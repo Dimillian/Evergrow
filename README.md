@@ -2,7 +2,7 @@
 
 A browser ARPG about exploring an unending gothic wilderness and shaping a character through a vast, classless skill tree. Its world, equipment, characters, and effects are drawn from procedural definitions in code.
 
-The **local playable prototype** is in `game/`: fluid combat, a visibly equipped character, connected Deadwood/verdant/swamp biomes, and procedural settlements with walk-in interiors. A scrolling minimap and explored-world map track your travels. Artwork is generated in code, with dynamic lights, combat particles, a floating HUD, and CRT/phosphor presentation. The broader design documents remain proposals for later development.
+The **local playable prototype** is in `game/`: fluid combat, a visibly equipped character, seven organically connected biomes with distinct vegetation and atmosphere, and procedural settlements with walk-in interiors. A scrolling minimap and explored-world map track your travels. Artwork is generated in code, with dynamic lights, combat particles, a floating HUD, and CRT/phosphor presentation. The broader design documents remain proposals for later development.
 
 ## Play locally
 
@@ -49,11 +49,13 @@ Hover an enemy to see its name and health at the top of the screen. A subtle mar
 
 The world uses one fixed presentation: soft CRT scanlines combined with restrained phosphor glow and a subtle RGB grille. There is no settings panel or filter switching. Reduced motion follows the operating system; N still toggles sound.
 
-Walk west from Deadwood to reach Verdant Forest, east to reach the swamp, or follow the road north to the first settlement. Enter buildings through their open south-facing doors; roofs fade and warm interior lighting blends in without changing spaces. Shops and the forge have distinct furnished interiors; trading is not implemented yet.
+Explore outward from Deadwood to reach recurring Verdant Forest, Mire, Frostpine, Emberfall, Amberwood, and Highland regions, or follow the road north to the first settlement. Terrain colors, mixed vegetation and ambient effects blend across irregular borders. Enter buildings through their open south-facing doors; roofs fade and warm interior lighting blends in without changing spaces. Shops and the forge have distinct furnished interiors; trading is not implemented yet.
 
-The large map pauses combat. Hover over discovered points of interest for details, and use its recenter control to return to your position. Exploration is retained locally for this world seed and generation version; starting a new run resets combat and position while keeping the explored map. Character progress is not saved yet.
+The large map pauses combat and now supports a wider overview with revealed biome labels and decluttered landmarks. Hover over discovered points of interest for details, and use its recenter control to return to your position. Exploration is retained locally for this world seed and generation version; starting a new run resets combat and position while keeping the explored map. Character progress is not saved yet. World generation 4 starts a fresh exploration chart because the biome geography has changed.
 
-The user owns gameplay and visual verification in the in-app browser and directs the next changes. See [prototype status](docs/prototype-status.md) for what is implemented and deliberately deferred. Control documentation stays here; the game view has no how-to text or control legend.
+The local [explored atlas](http://127.0.0.1:5173/atlas.html) compares three generated worlds after extensive staged exploration. The [biome studies](http://127.0.0.1:5173/biomes.html) show seven frozen environments and two real borders. Both use the game renderers, offer PNG export, and leave gameplay and saved exploration untouched.
+
+The user owns gameplay and visual verification in the in-app browser and directs the next changes. See [system status](docs/system-status.md) for what is implemented and deliberately deferred. Control documentation stays here; the game view has no how-to text or control legend.
 
 `npm run check` runs deterministic/code-level tests, strict application and browser-independent core type checks, and the local production build. It excludes automated browser playtesting. `npm run stats` reports current code/content counts, resource limits, and last-build sizes. The source is tracked in a local Git repository with no remote.
 
@@ -64,6 +66,8 @@ The user owns gameplay and visual verification in the in-app browser and directs
 | [Game brief](docs/game-brief.md) | What is the game, what makes it distinctive, and what must it deliver? |
 | [Systems catalog](docs/systems-catalog.md) | What systems exist, how do they connect, and what is needed first? |
 | [Combat and progression](docs/combat-and-progression.md) | How do fighting, builds, loot, and endless advancement work? |
+| [Biomes](docs/biomes.md) | How do the seven implemented climates, props, atmosphere and borders work? |
+| [Explored atlas](docs/explored-atlas.md) | How does the map show extensive exploration across different seeds? |
 | [World and art](docs/world-and-art.md) | How does the wilderness grow, how do settlements work, and how is everything drawn? |
 | [Technical foundations](docs/technical-foundations.md) | How could a browser deliver this, and which assumptions need prototypes? |
 | [Roadmap](docs/roadmap.md) | In what order should we prove and build the game? |

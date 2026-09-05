@@ -18,6 +18,8 @@ import { drawProjectile, projectileLight } from './projectile-art.ts';
 import { drawCharacterStatus } from './status-art.ts';
 import { SettlementArt } from './settlement-art.ts';
 import { EnvironmentArt } from './environment-art.ts';
+import { biomeAmbient } from './biomes.ts';
+import { propDefinition } from './biome-props.ts';
 import { SceneVisibility } from './scene-visibility.ts';
 import { isGameUIPoint } from './ui-hit-test.ts';
 import type { GamePhase } from './game-phase.ts';
@@ -221,7 +223,9 @@ export class Renderer {
 
     const lights = this.sceneLights(sim, px, py, settings.reducedMotion);
     const weights = biome.weights, inside = this.indoorBlend;
-    const ambient = `rgb(${Math.round((131 * weights.deadwood + 121 * weights.verdant + 114 * weights.swamp) * (1 - inside) + 116 * inside)},${Math.round((156 * weights.deadwood + 172 * weights.verdant + 160 * weights.swamp) * (1 - inside) + 119 * inside)},${Math.round((174 * weights.deadwood + 153 * weights.verdant + 159 * weights.swamp) * (1 - inside) + 141 * inside)})`;
+    const ambientChannels = biomeAmbient(weights).map((value, channel) =>
+      Math.round(value * (1 - inside) + [116, 119, 141][channel] * inside));
+    const ambient = `rgb(${ambientChannels.join(',')})`;
     this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps, ambient, zoom);
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
     // Emission is composed after surface illumination, so a hot core stays luminous.
@@ -230,8 +234,8 @@ export class Renderer {
     this.effects.drawSword(c);
     this.effects.draw(c);
     this.damageDirection(px, py);
-    this.motes(left, top, worldWidth, worldHeight, sim.time, settings.reducedMotion);
-    this.environmentArt.drawAmbient(c, weights, { x: left, y: top, width: worldWidth, height: worldHeight },
+    this.motes(world, left, top, worldWidth, worldHeight, sim.time, settings.reducedMotion);
+    this.environmentArt.drawAmbient(c, (x, y) => world.sampleBiome(x, y).weights, { x: left, y: top, width: worldWidth, height: worldHeight },
       this.visualTime, settings.reducedMotion);
     for (const enemy of sim.enemies) this.telegraph(enemy, alpha);
     this.healthBars(sim, alpha);
@@ -296,8 +300,9 @@ export class Renderer {
     const c = this.ctx;
     for (const prop of this.cachedProps) {
       if (prop.radius <= 0) continue;
+      const [rx, ry] = propDefinition(prop.kind).shadow;
       c.fillStyle = '#020a1080'; c.beginPath();
-      c.ellipse(prop.x + 3, prop.y + 4, prop.kind === 'tree' ? 24 : 15, prop.kind === 'rock' ? 6 : 9, -.2, 0, TAU); c.fill();
+      c.ellipse(prop.x + 3, prop.y + 4, rx * prop.scale, ry * prop.scale, -.2, 0, TAU); c.fill();
     }
   }
 
@@ -306,9 +311,11 @@ export class Renderer {
     const entries: Array<{ y: number; draw: () => void }> = this.cachedProps.map(prop => ({ y: prop.y, draw: () => {
       const sprite = this.environmentArt.getSprite(prop) ?? (prop.kind === 'tree' || prop.kind === 'deadTree'
         ? this.art.getTree(prop.seed, prop.kind === 'deadTree') : prop.kind === 'rock' ? this.art.getRock(prop.seed) : this.art.getShrine());
-      const wind = settings.reducedMotion || prop.kind === 'rock' || prop.kind === 'shrine' ? 0 : Math.sin(sim.time * .8 + prop.seed) * .7;
-      const occludes = (prop.kind === 'tree' || prop.kind === 'deadTree' || prop.kind === 'willow') && py < prop.y + 8
-        && py > prop.y - sprite.height * prop.scale && Math.abs(px - prop.x) < sprite.width * prop.scale * .38;
+      const definition = propDefinition(prop.kind);
+      const wind = settings.reducedMotion ? 0 : Math.sin(sim.time * .8 + prop.seed) * definition.sway;
+      const crown = definition.canopy;
+      const occludes = crown && py < prop.y + 8 && py > prop.y - (crown.height + crown.radius) * prop.scale
+        && Math.abs(px - prop.x - crown.offsetX * prop.scale) < crown.radius * prop.scale;
       c.save(); if (occludes) c.globalAlpha = .35;
       c.drawImage(sprite.image, prop.x - sprite.anchorX * prop.scale + wind, prop.y - sprite.anchorY * prop.scale,
         sprite.width * prop.scale, sprite.height * prop.scale); c.restore();
@@ -354,9 +361,12 @@ export class Renderer {
     const siteLights = this.visibility.sites.flatMap(site => wildernessLights(site, reducedMotion ? 0 : this.visualTime))
       .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py));
     environmentLights.push(...siteLights.slice(0, 6));
-    for (const prop of this.cachedProps) if (prop.kind === 'shrine') {
+    for (const prop of this.cachedProps) {
+      const emission = propDefinition(prop.kind).emissive;
+      if (!emission) continue;
       const flicker = reducedMotion ? 1 : 1 + Math.sin(sim.time * 8 + prop.seed) * .035 + Math.sin(sim.time * 17) * .018;
-      environmentLights.push({ x: prop.x - 18, y: prop.y - 31, radius: 215 * flicker, color: '#ffa64f', power: .92, shadows: true });
+      environmentLights.push({ x: prop.x + emission.offsetX * prop.scale, y: prop.y + emission.offsetY * prop.scale,
+        radius: emission.radius * prop.scale * flicker, color: emission.color, power: emission.power, shadows: emission.power > .2 });
     }
     if (p.attack?.kind === 'melee' && p.attack.weapon.visual.kind !== 'unarmed' && p.attack.elapsed >= p.attack.activeStart && p.attack.elapsed < p.attack.activeEnd + .05) {
       const a = p.attack;
@@ -410,7 +420,7 @@ export class Renderer {
     }
   }
 
-  private motes(left: number, top: number, width: number, height: number, time: number, reducedMotion: boolean) {
+  private motes(world: World, left: number, top: number, width: number, height: number, time: number, reducedMotion: boolean) {
     const c = this.ctx, cell = 140, t = reducedMotion ? 0 : time;
     // Anchoring each emitter to a world cell avoids screen-relative swimming or pop-in.
     for (let iy = Math.floor(top / cell) - 1; iy <= Math.floor((top + height) / cell) + 1; iy++) {
@@ -418,7 +428,10 @@ export class Renderer {
         const seed = Math.sin(ix * 127.1 + iy * 311.7) * 43758.5453, phase = (seed - Math.floor(seed)) * TAU;
         const x = ix * cell + 70 + Math.sin(t * .3 + phase) * 35;
         const y = iy * cell + 70 + Math.cos(t * .4 + phase * 2) * 25;
-        const power = .2 + (Math.sin(t * 1.3 + phase) + 1) * .22;
+        const weights = world.sampleBiome(ix * cell + 70, iy * cell + 70).weights;
+        const abundance = weights.deadwood + weights.verdant * .35 + weights.swamp * .25 + weights.autumn * .22;
+        const power = (.2 + (Math.sin(t * 1.3 + phase) + 1) * .22) * abundance;
+        if (power < .01) continue;
         const color = (ix + iy) % 3 === 0 ? '#ffad48' : '#54e8b8';
         c.globalAlpha = 1;
         drawGlow(c, x, y, 12, color, power * .5);

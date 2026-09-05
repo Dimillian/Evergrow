@@ -35,12 +35,16 @@ Ambient population targets `min(6, 3 + floor((areaLevel − 1) / 4))`, with a sh
 | Deadwood | 34 | 20 | 10 | 14 | 16 | 6 |
 | Verdant Forest | 22 | 8 | 8 | 30 | 24 | 8 |
 | Swamp | 22 | 10 | 24 | 8 | 10 | 26 |
+| Frostpine Reach | 16 | 16 | 8 | 24 | 14 | 22 |
+| Emberfall | 18 | 26 | 26 | 10 | 12 | 8 |
+| Amberwood | 24 | 10 | 8 | 24 | 28 | 6 |
+| Hollow Highlands | 18 | 28 | 10 | 10 | 26 | 8 |
 
 Ambient selection caps each special archetype (Brute, Hexer, Archer, Wisp) at two and renormalizes the remaining weights. Authored camps supply their own fixed mixture. The total population and rank caps apply to both sources. Concurrent attacks share **two pack slots** for Stalkers/Hounds and **one special slot** for the four larger/ranged roles. Level increases never shorten anticipation, increase movement speed, or add simultaneous attack slots.
 
 ### Camps and awareness
 
-Ashen Watch at `(740, 180)` introduces a four-member garrison: a veteran Stalker, an Archer, a Hound, and another Stalker. Other camps have six members with biome-specific support. Camp leaders are an authored exception to ambient rank rolls: a veteran can appear in a level-one camp; elite leaders require at least area level three. These enemies still use the ordinary rank XP and loot tables.
+Ashen Watch at `(740, 180)` introduces a four-member garrison: a veteran Stalker, an Archer, a Hound, and another Stalker. Other camps have six members with biome-specific support. Frostpine camps follow a Wisp leader with hounds and a Hexer; Emberfall favors a Brute leader and a second Brute; Amberwood and Verdant camps feature an Archer leader and hounds; Highlands camps place archers behind their Brute leader. The Mire keeps its Hexer leader and Wisp support. Cloth, banners, and soil materials also follow the climate. Shared camp footprints and member slots stay unchanged. Camp leaders are an authored exception to ambient rank rolls: a veteran can appear in a level-one camp; elite leaders require at least area level three. These enemies still use the ordinary rank XP and loot tables.
 
 Camps preload within 1,000–2,000 units according to visible world coverage. Approaching camps take priority over farther offscreen populations when the shared actor/rank budget is full. A garrison sleeps as a whole; visible and nearer foes cannot disappear to free capacity. Its original health, level, damage, rank, reward seed, and dead member identities survive unloading. Defeating every member marks the camp cleared for this run. Returning cannot refill it, reroll its items, or award extra XP. There is no bonus chest or separate camp completion reward yet.
 
@@ -175,8 +179,12 @@ For weapons and shields, the source biome then weights the profile. Every weapon
 - **Deadwood** favors heavy melee gear and tower shields.
 - **Verdant Forest** favors daggers, bows, and lighter shields.
 - **Swamp** favors elemental staves, especially frost and lightning.
+- **Frostpine Reach** favors frost staves, longbows, and kite shields.
+- **Emberfall** favors fire staves, greataxes, maces, and tower shields.
+- **Amberwood** favors daggers, hand axes, bows, and bucklers.
+- **Hollow Highlands** favors longbows, lightning staves, heavy melee gear, and larger shields.
 
-These are relative profile weights within that item kind, not extra drop chances. The exact immutable weights live in `game/src/loot-content.ts`; the [weapon catalog](weapons-and-skills.md) lists the available profiles. Player level, equipped weapon, combat RNG history, and XP-award order are not inputs to the item roll.
+All seven climates keep the same XP, rank, item-level, rarity, and drop-count formulas. These are relative profile weights within that item kind, not extra drop chances. The exact immutable weights live in `game/src/loot-content.ts`; the [weapon catalog](weapons-and-skills.md) lists the available profiles. Player level, equipped weapon, combat RNG history, and XP-award order are not inputs to the item roll.
 
 ## Item growth and defenses
 

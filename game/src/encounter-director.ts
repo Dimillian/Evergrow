@@ -14,10 +14,14 @@ export const ENCOUNTER_RULES = Object.freeze({
 });
 
 /** Available archetypes vary with the landscape; kill count never makes an old area harder. */
-export const ENCOUNTER_WEIGHTS = Object.freeze({
+export const ENCOUNTER_WEIGHTS: Readonly<Record<BiomeId, Readonly<Record<EnemyKind, number>>>> = Object.freeze({
   deadwood: Object.freeze({ stalker: 34, brute: 20, caster: 10, hound: 14, archer: 16, wisp: 6 }),
   verdant: Object.freeze({ stalker: 22, brute: 8, caster: 8, hound: 30, archer: 24, wisp: 8 }),
   swamp: Object.freeze({ stalker: 22, brute: 10, caster: 24, hound: 8, archer: 10, wisp: 26 }),
+  frostpine: Object.freeze({ stalker: 16, brute: 16, caster: 8, hound: 24, archer: 14, wisp: 22 }),
+  emberfall: Object.freeze({ stalker: 18, brute: 26, caster: 26, hound: 10, archer: 12, wisp: 8 }),
+  autumn: Object.freeze({ stalker: 24, brute: 10, caster: 8, hound: 24, archer: 28, wisp: 6 }),
+  highlands: Object.freeze({ stalker: 18, brute: 28, caster: 10, hound: 10, archer: 26, wisp: 8 }),
 });
 
 export function livingEnemyCount(enemies: readonly Enemy[]): number {

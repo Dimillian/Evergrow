@@ -31,7 +31,7 @@ test('cached settlement blueprints resist consumer edits and regenerate identica
     const y = FIRST_TOWN_Y + band * TOWN_INTERVAL;
     return world.getSettlements(mainPathX(y) - 1, y - 1, 2, 2)[0];
   };
-  const first = at(0), expected = JSON.stringify(first), building = first.buildings[0];
+  const first = at(0), expected = JSON.stringify(first), building = first.buildings[0], version = world.generationVersion;
   assert.throws(() => { building.door.x += 200; }, TypeError);
   assert.throws(() => { building.walls[0].width = 0; }, TypeError);
   assert.throws(() => { first.streets.length = 0; }, TypeError);
@@ -41,7 +41,7 @@ test('cached settlement blueprints resist consumer edits and regenerate identica
   world.dispose(); world.dispose();
   assert.deepEqual(world.cacheStats, { groundTiles: 0, settlements: 0, wildernessSites: 0 });
   assert.equal(JSON.stringify(at(0)), expected, 'cache release must not alter seed/version/layout');
-  assert.equal(world.generationVersion, 3);
+  assert.equal(world.generationVersion, version);
 });
 
 test('zoom anchor preservation yields to the chart coordinate boundary instead of escaping its domain', () => {

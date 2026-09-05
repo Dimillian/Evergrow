@@ -7,6 +7,7 @@ import { getZoneAt, scaledEnemyStats, ZONE_RULES } from '../src/zone-progression
 import { awardExperience, xpForNextLevel, xpLevelFactor } from '../src/progression.ts';
 import { rollEnemyLoot } from '../src/loot.ts';
 import { generateItem } from '../src/items.ts';
+import { sampleBiome } from '../src/biomes.ts';
 import { LOOT_RULES, PLAYER_ABILITIES } from '../src/combat-content.ts';
 import type { Enemy, Input, Projectile, WorldQuery } from '../src/model.ts';
 
@@ -30,7 +31,7 @@ test('spawn geography snapshots monster health, damage, rank, biome, and XP inde
   const enemy = sim.spawnEnemy('brute', x, 0, 'elite')!;
   const expected = scaledEnemyStats('brute', 4, 'elite');
   assert.equal(getZoneAt(x, 0).level, 4); assert.equal(enemy.level, 4);
-  assert.equal(enemy.rank, 'elite'); assert.equal(enemy.biome, 'swamp');
+  assert.equal(enemy.rank, 'elite'); assert.equal(enemy.biome, sampleBiome(x, 0).id);
   assert.equal(enemy.hp, expected.maxHp); assert.equal(enemy.maxHp, expected.maxHp);
   assert.equal(enemy.damage, expected.damage); assert.equal(enemy.xpReward, expected.xpReward);
   const snapshot = { hp: enemy.hp, maxHp: enemy.maxHp, damage: enemy.damage, xpReward: enemy.xpReward,

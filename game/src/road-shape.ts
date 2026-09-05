@@ -1,5 +1,5 @@
-const BRANCH_INTERVAL = 1600;
-const BRANCH_OFFSET = -620;
+export const BRANCH_INTERVAL = 1600;
+export const BRANCH_OFFSET = -620;
 const smoothstep = (a: number, b: number, value: number) => {
   const t = Math.max(0, Math.min(1, (value - a) / (b - a)));
   return t * t * (3 - 2 * t);

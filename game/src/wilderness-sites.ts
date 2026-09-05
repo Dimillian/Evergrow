@@ -26,6 +26,31 @@ export interface WildernessSite extends EnemyCamp {
   readonly entrance: { readonly x: number; readonly y: number };
 }
 export type SiteReservation = (x: number, y: number, radius: number) => boolean;
+/** Camp silhouettes and slot geometry stay shared while the climate supplies cloth and soil materials. */
+export interface WildernessBiomeTheme {
+  readonly cloth: string; readonly lining: string; readonly trim: string; readonly banner: string; readonly earthRgb: string;
+}
+export const WILDERNESS_BIOME_THEMES: Readonly<Record<BiomeId, WildernessBiomeTheme>> = Object.freeze({
+  deadwood: Object.freeze({ cloth: '#875146', lining: '#94815e', trim: '#c5b384', banner: '#9b4e49', earthRgb: '141,120,82' }),
+  verdant: Object.freeze({ cloth: '#586e47', lining: '#8b9263', trim: '#c1bd85', banner: '#728b49', earthRgb: '119,134,86' }),
+  swamp: Object.freeze({ cloth: '#46726c', lining: '#809587', trim: '#b5bfa3', banner: '#3f8e88', earthRgb: '134,121,84' }),
+  frostpine: Object.freeze({ cloth: '#546d89', lining: '#91aab9', trim: '#ceddd7', banner: '#779bb3', earthRgb: '161,179,184' }),
+  emberfall: Object.freeze({ cloth: '#723f36', lining: '#aa6b47', trim: '#d8a074', banner: '#b95836', earthRgb: '129,100,86' }),
+  autumn: Object.freeze({ cloth: '#8b653e', lining: '#b48c51', trim: '#dbbc7b', banner: '#bc7d3e', earthRgb: '157,123,75' }),
+  highlands: Object.freeze({ cloth: '#67617f', lining: '#9991a7', trim: '#c4c0ba', banner: '#84729b', earthRgb: '144,145,140' }),
+});
+
+/** Six authored roles, in the shared leader / sentry / hunter / guard / support / rear-guard slots. */
+export const CAMP_BIOME_ROSTERS: Readonly<Record<BiomeId, readonly [EnemyKind, EnemyKind, EnemyKind, EnemyKind, EnemyKind, EnemyKind]>> = Object.freeze({
+  deadwood: Object.freeze(['brute', 'archer', 'hound', 'stalker', 'caster', 'stalker'] as const),
+  verdant: Object.freeze(['archer', 'archer', 'hound', 'stalker', 'caster', 'hound'] as const),
+  swamp: Object.freeze(['caster', 'archer', 'hound', 'stalker', 'wisp', 'stalker'] as const),
+  frostpine: Object.freeze(['wisp', 'archer', 'hound', 'stalker', 'caster', 'hound'] as const),
+  emberfall: Object.freeze(['brute', 'archer', 'hound', 'stalker', 'caster', 'brute'] as const),
+  autumn: Object.freeze(['archer', 'archer', 'hound', 'stalker', 'caster', 'hound'] as const),
+  highlands: Object.freeze(['brute', 'archer', 'hound', 'stalker', 'archer', 'stalker'] as const),
+});
+
 const UINT_RANGE = 0x100000000;
 export function siteHash(x: number, y: number, seed: number, salt = 0): number {
   let n = (seed ^ salt ^ Math.imul(x | 0, 0x45d9f3b) ^ Math.imul(y | 0, 0x27d4eb2d)
@@ -67,10 +92,13 @@ function makeSite(seed: number, id: string, kind: WildernessKind, x: number, y: 
     add('bedroll', 80, 62, 0, 1.1, .17); add('bedroll', 106, 72, 0, .95, -.12);
     add('lantern', -57, -104, 3); add('bones', 42, 122, 0, 1.2, -.4);
     for (const [dx, dy, angle] of [[-139, -88, -.3], [-116, -142, .1], [-47, -158, .02], [42, -164, -.03], [126, -148, .25], [159, -93, 1.0], [164, -30, 1.5], [153, 60, 1.8], [91, 138, -.2], [-72, 145, .15]]) add('fence', dx, dy, 9, 1, angle);
-    member(starter ? 'stalker' : biome === 'swamp' ? 'caster' : 'brute', 0, -68,
+    const roster = CAMP_BIOME_ROSTERS[biome];
+    member(starter ? 'stalker' : roster[0], 0, -68,
       !starter && Math.hypot(x, y - 68) >= 6400 && random(seed, 29) > .72 ? 'elite' : 'veteran');
-    member('archer', 71, 0); member('hound', -56, 74); member('stalker', 53, 104);
-    if (!starter) { member(biome === 'swamp' ? 'wisp' : 'caster', -57, -11); member(biome === 'verdant' ? 'hound' : 'stalker', -27, 113); }
+    member(starter ? 'archer' : roster[1], 71, 0);
+    member(starter ? 'hound' : roster[2], -56, 74);
+    member(starter ? 'stalker' : roster[3], 53, 104);
+    if (!starter) { member(roster[4], -57, -11); member(roster[5], -27, 113); }
   } else if (kind === 'watchtower') {
     add('tower', 0, -48, 37, 1.15); add('lantern', 33, -51, 3, 1.2);
     add('banner', -77, -4, 5, 1.05); add('crate', 67, 45, 13); add('barrel', 89, 30, 10);

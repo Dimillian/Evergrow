@@ -1,6 +1,6 @@
 import { line, polygon, randomFromSeed, type Point } from './art-primitives.ts';
 import { drawGlow, type PointLight } from './lighting.ts';
-import type { WildernessSite, SiteDecor } from './wilderness-sites.ts';
+import { WILDERNESS_BIOME_THEMES, type WildernessSite, type SiteDecor } from './wilderness-sites.ts';
 
 const TAU = Math.PI * 2;
 const palette = { stone: '#596665', edge: '#a7b2a0', dark: '#273637', wood: '#66533d', woodEdge: '#a08b5d', iron: '#778582' };
@@ -15,7 +15,7 @@ export function drawSiteGround(c: CanvasRenderingContext2D, site: WildernessSite
   });
   c.save();
   c.beginPath(); c.moveTo(...points[0]); for (const point of points.slice(1)) c.lineTo(...point); c.closePath(); c.clip();
-  const earth = site.kind === 'graveyard' || site.kind === 'watchtower' ? '117,128,119' : site.biome === 'swamp' ? '134,121,84' : '141,120,82';
+  const earth = WILDERNESS_BIOME_THEMES[site.biome].earthRgb;
   // Overlapping soft soil stains make an irregular clearing; no nested contour bands.
   for (let stain = 0; stain < 6; stain++) {
     const angle = stain / 5 * TAU, offset = stain === 0 ? 0 : site.radius * .28;
@@ -78,16 +78,15 @@ export function drawSiteGround(c: CanvasRenderingContext2D, site: WildernessSite
 }
 
 function tent(c: CanvasRenderingContext2D, site: WildernessSite, seed: number, time: number): void {
-  const cloth = site.biome === 'swamp' ? '#46726c' : seed % 2 ? '#875146' : '#727849';
-  const trim = site.biome === 'swamp' ? '#b5bfa3' : '#c5b384';
+  const { cloth, lining, trim } = WILDERNESS_BIOME_THEMES[site.biome];
   const wave = Math.sin(time * 1.9 + seed) * .8;
   line(c, [[-42, -48], [-56, 9]], '#a8a57b', .8); line(c, [[39, -47], [52, 10]], '#a8a57b', .8);
   polygon(c, [[-46, -5], [-31, -51], [28, -58], [48, -3], [6, 7]], '#263732');
   polygon(c, [[-46, -5], [-31, -51], [3 + wave, -67], [7, 6]], cloth);
-  polygon(c, [[3 + wave, -67], [28, -58], [48, -3], [7, 6]], '#a09364');
+  polygon(c, [[3 + wave, -67], [28, -58], [48, -3], [7, 6]], lining);
   polygon(c, [[-21, -2], [3 + wave, -60], [28, 0]], '#152624');
   polygon(c, [[-18, -2], [3 + wave, -58], [1, -5]], '#5a6045');
-  polygon(c, [[3 + wave, -58], [28, 0], [16, -5]], '#b6a177');
+  polygon(c, [[3 + wave, -58], [28, 0], [16, -5]], lining);
   line(c, [[-46, -5], [-31, -51], [3 + wave, -67], [28, -58], [48, -3]], trim, 1.3);
   line(c, [[3 + wave, -66], [6, 5]], '#d3c592', 1); line(c, [[-36, -35], [-9, -45]], '#cab88a65', 1);
   line(c, [[-25, -28], [-14, -35], [-17, -21], [-6, -29]], '#d1ba87', 1.1);
@@ -191,9 +190,9 @@ export function drawSiteDecor(c: CanvasRenderingContext2D, site: WildernessSite,
     case 'banner': {
       const wave = Math.sin(time * 2 + decor.seed) * 2;
       line(c, [[0, 1], [0, -64], [-4, -71]], '#aaa17b', 2);
-      polygon(c, [[2, -61], [28 + wave, -57], [23, -40], [26 + wave, -30], [14, -36], [2, -35]], site.biome === 'swamp' ? '#3f8e88' : '#9b4e49');
-      line(c, [[3, -60], [27 + wave, -56]], '#d2b688', 1.2);
-      line(c, [[12, -52], [20, -46], [11, -42], [14, -52]], '#d4c492', 1.2);
+      polygon(c, [[2, -61], [28 + wave, -57], [23, -40], [26 + wave, -30], [14, -36], [2, -35]], WILDERNESS_BIOME_THEMES[site.biome].banner);
+      line(c, [[3, -60], [27 + wave, -56]], WILDERNESS_BIOME_THEMES[site.biome].trim, 1.2);
+      line(c, [[12, -52], [20, -46], [11, -42], [14, -52]], WILDERNESS_BIOME_THEMES[site.biome].trim, 1.2);
       line(c, [[0, -34], [20, -29]], '#493c32', 1); break;
     }
     case 'fence':

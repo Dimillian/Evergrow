@@ -1,0 +1,28 @@
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+body { color: var(--ui-text); background: #070e15; font-family: var(--ui-font); }
+#atlas-review { height: 100%; display: flex; flex-direction: column; }
+.atlas-loading { margin: auto; color: var(--ui-muted); }
+.atlas-review-header { padding: 17px 25px 13px; display: flex; flex: none; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--ui-line); background: radial-gradient(ellipse at 10% 0, #739b8610, transparent 75%); }
+.atlas-review-heading { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.atlas-review-heading > .ui-icon { width: 31px; height: 31px; color: var(--ui-brass); }
+.atlas-review-heading .ui-kicker { font-size: 10px; margin: 0 0 4px; }
+.atlas-review-heading h1 { font-weight: 400; font-size: 24px; line-height: 1; margin: 0; color: var(--ui-ivory); }
+.atlas-seeds { display: flex; gap: 7px; }
+.atlas-seeds .ui-button { min-height: 34px; padding: 5px 13px; font-size: 14px; text-decoration: none; }
+.atlas-seeds .is-selected { color: var(--ui-ivory); background: #7897851d; border-color: var(--ui-jade); }
+.atlas-map-mount { position: relative; min-height: 0; flex: 1; }
+.atlas-map-mount .world-map-root { padding: 17px 24px; background: none; backdrop-filter: none; }
+.atlas-map-mount .world-map-panel { width: 100%; height: 100%; }
+.atlas-map-mount .world-map-header { padding: 13px 19px; }
+.atlas-map-mount .world-map-emblem { width: 36px; height: 38px; }
+.atlas-map-mount .world-map-close { display: none; }
+.atlas-map-mount .world-map-footer { padding: 10px 18px; }
+.atlas-review-footer { padding: 0 26px 13px; display: flex; flex: none; justify-content: space-between; gap: 20px; font-size: 12px; line-height: 1.4; color: var(--ui-muted); }
+.atlas-review-footer strong { color: var(--ui-text); font-weight: 400; }
+.atlas-review-footer a { color: var(--ui-jade); text-decoration: none; }
+@media (max-width: 720px) {
+  .atlas-review-header { flex-wrap: wrap; gap: 12px; padding: 14px; }
+  .atlas-review-heading h1 { font-size: 20px; }
+  .atlas-map-mount .world-map-root { padding: 10px; }
+  .atlas-review-footer { padding: 0 14px 10px; font-size: 11px; }
+}

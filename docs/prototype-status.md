@@ -1,4 +1,6 @@
-# Local combat prototype
+# Early local prototype checkpoint
+
+Historical slice record from 2026-09-05, before the later character, weapon, encounter and seven-biome iterations. For the current implemented content and checks, use [system status](system-status.md).
 
 Checkpoint date: 2026-09-05. The current pass expands the combat slice into connected biomes, settlements, seamless interiors, and exploration maps. Gameplay feel and visual acceptance belong to the user in the existing Codex in-app browser tab.
 

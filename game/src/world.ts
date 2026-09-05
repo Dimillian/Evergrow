@@ -1,5 +1,7 @@
-import { biomeGround, sampleBiome } from './biomes.ts';
+import { biomeGround, biomeMapColor, sampleBiome } from './biomes.ts';
 import type { BiomeId, BiomeSample } from './biomes.ts';
+import { chooseBiomeProp, propDefinition, type PropKind } from './biome-props.ts';
+import { drawBiomeGroundAccent } from './biome-prop-art.ts';
 import { circleHitsRect, contains, FIRST_TOWN_Y, freezeSettlement, generateSettlement, intersects, MAX_TOWN_RADIUS, settlementPavingWeight, settlementPOIs, TOWN_INTERVAL } from './settlements.ts';
 import type { Building, POI, Settlement } from './settlements.ts';
 import { mainPathX, pathDistance, roadSurface } from './road-shape.ts';
@@ -15,14 +17,14 @@ export interface Prop {
   x: number;
   y: number;
   radius: number;
-  kind: 'tree' | 'deadTree' | 'rock' | 'shrine' | 'willow' | 'reeds' | 'fern' | 'flowers';
+  kind: PropKind;
   biome?: BiomeId;
   seed: number;
   scale: number;
 }
 
 export const TILE_SIZE = 256;
-export const WORLD_GENERATION_VERSION = 3;
+export const WORLD_GENERATION_VERSION = 4;
 const PROP_CELL_SIZE = 80;
 const MAX_PROP_RADIUS = 15;
 const TILE_CACHE_LIMIT = 48;
@@ -178,7 +180,11 @@ export class World {
   }
 
   /** Cheap map samples share terrain/road colors without querying collision. */
-  mapColor(x: number, y: number): string {
+  mapColor(x: number, y: number, sampleSize = 24): string {
+    if (sampleSize > 48) {
+      const [r, g, b] = biomeMapColor(this.sampleBiome(x, y).weights).map(Math.round);
+      return `rgb(${r},${g},${b})`;
+    }
     const towns = this.getSettlements(x, y, .01, .01);
     const [r, g, b] = this.surfaceColor(x, y, towns, false).map(Math.round);
     return `rgb(${r},${g},${b})`;
@@ -199,7 +205,7 @@ export class World {
     const weights = this.sampleBiome(x, y).weights;
     const profile = roadSurface(x, y, this.seed), road = profile.weight;
     const paved = this.pavingWeight(towns, x, y, road);
-    const base = biomeGround(weights, smoothstep(.50, .85, damp) * .65);
+    const base = detail ? biomeGround(weights, smoothstep(.50, .85, damp) * .65) : biomeMapColor(weights);
     const water = weights.swamp * smoothstep(.48, .75, damp) * (1 - road);
     const wet = smoothstep(.35, .85, damp) * (.35 + weights.swamp * .65);
     const pool = [15, 48, 60];
@@ -260,23 +266,18 @@ export class World {
     if (random(cx, cy, this.seed, 3) > density) return null;
     const choice = random(cx, cy, this.seed, 4);
     const weights = this.sampleBiome(x, y).weights;
-    const mixture = random(cx, cy, this.seed, 41);
-    const biome: BiomeId = mixture < weights.verdant ? 'verdant' : mixture < weights.verdant + weights.swamp ? 'swamp' : 'deadwood';
-    const kind: Prop['kind'] = biome === 'verdant'
-      ? choice < .1 ? 'rock' : choice < .2 ? 'fern' : choice < .29 ? 'flowers' : choice < .33 ? 'deadTree' : 'tree'
-      : biome === 'swamp' ? choice < .13 ? 'rock' : choice < .36 ? 'reeds' : choice < .5 ? 'deadTree' : 'willow'
-      : choice < .18 ? 'rock' : choice < .76 ? 'deadTree' : 'tree';
-    const scale = 0.82 + random(cx, cy, this.seed, 5) * 0.38;
-    if (kind === 'tree' || kind === 'willow') {
+    const { biome, kind } = chooseBiomeProp(weights, random(cx, cy, this.seed, 41), choice);
+    const definition = propDefinition(kind);
+    const scale = definition.scale[0] + random(cx, cy, this.seed, 5) * (definition.scale[1] - definition.scale[0]);
+    if (definition.canopy) {
       // The crown is projected above its trunk. A clear ground contact alone can
       // leave a foreground tree hiding a site's fire, supplies and entrance.
-      const crownY = y - 90 * scale, crownMargin = 30;
-      if (this.getWildernessSites(x - crownMargin, crownY - crownMargin, crownMargin * 2, crownMargin * 2)
-        .some(site => Math.hypot(x - site.x, crownY - site.y) < site.radius + crownMargin)) return null;
+      const crownX = x + definition.canopy.offsetX * scale;
+      const crownY = y - definition.canopy.height * scale, crownMargin = definition.canopy.radius * scale;
+      if (this.getWildernessSites(crownX - crownMargin, crownY - crownMargin, crownMargin * 2, crownMargin * 2)
+        .some(site => Math.hypot(crownX - site.x, crownY - site.y) < site.radius + crownMargin)) return null;
     }
-    const radius = kind === 'reeds' || kind === 'fern' || kind === 'flowers' ? 0 : kind === 'rock'
-      ? 8 + random(cx, cy, this.seed, 6) * 5
-      : 9 + random(cx, cy, this.seed, 6) * 5;
+    const radius = definition.radius[0] + random(cx, cy, this.seed, 6) * (definition.radius[1] - definition.radius[0]);
     return { id: `prop:${cx}:${cy}`, x, y, radius, kind, biome, seed: hash(cx, cy, this.seed, 7), scale };
   }
 
@@ -407,7 +408,9 @@ export class World {
         if (buildings.some(building => contains(building, wx, wy, 9))
           || this.pavingWeight(towns, wx, wy, this.roadWeight(wx, wy)) > .08) continue;
         const weights = this.sampleBiome(wx, wy).weights;
-        if (weights.swamp > .45 && !onRoad && noise(wx / 180, wy / 180, this.seed + 201) > .64) {
+        const { biome } = chooseBiomeProp(weights, random(cx, cy, this.seed, 217), 0);
+        if (drawBiomeGroundAccent(context, biome, px, py, pick, hash(cx, cy, this.seed, 218), onRoad)) continue;
+        if (biome === 'swamp' && !onRoad && noise(wx / 180, wy / 180, this.seed + 201) > .64) {
           if (pick > .8) {
             context.strokeStyle = 'rgba(90,160,161,0.22)'; context.lineWidth = .7;
             context.beginPath(); context.moveTo(px - 4, py); context.lineTo(px + 5, py);
@@ -422,7 +425,9 @@ export class World {
         if (pick < (onRoad ? 0.08 : 0.49)) {
           const length = 3 + random(cx, cy, this.seed, 214) * 5;
           const lean = random(cx, cy, this.seed, 215) * 5 - 2.5;
-          context.strokeStyle = weights.swamp > .5 ? 'rgba(111,155,132,0.31)' : weights.verdant > .5 ? 'rgba(99,180,87,0.36)' : 'rgba(90,144,96,0.26)';
+          context.strokeStyle = biome === 'swamp' ? 'rgba(111,155,132,0.31)' : biome === 'verdant' ? 'rgba(99,180,87,0.36)'
+            : biome === 'autumn' ? 'rgba(161,151,83,0.33)' : biome === 'highlands' ? 'rgba(155,160,122,0.35)'
+              : biome === 'frostpine' ? 'rgba(139,174,176,0.25)' : biome === 'emberfall' ? 'rgba(133,115,104,0.24)' : 'rgba(90,144,96,0.26)';
           context.lineWidth = 0.65;
           context.beginPath();
           context.moveTo(px, py);

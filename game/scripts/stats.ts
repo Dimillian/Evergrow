@@ -10,18 +10,23 @@ import { MAX_PROJECTILES } from '../src/projectile-combat.ts';
 import { ENEMY_RANKS, MAX_CONTENT_LEVEL } from '../src/progression-content.ts';
 import { ZONE_RULES } from '../src/zone-progression.ts';
 import { ENEMY_LOOT_TABLES } from '../src/loot-content.ts';
-import { BIOMES } from '../src/biomes.ts';
+import { BIOMES, BIOME_FIELD_RULES } from '../src/biomes.ts';
 import { COMBAT_TIMING, ENEMY_DEFINITIONS, PLAYER_ABILITIES, PROJECTILE_DEFINITIONS } from '../src/combat-content.ts';
 import { ENCOUNTER_RULES } from '../src/encounter-director.ts';
 import { EXPLORATION_LIMITS } from '../src/exploration-save.ts';
 import { POI_DEFINITIONS } from '../src/world-pois.ts';
 import { WILDERNESS_RULES } from '../src/wilderness-sites.ts';
 import { CAMP_POPULATION_RULES } from '../src/camp-population.ts';
+import { PROP_KINDS } from '../src/biome-props.ts';
+import { ENVIRONMENT_ART_RULES } from '../src/environment-art.ts';
+import { MAP_TERRAIN_RULES, mapTerrainSize } from '../src/world-map.ts';
+import { MAP_ZOOM } from '../src/map-view.ts';
+import { WORLD_GENERATION_VERSION } from '../src/world.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const sourceFiles = readdirSync(resolve(root, 'src')).filter(file => file.endsWith('.ts'));
 const reviewFiles = sourceFiles.filter(file => file.endsWith('-review.ts'));
-const runtimeFiles = sourceFiles.filter(file => !reviewFiles.includes(file) && !file.startsWith('hud-concept-'));
+const runtimeFiles = sourceFiles.filter(file => !file.includes('-review') && !file.startsWith('hud-concept-'));
 const countLines = (files: string[]) => files.reduce((sum, file) =>
   sum + readFileSync(resolve(root, 'src', file), 'utf8').trimEnd().split('\n').length, 0);
 const manifest = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
@@ -39,7 +44,7 @@ console.log(JSON.stringify({
     browserFiles: readdirSync(resolve(root, 'tests/browser')).filter(file => file.endsWith('.spec.ts')).length },
   dependencies: { runtime: Object.keys(manifest.dependencies ?? {}).length,
     development: Object.keys(manifest.devDependencies ?? {}).length },
-  content: { biomes: Object.keys(BIOMES).length, enemyArchetypes: Object.keys(ENEMY_DEFINITIONS).length,
+  content: { worldGeneration: WORLD_GENERATION_VERSION, propKinds: PROP_KINDS.length, biomes: Object.keys(BIOMES).length, enemyArchetypes: Object.keys(ENEMY_DEFINITIONS).length,
     enemyRanks: Object.keys(ENEMY_RANKS).length, enemyLootTables: Object.keys(ENEMY_LOOT_TABLES).length,
     basicAndUtilityActions: Object.keys(PLAYER_ABILITIES).length, activeSkills: Object.keys(SKILL_DEFINITIONS).length,
     skillNodes: SKILL_TREE.nodes.length, skillEdges: SKILL_TREE.edges.length,
@@ -52,6 +57,10 @@ console.log(JSON.stringify({
     numericContentLevel: MAX_CONTENT_LEVEL, areaBandWidth: ZONE_RULES.bandWidth,
     targetEnemies: ENCOUNTER_RULES.targetPopulationCap, hardEnemyCap: ENCOUNTER_RULES.hardPopulationCap,
     wildernessCells: WILDERNESS_RULES.cacheLimit, campLedger: CAMP_POPULATION_RULES.ledgerCapacity,
+    climateRegions: BIOME_FIELD_RULES.cacheLimit,
+    environmentSprites: ENVIRONMENT_ART_RULES.cacheLimit, environmentVariantsPerFamily: ENVIRONMENT_ART_RULES.variants,
+    mapTerrainTiles: MAP_TERRAIN_RULES.cacheLimit, visibleMapTerrainTiles: MAP_TERRAIN_RULES.maximumVisibleTiles,
+    mapZoom: MAP_ZOOM, nominalMapTerrainSizes: [.2, .1, .04].map(zoom => mapTerrainSize(zoom, 1280, 720)),
     exploration: EXPLORATION_LIMITS },
   lastBuild: bundle,
 }, null, 2));

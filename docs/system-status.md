@@ -1,6 +1,6 @@
 # System status and foundation checkpoint
 
-2026-09-05 · local prototype · world generation 3 · character foundation 2 · weapon schools 1 · progression model 1 · wilderness encounters 1.
+2026-09-05 · local prototype · world generation 4 · character foundation 2 · weapon schools 1 · progression model 1 · wilderness encounters 1.
 
 The engine foundation supports run-local character progression, one- and two-handed gear, shields, dual wield, inventory, tree allocations, and seventeen active skills through shared contracts and validated mutations. The large atlas reuses authored bonus families and is not a balanced endgame. Gameplay acceptance and performance on the user's machine remain separate from code verification.
 
@@ -14,11 +14,11 @@ The engine foundation supports run-local character progression, one- and two-han
 | Equipment / stats | 4 attributes; one derived-stat path; 11 equipment slots, 10 kinds, 5 tiers, 17 general and 2 shield affix families; 13 weapon profiles and 3 shields; procedural worn art | One-/two-handed melee, dual wield, three bows and three elemental staves; no wands or unique legendary powers |
 | Inventory / gear loot | 48 bag cells; 3-column character screen, comparisons and transactional gear changes; rank loot tables, archetype/biome weights, source-level items, bounded percentage growth | No stash, trade, crafting, item deletion, or character persistence; long farming sessions need item disposal |
 | Skill atlas | 2,824 connected nodes, 2,923 curved edges, 150 themed constellations, 3 domains, 9 weapon schools and 17 active-skill majors; winding paths, hybrid crosslinks, search and shortest-route preview | First/advanced school skills require 4/7 points from origin; authored bonus families repeat, with balance/content expansion ahead |
-| World | 3 smoothly connected biomes; streamed 256-unit terrain tiles; deterministic roads, props and clear corridors | Tested generation; biome distribution is still a three-region prototype |
+| World | 7 climates blended through a seeded two-dimensional field; streamed 256-unit terrain tiles; 23 prop families, deterministic roads and clear corridors | Tested seeds, boundaries and distribution; distinct climates now occur throughout the world |
 | Wilderness sites / camps | Fixed 4-/6-member camps, watchtowers, graveyards, standing stones and caravans; shared geometry, decor and lighting | Camp member health/deaths survive streaming within the run; decorative landmarks have no interactions or chest rewards yet |
 | Settlements / interiors | 5 building kinds; 8 buildings in Briarwatch; towns target 5–8, cities 12–16; shared doors/walls/furniture; roof fading and sanctuaries | Walkable layout foundation; no residents or service transactions |
-| Maps / discovery | Smooth minimap, explored-world map, hover POIs and revealed-area levels; 12 registered POI kinds; cleared camp markers/tooltips; chart persistence | Sanctuary/area labels share geographic danger; uncharted terrain discloses no metadata |
-| Procedural art | Shared weapon/shield/armor silhouettes for worn art and inventory icons; actual item silhouettes on the ground; one-/two-handed, bow, staff, shield and dual-wield poses; enemy art and prop libraries; all generated in code | Held attack snapshots keep animation and weapon effects aligned |
+| Maps / discovery | Smooth minimap, adaptive-detail world overview, decluttered hover POIs, revealed biome/area labels; 12 registered POI kinds; cleared camp markers/tooltips; chart persistence | Coarse samples require fully known discovery cells; world generation 4 starts a new exploration chart |
+| Procedural art | Shared weapon/shield/armor silhouettes for worn art and inventory icons; actual item silhouettes on the ground; one-/two-handed, bow, staff, shield and dual-wield poses; enemy art and 23 climate prop families; all generated in code | Held attacks retain pose snapshots; prop collision, crowns, light and sway share metadata |
 | Lighting / effects | Dynamic lights/shadows, combat particles, blade ribbon, elemental projectiles, blast/chain/ground/block effects, burn/frost cues, synthesized audio, fixed CRT/soft phosphor | Bounded resources; performance has not been benchmarked in gameplay |
 | HUD / application | Astral frames/orbs/XP; equipped-weapon basic attack + 5 assignable skill wells; separate potion/dodge; enabled C/I/T menus; skill costs/cooldowns/gear requirements; enemy focus plate with iron/silver/crowned rank heraldry and native text | New runs have empty skill slots; journal remains unavailable |
 | Interface kit | Shared materials/icons/primitives across start/pause/defeat/map, character inventory, and skill atlas; native focus, tooltips, scroll regions, responsive layouts | Existing panels share the kit; static review is separate from gameplay |
@@ -26,7 +26,7 @@ The engine foundation supports run-local character progression, one- and two-han
 
 ## Combat numbers
 
-Player starts with **100 life / 100 mana**. The two-handed Weathered Sword deals **24 damage**, attacks **2 times/second**, reaches **60 world units**, and sweeps **135°**. The new run has no assigned skills or default right-click cast. Skills require allocating a major, assigning a slot, and compatible equipped gear. Attribute, gear, and tree bonuses affect real combat; the numbers here describe the unchanged starter equipment. Eight bag items include a one-handed sword, dagger, buckler, bow, and staff for immediate equipment testing. Dodge has **2 charges** with **1.8 s** recharge; flasks have **2 charges**, restore **42% of maximum life**, and replenish a charge every **8 kills**. There is **2 enemy projectile templates** and **2 resource pickup types** (12% maximum life / 16% maximum mana). See [weapons and skills](weapons-and-skills.md) for all profile values, skills, effects, requirements, and formulas.
+Player starts with **100 life / 100 mana**. The two-handed Weathered Sword deals **24 damage**, attacks **2 times/second**, reaches **60 world units**, and sweeps **135°**. The new run has no assigned skills or default right-click cast. Skills require allocating a major, assigning a slot, and compatible equipped gear. Attribute, gear, and tree bonuses affect real combat; the numbers here describe the unchanged starter equipment. Eight bag items include a one-handed sword, dagger, buckler, bow, and staff for immediate equipment testing. Dodge has **2 charges** with **1.8 s** recharge; flasks have **2 charges**, restore **42% of maximum life**, and replenish a charge every **8 kills**. There are **2 enemy projectile templates** and **2 resource pickup types** (12% maximum life / 16% maximum mana). See [weapons and skills](weapons-and-skills.md) for all profile values, skills, effects, requirements, and formulas.
 
 | Level-one normal enemy | Life | Damage | Move speed (units/s) | Windup / active / recovery |
 | --- | ---: | ---: | ---: | --- |
@@ -48,9 +48,12 @@ Area danger rises one level per 3,200 units from the origin. Monster level and r
 | Ground equipment | 96 items; auto-pickup within 30 units with line of sight |
 | Skill atlas | 2,824 immutable nodes / 2,923 edges; culled, event-driven Canvas drawing |
 | World terrain tiles / settlement blueprints | 48 / 32 cached entries |
+| Climate region cache | 512 seeded region records; 2,400-unit region grid |
 | Wilderness blueprint cache / camp run ledger | 128 cells / 1,024 camps, maximum 6 members each; later unrecorded camps remain dormant at ledger capacity |
-| Rendered building cache / chart terrain cache | 24 buildings / 384 map tiles |
+| Rendered building cache / chart terrain cache | 24 buildings / 384 map tiles; at most 256 visible chart tiles; about 51 MiB raw RGBA if all cached tiles use the coarse road layers, excluding browser/GPU overhead |
+| Chart detail levels / zoom | Nominal 768 / 1,536 / 3,072 world units per tile, coarsening further for large viewports; zoom 0.025–0.7 |
 | Base procedural prop library | 161 sprite canvases; about 5.05 MiB of RGBA pixels when all variants are populated, excluding other art/GPU overhead |
+| Biome sprite LRU | 96 sprites; 24 seeded variants per family; at most 12.13 MiB raw RGBA using the largest 186×178 sprite for every entry, excluding browser/GPU overhead |
 | Combat particles / flashes / impact effects / damage labels | 650 / 22 / 24 / 35 |
 | Skill area visuals / chain visuals | 20 / 24 |
 | Sword ribbon / rendered corpses | 96 samples / 45 corpses |
@@ -154,3 +157,15 @@ Helmets, cuirasses and pauldrons now share forged geometry between equipped char
 **350 code tests across 48 files pass**, plus strict application/core compilation and the production build. Coverage includes all six hover silhouettes, patrol/LOS/return, committed attacks and escape windows, ranged retreat, encounter caps, camp sleep/death/restore/priority, blocked entrances, canopy visibility, deterministic sites, and item/rig geometry. There are **93 runtime TypeScript modules**, **9 development review entrypoints**, and **zero runtime package dependencies**. Production output is **377.88 kB JavaScript / 131.09 kB gzip**, and **44.17 kB CSS / 9.81 kB gzip** (Vite report), with the font separate.
 
 [Nine frozen in-app screenshots](captures/2026-09-05/encounter-polish/README.md) cover rank plates, six creatures, equipped characters/items, all five wilderness layouts, and the wisp warning. Static inspection caught and corrected a helmet face layer, staff framing, two obstructed site approaches, hard soil edges and foreground canopy occlusion. No gameplay was driven; combat feel, difficulty and runtime performance remain for user playtesting. Exploration identity remains unchanged and no deployment or remote push was made.
+
+## Seven-biome world and map overview checkpoint
+
+Deadwood, Verdant Forest and The Mire now join Frostpine Reach, Emberfall, Amberwood and Hollow Highlands in a two-dimensional climate field. Normalized weights drive shared ground, light, map and vegetation transitions. Twenty-three prop families add snowy pines/crystals, charred trunks/basalt, autumn crowns/leaves, windswept trees/heather/limestone and richer existing-biome groundcover. Ground contacts respect road/town clearance; projected crowns also keep wilderness sites visible, and procedural sprites remain bounded by a dedicated LRU. All seven climates have explicit six-archetype encounter weights, camp rosters/palettes and positive gear-profile biases. Area, rank, XP and item scaling formulas are unchanged.
+
+The large map now switches terrain detail as it zooms out, declutters POIs before hover testing and labels revealed biome regions. Coarse samples cannot expose unknown fine discovery cells. The [three-seed atlas review](explored-atlas.md) uses the actual map with memory-only exploration; the [biome review](biomes.md) stages actual world scenes and transitions through the renderer. Both export frozen PNGs without gameplay or saved-chart access.
+
+World generation is now **4**. The altered climate geography starts a fresh exploration namespace; old generation-3 charts are not merged or migrated. Characters, gear and skill allocations remain run-local as before.
+
+**369 code tests across 50 files pass**, together with strict application/core compilation and the production build. Coverage includes seven-biome determinism, normalization/continuity, seeded prop geometry and cache limits, all-climate encounter/loot contracts, canopy visibility, overview framing/fog/cache invalidation, road continuity and minimap detail. There are **112 TypeScript source modules**, **95 runtime modules totaling 13,316 lines**, **11 development review entrypoints**, and **zero runtime package dependencies**. Production output contains 100 transformed modules, **401.10 kB JavaScript / 139.83 kB gzip**, and **44.17 kB CSS / 9.81 kB gzip** (Vite report), with the local font separate. `npm run stats` now reports biome/prop counts, generation identity and the climate, sprite and chart limits from the actual registries.
+
+[Static biome and atlas captures](captures/2026-09-05/biome-atlas/README.md) show the generated world and explored-map samples; that capture record describes the rendering method and visual-review limits. No gameplay was driven. Combat feel, navigation and runtime performance remain for user playtesting.

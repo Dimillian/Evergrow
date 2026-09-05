@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { World, pathDistance } from '../src/world.ts';
-import { WILDERNESS_RULES, startingEnemyCamp, siteHash } from '../src/wilderness-sites.ts';
+import { WILDERNESS_RULES, startingEnemyCamp, siteHash, CAMP_BIOME_ROSTERS, WILDERNESS_BIOME_THEMES } from '../src/wilderness-sites.ts';
+import { BIOMES, type BiomeId } from '../src/biomes.ts';
+import { propDefinition } from '../src/biome-props.ts';
+import { ENEMY_DEFINITIONS } from '../src/combat-content.ts';
 import { Exploration } from '../src/exploration.ts';
 import { validExplorationPOI } from '../src/exploration-save.ts';
 
@@ -93,21 +96,23 @@ test('decor collision is shared by point checks and swept movement while clearin
   assert.ok(ambient.every(p => Math.hypot(p.x - first.x, p.y - first.y) >= first.radius));
 });
 
-test('foreground tree crowns leave the nearest caravan and watchtower activity spaces visible', () => {
-  const world = new World(), sites = world.getWildernessSites(-6000, -6000, 12000, 12000);
+test('foreground tree crowns leave caravan and watchtower activity spaces visible in a sampled forest', () => {
+  const world = new World(), sites = world.getWildernessSites(-16000, -16000, 32000, 32000);
   for (const kind of ['caravan', 'watchtower'] as const) {
-    const site = sites.filter(site => site.kind === kind).sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y))[0];
+    const site = sites.filter(site => site.kind === kind && site.biome === 'verdant').sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y))[0];
     assert.ok(site && site.biome === 'verdant');
     const props = world.getProps(site.x - 500, site.y - 500, 1000, 1000);
-    const canopies = props.filter(prop => prop.kind === 'tree' || prop.kind === 'willow');
+    const canopies = props.filter(prop => propDefinition(prop.kind).canopy);
     assert.ok(canopies.length >= 12, 'the surrounding forest remains dense');
     for (const tree of canopies) {
-      const crownY = tree.y - 90 * tree.scale;
-      assert.ok(Math.hypot(tree.x - site.x, crownY - site.y) >= site.radius + 30,
+      const crown = propDefinition(tree.kind).canopy!;
+      const crownX = tree.x + crown.offsetX * tree.scale, crownY = tree.y - crown.height * tree.scale;
+      const radius = crown.radius * tree.scale;
+      assert.ok(Math.hypot(crownX - site.x, crownY - site.y) >= site.radius + radius,
         `${kind}: foreground crown ${tree.id} hides the authored activity clearing`);
       for (const supply of site.decor.filter(decor => ['fire', 'crate', 'barrel', 'bedroll'].includes(decor.kind))) {
         if (tree.y <= supply.y) continue;
-        assert.ok(Math.hypot((tree.x - supply.x) / (70 * tree.scale), (crownY - supply.y) / (60 * tree.scale)) >= 1,
+        assert.ok(Math.hypot(crownX - supply.x, crownY - supply.y) >= radius,
           `${kind}: foreground canopy ${tree.id} obscures ${supply.kind}`);
       }
     }
@@ -137,4 +142,30 @@ test('invalid or over-budget wilderness requests terminate without enumerating u
     assert.deepEqual(world.getEnemyCamps(x, y, w, h), []);
   }
   assert.equal(world.cacheStats.wildernessSites, 0);
+});
+
+
+test('all climates own complete camp materials and six-member roles without introducing new rank scaling', () => {
+  assert.deepEqual(Object.keys(CAMP_BIOME_ROSTERS).sort(), Object.keys(BIOMES).sort());
+  assert.deepEqual(Object.keys(WILDERNESS_BIOME_THEMES).sort(), Object.keys(BIOMES).sort());
+  assert.ok(Object.isFrozen(CAMP_BIOME_ROSTERS)); assert.ok(Object.isFrozen(WILDERNESS_BIOME_THEMES));
+  const cloth = new Set<string>();
+  for (const biome of Object.keys(BIOMES) as BiomeId[]) {
+    const roster = CAMP_BIOME_ROSTERS[biome], theme = WILDERNESS_BIOME_THEMES[biome];
+    assert.ok(Object.isFrozen(roster)); assert.equal(roster.length, 6);
+    assert.ok(roster.every(kind => ENEMY_DEFINITIONS[kind]));
+    assert.ok(Object.isFrozen(theme));
+    for (const value of [theme.cloth, theme.lining, theme.trim, theme.banner]) assert.match(value, /^#[0-9a-f]{6}$/i);
+    assert.match(theme.earthRgb, /^\d+,\d+,\d+$/); cloth.add(theme.cloth);
+  }
+  assert.equal(cloth.size, Object.keys(BIOMES).length, 'each climate has a distinct cloth palette');
+  for (const seed of [7319, 42, -73]) {
+    const world = new World(seed);
+    for (const camp of world.getWildernessSites(-10000, -10000, 20000, 20000).filter(site => site.kind === 'camp')) {
+      if (camp.id.endsWith(':first-camp')) continue;
+      assert.deepEqual(camp.members.map(member => member.kind), CAMP_BIOME_ROSTERS[camp.biome]);
+      assert.ok(camp.members[0].rank === 'veteran' || camp.members[0].rank === 'elite');
+      assert.ok(camp.members.slice(1).every(member => member.rank === 'normal'));
+    }
+  }
 });

@@ -59,4 +59,28 @@ export const BIOME_PROFILE_WEIGHTS: Readonly<Record<BiomeId, BiomeProfileWeights
       'warden-longbow': 1, 'ember-staff': 2, 'rime-staff': 4, 'storm-staff': 3 }),
     shield: Object.freeze({ 'iron-buckler': 3, 'vigil-kite': 1, 'bastion-tower': 1 }),
   }),
+  frostpine: Object.freeze({
+    weapon: Object.freeze({ longsword: 1, 'hand-axe': 2, 'flanged-mace': 1, 'rondel-dagger': 1,
+      greatblade: 1, greataxe: 2, 'grave-maul': 2, 'thorn-shortbow': 2, 'crescent-recurve': 2,
+      'warden-longbow': 3, 'ember-staff': 1, 'rime-staff': 5, 'storm-staff': 2 }),
+    shield: Object.freeze({ 'iron-buckler': 1, 'vigil-kite': 3, 'bastion-tower': 2 }),
+  }),
+  emberfall: Object.freeze({
+    weapon: Object.freeze({ longsword: 1, 'hand-axe': 2, 'flanged-mace': 3, 'rondel-dagger': 1,
+      greatblade: 2, greataxe: 4, 'grave-maul': 3, 'thorn-shortbow': 1, 'crescent-recurve': 1,
+      'warden-longbow': 1, 'ember-staff': 5, 'rime-staff': 1, 'storm-staff': 1 }),
+    shield: Object.freeze({ 'iron-buckler': 1, 'vigil-kite': 2, 'bastion-tower': 4 }),
+  }),
+  autumn: Object.freeze({
+    weapon: Object.freeze({ longsword: 2, 'hand-axe': 3, 'flanged-mace': 1, 'rondel-dagger': 4,
+      greatblade: 1, greataxe: 1, 'grave-maul': 1, 'thorn-shortbow': 3, 'crescent-recurve': 3,
+      'warden-longbow': 2, 'ember-staff': 1, 'rime-staff': 1, 'storm-staff': 2 }),
+    shield: Object.freeze({ 'iron-buckler': 4, 'vigil-kite': 2, 'bastion-tower': 1 }),
+  }),
+  highlands: Object.freeze({
+    weapon: Object.freeze({ longsword: 3, 'hand-axe': 1, 'flanged-mace': 3, 'rondel-dagger': 1,
+      greatblade: 3, greataxe: 2, 'grave-maul': 3, 'thorn-shortbow': 1, 'crescent-recurve': 1,
+      'warden-longbow': 4, 'ember-staff': 1, 'rime-staff': 1, 'storm-staff': 4 }),
+    shield: Object.freeze({ 'iron-buckler': 1, 'vigil-kite': 3, 'bastion-tower': 3 }),
+  }),
 });

@@ -4,11 +4,11 @@ import { BIOME_PROFILE_WEIGHTS, ENEMY_ITEM_KIND_WEIGHTS, ENEMY_LOOT_TABLES, getL
 import { enemyLootCount, lootItemLevel, rollEnemyLoot, selectLootWeight } from '../src/loot.ts';
 import { ITEM_KINDS } from '../src/items.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
-import type { BiomeId } from '../src/biomes.ts';
+import { BIOMES, type BiomeId } from '../src/biomes.ts';
 import type { EnemyRank } from '../src/progression-content.ts';
 
 const ranks: readonly EnemyRank[] = ['normal', 'veteran', 'elite'];
-const biomes: readonly BiomeId[] = ['deadwood', 'verdant', 'swamp'];
+const biomes = Object.keys(BIOMES) as BiomeId[];
 const source = { seed: 410, level: 12, rank: 'elite' as const, biome: 'swamp' as const, kind: 'caster' as const };
 
 test('reward content is deeply immutable and every authored weight table is complete', () => {
@@ -27,6 +27,7 @@ test('reward content is deeply immutable and every authored weight table is comp
     assert.ok(Object.values(weights).every(weight => weight > 0));
   }
   assert.ok(Object.isFrozen(BIOME_PROFILE_WEIGHTS));
+  assert.deepEqual(Object.keys(BIOME_PROFILE_WEIGHTS).sort(), Object.keys(BIOMES).sort());
   for (const biome of biomes) {
     const profiles = BIOME_PROFILE_WEIGHTS[biome];
     assert.ok(Object.isFrozen(profiles) && Object.isFrozen(profiles.weapon) && Object.isFrozen(profiles.shield));
@@ -119,5 +120,16 @@ test('archetypes and biomes create authored tendencies without excluding any equ
       }
     }
     assert.deepEqual([...profiles].sort(), [...WEAPON_PROFILES, ...SHIELD_PROFILES].map(profile => profile.name).sort());
+  }
+});
+
+
+test('climate changes profile tendencies without changing rank yield, rarity, or source item level', () => {
+  for (let seed = 0; seed < 200; seed++) {
+    for (const rank of ranks) {
+      const rewards = biomes.map(biome => rollEnemyLoot({ ...source, biome, rank, seed }).map(item =>
+        ({ tier: item.tier, kind: item.kind, level: item.itemLevel, required: item.requiredLevel })));
+      for (const reward of rewards) assert.deepEqual(reward, rewards[0]);
+    }
   }
 });

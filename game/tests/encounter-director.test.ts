@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { canEnemyJoinAttack, chooseEncounterEnemy, encounterPopulationTarget, ENCOUNTER_RULES,
   livingEnemyCount, ENCOUNTER_WEIGHTS, encounterRankChances, chooseEncounterRank } from '../src/encounter-director.ts';
 import { Simulation } from '../src/simulation.ts';
+import { BIOMES, type BiomeId } from '../src/biomes.ts';
+import { ENEMY_DEFINITIONS } from '../src/combat-content.ts';
 import type { EnemyKind, WorldQuery } from '../src/model.ts';
 
 const world: WorldQuery = { blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) };
@@ -18,13 +20,17 @@ test('population follows geographic area level with a fixed simultaneous actor c
 });
 
 test('each biome selects its authored population mix and full areas consume no random draw', () => {
-  for (const biome of ['deadwood', 'verdant', 'swamp'] as const) {
+  for (const biome of Object.keys(BIOMES) as BiomeId[]) {
     const weights = ENCOUNTER_WEIGHTS[biome];
+    assert.ok(Object.isFrozen(weights));
+    assert.deepEqual(Object.keys(weights).sort(), Object.keys(ENEMY_DEFINITIONS).sort());
+    assert.ok(Object.values(weights).every(value => Number.isFinite(value) && value > 0));
     assert.equal(Object.values(weights).reduce((sum, weight) => sum + weight, 0), 100);
     assert.equal(chooseEncounterEnemy([], 1, biome, () => 0), 'stalker');
     assert.equal(chooseEncounterEnemy([], 1, biome, () => (weights.stalker + .1) / 100), 'brute');
     assert.equal(chooseEncounterEnemy([], 1, biome, () => .999), 'wisp');
   }
+  assert.deepEqual(Object.keys(ENCOUNTER_WEIGHTS).sort(), Object.keys(BIOMES).sort());
   const full = actors(['stalker', 'stalker', 'stalker', 'stalker', 'stalker']);
   assert.equal(chooseEncounterEnemy(full, 1, 'deadwood', () => { throw new Error('Full area rolled a spawn'); }), null);
 });
@@ -74,4 +80,16 @@ test('attack slots independently limit pack enemies and the shared heavy/ranged 
   caster.state = 'attack';
   assert.equal(canEnemyJoinAttack(brute, enemies), false);
   assert.equal(canEnemyJoinAttack(three, enemies), true, 'a ranged attack does not spend the pack allowance');
+});
+
+
+test('every registered climate selects exactly its authored six-archetype weight distribution', () => {
+  for (const biome of Object.keys(BIOMES) as BiomeId[]) {
+    const counts = Object.fromEntries(Object.keys(ENEMY_DEFINITIONS).map(kind => [kind, 0]));
+    for (let index = 0; index < 100; index++) {
+      const kind = chooseEncounterEnemy([], 1, biome, () => (index + .5) / 100);
+      assert.ok(kind); counts[kind]++;
+    }
+    assert.deepEqual(counts, ENCOUNTER_WEIGHTS[biome], biome);
+  }
 });

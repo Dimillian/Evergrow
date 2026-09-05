@@ -1,12 +1,14 @@
-import type { Sprite } from './art.ts';
+import type { Sprite } from './art-types.ts';
 import type { Prop } from './world.ts';
 import { drawGlow } from './lighting.ts';
+import { BIOME_PROP_BOUNDS, drawBiomeProp } from './biome-prop-art.ts';
+import type { BiomeWeights } from './biomes.ts';
 
 type Point = readonly [number, number];
 type CanvasFactory = (width: number, height: number) => HTMLCanvasElement;
-interface BiomeWeights { deadwood: number; verdant: number; swamp: number; }
 interface ViewRect { x: number; y: number; width: number; height: number; }
 const TAU = Math.PI * 2;
+export const ENVIRONMENT_ART_RULES = Object.freeze({ variants: 24, cacheLimit: 96, ambientCells: 384 });
 
 function hash(seed: number): number {
   let n = seed | 0;
@@ -43,29 +45,32 @@ export class EnvironmentArt {
     });
   }
   reset() { this.cache.clear(); }
+  get cacheStats() { return { sprites: this.cache.size,
+    pixels: [...this.cache.values()].reduce((pixels, sprite) => pixels + sprite.width * sprite.height, 0) }; }
 
   getSprite(prop: Prop): Sprite | null {
-    const family = prop.kind === 'tree' && prop.biome === 'verdant' ? 'canopy' : prop.kind;
-    if (!['willow', 'reeds', 'fern', 'flowers', 'canopy'].includes(family)) return null;
-    const variant = hash(prop.seed) % 24, key = `${family}:${variant}`;
+    const family = prop.kind, bounds = BIOME_PROP_BOUNDS[family];
+    if (!bounds && !['willow', 'reeds', 'fern', 'flowers', 'canopy'].includes(family)) return null;
+    const variant = hash(prop.seed) % ENVIRONMENT_ART_RULES.variants, key = `${family}:${variant}`;
     const existing = this.cache.get(key);
     if (existing) { this.cache.delete(key); this.cache.set(key, existing); return existing; }
     const large = family === 'willow' || family === 'canopy';
-    const width = family === 'willow' ? 176 : large ? 156 : family === 'fern' ? 52 : family === 'reeds' ? 42 : 34;
-    const height = large ? 170 : family === 'reeds' ? 49 : 37;
+    const width = bounds?.[0] ?? (family === 'willow' ? 176 : large ? 156 : family === 'fern' ? 52 : family === 'reeds' ? 42 : 34);
+    const height = bounds?.[1] ?? (large ? 170 : family === 'reeds' ? 49 : 37);
     const image = this.factory(width, height); image.width = width; image.height = height;
     const c = image.getContext('2d');
     if (!c) throw new Error('A 2D canvas context is required for biome art.');
     const sprite: Sprite = { image, width, height, anchorX: width / 2, anchorY: height - 4 };
     const seed = hash(variant + family.length * 313);
     c.translate(sprite.anchorX, sprite.anchorY);
-    if (family === 'willow') this.willow(c, seed);
+    if (bounds) drawBiomeProp(c, family, seed);
+    else if (family === 'willow') this.willow(c, seed);
     else if (family === 'canopy') this.canopy(c, seed);
     else if (family === 'reeds') this.reeds(c, seed);
     else if (family === 'fern') this.fern(c, seed);
     else this.flowers(c, seed);
     this.cache.set(key, sprite);
-    if (this.cache.size > 72) this.cache.delete(this.cache.keys().next().value!);
+    if (this.cache.size > ENVIRONMENT_ART_RULES.cacheLimit) this.cache.delete(this.cache.keys().next().value!);
     return sprite;
   }
 
@@ -179,16 +184,24 @@ export class EnvironmentArt {
     }
   }
 
-  drawAmbient(c: CanvasRenderingContext2D, weights: BiomeWeights, view: ViewRect, time: number, reducedMotion: boolean) {
+  drawAmbient(c: CanvasRenderingContext2D, sampleWeights: (x: number, y: number) => BiomeWeights,
+    view: ViewRect, time: number, reducedMotion: boolean) {
+    if (![view.x, view.y, view.width, view.height, time].every(Number.isFinite) || view.width <= 0 || view.height <= 0) return;
     const t = reducedMotion ? 0 : time;
     c.save();
     const opacity = c.globalAlpha;
-    for (let cy = Math.floor(view.y / 170) - 1; cy <= Math.floor((view.y + view.height) / 170); cy++) {
-      for (let cx = Math.floor(view.x / 170) - 1; cx <= Math.floor((view.x + view.width) / 170); cx++) {
+    const cells = (Math.ceil(view.width / 170) + 2) * (Math.ceil(view.height / 170) + 2);
+    const stride = Math.max(1, Math.ceil(Math.sqrt(cells / ENVIRONMENT_ART_RULES.ambientCells)));
+    let visited = 0;
+    ambient: for (let cy = Math.floor(view.y / 170 / stride) * stride - stride; cy <= Math.floor((view.y + view.height) / 170); cy += stride) {
+      for (let cx = Math.floor(view.x / 170 / stride) * stride - stride; cx <= Math.floor((view.x + view.width) / 170); cx += stride) {
+        if (visited++ >= ENVIRONMENT_ART_RULES.ambientCells) break ambient;
         const seed = hash(Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663));
         const phase = random(seed, 0) * TAU;
         const x = cx * 170 + random(seed, 1) * 170 + Math.sin(t * .35 + phase) * 13;
         const y = cy * 170 + random(seed, 2) * 170 + Math.cos(t * .3 + phase) * 8;
+        // Particle families belong to their world anchor, not the camera's biome.
+        const weights = sampleWeights(cx * 170 + 85, cy * 170 + 85);
         if (weights.swamp > .05) {
           const pulse = .25 + .75 * Math.max(0, Math.sin(t * 1.3 + phase));
           c.globalAlpha = opacity * weights.swamp * pulse * .55;
@@ -202,6 +215,34 @@ export class EnvironmentArt {
           c.save(); c.translate(x + 31, y - 23); c.rotate(Math.sin(t + phase) * .7);
           c.fillRect(-1.5, -.6, 3, 1.2); c.restore();
         }
+        if (weights.frostpine > .05) {
+          c.globalAlpha = opacity * weights.frostpine * .62; c.fillStyle = '#dbe9e6';
+          for (let flake = 0; flake < 3; flake++) {
+            const fx = x + flake * 37 + Math.sin(t * .55 + phase + flake) * 17;
+            const fy = y + ((t * 11 + flake * 53 + phase * 17) % 160) - 80;
+            c.fillRect(fx, fy, flake === 1 ? 1.8 : 1.1, flake === 1 ? 1.1 : 1.5);
+          }
+        }
+        if (weights.emberfall > .05) {
+          const emberY = y - ((t * 14 + phase * 20) % 110);
+          const pulse = .5 + Math.sin(t * 2 + phase) * .35;
+          c.globalAlpha = opacity * weights.emberfall * pulse;
+          c.fillStyle = '#e9aa70'; c.fillRect(x + Math.sin(t + phase) * 4, emberY, 1.3, 1.5);
+          c.fillStyle = '#a28c87'; c.fillRect(x - 32, y + Math.sin(t * .2 + phase) * 14, 1.2, .8);
+        }
+        if (weights.autumn > .05 && seed % 2 === 0) {
+          c.globalAlpha = opacity * weights.autumn * .55;
+          c.save(); c.translate(x + Math.sin(t * .45 + phase) * 21, y + Math.cos(t * .6 + phase) * 8);
+          c.rotate(Math.sin(t * .8 + phase) * 1.1);
+          polygon(c, [[-2.8, 0], [-1, -1.5], [.8, -1], [2.8, .1], [.7, 1.5], [-1.2, 1]], seed % 3 ? '#d4a55c' : '#b67748');
+          c.restore();
+        }
+        if (weights.highlands > .05 && seed % 3 === 0) {
+          c.globalAlpha = opacity * weights.highlands * .38;
+          c.strokeStyle = '#c7c2ae'; c.lineWidth = .65; c.beginPath();
+          c.moveTo(x + Math.sin(t * .3 + phase) * 20, y); c.lineTo(x + 4 + Math.sin(t * .3 + phase) * 20, y - 1.5); c.stroke();
+        }
+        c.globalAlpha = opacity;
       }
     }
     c.restore();
