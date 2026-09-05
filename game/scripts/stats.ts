@@ -23,6 +23,7 @@ import { ENVIRONMENT_ART_RULES } from '../src/environment-art.ts';
 import { MAP_TERRAIN_RULES, mapTerrainSize } from '../src/world-map.ts';
 import { MAP_ZOOM } from '../src/map-view.ts';
 import { GROUND_DRESSING_LIMIT } from '../src/ground-art.ts';
+import { BIOME_LIFE_LIMITS } from '../src/biome-life.ts';
 import { TREE_BOUNDS } from '../src/tree-art.ts';
 import { WORLD_GENERATION_VERSION } from '../src/world.ts';
 
@@ -61,7 +62,7 @@ console.log(JSON.stringify({
     targetRoamingEnemies: { base: ENCOUNTER_RULES.basePopulation, maximum: ENCOUNTER_RULES.targetPopulationCap },
     reservedRoamingSlots: ENCOUNTER_RULES.roamingReserve, hardEnemyCap: ENCOUNTER_RULES.hardPopulationCap,
     wildernessCells: WILDERNESS_RULES.cacheLimit, campLedger: CAMP_POPULATION_RULES.ledgerCapacity,
-    climateRegions: BIOME_FIELD_RULES.cacheLimit,
+    climateRegions: BIOME_FIELD_RULES.cacheLimit, biomeLife: BIOME_LIFE_LIMITS,
     groundDressingStamps: GROUND_DRESSING_LIMIT, layeredTreeFamilies: Object.keys(TREE_BOUNDS).length,
     environmentSprites: ENVIRONMENT_ART_RULES.cacheLimit, environmentVariantsPerFamily: ENVIRONMENT_ART_RULES.variants,
     mapTerrainTiles: MAP_TERRAIN_RULES.cacheLimit, visibleMapTerrainTiles: MAP_TERRAIN_RULES.maximumVisibleTiles,

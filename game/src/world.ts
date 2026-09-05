@@ -6,6 +6,7 @@ import { drawBiomeGroundAccent } from './biome-prop-art.ts';
 import { circleHitsRect, contains, FIRST_TOWN_Y, freezeSettlement, generateSettlement, intersects, MAX_TOWN_RADIUS, settlementPavingWeight, settlementPOIs, TOWN_INTERVAL } from './settlements.ts';
 import type { Building, POI, Settlement } from './settlements.ts';
 import { mainPathX, pathDistance, roadSurface } from './road-shape.ts';
+import { groundContact, surfaceWaterWeight } from './ground-material.ts';
 import { drawGroundSurface } from './ground-surface.ts';
 import { drawRoadDetails } from './road-art.ts';
 import { isWorldCoordinate, validWorldRectangle, WORLD_QUERY_LIMITS } from './world-query.ts';
@@ -207,7 +208,7 @@ export class World {
     const profile = roadSurface(x, y, this.seed), road = profile.weight;
     const paved = this.pavingWeight(towns, x, y, road);
     const base = detail ? biomeGround(weights, smoothstep(.50, .85, damp) * .65) : biomeMapColor(weights);
-    const water = weights.swamp * smoothstep(.48, .75, damp) * (1 - road);
+    const water = surfaceWaterWeight(weights, damp, road);
     const wet = smoothstep(.35, .85, damp) * (.35 + weights.swamp * .65);
     const pool = [15, 48, 60];
     const dirt = [58 - wet * 9, 51 - wet * 5, 39 - wet * 2];
@@ -219,6 +220,14 @@ export class World {
     return base.map((value, i) => (((value + weather * .65 + [8, 16, 10][i] * bank) * (1 - water) + pool[i] * water) * (1 - road)
       + (dirt[i] + weather - track) * road) * (1 - paved)
       + (stone[i] + weather * .7 - (detail ? wet * 4 : 0)) * paved + grain);
+  }
+
+  /** Presentation samples the actual terrain materials only when a foot lands. */
+  sampleGroundContact(x: number, y: number) {
+    const weights = this.sampleBiome(x, y).weights;
+    const road = this.roadWeight(x, y), towns = this.getSettlements(x, y, .01, .01);
+    return groundContact(weights, noise(x / 180, y / 180, this.seed + 201), road,
+      this.pavingWeight(towns, x, y, road), !!this.getBuildingAt(x, y));
   }
 
   /** Half-open rectangle of ground contacts, returned in stable depth order. */

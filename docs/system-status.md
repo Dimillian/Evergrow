@@ -1,8 +1,10 @@
 # System status and foundation checkpoint
 
-## Living forest visual pass
+## Living biomes visual pass
 
-Verdant now has shared traveling gusts, responsive grass and footstep litter, decorative crows/butterflies, moving dapple and restrained canopy shafts. Limits: 40 grass disturbances, 48 foot impressions, 100 leaves, six crows, ten butterflies, 100 ground anchors and five shafts. Reduced motion freezes reactions; teleports and reset clear movement history appropriately. `/forest.html` provides a staged 14-second recording through the actual renderer and CRT. See [living forest](living-forest.md). All 419 code tests, strict application/core compilation and production build pass. Motion was reviewed in the local in-app browser; combat-load performance remains for playtesting.
+The forest motion system now covers all seven climates: shared traveling gusts, reactive grass, material-specific footsteps, moving canopy light, five bird silhouettes and three insect silhouettes. The Mire samples actual water for splashes; Frostpine leaves snow impressions; Emberfall adds ash and rock sparks; Amberwood lifts copper leaves; Highlands sheds windborne seeds. Mixed borders share one budget: 40 disturbances, 48 footprints, 100 particles, six birds, ten insects, 100 ground anchors and five shafts. Reduced motion freezes reactions; teleports and reset clear movement history. See [living biomes](living-biomes.md).
+
+All 423 code tests, strict application/core compilation and production build pass. Native Canvas staging inspected the actual renderer in all seven climates and two mixed borders, before the CRT pass and without gameplay ticks or saves. The earlier `/forest.html` browser recording remains available. Combat-load performance and the expanded motion in play remain for user testing. World generation and exploration namespace are unchanged.
 
 2026-09-05 · local prototype · world generation 4 · character foundation 2 · weapon schools 1 · progression model 1 · wilderness encounters 1.
 

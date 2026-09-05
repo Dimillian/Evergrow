@@ -1,6 +1,6 @@
-import { ForestLife } from './forest-life.ts';
-import { ForestLifeArt } from './forest-life-art.ts';
-import { forestWind } from './forest-wind.ts';
+import { BiomeLife } from './biome-life.ts';
+import { BiomeLifeArt } from './biome-life-art.ts';
+import { biomeWind } from './biome-wind.ts';
 import { AtmosphereArt } from './atmosphere-art.ts';
 import { GroundDressing } from './ground-art.ts';
 import { SKILL_CAST_MOTION } from './combat-content.ts';
@@ -75,8 +75,8 @@ export class Renderer {
   private settlementArt = new SettlementArt();
   private environmentArt = new EnvironmentArt();
   private atmosphere = new AtmosphereArt();
-  private forestLife = new ForestLife();
-  private forestArt = new ForestLifeArt();
+  private biomeLife = new BiomeLife();
+  private biomeArt = new BiomeLifeArt();
   private crownOpacity = new Map<string, number>();
   private visibility = new SceneVisibility();
   private get cachedBuildings() { return this.visibility.buildings; }
@@ -127,7 +127,7 @@ export class Renderer {
     this.cameraX = 0; this.cameraY = 0; this.effects.reset();
     this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
     this.lastDisplayedView = this.view;
-    this.groundLayer.reset(); this.groundDressing.reset(); this.forestLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
+    this.groundLayer.reset(); this.groundDressing.reset(); this.biomeLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
     this.settlementArt.reset(); this.indoorBlend = 0;
     this.corpses = []; this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
@@ -222,8 +222,8 @@ export class Renderer {
     this.settlementArt.update(this.cachedBuildings, px, py, dt, settings.reducedMotion);
     this.indoorBlend += ((world.getBuildingAt(px, py) ? 1 : 0) - this.indoorBlend) * (1 - Math.exp(-dt * 5));
     const biome = world.sampleBiome(px, py);
-    this.forestLife.update(dt, this.visualTime, this.cachedProps, { x: px, y: py, vx: p.vx, vy: p.vy },
-      settings.reducedMotion, biome.id === 'verdant' && !world.getBuildingAt(px, py));
+    this.biomeLife.update(dt, this.visualTime, this.cachedProps, { x: px, y: py, vx: p.vx, vy: p.vy },
+      settings.reducedMotion, (x, y) => world.sampleGroundContact(x, y));
     c.fillStyle = '#101c22'; c.fillRect(0, 0, this.width, this.height);
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
     this.groundLayer.draw(c, world, left, top, worldWidth, worldHeight);
@@ -231,7 +231,7 @@ export class Renderer {
     this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime);
     this.remains();
     this.groundDressing.draw(c, this.cachedProps, this.view);
-    this.forestArt.drawGround(c, this.forestLife, this.cachedProps, this.visualTime, settings.reducedMotion, this.view);
+    this.biomeArt.drawGround(c, this.biomeLife, this.cachedProps, this.visualTime, settings.reducedMotion, this.view);
     this.atmosphere.drawWater(c, this.cachedProps, this.visualTime, settings.reducedMotion);
     this.enemyFocusMark(alpha);
     for (const pickup of sim.pickups) {
@@ -257,8 +257,8 @@ export class Renderer {
     const ambient = `rgb(${ambientChannels.join(',')})`;
     this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps, ambient, zoom);
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
-    this.forestArt.drawLight(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
-    this.forestArt.drawAir(c, this.forestLife, this.visualTime, settings.reducedMotion);
+    this.biomeArt.drawLight(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
+    this.biomeArt.drawAir(c, this.biomeLife, this.visualTime, settings.reducedMotion);
     this.atmosphere.drawMist(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, px, py, alpha, lights);
@@ -341,7 +341,7 @@ export class Renderer {
       const occludes = crown && py < prop.y + 8 && py > prop.y - (crown.height + crown.radius) * prop.scale
         && Math.abs(px - prop.x - crown.offsetX * prop.scale) < crown.radius * prop.scale;
       let foliageOpacity = occludes ? .24 : 1;
-      if (sprite.foliage && prop.biome === 'verdant' && !settings.reducedMotion) {
+      if (sprite.foliage && !settings.reducedMotion) {
         foliageOpacity += ((this.crownOpacity.get(prop.id) ?? 1) - foliageOpacity) * Math.exp(-dt * 13);
         if (!occludes && foliageOpacity > .995) this.crownOpacity.delete(prop.id);
         else this.crownOpacity.set(prop.id, foliageOpacity);
@@ -350,20 +350,15 @@ export class Renderer {
       c.save(); c.translate(prop.x, prop.y); c.scale(prop.scale, prop.scale);
       // Trunks stay rooted and opaque. Only the obstructing canopy becomes translucent.
       if (!sprite.foliage && definition.radius[1] === 0) {
-        const wind = prop.biome === 'verdant'
-          ? forestWind(prop.x, prop.y, this.visualTime, settings.reducedMotion).x * definition.sway
-          : settings.reducedMotion ? 0 : Math.sin(this.visualTime * .8 + prop.seed) * definition.sway;
-        const bend = settings.reducedMotion ? 0 : this.forestLife.bend(prop.x, prop.y);
+        const wind = biomeWind(prop.x, prop.y, this.visualTime, prop.biome ?? 'deadwood', settings.reducedMotion).x * definition.sway;
+        const bend = settings.reducedMotion ? 0 : this.biomeLife.bend(prop.x, prop.y);
         c.transform(1, 0, -bend * .35, 1 - Math.abs(bend) * .18, 0, 0);
         c.transform(1, 0, wind * -.012, 1, 0, 0);
       }
       c.drawImage(sprite.image, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
       for (const [layer, foliage] of (sprite.foliage ?? []).entries()) {
         c.save();
-        const gust = prop.biome === 'verdant'
-          ? forestWind(prop.x, prop.y, this.visualTime - layer * .18, settings.reducedMotion).x * definition.sway * 2.2
-          : settings.reducedMotion ? 0 : (Math.sin(this.visualTime * .72 + prop.x * .009 + prop.y * .006)
-          + Math.sin(this.visualTime * 1.27 + prop.seed + layer * 1.7) * .34) * definition.sway;
+        const gust = biomeWind(prop.x, prop.y, this.visualTime - layer * .18, prop.biome ?? 'deadwood', settings.reducedMotion).x * definition.sway * 2.2;
         c.transform(1, 0, gust * (layer ? -.009 : -.005), 1, 0, 0);
         c.globalAlpha *= foliageOpacity;
         c.drawImage(foliage, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
@@ -371,8 +366,8 @@ export class Renderer {
       }
       c.restore();
     } }));
-    for (const bird of this.forestLife.birds) entries.push({ y: bird.y + (bird.state === 'perched' ? 1 : 130),
-      draw: () => this.forestArt.drawBird(c, bird, this.visualTime, settings.reducedMotion) });
+    for (const bird of this.biomeLife.birds) entries.push({ y: bird.y + (bird.state === 'perched' ? 1 : 130),
+      draw: () => this.biomeArt.drawBird(c, bird, this.visualTime, settings.reducedMotion) });
     for (const building of this.cachedBuildings) {
       for (const layer of this.settlementArt.getStructureLayers(building, this.visualTime)) {
         entries.push({ y: layer.y, draw: () => layer.draw(c) });

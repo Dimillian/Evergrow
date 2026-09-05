@@ -44,3 +44,7 @@ Biome-specific enemies and loot biases extend the existing tables; level, XP, ra
 `material-art.ts` supplies clipped stone fractures, strata and lichen. `architecture-art.ts` draws sloped slate courses, repairs, sheltered roof moss, soot, foundation weathering and service-specific flat activity marks. Building entrances and furniture retain their existing geometry. `atmosphere-art.ts` adds lily-anchored ripples and at most twelve localized mist banks; reduced motion freezes their phases.
 
 Larger tree crowns now reserve their full projected area around protected sites. Individual physical radii, roads, climate geography and POIs are unchanged; a few trees near protected landmarks may be omitted by the more conservative crown clearance. Generation remains 4 and there is no exploration reset. See [graphics overhaul](graphics-overhaul.md) for scope, verification and exports.
+
+## Living biomes, 2026-09-05
+
+All climates now share traveling gusts, reactive groundcover, moving canopy light and smooth foliage occlusion. Immutable `biome-life-content.ts` recipes give each climate its own debris, ground impressions, birds and insects. Footsteps sample the same wetness and road/paving coverage as terrain coloring; the Mire produces splashes only on wet patches. Existing props anchor wildlife and gust emissions, while each footstep particle samples the blended climate weights. Mixed borders retain both materials and species, with shared effect caps across the whole scene. See [living biomes](living-biomes.md). World generation remains 4; no exploration reset.

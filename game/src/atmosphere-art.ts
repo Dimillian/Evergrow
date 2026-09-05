@@ -1,5 +1,6 @@
 import type { Prop } from './world.ts';
 import { hash, randomFromSeed } from './art-primitives.ts';
+import { biomeWind } from './biome-wind.ts';
 
 /** Anchored water and air, with fixed draw budgets and no simulation or particle state. */
 export class AtmosphereArt {
@@ -39,7 +40,9 @@ export class AtmosphereArt {
     for (const prop of props) {
       if (!['willow', 'iceCrystal', 'windTree'].includes(prop.kind) || hash(prop.seed) % 4 !== 0 || count++ >= 12) continue;
       const phase = hash(prop.seed) / 0x100000000 * Math.PI * 2;
-      const x = prop.x + Math.sin(t * .13 + phase) * 25, y = prop.y - 12 + Math.cos(t * .16 + phase) * 8;
+      const wind = biomeWind(prop.x, prop.y, t, prop.biome ?? 'deadwood', reducedMotion);
+      const x = prop.x + Math.sin(t * .13 + phase) * 25 + wind.x * 10,
+        y = prop.y - 12 + Math.cos(t * .16 + phase) * 8 + wind.y * 4;
       // Leave the immediate combat silhouette clear even when a mist bank crosses it.
       const clearance = Math.min(1, Math.hypot(x - playerX, y - playerY) / 110);
       c.globalAlpha = (.13 + Math.sin(t * .27 + phase) * .025) * clearance;
