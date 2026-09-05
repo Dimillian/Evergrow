@@ -1,10 +1,11 @@
 /** Shared logical coordinates for Astral artwork, controls, and pointer routing. */
 export const HUD_ART = Object.freeze({
-  width: 520, height: 156, maxScale: .82,
+  width: 520, height: 174, maxScale: .82,
   menu: Object.freeze({ x: 186, y: 30, width: 35, height: 22, step: 37 }),
   skill: Object.freeze({ x: 135, y: 70, width: 38, height: 56, step: 42.4, count: 6 }),
   utility: Object.freeze({ left: 114, right: 342, y: 29, width: 64, height: 27 }),
   orb: Object.freeze({ left: 61, right: 459, y: 79, scale: 1.18 }),
+  experience: Object.freeze({ x: 133, y: 141, width: 254, height: 28, railHeight: 7 }),
 });
 
 /** Curved support edges in coordinates relative to the HUD's center. */
@@ -92,7 +93,9 @@ export function isHUDPoint(x: number, y: number, width: number, height: number):
   // Include a small input margin between adjacent skill plates.
   if (lx >= 133 && lx <= 387 && ly >= 64 && ly <= 136) return true;
   if (isArmPoint(lx, ly)) return true;
-  if (Math.hypot(lx - 260, ly - 13.5) <= 9 || Math.hypot(lx - 260, ly - 143) <= 6) return true;
+  const xp = HUD_ART.experience;
+  if (lx >= xp.x && lx <= xp.x + xp.width && ly >= xp.y && ly <= xp.y + xp.height) return true;
+  if (Math.hypot(lx - 260, ly - 13.5) <= 9) return true;
   return [HUD_ART.orb.left, HUD_ART.orb.right].some(cx =>
     Math.hypot(lx - cx, ly - HUD_ART.orb.y) <= 55
     || (Math.abs(lx - cx) <= 5 && ly >= 20 && ly <= 34)

@@ -26,14 +26,15 @@ test('native menu shortcut bounds remain inside the HUD and block world input at
 test('resource orbs, action tray and resource readouts block world input after responsive scaling', () => {
   // Broad interior samples describe functional areas, not individual ornamental edges.
   const occupied = [
-    ['left orb', .10, .48], ['right orb', .90, .48],
-    ['basic attack', .30, .60], ['empty skill', .43, .60], ['empty skill', .57, .60], ['empty skill', .70, .60],
-    ['health readout', .10, .90], ['mana readout', .90, .90],
+    ['left orb', 61, 79], ['right orb', 459, 79],
+    ['basic attack', 153, 94], ['empty skill', 211, 94], ['empty skill', 297, 94], ['empty skill', 365, 94],
+    ['health readout', 61, 131], ['mana readout', 459, 131],
+    ['XP rail', 260, 145], ['level', 160, 159], ['current XP', 358, 159],
   ] as const;
   for (const [width, height] of viewports) {
     const hud = getHUDLayout(width, height);
-    for (const [label, u, v] of occupied) {
-      assert.equal(isHUDPoint(hud.x + hud.width * u, hud.y + hud.height * v, width, height), true,
+    for (const [label, x, y] of occupied) {
+      assert.equal(isHUDPoint(hud.x + x * hud.scale, hud.y + y * hud.scale, width, height), true,
         `${label} must not attack through visible controls (${width}×${height})`);
     }
   }

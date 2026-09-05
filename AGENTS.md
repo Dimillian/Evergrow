@@ -32,6 +32,7 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/`: standalone Vite + TypeScript application; no runtime package dependencies.
 - `game/src/simulation.ts` and `model.ts`: deterministic 120 Hz combat state, rule execution, and render interpolation snapshots.
 - `game/src/combat-content.ts`, `encounter-director.ts`, and `combat-geometry.ts`: immutable balance definitions, encounter policy, and swept contact geometry. HUD/telegraph/action timing must consume shared definitions rather than duplicating gameplay values.
+- `game/src/progression.ts`: run-local level and XP rules; shared next-level thresholds and overflow handling. Actual enemy deaths award authored XP once in simulation. No stat bonuses or character persistence yet.
 - `game/src/equipment.ts`: immutable starter definition and per-player equipment copies used to derive the basic attack.
 - `game/src/world.ts`: seeded terrain, props, collision, and bounded tile caching.
 - `game/src/road-shape.ts` and `road-art.ts`: continuous road contours, blended junctions, worn cobbles, and gravel. Keep visual shoulders inside the existing clear corridor and preserve the shared road centerlines.
@@ -51,7 +52,7 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/src/effects.ts`: bounded combat particles, trails, flashes, and damage numbers; effects never drive gameplay.
 - `game/src/sword-trail.ts`: sampled world-space metal-gold ribbons following the weapon.
 - `game/src/postfx.ts`: world-only WebGL bloom passes, CRT/phosphor display treatment, and clean fallback.
-- `game/src/hud.ts`, `hud-frame.ts`, `hud-layout.ts`, `hud-icons.ts`, `hud-orb.ts`, and `font.ts`: the selected Astral Instrument HUD, shared layout/hit bounds, calibrated silver rings and celestial engraving, skill/menu icons, animated resource glass, and native font rendering. Keep its materials and suspended-plate silhouette when extending it.
+- `game/src/hud.ts`, `hud-frame.ts`, `hud-layout.ts`, `hud-icons.ts`, `hud-orb.ts`, `hud-experience.ts`, and `font.ts`: the selected Astral Instrument HUD, shared layout/hit bounds, calibrated silver rings and celestial engraving, skill/menu icons, animated resource glass, and native font rendering. Keep its materials and suspended-plate silhouette when extending it. The violet XP rail below the skills shows current level and XP toward the next level; smoothing and pulses are presentation only.
 - `game/src/enemy-focus.ts` and `enemy-plate.ts`: visual enemy hover/recent-hit focus and the native top name/health plate. Use interpolated body bounds and the current camera transform; hover takes priority, dead/offscreen targets clear, and attack aiming remains unchanged.
 - `game/src/assets/fonts/` and `typography.css`: locally bundled Pixelify Sans, source/license records, and shared menu typography.
 - `game/src/main.ts`: font loading, bootstrap, and hot replacement. `game.ts` coordinates systems and application phases; `game-shell.ts` owns DOM menus and controls; `game-input.ts` owns held controls and action edges; `lifetime.ts` handles reverse-order teardown and startup rollback.

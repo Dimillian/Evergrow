@@ -52,3 +52,7 @@ Open the local [interface review](http://127.0.0.1:5173/ui.html) to compare real
 ## Extending for inventory
 
 Compose the shared window, wells, slots, stat rows, badges, and tooltip surfaces. Keep equipment and item state outside the presentation helpers. Use the game's existing phase/input boundary when opening a new modal, and register its bounds with UI hit testing. Maintain 44px interactive targets, responsive overflow, native-resolution text, and keyboard access. Expand the shared primitives when a repeated pattern is needed instead of creating another independent panel theme.
+
+## Experience presentation
+
+`hud-experience.ts` supplies the violet XP rail, level label, and exact current/required XP. It consumes `progression.ts` thresholds rather than duplicating the curve. Its feedback state lives with the renderer, resets with a new run, and never modifies player progression. The layout and pointer boundary include the XP rail and labels. Keep XP distinct from the blue mana glass and retain native text rendering.

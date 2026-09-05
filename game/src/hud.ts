@@ -5,13 +5,14 @@ import { text, textWidth } from './font.ts';
 import { drawHUDSkillIcon, drawHUDMenuIcon } from './hud-icons.ts';
 import { drawHUDOrb } from './hud-orb.ts';
 import { drawHUDFrame } from './hud-frame.ts';
+import { drawHUDExperience, type ExperienceDisplay } from './hud-experience.ts';
 import { HUD_ART, HUD_MENU_SHORTCUTS, HUD_SKILL_SLOTS, getHUDLayout } from './hud-layout.ts';
 
 // Preserve the public entrypoint for the shell and existing UI consumers.
 export { HUD_MENU_SHORTCUTS, getHUDLayout, isHUDPoint } from './hud-layout.ts';
 export type { HUDRect, HUDShortcut, HUDLayout } from './hud-layout.ts';
 
-export interface HUDOptions { reducedMotion?: boolean; healthTrail?: number; hitPulse?: number; }
+export interface HUDOptions { reducedMotion?: boolean; healthTrail?: number; hitPulse?: number; experience?: ExperienceDisplay; }
 
 const UI = UI_THEME.palette;
 const TAU = Math.PI * 2;
@@ -141,6 +142,7 @@ export function drawHUDContents(c: CanvasRenderingContext2D, p: Player, time: nu
   shortcuts(c);
   readout(c, orb.left, Math.ceil(Math.max(0, p.hp)), p.maxHp, false);
   readout(c, orb.right, Math.floor(Math.max(0, p.mana)), p.maxMana, true);
+  drawHUDExperience(c, p, t, options.experience);
 }
 
 /** Drawn at native display density above the world shader. */

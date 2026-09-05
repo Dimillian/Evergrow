@@ -10,6 +10,7 @@ The foundation pass preserves existing gameplay and art while making rules, draw
 | --- | --- | --- |
 | Combat | 120 Hz deterministic simulation; 3 playable player actions (basic attack, dodge, potion); swept melee/projectiles; buffering, dodge, recoil, death/restart | Tested foundation; action execution remains explicit |
 | Encounters | 3 enemy archetypes, progression-based mix, 5–10 target population, 12-enemy hard cap, 2 pack + 1 special simultaneous attack slots | Bounded prototype; large crowds need profiling |
+| Experience / levels | Level 1 / 0 XP start; per-enemy kill rewards; increasing thresholds; overflow; live XP/level bar | Run-local foundation; no level stat rewards or character saving yet |
 | Equipment / stats | 1 sword definition; speed/damage multipliers; attack snapshots; 7 outfit layers; two-hand grip with future off-hand occupancy | Rendering/stat foundation; no inventory or item swapping UI |
 | World | 3 smoothly connected biomes; streamed 256-unit terrain tiles; deterministic roads, props and clear corridors | Tested generation; biome distribution is still a three-region prototype |
 | Settlements / interiors | 5 building kinds; 8 buildings in Briarwatch; towns target 5–8, cities 12–16; shared doors/walls/furniture; roof fading and sanctuaries | Walkable layout foundation; no residents or service transactions |
@@ -76,3 +77,9 @@ Static in-app browser inspection covered start/pause/defeat windows, the world m
 ## Astral skill-bar checkpoint
 
 The live HUD has one basic attack, five unassigned skill wells, and separate potion/dodge shortcuts within the same compact Astral footprint. Right-click and 1–4 perform no action. Simulation and input no longer start or buffer default fireball casts; regression tests cover stale/direct cast input and normal attack, dodge, potion, and movement behavior. The current check passes **180 code tests**, strict/core compilation, and a production build. Gameplay feedback remains with the user.
+
+## Experience checkpoint
+
+Kills award 20 XP for a Hollow Stalker, 30 for a Mire Hexer, and 50 for a Gravebound Brute, once per death. The next level requires `100 + 50 × (level − 1)` XP. Overflow carries across levels; new runs reset to level 1 / 0 XP. Current combat stats remain independent of level. The Astral HUD shows exact current/required XP plus level, with a smoothed violet rail and level-up pulse that respects reduced motion.
+
+Verification: **190 code tests**, strict application/core compilation, and production build passed. Tests cover lethal-only and duplicate rewards, sanctuary despawns, overflow and multiple levels, run reset, HUD input bounds, animation convergence, and reduced motion. Static in-app previews cover desktop and narrow layouts; gameplay testing remains with the user.

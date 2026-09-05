@@ -428,7 +428,7 @@ test('swept projectiles hit the first crossed enemy exactly once', () => {
   assert.equal(sim.projectiles.length, 0);
 });
 
-test('simultaneous lethal attacks award one kill and one pickup', () => {
+test('simultaneous lethal attacks award one kill, one XP reward, and one pickup', () => {
   const sim = make();
   const enemy = target(sim, 35);
   enemy.hp = 20;
@@ -436,6 +436,8 @@ test('simultaneous lethal attacks award one kill and one pickup', () => {
   sim.projectiles.push({ id: 999, x: 25, y: 0, prevX: 25, prevY: 0, vx: 360, vy: 0, angle: 0, radius: 5, damage: 36, life: 1, maxLife: 1, owner: 'player' });
   sim.update(FIXED_STEP, idle);
   assert.equal(sim.kills, 1);
+  assert.equal(sim.player.xp, 50);
+  assert.equal(sim.player.level, 1);
   assert.equal(sim.pickups.length, 1);
   assert.equal(sim.drainEvents().filter(event => event.type === 'kill').length, 1);
 });

@@ -6,6 +6,7 @@ import type { Simulation } from './simulation.ts';
 import type { CombatEvent, Enemy } from './model.ts';
 import { text } from './font.ts';
 import { drawFloatingHUD } from './hud.ts';
+import { ExperienceFeedback, type ExperienceDisplay } from './hud-experience.ts';
 import { Lighting, drawGlow } from './lighting.ts';
 import type { PointLight } from './lighting.ts';
 import { CombatEffects } from './effects.ts';
@@ -50,6 +51,8 @@ export class Renderer {
   private damageTrails = new Map<number, { value: number; hold: number }>();
   private playerHealthTrail = 100;
   private playerHealthHold = 0;
+  private experienceFeedback = new ExperienceFeedback();
+  private experienceDisplay: ExperienceDisplay | undefined;
   private effects = new CombatEffects();
   private groundLayer = new GroundLayer();
   private settlementArt = new SettlementArt();
@@ -96,6 +99,7 @@ export class Renderer {
     this.corpses = []; this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
     this.damageTrails.clear(); this.playerHealthTrail = 100; this.playerHealthHold = 0;
+    this.experienceFeedback.reset(); this.experienceDisplay = undefined;
     this.enemyFocus.reset(); this.focusedEnemy = this.plateEnemy = null; this.plateOpacity = 0;
     this.visibility.reset();
   }
@@ -129,6 +133,7 @@ export class Renderer {
     const c = this.ctx, p = sim.player, active = settings.phase === 'playing';
     const step = active ? dt : 0, alpha = sim.interpolationAlpha;
     const feedbackStep = active || settings.phase === 'dead' ? dt : 0;
+    this.experienceDisplay = this.experienceFeedback.update(p, feedbackStep, settings.reducedMotion);
     const px = lerp(p.prevX, p.x, alpha), py = lerp(p.prevY, p.y, alpha);
     this.visualTime += dt;
     this.shake *= Math.exp(-dt * 22); this.hurt *= Math.exp(-dt * 5);
@@ -238,6 +243,7 @@ export class Renderer {
     drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
       reducedMotion: settings.reducedMotion, healthTrail: this.playerHealthTrail / Math.max(1, p.maxHp),
       hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / COMBAT_TIMING.hitFlashDuration),
+      experience: this.experienceDisplay,
     });
     if (this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, this.width, this.height, {
       opacity: this.plateOpacity,

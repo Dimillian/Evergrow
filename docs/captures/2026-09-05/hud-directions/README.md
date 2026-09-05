@@ -11,3 +11,6 @@ The user selected The Astral Instrument. The game uses its procedural frame, wit
 
 - `evergrowing-astral-six-skills.png`: refined live bar with basic attack, five empty skills, and separate Q/Space utilities; healthy state at `/hud.html?state=healthy`. Earlier live captures above retain the previous four-action arrangement.
 - `evergrowing-astral-six-skills-narrow.png`: 390px depleted-state review of the same six-slot bar and separate utility cooldowns.
+
+- `evergrowing-astral-xp.png`: current Astral XP rail at level 1, 60/100 XP, using the frozen healthy-state review.
+- `evergrowing-astral-xp-narrow.png`: 390px depleted-state preview with level 4 and 220/250 XP.

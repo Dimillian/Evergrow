@@ -6,6 +6,7 @@ import { BASIC_ATTACK_PHASES, COMBAT_TIMING, ENEMY_DEFINITIONS, LOOT_RULES, PLAY
   PLAYER_DEFAULTS, PLAYER_MOVEMENT, PROJECTILE_DEFINITIONS, type ProjectileDefinition } from './combat-content.ts';
 import { canEnemyJoinAttack, chooseEncounterEnemy, ENCOUNTER_RULES, livingEnemyCount } from './encounter-director.ts';
 import { circleIntersectsSector, segmentDistanceSquared } from './combat-geometry.ts';
+import { awardExperience } from './progression.ts';
 
 export { BASIC_ATTACK_PHASES } from './combat-content.ts';
 export { angleDifference, circleIntersectsSector } from './combat-geometry.ts';
@@ -17,6 +18,7 @@ function initialPlayer(x: number, y: number): Player {
   return {
     x, y, prevX: x, prevY: y, vx: 0, vy: 0, angle: 0,
     hp: PLAYER_DEFAULTS.maxHp, maxHp: PLAYER_DEFAULTS.maxHp, mana: PLAYER_DEFAULTS.maxMana, maxMana: PLAYER_DEFAULTS.maxMana,
+    level: 1, xp: 0,
     stats: createBaseStats(), equipment: createStartingEquipment(),
     attack: null, dodgeTime: 0, dodgeAngle: 0, dodgeCharges: PLAYER_ABILITIES.dodge.charges, dodgeRecharge: 0,
     invulnerable: 0, flasks: PLAYER_ABILITIES.heal.charges, healCooldown: 0, castCooldown: 0, castTime: 0,
@@ -315,6 +317,7 @@ export class Simulation {
     if (enemy.hp <= 0) {
       this.transition(enemy, 'dead', ENCOUNTER_RULES.corpseDuration);
       this.kills++;
+      awardExperience(this.player, definition.xpReward);
       this.killRecharge++;
       if (this.killRecharge >= PLAYER_ABILITIES.heal.killsPerCharge) {
         this.killRecharge -= PLAYER_ABILITIES.heal.killsPerCharge;

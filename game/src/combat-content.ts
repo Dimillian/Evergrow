@@ -38,6 +38,7 @@ export const PROJECTILE_DEFINITIONS = Object.freeze({
 interface EnemyBaseDefinition {
   readonly name: string;
   readonly hp: number;
+  readonly xpReward: number;
   readonly radius: number;
   readonly speed: number;
   readonly windup: number;
@@ -59,15 +60,15 @@ export type EnemyDefinition = EnemyBaseDefinition & (
 );
 
 export const ENEMY_DEFINITIONS: Readonly<Record<EnemyKind, EnemyDefinition>> = Object.freeze({
-  stalker: Object.freeze({ name: 'Hollow Stalker', hp: 48, radius: 10, speed: 112,
+  stalker: Object.freeze({ name: 'Hollow Stalker', hp: 48, xpReward: 20, radius: 10, speed: 112,
     windup: .32, active: .18, recovery: .65, range: 28, damage: 8, aimLock: .16,
     attack: 'melee', arc: Math.PI * .7, lungeSpeed: 48,
     knockbackDistance: 14, interruptible: true, attackGroup: 'pack' }),
-  brute: Object.freeze({ name: 'Gravebound Brute', hp: 138, radius: 17, speed: 69,
+  brute: Object.freeze({ name: 'Gravebound Brute', hp: 138, xpReward: 50, radius: 17, speed: 69,
     windup: .75, active: .13, recovery: .9, range: 48, damage: 22, aimLock: .3,
     attack: 'melee', arc: Math.PI * 1.25, lungeSpeed: 0,
     knockbackDistance: 5, interruptible: false, attackGroup: 'special' }),
-  caster: Object.freeze({ name: 'Mire Hexer', hp: 56, radius: 11, speed: 82,
+  caster: Object.freeze({ name: 'Mire Hexer', hp: 56, xpReward: 30, radius: 11, speed: 82,
     windup: .65, active: .15, recovery: .7, range: 240, damage: PROJECTILE_DEFINITIONS.hex.damage, aimLock: .43,
     attack: 'projectile', projectile: PROJECTILE_DEFINITIONS.hex,
     minAttackDistance: 100, maxAttackDistance: 215, retreatDistance: 125,

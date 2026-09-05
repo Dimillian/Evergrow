@@ -33,9 +33,12 @@ function makeStages(): Stage[] {
   const player = () => new Simulation(emptyWorld, { spawn: false }).player;
   const healthy = player(), damaged = player(), depleted = player();
   healthy.mana = 94;
+  healthy.xp = 60;
   damaged.hp = 39; damaged.mana = 68; damaged.dodgeCharges = 1; damaged.dodgeRecharge = 1.2;
+  damaged.level = 2; damaged.xp = 90;
   depleted.hp = 16; depleted.mana = 7; depleted.flasks = 0; depleted.dodgeCharges = 0;
   depleted.dodgeRecharge = .56; depleted.healCooldown = .65;
+  depleted.level = 4; depleted.xp = 220;
   return [
     { name: 'Healthy', detail: 'Full vitality · abilities ready', player: healthy, time: 5.7, options: {},
       enemy: { kind: 'stalker', hp: 48, maxHp: 48 } },

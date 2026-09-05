@@ -77,6 +77,9 @@ export interface Player {
   maxHp: number;
   mana: number;
   maxMana: number;
+  level: number;
+  /** Experience earned toward the next level; overflow carries on level-up. */
+  xp: number;
   stats: CharacterStats;
   equipment: Equipment;
   attack: Attack | null;

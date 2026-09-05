@@ -1,4 +1,4 @@
-/** Astral Instrument HUD frame, drawn in transparent 520 × 156 logical coordinates. */
+/** Astral Instrument HUD frame; geometry is shared with native input and content. */
 import { HUD_ARM, HUD_ART } from './hud-layout.ts';
 
 const TAU = Math.PI * 2;
@@ -131,11 +131,6 @@ function actionTray(c: CanvasRenderingContext2D) {
     }
   }
 
-  c.beginPath(); c.moveTo(152, 139); c.bezierCurveTo(194, 140, 225, 143, 254, 143);
-  c.moveTo(266, 143); c.bezierCurveTo(295, 143, 326, 140, 368, 139);
-  c.strokeStyle = '#59717a'; c.lineWidth = .6; c.stroke();
-  c.beginPath(); c.arc(260, 143, 5.5, 0, TAU); c.strokeStyle = '#344f5d'; c.stroke();
-  star(c, 260, 143, 4, '#8cacae');
 }
 
 function utilityPlates(c: CanvasRenderingContext2D) {

@@ -5,7 +5,7 @@
     "types": []
   },
   "include": [
-    "src/simulation.ts", "src/combat-content.ts", "src/combat-geometry.ts", "src/encounter-director.ts",
+    "src/simulation.ts", "src/combat-content.ts", "src/combat-geometry.ts", "src/encounter-director.ts", "src/progression.ts",
     "src/equipment.ts", "src/game-input.ts", "src/lifetime.ts",
     "src/biomes.ts", "src/settlements.ts", "src/road-shape.ts", "src/world-query.ts",
     "src/player-arm-rig.ts", "src/camera.ts", "src/exploration-save.ts"

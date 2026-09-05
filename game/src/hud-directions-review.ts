@@ -13,6 +13,7 @@ import { drawReliquary } from './hud-concept-reliquary.ts';
 import { drawThornbound } from './hud-concept-thornbound.ts';
 import { drawAstral } from './hud-concept-astral.ts';
 import { drawHUDContents } from './hud.ts';
+import { HUD_ART } from './hud-layout.ts';
 
 // Art propositions only: no Game instance, input bindings, simulation ticks or saves.
 const proposals: { id: ConceptMaterial; name: string; subtitle: string; material: string; character: string;
@@ -71,6 +72,7 @@ async function boot() {
     sim.player.hp = pressured ? 39 : 100; sim.player.mana = pressured ? 68 : 94;
     sim.player.dodgeCharges = pressured ? 1 : 2; sim.player.dodgeRecharge = pressured ? 1.2 : 0;
     sim.player.flasks = pressured ? 1 : 2;
+    sim.player.level = pressured ? 2 : 1; sim.player.xp = pressured ? 90 : 60;
     for (const { canvas, link, proposal } of sheets) {
       const width = canvas.clientWidth, height = 252; if (width < 1) continue;
       const ratio = Math.min(2, window.devicePixelRatio || 1);
@@ -84,7 +86,8 @@ async function boot() {
       shade.addColorStop(0, '#060c1120'); shade.addColorStop(1, '#040a10c9');
       c.fillStyle = shade; c.fillRect(0, 0, width, height);
       const scale = Math.min(detail ? 1.28 : .82, (width - 24) / 520);
-      c.save(); c.translate((width - 520 * scale) / 2, height - 156 * scale - 16); c.scale(scale, scale);
+      const artHeight = proposal.id === 'astral' ? HUD_ART.height : 156;
+      c.save(); c.translate((width - 520 * scale) / 2, height - artHeight * scale - 16); c.scale(scale, scale);
       proposal.draw(c, 9.2);
       if (proposal.id === 'astral') drawHUDContents(c, sim.player, 9.2, { healthTrail: pressured ? .73 : 1 });
       else drawConceptControls(c, proposal.id, pressured, 9.2);

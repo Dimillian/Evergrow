@@ -37,7 +37,7 @@ The camera smoothly zooms around the character from 0.65× to 1.8× with the mou
 
 The HUD and damage numbers render at native display resolution above the world shader. UI typography uses locally bundled [Pixelify Sans](game/src/assets/fonts/SOURCE.md), licensed under the SIL Open Font License; no external font service is used.
 
-The compact HUD uses dark metalwork, engraved skill icons, and subtly animated resource glass. A local [static HUD review](http://127.0.0.1:5173/hud.html) shows healthy, damaged, and depleted states without advancing gameplay or touching saves.
+The compact HUD uses dark metalwork, engraved skill icons, and subtly animated resource glass. A violet XP rail beneath the skills shows the current level and exact experience toward the next one. Kills grant 20 XP (stalker), 30 XP (hexer), or 50 XP (brute); the first level needs 100 XP and each following level needs 50 more. Excess XP carries over. New runs start at level 1 with 0 XP; levels do not yet grant stats or persist between runs. A local [static HUD review](http://127.0.0.1:5173/hud.html) shows healthy, damaged, and depleted states without advancing gameplay or touching saves.
 
 The selected [Astral Instrument HUD](docs/hud-directions.md) uses calibrated silver rings, celestial engraving, and suspended black-steel skill plates. Its live resources, charges, cooldowns, and damage feedback retain native-resolution text. Compare the original three studies in the local [HUD directions preview](http://127.0.0.1:5173/hud-directions.html), or inspect the live healthy/damaged/depleted states at [HUD review](http://127.0.0.1:5173/hud.html) (`?size=narrow` for 390px).
 
