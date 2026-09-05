@@ -1,16 +1,17 @@
 import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, SimulationOptions, WorldQuery } from './model.ts';
 import type { Pickup } from './model.ts';
+import { createBaseStats, createStartingEquipment, deriveAttackStats } from './equipment.ts';
 
 export const FIXED_STEP = 1 / 120;
 const TAU = Math.PI * 2;
 const BUFFER = 0.11;
+const ATTACK_BUFFER = 0.22;
 const DODGE_DURATION = 0.22;
 const MAX_ENEMIES = 12;
-const ATTACKS = [
-  { duration: 0.32, activeStart: 0.08, activeEnd: 0.13, chain: 0.24, range: 49, arc: 105 * Math.PI / 180, damage: 24 },
-  { duration: 0.34, activeStart: 0.09, activeEnd: 0.15, chain: 0.26, range: 52, arc: 115 * Math.PI / 180, damage: 28 },
-  { duration: 0.45, activeStart: 0.13, activeEnd: 0.21, chain: 0.35, range: 58, arc: 145 * Math.PI / 180, damage: 40 },
-];
+const MOVE_SPEED = 165;
+const KNOCKBACK_DECAY = 0.065;
+/** Normalized phases of the one basic attack, scaled by derived attack speed. */
+export const BASIC_ATTACK_PHASES = { activeStart: .19, activeEnd: .45 } as const;
 const ENEMY_STATS = {
   stalker: { hp: 48, radius: 10, speed: 112, windup: 0.32, active: 0.18, recovery: 0.65, range: 28, damage: 8 },
   brute: { hp: 138, radius: 17, speed: 69, windup: 0.75, active: 0.13, recovery: 0.9, range: 48, damage: 22 },
@@ -45,7 +46,8 @@ export function circleIntersectsSector(x: number, y: number, radius: number, ori
 
 function initialPlayer(x: number, y: number): Player {
   return {
-    x, y, vx: 0, vy: 0, angle: 0, hp: 100, maxHp: 100, mana: 100, maxMana: 100,
+    x, y, prevX: x, prevY: y, vx: 0, vy: 0, angle: 0, hp: 100, maxHp: 100, mana: 100, maxMana: 100,
+    stats: createBaseStats(), equipment: createStartingEquipment(),
     attack: null, dodgeTime: 0, dodgeAngle: 0, dodgeCharges: 2, dodgeRecharge: 0,
     invulnerable: 0, flasks: 2, healCooldown: 0, castCooldown: 0, castTime: 0,
     castAngle: 0, healFlash: 0, walkTime: 0, radius: 9, dead: false,
@@ -69,8 +71,6 @@ export class Simulation {
   private castBuffer = -1;
   private dodgeBuffer = -1;
   private healBuffer = -1;
-  private lastCombo = 0;
-  private comboExpires = 0;
   private hurtGuard = 0;
   private castReleased = false;
   private spawnTimer = 0;
@@ -95,7 +95,7 @@ export class Simulation {
     this.events = [];
     this.randomState = this.options.seed! >>> 0;
     this.attackBuffer = this.castBuffer = this.dodgeBuffer = this.healBuffer = -1;
-    this.lastCombo = this.comboExpires = this.hurtGuard = this.killRecharge = 0;
+    this.hurtGuard = this.killRecharge = 0;
     this.castReleased = false;
     this.spawnTimer = 2;
     if (this.options.spawn) for (let i = 0; i < 3; i++) this.spawnAroundPlayer('stalker', 220, 270);
@@ -106,6 +106,17 @@ export class Simulation {
     this.attackBuffer = this.castBuffer = this.dodgeBuffer = this.healBuffer = -1;
     this.player.vx = this.player.vy = 0;
     this.accumulator = 0;
+    this.capturePositions();
+  }
+
+  /** UI hover cancels queued weapons while movement and current actions continue. */
+  clearCombatInput(): void {
+    this.attackBuffer = this.castBuffer = -1;
+  }
+
+  /** Fraction between the two most recent fixed-tick positions for rendering. */
+  get interpolationAlpha(): number {
+    return Math.max(0, Math.min(1, this.accumulator / FIXED_STEP));
   }
 
   drainEvents(): CombatEvent[] {
@@ -116,15 +127,15 @@ export class Simulation {
 
   update(dt: number, input: Input): void {
     if (!Number.isFinite(dt) || dt <= 0 || this.player.dead) return;
-    if (input.attack) this.attackBuffer = this.time + BUFFER;
+    if (input.attack) this.attackBuffer = this.time + ATTACK_BUFFER;
     if (input.cast) this.castBuffer = this.time + BUFFER;
     if (input.dodge) this.dodgeBuffer = this.time + BUFFER;
     if (input.heal) this.healBuffer = this.time + BUFFER;
     // Bound catch-up after a suspended tab; normal frames always run at 120 Hz.
     this.accumulator += Math.min(dt, 0.25);
     while (this.accumulator + 1e-10 >= FIXED_STEP && !this.player.dead) {
-      this.step(FIXED_STEP, input);
       this.accumulator -= FIXED_STEP;
+      this.step(FIXED_STEP, input);
     }
   }
 
@@ -133,7 +144,7 @@ export class Simulation {
     const stats = ENEMY_STATS[kind];
     if (this.enemies.filter(e => e.state !== 'dead').length >= MAX_ENEMIES || this.world.blocked(x, y, stats.radius)) return null;
     const enemy: Enemy = {
-      id: this.nextId++, x, y, vx: 0, vy: 0, angle: 0, hp: stats.hp, maxHp: stats.hp,
+      id: this.nextId++, x, y, prevX: x, prevY: y, vx: 0, vy: 0, knockbackX: 0, knockbackY: 0, angle: 0, hp: stats.hp, maxHp: stats.hp,
       kind, state: 'idle', stateTime: 0, stateDuration: 0.45 + this.random() * 0.35,
       attackAngle: 0, hitFlash: 0, radius: stats.radius, stagger: 0,
       attackHit: false, interrupted: false,
@@ -152,20 +163,39 @@ export class Simulation {
   }
 
   private step(dt: number, input: Input): void {
+    this.capturePositions();
     this.time += dt;
-    if (input.attack) this.attackBuffer = this.time + BUFFER;
+    if (input.attack) this.attackBuffer = this.time + ATTACK_BUFFER;
     if (input.cast) this.castBuffer = this.time + BUFFER;
     this.updatePlayer(dt, input);
     this.updateEnemies(dt);
     this.updateProjectiles(dt);
     this.updatePickups(dt);
-    if (this.player.dead) return;
+    if (this.player.dead) {
+      // A death may clear input midway through this tick; freeze its final poses.
+      this.capturePositions();
+      return;
+    }
     this.updateSpawns(dt);
     this.enemies = this.enemies.filter(e => (e.state !== 'dead' || e.stateTime < 0.5) && Math.hypot(e.x - this.player.x, e.y - this.player.y) < 850);
   }
 
+  private capturePositions(): void {
+    this.player.prevX = this.player.x;
+    this.player.prevY = this.player.y;
+    for (const enemy of this.enemies) {
+      enemy.prevX = enemy.x;
+      enemy.prevY = enemy.y;
+    }
+    for (const projectile of this.projectiles) {
+      projectile.prevX = projectile.x;
+      projectile.prevY = projectile.y;
+    }
+  }
+
   private updatePlayer(dt: number, input: Input): void {
     const p = this.player;
+    let completedAttackTime = 0;
     this.hurtGuard = Math.max(0, this.hurtGuard - dt);
     p.healCooldown = Math.max(0, p.healCooldown - dt);
     p.castCooldown = Math.max(0, p.castCooldown - dt);
@@ -191,9 +221,15 @@ export class Simulation {
     }
 
     if (p.attack) {
+      // Let aim corrections steer anticipation, then lock the actual contact arc.
+      if (p.attack.elapsed < p.attack.activeStart) p.attack.angle = p.angle;
       p.attack.elapsed += dt;
       if (p.attack.elapsed >= p.attack.activeStart && p.attack.elapsed < p.attack.activeEnd) this.resolveMelee(p.attack);
-      if (p.attack.elapsed >= p.attack.duration) p.attack = null;
+      if (p.attack.elapsed + 1e-9 >= p.attack.duration) {
+        // Carry sub-tick recovery time so repeated swings keep the derived rate.
+        completedAttackTime = Math.max(0, p.attack.elapsed - p.attack.duration);
+        p.attack = null;
+      }
     }
     if (p.castTime > 0) {
       p.castTime = Math.max(0, p.castTime - dt);
@@ -225,8 +261,8 @@ export class Simulation {
         p.castAngle = p.angle;
         this.castReleased = false;
         this.castBuffer = -1;
-      } else if (this.attackBuffer >= this.time && (!p.attack || p.attack.elapsed >= ATTACKS[p.attack.combo - 1]!.chain)) {
-        this.startAttack();
+      } else if (this.attackBuffer >= this.time && !p.attack) {
+        this.startAttack(completedAttackTime);
         this.attackBuffer = -1;
       }
     }
@@ -239,14 +275,20 @@ export class Simulation {
       p.dodgeTime = Math.max(0, p.dodgeTime - dt);
     } else {
       const length = Math.hypot(input.moveX, input.moveY);
-      const factor = p.attack ? (p.attack.elapsed < p.attack.activeEnd ? 0.55 : 0.8) : p.castTime > 0 ? 0.65 : 1;
+      const factor = p.attack
+        ? p.attack.elapsed < p.attack.activeStart ? 0.92
+          : p.attack.elapsed < p.attack.activeEnd ? 0.87 : 0.96
+        : p.castTime > 0 ? 0.88 : 1;
       if (length > 0) {
-        targetVX = input.moveX / Math.max(1, length) * 165 * factor;
-        targetVY = input.moveY / Math.max(1, length) * 165 * factor;
+        targetVX = input.moveX / Math.max(1, length) * MOVE_SPEED * factor;
+        targetVY = input.moveY / Math.max(1, length) * MOVE_SPEED * factor;
       }
-      const easing = 1 - Math.exp(-dt / (length > 0 ? 0.015 : 0.012));
+      const reversing = p.vx * targetVX + p.vy * targetVY < 0;
+      const responseTime = length === 0 ? 0.025 : reversing ? 0.028 : 0.045;
+      const easing = 1 - Math.exp(-dt / responseTime);
       p.vx += (targetVX - p.vx) * easing;
       p.vy += (targetVY - p.vy) * easing;
+      if (length === 0 && Math.hypot(p.vx, p.vy) < 0.4) p.vx = p.vy = 0;
     }
     const destination = this.world.move(p.x, p.y, p.vx * dt, p.vy * dt, p.radius);
     p.walkTime += Math.hypot(destination.x - p.x, destination.y - p.y) / 22;
@@ -256,13 +298,15 @@ export class Simulation {
     p.invulnerable = Math.max(this.hurtGuard, p.dodgeTime > 0 && dodgeElapsed >= 0.02 && dodgeElapsed < 0.18 ? 0.18 - dodgeElapsed : 0);
   }
 
-  private startAttack(): void {
-    const combo = this.time > this.comboExpires ? 1 : this.lastCombo % 3 + 1;
-    const recipe = ATTACKS[combo - 1]!;
-    this.player.attack = { ...recipe, elapsed: 0, angle: this.player.angle, combo, hitIds: new Set<number>() };
-    this.lastCombo = combo;
-    this.comboExpires = this.time + recipe.duration + 0.7;
-    this.events.push({ type: 'swing', x: this.player.x, y: this.player.y, angle: this.player.angle, value: combo, heavy: combo === 3 });
+  private startAttack(elapsed = 0): void {
+    const stats = deriveAttackStats(this.player.stats, this.player.equipment.mainHand);
+    const duration = 1 / stats.attacksPerSecond;
+    this.player.attack = {
+      elapsed, duration, activeStart: duration * BASIC_ATTACK_PHASES.activeStart,
+      activeEnd: duration * BASIC_ATTACK_PHASES.activeEnd, angle: this.player.angle,
+      range: stats.range, arc: stats.arc, damage: stats.damage, hitIds: new Set<number>(),
+    };
+    this.events.push({ type: 'swing', x: this.player.x, y: this.player.y, angle: this.player.angle });
   }
 
   private resolveMelee(attack: Attack): void {
@@ -272,7 +316,7 @@ export class Simulation {
       if (!circleIntersectsSector(enemy.x, enemy.y, enemy.radius, p.x, p.y, attack.angle, attack.range, attack.arc)) continue;
       if (!this.lineOfSight(p.x, p.y, enemy.x, enemy.y)) continue;
       attack.hitIds.add(enemy.id);
-      this.damageEnemy(enemy, attack.damage, attack.angle, attack.combo === 3, true);
+      this.damageEnemy(enemy, attack.damage, attack.angle, true);
     }
   }
 
@@ -282,15 +326,14 @@ export class Simulation {
     return true;
   }
 
-  private damageEnemy(enemy: Enemy, damage: number, angle: number, heavy: boolean, melee: boolean): void {
+  private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean): void {
     if (enemy.state === 'dead') return;
     enemy.hp = Math.max(0, enemy.hp - damage);
     enemy.hitFlash = 0.09;
-    const shove = enemy.kind === 'brute' ? (heavy ? 9 : 3) : heavy ? 20 : 10;
-    const destination = this.world.move(enemy.x, enemy.y, Math.cos(angle) * shove, Math.sin(angle) * shove, enemy.radius);
-    enemy.x = destination.x;
-    enemy.y = destination.y;
-    this.events.push({ type: 'hit', x: enemy.x, y: enemy.y, angle, value: damage, enemyKind: enemy.kind, heavy });
+    const shove = enemy.kind === 'brute' ? 3 : 10;
+    enemy.knockbackX += Math.cos(angle) * shove / KNOCKBACK_DECAY;
+    enemy.knockbackY += Math.sin(angle) * shove / KNOCKBACK_DECAY;
+    this.events.push({ type: 'hit', x: enemy.x, y: enemy.y, angle, value: damage, enemyKind: enemy.kind });
     if (enemy.hp <= 0) {
       this.transition(enemy, 'dead', 0.5);
       this.kills++;
@@ -301,12 +344,12 @@ export class Simulation {
       }
       const health = this.kills % 3 === 0;
       if (this.pickups.length < 32) this.pickups.push({ id: this.nextId++, x: enemy.x, y: enemy.y, kind: health ? 'health' : 'mana', value: health ? 12 : 16, life: 20, radius: 4 });
-      this.events.push({ type: 'kill', x: enemy.x, y: enemy.y, angle, enemyKind: enemy.kind, heavy });
-    } else if ((enemy.kind !== 'brute' && melee) || (enemy.kind === 'brute' && heavy && !enemy.interrupted)) {
-      enemy.stagger = heavy ? 0.19 : 0.1;
+      this.events.push({ type: 'kill', x: enemy.x, y: enemy.y, angle, enemyKind: enemy.kind });
+    } else if (enemy.kind !== 'brute' && melee) {
+      enemy.stagger = 0.1;
       if (enemy.state === 'windup') {
         enemy.interrupted = true;
-        this.transition(enemy, 'recover', enemy.kind === 'brute' ? 0.6 : 0.3);
+        this.transition(enemy, 'recover', 0.3);
       }
     }
   }
@@ -326,6 +369,7 @@ export class Simulation {
     const p = this.player;
     for (const enemy of this.enemies) {
       const stats = ENEMY_STATS[enemy.kind];
+      this.updateKnockback(enemy, dt);
       enemy.hitFlash = Math.max(0, enemy.hitFlash - dt);
       enemy.stateTime += dt;
       if (enemy.state === 'dead') continue;
@@ -384,6 +428,23 @@ export class Simulation {
       }
       if (p.dead) break;
     }
+    for (const enemy of this.enemies) {
+      enemy.vx = (enemy.x - enemy.prevX) / dt;
+      enemy.vy = (enemy.y - enemy.prevY) / dt;
+    }
+  }
+
+  private updateKnockback(enemy: Enemy, dt: number): void {
+    if (enemy.knockbackX === 0 && enemy.knockbackY === 0) return;
+    const decay = Math.exp(-dt / KNOCKBACK_DECAY);
+    // Integrating the exponential preserves the old shove distance across ticks.
+    const travel = KNOCKBACK_DECAY * (1 - decay);
+    const destination = this.world.move(enemy.x, enemy.y, enemy.knockbackX * travel, enemy.knockbackY * travel, enemy.radius);
+    enemy.x = destination.x;
+    enemy.y = destination.y;
+    enemy.knockbackX *= decay;
+    enemy.knockbackY *= decay;
+    if (Math.hypot(enemy.knockbackX, enemy.knockbackY) < 0.4) enemy.knockbackX = enemy.knockbackY = 0;
   }
 
   private moveEnemy(enemy: Enemy, vx: number, vy: number, dt: number): void {
@@ -436,8 +497,6 @@ export class Simulation {
     for (const projectile of this.projectiles) {
       projectile.life -= dt;
       if (projectile.life <= 0) continue;
-      projectile.prevX = projectile.x;
-      projectile.prevY = projectile.y;
       const steps = Math.max(1, Math.ceil(Math.hypot(projectile.vx, projectile.vy) * dt / 3));
       for (let i = 0; i < steps && projectile.life > 0; i++) {
         const oldX = projectile.x;
@@ -450,7 +509,7 @@ export class Simulation {
           candidates.sort((a, b) => Math.hypot(a.x - oldX, a.y - oldY) - Math.hypot(b.x - oldX, b.y - oldY));
           const enemy = candidates[0];
           if (enemy) {
-            this.damageEnemy(enemy, projectile.damage, projectile.angle, false, false);
+            this.damageEnemy(enemy, projectile.damage, projectile.angle, false);
             projectile.life = 0;
           }
         } else if (segmentDistanceSquared(p.x, p.y, oldX, oldY, projectile.x, projectile.y) <= (projectile.radius + p.radius) ** 2) {

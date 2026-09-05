@@ -13,13 +13,20 @@
 
 One procedural Deadwood biome, a visibly equipped character, movement, and satisfying combat against mobs. Prioritize the procedural asset engine, animation, input, enemy tells, and hit feedback. Larger systems in the design documents are future work.
 
+The basic attack is one repeatable action driven by character stats and equipped-weapon stats. Do not reintroduce an automatic combo chain; combos may become a separate skill in future work. Keep movement and combat continuous, without hitstop. The runtime game view has no how-to text or control legend; small bindings on skill buttons are intentional. Character, inventory, skill-tree, and journal HUD shortcuts remain disabled until those systems are requested.
+
 ## Project layout
 
 - `game/`: standalone Vite + TypeScript application; no runtime package dependencies.
-- `game/src/simulation.ts` and `model.ts`: deterministic combat state and rules.
+- `game/src/simulation.ts` and `model.ts`: deterministic 120 Hz combat state, rules, and render interpolation snapshots.
+- `game/src/equipment.ts`: character and equipped-weapon stats used to derive the basic attack.
 - `game/src/world.ts`: seeded terrain, props, collision, and bounded tile caching.
-- `game/src/art.ts`: procedural Canvas art and layered character rigs.
-- `game/src/renderer.ts`, `postfx.ts`, and `font.ts`: scene composition, retro display effects, and bitmap typography.
+- `game/src/art.ts`: procedural Canvas assets, modular equipment, articulated character rigs, and phased attack motion.
+- `game/src/renderer.ts`: interpolated scene composition, camera, actors, and world overlays.
+- `game/src/lighting.ts`: bounded dynamic light map, cached light stamps, and prop shadows.
+- `game/src/effects.ts`: bounded combat particles, trails, flashes, and damage numbers; effects never drive gameplay.
+- `game/src/postfx.ts`: WebGL bloom passes, CRT/phosphor display treatment, and clean fallback with HUD protection.
+- `game/src/hud.ts` and `font.ts`: procedural floating HUD, shared layout/hit bounds, animated resource orbs, and bitmap typography.
 - `game/src/main.ts`: input, loop, menus, and local preferences.
 - `docs/`: design documents and reference concepts, not runtime assets.
 

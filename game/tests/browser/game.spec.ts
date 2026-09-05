@@ -28,7 +28,7 @@ test('local game supports movement, combat, dodge, pause, recovery, and clean re
   await page.waitForTimeout(250);
   expect(await page.evaluate(()=>(window as any).__evergrowing.sim.time)).toBe(pausedTime);
   await page.selectOption('#display-mode','clean');
-  await expect(page.locator('#visual')).toHaveText('CLEAN');
+  await expect(page.locator('#display-mode')).toHaveValue('clean');
   await page.getByRole('button',{name:'RESUME',exact:true}).click();
   await page.evaluate(()=>{const g=(window as any).__evergrowing;g.sim.player.hp=50;g.sim.enemies=[];});
   await page.keyboard.press('q');
@@ -50,7 +50,7 @@ test('local game supports movement, combat, dodge, pause, recovery, and clean re
 test('all generated assets and shader modes render without external media',async({page})=>{
   const requests:string[]=[];page.on('request',request=>requests.push(request.url()));
   await page.goto('/');await page.getByRole('button',{name:'ENTER THE WOODS'}).click();
-  for(const mode of ['PHOSPHOR','CLEAN','CRT']){await page.keyboard.press('v');await expect(page.locator('#visual')).toHaveText(mode);}
+  for(const mode of ['phosphor','clean','crt']){await page.keyboard.press('v');await expect.poll(()=>page.evaluate(()=>(window as any).__evergrowing.preferences.mode)).toBe(mode);}
   const stats=await page.evaluate(()=>{const g=(window as any).__evergrowing;const ctx=g.renderer.ctx,data=ctx.getImageData(0,0,g.renderer.width,g.renderer.height).data;let bright=0;for(let i=0;i<data.length;i+=4)if(data[i]+data[i+1]+data[i+2]>90)bright++;return{bright,width:g.renderer.width,height:g.renderer.height,webgl:!!g.fx.gl};});
   expect(stats.bright).toBeGreaterThan(stats.width*stats.height*.04);
   expect(requests.filter(url=>/^https?:/.test(url)&&!url.startsWith('http://127.0.0.1:5173'))).toEqual([]);

@@ -2,7 +2,7 @@
 
 A browser ARPG about exploring an unending gothic wilderness and shaping a character through a vast, classless skill tree. Its world, equipment, characters, and effects are drawn from procedural definitions in code.
 
-The first **local combat prototype** is playable in `game/`. It focuses on one procedural Deadwood biome, a visibly equipped character, and fighting mobs. The broader design documents remain proposals for later development.
+The **local combat prototype** is playable in `game/`. It focuses on one procedural Deadwood biome, a visibly equipped character, fluid movement, and fighting mobs. Its current art pass adds articulated equipment, dynamic lights and shadows, flying combat particles, a compact floating HUD, and distinct CRT/phosphor presentation. The broader design documents remain proposals for later development.
 
 ## Play locally
 
@@ -19,7 +19,7 @@ Open [Evergrowing locally](http://127.0.0.1:5173/) in the Codex in-app browser. 
 | --- | --- |
 | WASD / arrow keys | Move |
 | Mouse | Aim |
-| Hold left mouse | Three-hit sword combo |
+| Hold left mouse | Repeat the basic weapon attack |
 | Right mouse | Ember projectile |
 | Space | Dodge, using one of two regenerating charges |
 | Q | Healing flask; charges return through kills |
@@ -28,7 +28,9 @@ Open [Evergrowing locally](http://127.0.0.1:5173/) in the Codex in-app browser. 
 | M | Toggle synthesized sound |
 | F3 | Frame-rate and coordinate overlay |
 
-The user playtests and directs gameplay changes. See [prototype status](docs/prototype-status.md) for what is implemented and deliberately deferred.
+The basic attack derives its timing, reach, and damage from character and equipped-weapon stats. There is no automatic combo chain; a combo could become a separate skill later. Character, inventory, skill-tree, and journal shortcuts on the HUD are disabled placeholders. The gear button opens settings.
+
+The user owns gameplay and visual verification in the in-app browser and directs the next changes. See [prototype status](docs/prototype-status.md) for what is implemented and deliberately deferred. Control documentation stays here; the game view has no how-to text or control legend.
 
 `npm test` runs deterministic engine tests. `npm run build` type-checks and creates the local production bundle. The source is tracked in a local Git repository with no remote.
 

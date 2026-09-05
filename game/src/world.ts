@@ -237,9 +237,9 @@ export class World {
         const road = 1 - smoothstep(shoulder - 5, shoulder + 14, distance);
         const rut = (1 - smoothstep(0, 2.5, Math.abs(distance - 11))) * road;
         const shade = grain * 5 - rut * 1.5;
-        const red = Math.round((23 + moss * 14) * (1 - road) + 53 * road + shade);
-        const green = Math.round((32 + moss * 21) * (1 - road) + 49 * road + shade);
-        const blue = Math.round((32 + moss * 9) * (1 - road) + 40 * road + shade);
+        const red = Math.round((22 + moss * 10) * (1 - road) + 64 * road + shade);
+        const green = Math.round((40 + moss * 35) * (1 - road) + 54 * road + shade);
+        const blue = Math.round((43 + moss * 13) * (1 - road) + 37 * road + shade);
         context.fillStyle = `rgb(${red},${green},${blue})`;
         context.fillRect(x, y, 4, 4);
       }
@@ -261,7 +261,7 @@ export class World {
         if (pick < (onRoad ? 0.08 : 0.49)) {
           const length = 3 + random(cx, cy, this.seed, 214) * 5;
           const lean = random(cx, cy, this.seed, 215) * 5 - 2.5;
-          context.strokeStyle = 'rgba(78,91,66,0.19)';
+          context.strokeStyle = 'rgba(90,144,96,0.26)';
           context.lineWidth = 0.65;
           context.beginPath();
           context.moveTo(px, py);

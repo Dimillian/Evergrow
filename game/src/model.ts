@@ -20,16 +20,51 @@ export interface Attack {
   activeStart: number;
   activeEnd: number;
   angle: number;
-  combo: number;
   range: number;
   arc: number;
   damage: number;
   hitIds: Set<number>;
 }
 
+export interface CharacterStats {
+  /** 1 is normal speed; 1.25 means 25% more attacks per second. */
+  attackSpeedMultiplier: number;
+  /** Multiplies the equipped weapon's base damage. */
+  attackDamageMultiplier: number;
+}
+
+export interface WeaponVisual {
+  kind: 'sword';
+  length: number;
+  width: number;
+  metal: string;
+  edge: string;
+  grip: string;
+  guard: string;
+  glow?: string;
+}
+
+export interface WeaponDefinition {
+  id: string;
+  name: string;
+  baseAttacksPerSecond: number;
+  damage: number;
+  reach: number;
+  /** Full horizontal damage arc in radians. */
+  arc: number;
+  visual: WeaponVisual;
+}
+
+export interface Equipment {
+  mainHand: WeaponDefinition;
+}
+
 export interface Player {
   x: number;
   y: number;
+  /** Position at the beginning of the most recently completed simulation tick. */
+  prevX: number;
+  prevY: number;
   vx: number;
   vy: number;
   angle: number;
@@ -37,6 +72,8 @@ export interface Player {
   maxHp: number;
   mana: number;
   maxMana: number;
+  stats: CharacterStats;
+  equipment: Equipment;
   attack: Attack | null;
   /** Remaining dodge animation time in seconds. */
   dodgeTime: number;
@@ -64,8 +101,13 @@ export interface Enemy {
   id: number;
   x: number;
   y: number;
+  prevX: number;
+  prevY: number;
   vx: number;
   vy: number;
+  /** Impact velocity, integrated separately from enemy intent. */
+  knockbackX: number;
+  knockbackY: number;
   angle: number;
   hp: number;
   maxHp: number;

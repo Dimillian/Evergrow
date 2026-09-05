@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { circleIntersectsSector, FIXED_STEP, Simulation } from '../src/simulation.ts';
+import { BASIC_ATTACK_PHASES, circleIntersectsSector, FIXED_STEP, Simulation } from '../src/simulation.ts';
+import { deriveAttackStats } from '../src/equipment.ts';
 import type { Input, WorldQuery } from '../src/model.ts';
 
 const emptyWorld: WorldQuery = {
@@ -27,7 +28,43 @@ test('diagonal input has the same speed as cardinal movement', () => {
   advance(cardinal, 1, { moveX: 1 });
   advance(diagonal, 1, { moveX: 1, moveY: 1 });
   assert.ok(Math.abs(cardinal.player.x - Math.hypot(diagonal.player.x, diagonal.player.y)) < 1e-8);
-  assert.ok(cardinal.player.x > 160 && cardinal.player.x < 165);
+  // A short acceleration ramp gives up less than eight pixels in the first second.
+  assert.ok(cardinal.player.x > 157 && cardinal.player.x < 160);
+  assert.ok(cardinal.player.vx > 164);
+});
+
+test('movement eases into speed but brakes and reverses without skating', () => {
+  const sim = make();
+  sim.update(FIXED_STEP, { ...idle, moveX: 1 });
+  assert.ok(sim.player.vx > 20 && sim.player.vx < 35, 'the first tick does not jump to full speed');
+  advance(sim, 0.1 - FIXED_STEP, { moveX: 1 });
+  assert.ok(sim.player.vx > 145, 'the player reaches useful speed within 100 ms');
+  advance(sim, 0.4, { moveX: 1 });
+  const stopX = sim.player.x;
+  advance(sim, 0.2);
+  assert.equal(sim.player.vx, 0);
+  assert.ok(sim.player.x - stopX < 4, 'releasing movement stops within four pixels');
+
+  advance(sim, 0.4, { moveX: 1 });
+  sim.update(FIXED_STEP, { ...idle, moveX: -1 });
+  assert.ok(sim.player.vx > 0 && sim.player.vx < 100, 'reversal has one continuous turn');
+  advance(sim, 0.025 - FIXED_STEP, { moveX: -1 });
+  assert.ok(sim.player.vx < 0, 'reversal takes effect within 25 ms');
+  advance(sim, 0.1, { moveX: -1 });
+  assert.ok(sim.player.vx < -145);
+});
+
+test('melee and casting retain movement through the animation', () => {
+  const moving = make();
+  const melee = make();
+  const casting = make();
+  advance(moving, 2, { moveX: 1 });
+  advance(melee, 2, { moveX: 1, attack: true });
+  advance(casting, 2, { moveX: 1, cast: true });
+  for (const sim of [melee, casting]) {
+    assert.ok(sim.player.x > moving.player.x * 0.87, 'combat retains at least 87% traversal speed');
+    assert.ok(sim.player.x < moving.player.x);
+  }
 });
 
 test('melee sector respects facing, range, and circle-edge overlap', () => {
@@ -62,13 +99,144 @@ test('solid obstacles occlude sword contact', () => {
   assert.equal(enemy.hp, enemy.maxHp);
 });
 
-test('holding attack repeats the three-step combo and idle resets it', () => {
+test('holding attack repeats only the same basic strike with no combo or heavy hit', () => {
   const sim = make();
+  const enemy = target(sim, 40);
+  enemy.hp = enemy.maxHp = 1000;
   advance(sim, 1, { attack: true });
-  assert.deepEqual(sim.drainEvents().filter(event => event.type === 'swing').map(event => event.value), [1, 2, 3, 1]);
+  const events = sim.drainEvents();
+  assert.equal(events.filter(event => event.type === 'swing').length, 4);
+  const hits = events.filter(event => event.type === 'hit');
+  assert.deepEqual(hits.map(event => event.value), [24, 24, 24, 24]);
+  assert.ok(events.every(event => !event.heavy));
+  assert.ok(sim.player.attack);
+  assert.equal('combo' in sim.player.attack, false);
+  const duration = sim.player.attack.duration;
   advance(sim, 1.3);
   sim.update(FIXED_STEP, { ...idle, attack: true });
-  assert.equal(sim.player.attack?.combo, 1);
+  assert.equal(sim.player.attack?.duration, duration);
+  assert.equal(sim.player.attack?.damage, 24);
+});
+
+test('weapon speed and character attack speed determine cadence without tick drift', () => {
+  for (const [weaponSpeed, multiplier, expectedRate] of [[2, 1, 2], [4, 1, 4], [2, 2, 4], [3.5, 1.5, 5.25]]) {
+    const sim = make();
+    sim.player.equipment.mainHand.baseAttacksPerSecond = weaponSpeed;
+    sim.player.stats.attackSpeedMultiplier = multiplier;
+    const times: number[] = [];
+    for (let i = 0; i < 240; i++) {
+      sim.update(FIXED_STEP, { ...idle, attack: true });
+      if (sim.drainEvents().some(event => event.type === 'swing')) times.push(sim.time);
+    }
+    assert.equal(times.length, Math.ceil(2 * expectedRate));
+    for (let i = 0; i < times.length; i++) {
+      assert.ok(Math.abs(times[i] - times[0] - i / expectedRate) <= FIXED_STEP + 1e-9,
+        `${expectedRate} attacks/sec preserves cumulative timing`);
+    }
+    assert.ok(Math.abs(sim.player.attack!.duration - 1 / expectedRate) < 1e-9);
+  }
+});
+
+test('derived weapon damage, reach and timing are snapshotted until the next strike', () => {
+  const sim = make();
+  sim.player.equipment.mainHand.baseAttacksPerSecond = 2;
+  sim.player.equipment.mainHand.reach = 70;
+  sim.player.stats.attackDamageMultiplier = 1.5;
+  const stats = deriveAttackStats(sim.player.stats, sim.player.equipment.mainHand);
+  assert.equal(stats.damage, 36);
+  assert.equal(stats.range, 70);
+  sim.update(FIXED_STEP, { ...idle, attack: true });
+  const first = sim.player.attack!;
+  assert.equal(first.duration, .5);
+  assert.equal(first.activeStart, .5 * BASIC_ATTACK_PHASES.activeStart);
+  assert.equal(first.activeEnd, .5 * BASIC_ATTACK_PHASES.activeEnd);
+  assert.equal(first.damage, 36);
+  sim.player.stats.attackSpeedMultiplier = 2;
+  sim.player.stats.attackDamageMultiplier = 2;
+  advance(sim, .25, { attack: true });
+  assert.equal(sim.player.attack, first, 'equipping faster gear cannot change an in-flight contact window');
+  assert.equal(first.duration, .5);
+  advance(sim, .25, { attack: true });
+  assert.notEqual(sim.player.attack, first);
+  assert.equal(sim.player.attack?.duration, .25);
+  assert.equal(sim.player.attack?.damage, 48);
+});
+
+test('a tap during contact buffers exactly one attack through recovery', () => {
+  const sim = make();
+  sim.update(FIXED_STEP, { ...idle, attack: true });
+  advance(sim, 0.075);
+  sim.update(FIXED_STEP, { ...idle, attack: true });
+  advance(sim, 0.25);
+  assert.ok(sim.player.attack);
+  assert.equal(sim.drainEvents().filter(event => event.type === 'swing').length, 2);
+  advance(sim, 0.4);
+  assert.equal(sim.player.attack, null);
+});
+
+test('UI combat input clearing drops queued weapons without stopping movement or dodge', () => {
+  const sim = make();
+  sim.update(FIXED_STEP, { ...idle, moveX: 1, attack: true });
+  advance(sim, 0.075, { moveX: 1 });
+  sim.update(FIXED_STEP * 0.5, { ...idle, moveX: 1, attack: true, cast: true, dodge: true });
+  const velocity = sim.player.vx;
+  const alpha = sim.interpolationAlpha;
+  sim.clearCombatInput();
+  assert.equal(sim.player.vx, velocity);
+  assert.equal(sim.interpolationAlpha, alpha);
+  assert.ok(sim.player.attack);
+  advance(sim, 0.4, { moveX: 1 });
+  assert.equal(sim.player.mana, 100, 'the queued spell was discarded');
+  assert.equal(sim.player.dodgeCharges, 1, 'the independently queued dodge was preserved');
+  assert.equal(sim.player.attack, null);
+  assert.equal(sim.drainEvents().filter(event => event.type === 'swing').length, 1);
+});
+
+test('aim can correct the sword windup but contact keeps a stable hit sector', () => {
+  const sim = make();
+  const front = target(sim, 40);
+  const above = target(sim, 0, 40);
+  sim.update(FIXED_STEP, { ...idle, attack: true });
+  advance(sim, 0.075, { aimX: 0, aimY: 200 });
+  assert.equal(sim.player.attack?.angle, Math.PI / 2);
+  assert.equal(above.hp, above.maxHp - 24);
+  advance(sim, 0.025, { aimX: 200, aimY: 0 });
+  assert.equal(sim.player.attack?.angle, Math.PI / 2);
+  assert.equal(front.hp, front.maxHp);
+});
+
+test('knockback is a continuous decaying motion after impact', () => {
+  const sim = make();
+  const enemy = target(sim, 40);
+  sim.projectiles.push({ id: 999, x: 0, y: 0, prevX: 0, prevY: 0, vx: 10000, vy: 0, angle: 0, radius: 5, damage: 36, life: 1, maxLife: 1, owner: 'player' });
+  sim.update(FIXED_STEP, idle);
+  assert.equal(enemy.x, 40, 'contact records an impulse without teleporting the target');
+  assert.ok(enemy.knockbackX > 0);
+  let previousTravel = Infinity;
+  for (let i = 0; i < 40; i++) {
+    const x: number = enemy.x;
+    sim.update(FIXED_STEP, idle);
+    const travel = enemy.x - x;
+    assert.ok(travel >= 0 && travel < 0.5, 'one tick only advances a fraction of the shove');
+    assert.ok(travel <= previousTravel + 1e-9, 'impact slows continuously');
+    assert.equal(enemy.prevX, x);
+    previousTravel = travel;
+  }
+  assert.ok(enemy.x > 42.9 && enemy.x <= 43, 'the integrated motion retains the original three-pixel brute shove');
+});
+
+test('knockback respects enemy collision radius through the entire motion', () => {
+  const wall: WorldQuery = {
+    blocked: (x, _y, radius) => x + radius > 54,
+    move: (x, y, dx, dy, radius) => ({ x: Math.min(54 - radius, x + dx), y: y + dy }),
+  };
+  const sim = make(wall);
+  const enemy = target(sim, 36);
+  sim.update(FIXED_STEP, { ...idle, attack: true });
+  advance(sim, 0.3);
+  assert.equal(enemy.x, 37);
+  assert.equal(enemy.y, 0);
+  assert.equal(enemy.hp, enemy.maxHp - 24);
 });
 
 test('dodge buffer waits for sword recovery and consumes once', () => {
@@ -169,7 +337,7 @@ test('simultaneous lethal attacks award one kill and one pickup', () => {
   const sim = make();
   const enemy = target(sim, 35);
   enemy.hp = 20;
-  sim.player.attack = { elapsed: 0.079, duration: 0.32, activeStart: 0.08, activeEnd: 0.13, angle: 0, combo: 1, range: 49, arc: Math.PI, damage: 24, hitIds: new Set() };
+  sim.player.attack = { elapsed: 0.079, duration: 0.32, activeStart: 0.08, activeEnd: 0.13, angle: 0, range: 49, arc: Math.PI, damage: 24, hitIds: new Set() };
   sim.projectiles.push({ id: 999, x: 25, y: 0, prevX: 25, prevY: 0, vx: 360, vy: 0, angle: 0, radius: 5, damage: 36, life: 1, maxLife: 1, owner: 'player' });
   sim.update(FIXED_STEP, idle);
   assert.equal(sim.kills, 1);
@@ -239,8 +407,14 @@ test('clearInput discards buffered controls and death stops simulation until res
   enemy.state = 'attack';
   enemy.stateDuration = 1;
   enemy.attackAngle = 0;
+  sim.projectiles.push({ id: 999, x: 120, y: 120, prevX: 120, prevY: 120, vx: 120, vy: 0, angle: 0, radius: 5, damage: 13, life: 1, maxLife: 1, owner: 'enemy' });
   sim.update(FIXED_STEP, idle);
   assert.equal(sim.player.dead, true);
+  assert.equal(sim.interpolationAlpha, 0);
+  for (const actor of [sim.player, ...sim.enemies, ...sim.projectiles]) {
+    assert.equal(actor.prevX, actor.x, 'death freezes the final tick without stale interpolation');
+    assert.equal(actor.prevY, actor.y);
+  }
   const time = sim.time;
   advance(sim, 1, { attack: true, moveX: 1 });
   assert.equal(sim.time, time);
@@ -252,16 +426,51 @@ test('clearInput discards buffered controls and death stops simulation until res
   assert.equal(sim.kills, 0);
 });
 
-test('same seed and input stream produce identical state and restart restores the seed', () => {
+test('render interpolation follows fixed ticks and clears stale positions with input', () => {
+  const sim = make();
+  const enemy = target(sim);
+  enemy.knockbackX = 120;
+  sim.projectiles.push({ id: 999, x: 100, y: 0, prevX: 100, prevY: 0, vx: 120, vy: 0, angle: 0, radius: 5, damage: 36, life: 1, maxLife: 1, owner: 'player' });
+  sim.update(FIXED_STEP * 1.5, { ...idle, moveX: 1 });
+  assert.ok(Math.abs(sim.interpolationAlpha - 0.5) < 1e-9);
+  assert.equal(sim.player.prevX, 0);
+  assert.equal(enemy.prevX, 36);
+  assert.equal(sim.projectiles[0]!.prevX, 100);
+  const firstX = sim.player.x;
+  sim.update(FIXED_STEP * 0.25, { ...idle, moveX: 1 });
+  assert.equal(sim.player.x, firstX, 'a partial tick changes only render interpolation');
+  assert.ok(Math.abs(sim.interpolationAlpha - 0.75) < 1e-9);
+  sim.update(FIXED_STEP * 0.5, { ...idle, moveX: 1 });
+  assert.equal(sim.player.prevX, firstX);
+  assert.ok(sim.player.x > firstX);
+  assert.ok(Math.abs(sim.interpolationAlpha - 0.25) < 1e-9);
+
+  sim.clearInput();
+  assert.equal(sim.interpolationAlpha, 0);
+  for (const actor of [sim.player, ...sim.enemies, ...sim.projectiles]) {
+    assert.equal(actor.prevX, actor.x);
+    assert.equal(actor.prevY, actor.y);
+  }
+  sim.reset();
+  assert.equal(sim.player.prevX, sim.player.x);
+  assert.equal(sim.player.prevY, sim.player.y);
+  assert.equal(sim.interpolationAlpha, 0);
+});
+
+test('same seed and held input remain deterministic at 30, 60, 120, 144, and 240 Hz', () => {
   const a = new Simulation(emptyWorld, { seed: 123 });
-  const b = new Simulation(emptyWorld, { seed: 123 });
   const initial = JSON.stringify(a.enemies);
   const input = { moveX: 0.4, moveY: 1, attack: true };
-  advance(a, 4, input, 1 / 60);
-  advance(b, 4, input, 1 / 30);
-  assert.deepEqual(a.player, b.player);
-  assert.deepEqual(a.enemies, b.enemies);
-  assert.deepEqual(a.drainEvents(), b.drainEvents());
+  advance(a, 4, input, FIXED_STEP);
+  const events = a.drainEvents();
+  for (const hz of [30, 60, 144, 240]) {
+    const b = new Simulation(emptyWorld, { seed: 123 });
+    advance(b, 4, input, 1 / hz);
+    assert.deepEqual(a.player, b.player, `${hz} Hz player state`);
+    assert.deepEqual(a.enemies, b.enemies, `${hz} Hz enemy state`);
+    assert.deepEqual(a.projectiles, b.projectiles, `${hz} Hz projectiles`);
+    assert.deepEqual(events, b.drainEvents(), `${hz} Hz combat events`);
+  }
   a.reset();
   assert.equal(JSON.stringify(a.enemies), initial);
 });

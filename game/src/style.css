@@ -1,4 +1,122 @@
-:root{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#d9cfac;background:#0a1013;font-synthesis:none;color-scheme:dark;--gold:#b4975d;--line:#5e5135;--muted:#939b89;--panel:#0c1317ed}
-*{box-sizing:border-box}html,body,#app{margin:0;width:100%;height:100%;overflow:hidden}button,select,input{font:inherit}button{touch-action:manipulation}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #e8c77e;outline-offset:5px}button{color:inherit;cursor:pointer}canvas{display:block;width:100%;height:100%;image-rendering:pixelated;outline:0}.playing canvas{cursor:none}.game-shell{position:relative;width:100%;height:100%;background:#0a1013;isolation:isolate}.overlay{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(180deg,#050a0e20 0%,#050a0e08 25%,#050a0e38 75%,#050a0e12);z-index:2}.overlay[hidden]{display:none}.panel{width:min(460px,calc(100vw - 40px));padding:28px 36px 30px;text-align:center;background:linear-gradient(140deg,#101a1ff2,#090f12f5);border:1px solid #72603dd1;box-shadow:0 0 0 5px #080d104a,0 15px 80px #0008;position:relative}.panel:before,.panel:after{content:"";position:absolute;width:5px;height:5px;background:#be985d;top:-3px;transform:rotate(45deg)}.panel:before{left:-3px}.panel:after{right:-3px}.eyebrow{font-size:11px;letter-spacing:.25em;color:#9da18b;margin:0 0 13px}.panel h1{font-family:ui-monospace,monospace;font-size:clamp(27px,4vw,38px);font-weight:400;letter-spacing:.18em;margin:0 0 20px;color:#e3d8b2;text-shadow:0 0 16px #9b85472b}.rule{height:1px;width:48px;background:#9d8046;margin:0 auto 22px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:17px 10px;text-align:left;margin:22px 0 25px}.controls div{font-size:12px;color:#9ca18f;line-height:1.9}.controls kbd{display:block;color:#d5cdaa;font-size:14px;letter-spacing:.03em}kbd{font:inherit}.primary{background:linear-gradient(#88703c22,#6c522922);border:1px solid #a08347;padding:14px 24px;letter-spacing:.12em;font-size:13px;min-width:240px;text-transform:uppercase;transition:background .16s,border-color .16s}.primary:hover{background:#9a794332;border-color:#d2b577}.secondary{border:1px solid #4d513e;background:#111b1d;padding:10px 16px;font-size:12px;letter-spacing:.08em}.secondary:hover{background:#22302c}.hint{font-size:11px;color:#808d7f;margin:15px 0 0;line-height:1.8}.settings{display:grid;gap:15px;margin:23px 0;text-align:left}.settings label{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:#adb4a0;gap:20px}.settings select{max-width:180px;padding:6px 10px;background:#15201f;border:1px solid #576044;border-radius:0;color:#ddd0a7;font-size:12px}.settings input{accent-color:#c0a164;width:16px;height:16px}.menu-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}.menu-actions .primary{min-width:170px}.toolbar{position:absolute;right:24px;top:122px;display:flex;gap:8px;z-index:1}.toolbar button{border:1px solid #5551377a;background:#0b1215b8;font-size:11px;padding:6px 9px;color:#999d85}.toolbar button:hover{color:#e3cf97;border-color:#91764d}.toast{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);font-size:12px;color:#ccb984;background:#0b1317e6;border:1px solid #6d5e3c;padding:9px 16px;pointer-events:none;opacity:0;transition:opacity .18s;z-index:4}.toast.visible{opacity:1}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.error{max-width:600px;margin:20vh auto;padding:32px;color:#e0bba4;font:16px/1.7 monospace}.death-count{color:#aa9b79;font-size:13px;margin:0 0 25px}.corner-help{position:absolute;left:24px;bottom:108px;font-size:10px;color:#8f9a87;opacity:.75;pointer-events:none;letter-spacing:.03em}
-@media(max-height:600px){.panel{padding:20px 28px}.controls{gap:8px;margin:14px 0}.panel h1{font-size:27px;margin-bottom:10px}.rule{margin-bottom:10px}.toolbar{top:103px}.corner-help{display:none}}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+:root {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  color: #dfd3b1;
+  background: #080f13;
+  font-synthesis: none;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body, #app { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+button, select, input { font: inherit; }
+button { color: inherit; cursor: pointer; touch-action: manipulation; }
+button:focus-visible, select:focus-visible, input:focus-visible {
+  outline: 2px solid #e8c77e;
+  outline-offset: 4px;
+}
+canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; outline: 0; }
+.playing canvas { cursor: none; }
+.playing canvas.hud-hover { cursor: default; }
+.game-shell { position: relative; width: 100%; height: 100%; background: #080f13; isolation: isolate; }
+
+/* Canvas draws the hub. These controls only supply interaction and semantics. */
+.hud-controls { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.hud-controls[hidden] { display: none; }
+.hud-control {
+  position: absolute;
+  display: block;
+  padding: 0;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  appearance: none;
+  pointer-events: auto;
+}
+.hud-control:disabled { cursor: default; }
+.hud-control:not(:disabled):hover { background: #e7c48212; border-color: #d1b57588; }
+.hud-control:focus-visible { outline-offset: 2px; background: #e7c48216; }
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #050a1018, #050a1030 70%, #050a1018);
+  z-index: 2;
+}
+.overlay[hidden] { display: none; }
+.panel {
+  position: relative;
+  width: min(388px, calc(100vw - 40px));
+  padding: 30px 32px;
+  text-align: center;
+  background: linear-gradient(145deg, #132027f5, #090f15f7);
+  border: 1px solid #8c754abf;
+  box-shadow: 0 0 0 4px #070d116b, 0 18px 70px #0008, inset 0 1px #d5bc7924;
+}
+.panel::before, .panel::after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  top: -3px;
+  transform: rotate(45deg);
+  background: #c9a56b;
+}
+.panel::before { left: -3px; }
+.panel::after { right: -3px; }
+.eyebrow { margin: 0 0 12px; font-size: 10px; letter-spacing: 0.3em; color: #9fac97; }
+.panel h1 {
+  margin: 0 0 18px;
+  font-size: clamp(25px, 4vw, 33px);
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  color: #f0dfb1;
+  text-shadow: 0 0 18px #ba9b5633;
+}
+.rule { width: 44px; height: 1px; margin: 0 auto 23px; background: #b2975b; }
+.menu-actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.primary {
+  min-width: 190px;
+  padding: 13px 18px;
+  border: 1px solid #ad8b50;
+  background: linear-gradient(#88703c25, #6c522918);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  transition: background 0.16s, border-color 0.16s;
+}
+.primary:hover { background: #a17c4335; border-color: #e1c28a; }
+.secondary { padding: 10px 14px; border: 1px solid #57604d; background: #101b20; font-size: 11px; letter-spacing: 0.08em; }
+.secondary:hover { background: #20352f; }
+.settings { display: grid; gap: 18px; margin: 0 0 27px; text-align: left; }
+.settings label { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 12px; color: #b5bda6; }
+.settings select { max-width: 152px; padding: 7px 10px; border: 1px solid #546050; border-radius: 0; background: #122421; color: #e2d1a9; font-size: 12px; }
+.settings input { width: 16px; height: 16px; accent-color: #c6a465; }
+.death-count { margin: 0 0 25px; color: #b7a386; font-size: 12px; }
+.toast {
+  position: absolute;
+  left: 50%;
+  top: 24px;
+  transform: translateX(-50%);
+  padding: 9px 16px;
+  border: 1px solid #6d5e3c;
+  background: #0b1317e6;
+  color: #dbc698;
+  font-size: 11px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s;
+  z-index: 4;
+}
+.toast.visible { opacity: 1; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.error { max-width: 600px; margin: 20vh auto; padding: 32px; color: #e0bba4; font: 16px/1.7 monospace; }
+
+@media (max-height: 530px) {
+  .panel { padding: 20px 26px; }
+  .panel h1 { margin-bottom: 12px; font-size: 26px; }
+  .rule { margin-bottom: 18px; }
+  .settings { gap: 12px; margin-bottom: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
