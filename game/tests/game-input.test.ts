@@ -12,10 +12,10 @@ test('a press and release between frames retains one action edge, while held bas
   input.pointerDown(0); input.pointerUp(0);
   input.keyDown('Space'); input.keyUp('Space'); input.keyDown('KeyQ'); input.keyUp('KeyQ');
   assert.deepEqual(input.consume(aim, false), {
-    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: true, dodge: true, heal: true,
+    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: true, dodge: true, heal: true, skillSlot: null,
   });
   assert.deepEqual(input.consume(aim, false), {
-    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: false, dodge: false, heal: false,
+    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: false, dodge: false, heal: false, skillSlot: null,
   });
   input.pointerDown(0);
   for (let frame = 0; frame < 10; frame++) {
@@ -23,22 +23,21 @@ test('a press and release between frames retains one action edge, while held bas
   }
 });
 
-test('unassigned mouse and skill shortcuts never queue or repeat a default spell', () => {
+test('five active skill bindings report slots, held RMB repeats, and unused controls stay inert', () => {
   const input = new GameInput();
-  const idle = { moveX: 0, moveY: 0, aimX: aim.x, aimY: aim.y, attack: false, dodge: false, heal: false };
-  for (const button of [1, 2, 3, 4]) {
-    input.pointerDown(button);
-    for (let frame = 0; frame < 3; frame++) assert.deepEqual(input.consume(aim, false), idle);
-    input.pointerUp(button);
-    assert.deepEqual(input.consume(aim, false), idle, 'releasing an unassigned button leaves no pending action');
+  for (const button of [1, 3, 4]) {
+    input.pointerDown(button); assert.equal(input.consume(aim, false).skillSlot, null); input.pointerUp(button);
   }
-  for (const key of ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5']) {
-    input.keyDown(key); assert.deepEqual(input.consume(aim, false), idle); input.keyUp(key);
+  for (let slot = 1; slot <= 4; slot++) {
+    input.keyDown(`Digit${slot}`); assert.equal(input.consume(aim, false).skillSlot, slot);
+    assert.equal(input.consume(aim, false).skillSlot, null); input.keyUp(`Digit${slot}`);
   }
   input.pointerDown(2); input.pointerDown(0);
-  assert.equal(input.consume(aim, false).attack, true, 'holding RMB does not suppress basic attack');
-  input.pointerUp(0);
-  assert.deepEqual(input.consume(aim, false), idle);
+  let state = input.consume(aim, false); assert.equal(state.attack, true); assert.equal(state.skillSlot, 0);
+  assert.equal(input.consume(aim, false).skillSlot, 0);
+  input.pointerUp(2); input.pointerUp(0); assert.equal(input.consume(aim, false).skillSlot, null);
+  input.keyDown('Digit1'); assert.equal(input.consume(aim, true).skillSlot, null);
+  assert.equal(input.consume(aim, false).skillSlot, null, 'blocked edges never replay after leaving the HUD');
 });
 
 test('aliases and opposing movement remain coherent, and repeat keydowns cannot queue extra dodges', () => {
@@ -69,7 +68,7 @@ test('focus loss and phase changes clear every held and pending action', () => {
   for (const code of ['KeyD', 'KeyW', 'Space', 'KeyQ']) input.keyDown(code);
   input.pointerDown(0); input.pointerDown(2); input.clear(); input.clear();
   assert.deepEqual(input.consume(aim, false), {
-    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: false, dodge: false, heal: false,
+    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: false, dodge: false, heal: false, skillSlot: null,
   });
 });
 

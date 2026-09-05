@@ -1,3 +1,5 @@
+import { drawActiveSkillIcon } from './hud-active-skills.ts';
+import { SKILL_DEFINITIONS } from './skill-content.ts';
 import type { Player } from './model.ts';
 import { PLAYER_ABILITIES } from './combat-content.ts';
 import { UI_THEME } from './ui-theme.ts';
@@ -33,7 +35,11 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
   const field = HUD_ART.skill;
   for (const [i, slot] of HUD_SKILL_SLOTS.entries()) {
     const x = field.x + i * field.step, y = field.y, w = field.width, h = field.height;
-    const occupied = slot.action !== null, active = occupied && !!p.attack;
+    const skill = i > 0 ? p.character.skillSlots[i - 1] : null;
+    const definition = skill ? SKILL_DEFINITIONS[skill] : null;
+    const cooldown = skill ? p.skillCooldowns[skill] ?? 0 : 0;
+    const occupied = i === 0 || !!skill, active = i === 0 ? !!p.attack : !!skill && p.activeSkill === skill;
+    const usable = !p.dead && cooldown <= 0 && (!definition || p.mana >= definition.manaCost);
     c.save();
     chamfer(c, x, y, w, h, 3);
     const well = c.createLinearGradient(x, y, x, y + h);
@@ -46,9 +52,15 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
       const glow = c.createRadialGradient(x + w / 2, y + 22, 0, x + w / 2, y + 22, 20);
       glow.addColorStop(0, active ? '#d3ba8035' : '#d3ba8015'); glow.addColorStop(1, '#d3ba8000');
       c.fillStyle = glow; c.fillRect(x + 1, y + 2, w - 2, 38);
-      c.globalAlpha = p.dead ? .48 : 1;
+      c.globalAlpha = usable ? 1 : .42;
       c.save(); c.translate(x + w / 2, y + 22); c.scale(1.08, 1.08);
-      drawHUDSkillIcon(c, 0, 0, 0, time, active); c.restore(); c.globalAlpha = 1;
+      if (skill) drawActiveSkillIcon(c, skill);
+      else drawHUDSkillIcon(c, 0, 0, 0, time, active);
+      c.restore(); c.globalAlpha = 1;
+      if (definition && cooldown > 0) {
+        c.fillStyle = '#030a10a8'; c.fillRect(x + 2, y + 2, w - 4, 37 * clamp(cooldown / (definition.cooldown * p.derived.cooldownMultiplier)));
+        text(c, cooldown.toFixed(1), x + w / 2, y + 18, 1.3, UI.ivory, 'center');
+      } else if (definition) text(c, String(definition.manaCost), x + w - 5, y + 3, .8, '#91bddd', 'right');
     }
     // An empty well has no icon, lock, cooldown, or resource cost.
     c.strokeStyle = occupied ? '#b6baa226' : '#617b8d25'; c.lineWidth = .6;
@@ -105,7 +117,7 @@ function utilities(c: CanvasRenderingContext2D, p: Player, time: number) {
   }
 }
 
-function shortcuts(c: CanvasRenderingContext2D) {
+function shortcuts(c: CanvasRenderingContext2D, p: Player) {
   const menu = HUD_ART.menu;
   for (let i = 0; i < HUD_MENU_SHORTCUTS.length; i++) {
     const x = menu.x + i * menu.step;
@@ -113,7 +125,9 @@ function shortcuts(c: CanvasRenderingContext2D) {
     c.strokeStyle = UI.silverDim + '70'; c.lineWidth = .65;
     c.beginPath(); c.moveTo(x + 4, menu.y + 21.5); c.lineTo(x + 30, menu.y + 21.5); c.stroke();
     drawHUDMenuIcon(c, i, x + 11, menu.y + 10);
-    text(c, HUD_MENU_SHORTCUTS[i].key, x + 26, menu.y + 6.5, 1, UI.muted, 'center');
+    text(c, HUD_MENU_SHORTCUTS[i].key, x + 26, menu.y + 6.5, 1, i < 3 ? UI.text : UI.muted, 'center');
+    const points = i === 0 ? p.character.statPoints : i === 2 ? p.character.skillPoints : 0;
+    if (points > 0) { c.fillStyle = '#c6b1e8'; c.beginPath(); c.arc(x + 31, menu.y + 2, 2, 0, TAU); c.fill(); }
   }
 }
 
@@ -139,7 +153,7 @@ export function drawHUDContents(c: CanvasRenderingContext2D, p: Player, time: nu
   }
   skills(c, p, t);
   utilities(c, p, t);
-  shortcuts(c);
+  shortcuts(c, p);
   readout(c, orb.left, Math.ceil(Math.max(0, p.hp)), p.maxHp, false);
   readout(c, orb.right, Math.floor(Math.max(0, p.mana)), p.maxMana, true);
   drawHUDExperience(c, p, t, options.experience);

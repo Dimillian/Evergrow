@@ -160,7 +160,7 @@ function embeddedReview() {
   const mapPlayer = seedDiscovery(world, exploration);
   const shell = lifetime.own(new GameShell(root, {
     play: () => shell.toast('Static preview · no simulation is running'),
-    restart: () => selectView('ready'), openMap: () => selectView('map'),
+    restart: () => selectView('ready'), openCharacter: () => {}, openSkills: () => {}, openMap: () => selectView('map'),
   }));
   const map = lifetime.own(new WorldMap(world, exploration, shell.mapMount, () => selectView('paused')));
   const foundation = foundationSheet(); root.querySelector('.game-shell')!.append(foundation);

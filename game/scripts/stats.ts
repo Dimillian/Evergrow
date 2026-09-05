@@ -2,6 +2,9 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
+import { SKILL_TREE } from '../src/skill-tree.ts';
+import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
+import { EQUIPMENT_SLOTS, ITEM_KINDS, TIER_NAMES } from '../src/items.ts';
 import { BIOMES } from '../src/biomes.ts';
 import { COMBAT_TIMING, ENEMY_DEFINITIONS, PLAYER_ABILITIES, PROJECTILE_DEFINITIONS } from '../src/combat-content.ts';
 import { ENCOUNTER_RULES } from '../src/encounter-director.ts';
@@ -30,7 +33,10 @@ console.log(JSON.stringify({
   dependencies: { runtime: Object.keys(manifest.dependencies ?? {}).length,
     development: Object.keys(manifest.devDependencies ?? {}).length },
   content: { biomes: Object.keys(BIOMES).length, enemyArchetypes: Object.keys(ENEMY_DEFINITIONS).length,
-    playerActionDefinitions: Object.keys(PLAYER_ABILITIES).length, projectileTypes: Object.keys(PROJECTILE_DEFINITIONS).length,
+    basicAndUtilityActions: Object.keys(PLAYER_ABILITIES).length, activeSkills: Object.keys(SKILL_DEFINITIONS).length,
+    skillNodes: SKILL_TREE.nodes.length, skillEdges: SKILL_TREE.edges.length,
+    equipmentSlots: EQUIPMENT_SLOTS.length, itemKinds: ITEM_KINDS.length, itemTiers: Object.keys(TIER_NAMES).length,
+    enemyProjectileTemplates: Object.keys(PROJECTILE_DEFINITIONS).length,
     pointOfInterestKinds: Object.keys(POI_DEFINITIONS).length },
   limits: { simulationHz: Math.round(1 / COMBAT_TIMING.fixedStep),
     targetEnemies: ENCOUNTER_RULES.targetPopulationCap, hardEnemyCap: ENCOUNTER_RULES.hardPopulationCap,

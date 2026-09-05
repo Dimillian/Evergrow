@@ -7,10 +7,11 @@ export const COMBAT_TIMING = Object.freeze({
 });
 
 export const PLAYER_DEFAULTS = Object.freeze({ maxHp: 100, maxMana: 100, manaRegeneration: 9, radius: 9 });
+export const SKILL_CAST_MOTION = Object.freeze({ duration: .22, releaseRemaining: .145 });
+export const SKILL_PROJECTILE_MOTION = Object.freeze({ speed: 360, life: 1.4, radius: 5 });
 export const BASIC_ATTACK_PHASES = Object.freeze({ activeStart: .19, activeEnd: .45 });
 export const PLAYER_ABILITIES = Object.freeze({
   basicAttack: Object.freeze({ ...BASIC_ATTACK_PHASES, bladeHalfAngle: .055 }),
-  ember: Object.freeze({ manaCost: 20, cooldown: .45, duration: .22, releaseRemaining: .145 }),
   dodge: Object.freeze({ charges: 2, recharge: 1.8, duration: .22, speed: 360,
     invulnerabilityStart: .02, invulnerabilityEnd: .18 }),
   heal: Object.freeze({ charges: 2, restore: 42, cooldown: .8, flashDuration: .5, killsPerCharge: 8 }),
@@ -31,7 +32,6 @@ export interface ProjectileDefinition {
 }
 
 export const PROJECTILE_DEFINITIONS = Object.freeze({
-  ember: Object.freeze({ owner: 'player', speed: 360, life: 1.4, radius: 5, damage: 36 } as const),
   hex: Object.freeze({ owner: 'enemy', speed: 145, life: 2, radius: 5, damage: 13 } as const),
 }) satisfies Readonly<Record<string, ProjectileDefinition>>;
 
@@ -76,6 +76,7 @@ export const ENEMY_DEFINITIONS: Readonly<Record<EnemyKind, EnemyDefinition>> = O
 });
 
 export const LOOT_RULES = Object.freeze({
+  equipmentChance: .45, maxGroundItems: 96, equipmentCollectDistance: 30,
   maxPickups: 32, life: 20, radius: 4, healthEveryKills: 3, healthValue: 12, manaValue: 16,
   collectDistance: 18, magnetDistance: 55, magnetSpeed: 100,
 });

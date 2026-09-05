@@ -1,3 +1,5 @@
+import { SKILL_CAST_MOTION } from './combat-content.ts';
+import { SKILL_DEFINITIONS } from './skill-content.ts';
 import { getSwingAngle, getPlayerSwordTip } from './art.ts';
 import { playerPose } from './character-pose.ts';
 import { drawGlow } from './lighting.ts';
@@ -6,7 +8,6 @@ import type { CombatEvent } from './model.ts';
 import type { Simulation } from './simulation.ts';
 import { text } from './font.ts';
 import { SwordTrail } from './sword-trail.ts';
-import { PLAYER_ABILITIES } from './combat-content.ts';
 
 interface Spark {
   x: number; y: number; vx: number; vy: number;
@@ -45,15 +46,15 @@ export class CombatEffects {
     for (const event of events) {
       const enemyCast = event.type === 'cast' && event.enemyKind;
       const contact = event.type === 'hit' || event.type === 'hurt' || event.type === 'kill';
-      const color = event.type === 'hurt' ? '#ff5e4e' : event.type === 'heal' || enemyCast ? MINT
-        : event.type === 'dodge' ? BLUE : event.type === 'cast' ? FIRE : GOLD;
+      const color = event.color ?? (event.type === 'hurt' ? '#ff5e4e' : event.type === 'heal' || enemyCast ? MINT
+        : event.type === 'dodge' ? BLUE : event.type === 'cast' ? FIRE : GOLD);
       const count = event.type === 'hit' ? 30 : event.type === 'kill' ? 42
         : event.type === 'hurt' ? 32 : event.type === 'cast' ? 18 : event.type === 'heal' ? 30
-        : event.type === 'pickup' ? 10 : event.type === 'dodge' ? 14 : 0;
+        : event.type === 'level' ? 50 : event.type === 'loot' ? 8 : event.type === 'pickup' ? 10 : event.type === 'dodge' ? 14 : 0;
       const bodyColor = event.type === 'hurt' ? '#b64143' : event.enemyKind === 'caster' ? '#7dbf98'
         : event.enemyKind === 'brute' ? '#b6a184' : '#a44349';
       for (let i = 0; i < count; i++) {
-        const radial = ['kill', 'heal', 'pickup'].includes(event.type);
+        const radial = ['kill', 'heal', 'pickup', 'level'].includes(event.type) || event.skill === 'nova';
         const angle = radial ? Math.random() * Math.PI * 2 : (event.angle ?? 0) + (Math.random() - .5) * 2.8;
         const debris = contact && i % 3 === 0;
         this.spark(event.x, event.y, angle, debris ? bodyColor : i % 4 === 0 ? '#fff7db' : color,
@@ -67,11 +68,11 @@ export class CombatEffects {
         const max = event.type === 'heal' ? .55 : event.type === 'kill' ? .32 : .22;
         this.flashes.push({ x: event.x, y: contact ? contactY : event.y - 10, life: max, max,
           radius: event.type === 'kill' || event.heavy ? 145 : contact ? 118 : 90, color,
-          ring: event.type === 'kill' || event.type === 'heal' });
+          ring: event.type === 'kill' || event.type === 'heal' || event.type === 'level' || event.skill === 'nova' });
       }
       if (event.type === 'hit' && event.value) this.popups.push({ x: event.x + (Math.random() - .5) * 10,
         y: event.y - (event.enemyKind === 'brute' ? 54 : 44), vx: (Math.random() - .5) * 22, vy: -47,
-        life: .85, max: .85, value: String(Math.round(event.value)), color: '#fff0c8', size: 2 });
+        life: .85, max: .85, value: String(Math.round(event.value)), color: event.heavy ? '#ffd177' : '#fff0c8', size: event.heavy ? 2.5 : 2 });
       if (event.type === 'hurt' || event.type === 'heal') this.popups.push({ x: event.x, y: event.y - 61,
         vx: Math.cos(event.angle ?? 0) * 14, vy: -55, life: .95, max: .95,
         value: (event.type === 'hurt' ? '-' : '+') + Math.round(event.value ?? 0),
@@ -120,7 +121,7 @@ export class CombatEffects {
     while (this.emitterTime >= .016) {
       this.emitterTime -= .016;
       const p = sim.player, attack = p.attack;
-      if (attack && attack.elapsed >= attack.activeStart && attack.elapsed <= attack.activeEnd) {
+      if (p.equipment.mainHand.visual.kind !== 'unarmed' && attack && attack.elapsed >= attack.activeStart && attack.elapsed <= attack.activeEnd) {
         const angle = getSwingAngle(attack.angle, attack.elapsed / attack.duration,
           attack.activeStart / attack.duration, attack.activeEnd / attack.duration, attack.arc);
         const tip = getPlayerSwordTip(playerPose(p, sim.time));
@@ -131,9 +132,9 @@ export class CombatEffects {
       }
       for (const shot of sim.projectiles.slice(0, 32)) {
         this.spark(shot.x, shot.y, shot.angle + Math.PI + (Math.random() - .5),
-          shot.owner === 'player' ? (Math.random() > .5 ? FIRE : GOLD) : MINT, .3, false);
+          shot.skill ? SKILL_DEFINITIONS[shot.skill].color : MINT, .3, false);
       }
-      if (p.castTime > PLAYER_ABILITIES.ember.releaseRemaining) {
+      if (p.castTime > SKILL_CAST_MOTION.releaseRemaining) {
         const angle = sim.time * 22;
         this.spark(p.x + Math.cos(p.castAngle) * 17 + Math.cos(angle) * 8,
           p.y - 22 + Math.sin(p.castAngle) * 12 + Math.sin(angle) * 8, angle + Math.PI / 2, GOLD, .25, false);

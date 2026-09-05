@@ -1,20 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BASIC_ATTACK_PHASES, COMBAT_TIMING, ENEMY_DEFINITIONS, PLAYER_ABILITIES,
+import { COMBAT_TIMING, SKILL_CAST_MOTION, ENEMY_DEFINITIONS, PLAYER_ABILITIES,
   PROJECTILE_DEFINITIONS } from '../src/combat-content.ts';
-import { FIXED_STEP, HIT_FLASH_DURATION, BASIC_ATTACK_PHASES as LEGACY_PHASES, Simulation } from '../src/simulation.ts';
-import { circleIntersectsSector as legacySector } from '../src/simulation.ts';
-import { circleIntersectsSector } from '../src/combat-geometry.ts';
+import { FIXED_STEP, HIT_FLASH_DURATION, Simulation } from '../src/simulation.ts';
 import type { EnemyKind, Input, WorldQuery } from '../src/model.ts';
 
 const world: WorldQuery = { blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) };
-const idle: Input = { moveX: 0, moveY: 0, aimX: 0, aimY: 0, attack: false, dodge: false, heal: false };
+const idle: Input = { moveX: 0, moveY: 0, aimX: 0, aimY: 0, attack: false, dodge: false, heal: false, skillSlot: null };
 
-test('existing simulation exports retain the canonical timing and geometry API', () => {
+test('simulation uses canonical fixed-step and impact timing', () => {
   assert.equal(FIXED_STEP, COMBAT_TIMING.fixedStep);
   assert.equal(HIT_FLASH_DURATION, COMBAT_TIMING.hitFlashDuration);
-  assert.equal(LEGACY_PHASES, BASIC_ATTACK_PHASES);
-  assert.equal(legacySector, circleIntersectsSector);
 });
 
 test('enemy definitions have complete coherent telegraph, attack and projectile windows', () => {
@@ -45,15 +41,15 @@ test('enemy definitions have complete coherent telegraph, attack and projectile 
 });
 
 test('player ability definitions retain cancellable casts and bounded dodge protection', () => {
-  const { ember, dodge, heal, basicAttack } = PLAYER_ABILITIES;
+  const { dodge, heal, basicAttack } = PLAYER_ABILITIES;
   assert.ok(0 < basicAttack.activeStart && basicAttack.activeStart < basicAttack.activeEnd && basicAttack.activeEnd < 1);
-  assert.ok(ember.releaseRemaining > 0 && ember.releaseRemaining < ember.duration && ember.duration < ember.cooldown);
+  assert.ok(SKILL_CAST_MOTION.releaseRemaining > 0 && SKILL_CAST_MOTION.releaseRemaining < SKILL_CAST_MOTION.duration);
   assert.ok(0 < dodge.invulnerabilityStart && dodge.invulnerabilityStart < dodge.invulnerabilityEnd
     && dodge.invulnerabilityEnd < dodge.duration && dodge.duration < dodge.recharge);
   assert.ok(Number.isInteger(dodge.charges) && dodge.charges > 0);
   assert.ok(Number.isInteger(heal.charges) && heal.charges > 0 && heal.restore > 0 && heal.killsPerCharge > 0);
   for (const definition of Object.values(PLAYER_ABILITIES)) assert.ok(Object.isFrozen(definition));
-  assert.throws(() => Object.assign(PLAYER_ABILITIES.ember, { manaCost: 0 }), TypeError);
+  assert.throws(() => Object.assign(SKILL_CAST_MOTION, { duration: 0 }), TypeError);
 });
 
 test('spawned actors and actual melee/projectile contact use the authored enemy definitions', () => {

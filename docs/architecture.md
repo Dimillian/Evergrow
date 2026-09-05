@@ -27,7 +27,7 @@ flowchart TD
 
 | Owner | State and responsibilities | Lifetime |
 | --- | --- | --- |
-| `Simulation` | Player, enemies, projectiles, pickups, RNG, fixed clock, input buffers, combat events | Resets for a new run |
+| `Simulation` | Player, enemies, projectiles, pickups, ground equipment, character sheet, RNG, fixed clock, input buffers, combat events | Resets for a new run |
 | `combat-content`, `equipment`, `encounter-director` | Authored balance, starter weapon, encounter composition and attack concurrency | Immutable definitions; actor equipment is copied |
 | `World` | Seed, procedural queries, immutable cached settlement blueprints, terrain cache | One world instance; disposed by the application |
 | `Exploration` | Visited cells, discovered POIs, schema validation, storage status and delayed writes | Survives new runs; flushes on teardown/page hide |
@@ -41,11 +41,11 @@ Generated buildings are frozen blueprints. Future shop inventories, opened chest
 
 ## Where to extend
 
-**Combat content:** `combat-content.ts` owns player action timing/costs, enemy stats and supported attack behaviors, projectile parameters, and pickup rules. `encounter-director.ts` owns spawn pacing, progression thresholds, population targets, and concurrent attack slots. `combat-geometry.ts` owns sector/swept-contact math. `Simulation` executes those rules in a fixed order. HUD cooldowns, casting effects, player pose timing, enemy names, and melee telegraphs now consume the same definitions.
+**Combat content:** `combat-content.ts` owns basic/utility timing, shared cast motion, enemy stats and supported attack behaviors, projectile parameters, and pickup rules. `encounter-director.ts` owns spawn pacing, progression thresholds, population targets, and concurrent attack slots. `combat-geometry.ts` owns sector/swept-contact math. `Simulation` executes those rules in a fixed order. HUD cooldowns, casting effects, player pose timing, enemy names, and melee telegraphs now consume the same definitions.
 
 Adding an enemy requires a typed `EnemyKind`, its definition, art dispatch, hover bounds, and intended encounter policy. The exhaustive definition/art records make omissions visible to TypeScript. An enemy can reuse melee or projectile behavior; genuinely new attack behavior belongs in the simulation and needs contact/cancellation tests. This is an explicit combat model, not yet a general skill scripting framework.
 
-**Experience:** `progression.ts` owns current-level XP and the shared next-level curve. Enemy definitions own their XP reward; the guarded enemy-death branch grants it exactly once. The renderer owns `ExperienceFeedback` for smoothing and pulses; the HUD reads player XP/level and never awards rewards. New runs reset progression. Stat growth and character saving remain future work.
+**Experience:** `progression.ts` owns current-level XP and the shared next-level curve. Enemy definitions own their XP reward; the guarded enemy-death branch grants it exactly once. The renderer owns `ExperienceFeedback` for smoothing and pulses; the HUD reads player XP/level and never awards rewards. The `character.ts` composition layer grants one skill and five attribute points for each gained level, including overflow. New runs reset progression; character saving remains future work.
 
 **Character assets:** `art.ts` is currently a small entrypoint that can be removed or replaced as its callers evolve. `art-types.ts` defines poses and outfit layers; `art-primitives.ts` provides drawing/math helpers; `prop-art.ts` owns finite prop variants. `equipment-art.ts`, `character-motion.ts`, `player-art.ts`, and `enemy-art.ts` separate materials, attachment geometry, animation, and actor drawing. Add armor through the existing piece/mount definitions. The rig, sword trail, sparks, and weapon light must continue to share the same pose and blade position.
 
@@ -71,4 +71,12 @@ The refactor was compared against the previous implementation: 86,400 determinis
 
 The current architecture is suitable for incremental additions at the prototype's population and cache budgets. It is not a claim of production readiness or arbitrary scale. Enemy separation and several contact queries still scan actor lists; large crowds will need measured profiling and spatial indexing. Terrain/art generation is synchronous on the main thread; worker generation should follow evidence of frame stalls. Origin rebasing or another precision strategy will be needed for truly unbounded coordinates.
 
-Exploration uses bounded, best-effort localStorage. Read/merge/write preserves known discoveries and rejects corrupt payloads, but simultaneous writes from multiple tabs are not a transactional database. Persistent character progression will need its own save model and deliberate multi-tab ownership. Add migrations or recovery/export when release or user requirements justify them; preserving old prototype saves is not a current requirement. Trading, inventory, skill trees and arbitrary skill execution remain separate work.
+Exploration uses bounded, best-effort localStorage. Read/merge/write preserves known discoveries and rejects corrupt payloads, but simultaneous writes from multiple tabs are not a transactional database. Persistent character progression will need its own save model and deliberate multi-tab ownership. Add migrations or recovery/export when release or user requirements justify them; preserving old prototype saves is not a current requirement. Trading, crafting, respecs, off-hand equipment, character persistence and arbitrary skill scripting remain separate work.
+
+## Character rules and panels
+
+`character-types.ts` is the shared sheet/item contract. `items.ts` generates seeded equipment; `inventory.ts` validates transactional moves/equips and attribute spends; `skill-tree.ts` owns graph connectivity and node allocation. `character-stats.ts` merges item, allocated-attribute, and tree bonuses exactly once. `character.ts` projects these into runtime combat stats and worn weapon data, clamps resources without healing, grants progression points, and validates skill assignments. The application refreshes these projections after successful character mutations.
+
+`skill-content.ts` owns six active skill definitions. `skill-combat.ts` executes unlocked/assigned actions via a small simulation context for contact, projectiles, line of sight, and events. Skill cooldowns are keyed by skill identity, so moving slots cannot reset them. `Simulation` advances cooldowns, applies derived offense/defense/regen/movement, rolls drops, and collects nearby loot. Ground loot art and HUD skill art remain presentation-only.
+
+`InventoryPanel` and `SkillTreePanel` consume the player and callbacks; `Game` owns pausing, input clearing, mutation commits, and focus return. Slot DOM remains stable where practical and dynamic atlas control updates retain focus. `item-art.ts` projects equipment into the same material layers used by the world character, paper doll, and procedural icons. The static `/character.html` entry stages review data without simulation ticks or save access. See [character systems](character-systems.md) for formulas and current limits.

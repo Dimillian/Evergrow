@@ -28,7 +28,7 @@ export function createStartingEquipment(): Equipment {
 
 export type WeaponGrip = 'two-handed' | 'one-handed';
 export function getWeaponGrip(equipment: Equipment): WeaponGrip {
-  return equipment.offHand ? 'one-handed' : 'two-handed';
+  return equipment.offHand || equipment.mainHand.visual.kind === 'unarmed' ? 'one-handed' : 'two-handed';
 }
 
 export function getGripLength(visual = STARTING_SWORD.visual): number {
@@ -57,3 +57,8 @@ export function deriveAttackStats(stats: CharacterStats, weapon: WeaponDefinitio
     arc: Math.min(Math.PI * 2, positive(weapon.arc, STARTING_SWORD.arc)),
   };
 }
+
+export const UNARMED_WEAPON: WeaponDefinition = {
+  id: 'unarmed', name: 'Unarmed', damage: 5, baseAttacksPerSecond: 1.8, reach: 24, arc: Math.PI / 2,
+  visual: { ...STARTING_SWORD.visual, kind: 'unarmed', length: 0, width: 0 },
+};

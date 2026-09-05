@@ -20,7 +20,7 @@ The selected bottom-HUD direction is **The Astral Instrument**: calibrated silve
 | `.ui-stat`, `.ui-stat-label`, `.ui-stat-value` | Label/value pairs |
 | `.ui-badge`, `.ui-status`, `.ui-key` | Compact metadata, feedback, and key bindings |
 | `.ui-tooltip` | Shared detail-card surface |
-| `.ui-slot` | An item-slot presentation primitive for future inventory work |
+| `.ui-slot` | Shared equipment and bag-slot presentation primitive |
 
 `ui-icons.ts` provides decorative code-defined SVG icons with a common grid and stroke. Give every icon-only button an accessible name. `ui-components.ts` exports the icons, `escapeUI()` for interpolated markup, and dialog focus management. Prefer `textContent` for dynamic labels when no markup is needed.
 
@@ -47,12 +47,14 @@ Short button hints use `data-tooltip`; they appear on hover or keyboard focus. U
 
 Start, pause, and defeat windows share the markup builder in `game-menu.ts` and the kit's window/action primitives. The world map uses the same header, controls, POI cards, and footer language. Toasts share the status treatment. The Canvas HUD, enemy plate, and minimap share the palette while preserving their functional health, mana, skill, and map colors.
 
-Open the local [interface review](http://127.0.0.1:5173/ui.html) to compare real windows and component states in desktop and 390px previews. It draws a frozen procedural background, never advances gameplay, and uses memory-only map discovery. Example item slots demonstrate the presentation API; inventory behavior is not implemented. The review route is development-only.
+Open the local [interface review](http://127.0.0.1:5173/ui.html) to compare real windows and component states in desktop and 390px previews. It draws a frozen procedural background, never advances gameplay, and uses memory-only map discovery. Example item slots demonstrate the presentation API; real inventory behavior is reviewed in `/character.html?panel=character`. The review route is development-only.
 
-## Extending for inventory
+## Character panels and extension
 
 Compose the shared window, wells, slots, stat rows, badges, and tooltip surfaces. Keep equipment and item state outside the presentation helpers. Use the game's existing phase/input boundary when opening a new modal, and register its bounds with UI hit testing. Maintain 44px interactive targets, responsive overflow, native-resolution text, and keyboard access. Expand the shared primitives when a repeated pattern is needed instead of creating another independent panel theme.
 
 ## Experience presentation
 
 `hud-experience.ts` supplies the violet XP rail, level label, and exact current/required XP. It consumes `progression.ts` thresholds rather than duplicating the curve. Its feedback state lives with the renderer, resets with a new run, and never modifies player progression. The layout and pointer boundary include the XP rail and labels. Keep XP distinct from the blue mana glass and retain native text rendering.
+
+`inventory-panel.ts` composes the kit into a three-column Astral armory: equipment/doll, bag/inspection, and attributes/effective stats. `skill-tree-panel.ts` uses the same materials with a culled Canvas atlas and native controls. Both accept callbacks, never mutate character rules themselves, and expose open/refresh/close/dispose lifecycles. The game owns pausing, Escape and C/I/T switching. Headers/footers remain visible in short viewports; content scrolls within the panel. Item/skill SVGs come from code-defined art and retain native-resolution text.

@@ -1,3 +1,9 @@
+import { InventoryPanel } from './inventory-panel.ts';
+import { SkillTreePanel } from './skill-tree-panel.ts';
+import { equipItem, unequipItem, moveInventoryItem, allocateAttribute } from './inventory.ts';
+import { allocateNode } from './skill-tree.ts';
+import { refreshCharacter, assignSkill } from './character.ts';
+import type { ActionResult } from './character-types.ts';
 import { Lifetime } from './lifetime.ts';
 import { World } from './world.ts';
 import { Simulation } from './simulation.ts';
@@ -22,6 +28,8 @@ export class Game {
   private exploration: Exploration;
   private worldMap: WorldMap;
   private shell: GameShell;
+  private inventoryPanel: InventoryPanel;
+  private skillPanel: SkillTreePanel;
   readonly canvas: HTMLCanvasElement;
   private uiCanvas: HTMLCanvasElement;
   private uiContext: CanvasRenderingContext2D;
@@ -49,6 +57,7 @@ export class Game {
       this.shell = this.lifetime.own(new GameShell(root, {
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
         restart: () => this.start(), openMap: () => this.openMap(),
+        openCharacter: () => this.openCharacterPanel('character'), openSkills: () => this.openCharacterPanel('skills'),
       }));
       this.canvas = this.shell.canvas;
       this.uiCanvas = this.shell.uiCanvas;
@@ -56,12 +65,24 @@ export class Game {
       if (!uiContext) throw new Error('The HUD requires a 2D canvas context.');
       this.uiContext = uiContext;
       this.worldMap = this.lifetime.own(new WorldMap(this.world, this.exploration, this.shell.mapMount, () => this.closeMap()));
+      this.inventoryPanel = this.lifetime.own(new InventoryPanel(this.shell.panelMount, {
+        close: () => this.closeCharacterPanel(),
+        equip: (index, slot) => this.characterAction(equipItem(this.sim.player.character, index, this.sim.player.level, slot)),
+        unequip: (slot, index) => this.characterAction(unequipItem(this.sim.player.character, slot, index)),
+        move: (from, to) => this.characterAction(moveInventoryItem(this.sim.player.character, from, to)),
+        allocate: attribute => this.characterAction(allocateAttribute(this.sim.player.character, attribute)),
+      }));
+      this.skillPanel = this.lifetime.own(new SkillTreePanel(this.shell.panelMount, {
+        close: () => this.closeCharacterPanel(),
+        allocate: id => this.characterAction(allocateNode(this.sim.player.character, id)),
+        assign: (slot, skill) => this.characterAction(assignSkill(this.sim.player, slot, skill)),
+      }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
       try {
         const saved = JSON.parse(localStorage.getItem('evergrowing-preferences') ?? 'null');
         if (typeof saved?.muted === 'boolean') this.muted = saved.muted;
       } catch { /* Preferences are optional when storage is disabled. */ }
-      // Migrate old preferences: presentation is fixed and motion follows the OS.
+      // Presentation is fixed and motion follows the OS.
       this.savePreferences();
       this.audio.setEnabled(!this.muted);
       this.resize();
@@ -93,12 +114,25 @@ export class Game {
       if (event.code === 'Escape') {
         event.preventDefault();
         if (!event.repeat) {
-          if (this.phase === 'map') this.closeMap();
+          if (this.phase === 'character' || this.phase === 'skills') this.closeCharacterPanel();
+          else if (this.phase === 'map') this.closeMap();
           else if (this.phase === 'playing') this.pause();
           else if (this.phase === 'paused') this.resume();
         }
         return;
       }
+      const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement
+        || event.target instanceof HTMLSelectElement || (event.target instanceof HTMLElement && event.target.isContentEditable);
+      if (!typing && ['KeyC', 'KeyI', 'KeyT'].includes(event.code)
+        && ['playing', 'character', 'skills'].includes(this.phase)) {
+        event.preventDefault();
+        if (!event.repeat) {
+          const panel = event.code === 'KeyT' ? 'skills' : 'character';
+          this.phase === panel ? this.closeCharacterPanel() : this.openCharacterPanel(panel);
+        }
+        return;
+      }
+      if (typing) return;
       if (event.code === 'KeyM' && (this.phase === 'playing' || this.phase === 'map')) {
         event.preventDefault();
         if (!event.repeat) this.phase === 'map' ? this.closeMap() : this.openMap();
@@ -192,6 +226,7 @@ export class Game {
   start() {
     if (this.disposed) return;
     this.worldMap.close();
+    this.inventoryPanel.close(); this.skillPanel.close();
     this.sim.reset();
     this.renderer.reset();
     this.clearInput();
@@ -211,7 +246,7 @@ export class Game {
   }
 
   resume() {
-    if (this.disposed || (this.phase !== 'paused' && this.phase !== 'map')) return;
+    if (this.disposed || !['paused', 'map', 'character', 'skills'].includes(this.phase)) return;
     this.clearInput();
     this.phase = 'playing';
     this.showMenu();
@@ -232,6 +267,27 @@ export class Game {
     if (this.phase !== 'map') return;
     this.worldMap.close();
     this.resume();
+  }
+
+  private openCharacterPanel(panel: 'character' | 'skills') {
+    if (!['playing', 'character', 'skills'].includes(this.phase)) return;
+    this.clearInput(); this.inventoryPanel.close(); this.skillPanel.close();
+    this.phase = panel; this.showMenu();
+    if (panel === 'character') this.inventoryPanel.open(this.sim.player);
+    else this.skillPanel.open(this.sim.player);
+    this.shell.setStatus(`${panel === 'character' ? 'Character and inventory' : 'Skill tree'} open. Game paused.`);
+  }
+
+  private closeCharacterPanel() {
+    if (this.phase !== 'character' && this.phase !== 'skills') return;
+    this.inventoryPanel.close(); this.skillPanel.close(); this.resume();
+  }
+
+  private characterAction(result: ActionResult) {
+    if (!result.ok) { this.toast(result.message ?? 'Action unavailable.'); return; }
+    refreshCharacter(this.sim.player);
+    if (this.phase === 'character') this.inventoryPanel.refresh(this.sim.player);
+    if (this.phase === 'skills') this.skillPanel.refresh(this.sim.player);
   }
 
   private readInput(): Input {
@@ -257,6 +313,7 @@ export class Game {
       const events = this.sim.drainEvents();
       this.renderer.handleEvents(events, this.reducedMotion);
       for (const event of events) {
+        if (event.text) this.toast(event.text);
         if (!(event.type === 'cast' && event.enemyKind)) this.audio.play(event);
       }
       if (this.sim.player.dead) {

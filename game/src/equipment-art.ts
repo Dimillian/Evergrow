@@ -18,6 +18,7 @@ export const STARTER_OUTFIT: CharacterOutfit = {
 };
 
 export function sword(ctx: CanvasRenderingContext2D, hand: Point, angle: number, color: Color, visual = STARTING_SWORD.visual): void {
+  if (visual.kind === 'unarmed') return;
   ctx.save();
   ctx.translate(hand[0], hand[1]);
   ctx.rotate(angle);

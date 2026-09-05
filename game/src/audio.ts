@@ -218,6 +218,8 @@ export class GameAudio {
         tone(880, 990, .22, .045, 1, 'sine', .13, .02);
         noise({ duration: .22, frequency: 1700, endFrequency: 2600, volume: .065, attack: .035 }, 1);
         break;
+      case 'level':
+      case 'loot':
       case 'pickup':
         tone(event.heavy ? 610 : 790, event.heavy ? 820 : 1050, .086, .08, 0, 'sine');
         tone(event.heavy ? 910 : 1180, event.heavy ? 1080 : 1360, .065, .03, 0, 'sine', .025);

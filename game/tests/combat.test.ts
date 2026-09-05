@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BASIC_ATTACK_PHASES, circleIntersectsSector, FIXED_STEP, HIT_FLASH_DURATION, Simulation } from '../src/simulation.ts';
+import { BASIC_ATTACK_PHASES } from '../src/combat-content.ts';
+import { circleIntersectsSector } from '../src/combat-geometry.ts';
+import { FIXED_STEP, HIT_FLASH_DURATION, Simulation } from '../src/simulation.ts';
 import { deriveAttackStats } from '../src/equipment.ts';
 import type { Input, WorldQuery } from '../src/model.ts';
 
@@ -8,7 +10,7 @@ const emptyWorld: WorldQuery = {
   blocked: () => false,
   move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }),
 };
-const idle: Input = { moveX: 0, moveY: 0, aimX: 200, aimY: 0, attack: false, dodge: false, heal: false };
+const idle: Input = { moveX: 0, moveY: 0, aimX: 200, aimY: 0, attack: false, dodge: false, heal: false, skillSlot: null };
 const make = (world = emptyWorld) => new Simulation(world, { spawn: false, seed: 42 });
 
 function advance(sim: Simulation, duration: number, input: Partial<Input> = {}, step = FIXED_STEP): void {
@@ -382,39 +384,6 @@ test('dodge charges replenish sequentially and mana does not gate dodging', () =
   advance(sim, 1.8);
   assert.equal(sim.player.dodgeCharges, 2);
   assert.equal(sim.player.dodgeRecharge, 0);
-});
-
-test('legacy direct cast input cannot start or buffer an unassigned fireball', () => {
-  const sim = make();
-  const legacyInput = { ...idle, cast: true };
-  sim.update(FIXED_STEP / 2, legacyInput);
-  sim.update(FIXED_STEP / 2, idle);
-  for (let i = 0; i < 240; i++) sim.update(FIXED_STEP, legacyInput);
-  advance(sim, .5);
-  assert.equal(sim.player.mana, sim.player.maxMana);
-  assert.equal(sim.player.castTime, 0);
-  assert.equal(sim.player.castCooldown, 0);
-  assert.deepEqual(sim.projectiles, []);
-  assert.deepEqual(sim.drainEvents(), []);
-});
-
-test('legacy cast input cannot interrupt basic attack, movement, dodge or potion', () => {
-  const expected = make(), legacy = make();
-  expected.player.hp = legacy.player.hp = 40;
-  expected.player.mana = legacy.player.mana = 50;
-  for (let tick = 0; tick < 240; tick++) {
-    const input = { ...idle, attack: true, moveX: 1, dodge: tick === 60, heal: tick === 120 };
-    const legacyInput = { ...input, cast: true };
-    expected.update(FIXED_STEP, input);
-    legacy.update(FIXED_STEP, legacyInput);
-    assert.deepEqual(legacy.player, expected.player, `legacy cast is inert through action tick ${tick}`);
-    assert.deepEqual(legacy.drainEvents(), expected.drainEvents());
-  }
-  assert.equal(legacy.player.flasks, 1);
-  assert.ok(legacy.player.hp > 40);
-  assert.ok(legacy.player.x > 200);
-  assert.equal(legacy.player.castTime, 0);
-  assert.deepEqual(legacy.projectiles, []);
 });
 
 test('swept projectiles hit the first crossed enemy exactly once', () => {

@@ -2,26 +2,31 @@ import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, 
 import type { Pickup } from './model.ts';
 import { createBaseStats, createStartingEquipment, deriveAttackStats } from './equipment.ts';
 import { getActiveSwingOffset } from './attack-motion.ts';
-import { BASIC_ATTACK_PHASES, COMBAT_TIMING, ENEMY_DEFINITIONS, LOOT_RULES, PLAYER_ABILITIES,
-  PLAYER_DEFAULTS, PLAYER_MOVEMENT, PROJECTILE_DEFINITIONS, type ProjectileDefinition } from './combat-content.ts';
+import { BASIC_ATTACK_PHASES, COMBAT_TIMING, SKILL_CAST_MOTION, ENEMY_DEFINITIONS, LOOT_RULES, PLAYER_ABILITIES,
+  PLAYER_DEFAULTS, PLAYER_MOVEMENT, type ProjectileDefinition } from './combat-content.ts';
 import { canEnemyJoinAttack, chooseEncounterEnemy, ENCOUNTER_RULES, livingEnemyCount } from './encounter-director.ts';
 import { circleIntersectsSector, segmentDistanceSquared } from './combat-geometry.ts';
-import { awardExperience } from './progression.ts';
+import { awardCharacterExperience, refreshCharacter } from './character.ts';
+import { createCharacterSheet, generateItem, TIER_COLORS } from './items.ts';
+import { deriveCharacterStats } from './character-stats.ts';
+import { addInventoryItem } from './inventory.ts';
+import { activateSkill } from './skill-combat.ts';
+import type { GroundItem, SkillId } from './character-types.ts';
 
-export { BASIC_ATTACK_PHASES } from './combat-content.ts';
-export { angleDifference, circleIntersectsSector } from './combat-geometry.ts';
 export const FIXED_STEP = COMBAT_TIMING.fixedStep;
 export const HIT_FLASH_DURATION = COMBAT_TIMING.hitFlashDuration;
 const TAU = Math.PI * 2;
 
 function initialPlayer(x: number, y: number): Player {
+  const character = createCharacterSheet();
   return {
+    character, derived: deriveCharacterStats(character), skillCooldowns: {}, activeSkill: null,
     x, y, prevX: x, prevY: y, vx: 0, vy: 0, angle: 0,
     hp: PLAYER_DEFAULTS.maxHp, maxHp: PLAYER_DEFAULTS.maxHp, mana: PLAYER_DEFAULTS.maxMana, maxMana: PLAYER_DEFAULTS.maxMana,
     level: 1, xp: 0,
     stats: createBaseStats(), equipment: createStartingEquipment(),
     attack: null, dodgeTime: 0, dodgeAngle: 0, dodgeCharges: PLAYER_ABILITIES.dodge.charges, dodgeRecharge: 0,
-    invulnerable: 0, flasks: PLAYER_ABILITIES.heal.charges, healCooldown: 0, castCooldown: 0, castTime: 0,
+    invulnerable: 0, flasks: PLAYER_ABILITIES.heal.charges, healCooldown: 0, castTime: 0,
     castAngle: 0, healFlash: 0, hitFlash: 0, hitAngle: 0, walkTime: 0, radius: PLAYER_DEFAULTS.radius, dead: false,
   };
 }
@@ -31,6 +36,9 @@ export class Simulation {
   enemies: Enemy[] = [];
   projectiles: Projectile[] = [];
   pickups: Pickup[] = [];
+  groundItems: GroundItem[] = [];
+  private lootNoticeAt = -10;
+  private skillBuffer: { slot: number; until: number } | null = null;
   time = 0;
   kills = 0;
   readonly world: WorldQuery;
@@ -43,7 +51,6 @@ export class Simulation {
   private dodgeBuffer = -1;
   private healBuffer = -1;
   private hurtGuard = 0;
-  private castReleased = false;
   private spawnTimer = 0;
   private killRecharge = 0;
 
@@ -59,6 +66,8 @@ export class Simulation {
     this.enemies = [];
     this.projectiles = [];
     this.pickups = [];
+    this.groundItems = []; this.lootNoticeAt = -10; this.skillBuffer = null;
+    refreshCharacter(this.player);
     this.time = 0;
     this.kills = 0;
     this.accumulator = 0;
@@ -67,7 +76,6 @@ export class Simulation {
     this.randomState = this.options.seed! >>> 0;
     this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
     this.hurtGuard = this.killRecharge = 0;
-    this.castReleased = false;
     this.spawnTimer = ENCOUNTER_RULES.spawnInterval;
     if (this.options.spawn) for (let i = 0; i < ENCOUNTER_RULES.initialCount; i++) {
       this.spawnAroundPlayer(ENCOUNTER_RULES.initialKind, ENCOUNTER_RULES.initialMinDistance, ENCOUNTER_RULES.initialMaxDistance);
@@ -77,6 +85,7 @@ export class Simulation {
   /** Call when focus/control context changes, including pause and resume. */
   clearInput(): void {
     this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
+    this.skillBuffer = null;
     this.player.vx = this.player.vy = 0;
     this.accumulator = 0;
     this.capturePositions();
@@ -84,7 +93,7 @@ export class Simulation {
 
   /** UI hover cancels queued weapons while movement and current actions continue. */
   clearCombatInput(): void {
-    this.attackBuffer = -1;
+    this.attackBuffer = -1; this.skillBuffer = null;
   }
 
   /** Fraction between the two most recent fixed-tick positions for rendering. */
@@ -102,6 +111,7 @@ export class Simulation {
     if (!Number.isFinite(dt) || dt <= 0 || this.player.dead) return;
     if (input.attack) this.attackBuffer = this.time + COMBAT_TIMING.attackBuffer;
     if (input.dodge) this.dodgeBuffer = this.time + COMBAT_TIMING.inputBuffer;
+    if (input.skillSlot !== null) this.skillBuffer = { slot: input.skillSlot, until: this.time + COMBAT_TIMING.inputBuffer };
     if (input.heal) this.healBuffer = this.time + COMBAT_TIMING.inputBuffer;
     // Bound catch-up after a suspended tab; normal frames always run at 120 Hz.
     this.accumulator += Math.min(dt, 0.25);
@@ -146,6 +156,7 @@ export class Simulation {
     this.updateEnemies(dt);
     this.updateProjectiles(dt);
     this.updatePickups(dt);
+    this.collectGroundItems();
     if (this.player.dead) {
       // A death may clear input midway through this tick; freeze its final poses.
       this.capturePositions();
@@ -174,11 +185,12 @@ export class Simulation {
     let completedAttackTime = 0;
     this.hurtGuard = Math.max(0, this.hurtGuard - dt);
     p.healCooldown = Math.max(0, p.healCooldown - dt);
-    p.castCooldown = Math.max(0, p.castCooldown - dt);
+    for (const id of Object.keys(p.skillCooldowns) as SkillId[]) p.skillCooldowns[id] = Math.max(0, p.skillCooldowns[id]! - dt);
     p.healFlash = Math.max(0, p.healFlash - dt);
-    p.mana = Math.min(p.maxMana, p.mana + PLAYER_DEFAULTS.manaRegeneration * dt);
+    p.mana = Math.min(p.maxMana, p.mana + p.derived.manaRegeneration * dt);
+    p.hp = Math.min(p.maxHp, p.hp + p.derived.lifeRegeneration * dt);
     if (p.dodgeCharges < PLAYER_ABILITIES.dodge.charges) {
-      p.dodgeRecharge += dt;
+      p.dodgeRecharge += dt / p.derived.cooldownMultiplier;
       if (p.dodgeRecharge + 1e-9 >= PLAYER_ABILITIES.dodge.recharge) {
         p.dodgeCharges++;
         p.dodgeRecharge -= PLAYER_ABILITIES.dodge.recharge;
@@ -190,7 +202,7 @@ export class Simulation {
       const healed = Math.min(PLAYER_ABILITIES.heal.restore, p.maxHp - p.hp);
       p.hp += healed;
       p.flasks--;
-      p.healCooldown = PLAYER_ABILITIES.heal.cooldown;
+      p.healCooldown = PLAYER_ABILITIES.heal.cooldown * p.derived.cooldownMultiplier;
       p.healFlash = PLAYER_ABILITIES.heal.flashDuration;
       this.healBuffer = -1;
       this.events.push({ type: 'heal', x: p.x, y: p.y, value: healed });
@@ -208,16 +220,10 @@ export class Simulation {
         p.attack = null;
       }
     }
-    if (p.castTime > 0) {
-      p.castTime = Math.max(0, p.castTime - dt);
-      if (!this.castReleased && p.castTime <= PLAYER_ABILITIES.ember.releaseRemaining) {
-        this.castReleased = true;
-        this.projectile(p.x, p.y, p.castAngle, PROJECTILE_DEFINITIONS.ember);
-        this.events.push({ type: 'cast', x: p.x, y: p.y, angle: p.castAngle });
-      }
-    }
+    p.castTime = Math.max(0, p.castTime - dt);
+    if (!p.attack && p.castTime <= 0) p.activeSkill = null;
 
-    const canCancel = (!p.attack || p.attack.elapsed >= p.attack.activeEnd) && p.castTime <= PLAYER_ABILITIES.ember.releaseRemaining;
+    const canCancel = (!p.attack || p.attack.elapsed >= p.attack.activeEnd) && p.castTime <= SKILL_CAST_MOTION.releaseRemaining;
     if (this.dodgeBuffer >= this.time && p.dodgeTime <= 0 && p.dodgeCharges > 0 && canCancel) {
       const moving = Math.hypot(input.moveX, input.moveY) > 0.01;
       p.dodgeAngle = moving ? Math.atan2(input.moveY, input.moveX) : p.angle;
@@ -228,6 +234,14 @@ export class Simulation {
       this.dodgeBuffer = -1;
       this.events.push({ type: 'dodge', x: p.x, y: p.y, angle: p.dodgeAngle });
     }
+
+    if (this.skillBuffer && this.skillBuffer.until >= this.time && activateSkill({
+      player: p, world: this.world, enemies: this.enemies,
+      damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),
+      visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
+      projectile: (x, y, angle, definition, skill) => this.projectile(x, y, angle, definition, skill),
+      emit: event => this.events.push(event),
+    }, this.skillBuffer.slot)) this.skillBuffer = null;
 
     if (p.dodgeTime <= 0 && p.castTime <= 0 && this.attackBuffer >= this.time && !p.attack) {
       this.startAttack(completedAttackTime);
@@ -247,8 +261,8 @@ export class Simulation {
           : p.attack.elapsed < p.attack.activeEnd ? PLAYER_MOVEMENT.attackMultiplier.active : PLAYER_MOVEMENT.attackMultiplier.recovery
         : p.castTime > 0 ? PLAYER_MOVEMENT.castMultiplier : 1;
       if (length > 0) {
-        targetVX = input.moveX / Math.max(1, length) * PLAYER_MOVEMENT.speed * factor;
-        targetVY = input.moveY / Math.max(1, length) * PLAYER_MOVEMENT.speed * factor;
+        targetVX = input.moveX / Math.max(1, length) * PLAYER_MOVEMENT.speed * p.derived.moveSpeedMultiplier * factor;
+        targetVY = input.moveY / Math.max(1, length) * PLAYER_MOVEMENT.speed * p.derived.moveSpeedMultiplier * factor;
       }
       const reversing = p.vx * targetVX + p.vy * targetVY < 0;
       const responseTime = length === 0 ? PLAYER_MOVEMENT.response.stop
@@ -305,7 +319,10 @@ export class Simulation {
 
   private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean): void {
     if (enemy.state === 'dead') return;
+    const critical = this.player.derived.critChance > 0 && this.random() < this.player.derived.critChance;
+    damage = Math.max(1, Math.round(damage * (critical ? this.player.derived.critMultiplier : 1)));
     enemy.hp = Math.max(0, enemy.hp - damage);
+    if (!this.player.dead) this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.derived.lifeOnHit);
     enemy.hitFlash = HIT_FLASH_DURATION;
     enemy.hitAngle = angle;
     const definition = ENEMY_DEFINITIONS[enemy.kind];
@@ -313,11 +330,18 @@ export class Simulation {
     enemy.knockbackX += Math.cos(angle) * shove / COMBAT_TIMING.knockbackDecay;
     enemy.knockbackY += Math.sin(angle) * shove / COMBAT_TIMING.knockbackDecay;
     this.events.push({ type: 'hit', x: enemy.x, y: enemy.y, angle, value: damage,
-      targetId: enemy.id, remainingHp: enemy.hp, enemyKind: enemy.kind });
+      targetId: enemy.id, remainingHp: enemy.hp, enemyKind: enemy.kind, heavy: critical });
     if (enemy.hp <= 0) {
       this.transition(enemy, 'dead', ENCOUNTER_RULES.corpseDuration);
       this.kills++;
-      awardExperience(this.player, definition.xpReward);
+      const levels = awardCharacterExperience(this.player, definition.xpReward);
+      if (levels) this.events.push({ type: 'level', x: this.player.x, y: this.player.y,
+        text: `Level ${this.player.level} · +${levels} skill point${levels > 1 ? 's' : ''} · +${levels * 5} attribute points`, color: '#c0acf0' });
+      if ((this.kills === 1 || this.random() < LOOT_RULES.equipmentChance) && this.groundItems.length < LOOT_RULES.maxGroundItems) {
+        const id = this.nextId++;
+        const item = generateItem((Math.imul(id, 2654435761) ^ this.options.seed!) >>> 0, this.player.level);
+        this.groundItems.push({ id, x: enemy.x, y: enemy.y, item });
+      }
       this.killRecharge++;
       if (this.killRecharge >= PLAYER_ABILITIES.heal.killsPerCharge) {
         this.killRecharge -= PLAYER_ABILITIES.heal.killsPerCharge;
@@ -467,6 +491,7 @@ export class Simulation {
   private damagePlayer(amount: number, angle: number, kind?: EnemyKind): void {
     const p = this.player;
     if (p.dead || p.invulnerable > 0 || this.world.isSanctuary?.(p.x, p.y)) return;
+    amount = Math.max(1, Math.round(amount * (1 - p.derived.damageReduction)));
     p.hp = Math.max(0, p.hp - amount);
     p.hitFlash = HIT_FLASH_DURATION;
     p.hitAngle = angle;
@@ -483,10 +508,10 @@ export class Simulation {
     }
   }
 
-  private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition): void {
+  private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill?: SkillId): void {
     const { speed, life, radius, damage, owner } = definition;
     this.projectiles.push({ id: this.nextId++, x, y, prevX: x, prevY: y,
-      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, radius, damage, life, maxLife: life, owner });
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, radius, damage, life, maxLife: life, owner, skill });
   }
 
   private updateProjectiles(dt: number): void {
@@ -510,6 +535,11 @@ export class Simulation {
           const enemy = candidates[0];
           if (enemy) {
             this.damageEnemy(enemy, projectile.damage, projectile.angle, false);
+            if (projectile.skill === 'siphon' && !p.dead) {
+              const healed = Math.min(p.maxHp - p.hp, projectile.damage * .35);
+              p.hp += healed;
+              if (healed > 0) this.events.push({ type: 'heal', x: p.x, y: p.y, value: healed });
+            }
             projectile.life = 0;
           }
         } else if (segmentDistanceSquared(p.x, p.y, oldX, oldY, projectile.x, projectile.y) <= (projectile.radius + p.radius) ** 2) {
@@ -545,6 +575,23 @@ export class Simulation {
       }
     }
     this.pickups = this.pickups.filter(pickup => pickup.life > 0);
+  }
+
+  private collectGroundItems(): void {
+    if (this.player.dead) return;
+    this.groundItems = this.groundItems.filter(drop => {
+      if (Math.hypot(drop.x - this.player.x, drop.y - this.player.y) > LOOT_RULES.equipmentCollectDistance
+        || !this.lineOfSight(this.player.x, this.player.y, drop.x, drop.y)) return true;
+      if (!addInventoryItem(this.player.character, drop.item)) {
+        if (this.time - this.lootNoticeAt > 4) {
+          this.events.push({ type: 'loot', x: drop.x, y: drop.y, text: 'Inventory full · item remains on the ground' });
+          this.lootNoticeAt = this.time;
+        }
+        return true;
+      }
+      this.events.push({ type: 'loot', x: drop.x, y: drop.y, text: drop.item.name, color: TIER_COLORS[drop.item.tier] });
+      return false;
+    });
   }
 
   private updateSpawns(dt: number): void {

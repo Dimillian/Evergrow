@@ -27,6 +27,7 @@ export class SwordTrail {
   update(player: Player, dt: number, simulationTime: number, interpolationAlpha = 1) {
     if (dt <= 0) return;
     this.time += dt;
+    if (player.equipment.mainHand.visual.kind === 'unarmed') { this.reset(); return; }
     const attack = player.attack;
     const x = player.prevX + (player.x - player.prevX) * interpolationAlpha;
     const y = player.prevY + (player.y - player.prevY) * interpolationAlpha;

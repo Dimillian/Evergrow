@@ -1,3 +1,5 @@
+import type { CharacterSheet, DerivedCharacterStats, SkillId } from './character-types.ts';
+
 export interface WorldQuery {
   blocked(x: number, y: number, radius: number): boolean;
   /** Settlements suppress hostile spawns and protect the player's occupied position. */
@@ -13,6 +15,7 @@ export interface Input {
   attack: boolean;
   dodge: boolean;
   heal: boolean;
+  skillSlot: number | null;
 }
 
 export interface Attack {
@@ -35,7 +38,7 @@ export interface CharacterStats {
 }
 
 export interface WeaponVisual {
-  kind: 'sword';
+  kind: 'sword' | 'unarmed';
   length: number;
   width: number;
   metal: string;
@@ -80,6 +83,10 @@ export interface Player {
   level: number;
   /** Experience earned toward the next level; overflow carries on level-up. */
   xp: number;
+  character: CharacterSheet;
+  derived: DerivedCharacterStats;
+  skillCooldowns: Partial<Record<SkillId, number>>;
+  activeSkill: SkillId | null;
   stats: CharacterStats;
   equipment: Equipment;
   attack: Attack | null;
@@ -93,7 +100,6 @@ export interface Player {
   invulnerable: number;
   flasks: number;
   healCooldown: number;
-  castCooldown: number;
   castTime: number;
   castAngle: number;
   healFlash: number;
@@ -150,6 +156,7 @@ export interface Projectile {
   life: number;
   maxLife: number;
   owner: 'player' | 'enemy';
+  skill?: SkillId;
 }
 
 export interface Pickup {
@@ -162,7 +169,7 @@ export interface Pickup {
   radius: number;
 }
 
-export type CombatEventType = 'swing' | 'hit' | 'kill' | 'cast' | 'hurt' | 'dodge' | 'heal' | 'pickup' | 'spawn';
+export type CombatEventType = 'swing' | 'hit' | 'kill' | 'cast' | 'hurt' | 'dodge' | 'heal' | 'pickup' | 'spawn' | 'loot' | 'level';
 
 export interface CombatEvent {
   type: CombatEventType;
@@ -176,6 +183,9 @@ export interface CombatEvent {
   remainingHp?: number;
   enemyKind?: EnemyKind;
   heavy?: boolean;
+  skill?: SkillId;
+  text?: string;
+  color?: string;
 }
 
 export interface SimulationOptions {

@@ -4,7 +4,7 @@ const MOVEMENT = {
   right: ['KeyD', 'ArrowRight'], left: ['KeyA', 'ArrowLeft'],
   down: ['KeyS', 'ArrowDown'], up: ['KeyW', 'ArrowUp'],
 } as const;
-const GAME_KEYS = new Set<string>([...Object.values(MOVEMENT).flat(), 'Space', 'KeyQ']);
+const GAME_KEYS = new Set<string>([...Object.values(MOVEMENT).flat(), 'Space', 'KeyQ', 'Digit1', 'Digit2', 'Digit3', 'Digit4']);
 type Point = { x: number; y: number };
 type PointerBounds = { left: number; top: number; width: number; height: number };
 
@@ -13,6 +13,7 @@ export class GameInput {
   readonly pointer = { x: 0, y: 0, present: false };
   private keys = new Set<string>();
   private buttons = new Set<number>();
+  private pendingSkill: number | null = null;
   private pending = { attack: false, dodge: false, heal: false };
 
   keyDown(code: string): void {
@@ -20,14 +21,16 @@ export class GameInput {
     this.keys.add(code);
     if (code === 'Space') this.pending.dodge = true;
     if (code === 'KeyQ') this.pending.heal = true;
+    if (/^Digit[1-4]$/.test(code)) this.pendingSkill = Number(code.at(-1));
   }
 
   keyUp(code: string): void { this.keys.delete(code); }
 
   pointerDown(button: number): void {
-    if (button !== 0 || this.buttons.has(button)) return;
+    if ((button !== 0 && button !== 2) || this.buttons.has(button)) return;
     this.buttons.add(button);
-    this.pending.attack = true;
+    if (button === 0) this.pending.attack = true;
+    else this.pendingSkill = 0;
   }
 
   pointerUp(button: number): void { this.buttons.delete(button); }
@@ -53,8 +56,10 @@ export class GameInput {
       aimX: aim.x, aimY: aim.y,
       attack: !combatBlocked && (this.buttons.has(0) || this.pending.attack),
       dodge: this.pending.dodge, heal: this.pending.heal,
+      skillSlot: combatBlocked ? null : this.pendingSkill ?? (this.buttons.has(2) ? 0 : null),
     };
     this.pending.attack = this.pending.dodge = this.pending.heal = false;
+    this.pendingSkill = null;
     return input;
   }
 
@@ -62,5 +67,6 @@ export class GameInput {
   clear(): void {
     this.keys.clear(); this.buttons.clear();
     this.pending.attack = this.pending.dodge = this.pending.heal = false;
+    this.pendingSkill = null;
   }
 }

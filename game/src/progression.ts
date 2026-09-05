@@ -12,8 +12,9 @@ export function xpForNextLevel(level: number): number {
   return FIRST_LEVEL_XP + (level - 1) * XP_INCREASE_PER_LEVEL;
 }
 
-/** Awards affect progression only; level-up stat changes belong to future systems. */
+/** Threshold arithmetic; character.ts grants points for the resulting level changes. */
 export function awardExperience(progress: ExperienceProgress, amount: number): void {
+  if (!Number.isFinite(amount) || amount <= 0) return;
   progress.xp += amount;
   while (progress.xp >= xpForNextLevel(progress.level)) {
     progress.xp -= xpForNextLevel(progress.level);

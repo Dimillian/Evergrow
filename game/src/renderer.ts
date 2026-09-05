@@ -1,3 +1,6 @@
+import { SKILL_CAST_MOTION } from './combat-content.ts';
+import { drawGroundLoot, drawLootLabels } from './loot-art.ts';
+import { SKILL_DEFINITIONS } from './skill-content.ts';
 import { ArtLibrary, drawHumanoid, getPlayerSwordTip, PLAYER_ART_SCALE } from './art.ts';
 import type { CharacterPose } from './art.ts';
 import { World } from './world.ts';
@@ -16,7 +19,7 @@ import { EnvironmentArt } from './environment-art.ts';
 import { SceneVisibility } from './scene-visibility.ts';
 import { isGameUIPoint } from './ui-hit-test.ts';
 import type { GamePhase } from './game-phase.ts';
-import { COMBAT_TIMING, PLAYER_ABILITIES, ENEMY_DEFINITIONS } from './combat-content.ts';
+import { COMBAT_TIMING, ENEMY_DEFINITIONS } from './combat-content.ts';
 import { CameraZoom, cameraView, screenToWorld, worldToScreen } from './camera.ts';
 import { EnemyFocus } from './enemy-focus.ts';
 import { drawEnemyPlate } from './enemy-plate.ts';
@@ -217,6 +220,7 @@ export class Renderer {
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, px, py, alpha, lights);
+    drawGroundLoot(c, sim.groundItems, sim.time);
     this.effects.drawSword(c);
     this.effects.draw(c);
     this.damageDirection(px, py);
@@ -239,6 +243,7 @@ export class Renderer {
     const p = sim.player;
     // Project popup anchors, leaving their glyph size and outline independent of camera zoom.
     this.effects.drawNumbers(c, (x, y) => worldToScreen(this.view, x, y));
+    drawLootLabels(c, sim.groundItems, (x, y) => worldToScreen(this.view, x, y), this.width, this.height);
     this.navigation(c, sim, world, settings);
     drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
       reducedMotion: settings.reducedMotion, healthTrail: this.playerHealthTrail / Math.max(1, p.maxHp),
@@ -340,20 +345,20 @@ export class Renderer {
       const flicker = reducedMotion ? 1 : 1 + Math.sin(sim.time * 8 + prop.seed) * .035 + Math.sin(sim.time * 17) * .018;
       lights.push({ x: prop.x - 18, y: prop.y - 31, radius: 215 * flicker, color: '#ffa64f', power: .92, shadows: true });
     }
-    if (p.attack && p.attack.elapsed >= p.attack.activeStart && p.attack.elapsed < p.attack.activeEnd + .05) {
+    if (p.equipment.mainHand.visual.kind !== 'unarmed' && p.attack && p.attack.elapsed >= p.attack.activeStart && p.attack.elapsed < p.attack.activeEnd + .05) {
       const a = p.attack;
       const tip = getPlayerSwordTip(playerPose(p, sim.time));
       lights.push({ x: px + tip.x, y: py + tip.y,
         radius: 105, color: p.equipment.mainHand.visual.glow ?? '#ffbf67',
         power: .55 * Math.sin(Math.PI * Math.min(1, (a.elapsed - a.activeStart) / (a.activeEnd - a.activeStart + .05))), shadows: true });
     }
-    if (p.castTime > PLAYER_ABILITIES.ember.releaseRemaining) lights.push({ x: px + Math.cos(p.castAngle) * 17, y: py - 17,
-      radius: 110, color: '#ff643b', power: (PLAYER_ABILITIES.ember.duration - p.castTime)
-        / (PLAYER_ABILITIES.ember.duration - PLAYER_ABILITIES.ember.releaseRemaining) * .8 });
+    if (p.castTime > SKILL_CAST_MOTION.releaseRemaining) lights.push({ x: px + Math.cos(p.castAngle) * 17, y: py - 17,
+      radius: 110, color: p.activeSkill ? SKILL_DEFINITIONS[p.activeSkill].color : '#c0acf0', power: (SKILL_CAST_MOTION.duration - p.castTime)
+        / (SKILL_CAST_MOTION.duration - SKILL_CAST_MOTION.releaseRemaining) * .8 });
     if (p.healFlash > 0) lights.push({ x: px, y: py - 8, radius: 150, color: '#54e8b8', power: p.healFlash * .8 });
     lights.push(...this.effects.getLights());
     for (const shot of sim.projectiles.slice(0, 8)) lights.push({ x: shot.x, y: shot.y, radius: shot.owner === 'player' ? 115 : 85,
-      color: shot.owner === 'player' ? '#ff8b3d' : '#54e8b8', power: .85, shadows: true });
+      color: shot.skill ? SKILL_DEFINITIONS[shot.skill].color : '#54e8b8', power: .85, shadows: true });
     for (const enemy of sim.enemies) if (enemy.hp > 0 && enemy.kind === 'caster') lights.push({ x: enemy.x, y: enemy.y - 22,
       radius: enemy.state === 'windup' ? 100 : 53, color: '#54e8b8', power: enemy.state === 'windup' ? .65 : .28 });
     return lights;
@@ -368,9 +373,9 @@ export class Renderer {
       c.fillStyle = '#fff0b4'; c.fillRect(x - 1.5, y - 3, 3, 6);
     }
     for (const light of lights.slice(1, 12)) drawGlow(c, light.x, light.y, light.radius * .27, light.color, light.power * .2);
-    if (p.castTime > PLAYER_ABILITIES.ember.releaseRemaining) {
-      const charge = Math.max(.1, (PLAYER_ABILITIES.ember.duration - p.castTime)
-        / (PLAYER_ABILITIES.ember.duration - PLAYER_ABILITIES.ember.releaseRemaining));
+    if (p.castTime > SKILL_CAST_MOTION.releaseRemaining) {
+      const charge = Math.max(.1, (SKILL_CAST_MOTION.duration - p.castTime)
+        / (SKILL_CAST_MOTION.duration - SKILL_CAST_MOTION.releaseRemaining));
       const x = px + Math.cos(p.castAngle) * 17, y = py - 22 + Math.sin(p.castAngle) * 12;
       drawGlow(c, x, y, 37, '#ffad48', charge * .8);
       c.fillStyle = '#fff2c0'; c.beginPath(); c.arc(x, y, 1 + charge * 3, 0, TAU); c.fill();
@@ -378,9 +383,10 @@ export class Renderer {
     for (const shot of sim.projectiles) {
       const x = lerp(shot.prevX, shot.x, alpha), y = lerp(shot.prevY, shot.y, alpha);
       const friendly = shot.owner === 'player';
-      drawGlow(c, x, y, friendly ? 40 : 27, friendly ? '#ff643b' : '#54e8b8', .65);
+      const color = shot.skill ? SKILL_DEFINITIONS[shot.skill].color : '#54e8b8';
+      drawGlow(c, x, y, friendly ? 40 : 27, color, .65);
       c.save(); c.translate(x, y); c.rotate(shot.angle);
-      c.fillStyle = friendly ? '#ff803f' : '#64edb7';
+      c.fillStyle = color;
       c.beginPath(); c.moveTo(shot.radius + 1, 0); c.quadraticCurveTo(-5, -7, -25, 0);
       c.quadraticCurveTo(-5, 7, shot.radius + 1, 0); c.fill();
       c.fillStyle = '#fff5c9'; c.beginPath(); c.ellipse(0, 0, shot.radius, shot.radius * .65, 0, 0, TAU); c.fill();

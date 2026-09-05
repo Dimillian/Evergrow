@@ -1,3 +1,5 @@
+import { SKILL_CAST_MOTION } from './combat-content.ts';
+import { outfitFromEquipment } from './item-art.ts';
 import type { CharacterPose } from './art.ts';
 import type { Attack, Player } from './model.ts';
 import { COMBAT_TIMING, PLAYER_ABILITIES } from './combat-content.ts';
@@ -8,9 +10,9 @@ const smooth = (value: number) => { const t = Math.max(0, Math.min(1, value)); r
 /** The rig, ribbon, sparks and moving light all receive the same player pose. */
 export function playerPose(player: Player, time: number,
   attack: Attack | null = player.attack, elapsed = attack?.elapsed ?? 0): CharacterPose {
-  const castProgress = player.castTime > 0 ? Math.max(0, Math.min(1, 1 - player.castTime / PLAYER_ABILITIES.ember.duration)) : 0;
+  const castProgress = player.castTime > 0 ? Math.max(0, Math.min(1, 1 - player.castTime / SKILL_CAST_MOTION.duration)) : 0;
   return {
-    kind: 'player', angle: player.castTime > 0 ? player.castAngle : player.angle,
+    kind: 'player', outfit: outfitFromEquipment(player.character), angle: player.castTime > 0 ? player.castAngle : player.angle,
     time, gaitPhase: player.walkTime, moveAngle: Math.atan2(player.vy, player.vx),
     moving: Math.min(1, Math.hypot(player.vx, player.vy) / 130),
     attack: attack ? elapsed / attack.duration : 0,

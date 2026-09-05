@@ -10,7 +10,7 @@ const emptyWorld: WorldQuery = {
   blocked: () => false,
   move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }),
 };
-const idle: Input = { moveX: 0, moveY: 0, aimX: 200, aimY: 0, attack: false, dodge: false, heal: false };
+const idle: Input = { moveX: 0, moveY: 0, aimX: 200, aimY: 0, attack: false, dodge: false, heal: false, skillSlot: null };
 function advance(sim: Simulation, seconds: number, input: Partial<Input> = {}): void {
   for (let i = 0; i < Math.round(seconds / FIXED_STEP); i++) sim.update(FIXED_STEP, { ...idle, ...input });
 }
