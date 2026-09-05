@@ -6,7 +6,7 @@ import { getActiveSwingOffset } from './attack-motion.ts';
 import { BASIC_ATTACK_PHASES, COMBAT_TIMING, SKILL_CAST_MOTION, ENEMY_DEFINITIONS, LOOT_RULES, PLAYER_ABILITIES,
   PLAYER_DEFAULTS, PLAYER_MOVEMENT, type ProjectileDefinition } from './combat-content.ts';
 import { chooseEncounterEnemy, chooseEncounterRank, ENCOUNTER_RULES, livingEnemyCount, encounterPopulationTarget, type EncounterActor } from './encounter-director.ts';
-import { circleIntersectsSector, segmentDistanceSquared } from './combat-geometry.ts';
+import { circleIntersectsSector, segmentDistanceSquared, hasLineOfSight } from './combat-geometry.ts';
 import { refreshCharacter } from './character.ts';
 import { createCharacterSheet, TIER_COLORS } from './items.ts';
 import { deriveCharacterStats } from './character-stats.ts';
@@ -280,7 +280,9 @@ export class Simulation {
         if (p.dodgeCharges === PLAYER_ABILITIES.dodge.charges) p.dodgeRecharge = 0;
       }
     }
-    if (input.aimX !== p.x || input.aimY !== p.y) p.angle = Math.atan2(input.aimY - p.y, input.aimX - p.x);
+    const direction = p.equipment.mainHand.attackKind !== 'melee' && input.rangedAim
+      && Number.isFinite(input.rangedAim.x) && Number.isFinite(input.rangedAim.y) ? input.rangedAim : { x: input.aimX, y: input.aimY };
+    if (direction.x !== p.x || direction.y !== p.y) p.angle = Math.atan2(direction.y - p.y, direction.x - p.x);
     if (this.healBuffer >= this.time && p.flasks > 0 && p.hp < p.maxHp && p.healCooldown <= 0) {
       const healed = Math.min(p.maxHp * PLAYER_ABILITIES.heal.restoreFraction, p.maxHp - p.hp);
       p.hp += healed;
@@ -433,9 +435,7 @@ export class Simulation {
   }
 
   private lineOfSight(ax: number, ay: number, bx: number, by: number): boolean {
-    const count = Math.ceil(Math.hypot(bx - ax, by - ay) / 2);
-    for (let i = 1; i < count; i++) if (this.world.blocked(ax + (bx - ax) * i / count, ay + (by - ay) * i / count, 1)) return false;
-    return true;
+    return hasLineOfSight(this.world, ax, ay, bx, by);
   }
 
   private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean, periodic = false): void {

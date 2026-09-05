@@ -393,7 +393,9 @@ export class Game {
     // A captured pointer still belongs to the canvas over a menu button.
     // Clear queued weapon inputs as well as suppressing the held buttons.
     if (blocked) this.sim.clearCombatInput();
-    return this.input.consume(aim, blocked);
+    const input = this.input.consume(aim, blocked);
+    const rangedAim = this.renderer.resolvePointerAim(this.sim, this.world, this.mouse.x, this.mouse.y, !blocked && this.mouse.present);
+    return rangedAim ? { ...input, rangedAim: { x: rangedAim.x, y: rangedAim.y } } : input;
   }
 
   private frame = (now: number) => {

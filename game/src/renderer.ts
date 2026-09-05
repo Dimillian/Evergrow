@@ -31,7 +31,11 @@ import type { GamePhase } from './game-phase.ts';
 import { COMBAT_TIMING, ENEMY_DEFINITIONS, PLAYER_ABILITIES, PLAYER_MOVEMENT } from './combat-content.ts';
 import { CAMERA_FOLLOW, CameraZoom, cameraFollowTarget, cameraSpawnExclusion,
   cameraView, screenToWorld, worldToScreen } from './camera.ts';
-import { EnemyFocus, ENEMY_BODY_BOUNDS } from './enemy-focus.ts';
+import { EnemyFocus } from './enemy-focus.ts';
+import { ENEMY_BODY_BOUNDS } from './enemy-body.ts';
+import { resolveRangedAim, PROJECTILE_HEIGHT, type RangedAim } from './ranged-aim.ts';
+import { deriveAttackStats } from './equipment.ts';
+import { hasLineOfSight } from './combat-geometry.ts';
 import { drawEnemyPlate } from './enemy-plate.ts';
 import { drawRankCrest } from './enemy-rank-art.ts';
 import { drawSiteGround, drawSiteDecor, wildernessLights } from './wilderness-art.ts';
@@ -92,6 +96,7 @@ export class Renderer {
   private focusedEnemy: Enemy | null = null;
   private plateEnemy: Enemy | null = null;
   private plateOpacity = 0;
+  private rangedAim: RangedAim | null = null;
 
   constructor() { this.resize(960, 600); }
 
@@ -124,8 +129,23 @@ export class Renderer {
     return screenToWorld(this.view, x, y);
   }
 
+  /** Uses the displayed camera/body positions, then returns gameplay ground coordinates. */
+  resolvePointerAim(sim: Simulation, world: World, x: number, y: number, enabled: boolean): RangedAim | null {
+    const p = sim.player;
+    if (!enabled || p.dead || p.equipment.mainHand.attackKind === 'melee') { this.rangedAim = null; return null; }
+    const cursor = screenToWorld(this.lastDisplayedView, x, y);
+    this.rangedAim = resolveRangedAim(p, cursor, sim.enemies, {
+      range: deriveAttackStats(p.stats, p.equipment.mainHand).range,
+      speed: p.equipment.mainHand.attackKind === 'arrow' ? 560 : 380,
+      alpha: sim.interpolationAlpha, previousTargetId: this.rangedAim?.targetId ?? null,
+      bounds: this.lastDisplayedView,
+      visible: (ax, ay, bx, by) => hasLineOfSight(world, ax, ay, bx, by),
+    });
+    return this.rangedAim;
+  }
+
   reset() {
-    this.cameraX = 0; this.cameraY = 0; this.effects.reset();
+    this.cameraX = 0; this.cameraY = 0; this.effects.reset(); this.rangedAim = null;
     this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
     this.lastDisplayedView = this.view;
     this.groundLayer.reset(); this.groundDressing.reset(); this.biomeLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
@@ -291,7 +311,7 @@ export class Renderer {
       healthTrail: this.damageTrails.get(this.plateEnemy.id)?.value ?? this.plateEnemy.hp,
       hitPulse: settings.reducedMotion ? 0 : Math.min(1, this.plateEnemy.hitFlash / COMBAT_TIMING.hitFlashDuration),
     });
-    if (settings.phase === 'playing') this.cursor(c);
+    if (settings.phase === 'playing') this.cursor(c, sim);
   }
 
   private enemyFocusMark(alpha: number) {
@@ -445,7 +465,7 @@ export class Renderer {
     }
     for (const shot of sim.projectiles) {
       const x = lerp(shot.prevX, shot.x, alpha), y = lerp(shot.prevY, shot.y, alpha);
-      drawProjectile(c, shot, x, y - 16, this.visualTime);
+      drawProjectile(c, shot, x, y - PROJECTILE_HEIGHT, this.visualTime);
     }
   }
 
@@ -577,10 +597,37 @@ export class Renderer {
     return isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height);
   }
 
-  private cursor(c: CanvasRenderingContext2D) {
+  private cursor(c: CanvasRenderingContext2D, sim: Simulation) {
     if (!this.pointerActive || this.pointerOverHUD()) return;
     const x = this.pointerX, y = this.pointerY;
-    c.strokeStyle = this.enemyFocus.hoveredId === null ? '#ded5a9bb' : '#efb398'; c.lineWidth = 1; c.beginPath();
+    const aim = this.rangedAim, player = sim.player;
+    const target = aim?.targetId == null ? null : sim.enemies.find(e => e.id === aim.targetId && e.hp > 0);
+    if (aim && player.equipment.mainHand.attackKind !== 'melee') {
+      const origin = worldToScreen(this.view, player.x, player.y - PROJECTILE_HEIGHT);
+      const end = worldToScreen(this.view, aim.x, aim.y - PROJECTILE_HEIGHT);
+      const dx = end.x - origin.x, dy = end.y - origin.y, distance = Math.hypot(dx, dy);
+      if (distance > 30) {
+        const reach = Math.min(distance, 85 * this.view.zoom);
+        c.save(); c.strokeStyle = target ? '#aee2cd70' : '#c0d3d640'; c.lineWidth = .8; c.setLineDash([2, 5]);
+        c.beginPath(); c.moveTo(origin.x + dx / distance * 24, origin.y + dy / distance * 24);
+        c.lineTo(origin.x + dx / distance * reach, origin.y + dy / distance * reach); c.stroke(); c.restore();
+      }
+      if (target) {
+        const alpha = sim.interpolationAlpha;
+        const body = ENEMY_BODY_BOUNDS[target.kind];
+        const center = worldToScreen(this.view, lerp(target.prevX, target.x, alpha),
+          lerp(target.prevY, target.y, alpha) + (body.top + body.bottom) / 2);
+        const radius = Math.max(10, body.radiusX * this.view.zoom + 3);
+        c.save(); c.strokeStyle = '#bee9d9'; c.lineWidth = 1;
+        for (const side of [-1, 1]) {
+          c.beginPath(); c.moveTo(center.x + side * (radius - 4), center.y - 6);
+          c.lineTo(center.x + side * radius, center.y - 6); c.lineTo(center.x + side * radius, center.y + 6);
+          c.lineTo(center.x + side * (radius - 4), center.y + 6); c.stroke();
+        }
+        c.restore();
+      }
+    }
+    c.strokeStyle = target ? '#bee9d9' : this.enemyFocus.hoveredId === null ? '#ded5a9dd' : '#efb398'; c.lineWidth = 1; c.beginPath();
     c.moveTo(x - 6, y); c.lineTo(x - 3, y); c.moveTo(x + 3, y); c.lineTo(x + 6, y);
     c.moveTo(x, y - 6); c.lineTo(x, y - 3); c.moveTo(x, y + 3); c.lineTo(x, y + 6); c.stroke();
     c.fillStyle = '#fff0bb'; c.fillRect(x, y, 1, 1);

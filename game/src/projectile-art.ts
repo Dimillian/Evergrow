@@ -1,3 +1,4 @@
+import { PROJECTILE_HEIGHT } from './ranged-aim.ts';
 import type { Projectile, ProjectileStyle } from './model.ts';
 import { drawGlow, type PointLight } from './lighting.ts';
 import { line, polygon, type Point } from './art-primitives.ts';
@@ -9,7 +10,7 @@ export const projectileStyle = (shot: Projectile): ProjectileStyle => shot.effec
 
 export function projectileLight(shot: Projectile): PointLight {
   const style = projectileStyle(shot);
-  return { x: shot.x, y: shot.y - 16, color: PROJECTILE_COLORS[style],
+  return { x: shot.x, y: shot.y - PROJECTILE_HEIGHT, color: PROJECTILE_COLORS[style],
     radius: style === 'arrow' ? 30 : style === 'fire' ? 150 : style === 'lightning' ? 130 : 105,
     power: style === 'arrow' ? .15 : .86, shadows: style !== 'arrow' };
 }
@@ -21,9 +22,9 @@ export function drawProjectile(c: CanvasRenderingContext2D, shot: Projectile, x:
   if (style !== 'arrow') drawGlow(c, x, y, style === 'fire' ? 58 : 37, color, .65);
   c.save(); c.translate(x, y); c.rotate(shot.angle);
   if (style === 'arrow') {
-    c.globalAlpha *= .25;
-    line(c, [[-45, 0], [-14, 0]], '#d5ddc2', 1.3);
-    c.globalAlpha /= .25;
+    c.globalAlpha *= .45;
+    line(c, [[-42, 0], [-14, 0]], '#d5ddc2', 1.5);
+    c.globalAlpha /= .45;
     line(c, [[-23, .4], [6, .4]], '#473e32', 2);
     line(c, [[-23, -.2], [6, -.2]], '#c4ad80', .85);
     polygon(c, [[5, -2.4], [12, 0], [5, 2.4], [7, 0]], '#e4e7d0');

@@ -1,5 +1,6 @@
 import type { CombatEvent, Enemy, EnemyKind, Player, Projectile, WorldQuery } from './model.ts';
 import { applySlow, applyBurn } from './combat-status.ts';
+import { PLAYER_PROJECTILE_FORGIVENESS } from './ranged-aim.ts';
 import { segmentDistanceSquared } from './combat-geometry.ts';
 
 export const MAX_PROJECTILES = 128;
@@ -69,7 +70,7 @@ export function advanceProjectiles(projectiles: Projectile[], dt: number, contex
         continue;
       }
       const candidates = context.enemies.filter(enemy => enemy.state !== 'dead' && !projectile.hitIds.has(enemy.id)
-        && segmentDistanceSquared(enemy.x, enemy.y, oldX, oldY, projectile.x, projectile.y) <= (projectile.radius + enemy.radius) ** 2
+        && segmentDistanceSquared(enemy.x, enemy.y, oldX, oldY, projectile.x, projectile.y) <= (projectile.radius + enemy.radius + PLAYER_PROJECTILE_FORGIVENESS) ** 2
         && context.visible(oldX, oldY, enemy.x, enemy.y));
       candidates.sort((a, b) => Math.hypot(a.x - oldX, a.y - oldY) - Math.hypot(b.x - oldX, b.y - oldY) || a.id - b.id);
       const enemy = candidates[0];

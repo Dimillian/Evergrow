@@ -1,16 +1,9 @@
 import { screenToWorld, type CameraView } from './camera.ts';
-import type { CombatEvent, Enemy, EnemyKind } from './model.ts';
+import type { CombatEvent, Enemy } from './model.ts';
 
 const HOVER_GRACE = .25;
 const HIT_RETENTION = 1.5;
-export const ENEMY_BODY_BOUNDS: Record<EnemyKind, { radiusX: number; top: number; bottom: number }> = {
-  stalker: { radiusX: 14, top: -43, bottom: 3 },
-  brute: { radiusX: 22, top: -54, bottom: 4 },
-  caster: { radiusX: 15, top: -46, bottom: 3 },
-  hound: { radiusX: 25, top: -38, bottom: 5 },
-  archer: { radiusX: 22, top: -48, bottom: 3 },
-  wisp: { radiusX: 18, top: -49, bottom: -4 },
-};
+import { ENEMY_BODY_BOUNDS } from './enemy-body.ts';
 
 interface VisibleEnemy { enemy: Enemy; x: number; y: number; centerY: number; radiusX: number; radiusY: number; }
 

@@ -17,6 +17,8 @@ export interface Input {
   moveY: number;
   aimX: number;
   aimY: number;
+  /** Optional body-height corrected ranged aim; ground skills retain aimX/aimY. */
+  rangedAim?: { x: number; y: number };
   attack: boolean;
   dodge: boolean;
   heal: boolean;

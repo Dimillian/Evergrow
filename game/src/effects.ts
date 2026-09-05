@@ -1,3 +1,4 @@
+import { PROJECTILE_HEIGHT } from './ranged-aim.ts';
 import { SKILL_CAST_MOTION } from './combat-content.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
 import { getSwingAngle, getPlayerSwordTip } from './art.ts';
@@ -146,7 +147,7 @@ export class CombatEffects {
         if (style === 'arrow') continue;
         const color = PROJECTILE_COLORS[style];
         for (let i = 0; i < (style === 'fire' ? 2 : 1); i++) {
-          this.spark(shot.x, shot.y - 16, shot.angle + Math.PI + (Math.random() - .5) * .7,
+          this.spark(shot.x, shot.y - PROJECTILE_HEIGHT, shot.angle + Math.PI + (Math.random() - .5) * .7,
             i ? '#ffd674' : color, style === 'fire' ? .45 : .22, false);
         }
       }

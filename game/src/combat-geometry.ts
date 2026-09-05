@@ -1,3 +1,5 @@
+import type { WorldQuery } from './model.ts';
+
 export function angleDifference(a: number, b: number): number {
   return Math.atan2(Math.sin(a - b), Math.cos(a - b));
 }
@@ -22,4 +24,11 @@ export function circleIntersectsSector(x: number, y: number, radius: number, ori
       originY + Math.sin(edge) * range) <= radius * radius) return true;
   }
   return false;
+}
+
+/** Shared obstruction test for damage, targeting and aim feedback. */
+export function hasLineOfSight(world: Pick<WorldQuery, 'blocked'>, ax: number, ay: number, bx: number, by: number): boolean {
+  const count = Math.ceil(Math.hypot(bx - ax, by - ay) / 2);
+  for (let i = 1; i < count; i++) if (world.blocked(ax + (bx - ax) * i / count, ay + (by - ay) * i / count, 1)) return false;
+  return true;
 }
