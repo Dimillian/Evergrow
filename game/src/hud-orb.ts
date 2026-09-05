@@ -19,6 +19,29 @@ function liquidLevel(ratio: number): number {
   return (low + high) * GLASS_RADIUS / 2;
 }
 
+/** Small luminous motes rise through mana, at the same scale as health bubbles. */
+function manaEnergy(c: CanvasRenderingContext2D, time: number, level: number) {
+  for (let i = 0; i < 9; i++) {
+    const phase = (time * (.07 + i % 3 * .012) + i * .381966) % 1;
+    const x = Math.sin(i * 2.4) * 16 + Math.sin(time * .75 + i * 1.7) * 1.2;
+    const y = 25 - phase * 53;
+    const radius = .5 + i % 3 * .18;
+    const submerged = Math.min(1, Math.max(0, (y - level) / 3));
+    const fade = Math.min(1, phase * 9) * submerged * (.75 + Math.sin(time * 1.5 + i) * .15);
+    if (fade <= 0) continue;
+    const tint = i % 3 === 0 ? '#b9b6ff' : '#a6dfff';
+    const halo = c.createRadialGradient(x, y, 0, x, y, radius * 2.7);
+    halo.addColorStop(0, tint + '60'); halo.addColorStop(.4, tint + '24'); halo.addColorStop(1, tint + '00');
+    c.globalAlpha = fade * .65; c.fillStyle = halo;
+    c.fillRect(x - 3, y - 3, 6, 6);
+    c.globalAlpha = fade * .46; c.fillStyle = tint;
+    circle(c, x, y, radius); c.fill();
+    // A very short fading wake reads as rising energy without tracing a pattern.
+    c.globalAlpha = fade * .16; c.strokeStyle = tint; c.lineWidth = .45;
+    c.beginPath(); c.moveTo(x, y + radius); c.lineTo(x - .25, y + radius + 1.4); c.stroke();
+  }
+}
+
 /** Native-resolution garnet/lapis glass and its complete, 31px metal socket. */
 export function drawHUDOrb(c: CanvasRenderingContext2D, x: number, y: number,
   ratio: number, time: number, mana: boolean, trail = ratio, hit = 0) {
@@ -70,7 +93,7 @@ export function drawHUDOrb(c: CanvasRenderingContext2D, x: number, y: number,
     liquid.addColorStop(1, mana ? '#0a1c50' : '#45091f');
     c.fillStyle = liquid; c.fillRect(-r, -r, r * 2, r * 2);
 
-    // Slow, soft illumination gives depth without painting ribbons through it.
+    // Soft illumination remains behind the resource-specific motion.
     c.globalCompositeOperation = 'screen';
     const glowX = -7 + Math.sin(time * .31) * 2;
     const glowY = 9 + Math.cos(time * .27) * 2;
@@ -85,7 +108,7 @@ export function drawHUDOrb(c: CanvasRenderingContext2D, x: number, y: number,
       c.globalAlpha = .6; c.lineWidth = .75;
       c.strokeStyle = mana ? '#b3d7f7' : '#f38b99';
       c.beginPath(); c.moveTo(-halfWidth, level + .4); c.lineTo(halfWidth, level + .4); c.stroke();
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; !mana && i < 2; i++) {
         const travel = (time * .14 + i * .5) % 1;
         const width = halfWidth * (.25 + travel * .6);
         c.globalAlpha = Math.sin(travel * Math.PI) * .2;
@@ -96,9 +119,9 @@ export function drawHUDOrb(c: CanvasRenderingContext2D, x: number, y: number,
       }
     }
 
-    // Hollow bubbles rise on staggered cycles inside the exact resource segment.
-    // Constant world-of-glass paths avoid rearranging the bubbles when mana is spent.
-    for (let i = 0; i < 11; i++) {
+    if (mana) manaEnergy(c, time, level);
+    // Health retains hollow rising bubbles; mana uses soft luminous motes instead.
+    for (let i = 0; !mana && i < 11; i++) {
       const phase = (time * (.09 + (i % 4) * .017) + i * .381966) % 1;
       const bx = Math.sin(i * 2.4) * 16 + Math.sin(time * 1.2 + i * 1.7) * 1.5;
       const by = 25 - phase * 53;
@@ -107,13 +130,13 @@ export function drawHUDOrb(c: CanvasRenderingContext2D, x: number, y: number,
       const fade = Math.min(1, phase * 9) * submerged;
       if (fade <= 0) continue;
       c.globalAlpha = fade * .55;
-      c.fillStyle = mana ? '#77c7fb28' : '#ff9caa28';
+      c.fillStyle = '#ff9caa28';
       circle(c, bx, by, radius); c.fill();
-      c.strokeStyle = mana ? '#9cddf7' : '#ffb8bd'; c.lineWidth = .42;
+      c.strokeStyle = '#ffb8bd'; c.lineWidth = .42;
       c.stroke();
       c.globalAlpha = fade * .85;
       c.beginPath(); c.arc(bx, by, radius * .76, 3.5, 4.8);
-      c.strokeStyle = mana ? '#e2f8ff' : '#ffe1d3'; c.lineWidth = .5; c.stroke();
+      c.strokeStyle = '#ffe1d3'; c.lineWidth = .5; c.stroke();
     }
     c.restore();
   }
