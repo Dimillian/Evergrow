@@ -50,9 +50,12 @@ test('biome borders require sustained entry and continuing does not announce the
   tracker.reset('swamp'); assert.equal(tracker.update('swamp', 100), false);
 });
 
-test('routine pickup counts merge instead of filling the feed with individual common items', () => {
+test('distinct common and magic pickups retain their names, tiers and order', () => {
   const queue = new NotificationQueue(2);
-  for (let i = 0; i < 12; i++) queue.push({ kind: 'lootSummary', count: 1 });
-  assert.equal(queue.visible.length, 1); assert.equal(queue.pendingCount, 0);
-  assert.deepEqual(queue.visible[0].notice, { kind: 'lootSummary', count: 12 });
+  const items = ['common', 'magic', 'common'].map((tier, index) => generateItem(800 + index, 3, 'boots', undefined, tier as 'common' | 'magic'));
+  for (const item of items) queue.push({ kind: 'loot', item });
+  assert.equal(queue.visible.length, 2); assert.equal(queue.pendingCount, 1);
+  assert.deepEqual(queue.visible.map(entry => entry.notice), items.slice(0, 2).map(item => ({ kind: 'loot', item })));
+  queue.advance(4);
+  assert.deepEqual(queue.visible[0].notice, { kind: 'loot', item: items[2] });
 });

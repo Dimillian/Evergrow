@@ -24,9 +24,7 @@ export class GameNotifications {
   }
   push(notice: GameNotice): void {
     if (this.disposed) return;
-    if (notice.kind === 'loot' && (notice.item.tier === 'common' || notice.item.tier === 'magic'))
-      this.feed.push({ kind: 'lootSummary', count: 1 });
-    else this.feed.push(notice);
+    this.feed.push(notice);
     this.render();
     if (this.autoAdvance && !this.frame) { this.last = performance.now(); this.frame = requestAnimationFrame(this.tick); }
   }
@@ -61,9 +59,7 @@ export class GameNotifications {
           if (notice.kind === 'loot') {
             title = notice.item.name; detail = `${TIER_NAMES[notice.item.tier]} · Item level ${notice.item.itemLevel}`;
             icon = itemIconSVG(notice.item, 46); color = TIER_COLORS[notice.item.tier];
-          } else if (notice.kind === 'lootSummary') {
-            title = `${notice.count} ${notice.count === 1 ? 'item collected' : 'items collected'}`; detail = '';
-            icon = uiIcon('inventory'); color = '#9eafb4';
+
           } else if (notice.kind === 'level') {
             title = `Level ${notice.level}`;
             detail = `+${notice.skillPoints} skill ${notice.skillPoints === 1 ? 'point' : 'points'}  ·  +${notice.statPoints} stat ${notice.statPoints === 1 ? 'point' : 'points'}`;

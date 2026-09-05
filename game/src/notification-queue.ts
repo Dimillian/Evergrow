@@ -3,7 +3,6 @@ import type { WorldPOI } from './world-pois.ts';
 
 export type GameNotice =
   | { kind: 'loot'; item: Item }
-  | { kind: 'lootSummary'; count: number }
   | { kind: 'level'; level: number; skillPoints: number; statPoints: number }
   | { kind: 'discovery'; poi: WorldPOI }
   | { kind: 'area'; id: string; name: string; level: number }
@@ -15,7 +14,7 @@ const key = (notice: GameNotice): string => notice.kind === 'loot' ? `loot:${not
     : notice.kind === 'info' ? `info:${notice.message}` : notice.kind;
 const duration = (notice: GameNotice) => notice.kind === 'level' ? 3.5 : notice.kind === 'loot' ? 3.6 : 2.8;
 
-/** Bounded feed with aggregated routine pickups and priority for level rewards. */
+/** Bounded feed with individual item pickups and priority for level rewards. */
 export class NotificationQueue {
   readonly visible: NoticeEntry[] = [];
   private pending: GameNotice[] = [];
@@ -29,8 +28,7 @@ export class NotificationQueue {
     const waiting = this.pending.findIndex(value => key(value) === key(notice));
     const merge = (previous: GameNotice): GameNotice => notice.kind === 'level' && previous.kind === 'level'
       ? { kind: 'level', level: Math.max(previous.level, notice.level),
-        skillPoints: previous.skillPoints + notice.skillPoints, statPoints: previous.statPoints + notice.statPoints }
-      : notice.kind === 'lootSummary' && previous.kind === 'lootSummary' ? { kind: 'lootSummary', count: previous.count + notice.count } : notice;
+        skillPoints: previous.skillPoints + notice.skillPoints, statPoints: previous.statPoints + notice.statPoints } : notice;
     if (active) { active.notice = merge(active.notice); active.age = 0; active.duration = duration(active.notice); return; }
     if (waiting >= 0) { this.pending[waiting] = merge(this.pending[waiting]); return; }
     if (notice.kind === 'level') this.pending.unshift(notice); else this.pending.push(notice);
