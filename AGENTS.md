@@ -38,6 +38,7 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/src/attack-motion.ts`: shared angular motion for visible swings and swept melee contact.
 - `game/src/character-pose.ts`: common player pose for the character, ribbon, sparks, and weapon light.
 - `game/src/renderer.ts`: interpolated scene composition, camera, actors, and a separate native-resolution UI pass.
+- `game/src/camera.ts`: smooth bounded wheel zoom and shared world/screen projection. Keep the HUD and damage-text size independent of camera zoom; terrain, object coverage, and lights must follow the visible world bounds.
 - `game/src/lighting.ts`: bounded dynamic light map, cached light stamps, and prop shadows.
 - `game/src/effects.ts`: bounded combat particles, trails, flashes, and damage numbers; effects never drive gameplay.
 - `game/src/sword-trail.ts`: sampled world-space metal-gold ribbons following the weapon.

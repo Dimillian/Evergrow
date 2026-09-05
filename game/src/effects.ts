@@ -193,16 +193,17 @@ export class CombatEffects {
     c.restore();
   }
 
-  drawNumbers(c: CanvasRenderingContext2D) {
+  drawNumbers(c: CanvasRenderingContext2D, project: (x: number, y: number) => { x: number; y: number } = (x, y) => ({ x, y })) {
     c.save();
     for (const popup of this.popups) {
       const elapsed = popup.max - popup.life;
       const pop = 1 + .35 * Math.exp(-elapsed * 22);
       const size = popup.size * pop;
+      const { x, y } = project(popup.x, popup.y);
       c.globalAlpha = Math.min(1, popup.life / .2);
-      text(c, popup.value, popup.x - 1, popup.y, size, '#04070b', 'center');
-      text(c, popup.value, popup.x + 1, popup.y + 1, size, '#04070b', 'center');
-      text(c, popup.value, popup.x, popup.y, size, popup.color, 'center');
+      text(c, popup.value, x - 1, y, size, '#04070b', 'center');
+      text(c, popup.value, x + 1, y + 1, size, '#04070b', 'center');
+      text(c, popup.value, x, y, size, popup.color, 'center');
     }
     c.restore();
   }

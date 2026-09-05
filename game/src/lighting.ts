@@ -52,8 +52,12 @@ export class Lighting {
   }
 
   apply(target: CanvasRenderingContext2D, width: number, height: number,
-    left: number, top: number, lights: PointLight[], props: Prop[], ambient = '#839cae') {
+    left: number, top: number, lights: PointLight[], props: Prop[], ambient = '#839cae', zoom = 1) {
     const mw = Math.ceil(width / 2), mh = Math.ceil(height / 2);
+    const worldWidth = width / zoom, worldHeight = height / zoom;
+    // Use the real map ratios so odd-sized viewports upscale back onto the same
+    // camera projection as the world, without drifting half a pixel at the edges.
+    const scaleX = zoom * mw / width, scaleY = zoom * mh / height;
     if (this.map.width !== mw || this.map.height !== mh) {
       this.map.width = mw; this.map.height = mh;
     }
@@ -66,8 +70,8 @@ export class Lighting {
     c.globalCompositeOperation = 'lighter';
     let shadowCount = 0;
     for (const light of lights.slice(0, 18)) {
-      if (light.x + light.radius < left || light.x - light.radius > left + width
-        || light.y + light.radius < top || light.y - light.radius > top + height) continue;
+      if (light.x + light.radius < left || light.x - light.radius > left + worldWidth
+        || light.y + light.radius < top || light.y - light.radius > top + worldHeight) continue;
       const scratch = this.scratchContext;
       scratch.setTransform(1, 0, 0, 1, 0, 0);
       scratch.clearRect(0, 0, 256, 256);
@@ -76,8 +80,8 @@ export class Lighting {
       scratch.drawImage(lightStamp(light.color), 0, 0);
       if (light.shadows && shadowCount++ < 4) this.cutShadows(light, props);
       c.globalAlpha = Math.min(1, light.power);
-      c.drawImage(this.scratch, (light.x - light.radius - left) / 2,
-        (light.y - light.radius - top) / 2, light.radius, light.radius);
+      c.drawImage(this.scratch, (light.x - light.radius - left) * scaleX,
+        (light.y - light.radius - top) * scaleY, light.radius * 2 * scaleX, light.radius * 2 * scaleY);
     }
     c.globalAlpha = 1;
     target.save();

@@ -133,6 +133,13 @@ class Game {
     window.addEventListener('keyup', event => this.keys.delete(event.code), { signal });
     // Window-level tracking also follows the pointer across the DOM HUD buttons.
     window.addEventListener('pointermove', event => this.updatePointer(event), { signal });
+    this.canvas.addEventListener('wheel', event => {
+      if (this.phase !== 'playing' || event.ctrlKey || event.metaKey) return;
+      this.updatePointer(event);
+      if (this.pointerInHUD()) return;
+      event.preventDefault();
+      this.renderer.zoomByWheel(event.deltaY, event.deltaMode, this.canvas.getBoundingClientRect().height);
+    }, { signal, passive: false });
     this.canvas.addEventListener('pointerdown', event => {
       if (this.phase !== 'playing') return;
       event.preventDefault();
@@ -154,7 +161,7 @@ class Game {
     document.querySelector('[data-hud="map"]')!.addEventListener('click', () => this.openMap(), { signal });
   }
 
-  private updatePointer(event: PointerEvent) {
+  private updatePointer(event: { clientX: number; clientY: number }) {
     const rect = this.canvas.getBoundingClientRect();
     this.mouse.x = (event.clientX - rect.left) / rect.width * this.renderer.width;
     this.mouse.y = (event.clientY - rect.top) / rect.height * this.renderer.height;

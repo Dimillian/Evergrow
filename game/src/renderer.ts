@@ -16,6 +16,7 @@ import { SettlementArt } from './settlement-art.ts';
 import { EnvironmentArt } from './environment-art.ts';
 import type { Building } from './settlements.ts';
 import { getMinimapRect } from './world-map.ts';
+import { CameraZoom, cameraView, screenToWorld, worldToScreen } from './camera.ts';
 
 interface Corpse { x: number; y: number; angle: number; kind: Enemy['kind']; life: number; seed: number; }
 interface Ghost { x: number; y: number; angle: number; gait: number; life: number; }
@@ -40,8 +41,8 @@ export class Renderer {
   hurt = 0;
   private kickX = 0;
   private kickY = 0;
-  private viewOffsetX = 0;
-  private viewOffsetY = 0;
+  private cameraZoom = new CameraZoom();
+  private view = cameraView(this.width, this.height, 0, 0, 1);
   private hurtAngle = 0;
   private damageTrails = new Map<number, { value: number; hold: number }>();
   private playerHealthTrail = 100;
@@ -58,36 +59,37 @@ export class Renderer {
   private ghostTimer = 0;
   private visualTime = 0;
   private cachedProps: Prop[] = [];
-  private queryX = Infinity;
-  private queryY = Infinity;
+  private queryView: { left: number; top: number; width: number; height: number } | null = null;
 
   constructor() { this.resize(960, 600); }
 
   resize(width: number, height: number) {
     this.width = Math.round(width); this.height = Math.round(height);
     this.canvas.width = this.width; this.canvas.height = this.height;
-    this.viewOffsetX = this.width / 2 - this.cameraX;
-    this.viewOffsetY = this.height / 2 - this.cameraY;
+    this.view = cameraView(this.width, this.height, this.cameraX, this.cameraY, this.cameraZoom.value);
     // Smooth subpixel sprite translation, with the deliberately coarse art preserved by its source.
     this.ctx.imageSmoothingEnabled = true;
-    this.queryX = Infinity;
+    this.queryView = null;
   }
 
-  get worldHeight() { return this.height; }
+  get worldHeight() { return this.view.height; }
+  zoomByWheel(deltaY: number, deltaMode: number, viewportHeight: number) {
+    this.cameraZoom.wheel(deltaY, deltaMode, viewportHeight);
+  }
   screenToWorld(x: number, y: number) {
     // Input targets the last displayed frame, including its small impact impulse.
-    return { x: x - this.viewOffsetX, y: y - this.viewOffsetY };
+    return screenToWorld(this.view, x, y);
   }
 
   reset() {
     this.cameraX = 0; this.cameraY = 0; this.effects.reset();
-    this.viewOffsetX = this.width / 2; this.viewOffsetY = this.height / 2;
+    this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
     this.groundLayer.reset();
     this.settlementArt.reset(); this.cachedBuildings = []; this.indoorBlend = 0;
     this.corpses = []; this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
     this.damageTrails.clear(); this.playerHealthTrail = 100; this.playerHealthHold = 0;
-    this.queryX = Infinity;
+    this.queryView = null;
   }
 
   handleEvents(events: CombatEvent[], reducedMotion: boolean) {
@@ -150,21 +152,26 @@ export class Renderer {
     }
 
     const shake = settings.reducedMotion ? 0 : this.shake;
-    const offsetX = this.width / 2 - this.cameraX + (settings.reducedMotion ? 0 : this.kickX) + Math.sin(this.visualTime * 103) * shake;
-    const offsetY = this.height / 2 - this.cameraY + (settings.reducedMotion ? 0 : this.kickY) + Math.cos(this.visualTime * 127) * shake * .7;
-    this.viewOffsetX = offsetX; this.viewOffsetY = offsetY;
-    const left = -offsetX, top = -offsetY;
-    if (Math.abs(this.queryX - this.cameraX) > 65 || Math.abs(this.queryY - this.cameraY) > 65) {
-      this.cachedProps = world.getProps(left - 240, top - 240, this.width + 480, this.height + 480);
-      this.cachedBuildings = world.getBuildings(left - 300, top - 300, this.width + 600, this.height + 600);
-      this.queryX = this.cameraX; this.queryY = this.cameraY;
+    const zoom = this.cameraZoom.update(step, settings.reducedMotion);
+    this.view = cameraView(this.width, this.height, this.cameraX, this.cameraY, zoom,
+      (settings.reducedMotion ? 0 : this.kickX) + Math.sin(this.visualTime * 103) * shake,
+      (settings.reducedMotion ? 0 : this.kickY) + Math.cos(this.visualTime * 127) * shake * .7);
+    const { offsetX, offsetY, left, top, width: worldWidth, height: worldHeight } = this.view;
+    const query = this.queryView;
+    // Refresh coverage when any edge moves, including zooming out while standing still.
+    if (!query || Math.abs(query.left - left) > 65 || Math.abs(query.top - top) > 65
+      || Math.abs(query.left + query.width - left - worldWidth) > 65
+      || Math.abs(query.top + query.height - top - worldHeight) > 65) {
+      this.cachedProps = world.getProps(left - 240, top - 240, worldWidth + 480, worldHeight + 480);
+      this.cachedBuildings = world.getBuildings(left - 300, top - 300, worldWidth + 600, worldHeight + 600);
+      this.queryView = this.view;
     }
     this.settlementArt.update(this.cachedBuildings, px, py, dt, settings.reducedMotion);
     this.indoorBlend += ((world.getBuildingAt(px, py) ? 1 : 0) - this.indoorBlend) * (1 - Math.exp(-dt * 5));
     const biome = world.sampleBiome(px, py);
     c.fillStyle = '#101c22'; c.fillRect(0, 0, this.width, this.height);
-    c.save(); c.translate(offsetX, offsetY);
-    this.groundLayer.draw(c, world, left, top, this.width, this.height);
+    c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
+    this.groundLayer.draw(c, world, left, top, worldWidth, worldHeight);
     this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime);
     this.remains();
     this.propShadows();
@@ -187,15 +194,15 @@ export class Renderer {
     const lights = this.sceneLights(sim, px, py, settings.reducedMotion);
     const weights = biome.weights, inside = this.indoorBlend;
     const ambient = `rgb(${Math.round((131 * weights.deadwood + 121 * weights.verdant + 114 * weights.swamp) * (1 - inside) + 116 * inside)},${Math.round((156 * weights.deadwood + 172 * weights.verdant + 160 * weights.swamp) * (1 - inside) + 119 * inside)},${Math.round((174 * weights.deadwood + 153 * weights.verdant + 159 * weights.swamp) * (1 - inside) + 141 * inside)})`;
-    this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps, ambient);
-    c.save(); c.translate(offsetX, offsetY);
+    this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps, ambient, zoom);
+    c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, px, py, alpha, lights);
     this.effects.drawSword(c);
     this.effects.draw(c);
     this.damageDirection(px, py);
-    this.motes(left, top, sim.time, settings.reducedMotion);
-    this.environmentArt.drawAmbient(c, weights, { x: left, y: top, width: this.width, height: this.height },
+    this.motes(left, top, worldWidth, worldHeight, sim.time, settings.reducedMotion);
+    this.environmentArt.drawAmbient(c, weights, { x: left, y: top, width: worldWidth, height: worldHeight },
       this.visualTime, settings.reducedMotion);
     for (const enemy of sim.enemies) this.telegraph(enemy, alpha);
     this.healthBars(sim, alpha);
@@ -211,10 +218,8 @@ export class Renderer {
   /** Draw after world post-processing into the native-resolution transparent UI surface. */
   renderUI(c: CanvasRenderingContext2D, sim: Simulation, world: World, settings: RenderSettings) {
     const p = sim.player;
-    // Popups follow the exact camera impulse used by this frame's world, without filtering the text.
-    c.save(); c.translate(this.viewOffsetX, this.viewOffsetY);
-    this.effects.drawNumbers(c);
-    c.restore();
+    // Project popup anchors, leaving their glyph size and outline independent of camera zoom.
+    this.effects.drawNumbers(c, (x, y) => worldToScreen(this.view, x, y));
     this.navigation(c, sim, world, settings);
     drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
       reducedMotion: settings.reducedMotion, healthTrail: this.playerHealthTrail / Math.max(1, p.maxHp),
@@ -343,11 +348,11 @@ export class Renderer {
     }
   }
 
-  private motes(left: number, top: number, time: number, reducedMotion: boolean) {
+  private motes(left: number, top: number, width: number, height: number, time: number, reducedMotion: boolean) {
     const c = this.ctx, cell = 140, t = reducedMotion ? 0 : time;
     // Anchoring each emitter to a world cell avoids screen-relative swimming or pop-in.
-    for (let iy = Math.floor(top / cell) - 1; iy <= Math.floor((top + this.height) / cell) + 1; iy++) {
-      for (let ix = Math.floor(left / cell) - 1; ix <= Math.floor((left + this.width) / cell) + 1; ix++) {
+    for (let iy = Math.floor(top / cell) - 1; iy <= Math.floor((top + height) / cell) + 1; iy++) {
+      for (let ix = Math.floor(left / cell) - 1; ix <= Math.floor((left + width) / cell) + 1; ix++) {
         const seed = Math.sin(ix * 127.1 + iy * 311.7) * 43758.5453, phase = (seed - Math.floor(seed)) * TAU;
         const x = ix * cell + 70 + Math.sin(t * .3 + phase) * 35;
         const y = iy * cell + 70 + Math.cos(t * .4 + phase * 2) * 25;
