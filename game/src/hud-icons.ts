@@ -1,8 +1,6 @@
 const INK = '#080d10';
-const STEEL = '#78847f';
 const EDGE = '#bec4ac';
 const BRONZE = '#8e774c';
-const MENU = '#858b7f';
 
 function polygon(c: CanvasRenderingContext2D, points: readonly number[]): void {
   c.beginPath(); c.moveTo(points[0], points[1]);
@@ -142,11 +140,11 @@ export function drawHUDSkillIcon(c: CanvasRenderingContext2D, index: number,
   c.restore();
 }
 
-/** Small disabled menu symbols; bindings are rendered separately with the HUD font. */
+/** High-contrast menu engravings; bindings are rendered separately at native resolution. */
 export function drawHUDMenuIcon(c: CanvasRenderingContext2D, index: number, x: number, y: number): void {
-  c.save(); c.translate(x, y); c.lineCap = 'round'; c.lineJoin = 'round';
+  c.save(); c.translate(x, y); c.scale(1.4, 1.4); c.lineCap = 'round'; c.lineJoin = 'round';
   c.shadowBlur = 0; c.shadowColor = 'transparent';
-  c.strokeStyle = MENU; c.fillStyle = STEEL; c.lineWidth = .9;
+  c.strokeStyle = index === 3 ? '#687980' : '#d5e4e9'; c.fillStyle = c.strokeStyle; c.lineWidth = 1.15;
   c.beginPath();
   if (index === 0) {
     c.arc(0, -2.6, 1.8, 0, Math.PI * 2);

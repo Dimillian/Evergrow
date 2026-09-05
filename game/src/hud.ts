@@ -131,13 +131,32 @@ function shortcuts(c: CanvasRenderingContext2D, p: Player) {
   const menu = HUD_ART.menu;
   for (let i = 0; i < HUD_MENU_SHORTCUTS.length; i++) {
     const x = menu.x + i * menu.step;
-    c.fillStyle = '#080e11d9'; c.fillRect(x, menu.y, menu.width, menu.height);
-    c.strokeStyle = UI.silverDim + '70'; c.lineWidth = .65;
-    c.beginPath(); c.moveTo(x + 4, menu.y + 21.5); c.lineTo(x + 30, menu.y + 21.5); c.stroke();
-    drawHUDMenuIcon(c, i, x + 11, menu.y + 10);
-    text(c, HUD_MENU_SHORTCUTS[i].key, x + 26, menu.y + 6.5, 1, i < 3 ? UI.text : UI.muted, 'center');
+    const enabled = i < 3;
     const points = i === 0 ? p.character.statPoints : i === 2 ? p.character.skillPoints : 0;
-    if (points > 0) { c.fillStyle = '#c6b1e8'; c.beginPath(); c.arc(x + 31, menu.y + 2, 2, 0, TAU); c.fill(); }
+    const accent = i === 0 ? '#edbd79' : '#c9a5f3';
+    c.fillStyle = points > 0 ? '#252332' : '#0b151cf2';
+    c.fillRect(x, menu.y, menu.width, menu.height);
+    c.strokeStyle = points > 0 ? accent : enabled ? '#728992' : '#34444b'; c.lineWidth = .7;
+    c.strokeRect(x + .5, menu.y + .5, menu.width - 1, menu.height - 1);
+    drawHUDMenuIcon(c, i, x + 10, menu.y + 11);
+    // A separate keycap gives the binding a stable, bright silhouette beside its icon.
+    c.fillStyle = enabled ? '#1d303c' : '#101c23';
+    c.fillRect(x + 20, menu.y + 4, 12, 15);
+    c.strokeStyle = enabled ? '#819aa6' : '#394b55';
+    c.beginPath(); c.moveTo(x + 21, menu.y + 18.5); c.lineTo(x + 31, menu.y + 18.5); c.stroke();
+    text(c, HUD_MENU_SHORTCUTS[i].key, x + 26, menu.y + 5.5, 1.5, enabled ? '#f0f5ee' : '#829098', 'center');
+    if (points > 0) {
+      // Persistent numbered seals: amber attributes, violet skills. Hide as soon as spent.
+      const count = points > 99 ? '99+' : String(points);
+      const badgeWidth = Math.max(13, textWidth(count, 1.05) + 6);
+      const bx = x + menu.width - badgeWidth + 1, by = menu.y - 7;
+      c.save(); c.shadowColor = accent; c.shadowBlur = 5;
+      c.fillStyle = accent; c.beginPath(); c.roundRect(bx, by, badgeWidth, 11, 3); c.fill();
+      c.shadowBlur = 0; c.strokeStyle = '#0a1119'; c.lineWidth = 1; c.stroke();
+      text(c, count, bx + badgeWidth / 2, by + 1.5, 1.05, '#15121d', 'center');
+      c.restore();
+      c.fillStyle = accent; c.fillRect(x + 3, menu.y + menu.height - 2, menu.width - 6, 1);
+    }
   }
 }
 
