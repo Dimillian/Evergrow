@@ -68,27 +68,27 @@ Each skill requires allocation, an assigned slot, suitable equipment, enough man
 
 ## Active skill catalog
 
-Costs and cooldowns are authored bases; cooldown reduction changes the effective cooldown. Damage potency multiplies the selected compatible weapon’s derived hit. “Melee” means sword, axe, mace, or dagger; “blade” means sword, axe, or dagger. Heavy skills accept an axe or mace of either handedness.
+First-row skills have no cooldown; the eight second-row skills cost 24–40 base mana and retain cooldowns. Both tiers respect action recovery. Costs and cooldowns below are authored bases; mana-cost reduction and cooldown reduction independently change their effective values. Mana reduction adds across gear and tree, caps at 75%, and costs round to tenths with a minimum of one mana. Damage potency multiplies the selected compatible weapon’s derived hit. “Melee” means sword, axe, mace, or dagger; “blade” means sword, axe, or dagger. Heavy skills accept an axe or mace of either handedness.
 
 | Skill | Requirement | Mana | Cooldown | Potency | Effect |
 | --- | --- | ---: | ---: | ---: | --- |
-| Crescent Cleave | Melee | 12 | 2.5 s | 1.8× | Swept crescent with 1.4× weapon reach; each enemy is hit once. |
-| Rift Lunge | Blade | 10 | 4 s | 1.5× | Continuous 0.24 s dash at 520 units/sec, limited by collision; hits enemies along the traversed path once. |
-| Whirlwind | Melee | 20 | 4.5 s | 1.6× | Full-circle weapon sweep with 1.25× reach; each enemy is hit once. |
-| Earthshatter | Axe or mace | 24 | 6 s | 2.6× | Shockwave in a 125-unit radius; stuns survivors for 1.2 s. |
-| Shield Bash | Shield | 10 | 3 s | 1.35× | Frontal 68-unit strike; stuns survivors for 1.1 s. |
-| Bulwark | Shield | 18 | 8 s | — | Three seconds of guaranteed blocking with at least 75% blocked-damage reduction. |
-| Thorn Volley | Bow | 16 | 3 s | 0.8× per arrow | Three arrows in a spreading fan; each stops at its first enemy. |
-| Piercing Shot | Bow | 14 | 3.5 s | 1.6× per target | One arrow pierces up to four distinct enemies. |
-| Ricochet | Bow | 18 | 4 s | 1.2× per target | Arrow rebounds to up to three additional enemies within 150 units. |
-| Rain of Arrows | Bow | 24 | 6 s | 0.7× per wave | Four waves in a 92-unit area, beginning after 0.4 s and spaced 0.3 s apart. |
-| Backstab | Dagger | 10 | 2.5 s | 2.1× | Nearest target in a close frontal thrust; attacking from behind doubles this damage. |
-| Fireball | Staff | 12 | 0.85 s | 1.45× | Projectile bursts in an 85-unit radius and ignites survivors for three seconds. |
-| Arc Lightning | Staff | 20 | 3 s | 1.4× first hit | Up to five targets; each jump retains 78% of the previous hit's damage. |
-| Ice Nova | Staff | 24 | 5 s | 1.5× | Frost in a 115-unit radius; slows survivors by 50% for 2.5 s. |
-| Frost Lance | Staff | 14 | 1.8 s | 1.65× per target | Pierces up to four enemies and slows each survivor by 50% for 2.5 s. |
-| Meteor | Staff | 32 | 7 s | 3.4× | Aimed 125-unit blast after 0.85 s; ignites survivors. |
-| Soul Siphon | Staff | 18 | 4.5 s | 1.65× | Spirit projectile restores 35% of the actual enemy life removed by its direct hit, capped by missing player life. |
+| Crescent Cleave | Melee | 12 | None | 1.8× | Swept crescent with 1.4× weapon reach; each enemy is hit once. |
+| Rift Lunge | Blade | 24 | 4 s | 1.5× | Continuous 0.24 s dash at 520 units/sec, limited by collision; hits enemies along the traversed path once. |
+| Whirlwind | Melee | 12 | None | 1.6× | Full-circle weapon sweep with 1.25× reach; each enemy is hit once. |
+| Earthshatter | Axe or mace | 36 | 6 s | 2.6× | Shockwave in a 125-unit radius; stuns survivors for 1.2 s. |
+| Shield Bash | Shield | 10 | None | 1.35× | Frontal 68-unit strike; stuns survivors for 1.1 s. |
+| Bulwark | Shield | 32 | 8 s | — | Three seconds of guaranteed blocking with at least 75% blocked-damage reduction. |
+| Thorn Volley | Bow | 10 | None | 0.8× per arrow | Three arrows in a spreading fan; each stops at its first enemy. |
+| Piercing Shot | Bow | 28 | 3.5 s | 1.6× per target | One arrow pierces up to four distinct enemies. |
+| Ricochet | Bow | 12 | None | 1.2× per target | Arrow rebounds to up to three additional enemies within 150 units. |
+| Rain of Arrows | Bow | 36 | 6 s | 0.7× per wave | Four waves in a 92-unit area, beginning after 0.4 s and spaced 0.3 s apart. |
+| Backstab | Dagger | 10 | None | 2.1× | Nearest target in a close frontal thrust; attacking from behind doubles this damage. |
+| Fireball | Staff | 12 | None | 1.45× | Projectile bursts in an 85-unit radius and ignites survivors for three seconds. |
+| Arc Lightning | Staff | 12 | None | 1.4× first hit | Up to five targets; each jump retains 78% of the previous hit's damage. |
+| Ice Nova | Staff | 14 | None | 1.5× | Frost in a 115-unit radius; slows survivors by 50% for 2.5 s. |
+| Frost Lance | Staff | 28 | 1.8 s | 1.65× per target | Pierces up to four enemies and slows each survivor by 50% for 2.5 s. |
+| Meteor | Staff | 40 | 7 s | 3.4× | Aimed 125-unit blast after 0.85 s; ignites survivors. |
+| Soul Siphon | Staff | 30 | 4.5 s | 1.65× | Spirit projectile restores 35% of the actual enemy life removed by its direct hit, capped by missing player life. |
 
 A projectile cannot hit the same enemy again after piercing or ricocheting. Fireball's primary target is not struck twice by its own explosion. Walls block projectiles and relevant area/chain line-of-sight checks; aimed ground markers stop before solid terrain.
 
@@ -101,3 +101,9 @@ Gear, XP, attributes, allocations, assignments, statuses, and ground effects rem
 This is a concrete initial catalog for testing. Element labels and status effects are implemented, but an elemental resistance/penetration model, ammunition, durability, skill ranks, respecs, trading, crafting, and persistent characters are not. Skills remain authored action recipes, rather than a general scripting system. Balance and combat feel remain for the user's playtesting.
 
 See [character systems](character-systems.md) for item tiers, point rewards, stat formulas, and inventory rules. Add weapon/profile content in `weapon-content.ts`, shared skill requirements/costs/icons in `skill-content.ts`, typed execution profiles in `skill-execution-content.ts`, execution-kind handlers in `skill-combat.ts`, projectile behavior in `projectile-combat.ts`, shared statuses in `combat-status.ts`, and delayed pulses in `ground-effects.ts`. Damage/death and rewards live in `combat-damage.ts` and `combat-rewards.ts`; Simulation preserves their ordered fixed-tick integration. Rendering consumes those definitions and events without awarding damage or effects.
+
+## Action speed and efficiency
+
+Melee and bows use attack speed. Staff innate bolts and staff-required spells use cast speed, independently of attack speed. Action duration is the reciprocal of the compatible weapon's effective actions per second (bounded to 0.25–12). Sweeps and casting recovery snapshot that duration; changing gear cannot shorten an action already underway. Dash travel retains its authored duration, while action recovery lasts at least that long. Casting poses, charging lights and dodge-cancel timing use the same snapshotted duration. Cooldown begins at activation and is separate from recovery.
+
+Gear can roll Invocation (cast speed) and Efficiency (mana-cost reduction), with bounded percentage scaling. Inner Flame nodes grant cast speed; Battle Rhythm, Keen Pursuit and Quiet Current grant mana efficiency. Existing cooldown-reduction gear and nodes affect the second-row skills; a zero cooldown stays zero. Character statistics show both speed bonuses and mana-cost reduction. HUD affordability and atlas costs use the actual derived values.

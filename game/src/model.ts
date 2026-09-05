@@ -43,6 +43,7 @@ export interface Attack {
 export interface CharacterStats {
   /** 1 is normal speed; 1.25 means 25% more attacks per second. */
   attackSpeedMultiplier: number;
+  castSpeedMultiplier: number;
   /** Multiplies the equipped weapon's base damage. */
   attackDamageMultiplier: number;
   spellDamageMultiplier: number;
@@ -134,6 +135,8 @@ export interface Player {
   flasks: number;
   healCooldown: number;
   castTime: number;
+  /** Snapshotted action duration used by recovery and the casting pose. */
+  castDuration: number;
   castAngle: number;
   healFlash: number;
   /** Time remaining for an actual damage reaction, independent of invulnerability. */

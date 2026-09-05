@@ -143,13 +143,13 @@ for (const id of Object.keys(SKILL_DEFINITIONS) as SkillId[]) {
 }
 
 test('skill cooldown belongs to the skill and cannot be reset by moving it to another slot', () => {
-  const sim = createSim(); unlock(sim, 'fireball');
+  const sim = createSim(); unlock(sim, 'frostLance');
   advance(sim, FIXED_STEP, { skillSlot: 0 }); sim.drainEvents();
-  assert.ok(assignSkill(sim.player, 4, 'fireball').ok);
-  assert.equal(sim.player.character.skillSlots[0], null); assert.equal(sim.player.character.skillSlots[4], 'fireball');
+  assert.ok(assignSkill(sim.player, 4, 'frostLance').ok);
+  assert.equal(sim.player.character.skillSlots[0], null); assert.equal(sim.player.character.skillSlots[4], 'frostLance');
   advance(sim, .4, { skillSlot: 4 });
   assert.equal(sim.drainEvents().filter(event => event.type === 'cast').length, 0);
-  advance(sim, .5, { skillSlot: 4 });
+  advance(sim, 1.5, { skillSlot: 4 });
   assert.equal(sim.drainEvents().filter(event => event.type === 'cast').length, 1);
 });
 
@@ -261,4 +261,20 @@ test('a projectile already in flight cannot revive a fallen player through life 
   sim.update(FIXED_STEP, idle);
   assert.equal(player.dead, true); assert.equal(player.hp, 0);
   assert.ok(enemy.hp < enemy.maxHp);
+});
+
+test('held no-cooldown magic repeats at cast speed, never at physical attack speed', () => {
+  const casts = (castSpeed: number, attackSpeed: number) => {
+    const sim = createSim(); unlock(sim, 'fireball');
+    sim.player.stats.castSpeedMultiplier = castSpeed;
+    sim.player.stats.attackSpeedMultiplier = attackSpeed;
+    sim.player.mana = sim.player.maxMana = 1000;
+    advance(sim, 2, { skillSlot: 0 });
+    assert.equal(sim.player.skillCooldowns.fireball, 0);
+    return sim.drainEvents().filter(event => event.type === 'cast' && event.skill === 'fireball').length;
+  };
+  const normal = casts(1, 1);
+  assert.ok(normal >= 2);
+  assert.equal(casts(1, 3), normal);
+  assert.ok(casts(2, 1) >= normal * 2 - 1);
 });

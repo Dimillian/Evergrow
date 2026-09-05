@@ -1,5 +1,5 @@
 import { drawActiveSkillIcon } from './hud-active-skills.ts';
-import { SKILL_DEFINITIONS, canUseSkill } from './skill-content.ts';
+import { SKILL_DEFINITIONS, canUseSkill, skillCosts } from './skill-content.ts';
 import { heldWeapon as drawEquippedWeapon } from './equipment-art.ts';
 import type { Player } from './model.ts';
 import { PLAYER_ABILITIES } from './combat-content.ts';
@@ -41,7 +41,7 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
     const cooldown = skill ? p.skillCooldowns[skill] ?? 0 : 0;
     const occupied = i === 0 || !!skill, active = i === 0 ? !!p.attack : !!skill && p.activeSkill === skill;
     const compatible = !skill || canUseSkill(skill, p.equipment);
-    const usable = !p.dead && compatible && cooldown <= 0 && (!definition || p.mana >= definition.manaCost);
+    const usable = !p.dead && compatible && cooldown <= 0 && (!definition || p.mana >= skillCosts(definition.id, p.derived).mana);
     c.save();
     chamfer(c, x, y, w, h, 3);
     const well = c.createLinearGradient(x, y, x, y + h);
@@ -70,7 +70,7 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
       } else if (definition && cooldown > 0) {
         c.fillStyle = '#030a10a8'; c.fillRect(x + 2, y + 2, w - 4, 37 * clamp(cooldown / (definition.cooldown * p.derived.cooldownMultiplier)));
         text(c, cooldown.toFixed(1), x + w / 2, y + 18, 1.3, UI.ivory, 'center');
-      } else if (definition) text(c, String(definition.manaCost), x + w - 5, y + 3, .8, '#91bddd', 'right');
+      } else if (definition) text(c, String(skillCosts(definition.id, p.derived).mana), x + w - 5, y + 3, .8, '#91bddd', 'right');
     }
     // An empty well has no icon, lock, cooldown, or resource cost.
     c.strokeStyle = occupied ? '#b6baa226' : '#617b8d25'; c.lineWidth = .6;

@@ -84,3 +84,14 @@ test('block modifiers require a usable equipped shield and combine as percentage
   sheet.equipped.offhand = generateItem(144, 1, 'weapon', 'rondel-dagger');
   assert.equal(deriveCharacterStats(sheet, bonuses).blockChance, 0);
 });
+
+test('gear and tree combine independent cast speed and mana efficiency with bounded reduction', () => {
+  const sheet = createCharacterSheet();
+  sheet.equipped.head!.implicit = { castSpeedPercent: 10, manaCostPercent: 15 };
+  const stats = deriveCharacterStats(sheet, { castSpeedPercent: 20, manaCostPercent: 10 });
+  assert.equal(stats.castSpeedMultiplier, 1.3);
+  assert.equal(stats.attackSpeedMultiplier, 1);
+  assert.equal(stats.manaCostMultiplier, .75);
+  const capped = deriveCharacterStats(sheet, { castSpeedPercent: 1e9, manaCostPercent: 1e9 });
+  assert.equal(capped.castSpeedMultiplier, 6); assert.equal(capped.manaCostMultiplier, .25);
+});

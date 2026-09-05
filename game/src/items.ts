@@ -16,12 +16,12 @@ export const TIER_NAMES: Readonly<Record<ItemTier, string>> = Object.freeze({
 export const STAT_LABELS: Readonly<Record<StatKey, string>> = Object.freeze({
   strength: 'Strength', dexterity: 'Dexterity', intelligence: 'Intelligence', vitality: 'Vitality',
   maxHp: 'Maximum life', maxMana: 'Maximum mana', armor: 'Armor', damagePercent: 'Attack damage',
-  attackSpeedPercent: 'Attack speed', critChance: 'Critical chance', critDamage: 'Critical damage',
+  attackSpeedPercent: 'Attack speed', castSpeedPercent: 'Cast speed', critChance: 'Critical chance', critDamage: 'Critical damage',
   moveSpeedPercent: 'Movement speed', spellDamagePercent: 'Spell damage', manaRegen: 'Mana / sec',
-  lifeRegen: 'Life / sec', cooldownPercent: 'Cooldown reduction', lifeOnHit: 'Life on hit',
+  lifeRegen: 'Life / sec', manaCostPercent: 'Mana cost reduction', cooldownPercent: 'Cooldown reduction', lifeOnHit: 'Life on hit',
   blockChance: 'Block chance', blockReduction: 'Blocked damage reduction',
 });
-const PERCENT_STATS = new Set<StatKey>(['damagePercent', 'attackSpeedPercent', 'critChance', 'critDamage', 'moveSpeedPercent', 'spellDamagePercent', 'cooldownPercent', 'blockChance', 'blockReduction']);
+const PERCENT_STATS = new Set<StatKey>(['damagePercent', 'attackSpeedPercent', 'castSpeedPercent', 'critChance', 'critDamage', 'moveSpeedPercent', 'spellDamagePercent', 'cooldownPercent', 'manaCostPercent', 'blockChance', 'blockReduction']);
 export function formatStatValue(stat: StatKey, value: number): string {
   return `${value > 0 ? '+' : ''}${Number(value.toFixed(1))}${PERCENT_STATS.has(stat) ? '%' : ''}`;
 }
@@ -69,6 +69,7 @@ const AFFIXES: readonly { name: string; stat: StatKey; base: number; growth: num
   { name: 'The Wellspring', stat: 'maxMana', base: 8, growth: 1.5 },
   { name: 'Shelter', stat: 'armor', base: 6, growth: 1.4 },
   { name: 'Ruin', stat: 'damagePercent', base: 4, growth: .35 },
+  { name: 'Invocation', stat: 'castSpeedPercent', base: 3, growth: .18 },
   { name: 'Haste', stat: 'attackSpeedPercent', base: 3, growth: .18 },
   { name: 'Precision', stat: 'critChance', base: 1, growth: .08 },
   { name: 'Severity', stat: 'critDamage', base: 6, growth: .35 },
@@ -76,6 +77,7 @@ const AFFIXES: readonly { name: string; stat: StatKey; base: number; growth: num
   { name: 'Sorcery', stat: 'spellDamagePercent', base: 5, growth: .45 },
   { name: 'Clarity', stat: 'manaRegen', base: .5, growth: .08 },
   { name: 'Renewal', stat: 'lifeRegen', base: .3, growth: .05 },
+  { name: 'Efficiency', stat: 'manaCostPercent', base: 4, growth: .15 },
   { name: 'Readiness', stat: 'cooldownPercent', base: 2, growth: .1 },
   { name: 'Sustenance', stat: 'lifeOnHit', base: 1, growth: .12 },
 ];

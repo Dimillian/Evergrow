@@ -1,7 +1,7 @@
 import { skillDamageSuffix, skillUtilityLabel } from './skill-execution-content.ts';
 import type { Player } from './model.ts';
 import type { SkillId, StatKey } from './character-types.ts';
-import { SKILL_DEFINITIONS, skillIconSVG, canUseSkill, skillRequirementLabel } from './skill-content.ts';
+import { SKILL_DEFINITIONS, skillCosts, skillIconSVG, canUseSkill, skillRequirementLabel } from './skill-content.ts';
 import { SKILL_TREE, SKILL_NODES, SKILL_TREE_ORIGIN, unlockedSkills, type SkillDomain, type SkillNode } from './skill-tree.ts';
 import { escapeUI, trapDialogFocus, uiIcon } from './ui-components.ts';
 import { drawSkillAtlas, SKILL_DOMAIN_COLORS, skillNodeScreenRadius } from './skill-tree-art.ts';
@@ -205,6 +205,7 @@ export class SkillTreePanel {
     if (!this.player) return;
     const node = SKILL_NODES.get(this.hovered ?? this.selected)!, owned = this.allocated.has(node.id), reachable = this.reachable.has(node.id);
     const skill = node.skill ? SKILL_DEFINITIONS[node.skill] : undefined;
+    const costs = skill ? skillCosts(skill.id, this.player.derived) : undefined;
     const heading = node.kind === 'origin' ? 'YOUR ORIGIN' : node.kind === 'major' ? 'MAJOR · ACTIVE SKILL' : node.kind === 'notable' ? 'NOTABLE · SPECIALIZATION' : node.role === 'travel' ? 'TRAVEL NODE' : 'MINOR · PASSIVE';
     const routeCost = this.routes.get(node.id)?.cost;
     const cluster = SKILL_TREE.clusters.find(cluster => cluster.id === node.cluster);
@@ -212,7 +213,7 @@ export class SkillTreePanel {
     this.detail.innerHTML = `<div class="skill-atlas-emblem" style="--star-color:${COLORS[node.domain]}">${skillNodeIconSVG(node, 48)}</div>
       <p class="ui-kicker">${heading}</p><h3>${escapeUI(node.name)}</h3><p class="skill-atlas-domain" style="color:${COLORS[node.domain]}">${node.kind === 'origin' ? 'Might · Cunning · Arcana' : escapeUI(cluster ? `${node.domain} / ${cluster.name}` : node.domain)}</p>
       <p class="skill-atlas-description">${escapeUI(node.description)}</p>${bonuses ? `<div class="skill-atlas-bonuses ui-well">${bonuses}</div>` : ''}
-      ${skill ? `<p class="skill-atlas-requirement ${canUseSkill(skill.id, this.player.equipment) ? 'is-ready' : ''}">Requires ${escapeUI(skillRequirementLabel(skill.requirement))}<small>${canUseSkill(skill.id, this.player.equipment) ? 'Matching equipment ready' : 'Equip matching gear to use this skill'}</small></p><div class="skill-atlas-skill-costs"><span><b>${skill.manaCost}</b> mana</span><span><b>${skill.cooldown}s</b> cooldown</span>${skill.damageMultiplier ? `<span><b>${Math.round(skill.damageMultiplier * 100)}%</b> damage${skillDamageSuffix(skill.id)}</span>` : `<span>${skillUtilityLabel(skill.id)}</span>`}</div>` : ''}
+      ${skill ? `<p class="skill-atlas-requirement ${canUseSkill(skill.id, this.player.equipment) ? 'is-ready' : ''}">Requires ${escapeUI(skillRequirementLabel(skill.requirement))}<small>${canUseSkill(skill.id, this.player.equipment) ? 'Matching equipment ready' : 'Equip matching gear to use this skill'}</small></p><div class="skill-atlas-skill-costs"><span><b>${costs!.mana}</b> mana</span><span>${costs!.cooldown ? `<b>${Number(costs!.cooldown.toFixed(2))}s</b> cooldown` : 'No cooldown'}</span>${skill.damageMultiplier ? `<span><b>${Math.round(skill.damageMultiplier * 100)}%</b> damage${skillDamageSuffix(skill.id)}</span>` : `<span>${skillUtilityLabel(skill.id)}</span>`}</div>` : ''}
       <div class="skill-atlas-allocation"><span class="skill-atlas-node-state ${owned ? 'is-owned' : ''}">${owned ? '◆ Allocated' : reachable ? '◇ Connected to your path' : routeCost !== undefined ? `◇ ${routeCost} ${routeCost === 1 ? 'point' : 'points'} along the highlighted path` : '◇ No connected path'}</span>
         ${owned ? '' : `<button class="ui-button ui-button--primary" data-tree="allocate" data-inspected="${node.id}" ${!reachable || this.player.character.skillPoints < 1 ? 'disabled' : ''}>Allocate <span>1 point</span></button>`}
         ${!owned && reachable && this.player.character.skillPoints < 1 ? '<small class="ui-muted">Your next level grants one skill point.</small>' : ''}</div>
@@ -296,7 +297,7 @@ export class SkillTreePanel {
     ctx.setTransform(this.canvas.width / this.width, 0, 0, this.canvas.height / this.height, 0, 0);
     drawSkillAtlas(ctx, { width: this.width, height: this.height, zoom: this.zoom,
       centerX: this.centerX, centerY: this.centerY, allocated: this.allocated, reachable: this.reachable,
-      selected: this.selected, hovered: this.hovered, route: previewSkillRoute(this.routes, this.hovered ?? this.selected),
+      costStats: this.player?.derived, selected: this.selected, hovered: this.hovered, route: previewSkillRoute(this.routes, this.hovered ?? this.selected),
       matches: node => this.matches(node) });
   }
 }

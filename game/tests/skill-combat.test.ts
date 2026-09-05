@@ -187,3 +187,48 @@ test('ground skills schedule delayed effects inside weapon range and before bloc
     assert.ok(activateSkill(walled.context, 0)); assert.ok(walled.scheduled[0].x < 100);
   }
 });
+
+test('first-row skills repeat after action recovery while second-row skills retain cooldowns', () => {
+  const basic: SkillId[] = ['cleave', 'whirlwind', 'shieldBash', 'volley', 'ricochet', 'backstab', 'fireball', 'iceNova', 'arcLightning'];
+  for (const skill of Object.values(SKILL_DEFINITIONS)) {
+    const h = harness(skill.id);
+    assert.equal(skill.tier, basic.includes(skill.id) ? 'basic' : 'advanced');
+    assert.equal(activateSkill(h.context, 0), true);
+    assert.equal(activateSkill(h.context, 0), false, 'actions cannot overlap even without a cooldown');
+    h.player.attack = null; h.player.dash = null; h.player.castTime = 0;
+    if (basic.includes(skill.id)) {
+      assert.equal(h.player.skillCooldowns[skill.id], 0);
+      assert.equal(activateSkill(h.context, 0), true, skill.id);
+    } else {
+      assert.ok(skill.manaCost >= 24 && h.player.skillCooldowns[skill.id]! > 0);
+      assert.equal(activateSkill(h.context, 0), false, skill.id);
+    }
+  }
+});
+
+test('attack and cast speed independently govern weapon and active skill recovery', () => {
+  for (const id of ['cleave', 'volley', 'shieldBash', 'fireball', 'iceNova', 'arcLightning'] as SkillId[]) {
+    const h = harness(id), magical = SKILL_DEFINITIONS[id].requirement === 'staff';
+    const baseRate = h.player.equipment.mainHand.baseAttacksPerSecond;
+    h.player.stats.attackSpeedMultiplier = 2;
+    h.player.stats.castSpeedMultiplier = 3;
+    const expectedDuration = 1 / (baseRate * (magical ? 3 : 2));
+    assert.equal(activateSkill(h.context, 0), true);
+    close(h.player.attack?.duration ?? h.player.castDuration, expectedDuration);
+    const snapshotted = h.player.attack?.duration ?? h.player.castDuration;
+    h.player.stats.castSpeedMultiplier = 1; h.player.stats.attackSpeedMultiplier = 1;
+    close(h.player.attack?.duration ?? h.player.castDuration, snapshotted);
+  }
+});
+
+test('effective mana cost is used both to validate and spend, with independent cooldown reduction', () => {
+  for (const id of ['fireball', 'meteor'] as SkillId[]) {
+    const h = harness(id), definition = SKILL_DEFINITIONS[id];
+    h.player.derived.manaCostMultiplier = .5; h.player.derived.cooldownMultiplier = .75;
+    h.player.mana = definition.manaCost * .5 - .1;
+    assert.equal(activateSkill(h.context, 0), false);
+    h.player.mana = definition.manaCost * .5;
+    assert.equal(activateSkill(h.context, 0), true);
+    close(h.player.mana, 0); close(h.player.skillCooldowns[id]!, definition.cooldown * .75);
+  }
+});

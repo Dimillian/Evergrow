@@ -176,14 +176,15 @@ export class InventoryPanel {
     }
     const attack = deriveAttackStats(player.stats, player.equipment.mainHand);
     const statRows: Array<[string, string]> = [
-      ['Attack damage', number(attack.damage)], ['Attacks per second', number(attack.attacksPerSecond, 2)],
+      ['Attack damage', number(attack.damage)], [player.equipment.mainHand.family === 'staff' ? 'Casts per second' : 'Attacks per second', number(attack.attacksPerSecond, 2)],
       ['Critical chance', percent(stats.critChance)], ['Critical damage', percent(stats.critMultiplier)],
       ['Maximum life', number(stats.maxHp)], ['Maximum mana', number(stats.maxMana)],
       ['Armor', number(stats.armor)], [`Reduction vs level ${player.level}`, percent(stats.damageReduction)],
       ['Block chance', percent(stats.blockChance)], ['Blocked damage reduction', percent(stats.blockReduction)],
       ['Movement speed', percent(stats.moveSpeedMultiplier)], ['Spell damage', percent(stats.spellDamageMultiplier)],
+      ['Attack speed bonus', percent(stats.attackSpeedMultiplier - 1)], ['Cast speed bonus', percent(stats.castSpeedMultiplier - 1)],
       ['Life regeneration', `${number(stats.lifeRegeneration, 2)} / s`], ['Mana regeneration', `${number(stats.manaRegeneration, 2)} / s`],
-      ['Cooldown reduction', percent(1 - stats.cooldownMultiplier)], ['Life on hit', number(stats.lifeOnHit, 1)],
+      ['Mana cost reduction', percent(1 - stats.manaCostMultiplier)], ['Cooldown reduction', percent(1 - stats.cooldownMultiplier)], ['Life on hit', number(stats.lifeOnHit, 1)],
     ];
     if (player.equipment.offHand?.kind === 'weapon') {
       const off = deriveAttackStats(player.stats, player.equipment.offHand.weapon);
@@ -365,7 +366,7 @@ export class InventoryPanel {
       const delta = item.weapon.damage - (compare.item?.weapon?.damage ?? 0);
       const speedDelta = item.weapon.baseAttacksPerSecond - (compare.item?.weapon?.baseAttacksPerSecond ?? 0);
       const damageLabel = item.weapon.damageType[0].toUpperCase() + item.weapon.damageType.slice(1);
-      weapon = `<div class="character-item-weapon"><div><strong>${number(item.weapon.damage)}</strong><span>${damageLabel} damage</span>${!equipped && delta ? `<em class="${delta > 0 ? 'is-gain' : 'is-loss'}">${delta > 0 ? '+' : ''}${number(delta)}</em>` : ''}</div><div><strong>${number(item.weapon.baseAttacksPerSecond, 2)}</strong><span>Attacks / second</span>${!equipped && Math.abs(speedDelta) > .001 ? `<em class="${speedDelta > 0 ? 'is-gain' : 'is-loss'}">${speedDelta > 0 ? '+' : ''}${number(speedDelta, 2)}</em>` : ''}</div></div><p class="character-item-comparison">${item.weapon.hands === 2 ? 'Two-handed' : 'One-handed'} · ${escapeUI(item.weapon.family)} · ${item.weapon.attackKind === 'melee' ? 'Melee sweep' : item.weapon.attackKind === 'arrow' ? 'Arrow shot' : 'Elemental bolt'} · ${number(item.weapon.reach)} reach</p>`;
+      weapon = `<div class="character-item-weapon"><div><strong>${number(item.weapon.damage)}</strong><span>${damageLabel} damage</span>${!equipped && delta ? `<em class="${delta > 0 ? 'is-gain' : 'is-loss'}">${delta > 0 ? '+' : ''}${number(delta)}</em>` : ''}</div><div><strong>${number(item.weapon.baseAttacksPerSecond, 2)}</strong><span>${item.weapon.family === 'staff' ? 'Casts' : 'Attacks'} / second</span>${!equipped && Math.abs(speedDelta) > .001 ? `<em class="${speedDelta > 0 ? 'is-gain' : 'is-loss'}">${speedDelta > 0 ? '+' : ''}${number(speedDelta, 2)}</em>` : ''}</div></div><p class="character-item-comparison">${item.weapon.hands === 2 ? 'Two-handed' : 'One-handed'} · ${escapeUI(item.weapon.family)} · ${item.weapon.attackKind === 'melee' ? 'Melee sweep' : item.weapon.attackKind === 'arrow' ? 'Arrow shot' : 'Elemental bolt'} · ${number(item.weapon.reach)} reach</p>`;
     }
     if (item.shield) weapon = `<div class="character-item-weapon"><div><strong>${number(item.shield.blockChance)}%</strong><span>Block chance</span></div><div><strong>${number(item.shield.blockReduction)}%</strong><span>Damage blocked</span></div></div><p class="character-item-comparison">Off hand · Shield · Pairs with a one-handed weapon</p>`;
     return `<div class="character-item-heading" style="--item-color:${TIER_COLORS[item.tier]}">${condensed ? '' : `<span class="character-item-detail-icon">${itemIconSVG(item, 52)}</span>`}<div><span class="character-item-class">${escapeUI(TIER_NAMES[item.tier])} · ${escapeUI(item.baseName)}</span><h4>${escapeUI(item.name)}</h4></div></div>

@@ -1,9 +1,9 @@
 import type { CombatEvent, Enemy, GroundEffect, Player, ProjectileEffects, WorldQuery } from './model.ts';
 import type { SkillId } from './character-types.ts';
-import { skillWeapon, SKILL_DEFINITIONS } from './skill-content.ts';
+import { skillWeapon, skillCosts, SKILL_DEFINITIONS } from './skill-content.ts';
 import { unlockedSkills } from './skill-tree.ts';
 import { deriveAttackStats } from './equipment.ts';
-import { BASIC_ATTACK_PHASES, SKILL_CAST_MOTION, type ProjectileDefinition } from './combat-content.ts';
+import { BASIC_ATTACK_PHASES, type ProjectileDefinition } from './combat-content.ts';
 import { SKILL_EXECUTION, SKILL_TARGETING, type SkillExecution } from './skill-execution-content.ts';
 import { applySlow, applyStun } from './combat-status.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
@@ -28,8 +28,9 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   const weapon = skillWeapon(id, p.equipment);
   if (!weapon) return false;
   const definition = SKILL_DEFINITIONS[id];
+  const costs = skillCosts(id, p.derived);
   const recipe: SkillExecution = SKILL_EXECUTION[id];
-  if ((p.skillCooldowns[id] ?? 0) > 0 || p.mana < definition.manaCost) return false;
+  if ((p.skillCooldowns[id] ?? 0) > 0 || p.mana < costs.mana) return false;
 
   const attack = deriveAttackStats(p.stats, weapon);
   // Staff weapon derivation already applies spell bonuses; applying them here again would square scaling.
@@ -59,8 +60,8 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
     return result;
   };
 
-  p.mana -= definition.manaCost;
-  p.skillCooldowns[id] = definition.cooldown * p.derived.cooldownMultiplier;
+  p.mana -= costs.mana;
+  p.skillCooldowns[id] = costs.cooldown;
   p.activeSkill = id;
   if (recipe.kind === 'sweep') {
     const duration = 1 / attack.attacksPerSecond;
@@ -73,11 +74,11 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
     return true;
   }
 
-  p.castTime = SKILL_CAST_MOTION.duration; p.castAngle = p.angle;
+  p.castTime = 1 / attack.attacksPerSecond; p.castAngle = p.angle;
   switch (recipe.kind) {
     case 'dash':
       p.dash = { angle: p.angle, remaining: recipe.duration, speed: recipe.speed, damage, radius: recipe.radius, skill: id, hitIds: new Set() };
-      p.castTime = recipe.duration;
+      p.castTime = Math.max(p.castTime, recipe.duration);
       break;
     case 'radial':
       radial(recipe.radius, (enemy, angle) => {
@@ -140,6 +141,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
       throw new Error(`Missing skill execution handler: ${unimplemented}`);
     }
   }
+  p.castDuration = p.castTime;
   context.emit({ type: 'cast', x: p.x, y: p.y, angle: p.angle, skill: id, color });
   return true;
 }

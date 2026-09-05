@@ -144,7 +144,7 @@ test('casting releases the support hand and returns continuously to the same gri
   player.angle = player.castAngle = -.8;
   const restingPose = playerPose(player, 3.5);
   const restingRig = getPlayerArmRig(restingPose);
-  player.castTime = .22;
+  player.castDuration = player.castTime = .22;
   assertContinuous(restingRig, getPlayerArmRig(playerPose(player, 3.5)), 'cast begins on the grip');
   player.castTime = .22 * .55;
   const releasedPose = playerPose(player, 3.5);

@@ -423,9 +423,9 @@ export class Renderer {
         radius: 105, color: a.weapon.visual.glow ?? '#ffbf67',
         power: .55 * Math.sin(Math.PI * Math.min(1, (a.elapsed - a.activeStart) / (a.activeEnd - a.activeStart + .05))), shadows: true });
     }
-    if (p.equipment.mainHand.family === 'staff' && p.castTime > SKILL_CAST_MOTION.releaseRemaining) lights.push({ x: px + Math.cos(p.castAngle) * 17, y: py - 17,
-      radius: 110, color: p.activeSkill ? SKILL_DEFINITIONS[p.activeSkill].color : '#c0acf0', power: (SKILL_CAST_MOTION.duration - p.castTime)
-        / (SKILL_CAST_MOTION.duration - SKILL_CAST_MOTION.releaseRemaining) * .8 });
+    if (p.equipment.mainHand.family === 'staff' && p.castTime > (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction)) lights.push({ x: px + Math.cos(p.castAngle) * 17, y: py - 17,
+      radius: 110, color: p.activeSkill ? SKILL_DEFINITIONS[p.activeSkill].color : '#c0acf0', power: (p.castDuration - p.castTime)
+        / (p.castDuration - (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction)) * .8 });
     if (p.healFlash > 0) lights.push({ x: px, y: py - 8, radius: 150, color: '#54e8b8', power: p.healFlash * .8 });
     lights.push(...this.effects.getLights());
     if (p.equipment.mainHand.family === 'staff') {
@@ -454,9 +454,9 @@ export class Renderer {
       c.fillStyle = '#fff0b4'; c.fillRect(x - 1.5, y - 3, 3, 6);
     }
     for (const light of lights.slice(1, 12)) drawGlow(c, light.x, light.y, light.radius * .27, light.color, light.power * .2);
-    if (p.equipment.mainHand.family === 'staff' && p.castTime > SKILL_CAST_MOTION.releaseRemaining) {
-      const charge = Math.max(.1, (SKILL_CAST_MOTION.duration - p.castTime)
-        / (SKILL_CAST_MOTION.duration - SKILL_CAST_MOTION.releaseRemaining));
+    if (p.equipment.mainHand.family === 'staff' && p.castTime > (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction)) {
+      const charge = Math.max(.1, (p.castDuration - p.castTime)
+        / (p.castDuration - (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction)));
       const tip = getPlayerSwordTip(playerPose(p, sim.time));
       const x = px + tip.x, y = py + tip.y;
       drawGlow(c, x, y, 37, p.activeSkill ? SKILL_DEFINITIONS[p.activeSkill].color : p.equipment.mainHand.visual.glow ?? '#c0acf0', charge * .8);

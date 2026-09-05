@@ -96,7 +96,7 @@ test('domain minor and notable bonuses have finite supported values and active s
   }
   for (const [id, skill] of Object.entries(SKILL_DEFINITIONS)) {
     assert.equal(skill.id, id);
-    assert.ok(skill.cooldown > 0 && skill.manaCost > 0 && skill.damageMultiplier >= 0);
+    assert.ok(skill.cooldown >= 0 && skill.manaCost > 0 && skill.damageMultiplier >= 0);
     assert.equal(skill.damageMultiplier === 0, skill.id === 'bulwark', 'only the dedicated guard has no damage payload');
     assert.ok(skill.description.length > 30);
     const svg = skillIconSVG(id as SkillId); assert.ok(svg.startsWith('<svg')); assert.ok(svg.includes('<path'));

@@ -39,7 +39,7 @@ function initialPlayer(x: number, y: number): Player {
     level: 1, xp: 0,
     stats: createBaseStats(), equipment: createStartingEquipment(),
     attack: null, dodgeTime: 0, dodgeAngle: 0, dodgeCharges: PLAYER_ABILITIES.dodge.charges, dodgeRecharge: 0,
-    invulnerable: 0, flasks: PLAYER_ABILITIES.heal.charges, healCooldown: 0, castTime: 0,
+    invulnerable: 0, flasks: PLAYER_ABILITIES.heal.charges, healCooldown: 0, castTime: 0, castDuration: 0,
     castAngle: 0, healFlash: 0, hitFlash: 0, hitAngle: 0, walkTime: 0, radius: PLAYER_DEFAULTS.radius, dead: false,
   };
 }
@@ -269,7 +269,7 @@ export class Simulation {
     p.castTime = Math.max(0, p.castTime - dt);
     if (!p.attack && !p.dash && p.castTime <= 0) p.activeSkill = null;
 
-    const canCancel = (!p.attack || p.attack.elapsed >= p.attack.activeEnd) && p.castTime <= SKILL_CAST_MOTION.releaseRemaining;
+    const canCancel = (!p.attack || p.attack.elapsed >= p.attack.activeEnd) && p.castTime <= (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction);
     if (this.dodgeBuffer >= this.time && p.dodgeTime <= 0 && p.dodgeCharges > 0 && canCancel) {
       const moving = Math.hypot(input.moveX, input.moveY) > 0.01;
       p.dodgeAngle = moving ? Math.atan2(input.moveY, input.moveX) : p.angle;

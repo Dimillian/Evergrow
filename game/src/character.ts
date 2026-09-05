@@ -9,7 +9,7 @@ import { awardExperience } from './progression.ts';
 export function refreshCharacter(player: Player): void {
   const derived = deriveCharacterStats(player.character, getTreeBonuses(player.character.allocatedNodes), player.level);
   player.derived = derived;
-  player.stats = { attackDamageMultiplier: derived.attackDamageMultiplier, attackSpeedMultiplier: derived.attackSpeedMultiplier, spellDamageMultiplier: derived.spellDamageMultiplier };
+  player.stats = { castSpeedMultiplier: derived.castSpeedMultiplier, attackDamageMultiplier: derived.attackDamageMultiplier, attackSpeedMultiplier: derived.attackSpeedMultiplier, spellDamageMultiplier: derived.spellDamageMultiplier };
   const offhand = player.character.equipped.offhand;
   player.equipment = { mainHand: player.character.equipped.weapon?.weapon ?? UNARMED_WEAPON,
     offHand: offhand?.kind === 'shield' && offhand.shield ? { kind: 'shield', shield: offhand.shield }

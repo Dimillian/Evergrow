@@ -7,7 +7,7 @@ export const COMBAT_TIMING = Object.freeze({
 });
 
 export const PLAYER_DEFAULTS = Object.freeze({ maxHp: 100, maxMana: 100, manaRegeneration: 9, radius: 9 });
-export const SKILL_CAST_MOTION = Object.freeze({ duration: .22, releaseRemaining: .145 });
+export const SKILL_CAST_MOTION = Object.freeze({ releaseRemainingFraction: .145 / .22 });
 export const BASIC_ATTACK_PHASES = Object.freeze({ activeStart: .19, activeEnd: .45 });
 export const PLAYER_ABILITIES = Object.freeze({
   basicAttack: Object.freeze({ ...BASIC_ATTACK_PHASES, bladeHalfAngle: .055 }),

@@ -150,7 +150,7 @@ export class CombatEffects {
             i ? '#ffd674' : color, style === 'fire' ? .45 : .22, false);
         }
       }
-      if (p.equipment.mainHand.family === 'staff' && p.castTime > SKILL_CAST_MOTION.releaseRemaining) {
+      if (p.equipment.mainHand.family === 'staff' && p.castTime > (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction)) {
         const angle = sim.time * 22, tip = getPlayerSwordTip(playerPose(p, sim.time));
         this.spark(p.x + tip.x + Math.cos(angle) * 8,
           p.y + tip.y + Math.sin(angle) * 8, angle + Math.PI / 2, p.activeSkill ? SKILL_DEFINITIONS[p.activeSkill].color : p.equipment.mainHand.visual.glow ?? GOLD, .25, false);

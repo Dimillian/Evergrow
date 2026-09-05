@@ -1,4 +1,3 @@
-import { SKILL_CAST_MOTION } from './combat-content.ts';
 import { SKILL_DEFINITIONS, skillWeapon } from './skill-content.ts';
 import { outfitFromEquipment } from './item-art.ts';
 import type { CharacterPose } from './art.ts';
@@ -11,7 +10,7 @@ const smooth = (value: number) => { const t = Math.max(0, Math.min(1, value)); r
 /** The rig, ribbon, sparks and moving light all receive the same player pose. */
 export function playerPose(player: Player, time: number,
   attack: Attack | null = player.attack, elapsed = attack?.elapsed ?? 0): CharacterPose {
-  const castProgress = player.castTime > 0 ? Math.max(0, Math.min(1, 1 - player.castTime / SKILL_CAST_MOTION.duration)) : 0;
+  const castProgress = player.castTime > 0 ? Math.max(0, Math.min(1, 1 - player.castTime / Math.max(.001, player.castDuration))) : 0;
   const castingWeapon = player.activeSkill && player.castTime > 0 ? skillWeapon(player.activeSkill, player.equipment) : null;
   const gesture: CharacterPose['gesture'] = player.castTime <= 0 ? undefined : player.activeSkill === 'earthshatter' ? 'slam'
     : player.activeSkill === 'shieldBash' ? 'bash' : player.activeSkill === 'backstab' || player.activeSkill === 'lunge' ? 'thrust' : undefined;

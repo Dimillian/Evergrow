@@ -43,6 +43,8 @@ const STAT_GLYPHS: Readonly<Record<StatKey, StatGlyph>> = Object.freeze({
   spellDamagePercent: { engraving: 'flame', unit: 4 },
   manaRegen: { engraving: 'current', unit: .15 },
   lifeRegen: { engraving: 'leaf', unit: .15 },
+  manaCostPercent: { engraving: 'hourglass', unit: 1 },
+  castSpeedPercent: { engraving: 'hourglass', unit: 1 },
   cooldownPercent: { engraving: 'hourglass', unit: 1 },
   lifeOnHit: { engraving: 'leech', unit: .5 },
   blockChance: { engraving: 'shield', unit: 2 },

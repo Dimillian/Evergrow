@@ -1,5 +1,5 @@
 import { SKILL_EXECUTION, groundEffectPulseCount } from './skill-execution-content.ts';
-import type { SkillId } from './character-types.ts';
+import type { DerivedCharacterStats, SkillId } from './character-types.ts';
 import type { Equipment, WeaponDefinition } from './model.ts';
 
 export type SkillRequirement = 'melee' | 'blade' | 'heavy' | 'dagger' | 'bow' | 'staff' | 'shield';
@@ -9,6 +9,7 @@ export interface SkillDefinition {
   readonly description: string;
   readonly requirement: SkillRequirement;
   readonly domain: 'Might' | 'Cunning' | 'Arcana';
+  readonly tier: 'basic' | 'advanced';
   readonly manaCost: number;
   readonly cooldown: number;
   readonly damageMultiplier: number;
@@ -17,23 +18,23 @@ export interface SkillDefinition {
 
 /** Costs, potency and equipment requirements are shared by the atlas, HUD and combat. */
 export const SKILL_DEFINITIONS: Readonly<Record<SkillId, Readonly<SkillDefinition>>> = Object.freeze({
-  cleave: Object.freeze({ id: 'cleave', name: 'Crescent Cleave', description: 'Sweep a melee weapon through a broad crescent, striking each nearby enemy once.', requirement: 'melee', domain: 'Might', manaCost: 12, cooldown: 2.5, damageMultiplier: 1.8, color: '#e6bd7b' }),
-  lunge: Object.freeze({ id: 'lunge', name: 'Rift Lunge', description: 'Drive your blade forward in a swift dash, cutting enemies along your path.', requirement: 'blade', domain: 'Might', manaCost: 10, cooldown: 4, damageMultiplier: 1.5, color: '#add9ca' }),
-  whirlwind: Object.freeze({ id: 'whirlwind', name: 'Whirlwind', description: 'Turn a full circle with your melee weapon, sweeping through enemies on every side.', requirement: 'melee', domain: 'Might', manaCost: 20, cooldown: 4.5, damageMultiplier: 1.6, color: '#d8c28c' }),
-  earthshatter: Object.freeze({ id: 'earthshatter', name: 'Earthshatter', description: 'Slam an axe or mace into the ground. The shockwave damages and stuns nearby enemies.', requirement: 'heavy', domain: 'Might', manaCost: 24, cooldown: 6, damageMultiplier: 2.6, color: '#d9a077' }),
-  shieldBash: Object.freeze({ id: 'shieldBash', name: 'Shield Bash', description: 'Batter enemies in front of you with your shield, damaging and stunning them.', requirement: 'shield', domain: 'Might', manaCost: 10, cooldown: 3, damageMultiplier: 1.35, color: '#b7c9bf' }),
-  bulwark: Object.freeze({ id: 'bulwark', name: 'Bulwark', description: `Raise your shield in a lasting guard, greatly reducing incoming damage for ${SKILL_EXECUTION.bulwark.duration} seconds.`, requirement: 'shield', domain: 'Might', manaCost: 18, cooldown: 8, damageMultiplier: 0, color: '#b8ccdb' }),
-  volley: Object.freeze({ id: 'volley', name: 'Thorn Volley', description: `Loose ${SKILL_EXECUTION.volley.offsets.length} arrows from your bow in a spreading fan. Each arrow stops at its first enemy.`, requirement: 'bow', domain: 'Cunning', manaCost: 16, cooldown: 3, damageMultiplier: .8, color: '#a6ce9d' }),
-  piercingShot: Object.freeze({ id: 'piercingShot', name: 'Piercing Shot', description: `Draw a powerful bow shot that pierces through up to ${SKILL_EXECUTION.piercingShot.effects.pierce + 1} enemies in a line.`, requirement: 'bow', domain: 'Cunning', manaCost: 14, cooldown: 3.5, damageMultiplier: 1.6, color: '#d0d7a1' }),
-  ricochet: Object.freeze({ id: 'ricochet', name: 'Ricochet', description: `Fire an arrow that rebounds between nearby enemies, striking up to ${SKILL_EXECUTION.ricochet.effects.chain + 1} different targets.`, requirement: 'bow', domain: 'Cunning', manaCost: 18, cooldown: 4, damageMultiplier: 1.2, color: '#c0dca6' }),
-  rainOfArrows: Object.freeze({ id: 'rainOfArrows', name: 'Rain of Arrows', description: `Mark an area with your bow. ${groundEffectPulseCount(SKILL_EXECUTION.rainOfArrows)} waves of falling arrows strike it after a short delay.`, requirement: 'bow', domain: 'Cunning', manaCost: 24, cooldown: 6, damageMultiplier: .7, color: '#b7c49a' }),
-  backstab: Object.freeze({ id: 'backstab', name: 'Backstab', description: `Make a close dagger thrust. Striking an enemy from behind deals ${SKILL_EXECUTION.backstab.rearMultiplier}× damage.`, requirement: 'dagger', domain: 'Cunning', manaCost: 10, cooldown: 2.5, damageMultiplier: 2.1, color: '#d1b2c3' }),
-  fireball: Object.freeze({ id: 'fireball', name: 'Fireball', description: 'Cast a fireball from your staff. It bursts on impact, damaging and igniting nearby enemies.', requirement: 'staff', domain: 'Arcana', manaCost: 12, cooldown: .85, damageMultiplier: 1.45, color: '#f4a271' }),
-  arcLightning: Object.freeze({ id: 'arcLightning', name: 'Arc Lightning', description: `Call a bolt from your staff that chains through up to ${SKILL_EXECUTION.arcLightning.jumps} enemies, weakening with each jump.`, requirement: 'staff', domain: 'Arcana', manaCost: 20, cooldown: 3, damageMultiplier: 1.4, color: '#c4c4ff' }),
-  iceNova: Object.freeze({ id: 'iceNova', name: 'Ice Nova', description: 'Release frost from your staff in every direction, damaging and slowing surrounding enemies.', requirement: 'staff', domain: 'Arcana', manaCost: 24, cooldown: 5, damageMultiplier: 1.5, color: '#a5dbe7' }),
-  frostLance: Object.freeze({ id: 'frostLance', name: 'Frost Lance', description: `Launch a shard of ice from your staff. It pierces up to ${SKILL_EXECUTION.frostLance.effects.pierce + 1} enemies and slows each one.`, requirement: 'staff', domain: 'Arcana', manaCost: 14, cooldown: 1.8, damageMultiplier: 1.65, color: '#c1e8f0' }),
-  meteor: Object.freeze({ id: 'meteor', name: 'Meteor', description: 'Mark a distant area with your staff. A meteor falls after a delay, blasting and igniting it.', requirement: 'staff', domain: 'Arcana', manaCost: 32, cooldown: 7, damageMultiplier: 3.4, color: '#ef946a' }),
-  siphon: Object.freeze({ id: 'siphon', name: 'Soul Siphon', description: 'Cast a hungry spirit from your staff, restoring life from the damage it deals on impact.', requirement: 'staff', domain: 'Arcana', manaCost: 18, cooldown: 4.5, damageMultiplier: 1.65, color: '#dba3c3' }),
+  cleave: Object.freeze({ id: 'cleave', name: 'Crescent Cleave', description: 'Sweep a melee weapon through a broad crescent, striking each nearby enemy once.', requirement: 'melee', domain: 'Might', tier: 'basic', manaCost: 12, cooldown: 0, damageMultiplier: 1.8, color: '#e6bd7b' }),
+  lunge: Object.freeze({ id: 'lunge', name: 'Rift Lunge', description: 'Drive your blade forward in a swift dash, cutting enemies along your path.', requirement: 'blade', domain: 'Might', tier: 'advanced', manaCost: 24, cooldown: 4, damageMultiplier: 1.5, color: '#add9ca' }),
+  whirlwind: Object.freeze({ id: 'whirlwind', name: 'Whirlwind', description: 'Turn a full circle with your melee weapon, sweeping through enemies on every side.', requirement: 'melee', domain: 'Might', tier: 'basic', manaCost: 12, cooldown: 0, damageMultiplier: 1.6, color: '#d8c28c' }),
+  earthshatter: Object.freeze({ id: 'earthshatter', name: 'Earthshatter', description: 'Slam an axe or mace into the ground. The shockwave damages and stuns nearby enemies.', requirement: 'heavy', domain: 'Might', tier: 'advanced', manaCost: 36, cooldown: 6, damageMultiplier: 2.6, color: '#d9a077' }),
+  shieldBash: Object.freeze({ id: 'shieldBash', name: 'Shield Bash', description: 'Batter enemies in front of you with your shield, damaging and stunning them.', requirement: 'shield', domain: 'Might', tier: 'basic', manaCost: 10, cooldown: 0, damageMultiplier: 1.35, color: '#b7c9bf' }),
+  bulwark: Object.freeze({ id: 'bulwark', name: 'Bulwark', description: `Raise your shield in a lasting guard, greatly reducing incoming damage for ${SKILL_EXECUTION.bulwark.duration} seconds.`, requirement: 'shield', domain: 'Might', tier: 'advanced', manaCost: 32, cooldown: 8, damageMultiplier: 0, color: '#b8ccdb' }),
+  volley: Object.freeze({ id: 'volley', name: 'Thorn Volley', description: `Loose ${SKILL_EXECUTION.volley.offsets.length} arrows from your bow in a spreading fan. Each arrow stops at its first enemy.`, requirement: 'bow', domain: 'Cunning', tier: 'basic', manaCost: 10, cooldown: 0, damageMultiplier: .8, color: '#a6ce9d' }),
+  piercingShot: Object.freeze({ id: 'piercingShot', name: 'Piercing Shot', description: `Draw a powerful bow shot that pierces through up to ${SKILL_EXECUTION.piercingShot.effects.pierce + 1} enemies in a line.`, requirement: 'bow', domain: 'Cunning', tier: 'advanced', manaCost: 28, cooldown: 3.5, damageMultiplier: 1.6, color: '#d0d7a1' }),
+  ricochet: Object.freeze({ id: 'ricochet', name: 'Ricochet', description: `Fire an arrow that rebounds between nearby enemies, striking up to ${SKILL_EXECUTION.ricochet.effects.chain + 1} different targets.`, requirement: 'bow', domain: 'Cunning', tier: 'basic', manaCost: 12, cooldown: 0, damageMultiplier: 1.2, color: '#c0dca6' }),
+  rainOfArrows: Object.freeze({ id: 'rainOfArrows', name: 'Rain of Arrows', description: `Mark an area with your bow. ${groundEffectPulseCount(SKILL_EXECUTION.rainOfArrows)} waves of falling arrows strike it after a short delay.`, requirement: 'bow', domain: 'Cunning', tier: 'advanced', manaCost: 36, cooldown: 6, damageMultiplier: .7, color: '#b7c49a' }),
+  backstab: Object.freeze({ id: 'backstab', name: 'Backstab', description: `Make a close dagger thrust. Striking an enemy from behind deals ${SKILL_EXECUTION.backstab.rearMultiplier}× damage.`, requirement: 'dagger', domain: 'Cunning', tier: 'basic', manaCost: 10, cooldown: 0, damageMultiplier: 2.1, color: '#d1b2c3' }),
+  fireball: Object.freeze({ id: 'fireball', name: 'Fireball', description: 'Cast a fireball from your staff. It bursts on impact, damaging and igniting nearby enemies.', requirement: 'staff', domain: 'Arcana', tier: 'basic', manaCost: 12, cooldown: 0, damageMultiplier: 1.45, color: '#f4a271' }),
+  arcLightning: Object.freeze({ id: 'arcLightning', name: 'Arc Lightning', description: `Call a bolt from your staff that chains through up to ${SKILL_EXECUTION.arcLightning.jumps} enemies, weakening with each jump.`, requirement: 'staff', domain: 'Arcana', tier: 'basic', manaCost: 12, cooldown: 0, damageMultiplier: 1.4, color: '#c4c4ff' }),
+  iceNova: Object.freeze({ id: 'iceNova', name: 'Ice Nova', description: 'Release frost from your staff in every direction, damaging and slowing surrounding enemies.', requirement: 'staff', domain: 'Arcana', tier: 'basic', manaCost: 14, cooldown: 0, damageMultiplier: 1.5, color: '#a5dbe7' }),
+  frostLance: Object.freeze({ id: 'frostLance', name: 'Frost Lance', description: `Launch a shard of ice from your staff. It pierces up to ${SKILL_EXECUTION.frostLance.effects.pierce + 1} enemies and slows each one.`, requirement: 'staff', domain: 'Arcana', tier: 'advanced', manaCost: 28, cooldown: 1.8, damageMultiplier: 1.65, color: '#c1e8f0' }),
+  meteor: Object.freeze({ id: 'meteor', name: 'Meteor', description: 'Mark a distant area with your staff. A meteor falls after a delay, blasting and igniting it.', requirement: 'staff', domain: 'Arcana', tier: 'advanced', manaCost: 40, cooldown: 7, damageMultiplier: 3.4, color: '#ef946a' }),
+  siphon: Object.freeze({ id: 'siphon', name: 'Soul Siphon', description: 'Cast a hungry spirit from your staff, restoring life from the damage it deals on impact.', requirement: 'staff', domain: 'Arcana', tier: 'advanced', manaCost: 30, cooldown: 4.5, damageMultiplier: 1.65, color: '#dba3c3' }),
 });
 
 const REQUIREMENT_LABELS: Readonly<Record<SkillRequirement, string>> = Object.freeze({
@@ -87,4 +88,11 @@ const SKILL_PATHS: Readonly<Record<SkillId, string>> = Object.freeze({
 export function skillIconSVG(id: SkillId, size = 36): string {
   const dimension = Number.isFinite(size) ? Math.max(8, Math.min(256, size)) : 36;
   return `<svg aria-hidden="true" width="${dimension}" height="${dimension}" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${SKILL_PATHS[id]}</svg>`;
+}
+
+/** Shared effective costs for activation, HUD availability, and skill inspection. */
+export function skillCosts(id: SkillId, stats: Pick<DerivedCharacterStats, 'manaCostMultiplier' | 'cooldownMultiplier'>) {
+  const skill = SKILL_DEFINITIONS[id];
+  return { mana: Math.max(1, Math.round(skill.manaCost * stats.manaCostMultiplier * 10) / 10),
+    cooldown: skill.cooldown * stats.cooldownMultiplier };
 }

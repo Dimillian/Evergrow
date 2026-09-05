@@ -1,9 +1,9 @@
 import type { WeaponDefinition, ShieldDefinition } from './model.ts';
 
 export type Attribute = 'strength' | 'dexterity' | 'intelligence' | 'vitality';
-export type StatKey = Attribute | 'maxHp' | 'maxMana' | 'armor' | 'damagePercent' | 'attackSpeedPercent'
+export type StatKey = Attribute | 'maxHp' | 'maxMana' | 'armor' | 'damagePercent' | 'attackSpeedPercent' | 'castSpeedPercent'
   | 'critChance' | 'critDamage' | 'moveSpeedPercent' | 'spellDamagePercent' | 'manaRegen'
-  | 'lifeRegen' | 'cooldownPercent' | 'lifeOnHit' | 'blockChance' | 'blockReduction';
+  | 'lifeRegen' | 'manaCostPercent' | 'cooldownPercent' | 'lifeOnHit' | 'blockChance' | 'blockReduction';
 export type StatModifiers = Partial<Record<StatKey, number>>;
 export type EquipmentSlot = 'weapon' | 'offhand' | 'head' | 'chest' | 'gloves' | 'legs' | 'boots' | 'cloak' | 'amulet' | 'ring1' | 'ring2';
 export type ItemKind = Exclude<EquipmentSlot, 'offhand' | 'ring1' | 'ring2'> | 'ring' | 'shield';
@@ -27,11 +27,11 @@ export interface CharacterSheet {
   skillSlots: Array<SkillId | null>;
 }
 export interface DerivedCharacterStats {
-  attackSpeedMultiplier: number; attackDamageMultiplier: number;
+  attackSpeedMultiplier: number; castSpeedMultiplier: number; attackDamageMultiplier: number;
   maxHp: number; maxMana: number; armor: number; damageReduction: number;
   critChance: number; critMultiplier: number; moveSpeedMultiplier: number;
   spellDamageMultiplier: number; manaRegeneration: number; lifeRegeneration: number;
-  cooldownMultiplier: number; lifeOnHit: number;
+  manaCostMultiplier: number; cooldownMultiplier: number; lifeOnHit: number;
   blockChance: number; blockReduction: number;
   attributes: Record<Attribute, number>;
 }

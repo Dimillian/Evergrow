@@ -31,7 +31,7 @@ test('malformed grip lengths fall back to a connected finite two-hand attachment
 
 test('multiplication overflow cannot inject infinite damage into combat state or feedback events', () => {
   const weapon = { ...STARTING_SWORD, damage: Number.MAX_VALUE };
-  const stats = { attackSpeedMultiplier: 1, attackDamageMultiplier: Number.MAX_VALUE, spellDamageMultiplier: 1 };
+  const stats = { castSpeedMultiplier: 1, attackSpeedMultiplier: 1, attackDamageMultiplier: Number.MAX_VALUE, spellDamageMultiplier: 1 };
   const derived = deriveAttackStats(stats, weapon);
   assert.equal(derived.damage, Number.MAX_SAFE_INTEGER);
   assert.ok(Number.isSafeInteger(derived.damage));
@@ -49,7 +49,7 @@ test('multiplication overflow cannot inject infinite damage into combat state or
 
 test('invalid weapon and modifier inputs retain a finite resolvable basic attack', () => {
   for (const invalid of [NaN, Infinity, -Infinity, 0, -1]) {
-    const result = deriveAttackStats({ attackSpeedMultiplier: invalid, attackDamageMultiplier: invalid, spellDamageMultiplier: invalid },
+    const result = deriveAttackStats({ castSpeedMultiplier: 1, attackSpeedMultiplier: invalid, attackDamageMultiplier: invalid, spellDamageMultiplier: invalid },
       { ...STARTING_SWORD, baseAttacksPerSecond: invalid, damage: invalid, reach: invalid, arc: invalid });
     assert.deepEqual(result, { attacksPerSecond: 2, damage: 24, range: 60, arc: STARTING_SWORD.arc });
   }
@@ -57,12 +57,12 @@ test('invalid weapon and modifier inputs retain a finite resolvable basic attack
 
 
 test('weapon profile selects the authored grip and attack or spell scaling independently', () => {
-  const stats = { attackSpeedMultiplier: 1.5, attackDamageMultiplier: 2, spellDamageMultiplier: 3 };
+  const stats = { castSpeedMultiplier: 1, attackSpeedMultiplier: 1.5, attackDamageMultiplier: 2, spellDamageMultiplier: 3 };
   for (const weapon of WEAPON_PROFILES) {
     assert.equal(getWeaponGrip({ mainHand: weapon, offHand: null }), weapon.hands === 2 ? 'two-handed' : 'one-handed');
     const attack = deriveAttackStats(stats, weapon);
     assert.equal(attack.damage, Math.round(weapon.damage * (weapon.attackKind === 'bolt' ? 3 : 2)));
-    assert.equal(attack.attacksPerSecond, weapon.baseAttacksPerSecond * 1.5);
+    assert.equal(attack.attacksPerSecond, weapon.baseAttacksPerSecond * (weapon.family === 'staff' ? stats.castSpeedMultiplier : stats.attackSpeedMultiplier));
   }
 });
 

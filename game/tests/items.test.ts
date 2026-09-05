@@ -122,7 +122,7 @@ test('explicit reward tiers control quality and affix count, preserving the base
 
 test('percentage affixes approach bounded quality ranges while flat stats and base item power keep scaling', () => {
   const percentBounds: Partial<Record<import('../src/character-types.ts').StatKey, number>> = {
-    damagePercent: 4 + 25 * .35, attackSpeedPercent: 3 + 25 * .18,
+    manaCostPercent: 4 + 25 * .15, castSpeedPercent: 3 + 25 * .18, damagePercent: 4 + 25 * .35, attackSpeedPercent: 3 + 25 * .18,
     critChance: 1 + 25 * .08, critDamage: 6 + 25 * .35,
     moveSpeedPercent: 2 + 25 * .12, spellDamagePercent: 5 + 25 * .45,
     cooldownPercent: 2 + 25 * .1, blockChance: 2 + 25 * .08, blockReduction: 4 + 25 * .12,

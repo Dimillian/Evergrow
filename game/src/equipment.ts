@@ -20,7 +20,7 @@ export const STARTING_SWORD: Readonly<WeaponDefinition> = Object.freeze({
 });
 
 export function createBaseStats(): CharacterStats {
-  return { attackSpeedMultiplier: 1, attackDamageMultiplier: 1, spellDamageMultiplier: 1 };
+  return { castSpeedMultiplier: 1, attackSpeedMultiplier: 1, attackDamageMultiplier: 1, spellDamageMultiplier: 1 };
 }
 
 export function createStartingEquipment(): Equipment {
@@ -48,7 +48,7 @@ const positive = (value: number, fallback: number) => Number.isFinite(value) && 
 export function deriveAttackStats(stats: CharacterStats, weapon: WeaponDefinition): DerivedAttackStats {
   // Keep even extreme debug gear within a readable, resolvable 120 Hz attack window.
   const attacksPerSecond = Math.min(12, Math.max(.25,
-    positive(weapon.baseAttacksPerSecond, STARTING_SWORD.baseAttacksPerSecond) * positive(stats.attackSpeedMultiplier, 1)));
+    positive(weapon.baseAttacksPerSecond, STARTING_SWORD.baseAttacksPerSecond) * positive(weapon.family === 'staff' ? stats.castSpeedMultiplier : stats.attackSpeedMultiplier, 1)));
   return {
     attacksPerSecond,
     // Finite item values can still overflow when multiplied; never emit Infinity damage.

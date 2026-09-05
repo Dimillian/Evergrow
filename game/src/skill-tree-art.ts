@@ -1,14 +1,15 @@
 import { SKILL_TREE, SKILL_NODES, type SkillNode } from './skill-tree.ts';
 import { drawSkillGlyph } from './skill-tree-glyphs.ts';
-import type { StatKey } from './character-types.ts';
+import type { DerivedCharacterStats, StatKey } from './character-types.ts';
 import { STAT_LABELS, formatStatValue } from './items.ts';
-import { SKILL_DEFINITIONS, skillRequirementLabel } from './skill-content.ts';
+import { SKILL_DEFINITIONS, skillCosts, skillRequirementLabel } from './skill-content.ts';
 import { UI_THEME } from './ui-theme.ts';
 
 export const SKILL_DOMAIN_COLORS = { Might: '#c69b71', Cunning: '#80b29d', Arcana: '#a49ecb' } as const;
 export interface SkillAtlasView {
   width: number; height: number; zoom: number; centerX: number; centerY: number;
   allocated: ReadonlySet<string>; reachable: ReadonlySet<string>;
+  costStats?: Pick<DerivedCharacterStats, 'manaCostMultiplier' | 'cooldownMultiplier'>;
   selected: string; hovered: string | null; route: readonly string[];
   matches(node: SkillNode): boolean;
 }
@@ -175,7 +176,8 @@ function drawNodeTooltip(c: CanvasRenderingContext2D, node: SkillNode, view: Ski
   if (skill) {
     add(skill.description, '#b5c2ca', 13, 10);
     add(`Requires ${skillRequirementLabel(skill.requirement)}`, color, 12, 6);
-    add(`${skill.manaCost} mana · ${skill.cooldown}s cooldown`, '#cfc4df', 13, 10);
+    const costs = skillCosts(skill.id, view.costStats ?? { manaCostMultiplier: 1, cooldownMultiplier: 1 });
+    add(`${costs.mana} mana · ${costs.cooldown ? `${Number(costs.cooldown.toFixed(2))}s cooldown` : 'No cooldown'}`, '#cfc4df', 13, 10);
   } else if (!Object.keys(node.bonuses).length) add(node.description, '#b5c2ca', 13, 10);
   const cost = view.route.filter(id => !view.allocated.has(id)).length;
   add(owned ? '◆ Allocated' : view.reachable.has(node.id) ? '◇ Available · 1 skill point' : cost ? `◇ ${cost} skill points along this path` : '◇ Not connected', '#b8ab8d', 12, 0);

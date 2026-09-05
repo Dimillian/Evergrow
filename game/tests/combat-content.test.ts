@@ -46,13 +46,13 @@ test('enemy definitions have complete coherent telegraph, attack and projectile 
 test('player ability definitions retain cancellable casts and bounded dodge protection', () => {
   const { dodge, heal, basicAttack } = PLAYER_ABILITIES;
   assert.ok(0 < basicAttack.activeStart && basicAttack.activeStart < basicAttack.activeEnd && basicAttack.activeEnd < 1);
-  assert.ok(SKILL_CAST_MOTION.releaseRemaining > 0 && SKILL_CAST_MOTION.releaseRemaining < SKILL_CAST_MOTION.duration);
+  assert.ok(SKILL_CAST_MOTION.releaseRemainingFraction > 0 && SKILL_CAST_MOTION.releaseRemainingFraction < 1);
   assert.ok(0 < dodge.invulnerabilityStart && dodge.invulnerabilityStart < dodge.invulnerabilityEnd
     && dodge.invulnerabilityEnd < dodge.duration && dodge.duration < dodge.recharge);
   assert.ok(Number.isInteger(dodge.charges) && dodge.charges > 0);
   assert.ok(Number.isInteger(heal.charges) && heal.charges > 0 && heal.restoreFraction > 0 && heal.restoreFraction <= 1 && heal.killsPerCharge > 0);
   for (const definition of Object.values(PLAYER_ABILITIES)) assert.ok(Object.isFrozen(definition));
-  assert.throws(() => Object.assign(SKILL_CAST_MOTION, { duration: 0 }), TypeError);
+  assert.throws(() => Object.assign(SKILL_CAST_MOTION, { releaseRemainingFraction: 0 }), TypeError);
 });
 
 test('spawned actors and actual melee/projectile contact use the authored enemy definitions', () => {
