@@ -9,14 +9,13 @@ export function gameMenuMarkup(phase: 'paused' | 'dead',
   const seconds = Math.max(0, Math.floor(Number.isFinite(time) ? time : 0));
   const duration = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
   return `<section class="ui-window menu-window${dead ? ' menu-window--fallen' : ''}">
-    <header class="menu-brand">
-      <span class="ui-kicker">EVERGROW</span>
+    <header class="ui-window-header menu-brand">
+      <h1 id="menu-title" class="ui-title">${dead ? 'YOU FELL' : 'PAUSED'}</h1>
       ${phase === 'paused' ? `<button type="button" id="close-menu" class="ui-button ui-button--quiet ui-button--icon"
         aria-label="Resume game" data-tooltip="Resume game" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('close')}</button>` : `<span class="menu-brand-mark" aria-hidden="true">${uiIcon('diamond')}</span>`}
     </header>
     <div class="ui-window-body menu-body">
       <div class="menu-seal" aria-hidden="true">${uiIcon(dead ? 'skull' : 'leaf')}</div>
-      <h1 id="menu-title" class="ui-title menu-title">${dead ? 'YOU FELL' : 'PAUSED'}</h1>
       <div class="menu-location"><span class="menu-location-line" aria-hidden="true"></span>
         <span>${escapeUI(location)}</span><span class="menu-location-line" aria-hidden="true"></span></div>
       <dl class="menu-stats">

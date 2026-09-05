@@ -54,7 +54,7 @@ export class SkillTreePanel {
     this.root.className = 'skill-atlas';
     this.root.hidden = true;
     this.root.innerHTML = `<section class="ui-window skill-atlas-window" role="dialog" aria-modal="true" aria-labelledby="skill-atlas-title">
-      <header class="ui-window-header skill-atlas-header"><div><p class="ui-kicker">THE ASTRAL ATLAS</p><h2 class="ui-title" id="skill-atlas-title">The living atlas</h2></div>
+      <header class="ui-window-header skill-atlas-header"><h2 class="ui-title" id="skill-atlas-title">Skill tree</h2>
         <div class="skill-atlas-points" aria-live="polite"></div><button class="ui-button ui-button--quiet ui-button--icon" data-tree="close" aria-label="Close skill tree">${uiIcon('close')}</button></header>
       <div class="skill-atlas-main"><section class="skill-atlas-chart" aria-label="Skill atlas navigation">
         <div class="skill-atlas-toolbar"><label class="skill-atlas-search"><span>${uiIcon('center')}</span><input type="search" placeholder="Find a skill or bonus…" aria-label="Search skills and bonuses" maxlength="80"></label>

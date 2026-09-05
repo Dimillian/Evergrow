@@ -157,7 +157,6 @@ export class WorldMap {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
   private viewport: HTMLDivElement;
-  private title: HTMLElement;
   private status: HTMLElement;
   private discoveries: HTMLElement;
   private coordinates: HTMLElement;
@@ -190,7 +189,7 @@ export class WorldMap {
     this.element.innerHTML = `<section class="world-map-panel ui-window" role="dialog" aria-modal="true" aria-labelledby="world-map-title">
       <header class="world-map-header ui-window__header">
         <div class="world-map-heading"><span class="world-map-emblem" aria-hidden="true">${uiIcon('map')}</span>
-          <div><p class="world-map-eyebrow ui-kicker">Charted lands</p><h2 class="ui-title" id="world-map-title">The wilderness</h2></div></div>
+          <h2 class="ui-title" id="world-map-title">World map</h2></div>
         <button type="button" class="world-map-close ui-button ui-button--quiet ui-button--icon" aria-label="Close world map" data-tooltip="Close map" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('close')}</button>
       </header>
       <div class="world-map-viewport ui-window__body"><canvas class="world-map-canvas" tabindex="0" aria-label="Explored world map"></canvas>
@@ -211,7 +210,6 @@ export class WorldMap {
     this.canvas = this.element.querySelector<HTMLCanvasElement>('.world-map-canvas')!;
     this.context = this.canvas.getContext('2d')!;
     this.viewport = this.element.querySelector<HTMLDivElement>('.world-map-viewport')!;
-    this.title = this.element.querySelector('#world-map-title')!;
     this.status = this.element.querySelector('.world-map-status')!;
     this.discoveries = this.element.querySelector('.world-map-discoveries')!;
     this.coordinates = this.element.querySelector('.world-map-coordinates')!;
@@ -601,7 +599,6 @@ export class WorldMap {
 
     text(c, 'N', this.view.width - 27, 16, 1.15, palette.brass, 'center');
     c.strokeStyle = '#a8af9566'; c.beginPath(); c.moveTo(this.view.width - 27, 34); c.lineTo(this.view.width - 27, 54); c.moveTo(this.view.width - 32, 40); c.lineTo(this.view.width - 27, 34); c.lineTo(this.view.width - 22, 40); c.stroke();
-    setText(this.title, this.view.zoom < .065 ? 'The charted wilds' : this.location(this.player));
     const count = this.exploration.discoveredPOICount;
     setText(this.discoveries, `${count} ${count === 1 ? 'place' : 'places'} charted`);
     const area = mapAreaLabel(this.world, this.player.x, this.player.y);

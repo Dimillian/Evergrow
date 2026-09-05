@@ -46,9 +46,9 @@
   background: linear-gradient(110deg, #c0c5ac05, #060d1300 75%);
 }
 .ui-window-header > :first-child, .ui-window__header > :first-child { min-width: 0; }
-.ui-window-header .ui-kicker, .ui-window__header .ui-kicker {
-  margin-bottom: 3px; font-size: 10px; letter-spacing: .1em;
-}
+/* Header emblems use geometry, never a font glyph's baseline or a shrinking flex item. */
+.ui-header-emblem { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; aspect-ratio: 1; box-sizing: border-box; line-height: 1; }
+.ui-header-emblem > .ui-icon { width: 18px; height: 18px; }
 .ui-window-body, .ui-window__body { flex: 1; min-width: 0; min-height: 0; padding: 24px; }
 .ui-window-footer, .ui-window__footer {
   display: flex;

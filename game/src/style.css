@@ -57,7 +57,6 @@ canvas { display: block; width: 100%; height: 100%; outline: 0; }
   border-bottom: 1px solid var(--ui-line);
   background: linear-gradient(90deg, #b59a6310, transparent 78%);
 }
-.menu-brand .ui-kicker { margin: 0; font-size: 12px; letter-spacing: .18em; color: var(--ui-muted); }
 .menu-brand-mark { display: grid; width: 44px; height: 40px; place-items: center; color: var(--ui-brass-dim); }
 .menu-brand-mark svg { width: 15px; height: 15px; }
 .menu-body { padding: 28px 36px 30px; }
@@ -73,11 +72,7 @@ canvas { display: block; width: 100%; height: 100%; outline: 0; }
 }
 .menu-seal::after { width: 54px; height: 54px; border-color: var(--ui-line); }
 .menu-seal svg { width: 30px; height: 30px; filter: drop-shadow(0 0 8px #d3b17c22); }
-.menu-title.ui-title {
-  margin: 0; font-size: clamp(32px, 5vw, 42px); line-height: 1.1;
-  letter-spacing: .055em; font-weight: 500; color: var(--ui-ivory);
-  text-shadow: 0 2px #0008;
-}
+
 .menu-location { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 14px 0 30px; }
 .menu-location > span:not(.menu-location-line) {
   font-size: 12px; letter-spacing: .12em; line-height: 1.4; text-transform: uppercase;
@@ -102,7 +97,7 @@ canvas { display: block; width: 100%; height: 100%; outline: 0; }
 .menu-foot svg { width: 9px; height: 9px; }
 .menu-window--fallen .menu-seal { color: var(--ui-danger); }
 .menu-window--fallen .menu-seal::before { border-color: #9e62636b; }
-.menu-window--fallen .menu-title { color: #e5c0b5; }
+.menu-window--fallen #menu-title { color: #e5c0b5; }
 .toast {
   position: absolute; z-index: 10; left: 50%; top: 24px;
   max-width: calc(100% - 40px); padding: 12px 18px;
@@ -130,7 +125,6 @@ canvas { display: block; width: 100%; height: 100%; outline: 0; }
   .menu-seal::before { width: 30px; height: 30px; }
   .menu-seal::after { width: 40px; height: 40px; }
   .menu-seal svg { width: 24px; height: 24px; }
-  .menu-title.ui-title { font-size: 32px; }
   .menu-location { margin: 10px 0 20px; }
   .menu-stats { margin-bottom: 18px; padding-block: 12px; }
   .menu-foot { padding-bottom: 12px; }

@@ -9,7 +9,6 @@
 .title-brand-rule { display: flex; align-items: center; gap: 14px; color: #bdac7b; }
 .title-brand-rule i { flex: 1; height: 1px; background: linear-gradient(90deg,transparent,#acb5a160); }
 .title-brand-rule i:last-child { transform: rotate(180deg); }
-.title-tagline { color: #a5b5b2; font-size: 13px; letter-spacing: .03em; margin: 9px 0 0; }
 .title-hero { position: absolute; top: 24%; bottom: 10%; left: 5%; width: 47%; display: flex; justify-content: center; }
 .title-hero canvas { position: absolute; width: min(100%,440px); height: 100%; object-fit: contain; z-index: 2; filter: drop-shadow(0 12px 22px #0008); }
 .title-halo { position: absolute; width: 290px; height: 290px; top: 12%; border: 1px solid #b9c9b422; border-radius: 50%; box-shadow: 0 0 0 9px #b9c9b406,0 0 120px 30px #7bbaa512,inset 0 0 90px #618f7a14; }

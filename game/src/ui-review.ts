@@ -107,8 +107,7 @@ function outerReview() {
 function foundationSheet(): HTMLElement {
   const sheet = document.createElement('section'); sheet.className = 'ui-review-foundation ui-scroll-area'; sheet.hidden = true;
   sheet.setAttribute('aria-label', 'Shared interface components');
-  sheet.innerHTML = `<div class="ui-window"><header class="ui-window-header"><div><p class="ui-kicker">INTERFACE FOUNDATION</p>
-    <h2 class="ui-title">Forged for the journey</h2></div><span class="ui-badge">COMPONENTS</span></header>
+  sheet.innerHTML = `<div class="ui-window"><header class="ui-window-header"><h2 class="ui-title">Interface components</h2><span class="ui-badge">COMPONENTS</span></header>
     <div class="ui-window-body"><section class="ui-review-section"><h3>Actions &amp; states</h3>
       <div class="ui-review-component-row"><button class="ui-button ui-button--primary" type="button" data-demo="Primary action">${uiIcon('leaf')}<span>Primary action</span></button>
         <button class="ui-button ui-button--quiet" type="button" data-demo="Quiet action">Quiet action</button>

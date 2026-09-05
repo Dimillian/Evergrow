@@ -24,7 +24,6 @@
   content: ''; position: absolute; inset: 4px; border: 1px solid #b09a721a; pointer-events: none;
 }
 .world-map-emblem .ui-icon { width: 18px; height: 18px; }
-.world-map-eyebrow.ui-kicker { letter-spacing: .1em; }
 .world-map-header .ui-title { line-height: 1.1; }
 .world-map-close { align-self: center; }
 .world-map-viewport.ui-window__body {

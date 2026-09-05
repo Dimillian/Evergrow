@@ -77,7 +77,7 @@ export class InventoryPanel {
     this.element.hidden = true;
     this.element.innerHTML = `<section class="ui-window character-window" role="dialog" aria-modal="true" aria-labelledby="character-title">
       <header class="ui-window-header character-header">
-        <div class="character-heading"><span class="character-sigil" aria-hidden="true">✧</span><div><p class="ui-kicker">Character & inventory</p><h2 class="ui-title" id="character-title">Wayfarer</h2></div></div>
+        <div class="character-heading"><span class="character-sigil ui-header-emblem" aria-hidden="true">${uiIcon('star')}</span><h2 class="ui-title" id="character-title">Character &amp; inventory</h2></div>
         <div class="character-header-right"><span class="character-level" data-level></span><button type="button" class="ui-button ui-button--icon" data-close aria-label="Close character">${uiIcon('close')}</button></div>
       </header>
       <div class="character-columns ui-scroll-area">
@@ -147,7 +147,6 @@ export class InventoryPanel {
       cell.setAttribute('aria-label', item ? `${item.name}, ${TIER_NAMES[item.tier]}, item level ${item.itemLevel}${location.type === 'equipment' ? `, equipped in ${SLOT_NAMES[location.slot]}` : ''}${item.requiredLevel > player.level ? `, requires level ${item.requiredLevel}` : ''}` : location.type === 'equipment' ? `${SLOT_NAMES[location.slot]}, empty` : `Empty inventory slot ${location.index + 1}`);
     }
     const sheet = player.character, stats = player.derived;
-    this.text('#character-title', player.name ?? 'Wayfarer');
     this.text('[data-level]', `Level ${player.level}`);
     this.text('[data-equipped-count]', `${EQUIPMENT_SLOTS.filter(slot => sheet.equipped[slot]).length} / ${EQUIPMENT_SLOTS.length}`);
     this.text('[data-capacity]', `${sheet.inventory.filter(Boolean).length} / ${sheet.inventory.length}`);

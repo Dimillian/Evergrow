@@ -26,9 +26,9 @@ export class TitleScreen {
     this.actions = actions;
     this.element = document.createElement('div'); this.element.className = 'title-screen'; this.element.hidden = true;
     this.element.innerHTML = `<div class="title-vignette" aria-hidden="true"></div>
-      <header class="title-brand"><div class="title-crest" aria-hidden="true">${uiIcon('skilltree')}</div><div><p class="ui-kicker">Beyond the last light</p><h1>EVERGROW</h1><div class="title-brand-rule" aria-hidden="true"><i></i>✦<i></i></div><p class="title-tagline">A world without an edge. A path of your own.</p></div></header>
+      <header class="title-brand"><div class="title-crest" aria-hidden="true">${uiIcon('skilltree')}</div><div><h1>EVERGROW</h1><div class="title-brand-rule" aria-hidden="true"><i></i>✦<i></i></div></div></header>
       <section class="title-hero" aria-label="Selected character"><div class="title-halo" aria-hidden="true"></div><canvas width="560" height="720" aria-label="Selected character wearing their saved equipment"></canvas><div class="title-plinth" aria-hidden="true"></div><div class="title-character-caption"></div></section>
-      <section class="title-roster ui-window" aria-labelledby="roster-title"><header class="ui-window-header"><div><p class="ui-kicker">Your journeys</p><h2 class="ui-title" id="roster-title">The character hall</h2></div><span class="title-slot-count"></span></header>
+      <section class="title-roster ui-window" aria-labelledby="roster-title"><header class="ui-window-header"><div><h2 class="ui-title" id="roster-title">The character hall</h2></div><span class="title-slot-count"></span></header>
       <div class="title-slot-grid" role="group" aria-label="Eight character slots"></div>
       <div class="title-selection"></div><p class="title-save-message" role="status" hidden></p>
       <footer class="title-roster-footer"><span class="title-save-dot"></span>Saved on this browser<span>8 character slots</span></footer></section>

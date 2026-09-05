@@ -26,7 +26,7 @@ The selected bottom-HUD direction is **The Astral Instrument**: calibrated silve
 
 ## Windows and interaction
 
-Window headers use compact 8px vertical padding, 18–20px titles, 10px eyebrows and 28px decorative emblems. Keep screen-specific color treatments, but inherit shared header sizing rather than adding large banners. Close buttons retain 44px targets.
+Window headers use compact 8px vertical padding, a single 18–20px screen title and 28px decorative emblems. Do not add subtitle/eyebrow text or replace the screen title with a character or location name. Circular emblems use `.ui-header-emblem` with centered SVG geometry and a fixed, nonshrinking square. Keep screen-specific color treatments, but inherit shared header sizing rather than adding large banners. Close buttons retain 44px targets.
 
 ```html
 <section class="ui-window" role="dialog" aria-modal="true" aria-labelledby="panel-title">
