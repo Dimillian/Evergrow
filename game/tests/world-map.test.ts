@@ -1,8 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { WorldMap, getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt } from '../src/world-map.ts';
+import { WorldMap, chartedMapArea, getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt } from '../src/world-map.ts';
 import type { MapView } from '../src/world-map.ts';
 const near = (a: number, b: number) => assert.ok(Math.abs(a - b) < 1e-8, `${a} != ${b}`);
+
+test('area inspection reveals level only in charted terrain and respects sanctuaries', () => {
+  let samples = 0;
+  const world = { sampleBiome() { samples++; return { id: 'deadwood', name: 'Deadwood' }; }, isSanctuary: (x: number) => x === 0 };
+  const hidden = { isRevealed: () => false }, revealed = { isRevealed: () => true };
+  assert.equal(chartedMapArea(world, hidden, 6400, 0), null);
+  assert.equal(chartedMapArea(world, revealed, NaN, 0), null);
+  assert.equal(samples, 0, 'unknown cells do not query underlying biome or danger metadata');
+  assert.equal(chartedMapArea(world, revealed, 6400, 0)?.label, 'Area Lv 3');
+  assert.equal(chartedMapArea(world, revealed, -6400, 0)?.label, 'Area Lv 3');
+  assert.equal(chartedMapArea(world, revealed, 0, 0)?.label, 'Sanctuary');
+  assert.equal(chartedMapArea(world, revealed, 1, 0)?.name, 'Deadwood');
+});
 
 test('world/map projection is reversible at fractional centers and negative coordinates', () => {
   const view: MapView = { x: 21, y: 36, width: 977, height: 541, centerX: -1290.3125, centerY: 4831.0625, zoom: .173 };

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { canEnemyJoinAttack, chooseEncounterEnemy, encounterPopulationTarget, ENCOUNTER_RULES,
-  livingEnemyCount, SPECIAL_ENCOUNTERS } from '../src/encounter-director.ts';
+  livingEnemyCount, ENCOUNTER_WEIGHTS, encounterRankChances, chooseEncounterRank } from '../src/encounter-director.ts';
 import { Simulation } from '../src/simulation.ts';
 import type { EnemyKind, WorldQuery } from '../src/model.ts';
 
@@ -11,42 +11,50 @@ function actors(kinds: EnemyKind[]) {
   return kinds.map((kind, index) => sim.spawnEnemy(kind, index * 70, 0)!);
 }
 
-test('encounter population grows only at authored milestones and remains below the hard actor cap', () => {
-  assert.deepEqual([0, 6, 7, 13, 14, 34, 35, 10000].map(encounterPopulationTarget), [5, 5, 6, 6, 7, 9, 10, 10]);
+test('population follows geographic area level with a fixed simultaneous actor ceiling', () => {
+  assert.deepEqual([1, 3, 4, 6, 7, 15, 16, 10000].map(encounterPopulationTarget), [5, 5, 6, 6, 7, 9, 10, 10]);
   assert.ok(ENCOUNTER_RULES.targetPopulationCap <= ENCOUNTER_RULES.hardPopulationCap);
-  assert.ok(Object.isFrozen(ENCOUNTER_RULES) && Object.isFrozen(SPECIAL_ENCOUNTERS));
+  assert.ok(Object.isFrozen(ENCOUNTER_RULES) && Object.isFrozen(ENCOUNTER_WEIGHTS));
 });
 
-test('guaranteed enemy introductions and full populations do not consume a random draw', () => {
-  let calls = 0;
-  const random = () => { calls++; return .9; };
-  assert.equal(chooseEncounterEnemy([], 3, random), 'brute');
-  assert.equal(chooseEncounterEnemy([], 6, random), 'caster', 'the ranged introduction has priority when both are missing');
-  const caster = actors(['caster']);
-  assert.equal(chooseEncounterEnemy(caster, 6, random), 'brute');
-  const full = actors(['stalker', 'stalker', 'stalker', 'stalker', 'stalker']);
-  assert.equal(chooseEncounterEnemy(full, 0, random), null);
-  assert.equal(calls, 0, 'moving director policy must not shift the seeded spawn stream');
-  assert.equal(chooseEncounterEnemy([], 0, random), 'stalker');
-  assert.equal(calls, 1, 'a starter-only decision still consumes its original random draw');
-});
-
-test('composition rolls preserve ordered thresholds and special-enemy caps', () => {
-  const present = actors(['brute', 'caster']);
-  for (const [roll, expected] of [[.179999, 'caster'], [.18, 'brute'], [.379999, 'brute'], [.38, 'stalker']] as const) {
-    assert.equal(chooseEncounterEnemy(present, 6, () => roll), expected);
+test('each biome selects its authored population mix and full areas consume no random draw', () => {
+  for (const biome of ['deadwood', 'verdant', 'swamp'] as const) {
+    const weights = ENCOUNTER_WEIGHTS[biome];
+    assert.equal(weights.stalker + weights.brute + weights.caster, 100);
+    assert.equal(chooseEncounterEnemy([], 1, biome, () => 0), 'stalker');
+    assert.equal(chooseEncounterEnemy([], 1, biome, () => (weights.stalker + .1) / 100), 'brute');
+    assert.equal(chooseEncounterEnemy([], 1, biome, () => .999), 'caster');
   }
-  assert.equal(chooseEncounterEnemy(actors(['brute', 'caster', 'caster']), 6, () => .01), 'brute',
-    'a capped caster cohort leaves the original brute threshold intact');
-  assert.equal(chooseEncounterEnemy(actors(['brute', 'brute', 'caster']), 6, () => .2), 'stalker');
-  assert.equal(chooseEncounterEnemy(actors(['brute', 'brute', 'caster', 'caster']), 100, () => 0), 'stalker');
+  const full = actors(['stalker', 'stalker', 'stalker', 'stalker', 'stalker']);
+  assert.equal(chooseEncounterEnemy(full, 1, 'deadwood', () => { throw new Error('Full area rolled a spawn'); }), null);
 });
 
-test('dead actors free population and composition slots while living recoveries still count', () => {
-  const enemies = actors(['caster', 'brute', 'stalker', 'stalker', 'stalker']);
-  enemies[0].state = 'dead'; enemies[1].state = 'recover';
-  assert.equal(livingEnemyCount(enemies), 4);
-  assert.equal(chooseEncounterEnemy(enemies, 6, () => .9), 'caster');
+test('special-enemy caps redistribute their weight without increasing simultaneous threats', () => {
+  const capped = actors(['brute', 'brute', 'caster', 'caster']);
+  for (const roll of [0, .3, .9, .999]) assert.equal(chooseEncounterEnemy(capped, 1, 'swamp', () => roll), 'stalker');
+  capped[2].state = 'dead';
+  assert.equal(livingEnemyCount(capped), 3);
+  assert.equal(chooseEncounterEnemy(capped, 1, 'swamp', () => .999), 'caster');
+});
+
+test('veterans and elites unlock by area level and retain independent active caps', () => {
+  assert.deepEqual(encounterRankChances(1), { normal: 1, veteran: 0, elite: 0 });
+  assert.equal(chooseEncounterRank([], 1, 0), 'normal');
+  assert.equal(encounterRankChances(2).veteran, .12);
+  assert.equal(encounterRankChances(3).elite, .04);
+  const deep = encounterRankChances(100000);
+  assert.equal(deep.veteran, .2); assert.equal(deep.elite, .08);
+  assert.equal(chooseEncounterRank([], 3, .01), 'elite');
+  assert.equal(chooseEncounterRank([], 3, .04), 'veteran');
+  const sim = new Simulation(world, { spawn: false });
+  const elite = sim.spawnEnemy('stalker', 0, 0, 'elite')!;
+  const one = sim.spawnEnemy('stalker', 70, 0, 'veteran')!;
+  const two = sim.spawnEnemy('stalker', 140, 0, 'veteran')!;
+  assert.equal(chooseEncounterRank([elite, one, two], 10, 0), 'normal');
+  assert.equal(chooseEncounterRank([elite, one, two], 10, .1), 'normal');
+  elite.state = 'dead'; one.state = 'dead';
+  assert.equal(chooseEncounterRank([elite, one, two], 10, 0), 'elite');
+  assert.equal(chooseEncounterRank([elite, one, two], 10, .1), 'veteran');
 });
 
 test('attack slots independently limit pack enemies and the shared heavy/ranged group', () => {

@@ -6,6 +6,7 @@ import type { ExplorationWorld, MapPOI, MapRect } from './exploration.ts';
 import { text } from './font.ts';
 import { uiIcon } from './ui-components.ts';
 import { UI_THEME } from './ui-theme.ts';
+import { getZoneAt } from './zone-progression.ts';
 
 export interface MapPlayer { x: number; y: number; angle: number; }
 export interface MinimapEnemy { x: number; y: number; kind?: string; }
@@ -26,6 +27,17 @@ const bounds = (view: MapView): MapRect => ({ x: view.centerX - view.width / vie
   y: view.centerY - view.height / view.zoom / 2, width: view.width / view.zoom, height: view.height / view.zoom });
 const setText = (element: HTMLElement, value: string) => { if (element.textContent !== value) element.textContent = value; };
 const palette = UI_THEME.palette;
+
+/** Revealed cells are the boundary for inspecting terrain and danger on the chart. */
+export function chartedMapArea(world: Pick<MapWorld, 'sampleBiome' | 'isSanctuary'>,
+  exploration: Pick<Exploration, 'isRevealed'>, x: number, y: number) {
+  if (![x, y].every(Number.isFinite) || !exploration.isRevealed(x, y)) return null;
+  return { name: world.sampleBiome(x, y).name, label: mapAreaLabel(world, x, y), x, y };
+}
+
+function mapAreaLabel(world: Pick<MapWorld, 'isSanctuary'>, x: number, y: number) {
+  return world.isSanctuary?.(x, y) ? 'Sanctuary' : `Area Lv ${getZoneAt(x, y).level}`;
+}
 
 /** Keep hover selection inside the chart and prefer the closest visible marker. */
 export function pickMapPOI(pois: readonly MapPOI[], view: MapView, pointer: { x: number; y: number }, radius: number): MapPOI | null {
@@ -351,7 +363,8 @@ export class WorldMap {
     c.lineTo(r.x + 14, r.y + 17); c.lineTo(r.x + 10, r.y + 19); c.closePath();
     c.moveTo(r.x + 14, r.y + 7); c.lineTo(r.x + 14, r.y + 17);
     c.moveTo(r.x + 18, r.y + 9); c.lineTo(r.x + 18, r.y + 19); c.stroke();
-    text(c, 'MAP', r.x + 29, r.y + 9, 1.03, palette.ivory);
+    const area = mapAreaLabel(this.world, player.x, player.y);
+    text(c, area, r.x + 29, r.y + 10, .85, area === 'Sanctuary' ? palette.jade : palette.ivory);
     c.fillStyle = palette.well; c.fillRect(r.x + r.width - 25, r.y + 6, 16, 15);
     c.strokeStyle = palette.line; c.strokeRect(r.x + r.width - 24.5, r.y + 6.5, 15, 14);
     text(c, 'M', r.x + r.width - 17, r.y + 10, .86, palette.muted, 'center');
@@ -375,14 +388,14 @@ export class WorldMap {
     c.save(); c.beginPath(); c.rect(r.x + 6, r.y + r.height - 19, r.width - 12, 15); c.clip();
     text(c, name, r.x + r.width / 2, r.y + r.height - 15, .95, palette.text, 'center'); c.restore();
     if (this.minimapPointer) {
-      const poi = pickMapPOI(pois, view, this.minimapPointer, 8);
+      const poi = pickMapPOI(pois.filter(p => this.exploration.isRevealed(p.x, p.y)), view, this.minimapPointer, 8);
       if (poi) {
         const boxWidth = Math.min(190, width - 24), bx = Math.max(12, r.x - boxWidth - 9), by = r.y + 30;
         c.fillStyle = `${palette.panel}fa`; c.fillRect(bx, by, boxWidth, 48);
         c.strokeStyle = palette.lineStrong; c.strokeRect(bx + .5, by + .5, boxWidth - 1, 47);
         c.fillStyle = POI_DEFINITIONS[poi.kind].color; c.fillRect(bx + 1, by + 9, 2, 29);
         c.save(); c.beginPath(); c.rect(bx + 10, by + 6, boxWidth - 20, 36); c.clip();
-        text(c, POI_DEFINITIONS[poi.kind].label, bx + 11, by + 9, .85, palette.jade);
+        text(c, `${POI_DEFINITIONS[poi.kind].label} · ${mapAreaLabel(this.world, poi.x, poi.y)}`, bx + 11, by + 9, .75, palette.jade);
         text(c, poi.name, bx + 11, by + 26, 1.1, palette.ivory); c.restore();
       }
     }
@@ -402,7 +415,8 @@ export class WorldMap {
     c.setTransform(this.ratio, 0, 0, this.ratio, 0, 0); c.clearRect(0, 0, this.view.width, this.view.height);
     this.hovered = null;
     const region = bounds(this.view);
-    if (this.pointer && !this.drag) this.hovered = pickMapPOI(this.exploration.getDiscoveredPOIs(region), this.view, this.pointer, 14);
+    if (this.pointer && !this.drag) this.hovered = pickMapPOI(this.exploration.getDiscoveredPOIs(region)
+      .filter(p => this.exploration.isRevealed(p.x, p.y)), this.view, this.pointer, 14);
     this.chart(c, this.view, false);
     const grid = TILE_WORLD * 2, first = unprojectMapPoint(0, 0, this.view);
     c.save(); c.strokeStyle = '#bfbe9720'; c.lineWidth = .65;
@@ -418,16 +432,29 @@ export class WorldMap {
     setText(this.title, this.location(this.player));
     const count = this.exploration.discoveredPOICount;
     setText(this.discoveries, `${count} ${count === 1 ? 'place' : 'places'} charted`);
-    setText(this.status, this.exploration.persistenceMessage || (this.exploration.storageStatus === 'pending' ? 'Charting…' : 'Chart saved'));
+    const area = mapAreaLabel(this.world, this.player.x, this.player.y);
+    setText(this.status, `${area} · ${this.exploration.persistenceMessage || (this.exploration.storageStatus === 'pending' ? 'Charting…' : 'Chart saved')}`);
     this.status.dataset.state = this.exploration.storageStatus;
     setText(this.coordinates, `X ${Math.round(this.player.x)} · Y ${Math.round(this.player.y)}`);
-    if (this.hovered && this.pointer) this.showTooltip(this.hovered, this.pointer); else this.hideTooltip();
+    if (this.hovered && this.pointer) this.showTooltip(this.hovered, this.pointer);
+    else if (this.pointer && !this.drag) {
+      const point = unprojectMapPoint(this.pointer.x, this.pointer.y, this.view);
+      const inspected = chartedMapArea(this.world, this.exploration, point.x, point.y);
+      if (inspected) {
+        this.tooltip.hidden = false; setText(this.tooltipName, inspected.name); setText(this.tooltipKind, inspected.label);
+        setText(this.tooltipDescription, `X ${Math.round(inspected.x)} · Y ${Math.round(inspected.y)}`);
+        this.tooltip.style.setProperty('--poi-color', palette.jade); this.positionTooltip(this.pointer);
+      } else this.hideTooltip();
+    } else this.hideTooltip();
   }
 
   private showTooltip(poi: MapPOI, point: { x: number; y: number }) {
     this.tooltip.hidden = false; setText(this.tooltipName, poi.name);
-    setText(this.tooltipKind, POI_DEFINITIONS[poi.kind].label); setText(this.tooltipDescription, poi.description);
+    setText(this.tooltipKind, `${POI_DEFINITIONS[poi.kind].label} · ${mapAreaLabel(this.world, poi.x, poi.y)}`); setText(this.tooltipDescription, poi.description);
     this.tooltip.style.setProperty('--poi-color', POI_DEFINITIONS[poi.kind].color);
+    this.positionTooltip(point);
+  }
+  private positionTooltip(point: { x: number; y: number }) {
     this.tooltip.style.left = `${Math.max(10, Math.min(this.view.width - this.tooltip.offsetWidth - 12, point.x + 18))}px`;
     this.tooltip.style.top = `${Math.max(10, Math.min(this.view.height - this.tooltip.offsetHeight - 12, point.y + 15))}px`;
   }

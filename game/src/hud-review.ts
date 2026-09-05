@@ -2,6 +2,7 @@ import './typography.css';
 import { drawFloatingHUD, getHUDLayout, type HUDOptions } from './hud.ts';
 import { loadGameFont, text, textWidth } from './font.ts';
 import { Simulation } from './simulation.ts';
+import { scaledEnemyStats } from './zone-progression.ts';
 import { drawEnemyPlate, getEnemyPlateLayout } from './enemy-plate.ts';
 import type { Enemy, Player, WorldQuery } from './model.ts';
 
@@ -21,7 +22,7 @@ let disposed = false;
 
 interface Stage {
   name: string; detail: string; player: Player; time: number; options: HUDOptions;
-  enemy: Pick<Enemy, 'kind' | 'hp' | 'maxHp'>;
+  enemy: Pick<Enemy, 'kind' | 'hp' | 'maxHp' | 'level' | 'rank'>;
   enemyOptions?: Parameters<typeof drawEnemyPlate>[4];
 }
 const emptyWorld: WorldQuery = {
@@ -39,14 +40,15 @@ function makeStages(): Stage[] {
   depleted.hp = 16; depleted.mana = 7; depleted.flasks = 0; depleted.dodgeCharges = 0;
   depleted.dodgeRecharge = .56; depleted.healCooldown = .65;
   depleted.level = 4; depleted.xp = 220;
+  const brute = scaledEnemyStats('brute', 2, 'veteran'), caster = scaledEnemyStats('caster', 4, 'elite');
   return [
     { name: 'Healthy', detail: 'Full vitality · abilities ready', player: healthy, time: 5.7, options: {},
-      enemy: { kind: 'stalker', hp: 48, maxHp: 48 } },
+      enemy: { kind: 'stalker', hp: 48, maxHp: 48, level: 1, rank: 'normal' } },
     { name: 'Damaged', detail: 'Recent impact · trailing vitality · one dodge charge', player: damaged,
-      time: 9.2, options: { healthTrail: .83, hitPulse: .5 }, enemy: { kind: 'brute', hp: 86, maxHp: 138 },
-      enemyOptions: { healthTrail: 120, hitPulse: .5 } },
+      time: 9.2, options: { healthTrail: .83, hitPulse: .5 }, enemy: { kind: 'brute', hp: Math.round(brute.maxHp * .62), maxHp: brute.maxHp, level: 2, rank: 'veteran' },
+      enemyOptions: { healthTrail: brute.maxHp * .87, hitPulse: .5 } },
     { name: 'Depleted', detail: 'Low resources · recovery timers · empty flask', player: depleted, time: 14.4, options: {},
-      enemy: { kind: 'caster', hp: 8, maxHp: 56 } },
+      enemy: { kind: 'caster', hp: Math.round(caster.maxHp * .14), maxHp: caster.maxHp, level: 4, rank: 'elite' } },
   ];
 }
 

@@ -5,7 +5,7 @@ export const MAX_PROJECTILES = 128;
 export interface ProjectileContext {
   player: Player; enemies: Enemy[]; world: WorldQuery;
   damage(enemy: Enemy, amount: number, angle: number, melee: boolean): void;
-  hurt(amount: number, angle: number): void;
+  hurt(amount: number, angle: number, sourceLevel: number): void;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
   emit(event: CombatEvent): void;
 }
@@ -65,7 +65,7 @@ export function advanceProjectiles(projectiles: Projectile[], dt: number, contex
       }
       if (projectile.owner === 'enemy') {
         if (segmentDistanceSquared(p.x, p.y, oldX, oldY, projectile.x, projectile.y) <= (projectile.radius + p.radius) ** 2) {
-          context.hurt(projectile.damage, projectile.angle); projectile.life = 0;
+          context.hurt(projectile.damage, projectile.angle, projectile.sourceLevel); projectile.life = 0;
         }
         continue;
       }

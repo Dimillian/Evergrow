@@ -44,7 +44,9 @@ The offhand accepts a shield or a one-handed melee weapon. One-handed weapons ca
 
 Equipping a two-handed weapon stows any offhand item; equipping an offhand stows a two-handed main weapon. The transaction first plans the source-cell swap and any additional stow. Its vacated source cell can hold the displaced opposite-hand item when the receiving hand was empty. Replacing two occupied hands with a two-handed weapon needs an additional empty cell. If there is insufficient room, nothing changes and no item is lost.
 
-`generateItem(seed, itemLevel, kind?, profileId?)` supports deterministic profile selection for content tools and static reviews. Unknown profile IDs and mismatched kinds are rejected. Normal drops choose profiles from the same registries. The starter bag contains eight level-1 items: Longsword, chest armor, a ring, boots, Iron Buckler, Thorn Shortbow, Ember Staff, and Rondel Dagger. The equipped starter remains the Weathered Sword with neutral worn armor.
+`generateItem(seed, itemLevel, kind?, profileId?, tierOverride?)` supports deterministic profile/tier selection for content tools and static reviews. Unknown profile IDs and mismatched kinds are rejected. Enemy loot chooses profiles from these registries with biome weights, source-level/rank item levels, and explicit rank-table tiers. Weapon damage and base shield armor use `(1 + 0.13 × (itemLevel − 1)) × tierQuality`; percentage affix growth is bounded separately. Armor mitigation scales against the incoming enemy/projectile's captured level. The [progression and loot model](progression-and-loot.md) documents these shared curves and tables.
+
+The starter bag contains eight level-1 items: Longsword, chest armor, a ring, boots, Iron Buckler, Thorn Shortbow, Ember Staff, and Rondel Dagger. The equipped starter remains the Weathered Sword with neutral worn armor.
 
 ## Skill schools and requirements
 

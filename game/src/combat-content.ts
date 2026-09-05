@@ -13,7 +13,7 @@ export const PLAYER_ABILITIES = Object.freeze({
   basicAttack: Object.freeze({ ...BASIC_ATTACK_PHASES, bladeHalfAngle: .055 }),
   dodge: Object.freeze({ charges: 2, recharge: 1.8, duration: .22, speed: 360,
     invulnerabilityStart: .02, invulnerabilityEnd: .18 }),
-  heal: Object.freeze({ charges: 2, restore: 42, cooldown: .8, flashDuration: .5, killsPerCharge: 8 }),
+  heal: Object.freeze({ charges: 2, restoreFraction: .42, cooldown: .8, flashDuration: .5, killsPerCharge: 8 }),
 });
 
 export const PLAYER_MOVEMENT = Object.freeze({
@@ -75,7 +75,7 @@ export const ENEMY_DEFINITIONS: Readonly<Record<EnemyKind, EnemyDefinition>> = O
 });
 
 export const LOOT_RULES = Object.freeze({
-  equipmentChance: .45, maxGroundItems: 96, equipmentCollectDistance: 30,
-  maxPickups: 32, life: 20, radius: 4, healthEveryKills: 3, healthValue: 12, manaValue: 16,
+  maxGroundItems: 96, equipmentCollectDistance: 30,
+  maxPickups: 32, life: 20, radius: 4, healthEveryKills: 3, healthFraction: .12, manaFraction: .16,
   collectDistance: 18, magnetDistance: 55, magnetSpeed: 100,
 });

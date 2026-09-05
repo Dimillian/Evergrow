@@ -40,7 +40,7 @@ test('long display gaps expire old feedback without replaying a particle emissio
   const effects = new CombatEffects(), sim = new Simulation(emptyWorld, { spawn: false });
   sim.projectiles = Array.from({ length: 32 }, (_, id): Projectile => ({
     id, x: id * 5, y: 0, prevX: id * 5, prevY: 0, vx: 100, vy: 0, angle: 0,
-    radius: 3, damage: 10, life: 2, maxLife: 2, owner: 'player', hitIds: new Set(),
+    radius: 3, damage: 10, life: 2, sourceLevel: 1, maxLife: 2, owner: 'player', hitIds: new Set(),
   }));
   effects.handleEvents([{ type: 'hit', x: 0, y: 0, value: 20 }]);
   effects.update(sim, 30);

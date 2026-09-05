@@ -267,7 +267,7 @@ test('enemy contact identifies the target and starts one full impact flash', () 
 test('player damage reacts once with incoming direction and protection does not retrigger flashes', () => {
   const sim = make();
   sim.projectiles.push({ hitIds: new Set(), id: 999, x: -15, y: 0, prevX: -15, prevY: 0, vx: 1200, vy: 0,
-    angle: 0, radius: 5, damage: 13, life: 1, maxLife: 1, owner: 'enemy' });
+    angle: 0, radius: 5, damage: 13, life: 1, sourceLevel: 1, maxLife: 1, owner: 'enemy' });
   sim.update(FIXED_STEP, idle);
   const hurt = sim.drainEvents().find(event => event.type === 'hurt');
   assert.equal(sim.player.hp, 87);
@@ -277,7 +277,7 @@ test('player damage reacts once with incoming direction and protection does not 
   assert.equal(hurt?.remainingHp, 87);
   assert.equal(hurt?.value, 13);
   sim.projectiles.push({ hitIds: new Set(), id: 1000, x: 0, y: -15, prevX: 0, prevY: -15, vx: 0, vy: 1200,
-    angle: Math.PI / 2, radius: 5, damage: 13, life: 1, maxLife: 1, owner: 'enemy' });
+    angle: Math.PI / 2, radius: 5, damage: 13, life: 1, sourceLevel: 1, maxLife: 1, owner: 'enemy' });
   sim.update(FIXED_STEP, idle);
   assert.equal(sim.player.hp, 87);
   assert.ok(Math.abs(sim.player.hitFlash - (HIT_FLASH_DURATION - FIXED_STEP)) < 1e-9);
@@ -294,7 +294,7 @@ test('player damage reacts once with incoming direction and protection does not 
 test('knockback is a continuous decaying motion after impact', () => {
   const sim = make();
   const enemy = target(sim, 40);
-  sim.projectiles.push({ hitIds: new Set(), id: 999, x: 0, y: 0, prevX: 0, prevY: 0, vx: 10000, vy: 0, angle: 0, radius: 5, damage: 36, life: 1, maxLife: 1, owner: 'player' });
+  sim.projectiles.push({ hitIds: new Set(), id: 999, x: 0, y: 0, prevX: 0, prevY: 0, vx: 10000, vy: 0, angle: 0, radius: 5, damage: 36, life: 1, sourceLevel: 1, maxLife: 1, owner: 'player' });
   sim.update(FIXED_STEP, idle);
   assert.equal(enemy.x, 40, 'contact records an impulse without teleporting the target');
   assert.ok(enemy.knockbackX > 0);
@@ -390,7 +390,7 @@ test('swept projectiles hit the first crossed enemy exactly once', () => {
   const sim = make();
   const first = target(sim, 40);
   const second = target(sim, 80);
-  sim.projectiles.push({ hitIds: new Set(), id: 999, x: 0, y: 0, prevX: 0, prevY: 0, vx: 10000, vy: 0, angle: 0, radius: 5, damage: 36, life: 1, maxLife: 1, owner: 'player' });
+  sim.projectiles.push({ hitIds: new Set(), id: 999, x: 0, y: 0, prevX: 0, prevY: 0, vx: 10000, vy: 0, angle: 0, radius: 5, damage: 36, life: 1, sourceLevel: 1, maxLife: 1, owner: 'player' });
   sim.update(FIXED_STEP, idle);
   assert.equal(first.hp, first.maxHp - 36);
   assert.equal(second.hp, second.maxHp);
@@ -402,7 +402,7 @@ test('simultaneous lethal attacks award one kill, one XP reward, and one pickup'
   const enemy = target(sim, 35);
   enemy.hp = 20;
   sim.player.attack = { kind: 'melee', weapon: sim.player.equipment.mainHand, hand: 'main', elapsed: 0.079, duration: 0.32, activeStart: 0.08, activeEnd: 0.13, angle: 0, range: 49, arc: Math.PI, damage: 24, hitIds: new Set() };
-  sim.projectiles.push({ hitIds: new Set(), id: 999, x: 25, y: 0, prevX: 25, prevY: 0, vx: 360, vy: 0, angle: 0, radius: 5, damage: 36, life: 1, maxLife: 1, owner: 'player' });
+  sim.projectiles.push({ hitIds: new Set(), id: 999, x: 25, y: 0, prevX: 25, prevY: 0, vx: 360, vy: 0, angle: 0, radius: 5, damage: 36, life: 1, sourceLevel: 1, maxLife: 1, owner: 'player' });
   sim.update(FIXED_STEP, idle);
   assert.equal(sim.kills, 1);
   assert.equal(sim.player.xp, 50);
@@ -429,7 +429,7 @@ test('healing clamps health, requires a charge, and does not consume at full hea
 
 test('full-resource pickups remain and collected resources clamp at maximum', () => {
   const sim = make();
-  sim.pickups.push({ id: 10, x: 0, y: 0, kind: 'health', value: 12, life: 20, radius: 4 });
+  sim.pickups.push({ id: 10, x: 0, y: 0, kind: 'health', restoreFraction: .12, life: 20, radius: 4 });
   sim.update(FIXED_STEP, idle);
   assert.equal(sim.pickups.length, 1);
   sim.player.hp = 97;
@@ -473,7 +473,7 @@ test('clearInput discards buffered controls and death stops simulation until res
   enemy.state = 'attack';
   enemy.stateDuration = 1;
   enemy.attackAngle = 0;
-  sim.projectiles.push({ hitIds: new Set(), id: 999, x: 120, y: 120, prevX: 120, prevY: 120, vx: 120, vy: 0, angle: 0, radius: 5, damage: 13, life: 1, maxLife: 1, owner: 'enemy' });
+  sim.projectiles.push({ hitIds: new Set(), id: 999, x: 120, y: 120, prevX: 120, prevY: 120, vx: 120, vy: 0, angle: 0, radius: 5, damage: 13, life: 1, sourceLevel: 1, maxLife: 1, owner: 'enemy' });
   sim.update(FIXED_STEP, idle);
   assert.equal(sim.player.dead, true);
   assert.equal(sim.interpolationAlpha, 0);
@@ -496,7 +496,7 @@ test('render interpolation follows fixed ticks and clears stale positions with i
   const sim = make();
   const enemy = target(sim);
   enemy.knockbackX = 120;
-  sim.projectiles.push({ hitIds: new Set(), id: 999, x: 100, y: 0, prevX: 100, prevY: 0, vx: 120, vy: 0, angle: 0, radius: 5, damage: 36, life: 1, maxLife: 1, owner: 'player' });
+  sim.projectiles.push({ hitIds: new Set(), id: 999, x: 100, y: 0, prevX: 100, prevY: 0, vx: 120, vy: 0, angle: 0, radius: 5, damage: 36, life: 1, sourceLevel: 1, maxLife: 1, owner: 'player' });
   sim.update(FIXED_STEP * 1.5, { ...idle, moveX: 1 });
   assert.ok(Math.abs(sim.interpolationAlpha - 0.5) < 1e-9);
   assert.equal(sim.player.prevX, 0);

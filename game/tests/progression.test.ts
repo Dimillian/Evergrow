@@ -3,7 +3,8 @@ import test from 'node:test';
 import { ENEMY_DEFINITIONS } from '../src/combat-content.ts';
 import { ENCOUNTER_RULES } from '../src/encounter-director.ts';
 import type { EnemyKind, Input, WorldQuery } from '../src/model.ts';
-import { awardExperience, xpForNextLevel } from '../src/progression.ts';
+import { awardExperience, enemyXPReward, xpForNextLevel, xpLevelFactor } from '../src/progression.ts';
+import { MAX_CONTENT_LEVEL } from '../src/progression-content.ts';
 import { FIXED_STEP, Simulation } from '../src/simulation.ts';
 
 const emptyWorld: WorldQuery = {
@@ -15,8 +16,15 @@ function advance(sim: Simulation, seconds: number, input: Partial<Input> = {}): 
   for (let i = 0; i < Math.round(seconds / FIXED_STEP); i++) sim.update(FIXED_STEP, { ...idle, ...input });
 }
 
-test('XP thresholds grow from 100 by 50 per additional level', () => {
-  assert.deepEqual([1, 2, 3, 10].map(xpForNextLevel), [100, 150, 200, 550]);
+test('XP thresholds pace matching-level enemies across the early and later game', () => {
+  assert.deepEqual([1, 2, 3, 5, 10, 20, 50].map(xpForNextLevel), [100, 170, 230, 375, 865, 2295, 9800]);
+  let last = 0;
+  for (let level = 1; level <= 1000; level++) {
+    const threshold = xpForNextLevel(level);
+    assert.ok(threshold > last); assert.equal(threshold % 5, 0); last = threshold;
+  }
+  assert.equal(xpForNextLevel(Number.NaN), 100);
+  assert.equal(xpForNextLevel(1e12), xpForNextLevel(MAX_CONTENT_LEVEL));
 });
 
 test('only reaching the full XP threshold advances the level', () => {
@@ -31,11 +39,43 @@ test('only reaching the full XP threshold advances the level', () => {
 
 test('XP overflow carries through several level thresholds without losing progress', () => {
   const progress = { level: 1, xp: 80 };
-  awardExperience(progress, 700);
+  awardExperience(progress, 805);
   assert.deepEqual(progress, { level: 5, xp: 80 });
   const split = { level: 1, xp: 80 };
-  for (let i = 0; i < 35; i++) awardExperience(split, 20);
+  for (let i = 0; i < 161; i++) awardExperience(split, 5);
   assert.deepEqual(split, progress, 'reward grouping does not affect the resulting level');
+});
+
+test('XP rewards use source level and rank, with a bounded player-level difference factor', () => {
+  assert.deepEqual([1, 5, 10, 20, 50].map(level => enemyXPReward(20, level, level, 'normal')), [20, 34, 52, 88, 196]);
+  assert.equal(enemyXPReward(20, 1, 1, 'veteran'), 40);
+  assert.equal(enemyXPReward(20, 1, 1, 'elite'), 100);
+  assert.equal(xpLevelFactor(10, 6), 1, 'the free gap expands with player level');
+  assert.equal(xpLevelFactor(10, 5), .8);
+  assert.equal(xpLevelFactor(1, 2), 1.05);
+  assert.equal(xpLevelFactor(1, 100), 1.25);
+  assert.equal(xpLevelFactor(100, 1), .01);
+  assert.equal(enemyXPReward(20, 100, 1, 'normal'), 1, 'even trivial positive rewards retain one XP');
+  assert.equal(enemyXPReward(20, 1, 2, 'normal'), 25, 'source XP rounds before the player-level factor');
+  assert.equal(enemyXPReward(Number.NaN, 1, 1, 'normal'), 0);
+});
+
+test('invalid rewards are ignored and extreme rewards remain bounded with exact ordinary overflow', () => {
+  const progress = { level: 1, xp: 20 };
+  for (const reward of [Number.NaN, Infinity, -Infinity, -20, 0, .5]) awardExperience(progress, reward);
+  assert.deepEqual(progress, { level: 1, xp: 20 });
+  const damaged = { level: Number.NaN, xp: Infinity };
+  awardExperience(damaged, 100);
+  assert.deepEqual(damaged, { level: 2, xp: 0 });
+  const huge = { level: 1, xp: 0 };
+  awardExperience(huge, Number.MAX_VALUE);
+  assert.ok(Number.isSafeInteger(huge.level) && huge.level > 1000 && huge.level <= MAX_CONTENT_LEVEL);
+  assert.ok(Number.isSafeInteger(huge.xp) && huge.xp >= 0 && huge.xp < xpForNextLevel(huge.level));
+  const edge = { level: MAX_CONTENT_LEVEL - 1, xp: 0 };
+  awardExperience(edge, xpForNextLevel(edge.level) + 100);
+  assert.deepEqual(edge, { level: MAX_CONTENT_LEVEL, xp: 0 });
+  awardExperience(edge, Number.MAX_VALUE);
+  assert.deepEqual(edge, { level: MAX_CONTENT_LEVEL, xp: 0 });
 });
 
 test('each enemy archetype awards its authored XP once on lethal melee contact', () => {

@@ -179,7 +179,7 @@ export class InventoryPanel {
       ['Attack damage', number(attack.damage)], ['Attacks per second', number(attack.attacksPerSecond, 2)],
       ['Critical chance', percent(stats.critChance)], ['Critical damage', percent(stats.critMultiplier)],
       ['Maximum life', number(stats.maxHp)], ['Maximum mana', number(stats.maxMana)],
-      ['Armor', number(stats.armor)], ['Damage reduction', percent(stats.damageReduction)],
+      ['Armor', number(stats.armor)], [`Reduction vs level ${player.level}`, percent(stats.damageReduction)],
       ['Block chance', percent(stats.blockChance)], ['Blocked damage reduction', percent(stats.blockReduction)],
       ['Movement speed', percent(stats.moveSpeedMultiplier)], ['Spell damage', percent(stats.spellDamageMultiplier)],
       ['Life regeneration', `${number(stats.lifeRegeneration, 2)} / s`], ['Mana regeneration', `${number(stats.manaRegeneration, 2)} / s`],

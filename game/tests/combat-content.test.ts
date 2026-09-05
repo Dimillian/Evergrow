@@ -47,7 +47,7 @@ test('player ability definitions retain cancellable casts and bounded dodge prot
   assert.ok(0 < dodge.invulnerabilityStart && dodge.invulnerabilityStart < dodge.invulnerabilityEnd
     && dodge.invulnerabilityEnd < dodge.duration && dodge.duration < dodge.recharge);
   assert.ok(Number.isInteger(dodge.charges) && dodge.charges > 0);
-  assert.ok(Number.isInteger(heal.charges) && heal.charges > 0 && heal.restore > 0 && heal.killsPerCharge > 0);
+  assert.ok(Number.isInteger(heal.charges) && heal.charges > 0 && heal.restoreFraction > 0 && heal.restoreFraction <= 1 && heal.killsPerCharge > 0);
   for (const definition of Object.values(PLAYER_ABILITIES)) assert.ok(Object.isFrozen(definition));
   assert.throws(() => Object.assign(SKILL_CAST_MOTION, { duration: 0 }), TypeError);
 });

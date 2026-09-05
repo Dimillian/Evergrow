@@ -6,7 +6,7 @@ import type { CombatEvent, Enemy, EnemyKind } from '../src/model.ts';
 
 const view = cameraView(960, 600, 0, 0, 1);
 const enemy = (id = 1, x = 0, y = 0, kind: EnemyKind = 'stalker'): Enemy => ({
-  id, x, y, prevX: x, prevY: y, vx: 0, vy: 0, knockbackX: 0, knockbackY: 0,
+  id, level: 1, rank: 'normal', biome: 'deadwood', lootSeed: id, damage: 8, xpReward: 20, x, y, prevX: x, prevY: y, vx: 0, vy: 0, knockbackX: 0, knockbackY: 0,
   angle: 0, hp: 100, maxHp: 100, kind, state: 'idle', stateTime: 0, stateDuration: 1,
   attackAngle: 0, hitFlash: 0, hitAngle: 0, radius: 10, stagger: 0, attackHit: false, interrupted: false, slowTime: 0, slowFactor: 1, burnTime: 0, burnDps: 0, burnTick: 0,
 });

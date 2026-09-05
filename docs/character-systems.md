@@ -25,6 +25,8 @@ These windows pause combat, clear buffered inputs, trap modal keyboard focus, an
 | `inventory.ts` | Atomic equip/unequip/hand-conflict stow, bag swap, insertion, and attribute allocation |
 | `character-stats.ts` | Combine equipped-item modifiers, allocated attributes, and tree bonuses into derived stats |
 | `character.ts` | Refresh the live player projection; award points for XP levels; validate skill assignment |
+| `progression-content.ts`, `progression.ts`, `zone-progression.ts` | Shared level/rank curves, XP thresholds and factors, geographic threat, and spawn-stat snapshots |
+| `loot-content.ts`, `loot.ts` | Rank yield/tier tables, archetype/biome weights, isolated reward rolls, and source-level gear |
 | `skill-tree.ts` | Immutable cluster/curved-route recipes and bounds, connectivity validation, unique bonus aggregation, unlocked skills |
 | `skill-tree-routes.ts` | Pure shortest-route and remaining-point-cost previews from the current allocation |
 | `skill-tree-art.ts`, `skill-tree-glyphs.ts` | Culled native-resolution atlas drawing and shared procedural stat/skill engravings |
@@ -35,13 +37,15 @@ These windows pause combat, clear buffered inputs, trap modal keyboard focus, an
 | `inventory-panel.ts`, `skill-tree-panel.ts` | UI state and player actions; no independent stat calculation or mutation rules |
 | `item-art.ts`, `loot-art.ts` | Equipment icon/worn appearance and ground-marker/label presentation |
 
-`deriveCharacterStats(sheet, treeBonuses)` is pure. `refreshCharacter(player)` supplies the tree bonuses and updates combat projections after a successful character action. Raising maximum life or mana does not refill it; reducing a maximum clamps the current amount. Existing basic-attack snapshots retain their start-time attack stats. Presentation never grants points, damage, gear, or XP.
+`deriveCharacterStats(sheet, treeBonuses, level)` is pure. `refreshCharacter(player)` supplies tree bonuses and character level, updating combat projections after a successful character action or level gain. Raising maximum life or mana does not refill it; reducing a maximum clamps the current amount. Existing basic-attack snapshots retain their start-time attack stats. Presentation never grants points, damage, gear, or XP.
 
 ## Progression and attribute rules
 
 A new run starts at **level 1, 0 XP**, with **10 Strength, Dexterity, Intelligence, and Vitality**, zero unspent points, a free allocated origin, and five empty active slots. Starter armor is cosmetic, without hidden bonuses; the Weathered Sword retains its 24 damage and 2 attacks/second. Eight level-1 bag items provide immediate equipment choices: Longsword, chest armor, ring, boots, Iron Buckler, Thorn Shortbow, Ember Staff, and Rondel Dagger. LMB supplies the equipped weapon’s innate melee, arrow, or elemental-bolt attack; these basics require no skill unlock or mana.
 
-Kills award **20 XP** for a Hollow Stalker, **30** for a Mire Hexer, and **50** for a Gravebound Brute. The next level costs `100 + 50 × (level − 1)` XP. Overflow can cross several levels. Each gained level grants **1 skill point + 5 attribute points**, without auto-allocating them or healing the character.
+Level-one normal enemies award **20 XP** for a Hollow Stalker, **30** for a Mire Hexer, and **50** for a Gravebound Brute. Geographic area level increases every 3,200 world units from the origin; enemies snapshot their spawn level and normal/veteran/elite rank. Enemy XP scales by `1 + 0.18 × (enemyLevel − 1)`, then by rank (×1 / ×2 / ×5), with a bounded player-level-difference factor applied on death. Source level also controls life, damage, and item level; player level never upgrades an enemy's loot.
+
+The next level costs `roundToNearest5(S × (5 + 2 × (level − 1)^0.8))`, where `S` is a same-level normal Stalker's rounded XP. Thresholds at levels 1 / 5 / 10 / 20 / 50 are **100 / 375 / 865 / 2,295 / 9,800** XP. Overflow can cross several levels. Each gained level grants **1 skill point + 5 attribute points**, without auto-allocating them or healing the character. See [progression and loot](progression-and-loot.md) for the exact curves, XP-gap rules, encounter policy, and worked examples.
 
 Attribute effects apply per point above the starting baseline of ten, including attribute bonuses from gear/tree:
 
@@ -54,15 +58,17 @@ Attribute effects apply per point above the starting baseline of ten, including 
 
 Flat and percentage modifiers add within their stat before conversion to derived multipliers. For example, `attackSpeedPercent: 4` means **+4%**, not a 4× multiplier. Item implicit modifiers, item affixes, and tree bonuses use the same `StatKey` vocabulary.
 
-Supported effects include life/mana, armor, attack/spell damage, attack speed, critical chance/damage, movement speed, cooldown reduction, life/mana regeneration, life on hit, block chance, and blocked-damage reduction. Block modifiers become active only with a usable equipped shield; chance caps at 75% and reduction at 90%, applied after armor. Base mana regeneration is 9/second. Armor reduces incoming damage by `armor / (armor + 120)`, capped at 80%. Critical chance caps at 75%; critical damage starts at 1.5× and caps at 5×. Cooldown reduction caps at 75% and affects active-skill cooldowns and dodge-charge recovery. Movement multiplier caps at 1.75×; final basic attacks remain within 0.25–12 attacks/second. Other numeric bounds keep extreme generated values finite; these are engine limits, not completed balance targets.
+Supported effects include life/mana, armor, attack/spell damage, attack speed, critical chance/damage, movement speed, cooldown reduction, life/mana regeneration, life on hit, block chance, and blocked-damage reduction. Block modifiers become active only with a usable equipped shield; chance caps at 75% and reduction at 90%, applied after armor. Base mana regeneration is 9/second. Armor reduces incoming damage by `armor / (armor + 120 × (1 + 0.13 × (attackerLevel − 1)))`, capped at 80%. The character sheet estimates armor against the character's own level; combat uses the captured source level, including projectiles already in flight. Critical chance caps at 75%; critical damage starts at 1.5× and caps at 5×. Cooldown reduction caps at 75% and affects active-skill cooldowns and dodge-charge recovery. Movement multiplier caps at 1.75×; final basic attacks remain within 0.25–12 attacks/second. Other numeric bounds keep extreme generated values finite; these are engine limits, not completed balance targets.
+
+Potion healing restores 42% of maximum life, with two charges and one recovered charge per eight kills. Every third kill drops a 12%-maximum-life pickup; other kills drop a 16%-maximum-mana pickup. These retain their starting values of 42 / 12 / 16 at 100 maximum resources while remaining useful as gear and attributes grow. No recovery exceeds the missing resource.
 
 ## Equipment generation and transactions
 
 There are **ten item kinds** and **eleven equipment slots**: weapon, offhand, head, chest, gloves, legs, boots, cloak, amulet, and two rings. The offhand accepts a shield or a one-handed melee weapon. Each item occupies one inventory cell.
 
-Generation is deterministic from seed, item level, optional kind, and optional explicit profile ID, using an item-local RNG. Names combine authored base names, prefixes, suffixes, and titles. Icons and worn pieces share the item's procedural palette/material data; weapon icons use their profile dimensions. Jewelry modifies stats but has no dedicated visible character layer yet.
+Generation is deterministic from seed, item level, optional kind, optional explicit profile ID, and optional explicit tier, using an item-local RNG. Names combine authored base names, prefixes, suffixes, and titles. Icons and worn pieces share the item's procedural palette/material data; weapon icons use their profile dimensions. Jewelry modifies stats but has no dedicated visible character layer yet.
 
-| Tier | Drop-tier probability | Affixes | Quality multiplier |
+| Tier | General-generator probability | Affixes | Quality multiplier |
 | --- | ---: | ---: | ---: |
 | Common | 45% | 0 | 1.00 |
 | Magic | 32% | 1 | 1.09 |
@@ -70,9 +76,9 @@ Generation is deterministic from seed, item level, optional kind, and optional e
 | Epic | 5% | 3 | 1.34 |
 | Legendary | 1% | 4 | 1.50 |
 
-These are tier rolls **conditional on an item being generated**, not the chance for an enemy to drop gear. Affix stats are sampled without repetition from 17 shared families; shields can also roll block chance and blocked-damage reduction. Tier affects both affix count and potency; legendary currently means a stronger generated tier, not a unique item-specific mechanic.
+These general-generator tier rolls apply to starter packs and content tools when no tier is supplied. Enemy loot uses separate rank-specific tier tables and explicitly passes the rolled tier; see below. Affix stats are sampled without repetition from 17 shared families; shields can also roll block chance and blocked-damage reduction. Tier affects both affix count and potency; legendary currently means a stronger generated tier, not a unique item-specific mechanic.
 
-Generated item level is normalized to an integer within 1–1,000,000. Required character level is `max(1, itemLevel − 2)`. Base implicit stats and weapon damage scale using `(1 + (itemLevel − 1) × 0.13) × quality`. Affixes have individual level slopes and a deterministic 0.85–1.15 roll. The displayed item-power value is an informational score; it is not a second hidden damage multiplier.
+Generated item level is normalized to an integer within 1–1,000,000, the current numeric content bound. Required character level is `max(1, itemLevel − 2)`. Flat implicit stats and weapon damage scale using `(1 + (itemLevel − 1) × 0.13) × quality`. Flat affixes have individual level slopes and a deterministic 0.85–1.15 roll. Percentage affix slopes use the bounded effective growth `25n / (25 + n)`, where `n = itemLevel − 1`; ring damage implicits scale by `1 + 0.65 × effectiveGrowth / 25`. Raw damage/armor can continue growing without unbounded item-level increases to percentage budgets. The displayed item-power value is an informational score; it is not a second hidden damage multiplier.
 
 The generated catalog contains **13 weapons and 3 shields**: four one-handed melee profiles, three two-handed melee profiles, three bows, three elemental staves, and buckler/kite/tower shields. The separate Weathered Sword remains the equipped starter. Weapons carry explicit family, handedness, attack type, and element metadata; drawing and combat consume the same profile. One-handed melee weapons can pair with a shield or another weapon; dual-wield basics alternate hands using each weapon’s own cadence, damage, and reach. Two-handed melee weapons, bows, and staves reserve both hands. Unequipping the main weapon selects an actual unarmed profile. Wands remain future content. See the [weapon and skill catalog](weapons-and-skills.md) for profile values and current actions.
 
@@ -104,7 +110,15 @@ The atlas uses event-driven native-resolution Canvas drawing with curved-geometr
 
 ## Enemy gear drops
 
-The first actual enemy kill guarantees a gear drop. Subsequent kills have a **45%** gear-drop chance while fewer than **96 ground items** exist. Generated item level uses the player's level after that kill's XP award. The drop seed derives from the simulation seed and entity ID. Gear is independent of the existing health/mana pickup system.
+The first actual enemy kill guarantees at least one gear drop. Otherwise a **normal** enemy has a **28%** one-item chance, a **veteran** has **70%**, and an **elite** guarantees one item with a **25%** chance of a second. There can be at most **96 ground items**. Item level is the enemy's captured spawn level, plus **0 / 1 / 2** for normal/veteran/elite; leveling up on that kill cannot change it. The isolated seed derives from the world seed, spawn ordinal, and spawn position, so unrelated combat RNG and later movement do not reroll rewards. Gear is separate from health/mana pickups.
+
+| Source rank | Common | Magic | Rare | Epic | Legendary |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Normal | 55% | 32% | 11% | 1.8% | 0.2% |
+| Veteran | 15% | 45% | 32% | 7.5% | 0.5% |
+| Elite | 0% | 40% | 45% | 13% | 2% |
+
+These are conditional tier probabilities per dropped item, not per kill. Archetype weights bias item kind: Brutes favor shields/heavier armor; Hexers favor jewelry/cloaks. Captured source biome biases weapon/shield profiles: Deadwood favors heavy melee, Verdant bows/daggers, and Swamp elemental staves. Every kind and profile remains eligible. The complete tables and examples are in [progression and loot](progression-and-loot.md).
 
 Ground gear has a tier-colored marker, glow, and a crisp native-resolution name label. Moving within **30 world units**, with line of sight, automatically inserts it into the first empty inventory cell. If the bag is full, the item stays on the ground and the notice is throttled. Ground gear has no timed expiry; the population cap bounds it. Manual pickup selection, dropping/deleting items, stash, selling, crafting, and loot filters are absent.
 

@@ -104,3 +104,51 @@ test('implicit and explicit modifiers combine without mutating the item', () => 
   assert.deepEqual(itemModifiers(item), { strength: 5, maxHp: 10 });
   assert.equal(item.implicit.strength, 2);
 });
+
+test('explicit reward tiers control quality and affix count, preserving the base roll and distinct identity', () => {
+  const tiers = ['common', 'magic', 'rare', 'epic', 'legendary'] as const;
+  const variants = tiers.map(tier => generateItem(813, 12, 'weapon', 'longsword', tier));
+  assert.equal(new Set(variants.map(item => item.id)).size, tiers.length);
+  variants.forEach((item, index) => {
+    assert.equal(item.tier, tiers[index]);
+    assert.equal(item.affixes.length, index);
+    assert.deepEqual(item, generateItem(813, 12, 'weapon', 'longsword', tiers[index]));
+    assert.equal(item.baseName, 'Longsword');
+    assert.deepEqual(item.appearance, variants[0].appearance);
+    if (index > 0) assert.ok(item.weapon!.damage > variants[index - 1].weapon!.damage);
+  });
+  assert.throws(() => generateItem(1, 1, 'weapon', 'longsword', 'unknown' as ItemTier), RangeError);
+});
+
+test('percentage affixes approach bounded quality ranges while flat stats and base item power keep scaling', () => {
+  const percentBounds: Partial<Record<import('../src/character-types.ts').StatKey, number>> = {
+    damagePercent: 4 + 25 * .35, attackSpeedPercent: 3 + 25 * .18,
+    critChance: 1 + 25 * .08, critDamage: 6 + 25 * .35,
+    moveSpeedPercent: 2 + 25 * .12, spellDamagePercent: 5 + 25 * .45,
+    cooldownPercent: 2 + 25 * .1, blockChance: 2 + 25 * .08, blockReduction: 4 + 25 * .12,
+  };
+  const seen = new Set<string>();
+  for (let seed = 0; seed < 200; seed++) {
+    const low = generateItem(seed, 1, 'shield', 'iron-buckler', 'legendary');
+    const mid = generateItem(seed, 100, 'shield', 'iron-buckler', 'legendary');
+    const high = generateItem(seed, 1_000_000, 'shield', 'iron-buckler', 'legendary');
+    assert.ok(high.implicit.armor! > mid.implicit.armor! * 1000);
+    high.affixes.forEach((affix, index) => {
+      assert.equal(affix.stat, mid.affixes[index].stat);
+      assert.ok(mid.affixes[index].value > low.affixes[index].value);
+      assert.ok(affix.value >= mid.affixes[index].value);
+      const bound = percentBounds[affix.stat];
+      if (bound !== undefined) {
+        seen.add(affix.stat);
+        assert.ok(affix.value <= bound * 1.15 * 1.5 + .05);
+      } else assert.ok(affix.value > mid.affixes[index].value * 1000);
+    });
+  }
+  assert.deepEqual([...seen].sort(), Object.keys(percentBounds).sort());
+  const lowRing = generateItem(915, 1, 'ring', undefined, 'legendary');
+  const highRing = generateItem(915, 1_000_000, 'ring', undefined, 'legendary');
+  assert.equal(lowRing.implicit.damagePercent, 3);
+  assert.ok(highRing.implicit.damagePercent! > lowRing.implicit.damagePercent!);
+  assert.ok(highRing.implicit.damagePercent! <= 2 * 1.65 * 1.5 + .05);
+  assert.ok(generateItem(915, 1_000_000, 'weapon', 'greatblade', 'common').weapon!.damage > 1_000_000);
+});

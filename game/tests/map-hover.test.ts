@@ -40,6 +40,7 @@ test('POI cards use their measured responsive dimensions when staying inside the
   const name = { textContent: '' }, kind = { textContent: '' }, description = { textContent: '' };
   const map = Object.assign(Object.create(WorldMap.prototype), {
     view: { ...view, x: 0, y: 0, width: 800, height: 460 }, tooltip,
+    world: { isSanctuary: () => true },
     tooltipName: name, tooltipKind: kind, tooltipDescription: description,
   }) as { showTooltip(poi: MapPOI, point: { x: number; y: number }): void; view: MapView };
   const poi = markerAt(100, 100);
@@ -47,6 +48,7 @@ test('POI cards use their measured responsive dimensions when staying inside the
   assert.equal(tooltip.hidden, false);
   assert.equal(name.textContent, poi.name);
   assert.equal(description.textContent, poi.description);
+  assert.equal(kind.textContent, 'Settlement · Sanctuary');
   assert.ok(properties.has('--poi-color'));
   assert.ok(Number.parseFloat(tooltip.style.left) + tooltip.offsetWidth <= 788);
   assert.ok(Number.parseFloat(tooltip.style.top) + tooltip.offsetHeight <= 448);

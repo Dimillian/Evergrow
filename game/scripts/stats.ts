@@ -7,6 +7,9 @@ import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
 import { EQUIPMENT_SLOTS, ITEM_KINDS, TIER_NAMES } from '../src/items.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
 import { MAX_PROJECTILES } from '../src/projectile-combat.ts';
+import { ENEMY_RANKS, MAX_CONTENT_LEVEL } from '../src/progression-content.ts';
+import { ZONE_RULES } from '../src/zone-progression.ts';
+import { ENEMY_LOOT_TABLES } from '../src/loot-content.ts';
 import { BIOMES } from '../src/biomes.ts';
 import { COMBAT_TIMING, ENEMY_DEFINITIONS, PLAYER_ABILITIES, PROJECTILE_DEFINITIONS } from '../src/combat-content.ts';
 import { ENCOUNTER_RULES } from '../src/encounter-director.ts';
@@ -35,6 +38,7 @@ console.log(JSON.stringify({
   dependencies: { runtime: Object.keys(manifest.dependencies ?? {}).length,
     development: Object.keys(manifest.devDependencies ?? {}).length },
   content: { biomes: Object.keys(BIOMES).length, enemyArchetypes: Object.keys(ENEMY_DEFINITIONS).length,
+    enemyRanks: Object.keys(ENEMY_RANKS).length, enemyLootTables: Object.keys(ENEMY_LOOT_TABLES).length,
     basicAndUtilityActions: Object.keys(PLAYER_ABILITIES).length, activeSkills: Object.keys(SKILL_DEFINITIONS).length,
     skillNodes: SKILL_TREE.nodes.length, skillEdges: SKILL_TREE.edges.length,
     equipmentSlots: EQUIPMENT_SLOTS.length, itemKinds: ITEM_KINDS.length, itemTiers: Object.keys(TIER_NAMES).length,
@@ -43,6 +47,7 @@ console.log(JSON.stringify({
     pointOfInterestKinds: Object.keys(POI_DEFINITIONS).length },
   limits: { simulationHz: Math.round(1 / COMBAT_TIMING.fixedStep),
     projectiles: MAX_PROJECTILES,
+    numericContentLevel: MAX_CONTENT_LEVEL, areaBandWidth: ZONE_RULES.bandWidth,
     targetEnemies: ENCOUNTER_RULES.targetPopulationCap, hardEnemyCap: ENCOUNTER_RULES.hardPopulationCap,
     exploration: EXPLORATION_LIMITS },
   lastBuild: bundle,

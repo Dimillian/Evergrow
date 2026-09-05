@@ -68,3 +68,9 @@ The eleven equipment slots place Head above the doll, five armor slots to the le
 `weapon-shapes.ts` supplies shared geometry for the procedural inventory SVGs and held weapons/shields. Bow draw, staff grip, shield guard, and active-hand motion belong to the character rig. The basic-attack HUD well reflects the equipped weapon. `skill-content.ts` owns the seventeen active icons and requirement labels; the atlas inspector and assigned slots show when gear is incompatible. Preserve an assigned skill across gear changes, communicate the unmet requirement, and let combat validate activation. Do not duplicate requirement logic in the UI.
 
 Frozen development reviews at `/character.html?loadout=shield`, `?loadout=dual`, `?loadout=bow`, and `?loadout=staff` use the actual equip rules and doll. Add `&panel=skills` to inspect the corresponding skill availability. These pages do not advance simulation or access saves. [Weapon-school captures](captures/2026-09-05/weapon-schools/README.md) record the default 1280×720 in-app viewport.
+
+## Progression readouts
+
+Enemy plates show source level and rank beside their health readout, preserving the compact shared frame. Veteran/elite accents use the shared rank colors. Minimap and world-map location labels show area level or Sanctuary; hovering revealed ground can inspect its area level, while fogged terrain reveals no metadata. Character armor reduction is explicitly an estimate against the character's own level; actual combat uses attacker level.
+
+The development-only `/progression.html` study composes shared windows, stat rows, native controls, tier colors and procedural item icons into a scrollable balance reference. All displayed calculations consume runtime modules. Keep probabilities conditional where appropriate, label hypothetical ranks and benchmark gear, and distinguish expected rewards from guaranteed outcomes. This study stays outside gameplay menus and production entrypoints.

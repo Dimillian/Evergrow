@@ -1,9 +1,12 @@
 import type { CharacterSheet, DerivedCharacterStats, SkillId } from './character-types.ts';
+import type { BiomeId } from './biomes.ts';
+import type { EnemyRank } from './progression-content.ts';
 
 export interface WorldQuery {
   blocked(x: number, y: number, radius: number): boolean;
   /** Settlements suppress hostile spawns and protect the player's occupied position. */
   isSanctuary?(x: number, y: number): boolean;
+  sampleBiome?(x: number, y: number): { id: BiomeId };
   move(x: number, y: number, dx: number, dy: number, radius: number): { x: number; y: number };
 }
 
@@ -145,6 +148,13 @@ export type EnemyState = 'idle' | 'chase' | 'windup' | 'attack' | 'recover' | 'd
 
 export interface Enemy {
   id: number;
+  readonly level: number;
+  readonly rank: EnemyRank;
+  readonly biome: BiomeId;
+  readonly lootSeed: number;
+  /** Spawn-time offense and reward snapshots; crossing an area edge never rescales a living enemy. */
+  readonly damage: number;
+  readonly xpReward: number;
   x: number;
   y: number;
   prevX: number;
@@ -177,6 +187,7 @@ export interface Enemy {
 
 export interface Projectile {
   id: number;
+  readonly sourceLevel: number;
   x: number;
   y: number;
   prevX: number;
@@ -205,7 +216,7 @@ export interface Pickup {
   x: number;
   y: number;
   kind: 'health' | 'mana';
-  value: number;
+  restoreFraction: number;
   life: number;
   radius: number;
 }

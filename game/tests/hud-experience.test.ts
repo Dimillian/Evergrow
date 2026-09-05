@@ -30,9 +30,9 @@ test('a level-up starts a fresh rail and flashes without sweeping backwards', ()
 
 test('reduced motion, first render and restart show exact XP without stale feedback', () => {
   const feedback = new ExperienceFeedback();
-  assert.deepEqual(feedback.update({ level: 2, xp: 75 }, 0, false), { fill: .5, pulse: 0 });
-  assert.deepEqual(feedback.update({ level: 2, xp: 120 }, .01, true), { fill: .8, pulse: 0 });
-  assert.deepEqual(feedback.update({ level: 3, xp: 20 }, .01, true), { fill: .1, pulse: 0 });
+  assert.deepEqual(feedback.update({ level: 2, xp: 85 }, 0, false), { fill: .5, pulse: 0 });
+  assert.deepEqual(feedback.update({ level: 2, xp: 136 }, .01, true), { fill: .8, pulse: 0 });
+  assert.deepEqual(feedback.update({ level: 3, xp: 23 }, .01, true), { fill: .1, pulse: 0 });
   feedback.reset();
   assert.deepEqual(feedback.update({ level: 1, xp: 0 }, 0, false), { fill: 0, pulse: 0 });
 });

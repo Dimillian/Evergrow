@@ -58,7 +58,7 @@ test('multi-level rewards grant one skill and five attribute points per level wi
   player.xp = 80; player.hp = 42; player.mana = 63;
   player.character.statPoints = 3; player.character.skillPoints = 2;
   const beforeAttributes = { ...player.character.attributes }, beforeStats = { ...player.derived };
-  assert.equal(awardCharacterExperience(player, 700), 4);
+  assert.equal(awardCharacterExperience(player, 805), 4);
   assert.equal(player.level, 5); assert.equal(player.xp, 80);
   assert.equal(player.character.skillPoints, 6); assert.equal(player.character.statPoints, 23);
   assert.deepEqual(player.character.attributes, beforeAttributes); assert.deepEqual(player.derived, beforeStats);
@@ -188,7 +188,7 @@ test('the first real death drops loot and awards level points exactly once', () 
   assert.equal(enemy.state, 'dead'); assert.equal(sim.groundItems.length, 1);
   assert.equal(sim.player.level, 2); assert.equal(sim.player.xp, 10);
   assert.equal(sim.player.character.skillPoints, 1); assert.equal(sim.player.character.statPoints, 5);
-  assert.equal(sim.groundItems[0].item.itemLevel, 2);
+  assert.equal(sim.groundItems[0].item.itemLevel, 1, 'the source level owns loot even when the kill levels the player');
   const id = sim.groundItems[0].item.id;
   advance(sim, 1, { attack: true });
   assert.equal(sim.kills, 1); assert.equal(sim.player.xp, 10);
@@ -257,7 +257,7 @@ test('a projectile already in flight cannot revive a fallen player through life 
   player.hp = 1;
   const attacker = target(sim, -20); attacker.state = 'attack'; attacker.attackAngle = 0; attacker.stateDuration = 1;
   sim.projectiles.push({ hitIds: new Set(), id: 9999, x: 38, y: 0, prevX: 38, prevY: 0, vx: 360, vy: 0, angle: 0,
-    radius: 5, damage: 10, life: 1, maxLife: 1, owner: 'player' });
+    radius: 5, damage: 10, life: 1, maxLife: 1, owner: 'player', sourceLevel: 1 });
   sim.update(FIXED_STEP, idle);
   assert.equal(player.dead, true); assert.equal(player.hp, 0);
   assert.ok(enemy.hp < enemy.maxHp);

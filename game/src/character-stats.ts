@@ -1,4 +1,5 @@
 import { PLAYER_DEFAULTS } from './combat-content.ts';
+import { armorReduction } from './progression-content.ts';
 import { EQUIPMENT_SLOTS, itemModifiers } from './items.ts';
 import type { Attribute, CharacterSheet, DerivedCharacterStats, StatKey, StatModifiers } from './character-types.ts';
 
@@ -6,7 +7,7 @@ export const ATTRIBUTES: readonly Attribute[] = Object.freeze(['strength', 'dext
 const bounded = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Number.isNaN(value) ? min : value));
 
 /** All item, attribute and node bonuses converge here. Percent bonuses are percentage points. */
-export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatModifiers = {}): DerivedCharacterStats {
+export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatModifiers = {}, level = 1): DerivedCharacterStats {
   const modifiers: StatModifiers = {};
   const add = (source: StatModifiers) => {
     for (const [key, value] of Object.entries(source) as [StatKey, number][]) {
@@ -29,7 +30,7 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
     maxMana: Math.round(bounded(PLAYER_DEFAULTS.maxMana + intelligence * 4 + value('maxMana'), 1, 1e9)),
     attackDamageMultiplier: bounded(1 + (strength * 2 + value('damagePercent')) / 100, .1, 1e6),
     attackSpeedMultiplier: bounded(1 + (dexterity * .5 + value('attackSpeedPercent')) / 100, .25, 6),
-    armor, damageReduction: Math.min(.8, armor / (armor + 120)),
+    armor, damageReduction: armorReduction(armor, level),
     critChance: bounded((dexterity * .15 + value('critChance')) / 100, 0, .75),
     critMultiplier: bounded(1.5 + value('critDamage') / 100, 1, 5),
     moveSpeedMultiplier: bounded(1 + value('moveSpeedPercent') / 100, .5, 1.75),

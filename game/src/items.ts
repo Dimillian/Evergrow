@@ -1,5 +1,6 @@
 import { STARTING_SWORD } from './equipment.ts';
 import { SHIELD_PROFILES, WEAPON_PROFILES } from './weapon-content.ts';
+import { itemAffixGrowthLevel, itemPercentageScale, itemPowerScale, normalizeLevel } from './progression-content.ts';
 import type { CharacterSheet, EquipmentSlot, Item, ItemAffix, ItemKind, ItemTier, StatKey, StatModifiers } from './character-types.ts';
 
 export const EQUIPMENT_SLOTS: readonly EquipmentSlot[] = Object.freeze([
@@ -85,10 +86,11 @@ const SHIELD_AFFIXES: typeof AFFIXES = [
 const TIER_AFFIXES: Readonly<Record<ItemTier, number>> = { common: 0, magic: 1, rare: 2, epic: 3, legendary: 4 };
 const TIER_POWER: Readonly<Record<ItemTier, number>> = { common: 1, magic: 1.09, rare: 1.2, epic: 1.34, legendary: 1.5 };
 
-/** Stable seed + item level completely describe an item; callers own seed uniqueness. */
-export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, profileId?: string): Item {
+/** Item-local generation; reward sources may supply an explicitly rolled tier. Callers own seed uniqueness. */
+export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, profileId?: string, tierOverride?: ItemTier): Item {
+  if (tierOverride !== undefined && !Object.hasOwn(TIER_POWER, tierOverride)) throw new RangeError(`Unknown item tier: ${tierOverride}`);
   seed = seed >>> 0;
-  const level = Math.max(1, Math.min(1_000_000, Math.floor(Number.isFinite(itemLevel) ? itemLevel : 1)));
+  const level = normalizeLevel(itemLevel);
   const random = randomSource(seed), choose = <T>(values: readonly T[]): T => values[Math.floor(random() * values.length)];
   const selectedWeapon = profileId ? WEAPON_PROFILES.find(profile => profile.id === profileId) : undefined;
   const selectedShield = profileId ? SHIELD_PROFILES.find(profile => profile.id === profileId) : undefined;
@@ -98,17 +100,20 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
     throw new RangeError(`Profile ${profileId} does not describe an item of kind ${itemKind}.`);
   }
   const roll = random();
-  const tier: ItemTier = roll < .45 ? 'common' : roll < .77 ? 'magic' : roll < .94 ? 'rare' : roll < .99 ? 'epic' : 'legendary';
+  // This default is for general content tools and starting gear. Enemy loot supplies its own table result.
+  // Consume the same draw with an override so the underlying silhouette/material roll stays stable.
+  const tier: ItemTier = tierOverride ?? (roll < .45 ? 'common' : roll < .77 ? 'magic' : roll < .94 ? 'rare' : roll < .99 ? 'epic' : 'legendary');
   const variant = random();
   const weaponProfile = itemKind === 'weapon' ? selectedWeapon ?? WEAPON_PROFILES[Math.floor(variant * WEAPON_PROFILES.length)] : undefined;
   const shieldProfile = itemKind === 'shield' ? selectedShield ?? SHIELD_PROFILES[Math.floor(variant * SHIELD_PROFILES.length)] : undefined;
   const baseName = weaponProfile?.name ?? shieldProfile?.name ?? BASE_NAMES[itemKind as Exclude<ItemKind, 'weapon' | 'shield'>][Math.floor(variant * 3)];
   const appearance = { ...choose(PALETTES) }, quality = TIER_POWER[tier];
-  const growth = (1 + (level - 1) * .13) * quality;
+  const growth = itemPowerScale(level) * quality;
   const affixes: ItemAffix[] = [], remaining = itemKind === 'shield' ? [...AFFIXES, ...SHIELD_AFFIXES] : [...AFFIXES];
   for (let index = 0; index < TIER_AFFIXES[tier]; index++) {
     const definition = remaining.splice(Math.floor(random() * remaining.length), 1)[0];
-    const value = Math.round((definition.base + (level - 1) * definition.growth) * (.85 + random() * .3) * quality * 10) / 10;
+    const growthLevel = PERCENT_STATS.has(definition.stat) ? itemAffixGrowthLevel(level) : level - 1;
+    const value = Math.round((definition.base + growthLevel * definition.growth) * (.85 + random() * .3) * quality * 10) / 10;
     affixes.push({ name: definition.name, stat: definition.stat, value });
   }
   const implicit: StatModifiers = {};
@@ -117,12 +122,12 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
   if (shieldProfile) implicit.armor = Math.max(1, Math.round(({ buckler: 7, kite: 15, tower: 22 }[shieldProfile.visual.kind]) * growth));
   if (itemKind === 'cloak') implicit.maxHp = Math.round(6 * growth);
   if (itemKind === 'amulet') implicit.maxMana = Math.round(7 * growth);
-  if (itemKind === 'ring') implicit.damagePercent = Math.round(2 * growth * 10) / 10;
+  if (itemKind === 'ring') implicit.damagePercent = Math.round(2 * itemPercentageScale(level) * quality * 10) / 10;
   const prefix = choose(PREFIXES), suffix = choose(SUFFIXES);
   const name = tier === 'common' ? `${prefix} ${baseName}` : tier === 'magic' ? `${prefix} ${baseName} ${suffix}`
     : `${prefix} ${choose(TITLES)}`;
   const item: Item = {
-    id: `item-${seed.toString(36)}-${level}-${weaponProfile?.id ?? shieldProfile?.id ?? itemKind}`, seed, name, baseName, kind: itemKind, tier,
+    id: `item-${seed.toString(36)}-${level}-${weaponProfile?.id ?? shieldProfile?.id ?? itemKind}-${tier}`, seed, name, baseName, kind: itemKind, tier,
     itemLevel: level, requiredLevel: Math.max(1, level - 2),
     power: Math.round(level * 10 + quality * 12 + affixes.length * 7), implicit, affixes, appearance,
   };

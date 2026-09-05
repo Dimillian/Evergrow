@@ -4,15 +4,20 @@ import { createBaseStats, createStartingEquipment, deriveAttackStats } from './e
 import { getActiveSwingOffset } from './attack-motion.ts';
 import { BASIC_ATTACK_PHASES, COMBAT_TIMING, SKILL_CAST_MOTION, ENEMY_DEFINITIONS, LOOT_RULES, PLAYER_ABILITIES,
   PLAYER_DEFAULTS, PLAYER_MOVEMENT, type ProjectileDefinition } from './combat-content.ts';
-import { canEnemyJoinAttack, chooseEncounterEnemy, ENCOUNTER_RULES, livingEnemyCount } from './encounter-director.ts';
+import { canEnemyJoinAttack, chooseEncounterEnemy, chooseEncounterRank, ENCOUNTER_RULES, livingEnemyCount } from './encounter-director.ts';
 import { circleIntersectsSector, segmentDistanceSquared } from './combat-geometry.ts';
 import { awardCharacterExperience, refreshCharacter } from './character.ts';
-import { createCharacterSheet, generateItem, TIER_COLORS } from './items.ts';
+import { createCharacterSheet, TIER_COLORS } from './items.ts';
 import { deriveCharacterStats } from './character-stats.ts';
 import { addInventoryItem } from './inventory.ts';
 import { activateSkill } from './skill-combat.ts';
 import { advanceProjectiles, MAX_PROJECTILES } from './projectile-combat.ts';
 import type { GroundItem, SkillId } from './character-types.ts';
+import { armorReduction, type EnemyRank } from './progression-content.ts';
+import { enemyLootSeed, getZoneAt, scaledEnemyStats } from './zone-progression.ts';
+import { xpLevelFactor } from './progression.ts';
+import { rollEnemyLoot } from './loot.ts';
+import { sampleBiome } from './biomes.ts';
 
 export const FIXED_STEP = COMBAT_TIMING.fixedStep;
 export const HIT_FLASH_DURATION = COMBAT_TIMING.hitFlashDuration;
@@ -49,6 +54,7 @@ export class Simulation {
   private randomState = 1;
   private accumulator = 0;
   private nextId = 1;
+  private spawnOrdinal = 0;
   private events: CombatEvent[] = [];
   private attackBuffer = -1;
   private dodgeBuffer = -1;
@@ -76,6 +82,7 @@ export class Simulation {
     this.kills = 0;
     this.accumulator = 0;
     this.nextId = 1;
+    this.spawnOrdinal = 0;
     this.events = [];
     this.randomState = this.options.seed! >>> 0;
     this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
@@ -126,12 +133,16 @@ export class Simulation {
   }
 
   /** Useful for authored encounters and deterministic headless tests. */
-  spawnEnemy(kind: EnemyKind, x: number, y: number): Enemy | null {
+  spawnEnemy(kind: EnemyKind, x: number, y: number, rank: EnemyRank = 'normal'): Enemy | null {
     const stats = ENEMY_DEFINITIONS[kind];
     if (this.world.isSanctuary?.(x, y)) return null;
     if (livingEnemyCount(this.enemies) >= ENCOUNTER_RULES.hardPopulationCap || this.world.blocked(x, y, stats.radius)) return null;
+    const level = getZoneAt(x, y).level, scaled = scaledEnemyStats(kind, level, rank);
+    const biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
+    const lootSeed = enemyLootSeed(this.options.seed!, ++this.spawnOrdinal, x, y);
     const enemy: Enemy = {
-      id: this.nextId++, x, y, prevX: x, prevY: y, vx: 0, vy: 0, knockbackX: 0, knockbackY: 0, angle: 0, hp: stats.hp, maxHp: stats.hp,
+      id: this.nextId++, level, rank, biome, lootSeed, ...scaled,
+      x, y, prevX: x, prevY: y, vx: 0, vy: 0, knockbackX: 0, knockbackY: 0, angle: 0, hp: scaled.maxHp,
       kind, state: 'idle', stateTime: 0, stateDuration: ENCOUNTER_RULES.initialIdleMin + this.random() * ENCOUNTER_RULES.initialIdleRange,
       attackAngle: 0, hitFlash: 0, hitAngle: 0, radius: stats.radius, stagger: 0,
       attackHit: false, interrupted: false,
@@ -206,7 +217,7 @@ export class Simulation {
     }
     if (input.aimX !== p.x || input.aimY !== p.y) p.angle = Math.atan2(input.aimY - p.y, input.aimX - p.x);
     if (this.healBuffer >= this.time && p.flasks > 0 && p.hp < p.maxHp && p.healCooldown <= 0) {
-      const healed = Math.min(PLAYER_ABILITIES.heal.restore, p.maxHp - p.hp);
+      const healed = Math.min(p.maxHp * PLAYER_ABILITIES.heal.restoreFraction, p.maxHp - p.hp);
       p.hp += healed;
       p.flasks--;
       p.healCooldown = PLAYER_ABILITIES.heal.cooldown * p.derived.cooldownMultiplier;
@@ -381,13 +392,14 @@ export class Simulation {
     if (enemy.hp <= 0) {
       this.transition(enemy, 'dead', ENCOUNTER_RULES.corpseDuration);
       this.kills++;
-      const levels = awardCharacterExperience(this.player, definition.xpReward);
+      const reward = Math.max(1, Math.round(enemy.xpReward * xpLevelFactor(this.player.level, enemy.level)));
+      const levels = awardCharacterExperience(this.player, reward);
       if (levels) this.events.push({ type: 'level', x: this.player.x, y: this.player.y,
         text: `Level ${this.player.level} · +${levels} skill point${levels > 1 ? 's' : ''} · +${levels * 5} attribute points`, color: '#c0acf0' });
-      if ((this.kills === 1 || this.random() < LOOT_RULES.equipmentChance) && this.groundItems.length < LOOT_RULES.maxGroundItems) {
-        const id = this.nextId++;
-        const item = generateItem((Math.imul(id, 2654435761) ^ this.options.seed!) >>> 0, this.player.level);
-        this.groundItems.push({ id, x: enemy.x, y: enemy.y, item });
+      for (const item of rollEnemyLoot({ seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank,
+        biome: enemy.biome, kind: enemy.kind, firstKill: this.kills === 1 })) {
+        if (this.groundItems.length >= LOOT_RULES.maxGroundItems) break;
+        this.groundItems.push({ id: this.nextId++, x: enemy.x, y: enemy.y, item });
       }
       this.killRecharge++;
       if (this.killRecharge >= PLAYER_ABILITIES.heal.killsPerCharge) {
@@ -396,7 +408,7 @@ export class Simulation {
       }
       const health = this.kills % LOOT_RULES.healthEveryKills === 0;
       if (this.pickups.length < LOOT_RULES.maxPickups) this.pickups.push({ id: this.nextId++, x: enemy.x, y: enemy.y,
-        kind: health ? 'health' : 'mana', value: health ? LOOT_RULES.healthValue : LOOT_RULES.manaValue,
+        kind: health ? 'health' : 'mana', restoreFraction: health ? LOOT_RULES.healthFraction : LOOT_RULES.manaFraction,
         life: LOOT_RULES.life, radius: LOOT_RULES.radius });
       this.events.push({ type: 'kill', x: enemy.x, y: enemy.y, angle,
         targetId: enemy.id, remainingHp: 0, enemyKind: enemy.kind });
@@ -492,7 +504,7 @@ export class Simulation {
         if (enemy.stateTime >= enemy.stateDuration) {
           this.transition(enemy, 'attack', stats.active);
           if (stats.attack === 'projectile') {
-            this.projectile(enemy.x, enemy.y, enemy.attackAngle, stats.projectile);
+            this.projectile(enemy.x, enemy.y, enemy.attackAngle, { ...stats.projectile, damage: enemy.damage }, undefined, undefined, enemy.level);
             this.events.push({ type: 'cast', x: enemy.x, y: enemy.y, angle: enemy.attackAngle, enemyKind: enemy.kind });
           }
         }
@@ -504,7 +516,7 @@ export class Simulation {
           && circleIntersectsSector(p.x, p.y, p.radius, enemy.x, enemy.y, enemy.attackAngle, stats.range, stats.arc)
           && this.lineOfSight(enemy.x, enemy.y, p.x, p.y)) {
           enemy.attackHit = true;
-          this.damagePlayer(stats.damage, enemy.attackAngle, enemy.kind);
+          this.damagePlayer(enemy.damage, enemy.attackAngle, enemy.level, enemy.kind);
         }
         if (enemy.stateTime >= enemy.stateDuration) this.transition(enemy, 'recover', stats.recovery);
       }
@@ -550,10 +562,10 @@ export class Simulation {
     enemy.y = destination.y;
   }
 
-  private damagePlayer(amount: number, angle: number, kind?: EnemyKind): void {
+  private damagePlayer(amount: number, angle: number, sourceLevel: number, kind?: EnemyKind): void {
     const p = this.player;
     if (p.dead || p.invulnerable > 0 || this.world.isSanctuary?.(p.x, p.y)) return;
-    amount = Math.max(1, Math.round(amount * (1 - p.derived.damageReduction)));
+    amount = Math.max(1, Math.round(amount * (1 - armorReduction(p.derived.armor, sourceLevel))));
     if (p.equipment.offHand?.kind === 'shield' && (p.guardTime > 0 || this.random() < p.derived.blockChance)) {
       const reduction = p.guardTime > 0 ? Math.max(.75, p.derived.blockReduction) : p.derived.blockReduction;
       const blocked = Math.floor(amount * reduction);
@@ -577,10 +589,10 @@ export class Simulation {
     }
   }
 
-  private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill?: SkillId, effects?: ProjectileEffects): void {
+  private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill?: SkillId, effects?: ProjectileEffects, sourceLevel = this.player.level): void {
     if (this.projectiles.length >= MAX_PROJECTILES) return;
     const { speed, life, radius, damage, owner } = definition;
-    this.projectiles.push({ id: this.nextId++, x, y, prevX: x, prevY: y,
+    this.projectiles.push({ id: this.nextId++, sourceLevel, x, y, prevX: x, prevY: y,
       vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, radius, damage, life, maxLife: life, owner, skill,
       effects: effects ? { ...effects } : undefined, hitIds: new Set() });
   }
@@ -589,7 +601,7 @@ export class Simulation {
     advanceProjectiles(this.projectiles, dt, {
       player: this.player, enemies: this.enemies, world: this.world,
       damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),
-      hurt: (amount, angle) => this.damagePlayer(amount, angle, 'caster'),
+      hurt: (amount, angle, sourceLevel) => this.damagePlayer(amount, angle, sourceLevel, 'caster'),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       emit: event => this.events.push(event),
     });
@@ -642,8 +654,8 @@ export class Simulation {
       const distance = Math.hypot(dx, dy);
       if (distance < LOOT_RULES.collectDistance) {
         const before = pickup.kind === 'health' ? p.hp : p.mana;
-        if (pickup.kind === 'health') p.hp = Math.min(p.maxHp, p.hp + pickup.value);
-        else p.mana = Math.min(p.maxMana, p.mana + pickup.value);
+        if (pickup.kind === 'health') p.hp = Math.min(p.maxHp, p.hp + p.maxHp * pickup.restoreFraction);
+        else p.mana = Math.min(p.maxMana, p.mana + p.maxMana * pickup.restoreFraction);
         const value = (pickup.kind === 'health' ? p.hp : p.mana) - before;
         pickup.life = 0;
         this.events.push({ type: 'pickup', x: pickup.x, y: pickup.y, value, heavy: pickup.kind === 'health' });
@@ -683,19 +695,23 @@ export class Simulation {
     this.spawnTimer -= dt;
     if (this.spawnTimer > 0) return;
     this.spawnTimer = ENCOUNTER_RULES.spawnInterval;
-    const kind = chooseEncounterEnemy(this.enemies, this.kills, () => this.random());
-    if (kind) this.spawnAroundPlayer(kind, ENCOUNTER_RULES.spawnMinDistance, ENCOUNTER_RULES.spawnMaxDistance);
+    this.spawnAroundPlayer(null, ENCOUNTER_RULES.spawnMinDistance, ENCOUNTER_RULES.spawnMaxDistance);
   }
 
-  private spawnAroundPlayer(kind: EnemyKind, minDistance: number, maxDistance: number): void {
+  private spawnAroundPlayer(authoredKind: EnemyKind | null, minDistance: number, maxDistance: number): void {
     for (let attempt = 0; attempt < ENCOUNTER_RULES.maxSpawnAttempts; attempt++) {
       const angle = this.random() * TAU;
       const distance = minDistance + this.random() * (maxDistance - minDistance);
       const x = this.player.x + Math.cos(angle) * distance;
       const y = this.player.y + Math.sin(angle) * distance;
+      if (this.world.isSanctuary?.(x, y)) continue;
+      const zone = getZoneAt(x, y), biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
+      const kind = authoredKind ?? chooseEncounterEnemy(this.enemies, zone.level, biome, () => this.random());
+      if (!kind) return;
       if (this.world.blocked(x, y, ENEMY_DEFINITIONS[kind].radius + ENCOUNTER_RULES.spawnClearance)) continue;
       if (this.enemies.some(enemy => enemy.state !== 'dead' && Math.hypot(enemy.x - x, enemy.y - y) < ENCOUNTER_RULES.minimumSeparation)) continue;
-      this.spawnEnemy(kind, x, y);
+      const rank = authoredKind ? 'normal' : chooseEncounterRank(this.enemies, zone.level, this.random());
+      this.spawnEnemy(kind, x, y, rank);
       return;
     }
   }

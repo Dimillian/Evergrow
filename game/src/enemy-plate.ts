@@ -1,7 +1,8 @@
 import type { Enemy } from './model.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
+import { ENEMY_RANKS } from './progression-content.ts';
 import { UI_THEME } from './ui-theme.ts';
-import { text } from './font.ts';
+import { text, textWidth } from './font.ts';
 import { getHUDLayout } from './hud.ts';
 import { getMinimapRect } from './map-view.ts';
 
@@ -14,6 +15,8 @@ export interface EnemyPlateOptions {
 
 const UI = UI_THEME.palette;
 const clamp = (value: number) => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+const compactNumber = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
+const compact = (value: number) => value >= 10_000 ? compactNumber.format(value) : `${Math.ceil(value)}`;
 
 /** A centered target readout that shares the existing navigation and map space. */
 export function getEnemyPlateLayout(width: number, height: number): { x: number; y: number; width: number; height: number } {
@@ -39,7 +42,7 @@ function chamfer(c: CanvasRenderingContext2D, x: number, y: number, width: numbe
 }
 
 /** Native text and restrained metalwork, drawn after world post-processing. */
-export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, 'kind' | 'hp' | 'maxHp'>,
+export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, 'kind' | 'hp' | 'maxHp' | 'level' | 'rank'>,
   width: number, height: number, options: EnemyPlateOptions = {}): void {
   const layout = getEnemyPlateLayout(width, height);
   const opacity = clamp(options.opacity ?? 1);
@@ -50,6 +53,7 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
   const ratio = hp / Math.max(1, maxHp);
   const trail = Math.max(ratio, clamp((options.healthTrail ?? hp) / Math.max(1, maxHp)));
   const hit = clamp(options.hitPulse ?? 0);
+  const rank = ENEMY_RANKS[enemy.rank];
   c.save(); c.translate(layout.x, layout.y); c.globalAlpha *= opacity;
 
   // An elliptical shadow provides legibility without another rectangular panel.
@@ -59,7 +63,7 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
   c.fillStyle = shadow; c.fillRect(-1, -1, 2, 2); c.restore();
 
   c.save(); c.shadowColor = '#010409'; c.shadowBlur = 3; c.shadowOffsetY = 1;
-  text(c, ENEMY_DEFINITIONS[enemy.kind].name, w / 2, 2, 1.13, UI.ivory, 'center'); c.restore();
+  text(c, ENEMY_DEFINITIONS[enemy.kind].name, w / 2, 2, 1.13, enemy.rank === 'normal' ? UI.ivory : rank.color, 'center'); c.restore();
   const metal = c.createLinearGradient(0, 20, 0, 31);
   metal.addColorStop(0, '#746d59'); metal.addColorStop(.15, '#353a38');
   metal.addColorStop(.48, UI.panel); metal.addColorStop(1, UI.ink);
@@ -92,6 +96,9 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
     c.fillStyle = '#d0b88a70'; c.fillRect(x, 22.5, 2.5, .6);
   }
   c.save(); c.shadowColor = '#010409'; c.shadowBlur = 2;
-  text(c, `${Math.ceil(hp)} / ${Math.ceil(maxHp)}`, w / 2, 36, .86, UI.text, 'center');
+  const healthLabel = `${compact(hp)} / ${compact(maxHp)}`;
+  text(c, `Lv ${compact(enemy.level)}`, 11, 36, .78, UI.muted);
+  text(c, healthLabel, w / 2, 36, Math.min(.8, (w - 114) / Math.max(1, textWidth(healthLabel))), UI.text, 'center');
+  text(c, rank.name, w - 11, 36, .78, rank.color, 'right');
   c.restore(); c.restore();
 }

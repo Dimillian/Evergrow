@@ -7,7 +7,7 @@ import { awardExperience } from './progression.ts';
 
 /** Rebuild combat projections from the character's single source of truth. */
 export function refreshCharacter(player: Player): void {
-  const derived = deriveCharacterStats(player.character, getTreeBonuses(player.character.allocatedNodes));
+  const derived = deriveCharacterStats(player.character, getTreeBonuses(player.character.allocatedNodes), player.level);
   player.derived = derived;
   player.stats = { attackDamageMultiplier: derived.attackDamageMultiplier, attackSpeedMultiplier: derived.attackSpeedMultiplier, spellDamageMultiplier: derived.spellDamageMultiplier };
   const offhand = player.character.equipped.offhand;
@@ -24,6 +24,7 @@ export function awardCharacterExperience(player: Player, amount: number): number
   const levels = player.level - before;
   player.character.skillPoints += levels;
   player.character.statPoints += levels * 5;
+  if (levels > 0) refreshCharacter(player);
   return levels;
 }
 
