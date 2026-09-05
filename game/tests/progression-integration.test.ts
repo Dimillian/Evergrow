@@ -150,28 +150,28 @@ test('level gains refresh the sheet armor estimate without healing, spending poi
   assert.deepEqual(player.character.attributes, { strength: 10, dexterity: 10, intelligence: 10, vitality: 10 });
 });
 
-test('potion recovery scales with maximum life, consumes a charge only when useful, and clamps to missing life', () => {
+test('dual potion scales with both resource pools, consumes one charge, and clamps to missing resources', () => {
   const sim = createSim(), player = sim.player;
-  player.character.equipped.chest!.implicit = { maxHp: 900, maxMana: 1900, manaRegen: -9 };
+  player.character.equipped.chest!.implicit = { maxHp: 900, maxMana: 1900, manaRegen: -1 };
   refreshCharacter(player);
   assert.equal(player.maxHp, 1000); assert.equal(player.maxMana, 2000);
   assert.equal(player.hp, 100); assert.equal(player.mana, 100, 'larger resource pools grant no free restoration');
   advance(sim, FIXED_STEP, { heal: true });
-  assert.equal(player.hp, 100 + 1000 * PLAYER_ABILITIES.heal.restoreFraction);
-  assert.equal(player.flasks, 1);
+  assert.equal(player.hp, 100 + 1000 * PLAYER_ABILITIES.potion.lifeFraction);
+  assert.equal(player.flasks, 1); assert.equal(player.mana, 900);
   advance(sim, 1);
   player.hp = 990;
   advance(sim, FIXED_STEP, { heal: true });
   assert.equal(player.hp, 1000); assert.equal(player.flasks, 0);
-  assert.deepEqual(sim.drainEvents().filter(event => event.type === 'heal').map(event => event.value), [420, 10]);
-  advance(sim, 1); player.flasks = 1;
+  assert.deepEqual(sim.drainEvents().filter(event => event.type === 'potion').map(event => [event.life, event.mana]), [[420, 800], [10, 800]]);
+  advance(sim, 1); player.flasks = 1; player.mana = player.maxMana;
   advance(sim, FIXED_STEP, { heal: true });
   assert.equal(player.flasks, 1); assert.equal(player.hp, 1000);
 });
 
 test('death pickups retain the health cadence and restore percentages of current maxima with missing-resource clamps', () => {
   const sim = createSim(), player = sim.player;
-  player.character.equipped.chest!.implicit = { maxHp: 900, maxMana: 1900, manaRegen: -9 };
+  player.character.equipped.chest!.implicit = { maxHp: 900, maxMana: 1900, manaRegen: -1 };
   refreshCharacter(player); player.hp = player.maxHp; player.mana = player.maxMana;
   for (let index = 0; index < 3; index++) {
     const enemy = sim.spawnEnemy('stalker', 45, 0)!; prepareKill(enemy);
@@ -190,4 +190,25 @@ test('death pickups retain the health cadence and restore percentages of current
   sim.drainEvents(); advance(sim, FIXED_STEP);
   assert.equal(player.hp, 1000); assert.equal(player.mana, 2000);
   assert.deepEqual(sim.drainEvents().filter(event => event.type === 'pickup').map(event => event.value), [3, 2]);
+});
+
+
+test('dual potion works at full life, respects cooldown and charges, and reports only restored resources', () => {
+  const sim = createSim(), p = sim.player;
+  p.character.equipped.chest!.implicit = { manaRegen: -1 }; refreshCharacter(p);
+  p.mana = 0;
+  advance(sim, FIXED_STEP, { heal: true });
+  assert.equal(p.hp, p.maxHp); assert.equal(p.mana, 40); assert.equal(p.flasks, 1);
+  let events = sim.drainEvents().filter(event => event.type === 'potion');
+  assert.equal(events.length, 1); assert.equal(events[0].life, 0); assert.equal(events[0].mana, 40);
+  advance(sim, FIXED_STEP, { heal: true });
+  assert.equal(p.flasks, 1); assert.equal(p.mana, 40, 'cooldown prevents immediate reuse');
+  advance(sim, 1); p.mana = 95;
+  advance(sim, FIXED_STEP, { heal: true });
+  assert.equal(p.mana, 100); assert.equal(p.flasks, 0);
+  events = sim.drainEvents().filter(event => event.type === 'potion');
+  assert.equal(events.length, 1); assert.equal(events[0].mana, 5);
+  advance(sim, 1); p.mana = 0; p.hp = 20;
+  advance(sim, FIXED_STEP, { heal: true });
+  assert.equal(p.mana, 0); assert.equal(p.hp, 20, 'an empty potion cannot restore either resource');
 });

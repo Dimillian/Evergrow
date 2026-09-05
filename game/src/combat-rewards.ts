@@ -24,9 +24,9 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
     context.groundItems.push({ id: context.nextId(), x: enemy.x, y: enemy.y, item });
   }
   recharge++;
-  if (recharge >= PLAYER_ABILITIES.heal.killsPerCharge) {
-    recharge -= PLAYER_ABILITIES.heal.killsPerCharge;
-    player.flasks = Math.min(PLAYER_ABILITIES.heal.charges, player.flasks + 1);
+  if (recharge >= PLAYER_ABILITIES.potion.killsPerCharge) {
+    recharge -= PLAYER_ABILITIES.potion.killsPerCharge;
+    player.flasks = Math.min(PLAYER_ABILITIES.potion.charges, player.flasks + 1);
   }
   const health = kills % LOOT_RULES.healthEveryKills === 0;
   if (context.pickups.length < LOOT_RULES.maxPickups) context.pickups.push({ id: context.nextId(), x: enemy.x, y: enemy.y,

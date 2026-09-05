@@ -215,6 +215,7 @@ export class GameAudio {
         noise({ duration: .15, frequency: 850, endFrequency: 240, volume: .24, attack: .012 }, 1);
         noise({ duration: .095, frequency: 1900, endFrequency: 950, volume: .075, delay: .012 }, 1);
         break;
+      case 'potion':
       case 'heal':
         tone(330, 440, .24, .14, 1, 'sine', 0, .012);
         tone(550, 660, .31, .105, 1, 'triangle', .07, .018);

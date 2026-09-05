@@ -9,7 +9,7 @@ test('neutral starter gear preserves current basic attack and resource values', 
   const stats = deriveCharacterStats(createCharacterSheet());
   assert.equal(stats.maxHp, 100); assert.equal(stats.maxMana, 100);
   assert.equal(stats.attackDamageMultiplier, 1); assert.equal(stats.attackSpeedMultiplier, 1);
-  assert.equal(stats.manaRegeneration, 9); assert.equal(stats.moveSpeedMultiplier, 1);
+  assert.equal(stats.manaRegeneration, 1); assert.equal(stats.moveSpeedMultiplier, 1);
   assert.equal(stats.critChance, 0); assert.equal(stats.critMultiplier, 1.5);
   assert.equal(stats.armor, 0); assert.equal(stats.damageReduction, 0);
   assert.equal(stats.cooldownMultiplier, 1); assert.equal(stats.lifeOnHit, 0);
@@ -40,7 +40,7 @@ test('the same bonuses derive identically from equipment or tree nodes', () => {
   assert.deepEqual(gearStats, treeStats);
   assert.ok(gearStats.damageReduction > 0); assert.equal(gearStats.lifeOnHit, 2);
   assert.equal(gearStats.cooldownMultiplier, .9);
-  assert.equal(gearStats.lifeRegeneration, 1); assert.equal(gearStats.manaRegeneration, 11);
+  assert.equal(gearStats.lifeRegeneration, 1); assert.equal(gearStats.manaRegeneration, 3);
 });
 
 test('attribute and direct bonuses accumulate once across multiple items and the tree', () => {

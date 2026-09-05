@@ -44,13 +44,14 @@ test('enemy definitions have complete coherent telegraph, attack and projectile 
 });
 
 test('player ability definitions retain cancellable casts and bounded dodge protection', () => {
-  const { dodge, heal, basicAttack } = PLAYER_ABILITIES;
+  const { dodge, potion, basicAttack } = PLAYER_ABILITIES;
   assert.ok(0 < basicAttack.activeStart && basicAttack.activeStart < basicAttack.activeEnd && basicAttack.activeEnd < 1);
   assert.ok(SKILL_CAST_MOTION.releaseRemainingFraction > 0 && SKILL_CAST_MOTION.releaseRemainingFraction < 1);
   assert.ok(0 < dodge.invulnerabilityStart && dodge.invulnerabilityStart < dodge.invulnerabilityEnd
     && dodge.invulnerabilityEnd < dodge.duration && dodge.duration < dodge.recharge);
   assert.ok(Number.isInteger(dodge.charges) && dodge.charges > 0);
-  assert.ok(Number.isInteger(heal.charges) && heal.charges > 0 && heal.restoreFraction > 0 && heal.restoreFraction <= 1 && heal.killsPerCharge > 0);
+  assert.ok(Number.isInteger(potion.charges) && potion.charges > 0 && potion.lifeFraction > 0 && potion.lifeFraction <= 1 && potion.killsPerCharge > 0);
+  assert.ok(potion.manaFraction > 0 && potion.manaFraction <= 1);
   for (const definition of Object.values(PLAYER_ABILITIES)) assert.ok(Object.isFrozen(definition));
   assert.throws(() => Object.assign(SKILL_CAST_MOTION, { releaseRemainingFraction: 0 }), TypeError);
 });

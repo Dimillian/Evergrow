@@ -6,14 +6,14 @@ export const COMBAT_TIMING = Object.freeze({
   hurtGuard: .3, knockbackDecay: .065, staggerDuration: .16, interruptedRecovery: .3,
 });
 
-export const PLAYER_DEFAULTS = Object.freeze({ maxHp: 100, maxMana: 100, manaRegeneration: 9, radius: 9 });
+export const PLAYER_DEFAULTS = Object.freeze({ maxHp: 100, maxMana: 100, manaRegeneration: 1, radius: 9 });
 export const SKILL_CAST_MOTION = Object.freeze({ releaseRemainingFraction: .145 / .22 });
 export const BASIC_ATTACK_PHASES = Object.freeze({ activeStart: .19, activeEnd: .45 });
 export const PLAYER_ABILITIES = Object.freeze({
   basicAttack: Object.freeze({ ...BASIC_ATTACK_PHASES, bladeHalfAngle: .055 }),
   dodge: Object.freeze({ charges: 2, recharge: 1.8, duration: .22, speed: 360,
     invulnerabilityStart: .02, invulnerabilityEnd: .18 }),
-  heal: Object.freeze({ charges: 2, restoreFraction: .42, cooldown: .8, flashDuration: .5, killsPerCharge: 8 }),
+  potion: Object.freeze({ charges: 2, lifeFraction: .42, manaFraction: .4, cooldown: .8, flashDuration: .5, killsPerCharge: 8 }),
 });
 
 export const PLAYER_MOVEMENT = Object.freeze({

@@ -40,7 +40,7 @@ export function initialPlayer(x: number, y: number): Player {
     level: 1, xp: 0,
     stats: createBaseStats(), equipment: createStartingEquipment(),
     attack: null, dodgeTime: 0, dodgeAngle: 0, dodgeCharges: PLAYER_ABILITIES.dodge.charges, dodgeRecharge: 0,
-    invulnerable: 0, flasks: PLAYER_ABILITIES.heal.charges, healCooldown: 0, castTime: 0, castDuration: 0,
+    invulnerable: 0, flasks: PLAYER_ABILITIES.potion.charges, healCooldown: 0, castTime: 0, castDuration: 0,
     castAngle: 0, healFlash: 0, hitFlash: 0, hitAngle: 0, walkTime: 0, radius: PLAYER_DEFAULTS.radius, dead: false,
   };
 }
@@ -141,7 +141,7 @@ export class Simulation {
     const saved = this.captureCheckpoint();
     saved.x = this.options.startX!; saved.y = this.options.startY!; saved.dead = false;
     saved.hp = this.player.maxHp; saved.mana = this.player.maxMana;
-    saved.flasks = PLAYER_ABILITIES.heal.charges; saved.healCooldown = 0;
+    saved.flasks = PLAYER_ABILITIES.potion.charges; saved.healCooldown = 0;
     saved.dodgeCharges = PLAYER_ABILITIES.dodge.charges; saved.dodgeRecharge = 0; saved.skillCooldowns = {};
     this.restoreCheckpoint(saved);
   }
@@ -283,14 +283,15 @@ export class Simulation {
     const direction = p.equipment.mainHand.attackKind !== 'melee' && input.rangedAim
       && Number.isFinite(input.rangedAim.x) && Number.isFinite(input.rangedAim.y) ? input.rangedAim : { x: input.aimX, y: input.aimY };
     if (direction.x !== p.x || direction.y !== p.y) p.angle = Math.atan2(direction.y - p.y, direction.x - p.x);
-    if (this.healBuffer >= this.time && p.flasks > 0 && p.hp < p.maxHp && p.healCooldown <= 0) {
-      const healed = Math.min(p.maxHp * PLAYER_ABILITIES.heal.restoreFraction, p.maxHp - p.hp);
-      p.hp += healed;
+    if (this.healBuffer >= this.time && p.flasks > 0 && (p.hp < p.maxHp || p.mana < p.maxMana) && p.healCooldown <= 0) {
+      const healed = Math.min(p.maxHp * PLAYER_ABILITIES.potion.lifeFraction, p.maxHp - p.hp);
+      const mana = Math.min(p.maxMana * PLAYER_ABILITIES.potion.manaFraction, p.maxMana - p.mana);
+      p.hp += healed; p.mana += mana;
       p.flasks--;
-      p.healCooldown = PLAYER_ABILITIES.heal.cooldown * p.derived.cooldownMultiplier;
-      p.healFlash = PLAYER_ABILITIES.heal.flashDuration;
+      p.healCooldown = PLAYER_ABILITIES.potion.cooldown * p.derived.cooldownMultiplier;
+      p.healFlash = PLAYER_ABILITIES.potion.flashDuration;
       this.healBuffer = -1;
-      this.events.push({ type: 'heal', x: p.x, y: p.y, value: healed });
+      this.events.push({ type: 'potion', x: p.x, y: p.y, life: healed, mana, color: '#a9bfea' });
     }
 
     if (p.attack) {

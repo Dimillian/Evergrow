@@ -107,14 +107,15 @@ function flask(c: CanvasRenderingContext2D, time: number, active: boolean): void
   c.fillStyle = glass; c.fill(); c.strokeStyle = INK; c.lineWidth = 1.4; c.stroke();
   c.strokeStyle = '#758575'; c.lineWidth = .7; c.stroke();
 
-  const liquid = c.createLinearGradient(-3, 0, 4, 10);
-  liquid.addColorStop(0, active ? '#a9ba79' : '#8d9f67');
-  liquid.addColorStop(.46, '#627e52'); liquid.addColorStop(1, '#304b37');
   const surface = .9 + (active ? Math.sin(time * 6) * .35 : 0);
-  polygon(c, [-4.5, surface, 4.5, surface, 4.2, 7.7, 2.5, 9.2, -2.5, 9.2, -4.2, 7.7]);
-  c.fillStyle = liquid; c.fill();
-  c.strokeStyle = '#b0bd87'; c.lineWidth = .7;
-  c.beginPath(); c.moveTo(-4.1, surface + .2); c.lineTo(4.1, surface + .2); c.stroke();
+  const life = c.createLinearGradient(-4, 0, 0, 10);
+  life.addColorStop(0, active ? '#ed9295' : '#c66c78'); life.addColorStop(1, '#653c57');
+  const mana = c.createLinearGradient(0, 0, 4, 10);
+  mana.addColorStop(0, active ? '#9bcaff' : '#6d9ed4'); mana.addColorStop(1, '#354e80');
+  polygon(c, [-4.5, surface, 0, surface + .3, 0, 9.2, -2.5, 9.2, -4.2, 7.7]); c.fillStyle = life; c.fill();
+  polygon(c, [0, surface + .3, 4.5, surface, 4.2, 7.7, 2.5, 9.2, 0, 9.2]); c.fillStyle = mana; c.fill();
+  c.strokeStyle = '#c8bbdf'; c.lineWidth = .7;
+  c.beginPath(); c.moveTo(-4.1, surface + .2); c.lineTo(0, surface + .5); c.lineTo(4.1, surface + .2); c.stroke();
   c.strokeStyle = '#c4cfb19e'; c.lineWidth = 1;
   c.beginPath(); c.moveTo(-1.5, -7.5); c.lineTo(-1.5, -4.8);
   c.moveTo(-3.7, -.4); c.lineTo(-3.5, 4.7); c.stroke();

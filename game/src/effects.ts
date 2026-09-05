@@ -52,18 +52,19 @@ export class CombatEffects {
       const enemyKind = 'enemyKind' in event ? event.enemyKind : undefined;
       const heavy = 'heavy' in event && event.heavy;
       const eventAngle = 'angle' in event ? event.angle : 0;
+      const restoring = event.type === 'heal' || event.type === 'potion';
       const enemyCast = event.type === 'cast' && event.enemyKind;
       const contact = event.type === 'hit' || event.type === 'hurt' || event.type === 'kill';
-      const color = event.color ?? (event.style ? PROJECTILE_COLORS[event.style] : undefined) ?? (event.type === 'hurt' ? '#ff5e4e' : event.type === 'heal' || enemyCast ? MINT
+      const color = event.color ?? (event.style ? PROJECTILE_COLORS[event.style] : undefined) ?? (event.type === 'hurt' ? '#ff5e4e' : restoring || enemyCast ? MINT
         : event.type === 'dodge' ? BLUE : event.type === 'cast' ? FIRE : GOLD);
       const count = event.type === 'blast' ? 46 : event.type === 'block' ? 22 : event.type === 'hit' ? 30 : event.type === 'kill' ? 16
-        : event.type === 'hurt' ? 32 : event.type === 'cast' ? 18 : event.type === 'heal' ? 30
+        : event.type === 'hurt' ? 32 : event.type === 'cast' ? 18 : restoring ? 30
         : event.type === 'level' ? 50 : event.type === 'loot' ? 8 : event.type === 'pickup' ? 10 : event.type === 'dodge' ? 14 : 0;
       const bodyColor = event.type === 'hurt' ? '#b64143' : enemyKind === 'wisp' ? '#b1e5d6'
         : enemyKind === 'caster' ? '#809b8b' : enemyKind === 'brute' ? '#b6a184'
           : enemyKind === 'hound' || enemyKind === 'stalker' ? '#cec6a0' : '#788b69';
       for (let i = 0; i < count; i++) {
-        const radial = ['kill', 'heal', 'pickup', 'level', 'blast'].includes(event.type) || event.skill === 'iceNova';
+        const radial = ['kill', 'heal', 'potion', 'pickup', 'level', 'blast'].includes(event.type) || event.skill === 'iceNova';
         const angle = radial ? Math.random() * Math.PI * 2 : eventAngle + (Math.random() - .5) * 2.8;
         const debris = contact && (event.type === 'kill' || i % 3 === 0) && enemyKind !== 'wisp';
         this.spark(event.x, event.y, angle, debris ? bodyColor : i % 4 === 0 ? '#fff7db' : color,
@@ -74,10 +75,10 @@ export class CombatEffects {
         life: event.type === 'kill' ? .3 : .22, max: event.type === 'kill' ? .3 : .22,
         color, hurt: event.type === 'hurt', lethal: event.type === 'kill' });
       if (count > 5) {
-        const max = event.type === 'heal' ? .55 : event.type === 'kill' ? .16 : .22;
+        const max = restoring ? .55 : event.type === 'kill' ? .16 : .22;
         this.flashes.push({ x: event.x, y: contact ? contactY : event.y - 10, life: max, max,
           radius: event.type === 'kill' ? 62 : heavy ? 145 : contact ? 118 : event.type === 'loot' || event.type === 'pickup' ? 35 : 90, color,
-          ring: event.type === 'heal' || event.type === 'level' || event.skill === 'iceNova' });
+          ring: restoring || event.type === 'level' || event.skill === 'iceNova' });
       }
       if (event.type === 'hit' && event.value) this.popups.push({ x: event.x + (Math.random() - .5) * 10,
         y: event.y - (enemyKind === 'brute' ? 54 : 44), vx: (Math.random() - .5) * 22, vy: -47,
@@ -86,6 +87,12 @@ export class CombatEffects {
         vx: Math.cos(eventAngle) * 14, vy: -55, life: .95, max: .95,
         value: (event.type === 'hurt' ? '-' : '+') + Math.round(event.value),
         color: event.type === 'hurt' ? '#ff9075' : '#83ffbb', size: event.type === 'hurt' ? 2.5 : 2 });
+      if (event.type === 'potion') {
+        if (event.life > 0) this.popups.push({ x: event.x, y: event.y - 61, vx: -9, vy: -35,
+          life: .95, max: .95, value: `+${Math.round(event.life)}`, color: '#ffad9c', size: 1.8 });
+        if (event.mana > 0) this.popups.push({ x: event.x, y: event.y - (event.life > 0 ? 80 : 61), vx: 9, vy: -35,
+          life: .95, max: .95, value: `+${Math.round(event.mana)}`, color: '#91c8ff', size: 1.8 });
+      }
       if (event.type === 'block') this.popups.push({ x: event.x, y: event.y - 58, vx: 0, vy: -25,
         life: .65, max: .65, value: 'BLOCK', color: '#b4e4ee', size: 1.7 });
       // Large event batches must not allocate their entire particle history

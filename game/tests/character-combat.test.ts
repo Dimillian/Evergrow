@@ -177,7 +177,7 @@ test('armor, passive regeneration and movement gear affect simulation rather tha
   assert.equal(sim.drainEvents().find(event => event.type === 'hurt')!.value, 11);
   sim.enemies = []; sim.player.hp = 50; sim.player.mana = 20;
   advance(sim, 1, { moveX: 1 });
-  close(sim.player.hp, 56); close(sim.player.mana, 32);
+  close(sim.player.hp, 56); close(sim.player.mana, 24);
   assert.ok(sim.player.vx > 197 && sim.player.vx <= 198);
 });
 

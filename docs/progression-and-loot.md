@@ -212,7 +212,7 @@ Armor is now relative to the source of the incoming attack:
 
 The character sheet estimates this against an attacker matching the character's level. Actual combat uses the enemy/projectile's captured level. A full set of common base armor totals about `30 × G`, so its armor-only reduction remains around 20% against an equal-level enemy instead of climbing toward 80% solely because item levels increased. Shields, affixes, tree investment, and older or newer gear change that ratio. Armor currently reduces incoming damage without a separate elemental resistance calculation. Shield block applies afterward.
 
-Recovery also follows the growing resource pool. A potion restores 42% of maximum life; every third kill supplies a pickup restoring 12% of maximum life, while the other kills supply 16% of maximum mana. These preserve the starting 42 / 12 / 16 amounts at 100 maximum resources. The two-charge potion still gains one charge per eight kills. Recovery is capped by the missing resource, so it remains useful at later levels without overhealing.
+Recovery also follows the growing resource pool. The dual potion restores 42% of maximum life and 40% of maximum mana; every third kill supplies a pickup restoring 12% of maximum life, while the other kills supply 16% of maximum mana. These preserve the starting 42 / 12 / 16 amounts at 100 maximum resources. The two-charge potion still gains one charge per eight kills. Recovery is capped by the missing resource, so it remains useful at later levels without overhealing.
 
 ## Bounds and extension points
 
@@ -239,3 +239,5 @@ Shared ownership keeps the model inspectable:
 | `simulation.ts` | Spawn snapshots, actual death rewards, attack-source metadata, and pickup mutations |
 
 Future additions should extend these registries and shared formulas: further biome-specific enemies, landmark interactions, bosses, affix pools, unique items, and reward sources such as chests or quests. Difficulty, clear time, XP pace, loot usefulness, and inventory pressure remain questions for the user's gameplay feedback.
+
+Base mana regeneration is 1/second (down from 9), with gear and passive mana regeneration added normally. Q uses one shared charge to restore both resources and works when only mana is missing. It does nothing when both are full, during its 0.8-second cooldown, without charges or after death. Potion feedback carries actual restored life/mana separately, with red/blue numbers and a dual-colored HUD vial. The save shape and kill-based charge recovery are unchanged.

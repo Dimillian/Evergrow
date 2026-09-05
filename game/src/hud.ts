@@ -85,11 +85,11 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
 }
 
 function utilities(c: CanvasRenderingContext2D, p: Player, time: number) {
-  const field = HUD_ART.utility, dodge = PLAYER_ABILITIES.dodge, heal = PLAYER_ABILITIES.heal;
+  const field = HUD_ART.utility, dodge = PLAYER_ABILITIES.dodge, potion = PLAYER_ABILITIES.potion;
   const slots = [
-    { x: field.left, key: 'Q', icon: 3, charges: p.flasks, capacity: heal.charges,
-      cooldown: p.healCooldown, duration: heal.cooldown, active: p.healFlash > 0,
-      enabled: p.flasks > 0 && p.hp < p.maxHp && !p.dead, color: '#a1b276' },
+    { x: field.left, key: 'Q', icon: 3, charges: p.flasks, capacity: potion.charges,
+      cooldown: p.healCooldown, duration: potion.cooldown, active: p.healFlash > 0,
+      enabled: p.flasks > 0 && (p.hp < p.maxHp || p.mana < p.maxMana) && !p.dead, color: '#b7a6d4' },
     { x: field.right, key: 'SPACE', icon: 2, charges: p.dodgeCharges, capacity: dodge.charges,
       cooldown: p.dodgeCharges > 0 ? 0 : Math.max(0, dodge.recharge - p.dodgeRecharge), duration: dodge.recharge,
       active: p.dodgeTime > 0, enabled: p.dodgeCharges > 0 && !p.dead, color: '#7fb6b1' },

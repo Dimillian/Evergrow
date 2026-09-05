@@ -260,6 +260,7 @@ export type CombatEvent = EventAppearance & (
       readonly enemyKind?: EnemyKind; readonly heavy: boolean }
   | { readonly type: 'dodge'; readonly angle: number }
   | { readonly type: 'heal'; readonly value: number }
+  | { readonly type: 'potion'; readonly life: number; readonly mana: number }
   | { readonly type: 'pickup'; readonly value: number; readonly heavy: boolean }
   | { readonly type: 'spawn'; readonly enemyKind: EnemyKind }
   | { readonly type: 'loot'; readonly item: Item }
