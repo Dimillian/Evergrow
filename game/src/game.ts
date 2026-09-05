@@ -1,3 +1,4 @@
+import { bindGameKeyboard } from './game-keyboard.ts';
 import { createCharacterSheet, type StarterWeaponId } from './items.ts';
 import { refreshCharacter } from './character.ts';
 import { AreaNoticeTracker } from './notification-queue.ts';
@@ -118,7 +119,9 @@ export class Game {
 
   private bind() {
     const signal = this.abort.signal;
-    window.addEventListener('pagehide', () => this.saveCharacter(), { signal });
+    window.addEventListener('pagehide', () => { this.clearInput(); this.saveCharacter(); }, { signal });
+    window.addEventListener('focus', () => this.clearInput(), { signal });
+    this.canvas.addEventListener('blur', () => this.clearInput(), { signal });
     window.addEventListener('resize', () => this.resize(), { signal });
     window.addEventListener('blur', () => {
       this.mouse.present = false;
@@ -133,59 +136,62 @@ export class Game {
       }
       this.last = performance.now();
     }, { signal });
-    window.addEventListener('keydown', event => {
-      if (event.code === 'Escape') {
-        event.preventDefault();
-        if (!event.repeat) {
-          if (this.phase === 'character' || this.phase === 'skills') this.closeCharacterPanel();
-          else if (this.phase === 'map') this.closeMap();
-          else if (this.phase === 'playing') this.pause();
-          else if (this.phase === 'paused') this.resume();
+    bindGameKeyboard(window, {
+      clear: () => this.clearInput(),
+      release: code => this.input.keyUp(code),
+      press: event => {
+        if (event.code === 'Escape') {
+          event.preventDefault();
+          if (!event.repeat) {
+            if (this.phase === 'character' || this.phase === 'skills') this.closeCharacterPanel();
+            else if (this.phase === 'map') this.closeMap();
+            else if (this.phase === 'playing') this.pause();
+            else if (this.phase === 'paused') this.resume();
+          }
+          return;
         }
-        return;
-      }
-      const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement
-        || event.target instanceof HTMLSelectElement || (event.target instanceof HTMLElement && event.target.isContentEditable);
-      if (!typing && ['KeyC', 'KeyI', 'KeyT'].includes(event.code)
-        && ['playing', 'character', 'skills'].includes(this.phase)) {
-        event.preventDefault();
-        if (!event.repeat) {
-          const panel = event.code === 'KeyT' ? 'skills' : 'character';
-          this.phase === panel ? this.closeCharacterPanel() : this.openCharacterPanel(panel);
+        const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement
+          || event.target instanceof HTMLSelectElement || (event.target instanceof HTMLElement && event.target.isContentEditable);
+        if (!typing && ['KeyC', 'KeyI', 'KeyT'].includes(event.code)
+          && ['playing', 'character', 'skills'].includes(this.phase)) {
+          event.preventDefault();
+          if (!event.repeat) {
+            const panel = event.code === 'KeyT' ? 'skills' : 'character';
+            this.phase === panel ? this.closeCharacterPanel() : this.openCharacterPanel(panel);
+          }
+          return;
         }
-        return;
-      }
-      if (typing) return;
-      if (event.code === 'KeyM' && (this.phase === 'playing' || this.phase === 'map')) {
-        event.preventDefault();
-        if (!event.repeat) this.phase === 'map' ? this.closeMap() : this.openMap();
-        return;
-      }
-      if (event.code === 'Tab' && this.phase === 'playing') {
-        event.preventDefault();
-        if (!event.repeat) this.openMap();
-        return;
-      }
-      if (event.code === 'KeyN') {
-        if (!event.repeat) this.toggleSound();
-        return;
-      }
-      // Native menu controls retain their ordinary keyboard behavior.
-      if (event.target instanceof HTMLSelectElement || event.target instanceof HTMLInputElement
-        || event.target instanceof HTMLButtonElement) return;
-      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
-      if (event.repeat) return;
-      if (event.code === 'Enter' && (this.phase === 'dead' || this.phase === 'paused')) {
-        event.preventDefault();
-        this.phase === 'paused' ? this.resume() : this.start();
-        return;
-      }
-      if (event.code === 'F3') { event.preventDefault(); this.debug = !this.debug; return; }
-      if (event.code === 'KeyR' && this.phase === 'dead') { this.start(); return; }
-      if (this.phase !== 'playing') return;
-      this.input.keyDown(event.code);
-    }, { signal });
-    window.addEventListener('keyup', event => this.input.keyUp(event.code), { signal });
+        if (typing) return;
+        if (event.code === 'KeyM' && (this.phase === 'playing' || this.phase === 'map')) {
+          event.preventDefault();
+          if (!event.repeat) this.phase === 'map' ? this.closeMap() : this.openMap();
+          return;
+        }
+        if (event.code === 'Tab' && this.phase === 'playing') {
+          event.preventDefault();
+          if (!event.repeat) this.openMap();
+          return;
+        }
+        if (event.code === 'KeyN') {
+          if (!event.repeat) this.toggleSound();
+          return;
+        }
+        // Native menu controls retain their ordinary keyboard behavior.
+        if (event.target instanceof HTMLSelectElement || event.target instanceof HTMLInputElement
+          || event.target instanceof HTMLButtonElement) return;
+        if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
+        if (event.repeat) return;
+        if (event.code === 'Enter' && (this.phase === 'dead' || this.phase === 'paused')) {
+          event.preventDefault();
+          this.phase === 'paused' ? this.resume() : this.start();
+          return;
+        }
+        if (event.code === 'F3') { event.preventDefault(); this.debug = !this.debug; return; }
+        if (event.code === 'KeyR' && this.phase === 'dead') { this.start(); return; }
+        if (this.phase !== 'playing') return;
+        this.input.keyDown(event.code);
+      },
+    }, signal);
     // Window-level tracking also follows the pointer across the DOM HUD buttons.
     window.addEventListener('pointermove', event => this.updatePointer(event), { signal });
     this.canvas.addEventListener('pointerleave', () => { this.mouse.present = false; }, { signal });
