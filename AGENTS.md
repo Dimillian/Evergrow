@@ -9,12 +9,13 @@
 - Code-level tests, type checking, and production builds are appropriate. Existing optional browser regression tests require the user's explicit request before running.
 - Keep the local development server available while the user tests. Avoid unnecessary reloads during their play session.
 - Use local Git checkpoints for coherent changes. Do not add a remote or push unless requested.
+- This is an unreleased prototype for the user’s own testing. Prefer the cleanest current design over backward compatibility. When replacing a system, update its callers/tests and remove obsolete implementations, exports, adapters, and legacy-only tests. Do not keep old features or build compatibility layers for hypothetical consumers. Old save formats may be invalidated when a design change requires it; migrations are not required at this stage. Mention any resulting test-progress reset. Git checkpoints provide the history.
 
 ## Current scope
 
 The local slice now includes connected Deadwood, Verdant Forest, and swamp terrain; procedural settlements with enterable buildings; and exploration maps. Continue to prioritize the procedural asset engine, smooth transitions, readable navigation, and satisfying combat. Trading, skill trees, equipment screens, and other larger systems remain future work.
 
-The Astral skill row contains basic attack (LMB) and exactly five empty skills (RMB, 1–4). Potion (Q) and dodge (Space) occupy separate utility shortcuts beside the menu rail. Unassigned controls do nothing. There is no default player fireball; retained spell/projectile code is for a future proper skill or wand basic attack. Do not restore universal right-click casting.
+The Astral skill row contains basic attack (LMB) and exactly five empty skills (RMB, 1–4). Potion (Q) and dodge (Space) occupy separate utility shortcuts beside the menu rail. Unassigned controls do nothing. There is no default player fireball. Proper skills and wand attacks are future work; their design need not preserve the old fireball implementation. Do not restore universal right-click casting.
 
 The basic attack is one repeatable action driven by character stats and equipped-weapon stats. Do not reintroduce an automatic combo chain; combos may become a separate skill in future work. Keep movement and combat continuous, without hitstop. The runtime game view has no how-to text or control legend; small bindings on skill buttons are intentional. Character, inventory, skill-tree, and journal HUD shortcuts remain disabled until those systems are requested.
 
@@ -39,7 +40,7 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/src/world-query.ts` and `world-pois.ts`: per-request work/precision bounds and the shared POI kind registry. Cached settlements are frozen blueprints; future mutable world state belongs separately under stable IDs.
 - `game/src/environment-art.ts` and `settlement-art.ts`: procedural biome silhouettes, furnished buildings, roof fading, and settlement lights.
 - `game/src/ground-layer.ts`: bounded terrain composition before subpixel camera sampling; keep tile joins inside one surface to avoid seams.
-- `game/src/art.ts`: compatibility entrypoint for procedural character drawing and props. `art-types.ts`, `art-primitives.ts`, `prop-art.ts`, `equipment-art.ts`, `character-motion.ts`, `player-art.ts`, and `enemy-art.ts` own the implementation by responsibility.
+- `game/src/art.ts`: current entrypoint for procedural character drawing and props; it may be replaced with direct imports as callers evolve. `art-types.ts`, `art-primitives.ts`, `prop-art.ts`, `equipment-art.ts`, `character-motion.ts`, `player-art.ts`, and `enemy-art.ts` own the implementation by responsibility.
 - `game/src/player-arm-rig.ts`: facing-relative arm joints with separate depth and height, projected into the 2D art; shoulder armor must use the same joint anchors and upper-arm direction.
 - `game/src/attack-motion.ts`: shared angular motion for visible swings and swept melee contact.
 - `game/src/character-pose.ts`: common player pose for the character, ribbon, sparks, and weapon light.
@@ -57,7 +58,7 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/src/ui-hit-test.ts`: shared UI boundary for combat input, enemy hover, and cursor drawing. New panels must join this boundary and clear buffered simulation inputs when changing control context.
 - `game/src/ui-theme.ts`, `ui-kit.css`, `ui-icons.ts`, and `ui-components.ts`: shared DOM/Canvas palette, window/control primitives, decorative SVG icons, and abortable modal focus management. `game-menu.ts` builds start/pause/defeat windows. Read `docs/ui-kit.md` before expanding inventory or other panels; extend shared primitives rather than adding independent themes.
 - `game/src/exploration.ts` and `world-map.ts`: discovered terrain/POIs, local exploration persistence, smoothly scrolling minimap, and interactive world map.
-- `game/src/exploration-save.ts` and `map-view.ts`: transactional save validation and pure map projection/zoom limits; existing schemas and compatibility exports remain intact.
+- `game/src/exploration-save.ts` and `map-view.ts`: transactional save validation and pure map projection/zoom limits. Schemas and exports may change with the current design; no backward-compatibility or migration requirement applies to this prototype.
 - `game/layouts.html` and `game/src/layout-review.ts`: dev-only static town, interior, and road scenes with PNG export using the real renderer; never advances gameplay or changes exploration saves.
 - `game/rig.html` and `game/src/rig-review.ts`: dev-only frozen character poses across eight facings, without driving gameplay.
 - `game/hud.html` and `game/src/hud-review.ts`: dev-only frozen healthy, damaged, and depleted player HUD/enemy plate states with PNG export; no gameplay or save access.
