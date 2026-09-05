@@ -28,6 +28,8 @@ The selected bottom-HUD direction is **The Astral Instrument**: calibrated silve
 
 Window headers use compact 8px vertical padding, a single 18–20px screen title and 28px decorative emblems. Do not add subtitle/eyebrow text or replace the screen title with a character or location name. Circular emblems use `.ui-header-emblem` with centered SVG geometry and a fixed, nonshrinking square. Keep screen-specific color treatments, but inherit shared header sizing rather than adding large banners. Close buttons retain 44px targets.
 
+The character window uses three independently scrolling columns on desktop. At 1080px and below, equipment and inventory share the first row, with attributes and combat details below; below 740px the sections stack. The shared scrolling body must use content-sized rows and automatic section minimum heights so equipment cannot overlap the stats beneath it.
+
 ```html
 <section class="ui-window" role="dialog" aria-modal="true" aria-labelledby="panel-title">
   <header class="ui-window-header">

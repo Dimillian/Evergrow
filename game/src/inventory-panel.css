@@ -76,8 +76,10 @@
 .character-footer-status { display: flex; gap: 9px; align-items: center; color: var(--ui-silver-dim); font-size: 12px; }
 .character-footer-status .ui-icon { width: 16px; height: 16px; }
 @media (max-width: 1080px) {
-  .character-columns { grid-template-columns: minmax(250px, .85fr) minmax(426px, 1.4fr); grid-template-rows: auto auto; overflow: auto; }
-  .character-equipment, .character-inventory, .character-details { overflow: visible; }
+  /* The shared body scrolls here: rows must fit their contents instead of
+     shrinking into the viewport and painting over the following section. */
+  .character-columns { grid-template-columns: minmax(250px, .85fr) minmax(426px, 1.4fr); grid-template-rows: max-content max-content; align-content: start; overflow: auto; }
+  .character-equipment, .character-inventory, .character-details { min-height: auto; overflow: visible; }
   .character-inventory { border-right: 0; }
   .character-details { grid-column: 1 / -1; border-top: 1px solid #96b8c327; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
   .character-statistics .character-section-title { margin-top: 0; padding-top: 0; border-top: 0; }
