@@ -319,7 +319,7 @@ export class WorldMap {
     enemies: readonly MinimapEnemy[] = []) {
     const r = getMinimapRect(width, height);
     const view: MapView = { x: r.x + 6, y: r.y + 25, width: r.width - 12, height: r.height - 48,
-      centerX: player.x, centerY: player.y, zoom: .115 };
+      centerX: player.x, centerY: player.y, zoom: .08 };
     c.save();
     const bg = c.createLinearGradient(r.x, r.y, r.x, r.y + r.height);
     bg.addColorStop(0, '#18232bea'); bg.addColorStop(1, '#0b141ce8');

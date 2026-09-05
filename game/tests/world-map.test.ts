@@ -14,7 +14,7 @@ test('world/map projection is reversible at fractional centers and negative coor
 
 test('minimap scrolls continuously with the interpolated character and keeps its marker centered', () => {
   const r = getMinimapRect(960, 600);
-  const view: MapView = { ...r, centerX: 10.125, centerY: -19.25, zoom: .115 };
+  const view: MapView = { ...r, centerX: 10.125, centerY: -19.25, zoom: .08 };
   const a = projectMapPoint(150, 80, view);
   const next = { ...view, centerX: view.centerX + .25, centerY: view.centerY + .125 };
   const b = projectMapPoint(150, 80, next);
