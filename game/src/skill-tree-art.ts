@@ -1,5 +1,8 @@
 import { SKILL_TREE, SKILL_NODES, type SkillNode } from './skill-tree.ts';
 import { drawSkillGlyph } from './skill-tree-glyphs.ts';
+import type { StatKey } from './character-types.ts';
+import { STAT_LABELS, formatStatValue } from './items.ts';
+import { SKILL_DEFINITIONS, skillRequirementLabel } from './skill-content.ts';
 import { UI_THEME } from './ui-theme.ts';
 
 export const SKILL_DOMAIN_COLORS = { Might: '#c69b71', Cunning: '#80b29d', Arcana: '#a49ecb' } as const;
@@ -138,10 +141,60 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     if (x < 40 || x > w - 40 || y < 10 || y > h - 60) continue;
     label(cluster.name.toUpperCase(), x, y, SKILL_DOMAIN_COLORS[cluster.domain] + 'be', 10);
   }
-  // A local hover card retains the name even at overview scale.
-  if (view.hovered && view.hovered !== view.selected) {
+  // Native-resolution details follow the hovered node, including an already selected star.
+  if (view.hovered) {
     const node = SKILL_NODES.get(view.hovered)!;
-    const x = Math.max(120, Math.min(w - 120, sx(node.x))), y = Math.max(8, sy(node.y) - skillNodeScreenRadius(node, z) - 32);
-    label(node.name, x, y, '#eee0bf', 13, true);
+    drawNodeTooltip(c, node, view, sx(node.x), sy(node.y));
   }
+}
+
+function drawNodeTooltip(c: CanvasRenderingContext2D, node: SkillNode, view: SkillAtlasView, nodeX: number, nodeY: number): void {
+  const width = Math.min(310, view.width - 16), padding = 15;
+  const rows: Array<{ text: string; color: string; size: number; gap: number }> = [];
+  const add = (text: string, color: string, size = 14, gap = 5) => {
+    c.font = `${size}px ${UI_THEME.typography.font}`;
+    const words = text.split(/\s+/);
+    let line = '';
+    for (const word of words) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (line && c.measureText(candidate).width > width - padding * 2) {
+        rows.push({ text: line, color, size, gap: 3 }); line = word;
+      } else line = candidate;
+    }
+    if (line) rows.push({ text: line, color, size, gap });
+  };
+  const color = SKILL_DOMAIN_COLORS[node.domain];
+  const skill = node.skill ? SKILL_DEFINITIONS[node.skill] : undefined;
+  const owned = view.allocated.has(node.id);
+  c.save();
+  add(node.name, '#eee0bf', 17, 8);
+  add(`${node.domain} · ${skill ? 'Active skill' : node.kind === 'notable' ? 'Notable' : node.role === 'travel' ? 'Travel node' : node.kind === 'origin' ? 'Origin' : 'Passive'}`, color, 12, 12);
+  for (const [key, value] of Object.entries(node.bonuses) as [StatKey, number][]) {
+    add(`${formatStatValue(key, value)} ${STAT_LABELS[key]}`, '#d5e8ca', 15, 6);
+  }
+  if (skill) {
+    add(skill.description, '#b5c2ca', 13, 10);
+    add(`Requires ${skillRequirementLabel(skill.requirement)}`, color, 12, 6);
+    add(`${skill.manaCost} mana · ${skill.cooldown}s cooldown`, '#cfc4df', 13, 10);
+  } else if (!Object.keys(node.bonuses).length) add(node.description, '#b5c2ca', 13, 10);
+  const cost = view.route.filter(id => !view.allocated.has(id)).length;
+  add(owned ? '◆ Allocated' : view.reachable.has(node.id) ? '◇ Available · 1 skill point' : cost ? `◇ ${cost} skill points along this path` : '◇ Not connected', '#b8ab8d', 12, 0);
+  const height = padding * 2 + rows.reduce((sum, row) => sum + row.size + row.gap, 0);
+  const radius = skillNodeScreenRadius(node, view.zoom);
+  const x = Math.max(8, Math.min(view.width - width - 8, nodeX - width / 2));
+  const above = nodeY - radius - height - 14;
+  const y = Math.max(8, Math.min(view.height - height - 8, above >= 8 ? above : nodeY + radius + 14));
+  c.shadowColor = '#0009'; c.shadowBlur = 18; c.shadowOffsetY = 5;
+  c.fillStyle = '#0b141af7'; c.fillRect(x, y, width, height);
+  c.shadowBlur = 0; c.shadowOffsetY = 0;
+  c.strokeStyle = '#93876b'; c.lineWidth = 1; c.strokeRect(x + .5, y + .5, width - 1, height - 1);
+  c.fillStyle = color; c.fillRect(x + 1, y + 1, width - 2, 2);
+  c.textAlign = 'left'; c.textBaseline = 'top';
+  let textY = y + padding;
+  for (const row of rows) {
+    c.font = `${row.size}px ${UI_THEME.typography.font}`;
+    c.fillStyle = row.color; c.fillText(row.text, x + padding, textY);
+    textY += row.size + row.gap;
+  }
+  c.restore();
 }
