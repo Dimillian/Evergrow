@@ -9,6 +9,8 @@ import type { WorldQuery } from '../src/model.ts';
 test('exploration and elapsed time are both required, and blocked placement preserves earned travel', () => {
   const planner = new RoamingEncounters(); planner.reset(0, 0);
   planner.resolved(3, () => 0); planner.advance({ x: 0, y: 0 }, 1);
+  planner.resolved(3, () => 0); planner.advance({ x: 0, y: 0 }, 1);
+  planner.resolved(1, () => 0); planner.advance({ x: 0, y: 0 }, 1);
   assert.equal(planner.groupSize(8, .99), 2, 'initial group finishes the bounded warmup');
   planner.resolved(2, () => 0);
   for (let x = 32; x <= 256; x += 32) planner.advance({ x, y: 0 }, .05);

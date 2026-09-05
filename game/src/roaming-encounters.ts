@@ -4,9 +4,9 @@ import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { isEnemyInactive, isSpawnHidden, SPAWN_VISIBILITY_MARGIN, type SpawnExclusion } from './spawn-visibility.ts';
 
 export const ROAMING_RULES = Object.freeze({
-  warmupPopulation: 5, warmupInterval: .65, retryInterval: .45,
-  minInterval: 3.2, maxInterval: 5.8, minTravel: 220, maxTravel: 380,
-  minimumDistance: 360, leadMin: 140, leadMax: 300, groupRadius: 100,
+  warmupPopulation: 9, warmupInterval: .65, retryInterval: .45,
+  minInterval: 2.2, maxInterval: 3.8, minTravel: 180, maxTravel: 280,
+  minimumDistance: 300, leadMin: 30, leadMax: 90, groupRadius: 100, corridorHalfWidth: 140,
   retirementMargin: 650, behindDistance: 430, behindProjection: -220,
 });
 export const ROAMING_GROUPS: Readonly<Record<EnemyKind, readonly EnemyKind[]>> = Object.freeze({
@@ -48,7 +48,7 @@ export class RoamingEncounters {
   }
   get ready(): boolean { return this.cooldown <= 0 && (this.warmup > 0 || this.distance >= this.requiredDistance); }
   groupSize(available: number, roll: number): number {
-    const size = roll < .25 ? 1 : roll < .78 ? 2 : 3;
+    const size = roll < .10 ? 1 : roll < .55 ? 2 : 3;
     return Math.max(0, Math.min(size, available, this.warmup > 0 ? this.warmup : 3));
   }
   resolved(count: number, random: () => number): void {
@@ -65,8 +65,13 @@ export class RoamingEncounters {
  * Most new groups lie ahead of travel; later attempts also search the flanks. */
 export function roamingSpawnAnchor(player: Position, view: SpawnExclusion, heading: TravelHeading,
   random: () => number, attempt: number): { x: number; y: number; angle: number } {
-  const forward = attempt < 16 && unit(random()) < .78;
-  const angle = forward ? Math.atan2(heading.y, heading.x) + (unit(random()) - .5) * 1.9 : unit(random()) * Math.PI * 2;
+  const forward = attempt < 18;
+  const angle = forward ? Math.atan2(heading.y, heading.x) : unit(random()) * Math.PI * 2;
+  // A fixed world-space corridor stays encounterable even when zoomed far out.
+  // Angular scatter alone places groups hundreds of units beside the travel route.
+  const lateral = forward ? (unit(random()) * 2 - 1) * ROAMING_RULES.corridorHalfWidth : 0;
+  const originX = player.x - Math.sin(angle) * lateral;
+  const originY = player.y + Math.cos(angle) * lateral;
   const dx = Math.cos(angle), dy = Math.sin(angle);
   // Expand the rectangle for the whole group before intersecting the ray. Adding
   // only a radial distance leaves trailing members inside at shallow edge angles.
@@ -74,12 +79,12 @@ export function roamingSpawnAnchor(player: Position, view: SpawnExclusion, headi
   const maxX = view.x + view.width + SPAWN_VISIBILITY_MARGIN.horizontal + groupClearance;
   const minY = view.y - SPAWN_VISIBILITY_MARGIN.vertical - groupClearance;
   const maxY = view.y + view.height + SPAWN_VISIBILITY_MARGIN.vertical + groupClearance;
-  const tx = Math.abs(dx) < 1e-8 ? Infinity : ((dx > 0 ? maxX : minX) - player.x) / dx;
-  const ty = Math.abs(dy) < 1e-8 ? Infinity : ((dy > 0 ? maxY : minY) - player.y) / dy;
+  const tx = Math.abs(dx) < 1e-8 ? Infinity : ((dx > 0 ? maxX : minX) - originX) / dx;
+  const ty = Math.abs(dy) < 1e-8 ? Infinity : ((dy > 0 ? maxY : minY) - originY) / dy;
   const exit = Math.max(0, Math.min(tx, ty));
   const distance = Math.max(ROAMING_RULES.minimumDistance, exit)
     + ROAMING_RULES.leadMin + unit(random()) * (ROAMING_RULES.leadMax - ROAMING_RULES.leadMin);
-  return { x: player.x + dx * distance, y: player.y + dy * distance, angle };
+  return { x: originX + dx * distance, y: originY + dy * distance, angle };
 }
 
 /** Only unseen, unengaged roamers can leave the active population. Camps have their

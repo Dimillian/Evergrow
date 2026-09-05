@@ -228,11 +228,11 @@ test('visible corpses prevent whole-camp priority eviction alongside their survi
   assert.ok(sim.enemies.includes(corpse)); assert.equal(sim.enemies.filter(enemy => enemy.campId === near.id).length, 6);
 });
 
-test('camp count respects its reserved budget and cannot consume the last four roaming slots', () => {
+test('camp count respects its reserved budget and cannot consume the protected roaming slots', () => {
   const { sim, ledger, update } = harness();
   update([normalCamp('a', 100), normalCamp('b', 250)]);
-  const roamers = Array.from({ length: 6 }, (_, index) => sim.spawnEnemy('stalker', -800 - index * 30, 0)!);
-  const near = normalCamp('near', 450, 3); update([near], { x: -300, y: -250, width: 600, height: 500 });
+  const roamers = Array.from({ length: ENCOUNTER_RULES.hardPopulationCap - 12 }, (_, index) => sim.spawnEnemy('stalker', -800 - index * 30, 0)!);
+  const near = normalCamp('near', 450, ENCOUNTER_RULES.hardPopulationCap - ENCOUNTER_RULES.roamingReserve - 12 + 1); update([near], { x: -300, y: -250, width: 600, height: 500 });
   assert.equal(ledger.getState(near.id), 'dormant');
   assert.ok(roamers.every(enemy => sim.enemies.includes(enemy)), 'ambient retirement cannot solve a camp-only budget conflict');
   assert.equal(sim.enemies.filter(enemy => enemy.campId).length, 12);
@@ -242,8 +242,8 @@ test('camp count respects its reserved budget and cannot consume the last four r
 test('distant ambient population yields only the surplus above its protected reserve', () => {
   const { sim, ledger, update } = harness();
   update([normalCamp('a', 100), normalCamp('b', 250)]);
-  const roamers = Array.from({ length: 6 }, (_, index) => sim.spawnEnemy('stalker', -800 - index * 30, 0)!);
-  const near = normalCamp('near', 450, 2); update([near], { x: -300, y: -250, width: 600, height: 500 });
+  const roamers = Array.from({ length: ENCOUNTER_RULES.hardPopulationCap - 12 }, (_, index) => sim.spawnEnemy('stalker', -800 - index * 30, 0)!);
+  const near = normalCamp('near', 450, ENCOUNTER_RULES.hardPopulationCap - ENCOUNTER_RULES.roamingReserve - 12); update([near], { x: -300, y: -250, width: 600, height: 500 });
   assert.equal(ledger.getState(near.id), 'active');
   assert.equal(roamers.filter(enemy => sim.enemies.includes(enemy)).length, ENCOUNTER_RULES.roamingReserve);
   assert.equal(sim.enemies.filter(enemy => enemy.campId).length, ENCOUNTER_RULES.hardPopulationCap - ENCOUNTER_RULES.roamingReserve);
@@ -279,9 +279,9 @@ test('hidden engaged roamers cannot be retired to admit an approaching camp', ()
   for (const [state, awareness] of [['patrol', 1], ['chase', 0], ['windup', 0], ['attack', 0], ['recover', 0]] as const) {
     const { sim, ledger, update } = harness();
     update([normalCamp('a', 100), normalCamp('b', 250)]);
-    const roamers = Array.from({ length: 6 }, (_, index) => sim.spawnEnemy('stalker', -800 - index * 30, 0)!);
+    const roamers = Array.from({ length: ENCOUNTER_RULES.hardPopulationCap - 12 }, (_, index) => sim.spawnEnemy('stalker', -800 - index * 30, 0)!);
     for (const enemy of roamers) { enemy.state = state; enemy.awareness = awareness; }
-    const near = normalCamp('near', 450, 2), view = { x: -300, y: -250, width: 600, height: 500 };
+    const near = normalCamp('near', 450, ENCOUNTER_RULES.hardPopulationCap - ENCOUNTER_RULES.roamingReserve - 12), view = { x: -300, y: -250, width: 600, height: 500 };
     update([near], view);
     assert.equal(ledger.getState(near.id), 'dormant', state);
     assert.ok(roamers.every(enemy => sim.enemies.includes(enemy)), `${state}: hidden fighters stay alive`);

@@ -14,7 +14,7 @@ function actors(kinds: EnemyKind[]) {
 }
 
 test('population follows geographic area level with a fixed simultaneous actor ceiling', () => {
-  assert.deepEqual([1, 3, 4, 6, 7, 15, 16, 10000].map(encounterPopulationTarget), [5, 5, 5, 6, 6, 8, 8, 8]);
+  assert.deepEqual([1, 3, 4, 6, 7, 15, 16, 10000].map(encounterPopulationTarget), [9, 9, 9, 10, 10, 12, 12, 14]);
   assert.ok(ENCOUNTER_RULES.targetPopulationCap <= ENCOUNTER_RULES.hardPopulationCap);
   assert.ok(Object.isFrozen(ENCOUNTER_RULES) && Object.isFrozen(ENCOUNTER_WEIGHTS));
 });
@@ -31,7 +31,7 @@ test('each biome selects its authored population mix and full areas consume no r
     assert.equal(chooseEncounterEnemy([], 1, biome, () => .999), 'wisp');
   }
   assert.deepEqual(Object.keys(ENCOUNTER_WEIGHTS).sort(), Object.keys(BIOMES).sort());
-  const full = actors(['stalker', 'stalker', 'stalker', 'stalker', 'stalker']);
+  const full = actors(Array.from({ length: encounterPopulationTarget(1) }, () => 'stalker'));
   assert.equal(chooseEncounterEnemy(full, 1, 'deadwood', () => { throw new Error('Full area rolled a spawn'); }), null);
 });
 

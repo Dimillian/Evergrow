@@ -77,7 +77,7 @@ test('standing on cleared ground does not refill it from elapsed time or camera 
 
 test('camp garrisons do not consume the ambient target while all actors share the hard cap', () => {
   const sim = new Simulation(open, { seed: 356 }); sim.setSpawnExclusion(viewAt());
-  for (let index = 0; index < 13; index++) assert.ok(sim.spawnEnemy('stalker', -1100, -250 + index * 45, 'normal', {
+  for (let index = 0; index < ENCOUNTER_RULES.hardPopulationCap - encounterPopulationTarget(1); index++) assert.ok(sim.spawnEnemy('stalker', -1100, -250 + index * 45, 'normal', {
     campId: 'authored', memberId: `authored:${index}`, lootSeed: 500 + index,
   }));
   sim.drainEvents(); advance(sim, 20);
@@ -164,4 +164,26 @@ test('seed and real headless travel reproduce hidden forward encounters and sour
     return trace;
   };
   assert.deepEqual(run(581), run(581)); assert.notDeepEqual(run(581), run(582));
+});
+
+test('ordinary travel actually reaches roaming encounters instead of only spawning distant actors', () => {
+  for (const width of [1300, 2600]) {
+    const sim = new Simulation({ ...open, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) }, { seed: 581 });
+    sim.player.invulnerable = 999;
+    const encountered = new Set<number>();
+    let births = 0;
+    for (let tick = 0; tick < 60 / FIXED_STEP; tick++) {
+      const p = sim.player, view = viewAt(p.x, p.y, width, width * .64);
+      sim.setSpawnExclusion(view);
+      sim.update(FIXED_STEP, { ...idle, moveX: 1, aimX: p.x + 300, aimY: p.y });
+      for (const event of sim.drainEvents().filter(event => event.type === 'spawn')) {
+        births++;
+        assert.ok(outsideView(event.x, event.y, ENEMY_DEFINITIONS[event.enemyKind!].radius + 70, view));
+      }
+      for (const enemy of ambient(sim)) if (Math.hypot(enemy.x - p.x, enemy.y - p.y) < 300) encountered.add(enemy.id);
+      assert.ok(livingEnemyCount(sim.enemies) <= ENCOUNTER_RULES.hardPopulationCap);
+    }
+    assert.ok(encountered.size >= 12, `${width}: a minute of travel should reach several packs`);
+    assert.ok(encountered.size >= births * .6, `${width}: most placements should lie along the travelled route`);
+  }
 });

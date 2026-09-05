@@ -206,3 +206,7 @@ There are **104 runtime modules totaling 13,757 lines**, **11 development review
 ## Current checkpoint: character hall and saves
 
 Supersedes the run-local persistence limitations in earlier checkpoint notes above. The game now opens a forest-backed eight-slot character hall. Name/create, continue and confirmed delete are implemented, with actual equipped previews and derived power. Checkpoints preserve character progress, resources, position, ground gear and defeated camp members; charts are separate per character. New characters have identical basic leather gear, the weathered sword and 64 empty inventory slots. Saving is local to the browser, with autosave, last-good backups, whole-payload validation and stale-tab protection. Live encounters and in-flight combat are rebuilt on continue. See [character saves](character-saves.md).
+
+### Roaming density refinement
+
+Roaming targets are now 9–14, with 24 total actors and nine slots reserved from camps. After nine initial roamers, groups require 180–280 units of travel and a 2.2–3.8-second cooldown. Forward placements use a fixed-width travel corridor instead of wide angular scatter; lead beyond the padded camera/group bounds is 30–90 units. Births remain wholly offscreen, sanctuaries stay protected, and stationary players do not trigger endless refills. Concurrent attack/rank caps are unchanged.
