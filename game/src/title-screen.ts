@@ -3,9 +3,11 @@ import { characterPower, previewCharacter } from './character-summary.ts';
 import { drawCharacterPortrait } from './character-portrait.ts';
 import type { SaveSlot } from './character-storage.ts';
 import type { Player } from './model.ts';
+import { STARTER_WEAPONS, createStarterWeapon, isStarterWeaponId, type StarterWeaponId } from './items.ts';
+import { itemIconSVG } from './item-art.ts';
 import './title-screen.css';
 
-export interface TitleActions { create(index: number, name: string): void; continue(index: number): void; remove(index: number): void; }
+export interface TitleActions { create(index: number, name: string, weapon: StarterWeaponId): void; continue(index: number): void; remove(index: number): void; }
 const format = (n: number) => Math.round(n).toLocaleString('en-US');
 const powerHint = 'Build estimate from basic-attack DPS and effective life. Active skills, mana sustain and enemy mechanics are not included.';
 
@@ -14,6 +16,7 @@ export class TitleScreen {
   readonly element: HTMLDivElement;
   private slots: SaveSlot[] = [];
   private selected = 0;
+  private starter: StarterWeaponId = 'sword';
   private player: Player = previewCharacter(null);
   private canvas: HTMLCanvasElement;
   private abort = new AbortController();
@@ -41,9 +44,14 @@ export class TitleScreen {
       if (button.dataset.action === 'cancel') { this.confirming = false; this.render(); }
       if (button.dataset.action === 'confirm-delete') this.actions.remove(this.selected);
     }, { signal: this.abort.signal });
+    this.element.addEventListener('change', event => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || input.name !== 'starter-weapon' || !isStarterWeaponId(input.value)) return;
+      this.starter = input.value; this.player = previewCharacter(null, this.starter);
+    }, { signal: this.abort.signal });
     this.element.addEventListener('submit', event => {
       event.preventDefault(); const input = this.element.querySelector<HTMLInputElement>('[name="character-name"]');
-      const name = input?.value.trim(); if (name) this.actions.create(this.selected, name);
+      const name = input?.value.trim(); if (name) this.actions.create(this.selected, name, this.starter);
     }, { signal: this.abort.signal });
   }
   open(slots: SaveSlot[], preferred?: number): void {
@@ -61,7 +69,7 @@ export class TitleScreen {
   dispose(): void { this.close(); this.abort.abort(); this.element.remove(); }
   private render(): void {
     const selected = this.slots[this.selected], record = selected?.record;
-    this.player = previewCharacter(record ?? null);
+    this.player = previewCharacter(record ?? null, this.starter);
     this.element.querySelector('.title-slot-count')!.textContent = `${this.slots.filter(s => s.record).length} / 8`;
     this.element.querySelector('.title-slot-grid')!.innerHTML = this.slots.map(slot => {
       const r = slot.record, p = r ? characterPower(previewCharacter(r)) : null;
@@ -78,7 +86,7 @@ export class TitleScreen {
         <div class="title-save-meta"><span>${Math.floor(record.checkpoint.time / 60)} min played</span><span>Saved ${new Date(record.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${new Date(record.updatedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span></div>
         <button class="ui-button ui-button--primary title-enter" data-action="continue"><span>Continue</span>${uiIcon('chevron')}</button>`;
     } else if (selected?.state === 'empty') {
-      selection.innerHTML = `<form class="title-create"><label for="character-name">Name</label><input id="character-name" name="character-name" maxlength="24" minlength="1" required autocomplete="off" placeholder="Wayfarer" value="Wayfarer" pattern=".*\\S.*"/><button class="ui-button ui-button--primary title-enter" type="submit"><span>Create character</span>${uiIcon('chevron')}</button></form>`;
+      selection.innerHTML = `<form class="title-create"><label for="character-name">Name</label><input id="character-name" name="character-name" maxlength="24" minlength="1" required autocomplete="off" placeholder="Wayfarer" value="Wayfarer" pattern=".*\\S.*"/><fieldset class="title-weapons"><legend>Starter weapon</legend><div class="title-weapon-grid">${STARTER_WEAPONS.map(option => `<label class="title-weapon-choice"><input type="radio" name="starter-weapon" value="${option.id}" ${this.starter === option.id ? 'checked' : ''}/><span class="title-weapon-icon" aria-hidden="true">${itemIconSVG(createStarterWeapon(option.id), 36)}</span><span>${option.label}</span></label>`).join('')}</div></fieldset><button class="ui-button ui-button--primary title-enter" type="submit"><span>Create character</span>${uiIcon('chevron')}</button></form>`;
     } else {
       selection.innerHTML = `<h3>${selected?.state === 'unavailable' ? 'Storage unavailable' : 'Save could not be read'}</h3><p>${selected?.state === 'unavailable' ? 'Enable browser storage to save characters.' : 'This slot has been preserved. Try another slot, or delete this save to reclaim it.'}</p>${selected?.state === 'invalid' ? '<button class="ui-button ui-button--danger" data-action="delete">Delete unreadable save</button>' : ''}`;
     }

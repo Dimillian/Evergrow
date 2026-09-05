@@ -8,7 +8,7 @@ A gothic, top-down 2D action RPG built for the browser, inspired by Diablo and P
 
 ## What works today
 
-- **Characters & saves:** eight local save slots, a forest character hall, equipped previews, level/power summaries and automatic checkpoints. Every character starts with leather armor, a sword and an empty bag.
+- **Characters & saves:** eight local save slots, a forest character hall, equipped previews, level/power summaries and automatic checkpoints. Every character starts with leather armor, a choice of sword, bow or fire staff, and an empty bag.
 - **World:** seven blended biomes, procedural towns with walk-in interiors, camps and landmarks, day/night lighting, wind and ambient wildlife. Scrolling minimap and an explored-world atlas.
 - **Combat:** melee, bows and elemental staves; shields and dual wield; dodging, particles, damage feedback, and six enemy archetypes across three ranks. Encounters spawn outside the camera.
 - **Builds:** 2,113 nodes, 150 constellations and 17 active skills. Short early routes, useful resource/speed choices, and cross-discipline bridges at every layer. Attack and cast speed are independent; first-tier skills have no cooldown.
@@ -47,7 +47,7 @@ npm run check   # Code tests, strict TypeScript checks, production build
 npm run stats   # Content, source and build statistics
 ```
 
-TypeScript, Vite, Canvas 2D and WebGL; no runtime package dependencies. **464 code tests pass** at this checkpoint. Gameplay feel and balance are tested by the player.
+TypeScript, Vite, Canvas 2D and WebGL; no runtime package dependencies. **465 code tests pass** at this checkpoint. Gameplay feel and balance are tested by the player.
 
 [Character saves](docs/character-saves.md) · [Game brief](docs/game-brief.md) · [Roadmap](docs/roadmap.md) · [Architecture](docs/architecture.md) · [Skills & weapons](docs/weapons-and-skills.md) · [Progression & loot](docs/progression-and-loot.md)
 

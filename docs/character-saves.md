@@ -1,8 +1,8 @@
 # Character hall and local checkpoints
 
-Evergrow opens in a procedural forest character hall. Eight independent browser-local slots show name, level, power, last save time and equipped appearance. Select an empty slot, name a character, and begin. Select an existing character to continue. Deletion requires an explicit confirmation inside the hall.
+Evergrow opens in a procedural forest character hall. Eight independent browser-local slots show name, level, power, last save time and equipped appearance. Select an empty slot, name a character, choose Sword, Bow or Fire Staff, and begin. The equipped portrait updates immediately when choosing. Select an existing character to continue. Deletion requires an explicit confirmation inside the hall.
 
-Every character starts at level 1 with the same attributes, worn leather outfit, weathered sword, no allocated passives beyond the origin, five empty skill bindings and an empty 64-cell inventory. The world seed is 7319 for all slots; geography and starting conditions are identical, while exploration belongs to each character.
+Every character starts at level 1 with the same attributes, worn leather outfit, the selected level-one common weapon, no allocated passives beyond the origin, five empty skill bindings and an empty 64-cell inventory. The world seed is 7319 for all slots; geography and starting conditions are identical, while exploration belongs to each character.
 
 ## Checkpoint contents
 
@@ -34,3 +34,5 @@ Power is a comparative estimate: `round(sqrt(expected basic-attack DPS × effect
 ## Review and tests
 
 `/title.html` stages three characters in memory; `/title.html?empty` shows the new-character flow. Both use the real UI, character rig and world renderer, without gameplay ticks or browser storage. `/ui.html` also uses the real title component for its ready view. Headless tests cover slot limits, complete round trips, identical empty starters, malformed data, quota failures, backup recovery, stale writers, deletion, world mismatch, separate charts, death recovery and persistent camp casualties. Gameplay and save/resume acceptance remain for the user to test.
+
+Starter choices share `STARTER_WEAPONS` and `createStarterWeapon` in `items.ts`. The sword is the Weathered Sword, the bow uses Thorn Shortbow, and the fire staff uses Ember Staff. New gear has no affixes. The selected item is equipped before the first checkpoint; continuing a save always uses its saved equipment. The creation form uses a three-option native radio group with keyboard focus styling.

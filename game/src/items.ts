@@ -147,27 +147,46 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
   return item;
 }
 
-/** Every new character receives the same modest kit and an empty bag. */
-export function createCharacterSheet(): CharacterSheet {
+export const STARTER_WEAPONS = Object.freeze([
+  { id: 'sword', label: 'Sword', profileId: 'weathered-sword' },
+  { id: 'bow', label: 'Bow', profileId: 'thorn-shortbow' },
+  { id: 'fire', label: 'Fire staff', profileId: 'ember-staff' },
+] as const);
+export type StarterWeaponId = typeof STARTER_WEAPONS[number]['id'];
+export const isStarterWeaponId = (value: string): value is StarterWeaponId => STARTER_WEAPONS.some(option => option.id === value);
+
+/** Authored level-one common gear: no random rarity, affixes or starter-only powers. */
+export function createStarterWeapon(id: StarterWeaponId): Item {
+  const option = STARTER_WEAPONS.find(option => option.id === id);
+  if (!option) throw new RangeError('Unknown starter weapon');
+  const profile = id === 'sword' ? STARTING_SWORD : WEAPON_PROFILES.find(profile => profile.id === option.profileId)!;
+  const item = generateItem(1, 1, 'weapon', id === 'sword' ? 'longsword' : profile.id, 'common');
+  item.id = 'starter-weapon'; item.baseName = profile.name;
+  item.name = id === 'sword' ? profile.name : `Worn ${profile.name}`;
+  item.implicit = {}; item.affixes = []; item.power = 1;
+  item.weapon = { ...profile, visual: { ...profile.visual } };
+  item.appearance = { base: profile.visual.metal, shadow: profile.visual.grip,
+    edge: profile.visual.edge, trim: profile.visual.guard, style: 'plate' };
+  return item;
+}
+
+/** The chosen weapon, the same modest leather outfit, and an empty bag. */
+export function createCharacterSheet(starter: StarterWeaponId = 'sword'): CharacterSheet {
   const equipped = Object.fromEntries(EQUIPMENT_SLOTS.map(slot => [slot, null])) as CharacterSheet['equipped'];
-  const starterPieces: readonly [EquipmentSlot, number][] = [['weapon', 1], ['head', 31], ['chest', 17], ['gloves', 23], ['legs', 59], ['boots', 11], ['cloak', 71]];
+  const starterPieces: readonly [EquipmentSlot, number][] = [['head', 31], ['chest', 17], ['gloves', 23], ['legs', 59], ['boots', 11], ['cloak', 71]];
   for (const [slot, seed] of starterPieces) {
     const item = generateItem(seed, 1, slot as ItemKind);
-    const wornNames: Partial<Record<EquipmentSlot, string>> = { weapon: 'Longsword', head: 'Leather Hood', chest: 'Leather Jerkin',
+    const wornNames: Partial<Record<EquipmentSlot, string>> = { head: 'Leather Hood', chest: 'Leather Jerkin',
       gloves: 'Leather Gloves', legs: 'Leather Trousers', boots: 'Leather Boots', cloak: 'Travel Cloak' };
     item.baseName = wornNames[slot]!;
-    item.id = `starter-${slot}`; item.name = slot === 'weapon' ? STARTING_SWORD.name : `Worn ${item.baseName}`;
+    item.id = `starter-${slot}`; item.name = `Worn ${item.baseName}`;
     item.tier = 'common'; item.implicit = {}; item.affixes = []; item.power = 1;
     item.appearance = { base: '#655345', shadow: '#2c2826', edge: '#ac9470', trim: '#9e8156', style: 'leather' };
     if (slot === 'boots') item.appearance = { base: '#5c4c41', shadow: '#292b30', edge: '#a79873', trim: '#b18b58', style: 'leather' };
     if (slot === 'cloak') item.appearance = { base: '#555e50', shadow: '#292f2d', edge: '#89937c', trim: '#a28c64', style: 'leather' };
-    if (slot === 'weapon') {
-      item.weapon = { ...STARTING_SWORD, visual: { ...STARTING_SWORD.visual } };
-      item.appearance = { base: STARTING_SWORD.visual.metal, shadow: STARTING_SWORD.visual.grip,
-        edge: STARTING_SWORD.visual.edge, trim: STARTING_SWORD.visual.guard, style: 'plate' };
-    }
     equipped[slot] = item;
   }
+  equipped.weapon = createStarterWeapon(starter);
   const inventory: CharacterSheet['inventory'] = Array.from({ length: INVENTORY_CAPACITY }, () => null);
   return { attributes: { strength: 10, dexterity: 10, intelligence: 10, vitality: 10 },
     statPoints: 0, skillPoints: 0, allocatedNodes: ['origin'], inventory, equipped, skillSlots: Array.from({ length: 5 }, () => null) };

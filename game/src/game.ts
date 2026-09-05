@@ -1,3 +1,5 @@
+import { createCharacterSheet, type StarterWeaponId } from './items.ts';
+import { refreshCharacter } from './character.ts';
 import { AreaNoticeTracker } from './notification-queue.ts';
 import { getZoneAt } from './zone-progression.ts';
 import { CharacterRepository } from './character-storage.ts';
@@ -92,7 +94,7 @@ export class Game {
         assign: (slot, skill) => this.characterAction({ type: 'assignSkill', slot, skill }),
       }));
       this.titleScreen = this.lifetime.own(new TitleScreen(this.shell.titleMount, {
-        create: (index, name) => this.createCharacter(index, name),
+        create: (index, name, weapon) => this.createCharacter(index, name, weapon),
         continue: index => this.continueCharacter(index), remove: index => this.deleteCharacter(index),
       }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
@@ -251,9 +253,10 @@ export class Game {
     this.sim.revive(); this.enterWorld(); this.saveCharacter();
   }
 
-  private createCharacter(index: number, name: string) {
+  private createCharacter(index: number, name: string, weapon: StarterWeaponId) {
     if (this.phase !== 'ready') return;
     const fresh = new Simulation(this.world, { seed: this.world.seed, spawn: false });
+    fresh.player.character = createCharacterSheet(weapon); refreshCharacter(fresh.player);
     if (!this.session.create(index, name, fresh.captureCheckpoint(), crypto.randomUUID(), Date.now())) {
       this.titleScreen.message(this.session.error); return;
     }

@@ -43,7 +43,7 @@
 .title-enter.ui-button { width: 100%; justify-content: space-between; min-height: 48px; background: linear-gradient(110deg,#56614580,#2b413f); border-color: #bac49680; color: #ece6c9; font-size: 14px; letter-spacing: .1em; }
 .title-enter .ui-icon { width: 17px; height: 17px; }
 .title-create label { display: block; color: #c6d0c3; font-size: 14px; margin-bottom: 10px; }
-.title-create input { width: 100%; height: 44px; padding: 0 12px; border: 1px solid #7f99986b; border-radius: 2px; background: #071019; color: #e6e3ce; font: 18px var(--ui-font); }
+.title-create input[name="character-name"] { width: 100%; height: 44px; padding: 0 12px; border: 1px solid #7f99986b; border-radius: 2px; background: #071019; color: #e6e3ce; font: 18px var(--ui-font); }
 .title-create .title-enter { margin-top: 18px; }
 .title-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
 .title-roster-footer { display: flex; align-items: center; gap: 7px; border-top: 1px solid #718c9024; padding: 13px 20px; color: #7c9690; font-size: 10px; }
@@ -59,3 +59,15 @@
 .title-roster { animation-delay: 140ms; }
 @keyframes hall-arrive { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
 @media (prefers-reduced-motion: reduce) { .title-brand, .title-hero, .title-roster { animation: none; } .title-slot { transition: none; } }
+
+.title-weapons { margin: 16px 0 0; padding: 0; border: 0; min-width: 0; }
+.title-weapons legend { padding: 0; margin-bottom: 9px; color: #9eafac; font-size: 13px; }
+.title-weapon-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.title-create .title-weapon-choice { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; margin: 0; padding: 6px 2px; min-width: 0; cursor: pointer; border: 1px solid #718a9145; border-radius: 2px; background: #08121aa0; color: #9eafac; font-size: 12px; transition: border-color 140ms, background 140ms; }
+.title-weapon-choice input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; }
+.title-weapon-choice:has(input:checked) { color: #ece4c8; border-color: #b7b286; background: linear-gradient(145deg,#6e765333,#15282d); box-shadow: inset 0 -2px #b7b286; }
+.title-weapon-choice:hover { border-color: #a9bdb3; }
+.title-weapon-choice:has(input:focus-visible) { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.title-weapon-icon { height: 36px; pointer-events: none; }
+.title-weapon-icon svg { display: block; }
+@media (prefers-reduced-motion: reduce) { .title-weapon-choice { transition: none; } }
