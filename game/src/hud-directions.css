@@ -19,7 +19,7 @@ body { margin: 0; color: var(--ui-text); background: #080e12; }
 .direction footer { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 17px 24px 20px; }
 .direction footer p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ui-muted); }
 .direction footer strong { color: var(--ui-text); font-weight: 400; }
-.direction-recommended { border-color: #777a58; }
+.direction-selected { border-color: var(--ui-silver-dim); }
 .direction .ui-badge { white-space: nowrap; }
 .directions-note { color: var(--ui-muted); font-size: 14px; line-height: 1.5; margin: 24px 0 0; }
 .directions-status { font-size: 13px; color: var(--ui-faint); margin: 14px 0 0; }

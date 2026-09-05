@@ -48,7 +48,7 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/src/effects.ts`: bounded combat particles, trails, flashes, and damage numbers; effects never drive gameplay.
 - `game/src/sword-trail.ts`: sampled world-space metal-gold ribbons following the weapon.
 - `game/src/postfx.ts`: world-only WebGL bloom passes, CRT/phosphor display treatment, and clean fallback.
-- `game/src/hud.ts`, `hud-icons.ts`, `hud-orb.ts`, and `font.ts`: compact procedural floating HUD, shared layout/hit bounds, engraved skill/menu icons, animated resource glass, and native font rendering.
+- `game/src/hud.ts`, `hud-frame.ts`, `hud-layout.ts`, `hud-icons.ts`, `hud-orb.ts`, and `font.ts`: the selected Astral Instrument HUD, shared layout/hit bounds, calibrated silver rings and celestial engraving, skill/menu icons, animated resource glass, and native font rendering. Keep its materials and suspended-plate silhouette when extending it.
 - `game/src/enemy-focus.ts` and `enemy-plate.ts`: visual enemy hover/recent-hit focus and the native top name/health plate. Use interpolated body bounds and the current camera transform; hover takes priority, dead/offscreen targets clear, and attack aiming remains unchanged.
 - `game/src/assets/fonts/` and `typography.css`: locally bundled Pixelify Sans, source/license records, and shared menu typography.
 - `game/src/main.ts`: font loading, bootstrap, and hot replacement. `game.ts` coordinates systems and application phases; `game-shell.ts` owns DOM menus and controls; `game-input.ts` owns held controls and action edges; `lifetime.ts` handles reverse-order teardown and startup rollback.
@@ -60,7 +60,7 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/rig.html` and `game/src/rig-review.ts`: dev-only frozen character poses across eight facings, without driving gameplay.
 - `game/hud.html` and `game/src/hud-review.ts`: dev-only frozen healthy, damaged, and depleted player HUD/enemy plate states with PNG export; no gameplay or save access.
 - `game/ui.html` and `game/src/ui-review.ts`: dev-only static review of actual windows and reusable UI primitives at desktop/narrow sizes, with frozen rendering and memory-only exploration.
-- `game/hud-directions.html`, `game/src/hud-directions-review.ts`, and `hud-concept-*.ts`: dev-only bottom-HUD art propositions awaiting user selection; frozen scene, shared content, no gameplay/save access. These are not live themes. See `docs/hud-directions.md`.
+- `game/hud-directions.html`, `game/src/hud-directions-review.ts`, and `hud-concept-*.ts`: dev-only historical HUD art propositions; the user selected Astral, whose frame is shared with the runtime. Frozen scene, shared content, no gameplay/save access or theme switching. See `docs/hud-directions.md`.
 - `docs/`: design documents and reference concepts, not runtime assets.
 
 From the repository root: `npm run setup`, `npm run dev`, `npm test`, and `npm run build`. `npm run check` runs code tests, strict/core compilation, and a production build; it never runs browser gameplay tests. `npm run stats` prints source/content counts and last-build sizes. Engine tests require Node.js 22.13 or later for TypeScript stripping.

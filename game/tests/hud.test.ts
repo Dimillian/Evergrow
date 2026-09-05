@@ -55,3 +55,24 @@ test('open space beside the menu rail and around the HUD silhouette remains play
     assert.equal(isHUDPoint(hud.x + hud.width + 1, hud.y + hud.height / 2, width, height), false);
   }
 });
+
+test('curved metal supports block input while their upper and lower apertures remain open', () => {
+  const samples = [
+    ['tray-side metal', 394, 91, true],
+    ['middle of support', 399, 96, true],
+    ['orb-side metal', 405, 103, true],
+    ['lower metal tip', 411, 110, true],
+    ['above support near tray', 393, 78, false],
+    ['above curved edge', 399, 85, false],
+    ['below curved edge', 399, 107, false],
+    ['below support near orb', 405, 117, false],
+  ] as const;
+  for (const [width, height] of viewports) {
+    const hud = getHUDLayout(width, height);
+    for (const side of [-1, 1]) for (const [label, x, y, occupied] of samples) {
+      const logicalX = side === 1 ? x : 520 - x;
+      assert.equal(isHUDPoint(hud.x + logicalX * hud.scale, hud.y + y * hud.scale, width, height), occupied,
+        `${label}, ${side === 1 ? 'right' : 'left'} support (${width}×${height})`);
+    }
+  }
+});

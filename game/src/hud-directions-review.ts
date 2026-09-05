@@ -21,7 +21,7 @@ const proposals: { id: ConceptMaterial; name: string; subtitle: string; material
     character: 'The most classical ARPG direction. Weighty, precious, and deliberately ornate.', draw: drawReliquary },
   { id: 'thornbound', name: 'Thornbound', subtitle: 'Rootwood · bronze clasps · jade patina',
     material: 'Sculpted roots and thorned shoulders grow around the resource vessels.',
-    character: 'My recommendation: a living relic that belongs to Evergrowing’s wilderness.', draw: drawThornbound },
+    character: 'A living relic that belongs to Evergrowing’s wilderness.', draw: drawThornbound },
   { id: 'astral', name: 'The Astral Instrument', subtitle: 'Blackened steel · silver · celestial engraving',
     material: 'Calibrated rings, star marks, and suspended plates make the HUD an occult instrument.',
     character: 'The most precise direction. More negative space, cooler metal, quieter ornament.', draw: drawAstral },
@@ -43,14 +43,14 @@ async function boot() {
       <button type="button" class="ui-button ui-button--quiet" data-state="pressured" aria-pressed="false">Under pressure</button>
     </div><div aria-label="Study scale"><button type="button" class="ui-button ui-button--quiet" data-scale="detail" aria-pressed="true">Detail view</button>
       <button type="button" class="ui-button ui-button--quiet" data-scale="game" aria-pressed="false">Game size</button></div></div>
-    <div class="directions-studies"></div><p class="directions-note">These are working art propositions, drawn in code with the game’s existing icons, font, and glass.
+    <div class="directions-studies"></div><p class="directions-note">The Astral Instrument is selected and implemented in the live HUD. These original studies share its procedural frame.
     The selected direction can carry into item frames, equipment slots, and inventory ornament.</p>
     <p class="directions-status" role="status">Preparing frozen studies…</p>`;
   const holder = root.querySelector('.directions-studies')!;
   for (const [index, proposal] of proposals.entries()) {
-    const article = document.createElement('article'); article.className = `direction${proposal.id === 'thornbound' ? ' direction-recommended' : ''}`;
+    const article = document.createElement('article'); article.className = `direction${proposal.id === 'astral' ? ' direction-selected' : ''}`;
     article.innerHTML = `<header><div><div class="direction-heading"><span class="direction-number">0${index + 1}</span><h2>${proposal.name}</h2></div>
-      <p class="direction-subtitle">${proposal.subtitle}</p></div>${proposal.id === 'thornbound' ? '<span class="ui-badge">RECOMMENDED</span>' : ''}</header>
+      <p class="direction-subtitle">${proposal.subtitle}</p></div>${proposal.id === 'astral' ? '<span class="ui-badge">SELECTED</span>' : ''}</header>
       <canvas role="img" aria-label="${proposal.name} bottom HUD art proposition"></canvas>
       <footer><p><strong>Design.</strong> ${proposal.material}</p><div><p><strong>Character.</strong> ${proposal.character}</p>
         <a class="directions-export">Save study PNG</a></div></footer>`;

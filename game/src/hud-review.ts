@@ -1,15 +1,18 @@
 import './typography.css';
 import { drawFloatingHUD, getHUDLayout, type HUDOptions } from './hud.ts';
-import { loadGameFont, text } from './font.ts';
+import { loadGameFont, text, textWidth } from './font.ts';
 import { Simulation } from './simulation.ts';
 import { drawEnemyPlate, getEnemyPlateLayout } from './enemy-plate.ts';
 import type { Enemy, Player, WorldQuery } from './model.ts';
 
 // This dev-only entry never binds gameplay input, ticks a simulation or accesses saves.
-const HUD_DISPLAY_SCALE = 1.35;
+const params = new URLSearchParams(location.search);
+const narrow = params.get('size') === 'narrow';
+const HUD_DISPLAY_SCALE = narrow ? 1 : 1.35;
 const PANEL_GAP = 14;
 const ENEMY_PLATE_OFFSET = 56;
 const root = document.querySelector<HTMLElement>('#hud-review')!;
+if (narrow) root.style.maxWidth = '390px';
 const canvas = document.querySelector<HTMLCanvasElement>('#hud-sheet')!;
 const status = document.querySelector<HTMLElement>('#review-status')!;
 const download = document.querySelector<HTMLAnchorElement>('#save-png')!;
@@ -81,7 +84,9 @@ async function boot() {
   if (disposed) return;
   const context = canvas.getContext('2d', { alpha: false });
   if (!context) throw new Error('Canvas rendering is unavailable.');
-  const stages = makeStages();
+  const allStages = makeStages();
+  const selected = allStages.find(stage => stage.name.toLowerCase() === params.get('state'));
+  const stages = selected ? [selected] : allStages;
   function draw() {
     const width = canvas.getBoundingClientRect().width;
     if (width <= 0 || disposed) return;
@@ -107,7 +112,7 @@ async function boot() {
       c.beginPath(); c.rect(0, 0, width, panelHeight); c.clip();
       ground(c, width, panelHeight);
       text(c, stage.name, 20, 15, 1.7, '#dfd0ab');
-      text(c, stage.detail, 20, 38, 1.05, '#849e99');
+      text(c, stage.detail, 20, 38, Math.min(1.05, (width - 40) / Math.max(1, textWidth(stage.detail))), '#849e99');
       c.save(); c.translate(0, ENEMY_PLATE_OFFSET); c.scale(HUD_DISPLAY_SCALE, HUD_DISPLAY_SCALE);
       drawEnemyPlate(c, stage.enemy, logicalWidth, plateViewportHeight, stage.enemyOptions);
       c.restore();
