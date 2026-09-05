@@ -1,18 +1,26 @@
+import { biomeGround, sampleBiome } from './biomes.ts';
+import type { BiomeId, BiomeSample } from './biomes.ts';
+import { circleHitsRect, contains, FIRST_TOWN_Y, generateSettlement, intersects, MAX_TOWN_RADIUS, settlementPavingWeight, settlementPOIs, TOWN_INTERVAL } from './settlements.ts';
+import type { Building, POI, Settlement } from './settlements.ts';
+
 /** All coordinates are world pixels; prop positions are their ground contacts. */
 export interface Prop {
   id: string;
   x: number;
   y: number;
   radius: number;
-  kind: 'tree' | 'deadTree' | 'rock' | 'shrine';
+  kind: 'tree' | 'deadTree' | 'rock' | 'shrine' | 'willow' | 'reeds' | 'fern' | 'flowers';
+  biome?: BiomeId;
   seed: number;
   scale: number;
 }
 
 export const TILE_SIZE = 256;
+export const WORLD_GENERATION_VERSION = 3;
 const PROP_CELL_SIZE = 80;
 const MAX_PROP_RADIUS = 15;
 const TILE_CACHE_LIMIT = 48;
+const SETTLEMENT_CACHE_LIMIT = 32;
 const SHRINE_INTERVAL = 2200;
 const BRANCH_INTERVAL = 1600;
 const BRANCH_OFFSET = -620;
@@ -73,7 +81,7 @@ export function pathDistance(x: number, y: number): number {
   return distance;
 }
 
-function inRectangle(prop: Prop, x: number, y: number, width: number, height: number): boolean {
+function inRectangle(prop: { x: number; y: number }, x: number, y: number, width: number, height: number): boolean {
   return prop.x >= x && prop.x < x + width && prop.y >= y && prop.y < y + height;
 }
 
@@ -83,10 +91,101 @@ function compareProps(a: Prop, b: Prop): number {
 
 export class World {
   readonly seed: number;
+  readonly generationVersion = WORLD_GENERATION_VERSION;
   private groundTiles = new Map<string, HTMLCanvasElement>();
+  private settlements = new Map<number, Settlement>();
 
   constructor(seed = 7319) {
     this.seed = seed | 0;
+  }
+
+  sampleBiome(x: number, y: number): BiomeSample { return sampleBiome(x, y, this.seed); }
+
+  private settlement(band: number): Settlement {
+    let town = this.settlements.get(band);
+    if (town) this.settlements.delete(band);
+    else town = generateSettlement(this.seed, band, mainPathX, pathDistance);
+    this.settlements.set(band, town);
+    if (this.settlements.size > SETTLEMENT_CACHE_LIMIT) this.settlements.delete(this.settlements.keys().next().value!);
+    return town;
+  }
+
+  getSettlements(x: number, y: number, width: number, height: number): Settlement[] {
+    if (![x, y, width, height, x + width, y + height].every(Number.isFinite) || width <= 0 || height <= 0) return [];
+    const result: Settlement[] = [], query = { x, y, width, height };
+    const first = Math.ceil((y - MAX_TOWN_RADIUS - FIRST_TOWN_Y) / TOWN_INTERVAL);
+    const last = Math.floor((y + height + MAX_TOWN_RADIUS - FIRST_TOWN_Y) / TOWN_INTERVAL);
+    for (let band = first; band <= last; band++) {
+      const townY = FIRST_TOWN_Y + band * TOWN_INTERVAL, townX = mainPathX(townY);
+      if (!intersects(query, { x: townX - MAX_TOWN_RADIUS, y: townY - MAX_TOWN_RADIUS, width: MAX_TOWN_RADIUS * 2, height: MAX_TOWN_RADIUS * 2 })) continue;
+      const town = this.settlement(band);
+      if (intersects(query, { x: town.x - town.radius, y: town.y - town.radius, width: town.radius * 2, height: town.radius * 2 })) result.push(town);
+    }
+    return result;
+  }
+
+  getBuildings(x: number, y: number, width: number, height: number): Building[] {
+    const query = { x, y, width, height };
+    return this.getSettlements(x, y, width, height).flatMap(town => town.buildings).filter(building => intersects(query, building))
+      .sort((a, b) => a.y + a.height - b.y - b.height || a.id.localeCompare(b.id));
+  }
+
+  getBuildingAt(x: number, y: number): Building | null {
+    return this.getBuildings(x, y, .01, .01).find(building => contains(building, x, y)) ?? null;
+  }
+
+  isSanctuary(x: number, y: number): boolean {
+    return this.getSettlements(x, y, .01, .01).some(town => Math.hypot(x - town.x, y - town.y) < town.radius);
+  }
+
+  getPOIs(x: number, y: number, width: number, height: number): POI[] {
+    if (![x, y, width, height, x + width, y + height].every(Number.isFinite) || width <= 0 || height <= 0) return [];
+    const result = this.getSettlements(x, y, width, height).flatMap(settlementPOIs);
+    const first: Prop = { id: 'shrine:origin', x: -85, y: -95, radius: 15, kind: 'shrine', seed: 0, scale: 1 };
+    const shrines = [first];
+    for (let band = Math.floor(y / SHRINE_INTERVAL) - 1; band <= Math.floor((y + height) / SHRINE_INTERVAL) + 1; band++) {
+      const shrine = this.roadShrine(band);
+      if (shrine) shrines.push(shrine);
+    }
+    for (const shrine of shrines) result.push({ id: shrine.id, kind: 'shrine', name: 'Wayfarer Shrine', x: shrine.x, y: shrine.y,
+      description: 'A roadside lantern kept alight for travellers.' });
+    return result.filter(poi => inRectangle(poi, x, y, width, height)).sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
+  }
+
+  /** Cheap map samples share terrain/road colors without querying collision. */
+  mapColor(x: number, y: number): string {
+    const towns = this.getSettlements(x, y, .01, .01);
+    const [r, g, b] = this.surfaceColor(x, y, towns, false);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  private roadWeight(x: number, y: number, distance = pathDistance(x, y)): number {
+    const shoulder = 30 + noise(x / 65, y / 65, this.seed + 203) * 11;
+    return 1 - smoothstep(shoulder - 5, shoulder + 14, distance);
+  }
+
+  private pavingWeight(towns: Settlement[], x: number, y: number, road: number): number {
+    let paved = 0;
+    for (const town of towns) paved = Math.max(paved, settlementPavingWeight(town, x, y, road));
+    return paved;
+  }
+
+  private surfaceColor(x: number, y: number, towns: Settlement[], detail: boolean): number[] {
+    const damp = noise(x / 180, y / 180, this.seed + 201);
+    const weights = this.sampleBiome(x, y).weights;
+    const distance = pathDistance(x, y), road = this.roadWeight(x, y, distance);
+    const paved = this.pavingWeight(towns, x, y, road);
+    const base = biomeGround(weights, smoothstep(.50, .85, damp) * .65);
+    const water = weights.swamp * smoothstep(.48, .75, damp) * (1 - road);
+    const pool = [15, 48, 60], dirt = [64, 54, 37], stone = [80, 80, 70];
+    // The staggered cobbles share one world-space origin across every road join.
+    const mod = (value: number, period: number) => ((value % period) + period) % period;
+    const mortar = detail && (mod(Math.floor(y), 18) < 2
+      || mod(Math.floor(x) + mod(Math.floor(y / 18), 2) * 15, 30) < 2) ? -8 : 0;
+    const rut = (1 - smoothstep(0, 2.5, Math.abs(distance - 11))) * road * (1 - paved);
+    const shade = detail ? (noise(x / 19, y / 19, this.seed + 202) - .5) * 5 - rut * 1.5 : 0;
+    return base.map((value, i) => Math.round(((value * (1 - water) + pool[i] * water) * (1 - road) + dirt[i] * road)
+      * (1 - paved) + (stone[i] + mortar) * paved + shade));
   }
 
   /** Half-open rectangle of ground contacts, returned in stable depth order. */
@@ -128,17 +227,24 @@ export class World {
     if ((x / 180) ** 2 + (y / 140) ** 2 < 1) return null;
     // Keep generous shoulders clear as well as the visibly compacted road.
     if (pathDistance(x, y) < 76) return null;
+    if (this.isSanctuary(x, y)) return null;
     const roadsideShrine = this.roadShrine(Math.floor(y / SHRINE_INTERVAL));
     if (roadsideShrine && Math.hypot(x - roadsideShrine.x, y - roadsideShrine.y) < 44) return null;
     const density = 0.40 + noise(x / 520, y / 520, this.seed + 37) * 0.39;
     if (random(cx, cy, this.seed, 3) > density) return null;
     const choice = random(cx, cy, this.seed, 4);
-    const kind: Prop['kind'] = choice < 0.18 ? 'rock' : choice < 0.76 ? 'deadTree' : 'tree';
+    const weights = this.sampleBiome(x, y).weights;
+    const mixture = random(cx, cy, this.seed, 41);
+    const biome: BiomeId = mixture < weights.verdant ? 'verdant' : mixture < weights.verdant + weights.swamp ? 'swamp' : 'deadwood';
+    const kind: Prop['kind'] = biome === 'verdant'
+      ? choice < .1 ? 'rock' : choice < .2 ? 'fern' : choice < .29 ? 'flowers' : choice < .33 ? 'deadTree' : 'tree'
+      : biome === 'swamp' ? choice < .13 ? 'rock' : choice < .36 ? 'reeds' : choice < .5 ? 'deadTree' : 'willow'
+      : choice < .18 ? 'rock' : choice < .76 ? 'deadTree' : 'tree';
     const scale = 0.82 + random(cx, cy, this.seed, 5) * 0.38;
-    const radius = kind === 'rock'
+    const radius = kind === 'reeds' || kind === 'fern' || kind === 'flowers' ? 0 : kind === 'rock'
       ? 8 + random(cx, cy, this.seed, 6) * 5
       : 9 + random(cx, cy, this.seed, 6) * 5;
-    return { id: `prop:${cx}:${cy}`, x, y, radius, kind, seed: hash(cx, cy, this.seed, 7), scale };
+    return { id: `prop:${cx}:${cy}`, x, y, radius, kind, biome, seed: hash(cx, cy, this.seed, 7), scale };
   }
 
   private roadShrine(band: number): Prop | null {
@@ -146,8 +252,10 @@ export class World {
     const y = band * SHRINE_INTERVAL + 500 + random(band, 0, this.seed, 102) * 950;
     if (Math.abs(y) < 450) return null;
     const side = random(band, 0, this.seed, 103) < 0.5 ? -1 : 1;
+    const x = mainPathX(y) + side * 53;
+    if (this.isSanctuary(x, y)) return null;
     return {
-      id: `shrine:road:${band}`, x: mainPathX(y) + side * 53, y,
+      id: `shrine:road:${band}`, x, y,
       radius: 15, kind: 'shrine', seed: hash(band, 0, this.seed, 104), scale: 1,
     };
   }
@@ -155,8 +263,11 @@ export class World {
   blocked(x: number, y: number, radius: number): boolean {
     if (![x, y, radius].every(Number.isFinite) || radius < 0) return true;
     const extent = radius + MAX_PROP_RADIUS;
-    return this.getProps(x - extent, y - extent, extent * 2, extent * 2).some(prop =>
-      (x - prop.x) ** 2 + (y - prop.y) ** 2 < (radius + prop.radius) ** 2 - 1e-7);
+    if (this.getProps(x - extent, y - extent, extent * 2, extent * 2).some(prop => prop.radius > 0 &&
+      (x - prop.x) ** 2 + (y - prop.y) ** 2 < (radius + prop.radius) ** 2 - 1e-7)) return true;
+    const reach = Math.max(radius, .1);
+    return this.getBuildings(x - reach, y - reach, reach * 2, reach * 2).some(building =>
+      [...building.walls, ...building.furniture].some(rect => circleHitsRect(x, y, radius, rect)));
   }
 
   /** Sweep short segments against trunk circles, preserving the unblocked axis. */
@@ -164,7 +275,9 @@ export class World {
     if (![x, y, dx, dy, radius].every(Number.isFinite) || radius < 0) return { x, y };
     const extent = radius + MAX_PROP_RADIUS + 1;
     const props = this.getProps(Math.min(x, x + dx) - extent, Math.min(y, y + dy) - extent,
-      Math.abs(dx) + extent * 2, Math.abs(dy) + extent * 2);
+      Math.abs(dx) + extent * 2, Math.abs(dy) + extent * 2).filter(prop => prop.radius > 0);
+    const furniture = this.getBuildings(Math.min(x, x + dx) - radius, Math.min(y, y + dy) - radius,
+      Math.abs(dx) + radius * 2 + .1, Math.abs(dy) + radius * 2 + .1).flatMap(building => [...building.walls, ...building.furniture]);
     const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 4));
     const sx = dx / steps;
     const sy = dy / steps;
@@ -173,7 +286,7 @@ export class World {
       const vx = bx - ax;
       const vy = by - ay;
       const lengthSquared = vx * vx + vy * vy;
-      return props.some(prop => {
+      return furniture.some(rect => circleHitsRect(bx, by, radius, rect)) || props.some(prop => {
         const t = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1,
           ((prop.x - ax) * vx + (prop.y - ay) * vy) / lengthSquared));
         const nearX = ax + vx * t - prop.x;
@@ -223,23 +336,16 @@ export class World {
   }
 
   private drawGround(context: CanvasRenderingContext2D, originX: number, originY: number): void {
+    // Resolve nearby geometry once per tile, never while looking up individual pixels.
+    const towns = this.getSettlements(originX - 24, originY - 24, TILE_SIZE + 48, TILE_SIZE + 48);
+    const buildings = towns.flatMap(town => town.buildings);
     // Every material sample and detail anchor is in world space. Tile edges are
     // merely a crop of the same illustration, including at negative coordinates.
     for (let y = 0; y < TILE_SIZE; y += 4) {
       for (let x = 0; x < TILE_SIZE; x += 4) {
         const wx = originX + x + 2;
         const wy = originY + y + 2;
-        const damp = noise(wx / 180, wy / 180, this.seed + 201);
-        const grain = noise(wx / 19, wy / 19, this.seed + 202) - 0.5;
-        const moss = smoothstep(0.50, 0.85, damp) * 0.65;
-        const distance = pathDistance(wx, wy);
-        const shoulder = 30 + noise(wx / 65, wy / 65, this.seed + 203) * 11;
-        const road = 1 - smoothstep(shoulder - 5, shoulder + 14, distance);
-        const rut = (1 - smoothstep(0, 2.5, Math.abs(distance - 11))) * road;
-        const shade = grain * 5 - rut * 1.5;
-        const red = Math.round((22 + moss * 10) * (1 - road) + 64 * road + shade);
-        const green = Math.round((40 + moss * 35) * (1 - road) + 54 * road + shade);
-        const blue = Math.round((43 + moss * 13) * (1 - road) + 37 * road + shade);
+        const [red, green, blue] = this.surfaceColor(wx, wy, towns, true);
         context.fillStyle = `rgb(${red},${green},${blue})`;
         context.fillRect(x, y, 4, 4);
       }
@@ -257,11 +363,25 @@ export class World {
         const py = wy - originY;
         const pick = random(cx, cy, this.seed, 213);
         const onRoad = pathDistance(wx, wy) < 37;
+        if (buildings.some(building => contains(building, wx, wy, 9))
+          || this.pavingWeight(towns, wx, wy, this.roadWeight(wx, wy)) > .08) continue;
+        const weights = this.sampleBiome(wx, wy).weights;
+        if (weights.swamp > .45 && !onRoad && noise(wx / 180, wy / 180, this.seed + 201) > .64) {
+          if (pick > .8) {
+            context.strokeStyle = 'rgba(90,160,161,0.22)'; context.lineWidth = .7;
+            context.beginPath(); context.moveTo(px - 4, py); context.lineTo(px + 5, py);
+            context.moveTo(px + 7, py + 2); context.lineTo(px + 10, py + 2); context.stroke();
+          } else if (pick < .055) {
+            context.fillStyle = 'rgba(87,128,76,0.7)'; context.fillRect(px - 2, py - 1, 5, 3);
+            context.fillStyle = 'rgba(159,167,96,0.5)'; context.fillRect(px, py - 1, 2, 1);
+          }
+          continue;
+        }
 
         if (pick < (onRoad ? 0.08 : 0.49)) {
           const length = 3 + random(cx, cy, this.seed, 214) * 5;
           const lean = random(cx, cy, this.seed, 215) * 5 - 2.5;
-          context.strokeStyle = 'rgba(90,144,96,0.26)';
+          context.strokeStyle = weights.swamp > .5 ? 'rgba(111,155,132,0.31)' : weights.verdant > .5 ? 'rgba(99,180,87,0.36)' : 'rgba(90,144,96,0.26)';
           context.lineWidth = 0.65;
           context.beginPath();
           context.moveTo(px, py);

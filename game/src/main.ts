@@ -1,29 +1,35 @@
 import './style.css';
 import './typography.css';
+import './world-map.css';
 import { loadGameFont } from './font.ts';
 import { World } from './world.ts';
 import { Simulation } from './simulation.ts';
 import { Renderer } from './renderer.ts';
 import { PostFX } from './postfx.ts';
 import { GameAudio } from './audio.ts';
+import { Exploration } from './exploration.ts';
+import { WorldMap, getMinimapRect } from './world-map.ts';
 import { getHUDLayout, HUD_MENU_SHORTCUTS, isHUDPoint } from './hud.ts';
 import type { HUDRect } from './hud.ts';
 import type { VisualMode } from './postfx.ts';
 import type { Input } from './model.ts';
 
-type Phase = 'ready' | 'playing' | 'paused' | 'dead';
+type Phase = 'ready' | 'playing' | 'paused' | 'dead' | 'map';
 interface Preferences { mode: VisualMode; muted: boolean; reducedMotion: boolean; }
 
 const app = document.querySelector<HTMLElement>('#app')!;
 app.innerHTML = `<div class="game-shell">
-  <canvas id="game" tabindex="0" aria-label="Evergrowing: Deadwood combat arena"></canvas>
+  <canvas id="game" tabindex="0" aria-label="Evergrowing: wilderness and settlements"></canvas>
   <canvas id="game-ui" aria-hidden="true"></canvas>
   <nav id="hud-controls" class="hud-controls" aria-label="Character menus" hidden>
     ${HUD_MENU_SHORTCUTS.map(shortcut => `<button type="button" class="hud-control" data-hud="${shortcut.id}"
       disabled aria-label="${shortcut.label} (unavailable)" title="${shortcut.label}"></button>`).join('')}
     <button type="button" class="hud-control" data-hud="settings" aria-label="Settings"
       aria-haspopup="dialog" title="Settings"></button>
+    <button type="button" class="hud-control" data-hud="map" aria-label="World map" aria-keyshortcuts="M"
+      aria-haspopup="dialog" title="World map"></button>
   </nav>
+  <div id="world-map-mount"></div>
   <div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title"></div>
   <div id="toast" class="toast" role="status"></div>
   <p id="state-description" class="sr-only" aria-live="polite"></p>
@@ -34,6 +40,9 @@ class Game {
   sim = new Simulation(this.world, { seed: 7319 });
   renderer = new Renderer();
   audio = new GameAudio();
+  private exploration = new Exploration(this.world);
+  private worldMap = new WorldMap(this.world, this.exploration,
+    document.querySelector<HTMLElement>('#world-map-mount')!, () => this.closeMap());
   canvas = document.querySelector<HTMLCanvasElement>('#game')!;
   private uiCanvas = document.querySelector<HTMLCanvasElement>('#game-ui')!;
   private uiContext = this.uiCanvas.getContext('2d')!;
@@ -91,9 +100,20 @@ class Game {
       if (event.code === 'Escape') {
         event.preventDefault();
         if (!event.repeat) {
-          if (this.phase === 'playing') this.pause();
+          if (this.phase === 'map') this.closeMap();
+          else if (this.phase === 'playing') this.pause();
           else if (this.phase === 'paused') this.resume();
         }
+        return;
+      }
+      if (event.code === 'KeyM' && (this.phase === 'playing' || this.phase === 'map')) {
+        event.preventDefault();
+        if (!event.repeat) this.phase === 'map' ? this.closeMap() : this.openMap();
+        return;
+      }
+      if (event.code === 'Tab' && this.phase === 'playing') {
+        event.preventDefault();
+        if (!event.repeat) this.openMap();
         return;
       }
       // Native menu controls retain their ordinary keyboard behavior.
@@ -101,13 +121,13 @@ class Game {
         || event.target instanceof HTMLButtonElement) return;
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
       if (event.repeat) return;
-      if (event.code === 'Enter' && this.phase !== 'playing') {
+      if (event.code === 'Enter' && (this.phase === 'ready' || this.phase === 'dead' || this.phase === 'paused')) {
         event.preventDefault();
         this.phase === 'paused' ? this.resume() : this.start();
         return;
       }
       if (event.code === 'KeyV') { this.cycleMode(); return; }
-      if (event.code === 'KeyM') { this.toggleSound(); return; }
+      if (event.code === 'KeyN') { this.toggleSound(); return; }
       if (event.code === 'F3') { event.preventDefault(); this.debug = !this.debug; return; }
       if (event.code === 'KeyR' && this.phase === 'dead') { this.start(); return; }
       if (this.phase !== 'playing') return;
@@ -139,6 +159,7 @@ class Game {
     document.querySelector('[data-hud="settings"]')!.addEventListener('click', () => {
       if (this.phase === 'playing') this.pause();
     }, { signal });
+    document.querySelector('[data-hud="map"]')!.addEventListener('click', () => this.openMap(), { signal });
   }
 
   private updatePointer(event: PointerEvent) {
@@ -146,10 +167,14 @@ class Game {
     this.mouse.x = (event.clientX - rect.left) / rect.width * this.renderer.width;
     this.mouse.y = (event.clientY - rect.top) / rect.height * this.renderer.height;
     this.canvas.classList.toggle('hud-hover', this.pointerInHUD());
+    this.worldMap.setMinimapPointer({ x: this.mouse.x, y: this.mouse.y });
   }
 
   private pointerInHUD() {
-    return isHUDPoint(this.mouse.x, this.mouse.y, this.renderer.width, this.renderer.height);
+    const map = getMinimapRect(this.renderer.width, this.renderer.height);
+    return isHUDPoint(this.mouse.x, this.mouse.y, this.renderer.width, this.renderer.height)
+      || (this.mouse.x >= map.x && this.mouse.y >= map.y
+        && this.mouse.x <= map.x + map.width && this.mouse.y <= map.y + map.height);
   }
 
   private resize() {
@@ -175,6 +200,8 @@ class Game {
     };
     for (const shortcut of layout.shortcuts) place(shortcut.id, shortcut);
     place('settings', layout.settings);
+    place('map', getMinimapRect(this.renderer.width, this.renderer.height));
+    this.worldMap.resize();
   }
 
   clearInput() {
@@ -185,6 +212,7 @@ class Game {
   }
 
   start() {
+    this.worldMap.close();
     this.sim.reset();
     this.renderer.reset();
     this.clearInput();
@@ -208,6 +236,21 @@ class Game {
     this.showMenu();
     this.canvas.focus();
     this.last = performance.now();
+  }
+
+  private openMap() {
+    if (this.phase !== 'playing') return;
+    this.clearInput();
+    this.phase = 'map';
+    this.showMenu();
+    this.worldMap.open(this.sim.player);
+    document.querySelector('#state-description')!.textContent = 'World map open. Game paused.';
+  }
+
+  private closeMap() {
+    if (this.phase !== 'map') return;
+    this.worldMap.close();
+    this.resume();
   }
 
   private readInput(): Input {
@@ -265,16 +308,29 @@ class Game {
     ui.setTransform(this.uiCanvas.width / this.renderer.width, 0, 0,
       this.uiCanvas.height / this.renderer.height, 0, 0);
     this.renderer.renderUI(ui, this.sim, this.world, settings);
+    const p = this.sim.player, alpha = this.sim.interpolationAlpha;
+    const mapPlayer = { x: p.prevX + (p.x - p.prevX) * alpha,
+      y: p.prevY + (p.y - p.prevY) * alpha, angle: p.angle };
+    if (this.phase !== 'ready') this.worldMap.update(mapPlayer, dt);
+    this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, now / 1000,
+      this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
+        x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
+        y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind,
+      })));
     this.animation = requestAnimationFrame(this.frame);
   };
 
   private showMenu() {
     const playing = this.phase === 'playing';
     const overlay = document.querySelector<HTMLElement>('#overlay')!;
-    overlay.hidden = playing;
+    overlay.hidden = playing || this.phase === 'map';
     document.querySelector<HTMLElement>('#hud-controls')!.hidden = !playing;
     document.querySelector('.game-shell')!.classList.toggle('playing', playing);
-    if (playing) { overlay.innerHTML = ''; return; }
+    if (playing || this.phase === 'map') {
+      overlay.innerHTML = '';
+      if (playing) document.querySelector('#state-description')!.textContent = 'Exploring the world.';
+      return;
+    }
     const ready = this.phase === 'ready', dead = this.phase === 'dead';
     overlay.innerHTML = `<section class="panel">
       <p class="eyebrow">${dead ? 'DEADWOOD' : 'EVERGROWING'}</p>
@@ -353,6 +409,8 @@ class Game {
     this.abort.abort();
     this.fx.dispose();
     this.audio.dispose();
+    this.worldMap.dispose();
+    this.exploration.dispose();
   }
 }
 

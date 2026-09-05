@@ -1,0 +1,93 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  color: #dddbc9;
+  background: #080e12;
+}
+
+.layout-review {
+  --review-gold: #c5a56d;
+  max-width: 1560px;
+  margin: 0 auto;
+  padding: 20px 28px 24px;
+}
+
+.layout-review-header, .layout-review-toolbar, .layout-review-actions,
+.layout-review-views, .layout-review-caption {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.layout-review-header { justify-content: space-between; margin-bottom: 17px; }
+.layout-review-eyebrow { margin: 0 0 5px; color: #a98b60; font-size: 14px; letter-spacing: .14em; }
+.layout-review h1 { margin: 0; font-size: 29px; font-weight: 500; }
+.layout-review-static { margin: 0; color: #809094; font-size: 16px; }
+.layout-review-toolbar { justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px; }
+.layout-review-views { gap: 6px; flex-wrap: wrap; }
+.layout-review-actions { gap: 10px; }
+.layout-review-actions label { color: #a6afaa; font-size: 16px; }
+
+.layout-review button, .layout-review select, .layout-review-download {
+  appearance: none;
+  min-height: 36px;
+  border: 1px solid #36433f;
+  border-radius: 3px;
+  background: #111c20;
+  color: #c7cbc0;
+  font-size: 17px;
+  line-height: 1.15;
+  padding: 8px 13px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.layout-review button:hover, .layout-review select:hover, .layout-review-download:hover { border-color: #8c805e; color: #f0e2bf; }
+.layout-review button[aria-current="true"] { color: #f7dfab; border-color: #aa8a54; background: #302b21; }
+.layout-review :focus-visible { outline: 2px solid #d5b679; outline-offset: 3px; }
+.layout-review select { min-width: 106px; padding-right: 27px; }
+.layout-review button:disabled { cursor: wait; opacity: .55; }
+
+.layout-review-figure { margin: 0; }
+.layout-review-frame {
+  width: min(100%, calc((100vh - 198px) * 1.44));
+  min-width: 340px;
+  margin: 0 auto;
+  background: #081016;
+  outline: 1px solid #35413b;
+  box-shadow: 0 15px 80px #0008;
+}
+
+.layout-review-scene {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1440 / 1000;
+}
+
+.layout-review-caption {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 13px;
+  color: #899c9b;
+  font-size: 15px;
+}
+
+.layout-review-caption p { margin: 0; }
+.layout-review-caption strong { color: #d5c9ab; font-weight: 500; }
+.layout-review-loading { padding: 40px 0; font-size: 20px; }
+.layout-review-error { color: #e4a182; }
+.layout-review-status { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+
+@media (max-width: 650px) {
+  .layout-review { padding: 16px 14px; }
+  .layout-review-header { align-items: start; gap: 10px; }
+  .layout-review-static { max-width: 130px; text-align: right; font-size: 14px; }
+  .layout-review h1 { font-size: 24px; }
+  .layout-review button, .layout-review select, .layout-review-download { font-size: 16px; padding: 8px 10px; }
+  .layout-review-toolbar { gap: 10px; }
+  .layout-review-frame { width: 100%; min-width: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) { .layout-review * { scroll-behavior: auto; } }

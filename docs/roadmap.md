@@ -2,6 +2,8 @@
 
 **Status:** proposed sequence, not a dated commitment · **Updated:** 2026-09-04
 
+**Prototype update, 2026-09-05:** the local build now combines the combat foundation with three connected biomes, procedural town/city layouts, seamless furnished interiors, and persistent exploration maps. These are first implementations awaiting the user's feedback, not completion of M1/M2; trading, progression, objectives, inhabitants, and character saves remain deferred. See [prototype status](prototype-status.md).
+
 Build outward from a small expedition that feels good. World scale, procedural art, responsive combat, and a huge tree are interdependent risks; test their expensive assumptions early, then increase content volume. All quantities below are provisional scope targets.
 
 ## At a glance

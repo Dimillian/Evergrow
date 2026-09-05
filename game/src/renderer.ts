@@ -13,12 +13,16 @@ import { Lighting, drawGlow } from './lighting.ts';
 import type { PointLight } from './lighting.ts';
 import { CombatEffects } from './effects.ts';
 import { playerPose } from './character-pose.ts';
+import { SettlementArt } from './settlement-art.ts';
+import { EnvironmentArt } from './environment-art.ts';
+import type { Building } from './settlements.ts';
+import { getMinimapRect } from './world-map.ts';
 
 interface Corpse { x: number; y: number; angle: number; kind: Enemy['kind']; life: number; seed: number; }
 interface Ghost { x: number; y: number; angle: number; gait: number; life: number; }
 export interface RenderSettings {
   mode: VisualMode; muted: boolean; reducedMotion: boolean;
-  phase: 'ready' | 'playing' | 'paused' | 'dead'; fps: number; debug: boolean;
+  phase: 'ready' | 'playing' | 'paused' | 'dead' | 'map'; fps: number; debug: boolean;
 }
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const TAU = Math.PI * 2;
@@ -45,15 +49,15 @@ export class Renderer {
   private playerHealthHold = 0;
   private effects = new CombatEffects();
   private groundLayer = new GroundLayer();
+  private settlementArt = new SettlementArt();
+  private environmentArt = new EnvironmentArt();
+  private cachedBuildings: Building[] = [];
+  private indoorBlend = 0;
   private lighting = new Lighting();
   private corpses: Corpse[] = [];
   private ghosts: Ghost[] = [];
   private ghostTimer = 0;
   private visualTime = 0;
-  private mapCanvas = document.createElement('canvas');
-  private mapTime = -1;
-  private mapX = 0;
-  private mapY = 0;
   private cachedProps: Prop[] = [];
   private queryX = Infinity;
   private queryY = Infinity;
@@ -63,6 +67,8 @@ export class Renderer {
   resize(width: number, height: number) {
     this.width = Math.round(width); this.height = Math.round(height);
     this.canvas.width = this.width; this.canvas.height = this.height;
+    this.viewOffsetX = this.width / 2 - this.cameraX;
+    this.viewOffsetY = this.height / 2 - this.cameraY;
     // Smooth subpixel sprite translation, with the deliberately coarse art preserved by its source.
     this.ctx.imageSmoothingEnabled = true;
     this.queryX = Infinity;
@@ -70,16 +76,19 @@ export class Renderer {
 
   get worldHeight() { return this.height; }
   screenToWorld(x: number, y: number) {
-    return { x: x - this.width / 2 + this.cameraX, y: y - this.height / 2 + this.cameraY };
+    // Input targets the last displayed frame, including its small impact impulse.
+    return { x: x - this.viewOffsetX, y: y - this.viewOffsetY };
   }
 
   reset() {
     this.cameraX = 0; this.cameraY = 0; this.effects.reset();
+    this.viewOffsetX = this.width / 2; this.viewOffsetY = this.height / 2;
     this.groundLayer.reset();
+    this.settlementArt.reset(); this.cachedBuildings = []; this.indoorBlend = 0;
     this.corpses = []; this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
     this.damageTrails.clear(); this.playerHealthTrail = 100; this.playerHealthHold = 0;
-    this.queryX = Infinity; this.mapTime = -1;
+    this.queryX = Infinity;
   }
 
   handleEvents(events: CombatEvent[], reducedMotion: boolean) {
@@ -148,11 +157,16 @@ export class Renderer {
     const left = -offsetX, top = -offsetY;
     if (Math.abs(this.queryX - this.cameraX) > 65 || Math.abs(this.queryY - this.cameraY) > 65) {
       this.cachedProps = world.getProps(left - 240, top - 240, this.width + 480, this.height + 480);
+      this.cachedBuildings = world.getBuildings(left - 300, top - 300, this.width + 600, this.height + 600);
       this.queryX = this.cameraX; this.queryY = this.cameraY;
     }
+    this.settlementArt.update(this.cachedBuildings, px, py, dt, settings.reducedMotion);
+    this.indoorBlend += ((world.getBuildingAt(px, py) ? 1 : 0) - this.indoorBlend) * (1 - Math.exp(-dt * 5));
+    const biome = world.sampleBiome(px, py);
     c.fillStyle = '#101c22'; c.fillRect(0, 0, this.width, this.height);
     c.save(); c.translate(offsetX, offsetY);
     this.groundLayer.draw(c, world, left, top, this.width, this.height);
+    this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime);
     this.remains();
     this.propShadows();
     for (const pickup of sim.pickups) {
@@ -168,10 +182,13 @@ export class Renderer {
       c.restore();
     }
     this.actorsAndProps(sim, px, py, alpha, settings);
+    this.settlementArt.drawRoofs(c, this.cachedBuildings, this.visualTime);
     c.restore();
 
     const lights = this.sceneLights(sim, px, py, settings.reducedMotion);
-    this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps);
+    const weights = biome.weights, inside = this.indoorBlend;
+    const ambient = `rgb(${Math.round((131 * weights.deadwood + 121 * weights.verdant + 114 * weights.swamp) * (1 - inside) + 116 * inside)},${Math.round((156 * weights.deadwood + 172 * weights.verdant + 160 * weights.swamp) * (1 - inside) + 119 * inside)},${Math.round((174 * weights.deadwood + 153 * weights.verdant + 159 * weights.swamp) * (1 - inside) + 141 * inside)})`;
+    this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps, ambient);
     c.save(); c.translate(offsetX, offsetY);
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, px, py, alpha, lights);
@@ -179,6 +196,8 @@ export class Renderer {
     this.effects.draw(c);
     this.damageDirection(px, py);
     this.motes(left, top, sim.time, settings.reducedMotion);
+    this.environmentArt.drawAmbient(c, weights, { x: left, y: top, width: this.width, height: this.height },
+      this.visualTime, settings.reducedMotion);
     for (const enemy of sim.enemies) this.telegraph(enemy, alpha);
     this.healthBars(sim, alpha);
     c.restore();
@@ -223,6 +242,7 @@ export class Renderer {
   private propShadows() {
     const c = this.ctx;
     for (const prop of this.cachedProps) {
+      if (prop.radius <= 0) continue;
       c.fillStyle = '#020a1080'; c.beginPath();
       c.ellipse(prop.x + 3, prop.y + 4, prop.kind === 'tree' ? 24 : 15, prop.kind === 'rock' ? 6 : 9, -.2, 0, TAU); c.fill();
     }
@@ -231,15 +251,20 @@ export class Renderer {
   private actorsAndProps(sim: Simulation, px: number, py: number, alpha: number, settings: RenderSettings) {
     const c = this.ctx, p = sim.player;
     const entries: Array<{ y: number; draw: () => void }> = this.cachedProps.map(prop => ({ y: prop.y, draw: () => {
-      const sprite = prop.kind === 'tree' || prop.kind === 'deadTree' ? this.art.getTree(prop.seed, prop.kind === 'deadTree')
-        : prop.kind === 'rock' ? this.art.getRock(prop.seed) : this.art.getShrine();
+      const sprite = this.environmentArt.getSprite(prop) ?? (prop.kind === 'tree' || prop.kind === 'deadTree'
+        ? this.art.getTree(prop.seed, prop.kind === 'deadTree') : prop.kind === 'rock' ? this.art.getRock(prop.seed) : this.art.getShrine());
       const wind = settings.reducedMotion || prop.kind === 'rock' || prop.kind === 'shrine' ? 0 : Math.sin(sim.time * .8 + prop.seed) * .7;
-      const occludes = (prop.kind === 'tree' || prop.kind === 'deadTree') && py < prop.y + 8
+      const occludes = (prop.kind === 'tree' || prop.kind === 'deadTree' || prop.kind === 'willow') && py < prop.y + 8
         && py > prop.y - sprite.height * prop.scale && Math.abs(px - prop.x) < sprite.width * prop.scale * .38;
       c.save(); if (occludes) c.globalAlpha = .35;
       c.drawImage(sprite.image, prop.x - sprite.anchorX * prop.scale + wind, prop.y - sprite.anchorY * prop.scale,
         sprite.width * prop.scale, sprite.height * prop.scale); c.restore();
     } }));
+    for (const building of this.cachedBuildings) {
+      for (const layer of this.settlementArt.getStructureLayers(building, this.visualTime)) {
+        entries.push({ y: layer.y, draw: () => layer.draw(c) });
+      }
+    }
     for (const enemy of sim.enemies) {
       if (enemy.hp <= 0) continue;
       const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);
@@ -266,6 +291,9 @@ export class Renderer {
   private sceneLights(sim: Simulation, px: number, py: number, reducedMotion: boolean): PointLight[] {
     const p = sim.player;
     const lights: PointLight[] = [{ x: px, y: py - 15, radius: 185, color: '#ffcf87', power: .58, shadows: true }];
+    const buildingLights = this.settlementArt.getLights(this.cachedBuildings, this.visualTime)
+      .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py));
+    lights.push(...buildingLights.slice(0, 6));
     for (const prop of this.cachedProps) if (prop.kind === 'shrine') {
       const flicker = reducedMotion ? 1 : 1 + Math.sin(sim.time * 8 + prop.seed) * .035 + Math.sin(sim.time * 17) * .018;
       lights.push({ x: prop.x - 18, y: prop.y - 31, radius: 215 * flicker, color: '#ffa64f', power: .92, shadows: true });
@@ -394,31 +422,11 @@ export class Renderer {
 
   private navigation(c: CanvasRenderingContext2D, sim: Simulation, world: World, settings: RenderSettings) {
     const p = sim.player;
-    text(c, 'DEADWOOD', 22, 22, 1.2, '#bbb992');
-    text(c, String(sim.kills).padStart(2, '0') + ' SLAIN', 22, 37, 1, '#839b91');
-    const mw = 92, mh = 70, mx = this.width - mw - 20, my = 20, zoom = .085;
-    c.fillStyle = '#071018c9'; c.fillRect(mx, my, mw, mh);
-    c.strokeStyle = '#766542'; c.lineWidth = 1; c.strokeRect(mx + .5, my + .5, mw, mh);
-    c.save(); c.beginPath(); c.rect(mx + 3, my + 3, mw - 6, mh - 6); c.clip();
-    if (this.visualTime - this.mapTime > .5) {
-      this.mapTime = this.visualTime; this.mapX = p.x; this.mapY = p.y;
-      this.mapCanvas.width = mw; this.mapCanvas.height = mh;
-      const map = this.mapCanvas.getContext('2d')!;
-      for (let ix = 0; ix < mw; ix += 4) for (let iy = 0; iy < mh; iy += 4) {
-        map.fillStyle = world.blocked(p.x + (ix - mw / 2) / zoom, p.y + (iy - mh / 2) / zoom, 1) ? '#365345' : '#162a2d';
-        map.fillRect(ix, iy, 4, 4);
-      }
-    }
-    c.drawImage(this.mapCanvas, mx, my);
-    for (const prop of this.cachedProps) if (prop.kind === 'shrine') {
-      c.fillStyle = '#d3a65d'; c.fillRect(mx + mw / 2 + (prop.x - this.mapX) * zoom - 2, my + mh / 2 + (prop.y - this.mapY) * zoom - 2, 4, 4);
-    }
-    for (const enemy of sim.enemies) if (enemy.hp > 0) {
-      c.fillStyle = enemy.kind === 'brute' ? '#e8a26b' : '#c47466';
-      c.fillRect(mx + mw / 2 + (enemy.x - this.mapX) * zoom - 1, my + mh / 2 + (enemy.y - this.mapY) * zoom - 1, 2, 2);
-    }
-    c.fillStyle = '#fff0bb'; c.fillRect(mx + mw / 2 + (p.x - this.mapX) * zoom - 1, my + mh / 2 + (p.y - this.mapY) * zoom - 1, 3, 3);
-    c.restore();
+    const building = world.getBuildingAt(p.x, p.y);
+    const town = world.getSettlements(p.x - 1, p.y - 1, 2, 2).find(town => Math.hypot(p.x - town.x, p.y - town.y) <= town.radius);
+    text(c, building?.name ?? town?.name ?? world.sampleBiome(p.x, p.y).name, 22, 22, 1.2, '#d7c99d');
+    text(c, world.isSanctuary(p.x, p.y) ? 'SANCTUARY' : String(sim.kills).padStart(2, '0') + ' SLAIN',
+      22, 37, 1, '#91b69e');
     if (settings.debug) text(c, `${Math.round(settings.fps)} FPS / ${sim.enemies.length} MOBS / ${Math.round(p.x)},${Math.round(p.y)}`,
       22, this.height - 18, 1, '#a3c7a7');
   }
@@ -426,6 +434,8 @@ export class Renderer {
   private cursor(c: CanvasRenderingContext2D) {
     const x = this.pointerX, y = this.pointerY;
     if (isHUDPoint(x, y, this.width, this.height)) return;
+    const map = getMinimapRect(this.width, this.height);
+    if (x >= map.x && y >= map.y && x <= map.x + map.width && y <= map.y + map.height) return;
     c.strokeStyle = '#ded5a9bb'; c.lineWidth = 1; c.beginPath();
     c.moveTo(x - 6, y); c.lineTo(x - 3, y); c.moveTo(x + 3, y); c.lineTo(x + 6, y);
     c.moveTo(x, y - 6); c.lineTo(x, y - 3); c.moveTo(x, y + 3); c.lineTo(x, y + 6); c.stroke();

@@ -144,6 +144,7 @@ export class Simulation {
   /** Useful for authored encounters and deterministic headless tests. */
   spawnEnemy(kind: EnemyKind, x: number, y: number): Enemy | null {
     const stats = ENEMY_STATS[kind];
+    if (this.world.isSanctuary?.(x, y)) return null;
     if (this.enemies.filter(e => e.state !== 'dead').length >= MAX_ENEMIES || this.world.blocked(x, y, stats.radius)) return null;
     const enemy: Enemy = {
       id: this.nextId++, x, y, prevX: x, prevY: y, vx: 0, vy: 0, knockbackX: 0, knockbackY: 0, angle: 0, hp: stats.hp, maxHp: stats.hp,
@@ -383,6 +384,7 @@ export class Simulation {
 
   private updateEnemies(dt: number): void {
     const p = this.player;
+    const sheltered = this.world.isSanctuary?.(p.x, p.y) ?? false;
     for (const enemy of this.enemies) {
       const stats = ENEMY_STATS[enemy.kind];
       this.updateKnockback(enemy, dt);
@@ -397,6 +399,14 @@ export class Simulation {
       const dy = p.y - enemy.y;
       const distance = Math.hypot(dx, dy);
       const targetAngle = Math.atan2(dy, dx);
+      if (sheltered) {
+        // Pursuers turn away from sanctuary instead of waiting inside its doors.
+        if (enemy.state !== 'chase') this.transition(enemy, 'chase', 0);
+        enemy.angle = targetAngle + Math.PI;
+        this.moveEnemy(enemy, -Math.cos(targetAngle) * stats.speed * .7,
+          -Math.sin(targetAngle) * stats.speed * .7, dt);
+        continue;
+      }
       if (enemy.state === 'idle' || enemy.state === 'recover') {
         if (enemy.stateTime >= enemy.stateDuration) this.transition(enemy, 'chase', 0);
       } else if (enemy.state === 'chase') {
@@ -474,6 +484,8 @@ export class Simulation {
         if (Math.hypot(candidate.x - enemy.x, candidate.y - enemy.y) > intendedDistance * 0.7) { destination = candidate; break; }
       }
     }
+    if (this.world.isSanctuary?.(destination.x, destination.y)
+      && !this.world.isSanctuary(enemy.x, enemy.y)) destination = { x: enemy.x, y: enemy.y };
     enemy.vx = (destination.x - enemy.x) / dt;
     enemy.vy = (destination.y - enemy.y) / dt;
     enemy.x = destination.x;
@@ -487,7 +499,7 @@ export class Simulation {
 
   private damagePlayer(amount: number, angle: number, kind?: EnemyKind): void {
     const p = this.player;
-    if (p.dead || p.invulnerable > 0) return;
+    if (p.dead || p.invulnerable > 0 || this.world.isSanctuary?.(p.x, p.y)) return;
     p.hp = Math.max(0, p.hp - amount);
     p.hitFlash = HIT_FLASH_DURATION;
     p.hitAngle = angle;
@@ -521,6 +533,9 @@ export class Simulation {
         const oldY = projectile.y;
         projectile.x += projectile.vx * dt / steps;
         projectile.y += projectile.vy * dt / steps;
+        if (projectile.owner === 'enemy' && this.world.isSanctuary?.(projectile.x, projectile.y)) {
+          projectile.life = 0; break;
+        }
         if (this.world.blocked(projectile.x, projectile.y, projectile.radius)) { projectile.life = 0; break; }
         if (projectile.owner === 'player') {
           const candidates = this.enemies.filter(enemy => enemy.state !== 'dead' && segmentDistanceSquared(enemy.x, enemy.y, oldX, oldY, projectile.x, projectile.y) <= (projectile.radius + enemy.radius) ** 2);
@@ -566,6 +581,10 @@ export class Simulation {
 
   private updateSpawns(dt: number): void {
     if (!this.options.spawn) return;
+    if (this.world.isSanctuary?.(this.player.x, this.player.y)) {
+      this.spawnTimer = Math.max(this.spawnTimer, 1.5);
+      return;
+    }
     this.spawnTimer -= dt;
     if (this.spawnTimer > 0) return;
     this.spawnTimer = 2;

@@ -1,10 +1,15 @@
 # Local combat prototype
 
-Checkpoint date: 2026-09-05. The current pass develops the first playable Deadwood slice in response to feedback about stiff movement, animation, lighting, and the HUD. Gameplay feel and visual acceptance belong to the user in the existing Codex in-app browser tab.
+Checkpoint date: 2026-09-05. The current pass expands the combat slice into connected biomes, settlements, seamless interiors, and exploration maps. Gameplay feel and visual acceptance belong to the user in the existing Codex in-app browser tab.
 
 ## Implemented
 
-- One continuous seeded Deadwood biome with a clear starting area, winding protected trails, rocks, living/dead trees, and lantern shrines.
+- Three connected seeded biomes: Deadwood at the start, Verdant Forest to the west, and The Mire to the east. Broad, irregular world-space weights blend ground colors, vegetation distribution, and ambient lighting. Distinct canopies, ferns, flowers, willows, reeds, and shallow pools give the regions different silhouettes.
+- Procedural roadside settlements reserve plazas and access streets before placing named services and homes. Building footprints are about 50% larger than the first settlement pass, with wider doorways and reflowed blocks. Doors, walls, and furnishings share geometry with collision. Shops, a forge, an inn, and a chapel are recognizable destinations; trading and service transactions are not implemented.
+- Seamless building entry through open south doors, with gradually fading roofs, lowered foreground walls, furnished floors, and warm interior lights. Interior and exterior use the same coordinates; no teleport or loading screen occurs at the threshold.
+- Settlements act as sanctuaries: hostile spawns are suppressed, pursuers withdraw, and hostile projectiles dissolve at the boundary. Wilderness combat resumes when the player leaves.
+- A continuously scrolling minimap follows the interpolated player position, with discovered landmarks and nearby enemy markers. A larger map opens from M, Tab while playing, or the minimap and pauses combat. It supports panning, zooming, recentering, and details for discovered POIs on hover, with unexplored terrain concealed.
+- Explored terrain and discovered POIs persist locally per seed and generation version. New combat runs keep that exploration history; character position, items, kills, and combat state still reset.
 - Terrain generated on demand with a bounded tile cache; stable prop identities and collision across positive and negative coordinates.
 - Visible terrain tiles join at integer coordinates in one cached surface before fractional camera movement is applied. This avoids independently filtered tile edges while preserving smooth scrolling; the surface is bounded by the viewport and rebuilt when its tile coverage changes.
 - Procedural tree, rock, shrine, and equipment shapes with material marks and finite sprite caches. The concept PNGs remain design references and are not runtime assets.
@@ -30,6 +35,10 @@ Combat runs on a deterministic 120 Hz clock. Rendering interpolates simulation s
 
 The rendering layer owns camera motion, particles, trails, and flashes. Lighting uses a half-resolution surface light map, cached procedural light stamps, and bounded shadow casting. Limits on lights, occluders, particles, and transient effects keep their cost from growing with the explored world.
 
+Biome weights come from continuous warped world-space fields. Terrain, prop-family choice, and map colors share those fields. Settlement layouts reserve the existing main road and crossroads, with eight buildings in nearby Briarwatch and 12–16 buildings in recurring cities. Briarwatch sits at world Y = -1150; the nearest northern city, Mournbridge, sits at Y = -4350 for the current seed. Hollowmere lies south at Y = 2050. Streets and the main road share continuous cobblestone coverage, rounded shoulders, and one world-space stone pattern; paving fades gradually into dirt at the outskirts. Walls, furniture, entrances, and map footprints share definitions; roof visibility is presentation state only. Building surfaces and individual furnishings join the actor depth order.
+
+Exploration uses sparse bitsets of 48-unit cells, keyed by world seed and generation version (currently 3). Only visited surroundings and nearby discovered POIs are charted. Writes are batched, and malformed or unwritable saves are preserved rather than overwritten. Terrain caches remain bounded independently of discovery history. If exploration reaches its explicit storage capacity, the map reports it and retains older discoveries. The full map pauses combat; opening, panning, and zooming never reveal terrain by themselves. Generation 3 starts a fresh chart because the enlarged settlements moved; the earlier generation's storage remains untouched.
+
 The WebGL presentation pipeline extracts bright colors at quarter resolution, blurs them horizontally and vertically through two reusable targets, and composites bloom with scanlines and an RGB phosphor mask. CRT uses moderate bloom and warmer color; phosphor strengthens the glow and colored display treatment. Clean bypasses those display effects. No geometric screen distortion changes pointer aiming. These passes process the world only, including the area behind the floating HUD. A clean Canvas fallback remains available when WebGL is unavailable.
 
 A transparent Canvas above the processed world draws the HUD, navigation, cursor, and damage numbers directly at native device-pixel density. It shares logical coordinates with the world and transparent HTML controls so accessible labels, disabled menu states, the settings button, and pointer blocking match the artwork. Damage numbers use the same frame's camera offset and impulse as their world positions. The liquid animation never changes the underlying resource values.
@@ -40,9 +49,9 @@ This renderer remains an experiment. Performance on the user's normal play setup
 
 ## Validation and next feedback
 
-Code verification uses deterministic engine tests, TypeScript checking, and a production build. Relevant checks include blade-timed center/edge contacts at different attack speeds, one hit per attack window, impact directions and flash lifetimes, repeat-attack timing, stat-derived attack parameters, buffering and cancellation, dodge protection, swept projectiles, healing and reward identity, spawn limits, reproducibility, collision, route access, and cache bounds. HUD layout checks cover narrow and desktop viewports; code-level WebGL checks cover pass bindings, storage reuse, context restoration, and cleanup. Mocked audio checks cover bounded voices, muting, and cleanup; sound quality remains for the user's playtest.
+Code verification uses deterministic engine tests, TypeScript checking, and a production build. Relevant checks include blade-timed center/edge contacts, attack cadence, stat-derived parameters, input buffering, dodge protection, swept projectiles, rewards, spawn limits, reproducible terrain, continuous biome weights, reachable service doors, wall/furniture collision, sanctuary boundaries, cache bounds, exploration persistence, and map projection/zoom. Mocked drawing checks cover procedural surface bounds, roof fading, furniture depth, and Canvas state; these do not establish visual quality. Sound quality remains for the user's playtest.
 
-Code checks do not establish gameplay feel or visual acceptance. The user performs all gameplay and visual verification in the existing in-app browser. Optional browser regression tests remain separate and require the user's explicit request; do not drive gameplay, take over their session, or launch another browser to assess this pass.
+Code checks do not establish gameplay feel or visual acceptance. The user performs gameplay verification in the existing in-app browser. They explicitly requested static town/city captures for this pass; the local layout review page stages those views with the actual renderer without advancing combat or touching exploration saves. Optional browser regression tests remain separate and require the user's explicit request; do not drive gameplay, take over their session, or launch another browser to assess this pass.
 
 Useful feedback areas are movement continuity, repeated attack cadence, sword reach and weight, dodge responsiveness, enemy pressure, character proportions, lighting contrast, particle density, HUD size, and shader strength. These are observations to gather through the user's feedback, not an acceptance checklist they must complete.
 
@@ -52,6 +61,6 @@ The floating centerpiece uses bottom-center action grouping and clear resource a
 
 ## Deliberately deferred
 
-Additional biomes, towns and building interiors, a skill tree, equipment swapping and inventory, crafting, persistent character/world saves, danger tiers, controller/mobile support, and multiplayer. Combo mechanics are deferred to a possible future skill; the default attack remains a single stat-driven action. Kills and combat state are per run; only presentation preferences survive reload.
+Additional biome families, deeper city variation, inhabitants and trading, a skill tree, equipment swapping and inventory, crafting, persistent character saves, day/night progression, danger tiers, controller/mobile support, and multiplayer. Combo mechanics are deferred to a possible future skill; the default attack remains a single stat-driven action. Presentation preferences and exploration survive reload; combat and character state remain per run.
 
 The project stays local. Local Git checkpoints preserve coherent changes. No Site, deployment, Git remote, or push is part of this work.

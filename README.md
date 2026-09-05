@@ -2,7 +2,7 @@
 
 A browser ARPG about exploring an unending gothic wilderness and shaping a character through a vast, classless skill tree. Its world, equipment, characters, and effects are drawn from procedural definitions in code.
 
-The **local combat prototype** is playable in `game/`. It focuses on one procedural Deadwood biome, a visibly equipped character, fluid movement, and fighting mobs. Its current art pass adds articulated equipment, dynamic lights and shadows, flying combat particles, a compact floating HUD, and distinct CRT/phosphor presentation. The broader design documents remain proposals for later development.
+The **local playable prototype** is in `game/`: fluid combat, a visibly equipped character, connected Deadwood/verdant/swamp biomes, and procedural settlements with walk-in interiors. A scrolling minimap and explored-world map track your travels. Artwork is generated in code, with dynamic lights, combat particles, a floating HUD, and CRT/phosphor presentation. The broader design documents remain proposals for later development.
 
 ## Play locally
 
@@ -25,12 +25,19 @@ Open [Evergrowing locally](http://127.0.0.1:5173/) in the Codex in-app browser. 
 | Q | Healing flask; charges return through kills |
 | Escape | Pause, settings, or a new run |
 | V | Cycle CRT, phosphor, and clean display modes |
-| M | Toggle synthesized sound |
+| M | Open or close the world map |
+| Tab while playing / click minimap | Open the world map |
+| Map: drag / scroll / + and − | Pan / zoom |
+| N | Toggle synthesized sound |
 | F3 | Frame-rate and coordinate overlay |
 
 The basic attack derives its timing, reach, and damage from character and equipped-weapon stats. There is no automatic combo chain; a combo could become a separate skill later. Character, inventory, skill-tree, and journal shortcuts on the HUD are disabled placeholders. The gear button opens settings.
 
 The HUD and damage numbers render at native display resolution above the world shader. UI typography uses locally bundled [Pixelify Sans](game/src/assets/fonts/SOURCE.md), licensed under the SIL Open Font License; no external font service is used.
+
+Walk west from Deadwood to reach Verdant Forest, east to reach the swamp, or follow the road north to the first settlement. Enter buildings through their open south-facing doors; roofs fade and warm interior lighting blends in without changing spaces. Shops and the forge have distinct furnished interiors; trading is not implemented yet.
+
+The large map pauses combat. Hover over discovered points of interest for details, and use its recenter control to return to your position. Exploration is retained locally for this world seed and generation version; starting a new run resets combat and position while keeping the explored map. Character progress is not saved yet.
 
 The user owns gameplay and visual verification in the in-app browser and directs the next changes. See [prototype status](docs/prototype-status.md) for what is implemented and deliberately deferred. Control documentation stays here; the game view has no how-to text or control legend.
 
@@ -58,8 +65,10 @@ Read the brief first, then the roadmap. The systems catalog is the implementatio
 - **Presentation:** fully 2D top-down, dark gothic, fluid, lit, and entirely generated from code-defined art.
 - **First release assumption:** single-player desktop browser, keyboard and mouse, local saves with export/import. These platform and scope choices remain open to discussion.
 
-The current prototype narrows M0/M1 to art, movement, and combat. The next step is the user's playtest feedback; towns, interiors, skill trees, and broader progression wait until this foundation feels right.
+The current prototype combines the combat foundation with the first connected-biome, settlement, interior, and mapping experiments. The next step is the user's exploration and playtest feedback; trading, skill trees, and broader progression remain deferred.
 
 ## Visual exploration
 
 The [concept gallery](docs/concepts/README.md) shows forest exploration, swamp combat, a village blacksmith interior, and the skill-tree screen. The [retro art direction](docs/retro-art-direction.md) develops the new visual steering: procedural shapes, pixel typography, fluid movement, and subtle optional CRT/phosphor effects. Exact generation prompts are saved with the images.
+
+The [settlement capture gallery](docs/captures/2026-09-05/README.md) shows the current procedural buildings, street junctions, and furnished interiors. Open the local [layout review](http://127.0.0.1:5173/layouts.html) to stage these views with the game's renderer and export PNGs without advancing gameplay or changing the explored map. This review page is available only through the development server.

@@ -5,13 +5,14 @@
 - Keep the game local. Do not create, connect, publish, or deploy a Site unless the user explicitly requests it.
 - Use the Codex in-app browser for previews, reusing the existing local game tab.
 - The user does gameplay testing and provides feedback on combat feel, movement, balance, and visuals. Do not drive gameplay, launch another browser, or run automated browser playtests unless explicitly asked.
+- The user requested town/city layout captures on 2026-09-05. Static scene staging and captures in the in-app browser are authorized for that request; keep their playable session separate.
 - Code-level tests, type checking, and production builds are appropriate. Existing optional browser regression tests require the user's explicit request before running.
 - Keep the local development server available while the user tests. Avoid unnecessary reloads during their play session.
 - Use local Git checkpoints for coherent changes. Do not add a remote or push unless requested.
 
 ## Current scope
 
-One procedural Deadwood biome, a visibly equipped character, movement, and satisfying combat against mobs. Prioritize the procedural asset engine, animation, input, enemy tells, and hit feedback. Larger systems in the design documents are future work.
+The local slice now includes connected Deadwood, Verdant Forest, and swamp terrain; procedural settlements with enterable buildings; and exploration maps. Continue to prioritize the procedural asset engine, smooth transitions, readable navigation, and satisfying combat. Trading, skill trees, equipment screens, and other larger systems remain future work.
 
 The basic attack is one repeatable action driven by character stats and equipped-weapon stats. Do not reintroduce an automatic combo chain; combos may become a separate skill in future work. Keep movement and combat continuous, without hitstop. The runtime game view has no how-to text or control legend; small bindings on skill buttons are intentional. Character, inventory, skill-tree, and journal HUD shortcuts remain disabled until those systems are requested.
 
@@ -25,6 +26,8 @@ Draw HUD and text, including damage numbers, at native display resolution after 
 - `game/src/simulation.ts` and `model.ts`: deterministic 120 Hz combat state, rules, and render interpolation snapshots.
 - `game/src/equipment.ts`: character and equipped-weapon stats used to derive the basic attack.
 - `game/src/world.ts`: seeded terrain, props, collision, and bounded tile caching.
+- `game/src/biomes.ts` and `settlements.ts`: continuous biome weights, deterministic town layouts, shared building/collision geometry, and points of interest.
+- `game/src/environment-art.ts` and `settlement-art.ts`: procedural biome silhouettes, furnished buildings, roof fading, and settlement lights.
 - `game/src/ground-layer.ts`: bounded terrain composition before subpixel camera sampling; keep tile joins inside one surface to avoid seams.
 - `game/src/art.ts`: procedural Canvas assets, modular equipment, articulated character rigs, and phased attack motion.
 - `game/src/attack-motion.ts`: shared angular motion for visible swings and swept melee contact.
@@ -37,6 +40,10 @@ Draw HUD and text, including damage numbers, at native display resolution after 
 - `game/src/hud.ts` and `font.ts`: procedural floating HUD, shared layout/hit bounds, animated resource orbs, and native font rendering.
 - `game/src/assets/fonts/` and `typography.css`: locally bundled Pixelify Sans, source/license records, and shared menu typography.
 - `game/src/main.ts`: input, loop, menus, and local preferences.
+- `game/src/exploration.ts` and `world-map.ts`: discovered terrain/POIs, local exploration persistence, smoothly scrolling minimap, and interactive world map.
+- `game/layouts.html` and `game/src/layout-review.ts`: dev-only static scene staging and PNG export using the real renderer; never advances gameplay or changes exploration saves.
 - `docs/`: design documents and reference concepts, not runtime assets.
 
 From the repository root: `npm run setup`, `npm run dev`, `npm test`, and `npm run build`. Engine tests require Node.js 22.13 or later for TypeScript stripping.
+
+World map opens with M, Tab while playing, or the minimap; M/Escape closes it. The map pauses combat and shows explored terrain only. N toggles audio. Interior entry is movement through an open doorway in shared world coordinates; fading roofs must never change collision. Keep towns protected from enemy spawns and pursuit. World and character saves remain separate from the locally retained exploration map.

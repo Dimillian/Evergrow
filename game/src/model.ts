@@ -1,5 +1,7 @@
 export interface WorldQuery {
   blocked(x: number, y: number, radius: number): boolean;
+  /** Settlements suppress hostile spawns and protect the player's occupied position. */
+  isSanctuary?(x: number, y: number): boolean;
   move(x: number, y: number, dx: number, dy: number, radius: number): { x: number; y: number };
 }
 

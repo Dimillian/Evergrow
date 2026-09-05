@@ -52,7 +52,7 @@ export class Lighting {
   }
 
   apply(target: CanvasRenderingContext2D, width: number, height: number,
-    left: number, top: number, lights: PointLight[], props: Prop[]) {
+    left: number, top: number, lights: PointLight[], props: Prop[], ambient = '#839cae') {
     const mw = Math.ceil(width / 2), mh = Math.ceil(height / 2);
     if (this.map.width !== mw || this.map.height !== mh) {
       this.map.width = mw; this.map.height = mh;
@@ -61,7 +61,7 @@ export class Lighting {
     c.globalCompositeOperation = 'source-over';
     c.globalAlpha = 1;
     // Cool moonlight keeps unlit combat terrain readable; warm sources change its color.
-    c.fillStyle = '#839cae';
+    c.fillStyle = ambient;
     c.fillRect(0, 0, mw, mh);
     c.globalCompositeOperation = 'lighter';
     let shadowCount = 0;
@@ -95,7 +95,7 @@ export class Lighting {
     c.fillStyle = '#000';
     let count = 0;
     for (const prop of props) {
-      if (prop.kind === 'shrine') continue;
+      if (prop.kind === 'shrine' || prop.radius <= 0) continue;
       const dx = prop.x - light.x, dy = prop.y - light.y;
       const distance = Math.hypot(dx, dy), radius = Math.max(3, prop.radius * .85);
       if (distance <= radius + 4 || distance - radius > light.radius || count++ >= 24) continue;
