@@ -16,6 +16,7 @@ async function boot() {
   await loadGameFont(); if (disposed) return;
   const params = new URLSearchParams(location.search);
   world = new World(7319); const sceneWorld = world, scenes = biomeReviewScenes(sceneWorld);
+  scenes.push({ id: 'origin', name: 'The first steps · Deadwood', description: 'The starting wilderness at world origin. A frozen scene from the current procedural renderer.', x: 0, y: -100 });
   const renderer = new Renderer();
   const canvas = document.createElement('canvas'); canvas.width = 1600; canvas.height = 1100;
   canvas.className = 'layout-review-scene'; canvas.style.aspectRatio = '1600 / 1100'; canvas.setAttribute('role', 'img');

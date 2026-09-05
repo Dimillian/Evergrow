@@ -179,3 +179,24 @@ test('every discipline can reach its first three specialties without buying an a
     assert.ok(SKILL_TREE.nodes.some(node => node.cluster === cluster.id && seen.has(node.id)), cluster.id);
   }
 });
+
+test('every terrace connects each pair of disciplines directly across their outer borders', () => {
+  const domains = ['Might', 'Cunning', 'Arcana'];
+  for (let terrace = 0; terrace < 5; terrace++) for (let region = 0; region < domains.length; region++) {
+    const home = domains[region], away = domains[(region + 1) % domains.length];
+    const starts = SKILL_TREE.nodes.filter(node => node.domain === home && node.cluster?.includes(`:terrace:${terrace}:`));
+    const seen = new Set(starts.map(node => node.id));
+    const queue = starts.map(node => ({ node, cost: 0 }));
+    let connected = false;
+    for (let i = 0; i < queue.length; i++) {
+      const { node, cost } = queue[i];
+      if (cost >= 3) continue;
+      for (const id of node.neighbors) {
+        const next = SKILL_NODES.get(id)!;
+        if (next.domain === away && next.cluster?.includes(`:terrace:${terrace}:`)) connected = true;
+        if (!seen.has(id) && next.role === 'travel') { seen.add(id); queue.push({ node: next, cost: cost + 1 }); }
+      }
+    }
+    assert.ok(connected, `${home} → ${away}, terrace ${terrace}`);
+  }
+});

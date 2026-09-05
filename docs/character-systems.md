@@ -90,11 +90,11 @@ Equip validates source cell, item type, target slot, and level requirement befor
 
 ## Skill atlas and active skills
 
-The fixed atlas contains **2,108 nodes**, **2,916 undirected curved connections**, and **150 irregular constellations** across **Might, Cunning, and Arcana**:
+The fixed atlas contains **2,113 nodes**, **2,925 undirected curved connections**, and **150 irregular constellations** across **Might, Cunning, and Arcana**:
 
 - 1 free origin.
 - 1,662 minor nodes within themed constellations.
-- 242 minor travel nodes connecting specialties; these grant their discipline's attribute.
+- 247 minor travel nodes connecting specialties; these grant their discipline's attribute.
 - 36 early choice nodes granting speed, resources, critical chance, or mana efficiency.
 - 150 notable nodes, one concentrated reward in each constellation.
 - 17 major nodes, each unlocking one executable active skill.
@@ -138,3 +138,5 @@ Code tests cover graph connectivity, stable unique nodes, themed cluster members
 ### Repeatable skills and action-speed split
 
 The first skill in each of the nine weapon schools has zero cooldown; second skills retain cooldowns and cost 24–40 base mana. All skills still consume mana and respect their action animation/recovery. Attack speed scales melee/bow actions; cast speed scales staff basics and magic actions. Both apply to the weapon's base action rate. Gear and passives can reduce mana costs (75% maximum), with the same effective value used in activation and UI. See the current [skill catalog](weapons-and-skills.md) for costs and sources.
+
+Each of the five terraces now has a direct bridge between every pair of disciplines (15 guaranteed outer bridges), in addition to the three inner bridges and organically selected routes. Crossing a border needs at most two intermediate travel nodes.

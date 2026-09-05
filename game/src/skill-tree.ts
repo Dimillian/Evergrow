@@ -190,6 +190,15 @@ function buildTree() {
   const routes: Route[] = [], parents = blueprints.map((_, index) => index);
   const root = (index: number): number => { while (parents[index] !== index) { parents[index] = parents[parents[index]]; index = parents[index]; } return index; };
   const join = (a: number, b: number) => { parents[root(a)] = root(b); routes.push({ a, b }); };
+  // Each terrace is a complete belt: crossing disciplines never requires returning inward.
+  for (let terrace = 0; terrace < 5; terrace++) for (let region = 0; region < REGIONS.length; region++) {
+    const home = REGIONS[region].domain, away = REGIONS[(region + 1) % REGIONS.length].domain;
+    const homeIndices = blueprints.flatMap((cluster, index) => cluster.domain === home && cluster.id.includes(`:terrace:${terrace}:`) ? [index] : []);
+    const awayIndices = blueprints.flatMap((cluster, index) => cluster.domain === away && cluster.id.includes(`:terrace:${terrace}:`) ? [index] : []);
+    const pairs = homeIndices.flatMap(a => awayIndices.map(b => ({ a, b, length: distance(blueprints[a], blueprints[b]) })))
+      .sort((a, b) => a.length - b.length || a.a - b.a || a.b - b.b);
+    join(pairs[0].a, pairs[0].b);
+  }
   const candidates: Array<Route & { length: number }> = [];
   for (let a = 0; a < blueprints.length; a++) for (let b = a + 1; b < blueprints.length; b++) {
     const length = distance(blueprints[a], blueprints[b]);
