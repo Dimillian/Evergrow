@@ -2,6 +2,8 @@
 
 Updated 2026-09-05. This describes the local prototype as implemented; `technical-foundations.md` contains the broader design proposals.
 
+The [expansion readiness review](architecture-review-2026-09-05.md) records the current verification baseline, concrete maintenance pressure points and prioritized work before larger iterations.
+
 This game is unreleased and used only for the owner’s testing. Evolve systems directly: update callers and tests together, delete superseded code, and avoid compatibility wrappers, old-API guarantees, or migrations solely to support earlier prototype versions. Saved test progress may be invalidated when required by a change; report that consequence. Preserve history in Git, not parallel runtime implementations. Tests should protect the current intended behavior, not require obsolete features to survive.
 
 ## Ownership and dependency direction

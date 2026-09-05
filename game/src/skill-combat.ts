@@ -145,6 +145,11 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
       }
       break;
     }
+    default: {
+      // A new skill must implement behavior before its content can compile.
+      const unimplemented: never = id;
+      throw new Error(`Missing skill implementation: ${unimplemented}`);
+    }
   }
   context.emit({ type: 'cast', x: p.x, y: p.y, angle: p.angle, skill: id, color });
   return true;
