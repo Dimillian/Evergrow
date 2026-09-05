@@ -4,6 +4,7 @@ import { Renderer, type RenderSettings } from '../src/renderer.ts';
 import { Simulation } from '../src/simulation.ts';
 import { World, TILE_SIZE, type Prop } from '../src/world.ts';
 import type { Building, Settlement } from '../src/settlements.ts';
+import { getHUDLayout } from '../src/hud.ts';
 
 type Matrix = { a: number; b: number; c: number; d: number; e: number; f: number };
 type Rect = { left: number; top: number; width: number; height: number };
@@ -159,4 +160,61 @@ test('native HUD labels stay fixed and damage numbers project without scaling th
   assert.equal((menuLabels[0] as unknown[]).length, 4);
   assert.deepEqual(menuLabels[1], menuLabels[0]); assert.deepEqual(menuLabels[2], menuLabels[0]);
   assert.equal(new Set(popupFonts).size, 1);
+});
+
+test('renderer wires hover and combat focus to a native enemy plate without HUD click-through or phase leakage', t => {
+  const { renderer, sim, world, canvas, settings, render } = fixture(t);
+  world.blocked = () => false; world.isSanctuary = () => false;
+  const enemy = sim.spawnEnemy('stalker', sim.player.x + 80, sim.player.y + 20)!;
+  assert.ok(enemy);
+  const plateName = () => {
+    const ui = new RecordingContext(); ui.scale(2, 2);
+    renderer.renderUI(ui as unknown as CanvasRenderingContext2D, sim, world, settings);
+    assert.deepEqual(ui.getTransform(), { a: 2, b: 0, c: 0, d: 2, e: 0, f: 0 });
+    return ui.texts.find(call => call.value === 'HOLLOW STALKER');
+  };
+  const hoverTorso = (matrix: Matrix) => {
+    renderer.pointerX = matrix.a * enemy.x + matrix.e;
+    renderer.pointerY = matrix.d * (enemy.y - 22) + matrix.f;
+  };
+  const noteHit = () => renderer.handleEvents([{ type: 'hit', targetId: enemy.id,
+    enemyKind: enemy.kind, x: enemy.x, y: enemy.y, value: 5, remainingHp: enemy.hp }], true);
+
+  const firstMatrix = render();
+  assert.equal(plateName(), undefined, 'an unhovered nearby enemy does not acquire focus');
+  hoverTorso(firstMatrix); render();
+  const initial = plateName();
+  assert.ok(initial, 'hovering the rendered body displays its name on the next frame');
+  assert.deepEqual({ ...initial.matrix, e: 0, f: 0 }, identity(), 'enemy glyphs render at native physical pixels');
+  assert.ok(Number(initial.font.match(/([\d.]+)px/)![1]) > 20, 'the native font includes the UI backing DPR');
+  assert.ok(!canvas.context.texts.some(call => call.value === 'HOLLOW STALKER'), 'the name is absent from the post-processed world surface');
+
+  for (const delta of [300, -300]) {
+    renderer.zoomByWheel(delta, 0, 900);
+    hoverTorso(render()); render();
+    assert.deepEqual(plateName(), initial, 'world zoom changes neither plate typography nor its screen position');
+  }
+
+  const hud = getHUDLayout(renderer.width, renderer.height);
+  renderer.pointerX = hud.x + hud.width / 2; renderer.pointerY = hud.y + hud.height * .56;
+  const behindHUD = renderer.screenToWorld(renderer.pointerX, renderer.pointerY);
+  enemy.x = enemy.prevX = behindHUD.x; enemy.y = enemy.prevY = behindHUD.y + 22;
+  render(.3);
+  assert.equal(plateName(), undefined, 'a body directly beneath the HUD cannot refresh hover after its grace expires');
+
+  renderer.pointerX = 20; renderer.pointerY = 100;
+  noteHit(); render();
+  assert.ok(plateName(), 'actual hit events acquire the native plate while the mouse is away');
+  for (const phase of ['paused', 'map', 'dead'] as const) {
+    settings.phase = phase; render();
+    assert.equal(plateName(), undefined, `${phase} clears the plate immediately`);
+    settings.phase = 'playing'; render();
+    assert.equal(plateName(), undefined, 'resuming does not restore stale combat focus');
+    noteHit(); render(); assert.ok(plateName(), 'a fresh hit can acquire focus again');
+  }
+  sim.player.dead = true; render();
+  assert.equal(plateName(), undefined, 'player death clears focus even before the phase transition');
+  sim.player.dead = false; noteHit(); render(); assert.ok(plateName());
+  renderer.reset();
+  assert.equal(plateName(), undefined, 'restarting the renderer clears the retained plate');
 });

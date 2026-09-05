@@ -44,12 +44,13 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/src/sword-trail.ts`: sampled world-space metal-gold ribbons following the weapon.
 - `game/src/postfx.ts`: world-only WebGL bloom passes, CRT/phosphor display treatment, and clean fallback.
 - `game/src/hud.ts`, `hud-icons.ts`, `hud-orb.ts`, and `font.ts`: compact procedural floating HUD, shared layout/hit bounds, engraved skill/menu icons, animated resource glass, and native font rendering.
+- `game/src/enemy-focus.ts` and `enemy-plate.ts`: visual enemy hover/recent-hit focus and the native top name/health plate. Use interpolated body bounds and the current camera transform; hover takes priority, dead/offscreen targets clear, and attack aiming remains unchanged.
 - `game/src/assets/fonts/` and `typography.css`: locally bundled Pixelify Sans, source/license records, and shared menu typography.
 - `game/src/main.ts`: input, loop, pause menu, local audio preference, and system reduced motion.
 - `game/src/exploration.ts` and `world-map.ts`: discovered terrain/POIs, local exploration persistence, smoothly scrolling minimap, and interactive world map.
 - `game/layouts.html` and `game/src/layout-review.ts`: dev-only static scene staging and PNG export using the real renderer; never advances gameplay or changes exploration saves.
 - `game/rig.html` and `game/src/rig-review.ts`: dev-only frozen character poses across eight facings, without driving gameplay.
-- `game/hud.html` and `game/src/hud-review.ts`: dev-only frozen healthy, damaged, and depleted HUD states with PNG export; no gameplay or save access.
+- `game/hud.html` and `game/src/hud-review.ts`: dev-only frozen healthy, damaged, and depleted player HUD/enemy plate states with PNG export; no gameplay or save access.
 - `docs/`: design documents and reference concepts, not runtime assets.
 
 From the repository root: `npm run setup`, `npm run dev`, `npm test`, and `npm run build`. Engine tests require Node.js 22.13 or later for TypeScript stripping.

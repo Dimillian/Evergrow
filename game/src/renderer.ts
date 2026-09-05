@@ -17,6 +17,8 @@ import { EnvironmentArt } from './environment-art.ts';
 import type { Building } from './settlements.ts';
 import { getMinimapRect } from './world-map.ts';
 import { CameraZoom, cameraView, screenToWorld, worldToScreen } from './camera.ts';
+import { EnemyFocus } from './enemy-focus.ts';
+import { drawEnemyPlate } from './enemy-plate.ts';
 
 interface Corpse { x: number; y: number; angle: number; kind: Enemy['kind']; life: number; seed: number; }
 interface Ghost { x: number; y: number; angle: number; gait: number; life: number; }
@@ -37,6 +39,7 @@ export class Renderer {
   cameraY = 0;
   pointerX = 0;
   pointerY = 0;
+  pointerActive = true;
   shake = 0;
   hurt = 0;
   private kickX = 0;
@@ -60,6 +63,10 @@ export class Renderer {
   private visualTime = 0;
   private cachedProps: Prop[] = [];
   private queryView: { left: number; top: number; width: number; height: number } | null = null;
+  private enemyFocus = new EnemyFocus();
+  private focusedEnemy: Enemy | null = null;
+  private plateEnemy: Enemy | null = null;
+  private plateOpacity = 0;
 
   constructor() { this.resize(960, 600); }
 
@@ -89,11 +96,13 @@ export class Renderer {
     this.corpses = []; this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
     this.damageTrails.clear(); this.playerHealthTrail = 100; this.playerHealthHold = 0;
+    this.enemyFocus.reset(); this.focusedEnemy = this.plateEnemy = null; this.plateOpacity = 0;
     this.queryView = null;
   }
 
   handleEvents(events: CombatEvent[], reducedMotion: boolean) {
     this.effects.handleEvents(events);
+    this.enemyFocus.noteHits(events);
     for (const e of events) {
       if (e.type === 'hit' && e.targetId !== undefined && e.remainingHp !== undefined) {
         const previous = this.damageTrails.get(e.targetId)?.value ?? 0;
@@ -157,6 +166,18 @@ export class Renderer {
       (settings.reducedMotion ? 0 : this.kickX) + Math.sin(this.visualTime * 103) * shake,
       (settings.reducedMotion ? 0 : this.kickY) + Math.cos(this.visualTime * 127) * shake * .7);
     const { offsetX, offsetY, left, top, width: worldWidth, height: worldHeight } = this.view;
+    this.focusedEnemy = this.enemyFocus.update(sim.enemies, this.view,
+      this.pointerActive && !this.pointerOverHUD() ? { x: this.pointerX, y: this.pointerY } : null,
+      alpha, dt, active && !p.dead);
+    if (!active || p.dead) {
+      this.plateEnemy = null; this.plateOpacity = 0;
+    } else {
+      if (this.focusedEnemy) this.plateEnemy = this.focusedEnemy;
+      const opacity = this.focusedEnemy ? 1 : 0;
+      this.plateOpacity = settings.reducedMotion ? opacity
+        : opacity + (this.plateOpacity - opacity) * Math.exp(-dt * 20);
+      if (this.plateOpacity < .01) this.plateEnemy = null;
+    }
     const query = this.queryView;
     // Refresh coverage when any edge moves, including zooming out while standing still.
     if (!query || Math.abs(query.left - left) > 65 || Math.abs(query.top - top) > 65
@@ -175,6 +196,7 @@ export class Renderer {
     this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime);
     this.remains();
     this.propShadows();
+    this.enemyFocusMark(alpha);
     for (const pickup of sim.pickups) {
       const y = pickup.y - 4 - Math.sin(sim.time * 3 + pickup.id) * 2;
       drawGlow(c, pickup.x, y, 24, pickup.kind === 'health' ? '#ff643b' : '#64baff', .45);
@@ -225,7 +247,25 @@ export class Renderer {
       reducedMotion: settings.reducedMotion, healthTrail: this.playerHealthTrail / Math.max(1, p.maxHp),
       hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / HIT_FLASH_DURATION),
     });
+    if (this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, this.width, this.height, {
+      opacity: this.plateOpacity,
+      healthTrail: this.damageTrails.get(this.plateEnemy.id)?.value ?? this.plateEnemy.hp,
+      hitPulse: settings.reducedMotion ? 0 : Math.min(1, this.plateEnemy.hitFlash / HIT_FLASH_DURATION),
+    });
     if (settings.phase === 'playing') this.cursor(c);
+  }
+
+  private enemyFocusMark(alpha: number) {
+    const enemy = this.focusedEnemy;
+    if (!enemy) return;
+    const c = this.ctx, x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);
+    const radius = enemy.radius + 6;
+    c.save(); c.globalAlpha = .65 * this.plateOpacity;
+    c.strokeStyle = this.enemyFocus.hoveredId === enemy.id ? '#dfb68a' : '#b58366'; c.lineWidth = 1.1;
+    for (let i = 0; i < 4; i++) {
+      c.beginPath(); c.ellipse(x, y + 1, radius, radius * .46, 0, i * Math.PI / 2 + .14, i * Math.PI / 2 + 1.1); c.stroke();
+    }
+    c.restore();
   }
 
   private remains() {
@@ -435,12 +475,17 @@ export class Renderer {
       22, this.height - 18, 1, '#a3c7a7');
   }
 
-  private cursor(c: CanvasRenderingContext2D) {
+  private pointerOverHUD() {
     const x = this.pointerX, y = this.pointerY;
-    if (isHUDPoint(x, y, this.width, this.height)) return;
     const map = getMinimapRect(this.width, this.height);
-    if (x >= map.x && y >= map.y && x <= map.x + map.width && y <= map.y + map.height) return;
-    c.strokeStyle = '#ded5a9bb'; c.lineWidth = 1; c.beginPath();
+    return isHUDPoint(x, y, this.width, this.height)
+      || (x >= map.x && y >= map.y && x <= map.x + map.width && y <= map.y + map.height);
+  }
+
+  private cursor(c: CanvasRenderingContext2D) {
+    if (!this.pointerActive || this.pointerOverHUD()) return;
+    const x = this.pointerX, y = this.pointerY;
+    c.strokeStyle = this.enemyFocus.hoveredId === null ? '#ded5a9bb' : '#efb398'; c.lineWidth = 1; c.beginPath();
     c.moveTo(x - 6, y); c.lineTo(x - 3, y); c.moveTo(x + 3, y); c.lineTo(x + 6, y);
     c.moveTo(x, y - 6); c.lineTo(x, y - 3); c.moveTo(x, y + 3); c.lineTo(x, y + 6); c.stroke();
     c.fillStyle = '#fff0bb'; c.fillRect(x, y, 1, 1);

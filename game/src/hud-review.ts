@@ -2,11 +2,13 @@ import './typography.css';
 import { drawFloatingHUD, getHUDLayout, type HUDOptions } from './hud.ts';
 import { loadGameFont, text } from './font.ts';
 import { Simulation } from './simulation.ts';
-import type { Player, WorldQuery } from './model.ts';
+import { drawEnemyPlate, getEnemyPlateLayout } from './enemy-plate.ts';
+import type { Enemy, Player, WorldQuery } from './model.ts';
 
 // This dev-only entry never binds gameplay input, ticks a simulation or accesses saves.
 const HUD_DISPLAY_SCALE = 1.35;
 const PANEL_GAP = 14;
+const ENEMY_PLATE_OFFSET = 56;
 const root = document.querySelector<HTMLElement>('#hud-review')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#hud-sheet')!;
 const status = document.querySelector<HTMLElement>('#review-status')!;
@@ -14,7 +16,11 @@ const download = document.querySelector<HTMLAnchorElement>('#save-png')!;
 const abort = new AbortController();
 let disposed = false;
 
-interface Stage { name: string; detail: string; player: Player; time: number; options: HUDOptions; }
+interface Stage {
+  name: string; detail: string; player: Player; time: number; options: HUDOptions;
+  enemy: Pick<Enemy, 'kind' | 'hp' | 'maxHp'>;
+  enemyOptions?: Parameters<typeof drawEnemyPlate>[4];
+}
 const emptyWorld: WorldQuery = {
   blocked: () => false,
   move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }),
@@ -28,10 +34,13 @@ function makeStages(): Stage[] {
   depleted.hp = 16; depleted.mana = 7; depleted.flasks = 0; depleted.dodgeCharges = 0;
   depleted.dodgeRecharge = .56; depleted.castCooldown = .32; depleted.healCooldown = .65;
   return [
-    { name: 'Healthy', detail: 'Full vitality · abilities ready', player: healthy, time: 5.7, options: {} },
+    { name: 'Healthy', detail: 'Full vitality · abilities ready', player: healthy, time: 5.7, options: {},
+      enemy: { kind: 'stalker', hp: 48, maxHp: 48 } },
     { name: 'Damaged', detail: 'Recent impact · trailing vitality · one dodge charge', player: damaged,
-      time: 9.2, options: { healthTrail: .83, hitPulse: .5 } },
-    { name: 'Depleted', detail: 'Low resources · recovery timers · empty flask', player: depleted, time: 14.4, options: {} },
+      time: 9.2, options: { healthTrail: .83, hitPulse: .5 }, enemy: { kind: 'brute', hp: 86, maxHp: 138 },
+      enemyOptions: { healthTrail: 120, hitPulse: .5 } },
+    { name: 'Depleted', detail: 'Low resources · recovery timers · empty flask', player: depleted, time: 14.4, options: {},
+      enemy: { kind: 'caster', hp: 8, maxHp: 56 } },
   ];
 }
 
@@ -79,7 +88,13 @@ async function boot() {
     const logicalWidth = width / HUD_DISPLAY_SCALE;
     // Derive framing from the live layout so a taller or wider HUD needs no fixture edits.
     const layout = getHUDLayout(logicalWidth, 1000);
-    const panelHeight = Math.ceil(layout.height * HUD_DISPLAY_SCALE + 84);
+    // Stage the plate from a normal game viewport; this short crop has no minimap.
+    const plateViewportHeight = 450;
+    const plate = getEnemyPlateLayout(logicalWidth, plateViewportHeight);
+    const hudBottomMargin = (1000 - layout.y - layout.height) * HUD_DISPLAY_SCALE;
+    const plateBottom = ENEMY_PLATE_OFFSET + (plate.y + plate.height) * HUD_DISPLAY_SCALE;
+    const panelHeight = Math.ceil(Math.max(layout.height * HUD_DISPLAY_SCALE + 174,
+      plateBottom + 20 + layout.height * HUD_DISPLAY_SCALE + hudBottomMargin));
     const height = panelHeight * stages.length + PANEL_GAP * (stages.length - 1);
     const ratio = Math.max(1, window.devicePixelRatio || 1);
     canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio);
@@ -93,6 +108,9 @@ async function boot() {
       ground(c, width, panelHeight);
       text(c, stage.name, 20, 15, 1.7, '#dfd0ab');
       text(c, stage.detail, 20, 38, 1.05, '#849e99');
+      c.save(); c.translate(0, ENEMY_PLATE_OFFSET); c.scale(HUD_DISPLAY_SCALE, HUD_DISPLAY_SCALE);
+      drawEnemyPlate(c, stage.enemy, logicalWidth, plateViewportHeight, stage.enemyOptions);
+      c.restore();
       c.save(); c.scale(HUD_DISPLAY_SCALE, HUD_DISPLAY_SCALE);
       drawFloatingHUD(c, stage.player, logicalWidth, panelHeight / HUD_DISPLAY_SCALE, stage.time, stage.options);
       c.restore();
@@ -101,7 +119,7 @@ async function boot() {
     });
     download.href = canvas.toDataURL('image/png');
     download.download = 'evergrowing-hud-review.png'; download.hidden = false;
-    status.textContent = `Frozen procedural HUD · PNG ${canvas.width} × ${canvas.height}`;
+    status.textContent = `Frozen player HUD and enemy nameplates · PNG ${canvas.width} × ${canvas.height}`;
     root.dataset.ready = 'true'; root.setAttribute('aria-busy', 'false');
   }
   draw();

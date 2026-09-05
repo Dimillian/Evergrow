@@ -48,7 +48,7 @@ class Game {
   private readonly motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
   private get reducedMotion() { return this.motionPreference.matches; }
   private keys = new Set<string>();
-  private mouse = { x: 0, y: 0, left: false, right: false };
+  private mouse = { x: 0, y: 0, left: false, right: false, present: false };
   private pendingDodge = false;
   private pendingHeal = false;
   private pendingAttack = false;
@@ -79,6 +79,7 @@ class Game {
     const signal = this.abort.signal;
     window.addEventListener('resize', () => this.resize(), { signal });
     window.addEventListener('blur', () => {
+      this.mouse.present = false;
       this.clearInput();
       if (this.phase === 'playing') this.pause();
     }, { signal });
@@ -133,6 +134,7 @@ class Game {
     window.addEventListener('keyup', event => this.keys.delete(event.code), { signal });
     // Window-level tracking also follows the pointer across the DOM HUD buttons.
     window.addEventListener('pointermove', event => this.updatePointer(event), { signal });
+    this.canvas.addEventListener('pointerleave', () => { this.mouse.present = false; }, { signal });
     this.canvas.addEventListener('wheel', event => {
       if (this.phase !== 'playing' || event.ctrlKey || event.metaKey) return;
       this.updatePointer(event);
@@ -163,6 +165,8 @@ class Game {
 
   private updatePointer(event: { clientX: number; clientY: number }) {
     const rect = this.canvas.getBoundingClientRect();
+    this.mouse.present = event.clientX >= rect.left && event.clientX <= rect.right
+      && event.clientY >= rect.top && event.clientY <= rect.bottom;
     this.mouse.x = (event.clientX - rect.left) / rect.width * this.renderer.width;
     this.mouse.y = (event.clientY - rect.top) / rect.height * this.renderer.height;
     this.canvas.classList.toggle('hud-hover', this.pointerInHUD());
@@ -294,6 +298,7 @@ class Game {
     }
     this.renderer.pointerX = this.mouse.x;
     this.renderer.pointerY = this.mouse.y;
+    this.renderer.pointerActive = this.mouse.present;
     const settings = {
       reducedMotion: this.reducedMotion, phase: this.phase, fps: this.fps, debug: this.debug,
     };

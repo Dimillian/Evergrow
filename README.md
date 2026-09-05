@@ -39,6 +39,8 @@ The HUD and damage numbers render at native display resolution above the world s
 
 The compact HUD uses dark metalwork, engraved skill icons, and subtly animated resource glass. A local [static HUD review](http://127.0.0.1:5173/hud.html) shows healthy, damaged, and depleted states without advancing gameplay or touching saves.
 
+Hover an enemy to see its name and health at the top of the screen. A subtle marker identifies the focused mob, and enemies you hit stay on the plate briefly while you fight. Names and health remain crisp at every camera zoom.
+
 The world uses one fixed presentation: soft CRT scanlines combined with restrained phosphor glow and a subtle RGB grille. There is no settings panel or filter switching. Reduced motion follows the operating system; N still toggles sound.
 
 Walk west from Deadwood to reach Verdant Forest, east to reach the swamp, or follow the road north to the first settlement. Enter buildings through their open south-facing doors; roofs fade and warm interior lighting blends in without changing spaces. Shops and the forge have distinct furnished interiors; trading is not implemented yet.
