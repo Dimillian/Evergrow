@@ -4,7 +4,7 @@ A gothic, top-down 2D action RPG built for the browser, inspired by Diablo and P
 
 **Status: playable local prototype · actively iterating · not released.**
 
-[Play on Sites](https://evergrow.fun-crow-4124.chatgpt.site) (private owner access). Saves stay in the browser and are separate from localhost saves.
+[Play on Sites](https://evergrow.dimillian.chatgpt.site) (private owner access). Saves stay in the browser and are separate from localhost saves.
 
 ![The starting wilderness in Deadwood](docs/screenshots/deadwood.png)
 
