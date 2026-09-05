@@ -1,14 +1,15 @@
+import { updateItemSlot } from './item-ui.ts';
+import { ItemTooltip } from './item-tooltip.ts';
 import { goldBalance } from './wallet.ts';
 import { formatGold } from './currency-format.ts';
 import type { Player } from './model.ts';
-import type { Attribute, EquipmentSlot, Item, ItemTier, StatKey } from './character-types.ts';
-import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS, TIER_COLORS, TIER_NAMES, STAT_LABELS, itemModifiers, formatStatValue } from './items.ts';
-import { itemFitsSlot } from './inventory.ts';
-import { itemIconSVG } from './item-art.ts';
+import type { Attribute, EquipmentSlot, Item } from './character-types.ts';
+import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS, TIER_NAMES } from './items.ts';
+import { planEquipmentChange } from './inventory.ts';
 import { drawCharacterPortrait } from './character-portrait.ts';
 import { deriveAttackStats } from './equipment.ts';
 import { xpForNextLevel } from './progression.ts';
-import { escapeUI, uiIcon, trapDialogFocus } from './ui-components.ts';
+import { uiIcon, trapDialogFocus } from './ui-components.ts';
 import './inventory-panel.css';
 
 export interface InventoryPanelActions {
@@ -19,7 +20,6 @@ export interface InventoryPanelActions {
   allocate(attribute: Attribute): void;
 }
 
-const TIER_RANK: Readonly<Record<ItemTier, number>> = { common: 1, magic: 2, rare: 3, epic: 4, legendary: 5 };
 
 type ItemLocation = { type: 'bag'; index: number } | { type: 'equipment'; slot: EquipmentSlot };
 type ItemReference = ItemLocation & { id: string };
@@ -36,7 +36,6 @@ const LEFT_SLOTS: EquipmentSlot[] = ['chest', 'gloves', 'legs', 'boots', 'cloak'
 const RIGHT_SLOTS: EquipmentSlot[] = ['weapon', 'offhand', 'amulet', 'ring1', 'ring2'];
 const number = (value: number, decimals = 0) => Number.isFinite(value) ? value.toLocaleString('en-US', { maximumFractionDigits: decimals }) : '—';
 const percent = (value: number) => `${number(value * 100, 1)}%`;
-const statValue = formatStatValue;
 const locationKey = (location: ItemLocation) => location.type === 'bag' ? `bag-${location.index}` : `equipment-${location.slot}`;
 
 function emptySlotIcon(slot: EquipmentSlot): string {
@@ -68,7 +67,7 @@ export class InventoryPanel {
   private drag: ItemReference | null = null;
   private animation = 0;
   private facing = Math.PI / 2;
-  private readonly tooltip: HTMLDivElement;
+  private readonly tooltip: ItemTooltip;
   private readonly canvas: HTMLCanvasElement;
   private readonly cells = new Map<string, HTMLButtonElement>();
 
@@ -95,7 +94,7 @@ export class InventoryPanel {
         </section>
         <section class="character-inventory" aria-labelledby="inventory-title">
           <div class="character-section-title"><h3 id="inventory-title">Inventory</h3><div class="character-inventory-counts"><span class="character-gold" data-gold></span><span data-capacity></span></div></div>
-          <div class="character-grid-scroll"><div class="character-bag" role="group" aria-label="Inventory, ${INVENTORY_CAPACITY} slots">${Array.from({ length: INVENTORY_CAPACITY }, (_, index) => `<button type="button" class="ui-slot character-item-slot character-bag-slot" data-bag="${index}" data-location="bag-${index}" aria-label="Empty inventory slot ${index + 1}"></button>`).join('')}</div></div>
+          <div class="character-grid-scroll"><div class="character-bag" role="group" aria-label="Inventory, ${INVENTORY_CAPACITY} slots">${Array.from({ length: INVENTORY_CAPACITY }, (_, index) => `<button type="button" class="ui-slot ui-item-slot character-bag-slot" data-bag="${index}" data-location="bag-${index}" aria-label="Empty inventory slot ${index + 1}"></button>`).join('')}</div></div>
         </section>
         <section class="character-details" aria-labelledby="attributes-title">
           <div class="character-attributes"><div class="character-section-title"><h3 id="attributes-title">Attributes</h3><span class="character-points-available" data-points-label></span></div>
@@ -105,10 +104,9 @@ export class InventoryPanel {
         </section>
       </div>
       <footer class="ui-window-footer character-footer"><div class="character-experience"><div><span data-xp-label></span><span data-xp-total></span></div><div class="character-experience-track"><i data-xp-fill></i></div></div><span class="character-footer-status">${uiIcon('diamond')}<span data-allocated-label></span></span></footer>
-      <div class="ui-tooltip character-item-tooltip" role="tooltip" id="character-item-tooltip" hidden></div>
     </section>`;
     this.window = this.element.querySelector('.character-window')!;
-    this.tooltip = this.element.querySelector('.character-item-tooltip')!;
+    this.tooltip = new ItemTooltip(this.window, 'character-item-tooltip');
     this.canvas = this.element.querySelector('.character-doll')!;
     this.element.querySelectorAll<HTMLButtonElement>('[data-location]').forEach(cell => this.cells.set(cell.dataset.location!, cell));
     mount.append(this.element);
@@ -116,7 +114,7 @@ export class InventoryPanel {
   }
 
   private equipmentMarkup(slot: EquipmentSlot): string {
-    return `<div class="character-equipment-cell"><button type="button" class="ui-slot character-item-slot character-equipment-slot" data-equipment="${slot}" data-location="equipment-${slot}" aria-label="${SLOT_NAMES[slot]}, empty">${emptySlotIcon(slot)}</button><span>${SLOT_NAMES[slot]}</span></div>`;
+    return `<div class="character-equipment-cell"><button type="button" class="ui-slot ui-item-slot character-equipment-slot" data-equipment="${slot}" data-location="equipment-${slot}" aria-label="${SLOT_NAMES[slot]}, empty">${emptySlotIcon(slot)}</button><span>${SLOT_NAMES[slot]}</span></div>`;
   }
 
   open(player: Player): void {
@@ -136,17 +134,10 @@ export class InventoryPanel {
     for (const cell of this.cells.values()) {
       const location = this.locationFrom(cell)!;
       const item = this.itemAt(location);
-      const signature = item ? JSON.stringify(item) : '';
-      if (cell.dataset.signature !== signature) {
-        cell.dataset.signature = signature;
-        cell.innerHTML = item ? `${itemIconSVG(item, 44)}<span class="character-item-level">${item.itemLevel}</span><span class="character-item-tier" aria-hidden="true">${'<i></i>'.repeat(TIER_RANK[item.tier])}</span>` : location.type === 'equipment' ? emptySlotIcon(location.slot) : '<span class="character-empty-mark" aria-hidden="true">·</span>';
-        cell.style.setProperty('--item-color', item ? TIER_COLORS[item.tier] : 'var(--ui-silver-dim)');
-        cell.dataset.filled = String(Boolean(item));
-        cell.dataset.tier = item?.tier ?? '';
-        cell.draggable = Boolean(item);
-      }
-      cell.classList.toggle('is-locked', Boolean(item && item.requiredLevel > player.level));
-      cell.setAttribute('aria-label', item ? `${item.name}, ${TIER_NAMES[item.tier]}, item level ${item.itemLevel}${location.type === 'equipment' ? `, equipped in ${SLOT_NAMES[location.slot]}` : ''}${item.requiredLevel > player.level ? `, requires level ${item.requiredLevel}` : ''}` : location.type === 'equipment' ? `${SLOT_NAMES[location.slot]}, empty` : `Empty inventory slot ${location.index + 1}`);
+      updateItemSlot(cell, item, { level: player.level, draggable: true,
+        emptyMarkup: location.type === 'equipment' ? emptySlotIcon(location.slot) : '<span class="ui-empty-item-mark">·</span>',
+        label: item ? `${item.name}, ${TIER_NAMES[item.tier]}, item level ${item.itemLevel}${location.type === 'equipment' ? `, equipped in ${SLOT_NAMES[location.slot]}` : ''}${item.requiredLevel > player.level ? `, requires level ${item.requiredLevel}` : ''}` : location.type === 'equipment' ? `${SLOT_NAMES[location.slot]}, empty` : `Empty inventory slot ${location.index + 1}`,
+      });
     }
     const sheet = player.character, stats = player.derived;
     this.text('[data-level]', `Level ${player.level}`);
@@ -213,7 +204,7 @@ export class InventoryPanel {
     this.animation = 0;
   }
 
-  dispose(): void { this.close(); this.lifetime.abort(); this.element.remove(); this.player = null; }
+  dispose(): void { this.close(); this.tooltip.dispose(); this.lifetime.abort(); this.element.remove(); this.player = null; }
 
   private text(selector: string, value: string): void {
     const element = this.element.querySelector(selector)!;
@@ -329,7 +320,7 @@ export class InventoryPanel {
     if (!source || locationKey(source) === locationKey(target)) return false;
     const item = this.itemAt(source);
     if (!item || item.id !== source.id) return false;
-    if (target.type === 'equipment') return source.type === 'bag' && itemFitsSlot(item, target.slot) && item.requiredLevel <= this.player!.level;
+    if (target.type === 'equipment') return source.type === 'bag' && planEquipmentChange(this.player!.character, item, this.player!.level, { sourceIndex: source.index, slot: target.slot }).ok;
     if (source.type === 'equipment') return !this.itemAt(target);
     return true;
   }
@@ -337,65 +328,16 @@ export class InventoryPanel {
   private clearDropHighlight(): void { for (const cell of this.cells.values()) cell.classList.remove('is-drop-target'); }
   private clearDrag(): void { this.drag = null; for (const cell of this.cells.values()) cell.classList.remove('is-drop-target', 'is-dragging'); }
 
-  private comparison(item: Item): { slot: EquipmentSlot; item: Item | null } {
-    const sheet = this.player!.character;
-    const slot = item.kind === 'ring' ? (!sheet.equipped.ring1 ? 'ring1' : !sheet.equipped.ring2 ? 'ring2' : 'ring1') : item.kind === 'shield' ? 'offhand' : item.kind;
-    return { slot, item: sheet.equipped[slot] };
-  }
-
-  private itemTooltipMarkup(item: Item, location: ItemLocation): string {
-    const equipped = location.type === 'equipment';
-    const compare = this.comparison(item);
-    const requirements = item.requiredLevel > this.player!.level;
-    const mods = itemModifiers(item), previous = compare.item ? itemModifiers(compare.item) : {};
-    const rows = (Object.entries(mods) as Array<[StatKey, number]>).map(([key, value]) => {
-      const delta = value - (previous[key] ?? 0);
-      return `<div class="character-item-property"><span>${escapeUI(STAT_LABELS[key])}</span><strong>${statValue(key, value)}</strong>${!equipped && delta ? `<em class="${delta > 0 ? 'is-gain' : 'is-loss'}">${statValue(key, delta)}</em>` : '<em></em>'}</div>`;
-    });
-    if (!equipped) {
-      for (const [key, value] of Object.entries(previous) as Array<[StatKey, number]>) {
-        if (mods[key] === undefined && value) rows.push(`<div class="character-item-property is-removed"><span>${escapeUI(STAT_LABELS[key])}</span><strong>—</strong><em class="is-loss">${statValue(key, -value)}</em></div>`);
-      }
-    }
-    let weapon = '';
-    if (item.weapon) {
-      const delta = item.weapon.damage - (compare.item?.weapon?.damage ?? 0);
-      const speedDelta = item.weapon.baseAttacksPerSecond - (compare.item?.weapon?.baseAttacksPerSecond ?? 0);
-      const damageLabel = item.weapon.damageType[0].toUpperCase() + item.weapon.damageType.slice(1);
-      weapon = `<div class="character-item-weapon"><div><strong>${number(item.weapon.damage)}</strong><span>${damageLabel} damage</span>${!equipped && delta ? `<em class="${delta > 0 ? 'is-gain' : 'is-loss'}">${delta > 0 ? '+' : ''}${number(delta)}</em>` : ''}</div><div><strong>${number(item.weapon.baseAttacksPerSecond, 2)}</strong><span>${item.weapon.family === 'staff' ? 'Casts' : 'Attacks'} / second</span>${!equipped && Math.abs(speedDelta) > .001 ? `<em class="${speedDelta > 0 ? 'is-gain' : 'is-loss'}">${speedDelta > 0 ? '+' : ''}${number(speedDelta, 2)}</em>` : ''}</div></div><p class="character-item-comparison">${item.weapon.hands === 2 ? 'Two-handed' : 'One-handed'} · ${escapeUI(item.weapon.family)} · ${item.weapon.attackKind === 'melee' ? 'Melee sweep' : item.weapon.attackKind === 'arrow' ? 'Arrow shot' : 'Elemental bolt'} · ${number(item.weapon.reach)} reach</p>`;
-    }
-    if (item.shield) weapon = `<div class="character-item-weapon"><div><strong>${number(item.shield.blockChance)}%</strong><span>Block chance</span></div><div><strong>${number(item.shield.blockReduction)}%</strong><span>Damage blocked</span></div></div><p class="character-item-comparison">Off hand · Shield · Pairs with a one-handed weapon</p>`;
-    return `<div class="character-item-heading" style="--item-color:${TIER_COLORS[item.tier]}"><div><span class="character-item-class"><span class="character-rarity-badge" data-tier="${item.tier}"><span aria-hidden="true">${['I', 'II', 'III', 'IV', 'V'][TIER_RANK[item.tier] - 1]}</span>${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span></span><h4>${escapeUI(item.name)}</h4></div></div>
-      <div class="character-item-meta"><span>Item level ${number(item.itemLevel)}</span><span class="${requirements ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel)}</span>${equipped ? '<span class="character-item-equipped">Equipped</span>' : ''}</div>
-      ${weapon}<div class="character-item-properties">${rows.join('')}</div>
-      ${item.affixes.length ? `<div class="character-item-affixes">${item.affixes.map(affix => escapeUI(affix.name)).join(' · ')}</div>` : ''}
-      ${!equipped ? `<div class="character-item-comparison">${compare.item ? `Compared with <span>${escapeUI(compare.item.name)}</span>` : `Empty ${SLOT_NAMES[compare.slot].toLowerCase()} slot`}</div>` : ''}`;
-  }
-
   private showTooltip(location: ItemLocation): void {
     if (this.drag) return;
     const item = this.itemAt(location), cell = this.cells.get(locationKey(location));
-    if (!item || !cell) { this.hideTooltip(); return; }
+    if (!item || !cell || !this.player) { this.hideTooltip(); return; }
     this.hovered = location;
-    this.tooltip.innerHTML = this.itemTooltipMarkup(item, location);
-    this.tooltip.hidden = false;
-    this.tooltip.style.setProperty('--item-color', TIER_COLORS[item.tier]);
-    this.tooltip.dataset.tier = item.tier;
-    for (const other of this.cells.values()) other.removeAttribute('aria-describedby');
-    cell.setAttribute('aria-describedby', 'character-item-tooltip');
-    const bounds = cell.getBoundingClientRect(), viewportWidth = document.documentElement.clientWidth, viewportHeight = document.documentElement.clientHeight;
-    const width = this.tooltip.offsetWidth, height = this.tooltip.offsetHeight;
-    let left = bounds.right + 12;
-    if (left + width > viewportWidth - 12) left = bounds.left - width - 12;
-    this.tooltip.style.left = `${Math.max(8, Math.min(viewportWidth - width - 8, left))}px`;
-    this.tooltip.style.top = `${Math.max(8, Math.min(viewportHeight - height - 8, bounds.top - 12))}px`;
+    this.tooltip.show(item, { sheet: this.player.character, level: this.player.level,
+      equipped: location.type === 'equipment', sourceIndex: location.type === 'bag' ? location.index : undefined }, cell);
   }
 
-  private hideTooltip(): void {
-    this.hovered = null;
-    this.tooltip.hidden = true;
-    for (const cell of this.cells.values()) cell.removeAttribute('aria-describedby');
-  }
+  private hideTooltip(): void { this.hovered = null; this.tooltip.hide(); }
 
   private animate = (): void => {
     if (this.element.hidden || !this.player) return;

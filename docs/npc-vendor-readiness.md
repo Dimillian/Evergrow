@@ -2,6 +2,10 @@
 
 Reviewed 2026-09-05 at `9058c56`. This is an assessment and implementation sequence, not a runtime refactor. Gameplay, saves and the local server were left unchanged.
 
+## Consolidation completed
+
+The requested shared equipment preview/item UI and panel-lifecycle work is implemented. Equipment planning is pure and shared with commits and drag eligibility; effective comparisons include both-hand displacement. Item slot/tooltip components are reusable outside inventory. `PanelCoordinator` owns the transition lifecycle. All 492 code tests, strict/core TypeScript and the build pass; the corrected tooltip was inspected in the in-app static review. No save reset or NPC/trade implementation is part of this checkpoint. The assessment below records why these boundaries were selected.
+
 ## Assessment
 
 The existing foundation is suitable for the next step. Keep the fixed simulation, separate combat owners, generated world blueprints, procedural art, shared UI kit and validated character saves. Consolidate the specific boundaries below before building a vendor screen; an engine rewrite or generic entity/event framework would add work without solving the immediate problems.

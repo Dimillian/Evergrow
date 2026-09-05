@@ -56,6 +56,12 @@ if (profile) {
     equipItem(p.character, 47, p.level, 'offhand');
   }
 }
+const comparisonReview = new URLSearchParams(location.search).get('comparison') === 'twohand';
+if (comparisonReview) {
+  p.character.equipped.weapon = generateItem(9900, 1, 'weapon', 'longsword', 'common');
+  p.character.equipped.offhand = generateItem(9901, 1, 'shield', 'iron-buckler', 'common');
+  p.character.inventory[0] = generateItem(9902, 1, 'weapon', 'ember-staff', 'common');
+}
 refreshCharacter(p); p.hp = p.maxHp; p.mana = p.maxMana;
 const root = document.querySelector<HTMLElement>('#app')!;
 let selected = new URLSearchParams(location.search).get('panel') === 'skills' ? 'skills' : 'character';
@@ -99,5 +105,6 @@ function show(panel: string) {
   root.dataset.ready = 'true'; root.dataset.panel = panel;
 }
 background(); show(selected);
+if (comparisonReview && selected === 'character') inventory.element.querySelector<HTMLButtonElement>('[data-bag="0"]')?.focus();
 const observer = new ResizeObserver(background); observer.observe(root); life.defer(() => observer.disconnect());
 if (import.meta.hot) import.meta.hot.dispose(() => life.dispose());

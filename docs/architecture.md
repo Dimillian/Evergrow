@@ -133,3 +133,10 @@ The graphics overhaul keeps geometry in authored TypeScript recipes. `tree-art.t
 ## Character hall and persistence
 
 `TitleScreen` presents eight slot records and invokes application callbacks. `CharacterSession` owns the active slot, compatibility and writer token; `CharacterRepository` atomically stores validated records and retains the prior valid checkpoint. `character-save.ts` validates the entire sheet and world progress before `Simulation.restoreCheckpoint` rebuilds projections. Character actions and application lifecycle boundaries trigger saves; the frame coordinator also writes every ten seconds. `character-summary.ts` derives display-only power, while `character-portrait.ts` shares the real equipped rig between the hall and inventory. See [save boundaries](character-saves.md).
+
+
+## Pre-NPC consolidation
+
+Equipment planning now lives in `inventory.ts:planEquipmentChange`; equipment commits, drag eligibility and full-build previews share it. `equipment-preview.ts` uses the ordinary stat and weapon derivations on the planned sheet without mutating live resources. `item-ui.ts` / `.css` and `item-tooltip.ts` are reusable presenters for inventory and future vendor data. They separate item values from effective On equip changes, including any displaced shield/second weapon.
+
+`panel-coordinator.ts` centralizes phase transitions and panel registration. Old views close before new ones mount, input/buffers clear on transitions, and focus returns only on play resumption. Game retains application/session orchestration and submits transitions; panels retain their own focus-trap lifetime. The consolidation adds no NPC/trading state or save-format changes. Verified with 492 code tests and application/core compilation plus production build.

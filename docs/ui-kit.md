@@ -101,3 +101,12 @@ Successful inventory insertion emits a typed item payload; a full bag emits a se
 `loot-art.ts` uses actual equipment silhouettes resting on the ground, small rarity marks and occasional glints for rare or better gear. Health/mana pickups use distinct stoppered vials instead of glowing diamonds. Names render after CRT at display resolution, with explicit quality and item level in a clean small font. `loot-label-layout.ts` packs individual labels within the viewport, checks every occupied rectangle, and draws leaders back to the items. Extremely crowded views omit labels that cannot fit instead of overlapping; the items remain on the ground. Shared pickup coordinates, capacity, rarity odds and save data are unchanged.
 
 `death-presentation.ts` retains at most 45 enemy remains independently of simulation actors. The actual creature art collapses over 0.65 seconds in the hit direction, sheds material scraps and settles into a corpse, fading over its final three seconds (14-second lifetime; wisps dissipate within five). Reduced motion shows settled remains immediately. Death and loot presentation can be inspected in `/loot.html` without gameplay or save access.
+
+
+## Shared item presentation and panel ownership
+
+`item-ui.ts` / `.css` supply slot content/rarity styling and item tooltip markup. `item-tooltip.ts` owns mounting, anchor placement and `aria-describedby`, retaining the shared `ui-tooltip` motion. Panels supply an item plus character/level context, optional source bag index, explicit target slot, equipped flag and escaped action/price context. UI never mutates equipment.
+
+`inventory.ts:planEquipmentChange` plans the complete swap, capacity and both-hand displacements. Commits, drop eligibility and `equipment-preview.ts` reuse it. Tooltip item values describe the item itself; the separate On equip section reports effective build changes and all replaced gear. A failed plan shows its reason. `/character.html?comparison=twohand` stages the staff-versus-sword-and-shield case.
+
+`PanelCoordinator` owns application phase, allowed opens/toggles, input clearing, old-panel closure, menu updates, new-panel opening, focus return and save requests. Each view still owns/disposes its own focus trap. Game advances combat only while the coordinator reports playing. New panel phases must be registered with this coordinator; title/defeat entry and pause/resume use the same transition path.

@@ -1,3 +1,4 @@
+import { PanelCoordinator } from './panel-coordinator.ts';
 import { bindGameKeyboard } from './game-keyboard.ts';
 import { createCharacterSheet, type StarterWeaponId } from './items.ts';
 import { refreshCharacter } from './character.ts';
@@ -45,7 +46,8 @@ export class Game {
   private uiCanvas: HTMLCanvasElement;
   private uiContext: CanvasRenderingContext2D;
   fx: PostFX;
-  phase: GamePhase = 'ready';
+  private panels: PanelCoordinator;
+  get phase(): GamePhase { return this.panels?.phase ?? 'ready'; }
   private muted = false;
   private readonly motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
   private get reducedMotion() { return this.motionPreference.matches; }
@@ -98,6 +100,15 @@ export class Game {
         create: (index, name, weapon) => this.createCharacter(index, name, weapon),
         continue: index => this.continueCharacter(index), remove: index => this.deleteCharacter(index),
       }));
+      this.panels = new PanelCoordinator({
+        map: { open: () => { this.worldMap.open(this.sim.player); this.shell.setStatus('World map open. Game paused.'); }, close: () => this.worldMap.close() },
+        character: { open: () => { this.inventoryPanel.open(this.sim.player); this.shell.setStatus('Character and inventory open. Game paused.'); }, close: () => this.inventoryPanel.close() },
+        skills: { open: () => { this.skillPanel.open(this.sim.player); this.shell.setStatus('Skill tree open. Game paused.'); }, close: () => this.skillPanel.close() },
+      }, {
+        clearInput: () => this.clearInput(), changed: () => this.showMenu(),
+        resumeGameplay: () => { this.canvas.focus(); this.last = performance.now(); },
+        save: () => { this.saveCharacter(); },
+      });
       this.fx = this.lifetime.own(new PostFX(this.canvas));
       try {
         const saved = JSON.parse(localStorage.getItem('evergrow-preferences') ?? 'null');
@@ -143,8 +154,7 @@ export class Game {
         if (event.code === 'Escape') {
           event.preventDefault();
           if (!event.repeat) {
-            if (this.phase === 'character' || this.phase === 'skills') this.closeCharacterPanel();
-            else if (this.phase === 'map') this.closeMap();
+            if (this.panels.activePanel) this.resume();
             else if (this.phase === 'playing') this.pause();
             else if (this.phase === 'paused') this.resume();
           }
@@ -153,18 +163,18 @@ export class Game {
         const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement
           || event.target instanceof HTMLSelectElement || (event.target instanceof HTMLElement && event.target.isContentEditable);
         if (!typing && ['KeyC', 'KeyI', 'KeyT'].includes(event.code)
-          && ['playing', 'character', 'skills'].includes(this.phase)) {
+          && this.panels.canOpen(event.code === 'KeyT' ? 'skills' : 'character')) {
           event.preventDefault();
           if (!event.repeat) {
             const panel = event.code === 'KeyT' ? 'skills' : 'character';
-            this.phase === panel ? this.closeCharacterPanel() : this.openCharacterPanel(panel);
+            this.panels.toggle(panel);
           }
           return;
         }
         if (typing) return;
-        if (event.code === 'KeyM' && (this.phase === 'playing' || this.phase === 'map')) {
+        if (event.code === 'KeyM' && (this.panels.canOpen('map') || this.phase === 'map')) {
           event.preventDefault();
-          if (!event.repeat) this.phase === 'map' ? this.closeMap() : this.openMap();
+          if (!event.repeat) this.panels.toggle('map');
           return;
         }
         if (event.code === 'Tab' && this.phase === 'playing') {
@@ -306,12 +316,11 @@ export class Game {
     this.shell.notifications.clear();
     this.areaNotices.reset(this.world.sampleBiome(this.sim.player.x, this.sim.player.y).id);
     this.sim.player.name = this.session.active?.record.name;
-    this.worldMap.close(); this.inventoryPanel.close(); this.skillPanel.close();
     this.renderer.reset();
     const camera = cameraFollowTarget(this.sim.player);
     this.renderer.cameraX = camera.x; this.renderer.cameraY = camera.y;
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
-    this.clearInput(); this.phase = 'playing'; this.showMenu(); this.canvas.focus();
+    this.panels.transition('playing');
     void this.audio.unlock().catch(() => this.notify('Sound is unavailable in this browser.'));
     this.audio.setEnabled(!this.muted); this.last = performance.now(); this.nextAutosave = this.last + 10_000;
   }
@@ -331,58 +340,23 @@ export class Game {
     if (!this.session.active || !this.saveCharacter()) return;
     const index = this.session.active.index;
     this.session.active = null;
-    this.worldMap.close(); this.inventoryPanel.close(); this.skillPanel.close();
     this.shell.notifications.clear();
-    this.clearInput(); this.phase = 'ready'; this.sim.reset(); this.renderer.reset();
-    this.showMenu(); this.titleScreen.open(this.session.repository.list(), index);
+    this.sim.reset(); this.renderer.reset();
+    this.panels.transition('ready'); this.titleScreen.open(this.session.repository.list(), index);
   }
 
-  pause() {
-    if (this.disposed || this.phase !== 'playing') return;
-    this.phase = 'paused';
-    this.clearInput();
-    this.showMenu();
-    this.saveCharacter();
-  }
+  pause() { if (!this.disposed) this.panels.pause(); }
 
-  resume() {
-    if (this.disposed || !['paused', 'map', 'character', 'skills'].includes(this.phase)) return;
-    this.clearInput();
-    this.phase = 'playing';
-    this.showMenu();
-    this.canvas.focus();
-    this.last = performance.now();
-  }
+  resume() { if (!this.disposed) this.panels.resume(); }
 
-  private openMap() {
-    if (this.phase !== 'playing') return;
-    this.saveCharacter();
-    this.clearInput();
-    this.phase = 'map';
-    this.showMenu();
-    this.worldMap.open(this.sim.player);
-    this.shell.setStatus('World map open. Game paused.');
-  }
+  private openMap() { this.panels.open('map'); }
 
-  private closeMap() {
-    if (this.phase !== 'map') return;
-    this.worldMap.close();
-    this.resume();
-  }
+  private closeMap() { if (this.phase === 'map') this.resume(); }
 
-  private openCharacterPanel(panel: 'character' | 'skills') {
-    if (!['playing', 'character', 'skills'].includes(this.phase)) return;
-    this.saveCharacter();
-    this.clearInput(); this.inventoryPanel.close(); this.skillPanel.close();
-    this.phase = panel; this.showMenu();
-    if (panel === 'character') this.inventoryPanel.open(this.sim.player);
-    else this.skillPanel.open(this.sim.player);
-    this.shell.setStatus(`${panel === 'character' ? 'Character and inventory' : 'Skill tree'} open. Game paused.`);
-  }
+  private openCharacterPanel(panel: 'character' | 'skills') { this.panels.open(panel); }
 
   private closeCharacterPanel() {
-    if (this.phase !== 'character' && this.phase !== 'skills') return;
-    this.inventoryPanel.close(); this.skillPanel.close(); this.resume();
+    if (this.phase === 'character' || this.phase === 'skills') this.resume();
   }
 
   private characterAction(command: CharacterCommand) {
@@ -430,10 +404,7 @@ export class Game {
       const biome = this.world.sampleBiome(this.sim.player.x, this.sim.player.y);
       if (this.areaNotices.update(biome.id, dt)) this.shell.notifications.push({ kind: 'area', id: biome.id, name: biome.name, level: getZoneAt(this.sim.player.x, this.sim.player.y).level });
       if (this.sim.player.dead) {
-        this.phase = 'dead';
-        this.clearInput();
-        this.showMenu();
-        this.saveCharacter();
+        this.panels.transition('dead', true);
       }
       if (now >= this.nextAutosave) { this.saveCharacter(); this.nextAutosave = now + 10_000; }
     }
