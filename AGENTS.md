@@ -8,7 +8,7 @@
 - The user requested town/city layout captures on 2026-09-05. Static scene staging and captures in the in-app browser are authorized for that request; keep their playable session separate.
 - Code-level tests, type checking, and production builds are appropriate. Existing optional browser regression tests require the user's explicit request before running.
 - Keep the local development server available while the user tests. Avoid unnecessary reloads during their play session.
-- Use local Git checkpoints for coherent changes. Do not add a remote or push unless requested.
+- Commit coherent changes as checkpoints and push each checkpoint to origin, as requested by the user. Keep the existing remote; do not add or change remotes unless requested.
 - This is an unreleased prototype for the user’s own testing. Prefer the cleanest current design over backward compatibility. When replacing a system, update its callers/tests and remove obsolete implementations, exports, adapters, and legacy-only tests. Do not keep old features or build compatibility layers for hypothetical consumers. Old save formats may be invalidated when a design change requires it; migrations are not required at this stage. Mention any resulting test-progress reset. Git checkpoints provide the history.
 
 ## Current scope
