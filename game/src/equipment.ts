@@ -15,7 +15,7 @@ export const STARTING_SWORD: WeaponDefinition = {
   damage: 24,
   reach: 60,
   arc: 135 * Math.PI / 180,
-  visual: { kind: 'sword', length: 30, width: 3.4, metal: '#86b3a3', edge: '#f7e8b8', grip: '#715332', guard: '#dba25b' },
+  visual: { kind: 'sword', length: 30, width: 3.4, metal: '#86b3a3', edge: '#f7e8b8', grip: '#715332', gripLength: 12, guard: '#dba25b' },
 };
 
 export function createBaseStats(): CharacterStats {
@@ -23,7 +23,21 @@ export function createBaseStats(): CharacterStats {
 }
 
 export function createStartingEquipment(): Equipment {
-  return { mainHand: { ...STARTING_SWORD, visual: { ...STARTING_SWORD.visual } } };
+  return { mainHand: { ...STARTING_SWORD, visual: { ...STARTING_SWORD.visual } }, offHand: null };
+}
+
+export type WeaponGrip = 'two-handed' | 'one-handed';
+export function getWeaponGrip(equipment: Equipment): WeaponGrip {
+  return equipment.offHand ? 'one-handed' : 'two-handed';
+}
+
+export function getGripLength(visual = STARTING_SWORD.visual): number {
+  return Math.max(8, Math.min(20, visual.gripLength ?? 12));
+}
+
+/** Support hand sits behind the lead hand and ahead of the pommel. */
+export function getSupportGripOffset(visual = STARTING_SWORD.visual): number {
+  return -Math.max(5, Math.min(8, getGripLength(visual) * .55));
 }
 
 const positive = (value: number, fallback: number) => Number.isFinite(value) && value > 0 ? value : fallback;

@@ -16,6 +16,8 @@ The local slice now includes connected Deadwood, Verdant Forest, and swamp terra
 
 The basic attack is one repeatable action driven by character stats and equipped-weapon stats. Do not reintroduce an automatic combo chain; combos may become a separate skill in future work. Keep movement and combat continuous, without hitstop. The runtime game view has no how-to text or control legend; small bindings on skill buttons are intentional. Character, inventory, skill-tree, and journal HUD shortcuts remain disabled until those systems are requested.
 
+With only one weapon equipped, the character holds it with both hands. Both hands must stay attached to its hilt through movement and attacks; casting may briefly release and smoothly regrip. An occupied off-hand slot will support a shield or second weapon later. Do not return the empty off-hand to a dangling idle stance.
+
 The sword needs a clearly visible metal-gold arc that sweeps, tapers, and disperses with the blade. The user wants a dynamic arc, not its removal or a tiny glint. The starter sword currently attacks twice per second; further cadence and impact changes should follow the user's playtest feedback. Contact effects and damage must follow the blade's sweep.
 
 Draw HUD and text, including damage numbers, at native display resolution after world post-processing. Use the locally bundled Pixelify Sans font and natural glyph metrics; do not recreate letters from individually rounded pixel rectangles. Font files are a deliberate exception to procedural world/equipment art, with their license bundled locally.
@@ -32,6 +34,7 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/src/environment-art.ts` and `settlement-art.ts`: procedural biome silhouettes, furnished buildings, roof fading, and settlement lights.
 - `game/src/ground-layer.ts`: bounded terrain composition before subpixel camera sampling; keep tile joins inside one surface to avoid seams.
 - `game/src/art.ts`: procedural Canvas assets, modular equipment, articulated character rigs, and phased attack motion.
+- `game/src/player-arm-rig.ts`: facing-relative arm joints with separate depth and height, projected into the 2D art; shoulder armor must use the same joint anchors and upper-arm direction.
 - `game/src/attack-motion.ts`: shared angular motion for visible swings and swept melee contact.
 - `game/src/character-pose.ts`: common player pose for the character, ribbon, sparks, and weapon light.
 - `game/src/renderer.ts`: interpolated scene composition, camera, actors, and a separate native-resolution UI pass.
@@ -44,6 +47,7 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/src/main.ts`: input, loop, pause menu, local audio preference, and system reduced motion.
 - `game/src/exploration.ts` and `world-map.ts`: discovered terrain/POIs, local exploration persistence, smoothly scrolling minimap, and interactive world map.
 - `game/layouts.html` and `game/src/layout-review.ts`: dev-only static scene staging and PNG export using the real renderer; never advances gameplay or changes exploration saves.
+- `game/rig.html` and `game/src/rig-review.ts`: dev-only frozen character poses across eight facings, without driving gameplay.
 - `docs/`: design documents and reference concepts, not runtime assets.
 
 From the repository root: `npm run setup`, `npm run dev`, `npm test`, and `npm run build`. Engine tests require Node.js 22.13 or later for TypeScript stripping.

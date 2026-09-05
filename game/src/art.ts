@@ -1,5 +1,6 @@
-import { STARTING_SWORD, type WeaponVisual } from './equipment.ts';
+import { STARTING_SWORD, getGripLength, getSupportGripOffset, type WeaponVisual, type WeaponGrip } from './equipment.ts';
 import { getActiveSwingOffset } from './attack-motion.ts';
+import { ARM_DEPTH_SCALE, armShoulder, projectArmPoint, solveArm, type RigPoint } from './player-arm-rig.ts';
 
 /** Procedural art only: every cached image below is drawn from geometry. */
 export interface Sprite {
@@ -82,9 +83,10 @@ export interface CharacterPose {
   attackStart?: number;
   attackEnd?: number;
   attackArc?: number;
-  /** Normalized casting windup. Zero means the hand is relaxed. */
+  /** Casting release/regrip strength. Zero means the support hand holds the weapon. */
   cast?: number;
   weapon?: WeaponVisual;
+  grip?: WeaponGrip;
   /** Slots can be replaced or set to null independently, without altering the rig. */
   outfit?: Partial<CharacterOutfit>;
   /** Remaining bright-hit timer in seconds (0.16 seconds at impact). */
@@ -121,7 +123,7 @@ const TAU = Math.PI * 2;
 const TREE_VARIANTS = 48;
 const ROCK_VARIANTS = 32;
 const GRASS_VARIANTS = 32;
-const WEAPON_REST_ANGLE = -0.46;
+const WEAPON_REST_ANGLE = 0.46;
 
 function clamp(value: number, low = 0, high = 1): number {
   return Math.max(low, Math.min(high, value));
@@ -153,20 +155,6 @@ export function getSwingAngle(
   // at full speed on the exact tick where the damaging arc ends.
   const settle = smooth((recovery - 0.14) / 0.86);
   return angle + to + (rest - to) * settle + 0.22 * Math.sin(recovery * Math.PI) ** 2 * (1 - settle);
-}
-
-function elbowFor(shoulder: Point, hand: Point, side: number, anticipation = 0): Point {
-  const dx = hand[0] - shoulder[0], dy = hand[1] - shoulder[1];
-  const distance = Math.max(0.001, Math.hypot(dx, dy));
-  // The last few percent of reach stretch softly instead of snapping a joint.
-  const stretch = Math.max(1, distance / 19.7);
-  const upper = 9.1 * stretch, fore = 10.8 * stretch;
-  const along = clamp((upper * upper - fore * fore + distance * distance) / (2 * distance), 0, upper);
-  const height = Math.sqrt(Math.max(0, upper * upper - along * along));
-  const nx = -dy / distance, ny = dx / distance;
-  const bend = Math.tanh((nx * side + ny * (0.5 - anticipation * 0.75)) * 2.5);
-  return [shoulder[0] + dx / distance * along + nx * height * bend,
-    shoulder[1] + dy / distance * along + ny * height * bend];
 }
 
 function hash(value: number): number {
@@ -503,9 +491,10 @@ function sword(ctx: CanvasRenderingContext2D, hand: Point, angle: number, color:
   ctx.rotate(angle);
   const length = Math.max(8, visual.length), halfWidth = Math.max(0.7, visual.width * 0.5);
   const guard = Math.max(3.6, halfWidth * 2.4);
-  polygon(ctx, [[-5, -1.3], [3, -1.3], [3, 1.3], [-5, 1.3]], color(visual.grip));
-  for (let wrap = 0; wrap < 3; wrap++) {
-    line(ctx, [[-4 + wrap * 1.8, -1.2], [-3.2 + wrap * 1.8, 1.2]], color('#bd9461'), 0.5);
+  const gripLength = getGripLength(visual);
+  polygon(ctx, [[-gripLength, -1.3], [3, -1.3], [3, 1.3], [-gripLength, 1.3]], color(visual.grip));
+  for (let wrap = -gripLength + 1; wrap < 1; wrap += 1.8) {
+    line(ctx, [[wrap, -1.2], [wrap + .8, 1.2]], color('#bd9461'), 0.5);
   }
   polygon(ctx, [[3, -halfWidth], [length * 0.77, -halfWidth * 0.66], [length, 0],
     [length * 0.77, halfWidth * 0.68], [3, halfWidth]], color(visual.metal));
@@ -514,18 +503,19 @@ function sword(ctx: CanvasRenderingContext2D, hand: Point, angle: number, color:
   polygon(ctx, [[0.5, -guard + 0.8], [2.5, -guard], [4, -guard + 1.2],
     [3.8, guard - 1], [2, guard], [0.8, guard - 0.4]], color(visual.guard));
   line(ctx, [[1, -guard + 1], [2.5, -guard + 0.7], [3, guard - 1]], color(visual.edge), 0.55);
-  polygon(ctx, [[-7, -1.1], [-5.5, -2], [-4.2, -0.8], [-4.2, 0.8], [-5.5, 2], [-7, 1]], color(visual.guard));
+  polygon(ctx, [[-gripLength - 2, -1.1], [-gripLength - .5, -2], [-gripLength + .8, -.8],
+    [-gripLength + .8, .8], [-gripLength - .5, 2], [-gripLength - 2, 1]], color(visual.guard));
   ctx.fillStyle = color('#8b4c49');
-  ctx.fillRect(-6, -0.65, 1.1, 1.3);
+  ctx.fillRect(-gripLength - 1, -0.65, 1.1, 1.3);
   if (visual.glow) line(ctx, [[5, -halfWidth], [length * 0.77, -halfWidth * 0.66], [length, 0]], color(visual.glow), 0.55);
   ctx.restore();
 }
 
-function armorArm(
-  ctx: CanvasRenderingContext2D, shoulder: Point, elbow: Point, hand: Point,
-  piece: ArmorPiece | null, color: Color,
-): void {
+function upperArm(ctx: CanvasRenderingContext2D, shoulder: Point, elbow: Point, color: Color): void {
   taper(ctx, shoulder, elbow, 4.5, 3.4, color('#263a39'));
+}
+
+function forearm(ctx: CanvasRenderingContext2D, elbow: Point, hand: Point, piece: ArmorPiece | null, color: Color): void {
   taper(ctx, elbow, hand, 3.4, 2.1, color('#5b5145'));
   if (piece) {
     const m = piece.material;
@@ -535,6 +525,9 @@ function armorArm(
     line(ctx, [[elbow[0] - 1.4, elbow[1]], [cuff[0] - 1.2, cuff[1]]], color(m.edge), 0.65);
     line(ctx, [[cuff[0] - 1.6, cuff[1] - 0.7], [cuff[0] + 1.6, cuff[1] + 0.7]], color(m.trim), 0.8);
   }
+}
+
+function gauntlet(ctx: CanvasRenderingContext2D, hand: Point, piece: ArmorPiece | null, color: Color): void {
   const material = piece?.material ?? LEATHER;
   polygon(ctx, [[hand[0] - 2, hand[1] - 1.7], [hand[0] + 1.5, hand[1] - 2],
     [hand[0] + 2.1, hand[1] + 0.8], [hand[0] + 1.1, hand[1] + 2], [hand[0] - 1.5, hand[1] + 1.6]], color(material.base));
@@ -603,11 +596,13 @@ function chestArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | null, col
   ctx.restore();
 }
 
-function shoulderArmor(ctx: CanvasRenderingContext2D, side: number, piece: ArmorPiece | null, color: Color, sway: number): void {
+function shoulderArmor(ctx: CanvasRenderingContext2D, anchor: Point, elbow: Point, piece: ArmorPiece | null, color: Color): void {
   if (!piece) return;
   ctx.save();
-  ctx.translate(side * 6.5, -26 + side * sway);
-  ctx.scale(side, 1);
+  ctx.translate(...anchor);
+  // Mount and orientation both follow the upper arm, including in rear/side views.
+  ctx.rotate(-Math.atan2(elbow[0] - anchor[0], Math.max(2, elbow[1] - anchor[1])));
+  ctx.translate(-1.5, 0);
   const m = piece.material;
   const flare = piece.style === 'plate' ? 1 : 0;
   polygon(ctx, [[-1.3, -2.5], [1.2, -3.3], [4.1 + flare, -0.7], [4.4, 2.9], [0.6, 3.4], [-1.4, 0.8]], color(m.shadow));
@@ -689,7 +684,6 @@ function playerMotion(pose: CharacterPose) {
   const weaponAngle = swinging
     ? getSwingAngle(pose.attackAngle, attack, start, end, pose.attackArc) + idleSway * (1 - attackBlend)
     : pose.angle + WEAPON_REST_ANGLE + idleSway;
-  const weaponSide = -Math.sin(bodyAngle);
   const swordBehind = Math.sin(weaponAngle) < -0.18;
   const hipX = -moveY * step * 0.65 + Math.cos(pose.attackAngle) * commitment * 0.55;
   const hipY = Math.cos(phase * 2) * moving * 0.25 + crouch;
@@ -699,12 +693,41 @@ function playerMotion(pose: CharacterPose) {
     bob + crouch + Math.sin(pose.attackAngle) * commitment * 1.4];
   const reach = !swinging ? 11 : attack < start ? 11 + windup * 2.3
     : attack < end ? 13.3 + Math.sin(active * Math.PI) ** 2 * 3.5 : 13.3 - recovery * 2.3;
-  const hand: Point = [Math.cos(weaponAngle) * reach, -20 + Math.sin(weaponAngle) * reach * 0.9];
-  const shoulderSway = Math.cos(bodyAngle) * 1.15 + step * 0.3 + torsoTurn * 2.6;
-  const shoulder: Point = [weaponSide * 6.5, -26 + weaponSide * shoulderSway];
-  const elbow = elbowFor(shoulder, hand, weaponSide, elbowTuck);
+  const swingHand: Point = [Math.cos(weaponAngle) * reach, -20 + Math.sin(weaponAngle) * reach * .9];
+  const restHand: Point = [Math.cos(pose.angle) * 8 - Math.sin(bodyAngle) * 2,
+    -16.5 + Math.sin(pose.angle) * 4.4 + Math.cos(bodyAngle) * .9];
+  const hand: Point = [restHand[0] * (1 - attackBlend) + swingHand[0] * attackBlend,
+    restHand[1] * (1 - attackBlend) + swingHand[1] * attackBlend];
+  const shoulderSway = step * .3;
+  // A centered two-hand guard blends into the existing active attack orbit.
+  const handDepth = (Math.sin(pose.angle) * 8 + Math.cos(bodyAngle) * 2) * (1 - attackBlend)
+    + Math.sin(weaponAngle) * reach * attackBlend;
+  const weaponHand: RigPoint = [hand[0], handDepth, handDepth * ARM_DEPTH_SCALE - hand[1]];
+  const gripAmount = pose.grip === 'one-handed' ? 0 : 1 - cast;
+  const weaponArm = solveArm(armShoulder(bodyAngle, 1, shoulderSway), weaponHand, bodyAngle, 1, elbowTuck, gripAmount);
+  const rightX = -Math.sin(bodyAngle), rightDepth = Math.cos(bodyAngle);
+  const relaxedHand: RigPoint = [-rightX * 9 - step * moveX * 1.2,
+    -rightDepth * 9 - step * moveY * 1.2, 10 + Math.max(0, -commitment) * 3];
+  const supportOffset = getSupportGripOffset(pose.weapon);
+  const supportGrip: RigPoint = [weaponHand[0] + Math.cos(weaponAngle) * supportOffset,
+    weaponHand[1] + Math.sin(weaponAngle) * supportOffset,
+    weaponHand[2] + (ARM_DEPTH_SCALE - 1) * Math.sin(weaponAngle) * supportOffset];
+  const restOffHand = pose.grip === 'one-handed' ? relaxedHand : supportGrip;
+  const castHand: RigPoint = [Math.cos(pose.angle) * 15, Math.sin(pose.angle) * 15, 20];
+  const offHand3: RigPoint = [
+    restOffHand[0] * (1 - cast) + castHand[0] * cast,
+    restOffHand[1] * (1 - cast) + castHand[1] * cast,
+    restOffHand[2] * (1 - cast) + castHand[2] * cast,
+  ];
+  const offArm = solveArm(armShoulder(bodyAngle, -1, shoulderSway), offHand3, bodyAngle, -1, 0, gripAmount);
   return { moving, phase, step, moveX, moveY, bob, back, commitment, torsoTurn, cast,
-    weaponAngle, weaponSide, swordBehind, hipX, hipY, lean, body, hand, shoulderSway, shoulder, elbow };
+    weaponAngle, swordBehind, hipX, hipY, lean, body, hand, bodyAngle, weaponArm, offArm };
+}
+
+/** Shared joint data for equipment attachment checks and static rig inspection. */
+export function getPlayerArmRig(pose: CharacterPose) {
+  const { weaponArm, offArm, bodyAngle, weaponAngle } = playerMotion(pose);
+  return { weapon: weaponArm, offhand: offArm, facing: bodyAngle, weaponAngle };
 }
 
 /** Exact blade tip in scaled player-local coordinates, relative to the ground anchor. */
@@ -721,7 +744,7 @@ export function getPlayerSwordTip(pose: CharacterPose): { x: number; y: number }
 function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color): void {
   const outfit: CharacterOutfit = { ...STARTER_OUTFIT, ...pose.outfit };
   const { moving, phase, step, moveX, moveY, bob, back, commitment, torsoTurn, cast,
-    weaponAngle, weaponSide, swordBehind, hipX, hipY, lean, body, hand, shoulderSway, shoulder, elbow } = playerMotion(pose);
+    weaponAngle, swordBehind, hipX, hipY, lean, body, hand, weaponArm, offArm } = playerMotion(pose);
   const legs = [-1, 1].map(side => {
     const legPhase = phase + (side > 0 ? Math.PI : 0);
     const travel = Math.sin(legPhase) * 5.2 * moving;
@@ -755,14 +778,30 @@ function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color
 
   ctx.save();
   ctx.transform(...body);
-  const swordArm = () => {
-    armorArm(ctx, shoulder, elbow, hand, outfit.hands, color);
+  const supportHolding = pose.grip !== 'one-handed' && cast < .05;
+  const heldSword = () => {
     sword(ctx, hand, weaponAngle, color, pose.weapon);
+    gauntlet(ctx, hand, outfit.hands, color);
+    if (supportHolding) gauntlet(ctx, projectArmPoint(offArm.hand), outfit.hands, color);
     // Fingers cross the grip, keeping the weapon seated in the animated gauntlet.
     ctx.save(); ctx.translate(hand[0], hand[1]); ctx.rotate(weaponAngle);
     line(ctx, [[-0.6, -1.2], [-0.6, 1.3]], color(outfit.hands?.material.edge ?? '#baa078'), 0.7);
+    if (supportHolding) {
+      const support = getSupportGripOffset(pose.weapon);
+      line(ctx, [[support - .6, -1.2], [support - .6, 1.3]], color(outfit.hands?.material.edge ?? '#baa078'), .7);
+    }
     ctx.restore();
   };
+  const armLayers = [weaponArm, offArm].flatMap(arm => [
+    { depth: (arm.shoulder[1] + arm.elbow[1]) / 2,
+      draw: () => upperArm(ctx, projectArmPoint(arm.shoulder), projectArmPoint(arm.elbow), color) },
+    { depth: supportHolding ? (swordBehind ? -1 : 1) : (arm.elbow[1] + arm.hand[1]) / 2,
+      draw: () => forearm(ctx, projectArmPoint(arm.elbow), projectArmPoint(arm.hand), outfit.hands, color) },
+  ]).sort((a, b) => a.depth - b.depth);
+  if (!supportHolding) {
+    armLayers.push({ depth: offArm.hand[1], draw: () => gauntlet(ctx, projectArmPoint(offArm.hand), outfit.hands, color) });
+    armLayers.sort((a, b) => a.depth - b.depth);
+  }
   const cape = () => {
     const cloth = outfit.cloak;
     if (!cloth) return;
@@ -788,14 +827,8 @@ function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color
     line(ctx, [[-4, -26], [0, -24.5], [4, -26]], color(cloth.trim), 0.8);
   };
   if (!back) cape();
-  if (swordBehind) swordArm();
-  const offShoulder: Point = [-weaponSide * 6.5, -25 - weaponSide * shoulderSway];
-  const offHand: Point = [(-weaponSide * 8.2 - step * moveX * 1.2) * (1 - cast)
-    + Math.cos(pose.angle) * 15 * cast - Math.cos(pose.attackAngle) * commitment * 1.8,
-    -15 - step * moveY * 1.2 - cast * 5 + Math.sin(pose.angle) * cast * 8 - Math.max(0, -commitment) * 3];
-  const offElbow = elbowFor(offShoulder, offHand, -weaponSide);
-  const offArm = () => armorArm(ctx, offShoulder, offElbow, offHand, outfit.hands, color);
-  if (offHand[1] < -20) offArm();
+  for (const layer of armLayers) if (layer.depth < 0) layer.draw();
+  if (swordBehind) heldSword();
   ctx.save();
   ctx.translate(0, PLAYER_ATTACHMENTS.chest[1]);
   ctx.transform(1 - Math.abs(torsoTurn) * 0.08, torsoTurn * 0.12, 0, 1, 0, 0);
@@ -803,14 +836,18 @@ function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color
   chestArmor(ctx, outfit.chest, color);
   ctx.restore();
   if (back) cape();
-  if (offHand[1] >= -20) offArm();
-  for (const side of [-1, 1]) shoulderArmor(ctx, side, outfit.shoulders, color, shoulderSway);
+  for (const layer of armLayers) if (layer.depth >= 0) layer.draw();
+  const caps = [weaponArm, offArm].sort((a, b) => a.shoulder[1] - b.shoulder[1]);
+  for (const arm of caps) {
+    shoulderArmor(ctx, projectArmPoint(arm.shoulder), projectArmPoint(arm.elbow), outfit.shoulders, color);
+  }
   // The neck counterbalances the moving torso; small facial features stay legible.
   ctx.save(); ctx.translate(lean * -12, -bob * 0.3);
   headArmor(ctx, outfit.head, color, pose.angle);
   ctx.restore();
-  if (!swordBehind) swordArm();
+  if (!swordBehind) heldSword();
   if (cast > 0.05) {
+    const offHand = projectArmPoint(offArm.hand);
     ctx.save(); ctx.translate(offHand[0], offHand[1]); ctx.rotate(pose.time * 4.5);
     const radius = 1 + cast * 2.8;
     polygon(ctx, [[0, -radius], [radius, 0], [0, radius], [-radius, 0]], color('#ffc276'));

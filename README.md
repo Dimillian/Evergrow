@@ -30,7 +30,7 @@ Open [Evergrowing locally](http://127.0.0.1:5173/) in the Codex in-app browser. 
 | N | Toggle synthesized sound |
 | F3 | Frame-rate and coordinate overlay |
 
-The basic attack derives its timing, reach, and damage from character and equipped-weapon stats. There is no automatic combo chain; a combo could become a separate skill later. Character, inventory, skill-tree, and journal shortcuts on the HUD are disabled placeholders.
+The basic attack derives its timing, reach, and damage from character and equipped-weapon stats. A single equipped weapon uses both hands on its hilt; the rig has an independent-hand stance for future shields or second weapons. There is no automatic combo chain; a combo could become a separate skill later. Character, inventory, skill-tree, and journal shortcuts on the HUD are disabled placeholders.
 
 The HUD and damage numbers render at native display resolution above the world shader. UI typography uses locally bundled [Pixelify Sans](game/src/assets/fonts/SOURCE.md), licensed under the SIL Open Font License; no external font service is used.
 

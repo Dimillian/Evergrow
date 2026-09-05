@@ -42,6 +42,8 @@ export interface WeaponVisual {
   metal: string;
   edge: string;
   grip: string;
+  /** Length behind the lead-hand anchor; both hands can mount along this hilt. */
+  gripLength?: number;
   guard: string;
   glow?: string;
 }
@@ -59,6 +61,8 @@ export interface WeaponDefinition {
 
 export interface Equipment {
   mainHand: WeaponDefinition;
+  /** An occupied off-hand selects an independent-arm stance when those items arrive. */
+  offHand?: { kind: 'weapon'; weapon: WeaponDefinition } | { kind: 'shield'; id: string; name: string } | null;
 }
 
 export interface Player {
