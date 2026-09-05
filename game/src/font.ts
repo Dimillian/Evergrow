@@ -26,16 +26,19 @@ export function loadGameFont(): Promise<void> {
   return loading;
 }
 
-function font(pixelSize: number) {
+type TextFace = 'display' | 'interface';
+
+function font(pixelSize: number, face: TextFace = 'display') {
+  if (face === 'interface') return `600 ${pixelSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`;
   return `${FONT_WEIGHT} ${pixelSize}px "${GAME_FONT_FAMILY}", monospace`;
 }
 
 /** Natural font metrics replace the previous six-pixel character-count estimate. */
-export function textWidth(value: string, size = 1) {
+export function textWidth(value: string, size = 1, face: TextFace = 'display') {
   if (!value || size <= 0 || !Number.isFinite(size)) return 0;
   measuring ??= document.createElement('canvas').getContext('2d');
   if (!measuring) return 0;
-  measuring.font = font(GAME_FONT_EM * size);
+  measuring.font = font(GAME_FONT_EM * size, face);
   measuring.fontKerning = 'normal';
   return measuring.measureText(value.toUpperCase()).width;
 }
@@ -47,7 +50,7 @@ export function textWidth(value: string, size = 1) {
  * glyph stems and animated font scales keep their natural typeface geometry.
  */
 export function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number,
-  size = 1, color = '#d4c8a4', align: 'left' | 'center' | 'right' = 'left') {
+  size = 1, color = '#d4c8a4', align: 'left' | 'center' | 'right' = 'left', face: TextFace = 'display') {
   if (!value || size <= 0 || ![x, y, size].every(Number.isFinite)) return;
   const transform = ctx.getTransform();
   const physicalScale = Math.hypot(transform.c, transform.d);
@@ -55,7 +58,7 @@ export function text(ctx: CanvasRenderingContext2D, value: string, x: number, y:
   const pixels = GAME_FONT_EM * size * physicalScale;
   const valueToDraw = value.toUpperCase();
   ctx.save();
-  ctx.font = font(pixels);
+  ctx.font = font(pixels, face);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   ctx.direction = 'ltr';

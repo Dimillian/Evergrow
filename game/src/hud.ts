@@ -144,16 +144,16 @@ function shortcuts(c: CanvasRenderingContext2D, p: Player) {
     c.fillRect(x + 20, menu.y + 4, 12, 15);
     c.strokeStyle = enabled ? '#819aa6' : '#394b55';
     c.beginPath(); c.moveTo(x + 21, menu.y + 18.5); c.lineTo(x + 31, menu.y + 18.5); c.stroke();
-    text(c, HUD_MENU_SHORTCUTS[i].key, x + 26, menu.y + 5.5, 1.5, enabled ? '#f0f5ee' : '#829098', 'center');
+    text(c, HUD_MENU_SHORTCUTS[i].key, x + 26, menu.y + 5.5, 1.35, enabled ? '#f0f5ee' : '#829098', 'center', 'interface');
     if (points > 0) {
       // Persistent numbered seals: amber attributes, violet skills. Hide as soon as spent.
       const count = points > 99 ? '99+' : String(points);
-      const badgeWidth = Math.max(13, textWidth(count, 1.05) + 6);
-      const bx = x + menu.width - badgeWidth + 1, by = menu.y - 7;
+      const badgeWidth = Math.max(16, textWidth(count, 1.3, 'interface') + 8);
+      const bx = x + menu.width - badgeWidth + 1, by = menu.y - 9;
       c.save(); c.shadowColor = accent; c.shadowBlur = 5;
-      c.fillStyle = accent; c.beginPath(); c.roundRect(bx, by, badgeWidth, 11, 3); c.fill();
+      c.fillStyle = accent; c.beginPath(); c.roundRect(bx, by, badgeWidth, 15, 3); c.fill();
       c.shadowBlur = 0; c.strokeStyle = '#0a1119'; c.lineWidth = 1; c.stroke();
-      text(c, count, bx + badgeWidth / 2, by + 1.5, 1.05, '#15121d', 'center');
+      text(c, count, bx + badgeWidth / 2, by + 2, 1.3, '#15121d', 'center', 'interface');
       c.restore();
       c.fillStyle = accent; c.fillRect(x + 3, menu.y + menu.height - 2, menu.width - 6, 1);
     }

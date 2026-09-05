@@ -27,7 +27,7 @@ Weapon profiles explicitly own handedness. Two-handed melee weapons keep both ha
 
 The sword needs a clearly visible metal-gold arc that sweeps, tapers, and disperses with the blade. The user wants a dynamic arc, not its removal or a tiny glint. The starter sword currently attacks twice per second; further cadence and impact changes should follow the user's playtest feedback. Contact effects and damage must follow the blade's sweep.
 
-Draw HUD and text, including damage numbers, at native display resolution after world post-processing. Use the locally bundled Pixelify Sans font and natural glyph metrics; do not recreate letters from individually rounded pixel rectangles. Font files are a deliberate exception to procedural world/equipment art, with their license bundled locally.
+Draw HUD and text, including damage numbers, at native display resolution after world post-processing. Use the locally bundled Pixelify Sans font for display text and a clean system sans-serif for small HUD shortcut labels and point counts (user-requested legibility exception). Use natural glyph metrics; do not recreate letters from individually rounded pixel rectangles. Font files are a deliberate exception to procedural world/equipment art, with their license bundled locally.
 
 Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-contrast RGB grille. The user requested removing settings and filter switching. Do not reintroduce selectable display modes, the HUD gear, or a settings panel. Keep Escape pause/resume and N sound toggle; reduced motion follows the operating system automatically.
 
