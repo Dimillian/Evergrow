@@ -2,9 +2,15 @@
 
 A gothic, top-down 2D action RPG built for the browser, inspired by Diablo and Path of Exile. Explore a growing wilderness, find gear, and build a character across a vast classless skill tree.
 
-**Status: playable local prototype · actively iterating · not released.**
+**Playable prototype · actively iterating · not released.**
 
-[Play on Sites](https://evergrow.dimillian.chatgpt.site) (private owner access). Saves stay in the browser and are separate from localhost saves.
+## Play
+
+### [Play Evergrow in your browser →](https://evergrow.dimillian.chatgpt.site)
+
+Desktop keyboard and mouse. The hosted build currently requires owner access; this public repository does not grant access to the game. You can also [run it locally](#run-locally).
+
+Progress is saved in your browser. Hosted and localhost characters have separate saves; cloud saves are not available yet.
 
 ![The starting wilderness in Deadwood](docs/screenshots/deadwood.png)
 
@@ -15,7 +21,7 @@ A gothic, top-down 2D action RPG built for the browser, inspired by Diablo and P
 - **Combat:** melee, bows and elemental staves; shields and dual wield; dodging, particles, damage feedback, and six enemy archetypes across three ranks. Encounters spawn outside the camera.
 - **Builds:** 2,113 nodes, 150 constellations and 17 active skills. Short early routes, useful resource/speed choices, and cross-discipline bridges at every layer. Attack and cast speed are independent; first-tier skills have no cooldown.
 - **Gear & progression:** procedural names, icons and visible equipment; an 8×8 inventory, drag/drop, quick equip and comparison tooltips; item tiers, enemy loot tables, geographic danger scaling, and one skill point plus five attribute points per level.
-- **Presentation:** code-generated artwork, dynamic lighting, restrained CRT/phosphor, and a shared retro-modern UI kit with compact panels, readable rarity treatments and animated tooltips, fading enemy remains, labeled ground equipment, rarity-colored loot notifications, level-up rewards and discovery notices.
+- **Presentation:** code-generated artwork, dynamic lighting, restrained CRT/phosphor, a shared retro-modern UI kit, and compact loot, gold, XP and discovery notifications.
 
 **Town portal:** free three-second cast to your home town, with a saved return portal back to your expedition. Set home at a town plaza anchor.
 
@@ -25,7 +31,27 @@ Character progress, shop state and each character’s explored map persist in th
 
 ## Screenshots
 
-Current game renderers and interfaces, captured from frozen development scenes on September 5, 2026. Equipment and allocations are staged; no gameplay was automated.
+Real game interfaces and renderers, captured from frozen development scenes on September 5, 2026. Characters, equipment and resources are staged.
+
+### Combat HUD
+
+Animated life and mana glass, a compact shortcut rail, five assignable skill slots, and an integrated XP bar. UI and text stay crisp above the world’s CRT effects.
+
+![Current Astral HUD with life and mana orbs, utility shortcuts, skill slots and XP](docs/screenshots/hud.png)
+
+### Loot & item details
+
+Distinct rarity borders and crests, procedural equipment icons, readable affixes, and effective stat comparisons before equipping. The bag holds 64 items and supports drag/drop and quick equip.
+
+![Epic item tooltip showing affixes and on-equip stat changes beside the rarity-colored inventory](docs/screenshots/item-details.png)
+
+### Town services
+
+Trade with blacksmiths, jewelers and enchanters. Improve gear to +10, raise rarity, reroll affixes or bring a favorite item up to the area's level—including equipped gear.
+
+![Blacksmith enhancement preview with item stats, cost and rarity-colored equipment](docs/captures/2026-09-05/town-services/equipped-enhancement.png)
+
+### Characters & builds
 
 ![The character hall with staged adventurers](docs/screenshots/title-character-hall.png)
 
@@ -56,8 +82,6 @@ npm run stats   # Content, source and build statistics
 `npm run build:site` prepares the production game in root `dist/` for Sites. Deployment uses the existing project in `.openai/hosting.json`; local development remains unchanged.
 
 TypeScript, Vite, Canvas 2D and WebGL; no runtime package dependencies. **519 code tests pass** at this checkpoint. Gameplay feel and balance are tested by the player.
-
-Gold drops magnetize on approach, persist per character, and appear in the HUD and inventory. Gold and XP gains have compact animated feedback.
 
 [Documentation index](docs/README.md) · [Current status](docs/system-status.md) · [Character saves](docs/character-saves.md) · [Game brief](docs/game-brief.md) · [Roadmap](docs/roadmap.md) · [Architecture](docs/architecture.md) · [Skills & weapons](docs/weapons-and-skills.md) · [Progression & loot](docs/progression-and-loot.md) · [NPC services](docs/npcs-and-vendors.md)
 
