@@ -39,13 +39,16 @@
   flex: none;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: 12px;
   min-width: 0;
-  padding: 20px 24px;
+  padding: 8px 18px;
   border-bottom: 1px solid var(--ui-line);
   background: linear-gradient(110deg, #c0c5ac05, #060d1300 75%);
 }
 .ui-window-header > :first-child, .ui-window__header > :first-child { min-width: 0; }
+.ui-window-header .ui-kicker, .ui-window__header .ui-kicker {
+  margin-bottom: 3px; font-size: 10px; letter-spacing: .1em;
+}
 .ui-window-body, .ui-window__body { flex: 1; min-width: 0; min-height: 0; padding: 24px; }
 .ui-window-footer, .ui-window__footer {
   display: flex;
@@ -78,7 +81,7 @@
 .ui-title {
   margin: 0;
   color: var(--ui-ivory);
-  font-size: clamp(24px, 3vw, var(--ui-type-title));
+  font-size: clamp(18px, 2vw, var(--ui-type-title));
   font-weight: 400;
   line-height: 1.12;
   letter-spacing: .025em;
@@ -313,7 +316,7 @@
 .ui-window[hidden], .ui-button[hidden], .ui-status[hidden], .ui-slot[hidden], .ui-badge[hidden] { display: none; }
 
 @media (max-width: 560px) {
-  .ui-window-header, .ui-window__header { padding: 17px 18px; gap: 12px; }
+  .ui-window-header, .ui-window__header { padding: 8px 12px; gap: 10px; }
   .ui-window-body, .ui-window__body { padding: 20px 18px; }
   .ui-window-footer, .ui-window__footer { padding: 12px 18px; }
 }

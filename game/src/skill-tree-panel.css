@@ -1,12 +1,12 @@
 .skill-atlas { position: absolute; z-index: 16; inset: 0; display: grid; place-items: center; padding: clamp(12px, 2.5vw, 32px); background: #040910bb; backdrop-filter: blur(5px); color: var(--ui-text); font-family: var(--ui-font); }
 .skill-atlas[hidden] { display: none; }
 .skill-atlas-window { display: flex; flex-direction: column; width: min(1480px, 100%); height: min(1000px, 100%); min-height: min(450px, calc(100dvh - clamp(24px, 5vw, 64px))); padding: 0; overflow: hidden; border-color: var(--ui-silver-dim); background: linear-gradient(145deg, #17222d, var(--ui-steel-deep) 55%); box-shadow: 0 24px 100px #000c, inset 0 0 0 3px #080f16, inset 0 0 0 4px #728b9133; }
-.skill-atlas-header { display: flex; align-items: center; gap: 22px; padding: 23px 28px 20px; border-bottom-color: #73839966; background: linear-gradient(115deg, #26314377, #0e1721 70%); }
-.skill-atlas-header .ui-kicker { color: #ac9acb; margin: 0 0 5px; letter-spacing: .18em; }
-.skill-atlas-header .ui-title { font-size: clamp(23px, 2.5vw, 32px); letter-spacing: .02em; margin: 0; color: #e3e5ed; }
+.skill-atlas-header { display: flex; align-items: center; gap: 12px; border-bottom-color: #73839966; background: linear-gradient(115deg, #26314377, #0e1721 70%); }
+.skill-atlas-header .ui-kicker { color: #ac9acb; letter-spacing: .1em; }
+.skill-atlas-header .ui-title { letter-spacing: .02em; margin: 0; color: #e3e5ed; }
 .skill-atlas-header > .ui-button { flex: 0 0 44px; }
-.skill-atlas-points { display: flex; align-items: center; gap: 11px; margin-left: auto; color: #c5b3e7; padding: 8px 20px; border-left: 1px solid #71849b55; }
-.skill-atlas-points strong { font-size: 33px; line-height: 1; font-weight: 500; }
+.skill-atlas-points { display: flex; align-items: center; gap: 8px; margin-left: auto; color: #c5b3e7; padding: 3px 12px; border-left: 1px solid #71849b55; }
+.skill-atlas-points strong { font-size: 22px; line-height: 1; font-weight: 500; }
 .skill-atlas-points span { font-size: 12px; max-width: 58px; line-height: 1.3; letter-spacing: .1em; }
 .skill-atlas-main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 296px; }
 .skill-atlas-chart { display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
@@ -87,11 +87,10 @@
 @media (max-width: 620px) {
   .skill-atlas { padding: 5px; }
   .skill-atlas-window { width: 100%; height: 100%; min-height: 0; }
-  .skill-atlas-header { padding: 15px 13px; gap: 6px; }
-  .skill-atlas-header .ui-title { font-size: 21px; }
+  .skill-atlas-header { gap: 6px; }
   .skill-atlas-header .ui-kicker { font-size: 9px; }
   .skill-atlas-points { gap: 6px; padding: 3px 7px; }
-  .skill-atlas-points strong { font-size: 27px; }
+  .skill-atlas-points strong { font-size: 22px; }
   .skill-atlas-points span { font-size: 9px; max-width: 38px; }
   .skill-atlas-main { display: flex; flex-direction: column; overflow-y: auto; }
   .skill-atlas-chart { flex: 0 0 450px; }

@@ -9,23 +9,23 @@
   width: min(1180px, 100%); height: min(780px, 100%); min-height: 0; overflow: hidden;
 }
 .world-map-header {
-  position: relative; z-index: 3; padding: 19px 22px; gap: 16px;
+  position: relative; z-index: 3;
   background: linear-gradient(100deg, #b09a7208, transparent 65%);
 }
-.world-map-heading { display: flex; align-items: center; gap: 16px; }
+.world-map-heading { display: flex; align-items: center; gap: 12px; }
 .world-map-heading > div { min-width: 0; }
 .world-map-emblem {
   position: relative; display: grid; place-items: center; flex: none;
-  width: 44px; height: 44px; border: 1px solid var(--ui-line);
+  width: 28px; height: 28px; border: 1px solid var(--ui-line);
   background: var(--ui-well); color: var(--ui-brass);
   box-shadow: inset 0 1px #cbd2b709;
 }
 .world-map-emblem::after {
   content: ''; position: absolute; inset: 4px; border: 1px solid #b09a721a; pointer-events: none;
 }
-.world-map-emblem .ui-icon { width: 24px; height: 24px; }
-.world-map-eyebrow.ui-kicker { margin-bottom: 4px; font-size: 11px; letter-spacing: .16em; }
-.world-map-header .ui-title { font-size: clamp(23px, 3vw, 29px); line-height: 1.1; }
+.world-map-emblem .ui-icon { width: 18px; height: 18px; }
+.world-map-eyebrow.ui-kicker { letter-spacing: .1em; }
+.world-map-header .ui-title { line-height: 1.1; }
 .world-map-close { align-self: center; }
 .world-map-viewport.ui-window__body {
   position: relative; flex: 1; min-height: 0; overflow: hidden; padding: 0;
@@ -81,17 +81,12 @@
 .world-map-position .ui-kicker { margin: 0; font-size: 10px; color: var(--ui-faint); letter-spacing: .1em; }
 .world-map-coordinates { white-space: nowrap; color: var(--ui-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 @media (max-width: 560px) {
-  .world-map-header { padding: 14px; gap: 10px; }
   .world-map-heading { gap: 11px; }
-  .world-map-emblem { width: 36px; height: 40px; }
-  .world-map-emblem .ui-icon { width: 22px; height: 22px; }
-  .world-map-header .ui-title { font-size: 23px; }
   .world-map-eyebrow.ui-kicker { font-size: 10px; letter-spacing: .1em; }
   .world-map-toolbar { right: 12px; bottom: 12px; }
   .world-map-footer { align-items: flex-start; flex-wrap: wrap; gap: 10px 18px; padding: 12px 14px; }
   .world-map-position { margin-left: auto; }
 }
 @media (max-height: 500px) {
-  .world-map-header { padding-top: 10px; padding-bottom: 10px; }
   .world-map-footer { padding-top: 10px; padding-bottom: 10px; }
 }

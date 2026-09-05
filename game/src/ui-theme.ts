@@ -24,7 +24,7 @@ export const UI_THEME = Object.freeze({
   }),
   typography: Object.freeze({
     font: '"Pixelify Sans", ui-monospace, monospace',
-    body: '16px', small: '14px', kicker: '12px', title: '32px',
+    body: '16px', small: '14px', kicker: '12px', title: '20px',
   }),
   geometry: Object.freeze({ control: '44px', slot: '56px', radius: '3px' }),
   motion: Object.freeze({ quick: '140ms', gentle: '220ms' }),
