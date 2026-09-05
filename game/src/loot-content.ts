@@ -15,11 +15,11 @@ export interface EnemyLootTable {
 /** Initial authored rewards. Encounter rank changes yield and rarity, never the player's current level. */
 export const ENEMY_LOOT_TABLES: Readonly<Record<EnemyRank, EnemyLootTable>> = Object.freeze({
   normal: Object.freeze({ guaranteedItems: 0, bonusItemChance: .28, itemLevelBonus: 0,
-    tierWeights: Object.freeze({ common: 55, magic: 32, rare: 11, epic: 1.8, legendary: .2 }) }),
+    tierWeights: Object.freeze({ common: 75, magic: 22, rare: 2.7, epic: .28, legendary: .02 }) }),
   veteran: Object.freeze({ guaranteedItems: 0, bonusItemChance: .7, itemLevelBonus: 1,
-    tierWeights: Object.freeze({ common: 15, magic: 45, rare: 32, epic: 7.5, legendary: .5 }) }),
+    tierWeights: Object.freeze({ common: 60, magic: 32, rare: 7, epic: .95, legendary: .05 }) }),
   elite: Object.freeze({ guaranteedItems: 1, bonusItemChance: .25, itemLevelBonus: 2,
-    tierWeights: Object.freeze({ common: 0, magic: 40, rare: 45, epic: 13, legendary: 2 }) }),
+    tierWeights: Object.freeze({ common: 40, magic: 45, rare: 13, epic: 1.9, legendary: .1 }) }),
 });
 
 export function getLootTable(rank: EnemyRank): EnemyLootTable { return ENEMY_LOOT_TABLES[rank]; }

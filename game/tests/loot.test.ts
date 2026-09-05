@@ -58,13 +58,13 @@ test('conditional tier tables select the exact authored mass and zero-weight tie
     const weights = getLootTable(rank).tierWeights;
     const counts = { common: 0, magic: 0, rare: 0, epic: 0, legendary: 0 };
     for (let index = 0; index < 10_000; index++) counts[selectLootWeight(weights, (index + .5) / 10_000)]++;
-    for (const tier of Object.keys(counts) as (keyof typeof counts)[]) assert.equal(counts[tier], weights[tier] * 100);
+    for (const tier of Object.keys(counts) as (keyof typeof counts)[]) assert.equal(counts[tier], Math.round(weights[tier] * 100));
   }
-  assert.equal(selectLootWeight(getLootTable('elite').tierWeights, 0), 'magic');
-  assert.equal(selectLootWeight(getLootTable('normal').tierWeights, .55), 'magic');
-  assert.equal(selectLootWeight(getLootTable('normal').tierWeights, .87), 'rare');
-  assert.equal(selectLootWeight(getLootTable('normal').tierWeights, .98), 'epic');
-  assert.equal(selectLootWeight(getLootTable('normal').tierWeights, .998), 'legendary');
+  assert.equal(selectLootWeight(getLootTable('elite').tierWeights, 0), 'common');
+  assert.equal(selectLootWeight(getLootTable('normal').tierWeights, .75), 'magic');
+  assert.equal(selectLootWeight(getLootTable('normal').tierWeights, .97), 'rare');
+  assert.equal(selectLootWeight(getLootTable('normal').tierWeights, .9971), 'epic');
+  assert.equal(selectLootWeight(getLootTable('normal').tierWeights, .9999), 'legendary');
   assert.throws(() => selectLootWeight({ a: 0 }, .5), RangeError);
   assert.throws(() => selectLootWeight({ a: -1, b: 2 }, .5), RangeError);
   assert.throws(() => selectLootWeight({ a: Infinity }, .5), RangeError);
@@ -91,7 +91,7 @@ test('rank owns item level and at most two individually seeded rewards at valid 
       for (const item of items) {
         assert.equal(item.itemLevel, 12 + getLootTable(rank).itemLevelBonus);
         assert.equal(item.requiredLevel, item.itemLevel - 2);
-        if (rank === 'elite') assert.notEqual(item.tier, 'common');
+        assert.ok(getLootTable(rank).tierWeights[item.tier] > 0);
       }
     }
     assert.equal(lootItemLevel(10.8, rank), 10 + getLootTable(rank).itemLevelBonus);

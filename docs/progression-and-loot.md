@@ -28,11 +28,11 @@ Towns remain protected. Their safe interiors and streets do not create leveled c
 
 Level and rank are captured at spawn. Crossing a boundary or pulling an enemy across one never changes that enemy's stats or loot level. Enemy projectiles retain their attacker's source level after launch, including after the caster dies.
 
-Ambient population targets `min(8, 5 + floor((areaLevel − 1) / 4))`. Camp members do not count toward that target; all sources still share a hard limit of **18 living enemies**. Camps can occupy at most 14 slots, reserving four for roaming foes. Each candidate uses its own geographic level, so an area boundary can contain enemies from both levels.
+Ambient population targets `min(14, 9 + floor((areaLevel − 1) / 4))`. Camp members do not count toward that target; all sources still share a hard limit of **24 living enemies**. Camps can occupy at most 15 slots, reserving nine for roaming foes. Each candidate uses its own geographic level, so an area boundary can contain enemies from both levels.
 
-Automatic populations wait for valid camera bounds after construction or reset. Five initial roaming enemies settle into the offscreen surroundings in small batches; later groups require both travel and a cooldown. Placement uses the actual camera rectangle, shared visual margins and a forward lead, so a wide zoom does not leave the old fixed-distance spawn ring entirely visible. Solitary enemies and groups of two or three use loose formations, with travel-direction-biased placement and biome-appropriate companions. Blocked ground, sanctuaries and every camp footprint remain excluded.
+Automatic populations wait for valid camera bounds after construction or reset. Nine initial roaming enemies settle into the offscreen surroundings in small batches; later groups require both travel and a cooldown. Placement uses the actual camera rectangle, shared visual margins and a forward lead, so a wide zoom does not leave the old fixed-distance spawn ring entirely visible. Solitary enemies and groups of two or three use loose formations, with travel-direction-biased placement and biome-appropriate companions. Blocked ground, sanctuaries and every camp footprint remain excluded.
 
-After the initial population has been placed, standing still does not refill cleared ground from elapsed time or camera zoom alone. Further groups require 220–380 units of travel and 3.2–5.8 seconds between placements. Stored travel is capped at 380 units, failed placement retries after 0.45 seconds, and a full population cannot bank an unlimited burst. Distant inactive ambient actors may retire only while wholly offscreen; forward travel can also retire hidden trailing actors to free room ahead. Visible or engaged foes remain. Retirement is not death and grants no rewards. These travel and density values are starting playtest parameters.
+After the initial population has been placed, standing still does not refill cleared ground from elapsed time or camera zoom alone. Further groups require 180–280 units of travel and 2.2–3.8 seconds between placements. Stored travel is capped at 280 units, failed placement retries after 0.45 seconds, and a full population cannot bank an unlimited burst. Distant inactive ambient actors may retire only while wholly offscreen; forward travel can also retire hidden trailing actors to free room ahead. Visible or engaged foes remain. Retirement is not death and grants no rewards. These travel and density values are starting playtest parameters.
 
 | Biome | Stalker | Brute | Hexer | Hound | Archer | Wisp |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -54,7 +54,7 @@ Camps preload within 1,000–2,000 units according to visible world coverage. Ap
 
 Every member must be wholly offscreen before a fresh or sleeping garrison can appear. Direct teleports, wide views and capacity delays have no visible-population exception: an unpopulated camp remains dormant until its complete garrison can be placed outside view and within the shared budgets. Existing sleeping members retain their identity and wounds. No actors are removed to make room for a camp that is still visible or otherwise ineligible.
 
-The exact run ledger holds up to 1,024 camp records. At that ceiling new camps remain dormant; existing records are never evicted or falsely marked cleared. Resetting the run clears this ledger with the character. Only exploration remains persisted.
+The exact run ledger holds up to 1,024 camp records. At that ceiling new camps remain dormant; existing records are never evicted or falsely marked cleared. Character checkpoints retain cleared camps and dead members; continuing rebuilds surviving encounters. Exploration persists separately per character.
 
 All six archetypes patrol close to a home position until they notice the player with line of sight. Direct damage alerts the victim and nearby visible members of its own camp. Losing sight for 3.4 seconds or moving more than 470 units from home ends pursuit. Returning enemies use collision-safe steering, retain their current life, and do not grant rewards. Sanctuary entry cancels attacks and sends pursuers away from its entrance.
 
@@ -153,13 +153,13 @@ Every dropped item then rolls its tier independently from that rank's table:
 
 | Rank | Common | Magic | Rare | Epic | Legendary |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Normal | 55% | 32% | 11% | 1.8% | 0.2% |
-| Veteran | 15% | 45% | 32% | 7.5% | 0.5% |
-| Elite | 0% | 40% | 45% | 13% | 2% |
+| Normal | 75% | 22% | 2.7% | 0.28% | 0.02% |
+| Veteran | 60% | 32% | 7% | 0.95% | 0.05% |
+| Elite | 40% | 45% | 13% | 1.9% | 0.1% |
 
-These are **conditional tier probabilities per dropped item**, not per-kill drop chances. For example, an ordinary normal kill has a 0.28 × 0.002 = **0.056%** chance of a legendary item. An elite guarantees at least Magic quality but does not guarantee a Rare. Legendary currently means four stronger generated affixes; unique legendary powers are not implemented. There is no tier unlock gate, pity counter, smart-loot bias toward the equipped weapon, or magic-find stat in this foundation.
+These are **conditional tier probabilities per dropped item**, not per-kill drop chances. For example, an ordinary normal kill has a 0.28 × 0.0002 = **0.0056%** chance of a legendary item. Elites guarantee an item, not a minimum rarity. Common drops outnumber gold rares at every rank; these tables apply at all source levels. Legendary currently means four stronger generated affixes; unique legendary powers are not implemented. There is no tier unlock gate, pity counter, smart-loot bias toward the equipped weapon, or magic-find stat in this foundation.
 
-Default generation for starter packs and content tools keeps its general-purpose tier distribution of 45 / 32 / 17 / 5 / 1. Enemy rewards explicitly pass the rolled tier into the generator and always use the rank tables above.
+Default generation for content tools keeps its general-purpose tier distribution of 45 / 32 / 17 / 5 / 1. Enemy rewards explicitly pass the rolled tier into the generator and always use the rank tables above.
 
 ## What can drop
 
