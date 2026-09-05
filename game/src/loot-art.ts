@@ -2,22 +2,23 @@ import type { GroundItem } from './character-types.ts';
 import { TIER_COLORS } from './items.ts';
 import { drawGlow } from './lighting.ts';
 import { text, textWidth } from './font.ts';
+import { itemDropShapes } from './item-art.ts';
+import { drawGearShapes } from './equipment-art.ts';
 
 export function drawGroundLoot(c: CanvasRenderingContext2D, drops: readonly GroundItem[], time: number): void {
   c.save();
   for (const drop of drops) {
     const color = TIER_COLORS[drop.item.tier], x = drop.x, y = drop.y;
-    drawGlow(c, x, y - 2, 27, color, .3);
+    const special = drop.item.tier !== 'common';
+    drawGlow(c, x, y - 2, special ? 25 : 19, color, special ? .2 : .11);
     const beam = c.createLinearGradient(x, y - 35, x, y);
-    beam.addColorStop(0, color + '00'); beam.addColorStop(1, color + '65');
-    c.fillStyle = beam; c.fillRect(x - 1, y - 35, 2, 33);
-    c.strokeStyle = color; c.lineWidth = 1;
-    c.beginPath(); c.ellipse(x, y, 8, 3, 0, 0, Math.PI * 2); c.stroke();
-    c.save(); c.translate(x, y - 5 + Math.sin(time * 2 + drop.id) * 1.2);
-    c.rotate(drop.item.kind === 'weapon' ? .7 : 0);
-    c.fillStyle = drop.item.appearance.base; c.strokeStyle = drop.item.appearance.edge;
-    if (drop.item.kind === 'weapon') { c.fillRect(-1.5, -9, 3, 16); c.strokeRect(-1.5, -9, 3, 16); c.fillRect(-5, 3, 10, 2); }
-    else { c.beginPath(); c.moveTo(0, -7); c.lineTo(6, -2); c.lineTo(4, 6); c.lineTo(-4, 6); c.lineTo(-6, -2); c.closePath(); c.fill(); c.stroke(); }
+    beam.addColorStop(0, color + '00'); beam.addColorStop(1, color + '42');
+    if (special) { c.fillStyle = beam; c.fillRect(x - .75, y - 35, 1.5, 33); }
+    c.fillStyle = '#07111699'; c.beginPath(); c.ellipse(x, y + 1, 9, 2.7, 0, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = color + '88'; c.lineWidth = .7;
+    c.beginPath(); c.ellipse(x, y, 8, 3, 0, .1, Math.PI - .1); c.stroke();
+    c.save(); c.translate(x, y - 6 + Math.sin(time * 2 + drop.id) * .65);
+    drawGearShapes(c, itemDropShapes(drop.item), value => value);
     c.restore();
   }
   c.restore();

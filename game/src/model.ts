@@ -1,11 +1,13 @@
 import type { CharacterSheet, DerivedCharacterStats, SkillId } from './character-types.ts';
 import type { BiomeId } from './biomes.ts';
+import type { EnemyCamp } from './wilderness-sites.ts';
 import type { EnemyRank } from './progression-content.ts';
 
 export interface WorldQuery {
   blocked(x: number, y: number, radius: number): boolean;
   /** Settlements suppress hostile spawns and protect the player's occupied position. */
   isSanctuary?(x: number, y: number): boolean;
+  getEnemyCamps?(x: number, y: number, width: number, height: number): readonly EnemyCamp[];
   sampleBiome?(x: number, y: number): { id: BiomeId };
   move(x: number, y: number, dx: number, dy: number, radius: number): { x: number; y: number };
 }
@@ -143,8 +145,8 @@ export interface Player {
   dead: boolean;
 }
 
-export type EnemyKind = 'stalker' | 'brute' | 'caster';
-export type EnemyState = 'idle' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
+export type EnemyKind = 'stalker' | 'brute' | 'caster' | 'hound' | 'archer' | 'wisp';
+export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
 
 export interface Enemy {
   id: number;
@@ -172,6 +174,20 @@ export interface Enemy {
   stateTime: number;
   stateDuration: number;
   attackAngle: number;
+  /** Ground casts and ranged aim commit to the advertised location after aimLock. */
+  attackTargetX: number;
+  attackTargetY: number;
+  homeX: number;
+  homeY: number;
+  awareness: number;
+  lostSightTime: number;
+  lastSeenX: number;
+  lastSeenY: number;
+  senseTime: number;
+  seesPlayer: boolean;
+  patrolPhase: number;
+  campId?: string;
+  campMemberId?: string;
   hitFlash: number;
   hitAngle: number;
   radius: number;
@@ -188,6 +204,7 @@ export interface Enemy {
 export interface Projectile {
   id: number;
   readonly sourceLevel: number;
+  readonly sourceKind?: EnemyKind;
   x: number;
   y: number;
   prevX: number;

@@ -65,6 +65,7 @@ export class Game {
       if (!uiContext) throw new Error('The HUD requires a 2D canvas context.');
       this.uiContext = uiContext;
       this.worldMap = this.lifetime.own(new WorldMap(this.world, this.exploration, this.shell.mapMount, () => this.closeMap()));
+      this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
       this.inventoryPanel = this.lifetime.own(new InventoryPanel(this.shell.panelMount, {
         close: () => this.closeCharacterPanel(),
         equip: (index, slot) => this.characterAction(equipItem(this.sim.player.character, index, this.sim.player.level, slot)),
@@ -309,6 +310,7 @@ export class Game {
     this.fps += (1 / Math.max(dt, 0.001) - this.fps) * 0.04;
     if (this.phase === 'playing') {
       // The simulation owns the fixed 120 Hz clock and render interpolation.
+      this.sim.setSpawnExclusion(this.renderer.worldBounds);
       this.sim.update(dt, this.readInput());
       const events = this.sim.drainEvents();
       this.renderer.handleEvents(events, this.reducedMotion);

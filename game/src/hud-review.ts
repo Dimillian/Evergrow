@@ -9,6 +9,7 @@ import type { Enemy, Player, WorldQuery } from './model.ts';
 // This dev-only entry never binds gameplay input, ticks a simulation or accesses saves.
 const params = new URLSearchParams(location.search);
 const narrow = params.get('size') === 'narrow';
+const platesOnly = params.has('plates');
 const HUD_DISPLAY_SCALE = narrow ? 1 : 1.35;
 const PANEL_GAP = 14;
 const ENEMY_PLATE_OFFSET = 56;
@@ -102,8 +103,9 @@ async function boot() {
     const plateViewportHeight = 450;
     const plate = getEnemyPlateLayout(logicalWidth, plateViewportHeight);
     const hudBottomMargin = (1000 - layout.y - layout.height) * HUD_DISPLAY_SCALE;
-    const plateBottom = ENEMY_PLATE_OFFSET + (plate.y + plate.height) * HUD_DISPLAY_SCALE;
-    const panelHeight = Math.ceil(Math.max(layout.height * HUD_DISPLAY_SCALE + 174,
+    const plateOffset = platesOnly ? (plate.y >= 60 ? -30 : 28) : ENEMY_PLATE_OFFSET;
+    const plateBottom = plateOffset + (plate.y + plate.height) * HUD_DISPLAY_SCALE;
+    const panelHeight = platesOnly ? Math.ceil(plateBottom + 16) : Math.ceil(Math.max(layout.height * HUD_DISPLAY_SCALE + 174,
       plateBottom + 20 + layout.height * HUD_DISPLAY_SCALE + hudBottomMargin));
     const height = panelHeight * stages.length + PANEL_GAP * (stages.length - 1);
     const ratio = Math.max(1, window.devicePixelRatio || 1);
@@ -116,13 +118,13 @@ async function boot() {
       c.save(); c.translate(0, index * (panelHeight + PANEL_GAP));
       c.beginPath(); c.rect(0, 0, width, panelHeight); c.clip();
       ground(c, width, panelHeight);
-      text(c, stage.name, 20, 15, 1.7, '#dfd0ab');
-      text(c, stage.detail, 20, 38, Math.min(1.05, (width - 40) / Math.max(1, textWidth(stage.detail))), '#849e99');
-      c.save(); c.translate(0, ENEMY_PLATE_OFFSET); c.scale(HUD_DISPLAY_SCALE, HUD_DISPLAY_SCALE);
+      text(c, platesOnly ? stage.enemy.rank : stage.name, 20, 15, platesOnly ? 1.2 : 1.7, '#dfd0ab');
+      if (!platesOnly) text(c, stage.detail, 20, 38, Math.min(1.05, (width - 40) / Math.max(1, textWidth(stage.detail))), '#849e99');
+      c.save(); c.translate(0, plateOffset); c.scale(HUD_DISPLAY_SCALE, HUD_DISPLAY_SCALE);
       drawEnemyPlate(c, stage.enemy, logicalWidth, plateViewportHeight, stage.enemyOptions);
       c.restore();
       c.save(); c.scale(HUD_DISPLAY_SCALE, HUD_DISPLAY_SCALE);
-      drawFloatingHUD(c, stage.player, logicalWidth, panelHeight / HUD_DISPLAY_SCALE, stage.time, stage.options);
+      if (!platesOnly) drawFloatingHUD(c, stage.player, logicalWidth, panelHeight / HUD_DISPLAY_SCALE, stage.time, stage.options);
       c.restore();
       c.strokeStyle = '#354642'; c.lineWidth = 1; c.strokeRect(.5, .5, width - 1, panelHeight - 1);
       c.restore();
@@ -133,6 +135,11 @@ async function boot() {
     root.dataset.ready = 'true'; root.setAttribute('aria-busy', 'false');
   }
   draw();
+  if (platesOnly) {
+    root.querySelector('h1')!.textContent = 'Enemy heraldry';
+    root.querySelector('header p')!.textContent = 'Iron seal · silver pinions · gilded crown';
+    canvas.setAttribute('aria-label', 'Normal, veteran, and elite target plates with distinct rank crests.');
+  }
   window.addEventListener('resize', draw, { signal: abort.signal });
 }
 

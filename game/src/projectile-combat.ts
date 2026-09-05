@@ -1,11 +1,11 @@
-import type { CombatEvent, Enemy, Player, Projectile, WorldQuery } from './model.ts';
+import type { CombatEvent, Enemy, EnemyKind, Player, Projectile, WorldQuery } from './model.ts';
 import { segmentDistanceSquared } from './combat-geometry.ts';
 
 export const MAX_PROJECTILES = 128;
 export interface ProjectileContext {
   player: Player; enemies: Enemy[]; world: WorldQuery;
   damage(enemy: Enemy, amount: number, angle: number, melee: boolean): void;
-  hurt(amount: number, angle: number, sourceLevel: number): void;
+  hurt(amount: number, angle: number, sourceLevel: number, sourceKind?: EnemyKind): void;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
   emit(event: CombatEvent): void;
 }
@@ -65,7 +65,7 @@ export function advanceProjectiles(projectiles: Projectile[], dt: number, contex
       }
       if (projectile.owner === 'enemy') {
         if (segmentDistanceSquared(p.x, p.y, oldX, oldY, projectile.x, projectile.y) <= (projectile.radius + p.radius) ** 2) {
-          context.hurt(projectile.damage, projectile.angle, projectile.sourceLevel); projectile.life = 0;
+          context.hurt(projectile.damage, projectile.angle, projectile.sourceLevel, projectile.sourceKind); projectile.life = 0;
         }
         continue;
       }

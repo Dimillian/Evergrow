@@ -21,7 +21,7 @@ function advance(sim: Simulation, seconds: number, input: Partial<Input> = {}): 
 }
 function target(sim: Simulation, x: number, y = 0, hp = 100000): Enemy {
   const enemy = sim.spawnEnemy('brute', x, y)!; enemy.hp = enemy.maxHp = hp;
-  enemy.state = 'idle'; enemy.stateDuration = 999; enemy.angle = Math.PI;
+  enemy.state = 'recover'; enemy.stateDuration = 999; enemy.angle = Math.PI;
   return enemy;
 }
 function equip(sim: Simulation, profileId: string, offhand = false): void {
@@ -171,7 +171,7 @@ test('ice nova halves movement until its slowing status expires', () => {
   enemy.x = enemy.prevX = 330; enemy.knockbackX = enemy.knockbackY = 0; enemy.state = 'chase';
   advance(sim, .1); const slowedSpeed = Math.hypot(enemy.vx, enemy.vy);
   assert.ok(slowedSpeed > 0);
-  enemy.state = 'idle'; enemy.stateDuration = 999;
+  enemy.state = 'recover'; enemy.stateDuration = 999;
   advance(sim, 2.5); assert.equal(enemy.slowTime, 0); assert.equal(enemy.slowFactor, 1);
   enemy.x = enemy.prevX = 330; enemy.y = enemy.prevY = 0; enemy.state = 'chase';
   advance(sim, .1); close(Math.hypot(enemy.vx, enemy.vy), slowedSpeed * 2);

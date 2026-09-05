@@ -7,6 +7,11 @@ export const POI_DEFINITIONS = {
   chapel: { label: 'Chapel', color: '#b6d5ed' },
   shrine: { label: 'Shrine', color: '#85ded1' },
   landmark: { label: 'Landmark', color: '#9bb8a8' },
+  camp: { label: 'Enemy camp', color: '#e7936f' },
+  watchtower: { label: 'Ruined watchtower', color: '#c1c6a7' },
+  graveyard: { label: 'Graveyard', color: '#aba7c9' },
+  standingStones: { label: 'Standing stones', color: '#8ddbd0' },
+  caravan: { label: 'Abandoned caravan', color: '#d1ae77' },
 } as const;
 
 export type POIKind = keyof typeof POI_DEFINITIONS;

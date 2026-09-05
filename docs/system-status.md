@@ -1,6 +1,6 @@
 # System status and foundation checkpoint
 
-2026-09-05 · local prototype · world generation 3 · character foundation 2 · weapon schools 1 · progression model 1.
+2026-09-05 · local prototype · world generation 3 · character foundation 2 · weapon schools 1 · progression model 1 · wilderness encounters 1.
 
 The engine foundation supports run-local character progression, one- and two-handed gear, shields, dual wield, inventory, tree allocations, and seventeen active skills through shared contracts and validated mutations. The large atlas reuses authored bonus families and is not a balanced endgame. Gameplay acceptance and performance on the user's machine remain separate from code verification.
 
@@ -9,29 +9,33 @@ The engine foundation supports run-local character progression, one- and two-han
 | System | Implemented today | Status / next boundary |
 | --- | --- | --- |
 | Combat | 120 Hz deterministic simulation; weapon-dependent basic attack, dodge, potion, and 17 unlockable/assignable skills; melee, arrows, elemental bolts, pierce, chains, blasts, timed areas, burns, slows, blocks | Rules tested; skill feel and balance await user feedback |
-| Encounters | 3 enemy archetypes, 3 ranks, biome-weighted mix; fixed geographic level; 5–10 target population, 12-enemy hard cap, 2 pack + 1 special simultaneous attack slots | Spawn snapshots persist across boundaries; 2 veterans and 1 elite maximum; initial balance awaits playtesting |
+| Encounters | 6 enemy archetypes, 3 ranks, biome-weighted mix; fixed geographic level; patrol/LOS awareness, flanking, ranged spacing, committed attacks and home return; 3–6 ambient target, 12-enemy hard cap, 2 pack + 1 special attack slots | Spawn snapshots persist across boundaries; 2 veterans and 1 elite maximum; camera-aware ambient spawning; difficulty awaits user playtesting |
 | Experience / levels | Source-level/rank XP, level-gap bonuses/penalties, increasing thresholds, overflow, live XP/level bar; 1 skill point and 5 attribute points per level | Fixed geographic danger; run-local progress; no automatic spending, free refill, respec, or character saving |
 | Equipment / stats | 4 attributes; one derived-stat path; 11 equipment slots, 10 kinds, 5 tiers, 17 general and 2 shield affix families; 13 weapon profiles and 3 shields; procedural worn art | One-/two-handed melee, dual wield, three bows and three elemental staves; no wands or unique legendary powers |
 | Inventory / gear loot | 48 bag cells; 3-column character screen, comparisons and transactional gear changes; rank loot tables, archetype/biome weights, source-level items, bounded percentage growth | No stash, trade, crafting, item deletion, or character persistence; long farming sessions need item disposal |
 | Skill atlas | 2,824 connected nodes, 2,923 curved edges, 150 themed constellations, 3 domains, 9 weapon schools and 17 active-skill majors; winding paths, hybrid crosslinks, search and shortest-route preview | First/advanced school skills require 4/7 points from origin; authored bonus families repeat, with balance/content expansion ahead |
 | World | 3 smoothly connected biomes; streamed 256-unit terrain tiles; deterministic roads, props and clear corridors | Tested generation; biome distribution is still a three-region prototype |
+| Wilderness sites / camps | Fixed 4-/6-member camps, watchtowers, graveyards, standing stones and caravans; shared geometry, decor and lighting | Camp member health/deaths survive streaming within the run; decorative landmarks have no interactions or chest rewards yet |
 | Settlements / interiors | 5 building kinds; 8 buildings in Briarwatch; towns target 5–8, cities 12–16; shared doors/walls/furniture; roof fading and sanctuaries | Walkable layout foundation; no residents or service transactions |
-| Maps / discovery | Smooth minimap, explored-world map, hover POIs and revealed-area levels; 7 registered POI kinds; chart persistence | Sanctuary/area labels share geographic danger; uncharted terrain discloses no metadata |
-| Procedural art | Shared weapon/shield silhouettes for worn art and inventory icons; one-/two-handed, bow, staff, shield and dual-wield poses; enemy art and prop libraries; all generated in code | Held attack snapshots keep animation and weapon effects aligned |
+| Maps / discovery | Smooth minimap, explored-world map, hover POIs and revealed-area levels; 12 registered POI kinds; cleared camp markers/tooltips; chart persistence | Sanctuary/area labels share geographic danger; uncharted terrain discloses no metadata |
+| Procedural art | Shared weapon/shield/armor silhouettes for worn art and inventory icons; actual item silhouettes on the ground; one-/two-handed, bow, staff, shield and dual-wield poses; enemy art and prop libraries; all generated in code | Held attack snapshots keep animation and weapon effects aligned |
 | Lighting / effects | Dynamic lights/shadows, combat particles, blade ribbon, elemental projectiles, blast/chain/ground/block effects, burn/frost cues, synthesized audio, fixed CRT/soft phosphor | Bounded resources; performance has not been benchmarked in gameplay |
-| HUD / application | Astral frames/orbs/XP; equipped-weapon basic attack + 5 assignable skill wells; separate potion/dodge; enabled C/I/T menus; skill costs/cooldowns/gear requirements; enemy focus plate and native text | New runs have empty skill slots; journal remains unavailable |
+| HUD / application | Astral frames/orbs/XP; equipped-weapon basic attack + 5 assignable skill wells; separate potion/dodge; enabled C/I/T menus; skill costs/cooldowns/gear requirements; enemy focus plate with iron/silver/crowned rank heraldry and native text | New runs have empty skill slots; journal remains unavailable |
 | Interface kit | Shared materials/icons/primitives across start/pause/defeat/map, character inventory, and skill atlas; native focus, tooltips, scroll regions, responsive layouts | Existing panels share the kit; static review is separate from gameplay |
 | Lifecycle / tooling | Scoped teardown, HMR cleanup, strict/core compilation, dependency checks, stats command, interactive local progression/loot study | Foundation guardrails in place; progression study uses actual runtime formulas |
 
 ## Combat numbers
 
-Player starts with **100 life / 100 mana**. The two-handed Weathered Sword deals **24 damage**, attacks **2 times/second**, reaches **60 world units**, and sweeps **135°**. The new run has no assigned skills or default right-click cast. Skills require allocating a major, assigning a slot, and compatible equipped gear. Attribute, gear, and tree bonuses affect real combat; the numbers here describe the unchanged starter equipment. Eight bag items include a one-handed sword, dagger, buckler, bow, and staff for immediate equipment testing. Dodge has **2 charges** with **1.8 s** recharge; flasks have **2 charges**, restore **42% of maximum life**, and replenish a charge every **8 kills**. There is **1 enemy projectile template** and **2 resource pickup types** (12% maximum life / 16% maximum mana). See [weapons and skills](weapons-and-skills.md) for all profile values, skills, effects, requirements, and formulas.
+Player starts with **100 life / 100 mana**. The two-handed Weathered Sword deals **24 damage**, attacks **2 times/second**, reaches **60 world units**, and sweeps **135°**. The new run has no assigned skills or default right-click cast. Skills require allocating a major, assigning a slot, and compatible equipped gear. Attribute, gear, and tree bonuses affect real combat; the numbers here describe the unchanged starter equipment. Eight bag items include a one-handed sword, dagger, buckler, bow, and staff for immediate equipment testing. Dodge has **2 charges** with **1.8 s** recharge; flasks have **2 charges**, restore **42% of maximum life**, and replenish a charge every **8 kills**. There is **2 enemy projectile templates** and **2 resource pickup types** (12% maximum life / 16% maximum mana). See [weapons and skills](weapons-and-skills.md) for all profile values, skills, effects, requirements, and formulas.
 
 | Level-one normal enemy | Life | Damage | Move speed (units/s) | Windup / active / recovery |
 | --- | ---: | ---: | ---: | --- |
-| Hollow Stalker | 48 | 8 | 112 | 0.32 / 0.18 / 0.65 s |
-| Gravebound Brute | 138 | 22 | 69 | 0.75 / 0.13 / 0.90 s |
-| Mire Hexer | 56 | 13 | 82 | 0.65 / 0.15 / 0.70 s |
+| Hollow Stalker | 48 | 8 | 104 | 0.42 / 0.18 / 0.78 s |
+| Gravebound Brute | 138 | 22 | 65 | 0.95 / 0.18 / 1.20 s |
+| Mire Hexer | 56 | 13 per bolt | 76 | 0.90 / 0.15 / 1.15 s |
+| Briar Hound | 37 | 10 | 124 | 0.68 / 0.28 / 0.95 s |
+| Ashen Ranger | 45 | 11 | 96 | 0.95 / 0.12 / 0.95 s |
+| Lantern Wisp | 39 | 17 | 73 | 1.30 / 0.15 / 1.40 s |
 
 Area danger rises one level per 3,200 units from the origin. Monster level and rank govern source stats, XP and item levels. See [progression and loot](progression-and-loot.md) for the curves and loot tables, or inspect the shared values in the local `/progression.html` study.
 
@@ -44,6 +48,7 @@ Area danger rises one level per 3,200 units from the origin. Monster level and r
 | Ground equipment | 96 items; auto-pickup within 30 units with line of sight |
 | Skill atlas | 2,824 immutable nodes / 2,923 edges; culled, event-driven Canvas drawing |
 | World terrain tiles / settlement blueprints | 48 / 32 cached entries |
+| Wilderness blueprint cache / camp run ledger | 128 cells / 1,024 camps, maximum 6 members each; later unrecorded camps remain dormant at ledger capacity |
 | Rendered building cache / chart terrain cache | 24 buildings / 384 map tiles |
 | Base procedural prop library | 161 sprite canvases; about 5.05 MiB of RGBA pixels when all variants are populated, excluding other art/GPU overhead |
 | Combat particles / flashes / impact effects / damage labels | 650 / 22 / 24 / 35 |
@@ -137,3 +142,15 @@ Three explicit loot tables govern item count and rarity. Normal enemies have a 2
 Maps show area levels and sanctuaries; enemy plates show level and rank. The development-only [progression study](http://127.0.0.1:5173/progression.html) exposes the actual shared curves, equipment values and conditional loot probabilities. It runs no simulation and touches no saved progress. [Native in-app captures](captures/2026-09-05/progression/README.md) show the overview, loot/level comparison, elite rewards, and ranked enemy plate. Inspected review pages report no console errors.
 
 **319 code tests across 45 files pass**, including source snapshots, pre-award XP, full-rank loot yields, probability boundaries, percentage budgets, projectile-source armor, and scaled recovery. Strict/core TypeScript and the production build pass. There are 87 runtime TypeScript modules and no runtime package dependencies. The build contains **333.15 kB JavaScript / 115.32 kB gzip**, and **44.17 kB CSS / 9.81 kB gzip** (Vite compression report), with the font separate. The current numeric content ceiling is 1,000,000 levels; this is an implementation bound, not a validated infinite endgame. See [progression and loot](progression-and-loot.md) for all formulas, probabilities and remaining boundaries.
+
+## Wilderness, encounters and art checkpoint
+
+Six enemy archetypes now have distinct silhouettes and tactics. Stalkers flank, Brutes commit heavy swings, Hexers release slow fans, Hounds pounce along a locked lane, Archers retreat and aim, and Wisps mark a delayed ground detonation. Patrols, line-of-sight awareness, camp alerts, lost-target memory and home return share a headless state machine. Warnings read the real attack timing, spread, travel distance and blast radius. Native target plates and small world badges share distinct normal, veteran and elite heraldry.
+
+Five wilderness site types add camps, watchtowers, graveyards, standing stones and caravans, bringing the map registry to twelve kinds. Their immutable layouts drive art, collision, clear approaches and map discovery together. Crown-aware tree clearance keeps foreground foliage from hiding supplies and entrances. Camp groups preserve health, source stats, seeds and deaths on streaming; cleared markers read the current run without entering saved exploration. Ambient spawning respects camera bounds and camp footprints. The first four-member camp is east of the start at (740, 180); generated camps have six members. The 1,024-record ledger and capacity-delayed first-materialization limitation are documented in [progression and loot](progression-and-loot.md).
+
+Helmets, cuirasses and pauldrons now share forged geometry between equipped characters and inventory icons. Weapons and shields have material facets and engraving; ground loot uses actual equipment silhouettes. Existing hand attachments, two-handed support, bow draw and dual-wield rules remain intact. The four non-camp landmark types are environmental content today, without chests, quests or service interactions.
+
+**350 code tests across 48 files pass**, plus strict application/core compilation and the production build. Coverage includes all six hover silhouettes, patrol/LOS/return, committed attacks and escape windows, ranged retreat, encounter caps, camp sleep/death/restore/priority, blocked entrances, canopy visibility, deterministic sites, and item/rig geometry. There are **93 runtime TypeScript modules**, **9 development review entrypoints**, and **zero runtime package dependencies**. Production output is **377.88 kB JavaScript / 131.09 kB gzip**, and **44.17 kB CSS / 9.81 kB gzip** (Vite report), with the font separate.
+
+[Nine frozen in-app screenshots](captures/2026-09-05/encounter-polish/README.md) cover rank plates, six creatures, equipped characters/items, all five wilderness layouts, and the wisp warning. Static inspection caught and corrected a helmet face layer, staff framing, two obstructed site approaches, hard soil edges and foreground canopy occlusion. No gameplay was driven; combat feel, difficulty and runtime performance remain for user playtesting. Exploration identity remains unchanged and no deployment or remote push was made.

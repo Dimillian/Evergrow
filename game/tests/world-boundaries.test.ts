@@ -22,7 +22,7 @@ test('finite oversized and unsafe world requests return without entering unbound
   assert.equal(world.blocked(0, 0, Number.MAX_VALUE), true);
   assert.throws(() => world.getGroundTile(Number.MAX_SAFE_INTEGER, 0), RangeError,
     'integer tile indices must still produce safe world-space sample coordinates');
-  assert.deepEqual(world.cacheStats, { groundTiles: 0, settlements: 0 });
+  assert.deepEqual(world.cacheStats, { groundTiles: 0, settlements: 0, wildernessSites: 0 });
 });
 
 test('cached settlement blueprints resist consumer edits and regenerate identically after release', () => {
@@ -39,7 +39,7 @@ test('cached settlement blueprints resist consumer edits and regenerate identica
   for (let band = 1; band <= 40; band++) at(band);
   assert.equal(world.cacheStats.settlements, 32);
   world.dispose(); world.dispose();
-  assert.deepEqual(world.cacheStats, { groundTiles: 0, settlements: 0 });
+  assert.deepEqual(world.cacheStats, { groundTiles: 0, settlements: 0, wildernessSites: 0 });
   assert.equal(JSON.stringify(at(0)), expected, 'cache release must not alter seed/version/layout');
   assert.equal(world.generationVersion, 3);
 });

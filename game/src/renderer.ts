@@ -23,8 +23,10 @@ import { isGameUIPoint } from './ui-hit-test.ts';
 import type { GamePhase } from './game-phase.ts';
 import { COMBAT_TIMING, ENEMY_DEFINITIONS } from './combat-content.ts';
 import { CameraZoom, cameraView, screenToWorld, worldToScreen } from './camera.ts';
-import { EnemyFocus } from './enemy-focus.ts';
+import { EnemyFocus, ENEMY_BODY_BOUNDS } from './enemy-focus.ts';
 import { drawEnemyPlate } from './enemy-plate.ts';
+import { drawRankCrest } from './enemy-rank-art.ts';
+import { drawSiteGround, drawSiteDecor, wildernessLights } from './wilderness-art.ts';
 
 interface Corpse { x: number; y: number; angle: number; kind: Enemy['kind']; life: number; seed: number; }
 interface Ghost { x: number; y: number; angle: number; gait: number; life: number; }
@@ -88,6 +90,7 @@ export class Renderer {
   }
 
   get worldHeight() { return this.view.height; }
+  get worldBounds() { return { x: this.view.left, y: this.view.top, width: this.view.width, height: this.view.height }; }
   zoomByWheel(deltaY: number, deltaMode: number, viewportHeight: number) {
     this.cameraZoom.wheel(deltaY, deltaMode, viewportHeight);
   }
@@ -195,6 +198,7 @@ export class Renderer {
     c.fillStyle = '#101c22'; c.fillRect(0, 0, this.width, this.height);
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
     this.groundLayer.draw(c, world, left, top, worldWidth, worldHeight);
+    for (const site of this.visibility.sites) drawSiteGround(c, site, settings.reducedMotion ? 0 : this.visualTime);
     this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime);
     this.remains();
     this.propShadows();
@@ -314,6 +318,9 @@ export class Renderer {
         entries.push({ y: layer.y, draw: () => layer.draw(c) });
       }
     }
+    for (const site of this.visibility.sites) for (const decor of site.decor) {
+      entries.push({ y: decor.y, draw: () => drawSiteDecor(c, site, decor, settings.reducedMotion ? 0 : this.visualTime) });
+    }
     for (const enemy of sim.enemies) {
       if (enemy.hp <= 0) continue;
       const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);
@@ -340,12 +347,16 @@ export class Renderer {
   private sceneLights(sim: Simulation, px: number, py: number, reducedMotion: boolean): PointLight[] {
     const p = sim.player;
     const lights: PointLight[] = [{ x: px, y: py - 15, radius: 185, color: '#ffcf87', power: .58, shadows: true }];
+    const environmentLights: PointLight[] = [];
     const buildingLights = this.settlementArt.getLights(this.cachedBuildings, this.visualTime)
       .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py));
-    lights.push(...buildingLights.slice(0, 6));
+    environmentLights.push(...buildingLights.slice(0, 6));
+    const siteLights = this.visibility.sites.flatMap(site => wildernessLights(site, reducedMotion ? 0 : this.visualTime))
+      .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py));
+    environmentLights.push(...siteLights.slice(0, 6));
     for (const prop of this.cachedProps) if (prop.kind === 'shrine') {
       const flicker = reducedMotion ? 1 : 1 + Math.sin(sim.time * 8 + prop.seed) * .035 + Math.sin(sim.time * 17) * .018;
-      lights.push({ x: prop.x - 18, y: prop.y - 31, radius: 215 * flicker, color: '#ffa64f', power: .92, shadows: true });
+      environmentLights.push({ x: prop.x - 18, y: prop.y - 31, radius: 215 * flicker, color: '#ffa64f', power: .92, shadows: true });
     }
     if (p.attack?.kind === 'melee' && p.attack.weapon.visual.kind !== 'unarmed' && p.attack.elapsed >= p.attack.activeStart && p.attack.elapsed < p.attack.activeEnd + .05) {
       const a = p.attack;
@@ -364,9 +375,16 @@ export class Renderer {
       lights.push({ x: px + tip.x, y: py + tip.y, radius: 64, color: p.equipment.mainHand.visual.glow ?? '#c0acf0', power: .3 });
     }
     for (const shot of sim.projectiles.slice(0, 8)) lights.push(projectileLight(shot));
-    for (const enemy of sim.enemies) if (enemy.hp > 0 && enemy.kind === 'caster') lights.push({ x: enemy.x, y: enemy.y - 22,
-      radius: enemy.state === 'windup' ? 100 : 53, color: '#54e8b8', power: enemy.state === 'windup' ? .65 : .28 });
-    return lights;
+    for (const enemy of sim.enemies) if (enemy.hp > 0 && (enemy.kind === 'caster' || enemy.kind === 'wisp')) {
+      lights.push({ x: enemy.x, y: enemy.y - 22, radius: enemy.state === 'windup' ? 100 : 53,
+        color: enemy.kind === 'wisp' ? '#93c6ff' : '#54e8b8', power: enemy.state === 'windup' ? .65 : .28 });
+    }
+    // Combat illumination gets the finite light budget before distant lanterns.
+    environmentLights.sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py));
+    const view = this.view;
+    return [...lights, ...environmentLights].filter(light => light.x + light.radius >= view.left
+      && light.x - light.radius <= view.left + view.width && light.y + light.radius >= view.top
+      && light.y - light.radius <= view.top + view.height);
   }
 
   private emitters(sim: Simulation, px: number, py: number, alpha: number, lights: PointLight[]) {
@@ -416,9 +434,40 @@ export class Renderer {
     const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);
     c.save();
     const definition = ENEMY_DEFINITIONS[enemy.kind];
-    if (definition.attack === 'projectile') {
-      c.strokeStyle = `rgba(113,255,184,${.12 + t * .4})`; c.lineWidth = 1; c.setLineDash([3, 5]);
-      c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(enemy.attackAngle) * 290, y + Math.sin(enemy.attackAngle) * 290); c.stroke();
+    const locked = enemy.stateTime >= definition.aimLock || enemy.state === 'attack';
+    if (definition.attack === 'ground') {
+      const { blastRadius } = definition;
+      c.translate(enemy.attackTargetX, enemy.attackTargetY);
+      c.fillStyle = `rgba(117,144,240,${.035 + t * .1})`;
+      c.beginPath(); c.arc(0, 0, blastRadius, 0, TAU); c.fill();
+      c.strokeStyle = `rgba(163,206,255,${.35 + t * .5})`; c.lineWidth = 1.2;
+      c.setLineDash(locked ? [] : [4, 4]); c.stroke(); c.setLineDash([]);
+      c.lineWidth = 2; c.beginPath(); c.arc(0, 0, blastRadius - 4, -Math.PI / 2, -Math.PI / 2 + TAU * t); c.stroke();
+      c.globalAlpha = .35 + t * .4;
+      for (let i = 0; i < 4; i++) {
+        c.save(); c.rotate(i * TAU / 4); c.beginPath(); c.moveTo(blastRadius - 10, -3);
+        c.lineTo(blastRadius - 14, 0); c.lineTo(blastRadius - 10, 3); c.stroke(); c.restore();
+      }
+      drawGlow(c, 0, 0, 16 + t * 15, '#b6caff', .12 + t * .25);
+    } else if (definition.attack === 'projectile') {
+      const color = definition.projectileStyle === 'arrow' ? '255,183,117' : '113,255,184';
+      c.strokeStyle = `rgba(${color},${.12 + t * .4})`; c.lineWidth = locked ? 1 : .75;
+      c.setLineDash(locked ? [8, 5] : [2, 6]);
+      for (const offset of definition.shotOffsets) {
+        const aim = enemy.attackAngle + offset;
+        c.beginPath(); c.moveTo(x + Math.cos(aim) * 15, y + Math.sin(aim) * 15);
+        c.lineTo(x + Math.cos(aim) * definition.range, y + Math.sin(aim) * definition.range); c.stroke();
+      }
+    } else if (definition.engageDistance) {
+      // A pounce is a committed travel lane; its warning spans the actual lunge distance.
+      c.translate(x, y); c.rotate(enemy.attackAngle);
+      const remaining = Math.max(0, definition.active - (enemy.state === 'attack' ? enemy.stateTime : 0));
+      const reach = definition.lungeSpeed * remaining + definition.range;
+      c.fillStyle = `rgba(255,141,78,${.025 + t * .07})`; c.strokeStyle = `rgba(255,181,119,${.2 + t * .55})`;
+      c.lineWidth = 1; c.beginPath(); c.moveTo(8, -11); c.lineTo(reach - 15, -11);
+      c.lineTo(reach, 0); c.lineTo(reach - 15, 11); c.lineTo(8, 11); c.closePath(); c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(12 + (reach - 30) * t, -5); c.lineTo(18 + (reach - 30) * t, 0);
+      c.lineTo(12 + (reach - 30) * t, 5); c.stroke();
     } else {
       const { range, arc } = definition;
       c.fillStyle = `rgba(255,102,58,${.025 + t * .09})`; c.strokeStyle = `rgba(255,160,83,${.22 + t * .62})`;
@@ -434,9 +483,11 @@ export class Renderer {
   private healthBars(sim: Simulation, alpha: number) {
     const c = this.ctx;
     for (const enemy of sim.enemies) {
-      if (enemy.hp <= 0 || (enemy.hp >= enemy.maxHp && enemy.state !== 'windup')) continue;
+      if (enemy.hp <= 0) continue;
       const width = enemy.kind === 'brute' ? 40 : 31;
-      const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha) - (enemy.kind === 'brute' ? 53 : 43);
+      const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha) + ENEMY_BODY_BOUNDS[enemy.kind].top - 5;
+      if (enemy.rank !== 'normal') drawRankCrest(c, enemy.rank, x, y - 10, .5);
+      if (enemy.hp >= enemy.maxHp && enemy.state !== 'windup') continue;
       c.fillStyle = enemy.hitFlash > .1 ? '#efcea0' : '#080c12';
       c.fillRect(x - width / 2 - 1, y - 1, width + 2, 5);
       c.fillStyle = '#482a29'; c.fillRect(x - width / 2, y, width, 3);

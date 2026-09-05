@@ -4,9 +4,10 @@ import { SceneVisibility } from '../src/scene-visibility.ts';
 import type { Prop } from '../src/world.ts';
 
 function fixture() {
-  let propQueries = 0, buildingQueries = 0;
+  let propQueries = 0, buildingQueries = 0, siteQueries = 0;
   const props: Prop[] = [];
-  return { props, get propQueries() { return propQueries; }, get buildingQueries() { return buildingQueries; },
+  return { props, get siteQueries() { return siteQueries; }, get propQueries() { return propQueries; }, get buildingQueries() { return buildingQueries; },
+    getWildernessSites() { siteQueries++; return []; },
     getProps() { propQueries++; return props; }, getBuildings() { buildingQueries++; return []; } };
 }
 const view = { left: -200, top: -100, width: 900, height: 600 };
@@ -24,10 +25,10 @@ test('panning reuses padded coverage but zooming any edge beyond it refreshes bo
   cache.update(world, { ...view, left: view.left + 20, top: view.top - 30 });
   assert.equal(world.propQueries, 1);
   cache.update(world, { ...view, width: view.width + 66 });
-  assert.equal(world.propQueries, 2); assert.equal(world.buildingQueries, 2);
+  assert.equal(world.propQueries, 2); assert.equal(world.buildingQueries, 2); assert.equal(world.siteQueries, 2);
   cache.update(world, { ...view, width: view.width + 66, height: view.height + 66 });
   assert.equal(world.propQueries, 3);
-  cache.reset(); assert.equal(cache.props.length, 0); assert.equal(cache.buildings.length, 0);
+  cache.reset(); assert.equal(cache.props.length, 0); assert.equal(cache.buildings.length, 0); assert.equal(cache.sites.length, 0);
   cache.update(world, view); assert.equal(world.propQueries, 4);
 });
 

@@ -12,7 +12,7 @@ function actors(kinds: EnemyKind[]) {
 }
 
 test('population follows geographic area level with a fixed simultaneous actor ceiling', () => {
-  assert.deepEqual([1, 3, 4, 6, 7, 15, 16, 10000].map(encounterPopulationTarget), [5, 5, 6, 6, 7, 9, 10, 10]);
+  assert.deepEqual([1, 3, 4, 6, 7, 15, 16, 10000].map(encounterPopulationTarget), [3, 3, 3, 4, 4, 6, 6, 6]);
   assert.ok(ENCOUNTER_RULES.targetPopulationCap <= ENCOUNTER_RULES.hardPopulationCap);
   assert.ok(Object.isFrozen(ENCOUNTER_RULES) && Object.isFrozen(ENCOUNTER_WEIGHTS));
 });
@@ -20,10 +20,10 @@ test('population follows geographic area level with a fixed simultaneous actor c
 test('each biome selects its authored population mix and full areas consume no random draw', () => {
   for (const biome of ['deadwood', 'verdant', 'swamp'] as const) {
     const weights = ENCOUNTER_WEIGHTS[biome];
-    assert.equal(weights.stalker + weights.brute + weights.caster, 100);
+    assert.equal(Object.values(weights).reduce((sum, weight) => sum + weight, 0), 100);
     assert.equal(chooseEncounterEnemy([], 1, biome, () => 0), 'stalker');
     assert.equal(chooseEncounterEnemy([], 1, biome, () => (weights.stalker + .1) / 100), 'brute');
-    assert.equal(chooseEncounterEnemy([], 1, biome, () => .999), 'caster');
+    assert.equal(chooseEncounterEnemy([], 1, biome, () => .999), 'wisp');
   }
   const full = actors(['stalker', 'stalker', 'stalker', 'stalker', 'stalker']);
   assert.equal(chooseEncounterEnemy(full, 1, 'deadwood', () => { throw new Error('Full area rolled a spawn'); }), null);
@@ -31,10 +31,14 @@ test('each biome selects its authored population mix and full areas consume no r
 
 test('special-enemy caps redistribute their weight without increasing simultaneous threats', () => {
   const capped = actors(['brute', 'brute', 'caster', 'caster']);
-  for (const roll of [0, .3, .9, .999]) assert.equal(chooseEncounterEnemy(capped, 1, 'swamp', () => roll), 'stalker');
+  for (const roll of [0, .3, .9, .999]) {
+    const kind = chooseEncounterEnemy(capped, 100, 'swamp', () => roll);
+    assert.ok(kind && kind !== 'brute' && kind !== 'caster');
+  }
   capped[2].state = 'dead';
   assert.equal(livingEnemyCount(capped), 3);
-  assert.equal(chooseEncounterEnemy(capped, 1, 'swamp', () => .999), 'caster');
+  const kinds = new Set(Array.from({ length: 100 }, (_, index) => chooseEncounterEnemy(capped, 100, 'swamp', () => index / 100)));
+  assert.ok(kinds.has('caster')); assert.ok(!kinds.has('brute'));
 });
 
 test('veterans and elites unlock by area level and retain independent active caps', () => {

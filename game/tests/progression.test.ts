@@ -79,7 +79,7 @@ test('invalid rewards are ignored and extreme rewards remain bounded with exact 
 });
 
 test('each enemy archetype awards its authored XP once on lethal melee contact', () => {
-  const expectedRewards: Record<EnemyKind, number> = { stalker: 20, caster: 30, brute: 50 };
+  const expectedRewards: Record<EnemyKind, number> = { stalker: 20, caster: 30, brute: 50, hound: 22, archer: 28, wisp: 32 };
   for (const kind of Object.keys(expectedRewards) as EnemyKind[]) {
     const sim = new Simulation(emptyWorld, { spawn: false });
     const enemy = sim.spawnEnemy(kind, 36, 0)!;

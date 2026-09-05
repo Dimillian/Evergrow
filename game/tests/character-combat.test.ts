@@ -20,7 +20,7 @@ function advance(sim: Simulation, seconds: number, input: Partial<Input> = {}): 
 }
 function target(sim: Simulation, x = 45, y = 0, hp = 10000): Enemy {
   const enemy = sim.spawnEnemy('brute', x, y)!;
-  enemy.hp = enemy.maxHp = hp; enemy.stateDuration = 999;
+  enemy.hp = enemy.maxHp = hp; enemy.state = 'recover'; enemy.stateDuration = 999;
   return enemy;
 }
 function equipForSkill(sim: Simulation, id: SkillId): void {

@@ -6,6 +6,7 @@ import { mainPathX, pathDistance, roadSurface } from './road-shape.ts';
 import { drawGroundSurface } from './ground-surface.ts';
 import { drawRoadDetails } from './road-art.ts';
 import { isWorldCoordinate, validWorldRectangle, WORLD_QUERY_LIMITS } from './world-query.ts';
+import { generateWildernessSite, startingEnemyCamp, wildernessPOI, WILDERNESS_RULES, type WildernessSite, type EnemyCamp } from './wilderness-sites.ts';
 export { mainPathX, pathDistance } from './road-shape.ts';
 
 /** All coordinates are world pixels; prop positions are their ground contacts. */
@@ -75,15 +76,18 @@ export class World {
   readonly generationVersion = WORLD_GENERATION_VERSION;
   private groundTiles = new Map<string, HTMLCanvasElement>();
   private settlements = new Map<number, Settlement>();
+  private wilderness = new Map<string, WildernessSite | null>();
+  private firstCamp: WildernessSite;
 
   constructor(seed = 7319) {
     this.seed = seed | 0;
+    this.firstCamp = startingEnemyCamp(this.seed);
   }
 
-  get cacheStats() { return { groundTiles: this.groundTiles.size, settlements: this.settlements.size }; }
+  get cacheStats() { return { groundTiles: this.groundTiles.size, settlements: this.settlements.size, wildernessSites: this.wilderness.size }; }
 
   /** Cached generated content belongs to this world instance, not global module state. */
-  dispose() { this.groundTiles.clear(); this.settlements.clear(); }
+  dispose() { this.groundTiles.clear(); this.settlements.clear(); this.wilderness.clear(); }
 
   sampleBiome(x: number, y: number): BiomeSample { return sampleBiome(x, y, this.seed); }
 
@@ -110,6 +114,40 @@ export class World {
     return result;
   }
 
+  private wildernessSite(cx: number, cy: number): WildernessSite | null {
+    const key = `${cx}:${cy}`;
+    if (this.wilderness.has(key)) {
+      const site = this.wilderness.get(key)!;
+      this.wilderness.delete(key); this.wilderness.set(key, site); return site;
+    }
+    const site = generateWildernessSite(this.seed, cx, cy, (x, y, radius) =>
+      this.getSettlements(x - radius, y - radius, radius * 2, radius * 2).some(town =>
+        Math.hypot(x - town.x, y - town.y) < town.radius + radius));
+    this.wilderness.set(key, site);
+    if (this.wilderness.size > WILDERNESS_RULES.cacheLimit) this.wilderness.delete(this.wilderness.keys().next().value!);
+    return site;
+  }
+
+  /** Overlapping blueprints for rendering/collision. Center-based POI queries remain half open. */
+  getWildernessSites(x: number, y: number, width: number, height: number): WildernessSite[] {
+    if (!validWorldRectangle(x, y, width, height)) return [];
+    const { cellSize, maxRadius, maxQueryCells } = WILDERNESS_RULES;
+    const minX = Math.floor((x - maxRadius) / cellSize), maxX = Math.floor((x + width + maxRadius) / cellSize);
+    const minY = Math.floor((y - maxRadius) / cellSize), maxY = Math.floor((y + height + maxRadius) / cellSize);
+    if ((maxX - minX + 1) * (maxY - minY + 1) > maxQueryCells) return [];
+    const result: WildernessSite[] = [], query = { x, y, width, height };
+    const include = (site: WildernessSite | null) => {
+      if (site && intersects(query, { x: site.x - site.radius, y: site.y - site.radius, width: site.radius * 2, height: site.radius * 2 })) result.push(site);
+    };
+    include(this.firstCamp);
+    for (let cy = minY; cy <= maxY; cy++) for (let cx = minX; cx <= maxX; cx++) include(this.wildernessSite(cx, cy));
+    return result.sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
+  }
+
+  getEnemyCamps(x: number, y: number, width: number, height: number): EnemyCamp[] {
+    return this.getWildernessSites(x, y, width, height).filter(site => site.kind === 'camp');
+  }
+
   getBuildings(x: number, y: number, width: number, height: number): Building[] {
     const query = { x, y, width, height };
     return this.getSettlements(x, y, width, height).flatMap(town => town.buildings).filter(building => intersects(query, building))
@@ -126,7 +164,8 @@ export class World {
 
   getPOIs(x: number, y: number, width: number, height: number): POI[] {
     if (!validWorldRectangle(x, y, width, height)) return [];
-    const result = this.getSettlements(x, y, width, height).flatMap(settlementPOIs);
+    const result = [...this.getSettlements(x, y, width, height).flatMap(settlementPOIs),
+      ...this.getWildernessSites(x, y, width, height).map(wildernessPOI)];
     const first: Prop = { id: 'shrine:origin', x: -85, y: -95, radius: 15, kind: 'shrine', seed: 0, scale: 1 };
     const shrines = [first];
     for (let band = Math.floor(y / SHRINE_INTERVAL) - 1; band <= Math.floor((y + height) / SHRINE_INTERVAL) + 1; band++) {
@@ -214,6 +253,7 @@ export class World {
     // Keep generous shoulders clear as well as the visibly compacted road.
     if (pathDistance(x, y) < 76) return null;
     if (this.isSanctuary(x, y)) return null;
+    if (this.getWildernessSites(x - 18, y - 18, 36, 36).some(site => Math.hypot(x - site.x, y - site.y) < site.radius + 18)) return null;
     const roadsideShrine = this.roadShrine(Math.floor(y / SHRINE_INTERVAL));
     if (roadsideShrine && Math.hypot(x - roadsideShrine.x, y - roadsideShrine.y) < 44) return null;
     const density = 0.40 + noise(x / 520, y / 520, this.seed + 37) * 0.39;
@@ -227,6 +267,13 @@ export class World {
       : biome === 'swamp' ? choice < .13 ? 'rock' : choice < .36 ? 'reeds' : choice < .5 ? 'deadTree' : 'willow'
       : choice < .18 ? 'rock' : choice < .76 ? 'deadTree' : 'tree';
     const scale = 0.82 + random(cx, cy, this.seed, 5) * 0.38;
+    if (kind === 'tree' || kind === 'willow') {
+      // The crown is projected above its trunk. A clear ground contact alone can
+      // leave a foreground tree hiding a site's fire, supplies and entrance.
+      const crownY = y - 90 * scale, crownMargin = 30;
+      if (this.getWildernessSites(x - crownMargin, crownY - crownMargin, crownMargin * 2, crownMargin * 2)
+        .some(site => Math.hypot(x - site.x, crownY - site.y) < site.radius + crownMargin)) return null;
+    }
     const radius = kind === 'reeds' || kind === 'fern' || kind === 'flowers' ? 0 : kind === 'rock'
       ? 8 + random(cx, cy, this.seed, 6) * 5
       : 9 + random(cx, cy, this.seed, 6) * 5;
@@ -254,6 +301,8 @@ export class World {
     if (this.getProps(x - extent, y - extent, extent * 2, extent * 2).some(prop => prop.radius > 0 &&
       (x - prop.x) ** 2 + (y - prop.y) ** 2 < (radius + prop.radius) ** 2 - 1e-7)) return true;
     const reach = Math.max(radius, .1);
+    if (this.getWildernessSites(x - reach, y - reach, reach * 2, reach * 2).some(site =>
+      site.decor.some(decor => decor.radius > 0 && (x - decor.x) ** 2 + (y - decor.y) ** 2 < (radius + decor.radius) ** 2 - 1e-7))) return true;
     return this.getBuildings(x - reach, y - reach, reach * 2, reach * 2).some(building =>
       [...building.walls, ...building.furniture].some(rect => circleHitsRect(x, y, radius, rect)));
   }
@@ -268,6 +317,8 @@ export class World {
       Math.abs(dx) + extent * 2, Math.abs(dy) + extent * 2)) return { x, y };
     const props = this.getProps(Math.min(x, x + dx) - extent, Math.min(y, y + dy) - extent,
       Math.abs(dx) + extent * 2, Math.abs(dy) + extent * 2).filter(prop => prop.radius > 0);
+    const obstacles = [...props, ...this.getWildernessSites(Math.min(x, x + dx) - radius, Math.min(y, y + dy) - radius,
+      Math.abs(dx) + radius * 2 + .1, Math.abs(dy) + radius * 2 + .1).flatMap(site => site.decor).filter(decor => decor.radius > 0)];
     const furniture = this.getBuildings(Math.min(x, x + dx) - radius, Math.min(y, y + dy) - radius,
       Math.abs(dx) + radius * 2 + .1, Math.abs(dy) + radius * 2 + .1).flatMap(building => [...building.walls, ...building.furniture]);
     const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 4));
@@ -278,7 +329,7 @@ export class World {
       const vx = bx - ax;
       const vy = by - ay;
       const lengthSquared = vx * vx + vy * vy;
-      return furniture.some(rect => circleHitsRect(bx, by, radius, rect)) || props.some(prop => {
+      return furniture.some(rect => circleHitsRect(bx, by, radius, rect)) || obstacles.some(prop => {
         const t = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1,
           ((prop.x - ax) * vx + (prop.y - ay) * vy) / lengthSquared));
         const nearX = ax + vx * t - prop.x;

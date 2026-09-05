@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCharacterSheet, generateItem, ITEM_KINDS } from '../src/items.ts';
-import { itemIconSVG, outfitFromEquipment } from '../src/item-art.ts';
+import { itemIconSVG, itemDropShapes, outfitFromEquipment } from '../src/item-art.ts';
+import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
+import { armorShapes } from '../src/armor-shapes.ts';
+import { gearShapesSVG } from '../src/weapon-shapes.ts';
 
 test('every equipment family generates distinct vector art without external resources', () => {
   const icons = ITEM_KINDS.map(kind => itemIconSVG(generateItem(419, 1, kind)));
@@ -35,4 +38,30 @@ test('equipped art follows actual material changes and empties all removed layer
   const unequipped = outfitFromEquipment(sheet);
   assert.equal(unequipped.chest, null); assert.equal(unequipped.shoulders, null); assert.equal(unequipped.cloak, null);
   assert.ok(unequipped.head);
+});
+
+test('ground gear has bounded profile-specific geometry cached only for its item lifetime', () => {
+  const items = [...ITEM_KINDS.map(kind => generateItem(819, 3, kind)),
+    ...WEAPON_PROFILES.map(profile => generateItem(819, 3, 'weapon', profile.id)),
+    ...SHIELD_PROFILES.map(profile => generateItem(819, 3, 'shield', profile.id))];
+  for (const item of items) {
+    const shapes = itemDropShapes(item);
+    assert.ok(shapes.length > 0 && shapes.length < 100, `${item.name} has bounded procedural geometry`);
+    assert.equal(itemDropShapes(item), shapes, 'unchanged field loot does not regenerate every frame');
+    for (const shape of shapes) for (const [x, y] of shape.points) {
+      assert.ok(Number.isFinite(x) && Number.isFinite(y));
+      assert.ok(Math.abs(x) <= 11.001 && Math.abs(y) <= 11.001, 'every family fits the drop presentation envelope');
+    }
+  }
+  const weapons = WEAPON_PROFILES.map(profile => itemDropShapes(generateItem(819, 3, 'weapon', profile.id)));
+  assert.equal(new Set(weapons.map(shapes => JSON.stringify(shapes.map(shape => shape.points)))).size, WEAPON_PROFILES.length,
+    'every weapon profile retains its actual silhouette on the ground');
+});
+
+test('helmet and cuirass icons reuse the actual equipped plate geometry', () => {
+  for (const kind of ['head', 'chest'] as const) {
+    const item = generateItem(8901, 7, kind), { style, base, shadow, edge, trim } = item.appearance;
+    const actual = armorShapes(kind, { style, seed: item.seed, material: { base, shadow, edge, trim } });
+    assert.ok(itemIconSVG(item).includes(gearShapesSVG(actual)), `${kind} icon uses its mounted armor shape`);
+  }
 });

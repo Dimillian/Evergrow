@@ -55,7 +55,7 @@ test('all character layers emit finite geometry and restore the caller state acr
     { impact: .7, impactAngle: .4, hitFlash: .11 }, { dead: true },
     { outfit: { head: null, chest: null, hands: null, legs: null, boots: null, cloak: null } },
   ];
-  for (const kind of ['player', 'stalker', 'brute', 'caster'] as const) {
+  for (const kind of ['player', 'stalker', 'brute', 'caster', 'hound', 'archer', 'wisp'] as const) {
     for (let facing = 0; facing < 8; facing++) for (const action of actions) {
       const c = new ArtContext(), before = c.state();
       drawHumanoid(c as unknown as CanvasRenderingContext2D, {

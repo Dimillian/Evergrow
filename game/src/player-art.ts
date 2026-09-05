@@ -94,10 +94,19 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
       [-4.5 + hemX * 0.6, hemY - 4]], color(cloth.highlight));
     polygon(ctx, [[2, -24], [4, -24], [5 + hemX * 0.9, hemY - 4],
       [2 + hemX * 0.7, hemY - 2]], color(cloth.shadow));
+    // The center pleat is an actual fold with an inset lining and a split hem.
+    polygon(ctx, [[-.8, -23], [.8, -23], [2.1 + hemX * .82, hemY - .8],
+      [.5 + hemX * .7, hemY - 4.1], [-.9 + hemX * .7, hemY - 1.1]], color(cloth.shadow));
+    line(ctx, [[-1.1, -22], [-.5 + hemX * .45, -13], [-1.2 + hemX * .7, hemY - 3.2]], color(cloth.highlight), .6);
     line(ctx, [[-5.7 + hemX * 0.6, hemY - 3], [2 + hemX * 0.9, hemY - 0.5],
       [6.5 + hemX, hemY - 3]], color(cloth.trim), 0.65);
     line(ctx, [[-4.5, -24], [-4.5 + hemX * 0.3, -17], [-4.5 + hemX * 0.6, hemY - 4]], color(cloth.trim), 0.45);
     line(ctx, [[-4, -26], [0, -24.5], [4, -26]], color(cloth.trim), 0.8);
+    if (back) {
+      // A small stitched wayfarer's seal supplies an identity without hiding cloth.
+      line(ctx, [[-.8, -21.5], [1, -19.1], [-.5, -16.8], [-2.1, -19]], color(cloth.trim), .65);
+      line(ctx, [[-.6, -20.6], [-.6, -17.8]], color(cloth.highlight), .5);
+    }
   };
   if (!back) cape();
   for (const layer of armLayers) if (layer.depth < 0) layer.draw();
@@ -108,6 +117,13 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
   ctx.transform(1 - Math.abs(torsoTurn) * 0.08, torsoTurn * 0.12, 0, 1, 0, 0);
   ctx.translate(0, -PLAYER_ATTACHMENTS.chest[1]);
   chestArmor(ctx, outfit.chest, color);
+  if (outfit.cloak && !back) {
+    const trim = outfit.cloak.trim;
+    line(ctx, [[-5.1, -26.3], [-2.5, -24.1], [2.2, -24.1], [5.1, -26.3]], color('#29363d'), 1.7);
+    line(ctx, [[-5.1, -26.3], [-2.5, -24.1], [2.2, -24.1], [5.1, -26.3]], color(trim), .65);
+    polygon(ctx, [[-5.8, -26.2], [-4.6, -27.5], [-3.5, -26.2], [-4.6, -24.9]], color(trim));
+    polygon(ctx, [[3.6, -26.2], [4.8, -27.5], [6, -26.2], [4.8, -24.9]], color(trim));
+  }
   ctx.restore();
   if (back) cape();
   for (const layer of armLayers) if (layer.depth >= 0) layer.draw();

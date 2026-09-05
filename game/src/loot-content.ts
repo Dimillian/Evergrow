@@ -28,6 +28,9 @@ export function getLootTable(rank: EnemyRank): EnemyLootTable { return ENEMY_LOO
 export const ENEMY_ITEM_KIND_WEIGHTS: Readonly<Record<EnemyKind, Readonly<Record<ItemKind, number>>>> = Object.freeze({
   stalker: Object.freeze({ weapon: 32, shield: 6, head: 8, chest: 8, gloves: 10, legs: 8, boots: 12, cloak: 8, amulet: 3, ring: 5 }),
   brute: Object.freeze({ weapon: 27, shield: 18, head: 10, chest: 15, gloves: 7, legs: 10, boots: 5, cloak: 3, amulet: 2, ring: 3 }),
+  hound: Object.freeze({ weapon: 18, shield: 5, head: 5, chest: 7, gloves: 13, legs: 10, boots: 22, cloak: 10, amulet: 5, ring: 5 }),
+  archer: Object.freeze({ weapon: 38, shield: 3, head: 7, chest: 6, gloves: 11, legs: 7, boots: 10, cloak: 8, amulet: 4, ring: 6 }),
+  wisp: Object.freeze({ weapon: 20, shield: 3, head: 8, chest: 4, gloves: 4, legs: 4, boots: 6, cloak: 15, amulet: 18, ring: 18 }),
   caster: Object.freeze({ weapon: 28, shield: 3, head: 6, chest: 6, gloves: 5, legs: 5, boots: 5, cloak: 14, amulet: 14, ring: 14 }),
 });
 

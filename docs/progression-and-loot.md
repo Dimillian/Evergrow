@@ -28,15 +28,38 @@ Towns remain protected. Their safe interiors and streets do not create leveled c
 
 Level and rank are captured at spawn. Crossing a boundary or pulling an enemy across one never changes that enemy's stats or loot level. Enemy projectiles retain their attacker's source level after launch, including after the caster dies.
 
-The target living population is `min(10, 5 + floor((areaLevel − 1) / 3))`, with a hard limit of 12. Each candidate spawn uses its own geographic level, so a boundary can contain a mixture of adjacent levels. The director attempts a replacement every two seconds when population and placement allow it. The initial three enemies remain normal Stalkers.
+Ambient population targets `min(6, 3 + floor((areaLevel − 1) / 4))`, with a shared hard limit of **12 living enemies**, including camp garrisons. Each candidate uses its own geographic level, so an area boundary can contain enemies from both levels. Ambient placement is attempted every 5.5 seconds at 600–820 units from the player, outside the renderer's visible bounds and outside camp footprints. The initial two ambient enemies are normal Stalkers at 600–720 units. Failed attempts do not accumulate into later spawn bursts.
 
-| Biome | Stalker weight | Brute weight | Hexer weight |
-| --- | ---: | ---: | ---: |
-| Deadwood | 70 | 22 | 8 |
-| Verdant Forest | 72 | 12 | 16 |
-| Swamp | 55 | 15 | 30 |
+| Biome | Stalker | Brute | Hexer | Hound | Archer | Wisp |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Deadwood | 34 | 20 | 10 | 14 | 16 | 6 |
+| Verdant Forest | 22 | 8 | 8 | 30 | 24 | 8 |
+| Swamp | 22 | 10 | 24 | 8 | 10 | 26 |
 
-At most two Brutes and two Hexers can be alive at a time; the eligible archetype weights are renormalized when a cap is occupied. Existing attack slots still limit simultaneous pressure to two pack attackers and one special attacker. Killing more enemies no longer makes an unchanged area harder.
+Ambient selection caps each special archetype (Brute, Hexer, Archer, Wisp) at two and renormalizes the remaining weights. Authored camps supply their own fixed mixture. The total population and rank caps apply to both sources. Concurrent attacks share **two pack slots** for Stalkers/Hounds and **one special slot** for the four larger/ranged roles. Level increases never shorten anticipation, increase movement speed, or add simultaneous attack slots.
+
+### Camps and awareness
+
+Ashen Watch at `(740, 180)` introduces a four-member garrison: a veteran Stalker, an Archer, a Hound, and another Stalker. Other camps have six members with biome-specific support. Camp leaders are an authored exception to ambient rank rolls: a veteran can appear in a level-one camp; elite leaders require at least area level three. These enemies still use the ordinary rank XP and loot tables.
+
+Camps preload within 1,000–2,000 units according to visible world coverage. Approaching camps take priority over farther offscreen populations when the shared actor/rank budget is full. A garrison sleeps as a whole; visible and nearer foes cannot disappear to free capacity. Its original health, level, damage, rank, reward seed, and dead member identities survive unloading. Defeating every member marks the camp cleared for this run. Returning cannot refill it, reroll its items, or award extra XP. There is no bonus chest or separate camp completion reward yet.
+
+Ordinary approaches preload garrisons before they become visible. A direct teleport, very wide view, or a camp delayed by twelve already-visible enemies can still cause its first population to appear on screen once capacity becomes available. The prototype keeps that exception so such a camp does not remain permanently empty. Ambient spawning has no such exception: it stays outside the current view and outside every camp footprint.
+
+The exact run ledger holds up to 1,024 camp records. At that ceiling new camps remain dormant; existing records are never evicted or falsely marked cleared. Resetting the run clears this ledger with the character. Only exploration remains persisted.
+
+All six archetypes patrol close to a home position until they notice the player with line of sight. Direct damage alerts the victim and nearby visible members of its own camp. Losing sight for 3.4 seconds or moving more than 470 units from home ends pursuit. Returning enemies use collision-safe steering, retain their current life, and do not grant rewards. Sanctuary entry cancels attacks and sends pursuers away from its entrance.
+
+| Archetype | Pattern | Anticipation / recovery |
+| --- | --- | --- |
+| Hollow Stalker | Spreads around the target; waits on a support ring while pack attack slots are occupied | 0.42s / 0.78s |
+| Gravebound Brute | Commits a wide heavy swing early, with a long opening after it misses | 0.95s / 1.20s |
+| Mire Hexer | Maintains distance and releases three slow green bolts in a fixed fan | 0.90s / 1.15s |
+| Briar Hound | Approaches a flanking lane, crouches, then pounces 89.6 units along a committed direction | 0.68s / 0.95s |
+| Ashen Ranger | Retreats under pressure, locks a single arrow, and sidesteps during recovery | 0.95s / 0.95s |
+| Lantern Wisp | Locks a ground circle early; its 52-unit blast can be escaped before impact | 1.30s / 1.40s |
+
+Ranged roles make space before starting another attack when the player enters their retreat distance. Aim stops following the player before release: the Archer leaves 0.63 seconds after lock; the Wisp leaves 1.08 seconds. Collision and line of sight remain authoritative for the committed attack. These are the first behavior patterns, not boss phases, full navigation meshes, or squad command logic.
 
 ## Shared level curves
 
@@ -49,7 +72,18 @@ For source or item level `L`, let `n = L − 1`:
 | Enemy damage | `1 + 0.11n` |
 | Enemy base XP | `1 + 0.18n` |
 
-Archetype definitions retain their level-one values: Stalker 48 life / 8 damage / 20 XP; Hexer 56 / 13 / 30; Brute 138 / 22 / 50. Level and rank multiply those authored values, then the result is rounded. Movement speed, windup, attack cadence, and collision size do not accelerate just because an enemy has a higher level.
+Archetype definitions retain their level-one values:
+
+| Archetype | Life | Damage per contact | XP |
+| --- | ---: | ---: | ---: |
+| Stalker | 48 | 8 | 20 |
+| Brute | 138 | 22 | 50 |
+| Hexer | 56 | 13 | 30 |
+| Hound | 37 | 10 | 22 |
+| Archer | 45 | 11 | 28 |
+| Wisp | 39 | 17 | 32 |
+
+ Level and rank multiply those authored values, then the result is rounded. Movement speed, windup, attack cadence, and collision size do not accelerate just because an enemy has a higher level.
 
 | Matching level | Normal Stalker life | Hit before defenses | XP | Next-level XP | Stalker equivalents | Common Longsword damage |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -75,7 +109,7 @@ Rank is a separate modifier on an archetype, not another enemy behavior implemen
 
 Veterans and elites retain the existing readable attack timings. Their additional life, damage, XP, and better loot distinguish the threat. Unique elite affixes, champion pack mechanics, boss behavior, and boss-specific tables are future content.
 
-Veterans start at a 12% rank chance in level-two areas, increasing by one percentage point per area level to a 20% cap. Elites start at 4% in level-three areas, increasing by half a percentage point per area level to an 8% cap. Level-one areas spawn only normal ranks. At most two veterans and one elite are alive concurrently; a roll for a capped rank becomes normal rather than upgrading another rank.
+Veterans start at a 12% rank chance in level-two areas, increasing by one percentage point per area level to a 20% cap. Elites start at 4% in level-three areas, increasing by half a percentage point per area level to an 8% cap. Level-one ambient rolls are normal; authored camp leaders may be veterans. At most two veterans and one elite are alive concurrently; a roll for a capped rank becomes normal rather than upgrading another rank.
 
 ## XP costs and level differences
 
@@ -123,18 +157,18 @@ Default generation for starter packs and content tools keeps its general-purpose
 
 An archetype biases item kind without excluding any equipment slot:
 
-| Kind | Stalker | Brute | Hexer |
-| --- | ---: | ---: | ---: |
-| Weapon | 32% | 27% | 28% |
-| Shield | 6% | 18% | 3% |
-| Head | 8% | 10% | 6% |
-| Chest | 8% | 15% | 6% |
-| Gloves | 10% | 7% | 5% |
-| Legs | 8% | 10% | 5% |
-| Boots | 12% | 5% | 5% |
-| Cloak | 8% | 3% | 14% |
-| Amulet | 3% | 2% | 14% |
-| Ring | 5% | 3% | 14% |
+| Kind | Stalker | Brute | Hexer | Hound | Archer | Wisp |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Weapon | 32% | 27% | 28% | 18% | 38% | 20% |
+| Shield | 6% | 18% | 3% | 5% | 3% | 3% |
+| Head | 8% | 10% | 6% | 5% | 7% | 8% |
+| Chest | 8% | 15% | 6% | 7% | 6% | 4% |
+| Gloves | 10% | 7% | 5% | 13% | 11% | 4% |
+| Legs | 8% | 10% | 5% | 10% | 7% | 4% |
+| Boots | 12% | 5% | 5% | 22% | 10% | 6% |
+| Cloak | 8% | 3% | 14% | 10% | 8% | 15% |
+| Amulet | 3% | 2% | 14% | 5% | 4% | 18% |
+| Ring | 5% | 3% | 14% | 5% | 6% | 18% |
 
 For weapons and shields, the source biome then weights the profile. Every weapon and shield remains possible everywhere:
 
@@ -181,10 +215,13 @@ Shared ownership keeps the model inspectable:
 | `progression-content.ts` | Numeric level normalization, raw scaling functions, rank multipliers, source-level armor |
 | `progression.ts` | XP thresholds, exact overflow, level-difference factors, reward calculation |
 | `zone-progression.ts` | Geographic bands, enemy-stat snapshots, isolated enemy loot seeds |
-| `encounter-director.ts` | Geographic encounter mix, population policy, and rank selection |
+| `encounter-director.ts` | Geographic ambient mix, population policy, and rank selection |
+| `enemy-ai.ts` | Patrol, awareness, pursuit, commitment, role spacing, and return behavior |
+| `camp-population.ts` | Exact camp membership, bounded sleep/restore ledger, clear state and population priority |
+| `wilderness-sites.ts` | Immutable procedural camp/landmark layouts and authored garrison templates |
 | `loot-content.ts` | Rank yield/tier tables, archetype kind weights, biome profile weights |
 | `loot.ts` | Deterministic bounded reward rolls and source-based item level |
 | `items.ts` | Tier-aware item construction, affix budgets, names, appearance, and stat recipes |
 | `simulation.ts` | Spawn snapshots, actual death rewards, attack-source metadata, and pickup mutations |
 
-Future additions should extend these registries and shared formulas: biome-specific enemies, encounter landmarks, bosses, affix pools, unique items, and reward sources such as chests or quests. Difficulty, clear time, XP pace, loot usefulness, and inventory pressure remain questions for the user's gameplay feedback.
+Future additions should extend these registries and shared formulas: further biome-specific enemies, landmark interactions, bosses, affix pools, unique items, and reward sources such as chests or quests. Difficulty, clear time, XP pace, loot usefulness, and inventory pressure remain questions for the user's gameplay feedback.

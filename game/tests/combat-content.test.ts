@@ -15,7 +15,7 @@ test('simulation uses canonical fixed-step and impact timing', () => {
 
 test('enemy definitions have complete coherent telegraph, attack and projectile windows', () => {
   const names = new Set<string>();
-  for (const kind of ['stalker', 'brute', 'caster'] satisfies EnemyKind[]) {
+  for (const kind of ['stalker', 'brute', 'caster', 'hound', 'archer', 'wisp'] satisfies EnemyKind[]) {
     const enemy = ENEMY_DEFINITIONS[kind];
     assert.ok(Object.isFrozen(enemy), 'runtime actor updates cannot alter shared definitions');
     assert.ok(enemy.name.length > 0); names.add(enemy.name);
@@ -27,15 +27,18 @@ test('enemy definitions have complete coherent telegraph, attack and projectile 
     if (enemy.attack === 'melee') {
       assert.ok(enemy.arc > 0 && enemy.arc <= Math.PI * 2);
       assert.ok(enemy.lungeSpeed >= 0);
-    } else {
+    } else if (enemy.attack === 'projectile') {
       assert.equal(enemy.projectile.owner, 'enemy');
       assert.equal(enemy.damage, enemy.projectile.damage, 'projectile damage has one source');
-      assert.ok(enemy.minAttackDistance < enemy.retreatDistance && enemy.retreatDistance < enemy.maxAttackDistance);
+      assert.ok(0 < enemy.retreatDistance && enemy.retreatDistance < enemy.maxAttackDistance);
       assert.ok(enemy.maxAttackDistance <= enemy.range);
-      assert.ok(enemy.projectile.speed * enemy.projectile.life >= enemy.range, 'hexes can reach their advertised range');
+      assert.ok(enemy.projectile.speed * enemy.projectile.life >= enemy.range, 'projectiles can reach their advertised range');
+    } else {
+      assert.ok(enemy.blastRadius > 0 && enemy.blastRadius < enemy.range);
+      assert.ok(enemy.windup - enemy.aimLock >= .8, 'ground strikes leave a readable escape window');
     }
   }
-  assert.equal(names.size, 3);
+  assert.equal(names.size, 6);
   assert.ok(Object.isFrozen(ENEMY_DEFINITIONS));
   assert.ok(Object.isFrozen(PROJECTILE_DEFINITIONS));
 });
@@ -53,7 +56,7 @@ test('player ability definitions retain cancellable casts and bounded dodge prot
 });
 
 test('spawned actors and actual melee/projectile contact use the authored enemy definitions', () => {
-  for (const kind of ['stalker', 'brute', 'caster'] satisfies EnemyKind[]) {
+  for (const kind of ['stalker', 'brute', 'caster', 'hound', 'archer', 'wisp'] satisfies EnemyKind[]) {
     const definition = ENEMY_DEFINITIONS[kind];
     const sim = new Simulation(world, { spawn: false });
     const enemy = sim.spawnEnemy(kind, definition.attack === 'melee' ? -20 : -200, 0)!;
@@ -64,7 +67,7 @@ test('spawned actors and actual melee/projectile contact use the authored enemy 
       sim.update(FIXED_STEP, idle);
       assert.equal(sim.player.hp, sim.player.maxHp - definition.damage);
       assert.equal(sim.drainEvents().find(event => event.type === 'hurt')?.enemyKind, kind);
-    } else {
+    } else if (definition.attack === 'projectile') {
       enemy.state = 'windup'; enemy.stateDuration = definition.windup; enemy.stateTime = definition.windup - FIXED_STEP / 2;
       sim.update(FIXED_STEP, idle);
       const projectile = sim.projectiles[0]!;
@@ -73,7 +76,9 @@ test('spawned actors and actual melee/projectile contact use the authored enemy 
       assert.equal(projectile.maxLife, definition.projectile.life);
       assert.equal(projectile.radius, definition.projectile.radius);
       assert.equal(projectile.owner, definition.projectile.owner);
-      assert.equal(Math.hypot(projectile.vx, projectile.vy), definition.projectile.speed);
+      assert.ok(Math.abs(Math.hypot(projectile.vx, projectile.vy) - definition.projectile.speed) < 1e-8);
+      assert.equal(projectile.effects?.style, definition.projectileStyle);
+      assert.equal(projectile.sourceKind, kind);
     }
   }
 });

@@ -1,9 +1,10 @@
+import { armorShapes } from './armor-shapes.ts';
 import { STARTING_SWORD } from './equipment.ts';
 import type { ShieldDefinition } from './model.ts';
 import { shieldShapes, weaponShapes, type GearShape } from './weapon-shapes.ts';
 import type { ArmorMaterial, ArmorPiece, CharacterOutfit } from './art-types.ts';
 import { PLAYER_ATTACHMENTS } from './character-motion.ts';
-import { hash, polygon, line, taper, type Point, type Color } from './art-primitives.ts';
+import { polygon, line, taper, type Point, type Color } from './art-primitives.ts';
 
 const STEEL: ArmorMaterial = { base: '#728c81', shadow: '#294750', edge: '#d1d6b0', trim: '#cfaa6c' };
 
@@ -19,7 +20,7 @@ export const STARTER_OUTFIT: CharacterOutfit = {
   cloak: { base: '#92364e', shadow: '#4e2a3e', highlight: '#cf5e69', trim: '#d4a070', seed: 71 },
 };
 
-function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly GearShape[], color: Color): void {
+export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly GearShape[], color: Color): void {
   for (const shape of shapes) {
     if (shape.fill) polygon(ctx, shape.points, color(shape.fill));
     if (shape.stroke) line(ctx, shape.points, color(shape.stroke), shape.width ?? .7);
@@ -98,31 +99,7 @@ export function chestArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | nu
   for (let row = 0; row < 3; row++) {
     line(ctx, [[-4.5, 4 + row * 2], [0, 5 + row * 2], [4, 4 + row * 2]], color('#496257'), 0.6);
   }
-  if (piece) {
-    const m = piece.material;
-    const plate = piece.style === 'plate';
-    polygon(ctx, [[-5.6, -6], [-2.5, -7], [2, -7], [5.3, -5.5], [5.8, 2],
-      [3, 6], [0, 7.5], [-4.4, 5], [-5.6, 0]], color(m.shadow));
-    polygon(ctx, [[-4.8, -5.8], [-1.1, -6.5], [1, -5], [0.2, 4.8], [-3.8, 3.9], [-4.8, -0.7]], color(m.edge));
-    polygon(ctx, [[0.2, -5.7], [4.4, -4.8], [4.8, 1.4], [2.6, 4.8], [0.2, 5.9]], color(m.base));
-    line(ctx, [[-4.5, -5.9], [-1.3, -6.7], [2, -6.1], [4.5, -4.8]], color(m.trim), 0.7);
-    if (plate) {
-      line(ctx, [[-3.8, -2], [-0.2, -0.5], [3.7, -1.8]], color(m.shadow), 0.7);
-      line(ctx, [[0, -4.5], [0, 4.6]], color(m.edge), 0.65);
-      const mark = hash(piece.seed) % 2;
-      polygon(ctx, [[-0.8, -3.8], [mark ? 0 : 0.8, -4.5], [1.2, -3.5], [0.2, -2.3]], color(m.trim));
-    } else {
-      for (let stitch = 0; stitch < 4; stitch++) {
-        line(ctx, [[-3.7, -4.6 + stitch * 1.8], [-2.9, -4.3 + stitch * 1.8]], color(m.trim), 0.5);
-      }
-    }
-    // Two overlapping waist lames flex independently from the breastplate.
-    for (let band = 0; band < 2; band++) {
-      polygon(ctx, [[-4.4, 5 + band * 1.7], [0, 6.3 + band * 1.5], [4.4, 5 + band * 1.7],
-        [4.1, 6.4 + band * 1.7], [0, 7.6 + band * 1.5], [-4.2, 6.4 + band * 1.7]], color(band ? m.shadow : m.base));
-      line(ctx, [[-4, 5.1 + band * 1.7], [0, 6.2 + band * 1.5], [4, 5.1 + band * 1.7]], color(m.edge), 0.45);
-    }
-  }
+  if (piece) drawGearShapes(ctx, armorShapes('chest', piece), color);
   line(ctx, [[-5.3, 8.1], [5.3, 8.1]], color('#644834'), 2);
   ctx.fillStyle = color('#d4ae72'); ctx.fillRect(-1.4, 6.8, 2.8, 2.4);
   ctx.fillStyle = color('#392e2b'); ctx.fillRect(-0.5, 7.4, 1, 1.1);
@@ -138,54 +115,37 @@ export function shoulderArmor(ctx: CanvasRenderingContext2D, anchor: Point, elbo
   // Mount and orientation both follow the upper arm, including in rear/side views.
   ctx.rotate(-Math.atan2(elbow[0] - anchor[0], Math.max(2, elbow[1] - anchor[1])));
   ctx.translate(-1.5, 0);
-  const m = piece.material;
-  const flare = piece.style === 'plate' ? 1 : 0;
-  polygon(ctx, [[-1.3, -2.5], [1.2, -3.3], [4.1 + flare, -0.7], [4.4, 2.9], [0.6, 3.4], [-1.4, 0.8]], color(m.shadow));
-  polygon(ctx, [[-0.9, -2], [1.1, -2.6], [3.8 + flare * 0.5, -0.6], [3.7, 1.3], [0.8, 1.7], [-1, 0.3]], color(m.base));
-  line(ctx, [[-0.8, -2.1], [1.2, -2.8], [3.8 + flare * 0.5, -0.6]], color(m.edge), 0.8);
-  line(ctx, [[0.5, 2], [3.7, 1.4]], color(m.trim), 0.6);
-  ctx.fillStyle = color(m.trim); ctx.fillRect(1, -1.1, 0.8, 0.8);
-  if (piece.style === 'plate') {
-    polygon(ctx, [[0.5, 3], [3.4, 2.7], [3.1, 4], [1.2, 4.3]], color(m.base));
-    line(ctx, [[1, 3.8], [3, 3.5]], color(m.edge), 0.5);
-  }
+  drawGearShapes(ctx, armorShapes('shoulder', piece), color);
   ctx.restore();
 }
 
 export function headArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | null, color: Color, facing: number): void {
   ctx.save(); ctx.translate(Math.cos(facing) * 1.4, PLAYER_ATTACHMENTS.head[1]);
-  const back = Math.sin(facing) < -0.16;
+  const back = Math.sin(facing) < -.16;
+  const side = Math.cos(facing), look = side * .8;
   const m = piece?.material ?? LEATHER;
-  // A neck and gorget separate the face from the chest rather than one solid blob.
-  polygon(ctx, [[-2, 4.5], [2.2, 4.5], [2.8, 7], [-2.4, 7]], color('#b79671'));
-  line(ctx, [[-3.3, 5.5], [0, 7], [3.7, 5.4]], color(m.trim), 1);
-  polygon(ctx, [[-4.8, 3.2], [-5, -1], [-2.7, -4.8], [1.1, -5.7], [4.2, -2.4], [4.9, 1.8], [2.7, 5], [-1.2, 5.5]], color('#25383c'));
-  if (piece) {
-    polygon(ctx, [[-4, 1.2], [-4.2, -1.2], [-2.2, -4.5], [0.8, -5.2], [3.5, -2], [3.9, 1.6], [1.8, 3.2], [-2.5, 3.5]], color(m.base));
-    polygon(ctx, [[-4, 0.8], [-4.2, -1.2], [-2.2, -4.5], [0.2, -4.8], [-0.5, 2.4], [-2.5, 3.5]], color(m.edge));
-    line(ctx, [[-2.3, -4.4], [0.4, -5.2], [2.2, -3.4]], color(m.trim), 0.65);
-    if (piece.style === 'plate') {
-      line(ctx, [[0.4, -5.7], [0.3, -1]], color(m.edge), 0.8);
-      line(ctx, [[0.6, -5.3], [1.2, -1.6]], color(m.shadow), 0.65);
-    }
-  }
+  // A skin neck seated inside a dark gorget gives the helmet a separate volume.
+  polygon(ctx, [[-1.7, 3.8], [1.9, 3.8], [2.1, 6.7], [-2, 6.7]], color('#9e8069'));
+  polygon(ctx, [[-3.5, 5.4], [-1.9, 5.8], [0, 6.9], [2.3, 5.6], [3.6, 5.2], [3.1, 7.3], [0, 8], [-3.1, 7]], color(m.shadow));
+  line(ctx, [[-3, 5.8], [0, 7.2], [3.1, 5.6]], color(m.edge), .65);
+  polygon(ctx, [[-4.2, -.8], [-3.2, -3.9], [.6, -4.8], [3.7, -2.7], [4.2, .6], [2.7, 4.1], [.7, 5.3], [-2, 4.6], [-3.9, 1.8]], color('#403b39'));
   if (!back) {
-    const look = Math.cos(facing) * 0.65;
-    polygon(ctx, [[-3 + look, -0.2], [2.5 + look, -0.3], [2.6 + look, 3], [0.7 + look, 4.6], [-1.6 + look, 3.8]], color('#c5a17a'));
-    polygon(ctx, [[-3 + look, -0.2], [-1.4 + look, 0.3], [-0.7 + look, 3.8], [-1.6 + look, 3.8]], color('#806c59'));
-    line(ctx, [[-3.3 + look, -0.3], [2.9 + look, -0.3]], color(m.shadow), 1.1);
-    ctx.fillStyle = color('#1b2c31');
-    ctx.fillRect(-2.1 + look, 1, 1, 0.65); ctx.fillRect(1 + look, 1, 0.9, 0.65);
-    line(ctx, [[0.3 + look, 1.1], [0.7 + look, 2.7]], color('#ead2a0'), 0.55);
-    line(ctx, [[-0.8 + look, 3.2], [1.2 + look, 3.2]], color('#6a5349'), 0.55);
-    if (piece?.style === 'plate') {
-      polygon(ctx, [[-4.2, 0.8], [-2.8, 1], [-2.3, 4.4], [-3.6, 3.5]], color(m.base));
-      polygon(ctx, [[3.4, 0.9], [4.1, 1.2], [3.1, 4], [2.4, 4.5]], color(m.shadow));
-      line(ctx, [[-4.1, 1], [-3.5, 3.6]], color(m.edge), 0.55);
+    polygon(ctx, [[-3 + look, -1.4], [.2 + look, -2.6], [2.7 + look, -1.3], [3 + look, 2.4], [1.1 + look, 4.7], [-1.1 + look, 4.4], [-2.6 + look, 2.6]], color('#b89a7d'));
+    polygon(ctx, [[-3 + look, -1.4], [-1.1 + look, -.7], [-.7 + look, 3.8], [-1.1 + look, 4.4], [-2.6 + look, 2.6]], color('#755f51'));
+    polygon(ctx, [[.2 + look, 1.1], [1 + look, 2.2], [.4 + look, 2.7], [-.1 + look, 2.1]], color('#e0c39c'));
+    // Near eye is full width, far eye foreshortens; no fixed forward-looking mask.
+    for (const eye of [-1, 1]) {
+      const width = .9 - Math.max(0, side * eye) * .35;
+      line(ctx, [[eye * 1.6 + look - width / 2, 1.25], [eye * 1.6 + look + width / 2, 1.25]], color('#263239'), .65);
     }
-  } else {
-    line(ctx, [[-3.5, 3.3], [0, 4.8], [3.4, 3.2]], color(m.edge), 0.7);
-    line(ctx, [[-2.6, 1.4], [0.2, 2.2], [2.8, 1.3]], color(m.shadow), 0.65);
+    line(ctx, [[-.8 + look, 3.1], [.9 + look, 3.3]], color('#65504b'), .55);
+    line(ctx, [[-.5 + look, 4.2], [.8 + look, 4.3]], color('#d6b991'), .45);
+  }
+  if (piece) drawGearShapes(ctx, armorShapes('head', piece, facing), color);
+  else {
+    polygon(ctx, [[-4.2, -.7], [-3.2, -3.9], [.6, -4.8], [3.7, -2.7], [3.8, -.6], [2.1, -1.4], [1, -2.5], [-1.5, -1.8], [-2.2, .1], [-3.6, 1.4]], color('#4c3b32'));
+    line(ctx, [[-3.4, -1.5], [-2.6, -3], [.3, -3.7], [2.4, -2.4]], color('#8f7457'), .7);
+    if (back) polygon(ctx, [[-3.7, -.4], [3.7, -.4], [3.5, 3.2], [1.8, 4.8], [-2.3, 4.2], [-3.8, 2.1]], color('#4c3b32'));
   }
   ctx.restore();
 }

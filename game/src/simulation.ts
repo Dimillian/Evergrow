@@ -4,7 +4,7 @@ import { createBaseStats, createStartingEquipment, deriveAttackStats } from './e
 import { getActiveSwingOffset } from './attack-motion.ts';
 import { BASIC_ATTACK_PHASES, COMBAT_TIMING, SKILL_CAST_MOTION, ENEMY_DEFINITIONS, LOOT_RULES, PLAYER_ABILITIES,
   PLAYER_DEFAULTS, PLAYER_MOVEMENT, type ProjectileDefinition } from './combat-content.ts';
-import { canEnemyJoinAttack, chooseEncounterEnemy, chooseEncounterRank, ENCOUNTER_RULES, livingEnemyCount } from './encounter-director.ts';
+import { chooseEncounterEnemy, chooseEncounterRank, ENCOUNTER_RULES, livingEnemyCount } from './encounter-director.ts';
 import { circleIntersectsSector, segmentDistanceSquared } from './combat-geometry.ts';
 import { awardCharacterExperience, refreshCharacter } from './character.ts';
 import { createCharacterSheet, TIER_COLORS } from './items.ts';
@@ -17,7 +17,9 @@ import { armorReduction, type EnemyRank } from './progression-content.ts';
 import { enemyLootSeed, getZoneAt, scaledEnemyStats } from './zone-progression.ts';
 import { xpLevelFactor } from './progression.ts';
 import { rollEnemyLoot } from './loot.ts';
+import { CampPopulation, CAMP_POPULATION_RULES, type CampSpawnSource, type CampState } from './camp-population.ts';
 import { sampleBiome } from './biomes.ts';
+import { alertEnemy, interruptStaggeredEnemy, transitionEnemy, updateEnemyAI, type EnemyAIContext } from './enemy-ai.ts';
 
 export const FIXED_STEP = COMBAT_TIMING.fixedStep;
 export const HIT_FLASH_DURATION = COMBAT_TIMING.hitFlashDuration;
@@ -61,6 +63,9 @@ export class Simulation {
   private healBuffer = -1;
   private hurtGuard = 0;
   private spawnTimer = 0;
+  private campTimer = 0;
+  private camps = new CampPopulation();
+  private spawnExclusion: { x: number; y: number; width: number; height: number } | null = null;
   private killRecharge = 0;
 
   constructor(world: WorldQuery, options: SimulationOptions = {}) {
@@ -82,7 +87,7 @@ export class Simulation {
     this.kills = 0;
     this.accumulator = 0;
     this.nextId = 1;
-    this.spawnOrdinal = 0;
+    this.spawnOrdinal = 0; this.camps.reset(); this.campTimer = 0;
     this.events = [];
     this.randomState = this.options.seed! >>> 0;
     this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
@@ -92,6 +97,14 @@ export class Simulation {
       this.spawnAroundPlayer(ENCOUNTER_RULES.initialKind, ENCOUNTER_RULES.initialMinDistance, ENCOUNTER_RULES.initialMaxDistance);
     }
   }
+
+  /** Renderer supplies world bounds; camera size cannot cause ambient enemies to appear in sight. */
+  setSpawnExclusion(bounds: { x: number; y: number; width: number; height: number } | null): void {
+    this.spawnExclusion = bounds && [bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)
+      && bounds.width > 0 && bounds.height > 0 ? { ...bounds } : null;
+  }
+
+  getCampState(id: string): CampState { return this.camps.getState(id); }
 
   /** Call when focus/control context changes, including pause and resume. */
   clearInput(): void {
@@ -133,18 +146,21 @@ export class Simulation {
   }
 
   /** Useful for authored encounters and deterministic headless tests. */
-  spawnEnemy(kind: EnemyKind, x: number, y: number, rank: EnemyRank = 'normal'): Enemy | null {
+  spawnEnemy(kind: EnemyKind, x: number, y: number, rank: EnemyRank = 'normal', source?: CampSpawnSource): Enemy | null {
     const stats = ENEMY_DEFINITIONS[kind];
     if (this.world.isSanctuary?.(x, y)) return null;
     if (livingEnemyCount(this.enemies) >= ENCOUNTER_RULES.hardPopulationCap || this.world.blocked(x, y, stats.radius)) return null;
     const level = getZoneAt(x, y).level, scaled = scaledEnemyStats(kind, level, rank);
     const biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
-    const lootSeed = enemyLootSeed(this.options.seed!, ++this.spawnOrdinal, x, y);
+    const lootSeed = source?.lootSeed ?? enemyLootSeed(this.options.seed!, ++this.spawnOrdinal, x, y);
     const enemy: Enemy = {
       id: this.nextId++, level, rank, biome, lootSeed, ...scaled,
+      ...(source ? { campId: source.campId, campMemberId: source.memberId } : {}),
       x, y, prevX: x, prevY: y, vx: 0, vy: 0, knockbackX: 0, knockbackY: 0, angle: 0, hp: scaled.maxHp,
       kind, state: 'idle', stateTime: 0, stateDuration: ENCOUNTER_RULES.initialIdleMin + this.random() * ENCOUNTER_RULES.initialIdleRange,
-      attackAngle: 0, hitFlash: 0, hitAngle: 0, radius: stats.radius, stagger: 0,
+      attackAngle: 0, attackTargetX: x, attackTargetY: y, homeX: x, homeY: y, awareness: 0, lostSightTime: 0,
+      lastSeenX: x, lastSeenY: y, senseTime: 0, seesPlayer: false, patrolPhase: (this.nextId * 2.399963) % TAU,
+      hitFlash: 0, hitAngle: 0, radius: stats.radius, stagger: 0,
       attackHit: false, interrupted: false,
       slowTime: 0, slowFactor: 1, burnTime: 0, burnDps: 0, burnTick: 0,
     };
@@ -181,7 +197,7 @@ export class Simulation {
     }
     this.updateSpawns(dt);
     this.enemies = this.enemies.filter(e => (e.state !== 'dead' || e.stateTime < ENCOUNTER_RULES.corpseDuration)
-      && Math.hypot(e.x - this.player.x, e.y - this.player.y) < ENCOUNTER_RULES.despawnDistance);
+      && (e.campId || Math.hypot(e.x - this.player.x, e.y - this.player.y) < ENCOUNTER_RULES.despawnDistance));
   }
 
   private capturePositions(): void {
@@ -375,6 +391,13 @@ export class Simulation {
 
   private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean, periodic = false): void {
     if (enemy.state === 'dead') return;
+    if (!periodic) {
+      alertEnemy(enemy, this.player);
+      // A camp shares danger only with nearby members who can see the struck ally.
+      if (enemy.campId) for (const ally of this.enemies) if (ally !== enemy && ally.campId === enemy.campId
+        && ally.state !== 'dead' && Math.hypot(ally.x - enemy.x, ally.y - enemy.y) < 190
+        && this.lineOfSight(ally.x, ally.y, enemy.x, enemy.y)) alertEnemy(ally, this.player);
+    }
     const critical = !periodic && this.player.derived.critChance > 0 && this.random() < this.player.derived.critChance;
     damage = Math.max(1, Math.round(damage * (critical ? this.player.derived.critMultiplier : 1)));
     enemy.hp = Math.max(0, enemy.hp - damage);
@@ -390,7 +413,7 @@ export class Simulation {
     this.events.push({ type: 'hit', x: enemy.x, y: enemy.y, angle, value: damage,
       targetId: enemy.id, remainingHp: enemy.hp, enemyKind: enemy.kind, heavy: critical });
     if (enemy.hp <= 0) {
-      this.transition(enemy, 'dead', ENCOUNTER_RULES.corpseDuration);
+      transitionEnemy(enemy, 'dead', ENCOUNTER_RULES.corpseDuration);
       this.kills++;
       const reward = Math.max(1, Math.round(enemy.xpReward * xpLevelFactor(this.player.level, enemy.level)));
       const levels = awardCharacterExperience(this.player, reward);
@@ -416,27 +439,23 @@ export class Simulation {
       enemy.stagger = COMBAT_TIMING.staggerDuration;
       if (enemy.state === 'windup') {
         enemy.interrupted = true;
-        this.transition(enemy, 'recover', COMBAT_TIMING.interruptedRecovery);
+        transitionEnemy(enemy, 'recover', COMBAT_TIMING.interruptedRecovery);
       }
-    }
-  }
-
-  private transition(enemy: Enemy, state: Enemy['state'], duration: number): void {
-    enemy.state = state;
-    enemy.stateTime = 0;
-    enemy.stateDuration = duration;
-    enemy.vx = enemy.vy = 0;
-    if (state === 'windup') {
-      enemy.attackHit = false;
-      enemy.interrupted = false;
     }
   }
 
   private updateEnemies(dt: number): void {
     const p = this.player;
-    const sheltered = this.world.isSanctuary?.(p.x, p.y) ?? false;
+    const context: EnemyAIContext = {
+      player: p, enemies: this.enemies, world: this.world, time: this.time,
+      visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
+      move: (actor, vx, vy, delta) => this.moveEnemy(actor, vx, vy, delta),
+      hurt: (amount, angle, actor) => this.damagePlayer(amount, angle, actor.level, actor.kind),
+      shoot: (actor, angle, definition, effects) => this.projectile(actor.x, actor.y, angle,
+        definition, undefined, effects, actor.level, actor.kind),
+      emit: event => this.events.push(event),
+    };
     for (const enemy of this.enemies) {
-      const stats = ENEMY_DEFINITIONS[enemy.kind];
       this.updateKnockback(enemy, dt);
       enemy.stateTime += dt;
       if (enemy.state === 'dead') continue;
@@ -454,72 +473,12 @@ export class Simulation {
         if (enemy.hp <= 0) continue;
       }
       if (enemy.stagger > 0) {
-        if (enemy.interrupted && (enemy.state === 'windup' || enemy.state === 'attack')) this.transition(enemy, 'recover', COMBAT_TIMING.interruptedRecovery);
+        interruptStaggeredEnemy(enemy);
         enemy.stagger = Math.max(0, enemy.stagger - dt);
         enemy.vx = enemy.vy = 0;
         continue;
       }
-      const dx = p.x - enemy.x;
-      const dy = p.y - enemy.y;
-      const distance = Math.hypot(dx, dy);
-      const targetAngle = Math.atan2(dy, dx);
-      if (sheltered) {
-        // Pursuers turn away from sanctuary instead of waiting inside its doors.
-        if (enemy.state !== 'chase') this.transition(enemy, 'chase', 0);
-        enemy.angle = targetAngle + Math.PI;
-        this.moveEnemy(enemy, -Math.cos(targetAngle) * stats.speed * .7,
-          -Math.sin(targetAngle) * stats.speed * .7, dt);
-        continue;
-      }
-      if (enemy.state === 'idle' || enemy.state === 'recover') {
-        if (enemy.stateTime >= enemy.stateDuration) this.transition(enemy, 'chase', 0);
-      } else if (enemy.state === 'chase') {
-        enemy.angle = targetAngle;
-        const attackDistance = stats.attack === 'projectile' ? stats.maxAttackDistance : stats.range + p.radius - 3;
-        const minDistance = stats.attack === 'projectile' ? stats.minAttackDistance : 0;
-        if (distance <= attackDistance && distance > minDistance && canEnemyJoinAttack(enemy, this.enemies)
-          && this.lineOfSight(enemy.x, enemy.y, p.x, p.y)) {
-          enemy.attackAngle = targetAngle;
-          this.transition(enemy, 'windup', stats.windup);
-        } else {
-          const retreat = stats.attack === 'projectile' && distance < stats.retreatDistance;
-          let vx = Math.cos(targetAngle) * stats.speed * (retreat ? -0.7 : 1);
-          let vy = Math.sin(targetAngle) * stats.speed * (retreat ? -0.7 : 1);
-          if (stats.attack === 'melee' && distance < enemy.radius + p.radius + 3) vx = vy = 0;
-          for (const other of this.enemies) {
-            if (other === enemy || other.state === 'dead') continue;
-            const separation = Math.hypot(enemy.x - other.x, enemy.y - other.y);
-            const gap = enemy.radius + other.radius + 8;
-            if (separation > 0.01 && separation < gap) {
-              const force = (gap - separation) * 5;
-              vx += (enemy.x - other.x) / separation * force;
-              vy += (enemy.y - other.y) / separation * force;
-            }
-          }
-          this.moveEnemy(enemy, vx, vy, dt);
-        }
-      } else if (enemy.state === 'windup') {
-        if (enemy.stateTime < stats.aimLock) enemy.attackAngle = targetAngle;
-        enemy.angle = enemy.attackAngle;
-        if (enemy.stateTime >= enemy.stateDuration) {
-          this.transition(enemy, 'attack', stats.active);
-          if (stats.attack === 'projectile') {
-            this.projectile(enemy.x, enemy.y, enemy.attackAngle, { ...stats.projectile, damage: enemy.damage }, undefined, undefined, enemy.level);
-            this.events.push({ type: 'cast', x: enemy.x, y: enemy.y, angle: enemy.attackAngle, enemyKind: enemy.kind });
-          }
-        }
-      } else if (enemy.state === 'attack') {
-        if (stats.attack === 'melee' && stats.lungeSpeed > 0) {
-          this.moveEnemy(enemy, Math.cos(enemy.attackAngle) * stats.lungeSpeed, Math.sin(enemy.attackAngle) * stats.lungeSpeed, dt);
-        }
-        if (stats.attack === 'melee' && !enemy.attackHit
-          && circleIntersectsSector(p.x, p.y, p.radius, enemy.x, enemy.y, enemy.attackAngle, stats.range, stats.arc)
-          && this.lineOfSight(enemy.x, enemy.y, p.x, p.y)) {
-          enemy.attackHit = true;
-          this.damagePlayer(enemy.damage, enemy.attackAngle, enemy.level, enemy.kind);
-        }
-        if (enemy.stateTime >= enemy.stateDuration) this.transition(enemy, 'recover', stats.recovery);
-      }
+      updateEnemyAI(enemy, dt, context);
       if (p.dead) break;
     }
     for (const enemy of this.enemies) {
@@ -533,7 +492,9 @@ export class Simulation {
     const decay = Math.exp(-dt / COMBAT_TIMING.knockbackDecay);
     // Integrating the exponential preserves the old shove distance across ticks.
     const travel = COMBAT_TIMING.knockbackDecay * (1 - decay);
-    const destination = this.world.move(enemy.x, enemy.y, enemy.knockbackX * travel, enemy.knockbackY * travel, enemy.radius);
+    let destination = this.world.move(enemy.x, enemy.y, enemy.knockbackX * travel, enemy.knockbackY * travel, enemy.radius);
+    if (this.world.isSanctuary?.(destination.x, destination.y)
+      && !this.world.isSanctuary(enemy.x, enemy.y)) destination = { x: enemy.x, y: enemy.y };
     enemy.x = destination.x;
     enemy.y = destination.y;
     enemy.knockbackX *= decay;
@@ -546,7 +507,7 @@ export class Simulation {
     let destination = this.world.move(enemy.x, enemy.y, vx * dt, vy * dt, enemy.radius);
     // Local steering lets pursuers slip around trunks without a pathfinding grid.
     const intendedDistance = Math.hypot(vx, vy) * dt;
-    if (enemy.state === 'chase' && intendedDistance > 0 && Math.hypot(destination.x - enemy.x, destination.y - enemy.y) < intendedDistance * 0.35) {
+    if ((enemy.state === 'chase' || enemy.state === 'return' || enemy.state === 'patrol' || enemy.state === 'recover') && intendedDistance > 0 && Math.hypot(destination.x - enemy.x, destination.y - enemy.y) < intendedDistance * 0.35) {
       const heading = Math.atan2(vy, vx);
       const handedness = enemy.id % 2 === 0 ? 1 : -1;
       for (const turn of [0.7, -0.7, 1.3, -1.3]) {
@@ -589,10 +550,10 @@ export class Simulation {
     }
   }
 
-  private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill?: SkillId, effects?: ProjectileEffects, sourceLevel = this.player.level): void {
+  private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill?: SkillId, effects?: ProjectileEffects, sourceLevel = this.player.level, sourceKind?: EnemyKind): void {
     if (this.projectiles.length >= MAX_PROJECTILES) return;
     const { speed, life, radius, damage, owner } = definition;
-    this.projectiles.push({ id: this.nextId++, sourceLevel, x, y, prevX: x, prevY: y,
+    this.projectiles.push({ id: this.nextId++, sourceLevel, sourceKind, x, y, prevX: x, prevY: y,
       vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, radius, damage, life, maxLife: life, owner, skill,
       effects: effects ? { ...effects } : undefined, hitIds: new Set() });
   }
@@ -601,7 +562,7 @@ export class Simulation {
     advanceProjectiles(this.projectiles, dt, {
       player: this.player, enemies: this.enemies, world: this.world,
       damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),
-      hurt: (amount, angle, sourceLevel) => this.damagePlayer(amount, angle, sourceLevel, 'caster'),
+      hurt: (amount, angle, sourceLevel, sourceKind) => this.damagePlayer(amount, angle, sourceLevel, sourceKind),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       emit: event => this.events.push(event),
     });
@@ -688,6 +649,16 @@ export class Simulation {
 
   private updateSpawns(dt: number): void {
     if (!this.options.spawn) return;
+    this.campTimer -= dt;
+    if (this.campTimer <= 0 && this.world.getEnemyCamps) {
+      this.campTimer = CAMP_POPULATION_RULES.updateInterval;
+      const view = this.spawnExclusion;
+      const radius = Math.min(CAMP_POPULATION_RULES.maximumActivationDistance, Math.max(
+        CAMP_POPULATION_RULES.activationDistance, view ? Math.hypot(view.width, view.height) * .5 + 250 : 0));
+      const camps = this.world.getEnemyCamps(this.player.x - radius, this.player.y - radius, radius * 2, radius * 2);
+      this.camps.update(camps, this.player, this.enemies, this.world,
+        (member, x, y, source) => this.spawnEnemy(member.kind, x, y, member.rank, source), radius, view);
+    }
     if (this.world.isSanctuary?.(this.player.x, this.player.y)) {
       this.spawnTimer = Math.max(this.spawnTimer, ENCOUNTER_RULES.sanctuaryDelay);
       return;
@@ -705,6 +676,11 @@ export class Simulation {
       const x = this.player.x + Math.cos(angle) * distance;
       const y = this.player.y + Math.sin(angle) * distance;
       if (this.world.isSanctuary?.(x, y)) continue;
+      const view = this.spawnExclusion;
+      if (view && x >= view.x - 80 && x <= view.x + view.width + 80
+        && y >= view.y - 100 && y <= view.y + view.height + 100) continue;
+      if (this.world.getEnemyCamps?.(x - 60, y - 60, 120, 120)
+        .some(camp => Math.hypot(camp.x - x, camp.y - y) < camp.radius + 60)) continue;
       const zone = getZoneAt(x, y), biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
       const kind = authoredKind ?? chooseEncounterEnemy(this.enemies, zone.level, biome, () => this.random());
       if (!kind) return;

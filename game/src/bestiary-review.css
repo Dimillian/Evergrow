@@ -1,0 +1,27 @@
+body { margin: 0; background: #080f16; color: var(--ui-text); }
+#bestiary-review { max-width: 1380px; padding: 22px 28px 32px; margin: auto; }
+.bestiary-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+.bestiary-header h1 { color: var(--ui-ivory); font-weight: 500; font-size: 27px; margin: 4px 0; }
+.bestiary-header p { margin: 0; color: var(--ui-muted); font-size: 14px; }
+.bestiary-nav { display: flex; gap: 8px; }
+.bestiary-nav a { text-decoration: none; font-size: 14px; padding: 0 18px; }
+.bestiary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.bestiary-card { border: 1px solid #3c4c4f; background: linear-gradient(145deg, #15232b, #0b151d 66%); min-width: 0; position: relative; }
+.bestiary-card::after { position: absolute; content: ''; pointer-events: none; inset: 4px; border: 1px solid #71808012; }
+.bestiary-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px 0; }
+.bestiary-card h2 { color: var(--ui-ivory); font-size: 18px; margin: 0; font-weight: 500; }
+.bestiary-card .ui-kicker { font-size: 11px; white-space: nowrap; }
+.bestiary-card canvas { width: 100%; height: 170px; display: block; }
+.bestiary-card p { color: #a1b1a9; font-size: 13px; padding: 0 16px 12px; margin: 0; min-height: 16px; }
+.bestiary-armory { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.bestiary-armory canvas { height: 240px; }
+.bestiary-items-title { display: flex; align-items: baseline; gap: 18px; margin: 24px 0 12px; }
+.bestiary-items-title h2 { font-size: 20px; font-weight: 500; margin: 0; color: var(--ui-ivory); }
+.bestiary-items-title p { margin: 0; color: var(--ui-muted); font-size: 13px; }
+.bestiary-items { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 7px; }
+.bestiary-item { display: grid; grid-template-columns: 46px 1fr; align-items: center; gap: 4px; min-width: 0; padding: 7px; border: 1px solid #33454b; background: #102029; }
+.bestiary-item span { color: #b6c4bc; font-size: 12px; }
+.bestiary-item svg { width: 46px; height: 46px; }
+.bestiary-footer { margin: 16px 0 0; color: var(--ui-faint); font-size: 12px; }
+@media (max-width: 900px) { .bestiary-grid, .bestiary-armory { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bestiary-items { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 550px) { #bestiary-review { padding: 16px; } .bestiary-header { align-items: start; flex-direction: column; gap: 12px; } .bestiary-grid { grid-template-columns: 1fr; } .bestiary-items { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

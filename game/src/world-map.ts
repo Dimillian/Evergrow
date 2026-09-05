@@ -52,6 +52,8 @@ export function pickMapPOI(pois: readonly MapPOI[], view: MapView, pointer: { x:
   return nearest;
 }
 
+export type CampMapState = 'dormant' | 'active' | 'cleared';
+
 /** A continuously translated chart built from cached world-space terrain and discovery tiles. */
 export class WorldMap {
   readonly element: HTMLDivElement;
@@ -82,6 +84,7 @@ export class WorldMap {
   private world: MapWorld;
   private exploration: Exploration;
   private onClose: () => void;
+  private campStateReader: (id: string) => CampMapState = () => 'dormant';
 
   constructor(world: MapWorld, exploration: Exploration, mount: HTMLElement, onClose: () => void) {
     this.world = world; this.exploration = exploration; this.onClose = onClose;
@@ -121,6 +124,13 @@ export class WorldMap {
     this.tooltipDescription = this.tooltip.querySelector('.world-map-poi-description')!;
     this.bind();
   }
+
+  /** Run state is supplied by simulation; chart persistence contains discoveries only. */
+  setCampStateReader(reader: (id: string) => CampMapState) {
+    this.campStateReader = reader; this.render();
+  }
+  private isCampCleared(poi: MapPOI): boolean { return poi.kind === 'camp' && this.campStateReader(poi.id) === 'cleared'; }
+  private poiLabel(poi: MapPOI): string { return this.isCampCleared(poi) ? 'Camp · Cleared' : POI_DEFINITIONS[poi.kind].label; }
 
   get isOpen() { return this.opened; }
   open(player: MapPlayer) {
@@ -294,7 +304,8 @@ export class WorldMap {
 
   private poiIcon(c: CanvasRenderingContext2D, poi: MapPOI, x: number, y: number, size: number, selected: boolean) {
     c.save(); c.translate(x, y); c.lineWidth = selected ? 1.8 : 1.1;
-    c.fillStyle = palette.well; c.strokeStyle = selected ? palette.ivory : POI_DEFINITIONS[poi.kind].color;
+    const cleared = this.isCampCleared(poi);
+    c.fillStyle = palette.well; c.strokeStyle = selected ? palette.ivory : cleared ? palette.jade : POI_DEFINITIONS[poi.kind].color;
     c.beginPath(); c.arc(0, 0, size + 2.5, 0, Math.PI * 2); c.fill(); if (selected) c.stroke();
     c.beginPath();
     if (poi.kind === 'town' || poi.kind === 'inn') {
@@ -305,6 +316,22 @@ export class WorldMap {
       c.moveTo(-size, -size * .7); c.lineTo(size * .6, size * .6); c.moveTo(-size * .6, -size); c.lineTo(-size, -size * .4); c.moveTo(-size * .7, size); c.lineTo(size * .7, -size * .5); c.stroke();
     } else if (poi.kind === 'shrine') {
       c.moveTo(0, -size); c.lineTo(size * .3, -size * .3); c.lineTo(size, 0); c.lineTo(size * .3, size * .3); c.lineTo(0, size); c.lineTo(-size * .3, size * .3); c.lineTo(-size, 0); c.lineTo(-size * .3, -size * .3); c.closePath(); c.stroke();
+    } else if (poi.kind === 'camp') {
+      c.moveTo(-size, size * .8); c.lineTo(0, -size); c.lineTo(size, size * .8); c.closePath();
+      c.moveTo(0, -size); c.lineTo(0, size * .8); c.moveTo(-size * .5, -size); c.lineTo(size * .4, size * .8); c.stroke();
+      if (cleared) { c.beginPath(); c.moveTo(size * .35, size * .45); c.lineTo(size * .85, size * .9); c.lineTo(size * 1.45, 0); c.lineWidth = 1.6; c.stroke(); }
+    } else if (poi.kind === 'watchtower') {
+      c.moveTo(-size * .7, size); c.lineTo(-size * .7, -size); c.lineTo(-size * .25, -size * .5); c.lineTo(size * .1, -size); c.lineTo(size * .7, -size * .65); c.lineTo(size * .7, size); c.closePath();
+      c.moveTo(0, size * .5); c.lineTo(0, -size * .2); c.stroke();
+    } else if (poi.kind === 'graveyard') {
+      c.moveTo(-size * .7, size); c.lineTo(-size * .7, -size * .35); c.quadraticCurveTo(0, -size * 1.4, size * .7, -size * .35); c.lineTo(size * .7, size); c.closePath();
+      c.moveTo(0, -size * .4); c.lineTo(0, size * .5); c.moveTo(-size * .3, 0); c.lineTo(size * .3, 0); c.stroke();
+    } else if (poi.kind === 'standingStones') {
+      c.moveTo(-size, size * .6); c.lineTo(-size * .8, -size * .55); c.lineTo(-size * .4, -size * .7); c.lineTo(-size * .25, size * .6); c.closePath();
+      c.moveTo(size * .2, size * .6); c.lineTo(size * .3, -size); c.lineTo(size * .75, -size * .8); c.lineTo(size, size * .6); c.closePath(); c.stroke();
+    } else if (poi.kind === 'caravan') {
+      c.rect(-size, -size * .75, size * 2, size * 1.2); c.moveTo(-size, -size * .2); c.lineTo(size, -size * .2); c.stroke();
+      c.beginPath(); c.arc(-size * .55, size * .7, size * .24, 0, Math.PI * 2); c.moveTo(size * .79, size * .7); c.arc(size * .55, size * .7, size * .24, 0, Math.PI * 2); c.stroke();
     } else if (poi.kind === 'merchant') {
       c.ellipse(0, 0, size * .7, size, 0, 0, Math.PI * 2); c.moveTo(-size * .7, 0); c.lineTo(size * .7, 0); c.stroke();
     } else {
@@ -395,7 +422,7 @@ export class WorldMap {
         c.strokeStyle = palette.lineStrong; c.strokeRect(bx + .5, by + .5, boxWidth - 1, 47);
         c.fillStyle = POI_DEFINITIONS[poi.kind].color; c.fillRect(bx + 1, by + 9, 2, 29);
         c.save(); c.beginPath(); c.rect(bx + 10, by + 6, boxWidth - 20, 36); c.clip();
-        text(c, `${POI_DEFINITIONS[poi.kind].label} · ${mapAreaLabel(this.world, poi.x, poi.y)}`, bx + 11, by + 9, .75, palette.jade);
+        text(c, `${this.poiLabel(poi)} · ${mapAreaLabel(this.world, poi.x, poi.y)}`, bx + 11, by + 9, .75, palette.jade);
         text(c, poi.name, bx + 11, by + 26, 1.1, palette.ivory); c.restore();
       }
     }
@@ -450,7 +477,7 @@ export class WorldMap {
 
   private showTooltip(poi: MapPOI, point: { x: number; y: number }) {
     this.tooltip.hidden = false; setText(this.tooltipName, poi.name);
-    setText(this.tooltipKind, `${POI_DEFINITIONS[poi.kind].label} · ${mapAreaLabel(this.world, poi.x, poi.y)}`); setText(this.tooltipDescription, poi.description);
+    setText(this.tooltipKind, `${this.poiLabel(poi)} · ${mapAreaLabel(this.world, poi.x, poi.y)}`); setText(this.tooltipDescription, this.isCampCleared(poi) ? 'The watchfire is quiet. All members of this garrison have been defeated for the current run.' : poi.description);
     this.tooltip.style.setProperty('--poi-color', POI_DEFINITIONS[poi.kind].color);
     this.positionTooltip(point);
   }

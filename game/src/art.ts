@@ -2,7 +2,7 @@ import type { CharacterPose } from './art-types.ts';
 import { clamp, mixColor, type Color } from './art-primitives.ts';
 import { characterTransform, PLAYER_ART_SCALE } from './character-motion.ts';
 import { player } from './player-art.ts';
-import { stalker, brute, caster } from './enemy-art.ts';
+import { stalker, brute, caster, hound, archer, wisp } from './enemy-art.ts';
 
 // Public art entry point: callers need not depend on individual drawing layers.
 export type { Sprite, ArmorMaterial, ArmorPiece, CloakPiece, CharacterOutfit, CharacterPose } from './art-types.ts';
@@ -13,7 +13,7 @@ export { ArtLibrary } from './prop-art.ts';
 // Adding an enemy kind must provide its drawing explicitly instead of silently
 // falling through to another creature's artwork.
 const enemies: Record<Exclude<CharacterPose['kind'], 'player'>,
-  (ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color) => void> = { stalker, brute, caster };
+  (ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color) => void> = { stalker, brute, caster, hound, archer, wisp };
 
 /** Draw an articulated figure around (0, 0), its ground-contact point. */
 export function drawHumanoid(ctx: CanvasRenderingContext2D, pose: CharacterPose): void {

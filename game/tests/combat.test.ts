@@ -19,7 +19,7 @@ function advance(sim: Simulation, duration: number, input: Partial<Input> = {}, 
 
 function target(sim: Simulation, x = 36, y = 0) {
   const enemy = sim.spawnEnemy('brute', x, y)!;
-  enemy.stateDuration = 999;
+  enemy.state = 'recover'; enemy.stateDuration = 999;
   sim.drainEvents();
   return enemy;
 }

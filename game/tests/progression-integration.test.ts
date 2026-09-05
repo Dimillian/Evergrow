@@ -103,7 +103,7 @@ test('combat RNG draws and gear/pickup entity IDs cannot change later source see
 test('a caster bolt snapshots source level and scaled damage through its caster death and a player level change', () => {
   const sim = createSim(), caster = sim.spawnEnemy('caster', ZONE_RULES.bandWidth * 8 + 30, 0, 'veteran')!;
   const sourceDamage = caster.damage, sourceLevel = caster.level;
-  caster.x = caster.prevX = -150; caster.y = caster.prevY = 0;
+  caster.x = caster.prevX = caster.homeX = -150; caster.y = caster.prevY = 0;
   caster.state = 'windup'; caster.stateDuration = 0; caster.attackAngle = 0;
   sim.player.character.equipped.chest!.implicit = { armor: 120 }; refreshCharacter(sim.player);
   advance(sim, FIXED_STEP);

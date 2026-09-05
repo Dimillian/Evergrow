@@ -42,17 +42,27 @@ export function weaponShapes(visual: WeaponVisual, draw = 0): GearShape[] {
   for (let wrap = -grip + 1; wrap < wrappedEnd; wrap += 2) shapes.push(stroke([[wrap, -1.2], [wrap + .8, 1.2]], visual.guard, .45));
   if (visual.kind === 'sword' || visual.kind === 'dagger') {
     const broad = visual.kind === 'dagger' ? half * 1.4 : half;
-    shapes.push(poly([[3, -broad], [length * .77, -broad * .66], [length, 0], [length * .77, broad * .68], [3, broad]], visual.metal));
-    shapes.push(poly([[3, -broad], [length * .77, -broad * .66], [length, 0], [4, -.15]], visual.edge));
-    shapes.push(stroke([[5, .3], [length * .74, .3]], '#456664', .55));
+    shapes.push(poly([[3, -broad], [length * .77, -broad * .66], [length, 0], [length * .77, broad * .68], [3, broad]], '#233b43'));
+    shapes.push(poly([[3.5, -broad * .73], [length * .77, -broad * .43], [length, 0], [length * .77, broad * .48], [3.5, broad * .8]], visual.metal));
+    shapes.push(poly([[3, -broad], [length * .77, -broad * .66], [length, 0], [length * .76, -broad * .34], [4, -.15]], visual.edge));
+    shapes.push(poly([[5, .25], [length * .77, 0], [length * .69, broad * .35], [5, broad * .52]], '#476572'));
+    shapes.push(stroke([[6, -.1], [length * .7, -.1]], visual.edge, .35));
     const guard = Math.max(3.6, broad * 2.4);
-    shapes.push(poly([[.5, -guard + .8], [2.5, -guard], [4, -guard + 1.2], [3.8, guard - 1], [2, guard], [.8, guard - .4]], visual.guard));
-    shapes.push(stroke([[1, -guard + 1], [2.5, -guard + .7], [3, guard - 1]], visual.edge, .55));
+    const dagger = visual.kind === 'dagger';
+    shapes.push(poly(dagger
+      ? [[.1, -guard + 1], [1.5, -guard], [3.5, -guard + 1], [3.5, guard - 1], [1.5, guard], [.1, guard - 1]]
+      : [[-.5, -guard], [1.4, -guard - .8], [3.1, -guard + .4], [3.3, -1.6], [4.7, 0], [3.3, 1.6], [3.1, guard - .4], [1.4, guard + .8], [-.5, guard], [1, guard - 1.4], [1, -guard + 1.4]], visual.guard));
+    shapes.push(stroke([[.1, -guard + .2], [1.5, -guard + .1], [2.1, -2.2], [3.8, 0], [2.1, 2.2]], visual.edge, .55));
+    shapes.push(poly(gem(1.8, 0, 1.6, 1.3), '#344e56'), poly(gem(1.5, -.2, .65, .6), visual.edge));
+    if (!dagger) shapes.push(stroke([[5.5, -broad * .55], [8, -.25], [5.5, broad * .55]], visual.guard, .45));
   } else if (visual.kind === 'axe') {
     const head = length * .68, blade = 7 + half * 1.6;
     shapes.push(poly([[head - 3, -3], [head - 7, -blade], [length - 1, -blade + 1], [length + 2, -blade * .25], [length - 2, -1], [head + 2, 2]], visual.metal));
     shapes.push(poly([[head - 7, -blade], [length - 1, -blade + 1], [length + 2, -blade * .25], [length - 2, -1], [length - 1, -blade + 3], [head - 5, -blade + 2]], visual.edge));
     shapes.push(stroke([[head - 2, -3], [length - 4, -blade + 4]], visual.guard, .8));
+    shapes.push(poly([[head - 3, -4], [head - 4, -blade + 3], [length - 5, -blade + 4], [length - 3, -4], [head + 1, -2]], '#39515a'));
+    shapes.push(stroke([[head - 1, -5], [head - 2, -blade + 5], [length - 6, -blade + 5]], visual.metal, 1.1));
+    shapes.push(poly(gem(length - 5, -blade * .55, 1.3, 1.7), visual.guard));
     if (length > 31) {
       shapes.push(poly([[head - 3, 3], [head - 6, blade * .7], [length - 1, blade * .75], [length + 1, blade * .2], [length - 2, 1]], visual.metal));
       shapes.push(stroke([[head - 6, blade * .7], [length - 1, blade * .75], [length + 1, blade * .2]], visual.edge, 1));
@@ -62,7 +72,10 @@ export function weaponShapes(visual: WeaponVisual, draw = 0): GearShape[] {
     const head = length - 6, breadth = 5 + half * 1.15;
     shapes.push(poly([[head - 5, -breadth], [head + 5, -breadth], [length + 1, -breadth + 3], [length + 1, breadth - 3], [head + 5, breadth], [head - 5, breadth], [head - 7, breadth - 3], [head - 7, -breadth + 3]], visual.metal));
     shapes.push(poly([[head - 5, -breadth], [head + 5, -breadth], [length + 1, -breadth + 3], [head - 4, -breadth + 3]], visual.edge));
-    for (const y of [-breadth + 2, 0, breadth - 2]) shapes.push(stroke([[head - 5, y], [length, y]], y === 0 ? visual.guard : '#3e5656', y === 0 ? 2 : .8));
+    for (const y of [-breadth + 2, 0, breadth - 2]) {
+      shapes.push(poly([[head - 6, y], [head - 3, y - 1.3], [length - 1, y - 1.3], [length + 2, y], [length - 1, y + 1.5], [head - 3, y + 1.5]], y === 0 ? visual.guard : '#3e5656'));
+      shapes.push(stroke([[head - 3, y - 1.2], [length - 1, y - 1.2], [length + 1, y]], visual.edge, .55));
+    }
     shapes.push(poly(gem(head + 1, 0, 2.5, 2.5), visual.guard));
   } else if (visual.kind === 'staff') {
     const head = length - 5, glow = visual.glow ?? '#bda0f1';
@@ -91,7 +104,8 @@ export function weaponShapes(visual: WeaponVisual, draw = 0): GearShape[] {
     }
     for (let mark = 2; mark < head - 8; mark += 6) shapes.push(stroke([[mark, -2], [mark + 2, 0], [mark, 2]], glow, .7));
   }
-  shapes.push(poly([[-grip - 2, -1.1], [-grip - .5, -2], [-grip + .8, -.8], [-grip + .8, .8], [-grip - .5, 2], [-grip - 2, 1]], visual.guard));
+  shapes.push(poly([[-grip - 2.8, -1], [-grip - 1.3, -2.5], [-grip + .2, -2], [-grip + 1, -.8], [-grip + 1, .8], [-grip + .2, 2], [-grip - 1.3, 2.5], [-grip - 2.8, 1]], visual.guard));
+  shapes.push(stroke([[-grip - 2.3, -.6], [-grip - 1.2, -1.8], [-grip + .2, -1.4]], visual.edge, .6));
   if (visual.glow && visual.kind !== 'staff') shapes.push(stroke([[Math.max(5, length * .35), -half], [length * .8, -half * .6], [length, 0]], visual.glow, .6));
   return shapes;
 }
@@ -102,11 +116,34 @@ export function shieldShapes(visual: ShieldDefinition['visual']): GearShape[] {
     ? Array.from({ length: 12 }, (_, i): Point => [Math.cos(i * Math.PI / 6) * 8.8, Math.sin(i * Math.PI / 6) * 9.5])
     : visual.kind === 'tower' ? [[-7, -11], [0, -13], [7, -11], [8, 9], [4, 12], [-4, 12], [-8, 9]]
       : [[0, -11], [8, -8], [7, 4], [0, 14], [-7, 4], [-8, -8]];
-  const inner = edge.map(([x, y]): Point => [x * .78, y * .82]);
-  return [poly(edge, visual.shadow), stroke([...edge, edge[0]], visual.edge, 1.2), poly(inner, visual.base),
-    stroke([[0, -8], [0, 10]], visual.trim, 1.1), stroke([[-5, -3], [0, -1], [5, -3]], visual.edge, .8),
-    poly(gem(0, 0, 3.6, 4), visual.trim), poly(gem(-.5, -.5, 1.8, 2.3), visual.edge),
-    ...[[-5, -6], [5, -6], [-4, 5], [4, 5]].map(([x, y]) => poly(gem(x, y, .7, .7), visual.trim))];
+  const inner = edge.map(([x, y]): Point => [x * .79, y * .84]);
+  const shapes = [poly(edge, '#172832'), stroke([...edge, edge[0]], visual.edge, 1.3),
+    poly(inner, visual.base), stroke([...inner, inner[0]], visual.trim, .65),
+    poly([[0, -9], [5.7, -6.5], [5.7, 3.5], [0, visual.kind === 'buckler' ? 7.5 : 10.8]], visual.shadow),
+    stroke([[-5.8, -6.4], [-6.1, 0], [-4.4, 4]], visual.edge, .65)];
+  if (visual.kind === 'buckler') {
+    const ring = Array.from({ length: 13 }, (_, i): Point => [Math.cos(i * Math.PI / 6) * 5.4, Math.sin(i * Math.PI / 6) * 5.8]);
+    shapes.push(stroke(ring, visual.shadow, 1.3), stroke(ring, visual.trim, .6));
+    for (let spoke = 0; spoke < 8; spoke++) {
+      const angle = spoke * Math.PI / 4;
+      shapes.push(stroke([[Math.cos(angle) * 4.6, Math.sin(angle) * 4.8], [Math.cos(angle) * 6.6, Math.sin(angle) * 7]], visual.trim, .65));
+    }
+    shapes.push(poly([[-3.3, 0], [-2.1, -2.8], [.2, -3.4], [2.7, -1.8], [3.3, .7], [1.2, 3], [-1.7, 2.6]], visual.shadow),
+      poly([[-2.7, -.5], [-1.7, -2.3], [.2, -2.7], [2.2, -1.3], [1.1, .6], [-1.1, 1.2]], visual.edge));
+  } else if (visual.kind === 'kite') {
+    // A split heraldic wing follows the shield ridge instead of a generic cross.
+    shapes.push(stroke([[0, -8.7], [0, 10.8]], visual.edge, .9),
+      poly([[-.8, -2.4], [-5, -6.3], [-4.8, -2.1], [-2.2, -.2], [-4.4, -.8], [-3.1, 2.7], [-.8, 4.1]], visual.trim),
+      poly([[.8, -2.4], [5, -6.3], [4.8, -2.1], [2.2, -.2], [4.4, -.8], [3.1, 2.7], [.8, 4.1]], visual.trim),
+      poly(gem(0, -2, 1.9, 2.5), visual.shadow), poly(gem(-.3, -2.4, 1, 1.6), visual.edge));
+  } else {
+    shapes.push(stroke([[-4.9, 7.5], [-4.9, -6], [0, -9.7], [4.9, -6], [4.9, 7.5]], visual.trim, 1),
+      stroke([[-2.9, 6], [-2.9, -4.8], [0, -7.3], [2.9, -4.8], [2.9, 6]], visual.edge, .6),
+      poly([[0, -4.2], [1.8, -1.4], [.8, .3], [1.3, 5.7], [0, 8.8], [-1.3, 5.7], [-.8, .3], [-1.8, -1.4]], visual.trim),
+      poly(gem(-.2, -1.1, .8, 1.7), visual.edge));
+  }
+  for (const [x, y] of [[-5, -6], [5, -6], [-4, 5], [4, 5]]) shapes.push(poly(gem(x, y, .7, .7), visual.trim));
+  return shapes;
 }
 
 /** SVG and Canvas use these same points, keeping icons faithful to equipped silhouettes. */

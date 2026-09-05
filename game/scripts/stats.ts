@@ -15,6 +15,8 @@ import { COMBAT_TIMING, ENEMY_DEFINITIONS, PLAYER_ABILITIES, PROJECTILE_DEFINITI
 import { ENCOUNTER_RULES } from '../src/encounter-director.ts';
 import { EXPLORATION_LIMITS } from '../src/exploration-save.ts';
 import { POI_DEFINITIONS } from '../src/world-pois.ts';
+import { WILDERNESS_RULES } from '../src/wilderness-sites.ts';
+import { CAMP_POPULATION_RULES } from '../src/camp-population.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const sourceFiles = readdirSync(resolve(root, 'src')).filter(file => file.endsWith('.ts'));
@@ -49,6 +51,7 @@ console.log(JSON.stringify({
     projectiles: MAX_PROJECTILES,
     numericContentLevel: MAX_CONTENT_LEVEL, areaBandWidth: ZONE_RULES.bandWidth,
     targetEnemies: ENCOUNTER_RULES.targetPopulationCap, hardEnemyCap: ENCOUNTER_RULES.hardPopulationCap,
+    wildernessCells: WILDERNESS_RULES.cacheLimit, campLedger: CAMP_POPULATION_RULES.ledgerCapacity,
     exploration: EXPLORATION_LIMITS },
   lastBuild: bundle,
 }, null, 2));

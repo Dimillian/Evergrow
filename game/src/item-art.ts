@@ -1,11 +1,64 @@
+import { armorShapes } from './armor-shapes.ts';
 import type { ArmorPiece, CharacterOutfit } from './art-types.ts';
 import type { CharacterSheet, Item } from './character-types.ts';
 import { TIER_COLORS } from './items.ts';
 import { STARTING_SWORD } from './equipment.ts';
-import { gearShapesSVG, shieldShapes, weaponShapes } from './weapon-shapes.ts';
+import { gearShapesSVG, shieldShapes, weaponShapes, type GearShape } from './weapon-shapes.ts';
+import type { Point } from './art-primitives.ts';
 
 const safeColor = (value: string) => /^#[0-9a-f]{6}$/i.test(value) ? value : '#798590';
 const escape = (value: string) => value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
+
+const dropShapes = new WeakMap<Item, readonly GearShape[]>();
+
+/** Small world drops preserve the equipped silhouette and material. The geometry
+ * cache follows the item lifetime; it does not accumulate an unbounded ID map. */
+export function itemDropShapes(item: Item): readonly GearShape[] {
+  const cached = dropShapes.get(item);
+  if (cached) return cached;
+  const { base, shadow, edge, trim } = item.appearance;
+  const fill = (points: readonly Point[], color: string): GearShape => ({ points, fill: color });
+  const line = (points: readonly Point[], color: string, width = .8): GearShape => ({ points, stroke: color, width });
+  const piece: ArmorPiece = { style: item.appearance.style, seed: item.seed, material: { base, shadow, edge, trim } };
+  let shapes: readonly GearShape[], angle = 0;
+  switch (item.kind) {
+    case 'weapon': shapes = weaponShapes(item.weapon?.visual ?? STARTING_SWORD.visual); angle = -.52; break;
+    case 'shield': shapes = shieldShapes(item.shield?.visual ?? { kind: 'kite', base, shadow, edge, trim }); break;
+    case 'head': shapes = armorShapes('head', piece); break;
+    case 'chest': shapes = armorShapes('chest', piece); break;
+    case 'cloak': shapes = [fill([[-4, -8], [0, -10], [4, -8], [5, -2], [9, 9], [3, 8], [0, 10], [-4, 8], [-9, 10], [-5, -2]], shadow),
+      fill([[-3, -7], [0, -9], [3, -7], [3, -1], [6, 8], [0, 7], [-6, 8], [-3, -1]], base),
+      fill([[-3, -7], [0, -9], [-1, 5], [-5, 7]], edge), line([[-6, 8], [0, 7], [6, 8]], trim), line([[-3, -6], [0, -4], [3, -6]], trim)]; break;
+    case 'gloves': shapes = [-1, 1].flatMap(side => [fill([[side * 1.5, -8], [side * 6, -8], [side * 6.5, 3], [side * 5.5, 7], [side * 1.5, 8], [side * .8, 3]], base),
+      line([[side * 2, -6], [side * 5.5, -6]], trim, 1.2), line([[side * 2, 2], [side * 5.5, 2]], edge),
+      line([[side * 3, 4], [side * 3, 6.5]], shadow)]); break;
+    case 'legs': shapes = [fill([[-6, -9], [6, -9], [5, -1], [7, 9], [2, 10], [0, 1], [-2, 10], [-7, 9], [-5, -1]], base),
+      line([[-5.5, -7], [5.5, -7]], trim, 1.2), line([[-4, -4], [-3.5, 3]], edge), line([[3, -4], [3.5, 3]], shadow, 1.2),
+      line([[-5, 4], [-2, 4]], trim), line([[2, 4], [5, 4]], trim)]; break;
+    case 'boots': shapes = [-1, 1].flatMap(side => [fill([[side * 1.3, -8], [side * 5.7, -8], [side * 5.2, 1], [side * 7.5, 5], [side * 7.5, 8], [side * 1.5, 8], [side * .5, 5]], base),
+      line([[side * 1.8, -5], [side * 5.1, -5]], trim, 1.1), line([[side * 2, -6.5], [side * 2.1, 1.5], [side * 4.7, 4.7]], edge),
+      line([[side * 1.5, 7.5], [side * 7, 7.5]], shadow, 1.3)]); break;
+    case 'ring': {
+      const ring = Array.from({ length: 17 }, (_, i): Point => [Math.cos(i * Math.PI / 8) * 5.6, Math.sin(i * Math.PI / 8) * 6 + 1.5]);
+      shapes = [line(ring, shadow, 3.2), line(ring, trim, 2), fill([[-3.5, -7], [0, -9], [3.5, -7], [3, -3], [-3, -3]], trim),
+        fill([[-2, -6.6], [0, -7.8], [2, -6.6], [1.7, -4], [-1.7, -4]], TIER_COLORS[item.tier]), line([[-1.8, -6.4], [0, -7.4]], edge)]; break;
+    }
+    case 'amulet': shapes = [line([[-4, -10], [-7, -6], [-5, -1], [0, 3], [5, -1], [7, -6], [4, -10]], shadow, 1.8),
+      line([[-4, -10], [-7, -6], [-5, -1], [0, 3], [5, -1], [7, -6], [4, -10]], trim),
+      fill([[0, 0], [5, 4], [4, 9], [0, 12], [-4, 9], [-5, 4]], trim), fill([[0, 2], [3, 4.5], [2.5, 8], [0, 10], [-2.5, 8], [-3, 4.5]], TIER_COLORS[item.tier]),
+      fill([[0, 2], [0, 8], [-2.5, 4.5]], edge)]; break;
+  }
+  if (shapes.length === 0) return [];
+  const rotated = shapes.map(shape => ({ ...shape, points: shape.points.map(([x, y]): Point => [x * Math.cos(angle) - y * Math.sin(angle), x * Math.sin(angle) + y * Math.cos(angle)]) }));
+  const points = rotated.flatMap(shape => shape.points), xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const target = item.kind === 'weapon' ? 22 : item.kind === 'ring' || item.kind === 'amulet' ? 12 : 16;
+  const scale = target / Math.max(1, maxX - minX, maxY - minY);
+  const result = rotated.map(shape => ({ ...shape, width: (shape.width ?? .7) * scale,
+    points: shape.points.map(([x, y]): Point => [(x - (minX + maxX) / 2) * scale, (y - (minY + maxY) / 2) * scale]) }));
+  dropShapes.set(item, result);
+  return result;
+}
 
 /** Inventory silhouettes share each item's material and weapon dimensions with its worn art. */
 export function itemIconSVG(item: Item, size = 48): string {
@@ -14,8 +67,7 @@ export function itemIconSVG(item: Item, size = 48): string {
   const base = safeColor(item.appearance.base), shadow = safeColor(item.appearance.shadow);
   const edge = safeColor(item.appearance.edge), trim = safeColor(item.appearance.trim), rarity = TIER_COLORS[item.tier];
   const metal = `url(#${prefix}-metal)`, cloth = `url(#${prefix}-cloth)`;
-  const leather = item.appearance.style === 'leather';
-  const plateDetail = `<path d="M20 20L24 23L28 20M24 15V30" fill="none" stroke="${edge}" stroke-width=".8" opacity=".75"/>`;
+  const armorPiece: ArmorPiece = { style: item.appearance.style, seed: item.seed, material: { base, shadow, edge, trim } };
   let shape: string;
   switch (item.kind) {
     case 'weapon': {
@@ -37,19 +89,14 @@ export function itemIconSVG(item: Item, size = 48): string {
       break;
     }
     case 'head':
-      shape = `<path d="M11 23L14 12L23 7L33 12L37 24L34 39L29 41L27 31H20L18 41L12 37Z" fill="${metal}" stroke="${shadow}" stroke-width="1.5"/>
-        <path d="M23 8L21 20L24 25L27 20L25 8" fill="${leather ? shadow : edge}"/>
-        <path d="M15 23L22 24V28L14 27ZM26 24L34 22L35 26L26 28Z" fill="${shadow}"/>
-        <path d="M14 18L20 16M28 16L33 18M13 33L16 36M31 36L34 31" fill="none" stroke="${trim}" stroke-width="1.2"/>
-        <path d="M23 26V36L26 34L26 26" fill="${edge}" opacity=".75"/>`;
+      shape = `<g transform="translate(24 23) scale(3.3)"><path d="M-4-.5H4V4L0 5L-4 4Z" fill="${shadow}"/>${gearShapesSVG(armorShapes('head', armorPiece))}</g>`;
       break;
     case 'chest':
-      shape = `<path d="M15 9L20 7L24 12L28 7L34 9L43 15L38 23L33 22L33 37L29 42L18 42L14 37L14 22L9 23L5 15Z" fill="${metal}" stroke="${shadow}" stroke-width="1.5"/>
-        <path d="M15 10L13 20L7 19L9 13ZM34 10L36 20L41 18L39 13Z" fill="${base}" stroke="${trim}" stroke-width=".8"/>
-        <path d="M17 13L21 15H27L31 13L30 28L24 32L17 28Z" fill="${leather ? cloth : metal}" stroke="${edge}" stroke-width=".9"/>
-        ${leather ? `<path d="M19 16L21 18M19 21L21 23M19 26L21 28" stroke="${trim}" stroke-width=".8"/>` : plateDetail}
-        <path d="M15 33L24 36L33 33M16 37L24 40L32 37" fill="none" stroke="${trim}" stroke-width="1.2"/>
-        <path d="M21 33H27V37H21Z" fill="${trim}"/><path d="M23 34H25V36H23Z" fill="${shadow}"/>`;
+      shape = `<g transform="translate(24 19) scale(2.15)">
+        <path d="M-5-5H5L6 9L3 11H-3L-6 9Z" fill="${shadow}"/>
+        <g transform="translate(-6 -4) rotate(18)">${gearShapesSVG(armorShapes('shoulder', armorPiece))}</g>
+        <g transform="translate(6 -4) scale(-1 1) rotate(18)">${gearShapesSVG(armorShapes('shoulder', armorPiece))}</g>
+        ${gearShapesSVG(armorShapes('chest', armorPiece))}</g>`;
       break;
     case 'gloves':
       shape = `<g transform="rotate(-14 17 26)"><path d="M10 10H23L22 24L25 29L25 34L22 33L21 42L17 43L10 40L8 30L10 24Z" fill="${metal}" stroke="${shadow}" stroke-width="1.4"/>
