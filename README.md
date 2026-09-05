@@ -15,7 +15,9 @@ A gothic, top-down 2D action RPG built for the browser, inspired by Diablo and P
 - **Gear & progression:** procedural names, icons and visible equipment; an 8×8 inventory, drag/drop, quick equip and comparison tooltips; item tiers, enemy loot tables, geographic danger scaling, and one skill point plus five attribute points per level.
 - **Presentation:** code-generated artwork, dynamic lighting, restrained CRT/phosphor, and a shared retro-modern UI kit with compact panels, readable rarity treatments and animated tooltips, fading enemy remains, labeled ground equipment, rarity-colored loot notifications, level-up rewards and discovery notices.
 
-Character progress and each character’s explored map persist in this browser. Trading, crafting, quests, respecs and cloud saves are still to come. Endless progression is the direction, not a finished endgame.
+**Town services:** procedural blacksmiths, jewelers and enchanters; buy/sell/buyback, upgrade gear to +10, raise rarity, reroll affixes and raise item level. Equipped gear can be improved in place.
+
+Character progress, shop state and each character’s explored map persist in this browser. **Save format v2 requires a new character for older saves; old slots remain stored.** Quests, respecs and cloud saves are still to come. Endless progression is the direction, not a finished endgame.
 
 ## Screenshots
 
@@ -27,7 +29,7 @@ Current game renderers and interfaces, captured from frozen development scenes o
 | --- | --- |
 | ![Early skills and branching passives](docs/screenshots/skill-tree.png) | ![Equipment, inventory and character stats](docs/screenshots/character.png) |
 
-[View the complete skill atlas](docs/screenshots/skill-atlas.png).
+[View the complete skill atlas](docs/screenshots/skill-atlas.png) · [Town service captures](docs/captures/2026-09-05/town-services/README.md).
 
 ## Run locally
 
@@ -40,17 +42,17 @@ npm run dev
 
 Open [localhost:5173](http://127.0.0.1:5173/) in your browser. The server binds to your machine only.
 
-**WASD** move · **mouse** aim · **LMB** basic attack · **RMB / 1–4** skills · **Space** dodge · **Q** potion · **C/I** character · **T** tree · **M** map. [All controls](docs/controls.md).
+**WASD** move · **mouse** aim · **LMB** basic attack · **RMB / 1–4** skills · **Space** dodge · **Q** potion · **E** nearby NPC · **C/I** character · **T** tree · **M** map. [All controls](docs/controls.md).
 
 ```sh
 npm run check   # Code tests, strict TypeScript checks, production build
 npm run stats   # Content, source and build statistics
 ```
 
-TypeScript, Vite, Canvas 2D and WebGL; no runtime package dependencies. **492 code tests pass** at this checkpoint. Gameplay feel and balance are tested by the player.
+TypeScript, Vite, Canvas 2D and WebGL; no runtime package dependencies. **507 code tests pass** at this checkpoint. Gameplay feel and balance are tested by the player.
 
 Gold drops magnetize on approach, persist per character, and appear in the HUD and inventory. Gold and XP gains have compact animated feedback.
 
-[Documentation index](docs/README.md) · [Current status](docs/system-status.md) · [Character saves](docs/character-saves.md) · [Game brief](docs/game-brief.md) · [Roadmap](docs/roadmap.md) · [Architecture](docs/architecture.md) · [Skills & weapons](docs/weapons-and-skills.md) · [Progression & loot](docs/progression-and-loot.md) · [NPC & vendor spec](docs/npcs-and-vendors.md)
+[Documentation index](docs/README.md) · [Current status](docs/system-status.md) · [Character saves](docs/character-saves.md) · [Game brief](docs/game-brief.md) · [Roadmap](docs/roadmap.md) · [Architecture](docs/architecture.md) · [Skills & weapons](docs/weapons-and-skills.md) · [Progression & loot](docs/progression-and-loot.md) · [NPC services](docs/npcs-and-vendors.md)
 
 World, character and equipment art is generated in code. The bundled [Pixelify Sans font](game/src/assets/fonts/SOURCE.md) is licensed under the SIL Open Font License.

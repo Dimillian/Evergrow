@@ -14,21 +14,21 @@ Updated 2026-09-05. This tracks implementation progress and the next agreed work
 - [x] Eight saved characters, three starter weapons, title hall, automatic checkpoints and recovery safeguards.
 - [x] Named loot, discrete notifications, improved ground remains/labels, gold wallet and stacked gold/XP feedback.
 - [x] Consolidated combat/content ownership, equipment planning/item presentation and panel lifecycle.
-- [x] [NPC/vendor specification](npcs-and-vendors.md), including proposed service/economy rules.
+- [x] [Town NPCs and economy](npcs-and-vendors.md): blacksmith trading/buyback/+10, jeweler and enchanting, with atomic save-backed transactions.
 
 These are implemented foundations, not declarations of finished balance, final art or production readiness. See [current system status](system-status.md) for verified counts and limits.
 
-## Next: NPCs and the town economy
+## Town economy delivery
 
 | Order | Deliverable | State | Exit check |
 | --- | --- | --- | --- |
-| 1 | Town NPC interaction and blacksmith buy/sell/buyback | Specified, not implemented | Reachable service, shared panel, atomic gold/item/stock changes, durable stock and failure-safe saves |
-| 2 | Guaranteed equipment enhancement through +10 | Specified, not implemented | Shared recipe/stat derivation, correct previews, visible +N treatment, no lost upgrades or invalid equipped state |
-| 3 | Jeweler with expensive visible random stock | Specified, not implemented | Jewelry catalog, consistent prices, deterministic stock and existing trade rules |
-| 4 | Enchanter rarity upgrades, one/all-affix rerolls and zone-level upgrades | Specified, not implemented | Preserved item identity/rolls where required, deterministic committed outcomes, bounded costs and no duplicate charges |
-| 5 | Static UI review and player economy testing | Pending implementation | Review captures, then player feedback on affordability and usefulness |
+| 1 | Town NPC interaction and blacksmith buy/sell/buyback | Implemented | Reachable service, shared panel, atomic gold/item/stock changes, durable stock and failure-safe saves |
+| 2 | Guaranteed equipment enhancement through +10 | Implemented | Shared recipe/stat derivation, correct previews, visible +N treatment, no lost upgrades or invalid equipped state |
+| 3 | Jeweler with expensive visible random stock | Implemented | Jewelry catalog, consistent prices, deterministic stock and existing trade rules |
+| 4 | Enchanter rarity upgrades, one/all-affix rerolls and zone-level upgrades | Implemented | Preserved item identity/rolls where required, deterministic committed outcomes, bounded costs and no duplicate charges |
+| 5 | Static UI review and player economy testing | Static review complete; player feedback pending | Desktop/narrow captures, then affordability and usefulness tuning |
 
-Build transaction commands, item issuance and validated persistent vendor state with the first working shop. The shared wallet alone does not make multi-system trades atomic. Use the [NPC spec](npcs-and-vendors.md) as the service contract and the [architecture](architecture.md) for implementation ownership. Commit and push coherent checkpoints.
+Transaction commands stage item issuance, wallet, stock and buyback together, persist before live commitment, and reject stale or failed writes. Save version 2 requires new characters; older slots remain stored. Use the [NPC spec](npcs-and-vendors.md) as the service contract and the [architecture](architecture.md) for implementation ownership. Commit and push coherent checkpoints.
 
 ## Following the economy loop
 

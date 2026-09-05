@@ -230,7 +230,7 @@ export function settlementPOIs(town: Settlement): POI[] {
   return [
     { id: town.id, name: town.name, kind: 'town', x: town.x, y: town.y,
       description: town.kind === 'city' ? 'A sheltered market city with several blocks of shops and homes.' : 'A sheltered roadside town. Its doors stand open to travellers.' },
-    ...town.buildings.filter(b => b.kind !== 'house').map(b => ({ id: `${b.id}:poi`, name: b.name, kind: b.kind,
+    ...town.buildings.filter(b => b.kind !== 'house').map(b => ({ id: `${b.id}:poi`, name: b.kind === 'merchant' ? 'Jeweler' : b.kind === 'chapel' ? 'Enchanter' : b.name, kind: b.kind === 'merchant' ? 'jeweler' : b.kind === 'chapel' ? 'enchanter' : b.kind,
       x: b.door.x, y: b.door.y, description: BUILDING_DESCRIPTIONS[b.kind] } as POI)),
   ];
 }

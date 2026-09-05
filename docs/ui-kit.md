@@ -112,3 +112,9 @@ Successful inventory insertion emits a typed item payload; a full bag emits a se
 `inventory.ts:planEquipmentChange` plans the complete swap, capacity and both-hand displacements. Commits, drop eligibility and `equipment-preview.ts` reuse it. Tooltip item values describe the item itself; the separate On equip section reports effective build changes and all replaced gear. A failed plan shows its reason. `/character.html?comparison=twohand` stages the staff-versus-sword-and-shield case.
 
 `PanelCoordinator` owns application phase, allowed opens/toggles, input clearing, old-panel closure, menu updates, new-panel opening, focus return and save requests. Each view still owns/disposes its own focus trap. Game advances combat only while the coordinator reports playing. New panel phases must be registered with this coordinator; title/defeat entry and pause/resume use the same transition path.
+
+## Town services
+
+`service-panel.ts` uses shared windows, buttons, item slots, `ItemTooltip` and effective-stat comparisons. Role-colored procedural emblems distinguish Blacksmith, Jeweler and Enchanter. Stock/workbench is on the left; clearly separated Equipped and Inventory sections are on the right. Equipped gear appears first and can be improved in place. Empty bags collapse to one quiet message. Narrow screens scroll the content while retaining the paid-action footer. Keyboard focus survives operation changes and successful transactions.
+
+`item-ui.ts` supplies enhanced +N badges and borders for all equipment/bag cells and enhancement details for every item tooltip. +5/+10 receive stronger trim without continuous glitter. Successful service actions pulse the selected icon, with a static reduced-motion treatment. Random rerolls show eligible stats and a concise replacement warning, never a free rolled-outcome preview. See [static captures](captures/2026-09-05/town-services/README.md).

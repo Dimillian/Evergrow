@@ -195,7 +195,7 @@ test('sanctuary and point-of-interest queries agree with the generated settlemen
   const pois = world.getPOIs(town.x - town.radius, town.y - town.radius, town.radius * 2, town.radius * 2);
   assert.ok(pois.some(poi => poi.kind === 'town' && poi.id === town.id));
   for (const building of town.buildings.filter(b => b.kind !== 'house')) {
-    assert.ok(pois.some(poi => poi.kind === building.kind && poi.x === building.door.x && poi.y === building.door.y));
+    assert.ok(pois.some(poi => poi.kind === (building.kind === 'merchant' ? 'jeweler' : building.kind === 'chapel' ? 'enchanter' : building.kind) && poi.x === building.door.x && poi.y === building.door.y));
     assert.equal(world.isSanctuary(building.door.x, building.door.y), true);
   }
   assert.equal(world.getProps(town.x - town.radius, town.y - town.radius, town.radius * 2, town.radius * 2)

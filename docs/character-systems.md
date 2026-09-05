@@ -16,11 +16,12 @@ These windows pause combat, clear buffered inputs, trap modal keyboard focus, an
 
 ## State and ownership
 
-`CharacterSheet` in `character-types.ts` owns four base attributes, unspent stat/skill points, allocated node IDs, the gold wallet, the bag, equipment slots, and five skill assignments. It is the source of truth. `Player.derived`, basic-attack stats, and rendered equipment are rebuilt projections.
+`CharacterSheet` in `character-types.ts` owns four base attributes, unspent stat/skill points, allocated node IDs, the gold wallet, the bag, equipment slots, five skill assignments and persistent commerce state. It is the source of truth. `Player.derived`, basic-attack stats, and rendered equipment are rebuilt projections.
 
 | Module | Responsibility |
 | --- | --- |
 | `items.ts` | Seeded generation; item tiers, names, affixes, implicit modifiers, starter sheet, explicit profile selection; shared stat labels/formatting |
+| `item-improvement.ts`, `commerce.ts`, `commerce-command.ts` | Recipe-based enhancement/enchanting, deterministic stock and pricing, pure transaction planning and save-before-commit execution |
 | `weapon-content.ts` | Thirteen immutable generated weapon profiles and three shield profiles; handedness, attack family, element, cadence, reach, defense, and silhouette |
 | `inventory.ts` | Pure equipment planning shared by previews/drop eligibility/commits; atomic equip/unequip/hand-conflict stow, bag swap, insertion, and attribute allocation |
 | `equipment-preview.ts`, `item-ui.ts`, `item-tooltip.ts` | Complete effective equipment comparisons and reusable item presentation |
@@ -90,6 +91,12 @@ The generated catalog contains **13 weapons and 3 shields**: four one-handed mel
 
 Equip validates source cell, item type, target slot, and level requirement before changing state. Replacing equipment puts the previous item into the source bag cell. A two-handed weapon also stows an occupied offhand; equipping an offhand stows an equipped two-handed main weapon. The full transaction plans all displaced items before committing. A vacated source cell can hold the opposite-hand item when the receiving slot was empty; otherwise an additional stow requires an empty bag cell. Insufficient room rejects the complete action without mutation. Unequip requires an empty target cell. Failed moves never lose or duplicate items. Automatic ring equip prefers the first empty ring slot, then Ring I; explicit targeting supports Ring II.
 
+## Equipment services
+
+Town NPCs provide buying/selling/buyback, guaranteed +0→+10 enhancement, rarity upgrades, single/all-affix rerolls and releveling to the NPC’s geographic zone. Both equipped and bag items can be improved. The shared workbench puts equipped gear above the bag and previews effective character changes; incompatible equipped releveling is rejected.
+
+Every item retains a source recipe with profile, starter flag, normalized affix rolls, enhancement, revisions and separate reroll counters. `deriveItem` rebuilds values from that recipe, applies `1 + 0.05 × enhancement` and rounds once; it never compounds rounded item values. Final character caps still apply. Common starter leather has no base stat bonuses, so enhancing it cannot multiply a missing bonus; rarity upgrades add actual affixes. Shared +N badges, names and tooltip details appear in inventory, equipment and ground labels. See [NPC services](npcs-and-vendors.md) for prices and operation contracts.
+
 ## Skill atlas and active skills
 
 The fixed atlas contains **2,113 nodes**, **2,925 undirected curved connections**, and **150 irregular constellations** across **Might, Cunning, and Arcana**:
@@ -129,7 +136,7 @@ The first actual enemy kill guarantees at least one gear drop. Otherwise a **nor
 
 These are conditional tier probabilities per dropped item, not per kill. Archetype weights bias item kind: Brutes favor shields/heavier armor; Hexers favor jewelry/cloaks. Captured source biome biases weapon/shield profiles: Deadwood favors heavy melee, Verdant bows/daggers, and Swamp elemental staves. Every kind and profile remains eligible. The complete tables and examples are in [progression and loot](progression-and-loot.md).
 
-Ground gear uses its actual procedural equipment silhouette, restrained rarity markers/glints and a native-resolution name/rarity/level label. Labels avoid overlaps; enemy remains fade independently from persistent loot. Moving within **30 world units**, with line of sight, automatically inserts it into the first empty inventory cell. If the bag is full, the item stays on the ground and the notice is throttled. Ground gear has no timed expiry; the population cap bounds it. Manual pickup selection, dropping/deleting items, stash, selling, crafting, and loot filters are absent.
+Ground gear uses its actual procedural equipment silhouette, restrained rarity markers/glints and a native-resolution name/rarity/level label. Labels avoid overlaps; enemy remains fade independently from persistent loot. Moving within **30 world units**, with line of sight, automatically inserts it into the first empty inventory cell. If the bag is full, the item stays on the ground and the notice is throttled. Ground gear has no timed expiry; the population cap bounds it. Unequipped items can be sold at the blacksmith or jeweler. Manual pickup selection, dropping/deleting items, stash and loot filters remain absent.
 
 ## Persistence and verification boundary
 

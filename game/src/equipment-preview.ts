@@ -25,9 +25,12 @@ export interface EquipmentStatChange { key: PreviewStat; before: number; after: 
 export function previewEquipmentChange(sheet: CharacterSheet, item: Item, level: number, target: EquipmentTarget = {}) {
   const plan = planEquipmentChange(sheet, item, level, target);
   if (!plan.ok) return plan;
-  const before = values(sheet, level), after = values({ ...sheet, inventory: plan.inventory, equipped: plan.equipped }, level);
+  return { ...plan, changes: compareCharacterStats(sheet, { ...sheet, inventory: plan.inventory, equipped: plan.equipped }, level) };
+}
+export function compareCharacterStats(beforeSheet: CharacterSheet, afterSheet: CharacterSheet, level: number): EquipmentStatChange[] {
+  const before = values(beforeSheet, level), after = values(afterSheet, level);
   const changes: EquipmentStatChange[] = [];
   for (const key of Object.keys(before) as PreviewStat[]) if (Math.abs(after[key] - before[key]) > .00001)
     changes.push({ key, before: before[key], after: after[key] });
-  return { ...plan, changes };
+  return changes;
 }

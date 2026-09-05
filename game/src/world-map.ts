@@ -107,7 +107,7 @@ export function pickMapPOI(pois: readonly MapPOI[], view: MapView, pointer: { x:
   return nearest;
 }
 
-const SERVICE_KINDS = new Set(['blacksmith', 'merchant', 'inn', 'chapel']);
+const SERVICE_KINDS = new Set(['blacksmith', 'merchant', 'inn', 'chapel', 'jeweler', 'enchanter']);
 /** The same stable visible list serves painting and hover; hidden overlapping services never steal focus. */
 export function selectMapPOIs(pois: readonly MapPOI[], view: MapView, mini = false): MapPOI[] {
   const priority = (poi: MapPOI) => poi.kind === 'town' ? 0 : poi.kind === 'camp' ? 1 : SERVICE_KINDS.has(poi.kind) ? 3 : 2;
@@ -447,6 +447,10 @@ export class WorldMap {
     c.beginPath();
     if (poi.kind === 'town' || poi.kind === 'inn') {
       c.moveTo(-size, 0); c.lineTo(0, -size); c.lineTo(size, 0); c.lineTo(size * .7, 0); c.lineTo(size * .7, size); c.lineTo(-size * .7, size); c.lineTo(-size * .7, 0); c.closePath(); c.stroke();
+    } else if (poi.kind === 'jeweler') {
+      c.moveTo(0, -size); c.lineTo(size, 0); c.lineTo(0, size); c.lineTo(-size, 0); c.closePath(); c.stroke();
+    } else if (poi.kind === 'enchanter') {
+      c.arc(0, 0, size, 0, Math.PI * 2); c.moveTo(0, -size); c.lineTo(0, size); c.moveTo(-size, 0); c.lineTo(size, 0); c.stroke();
     } else if (poi.kind === 'chapel') {
       c.moveTo(0, -size); c.lineTo(0, size); c.moveTo(-size * .65, -size * .3); c.lineTo(size * .65, -size * .3); c.stroke();
     } else if (poi.kind === 'blacksmith') {

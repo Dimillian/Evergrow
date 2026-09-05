@@ -2,6 +2,8 @@
 export const POI_DEFINITIONS = {
   town: { label: 'Settlement', color: '#e0c38b' },
   blacksmith: { label: 'Blacksmith', color: '#ee9861' },
+  jeweler: { label: 'Jeweler', color: '#8fdbc8' },
+  enchanter: { label: 'Enchanter', color: '#baa2eb' },
   merchant: { label: 'Merchant', color: '#9dcfa4' },
   inn: { label: 'Inn', color: '#c2bc9a' },
   chapel: { label: 'Chapel', color: '#b6d5ed' },

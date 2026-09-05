@@ -81,7 +81,7 @@ export class GameShell {
   showMenu(phase: GamePhase, kills: number, time: number, location = 'Deadwood'): void {
     this.menuAbort.abort(); this.menuAbort = new AbortController();
     const playing = phase === 'playing';
-    const panel = phase === 'map' || phase === 'character' || phase === 'skills';
+    const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service';
     this.overlay.hidden = playing || panel || phase === 'ready';
     this.controls.hidden = !playing;
     this.element.classList.toggle('playing', playing);

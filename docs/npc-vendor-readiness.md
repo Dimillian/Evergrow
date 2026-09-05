@@ -1,5 +1,7 @@
 # Consolidation before NPCs and vendors
 
+Historical assessment. All transaction and NPC follow-up work below is now implemented; see [current services](npcs-and-vendors.md) and [system status](system-status.md). Checkpoint counts below describe the earlier consolidation, not the current build.
+
 Reviewed 2026-09-05 at `9058c56`. This is an assessment and implementation sequence, not a runtime refactor. Gameplay, saves and the local server were left unchanged.
 
 ## Consolidation completed

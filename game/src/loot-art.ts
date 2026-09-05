@@ -1,3 +1,4 @@
+import { itemDisplayName } from './items.ts';
 import type { GroundItem } from './character-types.ts';
 import type { Pickup } from './model.ts';
 import { TIER_COLORS, TIER_NAMES } from './items.ts';
@@ -69,7 +70,7 @@ export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly Grou
   const positions = lootPositions(drops);
   const byId = new Map(drops.map(drop => [drop.id, drop]));
   const anchors = positions.map(({ drop, x, y }) => ({ id: drop.id, ...project(x, y),
-    width: Math.max(textWidth(drop.item.name, 1.05), textWidth(`${TIER_NAMES[drop.item.tier]} · iLv ${drop.item.itemLevel}`, .72, 'interface')) + 22 }));
+    width: Math.max(textWidth(itemDisplayName(drop.item), 1.05), textWidth(`${TIER_NAMES[drop.item.tier]} · iLv ${drop.item.itemLevel}`, .72, 'interface')) + 22 }));
   const boxes = layoutLootLabels(anchors, width, height);
   c.save();
   for (const b of boxes) {
@@ -83,7 +84,7 @@ export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly Grou
     c.strokeStyle = color + '65'; c.lineWidth = .7; c.strokeRect(b.left + .5, b.top + .5, b.width - 1, b.height - 1);
     c.fillStyle = color; c.fillRect(b.left, b.top + 5, 2, b.height - 10);
     c.save(); c.beginPath(); c.rect(b.left + 6, b.top, b.width - 12, b.height); c.clip();
-    text(c, drop.item.name, center, b.top + 5, 1.05, color, 'center');
+    text(c, itemDisplayName(drop.item), center, b.top + 5, 1.05, color, 'center');
     text(c, `${TIER_NAMES[drop.item.tier]} · iLv ${drop.item.itemLevel}`, center, b.top + 18, .72, '#a9b9bc', 'center', 'interface');
     c.restore();
   }

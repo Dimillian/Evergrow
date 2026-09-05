@@ -5,7 +5,7 @@ Updated 2026-09-05. Use the current guides for implementation. Proposed designs 
 ## Start here
 
 - [Current system status](system-status.md): implemented features, source/content counts, limits, verification and recent checkpoints.
-- [Roadmap](roadmap.md): completed foundations, NPC delivery sequence and later candidates.
+- [Roadmap](roadmap.md): completed foundations, town economy delivery status and later candidates.
 - [Systems catalog](systems-catalog.md): stable system IDs with current coverage and remaining work.
 - [Architecture](architecture.md): code ownership, boundaries and extension rules.
 - [Controls](controls.md): current player controls.
@@ -23,9 +23,9 @@ Updated 2026-09-05. Use the current guides for implementation. Proposed designs 
 | Camps, landmarks and roaming | [Wilderness and encounters](wilderness-and-encounters.md) |
 | Explored map and review tooling | [Explored atlas](explored-atlas.md) |
 
-## Next-system specification
+## Town economy
 
-[NPCs and vendors](npcs-and-vendors.md) covers blacksmith trading/+10 enhancement, jeweler stock and enchanting. **Specified, not implemented.** Prices, stock weights and enhancement strength are proposed playtest defaults. The roadmap tracks implementation separately.
+[NPCs and vendors](npcs-and-vendors.md) documents implemented blacksmith trading/+10 enhancement, jeweler stock and enchanting. Prices, stock weights and enhancement strength are initial playtest defaults. [Service captures](captures/2026-09-05/town-services/README.md) show the shared panels and NPC art.
 
 ## Original vision and design exploration
 
@@ -38,7 +38,7 @@ Updated 2026-09-05. Use the current guides for implementation. Proposed designs 
 - [Foundation checkpoints](history/foundation-checkpoints.md): older successive implementation/test snapshots, preserved with original numbers.
 - [Early prototype](prototype-status.md): the initial slice before character saves and later world/combat work.
 - [Expansion review](architecture-review-2026-09-05.md): pre-refactor assessment; its first three recommendations were implemented.
-- [NPC readiness review](npc-vendor-readiness.md): assessment and completed item/panel consolidation; trade persistence remains future work.
+- [NPC readiness review](npc-vendor-readiness.md): assessment and completed item/panel consolidation; a historical pre-implementation assessment, now followed by atomic saved transactions.
 - [Living forest study](living-forest.md): original motion pass and recording, later generalized to all biomes.
 - [README screenshots](screenshots/README.md) and [capture gallery](captures/2026-09-05/README.md): staged evidence at capture time. Older loadouts, UI and maps are not claims about the latest playable save or visuals.
 

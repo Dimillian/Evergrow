@@ -1,3 +1,4 @@
+import { itemDisplayName } from './items.ts';
 import { formatGold } from './currency-format.ts';
 import { NotificationQueue, type GameNotice, type NoticeEntry } from './notification-queue.ts';
 import { itemIconSVG } from './item-art.ts';
@@ -58,7 +59,7 @@ export class GameNotifications {
           const notice = entry.notice; card.notice = notice;
           let title: string, detail: string, icon: string, color: string;
           if (notice.kind === 'loot') {
-            title = notice.item.name; detail = `${TIER_NAMES[notice.item.tier]} · Item level ${notice.item.itemLevel}`;
+            title = itemDisplayName(notice.item); detail = `${TIER_NAMES[notice.item.tier]} · Item level ${notice.item.itemLevel}`;
             icon = itemIconSVG(notice.item, 46); color = TIER_COLORS[notice.item.tier];
 
           } else if (notice.kind === 'rewards') {

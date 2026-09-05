@@ -1,6 +1,6 @@
 # NPCs, vendors and item improvement
 
-Design specification · 2026-09-05 · **Not implemented yet.** The equipment preview/item UI and panel lifecycle foundation is implemented in checkpoint `85b1b00` (492 passing tests). This document defines the next work. Prices, stock weights and enhancement strength below are initial tuning proposals for playtesting.
+Implemented service contract · 2026-09-05. Blacksmith, jeweler and enchanter are available in town. Prices, stock weights and enhancement strength are initial playtest tuning. Static captures live in [town services](captures/2026-09-05/town-services/README.md). Save payload version 2 adds explicit item recipes and commerce state; older slots remain stored but require a new character, with no migration.
 
 ## Town services
 
@@ -22,11 +22,13 @@ Reuse the compact shared window, item cells, rarity treatment, animated tooltips
 
 Shop layout: stock on the left, the player's 64-cell bag on the right. Hover shows the ordinary item tooltip, price and effective equip changes. Selecting a shop item exposes one clear **Buy · 285 gold** action. Buying puts it in the bag; it never equips automatically. Shift-click may buy/sell directly, using exactly the same validated command. Ordinary inventory retains hover-only inspection; the service selection exists only to identify the transaction target.
 
+Blacksmith and enchanter show a separate **Equipped** section above the bag. Click worn gear to improve it in place; clicking it from the blacksmith shop opens Enhance. Empty bags show a compact empty state. Equipment never needs to be moved into the bag for enhancement or enchanting, except when releveling would exceed the wearer’s level requirement.
+
 Selling transfers the exact item and credits gold. Equipped items must first be unequipped. Keep a shared **Buyback** list of the last 12 sales per character, available at either shop, at the original sale price. Buyback preserves the item, its enhancement and its reroll history. Display that limit; the thirteenth sale retires the oldest entry. There is no sell-all action in v1.
 
 Blacksmith stock guarantees a sword, bow, staff and shield, with the other eight entries covering armor and randomly selected equipment. All supported weapon profiles can appear. Jewelry stock is generated equipment with fully visible stats, not a blind purchase.
 
-Proposed rarity weights:
+Current stock rarity weights:
 
 | Stock | Common | Magic | Rare | Epic | Legendary |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -57,7 +59,7 @@ Initial effect: `enhancementMultiplier = 1 + 0.05 × enhancement`. Thus +5 gives
 
 Derive from the unenhanced recipe, then apply enhancement and round once using the stat's existing precision. Never multiply an already enhanced or rounded item. Percentage budgets still use the existing bounded growth curves, and final character caps remain authoritative. The preview distinguishes an increased item stat from an effective character stat already at its cap.
 
-UI: a legible +N badge separate from rarity, restrained metal highlights on enhanced borders, more intricate trim at +5 and +10. A brief forge pulse traces the item icon when the transaction succeeds. The tooltip shows `Enhancement +4 / 10` and the next-step comparison. Avoid continuous glitter on every bag cell; reduced motion uses static details. Ground labels and equipment slots use the same +N treatment.
+UI: a legible +N badge separate from rarity, restrained metal highlights on enhanced borders, more intricate trim at +5 and +10. A brief forge pulse traces the item icon when the transaction succeeds. The tooltip shows `Enhancement +4 / 10` while the workbench shows the next-step comparison. Avoid continuous glitter on every bag cell; reduced motion uses static details. Ground labels and equipment slots use the same +N treatment.
 
 ### Enchanter: raise rarity
 
@@ -88,7 +90,7 @@ Keep formulas in one headless content/rules module, shared by quotes and executi
 
 Let `B(L) = 30 × (1 + 0.1 × (L - 1))`, rarity factor `R = 1 / 2 / 5 / 12 / 30`, and enhancement investment factor `H = 1 + 0.1 × enhancement`. Round costs up and sale proceeds down to whole gold.
 
-| Operation | Proposed gold price |
+| Operation | Gold price |
 | --- | --- |
 | Buy equipment | `B(L) × R` |
 | Buy jewelry | `2.5 × B(L) × R` |
@@ -132,7 +134,9 @@ Extract shared item validation and enforce unique ownership across bag, equipmen
 
 **Presentation:** emit typed transaction results after commitment. Reuse compact notifications: named purchases, concise sales, brief improvement results. Spending gold must not enter the positive gold/XP reward accumulator. No new notification framework or service locator. Service panels reuse `ItemTooltip`, shared item components and the panel coordinator.
 
-## Delivery checkpoints and acceptance
+## Implemented delivery and verification
+
+All five delivery areas below are implemented and have static in-app review captures. The code suite passes 507 tests, including transaction failures, recipe derivation, save bounds and NPC reachability. Gameplay/economy acceptance remains with the player.
 
 1. **NPC interaction + blacksmith buy/sell/buyback:** stable placement, shared panel, stock generation, item issuance, complete transactions and persistence together. Test full bag, insufficient gold, duplicate clicks, stale quotes, return/reload/restock, storage failure and character switching.
 2. **Recipe-backed +10 enhancement:** one derivation path and before/after UI. Test all item kinds, starter items, both hands, caps, +10 rejection, rounding, resources unchanged and save round-trips. Verify equal final stats for enhancement before/after relevel or rarity changes with equivalent recipes.

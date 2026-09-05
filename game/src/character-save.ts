@@ -1,14 +1,16 @@
 import { GOLD_RULES, type GroundGold } from './gold.ts';
 import { validGold } from './wallet.ts';
 import type { CharacterSheet, GroundItem, Item, SkillId } from './character-types.ts';
-import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS, ITEM_KINDS, TIER_NAMES, STAT_LABELS } from './items.ts';
+import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS } from './items.ts';
+import { object, number, integer, text, validItem, type ObjectValue } from './item-validation.ts';
+import { validCommerce } from './commerce-validation.ts';
 import { itemFitsSlot } from './inventory.ts';
 import { SKILL_NODES, unlockedSkills } from './skill-tree.ts';
 import { MAX_CONTENT_LEVEL } from './progression-content.ts';
 import { xpForNextLevel } from './progression.ts';
 
 export const CHARACTER_SLOT_COUNT = 8;
-export const CHARACTER_SAVE_VERSION = 1;
+export const CHARACTER_SAVE_VERSION = 2;
 export const SAVE_MAX_BYTES = 700_000;
 export interface CharacterCheckpoint {
   character: CharacterSheet; level: number; xp: number; x: number; y: number; angle: number;
@@ -22,48 +24,9 @@ export interface CharacterSave {
   createdAt: number; updatedAt: number; worldSeed: number; worldVersion: number;
   checkpoint: CharacterCheckpoint;
 }
-type ObjectValue = Record<string, unknown>;
-const object = (v: unknown): v is ObjectValue => typeof v === 'object' && v !== null && !Array.isArray(v);
-const number = (v: unknown, min = 0, max = Number.MAX_SAFE_INTEGER): v is number => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
-const integer = (v: unknown, min = 0, max = Number.MAX_SAFE_INTEGER): v is number => number(v, min, max) && Number.isSafeInteger(v);
-const text = (v: unknown, max = 100): v is string => typeof v === 'string' && v.length > 0 && v.length <= max && !/[\u0000-\u001f]/u.test(v);
-const color = (v: unknown) => typeof v === 'string' && /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(v);
-const oneOf = (v: unknown, values: readonly unknown[]) => values.includes(v);
-const modifiers = (v: unknown) => object(v) && Object.keys(v).every(key => Object.hasOwn(STAT_LABELS, key) && number(v[key], -1e9, 1e9));
-
-function validItem(v: unknown): v is Item {
-  if (!object(v) || !text(v.id, 160) || !integer(v.seed, -2147483648, 4294967295) || !text(v.name)
-    || !text(v.baseName) || !oneOf(v.kind, ITEM_KINDS) || !Object.hasOwn(TIER_NAMES, String(v.tier))
-    || !integer(v.itemLevel, 1, MAX_CONTENT_LEVEL) || !integer(v.requiredLevel, 1, MAX_CONTENT_LEVEL)
-    || !number(v.power) || !modifiers(v.implicit) || !Array.isArray(v.affixes) || v.affixes.length > 12
-    || !v.affixes.every(a => object(a) && text(a.name) && Object.hasOwn(STAT_LABELS, String(a.stat)) && number(a.value, -1e9, 1e9))) return false;
-  const a = v.appearance;
-  if (!object(a) || !oneOf(a.style, ['plate', 'leather']) || !['base', 'shadow', 'edge', 'trim'].every(key => color(a[key]))) return false;
-  const w = v.weapon;
-  if (v.kind === 'weapon') {
-    if (!object(w) || !text(w.id) || !text(w.name) || !oneOf(w.family, ['sword', 'axe', 'mace', 'dagger', 'bow', 'staff'])
-      || !oneOf(w.hands, [1, 2]) || !oneOf(w.attackKind, ['melee', 'arrow', 'bolt'])
-      || !oneOf(w.damageType, ['physical', 'fire', 'frost', 'lightning', 'arcane'])
-      || !number(w.damage, 1) || !number(w.baseAttacksPerSecond, .01, 100) || !number(w.reach, 1, 2000) || !number(w.arc, 0, Math.PI * 2)) return false;
-    const visual = w.visual;
-    if (!object(visual) || visual.kind !== w.family || !number(visual.length, 0, 500) || !number(visual.width, 0, 100)
-      || !['metal', 'edge', 'grip', 'guard'].every(key => color(visual[key]))
-      || visual.glow !== undefined && !color(visual.glow)
-      || visual.gripLength !== undefined && !number(visual.gripLength, 0, 100)
-      || visual.element !== undefined && !oneOf(visual.element, ['physical', 'fire', 'frost', 'lightning', 'arcane'])) return false;
-  } else if (w !== undefined) return false;
-  const shield = v.shield;
-  if (v.kind === 'shield') {
-    if (!object(shield) || !text(shield.id) || !text(shield.name) || !number(shield.blockChance, 0, 100)
-      || !number(shield.blockReduction, 0, 100) || !object(shield.visual)
-      || !oneOf(shield.visual.kind, ['buckler', 'kite', 'tower'])
-      || !['base', 'shadow', 'edge', 'trim'].every(key => color((shield.visual as ObjectValue)[key]))) return false;
-  } else if (shield !== undefined) return false;
-  return true;
-}
 
 function validSheet(v: unknown, level: number): v is CharacterSheet {
-  if (!object(v) || (v.gold !== undefined && !validGold(v.gold)) || !object(v.attributes) || !['strength', 'dexterity', 'intelligence', 'vitality'].every(k => integer((v.attributes as ObjectValue)[k], 10, 5e6 + 10))
+  if (!object(v) || !validCommerce(v.commerce, level) || (v.gold !== undefined && !validGold(v.gold)) || !object(v.attributes) || !['strength', 'dexterity', 'intelligence', 'vitality'].every(k => integer((v.attributes as ObjectValue)[k], 10, 5e6 + 10))
     || !integer(v.statPoints, 0, 5e6) || !integer(v.skillPoints, 0, MAX_CONTENT_LEVEL)
     || !Array.isArray(v.inventory) || v.inventory.length !== INVENTORY_CAPACITY || !v.inventory.every(i => i === null || validItem(i))
     || !object(v.equipped) || Object.keys(v.equipped).length !== EQUIPMENT_SLOTS.length
@@ -113,8 +76,16 @@ export function decodeCharacterSave(raw: string): CharacterSave | null {
         && number(i.y, -4e7, 4e7) && integer(i.amount, 1) && number(i.age, 0, 10)))) return null;
     const groundIds = [...p.groundItems, ...((p.groundGold ?? []) as GroundGold[])].map(i => i.id);
     if (new Set(groundIds).size !== groundIds.length) return null;
-    const items = [...p.character.inventory, ...Object.values(p.character.equipped), ...p.groundItems.map(i => i.item)].filter(Boolean) as Item[];
+    const items = [...p.character.inventory, ...Object.values(p.character.equipped), ...p.groundItems.map(i => i.item), ...p.character.commerce.buyback.map(i => i.item)].filter(Boolean) as Item[];
     if (new Set(items.map(i => i.id)).size !== items.length || new Set(p.groundItems.map(i => i.id)).size !== p.groundItems.length) return null;
+    for (const item of items) {
+      if (!item.id.startsWith('stock:')) continue;
+      const source = /^stock:(town:[0-9]+:-?[0-9]+:building:[0-9]+:(blacksmith|jeweler)):([0-9]+):([0-9]+)$/.exec(item.id);
+      if (!source) return null;
+      const epoch = Number(source[3]), slot = Number(source[4]), state = p.character.commerce;
+      if (!Number.isSafeInteger(epoch) || epoch > Math.floor((p.level - 1) / 3) || slot >= (source[2] === 'jeweler' ? 6 : 12)) return null;
+      if (epoch >= state.epoch && !(state.sold[source[1]] & 1 << slot)) return null;
+    }
     return v as unknown as CharacterSave;
   } catch { return null; }
 }

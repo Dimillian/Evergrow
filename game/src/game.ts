@@ -1,3 +1,7 @@
+import { ServicePanel } from './service-panel.ts';
+import { buildingNPC, focusNPC, canInteractNPC, type TownNPC } from './npcs.ts';
+import type { ServiceQuote } from './commerce.ts';
+import { executeService } from './commerce-command.ts';
 import { PanelCoordinator } from './panel-coordinator.ts';
 import { bindGameKeyboard } from './game-keyboard.ts';
 import { createCharacterSheet, type StarterWeaponId } from './items.ts';
@@ -42,6 +46,8 @@ export class Game {
   private shell: GameShell;
   private inventoryPanel: InventoryPanel;
   private skillPanel: SkillTreePanel;
+  private servicePanel: ServicePanel;
+  private activeNPC: TownNPC | null = null;
   readonly canvas: HTMLCanvasElement;
   private uiCanvas: HTMLCanvasElement;
   private uiContext: CanvasRenderingContext2D;
@@ -100,7 +106,11 @@ export class Game {
         create: (index, name, weapon) => this.createCharacter(index, name, weapon),
         continue: index => this.continueCharacter(index), remove: index => this.deleteCharacter(index),
       }));
+      this.servicePanel = this.lifetime.own(new ServicePanel(this.shell.panelMount, {
+        close: () => this.resume(), trade: quote => this.trade(quote),
+      }));
       this.panels = new PanelCoordinator({
+        service: { open: () => { if (this.activeNPC) this.servicePanel.open(this.sim.player, this.activeNPC); }, close: () => { this.servicePanel.close(); this.activeNPC = null; } },
         map: { open: () => { this.worldMap.open(this.sim.player); this.shell.setStatus('World map open. Game paused.'); }, close: () => this.worldMap.close() },
         character: { open: () => { this.inventoryPanel.open(this.sim.player); this.shell.setStatus('Character and inventory open. Game paused.'); }, close: () => this.inventoryPanel.close() },
         skills: { open: () => { this.skillPanel.open(this.sim.player); this.shell.setStatus('Skill tree open. Game paused.'); }, close: () => this.skillPanel.close() },
@@ -199,6 +209,7 @@ export class Game {
         if (event.code === 'F3') { event.preventDefault(); this.debug = !this.debug; return; }
         if (event.code === 'KeyR' && this.phase === 'dead') { this.start(); return; }
         if (this.phase !== 'playing') return;
+        if (event.code === 'KeyE') { event.preventDefault(); this.interact(); return; }
         this.input.keyDown(event.code);
       },
     }, signal);
@@ -217,6 +228,7 @@ export class Game {
       event.preventDefault();
       this.updatePointer(event);
       if (this.pointerInHUD()) return;
+      if (event.button === 0 && this.interact(this.renderer.screenToWorld(this.mouse.x, this.mouse.y))) return;
       this.canvas.focus();
       this.canvas.setPointerCapture(event.pointerId);
       this.input.pointerDown(event.button);
@@ -290,7 +302,7 @@ export class Game {
     this.exploration = new Exploration(this.world, { characterId: record.id,
       onDiscover: poi => {
         // Shops share their settlement announcement; landmarks deserve their own.
-        if (!['blacksmith', 'merchant', 'inn', 'chapel'].includes(poi.kind))
+        if (!['blacksmith', 'merchant', 'inn', 'chapel', 'jeweler', 'enchanter'].includes(poi.kind))
           this.shell.notifications.push({ kind: 'discovery', poi });
       },
     });
@@ -357,6 +369,28 @@ export class Game {
 
   private closeCharacterPanel() {
     if (this.phase === 'character' || this.phase === 'skills') this.resume();
+  }
+
+  private interact(pointer?: { x: number; y: number }): boolean {
+    if (this.phase !== 'playing') return false;
+    const p = this.sim.player;
+    const npcs = this.world.getBuildings(p.x - 220, p.y - 220, 440, 440).map(buildingNPC).filter((npc): npc is TownNPC => npc !== null);
+    const npc = focusNPC(npcs, p, this.world, pointer);
+    if (!npc) return false;
+    this.activeNPC = npc; this.panels.open('service'); return true;
+  }
+
+  private trade(quote: ServiceQuote): { ok: boolean; message: string } {
+    const npc = this.activeNPC, p = this.sim.player;
+    if (this.phase !== 'service' || !npc || !this.session.active || !canInteractNPC(npc, p, this.world))
+      return { ok: false, message: 'This service is no longer in reach.' };
+    const result = executeService(p, npc, this.world, quote, (character, hp, mana) => {
+      const saved = this.session.save({ ...this.sim.captureCheckpoint(), character, hp, mana }, Date.now());
+      if (!saved) this.shell.setSaveStatus(this.session.error, true);
+      return { ok: saved, message: this.session.error };
+    });
+    if (result.ok) { this.saveError = ''; this.shell.setSaveStatus('Character saved locally.'); this.notify(result.message); }
+    return result;
   }
 
   private characterAction(command: CharacterCommand) {

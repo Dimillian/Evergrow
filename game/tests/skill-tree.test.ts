@@ -5,7 +5,7 @@ import { SKILL_DEFINITIONS, skillIconSVG } from '../src/skill-content.ts';
 import type { CharacterSheet, SkillId } from '../src/character-types.ts';
 
 function sheet(points = 10): CharacterSheet {
-  return { attributes: { strength: 0, dexterity: 0, intelligence: 0, vitality: 0 }, statPoints: 0,
+  return { commerce: { epoch: 0, revision: 0, operations: 0, sold: {}, buyback: [] }, attributes: { strength: 0, dexterity: 0, intelligence: 0, vitality: 0 }, statPoints: 0,
     skillPoints: points, allocatedNodes: [SKILL_TREE_ORIGIN], inventory: [],
     equipped: { weapon: null, offhand: null, head: null, chest: null, gloves: null, legs: null, boots: null, cloak: null, amulet: null, ring1: null, ring2: null },
     skillSlots: [null, null, null, null, null] };

@@ -10,7 +10,16 @@ export type EquipmentSlot = 'weapon' | 'offhand' | 'head' | 'chest' | 'gloves' |
 export type ItemKind = Exclude<EquipmentSlot, 'offhand' | 'ring1' | 'ring2'> | 'ring' | 'shield';
 export type ItemTier = 'common' | 'magic' | 'rare' | 'epic' | 'legendary';
 export interface ItemAffix { name: string; stat: StatKey; value: number; }
+export interface ItemRecipe {
+  profileId?: string; starter: boolean; enhancement: number; revision: number;
+  targetedRolls: number; fullRolls: number; rolls: number[];
+}
+export interface CommerceState {
+  epoch: number; revision: number; operations: number; sold: Record<string, number>;
+  buyback: Array<{ item: Item; price: number }>;
+}
 export interface Item {
+  recipe: ItemRecipe;
   id: string; seed: number; name: string; baseName: string; kind: ItemKind; tier: ItemTier;
   itemLevel: number; requiredLevel: number; power: number;
   implicit: StatModifiers; affixes: ItemAffix[]; weapon?: WeaponDefinition; shield?: ShieldDefinition;
@@ -20,6 +29,7 @@ export type SkillId = 'cleave' | 'lunge' | 'whirlwind' | 'earthshatter' | 'shiel
   | 'volley' | 'piercingShot' | 'ricochet' | 'rainOfArrows' | 'backstab'
   | 'fireball' | 'arcLightning' | 'iceNova' | 'frostLance' | 'meteor' | 'siphon';
 export interface CharacterSheet extends GoldWallet {
+  commerce: CommerceState;
   attributes: Record<Attribute, number>;
   statPoints: number; skillPoints: number;
   allocatedNodes: string[];

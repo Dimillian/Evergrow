@@ -253,11 +253,11 @@ Gold rolls independently of equipment using a salted enemy loot seed. Player lev
 | Veteran | 85% | 12–25 |
 | Elite | 100% | 35–65 |
 
-Multiply the rolled amount by `1 + 0.1 × (sourceLevel - 1)`, then round to whole gold. These are starting playtest values; prices and NPC trading are not implemented yet.
+Multiply the rolled amount by `1 + 0.1 × (sourceLevel - 1)`, then round to whole gold. These are starting playtest values; NPC shops and improvement costs are implemented with initial tuning in [town services](npcs-and-vendors.md#initial-economy). Stock rarity weights are separate from enemy loot tables.
 
 Coins settle for 0.3 seconds, attract within 100 world units with clear line of sight, and collect within 15 units. The wallet is credited only on pickup, even with a full inventory. Death prevents collection. Piles do not expire; at the 128-pile budget new value merges into the nearest pile. The balance and remaining piles are saved together, preventing a collected pile from reappearing after a successful save/reload.
 
-`wallet.ts` provides `goldBalance`, `creditGold`, `canAfford` and `spendGold` over the character wallet. All amounts must be non-negative safe integers; failed debits and overflowing credits leave the balance unchanged. Future NPC commands should validate the full purchase, then debit through this API; rendering must never mutate currency. New characters start at zero gold.
+`wallet.ts` provides `goldBalance`, `creditGold`, `canAfford` and `spendGold` over the character wallet. All amounts must be non-negative safe integers; failed debits and overflowing credits leave the balance unchanged. NPC commands validate and stage the full transaction through this API, persist the proposed checkpoint, then commit it; rendering must never mutate currency. New characters start at zero gold.
 
 The HUD shows a smoothly counting gold balance; inventory shows the exact full balance. Gold and XP gains share one compact notification with separate accumulating totals, leaving the second feed slot available for individual item pickups. Each gain resets its 2.8-second lifetime; gains during the 0.22-second fade revive the same total. Once removed, the next gain starts a fresh total. Queued gains also combine without creating a backlog of reward cards.
 

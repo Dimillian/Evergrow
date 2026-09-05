@@ -1,3 +1,5 @@
+import { buildingNPC, focusNPC, NPC_NAMES, NPC_COLORS } from './npcs.ts';
+import { drawNPC } from './npc-art.ts';
 import { RewardFeedback } from './reward-feedback.ts';
 import { drawGroundGold, drawRewardMotes, drawGoldBalance } from './reward-art.ts';
 import { goldBalance } from './wallet.ts';
@@ -321,7 +323,19 @@ export class Renderer {
       healthTrail: this.damageTrails.get(this.plateEnemy.id)?.value ?? this.plateEnemy.hp,
       hitPulse: settings.reducedMotion ? 0 : Math.min(1, this.plateEnemy.hitFlash / COMBAT_TIMING.hitFlashDuration),
     });
-    if (settings.phase === 'playing') this.cursor(c, sim);
+    if (settings.phase === 'playing') {
+      this.cursor(c, sim);
+      const npcs = this.cachedBuildings.flatMap(b => { const npc = buildingNPC(b); return npc ? [npc] : []; });
+      const npc = focusNPC(npcs, p, world);
+      if (npc) {
+        const point = worldToScreen(this.view, npc.x, npc.y - 65);
+        c.save(); c.font = '12px system-ui, sans-serif'; c.textAlign = 'center';
+        const label = `${NPC_NAMES[npc.role]}  [E]`, width = c.measureText(label).width + 18;
+        c.fillStyle = '#071019ed'; c.fillRect(point.x - width / 2, point.y - 14, width, 23);
+        c.strokeStyle = NPC_COLORS[npc.role] + '90'; c.strokeRect(point.x - width / 2, point.y - 14, width, 23);
+        c.fillStyle = '#e1dfcd'; c.fillText(label, point.x, point.y + 2); c.restore();
+      }
+    }
   }
 
   private enemyFocusMark(alpha: number) {
@@ -378,6 +392,8 @@ export class Renderer {
     for (const bird of this.biomeLife.birds) entries.push({ y: bird.y + (bird.state === 'perched' ? 1 : 130),
       draw: () => this.biomeArt.drawBird(c, bird, this.visualTime, settings.reducedMotion) });
     for (const building of this.cachedBuildings) {
+      const npc = buildingNPC(building);
+      if (npc) entries.push({ y: npc.y, draw: () => drawNPC(c, npc, this.visualTime, settings.reducedMotion) });
       for (const layer of this.settlementArt.getStructureLayers(building, this.visualTime)) {
         entries.push({ y: layer.y, draw: () => layer.draw(c) });
       }
@@ -414,6 +430,10 @@ export class Renderer {
     const p = sim.player;
     const lights: PointLight[] = [{ x: px, y: py - 15, radius: 185, color: '#ffcf87', power: .58, shadows: true }];
     const environmentLights: PointLight[] = [];
+    for (const building of this.cachedBuildings) {
+      const npc = buildingNPC(building);
+      if (npc) environmentLights.push({ x: npc.x, y: npc.y - 20, radius: 60, color: NPC_COLORS[npc.role], power: .3 });
+    }
     const buildingLights = this.settlementArt.getLights(this.cachedBuildings, this.visualTime)
       .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py));
     environmentLights.push(...buildingLights.slice(0, 6));

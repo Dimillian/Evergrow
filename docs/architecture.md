@@ -2,7 +2,7 @@
 
 The [living biomes](living-biomes.md) extend the original forest pass with bounded presentation-only wind, material-specific footstep reactions and decorative wildlife across all seven climates. `biome-life-content.ts` owns immutable recipes; `biome-wind.ts`, `biome-life.ts` and `biome-life-art.ts` own shared wind, ephemeral state and drawing. `ground-material.ts` shares water/road/paving weights with World terrain colors. These systems consume interpolated positions through Renderer and have no simulation mutation or reward path. The local `/forest.html` review records the actual world/CRT with staged poses and no gameplay ticks or save access.
 
-The [NPC/vendor readiness review](npc-vendor-readiness.md) records the consolidation assessment. Shared equipment planning/previews, item UI and panel lifecycle are implemented in `85b1b00`, with 492 passing code tests. The [NPC and vendor specification](npcs-and-vendors.md) defines the proposed services, economy and remaining transaction/persistence work; those services are not implemented yet.
+The [NPC/vendor readiness review](npc-vendor-readiness.md) records the earlier consolidation assessment. Equipment planning/previews, shared item UI and panel lifecycle now support implemented [NPC services](npcs-and-vendors.md), including atomic saved transactions. The full suite has 507 passing code tests.
 
 Updated 2026-09-05. This describes the local prototype as implemented; `technical-foundations.md` contains the broader design proposals.
 
@@ -45,7 +45,7 @@ flowchart TD
 | `GameShell` | DOM surface, accessible controls, menu listeners and toast timer | Explicit disposal; old menu listeners abort on replacement |
 | `Game` / `Lifetime` | Phase, event routing, frame scheduling, construction rollback, reverse-order resource teardown | One application instance per hot replacement |
 
-Generated buildings are frozen blueprints. Future shop inventories, opened chests, NPCs, and other mutable world state should be stored separately by stable identity, without editing geometry shared by collision, maps, and drawing.
+Generated buildings are frozen blueprints. Shop purchase masks and buyback state are stored separately on the character by stable identity, without editing geometry shared by collision, maps, and drawing.
 
 ## Where to extend
 
@@ -95,7 +95,7 @@ The refactor was compared against the previous implementation: 86,400 determinis
 
 The current architecture is suitable for incremental additions at the prototype's population and cache budgets. It is not a claim of production readiness or arbitrary scale. Enemy separation and several contact queries still scan actor lists; large crowds will need measured profiling and spatial indexing. Terrain/art generation is synchronous on the main thread; worker generation should follow evidence of frame stalls. Origin rebasing or another precision strategy will be needed for truly unbounded coordinates.
 
-Exploration uses bounded, best-effort localStorage. Read/merge/write preserves known discoveries and rejects corrupt payloads, but simultaneous writes from multiple tabs are not a transactional database. Characters have a separate validated eight-slot checkpoint model with last-good backups and stale-writer protection; each character owns a separate chart. Gold, equipment and camp casualties are saved. Save export/import, trading, crafting, respecs and arbitrary skill scripting remain separate work. Preserving old prototype save formats is not a current requirement.
+Exploration uses bounded, best-effort localStorage. Read/merge/write preserves known discoveries and rejects corrupt payloads, but simultaneous writes from multiple tabs are not a transactional database. Characters have a separate validated eight-slot checkpoint model with last-good backups and stale-writer protection; each character owns a separate chart. Gold, equipment, camp casualties and commerce state are saved. Save export/import, respecs and arbitrary skill scripting remain separate work. Preserving old prototype save formats is not a current requirement.
 
 ## Character rules and panels
 
@@ -137,6 +137,16 @@ The graphics overhaul keeps geometry in authored TypeScript recipes. `tree-art.t
 
 ## Pre-NPC consolidation
 
-Equipment planning now lives in `inventory.ts:planEquipmentChange`; equipment commits, drag eligibility and full-build previews share it. `equipment-preview.ts` uses the ordinary stat and weapon derivations on the planned sheet without mutating live resources. `item-ui.ts` / `.css` and `item-tooltip.ts` are reusable presenters for inventory and future vendor data. They separate item values from effective On equip changes, including any displaced shield/second weapon.
+Equipment planning now lives in `inventory.ts:planEquipmentChange`; equipment commits, drag eligibility and full-build previews share it. `equipment-preview.ts` uses the ordinary stat and weapon derivations on the planned sheet without mutating live resources. `item-ui.ts` / `.css` and `item-tooltip.ts` are reusable presenters for inventory and vendor data. They separate item values from effective On equip changes, including any displaced shield/second weapon.
 
 `panel-coordinator.ts` centralizes phase transitions and panel registration. Old views close before new ones mount, input/buffers clear on transitions, and focus returns only on play resumption. Game retains application/session orchestration and submits transitions; panels retain their own focus-trap lifetime. The consolidation adds no NPC/trading state or save-format changes. Verified with 492 code tests and application/core compilation plus production build.
+
+## Town services and item recipes
+
+- `npcs.ts` derives stable shopkeepers from existing building blueprints and validates reach/line of sight. `npc-art.ts` draws procedural role silhouettes, idle/work gestures and shared emblems. NPC stock never mutates generated geometry.
+- `items.ts:deriveItem` rebuilds item values from explicit source profiles, roll qualities and enhancement. `item-improvement.ts` changes those recipes for guaranteed upgrades and rerolls. No reverse inference from rounded stats.
+- `commerce.ts` owns deterministic catalogs/epochs, quotes, bounded prices and pure complete plans. It uses the shared wallet API. Plans copy affected containers; failure does not advance item revisions or operation RNG.
+- `commerce-command.ts` validates reach, plans, refreshes a proposed player, persists the candidate checkpoint, then commits live state. The active Game session also validates the service phase/NPC. Persistence failures and stale writers retain the original character.
+- `item-validation.ts` and `commerce-validation.ts` share bounded recipe/commerce validation with save version 2. Stock issuance IDs encode vendor/epoch/slot; ownership validation prevents a current issued item remaining available in stock. Old save payloads require new characters, without destructive conversion.
+- `service-panel.ts` composes shared item cells/tooltips, compact headers, operation previews and separate Equipped/Inventory sections. UI submits typed quotes; it never spends gold or mutates the character. Equipped upgrades refresh both hand projections without restoring life/mana.
+- The registered `service` phase shares panel suspension, focus, input clearing and teardown. `/services.html` and `/services-narrow.html` stage memory-only static reviews, never a gameplay session.
