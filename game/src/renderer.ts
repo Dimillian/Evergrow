@@ -387,7 +387,7 @@ export class Renderer {
         attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash, slow: enemy.slowTime, burning: enemy.burnTime,
         impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false }) });
     }
-    entries.push({ y: py, draw: () => this.actor(px, py, playerPose(p, sim.time)) });
+    if (settings.phase !== 'ready') entries.push({ y: py, draw: () => this.actor(px, py, playerPose(p, sim.time)) });
     entries.sort((a, b) => a.y - b.y);
     for (const entry of entries) entry.draw();
   }

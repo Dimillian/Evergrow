@@ -16,11 +16,23 @@ export type SpawnCampMember = (member: CampMember, x: number, y: number, source:
  * At the ledger ceiling later camps remain dormant; no existing camp is evicted or refilled. */
 export class CampPopulation {
   private records = new Map<string, CampRecord>();
-  get recordedCount(): number { return this.records.size; }
-  reset(): void { this.records.clear(); }
+  private defeated = new Map<string, Set<string>>();
+  defeatedMembers(): Record<string, string[]> {
+    const result = new Map([...this.defeated].map(([id, members]) => [id, new Set(members)]));
+    for (const [id, record] of this.records) for (const enemy of record.members) if (enemy.state === 'dead' && enemy.campMemberId) {
+      if (!result.has(id)) result.set(id, new Set());
+      result.get(id)!.add(enemy.campMemberId);
+    }
+    return Object.fromEntries([...result].map(([id, members]) => [id, [...members]]));
+  }
+  restoreDefeated(members: Record<string, string[]>): void { this.defeated = new Map(Object.entries(members).map(([id, ids]) => [id, new Set(ids)])); }
+  clearedIds(): string[] { return [...this.records.keys()].filter(id => this.getState(id) === 'cleared'); }
+  restoreCleared(ids: readonly string[]): void { this.records.clear(); for (const id of ids) this.records.set(id, { members: [] }); }
+  get recordedCount(): number { return new Set([...this.records.keys(), ...this.defeated.keys()]).size; }
+  reset(): void { this.records.clear(); this.defeated.clear(); }
   getState(id: string): CampState {
     const record = this.records.get(id);
-    return !record ? 'dormant' : record.members.every(enemy => enemy.state === 'dead') ? 'cleared' : 'active';
+    return !record ? this.defeated.has(id) ? 'active' : 'dormant' : record.members.every(enemy => enemy.state === 'dead') ? 'cleared' : 'active';
   }
 
   update(camps: readonly EnemyCamp[], player: Pick<Player, 'x' | 'y'>, enemies: Enemy[], world: WorldQuery,
@@ -49,15 +61,16 @@ export class CampPopulation {
       const previous = this.records.get(camp.id);
       const missing = previous ? previous.members.filter(enemy => enemy.state !== 'dead' && !enemies.includes(enemy)) : null;
       if (previous && !missing!.length) continue;
-      if (!previous && this.records.size >= CAMP_POPULATION_RULES.ledgerCapacity) continue;
-      const additions = missing ?? camp.members;
+      if (!previous && !this.defeated.has(camp.id) && this.recordedCount >= CAMP_POPULATION_RULES.ledgerCapacity) continue;
+      const livingMembers = camp.members.filter(member => !this.defeated.get(camp.id)?.has(member.id));
+      const additions = missing ?? livingMembers;
       const campBudget = ENCOUNTER_RULES.hardPopulationCap - ENCOUNTER_RULES.roamingReserve;
       if (additions.length > campBudget || additions.filter(member => member.rank === 'veteran').length > ENCOUNTER_RULES.veteranCap
         || additions.filter(member => member.rank === 'elite').length > ENCOUNTER_RULES.eliteCap) continue;
       // Never materialize even one visible member, including a returning wounded
       // garrison. Validate before eviction so a deferred camp has no side effects.
       const placements = missing ? missing.map(enemy => ({ x: enemy.x, y: enemy.y, radius: enemy.radius }))
-        : camp.members.map(member => ({ x: camp.x + member.dx, y: camp.y + member.dy, radius: ENEMY_DEFINITIONS[member.kind].radius }));
+        : livingMembers.map(member => ({ x: camp.x + member.dx, y: camp.y + member.dy, radius: ENEMY_DEFINITIONS[member.kind].radius }));
       if (placements.some(point => !isSpawnHidden(point.x, point.y, exclusion, point.radius)
         || world.blocked(point.x, point.y, point.radius) || world.isSanctuary?.(point.x, point.y))) continue;
       const rankCount = (rank: Enemy['rank']) => enemies.filter(enemy => enemy.state !== 'dead' && enemy.rank === rank).length
@@ -99,12 +112,12 @@ export class CampPopulation {
         continue;
       }
       const created: Enemy[] = [];
-      for (const member of camp.members) {
+      for (const member of livingMembers) {
         const enemy = spawn(member, camp.x + member.dx, camp.y + member.dy,
           { campId: camp.id, memberId: member.id, lootSeed: campMemberSeed(member.id) });
         if (enemy) created.push(enemy);
       }
-      if (created.length === camp.members.length) this.records.set(camp.id, { members: created });
+      if (created.length === livingMembers.length) this.records.set(camp.id, { members: created });
       else {
         // A caller may reject a placement for an additional rule. Roll the garrison back atomically.
         for (const enemy of created) { const index = enemies.indexOf(enemy); if (index >= 0) enemies.splice(index, 1); }

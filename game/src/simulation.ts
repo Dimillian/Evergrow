@@ -1,3 +1,4 @@
+import type { CharacterCheckpoint } from './character-save.ts';
 import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, ProjectileEffects, GroundEffect, SimulationOptions, WorldQuery } from './model.ts';
 import type { Pickup } from './model.ts';
 import { createBaseStats, createStartingEquipment, deriveAttackStats } from './equipment.ts';
@@ -29,7 +30,7 @@ export const FIXED_STEP = COMBAT_TIMING.fixedStep;
 export const HIT_FLASH_DURATION = COMBAT_TIMING.hitFlashDuration;
 const TAU = Math.PI * 2;
 
-function initialPlayer(x: number, y: number): Player {
+export function initialPlayer(x: number, y: number): Player {
   const character = createCharacterSheet();
   return {
     character, derived: deriveCharacterStats(character), skillCooldowns: {}, activeSkill: null,
@@ -98,6 +99,51 @@ export class Simulation {
     this.hurtGuard = this.killRecharge = 0;
     this.spawnExclusion = null;
     this.roaming.reset(this.player.x, this.player.y);
+  }
+
+  captureCheckpoint(): CharacterCheckpoint {
+    const p = this.player;
+    return JSON.parse(JSON.stringify({ character: p.character, level: p.level, xp: p.xp,
+      x: p.x, y: p.y, angle: p.angle, hp: p.hp, mana: p.mana, dead: p.dead,
+      flasks: p.flasks, healCooldown: p.healCooldown, dodgeCharges: p.dodgeCharges, dodgeRecharge: p.dodgeRecharge,
+      skillCooldowns: p.skillCooldowns, time: this.time, kills: this.kills,
+      randomState: this.randomState, spawnOrdinal: this.spawnOrdinal, killRecharge: this.killRecharge,
+      clearedCamps: this.camps.clearedIds(), defeatedCampMembers: this.camps.defeatedMembers(), groundItems: this.groundItems })) as CharacterCheckpoint;
+  }
+
+  /** Apply only a decoded checkpoint. Active encounters/attacks restart; character progress does not. */
+  restoreCheckpoint(checkpoint: CharacterCheckpoint): void {
+    this.reset();
+    const saved = JSON.parse(JSON.stringify(checkpoint)) as CharacterCheckpoint;
+    const p = this.player;
+    Object.assign(p, { character: saved.character, level: saved.level, xp: saved.xp,
+      x: saved.x, y: saved.y, angle: saved.angle, hp: saved.hp, mana: saved.mana, dead: saved.dead,
+      flasks: saved.flasks, healCooldown: saved.healCooldown, dodgeCharges: saved.dodgeCharges,
+      dodgeRecharge: saved.dodgeRecharge, skillCooldowns: saved.skillCooldowns });
+    refreshCharacter(p);
+    if (this.world.blocked(p.x, p.y, p.radius)) {
+      let found = false;
+      for (let r = 24; r <= 240 && !found; r += 24) for (let i = 0; i < 16 && !found; i++) {
+        const x = saved.x + Math.cos(i * Math.PI / 8) * r, y = saved.y + Math.sin(i * Math.PI / 8) * r;
+        if (!this.world.blocked(x, y, p.radius)) { p.x = x; p.y = y; found = true; }
+      }
+      if (!found) { p.x = this.options.startX!; p.y = this.options.startY!; }
+    }
+    p.prevX = p.x; p.prevY = p.y;
+    this.time = saved.time; this.kills = saved.kills;
+    this.randomState = saved.randomState; this.spawnOrdinal = saved.spawnOrdinal; this.killRecharge = saved.killRecharge;
+    this.camps.restoreCleared(saved.clearedCamps); this.camps.restoreDefeated(saved.defeatedCampMembers); this.groundItems = saved.groundItems;
+    this.nextId = Math.max(1, ...saved.groundItems.map(item => item.id + 1));
+    this.roaming.reset(p.x, p.y);
+  }
+
+  revive(): void {
+    const saved = this.captureCheckpoint();
+    saved.x = this.options.startX!; saved.y = this.options.startY!; saved.dead = false;
+    saved.hp = this.player.maxHp; saved.mana = this.player.maxMana;
+    saved.flasks = PLAYER_ABILITIES.heal.charges; saved.healCooldown = 0;
+    saved.dodgeCharges = PLAYER_ABILITIES.dodge.charges; saved.dodgeRecharge = 0; saved.skillCooldowns = {};
+    this.restoreCheckpoint(saved);
   }
 
   /** Automatic population waits for the camera's current/pending visible envelope. */

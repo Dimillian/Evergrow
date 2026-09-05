@@ -77,24 +77,23 @@ test('explicit authored profiles cover one-hand, two-hand, bow, staff, and shiel
   assert.throws(() => generateItem(1, 1, 'chest', 'greatblade'), RangeError);
 });
 
-test('the starter sheet has neutral worn gear, a full independent outfit and five empty skill slots', () => {
+test('the starter sheet has neutral worn gear, an empty bag, independent leather outfit and five empty skill slots', () => {
   const first = createCharacterSheet(), other = createCharacterSheet();
-  assert.equal(first.inventory.length, 64); assert.equal(first.inventory.filter(Boolean).length, 8);
+  assert.equal(first.inventory.length, 64); assert.equal(first.inventory.filter(Boolean).length, 0);
   assert.deepEqual(first.skillSlots, [null, null, null, null, null]);
   assert.deepEqual(first.allocatedNodes, ['origin']);
   assert.equal(first.statPoints, 0); assert.equal(first.skillPoints, 0);
   assert.equal(first.equipped.weapon!.weapon!.damage, 24);
   assert.equal(first.equipped.weapon!.weapon!.baseAttacksPerSecond, 2);
   assert.equal(first.equipped.weapon!.weapon!.hands, 2); assert.equal(first.equipped.offhand, null);
-  assert.ok(first.inventory.some(item => item?.kind === 'shield'));
-  for (const attackKind of ['melee', 'arrow', 'bolt']) assert.ok(first.inventory.some(item => item?.weapon?.attackKind === attackKind));
   for (const slot of EQUIPMENT_SLOTS) if (first.equipped[slot]) assert.deepEqual(itemModifiers(first.equipped[slot]!), {});
   first.equipped.weapon!.weapon!.damage = 1000;
   first.equipped.chest!.appearance.base = '#000000';
-  first.inventory[0]!.name = 'Changed'; first.attributes.strength = 50;
+  assert.equal(first.equipped.chest!.appearance.style, 'leather');
+  first.inventory[0] = generateItem(888, 1); first.attributes.strength = 50;
   assert.equal(other.equipped.weapon!.weapon!.damage, 24); assert.equal(STARTING_SWORD.damage, 24);
   assert.notEqual(other.equipped.chest!.appearance.base, '#000000');
-  assert.notEqual(other.inventory[0]!.name, 'Changed'); assert.equal(other.attributes.strength, 10);
+  assert.equal(other.inventory[0], null); assert.equal(other.attributes.strength, 10);
 });
 
 test('implicit and explicit modifiers combine without mutating the item', () => {

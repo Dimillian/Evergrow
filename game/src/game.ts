@@ -1,3 +1,7 @@
+import { CharacterRepository } from './character-storage.ts';
+import { CharacterSession } from './character-session.ts';
+import { TitleScreen } from './title-screen.ts';
+import { cameraFollowTarget } from './camera.ts';
 import { InventoryPanel } from './inventory-panel.ts';
 import { SkillTreePanel } from './skill-tree-panel.ts';
 import { executeCharacterCommand, type CharacterCommand } from './character-commands.ts';
@@ -23,6 +27,10 @@ export class Game {
   renderer: Renderer;
   audio: GameAudio;
   private exploration: Exploration;
+  private titleScreen: TitleScreen;
+  private session: CharacterSession;
+  private nextAutosave = 0;
+  private saveError = '';
   private worldMap: WorldMap;
   private shell: GameShell;
   private inventoryPanel: InventoryPanel;
@@ -50,10 +58,14 @@ export class Game {
     try {
       this.renderer = new Renderer();
       this.audio = this.lifetime.own(new GameAudio());
-      this.exploration = this.lifetime.own(new Exploration(this.world));
+      this.exploration = new Exploration(this.world, { storage: null });
+      this.lifetime.defer(() => this.exploration.dispose());
+      let storage: Storage | null = null;
+      try { storage = localStorage; } catch { /* The title screen explains unavailable storage. */ }
+      this.session = new CharacterSession(new CharacterRepository(storage), this.world.seed, this.world.generationVersion);
       this.shell = this.lifetime.own(new GameShell(root, {
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
-        restart: () => this.start(), openMap: () => this.openMap(),
+        returnToTitle: () => this.returnToTitle(), openMap: () => this.openMap(),
         openCharacter: () => this.openCharacterPanel('character'), openSkills: () => this.openCharacterPanel('skills'),
       }));
       this.canvas = this.shell.canvas;
@@ -61,7 +73,8 @@ export class Game {
       const uiContext = this.uiCanvas.getContext('2d');
       if (!uiContext) throw new Error('The HUD requires a 2D canvas context.');
       this.uiContext = uiContext;
-      this.worldMap = this.lifetime.own(new WorldMap(this.world, this.exploration, this.shell.mapMount, () => this.closeMap()));
+      this.worldMap = new WorldMap(this.world, this.exploration, this.shell.mapMount, () => this.closeMap());
+      this.lifetime.defer(() => this.worldMap.dispose());
       this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
       this.inventoryPanel = this.lifetime.own(new InventoryPanel(this.shell.panelMount, {
         close: () => this.closeCharacterPanel(),
@@ -75,6 +88,10 @@ export class Game {
         allocate: id => this.characterAction({ type: 'allocateNode', id }),
         assign: (slot, skill) => this.characterAction({ type: 'assignSkill', slot, skill }),
       }));
+      this.titleScreen = this.lifetime.own(new TitleScreen(this.shell.titleMount, {
+        create: (index, name) => this.createCharacter(index, name),
+        continue: index => this.continueCharacter(index), remove: index => this.deleteCharacter(index),
+      }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
       try {
         const saved = JSON.parse(localStorage.getItem('evergrow-preferences') ?? 'null');
@@ -86,6 +103,7 @@ export class Game {
       this.resize();
       this.bind();
       this.showMenu();
+      this.titleScreen.open(this.session.repository.list());
       this.animation = requestAnimationFrame(this.frame);
     } catch (error) {
       try { this.lifetime.dispose(); } catch (cleanupError) { console.error(cleanupError); }
@@ -95,6 +113,7 @@ export class Game {
 
   private bind() {
     const signal = this.abort.signal;
+    window.addEventListener('pagehide', () => this.saveCharacter(), { signal });
     window.addEventListener('resize', () => this.resize(), { signal });
     window.addEventListener('blur', () => {
       this.mouse.present = false;
@@ -105,6 +124,7 @@ export class Game {
       if (document.hidden) {
         this.clearInput();
         if (this.phase === 'playing') this.pause();
+        else this.saveCharacter();
       }
       this.last = performance.now();
     }, { signal });
@@ -150,7 +170,7 @@ export class Game {
         || event.target instanceof HTMLButtonElement) return;
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
       if (event.repeat) return;
-      if (event.code === 'Enter' && (this.phase === 'ready' || this.phase === 'dead' || this.phase === 'paused')) {
+      if (event.code === 'Enter' && (this.phase === 'dead' || this.phase === 'paused')) {
         event.preventDefault();
         this.phase === 'paused' ? this.resume() : this.start();
         return;
@@ -222,20 +242,77 @@ export class Game {
     this.sim.clearInput();
   }
 
+  /** Defeat recovery keeps the character, allocations and loot; it never creates a new run. */
   start() {
-    if (this.disposed) return;
-    this.worldMap.close();
-    this.inventoryPanel.close(); this.skillPanel.close();
-    this.sim.reset();
+    if (this.disposed || this.phase !== 'dead' || !this.session.active) return;
+    this.sim.revive(); this.enterWorld(); this.saveCharacter();
+  }
+
+  private createCharacter(index: number, name: string) {
+    if (this.phase !== 'ready') return;
+    const fresh = new Simulation(this.world, { seed: this.world.seed, spawn: false });
+    if (!this.session.create(index, name, fresh.captureCheckpoint(), crypto.randomUUID(), Date.now())) {
+      this.titleScreen.message(this.session.error); return;
+    }
+    this.continueCharacter(index);
+  }
+
+  private continueCharacter(index: number) {
+    if (this.phase !== 'ready') return;
+    const record = this.session.load(index);
+    if (!record) { this.titleScreen.message(this.session.error); return; }
+    this.sim.restoreCheckpoint(record.checkpoint);
+    if (this.sim.player.dead) this.sim.revive();
+    this.sim.player.name = record.name;
+    this.worldMap.dispose(); this.exploration.dispose();
+    this.exploration = new Exploration(this.world, { characterId: record.id });
+    this.worldMap = new WorldMap(this.world, this.exploration, this.shell.mapMount, () => this.closeMap());
+    this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
+    this.worldMap.resize(); this.titleScreen.close(); this.saveError = '';
+    this.enterWorld(); this.saveCharacter();
+  }
+
+  private deleteCharacter(index: number) {
+    if (this.phase !== 'ready') return;
+    const slot = this.session.repository.read(index);
+    const result = this.session.repository.remove(index, slot.token);
+    if (!result.ok) { this.titleScreen.message(result.message); return; }
+    if (slot.record) {
+      try { localStorage.removeItem(`evergrow:exploration:1:${slot.record.worldVersion}:${slot.record.worldSeed}:${slot.record.id}`); } catch { /* Character deletion already committed; chart cleanup is best effort. */ }
+    }
+    this.titleScreen.open(this.session.repository.list(), index);
+  }
+
+  private enterWorld() {
+    this.sim.player.name = this.session.active?.record.name;
+    this.worldMap.close(); this.inventoryPanel.close(); this.skillPanel.close();
     this.renderer.reset();
+    const camera = cameraFollowTarget(this.sim.player);
+    this.renderer.cameraX = camera.x; this.renderer.cameraY = camera.y;
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
-    this.clearInput();
-    this.phase = 'playing';
-    this.showMenu();
-    this.canvas.focus();
+    this.clearInput(); this.phase = 'playing'; this.showMenu(); this.canvas.focus();
     void this.audio.unlock().catch(() => this.toast('Sound is unavailable in this browser.'));
-    this.audio.setEnabled(!this.muted);
-    this.last = performance.now();
+    this.audio.setEnabled(!this.muted); this.last = performance.now(); this.nextAutosave = this.last + 10_000;
+  }
+
+  private saveCharacter(): boolean {
+    if (!this.session?.active) return true;
+    const saved = this.session.save(this.sim.captureCheckpoint(), Date.now());
+    const message = saved ? '' : this.session.error;
+    if (message && message !== this.saveError) this.toast(message);
+    this.saveError = message;
+    this.shell.setSaveStatus(message || 'Character saved locally.', !saved);
+    this.exploration.save();
+    return saved;
+  }
+
+  private returnToTitle() {
+    if (!this.session.active || !this.saveCharacter()) return;
+    const index = this.session.active.index;
+    this.session.active = null;
+    this.worldMap.close(); this.inventoryPanel.close(); this.skillPanel.close();
+    this.clearInput(); this.phase = 'ready'; this.sim.reset(); this.renderer.reset();
+    this.showMenu(); this.titleScreen.open(this.session.repository.list(), index);
   }
 
   pause() {
@@ -243,6 +320,7 @@ export class Game {
     this.phase = 'paused';
     this.clearInput();
     this.showMenu();
+    this.saveCharacter();
   }
 
   resume() {
@@ -256,6 +334,7 @@ export class Game {
 
   private openMap() {
     if (this.phase !== 'playing') return;
+    this.saveCharacter();
     this.clearInput();
     this.phase = 'map';
     this.showMenu();
@@ -271,6 +350,7 @@ export class Game {
 
   private openCharacterPanel(panel: 'character' | 'skills') {
     if (!['playing', 'character', 'skills'].includes(this.phase)) return;
+    this.saveCharacter();
     this.clearInput(); this.inventoryPanel.close(); this.skillPanel.close();
     this.phase = panel; this.showMenu();
     if (panel === 'character') this.inventoryPanel.open(this.sim.player);
@@ -288,6 +368,7 @@ export class Game {
     if (!result.ok) { this.toast(result.message ?? 'Action unavailable.'); return; }
     if (this.phase === 'character') this.inventoryPanel.refresh(this.sim.player);
     if (this.phase === 'skills') this.skillPanel.refresh(this.sim.player);
+    this.saveCharacter();
   }
 
   private readInput(): Input {
@@ -321,7 +402,9 @@ export class Game {
         this.phase = 'dead';
         this.clearInput();
         this.showMenu();
+        this.saveCharacter();
       }
+      if (now >= this.nextAutosave) { this.saveCharacter(); this.nextAutosave = now + 10_000; }
     }
     this.renderer.pointerX = this.mouse.x;
     this.renderer.pointerY = this.mouse.y;
@@ -329,6 +412,10 @@ export class Game {
     const settings = {
       reducedMotion: this.reducedMotion, phase: this.phase, fps: this.fps, debug: this.debug,
     };
+    if (this.phase === 'ready') {
+      this.renderer.cameraX = -90 + (this.reducedMotion ? 0 : Math.sin(now / 24000) * 45);
+      this.renderer.cameraY = -180 + (this.reducedMotion ? 0 : Math.cos(now / 31000) * 25);
+    }
     this.renderer.render(this.sim, this.world, dt, settings);
     this.fx.render(this.renderer.canvas, this.renderer.hurt);
     const ui = this.uiContext;
@@ -337,12 +424,12 @@ export class Game {
     // Keep shared logical coordinates for drawing, aiming, and the HTML hit targets.
     ui.setTransform(this.uiCanvas.width / this.renderer.width, 0, 0,
       this.uiCanvas.height / this.renderer.height, 0, 0);
-    this.renderer.renderUI(ui, this.sim, this.world, settings);
+    if (this.phase !== 'ready') this.renderer.renderUI(ui, this.sim, this.world, settings);
     const p = this.sim.player, alpha = this.sim.interpolationAlpha;
     const mapPlayer = { x: p.prevX + (p.x - p.prevX) * alpha,
       y: p.prevY + (p.y - p.prevY) * alpha, angle: p.angle };
     if (this.phase !== 'ready') this.worldMap.update(mapPlayer, dt);
-    this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, now / 1000,
+    if (this.phase !== 'ready') this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, now / 1000,
       this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
         x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
         y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind,
@@ -378,6 +465,7 @@ export class Game {
 
   dispose() {
     if (this.disposed) return;
+    this.saveCharacter();
     this.disposed = true;
     this.clearInput();
     this.renderer.reset();

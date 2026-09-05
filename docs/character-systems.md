@@ -80,7 +80,7 @@ Generation is deterministic from seed, item level, optional kind, optional expli
 | Epic | 5% | 3 | 1.34 |
 | Legendary | 1% | 4 | 1.50 |
 
-These general-generator tier rolls apply to starter packs and content tools when no tier is supplied. Enemy loot uses separate rank-specific tier tables and explicitly passes the rolled tier; see below. Affix stats are sampled without repetition from 17 shared families; shields can also roll block chance and blocked-damage reduction. Tier affects both affix count and potency; legendary currently means a stronger generated tier, not a unique item-specific mechanic.
+These general-generator tier rolls apply to content tools when no tier is supplied. Enemy loot uses separate rank-specific tier tables and explicitly passes the rolled tier; see below. Affix stats are sampled without repetition from 17 shared families; shields can also roll block chance and blocked-damage reduction. Tier affects both affix count and potency; legendary currently means a stronger generated tier, not a unique item-specific mechanic.
 
 Generated item level is normalized to an integer within 1–1,000,000, the current numeric content bound. Required character level is `max(1, itemLevel − 2)`. Flat implicit stats and weapon damage scale using `(1 + (itemLevel − 1) × 0.13) × quality`. Flat affixes have individual level slopes and a deterministic 0.85–1.15 roll. Percentage affix slopes use the bounded effective growth `25n / (25 + n)`, where `n = itemLevel − 1`; ring damage implicits scale by `1 + 0.65 × effectiveGrowth / 25`. Raw damage/armor can continue growing without unbounded item-level increases to percentage budgets. The displayed item-power value is an informational score; it is not a second hidden damage multiplier.
 
@@ -131,7 +131,7 @@ Ground gear has a tier-colored marker, glow, and a crisp native-resolution name 
 
 ## Persistence and verification boundary
 
-Character level/XP, equipment, inventory, allocations, assignments, and ground loot are **run-local**. A new run or reload resets them. Exploration-chart persistence remains separate and unchanged. No character save format, migration, or backward-compatibility layer is introduced.
+Character progress now persists in eight browser-local slots. The character hall resumes saved gear, XP, allocations, assignments, resources, position and ground loot, with a separate explored chart per character. New characters have identical leather gear, a sword and an empty bag. See [character checkpoints](character-saves.md) for backup, validation, autosave and recovery rules. No migration or cloud sync is introduced.
 
 Code tests cover graph connectivity, stable unique nodes, themed cluster membership, spacing and bounds, curved hybrid routes, shortest-route costs, short skill paths, allocation rejection, modifier deduplication, item generation and scaling, inventory conservation, stat derivation, skill execution, and integration behavior. Strict browser/core TypeScript and production builds remain the verification gates. Static in-app review scenes are used for screenshots; they stage data without gameplay or save access. The user owns gameplay feel, visual feedback, and balance acceptance.
 

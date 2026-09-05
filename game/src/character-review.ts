@@ -57,7 +57,7 @@ if (profile) {
 refreshCharacter(p); p.hp = p.maxHp; p.mana = p.maxMana;
 const root = document.querySelector<HTMLElement>('#app')!;
 let selected = new URLSearchParams(location.search).get('panel') === 'skills' ? 'skills' : 'character';
-const shell = life.own(new GameShell(root, { play: () => {}, restart: () => {}, openMap: () => {},
+const shell = life.own(new GameShell(root, { play: () => {}, returnToTitle: () => {}, openMap: () => {},
   openCharacter: () => show('character'), openSkills: () => show('skills') }));
 const result = (action: ActionResult) => {
   if (!action.ok) shell.toast(action.message ?? 'Unavailable');

@@ -96,7 +96,7 @@ Fireball and Meteor burns deal a nominal 12% of their pre-critical direct-hit pa
 
 ## Boundaries and extension
 
-Gear, XP, attributes, allocations, assignments, statuses, and ground effects remain run-local. Reloading or starting a new run resets them. Exploration persistence stays separate. The expanded schools replace the earlier six-skill layout and IDs directly; no legacy save or skill adapter is retained.
+Gear, XP, attributes, allocations, assignments, resources and skill cooldowns persist in each character’s local save slot. Each character also has a separate explored map. Temporary statuses, projectiles and ground effects are rebuilt when continuing; see [Character saves](character-saves.md). The expanded schools replace the earlier six-skill layout and IDs directly; no legacy save or skill adapter is retained.
 
 This is a concrete initial catalog for testing. Element labels and status effects are implemented, but an elemental resistance/penetration model, ammunition, durability, skill ranks, respecs, trading, crafting, and persistent characters are not. Skills remain authored action recipes, rather than a general scripting system. Balance and combat feel remain for the user's playtesting.
 

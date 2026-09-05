@@ -1,3 +1,5 @@
+import { TitleScreen } from './title-screen.ts';
+import { CharacterRepository } from './character-storage.ts';
 import './ui-kit.css';
 import './style.css';
 import './typography.css';
@@ -160,8 +162,11 @@ function embeddedReview() {
   const mapPlayer = seedDiscovery(world, exploration);
   const shell = lifetime.own(new GameShell(root, {
     play: () => shell.toast('Static preview · no simulation is running'),
-    restart: () => selectView('ready'), openCharacter: () => {}, openSkills: () => {}, openMap: () => selectView('map'),
+    returnToTitle: () => selectView('ready'), openCharacter: () => {}, openSkills: () => {}, openMap: () => selectView('map'),
   }));
+  const title = lifetime.own(new TitleScreen(shell.titleMount, { create: () => shell.toast('Static preview · no character is saved'),
+    continue: () => {}, remove: () => {} }));
+  const emptySlots = new CharacterRepository({ getItem: () => null, setItem: () => {} }).list();
   const map = lifetime.own(new WorldMap(world, exploration, shell.mapMount, () => selectView('paused')));
   const foundation = foundationSheet(); root.querySelector('.game-shell')!.append(foundation);
   const display = document.createElement('canvas'), postfx = lifetime.own(new PostFX(display));
@@ -194,7 +199,7 @@ function embeddedReview() {
     postfx.render(renderer.canvas, view === 'dead' ? .25 : 0);
     ground!.drawImage(display, 0, 0);
     ui!.setTransform(shell.uiCanvas.width / renderer.width, 0, 0, shell.uiCanvas.height / renderer.height, 0, 0);
-    renderer.renderUI(ui!, simulation, world, settings);
+    if (view !== 'ready') renderer.renderUI(ui!, simulation, world, settings);
     shell.resizeControls(renderer.width, renderer.height);
     map.resize(); ready();
   }
@@ -203,6 +208,7 @@ function embeddedReview() {
     if (disposed) return;
     view = next; setURL(); map.close(); foundation.hidden = next !== 'components';
     shell.showMenu(next === 'components' ? 'map' : next, 17, 218, 'Deadwood');
+    if (next === 'ready') title.open(emptySlots); else title.close();
     if (next === 'map') map.open(mapPlayer);
     drawFrozenBackground();
   }

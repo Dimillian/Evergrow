@@ -49,7 +49,7 @@ Short control hints use `data-tooltip` (including the transparent HUD controls);
 
 ## Implemented surfaces
 
-Start, pause, and defeat windows share the markup builder in `game-menu.ts` and the kit's window/action primitives. The world map uses the same header, controls, POI cards, and footer language. Toasts share the status treatment. The Canvas HUD, enemy plate, and minimap share the palette while preserving their functional health, mana, skill, and map colors.
+The title screen uses `title-screen.ts` and the shared window/action primitives for its eight-slot character hall. Pause and defeat windows share `game-menu.ts`. Both use the shared theme and tooltip motion. The world map uses the same header, controls, POI cards, and footer language. Toasts share the status treatment. The Canvas HUD, enemy plate, and minimap share the palette while preserving their functional health, mana, skill, and map colors.
 
 Open the local [interface review](http://127.0.0.1:5173/ui.html) to compare real windows and component states in desktop and 390px previews. It draws a frozen procedural background, never advances gameplay, and uses memory-only map discovery. Example item slots demonstrate the presentation API; real inventory behavior is reviewed in `/character.html?panel=character`. The review route is development-only.
 
@@ -78,3 +78,5 @@ Frozen development reviews at `/character.html?loadout=shield`, `?loadout=dual`,
 Enemy plates show source level and rank beside their health readout, preserving the compact shared frame. Veteran/elite accents use the shared rank colors. Minimap and world-map location labels show area level or Sanctuary; hovering revealed ground can inspect its area level, while fogged terrain reveals no metadata. Character armor reduction is explicitly an estimate against the character's own level; actual combat uses attacker level.
 
 The development-only `/progression.html` study composes shared windows, stat rows, native controls, tier colors and procedural item icons into a scrollable balance reference. All displayed calculations consume runtime modules. Keep probabilities conditional where appropriate, label hypothetical ranks and benchmark gear, and distinguish expected rewards from guaranteed outcomes. This study stays outside gameplay menus and production entrypoints.
+
+The character hall combines the live procedural forest background with the shared equipped portrait, compact slot cards, explicit delete confirmation, level/power metadata, and a required name field for creation. The static `/title.html` preview uses memory-only saves.

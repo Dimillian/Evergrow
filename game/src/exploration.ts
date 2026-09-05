@@ -16,6 +16,7 @@ export interface ExplorationOptions {
   storage?: ExplorationStorage | null;
   generationVersion?: string | number;
   saveDelayMs?: number;
+  characterId?: string;
 }
 function population(value: number) {
   value -= (value >>> 1) & 0x55555555;
@@ -51,7 +52,7 @@ export class Exploration {
   constructor(world: ExplorationWorld, options: ExplorationOptions = {}) {
     this.world = world;
     this.generationVersion = String(options.generationVersion ?? world.generationVersion ?? 1);
-    this.storageKey = `evergrow:exploration:1:${this.generationVersion}:${world.seed}`;
+    this.storageKey = `evergrow:exploration:1:${this.generationVersion}:${world.seed}${options.characterId ? `:${options.characterId}` : ''}`;
     this.storage = options.storage === undefined ? defaultStorage() : options.storage;
     const delay = options.saveDelayMs ?? 1800;
     this.saveDelay = Math.max(100, Math.min(10_000, Number.isFinite(delay) ? delay : 1800));

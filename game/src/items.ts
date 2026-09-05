@@ -147,20 +147,20 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
   return item;
 }
 
-/** Starter pieces preserve the current appearance without quietly adding combat bonuses. */
+/** Every new character receives the same modest kit and an empty bag. */
 export function createCharacterSheet(): CharacterSheet {
   const equipped = Object.fromEntries(EQUIPMENT_SLOTS.map(slot => [slot, null])) as CharacterSheet['equipped'];
   const starterPieces: readonly [EquipmentSlot, number][] = [['weapon', 1], ['head', 31], ['chest', 17], ['gloves', 23], ['legs', 59], ['boots', 11], ['cloak', 71]];
   for (const [slot, seed] of starterPieces) {
     const item = generateItem(seed, 1, slot as ItemKind);
-    const wornNames: Partial<Record<EquipmentSlot, string>> = { weapon: 'Longsword', head: 'Crown Helm', chest: 'Warden Plate',
-      gloves: 'Gauntlets', legs: 'Greaves', boots: 'Longboots', cloak: 'Mantle' };
+    const wornNames: Partial<Record<EquipmentSlot, string>> = { weapon: 'Longsword', head: 'Leather Hood', chest: 'Leather Jerkin',
+      gloves: 'Leather Gloves', legs: 'Leather Trousers', boots: 'Leather Boots', cloak: 'Travel Cloak' };
     item.baseName = wornNames[slot]!;
     item.id = `starter-${slot}`; item.name = slot === 'weapon' ? STARTING_SWORD.name : `Worn ${item.baseName}`;
     item.tier = 'common'; item.implicit = {}; item.affixes = []; item.power = 1;
-    item.appearance = { ...PALETTES[0] };
+    item.appearance = { base: '#655345', shadow: '#2c2826', edge: '#ac9470', trim: '#9e8156', style: 'leather' };
     if (slot === 'boots') item.appearance = { base: '#5c4c41', shadow: '#292b30', edge: '#a79873', trim: '#b18b58', style: 'leather' };
-    if (slot === 'cloak') item.appearance = { base: '#92364e', shadow: '#4e2a3e', edge: '#cf5e69', trim: '#d4a070', style: 'leather' };
+    if (slot === 'cloak') item.appearance = { base: '#555e50', shadow: '#292f2d', edge: '#89937c', trim: '#a28c64', style: 'leather' };
     if (slot === 'weapon') {
       item.weapon = { ...STARTING_SWORD, visual: { ...STARTING_SWORD.visual } };
       item.appearance = { base: STARTING_SWORD.visual.metal, shadow: STARTING_SWORD.visual.grip,
@@ -169,13 +169,6 @@ export function createCharacterSheet(): CharacterSheet {
     equipped[slot] = item;
   }
   const inventory: CharacterSheet['inventory'] = Array.from({ length: INVENTORY_CAPACITY }, () => null);
-  const startingPack: readonly [ItemKind, string?][] = [
-    ['weapon', 'longsword'], ['chest'], ['ring'], ['boots'], ['shield', 'iron-buckler'],
-    ['weapon', 'thorn-shortbow'], ['weapon', 'ember-staff'], ['weapon', 'rondel-dagger'],
-  ];
-  startingPack.forEach(([kind, profileId], index) => {
-    inventory[index] = generateItem(4201 + index * 313, 1, kind, profileId);
-  });
   return { attributes: { strength: 10, dexterity: 10, intelligence: 10, vitality: 10 },
     statPoints: 0, skillPoints: 0, allocatedNodes: ['origin'], inventory, equipped, skillSlots: Array.from({ length: 5 }, () => null) };
 }

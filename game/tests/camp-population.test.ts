@@ -309,3 +309,19 @@ test('an engaged member protects the whole hidden camp from priority eviction an
     assert.equal(sim.kills, 0); assert.equal(sim.player.xp, 0);
   }
 });
+
+test('saved camp casualties do not respawn or duplicate rewards when the rest of a garrison reloads', () => {
+  const first = harness(), camp = blueprint(); first.update([camp]);
+  const killed = first.sim.enemies[0]; killed.hp = 0; killed.state = 'dead';
+  const second = harness(); second.ledger.restoreDefeated(first.ledger.defeatedMembers());
+  assert.equal(second.ledger.getState(camp.id), 'active'); assert.equal(second.ledger.recordedCount, 1);
+  second.update([camp]);
+  assert.equal(second.sim.enemies.length, 2);
+  assert.ok(second.sim.enemies.every(enemy => enemy.campMemberId !== killed.campMemberId));
+  assert.equal(second.sim.kills, 0); assert.equal(second.sim.groundItems.length, 0);
+  for (const enemy of second.sim.enemies) { enemy.hp = 0; enemy.state = 'dead'; }
+  assert.equal(second.ledger.getState(camp.id), 'cleared');
+  assert.equal(second.ledger.defeatedMembers()[camp.id].length, 3);
+  const third = harness(); third.ledger.restoreCleared(second.ledger.clearedIds()); third.ledger.restoreDefeated(second.ledger.defeatedMembers());
+  third.update([camp]); assert.equal(third.sim.enemies.length, 0); assert.equal(third.ledger.getState(camp.id), 'cleared');
+});

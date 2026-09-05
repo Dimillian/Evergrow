@@ -9,7 +9,7 @@
     "src/combat-damage.ts", "src/combat-rewards.ts", "src/combat-status.ts", "src/ground-effects.ts", "src/skill-execution-content.ts",
     "src/roaming-encounters.ts", "src/spawn-visibility.ts",
     "src/equipment.ts", "src/weapon-content.ts", "src/projectile-combat.ts", "src/game-input.ts", "src/lifetime.ts",
-    "src/character-commands.ts", "src/character.ts", "src/character-stats.ts", "src/items.ts", "src/inventory.ts",
+    "src/character-session.ts", "src/character-summary.ts", "src/character-save.ts", "src/character-storage.ts", "src/character-commands.ts", "src/character.ts", "src/character-stats.ts", "src/items.ts", "src/inventory.ts",
     "src/skill-tree-routes.ts", "src/skill-combat.ts", "src/skill-content.ts", "src/skill-tree.ts",
     "src/biomes.ts", "src/biome-props.ts", "src/settlements.ts", "src/road-shape.ts", "src/world-query.ts",
     "src/player-arm-rig.ts", "src/camera.ts", "src/exploration-save.ts"

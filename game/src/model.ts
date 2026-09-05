@@ -99,6 +99,7 @@ export interface Equipment {
 }
 
 export interface Player {
+  name?: string;
   x: number;
   y: number;
   /** Position at the beginning of the most recently completed simulation tick. */

@@ -2,9 +2,8 @@ import type { Player } from './model.ts';
 import type { Attribute, EquipmentSlot, Item, ItemTier, StatKey } from './character-types.ts';
 import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS, TIER_COLORS, TIER_NAMES, STAT_LABELS, itemModifiers, formatStatValue } from './items.ts';
 import { itemFitsSlot } from './inventory.ts';
-import { itemIconSVG, outfitFromEquipment } from './item-art.ts';
-import { drawHumanoid, getPlayerSwordTip } from './art.ts';
-import { playerPose } from './character-pose.ts';
+import { itemIconSVG } from './item-art.ts';
+import { drawCharacterPortrait } from './character-portrait.ts';
 import { deriveAttackStats } from './equipment.ts';
 import { xpForNextLevel } from './progression.ts';
 import { escapeUI, uiIcon, trapDialogFocus } from './ui-components.ts';
@@ -148,6 +147,7 @@ export class InventoryPanel {
       cell.setAttribute('aria-label', item ? `${item.name}, ${TIER_NAMES[item.tier]}, item level ${item.itemLevel}${location.type === 'equipment' ? `, equipped in ${SLOT_NAMES[location.slot]}` : ''}${item.requiredLevel > player.level ? `, requires level ${item.requiredLevel}` : ''}` : location.type === 'equipment' ? `${SLOT_NAMES[location.slot]}, empty` : `Empty inventory slot ${location.index + 1}`);
     }
     const sheet = player.character, stats = player.derived;
+    this.text('#character-title', player.name ?? 'Wayfarer');
     this.text('[data-level]', `Level ${player.level}`);
     this.text('[data-equipped-count]', `${EQUIPMENT_SLOTS.filter(slot => sheet.equipped[slot]).length} / ${EQUIPMENT_SLOTS.length}`);
     this.text('[data-capacity]', `${sheet.inventory.filter(Boolean).length} / ${sheet.inventory.length}`);
@@ -401,21 +401,7 @@ export class InventoryPanel {
     if (ctx) {
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const time = reduced ? 3 : performance.now() / 1000;
-      const pose = playerPose(this.player, time, null, 0);
-      pose.angle = this.facing; pose.attackAngle = this.facing; pose.moving = 0;
-      pose.hitFlash = 0; pose.impact = 0; pose.cast = 0; pose.dodging = false; pose.dead = false;
-      pose.outfit = outfitFromEquipment(this.player.character);
-      ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      ctx.save(); ctx.translate(280, 500);
-      const glow = ctx.createRadialGradient(0, -135, 10, 0, -135, 225);
-      glow.addColorStop(0, '#83adc917'); glow.addColorStop(1, '#83adc900');
-      ctx.fillStyle = glow; ctx.fillRect(-240, -430, 480, 540);
-      ctx.fillStyle = '#02070cb0'; ctx.beginPath(); ctx.ellipse(0, 12, 77, 16, 0, 0, Math.PI * 2); ctx.fill();
-      const tip = getPlayerSwordTip(pose);
-      // A closer portrait keeps the full blade visible through all eight facings.
-      const scale = Math.min(6.8, 240 / Math.max(22, Math.abs(tip.x) + 6),
-        460 / Math.max(50, -tip.y + 6), 160 / Math.max(20, tip.y + 6));
-      ctx.scale(scale, scale); drawHumanoid(ctx, pose); ctx.restore();
+      drawCharacterPortrait(ctx, this.player, time, this.facing, this.canvas.width, this.canvas.height);
     }
     this.animation = requestAnimationFrame(this.animate);
   };

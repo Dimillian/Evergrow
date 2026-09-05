@@ -7,4 +7,7 @@ Captured in the Codex in-app browser on September 5, 2026, using frozen review s
 - `skill-atlas.png`: `/character.html?panel=skills&zoom=overview`, including bridges at all five terraces.
 - `character.png`: `/character.html?panel=character`, staged level-nine equipment with the 64-slot bag and compact header.
 
-The interface captures use the browser's default 1280×720 viewport. The world image uses the review's native 1600×1100 export.
+- `title-character-hall.png`: `/title.html`, three staged characters in the forest hall, using memory-only save slots.
+- `title-new-character.png`: `/title.html?empty`, the identical starter loadout and empty roster.
+
+The skill and inventory captures use the browser's default 1280×720 viewport. Title captures use the current in-app browser viewport. The world image uses the review's native 1600×1100 export.

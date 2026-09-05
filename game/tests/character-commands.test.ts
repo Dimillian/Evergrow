@@ -1,3 +1,4 @@
+import { stockTestGear } from './fixtures/character-pack.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Simulation } from '../src/simulation.ts';
@@ -73,7 +74,7 @@ test('skill assignment commands preserve cooldowns and reject locked or invalid 
 });
 
 test('bag commands preserve item identities, and failed equip requirements leave every projection intact', () => {
-  const player = make(); const first = player.character.inventory[0], second = player.character.inventory[1];
+  const player = make(); stockTestGear(player.character); const first = player.character.inventory[0], second = player.character.inventory[1];
   assert.ok(executeCharacterCommand(player, { type: 'moveItem', from: 0, to: 1 }).ok);
   assert.equal(player.character.inventory[0], second); assert.equal(player.character.inventory[1], first);
   player.character.inventory[47] = generateItem(194, 20, 'weapon', 'longsword');

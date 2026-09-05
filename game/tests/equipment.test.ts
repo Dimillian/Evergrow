@@ -1,3 +1,4 @@
+import { stockTestGear } from './fixtures/character-pack.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBaseStats, createStartingEquipment, deriveAttackStats, getGripLength, getSupportGripOffset, getWeaponGrip,
@@ -69,6 +70,7 @@ test('weapon profile selects the authored grip and attack or spell scaling indep
 test('refresh projects shield and dual weapon loadouts from the character sheet', () => {
   const sim = new Simulation({ blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) }, { spawn: false });
   const player = sim.player;
+  stockTestGear(player.character);
   assert.ok(equipItem(player.character, 0, 1).ok); assert.ok(equipItem(player.character, 4, 1).ok);
   refreshCharacter(player);
   assert.equal(player.equipment.mainHand.family, 'sword');

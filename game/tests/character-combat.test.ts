@@ -244,7 +244,7 @@ test('starting a new run resets character allocations, points, inventory changes
   assert.equal(sim.player.character.skillPoints, 0); assert.equal(sim.player.character.statPoints, 0);
   assert.deepEqual(sim.player.character.allocatedNodes, ['origin']);
   assert.deepEqual(sim.player.character.skillSlots, [null, null, null, null, null]);
-  assert.equal(sim.player.character.inventory.filter(Boolean).length, 8);
+  assert.equal(sim.player.character.inventory.filter(Boolean).length, 0);
   assert.equal(sim.groundItems.length, 0);
   assert.deepEqual(sim.player.skillCooldowns, {});
 });
