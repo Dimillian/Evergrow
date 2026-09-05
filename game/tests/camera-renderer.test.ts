@@ -41,7 +41,7 @@ class RecordingContext {
   fillText(value: string) { this.texts.push({ value, font: this.font, matrix: { ...this.matrix } }); }
   createLinearGradient() { return { addColorStop() {} }; }
   createRadialGradient() { return { addColorStop() {} }; }
-  clearRect() {} fillRect() {} strokeRect() {} beginPath() {} closePath() {}
+  clearRect() {} fillRect() {} strokeRect() {} rect() {} beginPath() {} closePath() {}
   moveTo() {} lineTo() {} quadraticCurveTo() {} bezierCurveTo() {} arc() {} ellipse() {}
   fill() {} stroke() {} clip() {} setLineDash() {}
 }

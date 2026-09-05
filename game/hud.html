@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b1114" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Evergrowing · HUD review</title>
+    <link rel="icon" href="data:," />
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 24px; color: #ded4ba; background: #090f14; }
+      main { max-width: 780px; margin: auto; }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
+      h1 { margin: 0 0 5px; font-size: 28px; font-weight: 500; }
+      p { margin: 0; color: #90a49f; font-size: 15px; }
+      a { flex-shrink: 0; padding: 10px 16px; border: 1px solid #756746; color: #ddcba0; text-decoration: none; background: #192322; }
+      a:hover { background: #26312c; } a:focus-visible { outline: 2px solid #d9c394; outline-offset: 3px; }
+      canvas { display: block; width: 100%; height: auto; }
+      footer { margin-top: 12px; }
+      @media (max-width: 560px) { body { padding: 14px; } header { align-items: flex-start; } h1 { font-size: 24px; } p { font-size: 13px; } a { padding: 9px 12px; } }
+    </style>
+  </head>
+  <body>
+    <main id="hud-review" aria-busy="true">
+      <header><div><h1>Floating HUD</h1><p>Three frozen resource states · native display resolution</p></div><a id="save-png" hidden>Save PNG</a></header>
+      <canvas id="hud-sheet" role="img" aria-label="The game's floating HUD in healthy, damaged, and depleted resource states."></canvas>
+      <footer><p id="review-status" role="status">Preparing HUD review…</p></footer>
+    </main>
+    <script type="module" src="/src/hud-review.ts"></script>
+  </body>
+</html>
