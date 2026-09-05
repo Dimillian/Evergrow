@@ -16,7 +16,7 @@ export interface SkillAtlasView {
 const TAU = Math.PI * 2;
 const edges = SKILL_TREE.edges.map(edge => ({ ...edge, a: SKILL_NODES.get(edge.from)!, b: SKILL_NODES.get(edge.to)! }));
 const edgeKey = (a: string, b: string) => a < b ? `${a}|${b}` : `${b}|${a}`;
-export const skillNodeRadius = (node: SkillNode) => node.kind === 'origin' ? 27 : node.kind === 'major' ? 24 : node.kind === 'notable' ? 14 : node.role === 'travel' ? 5.5 : 8;
+export const skillNodeRadius = (node: SkillNode) => node.kind === 'origin' ? 27 : node.kind === 'major' ? 24 : node.kind === 'notable' ? 14 : node.role === 'choice' ? 12 : node.role === 'travel' ? 5.5 : 8;
 
 // Keep engravings readable between overview and close inspection without oversized medallions.
 export const skillNodeScreenRadius = (node: SkillNode, zoom: number) =>
@@ -42,9 +42,9 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     if (x + r * 2 < 0 || x - r * 2 > w || y + r * 2 < 0 || y - r * 2 > h) continue;
     const color = SKILL_DOMAIN_COLORS[cluster.domain];
     const haze = c.createRadialGradient(x, y, 0, x, y, r * 1.8);
-    haze.addColorStop(0, color + '0b'); haze.addColorStop(1, color + '00');
+    haze.addColorStop(0, color + '12'); haze.addColorStop(1, color + '00');
     c.fillStyle = haze; c.fillRect(x - r * 1.8, y - r * 1.8, r * 3.6, r * 3.6);
-    if (z > .28) {
+    if (z > .06) {
       c.strokeStyle = color + '16'; c.lineWidth = .6;
       c.beginPath(); c.arc(x, y, r * .78, -.3, .9); c.stroke();
       c.beginPath(); c.arc(x, y, r * .82, Math.PI - .25, Math.PI + .45); c.stroke();
@@ -100,6 +100,7 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     if (x < -radius - 10 || x > w + radius + 10 || y < -radius - 10 || y > h + radius + 10) continue;
     const owned = view.allocated.has(node.id), reachable = view.reachable.has(node.id);
     const selected = view.selected === node.id, hover = view.hovered === node.id;
+    if (z < .16 && node.role === 'travel' && !owned && !reachable && !selected && !hover && !routeNodes.has(node.id)) continue;
     const major = node.kind === 'major' || node.kind === 'origin', notable = node.kind === 'notable';
     const color = SKILL_DOMAIN_COLORS[node.domain];
     c.globalAlpha = owned || selected || hover || routeNodes.has(node.id) || view.matches(node) ? 1 : .16;
@@ -131,6 +132,13 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     }
   }
   c.globalAlpha = 1;
+  // Overview preserves the three disciplines and their silhouette; local labels take over as you approach.
+  if (z < .25) for (const domain of ['Might', 'Cunning', 'Arcana'] as const) {
+    const clusters = SKILL_TREE.clusters.filter(cluster => cluster.domain === domain);
+    const x = clusters.reduce((sum, cluster) => sum + cluster.x, 0) / clusters.length;
+    const y = clusters.reduce((sum, cluster) => sum + cluster.y, 0) / clusters.length;
+    label(domain.toUpperCase(), sx(x * 1.12), sy(y * 1.12), SKILL_DOMAIN_COLORS[domain], 15);
+  }
   const priorityNodes = SKILL_TREE.nodes.filter(node => node.kind === 'major' || node.kind === 'origin' || node.id === view.selected);
   for (const node of priorityNodes) {
     if (z < .15 || z < .36 && node.id !== view.selected) continue;

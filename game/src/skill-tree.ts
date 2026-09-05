@@ -10,7 +10,7 @@ export interface SkillNode {
   readonly bonuses: Readonly<StatModifiers>;
   readonly skill?: SkillId;
   readonly cluster?: string;
-  readonly role?: 'travel' | 'cluster';
+  readonly role?: 'travel' | 'cluster' | 'choice';
   readonly neighbors: readonly string[];
 }
 export interface SkillEdge { readonly from: string; readonly to: string; readonly control?: Readonly<Point>; }
@@ -93,7 +93,7 @@ function randomSource(): () => number {
 
 function buildTree() {
   const random = randomSource(), nodes: MutableNode[] = [], edges: SkillEdge[] = [];
-  const byId = new Map<string, MutableNode>(), blueprints: Blueprint[] = [], regionTrunks: number[][] = [];
+  const byId = new Map<string, MutableNode>(), blueprints: Blueprint[] = [];
   const add = (node: Omit<MutableNode, 'neighbors'>): MutableNode => {
     const result = { ...node, bonuses: Object.freeze({ ...node.bonuses }), neighbors: [] as string[] };
     nodes.push(result); byId.set(result.id, result); return result;
@@ -111,43 +111,28 @@ function buildTree() {
   add({ id: SKILL_TREE_ORIGIN, x: 0, y: 0, kind: 'origin', domain: 'Might', name: 'The First Star',
     description: 'Three paths leave the same beginning. Follow a specialty, circle back, or cross into another discipline.', bonuses: {} });
 
-  // Authored winding arteries establish a clear macro structure. Other clusters leave their corridors open.
+  // Five staggered terraces form three readable petals, with deliberate space between specialties.
+  const terraceCounts = [3, 6, 10, 14, 17];
   for (const [regionIndex, region] of REGIONS.entries()) {
-    const trunk: number[] = [];
-    for (let station = 0; station < 5; station++) {
-      const radius = [660, 1400, 2170, 2950, 3690][station];
-      const angle = region.angle + Math.sin(station * 1.6 + regionIndex * .9) * .14;
-      trunk.push(blueprints.length);
-      blueprints.push({ id: `${region.domain.toLowerCase()}:artery:${station}`, ...polar(radius, angle), domain: region.domain,
-        name: `${FAMILIES[region.domain][station].name} · ${EPITHETS[station]}`, family: FAMILIES[region.domain][station],
-        radius: 108 + random() * 22, rotation: random() * TAU, shape: station % 4, count: 11 + station % 3 });
+    for (const [terrace, count] of terraceCounts.entries()) {
+      for (let slot = 0; slot < count; slot++) {
+        const fraction = count === 1 ? 0 : slot / (count - 1) - .5;
+        const angle = region.angle + fraction * 1.42 + Math.sin(terrace * 1.7 + regionIndex) * .025;
+        const radius = [790, 1370, 2000, 2670, 3370][terrace] + Math.cos(fraction * TAU) * 48 + Math.sin(slot * 2.4) * 20;
+        const familyIndex = terrace === 0 ? (region.domain === 'Arcana' ? [0, 1, 2][slot] : [0, 1, 6][slot]) : (slot + terrace * 2) % FAMILIES[region.domain].length;
+        const family = FAMILIES[region.domain][familyIndex];
+        blueprints.push({ id: `${region.domain.toLowerCase()}:terrace:${terrace}:${slot}`, ...polar(radius, angle), domain: region.domain,
+          name: `${family.name} · ${EPITHETS[(slot + terrace) % EPITHETS.length]}`, family,
+          radius: 118 + random() * 8, rotation: angle + Math.PI / 2 + Math.sin(slot) * .16,
+          shape: (slot + terrace) % 4, count: 12 + (slot + terrace) % 3 });
+      }
     }
-    regionTrunks.push(trunk);
-  }
-  for (const [regionIndex, region] of REGIONS.entries()) {
-    let accepted = 0;
-    for (let attempt = 0; accepted < 45 && attempt < 16000; attempt++) {
-      const radial = 680 + Math.sqrt(random()) * 3250;
-      const angle = region.angle + (random() - .5) * 1.89 + Math.sin(radial / 840 + regionIndex) * .085;
-      const p = polar(radial, angle), radius = 91 + random() * 42;
-      if (blueprints.some(other => distance(p, other) < radius + other.radius + 160)) continue;
-      if (regionTrunks.some(trunk => trunk.some((index, station) => {
-        const a = station === 0 ? polar(350, REGIONS[regionTrunks.indexOf(trunk)].angle) : blueprints[trunk[station - 1]];
-        return segmentDistance(p, a, blueprints[index]) < radius + 80;
-      }))) continue;
-      const family = FAMILIES[region.domain][Math.floor(random() * FAMILIES[region.domain].length)];
-      blueprints.push({ id: `${region.domain.toLowerCase()}:grove:${accepted}`, ...p, domain: region.domain,
-        name: `${family.name} · ${EPITHETS[accepted % EPITHETS.length]}`, family, radius, rotation: random() * TAU,
-        shape: Math.floor(random() * 4), count: 10 + Math.floor(random() * 5) });
-      accepted++;
-    }
-    if (accepted < 45) throw new Error(`Could not place the ${region.domain} constellations.`);
   }
 
   const members = new Map<string, MutableNode[]>();
   for (const cluster of blueprints) {
     const group: MutableNode[] = [];
-    const count = cluster.shape === 3 ? Math.min(cluster.count, 9) : cluster.shape === 2 ? Math.min(cluster.count, 13) : cluster.count;
+    const count = cluster.shape === 3 ? 9 + cluster.count % 2 : cluster.shape === 2 ? Math.min(cluster.count, 13) : cluster.count;
     const local = (x: number, y: number) => ({ x: cluster.x + x * Math.cos(cluster.rotation) - y * Math.sin(cluster.rotation),
       y: cluster.y + x * Math.sin(cluster.rotation) + y * Math.cos(cluster.rotation) });
     const put = (p: Point, notable: boolean) => {
@@ -159,20 +144,26 @@ function buildTree() {
         bonuses: notable ? cluster.family.notable : cluster.family.minor }));
     };
     if (cluster.shape < 2) {
-      // Unequal ellipses and open crescents have a clear route around a notable, rather than a hub and spokes.
-      const span = cluster.shape === 0 ? TAU : Math.PI * 1.62;
-      for (let i = 0; i < cluster.count; i++) {
-        const angle = -.82 * Math.PI + i / (cluster.shape === 0 ? cluster.count : cluster.count - 1) * span;
-        const r = cluster.radius * (1 + .06 * Math.sin(angle * 3));
-        put(local(Math.cos(angle) * r, Math.sin(angle) * r * .77), i === Math.floor(cluster.count * .53));
+      // A focal notable with a looped crown: three entrances avoid paying to traverse half a circle.
+      put(local(0, 0), true);
+      const ringCount = cluster.count - 1;
+      const span = cluster.shape === 0 ? TAU : Math.PI * 1.65;
+      for (let i = 0; i < ringCount; i++) {
+        const angle = -.825 * Math.PI + i / (cluster.shape === 0 ? ringCount : ringCount - 1) * span;
+        const r = cluster.radius * (1 + .07 * Math.cos(angle * 2));
+        put(local(Math.cos(angle) * r, Math.sin(angle) * r * .8), false);
       }
-      for (let i = 1; i < group.length; i++) {
+      for (let i = 2; i < group.length; i++) {
         const a = group[i - 1], b = group[i], mid = mix(a, b, .5);
-        link(a.id, b.id, { x: cluster.x + (mid.x - cluster.x) * 1.045, y: cluster.y + (mid.y - cluster.y) * 1.045 });
+        link(a.id, b.id, { x: cluster.x + (mid.x - cluster.x) * 1.05, y: cluster.y + (mid.y - cluster.y) * 1.05 });
       }
       if (cluster.shape === 0) {
-        const a = group[0], b = group[group.length - 1], mid = mix(a, b, .5);
+        const a = group[1], b = group[group.length - 1], mid = mix(a, b, .5);
         link(a.id, b.id, { x: cluster.x + (mid.x - cluster.x) * 1.05, y: cluster.y + (mid.y - cluster.y) * 1.05 });
+      }
+      for (const index of [1, 1 + Math.floor(ringCount / 3), 1 + Math.floor(ringCount * 2 / 3)]) {
+        const a = group[0], b = group[index], mid = mix(a, b, .5);
+        link(a.id, b.id, { x: mid.x + (b.y - a.y) * .08, y: mid.y - (b.x - a.x) * .08 });
       }
     } else {
       // Three curved fingers create fans; a two-sided bough gives an asymmetrical branching silhouette.
@@ -199,7 +190,6 @@ function buildTree() {
   const routes: Route[] = [], parents = blueprints.map((_, index) => index);
   const root = (index: number): number => { while (parents[index] !== index) { parents[index] = parents[parents[index]]; index = parents[index]; } return index; };
   const join = (a: number, b: number) => { parents[root(a)] = root(b); routes.push({ a, b }); };
-  for (const trunk of regionTrunks) for (let i = 1; i < trunk.length; i++) join(trunk[i - 1], trunk[i]);
   const candidates: Array<Route & { length: number }> = [];
   for (let a = 0; a < blueprints.length; a++) for (let b = a + 1; b < blueprints.length; b++) {
     const length = distance(blueprints[a], blueprints[b]);
@@ -212,13 +202,13 @@ function buildTree() {
       && crosses(blueprints[a], blueprints[b], blueprints[route.a], blueprints[route.b]));
   for (const { a, b } of candidates) if (root(a) !== root(b) && clear(a, b)) join(a, b);
   if (parents.some((_, index) => root(index) !== root(0))) throw new Error('Skill atlas roads must form a connected graph.');
-  // Sparse short crosslinks create useful circuit routes; shared borders receive extra hybrid connections.
+  // Local crosslinks create circuits between nearby specialties, with extra hybrid connections at shared borders.
   const degree = blueprints.map((_, index) => routes.filter(route => route.a === index || route.b === index).length);
   let loops = 0;
   for (const { a, b, length } of candidates) {
-    if (loops >= 47) break;
-    if (length > 1140 || degree[a] >= 4 || degree[b] >= 4 || routes.some(route => route.a === a && route.b === b || route.a === b && route.b === a)) continue;
-    if (blueprints[a].domain === blueprints[b].domain && random() > .4) continue;
+    if (loops >= 110) break;
+    if (length > 1140 || degree[a] >= 5 || degree[b] >= 5 || routes.some(route => route.a === a && route.b === b || route.a === b && route.b === a)) continue;
+    if (blueprints[a].domain === blueprints[b].domain && random() > .85) continue;
     if (!clear(a, b)) continue;
     routes.push({ a, b }); degree[a]++; degree[b]++; loops++;
   }
@@ -236,7 +226,7 @@ function buildTree() {
       }
       if (valid) { control = candidate; break; }
     }
-    const count = Math.max(1, Math.round(length / 55));
+    const count = Math.max(1, Math.min(3, Math.round(length / 180)));
     let previous = a, previousT = 0;
     for (let step = 1; step <= count; step++) {
       const t = step / count, p = quadratic(a, control, b, t);
@@ -251,38 +241,87 @@ function buildTree() {
   };
   for (const { a, b } of routes) {
     const from = blueprints[a], to = blueprints[b];
-    road(`road:${a}:${b}`, nearest(from, to), nearest(to, from), from.domain, to.domain, [from.id, to.id]);
-  }
-  for (const [index, region] of REGIONS.entries()) {
-    const first = travel(`path:${region.domain.toLowerCase()}:awakening`, polar(76, region.angle + .11), region.domain);
-    const threshold = travel(`path:${region.domain.toLowerCase()}:threshold`, polar(165, region.angle - .06), region.domain);
-    link(SKILL_TREE_ORIGIN, first.id, polar(37, region.angle + .22));
-    link(first.id, threshold.id, polar(124, region.angle + .06));
-    const schoolStarts: MutableNode[] = [];
-    for (const school of region.schools) {
-      const angle = region.angle + school.angle;
-      const entrance = add({ id: `school:${school.id}`, ...polar(228, angle), kind: 'minor', domain: region.domain, role: 'travel',
-        name: school.name, description: `Enter ${school.name.toLowerCase()}. Learn ${school.skills.map(skill => SKILL_DEFINITIONS[skill].name).join(' and ')}.`,
-        bonuses: { [region.attribute]: 2 } });
-      schoolStarts.push(entrance);
-      link(threshold.id, entrance.id, polar(198, region.angle + school.angle * .55));
-      let previous = entrance;
-      for (const [stage, skill] of school.skills.entries()) {
-        const definition = SKILL_DEFINITIONS[skill];
-        const major = add({ id: `skill:${skill}`, ...polar(330 + stage * 137, angle + stage * Math.sign(school.angle || 1) * .055), kind: 'major',
-          domain: definition.domain, name: definition.name, description: `${definition.description} Requires: ${skillRequirementLabel(definition.requirement)}.`, skill, bonuses: {} });
-        if (stage === 0) link(previous.id, major.id, polar(280, angle + .025));
-        else road(`path:${region.domain.toLowerCase()}:${skill}`, previous, major, region.domain, region.domain);
-        previous = major;
+    const source = nearest(from, to), target = nearest(to, from);
+    road(`road:${a}:${b}`, source, target, from.domain, to.domain, [from.id, to.id]);
+    for (const [cluster, gateway] of [[from, source], [to, target]] as const) {
+      const focal = members.get(cluster.id)!.find(node => node.kind === 'notable')!;
+      if (gateway.id !== focal.id) {
+        const mid = mix(gateway, focal, .5);
+        link(gateway.id, focal.id, { x: mid.x + (focal.y - gateway.y) * .06, y: mid.y - (focal.x - gateway.x) * .06 });
       }
-      const cluster = blueprints[regionTrunks[index][0]], arrival = nearest(cluster, previous);
-      road(`path:${region.domain.toLowerCase()}:${school.id}:arrival`, previous, arrival, region.domain, region.domain, [cluster.id]);
     }
-    // A short crescent between schools lets a build branch sideways without returning to origin.
+  }
+  const earlyChoices: Readonly<Record<SkillDomain, readonly Family[]>> = {
+    Might: [
+      { name: 'Quickened Steel', description: 'Attack faster with melee weapons and bows.', minor: { attackSpeedPercent: 4 }, notable: {} },
+      { name: 'Iron Vitality', description: 'Increase your maximum life.', minor: { maxHp: 16 }, notable: {} },
+      { name: 'Measured Strikes', description: 'Spend less mana on weapon skills.', minor: { manaCostPercent: 4 }, notable: {} },
+    ],
+    Cunning: [
+      { name: 'Quick Draw', description: 'Attack faster with bows and melee weapons.', minor: { attackSpeedPercent: 4 }, notable: {} },
+      { name: 'Sure Aim', description: 'Increase your chance to critically strike.', minor: { critChance: 2 }, notable: {} },
+      { name: 'Economy of Motion', description: 'Spend less mana on every skill.', minor: { manaCostPercent: 4 }, notable: {} },
+    ],
+    Arcana: [
+      { name: 'Swift Invocation', description: 'Cast staff attacks and magic skills faster.', minor: { castSpeedPercent: 4 }, notable: {} },
+      { name: 'Deep Reservoir', description: 'Increase your maximum mana.', minor: { maxMana: 16 }, notable: {} },
+      { name: 'Efficient Weaving', description: 'Reduce the mana cost of every skill.', minor: { manaCostPercent: 4 }, notable: {} },
+    ],
+  };
+  const innerBorders: MutableNode[][] = [];
+  for (const region of REGIONS) {
+    const first = travel(`path:${region.domain.toLowerCase()}:awakening`, polar(82, region.angle), region.domain);
+    link(SKILL_TREE_ORIGIN, first.id, polar(41, region.angle + .1));
+    const schoolStarts: MutableNode[] = [], exits: MutableNode[] = [];
+    for (const [schoolIndex, school] of region.schools.entries()) {
+      const angle = region.angle + school.angle * 1.35;
+      const family = earlyChoices[region.domain][schoolIndex];
+      const entrance = add({ id: `school:${school.id}`, ...polar(185, angle), kind: 'minor', domain: region.domain, role: 'choice',
+        name: family.name, description: `${family.description} Opens ${school.name.toLowerCase()}.`, bonuses: family.minor });
+      schoolStarts.push(entrance);
+      link(first.id, entrance.id, polar(132, region.angle + school.angle * .65));
+      const skill = school.skills[0], definition = SKILL_DEFINITIONS[skill];
+      const major = add({ id: `skill:${skill}`, ...polar(292, angle), kind: 'major', domain: region.domain,
+        name: definition.name, description: `${definition.description} Requires: ${skillRequirementLabel(definition.requirement)}.`, skill, bonuses: {} });
+      link(entrance.id, major.id, polar(239, angle + .035));
+      const choices: MutableNode[] = [];
+      for (let branch = 0; branch < 3; branch++) {
+        const specialty = earlyChoices[region.domain][branch];
+        const choice = add({ id: `choice:${school.id}:${branch}`, ...polar(410, angle + (branch - 1) * .19),
+          kind: 'minor', domain: region.domain, role: 'choice', name: specialty.name, description: specialty.description,
+          bonuses: specialty.minor });
+        choices.push(choice);
+        link(major.id, choice.id, polar(355, angle + (branch - 1) * .09));
+        if (branch !== 1) link(entrance.id, choice.id, polar(292, angle + (branch - 1) * .37));
+        if (branch > 0) link(choices[branch - 1].id, choice.id, polar(419, angle + (branch - 1.5) * .19));
+      }
+      let exit = choices[1];
+      if (school.skills[1]) {
+        const skill = school.skills[1], definition = SKILL_DEFINITIONS[skill];
+        exit = add({ id: `skill:${skill}`, ...polar(540, angle), kind: 'major', domain: region.domain,
+          name: definition.name, description: `${definition.description} Requires: ${skillRequirementLabel(definition.requirement)}.`, skill, bonuses: {} });
+        for (const choice of choices) link(choice.id, exit.id, mix(choice, exit, .5));
+      }
+      exits.push(exit);
+      const cluster = blueprints.filter(b => b.domain === region.domain).slice(0, 3)[schoolIndex];
+      const arrival = nearest(cluster, exit);
+      road(`path:${school.id}:arrival`, exit, arrival, region.domain, region.domain, [cluster.id]);
+      // Passives may continue outward without buying an active skill they won't use.
+      const bypass = choices[schoolIndex === 0 ? 0 : 2];
+      road(`path:${school.id}:passives`, bypass, arrival, region.domain, region.domain, [cluster.id]);
+    }
     for (let school = 1; school < schoolStarts.length; school++) {
       const a = schoolStarts[school - 1], b = schoolStarts[school];
-      link(a.id, b.id, polar(245, region.angle + (region.schools[school - 1].angle + region.schools[school].angle) / 2));
+      link(a.id, b.id, polar(205, region.angle + (region.schools[school - 1].angle + region.schools[school].angle) * .675));
+      road(`bridge:${region.domain}:${school}`, exits[school - 1], exits[school], region.domain, region.domain);
     }
+    innerBorders.push([schoolStarts[0], schoolStarts[2]]);
+  }
+  // Short inner hybrid bridges complement the outer network instead of forcing a return to origin.
+  const borderNodes = innerBorders.flat().sort((a, b) => Math.atan2(a.y, a.x) - Math.atan2(b.y, b.x));
+  for (let i = 0; i < borderNodes.length; i++) {
+    const a = borderNodes[i], b = borderNodes[(i + 1) % borderNodes.length];
+    if (a.domain !== b.domain) link(a.id, b.id, polar(235, Math.atan2(a.y + b.y, a.x + b.x)));
   }
 
   const clusters = blueprints.map(cluster => Object.freeze({ id: cluster.id, name: cluster.family.name, domain: cluster.domain, x: cluster.x, y: cluster.y,
@@ -293,7 +332,7 @@ function buildTree() {
   return Object.freeze({ nodes: Object.freeze(nodes) as readonly SkillNode[], edges: Object.freeze(edges), clusters: Object.freeze(clusters), bounds });
 }
 
-/** Organically spaced specialties joined by three arteries and sparse, curved hybrid routes. */
+/** Three terraced petals, early choice fans, and short interconnected specialty routes. */
 export const SKILL_TREE = buildTree();
 export const SKILL_NODES: ReadonlyMap<string, SkillNode> = new Map(SKILL_TREE.nodes.map(node => [node.id, node]));
 

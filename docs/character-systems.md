@@ -90,17 +90,20 @@ Equip validates source cell, item type, target slot, and level requirement befor
 
 ## Skill atlas and active skills
 
-The fixed atlas contains **2,824 nodes**, **2,923 undirected curved connections**, and **150 irregular constellations** across **Might, Cunning, and Arcana**:
+The fixed atlas contains **2,108 nodes**, **2,916 undirected curved connections**, and **150 irregular constellations** across **Might, Cunning, and Arcana**:
 
 - 1 free origin.
-- 1,528 minor nodes within themed constellations.
-- 1,128 minor travel nodes connecting specialties; these grant their discipline's attribute.
+- 1,662 minor nodes within themed constellations.
+- 242 minor travel nodes connecting specialties; these grant their discipline's attribute.
+- 36 early choice nodes granting speed, resources, critical chance, or mana efficiency.
 - 150 notable nodes, one concentrated reward in each constellation.
 - 17 major nodes, each unlocking one executable active skill.
 
-Three winding arteries lead outward through organically spaced regions. Ellipses, open crescents, fans, and branching boughs contain 9–14 nodes each. Each constellation develops one consistent specialty, such as armor, critical chance, or mana regeneration; its notable strengthens that theme and adds a related bonus. Seven authored specialty recipes per discipline provide the current content. The connecting network adds 47 circuit crosslinks, including routes across discipline boundaries, so hybrid builds can traverse between regions without returning to the origin. Node centers remain at least 22 world units apart, and cluster bounds include their actual geometry.
+Three distinct petals each contain five staggered terraces (3, 6, 10, 14 and 17 specialties). Ellipses, open crescents, fans and branching boughs contain 9–14 nodes. Focal notables connect multiple entrances, so crossing a specialty does not require buying half its circumference. Inter-cluster roads contain at most two intermediate travel nodes. Inner cross-discipline bridges and local circuits add alternatives. Node centers remain at least 22 world units apart, and cluster bounds include their actual geometry.
 
-All nodes have stable IDs from deterministic content recipes. There are no class locks. Every node can be reached from the origin. Nine named weapon schools lead to **four-point first skills** and **seven-point advanced skills** along their shortest origin routes; the dagger school currently has one skill. Allocate requires a real node, an integer unspent point, an allocated neighbor, and no existing allocation. Duplicate/unknown IDs do not add bonuses. Allocation is permanent for the current run; respec is not present.
+Arcana exposes +4% cast speed, +16 maximum mana, and 4% mana-cost reduction within two points, with nine more branching bonuses around the first skills. Might and Cunning receive corresponding attack-speed, survival, critical and efficiency choices. First Arcana specialties begin at four to five points; the second terrace begins at eight to twelve. Passive bypasses allow progression without buying an unwanted active skill.
+
+All nodes have stable IDs from deterministic content recipes. There are no class locks. Every node can be reached from the origin. Nine named weapon schools lead to **three-point first skills** and **four-point advanced skills** along their shortest origin routes; the dagger school currently has one skill. Allocate requires a real node, an integer unspent point, an allocated neighbor, and no existing allocation. Duplicate/unknown IDs do not add bonuses. Allocation is permanent for the current run; respec is not present.
 
 The shortest-route preview starts at any already allocated node, highlights the fewest additional points to the hovered or selected destination, and reports that cost. It is informational: points are still spent individually on connected nodes. Equivalent builds resolve tied routes deterministically.
 

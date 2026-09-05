@@ -120,7 +120,7 @@ for (const id of Object.keys(SKILL_DEFINITIONS) as SkillId[]) {
     player.mana = player.maxMana;
     sim.drainEvents();
     advance(sim, FIXED_STEP, { skillSlot: 0, aimX: enemy.x });
-    close(player.mana, player.maxMana - definition.manaCost);
+    close(player.mana, player.maxMana - Math.max(1, Math.round(definition.manaCost * player.derived.manaCostMultiplier * 10) / 10));
     close(player.skillCooldowns[id]!, definition.cooldown * player.derived.cooldownMultiplier);
     const firstEvents = sim.drainEvents();
     assert.equal(firstEvents.filter(event => (event.type === 'cast' || event.type === 'swing') && event.skill === id).length, 1);

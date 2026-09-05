@@ -52,7 +52,7 @@ The starter bag contains eight level-1 items: Longsword, chest armor, a ring, bo
 
 The atlas contains **2,824 nodes**, **2,923 curved connections**, **150 themed constellations**, and **17 skill majors**. Nine schools branch from the central Might, Cunning, and Arcana arteries. A school's first skill costs four points along its shortest origin route; its advanced skill costs seven total. The dagger school currently has one skill. Crosslinks allow movement between specialties and disciplines.
 
-| Domain | School | First skill — 4 points | Advanced skill — 7 total points |
+| Domain | School | First skill — 3 points | Advanced skill — 7 total points |
 | --- | --- | --- | --- |
 | Might | Way of the Blade | Crescent Cleave | Rift Lunge |
 | Might | Way of the Colossus | Whirlwind | Earthshatter |

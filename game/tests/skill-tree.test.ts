@@ -46,7 +46,7 @@ test('all active skills have approachable connected paths through their weapon s
   assert.equal(majors.length, Object.keys(SKILL_DEFINITIONS).length);
   assert.deepEqual(new Set(majors.map(node => node.skill)), new Set(Object.keys(SKILL_DEFINITIONS)));
   for (const major of majors) {
-    const path = paths.get(major.id)!; assert.ok(path.length >= 4 && path.length <= 7);
+    const path = paths.get(major.id)!; assert.equal(path.length, SKILL_DEFINITIONS[major.skill!].tier === 'basic' ? 3 : 4);
     assert.ok(path.some(id => id.startsWith('school:')), 'every skill follows a named weapon school');
     assert.equal(major.domain, SKILL_DEFINITIONS[major.skill!].domain);
     const character = sheet(path.length);
@@ -152,4 +152,30 @@ test('organic routes leave readable node clearance and provide interconnected hy
     if (deviation > .2) curved++;
   }
   assert.ok(curved > SKILL_TREE.edges.length * .6, 'routes carry actual curved geometry, rather than straight visual placeholders');
+});
+
+test('Arcana offers mana, cast speed and efficiency within two points, before any skill purchase', () => {
+  const paths = pathsFromOrigin();
+  for (const stat of ['maxMana', 'castSpeedPercent', 'manaCostPercent'] as const) {
+    const choices = SKILL_TREE.nodes.filter(node => node.domain === 'Arcana' && (node.bonuses[stat] ?? 0) > 0);
+    const nearest = choices.sort((a, b) => paths.get(a.id)!.length - paths.get(b.id)!.length)[0];
+    assert.ok(nearest && paths.get(nearest.id)!.length <= 2, stat);
+    assert.ok(paths.get(nearest.id)!.every(id => !SKILL_NODES.get(id)!.skill));
+  }
+  const early = SKILL_TREE.nodes.filter(node => node.domain === 'Arcana' && node.role === 'choice' && paths.get(node.id)!.length <= 4);
+  assert.ok(early.length >= 12, 'three entrances and nine branching choices');
+  for (const cluster of SKILL_TREE.clusters.filter(cluster => cluster.id.startsWith('arcana:terrace:1:'))) {
+    const cost = Math.min(...SKILL_TREE.nodes.filter(node => node.cluster === cluster.id).map(node => paths.get(node.id)!.length));
+    assert.ok(cost <= 12, `${cluster.name} requires ${cost} points`);
+  }
+});
+
+test('every discipline can reach its first three specialties without buying an active skill', () => {
+  const seen = new Set(['origin']), queue = ['origin'];
+  for (let i = 0; i < queue.length; i++) for (const id of SKILL_NODES.get(queue[i])!.neighbors) {
+    if (!seen.has(id) && !SKILL_NODES.get(id)!.skill) { seen.add(id); queue.push(id); }
+  }
+  for (const cluster of SKILL_TREE.clusters.filter(cluster => cluster.id.includes(':terrace:0:'))) {
+    assert.ok(SKILL_TREE.nodes.some(node => node.cluster === cluster.id && seen.has(node.id)), cluster.id);
+  }
 });
