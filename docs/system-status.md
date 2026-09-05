@@ -1,5 +1,9 @@
 # System status and foundation checkpoint
 
+## Living forest visual pass
+
+Verdant now has shared traveling gusts, responsive grass and footstep litter, decorative crows/butterflies, moving dapple and restrained canopy shafts. Limits: 40 grass disturbances, 48 foot impressions, 100 leaves, six crows, ten butterflies, 100 ground anchors and five shafts. Reduced motion freezes reactions; teleports and reset clear movement history appropriately. `/forest.html` provides a staged 14-second recording through the actual renderer and CRT. See [living forest](living-forest.md). All 419 code tests, strict application/core compilation and production build pass. Motion was reviewed in the local in-app browser; combat-load performance remains for playtesting.
+
 2026-09-05 · local prototype · world generation 4 · character foundation 2 · weapon schools 1 · progression model 1 · wilderness encounters 1.
 
 The engine foundation supports run-local character progression, one- and two-handed gear, shields, dual wield, inventory, tree allocations, and seventeen active skills through shared contracts and validated mutations. The large atlas reuses authored bonus families and is not a balanced endgame. Gameplay acceptance and performance on the user's machine remain separate from code verification.

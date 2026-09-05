@@ -1,5 +1,7 @@
 # Implemented architecture
 
+The [living forest](living-forest.md) adds bounded presentation-only wind, player proximity reactions and decorative wildlife. These systems consume interpolated positions through Renderer and have no simulation mutation or reward path. The local `/forest.html` review records the actual world/CRT with staged poses and no gameplay ticks or save access.
+
 Updated 2026-09-05. This describes the local prototype as implemented; `technical-foundations.md` contains the broader design proposals.
 
 The [expansion readiness review](architecture-review-2026-09-05.md) records the current verification baseline, concrete maintenance pressure points and prioritized work before larger iterations.
