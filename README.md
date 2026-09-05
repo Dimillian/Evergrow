@@ -39,6 +39,8 @@ The HUD and damage numbers render at native display resolution above the world s
 
 The compact HUD uses dark metalwork, engraved skill icons, and subtly animated resource glass. A local [static HUD review](http://127.0.0.1:5173/hud.html) shows healthy, damaged, and depleted states without advancing gameplay or touching saves.
 
+Menus and maps share a retro interface kit: slate surfaces, fine brass edges, jade actions, crisp typography, and consistent keyboard focus. The local [interface review](http://127.0.0.1:5173/ui.html) shows the actual start, pause, defeat, and map windows alongside reusable controls and item-slot primitives in desktop and narrow layouts.
+
 Hover an enemy to see its name and health at the top of the screen. A subtle marker identifies the focused mob, and enemies you hit stay on the plate briefly while you fight. Names and health remain crisp at every camera zoom.
 
 The world uses one fixed presentation: soft CRT scanlines combined with restrained phosphor glow and a subtle RGB grille. There is no settings panel or filter switching. Reduced motion follows the operating system; N still toggles sound.
@@ -62,6 +64,7 @@ The user owns gameplay and visual verification in the in-app browser and directs
 | [Technical foundations](docs/technical-foundations.md) | How could a browser deliver this, and which assumptions need prototypes? |
 | [Roadmap](docs/roadmap.md) | In what order should we prove and build the game? |
 | [Implemented architecture](docs/architecture.md) | Which module owns each system, and where should we extend it? |
+| [Interface kit](docs/ui-kit.md) | Which visual and interaction primitives should new windows and inventory reuse? |
 | [System status and stats](docs/system-status.md) | What exists today, which checks pass, and what are the current limits? |
 
 Read the brief first, then the roadmap. The systems catalog is the implementation inventory; the three deeper documents explain the intended behavior.

@@ -1,5 +1,6 @@
 import type { Player } from './model.ts';
 import { PLAYER_ABILITIES } from './combat-content.ts';
+import { UI_THEME } from './ui-theme.ts';
 import { text, textWidth } from './font.ts';
 import { drawHUDSkillIcon, drawHUDMenuIcon } from './hud-icons.ts';
 import { drawHUDOrb } from './hud-orb.ts';
@@ -19,6 +20,7 @@ export interface HUDLayout extends HUDRect {
 }
 export interface HUDOptions { reducedMotion?: boolean; healthTrail?: number; hitPulse?: number; }
 
+const UI = UI_THEME.palette;
 const BASE_WIDTH = 388;
 const BASE_HEIGHT = 90;
 const MENU_X = 124, MENU_STEP = 37, MENU_Y = 3, MENU_WIDTH = 29, MENU_HEIGHT = 18;
@@ -79,10 +81,10 @@ function chassis(c: CanvasRenderingContext2D) {
   chamfer(c, 76, 27, 236, 55, 10);
   const metal = c.createLinearGradient(0, 27, 0, 82);
   metal.addColorStop(0, '#45463d'); metal.addColorStop(.06, '#232a2b');
-  metal.addColorStop(.55, '#12191d'); metal.addColorStop(1, '#0b1013');
+  metal.addColorStop(.55, UI.panel); metal.addColorStop(1, UI.ink);
   c.fillStyle = metal; c.fill();
   c.shadowBlur = 0; c.shadowOffsetY = 0;
-  c.strokeStyle = '#65573f'; c.lineWidth = 1; c.stroke();
+  c.strokeStyle = UI.brassDim; c.lineWidth = 1; c.stroke();
   c.strokeStyle = '#b09a6c99'; c.lineWidth = .7;
   c.beginPath(); c.moveTo(88, 28.5); c.lineTo(300, 28.5); c.stroke();
   c.strokeStyle = '#383e38';
@@ -99,8 +101,8 @@ function chassis(c: CanvasRenderingContext2D) {
   // All four secondary shortcuts live on a single quiet, narrow rail.
   chamfer(c, 118, 0, 152, 25, 5);
   const ridge = c.createLinearGradient(0, 0, 0, 25);
-  ridge.addColorStop(0, '#252d2d'); ridge.addColorStop(.14, '#151e22'); ridge.addColorStop(1, '#0b1115');
-  c.fillStyle = ridge; c.fill(); c.strokeStyle = '#41463d'; c.lineWidth = .8; c.stroke();
+  ridge.addColorStop(0, '#252d2d'); ridge.addColorStop(.14, UI.panel); ridge.addColorStop(1, UI.ink);
+  c.fillStyle = ridge; c.fill(); c.strokeStyle = UI.line; c.lineWidth = .8; c.stroke();
   c.strokeStyle = '#91826488'; c.beginPath(); c.moveTo(124, 1); c.lineTo(264, 1); c.stroke();
   c.fillStyle = '#84704c'; c.fillRect(189, 24, 10, 2);
   c.fillStyle = '#c2ad78'; c.fillRect(192, 24, 4, .8);
@@ -119,9 +121,9 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
     c.save();
     chamfer(c, x, y, w, h, 2);
     const well = c.createLinearGradient(x, y, x, y + h);
-    well.addColorStop(0, '#1c272d'); well.addColorStop(.18, '#111c23'); well.addColorStop(1, '#080e13');
+    well.addColorStop(0, UI.panelRaised); well.addColorStop(.18, UI.panel); well.addColorStop(1, UI.well);
     c.fillStyle = well; c.fill();
-    c.strokeStyle = slot.active ? slot.color : '#474b41'; c.lineWidth = .8; c.stroke();
+    c.strokeStyle = slot.active ? slot.color : UI.lineStrong; c.lineWidth = .8; c.stroke();
     c.strokeStyle = slot.active ? '#ebd3a4' : '#8a806366';
     c.beginPath(); c.moveTo(x + 3, y + 1); c.lineTo(x + w - 3, y + 1); c.stroke();
     if (slot.active) {
@@ -138,13 +140,13 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
       c.beginPath(); c.moveTo(x + w / 2, y + 17);
       c.arc(x + w / 2, y + 17, 30, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(slot.cooldown / slot.duration));
       c.closePath(); c.fill(); c.restore();
-      text(c, (Math.ceil(slot.cooldown * 10) / 10).toFixed(1), x + w / 2, y + 15, .95, '#e5dac1', 'center');
+      text(c, (Math.ceil(slot.cooldown * 10) / 10).toFixed(1), x + w / 2, y + 15, .95, UI.ivory, 'center');
     }
     // Equal-size recessed keycaps keep the binding subordinate to its icon.
     c.fillStyle = '#080d12'; c.fillRect(x + 4, y + 33, w - 8, 10);
     c.strokeStyle = '#2d373688'; c.lineWidth = .6;
     c.beginPath(); c.moveTo(x + 6, y + 32.5); c.lineTo(x + w - 6, y + 32.5); c.stroke();
-    text(c, slot.key, x + w / 2, y + 35, .82, slot.enabled ? '#bfc3b4' : '#717a76', 'center');
+    text(c, slot.key, x + w / 2, y + 35, .82, slot.enabled ? UI.text : UI.faint, 'center');
     if (slot.charges >= 0) {
       for (let charge = 0; charge < (i === 2 ? PLAYER_ABILITIES.dodge.charges : PLAYER_ABILITIES.heal.charges); charge++) {
         c.beginPath(); c.arc(x + w - 11 + charge * 5, y + 6, 1.2, 0, TAU);
@@ -167,7 +169,7 @@ function shortcuts(c: CanvasRenderingContext2D) {
   for (let i = 0; i < HUD_MENU_SHORTCUTS.length; i++) {
     const x = MENU_X + i * MENU_STEP;
     drawHUDMenuIcon(c, i, x + 7, MENU_Y + 8.5);
-    text(c, HUD_MENU_SHORTCUTS[i].key, x + 23, MENU_Y + 5.5, .84, '#8e978b', 'center');
+    text(c, HUD_MENU_SHORTCUTS[i].key, x + 23, MENU_Y + 5.5, .84, UI.muted, 'center');
     if (i < HUD_MENU_SHORTCUTS.length - 1) {
       c.strokeStyle = '#43493a88'; c.lineWidth = .6;
       c.beginPath(); c.moveTo(x + 33, 7); c.lineTo(x + 33, 17); c.stroke();
@@ -182,7 +184,7 @@ function readout(c: CanvasRenderingContext2D, x: number, current: number, max: n
   const value = String(current), capacity = ` / ${max}`;
   const left = x - (textWidth(value, 1.02) + textWidth(capacity, .8)) / 2;
   text(c, value, left, 78, 1.02, mana ? '#b7d3e3' : '#e3b8ae');
-  text(c, capacity, left + textWidth(value, 1.02), 79.5, .8, '#85918d');
+  text(c, capacity, left + textWidth(value, 1.02), 79.5, .8, UI.muted);
 }
 
 /** Drawn at native display density above the world shader. */

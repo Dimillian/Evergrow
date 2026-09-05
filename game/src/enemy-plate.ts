@@ -1,5 +1,6 @@
 import type { Enemy } from './model.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
+import { UI_THEME } from './ui-theme.ts';
 import { text } from './font.ts';
 import { getHUDLayout } from './hud.ts';
 import { getMinimapRect } from './map-view.ts';
@@ -11,6 +12,7 @@ export interface EnemyPlateOptions {
   hitPulse?: number;
 }
 
+const UI = UI_THEME.palette;
 const clamp = (value: number) => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 
 /** A centered target readout that shares the existing navigation and map space. */
@@ -57,12 +59,12 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
   c.fillStyle = shadow; c.fillRect(-1, -1, 2, 2); c.restore();
 
   c.save(); c.shadowColor = '#010409'; c.shadowBlur = 3; c.shadowOffsetY = 1;
-  text(c, ENEMY_DEFINITIONS[enemy.kind].name, w / 2, 2, 1.13, '#e0d8c4', 'center'); c.restore();
+  text(c, ENEMY_DEFINITIONS[enemy.kind].name, w / 2, 2, 1.13, UI.ivory, 'center'); c.restore();
   const metal = c.createLinearGradient(0, 20, 0, 31);
   metal.addColorStop(0, '#746d59'); metal.addColorStop(.15, '#353a38');
-  metal.addColorStop(.48, '#111a21'); metal.addColorStop(1, '#090e13');
+  metal.addColorStop(.48, UI.panel); metal.addColorStop(1, UI.ink);
   chamfer(c, 10, 20, w - 20, 11, 3);
-  c.fillStyle = metal; c.fill(); c.strokeStyle = '#756144'; c.lineWidth = .7; c.stroke();
+  c.fillStyle = metal; c.fill(); c.strokeStyle = UI.brassDim; c.lineWidth = .7; c.stroke();
   c.beginPath(); c.moveTo(15, 20.7); c.lineTo(w - 15, 20.7);
   c.strokeStyle = '#b39b6c70'; c.lineWidth = .65; c.stroke();
 
@@ -90,6 +92,6 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
     c.fillStyle = '#d0b88a70'; c.fillRect(x, 22.5, 2.5, .6);
   }
   c.save(); c.shadowColor = '#010409'; c.shadowBlur = 2;
-  text(c, `${Math.ceil(hp)} / ${Math.ceil(maxHp)}`, w / 2, 36, .86, '#bab8ae', 'center');
+  text(c, `${Math.ceil(hp)} / ${Math.ceil(maxHp)}`, w / 2, 36, .86, UI.text, 'center');
   c.restore(); c.restore();
 }

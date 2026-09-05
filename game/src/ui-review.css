@@ -1,0 +1,68 @@
+html.ui-review-document, .ui-review-document body {
+  min-height: 100%; height: auto; overflow: auto; background: var(--ui-ink, #091116);
+}
+.ui-review-document body { padding: 26px 30px; }
+#ui-review { width: min(1420px, 100%); margin: 0 auto; }
+.ui-review-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+.ui-review-header h1 { margin: 5px 0 0; color: var(--ui-ivory, #e3dfca); font-size: 32px; font-weight: 400; letter-spacing: .02em; }
+.ui-review-header p { margin: 0; }
+.ui-review-note { color: var(--ui-muted, #92a096); font-size: 14px; line-height: 1.5; text-align: right; }
+.ui-review-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-bottom: 18px; }
+.ui-review-tabs, .ui-review-sizes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ui-review-tools .ui-button { min-height: 36px; padding: 8px 13px; font-size: 14px; }
+.ui-review-tools .ui-button[aria-pressed="true"] { border-color: var(--ui-brass, #b39b70); color: var(--ui-ivory, #e3dfca); background: var(--ui-panel-raised, #1a292c); }
+.ui-review-viewport {
+  display: flex; align-items: flex-start; justify-content: center; padding: 16px;
+  background: repeating-linear-gradient(135deg, #ffffff02 0 1px, transparent 1px 9px), #050b0e;
+  border: 1px solid var(--ui-line, #2c3c3e); min-width: 0;
+}
+.ui-review-frame {
+  display: block; width: min(1120px, 100%); height: clamp(510px, calc(100dvh - 235px), 760px);
+  min-width: 0; border: 1px solid var(--ui-line-strong, #53605a); background: #080f13;
+  box-shadow: 0 10px 40px #0008;
+}
+.ui-review-frame[data-size="narrow"] { width: min(390px, 100%); }
+.ui-review-footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 12px; color: var(--ui-muted, #92a096); font-size: 13px; line-height: 1.5; }
+.ui-review-footer p { margin: 0; }
+.ui-review-loading { margin: 30px; font-size: 17px; color: var(--ui-muted, #92a096); }
+.ui-review-error { color: var(--ui-danger, #db7f79); }
+
+html.ui-review-embedded, .ui-review-embedded body, .ui-review-embedded #ui-review {
+  margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+}
+.ui-review-embedded .game-shell { width: 100%; height: 100%; }
+.ui-review-embedded #game { cursor: default; }
+.ui-review-foundation {
+  position: absolute; inset: 0; z-index: 3; overflow: auto; padding: 26px;
+  background: linear-gradient(#071013e8, #071013fa);
+}
+.ui-review-foundation[hidden] { display: none; }
+.ui-review-foundation > .ui-window { width: min(880px, 100%); margin: auto; }
+.ui-review-foundation .ui-window-body { display: grid; gap: 24px; }
+.ui-review-section { min-width: 0; }
+.ui-review-section h3 { margin: 0 0 13px; color: var(--ui-ivory, #e3dfca); font-size: 18px; font-weight: 400; }
+.ui-review-component-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ui-review-components-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.ui-review-example-tooltip { position: relative !important; inset: auto !important; width: 100%; max-width: 310px; margin-top: 12px; }
+.ui-review-example-tooltip h4 { margin: 7px 0; font-size: 21px; font-weight: 400; color: var(--ui-ivory, #e3dfca); }
+.ui-review-example-tooltip p { margin: 0; }
+.ui-review-slot-row { display: grid; grid-template-columns: repeat(4, var(--ui-slot, 56px)); gap: 9px; }
+.ui-review-swatches { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; }
+.ui-review-swatch { min-width: 0; margin: 0; }
+.ui-review-swatch-color { height: 26px; border: 1px solid #ffffff14; }
+.ui-review-swatch figcaption { color: var(--ui-muted, #92a096); margin-top: 5px; font-size: 11px; overflow-wrap: anywhere; }
+.ui-review-component-feedback { min-height: 20px; margin: 0; }
+.ui-review-stat-list { margin: 0 0 16px; }
+
+@media (max-width: 680px) {
+  .ui-review-document body { padding: 18px 12px; }
+  .ui-review-header { align-items: flex-start; gap: 12px; }
+  .ui-review-header h1 { font-size: 26px; }
+  .ui-review-note { max-width: 160px; font-size: 12px; }
+  .ui-review-viewport { padding: 8px; }
+  .ui-review-tools { gap: 12px; }
+  .ui-review-footer { flex-direction: column; gap: 2px; }
+  .ui-review-foundation { padding: 12px; }
+  .ui-review-components-columns { grid-template-columns: 1fr; }
+  .ui-review-swatches { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

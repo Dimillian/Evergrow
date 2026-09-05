@@ -4,6 +4,8 @@ Checkpoint date: 2026-09-05. The current pass expands the combat slice into conn
 
 The foundation refactor now separates authored combat content, encounter policy, actor-art responsibilities, input/DOM ownership, save decoding, and map geometry. It preserves the current balance, drawing output, generation version, and exploration history while fixing boundary and cleanup failures. See [implemented architecture](architecture.md) for extension guidance and [system status](system-status.md) for the inventory, budgets, and 168 passing code tests.
 
+The subsequent interface pass adds a [shared UI kit](ui-kit.md): dark slate panels, brass detailing, jade actions, crisp typography, SVG icons, reusable slots/stat rows/tooltips, and consistent keyboard focus. Start, pause, defeat, and world-map windows share it; HUD, enemy plate, and minimap use the same palette. Static desktop/narrow views are available at `/ui.html`. Code verification now passes 177 tests plus strict/core type checks and the production build; gameplay acceptance remains with the user.
+
 ## Implemented
 
 - Three connected seeded biomes: Deadwood at the start, Verdant Forest to the west, and The Mire to the east. Broad, irregular world-space weights blend ground colors, vegetation distribution, and ambient lighting. Distinct canopies, ferns, flowers, willows, reeds, and shallow pools give the regions different silhouettes.
@@ -31,7 +33,7 @@ The foundation refactor now separates authored combat content, encounter policy,
 - No runtime how-to text, control legends, or introductory combat tips. Small bindings remain on their skill buttons; control documentation is available in the repository README.
 - Native-resolution HUD, shortcut icons, and floating damage numbers, drawn after world post-processing. Labels use locally bundled Pixelify Sans with natural glyph metrics; the shortcut strip has consistent line icons and clearer spacing.
 - A centered enemy name/health plate shows Hollow Stalkers, Gravebound Brutes, and Mire Hexers when hovered. Body picking follows interpolated positions and camera zoom, including heads above the ground collision circle. Hover takes priority over recent combat hits, with a brief hover grace period and 1.5-second hit retention; deaths, removal, and offscreen targets clear focus. A small ground marker and warmer cursor identify the focused enemy. The native plate shows immediate health, a delayed damage band, and exact HP, with responsive placement clear of the minimap and navigation. This is visual focus; attacks retain their existing pointer aiming.
-- A simple pause/resume menu, synthesized audio, and one fixed CRT treatment combined with soft phosphor glow. Settings, the HUD gear, and filter switching are removed. Reduced motion follows the operating system automatically; N toggles sound and retains only that audio preference locally. Older stored visual preferences cannot override the new treatment.
+- Refined start, pause/resume, and defeat windows with shared materials, 44px actions, contained keyboard focus, and location/run readouts. Synthesized audio and one fixed CRT treatment combine with soft phosphor glow. Settings, the HUD gear, and filter switching remain removed. Reduced motion follows the operating system automatically; N toggles sound and retains only that audio preference locally. Older stored visual preferences cannot override the new treatment.
 
 ## Architecture chosen for this experiment
 

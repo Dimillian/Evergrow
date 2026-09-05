@@ -2,6 +2,8 @@ import { getHUDLayout, HUD_MENU_SHORTCUTS } from './hud.ts';
 import type { HUDRect } from './hud.ts';
 import { getMinimapRect } from './map-view.ts';
 import type { GamePhase } from './game-phase.ts';
+import { gameMenuMarkup } from './game-menu.ts';
+import { trapDialogFocus } from './ui-components.ts';
 
 interface ShellActions { play(): void; restart(): void; openMap(): void; }
 
@@ -32,8 +34,8 @@ export class GameShell {
           aria-haspopup="dialog" title="World map"></button>
       </nav>
       <div id="world-map-mount"></div>
-      <div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title"></div>
-      <div id="toast" class="toast" role="status"></div>
+      <div id="overlay" class="overlay ui-scroll-area" role="dialog" aria-modal="true" aria-labelledby="menu-title"></div>
+      <div id="toast" class="toast ui-status" role="status"></div>
       <p id="state-description" class="sr-only" aria-live="polite"></p>
     </div>`;
     this.element = root.querySelector<HTMLElement>('.game-shell')!;
@@ -61,7 +63,7 @@ export class GameShell {
 
   setStatus(message: string): void { this.status.textContent = message; }
 
-  showMenu(phase: GamePhase, kills: number, time: number): void {
+  showMenu(phase: GamePhase, kills: number, time: number, location = 'Deadwood'): void {
     this.menuAbort.abort(); this.menuAbort = new AbortController();
     const playing = phase === 'playing';
     this.overlay.hidden = playing || phase === 'map';
@@ -72,22 +74,14 @@ export class GameShell {
       if (playing) this.setStatus('Exploring the world.');
       return;
     }
-    const ready = phase === 'ready', dead = phase === 'dead';
-    this.overlay.innerHTML = `<section class="panel">
-      <p class="eyebrow">${dead ? 'DEADWOOD' : 'EVERGROWING'}</p>
-      <h1 id="menu-title">${ready ? 'DEADWOOD' : dead ? 'YOU FELL' : 'PAUSED'}</h1>
-      <div class="rule" aria-hidden="true"></div>
-      ${dead ? `<p class="death-count">${kills} slain · ${Math.floor(time / 60)}:${String(Math.floor(time % 60)).padStart(2, '0')} survived</p>` : ''}
-      <div class="menu-actions">
-        <button class="primary" id="play-action">${ready ? 'ENTER THE WOODS' : dead ? 'TRY AGAIN' : 'RESUME'}</button>
-        ${!ready && !dead ? '<button class="secondary" id="restart-action">NEW RUN</button>' : ''}
-      </div>
-    </section>`;
+    const dead = phase === 'dead';
+    this.overlay.innerHTML = gameMenuMarkup(phase, kills, time, location);
     const signal = this.menuAbort.signal;
     const play = this.overlay.querySelector<HTMLButtonElement>('#play-action')!;
     play.addEventListener('click', this.actions.play, { signal });
     this.overlay.querySelector('#restart-action')?.addEventListener('click', this.actions.restart, { signal });
-    play.focus();
+    this.overlay.querySelector('#close-menu')?.addEventListener('click', this.actions.play, { signal });
+    trapDialogFocus(this.overlay, { signal, initialFocus: play, restoreFocus: false });
     this.setStatus(dead ? `You fell after defeating ${kills} enemies.`
       : phase === 'paused' ? 'Game paused.' : 'Ready to enter Deadwood.');
   }

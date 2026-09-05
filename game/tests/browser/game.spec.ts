@@ -29,7 +29,8 @@ test('local game supports movement, combat, dodge, pause, recovery, and clean re
   await page.waitForTimeout(250);
   expect(await page.evaluate(()=>(window as any).__evergrowing.sim.time)).toBe(pausedTime);
   await expect(page.locator('#overlay select, #overlay input')).toHaveCount(0);
-  await expect(page.locator('#overlay button')).toHaveCount(2);
+  await expect(page.getByRole('button',{name:'Resume game',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'NEW RUN',exact:true})).toBeVisible();
   await expect(page.locator('[data-hud="settings"]')).toHaveCount(0);
   await page.getByRole('button',{name:'RESUME',exact:true}).click();
   await page.evaluate(()=>{const g=(window as any).__evergrowing;g.sim.player.hp=50;g.sim.enemies=[];});

@@ -4,6 +4,8 @@ import { POI_DEFINITIONS } from './world-pois.ts';
 export { getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt, type MapView } from './map-view.ts';
 import type { ExplorationWorld, MapPOI, MapRect } from './exploration.ts';
 import { text } from './font.ts';
+import { uiIcon } from './ui-components.ts';
+import { UI_THEME } from './ui-theme.ts';
 
 export interface MapPlayer { x: number; y: number; angle: number; }
 export interface MinimapEnemy { x: number; y: number; kind?: string; }
@@ -23,6 +25,20 @@ interface PresentationState {
 const bounds = (view: MapView): MapRect => ({ x: view.centerX - view.width / view.zoom / 2,
   y: view.centerY - view.height / view.zoom / 2, width: view.width / view.zoom, height: view.height / view.zoom });
 const setText = (element: HTMLElement, value: string) => { if (element.textContent !== value) element.textContent = value; };
+const palette = UI_THEME.palette;
+
+/** Keep hover selection inside the chart and prefer the closest visible marker. */
+export function pickMapPOI(pois: readonly MapPOI[], view: MapView, pointer: { x: number; y: number }, radius: number): MapPOI | null {
+  if (pointer.x < view.x || pointer.y < view.y || pointer.x >= view.x + view.width || pointer.y >= view.y + view.height) return null;
+  let nearest: MapPOI | null = null, distance = radius;
+  for (const poi of pois) {
+    const p = projectMapPoint(poi.x, poi.y, view);
+    if (p.x < view.x || p.y < view.y || p.x > view.x + view.width || p.y > view.y + view.height) continue;
+    const d = Math.hypot(p.x - pointer.x, p.y - pointer.y);
+    if (d < distance || (!nearest && d === radius)) { distance = d; nearest = poi; }
+  }
+  return nearest;
+}
 
 /** A continuously translated chart built from cached world-space terrain and discovery tiles. */
 export class WorldMap {
@@ -32,6 +48,7 @@ export class WorldMap {
   private viewport: HTMLDivElement;
   private title: HTMLElement;
   private status: HTMLElement;
+  private discoveries: HTMLElement;
   private coordinates: HTMLElement;
   private tooltip: HTMLDivElement;
   private tooltipName: HTMLElement;
@@ -58,20 +75,33 @@ export class WorldMap {
     this.world = world; this.exploration = exploration; this.onClose = onClose;
     this.element = document.createElement('div');
     this.element.className = 'world-map-root'; this.element.hidden = true;
-    this.element.innerHTML = `<section class="world-map-panel" role="dialog" aria-modal="true" aria-labelledby="world-map-title">
-      <header class="world-map-header"><div><p class="world-map-eyebrow">CHARTED LANDS</p><h2 id="world-map-title">The wilderness</h2></div>
-        <button type="button" class="world-map-close" aria-label="Close world map" title="Close map">×</button></header>
-      <div class="world-map-viewport"><canvas class="world-map-canvas" tabindex="0" aria-label="Explored world map"></canvas>
-        <div class="world-map-toolbar" aria-label="Map controls"><button type="button" data-map="out" aria-label="Zoom out" title="Zoom out">−</button>
-          <button type="button" data-map="in" aria-label="Zoom in" title="Zoom in">+</button><button type="button" data-map="center" aria-label="Center on character" title="Center on character">⌖</button></div>
-        <div class="world-map-tooltip" role="status" hidden><p class="world-map-poi-kind"></p><h3></h3><p class="world-map-poi-description"></p></div>
-      </div><footer class="world-map-footer"><span class="world-map-status"></span><span class="world-map-coordinates"></span></footer></section>`;
+    this.element.innerHTML = `<section class="world-map-panel ui-window" role="dialog" aria-modal="true" aria-labelledby="world-map-title">
+      <header class="world-map-header ui-window__header">
+        <div class="world-map-heading"><span class="world-map-emblem" aria-hidden="true">${uiIcon('map')}</span>
+          <div><p class="world-map-eyebrow ui-kicker">Charted lands</p><h2 class="ui-title" id="world-map-title">The wilderness</h2></div></div>
+        <button type="button" class="world-map-close ui-button ui-button--quiet ui-button--icon" aria-label="Close world map" data-tooltip="Close map" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('close')}</button>
+      </header>
+      <div class="world-map-viewport ui-window__body"><canvas class="world-map-canvas" tabindex="0" aria-label="Explored world map"></canvas>
+        <div class="world-map-toolbar" role="toolbar" aria-label="Map controls">
+          <button type="button" class="ui-button ui-button--quiet ui-button--icon" data-map="out" aria-label="Zoom out" data-tooltip="Zoom out">${uiIcon('minus')}</button>
+          <button type="button" class="ui-button ui-button--quiet ui-button--icon" data-map="in" aria-label="Zoom in" data-tooltip="Zoom in">${uiIcon('plus')}</button>
+          <span class="world-map-control-divider" aria-hidden="true"></span>
+          <button type="button" class="ui-button ui-button--quiet ui-button--icon" data-map="center" aria-label="Center on character" data-tooltip="Center on character" data-tooltip-align="end">${uiIcon('center')}</button>
+        </div>
+        <div class="world-map-tooltip ui-tooltip" role="status" aria-live="polite" aria-atomic="true" hidden>
+          <p class="world-map-poi-kind ui-kicker"></p><h3 class="ui-title"></h3><p class="world-map-poi-description ui-body"></p></div>
+      </div>
+      <footer class="world-map-footer ui-window__footer">
+        <div class="world-map-progress"><span class="world-map-discoveries"></span><span class="world-map-status ui-muted" role="status"></span></div>
+        <div class="world-map-position"><span class="ui-kicker">Position</span><span class="world-map-coordinates"></span></div>
+      </footer></section>`;
     mount.append(this.element);
     this.canvas = this.element.querySelector<HTMLCanvasElement>('.world-map-canvas')!;
     this.context = this.canvas.getContext('2d')!;
     this.viewport = this.element.querySelector<HTMLDivElement>('.world-map-viewport')!;
     this.title = this.element.querySelector('#world-map-title')!;
     this.status = this.element.querySelector('.world-map-status')!;
+    this.discoveries = this.element.querySelector('.world-map-discoveries')!;
     this.coordinates = this.element.querySelector('.world-map-coordinates')!;
     this.tooltip = this.element.querySelector<HTMLDivElement>('.world-map-tooltip')!;
     this.tooltipName = this.tooltip.querySelector('h3')!;
@@ -213,7 +243,7 @@ export class WorldMap {
   private chart(c: CanvasRenderingContext2D, view: MapView, mini: boolean) {
     const region = bounds(view);
     c.save(); c.beginPath(); c.rect(view.x, view.y, view.width, view.height); c.clip();
-    c.fillStyle = '#080f13'; c.fillRect(view.x, view.y, view.width, view.height);
+    c.fillStyle = palette.ink; c.fillRect(view.x, view.y, view.width, view.height);
     c.imageSmoothingEnabled = false;
     const transform = c.getTransform();
     const bleed = 1 / Math.max(.1, Math.hypot(transform.a, transform.b));
@@ -242,8 +272,8 @@ export class WorldMap {
       const p = projectMapPoint(poi.x, poi.y, view);
       this.poiIcon(c, poi, p.x, p.y, mini ? 4.1 : 7, this.hovered?.id === poi.id && !mini);
       if (!mini && poi.kind === 'town') {
-        text(c, poi.name, p.x + 1, p.y + 13, 1.15, '#04070a', 'center');
-        text(c, poi.name, p.x, p.y + 12, 1.15, '#e8d9b2', 'center');
+        text(c, poi.name, p.x + 1, p.y + 13, 1.15, palette.ink, 'center');
+        text(c, poi.name, p.x, p.y + 12, 1.15, palette.ivory, 'center');
       }
     }
     c.restore();
@@ -252,7 +282,7 @@ export class WorldMap {
 
   private poiIcon(c: CanvasRenderingContext2D, poi: MapPOI, x: number, y: number, size: number, selected: boolean) {
     c.save(); c.translate(x, y); c.lineWidth = selected ? 1.8 : 1.1;
-    c.fillStyle = '#071018'; c.strokeStyle = selected ? '#fff0ba' : POI_DEFINITIONS[poi.kind].color;
+    c.fillStyle = palette.well; c.strokeStyle = selected ? palette.ivory : POI_DEFINITIONS[poi.kind].color;
     c.beginPath(); c.arc(0, 0, size + 2.5, 0, Math.PI * 2); c.fill(); if (selected) c.stroke();
     c.beginPath();
     if (poi.kind === 'town' || poi.kind === 'inn') {
@@ -298,15 +328,35 @@ export class WorldMap {
     const r = getMinimapRect(width, height);
     const view: MapView = { x: r.x + 6, y: r.y + 25, width: r.width - 12, height: r.height - 48,
       centerX: player.x, centerY: player.y, zoom: .08 };
+    const active = this.minimapPointer && this.minimapPointer.x >= r.x && this.minimapPointer.y >= r.y
+      && this.minimapPointer.x < r.x + r.width && this.minimapPointer.y < r.y + r.height;
     c.save();
     const bg = c.createLinearGradient(r.x, r.y, r.x, r.y + r.height);
-    bg.addColorStop(0, '#18232bea'); bg.addColorStop(1, '#0b141ce8');
+    bg.addColorStop(0, `${palette.panelRaised}f5`); bg.addColorStop(1, `${palette.panel}f5`);
+    c.fillStyle = '#00000040'; c.fillRect(r.x + 2, r.y + 4, r.width, r.height);
     c.fillStyle = bg; c.fillRect(r.x, r.y, r.width, r.height);
-    c.strokeStyle = '#86704cad'; c.lineWidth = 1; c.strokeRect(r.x + .5, r.y + .5, r.width - 1, r.height - 1);
-    c.strokeStyle = '#c6b17a4a'; c.beginPath(); c.moveTo(r.x + 8, r.y + 22); c.lineTo(r.x + r.width - 8, r.y + 22); c.stroke();
-    text(c, 'MAP', r.x + 10, r.y + 8, 1.03, '#d6c59b');
-    text(c, 'M', r.x + r.width - 12, r.y + 8, 1, '#a2ad9d', 'right');
+    c.strokeStyle = active ? palette.brass : palette.lineStrong; c.lineWidth = 1;
+    c.strokeRect(r.x + .5, r.y + .5, r.width - 1, r.height - 1);
+    c.strokeStyle = `${palette.ivory}16`; c.strokeRect(r.x + 2.5, r.y + 2.5, r.width - 5, r.height - 5);
+    c.strokeStyle = palette.brass; c.beginPath();
+    for (const [x, y, dx, dy] of [[r.x, r.y, 1, 1], [r.x + r.width, r.y, -1, 1],
+      [r.x, r.y + r.height, 1, -1], [r.x + r.width, r.y + r.height, -1, -1]]) {
+      c.moveTo(x + dx * .5, y + dy * 9); c.lineTo(x + dx * .5, y + dy * .5); c.lineTo(x + dx * 9, y + dy * .5);
+    }
+    c.stroke();
+    // A folded chart mark shares the fine-line style of the native menu icons.
+    c.strokeStyle = palette.brass; c.beginPath();
+    c.moveTo(r.x + 10, r.y + 9); c.lineTo(r.x + 14, r.y + 7); c.lineTo(r.x + 18, r.y + 9);
+    c.lineTo(r.x + 22, r.y + 7); c.lineTo(r.x + 22, r.y + 17); c.lineTo(r.x + 18, r.y + 19);
+    c.lineTo(r.x + 14, r.y + 17); c.lineTo(r.x + 10, r.y + 19); c.closePath();
+    c.moveTo(r.x + 14, r.y + 7); c.lineTo(r.x + 14, r.y + 17);
+    c.moveTo(r.x + 18, r.y + 9); c.lineTo(r.x + 18, r.y + 19); c.stroke();
+    text(c, 'MAP', r.x + 29, r.y + 9, 1.03, palette.ivory);
+    c.fillStyle = palette.well; c.fillRect(r.x + r.width - 25, r.y + 6, 16, 15);
+    c.strokeStyle = palette.line; c.strokeRect(r.x + r.width - 24.5, r.y + 6.5, 15, 14);
+    text(c, 'M', r.x + r.width - 17, r.y + 10, .86, palette.muted, 'center');
     const pois = this.chart(c, view, true);
+    c.strokeStyle = `${palette.brassDim}90`; c.strokeRect(view.x - .5, view.y - .5, view.width + 1, view.height + 1);
     const center = projectMapPoint(player.x, player.y, view);
     c.save(); c.beginPath(); c.rect(view.x, view.y, view.width, view.height); c.clip();
     c.setLineDash([2, 4]); c.strokeStyle = '#c5d5b127'; c.lineWidth = .8;
@@ -320,18 +370,20 @@ export class WorldMap {
       c.beginPath(); c.arc(p.x, p.y, enemy.kind === 'brute' ? 1.9 : 1.4, 0, Math.PI * 2); c.fill(); c.stroke();
     }
     this.playerArrow(c, player, view, true); c.restore();
-    text(c, 'N', view.x + view.width / 2, view.y + 3, .8, '#a9b8a6', 'center');
+    text(c, 'N', view.x + view.width / 2, view.y + 3, .8, palette.jade, 'center');
     const name = this.location(player);
     c.save(); c.beginPath(); c.rect(r.x + 6, r.y + r.height - 19, r.width - 12, 15); c.clip();
-    text(c, name, r.x + r.width / 2, r.y + r.height - 15, .95, '#bfc5a9', 'center'); c.restore();
+    text(c, name, r.x + r.width / 2, r.y + r.height - 15, .95, palette.text, 'center'); c.restore();
     if (this.minimapPointer) {
-      const p = this.minimapPointer;
-      const poi = pois.find(poi => { const q = projectMapPoint(poi.x, poi.y, view); return Math.hypot(q.x - p.x, q.y - p.y) <= 8; });
+      const poi = pickMapPOI(pois, view, this.minimapPointer, 8);
       if (poi) {
         const boxWidth = Math.min(190, width - 24), bx = Math.max(12, r.x - boxWidth - 9), by = r.y + 30;
-        c.fillStyle = '#0a141bf5'; c.fillRect(bx, by, boxWidth, 42); c.strokeStyle = '#8b7751'; c.strokeRect(bx + .5, by + .5, boxWidth - 1, 41);
-        c.save(); c.beginPath(); c.rect(bx + 7, by + 5, boxWidth - 14, 32); c.clip();
-        text(c, poi.name, bx + 8, by + 8, 1.1, '#ead7ab'); text(c, POI_DEFINITIONS[poi.kind].label, bx + 8, by + 26, .9, '#96b6a5'); c.restore();
+        c.fillStyle = `${palette.panel}fa`; c.fillRect(bx, by, boxWidth, 48);
+        c.strokeStyle = palette.lineStrong; c.strokeRect(bx + .5, by + .5, boxWidth - 1, 47);
+        c.fillStyle = POI_DEFINITIONS[poi.kind].color; c.fillRect(bx + 1, by + 9, 2, 29);
+        c.save(); c.beginPath(); c.rect(bx + 10, by + 6, boxWidth - 20, 36); c.clip();
+        text(c, POI_DEFINITIONS[poi.kind].label, bx + 11, by + 9, .85, palette.jade);
+        text(c, poi.name, bx + 11, by + 26, 1.1, palette.ivory); c.restore();
       }
     }
     c.restore();
@@ -350,13 +402,7 @@ export class WorldMap {
     c.setTransform(this.ratio, 0, 0, this.ratio, 0, 0); c.clearRect(0, 0, this.view.width, this.view.height);
     this.hovered = null;
     const region = bounds(this.view);
-    if (this.pointer && !this.drag) {
-      let distance = 14;
-      for (const poi of this.exploration.getDiscoveredPOIs(region)) {
-        const p = projectMapPoint(poi.x, poi.y, this.view), d = Math.hypot(p.x - this.pointer.x, p.y - this.pointer.y);
-        if (d < distance) { distance = d; this.hovered = poi; }
-      }
-    }
+    if (this.pointer && !this.drag) this.hovered = pickMapPOI(this.exploration.getDiscoveredPOIs(region), this.view, this.pointer, 14);
     this.chart(c, this.view, false);
     const grid = TILE_WORLD * 2, first = unprojectMapPoint(0, 0, this.view);
     c.save(); c.strokeStyle = '#bfbe9720'; c.lineWidth = .65;
@@ -367,18 +413,22 @@ export class WorldMap {
       const p = projectMapPoint(0, wy, this.view); c.beginPath(); c.moveTo(0, p.y); c.lineTo(this.view.width, p.y); c.stroke();
     }
     c.restore(); this.playerArrow(c, this.player, this.view, false);
-    text(c, 'N', this.view.width - 27, 16, 1.15, '#d4c293', 'center');
+    text(c, 'N', this.view.width - 27, 16, 1.15, palette.brass, 'center');
     c.strokeStyle = '#a8af9566'; c.beginPath(); c.moveTo(this.view.width - 27, 34); c.lineTo(this.view.width - 27, 54); c.moveTo(this.view.width - 32, 40); c.lineTo(this.view.width - 27, 34); c.lineTo(this.view.width - 22, 40); c.stroke();
     setText(this.title, this.location(this.player));
-    setText(this.status, this.exploration.persistenceMessage || `${this.exploration.discoveredPOICount} places discovered`);
-    setText(this.coordinates, `${Math.round(this.player.x)}, ${Math.round(this.player.y)}`);
+    const count = this.exploration.discoveredPOICount;
+    setText(this.discoveries, `${count} ${count === 1 ? 'place' : 'places'} charted`);
+    setText(this.status, this.exploration.persistenceMessage || (this.exploration.storageStatus === 'pending' ? 'Charting…' : 'Chart saved'));
+    this.status.dataset.state = this.exploration.storageStatus;
+    setText(this.coordinates, `X ${Math.round(this.player.x)} · Y ${Math.round(this.player.y)}`);
     if (this.hovered && this.pointer) this.showTooltip(this.hovered, this.pointer); else this.hideTooltip();
   }
 
   private showTooltip(poi: MapPOI, point: { x: number; y: number }) {
     this.tooltip.hidden = false; setText(this.tooltipName, poi.name);
     setText(this.tooltipKind, POI_DEFINITIONS[poi.kind].label); setText(this.tooltipDescription, poi.description);
-    this.tooltip.style.left = `${Math.max(10, Math.min(this.view.width - 254, point.x + 18))}px`;
+    this.tooltip.style.setProperty('--poi-color', POI_DEFINITIONS[poi.kind].color);
+    this.tooltip.style.left = `${Math.max(10, Math.min(this.view.width - this.tooltip.offsetWidth - 12, point.x + 18))}px`;
     this.tooltip.style.top = `${Math.max(10, Math.min(this.view.height - this.tooltip.offsetHeight - 12, point.y + 15))}px`;
   }
   private hideTooltip() { this.tooltip.hidden = true; }

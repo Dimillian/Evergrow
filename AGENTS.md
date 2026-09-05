@@ -53,11 +53,13 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/src/assets/fonts/` and `typography.css`: locally bundled Pixelify Sans, source/license records, and shared menu typography.
 - `game/src/main.ts`: font loading, bootstrap, and hot replacement. `game.ts` coordinates systems and application phases; `game-shell.ts` owns DOM menus and controls; `game-input.ts` owns held controls and action edges; `lifetime.ts` handles reverse-order teardown and startup rollback.
 - `game/src/ui-hit-test.ts`: shared UI boundary for combat input, enemy hover, and cursor drawing. New panels must join this boundary and clear buffered simulation inputs when changing control context.
+- `game/src/ui-theme.ts`, `ui-kit.css`, `ui-icons.ts`, and `ui-components.ts`: shared DOM/Canvas palette, window/control primitives, decorative SVG icons, and abortable modal focus management. `game-menu.ts` builds start/pause/defeat windows. Read `docs/ui-kit.md` before expanding inventory or other panels; extend shared primitives rather than adding independent themes.
 - `game/src/exploration.ts` and `world-map.ts`: discovered terrain/POIs, local exploration persistence, smoothly scrolling minimap, and interactive world map.
 - `game/src/exploration-save.ts` and `map-view.ts`: transactional save validation and pure map projection/zoom limits; existing schemas and compatibility exports remain intact.
 - `game/layouts.html` and `game/src/layout-review.ts`: dev-only static town, interior, and road scenes with PNG export using the real renderer; never advances gameplay or changes exploration saves.
 - `game/rig.html` and `game/src/rig-review.ts`: dev-only frozen character poses across eight facings, without driving gameplay.
 - `game/hud.html` and `game/src/hud-review.ts`: dev-only frozen healthy, damaged, and depleted player HUD/enemy plate states with PNG export; no gameplay or save access.
+- `game/ui.html` and `game/src/ui-review.ts`: dev-only static review of actual windows and reusable UI primitives at desktop/narrow sizes, with frozen rendering and memory-only exploration.
 - `docs/`: design documents and reference concepts, not runtime assets.
 
 From the repository root: `npm run setup`, `npm run dev`, `npm test`, and `npm run build`. `npm run check` runs code tests, strict/core compilation, and a production build; it never runs browser gameplay tests. `npm run stats` prints source/content counts and last-build sizes. Engine tests require Node.js 22.13 or later for TypeScript stripping.

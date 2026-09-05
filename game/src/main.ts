@@ -1,8 +1,12 @@
+import './ui-kit.css';
 import './style.css';
 import './typography.css';
+import { installUITheme } from './ui-theme.ts';
 import './world-map.css';
 import { loadGameFont } from './font.ts';
 import { Game } from './game.ts';
+
+installUITheme();
 
 const app = document.querySelector<HTMLElement>('#app')!;
 

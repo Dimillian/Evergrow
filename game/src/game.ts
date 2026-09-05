@@ -293,7 +293,12 @@ export class Game {
   };
 
   private showMenu() {
-    this.shell.showMenu(this.phase, this.sim.kills, this.sim.time);
+    const p = this.sim.player;
+    const building = this.world.getBuildingAt(p.x, p.y);
+    const town = this.world.getSettlements(p.x - 1, p.y - 1, 2, 2)
+      .find(place => Math.hypot(p.x - place.x, p.y - place.y) <= place.radius);
+    const location = building?.name ?? town?.name ?? this.world.sampleBiome(p.x, p.y).name;
+    this.shell.showMenu(this.phase, this.sim.kills, this.sim.time, location);
   }
 
   toggleSound() {

@@ -17,6 +17,7 @@ The foundation pass preserves existing gameplay and art while making rules, draw
 | Procedural art | Modular character motion, equipment drawing, enemy art and prop libraries; all world art generated in code | Preserved drawing output; more weapon/armor families remain content work |
 | Lighting / effects | Dynamic lights/shadows, combat particles, blade ribbon, synthesized audio, fixed CRT/soft phosphor | Bounded resources; performance has not been benchmarked in gameplay |
 | HUD / application | Animated orbs, 4 action slots, 4 disabled menu shortcuts, enemy focus plate, shared UI hit regions, clean native text | Tested geometry/input; menus await their actual systems |
+| Interface kit | Shared theme and SVG icons; refined start/pause/defeat/map windows; buttons, slots, stats, tooltips, scroll regions, keyboard focus | Ready for panel composition; inventory behavior remains future work |
 | Lifecycle / tooling | Scoped teardown and startup rollback, HMR cleanup, strict/core compilation, dependency checks, reusable stats command | Foundation guardrails in place |
 
 ## Combat numbers
@@ -65,3 +66,9 @@ The extra modules are smaller ownership boundaries; code size is a maintenance m
 Concrete fixes include bounded extreme-coordinate queries, immutable cached layouts, safe exploration boundary round-trips, correct full-capacity merge reporting, empty-corrupt-save protection, defensive POI copies, invalid grip/damage handling, bounded effect batches, world-aware scene caching, and cleanup of resources even if one teardown fails.
 
 For the ownership map and extension instructions, see [implemented architecture](architecture.md). Run `npm run stats` after future builds to refresh the measurements.
+
+## Subsequent interface checkpoint
+
+The UI pass passes **177 code tests across 31 files**, strict/core TypeScript checks, and the production build. There are now **61 TypeScript modules**, including **4 static review entrypoints**; **57 runtime modules** total **7,686 lines**. Runtime dependencies remain zero. The current build contains **198.46 kB JavaScript / 68.13 kB gzip** and **19.27 kB CSS / 4.69 kB gzip**, using the stats script's compression settings, with the font separate.
+
+Static in-app browser inspection covered start/pause/defeat windows, the world map, reusable components, desktop/narrow layouts, and pause keyboard focus. The user's playable tab was left untouched. See [interface kit](ui-kit.md) for extension guidance and the local review link. The foundation measurements above remain the historical before/after refactor record.
