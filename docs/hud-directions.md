@@ -7,7 +7,7 @@ Open the local [HUD directions](http://127.0.0.1:5173/hud-directions.html) in th
 | Direction | Identity | Material and silhouette | Tradeoff |
 | --- | --- | --- | --- |
 | The Reliquary | A gothic heirloom | Stone arcade, aged brass, pointed tracery, heraldic detail | Strong classical ARPG character; the most architectural ornament |
-| Thornbound | A living relic of the wilderness | Carved rootwood, antler shoulders, bronze bindings, jade patina | The strongest Evergrowing identity; organic detail must stay controlled at small sizes |
+| Thornbound | A living relic of the wilderness | Carved rootwood, antler shoulders, bronze bindings, jade patina | The strongest Evergrow identity; organic detail must stay controlled at small sizes |
 | The Astral Instrument | An occult measuring instrument | Calibrated silver rings, blackened steel, celestial engraving, suspended plates | The clearest and most precise direction; colder and more ceremonial |
 
 Selected direction: The Astral Instrument. Calibrated silver rings, celestial engraving, and suspended black-steel action plates provide its identity. The shared UI kit now includes silver and steel tokens for carrying these materials into future inventory work.

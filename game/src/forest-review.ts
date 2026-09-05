@@ -23,7 +23,7 @@ async function boot() {
   canvas.className = 'layout-review-scene'; canvas.style.aspectRatio = '3 / 2';
   canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', 'Animated Verdant Forest: gusts, reactive grass, falling leaves and startled birds.');
   const c = canvas.getContext('2d', { alpha: false })!;
-  root.innerHTML = `<header class="layout-review-header"><div><p class="layout-review-eyebrow">EVERGROWING / MOTION STUDY</p><h1>The living forest</h1></div><p>Seed 7319 · Actual renderer + CRT</p></header>
+  root.innerHTML = `<header class="layout-review-header"><div><p class="layout-review-eyebrow">EVERGROW / MOTION STUDY</p><h1>The living forest</h1></div><p>Seed 7319 · Actual renderer + CRT</p></header>
     <div class="layout-review-toolbar"><button type="button" id="forest-record">Record 14-second clip</button><button type="button" id="forest-restart">Restart scene</button><a id="forest-download" hidden>Save recording</a><button type="button" id="forest-export" hidden>Export to project</button></div>
     <figure class="layout-review-figure"><div class="layout-review-frame"></div><figcaption>Traveling gusts · Parting grass · Footstep litter · Crows and butterflies · Shifting canopy light</figcaption></figure>
     <p role="status" id="forest-status">Staged animation. No gameplay ticks or save access.</p>
@@ -48,7 +48,7 @@ async function boot() {
     renderer.render(simulation, sceneWorld, dt, { phase: 'paused', reducedMotion: reduced.matches, fps: 0, debug: false });
     post!.render(renderer.canvas, time);
     c.fillStyle = '#091318'; c.fillRect(0, 0, 960, 640); c.drawImage(display, 0, 32);
-    c.font = '18px "Pixelify Sans"'; c.fillStyle = '#d8d8ab'; c.fillText('EVERGROWING / THE LIVING FOREST', 16, 23);
+    c.font = '18px "Pixelify Sans"'; c.fillStyle = '#d8d8ab'; c.fillText('EVERGROW / THE LIVING FOREST', 16, 23);
     c.font = '12px "Pixelify Sans"'; c.fillStyle = '#9eb9a4';
     c.fillText('ACTUAL RENDERER + CRT · STAGED MOVEMENT · SEED 7319 · NO GAMEPLAY OR SAVE ACCESS', 16, 634);
     if (recorder?.state === 'recording') status.textContent = `Recording ${Math.floor(time)} / ${scene.duration} seconds…`;
@@ -68,7 +68,7 @@ async function boot() {
       if (disposed) return;
       if (download) URL.revokeObjectURL(download);
       recorded = new Blob(chunks, { type: mimeType }); download = URL.createObjectURL(recorded);
-      save.href = download; save.download = `evergrowing-living-forest.${mimeType.includes('mp4') ? 'mp4' : 'webm'}`; save.hidden = false;
+      save.href = download; save.download = `evergrow-living-forest.${mimeType.includes('mp4') ? 'mp4' : 'webm'}`; save.hidden = false;
       const video = root.querySelector<HTMLVideoElement>('#forest-recording')!; video.src = download; video.hidden = false;
       exportButton.hidden = false;
       button.disabled = false; status.textContent = 'Recording ready. Save the clip.';

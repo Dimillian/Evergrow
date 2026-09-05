@@ -1,4 +1,4 @@
-# Working on Evergrowing
+# Working on Evergrow
 
 ## User preferences
 

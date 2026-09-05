@@ -1,14 +1,14 @@
-# Evergrowing — game brief
+# Evergrow — game brief
 
 **Status:** initial design proposal · **Updated:** 2026-09-04
 
 ## The game in one paragraph
 
-Evergrowing is a fully 2D, top-down browser action RPG in which a gothic world unfolds as the player explores. Fight through living forests and drowned ruins, discover settlements, step directly into their buildings, and return to the wilderness with equipment that changes both your appearance and your play style. A vast, interconnected skill tree lets melee, ranged, and magic builds grow into hybrids. The world can keep generating, and the player can keep pursuing stronger challenges, without requiring a final map edge or a mandatory character reset.
+Evergrow is a fully 2D, top-down browser action RPG in which a gothic world unfolds as the player explores. Fight through living forests and drowned ruins, discover settlements, step directly into their buildings, and return to the wilderness with equipment that changes both your appearance and your play style. A vast, interconnected skill tree lets melee, ranged, and magic builds grow into hybrids. The world can keep generating, and the player can keep pursuing stronger challenges, without requiring a final map edge or a mandatory character reset.
 
 **Player fantasy:** “Every expedition reveals somewhere worth exploring, every fight feels good, and every return to town gives me a new possibility for my build.”
 
-Diablo informs the immediacy, atmosphere, loot excitement, and compact orb-based HUD. Path of Exile informs the depth of interconnected character choices. Evergrowing should develop its own fiction, art language, node structure, and interface details.
+Diablo informs the immediacy, atmosphere, loot excitement, and compact orb-based HUD. Path of Exile informs the depth of interconnected character choices. Evergrow should develop its own fiction, art language, node structure, and interface details.
 
 ## Original requirements
 

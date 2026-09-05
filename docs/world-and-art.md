@@ -1,4 +1,4 @@
-# Evergrowing — world and procedural art
+# Evergrow — world and procedural art
 
 Status: working design proposal for discussion. **Required** marks the player-facing direction from the initial brief; **proposed** marks a recommended design choice; **experiment** marks an approach that must earn its place in a playable prototype. Numbers below are starting targets, not measured performance claims.
 

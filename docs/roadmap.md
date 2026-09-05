@@ -1,4 +1,4 @@
-# Evergrowing — roadmap
+# Evergrow — roadmap
 
 **Status:** proposed sequence, not a dated commitment · **Updated:** 2026-09-04
 

@@ -29,7 +29,7 @@ async function start() {
   if (disposed) return;
   stageAtlasExploration(chart, seed);
   root.innerHTML = `<header class="atlas-review-header"><div class="atlas-review-heading">${uiIcon('map')}<div>
-    <p class="ui-kicker">Evergrowing · World study</p><h1>Beyond the familiar roads</h1></div></div>
+    <p class="ui-kicker">Evergrow · World study</p><h1>Beyond the familiar roads</h1></div></div>
     <nav class="atlas-seeds" aria-label="World seed">${SEEDS.map(value => `<a class="ui-button${seed === value ? ' is-selected' : ''}" href="/atlas.html?seed=${value}"${seed === value ? ' aria-current="page"' : ''}>Seed ${value}</a>`).join('')}</nav></header>
     <div class="atlas-map-mount"></div><footer class="atlas-review-footer"><span><strong class="atlas-biomes"></strong> · Extensive exploration, with a living frontier</span>
     <span>Static review · <a href="#" class="atlas-export">Export chart PNG</a></span></footer>`;
@@ -46,7 +46,7 @@ async function start() {
   window.addEventListener('resize', () => { map?.resize(); map?.fitBounds(framing, 24); }, { signal: abort.signal });
   root.querySelector('.atlas-export')!.addEventListener('click', event => {
     event.preventDefault(); if (!map) return;
-    const link = document.createElement('a'); link.download = `evergrowing-atlas-${seed}.png`;
+    const link = document.createElement('a'); link.download = `evergrow-atlas-${seed}.png`;
     link.href = map.getCanvas().toDataURL('image/png'); link.click();
   }, { signal: abort.signal });
 }

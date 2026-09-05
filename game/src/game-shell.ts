@@ -26,7 +26,7 @@ export class GameShell {
   constructor(root: HTMLElement, actions: ShellActions) {
     this.actions = actions;
     root.innerHTML = `<div class="game-shell">
-      <canvas id="game" tabindex="0" aria-label="Evergrowing: wilderness and settlements"></canvas>
+      <canvas id="game" tabindex="0" aria-label="Evergrow: wilderness and settlements"></canvas>
       <canvas id="game-ui" aria-hidden="true"></canvas>
       <nav id="hud-controls" class="hud-controls" aria-label="Character menus" hidden>
         ${HUD_MENU_SHORTCUTS.map(shortcut => `<button type="button" class="hud-control" data-hud="${shortcut.id}"

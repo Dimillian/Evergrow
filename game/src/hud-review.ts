@@ -130,7 +130,7 @@ async function boot() {
       c.restore();
     });
     download.href = canvas.toDataURL('image/png');
-    download.download = 'evergrowing-hud-review.png'; download.hidden = false;
+    download.download = 'evergrow-hud-review.png'; download.hidden = false;
     status.textContent = `Frozen player HUD and enemy nameplates · PNG ${canvas.width} × ${canvas.height}`;
     root.dataset.ready = 'true'; root.setAttribute('aria-busy', 'false');
   }

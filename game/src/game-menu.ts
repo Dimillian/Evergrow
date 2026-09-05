@@ -11,7 +11,7 @@ export function gameMenuMarkup(phase: Exclude<GamePhase, 'playing' | 'map'>,
   const duration = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
   return `<section class="ui-window menu-window${dead ? ' menu-window--fallen' : ''}">
     <header class="menu-brand">
-      <span class="ui-kicker">EVERGROWING</span>
+      <span class="ui-kicker">EVERGROW</span>
       ${phase === 'paused' ? `<button type="button" id="close-menu" class="ui-button ui-button--quiet ui-button--icon"
         aria-label="Resume game" data-tooltip="Resume game" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('close')}</button>` : `<span class="menu-brand-mark" aria-hidden="true">${uiIcon('diamond')}</span>`}
     </header>

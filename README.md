@@ -1,6 +1,6 @@
-# Evergrowing
+# Evergrow
 
-A dark, procedural 2D action RPG for the browser, inspired by Diablo and Path of Exile. Explore a growing wilderness, find gear, and build a character across a vast classless skill tree.
+A gothic, top-down 2D action RPG built for the browser, inspired by Diablo and Path of Exile. Explore a growing wilderness, find gear, and build a character across a vast classless skill tree.
 
 **Status: playable local prototype · actively iterating · not released.**
 
@@ -11,8 +11,8 @@ A dark, procedural 2D action RPG for the browser, inspired by Diablo and Path of
 - **World:** seven blended biomes, procedural towns with walk-in interiors, camps and landmarks, day/night lighting, wind and ambient wildlife. Scrolling minimap and an explored-world atlas.
 - **Combat:** melee, bows and elemental staves; shields and dual wield; dodging, particles, damage feedback, and six enemy archetypes across three ranks. Encounters spawn outside the camera.
 - **Builds:** 2,113 nodes, 150 constellations and 17 active skills. Short early routes, useful resource/speed choices, and cross-discipline bridges at every layer. Attack and cast speed are independent; first-tier skills have no cooldown.
-- **Gear & progression:** procedural names, icons and visible equipment; 64 inventory slots, drag/drop and quick equip; item tiers, enemy loot tables, geographic danger scaling, XP and allocatable points.
-- **Presentation:** code-generated artwork, dynamic lighting, restrained CRT/phosphor, and a shared retro interface with crisp UI text.
+- **Gear & progression:** procedural names, icons and visible equipment; an 8×8 inventory, drag/drop, quick equip and comparison tooltips; item tiers, enemy loot tables, geographic danger scaling, and one skill point plus five attribute points per level.
+- **Presentation:** code-generated artwork, dynamic lighting, restrained CRT/phosphor, and a shared retro-modern UI kit with compact panels, readable rarity treatments and animated tooltips.
 
 Character progress resets on reload or a new run; only map discovery persists locally. Trading, crafting, quests, respecs and character saves are still to come. Endless progression is the direction, not a finished endgame.
 
@@ -44,7 +44,7 @@ npm run check   # Code tests, strict TypeScript checks, production build
 npm run stats   # Content, source and build statistics
 ```
 
-TypeScript, Vite, Canvas 2D and WebGL; no runtime package dependencies. **431 code tests pass** at this checkpoint. Gameplay feel and balance are tested by the player.
+TypeScript, Vite, Canvas 2D and WebGL; no runtime package dependencies. **434 code tests pass** at this checkpoint. Gameplay feel and balance are tested by the player.
 
 [Game brief](docs/game-brief.md) · [Roadmap](docs/roadmap.md) · [Architecture](docs/architecture.md) · [Skills & weapons](docs/weapons-and-skills.md) · [Progression & loot](docs/progression-and-loot.md)
 

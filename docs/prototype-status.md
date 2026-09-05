@@ -67,7 +67,7 @@ Useful feedback areas are movement continuity, repeated attack cadence, sword re
 
 ## HUD references
 
-The floating centerpiece uses bottom-center action grouping and clear resource anchors as design references. Blizzard discusses its bottom-center PC action-bar layout in the [Diablo IV UI design update](https://news.blizzard.com/en-gb/article/23308274/diablo-iv-quarterly-updatefebruary-2020). Grinding Gear Games' [archived interface screenshot](https://webcdn.pathofexile.com/public/chris/old/11.jpg), published in its [development screenshot history](https://www.pathofexile.com/forum/view-thread/445682), provides another reference for orb-based ARPG controls. Evergrowing's frame, icons, and orb animation are generated in code; no reference artwork is imported.
+The floating centerpiece uses bottom-center action grouping and clear resource anchors as design references. Blizzard discusses its bottom-center PC action-bar layout in the [Diablo IV UI design update](https://news.blizzard.com/en-gb/article/23308274/diablo-iv-quarterly-updatefebruary-2020). Grinding Gear Games' [archived interface screenshot](https://webcdn.pathofexile.com/public/chris/old/11.jpg), published in its [development screenshot history](https://www.pathofexile.com/forum/view-thread/445682), provides another reference for orb-based ARPG controls. Evergrow's frame, icons, and orb animation are generated in code; no reference artwork is imported.
 
 ## Deliberately deferred
 

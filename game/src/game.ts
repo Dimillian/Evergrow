@@ -77,7 +77,7 @@ export class Game {
       }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
       try {
-        const saved = JSON.parse(localStorage.getItem('evergrowing-preferences') ?? 'null');
+        const saved = JSON.parse(localStorage.getItem('evergrow-preferences') ?? 'null');
         if (typeof saved?.muted === 'boolean') this.muted = saved.muted;
       } catch { /* Preferences are optional when storage is disabled. */ }
       // Presentation is fixed and motion follows the OS.
@@ -368,7 +368,7 @@ export class Game {
   }
 
   private savePreferences() {
-    try { localStorage.setItem('evergrowing-preferences', JSON.stringify({ muted: this.muted })); } catch { /* Storage may be disabled. */ }
+    try { localStorage.setItem('evergrow-preferences', JSON.stringify({ muted: this.muted })); } catch { /* Storage may be disabled. */ }
   }
 
   private toast(message: string) {

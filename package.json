@@ -1,5 +1,5 @@
 {
-  "name": "evergrowing-workspace",
+  "name": "evergrow-workspace",
   "private": true,
   "scripts": {
     "setup": "npm --prefix game ci",

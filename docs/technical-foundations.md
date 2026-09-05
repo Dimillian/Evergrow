@@ -1,10 +1,10 @@
-# Evergrowing — Technical Foundations
+# Evergrow — Technical Foundations
 
 Status: architecture proposal, not an implementation commitment. Updated: 2026-09-04.
 
 ## What the technology must preserve
 
-Evergrowing should feel like one continuous, responsive world: the player crosses biome borders, enters a blacksmith's house, changes visible equipment, and fights without a scene-loading interruption. Procedural generation is the source of the world and its visual assets. It must also produce navigable, readable spaces and a deliberate gothic visual language.
+Evergrow should feel like one continuous, responsive world: the player crosses biome borders, enters a blacksmith's house, changes visible equipment, and fights without a scene-loading interruption. Procedural generation is the source of the world and its visual assets. It must also produce navigable, readable spaces and a deliberate gothic visual language.
 
 The proposed first target is single-player desktop browser play with keyboard and mouse. Multiplayer, mobile controls, cloud accounts, and arbitrary player construction remain outside the first architecture. “Infinite” means effectively inexhaustible exploration and progression, with finite active simulation, finite storage, and explicit technical limits.
 

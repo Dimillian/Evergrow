@@ -1,4 +1,4 @@
-# Evergrowing interface kit
+# Evergrow interface kit
 
 The interface combines dark slate surfaces, fine brass edges, warm text, muted jade actions, and the bundled Pixelify Sans font. Ornament stays at the edges; content and actions get generous space. World post-processing never touches UI text or controls.
 

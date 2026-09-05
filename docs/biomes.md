@@ -1,6 +1,6 @@
 # Biome generation
 
-Evergrowing now has seven recurring biomes. All terrain, props and atmosphere remain generated in code; no biome artwork is loaded from image files.
+Evergrow now has seven recurring biomes. All terrain, props and atmosphere remain generated in code; no biome artwork is loaded from image files.
 
 | Biome | Visual identity | Main props and details |
 | --- | --- | --- |

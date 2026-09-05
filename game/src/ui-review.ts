@@ -25,7 +25,7 @@ const VIEWS = [
 ] as const;
 type View = typeof VIEWS[number]['id'];
 type Size = 'desktop' | 'narrow';
-const CHANNEL = 'evergrowing:ui-review';
+const CHANNEL = 'evergrow:ui-review';
 const SEED = 7319;
 const params = new URLSearchParams(location.search);
 const embedded = params.get('embed') === '1';
@@ -48,7 +48,7 @@ function setURL() {
 }
 
 function outerReview() {
-  root.innerHTML = `<header class="ui-review-header"><div><p class="ui-kicker">EVERGROWING / LOCAL DEV</p>
+  root.innerHTML = `<header class="ui-review-header"><div><p class="ui-kicker">EVERGROW / LOCAL DEV</p>
     <h1>Interface review</h1></div><p class="ui-review-note">Live interface components.<br>Frozen world and chart.</p></header>
     <div class="ui-review-tools"><nav class="ui-review-tabs" aria-label="Interface states">
       ${VIEWS.map(choice => `<button class="ui-button ui-button--quiet" type="button" data-view="${choice.id}" aria-pressed="false">${choice.label}</button>`).join('')}
@@ -57,7 +57,7 @@ function outerReview() {
       <button class="ui-button ui-button--quiet" type="button" data-size="narrow" aria-pressed="false">Narrow</button>
       <button class="ui-button ui-button--quiet" type="button" data-toast>Toast</button>
     </div></div>
-    <div class="ui-review-viewport"><iframe class="ui-review-frame" title="Frozen Evergrowing interface preview"></iframe></div>
+    <div class="ui-review-viewport"><iframe class="ui-review-frame" title="Frozen Evergrow interface preview"></iframe></div>
     <footer class="ui-review-footer"><p class="ui-review-status" role="status">Preparing preview…</p>
       <p>Seed ${SEED} · discovery held in memory · no gameplay</p></footer>`;
   const frame = root.querySelector<HTMLIFrameElement>('iframe')!;

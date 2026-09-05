@@ -23,7 +23,7 @@ const proposals: { id: ConceptMaterial; name: string; subtitle: string; material
     character: 'The most classical ARPG direction. Weighty, precious, and deliberately ornate.', draw: drawReliquary },
   { id: 'thornbound', name: 'Thornbound', subtitle: 'Rootwood · bronze clasps · jade patina',
     material: 'Sculpted roots and thorned shoulders grow around the resource vessels.',
-    character: 'A living relic that belongs to Evergrowing’s wilderness.', draw: drawThornbound },
+    character: 'A living relic that belongs to Evergrow’s wilderness.', draw: drawThornbound },
   { id: 'astral', name: 'The Astral Instrument', subtitle: 'Blackened steel · silver · celestial engraving',
     material: 'Calibrated rings, star marks, and suspended plates make the HUD an occult instrument.',
     character: 'The most precise direction. More negative space, cooler metal, quieter ornament.', draw: drawAstral },
@@ -37,7 +37,7 @@ const sheets: { canvas: HTMLCanvasElement; link: HTMLAnchorElement; proposal: ty
 async function boot() {
   if (!import.meta.env.DEV) throw new Error('HUD directions are available only on the local development server.');
   installUITheme(); await loadGameFont(); if (disposed) return;
-  root.innerHTML = `<header class="directions-header"><p class="ui-kicker">EVERGROWING / ART DIRECTION</p>
+  root.innerHTML = `<header class="directions-header"><p class="ui-kicker">EVERGROW / ART DIRECTION</p>
     <h1 class="ui-title">A HUD with more character.</h1><p class="ui-body">Three procedural studies, from a gothic heirloom to a living relic.
     The selected Astral Instrument reflects the current skill bar. Compare materials and detail with the original studies.</p></header>
     <div class="directions-toolbar"><div aria-label="Resource state">
@@ -92,7 +92,7 @@ async function boot() {
       if (proposal.id === 'astral') drawHUDContents(c, sim.player, 9.2, { healthTrail: pressured ? .73 : 1 });
       else drawConceptControls(c, proposal.id, pressured, 9.2);
       c.restore();
-      link.href = canvas.toDataURL('image/png'); link.download = `evergrowing-${proposal.id}-${pressured ? 'pressured' : 'ready'}.png`;
+      link.href = canvas.toDataURL('image/png'); link.download = `evergrow-${proposal.id}-${pressured ? 'pressured' : 'ready'}.png`;
     }
     root.dataset.ready = 'true'; root.setAttribute('aria-busy', 'false');
     root.querySelector('.directions-status')!.textContent = `${detail ? 'Enlarged detail' : 'Compact game size'} · ${pressured ? '39 life / 68 mana · cooldown and charge states' : '100 life / 94 mana'} · frozen world`;

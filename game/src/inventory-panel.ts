@@ -289,7 +289,7 @@ export class InventoryPanel {
       const location = this.locationFrom(event.target), item = location && this.itemAt(location);
       if (!location || !item || !event.dataTransfer) { event.preventDefault(); return; }
       this.drag = { ...location, id: item.id };
-      event.dataTransfer.setData('application/x-evergrowing-item', item.id);
+      event.dataTransfer.setData('application/x-evergrow-item', item.id);
       event.dataTransfer.effectAllowed = 'move';
       this.hideTooltip();
       this.cells.get(locationKey(location))?.classList.add('is-dragging');
@@ -308,7 +308,7 @@ export class InventoryPanel {
     }, options);
     this.element.addEventListener('drop', event => {
       const target = this.locationFrom(event.target), source = this.drag;
-      const valid = Boolean(source && target && this.canDrop(target) && event.dataTransfer?.getData('application/x-evergrowing-item') === source.id);
+      const valid = Boolean(source && target && this.canDrop(target) && event.dataTransfer?.getData('application/x-evergrow-item') === source.id);
       this.clearDrag();
       if (!valid || !source || !target) return;
       event.preventDefault();

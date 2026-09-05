@@ -31,7 +31,7 @@ async function boot() {
   canvas.className = 'layout-review-scene'; canvas.setAttribute('role', 'img');
   const c = canvas.getContext('2d', { alpha: false })!;
   const display = document.createElement('canvas'); display.width = 1440; display.height = 1000;
-  root.innerHTML = `<header class="layout-review-header"><div><p class="layout-review-eyebrow">EVERGROWING / WILDERNESS</p><h1></h1></div><p class="layout-review-static">Frozen procedural scenes</p></header>
+  root.innerHTML = `<header class="layout-review-header"><div><p class="layout-review-eyebrow">EVERGROW / WILDERNESS</p><h1></h1></div><p class="layout-review-static">Frozen procedural scenes</p></header>
     <div class="layout-review-toolbar"><nav class="layout-review-views" aria-label="Wilderness scenes"></nav><a class="layout-review-download">Save PNG</a></div>
     <figure class="layout-review-figure"><div class="layout-review-frame"></div><figcaption class="layout-review-caption"><p class="layout-review-description"></p><p>Shared world renderer · CRT / soft phosphor</p></figcaption></figure>
     <p class="layout-review-status" role="status"></p>`;
@@ -72,7 +72,7 @@ async function boot() {
     canvas.setAttribute('aria-label', `${title.textContent}. ${description.textContent}`);
     for (const [id, button] of buttons) button.setAttribute('aria-current', String(id === view));
     params.set('view', view); history.replaceState(null, '', `${location.pathname}?${params}`);
-    save.href = canvas.toDataURL('image/png'); save.download = `evergrowing-${view}.png`;
+    save.href = canvas.toDataURL('image/png'); save.download = `evergrow-${view}.png`;
     root.dataset.ready = 'true'; root.setAttribute('aria-busy', 'false');
     root.querySelector('.layout-review-status')!.textContent = `${title.textContent} ready.`;
   }

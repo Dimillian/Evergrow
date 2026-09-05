@@ -22,7 +22,7 @@ async function boot() {
   canvas.className = 'layout-review-scene'; canvas.style.aspectRatio = '1600 / 1100'; canvas.setAttribute('role', 'img');
   const c = canvas.getContext('2d', { alpha: false })!;
   const display = document.createElement('canvas'); display.width = 1600; display.height = 1100;
-  root.innerHTML = `<header class="layout-review-header"><div><p class="layout-review-eyebrow">EVERGROWING / BIOME STUDIES</p><h1></h1></div><p class="layout-review-static">Generated geometry · Seed 7319</p></header>
+  root.innerHTML = `<header class="layout-review-header"><div><p class="layout-review-eyebrow">EVERGROW / BIOME STUDIES</p><h1></h1></div><p class="layout-review-static">Generated geometry · Seed 7319</p></header>
     <div class="layout-review-toolbar"><nav class="layout-review-views" aria-label="Biomes and transitions"></nav><a class="layout-review-download">Save PNG</a></div>
     <figure class="layout-review-figure"><div class="layout-review-frame"></div><figcaption class="layout-review-caption"><p class="layout-review-description"></p><p class="layout-review-location"></p></figcaption></figure>
     <p class="layout-review-status" role="status"></p>`;
@@ -56,7 +56,7 @@ async function boot() {
     canvas.setAttribute('aria-label', `${scene.name}. ${scene.description}`);
     for (const [id, button] of buttons) button.setAttribute('aria-current', String(id === scene.id));
     params.set('view', scene.id); history.replaceState(null, '', `${location.pathname}?${params}`);
-    save.href = canvas.toDataURL('image/png'); save.download = `evergrowing-${scene.id}.png`;
+    save.href = canvas.toDataURL('image/png'); save.download = `evergrow-${scene.id}.png`;
     root.dataset.ready = 'true'; root.setAttribute('aria-busy', 'false');
     root.querySelector('.layout-review-status')!.textContent = `${scene.name} ready.`;
   }

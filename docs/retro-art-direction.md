@@ -1,4 +1,4 @@
-# Evergrowing — retro art exploration
+# Evergrow — retro art exploration
 
 Status: concept exploration, September 4, 2026; these are experiments, not approved final assets. Generated raster concepts are visual targets. Geometry, palettes, animation, and rendering recipes still need to be authored in code.
 

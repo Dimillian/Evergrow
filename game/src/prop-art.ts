@@ -18,7 +18,7 @@ function makeSprite(factory: CanvasFactory, width: number, height: number): Spri
 
 function context(sprite: Sprite): CanvasRenderingContext2D {
   const ctx = sprite.image.getContext('2d');
-  if (!ctx) throw new Error('Evergrowing needs a 2D canvas context to draw its procedural artwork.');
+  if (!ctx) throw new Error('Evergrow needs a 2D canvas context to draw its procedural artwork.');
   ctx.imageSmoothingEnabled = false;
   return ctx;
 }

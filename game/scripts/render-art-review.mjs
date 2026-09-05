@@ -49,7 +49,7 @@ for (const scene of scenes) {
  c.fillStyle = '#091318'; c.fillRect(0, 0, image.width, image.height);
  c.font = '25px "Pixelify Sans"'; c.fillStyle = '#ddd3ae'; c.fillText(scene.name, 24, 36);
  c.font = '14px "Pixelify Sans"'; c.fillStyle = '#96aba3';
- c.textAlign = 'right'; c.fillText('EVERGROWING / PROCEDURAL WORLD ART', 1576, 33); c.textAlign = 'left';
+ c.textAlign = 'right'; c.fillText('EVERGROW / PROCEDURAL WORLD ART', 1576, 33); c.textAlign = 'left';
  c.imageSmoothingEnabled = false; c.drawImage(renderer.canvas, 0, 55, 1600, height);
  c.font = '13px "Pixelify Sans"'; c.fillStyle = '#96aba3';
  c.fillText('SEED 7319 · FROZEN ACTUAL RENDERER · CANVAS BEFORE CRT · NO GAMEPLAY OR SAVE ACCESS', 24, image.height - 13);

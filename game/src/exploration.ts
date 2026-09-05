@@ -51,7 +51,7 @@ export class Exploration {
   constructor(world: ExplorationWorld, options: ExplorationOptions = {}) {
     this.world = world;
     this.generationVersion = String(options.generationVersion ?? world.generationVersion ?? 1);
-    this.storageKey = `evergrowing:exploration:1:${this.generationVersion}:${world.seed}`;
+    this.storageKey = `evergrow:exploration:1:${this.generationVersion}:${world.seed}`;
     this.storage = options.storage === undefined ? defaultStorage() : options.storage;
     const delay = options.saveDelayMs ?? 1800;
     this.saveDelay = Math.max(100, Math.min(10_000, Number.isFinite(delay) ? delay : 1800));

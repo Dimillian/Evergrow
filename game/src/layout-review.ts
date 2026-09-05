@@ -160,7 +160,7 @@ async function boot() {
 
   root.innerHTML = `
     <header class="layout-review-header">
-      <div><p class="layout-review-eyebrow">EVERGROWING / LOCAL DEV</p><h1>Settlement layout review</h1></div>
+      <div><p class="layout-review-eyebrow">EVERGROW / LOCAL DEV</p><h1>Settlement layout review</h1></div>
       <p class="layout-review-static">Frozen generated scenes</p>
     </header>
     <div class="layout-review-toolbar">
@@ -195,7 +195,7 @@ async function boot() {
     scene.setAttribute('aria-label', `${stage.title}. ${stage.description}. CRT with soft phosphor.`);
     scene.dataset.view = view;
     download.href = scene.toDataURL('image/png');
-    download.download = `evergrowing-${view}-seed-${WORLD_SEED}-v${world.generationVersion}-crt-phosphor.png`;
+    download.download = `evergrow-${view}-seed-${WORLD_SEED}-v${world.generationVersion}-crt-phosphor.png`;
     metadata.textContent = `Seed ${WORLD_SEED} · generation ${world.generationVersion} · PNG ${EXPORT_WIDTH} × ${EXPORT_HEIGHT}`;
     status.textContent = `${stage.title}, CRT with soft phosphor ready.`;
     root.dataset.ready = 'true';
@@ -214,7 +214,7 @@ async function boot() {
     renderer.render(simulation, world, 1, settings);
     view = next;
     heading.textContent = stage.title; description.textContent = stage.description;
-    document.title = `Evergrowing · ${stage.title} · Layout review`;
+    document.title = `Evergrow · ${stage.title} · Layout review`;
     for (const [id, button] of viewButtons) button.setAttribute('aria-current', String(id === view));
     compose();
   }

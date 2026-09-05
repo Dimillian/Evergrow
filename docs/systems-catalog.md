@@ -1,4 +1,4 @@
-# Evergrowing — systems catalog
+# Evergrow — systems catalog
 
 **Status:** initial design inventory · **Updated:** 2026-09-04
 

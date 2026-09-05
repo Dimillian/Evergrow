@@ -1,4 +1,4 @@
-# Evergrowing — retro procedural concept gallery
+# Evergrow — retro procedural concept gallery
 
 Created 2026-09-04 with the **built-in imagegen tool**. Four game states explore the user's direction: top-down procedural graphics, a retro appearance, pixel typography, pixel-art-adjacent shapes, and CRT/phosphor effects.
 
@@ -6,7 +6,7 @@ These images are visual references for code-authored geometry, materials, animat
 
 ## 1. Forest exploration at dusk
 
-![Forest exploration with simplified polygon trees, an amber lantern, and a pixel HUD](/Users/dimillian/Documents/dev/Evergrowing/docs/concepts/01-forest-exploration.png)
+![Forest exploration with simplified polygon trees, an amber lantern, and a pixel HUD](01-forest-exploration.png)
 
 **Build vocabulary:** tapered branch segments, overlapping canopy polygons, a broad path mask, two-tone stones, a layered avatar, a radial lamp pool, and a restrained full-screen retro pass. Green canopy gradually gives way to exposed dead branches.
 
@@ -14,7 +14,7 @@ This is the simplified second pass. The [initial study](studies/forest-detailed-
 
 ## 2. Swamp combat at night
 
-![Swamp combat with a clear sword arc, floating damage numbers, and phosphor accents](/Users/dimillian/Documents/dev/Evergrowing/docs/concepts/02-swamp-combat.png)
+![Swamp combat with a clear sword arc, floating damage numbers, and phosphor accents](02-swamp-combat.png)
 
 **Build vocabulary:** connected water/land masks, repeated plank strips, reed fans, small enemy rigs, a swept sword-arc shape, short particle bursts, ground-warning arcs, and pooled bitmap damage labels. Reserve the brightest contrast for the player action and enemy tells.
 
@@ -22,7 +22,7 @@ The pale green water accents explore phosphor-like emission while the amber atta
 
 ## 3. Village and blacksmith interior
 
-![A modular village with a revealed blacksmith interior and light spilling through its doorway](/Users/dimillian/Documents/dev/Evergrowing/docs/concepts/03-village-blacksmith.png)
+![A modular village with a revealed blacksmith interior and light spilling through its doorway](03-village-blacksmith.png)
 
 **Build vocabulary:** building footprints, repeated roof strips, short wall segments, anvil/bench/furnace shapes, window rectangles, and local light pools. The workshop occupies its actual footprint, with an open doorway connecting directly to the street.
 
@@ -30,7 +30,7 @@ This still depicts the roof after its reveal. A playable prototype must demonstr
 
 ## 4. Skill-tree planning
 
-![A readable skill-tree section with pixel typography, an amber allocated path, and a selected skill tooltip](/Users/dimillian/Documents/dev/Evergrowing/docs/concepts/04-skill-tree.png)
+![A readable skill-tree section with pixel typography, an amber allocated path, and a selected skill tooltip](04-skill-tree.png)
 
 **Build vocabulary:** circles and diamonds, reusable tiny glyphs, graph edges, selection rings, a softly glowing allocated route, bitmap labels, and plain panels. This is a local tree view; thousands of nodes belong in a pan-and-zoom graph with selective labels.
 
