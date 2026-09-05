@@ -80,3 +80,5 @@ Enemy plates show source level and rank beside their health readout, preserving 
 The development-only `/progression.html` study composes shared windows, stat rows, native controls, tier colors and procedural item icons into a scrollable balance reference. All displayed calculations consume runtime modules. Keep probabilities conditional where appropriate, label hypothetical ranks and benchmark gear, and distinguish expected rewards from guaranteed outcomes. This study stays outside gameplay menus and production entrypoints.
 
 The character hall combines the live procedural forest background with the shared equipped portrait, compact slot cards, explicit delete confirmation, level/power metadata, and a required name field for creation. The static `/title.html` preview uses memory-only saves.
+
+HUD navigation uses muted engravings and small native-font bindings on one shared shelf; only unspent-point badges carry strong amber/violet emphasis. Smooth metal shoulders extend beneath the orb collars, using the same curves for rendering and input coverage. Resource readouts share a single frame, and the six skill leaves have aligned upper and lower edges.

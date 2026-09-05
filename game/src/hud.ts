@@ -134,17 +134,19 @@ function shortcuts(c: CanvasRenderingContext2D, p: Player) {
     const enabled = i < 3;
     const points = i === 0 ? p.character.statPoints : i === 2 ? p.character.skillPoints : 0;
     const accent = i === 0 ? '#edbd79' : '#c9a5f3';
-    c.fillStyle = points > 0 ? '#252332' : '#0b151cf2';
-    c.fillRect(x, menu.y, menu.width, menu.height);
-    c.strokeStyle = points > 0 ? accent : enabled ? '#728992' : '#34444b'; c.lineWidth = .7;
-    c.strokeRect(x + .5, menu.y + .5, menu.width - 1, menu.height - 1);
+    // Navigation is an engraving in the shelf, not a row of competing skill buttons.
+    if (points > 0) {
+      const tint = c.createLinearGradient(x, menu.y, x, menu.y + menu.height);
+      tint.addColorStop(0, accent + '16'); tint.addColorStop(1, accent + '00');
+      c.fillStyle = tint; c.fillRect(x, menu.y, menu.width, menu.height);
+    }
+    if (i > 0) {
+      c.strokeStyle = '#758c952b'; c.lineWidth = .5;
+      c.beginPath(); c.moveTo(x - 1, menu.y + 5); c.lineTo(x - 1, menu.y + menu.height - 5); c.stroke();
+    }
     drawHUDMenuIcon(c, i, x + 10, menu.y + 11);
-    // A separate keycap gives the binding a stable, bright silhouette beside its icon.
-    c.fillStyle = enabled ? '#1d303c' : '#101c23';
-    c.fillRect(x + 20, menu.y + 4, 12, 15);
-    c.strokeStyle = enabled ? '#819aa6' : '#394b55';
-    c.beginPath(); c.moveTo(x + 21, menu.y + 18.5); c.lineTo(x + 31, menu.y + 18.5); c.stroke();
-    text(c, HUD_MENU_SHORTCUTS[i].key, x + 26, menu.y + 5.5, 1.35, enabled ? '#f0f5ee' : '#829098', 'center', 'interface');
+    text(c, HUD_MENU_SHORTCUTS[i].key, x + 26, menu.y + 7, 1.05,
+      enabled ? '#a0b2b7' : '#4e626c', 'center', 'interface');
     if (points > 0) {
       // Persistent numbered seals: amber attributes, violet skills. Hide as soon as spent.
       const count = points > 99 ? '99+' : String(points);
@@ -161,8 +163,6 @@ function shortcuts(c: CanvasRenderingContext2D, p: Player) {
 }
 
 function readout(c: CanvasRenderingContext2D, x: number, current: number, max: number, mana: boolean) {
-  polygon(c, [x - 34, 120, x + 34, 120, x + 29, 142, x - 29, 142]);
-  c.fillStyle = '#070d11ed'; c.fill(); c.strokeStyle = UI.silverDim; c.lineWidth = .7; c.stroke();
   const value = `${current} / ${max}`;
   // Reserve the same clear opening when future gear raises resource capacities.
   const size = Math.min(1.13, 58 / Math.max(1, textWidth(value)));

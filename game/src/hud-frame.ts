@@ -93,7 +93,7 @@ function glassInstrument(c: CanvasRenderingContext2D, x: number, side: number, t
 }
 
 function actionTray(c: CanvasRenderingContext2D) {
-  // Curved tension arms leave negative space between the spheres and the tray.
+  // Broad, gently swept shoulders terminate underneath the orb collars.
   for (const side of [-1, 1]) {
     const { upper, lower } = HUD_ARM;
     c.save(); c.translate(HUD_ARM.center, 0); c.scale(side, 1);
@@ -102,10 +102,11 @@ function actionTray(c: CanvasRenderingContext2D) {
     c.lineTo(lower[0], lower[1]);
     c.bezierCurveTo(lower[2], lower[3], lower[4], lower[5], lower[6], lower[7]); c.closePath();
     c.fillStyle = metal(c, 82, 114); c.fill(); c.strokeStyle = '#4c6572'; c.lineWidth = .75; c.stroke();
-    c.beginPath(); c.moveTo(127, 84); c.bezierCurveTo(138, 89, 142, 104, 150, 106);
-    c.strokeStyle = '#a1b4bb'; c.lineWidth = .65; c.stroke();
-    c.beginPath(); c.arc(151, 108, 2.2, 0, TAU); c.fillStyle = '#0b1620'; c.fill();
-    c.strokeStyle = '#718d98'; c.stroke();
+    // One inset glint follows the same shallow sweep; no exposed hinge or loose tip.
+    c.beginPath(); c.moveTo(127, 85); c.bezierCurveTo(139, 85, 149, 86, 166, 86);
+    c.strokeStyle = '#77929a'; c.lineWidth = .55; c.stroke();
+    c.beginPath(); c.moveTo(130, 90); c.bezierCurveTo(142, 93, 154, 94, 166, 94);
+    c.strokeStyle = '#172b36'; c.lineWidth = .8; c.stroke();
     c.restore();
   }
 
@@ -113,12 +114,12 @@ function actionTray(c: CanvasRenderingContext2D) {
   const skill = HUD_ART.skill;
   for (let i = 0; i < skill.count; i++) {
     const x = skill.x + i * skill.step - 2, width = skill.width + 4;
-    const inner = i === 2 || i === 3, top = inner ? 64 : 66, bottom = inner ? 136 : 133;
+    const top = 66, bottom = 133;
     path(c, [x + 5, top, x + width - 5, top, x + width, top + 5, x + width, bottom - 5,
       x + width - 7, bottom, x + 7, bottom, x, bottom - 5, x, top + 5]);
     c.fillStyle = metal(c, top, bottom); c.fill(); c.strokeStyle = '#344c59'; c.lineWidth = .9; c.stroke();
     c.beginPath(); c.moveTo(x + 5, top + .5); c.lineTo(x + width - 5, top + .5);
-    c.strokeStyle = '#a9bdc4'; c.lineWidth = .7; c.stroke();
+    c.strokeStyle = '#7e969f'; c.lineWidth = .6; c.stroke();
     c.strokeStyle = '#09121a'; c.lineWidth = 1.2;
     c.strokeRect(x + 1.5, skill.y - 1, width - 3, skill.height + 2.2);
     c.beginPath(); c.moveTo(x + 9, bottom - 2.5); c.lineTo(x + width - 9, bottom - 2.5);
@@ -143,7 +144,7 @@ function utilityPlates(c: CanvasRenderingContext2D) {
     c.fillStyle = metal(c, y, y + height); c.fill();
     c.strokeStyle = '#526b77'; c.lineWidth = .85; c.stroke();
     c.beginPath(); c.moveTo(x + 5, y + .8); c.lineTo(x + width - 5, y + .8);
-    c.strokeStyle = '#a9bec4'; c.lineWidth = .6; c.stroke();
+    c.strokeStyle = '#6d8792'; c.lineWidth = .55; c.stroke();
     c.beginPath(); c.moveTo(x + 5, y + height - 1.6); c.lineTo(x + width - 5, y + height - 1.6);
     c.strokeStyle = '#263f4d'; c.stroke();
     for (const px of [x + 3, x + width - 3]) {
@@ -158,16 +159,18 @@ function crown(c: CanvasRenderingContext2D) {
   c.beginPath(); c.moveTo(189, 54); c.bezierCurveTo(188, 59, 180, 61, 173, 62);
   c.moveTo(331, 54); c.bezierCurveTo(332, 59, 340, 61, 347, 62);
   c.strokeStyle = '#1e3340'; c.lineWidth = 3; c.stroke();
-  c.strokeStyle = '#829ea7'; c.lineWidth = .7; c.stroke();
+  c.strokeStyle = '#455e6b'; c.lineWidth = .6; c.stroke();
   c.beginPath(); c.moveTo(181, 29); c.quadraticCurveTo(181, 24, 188, 24);
   c.lineTo(249, 24); c.quadraticCurveTo(260, 20, 271, 24);
   c.lineTo(332, 24); c.quadraticCurveTo(339, 24, 339, 29);
   c.lineTo(339, 51); c.quadraticCurveTo(339, 56, 332, 56);
   c.lineTo(188, 56); c.quadraticCurveTo(181, 56, 181, 51); c.closePath();
-  c.fillStyle = metal(c, 24, 56); c.fill(); c.strokeStyle = '#526b77'; c.lineWidth = .85; c.stroke();
+  const shelf = c.createLinearGradient(0, 24, 0, 56);
+  shelf.addColorStop(0, '#354b56'); shelf.addColorStop(.12, '#15242e'); shelf.addColorStop(1, '#0a151ef5');
+  c.fillStyle = shelf; c.fill(); c.strokeStyle = '#3c5663'; c.lineWidth = .7; c.stroke();
   c.beginPath(); c.moveTo(190, 25.3); c.lineTo(247, 25.3);
   c.moveTo(273, 25.3); c.lineTo(330, 25.3);
-  c.strokeStyle = '#a9bec4'; c.lineWidth = .6; c.stroke();
+  c.strokeStyle = '#6d8792'; c.lineWidth = .55; c.stroke();
   c.beginPath(); c.moveTo(190, 54.3); c.lineTo(330, 54.3);
   c.strokeStyle = '#263f4d'; c.stroke();
 
@@ -188,12 +191,12 @@ function crown(c: CanvasRenderingContext2D) {
 
 function resourceShelf(c: CanvasRenderingContext2D, x: number) {
   // Opaque backing masks the lower orbit and leaves the full numeric line clear.
-  c.beginPath(); c.moveTo(x - 34, 122); c.quadraticCurveTo(x, 119, x + 34, 122);
-  c.lineTo(x + 31, 137); c.quadraticCurveTo(x, 143, x - 31, 137); c.closePath();
+  c.beginPath(); c.moveTo(x - 34, 122); c.quadraticCurveTo(x, 121, x + 34, 122);
+  c.lineTo(x + 30, 141); c.quadraticCurveTo(x, 143, x - 30, 141); c.closePath();
   c.fillStyle = metal(c, 121, 141); c.fill(); c.strokeStyle = '#4a6573'; c.lineWidth = .8; c.stroke();
   c.beginPath(); c.moveTo(x - 25, 122); c.quadraticCurveTo(x, 120.4, x + 25, 122);
   c.strokeStyle = '#90aab3'; c.lineWidth = .65; c.stroke();
-  c.beginPath(); c.moveTo(x - 20, 138.5); c.quadraticCurveTo(x, 142, x + 20, 138.5);
+  c.beginPath(); c.moveTo(x - 20, 140); c.quadraticCurveTo(x, 141.5, x + 20, 140);
   c.strokeStyle = '#718e99'; c.lineWidth = .6; c.stroke();
 }
 

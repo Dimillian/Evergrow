@@ -38,6 +38,7 @@ function makeStages(): Stage[] {
   healthy.xp = 60;
   damaged.hp = 39; damaged.mana = 68; damaged.dodgeCharges = 1; damaged.dodgeRecharge = 1.2;
   damaged.level = 2; damaged.xp = 90;
+  damaged.character.statPoints = 5; damaged.character.skillPoints = 1;
   depleted.hp = 16; depleted.mana = 7; depleted.flasks = 0; depleted.dodgeCharges = 0;
   depleted.dodgeRecharge = .56; depleted.healCooldown = .65;
   depleted.level = 4; depleted.xp = 220;

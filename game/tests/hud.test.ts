@@ -82,11 +82,11 @@ test('open space beside the menu rail and around the HUD silhouette remains play
 test('curved metal supports block input while their upper and lower apertures remain open', () => {
   const samples = [
     ['tray-side metal', 394, 91, true],
-    ['middle of support', 399, 96, true],
-    ['orb-side metal', 405, 103, true],
-    ['lower metal tip', 411, 110, true],
+    ['middle of support', 399, 89, true],
+    ['orb-side metal', 405, 91, true],
+    ['shoulder under orb collar', 416, 91, true],
     ['above support near tray', 393, 78, false],
-    ['above curved edge', 399, 85, false],
+    ['above curved edge', 399, 81, false],
     ['below curved edge', 399, 107, false],
     ['below support near orb', 405, 117, false],
   ] as const;

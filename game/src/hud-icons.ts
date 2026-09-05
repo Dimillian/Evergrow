@@ -140,11 +140,11 @@ export function drawHUDSkillIcon(c: CanvasRenderingContext2D, index: number,
   c.restore();
 }
 
-/** High-contrast menu engravings; bindings are rendered separately at native resolution. */
+/** Subdued menu engravings; bindings remain native-resolution text. */
 export function drawHUDMenuIcon(c: CanvasRenderingContext2D, index: number, x: number, y: number): void {
-  c.save(); c.translate(x, y); c.scale(1.4, 1.4); c.lineCap = 'round'; c.lineJoin = 'round';
+  c.save(); c.translate(x, y); c.scale(1.08, 1.08); c.lineCap = 'round'; c.lineJoin = 'round';
   c.shadowBlur = 0; c.shadowColor = 'transparent';
-  c.strokeStyle = index === 3 ? '#687980' : '#d5e4e9'; c.fillStyle = c.strokeStyle; c.lineWidth = 1.15;
+  c.strokeStyle = index === 3 ? '#4e626c' : '#9bb1b8'; c.fillStyle = c.strokeStyle; c.lineWidth = 1.15;
   c.beginPath();
   if (index === 0) {
     c.arc(0, -2.6, 1.8, 0, Math.PI * 2);

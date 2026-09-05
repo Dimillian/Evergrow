@@ -11,8 +11,8 @@ export const HUD_ART = Object.freeze({
 /** Curved support edges in coordinates relative to the HUD's center. */
 export const HUD_ARM = Object.freeze({
   center: 260,
-  upper: Object.freeze([125, 82, 137, 85, 141, 99, 153, 104] as const),
-  lower: Object.freeze([151, 112, 137, 107, 135, 91, 123, 89] as const),
+  upper: Object.freeze([123, 83, 139, 83, 145, 84, 166, 84] as const),
+  lower: Object.freeze([166, 96, 145, 96, 136, 91, 123, 91] as const),
 });
 
 type Point = readonly [number, number];
@@ -30,7 +30,7 @@ const armContour: readonly Point[] = [HUD_ARM.upper, HUD_ARM.lower].flatMap(curv
 
 function isArmPoint(x: number, y: number): boolean {
   x = Math.abs(x - HUD_ARM.center);
-  if (x < 122 || x > 154 || y < 81 || y > 113) return false;
+  if (x < 122 || x > 167 || y < 82 || y > 97) return false;
   let inside = false;
   for (let i = 0, j = armContour.length - 1; i < armContour.length; j = i++) {
     const [ax, ay] = armContour[j], [bx, by] = armContour[i];
