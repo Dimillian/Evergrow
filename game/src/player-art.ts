@@ -2,13 +2,13 @@ import { getSupportGripOffset } from './equipment.ts';
 import { projectArmPoint } from './player-arm-rig.ts';
 import type { CharacterPose, CharacterOutfit } from './art-types.ts';
 import { PLAYER_ATTACHMENTS, playerMotion } from './character-motion.ts';
-import { STARTER_OUTFIT, sword, upperArm, forearm, gauntlet, armorBoot, chestArmor, shoulderArmor, headArmor } from './equipment-art.ts';
+import { STARTER_OUTFIT, heldWeapon, heldShield, upperArm, forearm, gauntlet, armorBoot, chestArmor, shoulderArmor, headArmor } from './equipment-art.ts';
 import { hash, polygon, line, taper, type Color, type Point } from './art-primitives.ts';
 
 export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color): void {
   const outfit: CharacterOutfit = { ...STARTER_OUTFIT, ...pose.outfit };
   const { moving, phase, step, moveX, moveY, bob, back, commitment, torsoTurn, cast,
-    weaponAngle, swordBehind, hipX, hipY, lean, body, hand, weaponArm, offArm } = playerMotion(pose);
+    weaponAngle, offWeaponAngle, rangedDraw, swordBehind, hipX, hipY, lean, body, hand, weaponArm, offArm } = playerMotion(pose);
   const legs = [-1, 1].map(side => {
     const legPhase = phase + (side > 0 ? Math.PI : 0);
     const travel = Math.sin(legPhase) * 5.2 * moving;
@@ -42,19 +42,28 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
 
   ctx.save();
   ctx.transform(...body);
-  const supportHolding = pose.grip !== 'one-handed' && cast < .05;
-  const heldSword = () => {
-    sword(ctx, hand, weaponAngle, color, pose.weapon);
+  const bow = pose.weapon?.kind === 'bow';
+  const supportHolding = pose.grip !== 'one-handed' && (cast < .05 || bow || pose.weapon?.kind === 'staff' || !!pose.gesture);
+  const mainWeapon = () => {
+    heldWeapon(ctx, hand, weaponAngle, color, pose.weapon, rangedDraw);
     gauntlet(ctx, hand, outfit.hands, color);
     if (supportHolding) gauntlet(ctx, projectArmPoint(offArm.hand), outfit.hands, color);
     // Fingers cross the grip, keeping the weapon seated in the animated gauntlet.
     ctx.save(); ctx.translate(hand[0], hand[1]); ctx.rotate(weaponAngle);
     line(ctx, [[-0.6, -1.2], [-0.6, 1.3]], color(outfit.hands?.material.edge ?? '#baa078'), 0.7);
-    if (supportHolding) {
+    if (supportHolding && !bow) {
       const support = getSupportGripOffset(pose.weapon);
       line(ctx, [[support - .6, -1.2], [support - .6, 1.3]], color(outfit.hands?.material.edge ?? '#baa078'), .7);
     }
     ctx.restore();
+  };
+  const offEquipment = () => {
+    const offHand = projectArmPoint(offArm.hand);
+    if (pose.offHand?.kind === 'shield') heldShield(ctx, offHand, pose.angle, pose.offHand.visual, color, pose.guard);
+    if (pose.offHand?.kind === 'weapon') {
+      heldWeapon(ctx, offHand, offWeaponAngle, color, pose.offHand.visual);
+      gauntlet(ctx, offHand, outfit.hands, color);
+    }
   };
   const armLayers = [weaponArm, offArm].flatMap(arm => [
     { depth: (arm.shoulder[1] + arm.elbow[1]) / 2,
@@ -92,7 +101,8 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
   };
   if (!back) cape();
   for (const layer of armLayers) if (layer.depth < 0) layer.draw();
-  if (swordBehind) heldSword();
+  if (swordBehind) mainWeapon();
+  if (pose.offHand && offArm.hand[1] < 0) offEquipment();
   ctx.save();
   ctx.translate(0, PLAYER_ATTACHMENTS.chest[1]);
   ctx.transform(1 - Math.abs(torsoTurn) * 0.08, torsoTurn * 0.12, 0, 1, 0, 0);
@@ -109,12 +119,13 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
   ctx.save(); ctx.translate(lean * -12, -bob * 0.3);
   headArmor(ctx, outfit.head, color, pose.angle);
   ctx.restore();
-  if (!swordBehind) heldSword();
-  if (cast > 0.05) {
+  if (!swordBehind) mainWeapon();
+  if (pose.offHand && offArm.hand[1] >= 0) offEquipment();
+  if (cast > 0.05 && pose.weapon?.kind !== 'staff' && !bow && !pose.offHand && !pose.gesture) {
     const offHand = projectArmPoint(offArm.hand);
     ctx.save(); ctx.translate(offHand[0], offHand[1]); ctx.rotate(pose.time * 4.5);
     const radius = 1 + cast * 2.8;
-    polygon(ctx, [[0, -radius], [radius, 0], [0, radius], [-radius, 0]], color('#ffc276'));
+    polygon(ctx, [[0, -radius], [radius, 0], [0, radius], [-radius, 0]], color(pose.castColor ?? '#c0acf0'));
     ctx.fillStyle = color('#fff5c0'); ctx.fillRect(-0.8, -0.8, 1.6, 1.6);
     ctx.restore();
   }

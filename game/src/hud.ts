@@ -1,5 +1,6 @@
 import { drawActiveSkillIcon } from './hud-active-skills.ts';
-import { SKILL_DEFINITIONS } from './skill-content.ts';
+import { SKILL_DEFINITIONS, canUseSkill } from './skill-content.ts';
+import { heldWeapon as drawEquippedWeapon } from './equipment-art.ts';
 import type { Player } from './model.ts';
 import { PLAYER_ABILITIES } from './combat-content.ts';
 import { UI_THEME } from './ui-theme.ts';
@@ -39,7 +40,8 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
     const definition = skill ? SKILL_DEFINITIONS[skill] : null;
     const cooldown = skill ? p.skillCooldowns[skill] ?? 0 : 0;
     const occupied = i === 0 || !!skill, active = i === 0 ? !!p.attack : !!skill && p.activeSkill === skill;
-    const usable = !p.dead && cooldown <= 0 && (!definition || p.mana >= definition.manaCost);
+    const compatible = !skill || canUseSkill(skill, p.equipment);
+    const usable = !p.dead && compatible && cooldown <= 0 && (!definition || p.mana >= definition.manaCost);
     c.save();
     chamfer(c, x, y, w, h, 3);
     const well = c.createLinearGradient(x, y, x, y + h);
@@ -55,9 +57,17 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
       c.globalAlpha = usable ? 1 : .42;
       c.save(); c.translate(x + w / 2, y + 22); c.scale(1.08, 1.08);
       if (skill) drawActiveSkillIcon(c, skill);
-      else drawHUDSkillIcon(c, 0, 0, 0, time, active);
+      else if (p.equipment.mainHand.family === 'unarmed') drawHUDSkillIcon(c, 0, 0, 0, time, active);
+      else {
+        c.save(); c.scale(.66, .66);
+        drawEquippedWeapon(c, [0, 9], -Math.PI / 3, color => color, p.equipment.mainHand.visual);
+        c.restore();
+      }
       c.restore(); c.globalAlpha = 1;
-      if (definition && cooldown > 0) {
+      if (!compatible) {
+        const required = definition!.requirement;
+        text(c, required === 'heavy' ? 'HEAVY' : required.toUpperCase(), x + w / 2, y + 32, .7, '#d3a898', 'center');
+      } else if (definition && cooldown > 0) {
         c.fillStyle = '#030a10a8'; c.fillRect(x + 2, y + 2, w - 4, 37 * clamp(cooldown / (definition.cooldown * p.derived.cooldownMultiplier)));
         text(c, cooldown.toFixed(1), x + w / 2, y + 18, 1.3, UI.ivory, 'center');
       } else if (definition) text(c, String(definition.manaCost), x + w - 5, y + 3, .8, '#91bddd', 'right');

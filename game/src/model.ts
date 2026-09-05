@@ -19,6 +19,9 @@ export interface Input {
 }
 
 export interface Attack {
+  kind: 'melee' | 'ranged';
+  weapon: WeaponDefinition;
+  hand: 'main' | 'off';
   elapsed: number;
   duration: number;
   activeStart: number;
@@ -28,6 +31,8 @@ export interface Attack {
   arc: number;
   damage: number;
   hitIds: Set<number>;
+  projectile?: ProjectileEffects;
+  released?: boolean;
 }
 
 export interface CharacterStats {
@@ -35,10 +40,12 @@ export interface CharacterStats {
   attackSpeedMultiplier: number;
   /** Multiplies the equipped weapon's base damage. */
   attackDamageMultiplier: number;
+  spellDamageMultiplier: number;
 }
 
 export interface WeaponVisual {
-  kind: 'sword' | 'unarmed';
+  kind: WeaponFamily;
+  element?: DamageType;
   length: number;
   width: number;
   metal: string;
@@ -53,6 +60,10 @@ export interface WeaponVisual {
 export interface WeaponDefinition {
   id: string;
   name: string;
+  family: WeaponFamily;
+  hands: 1 | 2;
+  attackKind: 'melee' | 'arrow' | 'bolt';
+  damageType: DamageType;
   baseAttacksPerSecond: number;
   damage: number;
   reach: number;
@@ -61,10 +72,24 @@ export interface WeaponDefinition {
   visual: WeaponVisual;
 }
 
+export type WeaponFamily = 'sword' | 'axe' | 'mace' | 'dagger' | 'bow' | 'staff' | 'unarmed';
+export type DamageType = 'physical' | 'fire' | 'frost' | 'lightning' | 'arcane';
+export type ProjectileStyle = 'arrow' | 'fire' | 'frost' | 'lightning' | 'arcane' | 'spirit';
+export interface ShieldDefinition {
+  id: string; name: string; blockChance: number; blockReduction: number;
+  visual: { kind: 'buckler' | 'kite' | 'tower'; base: string; edge: string; trim: string; shadow: string };
+}
+/** Payload snapshots travel with a projectile; equipment changes cannot rewrite it in flight. */
+export interface ProjectileEffects {
+  style: ProjectileStyle;
+  pierce?: number; chain?: number; chainRange?: number; blastRadius?: number;
+  slowFactor?: number; slowDuration?: number; lifeSteal?: number;
+  burnDuration?: number; burnDps?: number;
+}
+
 export interface Equipment {
   mainHand: WeaponDefinition;
-  /** An occupied off-hand selects an independent-arm stance when those items arrive. */
-  offHand?: { kind: 'weapon'; weapon: WeaponDefinition } | { kind: 'shield'; id: string; name: string } | null;
+  offHand: { kind: 'weapon'; weapon: WeaponDefinition } | { kind: 'shield'; shield: ShieldDefinition } | null;
 }
 
 export interface Player {
@@ -87,6 +112,9 @@ export interface Player {
   derived: DerivedCharacterStats;
   skillCooldowns: Partial<Record<SkillId, number>>;
   activeSkill: SkillId | null;
+  nextAttackHand: 'main' | 'off';
+  guardTime: number;
+  dash: { angle: number; remaining: number; speed: number; damage: number; radius: number; skill: SkillId; hitIds: Set<number> } | null;
   stats: CharacterStats;
   equipment: Equipment;
   attack: Attack | null;
@@ -140,6 +168,11 @@ export interface Enemy {
   stagger: number;
   attackHit: boolean;
   interrupted: boolean;
+  slowTime: number;
+  slowFactor: number;
+  burnTime: number;
+  burnDps: number;
+  burnTick: number;
 }
 
 export interface Projectile {
@@ -157,6 +190,14 @@ export interface Projectile {
   maxLife: number;
   owner: 'player' | 'enemy';
   skill?: SkillId;
+  effects?: ProjectileEffects;
+  hitIds: Set<number>;
+}
+
+export interface GroundEffect {
+  id: number; kind: 'meteor' | 'arrowRain'; x: number; y: number; radius: number;
+  delay: number; duration: number; interval: number; tick: number;
+  damage: number; skill: SkillId;
 }
 
 export interface Pickup {
@@ -169,7 +210,7 @@ export interface Pickup {
   radius: number;
 }
 
-export type CombatEventType = 'swing' | 'hit' | 'kill' | 'cast' | 'hurt' | 'dodge' | 'heal' | 'pickup' | 'spawn' | 'loot' | 'level';
+export type CombatEventType = 'swing' | 'hit' | 'kill' | 'cast' | 'hurt' | 'dodge' | 'heal' | 'pickup' | 'spawn' | 'loot' | 'level' | 'blast' | 'chain' | 'block' | 'ground';
 
 export interface CombatEvent {
   type: CombatEventType;
@@ -186,6 +227,11 @@ export interface CombatEvent {
   skill?: SkillId;
   text?: string;
   color?: string;
+  style?: ProjectileStyle;
+  radius?: number;
+  duration?: number;
+  toX?: number;
+  toY?: number;
 }
 
 export interface SimulationOptions {

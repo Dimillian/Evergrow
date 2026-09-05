@@ -1,8 +1,9 @@
 import { STARTING_SWORD, getSupportGripOffset } from './equipment.ts';
 import { getActiveSwingOffset } from './attack-motion.ts';
 import { PLAYER_ABILITIES } from './combat-content.ts';
-import { ARM_DEPTH_SCALE, armShoulder, solveArm, type RigPoint } from './player-arm-rig.ts';
+import { ARM_DEPTH_SCALE, armShoulder, solveArm, projectArmPoint, type RigPoint } from './player-arm-rig.ts';
 import type { CharacterPose } from './art-types.ts';
+import { bowStringOffset } from './weapon-shapes.ts';
 import { compose, transformPoint, clamp, smooth, type Point, type Affine } from './art-primitives.ts';
 
 export const PLAYER_ART_SCALE = 1.24;
@@ -51,7 +52,8 @@ export function playerMotion(pose: CharacterPose) {
   const bob = (Math.cos(phase * 2) * 0.5 - 0.5) * moving + breath;
   const back = Math.sin(pose.angle) < -0.16;
   const attack = pose.dead ? 0 : clamp(pose.attack);
-  const swinging = attack > 0;
+  const ranged = pose.attackKind === 'ranged' || pose.weapon?.kind === 'bow' || pose.weapon?.kind === 'staff';
+  const swinging = attack > 0 && !ranged;
   const start = pose.attackStart ?? PLAYER_ABILITIES.basicAttack.activeStart, end = pose.attackEnd ?? PLAYER_ABILITIES.basicAttack.activeEnd;
   const windup = swinging && attack < start ? smooth(attack / start) : 0;
   const active = swinging ? clamp((attack - start) / Math.max(0.01, end - start)) : 0;
@@ -64,11 +66,24 @@ export function playerMotion(pose: CharacterPose) {
   const bodyAngle = pose.angle + torsoTurn;
   const crouch = Math.max(0, -commitment) * 1.3;
   const cast = pose.dead ? 0 : smooth(pose.cast ?? 0);
+  const rangedDraw = Math.max(pose.weapon?.kind === 'bow' ? cast : 0, ranged && attack > 0 ? (attack < start ? smooth(attack / start)
+    : 1 - smooth((attack - start) / Math.max(.06, (end - start) * .75))) : 0);
+  const staffCharge = pose.weapon?.kind === 'staff' ? Math.max(cast, rangedDraw) : 0;
   const idleSway = Math.sin(phase + 0.35) * moving * 0.07 + breath * 0.08;
   const attackBlend = !swinging ? 0 : attack < start ? windup : 1 - recovery;
-  const weaponAngle = swinging
+  let weaponAngle = swinging
     ? getSwingAngle(pose.attackAngle, attack, start, end, pose.attackArc) + idleSway * (1 - attackBlend)
     : pose.angle + WEAPON_REST_ANGLE + idleSway;
+  if (pose.weapon?.kind === 'bow') weaponAngle = pose.angle + idleSway * .18;
+  if (pose.weapon?.kind === 'staff') weaponAngle = pose.angle + (WEAPON_REST_ANGLE + idleSway) * (1 - staffCharge);
+  if (pose.gesture === 'thrust') weaponAngle += (pose.angle - weaponAngle) * cast;
+  if (pose.gesture === 'slam') weaponAngle -= cast * .9;
+  let activeWeaponAngle = weaponAngle;
+  const offAttacking = (swinging || !!pose.gesture) && pose.attackHand === 'off';
+  const offBlend = pose.gesture ? cast : attackBlend;
+  const offRestAngle = pose.angle - .7 + idleSway * .7;
+  const offWeaponAngle = offAttacking ? offRestAngle + (activeWeaponAngle - offRestAngle) * offBlend : offRestAngle;
+  if (offAttacking) weaponAngle = pose.angle + WEAPON_REST_ANGLE + idleSway;
   const swordBehind = Math.sin(weaponAngle) < -0.18;
   const hipX = -moveY * step * 0.65 + Math.cos(pose.attackAngle) * commitment * 0.55;
   const hipY = Math.cos(phase * 2) * moving * 0.25 + crouch;
@@ -78,35 +93,69 @@ export function playerMotion(pose: CharacterPose) {
     bob + crouch + Math.sin(pose.attackAngle) * commitment * 1.4];
   const reach = !swinging ? 11 : attack < start ? 11 + windup * 2.3
     : attack < end ? 13.3 + Math.sin(active * Math.PI) ** 2 * 3.5 : 13.3 - recovery * 2.3;
-  const swingHand: Point = [Math.cos(weaponAngle) * reach, -20 + Math.sin(weaponAngle) * reach * .9];
+  const swingHand: Point = [Math.cos(activeWeaponAngle) * reach, -20 + Math.sin(activeWeaponAngle) * reach * .9];
   const restHand: Point = [Math.cos(pose.angle) * 8 - Math.sin(bodyAngle) * 2,
     -16.5 + Math.sin(pose.angle) * 4.4 + Math.cos(bodyAngle) * .9];
-  const hand: Point = [restHand[0] * (1 - attackBlend) + swingHand[0] * attackBlend,
+  let hand: Point = [restHand[0] * (1 - attackBlend) + swingHand[0] * attackBlend,
     restHand[1] * (1 - attackBlend) + swingHand[1] * attackBlend];
   const shoulderSway = step * .3;
   // A centered two-hand guard blends into the existing active attack orbit.
   const handDepth = (Math.sin(pose.angle) * 8 + Math.cos(bodyAngle) * 2) * (1 - attackBlend)
-    + Math.sin(weaponAngle) * reach * attackBlend;
-  const weaponHand: RigPoint = [hand[0], handDepth, handDepth * ARM_DEPTH_SCALE - hand[1]];
-  const gripAmount = pose.grip === 'one-handed' ? 0 : 1 - cast;
-  const weaponArm = solveArm(armShoulder(bodyAngle, 1, shoulderSway), weaponHand, bodyAngle, 1, elbowTuck, gripAmount);
+    + Math.sin(activeWeaponAngle) * reach * attackBlend;
+  let weaponHand: RigPoint = [hand[0], handDepth, handDepth * ARM_DEPTH_SCALE - hand[1]];
+  if (pose.weapon?.kind === 'bow' || pose.weapon?.kind === 'staff') {
+    const reach = pose.weapon.kind === 'bow' ? 14 + rangedDraw : 9 + staffCharge * 7;
+    weaponHand = [Math.cos(pose.angle) * reach, Math.sin(pose.angle) * reach,
+      (pose.weapon.kind === 'bow' ? 23 : 20) + staffCharge * 1.5];
+    hand = projectArmPoint(weaponHand);
+  }
+  if (pose.gesture === 'thrust' || pose.gesture === 'slam') {
+    const reach = 10 + cast * (pose.gesture === 'thrust' ? 12 : 5);
+    const gestureHand: RigPoint = [Math.cos(pose.angle) * reach, Math.sin(pose.angle) * reach, 20 + (pose.gesture === 'slam' ? cast * 8 : 0)];
+    weaponHand = [weaponHand[0] * (1 - cast) + gestureHand[0] * cast,
+      weaponHand[1] * (1 - cast) + gestureHand[1] * cast, weaponHand[2] * (1 - cast) + gestureHand[2] * cast];
+  }
+  const bow = pose.weapon?.kind === 'bow', staff = pose.weapon?.kind === 'staff';
+  const independent = pose.grip === 'one-handed';
+  const gripAmount = independent ? 0 : bow || staff ? 1 : 1 - cast;
   const rightX = -Math.sin(bodyAngle), rightDepth = Math.cos(bodyAngle);
-  const relaxedHand: RigPoint = [-rightX * 9 - step * moveX * 1.2,
-    -rightDepth * 9 - step * moveY * 1.2, 10 + Math.max(0, -commitment) * 3];
-  const supportOffset = getSupportGripOffset(pose.weapon);
+  const guardHand = (side: number): RigPoint => [
+    rightX * side * 8 + Math.cos(bodyAngle) * (8 + (pose.guard ?? 0) * 3) - step * moveX * .5,
+    rightDepth * side * 8 + Math.sin(bodyAngle) * (8 + (pose.guard ?? 0) * 3) - step * moveY * .5,
+    20 + (pose.guard ?? 0) * 2,
+  ];
+  const supportOffset = bow ? bowStringOffset(rangedDraw) : getSupportGripOffset(pose.weapon);
   const supportGrip: RigPoint = [weaponHand[0] + Math.cos(weaponAngle) * supportOffset,
     weaponHand[1] + Math.sin(weaponAngle) * supportOffset,
     weaponHand[2] + (ARM_DEPTH_SCALE - 1) * Math.sin(weaponAngle) * supportOffset];
-  const restOffHand = pose.grip === 'one-handed' ? relaxedHand : supportGrip;
+  const offGuard = guardHand(-1);
+  const restOffHand: RigPoint = pose.gesture === 'bash'
+    ? [offGuard[0] * (1 - cast) + (Math.cos(pose.angle) * 23 - rightX * 4) * cast,
+      offGuard[1] * (1 - cast) + (Math.sin(pose.angle) * 23 - rightDepth * 4) * cast, offGuard[2] + cast * 2]
+    : independent ? offGuard : supportGrip;
   const castHand: RigPoint = [Math.cos(pose.angle) * 15, Math.sin(pose.angle) * 15, 20];
-  const offHand3: RigPoint = [
-    restOffHand[0] * (1 - cast) + castHand[0] * cast,
-    restOffHand[1] * (1 - cast) + castHand[1] * cast,
-    restOffHand[2] * (1 - cast) + castHand[2] * cast,
+  const release = bow || staff || pose.offHand || pose.gesture ? 0 : cast;
+  const offHand3: RigPoint = offAttacking ? [
+    offGuard[0] * (1 - offBlend) + weaponHand[0] * offBlend,
+    offGuard[1] * (1 - offBlend) + weaponHand[1] * offBlend,
+    offGuard[2] * (1 - offBlend) + weaponHand[2] * offBlend,
+  ] : [
+    restOffHand[0] * (1 - release) + castHand[0] * release,
+    restOffHand[1] * (1 - release) + castHand[1] * release,
+    restOffHand[2] * (1 - release) + castHand[2] * release,
   ];
-  const offArm = solveArm(armShoulder(bodyAngle, -1, shoulderSway), offHand3, bodyAngle, -1, 0, gripAmount);
+  const restingDepth = Math.sin(pose.angle) * 8 + Math.cos(bodyAngle) * 2;
+  const mainHand3: RigPoint = offAttacking ? [restHand[0], restingDepth, restingDepth * ARM_DEPTH_SCALE - restHand[1]] : weaponHand;
+  const weaponArm = solveArm(armShoulder(bodyAngle, 1, shoulderSway), mainHand3, bodyAngle, 1, elbowTuck, gripAmount);
+  const offArm = solveArm(armShoulder(bodyAngle, -1, shoulderSway), offHand3, bodyAngle, -1, offAttacking ? elbowTuck : 0, gripAmount);
+  hand = projectArmPoint(mainHand3);
+  const offWeaponActive = pose.attackHand === 'off' && pose.offHand?.kind === 'weapon';
+  const activeHand = offWeaponActive ? projectArmPoint(offHand3) : hand;
+  if (offWeaponActive) activeWeaponAngle = offWeaponAngle;
   return { moving, phase, step, moveX, moveY, bob, back, commitment, torsoTurn, cast,
-    weaponAngle, swordBehind, hipX, hipY, lean, body, hand, bodyAngle, weaponArm, offArm };
+    weaponAngle, activeWeaponAngle, offWeaponAngle, rangedDraw, swordBehind, hipX, hipY, lean, body,
+    hand, activeHand, bodyAngle, weaponArm, offArm };
+
 }
 
 /** Shared joint data for equipment attachment checks and static rig inspection. */
@@ -118,9 +167,10 @@ export function getPlayerArmRig(pose: CharacterPose) {
 /** Exact blade tip in scaled player-local coordinates, relative to the ground anchor. */
 export function getPlayerSwordTip(pose: CharacterPose): { x: number; y: number } {
   const motion = playerMotion(pose);
-  const length = Math.max(8, pose.weapon?.length ?? STARTING_SWORD.visual.length);
-  const local: Point = [motion.hand[0] + Math.cos(motion.weaponAngle) * length,
-    motion.hand[1] + Math.sin(motion.weaponAngle) * length];
+  const activeWeapon = pose.attackHand === 'off' && pose.offHand?.kind === 'weapon' ? pose.offHand.visual : pose.weapon;
+  const length = Math.max(8, activeWeapon?.length ?? STARTING_SWORD.visual.length);
+  const local: Point = [motion.activeHand[0] + Math.cos(motion.activeWeaponAngle) * length,
+    motion.activeHand[1] + Math.sin(motion.activeWeaponAngle) * length];
   const body = transformPoint(motion.body, local);
   const tip = transformPoint(characterTransform(pose), [body[0] * PLAYER_ART_SCALE, body[1] * PLAYER_ART_SCALE]);
   return { x: tip[0], y: tip[1] };

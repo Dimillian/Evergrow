@@ -26,11 +26,11 @@ const ATTRIBUTE_DESCRIPTIONS: Record<Attribute, string> = {
   intelligence: 'Spell damage and maximum mana', vitality: 'Maximum life',
 };
 const SLOT_NAMES: Record<EquipmentSlot, string> = {
-  weapon: 'Weapon', head: 'Head', chest: 'Chest', gloves: 'Gloves', legs: 'Legs', boots: 'Boots',
+  weapon: 'Main hand', offhand: 'Off hand', head: 'Head', chest: 'Chest', gloves: 'Gloves', legs: 'Legs', boots: 'Boots',
   cloak: 'Cloak', amulet: 'Amulet', ring1: 'Ring I', ring2: 'Ring II',
 };
-const LEFT_SLOTS: EquipmentSlot[] = ['head', 'chest', 'gloves', 'legs', 'boots'];
-const RIGHT_SLOTS: EquipmentSlot[] = ['weapon', 'cloak', 'amulet', 'ring1', 'ring2'];
+const LEFT_SLOTS: EquipmentSlot[] = ['chest', 'gloves', 'legs', 'boots', 'cloak'];
+const RIGHT_SLOTS: EquipmentSlot[] = ['weapon', 'offhand', 'amulet', 'ring1', 'ring2'];
 const number = (value: number, decimals = 0) => Number.isFinite(value) ? value.toLocaleString('en-US', { maximumFractionDigits: decimals }) : '—';
 const percent = (value: number) => `${number(value * 100, 1)}%`;
 const statValue = formatStatValue;
@@ -39,6 +39,7 @@ const locationKey = (location: ItemLocation) => location.type === 'bag' ? `bag-$
 function emptySlotIcon(slot: EquipmentSlot): string {
   const glyphs: Record<EquipmentSlot, string> = {
     weapon: '<path d="m10 30 20-20 3-1-1 4-20 19m-4-8 9 9m-9-4-4 4 3 3 4-4"/>',
+    offhand: '<path d="M21 7 34 12v11c0 8-7 13-13 16C15 36 8 31 8 23V12ZM21 13v19M14 21h14"/>',
     head: '<path d="M12 28V16l5-7h8l5 7v12l-6 3v-9h-6v9Zm1-8h16m-8-10v9"/>',
     chest: '<path d="m14 10 7 3 7-3 7 9-7 4v11H14V23l-7-4Zm0 13 7 4 7-4"/>',
     gloves: '<path d="m13 31-4-12 2-2 5 6V10h3v10-12h3v12-10h3v11-8h3v16l-5 5h-7Z"/>',
@@ -84,6 +85,7 @@ export class InventoryPanel {
         <section class="character-equipment" aria-labelledby="equipment-title">
           <div class="character-section-title"><h3 id="equipment-title">Equipment</h3><span data-equipped-count></span></div>
           <div class="character-doll-stage"><div class="character-orbit" aria-hidden="true"></div><canvas class="character-doll" width="560" height="720" aria-label="Your character wearing the current equipment"></canvas>
+            <div class="character-equipment-rail character-equipment-rail--crown">${this.equipmentMarkup('head')}</div>
             <div class="character-equipment-rail character-equipment-rail--left">${LEFT_SLOTS.map(slot => this.equipmentMarkup(slot)).join('')}</div>
             <div class="character-equipment-rail character-equipment-rail--right">${RIGHT_SLOTS.map(slot => this.equipmentMarkup(slot)).join('')}</div>
           </div>
@@ -178,10 +180,15 @@ export class InventoryPanel {
       ['Critical chance', percent(stats.critChance)], ['Critical damage', percent(stats.critMultiplier)],
       ['Maximum life', number(stats.maxHp)], ['Maximum mana', number(stats.maxMana)],
       ['Armor', number(stats.armor)], ['Damage reduction', percent(stats.damageReduction)],
+      ['Block chance', percent(stats.blockChance)], ['Blocked damage reduction', percent(stats.blockReduction)],
       ['Movement speed', percent(stats.moveSpeedMultiplier)], ['Spell damage', percent(stats.spellDamageMultiplier)],
       ['Life regeneration', `${number(stats.lifeRegeneration, 2)} / s`], ['Mana regeneration', `${number(stats.manaRegeneration, 2)} / s`],
       ['Cooldown reduction', percent(1 - stats.cooldownMultiplier)], ['Life on hit', number(stats.lifeOnHit, 1)],
     ];
+    if (player.equipment.offHand?.kind === 'weapon') {
+      const off = deriveAttackStats(player.stats, player.equipment.offHand.weapon);
+      statRows.splice(2, 0, ['Off-hand damage', number(off.damage)], ['Off-hand attacks / s', number(off.attacksPerSecond, 2)]);
+    }
     const markup = statRows.map(([label, value]) => `<div class="ui-stat"><dt class="ui-stat-label">${label}</dt><dd class="ui-stat-value">${value}</dd></div>`).join('');
     const statContainer = this.element.querySelector('[data-combat-stats]')!;
     if (statContainer.innerHTML !== markup) statContainer.innerHTML = markup;
@@ -335,7 +342,7 @@ export class InventoryPanel {
 
   private comparison(item: Item): { slot: EquipmentSlot; item: Item | null } {
     const sheet = this.player!.character;
-    const slot = item.kind === 'ring' ? (!sheet.equipped.ring1 ? 'ring1' : !sheet.equipped.ring2 ? 'ring2' : 'ring1') : item.kind;
+    const slot = item.kind === 'ring' ? (!sheet.equipped.ring1 ? 'ring1' : !sheet.equipped.ring2 ? 'ring2' : 'ring1') : item.kind === 'shield' ? 'offhand' : item.kind;
     return { slot, item: sheet.equipped[slot] };
   }
 
@@ -357,8 +364,10 @@ export class InventoryPanel {
     if (item.weapon) {
       const delta = item.weapon.damage - (compare.item?.weapon?.damage ?? 0);
       const speedDelta = item.weapon.baseAttacksPerSecond - (compare.item?.weapon?.baseAttacksPerSecond ?? 0);
-      weapon = `<div class="character-item-weapon"><div><strong>${number(item.weapon.damage)}</strong><span>Physical damage</span>${!equipped && delta ? `<em class="${delta > 0 ? 'is-gain' : 'is-loss'}">${delta > 0 ? '+' : ''}${number(delta)}</em>` : ''}</div><div><strong>${number(item.weapon.baseAttacksPerSecond, 2)}</strong><span>Attacks / second</span>${!equipped && Math.abs(speedDelta) > .001 ? `<em class="${speedDelta > 0 ? 'is-gain' : 'is-loss'}">${speedDelta > 0 ? '+' : ''}${number(speedDelta, 2)}</em>` : ''}</div></div>`;
+      const damageLabel = item.weapon.damageType[0].toUpperCase() + item.weapon.damageType.slice(1);
+      weapon = `<div class="character-item-weapon"><div><strong>${number(item.weapon.damage)}</strong><span>${damageLabel} damage</span>${!equipped && delta ? `<em class="${delta > 0 ? 'is-gain' : 'is-loss'}">${delta > 0 ? '+' : ''}${number(delta)}</em>` : ''}</div><div><strong>${number(item.weapon.baseAttacksPerSecond, 2)}</strong><span>Attacks / second</span>${!equipped && Math.abs(speedDelta) > .001 ? `<em class="${speedDelta > 0 ? 'is-gain' : 'is-loss'}">${speedDelta > 0 ? '+' : ''}${number(speedDelta, 2)}</em>` : ''}</div></div><p class="character-item-comparison">${item.weapon.hands === 2 ? 'Two-handed' : 'One-handed'} · ${escapeUI(item.weapon.family)} · ${item.weapon.attackKind === 'melee' ? 'Melee sweep' : item.weapon.attackKind === 'arrow' ? 'Arrow shot' : 'Elemental bolt'} · ${number(item.weapon.reach)} reach</p>`;
     }
+    if (item.shield) weapon = `<div class="character-item-weapon"><div><strong>${number(item.shield.blockChance)}%</strong><span>Block chance</span></div><div><strong>${number(item.shield.blockReduction)}%</strong><span>Damage blocked</span></div></div><p class="character-item-comparison">Off hand · Shield · Pairs with a one-handed weapon</p>`;
     return `<div class="character-item-heading" style="--item-color:${TIER_COLORS[item.tier]}">${condensed ? '' : `<span class="character-item-detail-icon">${itemIconSVG(item, 52)}</span>`}<div><span class="character-item-class">${escapeUI(TIER_NAMES[item.tier])} · ${escapeUI(item.baseName)}</span><h4>${escapeUI(item.name)}</h4></div></div>
       <div class="character-item-meta"><span>Item level ${number(item.itemLevel)}</span><span class="${requirements ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel)}</span>${equipped ? '<span class="character-item-equipped">Equipped</span>' : ''}</div>
       ${weapon}<div class="character-item-properties">${rows.join('')}</div>
@@ -380,7 +389,8 @@ export class InventoryPanel {
     const equipped = this.selection.type === 'equipment';
     const blocked = !equipped && item.requiredLevel > this.player!.level;
     const alternateRing = !equipped && item.kind === 'ring' ? `<button type="button" class="ui-button" data-item-action data-target-slot="${this.comparison(item).slot === 'ring1' ? 'ring2' : 'ring1'}"${blocked ? ' disabled' : ''}>${this.comparison(item).slot === 'ring1' ? 'Ring II' : 'Ring I'}</button>` : '';
-    container.innerHTML = `${this.itemDetails(item, this.selection)}<div class="character-item-actions"><div class="character-item-action-buttons"><button type="button" class="ui-button ${equipped ? '' : 'ui-button--primary'}" data-item-action${blocked ? ' disabled' : ''}>${uiIcon(equipped ? 'inventory' : 'check')}${blocked ? `Requires level ${item.requiredLevel}` : equipped ? 'Unequip' : 'Equip'}</button>${alternateRing}</div><span class="character-action-hint"><kbd class="ui-key">Shift</kbd> + click</span></div>`;
+    const alternateHand = !equipped && itemFitsSlot(item, 'offhand') && item.kind === 'weapon' ? `<button type="button" class="ui-button" data-item-action data-target-slot="offhand"${blocked ? ' disabled' : ''}>Off hand</button>` : '';
+    container.innerHTML = `${this.itemDetails(item, this.selection)}<div class="character-item-actions"><div class="character-item-action-buttons"><button type="button" class="ui-button ${equipped ? '' : 'ui-button--primary'}" data-item-action${blocked ? ' disabled' : ''}>${uiIcon(equipped ? 'inventory' : 'check')}${blocked ? `Requires level ${item.requiredLevel}` : equipped ? 'Unequip' : 'Equip'}</button>${alternateRing}${alternateHand}</div><span class="character-action-hint"><kbd class="ui-key">Shift</kbd> + click</span></div>`;
     if (actionFocused) container.querySelector<HTMLButtonElement>('[data-item-action]')?.focus({ preventScroll: true });
   }
 

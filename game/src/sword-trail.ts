@@ -28,7 +28,7 @@ export class SwordTrail {
     if (dt <= 0) return;
     this.time += dt;
     if (player.equipment.mainHand.visual.kind === 'unarmed') { this.reset(); return; }
-    const attack = player.attack;
+    const attack = player.attack?.kind === 'melee' ? player.attack : null;
     const x = player.prevX + (player.x - player.prevX) * interpolationAlpha;
     const y = player.prevY + (player.y - player.prevY) * interpolationAlpha;
     if (this.attack && attack !== this.attack) {
@@ -54,7 +54,7 @@ export class SwordTrail {
     const count = Math.max(1, Math.ceil((to - from) / SAMPLE_STEP));
     const angleAt = (elapsed: number) => getSwingAngle(attack.angle, elapsed / attack.duration,
       attack.activeStart / attack.duration, attack.activeEnd / attack.duration, attack.arc);
-    const color = player.equipment.mainHand.visual.glow ?? '#f4bd67';
+    const color = attack.weapon.visual.glow ?? '#f4bd67';
     for (let i = 0; i <= count; i++) {
       const elapsed = from + (to - from) * i / count;
       const behind = Math.max(0, current - elapsed);

@@ -9,8 +9,11 @@ import { awardExperience } from './progression.ts';
 export function refreshCharacter(player: Player): void {
   const derived = deriveCharacterStats(player.character, getTreeBonuses(player.character.allocatedNodes));
   player.derived = derived;
-  player.stats = { attackDamageMultiplier: derived.attackDamageMultiplier, attackSpeedMultiplier: derived.attackSpeedMultiplier };
-  player.equipment = { mainHand: player.character.equipped.weapon?.weapon ?? UNARMED_WEAPON, offHand: null };
+  player.stats = { attackDamageMultiplier: derived.attackDamageMultiplier, attackSpeedMultiplier: derived.attackSpeedMultiplier, spellDamageMultiplier: derived.spellDamageMultiplier };
+  const offhand = player.character.equipped.offhand;
+  player.equipment = { mainHand: player.character.equipped.weapon?.weapon ?? UNARMED_WEAPON,
+    offHand: offhand?.kind === 'shield' && offhand.shield ? { kind: 'shield', shield: offhand.shield }
+      : offhand?.kind === 'weapon' && offhand.weapon ? { kind: 'weapon', weapon: offhand.weapon } : null };
   player.maxHp = derived.maxHp; player.maxMana = derived.maxMana;
   player.hp = Math.min(player.hp, player.maxHp); player.mana = Math.min(player.mana, player.maxMana);
 }

@@ -13,6 +13,7 @@ test('neutral starter gear preserves current basic attack and resource values', 
   assert.equal(stats.critChance, 0); assert.equal(stats.critMultiplier, 1.5);
   assert.equal(stats.armor, 0); assert.equal(stats.damageReduction, 0);
   assert.equal(stats.cooldownMultiplier, 1); assert.equal(stats.lifeOnHit, 0);
+  assert.equal(stats.blockChance, 0); assert.equal(stats.blockReduction, 0);
 });
 
 test('assigned attributes drive actual combat resources, damage and cadence', () => {
@@ -65,4 +66,21 @@ test('extreme build bonuses are bounded before they reach combat and malformed m
   sheet.equipped.head!.implicit = { maxHp: Number.MAX_VALUE };
   sheet.equipped.chest!.implicit = { maxHp: Number.MAX_VALUE };
   assert.equal(deriveCharacterStats(sheet).maxHp, 1e9);
+});
+
+
+test('block modifiers require a usable equipped shield and combine as percentage points exactly once', () => {
+  const sheet = createCharacterSheet();
+  const bonuses: StatModifiers = { blockChance: 5, blockReduction: 10 };
+  assert.equal(deriveCharacterStats(sheet, bonuses).blockChance, 0);
+  sheet.equipped.offhand = generateItem(144, 1, 'shield', 'iron-buckler');
+  sheet.equipped.offhand.affixes = [];
+  assert.equal(deriveCharacterStats(sheet, bonuses).blockChance, 0, 'two-handed weapon prevents shield use');
+  sheet.equipped.weapon = null;
+  const stats = deriveCharacterStats(sheet, bonuses);
+  assert.equal(stats.blockChance, .25); assert.equal(stats.blockReduction, .65);
+  const bounded = deriveCharacterStats(sheet, { blockChance: 10000, blockReduction: 10000 });
+  assert.equal(bounded.blockChance, .75); assert.equal(bounded.blockReduction, .9);
+  sheet.equipped.offhand = generateItem(144, 1, 'weapon', 'rondel-dagger');
+  assert.equal(deriveCharacterStats(sheet, bonuses).blockChance, 0);
 });

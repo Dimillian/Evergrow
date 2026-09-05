@@ -5,6 +5,9 @@ import { projectArmPoint, type ArmRig, type RigPoint } from '../src/player-arm-r
 import { createStartingEquipment, getGripLength, getSupportGripOffset, getWeaponGrip, STARTING_SWORD } from '../src/equipment.ts';
 import { playerPose } from '../src/character-pose.ts';
 import { Simulation } from '../src/simulation.ts';
+import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
+import { playerMotion } from '../src/character-motion.ts';
+import { bowStringOffset } from '../src/weapon-shapes.ts';
 
 const TAU = Math.PI * 2;
 const rest: CharacterPose = {
@@ -88,20 +91,51 @@ test('a single weapon keeps both hands attached to its grip throughout facing, g
   }
 });
 
-test('off-hand equipment occupancy selects the stance without changing the equipped weapon', () => {
+test('authored weapon handedness selects the appropriate stance with or without off-hand equipment', () => {
   const equipment = createStartingEquipment();
-  const weapon = equipment.mainHand;
-  assert.equal(equipment.offHand, null);
   assert.equal(getWeaponGrip(equipment), 'two-handed');
-  delete equipment.offHand;
-  assert.equal(getWeaponGrip(equipment), 'two-handed', 'older equipment without the optional slot keeps the two-hand stance');
-  equipment.offHand = { kind: 'shield', id: 'test-buckler', name: 'Test buckler' };
+  const weapon = WEAPON_PROFILES.find(profile => profile.family === 'sword' && profile.hands === 1)!;
+  equipment.mainHand = weapon;
   assert.equal(getWeaponGrip(equipment), 'one-handed');
-  equipment.offHand = { kind: 'weapon', weapon: { ...STARTING_SWORD, id: 'test-dagger' } };
+  equipment.offHand = { kind: 'shield', shield: SHIELD_PROFILES[0] };
+  assert.equal(getWeaponGrip(equipment), 'one-handed');
+  equipment.offHand = { kind: 'weapon', weapon: WEAPON_PROFILES.find(profile => profile.family === 'dagger')! };
   assert.equal(getWeaponGrip(equipment), 'one-handed');
   assert.equal(equipment.mainHand, weapon);
   equipment.offHand = null;
-  assert.equal(getWeaponGrip(equipment), 'two-handed');
+  assert.equal(getWeaponGrip(equipment), 'one-handed', 'an empty off-hand keeps a raised free-hand guard');
+});
+
+test('bows attach their support hand to the exact drawn string and staves keep both hands on their shafts', () => {
+  for (const weapon of WEAPON_PROFILES.filter(profile => profile.family === 'bow' || profile.family === 'staff')) {
+    for (let facing = 0; facing < 16; facing++) for (const attack of [0, .05, .19, .25, .45, .8]) for (const cast of [0, .7]) {
+      const angle = facing / 16 * TAU;
+      const pose: CharacterPose = { ...rest, angle, attackAngle: angle, weapon: weapon.visual,
+        grip: 'two-handed', attackKind: 'ranged', attack, cast, moving: .7, gaitPhase: 1.4 };
+      const motion = playerMotion(pose), rig = getPlayerArmRig(pose);
+      validateArm(rig.weapon, weapon.name); validateArm(rig.offhand, weapon.name);
+      const lead = projectArmPoint(rig.weapon.hand), support = projectArmPoint(rig.offhand.hand);
+      const dx = support[0] - lead[0], dy = support[1] - lead[1];
+      near(-dx * Math.sin(rig.weaponAngle) + dy * Math.cos(rig.weaponAngle), 0, 'support hand stays on string/shaft axis');
+      near(dx * Math.cos(rig.weaponAngle) + dy * Math.sin(rig.weaponAngle),
+        weapon.family === 'bow' ? bowStringOffset(motion.rangedDraw) : getSupportGripOffset(weapon.visual), 'hand matches the actual equipment attachment');
+    }
+  }
+});
+
+test('a dual-wield off-hand attack animates the matching arm without exchanging anatomical shoulder mounts', () => {
+  const weapon = WEAPON_PROFILES.find(profile => profile.family === 'sword' && profile.hands === 1)!;
+  const dagger = WEAPON_PROFILES.find(profile => profile.family === 'dagger')!;
+  for (let facing = 0; facing < 16; facing++) {
+    const angle = facing / 16 * TAU;
+    const pose: CharacterPose = { ...rest, angle, attackAngle: angle, weapon: weapon.visual, grip: 'one-handed',
+      offHand: { kind: 'weapon', visual: dagger.visual }, attackKind: 'melee', attackHand: 'off' };
+    const idle = getPlayerArmRig(pose), attacking = getPlayerArmRig({ ...pose, attack: .32 });
+    validateArm(attacking.weapon, 'main-hand guard'); validateArm(attacking.offhand, 'off-hand attack');
+    assert.ok(distance(idle.offhand.hand, attacking.offhand.hand) > 4, 'the dagger hand performs the strike');
+    near(attacking.weapon.shoulder[0] + attacking.offhand.shoulder[0], 0, 'weapons never swap shoulder identities');
+    assert.ok(attacking.weapon.hand[2] >= 14, 'the resting main hand remains in its armed guard');
+  }
 });
 
 test('casting releases the support hand and returns continuously to the same grip', () => {
@@ -163,4 +197,21 @@ test('arm projection preserves depth ordering independently of height', () => {
   assert.ok(projectArmPoint(nearHand)[1] > projectArmPoint(origin)[1], 'nearer ground depth projects lower');
   assert.ok(projectArmPoint(raisedHand)[1] < projectArmPoint(nearHand)[1], 'raising a hand projects higher without changing its depth');
   near(nearHand[1], raisedHand[1], 'height changes cannot silently switch the anatomical depth');
+});
+
+
+test('dual-wield hand attachments stay continuous at the start and end of every attack phase', () => {
+  const weapon = WEAPON_PROFILES.find(profile => profile.family === 'sword' && profile.hands === 1)!;
+  const dagger = WEAPON_PROFILES.find(profile => profile.family === 'dagger')!;
+  const epsilon = 1e-6;
+  for (let facing = 0; facing < 8; facing++) for (const boundary of [0, .19, .45, 1]) {
+    const angle = facing / 8 * TAU;
+    const pose: CharacterPose = { ...rest, angle, attackAngle: angle, weapon: weapon.visual, grip: 'one-handed',
+      moving: .8, gaitPhase: 1.7, offHand: { kind: 'weapon', visual: dagger.visual }, attackKind: 'melee', attackHand: 'off' };
+    const before = { ...pose, attack: Math.max(0, boundary - epsilon) };
+    const after = { ...pose, attack: boundary === 1 ? 0 : boundary + epsilon };
+    assertContinuous(getPlayerArmRig(before), getPlayerArmRig(after), `off-hand boundary ${boundary}`);
+    const a = playerMotion(before), b = playerMotion(after);
+    assert.ok(Math.abs(a.offWeaponAngle - b.offWeaponAngle) < .001, 'off-hand weapon returns smoothly to its own guard angle');
+  }
 });

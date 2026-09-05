@@ -21,6 +21,8 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
   const strength = Math.max(0, attributes.strength - 10), dexterity = Math.max(0, attributes.dexterity - 10);
   const intelligence = Math.max(0, attributes.intelligence - 10), vitality = Math.max(0, attributes.vitality - 10);
   const armor = bounded(value('armor'), 0, 1e9);
+  const offhand = sheet.equipped.offhand;
+  const shield = sheet.equipped.weapon?.weapon?.hands !== 2 && offhand?.kind === 'shield' ? offhand.shield : undefined;
   return {
     attributes,
     maxHp: Math.round(bounded(PLAYER_DEFAULTS.maxHp + vitality * 6 + value('maxHp'), 1, 1e9)),
@@ -36,5 +38,7 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
     lifeRegeneration: bounded(value('lifeRegen'), 0, 1e6),
     cooldownMultiplier: bounded(1 - value('cooldownPercent') / 100, .25, 2),
     lifeOnHit: bounded(value('lifeOnHit'), 0, 1e6),
+    blockChance: shield ? bounded((shield.blockChance + value('blockChance')) / 100, 0, .75) : 0,
+    blockReduction: shield ? bounded((shield.blockReduction + value('blockReduction')) / 100, 0, .9) : 0,
   };
 }

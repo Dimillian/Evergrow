@@ -2,7 +2,7 @@ import type { SkillId } from './character-types.ts';
 import { skillIconSVG, SKILL_DEFINITIONS } from './skill-content.ts';
 const icons = new Map<SkillId, HTMLImageElement>();
 
-/** Six code-defined vectors rasterized once at high density for the native HUD. */
+/** Code-defined vectors rasterized once at high density for the native HUD. */
 export function drawActiveSkillIcon(c: CanvasRenderingContext2D, skill: SkillId): void {
   let icon = icons.get(skill);
   if (!icon) {

@@ -5,21 +5,37 @@ const success = (): ActionResult => ({ ok: true });
 const fail = (message: string): ActionResult => ({ ok: false, message });
 const validIndex = (sheet: CharacterSheet, index: number) => Number.isInteger(index) && index >= 0 && index < sheet.inventory.length;
 export function itemFitsSlot(item: Item, slot: EquipmentSlot): boolean {
-  return item.kind === 'ring' ? slot === 'ring1' || slot === 'ring2' : item.kind === slot;
+  if (item.kind === 'ring') return slot === 'ring1' || slot === 'ring2';
+  if (item.kind === 'shield') return slot === 'offhand';
+  if (item.kind === 'weapon') return slot === 'weapon' || slot === 'offhand' && item.weapon?.hands === 1 && item.weapon.attackKind === 'melee';
+  return item.kind === slot;
 }
 
-/** A swap uses the source bag cell, so it is valid even with a completely full pack. */
+/** Plan both hand conflicts and source-cell swaps before committing any inventory mutation. */
 export function equipItem(sheet: CharacterSheet, inventoryIndex: number, level: number, targetSlot?: EquipmentSlot): ActionResult {
   if (!validIndex(sheet, inventoryIndex)) return fail('Choose an item in your pack.');
   const item = sheet.inventory[inventoryIndex];
   if (!item) return fail('That inventory cell is empty.');
-  const slot = targetSlot ?? (item.kind === 'ring' ? !sheet.equipped.ring1 ? 'ring1' : !sheet.equipped.ring2 ? 'ring2' : 'ring1' : item.kind);
+  const slot: EquipmentSlot = targetSlot ?? (item.kind === 'ring'
+    ? !sheet.equipped.ring1 ? 'ring1' : !sheet.equipped.ring2 ? 'ring2' : 'ring1'
+    : item.kind === 'shield' ? 'offhand' : item.kind);
   if (!EQUIPMENT_SLOTS.includes(slot) || !itemFitsSlot(item, slot)) return fail('This item does not fit that equipment slot.');
   if (!Number.isSafeInteger(level) || !Number.isSafeInteger(item.requiredLevel) || item.requiredLevel < 1 || level < item.requiredLevel) return fail(`Requires level ${item.requiredLevel}.`);
   if (item.kind === 'weapon' && !item.weapon) return fail('This weapon has no attack profile.');
-  const previous = sheet.equipped[slot];
-  sheet.equipped[slot] = item;
-  sheet.inventory[inventoryIndex] = previous;
+  if (item.kind === 'shield' && !item.shield) return fail('This shield has no defense profile.');
+  const inventory = [...sheet.inventory], equipped = { ...sheet.equipped };
+  inventory[inventoryIndex] = equipped[slot];
+  equipped[slot] = item;
+  const displacedSlot = slot === 'weapon' && item.weapon?.hands === 2 && equipped.offhand ? 'offhand'
+    : slot === 'offhand' && equipped.weapon?.weapon?.hands === 2 ? 'weapon' : null;
+  if (displacedSlot) {
+    const emptyIndex = inventory.findIndex(existing => existing === null);
+    if (emptyIndex < 0) return fail(`Your pack needs an empty cell to stow the ${displacedSlot === 'weapon' ? 'two-handed weapon' : 'off-hand item'}.`);
+    inventory[emptyIndex] = equipped[displacedSlot];
+    equipped[displacedSlot] = null;
+  }
+  sheet.inventory = inventory;
+  sheet.equipped = equipped;
   return success();
 }
 

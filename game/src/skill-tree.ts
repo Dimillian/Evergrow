@@ -1,5 +1,5 @@
 import type { ActionResult, CharacterSheet, SkillId, StatKey, StatModifiers } from './character-types.ts';
-import { SKILL_DEFINITIONS } from './skill-content.ts';
+import { SKILL_DEFINITIONS, skillRequirementLabel } from './skill-content.ts';
 
 export type SkillDomain = 'Might' | 'Cunning' | 'Arcana';
 export interface SkillNode {
@@ -19,15 +19,28 @@ export const SKILL_TREE_ORIGIN = 'origin';
 
 interface Point { x: number; y: number; }
 interface Family { name: string; description: string; minor: StatModifiers; notable: StatModifiers; }
-interface Region { domain: SkillDomain; angle: number; skills: readonly SkillId[]; attribute: StatKey; }
+interface WeaponSchool { id: string; name: string; angle: number; skills: readonly SkillId[]; }
+interface Region { domain: SkillDomain; angle: number; schools: readonly WeaponSchool[]; attribute: StatKey; }
 interface Blueprint extends SkillCluster { family: Family; shape: number; rotation: number; count: number; }
 interface Route { a: number; b: number; }
 type MutableNode = Omit<SkillNode, 'neighbors'> & { neighbors: string[] };
 const TAU = Math.PI * 2;
 const REGIONS: readonly Region[] = [
-  { domain: 'Might', angle: 2.67, skills: ['cleave', 'lunge'], attribute: 'strength' },
-  { domain: 'Cunning', angle: .5, skills: ['volley', 'siphon'], attribute: 'dexterity' },
-  { domain: 'Arcana', angle: -1.55, skills: ['ember', 'nova'], attribute: 'intelligence' },
+  { domain: 'Might', angle: 2.67, attribute: 'strength', schools: [
+    { id: 'blade', name: 'Way of the Blade', angle: -.48, skills: ['cleave', 'lunge'] },
+    { id: 'heavy', name: 'Way of the Colossus', angle: 0, skills: ['whirlwind', 'earthshatter'] },
+    { id: 'shield', name: 'Way of the Sentinel', angle: .48, skills: ['shieldBash', 'bulwark'] },
+  ] },
+  { domain: 'Cunning', angle: .5, attribute: 'dexterity', schools: [
+    { id: 'marksman', name: 'Way of the Marksman', angle: -.48, skills: ['volley', 'piercingShot'] },
+    { id: 'ranger', name: 'Way of the Ranger', angle: 0, skills: ['ricochet', 'rainOfArrows'] },
+    { id: 'dagger', name: 'Way of the Dagger', angle: .48, skills: ['backstab'] },
+  ] },
+  { domain: 'Arcana', angle: -1.55, attribute: 'intelligence', schools: [
+    { id: 'flame', name: 'Way of the Pyromancer', angle: -.48, skills: ['fireball', 'meteor'] },
+    { id: 'frost', name: 'Way of the Winter Star', angle: 0, skills: ['iceNova', 'frostLance'] },
+    { id: 'spirit', name: 'Way of the Stormcaller', angle: .48, skills: ['arcLightning', 'siphon'] },
+  ] },
 ];
 const FAMILIES: Readonly<Record<SkillDomain, readonly Family[]>> = {
   Might: [
@@ -245,12 +258,30 @@ function buildTree() {
     const threshold = travel(`path:${region.domain.toLowerCase()}:threshold`, polar(165, region.angle - .06), region.domain);
     link(SKILL_TREE_ORIGIN, first.id, polar(37, region.angle + .22));
     link(first.id, threshold.id, polar(124, region.angle + .06));
-    for (const [side, skill] of region.skills.entries()) {
-      const major = add({ id: `skill:${skill}`, ...polar(302, region.angle + (side ? .28 : -.28)), kind: 'major',
-        domain: region.domain, name: SKILL_DEFINITIONS[skill].name, description: SKILL_DEFINITIONS[skill].description, skill, bonuses: {} });
-      link(threshold.id, major.id, polar(244, region.angle + (side ? .12 : -.12)));
-      const cluster = blueprints[regionTrunks[index][0]], arrival = nearest(cluster, major);
-      road(`path:${region.domain.toLowerCase()}:${skill}`, major, arrival, region.domain, region.domain, [cluster.id]);
+    const schoolStarts: MutableNode[] = [];
+    for (const school of region.schools) {
+      const angle = region.angle + school.angle;
+      const entrance = add({ id: `school:${school.id}`, ...polar(228, angle), kind: 'minor', domain: region.domain, role: 'travel',
+        name: school.name, description: `Enter ${school.name.toLowerCase()}. Learn ${school.skills.map(skill => SKILL_DEFINITIONS[skill].name).join(' and ')}.`,
+        bonuses: { [region.attribute]: 2 } });
+      schoolStarts.push(entrance);
+      link(threshold.id, entrance.id, polar(198, region.angle + school.angle * .55));
+      let previous = entrance;
+      for (const [stage, skill] of school.skills.entries()) {
+        const definition = SKILL_DEFINITIONS[skill];
+        const major = add({ id: `skill:${skill}`, ...polar(330 + stage * 137, angle + stage * Math.sign(school.angle || 1) * .055), kind: 'major',
+          domain: definition.domain, name: definition.name, description: `${definition.description} Requires: ${skillRequirementLabel(definition.requirement)}.`, skill, bonuses: {} });
+        if (stage === 0) link(previous.id, major.id, polar(280, angle + .025));
+        else road(`path:${region.domain.toLowerCase()}:${skill}`, previous, major, region.domain, region.domain);
+        previous = major;
+      }
+      const cluster = blueprints[regionTrunks[index][0]], arrival = nearest(cluster, previous);
+      road(`path:${region.domain.toLowerCase()}:${school.id}:arrival`, previous, arrival, region.domain, region.domain, [cluster.id]);
+    }
+    // A short crescent between schools lets a build branch sideways without returning to origin.
+    for (let school = 1; school < schoolStarts.length; school++) {
+      const a = schoolStarts[school - 1], b = schoolStarts[school];
+      link(a.id, b.id, polar(245, region.angle + (region.schools[school - 1].angle + region.schools[school].angle) / 2));
     }
   }
 

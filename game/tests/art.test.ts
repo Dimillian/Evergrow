@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ArtLibrary, drawHumanoid, type CharacterPose } from '../src/art.ts';
+import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
 
 interface DrawingState {
   globalAlpha: number; fillStyle: string; strokeStyle: string;
@@ -87,4 +88,22 @@ test('travelling through thousands of prop seeds reuses a finite procedural spri
   assert.ok(again.every((sprite, index) => sprite === first[index]));
   assert.equal(canvases.reduce((sum, canvas) => sum + canvas.context.commands, 0), commands,
     'cache hits never redraw the geometry');
+});
+
+
+test('every weapon family and shield silhouette draws finite connected equipment at all facings', () => {
+  for (const weapon of WEAPON_PROFILES) for (let facing = 0; facing < 8; facing++) for (const attack of [0, .18, .32, .7]) {
+    const offhands: CharacterPose['offHand'][] = weapon.hands === 2 ? [null] : [null,
+      ...SHIELD_PROFILES.map(shield => ({ kind: 'shield' as const, visual: shield.visual })),
+      { kind: 'weapon', visual: WEAPON_PROFILES.find(profile => profile.family === 'dagger')!.visual }];
+    for (const offHand of offhands) {
+      const c = new ArtContext(), before = c.state(), angle = facing * Math.PI / 4;
+      drawHumanoid(c as unknown as CanvasRenderingContext2D, { kind: 'player', angle, attackAngle: angle,
+        time: 3.2, moving: .6, attack, attackKind: weapon.attackKind === 'melee' ? 'melee' : 'ranged',
+        weapon: weapon.visual, grip: weapon.hands === 2 ? 'two-handed' : 'one-handed', offHand,
+        attackHand: offHand?.kind === 'weapon' ? 'off' : 'main', guard: .7,
+        hitFlash: .05, dodging: false });
+      assert.ok(c.commands > 0, weapon.name); assert.deepEqual(c.state(), before); assert.equal(c.depth, 0);
+    }
+  }
 });

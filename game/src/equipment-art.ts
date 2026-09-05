@@ -1,4 +1,6 @@
-import { STARTING_SWORD, getGripLength } from './equipment.ts';
+import { STARTING_SWORD } from './equipment.ts';
+import type { ShieldDefinition } from './model.ts';
+import { shieldShapes, weaponShapes, type GearShape } from './weapon-shapes.ts';
 import type { ArmorMaterial, ArmorPiece, CharacterOutfit } from './art-types.ts';
 import { PLAYER_ATTACHMENTS } from './character-motion.ts';
 import { hash, polygon, line, taper, type Point, type Color } from './art-primitives.ts';
@@ -17,30 +19,30 @@ export const STARTER_OUTFIT: CharacterOutfit = {
   cloak: { base: '#92364e', shadow: '#4e2a3e', highlight: '#cf5e69', trim: '#d4a070', seed: 71 },
 };
 
-export function sword(ctx: CanvasRenderingContext2D, hand: Point, angle: number, color: Color, visual = STARTING_SWORD.visual): void {
-  if (visual.kind === 'unarmed') return;
-  ctx.save();
-  ctx.translate(hand[0], hand[1]);
-  ctx.rotate(angle);
-  const length = Math.max(8, visual.length), halfWidth = Math.max(0.7, visual.width * 0.5);
-  const guard = Math.max(3.6, halfWidth * 2.4);
-  const gripLength = getGripLength(visual);
-  polygon(ctx, [[-gripLength, -1.3], [3, -1.3], [3, 1.3], [-gripLength, 1.3]], color(visual.grip));
-  for (let wrap = -gripLength + 1; wrap < 1; wrap += 1.8) {
-    line(ctx, [[wrap, -1.2], [wrap + .8, 1.2]], color('#bd9461'), 0.5);
+function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly GearShape[], color: Color): void {
+  for (const shape of shapes) {
+    if (shape.fill) polygon(ctx, shape.points, color(shape.fill));
+    if (shape.stroke) line(ctx, shape.points, color(shape.stroke), shape.width ?? .7);
   }
-  polygon(ctx, [[3, -halfWidth], [length * 0.77, -halfWidth * 0.66], [length, 0],
-    [length * 0.77, halfWidth * 0.68], [3, halfWidth]], color(visual.metal));
-  polygon(ctx, [[3, -halfWidth], [length * 0.77, -halfWidth * 0.66], [length, 0], [4, -0.15]], color(visual.edge));
-  line(ctx, [[5, 0.3], [length * 0.74, 0.3]], color('#456664'), 0.55);
-  polygon(ctx, [[0.5, -guard + 0.8], [2.5, -guard], [4, -guard + 1.2],
-    [3.8, guard - 1], [2, guard], [0.8, guard - 0.4]], color(visual.guard));
-  line(ctx, [[1, -guard + 1], [2.5, -guard + 0.7], [3, guard - 1]], color(visual.edge), 0.55);
-  polygon(ctx, [[-gripLength - 2, -1.1], [-gripLength - .5, -2], [-gripLength + .8, -.8],
-    [-gripLength + .8, .8], [-gripLength - .5, 2], [-gripLength - 2, 1]], color(visual.guard));
-  ctx.fillStyle = color('#8b4c49');
-  ctx.fillRect(-gripLength - 1, -0.65, 1.1, 1.3);
-  if (visual.glow) line(ctx, [[5, -halfWidth], [length * 0.77, -halfWidth * 0.66], [length, 0]], color(visual.glow), 0.55);
+}
+
+export function heldWeapon(ctx: CanvasRenderingContext2D, hand: Point, angle: number, color: Color,
+  visual = STARTING_SWORD.visual, draw = 0): void {
+  ctx.save(); ctx.translate(hand[0], hand[1]); ctx.rotate(angle);
+  drawGearShapes(ctx, weaponShapes(visual, draw), color);
+  ctx.restore();
+}
+
+export function heldShield(ctx: CanvasRenderingContext2D, hand: Point, angle: number,
+  visual: ShieldDefinition['visual'], color: Color, guard = 0): void {
+  ctx.save(); ctx.translate(hand[0], hand[1]);
+  ctx.rotate(Math.cos(angle) * -.12);
+  ctx.scale(.62 + Math.abs(Math.sin(angle)) * .38, 1);
+  drawGearShapes(ctx, shieldShapes(visual), color);
+  if (guard > 0) {
+    ctx.globalAlpha *= guard * .7;
+    line(ctx, [[-9, -10], [-11, 0], [0, 15], [11, 0], [9, -10]], '#b1ddef', 1);
+  }
   ctx.restore();
 }
 

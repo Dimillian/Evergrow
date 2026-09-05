@@ -137,3 +137,7 @@
 .skill-atlas-zoom { border-color: #8f815655; }
 .skill-atlas-footer { border-color: #8f815644; }
 .skill-atlas-footer b { color: #cdbb91; }
+.skill-atlas-requirement { color: #c8a69a; padding: 9px 8px; border: 1px solid #95766a44; font-size: 13px; background: #35211f25; }
+.skill-atlas-requirement small { display: block; font-size: 11px; color: #ac9891; margin-top: 5px; }
+.skill-atlas-requirement.is-ready { border-color: #7baf9644; color: #b3cbb9; background: #20312825; }
+.skill-atlas-requirement.is-ready small { color: #87a799; }

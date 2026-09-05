@@ -1,6 +1,8 @@
 import type { ArmorPiece, CharacterOutfit } from './art-types.ts';
 import type { CharacterSheet, Item } from './character-types.ts';
 import { TIER_COLORS } from './items.ts';
+import { STARTING_SWORD } from './equipment.ts';
+import { gearShapesSVG, shieldShapes, weaponShapes } from './weapon-shapes.ts';
 
 const safeColor = (value: string) => /^#[0-9a-f]{6}$/i.test(value) ? value : '#798590';
 const escape = (value: string) => value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
@@ -17,20 +19,21 @@ export function itemIconSVG(item: Item, size = 48): string {
   let shape: string;
   switch (item.kind) {
     case 'weapon': {
-      const weapon = item.weapon?.visual;
-      const width = Math.max(1.5, Math.min(3.4, (weapon?.width ?? 3.4) * .6));
-      const top = 24 - Math.max(16, Math.min(22, (weapon?.length ?? 30) * .65));
-      const grip = safeColor(weapon?.grip ?? shadow), guard = safeColor(weapon?.guard ?? trim);
-      shape = `<g transform="rotate(36 24 24)">
-        <path d="M${24 - width} 28L${24 - width * .75} ${top + 5}L24 ${top}L${24 + width * .75} ${top + 5}L${24 + width} 28Z" fill="${metal}" stroke="${shadow}" stroke-width="1.2"/>
-        <path d="M24 ${top + 1}V28" stroke="${safeColor(weapon?.edge ?? edge)}" stroke-width="1.25"/>
-        <path d="M22.2 29H25.8V40H22.2Z" fill="${grip}" stroke="${shadow}" stroke-width="1"/>
-        <path d="M22.4 31L25.6 32M22.4 34L25.6 35M22.4 37L25.6 38" stroke="${trim}" stroke-width=".8"/>
-        <path d="M15 27L19 26L22 28H26L29 26L33 27L32 30L27 30L24 31L21 30L16 30Z" fill="${guard}" stroke="${shadow}" stroke-width="1"/>
-        <path d="M21.5 40L24 38.8L26.5 40L26 42.5L24 44L22 42.5Z" fill="${guard}" stroke="${edge}" stroke-width=".6"/>
-        <path d="M23 40L24 39.6L25 40.5L24 42L23 41Z" fill="${rarity}"/>
-        ${weapon?.glow ? `<path d="M${24 - width * .75} ${top + 5}L24 ${top}L${24 + width * .75} ${top + 5}" fill="none" stroke="${safeColor(weapon.glow)}" stroke-width="1.2"/>` : ''}
-      </g>`;
+      const visual = item.weapon?.visual ?? STARTING_SWORD.visual;
+      const shapes = weaponShapes(visual);
+      if (shapes.length === 0) { shape = ''; break; }
+      const degrees = visual.kind === 'bow' ? -18 : -52;
+      const angle = degrees * Math.PI / 180;
+      const points = shapes.flatMap(shape => shape.points.map(([x, y]) => [x * Math.cos(angle) - y * Math.sin(angle), x * Math.sin(angle) + y * Math.cos(angle)]));
+      const minX = Math.min(...points.map(p => p[0])), maxX = Math.max(...points.map(p => p[0]));
+      const minY = Math.min(...points.map(p => p[1])), maxY = Math.max(...points.map(p => p[1]));
+      const scale = Math.min(37 / Math.max(1, maxX - minX), 40 / Math.max(1, maxY - minY));
+      shape = `<g transform="translate(24 24) scale(${scale}) translate(${-(minX + maxX) / 2} ${-(minY + maxY) / 2}) rotate(${degrees})">${gearShapesSVG(shapes)}</g>`;
+      break;
+    }
+    case 'shield': {
+      const visual = item.shield?.visual ?? { kind: 'kite', base, edge, trim, shadow };
+      shape = `<g transform="translate(24 23) scale(1.45)">${gearShapesSVG(shieldShapes(visual))}</g>`;
       break;
     }
     case 'head':

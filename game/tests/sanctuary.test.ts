@@ -37,7 +37,7 @@ test('entering sanctuary cancels incoming melee and sends pursuers away without 
 
 test('hostile projectiles dissolve at the sanctuary boundary', () => {
   const sim = new Simulation(world, { spawn: false, startX: 10 });
-  sim.projectiles.push({ id: 1, x: -2, y: 0, prevX: -2, prevY: 0, vx: 300, vy: 0,
+  sim.projectiles.push({ hitIds: new Set(), id: 1, x: -2, y: 0, prevX: -2, prevY: 0, vx: 300, vy: 0,
     angle: 0, radius: 5, damage: 13, life: 2, maxLife: 2, owner: 'enemy' });
   advance(sim, FIXED_STEP);
   assert.equal(sim.projectiles.length, 0);

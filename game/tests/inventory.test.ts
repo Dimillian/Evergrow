@@ -27,7 +27,7 @@ test('wrong slots, unmet levels and invalid indices never partially mutate inven
   assert.equal(equipItem(sheet, -1, 100).ok, false);
   assert.equal(equipItem(sheet, 48, 100).ok, false);
   assert.equal(equipItem(sheet, 4.5, 100).ok, false);
-  assert.equal(equipItem(sheet, 5, 100).ok, false);
+  assert.equal(equipItem(sheet, 47, 100).ok, false);
   assert.deepEqual(sheet, before);
 });
 
@@ -68,7 +68,8 @@ test('pickup rejects duplicate identities in gear or bag and never overwrites a 
   assert.equal(addInventoryItem(sheet, sheet.equipped.weapon!), false);
   assert.equal(addInventoryItem(sheet, structuredClone(sheet.inventory[0]!)), false);
   const loot = generateItem(192819, 5, 'chest');
-  assert.ok(addInventoryItem(sheet, loot)); assert.equal(sheet.inventory[4], loot);
+  const empty = sheet.inventory.findIndex(item => item === null);
+  assert.ok(addInventoryItem(sheet, loot)); assert.equal(sheet.inventory[empty], loot);
   fillBag(sheet); const before = ids(sheet);
   assert.equal(addInventoryItem(sheet, generateItem(987891, 5)), false);
   assert.deepEqual(ids(sheet), before);
@@ -98,4 +99,51 @@ test('mixed equipment and bag transactions conserve every item identity across r
     assert.deepEqual(ids(sheet), original);
     assert.equal(new Set(ids(sheet)).size, original.length);
   }
+});
+
+
+test('one-handed melee weapons and shields occupy the offhand while ranged and two-handed items cannot', () => {
+  const sheet = createCharacterSheet();
+  assert.ok(equipItem(sheet, 0, 1).ok);
+  const sword = sheet.equipped.weapon;
+  assert.ok(equipItem(sheet, 7, 1, 'offhand').ok);
+  assert.equal(sheet.equipped.offhand!.weapon!.family, 'dagger');
+  assert.equal(sheet.equipped.weapon, sword);
+  assert.ok(equipItem(sheet, 4, 1).ok);
+  assert.equal(sheet.equipped.offhand!.kind, 'shield');
+  assert.equal(sheet.inventory[4]!.weapon!.family, 'dagger');
+  const before = structuredClone(sheet);
+  assert.equal(equipItem(sheet, 5, 1, 'offhand').ok, false);
+  assert.equal(equipItem(sheet, 6, 1, 'offhand').ok, false);
+  assert.deepEqual(sheet, before);
+});
+
+test('two-handed equipment stows an offhand atomically, rejecting a full bag without losing either item', () => {
+  const sheet = createCharacterSheet();
+  assert.ok(equipItem(sheet, 0, 1).ok); assert.ok(equipItem(sheet, 4, 1).ok);
+  sheet.inventory[10] = generateItem(847, 1, 'weapon', 'greatblade'); fillBag(sheet);
+  const before = structuredClone(sheet), beforeIds = ids(sheet), shield = sheet.equipped.offhand;
+  assert.equal(equipItem(sheet, 10, 1).ok, false); assert.deepEqual(sheet, before);
+  const displacedBagItem = sheet.inventory[47]; sheet.inventory[47] = null;
+  assert.ok(equipItem(sheet, 10, 1).ok);
+  assert.equal(sheet.equipped.weapon!.weapon!.hands, 2); assert.equal(sheet.equipped.offhand, null);
+  assert.equal(sheet.inventory[47], shield);
+  assert.deepEqual(ids(sheet), beforeIds.filter(id => id !== displacedBagItem!.id));
+});
+
+test('equipping an offhand reuses its vacated source cell to stow a two-handed main weapon in a full bag', () => {
+  const sheet = createCharacterSheet(); fillBag(sheet);
+  const beforeIds = ids(sheet), sword = sheet.equipped.weapon, shield = sheet.inventory[4];
+  assert.ok(equipItem(sheet, 4, 1).ok);
+  assert.equal(sheet.equipped.weapon, null); assert.equal(sheet.equipped.offhand, shield);
+  assert.equal(sheet.inventory[4], sword); assert.deepEqual(ids(sheet), beforeIds);
+});
+
+test('hand conflict resolution can reuse the source cell when the receiving hand was empty', () => {
+  const sheet = createCharacterSheet();
+  assert.ok(equipItem(sheet, 4, 1).ok); // Shield stows the starting two-handed sword.
+  fillBag(sheet); const before = ids(sheet);
+  assert.ok(equipItem(sheet, 4, 1).ok);
+  assert.equal(sheet.equipped.weapon!.weapon!.hands, 2); assert.equal(sheet.equipped.offhand, null);
+  assert.equal(sheet.inventory[4]!.kind, 'shield'); assert.deepEqual(ids(sheet), before);
 });

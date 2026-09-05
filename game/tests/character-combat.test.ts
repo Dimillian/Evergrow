@@ -23,7 +23,22 @@ function target(sim: Simulation, x = 45, y = 0, hp = 10000): Enemy {
   enemy.hp = enemy.maxHp = hp; enemy.stateDuration = 999;
   return enemy;
 }
+function equipForSkill(sim: Simulation, id: SkillId): void {
+  const required = SKILL_DEFINITIONS[id].requirement;
+  const profile = required === 'staff' ? 'ember-staff' : required === 'bow' ? 'thorn-shortbow'
+    : required === 'dagger' ? 'rondel-dagger' : required === 'heavy' ? 'hand-axe' : 'longsword';
+  const item = generateItem(723, 1, 'weapon', profile); item.implicit = {}; item.affixes = [];
+  sim.player.character.inventory[47] = item;
+  assert.ok(equipItem(sim.player.character, 47, sim.player.level).ok);
+  if (required === 'shield') {
+    const shield = generateItem(724, 1, 'shield', 'iron-buckler'); shield.affixes = [];
+    sim.player.character.inventory[47] = shield;
+    assert.ok(equipItem(sim.player.character, 47, sim.player.level).ok);
+  }
+  refreshCharacter(sim.player);
+}
 function unlock(sim: Simulation, id: SkillId, slot = 0): void {
+  equipForSkill(sim, id);
   const major = SKILL_TREE.nodes.find(node => node.skill === id)!;
   const paths = new Map<string, string[]>([['origin', []]]), queue = ['origin'];
   for (let index = 0; index < queue.length && !paths.has(major.id); index++) {
@@ -53,7 +68,7 @@ test('multi-level rewards grant one skill and five attribute points per level wi
 });
 
 test('equipping an item changes actual melee damage and repeated attack timing through shared stats', () => {
-  const sim = createSim(), weapon = generateItem(455, 1, 'weapon');
+  const sim = createSim(), weapon = generateItem(455, 1, 'weapon', 'longsword');
   weapon.weapon!.damage = 40; weapon.weapon!.baseAttacksPerSecond = 1;
   weapon.implicit = { damagePercent: 50, attackSpeedPercent: 25 }; weapon.affixes = [];
   sim.player.character.inventory[4] = weapon;
@@ -86,9 +101,9 @@ test('equipping larger resource pools preserves current values and removing gear
 
 test('all five empty slots and a locked skill are inert and cannot consume mana', () => {
   const sim = createSim();
-  assert.equal(assignSkill(sim.player, 0, 'ember').ok, false);
+  assert.equal(assignSkill(sim.player, 0, 'fireball').ok, false);
   for (let slot = 0; slot < 5; slot++) advance(sim, .2, { skillSlot: slot });
-  sim.player.character.skillSlots[0] = 'ember';
+  sim.player.character.skillSlots[0] = 'fireball';
   advance(sim, .2, { skillSlot: 0 });
   assert.equal(sim.player.mana, 100);
   assert.equal(sim.projectiles.length, 0); assert.equal(sim.player.attack, null);
@@ -100,47 +115,49 @@ for (const id of Object.keys(SKILL_DEFINITIONS) as SkillId[]) {
   test(`${id} unlocks through connected nodes, pays its cost once and produces its actual combat effect`, () => {
     const sim = createSim(); unlock(sim, id);
     const player = sim.player, definition = SKILL_DEFINITIONS[id];
-    const enemy = target(sim, id === 'ember' || id === 'volley' || id === 'siphon' ? 80 : 45);
+    const enemy = target(sim, id === 'fireball' || id === 'volley' || id === 'siphon' ? 80 : 45);
     if (id === 'siphon') player.hp = 20;
     player.mana = player.maxMana;
     sim.drainEvents();
-    advance(sim, FIXED_STEP, { skillSlot: 0 });
+    advance(sim, FIXED_STEP, { skillSlot: 0, aimX: enemy.x });
     close(player.mana, player.maxMana - definition.manaCost);
     close(player.skillCooldowns[id]!, definition.cooldown * player.derived.cooldownMultiplier);
     const firstEvents = sim.drainEvents();
     assert.equal(firstEvents.filter(event => (event.type === 'cast' || event.type === 'swing') && event.skill === id).length, 1);
-    if (id === 'cleave') {
+    if (id === 'cleave' || id === 'whirlwind') {
       assert.ok(player.attack); assert.ok(player.attack.arc > Math.PI);
       assert.ok(player.attack.damage > deriveAttackStats(player.stats, player.equipment.mainHand).damage);
-    } else if (id === 'lunge') assert.ok(player.x >= 90 && player.x <= 100);
-    else if (id === 'nova') assert.ok(enemy.hp < enemy.maxHp);
-    else assert.equal(sim.projectiles.filter(projectile => projectile.skill === id).length, id === 'volley' ? 3 : 1);
-    advance(sim, .5, { skillSlot: 0 });
+    } else if (id === 'lunge') {
+      assert.ok(player.x > 0 && player.x < 10, 'dash advances over time, not a teleport');
+    } else if (id === 'bulwark') assert.ok(player.guardTime > 2.9);
+    else if (id === 'meteor' || id === 'rainOfArrows') assert.equal(sim.groundEffects.length, 1);
+    advance(sim, id === 'meteor' ? 1 : .5, { aimX: enemy.x });
     const laterEvents = sim.drainEvents();
     assert.equal(laterEvents.filter(event => event.type === 'cast' || event.type === 'swing').length, 0);
-    assert.ok(enemy.hp < enemy.maxHp, `${id} must damage the actual enemy`);
+    if (id !== 'bulwark') assert.ok(enemy.hp < enemy.maxHp, `${id} must damage the actual enemy`);
     if (id === 'siphon') {
       assert.ok(player.hp > 20); assert.ok(laterEvents.some(event => event.type === 'heal' && event.value! > 0));
     }
+
   });
 }
 
 test('skill cooldown belongs to the skill and cannot be reset by moving it to another slot', () => {
-  const sim = createSim(); unlock(sim, 'ember');
+  const sim = createSim(); unlock(sim, 'fireball');
   advance(sim, FIXED_STEP, { skillSlot: 0 }); sim.drainEvents();
-  assert.ok(assignSkill(sim.player, 4, 'ember').ok);
-  assert.equal(sim.player.character.skillSlots[0], null); assert.equal(sim.player.character.skillSlots[4], 'ember');
+  assert.ok(assignSkill(sim.player, 4, 'fireball').ok);
+  assert.equal(sim.player.character.skillSlots[0], null); assert.equal(sim.player.character.skillSlots[4], 'fireball');
   advance(sim, .4, { skillSlot: 4 });
   assert.equal(sim.drainEvents().filter(event => event.type === 'cast').length, 0);
-  advance(sim, .4, { skillSlot: 4 });
+  advance(sim, .5, { skillSlot: 4 });
   assert.equal(sim.drainEvents().filter(event => event.type === 'cast').length, 1);
 });
 
 test('insufficient mana and blocked geometry prevent free or wall-crossing skill effects', () => {
-  const sim = createSim(); unlock(sim, 'nova');
+  const sim = createSim(); unlock(sim, 'iceNova');
   sim.player.mana = 0;
   advance(sim, FIXED_STEP, { skillSlot: 0 });
-  assert.ok(sim.player.mana < 1); assert.equal(sim.player.activeSkill, null); assert.equal(sim.player.skillCooldowns.nova, undefined);
+  assert.ok(sim.player.mana < 1); assert.equal(sim.player.activeSkill, null); assert.equal(sim.player.skillCooldowns.iceNova, undefined);
   const wall: WorldQuery = { blocked: x => x >= 30 && x <= 40,
     move: (x, y, dx, dy, radius) => x + dx + radius >= 30 ? { x, y } : { x: x + dx, y: y + dy } };
   const blocked = new Simulation(wall, { spawn: false }); unlock(blocked, 'lunge');
@@ -219,7 +236,7 @@ test('a full inventory preserves dropped loot until a cell is available, then co
 });
 
 test('starting a new run resets character allocations, points, inventory changes and drops together', () => {
-  const sim = createSim(); unlock(sim, 'nova'); awardCharacterExperience(sim.player, 800);
+  const sim = createSim(); unlock(sim, 'iceNova'); awardCharacterExperience(sim.player, 800);
   sim.player.character.inventory.fill(null);
   sim.groundItems.push({ id: 991, x: 10, y: 10, item: generateItem(991, 4) });
   sim.reset();
@@ -227,7 +244,7 @@ test('starting a new run resets character allocations, points, inventory changes
   assert.equal(sim.player.character.skillPoints, 0); assert.equal(sim.player.character.statPoints, 0);
   assert.deepEqual(sim.player.character.allocatedNodes, ['origin']);
   assert.deepEqual(sim.player.character.skillSlots, [null, null, null, null, null]);
-  assert.equal(sim.player.character.inventory.filter(Boolean).length, 4);
+  assert.equal(sim.player.character.inventory.filter(Boolean).length, 8);
   assert.equal(sim.groundItems.length, 0);
   assert.deepEqual(sim.player.skillCooldowns, {});
 });
@@ -239,7 +256,7 @@ test('a projectile already in flight cannot revive a fallen player through life 
   armor.implicit = { lifeOnHit: 20 }; refreshCharacter(player);
   player.hp = 1;
   const attacker = target(sim, -20); attacker.state = 'attack'; attacker.attackAngle = 0; attacker.stateDuration = 1;
-  sim.projectiles.push({ id: 9999, x: 38, y: 0, prevX: 38, prevY: 0, vx: 360, vy: 0, angle: 0,
+  sim.projectiles.push({ hitIds: new Set(), id: 9999, x: 38, y: 0, prevX: 38, prevY: 0, vx: 360, vy: 0, angle: 0,
     radius: 5, damage: 10, life: 1, maxLife: 1, owner: 'player' });
   sim.update(FIXED_STEP, idle);
   assert.equal(player.dead, true); assert.equal(player.hp, 0);

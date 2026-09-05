@@ -45,6 +45,8 @@ const STAT_GLYPHS: Readonly<Record<StatKey, StatGlyph>> = Object.freeze({
   lifeRegen: { engraving: 'leaf', unit: .15 },
   cooldownPercent: { engraving: 'hourglass', unit: 1 },
   lifeOnHit: { engraving: 'leech', unit: .5 },
+  blockChance: { engraving: 'shield', unit: 2 },
+  blockReduction: { engraving: 'shield', unit: 4 },
 });
 
 function engravingFor(node: SkillNode): EngravingId {

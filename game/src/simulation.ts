@@ -1,4 +1,4 @@
-import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, SimulationOptions, WorldQuery } from './model.ts';
+import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, ProjectileEffects, GroundEffect, SimulationOptions, WorldQuery } from './model.ts';
 import type { Pickup } from './model.ts';
 import { createBaseStats, createStartingEquipment, deriveAttackStats } from './equipment.ts';
 import { getActiveSwingOffset } from './attack-motion.ts';
@@ -11,6 +11,7 @@ import { createCharacterSheet, generateItem, TIER_COLORS } from './items.ts';
 import { deriveCharacterStats } from './character-stats.ts';
 import { addInventoryItem } from './inventory.ts';
 import { activateSkill } from './skill-combat.ts';
+import { advanceProjectiles, MAX_PROJECTILES } from './projectile-combat.ts';
 import type { GroundItem, SkillId } from './character-types.ts';
 
 export const FIXED_STEP = COMBAT_TIMING.fixedStep;
@@ -21,6 +22,7 @@ function initialPlayer(x: number, y: number): Player {
   const character = createCharacterSheet();
   return {
     character, derived: deriveCharacterStats(character), skillCooldowns: {}, activeSkill: null,
+    nextAttackHand: 'main', guardTime: 0, dash: null,
     x, y, prevX: x, prevY: y, vx: 0, vy: 0, angle: 0,
     hp: PLAYER_DEFAULTS.maxHp, maxHp: PLAYER_DEFAULTS.maxHp, mana: PLAYER_DEFAULTS.maxMana, maxMana: PLAYER_DEFAULTS.maxMana,
     level: 1, xp: 0,
@@ -37,6 +39,7 @@ export class Simulation {
   projectiles: Projectile[] = [];
   pickups: Pickup[] = [];
   groundItems: GroundItem[] = [];
+  groundEffects: Array<GroundEffect & { pulsesLeft: number }> = [];
   private lootNoticeAt = -10;
   private skillBuffer: { slot: number; until: number } | null = null;
   time = 0;
@@ -65,6 +68,7 @@ export class Simulation {
     this.player = initialPlayer(this.options.startX!, this.options.startY!);
     this.enemies = [];
     this.projectiles = [];
+    this.groundEffects = [];
     this.pickups = [];
     this.groundItems = []; this.lootNoticeAt = -10; this.skillBuffer = null;
     refreshCharacter(this.player);
@@ -131,6 +135,7 @@ export class Simulation {
       kind, state: 'idle', stateTime: 0, stateDuration: ENCOUNTER_RULES.initialIdleMin + this.random() * ENCOUNTER_RULES.initialIdleRange,
       attackAngle: 0, hitFlash: 0, hitAngle: 0, radius: stats.radius, stagger: 0,
       attackHit: false, interrupted: false,
+      slowTime: 0, slowFactor: 1, burnTime: 0, burnDps: 0, burnTick: 0,
     };
     this.enemies.push(enemy);
     this.events.push({ type: 'spawn', x, y, enemyKind: kind });
@@ -155,6 +160,7 @@ export class Simulation {
     this.updatePlayer(dt, input);
     this.updateEnemies(dt);
     this.updateProjectiles(dt);
+    this.updateGroundEffects(dt);
     this.updatePickups(dt);
     this.collectGroundItems();
     if (this.player.dead) {
@@ -185,6 +191,7 @@ export class Simulation {
     let completedAttackTime = 0;
     this.hurtGuard = Math.max(0, this.hurtGuard - dt);
     p.healCooldown = Math.max(0, p.healCooldown - dt);
+    p.guardTime = Math.max(0, p.guardTime - dt);
     for (const id of Object.keys(p.skillCooldowns) as SkillId[]) p.skillCooldowns[id] = Math.max(0, p.skillCooldowns[id]! - dt);
     p.healFlash = Math.max(0, p.healFlash - dt);
     p.mana = Math.min(p.maxMana, p.mana + p.derived.manaRegeneration * dt);
@@ -213,7 +220,16 @@ export class Simulation {
       // Let aim corrections steer anticipation, then lock the actual contact arc.
       if (p.attack.elapsed < p.attack.activeStart) p.attack.angle = p.angle;
       p.attack.elapsed += dt;
-      if (p.attack.elapsed >= p.attack.activeStart && previousElapsed < p.attack.activeEnd) this.resolveMelee(p.attack, previousElapsed);
+      if (p.attack.kind === 'melee' && p.attack.elapsed >= p.attack.activeStart && previousElapsed < p.attack.activeEnd) this.resolveMelee(p.attack, previousElapsed);
+      if (p.attack.kind === 'ranged' && !p.attack.released && p.attack.elapsed >= p.attack.activeStart) {
+        const attack = p.attack, style = attack.projectile?.style ?? 'arrow';
+        const speed = style === 'arrow' ? 560 : 380;
+        this.projectile(p.x, p.y, attack.angle,
+          { owner: 'player', damage: attack.damage, speed, life: attack.range / speed, radius: style === 'arrow' ? 2 : 5 },
+          undefined, attack.projectile);
+        attack.released = true;
+        this.events.push({ type: 'cast', x: p.x, y: p.y, angle: attack.angle, style });
+      }
       if (p.attack.elapsed + 1e-9 >= p.attack.duration) {
         // Carry sub-tick recovery time so repeated swings keep the derived rate.
         completedAttackTime = Math.max(0, p.attack.elapsed - p.attack.duration);
@@ -221,7 +237,7 @@ export class Simulation {
       }
     }
     p.castTime = Math.max(0, p.castTime - dt);
-    if (!p.attack && p.castTime <= 0) p.activeSkill = null;
+    if (!p.attack && !p.dash && p.castTime <= 0) p.activeSkill = null;
 
     const canCancel = (!p.attack || p.attack.elapsed >= p.attack.activeEnd) && p.castTime <= SKILL_CAST_MOTION.releaseRemaining;
     if (this.dodgeBuffer >= this.time && p.dodgeTime <= 0 && p.dodgeCharges > 0 && canCancel) {
@@ -230,6 +246,7 @@ export class Simulation {
       p.dodgeTime = PLAYER_ABILITIES.dodge.duration;
       p.dodgeCharges--;
       p.attack = null;
+      p.dash = null;
       p.castTime = 0;
       this.dodgeBuffer = -1;
       this.events.push({ type: 'dodge', x: p.x, y: p.y, angle: p.dodgeAngle });
@@ -237,20 +254,39 @@ export class Simulation {
 
     if (this.skillBuffer && this.skillBuffer.until >= this.time && activateSkill({
       player: p, world: this.world, enemies: this.enemies,
+      aimX: input.aimX, aimY: input.aimY,
       damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
-      projectile: (x, y, angle, definition, skill) => this.projectile(x, y, angle, definition, skill),
+      projectile: (x, y, angle, definition, skill, effects) => this.projectile(x, y, angle, definition, skill, effects),
+      schedule: effect => this.scheduleGroundEffect(effect),
       emit: event => this.events.push(event),
     }, this.skillBuffer.slot)) this.skillBuffer = null;
 
-    if (p.dodgeTime <= 0 && p.castTime <= 0 && this.attackBuffer >= this.time && !p.attack) {
+    if (p.dodgeTime <= 0 && p.castTime <= 0 && !p.dash && this.attackBuffer >= this.time && !p.attack) {
       this.startAttack(completedAttackTime);
       this.attackBuffer = -1;
     }
 
     let targetVX = 0;
     let targetVY = 0;
-    if (p.dodgeTime > 0) {
+    if (p.dash) {
+      const dash = p.dash, startX = p.x, startY = p.y, delta = Math.min(dt, dash.remaining);
+      const steps = Math.max(1, Math.ceil(dash.speed * delta / 4));
+      for (let i = 0; i < steps; i++) {
+        const to = this.world.move(p.x, p.y, Math.cos(dash.angle) * dash.speed * delta / steps,
+          Math.sin(dash.angle) * dash.speed * delta / steps, p.radius);
+        p.x = to.x; p.y = to.y;
+      }
+      for (const enemy of this.enemies) if (enemy.state !== 'dead' && !dash.hitIds.has(enemy.id)
+        && segmentDistanceSquared(enemy.x, enemy.y, startX, startY, p.x, p.y) <= (enemy.radius + dash.radius) ** 2
+        && this.lineOfSight(p.x, p.y, enemy.x, enemy.y)) {
+        dash.hitIds.add(enemy.id); this.damageEnemy(enemy, dash.damage, dash.angle, true);
+      }
+      dash.remaining = Math.max(0, dash.remaining - dt);
+      p.walkTime += Math.hypot(p.x - startX, p.y - startY) / PLAYER_MOVEMENT.gaitDistance;
+      p.vx = p.vy = 0;
+      if (dash.remaining <= 0) p.dash = null;
+    } else if (p.dodgeTime > 0) {
       p.vx = Math.cos(p.dodgeAngle) * PLAYER_ABILITIES.dodge.speed;
       p.vy = Math.sin(p.dodgeAngle) * PLAYER_ABILITIES.dodge.speed;
       p.dodgeTime = Math.max(0, p.dodgeTime - dt);
@@ -283,14 +319,23 @@ export class Simulation {
   }
 
   private startAttack(elapsed = 0): void {
-    const stats = deriveAttackStats(this.player.stats, this.player.equipment.mainHand);
+    const p = this.player, off = p.equipment.offHand;
+    const dual = off?.kind === 'weapon' && p.equipment.mainHand.hands === 1;
+    const hand = dual ? p.nextAttackHand : 'main';
+    const weapon = hand === 'off' && off?.kind === 'weapon' ? off.weapon : p.equipment.mainHand;
+    const stats = deriveAttackStats(p.stats, weapon);
     const duration = 1 / stats.attacksPerSecond;
+    const ranged = weapon.attackKind !== 'melee';
+    const style = weapon.attackKind === 'arrow' ? 'arrow' : weapon.damageType === 'physical' ? 'arcane' : weapon.damageType;
     this.player.attack = {
-      elapsed, duration, activeStart: duration * BASIC_ATTACK_PHASES.activeStart,
-      activeEnd: duration * BASIC_ATTACK_PHASES.activeEnd, angle: this.player.angle,
+      kind: ranged ? 'ranged' : 'melee', weapon, hand,
+      elapsed, duration, activeStart: duration * (ranged ? .42 : BASIC_ATTACK_PHASES.activeStart),
+      activeEnd: duration * (ranged ? .5 : BASIC_ATTACK_PHASES.activeEnd), angle: this.player.angle,
       range: stats.range, arc: stats.arc, damage: stats.damage, hitIds: new Set<number>(),
+      ...(ranged ? { projectile: { style, ...(style === 'frost' ? { slowFactor: .8, slowDuration: 1 } : {}) } } : {}),
     };
-    this.events.push({ type: 'swing', x: this.player.x, y: this.player.y, angle: this.player.angle });
+    p.nextAttackHand = hand === 'main' ? 'off' : 'main';
+    if (!ranged) this.events.push({ type: 'swing', x: p.x, y: p.y, angle: p.angle });
   }
 
   private resolveMelee(attack: Attack, previousElapsed: number): void {
@@ -317,18 +362,20 @@ export class Simulation {
     return true;
   }
 
-  private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean): void {
+  private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean, periodic = false): void {
     if (enemy.state === 'dead') return;
-    const critical = this.player.derived.critChance > 0 && this.random() < this.player.derived.critChance;
+    const critical = !periodic && this.player.derived.critChance > 0 && this.random() < this.player.derived.critChance;
     damage = Math.max(1, Math.round(damage * (critical ? this.player.derived.critMultiplier : 1)));
     enemy.hp = Math.max(0, enemy.hp - damage);
-    if (!this.player.dead) this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.derived.lifeOnHit);
+    if (!periodic && !this.player.dead) this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.derived.lifeOnHit);
     enemy.hitFlash = HIT_FLASH_DURATION;
     enemy.hitAngle = angle;
     const definition = ENEMY_DEFINITIONS[enemy.kind];
     const shove = definition.knockbackDistance;
-    enemy.knockbackX += Math.cos(angle) * shove / COMBAT_TIMING.knockbackDecay;
-    enemy.knockbackY += Math.sin(angle) * shove / COMBAT_TIMING.knockbackDecay;
+    if (!periodic) {
+      enemy.knockbackX += Math.cos(angle) * shove / COMBAT_TIMING.knockbackDecay;
+      enemy.knockbackY += Math.sin(angle) * shove / COMBAT_TIMING.knockbackDecay;
+    }
     this.events.push({ type: 'hit', x: enemy.x, y: enemy.y, angle, value: damage,
       targetId: enemy.id, remainingHp: enemy.hp, enemyKind: enemy.kind, heavy: critical });
     if (enemy.hp <= 0) {
@@ -381,7 +428,21 @@ export class Simulation {
       this.updateKnockback(enemy, dt);
       enemy.stateTime += dt;
       if (enemy.state === 'dead') continue;
+      if (enemy.slowTime > 0) enemy.slowTime = Math.max(0, enemy.slowTime - dt);
+      if (enemy.slowTime <= 0) enemy.slowFactor = 1;
+      if (enemy.burnTime > 0) {
+        enemy.burnTick += Math.min(dt, enemy.burnTime);
+        const remainingBurn = enemy.burnTime - dt;
+        enemy.burnTime = remainingBurn > 1e-9 ? remainingBurn : 0;
+        if (enemy.burnTick > 1e-9 && (enemy.burnTick + 1e-9 >= .5 || enemy.burnTime <= 0)) {
+          this.damageEnemy(enemy, enemy.burnDps * enemy.burnTick, 0, false, true);
+          enemy.burnTick = 0;
+        }
+        if (enemy.burnTime <= 0) enemy.burnDps = 0;
+        if (enemy.hp <= 0) continue;
+      }
       if (enemy.stagger > 0) {
+        if (enemy.interrupted && (enemy.state === 'windup' || enemy.state === 'attack')) this.transition(enemy, 'recover', COMBAT_TIMING.interruptedRecovery);
         enemy.stagger = Math.max(0, enemy.stagger - dt);
         enemy.vx = enemy.vy = 0;
         continue;
@@ -469,6 +530,7 @@ export class Simulation {
   }
 
   private moveEnemy(enemy: Enemy, vx: number, vy: number, dt: number): void {
+    vx *= enemy.slowFactor; vy *= enemy.slowFactor;
     let destination = this.world.move(enemy.x, enemy.y, vx * dt, vy * dt, enemy.radius);
     // Local steering lets pursuers slip around trunks without a pathfinding grid.
     const intendedDistance = Math.hypot(vx, vy) * dt;
@@ -492,6 +554,12 @@ export class Simulation {
     const p = this.player;
     if (p.dead || p.invulnerable > 0 || this.world.isSanctuary?.(p.x, p.y)) return;
     amount = Math.max(1, Math.round(amount * (1 - p.derived.damageReduction)));
+    if (p.equipment.offHand?.kind === 'shield' && (p.guardTime > 0 || this.random() < p.derived.blockChance)) {
+      const reduction = p.guardTime > 0 ? Math.max(.75, p.derived.blockReduction) : p.derived.blockReduction;
+      const blocked = Math.floor(amount * reduction);
+      amount = Math.max(1, amount - blocked);
+      this.events.push({ type: 'block', x: p.x, y: p.y, angle, value: blocked, color: '#a9daca' });
+    }
     p.hp = Math.max(0, p.hp - amount);
     p.hitFlash = HIT_FLASH_DURATION;
     p.hitAngle = angle;
@@ -502,53 +570,65 @@ export class Simulation {
     if (p.hp <= 0) {
       p.dead = true;
       p.attack = null;
+      p.dash = null; p.guardTime = 0;
       p.castTime = p.dodgeTime = 0;
       p.vx = p.vy = 0;
       this.clearInput();
     }
   }
 
-  private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill?: SkillId): void {
+  private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill?: SkillId, effects?: ProjectileEffects): void {
+    if (this.projectiles.length >= MAX_PROJECTILES) return;
     const { speed, life, radius, damage, owner } = definition;
     this.projectiles.push({ id: this.nextId++, x, y, prevX: x, prevY: y,
-      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, radius, damage, life, maxLife: life, owner, skill });
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, radius, damage, life, maxLife: life, owner, skill,
+      effects: effects ? { ...effects } : undefined, hitIds: new Set() });
   }
 
   private updateProjectiles(dt: number): void {
-    const p = this.player;
-    for (const projectile of this.projectiles) {
-      projectile.life -= dt;
-      if (projectile.life <= 0) continue;
-      const steps = Math.max(1, Math.ceil(Math.hypot(projectile.vx, projectile.vy) * dt / 3));
-      for (let i = 0; i < steps && projectile.life > 0; i++) {
-        const oldX = projectile.x;
-        const oldY = projectile.y;
-        projectile.x += projectile.vx * dt / steps;
-        projectile.y += projectile.vy * dt / steps;
-        if (projectile.owner === 'enemy' && this.world.isSanctuary?.(projectile.x, projectile.y)) {
-          projectile.life = 0; break;
-        }
-        if (this.world.blocked(projectile.x, projectile.y, projectile.radius)) { projectile.life = 0; break; }
-        if (projectile.owner === 'player') {
-          const candidates = this.enemies.filter(enemy => enemy.state !== 'dead' && segmentDistanceSquared(enemy.x, enemy.y, oldX, oldY, projectile.x, projectile.y) <= (projectile.radius + enemy.radius) ** 2);
-          candidates.sort((a, b) => Math.hypot(a.x - oldX, a.y - oldY) - Math.hypot(b.x - oldX, b.y - oldY));
-          const enemy = candidates[0];
-          if (enemy) {
-            this.damageEnemy(enemy, projectile.damage, projectile.angle, false);
-            if (projectile.skill === 'siphon' && !p.dead) {
-              const healed = Math.min(p.maxHp - p.hp, projectile.damage * .35);
-              p.hp += healed;
-              if (healed > 0) this.events.push({ type: 'heal', x: p.x, y: p.y, value: healed });
-            }
-            projectile.life = 0;
-          }
-        } else if (segmentDistanceSquared(p.x, p.y, oldX, oldY, projectile.x, projectile.y) <= (projectile.radius + p.radius) ** 2) {
-          this.damagePlayer(projectile.damage, projectile.angle, 'caster');
-          projectile.life = 0;
-        }
-      }
-    }
+    advanceProjectiles(this.projectiles, dt, {
+      player: this.player, enemies: this.enemies, world: this.world,
+      damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),
+      hurt: (amount, angle) => this.damagePlayer(amount, angle, 'caster'),
+      visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
+      emit: event => this.events.push(event),
+    });
     this.projectiles = this.projectiles.filter(projectile => projectile.life > 0);
+  }
+
+  private scheduleGroundEffect(effect: Omit<GroundEffect, 'id' | 'tick'>): void {
+    if (this.groundEffects.length >= 16) return;
+    this.groundEffects.push({ ...effect, id: this.nextId++, tick: 0,
+      pulsesLeft: Math.max(1, Math.ceil(effect.duration / Math.max(.05, effect.interval))) });
+    this.events.push({ type: 'ground', x: effect.x, y: effect.y, radius: effect.radius,
+      duration: effect.delay + effect.duration, style: effect.kind === 'meteor' ? 'fire' : 'arrow', skill: effect.skill });
+  }
+
+  private updateGroundEffects(dt: number): void {
+    for (const effect of this.groundEffects) {
+      const beforeDelay = effect.delay;
+      effect.delay -= dt;
+      if (effect.delay > 0) continue;
+      const activeDt = beforeDelay > 0 ? Math.max(0, dt - beforeDelay) : dt;
+      effect.tick -= activeDt;
+      if (effect.tick <= 1e-9) {
+        for (const enemy of this.enemies) if (enemy.state !== 'dead'
+          && Math.hypot(enemy.x - effect.x, enemy.y - effect.y) <= effect.radius + enemy.radius
+          && this.lineOfSight(effect.x, effect.y, enemy.x, enemy.y)) {
+          this.damageEnemy(enemy, effect.damage, Math.atan2(enemy.y - effect.y, enemy.x - effect.x), false);
+          if (effect.kind === 'meteor' && enemy.hp > 0) {
+            enemy.burnTime = Math.max(enemy.burnTime, 3);
+            enemy.burnDps = Math.max(enemy.burnDps, effect.damage * .12);
+          }
+        }
+        this.events.push({ type: 'blast', x: effect.x, y: effect.y, radius: effect.radius,
+          style: effect.kind === 'meteor' ? 'fire' : 'arrow', skill: effect.skill });
+        effect.tick += Math.max(.05, effect.interval);
+        effect.pulsesLeft--;
+      }
+      effect.duration -= activeDt;
+    }
+    this.groundEffects = this.groundEffects.filter(effect => effect.pulsesLeft > 0);
   }
 
   private updatePickups(dt: number): void {

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CombatEffects } from '../src/effects.ts';
 import { Simulation } from '../src/simulation.ts';
+import { SkillEffects } from '../src/skill-effects.ts';
 import type { CombatEvent, Projectile, WorldQuery } from '../src/model.ts';
 
 const emptyWorld: WorldQuery = { blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) };
@@ -39,7 +40,7 @@ test('long display gaps expire old feedback without replaying a particle emissio
   const effects = new CombatEffects(), sim = new Simulation(emptyWorld, { spawn: false });
   sim.projectiles = Array.from({ length: 32 }, (_, id): Projectile => ({
     id, x: id * 5, y: 0, prevX: id * 5, prevY: 0, vx: 100, vy: 0, angle: 0,
-    radius: 3, damage: 10, life: 2, maxLife: 2, owner: 'player',
+    radius: 3, damage: 10, life: 2, maxLife: 2, owner: 'player', hitIds: new Set(),
   }));
   effects.handleEvents([{ type: 'hit', x: 0, y: 0, value: 20 }]);
   effects.update(sim, 30);
@@ -58,4 +59,23 @@ test('invalid visual deltas cannot poison live particles', () => {
   const before = structuredClone(storage(effects));
   for (const dt of [0, -1, NaN, Infinity]) effects.update(sim, dt);
   for (const field of fields) assert.deepEqual(storage(effects)[field], before[field]);
+});
+
+
+test('confirmed spell areas and chain links have independent bounded lifetimes', () => {
+  const effects = new SkillEffects();
+  const storage = effects as unknown as { areas: unknown[]; links: unknown[] };
+  for (let index = 0; index < 4000; index++) {
+    effects.handle({ type: 'chain', x: 0, y: 0, toX: 250, toY: -50, style: 'lightning' });
+    effects.handle({ type: index % 2 ? 'blast' : 'ground', x: index, y: 0,
+      style: index % 2 ? 'fire' : 'arrow', radius: 80, duration: 2 });
+    assert.ok(storage.areas.length <= 20 && storage.links.length <= 24, 'event batches cannot retain unbounded area/link history');
+  }
+  assert.ok(effects.getLights().length <= 3);
+  effects.update(10);
+  assert.equal(storage.areas.length, 0); assert.equal(storage.links.length, 0);
+  assert.equal(effects.getLights().length, 0);
+  effects.handle({ type: 'block', x: 0, y: 0 });
+  effects.reset();
+  assert.equal(storage.areas.length, 0); assert.equal(storage.links.length, 0);
 });

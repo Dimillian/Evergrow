@@ -1,6 +1,6 @@
 import type { Player } from './model.ts';
 import type { SkillId, StatKey } from './character-types.ts';
-import { SKILL_DEFINITIONS, skillIconSVG } from './skill-content.ts';
+import { SKILL_DEFINITIONS, skillIconSVG, canUseSkill, skillRequirementLabel } from './skill-content.ts';
 import { SKILL_TREE, SKILL_NODES, SKILL_TREE_ORIGIN, unlockedSkills, type SkillDomain, type SkillNode } from './skill-tree.ts';
 import { escapeUI, trapDialogFocus, uiIcon } from './ui-components.ts';
 import { drawSkillAtlas, SKILL_DOMAIN_COLORS, skillNodeRadius } from './skill-tree-art.ts';
@@ -66,7 +66,7 @@ export class SkillTreePanel {
         <aside class="skill-atlas-sidebar ui-scroll-area"><div class="skill-atlas-inspection" id="skill-atlas-selection" aria-live="polite"></div>
           <section class="skill-atlas-loadout"><div class="skill-atlas-section-heading"><span class="ui-kicker">ACTIVE SKILLS</span><span class="ui-muted">5 slots</span></div><div class="skill-atlas-assignments"></div></section>
         </aside></div>
-      <footer class="ui-window-footer skill-atlas-footer"><span><b>${SKILL_TREE.nodes.length.toLocaleString('en-US')}</b> nodes <i>·</i> <b>${SKILL_TREE.clusters.length}</b> clusters <i>·</i> <b>6</b> skills</span><span>One skill point per level</span></footer>
+      <footer class="ui-window-footer skill-atlas-footer"><span><b>${SKILL_TREE.nodes.length.toLocaleString('en-US')}</b> nodes <i>·</i> <b>${SKILL_TREE.clusters.length}</b> clusters <i>·</i> <b>${Object.keys(SKILL_DEFINITIONS).length}</b> skills</span><span>One skill point per level</span></footer>
     </section>`;
     mount.append(this.root);
     this.canvas = this.root.querySelector('canvas')!;
@@ -204,7 +204,7 @@ export class SkillTreePanel {
     this.detail.innerHTML = `<div class="skill-atlas-emblem" style="--star-color:${COLORS[node.domain]}">${skillNodeIconSVG(node, 48)}</div>
       <p class="ui-kicker">${heading}</p><h3>${escapeUI(node.name)}</h3><p class="skill-atlas-domain" style="color:${COLORS[node.domain]}">${node.kind === 'origin' ? 'Might · Cunning · Arcana' : escapeUI(cluster ? `${node.domain} / ${cluster.name}` : node.domain)}</p>
       <p class="skill-atlas-description">${escapeUI(node.description)}</p>${bonuses ? `<div class="skill-atlas-bonuses ui-well">${bonuses}</div>` : ''}
-      ${skill ? `<div class="skill-atlas-skill-costs"><span><b>${skill.manaCost}</b> mana</span><span><b>${skill.cooldown}s</b> cooldown</span><span><b>${Math.round(skill.damageMultiplier * 100)}%</b> damage${node.skill === 'volley' ? ' / thorn' : ''}</span></div>` : ''}
+      ${skill ? `<p class="skill-atlas-requirement ${canUseSkill(skill.id, this.player.equipment) ? 'is-ready' : ''}">Requires ${escapeUI(skillRequirementLabel(skill.requirement))}<small>${canUseSkill(skill.id, this.player.equipment) ? 'Matching equipment ready' : 'Equip matching gear to use this skill'}</small></p><div class="skill-atlas-skill-costs"><span><b>${skill.manaCost}</b> mana</span><span><b>${skill.cooldown}s</b> cooldown</span>${skill.damageMultiplier ? `<span><b>${Math.round(skill.damageMultiplier * 100)}%</b> damage${node.skill === 'volley' ? ' / arrow' : node.skill === 'rainOfArrows' ? ' / wave' : ''}</span>` : '<span>3s guard</span>'}</div>` : ''}
       <div class="skill-atlas-allocation"><span class="skill-atlas-node-state ${owned ? 'is-owned' : ''}">${owned ? '◆ Allocated' : reachable ? '◇ Connected to your path' : routeCost !== undefined ? `◇ ${routeCost} ${routeCost === 1 ? 'point' : 'points'} along the highlighted path` : '◇ No connected path'}</span>
         ${owned ? '' : `<button class="ui-button ui-button--primary" data-tree="allocate" ${!reachable || this.player.character.skillPoints < 1 ? 'disabled' : ''}>Allocate <span>1 point</span></button>`}
         ${!owned && reachable && this.player.character.skillPoints < 1 ? '<small class="ui-muted">Your next level grants one skill point.</small>' : ''}</div>
@@ -215,7 +215,7 @@ export class SkillTreePanel {
     const skills = new Set(unlockedSkills(this.player.character.allocatedNodes));
     this.assignments.innerHTML = BINDINGS.map((binding, index) => {
       const id = this.player!.character.skillSlots[index], skill = id && skills.has(id) ? SKILL_DEFINITIONS[id] : null;
-      return `<div class="skill-atlas-assigned ${skill ? 'is-filled' : ''}"><span class="skill-atlas-assigned-icon" ${skill ? `style="color:${skill.color}"` : ''}>${skill ? skillIconSVG(skill.id, 26) : '◇'}</span><div><span>${skill?.name ?? 'Empty slot'}</span><small>${binding}</small></div>${skill ? `<button class="ui-button ui-button--quiet ui-button--icon" data-clear="${index + 1}" aria-label="Remove ${skill.name} from ${binding}">×</button>` : ''}</div>`;
+      return `<div class="skill-atlas-assigned ${skill ? 'is-filled' : ''}"><span class="skill-atlas-assigned-icon" ${skill ? `style="color:${skill.color}"` : ''}>${skill ? skillIconSVG(skill.id, 26) : '◇'}</span><div><span>${skill?.name ?? 'Empty slot'}</span><small>${binding}${skill && !canUseSkill(skill.id, this.player!.equipment) ? ` · Requires ${escapeUI(skillRequirementLabel(skill.requirement))}` : ''}</small></div>${skill ? `<button class="ui-button ui-button--quiet ui-button--icon" data-clear="${index + 1}" aria-label="Remove ${skill.name} from ${binding}">×</button>` : ''}</div>`;
     }).join('');
   }
   private matches(node: SkillNode): boolean {

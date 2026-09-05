@@ -7,7 +7,7 @@ import type { CharacterSheet, SkillId } from '../src/character-types.ts';
 function sheet(points = 10): CharacterSheet {
   return { attributes: { strength: 0, dexterity: 0, intelligence: 0, vitality: 0 }, statPoints: 0,
     skillPoints: points, allocatedNodes: [SKILL_TREE_ORIGIN], inventory: [],
-    equipped: { weapon: null, head: null, chest: null, gloves: null, legs: null, boots: null, cloak: null, amulet: null, ring1: null, ring2: null },
+    equipped: { weapon: null, offhand: null, head: null, chest: null, gloves: null, legs: null, boots: null, cloak: null, amulet: null, ring1: null, ring2: null },
     skillSlots: [null, null, null, null, null] };
 }
 function pathsFromOrigin(): Map<string, string[]> {
@@ -41,16 +41,19 @@ test('thousands of immutable stars belong to a single reachable, undirected atla
   }
 });
 
-test('all six active skills have approachable three-point paths from the free origin', () => {
+test('all active skills have approachable connected paths through their weapon schools', () => {
   const paths = pathsFromOrigin(), majors = SKILL_TREE.nodes.filter(node => node.kind === 'major');
-  assert.equal(majors.length, 6);
+  assert.equal(majors.length, Object.keys(SKILL_DEFINITIONS).length);
   assert.deepEqual(new Set(majors.map(node => node.skill)), new Set(Object.keys(SKILL_DEFINITIONS)));
   for (const major of majors) {
-    const path = paths.get(major.id)!; assert.equal(path.length, 3);
-    const character = sheet(3);
+    const path = paths.get(major.id)!; assert.ok(path.length >= 4 && path.length <= 7);
+    assert.ok(path.some(id => id.startsWith('school:')), 'every skill follows a named weapon school');
+    assert.equal(major.domain, SKILL_DEFINITIONS[major.skill!].domain);
+    const character = sheet(path.length);
     for (const id of path) assert.equal(allocateNode(character, id).ok, true);
     assert.equal(character.skillPoints, 0);
-    assert.deepEqual(unlockedSkills(character.allocatedNodes), [major.skill]);
+    assert.deepEqual(unlockedSkills(character.allocatedNodes), path.map(id => SKILL_NODES.get(id)!.skill).filter(Boolean));
+    assert.ok(unlockedSkills(character.allocatedNodes).includes(major.skill!));
     assert.ok(Object.keys(getTreeBonuses(character.allocatedNodes)).length > 0, 'path minors improve character stats');
   }
 });
@@ -93,7 +96,8 @@ test('domain minor and notable bonuses have finite supported values and active s
   }
   for (const [id, skill] of Object.entries(SKILL_DEFINITIONS)) {
     assert.equal(skill.id, id);
-    assert.ok(skill.cooldown > 0 && skill.manaCost > 0 && skill.damageMultiplier > 0);
+    assert.ok(skill.cooldown > 0 && skill.manaCost > 0 && skill.damageMultiplier >= 0);
+    assert.equal(skill.damageMultiplier === 0, skill.id === 'bulwark', 'only the dedicated guard has no damage payload');
     assert.ok(skill.description.length > 30);
     const svg = skillIconSVG(id as SkillId); assert.ok(svg.startsWith('<svg')); assert.ok(svg.includes('<path'));
     assert.ok(!svg.includes('https:'));

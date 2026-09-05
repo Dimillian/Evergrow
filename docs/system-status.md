@@ -1,31 +1,31 @@
 # System status and foundation checkpoint
 
-2026-09-05 · local prototype · world generation 3 · character foundation 1 · organic atlas 2.
+2026-09-05 · local prototype · world generation 3 · character foundation 2 · weapon schools 1.
 
-The engine foundation now supports run-local character progression, gear, inventory, tree allocations, and six active skills through shared contracts and validated mutations. This is the first integrated character foundation; the large atlas reuses authored bonus families and is not a balanced endgame. Gameplay acceptance and performance on the user's machine remain separate from code verification.
+The engine foundation supports run-local character progression, one- and two-handed gear, shields, dual wield, inventory, tree allocations, and seventeen active skills through shared contracts and validated mutations. The large atlas reuses authored bonus families and is not a balanced endgame. Gameplay acceptance and performance on the user's machine remain separate from code verification.
 
 ## Current inventory
 
 | System | Implemented today | Status / next boundary |
 | --- | --- | --- |
-| Combat | 120 Hz deterministic simulation; basic attack, dodge, potion, and 6 unlockable/assignable skills; swept melee/projectiles, critical hits, armor, regeneration, life on hit | Integrated foundation; skill feel and balance await user feedback |
+| Combat | 120 Hz deterministic simulation; weapon-dependent basic attack, dodge, potion, and 17 unlockable/assignable skills; melee, arrows, elemental bolts, pierce, chains, blasts, timed areas, burns, slows, blocks | Rules tested; skill feel and balance await user feedback |
 | Encounters | 3 enemy archetypes, progression-based mix, 5–10 target population, 12-enemy hard cap, 2 pack + 1 special simultaneous attack slots | Bounded prototype; large crowds need profiling |
 | Experience / levels | Kill XP, increasing thresholds, overflow, live XP/level bar; 1 skill point and 5 attribute points per level | Run-local; no automatic spending, free refill, respec, or character saving |
-| Equipment / stats | 4 attributes; one derived-stat path; 10 equipment slots, 9 kinds, 5 tiers, 17 affix families; 3 generated sword profiles; procedural worn art | Seeded first content set; no shields, dual wield, bows, wands, or unique legendary powers |
+| Equipment / stats | 4 attributes; one derived-stat path; 11 equipment slots, 10 kinds, 5 tiers, 17 general and 2 shield affix families; 13 weapon profiles and 3 shields; procedural worn art | One-/two-handed melee, dual wield, three bows and three elemental staves; no wands or unique legendary powers |
 | Inventory / gear loot | 48 bag cells; 3-column character screen, comparison tooltips, drag/drop, Shift-click and button equip; seeded enemy gear drops and proximity pickup | Transactional item moves; no stash, trade, crafting, item deletion, or character persistence |
-| Skill atlas | 2,788 connected nodes, 2,878 curved edges, 150 themed constellations, 3 domains, 6 active-skill majors; winding paths, hybrid crosslinks, search and shortest-route preview | Organic immutable graph and shared bonuses; 21 authored families repeat, with balance/content expansion ahead |
+| Skill atlas | 2,824 connected nodes, 2,923 curved edges, 150 themed constellations, 3 domains, 9 weapon schools and 17 active-skill majors; winding paths, hybrid crosslinks, search and shortest-route preview | First/advanced school skills require 4/7 points from origin; authored bonus families repeat, with balance/content expansion ahead |
 | World | 3 smoothly connected biomes; streamed 256-unit terrain tiles; deterministic roads, props and clear corridors | Tested generation; biome distribution is still a three-region prototype |
 | Settlements / interiors | 5 building kinds; 8 buildings in Briarwatch; towns target 5–8, cities 12–16; shared doors/walls/furniture; roof fading and sanctuaries | Walkable layout foundation; no residents or service transactions |
 | Maps / discovery | Smooth minimap, explored-world map, hover POIs; 7 registered POI kinds; chart persistence | Tested bounded storage; landmark kind is reserved for later content |
-| Procedural art | Modular character motion, equipment drawing, enemy art and prop libraries; all world art generated in code | Preserved drawing output; more weapon/armor families remain content work |
-| Lighting / effects | Dynamic lights/shadows, combat particles, blade ribbon, synthesized audio, fixed CRT/soft phosphor | Bounded resources; performance has not been benchmarked in gameplay |
-| HUD / application | Astral frames/orbs/XP; basic attack + 5 assignable skill wells; separate potion/dodge; enabled C/I/T menus; skill cost/cooldown feedback; enemy focus plate and native text | New runs have empty skill slots; journal remains unavailable |
+| Procedural art | Shared weapon/shield silhouettes for worn art and inventory icons; one-/two-handed, bow, staff, shield and dual-wield poses; enemy art and prop libraries; all generated in code | Held attack snapshots keep animation and weapon effects aligned |
+| Lighting / effects | Dynamic lights/shadows, combat particles, blade ribbon, elemental projectiles, blast/chain/ground/block effects, burn/frost cues, synthesized audio, fixed CRT/soft phosphor | Bounded resources; performance has not been benchmarked in gameplay |
+| HUD / application | Astral frames/orbs/XP; equipped-weapon basic attack + 5 assignable skill wells; separate potion/dodge; enabled C/I/T menus; skill costs/cooldowns/gear requirements; enemy focus plate and native text | New runs have empty skill slots; journal remains unavailable |
 | Interface kit | Shared materials/icons/primitives across start/pause/defeat/map, character inventory, and skill atlas; native focus, tooltips, scroll regions, responsive layouts | Existing panels share the kit; static review is separate from gameplay |
 | Lifecycle / tooling | Scoped teardown and startup rollback, HMR cleanup, strict/core compilation, dependency checks, reusable stats command | Foundation guardrails in place |
 
 ## Combat numbers
 
-Player starts with **100 life / 100 mana**. The sword deals **24 damage**, attacks **2 times/second**, reaches **60 world units**, and sweeps **135°**. The new run has no assigned skills or default right-click cast. Ember Lance becomes available only after its major node is allocated and the skill assigned. Attribute, gear, and tree bonuses now affect real combat; the numbers here describe the unchanged starter equipment. Dodge has **2 charges** with **1.8 s** recharge; flasks have **2 charges**, restore **42 life**, and replenish a charge every **8 kills**. There are **2 projectile definitions** and **2 pickup types**.
+Player starts with **100 life / 100 mana**. The two-handed Weathered Sword deals **24 damage**, attacks **2 times/second**, reaches **60 world units**, and sweeps **135°**. The new run has no assigned skills or default right-click cast. Skills require allocating a major, assigning a slot, and compatible equipped gear. Attribute, gear, and tree bonuses affect real combat; the numbers here describe the unchanged starter equipment. Eight bag items include a one-handed sword, dagger, buckler, bow, and staff for immediate equipment testing. Dodge has **2 charges** with **1.8 s** recharge; flasks have **2 charges**, restore **42 life**, and replenish a charge every **8 kills**. There are **1 enemy projectile template** and **2 pickup types**. See [weapons and skills](weapons-and-skills.md) for all profile values, skills, effects, requirements, and formulas.
 
 | Enemy | Life | Damage | Move speed (units/s) | Windup / active / recovery |
 | --- | ---: | ---: | ---: | --- |
@@ -37,13 +37,15 @@ Player starts with **100 life / 100 mana**. The sword deals **24 damage**, attac
 
 | Resource | Current bound |
 | --- | --- |
-| Character bag / equipment / active skill slots | 48 cells / 10 slots / 5 slots |
+| Character bag / equipment / active skill slots | 48 cells / 11 slots / 5 slots |
+| Projectiles / timed ground effects | 128 / 16 |
 | Ground equipment | 96 items; auto-pickup within 30 units with line of sight |
-| Skill atlas | 2,788 immutable nodes / 2,878 edges; culled, event-driven Canvas drawing |
+| Skill atlas | 2,824 immutable nodes / 2,923 edges; culled, event-driven Canvas drawing |
 | World terrain tiles / settlement blueprints | 48 / 32 cached entries |
 | Rendered building cache / chart terrain cache | 24 buildings / 384 map tiles |
 | Base procedural prop library | 161 sprite canvases; about 5.05 MiB of RGBA pixels when all variants are populated, excluding other art/GPU overhead |
 | Combat particles / flashes / impact effects / damage labels | 650 / 22 / 24 / 35 |
+| Skill area visuals / chain visuals | 20 / 24 |
 | Sword ribbon / rendered corpses | 96 samples / 45 corpses |
 | Lighting | 18 lights per pass; up to 4 lights casting shadows against up to 24 props; 24 cached light stamps |
 | Audio | 96 voices maximum |
@@ -54,6 +56,8 @@ Player starts with **100 life / 100 mana**. The sword deals **24 damage**, attac
 Per-request limits prevent accidental huge enumeration; they are not a fixed map size. Cache eviction does not remove explored terrain from discovery. Storage capacity and numeric precision still make the implementation finite, despite its unbounded-generation design direction.
 
 ## Historical refactor and verification stats
+
+The following checkpoints describe their state at the time. The current system tables above and the final checkpoint below supersede older content counts and boundaries.
 
 | Metric | Before | After |
 | --- | ---: | ---: |
@@ -109,3 +113,13 @@ The lattice has been replaced by 150 irregular themed constellations and three w
 The native-resolution painter uses engraved stat/skill icons, distinct medallion sizes, restrained regional colors, warm allocated paths, and zoom-dependent labels. Hovering or selecting a destination highlights its shortest additional-point route; the inspector reports the cost. Search keeps that route legible and dismisses results after a choice. The initial camera frames the starter branches, and All fits the full graph to the viewport. Graph, route calculation, glyphs, painting, and panel interactions have separate owners.
 
 **240 code tests pass**, including graph connectivity, immutable content, node clearance, themed clusters, hybrid routes, allocation validation, and shortest-route correctness. Strict application/core compilation and the production build pass. The build has 82 transformed modules, 290.49 kB JavaScript (100.80 kB gzip), and 43.75 kB CSS (9.71 kB gzip), with the local font separate. [Three frozen in-app captures](captures/2026-09-05/organic-skill-tree/README.md) show the actual atlas at overview, regional, and detail zoom. The review reports no console errors; gameplay remains for the user to test. Character state remains run-local and resets on reload.
+
+## Weapon schools checkpoint
+
+Thirteen generated weapon profiles and three shield profiles now drive item generation, live equipment, icons, poses, basic attacks, and skill requirements. One-handed weapons support a shield or another one-handed melee weapon. Dual wield alternates each hand's own timing and damage. Bows fire arrows and elemental staves release free basic bolts; staff damage uses the spell multiplier once. Both-hand equipment changes are transactional, including full-bag failure cases.
+
+Seventeen implemented skills occupy nine schools in the expanded organic atlas. These include melee sweeps, a continuous collision-aware lunge, stuns, shield guard, bow volleys/piercing/ricochets/arrow rain, and Fireball, Arc Lightning, Ice Nova, Frost Lance, Meteor, and Soul Siphon. Projectile payloads and melee attacks retain their weapon snapshot. Timed ground attacks have explicit pulse counts; burns, slows, hit-once chains, and actual-damage healing have simulation integration coverage. The HUD and tree explain incompatible gear without deleting assignments.
+
+**295 code tests pass**, along with strict application/core compilation and the production build. Tests include every generated weapon's held geometry, dual-wield cadence, safe hand swaps, weapon gating, piercing and ricochets, wall collision, delayed areas, status expiry, shields, and healing edge cases. They caught and now prevent an extra burn tick at expiry. The build contains 88 transformed modules, **326.09 kB JavaScript / 112.89 kB gzip**, and **44.17 kB CSS / 9.81 kB gzip**, with the local font separate.
+
+[Frozen in-app captures](captures/2026-09-05/weapon-schools/README.md) cover sword/shield, dual wield, recurve bow, storm staff, and skill requirements at the default 1280×720 viewport. All five review pages report no console errors. No browser gameplay was driven; combat feel and balance remain for the user to test. Character state still resets on reload, while chart discovery remains separate.

@@ -14,6 +14,8 @@ import { Lighting, drawGlow } from './lighting.ts';
 import type { PointLight } from './lighting.ts';
 import { CombatEffects } from './effects.ts';
 import { playerPose } from './character-pose.ts';
+import { drawProjectile, projectileLight } from './projectile-art.ts';
+import { drawCharacterStatus } from './status-art.ts';
 import { SettlementArt } from './settlement-art.ts';
 import { EnvironmentArt } from './environment-art.ts';
 import { SceneVisibility } from './scene-visibility.ts';
@@ -320,7 +322,7 @@ export class Renderer {
         moving: Math.min(1, Math.hypot(enemy.vx, enemy.vy) / 70),
         attack: enemy.state === 'windup' ? -Math.max(.001, enemy.stateTime / enemy.stateDuration)
           : enemy.state === 'attack' ? Math.min(1, enemy.stateTime / enemy.stateDuration) : 0,
-        attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash,
+        attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash, slow: enemy.slowTime, burning: enemy.burnTime,
         impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false }) });
     }
     entries.push({ y: py, draw: () => this.actor(px, py, playerPose(p, sim.time)) });
@@ -332,7 +334,7 @@ export class Renderer {
     const c = this.ctx;
     c.fillStyle = '#02091190'; c.beginPath();
     c.ellipse(x, y + 2, pose.kind === 'brute' ? 17 : pose.kind === 'player' ? 11 * PLAYER_ART_SCALE : 11, pose.kind === 'brute' ? 8 : 5, 0, 0, TAU); c.fill();
-    c.save(); c.translate(x, y); if (pose.dead) c.globalAlpha = .4; drawHumanoid(c, pose); c.restore();
+    c.save(); c.translate(x, y); if (pose.dead) c.globalAlpha = .4; drawHumanoid(c, pose); drawCharacterStatus(c, pose); c.restore();
   }
 
   private sceneLights(sim: Simulation, px: number, py: number, reducedMotion: boolean): PointLight[] {
@@ -345,20 +347,23 @@ export class Renderer {
       const flicker = reducedMotion ? 1 : 1 + Math.sin(sim.time * 8 + prop.seed) * .035 + Math.sin(sim.time * 17) * .018;
       lights.push({ x: prop.x - 18, y: prop.y - 31, radius: 215 * flicker, color: '#ffa64f', power: .92, shadows: true });
     }
-    if (p.equipment.mainHand.visual.kind !== 'unarmed' && p.attack && p.attack.elapsed >= p.attack.activeStart && p.attack.elapsed < p.attack.activeEnd + .05) {
+    if (p.attack?.kind === 'melee' && p.attack.weapon.visual.kind !== 'unarmed' && p.attack.elapsed >= p.attack.activeStart && p.attack.elapsed < p.attack.activeEnd + .05) {
       const a = p.attack;
       const tip = getPlayerSwordTip(playerPose(p, sim.time));
       lights.push({ x: px + tip.x, y: py + tip.y,
-        radius: 105, color: p.equipment.mainHand.visual.glow ?? '#ffbf67',
+        radius: 105, color: a.weapon.visual.glow ?? '#ffbf67',
         power: .55 * Math.sin(Math.PI * Math.min(1, (a.elapsed - a.activeStart) / (a.activeEnd - a.activeStart + .05))), shadows: true });
     }
-    if (p.castTime > SKILL_CAST_MOTION.releaseRemaining) lights.push({ x: px + Math.cos(p.castAngle) * 17, y: py - 17,
+    if (p.equipment.mainHand.family === 'staff' && p.castTime > SKILL_CAST_MOTION.releaseRemaining) lights.push({ x: px + Math.cos(p.castAngle) * 17, y: py - 17,
       radius: 110, color: p.activeSkill ? SKILL_DEFINITIONS[p.activeSkill].color : '#c0acf0', power: (SKILL_CAST_MOTION.duration - p.castTime)
         / (SKILL_CAST_MOTION.duration - SKILL_CAST_MOTION.releaseRemaining) * .8 });
     if (p.healFlash > 0) lights.push({ x: px, y: py - 8, radius: 150, color: '#54e8b8', power: p.healFlash * .8 });
     lights.push(...this.effects.getLights());
-    for (const shot of sim.projectiles.slice(0, 8)) lights.push({ x: shot.x, y: shot.y, radius: shot.owner === 'player' ? 115 : 85,
-      color: shot.skill ? SKILL_DEFINITIONS[shot.skill].color : '#54e8b8', power: .85, shadows: true });
+    if (p.equipment.mainHand.family === 'staff') {
+      const tip = getPlayerSwordTip(playerPose(p, sim.time));
+      lights.push({ x: px + tip.x, y: py + tip.y, radius: 64, color: p.equipment.mainHand.visual.glow ?? '#c0acf0', power: .3 });
+    }
+    for (const shot of sim.projectiles.slice(0, 8)) lights.push(projectileLight(shot));
     for (const enemy of sim.enemies) if (enemy.hp > 0 && enemy.kind === 'caster') lights.push({ x: enemy.x, y: enemy.y - 22,
       radius: enemy.state === 'windup' ? 100 : 53, color: '#54e8b8', power: enemy.state === 'windup' ? .65 : .28 });
     return lights;
@@ -373,24 +378,17 @@ export class Renderer {
       c.fillStyle = '#fff0b4'; c.fillRect(x - 1.5, y - 3, 3, 6);
     }
     for (const light of lights.slice(1, 12)) drawGlow(c, light.x, light.y, light.radius * .27, light.color, light.power * .2);
-    if (p.castTime > SKILL_CAST_MOTION.releaseRemaining) {
+    if (p.equipment.mainHand.family === 'staff' && p.castTime > SKILL_CAST_MOTION.releaseRemaining) {
       const charge = Math.max(.1, (SKILL_CAST_MOTION.duration - p.castTime)
         / (SKILL_CAST_MOTION.duration - SKILL_CAST_MOTION.releaseRemaining));
-      const x = px + Math.cos(p.castAngle) * 17, y = py - 22 + Math.sin(p.castAngle) * 12;
-      drawGlow(c, x, y, 37, '#ffad48', charge * .8);
+      const tip = getPlayerSwordTip(playerPose(p, sim.time));
+      const x = px + tip.x, y = py + tip.y;
+      drawGlow(c, x, y, 37, p.activeSkill ? SKILL_DEFINITIONS[p.activeSkill].color : p.equipment.mainHand.visual.glow ?? '#c0acf0', charge * .8);
       c.fillStyle = '#fff2c0'; c.beginPath(); c.arc(x, y, 1 + charge * 3, 0, TAU); c.fill();
     }
     for (const shot of sim.projectiles) {
       const x = lerp(shot.prevX, shot.x, alpha), y = lerp(shot.prevY, shot.y, alpha);
-      const friendly = shot.owner === 'player';
-      const color = shot.skill ? SKILL_DEFINITIONS[shot.skill].color : '#54e8b8';
-      drawGlow(c, x, y, friendly ? 40 : 27, color, .65);
-      c.save(); c.translate(x, y); c.rotate(shot.angle);
-      c.fillStyle = color;
-      c.beginPath(); c.moveTo(shot.radius + 1, 0); c.quadraticCurveTo(-5, -7, -25, 0);
-      c.quadraticCurveTo(-5, 7, shot.radius + 1, 0); c.fill();
-      c.fillStyle = '#fff5c9'; c.beginPath(); c.ellipse(0, 0, shot.radius, shot.radius * .65, 0, 0, TAU); c.fill();
-      c.restore();
+      drawProjectile(c, shot, x, y - 16, this.visualTime);
     }
   }
 

@@ -8,6 +8,8 @@ import type { CombatEvent } from './model.ts';
 import type { Simulation } from './simulation.ts';
 import { text } from './font.ts';
 import { SwordTrail } from './sword-trail.ts';
+import { projectileStyle, PROJECTILE_COLORS } from './projectile-art.ts';
+import { SkillEffects } from './skill-effects.ts';
 
 interface Spark {
   x: number; y: number; vx: number; vy: number;
@@ -27,10 +29,11 @@ export class CombatEffects {
   private popups: Popup[] = [];
   private emitterTime = 0;
   private sword = new SwordTrail();
+  private skillEffects = new SkillEffects();
 
   reset() {
     this.sparks = []; this.flashes = []; this.impacts = []; this.popups = [];
-    this.emitterTime = 0; this.sword.reset();
+    this.emitterTime = 0; this.sword.reset(); this.skillEffects.reset();
   }
 
   private spark(x: number, y: number, angle: number, color: string, strength = 1, airborne = true, luminous = true) {
@@ -44,17 +47,18 @@ export class CombatEffects {
 
   handleEvents(events: CombatEvent[]) {
     for (const event of events) {
+      this.skillEffects.handle(event);
       const enemyCast = event.type === 'cast' && event.enemyKind;
       const contact = event.type === 'hit' || event.type === 'hurt' || event.type === 'kill';
-      const color = event.color ?? (event.type === 'hurt' ? '#ff5e4e' : event.type === 'heal' || enemyCast ? MINT
+      const color = event.color ?? (event.style ? PROJECTILE_COLORS[event.style] : undefined) ?? (event.type === 'hurt' ? '#ff5e4e' : event.type === 'heal' || enemyCast ? MINT
         : event.type === 'dodge' ? BLUE : event.type === 'cast' ? FIRE : GOLD);
-      const count = event.type === 'hit' ? 30 : event.type === 'kill' ? 42
+      const count = event.type === 'blast' ? 46 : event.type === 'block' ? 22 : event.type === 'hit' ? 30 : event.type === 'kill' ? 42
         : event.type === 'hurt' ? 32 : event.type === 'cast' ? 18 : event.type === 'heal' ? 30
         : event.type === 'level' ? 50 : event.type === 'loot' ? 8 : event.type === 'pickup' ? 10 : event.type === 'dodge' ? 14 : 0;
       const bodyColor = event.type === 'hurt' ? '#b64143' : event.enemyKind === 'caster' ? '#7dbf98'
         : event.enemyKind === 'brute' ? '#b6a184' : '#a44349';
       for (let i = 0; i < count; i++) {
-        const radial = ['kill', 'heal', 'pickup', 'level'].includes(event.type) || event.skill === 'nova';
+        const radial = ['kill', 'heal', 'pickup', 'level', 'blast'].includes(event.type) || event.skill === 'iceNova';
         const angle = radial ? Math.random() * Math.PI * 2 : (event.angle ?? 0) + (Math.random() - .5) * 2.8;
         const debris = contact && i % 3 === 0;
         this.spark(event.x, event.y, angle, debris ? bodyColor : i % 4 === 0 ? '#fff7db' : color,
@@ -68,7 +72,7 @@ export class CombatEffects {
         const max = event.type === 'heal' ? .55 : event.type === 'kill' ? .32 : .22;
         this.flashes.push({ x: event.x, y: contact ? contactY : event.y - 10, life: max, max,
           radius: event.type === 'kill' || event.heavy ? 145 : contact ? 118 : 90, color,
-          ring: event.type === 'kill' || event.type === 'heal' || event.type === 'level' || event.skill === 'nova' });
+          ring: event.type === 'kill' || event.type === 'heal' || event.type === 'level' || event.skill === 'iceNova' });
       }
       if (event.type === 'hit' && event.value) this.popups.push({ x: event.x + (Math.random() - .5) * 10,
         y: event.y - (event.enemyKind === 'brute' ? 54 : 44), vx: (Math.random() - .5) * 22, vy: -47,
@@ -77,6 +81,8 @@ export class CombatEffects {
         vx: Math.cos(event.angle ?? 0) * 14, vy: -55, life: .95, max: .95,
         value: (event.type === 'hurt' ? '-' : '+') + Math.round(event.value ?? 0),
         color: event.type === 'hurt' ? '#ff9075' : '#83ffbb', size: event.type === 'hurt' ? 2.5 : 2 });
+      if (event.type === 'block') this.popups.push({ x: event.x, y: event.y - 58, vx: 0, vy: -25,
+        life: .65, max: .65, value: 'BLOCK', color: '#b4e4ee', size: 1.7 });
       // Large event batches must not allocate their entire particle history
       // before enforcing the cap. Keep the same newest effects after each event.
       this.trim();
@@ -93,6 +99,7 @@ export class CombatEffects {
   update(sim: Simulation, dt: number) {
     if (!Number.isFinite(dt) || dt <= 0) return;
     this.sword.update(sim.player, dt, sim.time, sim.interpolationAlpha);
+    this.skillEffects.update(dt);
     for (const spark of this.sparks) {
       spark.life -= dt;
       const angle = spark.curl * dt, cos = Math.cos(angle), sin = Math.sin(angle);
@@ -121,31 +128,36 @@ export class CombatEffects {
     while (this.emitterTime >= .016) {
       this.emitterTime -= .016;
       const p = sim.player, attack = p.attack;
-      if (p.equipment.mainHand.visual.kind !== 'unarmed' && attack && attack.elapsed >= attack.activeStart && attack.elapsed <= attack.activeEnd) {
+      if (attack?.kind === 'melee' && attack.weapon.visual.kind !== 'unarmed' && attack.elapsed >= attack.activeStart && attack.elapsed <= attack.activeEnd) {
         const angle = getSwingAngle(attack.angle, attack.elapsed / attack.duration,
           attack.activeStart / attack.duration, attack.activeEnd / attack.duration, attack.arc);
         const tip = getPlayerSwordTip(playerPose(p, sim.time));
         const x = p.prevX + (p.x - p.prevX) * sim.interpolationAlpha + tip.x;
         const y = p.prevY + (p.y - p.prevY) * sim.interpolationAlpha + tip.y;
         for (let i = 0; i < 2; i++) this.spark(x, y, angle + 1.3,
-          i === 0 ? '#fff0d4' : (p.equipment.mainHand.visual.glow ?? GOLD), .5, false);
+          i === 0 ? '#fff0d4' : (attack.weapon.visual.glow ?? GOLD), .5, false);
       }
       for (const shot of sim.projectiles.slice(0, 32)) {
-        this.spark(shot.x, shot.y, shot.angle + Math.PI + (Math.random() - .5),
-          shot.skill ? SKILL_DEFINITIONS[shot.skill].color : MINT, .3, false);
+        const style = projectileStyle(shot);
+        if (style === 'arrow') continue;
+        const color = PROJECTILE_COLORS[style];
+        for (let i = 0; i < (style === 'fire' ? 2 : 1); i++) {
+          this.spark(shot.x, shot.y - 16, shot.angle + Math.PI + (Math.random() - .5) * .7,
+            i ? '#ffd674' : color, style === 'fire' ? .45 : .22, false);
+        }
       }
-      if (p.castTime > SKILL_CAST_MOTION.releaseRemaining) {
-        const angle = sim.time * 22;
-        this.spark(p.x + Math.cos(p.castAngle) * 17 + Math.cos(angle) * 8,
-          p.y - 22 + Math.sin(p.castAngle) * 12 + Math.sin(angle) * 8, angle + Math.PI / 2, GOLD, .25, false);
+      if (p.equipment.mainHand.family === 'staff' && p.castTime > SKILL_CAST_MOTION.releaseRemaining) {
+        const angle = sim.time * 22, tip = getPlayerSwordTip(playerPose(p, sim.time));
+        this.spark(p.x + tip.x + Math.cos(angle) * 8,
+          p.y + tip.y + Math.sin(angle) * 8, angle + Math.PI / 2, p.activeSkill ? SKILL_DEFINITIONS[p.activeSkill].color : p.equipment.mainHand.visual.glow ?? GOLD, .25, false);
       }
     }
     this.trim();
   }
 
   getLights(): PointLight[] {
-    return this.flashes.slice(-7).map(f => ({ x: f.x, y: f.y, radius: f.radius,
-      power: Math.pow(f.life / f.max, .75), color: f.color }));
+    return [...this.flashes.slice(-7).map(f => ({ x: f.x, y: f.y, radius: f.radius,
+      power: Math.pow(f.life / f.max, .75), color: f.color })), ...this.skillEffects.getLights()].slice(-7);
   }
 
   drawSword(c: CanvasRenderingContext2D) { this.sword.draw(c); }
@@ -162,6 +174,7 @@ export class CombatEffects {
         c.beginPath(); c.ellipse(flash.x, flash.y + 14, 8 + (1 - t) * 47, 4 + (1 - t) * 24, 0, 0, Math.PI * 2); c.stroke();
       }
     }
+    this.skillEffects.draw(c);
     for (const impact of this.impacts) this.drawImpact(c, impact);
     for (const spark of this.sparks) {
       const t = Math.min(1, spark.life / spark.max * 1.8), y = spark.y - spark.z;

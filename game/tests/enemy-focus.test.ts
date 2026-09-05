@@ -8,7 +8,7 @@ const view = cameraView(960, 600, 0, 0, 1);
 const enemy = (id = 1, x = 0, y = 0, kind: EnemyKind = 'stalker'): Enemy => ({
   id, x, y, prevX: x, prevY: y, vx: 0, vy: 0, knockbackX: 0, knockbackY: 0,
   angle: 0, hp: 100, maxHp: 100, kind, state: 'idle', stateTime: 0, stateDuration: 1,
-  attackAngle: 0, hitFlash: 0, hitAngle: 0, radius: 10, stagger: 0, attackHit: false, interrupted: false,
+  attackAngle: 0, hitFlash: 0, hitAngle: 0, radius: 10, stagger: 0, attackHit: false, interrupted: false, slowTime: 0, slowFactor: 1, burnTime: 0, burnDps: 0, burnTick: 0,
 });
 const hit = (id: number, remainingHp = 75): CombatEvent => ({ type: 'hit', targetId: id, x: 0, y: 0, value: 25, remainingHp });
 const point = (x = 0, y = -20) => worldToScreen(view, x, y);

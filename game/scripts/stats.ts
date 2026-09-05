@@ -5,6 +5,8 @@ import { gzipSync } from 'node:zlib';
 import { SKILL_TREE } from '../src/skill-tree.ts';
 import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
 import { EQUIPMENT_SLOTS, ITEM_KINDS, TIER_NAMES } from '../src/items.ts';
+import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
+import { MAX_PROJECTILES } from '../src/projectile-combat.ts';
 import { BIOMES } from '../src/biomes.ts';
 import { COMBAT_TIMING, ENEMY_DEFINITIONS, PLAYER_ABILITIES, PROJECTILE_DEFINITIONS } from '../src/combat-content.ts';
 import { ENCOUNTER_RULES } from '../src/encounter-director.ts';
@@ -36,9 +38,11 @@ console.log(JSON.stringify({
     basicAndUtilityActions: Object.keys(PLAYER_ABILITIES).length, activeSkills: Object.keys(SKILL_DEFINITIONS).length,
     skillNodes: SKILL_TREE.nodes.length, skillEdges: SKILL_TREE.edges.length,
     equipmentSlots: EQUIPMENT_SLOTS.length, itemKinds: ITEM_KINDS.length, itemTiers: Object.keys(TIER_NAMES).length,
+    generatedWeaponProfiles: WEAPON_PROFILES.length, shieldProfiles: SHIELD_PROFILES.length,
     enemyProjectileTemplates: Object.keys(PROJECTILE_DEFINITIONS).length,
     pointOfInterestKinds: Object.keys(POI_DEFINITIONS).length },
   limits: { simulationHz: Math.round(1 / COMBAT_TIMING.fixedStep),
+    projectiles: MAX_PROJECTILES,
     targetEnemies: ENCOUNTER_RULES.targetPopulationCap, hardEnemyCap: ENCOUNTER_RULES.hardPopulationCap,
     exploration: EXPLORATION_LIMITS },
   lastBuild: bundle,

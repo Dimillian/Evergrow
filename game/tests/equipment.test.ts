@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createBaseStats, createStartingEquipment, deriveAttackStats, getGripLength, getSupportGripOffset,
+import { createBaseStats, createStartingEquipment, deriveAttackStats, getGripLength, getSupportGripOffset, getWeaponGrip,
   STARTING_SWORD } from '../src/equipment.ts';
+import { WEAPON_PROFILES } from '../src/weapon-content.ts';
+import { refreshCharacter } from '../src/character.ts';
+import { equipItem } from '../src/inventory.ts';
 import { FIXED_STEP, Simulation } from '../src/simulation.ts';
 
 test('equipment instances and character modifiers never mutate the authored starting weapon or another player', () => {
@@ -28,7 +31,7 @@ test('malformed grip lengths fall back to a connected finite two-hand attachment
 
 test('multiplication overflow cannot inject infinite damage into combat state or feedback events', () => {
   const weapon = { ...STARTING_SWORD, damage: Number.MAX_VALUE };
-  const stats = { attackSpeedMultiplier: 1, attackDamageMultiplier: Number.MAX_VALUE };
+  const stats = { attackSpeedMultiplier: 1, attackDamageMultiplier: Number.MAX_VALUE, spellDamageMultiplier: 1 };
   const derived = deriveAttackStats(stats, weapon);
   assert.equal(derived.damage, Number.MAX_SAFE_INTEGER);
   assert.ok(Number.isSafeInteger(derived.damage));
@@ -46,8 +49,34 @@ test('multiplication overflow cannot inject infinite damage into combat state or
 
 test('invalid weapon and modifier inputs retain a finite resolvable basic attack', () => {
   for (const invalid of [NaN, Infinity, -Infinity, 0, -1]) {
-    const result = deriveAttackStats({ attackSpeedMultiplier: invalid, attackDamageMultiplier: invalid },
+    const result = deriveAttackStats({ attackSpeedMultiplier: invalid, attackDamageMultiplier: invalid, spellDamageMultiplier: invalid },
       { ...STARTING_SWORD, baseAttacksPerSecond: invalid, damage: invalid, reach: invalid, arc: invalid });
     assert.deepEqual(result, { attacksPerSecond: 2, damage: 24, range: 60, arc: STARTING_SWORD.arc });
   }
+});
+
+
+test('weapon profile selects the authored grip and attack or spell scaling independently', () => {
+  const stats = { attackSpeedMultiplier: 1.5, attackDamageMultiplier: 2, spellDamageMultiplier: 3 };
+  for (const weapon of WEAPON_PROFILES) {
+    assert.equal(getWeaponGrip({ mainHand: weapon, offHand: null }), weapon.hands === 2 ? 'two-handed' : 'one-handed');
+    const attack = deriveAttackStats(stats, weapon);
+    assert.equal(attack.damage, Math.round(weapon.damage * (weapon.attackKind === 'bolt' ? 3 : 2)));
+    assert.equal(attack.attacksPerSecond, weapon.baseAttacksPerSecond * 1.5);
+  }
+});
+
+test('refresh projects shield and dual weapon loadouts from the character sheet', () => {
+  const sim = new Simulation({ blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) }, { spawn: false });
+  const player = sim.player;
+  assert.ok(equipItem(player.character, 0, 1).ok); assert.ok(equipItem(player.character, 4, 1).ok);
+  refreshCharacter(player);
+  assert.equal(player.equipment.mainHand.family, 'sword');
+  const heldShield = player.equipment.offHand;
+  assert.equal(heldShield?.kind, 'shield'); assert.ok(player.derived.blockChance > 0);
+  assert.ok(equipItem(player.character, 7, 1, 'offhand').ok); refreshCharacter(player);
+  assert.equal(player.equipment.offHand?.kind, 'weapon');
+  if (player.equipment.offHand?.kind === 'weapon') assert.equal(player.equipment.offHand.weapon.family, 'dagger');
+  assert.equal(player.derived.blockChance, 0);
+  assert.equal(player.stats.spellDamageMultiplier, player.derived.spellDamageMultiplier);
 });

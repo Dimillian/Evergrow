@@ -36,6 +36,7 @@
 .character-equipment-rail { position: absolute; top: 0; display: grid; gap: 6px; }
 .character-equipment-rail--left { left: 0; }
 .character-equipment-rail--right { right: 0; }
+.character-equipment-rail--crown { left: 50%; transform: translateX(-50%); }
 .character-equipment-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .character-equipment-cell > span { font-size: 10px; line-height: 1; color: var(--ui-silver-dim); letter-spacing: .035em; }
 .character-item-slot { --ui-slot: 46px; padding: 3px; min-width: 0; width: 100%; aspect-ratio: 1; border-radius: 1px; border-color: #819ba527; cursor: pointer; transition: border-color 120ms, background 120ms, box-shadow 120ms; touch-action: manipulation; }

@@ -1,5 +1,5 @@
 import type { WeaponVisual, WeaponGrip } from './equipment.ts';
-import type { EnemyKind } from './model.ts';
+import type { EnemyKind, ShieldDefinition } from './model.ts';
 
 /** Procedural art only: every cached image below is drawn from geometry. */
 export interface Sprite {
@@ -56,6 +56,9 @@ export interface CharacterPose {
   /** Normalized swing progress; negative values are an enemy's windup progress. */
   attack: number;
   attackAngle: number;
+  attackKind?: 'melee' | 'ranged';
+  attackHand?: 'main' | 'off';
+  gesture?: 'thrust' | 'slam' | 'bash';
   /** Normalized active-window boundaries from the simulation's attack recipe. */
   attackStart?: number;
   attackEnd?: number;
@@ -64,6 +67,11 @@ export interface CharacterPose {
   cast?: number;
   weapon?: WeaponVisual;
   grip?: WeaponGrip;
+  offHand?: { kind: 'weapon'; visual: WeaponVisual } | { kind: 'shield'; visual: ShieldDefinition['visual'] } | null;
+  guard?: number;
+  castColor?: string;
+  slow?: number;
+  burning?: number;
   /** Slots can be replaced or set to null independently, without altering the rig. */
   outfit?: Partial<CharacterOutfit>;
   /** Remaining bright-hit timer in seconds (0.16 seconds at impact). */

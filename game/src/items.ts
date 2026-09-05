@@ -1,10 +1,11 @@
 import { STARTING_SWORD } from './equipment.ts';
+import { SHIELD_PROFILES, WEAPON_PROFILES } from './weapon-content.ts';
 import type { CharacterSheet, EquipmentSlot, Item, ItemAffix, ItemKind, ItemTier, StatKey, StatModifiers } from './character-types.ts';
 
 export const EQUIPMENT_SLOTS: readonly EquipmentSlot[] = Object.freeze([
-  'weapon', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'amulet', 'ring1', 'ring2',
+  'weapon', 'offhand', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'amulet', 'ring1', 'ring2',
 ]);
-export const ITEM_KINDS: readonly ItemKind[] = Object.freeze(['weapon', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'amulet', 'ring']);
+export const ITEM_KINDS: readonly ItemKind[] = Object.freeze(['weapon', 'shield', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'amulet', 'ring']);
 export const TIER_COLORS: Readonly<Record<ItemTier, string>> = Object.freeze({
   common: '#c5ccc8', magic: '#76b9ee', rare: '#e0c17a', epic: '#b895ef', legendary: '#f0a16b',
 });
@@ -17,8 +18,9 @@ export const STAT_LABELS: Readonly<Record<StatKey, string>> = Object.freeze({
   attackSpeedPercent: 'Attack speed', critChance: 'Critical chance', critDamage: 'Critical damage',
   moveSpeedPercent: 'Movement speed', spellDamagePercent: 'Spell damage', manaRegen: 'Mana / sec',
   lifeRegen: 'Life / sec', cooldownPercent: 'Cooldown reduction', lifeOnHit: 'Life on hit',
+  blockChance: 'Block chance', blockReduction: 'Blocked damage reduction',
 });
-const PERCENT_STATS = new Set<StatKey>(['damagePercent', 'attackSpeedPercent', 'critChance', 'critDamage', 'moveSpeedPercent', 'spellDamagePercent', 'cooldownPercent']);
+const PERCENT_STATS = new Set<StatKey>(['damagePercent', 'attackSpeedPercent', 'critChance', 'critDamage', 'moveSpeedPercent', 'spellDamagePercent', 'cooldownPercent', 'blockChance', 'blockReduction']);
 export function formatStatValue(stat: StatKey, value: number): string {
   return `${value > 0 ? '+' : ''}${Number(value.toFixed(1))}${PERCENT_STATS.has(stat) ? '%' : ''}`;
 }
@@ -39,8 +41,8 @@ function randomSource(seed: number): () => number {
     return ((n ^ n >>> 14) >>> 0) / 4294967296;
   };
 }
-const BASE_NAMES: Readonly<Record<ItemKind, readonly string[]>> = {
-  weapon: ['Longsword', 'Dusk Sabre', 'Greatblade'], head: ['Crown Helm', 'Watcher Hood', 'Visored Helm'],
+const BASE_NAMES: Readonly<Record<Exclude<ItemKind, 'weapon' | 'shield'>, readonly string[]>> = {
+  head: ['Crown Helm', 'Watcher Hood', 'Visored Helm'],
   chest: ['Brigandine', 'Warden Plate', 'Scale Vest'], gloves: ['Gauntlets', 'Grips', 'Vambraces'],
   legs: ['Greaves', 'Cuisses', 'Chausses'], boots: ['Sabatons', 'Treads', 'Longboots'],
   cloak: ['Mantle', 'Shroud', 'Halfcape'], amulet: ['Reliquary', 'Talisman', 'Moon Pendant'],
@@ -76,21 +78,34 @@ const AFFIXES: readonly { name: string; stat: StatKey; base: number; growth: num
   { name: 'Readiness', stat: 'cooldownPercent', base: 2, growth: .1 },
   { name: 'Sustenance', stat: 'lifeOnHit', base: 1, growth: .12 },
 ];
+const SHIELD_AFFIXES: typeof AFFIXES = [
+  { name: 'Deflection', stat: 'blockChance', base: 2, growth: .08 },
+  { name: 'The Bulwark', stat: 'blockReduction', base: 4, growth: .12 },
+];
 const TIER_AFFIXES: Readonly<Record<ItemTier, number>> = { common: 0, magic: 1, rare: 2, epic: 3, legendary: 4 };
 const TIER_POWER: Readonly<Record<ItemTier, number>> = { common: 1, magic: 1.09, rare: 1.2, epic: 1.34, legendary: 1.5 };
 
 /** Stable seed + item level completely describe an item; callers own seed uniqueness. */
-export function generateItem(seed: number, itemLevel: number, kind?: ItemKind): Item {
+export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, profileId?: string): Item {
   seed = seed >>> 0;
   const level = Math.max(1, Math.min(1_000_000, Math.floor(Number.isFinite(itemLevel) ? itemLevel : 1)));
   const random = randomSource(seed), choose = <T>(values: readonly T[]): T => values[Math.floor(random() * values.length)];
-  const itemKind = kind ?? choose(ITEM_KINDS);
+  const selectedWeapon = profileId ? WEAPON_PROFILES.find(profile => profile.id === profileId) : undefined;
+  const selectedShield = profileId ? SHIELD_PROFILES.find(profile => profile.id === profileId) : undefined;
+  if (profileId && !selectedWeapon && !selectedShield) throw new RangeError(`Unknown equipment profile: ${profileId}`);
+  const itemKind = kind ?? (selectedWeapon ? 'weapon' : selectedShield ? 'shield' : choose(ITEM_KINDS));
+  if (profileId && (itemKind === 'weapon' ? !selectedWeapon : itemKind === 'shield' ? !selectedShield : true)) {
+    throw new RangeError(`Profile ${profileId} does not describe an item of kind ${itemKind}.`);
+  }
   const roll = random();
   const tier: ItemTier = roll < .45 ? 'common' : roll < .77 ? 'magic' : roll < .94 ? 'rare' : roll < .99 ? 'epic' : 'legendary';
-  const variant = Math.floor(random() * 3), baseName = BASE_NAMES[itemKind][variant];
+  const variant = random();
+  const weaponProfile = itemKind === 'weapon' ? selectedWeapon ?? WEAPON_PROFILES[Math.floor(variant * WEAPON_PROFILES.length)] : undefined;
+  const shieldProfile = itemKind === 'shield' ? selectedShield ?? SHIELD_PROFILES[Math.floor(variant * SHIELD_PROFILES.length)] : undefined;
+  const baseName = weaponProfile?.name ?? shieldProfile?.name ?? BASE_NAMES[itemKind as Exclude<ItemKind, 'weapon' | 'shield'>][Math.floor(variant * 3)];
   const appearance = { ...choose(PALETTES) }, quality = TIER_POWER[tier];
   const growth = (1 + (level - 1) * .13) * quality;
-  const affixes: ItemAffix[] = [], remaining = [...AFFIXES];
+  const affixes: ItemAffix[] = [], remaining = itemKind === 'shield' ? [...AFFIXES, ...SHIELD_AFFIXES] : [...AFFIXES];
   for (let index = 0; index < TIER_AFFIXES[tier]; index++) {
     const definition = remaining.splice(Math.floor(random() * remaining.length), 1)[0];
     const value = Math.round((definition.base + (level - 1) * definition.growth) * (.85 + random() * .3) * quality * 10) / 10;
@@ -99,6 +114,7 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind): 
   const implicit: StatModifiers = {};
   const armorBase: Partial<Record<ItemKind, number>> = { head: 5, chest: 11, gloves: 3, legs: 7, boots: 4 };
   if (armorBase[itemKind]) implicit.armor = Math.max(1, Math.round(armorBase[itemKind]! * growth));
+  if (shieldProfile) implicit.armor = Math.max(1, Math.round(({ buckler: 7, kite: 15, tower: 22 }[shieldProfile.visual.kind]) * growth));
   if (itemKind === 'cloak') implicit.maxHp = Math.round(6 * growth);
   if (itemKind === 'amulet') implicit.maxMana = Math.round(7 * growth);
   if (itemKind === 'ring') implicit.damagePercent = Math.round(2 * growth * 10) / 10;
@@ -106,20 +122,18 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind): 
   const name = tier === 'common' ? `${prefix} ${baseName}` : tier === 'magic' ? `${prefix} ${baseName} ${suffix}`
     : `${prefix} ${choose(TITLES)}`;
   const item: Item = {
-    id: `item-${seed.toString(36)}-${level}-${itemKind}`, seed, name, baseName, kind: itemKind, tier,
+    id: `item-${seed.toString(36)}-${level}-${weaponProfile?.id ?? shieldProfile?.id ?? itemKind}`, seed, name, baseName, kind: itemKind, tier,
     itemLevel: level, requiredLevel: Math.max(1, level - 2),
     power: Math.round(level * 10 + quality * 12 + affixes.length * 7), implicit, affixes, appearance,
   };
-  if (itemKind === 'weapon') {
-    const profiles = [{ damage: 26, speed: 1.9, reach: 62, length: 32, width: 3.4 },
-      { damage: 21, speed: 2.3, reach: 56, length: 28, width: 2.7 },
-      { damage: 33, speed: 1.5, reach: 69, length: 37, width: 4.5 }];
-    const profile = profiles[variant];
-    item.weapon = { id: item.id, name, damage: Math.round(profile.damage * growth), baseAttacksPerSecond: profile.speed,
-      reach: profile.reach, arc: (variant === 2 ? 145 : 135) * Math.PI / 180,
-      visual: { kind: 'sword', length: profile.length, width: profile.width, metal: appearance.base, edge: appearance.edge,
-        grip: appearance.shadow, gripLength: variant === 2 ? 15 : 12, guard: appearance.trim,
-        ...(tier === 'epic' || tier === 'legendary' ? { glow: TIER_COLORS[tier] } : {}) } };
+  if (weaponProfile) {
+    item.weapon = { ...weaponProfile, id: item.id, name, damage: Math.round(weaponProfile.damage * growth),
+      visual: { ...weaponProfile.visual, metal: appearance.base, edge: appearance.edge, grip: appearance.shadow, guard: appearance.trim,
+        ...(!weaponProfile.visual.glow && (tier === 'epic' || tier === 'legendary') ? { glow: TIER_COLORS[tier] } : {}) } };
+  }
+  if (shieldProfile) {
+    item.shield = { ...shieldProfile, id: item.id, name,
+      visual: { ...shieldProfile.visual, base: appearance.base, edge: appearance.edge, trim: appearance.trim, shadow: appearance.shadow } };
   }
   return item;
 }
@@ -146,8 +160,12 @@ export function createCharacterSheet(): CharacterSheet {
     equipped[slot] = item;
   }
   const inventory: CharacterSheet['inventory'] = Array.from({ length: 48 }, () => null);
-  (['weapon', 'chest', 'ring', 'boots'] as const).forEach((kind, index) => {
-    inventory[index] = generateItem(4201 + index * 313, 1, kind);
+  const startingPack: readonly [ItemKind, string?][] = [
+    ['weapon', 'longsword'], ['chest'], ['ring'], ['boots'], ['shield', 'iron-buckler'],
+    ['weapon', 'thorn-shortbow'], ['weapon', 'ember-staff'], ['weapon', 'rondel-dagger'],
+  ];
+  startingPack.forEach(([kind, profileId], index) => {
+    inventory[index] = generateItem(4201 + index * 313, 1, kind, profileId);
   });
   return { attributes: { strength: 10, dexterity: 10, intelligence: 10, vitality: 10 },
     statPoints: 0, skillPoints: 0, allocatedNodes: ['origin'], inventory, equipped, skillSlots: Array.from({ length: 5 }, () => null) };
