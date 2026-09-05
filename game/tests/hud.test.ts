@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getHUDLayout, isHUDPoint } from '../src/hud.ts';
+import { HUD_ART, HUD_SKILL_SLOTS } from '../src/hud-layout.ts';
 
 const viewports = [[240, 180], [390, 844], [540, 450], [960, 600], [1440, 900]] as const;
 
@@ -26,7 +27,7 @@ test('resource orbs, action tray and resource readouts block world input after r
   // Broad interior samples describe functional areas, not individual ornamental edges.
   const occupied = [
     ['left orb', .10, .48], ['right orb', .90, .48],
-    ['basic attack', .30, .60], ['spell', .43, .60], ['dodge', .57, .60], ['flask', .70, .60],
+    ['basic attack', .30, .60], ['empty skill', .43, .60], ['empty skill', .57, .60], ['empty skill', .70, .60],
     ['health readout', .10, .90], ['mana readout', .90, .90],
   ] as const;
   for (const [width, height] of viewports) {
@@ -34,6 +35,27 @@ test('resource orbs, action tray and resource readouts block world input after r
     for (const [label, u, v] of occupied) {
       assert.equal(isHUDPoint(hud.x + hud.width * u, hud.y + hud.height * v, width, height), true,
         `${label} must not attack through visible controls (${width}×${height})`);
+    }
+  }
+});
+
+test('five unassigned skills and separate potion/dodge shortcuts all block world input', () => {
+  assert.equal(HUD_SKILL_SLOTS.length, 6);
+  assert.equal(HUD_SKILL_SLOTS.filter(slot => slot.action === null).length, 5);
+  assert.deepEqual(HUD_SKILL_SLOTS.filter(slot => slot.action !== null).map(slot => slot.action), ['attack']);
+  const skill = HUD_ART.skill, utility = HUD_ART.utility;
+  const fields = [
+    ...HUD_SKILL_SLOTS.map((slot, i) => ({ label: slot.key, x: skill.x + i * skill.step, y: skill.y,
+      width: skill.width, height: skill.height })),
+    { label: 'potion', x: utility.left, y: utility.y, width: utility.width, height: utility.height },
+    { label: 'dodge', x: utility.right, y: utility.y, width: utility.width, height: utility.height },
+  ];
+  for (const [width, height] of viewports) {
+    const hud = getHUDLayout(width, height);
+    for (const field of fields) for (const [u, v] of [[.1, .1], [.9, .1], [.1, .9], [.9, .9], [.5, .5]]) {
+      assert.equal(isHUDPoint(hud.x + (field.x + field.width * u) * hud.scale,
+        hud.y + (field.y + field.height * v) * hud.scale, width, height), true,
+      `${field.label} cannot attack through its visible well (${width}×${height})`);
     }
   }
 });

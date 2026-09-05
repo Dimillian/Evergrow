@@ -21,7 +21,7 @@ Open [Evergrowing locally](http://127.0.0.1:5173/) in the Codex in-app browser. 
 | Mouse | Aim |
 | Mouse wheel over the world | Smooth camera zoom in / out |
 | Hold left mouse | Repeat the basic weapon attack |
-| Right mouse | Ember projectile |
+| Right mouse / 1–4 | Five unassigned skill slots; no action yet |
 | Space | Dodge, using one of two regenerating charges |
 | Q | Healing flask; charges return through kills |
 | Escape | Pause, resume, or start a new run |
@@ -31,7 +31,7 @@ Open [Evergrowing locally](http://127.0.0.1:5173/) in the Codex in-app browser. 
 | N | Toggle synthesized sound |
 | F3 | Frame-rate and coordinate overlay |
 
-The basic attack derives its timing, reach, and damage from character and equipped-weapon stats. A single equipped weapon uses both hands on its hilt; the rig has an independent-hand stance for future shields or second weapons. There is no automatic combo chain; a combo could become a separate skill later. Character, inventory, skill-tree, and journal shortcuts on the HUD are disabled placeholders.
+The basic attack derives its timing, reach, and damage from character and equipped-weapon stats. A single equipped weapon uses both hands on its hilt; the rig has an independent-hand stance for future shields or second weapons. There is no automatic combo chain; a combo could become a separate skill later. Character, inventory, skill-tree, and journal shortcuts on the HUD are disabled placeholders. The skill row has basic attack plus five empty wells; potion (Q) and dodge (Space) have separate shortcuts. Default fireball casting is removed; a future equipped skill or wand attack will own that behavior.
 
 The camera smoothly zooms around the character from 0.65× to 1.8× with the mouse wheel or a trackpad scroll. HUD, minimap, and damage text keep their size; aiming, lighting, and particles follow the world view. The selected zoom remains through a new run but resets on page reload.
 

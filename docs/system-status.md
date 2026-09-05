@@ -8,7 +8,7 @@ The foundation pass preserves existing gameplay and art while making rules, draw
 
 | System | Implemented today | Status / next boundary |
 | --- | --- | --- |
-| Combat | 120 Hz deterministic simulation; 4 player actions; swept melee/projectiles; buffering, dodge, recoil, death/restart | Tested foundation; action execution remains explicit |
+| Combat | 120 Hz deterministic simulation; 3 playable player actions (basic attack, dodge, potion); swept melee/projectiles; buffering, dodge, recoil, death/restart | Tested foundation; action execution remains explicit |
 | Encounters | 3 enemy archetypes, progression-based mix, 5–10 target population, 12-enemy hard cap, 2 pack + 1 special simultaneous attack slots | Bounded prototype; large crowds need profiling |
 | Equipment / stats | 1 sword definition; speed/damage multipliers; attack snapshots; 7 outfit layers; two-hand grip with future off-hand occupancy | Rendering/stat foundation; no inventory or item swapping UI |
 | World | 3 smoothly connected biomes; streamed 256-unit terrain tiles; deterministic roads, props and clear corridors | Tested generation; biome distribution is still a three-region prototype |
@@ -16,13 +16,13 @@ The foundation pass preserves existing gameplay and art while making rules, draw
 | Maps / discovery | Smooth minimap, explored-world map, hover POIs; 7 registered POI kinds; chart persistence | Tested bounded storage; landmark kind is reserved for later content |
 | Procedural art | Modular character motion, equipment drawing, enemy art and prop libraries; all world art generated in code | Preserved drawing output; more weapon/armor families remain content work |
 | Lighting / effects | Dynamic lights/shadows, combat particles, blade ribbon, synthesized audio, fixed CRT/soft phosphor | Bounded resources; performance has not been benchmarked in gameplay |
-| HUD / application | Animated orbs, 4 action slots, 4 disabled menu shortcuts, enemy focus plate, shared UI hit regions, clean native text | Tested geometry/input; menus await their actual systems |
+| HUD / application | Astral orbital frames, animated orbs, basic attack + 5 empty skills, separate potion/dodge shortcuts, 4 disabled menu shortcuts, enemy focus plate, shared UI hit regions, clean native text | Tested geometry/input; menus await their actual systems |
 | Interface kit | Shared theme and SVG icons; refined start/pause/defeat/map windows; buttons, slots, stats, tooltips, scroll regions, keyboard focus | Ready for panel composition; inventory behavior remains future work |
 | Lifecycle / tooling | Scoped teardown and startup rollback, HMR cleanup, strict/core compilation, dependency checks, reusable stats command | Foundation guardrails in place |
 
 ## Combat numbers
 
-Player starts with **100 life / 100 mana**. The sword deals **24 damage**, attacks **2 times/second**, reaches **60 world units**, and sweeps **135°**. Ember costs **20 mana**, deals **36 damage**, and has a **0.45 s** cooldown. Dodge has **2 charges** with **1.8 s** recharge; flasks have **2 charges**, restore **42 life**, and replenish a charge every **8 kills**. There are **2 projectile definitions** and **2 pickup types**.
+Player starts with **100 life / 100 mana**. The sword deals **24 damage**, attacks **2 times/second**, reaches **60 world units**, and sweeps **135°**. Default fireball casting is removed. Its projectile and presentation definitions remain reserved for a future proper skill or wand attack. Dodge has **2 charges** with **1.8 s** recharge; flasks have **2 charges**, restore **42 life**, and replenish a charge every **8 kills**. There are **2 projectile definitions** and **2 pickup types**.
 
 | Enemy | Life | Damage | Move speed (units/s) | Windup / active / recovery |
 | --- | ---: | ---: | ---: | --- |
@@ -72,3 +72,7 @@ For the ownership map and extension instructions, see [implemented architecture]
 The UI pass passes **177 code tests across 31 files**, strict/core TypeScript checks, and the production build. There are now **61 TypeScript modules**, including **4 static review entrypoints**; **57 runtime modules** total **7,686 lines**. Runtime dependencies remain zero. The current build contains **198.46 kB JavaScript / 68.13 kB gzip** and **19.27 kB CSS / 4.69 kB gzip**, using the stats script's compression settings, with the font separate.
 
 Static in-app browser inspection covered start/pause/defeat windows, the world map, reusable components, desktop/narrow layouts, and pause keyboard focus. The user's playable tab was left untouched. See [interface kit](ui-kit.md) for extension guidance and the local review link. The foundation measurements above remain the historical before/after refactor record.
+
+## Astral skill-bar checkpoint
+
+The live HUD has one basic attack, five unassigned skill wells, and separate potion/dodge shortcuts within the same compact Astral footprint. Right-click and 1–4 perform no action. Simulation and input no longer start or buffer default fireball casts; regression tests cover stale/direct cast input and normal attack, dodge, potion, and movement behavior. The current check passes **180 code tests**, strict/core compilation, and a production build. Gameplay feedback remains with the user.

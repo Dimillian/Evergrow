@@ -8,7 +8,7 @@ import { circleIntersectsSector } from '../src/combat-geometry.ts';
 import type { EnemyKind, Input, WorldQuery } from '../src/model.ts';
 
 const world: WorldQuery = { blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) };
-const idle: Input = { moveX: 0, moveY: 0, aimX: 0, aimY: 0, attack: false, cast: false, dodge: false, heal: false };
+const idle: Input = { moveX: 0, moveY: 0, aimX: 0, aimY: 0, attack: false, dodge: false, heal: false };
 
 test('existing simulation exports retain the canonical timing and geometry API', () => {
   assert.equal(FIXED_STEP, COMBAT_TIMING.fixedStep);

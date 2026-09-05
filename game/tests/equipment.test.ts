@@ -37,7 +37,7 @@ test('multiplication overflow cannot inject infinite damage into combat state or
   const enemy = sim.spawnEnemy('brute', 35, 0)!;
   enemy.stateDuration = 100;
   for (let tick = 0; tick < 40; tick++) sim.update(FIXED_STEP,
-    { moveX: 0, moveY: 0, aimX: 100, aimY: 0, attack: true, cast: false, dodge: false, heal: false });
+    { moveX: 0, moveY: 0, aimX: 100, aimY: 0, attack: true, dodge: false, heal: false });
   assert.equal(enemy.hp, 0); assert.equal(sim.kills, 1);
   const hit = sim.drainEvents().find(event => event.type === 'hit');
   assert.ok(hit && Number.isSafeInteger(hit.value));

@@ -2,7 +2,8 @@
 export const HUD_ART = Object.freeze({
   width: 520, height: 156, maxScale: .82,
   menu: Object.freeze({ x: 186, y: 30, width: 35, height: 22, step: 37 }),
-  skill: Object.freeze({ x: 135, y: 70, width: 58, height: 56, step: 64 }),
+  skill: Object.freeze({ x: 135, y: 70, width: 38, height: 56, step: 42.4, count: 6 }),
+  utility: Object.freeze({ left: 114, right: 342, y: 29, width: 64, height: 27 }),
   orb: Object.freeze({ left: 61, right: 459, y: 79, scale: 1.18 }),
 });
 
@@ -49,6 +50,16 @@ export const HUD_MENU_SHORTCUTS = [
   { id: 'journal', label: 'Journal', key: 'J' },
 ] as const;
 
+/** Empty bindings reserve room for future equipped skills; they perform no action. */
+export const HUD_SKILL_SLOTS = [
+  { id: 'basic', key: 'LMB', action: 'attack' },
+  { id: 'skill-1', key: 'RMB', action: null },
+  { id: 'skill-2', key: '1', action: null },
+  { id: 'skill-3', key: '2', action: null },
+  { id: 'skill-4', key: '3', action: null },
+  { id: 'skill-5', key: '4', action: null },
+] as const;
+
 export interface HUDRect { x: number; y: number; width: number; height: number; }
 export interface HUDShortcut extends HUDRect { id: string; label: string; key: string; }
 export interface HUDLayout extends HUDRect { scale: number; shortcuts: HUDShortcut[]; }
@@ -74,6 +85,9 @@ export function isHUDPoint(x: number, y: number, width: number, height: number):
   const h = getHUDLayout(width, height);
   if (h.scale <= 0 || x < h.x || x > h.x + h.width || y < h.y || y > h.y + h.height) return false;
   const lx = (x - h.x) / h.scale, ly = (y - h.y) / h.scale;
+  const utility = HUD_ART.utility;
+  if (ly >= utility.y && ly <= utility.y + utility.height
+    && [utility.left, utility.right].some(left => lx >= left && lx <= left + utility.width)) return true;
   if (lx >= 181 && lx <= 339 && ly >= 23 && ly <= 56) return true;
   // Include a small input margin between adjacent skill plates.
   if (lx >= 133 && lx <= 387 && ly >= 64 && ly <= 136) return true;

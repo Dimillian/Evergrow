@@ -30,7 +30,7 @@ console.log(JSON.stringify({
   dependencies: { runtime: Object.keys(manifest.dependencies ?? {}).length,
     development: Object.keys(manifest.devDependencies ?? {}).length },
   content: { biomes: Object.keys(BIOMES).length, enemyArchetypes: Object.keys(ENEMY_DEFINITIONS).length,
-    playerActions: Object.keys(PLAYER_ABILITIES).length, projectileTypes: Object.keys(PROJECTILE_DEFINITIONS).length,
+    playerActionDefinitions: Object.keys(PLAYER_ABILITIES).length, projectileTypes: Object.keys(PROJECTILE_DEFINITIONS).length,
     pointOfInterestKinds: Object.keys(POI_DEFINITIONS).length },
   limits: { simulationHz: Math.round(1 / COMBAT_TIMING.fixedStep),
     targetEnemies: ENCOUNTER_RULES.targetPopulationCap, hardEnemyCap: ENCOUNTER_RULES.hardPopulationCap,

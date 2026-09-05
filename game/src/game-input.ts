@@ -13,7 +13,7 @@ export class GameInput {
   readonly pointer = { x: 0, y: 0, present: false };
   private keys = new Set<string>();
   private buttons = new Set<number>();
-  private pending = { attack: false, cast: false, dodge: false, heal: false };
+  private pending = { attack: false, dodge: false, heal: false };
 
   keyDown(code: string): void {
     if (!GAME_KEYS.has(code) || this.keys.has(code)) return;
@@ -25,10 +25,9 @@ export class GameInput {
   keyUp(code: string): void { this.keys.delete(code); }
 
   pointerDown(button: number): void {
-    if ((button !== 0 && button !== 2) || this.buttons.has(button)) return;
+    if (button !== 0 || this.buttons.has(button)) return;
     this.buttons.add(button);
-    if (button === 0) this.pending.attack = true;
-    if (button === 2) this.pending.cast = true;
+    this.pending.attack = true;
   }
 
   pointerUp(button: number): void { this.buttons.delete(button); }
@@ -53,16 +52,15 @@ export class GameInput {
       moveY: Number(held(MOVEMENT.down)) - Number(held(MOVEMENT.up)),
       aimX: aim.x, aimY: aim.y,
       attack: !combatBlocked && (this.buttons.has(0) || this.pending.attack),
-      cast: !combatBlocked && (this.buttons.has(2) || this.pending.cast),
       dodge: this.pending.dodge, heal: this.pending.heal,
     };
-    this.pending.attack = this.pending.cast = this.pending.dodge = this.pending.heal = false;
+    this.pending.attack = this.pending.dodge = this.pending.heal = false;
     return input;
   }
 
   /** Blur, pause, map entry, cancellation, and restart discard all held/queued input. */
   clear(): void {
     this.keys.clear(); this.buttons.clear();
-    this.pending.attack = this.pending.cast = this.pending.dodge = this.pending.heal = false;
+    this.pending.attack = this.pending.dodge = this.pending.heal = false;
   }
 }

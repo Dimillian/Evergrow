@@ -1,5 +1,5 @@
 /** Astral Instrument HUD frame, drawn in transparent 520 × 156 logical coordinates. */
-import { HUD_ARM } from './hud-layout.ts';
+import { HUD_ARM, HUD_ART } from './hud-layout.ts';
 
 const TAU = Math.PI * 2;
 
@@ -109,21 +109,23 @@ function actionTray(c: CanvasRenderingContext2D) {
     c.restore();
   }
 
-  // Four separate black-steel leaves; shared controls cover the recessed centers.
-  for (let i = 0; i < 4; i++) {
-    const x = 133 + i * 64, inner = i === 1 || i === 2, top = inner ? 64 : 66, bottom = inner ? 136 : 133;
-    path(c, [x + 5, top, x + 57, top, x + 62, top + 5, x + 62, bottom - 5,
-      x + 55, bottom, x + 7, bottom, x, bottom - 5, x, top + 5]);
+  // Separate black-steel leaves; shared controls cover the recessed centers.
+  const skill = HUD_ART.skill;
+  for (let i = 0; i < skill.count; i++) {
+    const x = skill.x + i * skill.step - 2, width = skill.width + 4;
+    const inner = i === 2 || i === 3, top = inner ? 64 : 66, bottom = inner ? 136 : 133;
+    path(c, [x + 5, top, x + width - 5, top, x + width, top + 5, x + width, bottom - 5,
+      x + width - 7, bottom, x + 7, bottom, x, bottom - 5, x, top + 5]);
     c.fillStyle = metal(c, top, bottom); c.fill(); c.strokeStyle = '#344c59'; c.lineWidth = .9; c.stroke();
-    c.beginPath(); c.moveTo(x + 5, top + .5); c.lineTo(x + 57, top + .5);
+    c.beginPath(); c.moveTo(x + 5, top + .5); c.lineTo(x + width - 5, top + .5);
     c.strokeStyle = '#a9bdc4'; c.lineWidth = .7; c.stroke();
     c.strokeStyle = '#09121a'; c.lineWidth = 1.2;
-    c.strokeRect(x + 2.8, 69, 58.4, 58.2);
-    c.beginPath(); c.moveTo(x + 9, bottom - 2.5); c.lineTo(x + 53, bottom - 2.5);
+    c.strokeRect(x + 1.5, skill.y - 1, width - 3, skill.height + 2.2);
+    c.beginPath(); c.moveTo(x + 9, bottom - 2.5); c.lineTo(x + width - 9, bottom - 2.5);
     c.strokeStyle = '#526e7a'; c.lineWidth = .65; c.stroke();
     // Small blue enamel inlays lie below the action well, never over its contents.
-    c.fillStyle = i % 2 ? '#709e9d' : '#5d8297'; c.fillRect(x + 27, 129.5, 8, 1);
-    for (const px of [x + 7, x + 55]) {
+    c.fillStyle = i % 2 ? '#709e9d' : '#5d8297'; c.fillRect(x + width / 2 - 3, 129.5, 6, 1);
+    for (const px of [x + 7, x + width - 7]) {
       c.fillStyle = '#172733'; c.fillRect(px - 1.2, top + 1.8, 2.4, 1.1);
       c.fillStyle = '#657e87'; c.fillRect(px - .55, top + 1.8, 1.1, .55);
     }
@@ -134,6 +136,26 @@ function actionTray(c: CanvasRenderingContext2D) {
   c.strokeStyle = '#59717a'; c.lineWidth = .6; c.stroke();
   c.beginPath(); c.arc(260, 143, 5.5, 0, TAU); c.strokeStyle = '#344f5d'; c.stroke();
   star(c, 260, 143, 4, '#8cacae');
+}
+
+function utilityPlates(c: CanvasRenderingContext2D) {
+  const { left, right, y, width, height } = HUD_ART.utility;
+  for (const x of [left, right]) {
+    // Shallow instrument plates flank navigation, leaving icon and binding clear.
+    path(c, [x + 4, y, x + width - 4, y, x + width, y + 4,
+      x + width, y + height - 4, x + width - 4, y + height,
+      x + 4, y + height, x, y + height - 4, x, y + 4]);
+    c.fillStyle = metal(c, y, y + height); c.fill();
+    c.strokeStyle = '#526b77'; c.lineWidth = .85; c.stroke();
+    c.beginPath(); c.moveTo(x + 5, y + .8); c.lineTo(x + width - 5, y + .8);
+    c.strokeStyle = '#a9bec4'; c.lineWidth = .6; c.stroke();
+    c.beginPath(); c.moveTo(x + 5, y + height - 1.6); c.lineTo(x + width - 5, y + height - 1.6);
+    c.strokeStyle = '#263f4d'; c.stroke();
+    for (const px of [x + 3, x + width - 3]) {
+      c.beginPath(); c.moveTo(px, y + 7); c.lineTo(px, y + height - 7);
+      c.strokeStyle = '#344c59'; c.lineWidth = .5; c.stroke();
+    }
+  }
 }
 
 function crown(c: CanvasRenderingContext2D) {
@@ -185,6 +207,7 @@ export function drawHUDFrame(c: CanvasRenderingContext2D, time: number): void {
   c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
   actionTray(c);
   crown(c);
+  utilityPlates(c);
   const t = Number.isFinite(time) ? time : 0;
   glassInstrument(c, 61, -1, t);
   glassInstrument(c, 459, 1, t);

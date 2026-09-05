@@ -12,6 +12,7 @@ import { drawConceptControls, type ConceptMaterial } from './hud-concept-control
 import { drawReliquary } from './hud-concept-reliquary.ts';
 import { drawThornbound } from './hud-concept-thornbound.ts';
 import { drawAstral } from './hud-concept-astral.ts';
+import { drawHUDContents } from './hud.ts';
 
 // Art propositions only: no Game instance, input bindings, simulation ticks or saves.
 const proposals: { id: ConceptMaterial; name: string; subtitle: string; material: string; character: string;
@@ -37,7 +38,7 @@ async function boot() {
   installUITheme(); await loadGameFont(); if (disposed) return;
   root.innerHTML = `<header class="directions-header"><p class="ui-kicker">EVERGROWING / ART DIRECTION</p>
     <h1 class="ui-title">A HUD with more character.</h1><p class="ui-body">Three procedural studies, from a gothic heirloom to a living relic.
-    Each carries the same skills and resource glass. Compare their silhouette, materials, and detail at game size.</p></header>
+    The selected Astral Instrument reflects the current skill bar. Compare materials and detail with the original studies.</p></header>
     <div class="directions-toolbar"><div aria-label="Resource state">
       <button type="button" class="ui-button ui-button--quiet" data-state="ready" aria-pressed="true">Ready</button>
       <button type="button" class="ui-button ui-button--quiet" data-state="pressured" aria-pressed="false">Under pressure</button>
@@ -67,6 +68,9 @@ async function boot() {
   const postfx = lifetime.own(new PostFX(backdrop)); postfx.render(renderer.canvas, 0);
   const draw = () => {
     scheduled = 0; if (disposed) return;
+    sim.player.hp = pressured ? 39 : 100; sim.player.mana = pressured ? 68 : 94;
+    sim.player.dodgeCharges = pressured ? 1 : 2; sim.player.dodgeRecharge = pressured ? 1.2 : 0;
+    sim.player.flasks = pressured ? 1 : 2;
     for (const { canvas, link, proposal } of sheets) {
       const width = canvas.clientWidth, height = 252; if (width < 1) continue;
       const ratio = Math.min(2, window.devicePixelRatio || 1);
@@ -81,7 +85,10 @@ async function boot() {
       c.fillStyle = shade; c.fillRect(0, 0, width, height);
       const scale = Math.min(detail ? 1.28 : .82, (width - 24) / 520);
       c.save(); c.translate((width - 520 * scale) / 2, height - 156 * scale - 16); c.scale(scale, scale);
-      proposal.draw(c, 9.2); drawConceptControls(c, proposal.id, pressured, 9.2); c.restore();
+      proposal.draw(c, 9.2);
+      if (proposal.id === 'astral') drawHUDContents(c, sim.player, 9.2, { healthTrail: pressured ? .73 : 1 });
+      else drawConceptControls(c, proposal.id, pressured, 9.2);
+      c.restore();
       link.href = canvas.toDataURL('image/png'); link.download = `evergrowing-${proposal.id}-${pressured ? 'pressured' : 'ready'}.png`;
     }
     root.dataset.ready = 'true'; root.setAttribute('aria-busy', 'false');

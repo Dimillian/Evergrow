@@ -11,7 +11,6 @@ export interface Input {
   aimX: number;
   aimY: number;
   attack: boolean;
-  cast: boolean;
   dodge: boolean;
   heal: boolean;
 }

@@ -14,6 +14,8 @@
 
 The local slice now includes connected Deadwood, Verdant Forest, and swamp terrain; procedural settlements with enterable buildings; and exploration maps. Continue to prioritize the procedural asset engine, smooth transitions, readable navigation, and satisfying combat. Trading, skill trees, equipment screens, and other larger systems remain future work.
 
+The Astral skill row contains basic attack (LMB) and exactly five empty skills (RMB, 1–4). Potion (Q) and dodge (Space) occupy separate utility shortcuts beside the menu rail. Unassigned controls do nothing. There is no default player fireball; retained spell/projectile code is for a future proper skill or wand basic attack. Do not restore universal right-click casting.
+
 The basic attack is one repeatable action driven by character stats and equipped-weapon stats. Do not reintroduce an automatic combo chain; combos may become a separate skill in future work. Keep movement and combat continuous, without hitstop. The runtime game view has no how-to text or control legend; small bindings on skill buttons are intentional. Character, inventory, skill-tree, and journal HUD shortcuts remain disabled until those systems are requested.
 
 With only one weapon equipped, the character holds it with both hands. Both hands must stay attached to its hilt through movement and attacks; casting may briefly release and smoothly regrip. An occupied off-hand slot will support a shield or second weapon later. Do not return the empty off-hand to a dangling idle stance.

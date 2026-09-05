@@ -12,8 +12,10 @@ Open the local [HUD directions](http://127.0.0.1:5173/hud-directions.html) in th
 
 Selected direction: The Astral Instrument. Calibrated silver rings, celestial engraving, and suspended black-steel action plates provide its identity. The shared UI kit now includes silver and steel tokens for carrying these materials into future inventory work.
 
-All three studies have identical information placement. Their logical art field is 520×156; the game-size preview and live HUD use 0.82× (about 426 logical pixels wide) on sufficiently wide screens. The detail view enlarges ornament for inspection. No new gameplay controls, filter settings, or live theme selection are introduced.
+The original studies used identical information placement; the selected Astral preview now follows the live skill-bar arrangement. Their logical art field is 520×156; the game-size preview and live HUD use 0.82× (about 426 logical pixels wide) on sufficiently wide screens. The detail view enlarges ornament for inspection. No new gameplay controls, filter settings, or live theme selection are introduced.
 
 `hud-frame.ts` owns the selected procedural metalwork. `hud-layout.ts` owns shared artwork/control coordinates and responsive pointer bounds. `hud.ts` connects those to existing resource glass, current player stats, ability cooldowns, charges, damage trails, and reduced motion. Text remains at native display resolution above the world shader. The concept route reuses the live Astral frame; the other drawings remain historical proposals.
 
 The [live HUD state review](http://127.0.0.1:5173/hud.html) exports healthy, damaged, and depleted examples. Add `?size=narrow` for a 390px preview. Both routes are frozen presentation fixtures with no gameplay or save access.
+
+The current Astral bar has six main wells: basic attack (LMB) plus five empty skills (RMB and 1–4). Separate Q potion and Space dodge shortcuts flank the menu rail, showing their charges and recovery state. The outer footprint and orbital frames remain unchanged. Unassigned wells contain no skill icon, resource cost, or cooldown, and their controls are inert.

@@ -8,7 +8,7 @@ const emptyWorld: WorldQuery = {
   blocked: () => false,
   move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }),
 };
-const idle: Input = { moveX: 0, moveY: 0, aimX: 200, aimY: 0, attack: false, cast: false, dodge: false, heal: false };
+const idle: Input = { moveX: 0, moveY: 0, aimX: 200, aimY: 0, attack: false, dodge: false, heal: false };
 const make = (world = emptyWorld) => new Simulation(world, { spawn: false, seed: 42 });
 
 function advance(sim: Simulation, duration: number, input: Partial<Input> = {}, step = FIXED_STEP): void {
@@ -54,17 +54,13 @@ test('movement eases into speed but brakes and reverses without skating', () => 
   assert.ok(sim.player.vx < -145);
 });
 
-test('melee and casting retain movement through the animation', () => {
+test('melee retains movement through the animation', () => {
   const moving = make();
   const melee = make();
-  const casting = make();
   advance(moving, 2, { moveX: 1 });
   advance(melee, 2, { moveX: 1, attack: true });
-  advance(casting, 2, { moveX: 1, cast: true });
-  for (const sim of [melee, casting]) {
-    assert.ok(sim.player.x > moving.player.x * 0.87, 'combat retains at least 87% traversal speed');
-    assert.ok(sim.player.x < moving.player.x);
-  }
+  assert.ok(melee.player.x > moving.player.x * 0.87, 'combat retains at least 87% traversal speed');
+  assert.ok(melee.player.x < moving.player.x);
 });
 
 test('melee sector respects facing, range, and circle-edge overlap', () => {
@@ -178,7 +174,7 @@ test('UI combat input clearing drops queued weapons without stopping movement or
   const sim = make();
   sim.update(FIXED_STEP, { ...idle, moveX: 1, attack: true });
   advance(sim, 0.15, { moveX: 1 });
-  sim.update(FIXED_STEP * 0.5, { ...idle, moveX: 1, attack: true, cast: true, dodge: true });
+  sim.update(FIXED_STEP * 0.5, { ...idle, moveX: 1, attack: true, dodge: true });
   const velocity = sim.player.vx;
   const alpha = sim.interpolationAlpha;
   sim.clearCombatInput();
@@ -186,7 +182,6 @@ test('UI combat input clearing drops queued weapons without stopping movement or
   assert.equal(sim.interpolationAlpha, alpha);
   assert.ok(sim.player.attack);
   advance(sim, 0.4, { moveX: 1 });
-  assert.equal(sim.player.mana, 100, 'the queued spell was discarded');
   assert.equal(sim.player.dodgeCharges, 1, 'the independently queued dodge was preserved');
   assert.equal(sim.player.attack, null);
   assert.equal(sim.drainEvents().filter(event => event.type === 'swing').length, 1);
@@ -389,26 +384,37 @@ test('dodge charges replenish sequentially and mana does not gate dodging', () =
   assert.equal(sim.player.dodgeRecharge, 0);
 });
 
-test('ember costs mana once and releases after its windup', () => {
+test('legacy direct cast input cannot start or buffer an unassigned fireball', () => {
   const sim = make();
-  sim.update(FIXED_STEP, { ...idle, cast: true });
-  assert.ok(sim.player.mana >= 80 && sim.player.mana < 81);
-  assert.equal(sim.projectiles.length, 0);
-  advance(sim, 0.05);
-  assert.equal(sim.projectiles.length, 0);
-  advance(sim, 0.05);
-  assert.equal(sim.projectiles.length, 1);
-  assert.equal(sim.drainEvents().filter(event => event.type === 'cast').length, 1);
+  const legacyInput = { ...idle, cast: true };
+  sim.update(FIXED_STEP / 2, legacyInput);
+  sim.update(FIXED_STEP / 2, idle);
+  for (let i = 0; i < 240; i++) sim.update(FIXED_STEP, legacyInput);
+  advance(sim, .5);
+  assert.equal(sim.player.mana, sim.player.maxMana);
+  assert.equal(sim.player.castTime, 0);
+  assert.equal(sim.player.castCooldown, 0);
+  assert.deepEqual(sim.projectiles, []);
+  assert.deepEqual(sim.drainEvents(), []);
 });
 
-test('ember can cancel sword recovery while attack remains held', () => {
-  const sim = make();
-  advance(sim, 0.25, { attack: true });
-  sim.update(FIXED_STEP, { ...idle, attack: true, cast: true });
-  assert.equal(sim.player.attack, null);
-  assert.ok(sim.player.castTime > 0);
-  advance(sim, 0.1, { attack: true, cast: true });
-  assert.equal(sim.drainEvents().filter(event => event.type === 'cast').length, 1);
+test('legacy cast input cannot interrupt basic attack, movement, dodge or potion', () => {
+  const expected = make(), legacy = make();
+  expected.player.hp = legacy.player.hp = 40;
+  expected.player.mana = legacy.player.mana = 50;
+  for (let tick = 0; tick < 240; tick++) {
+    const input = { ...idle, attack: true, moveX: 1, dodge: tick === 60, heal: tick === 120 };
+    const legacyInput = { ...input, cast: true };
+    expected.update(FIXED_STEP, input);
+    legacy.update(FIXED_STEP, legacyInput);
+    assert.deepEqual(legacy.player, expected.player, `legacy cast is inert through action tick ${tick}`);
+    assert.deepEqual(legacy.drainEvents(), expected.drainEvents());
+  }
+  assert.equal(legacy.player.flasks, 1);
+  assert.ok(legacy.player.hp > 40);
+  assert.ok(legacy.player.x > 200);
+  assert.equal(legacy.player.castTime, 0);
+  assert.deepEqual(legacy.projectiles, []);
 });
 
 test('swept projectiles hit the first crossed enemy exactly once', () => {

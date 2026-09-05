@@ -7,21 +7,38 @@ import { isGameUIPoint } from '../src/ui-hit-test.ts';
 
 const aim = { x: -41, y: 22 };
 
-test('a press and release between frames retains one action edge, while held weapons repeat', () => {
+test('a press and release between frames retains one action edge, while held basic attack repeats', () => {
   const input = new GameInput();
   input.pointerDown(0); input.pointerUp(0);
-  input.pointerDown(2); input.pointerUp(2);
   input.keyDown('Space'); input.keyUp('Space'); input.keyDown('KeyQ'); input.keyUp('KeyQ');
   assert.deepEqual(input.consume(aim, false), {
-    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: true, cast: true, dodge: true, heal: true,
+    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: true, dodge: true, heal: true,
   });
   assert.deepEqual(input.consume(aim, false), {
-    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: false, cast: false, dodge: false, heal: false,
+    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: false, dodge: false, heal: false,
   });
-  input.pointerDown(0); input.pointerDown(2);
+  input.pointerDown(0);
   for (let frame = 0; frame < 10; frame++) {
-    const next = input.consume(aim, false); assert.equal(next.attack, true); assert.equal(next.cast, true);
+    assert.equal(input.consume(aim, false).attack, true);
   }
+});
+
+test('unassigned mouse and skill shortcuts never queue or repeat a default spell', () => {
+  const input = new GameInput();
+  const idle = { moveX: 0, moveY: 0, aimX: aim.x, aimY: aim.y, attack: false, dodge: false, heal: false };
+  for (const button of [1, 2, 3, 4]) {
+    input.pointerDown(button);
+    for (let frame = 0; frame < 3; frame++) assert.deepEqual(input.consume(aim, false), idle);
+    input.pointerUp(button);
+    assert.deepEqual(input.consume(aim, false), idle, 'releasing an unassigned button leaves no pending action');
+  }
+  for (const key of ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5']) {
+    input.keyDown(key); assert.deepEqual(input.consume(aim, false), idle); input.keyUp(key);
+  }
+  input.pointerDown(2); input.pointerDown(0);
+  assert.equal(input.consume(aim, false).attack, true, 'holding RMB does not suppress basic attack');
+  input.pointerUp(0);
+  assert.deepEqual(input.consume(aim, false), idle);
 });
 
 test('aliases and opposing movement remain coherent, and repeat keydowns cannot queue extra dodges', () => {
@@ -40,7 +57,7 @@ test('UI consumes buffered weapon taps without suppressing movement, dodge or he
   input.keyDown('KeyD'); input.keyDown('Space'); input.keyDown('KeyQ');
   input.pointerDown(0); input.pointerUp(0); input.pointerDown(2); input.pointerUp(2);
   const blocked = input.consume(aim, true);
-  assert.equal(blocked.attack, false); assert.equal(blocked.cast, false);
+  assert.equal(blocked.attack, false);
   assert.equal(blocked.moveX, 1); assert.equal(blocked.dodge, true); assert.equal(blocked.heal, true);
   assert.equal(input.consume(aim, false).attack, false, 'leaving the UI cannot replay a blocked tap');
   input.pointerDown(0); assert.equal(input.consume(aim, true).attack, false);
@@ -52,7 +69,7 @@ test('focus loss and phase changes clear every held and pending action', () => {
   for (const code of ['KeyD', 'KeyW', 'Space', 'KeyQ']) input.keyDown(code);
   input.pointerDown(0); input.pointerDown(2); input.clear(); input.clear();
   assert.deepEqual(input.consume(aim, false), {
-    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: false, cast: false, dodge: false, heal: false,
+    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: false, dodge: false, heal: false,
   });
 });
 

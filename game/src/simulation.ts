@@ -38,7 +38,6 @@ export class Simulation {
   private nextId = 1;
   private events: CombatEvent[] = [];
   private attackBuffer = -1;
-  private castBuffer = -1;
   private dodgeBuffer = -1;
   private healBuffer = -1;
   private hurtGuard = 0;
@@ -64,7 +63,7 @@ export class Simulation {
     this.nextId = 1;
     this.events = [];
     this.randomState = this.options.seed! >>> 0;
-    this.attackBuffer = this.castBuffer = this.dodgeBuffer = this.healBuffer = -1;
+    this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
     this.hurtGuard = this.killRecharge = 0;
     this.castReleased = false;
     this.spawnTimer = ENCOUNTER_RULES.spawnInterval;
@@ -75,7 +74,7 @@ export class Simulation {
 
   /** Call when focus/control context changes, including pause and resume. */
   clearInput(): void {
-    this.attackBuffer = this.castBuffer = this.dodgeBuffer = this.healBuffer = -1;
+    this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
     this.player.vx = this.player.vy = 0;
     this.accumulator = 0;
     this.capturePositions();
@@ -83,7 +82,7 @@ export class Simulation {
 
   /** UI hover cancels queued weapons while movement and current actions continue. */
   clearCombatInput(): void {
-    this.attackBuffer = this.castBuffer = -1;
+    this.attackBuffer = -1;
   }
 
   /** Fraction between the two most recent fixed-tick positions for rendering. */
@@ -100,7 +99,6 @@ export class Simulation {
   update(dt: number, input: Input): void {
     if (!Number.isFinite(dt) || dt <= 0 || this.player.dead) return;
     if (input.attack) this.attackBuffer = this.time + COMBAT_TIMING.attackBuffer;
-    if (input.cast) this.castBuffer = this.time + COMBAT_TIMING.inputBuffer;
     if (input.dodge) this.dodgeBuffer = this.time + COMBAT_TIMING.inputBuffer;
     if (input.heal) this.healBuffer = this.time + COMBAT_TIMING.inputBuffer;
     // Bound catch-up after a suspended tab; normal frames always run at 120 Hz.
@@ -142,7 +140,6 @@ export class Simulation {
     for (const enemy of this.enemies) enemy.hitFlash = Math.max(0, enemy.hitFlash - dt);
     this.time += dt;
     if (input.attack) this.attackBuffer = this.time + COMBAT_TIMING.attackBuffer;
-    if (input.cast) this.castBuffer = this.time + COMBAT_TIMING.inputBuffer;
     this.updatePlayer(dt, input);
     this.updateEnemies(dt);
     this.updateProjectiles(dt);
@@ -230,20 +227,9 @@ export class Simulation {
       this.events.push({ type: 'dodge', x: p.x, y: p.y, angle: p.dodgeAngle });
     }
 
-    if (p.dodgeTime <= 0 && p.castTime <= 0) {
-      if ((!p.attack || p.attack.elapsed >= p.attack.activeEnd) && this.castBuffer >= this.time
-        && p.castCooldown <= 0 && p.mana >= PLAYER_ABILITIES.ember.manaCost) {
-        p.attack = null;
-        p.mana -= PLAYER_ABILITIES.ember.manaCost;
-        p.castCooldown = PLAYER_ABILITIES.ember.cooldown;
-        p.castTime = PLAYER_ABILITIES.ember.duration;
-        p.castAngle = p.angle;
-        this.castReleased = false;
-        this.castBuffer = -1;
-      } else if (this.attackBuffer >= this.time && !p.attack) {
-        this.startAttack(completedAttackTime);
-        this.attackBuffer = -1;
-      }
+    if (p.dodgeTime <= 0 && p.castTime <= 0 && this.attackBuffer >= this.time && !p.attack) {
+      this.startAttack(completedAttackTime);
+      this.attackBuffer = -1;
     }
 
     let targetVX = 0;
