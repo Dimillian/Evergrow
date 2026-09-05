@@ -12,6 +12,8 @@ export interface EnemyPlateOptions {
   /** Delayed resource value in hit points, not a normalized ratio. */
   healthTrail?: number;
   hitPulse?: number;
+  time?: number;
+  reducedMotion?: boolean;
 }
 
 const UI = UI_THEME.palette;
@@ -40,6 +42,40 @@ function chamfer(c: CanvasRenderingContext2D, x: number, y: number, width: numbe
   c.lineTo(x + width, y + cut); c.lineTo(x + width, y + height - cut);
   c.lineTo(x + width - cut, y + height); c.lineTo(x + cut, y + height);
   c.lineTo(x, y + height - cut); c.lineTo(x, y + cut); c.closePath();
+}
+
+/** Blood under glass: all movement stays inside the exact remaining health width. */
+function bloodMotion(c: CanvasRenderingContext2D, x: number, y: number, width: number, height: number,
+  ratio: number, time: number) {
+  c.save(); c.beginPath(); c.rect(x, y, width * ratio, height); c.clip();
+  const opacity = c.globalAlpha;
+  for (let i = 0; i < 3; i++) {
+    const phase = time * .65 + i * 2.1;
+    const cy = y + 2 + i * 2;
+    c.beginPath(); c.moveTo(x - 4, cy);
+    c.bezierCurveTo(x + width * .3, cy + Math.sin(phase) * 3,
+      x + width * .65, cy + Math.cos(phase * .8) * 3, x + width + 4, cy - 1);
+    c.strokeStyle = i === 1 ? '#ff8e96' : '#400923';
+    c.globalAlpha = opacity * (i === 1 ? .18 : .3); c.lineWidth = i === 1 ? .8 : 1.5; c.stroke();
+  }
+  for (let i = 0; i < 18; i++) {
+    const phase = (time * (.15 + i % 4 * .023) + i * .381966) % 1;
+    const bx = x + (i + .5) / 18 * width + Math.sin(time * .8 + i * 2) * 1.3;
+    const by = y + height + 1 - phase * (height + 3), radius = .6 + i % 3 * .23;
+    const fade = Math.sin(phase * Math.PI);
+    c.globalAlpha = opacity * fade * .5;
+    c.beginPath(); c.arc(bx, by, radius, 0, Math.PI * 2);
+    c.fillStyle = '#f66a8140'; c.fill(); c.strokeStyle = '#ffa4b0'; c.lineWidth = .4; c.stroke();
+    c.globalAlpha = opacity * fade * .8;
+    c.beginPath(); c.arc(bx, by, radius * .75, 3.5, 4.8);
+    c.strokeStyle = '#ffddd1'; c.stroke();
+  }
+  // A wet meniscus marks the real health boundary, ahead of the damage trail.
+  if (ratio < 1) {
+    c.globalAlpha = opacity * .65; c.fillStyle = '#f9a2ac';
+    c.fillRect(x + width * ratio - .65, y + .5, .65, height - 1);
+  }
+  c.restore();
 }
 
 /** Native text and restrained metalwork, drawn after world post-processing. */
@@ -77,15 +113,15 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
     c.fillStyle = trim.light; c.beginPath(); c.moveTo(w / 2 - 22, -5); c.lineTo(w / 2 - 20, -3);
     c.lineTo(w / 2 - 22, -1); c.lineTo(w / 2 - 24, -3); c.closePath(); c.fill(); c.restore();
   }
-  const metal = c.createLinearGradient(0, 43, 0, 55);
+  const metal = c.createLinearGradient(0, 43, 0, 57);
   metal.addColorStop(0, trim.edge); metal.addColorStop(.15, trim.shade);
   metal.addColorStop(.48, UI.panel); metal.addColorStop(1, UI.ink);
-  chamfer(c, 9, 43, w - 18, 12, 4);
+  chamfer(c, 9, 43, w - 18, 14, 4);
   c.fillStyle = metal; c.fill(); c.strokeStyle = trim.edge; c.lineWidth = .8; c.stroke();
   c.beginPath(); c.moveTo(15, 43.7); c.lineTo(w - 15, 43.7);
   c.strokeStyle = `${trim.light}90`; c.lineWidth = .65; c.stroke();
 
-  const barX = 15, barY = 46, barWidth = w - 30, barHeight = 6;
+  const barX = 15, barY = 46, barWidth = w - 30, barHeight = 8;
   c.fillStyle = '#070c12'; c.fillRect(barX, barY, barWidth, barHeight);
   if (trail > ratio) {
     c.fillStyle = '#bb866a9c'; c.fillRect(barX, barY, barWidth * trail, barHeight);
@@ -95,6 +131,8 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
     blood.addColorStop(0, '#d66270'); blood.addColorStop(.27, '#b53048');
     blood.addColorStop(.7, '#861832'); blood.addColorStop(1, '#4b0e24');
     c.fillStyle = blood; c.fillRect(barX, barY, barWidth * ratio, barHeight);
+    const time = options.reducedMotion || !Number.isFinite(options.time) ? 0 : options.time!;
+    bloodMotion(c, barX, barY, barWidth, barHeight, ratio, time);
     c.fillStyle = '#eea0a047'; c.fillRect(barX, barY, barWidth * ratio, .6);
     if (hit > 0) {
       c.save(); c.globalAlpha *= hit * .58;
@@ -104,8 +142,8 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
   }
   // Narrow steel collars seat the garnet channel into the dark brass rail.
   for (const x of [11.5, w - 14]) {
-    c.fillStyle = trim.shade; c.fillRect(x, 46, 2.5, 6);
-    c.fillStyle = trim.edge; c.fillRect(x, 46, .65, 5);
+    c.fillStyle = trim.shade; c.fillRect(x, 46, 2.5, 8);
+    c.fillStyle = trim.edge; c.fillRect(x, 46, .65, 7);
     c.fillStyle = trim.light; c.fillRect(x, 45.5, 2.5, .6);
   }
   for (const side of [-1, 1]) {

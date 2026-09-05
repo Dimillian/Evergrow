@@ -96,13 +96,24 @@ export function drawHUDOrb(c: CanvasRenderingContext2D, x: number, y: number,
       }
     }
 
-    for (let i = 0; i < 3; i++) {
-      const phase = (time * (.032 + i * .005) + i * .347) % 1;
-      const mx = Math.sin(i * 4.1 + time * .19) * (8 + i * 3);
-      const my = 26 - phase * 52;
-      c.globalAlpha = Math.sin(phase * Math.PI) * .24;
-      c.fillStyle = mana ? '#bdddf4' : '#edafb1';
-      circle(c, mx, my, .45 + i * .06); c.fill();
+    // Hollow bubbles rise on staggered cycles inside the exact resource segment.
+    // Constant world-of-glass paths avoid rearranging the bubbles when mana is spent.
+    for (let i = 0; i < 11; i++) {
+      const phase = (time * (.09 + (i % 4) * .017) + i * .381966) % 1;
+      const bx = Math.sin(i * 2.4) * 16 + Math.sin(time * 1.2 + i * 1.7) * 1.5;
+      const by = 25 - phase * 53;
+      const radius = .7 + (i % 4) * .36;
+      const submerged = Math.min(1, Math.max(0, (by - level) / (radius * 2.5)));
+      const fade = Math.min(1, phase * 9) * submerged;
+      if (fade <= 0) continue;
+      c.globalAlpha = fade * .55;
+      c.fillStyle = mana ? '#77c7fb28' : '#ff9caa28';
+      circle(c, bx, by, radius); c.fill();
+      c.strokeStyle = mana ? '#9cddf7' : '#ffb8bd'; c.lineWidth = .42;
+      c.stroke();
+      c.globalAlpha = fade * .85;
+      c.beginPath(); c.arc(bx, by, radius * .76, 3.5, 4.8);
+      c.strokeStyle = mana ? '#e2f8ff' : '#ffe1d3'; c.lineWidth = .5; c.stroke();
     }
     c.restore();
   }

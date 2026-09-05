@@ -1,5 +1,6 @@
 /** Astral Instrument HUD frame; geometry is shared with native input and content. */
-import { HUD_ARM, HUD_ART } from './hud-layout.ts';
+import { HUD_ART } from './hud-layout.ts';
+import { drawHUDEnergy } from './hud-energy.ts';
 
 const TAU = Math.PI * 2;
 
@@ -36,7 +37,7 @@ function metal(c: CanvasRenderingContext2D, top: number, bottom: number) {
 }
 
 function glassInstrument(c: CanvasRenderingContext2D, x: number, side: number, time: number) {
-  c.save(); c.translate(x, 79);
+  c.save(); c.translate(x, HUD_ART.orb.y);
 
   // Nested, calibrated circles surround an unobstructed 36.6-radius glass area.
   c.beginPath(); c.arc(0, 0, 43.5, 0, TAU); c.arc(0, 0, 37.5, 0, TAU, true);
@@ -93,23 +94,6 @@ function glassInstrument(c: CanvasRenderingContext2D, x: number, side: number, t
 }
 
 function actionTray(c: CanvasRenderingContext2D) {
-  // Broad, gently swept shoulders terminate underneath the orb collars.
-  for (const side of [-1, 1]) {
-    const { upper, lower } = HUD_ARM;
-    c.save(); c.translate(HUD_ARM.center, 0); c.scale(side, 1);
-    c.beginPath(); c.moveTo(upper[0], upper[1]);
-    c.bezierCurveTo(upper[2], upper[3], upper[4], upper[5], upper[6], upper[7]);
-    c.lineTo(lower[0], lower[1]);
-    c.bezierCurveTo(lower[2], lower[3], lower[4], lower[5], lower[6], lower[7]); c.closePath();
-    c.fillStyle = metal(c, 82, 114); c.fill(); c.strokeStyle = '#4c6572'; c.lineWidth = .75; c.stroke();
-    // One inset glint follows the same shallow sweep; no exposed hinge or loose tip.
-    c.beginPath(); c.moveTo(127, 85); c.bezierCurveTo(139, 85, 149, 86, 166, 86);
-    c.strokeStyle = '#77929a'; c.lineWidth = .55; c.stroke();
-    c.beginPath(); c.moveTo(130, 90); c.bezierCurveTo(142, 93, 154, 94, 166, 94);
-    c.strokeStyle = '#172b36'; c.lineWidth = .8; c.stroke();
-    c.restore();
-  }
-
   // Separate black-steel leaves; shared controls cover the recessed centers.
   const skill = HUD_ART.skill;
   for (let i = 0; i < skill.count; i++) {
@@ -134,59 +118,49 @@ function actionTray(c: CanvasRenderingContext2D) {
 
 }
 
-function utilityPlates(c: CanvasRenderingContext2D) {
-  const { left, right, y, width, height } = HUD_ART.utility;
-  for (const x of [left, right]) {
-    // Shallow instrument plates flank navigation, leaving icon and binding clear.
-    path(c, [x + 4, y, x + width - 4, y, x + width, y + 4,
-      x + width, y + height - 4, x + width - 4, y + height,
-      x + 4, y + height, x, y + height - 4, x, y + 4]);
-    c.fillStyle = metal(c, y, y + height); c.fill();
-    c.strokeStyle = '#526b77'; c.lineWidth = .85; c.stroke();
-    c.beginPath(); c.moveTo(x + 5, y + .8); c.lineTo(x + width - 5, y + .8);
-    c.strokeStyle = '#6d8792'; c.lineWidth = .55; c.stroke();
-    c.beginPath(); c.moveTo(x + 5, y + height - 1.6); c.lineTo(x + width - 5, y + height - 1.6);
-    c.strokeStyle = '#263f4d'; c.stroke();
-    for (const px of [x + 3, x + width - 3]) {
-      c.beginPath(); c.moveTo(px, y + 7); c.lineTo(px, y + height - 7);
-      c.strokeStyle = '#344c59'; c.lineWidth = .5; c.stroke();
-    }
+function shortcutRail(c: CanvasRenderingContext2D) {
+  const { x, y, width, height } = HUD_ART.rail;
+  // One shallow, aligned glass rail; the frame has a single fine silver edge.
+  path(c, [x + 5, y, x + width - 5, y, x + width, y + 5,
+    x + width, y + height - 4, x + width - 5, y + height,
+    x + 5, y + height, x, y + height - 4, x, y + 5]);
+  const glass = c.createLinearGradient(0, y, 0, y + height);
+  glass.addColorStop(0, '#273c47f5'); glass.addColorStop(.12, '#14232dee');
+  glass.addColorStop(.65, '#0b171ff2'); glass.addColorStop(1, '#10222af5');
+  c.fillStyle = glass; c.fill(); c.strokeStyle = '#536f7b'; c.lineWidth = .65; c.stroke();
+  const edge = c.createLinearGradient(x, 0, x + width, 0);
+  edge.addColorStop(0, '#7d9aa740'); edge.addColorStop(.2, '#a2b8bcbb');
+  edge.addColorStop(.5, '#b9d0cd'); edge.addColorStop(.8, '#a2b8bcbb'); edge.addColorStop(1, '#7d9aa740');
+  c.beginPath(); c.moveTo(x + 6, y + .5); c.lineTo(x + width - 6, y + .5);
+  c.strokeStyle = edge; c.lineWidth = .6; c.stroke();
+  c.beginPath(); c.moveTo(x + 8, y + height - 1.2); c.lineTo(x + width - 8, y + height - 1.2);
+  c.strokeStyle = '#6ca2aa45'; c.lineWidth = .55; c.stroke();
+  // Quiet separators distinguish utilities from navigation without nested boxes.
+  for (const divider of [182, 338]) {
+    c.beginPath(); c.moveTo(divider, y + 5); c.lineTo(divider, y + height - 5);
+    c.strokeStyle = '#8babb94a'; c.lineWidth = .55; c.stroke();
+    c.fillStyle = '#9ab9be'; c.fillRect(divider - .5, y + height / 2 - .5, 1, 1);
   }
-}
-
-function crown(c: CanvasRenderingContext2D) {
-  // Quiet navigation shelf, hung above the tray on a pair of curved supports.
-  c.beginPath(); c.moveTo(189, 54); c.bezierCurveTo(188, 59, 180, 61, 173, 62);
-  c.moveTo(331, 54); c.bezierCurveTo(332, 59, 340, 61, 347, 62);
-  c.strokeStyle = '#1e3340'; c.lineWidth = 3; c.stroke();
-  c.strokeStyle = '#455e6b'; c.lineWidth = .6; c.stroke();
-  c.beginPath(); c.moveTo(181, 29); c.quadraticCurveTo(181, 24, 188, 24);
-  c.lineTo(249, 24); c.quadraticCurveTo(260, 20, 271, 24);
-  c.lineTo(332, 24); c.quadraticCurveTo(339, 24, 339, 29);
-  c.lineTo(339, 51); c.quadraticCurveTo(339, 56, 332, 56);
-  c.lineTo(188, 56); c.quadraticCurveTo(181, 56, 181, 51); c.closePath();
-  const shelf = c.createLinearGradient(0, 24, 0, 56);
-  shelf.addColorStop(0, '#354b56'); shelf.addColorStop(.12, '#15242e'); shelf.addColorStop(1, '#0a151ef5');
-  c.fillStyle = shelf; c.fill(); c.strokeStyle = '#3c5663'; c.lineWidth = .7; c.stroke();
-  c.beginPath(); c.moveTo(190, 25.3); c.lineTo(247, 25.3);
-  c.moveTo(273, 25.3); c.lineTo(330, 25.3);
-  c.strokeStyle = '#6d8792'; c.lineWidth = .55; c.stroke();
-  c.beginPath(); c.moveTo(190, 54.3); c.lineTo(330, 54.3);
-  c.strokeStyle = '#263f4d'; c.stroke();
-
-  // The polar star is an engraved astronomical insignia, not a control.
-  c.beginPath(); c.arc(260, 13.5, 8.7, 0, TAU); c.fillStyle = '#0b1722'; c.fill();
-  c.strokeStyle = '#7898a6'; c.lineWidth = .75; c.stroke();
-  c.beginPath(); c.arc(260, 13.5, 6.5, 0, TAU); c.strokeStyle = '#304f5d'; c.lineWidth = .5; c.stroke();
-  star(c, 260, 13.5, 7.6, '#b1c8cd');
-  c.beginPath(); c.arc(260, 13.5, 1.3, 0, TAU); c.fillStyle = '#83b6b3'; c.fill();
   for (const side of [-1, 1]) {
-    c.beginPath(); c.moveTo(260 + side * 13, 14); c.lineTo(260 + side * 30, 18);
-    c.lineTo(260 + side * 53, 18); c.lineTo(260 + side * 62, 22);
-    c.strokeStyle = '#536f7d'; c.lineWidth = .65; c.stroke();
-    star(c, 260 + side * 34, 18, 2.2, '#94afb8');
-    c.beginPath(); c.arc(260 + side * 53, 18, 1.1, 0, TAU); c.fillStyle = '#8eafb3'; c.fill();
+    const end = side < 0 ? x : x + width;
+    c.beginPath(); c.moveTo(end - side * 6, y + 1.4); c.lineTo(end - side * 1.4, y + 5);
+    c.lineTo(end - side * 1.4, y + 10); c.strokeStyle = '#b4c7c7'; c.lineWidth = .65; c.stroke();
   }
+
+  // A small suspended compass diamond replaces the tall medallion and supports.
+  const crest = HUD_ART.crest;
+  c.save(); c.translate(crest.x, crest.y);
+  path(c, [0, -crest.radius, 5, 0, 0, crest.radius, -5, 0]);
+  c.fillStyle = '#10242c'; c.fill(); c.strokeStyle = '#739da9'; c.lineWidth = .6; c.stroke();
+  star(c, 0, 0, 4.4, '#b8d9d8');
+  c.beginPath(); c.moveTo(0, crest.radius + 1); c.lineTo(0, 9);
+  c.strokeStyle = '#88b7ba70'; c.lineWidth = .55; c.stroke();
+  for (const side of [-1, 1]) {
+    c.beginPath(); c.moveTo(side * 9, 2); c.lineTo(side * 23, 7); c.lineTo(side * 37, 7);
+    c.strokeStyle = '#7c9daa60'; c.lineWidth = .5; c.stroke();
+    star(c, side * 24, 7, 1.5, '#9dbcbf');
+  }
+  c.restore();
 }
 
 function resourceShelf(c: CanvasRenderingContext2D, x: number) {
@@ -203,12 +177,12 @@ function resourceShelf(c: CanvasRenderingContext2D, x: number) {
 /** The Astral Instrument: calibrated silver circles and suspended black-steel leaves. */
 export function drawHUDFrame(c: CanvasRenderingContext2D, time: number): void {
   c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
-  actionTray(c);
-  crown(c);
-  utilityPlates(c);
   const t = Number.isFinite(time) ? time : 0;
-  glassInstrument(c, 61, -1, t);
-  glassInstrument(c, 459, 1, t);
-  resourceShelf(c, 61); resourceShelf(c, 459);
+  drawHUDEnergy(c, t);
+  actionTray(c);
+  shortcutRail(c);
+  glassInstrument(c, HUD_ART.orb.left, -1, t);
+  glassInstrument(c, HUD_ART.orb.right, 1, t);
+  resourceShelf(c, HUD_ART.orb.left); resourceShelf(c, HUD_ART.orb.right);
   c.restore();
 }

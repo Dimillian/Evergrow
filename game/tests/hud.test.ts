@@ -26,9 +26,10 @@ test('native menu shortcut bounds remain inside the HUD and block world input at
 test('resource orbs, action tray and resource readouts block world input after responsive scaling', () => {
   // Broad interior samples describe functional areas, not individual ornamental edges.
   const occupied = [
-    ['left orb', 61, 79], ['right orb', 459, 79],
+    ['left orb', HUD_ART.orb.left, HUD_ART.orb.y], ['right orb', HUD_ART.orb.right, HUD_ART.orb.y],
     ['basic attack', 153, 94], ['empty skill', 211, 94], ['empty skill', 297, 94], ['empty skill', 365, 94],
-    ['health readout', 61, 131], ['mana readout', 459, 131],
+    ['health readout', HUD_ART.orb.left, 131], ['mana readout', HUD_ART.orb.right, 131],
+    ['attribute seal', 212, 30], ['skill seal', 286, 30],
     ['XP rail', 260, 145], ['level', 160, 159], ['current XP', 358, 159],
   ] as const;
   for (const [width, height] of viewports) {
@@ -79,23 +80,20 @@ test('open space beside the menu rail and around the HUD silhouette remains play
   }
 });
 
-test('curved metal supports block input while their upper and lower apertures remain open', () => {
+test('energy wisps leave open space playable while the closer orb collars block input', () => {
   const samples = [
-    ['tray-side metal', 394, 91, true],
-    ['middle of support', 399, 89, true],
-    ['orb-side metal', 405, 91, true],
-    ['shoulder under orb collar', 416, 91, true],
-    ['above support near tray', 393, 78, false],
-    ['above curved edge', 399, 81, false],
-    ['below curved edge', 399, 107, false],
-    ['below support near orb', 405, 117, false],
+    ['gap beside skill tray', 390, 94, false],
+    ['current beneath collar', 397, 127, false],
+    ['current beneath skill plate', 368, 138, false],
+    ['orb collar', 410, 97, true],
+    ['readout shelf', 446, 131, true],
   ] as const;
   for (const [width, height] of viewports) {
     const hud = getHUDLayout(width, height);
     for (const side of [-1, 1]) for (const [label, x, y, occupied] of samples) {
       const logicalX = side === 1 ? x : 520 - x;
       assert.equal(isHUDPoint(hud.x + logicalX * hud.scale, hud.y + y * hud.scale, width, height), occupied,
-        `${label}, ${side === 1 ? 'right' : 'left'} support (${width}×${height})`);
+        `${label}, ${side === 1 ? 'right' : 'left'} side (${width}×${height})`);
     }
   }
 });

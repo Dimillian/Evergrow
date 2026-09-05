@@ -10,6 +10,9 @@ import type { Enemy, Player, WorldQuery } from './model.ts';
 const params = new URLSearchParams(location.search);
 const narrow = params.get('size') === 'narrow';
 const platesOnly = params.has('plates');
+const motion = params.has('motion') && !platesOnly;
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let frame = 0, motionTime = 0;
 const HUD_DISPLAY_SCALE = narrow ? 1 : 1.35;
 const PANEL_GAP = 14;
 const ENEMY_PLATE_OFFSET = 56;
@@ -110,7 +113,9 @@ async function boot() {
       plateBottom + 20 + layout.height * HUD_DISPLAY_SCALE + hudBottomMargin));
     const height = panelHeight * stages.length + PANEL_GAP * (stages.length - 1);
     const ratio = Math.max(1, window.devicePixelRatio || 1);
-    canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio);
+    const pixelWidth = Math.round(width * ratio), pixelHeight = Math.round(height * ratio);
+    if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+    if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
     canvas.style.height = `${height}px`;
     const c = context!;
     c.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
@@ -122,20 +127,31 @@ async function boot() {
       text(c, platesOnly ? stage.enemy.rank : stage.name, 20, 15, platesOnly ? 1.2 : 1.7, '#dfd0ab');
       if (!platesOnly) text(c, stage.detail, 20, 38, Math.min(1.05, (width - 40) / Math.max(1, textWidth(stage.detail))), '#849e99');
       c.save(); c.translate(0, plateOffset); c.scale(HUD_DISPLAY_SCALE, HUD_DISPLAY_SCALE);
-      drawEnemyPlate(c, stage.enemy, logicalWidth, plateViewportHeight, stage.enemyOptions);
+      drawEnemyPlate(c, stage.enemy, logicalWidth, plateViewportHeight, { ...stage.enemyOptions, time: stage.time + motionTime, reducedMotion });
       c.restore();
       c.save(); c.scale(HUD_DISPLAY_SCALE, HUD_DISPLAY_SCALE);
-      if (!platesOnly) drawFloatingHUD(c, stage.player, logicalWidth, panelHeight / HUD_DISPLAY_SCALE, stage.time, stage.options);
+      if (!platesOnly) drawFloatingHUD(c, stage.player, logicalWidth, panelHeight / HUD_DISPLAY_SCALE, stage.time + motionTime, { ...stage.options, reducedMotion });
       c.restore();
       c.strokeStyle = '#354642'; c.lineWidth = 1; c.strokeRect(.5, .5, width - 1, panelHeight - 1);
       c.restore();
     });
-    download.href = canvas.toDataURL('image/png');
+    if (!motion || reducedMotion || !download.hasAttribute('href')) download.href = canvas.toDataURL('image/png');
     download.download = 'evergrow-hud-review.png'; download.hidden = false;
-    status.textContent = `Frozen player HUD and enemy nameplates · PNG ${canvas.width} × ${canvas.height}`;
-    root.dataset.ready = 'true'; root.setAttribute('aria-busy', 'false');
+    const description = `${motion && !reducedMotion ? 'Animated' : 'Frozen'} player HUD and enemy nameplates · PNG ${canvas.width} × ${canvas.height}`;
+    if (status.textContent !== description) status.textContent = description;
+    if (root.dataset.ready !== 'true') { root.dataset.ready = 'true'; root.setAttribute('aria-busy', 'false'); }
   }
   draw();
+  download.addEventListener('click', () => { download.href = canvas.toDataURL('image/png'); }, { signal: abort.signal });
+  if (motion && !reducedMotion) {
+    root.querySelector('header p')!.textContent = 'Living glass and energy currents · staged resources';
+    const start = performance.now();
+    const animate = (now: number) => {
+      if (disposed) return;
+      motionTime = (now - start) / 1000; draw(); frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+  }
   if (platesOnly) {
     root.querySelector('h1')!.textContent = 'Enemy heraldry';
     root.querySelector('header p')!.textContent = 'Iron seal · silver pinions · gilded crown';
@@ -149,4 +165,4 @@ void boot().catch(error => {
   root.setAttribute('aria-busy', 'false'); status.setAttribute('role', 'alert');
   status.textContent = error instanceof Error ? error.message : 'The HUD could not be drawn.';
 });
-if (import.meta.hot) import.meta.hot.dispose(() => { disposed = true; abort.abort(); });
+if (import.meta.hot) import.meta.hot.dispose(() => { disposed = true; cancelAnimationFrame(frame); abort.abort(); });

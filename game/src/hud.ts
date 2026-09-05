@@ -97,25 +97,27 @@ function utilities(c: CanvasRenderingContext2D, p: Player, time: number) {
   for (const slot of slots) {
     const { x } = slot, y = field.y, w = field.width, h = field.height;
     c.save();
-    chamfer(c, x + 2, y + 2, w - 4, h - 4, 3);
-    c.fillStyle = UI.steelDeep; c.fill();
-    c.strokeStyle = slot.active ? slot.color : '#3f5867'; c.lineWidth = .6; c.stroke();
+    if (slot.active) {
+      chamfer(c, x + 1, y + 1, w - 2, h - 2, 2);
+      c.fillStyle = slot.color + '18'; c.fill();
+      c.strokeStyle = slot.color + '90'; c.lineWidth = .55; c.stroke();
+    }
     c.globalAlpha = slot.enabled ? 1 : .48;
-    c.save(); c.translate(x + 14, y + 13.5); c.scale(.8, .8);
+    c.save(); c.translate(x + 10, y + 11); c.scale(.7, .7);
     drawHUDSkillIcon(c, slot.icon, 0, 0, time, slot.active); c.restore(); c.globalAlpha = 1;
     if (slot.cooldown > 0) {
-      c.save(); c.beginPath(); c.rect(x + 3, y + 3, 23, h - 6); c.clip();
-      c.fillStyle = '#030a10c8'; c.beginPath(); c.moveTo(x + 14, y + 13.5);
-      c.arc(x + 14, y + 13.5, 20, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(slot.cooldown / slot.duration));
+      c.save(); c.beginPath(); c.rect(x + 1, y + 1, 19, h - 2); c.clip();
+      c.fillStyle = '#030a10c8'; c.beginPath(); c.moveTo(x + 10, y + 11);
+      c.arc(x + 10, y + 11, 20, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(slot.cooldown / slot.duration));
       c.closePath(); c.fill(); c.restore();
-      text(c, (Math.ceil(slot.cooldown * 10) / 10).toFixed(1), x + 14, y + 10, .85, UI.ivory, 'center');
+      text(c, (Math.ceil(slot.cooldown * 10) / 10).toFixed(1), x + 10, y + 8, .8, UI.ivory, 'center');
     }
     c.strokeStyle = '#40566580'; c.lineWidth = .6;
-    c.beginPath(); c.moveTo(x + 28, y + 7); c.lineTo(x + 28, y + h - 6); c.stroke();
-    text(c, slot.key, x + 45, y + 11, slot.key === 'SPACE' ? .9 : 1.1,
-      slot.enabled ? UI.text : UI.faint, 'center');
+    c.beginPath(); c.moveTo(x + 20, y + 6); c.lineTo(x + 20, y + h - 5); c.stroke();
+    text(c, slot.key, x + 31, y + 9, slot.key === 'SPACE' ? .73 : .95,
+      slot.enabled ? UI.text : UI.faint, 'center', 'interface');
     for (let charge = 0; charge < slot.capacity; charge++) {
-      c.beginPath(); c.arc(x + 42 + charge * 6, y + 5, 1.2, 0, TAU);
+      c.beginPath(); c.arc(x + 28.5 + charge * 5, y + 4, .9, 0, TAU);
       c.fillStyle = charge < slot.charges ? slot.color : '#080e13'; c.fill();
       c.strokeStyle = UI.silverDim; c.lineWidth = .5; c.stroke();
     }
@@ -144,14 +146,14 @@ function shortcuts(c: CanvasRenderingContext2D, p: Player) {
       c.strokeStyle = '#758c952b'; c.lineWidth = .5;
       c.beginPath(); c.moveTo(x - 1, menu.y + 5); c.lineTo(x - 1, menu.y + menu.height - 5); c.stroke();
     }
-    drawHUDMenuIcon(c, i, x + 10, menu.y + 11);
-    text(c, HUD_MENU_SHORTCUTS[i].key, x + 26, menu.y + 7, 1.05,
+    drawHUDMenuIcon(c, i, x + 10, menu.y + 10);
+    text(c, HUD_MENU_SHORTCUTS[i].key, x + 26, menu.y + 6, 1.0,
       enabled ? '#a0b2b7' : '#4e626c', 'center', 'interface');
     if (points > 0) {
       // Persistent numbered seals: amber attributes, violet skills. Hide as soon as spent.
       const count = points > 99 ? '99+' : String(points);
       const badgeWidth = Math.max(16, textWidth(count, 1.3, 'interface') + 8);
-      const bx = x + menu.width - badgeWidth + 1, by = menu.y - 9;
+      const bx = x + menu.width - badgeWidth + 1, by = menu.y - menu.badgeRise;
       c.save(); c.shadowColor = accent; c.shadowBlur = 5;
       c.fillStyle = accent; c.beginPath(); c.roundRect(bx, by, badgeWidth, 15, 3); c.fill();
       c.shadowBlur = 0; c.strokeStyle = '#0a1119'; c.lineWidth = 1; c.stroke();
