@@ -14,6 +14,10 @@ const edges = SKILL_TREE.edges.map(edge => ({ ...edge, a: SKILL_NODES.get(edge.f
 const edgeKey = (a: string, b: string) => a < b ? `${a}|${b}` : `${b}|${a}`;
 export const skillNodeRadius = (node: SkillNode) => node.kind === 'origin' ? 27 : node.kind === 'major' ? 24 : node.kind === 'notable' ? 14 : node.role === 'travel' ? 5.5 : 8;
 
+// Keep engravings readable between overview and close inspection without oversized medallions.
+export const skillNodeScreenRadius = (node: SkillNode, zoom: number) =>
+  Math.max(.72, skillNodeRadius(node) * (zoom < .3 ? zoom / Math.sqrt(.3) : Math.sqrt(zoom)));
+
 /** One map projection owns all strokes, medallions and level-of-detail decisions. */
 export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView): void {
   const { width: w, height: h, zoom: z } = view;
@@ -88,7 +92,7 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
   };
   // Draw small travel nodes first; landmarks and their framed icons win visual priority.
   for (const node of SKILL_TREE.nodes) {
-    const x = sx(node.x), y = sy(node.y), radius = Math.max(.72, skillNodeRadius(node) * z);
+    const x = sx(node.x), y = sy(node.y), radius = skillNodeScreenRadius(node, z);
     if (x < -radius - 10 || x > w + radius + 10 || y < -radius - 10 || y > h + radius + 10) continue;
     const owned = view.allocated.has(node.id), reachable = view.reachable.has(node.id);
     const selected = view.selected === node.id, hover = view.hovered === node.id;
@@ -126,7 +130,7 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
   const priorityNodes = SKILL_TREE.nodes.filter(node => node.kind === 'major' || node.kind === 'origin' || node.id === view.selected);
   for (const node of priorityNodes) {
     if (z < .15 || z < .36 && node.id !== view.selected) continue;
-    label(node.kind === 'origin' ? 'THE FIRST STAR' : node.name, sx(node.x), sy(node.y) + skillNodeRadius(node) * z + 11,
+    label(node.kind === 'origin' ? 'THE FIRST STAR' : node.name, sx(node.x), sy(node.y) + skillNodeScreenRadius(node, z) + 11,
       view.allocated.has(node.id) ? '#efdaad' : '#c8bba0', 12);
   }
   if (z >= .27 && z <= 1.6) for (const cluster of SKILL_TREE.clusters) {
@@ -137,7 +141,7 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
   // A local hover card retains the name even at overview scale.
   if (view.hovered && view.hovered !== view.selected) {
     const node = SKILL_NODES.get(view.hovered)!;
-    const x = Math.max(120, Math.min(w - 120, sx(node.x))), y = Math.max(8, sy(node.y) - skillNodeRadius(node) * z - 32);
+    const x = Math.max(120, Math.min(w - 120, sx(node.x))), y = Math.max(8, sy(node.y) - skillNodeScreenRadius(node, z) - 32);
     label(node.name, x, y, '#eee0bf', 13, true);
   }
 }

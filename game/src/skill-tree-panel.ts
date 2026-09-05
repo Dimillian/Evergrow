@@ -4,7 +4,7 @@ import type { SkillId, StatKey } from './character-types.ts';
 import { SKILL_DEFINITIONS, skillIconSVG, canUseSkill, skillRequirementLabel } from './skill-content.ts';
 import { SKILL_TREE, SKILL_NODES, SKILL_TREE_ORIGIN, unlockedSkills, type SkillDomain, type SkillNode } from './skill-tree.ts';
 import { escapeUI, trapDialogFocus, uiIcon } from './ui-components.ts';
-import { drawSkillAtlas, SKILL_DOMAIN_COLORS, skillNodeRadius } from './skill-tree-art.ts';
+import { drawSkillAtlas, SKILL_DOMAIN_COLORS, skillNodeScreenRadius } from './skill-tree-art.ts';
 import { skillNodeIconSVG } from './skill-tree-glyphs.ts';
 import { buildSkillRoutes, previewSkillRoute, type SkillRouteStep } from './skill-tree-routes.ts';
 import { STAT_LABELS, formatStatValue } from './items.ts';
@@ -92,11 +92,11 @@ export class SkillTreePanel {
       if (this.drag) {
         const d = this.drag;
         if (Math.hypot(event.clientX - d.startX, event.clientY - d.startY) > 4) d.moved = true;
-        if (d.moved) { this.centerX -= (event.clientX - d.x) / this.zoom; this.centerY -= (event.clientY - d.y) / this.zoom; this.clampCenter(); }
+        if (d.moved) { this.setHovered(null); this.centerX -= (event.clientX - d.x) / this.zoom; this.centerY -= (event.clientY - d.y) / this.zoom; this.clampCenter(); }
         d.x = event.clientX; d.y = event.clientY; this.invalidate();
       } else {
         const node = this.pick(event.clientX, event.clientY), id = node?.id ?? null;
-        if (id !== this.hovered) { this.hovered = id; this.canvas.style.cursor = id ? 'pointer' : 'grab'; this.invalidate(); }
+        this.setHovered(id);
       }
     }, opts);
     this.canvas.addEventListener('pointerup', event => {
@@ -106,7 +106,7 @@ export class SkillTreePanel {
       if (this.canvas.hasPointerCapture(event.pointerId)) this.canvas.releasePointerCapture(event.pointerId);
     }, opts);
     this.canvas.addEventListener('pointercancel', () => { this.drag = undefined; }, opts);
-    this.canvas.addEventListener('pointerleave', () => { this.hovered = null; this.invalidate(); }, opts);
+    this.canvas.addEventListener('pointerleave', () => this.setHovered(null), opts);
     this.canvas.addEventListener('wheel', event => {
       event.preventDefault();
       const rect = this.canvas.getBoundingClientRect();
@@ -152,8 +152,8 @@ export class SkillTreePanel {
   /** Also used by frozen review scenes; it changes presentation only. */
   inspectNode(id: string, center = true): void {
     const node = SKILL_NODES.get(id); if (!node) return;
-    this.selected = id;
-    if (center) { this.centerX = node.x; this.centerY = node.y; }
+    this.selected = id; this.hovered = null;
+    if (center) { this.centerX = node.x; this.centerY = node.y; this.setZoom(Math.max(.85, this.zoom)); }
     this.updateDetail(); this.invalidate();
   }
   private click(event: MouseEvent): void {
@@ -163,18 +163,19 @@ export class SkillTreePanel {
       this.inspectNode(button.dataset.node); this.canvas.focus({ preventScroll: true }); return;
     }
     if (button.dataset.assign) {
-      const skill = SKILL_NODES.get(this.selected)?.skill;
-      if (skill && this.allocated.has(this.selected)) this.actions.assign(Number(button.dataset.assign) - 1, skill);
+      const id = button.dataset.inspected ?? this.selected;
+      const skill = SKILL_NODES.get(id)?.skill;
+      if (skill && this.allocated.has(id)) this.actions.assign(Number(button.dataset.assign) - 1, skill);
       return;
     }
     if (button.dataset.clear) { this.actions.assign(Number(button.dataset.clear) - 1, null); return; }
     const action = button.dataset.tree;
     if (action === 'close') this.actions.close();
-    else if (action === 'allocate') this.actions.allocate(this.selected);
+    else if (action === 'allocate') this.actions.allocate(button.dataset.inspected ?? this.selected);
     else if (action === 'origin') this.showOrigin();
     else if (action === 'overview') this.showOverview();
-    else if (action === 'in') this.setZoom(this.zoom * 1.25);
-    else if (action === 'out') this.setZoom(this.zoom / 1.25);
+    else if (action === 'in') this.setZoom(this.zoom * 1.15);
+    else if (action === 'out') this.setZoom(this.zoom / 1.15);
     else if (action === 'reachable') {
       this.reachableOnly = !this.reachableOnly; this.resultsDismissed = false;
       button.setAttribute('aria-pressed', String(this.reachableOnly)); this.updateResults(); this.invalidate();
@@ -194,9 +195,15 @@ export class SkillTreePanel {
     }).sort((a, b) => b.alignment - a.alignment);
     if (choices[0]?.alignment > .1) this.inspectNode(choices[0].node.id);
   }
+  private setHovered(id: string | null): void {
+    if (id === this.hovered) return;
+    this.hovered = id;
+    this.canvas.style.cursor = id ? 'pointer' : 'grab';
+    this.updateDetail(); this.invalidate();
+  }
   private updateDetail(): void {
     if (!this.player) return;
-    const node = SKILL_NODES.get(this.selected)!, owned = this.allocated.has(node.id), reachable = this.reachable.has(node.id);
+    const node = SKILL_NODES.get(this.hovered ?? this.selected)!, owned = this.allocated.has(node.id), reachable = this.reachable.has(node.id);
     const skill = node.skill ? SKILL_DEFINITIONS[node.skill] : undefined;
     const heading = node.kind === 'origin' ? 'YOUR ORIGIN' : node.kind === 'major' ? 'MAJOR · ACTIVE SKILL' : node.kind === 'notable' ? 'NOTABLE · SPECIALIZATION' : node.role === 'travel' ? 'TRAVEL NODE' : 'MINOR · PASSIVE';
     const routeCost = this.routes.get(node.id)?.cost;
@@ -207,9 +214,9 @@ export class SkillTreePanel {
       <p class="skill-atlas-description">${escapeUI(node.description)}</p>${bonuses ? `<div class="skill-atlas-bonuses ui-well">${bonuses}</div>` : ''}
       ${skill ? `<p class="skill-atlas-requirement ${canUseSkill(skill.id, this.player.equipment) ? 'is-ready' : ''}">Requires ${escapeUI(skillRequirementLabel(skill.requirement))}<small>${canUseSkill(skill.id, this.player.equipment) ? 'Matching equipment ready' : 'Equip matching gear to use this skill'}</small></p><div class="skill-atlas-skill-costs"><span><b>${skill.manaCost}</b> mana</span><span><b>${skill.cooldown}s</b> cooldown</span>${skill.damageMultiplier ? `<span><b>${Math.round(skill.damageMultiplier * 100)}%</b> damage${skillDamageSuffix(skill.id)}</span>` : `<span>${skillUtilityLabel(skill.id)}</span>`}</div>` : ''}
       <div class="skill-atlas-allocation"><span class="skill-atlas-node-state ${owned ? 'is-owned' : ''}">${owned ? '◆ Allocated' : reachable ? '◇ Connected to your path' : routeCost !== undefined ? `◇ ${routeCost} ${routeCost === 1 ? 'point' : 'points'} along the highlighted path` : '◇ No connected path'}</span>
-        ${owned ? '' : `<button class="ui-button ui-button--primary" data-tree="allocate" ${!reachable || this.player.character.skillPoints < 1 ? 'disabled' : ''}>Allocate <span>1 point</span></button>`}
+        ${owned ? '' : `<button class="ui-button ui-button--primary" data-tree="allocate" data-inspected="${node.id}" ${!reachable || this.player.character.skillPoints < 1 ? 'disabled' : ''}>Allocate <span>1 point</span></button>`}
         ${!owned && reachable && this.player.character.skillPoints < 1 ? '<small class="ui-muted">Your next level grants one skill point.</small>' : ''}</div>
-      ${skill && owned ? `<div class="skill-atlas-equip"><p class="ui-kicker">ASSIGN TO A SLOT</p><div>${BINDINGS.map((binding, index) => `<button class="ui-button ${this.player!.character.skillSlots[index] === node.skill ? 'ui-button--primary' : 'ui-button--quiet'}" data-assign="${index + 1}" aria-label="Assign ${skill.name} to ${binding}">${binding}</button>`).join('')}</div></div>` : ''}`;
+      ${skill && owned ? `<div class="skill-atlas-equip"><p class="ui-kicker">ASSIGN TO A SLOT</p><div>${BINDINGS.map((binding, index) => `<button class="ui-button ${this.player!.character.skillSlots[index] === node.skill ? 'ui-button--primary' : 'ui-button--quiet'}" data-assign="${index + 1}" data-inspected="${node.id}" aria-label="Assign ${skill.name} to ${binding}">${binding}</button>`).join('')}</div></div>` : ''}`;
   }
   private updateAssignments(): void {
     if (!this.player) return;
@@ -254,7 +261,7 @@ export class SkillTreePanel {
   }
   private showOrigin(): void {
     this.centerX = 0; this.centerY = -35;
-    this.setZoom(Math.min(.8, (this.width - 100) / 800, (this.height - 90) / 640));
+    this.setZoom(Math.max(.7, Math.min(1, (this.width - 60) / 680, (this.height - 60) / 480)));
     this.inspectNode(SKILL_TREE_ORIGIN, false);
   }
   /** Presentation-only camera access for frozen review and atlas navigation. */
@@ -264,8 +271,8 @@ export class SkillTreePanel {
   }
   private setZoom(value: number, x = this.width / 2, y = this.height / 2): void {
     const b = SKILL_TREE.bounds;
-    const minimum = Math.min(.035, Math.max(.005, Math.min((this.width - 80) / (b.maxX - b.minX), (this.height - 90) / (b.maxY - b.minY))));
-    const zoom = Math.max(minimum, Math.min(2.2, value));
+    const minimum = Math.max(.005, Math.min((this.width - 80) / (b.maxX - b.minX), (this.height - 90) / (b.maxY - b.minY)) * .85);
+    const zoom = Math.max(minimum, Math.min(1.65, value));
     this.centerX += (x - this.width / 2) * (1 / this.zoom - 1 / zoom);
     this.centerY += (y - this.height / 2) * (1 / this.zoom - 1 / zoom);
     this.zoom = zoom; this.clampCenter(); this.zoomLabel.textContent = `${Math.round(zoom * 100)}%`; this.invalidate();
@@ -275,7 +282,7 @@ export class SkillTreePanel {
     let selected: SkillNode | undefined, distance = Infinity;
     for (const node of SKILL_TREE.nodes) {
       if (!this.matches(node)) continue;
-      const d = Math.hypot(node.x - x, node.y - y), radius = skillNodeRadius(node);
+      const d = Math.hypot(node.x - x, node.y - y), radius = skillNodeScreenRadius(node, this.zoom) / this.zoom;
       if (d < Math.max(radius, 12 / this.zoom) && d < distance) { selected = node; distance = d; }
     }
     return selected;
