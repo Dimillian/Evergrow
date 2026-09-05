@@ -16,7 +16,7 @@ export interface SkillAtlasView {
 const TAU = Math.PI * 2;
 const edges = SKILL_TREE.edges.map(edge => ({ ...edge, a: SKILL_NODES.get(edge.from)!, b: SKILL_NODES.get(edge.to)! }));
 const edgeKey = (a: string, b: string) => a < b ? `${a}|${b}` : `${b}|${a}`;
-export const skillNodeRadius = (node: SkillNode) => node.kind === 'origin' ? 27 : node.kind === 'major' ? 24 : node.kind === 'notable' ? 14 : node.role === 'choice' ? 12 : node.role === 'travel' ? 5.5 : 8;
+export const skillNodeRadius = (node: SkillNode) => node.kind === 'origin' ? 27 : node.kind === 'major' ? 16 : node.kind === 'notable' ? 14 : node.role === 'choice' ? 12 : node.role === 'travel' ? 5.5 : 8;
 
 // Keep engravings readable between overview and close inspection without oversized medallions.
 export const skillNodeScreenRadius = (node: SkillNode, zoom: number) =>
@@ -115,12 +115,12 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     c.lineWidth = major || notable ? Math.max(.9, 1.2 * z) : Math.max(.65, .8 * z); c.stroke();
     if ((major || notable) && radius >= 4) {
       c.strokeStyle = owned ? '#ab9760' : '#434636'; c.lineWidth = .65;
-      c.beginPath(); c.arc(x, y, radius + (major ? 3 : 1) * z, 0, TAU); c.stroke();
+      c.beginPath(); c.arc(x, y, radius + (major ? 2 : 1) * z, 0, TAU); c.stroke();
       if (major) {
         for (let i = 0; i < 4; i++) {
           const a = Math.PI / 4 + i * Math.PI / 2;
-          const tx = x + Math.cos(a) * (radius + 3 * z), ty = y + Math.sin(a) * (radius + 3 * z);
-          c.fillStyle = owned ? '#e8cc8e' : '#9b8965'; c.save(); c.translate(tx, ty); c.rotate(a); c.fillRect(-1.8 * z, -1.8 * z, 3.6 * z, 3.6 * z); c.restore();
+          const tx = x + Math.cos(a) * (radius + 2 * z), ty = y + Math.sin(a) * (radius + 2 * z);
+          c.fillStyle = owned ? '#e8cc8e' : '#9b8965'; c.save(); c.translate(tx, ty); c.rotate(a); c.fillRect(-1.3 * z, -1.3 * z, 2.6 * z, 2.6 * z); c.restore();
         }
       }
     }
