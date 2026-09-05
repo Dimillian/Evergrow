@@ -1,3 +1,6 @@
+import { buildSkillRoutes, previewSkillRoute } from '../src/skill-tree-routes.ts';
+import { unlockedSkills } from '../src/skill-tree.ts';
+import { refreshCharacter } from '../src/character.ts';
 import { stockTestGear } from './fixtures/character-pack.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -83,4 +86,44 @@ test('bag commands preserve item identities, and failed equip requirements leave
   assert.deepEqual(player, before);
   assert.equal(executeCharacterCommand(player, { type: 'moveItem', from: -1, to: 2 }).ok, false);
   assert.deepEqual(player, before);
+});
+
+test('destination allocation commits the previewed path, unlocks its skill and refreshes once without healing', () => {
+  const player = make(), destination = 'skill:fireball';
+  const route = previewSkillRoute(buildSkillRoutes(new Set(player.character.allocatedNodes)), destination).slice(1);
+  assert.ok(route.length > 1);
+  player.character.skillPoints = route.length; player.hp = 23; player.mana = 17;
+  const expected = structuredClone(player);
+  expected.character.allocatedNodes.push(...route); expected.character.skillPoints = 0;
+  refreshCharacter(expected);
+  assert.ok(executeCharacterCommand(player, { type: 'allocateNode', id: destination }).ok);
+  assert.deepEqual(player, expected);
+  assert.ok(unlockedSkills(player.character.allocatedNodes).includes('fireball'));
+  assert.equal(player.hp, 23); assert.equal(player.mana, 17);
+  const after = structuredClone(player);
+  assert.equal(executeCharacterCommand(player, { type: 'allocateNode', id: destination }).ok, false);
+  assert.deepEqual(player, after);
+});
+
+test('unaffordable and invalid destinations never partially allocate or refresh', () => {
+  const player = make();
+  const cost = buildSkillRoutes(new Set(player.character.allocatedNodes)).get('skill:fireball')!.cost;
+  player.character.skillPoints = cost - 1;
+  const before = structuredClone(player), derived = player.derived;
+  for (const id of ['skill:fireball', 'missing-node']) {
+    assert.equal(executeCharacterCommand(player, { type: 'allocateNode', id }).ok, false);
+    assert.deepEqual(player, before); assert.equal(player.derived, derived);
+  }
+});
+
+test('path allocation charges only missing nodes from the nearest owned branch', () => {
+  const player = make(), destination = 'skill:fireball';
+  const original = previewSkillRoute(buildSkillRoutes(new Set(player.character.allocatedNodes)), destination);
+  player.character.allocatedNodes.push(...original.slice(1, -1));
+  player.character.skillPoints = 1;
+  const count = player.character.allocatedNodes.length;
+  assert.ok(executeCharacterCommand(player, { type: 'allocateNode', id: destination }).ok);
+  assert.equal(player.character.allocatedNodes.length, count + 1);
+  assert.equal(player.character.skillPoints, 0);
+  assert.equal(new Set(player.character.allocatedNodes).size, count + 1);
 });

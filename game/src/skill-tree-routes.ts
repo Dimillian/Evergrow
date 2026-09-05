@@ -1,3 +1,4 @@
+import type { ActionResult, CharacterSheet } from './character-types.ts';
 import { SKILL_NODES } from './skill-tree.ts';
 
 export interface SkillRouteStep {
@@ -35,4 +36,18 @@ export function previewSkillRoute(routes: ReadonlyMap<string, SkillRouteStep>, n
     current = step.previous;
   }
   return path.reverse();
+}
+
+/** Allocate the same shortest route shown in the atlas, all or nothing. */
+export function allocateSkillRoute(sheet: CharacterSheet, nodeId: string): ActionResult {
+  if (!SKILL_NODES.has(nodeId)) return { ok: false, message: 'Unknown node.' };
+  const owned = new Set(sheet.allocatedNodes);
+  if (owned.has(nodeId)) return { ok: false, message: 'Already allocated.' };
+  const path = previewSkillRoute(buildSkillRoutes(owned), nodeId).filter(id => !owned.has(id));
+  if (!path.length) return { ok: false, message: 'No connected path.' };
+  if (!Number.isSafeInteger(sheet.skillPoints) || sheet.skillPoints < path.length)
+    return { ok: false, message: `Requires ${path.length} skill ${path.length === 1 ? 'point' : 'points'}.` };
+  sheet.allocatedNodes.push(...path);
+  sheet.skillPoints -= path.length;
+  return { ok: true };
 }

@@ -84,3 +84,5 @@ The character hall combines the live procedural forest background with the share
 HUD navigation uses muted engravings and small native-font bindings on one shared shelf; only unspent-point badges carry strong amber/violet emphasis. Smooth metal shoulders extend beneath the orb collars, using the same curves for rendering and input coverage. Resource readouts share a single frame, and the six skill leaves have aligned upper and lower edges.
 
 Keep interface copy functional and brief. Use direct labels such as Characters, Name, Create character and Continue. Avoid flavor captions, taglines, repeated empty-slot descriptions and redundant status labels; let the artwork establish atmosphere.
+
+In the skill tree, single-click inspects and double-click allocates. The inspector’s Allocate path action and double-click commit the highlighted shortest route, charging only missing nodes. Show the full cost; insufficient points leave the entire build unchanged. Panning must never allocate.

@@ -1,7 +1,7 @@
 import type { Player } from './model.ts';
 import type { ActionResult, Attribute, EquipmentSlot, SkillId } from './character-types.ts';
 import { equipItem, unequipItem, moveInventoryItem, allocateAttribute } from './inventory.ts';
-import { allocateNode } from './skill-tree.ts';
+import { allocateSkillRoute } from './skill-tree-routes.ts';
 import { assignSkill, refreshCharacter } from './character.ts';
 
 export type CharacterCommand =
@@ -22,7 +22,7 @@ export function executeCharacterCommand(player: Player, command: CharacterComman
     case 'unequip': result = unequipItem(player.character, command.slot, command.index); break;
     case 'moveItem': result = moveInventoryItem(player.character, command.from, command.to); break;
     case 'allocateAttribute': result = allocateAttribute(player.character, command.attribute); break;
-    case 'allocateNode': result = allocateNode(player.character, command.id); break;
+    case 'allocateNode': result = allocateSkillRoute(player.character, command.id); break;
     case 'assignSkill': result = assignSkill(player, command.slot, command.skill); break;
     default: {
       const unhandled: never = command;

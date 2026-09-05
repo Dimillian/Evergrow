@@ -1,3 +1,4 @@
+import { executeCharacterCommand } from './character-commands.ts';
 import './ui-kit.css';
 import './style.css';
 import './typography.css';
@@ -70,7 +71,7 @@ const inventory = life.own(new InventoryPanel(shell.panelMount, { close: () => s
   allocate: attribute => result(allocateAttribute(p.character, attribute)),
 }));
 const tree = life.own(new SkillTreePanel(shell.panelMount, { close: () => show('character'),
-  allocate: id => result(allocateNode(p.character, id)), assign: (slot, skill) => result(assignSkill(p, slot, skill)),
+  allocate: id => result(executeCharacterCommand(p, { type: 'allocateNode', id })), assign: (slot, skill) => result(assignSkill(p, slot, skill)),
 }));
 const renderer = new Renderer(), fx = life.own(new PostFX(shell.canvas));
 function background() {

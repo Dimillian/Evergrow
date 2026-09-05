@@ -45,6 +45,8 @@ export class SkillTreePanel {
   private width = 1;
   private height = 1;
   private frame = 0;
+  private lastClickedNode: string | null = null;
+  private doubleClickedNode: string | null = null;
   private drag?: { pointer: number; x: number; y: number; startX: number; startY: number; moved: boolean };
   private shown = false;
 
@@ -103,11 +105,24 @@ export class SkillTreePanel {
     }, opts);
     this.canvas.addEventListener('pointerup', event => {
       if (this.drag?.pointer !== event.pointerId) return;
-      if (!this.drag.moved) { const node = this.pick(event.clientX, event.clientY); if (node) this.inspectNode(node.id, false); }
+      const node = !this.drag.moved ? this.pick(event.clientX, event.clientY) : null;
+      this.doubleClickedNode = node && this.lastClickedNode === node.id ? node.id : null;
+      this.lastClickedNode = node?.id ?? null;
+      if (node) this.inspectNode(node.id, false);
       this.drag = undefined;
       if (this.canvas.hasPointerCapture(event.pointerId)) this.canvas.releasePointerCapture(event.pointerId);
     }, opts);
-    this.canvas.addEventListener('pointercancel', () => { this.drag = undefined; }, opts);
+    this.canvas.addEventListener('dblclick', event => {
+      event.preventDefault();
+      const node = this.pick(event.clientX, event.clientY);
+      if (event.button === 0 && node && node.id === this.doubleClickedNode && !this.allocated.has(node.id)) {
+        this.actions.allocate(node.id);
+      }
+      this.lastClickedNode = this.doubleClickedNode = null;
+    }, opts);
+    this.canvas.addEventListener('pointercancel', () => {
+      this.drag = undefined; this.lastClickedNode = this.doubleClickedNode = null;
+    }, opts);
     this.canvas.addEventListener('pointerleave', () => this.setHovered(null), opts);
     this.canvas.addEventListener('wheel', event => {
       event.preventDefault();
@@ -145,6 +160,7 @@ export class SkillTreePanel {
     }
   }
   close(): void {
+    this.lastClickedNode = this.doubleClickedNode = null;
     this.shown = false; this.root.hidden = true; this.focus?.dispose(); this.focus = undefined;
     this.drag = undefined; this.hovered = null; this.tooltipMotion.reset();
     if (this.frame) cancelAnimationFrame(this.frame); this.frame = 0;
@@ -218,8 +234,8 @@ export class SkillTreePanel {
       <p class="skill-atlas-description">${escapeUI(node.description)}</p>${bonuses ? `<div class="skill-atlas-bonuses ui-well">${bonuses}</div>` : ''}
       ${skill ? `<p class="skill-atlas-requirement ${canUseSkill(skill.id, this.player.equipment) ? 'is-ready' : ''}">Requires ${escapeUI(skillRequirementLabel(skill.requirement))}<small>${canUseSkill(skill.id, this.player.equipment) ? 'Matching equipment ready' : 'Equip matching gear to use this skill'}</small></p><div class="skill-atlas-skill-costs"><span><b>${costs!.mana}</b> mana</span><span>${costs!.cooldown ? `<b>${Number(costs!.cooldown.toFixed(2))}s</b> cooldown` : 'No cooldown'}</span>${skill.damageMultiplier ? `<span><b>${Math.round(skill.damageMultiplier * 100)}%</b> damage${skillDamageSuffix(skill.id)}</span>` : `<span>${skillUtilityLabel(skill.id)}</span>`}</div>` : ''}
       <div class="skill-atlas-allocation"><span class="skill-atlas-node-state ${owned ? 'is-owned' : ''}">${owned ? '◆ Allocated' : reachable ? '◇ Connected to your path' : routeCost !== undefined ? `◇ ${routeCost} ${routeCost === 1 ? 'point' : 'points'} along the highlighted path` : '◇ No connected path'}</span>
-        ${owned ? '' : `<button class="ui-button ui-button--primary" data-tree="allocate" data-inspected="${node.id}" ${!reachable || this.player.character.skillPoints < 1 ? 'disabled' : ''}>Allocate <span>1 point</span></button>`}
-        ${!owned && reachable && this.player.character.skillPoints < 1 ? '<small class="ui-muted">Your next level grants one skill point.</small>' : ''}</div>
+        ${owned ? '' : `<button class="ui-button ui-button--primary" data-tree="allocate" data-inspected="${node.id}" ${routeCost === undefined || this.player.character.skillPoints < routeCost ? 'disabled' : ''}>${routeCost === 1 ? 'Allocate' : 'Allocate path'} <span>${routeCost ?? '—'} ${routeCost === 1 ? 'point' : 'points'}</span></button>`}
+        ${!owned && routeCost !== undefined && this.player.character.skillPoints < routeCost ? `<small class="ui-muted">${routeCost - this.player.character.skillPoints} more ${routeCost - this.player.character.skillPoints === 1 ? 'point' : 'points'} needed.</small>` : ''}</div>
       ${skill && owned ? `<div class="skill-atlas-equip"><p class="ui-kicker">ASSIGN TO A SLOT</p><div>${BINDINGS.map((binding, index) => `<button class="ui-button ${this.player!.character.skillSlots[index] === node.skill ? 'ui-button--primary' : 'ui-button--quiet'}" data-assign="${index + 1}" data-inspected="${node.id}" aria-label="Assign ${skill.name} to ${binding}">${binding}</button>`).join('')}</div></div>` : ''}`;
   }
   private updateAssignments(): void {
