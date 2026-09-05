@@ -101,7 +101,7 @@ export class InventoryPanel {
           <div class="character-attributes"><div class="character-section-title"><h3 id="attributes-title">Attributes</h3><span class="character-points-available" data-points-label></span></div>
             <div class="character-attribute-list">${(Object.keys(ATTRIBUTE_NAMES) as Attribute[]).map(attribute => `<div class="character-attribute"><div><span>${ATTRIBUTE_NAMES[attribute]}</span><small>${ATTRIBUTE_DESCRIPTIONS[attribute]}</small></div><strong data-attribute-value="${attribute}"></strong><button type="button" class="ui-button ui-button--icon character-attribute-add" data-allocate="${attribute}" aria-label="Increase ${ATTRIBUTE_NAMES[attribute]}">${uiIcon('plus')}</button></div>`).join('')}</div>
           </div>
-          <div class="character-statistics"><div class="character-section-title character-section-title--secondary"><h3>Combat details</h3><span>Effective</span></div><dl data-combat-stats></dl></div>
+          <div class="character-statistics"><div class="character-section-title character-section-title--secondary"><h3>Combat details</h3><span>Effective</span></div><div data-combat-stats></div></div>
         </section>
       </div>
       <footer class="ui-window-footer character-footer"><div class="character-experience"><div><span data-xp-label></span><span data-xp-total></span></div><div class="character-experience-track"><i data-xp-fill></i></div></div><span class="character-footer-status">${uiIcon('diamond')}<span data-allocated-label></span></span></footer>
@@ -175,22 +175,35 @@ export class InventoryPanel {
       button.title = `Spend 1 attribute point on ${ATTRIBUTE_NAMES[attribute]}`;
     }
     const attack = deriveAttackStats(player.stats, player.equipment.mainHand);
-    const statRows: Array<[string, string]> = [
-      ['Attack damage', number(attack.damage)], [player.equipment.mainHand.family === 'staff' ? 'Casts per second' : 'Attacks per second', number(attack.attacksPerSecond, 2)],
+    const offense: Array<[string, string]> = [
+      [player.equipment.mainHand.family === 'staff' ? 'Staff damage' : 'Attack damage', number(attack.damage)],
+      [player.equipment.mainHand.family === 'staff' ? 'Casts per second' : 'Attacks per second', number(attack.attacksPerSecond, 2)],
+      ['Attack speed bonus', percent(stats.attackSpeedMultiplier - 1)],
+      ['Spell damage', percent(stats.spellDamageMultiplier)], ['Cast speed bonus', percent(stats.castSpeedMultiplier - 1)],
       ['Critical chance', percent(stats.critChance)], ['Critical damage', percent(stats.critMultiplier)],
-      ['Maximum life', number(stats.maxHp)], ['Maximum mana', number(stats.maxMana)],
-      ['Armor', number(stats.armor)], [`Reduction vs level ${player.level}`, percent(stats.damageReduction)],
-      ['Block chance', percent(stats.blockChance)], ['Blocked damage reduction', percent(stats.blockReduction)],
-      ['Movement speed', percent(stats.moveSpeedMultiplier)], ['Spell damage', percent(stats.spellDamageMultiplier)],
-      ['Attack speed bonus', percent(stats.attackSpeedMultiplier - 1)], ['Cast speed bonus', percent(stats.castSpeedMultiplier - 1)],
-      ['Life regeneration', `${number(stats.lifeRegeneration, 2)} / s`], ['Mana regeneration', `${number(stats.manaRegeneration, 2)} / s`],
-      ['Mana cost reduction', percent(1 - stats.manaCostMultiplier)], ['Cooldown reduction', percent(1 - stats.cooldownMultiplier)], ['Life on hit', number(stats.lifeOnHit, 1)],
     ];
     if (player.equipment.offHand?.kind === 'weapon') {
       const off = deriveAttackStats(player.stats, player.equipment.offHand.weapon);
-      statRows.splice(2, 0, ['Off-hand damage', number(off.damage)], ['Off-hand attacks / s', number(off.attacksPerSecond, 2)]);
+      offense.splice(2, 0, ['Off-hand damage', number(off.damage)], ['Off-hand attacks / s', number(off.attacksPerSecond, 2)]);
     }
-    const markup = statRows.map(([label, value]) => `<div class="ui-stat"><dt class="ui-stat-label">${label}</dt><dd class="ui-stat-value">${value}</dd></div>`).join('');
+    const groups: Array<{ title: string; tone: string; rows: Array<[string, string]> }> = [
+      { title: 'Offense', tone: 'offense', rows: offense },
+      { title: 'Defense', tone: 'defense', rows: [
+        ['Armor', number(stats.armor)], [`Reduction vs level ${player.level}`, percent(stats.damageReduction)],
+        ['Block chance', percent(stats.blockChance)], ['Blocked damage reduction', percent(stats.blockReduction)],
+      ] },
+      { title: 'Life & mana', tone: 'resources', rows: [
+        ['Maximum life', number(stats.maxHp)], ['Life regeneration', `${number(stats.lifeRegeneration, 2)} / s`],
+        ['Life on hit', number(stats.lifeOnHit, 1)], ['Maximum mana', number(stats.maxMana)],
+        ['Mana regeneration', `${number(stats.manaRegeneration, 2)} / s`],
+      ] },
+      { title: 'Utility & efficiency', tone: 'utility', rows: [
+        ['Movement speed', percent(stats.moveSpeedMultiplier)], ['Mana cost reduction', percent(1 - stats.manaCostMultiplier)],
+        ['Cooldown reduction', percent(1 - stats.cooldownMultiplier)],
+      ] },
+    ];
+    const markup = groups.map(group => `<section class="character-stat-group character-stat-group--${group.tone}" aria-labelledby="stats-${group.tone}">
+      <h4 id="stats-${group.tone}">${group.title}</h4><dl>${group.rows.map(([label, value]) => `<div class="ui-stat"><dt class="ui-stat-label">${label}</dt><dd class="ui-stat-value">${value}</dd></div>`).join('')}</dl></section>`).join('');
     const statContainer = this.element.querySelector('[data-combat-stats]')!;
     if (statContainer.innerHTML !== markup) statContainer.innerHTML = markup;
     this.renderSelection();

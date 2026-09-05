@@ -159,3 +159,17 @@
 }
 @media (prefers-reduced-motion: reduce) { .character-item-slot { transition: none; } }
 @media (forced-colors: active) { .character-item-slot, .character-window, .character-item-tooltip { border-color: ButtonText; } .character-item-slot.is-selected { outline: 2px solid Highlight; } }
+
+/* Group labels and ruled dividers provide landmarks within the long character sheet. */
+.character-stat-group { --stat-accent: #cfb98d; margin-top: 19px; }
+.character-stat-group:first-child { margin-top: 14px; }
+.character-stat-group--defense { --stat-accent: #a2bfd3; }
+.character-stat-group--resources { --stat-accent: #9fc6ae; }
+.character-stat-group--utility { --stat-accent: #bbaad4; }
+.character-stat-group h4 { display: flex; align-items: center; gap: 9px; margin: 0 0 8px; color: var(--stat-accent); font: 500 12px var(--ui-font); letter-spacing: .09em; text-transform: uppercase; }
+.character-stat-group h4::before { content: ''; flex: 0 0 4px; height: 4px; background: var(--stat-accent); transform: rotate(45deg); }
+.character-stat-group h4::after { content: ''; height: 1px; flex: 1; background: linear-gradient(90deg, color-mix(in srgb, var(--stat-accent), transparent 55%), transparent); }
+.character-stat-group dl { margin: 0; }
+.character-stat-group .ui-stat { padding: 7px 0; border-bottom-color: #96b8c312; }
+.character-stat-group .ui-stat:last-child { border-bottom: 0; }
+.character-stat-group .ui-stat-value { color: #e0e8e6; font-variant-numeric: tabular-nums; }
