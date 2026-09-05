@@ -82,3 +82,5 @@ The development-only `/progression.html` study composes shared windows, stat row
 The character hall combines the live procedural forest background with the shared equipped portrait, compact slot cards, explicit delete confirmation, level/power metadata, and a required name field for creation. The static `/title.html` preview uses memory-only saves.
 
 HUD navigation uses muted engravings and small native-font bindings on one shared shelf; only unspent-point badges carry strong amber/violet emphasis. Smooth metal shoulders extend beneath the orb collars, using the same curves for rendering and input coverage. Resource readouts share a single frame, and the six skill leaves have aligned upper and lower edges.
+
+Keep interface copy functional and brief. Use direct labels such as Characters, Name, Create character and Continue. Avoid flavor captions, taglines, repeated empty-slot descriptions and redundant status labels; let the artwork establish atmosphere.

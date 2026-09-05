@@ -3,7 +3,6 @@
 .title-vignette { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(90deg,#040c14b8,#08121b28 35%,#030910a3 75%),linear-gradient(0deg,#040a10 0%,transparent 40%,#050c1488); backdrop-filter: blur(1px) saturate(.8); }
 .title-brand { position: absolute; left: 6%; top: 6%; width: 45%; display: flex; align-items: flex-start; gap: 18px; }
 .title-brand h1 { font-size: clamp(44px,5.7vw,84px); font-weight: 400; letter-spacing: .13em; line-height: 1; margin: 12px 0 10px; color: #e7dfc6; text-shadow: 0 2px #111921,0 0 45px #b4c1a925; }
-.title-brand .ui-kicker { color: #9cac9f; font-size: 10px; letter-spacing: .3em; }
 .title-crest { margin-top: 28px; color: #b6c8c5; border: 1px solid #879c9466; padding: 11px; transform: rotate(45deg); box-shadow: inset 0 0 0 4px #14232b,0 0 0 5px #acbfac09; }
 .title-crest svg { width: 30px; height: 30px; transform: rotate(-45deg); }
 .title-brand-rule { display: flex; align-items: center; gap: 14px; color: #bdac7b; }
@@ -15,10 +14,6 @@
 .title-halo::before { content: ''; position: absolute; inset: 13px; border: 1px dashed #b9c9b419; border-radius: 50%; }
 .title-halo::after { content: '✧'; position: absolute; top: -22px; left: calc(50% - 15px); font-size: 32px; color: #a9bcb9aa; }
 .title-plinth { position: absolute; bottom: 19%; width: 230px; height: 36px; border-radius: 50%; border: 1px solid #a9bfa444; background: radial-gradient(ellipse,#5b806927,#0c192300 70%); box-shadow: 0 6px 0 #142020,0 7px 0 #a9bfa41a,0 17px 24px #0009; }
-.title-character-caption { position: absolute; bottom: 0; width: 100%; text-align: center; z-index: 3; }
-.title-character-caption .ui-kicker { font-size: 10px; color: #b4a881; letter-spacing: .16em; }
-.title-character-caption h2 { margin: 5px 0 6px; font-size: 30px; font-weight: 400; color: #e1dfcd; }
-.title-character-caption > span { font-size: 13px; color: #96ada9; }
 .title-roster.ui-window { position: absolute; top: 8%; right: 5%; width: 40%; max-width: 540px; background: linear-gradient(140deg,#1b2a32f5,#081019f2 70%); border-color: #819a985c; box-shadow: 0 25px 90px #0009,inset 0 1px #b4cabb24; }
 .title-roster .ui-window-header { padding: 16px 20px; }
 .title-roster .ui-kicker { color: #a1aaa0; }
@@ -49,18 +44,16 @@
 .title-enter .ui-icon { width: 17px; height: 17px; }
 .title-create label { display: block; color: #c6d0c3; font-size: 14px; margin-bottom: 10px; }
 .title-create input { width: 100%; height: 44px; padding: 0 12px; border: 1px solid #7f99986b; border-radius: 2px; background: #071019; color: #e6e3ce; font: 18px var(--ui-font); }
-.title-create p { margin: 12px 0 18px; font-size: 11px; }
+.title-create .title-enter { margin-top: 18px; }
 .title-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
 .title-roster-footer { display: flex; align-items: center; gap: 7px; border-top: 1px solid #718c9024; padding: 13px 20px; color: #7c9690; font-size: 10px; }
-.title-roster-footer > span:last-child { margin-left: auto; }
+
 .title-save-dot { width: 4px; height: 4px; background: #9bbfa1; transform: rotate(45deg); }
 .title-save-message { margin: 0 20px 15px; padding: 12px; color: #e8bf96; background: #603c272c; border: 1px solid #ba885d44; font-size: 13px; line-height: 1.5; }
-.title-footer { position: absolute; bottom: 3%; left: 6%; right: 5%; display: flex; justify-content: space-between; color: #708b84; font-size: 9px; letter-spacing: .16em; }
-.title-footer i { color: #c8b98a; margin: 0 8px; font-style: normal; }
 @media (max-width: 1000px) { .title-brand { left: 4%; width: 45%; gap: 12px; } .title-crest { display: none; } .title-brand h1 { font-size: 49px; } .title-roster.ui-window { right: 3%; width: 47%; } .title-hero { left: 1%; width: 46%; } .title-slot { gap: 6px; padding: 8px; } .title-slot-emblem { display: none; } }
 @media (max-height: 750px) and (min-width: 761px) { .title-roster.ui-window { top: 4%; } .title-slot { min-height: 59px; } .title-slot-grid { padding: 12px; gap: 6px; } .title-selection { padding-top: 12px; padding-bottom: 15px; min-height: 190px; } .title-brand { top: 7%; } }
-@media (max-width: 760px) { .title-brand { position: relative; inset: auto; padding: 32px 24px 16px; width: 100%; } .title-brand h1 { font-size: 48px; } .title-hero { position: relative; inset: auto; width: 100%; height: 320px; } .title-halo { width: 180px; height: 180px; top: 0; } .title-character-caption h2 { font-size: 23px; } .title-plinth { bottom: 25%; width: 150px; } .title-hero canvas { height: 290px; top: -15px; } .title-roster.ui-window { position: relative; inset: auto; width: calc(100% - 32px); max-width: none; margin: 24px 16px; } .title-footer { position: relative; inset: auto; padding: 0 20px 22px; font-size: 8px; } .title-footer > span:last-child { display: none; } }
-@media (max-height: 680px) and (min-width: 761px) { .title-roster.ui-window { position: relative; top: auto; right: auto; margin: 18px 5% 35px auto; } .title-footer { display: none; } }
+@media (max-width: 760px) { .title-brand { position: relative; inset: auto; padding: 32px 24px 16px; width: 100%; } .title-brand h1 { font-size: 48px; } .title-hero { position: relative; inset: auto; width: 100%; height: 320px; } .title-halo { width: 180px; height: 180px; top: 0; } .title-plinth { bottom: 25%; width: 150px; } .title-hero canvas { height: 290px; top: -15px; } .title-roster.ui-window { position: relative; inset: auto; width: calc(100% - 32px); max-width: none; margin: 24px 16px; } }
+@media (max-height: 680px) and (min-width: 761px) { .title-roster.ui-window { position: relative; top: auto; right: auto; margin: 18px 5% 35px auto; } }
 .title-brand, .title-hero, .title-roster { animation: hall-arrive 550ms ease-out both; }
 .title-hero { animation-delay: 80ms; }
 .title-roster { animation-delay: 140ms; }

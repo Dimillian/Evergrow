@@ -4,10 +4,10 @@ import { test, expect } from '@playwright/test';
 test('character creation, pause checkpoint and reload continue use the same slot', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'The character hall' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Characters' })).toBeVisible();
   await expect(page.locator('[data-slot]')).toHaveCount(8);
-  await page.getByLabel('Name your wayfarer').fill('Browser test');
-  await page.getByRole('button', { name: 'BEGIN JOURNEY' }).click();
+  await page.getByLabel('Name').fill('Browser test');
+  await page.getByRole('button', { name: 'Create character' }).click();
   await expect(page.locator('.title-screen')).toBeHidden();
   expect(await page.evaluate(() => (window as any).__evergrow.sim.player.character.inventory.filter(Boolean).length)).toBe(0);
   await page.keyboard.press('Escape');
@@ -15,8 +15,8 @@ test('character creation, pause checkpoint and reload continue use the same slot
   await page.getByRole('button', { name: 'SAVE & CHARACTER HALL' }).click();
   await expect(page.locator('[data-slot="0"]')).toContainText('Browser test');
   await page.reload();
-  await expect(page.getByRole('button', { name: 'CONTINUE JOURNEY' })).toBeVisible();
-  await page.getByRole('button', { name: 'CONTINUE JOURNEY' }).click();
+  await expect(page.getByRole('button', { name: 'Continue' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue' }).click();
   expect(await page.evaluate(() => (window as any).__evergrow.sim.player.name)).toBe('Browser test');
   await page.keyboard.press('Escape');
   await expect(page.locator('.menu-save-state')).toHaveText('Character saved locally.');
@@ -25,8 +25,8 @@ test('character creation, pause checkpoint and reload continue use the same slot
 
 test('title creation is keyboard accessible and selected character deletion is explicit', async ({ page }) => {
   await page.goto('/');
-  await page.getByLabel('Name your wayfarer').fill('Temporary');
-  await page.getByRole('button', { name: 'BEGIN JOURNEY' }).click();
+  await page.getByLabel('Name').fill('Temporary');
+  await page.getByRole('button', { name: 'Create character' }).click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'SAVE & CHARACTER HALL' }).click();
   await page.getByRole('button', { name: 'Delete Temporary', exact: true }).click();
@@ -35,7 +35,7 @@ test('title creation is keyboard accessible and selected character deletion is e
   await page.getByRole('button', { name: 'Delete Temporary', exact: true }).click();
   await page.getByRole('button', { name: 'Delete character', exact: true }).click();
   await page.reload();
-  await expect(page.locator('[data-slot="0"]')).toContainText('New journey');
+  await expect(page.locator('[data-slot="0"]')).toContainText('New character');
 });
 
 test('the title retains mute preferences and follows system motion without remote assets', async ({ page }) => {

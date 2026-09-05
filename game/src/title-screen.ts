@@ -27,12 +27,11 @@ export class TitleScreen {
     this.element = document.createElement('div'); this.element.className = 'title-screen'; this.element.hidden = true;
     this.element.innerHTML = `<div class="title-vignette" aria-hidden="true"></div>
       <header class="title-brand"><div class="title-crest" aria-hidden="true">${uiIcon('skilltree')}</div><div><h1>EVERGROW</h1><div class="title-brand-rule" aria-hidden="true"><i></i>✦<i></i></div></div></header>
-      <section class="title-hero" aria-label="Selected character"><div class="title-halo" aria-hidden="true"></div><canvas width="560" height="720" aria-label="Selected character wearing their saved equipment"></canvas><div class="title-plinth" aria-hidden="true"></div><div class="title-character-caption"></div></section>
-      <section class="title-roster ui-window" aria-labelledby="roster-title"><header class="ui-window-header"><div><h2 class="ui-title" id="roster-title">The character hall</h2></div><span class="title-slot-count"></span></header>
+      <section class="title-hero" aria-label="Selected character"><div class="title-halo" aria-hidden="true"></div><canvas width="560" height="720" aria-label="Selected character wearing their saved equipment"></canvas><div class="title-plinth" aria-hidden="true"></div></section>
+      <section class="title-roster ui-window" aria-labelledby="roster-title"><header class="ui-window-header"><div><h2 class="ui-title" id="roster-title">Characters</h2></div><span class="title-slot-count"></span></header>
       <div class="title-slot-grid" role="group" aria-label="Eight character slots"></div>
       <div class="title-selection"></div><p class="title-save-message" role="status" hidden></p>
-      <footer class="title-roster-footer"><span class="title-save-dot"></span>Saved on this browser<span>8 character slots</span></footer></section>
-      <footer class="title-footer"><span>LOCAL PROTOTYPE <i>·</i> AUTOSAVE ENABLED</span><span>THE WILDERNESS AWAITS</span></footer>`;
+      <footer class="title-roster-footer"><span class="title-save-dot"></span>Saved locally</footer></section>`;
     this.canvas = this.element.querySelector('canvas')!; mount.append(this.element);
     this.element.addEventListener('click', event => {
       const button = (event.target as Element).closest<HTMLButtonElement>('button'); if (!button) return;
@@ -67,24 +66,23 @@ export class TitleScreen {
     this.element.querySelector('.title-slot-grid')!.innerHTML = this.slots.map(slot => {
       const r = slot.record, p = r ? characterPower(previewCharacter(r)) : null;
       return `<button type="button" class="title-slot" data-slot="${slot.index}" aria-pressed="${slot.index === this.selected}" aria-label="Slot ${slot.index + 1}: ${r ? escapeUI(r.name) : slot.state === 'empty' ? 'New character' : 'Save unavailable'}">
-        <span class="title-slot-number">0${slot.index + 1}</span><span class="title-slot-emblem" aria-hidden="true">${uiIcon(r ? 'character' : 'plus')}</span><span class="title-slot-copy"><strong>${r ? escapeUI(r.name) : slot.state === 'empty' ? 'New journey' : 'Unreadable save'}</strong><small>${r ? `Level ${r.checkpoint.level} <i>·</i> ${format(p!.power)} power` : slot.state === 'empty' ? 'Empty character slot' : 'Your data is preserved'}</small></span></button>`;
+        <span class="title-slot-number">0${slot.index + 1}</span><span class="title-slot-emblem" aria-hidden="true">${uiIcon(r ? 'character' : 'plus')}</span><span class="title-slot-copy"><strong>${r ? escapeUI(r.name) : slot.state === 'empty' ? 'New character' : 'Unreadable save'}</strong>${r ? `<small>Level ${r.checkpoint.level} <i>·</i> ${format(p!.power)} power</small>` : ''}</span></button>`;
     }).join('');
-    const power = characterPower(this.player), name = record?.name ?? 'A new wayfarer';
-    this.element.querySelector('.title-character-caption')!.innerHTML = `<p class="ui-kicker">${record ? `LEVEL ${record.checkpoint.level} · ${record.checkpoint.dead ? 'RETURNING TO THE REFUGE' : 'WAYFARER'}` : 'EVERY JOURNEY BEGINS HERE'}</p><h2>${escapeUI(name)}</h2><span>${record ? escapeUI(record.checkpoint.character.equipped.weapon?.name ?? 'Unarmed') : 'A sword, worn leather, and an open road.'}</span>`;
+    const power = characterPower(this.player), name = record?.name ?? 'New character';
     const selection = this.element.querySelector('.title-selection')!;
     if (this.confirming) {
       selection.innerHTML = `<h3>Delete ${record ? escapeUI(record.name) : 'this unreadable save'}?</h3><p>This permanently removes the character from this browser.</p><div class="title-actions"><button class="ui-button" data-action="cancel">Keep character</button><button class="ui-button ui-button--danger" data-action="confirm-delete">Delete character</button></div>`;
     } else if (record) {
-      selection.innerHTML = `<div class="title-selection-heading"><div><p class="ui-kicker">${selected.state === 'recovered' ? 'BACKUP RECOVERED' : 'READY TO CONTINUE'}</p><h3>${escapeUI(name)}</h3></div><button class="ui-button ui-button--quiet ui-button--icon" data-action="delete" aria-label="Delete ${escapeUI(name)}" data-tooltip="Delete character" data-tooltip-align="end">${uiIcon('close')}</button></div>
+      selection.innerHTML = `<div class="title-selection-heading"><div>${selected.state === 'recovered' ? '<p class="ui-kicker">Backup recovered</p>' : ''}<h3>${escapeUI(name)}</h3></div><button class="ui-button ui-button--quiet ui-button--icon" data-action="delete" aria-label="Delete ${escapeUI(name)}" data-tooltip="Delete character" data-tooltip-align="end">${uiIcon('close')}</button></div>
         <div class="title-build-stats"><div data-tooltip="${powerHint}" tabindex="0"><strong>${format(power.power)}</strong><span>Power ⓘ</span></div><div><strong>${format(this.player.maxHp)}</strong><span>Life</span></div><div><strong>${format(this.player.derived.armor)}</strong><span>Armor</span></div><div><strong>${record.checkpoint.character.allocatedNodes.length - 1}</strong><span>Passives</span></div></div>
         <div class="title-save-meta"><span>${Math.floor(record.checkpoint.time / 60)} min played</span><span>Saved ${new Date(record.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${new Date(record.updatedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span></div>
-        <button class="ui-button ui-button--primary title-enter" data-action="continue"><span>${record.checkpoint.dead ? 'RETURN TO THE REFUGE' : 'CONTINUE JOURNEY'}</span>${uiIcon('chevron')}</button>`;
+        <button class="ui-button ui-button--primary title-enter" data-action="continue"><span>Continue</span>${uiIcon('chevron')}</button>`;
     } else if (selected?.state === 'empty') {
-      selection.innerHTML = `<form class="title-create"><label for="character-name">Name your wayfarer</label><input id="character-name" name="character-name" maxlength="24" minlength="1" required autocomplete="off" placeholder="Wayfarer" value="Wayfarer" pattern=".*\\S.*"/><p>Level 1 · Basic leather armor · Sword · Empty inventory</p><button class="ui-button ui-button--primary title-enter" type="submit"><span>BEGIN JOURNEY</span>${uiIcon('chevron')}</button></form>`;
+      selection.innerHTML = `<form class="title-create"><label for="character-name">Name</label><input id="character-name" name="character-name" maxlength="24" minlength="1" required autocomplete="off" placeholder="Wayfarer" value="Wayfarer" pattern=".*\\S.*"/><button class="ui-button ui-button--primary title-enter" type="submit"><span>Create character</span>${uiIcon('chevron')}</button></form>`;
     } else {
-      selection.innerHTML = `<h3>${selected?.state === 'unavailable' ? 'Storage unavailable' : 'Save could not be read'}</h3><p>${selected?.state === 'unavailable' ? 'Allow local browser storage to save your journeys.' : 'This slot has been preserved. Try another slot, or delete this save to reclaim it.'}</p>${selected?.state === 'invalid' ? '<button class="ui-button ui-button--danger" data-action="delete">Delete unreadable save</button>' : ''}`;
+      selection.innerHTML = `<h3>${selected?.state === 'unavailable' ? 'Storage unavailable' : 'Save could not be read'}</h3><p>${selected?.state === 'unavailable' ? 'Enable browser storage to save characters.' : 'This slot has been preserved. Try another slot, or delete this save to reclaim it.'}</p>${selected?.state === 'invalid' ? '<button class="ui-button ui-button--danger" data-action="delete">Delete unreadable save</button>' : ''}`;
     }
-    this.message(this.slots.some(slot => slot.state === 'unavailable') ? 'Local saving is unavailable in this browser. Enable storage before starting a journey.' : '');
+    this.message(this.slots.some(slot => slot.state === 'unavailable') ? 'Enable browser storage to create a character.' : '');
   }
   private animate = (): void => {
     if (this.element.hidden) return;
