@@ -84,10 +84,10 @@ export function drawRoadDetails(c: CanvasRenderingContext2D, originX: number, or
         const worn = smooth(.42, .82, wearNoise(wx / 118, wy / 104, seed));
         const fadeStart = .02 + random(column, row, seed, 705) * .17;
         const opacity = smooth(fadeStart, .67 + fadeStart, paved) * (.92 - worn * .3);
-        if (opacity > .006 && pick > .065 + worn * .29) {
+        if (opacity > .006 && pick > .025 + worn * .14) {
           const detail = hash(column, row, seed, 706);
-          const width = 12 + (detail & 255) / 255 * 6;
-          const height = 7 + ((detail >>> 8) & 255) / 255 * 4;
+          const width = 16 + (detail & 255) / 255 * 2.7;
+          const height = 9.2 + ((detail >>> 8) & 255) / 255 * 2.5;
           const corner = 1 + ((detail >>> 16) & 255) / 255 * 1.15;
           const skew = ((detail >>> 24) / 255 - .5) * .9;
           const nick = pick > .73 ? .8 + worn * .7 : 0;
@@ -101,12 +101,12 @@ export function drawRoadDetails(c: CanvasRenderingContext2D, originX: number, or
           c.fillStyle = STONE_COLORS[detail % STONE_COLORS.length]; c.fill();
 
           if (pick > .54) {
-            c.globalAlpha = alpha * opacity * .23;
+            c.globalAlpha = alpha * opacity * .32;
             c.lineWidth = .6; c.strokeStyle = '#a6a294';
             c.beginPath(); c.moveTo(left + corner + 1, top + .75);
             c.lineTo(left + width * (nick ? .48 : .72), top + .75 + skew * .4); c.stroke();
           }
-          if (pick > .065 + worn * .29 && pick < .15 + worn * .29) {
+          if (pick > .025 + worn * .14 && pick < .11 + worn * .14) {
             c.globalAlpha = alpha * opacity * .43;
             c.strokeStyle = '#35432d'; c.lineWidth = 1.05;
             c.beginPath(); c.moveTo(left + corner, top + height - .6);

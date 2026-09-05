@@ -66,6 +66,14 @@ export function armorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing = Ma
     line([[-4.8, -5.4], [-3.1, -6.3], [-1.3, -4.9], [1.3, -4.9], [3.1, -6.3], [4.7, -5.2]], trim, .65),
   ];
   if (plate) {
+    // A broad polished bevel and small chased marks survive the world resolution.
+    shapes.push(fill([[-4.7, -4.6], [-3.4, -5.3], [-2.6, -3], [-3.1, 1.9], [-4.2, .9]], edge),
+      line([[-3.7, -4.8], [-3.2, -3.8]], trim, .7),
+      line([[2.7, -3.8], [3.8, -3.1]], base, .65));
+    for (let mark = 0; mark < 3; mark++) {
+      const y = -1.4 + mark * 1.4, x = 2.3 + ((piece.seed + mark) % 3) * .25;
+      shapes.push(line([[x, y], [x + .7, y - .45]], edge, .4));
+    }
     shapes.push(line([[-4.3, -2.4], [-1.1, -1.6], [0, -.6], [1.2, -1.6], [4, -2.4]], shadow, .85),
       line([[-4, -3], [-1.4, -2.5]], edge, .6),
       fill([[-.7, -3.5], [0, -4.5], [.8, -3.5], [.4, 2.8], [0, 4.6], [-.6, 2.9]], base),

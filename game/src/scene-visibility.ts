@@ -5,7 +5,8 @@ import type { WildernessSite } from './wilderness-sites.ts';
 interface ViewBounds { left: number; top: number; width: number; height: number; }
 type SceneWorld = Pick<World, 'getProps' | 'getBuildings' | 'getWildernessSites'>;
 const REFRESH_DISTANCE = 65;
-const PROP_MARGIN = 240;
+// Covers the tallest layered tree plus the permitted camera travel before refresh.
+const PROP_MARGIN = 300;
 const BUILDING_MARGIN = 300;
 const SITE_MARGIN = 320;
 

@@ -80,9 +80,9 @@ test('travelling through thousands of prop seeds reuses a finite procedural spri
   for (let seed = -5000; seed <= 5000; seed++) {
     art.getTree(seed, false); art.getTree(seed, true); art.getRock(seed); art.getGrass(seed); art.getShrine();
   }
-  assert.ok(canvases.length <= 161, '48 variants per tree family, 32 rocks, 32 grasses, one shrine');
+  assert.ok(canvases.length <= 257, '48 layered living trees, 48 dead trees, 32 rocks, 32 grasses, one shrine');
   const storedPixels = canvases.reduce((sum, canvas) => sum + canvas.width * canvas.height, 0);
-  assert.ok(storedPixels * 4 < 7.5 * 1024 * 1024, 'the full RGBA prop library stays below 7.5MiB');
+  assert.ok(storedPixels * 4 < 20 * 1024 * 1024, 'the full layered RGBA prop library stays below 20MiB');
   const commands = canvases.reduce((sum, canvas) => sum + canvas.context.commands, 0);
   const again = [art.getTree(42, false), art.getTree(42, true), art.getRock(42), art.getGrass(42), art.getShrine()];
   assert.ok(again.every((sprite, index) => sprite === first[index]));

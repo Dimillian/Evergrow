@@ -1,3 +1,4 @@
+import { weatherStone } from './material-art.ts';
 import { line, polygon, randomFromSeed, type Point } from './art-primitives.ts';
 import { drawGlow, type PointLight } from './lighting.ts';
 import { WILDERNESS_BIOME_THEMES, type WildernessSite, type SiteDecor } from './wilderness-sites.ts';
@@ -46,6 +47,16 @@ export function drawSiteGround(c: CanvasRenderingContext2D, site: WildernessSite
     c.fillRect(x, y, 1 + random() * 3, .7 + random() * 1.3);
   }
   c.globalAlpha = 1;
+  for (const decor of site.decor) {
+    if (!['standingStone', 'gravestone', 'tower', 'wagon'].includes(decor.kind)) continue;
+    const x = decor.x - site.x, y = decor.y - site.y;
+    for (let fragment = 0; fragment < 9; fragment++) {
+      const dx = x + (random() - .5) * 48, dy = y + (random() - .4) * 23;
+      const size = 2 + random() * 4;
+      polygon(c, [[dx - size, dy], [dx - size * .4, dy - 2], [dx + size, dy - 1], [dx + size * .7, dy + 2]], '#53635b80');
+      line(c, [[dx - size * .4, dy - 2], [dx + size, dy - 1]], '#a3a38966', .7);
+    }
+  }
   if (site.kind === 'standingStones') {
     c.strokeStyle = '#b1ded34a'; c.lineWidth = 1;
     for (const radius of [65, 75, 104]) { c.beginPath(); c.ellipse(0, 0, radius, radius * .78, 0, 0, TAU); c.stroke(); }
@@ -131,6 +142,7 @@ function standingStone(c: CanvasRenderingContext2D, seed: number, time: number):
   polygon(c, [[-17, 2], [-13, -43], [-5, -66], [10, -59], [16, -12], [13, 3]], '#4e6865');
   polygon(c, [[-13, -43], [-5, -66], [0, -58], [-3, -2], [-17, 2]], '#899789');
   line(c, [[-5, -64], [10, -59], [15, -14]], '#b2c2a6', 1.1);
+  weatherStone(c, [[-17, 2], [-13, -43], [-5, -66], [10, -59], [16, -12], [13, 3]], seed, '#aeb8a1', '#283f43', '#6f8260');
   const light = .75 + Math.sin(time * 1.4 + seed) * .12;
   c.globalAlpha = light;
   line(c, [[3, -50], [-3, -42], [6, -37], [-2, -27], [5, -19]], '#a3e7d9', 1.6);

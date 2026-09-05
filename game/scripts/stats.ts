@@ -22,6 +22,8 @@ import { PROP_KINDS } from '../src/biome-props.ts';
 import { ENVIRONMENT_ART_RULES } from '../src/environment-art.ts';
 import { MAP_TERRAIN_RULES, mapTerrainSize } from '../src/world-map.ts';
 import { MAP_ZOOM } from '../src/map-view.ts';
+import { GROUND_DRESSING_LIMIT } from '../src/ground-art.ts';
+import { TREE_BOUNDS } from '../src/tree-art.ts';
 import { WORLD_GENERATION_VERSION } from '../src/world.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -60,6 +62,7 @@ console.log(JSON.stringify({
     reservedRoamingSlots: ENCOUNTER_RULES.roamingReserve, hardEnemyCap: ENCOUNTER_RULES.hardPopulationCap,
     wildernessCells: WILDERNESS_RULES.cacheLimit, campLedger: CAMP_POPULATION_RULES.ledgerCapacity,
     climateRegions: BIOME_FIELD_RULES.cacheLimit,
+    groundDressingStamps: GROUND_DRESSING_LIMIT, layeredTreeFamilies: Object.keys(TREE_BOUNDS).length,
     environmentSprites: ENVIRONMENT_ART_RULES.cacheLimit, environmentVariantsPerFamily: ENVIRONMENT_ART_RULES.variants,
     mapTerrainTiles: MAP_TERRAIN_RULES.cacheLimit, visibleMapTerrainTiles: MAP_TERRAIN_RULES.maximumVisibleTiles,
     mapZoom: MAP_ZOOM, nominalMapTerrainSizes: [.2, .1, .04].map(zoom => mapTerrainSize(zoom, 1280, 720)),

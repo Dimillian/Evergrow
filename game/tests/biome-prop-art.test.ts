@@ -17,6 +17,7 @@ class GeometryContext {
   restore() { [this.offsetX, this.offsetY, this.globalAlpha] = this.stack.pop()!; }
   translate(x: number, y: number) { this.offsetX += x; this.offsetY += y; }
   rotate(n: number) { assert.ok(Number.isFinite(n)); this.commands.push(['rotate', n]); }
+  clip() {}
   beginPath() {} closePath() {} fill() { this.commands.push(['fill', this.fillStyle]); }
   stroke() { assert.ok(Number.isFinite(this.lineWidth)); this.commands.push(['stroke', this.strokeStyle]); }
   point(x: number, y: number) {
@@ -45,7 +46,7 @@ test('all biome sprite families emit finite unclipped geometry from reproducible
     assert.equal(art.getSprite(prop(kind, seed)), sprite, 'a cache hit reuses the actual procedural sprite');
     assert.equal(contexts.length, calls);
     assert.ok(art.cacheStats.sprites <= ENVIRONMENT_ART_RULES.cacheLimit);
-    assert.ok(art.cacheStats.pixels * 4 <= ENVIRONMENT_ART_RULES.cacheLimit * 186 * 178 * 4);
+    assert.ok(art.cacheStats.pixels * 4 <= ENVIRONMENT_ART_RULES.cacheLimit * 186 * 182 * 3 * 4);
   }
   for (const { width, height, context } of contexts) for (const [x, y] of context.points) {
     assert.ok(x >= -.01 && x <= width + .01 && y >= -.01 && y <= height + .01,
@@ -53,7 +54,7 @@ test('all biome sprite families emit finite unclipped geometry from reproducible
   }
   for (const kind of ['tree', 'deadTree', 'rock', 'shrine'] as const) assert.equal(art.getSprite(prop(kind)), null, 'base atlas owns this family');
   art.reset(); assert.deepEqual(art.cacheStats, { sprites: 0, pixels: 0 });
-  assert.equal(Object.keys(BIOME_PROP_BOUNDS).length, 14);
+  assert.equal(Object.keys(BIOME_PROP_BOUNDS).length, 10);
 });
 
 test('ambient families sample their own world cells, respect reduced motion, and bound oversized views', () => {

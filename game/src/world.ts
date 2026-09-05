@@ -1,3 +1,4 @@
+import { drawGroundPatches } from './ground-art.ts';
 import { biomeGround, biomeMapColor, sampleBiome } from './biomes.ts';
 import type { BiomeId, BiomeSample } from './biomes.ts';
 import { chooseBiomeProp, propDefinition, type PropKind } from './biome-props.ts';
@@ -211,10 +212,11 @@ export class World {
     const pool = [15, 48, 60];
     const dirt = [58 - wet * 9, 51 - wet * 5, 39 - wet * 2];
     const stone = [68, 68, 59];
-    const weather = detail ? (noise(x / 93, y / 93, this.seed + 203) - .5) * 9 : 0;
-    const grain = detail ? (noise(x / 18, y / 18, this.seed + 202) - .5) * 3 : 0;
+    const weather = detail ? (noise(x / 93, y / 93, this.seed + 203) - .5) * 18 : 0;
+    const grain = detail ? (noise(x / 18, y / 18, this.seed + 202) - .5) * 5 : 0;
     const track = profile.tracks * road * (1 - paved) * 3;
-    return base.map((value, i) => ((value * (1 - water) + pool[i] * water) * (1 - road)
+    const bank = detail ? weights.swamp * (smoothstep(.40, .50, damp) - smoothstep(.50, .64, damp)) * (1 - road) : 0;
+    return base.map((value, i) => (((value + weather * .65 + [8, 16, 10][i] * bank) * (1 - water) + pool[i] * water) * (1 - road)
       + (dirt[i] + weather - track) * road) * (1 - paved)
       + (stone[i] + weather * .7 - (detail ? wet * 4 : 0)) * paved + grain);
   }
@@ -382,11 +384,14 @@ export class World {
 
   private drawGround(context: CanvasRenderingContext2D, originX: number, originY: number): void {
     // Resolve nearby geometry once per tile, never while looking up individual pixels.
-    const towns = this.getSettlements(originX - 24, originY - 24, TILE_SIZE + 48, TILE_SIZE + 48);
+    const towns = this.getSettlements(originX - 192, originY - 192, TILE_SIZE + 384, TILE_SIZE + 384);
     const buildings = towns.flatMap(town => town.buildings);
     // Every material sample and detail anchor is in world space. Tile edges are
     // merely a crop of the same illustration, including at negative coordinates.
     drawGroundSurface(context, originX, originY, TILE_SIZE, (x, y) => this.surfaceColor(x, y, towns, true));
+    drawGroundPatches(context, originX, originY, TILE_SIZE, this.seed, (x, y) => this.sampleBiome(x, y).id,
+      (x, y) => this.roadWeight(x, y) < .025 && this.pavingWeight(towns, x, y, 0) < .025
+        && !buildings.some(building => contains(building, x, y, 12)));
     drawRoadDetails(context, originX, originY, TILE_SIZE, this.seed, (x, y) => {
       if (buildings.some(building => contains(building, x, y, 10))) return { road: 0, paved: 0 };
       const road = this.roadWeight(x, y);
@@ -422,7 +427,7 @@ export class World {
           continue;
         }
 
-        if (pick < (onRoad ? 0.08 : 0.49)) {
+        if (pick < (onRoad ? 0.08 : 0.18 + noise(wx / 83, wy / 83, this.seed + 239) * .23)) {
           const length = 3 + random(cx, cy, this.seed, 214) * 5;
           const lean = random(cx, cy, this.seed, 215) * 5 - 2.5;
           context.strokeStyle = biome === 'swamp' ? 'rgba(111,155,132,0.31)' : biome === 'verdant' ? 'rgba(99,180,87,0.36)'

@@ -98,7 +98,8 @@ test('ground tiles use an injected canvas and a bounded LRU cache', () => {
   const context = {
     fillStyle: '', strokeStyle: '', lineWidth: 1, globalAlpha: 1,
     createImageData(width: number, height: number) { return { width, height, data: new Uint8ClampedArray(width * height * 4) }; },
-    putImageData() {}, save() {}, restore() { this.globalAlpha = 1; }, rect() {}, clip() {}, closePath() {}, fill() {},
+    createRadialGradient() { return { addColorStop() {} }; },
+    putImageData() {}, translate() {}, scale() {}, save() {}, restore() { this.globalAlpha = 1; }, rect() {}, clip() {}, closePath() {}, fill() {},
     fillRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {}, stroke() {},
   };
   const factory = () => {

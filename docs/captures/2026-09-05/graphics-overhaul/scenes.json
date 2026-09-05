@@ -1,0 +1,156 @@
+[
+  {
+    "id": "deadwood",
+    "name": "Deadwood",
+    "camera": {
+      "x": 0,
+      "y": -20
+    },
+    "width": 800,
+    "height": 550,
+    "hero": {
+      "x": 0,
+      "y": 100
+    }
+  },
+  {
+    "id": "verdant",
+    "name": "Verdant Forest",
+    "camera": {
+      "x": -5520,
+      "y": -2900
+    },
+    "width": 800,
+    "height": 550,
+    "hero": {
+      "x": -5520,
+      "y": -2780
+    }
+  },
+  {
+    "id": "swamp",
+    "name": "The Mire",
+    "camera": {
+      "x": 3600,
+      "y": -5300
+    },
+    "width": 800,
+    "height": 550,
+    "hero": {
+      "x": 3600,
+      "y": -5180
+    }
+  },
+  {
+    "id": "frostpine",
+    "name": "Frostpine Reach",
+    "camera": {
+      "x": 3120,
+      "y": -260
+    },
+    "width": 800,
+    "height": 550,
+    "hero": {
+      "x": 3120,
+      "y": -140
+    }
+  },
+  {
+    "id": "emberfall",
+    "name": "Emberfall",
+    "camera": {
+      "x": -1440,
+      "y": -740
+    },
+    "width": 800,
+    "height": 550,
+    "hero": {
+      "x": -1440,
+      "y": -620
+    }
+  },
+  {
+    "id": "autumn",
+    "name": "Amberwood",
+    "camera": {
+      "x": -960,
+      "y": 940
+    },
+    "width": 800,
+    "height": 550,
+    "hero": {
+      "x": -960,
+      "y": 1060
+    }
+  },
+  {
+    "id": "highlands",
+    "name": "Hollow Highlands",
+    "camera": {
+      "x": 1200,
+      "y": -20
+    },
+    "width": 800,
+    "height": 550,
+    "hero": {
+      "x": 1200,
+      "y": 100
+    }
+  },
+  {
+    "id": "frostpine-highlands",
+    "name": "Frostpine Reach / Hollow Highlands",
+    "camera": {
+      "x": 2160,
+      "y": -820
+    },
+    "width": 800,
+    "height": 550,
+    "hero": {
+      "x": 2160,
+      "y": -700
+    }
+  },
+  {
+    "id": "autumn-emberfall",
+    "name": "Amberwood / Emberfall",
+    "camera": {
+      "x": -1360,
+      "y": 60
+    },
+    "width": 800,
+    "height": 550,
+    "hero": {
+      "x": -1360,
+      "y": 180
+    }
+  },
+  {
+    "id": "town-street",
+    "name": "Briarwatch / The Ember Forge",
+    "camera": {
+      "x": -172.8212256582982,
+      "y": -1536.45
+    },
+    "width": 605,
+    "height": 420,
+    "hero": {
+      "x": -172.8212256582982,
+      "y": -1431
+    }
+  },
+  {
+    "id": "standing-stones",
+    "name": "The Elder Choir",
+    "camera": {
+      "x": 2483.6054746620357,
+      "y": -1052.7057925984263
+    },
+    "width": 720,
+    "height": 500,
+    "hero": {
+      "x": 2483.6054746620357,
+      "y": -874.7057925984263
+    }
+  }
+]

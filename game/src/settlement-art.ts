@@ -1,3 +1,4 @@
+import { drawRoofCourses, drawBuildingApron, drawWallWeathering } from './architecture-art.ts';
 import type { Building, Rect } from './settlements.ts';
 import type { PointLight } from './lighting.ts';
 import { drawGlow } from './lighting.ts';
@@ -106,7 +107,7 @@ export class SettlementArt {
     const local: Building = { ...b, x: 0, y: 0, door: { ...b.door, x: b.door.x - b.x, y: b.door.y - b.y },
       walls: b.walls.map(r => ({ ...r, x: r.x - b.x, y: r.y - b.y })),
       furniture: b.furniture.map(r => ({ ...r, x: r.x - b.x, y: r.y - b.y })) };
-    const floor = this.layer(b.width + 20, b.height + 27, -10, -7, c => this.floor(c, local));
+    const floor = this.layer(b.width + 32, b.height + 29, -16, -8, c => { drawBuildingApron(c, local); this.floor(c, local); });
     const furniture = local.furniture.map(item => ({
       ...this.layer(item.width + 16, item.height + 38, item.x - 8, item.y - 31, c => this.furnish(c, item, b.seed)),
       depth: item.y + item.height, kind: item.kind, source: item,
@@ -123,6 +124,15 @@ export class SettlementArt {
     for (const b of buildings) {
       const layer = this.art(b).floor;
       c.drawImage(layer.image, b.x + layer.x, b.y + layer.y);
+      const opacity = this.reveal.get(b.id)?.opacity ?? 1;
+      if (opacity > .1) for (const window of facadeWindows(b)) {
+        if (window.sign) continue;
+        c.save(); c.globalAlpha *= opacity;
+        const y = b.y + b.height;
+        polygon(c, [[window.x - 5, y], [window.x + 5, y], [window.x + 16, y + 27], [window.x - 10, y + 27]], '#e9bc7014');
+        line(c, [[window.x + 1, y + 2], [window.x + 4, y + 26]], '#253c3330', 1.4);
+        c.restore();
+      }
     }
   }
 
@@ -349,6 +359,7 @@ export class SettlementArt {
         }
       } else c.fillRect(r.x + 1, r.y - height, 2, r.height + height);
     }
+    drawWallWeathering(c, r, height, stone);
   }
 
   private window(c: CanvasRenderingContext2D, x: number, y: number, chapel: boolean, time: number, seed: number) {
@@ -414,14 +425,7 @@ export class SettlementArt {
       c.save();
       polygon(c, [[edge, back], [center, back - rise], [center, front - rise], [edge, front]], side < 0 ? '#3d535e' : '#283f4d');
       c.clip();
-      for (let y = back - rise - 1, row = 0; y <= front; y += 7, row++) {
-        for (let x = left - 8 + (row % 2 ? 6 : 0), col = 0; x < right + 8; x += 13, col++) {
-          const tone = rand(b.seed, row * 37 + col + (side < 0 ? 0 : 317));
-          c.fillStyle = side < 0 ? (tone > .5 ? '#536976' : '#405b68') : (tone > .5 ? '#344d5b' : '#29434f');
-          c.fillRect(x, y, 12.4, 6.4);
-          line(c, [[x + .7, y + 5.8], [x + 11.7, y + 5.8]], side < 0 ? '#82908a75' : '#6a827960', .65);
-        }
-      }
+      drawRoofCourses(c, b, edge, center, back, front, rise, side);
       c.restore();
       line(c, [[edge, front], [edge, back], [center, back - rise]], '#a7a68a', 1.4);
       line(c, [[edge, front], [center, front - rise]], side < 0 ? '#8a968b' : '#5f7980', 2);

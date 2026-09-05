@@ -8,6 +8,8 @@ export interface Sprite {
   anchorY: number;
   width: number;
   height: number;
+  /** Independently moving crown layers. The primary image remains the rooted trunk. */
+  foliage?: readonly HTMLCanvasElement[];
 }
 
 export interface ArmorMaterial {

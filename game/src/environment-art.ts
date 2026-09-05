@@ -1,3 +1,4 @@
+import { createTreeSprite, isTreeKind } from './tree-art.ts';
 import type { Sprite } from './art-types.ts';
 import type { Prop } from './world.ts';
 import { drawGlow } from './lighting.ts';
@@ -46,17 +47,23 @@ export class EnvironmentArt {
   }
   reset() { this.cache.clear(); }
   get cacheStats() { return { sprites: this.cache.size,
-    pixels: [...this.cache.values()].reduce((pixels, sprite) => pixels + sprite.width * sprite.height, 0) }; }
+    pixels: [...this.cache.values()].reduce((pixels, sprite) => pixels + sprite.width * sprite.height * (1 + (sprite.foliage?.length ?? 0)), 0) }; }
 
   getSprite(prop: Prop): Sprite | null {
     const family = prop.kind, bounds = BIOME_PROP_BOUNDS[family];
-    if (!bounds && !['willow', 'reeds', 'fern', 'flowers', 'canopy'].includes(family)) return null;
+    if (!bounds && !isTreeKind(family) && !['reeds', 'fern', 'flowers'].includes(family)) return null;
+    if (family === 'tree' || family === 'deadTree') return null;
     const variant = hash(prop.seed) % ENVIRONMENT_ART_RULES.variants, key = `${family}:${variant}`;
     const existing = this.cache.get(key);
     if (existing) { this.cache.delete(key); this.cache.set(key, existing); return existing; }
-    const large = family === 'willow' || family === 'canopy';
-    const width = bounds?.[0] ?? (family === 'willow' ? 176 : large ? 156 : family === 'fern' ? 52 : family === 'reeds' ? 42 : 34);
-    const height = bounds?.[1] ?? (large ? 170 : family === 'reeds' ? 49 : 37);
+    if (isTreeKind(family)) {
+      const sprite = createTreeSprite(this.factory, family, hash(variant + family.length * 313));
+      this.cache.set(key, sprite);
+      if (this.cache.size > ENVIRONMENT_ART_RULES.cacheLimit) this.cache.delete(this.cache.keys().next().value!);
+      return sprite;
+    }
+    const width = bounds?.[0] ?? (family === 'fern' ? 52 : family === 'reeds' ? 42 : 34);
+    const height = bounds?.[1] ?? (family === 'reeds' ? 49 : 37);
     const image = this.factory(width, height); image.width = width; image.height = height;
     const c = image.getContext('2d');
     if (!c) throw new Error('A 2D canvas context is required for biome art.');
@@ -64,80 +71,12 @@ export class EnvironmentArt {
     const seed = hash(variant + family.length * 313);
     c.translate(sprite.anchorX, sprite.anchorY);
     if (bounds) drawBiomeProp(c, family, seed);
-    else if (family === 'willow') this.willow(c, seed);
-    else if (family === 'canopy') this.canopy(c, seed);
     else if (family === 'reeds') this.reeds(c, seed);
     else if (family === 'fern') this.fern(c, seed);
     else this.flowers(c, seed);
     this.cache.set(key, sprite);
     if (this.cache.size > ENVIRONMENT_ART_RULES.cacheLimit) this.cache.delete(this.cache.keys().next().value!);
     return sprite;
-  }
-
-  private canopy(c: CanvasRenderingContext2D, seed: number) {
-    const lean = (random(seed, 1) - .5) * 10;
-    polygon(c, [[-15, 1], [-4, -13], [4, -13], [17, 2], [3, -1], [-3, 3]], '#263e34');
-    branch(c, [0, 0], [lean, -75], 5.5, '#645b40');
-    branch(c, [-2, -4], [lean - 2, -76], 1.3, '#a89767');
-    for (const side of [-1, 1]) {
-      branch(c, [lean * .6, -43], [side * 32, -79], 3.1, '#736849');
-      branch(c, [side * 20, -64], [side * 44, -69], 1.6, '#837d52');
-    }
-    const masses = [[-27, -122, 29, 24], [13, -132, 35, 25], [41, -102, 29, 29],
-      [-46, -96, 28, 28], [-8, -99, 39, 33], [-31, -71, 34, 25], [29, -72, 36, 28], [0, -67, 32, 23]];
-    const shades = ['#225343', '#407445', '#315f42', '#244e40', '#3e794a', '#346b43', '#2e664b', '#53854c'];
-    masses.forEach(([x, y, rx, ry], i) => {
-      const outline: Point[] = [];
-      for (let edge = 0; edge < 13; edge++) {
-        const angle = edge / 13 * TAU, r = .84 + random(seed, i * 19 + edge) * .2;
-        outline.push([x + Math.cos(angle) * rx * r, y + Math.sin(angle) * ry * r]);
-      }
-      polygon(c, outline, shades[i]);
-      c.strokeStyle = i % 3 === 0 ? '#6c9860' : '#89a964'; c.lineWidth = 1.2;
-      c.beginPath(); c.moveTo(...outline[7]);
-      for (let edge = 8; edge < 12; edge++) c.lineTo(...outline[edge]);
-      c.stroke();
-      for (let mark = 0; mark < 4; mark++) {
-        const lx = x + (random(seed, i * 31 + mark + 311) - .5) * rx;
-        const ly = y + (random(seed, i * 29 + mark + 517) - .5) * ry;
-        leaf(c, [lx - 3, ly], [lx + 4, ly - 2], 1.7, i % 2 ? '#739754' : '#588450');
-      }
-    });
-    c.strokeStyle = '#77996a'; c.lineWidth = .8;
-    c.beginPath(); c.moveTo(lean + 5, -38); c.quadraticCurveTo(lean - 6, -24, 3, -9); c.stroke();
-    for (let i = 0; i < 4; i++) leaf(c, [3, -10 - i * 5], [i % 2 ? 9 : -3, -14 - i * 5], 2, '#79a466');
-  }
-
-  private willow(c: CanvasRenderingContext2D, seed: number) {
-    const lean = -9 + random(seed, 7) * 18;
-    polygon(c, [[-18, 2], [-7, -8], [2, -14], [11, -4], [19, 3], [3, 0]], '#263d3b');
-    branch(c, [0, 0], [lean, -78], 5, '#657165');
-    branch(c, [-2, -3], [lean - 2, -79], 1.3, '#a0a187');
-    for (const side of [-1, 1]) {
-      branch(c, [lean, -61], [side * 42, -105], 3.4, '#768474');
-      branch(c, [side * 27, -89], [side * 62, -83], 2, '#667e6e');
-    }
-    for (let cluster = 0; cluster < 7; cluster++) {
-      const x = (cluster - 3) * 18, y = -110 - Math.sin(cluster / 6 * Math.PI) * 31;
-      const rx = 21 + random(seed, cluster + 21) * 6;
-      polygon(c, [[x - rx, y + 10], [x - rx * .75, y - 5], [x - 3, y - 12], [x + rx * .8, y - 5],
-        [x + rx, y + 12], [x + 11, y + 27], [x - 9, y + 23]], cluster % 2 ? '#3c6658' : '#2b514b');
-      for (let strand = 0; strand < 4; strand++) {
-        const sx = x - 13 + strand * 9, sy = y + 7 + random(seed, cluster * 7 + strand) * 9;
-        const length = 29 + random(seed, cluster * 13 + strand + 101) * 44;
-        const curl = (random(seed, cluster * 9 + strand + 207) - .5) * 11;
-        c.strokeStyle = strand % 2 ? '#7b9470' : '#5a816b'; c.lineWidth = .8;
-        c.beginPath(); c.moveTo(sx, sy); c.quadraticCurveTo(sx + curl, sy + length * .55, sx + curl * .55, sy + length); c.stroke();
-        for (let n = 0; n < 5; n++) {
-          const py = sy + 5 + n * length / 5, px = sx + Math.sin(n / 5 * Math.PI) * curl * .5;
-          leaf(c, [px, py], [px + (n % 2 ? 4 : -4), py + 7], 1.6, strand % 2 ? '#7b9972' : '#456f5c');
-        }
-      }
-    }
-    for (let i = 0; i < 3; i++) {
-      c.fillStyle = i % 2 ? '#74a49a' : '#506e68';
-      c.beginPath(); c.ellipse(-8 + i * 7, -4 + i % 2 * 3, 4, 1.7, -.2, 0, TAU); c.fill();
-    }
   }
 
   private reeds(c: CanvasRenderingContext2D, seed: number) {

@@ -53,8 +53,9 @@ Area danger rises one level per 3,200 units from the origin. Monster level and r
 | Wilderness blueprint cache / camp run ledger | 128 cells / 1,024 camps, maximum 6 members each; later unrecorded camps remain dormant at ledger capacity |
 | Rendered building cache / chart terrain cache | 24 buildings / 384 map tiles; at most 256 visible chart tiles; about 51 MiB raw RGBA if all cached tiles use the coarse road layers, excluding browser/GPU overhead |
 | Chart detail levels / zoom | Nominal 768 / 1,536 / 3,072 world units per tile, coarsening further for large viewports; zoom 0.025–0.7 |
-| Base procedural prop library | 161 sprite canvases; about 5.05 MiB of RGBA pixels when all variants are populated, excluding other art/GPU overhead |
-| Biome sprite LRU | 96 sprites; 24 seeded variants per family; at most 12.13 MiB raw RGBA using the largest 186×178 sprite for every entry, excluding browser/GPU overhead |
+| Base procedural prop library | 257 surfaces maximum (48 three-layer living trees, 48 dead trees, 32 rocks, 32 grasses, one shrine); under 20 MiB raw RGBA, excluding browser/GPU overhead |
+| Biome sprite LRU | 96 entries; 24 seeded variants per family; up to three surfaces per living tree; conservative ceiling 37.2 MiB raw RGBA (186×182×3 per entry), excluding browser/GPU overhead |
+| Ground dressing / localized atmosphere | 96 stamps at 192×112 (7.88 MiB raw RGBA); one 240×80 mist stamp; at most 12 mist banks and 32 lily ripple anchors |
 | Combat particles / flashes / impact effects / damage labels | 650 / 22 / 24 / 35 |
 | Skill area visuals / chain visuals | 20 / 24 |
 | Sword ribbon / rendered corpses | 96 samples / 45 corpses |

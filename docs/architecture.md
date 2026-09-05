@@ -117,3 +117,11 @@ Exploration uses bounded, best-effort localStorage. Read/merge/write preserves k
 - Extend `CombatEvent` as a discriminated payload and update consumers through narrowing. `tests/type-contracts.ts` has compile-only negative checks for missing or mismatched payloads and incomplete recipes/commands.
 
 The first extraction reduced Simulation from 712 to 616 lines while preserving its ordered clock. A one-time comparison against checkpoint `fad5f4a` matched public actor/projectile/item/pickup state, resources, rewards and events for 64,800 ticks across basic combat and all seventeen skills. This validates that refactor at its tested scenarios, not arbitrary gameplay equivalence or GPU performance. Existing rules may change deliberately in later iterations; no compatibility layer was introduced.
+
+## Layered procedural world art
+
+The graphics overhaul keeps geometry in authored TypeScript recipes. `tree-art.ts` returns a rooted trunk sprite and two optional foliage surfaces; `Renderer` moves/fades foliage independently and culls fully offscreen sprites before cache lookup. `SceneVisibility` keeps 300 units of prop coverage, including the tallest crown and its 65-unit refresh allowance.
+
+`ground-art.ts` has two responsibilities: stable world-coordinate deposits generated with terrain tiles, and a bounded prop-ground stamp library. `material-art.ts` draws clipped stone texture. `architecture-art.ts` builds cached roof/apron details and height-aware wall weathering. `atmosphere-art.ts` consumes prop anchors and presentation time, with no simulation, collision or save mutations. All art caches remain finite; budgets are recorded in system-status.
+
+`game/scripts/render-art-review.mjs` is an optional static CPU exporter. It uses an explicitly supplied, already-installed Canvas package and the actual World/Renderer, with no browser or gameplay ticks. Its exports are explicitly before the WebGL CRT pass; browser reviews remain the reference for the final display treatment. It adds no runtime package dependency.

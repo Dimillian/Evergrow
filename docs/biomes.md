@@ -26,7 +26,7 @@ A warped starting area remains Deadwood. Region queries are independent of terra
 
 `biome-props.ts` owns 23 named prop families and immutable weighted species tables. Each family defines collision radius, scale, projected canopy bounds, shadow, wind sway and optional emitted light. World generation and rendering consume the same metadata. Decorative groundcover remains passable. Roads, settlements, shrines and wilderness approaches keep their existing clearance rules; foreground crowns also avoid obscuring protected sites.
 
-`biome-prop-art.ts` draws fourteen new explicit geometry families. `environment-art.ts` supplies the older foliage families and caches a bounded set of sprite variants. Base trees, rocks and shrines stay in `ArtLibrary`. Ice crystals, ember stones and fungi add restrained emitted light within the existing light budget.
+`tree-art.ts` now owns eight tree families, each with three growth habits, furrowed trunks and layered crowns. Living trees have a stable trunk surface and two independently moving canopy surfaces; only foliage fades around the player. `biome-prop-art.ts` owns ten smaller climate families. `environment-art.ts` caches 24 seeded variants per family in a 96-entry LRU. Base trees, rocks and shrines stay in `ArtLibrary`; its trees use the same layered generator. Ice crystals, ember stones and fungi add restrained emitted light within the existing light budget.
 
 ## Local review
 
@@ -36,3 +36,11 @@ A warped starting area remains Deadwood. Region queries are independent of terra
 Generation version is now **4**. Earlier exploration charts are invalidated because their geography no longer matches. The current prototype has no character save or save migrations.
 
 Biome-specific enemies and loot biases extend the existing tables; level, XP, rank, rarity and item scaling formulas remain unchanged. Water, snow and ash are visual terrain materials in this iteration. Navigation hazards, biome bosses, weather gameplay and biome-specific town architecture are future work.
+
+## World-art overhaul, 2026-09-05
+
+`ground-art.ts` adds world-anchored moss, soil, leaf, snow and mineral deposits before road details. Samples include a 192-unit settlement margin so deposits crossing terrain tiles use the same building/road exclusions. Root beds, low undergrowth, rubble and soft crown/contact shade are rendered into a separate 96-entry ground-stamp LRU. A stamp's geometry depends only on its cache key; position, instance scale and collision-radius rolls cannot change it.
+
+`material-art.ts` supplies clipped stone fractures, strata and lichen. `architecture-art.ts` draws sloped slate courses, repairs, sheltered roof moss, soot, foundation weathering and service-specific flat activity marks. Building entrances and furniture retain their existing geometry. `atmosphere-art.ts` adds lily-anchored ripples and at most twelve localized mist banks; reduced motion freezes their phases.
+
+Larger tree crowns now reserve their full projected area around protected sites. Individual physical radii, roads, climate geography and POIs are unchanged; a few trees near protected landmarks may be omitted by the more conservative crown clearance. Generation remains 4 and there is no exploration reset. See [graphics overhaul](graphics-overhaul.md) for scope, verification and exports.

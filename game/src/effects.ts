@@ -58,12 +58,13 @@ export class CombatEffects {
       const count = event.type === 'blast' ? 46 : event.type === 'block' ? 22 : event.type === 'hit' ? 30 : event.type === 'kill' ? 42
         : event.type === 'hurt' ? 32 : event.type === 'cast' ? 18 : event.type === 'heal' ? 30
         : event.type === 'level' ? 50 : event.type === 'loot' ? 8 : event.type === 'pickup' ? 10 : event.type === 'dodge' ? 14 : 0;
-      const bodyColor = event.type === 'hurt' ? '#b64143' : enemyKind === 'caster' ? '#7dbf98'
-        : enemyKind === 'brute' ? '#b6a184' : '#a44349';
+      const bodyColor = event.type === 'hurt' ? '#b64143' : enemyKind === 'wisp' ? '#b1e5d6'
+        : enemyKind === 'caster' ? '#809b8b' : enemyKind === 'brute' ? '#b6a184'
+          : enemyKind === 'hound' || enemyKind === 'stalker' ? '#cec6a0' : '#788b69';
       for (let i = 0; i < count; i++) {
         const radial = ['kill', 'heal', 'pickup', 'level', 'blast'].includes(event.type) || event.skill === 'iceNova';
         const angle = radial ? Math.random() * Math.PI * 2 : eventAngle + (Math.random() - .5) * 2.8;
-        const debris = contact && i % 3 === 0;
+        const debris = contact && i % 3 === 0 && enemyKind !== 'wisp';
         this.spark(event.x, event.y, angle, debris ? bodyColor : i % 4 === 0 ? '#fff7db' : color,
           contact ? 1.2 : 1, true, !debris);
       }
@@ -187,7 +188,12 @@ export class CombatEffects {
       c.beginPath(); c.moveTo(spark.x - spark.vx * .038, y - (spark.vy - spark.vz) * .026);
       c.lineTo(spark.x, y); c.stroke();
       c.fillStyle = spark.luminous && spark.life > spark.max * .65 ? '#fff0c9' : spark.color;
-      c.fillRect(spark.x - spark.size / 2, y - spark.size / 2, spark.size, spark.size);
+      if (spark.luminous) c.fillRect(spark.x - spark.size / 2, y - spark.size / 2, spark.size, spark.size);
+      else {
+        const size = spark.size, turn = Math.sin((spark.max - spark.life) * 15 + spark.curl);
+        c.beginPath(); c.moveTo(spark.x - size, y); c.lineTo(spark.x + turn * size, y - size * .6);
+        c.lineTo(spark.x + size * .7, y + size * .2); c.lineTo(spark.x - size * .3, y + size * .5); c.closePath(); c.fill();
+      }
       if (spark.luminous && spark.size > 1.7) drawGlow(c, spark.x, y, 8, spark.color, t * .4);
     }
     c.restore();

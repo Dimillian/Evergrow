@@ -1,3 +1,5 @@
+import { AtmosphereArt } from './atmosphere-art.ts';
+import { GroundDressing } from './ground-art.ts';
 import { SKILL_CAST_MOTION } from './combat-content.ts';
 import { drawGroundLoot, drawLootLabels } from './loot-art.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
@@ -66,8 +68,10 @@ export class Renderer {
   private experienceDisplay: ExperienceDisplay | undefined;
   private effects = new CombatEffects();
   private groundLayer = new GroundLayer();
+  private groundDressing = new GroundDressing();
   private settlementArt = new SettlementArt();
   private environmentArt = new EnvironmentArt();
+  private atmosphere = new AtmosphereArt();
   private visibility = new SceneVisibility();
   private get cachedBuildings() { return this.visibility.buildings; }
   private indoorBlend = 0;
@@ -117,7 +121,7 @@ export class Renderer {
     this.cameraX = 0; this.cameraY = 0; this.effects.reset();
     this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
     this.lastDisplayedView = this.view;
-    this.groundLayer.reset();
+    this.groundLayer.reset(); this.groundDressing.reset();
     this.settlementArt.reset(); this.indoorBlend = 0;
     this.corpses = []; this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
@@ -218,7 +222,8 @@ export class Renderer {
     for (const site of this.visibility.sites) drawSiteGround(c, site, settings.reducedMotion ? 0 : this.visualTime);
     this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime);
     this.remains();
-    this.propShadows();
+    this.groundDressing.draw(c, this.cachedProps, this.view);
+    this.atmosphere.drawWater(c, this.cachedProps, this.visualTime, settings.reducedMotion);
     this.enemyFocusMark(alpha);
     for (const pickup of sim.pickups) {
       const y = pickup.y - 4 - Math.sin(sim.time * 3 + pickup.id) * 2;
@@ -243,6 +248,7 @@ export class Renderer {
     const ambient = `rgb(${ambientChannels.join(',')})`;
     this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps, ambient, zoom);
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
+    this.atmosphere.drawMist(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, px, py, alpha, lights);
     drawGroundLoot(c, sim.groundItems, sim.time);
@@ -311,29 +317,35 @@ export class Renderer {
     }
   }
 
-  private propShadows() {
-    const c = this.ctx;
-    for (const prop of this.cachedProps) {
-      if (prop.radius <= 0) continue;
-      const [rx, ry] = propDefinition(prop.kind).shadow;
-      c.fillStyle = '#020a1080'; c.beginPath();
-      c.ellipse(prop.x + 3, prop.y + 4, rx * prop.scale, ry * prop.scale, -.2, 0, TAU); c.fill();
-    }
-  }
-
   private actorsAndProps(sim: Simulation, px: number, py: number, alpha: number, settings: RenderSettings) {
     const c = this.ctx, p = sim.player;
     const entries: Array<{ y: number; draw: () => void }> = this.cachedProps.map(prop => ({ y: prop.y, draw: () => {
+      // Prefetched offscreen props retain collision/light coverage without generating unseen sprites.
+      if (prop.x + 115 < this.view.left || prop.x - 115 > this.view.left + this.view.width
+        || prop.y + 10 < this.view.top || prop.y - 230 > this.view.top + this.view.height) return;
       const sprite = this.environmentArt.getSprite(prop) ?? (prop.kind === 'tree' || prop.kind === 'deadTree'
         ? this.art.getTree(prop.seed, prop.kind === 'deadTree') : prop.kind === 'rock' ? this.art.getRock(prop.seed) : this.art.getShrine());
       const definition = propDefinition(prop.kind);
-      const wind = settings.reducedMotion ? 0 : Math.sin(sim.time * .8 + prop.seed) * definition.sway;
       const crown = definition.canopy;
       const occludes = crown && py < prop.y + 8 && py > prop.y - (crown.height + crown.radius) * prop.scale
         && Math.abs(px - prop.x - crown.offsetX * prop.scale) < crown.radius * prop.scale;
-      c.save(); if (occludes) c.globalAlpha = .35;
-      c.drawImage(sprite.image, prop.x - sprite.anchorX * prop.scale + wind, prop.y - sprite.anchorY * prop.scale,
-        sprite.width * prop.scale, sprite.height * prop.scale); c.restore();
+      c.save(); c.translate(prop.x, prop.y); c.scale(prop.scale, prop.scale);
+      // Trunks stay rooted and opaque. Only the obstructing canopy becomes translucent.
+      if (!sprite.foliage && definition.radius[1] === 0) {
+        const wind = settings.reducedMotion ? 0 : Math.sin(this.visualTime * .8 + prop.seed) * definition.sway;
+        c.transform(1, 0, wind * -.012, 1, 0, 0);
+      }
+      c.drawImage(sprite.image, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
+      for (const [layer, foliage] of (sprite.foliage ?? []).entries()) {
+        c.save();
+        const gust = settings.reducedMotion ? 0 : (Math.sin(this.visualTime * .72 + prop.x * .009 + prop.y * .006)
+          + Math.sin(this.visualTime * 1.27 + prop.seed + layer * 1.7) * .34) * definition.sway;
+        c.transform(1, 0, gust * (layer ? -.009 : -.005), 1, 0, 0);
+        c.globalAlpha *= occludes ? .24 : 1;
+        c.drawImage(foliage, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
+        c.restore();
+      }
+      c.restore();
     } }));
     for (const building of this.cachedBuildings) {
       for (const layer of this.settlementArt.getStructureLayers(building, this.visualTime)) {

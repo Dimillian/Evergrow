@@ -65,6 +65,8 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/src/biome-props.ts`: headless registry of 23 prop families, per-biome mixtures, collision radii, projected crowns, shadows, sway and light metadata. Generation and rendering must consume the same physical anchors.
 - `game/src/settlements.ts`: deterministic town layouts, shared building/collision geometry, and points of interest.
 - `game/src/world-query.ts` and `world-pois.ts`: per-request work/precision bounds and the shared POI kind registry. Cached settlements are frozen blueprints; future mutable world state belongs separately under stable IDs.
+- `game/src/tree-art.ts`: eight tree families with three growth habits, rooted trunk surfaces and two moving crown layers. Crown occlusion fades foliage only; keep conservative bounds in `biome-props.ts` aligned with the art.
+- `game/src/ground-art.ts`, `material-art.ts`, `architecture-art.ts`, and `atmosphere-art.ts`: world-aligned deposits, bounded contextual root/litter/shadow stamps, clipped stone materials, roof/foundation weathering, localized mist and water ripples. Keep terrain crops consistent, ground decoration passable, physical anchors fixed, and reduced-motion phases frozen. See `docs/graphics-overhaul.md`.
 - `game/src/environment-art.ts` and `biome-prop-art.ts`: procedural foliage, rocks, groundcover and biome detail; 24 seeded variants per family with a 96-entry sprite LRU, separate from the base prop library.
 - `game/src/settlement-art.ts`: furnished buildings, roof fading, and settlement lights.
 - `game/src/ground-layer.ts`: bounded terrain composition before subpixel camera sampling; keep tile joins inside one surface to avoid seams.
