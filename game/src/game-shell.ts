@@ -30,9 +30,9 @@ export class GameShell {
       <canvas id="game-ui" aria-hidden="true"></canvas>
       <nav id="hud-controls" class="hud-controls" aria-label="Character menus" hidden>
         ${HUD_MENU_SHORTCUTS.map(shortcut => `<button type="button" class="hud-control" data-hud="${shortcut.id}"
-          ${shortcut.id === 'journal' ? 'disabled' : 'aria-haspopup="dialog"'} aria-keyshortcuts="${shortcut.key}" aria-label="${shortcut.label}${shortcut.id === 'journal' ? ' (unavailable)' : ''}" title="${shortcut.label}"></button>`).join('')}
+          ${shortcut.id === 'journal' ? 'disabled' : 'aria-haspopup="dialog"'} aria-keyshortcuts="${shortcut.key}" aria-label="${shortcut.label}${shortcut.id === 'journal' ? ' (unavailable)' : ''}" data-tooltip="${shortcut.label}"></button>`).join('')}
         <button type="button" class="hud-control" data-hud="map" aria-label="World map" aria-keyshortcuts="M"
-          aria-haspopup="dialog" title="World map"></button>
+          aria-haspopup="dialog" data-tooltip="World map" data-tooltip-placement="below" data-tooltip-align="end"></button>
       </nav>
       <div id="world-map-mount"></div>
       <div id="character-panels-mount"></div>

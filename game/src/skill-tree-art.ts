@@ -10,6 +10,7 @@ export interface SkillAtlasView {
   width: number; height: number; zoom: number; centerX: number; centerY: number;
   allocated: ReadonlySet<string>; reachable: ReadonlySet<string>;
   costStats?: Pick<DerivedCharacterStats, 'manaCostMultiplier' | 'cooldownMultiplier'>;
+  tooltip?: { id: string | null; opacity: number; lift: number };
   selected: string; hovered: string | null; route: readonly string[];
   matches(node: SkillNode): boolean;
 }
@@ -151,9 +152,14 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     label(cluster.name.toUpperCase(), x, y, SKILL_DOMAIN_COLORS[cluster.domain] + 'be', 10);
   }
   // Native-resolution details follow the hovered node, including an already selected star.
-  if (view.hovered) {
-    const node = SKILL_NODES.get(view.hovered)!;
+  const tooltipId = view.tooltip ? view.tooltip.id : view.hovered;
+  if (tooltipId) {
+    const node = SKILL_NODES.get(tooltipId)!;
+    c.save();
+    c.globalAlpha = view.tooltip?.opacity ?? 1;
+    c.translate(0, view.tooltip?.lift ?? 0);
     drawNodeTooltip(c, node, view, sx(node.x), sy(node.y));
+    c.restore();
   }
 }
 

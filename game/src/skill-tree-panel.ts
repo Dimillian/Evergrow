@@ -1,3 +1,4 @@
+import { TooltipMotion } from './ui-tooltip-motion.ts';
 import { skillDamageSuffix, skillUtilityLabel } from './skill-execution-content.ts';
 import type { Player } from './model.ts';
 import type { SkillId, StatKey } from './character-types.ts';
@@ -31,6 +32,7 @@ export class SkillTreePanel {
   private player?: Player;
   private selected = SKILL_TREE_ORIGIN;
   private hovered: string | null = null;
+  private readonly tooltipMotion = new TooltipMotion();
   private domain: SkillDomain | 'all' = 'all';
   private reachableOnly = false;
   private resultsDismissed = false;
@@ -144,7 +146,7 @@ export class SkillTreePanel {
   }
   close(): void {
     this.shown = false; this.root.hidden = true; this.focus?.dispose(); this.focus = undefined;
-    this.drag = undefined; this.hovered = null;
+    this.drag = undefined; this.hovered = null; this.tooltipMotion.reset();
     if (this.frame) cancelAnimationFrame(this.frame); this.frame = 0;
   }
   dispose(): void { this.close(); this.life.abort(); this.observer.disconnect(); this.root.remove(); }
@@ -152,7 +154,7 @@ export class SkillTreePanel {
   /** Also used by frozen review scenes; it changes presentation only. */
   inspectNode(id: string, center = true): void {
     const node = SKILL_NODES.get(id); if (!node) return;
-    this.selected = id; this.hovered = null;
+    this.selected = id; this.hovered = null; this.tooltipMotion.reset();
     if (center) { this.centerX = node.x; this.centerY = node.y; this.setZoom(Math.max(.85, this.zoom)); }
     this.updateDetail(); this.invalidate();
   }
@@ -198,6 +200,7 @@ export class SkillTreePanel {
   private setHovered(id: string | null): void {
     if (id === this.hovered) return;
     this.hovered = id;
+    this.tooltipMotion.set(id, performance.now(), window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     this.canvas.style.cursor = id ? 'pointer' : 'grab';
     this.updateDetail(); this.invalidate();
   }
@@ -294,10 +297,12 @@ export class SkillTreePanel {
   }
   private draw(): void {
     const ctx = this.canvas.getContext('2d'); if (!ctx) return;
+    const tooltip = this.tooltipMotion.sample(performance.now());
     ctx.setTransform(this.canvas.width / this.width, 0, 0, this.canvas.height / this.height, 0, 0);
     drawSkillAtlas(ctx, { width: this.width, height: this.height, zoom: this.zoom,
       centerX: this.centerX, centerY: this.centerY, allocated: this.allocated, reachable: this.reachable,
-      costStats: this.player?.derived, selected: this.selected, hovered: this.hovered, route: previewSkillRoute(this.routes, this.hovered ?? this.selected),
+      tooltip, costStats: this.player?.derived, selected: this.selected, hovered: this.hovered, route: previewSkillRoute(this.routes, this.hovered ?? this.selected),
       matches: node => this.matches(node) });
+    if (tooltip.active) this.invalidate();
   }
 }

@@ -163,7 +163,8 @@ export class InventoryPanel {
       this.text(`[data-attribute-value="${attribute}"]`, number(stats.attributes[attribute], 1));
       const button = this.element.querySelector<HTMLButtonElement>(`[data-allocate="${attribute}"]`)!;
       button.disabled = sheet.statPoints <= 0;
-      button.title = `Spend 1 attribute point on ${ATTRIBUTE_NAMES[attribute]}`;
+      button.dataset.tooltipAlign = 'end';
+      button.dataset.tooltip = `Spend 1 attribute point on ${ATTRIBUTE_NAMES[attribute]}`;
     }
     const attack = deriveAttackStats(player.stats, player.equipment.mainHand);
     const offense: Array<[string, string]> = [

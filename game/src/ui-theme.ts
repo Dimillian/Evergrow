@@ -1,3 +1,5 @@
+import { TOOLTIP_MOTION } from './ui-tooltip-motion.ts';
+
 /** Shared DOM/Canvas materials. Keep world lighting and post-processing separate. */
 export const UI_THEME = Object.freeze({
   palette: Object.freeze({
@@ -43,5 +45,8 @@ export function installUITheme(root: HTMLElement = document.documentElement): vo
   }
   for (const [name, value] of Object.entries(UI_THEME.geometry)) root.style.setProperty(`--ui-${name}`, value);
   for (const [name, value] of Object.entries(UI_THEME.motion)) root.style.setProperty(`--ui-motion-${name}`, value);
+  root.style.setProperty('--ui-tooltip-enter', `${TOOLTIP_MOTION.enter}ms`);
+  root.style.setProperty('--ui-tooltip-exit', `${TOOLTIP_MOTION.exit}ms`);
+  root.style.setProperty('--ui-tooltip-lift', `${TOOLTIP_MOTION.lift}px`);
   installed.add(root);
 }
