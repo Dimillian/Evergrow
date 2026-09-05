@@ -79,7 +79,6 @@ test('paving continuously joins the main road, side streets and rounded plaza, t
       const x = roadX + (building.door.x - roadX) * t;
       assert.ok(settlementPavingWeight(town, x, y, pathDistance(x, y) < 25 ? 1 : 0) > .99,
         'stone has no gap from the main road to each entry street');
-      assert.equal(world.mapColor(x, y), 'rgb(80,80,70)', 'terrain and map use one continuous stone material');
     }
   }
   const isolated = { ...town, x: 0, y: 0, radius: 600, plaza: { x: -80, y: -60, width: 160, height: 120 }, streets: [] };
@@ -99,6 +98,92 @@ test('paving continuously joins the main road, side streets and rounded plaza, t
     const next = settlementPavingWeight(isolated, 0, y, 0);
     assert.ok(Math.abs(next - last) < .028, 'paving shoulders have continuous material coverage');
     last = next;
+  }
+});
+
+test('bowed access lanes preserve full-width walking routes and doorway aprons across town layouts', () => {
+  for (const seed of [7319, 9, -127]) for (const band of [0, -1, 2]) {
+    const town = townAt(new World(seed), band);
+    for (const building of town.buildings) {
+      const streetY = building.door.y + 24, roadX = mainPathX(streetY);
+      for (let step = 0; step <= 20; step++) for (const offset of [-16, 0, 16]) {
+        const x = roadX + (building.door.x - roadX) * step / 20, y = streetY + offset;
+        assert.ok(settlementPavingWeight(town, x, y, pathDistance(x, y) < 25 ? 1 : 0) > .99,
+          `${building.id} retains the 32 px access corridor at step ${step}, offset ${offset}`);
+      }
+      for (const offset of [-16, 0, 16]) for (const depth of [0, 8, 16, 24]) {
+        assert.ok(settlementPavingWeight(town, building.door.x + offset, building.door.y + depth, 0) > .99,
+          'the smooth entry apron fully covers the walkable threshold');
+      }
+    }
+  }
+});
+
+test('smooth paving unions fill concave street/plaza and main-road junctions instead of selecting rectangular masks', () => {
+  const source = townAt(new World(), 0);
+  const empty = { ...source, x: 0, y: 0, radius: 1000, buildings: [], streets: [],
+    plaza: { x: 5000, y: 5000, width: 160, height: 120 } };
+  const plaza = { ...empty, plaza: { x: -80, y: -60, width: 160, height: 120 } };
+  const lane = { ...empty, streets: [{ x: 0, y: 15, width: 240, height: 44 }] };
+  const connected = { ...plaza, streets: lane.streets };
+  let roundedPlazaSamples = 0, roundedRoadSamples = 0;
+  const road = (x: number) => {
+    const t = Math.max(0, Math.min(1, (Math.abs(x) - 16) / 22));
+    return 1 - t * t * (3 - 2 * t);
+  };
+  for (let x = -40; x <= 140; x += 2) for (let y = -40; y <= 110; y += 2) {
+    const singleLane = settlementPavingWeight(lane, x, y, 0);
+    const separate = Math.max(singleLane, settlementPavingWeight(plaza, x, y, 0));
+    const joined = settlementPavingWeight(connected, x, y, 0);
+    assert.ok(joined >= separate - 1e-12 && joined <= 1, 'joining cannot punch holes in existing paving');
+    if (joined > separate + .08) roundedPlazaSamples++;
+    const incoming = road(x), roadJoin = settlementPavingWeight(lane, x, y, incoming);
+    assert.ok(roadJoin >= Math.max(singleLane, incoming) - 1e-12 && roadJoin <= 1);
+    if (roadJoin > Math.max(singleLane, incoming) + .08) roundedRoadSamples++;
+  }
+  assert.ok(roundedPlazaSamples > 20, 'rounded concave shoulders bridge the plaza and access lane');
+  assert.ok(roundedRoadSamples > 20, 'the incoming road also participates in the smooth junction');
+});
+
+test('paving shoulders vary gently in world space and remain continuous at terrain tile boundaries', () => {
+  const source = townAt(new World(), 0);
+  const lane = { ...source, x: 0, y: 0, radius: 1000, buildings: [],
+    plaza: { x: 5000, y: 5000, width: 160, height: 120 },
+    streets: [{ x: -300, y: -22, width: 600, height: 44 }] };
+  let low = 1, high = 0;
+  for (let x = -260; x <= 260; x += 4) {
+    const value = settlementPavingWeight(lane, x, 38, 0);
+    low = Math.min(low, value); high = Math.max(high, value);
+    assert.ok(value > 0 && value < 1, 'worn shoulders retain a broad material transition');
+  }
+  assert.ok(high - low > .07, 'the contour is not another constant-width rectangular band');
+  for (const x of [-256, 0, 256]) for (let y = -70; y <= 70; y += 2) {
+    const a = settlementPavingWeight(lane, x - .0001, y, 0);
+    const b = settlementPavingWeight(lane, x + .0001, y, 0);
+    assert.ok(Math.abs(a - b) < .0001, 'adjacent tiles sample one continuous paving field');
+  }
+  for (const [x, y] of [[25, -3], [37, 40], [20, 45]]) {
+    let previous = settlementPavingWeight(lane, x, y, 0);
+    for (let step = 1; step <= 1000; step++) {
+      const next = settlementPavingWeight(lane, x, y, step / 1000);
+      assert.ok(next >= previous - 1e-12 && next - previous < .01,
+        'a road shoulder entering the union cannot create a coverage jump');
+      previous = next;
+    }
+  }
+});
+
+test('broader paving stays outside building bodies while leaving south thresholds connected', () => {
+  const town = townAt(new World(), 0);
+  for (const building of town.buildings) {
+    for (const [x, y] of [[building.door.x, building.y + building.height / 2],
+      [building.door.x, building.door.y - 20], [building.x + 3, building.door.y - 3],
+      [building.x + building.width - 3, building.door.y - 3]]) {
+      assert.equal(settlementPavingWeight(town, x, y, 1), 0,
+        'even incoming paving does not bleed through a building footprint');
+    }
+    assert.equal(settlementPavingWeight(town, building.door.x, building.door.y, 0), 1,
+      'the threshold apron is the deliberate exception to the building exclusion');
   }
 });
 

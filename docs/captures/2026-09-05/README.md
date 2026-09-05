@@ -29,3 +29,17 @@ Close view in CRT mode, with the roof automatically hidden around the staged cha
 ![Lantern Inn interior with CRT](lantern-inn-interior-crt.png)
 
 Open these layouts using the local dev-only [layout review](http://127.0.0.1:5173/layouts.html), select a view, then use **Save PNG**. The viewer now uses the game's fixed CRT/soft-phosphor presentation; the images above retain the earlier display treatments recorded in their captions. The camera is pulled back for overviews; these are not a replacement for the user's gameplay testing.
+
+## Road refinement · town approach
+
+The revised southern approach to Briarwatch uses rounded junctions, broken cobbles, and a gradual transition to dirt. Building positions, doorways, and road centerlines remain unchanged. Captured with the fixed CRT/soft-phosphor treatment.
+
+![Briarwatch approach with rounded paving and worn dirt shoulders](natural-town-roads.png)
+
+## Road refinement · wilderness trail
+
+The southern wilderness crossroad shows gently varying widths, smooth terrain colors, uneven shoulders, and sparse gravel. This is a frozen scene from the same seed and generation, using the fixed presentation.
+
+![Wilderness crossroad with soft irregular shoulders](natural-wilderness-roads.png)
+
+Open the [town approach](http://127.0.0.1:5173/layouts.html?view=approach) or [wilderness trail](http://127.0.0.1:5173/layouts.html?view=trail) directly in the local review page.

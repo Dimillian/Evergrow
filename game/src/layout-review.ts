@@ -19,6 +19,8 @@ const VIEWS = [
   { id: 'town', label: 'Town overview' },
   { id: 'city', label: 'City overview' },
   { id: 'street', label: 'Street junction' },
+  { id: 'approach', label: 'Town approach' },
+  { id: 'trail', label: 'Wilderness trail' },
   { id: 'interior', label: 'Furnished interior' },
 ] as const;
 type ViewId = typeof VIEWS[number]['id'];
@@ -90,6 +92,27 @@ function makeStage(world: World, view: ViewId): Stage {
   const town = settlementAt(world, FIRST_TOWN_Y);
   if (view === 'town') return overview(world, town);
   if (view === 'city') return overview(world, settlementAt(world, FIRST_TOWN_Y - TOWN_INTERVAL));
+  if (view === 'approach') {
+    const height = 500;
+    return {
+      title: `${town.name} · south approach`,
+      description: 'Southern homes and doorsteps · town street meets the main trail and crossroad',
+      // The south row has doors at -798; the older crossroad meets the main trail near -644.
+      camera: { x: mainPathX(-700), y: -780 }, width: Math.round(height * ASPECT), height,
+      hero: clearFloor(world, { x: mainPathX(-720), y: -720 }), settlement: town,
+    };
+  }
+  if (view === 'trail') {
+    const height = 460, y = 980;
+    const camera = { x: mainPathX(y), y };
+    return {
+      title: `${world.sampleBiome(camera.x, camera.y).name} · wilderness crossroads`,
+      description: 'Curving wilderness trails · blended shoulders and an uninterrupted junction',
+      camera, width: Math.round(height * ASPECT), height,
+      hero: clearFloor(world, { x: mainPathX(1034), y: 1034 }),
+      settlement: settlementAt(world, FIRST_TOWN_Y + TOWN_INTERVAL),
+    };
+  }
   if (view === 'street') {
     const building = selectBuilding(town, 'blacksmith');
     const junction = { x: mainPathX(building.door.y + 27), y: building.door.y + 27 };

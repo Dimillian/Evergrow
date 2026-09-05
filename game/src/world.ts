@@ -2,6 +2,10 @@ import { biomeGround, sampleBiome } from './biomes.ts';
 import type { BiomeId, BiomeSample } from './biomes.ts';
 import { circleHitsRect, contains, FIRST_TOWN_Y, generateSettlement, intersects, MAX_TOWN_RADIUS, settlementPavingWeight, settlementPOIs, TOWN_INTERVAL } from './settlements.ts';
 import type { Building, POI, Settlement } from './settlements.ts';
+import { mainPathX, pathDistance, roadSurface } from './road-shape.ts';
+import { drawGroundSurface } from './ground-surface.ts';
+import { drawRoadDetails } from './road-art.ts';
+export { mainPathX, pathDistance } from './road-shape.ts';
 
 /** All coordinates are world pixels; prop positions are their ground contacts. */
 export interface Prop {
@@ -22,8 +26,6 @@ const MAX_PROP_RADIUS = 15;
 const TILE_CACHE_LIMIT = 48;
 const SETTLEMENT_CACHE_LIMIT = 32;
 const SHRINE_INTERVAL = 2200;
-const BRANCH_INTERVAL = 1600;
-const BRANCH_OFFSET = -620;
 const UINT_RANGE = 0x100000000;
 
 type CanvasFactory = () => HTMLCanvasElement;
@@ -57,28 +59,6 @@ function noise(x: number, y: number, seed: number): number {
   const c = random(ix, iy + 1, seed);
   const d = random(ix + 1, iy + 1, seed);
   return (a + (b - a) * tx) * (1 - ty) + (c + (d - c) * tx) * ty;
-}
-
-/** The central trail passes through the starting clearing and continues forever. */
-export function mainPathX(y: number): number {
-  return Math.sin(y / 580) * 78 + Math.sin(y / 210) * 22;
-}
-
-function branchY(x: number, band: number): number {
-  return band * BRANCH_INTERVAL + BRANCH_OFFSET
-    + Math.sin(x / 430) * 90 + Math.sin(x / 180) * 25;
-}
-
-/** Approximate normal distance to the nearest continuous trail centerline. */
-export function pathDistance(x: number, y: number): number {
-  const mainSlope = Math.cos(y / 580) * 78 / 580 + Math.cos(y / 210) * 22 / 210;
-  let distance = Math.abs(x - mainPathX(y)) / Math.hypot(1, mainSlope);
-  const nearestBand = Math.round((y - BRANCH_OFFSET) / BRANCH_INTERVAL);
-  const branchSlope = Math.cos(x / 430) * 90 / 430 + Math.cos(x / 180) * 25 / 180;
-  for (let band = nearestBand - 1; band <= nearestBand + 1; band++) {
-    distance = Math.min(distance, Math.abs(y - branchY(x, band)) / Math.hypot(1, branchSlope));
-  }
-  return distance;
 }
 
 function inRectangle(prop: { x: number; y: number }, x: number, y: number, width: number, height: number): boolean {
@@ -155,13 +135,12 @@ export class World {
   /** Cheap map samples share terrain/road colors without querying collision. */
   mapColor(x: number, y: number): string {
     const towns = this.getSettlements(x, y, .01, .01);
-    const [r, g, b] = this.surfaceColor(x, y, towns, false);
+    const [r, g, b] = this.surfaceColor(x, y, towns, false).map(Math.round);
     return `rgb(${r},${g},${b})`;
   }
 
-  private roadWeight(x: number, y: number, distance = pathDistance(x, y)): number {
-    const shoulder = 30 + noise(x / 65, y / 65, this.seed + 203) * 11;
-    return 1 - smoothstep(shoulder - 5, shoulder + 14, distance);
+  private roadWeight(x: number, y: number): number {
+    return roadSurface(x, y, this.seed).weight;
   }
 
   private pavingWeight(towns: Settlement[], x: number, y: number, road: number): number {
@@ -173,19 +152,20 @@ export class World {
   private surfaceColor(x: number, y: number, towns: Settlement[], detail: boolean): number[] {
     const damp = noise(x / 180, y / 180, this.seed + 201);
     const weights = this.sampleBiome(x, y).weights;
-    const distance = pathDistance(x, y), road = this.roadWeight(x, y, distance);
+    const profile = roadSurface(x, y, this.seed), road = profile.weight;
     const paved = this.pavingWeight(towns, x, y, road);
     const base = biomeGround(weights, smoothstep(.50, .85, damp) * .65);
     const water = weights.swamp * smoothstep(.48, .75, damp) * (1 - road);
-    const pool = [15, 48, 60], dirt = [64, 54, 37], stone = [80, 80, 70];
-    // The staggered cobbles share one world-space origin across every road join.
-    const mod = (value: number, period: number) => ((value % period) + period) % period;
-    const mortar = detail && (mod(Math.floor(y), 18) < 2
-      || mod(Math.floor(x) + mod(Math.floor(y / 18), 2) * 15, 30) < 2) ? -8 : 0;
-    const rut = (1 - smoothstep(0, 2.5, Math.abs(distance - 11))) * road * (1 - paved);
-    const shade = detail ? (noise(x / 19, y / 19, this.seed + 202) - .5) * 5 - rut * 1.5 : 0;
-    return base.map((value, i) => Math.round(((value * (1 - water) + pool[i] * water) * (1 - road) + dirt[i] * road)
-      * (1 - paved) + (stone[i] + mortar) * paved + shade));
+    const wet = smoothstep(.35, .85, damp) * (.35 + weights.swamp * .65);
+    const pool = [15, 48, 60];
+    const dirt = [58 - wet * 9, 51 - wet * 5, 39 - wet * 2];
+    const stone = [68, 68, 59];
+    const weather = detail ? (noise(x / 93, y / 93, this.seed + 203) - .5) * 9 : 0;
+    const grain = detail ? (noise(x / 18, y / 18, this.seed + 202) - .5) * 3 : 0;
+    const track = profile.tracks * road * (1 - paved) * 3;
+    return base.map((value, i) => ((value * (1 - water) + pool[i] * water) * (1 - road)
+      + (dirt[i] + weather - track) * road) * (1 - paved)
+      + (stone[i] + weather * .7 - (detail ? wet * 4 : 0)) * paved + grain);
   }
 
   /** Half-open rectangle of ground contacts, returned in stable depth order. */
@@ -341,15 +321,12 @@ export class World {
     const buildings = towns.flatMap(town => town.buildings);
     // Every material sample and detail anchor is in world space. Tile edges are
     // merely a crop of the same illustration, including at negative coordinates.
-    for (let y = 0; y < TILE_SIZE; y += 4) {
-      for (let x = 0; x < TILE_SIZE; x += 4) {
-        const wx = originX + x + 2;
-        const wy = originY + y + 2;
-        const [red, green, blue] = this.surfaceColor(wx, wy, towns, true);
-        context.fillStyle = `rgb(${red},${green},${blue})`;
-        context.fillRect(x, y, 4, 4);
-      }
-    }
+    drawGroundSurface(context, originX, originY, TILE_SIZE, (x, y) => this.surfaceColor(x, y, towns, true));
+    drawRoadDetails(context, originX, originY, TILE_SIZE, this.seed, (x, y) => {
+      if (buildings.some(building => contains(building, x, y, 10))) return { road: 0, paved: 0 };
+      const road = this.roadWeight(x, y);
+      return { road, paved: this.pavingWeight(towns, x, y, road) };
+    });
 
     const detailCell = 15;
     const margin = 22;

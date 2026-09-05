@@ -48,9 +48,10 @@ test('biome props mix deterministically and decorative groundcover remains passa
 test('map colors include roads and plazas without asking collision to generate map pixels', () => {
   class MapWorld extends World { override blocked(): boolean { throw new Error('Map rendering must not query collision.'); } }
   const world = new MapWorld();
-  assert.equal(world.mapColor(mainPathX(500), 500), 'rgb(64,54,37)');
+  const trail = world.mapColor(mainPathX(500), 500);
+  assert.notEqual(trail, world.mapColor(mainPathX(500) + 150, 500), 'compacted trail reads differently from surrounding ground');
   const town = world.getSettlements(-600, -1400, 1200, 1100)[0];
-  assert.equal(world.mapColor(town.x, town.y), 'rgb(80,80,70)');
+  assert.notEqual(world.mapColor(town.x, town.y), trail, 'town paving and wilderness dirt remain distinct');
   for (const building of town.buildings) {
     const y = building.door.y + 24;
     assert.equal(world.mapColor(mainPathX(y), y), world.mapColor(building.door.x, y), 'main road and side streets share the stone map palette');

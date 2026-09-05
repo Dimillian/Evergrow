@@ -30,6 +30,8 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/src/simulation.ts` and `model.ts`: deterministic 120 Hz combat state, rules, and render interpolation snapshots.
 - `game/src/equipment.ts`: character and equipped-weapon stats used to derive the basic attack.
 - `game/src/world.ts`: seeded terrain, props, collision, and bounded tile caching.
+- `game/src/road-shape.ts` and `road-art.ts`: continuous road contours, blended junctions, worn cobbles, and gravel. Keep visual shoulders inside the existing clear corridor and preserve the shared road centerlines.
+- `game/src/ground-surface.ts`: world-aligned terrain samples interpolated per pixel; neighboring tiles must produce the same color field without blocky sample boundaries.
 - `game/src/biomes.ts` and `settlements.ts`: continuous biome weights, deterministic town layouts, shared building/collision geometry, and points of interest.
 - `game/src/environment-art.ts` and `settlement-art.ts`: procedural biome silhouettes, furnished buildings, roof fading, and settlement lights.
 - `game/src/ground-layer.ts`: bounded terrain composition before subpixel camera sampling; keep tile joins inside one surface to avoid seams.
@@ -48,7 +50,7 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/src/assets/fonts/` and `typography.css`: locally bundled Pixelify Sans, source/license records, and shared menu typography.
 - `game/src/main.ts`: input, loop, pause menu, local audio preference, and system reduced motion.
 - `game/src/exploration.ts` and `world-map.ts`: discovered terrain/POIs, local exploration persistence, smoothly scrolling minimap, and interactive world map.
-- `game/layouts.html` and `game/src/layout-review.ts`: dev-only static scene staging and PNG export using the real renderer; never advances gameplay or changes exploration saves.
+- `game/layouts.html` and `game/src/layout-review.ts`: dev-only static town, interior, and road scenes with PNG export using the real renderer; never advances gameplay or changes exploration saves.
 - `game/rig.html` and `game/src/rig-review.ts`: dev-only frozen character poses across eight facings, without driving gameplay.
 - `game/hud.html` and `game/src/hud-review.ts`: dev-only frozen healthy, damaged, and depleted player HUD/enemy plate states with PNG export; no gameplay or save access.
 - `docs/`: design documents and reference concepts, not runtime assets.

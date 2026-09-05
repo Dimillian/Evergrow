@@ -143,21 +143,78 @@ function smoothstep(a: number, b: number, value: number): number {
   return t * t * (3 - 2 * t);
 }
 
-/** Rounded contours and a soft shoulder join every street into one material. */
-function roundedPaving(rect: Rect, x: number, y: number): number {
-  const radius = Math.min(18, rect.width / 2, rect.height / 2);
-  const qx = Math.abs(x - rect.x - rect.width / 2) - rect.width / 2 + radius;
-  const qy = Math.abs(y - rect.y - rect.height / 2) - rect.height / 2 + radius;
-  const distance = Math.hypot(Math.max(0, qx), Math.max(0, qy)) + Math.min(Math.max(qx, qy), 0) - radius;
-  return 1 - smoothstep(-4, 10, distance);
+const PAVING_INNER = -6, PAVING_OUTER = 18, PAVING_JOIN = 22;
+
+function pavingDistance(rect: Rect, x: number, y: number, paddingX: number, paddingY: number, rounding: number): number {
+  const halfWidth = rect.width / 2 + paddingX, halfHeight = rect.height / 2 + paddingY;
+  const radius = Math.min(rounding, halfWidth, halfHeight);
+  const qx = Math.abs(x - rect.x - rect.width / 2) - halfWidth + radius;
+  const qy = Math.abs(y - rect.y - rect.height / 2) - halfHeight + radius;
+  return Math.hypot(Math.max(0, qx), Math.max(0, qy)) + Math.min(Math.max(qx, qy), 0) - radius;
 }
 
-/** Shared by ground and map rendering; main/crossroads become cobbles inside town. */
+/** Polynomial smooth union rounds the concave corners where two lanes meet. */
+function joinPaving(a: number, b: number, radius: number): number {
+  if (radius <= 0) return Math.min(a, b);
+  const overlap = Math.max(0, 1 - Math.abs(a - b) / radius);
+  return Math.min(a, b) - overlap * overlap * radius * .25;
+}
+
+function buildingPavingClearance(town: Settlement, x: number, y: number, paved: number): number {
+  for (const building of town.buildings) {
+    if (x < building.x - 6 || x > building.x + building.width + 6
+      || y < building.y - 6 || y > building.y + building.height + 6) continue;
+    const dx = Math.max(building.x - x, 0, x - building.x - building.width);
+    const dy = Math.max(building.y - y, 0, y - building.y - building.height);
+    const outside = smoothstep(0, 6, Math.hypot(dx, dy));
+    const apron = (1 - smoothstep(building.door.width / 2 - 5, building.door.width / 2, Math.abs(x - building.door.x)))
+      * smoothstep(building.door.y - 10, building.door.y - 5, y);
+    paved *= Math.max(outside, apron);
+    if (paved <= 0) return 0;
+  }
+  return paved;
+}
+
+/** Shared continuous paving field; street rectangles remain the saved layout geometry. */
 export function settlementPavingWeight(town: Settlement, x: number, y: number, road: number): number {
   const outskirts = 1 - smoothstep(town.radius - 180, town.radius - 20, Math.hypot(x - town.x, y - town.y));
-  let paved = Math.max(road * outskirts, roundedPaving(town.plaza, x, y));
-  for (const street of town.streets) paved = Math.max(paved, roundedPaving(street, x, y));
-  return paved;
+  const incoming = Math.max(0, Math.min(1, road)) * outskirts;
+  if (incoming >= 1) return buildingPavingClearance(town, x, y, 1);
+  let distance = pavingDistance(town.plaza, x, y, 0, 0, 38);
+  // All further unions only expand paving; its bounded wear cannot erode this core.
+  if (distance <= PAVING_INNER - 1.5) return buildingPavingClearance(town, x, y, 1);
+  for (let i = 0; i < town.streets.length; i++) {
+    const street = town.streets[i];
+    const lane = street.width > 120 && street.width > street.height * 2;
+    let bow = 0;
+    if (lane) {
+      // Both authored road/door endpoints stay fixed; the middle bows at most 4.2 px.
+      const t = Math.max(0, Math.min(1, (x - street.x - 28) / (street.width - 56)));
+      const arch = t * (1 - t);
+      bow = arch * arch * 67.2 * (((town.seed + i) & 2) ? 1 : -1);
+    }
+    // A fully paved 32 px walking corridor survives the bow and chipped shoulders.
+    const next = pavingDistance(street, x, y - bow, lane ? 4 : 2, lane ? 10.5 : 5, lane ? 32 : 22);
+    distance = joinPaving(distance, next, PAVING_JOIN);
+    if (distance <= PAVING_INNER - 1.5) return buildingPavingClearance(town, x, y, 1);
+  }
+  // One world-space contour variation, rather than independent noise at tile or lane edges.
+  distance += 1.5 * (Math.sin(x * .071 + y * .023) * .55
+    + Math.sin(y * .109 - x * .041) * .3 + Math.sin(x * .23 + y * .17) * .15);
+  let paved: number;
+  if (distance <= PAVING_INNER) paved = 1;
+  else if (distance >= PAVING_OUTER + PAVING_JOIN) paved = incoming;
+  else {
+    if (incoming > 0) {
+      // Invert the coverage curve so road shoulders and the radial outskirts retain
+      // their exact existing weight. The inverse is only needed near a street join.
+      const t = .5 - Math.sin(Math.asin(2 * incoming - 1) / 3);
+      const roadDistance = PAVING_INNER + (PAVING_OUTER - PAVING_INNER) * t;
+      distance = joinPaving(distance, roadDistance, PAVING_JOIN * smoothstep(0, .22, incoming));
+    }
+    paved = 1 - smoothstep(PAVING_INNER, PAVING_OUTER, distance);
+  }
+  return paved > 0 ? buildingPavingClearance(town, x, y, paved) : 0;
 }
 
 export function settlementPOIs(town: Settlement): POI[] {
