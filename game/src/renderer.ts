@@ -1,7 +1,8 @@
-import { ArtLibrary, drawHumanoid, PLAYER_ART_SCALE } from './art.ts';
+import { ArtLibrary, drawHumanoid, getPlayerSwordTip, PLAYER_ART_SCALE } from './art.ts';
 import type { CharacterPose } from './art.ts';
 import { World, TILE_SIZE } from './world.ts';
 import type { Prop } from './world.ts';
+import { HIT_FLASH_DURATION } from './simulation.ts';
 import type { Simulation } from './simulation.ts';
 import type { CombatEvent, Enemy } from './model.ts';
 import { text } from './font.ts';
@@ -9,7 +10,8 @@ import type { VisualMode } from './postfx.ts';
 import { drawFloatingHUD, isHUDPoint } from './hud.ts';
 import { Lighting, drawGlow } from './lighting.ts';
 import type { PointLight } from './lighting.ts';
-import { CombatEffects, drawSwordTrail } from './effects.ts';
+import { CombatEffects } from './effects.ts';
+import { playerPose } from './character-pose.ts';
 
 interface Corpse { x: number; y: number; angle: number; kind: Enemy['kind']; life: number; seed: number; }
 interface Ghost { x: number; y: number; angle: number; gait: number; life: number; }
@@ -32,6 +34,12 @@ export class Renderer {
   pointerY = 0;
   shake = 0;
   hurt = 0;
+  private kickX = 0;
+  private kickY = 0;
+  private hurtAngle = 0;
+  private damageTrails = new Map<number, { value: number; hold: number }>();
+  private playerHealthTrail = 100;
+  private playerHealthHold = 0;
   private effects = new CombatEffects();
   private lighting = new Lighting();
   private corpses: Corpse[] = [];
@@ -64,14 +72,29 @@ export class Renderer {
   reset() {
     this.cameraX = 0; this.cameraY = 0; this.effects.reset();
     this.corpses = []; this.ghosts = []; this.ghostTimer = 0;
-    this.hurt = 0; this.shake = 0; this.queryX = Infinity; this.mapTime = -1;
+    this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
+    this.damageTrails.clear(); this.playerHealthTrail = 100; this.playerHealthHold = 0;
+    this.queryX = Infinity; this.mapTime = -1;
   }
 
   handleEvents(events: CombatEvent[], reducedMotion: boolean) {
     this.effects.handleEvents(events);
     for (const e of events) {
-      if (e.type === 'hit' && !reducedMotion) this.shake = Math.max(this.shake, e.heavy ? 2.3 : .8);
-      if (e.type === 'hurt') { this.hurt = .7; if (!reducedMotion) this.shake = 3; }
+      if (e.type === 'hit' && e.targetId !== undefined && e.remainingHp !== undefined) {
+        const previous = this.damageTrails.get(e.targetId)?.value ?? 0;
+        this.damageTrails.set(e.targetId, { value: Math.max(previous, e.remainingHp + (e.value ?? 0)), hold: .18 });
+      }
+      if (e.type === 'hurt') {
+        this.hurt = reducedMotion ? .4 : .95; this.hurtAngle = e.angle ?? 0;
+        this.playerHealthHold = .22;
+        this.playerHealthTrail = Math.max(this.playerHealthTrail, (e.remainingHp ?? 0) + (e.value ?? 0));
+      }
+      if (!reducedMotion && (e.type === 'hit' || e.type === 'hurt' || e.type === 'kill')) {
+        const strength = e.type === 'hurt' ? 5 : e.type === 'kill' ? 2 : 2.6;
+        this.kickX = Math.max(-6, Math.min(6, this.kickX - Math.cos(e.angle ?? 0) * strength));
+        this.kickY = Math.max(-5, Math.min(5, this.kickY - Math.sin(e.angle ?? 0) * strength * .7));
+        this.shake = Math.max(this.shake, e.type === 'hurt' ? 1.6 : .65);
+      }
       if (e.type === 'kill') this.corpses.push({ x: e.x, y: e.y, angle: e.angle ?? 0,
         kind: e.enemyKind ?? 'stalker', life: 18, seed: Math.random() * 100 });
     }
@@ -81,16 +104,28 @@ export class Renderer {
   render(sim: Simulation, world: World, dt: number, settings: RenderSettings) {
     const c = this.ctx, p = sim.player, active = settings.phase === 'playing';
     const step = active ? dt : 0, alpha = sim.interpolationAlpha;
+    const feedbackStep = active || settings.phase === 'dead' ? dt : 0;
     const px = lerp(p.prevX, p.x, alpha), py = lerp(p.prevY, p.y, alpha);
     this.visualTime += dt;
-    this.shake *= Math.exp(-dt * 19); this.hurt *= Math.exp(-dt * 5);
+    this.shake *= Math.exp(-dt * 22); this.hurt *= Math.exp(-dt * 5);
+    this.kickX *= Math.exp(-dt * 18); this.kickY *= Math.exp(-dt * 18);
+    this.playerHealthHold -= feedbackStep;
+    this.playerHealthTrail = Math.max(p.hp, this.playerHealthTrail);
+    if (this.playerHealthHold <= 0) this.playerHealthTrail += (p.hp - this.playerHealthTrail) * (1 - Math.exp(-feedbackStep * 7));
+    for (const [id, trail] of this.damageTrails) {
+      const enemy = sim.enemies.find(e => e.id === id);
+      if (!enemy || enemy.hp <= 0) { this.damageTrails.delete(id); continue; }
+      trail.hold -= step;
+      if (trail.hold <= 0) trail.value += (enemy.hp - trail.value) * (1 - Math.exp(-step * 8));
+      if (Math.abs(trail.value - enemy.hp) < .2) this.damageTrails.delete(id);
+    }
     if (active) {
       // Velocity-based lookahead does not swing the camera when the player merely aims.
       const follow = 1 - Math.exp(-dt * 11);
       this.cameraX += (px + p.vx * .07 - this.cameraX) * follow;
       this.cameraY += (py + p.vy * .05 - 15 - this.cameraY) * follow;
     }
-    this.effects.update(sim, step);
+    this.effects.update(sim, feedbackStep);
     for (const corpse of this.corpses) corpse.life -= step;
     for (const ghost of this.ghosts) ghost.life -= step;
     this.corpses = this.corpses.filter(corpse => corpse.life > 0);
@@ -102,8 +137,8 @@ export class Renderer {
     }
 
     const shake = settings.reducedMotion ? 0 : this.shake;
-    const offsetX = this.width / 2 - this.cameraX + Math.sin(this.visualTime * 103) * shake;
-    const offsetY = this.height / 2 - this.cameraY + Math.cos(this.visualTime * 127) * shake * .7;
+    const offsetX = this.width / 2 - this.cameraX + (settings.reducedMotion ? 0 : this.kickX) + Math.sin(this.visualTime * 103) * shake;
+    const offsetY = this.height / 2 - this.cameraY + (settings.reducedMotion ? 0 : this.kickY) + Math.cos(this.visualTime * 127) * shake * .7;
     const left = -offsetX, top = -offsetY;
     if (Math.abs(this.queryX - this.cameraX) > 65 || Math.abs(this.queryY - this.cameraY) > 65) {
       this.cachedProps = world.getProps(left - 240, top - 240, this.width + 480, this.height + 480);
@@ -134,8 +169,9 @@ export class Renderer {
     c.save(); c.translate(offsetX, offsetY);
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, px, py, alpha, lights);
-    drawSwordTrail(c, p, px, py);
+    this.effects.drawSword(c);
     this.effects.draw(c);
+    this.damageDirection(px, py);
     this.motes(left, top, sim.time, settings.reducedMotion);
     for (const enemy of sim.enemies) this.telegraph(enemy, alpha);
     this.healthBars(sim, alpha);
@@ -146,8 +182,12 @@ export class Renderer {
       this.width / 2, this.height * .46, Math.max(this.width, this.height) * .7);
     vignette.addColorStop(0, '#04101900'); vignette.addColorStop(1, '#02081260');
     c.fillStyle = vignette; c.fillRect(0, 0, this.width, this.height);
+    this.damageVignette(settings.reducedMotion);
     this.navigation(sim, world, settings);
-    drawFloatingHUD(c, p, this.width, this.height, this.visualTime, { reducedMotion: settings.reducedMotion });
+    drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
+      reducedMotion: settings.reducedMotion, healthTrail: this.playerHealthTrail / Math.max(1, p.maxHp),
+      hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / HIT_FLASH_DURATION),
+    });
     if (active) this.cursor();
   }
 
@@ -203,21 +243,10 @@ export class Renderer {
         moving: Math.min(1, Math.hypot(enemy.vx, enemy.vy) / 70),
         attack: enemy.state === 'windup' ? -Math.max(.001, enemy.stateTime / enemy.stateDuration)
           : enemy.state === 'attack' ? Math.min(1, enemy.stateTime / enemy.stateDuration) : 0,
-        attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash, dodging: false }) });
+        attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash,
+        impact: Math.min(1, enemy.hitFlash / HIT_FLASH_DURATION), impactAngle: enemy.hitAngle, dodging: false }) });
     }
-    entries.push({ y: py, draw: () => this.actor(px, py, {
-      kind: 'player', angle: p.castTime > 0 ? p.castAngle : p.angle,
-      time: sim.time, gaitPhase: p.walkTime, moveAngle: Math.atan2(p.vy, p.vx),
-      moving: Math.min(1, Math.hypot(p.vx, p.vy) / 130),
-      attack: p.attack ? p.attack.elapsed / p.attack.duration : 0,
-      attackAngle: p.attack?.angle ?? p.angle, weapon: p.equipment.mainHand.visual,
-      attackStart: p.attack ? p.attack.activeStart / p.attack.duration : undefined,
-      attackEnd: p.attack ? p.attack.activeEnd / p.attack.duration : undefined,
-      attackArc: p.attack?.arc,
-      cast: p.castTime > 0 ? Math.min(1, (.22 - p.castTime) / .075) : 0,
-      hitFlash: p.invulnerable > 0 && p.dodgeTime <= 0 ? .025 : 0,
-      dodging: p.dodgeTime > 0, dodgeProgress: 1 - p.dodgeTime / .22, dead: p.dead,
-    }) });
+    entries.push({ y: py, draw: () => this.actor(px, py, playerPose(p, sim.time)) });
     entries.sort((a, b) => a.y - b.y);
     for (const entry of entries) entry.draw();
   }
@@ -237,9 +266,11 @@ export class Renderer {
       lights.push({ x: prop.x - 18, y: prop.y - 31, radius: 215 * flicker, color: '#ffa64f', power: .92, shadows: true });
     }
     if (p.attack && p.attack.elapsed >= p.attack.activeStart && p.attack.elapsed < p.attack.activeEnd + .05) {
-      lights.push({ x: px + Math.cos(p.attack.angle) * 28, y: py - 10 + Math.sin(p.attack.angle) * 28,
-        radius: 112, color: (p.equipment.mainHand.visual.glow ?? '#bad8ef'),
-        power: .35 * Math.sin(Math.PI * Math.min(1, (p.attack.elapsed - p.attack.activeStart) / (p.attack.activeEnd - p.attack.activeStart + .05))), shadows: true });
+      const a = p.attack;
+      const tip = getPlayerSwordTip(playerPose(p, sim.time));
+      lights.push({ x: px + tip.x, y: py + tip.y,
+        radius: 105, color: p.equipment.mainHand.visual.glow ?? '#ffbf67',
+        power: .55 * Math.sin(Math.PI * Math.min(1, (a.elapsed - a.activeStart) / (a.activeEnd - a.activeStart + .05))), shadows: true });
     }
     if (p.castTime > .145) lights.push({ x: px + Math.cos(p.castAngle) * 17, y: py - 17,
       radius: 110, color: '#ff643b', power: (.22 - p.castTime) / .075 * .8 });
@@ -322,12 +353,38 @@ export class Renderer {
     const c = this.ctx;
     for (const enemy of sim.enemies) {
       if (enemy.hp <= 0 || (enemy.hp >= enemy.maxHp && enemy.state !== 'windup')) continue;
-      const width = enemy.kind === 'brute' ? 34 : 25;
+      const width = enemy.kind === 'brute' ? 40 : 31;
       const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha) - (enemy.kind === 'brute' ? 53 : 43);
-      c.fillStyle = '#080c12'; c.fillRect(x - width / 2 - 1, y - 1, width + 2, 4);
-      c.fillStyle = '#60302c'; c.fillRect(x - width / 2, y, width, 2);
-      c.fillStyle = enemy.kind === 'caster' ? '#89d5a2' : '#e6a071'; c.fillRect(x - width / 2, y, width * enemy.hp / enemy.maxHp, 2);
+      c.fillStyle = enemy.hitFlash > .1 ? '#efcea0' : '#080c12';
+      c.fillRect(x - width / 2 - 1, y - 1, width + 2, 5);
+      c.fillStyle = '#482a29'; c.fillRect(x - width / 2, y, width, 3);
+      const trail = Math.min(enemy.maxHp, this.damageTrails.get(enemy.id)?.value ?? enemy.hp);
+      c.fillStyle = '#edc582'; c.fillRect(x - width / 2, y, width * trail / enemy.maxHp, 3);
+      c.fillStyle = enemy.kind === 'caster' ? '#7bb59c' : '#c45f54';
+      c.fillRect(x - width / 2, y, width * enemy.hp / enemy.maxHp, 3);
     }
+  }
+
+  private damageDirection(x: number, y: number) {
+    if (this.hurt < .04) return;
+    const c = this.ctx, radius = 32 + (1 - this.hurt) * 12;
+    const source = this.hurtAngle + Math.PI;
+    c.save(); c.globalAlpha = this.hurt * .8; c.strokeStyle = '#ff8168'; c.lineWidth = 2.5;
+    c.beginPath(); c.arc(x, y - 13, radius, source - .58, source + .58); c.stroke();
+    c.lineWidth = 1; c.globalAlpha *= .45;
+    c.beginPath(); c.arc(x, y - 13, radius + 5, source - .38, source + .38); c.stroke();
+    c.restore();
+  }
+
+  private damageVignette(reducedMotion: boolean) {
+    if (this.hurt < .02) return;
+    const c = this.ctx;
+    const radius = Math.hypot(this.width, this.height) * .55;
+    const gradient = c.createRadialGradient(this.width / 2, this.height / 2, radius * .28,
+      this.width / 2, this.height / 2, radius);
+    gradient.addColorStop(0, '#ac1f2700'); gradient.addColorStop(.6, '#ac1f2700'); gradient.addColorStop(1, '#df3437');
+    c.save(); c.globalAlpha = this.hurt * (reducedMotion ? .13 : .25);
+    c.fillStyle = gradient; c.fillRect(0, 0, this.width, this.height); c.restore();
   }
 
   private navigation(sim: Simulation, world: World, settings: RenderSettings) {

@@ -89,6 +89,10 @@ export interface Player {
   castTime: number;
   castAngle: number;
   healFlash: number;
+  /** Time remaining for an actual damage reaction, independent of invulnerability. */
+  hitFlash: number;
+  /** Incoming impact travel direction, used to recoil away from the attacker. */
+  hitAngle: number;
   walkTime: number;
   radius: number;
   dead: boolean;
@@ -117,6 +121,7 @@ export interface Enemy {
   stateDuration: number;
   attackAngle: number;
   hitFlash: number;
+  hitAngle: number;
   radius: number;
   stagger: number;
   attackHit: boolean;
@@ -157,6 +162,10 @@ export interface CombatEvent {
   y: number;
   angle?: number;
   value?: number;
+  /** Enemy identity for attached hit reactions or death effects. */
+  targetId?: number;
+  /** Target health immediately after a damaging event. */
+  remainingHp?: number;
   enemyKind?: EnemyKind;
   heavy?: boolean;
 }

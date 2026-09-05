@@ -15,7 +15,7 @@ export interface HUDLayout extends HUDRect {
   shortcuts: HUDShortcut[];
   settings: HUDShortcut;
 }
-export interface HUDOptions { reducedMotion?: boolean; }
+export interface HUDOptions { reducedMotion?: boolean; healthTrail?: number; hitPulse?: number; }
 
 const BASE_WIDTH = 444;
 const BASE_HEIGHT = 84;
@@ -118,7 +118,7 @@ function liquidLevel(ratio: number, radius: number): number {
   return (low + high) * radius / 2;
 }
 
-function orb(c: CanvasRenderingContext2D, x: number, y: number, ratio: number, time: number, mana: boolean) {
+function orb(c: CanvasRenderingContext2D, x: number, y: number, ratio: number, time: number, mana: boolean, trail = ratio, hit = 0) {
   const r = 28;
   ratio = clamp(ratio);
   c.save(); c.translate(x, y);
@@ -137,6 +137,10 @@ function orb(c: CanvasRenderingContext2D, x: number, y: number, ratio: number, t
   const empty = c.createRadialGradient(-9, -12, 0, 0, 0, r * 1.5);
   empty.addColorStop(0, mana ? '#172a42' : '#351b2c'); empty.addColorStop(1, '#04080e');
   c.fillStyle = empty; c.fillRect(-r, -r, r * 2, r * 2);
+  if (!mana && trail > ratio + .002) {
+    const lagLevel = liquidLevel(clamp(trail), r);
+    c.fillStyle = '#ffc1808c'; c.fillRect(-r, lagLevel, r * 2, r * 2);
+  }
   const level = liquidLevel(ratio, r);
   const waveSize = Math.sin(ratio * Math.PI) * 1.8;
   const wave = (px: number) => level + Math.sin(px * .16 + time * 2) * waveSize + Math.sin(px * .29 - time * 1.6) * waveSize * .4;
@@ -191,6 +195,12 @@ function orb(c: CanvasRenderingContext2D, x: number, y: number, ratio: number, t
     c.save(); c.rotate(i * Math.PI / 2 + Math.PI / 4);
     polygon(c, [-2, -35, 2, -35, 3, -29, 0, -27, -3, -29]);
     c.fillStyle = '#746e55'; c.fill(); c.strokeStyle = '#ada17a'; c.lineWidth = .7; c.stroke(); c.restore();
+  }
+  if (!mana && hit > 0) {
+    c.save(); c.globalAlpha = hit * .85; c.globalCompositeOperation = 'screen';
+    circle(c, 0, 0, r + 4); c.lineWidth = 2.5;
+    c.strokeStyle = '#ffb28b'; c.shadowColor = '#ff313e'; c.shadowBlur = 12; c.stroke();
+    c.restore();
   }
   c.restore();
 }
@@ -302,7 +312,8 @@ export function drawFloatingHUD(c: CanvasRenderingContext2D, p: Player, width: n
   const t = options.reducedMotion ? 0 : time;
   c.save(); c.translate(layout.x, layout.y); c.scale(layout.scale, layout.scale);
   chassis(c);
-  orb(c, 48, 40, p.hp / Math.max(1, p.maxHp), t, false);
+  orb(c, 48, 40, p.hp / Math.max(1, p.maxHp), t, false, options.healthTrail,
+    (options.hitPulse ?? 0) * (options.reducedMotion ? .4 : 1));
   orb(c, 396, 40, p.mana / Math.max(1, p.maxMana), t + (options.reducedMotion ? 0 : 7), true);
   skills(c, p, t);
   for (let i = 0; i < HUD_MENU_SHORTCUTS.length; i++) {

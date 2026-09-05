@@ -1,4 +1,5 @@
 import { STARTING_SWORD, type WeaponVisual } from './equipment.ts';
+import { getActiveSwingOffset } from './attack-motion.ts';
 
 /** Procedural art only: every cached image below is drawn from geometry. */
 export interface Sprite {
@@ -86,7 +87,12 @@ export interface CharacterPose {
   weapon?: WeaponVisual;
   /** Slots can be replaced or set to null independently, without altering the rig. */
   outfit?: Partial<CharacterOutfit>;
+  /** Remaining bright-hit timer in seconds (0.16 seconds at impact). */
   hitFlash: number;
+  /** Normalized remaining impact animation, from one at contact to zero at rest. */
+  impact?: number;
+  /** Direction away from the attacker; recoil never moves the ground anchor. */
+  impactAngle?: number;
   dodging: boolean;
   /** Normalized dodge progress, from launch through recovery. */
   dodgeProgress?: number;
@@ -94,6 +100,19 @@ export interface CharacterPose {
 }
 
 type Point = readonly [number, number];
+type Affine = readonly [number, number, number, number, number, number];
+
+function compose(a: Affine, b: Affine): Affine {
+  return [a[0] * b[0] + a[2] * b[1], a[1] * b[0] + a[3] * b[1],
+    a[0] * b[2] + a[2] * b[3], a[1] * b[2] + a[3] * b[3],
+    a[0] * b[4] + a[2] * b[5] + a[4], a[1] * b[4] + a[3] * b[5] + a[5]];
+}
+
+function transformPoint(matrix: Affine, point: Point): Point {
+  return [matrix[0] * point[0] + matrix[2] * point[1] + matrix[4],
+    matrix[1] * point[0] + matrix[3] * point[1] + matrix[5]];
+}
+
 type Random = () => number;
 type CanvasFactory = (width: number, height: number) => HTMLCanvasElement;
 type Color = (value: string) => string;
@@ -128,9 +147,26 @@ export function getSwingAngle(
   const to = arc * 0.5;
   const t = clamp(progress);
   if (t < start) return angle + rest + (from - rest) * smooth(t / start);
-  if (t < end) return angle + from + (to - from) * smooth((t - start) / (end - start));
+  if (t < end) return angle + getActiveSwingOffset((t - start) / (end - start), arc);
   const recovery = (t - end) / (1 - end);
-  return angle + to + (rest - to) * smooth(recovery) + 0.16 * Math.sin(recovery * Math.PI);
+  // Finish the motion before bringing the blade back: the hand does not reverse
+  // at full speed on the exact tick where the damaging arc ends.
+  const settle = smooth((recovery - 0.14) / 0.86);
+  return angle + to + (rest - to) * settle + 0.22 * Math.sin(recovery * Math.PI) ** 2 * (1 - settle);
+}
+
+function elbowFor(shoulder: Point, hand: Point, side: number, anticipation = 0): Point {
+  const dx = hand[0] - shoulder[0], dy = hand[1] - shoulder[1];
+  const distance = Math.max(0.001, Math.hypot(dx, dy));
+  // The last few percent of reach stretch softly instead of snapping a joint.
+  const stretch = Math.max(1, distance / 19.7);
+  const upper = 9.1 * stretch, fore = 10.8 * stretch;
+  const along = clamp((upper * upper - fore * fore + distance * distance) / (2 * distance), 0, upper);
+  const height = Math.sqrt(Math.max(0, upper * upper - along * along));
+  const nx = -dy / distance, ny = dx / distance;
+  const bend = Math.tanh((nx * side + ny * (0.5 - anticipation * 0.75)) * 2.5);
+  return [shoulder[0] + dx / distance * along + nx * height * bend,
+    shoulder[1] + dy / distance * along + ny * height * bend];
 }
 
 function hash(value: number): number {
@@ -624,8 +660,8 @@ function headArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | null, colo
   ctx.restore();
 }
 
-function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color): void {
-  const outfit: CharacterOutfit = { ...STARTER_OUTFIT, ...pose.outfit };
+/** Geometry shared by the articulated rig and its attached sword effects. */
+function playerMotion(pose: CharacterPose) {
   const moving = pose.dead ? 0 : clamp(pose.moving);
   const phase = pose.gaitPhase ?? pose.time * 8;
   const step = Math.sin(phase) * moving;
@@ -641,15 +677,51 @@ function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color
   const active = swinging ? clamp((attack - start) / Math.max(0.01, end - start)) : 0;
   const recovery = swinging ? smooth((attack - end) / Math.max(0.01, 1 - end)) : 0;
   const commitment = swinging
-    ? (attack < start ? -windup * 0.65 : (-0.65 + smooth(active) * 1.65) * (1 - recovery)) : 0;
+    ? (attack < start ? -windup : (-1 + smooth(active) * 2.1) * (1 - recovery)) : 0;
+  const torsoTurn = swinging
+    ? (attack < start ? -windup * 0.52 : (-0.52 + smooth(active) * 1.14) * (1 - recovery)) : 0;
+  const elbowTuck = !swinging ? 0 : attack < start ? windup : 1 - smooth(active / 0.65);
+  const bodyAngle = pose.angle + torsoTurn;
+  const crouch = Math.max(0, -commitment) * 1.3;
   const cast = pose.dead ? 0 : smooth(pose.cast ?? 0);
+  const idleSway = Math.sin(phase + 0.35) * moving * 0.07 + breath * 0.08;
+  const attackBlend = !swinging ? 0 : attack < start ? windup : 1 - recovery;
   const weaponAngle = swinging
-    ? getSwingAngle(pose.attackAngle, attack, start, end, pose.attackArc)
-    : pose.angle + WEAPON_REST_ANGLE + Math.sin(phase + 0.35) * moving * 0.07 + breath * 0.08;
-  const weaponSide = -Math.sin(pose.angle);
+    ? getSwingAngle(pose.attackAngle, attack, start, end, pose.attackArc) + idleSway * (1 - attackBlend)
+    : pose.angle + WEAPON_REST_ANGLE + idleSway;
+  const weaponSide = -Math.sin(bodyAngle);
   const swordBehind = Math.sin(weaponAngle) < -0.18;
-  const hipX = -moveY * step * 0.65;
-  const hipY = Math.cos(phase * 2) * moving * 0.25;
+  const hipX = -moveY * step * 0.65 + Math.cos(pose.attackAngle) * commitment * 0.55;
+  const hipY = Math.cos(phase * 2) * moving * 0.25 + crouch;
+  const lean = moving * moveX * 0.065 + Math.cos(pose.attackAngle) * commitment * 0.065;
+  const body: Affine = [1, 0, -lean, 1,
+    hipX * 0.6 + Math.cos(pose.attackAngle) * commitment * 1.6,
+    bob + crouch + Math.sin(pose.attackAngle) * commitment * 1.4];
+  const reach = !swinging ? 11 : attack < start ? 11 + windup * 2.3
+    : attack < end ? 13.3 + Math.sin(active * Math.PI) ** 2 * 3.5 : 13.3 - recovery * 2.3;
+  const hand: Point = [Math.cos(weaponAngle) * reach, -20 + Math.sin(weaponAngle) * reach * 0.9];
+  const shoulderSway = Math.cos(bodyAngle) * 1.15 + step * 0.3 + torsoTurn * 2.6;
+  const shoulder: Point = [weaponSide * 6.5, -26 + weaponSide * shoulderSway];
+  const elbow = elbowFor(shoulder, hand, weaponSide, elbowTuck);
+  return { moving, phase, step, moveX, moveY, bob, back, commitment, torsoTurn, cast,
+    weaponAngle, weaponSide, swordBehind, hipX, hipY, lean, body, hand, shoulderSway, shoulder, elbow };
+}
+
+/** Exact blade tip in scaled player-local coordinates, relative to the ground anchor. */
+export function getPlayerSwordTip(pose: CharacterPose): { x: number; y: number } {
+  const motion = playerMotion(pose);
+  const length = Math.max(8, pose.weapon?.length ?? STARTING_SWORD.visual.length);
+  const local: Point = [motion.hand[0] + Math.cos(motion.weaponAngle) * length,
+    motion.hand[1] + Math.sin(motion.weaponAngle) * length];
+  const body = transformPoint(motion.body, local);
+  const tip = transformPoint(characterTransform(pose), [body[0] * PLAYER_ART_SCALE, body[1] * PLAYER_ART_SCALE]);
+  return { x: tip[0], y: tip[1] };
+}
+
+function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color): void {
+  const outfit: CharacterOutfit = { ...STARTER_OUTFIT, ...pose.outfit };
+  const { moving, phase, step, moveX, moveY, bob, back, commitment, torsoTurn, cast,
+    weaponAngle, weaponSide, swordBehind, hipX, hipY, lean, body, hand, shoulderSway, shoulder, elbow } = playerMotion(pose);
   const legs = [-1, 1].map(side => {
     const legPhase = phase + (side > 0 ? Math.PI : 0);
     const travel = Math.sin(legPhase) * 5.2 * moving;
@@ -682,16 +754,7 @@ function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color
   }
 
   ctx.save();
-  const lean = moving * moveX * 0.065 + Math.cos(pose.attackAngle) * commitment * 0.055;
-  ctx.translate(hipX * 0.6 + Math.cos(pose.attackAngle) * commitment * 1.2,
-    bob + Math.sin(pose.attackAngle) * commitment * 0.8);
-  ctx.transform(1, 0, -lean, 1, 0, 0);
-  const reach = swinging ? 12.5 + Math.sin(active * Math.PI) * 2.5 : 11;
-  const hand: Point = [Math.cos(weaponAngle) * reach, -20 + Math.sin(weaponAngle) * reach * 0.72];
-  const shoulderSway = Math.cos(pose.angle) * 0.9 + step * 0.3 + commitment * 0.6;
-  const shoulder: Point = [weaponSide * 6.5, -26 + weaponSide * shoulderSway];
-  const elbow: Point = [shoulder[0] * 0.4 + hand[0] * 0.6 + weaponSide * 2.1,
-    -21 + (hand[1] + 20) * 0.45];
+  ctx.transform(...body);
   const swordArm = () => {
     armorArm(ctx, shoulder, elbow, hand, outfit.hands, color);
     sword(ctx, hand, weaponAngle, color, pose.weapon);
@@ -706,8 +769,9 @@ function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color
     const offset = (hash(cloth.seed) % 11) * 0.1;
     const wind = Math.sin(pose.time * 3.6 - 0.6 + offset) * (0.8 + moving * 1.1);
     const lag = Math.sin(phase - 0.7) * moving * 1.8;
-    const trailX = -moveX * moving * 5 - Math.cos(pose.attackAngle) * commitment * 2;
-    const trailY = -moveY * moving * 3;
+    const trailX = -moveX * moving * 5 - Math.cos(pose.attackAngle) * commitment * 2.3
+      - Math.sin(pose.attackAngle) * torsoTurn * 3;
+    const trailY = -moveY * moving * 3 + Math.cos(pose.attackAngle) * torsoTurn * 1.6;
     const hemX = wind + lag + trailX;
     const hemY = -5.2 + trailY + Math.sin(pose.time * 4.7 - 0.4) * 0.5;
     polygon(ctx, [[-6, -27], [6, -27], [8 + hemX, hemY - 2],
@@ -727,12 +791,17 @@ function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color
   if (swordBehind) swordArm();
   const offShoulder: Point = [-weaponSide * 6.5, -25 - weaponSide * shoulderSway];
   const offHand: Point = [(-weaponSide * 8.2 - step * moveX * 1.2) * (1 - cast)
-    + Math.cos(pose.angle) * 15 * cast, -15 - step * moveY * 1.2 - cast * 5 + Math.sin(pose.angle) * cast * 8];
-  const offElbow: Point = [offShoulder[0] * 0.5 + offHand[0] * 0.5 - weaponSide * 2,
-    -20 + (offHand[1] + 15) * 0.35];
+    + Math.cos(pose.angle) * 15 * cast - Math.cos(pose.attackAngle) * commitment * 1.8,
+    -15 - step * moveY * 1.2 - cast * 5 + Math.sin(pose.angle) * cast * 8 - Math.max(0, -commitment) * 3];
+  const offElbow = elbowFor(offShoulder, offHand, -weaponSide);
   const offArm = () => armorArm(ctx, offShoulder, offElbow, offHand, outfit.hands, color);
   if (offHand[1] < -20) offArm();
+  ctx.save();
+  ctx.translate(0, PLAYER_ATTACHMENTS.chest[1]);
+  ctx.transform(1 - Math.abs(torsoTurn) * 0.08, torsoTurn * 0.12, 0, 1, 0, 0);
+  ctx.translate(0, -PLAYER_ATTACHMENTS.chest[1]);
   chestArmor(ctx, outfit.chest, color);
+  ctx.restore();
   if (back) cape();
   if (offHand[1] >= -20) offArm();
   for (const side of [-1, 1]) shoulderArmor(ctx, side, outfit.shoulders, color, shoulderSway);
@@ -880,28 +949,45 @@ function caster(ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color
   }
 }
 
-/** Draw an articulated figure around (0, 0), its ground-contact point. */
-export function drawHumanoid(ctx: CanvasRenderingContext2D, pose: CharacterPose): void {
-  ctx.save();
-  const flash = clamp(pose.hitFlash / 0.09) * 0.88;
-  const color: Color = flash > 0 ? (value) => mixColor(value, '#efe5c6', flash) : (value) => value;
+function characterTransform(pose: CharacterPose): Affine {
+  let base: Affine = [1, 0, 0, 1, 0, 0];
   if (pose.dead) {
-    ctx.globalAlpha *= 0.6;
-    ctx.transform(1, 0, 0.72, 0.27, 7, 0);
+    base = [1, 0, 0.72, 0.27, 7, 0];
   } else if (pose.dodging) {
     const progress = clamp(pose.dodgeProgress ?? 0.4);
     const envelope = Math.pow(Math.max(0, Math.sin(progress * Math.PI)), 0.7);
     const direction = Math.cos(pose.moveAngle ?? pose.angle);
-    ctx.transform(1 + Math.abs(direction) * envelope * 0.12, 0,
+    base = [1 + Math.abs(direction) * envelope * 0.12, 0,
       -direction * envelope * 0.2, 1 - envelope * 0.23,
-      direction * envelope * 1.5, -envelope);
+      direction * envelope * 1.5, -envelope];
   } else if (pose.kind !== 'player' && pose.attack !== 0) {
     const windup = pose.attack < 0 ? smooth(-pose.attack) : 1 - smooth(pose.attack / 0.28);
     const strike = pose.attack > 0 ? Math.sin(clamp(pose.attack) * Math.PI) : 0;
     const commitment = strike * 0.1 - windup * 0.035;
-    ctx.transform(1, 0, -Math.cos(pose.attackAngle) * commitment,
-      1 - windup * 0.035, 0, Math.sin(pose.attackAngle) * strike * 1.5);
+    base = [1, 0, -Math.cos(pose.attackAngle) * commitment,
+      1 - windup * 0.035, 0, Math.sin(pose.attackAngle) * strike * 1.5];
   }
+  if (!pose.dead && (pose.impact ?? 0) > 0) {
+    const elapsed = 1 - clamp(pose.impact!);
+    const recoil = elapsed < 0.18 ? smooth(elapsed / 0.18) : 1 - smooth((elapsed - 0.18) / 0.82);
+    const angle = pose.impactAngle ?? pose.angle + Math.PI;
+    const height = pose.kind === 'player' ? 48 : 38;
+    // All terms vanish at y=0. Feet remain planted while the shoulders and head
+    // recoil away from the hit and then settle, independently of locomotion.
+    const impact: Affine = [1 + recoil * 0.025, 0, -Math.cos(angle) * recoil * 4.2 / height,
+      1 - (Math.sin(angle) * 3.4 + 1.1) * recoil / height, 0, 0];
+    return compose(base, impact);
+  }
+  return base;
+}
+
+/** Draw an articulated figure around (0, 0), its ground-contact point. */
+export function drawHumanoid(ctx: CanvasRenderingContext2D, pose: CharacterPose): void {
+  ctx.save();
+  const flash = Math.pow(clamp(pose.hitFlash / 0.16), 3.2) * 0.97;
+  const color: Color = flash > 0 ? (value) => mixColor(value, '#fff3d9', flash) : (value) => value;
+  if (pose.dead) ctx.globalAlpha *= 0.6;
+  ctx.transform(...characterTransform(pose));
   if (pose.kind === 'player') {
     ctx.scale(PLAYER_ART_SCALE, PLAYER_ART_SCALE);
     player(ctx, pose, color);

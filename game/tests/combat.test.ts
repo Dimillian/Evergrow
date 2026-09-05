@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BASIC_ATTACK_PHASES, circleIntersectsSector, FIXED_STEP, Simulation } from '../src/simulation.ts';
+import { BASIC_ATTACK_PHASES, circleIntersectsSector, FIXED_STEP, HIT_FLASH_DURATION, Simulation } from '../src/simulation.ts';
 import { deriveAttackStats } from '../src/equipment.ts';
 import type { Input, WorldQuery } from '../src/model.ts';
 
@@ -105,9 +105,9 @@ test('holding attack repeats only the same basic strike with no combo or heavy h
   enemy.hp = enemy.maxHp = 1000;
   advance(sim, 1, { attack: true });
   const events = sim.drainEvents();
-  assert.equal(events.filter(event => event.type === 'swing').length, 4);
+  assert.equal(events.filter(event => event.type === 'swing').length, 2);
   const hits = events.filter(event => event.type === 'hit');
-  assert.deepEqual(hits.map(event => event.value), [24, 24, 24, 24]);
+  assert.deepEqual(hits.map(event => event.value), [24, 24]);
   assert.ok(events.every(event => !event.heavy));
   assert.ok(sim.player.attack);
   assert.equal('combo' in sim.player.attack, false);
@@ -162,22 +162,22 @@ test('derived weapon damage, reach and timing are snapshotted until the next str
   assert.equal(sim.player.attack?.damage, 48);
 });
 
-test('a tap during contact buffers exactly one attack through recovery', () => {
+test('a tap in recovery buffers exactly one next attack', () => {
   const sim = make();
   sim.update(FIXED_STEP, { ...idle, attack: true });
-  advance(sim, 0.075);
+  advance(sim, 0.325);
   sim.update(FIXED_STEP, { ...idle, attack: true });
   advance(sim, 0.25);
   assert.ok(sim.player.attack);
   assert.equal(sim.drainEvents().filter(event => event.type === 'swing').length, 2);
-  advance(sim, 0.4);
+  advance(sim, 0.55);
   assert.equal(sim.player.attack, null);
 });
 
 test('UI combat input clearing drops queued weapons without stopping movement or dodge', () => {
   const sim = make();
   sim.update(FIXED_STEP, { ...idle, moveX: 1, attack: true });
-  advance(sim, 0.075, { moveX: 1 });
+  advance(sim, 0.15, { moveX: 1 });
   sim.update(FIXED_STEP * 0.5, { ...idle, moveX: 1, attack: true, cast: true, dodge: true });
   const velocity = sim.player.vx;
   const alpha = sim.interpolationAlpha;
@@ -194,15 +194,104 @@ test('UI combat input clearing drops queued weapons without stopping movement or
 
 test('aim can correct the sword windup but contact keeps a stable hit sector', () => {
   const sim = make();
-  const front = target(sim, 40);
-  const above = target(sim, 0, 40);
+  const front = target(sim, 55);
+  const above = target(sim, 0, 55);
   sim.update(FIXED_STEP, { ...idle, attack: true });
-  advance(sim, 0.075, { aimX: 0, aimY: 200 });
+  advance(sim, 0.125, { aimX: 0, aimY: 200 });
+  assert.equal(sim.player.attack?.angle, Math.PI / 2);
+  assert.equal(above.hp, above.maxHp, 'the turning blade has not reached the center yet');
+  advance(sim, 0.05, { aimX: 200, aimY: 0 });
   assert.equal(sim.player.attack?.angle, Math.PI / 2);
   assert.equal(above.hp, above.maxHp - 24);
-  advance(sim, 0.025, { aimX: 200, aimY: 0 });
-  assert.equal(sim.player.attack?.angle, Math.PI / 2);
   assert.equal(front.hp, front.maxHp);
+});
+
+test('sword contact follows its sweep through the center and both outer edges', () => {
+  for (const speed of [2, 12]) {
+    const sim = make();
+    sim.player.equipment.mainHand.baseAttacksPerSecond = speed;
+    const arc = sim.player.equipment.mainHand.arc;
+    const angles = [-arc / 2, 0, arc / 2];
+    const targets = angles.map(angle => {
+      const enemy = target(sim, Math.cos(angle) * 58, Math.sin(angle) * 58);
+      enemy.radius = 2;
+      return enemy;
+    });
+    sim.update(FIXED_STEP, { ...idle, attack: true });
+    const attack = sim.player.attack!;
+    const hitTimes = new Map<number, number>();
+    while (sim.player.attack && sim.player.attack.elapsed <= attack.activeEnd + FIXED_STEP) {
+      sim.update(FIXED_STEP, idle);
+      for (const event of sim.drainEvents()) if (event.type === 'hit') hitTimes.set(event.targetId!, attack.elapsed);
+    }
+    assert.equal(hitTimes.size, 3, `${speed} APS reaches both edge targets and the center`);
+    assert.ok(hitTimes.get(targets[0].id)! < hitTimes.get(targets[1].id)!);
+    assert.ok(hitTimes.get(targets[1].id)! <= hitTimes.get(targets[2].id)!);
+    const midpoint = (attack.activeStart + attack.activeEnd) / 2;
+    assert.ok(Math.abs(hitTimes.get(targets[1].id)! - midpoint) <= FIXED_STEP + .005,
+      `${speed} APS center contact occurs when the blade crosses center, not at startup`);
+    for (const enemy of targets) assert.equal(enemy.hp, enemy.maxHp - 24);
+  }
+});
+
+test('a tick spanning the entire active window still resolves the whole swept blade once', () => {
+  const sim = make();
+  const enemy = target(sim, 55);
+  sim.player.attack = { elapsed: 0, duration: .02, activeStart: .001, activeEnd: .006,
+    angle: 0, range: 60, arc: Math.PI * .75, damage: 24, hitIds: new Set() };
+  sim.update(FIXED_STEP, idle);
+  assert.equal(enemy.hp, enemy.maxHp - 24);
+  advance(sim, .1);
+  assert.equal(sim.drainEvents().filter(event => event.type === 'hit').length, 1);
+});
+
+test('enemy contact identifies the target and starts one full impact flash', () => {
+  const sim = make();
+  const enemy = target(sim, 40);
+  sim.update(FIXED_STEP, { ...idle, attack: true });
+  while (enemy.hp === enemy.maxHp && sim.time < .3) sim.update(FIXED_STEP, idle);
+  const hit = sim.drainEvents().find(event => event.type === 'hit');
+  assert.equal(hit?.targetId, enemy.id);
+  assert.equal(hit?.remainingHp, enemy.maxHp - 24);
+  assert.equal(hit?.angle, 0);
+  assert.equal(enemy.hitFlash, HIT_FLASH_DURATION);
+  assert.equal(enemy.hitAngle, 0);
+  advance(sim, .075);
+  assert.ok(Math.abs(enemy.hitFlash - (HIT_FLASH_DURATION - .075)) < 1e-9);
+  const remainingFlash = enemy.hitFlash;
+  sim.clearInput();
+  sim.update(0, idle);
+  assert.equal(enemy.hitFlash, remainingFlash, 'pause does not restart or erase an impact');
+  advance(sim, .1);
+  assert.equal(enemy.hitFlash, 0);
+  assert.equal(sim.drainEvents().filter(event => event.type === 'hit').length, 0);
+});
+
+test('player damage reacts once with incoming direction and protection does not retrigger flashes', () => {
+  const sim = make();
+  sim.projectiles.push({ id: 999, x: -15, y: 0, prevX: -15, prevY: 0, vx: 1200, vy: 0,
+    angle: 0, radius: 5, damage: 13, life: 1, maxLife: 1, owner: 'enemy' });
+  sim.update(FIXED_STEP, idle);
+  const hurt = sim.drainEvents().find(event => event.type === 'hurt');
+  assert.equal(sim.player.hp, 87);
+  assert.equal(sim.player.hitFlash, HIT_FLASH_DURATION);
+  assert.equal(sim.player.hitAngle, 0);
+  assert.equal(hurt?.angle, 0);
+  assert.equal(hurt?.remainingHp, 87);
+  assert.equal(hurt?.value, 13);
+  sim.projectiles.push({ id: 1000, x: 0, y: -15, prevX: 0, prevY: -15, vx: 0, vy: 1200,
+    angle: Math.PI / 2, radius: 5, damage: 13, life: 1, maxLife: 1, owner: 'enemy' });
+  sim.update(FIXED_STEP, idle);
+  assert.equal(sim.player.hp, 87);
+  assert.ok(Math.abs(sim.player.hitFlash - (HIT_FLASH_DURATION - FIXED_STEP)) < 1e-9);
+  assert.equal(sim.player.hitAngle, 0, 'an immune contact cannot change recoil direction');
+  assert.equal(sim.drainEvents().filter(event => event.type === 'hurt').length, 0);
+  advance(sim, .175);
+  assert.equal(sim.player.hitFlash, 0);
+  assert.ok(sim.player.invulnerable > 0, 'damage protection outlasts the visual hit flash');
+  sim.reset();
+  assert.equal(sim.player.hitFlash, 0);
+  assert.equal(sim.player.hitAngle, 0);
 });
 
 test('knockback is a continuous decaying motion after impact', () => {
@@ -217,12 +306,12 @@ test('knockback is a continuous decaying motion after impact', () => {
     const x: number = enemy.x;
     sim.update(FIXED_STEP, idle);
     const travel = enemy.x - x;
-    assert.ok(travel >= 0 && travel < 0.5, 'one tick only advances a fraction of the shove');
+    assert.ok(travel >= 0 && travel < 0.7, 'one tick only advances a fraction of the shove');
     assert.ok(travel <= previousTravel + 1e-9, 'impact slows continuously');
     assert.equal(enemy.prevX, x);
     previousTravel = travel;
   }
-  assert.ok(enemy.x > 42.9 && enemy.x <= 43, 'the integrated motion retains the original three-pixel brute shove');
+  assert.ok(enemy.x > 44.9 && enemy.x <= 45, 'the integrated motion delivers the five-pixel brute shove');
 });
 
 test('knockback respects enemy collision radius through the entire motion', () => {
@@ -242,7 +331,7 @@ test('knockback respects enemy collision radius through the entire motion', () =
 test('dodge buffer waits for sword recovery and consumes once', () => {
   const sim = make();
   sim.update(FIXED_STEP, { ...idle, attack: true });
-  advance(sim, 0.075);
+  advance(sim, 0.15);
   sim.update(FIXED_STEP, { ...idle, dodge: true });
   assert.equal(sim.player.dodgeCharges, 2);
   advance(sim, 0.1);
@@ -255,7 +344,7 @@ test('a dodge buffered too early expires before the attack can cancel', () => {
   const sim = make();
   sim.update(FIXED_STEP, { ...idle, attack: true });
   sim.update(FIXED_STEP, { ...idle, dodge: true });
-  advance(sim, 0.2);
+  advance(sim, 0.3);
   assert.equal(sim.player.dodgeCharges, 2);
 });
 
@@ -314,7 +403,7 @@ test('ember costs mana once and releases after its windup', () => {
 
 test('ember can cancel sword recovery while attack remains held', () => {
   const sim = make();
-  advance(sim, 0.15, { attack: true });
+  advance(sim, 0.25, { attack: true });
   sim.update(FIXED_STEP, { ...idle, attack: true, cast: true });
   assert.equal(sim.player.attack, null);
   assert.ok(sim.player.castTime > 0);

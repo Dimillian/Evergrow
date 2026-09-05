@@ -1,8 +1,10 @@
 import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, SimulationOptions, WorldQuery } from './model.ts';
 import type { Pickup } from './model.ts';
 import { createBaseStats, createStartingEquipment, deriveAttackStats } from './equipment.ts';
+import { getActiveSwingOffset } from './attack-motion.ts';
 
 export const FIXED_STEP = 1 / 120;
+export const HIT_FLASH_DURATION = .16;
 const TAU = Math.PI * 2;
 const BUFFER = 0.11;
 const ATTACK_BUFFER = 0.22;
@@ -50,7 +52,7 @@ function initialPlayer(x: number, y: number): Player {
     stats: createBaseStats(), equipment: createStartingEquipment(),
     attack: null, dodgeTime: 0, dodgeAngle: 0, dodgeCharges: 2, dodgeRecharge: 0,
     invulnerable: 0, flasks: 2, healCooldown: 0, castCooldown: 0, castTime: 0,
-    castAngle: 0, healFlash: 0, walkTime: 0, radius: 9, dead: false,
+    castAngle: 0, healFlash: 0, hitFlash: 0, hitAngle: 0, walkTime: 0, radius: 9, dead: false,
   };
 }
 
@@ -146,7 +148,7 @@ export class Simulation {
     const enemy: Enemy = {
       id: this.nextId++, x, y, prevX: x, prevY: y, vx: 0, vy: 0, knockbackX: 0, knockbackY: 0, angle: 0, hp: stats.hp, maxHp: stats.hp,
       kind, state: 'idle', stateTime: 0, stateDuration: 0.45 + this.random() * 0.35,
-      attackAngle: 0, hitFlash: 0, radius: stats.radius, stagger: 0,
+      attackAngle: 0, hitFlash: 0, hitAngle: 0, radius: stats.radius, stagger: 0,
       attackHit: false, interrupted: false,
     };
     this.enemies.push(enemy);
@@ -164,6 +166,9 @@ export class Simulation {
 
   private step(dt: number, input: Input): void {
     this.capturePositions();
+    // Decrement before damage resolves so every new impact gets a full flash.
+    this.player.hitFlash = Math.max(0, this.player.hitFlash - dt);
+    for (const enemy of this.enemies) enemy.hitFlash = Math.max(0, enemy.hitFlash - dt);
     this.time += dt;
     if (input.attack) this.attackBuffer = this.time + ATTACK_BUFFER;
     if (input.cast) this.castBuffer = this.time + BUFFER;
@@ -221,10 +226,11 @@ export class Simulation {
     }
 
     if (p.attack) {
+      const previousElapsed = p.attack.elapsed;
       // Let aim corrections steer anticipation, then lock the actual contact arc.
       if (p.attack.elapsed < p.attack.activeStart) p.attack.angle = p.angle;
       p.attack.elapsed += dt;
-      if (p.attack.elapsed >= p.attack.activeStart && p.attack.elapsed < p.attack.activeEnd) this.resolveMelee(p.attack);
+      if (p.attack.elapsed >= p.attack.activeStart && previousElapsed < p.attack.activeEnd) this.resolveMelee(p.attack, previousElapsed);
       if (p.attack.elapsed + 1e-9 >= p.attack.duration) {
         // Carry sub-tick recovery time so repeated swings keep the derived rate.
         completedAttackTime = Math.max(0, p.attack.elapsed - p.attack.duration);
@@ -309,14 +315,21 @@ export class Simulation {
     this.events.push({ type: 'swing', x: this.player.x, y: this.player.y, angle: this.player.angle });
   }
 
-  private resolveMelee(attack: Attack): void {
+  private resolveMelee(attack: Attack, previousElapsed: number): void {
     const p = this.player;
+    const activeDuration = attack.activeEnd - attack.activeStart;
+    const before = getActiveSwingOffset((previousElapsed - attack.activeStart) / activeDuration, attack.arc);
+    const after = getActiveSwingOffset((attack.elapsed - attack.activeStart) / activeDuration, attack.arc);
+    // A small blade width is included, while keeping the advertised arc bounds.
+    const from = Math.max(-attack.arc / 2, before - .055);
+    const to = Math.min(attack.arc / 2, after + .055);
+    const angle = attack.angle + (from + to) / 2;
     for (const enemy of this.enemies) {
       if (enemy.state === 'dead' || attack.hitIds.has(enemy.id)) continue;
-      if (!circleIntersectsSector(enemy.x, enemy.y, enemy.radius, p.x, p.y, attack.angle, attack.range, attack.arc)) continue;
+      if (!circleIntersectsSector(enemy.x, enemy.y, enemy.radius, p.x, p.y, angle, attack.range, to - from)) continue;
       if (!this.lineOfSight(p.x, p.y, enemy.x, enemy.y)) continue;
       attack.hitIds.add(enemy.id);
-      this.damageEnemy(enemy, attack.damage, attack.angle, true);
+      this.damageEnemy(enemy, attack.damage, Math.atan2(enemy.y - p.y, enemy.x - p.x), true);
     }
   }
 
@@ -329,11 +342,13 @@ export class Simulation {
   private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean): void {
     if (enemy.state === 'dead') return;
     enemy.hp = Math.max(0, enemy.hp - damage);
-    enemy.hitFlash = 0.09;
-    const shove = enemy.kind === 'brute' ? 3 : 10;
+    enemy.hitFlash = HIT_FLASH_DURATION;
+    enemy.hitAngle = angle;
+    const shove = enemy.kind === 'brute' ? 5 : 14;
     enemy.knockbackX += Math.cos(angle) * shove / KNOCKBACK_DECAY;
     enemy.knockbackY += Math.sin(angle) * shove / KNOCKBACK_DECAY;
-    this.events.push({ type: 'hit', x: enemy.x, y: enemy.y, angle, value: damage, enemyKind: enemy.kind });
+    this.events.push({ type: 'hit', x: enemy.x, y: enemy.y, angle, value: damage,
+      targetId: enemy.id, remainingHp: enemy.hp, enemyKind: enemy.kind });
     if (enemy.hp <= 0) {
       this.transition(enemy, 'dead', 0.5);
       this.kills++;
@@ -344,9 +359,10 @@ export class Simulation {
       }
       const health = this.kills % 3 === 0;
       if (this.pickups.length < 32) this.pickups.push({ id: this.nextId++, x: enemy.x, y: enemy.y, kind: health ? 'health' : 'mana', value: health ? 12 : 16, life: 20, radius: 4 });
-      this.events.push({ type: 'kill', x: enemy.x, y: enemy.y, angle, enemyKind: enemy.kind });
+      this.events.push({ type: 'kill', x: enemy.x, y: enemy.y, angle,
+        targetId: enemy.id, remainingHp: 0, enemyKind: enemy.kind });
     } else if (enemy.kind !== 'brute' && melee) {
-      enemy.stagger = 0.1;
+      enemy.stagger = .16;
       if (enemy.state === 'windup') {
         enemy.interrupted = true;
         this.transition(enemy, 'recover', 0.3);
@@ -370,7 +386,6 @@ export class Simulation {
     for (const enemy of this.enemies) {
       const stats = ENEMY_STATS[enemy.kind];
       this.updateKnockback(enemy, dt);
-      enemy.hitFlash = Math.max(0, enemy.hitFlash - dt);
       enemy.stateTime += dt;
       if (enemy.state === 'dead') continue;
       if (enemy.stagger > 0) {
@@ -474,9 +489,12 @@ export class Simulation {
     const p = this.player;
     if (p.dead || p.invulnerable > 0) return;
     p.hp = Math.max(0, p.hp - amount);
+    p.hitFlash = HIT_FLASH_DURATION;
+    p.hitAngle = angle;
     this.hurtGuard = 0.3;
     p.invulnerable = 0.3;
-    this.events.push({ type: 'hurt', x: p.x, y: p.y, angle, value: amount, enemyKind: kind, heavy: amount >= 20 });
+    this.events.push({ type: 'hurt', x: p.x, y: p.y, angle, value: amount,
+      remainingHp: p.hp, enemyKind: kind, heavy: amount >= 20 });
     if (p.hp <= 0) {
       p.dead = true;
       p.attack = null;

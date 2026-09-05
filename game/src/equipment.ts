@@ -11,11 +11,11 @@ export interface DerivedAttackStats {
 export const STARTING_SWORD: WeaponDefinition = {
   id: 'weathered-sword',
   name: 'Weathered Sword',
-  baseAttacksPerSecond: 3.5,
+  baseAttacksPerSecond: 2,
   damage: 24,
-  reach: 54,
-  arc: 105 * Math.PI / 180,
-  visual: { kind: 'sword', length: 25, width: 3.4, metal: '#86b3a3', edge: '#f7e8b8', grip: '#715332', guard: '#dba25b' },
+  reach: 60,
+  arc: 135 * Math.PI / 180,
+  visual: { kind: 'sword', length: 30, width: 3.4, metal: '#86b3a3', edge: '#f7e8b8', grip: '#715332', guard: '#dba25b' },
 };
 
 export function createBaseStats(): CharacterStats {

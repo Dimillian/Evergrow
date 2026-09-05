@@ -336,6 +336,7 @@ class Game {
     window.clearTimeout(this.toastTimer);
     this.abort.abort();
     this.fx.dispose();
+    this.audio.dispose();
   }
 }
 

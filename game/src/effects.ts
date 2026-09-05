@@ -1,61 +1,80 @@
-import { getSwingAngle, PLAYER_ART_SCALE } from './art.ts';
+import { getSwingAngle, getPlayerSwordTip } from './art.ts';
+import { playerPose } from './character-pose.ts';
 import { drawGlow } from './lighting.ts';
 import type { PointLight } from './lighting.ts';
-import type { CombatEvent, Player } from './model.ts';
+import type { CombatEvent } from './model.ts';
 import type { Simulation } from './simulation.ts';
 import { text } from './font.ts';
+import { SwordTrail } from './sword-trail.ts';
 
 interface Spark {
   x: number; y: number; vx: number; vy: number;
   z: number; vz: number; curl: number;
-  life: number; max: number; size: number; color: string;
+  life: number; max: number; size: number; color: string; luminous: boolean;
 }
 interface Flash { x: number; y: number; life: number; max: number; radius: number; color: string; ring: boolean; }
-interface Popup { x: number; y: number; life: number; value: string; color: string; size: number; }
-const GOLD = '#ffad48', FIRE = '#ff643b', MINT = '#54e8b8', BLUE = '#64baff';
+interface Impact { x: number; y: number; angle: number; life: number; max: number; color: string; hurt: boolean; lethal: boolean; }
+interface Popup { x: number; y: number; vx: number; vy: number; life: number; max: number; value: string; color: string; size: number; }
+const GOLD = '#ffbd63', FIRE = '#ff643b', MINT = '#54e8b8', BLUE = '#64baff';
 
 /** Effects never drive gameplay. All collections and continuous emitters are bounded. */
 export class CombatEffects {
   private sparks: Spark[] = [];
   private flashes: Flash[] = [];
+  private impacts: Impact[] = [];
   private popups: Popup[] = [];
   private emitterTime = 0;
+  private sword = new SwordTrail();
 
-  reset() { this.sparks = []; this.flashes = []; this.popups = []; this.emitterTime = 0; }
+  reset() {
+    this.sparks = []; this.flashes = []; this.impacts = []; this.popups = [];
+    this.emitterTime = 0; this.sword.reset();
+  }
 
-  private spark(x: number, y: number, angle: number, color: string, strength = 1, airborne = true) {
-    const speed = (35 + Math.random() * 150) * strength;
-    const life = .25 + Math.random() * .5;
+  private spark(x: number, y: number, angle: number, color: string, strength = 1, airborne = true, luminous = true) {
+    const speed = (40 + Math.random() * 170) * strength;
+    const life = .2 + Math.random() * .48;
     this.sparks.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-      z: airborne ? 9 : 0, vz: airborne ? 25 + Math.random() * 100 : 0,
-      curl: (Math.random() - .5) * 5, life, max: life, size: .7 + Math.random() * 1.6, color });
+      z: airborne ? 15 : 0, vz: airborne ? 25 + Math.random() * 95 : 0,
+      curl: (Math.random() - .5) * (luminous ? 5 : 1.2), life, max: life,
+      size: luminous ? .8 + Math.random() * 1.7 : 1.6 + Math.random() * 2, color, luminous });
   }
 
   handleEvents(events: CombatEvent[]) {
     for (const event of events) {
       const enemyCast = event.type === 'cast' && event.enemyKind;
-      const color = event.type === 'hurt' ? FIRE : event.type === 'heal' || enemyCast ? MINT
+      const contact = event.type === 'hit' || event.type === 'hurt' || event.type === 'kill';
+      const color = event.type === 'hurt' ? '#ff5e4e' : event.type === 'heal' || enemyCast ? MINT
         : event.type === 'dodge' ? BLUE : event.type === 'cast' ? FIRE : GOLD;
-      const count = event.type === 'hit' ? (event.heavy ? 32 : 20) : event.type === 'kill' ? 44
-        : event.type === 'hurt' ? 24 : event.type === 'cast' ? 18 : event.type === 'heal' ? 30
-        : event.type === 'pickup' ? 10 : event.type === 'dodge' ? 14 : event.type === 'swing' ? 5 : 0;
+      const count = event.type === 'hit' ? 30 : event.type === 'kill' ? 42
+        : event.type === 'hurt' ? 32 : event.type === 'cast' ? 18 : event.type === 'heal' ? 30
+        : event.type === 'pickup' ? 10 : event.type === 'dodge' ? 14 : 0;
+      const bodyColor = event.type === 'hurt' ? '#b64143' : event.enemyKind === 'caster' ? '#7dbf98'
+        : event.enemyKind === 'brute' ? '#b6a184' : '#a44349';
       for (let i = 0; i < count; i++) {
         const radial = ['kill', 'heal', 'pickup'].includes(event.type);
-        const angle = radial ? Math.random() * Math.PI * 2 : (event.angle ?? 0) + (Math.random() - .5) * 3.4;
-        this.spark(event.x, event.y, angle, i % 4 === 0 ? '#fff0b4' : color, event.heavy ? 1.3 : 1);
+        const angle = radial ? Math.random() * Math.PI * 2 : (event.angle ?? 0) + (Math.random() - .5) * 2.8;
+        const debris = contact && i % 3 === 0;
+        this.spark(event.x, event.y, angle, debris ? bodyColor : i % 4 === 0 ? '#fff7db' : color,
+          contact ? 1.2 : 1, true, !debris);
       }
+      const contactY = event.y - (event.type === 'hurt' ? 24 : event.enemyKind === 'brute' ? 25 : 18);
+      if (contact) this.impacts.push({ x: event.x, y: contactY, angle: event.angle ?? 0,
+        life: event.type === 'kill' ? .3 : .22, max: event.type === 'kill' ? .3 : .22,
+        color, hurt: event.type === 'hurt', lethal: event.type === 'kill' });
       if (count > 5) {
-        const max = event.type === 'heal' ? .55 : event.type === 'kill' ? .32 : .17;
-        this.flashes.push({ x: event.x, y: event.y - 10, life: max, max,
-          radius: event.heavy || event.type === 'kill' ? 135 : 90, color,
-          ring: event.type === 'kill' || event.type === 'heal' || !!event.heavy });
+        const max = event.type === 'heal' ? .55 : event.type === 'kill' ? .32 : .22;
+        this.flashes.push({ x: event.x, y: contact ? contactY : event.y - 10, life: max, max,
+          radius: event.type === 'kill' || event.heavy ? 145 : contact ? 118 : 90, color,
+          ring: event.type === 'kill' || event.type === 'heal' });
       }
-      if (event.type === 'hit' && event.value) this.popups.push({ x: event.x + (Math.random() - .5) * 12,
-        y: event.y - 36, life: .7, value: String(Math.round(event.value)),
-        color: event.heavy ? '#fff0aa' : '#f1e6cc', size: event.heavy ? 2 : 1.5 });
-      if (event.type === 'hurt' || event.type === 'heal') this.popups.push({ x: event.x, y: event.y - 58,
-        life: .8, value: (event.type === 'hurt' ? '-' : '+') + Math.round(event.value ?? 0),
-        color: event.type === 'hurt' ? '#ff8d72' : '#83ffbb', size: 2 });
+      if (event.type === 'hit' && event.value) this.popups.push({ x: event.x + (Math.random() - .5) * 10,
+        y: event.y - (event.enemyKind === 'brute' ? 54 : 44), vx: (Math.random() - .5) * 22, vy: -47,
+        life: .85, max: .85, value: String(Math.round(event.value)), color: '#fff0c8', size: 2 });
+      if (event.type === 'hurt' || event.type === 'heal') this.popups.push({ x: event.x, y: event.y - 61,
+        vx: Math.cos(event.angle ?? 0) * 14, vy: -55, life: .95, max: .95,
+        value: (event.type === 'hurt' ? '-' : '+') + Math.round(event.value ?? 0),
+        color: event.type === 'hurt' ? '#ff9075' : '#83ffbb', size: event.type === 'hurt' ? 2.5 : 2 });
     }
     this.trim();
   }
@@ -63,11 +82,13 @@ export class CombatEffects {
   private trim() {
     if (this.sparks.length > 650) this.sparks.splice(0, this.sparks.length - 650);
     if (this.flashes.length > 22) this.flashes.splice(0, this.flashes.length - 22);
+    if (this.impacts.length > 24) this.impacts.splice(0, this.impacts.length - 24);
     if (this.popups.length > 35) this.popups.splice(0, this.popups.length - 35);
   }
 
   update(sim: Simulation, dt: number) {
     if (dt <= 0) return;
+    this.sword.update(sim.player, dt, sim.time, sim.interpolationAlpha);
     for (const spark of this.sparks) {
       spark.life -= dt;
       const angle = spark.curl * dt, cos = Math.cos(angle), sin = Math.sin(angle);
@@ -75,24 +96,33 @@ export class CombatEffects {
       spark.vy = (spark.vx * sin + spark.vy * cos) * Math.exp(-dt * 1.7);
       spark.vx = vx * Math.exp(-dt * 1.7);
       spark.x += spark.vx * dt; spark.y += spark.vy * dt;
-      spark.z = Math.max(0, spark.z + spark.vz * dt); spark.vz -= dt * 170;
+      spark.z = Math.max(0, spark.z + spark.vz * dt); spark.vz -= dt * 190;
     }
     for (const flash of this.flashes) flash.life -= dt;
-    for (const popup of this.popups) { popup.life -= dt; popup.y -= dt * 26; }
+    for (const impact of this.impacts) impact.life -= dt;
+    for (const popup of this.popups) {
+      popup.life -= dt; popup.x += popup.vx * dt; popup.y += popup.vy * dt;
+      popup.vx *= Math.exp(-dt * 2.5); popup.vy = Math.min(-17, popup.vy + dt * 60);
+    }
     this.sparks = this.sparks.filter(s => s.life > 0);
     this.flashes = this.flashes.filter(f => f.life > 0);
+    this.impacts = this.impacts.filter(i => i.life > 0);
     this.popups = this.popups.filter(p => p.life > 0);
+    // Let the final impact disperse behind the death menu without emitting forever
+    // from projectiles whose gameplay state has already stopped.
+    if (sim.player.dead) return;
     this.emitterTime += dt;
     while (this.emitterTime >= .016) {
       this.emitterTime -= .016;
       const p = sim.player, attack = p.attack;
-      if (attack && attack.elapsed >= attack.activeStart && attack.elapsed <= attack.activeEnd + .025) {
+      if (attack && attack.elapsed >= attack.activeStart && attack.elapsed <= attack.activeEnd) {
         const angle = getSwingAngle(attack.angle, attack.elapsed / attack.duration,
           attack.activeStart / attack.duration, attack.activeEnd / attack.duration, attack.arc);
-        const reach = (15 + p.equipment.mainHand.visual.length) * PLAYER_ART_SCALE;
-        const x = p.x + Math.cos(angle) * reach, y = p.y - 20 * PLAYER_ART_SCALE + Math.sin(angle) * reach * .86;
+        const tip = getPlayerSwordTip(playerPose(p, sim.time));
+        const x = p.prevX + (p.x - p.prevX) * sim.interpolationAlpha + tip.x;
+        const y = p.prevY + (p.y - p.prevY) * sim.interpolationAlpha + tip.y;
         for (let i = 0; i < 2; i++) this.spark(x, y, angle + 1.3,
-          i === 0 ? '#fff0d4' : (p.equipment.mainHand.visual.glow ?? '#bad8ef'), .55, false);
+          i === 0 ? '#fff0d4' : (p.equipment.mainHand.visual.glow ?? GOLD), .5, false);
       }
       for (const shot of sim.projectiles.slice(0, 32)) {
         this.spark(shot.x, shot.y, shot.angle + Math.PI + (Math.random() - .5),
@@ -109,32 +139,56 @@ export class CombatEffects {
 
   getLights(): PointLight[] {
     return this.flashes.slice(-7).map(f => ({ x: f.x, y: f.y, radius: f.radius,
-      power: f.life / f.max * .85, color: f.color }));
+      power: Math.pow(f.life / f.max, .75), color: f.color }));
   }
+
+  drawSword(c: CanvasRenderingContext2D) { this.sword.draw(c); }
 
   draw(c: CanvasRenderingContext2D) {
     c.save();
     for (const flash of this.flashes) {
       c.globalAlpha = 1;
       const t = flash.life / flash.max;
-      drawGlow(c, flash.x, flash.y, flash.radius * .5, flash.color, t * .4);
+      drawGlow(c, flash.x, flash.y, flash.radius * .5, flash.color, t * .52);
       if (flash.ring) {
-        c.globalAlpha = t * .7;
+        c.globalAlpha = t * .65;
         c.strokeStyle = flash.color; c.lineWidth = 1 + t * 2;
-        c.beginPath(); c.ellipse(flash.x, flash.y + 10, 8 + (1 - t) * 47, 4 + (1 - t) * 24, 0, 0, Math.PI * 2); c.stroke();
+        c.beginPath(); c.ellipse(flash.x, flash.y + 14, 8 + (1 - t) * 47, 4 + (1 - t) * 24, 0, 0, Math.PI * 2); c.stroke();
       }
     }
-    c.globalCompositeOperation = 'lighter';
+    for (const impact of this.impacts) this.drawImpact(c, impact);
     for (const spark of this.sparks) {
       const t = Math.min(1, spark.life / spark.max * 1.8), y = spark.y - spark.z;
+      c.globalCompositeOperation = spark.luminous ? 'lighter' : 'source-over';
       c.globalAlpha = t;
-      // Bright cores and fading tangential ribbons make motion readable between frames.
-      c.strokeStyle = spark.color; c.lineWidth = spark.size * .65;
-      c.beginPath(); c.moveTo(spark.x - spark.vx * .032, y - (spark.vy - spark.vz) * .026);
+      c.strokeStyle = spark.color; c.lineWidth = spark.size * .75;
+      c.beginPath(); c.moveTo(spark.x - spark.vx * .038, y - (spark.vy - spark.vz) * .026);
       c.lineTo(spark.x, y); c.stroke();
-      c.fillStyle = spark.life > spark.max * .65 ? '#fff0c9' : spark.color;
+      c.fillStyle = spark.luminous && spark.life > spark.max * .65 ? '#fff0c9' : spark.color;
       c.fillRect(spark.x - spark.size / 2, y - spark.size / 2, spark.size, spark.size);
-      if (spark.size > 1.7) drawGlow(c, spark.x, y, 8, spark.color, t * .35);
+      if (spark.luminous && spark.size > 1.7) drawGlow(c, spark.x, y, 8, spark.color, t * .4);
+    }
+    c.restore();
+  }
+
+  private drawImpact(c: CanvasRenderingContext2D, impact: Impact) {
+    const t = Math.max(0, impact.life / impact.max), elapsed = 1 - t;
+    c.save(); c.translate(impact.x, impact.y); c.rotate(impact.angle);
+    c.globalCompositeOperation = 'lighter';
+    c.globalAlpha = Math.pow(t, 1.5);
+    const length = (impact.lethal ? 30 : 23) * Math.sin(Math.min(1, elapsed * 2 + .25) * Math.PI / 2);
+    const waist = 3.7 * t;
+    c.fillStyle = elapsed < .3 ? '#fff8da' : impact.color;
+    // The contact has a hard, brief center, followed by an expanding broken star.
+    c.beginPath(); c.moveTo(-length * .7, 0); c.lineTo(-waist, -waist);
+    c.lineTo(0, -length * .65); c.lineTo(waist, -waist);
+    c.lineTo(length, 0); c.lineTo(waist, waist);
+    c.lineTo(0, length * .65); c.lineTo(-waist, waist); c.closePath(); c.fill();
+    c.rotate(impact.hurt ? -.6 : .65);
+    c.strokeStyle = impact.color; c.lineWidth = 1.3 * t;
+    for (let i = 0; i < 3; i++) {
+      const a = i * 2.1 + elapsed * .35, r = 11 + elapsed * (impact.hurt ? 29 : 20);
+      c.beginPath(); c.ellipse(0, 0, r, r * .7, 0, a, a + .6); c.stroke();
     }
     c.restore();
   }
@@ -142,42 +196,14 @@ export class CombatEffects {
   drawNumbers(c: CanvasRenderingContext2D) {
     c.save();
     for (const popup of this.popups) {
-      c.globalAlpha = Math.min(1, popup.life / .18);
-      text(c, popup.value, popup.x + 1, popup.y + 1, popup.size, '#071016', 'center');
-      text(c, popup.value, popup.x, popup.y, popup.size, popup.color, 'center');
+      const elapsed = popup.max - popup.life;
+      const pop = 1 + .35 * Math.exp(-elapsed * 22);
+      const size = popup.size * pop;
+      c.globalAlpha = Math.min(1, popup.life / .2);
+      text(c, popup.value, popup.x - 1, popup.y, size, '#04070b', 'center');
+      text(c, popup.value, popup.x + 1, popup.y + 1, size, '#04070b', 'center');
+      text(c, popup.value, popup.x, popup.y, size, popup.color, 'center');
     }
     c.restore();
   }
-}
-
-/** A short moving glint follows the sword tip; there is no filled damage arc. */
-export function drawSwordTrail(c: CanvasRenderingContext2D, p: Player, x: number, y: number) {
-  const a = p.attack;
-  if (!a || a.elapsed < a.activeStart || a.elapsed > a.activeEnd + .065) return;
-  const fade = Math.max(0, 1 - Math.max(0, a.elapsed - a.activeEnd) / .065);
-  const end = Math.min(a.activeEnd, a.elapsed);
-  const start = Math.max(a.activeStart, end - (a.activeEnd - a.activeStart) * .2);
-  const angleAt = (time: number) => getSwingAngle(a.angle, time / a.duration,
-    a.activeStart / a.duration, a.activeEnd / a.duration, a.arc);
-  const radius = (15 + p.equipment.mainHand.visual.length) * PLAYER_ART_SCALE;
-  c.save();
-  c.globalCompositeOperation = 'lighter';
-  for (let band = 0; band < 2; band++) {
-    c.strokeStyle = band === 0 ? (p.equipment.mainHand.visual.glow ?? '#bad8ef') : '#f1fcff';
-    c.lineWidth = band === 0 ? 3.5 : .8;
-    c.globalAlpha = fade * (band === 0 ? .16 : .64);
-    c.beginPath();
-    for (let i = 0; i <= 10; i++) {
-      const angle = angleAt(start + (end - start) * i / 10);
-      const sx = x + Math.cos(angle) * radius;
-      const sy = y - 20 * PLAYER_ART_SCALE + Math.sin(angle) * radius * .86;
-      if (i === 0) c.moveTo(sx, sy); else c.lineTo(sx, sy);
-    }
-    c.stroke();
-  }
-  const tip = angleAt(end);
-  drawGlow(c, x + Math.cos(tip) * radius,
-    y - 20 * PLAYER_ART_SCALE + Math.sin(tip) * radius * .86, 14,
-    (p.equipment.mainHand.visual.glow ?? '#bad8ef'), fade * .22);
-  c.restore();
 }
