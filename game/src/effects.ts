@@ -6,6 +6,7 @@ import type { CombatEvent } from './model.ts';
 import type { Simulation } from './simulation.ts';
 import { text } from './font.ts';
 import { SwordTrail } from './sword-trail.ts';
+import { PLAYER_ABILITIES } from './combat-content.ts';
 
 interface Spark {
   x: number; y: number; vx: number; vy: number;
@@ -75,8 +76,10 @@ export class CombatEffects {
         vx: Math.cos(event.angle ?? 0) * 14, vy: -55, life: .95, max: .95,
         value: (event.type === 'hurt' ? '-' : '+') + Math.round(event.value ?? 0),
         color: event.type === 'hurt' ? '#ff9075' : '#83ffbb', size: event.type === 'hurt' ? 2.5 : 2 });
+      // Large event batches must not allocate their entire particle history
+      // before enforcing the cap. Keep the same newest effects after each event.
+      this.trim();
     }
-    this.trim();
   }
 
   private trim() {
@@ -87,7 +90,7 @@ export class CombatEffects {
   }
 
   update(sim: Simulation, dt: number) {
-    if (dt <= 0) return;
+    if (!Number.isFinite(dt) || dt <= 0) return;
     this.sword.update(sim.player, dt, sim.time, sim.interpolationAlpha);
     for (const spark of this.sparks) {
       spark.life -= dt;
@@ -111,7 +114,9 @@ export class CombatEffects {
     // Let the final impact disperse behind the death menu without emitting forever
     // from projectiles whose gameplay state has already stopped.
     if (sim.player.dead) return;
-    this.emitterTime += dt;
+    // Expire existing visuals using real elapsed time, but do not replay a long
+    // backlog of continuous emission after a stalled or suspended frame.
+    this.emitterTime += Math.min(dt, .05);
     while (this.emitterTime >= .016) {
       this.emitterTime -= .016;
       const p = sim.player, attack = p.attack;
@@ -128,7 +133,7 @@ export class CombatEffects {
         this.spark(shot.x, shot.y, shot.angle + Math.PI + (Math.random() - .5),
           shot.owner === 'player' ? (Math.random() > .5 ? FIRE : GOLD) : MINT, .3, false);
       }
-      if (p.castTime > .145) {
+      if (p.castTime > PLAYER_ABILITIES.ember.releaseRemaining) {
         const angle = sim.time * 22;
         this.spark(p.x + Math.cos(p.castAngle) * 17 + Math.cos(angle) * 8,
           p.y - 22 + Math.sin(p.castAngle) * 12 + Math.sin(angle) * 8, angle + Math.PI / 2, GOLD, .25, false);

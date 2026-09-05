@@ -2,20 +2,20 @@ import { ArtLibrary, drawHumanoid, getPlayerSwordTip, PLAYER_ART_SCALE } from '.
 import type { CharacterPose } from './art.ts';
 import { World } from './world.ts';
 import { GroundLayer } from './ground-layer.ts';
-import type { Prop } from './world.ts';
-import { HIT_FLASH_DURATION } from './simulation.ts';
 import type { Simulation } from './simulation.ts';
 import type { CombatEvent, Enemy } from './model.ts';
 import { text } from './font.ts';
-import { drawFloatingHUD, isHUDPoint } from './hud.ts';
+import { drawFloatingHUD } from './hud.ts';
 import { Lighting, drawGlow } from './lighting.ts';
 import type { PointLight } from './lighting.ts';
 import { CombatEffects } from './effects.ts';
 import { playerPose } from './character-pose.ts';
 import { SettlementArt } from './settlement-art.ts';
 import { EnvironmentArt } from './environment-art.ts';
-import type { Building } from './settlements.ts';
-import { getMinimapRect } from './world-map.ts';
+import { SceneVisibility } from './scene-visibility.ts';
+import { isGameUIPoint } from './ui-hit-test.ts';
+import type { GamePhase } from './game-phase.ts';
+import { COMBAT_TIMING, PLAYER_ABILITIES, ENEMY_DEFINITIONS } from './combat-content.ts';
 import { CameraZoom, cameraView, screenToWorld, worldToScreen } from './camera.ts';
 import { EnemyFocus } from './enemy-focus.ts';
 import { drawEnemyPlate } from './enemy-plate.ts';
@@ -24,7 +24,7 @@ interface Corpse { x: number; y: number; angle: number; kind: Enemy['kind']; lif
 interface Ghost { x: number; y: number; angle: number; gait: number; life: number; }
 export interface RenderSettings {
   reducedMotion: boolean;
-  phase: 'ready' | 'playing' | 'paused' | 'dead' | 'map'; fps: number; debug: boolean;
+  phase: GamePhase; fps: number; debug: boolean;
 }
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const TAU = Math.PI * 2;
@@ -54,15 +54,15 @@ export class Renderer {
   private groundLayer = new GroundLayer();
   private settlementArt = new SettlementArt();
   private environmentArt = new EnvironmentArt();
-  private cachedBuildings: Building[] = [];
+  private visibility = new SceneVisibility();
+  private get cachedBuildings() { return this.visibility.buildings; }
   private indoorBlend = 0;
   private lighting = new Lighting();
   private corpses: Corpse[] = [];
   private ghosts: Ghost[] = [];
   private ghostTimer = 0;
   private visualTime = 0;
-  private cachedProps: Prop[] = [];
-  private queryView: { left: number; top: number; width: number; height: number } | null = null;
+  private get cachedProps() { return this.visibility.props; }
   private enemyFocus = new EnemyFocus();
   private focusedEnemy: Enemy | null = null;
   private plateEnemy: Enemy | null = null;
@@ -76,7 +76,7 @@ export class Renderer {
     this.view = cameraView(this.width, this.height, this.cameraX, this.cameraY, this.cameraZoom.value);
     // Smooth subpixel sprite translation, with the deliberately coarse art preserved by its source.
     this.ctx.imageSmoothingEnabled = true;
-    this.queryView = null;
+    this.visibility.reset();
   }
 
   get worldHeight() { return this.view.height; }
@@ -92,12 +92,12 @@ export class Renderer {
     this.cameraX = 0; this.cameraY = 0; this.effects.reset();
     this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
     this.groundLayer.reset();
-    this.settlementArt.reset(); this.cachedBuildings = []; this.indoorBlend = 0;
+    this.settlementArt.reset(); this.indoorBlend = 0;
     this.corpses = []; this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
     this.damageTrails.clear(); this.playerHealthTrail = 100; this.playerHealthHold = 0;
     this.enemyFocus.reset(); this.focusedEnemy = this.plateEnemy = null; this.plateOpacity = 0;
-    this.queryView = null;
+    this.visibility.reset();
   }
 
   handleEvents(events: CombatEvent[], reducedMotion: boolean) {
@@ -178,15 +178,7 @@ export class Renderer {
         : opacity + (this.plateOpacity - opacity) * Math.exp(-dt * 20);
       if (this.plateOpacity < .01) this.plateEnemy = null;
     }
-    const query = this.queryView;
-    // Refresh coverage when any edge moves, including zooming out while standing still.
-    if (!query || Math.abs(query.left - left) > 65 || Math.abs(query.top - top) > 65
-      || Math.abs(query.left + query.width - left - worldWidth) > 65
-      || Math.abs(query.top + query.height - top - worldHeight) > 65) {
-      this.cachedProps = world.getProps(left - 240, top - 240, worldWidth + 480, worldHeight + 480);
-      this.cachedBuildings = world.getBuildings(left - 300, top - 300, worldWidth + 600, worldHeight + 600);
-      this.queryView = this.view;
-    }
+    this.visibility.update(world, this.view);
     this.settlementArt.update(this.cachedBuildings, px, py, dt, settings.reducedMotion);
     this.indoorBlend += ((world.getBuildingAt(px, py) ? 1 : 0) - this.indoorBlend) * (1 - Math.exp(-dt * 5));
     const biome = world.sampleBiome(px, py);
@@ -245,12 +237,12 @@ export class Renderer {
     this.navigation(c, sim, world, settings);
     drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
       reducedMotion: settings.reducedMotion, healthTrail: this.playerHealthTrail / Math.max(1, p.maxHp),
-      hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / HIT_FLASH_DURATION),
+      hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / COMBAT_TIMING.hitFlashDuration),
     });
     if (this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, this.width, this.height, {
       opacity: this.plateOpacity,
       healthTrail: this.damageTrails.get(this.plateEnemy.id)?.value ?? this.plateEnemy.hp,
-      hitPulse: settings.reducedMotion ? 0 : Math.min(1, this.plateEnemy.hitFlash / HIT_FLASH_DURATION),
+      hitPulse: settings.reducedMotion ? 0 : Math.min(1, this.plateEnemy.hitFlash / COMBAT_TIMING.hitFlashDuration),
     });
     if (settings.phase === 'playing') this.cursor(c);
   }
@@ -318,7 +310,7 @@ export class Renderer {
         attack: enemy.state === 'windup' ? -Math.max(.001, enemy.stateTime / enemy.stateDuration)
           : enemy.state === 'attack' ? Math.min(1, enemy.stateTime / enemy.stateDuration) : 0,
         attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash,
-        impact: Math.min(1, enemy.hitFlash / HIT_FLASH_DURATION), impactAngle: enemy.hitAngle, dodging: false }) });
+        impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false }) });
     }
     entries.push({ y: py, draw: () => this.actor(px, py, playerPose(p, sim.time)) });
     entries.sort((a, b) => a.y - b.y);
@@ -349,8 +341,9 @@ export class Renderer {
         radius: 105, color: p.equipment.mainHand.visual.glow ?? '#ffbf67',
         power: .55 * Math.sin(Math.PI * Math.min(1, (a.elapsed - a.activeStart) / (a.activeEnd - a.activeStart + .05))), shadows: true });
     }
-    if (p.castTime > .145) lights.push({ x: px + Math.cos(p.castAngle) * 17, y: py - 17,
-      radius: 110, color: '#ff643b', power: (.22 - p.castTime) / .075 * .8 });
+    if (p.castTime > PLAYER_ABILITIES.ember.releaseRemaining) lights.push({ x: px + Math.cos(p.castAngle) * 17, y: py - 17,
+      radius: 110, color: '#ff643b', power: (PLAYER_ABILITIES.ember.duration - p.castTime)
+        / (PLAYER_ABILITIES.ember.duration - PLAYER_ABILITIES.ember.releaseRemaining) * .8 });
     if (p.healFlash > 0) lights.push({ x: px, y: py - 8, radius: 150, color: '#54e8b8', power: p.healFlash * .8 });
     lights.push(...this.effects.getLights());
     for (const shot of sim.projectiles.slice(0, 8)) lights.push({ x: shot.x, y: shot.y, radius: shot.owner === 'player' ? 115 : 85,
@@ -369,8 +362,9 @@ export class Renderer {
       c.fillStyle = '#fff0b4'; c.fillRect(x - 1.5, y - 3, 3, 6);
     }
     for (const light of lights.slice(1, 12)) drawGlow(c, light.x, light.y, light.radius * .27, light.color, light.power * .2);
-    if (p.castTime > .145) {
-      const charge = Math.max(.1, (.22 - p.castTime) / .075);
+    if (p.castTime > PLAYER_ABILITIES.ember.releaseRemaining) {
+      const charge = Math.max(.1, (PLAYER_ABILITIES.ember.duration - p.castTime)
+        / (PLAYER_ABILITIES.ember.duration - PLAYER_ABILITIES.ember.releaseRemaining));
       const x = px + Math.cos(p.castAngle) * 17, y = py - 22 + Math.sin(p.castAngle) * 12;
       drawGlow(c, x, y, 37, '#ffad48', charge * .8);
       c.fillStyle = '#fff2c0'; c.beginPath(); c.arc(x, y, 1 + charge * 3, 0, TAU); c.fill();
@@ -411,11 +405,12 @@ export class Renderer {
     const c = this.ctx, t = enemy.state === 'attack' ? 1 : Math.min(1, enemy.stateTime / Math.max(.01, enemy.stateDuration));
     const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);
     c.save();
-    if (enemy.kind === 'caster') {
+    const definition = ENEMY_DEFINITIONS[enemy.kind];
+    if (definition.attack === 'projectile') {
       c.strokeStyle = `rgba(113,255,184,${.12 + t * .4})`; c.lineWidth = 1; c.setLineDash([3, 5]);
       c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(enemy.attackAngle) * 290, y + Math.sin(enemy.attackAngle) * 290); c.stroke();
     } else {
-      const range = enemy.kind === 'brute' ? 48 : 28, arc = enemy.kind === 'brute' ? Math.PI * 1.25 : Math.PI * .7;
+      const { range, arc } = definition;
       c.fillStyle = `rgba(255,102,58,${.025 + t * .09})`; c.strokeStyle = `rgba(255,160,83,${.22 + t * .62})`;
       c.lineWidth = enemy.kind === 'brute' ? 1.5 : 1;
       c.beginPath(); c.moveTo(x, y); c.arc(x, y, range, enemy.attackAngle - arc / 2, enemy.attackAngle + arc / 2); c.closePath(); c.fill(); c.stroke();
@@ -476,10 +471,7 @@ export class Renderer {
   }
 
   private pointerOverHUD() {
-    const x = this.pointerX, y = this.pointerY;
-    const map = getMinimapRect(this.width, this.height);
-    return isHUDPoint(x, y, this.width, this.height)
-      || (x >= map.x && y >= map.y && x <= map.x + map.width && y <= map.y + map.height);
+    return isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height);
   }
 
   private cursor(c: CanvasRenderingContext2D) {

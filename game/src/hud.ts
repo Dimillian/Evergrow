@@ -1,4 +1,5 @@
 import type { Player } from './model.ts';
+import { PLAYER_ABILITIES } from './combat-content.ts';
 import { text, textWidth } from './font.ts';
 import { drawHUDSkillIcon, drawHUDMenuIcon } from './hud-icons.ts';
 import { drawHUDOrb } from './hud-orb.ts';
@@ -109,9 +110,9 @@ function chassis(c: CanvasRenderingContext2D) {
 function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
   const definitions = [
     { key: 'LMB', cooldown: 0, duration: 1, enabled: !p.dead, active: !!p.attack, color: '#c4ad7a', charges: -1 },
-    { key: 'RMB', cooldown: p.castCooldown, duration: .45, enabled: p.mana >= 20 && !p.dead, active: p.castTime > 0, color: '#df925e', charges: -1 },
-    { key: 'SPACE', cooldown: p.dodgeCharges > 0 ? 0 : Math.max(0, 1.8 - p.dodgeRecharge), duration: 1.8, enabled: p.dodgeCharges > 0 && !p.dead, active: p.dodgeTime > 0, color: '#89b5b2', charges: p.dodgeCharges },
-    { key: 'Q', cooldown: p.healCooldown, duration: .8, enabled: p.flasks > 0 && p.hp < p.maxHp && !p.dead, active: p.healFlash > 0, color: '#9fb47b', charges: p.flasks },
+    { key: 'RMB', cooldown: p.castCooldown, duration: PLAYER_ABILITIES.ember.cooldown, enabled: p.mana >= PLAYER_ABILITIES.ember.manaCost && !p.dead, active: p.castTime > 0, color: '#df925e', charges: -1 },
+    { key: 'SPACE', cooldown: p.dodgeCharges > 0 ? 0 : Math.max(0, PLAYER_ABILITIES.dodge.recharge - p.dodgeRecharge), duration: PLAYER_ABILITIES.dodge.recharge, enabled: p.dodgeCharges > 0 && !p.dead, active: p.dodgeTime > 0, color: '#89b5b2', charges: p.dodgeCharges },
+    { key: 'Q', cooldown: p.healCooldown, duration: PLAYER_ABILITIES.heal.cooldown, enabled: p.flasks > 0 && p.hp < p.maxHp && !p.dead, active: p.healFlash > 0, color: '#9fb47b', charges: p.flasks },
   ];
   definitions.forEach((slot, i) => {
     const x = SKILL_X + i * SKILL_STEP, y = SKILL_Y, w = SKILL_WIDTH, h = SKILL_HEIGHT;
@@ -145,14 +146,14 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
     c.beginPath(); c.moveTo(x + 6, y + 32.5); c.lineTo(x + w - 6, y + 32.5); c.stroke();
     text(c, slot.key, x + w / 2, y + 35, .82, slot.enabled ? '#bfc3b4' : '#717a76', 'center');
     if (slot.charges >= 0) {
-      for (let charge = 0; charge < 2; charge++) {
+      for (let charge = 0; charge < (i === 2 ? PLAYER_ABILITIES.dodge.charges : PLAYER_ABILITIES.heal.charges); charge++) {
         c.beginPath(); c.arc(x + w - 11 + charge * 5, y + 6, 1.2, 0, TAU);
         c.fillStyle = charge < slot.charges ? slot.color : '#080e13'; c.fill();
         c.strokeStyle = charge < slot.charges ? '#ddd4ad88' : '#535c50'; c.lineWidth = .5; c.stroke();
       }
-      if (i === 2 && p.dodgeCharges < 2) {
+      if (i === 2 && p.dodgeCharges < PLAYER_ABILITIES.dodge.charges) {
         c.fillStyle = '#111c21'; c.fillRect(x + 4, y + h - 1.5, w - 8, 1);
-        c.fillStyle = '#83aaa5'; c.fillRect(x + 4, y + h - 1.5, (w - 8) * clamp(p.dodgeRecharge / 1.8), 1);
+        c.fillStyle = '#83aaa5'; c.fillRect(x + 4, y + h - 1.5, (w - 8) * clamp(p.dodgeRecharge / PLAYER_ABILITIES.dodge.recharge), 1);
       }
     }
     if (slot.active) {

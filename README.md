@@ -49,7 +49,7 @@ The large map pauses combat. Hover over discovered points of interest for detail
 
 The user owns gameplay and visual verification in the in-app browser and directs the next changes. See [prototype status](docs/prototype-status.md) for what is implemented and deliberately deferred. Control documentation stays here; the game view has no how-to text or control legend.
 
-`npm test` runs deterministic engine tests. `npm run build` type-checks and creates the local production bundle. The source is tracked in a local Git repository with no remote.
+`npm run check` runs deterministic/code-level tests, strict application and browser-independent core type checks, and the local production build. It excludes automated browser playtesting. `npm run stats` reports current code/content counts, resource limits, and last-build sizes. The source is tracked in a local Git repository with no remote.
 
 ## Start here
 
@@ -61,6 +61,8 @@ The user owns gameplay and visual verification in the in-app browser and directs
 | [World and art](docs/world-and-art.md) | How does the wilderness grow, how do settlements work, and how is everything drawn? |
 | [Technical foundations](docs/technical-foundations.md) | How could a browser deliver this, and which assumptions need prototypes? |
 | [Roadmap](docs/roadmap.md) | In what order should we prove and build the game? |
+| [Implemented architecture](docs/architecture.md) | Which module owns each system, and where should we extend it? |
+| [System status and stats](docs/system-status.md) | What exists today, which checks pass, and what are the current limits? |
 
 Read the brief first, then the roadmap. The systems catalog is the implementation inventory; the three deeper documents explain the intended behavior.
 

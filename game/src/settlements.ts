@@ -1,3 +1,6 @@
+import type { WorldPOI } from './world-pois.ts';
+export type POI = WorldPOI;
+
 export interface Rect { x: number; y: number; width: number; height: number; }
 export type BuildingKind = 'blacksmith' | 'merchant' | 'inn' | 'house' | 'chapel';
 export interface Building extends Rect {
@@ -21,14 +24,7 @@ export interface Settlement {
   plaza: Rect;
   streets: Rect[];
 }
-export interface POI {
-  id: string;
-  name: string;
-  kind: 'town' | 'blacksmith' | 'merchant' | 'inn' | 'chapel' | 'shrine' | 'landmark';
-  x: number;
-  y: number;
-  description: string;
-}
+
 
 export const FIRST_TOWN_Y = -1150;
 export const TOWN_INTERVAL = 3200;
@@ -44,6 +40,19 @@ const BUILDING_DESCRIPTIONS: Record<BuildingKind, string> = {
   house: 'A modest timber home tucked beside the road.',
   chapel: 'Candles gather around an old stone altar beneath dark rafters.',
 };
+
+/** Cached generation is a blueprint; future mutable settlement state belongs elsewhere. */
+export function freezeSettlement(town: Settlement): Settlement {
+  for (const building of town.buildings) {
+    Object.freeze(building.door);
+    building.walls.forEach(Object.freeze); Object.freeze(building.walls);
+    building.furniture.forEach(Object.freeze); Object.freeze(building.furniture);
+    Object.freeze(building);
+  }
+  town.streets.forEach(Object.freeze); Object.freeze(town.streets);
+  Object.freeze(town.plaza); Object.freeze(town.buildings);
+  return Object.freeze(town);
+}
 
 export function contains(rect: Rect, x: number, y: number, margin = 0): boolean {
   return x >= rect.x - margin && x < rect.x + rect.width + margin && y >= rect.y - margin && y < rect.y + rect.height + margin;

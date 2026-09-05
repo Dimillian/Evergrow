@@ -8,15 +8,15 @@ export interface DerivedAttackStats {
   arc: number;
 }
 
-export const STARTING_SWORD: WeaponDefinition = {
+export const STARTING_SWORD: Readonly<WeaponDefinition> = Object.freeze({
   id: 'weathered-sword',
   name: 'Weathered Sword',
   baseAttacksPerSecond: 2,
   damage: 24,
   reach: 60,
   arc: 135 * Math.PI / 180,
-  visual: { kind: 'sword', length: 30, width: 3.4, metal: '#86b3a3', edge: '#f7e8b8', grip: '#715332', gripLength: 12, guard: '#dba25b' },
-};
+  visual: Object.freeze({ kind: 'sword', length: 30, width: 3.4, metal: '#86b3a3', edge: '#f7e8b8', grip: '#715332', gripLength: 12, guard: '#dba25b' }),
+});
 
 export function createBaseStats(): CharacterStats {
   return { attackSpeedMultiplier: 1, attackDamageMultiplier: 1 };
@@ -32,7 +32,8 @@ export function getWeaponGrip(equipment: Equipment): WeaponGrip {
 }
 
 export function getGripLength(visual = STARTING_SWORD.visual): number {
-  return Math.max(8, Math.min(20, visual.gripLength ?? 12));
+  const length = visual.gripLength ?? 12;
+  return Math.max(8, Math.min(20, Number.isFinite(length) ? length : 12));
 }
 
 /** Support hand sits behind the lead hand and ahead of the pommel. */
@@ -49,7 +50,9 @@ export function deriveAttackStats(stats: CharacterStats, weapon: WeaponDefinitio
     positive(weapon.baseAttacksPerSecond, STARTING_SWORD.baseAttacksPerSecond) * positive(stats.attackSpeedMultiplier, 1)));
   return {
     attacksPerSecond,
-    damage: Math.max(1, Math.round(positive(weapon.damage, STARTING_SWORD.damage) * positive(stats.attackDamageMultiplier, 1))),
+    // Finite item values can still overflow when multiplied; never emit Infinity damage.
+    damage: Math.max(1, Math.min(Number.MAX_SAFE_INTEGER,
+      Math.round(positive(weapon.damage, STARTING_SWORD.damage) * positive(stats.attackDamageMultiplier, 1)))),
     range: positive(weapon.reach, STARTING_SWORD.reach),
     arc: Math.min(Math.PI * 2, positive(weapon.arc, STARTING_SWORD.arc)),
   };

@@ -2,6 +2,8 @@
 
 Checkpoint date: 2026-09-05. The current pass expands the combat slice into connected biomes, settlements, seamless interiors, and exploration maps. Gameplay feel and visual acceptance belong to the user in the existing Codex in-app browser tab.
 
+The foundation refactor now separates authored combat content, encounter policy, actor-art responsibilities, input/DOM ownership, save decoding, and map geometry. It preserves the current balance, drawing output, generation version, and exploration history while fixing boundary and cleanup failures. See [implemented architecture](architecture.md) for extension guidance and [system status](system-status.md) for the inventory, budgets, and 168 passing code tests.
+
 ## Implemented
 
 - Three connected seeded biomes: Deadwood at the start, Verdant Forest to the west, and The Mire to the east. Broad, irregular world-space weights blend ground colors, vegetation distribution, and ambient lighting. Distinct canopies, ferns, flowers, willows, reeds, and shallow pools give the regions different silhouettes.

@@ -1,10 +1,11 @@
 import { biomeGround, sampleBiome } from './biomes.ts';
 import type { BiomeId, BiomeSample } from './biomes.ts';
-import { circleHitsRect, contains, FIRST_TOWN_Y, generateSettlement, intersects, MAX_TOWN_RADIUS, settlementPavingWeight, settlementPOIs, TOWN_INTERVAL } from './settlements.ts';
+import { circleHitsRect, contains, FIRST_TOWN_Y, freezeSettlement, generateSettlement, intersects, MAX_TOWN_RADIUS, settlementPavingWeight, settlementPOIs, TOWN_INTERVAL } from './settlements.ts';
 import type { Building, POI, Settlement } from './settlements.ts';
 import { mainPathX, pathDistance, roadSurface } from './road-shape.ts';
 import { drawGroundSurface } from './ground-surface.ts';
 import { drawRoadDetails } from './road-art.ts';
+import { isWorldCoordinate, validWorldRectangle, WORLD_QUERY_LIMITS } from './world-query.ts';
 export { mainPathX, pathDistance } from './road-shape.ts';
 
 /** All coordinates are world pixels; prop positions are their ground contacts. */
@@ -79,19 +80,24 @@ export class World {
     this.seed = seed | 0;
   }
 
+  get cacheStats() { return { groundTiles: this.groundTiles.size, settlements: this.settlements.size }; }
+
+  /** Cached generated content belongs to this world instance, not global module state. */
+  dispose() { this.groundTiles.clear(); this.settlements.clear(); }
+
   sampleBiome(x: number, y: number): BiomeSample { return sampleBiome(x, y, this.seed); }
 
   private settlement(band: number): Settlement {
     let town = this.settlements.get(band);
     if (town) this.settlements.delete(band);
-    else town = generateSettlement(this.seed, band, mainPathX, pathDistance);
+    else town = freezeSettlement(generateSettlement(this.seed, band, mainPathX, pathDistance));
     this.settlements.set(band, town);
     if (this.settlements.size > SETTLEMENT_CACHE_LIMIT) this.settlements.delete(this.settlements.keys().next().value!);
     return town;
   }
 
   getSettlements(x: number, y: number, width: number, height: number): Settlement[] {
-    if (![x, y, width, height, x + width, y + height].every(Number.isFinite) || width <= 0 || height <= 0) return [];
+    if (!validWorldRectangle(x, y, width, height)) return [];
     const result: Settlement[] = [], query = { x, y, width, height };
     const first = Math.ceil((y - MAX_TOWN_RADIUS - FIRST_TOWN_Y) / TOWN_INTERVAL);
     const last = Math.floor((y + height + MAX_TOWN_RADIUS - FIRST_TOWN_Y) / TOWN_INTERVAL);
@@ -119,7 +125,7 @@ export class World {
   }
 
   getPOIs(x: number, y: number, width: number, height: number): POI[] {
-    if (![x, y, width, height, x + width, y + height].every(Number.isFinite) || width <= 0 || height <= 0) return [];
+    if (!validWorldRectangle(x, y, width, height)) return [];
     const result = this.getSettlements(x, y, width, height).flatMap(settlementPOIs);
     const first: Prop = { id: 'shrine:origin', x: -85, y: -95, radius: 15, kind: 'shrine', seed: 0, scale: 1 };
     const shrines = [first];
@@ -170,14 +176,14 @@ export class World {
 
   /** Half-open rectangle of ground contacts, returned in stable depth order. */
   getProps(x: number, y: number, width: number, height: number): Prop[] {
-    if (![x, y, width, height, x + width, y + height].every(Number.isFinite)
-      || width <= 0 || height <= 0) return [];
+    if (!validWorldRectangle(x, y, width, height)) return [];
 
     const result: Prop[] = [];
     const minCellX = Math.floor(x / PROP_CELL_SIZE);
     const minCellY = Math.floor(y / PROP_CELL_SIZE);
     const maxCellX = Math.floor((x + width) / PROP_CELL_SIZE);
     const maxCellY = Math.floor((y + height) / PROP_CELL_SIZE);
+    if ((maxCellX - minCellX + 1) * (maxCellY - minCellY + 1) > WORLD_QUERY_LIMITS.propCells) return [];
 
     for (let cy = minCellY; cy <= maxCellY; cy++) {
       for (let cx = minCellX; cx <= maxCellX; cx++) {
@@ -241,8 +247,10 @@ export class World {
   }
 
   blocked(x: number, y: number, radius: number): boolean {
-    if (![x, y, radius].every(Number.isFinite) || radius < 0) return true;
+    if (![x, y].every(isWorldCoordinate) || !Number.isFinite(radius)
+      || radius < 0 || radius > WORLD_QUERY_LIMITS.collisionRadius) return true;
     const extent = radius + MAX_PROP_RADIUS;
+    if (!validWorldRectangle(x - extent, y - extent, extent * 2, extent * 2)) return true;
     if (this.getProps(x - extent, y - extent, extent * 2, extent * 2).some(prop => prop.radius > 0 &&
       (x - prop.x) ** 2 + (y - prop.y) ** 2 < (radius + prop.radius) ** 2 - 1e-7)) return true;
     const reach = Math.max(radius, .1);
@@ -252,8 +260,12 @@ export class World {
 
   /** Sweep short segments against trunk circles, preserving the unblocked axis. */
   move(x: number, y: number, dx: number, dy: number, radius: number): { x: number; y: number } {
-    if (![x, y, dx, dy, radius].every(Number.isFinite) || radius < 0) return { x, y };
+    if (![x, y, x + dx, y + dy].every(isWorldCoordinate) || ![dx, dy, radius].every(Number.isFinite)
+      || radius < 0 || radius > WORLD_QUERY_LIMITS.collisionRadius
+      || Math.hypot(dx, dy) > WORLD_QUERY_LIMITS.movement) return { x, y };
     const extent = radius + MAX_PROP_RADIUS + 1;
+    if (!validWorldRectangle(Math.min(x, x + dx) - extent, Math.min(y, y + dy) - extent,
+      Math.abs(dx) + extent * 2, Math.abs(dy) + extent * 2)) return { x, y };
     const props = this.getProps(Math.min(x, x + dx) - extent, Math.min(y, y + dy) - extent,
       Math.abs(dx) + extent * 2, Math.abs(dy) + extent * 2).filter(prop => prop.radius > 0);
     const furniture = this.getBuildings(Math.min(x, x + dx) - radius, Math.min(y, y + dy) - radius,
@@ -292,7 +304,8 @@ export class World {
 
   /** Ground is rendered only on demand; the constructor and queries need no DOM. */
   getGroundTile(tileX: number, tileY: number, createCanvas?: CanvasFactory): HTMLCanvasElement {
-    if (!Number.isSafeInteger(tileX) || !Number.isSafeInteger(tileY)) {
+    if (![tileX, tileY, tileX * TILE_SIZE, tileY * TILE_SIZE,
+      (tileX + 1) * TILE_SIZE, (tileY + 1) * TILE_SIZE].every(Number.isSafeInteger)) {
       throw new RangeError('Ground tile coordinates must be safe integers.');
     }
     const key = `${tileX}:${tileY}`;

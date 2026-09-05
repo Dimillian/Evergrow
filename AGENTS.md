@@ -27,19 +27,22 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 ## Project layout
 
 - `game/`: standalone Vite + TypeScript application; no runtime package dependencies.
-- `game/src/simulation.ts` and `model.ts`: deterministic 120 Hz combat state, rules, and render interpolation snapshots.
-- `game/src/equipment.ts`: character and equipped-weapon stats used to derive the basic attack.
+- `game/src/simulation.ts` and `model.ts`: deterministic 120 Hz combat state, rule execution, and render interpolation snapshots.
+- `game/src/combat-content.ts`, `encounter-director.ts`, and `combat-geometry.ts`: immutable balance definitions, encounter policy, and swept contact geometry. HUD/telegraph/action timing must consume shared definitions rather than duplicating gameplay values.
+- `game/src/equipment.ts`: immutable starter definition and per-player equipment copies used to derive the basic attack.
 - `game/src/world.ts`: seeded terrain, props, collision, and bounded tile caching.
 - `game/src/road-shape.ts` and `road-art.ts`: continuous road contours, blended junctions, worn cobbles, and gravel. Keep visual shoulders inside the existing clear corridor and preserve the shared road centerlines.
 - `game/src/ground-surface.ts`: world-aligned terrain samples interpolated per pixel; neighboring tiles must produce the same color field without blocky sample boundaries.
 - `game/src/biomes.ts` and `settlements.ts`: continuous biome weights, deterministic town layouts, shared building/collision geometry, and points of interest.
+- `game/src/world-query.ts` and `world-pois.ts`: per-request work/precision bounds and the shared POI kind registry. Cached settlements are frozen blueprints; future mutable world state belongs separately under stable IDs.
 - `game/src/environment-art.ts` and `settlement-art.ts`: procedural biome silhouettes, furnished buildings, roof fading, and settlement lights.
 - `game/src/ground-layer.ts`: bounded terrain composition before subpixel camera sampling; keep tile joins inside one surface to avoid seams.
-- `game/src/art.ts`: procedural Canvas assets, modular equipment, articulated character rigs, and phased attack motion.
+- `game/src/art.ts`: compatibility entrypoint for procedural character drawing and props. `art-types.ts`, `art-primitives.ts`, `prop-art.ts`, `equipment-art.ts`, `character-motion.ts`, `player-art.ts`, and `enemy-art.ts` own the implementation by responsibility.
 - `game/src/player-arm-rig.ts`: facing-relative arm joints with separate depth and height, projected into the 2D art; shoulder armor must use the same joint anchors and upper-arm direction.
 - `game/src/attack-motion.ts`: shared angular motion for visible swings and swept melee contact.
 - `game/src/character-pose.ts`: common player pose for the character, ribbon, sparks, and weapon light.
 - `game/src/renderer.ts`: interpolated scene composition, camera, actors, and a separate native-resolution UI pass.
+- `game/src/scene-visibility.ts`: padded viewport coverage for props/buildings, invalidated when the world or visible bounds change.
 - `game/src/camera.ts`: smooth bounded wheel zoom and shared world/screen projection. Keep the HUD and damage-text size independent of camera zoom; terrain, object coverage, and lights must follow the visible world bounds.
 - `game/src/lighting.ts`: bounded dynamic light map, cached light stamps, and prop shadows.
 - `game/src/effects.ts`: bounded combat particles, trails, flashes, and damage numbers; effects never drive gameplay.
@@ -48,13 +51,17 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/src/hud.ts`, `hud-icons.ts`, `hud-orb.ts`, and `font.ts`: compact procedural floating HUD, shared layout/hit bounds, engraved skill/menu icons, animated resource glass, and native font rendering.
 - `game/src/enemy-focus.ts` and `enemy-plate.ts`: visual enemy hover/recent-hit focus and the native top name/health plate. Use interpolated body bounds and the current camera transform; hover takes priority, dead/offscreen targets clear, and attack aiming remains unchanged.
 - `game/src/assets/fonts/` and `typography.css`: locally bundled Pixelify Sans, source/license records, and shared menu typography.
-- `game/src/main.ts`: input, loop, pause menu, local audio preference, and system reduced motion.
+- `game/src/main.ts`: font loading, bootstrap, and hot replacement. `game.ts` coordinates systems and application phases; `game-shell.ts` owns DOM menus and controls; `game-input.ts` owns held controls and action edges; `lifetime.ts` handles reverse-order teardown and startup rollback.
+- `game/src/ui-hit-test.ts`: shared UI boundary for combat input, enemy hover, and cursor drawing. New panels must join this boundary and clear buffered simulation inputs when changing control context.
 - `game/src/exploration.ts` and `world-map.ts`: discovered terrain/POIs, local exploration persistence, smoothly scrolling minimap, and interactive world map.
+- `game/src/exploration-save.ts` and `map-view.ts`: transactional save validation and pure map projection/zoom limits; existing schemas and compatibility exports remain intact.
 - `game/layouts.html` and `game/src/layout-review.ts`: dev-only static town, interior, and road scenes with PNG export using the real renderer; never advances gameplay or changes exploration saves.
 - `game/rig.html` and `game/src/rig-review.ts`: dev-only frozen character poses across eight facings, without driving gameplay.
 - `game/hud.html` and `game/src/hud-review.ts`: dev-only frozen healthy, damaged, and depleted player HUD/enemy plate states with PNG export; no gameplay or save access.
 - `docs/`: design documents and reference concepts, not runtime assets.
 
-From the repository root: `npm run setup`, `npm run dev`, `npm test`, and `npm run build`. Engine tests require Node.js 22.13 or later for TypeScript stripping.
+From the repository root: `npm run setup`, `npm run dev`, `npm test`, and `npm run build`. `npm run check` runs code tests, strict/core compilation, and a production build; it never runs browser gameplay tests. `npm run stats` prints source/content counts and last-build sizes. Engine tests require Node.js 22.13 or later for TypeScript stripping.
+
+The headless core must compile with `tsconfig.core.json` without DOM or Node globals. Runtime imports must stay acyclic. Read `docs/architecture.md` for ownership and extension guidance, and `docs/system-status.md` for current content, budgets, and verified limitations.
 
 World map opens with M, Tab while playing, or the minimap; M/Escape closes it. The map pauses combat and shows explored terrain only. N toggles audio. Interior entry is movement through an open doorway in shared world coordinates; fading roofs must never change collision. Keep towns protected from enemy spawns and pursuit. World and character saves remain separate from the locally retained exploration map.

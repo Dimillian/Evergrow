@@ -1,7 +1,8 @@
 import type { Enemy } from './model.ts';
+import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { text } from './font.ts';
 import { getHUDLayout } from './hud.ts';
-import { getMinimapRect } from './world-map.ts';
+import { getMinimapRect } from './map-view.ts';
 
 export interface EnemyPlateOptions {
   opacity?: number;
@@ -10,9 +11,6 @@ export interface EnemyPlateOptions {
   hitPulse?: number;
 }
 
-const NAMES: Record<Enemy['kind'], string> = {
-  stalker: 'Hollow Stalker', brute: 'Gravebound Brute', caster: 'Mire Hexer',
-};
 const clamp = (value: number) => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 
 /** A centered target readout that shares the existing navigation and map space. */
@@ -59,7 +57,7 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
   c.fillStyle = shadow; c.fillRect(-1, -1, 2, 2); c.restore();
 
   c.save(); c.shadowColor = '#010409'; c.shadowBlur = 3; c.shadowOffsetY = 1;
-  text(c, NAMES[enemy.kind], w / 2, 2, 1.13, '#e0d8c4', 'center'); c.restore();
+  text(c, ENEMY_DEFINITIONS[enemy.kind].name, w / 2, 2, 1.13, '#e0d8c4', 'center'); c.restore();
   const metal = c.createLinearGradient(0, 20, 0, 31);
   metal.addColorStop(0, '#746d59'); metal.addColorStop(.15, '#353a38');
   metal.addColorStop(.48, '#111a21'); metal.addColorStop(1, '#090e13');

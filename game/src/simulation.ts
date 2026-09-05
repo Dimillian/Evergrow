@@ -2,57 +2,25 @@ import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, 
 import type { Pickup } from './model.ts';
 import { createBaseStats, createStartingEquipment, deriveAttackStats } from './equipment.ts';
 import { getActiveSwingOffset } from './attack-motion.ts';
+import { BASIC_ATTACK_PHASES, COMBAT_TIMING, ENEMY_DEFINITIONS, LOOT_RULES, PLAYER_ABILITIES,
+  PLAYER_DEFAULTS, PLAYER_MOVEMENT, PROJECTILE_DEFINITIONS, type ProjectileDefinition } from './combat-content.ts';
+import { canEnemyJoinAttack, chooseEncounterEnemy, ENCOUNTER_RULES, livingEnemyCount } from './encounter-director.ts';
+import { circleIntersectsSector, segmentDistanceSquared } from './combat-geometry.ts';
 
-export const FIXED_STEP = 1 / 120;
-export const HIT_FLASH_DURATION = .16;
+export { BASIC_ATTACK_PHASES } from './combat-content.ts';
+export { angleDifference, circleIntersectsSector } from './combat-geometry.ts';
+export const FIXED_STEP = COMBAT_TIMING.fixedStep;
+export const HIT_FLASH_DURATION = COMBAT_TIMING.hitFlashDuration;
 const TAU = Math.PI * 2;
-const BUFFER = 0.11;
-const ATTACK_BUFFER = 0.22;
-const DODGE_DURATION = 0.22;
-const MAX_ENEMIES = 12;
-const MOVE_SPEED = 165;
-const KNOCKBACK_DECAY = 0.065;
-/** Normalized phases of the one basic attack, scaled by derived attack speed. */
-export const BASIC_ATTACK_PHASES = { activeStart: .19, activeEnd: .45 } as const;
-const ENEMY_STATS = {
-  stalker: { hp: 48, radius: 10, speed: 112, windup: 0.32, active: 0.18, recovery: 0.65, range: 28, damage: 8 },
-  brute: { hp: 138, radius: 17, speed: 69, windup: 0.75, active: 0.13, recovery: 0.9, range: 48, damage: 22 },
-  caster: { hp: 56, radius: 11, speed: 82, windup: 0.65, active: 0.15, recovery: 0.7, range: 240, damage: 13 },
-};
-
-export function angleDifference(a: number, b: number): number {
-  return Math.atan2(Math.sin(a - b), Math.cos(a - b));
-}
-
-function segmentDistanceSquared(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
-  const dx = bx - ax;
-  const dy = by - ay;
-  const length = dx * dx + dy * dy;
-  const t = length === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / length));
-  return (px - ax - t * dx) ** 2 + (py - ay - t * dy) ** 2;
-}
-
-/** Exact circle/sector overlap including both radial edges and the outer arc. */
-export function circleIntersectsSector(x: number, y: number, radius: number, originX: number, originY: number, angle: number, range: number, arc: number): boolean {
-  const dx = x - originX;
-  const dy = y - originY;
-  const distance = Math.hypot(dx, dy);
-  if (distance <= radius) return true;
-  if (distance > range + radius) return false;
-  if (Math.abs(angleDifference(Math.atan2(dy, dx), angle)) <= arc / 2) return true;
-  for (const edge of [angle - arc / 2, angle + arc / 2]) {
-    if (segmentDistanceSquared(x, y, originX, originY, originX + Math.cos(edge) * range, originY + Math.sin(edge) * range) <= radius * radius) return true;
-  }
-  return false;
-}
 
 function initialPlayer(x: number, y: number): Player {
   return {
-    x, y, prevX: x, prevY: y, vx: 0, vy: 0, angle: 0, hp: 100, maxHp: 100, mana: 100, maxMana: 100,
+    x, y, prevX: x, prevY: y, vx: 0, vy: 0, angle: 0,
+    hp: PLAYER_DEFAULTS.maxHp, maxHp: PLAYER_DEFAULTS.maxHp, mana: PLAYER_DEFAULTS.maxMana, maxMana: PLAYER_DEFAULTS.maxMana,
     stats: createBaseStats(), equipment: createStartingEquipment(),
-    attack: null, dodgeTime: 0, dodgeAngle: 0, dodgeCharges: 2, dodgeRecharge: 0,
-    invulnerable: 0, flasks: 2, healCooldown: 0, castCooldown: 0, castTime: 0,
-    castAngle: 0, healFlash: 0, hitFlash: 0, hitAngle: 0, walkTime: 0, radius: 9, dead: false,
+    attack: null, dodgeTime: 0, dodgeAngle: 0, dodgeCharges: PLAYER_ABILITIES.dodge.charges, dodgeRecharge: 0,
+    invulnerable: 0, flasks: PLAYER_ABILITIES.heal.charges, healCooldown: 0, castCooldown: 0, castTime: 0,
+    castAngle: 0, healFlash: 0, hitFlash: 0, hitAngle: 0, walkTime: 0, radius: PLAYER_DEFAULTS.radius, dead: false,
   };
 }
 
@@ -99,8 +67,10 @@ export class Simulation {
     this.attackBuffer = this.castBuffer = this.dodgeBuffer = this.healBuffer = -1;
     this.hurtGuard = this.killRecharge = 0;
     this.castReleased = false;
-    this.spawnTimer = 2;
-    if (this.options.spawn) for (let i = 0; i < 3; i++) this.spawnAroundPlayer('stalker', 220, 270);
+    this.spawnTimer = ENCOUNTER_RULES.spawnInterval;
+    if (this.options.spawn) for (let i = 0; i < ENCOUNTER_RULES.initialCount; i++) {
+      this.spawnAroundPlayer(ENCOUNTER_RULES.initialKind, ENCOUNTER_RULES.initialMinDistance, ENCOUNTER_RULES.initialMaxDistance);
+    }
   }
 
   /** Call when focus/control context changes, including pause and resume. */
@@ -129,10 +99,10 @@ export class Simulation {
 
   update(dt: number, input: Input): void {
     if (!Number.isFinite(dt) || dt <= 0 || this.player.dead) return;
-    if (input.attack) this.attackBuffer = this.time + ATTACK_BUFFER;
-    if (input.cast) this.castBuffer = this.time + BUFFER;
-    if (input.dodge) this.dodgeBuffer = this.time + BUFFER;
-    if (input.heal) this.healBuffer = this.time + BUFFER;
+    if (input.attack) this.attackBuffer = this.time + COMBAT_TIMING.attackBuffer;
+    if (input.cast) this.castBuffer = this.time + COMBAT_TIMING.inputBuffer;
+    if (input.dodge) this.dodgeBuffer = this.time + COMBAT_TIMING.inputBuffer;
+    if (input.heal) this.healBuffer = this.time + COMBAT_TIMING.inputBuffer;
     // Bound catch-up after a suspended tab; normal frames always run at 120 Hz.
     this.accumulator += Math.min(dt, 0.25);
     while (this.accumulator + 1e-10 >= FIXED_STEP && !this.player.dead) {
@@ -143,12 +113,12 @@ export class Simulation {
 
   /** Useful for authored encounters and deterministic headless tests. */
   spawnEnemy(kind: EnemyKind, x: number, y: number): Enemy | null {
-    const stats = ENEMY_STATS[kind];
+    const stats = ENEMY_DEFINITIONS[kind];
     if (this.world.isSanctuary?.(x, y)) return null;
-    if (this.enemies.filter(e => e.state !== 'dead').length >= MAX_ENEMIES || this.world.blocked(x, y, stats.radius)) return null;
+    if (livingEnemyCount(this.enemies) >= ENCOUNTER_RULES.hardPopulationCap || this.world.blocked(x, y, stats.radius)) return null;
     const enemy: Enemy = {
       id: this.nextId++, x, y, prevX: x, prevY: y, vx: 0, vy: 0, knockbackX: 0, knockbackY: 0, angle: 0, hp: stats.hp, maxHp: stats.hp,
-      kind, state: 'idle', stateTime: 0, stateDuration: 0.45 + this.random() * 0.35,
+      kind, state: 'idle', stateTime: 0, stateDuration: ENCOUNTER_RULES.initialIdleMin + this.random() * ENCOUNTER_RULES.initialIdleRange,
       attackAngle: 0, hitFlash: 0, hitAngle: 0, radius: stats.radius, stagger: 0,
       attackHit: false, interrupted: false,
     };
@@ -171,8 +141,8 @@ export class Simulation {
     this.player.hitFlash = Math.max(0, this.player.hitFlash - dt);
     for (const enemy of this.enemies) enemy.hitFlash = Math.max(0, enemy.hitFlash - dt);
     this.time += dt;
-    if (input.attack) this.attackBuffer = this.time + ATTACK_BUFFER;
-    if (input.cast) this.castBuffer = this.time + BUFFER;
+    if (input.attack) this.attackBuffer = this.time + COMBAT_TIMING.attackBuffer;
+    if (input.cast) this.castBuffer = this.time + COMBAT_TIMING.inputBuffer;
     this.updatePlayer(dt, input);
     this.updateEnemies(dt);
     this.updateProjectiles(dt);
@@ -183,7 +153,8 @@ export class Simulation {
       return;
     }
     this.updateSpawns(dt);
-    this.enemies = this.enemies.filter(e => (e.state !== 'dead' || e.stateTime < 0.5) && Math.hypot(e.x - this.player.x, e.y - this.player.y) < 850);
+    this.enemies = this.enemies.filter(e => (e.state !== 'dead' || e.stateTime < ENCOUNTER_RULES.corpseDuration)
+      && Math.hypot(e.x - this.player.x, e.y - this.player.y) < ENCOUNTER_RULES.despawnDistance);
   }
 
   private capturePositions(): void {
@@ -206,22 +177,22 @@ export class Simulation {
     p.healCooldown = Math.max(0, p.healCooldown - dt);
     p.castCooldown = Math.max(0, p.castCooldown - dt);
     p.healFlash = Math.max(0, p.healFlash - dt);
-    p.mana = Math.min(p.maxMana, p.mana + 9 * dt);
-    if (p.dodgeCharges < 2) {
+    p.mana = Math.min(p.maxMana, p.mana + PLAYER_DEFAULTS.manaRegeneration * dt);
+    if (p.dodgeCharges < PLAYER_ABILITIES.dodge.charges) {
       p.dodgeRecharge += dt;
-      if (p.dodgeRecharge + 1e-9 >= 1.8) {
+      if (p.dodgeRecharge + 1e-9 >= PLAYER_ABILITIES.dodge.recharge) {
         p.dodgeCharges++;
-        p.dodgeRecharge -= 1.8;
-        if (p.dodgeCharges === 2) p.dodgeRecharge = 0;
+        p.dodgeRecharge -= PLAYER_ABILITIES.dodge.recharge;
+        if (p.dodgeCharges === PLAYER_ABILITIES.dodge.charges) p.dodgeRecharge = 0;
       }
     }
     if (input.aimX !== p.x || input.aimY !== p.y) p.angle = Math.atan2(input.aimY - p.y, input.aimX - p.x);
     if (this.healBuffer >= this.time && p.flasks > 0 && p.hp < p.maxHp && p.healCooldown <= 0) {
-      const healed = Math.min(42, p.maxHp - p.hp);
+      const healed = Math.min(PLAYER_ABILITIES.heal.restore, p.maxHp - p.hp);
       p.hp += healed;
       p.flasks--;
-      p.healCooldown = 0.8;
-      p.healFlash = 0.5;
+      p.healCooldown = PLAYER_ABILITIES.heal.cooldown;
+      p.healFlash = PLAYER_ABILITIES.heal.flashDuration;
       this.healBuffer = -1;
       this.events.push({ type: 'heal', x: p.x, y: p.y, value: healed });
     }
@@ -240,18 +211,18 @@ export class Simulation {
     }
     if (p.castTime > 0) {
       p.castTime = Math.max(0, p.castTime - dt);
-      if (!this.castReleased && p.castTime <= 0.145) {
+      if (!this.castReleased && p.castTime <= PLAYER_ABILITIES.ember.releaseRemaining) {
         this.castReleased = true;
-        this.projectile(p.x, p.y, p.castAngle, 'player');
+        this.projectile(p.x, p.y, p.castAngle, PROJECTILE_DEFINITIONS.ember);
         this.events.push({ type: 'cast', x: p.x, y: p.y, angle: p.castAngle });
       }
     }
 
-    const canCancel = (!p.attack || p.attack.elapsed >= p.attack.activeEnd) && p.castTime <= 0.145;
+    const canCancel = (!p.attack || p.attack.elapsed >= p.attack.activeEnd) && p.castTime <= PLAYER_ABILITIES.ember.releaseRemaining;
     if (this.dodgeBuffer >= this.time && p.dodgeTime <= 0 && p.dodgeCharges > 0 && canCancel) {
       const moving = Math.hypot(input.moveX, input.moveY) > 0.01;
       p.dodgeAngle = moving ? Math.atan2(input.moveY, input.moveX) : p.angle;
-      p.dodgeTime = DODGE_DURATION;
+      p.dodgeTime = PLAYER_ABILITIES.dodge.duration;
       p.dodgeCharges--;
       p.attack = null;
       p.castTime = 0;
@@ -260,11 +231,12 @@ export class Simulation {
     }
 
     if (p.dodgeTime <= 0 && p.castTime <= 0) {
-      if ((!p.attack || p.attack.elapsed >= p.attack.activeEnd) && this.castBuffer >= this.time && p.castCooldown <= 0 && p.mana >= 20) {
+      if ((!p.attack || p.attack.elapsed >= p.attack.activeEnd) && this.castBuffer >= this.time
+        && p.castCooldown <= 0 && p.mana >= PLAYER_ABILITIES.ember.manaCost) {
         p.attack = null;
-        p.mana -= 20;
-        p.castCooldown = 0.45;
-        p.castTime = 0.22;
+        p.mana -= PLAYER_ABILITIES.ember.manaCost;
+        p.castCooldown = PLAYER_ABILITIES.ember.cooldown;
+        p.castTime = PLAYER_ABILITIES.ember.duration;
         p.castAngle = p.angle;
         this.castReleased = false;
         this.castBuffer = -1;
@@ -277,32 +249,35 @@ export class Simulation {
     let targetVX = 0;
     let targetVY = 0;
     if (p.dodgeTime > 0) {
-      p.vx = Math.cos(p.dodgeAngle) * 360;
-      p.vy = Math.sin(p.dodgeAngle) * 360;
+      p.vx = Math.cos(p.dodgeAngle) * PLAYER_ABILITIES.dodge.speed;
+      p.vy = Math.sin(p.dodgeAngle) * PLAYER_ABILITIES.dodge.speed;
       p.dodgeTime = Math.max(0, p.dodgeTime - dt);
     } else {
       const length = Math.hypot(input.moveX, input.moveY);
       const factor = p.attack
-        ? p.attack.elapsed < p.attack.activeStart ? 0.92
-          : p.attack.elapsed < p.attack.activeEnd ? 0.87 : 0.96
-        : p.castTime > 0 ? 0.88 : 1;
+        ? p.attack.elapsed < p.attack.activeStart ? PLAYER_MOVEMENT.attackMultiplier.windup
+          : p.attack.elapsed < p.attack.activeEnd ? PLAYER_MOVEMENT.attackMultiplier.active : PLAYER_MOVEMENT.attackMultiplier.recovery
+        : p.castTime > 0 ? PLAYER_MOVEMENT.castMultiplier : 1;
       if (length > 0) {
-        targetVX = input.moveX / Math.max(1, length) * MOVE_SPEED * factor;
-        targetVY = input.moveY / Math.max(1, length) * MOVE_SPEED * factor;
+        targetVX = input.moveX / Math.max(1, length) * PLAYER_MOVEMENT.speed * factor;
+        targetVY = input.moveY / Math.max(1, length) * PLAYER_MOVEMENT.speed * factor;
       }
       const reversing = p.vx * targetVX + p.vy * targetVY < 0;
-      const responseTime = length === 0 ? 0.025 : reversing ? 0.028 : 0.045;
+      const responseTime = length === 0 ? PLAYER_MOVEMENT.response.stop
+        : reversing ? PLAYER_MOVEMENT.response.reverse : PLAYER_MOVEMENT.response.accelerate;
       const easing = 1 - Math.exp(-dt / responseTime);
       p.vx += (targetVX - p.vx) * easing;
       p.vy += (targetVY - p.vy) * easing;
-      if (length === 0 && Math.hypot(p.vx, p.vy) < 0.4) p.vx = p.vy = 0;
+      if (length === 0 && Math.hypot(p.vx, p.vy) < PLAYER_MOVEMENT.stopThreshold) p.vx = p.vy = 0;
     }
     const destination = this.world.move(p.x, p.y, p.vx * dt, p.vy * dt, p.radius);
-    p.walkTime += Math.hypot(destination.x - p.x, destination.y - p.y) / 22;
+    p.walkTime += Math.hypot(destination.x - p.x, destination.y - p.y) / PLAYER_MOVEMENT.gaitDistance;
     p.x = destination.x;
     p.y = destination.y;
-    const dodgeElapsed = DODGE_DURATION - p.dodgeTime;
-    p.invulnerable = Math.max(this.hurtGuard, p.dodgeTime > 0 && dodgeElapsed >= 0.02 && dodgeElapsed < 0.18 ? 0.18 - dodgeElapsed : 0);
+    const dodgeElapsed = PLAYER_ABILITIES.dodge.duration - p.dodgeTime;
+    p.invulnerable = Math.max(this.hurtGuard,
+      p.dodgeTime > 0 && dodgeElapsed >= PLAYER_ABILITIES.dodge.invulnerabilityStart && dodgeElapsed < PLAYER_ABILITIES.dodge.invulnerabilityEnd
+        ? PLAYER_ABILITIES.dodge.invulnerabilityEnd - dodgeElapsed : 0);
   }
 
   private startAttack(elapsed = 0): void {
@@ -322,8 +297,8 @@ export class Simulation {
     const before = getActiveSwingOffset((previousElapsed - attack.activeStart) / activeDuration, attack.arc);
     const after = getActiveSwingOffset((attack.elapsed - attack.activeStart) / activeDuration, attack.arc);
     // A small blade width is included, while keeping the advertised arc bounds.
-    const from = Math.max(-attack.arc / 2, before - .055);
-    const to = Math.min(attack.arc / 2, after + .055);
+    const from = Math.max(-attack.arc / 2, before - PLAYER_ABILITIES.basicAttack.bladeHalfAngle);
+    const to = Math.min(attack.arc / 2, after + PLAYER_ABILITIES.basicAttack.bladeHalfAngle);
     const angle = attack.angle + (from + to) / 2;
     for (const enemy of this.enemies) {
       if (enemy.state === 'dead' || attack.hitIds.has(enemy.id)) continue;
@@ -345,28 +320,31 @@ export class Simulation {
     enemy.hp = Math.max(0, enemy.hp - damage);
     enemy.hitFlash = HIT_FLASH_DURATION;
     enemy.hitAngle = angle;
-    const shove = enemy.kind === 'brute' ? 5 : 14;
-    enemy.knockbackX += Math.cos(angle) * shove / KNOCKBACK_DECAY;
-    enemy.knockbackY += Math.sin(angle) * shove / KNOCKBACK_DECAY;
+    const definition = ENEMY_DEFINITIONS[enemy.kind];
+    const shove = definition.knockbackDistance;
+    enemy.knockbackX += Math.cos(angle) * shove / COMBAT_TIMING.knockbackDecay;
+    enemy.knockbackY += Math.sin(angle) * shove / COMBAT_TIMING.knockbackDecay;
     this.events.push({ type: 'hit', x: enemy.x, y: enemy.y, angle, value: damage,
       targetId: enemy.id, remainingHp: enemy.hp, enemyKind: enemy.kind });
     if (enemy.hp <= 0) {
-      this.transition(enemy, 'dead', 0.5);
+      this.transition(enemy, 'dead', ENCOUNTER_RULES.corpseDuration);
       this.kills++;
       this.killRecharge++;
-      if (this.killRecharge >= 8) {
-        this.killRecharge -= 8;
-        this.player.flasks = Math.min(2, this.player.flasks + 1);
+      if (this.killRecharge >= PLAYER_ABILITIES.heal.killsPerCharge) {
+        this.killRecharge -= PLAYER_ABILITIES.heal.killsPerCharge;
+        this.player.flasks = Math.min(PLAYER_ABILITIES.heal.charges, this.player.flasks + 1);
       }
-      const health = this.kills % 3 === 0;
-      if (this.pickups.length < 32) this.pickups.push({ id: this.nextId++, x: enemy.x, y: enemy.y, kind: health ? 'health' : 'mana', value: health ? 12 : 16, life: 20, radius: 4 });
+      const health = this.kills % LOOT_RULES.healthEveryKills === 0;
+      if (this.pickups.length < LOOT_RULES.maxPickups) this.pickups.push({ id: this.nextId++, x: enemy.x, y: enemy.y,
+        kind: health ? 'health' : 'mana', value: health ? LOOT_RULES.healthValue : LOOT_RULES.manaValue,
+        life: LOOT_RULES.life, radius: LOOT_RULES.radius });
       this.events.push({ type: 'kill', x: enemy.x, y: enemy.y, angle,
         targetId: enemy.id, remainingHp: 0, enemyKind: enemy.kind });
-    } else if (enemy.kind !== 'brute' && melee) {
-      enemy.stagger = .16;
+    } else if (definition.interruptible && melee) {
+      enemy.stagger = COMBAT_TIMING.staggerDuration;
       if (enemy.state === 'windup') {
         enemy.interrupted = true;
-        this.transition(enemy, 'recover', 0.3);
+        this.transition(enemy, 'recover', COMBAT_TIMING.interruptedRecovery);
       }
     }
   }
@@ -386,7 +364,7 @@ export class Simulation {
     const p = this.player;
     const sheltered = this.world.isSanctuary?.(p.x, p.y) ?? false;
     for (const enemy of this.enemies) {
-      const stats = ENEMY_STATS[enemy.kind];
+      const stats = ENEMY_DEFINITIONS[enemy.kind];
       this.updateKnockback(enemy, dt);
       enemy.stateTime += dt;
       if (enemy.state === 'dead') continue;
@@ -411,15 +389,17 @@ export class Simulation {
         if (enemy.stateTime >= enemy.stateDuration) this.transition(enemy, 'chase', 0);
       } else if (enemy.state === 'chase') {
         enemy.angle = targetAngle;
-        const attackDistance = enemy.kind === 'caster' ? 215 : stats.range + p.radius - 3;
-        if (distance <= attackDistance && distance > (enemy.kind === 'caster' ? 100 : 0) && this.canEnemyAttack(enemy) && this.lineOfSight(enemy.x, enemy.y, p.x, p.y)) {
+        const attackDistance = stats.attack === 'projectile' ? stats.maxAttackDistance : stats.range + p.radius - 3;
+        const minDistance = stats.attack === 'projectile' ? stats.minAttackDistance : 0;
+        if (distance <= attackDistance && distance > minDistance && canEnemyJoinAttack(enemy, this.enemies)
+          && this.lineOfSight(enemy.x, enemy.y, p.x, p.y)) {
           enemy.attackAngle = targetAngle;
           this.transition(enemy, 'windup', stats.windup);
         } else {
-          const retreat = enemy.kind === 'caster' && distance < 125;
+          const retreat = stats.attack === 'projectile' && distance < stats.retreatDistance;
           let vx = Math.cos(targetAngle) * stats.speed * (retreat ? -0.7 : 1);
           let vy = Math.sin(targetAngle) * stats.speed * (retreat ? -0.7 : 1);
-          if (enemy.kind !== 'caster' && distance < enemy.radius + p.radius + 3) vx = vy = 0;
+          if (stats.attack === 'melee' && distance < enemy.radius + p.radius + 3) vx = vy = 0;
           for (const other of this.enemies) {
             if (other === enemy || other.state === 'dead') continue;
             const separation = Math.hypot(enemy.x - other.x, enemy.y - other.y);
@@ -433,19 +413,22 @@ export class Simulation {
           this.moveEnemy(enemy, vx, vy, dt);
         }
       } else if (enemy.state === 'windup') {
-        const lockTime = enemy.kind === 'brute' ? 0.3 : enemy.kind === 'caster' ? 0.43 : 0.16;
-        if (enemy.stateTime < lockTime) enemy.attackAngle = targetAngle;
+        if (enemy.stateTime < stats.aimLock) enemy.attackAngle = targetAngle;
         enemy.angle = enemy.attackAngle;
         if (enemy.stateTime >= enemy.stateDuration) {
           this.transition(enemy, 'attack', stats.active);
-          if (enemy.kind === 'caster') {
-            this.projectile(enemy.x, enemy.y, enemy.attackAngle, 'enemy');
+          if (stats.attack === 'projectile') {
+            this.projectile(enemy.x, enemy.y, enemy.attackAngle, stats.projectile);
             this.events.push({ type: 'cast', x: enemy.x, y: enemy.y, angle: enemy.attackAngle, enemyKind: enemy.kind });
           }
         }
       } else if (enemy.state === 'attack') {
-        if (enemy.kind === 'stalker') this.moveEnemy(enemy, Math.cos(enemy.attackAngle) * 48, Math.sin(enemy.attackAngle) * 48, dt);
-        if (enemy.kind !== 'caster' && !enemy.attackHit && circleIntersectsSector(p.x, p.y, p.radius, enemy.x, enemy.y, enemy.attackAngle, stats.range, enemy.kind === 'brute' ? Math.PI * 1.25 : Math.PI * 0.7) && this.lineOfSight(enemy.x, enemy.y, p.x, p.y)) {
+        if (stats.attack === 'melee' && stats.lungeSpeed > 0) {
+          this.moveEnemy(enemy, Math.cos(enemy.attackAngle) * stats.lungeSpeed, Math.sin(enemy.attackAngle) * stats.lungeSpeed, dt);
+        }
+        if (stats.attack === 'melee' && !enemy.attackHit
+          && circleIntersectsSector(p.x, p.y, p.radius, enemy.x, enemy.y, enemy.attackAngle, stats.range, stats.arc)
+          && this.lineOfSight(enemy.x, enemy.y, p.x, p.y)) {
           enemy.attackHit = true;
           this.damagePlayer(stats.damage, enemy.attackAngle, enemy.kind);
         }
@@ -461,9 +444,9 @@ export class Simulation {
 
   private updateKnockback(enemy: Enemy, dt: number): void {
     if (enemy.knockbackX === 0 && enemy.knockbackY === 0) return;
-    const decay = Math.exp(-dt / KNOCKBACK_DECAY);
+    const decay = Math.exp(-dt / COMBAT_TIMING.knockbackDecay);
     // Integrating the exponential preserves the old shove distance across ticks.
-    const travel = KNOCKBACK_DECAY * (1 - decay);
+    const travel = COMBAT_TIMING.knockbackDecay * (1 - decay);
     const destination = this.world.move(enemy.x, enemy.y, enemy.knockbackX * travel, enemy.knockbackY * travel, enemy.radius);
     enemy.x = destination.x;
     enemy.y = destination.y;
@@ -492,19 +475,14 @@ export class Simulation {
     enemy.y = destination.y;
   }
 
-  private canEnemyAttack(enemy: Enemy): boolean {
-    const active = this.enemies.filter(e => e !== enemy && (e.state === 'windup' || e.state === 'attack'));
-    return enemy.kind === 'stalker' ? active.filter(e => e.kind === 'stalker').length < 2 : !active.some(e => e.kind !== 'stalker');
-  }
-
   private damagePlayer(amount: number, angle: number, kind?: EnemyKind): void {
     const p = this.player;
     if (p.dead || p.invulnerable > 0 || this.world.isSanctuary?.(p.x, p.y)) return;
     p.hp = Math.max(0, p.hp - amount);
     p.hitFlash = HIT_FLASH_DURATION;
     p.hitAngle = angle;
-    this.hurtGuard = 0.3;
-    p.invulnerable = 0.3;
+    this.hurtGuard = COMBAT_TIMING.hurtGuard;
+    p.invulnerable = COMBAT_TIMING.hurtGuard;
     this.events.push({ type: 'hurt', x: p.x, y: p.y, angle, value: amount,
       remainingHp: p.hp, enemyKind: kind, heavy: amount >= 20 });
     if (p.hp <= 0) {
@@ -516,10 +494,10 @@ export class Simulation {
     }
   }
 
-  private projectile(x: number, y: number, angle: number, owner: Projectile['owner']): void {
-    const speed = owner === 'player' ? 360 : 145;
-    const life = owner === 'player' ? 1.4 : 2;
-    this.projectiles.push({ id: this.nextId++, x, y, prevX: x, prevY: y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, radius: 5, damage: owner === 'player' ? 36 : 13, life, maxLife: life, owner });
+  private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition): void {
+    const { speed, life, radius, damage, owner } = definition;
+    this.projectiles.push({ id: this.nextId++, x, y, prevX: x, prevY: y,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, radius, damage, life, maxLife: life, owner });
   }
 
   private updateProjectiles(dt: number): void {
@@ -563,15 +541,16 @@ export class Simulation {
       const dx = p.x - pickup.x;
       const dy = p.y - pickup.y;
       const distance = Math.hypot(dx, dy);
-      if (distance < 18) {
+      if (distance < LOOT_RULES.collectDistance) {
         const before = pickup.kind === 'health' ? p.hp : p.mana;
         if (pickup.kind === 'health') p.hp = Math.min(p.maxHp, p.hp + pickup.value);
         else p.mana = Math.min(p.maxMana, p.mana + pickup.value);
         const value = (pickup.kind === 'health' ? p.hp : p.mana) - before;
         pickup.life = 0;
         this.events.push({ type: 'pickup', x: pickup.x, y: pickup.y, value, heavy: pickup.kind === 'health' });
-      } else if (distance < 55) {
-        const destination = this.world.move(pickup.x, pickup.y, dx / distance * 100 * dt, dy / distance * 100 * dt, pickup.radius);
+      } else if (distance < LOOT_RULES.magnetDistance) {
+        const destination = this.world.move(pickup.x, pickup.y, dx / distance * LOOT_RULES.magnetSpeed * dt,
+          dy / distance * LOOT_RULES.magnetSpeed * dt, pickup.radius);
         pickup.x = destination.x;
         pickup.y = destination.y;
       }
@@ -582,36 +561,24 @@ export class Simulation {
   private updateSpawns(dt: number): void {
     if (!this.options.spawn) return;
     if (this.world.isSanctuary?.(this.player.x, this.player.y)) {
-      this.spawnTimer = Math.max(this.spawnTimer, 1.5);
+      this.spawnTimer = Math.max(this.spawnTimer, ENCOUNTER_RULES.sanctuaryDelay);
       return;
     }
     this.spawnTimer -= dt;
     if (this.spawnTimer > 0) return;
-    this.spawnTimer = 2;
-    const live = this.enemies.filter(enemy => enemy.state !== 'dead');
-    const target = Math.min(10, 5 + Math.floor(this.kills / 7));
-    if (live.length >= target) return;
-    const brutes = live.filter(enemy => enemy.kind === 'brute').length;
-    const casters = live.filter(enemy => enemy.kind === 'caster').length;
-    let kind: EnemyKind = 'stalker';
-    if (this.kills >= 6 && casters === 0) kind = 'caster';
-    else if (this.kills >= 3 && brutes === 0) kind = 'brute';
-    else {
-      const roll = this.random();
-      if (this.kills >= 6 && casters < 2 && roll < 0.18) kind = 'caster';
-      else if (this.kills >= 3 && brutes < 2 && roll < 0.38) kind = 'brute';
-    }
-    this.spawnAroundPlayer(kind, 300, 450);
+    this.spawnTimer = ENCOUNTER_RULES.spawnInterval;
+    const kind = chooseEncounterEnemy(this.enemies, this.kills, () => this.random());
+    if (kind) this.spawnAroundPlayer(kind, ENCOUNTER_RULES.spawnMinDistance, ENCOUNTER_RULES.spawnMaxDistance);
   }
 
   private spawnAroundPlayer(kind: EnemyKind, minDistance: number, maxDistance: number): void {
-    for (let attempt = 0; attempt < 12; attempt++) {
+    for (let attempt = 0; attempt < ENCOUNTER_RULES.maxSpawnAttempts; attempt++) {
       const angle = this.random() * TAU;
       const distance = minDistance + this.random() * (maxDistance - minDistance);
       const x = this.player.x + Math.cos(angle) * distance;
       const y = this.player.y + Math.sin(angle) * distance;
-      if (this.world.blocked(x, y, ENEMY_STATS[kind].radius + 7)) continue;
-      if (this.enemies.some(enemy => enemy.state !== 'dead' && Math.hypot(enemy.x - x, enemy.y - y) < 45)) continue;
+      if (this.world.blocked(x, y, ENEMY_DEFINITIONS[kind].radius + ENCOUNTER_RULES.spawnClearance)) continue;
+      if (this.enemies.some(enemy => enemy.state !== 'dead' && Math.hypot(enemy.x - x, enemy.y - y) < ENCOUNTER_RULES.minimumSeparation)) continue;
       this.spawnEnemy(kind, x, y);
       return;
     }

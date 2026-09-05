@@ -1,4 +1,7 @@
-import { Exploration, EXPLORATION_CELL_SIZE } from './exploration.ts';
+import { Exploration } from './exploration.ts';
+import { clampMapCoordinate, getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt, type MapView } from './map-view.ts';
+import { POI_DEFINITIONS } from './world-pois.ts';
+export { getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt, type MapView } from './map-view.ts';
 import type { ExplorationWorld, MapPOI, MapRect } from './exploration.ts';
 import { text } from './font.ts';
 
@@ -11,37 +14,8 @@ export interface MapWorld extends ExplorationWorld {
   getBuildingAt?(x: number, y: number): { name?: string } | null;
   isSanctuary?(x: number, y: number): boolean;
 }
-export interface MapView extends MapRect { centerX: number; centerY: number; zoom: number; }
-export function projectMapPoint(x: number, y: number, view: MapView) {
-  return { x: view.x + view.width / 2 + (x - view.centerX) * view.zoom,
-    y: view.y + view.height / 2 + (y - view.centerY) * view.zoom };
-}
-export function unprojectMapPoint(x: number, y: number, view: MapView) {
-  return { x: view.centerX + (x - view.x - view.width / 2) / view.zoom,
-    y: view.centerY + (y - view.y - view.height / 2) / view.zoom };
-}
-export function zoomMapAt(view: MapView, x: number, y: number, zoom: number): MapView {
-  const anchor = unprojectMapPoint(x, y, view);
-  const next = { ...view, zoom: Math.max(.065, Math.min(.7, Number.isFinite(zoom) ? zoom : view.zoom)) };
-  const after = unprojectMapPoint(x, y, next);
-  next.centerX += anchor.x - after.x; next.centerY += anchor.y - after.y;
-  return next;
-}
-export function getMinimapRect(width: number, _height: number): MapRect {
-  const compact = width < 660;
-  return { x: width - (compact ? 150 : 172) - 18, y: 18,
-    width: compact ? 150 : 172, height: compact ? 143 : 155 };
-}
-
 const TILE_WORLD = 768, TILE_PIXELS = 32, SAMPLE_SIZE = TILE_WORLD / TILE_PIXELS;
 const TERRAIN_CACHE_LIMIT = 384;
-const KIND_LABELS: Record<MapPOI['kind'], string> = {
-  town: 'Settlement', blacksmith: 'Blacksmith', merchant: 'Merchant', inn: 'Inn', chapel: 'Chapel', shrine: 'Shrine', landmark: 'Landmark',
-};
-const KIND_COLORS: Record<MapPOI['kind'], string> = {
-  town: '#e0c38b', blacksmith: '#ee9861', merchant: '#9dcfa4', inn: '#c2bc9a',
-  chapel: '#b6d5ed', shrine: '#85ded1', landmark: '#9bb8a8',
-};
 interface TerrainTile { base: HTMLCanvasElement; charted: HTMLCanvasElement; revision: number; }
 interface PresentationState {
   x: number; y: number; angle: number; revision: number; status: string; message: string;
@@ -112,7 +86,7 @@ export class WorldMap {
     this.player = { ...player }; this.exploration.reveal(player.x, player.y);
     this.returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     this.opened = true; this.element.hidden = false;
-    this.view.centerX = player.x; this.view.centerY = player.y;
+    this.view.centerX = clampMapCoordinate(player.x); this.view.centerY = clampMapCoordinate(player.y);
     this.resize(); this.render(); this.canvas.focus({ preventScroll: true });
   }
   close() {
@@ -147,7 +121,9 @@ export class WorldMap {
     this.element.querySelector('.world-map-close')!.addEventListener('click', () => { this.close(); this.onClose(); }, { signal });
     for (const button of this.element.querySelectorAll<HTMLButtonElement>('[data-map]')) {
       button.addEventListener('click', () => {
-        if (button.dataset.map === 'center') { this.view.centerX = this.player.x; this.view.centerY = this.player.y; }
+        if (button.dataset.map === 'center') {
+          this.view.centerX = clampMapCoordinate(this.player.x); this.view.centerY = clampMapCoordinate(this.player.y);
+        }
         else this.view = zoomMapAt(this.view, this.view.width / 2, this.view.height / 2,
           this.view.zoom * (button.dataset.map === 'in' ? 1.3 : 1 / 1.3));
         this.render();
@@ -163,8 +139,8 @@ export class WorldMap {
     this.canvas.addEventListener('pointermove', event => {
       const p = local(event); this.pointer = p;
       if (this.drag && event.pointerId === this.drag.id) {
-        this.view.centerX = Math.max(-48_000_000, Math.min(48_000_000, this.drag.centerX - (p.x - this.drag.x) / this.view.zoom));
-        this.view.centerY = Math.max(-48_000_000, Math.min(48_000_000, this.drag.centerY - (p.y - this.drag.y) / this.view.zoom));
+        this.view.centerX = clampMapCoordinate(this.drag.centerX - (p.x - this.drag.x) / this.view.zoom);
+        this.view.centerY = clampMapCoordinate(this.drag.centerY - (p.y - this.drag.y) / this.view.zoom);
       }
       this.render();
     }, { signal });
@@ -196,6 +172,8 @@ export class WorldMap {
       else if (event.key === '+' || event.key === '=' || event.key === '-') this.view = zoomMapAt(this.view,
         this.view.width / 2, this.view.height / 2, this.view.zoom * (event.key === '-' ? 1 / 1.3 : 1.3));
       else return;
+      this.view.centerX = clampMapCoordinate(this.view.centerX);
+      this.view.centerY = clampMapCoordinate(this.view.centerY);
       event.preventDefault(); event.stopPropagation(); this.render();
     }, { signal });
   }
@@ -274,7 +252,7 @@ export class WorldMap {
 
   private poiIcon(c: CanvasRenderingContext2D, poi: MapPOI, x: number, y: number, size: number, selected: boolean) {
     c.save(); c.translate(x, y); c.lineWidth = selected ? 1.8 : 1.1;
-    c.fillStyle = '#071018'; c.strokeStyle = selected ? '#fff0ba' : KIND_COLORS[poi.kind];
+    c.fillStyle = '#071018'; c.strokeStyle = selected ? '#fff0ba' : POI_DEFINITIONS[poi.kind].color;
     c.beginPath(); c.arc(0, 0, size + 2.5, 0, Math.PI * 2); c.fill(); if (selected) c.stroke();
     c.beginPath();
     if (poi.kind === 'town' || poi.kind === 'inn') {
@@ -353,7 +331,7 @@ export class WorldMap {
         const boxWidth = Math.min(190, width - 24), bx = Math.max(12, r.x - boxWidth - 9), by = r.y + 30;
         c.fillStyle = '#0a141bf5'; c.fillRect(bx, by, boxWidth, 42); c.strokeStyle = '#8b7751'; c.strokeRect(bx + .5, by + .5, boxWidth - 1, 41);
         c.save(); c.beginPath(); c.rect(bx + 7, by + 5, boxWidth - 14, 32); c.clip();
-        text(c, poi.name, bx + 8, by + 8, 1.1, '#ead7ab'); text(c, KIND_LABELS[poi.kind], bx + 8, by + 26, .9, '#96b6a5'); c.restore();
+        text(c, poi.name, bx + 8, by + 8, 1.1, '#ead7ab'); text(c, POI_DEFINITIONS[poi.kind].label, bx + 8, by + 26, .9, '#96b6a5'); c.restore();
       }
     }
     c.restore();
@@ -399,7 +377,7 @@ export class WorldMap {
 
   private showTooltip(poi: MapPOI, point: { x: number; y: number }) {
     this.tooltip.hidden = false; setText(this.tooltipName, poi.name);
-    setText(this.tooltipKind, KIND_LABELS[poi.kind]); setText(this.tooltipDescription, poi.description);
+    setText(this.tooltipKind, POI_DEFINITIONS[poi.kind].label); setText(this.tooltipDescription, poi.description);
     this.tooltip.style.left = `${Math.max(10, Math.min(this.view.width - 254, point.x + 18))}px`;
     this.tooltip.style.top = `${Math.max(10, Math.min(this.view.height - this.tooltip.offsetHeight - 12, point.y + 15))}px`;
   }
