@@ -7,22 +7,24 @@ The character sheet now connects equipment, attributes, tree allocations, active
 ## What the player can do
 
 - **C / I:** open the same character window: procedural character doll and eleven equipment slots on the left, a 64-cell inventory in the middle, attributes and detailed combat stats on the right.
-- Inspect an item by hovering, keyboard focus, or a tap. Its tooltip shows tier, item level, required level, weapon profile, modifiers, and comparison against the relevant equipped item.
+- Inspect an item by hovering, keyboard focus, or a tap. Its tooltip shows tier, item level, required level, weapon profile and modifiers, followed by complete effective equip changes, including all displaced items. There is no selected-item detail view.
 - Drag an item onto a compatible equipment slot, use **Shift-click** to equip/unequip. Dragging between bag cells swaps their contents. Rings support either ring slot.
-- **T:** open the skill atlas. Pan, zoom, search names/bonuses, filter a domain or reachable stars, inspect a node, and spend a point on a connected node. Hovering or selecting a distant node previews the shortest route from the current build and its remaining point cost. Canvas keyboard navigation follows neighboring stars; the allocation button remains a native control.
+- **T:** open the skill atlas. Pan, zoom, search names/bonuses, filter a domain or reachable stars, inspect a node, and allocate a connected node or an affordable complete route. Hovering or selecting a distant node previews the shortest route from the current build and its remaining point cost. Double-click commits the shortest affordable route; the native Allocate path button does the same. Hover updates the stat preview immediately. Canvas keyboard navigation follows neighboring stars.
 - Assign unlocked skills to **RMB, 1, 2, 3, 4** from a major node's detail panel. Assigning a skill to a new slot moves its existing assignment; one skill cannot occupy multiple slots. LMB stays the basic attack, Q the potion, and Space the dodge.
 
 These windows pause combat, clear buffered inputs, trap modal keyboard focus, and close with Escape or their shortcut. Unassigned skill slots stay empty and do nothing. The journal is still unavailable.
 
 ## State and ownership
 
-`CharacterSheet` in `character-types.ts` owns four base attributes, unspent stat/skill points, allocated node IDs, the bag, equipment slots, and five skill assignments. It is the source of truth. `Player.derived`, basic-attack stats, and rendered equipment are rebuilt projections.
+`CharacterSheet` in `character-types.ts` owns four base attributes, unspent stat/skill points, allocated node IDs, the gold wallet, the bag, equipment slots, and five skill assignments. It is the source of truth. `Player.derived`, basic-attack stats, and rendered equipment are rebuilt projections.
 
 | Module | Responsibility |
 | --- | --- |
 | `items.ts` | Seeded generation; item tiers, names, affixes, implicit modifiers, starter sheet, explicit profile selection; shared stat labels/formatting |
 | `weapon-content.ts` | Thirteen immutable generated weapon profiles and three shield profiles; handedness, attack family, element, cadence, reach, defense, and silhouette |
-| `inventory.ts` | Atomic equip/unequip/hand-conflict stow, bag swap, insertion, and attribute allocation |
+| `inventory.ts` | Pure equipment planning shared by previews/drop eligibility/commits; atomic equip/unequip/hand-conflict stow, bag swap, insertion, and attribute allocation |
+| `equipment-preview.ts`, `item-ui.ts`, `item-tooltip.ts` | Complete effective equipment comparisons and reusable item presentation |
+| `panel-coordinator.ts` | Shared phase, input, focus, panel transition and save-request lifecycle |
 | `character-stats.ts` | Combine equipped-item modifiers, allocated attributes, and tree bonuses into derived stats |
 | `character.ts` | Refresh the live player projection; award points for XP levels; validate skill assignment |
 | `progression-content.ts`, `progression.ts`, `zone-progression.ts` | Shared level/rank curves, XP thresholds and factors, geographic threat, and spawn-stat snapshots |
@@ -45,7 +47,7 @@ These windows pause combat, clear buffered inputs, trap modal keyboard focus, an
 
 ## Progression and attribute rules
 
-A new run starts at **level 1, 0 XP**, with **10 Strength, Dexterity, Intelligence, and Vitality**, zero unspent points, a free allocated origin, and five empty active slots. Starter armor is cosmetic, without hidden bonuses; the Weathered Sword retains its 24 damage and 2 attacks/second. Eight level-1 bag items provide immediate equipment choices: Longsword, chest armor, ring, boots, Iron Buckler, Thorn Shortbow, Ember Staff, and Rondel Dagger. LMB supplies the equipped weapon’s innate melee, arrow, or elemental-bolt attack; these basics require no skill unlock or mana.
+A new run starts at **level 1, 0 XP**, with **10 Strength, Dexterity, Intelligence, and Vitality**, zero unspent points, a free allocated origin, and five empty active slots. Each character chooses Sword, Bow or Fire Staff and starts with zero gold and 64 empty bag cells. The shared worn leather outfit has no stat bonuses. The Weathered Sword retains its 24 damage and 2 attacks/second; the bow and staff use their own profiles. LMB supplies the equipped weapon’s innate melee, arrow, or elemental-bolt attack; these basics require no skill unlock or mana.
 
 Level-one normal enemies award **20 XP** for a Hollow Stalker, **30** for a Mire Hexer, and **50** for a Gravebound Brute. Geographic area level increases every 3,200 world units from the origin; enemies snapshot their spawn level and normal/veteran/elite rank. Enemy XP scales by `1 + 0.18 × (enemyLevel − 1)`, then by rank (×1 / ×2 / ×5), with a bounded player-level-difference factor applied on death. Source level also controls life, damage, and item level; player level never upgrades an enemy's loot.
 
@@ -80,11 +82,11 @@ Generation is deterministic from seed, item level, optional kind, optional expli
 | Epic | 5% | 3 | 1.34 |
 | Legendary | 1% | 4 | 1.50 |
 
-These general-generator tier rolls apply to content tools when no tier is supplied. Enemy loot uses separate rank-specific tier tables and explicitly passes the rolled tier; see below. Affix stats are sampled without repetition from 17 shared families; shields can also roll block chance and blocked-damage reduction. Tier affects both affix count and potency; legendary currently means a stronger generated tier, not a unique item-specific mechanic.
+These general-generator tier rolls apply to content tools when no tier is supplied. Enemy loot uses separate rank-specific tier tables and explicitly passes the rolled tier; see below. Affix stats are sampled without repetition from 19 shared families; shields can also roll block chance and blocked-damage reduction. Tier affects both affix count and potency; legendary currently means a stronger generated tier, not a unique item-specific mechanic.
 
 Generated item level is normalized to an integer within 1–1,000,000, the current numeric content bound. Required character level is `max(1, itemLevel − 2)`. Flat implicit stats and weapon damage scale using `(1 + (itemLevel − 1) × 0.13) × quality`. Flat affixes have individual level slopes and a deterministic 0.85–1.15 roll. Percentage affix slopes use the bounded effective growth `25n / (25 + n)`, where `n = itemLevel − 1`; ring damage implicits scale by `1 + 0.65 × effectiveGrowth / 25`. Raw damage/armor can continue growing without unbounded item-level increases to percentage budgets. The displayed item-power value is an informational score; it is not a second hidden damage multiplier.
 
-The generated catalog contains **13 weapons and 3 shields**: four one-handed melee profiles, three two-handed melee profiles, three bows, three elemental staves, and buckler/kite/tower shields. The separate Weathered Sword remains the equipped starter. Weapons carry explicit family, handedness, attack type, and element metadata; drawing and combat consume the same profile. One-handed melee weapons can pair with a shield or another weapon; dual-wield basics alternate hands using each weapon’s own cadence, damage, and reach. Two-handed melee weapons, bows, and staves reserve both hands. Unequipping the main weapon selects an actual unarmed profile. Wands remain future content. See the [weapon and skill catalog](weapons-and-skills.md) for profile values and current actions.
+The generated catalog contains **13 weapons and 3 shields**: four one-handed melee profiles, three two-handed melee profiles, three bows, three elemental staves, and buckler/kite/tower shields. The separate Weathered Sword is the sword starter; the other choices use Thorn Shortbow and Ember Staff. Weapons carry explicit family, handedness, attack type, and element metadata; drawing and combat consume the same profile. One-handed melee weapons can pair with a shield or another weapon; dual-wield basics alternate hands using each weapon’s own cadence, damage, and reach. Two-handed melee weapons, bows, and staves reserve both hands. Unequipping the main weapon selects an actual unarmed profile. Wands remain future content. See the [weapon and skill catalog](weapons-and-skills.md) for profile values and current actions.
 
 Equip validates source cell, item type, target slot, and level requirement before changing state. Replacing equipment puts the previous item into the source bag cell. A two-handed weapon also stows an occupied offhand; equipping an offhand stows an equipped two-handed main weapon. The full transaction plans all displaced items before committing. A vacated source cell can hold the opposite-hand item when the receiving slot was empty; otherwise an additional stow requires an empty bag cell. Insufficient room rejects the complete action without mutation. Unequip requires an empty target cell. Failed moves never lose or duplicate items. Automatic ring equip prefers the first empty ring slot, then Ring I; explicit targeting supports Ring II.
 
@@ -103,9 +105,9 @@ Three distinct petals each contain five staggered terraces (3, 6, 10, 14 and 17 
 
 Arcana exposes +4% cast speed, +16 maximum mana, and 4% mana-cost reduction within two points, with nine more branching bonuses around the first skills. Might and Cunning receive corresponding attack-speed, survival, critical and efficiency choices. First Arcana specialties begin at four to five points; the second terrace begins at eight to twelve. Passive bypasses allow progression without buying an unwanted active skill.
 
-All nodes have stable IDs from deterministic content recipes. There are no class locks. Every node can be reached from the origin. Nine named weapon schools lead to **three-point first skills** and **four-point advanced skills** along their shortest origin routes; the dagger school currently has one skill. Allocate requires a real node, an integer unspent point, an allocated neighbor, and no existing allocation. Duplicate/unknown IDs do not add bonuses. Allocation is permanent for the current run; respec is not present.
+All nodes have stable IDs from deterministic content recipes. There are no class locks. Every node can be reached from the origin. Nine named weapon schools lead to **three-point first skills** and **four-point advanced skills** along their shortest origin routes; the dagger school currently has one skill. Allocate requires a real node, an integer unspent point, an allocated neighbor, and no existing allocation. Duplicate/unknown IDs do not add bonuses. Allocation persists with the character; respec is not present.
 
-The shortest-route preview starts at any already allocated node, highlights the fewest additional points to the hovered or selected destination, and reports that cost. It is informational: points are still spent individually on connected nodes. Equivalent builds resolve tied routes deterministically.
+The shortest-route preview starts at any already allocated node, highlights the fewest additional points to the hovered or selected destination, and reports that cost. Double-click or Allocate path commits the complete highlighted route atomically, spending only missing nodes. Insufficient points or an invalid route leave all allocations and points unchanged. Equivalent builds resolve tied routes deterministically.
 
 The seventeen skills cover melee sweeps and dashes, heavy-weapon shocks, shield strikes/guarding, bow fans/piercing/ricochets/area rain, dagger backstabs, fire/ice/lightning spells, and life-stealing spirits. Shared metadata includes equipment requirements, mana costs, cooldowns, potency, and icons. The full [weapon and skill catalog](weapons-and-skills.md) lists every school, skill, and profile.
 
@@ -121,17 +123,17 @@ The first actual enemy kill guarantees at least one gear drop. Otherwise a **nor
 
 | Source rank | Common | Magic | Rare | Epic | Legendary |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Normal | 55% | 32% | 11% | 1.8% | 0.2% |
-| Veteran | 15% | 45% | 32% | 7.5% | 0.5% |
-| Elite | 0% | 40% | 45% | 13% | 2% |
+| Normal | 75% | 22% | 2.7% | 0.28% | 0.02% |
+| Veteran | 60% | 32% | 7% | 0.95% | 0.05% |
+| Elite | 40% | 45% | 13% | 1.9% | 0.1% |
 
 These are conditional tier probabilities per dropped item, not per kill. Archetype weights bias item kind: Brutes favor shields/heavier armor; Hexers favor jewelry/cloaks. Captured source biome biases weapon/shield profiles: Deadwood favors heavy melee, Verdant bows/daggers, and Swamp elemental staves. Every kind and profile remains eligible. The complete tables and examples are in [progression and loot](progression-and-loot.md).
 
-Ground gear has a tier-colored marker, glow, and a crisp native-resolution name label. Moving within **30 world units**, with line of sight, automatically inserts it into the first empty inventory cell. If the bag is full, the item stays on the ground and the notice is throttled. Ground gear has no timed expiry; the population cap bounds it. Manual pickup selection, dropping/deleting items, stash, selling, crafting, and loot filters are absent.
+Ground gear uses its actual procedural equipment silhouette, restrained rarity markers/glints and a native-resolution name/rarity/level label. Labels avoid overlaps; enemy remains fade independently from persistent loot. Moving within **30 world units**, with line of sight, automatically inserts it into the first empty inventory cell. If the bag is full, the item stays on the ground and the notice is throttled. Ground gear has no timed expiry; the population cap bounds it. Manual pickup selection, dropping/deleting items, stash, selling, crafting, and loot filters are absent.
 
 ## Persistence and verification boundary
 
-Character progress now persists in eight browser-local slots. The character hall resumes saved gear, XP, allocations, assignments, resources, position and ground loot, with a separate explored chart per character. New characters have identical leather gear, a sword and an empty bag. See [character checkpoints](character-saves.md) for backup, validation, autosave and recovery rules. No migration or cloud sync is introduced.
+Character progress now persists in eight browser-local slots. The character hall resumes saved gear, XP, allocations, assignments, resources, position and ground loot, with a separate explored chart per character. New characters have the same worn leather outfit, their selected Sword/Bow/Fire Staff and an empty bag. Gold and uncollected coin piles are also saved. See [character checkpoints](character-saves.md) for backup, validation, autosave and recovery rules. No migration or cloud sync is introduced.
 
 Code tests cover graph connectivity, stable unique nodes, themed cluster membership, spacing and bounds, curved hybrid routes, shortest-route costs, short skill paths, allocation rejection, modifier deduplication, item generation and scaling, inventory conservation, stat derivation, skill execution, and integration behavior. Strict browser/core TypeScript and production builds remain the verification gates. Static in-app review scenes are used for screenshots; they stage data without gameplay or save access. The user owns gameplay feel, visual feedback, and balance acceptance.
 

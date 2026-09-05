@@ -1,5 +1,7 @@
 # Evergrow — Technical Foundations
 
+> Original design proposal (2026-09-04), retained for vision and discussion. For current implementation and agreed work, use [system status](system-status.md), [roadmap](roadmap.md) and [documentation index](README.md). Current choices supersede proposed alternatives here: geographic danger, five assignable skills, continuous combat without hitstop, one fixed CRT/phosphor treatment, eight local saves and no prototype migration requirement. NPC services now follow the [NPC spec](npcs-and-vendors.md).
+
 Status: architecture proposal, not an implementation commitment. Updated: 2026-09-04.
 
 ## What the technology must preserve

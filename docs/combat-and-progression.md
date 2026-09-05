@@ -1,5 +1,7 @@
 # Combat and progression
 
+> Original design proposal (2026-09-04), retained for vision and discussion. For current implementation and agreed work, use [system status](system-status.md), [roadmap](roadmap.md) and [documentation index](README.md). Current choices supersede proposed alternatives here: geographic danger, five assignable skills, continuous combat without hitstop, one fixed CRT/phosphor treatment, eight local saves and no prototype migration requirement. NPC services now follow the [NPC spec](npcs-and-vendors.md).
+
 Status: working design proposal. This document translates the initial vision into systems to prototype; it is not a final balance specification. **Every count, timing, percentage, range, and content quantity below is provisional.** They express a starting hypothesis and must be revised through playtesting.
 
 ## What is fixed, and what is proposed

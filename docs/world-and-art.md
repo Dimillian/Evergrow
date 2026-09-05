@@ -1,5 +1,7 @@
 # Evergrow — world and procedural art
 
+> Original design proposal (2026-09-04), retained for vision and discussion. For current implementation and agreed work, use [system status](system-status.md), [roadmap](roadmap.md) and [documentation index](README.md). Current choices supersede proposed alternatives here: geographic danger, five assignable skills, continuous combat without hitstop, one fixed CRT/phosphor treatment, eight local saves and no prototype migration requirement. NPC services now follow the [NPC spec](npcs-and-vendors.md).
+
 Status: working design proposal for discussion. **Required** marks the player-facing direction from the initial brief; **proposed** marks a recommended design choice; **experiment** marks an approach that must earn its place in a playable prototype. Numbers below are starting targets, not measured performance claims.
 
 **Visual update, 2026-09-04:** the user has added a retro, pixel-art-adjacent direction with pixel fonts and CRT/phosphor effects, grounded in buildable procedural graphics. See the [concept gallery](concepts/README.md) and [retro art exploration](retro-art-direction.md). The images explore this direction; exact camera tilt, texture density, and shader strength remain prototype decisions.

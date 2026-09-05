@@ -28,7 +28,7 @@ Weapons supply the basic attack immediately. LMB swings a melee weapon, fires an
 
 Rime Staff's basic bolt slows movement by 20% for one second. Other basic bolts are direct projectiles; the staff's element supplies its appearance and innate attack identity. Area explosions, chaining, and stronger status effects belong to unlocked skills. Any staff can use a staff-required skill, regardless of its innate element.
 
-Physical melee attacks and arrows use `attackDamageMultiplier`; staff bolts use `spellDamageMultiplier`. Both use `attackSpeedMultiplier`. This keeps Strength/attack-damage bonuses and Intelligence/spell-damage bonuses on their respective damage paths. Active skills multiply a compatible held weapon’s derived hit by their potency, preferring the main hand; staff spell scaling is already included and is never applied a second time. Normal direct hits can critically strike and trigger life on hit.
+Physical melee attacks and arrows use `attackDamageMultiplier`; staff bolts use `spellDamageMultiplier`. Melee and arrows use `attackSpeedMultiplier`; staff bolts and magic spells use the independent `castSpeedMultiplier`. This keeps Strength/attack-damage bonuses and Intelligence/spell-damage bonuses on their respective damage paths. Active skills multiply a compatible held weapon’s derived hit by their potency, preferring the main hand; staff spell scaling is already included and is never applied a second time. Normal direct hits can critically strike and trigger life on hit.
 
 ## Shields and hand transactions
 
@@ -46,13 +46,13 @@ Equipping a two-handed weapon stows any offhand item; equipping an offhand stows
 
 `generateItem(seed, itemLevel, kind?, profileId?, tierOverride?)` supports deterministic profile/tier selection for content tools and static reviews. Unknown profile IDs and mismatched kinds are rejected. Enemy loot chooses profiles from these registries with biome weights, source-level/rank item levels, and explicit rank-table tiers. Weapon damage and base shield armor use `(1 + 0.13 × (itemLevel − 1)) × tierQuality`; percentage affix growth is bounded separately. Armor mitigation scales against the incoming enemy/projectile's captured level. The [progression and loot model](progression-and-loot.md) documents these shared curves and tables.
 
-The starter bag contains eight level-1 items: Longsword, chest armor, a ring, boots, Iron Buckler, Thorn Shortbow, Ember Staff, and Rondel Dagger. The equipped starter remains the Weathered Sword with neutral worn armor.
+New characters choose Sword (Weathered Sword), Bow (Thorn Shortbow) or Fire Staff (Ember Staff). They share neutral worn leather armor and 64 empty inventory cells; no test items are granted.
 
 ## Skill schools and requirements
 
-The atlas contains **2,824 nodes**, **2,923 curved connections**, **150 themed constellations**, and **17 skill majors**. Nine schools branch from the central Might, Cunning, and Arcana arteries. A school's first skill costs four points along its shortest origin route; its advanced skill costs seven total. The dagger school currently has one skill. Crosslinks allow movement between specialties and disciplines.
+The atlas contains **2,113 nodes**, **2,925 curved connections**, **150 themed constellations**, and **17 skill majors**. Nine schools branch from the central Might, Cunning, and Arcana arteries. A school's first skill costs three points along its shortest origin route; its advanced skill costs four total. The dagger school currently has one skill. Crosslinks allow movement between specialties and disciplines.
 
-| Domain | School | First skill — 3 points | Advanced skill — 7 total points |
+| Domain | School | First skill — 3 points | Advanced skill — 4 total points |
 | --- | --- | --- | --- |
 | Might | Way of the Blade | Crescent Cleave | Rift Lunge |
 | Might | Way of the Colossus | Whirlwind | Earthshatter |
@@ -98,7 +98,7 @@ Fireball and Meteor burns deal a nominal 12% of their pre-critical direct-hit pa
 
 Gear, XP, attributes, allocations, assignments, resources and skill cooldowns persist in each character’s local save slot. Each character also has a separate explored map. Temporary statuses, projectiles and ground effects are rebuilt when continuing; see [Character saves](character-saves.md). The expanded schools replace the earlier six-skill layout and IDs directly; no legacy save or skill adapter is retained.
 
-This is a concrete initial catalog for testing. Element labels and status effects are implemented, but an elemental resistance/penetration model, ammunition, durability, skill ranks, respecs, trading, crafting, and persistent characters are not. Skills remain authored action recipes, rather than a general scripting system. Balance and combat feel remain for the user's playtesting.
+This is a concrete initial catalog for testing. Element labels and status effects are implemented, but an elemental resistance/penetration model, ammunition, durability, skill ranks, respecs, trading and crafting are not. Persistent characters are implemented through the eight-slot save system. Skills remain authored action recipes, rather than a general scripting system. Balance and combat feel remain for the user's playtesting.
 
 See [character systems](character-systems.md) for item tiers, point rewards, stat formulas, and inventory rules. Add weapon/profile content in `weapon-content.ts`, shared skill requirements/costs/icons in `skill-content.ts`, typed execution profiles in `skill-execution-content.ts`, execution-kind handlers in `skill-combat.ts`, projectile behavior in `projectile-combat.ts`, shared statuses in `combat-status.ts`, and delayed pulses in `ground-effects.ts`. Damage/death and rewards live in `combat-damage.ts` and `combat-rewards.ts`; Simulation preserves their ordered fixed-tick integration. Rendering consumes those definitions and events without awarding damage or effects.
 

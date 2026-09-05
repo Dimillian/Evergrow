@@ -1,5 +1,7 @@
 # Living biomes — 2026-09-05
 
+Implementation-pass record from 2026-09-05. Verification counts and captures below belong to that pass; [system status](system-status.md) tracks the current build.
+
 The Verdant motion pass now extends across all seven climates, using the existing procedural props and terrain. The traveling wind front keeps one world-space phase; material stiffness and climate strength change its response. Crowns, groundcover, local mist and drifting debris respond together. Foliage occlusion now fades smoothly in every climate while trunks and collision stay fixed.
 
 | Climate | Reactions and atmosphere | Decorative wildlife |

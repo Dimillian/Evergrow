@@ -51,6 +51,6 @@ TypeScript, Vite, Canvas 2D and WebGL; no runtime package dependencies. **492 co
 
 Gold drops magnetize on approach, persist per character, and appear in the HUD and inventory. Gold and XP gains have compact animated feedback.
 
-[Character saves](docs/character-saves.md) · [Game brief](docs/game-brief.md) · [Roadmap](docs/roadmap.md) · [Architecture](docs/architecture.md) · [Skills & weapons](docs/weapons-and-skills.md) · [Progression & loot](docs/progression-and-loot.md) · [NPC & vendor spec](docs/npcs-and-vendors.md)
+[Documentation index](docs/README.md) · [Current status](docs/system-status.md) · [Character saves](docs/character-saves.md) · [Game brief](docs/game-brief.md) · [Roadmap](docs/roadmap.md) · [Architecture](docs/architecture.md) · [Skills & weapons](docs/weapons-and-skills.md) · [Progression & loot](docs/progression-and-loot.md) · [NPC & vendor spec](docs/npcs-and-vendors.md)
 
 World, character and equipment art is generated in code. The bundled [Pixelify Sans font](game/src/assets/fonts/SOURCE.md) is licensed under the SIL Open Font License.

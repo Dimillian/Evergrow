@@ -86,5 +86,5 @@ The last checkpoint is part of implementing vendors, not speculative infrastruct
 
 - Keep current renderer and combat architecture. Split further only where the new responsibility requires it; no ECS conversion or global service container.
 - Add per-system timings before materially increasing actor density or adding roaming NPC populations. Current FPS smoothing is not a profiling baseline.
-- Consolidate the documentation's historical snapshots: `system-status.md` still labels older counts and encounter limits as current, while later sections supersede them. Prefer a compact current summary and clearly labeled historical notes.
+- Documentation consolidation is now complete: [system status](system-status.md) is the current summary, [roadmap](roadmap.md) tracks implementation, and earlier snapshots are explicitly [historical](history/foundation-checkpoints.md). Keep those boundaries when updating docs.
 - Keep compatibility code out of the design. No save reset is needed for this assessment; decide any schema change as part of the actual implementation.

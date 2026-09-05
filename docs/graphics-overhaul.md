@@ -1,5 +1,7 @@
 # Procedural graphics overhaul — 2026-09-05
 
+Implementation-pass record from 2026-09-05. Verification counts and captures below belong to that pass; [system status](system-status.md) tracks the current build.
+
 The pass develops the existing gothic palette and fully code-defined artwork across all seven climates. No generated image assets, display settings, new dependencies, combat rules or character saving were introduced.
 
 ## Implemented

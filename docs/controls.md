@@ -10,7 +10,7 @@
 | C / I | Character, equipment, inventory, and attributes |
 | T | Skill tree and active skill assignments |
 | Space | Dodge, using one of two regenerating charges |
-| Q | Healing flask; charges return through kills |
+| Q | Dual potion: restores life and mana; charges return through kills |
 | Escape | Close a panel, pause, or resume |
 | M | Open or close the world map |
 | Tab while playing / click minimap | Open the world map |
@@ -18,4 +18,6 @@
 | N | Toggle synthesized sound |
 | F3 | Frame-rate and coordinate overlay |
 
-Unlock skills in the tree, then assign them to RMB or 1–4. Empty slots do nothing. Character, inventory, and map panels pause combat.
+Unlock skills in the tree, then assign them to RMB or 1–4. Empty slots do nothing. Character, inventory, skill tree and map panels pause combat.
+
+In the inventory, hover/focus inspects, Shift-click equips or unequips, and drag/drop moves or equips items. In the tree, single-click inspects; double-click or Allocate path spends points on the complete highlighted route if affordable. Wheel zooms and dragging pans the atlas.
