@@ -4,7 +4,7 @@ import { biomeWind } from './biome-wind.ts';
 import { AtmosphereArt } from './atmosphere-art.ts';
 import { GroundDressing } from './ground-art.ts';
 import { SKILL_CAST_MOTION } from './combat-content.ts';
-import { drawGroundLoot, drawLootLabels } from './loot-art.ts';
+import { drawGroundLoot, drawLootLabels, drawResourcePickups } from './loot-art.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
 import { ArtLibrary, drawHumanoid, getPlayerSwordTip, PLAYER_ART_SCALE } from './art.ts';
 import type { CharacterPose } from './art.ts';
@@ -36,7 +36,8 @@ import { drawEnemyPlate } from './enemy-plate.ts';
 import { drawRankCrest } from './enemy-rank-art.ts';
 import { drawSiteGround, drawSiteDecor, wildernessLights } from './wilderness-art.ts';
 
-interface Corpse { x: number; y: number; angle: number; kind: Enemy['kind']; life: number; seed: number; }
+import { EnemyDeaths, DEATH_SETTLE_SECONDS } from './death-presentation.ts';
+import { drawEnemyRemains } from './death-art.ts';
 interface Ghost { x: number; y: number; angle: number; gait: number; life: number; }
 export interface RenderSettings {
   reducedMotion: boolean;
@@ -82,7 +83,7 @@ export class Renderer {
   private get cachedBuildings() { return this.visibility.buildings; }
   private indoorBlend = 0;
   private lighting = new Lighting();
-  private corpses: Corpse[] = [];
+  private deaths = new EnemyDeaths();
   private ghosts: Ghost[] = [];
   private ghostTimer = 0;
   private visualTime = 0;
@@ -129,7 +130,7 @@ export class Renderer {
     this.lastDisplayedView = this.view;
     this.groundLayer.reset(); this.groundDressing.reset(); this.biomeLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
     this.settlementArt.reset(); this.indoorBlend = 0;
-    this.corpses = []; this.ghosts = []; this.ghostTimer = 0;
+    this.deaths.reset(); this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
     this.damageTrails.clear(); this.playerHealthTrail = 100; this.playerHealthHold = 0;
     this.experienceFeedback.reset(); this.experienceDisplay = undefined;
@@ -156,10 +157,8 @@ export class Renderer {
         this.kickY = Math.max(-5, Math.min(5, this.kickY - Math.sin(e.angle) * strength * .7));
         this.shake = Math.max(this.shake, e.type === 'hurt' ? 1.6 : .65);
       }
-      if (e.type === 'kill') this.corpses.push({ x: e.x, y: e.y, angle: e.angle,
-        kind: e.enemyKind, life: 18, seed: Math.random() * 100 });
+      this.deaths.handle(e);
     }
-    if (this.corpses.length > 45) this.corpses.splice(0, this.corpses.length - 45);
   }
 
   render(sim: Simulation, world: World, dt: number, settings: RenderSettings) {
@@ -189,9 +188,8 @@ export class Renderer {
       this.cameraY += (target.y - this.cameraY) * follow;
     }
     this.effects.update(sim, feedbackStep);
-    for (const corpse of this.corpses) corpse.life -= step;
+    this.deaths.update(feedbackStep);
     for (const ghost of this.ghosts) ghost.life -= step;
-    this.corpses = this.corpses.filter(corpse => corpse.life > 0);
     this.ghosts = this.ghosts.filter(ghost => ghost.life > 0);
     this.ghostTimer -= step;
     if (active && p.dodgeTime > 0 && this.ghostTimer <= 0) {
@@ -229,17 +227,13 @@ export class Renderer {
     this.groundLayer.draw(c, world, left, top, worldWidth, worldHeight);
     for (const site of this.visibility.sites) drawSiteGround(c, site, settings.reducedMotion ? 0 : this.visualTime);
     this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime);
-    this.remains();
     this.groundDressing.draw(c, this.cachedProps, this.view);
     this.biomeArt.drawGround(c, this.biomeLife, this.cachedProps, this.visualTime, settings.reducedMotion, this.view);
     this.atmosphere.drawWater(c, this.cachedProps, this.visualTime, settings.reducedMotion);
+    for (const remains of this.deaths.remains) if (remains.age >= DEATH_SETTLE_SECONDS)
+      drawEnemyRemains(c, remains, settings.reducedMotion);
     this.enemyFocusMark(alpha);
-    for (const pickup of sim.pickups) {
-      const y = pickup.y - 4 - Math.sin(sim.time * 3 + pickup.id) * 2;
-      drawGlow(c, pickup.x, y, 24, pickup.kind === 'health' ? '#ff643b' : '#64baff', .45);
-      c.save(); c.translate(pickup.x, y); c.rotate(Math.PI / 4);
-      c.fillStyle = pickup.kind === 'health' ? '#ff9378' : '#98dbff'; c.fillRect(-2, -2, 4, 4); c.restore();
-    }
+    drawResourcePickups(c, sim.pickups, this.visualTime, settings.reducedMotion);
     for (const ghost of this.ghosts) {
       c.save(); c.globalAlpha = ghost.life / .19 * .3; c.translate(ghost.x, ghost.y);
       drawHumanoid(c, { kind: 'player', angle: ghost.angle, time: sim.time, gaitPhase: ghost.gait,
@@ -262,7 +256,7 @@ export class Renderer {
     this.atmosphere.drawMist(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, px, py, alpha, lights);
-    drawGroundLoot(c, sim.groundItems, sim.time);
+    drawGroundLoot(c, sim.groundItems, this.visualTime, settings.reducedMotion);
     this.effects.drawSword(c);
     this.effects.draw(c);
     this.damageDirection(px, py);
@@ -313,21 +307,6 @@ export class Renderer {
     c.restore();
   }
 
-  private remains() {
-    const c = this.ctx;
-    for (const corpse of this.corpses) {
-      c.save(); c.translate(corpse.x, corpse.y); c.rotate(corpse.angle);
-      c.globalAlpha = Math.min(.75, corpse.life / 3); c.fillStyle = '#191c20';
-      c.beginPath(); c.ellipse(0, 0, 21, 9, 0, 0, TAU); c.fill();
-      c.strokeStyle = corpse.kind === 'caster' ? '#567f78' : '#887b67'; c.lineWidth = 2;
-      for (let i = 0; i < 5; i++) {
-        c.beginPath(); c.moveTo(-8 + i * 3, Math.sin(i + corpse.seed) * 5);
-        c.lineTo(-4 + i * 3, Math.cos(i + corpse.seed) * 6); c.stroke();
-      }
-      c.restore();
-    }
-  }
-
   private actorsAndProps(sim: Simulation, px: number, py: number, alpha: number, dt: number, settings: RenderSettings) {
     const c = this.ctx, p = sim.player;
     const entries: Array<{ y: number; draw: () => void }> = this.cachedProps.map(prop => ({ y: prop.y, draw: () => {
@@ -376,6 +355,8 @@ export class Renderer {
     for (const site of this.visibility.sites) for (const decor of site.decor) {
       entries.push({ y: decor.y, draw: () => drawSiteDecor(c, site, decor, settings.reducedMotion ? 0 : this.visualTime) });
     }
+    for (const remains of this.deaths.remains) if (remains.age < DEATH_SETTLE_SECONDS)
+      entries.push({ y: remains.y, draw: () => drawEnemyRemains(c, remains, settings.reducedMotion) });
     for (const enemy of sim.enemies) {
       if (enemy.hp <= 0) continue;
       const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);

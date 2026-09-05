@@ -22,7 +22,7 @@ test('effect storage stays bounded while processing a large event batch, not onl
   }
   const samples: CombatEvent[] = [
     { type: 'hit', x: 0, y: 0, angle: .3, value: 20, enemyKind: 'brute', targetId: 1, remainingHp: 80, heavy: false },
-    { type: 'kill', x: 0, y: 0, angle: .3, enemyKind: 'brute', targetId: 1, remainingHp: 0 },
+    { type: 'kill', facing: 0, x: 0, y: 0, angle: .3, enemyKind: 'brute', targetId: 1, remainingHp: 0 },
     { type: 'hurt', x: 0, y: 0, angle: .3, value: 20, remainingHp: 80, enemyKind: 'brute', heavy: false },
     { type: 'heal', x: 0, y: 0, value: 20 },
   ];

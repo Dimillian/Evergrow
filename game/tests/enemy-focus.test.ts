@@ -128,7 +128,7 @@ test('kills and removal clear retained focus without waiting for its timeout', (
   const target = enemy(), focus = new EnemyFocus();
   focus.update([target], view, point(), 1, 0); focus.noteHits([hit(1)]);
   focus.update([target], view, null, 1, 0);
-  focus.noteHits([{ type: 'kill', angle: 0, enemyKind: 'stalker', targetId: 1, x: 0, y: 0, remainingHp: 0 }]);
+  focus.noteHits([{ type: 'kill', facing: 0, angle: 0, enemyKind: 'stalker', targetId: 1, x: 0, y: 0, remainingHp: 0 }]);
   assert.equal(focus.targetId, null);
   assert.equal(focus.update([target], view, point(), 1, 0), null, 'a kill event suppresses reacquisition before the corpse state arrives');
   focus.reset(); focus.noteHits([hit(1)]); focus.update([target], view, null, 1, 0);

@@ -55,7 +55,7 @@ export class CombatEffects {
       const contact = event.type === 'hit' || event.type === 'hurt' || event.type === 'kill';
       const color = event.color ?? (event.style ? PROJECTILE_COLORS[event.style] : undefined) ?? (event.type === 'hurt' ? '#ff5e4e' : event.type === 'heal' || enemyCast ? MINT
         : event.type === 'dodge' ? BLUE : event.type === 'cast' ? FIRE : GOLD);
-      const count = event.type === 'blast' ? 46 : event.type === 'block' ? 22 : event.type === 'hit' ? 30 : event.type === 'kill' ? 42
+      const count = event.type === 'blast' ? 46 : event.type === 'block' ? 22 : event.type === 'hit' ? 30 : event.type === 'kill' ? 16
         : event.type === 'hurt' ? 32 : event.type === 'cast' ? 18 : event.type === 'heal' ? 30
         : event.type === 'level' ? 50 : event.type === 'loot' ? 8 : event.type === 'pickup' ? 10 : event.type === 'dodge' ? 14 : 0;
       const bodyColor = event.type === 'hurt' ? '#b64143' : enemyKind === 'wisp' ? '#b1e5d6'
@@ -64,7 +64,7 @@ export class CombatEffects {
       for (let i = 0; i < count; i++) {
         const radial = ['kill', 'heal', 'pickup', 'level', 'blast'].includes(event.type) || event.skill === 'iceNova';
         const angle = radial ? Math.random() * Math.PI * 2 : eventAngle + (Math.random() - .5) * 2.8;
-        const debris = contact && i % 3 === 0 && enemyKind !== 'wisp';
+        const debris = contact && (event.type === 'kill' || i % 3 === 0) && enemyKind !== 'wisp';
         this.spark(event.x, event.y, angle, debris ? bodyColor : i % 4 === 0 ? '#fff7db' : color,
           contact ? 1.2 : 1, true, !debris);
       }
@@ -73,10 +73,10 @@ export class CombatEffects {
         life: event.type === 'kill' ? .3 : .22, max: event.type === 'kill' ? .3 : .22,
         color, hurt: event.type === 'hurt', lethal: event.type === 'kill' });
       if (count > 5) {
-        const max = event.type === 'heal' ? .55 : event.type === 'kill' ? .32 : .22;
+        const max = event.type === 'heal' ? .55 : event.type === 'kill' ? .16 : .22;
         this.flashes.push({ x: event.x, y: contact ? contactY : event.y - 10, life: max, max,
-          radius: event.type === 'kill' || heavy ? 145 : contact ? 118 : 90, color,
-          ring: event.type === 'kill' || event.type === 'heal' || event.type === 'level' || event.skill === 'iceNova' });
+          radius: event.type === 'kill' ? 62 : heavy ? 145 : contact ? 118 : event.type === 'loot' || event.type === 'pickup' ? 35 : 90, color,
+          ring: event.type === 'heal' || event.type === 'level' || event.skill === 'iceNova' });
       }
       if (event.type === 'hit' && event.value) this.popups.push({ x: event.x + (Math.random() - .5) * 10,
         y: event.y - (enemyKind === 'brute' ? 54 : 44), vx: (Math.random() - .5) * 22, vy: -47,

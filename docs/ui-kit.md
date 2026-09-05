@@ -94,3 +94,10 @@ In the skill tree, single-click inspects and double-click allocates. The inspect
 Successful inventory insertion emits a typed item payload; a full bag emits a separate status and leaves the item on the ground. Level events include the destination level and exact point gains, not parsed strings. Exploration calls `onDiscover` only for newly revealed POIs, never while loading/merging saved discoveries. Settlement shops share their town notification. Biome entry requires 1.6 seconds of sustained presence and has a six-second cooldown; it announces entry, not permanent first discovery. Character switches clear the feed. Existing saves need no migration.
 
 `/notifications.html` stages actual cards over the frozen renderer without gameplay or save access. Add `?view=discovery` or `?view=area` to review discoveries; the default shows a level-up and a rare item, with other item pickups queued individually.
+
+
+### Ground item labels
+
+`loot-art.ts` uses actual equipment silhouettes resting on the ground, small rarity marks and occasional glints for rare or better gear. Health/mana pickups use distinct stoppered vials instead of glowing diamonds. Names render after CRT at display resolution, with explicit quality and item level in a clean small font. `loot-label-layout.ts` packs individual labels within the viewport, checks every occupied rectangle, and draws leaders back to the items. Extremely crowded views omit labels that cannot fit instead of overlapping; the items remain on the ground. Shared pickup coordinates, capacity, rarity odds and save data are unchanged.
+
+`death-presentation.ts` retains at most 45 enemy remains independently of simulation actors. The actual creature art collapses over 0.65 seconds in the hit direction, sheds material scraps and settles into a corpse, fading over its final three seconds (14-second lifetime; wisps dissipate within five). Reduced motion shows settled remains immediately. Death and loot presentation can be inspected in `/loot.html` without gameplay or save access.

@@ -43,7 +43,7 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
   if (enemy.hp <= 0) {
     transitionEnemy(enemy, 'dead', ENCOUNTER_RULES.corpseDuration);
     context.killed(enemy);
-    context.emit({ type: 'kill', x: enemy.x, y: enemy.y, angle,
+    context.emit({ type: 'kill', x: enemy.x, y: enemy.y, angle, facing: enemy.angle,
       targetId: enemy.id, remainingHp: 0, enemyKind: enemy.kind });
   } else if (definition.interruptible && melee) {
     enemy.stagger = COMBAT_TIMING.staggerDuration;

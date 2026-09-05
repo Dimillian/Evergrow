@@ -252,7 +252,7 @@ export type CombatEvent = EventAppearance & (
   | { readonly type: 'swing'; readonly angle: number }
   | { readonly type: 'hit'; readonly angle: number; readonly value: number; readonly targetId: number;
       readonly remainingHp: number; readonly enemyKind: EnemyKind; readonly heavy: boolean }
-  | { readonly type: 'kill'; readonly angle: number; readonly targetId: number; readonly remainingHp: 0; readonly enemyKind: EnemyKind }
+  | { readonly type: 'kill'; readonly angle: number; readonly facing: number; readonly targetId: number; readonly remainingHp: 0; readonly enemyKind: EnemyKind }
   | { readonly type: 'cast'; readonly angle: number; readonly enemyKind?: EnemyKind }
   | { readonly type: 'hurt'; readonly angle: number; readonly value: number; readonly remainingHp: number;
       readonly enemyKind?: EnemyKind; readonly heavy: boolean }

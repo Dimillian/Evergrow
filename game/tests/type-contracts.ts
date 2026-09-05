@@ -13,7 +13,7 @@ export function verifyTypeContracts(event: (event: CombatEvent) => void,
   // @ts-expect-error Damage to the player must include the resulting health.
   event({ type: 'hurt', x: 0, y: 0, angle: 0, value: 8, heavy: false });
   // @ts-expect-error A death event cannot claim positive remaining health.
-  event({ type: 'kill', x: 0, y: 0, angle: 0, targetId: 1, enemyKind: 'stalker', remainingHp: 5 });
+  event({ type: 'kill', facing: 0, x: 0, y: 0, angle: 0, targetId: 1, enemyKind: 'stalker', remainingHp: 5 });
   // @ts-expect-error A spawn event is not a hit event with target health.
   event({ type: 'spawn', x: 0, y: 0, enemyKind: 'hound', remainingHp: 5 });
   // @ts-expect-error A ground warning must describe its footprint and timing.
