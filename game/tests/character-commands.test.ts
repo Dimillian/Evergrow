@@ -31,7 +31,7 @@ test('full-pack hand conflicts fail atomically, including derived state and reso
   assert.ok(executeCharacterCommand(player, { type: 'equip', index: 47 }).ok);
   player.character.inventory[47] = generateItem(72, 1, 'shield', 'iron-buckler');
   assert.ok(executeCharacterCommand(player, { type: 'equip', index: 47 }).ok);
-  player.character.inventory = Array.from({ length: 48 }, (_, index) => generateItem(1000 + index, 1, 'head'));
+  player.character.inventory = Array.from({ length: 64 }, (_, index) => generateItem(1000 + index, 1, 'head'));
   player.character.inventory[0] = generateItem(90, 1, 'weapon', 'ember-staff');
   const before = structuredClone(player), derived = player.derived;
   assert.equal(executeCharacterCommand(player, { type: 'equip', index: 0 }).ok, false);

@@ -49,7 +49,7 @@ Area danger rises one level per 3,200 units from the origin. Monster level and r
 
 | Resource | Current bound |
 | --- | --- |
-| Character bag / equipment / active skill slots | 48 cells / 11 slots / 5 slots |
+| Character bag / equipment / active skill slots | 64 cells / 11 slots / 5 slots |
 | Projectiles / timed ground effects | 128 / 16 |
 | Living enemies / ambient target / reserved roaming slots | 18 total / 5–8 ambient by area level / 4 slots unavailable to camps |
 | Ground equipment | 96 items; auto-pickup within 30 units with line of sight |

@@ -218,7 +218,7 @@ test('repeated seeded enemy deaths generate reproducible loot with unique identi
 
 test('a full inventory preserves dropped loot until a cell is available, then collects it once', () => {
   const sim = createSim();
-  sim.player.character.inventory = Array.from({ length: 48 }, (_, index) => generateItem(9000 + index, 1));
+  sim.player.character.inventory = Array.from({ length: 64 }, (_, index) => generateItem(9000 + index, 1));
   const enemy = sim.spawnEnemy('stalker', 22, 0)!; enemy.hp = 1; enemy.stateDuration = 999;
   advance(sim, .25, { attack: true });
   assert.equal(sim.groundItems.length, 1);

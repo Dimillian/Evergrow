@@ -6,9 +6,9 @@ The character sheet now connects equipment, attributes, tree allocations, active
 
 ## What the player can do
 
-- **C / I:** open the same character window: procedural character doll and eleven equipment slots on the left, a 48-cell inventory in the middle, attributes and detailed combat stats on the right.
-- Inspect an item by hovering, keyboard focus, or selection. Its tooltip/detail card shows tier, item level, required level, weapon profile, modifiers, and comparison against the relevant equipped item.
-- Drag an item onto a compatible equipment slot, use **Shift-click** to equip/unequip, or use the selected item's button. Dragging between bag cells swaps their contents. Rings support either ring slot.
+- **C / I:** open the same character window: procedural character doll and eleven equipment slots on the left, a 64-cell inventory in the middle, attributes and detailed combat stats on the right.
+- Inspect an item by hovering, keyboard focus, or a tap. Its tooltip shows tier, item level, required level, weapon profile, modifiers, and comparison against the relevant equipped item.
+- Drag an item onto a compatible equipment slot, use **Shift-click** to equip/unequip. Dragging between bag cells swaps their contents. Rings support either ring slot.
 - **T:** open the skill atlas. Pan, zoom, search names/bonuses, filter a domain or reachable stars, inspect a node, and spend a point on a connected node. Hovering or selecting a distant node previews the shortest route from the current build and its remaining point cost. Canvas keyboard navigation follows neighboring stars; the allocation button remains a native control.
 - Assign unlocked skills to **RMB, 1, 2, 3, 4** from a major node's detail panel. Assigning a skill to a new slot moves its existing assignment; one skill cannot occupy multiple slots. LMB stays the basic attack, Q the potion, and Space the dodge.
 

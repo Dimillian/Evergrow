@@ -79,7 +79,7 @@ test('explicit authored profiles cover one-hand, two-hand, bow, staff, and shiel
 
 test('the starter sheet has neutral worn gear, a full independent outfit and five empty skill slots', () => {
   const first = createCharacterSheet(), other = createCharacterSheet();
-  assert.equal(first.inventory.length, 48); assert.equal(first.inventory.filter(Boolean).length, 8);
+  assert.equal(first.inventory.length, 64); assert.equal(first.inventory.filter(Boolean).length, 8);
   assert.deepEqual(first.skillSlots, [null, null, null, null, null]);
   assert.deepEqual(first.allocatedNodes, ['origin']);
   assert.equal(first.statPoints, 0); assert.equal(first.skillPoints, 0);

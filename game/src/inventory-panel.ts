@@ -1,6 +1,6 @@
 import type { Player } from './model.ts';
 import type { Attribute, EquipmentSlot, Item, ItemTier, StatKey } from './character-types.ts';
-import { EQUIPMENT_SLOTS, TIER_COLORS, TIER_NAMES, STAT_LABELS, itemModifiers, formatStatValue } from './items.ts';
+import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS, TIER_COLORS, TIER_NAMES, STAT_LABELS, itemModifiers, formatStatValue } from './items.ts';
 import { itemFitsSlot } from './inventory.ts';
 import { itemIconSVG, outfitFromEquipment } from './item-art.ts';
 import { drawHumanoid, getPlayerSwordTip } from './art.ts';
@@ -63,12 +63,10 @@ export class InventoryPanel {
   private readonly actions: InventoryPanelActions;
   private focus: ReturnType<typeof trapDialogFocus> | null = null;
   private player: Player | null = null;
-  private selection: ItemReference | null = null;
   private hovered: ItemLocation | null = null;
   private drag: ItemReference | null = null;
   private animation = 0;
   private facing = Math.PI / 2;
-  private selectedSignature = '';
   private readonly tooltip: HTMLDivElement;
   private readonly canvas: HTMLCanvasElement;
   private readonly cells = new Map<string, HTMLButtonElement>();
@@ -96,8 +94,7 @@ export class InventoryPanel {
         </section>
         <section class="character-inventory" aria-labelledby="inventory-title">
           <div class="character-section-title"><h3 id="inventory-title">Inventory</h3><span data-capacity></span></div>
-          <div class="character-grid-scroll"><div class="character-bag" role="group" aria-label="Inventory, 48 slots">${Array.from({ length: 48 }, (_, index) => `<button type="button" class="ui-slot character-item-slot character-bag-slot" data-bag="${index}" data-location="bag-${index}" aria-label="Empty inventory slot ${index + 1}"></button>`).join('')}</div></div>
-          <div class="character-selection" data-selection><div class="character-selection-empty">${uiIcon('inventory')}<p>Select an item to inspect its properties.</p></div></div>
+          <div class="character-grid-scroll"><div class="character-bag" role="group" aria-label="Inventory, ${INVENTORY_CAPACITY} slots">${Array.from({ length: INVENTORY_CAPACITY }, (_, index) => `<button type="button" class="ui-slot character-item-slot character-bag-slot" data-bag="${index}" data-location="bag-${index}" aria-label="Empty inventory slot ${index + 1}"></button>`).join('')}</div></div>
         </section>
         <section class="character-details" aria-labelledby="attributes-title">
           <div class="character-attributes"><div class="character-section-title"><h3 id="attributes-title">Attributes</h3><span class="character-points-available" data-points-label></span></div>
@@ -135,13 +132,7 @@ export class InventoryPanel {
   refresh(player: Player): void {
     this.player = player;
     if (this.element.hidden) return;
-    if (this.selection && this.itemAt(this.selection)?.id !== this.selection.id) {
-      const itemId = this.selection.id;
-      const bag = player.character.inventory.findIndex(item => item?.id === itemId);
-      const equipped = EQUIPMENT_SLOTS.find(slot => player.character.equipped[slot]?.id === itemId);
-      this.selection = bag >= 0 ? { type: 'bag', index: bag, id: itemId } : equipped ? { type: 'equipment', slot: equipped, id: itemId } : null;
-    }
-    for (const [key, cell] of this.cells) {
+    for (const cell of this.cells.values()) {
       const location = this.locationFrom(cell)!;
       const item = this.itemAt(location);
       const signature = item ? JSON.stringify(item) : '';
@@ -153,9 +144,6 @@ export class InventoryPanel {
         cell.dataset.tier = item?.tier ?? '';
         cell.draggable = Boolean(item);
       }
-      const selected = Boolean(this.selection && key === locationKey(this.selection));
-      cell.setAttribute('aria-pressed', String(selected));
-      cell.classList.toggle('is-selected', selected);
       cell.classList.toggle('is-locked', Boolean(item && item.requiredLevel > player.level));
       cell.setAttribute('aria-label', item ? `${item.name}, ${TIER_NAMES[item.tier]}, item level ${item.itemLevel}${location.type === 'equipment' ? `, equipped in ${SLOT_NAMES[location.slot]}` : ''}${item.requiredLevel > player.level ? `, requires level ${item.requiredLevel}` : ''}` : location.type === 'equipment' ? `${SLOT_NAMES[location.slot]}, empty` : `Empty inventory slot ${location.index + 1}`);
     }
@@ -209,7 +197,6 @@ export class InventoryPanel {
       <h4 id="stats-${group.tone}">${group.title}</h4><dl>${group.rows.map(([label, value]) => `<div class="ui-stat"><dt class="ui-stat-label">${label}</dt><dd class="ui-stat-value">${value}</dd></div>`).join('')}</dl></section>`).join('');
     const statContainer = this.element.querySelector('[data-combat-stats]')!;
     if (statContainer.innerHTML !== markup) statContainer.innerHTML = markup;
-    this.renderSelection();
     if (this.hovered) this.showTooltip(this.hovered);
   }
 
@@ -258,21 +245,12 @@ export class InventoryPanel {
       if (turn) { this.facing += Number(turn.dataset.turn) * Math.PI / 4; return; }
       const attribute = target.closest<HTMLElement>('[data-allocate]')?.dataset.allocate as Attribute | undefined;
       if (attribute && Object.hasOwn(ATTRIBUTE_NAMES, attribute)) { this.actions.allocate(attribute); return; }
-      const itemAction = target.closest<HTMLElement>('[data-item-action]');
-      if (itemAction && this.selection && this.itemAt(this.selection)?.id === this.selection.id) {
-        const slot = itemAction.dataset.targetSlot as EquipmentSlot | undefined;
-        if (slot && EQUIPMENT_SLOTS.includes(slot) && this.selection.type === 'bag') this.actions.equip(this.selection.index, slot);
-        else this.activate(this.selection);
-        return;
-      }
       const location = this.locationFrom(target);
       if (!location) return;
       const item = this.itemAt(location);
       if (item && event.shiftKey) { this.hideTooltip(); this.activate(location); return; }
-      this.selection = item ? { ...location, id: item.id } : null;
-      this.refresh(this.player!);
-      // Touch users inspect the fixed detail area without a hover overlay covering it.
-      if (event.detail > 0) this.hideTooltip();
+      if (item) this.showTooltip(location);
+      else this.hideTooltip();
     }, options);
     this.element.addEventListener('pointerover', event => {
       if (event.pointerType === 'touch' || this.drag) return;
@@ -295,9 +273,9 @@ export class InventoryPanel {
       const location = this.locationFrom(event.target);
       if (!location || location.type !== 'bag' || event.altKey || event.ctrlKey || event.metaKey) return;
       let next = location.index;
-      if (event.key === 'ArrowRight') next = Math.min(47, next + 1);
+      if (event.key === 'ArrowRight') next = Math.min(INVENTORY_CAPACITY - 1, next + 1);
       else if (event.key === 'ArrowLeft') next = Math.max(0, next - 1);
-      else if (event.key === 'ArrowDown') next = Math.min(47, next + 8);
+      else if (event.key === 'ArrowDown') next = Math.min(INVENTORY_CAPACITY - 1, next + 8);
       else if (event.key === 'ArrowUp') next = Math.max(0, next - 8);
       else if (event.key === 'Home') next -= next % 8;
       else if (event.key === 'End') next += 7 - next % 8;
@@ -333,7 +311,6 @@ export class InventoryPanel {
       this.clearDrag();
       if (!valid || !source || !target) return;
       event.preventDefault();
-      this.selection = source;
       if (source.type === 'bag' && target.type === 'equipment') this.actions.equip(source.index, target.slot);
       else if (source.type === 'bag' && target.type === 'bag') this.actions.move(source.index, target.index);
       else if (source.type === 'equipment' && target.type === 'bag') this.actions.unequip(source.slot, target.index);
@@ -363,7 +340,7 @@ export class InventoryPanel {
     return { slot, item: sheet.equipped[slot] };
   }
 
-  private itemDetails(item: Item, location: ItemLocation, condensed = false): string {
+  private itemTooltipMarkup(item: Item, location: ItemLocation): string {
     const equipped = location.type === 'equipment';
     const compare = this.comparison(item);
     const requirements = item.requiredLevel > this.player!.level;
@@ -385,30 +362,11 @@ export class InventoryPanel {
       weapon = `<div class="character-item-weapon"><div><strong>${number(item.weapon.damage)}</strong><span>${damageLabel} damage</span>${!equipped && delta ? `<em class="${delta > 0 ? 'is-gain' : 'is-loss'}">${delta > 0 ? '+' : ''}${number(delta)}</em>` : ''}</div><div><strong>${number(item.weapon.baseAttacksPerSecond, 2)}</strong><span>${item.weapon.family === 'staff' ? 'Casts' : 'Attacks'} / second</span>${!equipped && Math.abs(speedDelta) > .001 ? `<em class="${speedDelta > 0 ? 'is-gain' : 'is-loss'}">${speedDelta > 0 ? '+' : ''}${number(speedDelta, 2)}</em>` : ''}</div></div><p class="character-item-comparison">${item.weapon.hands === 2 ? 'Two-handed' : 'One-handed'} · ${escapeUI(item.weapon.family)} · ${item.weapon.attackKind === 'melee' ? 'Melee sweep' : item.weapon.attackKind === 'arrow' ? 'Arrow shot' : 'Elemental bolt'} · ${number(item.weapon.reach)} reach</p>`;
     }
     if (item.shield) weapon = `<div class="character-item-weapon"><div><strong>${number(item.shield.blockChance)}%</strong><span>Block chance</span></div><div><strong>${number(item.shield.blockReduction)}%</strong><span>Damage blocked</span></div></div><p class="character-item-comparison">Off hand · Shield · Pairs with a one-handed weapon</p>`;
-    return `<div class="character-item-heading" style="--item-color:${TIER_COLORS[item.tier]}">${condensed ? '' : `<span class="character-item-detail-icon">${itemIconSVG(item, 52)}</span>`}<div><span class="character-item-class"><span class="character-rarity-badge" data-tier="${item.tier}"><span aria-hidden="true">${['I', 'II', 'III', 'IV', 'V'][TIER_RANK[item.tier] - 1]}</span>${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span></span><h4>${escapeUI(item.name)}</h4></div></div>
+    return `<div class="character-item-heading" style="--item-color:${TIER_COLORS[item.tier]}"><div><span class="character-item-class"><span class="character-rarity-badge" data-tier="${item.tier}"><span aria-hidden="true">${['I', 'II', 'III', 'IV', 'V'][TIER_RANK[item.tier] - 1]}</span>${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span></span><h4>${escapeUI(item.name)}</h4></div></div>
       <div class="character-item-meta"><span>Item level ${number(item.itemLevel)}</span><span class="${requirements ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel)}</span>${equipped ? '<span class="character-item-equipped">Equipped</span>' : ''}</div>
       ${weapon}<div class="character-item-properties">${rows.join('')}</div>
       ${item.affixes.length ? `<div class="character-item-affixes">${item.affixes.map(affix => escapeUI(affix.name)).join(' · ')}</div>` : ''}
       ${!equipped ? `<div class="character-item-comparison">${compare.item ? `Compared with <span>${escapeUI(compare.item.name)}</span>` : `Empty ${SLOT_NAMES[compare.slot].toLowerCase()} slot`}</div>` : ''}`;
-  }
-
-  private renderSelection(): void {
-    const item = this.selection && this.itemAt(this.selection);
-    const signature = JSON.stringify([this.selection, item, this.player!.character.equipped, this.player!.level]);
-    if (signature === this.selectedSignature) return;
-    this.selectedSignature = signature;
-    const container = this.element.querySelector('[data-selection]')!;
-    const actionFocused = container.contains(document.activeElement);
-    if (!item || !this.selection) {
-      container.innerHTML = `<div class="character-selection-empty">${uiIcon('inventory')}<p>Select an item to inspect its properties.</p></div>`;
-      return;
-    }
-    const equipped = this.selection.type === 'equipment';
-    const blocked = !equipped && item.requiredLevel > this.player!.level;
-    const alternateRing = !equipped && item.kind === 'ring' ? `<button type="button" class="ui-button" data-item-action data-target-slot="${this.comparison(item).slot === 'ring1' ? 'ring2' : 'ring1'}"${blocked ? ' disabled' : ''}>${this.comparison(item).slot === 'ring1' ? 'Ring II' : 'Ring I'}</button>` : '';
-    const alternateHand = !equipped && itemFitsSlot(item, 'offhand') && item.kind === 'weapon' ? `<button type="button" class="ui-button" data-item-action data-target-slot="offhand"${blocked ? ' disabled' : ''}>Off hand</button>` : '';
-    container.innerHTML = `${this.itemDetails(item, this.selection)}<div class="character-item-actions"><div class="character-item-action-buttons"><button type="button" class="ui-button ${equipped ? '' : 'ui-button--primary'}" data-item-action${blocked ? ' disabled' : ''}>${uiIcon(equipped ? 'inventory' : 'check')}${blocked ? `Requires level ${item.requiredLevel}` : equipped ? 'Unequip' : 'Equip'}</button>${alternateRing}${alternateHand}</div><span class="character-action-hint"><kbd class="ui-key">Shift</kbd> + click</span></div>`;
-    if (actionFocused) container.querySelector<HTMLButtonElement>('[data-item-action]')?.focus({ preventScroll: true });
   }
 
   private showTooltip(location: ItemLocation): void {
@@ -416,7 +374,7 @@ export class InventoryPanel {
     const item = this.itemAt(location), cell = this.cells.get(locationKey(location));
     if (!item || !cell) { this.hideTooltip(); return; }
     this.hovered = location;
-    this.tooltip.innerHTML = this.itemDetails(item, location, true);
+    this.tooltip.innerHTML = this.itemTooltipMarkup(item, location);
     this.tooltip.hidden = false;
     this.tooltip.style.setProperty('--item-color', TIER_COLORS[item.tier]);
     this.tooltip.dataset.tier = item.tier;

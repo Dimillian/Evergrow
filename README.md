@@ -11,7 +11,7 @@ A dark, procedural 2D action RPG for the browser, inspired by Diablo and Path of
 - **World:** seven blended biomes, procedural towns with walk-in interiors, camps and landmarks, day/night lighting, wind and ambient wildlife. Scrolling minimap and an explored-world atlas.
 - **Combat:** melee, bows and elemental staves; shields and dual wield; dodging, particles, damage feedback, and six enemy archetypes across three ranks. Encounters spawn outside the camera.
 - **Builds:** 2,113 nodes, 150 constellations and 17 active skills. Short early routes, useful resource/speed choices, and cross-discipline bridges at every layer. Attack and cast speed are independent; first-tier skills have no cooldown.
-- **Gear & progression:** procedural names, icons and visible equipment; 48 inventory slots, drag/drop and quick equip; item tiers, enemy loot tables, geographic danger scaling, XP and allocatable points.
+- **Gear & progression:** procedural names, icons and visible equipment; 64 inventory slots, drag/drop and quick equip; item tiers, enemy loot tables, geographic danger scaling, XP and allocatable points.
 - **Presentation:** code-generated artwork, dynamic lighting, restrained CRT/phosphor, and a shared retro interface with crisp UI text.
 
 Character progress resets on reload or a new run; only map discovery persists locally. Trading, crafting, quests, respecs and character saves are still to come. Endless progression is the direction, not a finished endgame.

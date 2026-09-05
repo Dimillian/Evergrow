@@ -3,6 +3,8 @@ import { SHIELD_PROFILES, WEAPON_PROFILES } from './weapon-content.ts';
 import { itemAffixGrowthLevel, itemPercentageScale, itemPowerScale, normalizeLevel } from './progression-content.ts';
 import type { CharacterSheet, EquipmentSlot, Item, ItemAffix, ItemKind, ItemTier, StatKey, StatModifiers } from './character-types.ts';
 
+export const INVENTORY_CAPACITY = 64;
+
 export const EQUIPMENT_SLOTS: readonly EquipmentSlot[] = Object.freeze([
   'weapon', 'offhand', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'amulet', 'ring1', 'ring2',
 ]);
@@ -166,7 +168,7 @@ export function createCharacterSheet(): CharacterSheet {
     }
     equipped[slot] = item;
   }
-  const inventory: CharacterSheet['inventory'] = Array.from({ length: 48 }, () => null);
+  const inventory: CharacterSheet['inventory'] = Array.from({ length: INVENTORY_CAPACITY }, () => null);
   const startingPack: readonly [ItemKind, string?][] = [
     ['weapon', 'longsword'], ['chest'], ['ring'], ['boots'], ['shield', 'iron-buckler'],
     ['weapon', 'thorn-shortbow'], ['weapon', 'ember-staff'], ['weapon', 'rondel-dagger'],

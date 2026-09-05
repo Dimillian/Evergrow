@@ -25,9 +25,9 @@ test('wrong slots, unmet levels and invalid indices never partially mutate inven
   assert.equal(equipItem(sheet, 4, NaN).ok, false);
   assert.equal(equipItem(sheet, 4, 100, 'unknown' as EquipmentSlot).ok, false);
   assert.equal(equipItem(sheet, -1, 100).ok, false);
-  assert.equal(equipItem(sheet, 48, 100).ok, false);
+  assert.equal(equipItem(sheet, 64, 100).ok, false);
   assert.equal(equipItem(sheet, 4.5, 100).ok, false);
-  assert.equal(equipItem(sheet, 47, 100).ok, false);
+  assert.equal(equipItem(sheet, 63, 100).ok, false);
   assert.deepEqual(sheet, before);
 });
 
@@ -56,10 +56,10 @@ test('bag moves swap occupants and never create or duplicate items', () => {
   const sheet = createCharacterSheet(), before = ids(sheet);
   const first = sheet.inventory[0], second = sheet.inventory[1];
   assert.ok(moveInventoryItem(sheet, 0, 1).ok); assert.equal(sheet.inventory[1], first); assert.equal(sheet.inventory[0], second);
-  assert.ok(moveInventoryItem(sheet, 1, 47).ok); assert.equal(sheet.inventory[47], first); assert.equal(sheet.inventory[1], null);
+  assert.ok(moveInventoryItem(sheet, 1, 63).ok); assert.equal(sheet.inventory[63], first); assert.equal(sheet.inventory[1], null);
   assert.equal(moveInventoryItem(sheet, 1, 3).ok, false);
-  assert.equal(moveInventoryItem(sheet, 47, -1).ok, false);
-  assert.ok(moveInventoryItem(sheet, 47, 47).ok);
+  assert.equal(moveInventoryItem(sheet, 63, -1).ok, false);
+  assert.ok(moveInventoryItem(sheet, 63, 63).ok);
   assert.deepEqual(ids(sheet), before);
 });
 
@@ -92,10 +92,10 @@ test('mixed equipment and bag transactions conserve every item identity across r
   let state = 145;
   const random = (max: number) => { state = Math.imul(state, 1664525) + 1013904223 | 0; return (state >>> 0) % max; };
   for (let operation = 0; operation < 1000; operation++) {
-    const type = random(3), index = random(48), slot = EQUIPMENT_SLOTS[random(EQUIPMENT_SLOTS.length)];
+    const type = random(3), index = random(64), slot = EQUIPMENT_SLOTS[random(EQUIPMENT_SLOTS.length)];
     if (type === 0) equipItem(sheet, index, 100, slot);
     else if (type === 1) unequipItem(sheet, slot, index);
-    else moveInventoryItem(sheet, index, random(48));
+    else moveInventoryItem(sheet, index, random(64));
     assert.deepEqual(ids(sheet), original);
     assert.equal(new Set(ids(sheet)).size, original.length);
   }
@@ -124,10 +124,10 @@ test('two-handed equipment stows an offhand atomically, rejecting a full bag wit
   sheet.inventory[10] = generateItem(847, 1, 'weapon', 'greatblade'); fillBag(sheet);
   const before = structuredClone(sheet), beforeIds = ids(sheet), shield = sheet.equipped.offhand;
   assert.equal(equipItem(sheet, 10, 1).ok, false); assert.deepEqual(sheet, before);
-  const displacedBagItem = sheet.inventory[47]; sheet.inventory[47] = null;
+  const displacedBagItem = sheet.inventory[63]; sheet.inventory[63] = null;
   assert.ok(equipItem(sheet, 10, 1).ok);
   assert.equal(sheet.equipped.weapon!.weapon!.hands, 2); assert.equal(sheet.equipped.offhand, null);
-  assert.equal(sheet.inventory[47], shield);
+  assert.equal(sheet.inventory[63], shield);
   assert.deepEqual(ids(sheet), beforeIds.filter(id => id !== displacedBagItem!.id));
 });
 
