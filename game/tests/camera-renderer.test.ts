@@ -5,6 +5,7 @@ import { Simulation } from '../src/simulation.ts';
 import { World, TILE_SIZE, type Prop } from '../src/world.ts';
 import type { Building, Settlement } from '../src/settlements.ts';
 import { getHUDLayout } from '../src/hud.ts';
+import { cameraView, MIN_CAMERA_ZOOM } from '../src/camera.ts';
 
 type Matrix = { a: number; b: number; c: number; d: number; e: number; f: number };
 type Rect = { left: number; top: number; width: number; height: number };
@@ -217,4 +218,61 @@ test('renderer wires hover and combat focus to a native enemy plate without HUD 
   sim.player.dead = false; noteHit(); render(); assert.ok(plateName());
   renderer.reset();
   assert.equal(plateName(), undefined, 'restarting the renderer clears the retained plate');
+});
+
+function containsBounds(outer: { x: number; y: number; width: number; height: number },
+  inner: { x: number; y: number; width: number; height: number }, message: string) {
+  assert.ok(outer.x <= inner.x && outer.y <= inner.y
+    && outer.x + outer.width >= inner.x + inner.width
+    && outer.y + outer.height >= inner.y + inner.height, message);
+}
+
+test('renderer supplies pending wheel coverage before drawing for smooth and reduced-motion cameras', t => {
+  const { renderer, sim, settings, render } = fixture(t);
+  for (const reducedMotion of [false, true]) {
+    settings.reducedMotion = reducedMotion;
+    renderer.reset(); render();
+    const displayed = renderer.worldBounds;
+    const aim = renderer.screenToWorld(83, 97);
+    for (let index = 0; index < 5; index++) renderer.zoomByWheel(300, 0, 900);
+    const guard = renderer.spawnExclusionBounds(sim.player);
+    assert.deepEqual(renderer.worldBounds, displayed, 'guard query does not apply the pending zoom');
+    assert.deepEqual(renderer.screenToWorld(83, 97), aim, 'pointer still targets the displayed frame');
+    const wide = cameraView(renderer.width, renderer.height, renderer.cameraX, renderer.cameraY, MIN_CAMERA_ZOOM);
+    containsBounds(guard, { x: wide.left, y: wide.top, width: wide.width, height: wide.height },
+      'full pending screen is excluded, including the terrain behind the bottom HUD');
+    render(.05);
+    containsBounds(guard, renderer.worldBounds, 'next visible frame cannot reveal a freshly spawned enemy');
+  }
+});
+
+test('renderer guard is valid immediately after reset and includes old/new views during resize', t => {
+  const { renderer, sim, render } = fixture(t);
+  renderer.reset();
+  const fresh = renderer.spawnExclusionBounds(sim.player);
+  containsBounds(fresh, renderer.worldBounds, 'a run has a valid guard before its first render');
+  renderer.resize(1600, 500); render();
+  const wideOld = renderer.worldBounds;
+  renderer.resize(540, 900);
+  const tall = renderer.spawnExclusionBounds(sim.player);
+  containsBounds(tall, wideOld, 'the previous wide frame survives a resize until it is replaced');
+  containsBounds(tall, renderer.worldBounds, 'the taller new frame is protected before render');
+  render();
+  containsBounds(tall, renderer.worldBounds, 'first resized frame is inside its advance guard');
+});
+
+test('renderer anticipates direct skill-dash travel even when player velocity is zero', t => {
+  const { renderer, sim, render } = fixture(t);
+  render();
+  const player = sim.player;
+  player.dash = { angle: Math.PI / 4, speed: 520, remaining: .24,
+    damage: 1, radius: 23, skill: 'lunge', hitIds: new Set() };
+  player.vx = player.vy = 0;
+  const guard = renderer.spawnExclusionBounds(player);
+  player.x += Math.cos(player.dash.angle) * 520 * .05;
+  player.y += Math.sin(player.dash.angle) * 520 * .05;
+  player.prevX = player.x; player.prevY = player.y;
+  renderer.handleEvents([{ type: 'hurt', x: player.x, y: player.y, value: 8, angle: .7 }], false);
+  render(.05);
+  containsBounds(guard, renderer.worldBounds, 'direct dash motion and impact still stay inside the prior guard');
 });

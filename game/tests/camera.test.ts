@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CameraZoom, cameraView, screenToWorld, worldToScreen,
+import { CameraZoom, cameraView, cameraFollowTarget, cameraSpawnExclusion, screenToWorld, worldToScreen,
   MIN_CAMERA_ZOOM, MAX_CAMERA_ZOOM } from '../src/camera.ts';
+import type { CameraBounds, CameraView } from '../src/camera.ts';
 
 const near = (actual: number, expected: number, message = '', tolerance = 1e-9) =>
   assert.ok(Math.abs(actual - expected) < tolerance, `${message}: expected ${expected}, received ${actual}`);
@@ -106,4 +107,69 @@ test('visible world bounds match screen edges and zooming out expands them', () 
   assert.ok(wide.left < regular.left && wide.top < regular.top);
   assert.ok(wide.left + wide.width > regular.left + regular.width);
   assert.ok(wide.top + wide.height > regular.top + regular.height);
+});
+
+function containsView(bounds: CameraBounds, view: CameraView, message: string) {
+  const epsilon = 1e-8;
+  assert.ok(bounds.x <= view.left + epsilon && bounds.y <= view.top + epsilon
+    && bounds.x + bounds.width >= view.left + view.width - epsilon
+    && bounds.y + bounds.height >= view.top + view.height - epsilon, message);
+}
+
+test('spawn bounds protect every pending zoom frame without changing the displayed view', () => {
+  const player = { x: -131.5, y: 729.25, vx: 0, vy: 0 };
+  const target = cameraFollowTarget(player);
+  for (const [zoom, pending] of [[1.8, .65], [.65, 1.8], [1, 1]]) {
+    const displayed = Object.freeze(cameraView(1024, 640, target.x, target.y, zoom, 7.6, -6.12));
+    const snapshot = { ...displayed };
+    const bounds = cameraSpawnExclusion(1024, 640, target.x, target.y, zoom, pending, displayed, player, 360);
+    containsView(bounds, displayed, 'last displayed kick is protected');
+    for (let step = 0; step <= 10; step++) {
+      const intermediate = zoom + (pending - zoom) * step / 10;
+      containsView(bounds, cameraView(1024, 640, target.x, target.y, intermediate, -7.6, 6.12),
+        'instant reduced-motion zoom and every smoothed zoom share the protected rectangle');
+    }
+    assert.deepEqual(displayed, snapshot, 'querying the guard does not change aiming or camera geometry');
+  }
+});
+
+test('spawn bounds retain the old frame and expanded dimensions through resize', () => {
+  const player = { x: 400, y: -800, vx: 0, vy: 0 };
+  const displayed = cameraView(1400, 480, 370, -815, .8);
+  for (const [width, height] of [[2000, 900], [600, 900], [540, 450]]) {
+    const bounds = cameraSpawnExclusion(width, height, 370, -815, .8, .65, displayed, player, 360);
+    containsView(bounds, displayed, 'resizing cannot drop the still-displayed old world edges');
+    containsView(bounds, cameraView(width, height, 370, -815, .65), 'new full-size target view is protected');
+  }
+});
+
+test('spawn bounds cover camera catch-up, near-future travel and a changed movement direction', () => {
+  for (const [vx, vy] of [[360, 0], [0, -360], [-254.56, 254.56], [0, 0]]) {
+    const player = { x: 820, y: -195, vx, vy };
+    const camera = { x: 660, y: -110 };
+    const displayed = cameraView(1200, 680, camera.x, camera.y, 1.2);
+    const bounds = cameraSpawnExclusion(1200, 680, camera.x, camera.y, 1.2, .65, displayed, player, 360);
+    for (const t of [0, .025, .05, .1]) {
+      const moving = cameraFollowTarget({ ...player, x: player.x + vx * t, y: player.y + vy * t });
+      for (const follow of [0, .25, .5, 1]) {
+        containsView(bounds, cameraView(1200, 680,
+          camera.x + (moving.x - camera.x) * follow, camera.y + (moving.y - camera.y) * follow, .65),
+        'the whole camera catch-up path toward the moving player stays protected');
+      }
+    }
+    for (const angle of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+      const dx = Math.cos(angle) * 360, dy = Math.sin(angle) * 360;
+      const changed = cameraFollowTarget({ x: player.x + dx * .05, y: player.y + dy * .05, vx: dx, vy: dy });
+      containsView(bounds, cameraView(1200, 680, changed.x, changed.y, .65),
+        'a fresh dodge or reversed input cannot uncover a birth during the next frame');
+    }
+  }
+});
+
+test('stationary camera guard adds only camera motion space, leaving enemy body padding to spawn visibility', () => {
+  const player = { x: 0, y: 0, vx: 0, vy: 0 }, follow = cameraFollowTarget(player);
+  const displayed = cameraView(960, 600, follow.x, follow.y, 1);
+  const bounds = cameraSpawnExclusion(960, 600, follow.x, follow.y, 1, 1, displayed, player, 360);
+  assert.ok(bounds.width > 960 && bounds.width < 1080);
+  assert.ok(bounds.height > 600 && bounds.height < 720);
 });

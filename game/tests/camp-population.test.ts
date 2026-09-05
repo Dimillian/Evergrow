@@ -5,6 +5,7 @@ import { Simulation, FIXED_STEP } from '../src/simulation.ts';
 import { ENCOUNTER_RULES } from '../src/encounter-director.ts';
 import type { EnemyCamp } from '../src/wilderness-sites.ts';
 import type { Input, WorldQuery } from '../src/model.ts';
+import { isSpawnHidden, type SpawnExclusion } from '../src/spawn-visibility.ts';
 
 const open: WorldQuery = { blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) };
 const idle: Input = { moveX: 0, moveY: 0, aimX: 300, aimY: 0, attack: false, dodge: false, heal: false, skillSlot: null };
@@ -17,8 +18,8 @@ function blueprint(id = 'camp-a', x = 400, y = 0): EnemyCamp {
 }
 function harness(world: WorldQuery = open) {
   const sim = new Simulation(world, { spawn: false }), ledger = new CampPopulation();
-  const update = (camps: readonly EnemyCamp[]) => ledger.update(camps, sim.player, sim.enemies, world,
-    (member, x, y, source) => sim.spawnEnemy(member.kind, x, y, member.rank, source), 1000);
+  const update = (camps: readonly EnemyCamp[], exclusion: SpawnExclusion | null = null) => ledger.update(camps, sim.player, sim.enemies, world,
+    (member, x, y, source) => sim.spawnEnemy(member.kind, x, y, member.rank, source), 1000, exclusion);
   return { sim, ledger, update };
 }
 function advance(sim: Simulation, seconds: number): void {
@@ -84,7 +85,7 @@ test('whole-camp activation respects total/rank caps and rejects blocked or sanc
     const world: WorldQuery = { ...open, blocked: x => reject && mode === 'blocked' && x > 450,
       isSanctuary: x => reject && mode === 'sanctuary' && x > 450 };
     const { sim, ledger, update } = harness(world), camp = blueprint();
-    if (mode === 'population') for (let index = 0; index < ENCOUNTER_RULES.hardPopulationCap - 2; index++) sim.spawnEnemy('stalker', -100 - index * 30, 0);
+    if (mode === 'population') for (let index = 0; index < ENCOUNTER_RULES.hardPopulationCap - 2; index++) sim.spawnEnemy('stalker', -100 - index * 10, 0);
     if (mode === 'veterans') for (let index = 0; index < ENCOUNTER_RULES.veteranCap; index++) sim.spawnEnemy('stalker', -100 - index * 30, 0, 'veteran');
     reject = true; const count = sim.enemies.length; update([camp]);
     assert.equal(sim.enemies.length, count, mode); assert.equal(ledger.getState(camp.id), 'dormant', mode);
@@ -109,7 +110,7 @@ test('runtime camp kills preserve first-kill rewards and remain cleared through 
   const camp = { ...blueprint(), members: blueprint().members.slice(0, 1) };
   const world = { ...open, getEnemyCamps: () => [camp] };
   const sim = new Simulation(world, { seed: 91 }); sim.enemies = [];
-  sim.setSpawnExclusion({ x: -20000, y: -20000, width: 40000, height: 40000 });
+  sim.setSpawnExclusion({ x: -200, y: -200, width: 400, height: 400 });
   advance(sim, FIXED_STEP);
   const enemy = sim.enemies.find(enemy => enemy.campId === camp.id)!; assert.ok(enemy);
   enemy.hp = 1; enemy.state = 'recover'; enemy.stateDuration = 999;
@@ -127,7 +128,7 @@ test('runtime camp kills preserve first-kill rewards and remain cleared through 
 
 test('approaching camp priority sleeps distant offscreen garrisons while preserving their wounded members', () => {
   const sim = new Simulation(open, { spawn: false }), ledger = new CampPopulation();
-  const a = blueprint('far-a', 800), b = blueprint('far-b', 1100), near = blueprint('near', 150);
+  const a = blueprint('far-a', 800), b = blueprint('far-b', 1100), near = blueprint('near', 450);
   const update = (camps: EnemyCamp[], wide = false) => ledger.update(camps, sim.player, sim.enemies, open,
     (member, x, y, source) => sim.spawnEnemy(member.kind, x, y, member.rank, source), 1000,
     { x: sim.player.x - (wide ? 1400 : 300), y: -250, width: wide ? 2800 : 600, height: 500 });
@@ -142,15 +143,17 @@ test('approaching camp priority sleeps distant offscreen garrisons while preserv
   assert.equal(ledger.getState(b.id), 'active', 'a sleeping garrison is still uncleared');
   assert.equal(sim.enemies.filter(enemy => enemy.rank === 'veteran').length, ENCOUNTER_RULES.veteranCap);
   sim.player.x = b.x; update([a, b, near]);
+  assert.ok(!sim.enemies.includes(wounded), 'returning camp cannot wake under the player');
+  sim.player.x = 1650; update([a, b, near]);
   assert.ok(sim.enemies.includes(wounded)); assert.equal(wounded.hp, 5);
   assert.equal(sim.kills, 0); assert.equal(sim.player.xp, 0);
 });
 
-test('a full twelve-actor camp budget yields only offscreen farther groups to the approaching camp', () => {
+test('the reserved camp budget yields only offscreen farther groups to the approaching camp', () => {
   const sim = new Simulation(open, { spawn: false }), ledger = new CampPopulation();
   const camp = (id: string, x: number): EnemyCamp => ({ id, x, y: 0, radius: 150,
     members: Array.from({ length: 6 }, (_, index) => ({ id: `${id}:${index}`, kind: 'stalker', rank: 'normal', dx: index * 25, dy: 0 })) });
-  const a = camp('a', 750), b = camp('b', 1000), near = camp('near', 100);
+  const a = camp('a', 750), b = camp('b', 1000), near = camp('near', 400);
   const update = (camps: EnemyCamp[]) => ledger.update(camps, sim.player, sim.enemies, open,
     (member, x, y, source) => sim.spawnEnemy(member.kind, x, y, member.rank, source), 1000,
     { x: -250, y: -250, width: 500, height: 500 });
@@ -159,4 +162,150 @@ test('a full twelve-actor camp budget yields only offscreen farther groups to th
   assert.equal(sim.enemies.length, 12); assert.equal(sim.enemies.filter(enemy => enemy.campId === near.id).length, 6);
   assert.equal(sim.enemies.filter(enemy => enemy.campId === a.id).length, 6);
   assert.equal(sim.enemies.filter(enemy => enemy.campId === b.id).length, 0);
+});
+
+test('one member inside the padded viewport defers the entire fresh camp without evicting other actors', () => {
+  const { sim, ledger, update } = harness();
+  const a = blueprint('a', 900), b = blueprint('b', 1100), approaching = blueprint('approaching', 500);
+  update([a, b]); const existing = sim.enemies.map(enemy => enemy.id);
+  const partial = { x: -400, y: -200, width: 800, height: 400 };
+  const hidden = approaching.members.map(member => isSpawnHidden(approaching.x + member.dx, member.dy, partial, 17));
+  assert.ok(hidden.some(Boolean) && hidden.some(value => !value), 'fixture straddles the protected edge');
+  update([approaching], partial);
+  assert.deepEqual(sim.enemies.map(enemy => enemy.id), existing);
+  assert.equal(ledger.getState(approaching.id), 'dormant'); assert.equal(ledger.recordedCount, 2);
+  const narrow = { x: -300, y: -200, width: 600, height: 400 }; update([approaching], narrow);
+  assert.equal(sim.enemies.filter(enemy => enemy.campId === approaching.id).length, 3);
+  assert.ok(sim.enemies.every(enemy => isSpawnHidden(enemy.x, enemy.y, narrow, enemy.radius)));
+});
+
+test('capacity becoming available never causes a visible dormant camp to appear', () => {
+  const { sim, ledger, update } = harness(), camp = blueprint('visible', 300);
+  for (let index = 0; index < ENCOUNTER_RULES.hardPopulationCap; index++) sim.spawnEnemy('stalker', -index * 3, 0);
+  const view = { x: -500, y: -300, width: 1000, height: 600 }; update([camp], view);
+  sim.enemies.splice(0, 8); const before = sim.enemies.map(enemy => enemy.id); update([camp], view);
+  assert.deepEqual(sim.enemies.map(enemy => enemy.id), before); assert.equal(ledger.getState(camp.id), 'dormant');
+  update([camp], { x: -300, y: -300, width: 400, height: 600 });
+  assert.equal(sim.enemies.filter(enemy => enemy.campId === camp.id).length, 3);
+});
+
+test('sleeping camp restoration waits for every surviving member to leave the viewport and preserves its source', () => {
+  const { sim, ledger, update } = harness(), camp = blueprint(); update([camp]);
+  const [dead, wounded] = sim.enemies; dead.hp = 0; dead.state = 'dead'; wounded.hp = 9;
+  const source = { id: wounded.id, level: wounded.level, rank: wounded.rank, hp: wounded.hp, seed: wounded.lootSeed };
+  sim.player.x = 4000; update([], { x: 3800, y: -200, width: 400, height: 400 });
+  assert.equal(sim.enemies.length, 0);
+  sim.player.x = 0; const view = { x: -400, y: -200, width: 800, height: 400 };
+  update([camp], view); assert.equal(sim.enemies.length, 0); assert.equal(ledger.getState(camp.id), 'active');
+  update([camp], { x: -200, y: -200, width: 400, height: 400 });
+  assert.equal(sim.enemies.length, 2); assert.ok(sim.enemies.includes(wounded)); assert.ok(!sim.enemies.includes(dead));
+  assert.deepEqual({ id: wounded.id, level: wounded.level, rank: wounded.rank, hp: wounded.hp, seed: wounded.lootSeed }, source);
+  assert.equal(sim.kills, 0); assert.equal(sim.player.xp, 0); assert.equal(sim.groundItems.length, 0);
+});
+
+test('malformed viewport data cannot create, wake or sleep a camp', () => {
+  const { sim, ledger, update } = harness(), camp = blueprint();
+  const invalid = { x: 0, y: 0, width: NaN, height: 300 }; update([camp], invalid);
+  assert.equal(sim.enemies.length, 0); assert.equal(ledger.getState(camp.id), 'dormant');
+  update([camp]); const ids = sim.enemies.map(enemy => enemy.id);
+  sim.player.x = 5000; update([], invalid); assert.deepEqual(sim.enemies.map(enemy => enemy.id), ids);
+  update([]); assert.equal(sim.enemies.length, 0); sim.player.x = 0;
+  update([camp], invalid); assert.equal(sim.enemies.length, 0);
+});
+
+function normalCamp(id: string, x: number, count = 6): EnemyCamp {
+  return { id, x, y: 0, radius: 150, members: Array.from({ length: count }, (_, index) =>
+    ({ id: `${id}:${index}`, kind: 'stalker', rank: 'normal', dx: index * 25, dy: 0 })) };
+}
+
+test('visible corpses prevent whole-camp priority eviction alongside their surviving garrison', () => {
+  const { sim, update } = harness(); const a = normalCamp('a', 750), b = normalCamp('b', 1050), near = normalCamp('near', 400);
+  update([a, b]); const corpse = sim.enemies.find(enemy => enemy.campId === b.id)!;
+  corpse.hp = 0; corpse.state = 'dead'; corpse.x = corpse.prevX = 0;
+  const bIds = sim.enemies.filter(enemy => enemy.campId === b.id).map(enemy => enemy.id);
+  update([near], { x: -200, y: -200, width: 400, height: 400 });
+  assert.deepEqual(sim.enemies.filter(enemy => enemy.campId === b.id).map(enemy => enemy.id), bIds);
+  assert.ok(sim.enemies.includes(corpse)); assert.equal(sim.enemies.filter(enemy => enemy.campId === near.id).length, 6);
+});
+
+test('camp count respects its reserved budget and cannot consume the last four roaming slots', () => {
+  const { sim, ledger, update } = harness();
+  update([normalCamp('a', 100), normalCamp('b', 250)]);
+  const roamers = Array.from({ length: 6 }, (_, index) => sim.spawnEnemy('stalker', -800 - index * 30, 0)!);
+  const near = normalCamp('near', 450, 3); update([near], { x: -300, y: -250, width: 600, height: 500 });
+  assert.equal(ledger.getState(near.id), 'dormant');
+  assert.ok(roamers.every(enemy => sim.enemies.includes(enemy)), 'ambient retirement cannot solve a camp-only budget conflict');
+  assert.equal(sim.enemies.filter(enemy => enemy.campId).length, 12);
+  assert.ok(sim.enemies.length <= ENCOUNTER_RULES.hardPopulationCap);
+});
+
+test('distant ambient population yields only the surplus above its protected reserve', () => {
+  const { sim, ledger, update } = harness();
+  update([normalCamp('a', 100), normalCamp('b', 250)]);
+  const roamers = Array.from({ length: 6 }, (_, index) => sim.spawnEnemy('stalker', -800 - index * 30, 0)!);
+  const near = normalCamp('near', 450, 2); update([near], { x: -300, y: -250, width: 600, height: 500 });
+  assert.equal(ledger.getState(near.id), 'active');
+  assert.equal(roamers.filter(enemy => sim.enemies.includes(enemy)).length, ENCOUNTER_RULES.roamingReserve);
+  assert.equal(sim.enemies.filter(enemy => enemy.campId).length, ENCOUNTER_RULES.hardPopulationCap - ENCOUNTER_RULES.roamingReserve);
+  assert.equal(sim.enemies.length, ENCOUNTER_RULES.hardPopulationCap);
+  assert.equal(sim.kills, 0); assert.equal(sim.player.xp, 0);
+});
+
+test('sleeping members remain deferred if their saved return position becomes obstructed or protected', () => {
+  for (const sanctuary of [false, true]) {
+    let reject = false;
+    const world = { ...open, blocked: (x: number) => reject && !sanctuary && x > 450,
+      isSanctuary: (x: number) => reject && sanctuary && x > 450 };
+    const { sim, ledger, update } = harness(world), camp = blueprint(); update([camp]);
+    const wounded = sim.enemies[1]; wounded.hp = 5;
+    sim.player.x = 5000; update([]); sim.player.x = 0; reject = true;
+    update([camp], { x: -200, y: -200, width: 400, height: 400 });
+    assert.equal(sim.enemies.length, 0); assert.equal(ledger.getState(camp.id), 'active');
+    reject = false; update([camp], { x: -200, y: -200, width: 400, height: 400 });
+    assert.equal(sim.enemies.length, 3); assert.ok(sim.enemies.includes(wounded)); assert.equal(wounded.hp, 5);
+  }
+});
+
+test('a visible pursuing member prevents distant-home sleeping for the entire garrison', () => {
+  const { sim, update } = harness(), camp = blueprint(); update([camp]);
+  const ids = sim.enemies.map(enemy => enemy.id), visible = sim.enemies[0];
+  sim.player.x = 5000; visible.x = visible.prevX = 5000;
+  update([], { x: 4800, y: -200, width: 400, height: 400 });
+  assert.deepEqual(sim.enemies.map(enemy => enemy.id), ids);
+  assert.equal(visible.x, 5000, 'visible actors cannot be snapped to home when the camp sleeps');
+});
+
+test('hidden engaged roamers cannot be retired to admit an approaching camp', () => {
+  for (const [state, awareness] of [['patrol', 1], ['chase', 0], ['windup', 0], ['attack', 0], ['recover', 0]] as const) {
+    const { sim, ledger, update } = harness();
+    update([normalCamp('a', 100), normalCamp('b', 250)]);
+    const roamers = Array.from({ length: 6 }, (_, index) => sim.spawnEnemy('stalker', -800 - index * 30, 0)!);
+    for (const enemy of roamers) { enemy.state = state; enemy.awareness = awareness; }
+    const near = normalCamp('near', 450, 2), view = { x: -300, y: -250, width: 600, height: 500 };
+    update([near], view);
+    assert.equal(ledger.getState(near.id), 'dormant', state);
+    assert.ok(roamers.every(enemy => sim.enemies.includes(enemy)), `${state}: hidden fighters stay alive`);
+    for (const enemy of roamers) { enemy.state = 'return'; enemy.awareness = .25; }
+    update([near], view); assert.equal(ledger.getState(near.id), 'active');
+    assert.equal(roamers.filter(enemy => sim.enemies.includes(enemy)).length, ENCOUNTER_RULES.roamingReserve);
+  }
+});
+
+test('an engaged member protects the whole hidden camp from priority eviction and distant sleeping', () => {
+  for (const [state, awareness] of [['idle', 1], ['chase', 0], ['windup', 0], ['attack', 0], ['recover', 0]] as const) {
+    const { sim, ledger, update } = harness();
+    const a = blueprint('a', 800), b = blueprint('b', 1100), near = blueprint('near', 450);
+    update([a, b]);
+    const guards = [sim.enemies.find(enemy => enemy.campId === a.id)!, sim.enemies.find(enemy => enemy.campId === b.id)!];
+    for (const guard of guards) { guard.state = state; guard.awareness = awareness; }
+    const ids = sim.enemies.map(enemy => enemy.id);
+    update([near], { x: -300, y: -250, width: 600, height: 500 });
+    assert.equal(ledger.getState(near.id), 'dormant', state); assert.deepEqual(sim.enemies.map(enemy => enemy.id), ids);
+    sim.player.x = 5000; update([], { x: 4800, y: -250, width: 400, height: 500 });
+    assert.deepEqual(sim.enemies.map(enemy => enemy.id), ids, `${state}: the group waits for its fighters`);
+    for (const guard of guards) { guard.state = 'return'; guard.awareness = .25; }
+    update([], { x: 4800, y: -250, width: 400, height: 500 });
+    assert.equal(sim.enemies.length, 0); assert.equal(ledger.getState(a.id), 'active'); assert.equal(ledger.getState(b.id), 'active');
+    assert.equal(sim.kills, 0); assert.equal(sim.player.xp, 0);
+  }
 });

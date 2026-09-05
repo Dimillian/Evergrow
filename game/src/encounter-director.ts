@@ -4,10 +4,8 @@ import type { BiomeId } from './biomes.ts';
 import { normalizeLevel, type EnemyRank } from './progression-content.ts';
 
 export const ENCOUNTER_RULES = Object.freeze({
-  spawnInterval: 5.5, sanctuaryDelay: 1.5, initialCount: 2, initialKind: 'stalker' as const,
-  initialMinDistance: 600, initialMaxDistance: 720, spawnMinDistance: 600, spawnMaxDistance: 820,
-  maxSpawnAttempts: 12, spawnClearance: 7, minimumSeparation: 45,
-  basePopulation: 3, levelsPerPopulation: 4, targetPopulationCap: 6, hardPopulationCap: 12,
+  maxSpawnAttempts: 24, spawnClearance: 7, minimumSeparation: 45,
+  basePopulation: 5, levelsPerPopulation: 4, targetPopulationCap: 8, hardPopulationCap: 18, roamingReserve: 4,
   veteranCap: 2, eliteCap: 1,
   initialIdleMin: .45, initialIdleRange: .35, corpseDuration: .5, despawnDistance: 1800,
   activeAttackCaps: Object.freeze({ pack: 2, special: 1 }),
@@ -24,7 +22,7 @@ export const ENCOUNTER_WEIGHTS: Readonly<Record<BiomeId, Readonly<Record<EnemyKi
   highlands: Object.freeze({ stalker: 18, brute: 28, caster: 10, hound: 10, archer: 26, wisp: 8 }),
 });
 
-export function livingEnemyCount(enemies: readonly Enemy[]): number {
+export function livingEnemyCount(enemies: readonly Pick<Enemy, 'state'>[]): number {
   let count = 0;
   for (const enemy of enemies) if (enemy.state !== 'dead') count++;
   return count;
@@ -36,13 +34,15 @@ export function encounterPopulationTarget(level: number): number {
 }
 
 /** Policy is independent of placement/collision; random is read only when a roll is needed. */
-export function chooseEncounterEnemy(enemies: readonly Enemy[], level: number, biome: BiomeId, random: () => number): EnemyKind | null {
+export type EncounterActor = Pick<Enemy, 'state' | 'kind' | 'rank' | 'campId'>;
+export function chooseEncounterEnemy(enemies: readonly EncounterActor[], level: number, biome: BiomeId, random: () => number, preferred?: EnemyKind): EnemyKind | null {
   const counts: Record<EnemyKind, number> = { stalker: 0, brute: 0, caster: 0, hound: 0, archer: 0, wisp: 0 };
   let living = 0;
-  for (const enemy of enemies) if (enemy.state !== 'dead') { counts[enemy.kind]++; living++; }
-  if (living >= encounterPopulationTarget(level)) return null;
+  for (const enemy of enemies) if (enemy.state !== 'dead' && !enemy.campId) { counts[enemy.kind]++; living++; }
+  if (living >= encounterPopulationTarget(level) || livingEnemyCount(enemies) >= ENCOUNTER_RULES.hardPopulationCap) return null;
   const entries = (Object.entries(ENCOUNTER_WEIGHTS[biome]) as [EnemyKind, number][])
     .filter(([kind]) => ENEMY_DEFINITIONS[kind].attackGroup === 'pack' || counts[kind] < 2);
+  if (preferred && entries.some(([kind]) => kind === preferred)) return preferred;
   const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
   let roll = Math.max(0, Math.min(1 - Number.EPSILON, random())) * total;
   for (const [kind, weight] of entries) { if (roll < weight) return kind; roll -= weight; }
@@ -57,7 +57,7 @@ export function encounterRankChances(level: number): Readonly<Record<EnemyRank, 
 }
 
 /** Stronger ranks change per-foe stakes while concurrent threats remain bounded. */
-export function chooseEncounterRank(enemies: readonly Enemy[], level: number, roll: number): EnemyRank {
+export function chooseEncounterRank(enemies: readonly EncounterActor[], level: number, roll: number): EnemyRank {
   const chances = encounterRankChances(level);
   const count = (rank: EnemyRank) => enemies.filter(enemy => enemy.state !== 'dead' && enemy.rank === rank).length;
   if (roll < chances.elite && count('elite') < ENCOUNTER_RULES.eliteCap) return 'elite';

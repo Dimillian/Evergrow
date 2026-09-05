@@ -131,14 +131,6 @@ test('pack support positions spread attackers and preserve two pack plus one spe
   assert.ok(sim.enemies.every(enemy => Number.isFinite(enemy.x) && Number.isFinite(enemy.y)));
 });
 
-test('ambient spawning honors a renderer-provided exclusion and clearing it restores eligibility', () => {
-  const sim = new Simulation(open, { seed: 97 }); sim.enemies = [];
-  sim.setSpawnExclusion({ x: -1000, y: -1000, width: 2000, height: 2000 });
-  advance(sim, 12); assert.equal(sim.enemies.length, 0);
-  sim.setSpawnExclusion(null); advance(sim, 6); assert.ok(sim.enemies.length > 0);
-  assert.ok(sim.enemies.every(enemy => Math.hypot(enemy.x, enemy.y) > 500));
-});
-
 test('ranged roles retreat before starting a new shot when pressured inside their standoff distance', () => {
   for (const kind of ['archer', 'caster', 'wisp'] as const) {
     const sim = new Simulation(open, { spawn: false }), enemy = sim.spawnEnemy(kind, -80, 0)!;
@@ -148,15 +140,4 @@ test('ranged roles retreat before starting a new shot when pressured inside thei
     assert.ok(Math.hypot(enemy.x, enemy.y) > 85, `${kind} makes space before another telegraph`);
     assert.equal(sim.projectiles.length, 0); assert.equal(sim.player.hp, sim.player.maxHp);
   }
-});
-
-test('ambient population never materializes inside an authored camp, including a cleared footprint', () => {
-  const camp = { id: 'cleared-site', x: 0, y: 0, radius: 1100,
-    members: [{ id: 'cleared-site:guard', kind: 'stalker' as const, rank: 'normal' as const, dx: 100, dy: 0 }] };
-  const sim = new Simulation({ ...open, getEnemyCamps: () => [camp] }, { seed: 15 });
-  assert.equal(sim.enemies.length, 0, 'initial ambient placement also reserves the camp');
-  advance(sim, FIXED_STEP); assert.equal(sim.enemies.length, 1);
-  sim.enemies[0].state = 'dead'; sim.enemies[0].hp = 0;
-  advance(sim, 12);
-  assert.equal(sim.getCampState(camp.id), 'cleared'); assert.equal(sim.enemies.length, 0);
 });

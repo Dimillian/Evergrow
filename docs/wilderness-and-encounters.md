@@ -24,7 +24,15 @@ Ambient trunks and rocks are cleared from each site footprint. Tree and willow p
 
 `wilderness-art.ts` provides a ground pass, depth-sorted object drawing and bounded light candidates. Disturbed soil uses feathered stains rather than hard stamps. Tent stitching, runes, planks, damaged stone, fabric motion, fire and embers are generated from code. Actor depth is interleaved with individual object ground contacts rather than placing the whole site over the player.
 
-`WorldMap.setCampStateReader` reads the current simulation without copying encounter state into saved exploration. A cleared camp becomes a jade tent/check icon, with a **Camp · Cleared** label and a changed tooltip. Unvisited places remain hidden. The world-generation identity remains 3, so existing explored terrain is retained and new places are discovered when revisited. Camp clear state and surviving enemies remain local to the current run.
+`WorldMap.setCampStateReader` reads the current simulation without copying encounter state into saved exploration. A cleared camp becomes a jade tent/check icon, with a **Camp · Cleared** label and a changed tooltip. Unvisited places remain hidden. World-generation identity 4 selects the seven-biome chart namespace. Camp clear state and surviving enemies remain local to the current run; population changes do not reset the chart.
+
+## Roaming and visibility
+
+Roaming encounters complement fixed camp garrisons. Their target is five to eight living ambient enemies by area level, independently of camp membership, within the shared eighteen-actor ceiling. At least four actor slots remain reserved for roaming populations. Camp priority may sleep a farther wholly hidden garrison, but cannot remove visible actors or consume that reserve.
+
+The current renderer supplies actual world-space camera coverage before automatic births. `spawn-visibility.ts` adds 80 horizontal and 120 vertical units plus each body radius, shared by ambient births, camp activation, waking and removal. Every member of a camp must pass visibility, collision and sanctuary checks before population budgets change. A delayed camp remains dormant while its authored positions are visible, including after a direct teleport or a wide zoom. Waking restores surviving members; it never refills dead slots or heals wounds.
+
+Roaming groups contain one to three enemies and prefer the direction of travel. The first five are placed outside view during startup; subsequent groups require travel as well as time. Once that initial population is placed, waiting or changing zoom on cleared ground cannot generate replacements by itself. Hidden, distant inactive foes may retire as travel carries the player onward. All new foes retain normal geographic level, rank and loot snapshots; retirement grants no XP or items. Detailed limits and tuning values live in [progression and loot](progression-and-loot.md).
 
 ## Verification
 

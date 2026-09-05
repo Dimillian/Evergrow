@@ -4,7 +4,7 @@ import { createBaseStats, createStartingEquipment, deriveAttackStats } from './e
 import { getActiveSwingOffset } from './attack-motion.ts';
 import { BASIC_ATTACK_PHASES, COMBAT_TIMING, SKILL_CAST_MOTION, ENEMY_DEFINITIONS, LOOT_RULES, PLAYER_ABILITIES,
   PLAYER_DEFAULTS, PLAYER_MOVEMENT, type ProjectileDefinition } from './combat-content.ts';
-import { chooseEncounterEnemy, chooseEncounterRank, ENCOUNTER_RULES, livingEnemyCount } from './encounter-director.ts';
+import { chooseEncounterEnemy, chooseEncounterRank, ENCOUNTER_RULES, livingEnemyCount, encounterPopulationTarget, type EncounterActor } from './encounter-director.ts';
 import { circleIntersectsSector, segmentDistanceSquared } from './combat-geometry.ts';
 import { awardCharacterExperience, refreshCharacter } from './character.ts';
 import { createCharacterSheet, TIER_COLORS } from './items.ts';
@@ -19,6 +19,8 @@ import { xpLevelFactor } from './progression.ts';
 import { rollEnemyLoot } from './loot.ts';
 import { CampPopulation, CAMP_POPULATION_RULES, type CampSpawnSource, type CampState } from './camp-population.ts';
 import { sampleBiome } from './biomes.ts';
+import { RoamingEncounters, ROAMING_GROUPS, roamingSpawnAnchor, shouldRetireRoamer } from './roaming-encounters.ts';
+import { isSpawnHidden, type SpawnExclusion } from './spawn-visibility.ts';
 import { alertEnemy, interruptStaggeredEnemy, transitionEnemy, updateEnemyAI, type EnemyAIContext } from './enemy-ai.ts';
 
 export const FIXED_STEP = COMBAT_TIMING.fixedStep;
@@ -62,10 +64,10 @@ export class Simulation {
   private dodgeBuffer = -1;
   private healBuffer = -1;
   private hurtGuard = 0;
-  private spawnTimer = 0;
+  private roaming = new RoamingEncounters();
   private campTimer = 0;
   private camps = new CampPopulation();
-  private spawnExclusion: { x: number; y: number; width: number; height: number } | null = null;
+  private spawnExclusion: SpawnExclusion | null = null;
   private killRecharge = 0;
 
   constructor(world: WorldQuery, options: SimulationOptions = {}) {
@@ -92,13 +94,11 @@ export class Simulation {
     this.randomState = this.options.seed! >>> 0;
     this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
     this.hurtGuard = this.killRecharge = 0;
-    this.spawnTimer = ENCOUNTER_RULES.spawnInterval;
-    if (this.options.spawn) for (let i = 0; i < ENCOUNTER_RULES.initialCount; i++) {
-      this.spawnAroundPlayer(ENCOUNTER_RULES.initialKind, ENCOUNTER_RULES.initialMinDistance, ENCOUNTER_RULES.initialMaxDistance);
-    }
+    this.spawnExclusion = null;
+    this.roaming.reset(this.player.x, this.player.y);
   }
 
-  /** Renderer supplies world bounds; camera size cannot cause ambient enemies to appear in sight. */
+  /** Automatic population waits for the camera's current/pending visible envelope. */
   setSpawnExclusion(bounds: { x: number; y: number; width: number; height: number } | null): void {
     this.spawnExclusion = bounds && [bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)
       && bounds.width > 0 && bounds.height > 0 ? { ...bounds } : null;
@@ -196,8 +196,9 @@ export class Simulation {
       return;
     }
     this.updateSpawns(dt);
-    this.enemies = this.enemies.filter(e => (e.state !== 'dead' || e.stateTime < ENCOUNTER_RULES.corpseDuration)
-      && (e.campId || Math.hypot(e.x - this.player.x, e.y - this.player.y) < ENCOUNTER_RULES.despawnDistance));
+    this.enemies = this.enemies.filter(e => e.state !== 'dead' || e.stateTime < ENCOUNTER_RULES.corpseDuration);
+    if (this.spawnExclusion) this.enemies = this.enemies.filter(enemy =>
+      !shouldRetireRoamer(enemy, this.player, this.spawnExclusion!, this.roaming.heading));
   }
 
   private capturePositions(): void {
@@ -648,47 +649,64 @@ export class Simulation {
   }
 
   private updateSpawns(dt: number): void {
-    if (!this.options.spawn) return;
+    const view = this.spawnExclusion;
+    if (!this.options.spawn || !view) return;
+    this.roaming.advance(this.player, dt);
     this.campTimer -= dt;
     if (this.campTimer <= 0 && this.world.getEnemyCamps) {
       this.campTimer = CAMP_POPULATION_RULES.updateInterval;
-      const view = this.spawnExclusion;
       const radius = Math.min(CAMP_POPULATION_RULES.maximumActivationDistance, Math.max(
-        CAMP_POPULATION_RULES.activationDistance, view ? Math.hypot(view.width, view.height) * .5 + 250 : 0));
+        CAMP_POPULATION_RULES.activationDistance, Math.hypot(view.width, view.height) * .5 + 350));
       const camps = this.world.getEnemyCamps(this.player.x - radius, this.player.y - radius, radius * 2, radius * 2);
       this.camps.update(camps, this.player, this.enemies, this.world,
         (member, x, y, source) => this.spawnEnemy(member.kind, x, y, member.rank, source), radius, view);
     }
-    if (this.world.isSanctuary?.(this.player.x, this.player.y)) {
-      this.spawnTimer = Math.max(this.spawnTimer, ENCOUNTER_RULES.sanctuaryDelay);
-      return;
-    }
-    this.spawnTimer -= dt;
-    if (this.spawnTimer > 0) return;
-    this.spawnTimer = ENCOUNTER_RULES.spawnInterval;
-    this.spawnAroundPlayer(null, ENCOUNTER_RULES.spawnMinDistance, ENCOUNTER_RULES.spawnMaxDistance);
+    if (this.world.isSanctuary?.(this.player.x, this.player.y) || !this.roaming.ready) return;
+    this.roaming.resolved(this.spawnRoamingGroup(view), () => this.random());
   }
 
-  private spawnAroundPlayer(authoredKind: EnemyKind | null, minDistance: number, maxDistance: number): void {
+  private spawnRoamingGroup(view: SpawnExclusion): number {
+    const living = this.enemies.filter(enemy => enemy.state !== 'dead');
+    const roamingCount = living.filter(enemy => !enemy.campId).length;
+    const room = Math.min(encounterPopulationTarget(getZoneAt(this.player.x, this.player.y).level) - roamingCount,
+      ENCOUNTER_RULES.hardPopulationCap - living.length);
+    if (room <= 0) return 0;
+    const size = this.roaming.groupSize(room, this.random());
     for (let attempt = 0; attempt < ENCOUNTER_RULES.maxSpawnAttempts; attempt++) {
-      const angle = this.random() * TAU;
-      const distance = minDistance + this.random() * (maxDistance - minDistance);
-      const x = this.player.x + Math.cos(angle) * distance;
-      const y = this.player.y + Math.sin(angle) * distance;
-      if (this.world.isSanctuary?.(x, y)) continue;
-      const view = this.spawnExclusion;
-      if (view && x >= view.x - 80 && x <= view.x + view.width + 80
-        && y >= view.y - 100 && y <= view.y + view.height + 100) continue;
-      if (this.world.getEnemyCamps?.(x - 60, y - 60, 120, 120)
-        .some(camp => Math.hypot(camp.x - x, camp.y - y) < camp.radius + 60)) continue;
-      const zone = getZoneAt(x, y), biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
-      const kind = authoredKind ?? chooseEncounterEnemy(this.enemies, zone.level, biome, () => this.random());
-      if (!kind) return;
-      if (this.world.blocked(x, y, ENEMY_DEFINITIONS[kind].radius + ENCOUNTER_RULES.spawnClearance)) continue;
-      if (this.enemies.some(enemy => enemy.state !== 'dead' && Math.hypot(enemy.x - x, enemy.y - y) < ENCOUNTER_RULES.minimumSeparation)) continue;
-      const rank = authoredKind ? 'normal' : chooseEncounterRank(this.enemies, zone.level, this.random());
-      this.spawnEnemy(kind, x, y, rank);
-      return;
+      const anchor = roamingSpawnAnchor(this.player, view, this.roaming.heading, () => this.random(), attempt);
+      const members: Array<{ kind: EnemyKind; rank: EnemyRank; x: number; y: number }> = [];
+      const population: EncounterActor[] = [...living];
+      for (let index = 0; index < size; index++) {
+        const angle = anchor.angle + index * 2.399963;
+        const radius = index === 0 ? 0 : 65 + this.random() * 35;
+        const x = anchor.x + Math.cos(angle) * radius, y = anchor.y + Math.sin(angle) * radius;
+        const zone = getZoneAt(x, y), biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
+        const preferred = index ? ROAMING_GROUPS[members[0].kind][index] : undefined;
+        const kind = chooseEncounterEnemy(population, zone.level, biome, () => this.random(), preferred);
+        if (!kind || !isSpawnHidden(x, y, view, ENEMY_DEFINITIONS[kind].radius)
+          || this.world.isSanctuary?.(x, y)
+          || this.world.blocked(x, y, ENEMY_DEFINITIONS[kind].radius + ENCOUNTER_RULES.spawnClearance)
+          || this.world.getEnemyCamps?.(x - 60, y - 60, 120, 120)
+            .some(camp => Math.hypot(camp.x - x, camp.y - y) < camp.radius + 60)
+          || [...living, ...members].some(enemy => Math.hypot(enemy.x - x, enemy.y - y) < ENCOUNTER_RULES.minimumSeparation)) break;
+        const rank = chooseEncounterRank(population, zone.level, this.random());
+        members.push({ kind, rank, x, y }); population.push({ kind, rank, state: 'idle' });
+      }
+      if (members.length !== size) continue;
+      // A loose encounter is validated together, so a single blocked member does
+      // not scatter a half-formed group through several unrelated candidates.
+      const created: Enemy[] = [], firstEvent = this.events.length;
+      for (const member of members) {
+        const enemy = this.spawnEnemy(member.kind, member.x, member.y, member.rank);
+        if (enemy) {
+          enemy.angle = anchor.angle + Math.PI + (this.random() - .5) * .9;
+          created.push(enemy);
+        }
+      }
+      if (created.length === members.length) return created.length;
+      this.enemies = this.enemies.filter(enemy => !created.includes(enemy));
+      this.events.splice(firstEvent);
     }
+    return 0;
   }
 }

@@ -213,6 +213,7 @@ export class Game {
     this.uiCanvas.height = Math.round(height * uiRatio);
     const logicalHeight = Math.min(680, Math.max(450, Math.round(height / 1.35)));
     this.renderer.resize(Math.max(540, Math.round(logicalHeight * width / height)), logicalHeight);
+    this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
     this.mouse.x = this.renderer.width * 0.6;
     this.mouse.y = this.renderer.height * 0.43;
     this.shell.resizeControls(this.renderer.width, this.renderer.height);
@@ -230,6 +231,7 @@ export class Game {
     this.inventoryPanel.close(); this.skillPanel.close();
     this.sim.reset();
     this.renderer.reset();
+    this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
     this.clearInput();
     this.phase = 'playing';
     this.showMenu();
@@ -310,7 +312,7 @@ export class Game {
     this.fps += (1 / Math.max(dt, 0.001) - this.fps) * 0.04;
     if (this.phase === 'playing') {
       // The simulation owns the fixed 120 Hz clock and render interpolation.
-      this.sim.setSpawnExclusion(this.renderer.worldBounds);
+      this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
       this.sim.update(dt, this.readInput());
       const events = this.sim.drainEvents();
       this.renderer.handleEvents(events, this.reducedMotion);

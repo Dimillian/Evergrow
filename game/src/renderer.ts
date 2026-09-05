@@ -6,7 +6,7 @@ import type { CharacterPose } from './art.ts';
 import { World } from './world.ts';
 import { GroundLayer } from './ground-layer.ts';
 import type { Simulation } from './simulation.ts';
-import type { CombatEvent, Enemy } from './model.ts';
+import type { CombatEvent, Enemy, Player } from './model.ts';
 import { text } from './font.ts';
 import { drawFloatingHUD } from './hud.ts';
 import { ExperienceFeedback, type ExperienceDisplay } from './hud-experience.ts';
@@ -23,8 +23,9 @@ import { propDefinition } from './biome-props.ts';
 import { SceneVisibility } from './scene-visibility.ts';
 import { isGameUIPoint } from './ui-hit-test.ts';
 import type { GamePhase } from './game-phase.ts';
-import { COMBAT_TIMING, ENEMY_DEFINITIONS } from './combat-content.ts';
-import { CameraZoom, cameraView, screenToWorld, worldToScreen } from './camera.ts';
+import { COMBAT_TIMING, ENEMY_DEFINITIONS, PLAYER_ABILITIES, PLAYER_MOVEMENT } from './combat-content.ts';
+import { CAMERA_FOLLOW, CameraZoom, cameraFollowTarget, cameraSpawnExclusion,
+  cameraView, screenToWorld, worldToScreen } from './camera.ts';
 import { EnemyFocus, ENEMY_BODY_BOUNDS } from './enemy-focus.ts';
 import { drawEnemyPlate } from './enemy-plate.ts';
 import { drawRankCrest } from './enemy-rank-art.ts';
@@ -56,6 +57,7 @@ export class Renderer {
   private kickY = 0;
   private cameraZoom = new CameraZoom();
   private view = cameraView(this.width, this.height, 0, 0, 1);
+  private lastDisplayedView = this.view;
   private hurtAngle = 0;
   private damageTrails = new Map<number, { value: number; hold: number }>();
   private playerHealthTrail = 100;
@@ -93,6 +95,16 @@ export class Renderer {
 
   get worldHeight() { return this.view.height; }
   get worldBounds() { return { x: this.view.left, y: this.view.top, width: this.view.width, height: this.view.height }; }
+  spawnExclusionBounds(player: Player) {
+    const speed = Math.max(PLAYER_MOVEMENT.speed * player.derived.moveSpeedMultiplier,
+      PLAYER_ABILITIES.dodge.speed, player.dash?.speed ?? 0);
+    // Skill dashes move positions directly while regular velocity is zero.
+    const subject = player.dash ? { x: player.x, y: player.y,
+      vx: Math.cos(player.dash.angle) * player.dash.speed,
+      vy: Math.sin(player.dash.angle) * player.dash.speed } : player;
+    return cameraSpawnExclusion(this.width, this.height, this.cameraX, this.cameraY,
+      this.cameraZoom.value, this.cameraZoom.target, this.lastDisplayedView, subject, speed);
+  }
   zoomByWheel(deltaY: number, deltaMode: number, viewportHeight: number) {
     this.cameraZoom.wheel(deltaY, deltaMode, viewportHeight);
   }
@@ -104,6 +116,7 @@ export class Renderer {
   reset() {
     this.cameraX = 0; this.cameraY = 0; this.effects.reset();
     this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
+    this.lastDisplayedView = this.view;
     this.groundLayer.reset();
     this.settlementArt.reset(); this.indoorBlend = 0;
     this.corpses = []; this.ghosts = []; this.ghostTimer = 0;
@@ -160,9 +173,10 @@ export class Renderer {
     }
     if (active) {
       // Velocity-based lookahead does not swing the camera when the player merely aims.
-      const follow = 1 - Math.exp(-dt * 11);
-      this.cameraX += (px + p.vx * .07 - this.cameraX) * follow;
-      this.cameraY += (py + p.vy * .05 - 15 - this.cameraY) * follow;
+      const follow = 1 - Math.exp(-dt * CAMERA_FOLLOW.response);
+      const target = cameraFollowTarget({ x: px, y: py, vx: p.vx, vy: p.vy });
+      this.cameraX += (target.x - this.cameraX) * follow;
+      this.cameraY += (target.y - this.cameraY) * follow;
     }
     this.effects.update(sim, feedbackStep);
     for (const corpse of this.corpses) corpse.life -= step;
@@ -180,6 +194,7 @@ export class Renderer {
     this.view = cameraView(this.width, this.height, this.cameraX, this.cameraY, zoom,
       (settings.reducedMotion ? 0 : this.kickX) + Math.sin(this.visualTime * 103) * shake,
       (settings.reducedMotion ? 0 : this.kickY) + Math.cos(this.visualTime * 127) * shake * .7);
+    this.lastDisplayedView = this.view;
     const { offsetX, offsetY, left, top, width: worldWidth, height: worldHeight } = this.view;
     this.focusedEnemy = this.enemyFocus.update(sim.enemies, this.view,
       this.pointerActive && !this.pointerOverHUD() ? { x: this.pointerX, y: this.pointerY } : null,

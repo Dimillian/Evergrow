@@ -28,7 +28,11 @@ Towns remain protected. Their safe interiors and streets do not create leveled c
 
 Level and rank are captured at spawn. Crossing a boundary or pulling an enemy across one never changes that enemy's stats or loot level. Enemy projectiles retain their attacker's source level after launch, including after the caster dies.
 
-Ambient population targets `min(6, 3 + floor((areaLevel − 1) / 4))`, with a shared hard limit of **12 living enemies**, including camp garrisons. Each candidate uses its own geographic level, so an area boundary can contain enemies from both levels. Ambient placement is attempted every 5.5 seconds at 600–820 units from the player, outside the renderer's visible bounds and outside camp footprints. The initial two ambient enemies are normal Stalkers at 600–720 units. Failed attempts do not accumulate into later spawn bursts.
+Ambient population targets `min(8, 5 + floor((areaLevel − 1) / 4))`. Camp members do not count toward that target; all sources still share a hard limit of **18 living enemies**. Camps can occupy at most 14 slots, reserving four for roaming foes. Each candidate uses its own geographic level, so an area boundary can contain enemies from both levels.
+
+Automatic populations wait for valid camera bounds after construction or reset. Five initial roaming enemies settle into the offscreen surroundings in small batches; later groups require both travel and a cooldown. Placement uses the actual camera rectangle, shared visual margins and a forward lead, so a wide zoom does not leave the old fixed-distance spawn ring entirely visible. Solitary enemies and groups of two or three use loose formations, with travel-direction-biased placement and biome-appropriate companions. Blocked ground, sanctuaries and every camp footprint remain excluded.
+
+After the initial population has been placed, standing still does not refill cleared ground from elapsed time or camera zoom alone. Further groups require 220–380 units of travel and 3.2–5.8 seconds between placements. Stored travel is capped at 380 units, failed placement retries after 0.45 seconds, and a full population cannot bank an unlimited burst. Distant inactive ambient actors may retire only while wholly offscreen; forward travel can also retire hidden trailing actors to free room ahead. Visible or engaged foes remain. Retirement is not death and grants no rewards. These travel and density values are starting playtest parameters.
 
 | Biome | Stalker | Brute | Hexer | Hound | Archer | Wisp |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -40,15 +44,15 @@ Ambient population targets `min(6, 3 + floor((areaLevel − 1) / 4))`, with a sh
 | Amberwood | 24 | 10 | 8 | 24 | 28 | 6 |
 | Hollow Highlands | 18 | 28 | 10 | 10 | 26 | 8 |
 
-Ambient selection caps each special archetype (Brute, Hexer, Archer, Wisp) at two and renormalizes the remaining weights. Authored camps supply their own fixed mixture. The total population and rank caps apply to both sources. Concurrent attacks share **two pack slots** for Stalkers/Hounds and **one special slot** for the four larger/ranged roles. Level increases never shorten anticipation, increase movement speed, or add simultaneous attack slots.
+Ambient selection caps each special archetype (Brute, Hexer, Archer, Wisp) at two and renormalizes the remaining weights. Authored camps supply their own fixed mixture without consuming this ambient composition allowance. The total population and rank caps apply to both sources. Concurrent attacks share **two pack slots** for Stalkers/Hounds and **one special slot** for the four larger/ranged roles. Level increases never shorten anticipation, increase movement speed, or add simultaneous attack slots.
 
 ### Camps and awareness
 
 Ashen Watch at `(740, 180)` introduces a four-member garrison: a veteran Stalker, an Archer, a Hound, and another Stalker. Other camps have six members with biome-specific support. Frostpine camps follow a Wisp leader with hounds and a Hexer; Emberfall favors a Brute leader and a second Brute; Amberwood and Verdant camps feature an Archer leader and hounds; Highlands camps place archers behind their Brute leader. The Mire keeps its Hexer leader and Wisp support. Cloth, banners, and soil materials also follow the climate. Shared camp footprints and member slots stay unchanged. Camp leaders are an authored exception to ambient rank rolls: a veteran can appear in a level-one camp; elite leaders require at least area level three. These enemies still use the ordinary rank XP and loot tables.
 
-Camps preload within 1,000–2,000 units according to visible world coverage. Approaching camps take priority over farther offscreen populations when the shared actor/rank budget is full. A garrison sleeps as a whole; visible and nearer foes cannot disappear to free capacity. Its original health, level, damage, rank, reward seed, and dead member identities survive unloading. Defeating every member marks the camp cleared for this run. Returning cannot refill it, reroll its items, or award extra XP. There is no bonus chest or separate camp completion reward yet.
+Camps preload within 1,000–2,000 units according to visible world coverage. Approaching camps take priority over farther offscreen populations when the shared actor/rank budget is full. A garrison sleeps as a whole; visible, engaged and nearer foes cannot disappear to free capacity. Pursuing or attacking members must disengage naturally before their group can sleep. Its original health, level, damage, rank, reward seed, and dead member identities survive unloading. Defeating every member marks the camp cleared for this run. Returning cannot refill it, reroll its items, or award extra XP. There is no bonus chest or separate camp completion reward yet.
 
-Ordinary approaches preload garrisons before they become visible. A direct teleport, very wide view, or a camp delayed by twelve already-visible enemies can still cause its first population to appear on screen once capacity becomes available. The prototype keeps that exception so such a camp does not remain permanently empty. Ambient spawning has no such exception: it stays outside the current view and outside every camp footprint.
+Every member must be wholly offscreen before a fresh or sleeping garrison can appear. Direct teleports, wide views and capacity delays have no visible-population exception: an unpopulated camp remains dormant until its complete garrison can be placed outside view and within the shared budgets. Existing sleeping members retain their identity and wounds. No actors are removed to make room for a camp that is still visible or otherwise ineligible.
 
 The exact run ledger holds up to 1,024 camp records. At that ceiling new camps remain dormant; existing records are never evicted or falsely marked cleared. Resetting the run clears this ledger with the character. Only exploration remains persisted.
 
@@ -224,6 +228,8 @@ Shared ownership keeps the model inspectable:
 | `progression.ts` | XP thresholds, exact overflow, level-difference factors, reward calculation |
 | `zone-progression.ts` | Geographic bands, enemy-stat snapshots, isolated enemy loot seeds |
 | `encounter-director.ts` | Geographic ambient mix, population policy, and rank selection |
+| `roaming-encounters.ts` | Bounded offscreen placement, travelling groups and inactive retirement policy |
+| `spawn-visibility.ts` | Shared camera rectangle and body/effect margins for births, sleeping and removal |
 | `enemy-ai.ts` | Patrol, awareness, pursuit, commitment, role spacing, and return behavior |
 | `camp-population.ts` | Exact camp membership, bounded sleep/restore ledger, clear state and population priority |
 | `wilderness-sites.ts` | Immutable procedural camp/landmark layouts and authored garrison templates |

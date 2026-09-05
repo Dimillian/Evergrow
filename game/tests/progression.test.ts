@@ -133,6 +133,7 @@ test('sanctuary withdrawal and living-enemy despawn do not award XP', () => {
   advance(sim, .5);
   assert.ok(enemy.x < -35, 'the enemy withdraws from the sanctuary');
   assert.equal(sim.player.xp, 0);
+  sim.setSpawnExclusion({ x: -300, y: -250, width: 600, height: 500 });
   enemy.x = sim.player.x - ENCOUNTER_RULES.despawnDistance - 1;
   advance(sim, FIXED_STEP);
   assert.equal(sim.enemies.length, 0);
