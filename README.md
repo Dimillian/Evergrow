@@ -8,7 +8,7 @@ A gothic, top-down 2D action RPG built for the browser, inspired by Diablo and P
 
 ### [Play Evergrow in your browser →](https://evergrow.dimillian.chatgpt.site)
 
-Desktop keyboard and mouse. The hosted build currently requires owner access; this public repository does not grant access to the game. You can also [run it locally](#run-locally).
+Play on desktop with keyboard and mouse, or [run it locally](#run-locally).
 
 Progress is saved in your browser. Hosted and localhost characters have separate saves; cloud saves are not available yet.
 
