@@ -57,7 +57,7 @@ function outerReview() {
     </nav><div class="ui-review-sizes" aria-label="Preview viewport">
       <button class="ui-button ui-button--quiet" type="button" data-size="desktop" aria-pressed="false">Desktop</button>
       <button class="ui-button ui-button--quiet" type="button" data-size="narrow" aria-pressed="false">Narrow</button>
-      <button class="ui-button ui-button--quiet" type="button" data-toast>Toast</button>
+      <button class="ui-button ui-button--quiet" type="button" data-notification>Notification</button>
     </div></div>
     <div class="ui-review-viewport"><iframe class="ui-review-frame" title="Frozen Evergrow interface preview"></iframe></div>
     <footer class="ui-review-footer"><p class="ui-review-status" role="status">Preparing preview…</p>
@@ -82,8 +82,8 @@ function outerReview() {
   for (const button of root.querySelectorAll<HTMLButtonElement>('[data-size]')) {
     button.addEventListener('click', () => { size = button.dataset.size === 'narrow' ? 'narrow' : 'desktop'; updateChrome(); }, { signal: abort.signal });
   }
-  root.querySelector('[data-toast]')!.addEventListener('click', () => {
-    frame.contentWindow?.postMessage({ channel: CHANNEL, action: 'toast' }, location.origin);
+  root.querySelector('[data-notification]')!.addEventListener('click', () => {
+    frame.contentWindow?.postMessage({ channel: CHANNEL, action: 'notification' }, location.origin);
   }, { signal: abort.signal });
   window.addEventListener('message', event => {
     if (event.source !== frame.contentWindow || event.origin !== location.origin || event.data?.channel !== CHANNEL) return;
@@ -160,10 +160,10 @@ function embeddedReview() {
   const exploration = lifetime.own(new Exploration(world, { storage: null }));
   const mapPlayer = seedDiscovery(world, exploration);
   const shell = lifetime.own(new GameShell(root, {
-    play: () => shell.toast('Static preview · no simulation is running'),
+    play: () => shell.notifications.info('Static preview · no simulation is running'),
     returnToTitle: () => selectView('ready'), openCharacter: () => {}, openSkills: () => {}, openMap: () => selectView('map'),
   }));
-  const title = lifetime.own(new TitleScreen(shell.titleMount, { create: () => shell.toast('Static preview · no character is saved'),
+  const title = lifetime.own(new TitleScreen(shell.titleMount, { create: () => shell.notifications.info('Static preview · no character is saved'),
     continue: () => {}, remove: () => {} }));
   const emptySlots = new CharacterRepository({ getItem: () => null, setItem: () => {} }).list();
   const map = lifetime.own(new WorldMap(world, exploration, shell.mapMount, () => selectView('paused')));
@@ -222,7 +222,7 @@ function embeddedReview() {
     if (event.source !== parent || event.origin !== location.origin || event.data?.channel !== CHANNEL) return;
     const next = validView(event.data.view);
     if (event.data.action === 'view' && next) selectView(next);
-    else if (event.data.action === 'toast') shell.toast('The path ahead is charted.');
+    else if (event.data.action === 'notification') shell.notifications.info('Inventory full · item left on the ground');
   }, { signal: abort.signal });
   root.addEventListener('keydown', event => {
     if (view === 'map' && event.key === 'Escape') { event.preventDefault(); selectView('paused'); }

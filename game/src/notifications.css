@@ -1,0 +1,17 @@
+/* A quiet feed beside the HUD; the world stays in focus. */
+.game-notifications { position: absolute; inset: 0; z-index: 75; pointer-events: none; font-family: var(--ui-font); }
+.notification-feed { position: absolute; left: 18px; bottom: 26px; width: min(244px, calc(100vw - 36px)); display: flex; flex-direction: column; gap: 5px; }
+.notification-card { --notice-accent: #abc4c7; position: relative; display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 6px 10px 6px 6px; color: var(--ui-ivory); background: linear-gradient(100deg, #0b151edb, #0b151e88); border: 0; border-left: 1px solid var(--notice-accent); border-radius: 1px; animation: notice-enter 180ms ease-out both; transition: opacity 220ms ease, transform 220ms ease; }
+.notification-icon { flex: 0 0 26px; height: 26px; display: grid; place-items: center; color: var(--notice-accent); opacity: .85; }
+.notification-icon > svg { width: 26px; height: 26px; }
+.notification-icon > .ui-icon { width: 17px; height: 17px; }
+.notification-copy { min-width: 0; }
+.notification-copy strong { display: block; font-weight: 400; font-size: 13px; line-height: 1.15; color: var(--notice-accent); overflow-wrap: anywhere; }
+.notification-copy > span { display: block; margin-top: 3px; color: #899da4; font: 10px/1.25 system-ui, sans-serif; }
+.notification-number { font-family: system-ui, sans-serif; font-size: .9em; font-weight: 500; font-variant-numeric: tabular-nums; }
+.notification-flourish { display: none; }
+.notification-card.is-leaving { opacity: 0; transform: translateY(-3px); animation: none; }
+@keyframes notice-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 1000px) { .notification-feed { left: 12px; bottom: 210px; width: 220px; } }
+@media (max-height: 560px) { .notification-feed { bottom: 160px; } }
+@media (prefers-reduced-motion: reduce) { .notification-card, .notification-card.is-leaving { animation: none; transition: none; transform: none; } }

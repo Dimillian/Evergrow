@@ -1,3 +1,4 @@
+import { GameNotifications } from './notifications.ts';
 import { getHUDLayout, HUD_MENU_SHORTCUTS } from './hud.ts';
 import type { HUDRect } from './hud.ts';
 import { getMinimapRect } from './map-view.ts';
@@ -18,10 +19,9 @@ export class GameShell {
   private readonly overlay: HTMLElement;
   private readonly controls: HTMLElement;
   private readonly status: HTMLElement;
-  private readonly toastElement: HTMLElement;
+  readonly notifications: GameNotifications;
   private readonly abort = new AbortController();
   private menuAbort = new AbortController();
-  private toastTimer = 0;
   private readonly actions: ShellActions;
 
   constructor(root: HTMLElement, actions: ShellActions) {
@@ -39,7 +39,6 @@ export class GameShell {
       <div id="world-map-mount"></div>
       <div id="character-panels-mount"></div>
       <div id="overlay" class="overlay ui-scroll-area" role="dialog" aria-modal="true" aria-labelledby="menu-title"></div>
-      <div id="toast" class="toast ui-status" role="status"></div>
       <div id="save-warning" class="save-warning" role="status" hidden></div>
       <p id="state-description" class="sr-only" aria-live="polite"></p>
     </div>`;
@@ -52,7 +51,7 @@ export class GameShell {
     this.overlay = root.querySelector<HTMLElement>('#overlay')!;
     this.controls = root.querySelector<HTMLElement>('#hud-controls')!;
     this.status = root.querySelector<HTMLElement>('#state-description')!;
-    this.toastElement = root.querySelector<HTMLElement>('#toast')!;
+    this.notifications = new GameNotifications(this.element);
     const signal = this.abort.signal;
     this.element.addEventListener('contextmenu', event => event.preventDefault(), { signal });
     this.controls.querySelector('[data-hud="map"]')!.addEventListener('click', actions.openMap, { signal });
@@ -103,15 +102,8 @@ export class GameShell {
       : phase === 'paused' ? 'Game paused.' : 'Ready to enter Deadwood.');
   }
 
-  toast(message: string): void {
-    this.toastElement.textContent = message;
-    this.toastElement.classList.add('visible');
-    window.clearTimeout(this.toastTimer);
-    this.toastTimer = window.setTimeout(() => this.toastElement.classList.remove('visible'), 1800);
-  }
-
   dispose(): void {
-    window.clearTimeout(this.toastTimer);
+    this.notifications.dispose();
     this.menuAbort.abort(); this.abort.abort();
   }
 }

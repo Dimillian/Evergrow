@@ -195,7 +195,10 @@ test('the first real death drops loot and awards level points exactly once', () 
   assert.equal(sim.groundItems.length, 1); assert.equal(sim.groundItems[0].item.id, id);
   const events = sim.drainEvents();
   assert.equal(events.filter(event => event.type === 'kill').length, 1);
-  assert.equal(events.filter(event => event.type === 'level').length, 1);
+  const levels = events.filter(event => event.type === 'level');
+  assert.equal(levels.length, 1);
+  assert.equal(levels[0].level, sim.player.level);
+  assert.equal(levels[0].skillPoints, 1); assert.equal(levels[0].statPoints, 5);
 });
 
 test('repeated seeded enemy deaths generate reproducible loot with unique identities', () => {
@@ -224,14 +227,14 @@ test('a full inventory preserves dropped loot until a cell is available, then co
   assert.equal(sim.groundItems.length, 1);
   const drop = sim.groundItems[0];
   assert.equal(sim.player.character.inventory.some(item => item?.id === drop.item.id), false);
-  assert.ok(sim.drainEvents().some(event => event.type === 'loot' && event.text?.includes('Inventory full')));
+  assert.ok(sim.drainEvents().some(event => event.type === 'notice' && event.message.includes('Inventory full')));
   sim.player.x = drop.x; sim.player.y = drop.y;
   sim.player.character.inventory[7] = null;
   advance(sim, FIXED_STEP);
   assert.equal(sim.groundItems.length, 0); assert.equal(sim.player.character.inventory.at(7)?.id, drop.item.id);
   advance(sim, .25);
   assert.equal(sim.player.character.inventory.filter(item => item?.id === drop.item.id).length, 1);
-  assert.equal(sim.drainEvents().filter(event => event.type === 'loot' && event.text === drop.item.name).length, 1);
+  assert.equal(sim.drainEvents().filter(event => event.type === 'loot' && event.item.id === drop.item.id).length, 1);
   assert.equal(sim.player.xp, ENEMY_DEFINITIONS.stalker.xpReward);
 });
 

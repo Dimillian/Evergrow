@@ -118,3 +118,17 @@ test('reaching exploration capacity preserves old areas instead of silently evic
   assert.equal(JSON.parse(e.serialize()).chunks.length, 8192);
   assert.match(e.persistenceMessage, /full.*preserved/);
 });
+
+test('discovery notifications fire once on reveal, never on restoration or revisiting', t => {
+  const storage = new MemoryStorage(), found: MapPOI[] = [];
+  const first = new Exploration(world([shrine]), { storage, onDiscover: poi => { found.push(poi); poi.name = 'Changed by consumer'; } });
+  t.after(() => first.dispose()); first.reveal(0, 0); first.reveal(100, 0); first.save();
+  assert.equal(found.length, 1);
+  assert.equal(first.getDiscoveredPOIs()[0].name, shrine.name, 'notification snapshots do not mutate the chart');
+  const restored = new Exploration(world([shrine]), { storage, onDiscover: poi => found.push(poi) });
+  t.after(() => restored.dispose()); restored.reveal(0, 0);
+  assert.equal(found.length, 1, 'continuing the character does not replay discoveries');
+  const other = new Exploration(world([shrine]), { storage, characterId: 'other', onDiscover: poi => found.push(poi) });
+  t.after(() => other.dispose()); other.reveal(0, 0);
+  assert.equal(found.length, 2, 'a different character discovers independently');
+});

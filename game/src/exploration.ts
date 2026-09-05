@@ -17,6 +17,7 @@ export interface ExplorationOptions {
   generationVersion?: string | number;
   saveDelayMs?: number;
   characterId?: string;
+  onDiscover?: (poi: MapPOI) => void;
 }
 function population(value: number) {
   value -= (value >>> 1) & 0x55555555;
@@ -41,6 +42,7 @@ export class Exploration {
   private disposed = false;
   private protectSave = false;
   private capacityReached = false;
+  private onDiscover?: (poi: MapPOI) => void;
   private lastX = Infinity;
   private lastY = Infinity;
   private lastRadius = 0;
@@ -50,7 +52,7 @@ export class Exploration {
   storageStatus: ExplorationStatus;
 
   constructor(world: ExplorationWorld, options: ExplorationOptions = {}) {
-    this.world = world;
+    this.world = world; this.onDiscover = options.onDiscover;
     this.generationVersion = String(options.generationVersion ?? world.generationVersion ?? 1);
     this.storageKey = `evergrow:exploration:1:${this.generationVersion}:${world.seed}${options.characterId ? `:${options.characterId}` : ''}`;
     this.storage = options.storage === undefined ? defaultStorage() : options.storage;
@@ -128,6 +130,7 @@ export class Exploration {
       if (this.pois.size >= EXPLORATION_LIMITS.pois) { this.capacityReached = true; break; }
       this.pois.set(poi.id, { id: poi.id, name: poi.name, kind: poi.kind, x: poi.x, y: poi.y, description: poi.description });
       this.revision++; changed = true;
+      this.onDiscover?.({ ...this.pois.get(poi.id)! });
     }
     if (changed) this.markDirty();
     return changed;

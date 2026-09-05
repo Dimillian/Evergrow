@@ -61,7 +61,7 @@ let selected = new URLSearchParams(location.search).get('panel') === 'skills' ? 
 const shell = life.own(new GameShell(root, { play: () => {}, returnToTitle: () => {}, openMap: () => {},
   openCharacter: () => show('character'), openSkills: () => show('skills') }));
 const result = (action: ActionResult) => {
-  if (!action.ok) shell.toast(action.message ?? 'Unavailable');
+  if (!action.ok) shell.notifications.info(action.message ?? 'Unavailable');
   refreshCharacter(p); inventory.refresh(p); tree.refresh(p);
 };
 const inventory = life.own(new InventoryPanel(shell.panelMount, { close: () => show('skills'),

@@ -17,7 +17,7 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
   const reward = Math.max(1, Math.round(enemy.xpReward * xpLevelFactor(player.level, enemy.level)));
   const levels = awardCharacterExperience(player, reward);
   if (levels) context.emit({ type: 'level', x: player.x, y: player.y,
-    text: `Level ${player.level} · +${levels} skill point${levels > 1 ? 's' : ''} · +${levels * 5} attribute points`, color: '#c0acf0' });
+    level: player.level, skillPoints: levels, statPoints: levels * 5, color: '#c0acf0' });
   for (const item of rollEnemyLoot({ seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank,
     biome: enemy.biome, kind: enemy.kind, firstKill: kills === 1 })) {
     if (context.groundItems.length >= LOOT_RULES.maxGroundItems) break;

@@ -588,12 +588,12 @@ export class Simulation {
         || !this.lineOfSight(this.player.x, this.player.y, drop.x, drop.y)) return true;
       if (!addInventoryItem(this.player.character, drop.item)) {
         if (this.time - this.lootNoticeAt > 4) {
-          this.events.push({ type: 'loot', x: drop.x, y: drop.y, text: 'Inventory full · item remains on the ground' });
+          this.events.push({ type: 'notice', x: drop.x, y: drop.y, message: 'Inventory full · item left on the ground' });
           this.lootNoticeAt = this.time;
         }
         return true;
       }
-      this.events.push({ type: 'loot', x: drop.x, y: drop.y, text: drop.item.name, color: TIER_COLORS[drop.item.tier] });
+      this.events.push({ type: 'loot', x: drop.x, y: drop.y, item: drop.item, color: TIER_COLORS[drop.item.tier] });
       return false;
     });
   }

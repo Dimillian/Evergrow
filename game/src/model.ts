@@ -1,4 +1,4 @@
-import type { CharacterSheet, DerivedCharacterStats, SkillId } from './character-types.ts';
+import type { CharacterSheet, DerivedCharacterStats, SkillId, Item } from './character-types.ts';
 import type { BiomeId } from './biomes.ts';
 import type { EnemyCamp } from './wilderness-sites.ts';
 import type { EnemyRank } from './progression-content.ts';
@@ -260,8 +260,9 @@ export type CombatEvent = EventAppearance & (
   | { readonly type: 'heal'; readonly value: number }
   | { readonly type: 'pickup'; readonly value: number; readonly heavy: boolean }
   | { readonly type: 'spawn'; readonly enemyKind: EnemyKind }
-  | { readonly type: 'loot'; readonly text: string }
-  | { readonly type: 'level'; readonly text: string }
+  | { readonly type: 'loot'; readonly item: Item }
+  | { readonly type: 'level'; readonly level: number; readonly skillPoints: number; readonly statPoints: number }
+  | { readonly type: 'notice'; readonly message: string }
   | { readonly type: 'blast'; readonly radius: number; readonly duration?: number; readonly enemyKind?: EnemyKind }
   | { readonly type: 'chain'; readonly toX: number; readonly toY: number; readonly duration?: number }
   | { readonly type: 'block'; readonly angle: number; readonly value: number }

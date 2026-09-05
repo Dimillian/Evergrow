@@ -1,3 +1,5 @@
+import { AreaNoticeTracker } from './notification-queue.ts';
+import { getZoneAt } from './zone-progression.ts';
 import { CharacterRepository } from './character-storage.ts';
 import { CharacterSession } from './character-session.ts';
 import { TitleScreen } from './title-screen.ts';
@@ -30,6 +32,7 @@ export class Game {
   private titleScreen: TitleScreen;
   private session: CharacterSession;
   private nextAutosave = 0;
+  private areaNotices = new AreaNoticeTracker();
   private saveError = '';
   private worldMap: WorldMap;
   private shell: GameShell;
@@ -199,7 +202,7 @@ export class Game {
       this.canvas.focus();
       this.canvas.setPointerCapture(event.pointerId);
       this.input.pointerDown(event.button);
-      void this.audio.unlock().catch(() => this.toast('Sound is unavailable in this browser.'));
+      void this.audio.unlock().catch(() => this.notify('Sound is unavailable in this browser.'));
     }, { signal });
     window.addEventListener('pointerup', event => {
       this.input.pointerUp(event.button);
@@ -265,7 +268,13 @@ export class Game {
     if (this.sim.player.dead) this.sim.revive();
     this.sim.player.name = record.name;
     this.worldMap.dispose(); this.exploration.dispose();
-    this.exploration = new Exploration(this.world, { characterId: record.id });
+    this.exploration = new Exploration(this.world, { characterId: record.id,
+      onDiscover: poi => {
+        // Shops share their settlement announcement; landmarks deserve their own.
+        if (!['blacksmith', 'merchant', 'inn', 'chapel'].includes(poi.kind))
+          this.shell.notifications.push({ kind: 'discovery', poi });
+      },
+    });
     this.worldMap = new WorldMap(this.world, this.exploration, this.shell.mapMount, () => this.closeMap());
     this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
     this.worldMap.resize(); this.titleScreen.close(); this.saveError = '';
@@ -280,10 +289,13 @@ export class Game {
     if (slot.record) {
       try { localStorage.removeItem(`evergrow:exploration:1:${slot.record.worldVersion}:${slot.record.worldSeed}:${slot.record.id}`); } catch { /* Character deletion already committed; chart cleanup is best effort. */ }
     }
+    this.shell.notifications.clear();
     this.titleScreen.open(this.session.repository.list(), index);
   }
 
   private enterWorld() {
+    this.shell.notifications.clear();
+    this.areaNotices.reset(this.world.sampleBiome(this.sim.player.x, this.sim.player.y).id);
     this.sim.player.name = this.session.active?.record.name;
     this.worldMap.close(); this.inventoryPanel.close(); this.skillPanel.close();
     this.renderer.reset();
@@ -291,7 +303,7 @@ export class Game {
     this.renderer.cameraX = camera.x; this.renderer.cameraY = camera.y;
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
     this.clearInput(); this.phase = 'playing'; this.showMenu(); this.canvas.focus();
-    void this.audio.unlock().catch(() => this.toast('Sound is unavailable in this browser.'));
+    void this.audio.unlock().catch(() => this.notify('Sound is unavailable in this browser.'));
     this.audio.setEnabled(!this.muted); this.last = performance.now(); this.nextAutosave = this.last + 10_000;
   }
 
@@ -299,7 +311,7 @@ export class Game {
     if (!this.session?.active) return true;
     const saved = this.session.save(this.sim.captureCheckpoint(), Date.now());
     const message = saved ? '' : this.session.error;
-    if (message && message !== this.saveError) this.toast(message);
+    if (message && message !== this.saveError) this.notify(message);
     this.saveError = message;
     this.shell.setSaveStatus(message || 'Character saved locally.', !saved);
     this.exploration.save();
@@ -311,6 +323,7 @@ export class Game {
     const index = this.session.active.index;
     this.session.active = null;
     this.worldMap.close(); this.inventoryPanel.close(); this.skillPanel.close();
+    this.shell.notifications.clear();
     this.clearInput(); this.phase = 'ready'; this.sim.reset(); this.renderer.reset();
     this.showMenu(); this.titleScreen.open(this.session.repository.list(), index);
   }
@@ -365,7 +378,7 @@ export class Game {
 
   private characterAction(command: CharacterCommand) {
     const result = executeCharacterCommand(this.sim.player, command);
-    if (!result.ok) { this.toast(result.message ?? 'Action unavailable.'); return; }
+    if (!result.ok) { this.notify(result.message ?? 'Action unavailable.'); return; }
     if (this.phase === 'character') this.inventoryPanel.refresh(this.sim.player);
     if (this.phase === 'skills') this.skillPanel.refresh(this.sim.player);
     this.saveCharacter();
@@ -395,9 +408,13 @@ export class Game {
       const events = this.sim.drainEvents();
       this.renderer.handleEvents(events, this.reducedMotion);
       for (const event of events) {
-        if ('text' in event) this.toast(event.text);
+        if (event.type === 'loot') this.shell.notifications.push({ kind: 'loot', item: event.item });
+        else if (event.type === 'level') this.shell.notifications.push({ kind: 'level', level: event.level, skillPoints: event.skillPoints, statPoints: event.statPoints });
+        else if (event.type === 'notice') this.notify(event.message);
         if (!(event.type === 'cast' && event.enemyKind)) this.audio.play(event);
       }
+      const biome = this.world.sampleBiome(this.sim.player.x, this.sim.player.y);
+      if (this.areaNotices.update(biome.id, dt)) this.shell.notifications.push({ kind: 'area', id: biome.id, name: biome.name, level: getZoneAt(this.sim.player.x, this.sim.player.y).level });
       if (this.sim.player.dead) {
         this.phase = 'dead';
         this.clearInput();
@@ -458,9 +475,9 @@ export class Game {
     try { localStorage.setItem('evergrow-preferences', JSON.stringify({ muted: this.muted })); } catch { /* Storage may be disabled. */ }
   }
 
-  private toast(message: string) {
+  private notify(message: string) {
     if (this.disposed) return;
-    this.shell.toast(message);
+    this.shell.notifications.info(message);
   }
 
   dispose() {

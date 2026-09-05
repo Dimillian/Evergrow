@@ -49,7 +49,7 @@ Short control hints use `data-tooltip` (including the transparent HUD controls);
 
 ## Implemented surfaces
 
-The title screen uses `title-screen.ts` and the shared window/action primitives for its eight-slot character hall. Pause and defeat windows share `game-menu.ts`. Both use the shared theme and tooltip motion. The world map uses the same header, controls, POI cards, and footer language. Toasts share the status treatment. The Canvas HUD, enemy plate, and minimap share the palette while preserving their functional health, mana, skill, and map colors.
+The title screen uses `title-screen.ts` and the shared window/action primitives for its eight-slot character hall. Pause and defeat windows share `game-menu.ts`. Both use the shared theme and tooltip motion. The world map uses the same header, controls, POI cards, and footer language. Notifications share the native-resolution materials and typography. The Canvas HUD, enemy plate, and minimap share the palette while preserving their functional health, mana, skill, and map colors.
 
 Open the local [interface review](http://127.0.0.1:5173/ui.html) to compare real windows and component states in desktop and 390px previews. It draws a frozen procedural background, never advances gameplay, and uses memory-only map discovery. Example item slots demonstrate the presentation API; real inventory behavior is reviewed in `/character.html?panel=character`. The review route is development-only.
 
@@ -86,3 +86,11 @@ HUD navigation uses muted engravings and small native-font bindings on one share
 Keep interface copy functional and brief. Use direct labels such as Characters, Name, Create character and Continue. Avoid flavor captions, taglines, repeated empty-slot descriptions and redundant status labels; let the artwork establish atmosphere.
 
 In the skill tree, single-click inspects and double-click allocates. The inspector’s Allocate path action and double-click commit the highlighted shortest route, charging only missing nodes. Show the full cost; insufficient points leave the entire build unchanged. Panning must never allocate.
+
+## Notifications
+
+`notification-queue.ts` owns bounded queues, duplicate suppression, exact multi-level reward aggregation, and stable biome-entry detection. `notifications.ts` / `.css` present one compact two-card feed beside the HUD, with no central banner. Common and magic pickups merge into one count; rare-or-better gear keeps its own icon/name. Cards enter and leave with short fades and follow reduced motion. Native number/detail fonts keep earned points readable. Messages never take focus or intercept gameplay input; screen-reader announcements batch same-frame arrivals. The feed retains up to 24 pending notices, with level-ups protected and prioritized during exceptional bursts.
+
+Successful inventory insertion emits a typed item payload; a full bag emits a separate status and leaves the item on the ground. Level events include the destination level and exact point gains, not parsed strings. Exploration calls `onDiscover` only for newly revealed POIs, never while loading/merging saved discoveries. Settlement shops share their town notification. Biome entry requires 1.6 seconds of sustained presence and has a six-second cooldown; it announces entry, not permanent first discovery. Character switches clear the feed. Existing saves need no migration.
+
+`/notifications.html` stages actual cards over the frozen renderer without gameplay or save access. Add `?view=discovery` or `?view=area` to review discoveries; the default shows a level-up and a rare item, with routine pickups queued as a summary.
