@@ -18,7 +18,8 @@ Checkpoint date: 2026-09-05. The current pass develops the first playable Deadwo
 - Bounded enemy populations with gradual introduction of heavy and ranged enemies; health/focus pickups, flask recovery through kills, death, and restart.
 - A smaller centered floating HUD with detailed metal framing, animated red and blue liquid orbs, resource numbers, skill icons, cooldowns, and charges. Character, inventory, skill-tree, and journal shortcuts are visible but disabled; the gear button opens settings. World drawing continues behind the HUD.
 - No runtime how-to text, control legends, or introductory combat tips. Small bindings remain on their skill buttons; control documentation is available in the repository README.
-- Pause/settings, synthesized audio, a code-defined bitmap font, reduced-motion preferences, and distinct CRT/phosphor/clean display modes. Presentation preferences are stored locally when browser storage is available.
+- Native-resolution HUD, shortcut icons, and floating damage numbers, drawn after world post-processing. Labels use locally bundled Pixelify Sans with natural glyph metrics; the shortcut strip has consistent line icons and clearer spacing.
+- Pause/settings, synthesized audio, reduced-motion preferences, and distinct CRT/phosphor/clean display modes. Presentation preferences are stored locally when browser storage is available.
 
 ## Architecture chosen for this experiment
 
@@ -28,9 +29,11 @@ Combat runs on a deterministic 120 Hz clock. Rendering interpolates simulation s
 
 The rendering layer owns camera motion, particles, trails, and flashes. Lighting uses a half-resolution surface light map, cached procedural light stamps, and bounded shadow casting. Limits on lights, occluders, particles, and transient effects keep their cost from growing with the explored world.
 
-The WebGL presentation pipeline extracts bright colors at quarter resolution, blurs them horizontally and vertically through two reusable targets, and composites bloom with scanlines and an RGB phosphor mask. CRT uses moderate bloom and warmer color; phosphor strengthens the glow and colored display treatment. Clean bypasses those display effects. No geometric screen distortion changes pointer aiming. HUD bounds suppress filtering and bloom around small labels and resource orbs. A clean Canvas fallback remains available when WebGL is unavailable.
+The WebGL presentation pipeline extracts bright colors at quarter resolution, blurs them horizontally and vertically through two reusable targets, and composites bloom with scanlines and an RGB phosphor mask. CRT uses moderate bloom and warmer color; phosphor strengthens the glow and colored display treatment. Clean bypasses those display effects. No geometric screen distortion changes pointer aiming. These passes process the world only, including the area behind the floating HUD. A clean Canvas fallback remains available when WebGL is unavailable.
 
-The Canvas HUD shares its geometry with transparent HTML controls so accessible labels, disabled menu states, the settings button, and pointer blocking match the artwork. The liquid animation never changes the underlying resource values.
+A transparent Canvas above the processed world draws the HUD, navigation, cursor, and damage numbers directly at native device-pixel density. It shares logical coordinates with the world and transparent HTML controls so accessible labels, disabled menu states, the settings button, and pointer blocking match the artwork. Damage numbers use the same frame's camera offset and impulse as their world positions. The liquid animation never changes the underlying resource values.
+
+Pixelify Sans is bundled locally under the SIL Open Font License; its source and license are recorded in `game/src/assets/fonts/`. The font loads before the first game frame and serves Canvas text and HTML menus, with a readable fallback if loading fails. Glyphs use native font rasterization instead of individually rounded bitmap blocks. No runtime font service or external asset request is needed; world and equipment artwork remain procedural.
 
 This renderer remains an experiment. Performance on the user's normal play setup, readability in motion, and combat feel determine the next changes.
 

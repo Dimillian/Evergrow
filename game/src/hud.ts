@@ -284,23 +284,59 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
   });
 }
 
-function menuIcon(c: CanvasRenderingContext2D, index: number, x: number, y: number) {
-  c.save(); c.translate(x, y); c.strokeStyle = '#929281'; c.fillStyle = '#7d867e'; c.lineWidth = 1;
+/** Menu glyphs share one 14 × 14 drawing field and a consistent metal stroke. */
+function menuIcon(c: CanvasRenderingContext2D, index: number, x: number, y: number, enabled = false) {
+  c.save(); c.translate(x, y);
+  c.strokeStyle = enabled ? '#c8ba94' : '#98a194';
+  c.fillStyle = '#152027';
+  c.lineWidth = 1;
+  c.lineJoin = 'round'; c.lineCap = 'round';
   if (index === 0) {
-    circle(c, 0, -3, 2); c.stroke();
-    c.beginPath(); c.moveTo(-5, 6); c.lineTo(-4, 2); c.lineTo(0, 0); c.lineTo(4, 2); c.lineTo(5, 6); c.closePath(); c.stroke();
+    // A head above a fitted collar is legible without a filled portrait blob.
+    c.beginPath(); c.arc(0, -3.5, 2.3, 0, TAU); c.stroke();
+    c.beginPath(); c.moveTo(-5, 6); c.lineTo(-5, 4);
+    c.quadraticCurveTo(-4.5, 2, -2, 1);
+    c.lineTo(0, 2.5); c.lineTo(2, 1);
+    c.quadraticCurveTo(4.5, 2, 5, 4);
+    c.lineTo(5, 6); c.closePath(); c.stroke();
   } else if (index === 1) {
-    c.strokeRect(-5.5, -3.5, 11, 10); c.strokeRect(-2.5, -6.5, 5, 3);
-    c.beginPath(); c.moveTo(-5, 0); c.lineTo(5, 0); c.moveTo(0, -1); c.lineTo(0, 3); c.stroke();
+    // The handle, flap and clasp all belong to the same bag silhouette.
+    c.beginPath(); c.moveTo(-2, -3); c.lineTo(-2, -5);
+    c.quadraticCurveTo(-2, -6, 0, -6);
+    c.quadraticCurveTo(2, -6, 2, -5); c.lineTo(2, -3); c.stroke();
+    c.beginPath(); c.moveTo(-4, -3); c.lineTo(4, -3);
+    c.lineTo(5, 4); c.quadraticCurveTo(5, 6, 4, 6);
+    c.lineTo(-4, 6); c.quadraticCurveTo(-5, 6, -5, 4); c.closePath(); c.stroke();
+    c.beginPath(); c.moveTo(-4, 0); c.lineTo(4, 0);
+    c.moveTo(0, -.5); c.lineTo(0, 2.5); c.stroke();
   } else if (index === 2) {
-    c.beginPath(); c.moveTo(0, 4); c.lineTo(0, -4); c.moveTo(0, 1); c.lineTo(-5, -3); c.moveTo(0, 1); c.lineTo(5, -3); c.stroke();
-    for (const [nx, ny] of [[0, -5], [-5, -3], [5, -3], [0, 5]]) { circle(c, nx, ny, 1.3); c.fill(); }
+    c.beginPath(); c.moveTo(0, 4.5); c.lineTo(0, -4.5);
+    c.moveTo(0, 1); c.lineTo(-4.5, -2.5);
+    c.moveTo(0, 1); c.lineTo(4.5, -2.5); c.stroke();
+    for (const [nx, ny] of [[0, -5], [-4.5, -2.5], [4.5, -2.5], [0, 5]]) {
+      circle(c, nx, ny, 1.2); c.fill(); c.stroke();
+    }
   } else if (index === 3) {
-    polygon(c, [-6, -5, -1, -4, 0, -3, 1, -4, 6, -5, 6, 5, 1, 4, 0, 5, -1, 4, -6, 5]); c.stroke();
-    c.beginPath(); c.moveTo(0, -3); c.lineTo(0, 5); c.stroke();
+    c.beginPath(); c.moveTo(0, -3.5);
+    c.quadraticCurveTo(-2.5, -5.5, -5, -4.5);
+    c.lineTo(-5, 5); c.quadraticCurveTo(-2.5, 4.5, 0, 6);
+    c.quadraticCurveTo(2.5, 4.5, 5, 5); c.lineTo(5, -4.5);
+    c.quadraticCurveTo(2.5, -5.5, 0, -3.5); c.closePath(); c.stroke();
+    c.beginPath(); c.moveTo(0, -3.5); c.lineTo(0, 5.5); c.stroke();
   } else {
-    for (let i = 0; i < 8; i++) { c.save(); c.rotate(i * Math.PI / 4); c.fillRect(-1, -7, 2, 3); c.restore(); }
-    circle(c, 0, 0, 4.5); c.stroke(); circle(c, 0, 0, 1.5); c.stroke();
+    // A single toothed outline avoids detached spokes at the small display size.
+    c.beginPath();
+    for (let tooth = 0; tooth < 8; tooth++) {
+      const angle = -Math.PI / 2 + tooth * TAU / 8;
+      const profile = [[-.29, 4.8], [-.13, 6.4], [.13, 6.4], [.29, 4.8]];
+      for (let edge = 0; edge < profile.length; edge++) {
+        const [offset, radius] = profile[edge];
+        const px = Math.cos(angle + offset) * radius, py = Math.sin(angle + offset) * radius;
+        if (tooth === 0 && edge === 0) c.moveTo(px, py); else c.lineTo(px, py);
+      }
+    }
+    c.closePath(); c.fill(); c.stroke();
+    circle(c, 0, 0, 2); c.stroke();
   }
   c.restore();
 }
@@ -318,14 +354,20 @@ export function drawFloatingHUD(c: CanvasRenderingContext2D, p: Player, width: n
   skills(c, p, t);
   for (let i = 0; i < HUD_MENU_SHORTCUTS.length; i++) {
     const x = 152 + i * 36;
-    c.fillStyle = '#121a20'; c.fillRect(x + 1, 1, 30, 19);
-    c.strokeStyle = '#41483f'; c.strokeRect(x + 1.5, 1.5, 29, 18);
-    c.globalAlpha = .65; menuIcon(c, i, x + 11, 10);
-    text(c, HUD_MENU_SHORTCUTS[i].key, x + 24, 7, 1, '#8e907f', 'center'); c.globalAlpha = 1;
+    c.fillStyle = '#152027'; c.fillRect(x + 1, 1, 30, 19);
+    c.strokeStyle = '#49554e'; c.lineWidth = 1; c.strokeRect(x + 1.5, 1.5, 29, 18);
+    c.strokeStyle = '#647064';
+    c.beginPath(); c.moveTo(x + 3.5, 2.5); c.lineTo(x + 27.5, 2.5); c.stroke();
+    c.strokeStyle = '#2a3939';
+    c.beginPath(); c.moveTo(x + 19.5, 5.5); c.lineTo(x + 19.5, 15.5); c.stroke();
+    menuIcon(c, i, x + 10.5, 10.5);
+    text(c, HUD_MENU_SHORTCUTS[i].key, x + 24, 6, 1, '#a1a796', 'center');
   }
-  c.fillStyle = '#131c23'; c.fillRect(316, 0, 24, 21);
-  c.strokeStyle = '#736e52'; c.strokeRect(316.5, .5, 23, 20);
-  menuIcon(c, 4, 328, 10);
+  c.fillStyle = '#172129'; c.fillRect(316, 0, 24, 21);
+  c.strokeStyle = '#8a7958'; c.lineWidth = 1; c.strokeRect(316.5, .5, 23, 20);
+  c.strokeStyle = '#b4a077';
+  c.beginPath(); c.moveTo(318.5, 1.5); c.lineTo(337.5, 1.5); c.stroke();
+  menuIcon(c, 4, 328, 10.5, true);
   // Readouts sit in little inset plaques, not in the liquid or in a legend.
   for (const [x, current, max, color] of [
     [48, Math.ceil(Math.max(0, p.hp)), p.maxHp, '#e6aba0'],

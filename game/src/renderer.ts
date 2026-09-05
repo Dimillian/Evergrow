@@ -36,6 +36,8 @@ export class Renderer {
   hurt = 0;
   private kickX = 0;
   private kickY = 0;
+  private viewOffsetX = 0;
+  private viewOffsetY = 0;
   private hurtAngle = 0;
   private damageTrails = new Map<number, { value: number; hold: number }>();
   private playerHealthTrail = 100;
@@ -139,6 +141,7 @@ export class Renderer {
     const shake = settings.reducedMotion ? 0 : this.shake;
     const offsetX = this.width / 2 - this.cameraX + (settings.reducedMotion ? 0 : this.kickX) + Math.sin(this.visualTime * 103) * shake;
     const offsetY = this.height / 2 - this.cameraY + (settings.reducedMotion ? 0 : this.kickY) + Math.cos(this.visualTime * 127) * shake * .7;
+    this.viewOffsetX = offsetX; this.viewOffsetY = offsetY;
     const left = -offsetX, top = -offsetY;
     if (Math.abs(this.queryX - this.cameraX) > 65 || Math.abs(this.queryY - this.cameraY) > 65) {
       this.cachedProps = world.getProps(left - 240, top - 240, this.width + 480, this.height + 480);
@@ -175,7 +178,6 @@ export class Renderer {
     this.motes(left, top, sim.time, settings.reducedMotion);
     for (const enemy of sim.enemies) this.telegraph(enemy, alpha);
     this.healthBars(sim, alpha);
-    this.effects.drawNumbers(c);
     c.restore();
 
     const vignette = c.createRadialGradient(this.width / 2, this.height * .46, this.height * .23,
@@ -183,12 +185,21 @@ export class Renderer {
     vignette.addColorStop(0, '#04101900'); vignette.addColorStop(1, '#02081260');
     c.fillStyle = vignette; c.fillRect(0, 0, this.width, this.height);
     this.damageVignette(settings.reducedMotion);
-    this.navigation(sim, world, settings);
+  }
+
+  /** Draw after world post-processing into the native-resolution transparent UI surface. */
+  renderUI(c: CanvasRenderingContext2D, sim: Simulation, world: World, settings: RenderSettings) {
+    const p = sim.player;
+    // Popups follow the exact camera impulse used by this frame's world, without filtering the text.
+    c.save(); c.translate(this.viewOffsetX, this.viewOffsetY);
+    this.effects.drawNumbers(c);
+    c.restore();
+    this.navigation(c, sim, world, settings);
     drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
       reducedMotion: settings.reducedMotion, healthTrail: this.playerHealthTrail / Math.max(1, p.maxHp),
       hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / HIT_FLASH_DURATION),
     });
-    if (active) this.cursor();
+    if (settings.phase === 'playing') this.cursor(c);
   }
 
   private ground(world: World, left: number, top: number) {
@@ -387,8 +398,8 @@ export class Renderer {
     c.fillStyle = gradient; c.fillRect(0, 0, this.width, this.height); c.restore();
   }
 
-  private navigation(sim: Simulation, world: World, settings: RenderSettings) {
-    const c = this.ctx, p = sim.player;
+  private navigation(c: CanvasRenderingContext2D, sim: Simulation, world: World, settings: RenderSettings) {
+    const p = sim.player;
     text(c, 'DEADWOOD', 22, 22, 1.2, '#bbb992');
     text(c, String(sim.kills).padStart(2, '0') + ' SLAIN', 22, 37, 1, '#839b91');
     const mw = 92, mh = 70, mx = this.width - mw - 20, my = 20, zoom = .085;
@@ -418,8 +429,8 @@ export class Renderer {
       22, this.height - 18, 1, '#a3c7a7');
   }
 
-  private cursor() {
-    const c = this.ctx, x = this.pointerX, y = this.pointerY;
+  private cursor(c: CanvasRenderingContext2D) {
+    const x = this.pointerX, y = this.pointerY;
     if (isHUDPoint(x, y, this.width, this.height)) return;
     c.strokeStyle = '#ded5a9bb'; c.lineWidth = 1; c.beginPath();
     c.moveTo(x - 6, y); c.lineTo(x - 3, y); c.moveTo(x + 3, y); c.lineTo(x + 6, y);

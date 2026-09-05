@@ -1,41 +1,75 @@
-// A tiny code-defined 5 × 7 font. No font file or image atlas is required.
-const glyphs: Record<string, string> = {
-  A:'01110/10001/10001/11111/10001/10001/10001',B:'11110/10001/10001/11110/10001/10001/11110',
-  C:'01111/10000/10000/10000/10000/10000/01111',D:'11110/10001/10001/10001/10001/10001/11110',
-  E:'11111/10000/10000/11110/10000/10000/11111',F:'11111/10000/10000/11110/10000/10000/10000',
-  G:'01111/10000/10000/10111/10001/10001/01111',H:'10001/10001/10001/11111/10001/10001/10001',
-  I:'111/010/010/010/010/010/111',J:'00111/00010/00010/00010/10010/10010/01100',
-  K:'10001/10010/10100/11000/10100/10010/10001',L:'10000/10000/10000/10000/10000/10000/11111',
-  M:'10001/11011/10101/10101/10001/10001/10001',N:'10001/11001/11001/10101/10011/10011/10001',
-  O:'01110/10001/10001/10001/10001/10001/01110',P:'11110/10001/10001/11110/10000/10000/10000',
-  Q:'01110/10001/10001/10001/10101/10010/01101',R:'11110/10001/10001/11110/10100/10010/10001',
-  S:'01111/10000/10000/01110/00001/00001/11110',T:'11111/00100/00100/00100/00100/00100/00100',
-  U:'10001/10001/10001/10001/10001/10001/01110',V:'10001/10001/10001/10001/10001/01010/00100',
-  W:'10001/10001/10001/10101/10101/11011/10001',X:'10001/10001/01010/00100/01010/10001/10001',
-  Y:'10001/10001/01010/00100/00100/00100/00100',Z:'11111/00001/00010/00100/01000/10000/11111',
-  '0':'01110/10001/10011/10101/11001/10001/01110','1':'00100/01100/00100/00100/00100/00100/01110',
-  '2':'01110/10001/00001/00010/00100/01000/11111','3':'11110/00001/00001/01110/00001/00001/11110',
-  '4':'00010/00110/01010/10010/11111/00010/00010','5':'11111/10000/10000/11110/00001/00001/11110',
-  '6':'01110/10000/10000/11110/10001/10001/01110','7':'11111/00001/00010/00100/01000/01000/01000',
-  '8':'01110/10001/10001/01110/10001/10001/01110','9':'01110/10001/10001/01111/00001/00001/01110',
-  '/':'00001/00001/00010/00100/01000/10000/10000',':':'0/1/1/0/1/1/0',
-  '.':'0/0/0/0/0/1/1','-':'000/000/000/111/000/000/000','+':'00000/00100/00100/11111/00100/00100/00000',
-  '?':'01110/10001/00001/00010/00100/00000/00100','!':'1/1/1/1/1/0/1',
-  '[':'111/100/100/100/100/100/111',']':'111/001/001/001/001/001/111',
-  '>':'100/010/001/001/001/010/100','<':'001/010/100/100/100/010/001',
-};
-const parsed = Object.fromEntries(Object.entries(glyphs).map(([k,v])=>[k,v.split('/')]));
-export function textWidth(value: string, size = 1) { return Math.max(0, value.length * 6 - 1) * size; }
-export function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size = 1, color = '#d4c8a4', align: 'left'|'center'|'right' = 'left') {
-  const width = textWidth(value, size);
-  if (align === 'center') x -= width / 2;
-  if (align === 'right') x -= width;
-  ctx.fillStyle = color;
-  for (const character of value.toUpperCase()) {
-    const rows = parsed[character];
-    if (rows) for (let row=0;row<7;row++) for(let col=0;col<rows[row].length;col++) {
-      if(rows[row][col]==='1') ctx.fillRect(Math.round(x + (col+(5-rows[row].length)/2)*size),Math.round(y+row*size),Math.ceil(size),Math.ceil(size));
-    }
-    x += size * 6;
+export const GAME_FONT_FAMILY = 'Pixelify Sans';
+/** 11px em gives 7.7px capitals and a typical 6.45px advance at the legacy size=1. */
+export const GAME_FONT_EM = 11;
+const FONT_WEIGHT = 400;
+const FONT_URL = new URL('./assets/fonts/PixelifySans-Variable.ttf', import.meta.url).href;
+let loading: Promise<void> | null = null;
+let measuring: CanvasRenderingContext2D | null = null;
+
+/** One locally bundled face serves both Canvas labels and the DOM interface. */
+export function loadGameFont(): Promise<void> {
+  if (loading) return loading;
+  if (typeof document === 'undefined' || typeof FontFace === 'undefined') {
+    return Promise.reject(new Error('The game font requires the browser FontFace API'));
   }
+  // Reuse the registered face after module hot replacement instead of accumulating fonts.
+  const existing = [...document.fonts].find(face => face.family.replace(/["']/g, '') === GAME_FONT_FAMILY);
+  const face = existing ?? new FontFace(GAME_FONT_FAMILY, `url("${FONT_URL}")`, {
+    style: 'normal', weight: '400 700', display: 'block',
+  });
+  if (!existing) document.fonts.add(face);
+  loading = face.load().then(() => { measuring = null; }).catch(error => {
+    if (!existing) document.fonts.delete(face);
+    loading = null;
+    throw error;
+  });
+  return loading;
+}
+
+function font(pixelSize: number) {
+  return `${FONT_WEIGHT} ${pixelSize}px "${GAME_FONT_FAMILY}", monospace`;
+}
+
+/** Natural font metrics replace the previous six-pixel character-count estimate. */
+export function textWidth(value: string, size = 1) {
+  if (!value || size <= 0 || !Number.isFinite(size)) return 0;
+  measuring ??= document.createElement('canvas').getContext('2d');
+  if (!measuring) return 0;
+  measuring.font = font(GAME_FONT_EM * size);
+  measuring.fontKerning = 'normal';
+  return measuring.measureText(value.toUpperCase()).width;
+}
+
+/**
+ * y remains the cap-top position used by existing HUD and damage-number layouts.
+ * Resolve the current transform into a physical font size, then rasterize the whole
+ * glyph run directly into the backing canvas. Only the final baseline origin snaps;
+ * glyph stems and animated font scales keep their natural typeface geometry.
+ */
+export function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number,
+  size = 1, color = '#d4c8a4', align: 'left' | 'center' | 'right' = 'left') {
+  if (!value || size <= 0 || ![x, y, size].every(Number.isFinite)) return;
+  const transform = ctx.getTransform();
+  const physicalScale = Math.hypot(transform.c, transform.d);
+  if (!Number.isFinite(physicalScale) || physicalScale < .00001) return;
+  const pixels = GAME_FONT_EM * size * physicalScale;
+  const valueToDraw = value.toUpperCase();
+  ctx.save();
+  ctx.font = font(pixels);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.direction = 'ltr';
+  ctx.fontKerning = 'normal';
+  const width = ctx.measureText(valueToDraw).width;
+  const caps = ctx.measureText('H');
+  const ascent = caps.actualBoundingBoxAscent || pixels * .7;
+  const offset = align === 'center' ? -width / 2 : align === 'right' ? -width : 0;
+  const a = transform.a / physicalScale, b = transform.b / physicalScale;
+  const c = transform.c / physicalScale, d = transform.d / physicalScale;
+  const physicalX = transform.a * x + transform.c * y + transform.e + a * offset + c * ascent;
+  const physicalY = transform.b * x + transform.d * y + transform.f + b * offset + d * ascent;
+  ctx.setTransform(a, b, c, d, Math.round(physicalX), Math.round(physicalY));
+  ctx.fillStyle = color;
+  ctx.fillText(valueToDraw, 0, 0);
+  ctx.restore();
 }

@@ -14,13 +14,15 @@ button:focus-visible, select:focus-visible, input:focus-visible {
   outline: 2px solid #e8c77e;
   outline-offset: 4px;
 }
-canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; outline: 0; }
-.playing canvas { cursor: none; }
-.playing canvas.hud-hover { cursor: default; }
+canvas { display: block; width: 100%; height: 100%; outline: 0; }
+#game { image-rendering: pixelated; }
+#game-ui { position: absolute; inset: 0; image-rendering: auto; pointer-events: none; z-index: 1; }
+.playing #game { cursor: none; }
+.playing #game.hud-hover { cursor: default; }
 .game-shell { position: relative; width: 100%; height: 100%; background: #080f13; isolation: isolate; }
 
 /* Canvas draws the hub. These controls only supply interaction and semantics. */
-.hud-controls { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.hud-controls { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
 .hud-controls[hidden] { display: none; }
 .hud-control {
   position: absolute;
@@ -43,7 +45,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   display: grid;
   place-items: center;
   background: linear-gradient(180deg, #050a1018, #050a1030 70%, #050a1018);
-  z-index: 2;
+  z-index: 3;
 }
 .overlay[hidden] { display: none; }
 .panel {

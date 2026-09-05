@@ -1,5 +1,4 @@
 export type VisualMode = 'crt' | 'phosphor' | 'clean';
-export interface HUDBounds { x: number; y: number; width: number; height: number; }
 
 const vertex = `
 attribute vec2 a_position;
@@ -16,31 +15,21 @@ precision mediump float;
 #endif
 varying vec2 v_uv;
 `;
-// Bounds have the scene canvas's top-left origin. No pass warps UV coordinates.
-const hudUniforms = `
-uniform vec2 u_size;
-uniform vec4 u_hud;
-uniform float u_hud_enabled;
-float hudCoverage(vec2 uv) {
-  vec2 p = vec2(uv.x, 1. - uv.y) * u_size;
-  vec2 outside = max(u_hud.xy - p, p - (u_hud.xy + u_hud.zw));
-  return u_hud_enabled * (1. - smoothstep(0., 6., max(outside.x, outside.y)));
-}
-`;
 const damage = `
 uniform float u_hurt;
-vec3 damageTint(vec3 color, float hud) {
+vec3 damageTint(vec3 color) {
   float edge = smoothstep(.23, .72, length(v_uv - .5));
-  return color + vec3(.22, .008, .018) * edge * u_hurt * (1. - hud);
+  return color + vec3(.22, .008, .018) * edge * u_hurt;
 }
 `;
-const copyFragment = precision + hudUniforms + damage + `
+const copyFragment = precision + damage + `
 uniform sampler2D u_scene;
 void main() {
-  gl_FragColor = vec4(damageTint(texture2D(u_scene, v_uv).rgb, hudCoverage(v_uv)), 1.);
+  gl_FragColor = vec4(damageTint(texture2D(u_scene, v_uv).rgb), 1.);
 }`;
-const brightFragment = precision + hudUniforms + `
+const brightFragment = precision + `
 uniform sampler2D u_scene;
+uniform vec2 u_size;
 uniform float u_threshold;
 void main() {
   // Preserve thin trails and sparks in the quarter-resolution extraction.
@@ -58,7 +47,7 @@ void main() {
   float soft = clamp(brightness - u_threshold + knee, 0., 2. * knee);
   soft = soft * soft / (4. * knee + .0001);
   float contribution = max(soft, brightness - u_threshold) / max(brightness, .0001);
-  gl_FragColor = vec4(color * contribution * (1. - hudCoverage(v_uv)), 1.);
+  gl_FragColor = vec4(color * contribution, 1.);
 }`;
 const blurFragment = precision + `
 uniform sampler2D u_scene;
@@ -72,13 +61,13 @@ void main() {
   color += texture2D(u_scene, v_uv - u_direction * 3.2307692308).rgb * .0702702703;
   gl_FragColor = vec4(color, 1.);
 }`;
-const compositeFragment = precision + hudUniforms + damage + `
+const compositeFragment = precision + damage + `
 uniform sampler2D u_scene;
 uniform sampler2D u_bloom;
+uniform vec2 u_size;
 uniform float u_phosphor;
 void main() {
   vec3 original = texture2D(u_scene, v_uv).rgb;
-  float hud = hudCoverage(v_uv);
   float edge = smoothstep(.17, .7, length(v_uv - .5));
   // Subpixel edge separation leaves the scene geometry and cursor aim unchanged.
   vec2 separation = vec2((.32 + u_phosphor * .24) * edge / u_size.x, 0.);
@@ -101,9 +90,7 @@ void main() {
                      : column < 2. ? vec3(.87, 1.15, .87) : vec3(.87, .87, 1.15);
   color *= mix(mask, phosphorMask, u_phosphor);
   color *= mix(vec3(1.045, 1.02, .99), vec3(.98, 1.09, 1.1), u_phosphor);
-  // Tiny pixel-font labels and the animated orbs retain their original clarity.
-  color = mix(color, original, hud);
-  gl_FragColor = vec4(damageTint(color, hud), 1.);
+  gl_FragColor = vec4(damageTint(color), 1.);
 }`;
 
 interface Pass {
@@ -196,11 +183,10 @@ export class PostFX {
     const gl = this.gl!;
     this.clearHandles();
     try {
-      const hud = ['u_size', 'u_hud', 'u_hud_enabled'];
-      this.copy = this.makePass(copyFragment, ['u_scene', ...hud, 'u_hurt']);
-      this.bright = this.makePass(brightFragment, ['u_scene', ...hud, 'u_threshold']);
+      this.copy = this.makePass(copyFragment, ['u_scene', 'u_hurt']);
+      this.bright = this.makePass(brightFragment, ['u_scene', 'u_size', 'u_threshold']);
       this.blur = this.makePass(blurFragment, ['u_scene', 'u_direction']);
-      this.composite = this.makePass(compositeFragment, ['u_scene', 'u_bloom', ...hud, 'u_hurt', 'u_phosphor']);
+      this.composite = this.makePass(compositeFragment, ['u_scene', 'u_bloom', 'u_size', 'u_hurt', 'u_phosphor']);
       this.buffer = gl.createBuffer();
       if (!this.buffer) throw new Error('Could not allocate the display geometry');
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
@@ -246,14 +232,8 @@ export class PostFX {
     gl.useProgram(pass.program); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texture);
   }
 
-  private setHUD(pass: Pass, bounds?: HUDBounds) {
-    const gl = this.gl!;
-    gl.uniform2f(pass.uniforms.u_size, this.sourceWidth, this.sourceHeight);
-    gl.uniform1f(pass.uniforms.u_hud_enabled, bounds && bounds.width > 0 && bounds.height > 0 ? 1 : 0);
-    gl.uniform4f(pass.uniforms.u_hud, bounds?.x ?? 0, bounds?.y ?? 0, bounds?.width ?? 0, bounds?.height ?? 0);
-  }
-
-  render(source: HTMLCanvasElement, mode: VisualMode, hurt: number, hudBounds?: HUDBounds) {
+  /** The source contains only the world; native-resolution UI is composed later. */
+  render(source: HTMLCanvasElement, mode: VisualMode, hurt: number) {
     if (this.lost || this.disposed || !source.width || !source.height) return;
     const gl = this.gl;
     if (gl && this.scene && this.copy && this.bright && this.blur && this.composite) {
@@ -264,19 +244,21 @@ export class PostFX {
       gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
       const hurtAmount = Math.max(0, Math.min(1, hurt));
       if (mode === 'clean') {
-        this.use(this.copy, this.scene, null); this.setHUD(this.copy, hudBounds);
+        this.use(this.copy, this.scene, null);
         gl.uniform1f(this.copy.uniforms.u_hurt, hurtAmount); gl.drawArrays(gl.TRIANGLES, 0, 6);
         return;
       }
       const phosphor = mode === 'phosphor' ? 1 : 0;
       const [a, b] = this.targets;
-      this.use(this.bright, this.scene, a); this.setHUD(this.bright, hudBounds);
+      this.use(this.bright, this.scene, a);
+      gl.uniform2f(this.bright.uniforms.u_size, this.sourceWidth, this.sourceHeight);
       gl.uniform1f(this.bright.uniforms.u_threshold, phosphor ? .41 : .53); gl.drawArrays(gl.TRIANGLES, 0, 6);
       this.use(this.blur, a.texture, b);
       gl.uniform2f(this.blur.uniforms.u_direction, 1 / this.bloomWidth, 0); gl.drawArrays(gl.TRIANGLES, 0, 6);
       this.use(this.blur, b.texture, a);
       gl.uniform2f(this.blur.uniforms.u_direction, 0, 1 / this.bloomHeight); gl.drawArrays(gl.TRIANGLES, 0, 6);
-      this.use(this.composite, this.scene, null); this.setHUD(this.composite, hudBounds);
+      this.use(this.composite, this.scene, null);
+      gl.uniform2f(this.composite.uniforms.u_size, this.sourceWidth, this.sourceHeight);
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, a.texture);
       gl.uniform1f(this.composite.uniforms.u_phosphor, phosphor);
       gl.uniform1f(this.composite.uniforms.u_hurt, hurtAmount); gl.drawArrays(gl.TRIANGLES, 0, 6);

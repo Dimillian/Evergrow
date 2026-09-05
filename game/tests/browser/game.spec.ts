@@ -4,7 +4,8 @@ test('local game supports movement, combat, dodge, pause, recovery, and clean re
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto('/');
   await expect(page.getByRole('button',{name:'ENTER THE WOODS'})).toBeVisible();
-  await expect(page.locator('canvas')).toBeVisible();
+  await expect(page.locator('#game')).toBeVisible();
+  await expect(page.locator('#game-ui')).toBeVisible();
   await page.getByRole('button',{name:'ENTER THE WOODS'}).click();
   await expect(page.locator('#overlay')).toBeHidden();
   // Read-only instrumentation is available on the development build.

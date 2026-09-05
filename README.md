@@ -30,6 +30,8 @@ Open [Evergrowing locally](http://127.0.0.1:5173/) in the Codex in-app browser. 
 
 The basic attack derives its timing, reach, and damage from character and equipped-weapon stats. There is no automatic combo chain; a combo could become a separate skill later. Character, inventory, skill-tree, and journal shortcuts on the HUD are disabled placeholders. The gear button opens settings.
 
+The HUD and damage numbers render at native display resolution above the world shader. UI typography uses locally bundled [Pixelify Sans](game/src/assets/fonts/SOURCE.md), licensed under the SIL Open Font License; no external font service is used.
+
 The user owns gameplay and visual verification in the in-app browser and directs the next changes. See [prototype status](docs/prototype-status.md) for what is implemented and deliberately deferred. Control documentation stays here; the game view has no how-to text or control legend.
 
 `npm test` runs deterministic engine tests. `npm run build` type-checks and creates the local production bundle. The source is tracked in a local Git repository with no remote.

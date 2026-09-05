@@ -1,4 +1,6 @@
 import './style.css';
+import './typography.css';
+import { loadGameFont } from './font.ts';
 import { World } from './world.ts';
 import { Simulation } from './simulation.ts';
 import { Renderer } from './renderer.ts';
@@ -15,6 +17,7 @@ interface Preferences { mode: VisualMode; muted: boolean; reducedMotion: boolean
 const app = document.querySelector<HTMLElement>('#app')!;
 app.innerHTML = `<div class="game-shell">
   <canvas id="game" tabindex="0" aria-label="Evergrowing: Deadwood combat arena"></canvas>
+  <canvas id="game-ui" aria-hidden="true"></canvas>
   <nav id="hud-controls" class="hud-controls" aria-label="Character menus" hidden>
     ${HUD_MENU_SHORTCUTS.map(shortcut => `<button type="button" class="hud-control" data-hud="${shortcut.id}"
       disabled aria-label="${shortcut.label} (unavailable)" title="${shortcut.label}"></button>`).join('')}
@@ -32,6 +35,8 @@ class Game {
   renderer = new Renderer();
   audio = new GameAudio();
   canvas = document.querySelector<HTMLCanvasElement>('#game')!;
+  private uiCanvas = document.querySelector<HTMLCanvasElement>('#game-ui')!;
+  private uiContext = this.uiCanvas.getContext('2d')!;
   fx: PostFX;
   phase: Phase = 'ready';
   preferences: Preferences = {
@@ -152,6 +157,10 @@ class Game {
     const ratio = Math.min(1.6, window.devicePixelRatio || 1);
     this.canvas.width = Math.round(width * ratio);
     this.canvas.height = Math.round(height * ratio);
+    // UI is rasterized at the display's native density, independently of the world buffer.
+    const uiRatio = window.devicePixelRatio || 1;
+    this.uiCanvas.width = Math.round(width * uiRatio);
+    this.uiCanvas.height = Math.round(height * uiRatio);
     const logicalHeight = Math.min(680, Math.max(450, Math.round(height / 1.35)));
     this.renderer.resize(Math.max(540, Math.round(logicalHeight * width / height)), logicalHeight);
     this.mouse.x = this.renderer.width * 0.6;
@@ -244,11 +253,18 @@ class Game {
     }
     this.renderer.pointerX = this.mouse.x;
     this.renderer.pointerY = this.mouse.y;
-    this.renderer.render(this.sim, this.world, dt, {
+    const settings = {
       ...this.preferences, phase: this.phase, fps: this.fps, debug: this.debug,
-    });
-    this.fx.render(this.renderer.canvas, this.preferences.mode, this.renderer.hurt,
-      getHUDLayout(this.renderer.width, this.renderer.height));
+    };
+    this.renderer.render(this.sim, this.world, dt, settings);
+    this.fx.render(this.renderer.canvas, this.preferences.mode, this.renderer.hurt);
+    const ui = this.uiContext;
+    ui.setTransform(1, 0, 0, 1, 0, 0);
+    ui.clearRect(0, 0, this.uiCanvas.width, this.uiCanvas.height);
+    // Keep shared logical coordinates for drawing, aiming, and the HTML hit targets.
+    ui.setTransform(this.uiCanvas.width / this.renderer.width, 0, 0,
+      this.uiCanvas.height / this.renderer.height, 0, 0);
+    this.renderer.renderUI(ui, this.sim, this.world, settings);
     this.animation = requestAnimationFrame(this.frame);
   };
 
@@ -340,11 +356,18 @@ class Game {
   }
 }
 
-try {
-  const game = new Game();
-  if (import.meta.env.DEV) Object.assign(window, { __evergrowing: game });
-  if (import.meta.hot) import.meta.hot.dispose(() => game.dispose());
-} catch (error) {
-  console.error(error);
-  app.innerHTML = '<div class="error"><h1>The woods could not be drawn.</h1><p>This browser could not initialize the game display.</p></div>';
-}
+let game: Game | undefined;
+let moduleDisposed = false;
+if (import.meta.hot) import.meta.hot.dispose(() => { moduleDisposed = true; game?.dispose(); });
+
+// Wait for local font metrics before the first frame; a missing font has a readable fallback.
+void loadGameFont().catch(error => console.warn('Local UI font unavailable; using fallback.', error)).then(() => {
+  if (moduleDisposed) return;
+  try {
+    game = new Game();
+    if (import.meta.env.DEV) Object.assign(window, { __evergrowing: game });
+  } catch (error) {
+    console.error(error);
+    app.innerHTML = '<div class="error"><h1>The woods could not be drawn.</h1><p>This browser could not initialize the game display.</p></div>';
+  }
+});
