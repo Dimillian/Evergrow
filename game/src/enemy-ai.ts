@@ -1,4 +1,5 @@
-import { COMBAT_TIMING, ENEMY_AI_RULES, ENEMY_DEFINITIONS, type EnemyDefinition, type ProjectileDefinition } from './combat-content.ts';
+import { transitionEnemy } from './enemy-state.ts';
+import { ENEMY_AI_RULES, ENEMY_DEFINITIONS, type EnemyDefinition, type ProjectileDefinition } from './combat-content.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
 import { canEnemyJoinAttack } from './encounter-director.ts';
 import type { CombatEvent, Enemy, Player, ProjectileEffects, WorldQuery } from './model.ts';
@@ -14,19 +15,6 @@ export interface EnemyAIContext {
   hurt(amount: number, angle: number, enemy: Enemy): void;
   shoot(enemy: Enemy, angle: number, definition: ProjectileDefinition, effects: ProjectileEffects): void;
   emit(event: CombatEvent): void;
-}
-
-export function transitionEnemy(enemy: Enemy, state: Enemy['state'], duration = 0): void {
-  enemy.state = state; enemy.stateTime = 0; enemy.stateDuration = duration;
-  enemy.vx = enemy.vy = 0;
-  if (state === 'windup') { enemy.attackHit = false; enemy.interrupted = false; }
-}
-
-/** Direct hits are always noticed, even outside the normal view radius. */
-export function alertEnemy(enemy: Enemy, player: Pick<Player, 'x' | 'y'>): void {
-  if (enemy.state === 'dead') return;
-  enemy.awareness = 1; enemy.lastSeenX = player.x; enemy.lastSeenY = player.y; enemy.lostSightTime = 0;
-  if (enemy.state === 'idle' || enemy.state === 'patrol' || enemy.state === 'return') transitionEnemy(enemy, 'chase');
 }
 
 function separatedMotion(enemy: Enemy, vx: number, vy: number, context: EnemyAIContext): { vx: number; vy: number } {
@@ -198,10 +186,4 @@ export function updateEnemyAI(enemy: Enemy, dt: number, context: EnemyAIContext)
     }
     if (enemy.stateTime + 1e-9 >= enemy.stateDuration) transitionEnemy(enemy, 'recover', definition.recovery);
   }
-}
-
-/** Shared interruption entrypoint for status skills without forcing every actor type into a kind branch. */
-export function interruptStaggeredEnemy(enemy: Enemy): void {
-  if (enemy.interrupted && (enemy.state === 'windup' || enemy.state === 'attack'))
-    transitionEnemy(enemy, 'recover', COMBAT_TIMING.interruptedRecovery);
 }

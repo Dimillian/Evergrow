@@ -164,8 +164,11 @@ export class GameAudio {
     if (!this.enabled || !this.ctx || !this.bus || this.disposed || this.ctx.state !== 'running') return;
     if (event.type === 'spawn') return;
     const gain = this.burstGain(event.type);
-    const weight = event.heavy ? 1.2 : Math.min(1.15, Math.max(.9, Math.pow((event.value ?? 24) / 24, .14)));
-    const pitch = (event.enemyKind === 'brute' ? .8 : event.enemyKind === 'caster' ? 1.09 : 1) * (.97 + Math.random() * .06);
+    const heavy = 'heavy' in event && event.heavy;
+    const value = 'value' in event ? event.value : 24;
+    const enemyKind = 'enemyKind' in event ? event.enemyKind : undefined;
+    const weight = heavy ? 1.2 : Math.min(1.15, Math.max(.9, Math.pow(value / 24, .14)));
+    const pitch = (enemyKind === 'brute' ? .8 : enemyKind === 'caster' ? 1.09 : 1) * (.97 + Math.random() * .06);
     const noise = (shape: NoiseShape, priority = 2) => this.hiss({ ...shape, volume: shape.volume * gain }, priority);
     const tone = (a: number, b: number, duration: number, volume: number, priority = 2,
       type: OscillatorType = 'triangle', delay = 0, attack = .003) =>
@@ -221,8 +224,8 @@ export class GameAudio {
       case 'level':
       case 'loot':
       case 'pickup':
-        tone(event.heavy ? 610 : 790, event.heavy ? 820 : 1050, .086, .08, 0, 'sine');
-        tone(event.heavy ? 910 : 1180, event.heavy ? 1080 : 1360, .065, .03, 0, 'sine', .025);
+        tone(heavy ? 610 : 790, heavy ? 820 : 1050, .086, .08, 0, 'sine');
+        tone(heavy ? 910 : 1180, heavy ? 1080 : 1360, .065, .03, 0, 'sine', .025);
         break;
     }
   }

@@ -121,7 +121,7 @@ test('mouse aiming inverts the actual smoothed rendering transform, including ca
   const { renderer, render, settings } = fixture(t);
   settings.reducedMotion = false;
   renderer.zoomByWheel(-300, 0, 900);
-  renderer.handleEvents([{ type: 'hurt', x: -123.25, y: 67.125, value: 8, angle: .7 }], false);
+  renderer.handleEvents([{ type: 'hurt', remainingHp: 92, heavy: false, x: -123.25, y: 67.125, value: 8, angle: .7 }], false);
   let previousZoom = 1;
   for (let frame = 0; frame < 8; frame++) {
     const matrix = render();
@@ -178,7 +178,7 @@ test('renderer wires hover and combat focus to a native enemy plate without HUD 
     renderer.pointerX = matrix.a * enemy.x + matrix.e;
     renderer.pointerY = matrix.d * (enemy.y - 22) + matrix.f;
   };
-  const noteHit = () => renderer.handleEvents([{ type: 'hit', targetId: enemy.id,
+  const noteHit = () => renderer.handleEvents([{ type: 'hit', angle: 0, heavy: false, targetId: enemy.id,
     enemyKind: enemy.kind, x: enemy.x, y: enemy.y, value: 5, remainingHp: enemy.hp }], true);
 
   const firstMatrix = render();
@@ -272,7 +272,7 @@ test('renderer anticipates direct skill-dash travel even when player velocity is
   player.x += Math.cos(player.dash.angle) * 520 * .05;
   player.y += Math.sin(player.dash.angle) * 520 * .05;
   player.prevX = player.x; player.prevY = player.y;
-  renderer.handleEvents([{ type: 'hurt', x: player.x, y: player.y, value: 8, angle: .7 }], false);
+  renderer.handleEvents([{ type: 'hurt', remainingHp: 92, heavy: false, x: player.x, y: player.y, value: 8, angle: .7 }], false);
   render(.05);
   containsBounds(guard, renderer.worldBounds, 'direct dash motion and impact still stay inside the prior guard');
 });

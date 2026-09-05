@@ -106,7 +106,7 @@ test('holding attack repeats only the same basic strike with no combo or heavy h
   assert.equal(events.filter(event => event.type === 'swing').length, 2);
   const hits = events.filter(event => event.type === 'hit');
   assert.deepEqual(hits.map(event => event.value), [24, 24]);
-  assert.ok(events.every(event => !event.heavy));
+  assert.ok(events.every(event => !('heavy' in event) || !event.heavy));
   assert.ok(sim.player.attack);
   assert.equal('combo' in sim.player.attack, false);
   const duration = sim.player.attack.duration;

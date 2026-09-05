@@ -2,6 +2,8 @@
 
 Reviewed 2026-09-05 against local checkpoint `99b1c57`, with the skill-execution compiler guard added during this review.
 
+The first three engineering recommendations (skill content, Simulation responsibilities, and event/character contracts) were subsequently implemented. See the [current architecture](architecture.md#adding-combat-behavior-after-the-expansion-refactor) for the resulting ownership and extension rules. The assessment below records the pre-refactor findings; performance instrumentation and interactive-world state remain future work.
+
 ## Assessment
 
 The project has a sound modular prototype foundation. Existing biome, item, enemy and skill variants can be extended through established definitions and tested rules. A larger increase in combat complexity, interactive world systems or population should begin with the focused work below. Current checks establish rule correctness and dependency boundaries; they do not establish frame-time performance at larger scale or validate game balance.

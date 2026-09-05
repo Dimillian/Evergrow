@@ -1,9 +1,6 @@
 import { InventoryPanel } from './inventory-panel.ts';
 import { SkillTreePanel } from './skill-tree-panel.ts';
-import { equipItem, unequipItem, moveInventoryItem, allocateAttribute } from './inventory.ts';
-import { allocateNode } from './skill-tree.ts';
-import { refreshCharacter, assignSkill } from './character.ts';
-import type { ActionResult } from './character-types.ts';
+import { executeCharacterCommand, type CharacterCommand } from './character-commands.ts';
 import { Lifetime } from './lifetime.ts';
 import { World } from './world.ts';
 import { Simulation } from './simulation.ts';
@@ -68,15 +65,15 @@ export class Game {
       this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
       this.inventoryPanel = this.lifetime.own(new InventoryPanel(this.shell.panelMount, {
         close: () => this.closeCharacterPanel(),
-        equip: (index, slot) => this.characterAction(equipItem(this.sim.player.character, index, this.sim.player.level, slot)),
-        unequip: (slot, index) => this.characterAction(unequipItem(this.sim.player.character, slot, index)),
-        move: (from, to) => this.characterAction(moveInventoryItem(this.sim.player.character, from, to)),
-        allocate: attribute => this.characterAction(allocateAttribute(this.sim.player.character, attribute)),
+        equip: (index, slot) => this.characterAction({ type: 'equip', index, slot }),
+        unequip: (slot, index) => this.characterAction({ type: 'unequip', slot, index }),
+        move: (from, to) => this.characterAction({ type: 'moveItem', from, to }),
+        allocate: attribute => this.characterAction({ type: 'allocateAttribute', attribute }),
       }));
       this.skillPanel = this.lifetime.own(new SkillTreePanel(this.shell.panelMount, {
         close: () => this.closeCharacterPanel(),
-        allocate: id => this.characterAction(allocateNode(this.sim.player.character, id)),
-        assign: (slot, skill) => this.characterAction(assignSkill(this.sim.player, slot, skill)),
+        allocate: id => this.characterAction({ type: 'allocateNode', id }),
+        assign: (slot, skill) => this.characterAction({ type: 'assignSkill', slot, skill }),
       }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
       try {
@@ -286,9 +283,9 @@ export class Game {
     this.inventoryPanel.close(); this.skillPanel.close(); this.resume();
   }
 
-  private characterAction(result: ActionResult) {
+  private characterAction(command: CharacterCommand) {
+    const result = executeCharacterCommand(this.sim.player, command);
     if (!result.ok) { this.toast(result.message ?? 'Action unavailable.'); return; }
-    refreshCharacter(this.sim.player);
     if (this.phase === 'character') this.inventoryPanel.refresh(this.sim.player);
     if (this.phase === 'skills') this.skillPanel.refresh(this.sim.player);
   }
@@ -317,7 +314,7 @@ export class Game {
       const events = this.sim.drainEvents();
       this.renderer.handleEvents(events, this.reducedMotion);
       for (const event of events) {
-        if (event.text) this.toast(event.text);
+        if ('text' in event) this.toast(event.text);
         if (!(event.type === 'cast' && event.enemyKind)) this.audio.play(event);
       }
       if (this.sim.player.dead) {

@@ -34,15 +34,16 @@ export class EnemyFocus {
   /** Resolve a batch against visible, living enemies on the next rendered frame. */
   noteHits(events: readonly CombatEvent[]): void {
     for (const event of events) {
+      if (event.type !== 'hit' && event.type !== 'kill') continue;
       const id = event.targetId;
-      if (id === undefined || !Number.isFinite(id)) continue;
-      if (event.type === 'kill' || (event.type === 'hit' && event.remainingHp !== undefined && event.remainingHp <= 0)) {
+      if (!Number.isFinite(id)) continue;
+      if (event.type === 'kill' || (event.type === 'hit' && event.remainingHp <= 0)) {
         this.killedIds.add(id); this.pendingHits.delete(id);
         if (this.hoveredId === id) this.hoveredId = null;
         if (this.targetId === id) this.targetId = null;
         if (this.retainedHoverId === id) { this.retainedHoverId = null; this.hoverRemaining = 0; }
         if (this.recentHitId === id) { this.recentHitId = null; this.hitRemaining = 0; }
-      } else if (event.type === 'hit' && (event.value === undefined || event.value > 0) && !this.killedIds.has(id)) {
+      } else if (event.type === 'hit' && event.value > 0 && !this.killedIds.has(id)) {
         this.pendingHits.add(id);
       }
     }

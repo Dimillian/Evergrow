@@ -33,11 +33,15 @@ These windows pause combat, clear buffered inputs, trap modal keyboard focus, an
 | `skill-content.ts` | Shared names, costs, cooldowns, damage multipliers, colors, and procedural skill icons |
 | `skill-combat.ts` | Execute seventeen unlocked, assigned, equipment-compatible active actions |
 | `projectile-combat.ts` | Swept projectile contacts, pierce/chain/explosion payloads, and direct-hit status/life-steal application |
-| `simulation.ts` | Deterministic timing, damage, kill XP, drops, pickup, and combat/resource effects |
+| `simulation.ts` | Deterministic tick ordering, state, RNG/IDs, movement, spawning and pickup |
+| `combat-damage.ts`, `combat-rewards.ts` | Damage/death commitment and exactly-once source-level XP/loot/flask rewards |
+| `combat-status.ts`, `ground-effects.ts` | Shared status reapplication/ticking and snapshotted delayed pulses |
+| `character-commands.ts` | Runtime validation, transactional mutation and immediate projection refresh |
+| `skill-execution-content.ts` | Frozen execution profiles and numeric skill readouts |
 | `inventory-panel.ts`, `skill-tree-panel.ts` | UI state and player actions; no independent stat calculation or mutation rules |
 | `item-art.ts`, `loot-art.ts` | Equipment icon/worn appearance and ground-marker/label presentation |
 
-`deriveCharacterStats(sheet, treeBonuses, level)` is pure. `refreshCharacter(player)` supplies tree bonuses and character level, updating combat projections after a successful character action or level gain. Raising maximum life or mana does not refill it; reducing a maximum clamps the current amount. Existing basic-attack snapshots retain their start-time attack stats. Presentation never grants points, damage, gear, or XP.
+`deriveCharacterStats(sheet, treeBonuses, level)` is pure. `refreshCharacter(player)` supplies tree bonuses and character level, updating combat projections inside `executeCharacterCommand` after successful character actions, and inside the XP award operation after level gain. UI callers submit commands rather than remembering a separate refresh step. Raising maximum life or mana does not refill it; reducing a maximum clamps the current amount. Existing basic-attack snapshots retain their start-time attack stats. Presentation never grants points, damage, gear, or XP.
 
 ## Progression and attribute rules
 

@@ -1,4 +1,5 @@
 import type { CombatEvent, Enemy, EnemyKind, Player, Projectile, WorldQuery } from './model.ts';
+import { applySlow, applyBurn } from './combat-status.ts';
 import { segmentDistanceSquared } from './combat-geometry.ts';
 
 export const MAX_PROJECTILES = 128;
@@ -17,12 +18,10 @@ function hit(projectile: Projectile, enemy: Enemy, context: ProjectileContext): 
   context.damage(enemy, projectile.damage, projectile.angle, false);
   if (enemy.state !== 'dead') {
     if (effects?.slowDuration) {
-      enemy.slowTime = Math.max(enemy.slowTime, effects.slowDuration);
-      enemy.slowFactor = Math.min(enemy.slowFactor, effects.slowFactor ?? .6);
+      applySlow(enemy, { duration: effects.slowDuration, factor: effects.slowFactor ?? .6 });
     }
     if (effects?.burnDuration) {
-      enemy.burnTime = Math.max(enemy.burnTime, effects.burnDuration);
-      enemy.burnDps = Math.max(enemy.burnDps, effects.burnDps ?? 0);
+      applyBurn(enemy, { duration: effects.burnDuration, dps: effects.burnDps ?? 0 });
     }
   }
   const p = context.player;

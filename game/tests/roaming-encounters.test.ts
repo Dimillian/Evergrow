@@ -13,8 +13,8 @@ const open: WorldQuery = { blocked: () => false, move: (x, y) => ({ x, y }), sam
 const idle: Input = { moveX: 0, moveY: 0, aimX: 300, aimY: 0, attack: false, dodge: false, heal: false, skillSlot: null };
 type View = { x: number; y: number; width: number; height: number };
 const viewAt = (x = 0, y = 0, width = 1300, height = 900): View => ({ x: x - width / 2, y: y - height / 2, width, height });
-function advance(sim: Simulation, seconds: number): CombatEvent[][] {
-  const batches: CombatEvent[][] = [];
+function advance(sim: Simulation, seconds: number): Extract<CombatEvent, { type: 'spawn' }>[][] {
+  const batches: Extract<CombatEvent, { type: 'spawn' }>[][] = [];
   for (let tick = 0; tick < Math.round(seconds / FIXED_STEP); tick++) {
     sim.update(FIXED_STEP, idle);
     const births = sim.drainEvents().filter(event => event.type === 'spawn');

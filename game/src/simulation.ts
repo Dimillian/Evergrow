@@ -6,22 +6,24 @@ import { BASIC_ATTACK_PHASES, COMBAT_TIMING, SKILL_CAST_MOTION, ENEMY_DEFINITION
   PLAYER_DEFAULTS, PLAYER_MOVEMENT, type ProjectileDefinition } from './combat-content.ts';
 import { chooseEncounterEnemy, chooseEncounterRank, ENCOUNTER_RULES, livingEnemyCount, encounterPopulationTarget, type EncounterActor } from './encounter-director.ts';
 import { circleIntersectsSector, segmentDistanceSquared } from './combat-geometry.ts';
-import { awardCharacterExperience, refreshCharacter } from './character.ts';
+import { refreshCharacter } from './character.ts';
 import { createCharacterSheet, TIER_COLORS } from './items.ts';
 import { deriveCharacterStats } from './character-stats.ts';
 import { addInventoryItem } from './inventory.ts';
+import { damageEnemy, damagePlayer } from './combat-damage.ts';
+import { awardKillRewards } from './combat-rewards.ts';
+import { advanceEnemyStatuses } from './combat-status.ts';
+import { scheduleGroundEffect, advanceGroundEffects, type ActiveGroundEffect } from './ground-effects.ts';
 import { activateSkill } from './skill-combat.ts';
 import { advanceProjectiles, MAX_PROJECTILES } from './projectile-combat.ts';
 import type { GroundItem, SkillId } from './character-types.ts';
-import { armorReduction, type EnemyRank } from './progression-content.ts';
+import type { EnemyRank } from './progression-content.ts';
 import { enemyLootSeed, getZoneAt, scaledEnemyStats } from './zone-progression.ts';
-import { xpLevelFactor } from './progression.ts';
-import { rollEnemyLoot } from './loot.ts';
 import { CampPopulation, CAMP_POPULATION_RULES, type CampSpawnSource, type CampState } from './camp-population.ts';
 import { sampleBiome } from './biomes.ts';
 import { RoamingEncounters, ROAMING_GROUPS, roamingSpawnAnchor, shouldRetireRoamer } from './roaming-encounters.ts';
 import { isSpawnHidden, type SpawnExclusion } from './spawn-visibility.ts';
-import { alertEnemy, interruptStaggeredEnemy, transitionEnemy, updateEnemyAI, type EnemyAIContext } from './enemy-ai.ts';
+import { updateEnemyAI, type EnemyAIContext } from './enemy-ai.ts';
 
 export const FIXED_STEP = COMBAT_TIMING.fixedStep;
 export const HIT_FLASH_DURATION = COMBAT_TIMING.hitFlashDuration;
@@ -48,7 +50,7 @@ export class Simulation {
   projectiles: Projectile[] = [];
   pickups: Pickup[] = [];
   groundItems: GroundItem[] = [];
-  groundEffects: Array<GroundEffect & { pulsesLeft: number }> = [];
+  groundEffects: ActiveGroundEffect[] = [];
   private lootNoticeAt = -10;
   private skillBuffer: { slot: number; until: number } | null = null;
   time = 0;
@@ -391,58 +393,17 @@ export class Simulation {
   }
 
   private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean, periodic = false): void {
-    if (enemy.state === 'dead') return;
-    if (!periodic) {
-      alertEnemy(enemy, this.player);
-      // A camp shares danger only with nearby members who can see the struck ally.
-      if (enemy.campId) for (const ally of this.enemies) if (ally !== enemy && ally.campId === enemy.campId
-        && ally.state !== 'dead' && Math.hypot(ally.x - enemy.x, ally.y - enemy.y) < 190
-        && this.lineOfSight(ally.x, ally.y, enemy.x, enemy.y)) alertEnemy(ally, this.player);
-    }
-    const critical = !periodic && this.player.derived.critChance > 0 && this.random() < this.player.derived.critChance;
-    damage = Math.max(1, Math.round(damage * (critical ? this.player.derived.critMultiplier : 1)));
-    enemy.hp = Math.max(0, enemy.hp - damage);
-    if (!periodic && !this.player.dead) this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.derived.lifeOnHit);
-    enemy.hitFlash = HIT_FLASH_DURATION;
-    enemy.hitAngle = angle;
-    const definition = ENEMY_DEFINITIONS[enemy.kind];
-    const shove = definition.knockbackDistance;
-    if (!periodic) {
-      enemy.knockbackX += Math.cos(angle) * shove / COMBAT_TIMING.knockbackDecay;
-      enemy.knockbackY += Math.sin(angle) * shove / COMBAT_TIMING.knockbackDecay;
-    }
-    this.events.push({ type: 'hit', x: enemy.x, y: enemy.y, angle, value: damage,
-      targetId: enemy.id, remainingHp: enemy.hp, enemyKind: enemy.kind, heavy: critical });
-    if (enemy.hp <= 0) {
-      transitionEnemy(enemy, 'dead', ENCOUNTER_RULES.corpseDuration);
-      this.kills++;
-      const reward = Math.max(1, Math.round(enemy.xpReward * xpLevelFactor(this.player.level, enemy.level)));
-      const levels = awardCharacterExperience(this.player, reward);
-      if (levels) this.events.push({ type: 'level', x: this.player.x, y: this.player.y,
-        text: `Level ${this.player.level} · +${levels} skill point${levels > 1 ? 's' : ''} · +${levels * 5} attribute points`, color: '#c0acf0' });
-      for (const item of rollEnemyLoot({ seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank,
-        biome: enemy.biome, kind: enemy.kind, firstKill: this.kills === 1 })) {
-        if (this.groundItems.length >= LOOT_RULES.maxGroundItems) break;
-        this.groundItems.push({ id: this.nextId++, x: enemy.x, y: enemy.y, item });
-      }
-      this.killRecharge++;
-      if (this.killRecharge >= PLAYER_ABILITIES.heal.killsPerCharge) {
-        this.killRecharge -= PLAYER_ABILITIES.heal.killsPerCharge;
-        this.player.flasks = Math.min(PLAYER_ABILITIES.heal.charges, this.player.flasks + 1);
-      }
-      const health = this.kills % LOOT_RULES.healthEveryKills === 0;
-      if (this.pickups.length < LOOT_RULES.maxPickups) this.pickups.push({ id: this.nextId++, x: enemy.x, y: enemy.y,
-        kind: health ? 'health' : 'mana', restoreFraction: health ? LOOT_RULES.healthFraction : LOOT_RULES.manaFraction,
-        life: LOOT_RULES.life, radius: LOOT_RULES.radius });
-      this.events.push({ type: 'kill', x: enemy.x, y: enemy.y, angle,
-        targetId: enemy.id, remainingHp: 0, enemyKind: enemy.kind });
-    } else if (definition.interruptible && melee) {
-      enemy.stagger = COMBAT_TIMING.staggerDuration;
-      if (enemy.state === 'windup') {
-        enemy.interrupted = true;
-        transitionEnemy(enemy, 'recover', COMBAT_TIMING.interruptedRecovery);
-      }
-    }
+    damageEnemy(enemy, damage, angle, melee, {
+      player: this.player, enemies: this.enemies, random: () => this.random(),
+      visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by), emit: event => this.events.push(event),
+      killed: actor => {
+        const reward = awardKillRewards(actor, this.kills, this.killRecharge, {
+          player: this.player, groundItems: this.groundItems, pickups: this.pickups,
+          nextId: () => this.nextId++, emit: event => this.events.push(event),
+        });
+        this.kills = reward.kills; this.killRecharge = reward.recharge;
+      },
+    }, periodic);
   }
 
   private updateEnemies(dt: number): void {
@@ -460,25 +421,8 @@ export class Simulation {
       this.updateKnockback(enemy, dt);
       enemy.stateTime += dt;
       if (enemy.state === 'dead') continue;
-      if (enemy.slowTime > 0) enemy.slowTime = Math.max(0, enemy.slowTime - dt);
-      if (enemy.slowTime <= 0) enemy.slowFactor = 1;
-      if (enemy.burnTime > 0) {
-        enemy.burnTick += Math.min(dt, enemy.burnTime);
-        const remainingBurn = enemy.burnTime - dt;
-        enemy.burnTime = remainingBurn > 1e-9 ? remainingBurn : 0;
-        if (enemy.burnTick > 1e-9 && (enemy.burnTick + 1e-9 >= .5 || enemy.burnTime <= 0)) {
-          this.damageEnemy(enemy, enemy.burnDps * enemy.burnTick, 0, false, true);
-          enemy.burnTick = 0;
-        }
-        if (enemy.burnTime <= 0) enemy.burnDps = 0;
-        if (enemy.hp <= 0) continue;
-      }
-      if (enemy.stagger > 0) {
-        interruptStaggeredEnemy(enemy);
-        enemy.stagger = Math.max(0, enemy.stagger - dt);
-        enemy.vx = enemy.vy = 0;
-        continue;
-      }
+      if (!advanceEnemyStatuses(enemy, dt,
+        (actor, amount) => this.damageEnemy(actor, amount, 0, false, true))) continue;
       updateEnemyAI(enemy, dt, context);
       if (p.dead) break;
     }
@@ -525,30 +469,11 @@ export class Simulation {
   }
 
   private damagePlayer(amount: number, angle: number, sourceLevel: number, kind?: EnemyKind): void {
-    const p = this.player;
-    if (p.dead || p.invulnerable > 0 || this.world.isSanctuary?.(p.x, p.y)) return;
-    amount = Math.max(1, Math.round(amount * (1 - armorReduction(p.derived.armor, sourceLevel))));
-    if (p.equipment.offHand?.kind === 'shield' && (p.guardTime > 0 || this.random() < p.derived.blockChance)) {
-      const reduction = p.guardTime > 0 ? Math.max(.75, p.derived.blockReduction) : p.derived.blockReduction;
-      const blocked = Math.floor(amount * reduction);
-      amount = Math.max(1, amount - blocked);
-      this.events.push({ type: 'block', x: p.x, y: p.y, angle, value: blocked, color: '#a9daca' });
-    }
-    p.hp = Math.max(0, p.hp - amount);
-    p.hitFlash = HIT_FLASH_DURATION;
-    p.hitAngle = angle;
+    if (!damagePlayer(amount, angle, sourceLevel, {
+      player: this.player, world: this.world, random: () => this.random(), emit: event => this.events.push(event),
+    }, kind)) return;
     this.hurtGuard = COMBAT_TIMING.hurtGuard;
-    p.invulnerable = COMBAT_TIMING.hurtGuard;
-    this.events.push({ type: 'hurt', x: p.x, y: p.y, angle, value: amount,
-      remainingHp: p.hp, enemyKind: kind, heavy: amount >= 20 });
-    if (p.hp <= 0) {
-      p.dead = true;
-      p.attack = null;
-      p.dash = null; p.guardTime = 0;
-      p.castTime = p.dodgeTime = 0;
-      p.vx = p.vy = 0;
-      this.clearInput();
-    }
+    if (this.player.dead) this.clearInput();
   }
 
   private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill?: SkillId, effects?: ProjectileEffects, sourceLevel = this.player.level, sourceKind?: EnemyKind): void {
@@ -571,38 +496,17 @@ export class Simulation {
   }
 
   private scheduleGroundEffect(effect: Omit<GroundEffect, 'id' | 'tick'>): void {
-    if (this.groundEffects.length >= 16) return;
-    this.groundEffects.push({ ...effect, id: this.nextId++, tick: 0,
-      pulsesLeft: Math.max(1, Math.ceil(effect.duration / Math.max(.05, effect.interval))) });
-    this.events.push({ type: 'ground', x: effect.x, y: effect.y, radius: effect.radius,
-      duration: effect.delay + effect.duration, style: effect.kind === 'meteor' ? 'fire' : 'arrow', skill: effect.skill });
+    scheduleGroundEffect(this.groundEffects, effect, {
+      nextId: () => this.nextId++, emit: event => this.events.push(event),
+    });
   }
 
   private updateGroundEffects(dt: number): void {
-    for (const effect of this.groundEffects) {
-      const beforeDelay = effect.delay;
-      effect.delay -= dt;
-      if (effect.delay > 0) continue;
-      const activeDt = beforeDelay > 0 ? Math.max(0, dt - beforeDelay) : dt;
-      effect.tick -= activeDt;
-      if (effect.tick <= 1e-9) {
-        for (const enemy of this.enemies) if (enemy.state !== 'dead'
-          && Math.hypot(enemy.x - effect.x, enemy.y - effect.y) <= effect.radius + enemy.radius
-          && this.lineOfSight(effect.x, effect.y, enemy.x, enemy.y)) {
-          this.damageEnemy(enemy, effect.damage, Math.atan2(enemy.y - effect.y, enemy.x - effect.x), false);
-          if (effect.kind === 'meteor' && enemy.hp > 0) {
-            enemy.burnTime = Math.max(enemy.burnTime, 3);
-            enemy.burnDps = Math.max(enemy.burnDps, effect.damage * .12);
-          }
-        }
-        this.events.push({ type: 'blast', x: effect.x, y: effect.y, radius: effect.radius,
-          style: effect.kind === 'meteor' ? 'fire' : 'arrow', skill: effect.skill });
-        effect.tick += Math.max(.05, effect.interval);
-        effect.pulsesLeft--;
-      }
-      effect.duration -= activeDt;
-    }
-    this.groundEffects = this.groundEffects.filter(effect => effect.pulsesLeft > 0);
+    this.groundEffects = advanceGroundEffects(this.groundEffects, dt, {
+      enemies: this.enemies, visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
+      damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),
+      emit: event => this.events.push(event),
+    });
   }
 
   private updatePickups(dt: number): void {

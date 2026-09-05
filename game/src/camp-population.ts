@@ -2,7 +2,7 @@ import type { Enemy, Player, WorldQuery } from './model.ts';
 import type { CampMember, EnemyCamp } from './wilderness-sites.ts';
 import { ENCOUNTER_RULES, livingEnemyCount } from './encounter-director.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
-import { transitionEnemy } from './enemy-ai.ts';
+import { transitionEnemy } from './enemy-state.ts';
 import { isEnemyInactive, isSpawnHidden, type SpawnExclusion } from './spawn-visibility.ts';
 
 export const CAMP_POPULATION_RULES = Object.freeze({ ledgerCapacity: 1024, updateInterval: .4,

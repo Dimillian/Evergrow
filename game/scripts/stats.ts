@@ -6,6 +6,7 @@ import { SKILL_TREE } from '../src/skill-tree.ts';
 import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
 import { EQUIPMENT_SLOTS, ITEM_KINDS, TIER_NAMES } from '../src/items.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
+import { GROUND_EFFECT_RULES } from '../src/skill-execution-content.ts';
 import { MAX_PROJECTILES } from '../src/projectile-combat.ts';
 import { ENEMY_RANKS, MAX_CONTENT_LEVEL } from '../src/progression-content.ts';
 import { ZONE_RULES } from '../src/zone-progression.ts';
@@ -53,7 +54,7 @@ console.log(JSON.stringify({
     enemyProjectileTemplates: Object.keys(PROJECTILE_DEFINITIONS).length,
     pointOfInterestKinds: Object.keys(POI_DEFINITIONS).length },
   limits: { simulationHz: Math.round(1 / COMBAT_TIMING.fixedStep),
-    projectiles: MAX_PROJECTILES,
+    projectiles: MAX_PROJECTILES, groundEffects: GROUND_EFFECT_RULES.maximum,
     numericContentLevel: MAX_CONTENT_LEVEL, areaBandWidth: ZONE_RULES.bandWidth,
     targetRoamingEnemies: { base: ENCOUNTER_RULES.basePopulation, maximum: ENCOUNTER_RULES.targetPopulationCap },
     reservedRoamingSlots: ENCOUNTER_RULES.roamingReserve, hardEnemyCap: ENCOUNTER_RULES.hardPopulationCap,

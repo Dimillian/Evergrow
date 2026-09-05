@@ -11,7 +11,7 @@ const enemy = (id = 1, x = 0, y = 0, kind: EnemyKind = 'stalker'): Enemy => ({
   homeX: x, homeY: y, awareness: 0, lostSightTime: 0, lastSeenX: x, lastSeenY: y, senseTime: 0, seesPlayer: false, patrolPhase: 0,
   attackAngle: 0, attackTargetX: x, attackTargetY: y, hitFlash: 0, hitAngle: 0, radius: 10, stagger: 0, attackHit: false, interrupted: false, slowTime: 0, slowFactor: 1, burnTime: 0, burnDps: 0, burnTick: 0,
 });
-const hit = (id: number, remainingHp = 75): CombatEvent => ({ type: 'hit', targetId: id, x: 0, y: 0, value: 25, remainingHp });
+const hit = (id: number, remainingHp = 75): Extract<CombatEvent, { type: 'hit' }> => ({ type: 'hit', angle: 0, enemyKind: 'stalker', heavy: false, targetId: id, x: 0, y: 0, value: 25, remainingHp });
 const point = (x = 0, y = -20) => worldToScreen(view, x, y);
 
 test('hover follows the drawn torso and head rather than a ground collision circle', () => {
@@ -59,8 +59,8 @@ test('overlapping bodies choose frontmost depth then a stable identity tie-break
 test('focus is only acquired by hover or a damaging hit, never enemy proximity', () => {
   const focus = new EnemyFocus(), target = enemy();
   assert.equal(focus.update([target], view, null, 1, 0), null);
-  focus.noteHits([{ type: 'spawn', targetId: 1, x: 0, y: 0 },
-    { type: 'hurt', targetId: 1, x: 0, y: 0 }, { ...hit(1), value: 0 }]);
+  focus.noteHits([{ type: 'spawn', enemyKind: 'stalker', x: 0, y: 0 },
+    { type: 'hurt', value: 8, remainingHp: 92, heavy: false, angle: 0, x: 0, y: 0 }, { ...hit(1), value: 0 }]);
   assert.equal(focus.update([target], view, point(100, 100), 1, 0), null);
 });
 
@@ -128,7 +128,7 @@ test('kills and removal clear retained focus without waiting for its timeout', (
   const target = enemy(), focus = new EnemyFocus();
   focus.update([target], view, point(), 1, 0); focus.noteHits([hit(1)]);
   focus.update([target], view, null, 1, 0);
-  focus.noteHits([{ type: 'kill', targetId: 1, x: 0, y: 0, remainingHp: 0 }]);
+  focus.noteHits([{ type: 'kill', angle: 0, enemyKind: 'stalker', targetId: 1, x: 0, y: 0, remainingHp: 0 }]);
   assert.equal(focus.targetId, null);
   assert.equal(focus.update([target], view, point(), 1, 0), null, 'a kill event suppresses reacquisition before the corpse state arrives');
   focus.reset(); focus.noteHits([hit(1)]); focus.update([target], view, null, 1, 0);

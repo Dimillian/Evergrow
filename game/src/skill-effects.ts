@@ -24,20 +24,20 @@ export class SkillEffects {
   handle(event: CombatEvent): void {
     const style = event.style ?? 'arcane', color = event.color ?? PROJECTILE_COLORS[style];
     if (event.type === 'chain' && Number.isFinite(event.toX) && Number.isFinite(event.toY)) {
-      const dx = event.toX! - event.x, dy = event.toY! - event.y, distance = Math.max(1, Math.hypot(dx, dy));
+      const dx = event.toX - event.x, dy = event.toY - event.y, distance = Math.max(1, Math.hypot(dx, dy));
       const steps = Math.max(3, Math.min(16, Math.ceil(distance / 13)));
       const points: Point[] = [];
       for (let i = 0; i <= steps; i++) {
         const t = i / steps, offset = i === 0 || i === steps ? 0 : (Math.random() - .5) * (style === 'arrow' ? 3 : 20);
         points.push([event.x + dx * t - dy / distance * offset, event.y + dy * t + dx / distance * offset - 16]);
       }
-      const max = style === 'arrow' ? .18 : .28;
+      const max = bounds(event.duration, .05, 8, style === 'arrow' ? .18 : .28);
       this.links.push({ points, life: max, max, color, style });
       if (this.links.length > 24) this.links.shift();
     }
     if (event.type === 'blast' || event.type === 'ground' || event.type === 'block') {
       const max = event.type === 'ground' ? bounds(event.duration, .15, 8, 1.2) : event.type === 'block' ? .32 : style === 'frost' ? .7 : .56;
-      this.areas.push({ x: event.x, y: event.y, radius: bounds(event.radius, 8, 250, event.type === 'block' ? 22 : 55),
+      this.areas.push({ x: event.x, y: event.y, radius: event.type === 'block' ? 22 : bounds(event.radius, 8, 250, 55),
         life: max, max, style, color, kind: event.type, seed: this.sequence++ });
       if (this.areas.length > 20) this.areas.shift();
     }

@@ -225,7 +225,8 @@ export interface Projectile {
 export interface GroundEffect {
   id: number; kind: 'meteor' | 'arrowRain'; x: number; y: number; radius: number;
   delay: number; duration: number; interval: number; tick: number;
-  damage: number; skill: SkillId;
+  damage: number; skill: SkillId; style: ProjectileStyle;
+  burn?: { readonly duration: number; readonly dps: number };
 }
 
 export interface Pickup {
@@ -238,29 +239,31 @@ export interface Pickup {
   radius: number;
 }
 
-export type CombatEventType = 'swing' | 'hit' | 'kill' | 'cast' | 'hurt' | 'dodge' | 'heal' | 'pickup' | 'spawn' | 'loot' | 'level' | 'blast' | 'chain' | 'block' | 'ground';
-
-export interface CombatEvent {
-  type: CombatEventType;
-  x: number;
-  y: number;
-  angle?: number;
-  value?: number;
-  /** Enemy identity for attached hit reactions or death effects. */
-  targetId?: number;
-  /** Target health immediately after a damaging event. */
-  remainingHp?: number;
-  enemyKind?: EnemyKind;
-  heavy?: boolean;
-  skill?: SkillId;
-  text?: string;
-  color?: string;
-  style?: ProjectileStyle;
-  radius?: number;
-  duration?: number;
-  toX?: number;
-  toY?: number;
+/** Shared presentation hints do not replace the required payload of each event. */
+interface EventAppearance {
+  readonly x: number; readonly y: number;
+  readonly color?: string; readonly style?: ProjectileStyle; readonly skill?: SkillId;
 }
+export type CombatEvent = EventAppearance & (
+  | { readonly type: 'swing'; readonly angle: number }
+  | { readonly type: 'hit'; readonly angle: number; readonly value: number; readonly targetId: number;
+      readonly remainingHp: number; readonly enemyKind: EnemyKind; readonly heavy: boolean }
+  | { readonly type: 'kill'; readonly angle: number; readonly targetId: number; readonly remainingHp: 0; readonly enemyKind: EnemyKind }
+  | { readonly type: 'cast'; readonly angle: number; readonly enemyKind?: EnemyKind }
+  | { readonly type: 'hurt'; readonly angle: number; readonly value: number; readonly remainingHp: number;
+      readonly enemyKind?: EnemyKind; readonly heavy: boolean }
+  | { readonly type: 'dodge'; readonly angle: number }
+  | { readonly type: 'heal'; readonly value: number }
+  | { readonly type: 'pickup'; readonly value: number; readonly heavy: boolean }
+  | { readonly type: 'spawn'; readonly enemyKind: EnemyKind }
+  | { readonly type: 'loot'; readonly text: string }
+  | { readonly type: 'level'; readonly text: string }
+  | { readonly type: 'blast'; readonly radius: number; readonly duration?: number; readonly enemyKind?: EnemyKind }
+  | { readonly type: 'chain'; readonly toX: number; readonly toY: number; readonly duration?: number }
+  | { readonly type: 'block'; readonly angle: number; readonly value: number }
+  | { readonly type: 'ground'; readonly radius: number; readonly duration: number; readonly style: ProjectileStyle; readonly skill: SkillId }
+);
+export type CombatEventType = CombatEvent['type'];
 
 export interface SimulationOptions {
   seed?: number;

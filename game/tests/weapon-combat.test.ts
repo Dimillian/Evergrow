@@ -52,7 +52,7 @@ function skillSim(id: SkillId, world = openWorld): Simulation {
   unlock(sim, id); sim.drainEvents(); return sim;
 }
 function cast(sim: Simulation, aimX = 400, aimY = 0): void { sim.update(FIXED_STEP, { ...idle, aimX, aimY, skillSlot: 0 }); }
-const hitEvents = (events: CombatEvent[], enemy?: Enemy) => events.filter(event => event.type === 'hit' && (!enemy || event.targetId === enemy.id));
+const hitEvents = (events: CombatEvent[], enemy?: Enemy) => events.filter((event): event is Extract<CombatEvent, { type: 'hit' }> => event.type === 'hit' && (!enemy || event.targetId === enemy.id));
 function incoming(sim: Simulation, damage = 40): void {
   sim.projectiles.push({ id: 99999, x: -12, y: 0, prevX: -12, prevY: 0, vx: 600, vy: 0, angle: 0, radius: 4,
     damage, life: 1, sourceLevel: 1, maxLife: 1, owner: 'enemy', hitIds: new Set() });

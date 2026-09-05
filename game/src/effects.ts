@@ -48,6 +48,9 @@ export class CombatEffects {
   handleEvents(events: CombatEvent[]) {
     for (const event of events) {
       this.skillEffects.handle(event);
+      const enemyKind = 'enemyKind' in event ? event.enemyKind : undefined;
+      const heavy = 'heavy' in event && event.heavy;
+      const eventAngle = 'angle' in event ? event.angle : 0;
       const enemyCast = event.type === 'cast' && event.enemyKind;
       const contact = event.type === 'hit' || event.type === 'hurt' || event.type === 'kill';
       const color = event.color ?? (event.style ? PROJECTILE_COLORS[event.style] : undefined) ?? (event.type === 'hurt' ? '#ff5e4e' : event.type === 'heal' || enemyCast ? MINT
@@ -55,31 +58,31 @@ export class CombatEffects {
       const count = event.type === 'blast' ? 46 : event.type === 'block' ? 22 : event.type === 'hit' ? 30 : event.type === 'kill' ? 42
         : event.type === 'hurt' ? 32 : event.type === 'cast' ? 18 : event.type === 'heal' ? 30
         : event.type === 'level' ? 50 : event.type === 'loot' ? 8 : event.type === 'pickup' ? 10 : event.type === 'dodge' ? 14 : 0;
-      const bodyColor = event.type === 'hurt' ? '#b64143' : event.enemyKind === 'caster' ? '#7dbf98'
-        : event.enemyKind === 'brute' ? '#b6a184' : '#a44349';
+      const bodyColor = event.type === 'hurt' ? '#b64143' : enemyKind === 'caster' ? '#7dbf98'
+        : enemyKind === 'brute' ? '#b6a184' : '#a44349';
       for (let i = 0; i < count; i++) {
         const radial = ['kill', 'heal', 'pickup', 'level', 'blast'].includes(event.type) || event.skill === 'iceNova';
-        const angle = radial ? Math.random() * Math.PI * 2 : (event.angle ?? 0) + (Math.random() - .5) * 2.8;
+        const angle = radial ? Math.random() * Math.PI * 2 : eventAngle + (Math.random() - .5) * 2.8;
         const debris = contact && i % 3 === 0;
         this.spark(event.x, event.y, angle, debris ? bodyColor : i % 4 === 0 ? '#fff7db' : color,
           contact ? 1.2 : 1, true, !debris);
       }
-      const contactY = event.y - (event.type === 'hurt' ? 24 : event.enemyKind === 'brute' ? 25 : 18);
-      if (contact) this.impacts.push({ x: event.x, y: contactY, angle: event.angle ?? 0,
+      const contactY = event.y - (event.type === 'hurt' ? 24 : enemyKind === 'brute' ? 25 : 18);
+      if (contact) this.impacts.push({ x: event.x, y: contactY, angle: eventAngle,
         life: event.type === 'kill' ? .3 : .22, max: event.type === 'kill' ? .3 : .22,
         color, hurt: event.type === 'hurt', lethal: event.type === 'kill' });
       if (count > 5) {
         const max = event.type === 'heal' ? .55 : event.type === 'kill' ? .32 : .22;
         this.flashes.push({ x: event.x, y: contact ? contactY : event.y - 10, life: max, max,
-          radius: event.type === 'kill' || event.heavy ? 145 : contact ? 118 : 90, color,
+          radius: event.type === 'kill' || heavy ? 145 : contact ? 118 : 90, color,
           ring: event.type === 'kill' || event.type === 'heal' || event.type === 'level' || event.skill === 'iceNova' });
       }
       if (event.type === 'hit' && event.value) this.popups.push({ x: event.x + (Math.random() - .5) * 10,
-        y: event.y - (event.enemyKind === 'brute' ? 54 : 44), vx: (Math.random() - .5) * 22, vy: -47,
-        life: .85, max: .85, value: String(Math.round(event.value)), color: event.heavy ? '#ffd177' : '#fff0c8', size: event.heavy ? 2.5 : 2 });
+        y: event.y - (enemyKind === 'brute' ? 54 : 44), vx: (Math.random() - .5) * 22, vy: -47,
+        life: .85, max: .85, value: String(Math.round(event.value)), color: heavy ? '#ffd177' : '#fff0c8', size: heavy ? 2.5 : 2 });
       if (event.type === 'hurt' || event.type === 'heal') this.popups.push({ x: event.x, y: event.y - 61,
-        vx: Math.cos(event.angle ?? 0) * 14, vy: -55, life: .95, max: .95,
-        value: (event.type === 'hurt' ? '-' : '+') + Math.round(event.value ?? 0),
+        vx: Math.cos(eventAngle) * 14, vy: -55, life: .95, max: .95,
+        value: (event.type === 'hurt' ? '-' : '+') + Math.round(event.value),
         color: event.type === 'hurt' ? '#ff9075' : '#83ffbb', size: event.type === 'hurt' ? 2.5 : 2 });
       if (event.type === 'block') this.popups.push({ x: event.x, y: event.y - 58, vx: 0, vy: -25,
         life: .65, max: .65, value: 'BLOCK', color: '#b4e4ee', size: 1.7 });

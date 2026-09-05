@@ -131,23 +131,23 @@ export class Renderer {
     this.effects.handleEvents(events);
     this.enemyFocus.noteHits(events);
     for (const e of events) {
-      if (e.type === 'hit' && e.targetId !== undefined && e.remainingHp !== undefined) {
+      if (e.type === 'hit') {
         const previous = this.damageTrails.get(e.targetId)?.value ?? 0;
-        this.damageTrails.set(e.targetId, { value: Math.max(previous, e.remainingHp + (e.value ?? 0)), hold: .18 });
+        this.damageTrails.set(e.targetId, { value: Math.max(previous, e.remainingHp + e.value), hold: .18 });
       }
       if (e.type === 'hurt') {
-        this.hurt = reducedMotion ? .4 : .95; this.hurtAngle = e.angle ?? 0;
+        this.hurt = reducedMotion ? .4 : .95; this.hurtAngle = e.angle;
         this.playerHealthHold = .22;
-        this.playerHealthTrail = Math.max(this.playerHealthTrail, (e.remainingHp ?? 0) + (e.value ?? 0));
+        this.playerHealthTrail = Math.max(this.playerHealthTrail, e.remainingHp + e.value);
       }
       if (!reducedMotion && (e.type === 'hit' || e.type === 'hurt' || e.type === 'kill')) {
         const strength = e.type === 'hurt' ? 5 : e.type === 'kill' ? 2 : 2.6;
-        this.kickX = Math.max(-6, Math.min(6, this.kickX - Math.cos(e.angle ?? 0) * strength));
-        this.kickY = Math.max(-5, Math.min(5, this.kickY - Math.sin(e.angle ?? 0) * strength * .7));
+        this.kickX = Math.max(-6, Math.min(6, this.kickX - Math.cos(e.angle) * strength));
+        this.kickY = Math.max(-5, Math.min(5, this.kickY - Math.sin(e.angle) * strength * .7));
         this.shake = Math.max(this.shake, e.type === 'hurt' ? 1.6 : .65);
       }
-      if (e.type === 'kill') this.corpses.push({ x: e.x, y: e.y, angle: e.angle ?? 0,
-        kind: e.enemyKind ?? 'stalker', life: 18, seed: Math.random() * 100 });
+      if (e.type === 'kill') this.corpses.push({ x: e.x, y: e.y, angle: e.angle,
+        kind: e.enemyKind, life: 18, seed: Math.random() * 100 });
     }
     if (this.corpses.length > 45) this.corpses.splice(0, this.corpses.length - 45);
   }
