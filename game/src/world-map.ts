@@ -1,4 +1,4 @@
-import { Exploration, EXPLORATION_CELL_SIZE, EXPLORATION_CHUNK_SIZE } from './exploration.ts';
+import { Exploration, EXPLORATION_REVEAL_RADIUS, EXPLORATION_CELL_SIZE, EXPLORATION_CHUNK_SIZE } from './exploration.ts';
 import { BIOMES, type BiomeId } from './biomes.ts';
 import { mainPathX, branchY, BRANCH_INTERVAL, BRANCH_OFFSET } from './road-shape.ts';
 import { clampMapCoordinate, fitMapBounds, getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt, type MapView } from './map-view.ts';
@@ -503,7 +503,7 @@ export class WorldMap {
     enemies: readonly MinimapEnemy[] = []) {
     const r = getMinimapRect(width, height);
     const view: MapView = { x: r.x + 6, y: r.y + 25, width: r.width - 12, height: r.height - 48,
-      centerX: player.x, centerY: player.y, zoom: .08 };
+      centerX: player.x, centerY: player.y, zoom: .05 };
     const active = this.minimapPointer && this.minimapPointer.x >= r.x && this.minimapPointer.y >= r.y
       && this.minimapPointer.x < r.x + r.width && this.minimapPointer.y < r.y + r.height;
     c.save();
@@ -537,7 +537,7 @@ export class WorldMap {
     const center = projectMapPoint(player.x, player.y, view);
     c.save(); c.beginPath(); c.rect(view.x, view.y, view.width, view.height); c.clip();
     c.setLineDash([2, 4]); c.strokeStyle = '#c5d5b127'; c.lineWidth = .8;
-    c.beginPath(); c.arc(center.x, center.y, 260 * view.zoom, 0, Math.PI * 2); c.stroke(); c.setLineDash([]);
+    c.beginPath(); c.arc(center.x, center.y, EXPLORATION_REVEAL_RADIUS * view.zoom, 0, Math.PI * 2); c.stroke(); c.setLineDash([]);
     for (const enemy of enemies) {
       if (!this.exploration.isRevealed(enemy.x, enemy.y)) continue;
       const p = projectMapPoint(enemy.x, enemy.y, view);

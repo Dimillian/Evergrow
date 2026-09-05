@@ -16,7 +16,7 @@ The seed tabs change the local review. The map retains normal panning, zooming a
 
 The full map now zooms out to **0.025**, allowing a broad region to fit on screen. A scale rail gives the overview a readable distance reference. Native biome labels are placed only on revealed, predominantly matching terrain; they avoid settlement markers and reserve space from minor POIs. Labels are a cartographic aid, not discovery or simulation state.
 
-Overview POIs use deterministic priority and spacing: settlements and camps remain readable, while overlapping shop markers return at closer zoom. Hover queries the exact list that is drawn, so a hidden shop or obscured landmark cannot intercept a visible marker. At closer zoom, detailed building footprints remain available. The minimap keeps its existing detailed terrain sampling.
+Overview POIs use deterministic priority and spacing: settlements and camps remain readable, while overlapping shop markers return at closer zoom. Hover queries the exact list that is drawn, so a hidden shop or obscured landmark cannot intercept a visible marker. At closer zoom, detailed building footprints remain available. The minimap uses a 0.05 scale (60% more distance across than 0.08) while retaining detailed terrain sampling. Walking reveals terrain and nearby POIs within 600 world units, up from 260; its discovery ring shares the same radius. Existing explored charts are preserved.
 
 The chart chooses 768-, 1,536- or 3,072-unit terrain tiles according to zoom, using 32 samples per tile edge. Larger viewports may use further powers of two to cap the visible working set at 256 tiles, below the shared 384-tile cache. This avoids constantly evicting a large overview's own tiles. Panning and hover reuse cached terrain colors.
 

@@ -15,11 +15,12 @@ function world(pois: MapPOI[] = [], seed = 7319, generationVersion = 2): Explora
 const shrine: MapPOI = { id: 'shrine:near', kind: 'shrine', name: 'The Watchfire', x: 250, y: 0, description: 'A flame among the roots.' };
 
 test('discovery reveals travelled circles and visible POIs, without connecting teleports', t => {
-  const far = { ...shrine, id: 'shrine:far', x: 350 };
+  const far = { ...shrine, id: 'shrine:far', x: 850 };
   const e = new Exploration(world([shrine, far]), { storage: null }); t.after(() => e.dispose());
   e.reveal(0, 0);
   assert.equal(e.isRevealed(0, 0), true);
-  assert.equal(e.isRevealed(600, 0), false);
+  assert.equal(e.isRevealed(450, 0), true, 'discovery extends well beyond the old nearby circle');
+  assert.equal(e.isRevealed(800, 0), false);
   assert.equal(e.isDiscovered(shrine.id), true, 'a POI inside radius reveals its boundary cell');
   assert.equal(e.isDiscovered(far.id), false);
   assert.deepEqual(e.getDiscoveredPOIs().map(p => p.name), ['The Watchfire']);

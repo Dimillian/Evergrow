@@ -3,6 +3,7 @@ import { decodeExploration, explorationChunkKey as key, validExplorationCoordina
   EXPLORATION_LIMITS, type ExplorationChunk as Chunk, type DecodedExploration } from './exploration-save.ts';
 import type { WorldPOI } from './world-pois.ts';
 export { EXPLORATION_CELL_SIZE, EXPLORATION_CHUNK_CELLS, EXPLORATION_CHUNK_SIZE, EXPLORATION_LIMITS } from './exploration-save.ts';
+export const EXPLORATION_REVEAL_RADIUS = 600;
 export type MapPOI = WorldPOI;
 export interface ExplorationWorld {
   readonly seed: number;
@@ -110,7 +111,7 @@ export class Exploration {
   }
 
   /** Reveal the current view only; teleporting never reveals an untravelled connecting path. */
-  reveal(x: number, y: number, radius = 260) {
+  reveal(x: number, y: number, radius = EXPLORATION_REVEAL_RADIUS) {
     if (this.disposed || !coordinate(x) || !coordinate(y) || !Number.isFinite(radius) || radius < 0) return false;
     radius = Math.min(EXPLORATION_LIMITS.revealRadius, radius);
     if (radius === this.lastRadius && this.isRevealed(x, y) && Math.hypot(x - this.lastX, y - this.lastY) < 12) return false;
