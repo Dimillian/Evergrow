@@ -1,5 +1,5 @@
 import type { Player } from './model.ts';
-import type { Attribute, EquipmentSlot, Item, StatKey } from './character-types.ts';
+import type { Attribute, EquipmentSlot, Item, ItemTier, StatKey } from './character-types.ts';
 import { EQUIPMENT_SLOTS, TIER_COLORS, TIER_NAMES, STAT_LABELS, itemModifiers, formatStatValue } from './items.ts';
 import { itemFitsSlot } from './inventory.ts';
 import { itemIconSVG, outfitFromEquipment } from './item-art.ts';
@@ -17,6 +17,8 @@ export interface InventoryPanelActions {
   move(from: number, to: number): void;
   allocate(attribute: Attribute): void;
 }
+
+const TIER_RANK: Readonly<Record<ItemTier, number>> = { common: 1, magic: 2, rare: 3, epic: 4, legendary: 5 };
 
 type ItemLocation = { type: 'bag'; index: number } | { type: 'equipment'; slot: EquipmentSlot };
 type ItemReference = ItemLocation & { id: string };
@@ -145,9 +147,10 @@ export class InventoryPanel {
       const signature = item ? JSON.stringify(item) : '';
       if (cell.dataset.signature !== signature) {
         cell.dataset.signature = signature;
-        cell.innerHTML = item ? `${itemIconSVG(item, 44)}<span class="character-item-level">${item.itemLevel}</span><i class="character-item-tier" aria-hidden="true"></i>` : location.type === 'equipment' ? emptySlotIcon(location.slot) : '<span class="character-empty-mark" aria-hidden="true">·</span>';
+        cell.innerHTML = item ? `${itemIconSVG(item, 44)}<span class="character-item-level">${item.itemLevel}</span><span class="character-item-tier" aria-hidden="true">${'<i></i>'.repeat(TIER_RANK[item.tier])}</span>` : location.type === 'equipment' ? emptySlotIcon(location.slot) : '<span class="character-empty-mark" aria-hidden="true">·</span>';
         cell.style.setProperty('--item-color', item ? TIER_COLORS[item.tier] : 'var(--ui-silver-dim)');
         cell.dataset.filled = String(Boolean(item));
+        cell.dataset.tier = item?.tier ?? '';
         cell.draggable = Boolean(item);
       }
       const selected = Boolean(this.selection && key === locationKey(this.selection));
@@ -382,7 +385,7 @@ export class InventoryPanel {
       weapon = `<div class="character-item-weapon"><div><strong>${number(item.weapon.damage)}</strong><span>${damageLabel} damage</span>${!equipped && delta ? `<em class="${delta > 0 ? 'is-gain' : 'is-loss'}">${delta > 0 ? '+' : ''}${number(delta)}</em>` : ''}</div><div><strong>${number(item.weapon.baseAttacksPerSecond, 2)}</strong><span>${item.weapon.family === 'staff' ? 'Casts' : 'Attacks'} / second</span>${!equipped && Math.abs(speedDelta) > .001 ? `<em class="${speedDelta > 0 ? 'is-gain' : 'is-loss'}">${speedDelta > 0 ? '+' : ''}${number(speedDelta, 2)}</em>` : ''}</div></div><p class="character-item-comparison">${item.weapon.hands === 2 ? 'Two-handed' : 'One-handed'} · ${escapeUI(item.weapon.family)} · ${item.weapon.attackKind === 'melee' ? 'Melee sweep' : item.weapon.attackKind === 'arrow' ? 'Arrow shot' : 'Elemental bolt'} · ${number(item.weapon.reach)} reach</p>`;
     }
     if (item.shield) weapon = `<div class="character-item-weapon"><div><strong>${number(item.shield.blockChance)}%</strong><span>Block chance</span></div><div><strong>${number(item.shield.blockReduction)}%</strong><span>Damage blocked</span></div></div><p class="character-item-comparison">Off hand · Shield · Pairs with a one-handed weapon</p>`;
-    return `<div class="character-item-heading" style="--item-color:${TIER_COLORS[item.tier]}">${condensed ? '' : `<span class="character-item-detail-icon">${itemIconSVG(item, 52)}</span>`}<div><span class="character-item-class">${escapeUI(TIER_NAMES[item.tier])} · ${escapeUI(item.baseName)}</span><h4>${escapeUI(item.name)}</h4></div></div>
+    return `<div class="character-item-heading" style="--item-color:${TIER_COLORS[item.tier]}">${condensed ? '' : `<span class="character-item-detail-icon">${itemIconSVG(item, 52)}</span>`}<div><span class="character-item-class"><span class="character-rarity-badge" data-tier="${item.tier}"><span aria-hidden="true">${['I', 'II', 'III', 'IV', 'V'][TIER_RANK[item.tier] - 1]}</span>${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span></span><h4>${escapeUI(item.name)}</h4></div></div>
       <div class="character-item-meta"><span>Item level ${number(item.itemLevel)}</span><span class="${requirements ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel)}</span>${equipped ? '<span class="character-item-equipped">Equipped</span>' : ''}</div>
       ${weapon}<div class="character-item-properties">${rows.join('')}</div>
       ${item.affixes.length ? `<div class="character-item-affixes">${item.affixes.map(affix => escapeUI(affix.name)).join(' · ')}</div>` : ''}
@@ -416,6 +419,7 @@ export class InventoryPanel {
     this.tooltip.innerHTML = this.itemDetails(item, location, true);
     this.tooltip.hidden = false;
     this.tooltip.style.setProperty('--item-color', TIER_COLORS[item.tier]);
+    this.tooltip.dataset.tier = item.tier;
     for (const other of this.cells.values()) other.removeAttribute('aria-describedby');
     cell.setAttribute('aria-describedby', 'character-item-tooltip');
     const bounds = cell.getBoundingClientRect(), viewportWidth = document.documentElement.clientWidth, viewportHeight = document.documentElement.clientHeight;
