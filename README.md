@@ -4,6 +4,8 @@ A gothic, top-down 2D action RPG built for the browser, inspired by Diablo and P
 
 **Status: playable local prototype · actively iterating · not released.**
 
+[Play on Sites](https://evergrow.fun-crow-4124.chatgpt.site) (private owner access). Saves stay in the browser and are separate from localhost saves.
+
 ![The starting wilderness in Deadwood](docs/screenshots/deadwood.png)
 
 ## What works today
@@ -50,6 +52,8 @@ Open [localhost:5173](http://127.0.0.1:5173/) in your browser. The server binds 
 npm run check   # Code tests, strict TypeScript checks, production build
 npm run stats   # Content, source and build statistics
 ```
+
+`npm run build:site` prepares the production game in root `dist/` for Sites. Deployment uses the existing project in `.openai/hosting.json`; local development remains unchanged.
 
 TypeScript, Vite, Canvas 2D and WebGL; no runtime package dependencies. **519 code tests pass** at this checkpoint. Gameplay feel and balance are tested by the player.
 
