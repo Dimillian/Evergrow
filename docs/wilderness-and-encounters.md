@@ -34,6 +34,10 @@ The current renderer supplies actual world-space camera coverage before automati
 
 Roaming groups contain one to three enemies and prefer the direction of travel. The first nine are placed outside view during startup; subsequent groups require travel as well as time. Once that initial population is placed, waiting or changing zoom on cleared ground cannot generate replacements by itself. Hidden, distant inactive foes may retire as travel carries the player onward. All new foes retain normal geographic level, rank and loot snapshots; retirement grants no XP or items. Detailed limits and tuning values live in [progression and loot](progression-and-loot.md).
 
+## Planned interactions
+
+The [interactive POI specification](interactive-pois.md) defines the next pass for these existing layouts: camp strongboxes, caravan choices, beacon reveals and optional graveyard/stone trials, plus roadside reliquaries. These interactions are not implemented yet. [Travel design](travel-and-portals.md) covers town portals and permanent anchors.
+
 ## Verification
 
 Deterministic tests cover seed/order independence, frozen blueprints, cache/query limits, negative-coordinate partition consistency, road/town/start exclusions, site spacing, member placement, every site’s open south approach, foreground canopy visibility, shared swept collision, discovery and chart round-tripping. Static visual review uses the real renderer without advancing gameplay. Combat feel and encounter difficulty remain for the user’s playtesting.

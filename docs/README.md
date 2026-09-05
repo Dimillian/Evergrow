@@ -27,6 +27,13 @@ Updated 2026-09-05. Use the current guides for implementation. Proposed designs 
 
 [NPCs and vendors](npcs-and-vendors.md) documents implemented blacksmith trading/+10 enhancement, jeweler stock and enchanting. Prices, stock weights and enhancement strength are initial playtest defaults. [Service captures](captures/2026-09-05/town-services/README.md) show the shared panels and NPC art.
 
+## Next iteration specifications
+
+- [Town portals and waypoints](travel-and-portals.md): interruptible town return, one return link and activated travel anchors.
+- [Interactive POIs](interactive-pois.md): camp chests, caravan choices, beacons, graveyard/stone trials and roadside reliquaries.
+
+Both are specified, not implemented.
+
 ## Original vision and design exploration
 
 [Game brief](game-brief.md), [world and art](world-and-art.md), [combat and progression](combat-and-progression.md), [technical foundations](technical-foundations.md), and [retro art direction](retro-art-direction.md) preserve the initial vision/proposals. Their proposed content counts, renderer choices, active-slot counts, sanctuary difficulty tiers, settings and migration ideas are not current requirements. Current guides and explicit user decisions supersede them.

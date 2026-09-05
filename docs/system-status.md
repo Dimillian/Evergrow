@@ -68,3 +68,7 @@ Counts were refreshed with `npm run stats` after the implementation checks. Buil
 | `16431cf` | NPC/vendor design specification; no NPC runtime implementation |
 
 The prior checkpoints above were pushed to `origin/main`. The town-services checkpoint adds all three NPC roles, complete transactions/persistence and improvement services, plus [desktop/narrow static captures](captures/2026-09-05/town-services/README.md). The next step is player feedback on affordability, usefulness and interaction feel; the current prices and +10 strength are initial live tuning.
+
+## Selected next work
+
+[Town portals/waypoints](travel-and-portals.md) and [interactive POIs](interactive-pois.md) are now specified. Neither is implemented yet; the runtime counts and controls above remain unchanged.

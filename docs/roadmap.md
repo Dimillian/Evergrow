@@ -30,11 +30,18 @@ These are implemented foundations, not declarations of finished balance, final a
 
 Transaction commands stage item issuance, wallet, stock and buyback together, persist before live commitment, and reject stale or failed writes. Save version 2 requires new characters; older slots remain stored. Use the [NPC spec](npcs-and-vendors.md) as the service contract and the [architecture](architecture.md) for implementation ownership. Commit and push coherent checkpoints.
 
+## Next: travel and interactive exploration
+
+Selected 2026-09-05. Specifications complete; runtime implementation has not started.
+
+1. [Town portals and waypoints](travel-and-portals.md): free interruptible town return, saved single-use return link, activated anchor network and map travel.
+2. [Interactive POIs](interactive-pois.md): durable site/reward ledger, camp strongboxes and reliquaries; caravan choices and beacons; then graveyard/standing-stone trials.
+3. Validate travel/event persistence and exactly-once rewards together; static visual reviews followed by player testing. Initial rewards and timings are tuning proposals.
+
 ## Following the economy loop
 
 These are candidates, not authorization to implement them now:
 
-- Meaningful landmark interactions, chests, objectives and return-to-town travel.
 - Deeper enemy/elite mechanics and bosses, driven by combat playtests.
 - Build balance, affix diversity, item identity and a deliberate respec design.
 - Long-session profiling before larger actor counts or world complexity; measure Safari frame times, memory and save growth.
