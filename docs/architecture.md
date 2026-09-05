@@ -2,7 +2,7 @@
 
 The [living biomes](living-biomes.md) extend the original forest pass with bounded presentation-only wind, material-specific footstep reactions and decorative wildlife across all seven climates. `biome-life-content.ts` owns immutable recipes; `biome-wind.ts`, `biome-life.ts` and `biome-life-art.ts` own shared wind, ephemeral state and drawing. `ground-material.ts` shares water/road/paving weights with World terrain colors. These systems consume interpolated positions through Renderer and have no simulation mutation or reward path. The local `/forest.html` review records the actual world/CRT with staged poses and no gameplay ticks or save access.
 
-The [NPC/vendor readiness review](npc-vendor-readiness.md) is the latest consolidation assessment, verified at `9058c56` with 483 passing code tests. It identifies shared equipment previews, transactional trades, durable interaction state and panel lifecycle as the next boundaries.
+The [NPC/vendor readiness review](npc-vendor-readiness.md) records the consolidation assessment. Shared equipment planning/previews, item UI and panel lifecycle are implemented in `85b1b00`, with 492 passing code tests. The [NPC and vendor specification](npcs-and-vendors.md) defines the proposed services, economy and remaining transaction/persistence work; those services are not implemented yet.
 
 Updated 2026-09-05. This describes the local prototype as implemented; `technical-foundations.md` contains the broader design proposals.
 

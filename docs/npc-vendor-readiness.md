@@ -74,6 +74,8 @@ Sources: `game/src/game.ts`, `game/src/game-phase.ts`, `game/src/game-keyboard.t
 
 ## Suggested checkpoints
 
+The first two consolidation checkpoints are complete in `85b1b00`; NPC interaction itself remains future work. See the [NPC and vendor specification](npcs-and-vendors.md) for the next implementation sequence and proposed service rules.
+
 1. Shared equipment plan, correct comparison previews and reusable item UI. Correct current behavior before copying it into shops.
 2. Consolidated panel lifecycle and a narrow interaction target/command boundary, exercised by one stationary NPC.
 3. Transactional buy/sell, distinct item issuance, bounded vendor state and save validation together; then expose the vendor UI.
