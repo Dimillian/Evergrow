@@ -1,3 +1,4 @@
+import { formatGold } from './currency-format.ts';
 import { NotificationQueue, type GameNotice, type NoticeEntry } from './notification-queue.ts';
 import { itemIconSVG } from './item-art.ts';
 import { TIER_COLORS, TIER_NAMES } from './items.ts';
@@ -14,7 +15,7 @@ export class GameNotifications {
   private last = 0;
   private disposed = false;
   private autoAdvance: boolean;
-  private announcements: string[] = [];
+  private announcements = new Map<number, string>();
   private announceScheduled = false;
   constructor(mount: HTMLElement, options: { autoAdvance?: boolean } = {}) {
     this.autoAdvance = options.autoAdvance ?? true;
@@ -31,7 +32,7 @@ export class GameNotifications {
   info(message: string): void { this.push({ kind: 'info', message }); }
   clear(): void {
     cancelAnimationFrame(this.frame); this.frame = 0;
-    this.announcements = [];
+    this.announcements.clear();
     this.feed.clear(); this.render();
     this.element.querySelector('[role="status"]')!.textContent = '';
   }
@@ -42,7 +43,7 @@ export class GameNotifications {
     this.frame = this.feed.idle ? 0 : requestAnimationFrame(this.tick);
   };
   private render(): void {
-    const announced: string[] = [];
+    const announced = new Map<number, string>();
     const lane = (selector: string, entries: readonly NoticeEntry[], cards: typeof this.cards) => {
       const parent = this.element.querySelector(selector)!;
       for (const [id, card] of cards) if (!entries.some(entry => entry.id === id)) { card.element.remove(); cards.delete(id); }
@@ -60,6 +61,9 @@ export class GameNotifications {
             title = notice.item.name; detail = `${TIER_NAMES[notice.item.tier]} · Item level ${notice.item.itemLevel}`;
             icon = itemIconSVG(notice.item, 46); color = TIER_COLORS[notice.item.tier];
 
+          } else if (notice.kind === 'rewards') {
+            title = [notice.gold ? `+${formatGold(notice.gold)} Gold` : '', notice.xp ? `+${formatGold(notice.xp)} XP` : ''].filter(Boolean).join(' · ');
+            detail = ''; icon = uiIcon('diamond'); color = notice.gold ? '#e3c880' : '#c7aff0';
           } else if (notice.kind === 'level') {
             title = `Level ${notice.level}`;
             detail = `+${notice.skillPoints} skill ${notice.skillPoints === 1 ? 'point' : 'points'}  ·  +${notice.statPoints} stat ${notice.statPoints === 1 ? 'point' : 'points'}`;
@@ -73,22 +77,25 @@ export class GameNotifications {
           } else { title = notice.message; detail = ''; icon = uiIcon('diamond'); color = '#d8b780'; }
           card.element.dataset.kind = notice.kind;
           card.element.style.setProperty('--notice-accent', color);
-          card.element.innerHTML = `<span class="notification-icon">${icon}</span><div class="notification-copy"><strong>${notice.kind === 'level' ? `Level <b class="notification-number">${escapeUI(notice.level)}</b>` : escapeUI(title)}</strong>${detail ? `<span>${escapeUI(detail)}</span>` : ''}</div><i class="notification-flourish" aria-hidden="true"></i>`;
-          announced.push(`${title}${detail ? `. ${detail}` : ''}`);
+          const heading = notice.kind === 'rewards'
+            ? `<span class="notification-reward-totals">${notice.gold ? `<b class="notification-reward-gold">+${escapeUI(formatGold(notice.gold))} Gold</b>` : ''}${notice.xp ? `<b class="notification-reward-xp">+${escapeUI(formatGold(notice.xp))} XP</b>` : ''}</span>`
+            : notice.kind === 'level' ? `Level <b class="notification-number">${escapeUI(notice.level)}</b>` : escapeUI(title);
+          card.element.innerHTML = `<span class="notification-icon">${icon}</span><div class="notification-copy"><strong>${heading}</strong>${detail ? `<span>${escapeUI(detail)}</span>` : ''}</div><i class="notification-flourish" aria-hidden="true"></i>`;
+          announced.set(entry.id, `${title}${detail ? `. ${detail}` : ''}`);
         }
         card.element.classList.toggle('is-leaving', entry.age >= entry.duration);
       }
     };
     lane('.notification-feed', this.feed.visible, this.cards);
-    if (announced.length) {
-      this.announcements.push(...announced);
+    if (announced.size) {
+      for (const [id, message] of announced) this.announcements.set(id, message);
       if (!this.announceScheduled) {
         this.announceScheduled = true;
         queueMicrotask(() => {
           this.announceScheduled = false;
-          if (!this.disposed && this.announcements.length)
-            this.element.querySelector('[role="status"]')!.textContent = this.announcements.join('. ');
-          this.announcements = [];
+          if (!this.disposed && this.announcements.size)
+            this.element.querySelector('[role="status"]')!.textContent = [...this.announcements.values()].join('. ');
+          this.announcements.clear();
         });
       }
     }

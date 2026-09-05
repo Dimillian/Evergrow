@@ -419,7 +419,10 @@ export class Game {
       const events = this.sim.drainEvents();
       this.renderer.handleEvents(events, this.reducedMotion);
       for (const event of events) {
-        if (event.type === 'loot') this.shell.notifications.push({ kind: 'loot', item: event.item });
+        if (event.type === 'gold' || event.type === 'experience') this.shell.notifications.push({
+          kind: 'rewards', gold: event.type === 'gold' ? event.amount : 0, xp: event.type === 'experience' ? event.amount : 0,
+        });
+        else if (event.type === 'loot') this.shell.notifications.push({ kind: 'loot', item: event.item });
         else if (event.type === 'level') this.shell.notifications.push({ kind: 'level', level: event.level, skillPoints: event.skillPoints, statPoints: event.statPoints });
         else if (event.type === 'notice') this.notify(event.message);
         if (!(event.type === 'cast' && event.enemyKind)) this.audio.play(event);

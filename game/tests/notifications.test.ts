@@ -59,3 +59,38 @@ test('distinct common and magic pickups retain their names, tiers and order', ()
   queue.advance(4);
   assert.deepEqual(queue.visible[0].notice, { kind: 'loot', item: items[2] });
 });
+
+test('gold and XP accumulate independently in one card, renew its lifetime and reset only after it disappears', () => {
+  const queue = new NotificationQueue(2);
+  queue.push({ kind: 'rewards', gold: 7, xp: 0 });
+  const id = queue.visible[0].id;
+  queue.advance(2);
+  queue.push({ kind: 'rewards', gold: 0, xp: 20 });
+  queue.push({ kind: 'rewards', gold: 11, xp: 40 });
+  assert.equal(queue.visible.length, 1); assert.equal(queue.visible[0].id, id);
+  assert.equal(queue.visible[0].age, 0);
+  assert.deepEqual(queue.visible[0].notice, { kind: 'rewards', gold: 18, xp: 60 });
+  queue.advance(queue.visible[0].duration + NOTICE_EXIT_SECONDS / 2);
+  queue.push({ kind: 'rewards', gold: 2, xp: 5 });
+  assert.equal(queue.visible[0].id, id, 'a fading card still receives gains until removed');
+  assert.deepEqual(queue.visible[0].notice, { kind: 'rewards', gold: 20, xp: 65 });
+  queue.advance(4); assert.ok(queue.idle);
+  queue.push({ kind: 'rewards', gold: 3, xp: 0 });
+  assert.notEqual(queue.visible[0].id, id);
+  assert.deepEqual(queue.visible[0].notice, { kind: 'rewards', gold: 3, xp: 0 });
+});
+
+test('queued reward totals accumulate while items keep their own notices and a visible feed slot', () => {
+  const queue = new NotificationQueue(2);
+  const items = [generateItem(505, 1), generateItem(506, 1)];
+  for (const item of items) queue.push({ kind: 'loot', item });
+  for (let i = 0; i < 100; i++) queue.push({ kind: 'rewards', gold: 4, xp: 20 });
+  assert.equal(queue.pendingCount, 1);
+  assert.deepEqual(queue.visible.map(e => e.notice), items.map(item => ({ kind: 'loot', item })));
+  queue.advance(4);
+  assert.deepEqual(queue.visible[0].notice, { kind: 'rewards', gold: 400, xp: 2000 });
+  queue.push({ kind: 'loot', item: generateItem(507, 1) });
+  assert.equal(queue.visible.length, 2); assert.equal(queue.visible[1].notice.kind, 'loot');
+  queue.clear(); queue.push({ kind: 'rewards', gold: 1, xp: 1 });
+  assert.deepEqual(queue.visible[0].notice, { kind: 'rewards', gold: 1, xp: 1 });
+});

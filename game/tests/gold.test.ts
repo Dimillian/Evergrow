@@ -75,16 +75,16 @@ test('kill awards XP immediately, drops uncredited gold, then collecting awards 
   sim.reset(); assert.equal(goldBalance(sim.player.character), 0);
 });
 
-test('reward feedback aggregates bursts, catches up at any frame rate, expires, and stays bounded', () => {
+test('reward particles and balance catch up at any frame rate, expire, and stay bounded', () => {
   const events: CombatEvent[] = Array.from({ length: 1000 }, (_, i) => ({ type: 'gold', amount: 10, balance: (i + 1) * 10, x: 1, y: 2 }));
   const a = new RewardFeedback(), b = new RewardFeedback();
-  for (const f of [a, b]) { f.update(0, 0, false); f.handleEvents(events, false); assert.equal(f.gold.amount, 10000); assert.equal(f.motes.length, 96); }
+  for (const f of [a, b]) { f.update(0, 0, false); f.handleEvents(events, false); assert.equal(f.motes.length, 96); }
   for (let i = 0; i < 60; i++) a.update(10000, 1 / 60, false);
   for (let i = 0; i < 120; i++) b.update(10000, 1 / 120, false);
   assert.ok(Math.abs(a.balance - b.balance) < 1e-6);
-  a.update(10000, 5, false); assert.equal(a.balance, 10000); assert.equal(a.gold.remaining, 0); assert.equal(a.motes.length, 0);
+  a.update(10000, 5, false); assert.equal(a.balance, 10000); assert.equal(a.motes.length, 0);
   a.handleEvents([{ type: 'experience', amount: 20, x: 0, y: 0 }], true);
-  assert.equal(a.experience.amount, 20); assert.equal(a.motes.length, 0);
+  assert.equal(a.motes.length, 0);
   a.update(500, 0, true); assert.equal(a.balance, 500);
-  a.reset(); assert.equal(a.experience.remaining, 0); assert.equal(a.gold.amount, 0);
+  a.reset(); assert.equal(a.balance, 0); assert.equal(a.motes.length, 0);
 });

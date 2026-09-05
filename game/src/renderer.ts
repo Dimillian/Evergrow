@@ -1,5 +1,5 @@
 import { RewardFeedback } from './reward-feedback.ts';
-import { drawGroundGold, drawRewardMotes, drawRewardHUD } from './reward-art.ts';
+import { drawGroundGold, drawRewardMotes, drawGoldBalance } from './reward-art.ts';
 import { goldBalance } from './wallet.ts';
 import { BiomeLife } from './biome-life.ts';
 import { BiomeLifeArt } from './biome-life-art.ts';
@@ -314,7 +314,7 @@ export class Renderer {
       hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / COMBAT_TIMING.hitFlashDuration),
       experience: this.experienceDisplay,
     });
-    drawRewardHUD(c, this.rewards, this.width, this.height, settings.reducedMotion);
+    drawGoldBalance(c, this.rewards);
     if (this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, this.width, this.height, {
       opacity: this.plateOpacity,
       healthTrail: this.damageTrails.get(this.plateEnemy.id)?.value ?? this.plateEnemy.hp,

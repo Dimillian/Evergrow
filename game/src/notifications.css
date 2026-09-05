@@ -15,3 +15,9 @@
 @media (max-width: 1000px) { .notification-feed { left: 12px; bottom: 210px; width: 220px; } }
 @media (max-height: 560px) { .notification-feed { bottom: 160px; } }
 @media (prefers-reduced-motion: reduce) { .notification-card, .notification-card.is-leaving { animation: none; transition: none; transform: none; } }
+.notification-reward-totals { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.notification-reward-totals b { font: 500 12px/1.4 system-ui, sans-serif; font-variant-numeric: tabular-nums; animation: notice-total 160ms ease-out; }
+.notification-reward-gold { color: #e3c880; }
+.notification-reward-xp { color: #c7aff0; }
+@keyframes notice-total { from { opacity: .65; transform: translateY(1px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .notification-reward-totals b { animation: none; } }

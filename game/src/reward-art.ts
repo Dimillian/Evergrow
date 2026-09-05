@@ -1,6 +1,5 @@
 import type { GroundGold } from './gold.ts';
 import type { RewardFeedback } from './reward-feedback.ts';
-import { getHUDLayout, HUD_ART } from './hud-layout.ts';
 import { formatGold } from './currency-format.ts';
 
 function coin(c: CanvasRenderingContext2D, x: number, y: number, scale = 1): void {
@@ -48,25 +47,10 @@ export function drawRewardMotes(c: CanvasRenderingContext2D, feedback: RewardFee
   c.restore();
 }
 /** Native-resolution text; camera zoom and CRT never touch reward readouts. */
-export function drawRewardHUD(c: CanvasRenderingContext2D, feedback: RewardFeedback, width: number, height: number,
-  reducedMotion: boolean): void {
+export function drawGoldBalance(c: CanvasRenderingContext2D, feedback: RewardFeedback): void {
   c.save(); c.font = '600 13px system-ui, sans-serif'; c.textBaseline = 'middle';
   c.shadowColor = '#02070d'; c.shadowBlur = 4;
   coin(c, 27, 62, 1.25);
   c.fillStyle = '#e3c880'; c.fillText(formatGold(feedback.balance), 40, 62);
-  if (feedback.gold.remaining > 0) {
-    const x = 48 + c.measureText(formatGold(feedback.balance)).width;
-    c.globalAlpha = Math.min(1, feedback.gold.remaining / .4);
-    c.fillStyle = '#ffe7a0'; c.fillText(`+${formatGold(feedback.gold.amount)}`, x, 62 - (reducedMotion ? 0 : feedback.gold.pulse * 3));
-  }
-  const xp = feedback.experience;
-  if (xp.remaining > 0) {
-    const hud = getHUDLayout(width, height), rail = HUD_ART.experience;
-    const x = hud.x + (rail.x + rail.width / 2) * hud.scale;
-    const y = hud.y + (rail.y + rail.height + 5) * hud.scale;
-    c.globalAlpha = Math.min(1, xp.remaining / .5);
-    c.textAlign = 'center'; c.fillStyle = '#d4bafa';
-    c.fillText(`+${formatGold(xp.amount)} XP`, x, Math.min(height - 9, y) - (reducedMotion ? 0 : xp.pulse * 2));
-  }
   c.restore();
 }

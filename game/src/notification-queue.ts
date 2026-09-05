@@ -3,6 +3,7 @@ import type { WorldPOI } from './world-pois.ts';
 
 export type GameNotice =
   | { kind: 'loot'; item: Item }
+  | { kind: 'rewards'; gold: number; xp: number }
   | { kind: 'level'; level: number; skillPoints: number; statPoints: number }
   | { kind: 'discovery'; poi: WorldPOI }
   | { kind: 'area'; id: string; name: string; level: number }
@@ -26,15 +27,17 @@ export class NotificationQueue {
   push(notice: GameNotice): void {
     const active = this.visible.find(entry => key(entry.notice) === key(notice));
     const waiting = this.pending.findIndex(value => key(value) === key(notice));
-    const merge = (previous: GameNotice): GameNotice => notice.kind === 'level' && previous.kind === 'level'
+    const merge = (previous: GameNotice): GameNotice => notice.kind === 'rewards' && previous.kind === 'rewards'
+      ? { kind: 'rewards', gold: previous.gold + notice.gold, xp: previous.xp + notice.xp }
+      : notice.kind === 'level' && previous.kind === 'level'
       ? { kind: 'level', level: Math.max(previous.level, notice.level),
         skillPoints: previous.skillPoints + notice.skillPoints, statPoints: previous.statPoints + notice.statPoints } : notice;
     if (active) { active.notice = merge(active.notice); active.age = 0; active.duration = duration(active.notice); return; }
     if (waiting >= 0) { this.pending[waiting] = merge(this.pending[waiting]); return; }
     if (notice.kind === 'level') this.pending.unshift(notice); else this.pending.push(notice);
-    // Keep the newest events during exceptional bursts; a queued level-up is protected.
+    // Keep the newest events during exceptional bursts; queued level-ups and accumulated currency/XP are protected.
     if (this.pending.length > 24) {
-      const index = this.pending.findIndex(value => value.kind !== 'level');
+      const index = this.pending.findIndex(value => value.kind !== 'level' && value.kind !== 'rewards');
       this.pending.splice(index < 0 ? this.pending.length - 1 : index, 1);
     }
     this.promote();
