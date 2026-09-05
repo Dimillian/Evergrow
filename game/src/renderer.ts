@@ -1,6 +1,7 @@
 import { ArtLibrary, drawHumanoid, getPlayerSwordTip, PLAYER_ART_SCALE } from './art.ts';
 import type { CharacterPose } from './art.ts';
-import { World, TILE_SIZE } from './world.ts';
+import { World } from './world.ts';
+import { GroundLayer } from './ground-layer.ts';
 import type { Prop } from './world.ts';
 import { HIT_FLASH_DURATION } from './simulation.ts';
 import type { Simulation } from './simulation.ts';
@@ -43,6 +44,7 @@ export class Renderer {
   private playerHealthTrail = 100;
   private playerHealthHold = 0;
   private effects = new CombatEffects();
+  private groundLayer = new GroundLayer();
   private lighting = new Lighting();
   private corpses: Corpse[] = [];
   private ghosts: Ghost[] = [];
@@ -73,6 +75,7 @@ export class Renderer {
 
   reset() {
     this.cameraX = 0; this.cameraY = 0; this.effects.reset();
+    this.groundLayer.reset();
     this.corpses = []; this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
     this.damageTrails.clear(); this.playerHealthTrail = 100; this.playerHealthHold = 0;
@@ -149,7 +152,7 @@ export class Renderer {
     }
     c.fillStyle = '#101c22'; c.fillRect(0, 0, this.width, this.height);
     c.save(); c.translate(offsetX, offsetY);
-    this.ground(world, left, top);
+    this.groundLayer.draw(c, world, left, top, this.width, this.height);
     this.remains();
     this.propShadows();
     for (const pickup of sim.pickups) {
@@ -200,15 +203,6 @@ export class Renderer {
       hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / HIT_FLASH_DURATION),
     });
     if (settings.phase === 'playing') this.cursor(c);
-  }
-
-  private ground(world: World, left: number, top: number) {
-    const c = this.ctx;
-    for (let ty = Math.floor(top / TILE_SIZE); ty <= Math.floor((top + this.height) / TILE_SIZE); ty++) {
-      for (let tx = Math.floor(left / TILE_SIZE); tx <= Math.floor((left + this.width) / TILE_SIZE); tx++) {
-        c.drawImage(world.getGroundTile(tx, ty), tx * TILE_SIZE, ty * TILE_SIZE);
-      }
-    }
   }
 
   private remains() {

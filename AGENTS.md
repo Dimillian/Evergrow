@@ -25,6 +25,7 @@ Draw HUD and text, including damage numbers, at native display resolution after 
 - `game/src/simulation.ts` and `model.ts`: deterministic 120 Hz combat state, rules, and render interpolation snapshots.
 - `game/src/equipment.ts`: character and equipped-weapon stats used to derive the basic attack.
 - `game/src/world.ts`: seeded terrain, props, collision, and bounded tile caching.
+- `game/src/ground-layer.ts`: bounded terrain composition before subpixel camera sampling; keep tile joins inside one surface to avoid seams.
 - `game/src/art.ts`: procedural Canvas assets, modular equipment, articulated character rigs, and phased attack motion.
 - `game/src/attack-motion.ts`: shared angular motion for visible swings and swept melee contact.
 - `game/src/character-pose.ts`: common player pose for the character, ribbon, sparks, and weapon light.

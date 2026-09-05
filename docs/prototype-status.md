@@ -6,6 +6,7 @@ Checkpoint date: 2026-09-05. The current pass develops the first playable Deadwo
 
 - One continuous seeded Deadwood biome with a clear starting area, winding protected trails, rocks, living/dead trees, and lantern shrines.
 - Terrain generated on demand with a bounded tile cache; stable prop identities and collision across positive and negative coordinates.
+- Visible terrain tiles join at integer coordinates in one cached surface before fractional camera movement is applied. This avoids independently filtered tile edges while preserving smooth scrolling; the surface is bounded by the viewport and rebuilt when its tile coverage changes.
 - Procedural tree, rock, shrine, and equipment shapes with material marks and finite sprite caches. The concept PNGs remain design references and are not runtime assets.
 - A larger articulated character rig with visible helmet, shoulder armor, cloak, boots, and sword. Directional strides, body motion, cloth movement, casting poses, and phased swings support continuous animation. Stalkers, brutes, and casters retain distinct silhouettes.
 - Keyboard movement and pointer aiming with smoother velocity changes, render interpolation, and input buffering. Movement continues through the basic attack, and recovery allows responsive transitions into the next action. Combat runs continuously without hitstop.
