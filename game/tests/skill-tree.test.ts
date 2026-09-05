@@ -21,8 +21,8 @@ function pathsFromOrigin(): Map<string, string[]> {
   return paths;
 }
 
-test('all 2,779 stable stars belong to a single reachable, undirected tree graph', () => {
-  assert.equal(SKILL_TREE.nodes.length, 2779);
+test('thousands of immutable stars belong to a single reachable, undirected atlas', () => {
+  assert.ok(SKILL_TREE.nodes.length >= 2000 && SKILL_TREE.nodes.length <= 3000);
   assert.equal(SKILL_NODES.size, SKILL_TREE.nodes.length);
   assert.equal(pathsFromOrigin().size, SKILL_TREE.nodes.length);
   const positions = new Set<string>();
@@ -57,7 +57,8 @@ test('all six active skills have approachable three-point paths from the free or
 
 test('allocation rejects disconnected, duplicate, invalid and unaffordable nodes without mutating points', () => {
   const character = sheet(2), before = JSON.stringify(character);
-  assert.equal(allocateNode(character, 'star:11:0:heart').ok, false);
+  const distant = [...pathsFromOrigin()].find(([, path]) => path.length > 20)![0];
+  assert.equal(allocateNode(character, distant).ok, false);
   assert.equal(allocateNode(character, SKILL_TREE_ORIGIN).ok, false);
   assert.equal(allocateNode(character, 'missing').ok, false);
   assert.equal(JSON.stringify(character), before);
@@ -78,7 +79,7 @@ test('allocation rejects disconnected, duplicate, invalid and unaffordable nodes
 });
 
 test('repeated and unknown allocations cannot stack bonuses or unlock duplicate skills', () => {
-  const node = SKILL_NODES.get('star:0:0:0')!;
+  const node = SKILL_NODES.get(SKILL_NODES.get(SKILL_TREE_ORIGIN)!.neighbors[0])!;
   assert.deepEqual(getTreeBonuses([node.id, node.id, 'unknown']), node.bonuses);
   const major = SKILL_TREE.nodes.find(node => node.skill === 'cleave')!;
   assert.deepEqual(unlockedSkills([major.id, major.id, 'unknown']), ['cleave']);
@@ -97,4 +98,54 @@ test('domain minor and notable bonuses have finite supported values and active s
     const svg = skillIconSVG(id as SkillId); assert.ok(svg.startsWith('<svg')); assert.ok(svg.includes('<path'));
     assert.ok(!svg.includes('https:'));
   }
+});
+
+
+test('constellations have coherent specialties, varied spacing, and bounds enclosing their actual members', () => {
+  assert.equal(SKILL_TREE.clusters.length, 150);
+  assert.ok(Object.isFrozen(SKILL_TREE.clusters)); assert.ok(Object.isFrozen(SKILL_TREE.bounds));
+  const memberCounts = new Set<number>();
+  for (const cluster of SKILL_TREE.clusters) {
+    const members = SKILL_TREE.nodes.filter(node => node.cluster === cluster.id);
+    const minors = members.filter(node => node.kind === 'minor');
+    assert.ok(members.length >= 8 && members.length <= 14);
+    assert.equal(members.filter(node => node.kind === 'notable').length, 1);
+    memberCounts.add(members.length);
+    assert.ok(Object.isFrozen(cluster));
+    for (const member of members) {
+      assert.equal(member.domain, cluster.domain);
+      assert.equal(member.role, 'cluster');
+      assert.ok(Math.hypot(member.x - cluster.x, member.y - cluster.y) < cluster.radius);
+    }
+    for (const minor of minors) assert.deepEqual(minor.bonuses, minors[0].bonuses, 'one stat family develops consistently through each specialty');
+    const notable = members.find(node => node.kind === 'notable')!;
+    for (const key of Object.keys(minors[0].bonuses)) assert.ok((notable.bonuses[key as keyof typeof notable.bonuses] ?? 0) > minors[0].bonuses[key as keyof typeof notable.bonuses]!);
+  }
+  assert.ok(memberCounts.size >= 5, 'specialties have different lengths and silhouettes');
+  for (const domain of ['Might', 'Cunning', 'Arcana']) assert.equal(SKILL_TREE.clusters.filter(cluster => cluster.domain === domain).length, 50);
+  for (const node of SKILL_TREE.nodes) {
+    assert.ok(node.x > SKILL_TREE.bounds.minX && node.x < SKILL_TREE.bounds.maxX);
+    assert.ok(node.y > SKILL_TREE.bounds.minY && node.y < SKILL_TREE.bounds.maxY);
+  }
+});
+
+test('organic routes leave readable node clearance and provide interconnected hybrid paths', () => {
+  for (let i = 0; i < SKILL_TREE.nodes.length; i++) for (let j = 0; j < i; j++) {
+    const a = SKILL_TREE.nodes[i], b = SKILL_TREE.nodes[j];
+    assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= 22, `crowded nodes ${a.id}, ${b.id}`);
+  }
+  const cycles = SKILL_TREE.edges.length - SKILL_TREE.nodes.length + 1;
+  assert.ok(cycles > 65, 'closed specialties and crosslinks offer alternate routes');
+  const crossRegion = SKILL_TREE.edges.filter(edge => SKILL_NODES.get(edge.from)!.domain !== SKILL_NODES.get(edge.to)!.domain);
+  assert.ok(crossRegion.length >= 8, 'neighboring regions connect beyond the common origin');
+  assert.equal(SKILL_NODES.get(SKILL_TREE_ORIGIN)!.neighbors.length, 3, 'three clear starting arteries');
+  let curved = 0;
+  for (const edge of SKILL_TREE.edges) {
+    assert.ok(edge.control && Object.isFrozen(edge.control));
+    assert.ok(Number.isFinite(edge.control.x) && Number.isFinite(edge.control.y));
+    const a = SKILL_NODES.get(edge.from)!, b = SKILL_NODES.get(edge.to)!;
+    const deviation = Math.abs((b.x - a.x) * (edge.control.y - a.y) - (b.y - a.y) * (edge.control.x - a.x)) / Math.hypot(b.x - a.x, b.y - a.y);
+    if (deviation > .2) curved++;
+  }
+  assert.ok(curved > SKILL_TREE.edges.length * .6, 'routes carry actual curved geometry, rather than straight visual placeholders');
 });

@@ -83,7 +83,7 @@ Read the brief first, then the roadmap. The systems catalog is the implementatio
 - **Presentation:** fully 2D top-down, dark gothic, fluid, lit, and entirely generated from code-defined art.
 - **First release assumption:** single-player desktop browser, keyboard and mouse, local saves with export/import. These platform and scope choices remain open to discussion.
 
-The prototype now connects combat, procedural exploration, settlements, maps, equipment, attributes, and a 2,779-node skill atlas. The next step is the user’s gameplay and balance feedback; trading, crafting, off-hand gear, respecs, and persistent characters remain future work.
+The prototype now connects combat, procedural exploration, settlements, maps, equipment, attributes, and a 2,788-node skill atlas. The next step is the user’s gameplay and balance feedback; trading, crafting, off-hand gear, respecs, and persistent characters remain future work.
 
 ## Visual exploration
 
@@ -97,6 +97,6 @@ The armory has a live equipment doll, ten equipment positions, an 8×6 inventory
 
 Monsters drop seeded gear with procedural names/icons, item levels, and five rarity tiers. The first kill guarantees gear; later kills have a 45% drop chance. Walking within 30 world units collects visible loot into the bag; full bags leave it on the ground. Four spare level-1 items make equipment interaction available immediately.
 
-The skill atlas contains 2,382 minor nodes, 390 notables, six major skill unlocks, and a free origin. Every major is three points from the origin. Pan, zoom, search, filter, inspect, and allocate connected nodes. The six initial skills are Crescent Cleave, Rift Lunge, Ember Lance, Astral Nova, Thorn Volley, and Soul Siphon. They are initial action recipes for iteration, alongside repeated authored bonus families throughout the tree.
+The skill atlas connects 150 organically spaced constellations with three winding arteries and curved crosslinks between Might, Cunning, and Arcana. Its 2,788 nodes include 1,528 themed minors, 1,103 attribute travel stars, 150 notables, six major skill unlocks, and a free origin. Each constellation develops a consistent specialty; varied rings, crescents, fans, and branches make those groups readable. Every major is three points from the origin. Pan, zoom, search, filter, inspect, and allocate connected nodes; hovering or selecting a destination previews the shortest route and remaining point cost from the current build. Procedural engravings identify the actual stat or skill at closer zoom. The six initial skills are Crescent Cleave, Rift Lunge, Ember Lance, Astral Nova, Thorn Volley, and Soul Siphon. They are initial action recipes for iteration, alongside seven authored specialty families per discipline.
 
 The [frozen character review](http://127.0.0.1:5173/character.html?panel=character) and [skill review](http://127.0.0.1:5173/character.html?panel=skills) use actual panels with staged level-10 data. These development-only views never tick combat or read/write saves. [Panel captures](docs/captures/2026-09-05/character-systems/README.md) show the result.

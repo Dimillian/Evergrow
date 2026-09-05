@@ -9,7 +9,7 @@ The character sheet now connects equipment, attributes, tree allocations, active
 - **C / I:** open the same character window: procedural character doll and ten equipment slots on the left, a 48-cell inventory in the middle, attributes and detailed combat stats on the right.
 - Inspect an item by hovering, keyboard focus, or selection. Its tooltip/detail card shows tier, item level, required level, weapon profile, modifiers, and comparison against the relevant equipped item.
 - Drag an item onto a compatible equipment slot, use **Shift-click** to equip/unequip, or use the selected item's button. Dragging between bag cells swaps their contents. Rings support either ring slot.
-- **T:** open the skill atlas. Pan, zoom, search names/bonuses, filter a domain or reachable stars, inspect a node, and spend a point on a connected node. Canvas keyboard navigation follows neighboring stars; the allocation button remains a native control.
+- **T:** open the skill atlas. Pan, zoom, search names/bonuses, filter a domain or reachable stars, inspect a node, and spend a point on a connected node. Hovering or selecting a distant node previews the shortest route from the current build and its remaining point cost. Canvas keyboard navigation follows neighboring stars; the allocation button remains a native control.
 - Assign unlocked skills to **RMB, 1, 2, 3, 4** from a major node's detail panel. Assigning a skill to a new slot moves its existing assignment; one skill cannot occupy multiple slots. LMB stays the basic attack, Q the potion, and Space the dodge.
 
 These windows pause combat, clear buffered inputs, trap modal keyboard focus, and close with Escape or their shortcut. Unassigned skill slots stay empty and do nothing. The journal is still unavailable.
@@ -24,7 +24,9 @@ These windows pause combat, clear buffered inputs, trap modal keyboard focus, an
 | `inventory.ts` | Validated equip, unequip, bag swap, insertion, and attribute allocation |
 | `character-stats.ts` | Combine equipped-item modifiers, allocated attributes, and tree bonuses into derived stats |
 | `character.ts` | Refresh the live player projection; award points for XP levels; validate skill assignment |
-| `skill-tree.ts` | Immutable graph/content recipes, connectivity validation, unique bonus aggregation, unlocked skills |
+| `skill-tree.ts` | Immutable cluster/curved-route recipes and bounds, connectivity validation, unique bonus aggregation, unlocked skills |
+| `skill-tree-routes.ts` | Pure shortest-route and remaining-point-cost previews from the current allocation |
+| `skill-tree-art.ts`, `skill-tree-glyphs.ts` | Culled native-resolution atlas drawing and shared procedural stat/skill engravings |
 | `skill-content.ts` | Shared names, costs, cooldowns, damage multipliers, colors, and procedural skill icons |
 | `skill-combat.ts` | Execute the six unlocked and assigned active actions |
 | `simulation.ts` | Deterministic timing, damage, kill XP, drops, pickup, and combat/resource effects |
@@ -76,14 +78,19 @@ Equip validates source cell, item type, target slot, and level requirement befor
 
 ## Skill atlas and active skills
 
-The fixed atlas contains **2,779 nodes**, **5,886 undirected connections**, and **397 hexagonal constellations** across **Might, Cunning, and Arcana**:
+The fixed atlas contains **2,788 nodes**, **2,878 undirected curved connections**, and **150 irregular constellations** across **Might, Cunning, and Arcana**:
 
 - 1 free origin.
-- 2,382 minor nodes using six bonus families per domain.
-- 390 notable nodes using three combined-bonus families per domain.
+- 1,528 minor nodes within themed constellations.
+- 1,103 minor travel nodes connecting specialties; these grant their discipline's attribute.
+- 150 notable nodes, one concentrated reward in each constellation.
 - 6 major nodes, each unlocking one executable active skill.
 
-All nodes have stable coordinate-derived IDs. The graph contains loops and links across domain boundaries; there are no class locks. Every node can be reached from the origin, and each active-skill major is exactly **three allocated points** away. Allocate requires a real node, an integer unspent point, an allocated neighbor, and no existing allocation. Duplicate/unknown IDs do not add bonuses. Allocation is permanent for the current run; respec is not present.
+Three winding arteries lead outward through organically spaced regions. Ellipses, open crescents, fans, and branching boughs contain 9–14 nodes each. Each constellation develops one consistent specialty, such as armor, critical chance, or mana regeneration; its notable strengthens that theme and adds a related bonus. Seven authored specialty recipes per discipline provide the current content. The connecting network adds 47 circuit crosslinks, including routes across discipline boundaries, so hybrid builds can traverse between regions without returning to the origin. Node centers remain at least 22 world units apart, and cluster bounds include their actual geometry.
+
+All nodes have stable IDs from deterministic content recipes. There are no class locks. Every node can be reached from the origin, and each active-skill major is exactly **three allocated points** away. Allocate requires a real node, an integer unspent point, an allocated neighbor, and no existing allocation. Duplicate/unknown IDs do not add bonuses. Allocation is permanent for the current run; respec is not present.
+
+The shortest-route preview starts at any already allocated node, highlights the fewest additional points to the hovered or selected destination, and reports that cost. It is informational: points are still spent individually on connected nodes. Equivalent builds resolve tied routes deterministically.
 
 | Major skill | Domain | Mana | Base cooldown | Damage multiplier | Current action |
 | --- | --- | ---: | ---: | ---: | --- |
@@ -98,7 +105,7 @@ The damage basis is the current derived weapon attack. Ember Lance, Astral Nova,
 
 Skills require both unlocking and assignment, enough mana, and a ready cooldown. Cooldowns belong to skill IDs and survive reassignment. There is no universal default right-click attack, default fireball, automatic sword combo, or wand requirement in this increment. Six real actions establish the shared pipeline; more varied animations, weapon-specific restrictions, richer major nodes, and balance remain iteration work.
 
-The atlas uses event-driven native-resolution Canvas drawing with geometry culling, rather than one DOM node per star. The detail pane, search, filtering, zoom controls, and skill assignment use ordinary UI controls. It shares Astral steel/silver/violet materials with the inventory and live HUD; world CRT processing does not touch text.
+The atlas uses event-driven native-resolution Canvas drawing with curved-geometry culling, rather than one DOM node per star. Overview zoom emphasizes regions and connecting routes; closer views reveal constellation names, notable frames, and code-defined engravings for the actual stat or skill. The same engraving paths appear in node details. The detail pane, search, filtering, zoom controls, and skill assignment use ordinary UI controls. It shares Astral steel/silver/violet materials with the inventory and live HUD; world CRT processing does not touch text.
 
 ## Enemy gear drops
 
@@ -110,4 +117,4 @@ Ground gear has a tier-colored marker, glow, and a crisp native-resolution name 
 
 Character level/XP, equipment, inventory, allocations, assignments, and ground loot are **run-local**. A new run or reload resets them. Exploration-chart persistence remains separate and unchanged. No character save format, migration, or backward-compatibility layer is introduced.
 
-Code tests cover graph connectivity, stable unique nodes, short skill paths, allocation rejection, modifier deduplication, item generation and scaling, inventory conservation, stat derivation, skill execution, and integration behavior. Strict browser/core TypeScript and production builds remain the verification gates. Static in-app review scenes are used for screenshots; they stage data without gameplay or save access. The user owns gameplay feel, visual feedback, and balance acceptance.
+Code tests cover graph connectivity, stable unique nodes, themed cluster membership, spacing and bounds, curved hybrid routes, shortest-route costs, short skill paths, allocation rejection, modifier deduplication, item generation and scaling, inventory conservation, stat derivation, skill execution, and integration behavior. Strict browser/core TypeScript and production builds remain the verification gates. Static in-app review scenes are used for screenshots; they stage data without gameplay or save access. The user owns gameplay feel, visual feedback, and balance acceptance.

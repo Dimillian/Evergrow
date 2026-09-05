@@ -12,7 +12,7 @@ import { InventoryPanel } from './inventory-panel.ts';
 import { SkillTreePanel } from './skill-tree-panel.ts';
 import { generateItem } from './items.ts';
 import { equipItem, unequipItem, moveInventoryItem, allocateAttribute } from './inventory.ts';
-import { allocateNode, SKILL_NODES } from './skill-tree.ts';
+import { allocateNode, SKILL_NODES, SKILL_TREE } from './skill-tree.ts';
 import { awardCharacterExperience, refreshCharacter, assignSkill } from './character.ts';
 import { Lifetime } from './lifetime.ts';
 import type { ActionResult, ItemKind } from './character-types.ts';
@@ -36,7 +36,8 @@ function unlock(id: string) {
   for (let at: string | null = id; at; at = parents.get(at) ?? null) path.unshift(at);
   for (const node of path) if (!p.character.allocatedNodes.includes(node)) allocateNode(p.character, node);
 }
-unlock('star:1:0:heart'); unlock('star:1:-1:heart');
+unlock(SKILL_TREE.nodes.find(node => node.skill === 'cleave')!.id);
+unlock(SKILL_TREE.nodes.find(node => node.skill === 'ember')!.id);
 assignSkill(p, 0, 'cleave'); assignSkill(p, 1, 'ember');
 const kinds: ItemKind[] = ['weapon', 'chest', 'head', 'boots', 'gloves', 'cloak', 'ring', 'amulet', 'legs'];
 for (let i = 0; i < 22; i++) p.character.inventory[i] = generateItem(1284 + i * 831, 7 + i % 4, kinds[i % kinds.length]);
@@ -69,7 +70,17 @@ function background() {
 }
 function show(panel: string) {
   selected = panel; inventory.close(); tree.close(); shell.showMenu(panel === 'skills' ? 'skills' : 'character', 0, 0);
-  if (panel === 'skills') { tree.open(p); tree.inspectNode('star:1:0:heart', false); }
+  if (panel === 'skills') {
+    tree.open(p); tree.inspectNode(SKILL_TREE.nodes.find(node => node.skill === 'cleave')!.id, false);
+    const zoom = new URLSearchParams(location.search).get('zoom');
+    if (zoom === 'overview') tree.showOverview();
+    else if (zoom === 'region' || zoom === 'detail') {
+      const cluster = SKILL_TREE.clusters.find(cluster => cluster.domain === 'Might' && cluster.name === 'Heart of Iron')!;
+      const notable = SKILL_TREE.nodes.find(node => node.cluster === cluster.id && node.kind === 'notable')!;
+      tree.inspectNode(notable.id, false);
+      tree.setView(cluster.x + (zoom === 'region' ? -350 : 0), cluster.y + (zoom === 'region' ? 250 : 0), zoom === 'detail' ? 1.2 : .3);
+    }
+  }
   else inventory.open(p);
   root.dataset.ready = 'true'; root.dataset.panel = panel;
 }

@@ -1,6 +1,6 @@
 # System status and foundation checkpoint
 
-2026-09-05 · local prototype · world generation 3 · character foundation 1.
+2026-09-05 · local prototype · world generation 3 · character foundation 1 · organic atlas 2.
 
 The engine foundation now supports run-local character progression, gear, inventory, tree allocations, and six active skills through shared contracts and validated mutations. This is the first integrated character foundation; the large atlas reuses authored bonus families and is not a balanced endgame. Gameplay acceptance and performance on the user's machine remain separate from code verification.
 
@@ -13,7 +13,7 @@ The engine foundation now supports run-local character progression, gear, invent
 | Experience / levels | Kill XP, increasing thresholds, overflow, live XP/level bar; 1 skill point and 5 attribute points per level | Run-local; no automatic spending, free refill, respec, or character saving |
 | Equipment / stats | 4 attributes; one derived-stat path; 10 equipment slots, 9 kinds, 5 tiers, 17 affix families; 3 generated sword profiles; procedural worn art | Seeded first content set; no shields, dual wield, bows, wands, or unique legendary powers |
 | Inventory / gear loot | 48 bag cells; 3-column character screen, comparison tooltips, drag/drop, Shift-click and button equip; seeded enemy gear drops and proximity pickup | Transactional item moves; no stash, trade, crafting, item deletion, or character persistence |
-| Skill atlas | 2,779 connected nodes, 5,886 edges, 397 constellations, 3 domains, 6 active-skill majors; searchable, pannable/zoomable Canvas atlas | Stable graph and shared bonuses; minor/notable families repeat, with balance/content expansion ahead |
+| Skill atlas | 2,788 connected nodes, 2,878 curved edges, 150 themed constellations, 3 domains, 6 active-skill majors; winding paths, hybrid crosslinks, search and shortest-route preview | Organic immutable graph and shared bonuses; 21 authored families repeat, with balance/content expansion ahead |
 | World | 3 smoothly connected biomes; streamed 256-unit terrain tiles; deterministic roads, props and clear corridors | Tested generation; biome distribution is still a three-region prototype |
 | Settlements / interiors | 5 building kinds; 8 buildings in Briarwatch; towns target 5–8, cities 12–16; shared doors/walls/furniture; roof fading and sanctuaries | Walkable layout foundation; no residents or service transactions |
 | Maps / discovery | Smooth minimap, explored-world map, hover POIs; 7 registered POI kinds; chart persistence | Tested bounded storage; landmark kind is reserved for later content |
@@ -39,7 +39,7 @@ Player starts with **100 life / 100 mana**. The sword deals **24 damage**, attac
 | --- | --- |
 | Character bag / equipment / active skill slots | 48 cells / 10 slots / 5 slots |
 | Ground equipment | 96 items; auto-pickup within 30 units with line of sight |
-| Skill atlas | 2,779 immutable nodes / 5,886 edges; culled, event-driven Canvas drawing |
+| Skill atlas | 2,788 immutable nodes / 2,878 edges; culled, event-driven Canvas drawing |
 | World terrain tiles / settlement blueprints | 48 / 32 cached entries |
 | Rendered building cache / chart terrain cache | 24 buildings / 384 map tiles |
 | Base procedural prop library | 161 sprite canvases; about 5.05 MiB of RGBA pixels when all variants are populated, excluding other art/GPU overhead |
@@ -101,3 +101,11 @@ Each level awards one skill point and five attribute points. Enemy gear is deter
 All character data and ground gear reset on a new run/reload; the separately saved exploration chart remains intact. There is no respec, stash, trading, crafting, item deletion, off-hand gear, wand attack, or character persistence yet. These are deliberate boundaries of this first increment. The six skills and generated bonus families need user gameplay/balance iteration.
 
 Validation for this increment uses code-level rules/integration tests, strict/core compilation, a production build, and frozen in-app panel captures. No automated gameplay tests are run. **233 code tests pass**, along with strict/core type checks and the production build. The build contains 79 transformed modules, 277.36 kB JavaScript (95.08 kB gzip), and 42.71 kB CSS (9.51 kB gzip), with the local font separate. Frozen in-app captures verify the actual panels at the default 1280×720 viewport; the local game starts without console errors. See [character systems](character-systems.md) for formulas, content counts, ownership, transaction rules, and current limits.
+
+## Organic atlas checkpoint
+
+The lattice has been replaced by 150 irregular themed constellations and three winding progression arteries. The 2,788-node graph contains 1 origin, 1,528 constellation minors, 1,103 attribute travel nodes, 150 notables, and 6 active-skill majors. There are 2,878 curved edges and 47 additional circuit crosslinks, including mixed-discipline routes. All nodes are reachable; all six active skills remain three points from the origin. Twenty-one authored specialties supply the current bonus content.
+
+The native-resolution painter uses engraved stat/skill icons, distinct medallion sizes, restrained regional colors, warm allocated paths, and zoom-dependent labels. Hovering or selecting a destination highlights its shortest additional-point route; the inspector reports the cost. Search keeps that route legible and dismisses results after a choice. The initial camera frames the starter branches, and All fits the full graph to the viewport. Graph, route calculation, glyphs, painting, and panel interactions have separate owners.
+
+**240 code tests pass**, including graph connectivity, immutable content, node clearance, themed clusters, hybrid routes, allocation validation, and shortest-route correctness. Strict application/core compilation and the production build pass. The build has 82 transformed modules, 290.49 kB JavaScript (100.80 kB gzip), and 43.75 kB CSS (9.71 kB gzip), with the local font separate. [Three frozen in-app captures](captures/2026-09-05/organic-skill-tree/README.md) show the actual atlas at overview, regional, and detail zoom. The review reports no console errors; gameplay remains for the user to test. Character state remains run-local and resets on reload.
