@@ -141,3 +141,37 @@ test('ranged roles retreat before starting a new shot when pressured inside thei
     assert.equal(sim.projectiles.length, 0); assert.equal(sim.player.hp, sim.player.maxHp);
   }
 });
+
+test('unaware camp hounds settle into a patrol without overshooting and reversing every tick', () => {
+  const sim = new Simulation(open, { spawn: false });
+  const hound = sim.spawnEnemy('hound', 650, 0)!;
+  hound.campId = 'quiet-camp';
+  advance(sim, 5);
+  let previousAngle = hound.angle, distance = 0, maxTurn = 0;
+  for (let tick = 0; tick < 1200; tick++) {
+    const x = hound.x, y = hound.y;
+    sim.update(FIXED_STEP, idle);
+    maxTurn = Math.max(maxTurn, Math.abs(Math.atan2(Math.sin(hound.angle - previousAngle), Math.cos(hound.angle - previousAngle))));
+    distance += Math.hypot(hound.x - x, hound.y - y); previousAngle = hound.angle;
+  }
+  assert.equal(hound.awareness, 0); assert.equal(hound.state, 'patrol');
+  assert.ok(maxTurn < .06, `quiet patrol turned ${(maxTurn * 180 / Math.PI).toFixed(1)} degrees in one tick`);
+  assert.ok(distance > 5 && distance < 80, `patrol should follow its slow route, not dance in place: ${distance}`);
+});
+
+test('crowded, obstructed camp patrols keep a steady facing and still notice the player', () => {
+  let hidden = true;
+  const obstructed: WorldQuery = { blocked: x => hidden && x > 45 && x < 55, move: (x, y) => ({ x, y }) };
+  const sim = new Simulation(obstructed, { spawn: false });
+  const hound = sim.spawnEnemy('hound', 100, 0)!;
+  const ally = sim.spawnEnemy('hound', 108, 8)!;
+  hound.campId = ally.campId = 'crowded-camp';
+  hound.state = ally.state = 'patrol';
+  advance(sim, .1); const facing = hound.angle;
+  advance(sim, 2);
+  assert.equal(hound.angle, facing, 'blocked footsteps must not spin the body');
+  assert.equal(hound.awareness, 0);
+  hidden = false; advance(sim, .5);
+  assert.equal(hound.awareness, 1);
+  assert.ok(['chase', 'windup', 'attack'].includes(hound.state));
+});

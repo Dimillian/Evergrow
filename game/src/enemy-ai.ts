@@ -35,9 +35,24 @@ function separatedMotion(enemy: Enemy, vx: number, vy: number, context: EnemyAIC
 function moveToward(enemy: Enemy, x: number, y: number, speed: number, dt: number, context: EnemyAIContext): void {
   const dx = x - enemy.x, dy = y - enemy.y, distance = Math.hypot(dx, dy);
   if (distance < .1) return;
-  const velocity = separatedMotion(enemy, dx / distance * speed, dy / distance * speed, context);
-  if (Math.hypot(velocity.vx, velocity.vy) > 1) enemy.angle = Math.atan2(velocity.vy, velocity.vx);
+  // A patrol target drifts much more slowly than a hound can run. Arrive gently
+  // instead of stepping past it and reversing on the next fixed tick.
+  const arriving = enemy.state === 'patrol' || (enemy.state === 'chase' && !enemy.seesPlayer);
+  const approachSpeed = Math.min(speed, distance / dt,
+    arriving ? distance * ENEMY_AI_RULES.arrivalResponse : speed);
+  const velocity = separatedMotion(enemy, dx / distance * approachSpeed, dy / distance * approachSpeed, context);
+  const beforeX = enemy.x, beforeY = enemy.y;
   context.move(enemy, velocity.vx, velocity.vy, dt);
+  // Face resolved travel, including obstacle steering; blocked movement holds
+  // its heading. Combat aim/telegraph locks remain owned by their attack state.
+  const movedX = enemy.x - beforeX, movedY = enemy.y - beforeY;
+  if (Math.hypot(movedX, movedY) > dt) {
+    const targetAngle = Math.atan2(movedY, movedX);
+    const turn = Math.atan2(Math.sin(targetAngle - enemy.angle), Math.cos(targetAngle - enemy.angle));
+    const limit = ENEMY_AI_RULES.locomotionTurnSpeed * dt;
+    enemy.angle += Math.max(-limit, Math.min(limit, turn));
+    enemy.angle = Math.atan2(Math.sin(enemy.angle), Math.cos(enemy.angle));
+  }
 }
 
 function sense(enemy: Enemy, dt: number, context: EnemyAIContext): void {
@@ -86,7 +101,7 @@ function chase(enemy: Enemy, dt: number, context: EnemyAIContext, definition: En
   const p = context.player, hasSight = enemy.seesPlayer;
   const targetX = hasSight ? p.x : enemy.lastSeenX, targetY = hasSight ? p.y : enemy.lastSeenY;
   const dx = targetX - enemy.x, dy = targetY - enemy.y, distance = Math.hypot(dx, dy), angle = Math.atan2(dy, dx);
-  enemy.angle = angle;
+  if (hasSight) enemy.angle = angle;
   const available = canEnemyJoinAttack(enemy, context.enemies);
   const attackDistance = definition.attack === 'melee'
     ? definition.engageDistance ?? definition.range + p.radius - 3 : definition.maxAttackDistance;

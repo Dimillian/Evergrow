@@ -103,6 +103,7 @@ export const ENEMY_DEFINITIONS: Readonly<Record<EnemyKind, EnemyDefinition>> = O
 export const ENEMY_AI_RULES = Object.freeze({
   senseInterval: .12, awarenessSeconds: .28, hearingDistance: 72, loseSightAfter: 3.4,
   tetherDistance: 470, returnStopDistance: 12, patrolRadius: 36, patrolSpeed: .28,
+  arrivalResponse: 3, locomotionTurnSpeed: 5,
   separationPadding: 13, flankAngle: .6, supportDistance: 80,
 });
 
