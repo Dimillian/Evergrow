@@ -1,3 +1,5 @@
+import { drawPortal, drawTownAnchor } from './travel-art.ts';
+import { townPortalAnchor, withinPortalReach, PORTAL_RULES, type PortalAnchor } from './travel.ts';
 import { buildingNPC, focusNPC, NPC_NAMES, NPC_COLORS } from './npcs.ts';
 import { drawNPC } from './npc-art.ts';
 import { RewardFeedback } from './reward-feedback.ts';
@@ -103,6 +105,9 @@ export class Renderer {
   private plateEnemy: Enemy | null = null;
   private plateOpacity = 0;
   private rangedAim: RangedAim | null = null;
+  portalGuide = 0;
+  private portalAnchors: PortalAnchor[] = [];
+  private fadingPortal: { x: number; y: number; progress: number; life: number } | null = null;
 
   constructor() { this.resize(960, 600); }
 
@@ -150,7 +155,15 @@ export class Renderer {
     return this.rangedAim;
   }
 
+  snapTo(player: Player) {
+    const target = cameraFollowTarget(player);
+    this.cameraX = target.x; this.cameraY = target.y;
+    this.view = cameraView(this.width, this.height, target.x, target.y, this.cameraZoom.value);
+    this.lastDisplayedView = this.view; this.visibility.reset();
+  }
+
   reset() {
+    this.portalGuide = 0; this.portalAnchors = []; this.fadingPortal = null;
     this.cameraX = 0; this.cameraY = 0; this.effects.reset(); this.rangedAim = null;
     this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
     this.lastDisplayedView = this.view;
@@ -196,6 +209,10 @@ export class Renderer {
     this.experienceDisplay = this.experienceFeedback.update(p, feedbackStep, settings.reducedMotion);
     const px = lerp(p.prevX, p.x, alpha), py = lerp(p.prevY, p.y, alpha);
     this.visualTime += dt;
+    this.portalGuide = Math.max(0, this.portalGuide - dt);
+    if (sim.portal.origin) this.fadingPortal = { ...sim.portal.origin, progress: sim.portal.progress, life: .25 };
+    else if (this.fadingPortal) { this.fadingPortal.life -= dt; if (settings.reducedMotion || this.fadingPortal.life <= 0) this.fadingPortal = null; }
+    this.portalAnchors = world.getSettlements(this.view.left - 100, this.view.top - 100, this.view.width + 200, this.view.height + 200).map(townPortalAnchor);
     this.shake *= Math.exp(-dt * 22); this.hurt *= Math.exp(-dt * 5);
     this.kickX *= Math.exp(-dt * 18); this.kickY *= Math.exp(-dt * 18);
     this.playerHealthHold -= feedbackStep;
@@ -324,6 +341,7 @@ export class Renderer {
       hitPulse: settings.reducedMotion ? 0 : Math.min(1, this.plateEnemy.hitFlash / COMBAT_TIMING.hitFlashDuration),
     });
     if (settings.phase === 'playing') {
+      this.drawPortalHints(c, sim, world);
       this.cursor(c, sim);
       const npcs = this.cachedBuildings.flatMap(b => { const npc = buildingNPC(b); return npc ? [npc] : []; });
       const npc = focusNPC(npcs, p, world);
@@ -335,6 +353,31 @@ export class Renderer {
         c.strokeStyle = NPC_COLORS[npc.role] + '90'; c.strokeRect(point.x - width / 2, point.y - 14, width, 23);
         c.fillStyle = '#e1dfcd'; c.fillText(label, point.x, point.y + 2); c.restore();
       }
+    }
+  }
+
+  private drawPortalHints(c: CanvasRenderingContext2D, sim: Simulation, world: World) {
+    const p = sim.player, anchor = this.portalAnchors.find(a => withinPortalReach(p, a, world));
+    let label = '', x = p.x, y = p.y - 79;
+    if (sim.portal.active) label = `Town portal · ${(PORTAL_RULES.channel * (1 - sim.portal.progress)).toFixed(1)}s`;
+    else if (anchor) { x = anchor.x; y = anchor.y - (sim.travel.returnTo?.town === anchor.band ? 82 : 28);
+      label = sim.travel.returnTo?.town === anchor.band ? 'Return to expedition  [E]' : sim.travel.homeTown === anchor.band ? `${anchor.name} · Home  [E]` : 'Set home town  [E]'; }
+    if (label) {
+      const point = worldToScreen(this.view, x, y);
+      c.save(); c.font = '12px system-ui, sans-serif'; c.textAlign = 'center';
+      const w = c.measureText(label).width + 18;
+      c.fillStyle = '#09121deb'; c.fillRect(point.x - w / 2, point.y - 14, w, 23);
+      c.strokeStyle = '#b7a9d366'; c.strokeRect(point.x - w / 2, point.y - 14, w, 23);
+      c.fillStyle = '#dfd7f0'; c.fillText(label, point.x, point.y + 2); c.restore();
+    }
+    if (this.portalGuide > 0 && sim.travel.returnTo) {
+      const home = world.getPortalAnchor(sim.travel.returnTo.town), pos = worldToScreen(this.view, home.x, home.y - 38);
+      const x = Math.max(40, Math.min(this.width - 210, pos.x)), y = Math.max(38, Math.min(this.height - 155, pos.y));
+      c.save(); c.strokeStyle = '#cfbff0'; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, 22, 0, TAU); c.stroke();
+      c.font = '12px system-ui, sans-serif'; c.fillStyle = '#e3d8f7'; c.textAlign = 'center'; c.fillText('Return portal', x, y + 38);
+      if (Math.hypot(pos.x - x, pos.y - y) > 20) { const a = Math.atan2(pos.y - y, pos.x - x); c.translate(x, y); c.rotate(a);
+        c.beginPath(); c.moveTo(10, 0); c.lineTo(-5, -6); c.lineTo(-5, 6); c.closePath(); c.fill(); }
+      c.restore();
     }
   }
 
@@ -389,6 +432,18 @@ export class Renderer {
       }
       c.restore();
     } }));
+    for (const anchor of this.portalAnchors) entries.push({ y: anchor.y, draw: () => {
+      drawTownAnchor(c, anchor, sim.travel.homeTown === anchor.band);
+      if (sim.travel.returnTo?.town === anchor.band) drawPortal(c, anchor.x, anchor.y, this.visualTime, 1,
+        '#b5a0ee', settings.reducedMotion);
+    } });
+    if (sim.portal.origin) { const origin = sim.portal.origin;
+      entries.push({ y: origin.y - 1, draw: () => drawPortal(c, origin.x, origin.y, this.visualTime, sim.portal.progress, '#b5a0ee', settings.reducedMotion) });
+    }
+    if (!sim.portal.active && this.fadingPortal) { const old = this.fadingPortal;
+      entries.push({ y: old.y - 1, draw: () => { c.save(); c.globalAlpha = old.life / .25;
+        drawPortal(c, old.x, old.y, this.visualTime, old.progress * old.life / .25); c.restore(); } });
+    }
     for (const bird of this.biomeLife.birds) entries.push({ y: bird.y + (bird.state === 'perched' ? 1 : 130),
       draw: () => this.biomeArt.drawBird(c, bird, this.visualTime, settings.reducedMotion) });
     for (const building of this.cachedBuildings) {
@@ -414,7 +469,11 @@ export class Renderer {
         attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash, slow: enemy.slowTime, burning: enemy.burnTime,
         impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false }) });
     }
-    if (settings.phase !== 'ready') entries.push({ y: py, draw: () => this.actor(px, py, playerPose(p, sim.time)) });
+    if (settings.phase !== 'ready') entries.push({ y: py, draw: () => {
+      const pose = playerPose(p, sim.time);
+      if (sim.portal.active) { pose.cast = .45 * Math.min(1, sim.portal.progress * 4); pose.castColor = '#b5a0ee'; }
+      this.actor(px, py, pose);
+    } });
     entries.sort((a, b) => a.y - b.y);
     for (const entry of entries) entry.draw();
   }
@@ -430,6 +489,9 @@ export class Renderer {
     const p = sim.player;
     const lights: PointLight[] = [{ x: px, y: py - 15, radius: 185, color: '#ffcf87', power: .58, shadows: true }];
     const environmentLights: PointLight[] = [];
+    if (sim.portal.active) lights.push({ x: p.x, y: p.y - 30, radius: 105, color: '#b5a0ee', power: .22 + sim.portal.progress * .35 });
+    for (const anchor of this.portalAnchors) if (sim.travel.returnTo?.town === anchor.band)
+      environmentLights.push({ x: anchor.x, y: anchor.y - 30, radius: 130, color: '#b5a0ee', power: .6 });
     for (const building of this.cachedBuildings) {
       const npc = buildingNPC(building);
       if (npc) environmentLights.push({ x: npc.x, y: npc.y - 20, radius: 60, color: NPC_COLORS[npc.role], power: .3 });

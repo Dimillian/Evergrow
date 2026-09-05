@@ -1,3 +1,4 @@
+import { freshTravel, PortalChannel, PORTAL_RULES } from './travel.ts';
 import { advanceGold, type GroundGold } from './gold.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, ProjectileEffects, GroundEffect, SimulationOptions, WorldQuery } from './model.ts';
@@ -48,6 +49,9 @@ export function initialPlayer(x: number, y: number): Player {
 
 export class Simulation {
   player: Player;
+  travel = freshTravel();
+  readonly portal = new PortalChannel();
+  private arrivalProtection = 0;
   enemies: Enemy[] = [];
   projectiles: Projectile[] = [];
   pickups: Pickup[] = [];
@@ -83,6 +87,7 @@ export class Simulation {
   }
 
   reset(): void {
+    this.travel = freshTravel(); this.portal.cancel(); this.arrivalProtection = 0;
     this.player = initialPlayer(this.options.startX!, this.options.startY!);
     this.enemies = [];
     this.projectiles = [];
@@ -105,7 +110,7 @@ export class Simulation {
 
   captureCheckpoint(): CharacterCheckpoint {
     const p = this.player;
-    return JSON.parse(JSON.stringify({ character: p.character, level: p.level, xp: p.xp,
+    return JSON.parse(JSON.stringify({ travel: this.travel, character: p.character, level: p.level, xp: p.xp,
       x: p.x, y: p.y, angle: p.angle, hp: p.hp, mana: p.mana, dead: p.dead,
       flasks: p.flasks, healCooldown: p.healCooldown, dodgeCharges: p.dodgeCharges, dodgeRecharge: p.dodgeRecharge,
       skillCooldowns: p.skillCooldowns, time: this.time, kills: this.kills,
@@ -117,6 +122,8 @@ export class Simulation {
   restoreCheckpoint(checkpoint: CharacterCheckpoint): void {
     this.reset();
     const saved = JSON.parse(JSON.stringify(checkpoint)) as CharacterCheckpoint;
+    this.travel = saved.travel ?? freshTravel();
+    if (saved.dead) this.travel.returnTo = null;
     const p = this.player;
     Object.assign(p, { character: saved.character, level: saved.level, xp: saved.xp,
       x: saved.x, y: saved.y, angle: saved.angle, hp: saved.hp, mana: saved.mana, dead: saved.dead,
@@ -142,11 +149,22 @@ export class Simulation {
 
   revive(): void {
     const saved = this.captureCheckpoint();
+    if (saved.travel) saved.travel.returnTo = null;
     saved.x = this.options.startX!; saved.y = this.options.startY!; saved.dead = false;
     saved.hp = this.player.maxHp; saved.mana = this.player.maxMana;
     saved.flasks = PLAYER_ABILITIES.potion.charges; saved.healCooldown = 0;
     saved.dodgeCharges = PLAYER_ABILITIES.dodge.charges; saved.dodgeRecharge = 0; saved.skillCooldowns = {};
     this.restoreCheckpoint(saved);
+  }
+
+  /** Travel preserves actors, loot, clocks and camp memory. It is not a reset/load. */
+  relocate(x: number, y: number): void {
+    const p = this.player;
+    this.clearInput(); this.portal.cancel();
+    p.x = p.prevX = x; p.y = p.prevY = y;
+    p.attack = null; p.dash = null; p.activeSkill = null; p.castTime = p.castDuration = p.dodgeTime = 0;
+    this.arrivalProtection = PORTAL_RULES.protection; p.invulnerable = Math.max(p.invulnerable, this.arrivalProtection);
+    this.spawnExclusion = null; this.roaming.relocate(x, y);
   }
 
   /** Automatic population waits for the camera's current/pending visible envelope. */
@@ -159,6 +177,7 @@ export class Simulation {
 
   /** Call when focus/control context changes, including pause and resume. */
   clearInput(): void {
+    this.portal.cancel();
     this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
     this.skillBuffer = null;
     this.player.vx = this.player.vy = 0;
@@ -193,6 +212,7 @@ export class Simulation {
     while (this.accumulator + 1e-10 >= FIXED_STEP && !this.player.dead) {
       this.accumulator -= FIXED_STEP;
       this.step(FIXED_STEP, input);
+      if (this.portal.ready) { this.accumulator = 0; break; }
     }
   }
 
@@ -244,9 +264,11 @@ export class Simulation {
     this.collectGroundItems();
     if (this.player.dead) {
       // A death may clear input midway through this tick; freeze its final poses.
+      this.travel.returnTo = null; this.portal.cancel();
       this.capturePositions();
       return;
     }
+    this.portal.advance(dt, this.player, input);
     this.updateSpawns(dt);
     this.enemies = this.enemies.filter(e => e.state !== 'dead' || e.stateTime < ENCOUNTER_RULES.corpseDuration);
     if (this.spawnExclusion) this.enemies = this.enemies.filter(enemy =>
@@ -269,6 +291,7 @@ export class Simulation {
   private updatePlayer(dt: number, input: Input): void {
     const p = this.player;
     let completedAttackTime = 0;
+    this.arrivalProtection = input.attack || input.skillSlot !== null ? 0 : Math.max(0, this.arrivalProtection - dt);
     this.hurtGuard = Math.max(0, this.hurtGuard - dt);
     p.healCooldown = Math.max(0, p.healCooldown - dt);
     p.guardTime = Math.max(0, p.guardTime - dt);
@@ -396,7 +419,7 @@ export class Simulation {
     p.x = destination.x;
     p.y = destination.y;
     const dodgeElapsed = PLAYER_ABILITIES.dodge.duration - p.dodgeTime;
-    p.invulnerable = Math.max(this.hurtGuard,
+    p.invulnerable = Math.max(this.hurtGuard, this.arrivalProtection,
       p.dodgeTime > 0 && dodgeElapsed >= PLAYER_ABILITIES.dodge.invulnerabilityStart && dodgeElapsed < PLAYER_ABILITIES.dodge.invulnerabilityEnd
         ? PLAYER_ABILITIES.dodge.invulnerabilityEnd - dodgeElapsed : 0);
   }
@@ -523,6 +546,7 @@ export class Simulation {
     if (!damagePlayer(amount, angle, sourceLevel, {
       player: this.player, world: this.world, random: () => this.random(), emit: event => this.events.push(event),
     }, kind)) return;
+    this.portal.cancel();
     this.hurtGuard = COMBAT_TIMING.hurtGuard;
     if (this.player.dead) this.clearInput();
   }

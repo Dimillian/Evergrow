@@ -32,9 +32,9 @@ Transaction commands stage item issuance, wallet, stock and buyback together, pe
 
 ## Next: travel and interactive exploration
 
-Selected 2026-09-05. Specifications complete; runtime implementation has not started.
+Selected 2026-09-05. Town portals implemented and code-verified; permanent waypoints and interactive POIs remain specified.
 
-1. [Town portals and waypoints](travel-and-portals.md): free interruptible town return, saved single-use return link, activated anchor network and map travel.
+1. [Town portals and waypoints](travel-and-portals.md): free interruptible town return, saved single-use return link and home-town anchors **implemented**; permanent anchor network/map travel remains next.
 2. [Interactive POIs](interactive-pois.md): durable site/reward ledger, camp strongboxes and reliquaries; caravan choices and beacons; then graveyard/standing-stone trials.
 3. Validate travel/event persistence and exactly-once rewards together; static visual reviews followed by player testing. Initial rewards and timings are tuning proposals.
 

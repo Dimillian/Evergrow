@@ -29,10 +29,10 @@ Updated 2026-09-05. Use the current guides for implementation. Proposed designs 
 
 ## Next iteration specifications
 
-- [Town portals and waypoints](travel-and-portals.md): interruptible town return, one return link and activated travel anchors.
+- [Town portals and waypoints](travel-and-portals.md): implemented town return/home anchors; permanent waypoint network still specified.
 - [Interactive POIs](interactive-pois.md): camp chests, caravan choices, beacons, graveyard/stone trials and roadside reliquaries.
 
-Both are specified, not implemented.
+Interactive POIs and permanent waypoint travel are specified, not implemented. Town portals are live.
 
 ## Original vision and design exploration
 

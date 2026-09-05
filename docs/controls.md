@@ -7,7 +7,8 @@
 | Mouse wheel over the world | Smooth camera zoom in / out |
 | Hold left mouse | Repeat the basic weapon attack |
 | Right mouse / 1–4 | Use assigned skills; empty slots do nothing |
-| E / click a nearby NPC | Open the focused town service, within reach and line of sight |
+| E / click a nearby NPC or town anchor | Open a service, use the return portal, or set an empty anchor as home |
+| P / portal control below minimap | Cast town portal outside sanctuary; locate your return portal while in sanctuary |
 | C / I | Character, equipment, inventory, and attributes |
 | T | Skill tree and active skill assignments |
 | Space | Dodge, using one of two regenerating charges |
@@ -18,6 +19,8 @@
 | Map: drag / scroll / + and − | Pan / zoom |
 | N | Toggle synthesized sound |
 | F3 | Frame-rate and coordinate overlay |
+
+A town portal channels for three seconds. Movement, damage, attacking, skills, dodge, Escape, P again or leaving the gameplay input context cancels it. It costs nothing and refills nothing. E/click the town endpoint returns once to your departure point.
 
 Unlock skills in the tree, then assign them to RMB or 1–4. Empty slots do nothing. Character, inventory, skill tree, map and town-service panels pause combat.
 

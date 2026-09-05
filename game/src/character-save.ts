@@ -1,3 +1,4 @@
+import { validTravel, type TravelState } from './travel.ts';
 import { GOLD_RULES, type GroundGold } from './gold.ts';
 import { validGold } from './wallet.ts';
 import type { CharacterSheet, GroundItem, Item, SkillId } from './character-types.ts';
@@ -13,6 +14,8 @@ export const CHARACTER_SLOT_COUNT = 8;
 export const CHARACTER_SAVE_VERSION = 2;
 export const SAVE_MAX_BYTES = 700_000;
 export interface CharacterCheckpoint {
+  /** Absent until travel has been initialized; no portal and Briarwatch home by default. */
+  travel?: TravelState;
   character: CharacterSheet; level: number; xp: number; x: number; y: number; angle: number;
   hp: number; mana: number; dead: boolean; flasks: number; healCooldown: number;
   dodgeCharges: number; dodgeRecharge: number; skillCooldowns: Partial<Record<SkillId, number>>;
@@ -56,7 +59,7 @@ export function decodeCharacterSave(raw: string): CharacterSave | null {
       || !text(v.name, 24) || !integer(v.createdAt) || !integer(v.updatedAt) || v.updatedAt < v.createdAt
       || !integer(v.worldSeed, 0, 4294967295) || !integer(v.worldVersion, 1)) return null;
     const p = v.checkpoint;
-    if (!object(p) || !integer(p.level, 1, MAX_CONTENT_LEVEL) || !integer(p.xp, 0) || (p.level < MAX_CONTENT_LEVEL && p.xp >= xpForNextLevel(p.level))
+    if (!object(p) || (p.travel !== undefined && !validTravel(p.travel)) || !integer(p.level, 1, MAX_CONTENT_LEVEL) || !integer(p.xp, 0) || (p.level < MAX_CONTENT_LEVEL && p.xp >= xpForNextLevel(p.level))
       || !validSheet(p.character, p.level) || !number(p.x, -4e7, 4e7) || !number(p.y, -4e7, 4e7) || !number(p.angle, -1000, 1000)
       || !number(p.hp, 0, 1e9) || !number(p.mana, 0, 1e9) || typeof p.dead !== 'boolean' || (!p.dead && p.hp <= 0)
       || !integer(p.flasks, 0, 2) || !number(p.healCooldown, 0, 1000) || !integer(p.dodgeCharges, 0, 2) || !number(p.dodgeRecharge, 0, 1000)

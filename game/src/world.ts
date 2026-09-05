@@ -1,3 +1,4 @@
+import { townPortalAnchor } from './travel.ts';
 import { drawGroundPatches } from './ground-art.ts';
 import { biomeGround, biomeMapColor, sampleBiome } from './biomes.ts';
 import type { BiomeId, BiomeSample } from './biomes.ts';
@@ -94,6 +95,8 @@ export class World {
   dispose() { this.groundTiles.clear(); this.settlements.clear(); this.wilderness.clear(); }
 
   sampleBiome(x: number, y: number): BiomeSample { return sampleBiome(x, y, this.seed); }
+
+  getPortalAnchor(band: number) { return townPortalAnchor(this.settlement(band)); }
 
   private settlement(band: number): Settlement {
     let town = this.settlements.get(band);

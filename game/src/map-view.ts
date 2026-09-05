@@ -37,3 +37,8 @@ export function getMinimapRect(width: number, _height: number): MapRect {
   return { x: width - (compact ? 150 : 172) - 18, y: 18,
     width: compact ? 150 : 172, height: compact ? 143 : 155 };
 }
+
+export function getPortalControlRect(width: number, height: number): MapRect {
+  const map = getMinimapRect(width, height);
+  return { x: map.x + map.width - 112, y: map.y + map.height + 8, width: 112, height: 32 };
+}

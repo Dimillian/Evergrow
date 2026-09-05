@@ -23,9 +23,9 @@ Updated 2026-09-05. Stable system IDs from the original design, with current imp
 | S17 | NPC services | Procedural blacksmith, jeweler and enchanter; nearby interaction, stock and workbenches | Dialogue, quests and residential schedules |
 | S18 | Art/lighting | Code-generated assets, layered trees, dynamic lights and fixed CRT/soft phosphor | More authored variety and measured performance work |
 | S19 | HUD/panels | Astral HUD, title hall, inventory/equipment/stats, atlas, shared tooltips, service panels and panel coordinator | Further player-led refinements |
-| S20 | Progression/travel/recovery | Fixed geographic danger, XP level-gap rewards, one skill/five stat points per level, sanctuary protection and defeat/continue handling | Return travel and deeper recovery/endgame design; no selectable danger tiers |
+| S20 | Progression/travel/recovery | Fixed geographic danger, XP level-gap rewards, one skill/five stat points per level, sanctuary protection, defeat/continue and saved town/return portals | Permanent waypoints and deeper recovery/endgame design; no selectable danger tiers |
 | S21 | Accessibility/controls | Native UI focus, input boundaries, reduced-motion behavior, legible numeric labels, concise controls document | Rebinding and broader accessibility verification; no graphics settings screen |
-| S22 | Persistence | Eight character slots, autosaves, backups, stale-writer rejection, separate charts, gear/gold/camp state and atomic vendor transactions/stock in save v2 | Export/import and cloud saves |
+| S22 | Persistence | Eight character slots, autosaves, backups, stale-writer rejection, separate charts, gear/gold/camp state and atomic vendor transactions/stock and travel state in save v2 | Export/import and cloud saves |
 | S23 | Runtime/performance | Canvas/WebGL browser renderer, fixed simulation, bounded caches, teardown/HMR and stats command | Recorded device-specific long-session profiles; no production performance guarantee |
 | S24 | Validation/tools | Headless code tests, strict browser/core compilation, import boundaries and static review scenes | Extend fixtures with each system; user owns gameplay testing |
 

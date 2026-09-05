@@ -2,7 +2,7 @@
 
 The [living biomes](living-biomes.md) extend the original forest pass with bounded presentation-only wind, material-specific footstep reactions and decorative wildlife across all seven climates. `biome-life-content.ts` owns immutable recipes; `biome-wind.ts`, `biome-life.ts` and `biome-life-art.ts` own shared wind, ephemeral state and drawing. `ground-material.ts` shares water/road/paving weights with World terrain colors. These systems consume interpolated positions through Renderer and have no simulation mutation or reward path. The local `/forest.html` review records the actual world/CRT with staged poses and no gameplay ticks or save access.
 
-The [NPC/vendor readiness review](npc-vendor-readiness.md) records the earlier consolidation assessment. Equipment planning/previews, shared item UI and panel lifecycle now support implemented [NPC services](npcs-and-vendors.md), including atomic saved transactions. The full suite has 507 passing code tests.
+The [NPC/vendor readiness review](npc-vendor-readiness.md) records the earlier consolidation assessment. Equipment planning/previews, shared item UI and panel lifecycle now support implemented [NPC services](npcs-and-vendors.md), including atomic saved transactions. The full suite has 519 passing code tests after town portals.
 
 Updated 2026-09-05. This describes the local prototype as implemented; `technical-foundations.md` contains the broader design proposals.
 
@@ -150,3 +150,9 @@ Equipment planning now lives in `inventory.ts:planEquipmentChange`; equipment co
 - `item-validation.ts` and `commerce-validation.ts` share bounded recipe/commerce validation with save version 2. Stock issuance IDs encode vendor/epoch/slot; ownership validation prevents a current issued item remaining available in stock. Old save payloads require new characters, without destructive conversion.
 - `service-panel.ts` composes shared item cells/tooltips, compact headers, operation previews and separate Equipped/Inventory sections. UI submits typed quotes; it never spends gold or mutates the character. Equipped upgrades refresh both hand projections without restoring life/mana.
 - The registered `service` phase shares panel suspension, focus, input clearing and teardown. `/services.html` and `/services-narrow.html` stage memory-only static reviews, never a gameplay session.
+
+## Town portal
+
+`travel.ts` owns bounded travel state, anchor placement, fixed-step channel rules, safe landing and known map markers. `travel-command.ts` validates an outward/return interaction, stages a checkpoint and persists before calling `Simulation.relocate`. Relocation must never call `reset`/`restoreCheckpoint`: preserve actors, loot, source rewards, camp memory and resources. Clear current attacks/inputs and establish destination spawn coverage before the next tick. `RoamingEncounters.relocate` discards discontinuity travel credit without resetting the warmup population. The simulation cancels casting at the damage boundary, so healing within a frame cannot conceal interruption.
+
+`travel-art.ts` draws code-generated rings/threads/motes; the renderer owns cancellation fading and camera snapping. `GameShell` presents the small portal control and native progress above post-processing. The world map reads current portal markers without storing them in explored terrain. `/portal.html?state=cast` and `?state=town` are frozen, save-free reviews. Full waypoint travel remains unimplemented.

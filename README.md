@@ -15,6 +15,8 @@ A gothic, top-down 2D action RPG built for the browser, inspired by Diablo and P
 - **Gear & progression:** procedural names, icons and visible equipment; an 8×8 inventory, drag/drop, quick equip and comparison tooltips; item tiers, enemy loot tables, geographic danger scaling, and one skill point plus five attribute points per level.
 - **Presentation:** code-generated artwork, dynamic lighting, restrained CRT/phosphor, and a shared retro-modern UI kit with compact panels, readable rarity treatments and animated tooltips, fading enemy remains, labeled ground equipment, rarity-colored loot notifications, level-up rewards and discovery notices.
 
+**Town portal:** free three-second cast to your home town, with a saved return portal back to your expedition. Set home at a town plaza anchor.
+
 **Town services:** procedural blacksmiths, jewelers and enchanters; buy/sell/buyback, upgrade gear to +10, raise rarity, reroll affixes and raise item level. Equipped gear can be improved in place.
 
 Character progress, shop state and each character’s explored map persist in this browser. **Save format v2 requires a new character for older saves; old slots remain stored.** Quests, respecs and cloud saves are still to come. Endless progression is the direction, not a finished endgame.
@@ -42,14 +44,14 @@ npm run dev
 
 Open [localhost:5173](http://127.0.0.1:5173/) in your browser. The server binds to your machine only.
 
-**WASD** move · **mouse** aim · **LMB** basic attack · **RMB / 1–4** skills · **Space** dodge · **Q** potion · **E** nearby NPC · **C/I** character · **T** tree · **M** map. [All controls](docs/controls.md).
+**WASD** move · **mouse** aim · **LMB** basic attack · **RMB / 1–4** skills · **Space** dodge · **Q** potion · **E** interact · **P** town portal · **C/I** character · **T** tree · **M** map. [All controls](docs/controls.md).
 
 ```sh
 npm run check   # Code tests, strict TypeScript checks, production build
 npm run stats   # Content, source and build statistics
 ```
 
-TypeScript, Vite, Canvas 2D and WebGL; no runtime package dependencies. **507 code tests pass** at this checkpoint. Gameplay feel and balance are tested by the player.
+TypeScript, Vite, Canvas 2D and WebGL; no runtime package dependencies. **519 code tests pass** at this checkpoint. Gameplay feel and balance are tested by the player.
 
 Gold drops magnetize on approach, persist per character, and appear in the HUD and inventory. Gold and XP gains have compact animated feedback.
 

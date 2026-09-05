@@ -110,7 +110,7 @@ export function pickMapPOI(pois: readonly MapPOI[], view: MapView, pointer: { x:
 const SERVICE_KINDS = new Set(['blacksmith', 'merchant', 'inn', 'chapel', 'jeweler', 'enchanter']);
 /** The same stable visible list serves painting and hover; hidden overlapping services never steal focus. */
 export function selectMapPOIs(pois: readonly MapPOI[], view: MapView, mini = false): MapPOI[] {
-  const priority = (poi: MapPOI) => poi.kind === 'town' ? 0 : poi.kind === 'camp' ? 1 : SERVICE_KINDS.has(poi.kind) ? 3 : 2;
+  const priority = (poi: MapPOI) => poi.kind === 'portal' ? -1 : poi.kind === 'town' ? 0 : poi.kind === 'camp' ? 1 : SERVICE_KINDS.has(poi.kind) ? 3 : 2;
   const candidates = pois.filter(poi => (view.zoom >= .10 || !SERVICE_KINDS.has(poi.kind)))
     .map(poi => ({ poi, screen: projectMapPoint(poi.x, poi.y, view) }))
     .filter(({ screen }) => screen.x >= view.x + 6 && screen.y >= view.y + 6 && screen.x <= view.x + view.width - 6 && screen.y <= view.y + view.height - 6)
@@ -170,6 +170,8 @@ export class WorldMap {
   private player: MapPlayer = { x: 0, y: 0, angle: 0 };
   private view: MapView = { x: 0, y: 0, width: 800, height: 500, centerX: 0, centerY: 0, zoom: .17 };
   private pointer: { x: number; y: number } | null = null;
+  private portalMarkers: () => MapPOI[] = () => [];
+  setPortalMarkers(reader: () => MapPOI[]) { this.portalMarkers = reader; this.render(); }
   private minimapPointer: { x: number; y: number } | null = null;
   private drag: { id: number; x: number; y: number; centerX: number; centerY: number } | null = null;
   private hovered: MapPOI | null = null;
@@ -374,10 +376,10 @@ export class WorldMap {
   }
 
   private features(view: MapView, mini: boolean): { pois: MapPOI[]; labels: MapRegionLabel[] } {
-    const pois = selectMapPOIs(this.exploration.getDiscoveredPOIs(bounds(view))
-      .filter(poi => this.exploration.isRevealed(poi.x, poi.y)), view, mini);
+    const pois = selectMapPOIs([...this.exploration.getDiscoveredPOIs(bounds(view))
+      .filter(poi => this.exploration.isRevealed(poi.x, poi.y)), ...this.portalMarkers()], view, mini);
     const labels = mini ? [] : mapRegionLabels(this.world, this.exploration, view, [...pois.filter(poi => poi.kind === 'town'), this.player]);
-    return { labels, pois: pois.filter(poi => poi.kind === 'town' || !labels.some(label => {
+    return { labels, pois: pois.filter(poi => poi.kind === 'portal' || poi.kind === 'town' || !labels.some(label => {
       const dx = Math.abs((poi.x - label.x) * view.zoom), dy = (poi.y - label.y) * view.zoom;
       return dx < label.name.length * 3.4 + 8 && dy > -9 && dy < 27;
     })) };
@@ -427,7 +429,7 @@ export class WorldMap {
       text(c, label.name, p.x, p.y, 1.14, palette.ivory, 'center'); c.restore();
     }
     for (const poi of pois) {
-      if (!this.exploration.isRevealed(poi.x, poi.y)) continue;
+      if (poi.kind !== 'portal' && !this.exploration.isRevealed(poi.x, poi.y)) continue;
       const p = projectMapPoint(poi.x, poi.y, view);
       this.poiIcon(c, poi, p.x, p.y, mini ? 4.1 : view.zoom < .07 ? 5.4 : 7, this.hovered?.id === poi.id && !mini);
       if (!mini && poi.kind === 'town' && view.zoom >= .045) {
@@ -445,7 +447,10 @@ export class WorldMap {
     c.fillStyle = palette.well; c.strokeStyle = selected ? palette.ivory : cleared ? palette.jade : POI_DEFINITIONS[poi.kind].color;
     c.beginPath(); c.arc(0, 0, size + 2.5, 0, Math.PI * 2); c.fill(); if (selected) c.stroke();
     c.beginPath();
-    if (poi.kind === 'town' || poi.kind === 'inn') {
+    if (poi.kind === 'portal') {
+      c.ellipse(0, -1, size * .7, size, 0, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.ellipse(0, size, size, size * .35, 0, 0, Math.PI * 2); c.stroke();
+    } else if (poi.kind === 'town' || poi.kind === 'inn') {
       c.moveTo(-size, 0); c.lineTo(0, -size); c.lineTo(size, 0); c.lineTo(size * .7, 0); c.lineTo(size * .7, size); c.lineTo(-size * .7, size); c.lineTo(-size * .7, 0); c.closePath(); c.stroke();
     } else if (poi.kind === 'jeweler') {
       c.moveTo(0, -size); c.lineTo(size, 0); c.lineTo(0, size); c.lineTo(-size, 0); c.closePath(); c.stroke();
@@ -556,7 +561,7 @@ export class WorldMap {
     c.save(); c.beginPath(); c.rect(r.x + 6, r.y + r.height - 19, r.width - 12, 15); c.clip();
     text(c, name, r.x + r.width / 2, r.y + r.height - 15, .95, palette.text, 'center'); c.restore();
     if (this.minimapPointer) {
-      const poi = pickMapPOI(pois.filter(p => this.exploration.isRevealed(p.x, p.y)), view, this.minimapPointer, 8);
+      const poi = pickMapPOI(pois.filter(p => p.kind === 'portal' || this.exploration.isRevealed(p.x, p.y)), view, this.minimapPointer, 8);
       if (poi) {
         const boxWidth = Math.min(190, width - 24), bx = Math.max(12, r.x - boxWidth - 9), by = r.y + 30;
         c.fillStyle = `${palette.panel}fa`; c.fillRect(bx, by, boxWidth, 48);

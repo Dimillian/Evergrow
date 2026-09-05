@@ -1,6 +1,6 @@
 # Current system status
 
-Updated 2026-09-05 for the town-services implementation checkpoint. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
+Updated 2026-09-05 for the town-portal implementation checkpoint. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
 
 ## Implemented systems
 
@@ -19,6 +19,7 @@ Updated 2026-09-05 for the town-services implementation checkpoint. **Playable l
 | World | Seven blended biomes, 23 prop families, seeded roads, streamed terrain, day/night and climate-specific environmental life | Finite coordinate/cache/save bounds; no weather or procedural quests |
 | Towns and interiors | Stable generated towns/cities, five building kinds, furnished walk-in interiors, roof fading and protected sanctuaries | Three procedural service NPC roles, nearby click/E interaction and pause-safe workbenches |
 | Town economy | Blacksmith equipment shop, jeweler jewelry stock, 12-item buyback, guaranteed +10, rarity upgrades, single/all-affix rerolls and geographic relevel | Deterministic stock refresh at levels 4/7/10…; initial prices require player balance feedback |
+| Town portal | Free three-second P channel, home-town anchors, saved single-use return endpoint, safe landing, native control/map markers and arrival protection | Permanent waypoint network and map travel remain specified |
 | Camps and landmarks | Four-/six-member camps, watchtowers, graveyards, standing stones and caravans; camp casualties persist with the character | Landmark interactions, chests and objective rewards remain absent |
 | Maps | Smooth 0.05-scale minimap; 600-unit normal discovery radius; explored atlas with POI hover, conservative fog and per-character chart saves | No waypoint travel; 720 units is the reveal API ceiling, not the normal reveal radius |
 | Presentation | Procedural equipment/world art, layered trees, wind/wildlife, dynamic lighting, fixed restrained CRT/phosphor; readable native UI, enemy rank plates, animated deaths and fading remains | Hardware performance and visual acceptance remain separate from code checks |
@@ -37,10 +38,10 @@ Geographic area level rises every 3,200 units from the origin. Enemies retain sp
 
 | Resource / metric | Current value |
 | --- | --- |
-| Code verification | 507 tests passed for town services; strict application/core TypeScript and production build passed |
-| Runtime code | 147 modules / 16,718 lines; zero runtime dependencies |
-| All TypeScript / review entrypoints | 171 modules / 19,031 lines; 17 review entrypoints |
-| Test files | 68 code-test files; one optional browser-test file |
+| Code verification | 519 tests passed for town portals; strict application/core TypeScript and production build passed |
+| Runtime code | 150 modules / 17,092 lines; zero runtime dependencies |
+| All TypeScript / review entrypoints | 175 modules / 19,453 lines; 18 review entrypoints |
+| Test files | 69 code-test files; one optional browser-test file |
 | Projectiles / timed ground effects | 128 / 16 |
 | Ground equipment / coin piles | 96 / 128 |
 | Character saves | Eight slots; 700,000-character serialized checkpoint limit per slot |
@@ -50,7 +51,7 @@ Geographic area level rises every 3,200 units from the origin. Enemies retain sp
 | Wilderness cells / camp ledger | 128 cached cells / 1,024 persisted camps, up to six members each |
 | Climate regions / chart tiles | 512 cached regions / 384 cached chart tiles, at most 256 visible |
 | Biome life | 40 disturbances, 48 footprints, 100 particles, six birds, ten insects |
-| Last build (stats script) | JS 514,555 bytes / 174,773 gzip; CSS 62,834 bytes / 13,931 gzip; font separate |
+| Last build (stats script) | JS 528,168 bytes / 178,690 gzip; CSS 63,760 bytes / 14,149 gzip; font separate |
 
 Counts were refreshed with `npm run stats` after the implementation checks. Build sizes describe the last successful build, not a performance measurement. Vite emits its initial-JS-chunk size advisory above 500 kB. Save payload version 2 requires a new character for earlier saves; old slots remain stored and incompatible. All service mutations persist before live commitment, and failed writes leave gold/items unchanged. Browser playtests are opt-in and remain with the player; static reviews do not prove gameplay balance or long-session Safari performance.
 
@@ -71,4 +72,4 @@ The prior checkpoints above were pushed to `origin/main`. The town-services chec
 
 ## Selected next work
 
-[Town portals/waypoints](travel-and-portals.md) and [interactive POIs](interactive-pois.md) are now specified. Neither is implemented yet; the runtime counts and controls above remain unchanged.
+[Town portals](travel-and-portals.md) are implemented without invalidating existing v2 saves. Permanent waypoint travel and [interactive POIs](interactive-pois.md) remain specified; gameplay feedback on the portal loop comes first.

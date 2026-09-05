@@ -1,3 +1,6 @@
+import { executePortalTravel, activatePortalAnchor } from './travel-command.ts';
+import { townPortalAnchor, withinPortalReach, portalMapMarkers, type PortalAnchor } from './travel.ts';
+import type { CharacterCheckpoint } from './character-save.ts';
 import { ServicePanel } from './service-panel.ts';
 import { buildingNPC, focusNPC, canInteractNPC, type TownNPC } from './npcs.ts';
 import type { ServiceQuote } from './commerce.ts';
@@ -11,7 +14,6 @@ import { getZoneAt } from './zone-progression.ts';
 import { CharacterRepository } from './character-storage.ts';
 import { CharacterSession } from './character-session.ts';
 import { TitleScreen } from './title-screen.ts';
-import { cameraFollowTarget } from './camera.ts';
 import { InventoryPanel } from './inventory-panel.ts';
 import { SkillTreePanel } from './skill-tree-panel.ts';
 import { executeCharacterCommand, type CharacterCommand } from './character-commands.ts';
@@ -79,6 +81,7 @@ export class Game {
       this.session = new CharacterSession(new CharacterRepository(storage), this.world.seed, this.world.generationVersion);
       this.shell = this.lifetime.own(new GameShell(root, {
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
+        portal: () => { this.canvas.focus(); this.requestPortal(); },
         returnToTitle: () => this.returnToTitle(), openMap: () => this.openMap(),
         openCharacter: () => this.openCharacterPanel('character'), openSkills: () => this.openCharacterPanel('skills'),
       }));
@@ -90,6 +93,7 @@ export class Game {
       this.worldMap = new WorldMap(this.world, this.exploration, this.shell.mapMount, () => this.closeMap());
       this.lifetime.defer(() => this.worldMap.dispose());
       this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
+    this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.world.getPortalAnchor(band)));
       this.inventoryPanel = this.lifetime.own(new InventoryPanel(this.shell.panelMount, {
         close: () => this.closeCharacterPanel(),
         equip: (index, slot) => this.characterAction({ type: 'equip', index, slot }),
@@ -164,6 +168,7 @@ export class Game {
         if (event.code === 'Escape') {
           event.preventDefault();
           if (!event.repeat) {
+            if (this.sim.portal.active) { this.sim.portal.cancel(); return; }
             if (this.panels.activePanel) this.resume();
             else if (this.phase === 'playing') this.pause();
             else if (this.phase === 'paused') this.resume();
@@ -209,6 +214,7 @@ export class Game {
         if (event.code === 'F3') { event.preventDefault(); this.debug = !this.debug; return; }
         if (event.code === 'KeyR' && this.phase === 'dead') { this.start(); return; }
         if (this.phase !== 'playing') return;
+        if (event.code === 'KeyP') { event.preventDefault(); this.requestPortal(); return; }
         if (event.code === 'KeyE') { event.preventDefault(); this.interact(); return; }
         this.input.keyDown(event.code);
       },
@@ -308,6 +314,7 @@ export class Game {
     });
     this.worldMap = new WorldMap(this.world, this.exploration, this.shell.mapMount, () => this.closeMap());
     this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
+    this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.world.getPortalAnchor(band)));
     this.worldMap.resize(); this.titleScreen.close(); this.saveError = '';
     this.enterWorld(); this.saveCharacter();
   }
@@ -329,8 +336,7 @@ export class Game {
     this.areaNotices.reset(this.world.sampleBiome(this.sim.player.x, this.sim.player.y).id);
     this.sim.player.name = this.session.active?.record.name;
     this.renderer.reset();
-    const camera = cameraFollowTarget(this.sim.player);
-    this.renderer.cameraX = camera.x; this.renderer.cameraY = camera.y;
+    this.renderer.snapTo(this.sim.player);
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
     this.panels.transition('playing');
     void this.audio.unlock().catch(() => this.notify('Sound is unavailable in this browser.'));
@@ -374,10 +380,57 @@ export class Game {
   private interact(pointer?: { x: number; y: number }): boolean {
     if (this.phase !== 'playing') return false;
     const p = this.sim.player;
+    const anchor = this.nearbyAnchor(pointer);
+    if (anchor) {
+      if (this.sim.travel.returnTo?.town === anchor.band) this.travelThrough(anchor, true);
+      else {
+        const result = activatePortalAnchor(this.sim, anchor, c => this.persistTravel(c));
+        this.notify(result.message);
+      }
+      return true;
+    }
     const npcs = this.world.getBuildings(p.x - 220, p.y - 220, 440, 440).map(buildingNPC).filter((npc): npc is TownNPC => npc !== null);
     const npc = focusNPC(npcs, p, this.world, pointer);
     if (!npc) return false;
     this.activeNPC = npc; this.panels.open('service'); return true;
+  }
+
+  private nearbyAnchor(pointer?: { x: number; y: number }): PortalAnchor | undefined {
+    const p = this.sim.player;
+    return this.world.getSettlements(p.x - 150, p.y - 150, 300, 300).map(townPortalAnchor)
+      .find(anchor => withinPortalReach(p, anchor, this.world)
+        && (!pointer || Math.hypot(pointer.x - anchor.x, pointer.y - (anchor.y - 25)) < 42));
+  }
+
+  private persistTravel(checkpoint: CharacterCheckpoint) {
+    const ok = this.session.save(checkpoint, Date.now());
+    this.saveError = ok ? '' : this.session.error;
+    this.shell.setSaveStatus(this.saveError || 'Character saved locally.', !ok);
+    return { ok, message: this.saveError };
+  }
+
+  private requestPortal() {
+    if (this.phase !== 'playing' || !this.session.active) return;
+    const p = this.sim.player, link = this.sim.travel.returnTo;
+    if (this.world.isSanctuary(p.x, p.y)) {
+      if (link) { this.renderer.portalGuide = 4; this.notify('Return portal marked on your map.'); }
+      else this.notify('Explore outside the sanctuary to open a town portal.');
+      return;
+    }
+    this.sim.clearCombatInput();
+    const problem = this.sim.portal.start(p, this.world);
+    if (problem) this.notify(problem);
+  }
+
+  private travelThrough(anchor: PortalAnchor, returning: boolean) {
+    const result = executePortalTravel(this.sim, anchor, returning, c => this.persistTravel(c));
+    if (!result.ok) { this.notify(result.message); return; }
+    this.input.clear();
+    this.renderer.reset(); this.renderer.snapTo(this.sim.player);
+    this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
+    this.areaNotices.reset(this.world.sampleBiome(this.sim.player.x, this.sim.player.y).id);
+    this.worldMap.update(this.sim.player, 0);
+    this.shell.portalTransition(); this.canvas.focus();
   }
 
   private trade(quote: ServiceQuote): { ok: boolean; message: string } {
@@ -435,6 +488,7 @@ export class Game {
         else if (event.type === 'notice') this.notify(event.message);
         if (!(event.type === 'cast' && event.enemyKind)) this.audio.play(event);
       }
+      if (this.sim.portal.ready) this.travelThrough(this.world.getPortalAnchor(this.sim.travel.homeTown), false);
       const biome = this.world.sampleBiome(this.sim.player.x, this.sim.player.y);
       if (this.areaNotices.update(biome.id, dt)) this.shell.notifications.push({ kind: 'area', id: biome.id, name: biome.name, level: getZoneAt(this.sim.player.x, this.sim.player.y).level });
       if (this.sim.player.dead) {
@@ -442,6 +496,8 @@ export class Game {
       }
       if (now >= this.nextAutosave) { this.saveCharacter(); this.nextAutosave = now + 10_000; }
     }
+    this.shell.setPortalState(this.sim.portal.active ? this.sim.portal.progress : null,
+      !!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x, this.sim.player.y));
     this.renderer.pointerX = this.mouse.x;
     this.renderer.pointerY = this.mouse.y;
     this.renderer.pointerActive = this.mouse.present;

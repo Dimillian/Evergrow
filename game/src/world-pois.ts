@@ -1,5 +1,6 @@
 /** One kind registry serves generated places, saved discovery validation and map presentation. */
 export const POI_DEFINITIONS = {
+  portal: { label: 'Portal', color: '#bfade8' },
   town: { label: 'Settlement', color: '#e0c38b' },
   blacksmith: { label: 'Blacksmith', color: '#ee9861' },
   jeweler: { label: 'Jeweler', color: '#8fdbc8' },

@@ -38,6 +38,7 @@ export class RoamingEncounters {
     this.requiredDistance = ROAMING_RULES.minTravel; this.cooldown = 0;
     this.warmup = ROAMING_RULES.warmupPopulation; this.heading.x = 1; this.heading.y = 0;
   }
+  relocate(x: number, y: number): void { this.lastX = x; this.lastY = y; this.distance = 0; }
   advance(player: Position, dt: number): void {
     const dx = player.x - this.lastX, dy = player.y - this.lastY, length = Math.hypot(dx, dy);
     this.lastX = player.x; this.lastY = player.y;

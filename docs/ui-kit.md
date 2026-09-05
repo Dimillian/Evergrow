@@ -118,3 +118,7 @@ Successful inventory insertion emits a typed item payload; a full bag emits a se
 `service-panel.ts` uses shared windows, buttons, item slots, `ItemTooltip` and effective-stat comparisons. Role-colored procedural emblems distinguish Blacksmith, Jeweler and Enchanter. Stock/workbench is on the left; clearly separated Equipped and Inventory sections are on the right. Equipped gear appears first and can be improved in place. Empty bags collapse to one quiet message. Narrow screens scroll the content while retaining the paid-action footer. Keyboard focus survives operation changes and successful transactions.
 
 `item-ui.ts` supplies enhanced +N badges and borders for all equipment/bag cells and enhancement details for every item tooltip. +5/+10 receive stronger trim without continuous glitter. Successful service actions pulse the selected icon, with a static reduced-motion treatment. Random rerolls show eligible stats and a concise replacement warning, never a free rolled-outcome preview. See [static captures](captures/2026-09-05/town-services/README.md).
+
+## Portal control
+
+A compact native button below the minimap provides P access, channel progress/cancellation and return-portal location. Its bounds are shared with game UI hit testing; hovering or clicking it cannot fire a weapon. Native world labels use the same concise framing as NPC hints. Arrival fades follow reduced motion, and canceled channels unravel over 250ms. Permanent travel selection is still deferred. See [portal captures](captures/2026-09-05/town-portal/README.md).

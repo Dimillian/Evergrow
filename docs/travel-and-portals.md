@@ -1,6 +1,14 @@
 # Town portals and waypoints
 
-Specification · 2026-09-05 · **Not implemented.** Selected next work alongside [interactive POIs](interactive-pois.md). Values below are initial playtest defaults. Existing controls, saves and runtime behavior remain unchanged until implementation.
+Updated 2026-09-05. **Town portal implemented; permanent waypoint travel remains specified.** Initial timings remain playtest defaults. [Static captures](captures/2026-09-05/town-portal/README.md) use the real renderer without gameplay.
+
+## Current delivery
+
+P or the minimap-adjacent portal button channels for three seconds outside sanctuary, then travels to the home town (initially Briarwatch). E/click the town return portal to go back once. Empty town anchors can be set as home with E/click. P in sanctuary locates the existing return portal. Casting, return endpoints, native progress/hints, map markers, brief arrival fade/protection and cancellation visuals are implemented. Existing v2 saves remain compatible; absent travel state means Briarwatch home and no return link.
+
+Home/return markers are explicit known positions and reveal no terrain. State and position persist together before relocation; failures preserve the previous link and position. Simulation relocation preserves live actors, ground loot, resources and camp memory, clears action buffers, resets encounter travel credit and waits for destination camera coverage. No portal trip refreshes the initial roaming population. Death removes the return link. Camp casualties remain persistent; surviving wounds retain the existing run-local behavior rather than gaining a new save format here.
+
+Deferred portions below: permanent waypoint network/map travel, biome-specific portal tint and future POI encounter integration. Town anchors currently set the home destination only. Verified with 519 code tests, strict application/core compilation and production build; gameplay remains for the player.
 
 ## Player loop
 
@@ -18,7 +26,7 @@ Explore, fill the bag, return to town, sell or improve gear, then return to the 
 
 The return destination remains the actual wilderness position, even after equipment changes. Enchanting still uses the town NPC's geographic level: returning from a level-20 area to a level-1 town does not turn that town into a level-20 service.
 
-### Permanent waypoints
+### Permanent waypoints — specified, not implemented
 
 Each town plaza and a sparse subset of existing roadside shrines contain an anchor. The origin shrine is unlocked initially too. Other anchors require approaching and activating with E/click. Seeing one on the map is discovery, not activation. Initial wilderness density: roughly one anchor per 3,200–4,800 units of road travel; do not duplicate nearby town anchors within 1,200 units.
 
@@ -30,7 +38,7 @@ Waypoint travel closes an outstanding return portal, preventing multiple expedit
 
 ## Visuals and UX
 
-Portal: an upright oval of thin silver-violet strands above a ground rune, with inward-traveling motes and restrained dynamic light. A small progress ring grows during channeling; interruption unravels it. The town endpoint subtly reflects the departure biome. Avoid a solid neon disk or a large screen banner.
+Portal: an upright oval of thin silver-violet strands above a ground rune, with inward-traveling motes and restrained dynamic light. A small progress ring grows during channeling; interruption unravels it. Departure-biome tint remains a later visual refinement; current portals use silver-violet. Avoid a solid neon disk or a large screen banner.
 
 Waypoints use a low stone plinth and engraved rings: dark when discovered, illuminated after activation. Their silhouette differs from temporary buff shrines. Native-resolution labels only appear on focus. The atlas distinguishes inactive, activated, home-town and return-portal markers, with concise hover information and area level.
 

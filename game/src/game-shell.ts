@@ -1,12 +1,14 @@
+import { PORTAL_RULES } from './travel.ts';
+import './travel-ui.css';
 import { GameNotifications } from './notifications.ts';
 import { getHUDLayout, HUD_MENU_SHORTCUTS } from './hud.ts';
 import type { HUDRect } from './hud.ts';
-import { getMinimapRect } from './map-view.ts';
+import { getMinimapRect, getPortalControlRect } from './map-view.ts';
 import type { GamePhase } from './game-phase.ts';
 import { gameMenuMarkup } from './game-menu.ts';
 import { trapDialogFocus } from './ui-components.ts';
 
-interface ShellActions { play(): void; returnToTitle(): void; openMap(): void; openCharacter(): void; openSkills(): void; }
+interface ShellActions { portal?(): void; play(): void; returnToTitle(): void; openMap(): void; openCharacter(): void; openSkills(): void; }
 
 /** Owns DOM presentation and its listeners; it never reads or mutates simulation state. */
 export class GameShell {
@@ -34,6 +36,7 @@ export class GameShell {
           ${shortcut.id === 'journal' ? 'disabled' : 'aria-haspopup="dialog"'} aria-keyshortcuts="${shortcut.key}" aria-label="${shortcut.label}${shortcut.id === 'journal' ? ' (unavailable)' : ''}" data-tooltip="${shortcut.label}"></button>`).join('')}
         <button type="button" class="hud-control" data-hud="map" aria-label="World map" aria-keyshortcuts="M"
           aria-haspopup="dialog" data-tooltip="World map" data-tooltip-placement="below" data-tooltip-align="end"></button>
+        <button type="button" class="hud-control portal-control" data-hud="portal" aria-label="Town portal" aria-keyshortcuts="P" data-tooltip="Town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="below" data-tooltip-align="end"><span>Town portal</span><kbd>P</kbd></button>
       </nav>
       <div id="title-mount"></div>
       <div id="world-map-mount"></div>
@@ -55,6 +58,8 @@ export class GameShell {
     const signal = this.abort.signal;
     this.element.addEventListener('contextmenu', event => event.preventDefault(), { signal });
     this.controls.querySelector('[data-hud="map"]')!.addEventListener('click', actions.openMap, { signal });
+    this.controls.querySelector<HTMLButtonElement>('[data-hud="portal"]')!.disabled = !actions.portal;
+    this.controls.querySelector('[data-hud="portal"]')!.addEventListener('click', () => actions.portal?.(), { signal });
     for (const id of ['character', 'inventory']) this.controls.querySelector(`[data-hud="${id}"]`)!.addEventListener('click', actions.openCharacter, { signal });
     this.controls.querySelector('[data-hud="skilltree"]')!.addEventListener('click', actions.openSkills, { signal });
   }
@@ -67,6 +72,23 @@ export class GameShell {
     };
     for (const shortcut of getHUDLayout(width, height).shortcuts) place(shortcut.id, shortcut);
     place('map', getMinimapRect(width, height));
+    place('portal', getPortalControlRect(width, height));
+  }
+
+  setPortalState(progress: number | null, returning: boolean): void {
+    const button = this.controls.querySelector<HTMLElement>('[data-hud="portal"]')!;
+    button.classList.toggle('is-channeling', progress !== null); button.classList.toggle('is-return', returning);
+    button.style.setProperty('--portal-progress', `${(progress ?? 0) * 100}%`);
+    const label = progress !== null ? `Casting · ${(PORTAL_RULES.channel * (1 - progress)).toFixed(1)}s` : returning ? 'Return portal' : 'Town portal';
+    const text = button.querySelector('span')!; if (text.textContent !== label) text.textContent = label;
+    button.setAttribute('aria-label', progress !== null ? 'Cancel town portal' : returning ? 'Locate return portal' : 'Town portal');
+    button.dataset.tooltip = progress !== null ? 'Cancel cast' : returning ? 'Locate your return portal' : `Town portal · ${PORTAL_RULES.channel} second cast`;
+  }
+  portalTransition(): void {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    this.element.querySelector('.portal-transition')?.remove();
+    const veil = document.createElement('div'); veil.className = 'portal-transition'; veil.setAttribute('aria-hidden', 'true');
+    this.element.append(veil); veil.addEventListener('animationend', () => veil.remove(), { once: true });
   }
 
   setSaveStatus(message: string, failed = false): void {
