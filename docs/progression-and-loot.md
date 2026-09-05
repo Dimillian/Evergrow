@@ -4,7 +4,7 @@
 
 The world supplies the danger; the character chooses how far to venture. An enemy keeps the level, rank, combat stats, biome, and reward context it received when it spawned. Leveling up does not strengthen existing enemies or improve their items. Better areas offer higher-level equipment and more XP, while returning to an earlier area makes the character's growth tangible.
 
-These are authored starting curves for playtesting. They establish consistent rules and expose their numbers; they do not establish a balanced endgame. Character progress, equipment, and ground loot remain run-local. Reloading starts a fresh character; exploration persistence remains separate.
+These are authored starting curves for playtesting. They establish consistent rules and expose their numbers; they do not establish a balanced endgame. Character progress, equipment, gold, uncollected loot and camp casualties persist in eight browser-local slots; each character also has its own explored chart.
 
 ## The progression loop
 
@@ -241,3 +241,22 @@ Shared ownership keeps the model inspectable:
 Future additions should extend these registries and shared formulas: further biome-specific enemies, landmark interactions, bosses, affix pools, unique items, and reward sources such as chests or quests. Difficulty, clear time, XP pace, loot usefulness, and inventory pressure remain questions for the user's gameplay feedback.
 
 Base mana regeneration is 1/second (down from 9), with gear and passive mana regeneration added normally. Q uses one shared charge to restore both resources and works when only mana is missing. It does nothing when both are full, during its 0.8-second cooldown, without charges or after death. Potion feedback carries actual restored life/mana separately, with red/blue numbers and a dual-colored HUD vial. The save shape and kill-based charge recovery are unchanged.
+
+
+## Gold and reward feedback
+
+Gold rolls independently of equipment using a salted enemy loot seed. Player level, pickup order and equipment-table changes do not affect the roll.
+
+| Enemy rank | Gold chance | Level-one amount |
+| --- | ---: | ---: |
+| Normal | 55% | 4–10 |
+| Veteran | 85% | 12–25 |
+| Elite | 100% | 35–65 |
+
+Multiply the rolled amount by `1 + 0.1 × (sourceLevel - 1)`, then round to whole gold. These are starting playtest values; prices and NPC trading are not implemented yet.
+
+Coins settle for 0.3 seconds, attract within 100 world units with clear line of sight, and collect within 15 units. The wallet is credited only on pickup, even with a full inventory. Death prevents collection. Piles do not expire; at the 128-pile budget new value merges into the nearest pile. The balance and remaining piles are saved together, preventing a collected pile from reappearing after a successful save/reload.
+
+`wallet.ts` provides `goldBalance`, `creditGold`, `canAfford` and `spendGold` over the character wallet. All amounts must be non-negative safe integers; failed debits and overflowing credits leave the balance unchanged. Future NPC commands should validate the full purchase, then debit through this API; rendering must never mutate currency. New characters start at zero gold.
+
+The HUD shows a smoothly counting gold balance and a short accumulated pickup gain; inventory shows the exact full balance. XP is still awarded immediately on death, with violet attraction trails, a soft chime and a compact gain burst under the existing XP rail. Presentation never delays rewards or changes XP curves. Gold and XP bursts combine nearby gains without adding notification cards; reduced motion disables trails and counter motion. Reward particles are bounded to 96, and gold/XP audio shares burst attenuation and the existing voice budget. `/rewards.html` is a frozen, save-free art review.

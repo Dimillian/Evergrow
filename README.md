@@ -47,7 +47,9 @@ npm run check   # Code tests, strict TypeScript checks, production build
 npm run stats   # Content, source and build statistics
 ```
 
-TypeScript, Vite, Canvas 2D and WebGL; no runtime package dependencies. **466 code tests pass** at this checkpoint. Gameplay feel and balance are tested by the player.
+TypeScript, Vite, Canvas 2D and WebGL; no runtime package dependencies. **475 code tests pass** at this checkpoint. Gameplay feel and balance are tested by the player.
+
+Gold drops magnetize on approach, persist per character, and appear in the HUD and inventory. Gold and XP gains have compact animated feedback.
 
 [Character saves](docs/character-saves.md) · [Game brief](docs/game-brief.md) · [Roadmap](docs/roadmap.md) · [Architecture](docs/architecture.md) · [Skills & weapons](docs/weapons-and-skills.md) · [Progression & loot](docs/progression-and-loot.md)
 

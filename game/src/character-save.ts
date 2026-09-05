@@ -1,3 +1,5 @@
+import { GOLD_RULES, type GroundGold } from './gold.ts';
+import { validGold } from './wallet.ts';
 import type { CharacterSheet, GroundItem, Item, SkillId } from './character-types.ts';
 import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS, ITEM_KINDS, TIER_NAMES, STAT_LABELS } from './items.ts';
 import { itemFitsSlot } from './inventory.ts';
@@ -13,7 +15,7 @@ export interface CharacterCheckpoint {
   hp: number; mana: number; dead: boolean; flasks: number; healCooldown: number;
   dodgeCharges: number; dodgeRecharge: number; skillCooldowns: Partial<Record<SkillId, number>>;
   time: number; kills: number; randomState: number; spawnOrdinal: number; killRecharge: number;
-  clearedCamps: string[]; defeatedCampMembers: Record<string, string[]>; groundItems: GroundItem[];
+  clearedCamps: string[]; defeatedCampMembers: Record<string, string[]>; groundItems: GroundItem[]; groundGold?: GroundGold[];
 }
 export interface CharacterSave {
   version: typeof CHARACTER_SAVE_VERSION; id: string; name: string;
@@ -61,7 +63,7 @@ function validItem(v: unknown): v is Item {
 }
 
 function validSheet(v: unknown, level: number): v is CharacterSheet {
-  if (!object(v) || !object(v.attributes) || !['strength', 'dexterity', 'intelligence', 'vitality'].every(k => integer((v.attributes as ObjectValue)[k], 10, 5e6 + 10))
+  if (!object(v) || (v.gold !== undefined && !validGold(v.gold)) || !object(v.attributes) || !['strength', 'dexterity', 'intelligence', 'vitality'].every(k => integer((v.attributes as ObjectValue)[k], 10, 5e6 + 10))
     || !integer(v.statPoints, 0, 5e6) || !integer(v.skillPoints, 0, MAX_CONTENT_LEVEL)
     || !Array.isArray(v.inventory) || v.inventory.length !== INVENTORY_CAPACITY || !v.inventory.every(i => i === null || validItem(i))
     || !object(v.equipped) || Object.keys(v.equipped).length !== EQUIPMENT_SLOTS.length
@@ -106,6 +108,11 @@ export function decodeCharacterSave(raw: string): CharacterSave | null {
       || new Set([...p.clearedCamps, ...Object.keys(p.defeatedCampMembers)]).size > 1024
       || !Array.isArray(p.groundItems) || p.groundItems.length > 96
       || !p.groundItems.every(i => object(i) && integer(i.id, 1) && number(i.x, -4e7, 4e7) && number(i.y, -4e7, 4e7) && validItem(i.item))) return null;
+    if (p.groundGold !== undefined && (!Array.isArray(p.groundGold) || p.groundGold.length > GOLD_RULES.maxPiles
+      || !p.groundGold.every(i => object(i) && integer(i.id, 1) && number(i.x, -4e7, 4e7)
+        && number(i.y, -4e7, 4e7) && integer(i.amount, 1) && number(i.age, 0, 10)))) return null;
+    const groundIds = [...p.groundItems, ...((p.groundGold ?? []) as GroundGold[])].map(i => i.id);
+    if (new Set(groundIds).size !== groundIds.length) return null;
     const items = [...p.character.inventory, ...Object.values(p.character.equipped), ...p.groundItems.map(i => i.item)].filter(Boolean) as Item[];
     if (new Set(items.map(i => i.id)).size !== items.length || new Set(p.groundItems.map(i => i.id)).size !== p.groundItems.length) return null;
     return v as unknown as CharacterSave;

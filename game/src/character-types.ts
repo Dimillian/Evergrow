@@ -1,3 +1,4 @@
+import type { GoldWallet } from './wallet.ts';
 import type { WeaponDefinition, ShieldDefinition } from './model.ts';
 
 export type Attribute = 'strength' | 'dexterity' | 'intelligence' | 'vitality';
@@ -18,7 +19,7 @@ export interface Item {
 export type SkillId = 'cleave' | 'lunge' | 'whirlwind' | 'earthshatter' | 'shieldBash' | 'bulwark'
   | 'volley' | 'piercingShot' | 'ricochet' | 'rainOfArrows' | 'backstab'
   | 'fireball' | 'arcLightning' | 'iceNova' | 'frostLance' | 'meteor' | 'siphon';
-export interface CharacterSheet {
+export interface CharacterSheet extends GoldWallet {
   attributes: Record<Attribute, number>;
   statPoints: number; skillPoints: number;
   allocatedNodes: string[];

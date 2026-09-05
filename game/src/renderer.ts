@@ -1,3 +1,6 @@
+import { RewardFeedback } from './reward-feedback.ts';
+import { drawGroundGold, drawRewardMotes, drawRewardHUD } from './reward-art.ts';
+import { goldBalance } from './wallet.ts';
 import { BiomeLife } from './biome-life.ts';
 import { BiomeLifeArt } from './biome-life-art.ts';
 import { biomeWind } from './biome-wind.ts';
@@ -72,6 +75,7 @@ export class Renderer {
   private damageTrails = new Map<number, { value: number; hold: number }>();
   private playerHealthTrail = 100;
   private playerHealthHold = 0;
+  private rewards = new RewardFeedback();
   private experienceFeedback = new ExperienceFeedback();
   private experienceDisplay: ExperienceDisplay | undefined;
   private effects = new CombatEffects();
@@ -153,13 +157,14 @@ export class Renderer {
     this.deaths.reset(); this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
     this.damageTrails.clear(); this.playerHealthTrail = 100; this.playerHealthHold = 0;
-    this.experienceFeedback.reset(); this.experienceDisplay = undefined;
+    this.rewards.reset(); this.experienceFeedback.reset(); this.experienceDisplay = undefined;
     this.enemyFocus.reset(); this.focusedEnemy = this.plateEnemy = null; this.plateOpacity = 0;
     this.visibility.reset();
   }
 
   handleEvents(events: CombatEvent[], reducedMotion: boolean) {
     this.effects.handleEvents(events);
+    this.rewards.handleEvents(events, reducedMotion);
     this.enemyFocus.noteHits(events);
     for (const e of events) {
       if (e.type === 'hit') {
@@ -185,6 +190,7 @@ export class Renderer {
     const c = this.ctx, p = sim.player, active = settings.phase === 'playing';
     const step = active ? dt : 0, alpha = sim.interpolationAlpha;
     const feedbackStep = active || settings.phase === 'dead' ? dt : 0;
+    this.rewards.update(goldBalance(p.character), feedbackStep, settings.reducedMotion);
     this.experienceDisplay = this.experienceFeedback.update(p, feedbackStep, settings.reducedMotion);
     const px = lerp(p.prevX, p.x, alpha), py = lerp(p.prevY, p.y, alpha);
     this.visualTime += dt;
@@ -276,6 +282,8 @@ export class Renderer {
     this.atmosphere.drawMist(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, px, py, alpha, lights);
+    drawGroundGold(c, sim.groundGold, this.visualTime, settings.reducedMotion);
+    drawRewardMotes(c, this.rewards, px, py);
     drawGroundLoot(c, sim.groundItems, this.visualTime, settings.reducedMotion);
     this.effects.drawSword(c);
     this.effects.draw(c);
@@ -306,6 +314,7 @@ export class Renderer {
       hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / COMBAT_TIMING.hitFlashDuration),
       experience: this.experienceDisplay,
     });
+    drawRewardHUD(c, this.rewards, this.width, this.height, settings.reducedMotion);
     if (this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, this.width, this.height, {
       opacity: this.plateOpacity,
       healthTrail: this.damageTrails.get(this.plateEnemy.id)?.value ?? this.plateEnemy.hp,

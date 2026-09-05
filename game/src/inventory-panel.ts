@@ -1,3 +1,5 @@
+import { goldBalance } from './wallet.ts';
+import { formatGold } from './currency-format.ts';
 import type { Player } from './model.ts';
 import type { Attribute, EquipmentSlot, Item, ItemTier, StatKey } from './character-types.ts';
 import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS, TIER_COLORS, TIER_NAMES, STAT_LABELS, itemModifiers, formatStatValue } from './items.ts';
@@ -92,7 +94,7 @@ export class InventoryPanel {
           <div class="character-points"><span>${uiIcon('skilltree')}Skill points <strong data-skill-points></strong></span><span>${uiIcon('plus')}Attribute points <strong data-stat-points></strong></span></div>
         </section>
         <section class="character-inventory" aria-labelledby="inventory-title">
-          <div class="character-section-title"><h3 id="inventory-title">Inventory</h3><span data-capacity></span></div>
+          <div class="character-section-title"><h3 id="inventory-title">Inventory</h3><div class="character-inventory-counts"><span class="character-gold" data-gold></span><span data-capacity></span></div></div>
           <div class="character-grid-scroll"><div class="character-bag" role="group" aria-label="Inventory, ${INVENTORY_CAPACITY} slots">${Array.from({ length: INVENTORY_CAPACITY }, (_, index) => `<button type="button" class="ui-slot character-item-slot character-bag-slot" data-bag="${index}" data-location="bag-${index}" aria-label="Empty inventory slot ${index + 1}"></button>`).join('')}</div></div>
         </section>
         <section class="character-details" aria-labelledby="attributes-title">
@@ -149,6 +151,7 @@ export class InventoryPanel {
     const sheet = player.character, stats = player.derived;
     this.text('[data-level]', `Level ${player.level}`);
     this.text('[data-equipped-count]', `${EQUIPMENT_SLOTS.filter(slot => sheet.equipped[slot]).length} / ${EQUIPMENT_SLOTS.length}`);
+    this.text('[data-gold]', `${formatGold(goldBalance(sheet))} Gold`);
     this.text('[data-capacity]', `${sheet.inventory.filter(Boolean).length} / ${sheet.inventory.length}`);
     this.text('[data-weapon-name]', sheet.equipped.weapon?.name ?? 'Unarmed');
     this.text('[data-skill-points]', number(sheet.skillPoints));

@@ -1,3 +1,4 @@
+import { advanceGold, type GroundGold } from './gold.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, ProjectileEffects, GroundEffect, SimulationOptions, WorldQuery } from './model.ts';
 import type { Pickup } from './model.ts';
@@ -51,6 +52,7 @@ export class Simulation {
   projectiles: Projectile[] = [];
   pickups: Pickup[] = [];
   groundItems: GroundItem[] = [];
+  groundGold: GroundGold[] = [];
   groundEffects: ActiveGroundEffect[] = [];
   private lootNoticeAt = -10;
   private skillBuffer: { slot: number; until: number } | null = null;
@@ -86,7 +88,7 @@ export class Simulation {
     this.projectiles = [];
     this.groundEffects = [];
     this.pickups = [];
-    this.groundItems = []; this.lootNoticeAt = -10; this.skillBuffer = null;
+    this.groundItems = []; this.groundGold = []; this.lootNoticeAt = -10; this.skillBuffer = null;
     refreshCharacter(this.player);
     this.time = 0;
     this.kills = 0;
@@ -108,7 +110,7 @@ export class Simulation {
       flasks: p.flasks, healCooldown: p.healCooldown, dodgeCharges: p.dodgeCharges, dodgeRecharge: p.dodgeRecharge,
       skillCooldowns: p.skillCooldowns, time: this.time, kills: this.kills,
       randomState: this.randomState, spawnOrdinal: this.spawnOrdinal, killRecharge: this.killRecharge,
-      clearedCamps: this.camps.clearedIds(), defeatedCampMembers: this.camps.defeatedMembers(), groundItems: this.groundItems })) as CharacterCheckpoint;
+      clearedCamps: this.camps.clearedIds(), defeatedCampMembers: this.camps.defeatedMembers(), groundItems: this.groundItems, groundGold: this.groundGold })) as CharacterCheckpoint;
   }
 
   /** Apply only a decoded checkpoint. Active encounters/attacks restart; character progress does not. */
@@ -133,7 +135,8 @@ export class Simulation {
     this.time = saved.time; this.kills = saved.kills;
     this.randomState = saved.randomState; this.spawnOrdinal = saved.spawnOrdinal; this.killRecharge = saved.killRecharge;
     this.camps.restoreCleared(saved.clearedCamps); this.camps.restoreDefeated(saved.defeatedCampMembers); this.groundItems = saved.groundItems;
-    this.nextId = Math.max(1, ...saved.groundItems.map(item => item.id + 1));
+    this.groundGold = saved.groundGold ?? [];
+    this.nextId = Math.max(1, ...saved.groundItems.map(item => item.id + 1), ...this.groundGold.map(pile => pile.id + 1));
     this.roaming.reset(p.x, p.y);
   }
 
@@ -237,6 +240,7 @@ export class Simulation {
     this.updateProjectiles(dt);
     this.updateGroundEffects(dt);
     this.updatePickups(dt);
+    this.groundGold = advanceGold(this.groundGold, this.player, this.world, dt, event => this.events.push(event));
     this.collectGroundItems();
     if (this.player.dead) {
       // A death may clear input midway through this tick; freeze its final poses.
@@ -445,7 +449,7 @@ export class Simulation {
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by), emit: event => this.events.push(event),
       killed: actor => {
         const reward = awardKillRewards(actor, this.kills, this.killRecharge, {
-          player: this.player, groundItems: this.groundItems, pickups: this.pickups,
+          player: this.player, groundGold: this.groundGold, groundItems: this.groundItems, pickups: this.pickups,
           nextId: () => this.nextId++, emit: event => this.events.push(event),
         });
         this.kills = reward.kills; this.killRecharge = reward.recharge;

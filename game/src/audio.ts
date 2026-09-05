@@ -151,7 +151,7 @@ export class GameAudio {
 
   private burstGain(type: CombatEvent['type']) {
     const time = this.ctx!.currentTime, previous = this.bursts.get(type);
-    if (previous && time - previous.time < .012) {
+    if (previous && time - previous.time < (type === 'gold' || type === 'experience' ? .08 : .012)) {
       previous.count++;
       // Share gain within a rapid group of hits rather than muting their feedback.
       return Math.max(.2, 1 / Math.sqrt(previous.count));
@@ -174,6 +174,13 @@ export class GameAudio {
       type: OscillatorType = 'triangle', delay = 0, attack = .003) =>
       this.tone(a, b, duration, volume * gain, priority, type, delay, attack);
     switch (event.type) {
+      case 'gold':
+        tone(2100, 1650, .09, .05, 1, 'sine');
+        tone(2900, 2350, .12, .025, 1, 'sine', .045);
+        break;
+      case 'experience':
+        tone(660, 880, .16, .018, 1, 'sine');
+        break;
       case 'swing':
         // Air gathers into the moving blade, with no impact sound until an actual hit.
         noise({ duration: .115, frequency: 700, endFrequency: 3000, volume: .18, attack: .028, q: .55 }, 1);

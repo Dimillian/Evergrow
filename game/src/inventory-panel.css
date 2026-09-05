@@ -172,3 +172,7 @@
 .character-item-slot[data-filled='true']:hover { border-color: var(--item-color); box-shadow: 0 0 0 1px color-mix(in srgb, var(--item-color) 45%, transparent), inset 0 0 18px color-mix(in srgb, var(--item-color) 15%, transparent); }
 .character-item-slot.is-drop-target { border-color: #d9efde; outline: 2px solid #b4dcca; }
 .character-item-level { padding: 1px 3px; border-radius: 2px; background: #081119c9; font: 600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #e0e9ed; text-shadow: none; }
+
+.character-inventory-counts { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
+.character-section-title .character-gold { color: #e3c880; font: 600 13px/1.4 system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.character-gold::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 7px; border: 1px solid #f4d58d; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #f9df94, #a37a31 70%); box-shadow: inset 0 0 0 2px #5e491b; }

@@ -26,6 +26,7 @@ const life = new Lifetime();
 const world = life.own(new World(7319));
 const sim = new Simulation(world, { seed: 7319, spawn: false });
 const p = sim.player;
+p.character.gold = 1248;
 awardCharacterExperience(p, 2877);
 for (let i = 0; i < 25; i++) allocateAttribute(p.character, i % 3 === 0 ? 'vitality' : i % 3 === 1 ? 'strength' : 'dexterity');
 function unlock(id: string) {

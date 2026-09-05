@@ -152,3 +152,33 @@ test('each starter choice persists with matching portrait equipment, common gear
     assert.equal(repo.read(index + 1).record!.checkpoint.character.equipped.weapon!.weapon!.id, option.profileId);
   }
 });
+
+test('wallet and uncollected coins round trip together without duplicating pickups', () => {
+  const { session, repo, sim } = setup();
+  sim.player.character.gold = 1234;
+  sim.groundGold = [{ id: 8100, x: sim.player.x, y: sim.player.y, amount: 25, age: 1 }];
+  assert.ok(session.save(sim.captureCheckpoint(), 200), session.error);
+  const saved = repo.read(0).record!;
+  sim.restoreCheckpoint(saved.checkpoint);
+  assert.equal(sim.player.character.gold, 1234); assert.equal(sim.groundGold[0].amount, 25);
+  const input = { moveX: 0, moveY: 0, aimX: 0, aimY: 0, attack: false, dodge: false, heal: false, skillSlot: null };
+  sim.update(.02, input);
+  assert.equal(sim.player.character.gold, 1259); assert.equal(sim.groundGold.length, 0);
+  assert.ok(session.save(sim.captureCheckpoint(), 300), session.error);
+  sim.restoreCheckpoint(repo.read(0).record!.checkpoint); sim.update(.02, input);
+  assert.equal(sim.player.character.gold, 1259); assert.equal(sim.groundGold.length, 0);
+});
+
+test('save validation rejects malformed currency and duplicated ground identities', () => {
+  const { repo } = setup(), record = repo.read(0).record!;
+  for (const amount of [-1, 1.5, '100', Number.MAX_SAFE_INTEGER + 1]) {
+    const invalid = structuredClone(record); (invalid.checkpoint.character as unknown as { gold: unknown }).gold = amount;
+    assert.equal(decodeCharacterSave(JSON.stringify(invalid)), null);
+  }
+  for (const amount of [0, -1, .5]) {
+    const invalid = structuredClone(record); invalid.checkpoint.groundGold = [{ id: 7, x: 0, y: 0, age: 0, amount }];
+    assert.equal(decodeCharacterSave(JSON.stringify(invalid)), null);
+  }
+  record.checkpoint.groundGold = [{ id: 7, x: 0, y: 0, age: 0, amount: 4 }, { id: 7, x: 5, y: 0, age: 0, amount: 8 }];
+  assert.equal(decodeCharacterSave(JSON.stringify(record)), null);
+});

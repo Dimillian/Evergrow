@@ -188,6 +188,6 @@ export function createCharacterSheet(starter: StarterWeaponId = 'sword'): Charac
   }
   equipped.weapon = createStarterWeapon(starter);
   const inventory: CharacterSheet['inventory'] = Array.from({ length: INVENTORY_CAPACITY }, () => null);
-  return { attributes: { strength: 10, dexterity: 10, intelligence: 10, vitality: 10 },
+  return { gold: 0, attributes: { strength: 10, dexterity: 10, intelligence: 10, vitality: 10 },
     statPoints: 0, skillPoints: 0, allocatedNodes: ['origin'], inventory, equipped, skillSlots: Array.from({ length: 5 }, () => null) };
 }
