@@ -39,6 +39,8 @@ The HUD and damage numbers render at native display resolution above the world s
 
 The compact HUD uses dark metalwork, engraved skill icons, and subtly animated resource glass. A local [static HUD review](http://127.0.0.1:5173/hud.html) shows healthy, damaged, and depleted states without advancing gameplay or touching saves.
 
+Three [HUD art propositions](docs/hud-directions.md) explore a stronger visual identity: Reliquary, Thornbound, and Astral Instrument. Compare their code-drawn studies in the local [HUD directions preview](http://127.0.0.1:5173/hud-directions.html); the playable HUD stays unchanged until a direction is chosen.
+
 Menus and maps share a retro interface kit: slate surfaces, fine brass edges, jade actions, crisp typography, and consistent keyboard focus. The local [interface review](http://127.0.0.1:5173/ui.html) shows the actual start, pause, defeat, and map windows alongside reusable controls and item-slot primitives in desktop and narrow layouts.
 
 Hover an enemy to see its name and health at the top of the screen. A subtle marker identifies the focused mob, and enemies you hit stay on the plate briefly while you fight. Names and health remain crisp at every camera zoom.

@@ -60,6 +60,7 @@ Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-
 - `game/rig.html` and `game/src/rig-review.ts`: dev-only frozen character poses across eight facings, without driving gameplay.
 - `game/hud.html` and `game/src/hud-review.ts`: dev-only frozen healthy, damaged, and depleted player HUD/enemy plate states with PNG export; no gameplay or save access.
 - `game/ui.html` and `game/src/ui-review.ts`: dev-only static review of actual windows and reusable UI primitives at desktop/narrow sizes, with frozen rendering and memory-only exploration.
+- `game/hud-directions.html`, `game/src/hud-directions-review.ts`, and `hud-concept-*.ts`: dev-only bottom-HUD art propositions awaiting user selection; frozen scene, shared content, no gameplay/save access. These are not live themes. See `docs/hud-directions.md`.
 - `docs/`: design documents and reference concepts, not runtime assets.
 
 From the repository root: `npm run setup`, `npm run dev`, `npm test`, and `npm run build`. `npm run check` runs code tests, strict/core compilation, and a production build; it never runs browser gameplay tests. `npm run stats` prints source/content counts and last-build sizes. Engine tests require Node.js 22.13 or later for TypeScript stripping.

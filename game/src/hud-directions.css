@@ -1,0 +1,33 @@
+* { box-sizing: border-box; }
+:root { color-scheme: dark; }
+body { margin: 0; color: var(--ui-text); background: #080e12; }
+#hud-directions { max-width: 1100px; margin: auto; padding: 40px 36px 60px; }
+.directions-header { max-width: 760px; margin-bottom: 26px; }
+.directions-header .ui-title { margin: 10px 0 15px; font-size: clamp(28px, 4vw, 40px); }
+.directions-header .ui-body { color: var(--ui-muted); font-size: 16px; max-width: 720px; }
+.directions-toolbar { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin-bottom: 24px; }
+.directions-toolbar > div { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--ui-line); background: var(--ui-well); }
+.directions-toolbar .ui-button { min-height: 36px; padding: 8px 13px; font-size: 14px; }
+.directions-toolbar [aria-pressed="true"] { background: var(--ui-panel-raised); border-color: var(--ui-line-strong); color: var(--ui-ivory); }
+.direction { margin-bottom: 28px; border: 1px solid #354641; background: #10191f; }
+.direction header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 22px 24px 18px; }
+.direction-heading { display: flex; align-items: baseline; gap: 14px; }
+.direction-number { color: var(--ui-brass); font-size: 14px; }
+.direction h2 { font-weight: 400; font-size: 28px; color: var(--ui-ivory); line-height: 1.1; margin: 0; }
+.direction-subtitle { margin: 7px 0 0 31px; font-size: 14px; color: var(--ui-muted); }
+.direction canvas { display: block; width: 100%; height: 252px; border-top: 1px solid #35464190; border-bottom: 1px solid #35464190; }
+.direction footer { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 17px 24px 20px; }
+.direction footer p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ui-muted); }
+.direction footer strong { color: var(--ui-text); font-weight: 400; }
+.direction-recommended { border-color: #777a58; }
+.direction .ui-badge { white-space: nowrap; }
+.directions-note { color: var(--ui-muted); font-size: 14px; line-height: 1.5; margin: 24px 0 0; }
+.directions-status { font-size: 13px; color: var(--ui-faint); margin: 14px 0 0; }
+.directions-export { display: inline-block; margin-top: 6px; color: var(--ui-jade); font-size: 13px; text-underline-offset: 3px; }
+@media (max-width: 620px) {
+  #hud-directions { padding: 24px 14px; }
+  .direction header { padding: 18px 16px; gap: 10px; }
+  .direction h2 { font-size: 24px; }
+  .direction footer { grid-template-columns: 1fr; padding: 16px; gap: 9px; }
+  .direction .ui-badge { font-size: 10px; padding: 4px 6px; }
+}
