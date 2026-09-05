@@ -1,0 +1,127 @@
+export interface WorldQuery {
+  blocked(x: number, y: number, radius: number): boolean;
+  move(x: number, y: number, dx: number, dy: number, radius: number): { x: number; y: number };
+}
+
+export interface Input {
+  moveX: number;
+  moveY: number;
+  aimX: number;
+  aimY: number;
+  attack: boolean;
+  cast: boolean;
+  dodge: boolean;
+  heal: boolean;
+}
+
+export interface Attack {
+  elapsed: number;
+  duration: number;
+  activeStart: number;
+  activeEnd: number;
+  angle: number;
+  combo: number;
+  range: number;
+  arc: number;
+  damage: number;
+  hitIds: Set<number>;
+}
+
+export interface Player {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  angle: number;
+  hp: number;
+  maxHp: number;
+  mana: number;
+  maxMana: number;
+  attack: Attack | null;
+  /** Remaining dodge animation time in seconds. */
+  dodgeTime: number;
+  dodgeAngle: number;
+  dodgeCharges: number;
+  /** Elapsed recharge time toward the next charge (1.8 seconds). */
+  dodgeRecharge: number;
+  /** Positive while damage protection is active. */
+  invulnerable: number;
+  flasks: number;
+  healCooldown: number;
+  castCooldown: number;
+  castTime: number;
+  castAngle: number;
+  healFlash: number;
+  walkTime: number;
+  radius: number;
+  dead: boolean;
+}
+
+export type EnemyKind = 'stalker' | 'brute' | 'caster';
+export type EnemyState = 'idle' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
+
+export interface Enemy {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  angle: number;
+  hp: number;
+  maxHp: number;
+  kind: EnemyKind;
+  state: EnemyState;
+  stateTime: number;
+  stateDuration: number;
+  attackAngle: number;
+  hitFlash: number;
+  radius: number;
+  stagger: number;
+  attackHit: boolean;
+  interrupted: boolean;
+}
+
+export interface Projectile {
+  id: number;
+  x: number;
+  y: number;
+  prevX: number;
+  prevY: number;
+  vx: number;
+  vy: number;
+  angle: number;
+  radius: number;
+  damage: number;
+  life: number;
+  maxLife: number;
+  owner: 'player' | 'enemy';
+}
+
+export interface Pickup {
+  id: number;
+  x: number;
+  y: number;
+  kind: 'health' | 'mana';
+  value: number;
+  life: number;
+  radius: number;
+}
+
+export type CombatEventType = 'swing' | 'hit' | 'kill' | 'cast' | 'hurt' | 'dodge' | 'heal' | 'pickup' | 'spawn';
+
+export interface CombatEvent {
+  type: CombatEventType;
+  x: number;
+  y: number;
+  angle?: number;
+  value?: number;
+  enemyKind?: EnemyKind;
+  heavy?: boolean;
+}
+
+export interface SimulationOptions {
+  seed?: number;
+  spawn?: boolean;
+  startX?: number;
+  startY?: number;
+}

@@ -1,0 +1,11 @@
+{
+  "name": "evergrowing-workspace",
+  "private": true,
+  "scripts": {
+    "setup": "npm --prefix game ci",
+    "dev": "npm --prefix game run dev",
+    "build": "npm --prefix game run build",
+    "test": "npm --prefix game test",
+    "test:browser": "npm --prefix game run test:browser"
+  }
+}

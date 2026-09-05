@@ -2,7 +2,35 @@
 
 A browser ARPG about exploring an unending gothic wilderness and shaping a character through a vast, classless skill tree. Its world, equipment, characters, and effects are drawn from procedural definitions in code.
 
-This repository currently contains design documents, not a playable game. These are a first brainstorming pass, dated **2026-09-04**. The original requirements are recorded in the game brief; additional ideas are proposals to test, not settled commitments.
+The first **local combat prototype** is playable in `game/`. It focuses on one procedural Deadwood biome, a visibly equipped character, and fighting mobs. The broader design documents remain proposals for later development.
+
+## Play locally
+
+Use Node.js 22.13 or later. From this repository:
+
+```sh
+npm run setup
+npm run dev
+```
+
+Open [Evergrowing locally](http://127.0.0.1:5173/) in the Codex in-app browser. The server binds to this machine only. No account, external media, or hosted service is required.
+
+| Control | Action |
+| --- | --- |
+| WASD / arrow keys | Move |
+| Mouse | Aim |
+| Hold left mouse | Three-hit sword combo |
+| Right mouse | Ember projectile |
+| Space | Dodge, using one of two regenerating charges |
+| Q | Healing flask; charges return through kills |
+| Escape | Pause, settings, or a new run |
+| V | Cycle CRT, phosphor, and clean display modes |
+| M | Toggle synthesized sound |
+| F3 | Frame-rate and coordinate overlay |
+
+The user playtests and directs gameplay changes. See [prototype status](docs/prototype-status.md) for what is implemented and deliberately deferred.
+
+`npm test` runs deterministic engine tests. `npm run build` type-checks and creates the local production bundle. The source is tracked in a local Git repository with no remote.
 
 ## Start here
 
@@ -26,7 +54,7 @@ Read the brief first, then the roadmap. The systems catalog is the implementatio
 - **Presentation:** fully 2D top-down, dark gothic, fluid, lit, and entirely generated from code-defined art.
 - **First release assumption:** single-player desktop browser, keyboard and mouse, local saves with export/import. These platform and scope choices remain open to discussion.
 
-The immediate next step is **M0 in the roadmap**: small playable experiments that prove combat feel, procedural character art, lighting, world streaming, and entering buildings. No framework or release date is committed yet.
+The current prototype narrows M0/M1 to art, movement, and combat. The next step is the user's playtest feedback; towns, interiors, skill trees, and broader progression wait until this foundation feels right.
 
 ## Visual exploration
 
