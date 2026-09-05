@@ -2,7 +2,6 @@ import './typography.css';
 import './layout-review.css';
 import { loadGameFont } from './font.ts';
 import { PostFX } from './postfx.ts';
-import type { VisualMode } from './postfx.ts';
 import { Renderer } from './renderer.ts';
 import type { RenderSettings } from './renderer.ts';
 import { FIRST_TOWN_Y, TOWN_INTERVAL } from './settlements.ts';
@@ -125,9 +124,7 @@ async function boot() {
   if (disposed) return;
   const params = new URLSearchParams(location.search);
   let view: ViewId = VIEWS.find(candidate => candidate.id === params.get('view'))?.id ?? 'town';
-  const defaultMode = (id: ViewId): VisualMode => id === 'town' || id === 'city' ? 'clean' : 'crt';
-  let modePinned = ['clean', 'crt', 'phosphor'].includes(params.get('mode') ?? '');
-  let mode: VisualMode = modePinned ? params.get('mode') as VisualMode : defaultMode(view);
+  params.delete('mode');
   const world = new World(WORLD_SEED);
   const renderer = new Renderer();
   const scene = document.createElement('canvas');
@@ -145,10 +142,7 @@ async function boot() {
     </header>
     <div class="layout-review-toolbar">
       <nav class="layout-review-views" aria-label="Layout views"></nav>
-      <div class="layout-review-actions">
-        <label for="layout-mode">Display</label>
-        <select id="layout-mode"><option value="clean">Clean</option><option value="crt">CRT</option><option value="phosphor">Phosphor</option></select>
-      </div>
+      <div class="layout-review-actions"></div>
     </div>
     <figure class="layout-review-figure">
       <div class="layout-review-frame"></div>
@@ -160,39 +154,33 @@ async function boot() {
   const description = root.querySelector<HTMLElement>('.layout-review-description')!;
   const metadata = root.querySelector<HTMLElement>('.layout-review-metadata')!;
   const status = root.querySelector<HTMLElement>('.layout-review-status')!;
-  const modeSelect = root.querySelector<HTMLSelectElement>('#layout-mode')!;
-  modeSelect.value = mode;
   const download = document.createElement('a');
   download.className = 'layout-review-download'; download.textContent = 'Save PNG';
   root.querySelector('.layout-review-actions')!.append(download);
   const viewButtons = new Map<ViewId, HTMLButtonElement>();
-  const settings: RenderSettings = { phase: 'paused', muted: true, reducedMotion: true, mode, fps: 0, debug: false };
+  const settings: RenderSettings = { phase: 'paused', reducedMotion: true, fps: 0, debug: false };
   let stage: Stage;
 
   function compose() {
     context!.imageSmoothingEnabled = false;
-    if (mode === 'clean') context!.drawImage(renderer.canvas, 0, 0, EXPORT_WIDTH, EXPORT_HEIGHT);
-    else {
-      postfx ??= new PostFX(display);
-      postfx.render(renderer.canvas, mode, 0);
-      // Copy immediately while the WebGL drawing buffer is still valid; exports use the persistent 2D canvas.
-      context!.drawImage(display, 0, 0);
-    }
-    params.set('view', view); params.set('mode', mode);
+    postfx ??= new PostFX(display);
+    postfx.render(renderer.canvas, 0);
+    // Copy immediately while the WebGL drawing buffer is still valid; exports use the persistent 2D canvas.
+    context!.drawImage(display, 0, 0);
+    params.set('view', view);
     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
-    scene.setAttribute('aria-label', `${stage.title}. ${stage.description}. ${mode} display.`);
+    scene.setAttribute('aria-label', `${stage.title}. ${stage.description}. CRT with soft phosphor.`);
     scene.dataset.view = view;
     download.href = scene.toDataURL('image/png');
-    download.download = `evergrowing-${view}-seed-${WORLD_SEED}-v${world.generationVersion}-${mode}.png`;
+    download.download = `evergrowing-${view}-seed-${WORLD_SEED}-v${world.generationVersion}-crt-phosphor.png`;
     metadata.textContent = `Seed ${WORLD_SEED} · generation ${world.generationVersion} · PNG ${EXPORT_WIDTH} × ${EXPORT_HEIGHT}`;
-    status.textContent = `${stage.title}, ${mode} display ready.`;
+    status.textContent = `${stage.title}, CRT with soft phosphor ready.`;
     root.dataset.ready = 'true';
     root.setAttribute('aria-busy', 'false');
   }
 
   function renderView(next: ViewId) {
     root.dataset.ready = 'false'; root.setAttribute('aria-busy', 'true');
-    if (!modePinned) { mode = defaultMode(next); modeSelect.value = mode; settings.mode = mode; }
     stage = makeStage(world, next);
     const simulation = new Simulation(world, { seed: WORLD_SEED, spawn: false, startX: stage.hero.x, startY: stage.hero.y });
     simulation.player.angle = -.65;
@@ -215,9 +203,6 @@ async function boot() {
     viewButtons.set(choice.id, button);
     root.querySelector('.layout-review-views')!.append(button);
   }
-  modeSelect.addEventListener('change', () => {
-    modePinned = true; mode = modeSelect.value as VisualMode; settings.mode = mode; compose();
-  }, { signal: lifecycle.signal });
   display.addEventListener('webglcontextrestored', compose, { signal: lifecycle.signal });
   renderView(view);
 }

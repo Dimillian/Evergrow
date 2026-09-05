@@ -91,10 +91,6 @@ canvas { display: block; width: 100%; height: 100%; outline: 0; }
 .primary:hover { background: #a17c4335; border-color: #e1c28a; }
 .secondary { padding: 10px 14px; border: 1px solid #57604d; background: #101b20; font-size: 11px; letter-spacing: 0.08em; }
 .secondary:hover { background: #20352f; }
-.settings { display: grid; gap: 18px; margin: 0 0 27px; text-align: left; }
-.settings label { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 12px; color: #b5bda6; }
-.settings select { max-width: 152px; padding: 7px 10px; border: 1px solid #546050; border-radius: 0; background: #122421; color: #e2d1a9; font-size: 12px; }
-.settings input { width: 16px; height: 16px; accent-color: #c6a465; }
 .death-count { margin: 0 0 25px; color: #b7a386; font-size: 12px; }
 .toast {
   position: absolute;
@@ -119,6 +115,5 @@ canvas { display: block; width: 100%; height: 100%; outline: 0; }
   .panel { padding: 20px 26px; }
   .panel h1 { margin-bottom: 12px; font-size: 26px; }
   .rule { margin-bottom: 18px; }
-  .settings { gap: 12px; margin-bottom: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

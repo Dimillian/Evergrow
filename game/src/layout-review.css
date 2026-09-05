@@ -27,9 +27,8 @@ body {
 .layout-review-toolbar { justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px; }
 .layout-review-views { gap: 6px; flex-wrap: wrap; }
 .layout-review-actions { gap: 10px; }
-.layout-review-actions label { color: #a6afaa; font-size: 16px; }
 
-.layout-review button, .layout-review select, .layout-review-download {
+.layout-review button, .layout-review-download {
   appearance: none;
   min-height: 36px;
   border: 1px solid #36433f;
@@ -43,10 +42,9 @@ body {
   text-decoration: none;
 }
 
-.layout-review button:hover, .layout-review select:hover, .layout-review-download:hover { border-color: #8c805e; color: #f0e2bf; }
+.layout-review button:hover, .layout-review-download:hover { border-color: #8c805e; color: #f0e2bf; }
 .layout-review button[aria-current="true"] { color: #f7dfab; border-color: #aa8a54; background: #302b21; }
 .layout-review :focus-visible { outline: 2px solid #d5b679; outline-offset: 3px; }
-.layout-review select { min-width: 106px; padding-right: 27px; }
 .layout-review button:disabled { cursor: wait; opacity: .55; }
 
 .layout-review-figure { margin: 0; }
@@ -85,7 +83,7 @@ body {
   .layout-review-header { align-items: start; gap: 10px; }
   .layout-review-static { max-width: 130px; text-align: right; font-size: 14px; }
   .layout-review h1 { font-size: 24px; }
-  .layout-review button, .layout-review select, .layout-review-download { font-size: 16px; padding: 8px 10px; }
+  .layout-review button, .layout-review-download { font-size: 16px; padding: 8px 10px; }
   .layout-review-toolbar { gap: 10px; }
   .layout-review-frame { width: 100%; min-width: 0; }
 }

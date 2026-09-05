@@ -28,8 +28,9 @@ test('local game supports movement, combat, dodge, pause, recovery, and clean re
   const pausedTime=await page.evaluate(()=>(window as any).__evergrowing.sim.time);
   await page.waitForTimeout(250);
   expect(await page.evaluate(()=>(window as any).__evergrowing.sim.time)).toBe(pausedTime);
-  await page.selectOption('#display-mode','clean');
-  await expect(page.locator('#display-mode')).toHaveValue('clean');
+  await expect(page.locator('#overlay select, #overlay input')).toHaveCount(0);
+  await expect(page.locator('#overlay button')).toHaveCount(2);
+  await expect(page.locator('[data-hud="settings"]')).toHaveCount(0);
   await page.getByRole('button',{name:'RESUME',exact:true}).click();
   await page.evaluate(()=>{const g=(window as any).__evergrowing;g.sim.player.hp=50;g.sim.enemies=[];});
   await page.keyboard.press('q');
@@ -48,10 +49,17 @@ test('local game supports movement, combat, dodge, pause, recovery, and clean re
   expect(errors).toEqual([]);
 });
 
-test('all generated assets and shader modes render without external media',async({page})=>{
+test('fixed retro display renders locally, retaining mute and following system motion',async({page})=>{
   const requests:string[]=[];page.on('request',request=>requests.push(request.url()));
+  await page.addInitScript(()=>localStorage.setItem('evergrowing-preferences',JSON.stringify({mode:'clean',muted:true,reducedMotion:false})));
+  await page.emulateMedia({reducedMotion:'reduce'});
   await page.goto('/');await page.getByRole('button',{name:'ENTER THE WOODS'}).click();
-  for(const mode of ['phosphor','clean','crt']){await page.keyboard.press('v');await expect.poll(()=>page.evaluate(()=>(window as any).__evergrowing.preferences.mode)).toBe(mode);}
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('evergrowing-preferences')!))).toEqual({muted:true});
+  expect(await page.evaluate(()=>(window as any).__evergrowing.reducedMotion)).toBe(true);
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await expect.poll(()=>page.evaluate(()=>(window as any).__evergrowing.reducedMotion)).toBe(false);
+  await page.keyboard.press('n');
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('evergrowing-preferences')!))).toEqual({muted:false});
   const stats=await page.evaluate(()=>{const g=(window as any).__evergrowing;const ctx=g.renderer.ctx,data=ctx.getImageData(0,0,g.renderer.width,g.renderer.height).data;let bright=0;for(let i=0;i<data.length;i+=4)if(data[i]+data[i+1]+data[i+2]>90)bright++;return{bright,width:g.renderer.width,height:g.renderer.height,webgl:!!g.fx.gl};});
   expect(stats.bright).toBeGreaterThan(stats.width*stats.height*.04);
   expect(requests.filter(url=>/^https?:/.test(url)&&!url.startsWith('http://127.0.0.1:5173'))).toEqual([]);

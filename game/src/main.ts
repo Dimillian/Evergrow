@@ -11,11 +11,9 @@ import { Exploration } from './exploration.ts';
 import { WorldMap, getMinimapRect } from './world-map.ts';
 import { getHUDLayout, HUD_MENU_SHORTCUTS, isHUDPoint } from './hud.ts';
 import type { HUDRect } from './hud.ts';
-import type { VisualMode } from './postfx.ts';
 import type { Input } from './model.ts';
 
 type Phase = 'ready' | 'playing' | 'paused' | 'dead' | 'map';
-interface Preferences { mode: VisualMode; muted: boolean; reducedMotion: boolean; }
 
 const app = document.querySelector<HTMLElement>('#app')!;
 app.innerHTML = `<div class="game-shell">
@@ -24,8 +22,6 @@ app.innerHTML = `<div class="game-shell">
   <nav id="hud-controls" class="hud-controls" aria-label="Character menus" hidden>
     ${HUD_MENU_SHORTCUTS.map(shortcut => `<button type="button" class="hud-control" data-hud="${shortcut.id}"
       disabled aria-label="${shortcut.label} (unavailable)" title="${shortcut.label}"></button>`).join('')}
-    <button type="button" class="hud-control" data-hud="settings" aria-label="Settings"
-      aria-haspopup="dialog" title="Settings"></button>
     <button type="button" class="hud-control" data-hud="map" aria-label="World map" aria-keyshortcuts="M"
       aria-haspopup="dialog" title="World map"></button>
   </nav>
@@ -48,10 +44,9 @@ class Game {
   private uiContext = this.uiCanvas.getContext('2d')!;
   fx: PostFX;
   phase: Phase = 'ready';
-  preferences: Preferences = {
-    mode: 'crt', muted: false,
-    reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
-  };
+  private muted = false;
+  private readonly motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
+  private get reducedMotion() { return this.motionPreference.matches; }
   private keys = new Set<string>();
   private mouse = { x: 0, y: 0, left: false, right: false };
   private pendingDodge = false;
@@ -69,13 +64,11 @@ class Game {
     this.fx = new PostFX(this.canvas);
     try {
       const saved = JSON.parse(localStorage.getItem('evergrowing-preferences') ?? 'null');
-      if (saved) {
-        if (['crt', 'phosphor', 'clean'].includes(saved.mode)) this.preferences.mode = saved.mode;
-        if (typeof saved.muted === 'boolean') this.preferences.muted = saved.muted;
-        if (typeof saved.reducedMotion === 'boolean') this.preferences.reducedMotion = saved.reducedMotion;
-      }
+      if (typeof saved?.muted === 'boolean') this.muted = saved.muted;
     } catch { /* Preferences are optional when storage is disabled. */ }
-    this.audio.setEnabled(!this.preferences.muted);
+    // Migrate old preferences: presentation is fixed and motion follows the OS.
+    this.savePreferences();
+    this.audio.setEnabled(!this.muted);
     this.resize();
     this.bind();
     this.showMenu();
@@ -116,6 +109,10 @@ class Game {
         if (!event.repeat) this.openMap();
         return;
       }
+      if (event.code === 'KeyN') {
+        if (!event.repeat) this.toggleSound();
+        return;
+      }
       // Native menu controls retain their ordinary keyboard behavior.
       if (event.target instanceof HTMLSelectElement || event.target instanceof HTMLInputElement
         || event.target instanceof HTMLButtonElement) return;
@@ -126,8 +123,6 @@ class Game {
         this.phase === 'paused' ? this.resume() : this.start();
         return;
       }
-      if (event.code === 'KeyV') { this.cycleMode(); return; }
-      if (event.code === 'KeyN') { this.toggleSound(); return; }
       if (event.code === 'F3') { event.preventDefault(); this.debug = !this.debug; return; }
       if (event.code === 'KeyR' && this.phase === 'dead') { this.start(); return; }
       if (this.phase !== 'playing') return;
@@ -156,9 +151,6 @@ class Game {
     }, { signal });
     this.canvas.addEventListener('pointercancel', () => this.clearInput(), { signal });
     document.querySelector('.game-shell')!.addEventListener('contextmenu', event => event.preventDefault(), { signal });
-    document.querySelector('[data-hud="settings"]')!.addEventListener('click', () => {
-      if (this.phase === 'playing') this.pause();
-    }, { signal });
     document.querySelector('[data-hud="map"]')!.addEventListener('click', () => this.openMap(), { signal });
   }
 
@@ -199,7 +191,6 @@ class Game {
       button.style.height = `${rect.height / this.renderer.height * 100}%`;
     };
     for (const shortcut of layout.shortcuts) place(shortcut.id, shortcut);
-    place('settings', layout.settings);
     place('map', getMinimapRect(this.renderer.width, this.renderer.height));
     this.worldMap.resize();
   }
@@ -220,7 +211,7 @@ class Game {
     this.showMenu();
     this.canvas.focus();
     void this.audio.unlock().catch(() => this.toast('Sound is unavailable in this browser.'));
-    this.audio.setEnabled(!this.preferences.muted);
+    this.audio.setEnabled(!this.muted);
     this.last = performance.now();
   }
 
@@ -284,7 +275,7 @@ class Game {
       // The simulation owns the fixed 120 Hz clock and render interpolation.
       this.sim.update(dt, this.readInput());
       const events = this.sim.drainEvents();
-      this.renderer.handleEvents(events, this.preferences.reducedMotion);
+      this.renderer.handleEvents(events, this.reducedMotion);
       for (const event of events) {
         if (!(event.type === 'cast' && event.enemyKind)) this.audio.play(event);
       }
@@ -297,10 +288,10 @@ class Game {
     this.renderer.pointerX = this.mouse.x;
     this.renderer.pointerY = this.mouse.y;
     const settings = {
-      ...this.preferences, phase: this.phase, fps: this.fps, debug: this.debug,
+      reducedMotion: this.reducedMotion, phase: this.phase, fps: this.fps, debug: this.debug,
     };
     this.renderer.render(this.sim, this.world, dt, settings);
-    this.fx.render(this.renderer.canvas, this.preferences.mode, this.renderer.hurt);
+    this.fx.render(this.renderer.canvas, this.renderer.hurt);
     const ui = this.uiContext;
     ui.setTransform(1, 0, 0, 1, 0, 0);
     ui.clearRect(0, 0, this.uiCanvas.width, this.uiCanvas.height);
@@ -337,11 +328,6 @@ class Game {
       <h1 id="menu-title">${ready ? 'DEADWOOD' : dead ? 'YOU FELL' : 'PAUSED'}</h1>
       <div class="rule" aria-hidden="true"></div>
       ${dead ? `<p class="death-count">${this.sim.kills} slain · ${Math.floor(this.sim.time / 60)}:${String(Math.floor(this.sim.time % 60)).padStart(2, '0')} survived</p>` : ''}
-      ${!ready && !dead ? `<div class="settings">
-        <label>Display<select id="display-mode"><option value="crt">CRT</option><option value="phosphor">Phosphor</option><option value="clean">Clean</option></select></label>
-        <label>Sound<input type="checkbox" id="audio-enabled" ${this.preferences.muted ? '' : 'checked'}></label>
-        <label>Reduced motion<input type="checkbox" id="reduced-motion" ${this.preferences.reducedMotion ? 'checked' : ''}></label>
-      </div>` : ''}
       <div class="menu-actions">
         <button class="primary" id="play-action">${ready ? 'ENTER THE WOODS' : dead ? 'TRY AGAIN' : 'RESUME'}</button>
         ${!ready && !dead ? '<button class="secondary" id="restart-action">NEW RUN</button>' : ''}
@@ -349,50 +335,21 @@ class Game {
     </section>`;
     document.querySelector('#play-action')!.addEventListener('click', () => this.phase === 'paused' ? this.resume() : this.start());
     document.querySelector('#restart-action')?.addEventListener('click', () => this.start());
-    const select = document.querySelector<HTMLSelectElement>('#display-mode');
-    if (select) {
-      select.value = this.preferences.mode;
-      select.addEventListener('change', () => {
-        this.preferences.mode = select.value as VisualMode;
-        this.savePreferences();
-      });
-    }
-    document.querySelector<HTMLInputElement>('#audio-enabled')?.addEventListener('change', event => {
-      this.preferences.muted = !(event.target as HTMLInputElement).checked;
-      this.audio.setEnabled(!this.preferences.muted);
-      this.savePreferences();
-    });
-    document.querySelector<HTMLInputElement>('#reduced-motion')?.addEventListener('change', event => {
-      this.preferences.reducedMotion = (event.target as HTMLInputElement).checked;
-      this.savePreferences();
-    });
     document.querySelector<HTMLButtonElement>('#play-action')?.focus();
     document.querySelector('#state-description')!.textContent = dead
       ? `You fell after defeating ${this.sim.kills} enemies.`
       : this.phase === 'paused' ? 'Game paused.' : 'Ready to enter Deadwood.';
   }
 
-  cycleMode() {
-    this.preferences.mode = this.preferences.mode === 'crt' ? 'phosphor' : this.preferences.mode === 'phosphor' ? 'clean' : 'crt';
-    this.savePreferences();
-    this.toast(`Display: ${this.preferences.mode.toUpperCase()}`);
-  }
-
   toggleSound() {
-    this.preferences.muted = !this.preferences.muted;
-    this.audio.setEnabled(!this.preferences.muted);
+    this.muted = !this.muted;
+    this.audio.setEnabled(!this.muted);
     void this.audio.unlock().catch(() => {});
     this.savePreferences();
   }
 
   private savePreferences() {
-    try { localStorage.setItem('evergrowing-preferences', JSON.stringify(this.preferences)); } catch { /* Storage may be disabled. */ }
-    const display = document.querySelector<HTMLSelectElement>('#display-mode');
-    if (display) display.value = this.preferences.mode;
-    const audio = document.querySelector<HTMLInputElement>('#audio-enabled');
-    if (audio) audio.checked = !this.preferences.muted;
-    const motion = document.querySelector<HTMLInputElement>('#reduced-motion');
-    if (motion) motion.checked = this.preferences.reducedMotion;
+    try { localStorage.setItem('evergrowing-preferences', JSON.stringify({ muted: this.muted })); } catch { /* Storage may be disabled. */ }
   }
 
   private toast(message: string) {

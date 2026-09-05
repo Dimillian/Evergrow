@@ -28,4 +28,4 @@ Close view in CRT mode, with the roof automatically hidden around the staged cha
 
 ![Lantern Inn interior with CRT](lantern-inn-interior-crt.png)
 
-Recreate these views using the local dev-only [layout review](http://127.0.0.1:5173/layouts.html). Select a view and display mode, then use **Save PNG**. The camera is pulled back for overviews; these are not a replacement for the user's gameplay testing.
+Open these layouts using the local dev-only [layout review](http://127.0.0.1:5173/layouts.html), select a view, then use **Save PNG**. The viewer now uses the game's fixed CRT/soft-phosphor presentation; the images above retain the earlier display treatments recorded in their captions. The camera is pulled back for overviews; these are not a replacement for the user's gameplay testing.

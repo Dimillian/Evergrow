@@ -13,7 +13,6 @@ export interface HUDShortcut extends HUDRect { id: string; label: string; key: s
 export interface HUDLayout extends HUDRect {
   scale: number;
   shortcuts: HUDShortcut[];
-  settings: HUDShortcut;
 }
 export interface HUDOptions { reducedMotion?: boolean; healthTrail?: number; hitPulse?: number; }
 
@@ -33,14 +32,20 @@ export function getHUDLayout(width: number, height: number): HUDLayout {
   return {
     x, y, width: hudWidth, height: hudHeight, scale,
     shortcuts: HUD_MENU_SHORTCUTS.map((shortcut, i) => ({ ...shortcut, ...rect(152 + i * 36, 0, 32, 21) })),
-    settings: { id: 'settings', label: 'Settings', key: 'ESC', ...rect(316, 0, 24, 21) },
   };
 }
 
-/** Keep attacks out of the whole hub, including the disabled menu controls. */
+/** Keep attacks off the visible hub, including the disabled menu controls. */
 export function isHUDPoint(x: number, y: number, width: number, height: number): boolean {
   const h = getHUDLayout(width, height);
-  return h.scale > 0 && x >= h.x && x <= h.x + h.width && y >= h.y && y <= h.y + h.height;
+  if (h.scale <= 0 || x < h.x || x > h.x + h.width || y < h.y || y > h.y + h.height) return false;
+  const localX = (x - h.x) / h.scale, localY = (y - h.y) / h.scale;
+  if (localY >= 23) return true;
+  // The open space beside the menu ridge no longer contains a settings control.
+  return (localX >= 143 && localX <= 300)
+    || Math.hypot(localX - 48, localY - 40) <= 35
+    || Math.hypot(localX - 396, localY - 40) <= 35
+    || (localX >= 108 && localX <= 137 && localY >= 8 && localY <= 18);
 }
 
 function polygon(c: CanvasRenderingContext2D, points: readonly number[]) {
@@ -285,9 +290,9 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
 }
 
 /** Menu glyphs share one 14 × 14 drawing field and a consistent metal stroke. */
-function menuIcon(c: CanvasRenderingContext2D, index: number, x: number, y: number, enabled = false) {
+function menuIcon(c: CanvasRenderingContext2D, index: number, x: number, y: number) {
   c.save(); c.translate(x, y);
-  c.strokeStyle = enabled ? '#c8ba94' : '#98a194';
+  c.strokeStyle = '#98a194';
   c.fillStyle = '#152027';
   c.lineWidth = 1;
   c.lineJoin = 'round'; c.lineCap = 'round';
@@ -323,20 +328,6 @@ function menuIcon(c: CanvasRenderingContext2D, index: number, x: number, y: numb
     c.quadraticCurveTo(2.5, 4.5, 5, 5); c.lineTo(5, -4.5);
     c.quadraticCurveTo(2.5, -5.5, 0, -3.5); c.closePath(); c.stroke();
     c.beginPath(); c.moveTo(0, -3.5); c.lineTo(0, 5.5); c.stroke();
-  } else {
-    // A single toothed outline avoids detached spokes at the small display size.
-    c.beginPath();
-    for (let tooth = 0; tooth < 8; tooth++) {
-      const angle = -Math.PI / 2 + tooth * TAU / 8;
-      const profile = [[-.29, 4.8], [-.13, 6.4], [.13, 6.4], [.29, 4.8]];
-      for (let edge = 0; edge < profile.length; edge++) {
-        const [offset, radius] = profile[edge];
-        const px = Math.cos(angle + offset) * radius, py = Math.sin(angle + offset) * radius;
-        if (tooth === 0 && edge === 0) c.moveTo(px, py); else c.lineTo(px, py);
-      }
-    }
-    c.closePath(); c.fill(); c.stroke();
-    circle(c, 0, 0, 2); c.stroke();
   }
   c.restore();
 }
@@ -363,11 +354,6 @@ export function drawFloatingHUD(c: CanvasRenderingContext2D, p: Player, width: n
     menuIcon(c, i, x + 10.5, 10.5);
     text(c, HUD_MENU_SHORTCUTS[i].key, x + 24, 6, 1, '#a1a796', 'center');
   }
-  c.fillStyle = '#172129'; c.fillRect(316, 0, 24, 21);
-  c.strokeStyle = '#8a7958'; c.lineWidth = 1; c.strokeRect(316.5, .5, 23, 20);
-  c.strokeStyle = '#b4a077';
-  c.beginPath(); c.moveTo(318.5, 1.5); c.lineTo(337.5, 1.5); c.stroke();
-  menuIcon(c, 4, 328, 10.5, true);
   // Readouts sit in little inset plaques, not in the liquid or in a legend.
   for (const [x, current, max, color] of [
     [48, Math.ceil(Math.max(0, p.hp)), p.maxHp, '#e6aba0'],

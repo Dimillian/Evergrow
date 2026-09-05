@@ -20,6 +20,8 @@ The sword needs a clearly visible metal-gold arc that sweeps, tapers, and disper
 
 Draw HUD and text, including damage numbers, at native display resolution after world post-processing. Use the locally bundled Pixelify Sans font and natural glyph metrics; do not recreate letters from individually rounded pixel rectangles. Font files are a deliberate exception to procedural world/equipment art, with their license bundled locally.
 
+Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-contrast RGB grille. The user requested removing settings and filter switching. Do not reintroduce selectable display modes, the HUD gear, or a settings panel. Keep Escape pause/resume and N sound toggle; reduced motion follows the operating system automatically.
+
 ## Project layout
 
 - `game/`: standalone Vite + TypeScript application; no runtime package dependencies.
@@ -39,7 +41,7 @@ Draw HUD and text, including damage numbers, at native display resolution after 
 - `game/src/postfx.ts`: world-only WebGL bloom passes, CRT/phosphor display treatment, and clean fallback.
 - `game/src/hud.ts` and `font.ts`: procedural floating HUD, shared layout/hit bounds, animated resource orbs, and native font rendering.
 - `game/src/assets/fonts/` and `typography.css`: locally bundled Pixelify Sans, source/license records, and shared menu typography.
-- `game/src/main.ts`: input, loop, menus, and local preferences.
+- `game/src/main.ts`: input, loop, pause menu, local audio preference, and system reduced motion.
 - `game/src/exploration.ts` and `world-map.ts`: discovered terrain/POIs, local exploration persistence, smoothly scrolling minimap, and interactive world map.
 - `game/layouts.html` and `game/src/layout-review.ts`: dev-only static scene staging and PNG export using the real renderer; never advances gameplay or changes exploration saves.
 - `docs/`: design documents and reference concepts, not runtime assets.

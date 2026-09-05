@@ -7,7 +7,6 @@ import { HIT_FLASH_DURATION } from './simulation.ts';
 import type { Simulation } from './simulation.ts';
 import type { CombatEvent, Enemy } from './model.ts';
 import { text } from './font.ts';
-import type { VisualMode } from './postfx.ts';
 import { drawFloatingHUD, isHUDPoint } from './hud.ts';
 import { Lighting, drawGlow } from './lighting.ts';
 import type { PointLight } from './lighting.ts';
@@ -21,7 +20,7 @@ import { getMinimapRect } from './world-map.ts';
 interface Corpse { x: number; y: number; angle: number; kind: Enemy['kind']; life: number; seed: number; }
 interface Ghost { x: number; y: number; angle: number; gait: number; life: number; }
 export interface RenderSettings {
-  mode: VisualMode; muted: boolean; reducedMotion: boolean;
+  reducedMotion: boolean;
   phase: 'ready' | 'playing' | 'paused' | 'dead' | 'map'; fps: number; debug: boolean;
 }
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
