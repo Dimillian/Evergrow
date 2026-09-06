@@ -25,7 +25,7 @@ function target(sim: Simulation, x = 45, y = 0, hp = 10000): Enemy {
 }
 function equipForSkill(sim: Simulation, id: SkillId): void {
   const required = SKILL_DEFINITIONS[id].requirement;
-  const profile = required === 'staff' ? 'ember-staff' : required === 'bow' ? 'thorn-shortbow'
+  const profile = required === 'magic' ? 'ember-staff' : required === 'bow' ? 'thorn-shortbow'
     : required === 'dagger' ? 'rondel-dagger' : required === 'heavy' ? 'hand-axe' : 'longsword';
   const item = generateItem(723, 1, 'weapon', profile); item.implicit = {}; item.affixes = [];
   sim.player.character.inventory[47] = item;

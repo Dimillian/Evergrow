@@ -5,7 +5,7 @@ import { CharacterRepository, characterSlotKey } from '../src/character-storage.
 import { CharacterSession } from '../src/character-session.ts';
 import { decodeCharacterSave, CHARACTER_SLOT_COUNT } from '../src/character-save.ts';
 import { awardCharacterExperience, refreshCharacter } from '../src/character.ts';
-import { generateItem, createCharacterSheet, STARTER_WEAPONS } from '../src/items.ts';
+import { generateItem, createCharacterSheet, STARTER_LOADOUTS } from '../src/items.ts';
 import { equipItem } from '../src/inventory.ts';
 import { executeCharacterCommand } from '../src/character-commands.ts';
 import { SKILL_NODES } from '../src/skill-tree.ts';
@@ -134,8 +134,8 @@ test('character power is reproducible from saved gear and increases with stronge
 
 test('each starter choice persists with matching portrait equipment, common gear and an empty bag', () => {
   const { repo, session, sim } = setup();
-  assert.deepEqual(STARTER_WEAPONS.map(option => option.id), ['sword', 'bow', 'fire']);
-  for (const [index, option] of STARTER_WEAPONS.entries()) {
+  assert.deepEqual(STARTER_LOADOUTS.map(option => option.id), ['sword-shield', 'sword', 'wand', 'fire', 'bow', 'longbow']);
+  for (const [index, option] of STARTER_LOADOUTS.entries()) {
     sim.player.character = createCharacterSheet(option.id); refreshCharacter(sim.player);
     const preview = previewCharacter(null, option.id);
     assert.deepEqual(preview.equipment, sim.player.equipment);
@@ -143,6 +143,7 @@ test('each starter choice persists with matching portrait equipment, common gear
     assert.equal(sim.player.character.equipped.weapon!.tier, 'common');
     assert.equal(sim.player.character.equipped.weapon!.itemLevel, 1);
     assert.deepEqual(sim.player.character.equipped.weapon!.affixes, []);
+    assert.equal(sim.player.character.equipped.offhand?.recipe.profileId ?? null, option.offhandProfileId);
     assert.ok(sim.player.character.inventory.every(item => item === null));
     assert.equal(sim.player.character.equipped.chest!.appearance.style, 'leather');
     assert.ok(session.create(index + 1, option.label, sim.captureCheckpoint(), `starter-${option.id}`, 200));

@@ -46,7 +46,7 @@ function unlock(sim: Simulation, id: SkillId): void {
 }
 function skillSim(id: SkillId, world = openWorld): Simulation {
   const sim = make(world), requirement = SKILL_DEFINITIONS[id].requirement;
-  equip(sim, requirement === 'bow' ? 'thorn-shortbow' : requirement === 'staff' ? 'ember-staff'
+  equip(sim, requirement === 'bow' ? 'thorn-shortbow' : requirement === 'magic' ? 'ember-staff'
     : requirement === 'dagger' ? 'rondel-dagger' : requirement === 'heavy' ? 'hand-axe' : 'longsword');
   if (requirement === 'shield') equip(sim, 'iron-buckler');
   unlock(sim, id); sim.drainEvents(); return sim;
@@ -58,7 +58,7 @@ function incoming(sim: Simulation, damage = 40): void {
     damage, life: 1, sourceLevel: 1, maxLife: 1, owner: 'enemy', hitIds: new Set() });
 }
 
-for (const profile of ['thorn-shortbow', 'ember-staff']) {
+for (const profile of ['thorn-shortbow', 'ember-staff', 'cinder-wand', 'hoarfrost-wand', 'spark-wand', 'star-wand']) {
   test(`${profile} basic attack releases once per cycle at weapon cadence and never deals a melee arc`, () => {
     const sim = make(); equip(sim, profile);
     const straight = target(sim, 160), beside = target(sim, 35, 35);

@@ -6,7 +6,7 @@ const fail = (message: string): ActionResult => ({ ok: false, message });
 const validIndex = (sheet: CharacterSheet, index: number) => Number.isInteger(index) && index >= 0 && index < sheet.inventory.length;
 export function itemFitsSlot(item: Item, slot: EquipmentSlot): boolean {
   if (item.kind === 'ring') return slot === 'ring1' || slot === 'ring2';
-  if (item.kind === 'shield') return slot === 'offhand';
+  if (item.kind === 'shield' || item.kind === 'grimoire' || item.kind === 'orb') return slot === 'offhand';
   if (item.kind === 'weapon') return slot === 'weapon' || slot === 'offhand' && item.weapon?.hands === 1 && item.weapon.attackKind === 'melee';
   return item.kind === slot;
 }
@@ -27,11 +27,12 @@ export function planEquipmentChange(sheet: CharacterSheet, item: Item, level: nu
     return reject('This item is already owned.');
   const slot: EquipmentSlot = target.slot ?? (item.kind === 'ring'
     ? !sheet.equipped.ring1 ? 'ring1' : !sheet.equipped.ring2 ? 'ring2' : 'ring1'
-    : item.kind === 'shield' ? 'offhand' : item.kind);
+    : (item.kind === 'shield' || item.kind === 'grimoire' || item.kind === 'orb') ? 'offhand' : item.kind);
   if (!EQUIPMENT_SLOTS.includes(slot) || !itemFitsSlot(item, slot)) return reject('This item does not fit that equipment slot.');
   if (!Number.isSafeInteger(level) || !Number.isSafeInteger(item.requiredLevel) || item.requiredLevel < 1 || level < item.requiredLevel)
     return reject(`Requires level ${item.requiredLevel}.`);
   if (item.kind === 'weapon' && !item.weapon) return reject('This weapon has no attack profile.');
+  if ((item.kind === 'grimoire' || item.kind === 'orb') && !item.focus) return reject('This focus has no equipment profile.');
   if (item.kind === 'shield' && !item.shield) return reject('This shield has no defense profile.');
   const inventory = [...sheet.inventory], equipped = { ...sheet.equipped };
   const displaced: Array<{ slot: EquipmentSlot; item: Item }> = [];

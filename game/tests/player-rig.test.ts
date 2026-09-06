@@ -81,7 +81,7 @@ test('a single weapon keeps both hands attached to its grip throughout facing, g
         gaitPhase: phase, moving: phase === 0 ? 0 : 1, time: 2.7 });
       const lead = projectArmPoint(rig.weapon.hand), support = projectArmPoint(rig.offhand.hand);
       const dx = support[0] - lead[0], dy = support[1] - lead[1];
-      const along = dx * Math.cos(rig.weaponAngle) + dy * Math.sin(rig.weaponAngle);
+      const along = (dx * Math.cos(rig.weaponAngle) + dy * Math.sin(rig.weaponAngle)) / rig.weaponScale;
       const across = dx * -Math.sin(rig.weaponAngle) + dy * Math.cos(rig.weaponAngle);
       near(across, 0, 'both gauntlets sit on the visible sword axis');
       near(along, getSupportGripOffset(weapon), 'support hand uses the weapon attachment offset');
@@ -106,7 +106,7 @@ test('authored weapon handedness selects the appropriate stance with or without 
   assert.equal(getWeaponGrip(equipment), 'one-handed', 'an empty off-hand keeps a raised free-hand guard');
 });
 
-test('bows attach to the drawn string and staves regrip their shaft while casting', () => {
+test('bows attach to the string and staff palms stay eight units apart on the shaft', () => {
   for (const weapon of WEAPON_PROFILES.filter(profile => profile.family === 'bow' || profile.family === 'staff')) {
     for (let facing = 0; facing < 16; facing++) for (const attack of [0, .05, .19, .25, .45, .8]) for (const cast of [0, .7]) {
       const angle = facing / 16 * TAU;
@@ -115,12 +115,12 @@ test('bows attach to the drawn string and staves regrip their shaft while castin
       const motion = playerMotion(pose), rig = getPlayerArmRig(pose);
       validateArm(rig.weapon, weapon.name); validateArm(rig.offhand, weapon.name);
       const lead = projectArmPoint(rig.weapon.hand), support = projectArmPoint(rig.offhand.hand);
-      if (weapon.family === 'staff' && !motion.supportHolding) continue;
-      const origin = weapon.family === 'staff' ? motion.weaponOrigin : lead;
+      if (weapon.family === 'staff') assert.equal(motion.supportHolding, true);
+      const origin = lead;
       const dx = support[0] - origin[0], dy = support[1] - origin[1];
       near(-dx * Math.sin(rig.weaponAngle) + dy * Math.cos(rig.weaponAngle), 0, 'support hand stays on string/shaft axis');
       near(dx * Math.cos(rig.weaponAngle) + dy * Math.sin(rig.weaponAngle),
-        weapon.family === 'bow' ? bowStringOffset(motion.rangedDraw) : getSupportGripOffset(weapon.visual), 'hand matches the actual equipment attachment');
+        weapon.family === 'bow' ? bowStringOffset(motion.rangedDraw) : -8, 'hand matches the actual equipment attachment');
     }
   }
 });

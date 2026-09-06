@@ -5,11 +5,11 @@ interface WeaponRecipe {
   damage: number; speed: number; reach: number; arc: number;
   length: number; width: number; gripLength: number; damageType?: DamageType;
 }
-const ELEMENT_COLORS: Partial<Record<DamageType, string>> = { fire: '#f7995c', frost: '#91d4ee', lightning: '#bcb0ff' };
+const ELEMENT_COLORS: Partial<Record<DamageType, string>> = { fire: '#f7995c', frost: '#91d4ee', lightning: '#bcb0ff', arcane: '#a5b9ff' };
 function weapon(recipe: WeaponRecipe): Readonly<WeaponDefinition> {
   const damageType = recipe.damageType ?? 'physical';
   return Object.freeze({ id: recipe.id, name: recipe.name, family: recipe.family, hands: recipe.hands,
-    attackKind: recipe.family === 'bow' ? 'arrow' : recipe.family === 'staff' ? 'bolt' : 'melee', damageType,
+    attackKind: recipe.family === 'bow' ? 'arrow' : (recipe.family === 'staff' || recipe.family === 'wand') ? 'bolt' : 'melee', damageType,
     damage: recipe.damage, baseAttacksPerSecond: recipe.speed, reach: recipe.reach, arc: recipe.arc * Math.PI / 180,
     visual: Object.freeze({ kind: recipe.family, element: damageType, length: recipe.length, width: recipe.width, gripLength: recipe.gripLength,
       metal: '#86b3a3', edge: '#f7e8b8', grip: '#715332', guard: '#dba25b',
@@ -31,6 +31,10 @@ export const WEAPON_PROFILES: readonly Readonly<WeaponDefinition>[] = Object.fre
   weapon({ id: 'ember-staff', name: 'Ember Staff', family: 'staff', hands: 2, damageType: 'fire', damage: 28, speed: 1.5, reach: 480, arc: 12, length: 40, width: 7, gripLength: 18 }),
   weapon({ id: 'rime-staff', name: 'Rime Staff', family: 'staff', hands: 2, damageType: 'frost', damage: 24, speed: 1.65, reach: 440, arc: 12, length: 39, width: 8, gripLength: 18 }),
   weapon({ id: 'storm-staff', name: 'Storm Staff', family: 'staff', hands: 2, damageType: 'lightning', damage: 17, speed: 2.3, reach: 500, arc: 10, length: 41, width: 7, gripLength: 18 }),
+  weapon({ id: 'cinder-wand', name: 'Cinder Wand', family: 'wand', hands: 1, damageType: 'fire', damage: 16, speed: 2.4, reach: 440, arc: 12, length: 19, width: 4, gripLength: 6 }),
+  weapon({ id: 'hoarfrost-wand', name: 'Hoarfrost Wand', family: 'wand', hands: 1, damageType: 'frost', damage: 14, speed: 2.6, reach: 420, arc: 12, length: 20, width: 4.5, gripLength: 6 }),
+  weapon({ id: 'spark-wand', name: 'Spark Wand', family: 'wand', hands: 1, damageType: 'lightning', damage: 11, speed: 3.1, reach: 460, arc: 10, length: 18, width: 4, gripLength: 6 }),
+  weapon({ id: 'star-wand', name: 'Star Wand', family: 'wand', hands: 1, damageType: 'arcane', damage: 17, speed: 2.3, reach: 450, arc: 10, length: 21, width: 4.5, gripLength: 6 }),
 ]);
 
 export const SHIELD_PROFILES: readonly Readonly<ShieldDefinition>[] = Object.freeze([

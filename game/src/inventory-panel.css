@@ -127,3 +127,13 @@
 .character-inventory-counts { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
 .character-section-title .character-gold { color: #e3c880; font: 600 13px/1.4 "Evergrow Numerals", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 .character-gold::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 7px; border: 1px solid #f4d58d; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #f9df94, #a37a31 70%); box-shadow: inset 0 0 0 2px #5e491b; }
+
+/* The second socket remains a valid swap target; this marks hand occupancy. */
+.character-equipment-slot.is-twohand-reserved {
+  background: repeating-linear-gradient(135deg, #b4b7ba06 0 1px, transparent 1px 7px), #171f26;
+  border-color: #66717b55; box-shadow: inset 0 0 16px #060e1680;
+}
+.character-reserved-glyph { position: absolute; inset: 3px 3px 13px; display: grid; place-items: center; opacity: .6; }
+.character-equipment-slot.is-twohand-reserved svg { color: #74818a; width: 28px; height: 28px; }
+.character-reserved-label { position: absolute; inset: auto 5px 5px; font: 600 10px/1.4 system-ui, sans-serif; letter-spacing: .12em; color: #9ca7af; border-top: 1px solid #7d8b9744; padding-top: 3px; }
+.character-equipment-slot.is-twohand-reserved:hover { border-color: #a7b7c47a; }

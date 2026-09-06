@@ -28,17 +28,18 @@ export function vendorStock(sheet: CharacterSheet, npc: TownNPC, level: number):
   const epoch = stockEpoch(level), state = sheet.commerce;
   const sold = state.epoch === epoch ? state.sold : {};
   if (!Object.hasOwn(sold, npc.id) && Object.keys(sold).length >= COMMERCE_LIMITS.vendors) return [];
-  const count = npc.role === 'jeweler' ? 6 : 12;
+  const count = npc.role === 'jeweler' ? 8 : 12;
   return Array.from({ length: count }, (_, slot) => {
     if ((sold[npc.id] ?? 0) & 1 << slot) return null;
     const id = `stock:${npc.id}:${epoch}:${slot}`, seed = hashService(id), random = randomSource(seed ^ 0x674af7c1), roll = random() * 100;
     const weights = npc.role === 'jeweler' ? [0, 60, 35, 4.8, .2] : [55, 35, 9, 1, 0];
     let total = 0; const tier = ITEM_TIERS[weights.findIndex(weight => { total += weight; return roll < total; })];
-    const kind = npc.role === 'jeweler' ? slot < 4 ? 'ring' : 'amulet'
+    const kind = npc.role === 'jeweler' ? slot < 4 ? 'ring' : slot < 6 ? 'amulet' : slot === 6 ? 'grimoire' : 'orb'
       : (['weapon', 'weapon', 'weapon', 'shield', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'weapon', 'shield'] as const)[slot];
-    const profile = npc.role === 'blacksmith' ? ['longsword', 'thorn-shortbow', 'ember-staff'][slot] : undefined;
+    const profile = npc.role === 'blacksmith' ? ({ 0: 'longsword', 1: 'thorn-shortbow', 2: 'ember-staff', 10: 'cinder-wand' } as Record<number, string>)[slot] : undefined;
     const item = generateItem(seed, npc.level, kind, profile, tier); item.id = id;
     if (item.weapon) item.weapon.id = id;
+    if (item.focus) item.focus.id = id;
     if (item.shield) item.shield.id = id;
     return item;
   });

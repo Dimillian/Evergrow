@@ -2,7 +2,7 @@ import { SKILL_EXECUTION, groundEffectPulseCount } from './skill-execution-conte
 import type { SkillId } from './character-types.ts';
 import type { Equipment, WeaponDefinition } from './model.ts';
 
-export type SkillRequirement = 'melee' | 'blade' | 'heavy' | 'dagger' | 'bow' | 'staff' | 'shield';
+export type SkillRequirement = 'melee' | 'blade' | 'heavy' | 'dagger' | 'bow' | 'magic' | 'shield';
 export interface SkillDefinition {
   readonly id: SkillId;
   readonly name: string;
@@ -18,9 +18,9 @@ export interface SkillDefinition {
 
 /** Costs, potency and equipment requirements are shared by the atlas, HUD and combat. */
 export const SKILL_DEFINITIONS: Readonly<Record<SkillId, Readonly<SkillDefinition>>> = Object.freeze({
-  cataclysm: Object.freeze({ id: 'cataclysm', name: 'Cataclysm', description: 'Seven meteors converge on a wide area, each igniting its impact zone.', requirement: 'staff', domain: 'Arcana', tier: 'ultimate', manaCost: 80, cooldown: 30, damageMultiplier: 2.8, color: '#ffa46b' }),
-  tempest: Object.freeze({ id: 'tempest', name: 'Tempest', description: 'A moving lightning storm strikes nearby enemies for up to six seconds. Each pulse consumes mana; exhaustion ends the storm.', requirement: 'staff', domain: 'Arcana', tier: 'ultimate', manaCost: 35, cooldown: 24, damageMultiplier: .65, color: '#c4c4ff' }),
-  absoluteZero: Object.freeze({ id: 'absoluteZero', name: 'Absolute Zero', description: 'Two vast freezing waves damage and chill surrounding enemies. Elite enemies resist the freeze.', requirement: 'staff', domain: 'Arcana', tier: 'ultimate', manaCost: 75, cooldown: 28, damageMultiplier: 2.4, color: '#b7efff' }),
+  cataclysm: Object.freeze({ id: 'cataclysm', name: 'Cataclysm', description: 'Seven meteors converge on a wide area, each igniting its impact zone.', requirement: 'magic', domain: 'Arcana', tier: 'ultimate', manaCost: 80, cooldown: 30, damageMultiplier: 2.8, color: '#ffa46b' }),
+  tempest: Object.freeze({ id: 'tempest', name: 'Tempest', description: 'A moving lightning storm strikes nearby enemies for up to six seconds. Each pulse consumes mana; exhaustion ends the storm.', requirement: 'magic', domain: 'Arcana', tier: 'ultimate', manaCost: 35, cooldown: 24, damageMultiplier: .65, color: '#c4c4ff' }),
+  absoluteZero: Object.freeze({ id: 'absoluteZero', name: 'Absolute Zero', description: 'Two vast freezing waves damage and chill surrounding enemies. Elite enemies resist the freeze.', requirement: 'magic', domain: 'Arcana', tier: 'ultimate', manaCost: 75, cooldown: 28, damageMultiplier: 2.4, color: '#b7efff' }),
   cleave: Object.freeze({ id: 'cleave', name: 'Crescent Cleave', description: 'Sweep a melee weapon through a broad crescent, striking each nearby enemy once.', requirement: 'melee', domain: 'Might', tier: 'basic', manaCost: 12, cooldown: 0, damageMultiplier: 1.8, color: '#e6bd7b' }),
   lunge: Object.freeze({ id: 'lunge', name: 'Rift Lunge', description: 'Drive your blade forward in a swift dash, cutting enemies along your path.', requirement: 'blade', domain: 'Might', tier: 'advanced', manaCost: 24, cooldown: 4, damageMultiplier: 1.5, color: '#add9ca' }),
   whirlwind: Object.freeze({ id: 'whirlwind', name: 'Whirlwind', description: 'Turn a full circle with your melee weapon, sweeping through enemies on every side.', requirement: 'melee', domain: 'Might', tier: 'basic', manaCost: 12, cooldown: 0, damageMultiplier: 1.6, color: '#d8c28c' }),
@@ -32,16 +32,16 @@ export const SKILL_DEFINITIONS: Readonly<Record<SkillId, Readonly<SkillDefinitio
   ricochet: Object.freeze({ id: 'ricochet', name: 'Ricochet', description: `Fire an arrow that rebounds between nearby enemies, striking up to ${SKILL_EXECUTION.ricochet.effects.chain + 1} different targets.`, requirement: 'bow', domain: 'Cunning', tier: 'basic', manaCost: 12, cooldown: 0, damageMultiplier: 1.2, color: '#c0dca6' }),
   rainOfArrows: Object.freeze({ id: 'rainOfArrows', name: 'Rain of Arrows', description: `Mark an area with your bow. ${groundEffectPulseCount(SKILL_EXECUTION.rainOfArrows)} waves of falling arrows strike it after a short delay.`, requirement: 'bow', domain: 'Cunning', tier: 'advanced', manaCost: 36, cooldown: 6, damageMultiplier: .7, color: '#b7c49a' }),
   backstab: Object.freeze({ id: 'backstab', name: 'Backstab', description: `Make a close dagger thrust. Striking an enemy from behind deals ${SKILL_EXECUTION.backstab.rearMultiplier}× damage.`, requirement: 'dagger', domain: 'Cunning', tier: 'basic', manaCost: 10, cooldown: 0, damageMultiplier: 2.1, color: '#d1b2c3' }),
-  fireball: Object.freeze({ id: 'fireball', name: 'Fireball', description: 'Cast a fireball from your staff. It bursts on impact, damaging and igniting nearby enemies.', requirement: 'staff', domain: 'Arcana', tier: 'basic', manaCost: 12, cooldown: 0, damageMultiplier: 1.45, color: '#f4a271' }),
-  arcLightning: Object.freeze({ id: 'arcLightning', name: 'Arc Lightning', description: `Call a bolt from your staff that chains through up to ${SKILL_EXECUTION.arcLightning.jumps} enemies, weakening with each jump.`, requirement: 'staff', domain: 'Arcana', tier: 'basic', manaCost: 12, cooldown: 0, damageMultiplier: 1.4, color: '#c4c4ff' }),
-  iceNova: Object.freeze({ id: 'iceNova', name: 'Ice Nova', description: 'Release frost from your staff in every direction, damaging and slowing surrounding enemies.', requirement: 'staff', domain: 'Arcana', tier: 'basic', manaCost: 14, cooldown: 0, damageMultiplier: 1.5, color: '#a5dbe7' }),
-  frostLance: Object.freeze({ id: 'frostLance', name: 'Frost Lance', description: `Launch a shard of ice from your staff. It pierces up to ${SKILL_EXECUTION.frostLance.effects.pierce + 1} enemies and slows each one.`, requirement: 'staff', domain: 'Arcana', tier: 'advanced', manaCost: 28, cooldown: 1.8, damageMultiplier: 1.65, color: '#c1e8f0' }),
-  meteor: Object.freeze({ id: 'meteor', name: 'Meteor', description: 'Mark a distant area with your staff. A meteor falls after a delay, blasting and igniting it.', requirement: 'staff', domain: 'Arcana', tier: 'advanced', manaCost: 40, cooldown: 7, damageMultiplier: 3.4, color: '#ef946a' }),
-  siphon: Object.freeze({ id: 'siphon', name: 'Soul Siphon', description: 'Cast a hungry spirit from your staff, restoring life from the damage it deals on impact.', requirement: 'staff', domain: 'Arcana', tier: 'advanced', manaCost: 30, cooldown: 4.5, damageMultiplier: 1.65, color: '#dba3c3' }),
+  fireball: Object.freeze({ id: 'fireball', name: 'Fireball', description: 'Cast a fireball from your staff or wand. It bursts on impact, damaging and igniting nearby enemies.', requirement: 'magic', domain: 'Arcana', tier: 'basic', manaCost: 12, cooldown: 0, damageMultiplier: 1.45, color: '#f4a271' }),
+  arcLightning: Object.freeze({ id: 'arcLightning', name: 'Arc Lightning', description: `Call a bolt from your staff or wand that chains through up to ${SKILL_EXECUTION.arcLightning.jumps} enemies, weakening with each jump.`, requirement: 'magic', domain: 'Arcana', tier: 'basic', manaCost: 12, cooldown: 0, damageMultiplier: 1.4, color: '#c4c4ff' }),
+  iceNova: Object.freeze({ id: 'iceNova', name: 'Ice Nova', description: 'Release frost from your staff or wand in every direction, damaging and slowing surrounding enemies.', requirement: 'magic', domain: 'Arcana', tier: 'basic', manaCost: 14, cooldown: 0, damageMultiplier: 1.5, color: '#a5dbe7' }),
+  frostLance: Object.freeze({ id: 'frostLance', name: 'Frost Lance', description: `Launch a shard of ice from your staff or wand. It pierces up to ${SKILL_EXECUTION.frostLance.effects.pierce + 1} enemies and slows each one.`, requirement: 'magic', domain: 'Arcana', tier: 'advanced', manaCost: 28, cooldown: 1.8, damageMultiplier: 1.65, color: '#c1e8f0' }),
+  meteor: Object.freeze({ id: 'meteor', name: 'Meteor', description: 'Mark a distant area with your staff or wand. A meteor falls after a delay, blasting and igniting it.', requirement: 'magic', domain: 'Arcana', tier: 'advanced', manaCost: 40, cooldown: 7, damageMultiplier: 3.4, color: '#ef946a' }),
+  siphon: Object.freeze({ id: 'siphon', name: 'Soul Siphon', description: 'Cast a hungry spirit from your staff or wand, restoring life from the damage it deals on impact.', requirement: 'magic', domain: 'Arcana', tier: 'advanced', manaCost: 30, cooldown: 4.5, damageMultiplier: 1.65, color: '#dba3c3' }),
 });
 
 const REQUIREMENT_LABELS: Readonly<Record<SkillRequirement, string>> = Object.freeze({
-  melee: 'Melee weapon', blade: 'Sword, axe or dagger', heavy: 'Axe or mace', dagger: 'Dagger', bow: 'Bow', staff: 'Staff', shield: 'Equipped shield',
+  melee: 'Melee weapon', blade: 'Sword, axe or dagger', heavy: 'Axe or mace', dagger: 'Dagger', bow: 'Bow', magic: 'Staff or wand', shield: 'Equipped shield',
 });
 export function skillRequirementLabel(requirement: SkillRequirement): string { return REQUIREMENT_LABELS[requirement]; }
 
@@ -57,7 +57,7 @@ export function skillWeapon(id: SkillId, equipment: Equipment): WeaponDefinition
       case 'heavy': return family === 'axe' || family === 'mace';
       case 'dagger': return family === 'dagger';
       case 'bow': return family === 'bow';
-      case 'staff': return family === 'staff';
+      case 'magic': return weapon.attackKind === 'bolt';
     }
   };
   if (eligible(equipment.mainHand)) return equipment.mainHand;

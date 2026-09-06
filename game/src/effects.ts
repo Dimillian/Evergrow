@@ -1,7 +1,8 @@
 import { PROJECTILE_HEIGHT } from './ranged-aim.ts';
 import { SKILL_CAST_MOTION } from './combat-content.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
-import { getSwingAngle, getPlayerSwordTip } from './art.ts';
+import { playerMotion } from './character-motion.ts';
+import { getPlayerSwordTip } from './art.ts';
 import { playerPose } from './character-pose.ts';
 import { drawGlow } from './lighting.ts';
 import type { PointLight } from './lighting.ts';
@@ -141,8 +142,7 @@ export class CombatEffects {
       this.emitterTime -= .016;
       const p = sim.player, attack = p.attack;
       if (attack?.kind === 'melee' && attack.weapon.visual.kind !== 'unarmed' && attack.elapsed >= attack.activeStart && attack.elapsed <= attack.activeEnd) {
-        const angle = getSwingAngle(attack.angle, attack.elapsed / attack.duration,
-          attack.activeStart / attack.duration, attack.activeEnd / attack.duration, attack.arc);
+        const angle = playerMotion(playerPose(p, sim.time)).activeWeaponAngle;
         const tip = getPlayerSwordTip(playerPose(p, sim.time));
         const x = p.prevX + (p.x - p.prevX) * sim.interpolationAlpha + tip.x;
         const y = p.prevY + (p.y - p.prevY) * sim.interpolationAlpha + tip.y;
@@ -158,7 +158,7 @@ export class CombatEffects {
             i ? '#ffd674' : color, style === 'fire' ? .45 : .22, false);
         }
       }
-      if (p.equipment.mainHand.family === 'staff' && p.castTime > (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction)) {
+      if (p.equipment.mainHand.attackKind === 'bolt' && p.castTime > (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction)) {
         const angle = sim.time * 22, tip = getPlayerSwordTip(playerPose(p, sim.time));
         this.spark(p.x + tip.x + Math.cos(angle) * 8,
           p.y + tip.y + Math.sin(angle) * 8, angle + Math.PI / 2, p.activeSkill ? SKILL_DEFINITIONS[p.activeSkill].color : p.equipment.mainHand.visual.glow ?? GOLD, .25, false);

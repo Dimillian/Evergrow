@@ -1,13 +1,13 @@
 import { projectArmPoint } from './player-arm-rig.ts';
 import type { CharacterPose, CharacterOutfit } from './art-types.ts';
 import { PLAYER_ATTACHMENTS, playerFootCycle, playerMotion } from './character-motion.ts';
-import { STARTER_OUTFIT, heldWeapon, heldShield, upperArm, forearm, gauntlet, armorBoot, chestArmor, shoulderArmor, headArmor } from './equipment-art.ts';
+import { STARTER_OUTFIT, heldWeapon, heldShield, heldFocus, upperArm, forearm, gauntlet, armorBoot, chestArmor, shoulderArmor, headArmor } from './equipment-art.ts';
 import { hash, polygon, line, taper, type Color, type Point } from './art-primitives.ts';
 
 export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color): void {
   const outfit: CharacterOutfit = { ...STARTER_OUTFIT, ...pose.outfit };
   const { moving, phase, step, moveX, moveY, bob, back, commitment, torsoTurn, cast,
-    weaponAngle, offWeaponAngle, rangedDraw, weaponBehind, supportHolding, hipX, hipY, lean, body, weaponOrigin, offWeaponOrigin, weaponArm, offArm } = playerMotion(pose);
+    weaponAngle, offWeaponAngle, weaponScale, offWeaponScale, rangedDraw, weaponCharge, weaponBehind, supportHolding, hipX, hipY, lean, body, weaponOrigin, offWeaponOrigin, weaponArm, offArm } = playerMotion(pose);
   const legs = [-1, 1].map(side => {
     const foot = playerFootCycle(phase + (side > 0 ? Math.PI : 0));
     const travel = foot.travel * moving, lift = foot.lift * moving;
@@ -43,7 +43,7 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
   const bow = pose.weapon?.kind === 'bow';
   const mainWeapon = () => {
     const hand = projectArmPoint(weaponArm.hand);
-    heldWeapon(ctx, weaponOrigin, weaponAngle, color, pose.weapon, rangedDraw, pose.time, cast);
+    heldWeapon(ctx, weaponOrigin, weaponAngle, color, pose.weapon, rangedDraw, pose.effectTime ?? pose.time, weaponCharge, weaponScale);
     gauntlet(ctx, hand, outfit.hands, color, weaponAngle);
     if (supportHolding) gauntlet(ctx, projectArmPoint(offArm.hand), outfit.hands, color, weaponAngle);
     // Fingers cross the grip, keeping the weapon seated in the animated gauntlet.
@@ -59,9 +59,13 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
   };
   const offEquipment = () => {
     const offHand = projectArmPoint(offArm.hand);
+    if (pose.offHand?.kind === 'focus') {
+      heldFocus(ctx, offHand, pose.offHand.visual, color, pose.effectTime ?? pose.time, pose.angle);
+      gauntlet(ctx, offHand, outfit.hands, color, -.2, false);
+    }
     if (pose.offHand?.kind === 'shield') heldShield(ctx, offHand, pose.angle, pose.offHand.visual, color, pose.guard);
     if (pose.offHand?.kind === 'weapon') {
-      heldWeapon(ctx, offWeaponOrigin, offWeaponAngle, color, pose.offHand.visual);
+      heldWeapon(ctx, offWeaponOrigin, offWeaponAngle, color, pose.offHand.visual, 0, 0, 0, offWeaponScale);
       gauntlet(ctx, offHand, outfit.hands, color, offWeaponAngle);
     }
   };
@@ -135,9 +139,12 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
   ctx.save(); ctx.translate(lean * -12, -bob * 0.3);
   headArmor(ctx, outfit.head, color, pose.angle);
   ctx.restore();
-  if (!weaponBehind) mainWeapon();
-  if (pose.offHand && offArm.hand[1] >= 0) offEquipment();
-  if (cast > 0.05 && pose.weapon?.kind !== 'staff' && !bow && !pose.offHand && !pose.gesture) {
+  const equipmentLayers = [
+    ...(!weaponBehind ? [{ depth: weaponArm.hand[1], draw: mainWeapon }] : []),
+    ...(pose.offHand && offArm.hand[1] >= 0 ? [{ depth: offArm.hand[1], draw: offEquipment }] : []),
+  ];
+  equipmentLayers.sort((a, b) => a.depth - b.depth).forEach(layer => layer.draw());
+  if (cast > 0.05 && pose.weapon?.kind !== 'staff' && pose.weapon?.kind !== 'wand' && !bow && !pose.offHand && !pose.gesture) {
     const offHand = projectArmPoint(offArm.hand);
     ctx.save(); ctx.translate(offHand[0], offHand[1]); ctx.rotate(pose.time * 4.5);
     const radius = 1 + cast * 2.8;

@@ -6,7 +6,7 @@ import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, 
 import type { Pickup } from './model.ts';
 import { createBaseStats, createStartingEquipment, deriveAttackStats, basicAttackManaCost } from './equipment.ts';
 import { getActiveSwingOffset } from './attack-motion.ts';
-import { BASIC_ATTACK_PHASES, COMBAT_TIMING, SKILL_CAST_MOTION, ENEMY_DEFINITIONS, LOOT_RULES, PLAYER_ABILITIES,
+import { RANGED_BASIC_ATTACK_PHASES, BASIC_ATTACK_PHASES, COMBAT_TIMING, SKILL_CAST_MOTION, ENEMY_DEFINITIONS, LOOT_RULES, PLAYER_ABILITIES,
   PLAYER_DEFAULTS, PLAYER_MOVEMENT, type ProjectileDefinition } from './combat-content.ts';
 import { chooseEncounterEnemy, chooseEncounterRank, ENCOUNTER_RULES, livingEnemyCount, encounterPopulationTarget, type EncounterActor } from './encounter-director.ts';
 import { circleIntersectsSector, segmentDistanceSquared, hasLineOfSight } from './combat-geometry.ts';
@@ -441,8 +441,8 @@ export class Simulation {
     const style = weapon.attackKind === 'arrow' ? 'arrow' : weapon.damageType === 'physical' ? 'arcane' : weapon.damageType;
     this.player.attack = {
       kind: ranged ? 'ranged' : 'melee', weapon, hand,
-      elapsed, duration, activeStart: duration * (ranged ? .42 : BASIC_ATTACK_PHASES.activeStart),
-      activeEnd: duration * (ranged ? .5 : BASIC_ATTACK_PHASES.activeEnd), angle: this.player.angle,
+      elapsed, duration, activeStart: duration * (ranged ? RANGED_BASIC_ATTACK_PHASES.activeStart : BASIC_ATTACK_PHASES.activeStart),
+      activeEnd: duration * (ranged ? RANGED_BASIC_ATTACK_PHASES.activeEnd : BASIC_ATTACK_PHASES.activeEnd), angle: this.player.angle,
       range: stats.range, arc: stats.arc, damage: stats.damage, hitIds: new Set<number>(),
       ...(ranged ? { projectile: { style, ...(style === 'frost' ? { slowFactor: .8, slowDuration: 1 } : {}) } } : {}),
     };
@@ -453,11 +453,11 @@ export class Simulation {
   private resolveMelee(attack: Attack, previousElapsed: number): void {
     const p = this.player;
     const activeDuration = attack.activeEnd - attack.activeStart;
-    const before = getActiveSwingOffset((previousElapsed - attack.activeStart) / activeDuration, attack.arc);
-    const after = getActiveSwingOffset((attack.elapsed - attack.activeStart) / activeDuration, attack.arc);
+    const before = getActiveSwingOffset((previousElapsed - attack.activeStart) / activeDuration, attack.arc, attack.hand);
+    const after = getActiveSwingOffset((attack.elapsed - attack.activeStart) / activeDuration, attack.arc, attack.hand);
     // A small blade width is included, while keeping the advertised arc bounds.
-    const from = Math.max(-attack.arc / 2, before - PLAYER_ABILITIES.basicAttack.bladeHalfAngle);
-    const to = Math.min(attack.arc / 2, after + PLAYER_ABILITIES.basicAttack.bladeHalfAngle);
+    const from = Math.max(-attack.arc / 2, Math.min(before, after) - PLAYER_ABILITIES.basicAttack.bladeHalfAngle);
+    const to = Math.min(attack.arc / 2, Math.max(before, after) + PLAYER_ABILITIES.basicAttack.bladeHalfAngle);
     const angle = attack.angle + (from + to) / 2;
     for (const enemy of this.enemies) {
       if (enemy.state === 'dead' || attack.hitIds.has(enemy.id)) continue;

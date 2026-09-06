@@ -1,11 +1,11 @@
 import type { Player } from './model.ts';
 import type { CharacterSave } from './character-save.ts';
-import { createCharacterSheet, type StarterWeaponId } from './items.ts';
+import { createCharacterSheet, type StarterLoadoutId } from './items.ts';
 import { initialPlayer } from './simulation.ts';
 import { refreshCharacter } from './character.ts';
 import { deriveAttackStats } from './equipment.ts';
 
-export function previewCharacter(record: CharacterSave | null, starter: StarterWeaponId = 'sword'): Player {
+export function previewCharacter(record: CharacterSave | null, starter: StarterLoadoutId = 'sword'): Player {
   const player = initialPlayer(0, 0);
   if (record) {
     player.character = JSON.parse(JSON.stringify(record.checkpoint.character));

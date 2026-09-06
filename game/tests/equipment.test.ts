@@ -63,7 +63,7 @@ test('weapon profile selects the authored grip and attack or spell scaling indep
     assert.equal(getWeaponGrip({ mainHand: weapon, offHand: null }), weapon.hands === 2 ? 'two-handed' : 'one-handed');
     const attack = deriveAttackStats(stats, weapon);
     assert.equal(attack.damage, Math.round(weapon.damage * (weapon.attackKind === 'bolt' ? 3 : 2)));
-    assert.equal(attack.attacksPerSecond, weaponActionRate(weapon) * (weapon.family === 'staff' ? stats.castSpeedMultiplier : stats.attackSpeedMultiplier));
+    assert.equal(attack.attacksPerSecond, weaponActionRate(weapon) * (weapon.attackKind === 'bolt' ? stats.castSpeedMultiplier : stats.attackSpeedMultiplier));
   }
 });
 

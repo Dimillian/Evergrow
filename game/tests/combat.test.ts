@@ -203,10 +203,12 @@ test('aim can correct the sword windup but contact keeps a stable hit sector', (
   assert.equal(front.hp, front.maxHp);
 });
 
-test('sword contact follows its sweep through the center and both outer edges', () => {
-  for (const speed of [2, 12]) {
+test('each hand contacts the shoulder-side edge, center and far edge in its visible slash order', () => {
+  for (const speed of [2, 12]) for (const hand of ['main', 'off'] as const) {
     const sim = make();
-    sim.player.equipment.mainHand.baseAttacksPerSecond = speed;
+    sim.player.equipment.mainHand = { ...sim.player.equipment.mainHand, hands: 1, baseAttacksPerSecond: speed };
+    sim.player.equipment.offHand = { kind: 'weapon', weapon: sim.player.equipment.mainHand };
+    sim.player.nextAttackHand = hand;
     const arc = sim.player.equipment.mainHand.arc;
     const angles = [-arc / 2, 0, arc / 2];
     const targets = angles.map(angle => {
@@ -222,8 +224,10 @@ test('sword contact follows its sweep through the center and both outer edges', 
       for (const event of sim.drainEvents()) if (event.type === 'hit') hitTimes.set(event.targetId!, attack.elapsed);
     }
     assert.equal(hitTimes.size, 3, `${speed} APS reaches both edge targets and the center`);
-    assert.ok(hitTimes.get(targets[0].id)! < hitTimes.get(targets[1].id)!);
-    assert.ok(hitTimes.get(targets[1].id)! <= hitTimes.get(targets[2].id)!);
+    assert.equal(attack.hand, hand);
+    const order = hand === 'main' ? [2, 1, 0] : [0, 1, 2];
+    assert.ok(hitTimes.get(targets[order[0]].id)! < hitTimes.get(targets[order[1]].id)!);
+    assert.ok(hitTimes.get(targets[order[1]].id)! <= hitTimes.get(targets[order[2]].id)!);
     const midpoint = (attack.activeStart + attack.activeEnd) / 2;
     assert.ok(Math.abs(hitTimes.get(targets[1].id)! - midpoint) <= FIXED_STEP + .005,
       `${speed} APS center contact occurs when the blade crosses center, not at startup`);

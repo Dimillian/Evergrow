@@ -276,7 +276,7 @@ function buildTree() {
       { name: 'Economy of Motion', description: 'Spend less mana on every skill.', minor: { manaCostPercent: 4 }, notable: {} },
     ],
     Arcana: [
-      { name: 'Swift Invocation', description: 'Cast staff attacks and magic skills faster.', minor: { castSpeedPercent: 4 }, notable: {} },
+      { name: 'Swift Invocation', description: 'Cast staff and wand attacks and magic skills faster.', minor: { castSpeedPercent: 4 }, notable: {} },
       { name: 'Deep Reservoir', description: 'Increase your maximum mana.', minor: { maxMana: 16 }, notable: {} },
       { name: 'Efficient Weaving', description: 'Reduce the mana cost of every skill.', minor: { manaCostPercent: 4 }, notable: {} },
     ],

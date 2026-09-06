@@ -1,6 +1,7 @@
+import { focusShapes } from './focus-shapes.ts';
 import { armorShapes } from './armor-shapes.ts';
 import { STARTING_SWORD } from './equipment.ts';
-import type { ShieldDefinition } from './model.ts';
+import type { FocusDefinition, ShieldDefinition } from './model.ts';
 import { shieldShapes, weaponShapes, weaponArtLength, type GearShape } from './weapon-shapes.ts';
 import type { ArmorMaterial, ArmorPiece, CharacterOutfit } from './art-types.ts';
 import { PLAYER_ATTACHMENTS } from './character-motion.ts';
@@ -43,10 +44,10 @@ export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly G
 }
 
 export function heldWeapon(ctx: CanvasRenderingContext2D, hand: Point, angle: number, color: Color,
-  visual = STARTING_SWORD.visual, draw = 0, time = 0, charge = 0): void {
-  ctx.save(); ctx.translate(hand[0], hand[1]); ctx.rotate(angle);
+  visual = STARTING_SWORD.visual, draw = 0, time = 0, charge = 0, lengthScale = 1): void {
+  ctx.save(); ctx.translate(hand[0], hand[1]); ctx.rotate(angle); ctx.scale(lengthScale, 1);
   drawGearShapes(ctx, weaponShapes(visual, draw), color);
-  if (visual.kind === 'staff' && visual.glow) {
+  if ((visual.kind === 'staff' || visual.kind === 'wand') && visual.glow) {
     const x = weaponArtLength(visual) - 1;
     const pulse = .7 + Math.sin(time * 2.2) * .1 + charge * .3;
     ctx.save(); ctx.globalCompositeOperation = 'screen';
@@ -187,6 +188,20 @@ export function headArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | nul
     polygon(ctx, [[-4.2, -.7], [-3.2, -3.9], [.6, -4.8], [3.7, -2.7], [3.8, -.6], [2.1, -1.4], [1, -2.5], [-1.5, -1.8], [-2.2, .1], [-3.6, 1.4]], color('#4c3b32'));
     line(ctx, [[-3.4, -1.5], [-2.6, -3], [.3, -3.7], [2.4, -2.4]], color('#8f7457'), .7);
     if (back) polygon(ctx, [[-3.7, -.4], [3.7, -.4], [3.5, 3.2], [1.8, 4.8], [-2.3, 4.2], [-3.8, 2.1]], color('#4c3b32'));
+  }
+  ctx.restore();
+}
+
+/** Bound spellbooks face their owner; luminous orbs levitate above the palm. */
+export function heldFocus(ctx: CanvasRenderingContext2D, hand: Point, visual: FocusDefinition['visual'], color: Color, time = 0, facing = Math.PI / 2): void {
+  ctx.save(); ctx.translate(hand[0], hand[1]);
+  drawGearShapes(ctx, focusShapes(visual, time, facing), color);
+  if (visual.kind === 'orb') {
+    const cy = -8.8 + Math.sin(time * 1.6) * .35;
+    const glow = ctx.createRadialGradient(0, cy, 1, 0, cy, 7);
+    glow.addColorStop(0, visual.glow + '45'); glow.addColorStop(1, visual.glow + '00');
+    ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha *= .75 + Math.sin(time * 1.6) * .15;
+    ctx.fillStyle = glow; ctx.fillRect(-8, cy - 8, 16, 16);
   }
   ctx.restore();
 }

@@ -1,3 +1,4 @@
+import { FOCUS_PROFILES } from './focus-content.ts';
 import type { Item } from './character-types.ts';
 import { ITEM_KINDS, TIER_NAMES, STAT_LABELS, TIER_AFFIXES } from './items.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from './weapon-content.ts';
@@ -26,7 +27,7 @@ export function validItem(v: unknown): v is Item {
   const profile = r.profileId;
   if (v.kind === 'weapon' && !(profile === STARTING_SWORD.id || WEAPON_PROFILES.some(p => p.id === profile))) return false;
   if (v.kind === 'shield' && !SHIELD_PROFILES.some(p => p.id === profile)) return false;
-  if (v.kind !== 'weapon' && v.kind !== 'shield' && profile !== undefined) return false;
+  if (v.kind !== 'weapon' && v.kind !== 'shield' && v.kind !== 'grimoire' && v.kind !== 'orb' && profile !== undefined) return false;
   const a = v.appearance;
   if (!object(a) || !oneOf(a.style, ['plate', 'leather']) || !['base', 'shadow', 'edge', 'trim'].every(key => color(a[key]))) return false;
   const w = v.weapon;
@@ -34,7 +35,7 @@ export function validItem(v: unknown): v is Item {
   const shieldProfile = SHIELD_PROFILES.find(p => p.id === profile);
   if (v.kind === 'weapon') {
     if (!object(w) || !weaponProfile || w.family !== weaponProfile.family || w.hands !== weaponProfile.hands
-      || w.attackKind !== weaponProfile.attackKind || w.damageType !== weaponProfile.damageType || !text(w.id) || !text(w.name) || !oneOf(w.family, ['sword', 'axe', 'mace', 'dagger', 'bow', 'staff'])
+      || w.attackKind !== weaponProfile.attackKind || w.damageType !== weaponProfile.damageType || !text(w.id) || !text(w.name) || !oneOf(w.family, ['sword', 'axe', 'mace', 'dagger', 'bow', 'staff', 'wand'])
       || !oneOf(w.hands, [1, 2]) || !oneOf(w.attackKind, ['melee', 'arrow', 'bolt'])
       || !oneOf(w.damageType, ['physical', 'fire', 'frost', 'lightning', 'arcane'])
       || !number(w.damage, 1) || !number(w.baseAttacksPerSecond, .01, 100) || !number(w.reach, 1, 2000) || !number(w.arc, 0, Math.PI * 2)) return false;
@@ -52,5 +53,11 @@ export function validItem(v: unknown): v is Item {
       || shield.visual.kind !== shieldProfile.visual.kind
       || !['base', 'shadow', 'edge', 'trim'].every(key => color((shield.visual as ObjectValue)[key]))) return false;
   } else if (shield !== undefined) return false;
+  if (v.kind === 'grimoire' || v.kind === 'orb') {
+    const f = v.focus, p = FOCUS_PROFILES.find(p => p.id === profile && p.visual.kind === v.kind);
+    if (!p || !object(f) || !text(f.id, 160) || !text(f.name) || !object(f.visual)
+      || f.visual.kind !== p.visual.kind || f.visual.motif !== p.visual.motif
+      || !['base', 'edge', 'trim', 'shadow', 'glow'].every(key => color((f.visual as ObjectValue)[key]))) return false;
+  } else if (v.focus !== undefined) return false;
   return true;
 }

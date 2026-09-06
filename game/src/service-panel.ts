@@ -8,7 +8,7 @@ import { improveItem, type Improvement } from './item-improvement.ts';
 import { updateItemSlot, itemTooltipMarkup, CHANGE_LABELS, PREVIEW_PERCENT } from './item-ui.ts';
 import { ItemTooltip } from './item-tooltip.ts';
 import { itemIconSVG } from './item-art.ts';
-import { EQUIPMENT_SLOTS, TIER_COLORS, TIER_NAMES, STAT_LABELS, AFFIXES, SHIELD_AFFIXES, itemDisplayName, itemModifiers, formatStatValue } from './items.ts';
+import { EQUIPMENT_SLOTS, TIER_COLORS, TIER_NAMES, STAT_LABELS, itemAffixPool, itemDisplayName, itemModifiers, formatStatValue } from './items.ts';
 import { goldBalance } from './wallet.ts';
 import { escapeUI, trapDialogFocus } from './ui-components.ts';
 import './service-panel.css';
@@ -162,7 +162,7 @@ export class ServicePanel {
     if (op === 'rerollOne' || op === 'rerollAll') {
       detail.innerHTML += `<div class="service-changes">${item.affixes.map((a, i) => `<div class="${op === 'rerollOne' && i === this.selectedAffix() ? 'is-selected-affix' : ''}"><span>${escapeUI(STAT_LABELS[a.stat])}</span><b>${formatStatValue(a.stat, a.value)}</b></div>`).join('')}</div>`;
       const excluded = op === 'rerollOne' ? new Set(item.affixes.map(a => a.stat)) : new Set();
-      const pool = (item.kind === 'shield' ? [...AFFIXES, ...SHIELD_AFFIXES] : AFFIXES).filter(a => !excluded.has(a.stat));
+      const pool = itemAffixPool(item).filter(a => !excluded.has(a.stat));
       detail.innerHTML += `<p class="service-caution">Replaces ${op === 'rerollOne' ? 'this affix' : 'all affixes'}. Results can be worse.</p><details><summary>Possible affixes</summary><p class="service-pool">${pool.map(a => escapeUI(STAT_LABELS[a.stat])).join(' · ')}</p></details>`;
     } else {
       const next = improveItem(item, op, this.npc.level, 1);
@@ -182,7 +182,7 @@ export class ServicePanel {
           return `<div><span>${CHANGE_LABELS[change.key]}</span><b class="${delta < 0 ? 'is-loss' : 'is-gain'}">${delta > 0 ? '+' : ''}${Number(delta.toFixed(2))}${percent ? '%' : ''}</b></div>`;
         }).join('') || `<p class="ui-muted">${preview && !preview.ok ? escapeUI(preview.message) : 'No effective stat change.'}</p>`}</div>`;
       }
-      if (op === 'rarity') detail.innerHTML += '<p class="service-caution">Adds one random affix.</p><details><summary>Possible new affixes</summary><p class="service-pool">' + (item.kind === 'shield' ? [...AFFIXES, ...SHIELD_AFFIXES] : AFFIXES).filter(a => !item.affixes.some(b => b.stat === a.stat)).map(a => escapeUI(STAT_LABELS[a.stat])).join(' · ') + '</p></details>';
+      if (op === 'rarity') detail.innerHTML += '<p class="service-caution">Adds one random affix.</p><details><summary>Possible new affixes</summary><p class="service-pool">' + itemAffixPool(item).filter(a => !item.affixes.some(b => b.stat === a.stat)).map(a => escapeUI(STAT_LABELS[a.stat])).join(' · ') + '</p></details>';
       if (op === 'relevel') detail.innerHTML += `<p class="${next.requiredLevel > this.player.level ? 'service-caution' : 'ui-muted'}">Requires level ${next.requiredLevel}</p>`;
       if (op === 'enhance') detail.innerHTML += '<p class="ui-muted">Guaranteed · maximum +10</p>';
     }

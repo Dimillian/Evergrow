@@ -62,3 +62,5 @@
 .ui-item-slot[data-enhancement="5"], .ui-item-slot[data-enhancement="6"], .ui-item-slot[data-enhancement="7"], .ui-item-slot[data-enhancement="8"], .ui-item-slot[data-enhancement="9"], .ui-item-slot[data-enhancement="10"] { box-shadow:inset 0 0 12px #e4c99622; }
 .ui-item-slot[data-enhancement="10"] { outline:1px solid #eadab35c; outline-offset:2px; }
 .ui-item-upgrade { font:12px "Evergrow Numerals", system-ui,sans-serif; color:#e6cc96; padding:8px 0; border-bottom:1px solid #c6b17b30; }
+
+.ui-item-hands { position: absolute; top: 3px; left: 4px; color: #b8c6ca; font: 600 8px/1.2 system-ui, sans-serif; text-shadow: 0 1px 2px #000; pointer-events: none; }

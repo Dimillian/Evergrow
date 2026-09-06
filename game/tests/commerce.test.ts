@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createCharacterSheet, generateItem, deriveItem, ITEM_KINDS, STARTER_WEAPONS, createStarterWeapon, TIER_AFFIXES } from '../src/items.ts';
+import { createCharacterSheet, generateItem, deriveItem, ITEM_KINDS, STARTER_LOADOUTS, createStarterLoadout, TIER_AFFIXES } from '../src/items.ts';
 import { vendorStock, quoteService, planService, improvementPrice, itemPrice, type ServiceRequest } from '../src/commerce.ts';
 import { improveItem, ITEM_TIERS } from '../src/item-improvement.ts';
 import { buildingNPC, canInteractNPC, focusNPC, type TownNPC } from '../src/npcs.ts';
@@ -29,7 +29,7 @@ test('stock is deterministic, visible jewelry only, varied equipment and distinc
   assert.equal(stock.length, 12); assert.deepEqual(stock, vendorStock(c, smith, 12));
   assert.equal(stock[0]!.weapon!.family, 'sword'); assert.equal(stock[1]!.weapon!.family, 'bow'); assert.equal(stock[2]!.weapon!.family, 'staff');
   assert.ok(stock.every(i => i?.itemLevel === 10 && validItem(i)));
-  const jewelry = vendorStock(c, jeweler, 10); assert.equal(jewelry.length, 6);
+  const jewelry = vendorStock(c, jeweler, 10); assert.equal(jewelry.length, 8);
   assert.equal(jewelry.filter(i => i!.kind === 'ring').length, 4); assert.equal(jewelry.filter(i => i!.kind === 'amulet').length, 2);
   assert.ok(!vendorStock(c, smith, 13).some(i => stock.some(j => j!.id === i!.id)));
   assert.deepEqual(vendorStock(c, enchanter, 10), []);
@@ -83,8 +83,15 @@ test('all item kinds derive consistently and +10 is bounded without compounding 
     assert.equal(enhanced.id, item.id); assert.deepEqual(enhanced.recipe.rolls, item.recipe.rolls);
     assert.throws(() => improveItem(enhanced, 'enhance', 10, 1));
   }
-  for (const choice of STARTER_WEAPONS) {
-    const item = createStarterWeapon(choice.id), next = improveItem(item, 'enhance', 1, 1);
+  for (const choice of STARTER_LOADOUTS) {
+    const loadout = createStarterLoadout(choice.id);
+    if (loadout.offhand) {
+      assert.deepEqual(deriveItem(loadout.offhand), loadout.offhand, 'starter off-hand keeps its authored bonuses during derivation');
+      const improved = improveItem(loadout.offhand, 'enhance', 1, 1);
+      assert.ok(validItem(improved));
+      for (const [stat, value] of Object.entries(loadout.offhand.implicit)) assert.ok(improved.implicit[stat as keyof typeof improved.implicit]! >= value!);
+    }
+    const item = loadout.weapon, next = improveItem(item, 'enhance', 1, 1);
     assert.equal(next.weapon!.damage, Math.round(item.weapon!.damage * 1.05)); assert.equal(next.weapon!.baseAttacksPerSecond, item.weapon!.baseAttacksPerSecond);
   }
 });

@@ -49,7 +49,7 @@ test('item level raises power, requirements and stats without changing a seeded 
 });
 
 test('explicit authored profiles cover one-hand, two-hand, bow, staff, and shield roles deterministically', () => {
-  assert.equal(WEAPON_PROFILES.length, 13); assert.equal(SHIELD_PROFILES.length, 3);
+  assert.equal(WEAPON_PROFILES.length, 17); assert.equal(SHIELD_PROFILES.length, 3);
   const families = new Set<string>();
   for (const profile of WEAPON_PROFILES) {
     const item = generateItem(872, 1, 'weapon', profile.id), high = generateItem(872, 30, 'weapon', profile.id);
@@ -59,10 +59,10 @@ test('explicit authored profiles cover one-hand, two-hand, bow, staff, and shiel
     assert.deepEqual(item, generateItem(872, 1, undefined, profile.id));
     assert.ok(Object.isFrozen(profile) && Object.isFrozen(profile.visual));
   }
-  assert.deepEqual([...families].sort(), ['axe', 'bow', 'dagger', 'mace', 'staff', 'sword']);
-  assert.equal(WEAPON_PROFILES.filter(profile => profile.hands === 1).length, 4);
+  assert.deepEqual([...families].sort(), ['axe', 'bow', 'dagger', 'mace', 'staff', 'sword', 'wand']);
+  assert.equal(WEAPON_PROFILES.filter(profile => profile.hands === 1).length, 8);
   assert.equal(WEAPON_PROFILES.filter(profile => profile.attackKind === 'arrow').length, 3);
-  assert.equal(WEAPON_PROFILES.filter(profile => profile.attackKind === 'bolt').length, 3);
+  assert.equal(WEAPON_PROFILES.filter(profile => profile.attackKind === 'bolt').length, 7);
   assert.deepEqual(WEAPON_PROFILES.filter(profile => profile.family === 'staff').map(profile => profile.damageType), ['fire', 'frost', 'lightning']);
   for (const profile of SHIELD_PROFILES) {
     const item = generateItem(873, 1, 'shield', profile.id), high = generateItem(873, 30, 'shield', profile.id);

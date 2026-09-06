@@ -7,7 +7,7 @@ Implemented service contract · 2026-09-05. Blacksmith, jeweler and enchanter ar
 | NPC | Services | Stock |
 | --- | --- | --- |
 | Blacksmith | Buy equipment, sell any unequipped item, enhance equipment to +10 | 12 weapons, shields and armor pieces |
-| Jeweler | Buy jewelry, sell any unequipped item | 6 pieces: 4 rings and 2 amulets |
+| Jeweler | Buy jewelry and caster foci, sell any unequipped item | 8 pieces: 4 rings, 2 amulets, 1 grimoire and 1 orb |
 | Enchanter | Raise rarity, reroll one affix, reroll all affixes, raise item level | No equipment shop |
 
 Every town supplies all three services. Use the existing forge for the blacksmith, merchant building for the jeweler, and a work area in the chapel for the enchanter. Preserve doors, streets and footprints. Give each service a distinct discovered-map icon and concise role label; replace redundant shop markers rather than overlapping them.
@@ -26,7 +26,7 @@ Blacksmith and enchanter show a separate **Equipped** section above the bag. Cli
 
 Selling transfers the exact item and credits gold. Equipped items must first be unequipped. Keep a shared **Buyback** list of the last 12 sales per character, available at either shop, at the original sale price. Buyback preserves the item, its enhancement and its reroll history. Display that limit; the thirteenth sale retires the oldest entry. There is no sell-all action in v1.
 
-Blacksmith stock guarantees a sword, bow, staff and shield, with the other eight entries covering armor and randomly selected equipment. All supported weapon profiles can appear. Jewelry stock is generated equipment with fully visible stats, not a blind purchase.
+Blacksmith stock guarantees a sword, bow, staff, wand and shield, with the other seven entries covering armor and randomly selected equipment. All supported weapon profiles can appear. Jewelry stock is generated equipment with fully visible stats, not a blind purchase.
 
 Current stock rarity weights:
 

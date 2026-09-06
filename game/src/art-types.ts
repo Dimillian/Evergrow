@@ -1,5 +1,5 @@
 import type { WeaponVisual, WeaponGrip } from './equipment.ts';
-import type { EnemyKind, ShieldDefinition } from './model.ts';
+import type { EnemyKind, FocusDefinition, ShieldDefinition } from './model.ts';
 
 /** Procedural art only: every cached image below is drawn from geometry. */
 export interface Sprite {
@@ -50,6 +50,8 @@ export interface CharacterPose {
   angle: number;
   /** Elapsed animation time in seconds. */
   time: number;
+  /** Optional frozen clock for decorative equipment effects. */
+  effectTime?: number;
   /** Radians accumulated from distance travelled, independent of idle/cape time. */
   gaitPhase?: number;
   /** Movement direction, independent of where the weapon is aimed. */
@@ -69,7 +71,7 @@ export interface CharacterPose {
   cast?: number;
   weapon?: WeaponVisual;
   grip?: WeaponGrip;
-  offHand?: { kind: 'weapon'; visual: WeaponVisual } | { kind: 'shield'; visual: ShieldDefinition['visual'] } | null;
+  offHand?: { kind: 'weapon'; visual: WeaponVisual } | { kind: 'shield'; visual: ShieldDefinition['visual'] } | { kind: 'focus'; visual: FocusDefinition['visual'] } | null;
   guard?: number;
   castColor?: string;
   slow?: number;

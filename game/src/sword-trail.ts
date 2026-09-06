@@ -1,4 +1,5 @@
-import { getSwingAngle, getPlayerSwordTip } from './art.ts';
+import { playerMotion } from './character-motion.ts';
+import { getPlayerSwordTip } from './art.ts';
 import { playerPose } from './character-pose.ts';
 import type { Attack, Player } from './model.ts';
 import { drawGlow } from './lighting.ts';
@@ -52,8 +53,7 @@ export class SwordTrail {
     const to = Math.min(attack.activeEnd, current);
     if (to <= from) return;
     const count = Math.max(1, Math.ceil((to - from) / SAMPLE_STEP));
-    const angleAt = (elapsed: number) => getSwingAngle(attack.angle, elapsed / attack.duration,
-      attack.activeStart / attack.duration, attack.activeEnd / attack.duration, attack.arc);
+    const angleAt = (elapsed: number) => playerMotion(playerPose(player, simulationTime, attack, elapsed)).activeWeaponAngle;
     const color = attack.weapon.visual.glow ?? '#f4bd67';
     for (let i = 0; i <= count; i++) {
       const elapsed = from + (to - from) * i / count;
@@ -62,8 +62,8 @@ export class SwordTrail {
       const cx = this.lastX + (x - this.lastX) * position;
       const cy = this.lastY + (y - this.lastY) * position;
       const angle = angleAt(elapsed);
-      const speed = Math.abs(angleAt(Math.min(attack.activeEnd, elapsed + .003))
-        - angleAt(Math.max(attack.activeStart, elapsed - .003))) / .006;
+      const delta = angleAt(Math.min(attack.activeEnd, elapsed + .003)) - angleAt(Math.max(attack.activeStart, elapsed - .003));
+      const speed = Math.abs(Math.atan2(Math.sin(delta), Math.cos(delta))) / .006;
       const nx = Math.cos(angle), ny = Math.sin(angle);
       const pose = playerPose(player, simulationTime - behind, attack, elapsed);
       pose.gaitPhase = (pose.gaitPhase ?? 0) - Math.hypot(player.vx, player.vy) * behind / 22;

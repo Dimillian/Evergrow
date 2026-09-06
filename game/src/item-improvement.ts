@@ -1,5 +1,5 @@
 import type { Item } from './character-types.ts';
-import { AFFIXES, SHIELD_AFFIXES, TIER_AFFIXES, deriveItem, randomSource } from './items.ts';
+import { itemAffixPool, TIER_AFFIXES, deriveItem, randomSource } from './items.ts';
 export type Improvement = 'enhance' | 'rarity' | 'rerollOne' | 'rerollAll' | 'relevel';
 export const ITEM_TIERS = ['common', 'magic', 'rare', 'epic', 'legendary'] as const;
 export function improvementProblem(item: Item, operation: Improvement, zoneLevel: number, affix?: number): string | null {
@@ -15,7 +15,7 @@ export function improveItem(item: Item, operation: Improvement, zoneLevel: numbe
   const problem = improvementProblem(item, operation, zoneLevel, affix);
   if (problem) throw new RangeError(problem);
   const next = { ...item, recipe: { ...item.recipe, rolls: [...item.recipe.rolls], revision: item.recipe.revision + 1 }, affixes: [...item.affixes] };
-  const random = randomSource(seed), definitions = item.kind === 'shield' ? [...AFFIXES, ...SHIELD_AFFIXES] : [...AFFIXES];
+  const random = randomSource(seed), definitions = [...itemAffixPool(item)];
   const roll = (index: number, excluded?: string) => {
     const occupied = new Set(next.affixes.filter((_, i) => i !== index).map(a => a.stat));
     const pool = definitions.filter(a => !occupied.has(a.stat) && a.stat !== excluded);

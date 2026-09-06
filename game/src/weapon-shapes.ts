@@ -8,7 +8,7 @@ const stroke = (points: readonly Point[], color: string, width = .7): GearShape 
 const gem = (x: number, y: number, rx: number, ry: number): Point[] => [[x - rx, y], [x, y - ry], [x + rx, y], [x, y + ry]];
 
 /** Staff proportions fit a walking-staff carry; held effects share this tip. */
-export const weaponArtLength = (visual: WeaponVisual) => clamp(visual.length, 8, 60) * (visual.kind === 'staff' ? .82 : 1);
+export const weaponArtLength = (visual: WeaponVisual) => clamp(visual.length, 8, 60) * (visual.kind === 'staff' ? .73 : 1);
 
 /** The string and the support-hand anchor consume exactly the same draw offset. */
 export const bowStringOffset = (draw: number) => -5 - clamp(draw, 0, 1) * 11;
@@ -82,6 +82,15 @@ export function weaponShapes(visual: WeaponVisual, draw = 0): GearShape[] {
       shapes.push(stroke([[head - 3, y - 1.2], [length - 1, y - 1.2], [length + 1, y]], visual.edge, .55));
     }
     shapes.push(poly(gem(head + 1, 0, 2.5, 2.5), visual.guard));
+  } else if (visual.kind === 'wand') {
+    const glow = visual.glow ?? '#b4a5ef', tip = length - 2;
+    shapes.push(poly([[-grip, -1.2], [4, -1.8], [tip - 3, -.8], [tip - 3, .8], [4, 1.8], [-grip, 1.2]], visual.grip));
+    shapes.push(stroke([[2, -1.3], [tip - 3, -.6]], visual.edge, .45));
+    shapes.push(poly([[tip - 5, -2], [tip - 2, -2.5], [tip + 2, 0], [tip - 2, 2.5], [tip - 5, 2]], visual.metal));
+    shapes.push(poly(gem(tip, 0, 3.5, visual.element === 'frost' ? 2 : 1.6), glow));
+    shapes.push(poly([[tip - 2, -.2], [tip, -1.5], [tip + 3, 0], [tip, -.3]], visual.edge));
+    for (const x of [2, tip - 5]) shapes.push(stroke([[x, -1.7], [x, 1.7]], visual.guard, 1));
+    if (visual.element === 'lightning') shapes.push(stroke([[5, -.4], [8, .4], [9, -.4], [12, .2]], glow, .45));
   } else if (visual.kind === 'staff') {
     const head = length - 4, glow = visual.glow ?? '#a99acf';
     const iron = mixColor(visual.metal, '#121c28', .72), lit = mixColor(visual.metal, '#bdc7cc', .25);
@@ -117,8 +126,8 @@ export function weaponShapes(visual: WeaponVisual, draw = 0): GearShape[] {
   const pommel: Point[] = [[-2, -.7], [-1.1, -1.7], [.2, -1.4], [.8, -.6], [.8, .6], [.2, 1.4], [-1.1, 1.7], [-2, .7]];
   shapes.push(poly(pommel.map(([x, y]) => [x - grip, y]), mixColor(visual.guard, '#23313a', .25)));
   shapes.push(stroke([[-grip - 1.6, -.5], [-grip - 1, -1.2], [-grip + .1, -.9]], visual.edge, .35));
-  if (visual.glow && visual.kind !== 'staff') shapes.push(stroke([[Math.max(5, length * .35), -half], [length * .8, -half * .6], [length, 0]], visual.glow, .6));
-  if (visual.kind !== 'staff') {
+  if (visual.glow && visual.kind !== 'staff' && visual.kind !== 'wand') shapes.push(stroke([[Math.max(5, length * .35), -half], [length * .8, -half * .6], [length, 0]], visual.glow, .6));
+  if (visual.kind !== 'staff' && visual.kind !== 'wand') {
     const dark = mixColor(visual.metal, '#101b24', .65);
     for (let i = 0; i < 3; i++) {
       const x = length * (.32 + i * .16);
@@ -128,6 +137,10 @@ export function weaponShapes(visual: WeaponVisual, draw = 0): GearShape[] {
       shapes.push(stroke([[wrap, -.9], [wrap + .5, .8]], mixColor(visual.grip, '#172027', .55), .35));
     }
   }
+  if (visual.kind === 'staff') return shapes.map(shape => ({ ...shape,
+    points: shape.points.map(([x, y]): Point => [x, y * .62]),
+    ...(shape.width !== undefined ? { width: shape.width * .8 } : {}),
+  }));
   return shapes;
 }
 
@@ -168,7 +181,15 @@ export function shieldShapes(visual: ShieldDefinition['visual']): GearShape[] {
 }
 
 /** SVG and Canvas use these same points, keeping icons faithful to equipped silhouettes. */
+/** Accept only bounded color forms emitted by the procedural material helpers. */
+export function gearShapeColor(value: string): string {
+  if (/^#[a-f0-9]{6}$/i.test(value)) return value;
+  const rgb = /^rgb\((\d{1,3}),(\d{1,3}),(\d{1,3})\)$/.exec(value);
+  if (rgb && rgb.slice(1).every(n => Number(n) <= 255)) return '#' + rgb.slice(1).map(n => Number(n).toString(16).padStart(2, '0')).join('');
+  return '#829487';
+}
+
 export function gearShapesSVG(shapes: readonly GearShape[], fine = true): string {
-  const color = (value: string) => /^#[a-f0-9]{6}$/i.test(value) ? value : '#829487';
+  const color = gearShapeColor;
   return shapes.filter(shape => fine || !shape.fine).map(shape => `<${shape.fill ? 'polygon' : 'polyline'} points="${shape.points.map(p => p.map(v => Math.round(v * 100) / 100).join(',')).join(' ')}" fill="${shape.fill ? color(shape.fill) : 'none'}"${shape.stroke ? ` stroke="${color(shape.stroke)}" stroke-width="${shape.width ?? .7}" stroke-linejoin="round" stroke-linecap="round"` : ''}/>`).join('');
 }

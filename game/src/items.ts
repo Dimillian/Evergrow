@@ -1,3 +1,4 @@
+import { FOCUS_PROFILES } from './focus-content.ts';
 import { STARTING_SWORD } from './equipment.ts';
 import { SHIELD_PROFILES, WEAPON_PROFILES } from './weapon-content.ts';
 import { itemAffixGrowthLevel, itemPercentageScale, itemPowerScale, normalizeLevel } from './progression-content.ts';
@@ -8,7 +9,7 @@ export const INVENTORY_CAPACITY = 64;
 export const EQUIPMENT_SLOTS: readonly EquipmentSlot[] = Object.freeze([
   'weapon', 'offhand', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'amulet', 'ring1', 'ring2',
 ]);
-export const ITEM_KINDS: readonly ItemKind[] = Object.freeze(['weapon', 'shield', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'amulet', 'ring']);
+export const ITEM_KINDS: readonly ItemKind[] = Object.freeze(['weapon', 'shield', 'grimoire', 'orb', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'amulet', 'ring']);
 export const TIER_COLORS: Readonly<Record<ItemTier, string>> = Object.freeze({
   common: '#c5ccc8', magic: '#76b9ee', rare: '#e0c17a', epic: '#b895ef', legendary: '#f0a16b',
 });
@@ -44,7 +45,7 @@ export function randomSource(seed: number): () => number {
     return ((n ^ n >>> 14) >>> 0) / 4294967296;
   };
 }
-const BASE_NAMES: Readonly<Record<Exclude<ItemKind, 'weapon' | 'shield'>, readonly string[]>> = {
+const BASE_NAMES: Readonly<Record<Exclude<ItemKind, 'weapon' | 'shield' | 'grimoire' | 'orb'>, readonly string[]>> = {
   head: ['Crown Helm', 'Watcher Hood', 'Visored Helm'],
   chest: ['Brigandine', 'Warden Plate', 'Scale Vest'], gloves: ['Gauntlets', 'Grips', 'Vambraces'],
   legs: ['Greaves', 'Cuisses', 'Chausses'], boots: ['Sabatons', 'Treads', 'Longboots'],
@@ -87,6 +88,19 @@ export const SHIELD_AFFIXES: typeof AFFIXES = [
   { name: 'Deflection', stat: 'blockChance', base: 2, growth: .08 },
   { name: 'The Bulwark', stat: 'blockReduction', base: 4, growth: .12 },
 ];
+/** Shared pool for rolling, improving and previewing caster equipment. */
+export function itemAffixPool(item: { kind: ItemKind; weapon?: { family: string } }): typeof AFFIXES {
+  if (item.kind === 'shield') return [...AFFIXES, ...SHIELD_AFFIXES];
+  if (item.kind === 'grimoire' || item.kind === 'orb' || item.weapon?.family === 'wand') {
+    return AFFIXES.filter(a => !['strength', 'dexterity', 'damagePercent', 'attackSpeedPercent', 'lifeOnHit', 'armor'].includes(a.stat));
+  }
+  return AFFIXES;
+}
+function focusImplicit(profileId: string, level: number, quality: number): StatModifiers {
+  const profile = FOCUS_PROFILES.find(p => p.id === profileId)!;
+  return Object.fromEntries(Object.entries(profile.implicit).map(([stat, value]) => [stat,
+    Math.round(value! * quality * (PERCENT_STATS.has(stat as StatKey) ? itemPercentageScale(level) : itemPowerScale(level)) * 10) / 10]));
+}
 export const TIER_AFFIXES: Readonly<Record<ItemTier, number>> = { common: 0, magic: 1, rare: 2, epic: 3, legendary: 4 };
 export const TIER_POWER: Readonly<Record<ItemTier, number>> = { common: 1, magic: 1.09, rare: 1.2, epic: 1.34, legendary: 1.5 };
 
@@ -98,9 +112,10 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
   const random = randomSource(seed), choose = <T>(values: readonly T[]): T => values[Math.floor(random() * values.length)];
   const selectedWeapon = profileId ? WEAPON_PROFILES.find(profile => profile.id === profileId) : undefined;
   const selectedShield = profileId ? SHIELD_PROFILES.find(profile => profile.id === profileId) : undefined;
-  if (profileId && !selectedWeapon && !selectedShield) throw new RangeError(`Unknown equipment profile: ${profileId}`);
-  const itemKind = kind ?? (selectedWeapon ? 'weapon' : selectedShield ? 'shield' : choose(ITEM_KINDS));
-  if (profileId && (itemKind === 'weapon' ? !selectedWeapon : itemKind === 'shield' ? !selectedShield : true)) {
+  const selectedFocus = profileId ? FOCUS_PROFILES.find(profile => profile.id === profileId) : undefined;
+  if (profileId && !selectedWeapon && !selectedShield && !selectedFocus) throw new RangeError(`Unknown equipment profile: ${profileId}`);
+  const itemKind = kind ?? (selectedWeapon ? 'weapon' : selectedShield ? 'shield' : selectedFocus ? selectedFocus.visual.kind : choose(ITEM_KINDS));
+  if (profileId && (itemKind === 'weapon' ? !selectedWeapon : itemKind === 'shield' ? !selectedShield : selectedFocus?.visual.kind !== itemKind)) {
     throw new RangeError(`Profile ${profileId} does not describe an item of kind ${itemKind}.`);
   }
   const roll = random();
@@ -110,11 +125,13 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
   const variant = random();
   const weaponProfile = itemKind === 'weapon' ? selectedWeapon ?? WEAPON_PROFILES[Math.floor(variant * WEAPON_PROFILES.length)] : undefined;
   const shieldProfile = itemKind === 'shield' ? selectedShield ?? SHIELD_PROFILES[Math.floor(variant * SHIELD_PROFILES.length)] : undefined;
-  const baseName = weaponProfile?.name ?? shieldProfile?.name ?? BASE_NAMES[itemKind as Exclude<ItemKind, 'weapon' | 'shield'>][Math.floor(variant * 3)];
+  const focusProfiles = FOCUS_PROFILES.filter(p => p.visual.kind === itemKind);
+  const focusProfile = selectedFocus ?? focusProfiles[Math.floor(variant * focusProfiles.length)];
+  const baseName = weaponProfile?.name ?? shieldProfile?.name ?? focusProfile?.name ?? BASE_NAMES[itemKind as Exclude<ItemKind, 'weapon' | 'shield' | 'grimoire' | 'orb'>][Math.floor(variant * 3)];
   const appearance = { ...choose(PALETTES) }, quality = TIER_POWER[tier];
   const growth = itemPowerScale(level) * quality;
   const rolls: number[] = [];
-  const affixes: ItemAffix[] = [], remaining = itemKind === 'shield' ? [...AFFIXES, ...SHIELD_AFFIXES] : [...AFFIXES];
+  const affixes: ItemAffix[] = [], remaining = [...itemAffixPool({ kind: itemKind, weapon: weaponProfile })];
   for (let index = 0; index < TIER_AFFIXES[tier]; index++) {
     const definition = remaining.splice(Math.floor(random() * remaining.length), 1)[0];
     const growthLevel = PERCENT_STATS.has(definition.stat) ? itemAffixGrowthLevel(level) : level - 1;
@@ -122,7 +139,7 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
     const value = Math.round((definition.base + growthLevel * definition.growth) * (.85 + rollQuality * .3) * quality * 10) / 10;
     affixes.push({ name: definition.name, stat: definition.stat, value });
   }
-  const implicit: StatModifiers = {};
+  const implicit: StatModifiers = focusProfile ? focusImplicit(focusProfile.id, level, quality) : {};
   const armorBase: Partial<Record<ItemKind, number>> = { head: 5, chest: 11, gloves: 3, legs: 7, boots: 4 };
   if (armorBase[itemKind]) implicit.armor = Math.max(1, Math.round(armorBase[itemKind]! * growth));
   if (shieldProfile) implicit.armor = Math.max(1, Math.round(({ buckler: 7, kite: 15, tower: 22 }[shieldProfile.visual.kind]) * growth));
@@ -133,8 +150,8 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
   const name = tier === 'common' ? `${prefix} ${baseName}` : tier === 'magic' ? `${prefix} ${baseName} ${suffix}`
     : `${prefix} ${choose(TITLES)}`;
   const item: Item = {
-    recipe: { ...((weaponProfile ?? shieldProfile) ? { profileId: (weaponProfile ?? shieldProfile)!.id } : {}), starter: false, enhancement: 0, revision: 0, targetedRolls: 0, fullRolls: 0, rolls },
-    id: `item-${seed.toString(36)}-${level}-${weaponProfile?.id ?? shieldProfile?.id ?? itemKind}-${tier}`, seed, name, baseName, kind: itemKind, tier,
+    recipe: { ...((weaponProfile ?? shieldProfile ?? focusProfile) ? { profileId: (weaponProfile ?? shieldProfile ?? focusProfile)!.id } : {}), starter: false, enhancement: 0, revision: 0, targetedRolls: 0, fullRolls: 0, rolls },
+    id: `item-${seed.toString(36)}-${level}-${weaponProfile?.id ?? shieldProfile?.id ?? focusProfile?.id ?? itemKind}-${tier}`, seed, name, baseName, kind: itemKind, tier,
     itemLevel: level, requiredLevel: Math.max(1, level - 2),
     power: Math.round(level * 10 + quality * 12 + affixes.length * 7), implicit, affixes, appearance,
   };
@@ -147,21 +164,26 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
     item.shield = { ...shieldProfile, id: item.id, name,
       visual: { ...shieldProfile.visual, base: appearance.base, edge: appearance.edge, trim: appearance.trim, shadow: appearance.shadow } };
   }
+  if (focusProfile) item.focus = { id: item.id, name, visual: { ...focusProfile.visual, base: appearance.base, edge: appearance.edge, trim: appearance.trim, shadow: appearance.shadow } };
   return item;
 }
 
-export const STARTER_WEAPONS = Object.freeze([
-  { id: 'sword', label: 'Sword', profileId: 'weathered-sword' },
-  { id: 'bow', label: 'Bow', profileId: 'thorn-shortbow' },
-  { id: 'fire', label: 'Fire staff', profileId: 'ember-staff' },
+/** Display order is deliberate: melee, magic, then archery; light before heavy. */
+export const STARTER_LOADOUTS = Object.freeze([
+  { id: 'sword-shield', label: 'Sword & shield', detail: 'Quick · guarded', profileId: 'longsword', offhandProfileId: 'iron-buckler' },
+  { id: 'sword', label: 'Two-handed sword', detail: 'Heavy · two-handed', profileId: 'weathered-sword', offhandProfileId: null },
+  { id: 'wand', label: 'Wand & grimoire', detail: 'Quick casting · sustain', profileId: 'cinder-wand', offhandProfileId: 'ember-codex' },
+  { id: 'fire', label: 'Fire staff', detail: 'Powerful · two-handed', profileId: 'ember-staff', offhandProfileId: null },
+  { id: 'bow', label: 'Shortbow', detail: 'Fast · short range', profileId: 'thorn-shortbow', offhandProfileId: null },
+  { id: 'longbow', label: 'Longbow', detail: 'Heavy · long range', profileId: 'warden-longbow', offhandProfileId: null },
 ] as const);
-export type StarterWeaponId = typeof STARTER_WEAPONS[number]['id'];
-export const isStarterWeaponId = (value: string): value is StarterWeaponId => STARTER_WEAPONS.some(option => option.id === value);
+export type StarterLoadoutId = typeof STARTER_LOADOUTS[number]['id'];
+export const isStarterLoadoutId = (value: string): value is StarterLoadoutId => STARTER_LOADOUTS.some(option => option.id === value);
 
 /** Authored level-one common gear: no random rarity, affixes or starter-only powers. */
-export function createStarterWeapon(id: StarterWeaponId): Item {
-  const option = STARTER_WEAPONS.find(option => option.id === id);
-  if (!option) throw new RangeError('Unknown starter weapon');
+export function createStarterLoadout(id: StarterLoadoutId): { weapon: Item; offhand: Item | null } {
+  const option = STARTER_LOADOUTS.find(option => option.id === id);
+  if (!option) throw new RangeError('Unknown starter loadout');
   const profile = id === 'sword' ? STARTING_SWORD : WEAPON_PROFILES.find(profile => profile.id === option.profileId)!;
   const item = generateItem(1, 1, 'weapon', id === 'sword' ? 'longsword' : profile.id, 'common');
   item.id = 'starter-weapon'; item.baseName = profile.name;
@@ -171,11 +193,19 @@ export function createStarterWeapon(id: StarterWeaponId): Item {
   item.weapon = { ...profile, visual: { ...profile.visual } };
   item.appearance = { base: profile.visual.metal, shadow: profile.visual.grip,
     edge: profile.visual.edge, trim: profile.visual.guard, style: 'plate' };
-  return item;
+  let offhand: Item | null = null;
+  if (option.offhandProfileId) {
+    offhand = generateItem(2, 1, undefined, option.offhandProfileId, 'common');
+    offhand.id = 'starter-offhand'; offhand.name = `Worn ${offhand.baseName}`;
+    offhand.recipe = { ...offhand.recipe, starter: true };
+    if (offhand.shield) offhand.shield = { ...offhand.shield, id: offhand.id, name: offhand.name };
+    if (offhand.focus) offhand.focus = { ...offhand.focus, id: offhand.id, name: offhand.name };
+  }
+  return { weapon: item, offhand };
 }
 
 /** The chosen weapon, the same modest leather outfit, and an empty bag. */
-export function createCharacterSheet(starter: StarterWeaponId = 'sword'): CharacterSheet {
+export function createCharacterSheet(starter: StarterLoadoutId = 'sword'): CharacterSheet {
   const equipped = Object.fromEntries(EQUIPMENT_SLOTS.map(slot => [slot, null])) as CharacterSheet['equipped'];
   const starterPieces: readonly [EquipmentSlot, number][] = [['head', 31], ['chest', 17], ['gloves', 23], ['legs', 59], ['boots', 11], ['cloak', 71]];
   for (const [slot, seed] of starterPieces) {
@@ -191,7 +221,8 @@ export function createCharacterSheet(starter: StarterWeaponId = 'sword'): Charac
     if (slot === 'cloak') item.appearance = { base: '#555e50', shadow: '#292f2d', edge: '#89937c', trim: '#a28c64', style: 'leather' };
     equipped[slot] = item;
   }
-  equipped.weapon = createStarterWeapon(starter);
+  const loadout = createStarterLoadout(starter);
+  equipped.weapon = loadout.weapon; equipped.offhand = loadout.offhand;
   const inventory: CharacterSheet['inventory'] = Array.from({ length: INVENTORY_CAPACITY }, () => null);
   return { skillRanks: {}, activeSkillRanks: {}, skillSpecializations: {}, arcaneOverload: false, gold: 0, commerce: { epoch: 0, revision: 0, operations: 0, sold: {}, buyback: [] }, attributes: { strength: 10, dexterity: 10, intelligence: 10, vitality: 10 },
     statPoints: 0, skillPoints: 0, allocatedNodes: ['origin'], inventory, equipped, skillSlots: Array.from({ length: 5 }, () => null) };
@@ -205,9 +236,10 @@ export function deriveItem(item: Item): Item {
   const weapon = r.profileId === STARTING_SWORD.id ? STARTING_SWORD : WEAPON_PROFILES.find(p => p.id === r.profileId);
   const shield = SHIELD_PROFILES.find(p => p.id === r.profileId);
   const armor: Partial<Record<ItemKind, number>> = { head: 5, chest: 11, gloves: 3, legs: 7, boots: 4 };
+  if (item.focus) next.implicit = focusImplicit(r.profileId!, item.itemLevel, quality * enhance);
+  if (shield) next.implicit.armor = Math.round(({ buckler: 7, kite: 15, tower: 22 }[shield.visual.kind]) * growth);
   if (!r.starter) {
     if (armor[item.kind]) next.implicit.armor = Math.round(armor[item.kind]! * growth);
-    if (shield) next.implicit.armor = Math.round(({ buckler: 7, kite: 15, tower: 22 }[shield.visual.kind]) * growth);
     if (item.kind === 'cloak') next.implicit.maxHp = Math.round(6 * growth);
     if (item.kind === 'amulet') next.implicit.maxMana = Math.round(7 * growth);
     if (item.kind === 'ring') next.implicit.damagePercent = Math.round(2 * itemPercentageScale(item.itemLevel) * quality * enhance * 10) / 10;

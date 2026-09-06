@@ -1,3 +1,4 @@
+import { focusShapes } from './focus-shapes.ts';
 import type { CharacterPose } from './art-types.ts';
 import { characterTransform, PLAYER_ART_SCALE, playerMotion } from './character-motion.ts';
 import { transformPoint, type Point } from './art-primitives.ts';
@@ -22,14 +23,17 @@ export function characterBounds(pose: CharacterPose): CharacterBounds {
     const p = projectArmPoint(joint);
     for (const x of [-5, 5]) for (const y of [-5, 5]) add([p[0] + x, p[1] + y]);
   }
-  const weapon = (visual: NonNullable<CharacterPose['weapon']>, hand: Point, angle: number, draw = 0) => {
+  const weapon = (visual: NonNullable<CharacterPose['weapon']>, hand: Point, angle: number, draw = 0, scale = 1) => {
     for (const shape of weaponShapes(visual, draw)) for (const [x, y] of shape.points) {
-      add([hand[0] + x * Math.cos(angle) - y * Math.sin(angle), hand[1] + x * Math.sin(angle) + y * Math.cos(angle)]);
+      add([hand[0] + x * scale * Math.cos(angle) - y * Math.sin(angle), hand[1] + x * scale * Math.sin(angle) + y * Math.cos(angle)]);
     }
   };
-  weapon(pose.weapon ?? STARTING_SWORD.visual, motion.weaponOrigin, motion.weaponAngle, motion.rangedDraw);
+  weapon(pose.weapon ?? STARTING_SWORD.visual, motion.weaponOrigin, motion.weaponAngle, motion.rangedDraw, motion.weaponScale);
   const hand = projectArmPoint(motion.offArm.hand);
-  if (pose.offHand?.kind === 'weapon') weapon(pose.offHand.visual, motion.offWeaponOrigin, motion.offWeaponAngle);
+  if (pose.offHand?.kind === 'weapon') weapon(pose.offHand.visual, motion.offWeaponOrigin, motion.offWeaponAngle, 0, motion.offWeaponScale);
+  if (pose.offHand?.kind === 'focus') {
+    for (const shape of focusShapes(pose.offHand.visual, pose.effectTime ?? pose.time, pose.angle)) for (const [x, y] of shape.points) add([hand[0] + x, hand[1] + y]);
+  }
   if (pose.offHand?.kind === 'shield') {
     const angle = Math.cos(pose.angle) * -.12, scale = .62 + Math.abs(Math.sin(pose.angle)) * .38;
     for (const shape of shieldShapes(pose.offHand.visual)) for (const [x, y] of shape.points) {

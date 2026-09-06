@@ -7,7 +7,7 @@ import type { ServiceQuote } from './commerce.ts';
 import { executeService } from './commerce-command.ts';
 import { PanelCoordinator } from './panel-coordinator.ts';
 import { bindGameKeyboard } from './game-keyboard.ts';
-import { createCharacterSheet, type StarterWeaponId } from './items.ts';
+import { createCharacterSheet, type StarterLoadoutId } from './items.ts';
 import { refreshCharacter } from './character.ts';
 import { AreaNoticeTracker } from './notification-queue.ts';
 import { getZoneAt } from './zone-progression.ts';
@@ -298,10 +298,11 @@ export class Game {
     this.sim.revive(); this.enterWorld(); this.saveCharacter();
   }
 
-  private createCharacter(index: number, name: string, weapon: StarterWeaponId) {
+  private createCharacter(index: number, name: string, weapon: StarterLoadoutId) {
     if (this.phase !== 'ready') return;
     const fresh = new Simulation(this.world, { seed: this.world.seed, spawn: false });
     fresh.player.character = createCharacterSheet(weapon); refreshCharacter(fresh.player);
+    fresh.player.hp = fresh.player.maxHp; fresh.player.mana = fresh.player.maxMana;
     if (!this.session.create(index, name, fresh.captureCheckpoint(), crypto.randomUUID(), Date.now())) {
       this.titleScreen.message(this.session.error); return;
     }

@@ -17,7 +17,7 @@ export function playerPose(player: Player, time: number,
   const off = player.equipment.offHand;
   const offHand: CharacterPose['offHand'] = off?.kind === 'weapon'
     ? { kind: 'weapon', visual: attack?.hand === 'off' ? attack.weapon.visual : off.weapon.visual }
-    : off?.kind === 'shield' ? { kind: 'shield', visual: off.shield.visual } : null;
+    : off?.kind === 'shield' ? { kind: 'shield', visual: off.shield.visual } : off?.kind === 'focus' ? { kind: 'focus', visual: off.focus.visual } : null;
   return {
     kind: 'player', outfit: outfitFromEquipment(player.character), angle: player.castTime > 0 ? player.castAngle : player.angle,
     time, gaitPhase: player.walkTime, moveAngle: Math.atan2(player.vy, player.vx),

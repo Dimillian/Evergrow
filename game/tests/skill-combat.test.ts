@@ -13,7 +13,7 @@ const emptyWorld: WorldQuery = { blocked: () => false, move: (x, y, dx, dy) => (
 const profile = (family: Exclude<WeaponFamily, 'unarmed'>) => WEAPON_PROFILES.find(weapon => weapon.family === family)!;
 const families: Readonly<Record<SkillRequirement, readonly WeaponFamily[]>> = {
   melee: ['sword', 'axe', 'mace', 'dagger'], blade: ['sword', 'axe', 'dagger'], heavy: ['axe', 'mace'],
-  dagger: ['dagger'], bow: ['bow'], staff: ['staff'], shield: [],
+  dagger: ['dagger'], bow: ['bow'], magic: ['staff', 'wand'], shield: [],
 };
 function harness(id: SkillId) {
   const sim = new Simulation(emptyWorld, { spawn: false }), player = sim.player;
@@ -208,7 +208,7 @@ test('first-row skills repeat after action recovery while second-row skills reta
 
 test('attack and cast speed independently govern weapon and active skill recovery', () => {
   for (const id of ['cleave', 'volley', 'shieldBash', 'fireball', 'iceNova', 'arcLightning'] as SkillId[]) {
-    const h = harness(id), magical = SKILL_DEFINITIONS[id].requirement === 'staff';
+    const h = harness(id), magical = SKILL_DEFINITIONS[id].requirement === 'magic';
     const baseRate = weaponActionRate(h.player.equipment.mainHand);
     h.player.stats.attackSpeedMultiplier = 2;
     h.player.stats.castSpeedMultiplier = 3;

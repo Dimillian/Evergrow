@@ -178,7 +178,7 @@ An archetype biases item kind without excluding any equipment slot:
 | Amulet | 3% | 2% | 14% | 5% | 4% | 18% |
 | Ring | 5% | 3% | 14% | 5% | 6% | 18% |
 
-For weapons and shields, the source biome then weights the profile. Every weapon and shield remains possible everywhere:
+For weapons, shields, grimoires and orbs, the source biome then weights the profile. Every profile remains possible everywhere. Wands and foci follow their corresponding elemental staff weights; star wands have weight 2 in all climates. Casters and wisps each allocate 10% kind weight to grimoires and 10% to orbs; other archetypes allocate 2% each, keeping each kind table at 100%.
 
 - **Deadwood** favors heavy melee gear and tower shields.
 - **Verdant Forest** favors daggers, bows, and lighter shields.

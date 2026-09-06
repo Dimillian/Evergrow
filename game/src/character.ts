@@ -13,6 +13,7 @@ export function refreshCharacter(player: Player): void {
   const offhand = player.character.equipped.offhand;
   player.equipment = { mainHand: player.character.equipped.weapon?.weapon ?? UNARMED_WEAPON,
     offHand: offhand?.kind === 'shield' && offhand.shield ? { kind: 'shield', shield: offhand.shield }
+      : offhand?.focus ? { kind: 'focus', focus: offhand.focus }
       : offhand?.kind === 'weapon' && offhand.weapon ? { kind: 'weapon', weapon: offhand.weapon } : null };
   player.maxHp = derived.maxHp; player.maxMana = derived.maxMana;
   player.hp = Math.min(player.hp, player.maxHp); player.mana = Math.min(player.mana, player.maxMana);

@@ -28,7 +28,7 @@ export function advanceGroundEffects(effects: ActiveGroundEffect[], dt: number, 
   for (const effect of effects) {
     if (effect.follow) {
       const p = context.player;
-      if (p.dead || p.equipment.mainHand.family !== 'staff') { effect.pulsesLeft = 0; continue; }
+      if (p.dead || p.equipment.mainHand.attackKind !== 'bolt') { effect.pulsesLeft = 0; continue; }
       effect.x = p.x; effect.y = p.y;
     }
     const beforeDelay = effect.delay;

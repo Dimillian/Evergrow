@@ -80,7 +80,7 @@ export interface WeaponDefinition {
   visual: WeaponVisual;
 }
 
-export type WeaponFamily = 'sword' | 'axe' | 'mace' | 'dagger' | 'bow' | 'staff' | 'unarmed';
+export type WeaponFamily = 'sword' | 'axe' | 'mace' | 'dagger' | 'bow' | 'staff' | 'wand' | 'unarmed';
 export type DamageType = 'physical' | 'fire' | 'frost' | 'lightning' | 'arcane';
 export type ProjectileStyle = 'arrow' | 'fire' | 'frost' | 'lightning' | 'arcane' | 'spirit';
 export interface ShieldDefinition {
@@ -95,9 +95,14 @@ export interface ProjectileEffects {
   burnDuration?: number; burnDps?: number; groundDuration?: number;
 }
 
+export interface FocusDefinition {
+  id: string; name: string;
+  visual: { kind: 'grimoire' | 'orb'; motif: 'ember' | 'rime' | 'astral'; base: string; edge: string; trim: string; shadow: string; glow: string };
+}
+
 export interface Equipment {
   mainHand: WeaponDefinition;
-  offHand: { kind: 'weapon'; weapon: WeaponDefinition } | { kind: 'shield'; shield: ShieldDefinition } | null;
+  offHand: { kind: 'weapon'; weapon: WeaponDefinition } | { kind: 'shield'; shield: ShieldDefinition } | { kind: 'focus'; focus: FocusDefinition } | null;
 }
 
 export interface Player {

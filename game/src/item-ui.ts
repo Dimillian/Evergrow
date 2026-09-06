@@ -24,7 +24,7 @@ export const PREVIEW_PERCENT = new Set<PreviewStat>(['blockChance', 'blockReduct
   'manaCostReduction', 'cooldownReduction', 'attackSpeedMultiplier', 'castSpeedMultiplier', 'spellDamageMultiplier']);
 
 export function itemSlotMarkup(item: Item, size = 44): string {
-  return `${itemIconSVG(item, size)}${item.recipe.enhancement ? `<span class="ui-item-enhancement">+${item.recipe.enhancement}</span>` : ''}<span class="ui-item-level">${number(item.itemLevel, 0)}</span><span class="ui-item-tier" aria-hidden="true">${'<i></i>'.repeat(TIER_RANK[item.tier])}</span>`;
+  return `${itemIconSVG(item, size)}${item.weapon ? `<span class="ui-item-hands">${item.weapon.hands}H</span>` : ''}${item.recipe.enhancement ? `<span class="ui-item-enhancement">+${item.recipe.enhancement}</span>` : ''}<span class="ui-item-level">${number(item.itemLevel, 0)}</span><span class="ui-item-tier" aria-hidden="true">${'<i></i>'.repeat(TIER_RANK[item.tier])}</span>`;
 }
 export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, options: { level: number; emptyMarkup: string; label: string; draggable?: boolean }): void {
   cell.classList.add('ui-item-slot');
@@ -47,8 +47,9 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
   let weapon = '';
   if (item.weapon) {
     const w = item.weapon;
-    weapon = `<div class="ui-item-weapon"><div><strong>${number(w.damage)}</strong><span>${escapeUI(w.damageType)} damage</span></div><div><strong>${number(weaponActionRate(w), 2)}</strong><span>${w.family === 'staff' ? 'Casts' : 'Attacks'} / second</span></div></div><p class="ui-item-comparison">${w.hands === 2 ? 'Two-handed' : 'One-handed'} · ${escapeUI(w.family)} · ${number(w.reach)} reach${w.family === 'staff' ? ` · ${basicAttackManaCost(w, { manaCostMultiplier: 1 })} base mana / bolt` : ''}</p>`;
+    weapon = `<div class="ui-item-weapon"><div><strong>${number(w.damage)}</strong><span>${escapeUI(w.damageType)} damage</span></div><div><strong>${number(weaponActionRate(w), 2)}</strong><span>${w.attackKind === 'bolt' ? 'Casts' : 'Attacks'} / second</span></div></div><p class="ui-item-comparison">${w.hands === 2 ? 'Two-handed' : 'One-handed'} · ${escapeUI(w.family)} · ${number(w.reach)} reach${w.attackKind === 'bolt' ? ` · ${basicAttackManaCost(w, { manaCostMultiplier: 1 })} base mana / bolt` : ''}</p>`;
   }
+  if (item.focus) weapon = `<p class="ui-item-comparison">Off-hand · ${item.kind === 'grimoire' ? 'Grimoire · Mana & spell sustain' : 'Orb · Spell potency'}<br>Pairs with a one-handed weapon</p>`;
   if (item.shield) weapon = `<div class="ui-item-weapon"><div><strong>${number(item.shield.blockChance)}%</strong><span>Block chance</span></div><div><strong>${number(item.shield.blockReduction)}%</strong><span>Damage blocked</span></div></div>`;
   let comparison = '';
   if (!view.equipped) {

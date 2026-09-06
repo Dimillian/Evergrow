@@ -47,7 +47,7 @@ test('Tempest follows its caster, pays each pulse and ends without free damage w
   const sim=new Simulation({blocked:()=>false,move:(x,y)=>({x,y})},{spawn:false});
   const p=sim.player;
   // Exercise the ground executor independently of the input/gear transaction layer.
-  p.equipment={mainHand:{...p.equipment.mainHand,family:'staff'},offHand:null};
+  p.equipment={mainHand:{...p.equipment.mainHand,family:'staff',attackKind:'bolt'},offHand:null};
   p.x=100; p.mana=18;
   const enemy=sim.spawnEnemy('brute',110,0)!;
   let effects:ActiveGroundEffect[]=[], hits=0;
@@ -62,10 +62,10 @@ test('Tempest follows its caster, pays each pulse and ends without free damage w
 test('Tempest cancels on death or loss of its staff and does not charge again',()=>{
   for(const reason of ['death','weapon'] as const) {
     const sim=new Simulation({blocked:()=>false,move:(x,y)=>({x,y})},{spawn:false});
-    const p=sim.player; p.equipment={mainHand:{...p.equipment.mainHand,family:'staff'},offHand:null};
+    const p=sim.player; p.equipment={mainHand:{...p.equipment.mainHand,family:'staff',attackKind:'bolt'},offHand:null};
     const effects:ActiveGroundEffect[]=[];
     scheduleGroundEffect(effects,{kind:'storm',skill:'tempest',x:0,y:0,radius:30,delay:0,duration:6,interval:.5,damage:3,style:'lightning',follow:true,upkeep:18}, {nextId:()=>1,emit:()=>{}});
-    if(reason==='death') p.dead=true; else p.equipment.mainHand={...p.equipment.mainHand,family:'sword'};
+    if(reason==='death') p.dead=true; else p.equipment.mainHand={...p.equipment.mainHand,family:'sword',attackKind:'melee'};
     assert.equal(advanceGroundEffects(effects,.5,{player:p,enemies:[],visible:()=>true,damage:()=>assert.fail('cancelled storm hit'),emit:()=>{}}).length,0);
     assert.equal(p.mana,100);
   }

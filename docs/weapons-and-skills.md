@@ -1,12 +1,12 @@
 # Weapons and skills
 
-2026-09-05 · current local prototype catalog.
+2026-09-06 · current local prototype catalog.
 
-Weapons supply the basic attack immediately. LMB swings a melee weapon, fires an arrow from a bow, or releases an elemental bolt from a staff. The five active slots remain empty on a new run; major tree nodes unlock skills for assignment to RMB and 1–4. Melee/bow basic attacks cost no mana; staff bolts cost 4 base mana, reduced by mana efficiency. Potion and dodge keep their separate Q and Space shortcuts.
+Weapons supply the basic attack immediately. LMB swings a melee weapon, fires an arrow from a bow, or releases an elemental bolt from a staff or wand. The five active slots remain empty on a new run; major tree nodes unlock skills for assignment to RMB and 1–4. Melee/bow basic attacks cost no mana; staff bolts cost 4 base mana and wand bolts cost 2, reduced by mana efficiency. Potion and dodge keep their separate Q and Space shortcuts.
 
 ## Weapon profiles
 
-`weapon-content.ts` owns 13 generated weapon profiles and three shields. `equipment.ts` owns the starting Weathered Sword and the unarmed fallback. Values below include shared cadence tuning, before item level, rarity, affixes, and character bonuses. All weapon actions use 80% of their authored weapon rate; this applies to existing gear as well as new drops. Range is measured in world units; ranged range is projectile travel distance.
+`weapon-content.ts` owns 17 generated weapon profiles and three shields. `equipment.ts` owns the starting Weathered Sword and the unarmed fallback. Values below include shared cadence tuning, before item level, rarity, affixes, and character bonuses. All weapon actions use 80% of their authored weapon rate; this applies to existing gear as well as new drops. Range is measured in world units; ranged range is projectile travel distance.
 
 | Weapon | Profile ID | Hands | Base damage | Attacks/sec | Range | Basic attack |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
@@ -23,12 +23,35 @@ Weapons supply the basic attack immediately. LMB swings a melee weapon, fires an
 | Ember Staff | `ember-staff` | 2 | 28 | 1.2 | 480 | Fire bolt |
 | Rime Staff | `rime-staff` | 2 | 24 | 1.32 | 440 | Frost bolt |
 | Storm Staff | `storm-staff` | 2 | 17 | 1.84 | 500 | Lightning bolt |
+| Cinder Wand | `cinder-wand` | 1 | 16 | 1.92 | 440 | Fire bolt |
+| Hoarfrost Wand | `hoarfrost-wand` | 1 | 14 | 2.08 | 420 | Frost bolt |
+| Spark Wand | `spark-wand` | 1 | 11 | 2.48 | 460 | Lightning bolt |
+| Star Wand | `star-wand` | 1 | 17 | 1.84 | 450 | Arcane bolt |
 | Weathered Sword — starter | `weathered-sword` | 2 | 24 | 1.6 | 60 | Physical swing |
 | Unarmed — empty main hand | `unarmed` | 1 | 5 | 1.44 | 24 | Physical strike |
 
-Rime Staff's basic bolt slows movement by 20% for one second. Other basic bolts are direct projectiles; the staff's element supplies its appearance and innate attack identity. Area explosions, chaining, and stronger status effects belong to unlocked skills. Any staff can use a staff-required skill, regardless of its innate element.
+Melee basics cut from the attacking shoulder across the body: main-hand contact sweeps from the positive arc edge to the negative edge, and off-hand contact mirrors it. The projected blade and physical contacts share this handed progression; damage, range and action phase durations remain profile-driven.
 
-Physical melee attacks and arrows use `attackDamageMultiplier`; staff bolts use `spellDamageMultiplier`. Melee and arrows use `attackSpeedMultiplier`; staff bolts and magic spells use the independent `castSpeedMultiplier`. This keeps Strength/attack-damage bonuses and Intelligence/spell-damage bonuses on their respective damage paths. Active skills multiply a compatible held weapon’s derived hit by their potency, preferring the main hand; staff spell scaling is already included and is never applied a second time. Normal direct hits can critically strike and trigger life on hit.
+Rime Staff and Hoarfrost Wand basic bolts slow movement by 20% for one second. Other basic bolts are direct projectiles; the weapon's element supplies its appearance and innate attack identity. Area explosions, chaining, and stronger status effects belong to unlocked skills. Any staff or wand can use a magic-required skill, regardless of its innate element.
+
+Physical melee attacks and arrows use `attackDamageMultiplier`; staff and wand bolts use `spellDamageMultiplier`. Melee and arrows use `attackSpeedMultiplier`; staff/wand bolts and magic spells use the independent `castSpeedMultiplier`. This keeps Strength/attack-damage bonuses and Intelligence/spell-damage bonuses on their respective damage paths. Active skills multiply a compatible held weapon’s derived hit by their potency, preferring the main hand; staff spell scaling is already included and is never applied a second time. Normal direct hits can critically strike and trigger life on hit.
+
+## Caster off-hands
+
+`focus-content.ts` owns six focus profiles, each with normal generated names, rarity, materials, affixes, enhancement and releveling. All occupy the offhand slot. Their base implicits are:
+
+| Profile | Item | Base implicit bonuses |
+| --- | --- | --- |
+| `ember-codex` | Ember Codex | +14 mana, +0.4 mana/sec |
+| `rime-folio` | Rime Folio | +18 mana, +3% mana-cost reduction |
+| `astral-grimoire` | Astral Grimoire | +12 mana, +3% cooldown reduction |
+| `cinder-orb` | Cinder Reliquary | +7% spell damage, +5% critical damage |
+| `rime-orb` | Rimeglass Orb | +5% spell damage, +3% cast speed |
+| `astral-orb` | Astral Sphere | +6% spell damage, +1.5% critical chance |
+
+Grimoires emphasize reserves and sustain; orbs emphasize potency. Wands and foci roll a curated pool of 13 existing affix families, excluding Strength, Dexterity, attack damage/speed, armor and life on hit. Percentage implicits use the same bounded item-level curve as rings; flat implicits use normal item power scaling. Rerolls, rarity previews and generation consume the same pool. Every biome can drop all profiles, with climate-specific elemental weights; caster and wisp loot favors foci. Blacksmiths carry a wand and jewelers carry a grimoire and orb.
+
+The off-hand socket shows a dimmed weapon silhouette, hatching and **2H** when the main weapon reserves both hands. Hover explains the reservation and swapping behavior. Weapon cells also carry a small 1H/2H badge. This is visual occupancy: a valid off-hand equip still stows the two-handed weapon safely.
 
 ## Shields and hand transactions
 
@@ -40,7 +63,7 @@ Physical melee attacks and arrows use `attackDamageMultiplier`; staff bolts use 
 
 Block chance and blocked-damage reduction are distinct stats. Shield bases and modifiers use whole percentage points; derived combat values use fractions. Chance caps at 75%, reduction at 90%; blocks have no facing restriction. Block stats are zero without a usable equipped shield. Armor reduces incoming damage before the block reduction; a landed hit still deals at least one damage. Bulwark makes incoming hits block for three seconds and raises blocked reduction to at least 75% while the shield remains equipped.
 
-The offhand accepts a shield or a one-handed melee weapon. One-handed weapons can be used alone, with a shield, or together. Dual-wield basic attacks alternate hands, using the selected hand's own damage, cadence, and reach. Melee skills can use a compatible weapon in either hand, preferring the main hand when both fit. Bow and staff skills require their two-handed main weapon. Shield skills require an equipped shield and a one-handed or unarmed main hand.
+The offhand accepts a shield, grimoire, orb or one-handed melee weapon. Wands are one-handed main weapons and can pair with any of these; full-sized staves remain two-handed. One-handed weapons can be used alone, with a shield, or together. Dual-wield basic attacks alternate hands, using the selected hand's own damage, cadence, and reach. Melee skills can use a compatible weapon in either hand, preferring the main hand when both fit. Bow skills require a bow; magic skills accept either a staff or wand. Shield skills require an equipped shield and a one-handed or unarmed main hand.
 
 Equipping a two-handed weapon stows any offhand item; equipping an offhand stows a two-handed main weapon. The transaction first plans the source-cell swap and any additional stow. Its vacated source cell can hold the displaced opposite-hand item when the receiving hand was empty. Replacing two occupied hands with a two-handed weapon needs an additional empty cell. If there is insufficient room, nothing changes and no item is lost.
 
@@ -87,12 +110,12 @@ First-row skills have no cooldown; the eight second-row skills cost 24–40 base
 | Ricochet | Bow | 12 | None | 1.2× per target | Arrow rebounds to up to three additional enemies within 150 units. |
 | Rain of Arrows | Bow | 36 | 6 s | 0.7× per wave | Four waves in a 92-unit area, beginning after 0.4 s and spaced 0.3 s apart. |
 | Backstab | Dagger | 10 | None | 2.1× | Nearest target in a close frontal thrust; attacking from behind doubles this damage. |
-| Fireball | Staff | 12 | None | 1.45× | Projectile bursts in an 85-unit radius and ignites survivors for three seconds. |
-| Arc Lightning | Staff | 12 | None | 1.4× first hit | Up to five targets; each jump retains 78% of the previous hit's damage. |
-| Ice Nova | Staff | 14 | None | 1.5× | Frost in a 115-unit radius; slows survivors by 50% for 2.5 s. |
-| Frost Lance | Staff | 28 | 1.8 s | 1.65× per target | Pierces up to four enemies and slows each survivor by 50% for 2.5 s. |
-| Meteor | Staff | 40 | 7 s | 3.4× | Aimed 125-unit blast after 0.85 s; ignites survivors. |
-| Soul Siphon | Staff | 30 | 4.5 s | 1.65× | Spirit projectile restores 35% of the actual enemy life removed by its direct hit, capped by missing player life. |
+| Fireball | Staff or wand | 12 | None | 1.45× | Projectile bursts in an 85-unit radius and ignites survivors for three seconds. |
+| Arc Lightning | Staff or wand | 12 | None | 1.4× first hit | Up to five targets; each jump retains 78% of the previous hit's damage. |
+| Ice Nova | Staff or wand | 14 | None | 1.5× | Frost in a 115-unit radius; slows survivors by 50% for 2.5 s. |
+| Frost Lance | Staff or wand | 28 | 1.8 s | 1.65× per target | Pierces up to four enemies and slows each survivor by 50% for 2.5 s. |
+| Meteor | Staff or wand | 40 | 7 s | 3.4× | Aimed 125-unit blast after 0.85 s; ignites survivors. |
+| Soul Siphon | Staff or wand | 30 | 4.5 s | 1.65× | Spirit projectile restores 35% of the actual enemy life removed by its direct hit, capped by missing player life. |
 
 A projectile cannot hit the same enemy again after piercing or ricocheting. Fireball's primary target is not struck twice by its own explosion. Walls block projectiles and relevant area/chain line-of-sight checks; aimed ground markers stop before solid terrain.
 
@@ -108,7 +131,7 @@ See [character systems](character-systems.md) for item tiers, point rewards, sta
 
 ## Action speed and efficiency
 
-Melee and bows use attack speed. Staff innate bolts and staff-required spells use cast speed, independently of attack speed. Action duration is the reciprocal of the compatible weapon's effective actions per second (bounded to 0.25–12). Sweeps and casting recovery snapshot that duration; changing gear cannot shorten an action already underway. Dash travel retains its authored duration, while action recovery lasts at least that long. Casting poses, charging lights and dodge-cancel timing use the same snapshotted duration. Cooldown begins at activation and is separate from recovery.
+Melee and bows use attack speed. Staff innate bolts and staff-or-wand-required spells use cast speed, independently of attack speed. Action duration is the reciprocal of the compatible weapon's effective actions per second (bounded to 0.25–12). Sweeps and casting recovery snapshot that duration; changing gear cannot shorten an action already underway. Dash travel retains its authored duration, while action recovery lasts at least that long. Casting poses, charging lights and dodge-cancel timing use the same snapshotted duration. Cooldown begins at activation and is separate from recovery.
 
 Gear can roll Invocation (cast speed) and Efficiency (mana-cost reduction), with bounded percentage scaling. Inner Flame nodes grant cast speed; Battle Rhythm, Keen Pursuit and Quiet Current grant mana efficiency. Existing cooldown-reduction gear and nodes affect the second-row skills; a zero cooldown stays zero. Character statistics show both speed bonuses and mana-cost reduction. HUD affordability and atlas costs use the actual derived values.
 
@@ -121,6 +144,10 @@ The native UI draws a faint short sight line and brackets around the assisted ta
 
 ## Weapon cadence and staff basic costs · 2026-09-06
 
-`WEAPON_ACTION_RULES`, `weaponActionRate` and `basicAttackManaCost` in `equipment.ts` define shared weapon pacing and staff basic costs. Every weapon uses 80% of its authored rate, followed by attack-speed bonuses for melee/bows or cast-speed bonuses for staves. The same cadence drives basic attacks and compatible skills. Starter sword and bow now attack at 1.6 and 1.76 attacks/second; staff cadence stays unchanged. Basic bolts pay four mana at windup, reduced by the normal mana-cost multiplier, rounded to tenths with a one-mana floor. Insufficient mana prevents the windup; release never charges again. Cancelling a paid windup does not refund mana. LMB shows its effective cost and dims when unaffordable; item tooltips show tuned base cadence and base bolt cost. Existing version-3 characters and equipment receive this tuning without a reset.
+`WEAPON_ACTION_RULES`, `weaponActionRate` and `basicAttackManaCost` in `equipment.ts` define shared weapon pacing and staff/wand basic costs. Every weapon uses 80% of its authored rate, followed by attack-speed bonuses for melee/bows or cast-speed bonuses for staves and wands. The same cadence drives basic attacks and compatible skills. Starter sword and bow now attack at 1.6 and 1.76 attacks/second; staff cadence stays unchanged. Staff bolts pay four mana and wand bolts pay two mana at windup, reduced by the normal mana-cost multiplier, rounded to tenths with a one-mana floor. Insufficient mana prevents the windup; release never charges again. Cancelling a paid windup does not refund mana. LMB shows its effective cost and dims when unaffordable; item tooltips show tuned base cadence and base bolt cost. Existing version-3 characters and equipment receive this tuning without a reset.
 
 Basic hit damage already grows with weapon item level, rarity, enhancement, attack/spell modifiers, attributes and critical stats; attack/cast speed scales damage per second. Purchased active-skill ranks do not affect LMB. An optional LMB-only mastery per weapon school is a design candidate, not implemented: it could trade skill points (and higher staff bolt costs) for stronger basics and later weapon-specific behavior. It should remain a deliberate basic-attack build choice rather than a required upgrade for spell builds.
+
+## Six starting loadouts
+
+The new-game screen presents three paired rows: Sword + Shield / Two-handed Sword; Wand + Grimoire / Fire Staff; Shortbow / Longbow. `STARTER_LOADOUTS` owns this order and `createStarterLoadout` supplies the same actual equipment to the card icons, portrait and first saved checkpoint. Starting off-hands retain their ordinary base defenses or caster implicits and support normal enhancements. All starting gear is level-one common with no affixes; the bag and five assigned skill slots start empty.

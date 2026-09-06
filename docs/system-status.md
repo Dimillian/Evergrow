@@ -6,13 +6,13 @@ Updated 2026-09-06 for the gamepad implementation checkpoint. **Playable local p
 
 | System | Current implementation | Remaining boundary |
 | --- | --- | --- |
-| Characters and saves | Eight browser-local slots; title hall, starter choice (Sword / Bow / Fire Staff), equipped preview, level/power summary, continue/delete; autosave, backup recovery and stale-writer checks | No cloud sync, export/import or migrations |
-| Combat | Deterministic 120 Hz simulation; weapon basics, five assignable active slots, dodge, dual potion; 20 executable skills; melee/bow attack speed and independent staff/magic cast speed | Player tests feel and balance; no automatic combos or default assigned spell |
+| Characters and saves | Eight browser-local slots; title hall, six starter loadouts in paired melee/magic/archery rows, equipped preview, level/power summary, continue/delete; autosave, backup recovery and stale-writer checks | No cloud sync, export/import or migrations |
+| Combat | Deterministic 120 Hz simulation; weapon basics, five assignable active slots, dodge, dual potion; 20 executable skills; melee/bow attack speed and independent staff/wand/magic cast speed | Player tests feel and balance; no automatic combos or default assigned spell |
 | Aiming and input | Swept ranged contacts, bounded aim assistance, aim feedback; standard gamepad analog movement/aim, combat bindings and menu navigation; neutral rearm and disconnect pause | Fixed Xbox-position labels; text entry, drag/drop and gameplay zoom still use keyboard/mouse; controller hardware/feel acceptance remains with the player |
 | Enemies | Six archetypes, three ranks, patrol/LOS, flank/pounce/ranged/area patterns, home return; corrected hound patrol arrival and idle facing | No bosses or deep elite modifier pool |
 | Spawning | 9–14 ambient target, 24 living actors total, nine slots reserved from camps; nine initial roamers, then travel/cooldown-driven groups; births fully offscreen | Larger populations need profiling; waiting on cleared ground does not refill it |
 | Progression | Fixed geographic danger, source-level rewards, XP level-gap factors, one skill and five stat points per level | Numeric level bound 1,000,000; not a balanced infinite endgame |
-| Equipment | Ten kinds, five rarities, eleven slots; thirteen generated weapon profiles, three shields; 19 general and two shield affix families; visible procedural gear | Recipe-based +10 enhancement and enchanting; no wands or unique legendary powers |
+| Equipment | Twelve kinds, five rarities, eleven slots; 17 generated weapons, 3 shields and 6 caster foci; shared affixes with curated caster rolls; visible procedural gear | Recipe-based +10 enhancement and enchanting; no unique legendary powers |
 | Inventory | 64 cells, three-column panel, drag/drop, Shift-click equip/unequip; shared complete equipment planning and effective-stat tooltips, including both-hand displacement | Shop sales and buyback; no stash or manual ground disposal |
 | Skill atlas | 2,185 nodes, 3,047 edges, 150 passive constellations + 12 development groups, three domains, nine schools; short cross-connected routes, hover stat previews, search/filters, double-click and atomic path allocation | Reused authored bonus families need balancing; no respec |
 | Gold and loot | Independent gear/gold rolls; physical saved coin piles, magnet pickup, wallet in HUD/inventory; corrected common-heavy loot tables; individual named ground items | Purchases, enhancements and enchanting provide gold sinks; affordability awaits playtesting |
@@ -98,3 +98,5 @@ Verification: `npm run check` passed with 559 code tests in the shared working t
 ## Exploration expansion proposal · 2026-09-06
 
 [Exploration, events and procedural dungeons](dungeons-and-events.md) specifies the proposed next loop: interactive landmarks, denser role-based packs, persistent procedural floors, a distinct boss and a completion chest. This is design work only; current landmarks, spawning, saves and combat remain unchanged.
+
+Caster equipment pass (2026-09-06): four one-handed wands, three grimoires, three orbs, visible 2H slot reservation and a two-hand upright staff pose. Save v3 remains valid; no test-progress reset is required. See [weapons and skills](weapons-and-skills.md).

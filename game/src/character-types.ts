@@ -1,5 +1,5 @@
 import type { GoldWallet } from './wallet.ts';
-import type { WeaponDefinition, ShieldDefinition } from './model.ts';
+import type { WeaponDefinition, FocusDefinition, ShieldDefinition } from './model.ts';
 
 export type Attribute = 'strength' | 'dexterity' | 'intelligence' | 'vitality';
 export type StatKey = Attribute | 'maxHp' | 'maxMana' | 'armor' | 'damagePercent' | 'attackSpeedPercent' | 'castSpeedPercent'
@@ -7,7 +7,7 @@ export type StatKey = Attribute | 'maxHp' | 'maxMana' | 'armor' | 'damagePercent
   | 'lifeRegen' | 'manaCostPercent' | 'cooldownPercent' | 'lifeOnHit' | 'blockChance' | 'blockReduction';
 export type StatModifiers = Partial<Record<StatKey, number>>;
 export type EquipmentSlot = 'weapon' | 'offhand' | 'head' | 'chest' | 'gloves' | 'legs' | 'boots' | 'cloak' | 'amulet' | 'ring1' | 'ring2';
-export type ItemKind = Exclude<EquipmentSlot, 'offhand' | 'ring1' | 'ring2'> | 'ring' | 'shield';
+export type ItemKind = Exclude<EquipmentSlot, 'offhand' | 'ring1' | 'ring2'> | 'ring' | 'shield' | 'grimoire' | 'orb';
 export type ItemTier = 'common' | 'magic' | 'rare' | 'epic' | 'legendary';
 export interface ItemAffix { name: string; stat: StatKey; value: number; }
 export interface ItemRecipe {
@@ -22,7 +22,7 @@ export interface Item {
   recipe: ItemRecipe;
   id: string; seed: number; name: string; baseName: string; kind: ItemKind; tier: ItemTier;
   itemLevel: number; requiredLevel: number; power: number;
-  implicit: StatModifiers; affixes: ItemAffix[]; weapon?: WeaponDefinition; shield?: ShieldDefinition;
+  implicit: StatModifiers; affixes: ItemAffix[]; weapon?: WeaponDefinition; shield?: ShieldDefinition; focus?: FocusDefinition;
   appearance: { base: string; shadow: string; edge: string; trim: string; style: 'plate' | 'leather' };
 }
 export type SkillId = 'cleave' | 'lunge' | 'whirlwind' | 'earthshatter' | 'shieldBash' | 'bulwark'

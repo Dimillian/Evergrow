@@ -42,15 +42,21 @@ function unlock(id: string) {
 unlock(SKILL_TREE.nodes.find(node => node.skill === 'cleave')!.id);
 unlock(SKILL_TREE.nodes.find(node => node.skill === 'fireball')!.id);
 assignSkill(p, 0, 'cleave'); assignSkill(p, 1, 'fireball');
-const kinds: ItemKind[] = ['weapon', 'chest', 'head', 'boots', 'gloves', 'cloak', 'ring', 'amulet', 'legs'];
+const kinds: ItemKind[] = ['weapon', 'chest', 'head', 'boots', 'gloves', 'cloak', 'ring', 'amulet', 'legs', 'grimoire', 'orb'];
 for (let i = 0; i < 22; i++) p.character.inventory[i] = generateItem(1284 + i * 831, 7 + i % 4, kinds[i % kinds.length]);
 for (const index of [0, 1, 2, 3, 4, 5, 6, 7, 8]) equipItem(p.character, index, p.level);
 const loadout = new URLSearchParams(location.search).get('loadout');
 const profile = loadout === 'bow' ? 'crescent-recurve' : loadout === 'staff' ? 'storm-staff'
+  : loadout === 'wand' || loadout === 'grimoire' || loadout === 'orb' || loadout === 'wand-shield' ? 'star-wand'
   : loadout === 'dual' || loadout === 'shield' ? 'longsword' : undefined;
 if (profile) {
   p.character.inventory[46] = generateItem(8409, 8, 'weapon', profile);
   equipItem(p.character, 46, p.level);
+  if (loadout === 'grimoire' || loadout === 'orb' || loadout === 'wand-shield') {
+    p.character.inventory[47] = generateItem(8411, 8, loadout === 'wand-shield' ? 'shield' : loadout,
+      loadout === 'wand-shield' ? 'vigil-kite' : loadout === 'grimoire' ? 'astral-grimoire' : 'rime-orb');
+    equipItem(p.character, 47, p.level, 'offhand');
+  }
   if (loadout === 'shield' || loadout === 'dual') {
     p.character.inventory[47] = generateItem(8410, 8, loadout === 'shield' ? 'shield' : 'weapon',
       loadout === 'shield' ? 'vigil-kite' : 'rondel-dagger');

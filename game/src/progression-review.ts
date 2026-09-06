@@ -31,7 +31,7 @@ const tiers = Object.keys(TIER_NAMES) as ItemTier[];
 const kinds = Object.keys(ENEMY_DEFINITIONS) as EnemyKind[];
 const ranks = Object.keys(ENEMY_RANKS) as EnemyRank[];
 const biomes = Object.keys(BIOMES) as BiomeId[];
-const KIND_NAMES: Record<ItemKind, string> = { weapon: 'Weapon', shield: 'Shield', head: 'Head', chest: 'Chest',
+const KIND_NAMES: Record<ItemKind, string> = { weapon: 'Weapon', grimoire: 'Grimoire', orb: 'Orb', shield: 'Shield', head: 'Head', chest: 'Chest',
   gloves: 'Gloves', legs: 'Legs', boots: 'Boots', cloak: 'Cloak', amulet: 'Amulet', ring: 'Ring' };
 const params = new URLSearchParams(location.search);
 const valid = <T extends string>(key: string, options: readonly T[], fallback: T): T => {

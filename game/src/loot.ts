@@ -71,7 +71,7 @@ export function rollEnemyLoot(context: EnemyLootContext): Item[] {
   for (let index = 0; index < count; index++) {
     const tier = selectLootWeight(table.tierWeights, random());
     const kind = selectLootWeight(ENEMY_ITEM_KIND_WEIGHTS[context.kind], random());
-    const profileId = kind === 'weapon' || kind === 'shield'
+    const profileId = kind === 'weapon' || kind === 'shield' || kind === 'grimoire' || kind === 'orb'
       ? selectLootWeight(BIOME_PROFILE_WEIGHTS[context.biome][kind], random()) : undefined;
     // Consecutive rewards receive different item-local seeds, independent of how many table draws were needed.
     const itemSeed = (seed + Math.imul(index + 1, 0x9E3779B9)) >>> 0;

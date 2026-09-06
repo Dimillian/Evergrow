@@ -135,9 +135,12 @@ export class InventoryPanel {
     for (const cell of this.cells.values()) {
       const location = this.locationFrom(cell)!;
       const item = this.itemAt(location);
+      const reserved = location.type === 'equipment' && location.slot === 'offhand' && player.character.equipped.weapon?.weapon?.hands === 2;
+      cell.classList.toggle('is-twohand-reserved', reserved);
+      cell.dataset.tooltip = reserved ? `Both hands hold ${player.character.equipped.weapon!.name}. Equipping an off-hand will stow it.` : '';
       updateItemSlot(cell, item, { level: player.level, draggable: true,
-        emptyMarkup: location.type === 'equipment' ? emptySlotIcon(location.slot) : '<span class="ui-empty-item-mark">·</span>',
-        label: item ? `${itemDisplayName(item)}, ${TIER_NAMES[item.tier]}, item level ${item.itemLevel}${location.type === 'equipment' ? `, equipped in ${SLOT_NAMES[location.slot]}` : ''}${item.requiredLevel > player.level ? `, requires level ${item.requiredLevel}` : ''}` : location.type === 'equipment' ? `${SLOT_NAMES[location.slot]}, empty` : `Empty inventory slot ${location.index + 1}`,
+        emptyMarkup: reserved ? `<span class="character-reserved-glyph" aria-hidden="true">${emptySlotIcon('weapon')}</span><span class="character-reserved-label">2H</span>` : location.type === 'equipment' ? emptySlotIcon(location.slot) : '<span class="ui-empty-item-mark">·</span>',
+        label: reserved ? `Off-hand reserved by two-handed ${player.character.equipped.weapon!.name}` : item ? `${itemDisplayName(item)}, ${TIER_NAMES[item.tier]}, item level ${item.itemLevel}${location.type === 'equipment' ? `, equipped in ${SLOT_NAMES[location.slot]}` : ''}${item.requiredLevel > player.level ? `, requires level ${item.requiredLevel}` : ''}` : location.type === 'equipment' ? `${SLOT_NAMES[location.slot]}, empty` : `Empty inventory slot ${location.index + 1}`,
       });
     }
     const sheet = player.character, stats = player.derived;
@@ -162,8 +165,8 @@ export class InventoryPanel {
     }
     const attack = deriveAttackStats(player.stats, player.equipment.mainHand);
     const offense: Array<[string, string]> = [
-      [player.equipment.mainHand.family === 'staff' ? 'Staff damage' : 'Attack damage', number(attack.damage)],
-      [player.equipment.mainHand.family === 'staff' ? 'Casts per second' : 'Attacks per second', number(attack.attacksPerSecond, 2)],
+      [player.equipment.mainHand.attackKind === 'bolt' ? 'Bolt damage' : 'Attack damage', number(attack.damage)],
+      [player.equipment.mainHand.attackKind === 'bolt' ? 'Casts per second' : 'Attacks per second', number(attack.attacksPerSecond, 2)],
       ['Attack speed bonus', percent(stats.attackSpeedMultiplier - 1)],
       ['Spell damage', percent(stats.spellDamageMultiplier)], ['Cast speed bonus', percent(stats.castSpeedMultiplier - 1)],
       ['Critical chance', percent(stats.critChance)], ['Critical damage', percent(stats.critMultiplier)],

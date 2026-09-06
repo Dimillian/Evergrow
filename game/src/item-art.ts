@@ -1,9 +1,10 @@
+import { focusShapes } from './focus-shapes.ts';
 import { armorShapes } from './armor-shapes.ts';
 import type { ArmorPiece, CharacterOutfit } from './art-types.ts';
 import type { CharacterSheet, Item } from './character-types.ts';
 import { TIER_COLORS } from './items.ts';
 import { STARTING_SWORD } from './equipment.ts';
-import { gearShapesSVG, shieldShapes, weaponShapes, type GearShape } from './weapon-shapes.ts';
+import { gearShapesSVG, gearShapeColor, shieldShapes, weaponShapes, type GearShape } from './weapon-shapes.ts';
 import { mixColor, type Point } from './art-primitives.ts';
 
 const safeColor = (value: string) => /^#[0-9a-f]{6}$/i.test(value) ? value : '#798590';
@@ -23,6 +24,7 @@ export function itemDropShapes(item: Item): readonly GearShape[] {
   let shapes: readonly GearShape[], angle = 0;
   switch (item.kind) {
     case 'weapon': shapes = weaponShapes(item.weapon?.visual ?? STARTING_SWORD.visual); angle = -.52; break;
+    case 'grimoire': case 'orb': shapes = focusShapes(item.focus!.visual); break;
     case 'shield': shapes = shieldShapes(item.shield?.visual ?? { kind: 'kite', base, shadow, edge, trim }); break;
     case 'head': shapes = armorShapes('head', piece); break;
     case 'chest': shapes = armorShapes('chest', piece); break;
@@ -72,7 +74,7 @@ export function itemIconSVG(item: Item, size = 48): string {
   const fine = pixels >= 96;
   const pigment: string[] = [];
   const detailed = (shapes: readonly GearShape[]) => {
-    const colors = [...new Set(shapes.flatMap(shape => shape.fill ? [safeColor(shape.fill)] : []))];
+    const colors = [...new Set(shapes.flatMap(shape => shape.fill ? [gearShapeColor(shape.fill)] : []))];
     let svg = gearShapesSVG(shapes, fine);
     for (const [index, color] of colors.entries()) {
       const id = `${prefix}-pigment-${pigment.length}-${index}`;
@@ -92,9 +94,13 @@ export function itemIconSVG(item: Item, size = 48): string {
       const points = shapes.flatMap(shape => shape.points.map(([x, y]) => [x * Math.cos(angle) - y * Math.sin(angle), x * Math.sin(angle) + y * Math.cos(angle)]));
       const minX = Math.min(...points.map(p => p[0])), maxX = Math.max(...points.map(p => p[0]));
       const minY = Math.min(...points.map(p => p[1])), maxY = Math.max(...points.map(p => p[1]));
-      const occupancy = visual.kind === 'dagger' ? .78 : visual.kind === 'mace' && visual.length < 26 ? .9 : 1;
+      const occupancy = visual.kind === 'wand' ? .72 : visual.kind === 'dagger' ? .78 : visual.kind === 'mace' && visual.length < 26 ? .9 : 1;
       const scale = occupancy * Math.min(37 / Math.max(1, maxX - minX), 40 / Math.max(1, maxY - minY));
       shape = `<g transform="translate(24 24) scale(${scale}) translate(${-(minX + maxX) / 2} ${-(minY + maxY) / 2}) rotate(${degrees})">${detailed(shapes)}</g>`;
+      break;
+    }
+    case 'grimoire': case 'orb': {
+      shape = `<g transform="translate(24 ${item.kind === 'orb' ? 39 : 33}) scale(${item.kind === 'orb' ? 2.3 : 2.15})">${detailed(focusShapes(item.focus!.visual))}</g>`;
       break;
     }
     case 'shield': {
