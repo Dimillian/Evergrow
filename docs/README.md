@@ -25,6 +25,7 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 | Camps, landmarks and roaming | [Wilderness and encounters](wilderness-and-encounters.md) |
 | Procedural crypt floors, boss, treasure and location saves | [Dungeons](dungeons.md) |
 | Chests, choices, beacons and guardian trials | [Interactive POIs](interactive-pois.md) |
+| Procedural sound palette and audition controls | [Sound studio](sound-studio.md) |
 | Explored map and review tooling | [Explored atlas](explored-atlas.md) |
 
 ## Town economy
@@ -36,7 +37,7 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 - [Town portals and waypoints](travel-and-portals.md): implemented town return/home anchors; permanent waypoint network still specified.
 - [Exploration, events and dungeons](dungeons-and-events.md): proposed encounter density, new enemy roles, interactive landmarks, procedural crypt floors, bosses and persistent expedition rewards.
 
-Interactive POIs and town portals are live. Dungeon expeditions and permanent waypoint travel remain specified.
+Interactive POIs, town portals and Rootbound Crypt expeditions are live. Permanent waypoint travel remains specified.
 
 ## Original vision and design exploration
 
