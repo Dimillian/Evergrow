@@ -71,3 +71,7 @@ Upgradeable skill ranks, lower casting-rank selection, 19 specialization choices
 ### Interactive POIs — delivered 2026-09-06
 
 Camp strongboxes, caravan choices, watchtower reveals, graveyard and standing-stone trials, and roadside reliquaries are implemented. Persistent partial claims, guardian casualties, offscreen spawning and timed blessings share existing save/combat boundaries. Next: player feedback on encounter/reward pacing, then the separate procedural dungeon proposal.
+
+## Proposed: journeys and local leads
+
+[Procedural journeys](procedural-journeys.md) specifies light guidance through existing world content, first-time character/service milestones, fixed-level route recommendations and a compact journal/tracker. Proposed delivery: single-site guidance and milestones first, then short regional chains and conservative quest XP. No quest runtime has been implemented or authorized by this specification request.

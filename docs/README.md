@@ -33,10 +33,12 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 
 ## Next iteration specifications
 
+- [Journeys and local leads](procedural-journeys.md): proposed procedural adventures, light onboarding, level-aware routing, journal and reward/persistence rules.
+
 - [Town portals and waypoints](travel-and-portals.md): implemented town return/home anchors; permanent waypoint network still specified.
 - [Exploration, events and dungeons](dungeons-and-events.md): proposed encounter density, new enemy roles, interactive landmarks, procedural crypt floors, bosses and persistent expedition rewards.
 
-Interactive POIs and town portals are live. Dungeon expeditions and permanent waypoint travel remain specified.
+Interactive POIs, town portals and dungeon expeditions are live. Permanent waypoint travel and procedural journeys remain specified.
 
 ## Original vision and design exploration
 
