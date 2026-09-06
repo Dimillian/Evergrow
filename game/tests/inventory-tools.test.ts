@@ -171,3 +171,29 @@ test('spatial navigation follows bag rows and reaches toolbar controls above the
   assert.equal(directionalControl(rects, 1, 'ArrowUp'), 0);
   assert.equal(directionalControl(rects, 1, 'ArrowLeft'), 1);
 });
+
+test('touch-style filtered selection equips the actual source and safely reserves both hands', () => {
+  const sim = new Simulation({ blocked: () => false, move: (x,y,dx,dy) => ({x:x+dx,y:y+dy}) }, {spawn:false});
+  const p = sim.player, sheet = p.character;
+  sheet.inventory[41] = generateItem(2901,1,'weapon','ember-staff','rare');
+  sheet.inventory[7] = generateItem(2902,1,'ring',undefined,'epic');
+  const selected = sheet.inventory[41]!, excluded = sheet.inventory[7]!, before = ids(sheet);
+  const source = inventoryGridSources(sheet.inventory,new Set(['weapons']),new Set(['rare']))[0]!;
+  assert.equal(source,41);
+  assert.ok(executeCharacterCommand(p,{type:'equip',index:source,slot:'weapon'}).ok);
+  assert.equal(sheet.equipped.weapon?.id,selected.id); assert.equal(sheet.equipped.offhand,null);
+  assert.equal(sheet.inventory[7]?.id,excluded.id); assert.deepEqual(ids(sheet),before);
+});
+test('moving through a filtered projection targets a real empty cell and retains acquisition order', () => {
+  const sheet=createCharacterSheet();
+  sheet.inventory[53]=generateItem(2911,1,'ring',undefined,'rare');
+  sheet.inventory[2]=generateItem(2912,1,'head',undefined,'epic');
+  const item=sheet.inventory[53]!, hidden=sheet.inventory[2]!, owned=ids(sheet);
+  sheet.recentItems=[item.id,hidden.id];
+  const projection=inventoryGridSources(sheet.inventory,new Set(['jewelry']),new Set(['rare']));
+  const source=projection[0]!, target=projection[1]!;
+  assert.equal(sheet.inventory[target],null);
+  assert.ok(moveInventoryItem(sheet,source,target).ok);
+  assert.equal(sheet.inventory[target],item);assert.equal(sheet.inventory[2]?.id,hidden.id);
+  assert.deepEqual(sheet.recentItems,[item.id,hidden.id]);assert.deepEqual(ids(sheet),owned);
+});

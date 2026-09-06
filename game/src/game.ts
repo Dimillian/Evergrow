@@ -193,7 +193,13 @@ export class Game {
         save: () => { this.saveCharacter(); },
       });
       this.touch = this.lifetime.own(new TouchHUD(this.canvas.parentElement!, {
-        activate: active => { this.input.clear(); this.gamepad.clear(); this.sim.clearInput(); this.usingGamepad = false; this.renderer.touchActive = active; if(this.touch) this.resize(); },
+        activate: active => {
+          this.input.clear();
+          // A fresh pad event switching away from touch must survive this presentation change.
+          if(active || !this.usingGamepad) this.gamepad.clear();
+          this.sim.clearInput(); this.usingGamepad = false; this.renderer.touchActive = active;
+          if(this.touch) this.resize();
+        },
         clearAttack: () => this.sim.clearBasicAttackInput(), cancelCombat: () => this.sim.clearCombatInput(),
         unlock: () => { void this.audio.unlock().catch(() => {}); }, notice: message => this.notify(message),
         menu: action => {

@@ -127,3 +127,5 @@
 .touch-point-badge { position: absolute; top: -7px; right: -3px; border: 1px solid #101d23; border-radius: 5px; padding: 1px 4px; color: #121722; background: #d8b47d; font: 12px var(--ui-font); }
 [data-touch-menu="skills"] .touch-point-badge { background: #c5a8e5; }
 .touch-point-badge[hidden] { display: none; }
+/* The compact desktop toolbar keeps its PR sizing; finger targets remain 48px. */
+.touch-mode .character-inventory-heading .character-tool-icon { width: 48px; min-width: 48px; height: 48px; min-height: 48px; }

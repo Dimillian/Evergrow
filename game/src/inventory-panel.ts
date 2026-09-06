@@ -175,6 +175,7 @@ export class InventoryPanel {
   refresh(player: Player): void {
     this.player = player;
     if (this.element.hidden) return;
+    if(this.touchItem && this.itemAt(this.touchItem)?.id !== this.touchItem.id) this.closeTouchItem();
     const sources = inventoryGridSources(player.character.inventory, this.filters, this.rarities);
     this.cells.clear();
     this.element.querySelectorAll<HTMLButtonElement>('.character-bag-slot').forEach((cell, index) => {
@@ -284,7 +285,7 @@ export class InventoryPanel {
   private popupPanel(): HTMLElement { return this.popupLayer.querySelector<HTMLElement>(`[data-mini="${this.popup}"]`)!; }
 
   private openPopup(kind: 'sort' | 'weapon', anchor: HTMLElement): void {
-    this.hideTooltip(); this.clearDrag(); this.controller.clear();
+    this.closeTouchItem(); this.hideTooltip(); this.clearDrag(); this.controller.clear();
     this.focus?.dispose(); this.focus = null;
     this.popup = kind; this.popupReturn = anchor;
     this.popupLayer.hidden = false;
@@ -317,6 +318,7 @@ export class InventoryPanel {
 
   private requestEquipBest(): void {
     if (!this.player) return;
+    this.closeTouchItem();
     this.hideTooltip();
     const plan = planBestEquipment(this.player.character, this.player.level);
     if (!plan.ok || !plan.weaponChange) { this.actions.equipBest(); return; }
@@ -405,7 +407,7 @@ export class InventoryPanel {
     this.element.addEventListener('click', event => {
       const target = event.target as Element;
       const tab = target.closest<HTMLElement>('[data-touch-tab]')?.dataset.touchTab;
-      if(tab) { this.window.dataset.touchTab = tab; for(const b of this.window.querySelectorAll('[data-touch-tab]')) b.setAttribute('aria-pressed',String((b as HTMLElement).dataset.touchTab===tab)); return; }
+      if(tab) { this.section = tab==='equipment'?0:tab==='stats'?2:1; this.updateSectionHighlight(); this.window.dataset.touchTab = tab; for(const b of this.window.querySelectorAll('[data-touch-tab]')) b.setAttribute('aria-pressed',String((b as HTMLElement).dataset.touchTab===tab)); return; }
       const itemAction = target.closest<HTMLElement>('[data-touch-item]');
       if(itemAction) { this.touchItemAction(itemAction.dataset.touchItem!); return; }
       if (target.closest('[data-close]')) { this.actions.close(); return; }
@@ -451,6 +453,7 @@ export class InventoryPanel {
       else this.hideTooltip();
     }, options);
     this.element.addEventListener('dblclick', event => {
+      if(document.documentElement.classList.contains('touch-mode')) return;
       const location = this.locationFrom(event.target);
       if (!event.shiftKey && location?.type === 'bag' && this.itemAt(location)) { this.hideTooltip(); this.activate(location); }
     }, options);
