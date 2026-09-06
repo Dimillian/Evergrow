@@ -23,10 +23,11 @@ export class ServicePanel {
   private operation: Improvement = 'enhance';
   private selected: ServiceRequest | null = null;
   private quote: ServiceQuote | null = null;
+  private saving = false;
   private lastConfirm = -Infinity;
   private abort = new AbortController();
   private focus: { dispose(): void } | null = null;
-  private actions: { close(): void; trade(quote: ServiceQuote): { ok: boolean; message: string } };
+  private actions: { close(): void; trade(quote: ServiceQuote): Promise<{ ok: boolean; message: string }> };
   constructor(mount: HTMLElement, actions: ServicePanel['actions']) {
     this.actions = actions;
     this.element = document.createElement('section'); this.element.className = 'service-panel ui-window'; this.element.hidden = true;
@@ -119,6 +120,7 @@ export class ServicePanel {
       context: value.request.type === 'buy' ? `${itemPrice(value.item, 'buy')} gold` : value.request.type === 'sell' ? `Sell · ${itemPrice(value.item, 'sell')} gold` : undefined }, cell);
   }
   private click(e: MouseEvent): void {
+    if (this.saving) return;
     const button = (e.target as HTMLElement).closest<HTMLButtonElement>('button'); if (!button) return;
     if (button.hasAttribute('data-close')) { this.actions.close(); return; }
     if (button.dataset.tab) { this.tab = button.dataset.tab as typeof this.tab; this.updateSelection(); this.render(); return; }
@@ -188,10 +190,18 @@ export class ServicePanel {
     }
   }
   private selectedAffix() { return this.selected?.type === 'improve' ? this.selected.affix ?? 0 : 0; }
-  private confirm(): void {
-    if (!this.quote || performance.now() - this.lastConfirm < 350) return;
+  private async confirm(): Promise<void> {
+    if (this.saving || !this.quote || performance.now() - this.lastConfirm < 350) return;
     this.lastConfirm = performance.now();
-    const result = this.actions.trade(this.quote);
+    this.saving = true;
+    const button = this.element.querySelector<HTMLButtonElement>('[data-confirm]')!;
+    button.disabled = true; button.textContent = 'Saving…';
+    let result: { ok: boolean; message: string };
+    try { result = await this.actions.trade(this.quote); }
+    catch { result = { ok: false, message: 'Could not complete the save. No purchase was committed.' }; }
+    finally { this.saving = false; }
+    if (this.element.hidden) return;
+    this.renderDetail();
     this.tooltip.hide();
     if (result.ok) {
       const keep = this.selected?.type === 'improve'; if (!keep) this.selected = null;

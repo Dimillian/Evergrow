@@ -47,45 +47,45 @@ test('movement, offense, dodge, focus cleanup and active actions prevent or inte
   sim.player.y = 0; assert.ok(sim.portal.start(sim.player, { ...world, blocked: () => true }));
 });
 
-test('saved round trip preserves equipment, gold, resources, loot and existing actors; replay cannot travel again', () => {
+test('saved round trip preserves equipment, gold, resources, loot and existing actors; replay cannot travel again', async () => {
   const sim = new Simulation(world, { spawn: false });
   const data = new Map<string, string>();
   const session = new CharacterSession(new CharacterRepository({ getItem: k => data.get(k) ?? null, setItem: (k, v) => { data.set(k, v); } }), 4);
-  assert.ok(session.create(0, 'Traveler', 7319, sim.captureCheckpoint(), 'portal-test', 1));
-  const persist = (checkpoint: ReturnType<Simulation['captureCheckpoint']>) => ({ ok: session.save(checkpoint, 2), message: session.error });
+  assert.ok((await session.create(0, 'Traveler', 7319, sim.captureCheckpoint(), 'portal-test', 1)));
+  const persist = async (checkpoint: ReturnType<Simulation['captureCheckpoint']>) => ({ ok: (await session.save(checkpoint, 2)), message: session.error });
   const enemy = sim.spawnEnemy('stalker', 1100, 0)!; enemy.hp = 11;
   ready(sim);
   sim.player.hp = 45; sim.player.mana = 17; sim.player.flasks = 1; sim.player.character.gold = 765;
   const before = sim.captureCheckpoint();
-  assert.ok(executePortalTravel(sim, anchor, false, persist).ok);
+  assert.ok((await executePortalTravel(sim, anchor, false, persist)).ok);
   assert.equal(sim.player.y, anchor.y + 35); assert.equal(sim.player.prevY, sim.player.y);
   assert.deepEqual(sim.travel.returnTo, { x: before.x, y: before.y, town: 0 });
   assert.deepEqual(sim.player.character, before.character);
   assert.equal(sim.player.hp, 45); assert.equal(sim.player.mana, 17); assert.equal(sim.player.flasks, 1);
   assert.equal(sim.enemies[0], enemy); assert.equal(enemy.hp, 11);
-  assert.equal(executePortalTravel(sim, anchor, false, persist).ok, false);
-  assert.deepEqual(session.repository.read(0).record!.checkpoint.travel, sim.travel);
-  const loaded = new Simulation(world, { spawn: false }); loaded.restoreCheckpoint(session.repository.read(0).record!.checkpoint);
+  assert.equal((await executePortalTravel(sim, anchor, false, persist)).ok, false);
+  assert.deepEqual((await session.repository.read(0)).record!.checkpoint.travel, sim.travel);
+  const loaded = new Simulation(world, { spawn: false }); loaded.restoreCheckpoint((await session.repository.read(0)).record!.checkpoint);
   assert.deepEqual(loaded.travel, sim.travel); assert.equal(loaded.portal.active, false);
-  assert.ok(executePortalTravel(sim, anchor, true, persist).ok);
+  assert.ok((await executePortalTravel(sim, anchor, true, persist)).ok);
   assert.equal(sim.travel.returnTo, null); assert.equal(sim.player.x, before.x); assert.equal(sim.player.y, before.y);
   assert.equal(sim.player.hp, 45); assert.equal(sim.player.mana, 17);
-  assert.equal(executePortalTravel(sim, anchor, true, persist).ok, false);
+  assert.equal((await executePortalTravel(sim, anchor, true, persist)).ok, false);
 });
 
-test('failed persistence preserves position and the previous return link on both directions', () => {
+test('failed persistence preserves position and the previous return link on both directions', async () => {
   const sim = new Simulation(world, { spawn: false }); ready(sim);
   sim.travel.returnTo = { x: 50, y: 60, town: 0 };
   const before = sim.captureCheckpoint();
-  assert.equal(executePortalTravel(sim, anchor, false, () => ({ ok: false, message: 'Stale save' })).ok, false);
+  assert.equal((await executePortalTravel(sim, anchor, false, () => ({ ok: false, message: 'Stale save' }))).ok, false);
   assert.deepEqual(sim.captureCheckpoint(), before); assert.equal(sim.portal.active, false);
   sim.player.x = anchor.x; sim.player.y = anchor.y;
   const town = sim.captureCheckpoint();
-  assert.equal(executePortalTravel(sim, anchor, true, () => ({ ok: false, message: 'Storage full' })).ok, false);
+  assert.equal((await executePortalTravel(sim, anchor, true, () => ({ ok: false, message: 'Storage full' }))).ok, false);
   assert.deepEqual(sim.captureCheckpoint(), town);
 });
 
-test('blocked return searches locally, never changes area level, and retains link when no landing exists', () => {
+test('blocked return searches locally, never changes area level, and retains link when no landing exists', async () => {
   assert.equal(portalLanding({ ...world, blocked: () => true }, { x: 0, y: 0 }, 9), null);
   const near = portalLanding({ ...world, blocked: (x, y) => Math.hypot(x, y) < 10 }, { x: 0, y: 0 }, 9)!;
   assert.ok(Math.hypot(near.x, near.y) <= 80);
@@ -97,7 +97,7 @@ test('blocked return searches locally, never changes area level, and retains lin
   const sim = new Simulation({ ...world, blocked: (_x, y) => y > -500 }, { spawn: false });
   sim.player.x = 0; sim.player.y = anchor.y; sim.travel.returnTo = { x: 0, y: 0, town: 0 };
   let saved = false;
-  assert.equal(executePortalTravel(sim, anchor, true, () => { saved = true; return { ok: true, message: '' }; }).ok, false);
+  assert.equal((await executePortalTravel(sim, anchor, true, () => { saved = true; return { ok: true, message: '' }; })).ok, false);
   assert.equal(saved, false); assert.ok(sim.travel.returnTo);
 });
 
@@ -121,7 +121,7 @@ test('death clears a return link, and character reset/restore do not share trave
   (sim.travel as TravelState).returnTo!.x = 99; assert.equal(checkpoint.travel!.returnTo!.x, 30);
 });
 
-test('town anchors are reachable and changing home is a persisted interaction without consuming the old return', () => {
+test('town anchors are reachable and changing home is a persisted interaction without consuming the old return', async () => {
   const real = new World(7319);
   for (let band = -6; band <= 6; band++) {
     const a = real.getPortalAnchor(band);
@@ -131,9 +131,9 @@ test('town anchors are reachable and changing home is a persisted interaction wi
   const sim = new Simulation(world, { spawn: false }); sim.player.x = 0; sim.player.y = anchor.y;
   sim.travel.returnTo = { x: 0, y: 0, town: 0 };
   const next = { ...anchor, band: 1 };
-  assert.equal(activatePortalAnchor(sim, next, () => ({ ok: false, message: 'Storage full' })).ok, false);
+  assert.equal((await activatePortalAnchor(sim, next, () => ({ ok: false, message: 'Storage full' }))).ok, false);
   assert.equal(sim.travel.homeTown, 0);
-  assert.ok(activatePortalAnchor(sim, next, () => ({ ok: true, message: '' })).ok);
+  assert.ok((await activatePortalAnchor(sim, next, () => ({ ok: true, message: '' }))).ok);
   assert.equal(sim.travel.homeTown, 1); assert.equal(sim.travel.returnTo!.town, 0);
   const towns = real.getSettlements(-2000, -2000, 4000, 1800);
   assert.ok(towns.some(t => townPortalAnchor(t).band === 0)); real.dispose();

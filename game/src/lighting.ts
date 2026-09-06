@@ -110,10 +110,10 @@ export class Lighting {
         if (shadows) this.cutShadows(light, props);
         cookie = this.scratch;
         if (light.stationary && this.observed.has(key)) {
-        cookie = document.createElement('canvas'); cookie.width = cookie.height = 256;
-        cookie.getContext('2d')!.drawImage(this.scratch, 0, 0);
-        if (this.cookies.size >= 32) this.cookies.delete(this.cookies.keys().next().value!);
-        this.cookies.set(key, cookie);
+          cookie = document.createElement('canvas'); cookie.width = cookie.height = 256;
+          cookie.getContext('2d')!.drawImage(this.scratch, 0, 0);
+          if (this.cookies.size >= 32) this.cookies.delete(this.cookies.keys().next().value!);
+          this.cookies.set(key, cookie);
         }
       }
       c.globalAlpha = Math.min(1, light.power);

@@ -13,7 +13,13 @@ export interface ExplorationWorld {
 export interface MapRect { x: number; y: number; width: number; height: number; }
 export interface ExplorationStorage { getItem(key: string): string | null; setItem(key: string, value: string): void; }
 export type ExplorationStatus = 'saved' | 'pending' | 'session' | 'full' | 'invalid';
+export interface ChartResult { status: 'saved' | 'session' | 'full' | 'invalid'; data?: DecodedExploration; }
+export interface ExplorationPersistence {
+  readChart(key: string, seed: number, generation: string): Promise<ChartResult>;
+  writeChart(key: string, seed: number, generation: string, data: DecodedExploration): Promise<ChartResult>;
+}
 export interface ExplorationOptions {
+  persistence?: ExplorationPersistence;
   storage?: ExplorationStorage | null;
   generationVersion?: string | number;
   saveDelayMs?: number;
@@ -25,10 +31,6 @@ function population(value: number) {
   value = (value & 0x33333333) + ((value >>> 2) & 0x33333333);
   return (((value + (value >>> 4)) & 0x0f0f0f0f) * 0x01010101) >>> 24;
 }
-function defaultStorage(): ExplorationStorage | null {
-  try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; }
-}
-
 /** Sparse bitsets retain every visited region; capacity never evicts older discoveries. */
 export class Exploration {
   readonly world: ExplorationWorld;
@@ -37,6 +39,9 @@ export class Exploration {
   private chunks = new Map<string, Chunk>();
   private pois = new Map<string, MapPOI>();
   private storage: ExplorationStorage | null;
+  private persistence?: ExplorationPersistence;
+  readonly ready: Promise<void>;
+  private pending: Promise<boolean> | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private saveDelay: number;
   private dirty = false;
@@ -56,14 +61,20 @@ export class Exploration {
     this.world = world; this.onDiscover = options.onDiscover;
     this.generationVersion = String(options.generationVersion ?? world.generationVersion ?? 1);
     this.storageKey = `evergrow:exploration:1:${this.generationVersion}:${world.seed}${options.characterId ? `:${options.characterId}` : ''}`;
-    this.storage = options.storage === undefined ? defaultStorage() : options.storage;
+    this.storage = options.storage ?? null;
+    this.persistence = options.persistence;
     const delay = options.saveDelayMs ?? 1800;
     this.saveDelay = Math.max(100, Math.min(10_000, Number.isFinite(delay) ? delay : 1800));
-    this.storageStatus = this.storage ? 'saved' : 'session';
+    this.storageStatus = this.storage || this.persistence ? 'saved' : 'session';
     try {
       const saved = this.storage?.getItem(this.storageKey);
       if (saved != null && !this.restore(saved)) { this.protectSave = true; this.storageStatus = 'invalid'; }
     } catch { this.storageStatus = 'session'; this.storage = null; }
+    this.ready = this.persistence ? this.persistence.readChart(this.storageKey, this.world.seed, this.generationVersion).then(result => {
+      if (this.disposed) return;
+      if (result.data) this.merge(result.data);
+      this.storageStatus = result.status; this.protectSave = result.status === 'invalid';
+    }).catch(() => { this.storageStatus = 'session'; }) : Promise.resolve();
     if (typeof window !== 'undefined') window.addEventListener('pagehide', this.onPageHide);
   }
 
@@ -154,8 +165,8 @@ export class Exploration {
 
   private markDirty() {
     this.dirty = true;
-    if (this.storage && !this.protectSave && !this.capacityReached) this.storageStatus = 'pending';
-    if (this.storage && !this.protectSave && this.timer === null) this.timer = setTimeout(() => { this.timer = null; this.save(); }, this.saveDelay);
+    if ((this.storage || this.persistence) && !this.protectSave && !this.capacityReached) this.storageStatus = 'pending';
+    if ((this.storage || this.persistence) && !this.protectSave && this.timer === null) this.timer = setTimeout(() => { this.timer = null; this.save(); }, this.saveDelay);
   }
 
   serialize() {
@@ -196,7 +207,44 @@ export class Exploration {
     return true;
   }
 
-  save() {
+  snapshot(): DecodedExploration { return { chunks: [...this.chunks.values()], pois: [...this.pois.values()] }; }
+
+  /** Worker-side import uses the same bounded chart merge as restoring a saved review. */
+  importSnapshot(data: DecodedExploration) {
+    if (!this.merge(data)) return false;
+    this.dirty = true; return true;
+  }
+
+  save(): boolean | Promise<boolean> {
+    if (this.persistence) return this.saveRemote();
+    return this.saveMemory();
+  }
+
+  private saveRemote(): Promise<boolean> {
+    if (this.timer !== null) { clearTimeout(this.timer); this.timer = null; }
+    if (this.pending) return this.pending;
+    if (this.disposed || !this.dirty || this.protectSave) return Promise.resolve(false);
+    this.pending = (async () => {
+      await this.ready;
+      if (this.protectSave) return false;
+      const revision = this.revision;
+      // postMessage takes an isolated copy immediately; no JSON work on the game thread.
+      const result = await this.persistence!.writeChart(this.storageKey, this.world.seed, this.generationVersion, this.snapshot());
+      const changed = this.revision !== revision;
+      if (result.data && !this.disposed) this.merge(result.data);
+      if (result.status === 'saved') this.dirty = changed;
+      this.protectSave = result.status === 'invalid';
+      this.storageStatus = this.capacityReached ? 'full' : this.dirty && result.status === 'saved' ? 'pending' : result.status;
+      return result.status === 'saved';
+    })().catch(() => { this.storageStatus = 'session'; return false; }).finally(() => {
+      this.pending = null;
+      if (this.dirty && !this.disposed && !this.protectSave && this.timer === null)
+        this.timer = setTimeout(() => { this.timer = null; this.save(); }, this.saveDelay);
+    });
+    return this.pending;
+  }
+
+  private saveMemory() {
     if (this.timer !== null) { clearTimeout(this.timer); this.timer = null; }
     if (this.disposed || !this.dirty || !this.storage || this.protectSave) return false;
     try {

@@ -38,7 +38,7 @@ export function eventProblem(sim: Simulation, site: EventSite, choice: EventChoi
   return null;
 }
 /** The runtime calls this after the channel. Persist the complete reward/ledger change before publishing it. */
-export function executeEvent(sim: Simulation, site: EventSite, choice: EventChoice | null, persist: (checkpoint: CharacterCheckpoint) => EventResult, beaconTarget?: WorldPOI): EventResult {
+export async function executeEvent(sim: Simulation, site: EventSite, choice: EventChoice | null, persist: (checkpoint: CharacterCheckpoint) => EventResult | Promise<EventResult>, beaconTarget?: WorldPOI): Promise<EventResult> {
   const problem = eventProblem(sim, site, choice);
   if (problem)
     return { ok: false, message: problem };
@@ -85,7 +85,7 @@ export function executeEvent(sim: Simulation, site: EventSite, choice: EventChoi
       record.phase = 'claimed';
   }
   const oldLevel = sim.player.level;
-  const result = persist(checkpoint);
+  const result = await persist(checkpoint);
   if (!result.ok)
     return result;
   // Do not restore/reset the simulation: actors, projectiles, channels and world state remain live.

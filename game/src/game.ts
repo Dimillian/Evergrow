@@ -20,7 +20,7 @@ import { createCharacterSheet, type StarterLoadoutId } from './items.ts';
 import { refreshCharacter } from './character.ts';
 import { AreaNoticeTracker } from './notification-queue.ts';
 import { getZoneAt } from './zone-progression.ts';
-import { CharacterRepository } from './character-storage.ts';
+import { SaveClient } from './save-client.ts';
 import { CharacterSession } from './character-session.ts';
 import { TitleScreen } from './title-screen.ts';
 import { InventoryPanel } from './inventory-panel.ts';
@@ -91,6 +91,12 @@ export class Game {
   private abort = new AbortController();
   private debug = false;
   private disposed = false;
+  private saveClient: SaveClient;
+  private hallBusy = false;
+  private savingAction = false;
+  private actionPending: Promise<unknown> = Promise.resolve();
+  private autosave: Promise<boolean> | null = null;
+  private saveAgain = false;
 
   constructor(root: HTMLElement) {
     this.lifetime.defer(() => this.abort.abort());
@@ -101,12 +107,8 @@ export class Game {
       this.audio = this.lifetime.own(new GameAudio());
       this.exploration = new Exploration(this.world, { storage: null });
       this.lifetime.defer(() => this.exploration.dispose());
-      let storage: Storage | null = null;
-      try { storage = localStorage; } catch { /* The title screen explains unavailable storage. */ }
-      const repository = new CharacterRepository(storage);
-      for (const slot of repository.list()) if (slot.state === 'invalid' || slot.record && slot.record.worldVersion < this.world.generationVersion)
-        repository.remove(slot.index, slot.token);
-      this.session = new CharacterSession(repository, this.world.generationVersion);
+      this.saveClient = new SaveClient();
+      this.session = new CharacterSession(this.saveClient, this.world.generationVersion);
       this.shell = this.lifetime.own(new GameShell(root, {
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
         portal: () => { this.canvas.focus(); this.requestPortal(); },
@@ -170,7 +172,7 @@ export class Game {
       this.resize();
       this.bind();
       this.showMenu();
-      this.titleScreen.open(this.session.repository.list());
+      void this.loadRoster();
       this.animation = requestAnimationFrame(this.frame);
     } catch (error) {
       try { this.lifetime.dispose(); } catch (cleanupError) { console.error(cleanupError); }
@@ -201,6 +203,7 @@ export class Game {
       clear: () => this.clearInput(),
       release: code => this.input.keyUp(code),
       press: event => {
+        if (this.savingAction) { event.preventDefault(); return; }
         if (event.isTrusted) this.usingGamepad = false;
         if (event.code === 'Escape') {
           event.preventDefault();
@@ -267,7 +270,7 @@ export class Game {
       this.renderer.zoomByWheel(event.deltaY, event.deltaMode, this.canvas.getBoundingClientRect().height);
     }, { signal, passive: false });
     this.canvas.addEventListener('pointerdown', event => {
-      if (this.phase !== 'playing') return;
+      if (this.phase !== 'playing' || this.savingAction) return;
       event.preventDefault();
       this.updatePointer(event);
       if (this.pointerInHUD()) return;
@@ -321,29 +324,34 @@ export class Game {
   }
 
   /** Defeat recovery keeps the character, allocations and loot; it never creates a new run. */
-  start() {
+  async start() {
     if (this.disposed || this.phase !== 'dead' || !this.session.active) return;
-    if(this.sim.dungeonFloor && !this.switchDungeon({kind:'death'})) return;
+    if(this.sim.dungeonFloor && !await this.switchDungeon({kind:'death'})) return;
     this.sim.revive(); this.enterWorld(); this.saveCharacter();
   }
 
-  private createCharacter(index: number, name: string, weapon: StarterLoadoutId, seed: number) {
-    if (this.phase !== 'ready') return;
+  private async createCharacter(index: number, name: string, weapon: StarterLoadoutId, seed: number) {
+    if (this.phase !== 'ready' || this.hallBusy || this.disposed) return;
     if (!isWorldSeed(seed)) { this.titleScreen.message('Enter a whole world seed from 0 to 4294967295.'); return; }
     const world = new World(seed);
     const fresh = new Simulation(world, { seed, spawn: false });
     fresh.player.character = createCharacterSheet(weapon); refreshCharacter(fresh.player);
     fresh.player.hp = fresh.player.maxHp; fresh.player.mana = fresh.player.maxMana;
     const checkpoint = fresh.captureCheckpoint(); world.dispose();
-    if (!this.session.create(index, name, seed, checkpoint, crypto.randomUUID(), Date.now())) {
-      this.titleScreen.message(this.session.error); return;
+    this.hallBusy = true;
+    if (!await this.session.create(index, name, seed, checkpoint, crypto.randomUUID(), Date.now())) {
+      this.hallBusy = false; this.titleScreen.message(this.session.error); return;
     }
-    this.continueCharacter(index);
+    this.hallBusy = false;
+    await this.continueCharacter(index);
   }
 
-  private continueCharacter(index: number) {
-    if (this.phase !== 'ready') return;
-    const record = this.session.load(index);
+  private async continueCharacter(index: number) {
+    if (this.phase !== 'ready' || this.hallBusy || this.disposed) return;
+    this.hallBusy = true;
+    try {
+    const record = await this.session.load(index);
+    if (this.disposed) return;
     if (!record) { this.titleScreen.message(this.session.error); return; }
     if (this.world !== this.overworld) this.world.dispose();
     this.overworld.dispose();
@@ -352,34 +360,40 @@ export class Game {
     this.setLocationWorld(record.checkpoint);
     this.sim.restoreCheckpoint(record.checkpoint);
     this.projectedBeacons.clear();
-    if (this.sim.player.dead) { if(this.sim.dungeonFloor && !this.switchDungeon({kind:'death'})) return; this.sim.revive(); }
+    if (this.sim.player.dead) { if(this.sim.dungeonFloor && !await this.switchDungeon({kind:'death'})) return; this.sim.revive(); }
     this.sim.player.name = record.name;
     this.worldMap.dispose(); this.exploration.dispose();
-    this.exploration = new Exploration(this.overworld, { characterId: record.id,
+    this.exploration = new Exploration(this.overworld, { characterId: record.id, persistence: this.saveClient,
       onDiscover: poi => {
         // Shops share their settlement announcement; landmarks deserve their own.
         if (!['blacksmith', 'merchant', 'inn', 'chapel', 'jeweler', 'enchanter'].includes(poi.kind))
           this.shell.notifications.push({ kind: 'discovery', poi });
       },
     });
+    await this.exploration.ready;
+    if (this.disposed) return;
     this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap());
     this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
     this.worldMap.setEventStateReader(poi => { if(poi.kind==='dungeon'){const run=this.sim.expeditions.runs.find(r=>r.entrance.id===poi.id);return run?(run.states.warden.hp<=0?'Cleared':'Expedition active'):null;} const record = this.sim.eventState.sites[poi.id]; return isEventKind(poi.kind) ? eventLabel(record ?? { id: poi.id, kind: poi.kind }, this.sim.eventState, this.sim.getCampState(poi.id) === 'cleared') : null; });
     this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.overworld.getPortalAnchor(band)));
     this.worldMap.resize(); this.titleScreen.close(); this.saveError = '';
     this.projectBeacons(); this.enterWorld(); this.saveCharacter();
+    } finally { this.hallBusy = false; }
   }
 
-  private deleteCharacter(index: number) {
-    if (this.phase !== 'ready') return;
-    const slot = this.session.repository.read(index);
-    const result = this.session.repository.remove(index, slot.token);
+  private async deleteCharacter(index: number) {
+    if (this.phase !== 'ready' || this.hallBusy || this.disposed) return;
+    this.hallBusy = true;
+    try {
+    const slot = await this.session.repository.read(index);
+    const result = await this.session.repository.remove(index, slot.token);
     if (!result.ok) { this.titleScreen.message(result.message); return; }
     if (slot.record) {
-      try { localStorage.removeItem(`evergrow:exploration:1:${slot.record.worldVersion}:${slot.record.worldSeed}:${slot.record.id}`); } catch { /* Character deletion already committed; chart cleanup is best effort. */ }
+      await this.saveClient.removeChart(`evergrow:exploration:1:${slot.record.worldVersion}:${slot.record.worldSeed}:${slot.record.id}`, slot.record.worldSeed, String(slot.record.worldVersion));
     }
     this.shell.notifications.clear();
-    this.titleScreen.open(this.session.repository.list(), index);
+    this.titleScreen.open(await this.session.repository.list(), index);
+    } finally { this.hallBusy = false; }
   }
 
   private enterWorld() {
@@ -394,36 +408,70 @@ export class Game {
     this.audio.setEnabled(!this.muted); this.last = performance.now(); this.nextAutosave = this.last + 10_000;
   }
 
-  private saveCharacter(): boolean {
-    if (!this.session?.active) return true;
-    const saved = this.session.save(this.sim.captureCheckpoint(), Date.now());
-    const message = saved ? '' : this.session.error;
-    if (message && message !== this.saveError) this.notify(message);
-    this.saveError = message;
-    this.shell.setSaveStatus(message || 'Character saved locally.', !saved);
-    this.exploration.save();
-    return saved;
+  private async loadRoster() {
+    this.hallBusy = true;
+    const slots = await this.session.repository.list();
+    for (const slot of slots) if (slot.state === 'invalid' || slot.record && slot.record.worldVersion < this.world.generationVersion)
+      await this.session.repository.remove(slot.index, slot.token);
+    if (!this.disposed) this.titleScreen.open(await this.session.repository.list());
+    this.hallBusy = false;
   }
 
-  private returnToTitle() {
-    if (!this.session.active || !this.saveCharacter()) return;
+  private saveCharacter(force = false): Promise<boolean> {
+    if (this.savingAction && !force) return Promise.resolve(false);
+    if (!this.session?.active) return Promise.resolve(true);
+    if (this.autosave) { this.saveAgain = true; return this.autosave; }
+    this.autosave = (async () => {
+      let saved = false;
+      do {
+        this.saveAgain = false;
+        saved = await this.session.save(this.sim.captureCheckpoint(), Date.now());
+        const message = saved ? '' : this.session.error;
+        if (!this.disposed) {
+          if (message && message !== this.saveError) this.notify(message);
+          this.saveError = message;
+          this.shell.setSaveStatus(message || 'Character saved locally.', !saved);
+        }
+      } while (this.saveAgain && !this.savingAction && !this.disposed && saved);
+      await this.exploration.save();
+      return saved;
+    })().finally(() => { this.autosave = null; });
+    return this.autosave;
+  }
+
+  /** Hold gameplay and new commands across save-before-commit; rendering continues. */
+  private durable<T>(operation: () => Promise<T>, busy: T): Promise<T> {
+    if (this.savingAction || this.disposed) return Promise.resolve(busy);
+    this.savingAction = true; this.input.clear(); this.gamepad.clear(); this.gamepadMenu.clear();
+    const result = (async () => {
+      try { await this.autosave; return await operation(); }
+      finally { this.savingAction = false; this.clearInput(); this.last = performance.now(); }
+    })();
+    this.actionPending = result;
+    return result;
+  }
+
+  private async returnToTitle() {
+    return this.durable(async () => {
+    if (!this.session.active || !await this.saveCharacter(true)) return;
     const index = this.session.active.index;
     this.session.active = null;
     this.shell.notifications.clear();
     if(this.world!==this.overworld)this.world.dispose(); this.world=this.overworld;this.sim.world=this.world;
     this.sim.reset(); this.renderer.reset();
-    this.panels.transition('ready'); this.titleScreen.open(this.session.repository.list(), index);
+    this.panels.transition('ready'); this.titleScreen.open(await this.session.repository.list(), index);
+    }, undefined);
   }
 
-  pause() { if (!this.disposed) this.panels.pause(); }
+  pause() { if (!this.disposed && !this.savingAction) this.panels.pause(); }
 
-  resume() { if (!this.disposed) this.panels.resume(); }
+  resume() { if (!this.disposed && !this.savingAction) this.panels.resume(); }
 
-  private openMap() { this.panels.open('map'); }
+  private openMap() { if (this.savingAction) return; this.panels.open('map'); }
 
   private closeMap() { if (this.phase === 'map') this.resume(); }
 
-  private openCharacterPanel(panel: 'character' | 'skills') { this.panels.open(panel); }
+  private openCharacterPanel(panel: 'character' | 'skills') { if (!this.savingAction) this.panels.open(panel); }
 
   private closeCharacterPanel() {
     if (this.phase === 'character' || this.phase === 'skills') this.resume();
@@ -433,6 +481,7 @@ export class Game {
       x: number;
       y: number;
   }): boolean {
+      if (this.savingAction) return false;
       if (this.phase !== 'playing')
           return false;
       const p = this.sim.player;
@@ -471,8 +520,10 @@ export class Game {
           if (this.sim.travel.returnTo?.town === anchor.band)
               this.travelThrough(anchor, true);
           else {
-              const result = activatePortalAnchor(this.sim, anchor, c => this.persistTravel(c));
-              this.notify(result.message);
+              void this.durable(async () => {
+                const result = await activatePortalAnchor(this.sim, anchor, c => this.persistTravel(c));
+                this.notify(result.message);
+              }, undefined);
           }
           return true;
       }
@@ -501,18 +552,20 @@ export class Game {
   }
 
   private startEvent(site: EventSite, choice: EventChoice | null): void {
+    if (this.savingAction) return;
     const problem = eventProblem(this.sim, site, choice);
     if (problem) { this.notify(problem); return; }
     this.sim.portal.cancel(); this.sim.clearInput();
     this.sim.eventChannel.start(site, choice);
   }
 
-  private finishEvent(): void {
+  private async finishEvent(): Promise<void> {
+    return this.durable(async () => {
       const channel = this.sim.eventChannel, site = channel.site;
       if (!site || !channel.ready)
           return;
       if (site.kind === 'cryptChest') {
-          const result = claimDungeonChest(this.sim, site.index, c => this.persistTravel(c));
+          const result = await claimDungeonChest(this.sim, site.index, c => this.persistTravel(c));
           channel.cancel();
           if (result.ok)
               this.renderer.handleEvents([{ type: 'blast', x: site.x, y: site.y, radius: 70, duration: .6, color: '#d7c18a' }], this.reducedMotion);
@@ -523,10 +576,11 @@ export class Game {
           .filter(poi => poi.id !== site.id && !this.exploration.isDiscovered(poi.id) && Math.hypot(poi.x - site.x, poi.y - site.y) <= 2400
           && ['camp', 'watchtower', 'graveyard', 'standingStones', 'caravan', 'reliquary'].includes(poi.kind))
           .sort((a, b) => Math.hypot(a.x - site.x, a.y - site.y) - Math.hypot(b.x - site.x, b.y - site.y))[0] : undefined;
-      const result = executeEvent(this.sim, site, channel.choice, c => this.persistTravel(c), target);
+      const result = await executeEvent(this.sim, site, channel.choice, c => this.persistTravel(c), target);
       channel.cancel();
       this.notify(result.message);
       this.projectBeacons();
+    }, undefined);
   }
 
   private projectBeacons(): void {
@@ -544,15 +598,15 @@ export class Game {
         && (!pointer || Math.hypot(pointer.x - anchor.x, pointer.y - (anchor.y - 25)) < 42));
   }
 
-  private persistTravel(checkpoint: CharacterCheckpoint) {
-    const ok = this.session.save(checkpoint, Date.now());
+  private async persistTravel(checkpoint: CharacterCheckpoint) {
+    const ok = await this.session.save(checkpoint, Date.now());
     this.saveError = ok ? '' : this.session.error;
     this.shell.setSaveStatus(this.saveError || 'Character saved locally.', !ok);
     return { ok, message: this.saveError };
   }
 
   private requestPortal() {
-    if (this.phase !== 'playing' || !this.session.active) return;
+    if (this.savingAction || this.phase !== 'playing' || !this.session.active) return;
     const p = this.sim.player, link = this.sim.travel.returnTo;
     if (this.world.isSanctuary(p.x, p.y)) {
       if (link) { this.renderer.portalGuide = 4; this.notify('Return portal marked on your map.'); }
@@ -572,8 +626,9 @@ export class Game {
       this.world = run ? new DungeonWorld(generateDungeon(run.entrance.seed, run.entrance.level), run.entrance) : this.overworld;
       this.sim.world = this.world;
   }
-  private switchDungeon(action: DungeonAction): boolean {
-      const result = planDungeonTravel(this.sim, action, this.overworld, c => this.persistTravel(c));
+  private async switchDungeon(action: DungeonAction): Promise<boolean> {
+    return this.durable(async () => {
+      const result = await planDungeonTravel(this.sim, action, this.overworld, c => this.persistTravel(c));
       if (!result.ok) {
           this.sim.portal.cancel();
           this.notify(result.message);
@@ -591,10 +646,12 @@ export class Game {
       this.canvas.focus();
       this.notify(result.message);
       return true;
+    }, false);
   }
-  private travelThrough(anchor: PortalAnchor, returning: boolean) {
-    if(this.sim.dungeonFloor||returning&&this.sim.travel.returnTo?.dungeon){this.switchDungeon(returning?{kind:'return',anchor}:{kind:'town',anchor});return;}
-    const result = executePortalTravel(this.sim, anchor, returning, c => this.persistTravel(c));
+  private async travelThrough(anchor: PortalAnchor, returning: boolean) {
+    if(this.sim.dungeonFloor||returning&&this.sim.travel.returnTo?.dungeon){await this.switchDungeon(returning?{kind:'return',anchor}:{kind:'town',anchor});return;}
+    return this.durable(async () => {
+    const result = await executePortalTravel(this.sim, anchor, returning, c => this.persistTravel(c));
     if (!result.ok) { this.notify(result.message); return; }
     this.input.clear();
     this.gamepad.clear();
@@ -603,22 +660,26 @@ export class Game {
     this.areaNotices.reset(getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed).id);
     this.worldMap.update(this.sim.player, 0);
     this.shell.portalTransition(); this.canvas.focus();
+    }, undefined);
   }
 
-  private trade(quote: ServiceQuote): { ok: boolean; message: string } {
+  private async trade(quote: ServiceQuote): Promise<{ ok: boolean; message: string }> {
+    return this.durable(async () => {
     const npc = this.activeNPC, p = this.sim.player;
     if (this.phase !== 'service' || !npc || !this.session.active || !canInteractNPC(npc, p, this.world))
       return { ok: false, message: 'This service is no longer in reach.' };
-    const result = executeService(p, npc, this.world, quote, (character, hp, mana) => {
-      const saved = this.session.save({ ...this.sim.captureCheckpoint(), character, hp, mana }, Date.now());
+    const result = await executeService(p, npc, this.world, quote, async (character, hp, mana) => {
+      const saved = await this.session.save({ ...this.sim.captureCheckpoint(), character, hp, mana }, Date.now());
       if (!saved) this.shell.setSaveStatus(this.session.error, true);
       return { ok: saved, message: this.session.error };
     });
     if (result.ok) { this.saveError = ''; this.shell.setSaveStatus('Character saved locally.'); this.notify(result.message); }
     return result;
+    }, { ok: false, message: 'Saving the previous action…' });
   }
 
   private characterAction(command: CharacterCommand) {
+    if (this.savingAction) return;
     const result = executeCharacterCommand(this.sim.player, command);
     if (!result.ok) { this.notify(result.message ?? 'Action unavailable.'); return; }
     if (this.phase === 'character') this.inventoryPanel.refresh(this.sim.player);
@@ -664,7 +725,7 @@ export class Game {
     this.pollGamepad(now);
     this.renderer.gamepadActive = this.usingGamepad;
     this.shell.setGamepadActive(this.usingGamepad);
-    if (this.phase === 'playing') {
+    if (this.phase === 'playing' && !this.savingAction) {
       // The simulation owns the fixed 120 Hz clock and render interpolation.
       this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
       const simulationStart = this.performance.start();
@@ -746,7 +807,7 @@ export class Game {
     if (!pad.active) { this.gamepadMenu.clear(); return; }
     if (pad.pressed.has(PAD.pause) || (this.phase !== 'playing' && pad.pressed.has(PAD.dodge))) {
       if (this.panels.activePanel) this.resume();
-      else if (this.phase === 'playing') { if (this.sim.portal.active) this.sim.portal.cancel(); else this.pause(); }
+      else if (this.phase === 'playing' && !this.savingAction) { if (this.sim.portal.active) this.sim.portal.cancel(); else this.pause(); }
       else if (this.phase === 'paused') this.resume();
       else if (this.phase === 'ready') this.shell.titleMount.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
       return;
@@ -754,7 +815,7 @@ export class Game {
     if (pad.pressed.has(PAD.map) && (this.panels.canOpen('map') || this.phase === 'map')) {
       this.panels.toggle('map'); return;
     }
-    if (this.phase === 'playing') {
+    if (this.phase === 'playing' && !this.savingAction) {
       if (pad.pressed.has(PAD.up)) { this.openCharacterPanel('skills'); return; }
       if (pad.pressed.has(PAD.left) || pad.pressed.has(PAD.right)) { this.openCharacterPanel('character'); return; }
       if (pad.pressed.has(PAD.down)) { this.requestPortal(); return; }
@@ -794,10 +855,11 @@ export class Game {
 
   dispose() {
     if (this.disposed) return;
-    this.saveCharacter();
     this.disposed = true;
-    this.clearInput();
-    this.renderer.reset();
-    this.lifetime.dispose();
+    this.abort.abort(); cancelAnimationFrame(this.animation); this.clearInput();
+    void this.actionPending.catch(error => console.error(error)).then(async () => {
+      try { await this.saveCharacter(true); await this.session.flush(); }
+      finally { this.saveClient.dispose(); this.renderer.reset(); this.lifetime.dispose(); }
+    }).catch(error => console.error(error));
   }
 }

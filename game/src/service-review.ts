@@ -32,7 +32,7 @@ for (let i = 0; i < (params.has('empty') ? 0 : 18); i++) {
 }
 refreshCharacter(p);
 const shell = life.own(new GameShell(document.querySelector('#app')!, { play() {}, returnToTitle() {}, openMap() {}, openCharacter() {}, openSkills() {} }));
-const panel = life.own(new ServicePanel(shell.panelMount, { close: () => panel.close(), trade: quote => {
+const panel = life.own(new ServicePanel(shell.panelMount, { close: () => panel.close(), trade: async quote => {
   const plan = planService(p.character, npc, p.level, quote);
   if (plan.ok) { p.character = plan.character; refreshCharacter(p); }
   return { ok: plan.ok, message: plan.message };

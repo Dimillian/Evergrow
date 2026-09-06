@@ -18,22 +18,22 @@ import { World } from '../src/world.ts';
 const world: WorldQuery = { blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) };
 const idle: Input = { moveX: 0, moveY: 0, aimX: 100, aimY: 0, attack: false, dodge: false, heal: false, skillSlot: null };
 const site = (kind: EventSite['kind'], id = 1): EventSite => ({ id: `site:7319:test-${id}`, kind, name: 'Test site', x: 0, y: 30, seed: id * 7319, biome: 'deadwood', level: 1 });
-function setup(w = world) {
+async function setup(w = world) {
   const sim = new Simulation(w, { spawn: false, seed: 7319 });
   const data = new Map<string, string>();
   const repo = new CharacterRepository({ getItem: k => data.get(k) ?? null, setItem: (k, v) => { data.set(k, v); } });
   const session = new CharacterSession(repo, 4);
-  assert.ok(session.create(0, 'Rowan', 7319, sim.captureCheckpoint(), 'test-character', 100));
-  const persist = (c: ReturnType<Simulation['captureCheckpoint']>) => ({ ok: session.save(c, 200), message: session.error });
+  assert.ok((await session.create(0, 'Rowan', 7319, sim.captureCheckpoint(), 'test-character', 100)));
+  const persist = async (c: ReturnType<Simulation['captureCheckpoint']>) => ({ ok: (await session.save(c, 200)), message: session.error });
   return { sim, repo, session, persist };
 }
 function tick(sim: Simulation, seconds: number, input: Partial<Input> = {}) { for (let i = 0; i < Math.ceil(seconds / FIXED_STEP); i++)
   sim.update(FIXED_STEP, { ...idle, ...input }); }
-test('caravan choices persist complete physical rewards once without touching wallet or healing', () => {
-  const { sim, repo, persist } = setup();
+test('caravan choices persist complete physical rewards once without touching wallet or healing', async () => {
+  const { sim, repo, persist } = (await setup());
   sim.player.hp = 31;
   sim.player.mana = 22;
-  assert.ok(executeEvent(sim, site('caravan'), 'goods', persist).ok);
+  assert.ok((await executeEvent(sim, site('caravan'), 'goods', persist)).ok);
   assert.equal(sim.groundItems.length, 2);
   assert.equal(sim.player.character.gold, 0);
   assert.equal(sim.player.hp, 31);
@@ -42,66 +42,66 @@ test('caravan choices persist complete physical rewards once without touching wa
   assert.ok(saved);
   const resumed = new Simulation(world, { spawn: false });
   resumed.restoreCheckpoint(saved.checkpoint);
-  assert.equal(executeEvent(resumed, site('caravan'), 'coin', persist).ok, false);
+  assert.equal((await executeEvent(resumed, site('caravan'), 'coin', persist)).ok, false);
   assert.deepEqual(resumed.groundItems, sim.groundItems);
 });
-test('storage rejection leaves reward IDs, character, ledger and existing actors untouched', () => {
-  const { sim } = setup();
+test('storage rejection leaves reward IDs, character, ledger and existing actors untouched', async () => {
+  const { sim } = (await setup());
   const enemy = sim.spawnEnemy('stalker', 200, 0)!;
   const before = sim.captureCheckpoint(), id = sim.nextEntityIdentity;
-  const result = executeEvent(sim, site('caravan'), 'goods', () => ({ ok: false, message: 'Storage full' }));
+  const result = (await executeEvent(sim, site('caravan'), 'goods', () => ({ ok: false, message: 'Storage full' })));
   assert.equal(result.ok, false);
   assert.deepEqual(sim.captureCheckpoint(), before);
   assert.equal(sim.nextEntityIdentity, id);
   assert.equal(sim.enemies[0], enemy);
 });
-test('full ground stores a deterministic pending bundle and partial delivery never rerolls', () => {
-  const { sim, persist, repo } = setup();
+test('full ground stores a deterministic pending bundle and partial delivery never rerolls', async () => {
+  const { sim, persist, repo } = (await setup());
   sim.groundItems = Array.from({ length: 96 }, (_, i) => ({ id: 1000 + i, x: 500, y: 500, item: generateItem(i + 900, 1) }));
   // Restore establishes the shared identity allocator as in an actual saved full-ground run.
   sim.restoreCheckpoint(sim.captureCheckpoint());
-  assert.ok(executeEvent(sim, site('caravan'), 'goods', persist).ok);
+  assert.ok((await executeEvent(sim, site('caravan'), 'goods', persist)).ok);
   assert.equal(sim.eventState.sites[site('caravan').id].phase, 'completed');
   assert.equal(sim.groundItems.length, 96);
   const expected = eventRewards(sim.eventState.sites[site('caravan').id]).items;
   sim.groundItems.pop();
-  assert.ok(executeEvent(sim, site('caravan'), 'goods', persist).ok);
+  assert.ok((await executeEvent(sim, site('caravan'), 'goods', persist)).ok);
   assert.deepEqual(sim.groundItems.at(-1)!.item, expected[0]);
   const resumed = new Simulation(world, { spawn: false });
   resumed.restoreCheckpoint(repo.read(0).record!.checkpoint);
   resumed.groundItems.shift();
-  assert.ok(executeEvent(resumed, site('caravan'), 'goods', persist).ok);
+  assert.ok((await executeEvent(resumed, site('caravan'), 'goods', persist)).ok);
   assert.deepEqual(resumed.groundItems.at(-1)!.item, expected[1]);
   assert.equal(resumed.eventState.sites[site('caravan').id].phase, 'claimed');
   assert.equal(new Set(resumed.groundItems.map(i => i.id)).size, 96);
 });
-test('full coin capacity retains value until a later interaction', () => {
-  const { sim, persist } = setup();
+test('full coin capacity retains value until a later interaction', async () => {
+  const { sim, persist } = (await setup());
   sim.groundGold = Array.from({ length: 128 }, (_, i) => ({ id: i + 1, x: 400, y: 400, amount: 1, age: 1 }));
   sim.restoreCheckpoint(sim.captureCheckpoint());
-  assert.ok(executeEvent(sim, site('caravan'), 'coin', persist).ok);
+  assert.ok((await executeEvent(sim, site('caravan'), 'coin', persist)).ok);
   assert.equal(sim.eventState.sites[site('caravan').id].phase, 'completed');
   sim.groundGold.pop();
-  assert.ok(executeEvent(sim, site('caravan'), 'coin', persist).ok);
+  assert.ok((await executeEvent(sim, site('caravan'), 'coin', persist)).ok);
   assert.equal(sim.groundGold.length, 128);
   assert.equal(sim.eventState.sites[site('caravan').id].phase, 'claimed');
 });
-test('camp reward reads the actual camp clear ledger and never adds a wave', () => {
-  const { sim, persist } = setup();
+test('camp reward reads the actual camp clear ledger and never adds a wave', async () => {
+  const { sim, persist } = (await setup());
   const camp = site('camp');
-  assert.equal(executeEvent(sim, camp, null, persist).ok, false);
+  assert.equal((await executeEvent(sim, camp, null, persist)).ok, false);
   const c = sim.captureCheckpoint();
   c.clearedCamps = [camp.id];
   sim.restoreCheckpoint(c);
-  assert.ok(executeEvent(sim, camp, null, persist).ok);
+  assert.ok((await executeEvent(sim, camp, null, persist)).ok);
   assert.equal(sim.groundItems.length, 1);
   assert.equal(sim.groundGold.length, 1);
   assert.equal(sim.enemies.length, 0);
 });
-test('trial admission waits for camera coverage and budgets, then preserves source and injuries on reload', () => {
-  const { sim, persist, repo } = setup();
+test('trial admission waits for camera coverage and budgets, then preserves source and injuries on reload', async () => {
+  const { sim, persist, repo } = (await setup());
   const grave = site('graveyard');
-  assert.ok(executeEvent(sim, grave, null, persist).ok);
+  assert.ok((await executeEvent(sim, grave, null, persist)).ok);
   tick(sim, 1);
   assert.equal(sim.enemies.length, 0);
   const view = { x: -900, y: -550, width: 1800, height: 1100 };
@@ -115,7 +115,7 @@ test('trial admission waits for camera coverage and budgets, then preserves sour
   first.state = 'dead';
   first.hp = 0;
   sim.enemies[1].hp = 4;
-  assert.ok(persist(sim.captureCheckpoint()).ok);
+  assert.ok((await persist(sim.captureCheckpoint())).ok);
   const resumed = new Simulation(world, { spawn: false });
   resumed.restoreCheckpoint(repo.read(0).record!.checkpoint);
   assert.equal(resumed.eventState.trial!.guardians[0].dead, true);
@@ -124,12 +124,12 @@ test('trial admission waits for camera coverage and budgets, then preserves sour
   tick(resumed, .6);
   assert.equal(resumed.enemies.length, 2);
   assert.ok(resumed.enemies.some(e => e.hp === 4));
-  assert.equal(executeEvent(resumed, site('standingStones', 2), blessingChoices(site('standingStones', 2))[0], persist).ok, false);
+  assert.equal((await executeEvent(resumed, site('standingStones', 2), blessingChoices(site('standingStones', 2))[0], persist)).ok, false);
 });
-test('a two-wave objective counts only defeated members and pays its bonus exactly once', () => {
-  const { sim, persist } = setup();
+test('a two-wave objective counts only defeated members and pays its bonus exactly once', async () => {
+  const { sim, persist } = (await setup());
   const grave = site('graveyard');
-  assert.ok(executeEvent(sim, grave, null, persist).ok);
+  assert.ok((await executeEvent(sim, grave, null, persist)).ok);
   const trial = sim.eventState.trial!;
   syncTrial(sim.eventState, []);
   assert.equal(sim.eventState.sites[grave.id].phase, 'active');
@@ -149,14 +149,14 @@ test('a two-wave objective counts only defeated members and pays its bonus exact
   syncTrial(sim.eventState, []);
   assert.equal(sim.eventState.trial, null);
   assert.equal(sim.eventState.sites[grave.id].phase, 'completed');
-  assert.ok(executeEvent(sim, grave, null, persist).ok);
+  assert.ok((await executeEvent(sim, grave, null, persist)).ok);
   assert.equal(sim.player.xp, 10);
   assert.equal(sim.drainEvents().filter(e => e.type === 'experience').length, 1);
-  assert.equal(executeEvent(sim, grave, null, persist).ok, false);
+  assert.equal((await executeEvent(sim, grave, null, persist)).ok, false);
   assert.equal(sim.player.xp, 10);
 });
-test('blessings use shared stat derivation, expire in wilderness, pause in town and disappear on death', () => {
-  const { sim } = setup({ ...world, isSanctuary: x => x > 1000 });
+test('blessings use shared stat derivation, expire in wilderness, pause in town and disappear on death', async () => {
+  const { sim } = (await setup({ ...world, isSanctuary: x => x > 1000 }));
   sim.player.character.blessing = { kind: 'haste', remaining: 1 };
   refreshCharacter(sim.player);
   assert.equal(sim.player.stats.attackSpeedMultiplier, 1.15);
@@ -176,8 +176,8 @@ test('blessings use shared stat derivation, expire in wilderness, pause in town 
   sim.revive();
   assert.equal(sim.player.character.blessing, undefined);
 });
-test('event channels stop on movement, combat and input clearing', () => {
-  const { sim } = setup();
+test('event channels stop on movement, combat and input clearing', async () => {
+  const { sim } = (await setup());
   const beacon = site('watchtower');
   sim.eventChannel.start(beacon, null);
   tick(sim, .5);
@@ -212,9 +212,9 @@ test('beacon terrain and sighted target replay without discovery spam or a path 
   exploration.dispose();
   restored.dispose();
 });
-test('event validation rejects forged completion, bad waves and invalid blessings without accepting partial state', () => {
-  const { sim, persist } = setup();
-  assert.ok(executeEvent(sim, site('graveyard'), null, persist).ok);
+test('event validation rejects forged completion, bad waves and invalid blessings without accepting partial state', async () => {
+  const { sim, persist } = (await setup());
+  assert.ok((await executeEvent(sim, site('graveyard'), null, persist)).ok);
   assert.ok(validEvents(sim.eventState));
   for (const mutate of [(s: typeof sim.eventState) => { s.trial!.wave = 1; }, (s: typeof sim.eventState) => { s.sites[site('graveyard').id].phase = 'claimed'; }, (s: typeof sim.eventState) => { s.trial!.guardians[0].hp = 1e30; }]) {
     const clone = structuredClone(sim.eventState);
@@ -222,17 +222,17 @@ test('event validation rejects forged completion, bad waves and invalid blessing
     assert.equal(validEvents(clone), false);
   }
 });
-test('the bounded event ledger stays compact and rejects additional state without evicting claims', () => {
-  const { sim, persist } = setup();
+test('the bounded event ledger stays compact and rejects additional state without evicting claims', async () => {
+  const { sim, persist } = (await setup());
   for (let i = 0; i < EVENT_RULES.capacity; i++) {
     const s = site('watchtower', i + 1);
     sim.eventState.sites[s.id] = { ...s, phase: 'claimed', choice: null, delivered: 0, bonusGranted: true };
   }
   assert.ok(validEvents(sim.eventState));
-  assert.ok(persist(sim.captureCheckpoint()).ok);
+  assert.ok((await persist(sim.captureCheckpoint())).ok);
   assert.ok(JSON.stringify(sim.eventState).length < 100000);
   assert.ok(JSON.stringify(sim.captureCheckpoint()).length < SAVE_MAX_BYTES);
-  assert.equal(executeEvent(sim, site('reliquary', 999), null, persist).ok, false);
+  assert.equal((await executeEvent(sim, site('reliquary', 999), null, persist)).ok, false);
   assert.equal(Object.keys(sim.eventState.sites).length, EVENT_RULES.capacity);
 });
 test('roadside reliquaries have deterministic separated safe approaches and are discoverable POIs', () => {
@@ -249,10 +249,10 @@ test('roadside reliquaries have deterministic separated safe approaches and are 
         assert.ok(Math.hypot(s.x - other.x, s.y - other.y) >= 450);
   }
 });
-test('trial actors wait for population room and suspend without rewarding or healing survivors', () => {
-  const { sim, persist } = setup();
+test('trial actors wait for population room and suspend without rewarding or healing survivors', async () => {
+  const { sim, persist } = (await setup());
   const grave = site('graveyard');
-  executeEvent(sim, grave, null, persist);
+  (await executeEvent(sim, grave, null, persist));
   const view = { x: -900, y: -550, width: 1800, height: 1100 };
   sim.setSpawnExclusion(view);
   for (let i = 0; i < ENCOUNTER_RULES.hardPopulationCap - 1; i++)
@@ -277,8 +277,8 @@ test('trial actors wait for population room and suspend without rewarding or hea
   assert.equal(sim.enemies.length, 3);
   assert.ok(sim.enemies.some(e => e.hp === 7));
 });
-test('landed enemy damage cancels an opening before it can award anything', () => {
-  const { sim } = setup();
+test('landed enemy damage cancels an opening before it can award anything', async () => {
+  const { sim } = (await setup());
   const enemy = sim.spawnEnemy('stalker', 0, 25)!;
   enemy.state = 'windup';
   enemy.stateTime = 1;

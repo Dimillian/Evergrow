@@ -1,3 +1,4 @@
+import { cloneData } from './data-clone.ts';
 import { freshExpeditions, currentDungeon, syncDungeon, storedActor, type Expeditions, type LocationContents } from './dungeon-state.ts';
 import { dungeonFromState, updateDungeon } from './dungeon-runtime.ts';
 import type { DungeonFloor } from './dungeon.ts';
@@ -136,24 +137,24 @@ export class Simulation {
 
   reserveIdentity(next:number):void { this.nextId=Math.max(this.nextId,next); }
   captureContents(): LocationContents {
-      return JSON.parse(JSON.stringify({ campWounds: this.camps.captureWounds(this.enemies), actors: this.enemies.filter(e => e.hp > 0).map(storedActor), groundItems: this.groundItems, groundGold: this.groundGold, pickups: this.pickups, clearedCamps: this.camps.clearedIds(), defeatedCampMembers: this.camps.defeatedMembers() }));
+      return cloneData({ campWounds: this.camps.captureWounds(this.enemies), actors: this.enemies.filter(e => e.hp > 0).map(storedActor), groundItems: this.groundItems, groundGold: this.groundGold, pickups: this.pickups, clearedCamps: this.camps.clearedIds(), defeatedCampMembers: this.camps.defeatedMembers() });
   }
   captureCheckpoint(): CharacterCheckpoint {
     const p = this.player;
     const run = currentDungeon(this.expeditions); if (run) syncDungeon(run,this.enemies,p.x,p.y);
     syncTrial(this.eventState, this.enemies);
-    return JSON.parse(JSON.stringify({ campWounds:this.camps.captureWounds(this.enemies), roaming:this.roaming.capture(), expeditions: this.expeditions, actors: this.enemies.filter(e=>e.hp>0).map(storedActor), pickups: this.pickups, events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
+    return cloneData({ campWounds:this.camps.captureWounds(this.enemies), roaming:this.roaming.capture(), expeditions: this.expeditions, actors: this.enemies.filter(e=>e.hp>0).map(storedActor), pickups: this.pickups, events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
       x: p.x, y: p.y, angle: p.angle, hp: p.hp, mana: p.mana, dead: p.dead,
       flasks: p.flasks, healCooldown: p.healCooldown, dodgeCharges: p.dodgeCharges, dodgeRecharge: p.dodgeRecharge,
       skillCooldowns: p.skillCooldowns, time: this.time, kills: this.kills,
       randomState: this.randomState, spawnOrdinal: this.spawnOrdinal, killRecharge: this.killRecharge,
-      clearedCamps: this.camps.clearedIds(), defeatedCampMembers: this.camps.defeatedMembers(), groundItems: this.groundItems, groundGold: this.groundGold })) as CharacterCheckpoint;
+      clearedCamps: this.camps.clearedIds(), defeatedCampMembers: this.camps.defeatedMembers(), groundItems: this.groundItems, groundGold: this.groundGold }) as CharacterCheckpoint;
   }
 
   /** Apply only a decoded checkpoint. Active encounters/attacks restart; character progress does not. */
   restoreCheckpoint(checkpoint: CharacterCheckpoint): void {
     this.reset();
-    const saved = JSON.parse(JSON.stringify(checkpoint)) as CharacterCheckpoint;
+    const saved = cloneData(checkpoint) as CharacterCheckpoint;
     this.expeditions = saved.expeditions ?? freshExpeditions(); this.dungeonFloor = dungeonFromState(this);
     this.eventState = saved.events ?? freshEvents();
     this.travel = saved.travel ?? freshTravel();

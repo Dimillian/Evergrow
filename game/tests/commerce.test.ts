@@ -150,26 +150,26 @@ test('real towns have stable reachable NPCs at all three service buildings witho
   }
   assert.equal(JSON.stringify(buildings), before); world.dispose();
 });
-test('save-backed trade commits exactly once, preserves resources and rolls back on failed storage', () => {
+test('save-backed trade commits exactly once, preserves resources and rolls back on failed storage', async () => {
   const world = { blocked: () => false, move: (x: number, y: number, dx: number, dy: number) => ({ x: x + dx, y: y + dy }) };
   const sim = new Simulation(world, { spawn: false }); const p = sim.player;
   p.x = 0; p.y = 0; p.character.gold = 10000; p.hp = 40; p.mana = 20;
   const npc = { ...smith, level: 1 }, data = new Map<string, string>(); let reject = false;
   const session = new CharacterSession(new CharacterRepository({ getItem: k => data.get(k) ?? null, setItem: (k, v) => { if (reject) throw new Error('quota'); data.set(k, v); } }), 4);
-  assert.ok(session.create(0, 'Mara', 7319, sim.captureCheckpoint(), 'trade-character', 1));
-  const persist = (character: CharacterSheet, hp: number, mana: number) => ({ ok: session.save({ ...sim.captureCheckpoint(), character, hp, mana }, 2), message: session.error });
+  assert.ok((await session.create(0, 'Mara', 7319, sim.captureCheckpoint(), 'trade-character', 1)));
+  const persist = async (character: CharacterSheet, hp: number, mana: number) => ({ ok: (await session.save({ ...sim.captureCheckpoint(), character, hp, mana }, 2)), message: session.error });
   const q = quoted(p.character, npc, { type: 'buy', slot: 0 }, 1), before = JSON.stringify(p);
-  reject = true; assert.equal(executeService(p, npc, world, q, persist).ok, false); assert.equal(JSON.stringify(p), before);
-  reject = false; assert.ok(executeService(p, npc, world, q, persist).ok); assert.equal(p.hp, 40); assert.equal(p.mana, 20);
-  const record = session.repository.read(0).record!; assert.deepEqual(record.checkpoint.character, p.character);
-  assert.equal(executeService(p, npc, world, q, persist).ok, false);
+  reject = true; assert.equal((await executeService(p, npc, world, q, persist)).ok, false); assert.equal(JSON.stringify(p), before);
+  reject = false; assert.ok((await executeService(p, npc, world, q, persist)).ok); assert.equal(p.hp, 40); assert.equal(p.mana, 20);
+  const record = (await session.repository.read(0)).record!; assert.deepEqual(record.checkpoint.character, p.character);
+  assert.equal((await executeService(p, npc, world, q, persist)).ok, false);
   const duplicate = JSON.parse(JSON.stringify(record)); duplicate.checkpoint.character.commerce.buyback.push({ item: p.character.inventory[0], price: 1 });
   assert.equal(decodeCharacterSave(JSON.stringify(duplicate)), null);
   const malformed = JSON.parse(JSON.stringify(record)); malformed.checkpoint.character.inventory[0].recipe.enhancement = 11;
   assert.equal(decodeCharacterSave(JSON.stringify(malformed)), null);
 });
 
-test('vendor mask capacity never restores sold items and worst-case bounded commerce fits a checkpoint', () => {
+test('vendor mask capacity never restores sold items and worst-case bounded commerce fits a checkpoint', async () => {
   const c = sheet();
   for (let i = 0; i < 2048; i++) c.commerce.sold[`town:7319:${i}:building:0:blacksmith`] = 1;
   c.commerce.epoch = 3;
@@ -185,25 +185,25 @@ test('vendor mask capacity never restores sold items and worst-case bounded comm
   const session = new CharacterSession(repo, 4);
   const checkpoint = sim.captureCheckpoint();
   checkpoint.groundItems = Array.from({ length: 96 }, (_, i) => ({ id: i + 1, x: 0, y: 0, item: generateItem(11000 + i, 10, undefined, undefined, 'legendary') }));
-  assert.ok(session.create(0, 'Capacity', 7319, checkpoint, 'capacity-test', 1), session.error);
+  assert.ok((await session.create(0, 'Capacity', 7319, checkpoint, 'capacity-test', 1)), session.error);
   const record = repo.read(0).record!; assert.ok(JSON.stringify(record).length < 700000);
   const inconsistent = JSON.parse(JSON.stringify(record));
   const stock = vendorStock(sheet(), smith, 10)[1]!; inconsistent.checkpoint.character.inventory[0] = stock;
   assert.equal(decodeCharacterSave(JSON.stringify(inconsistent)), null, 'available stock cannot simultaneously be owned');
 });
-test('stale writer and blocked NPC reject transactions before publishing any player changes', () => {
+test('stale writer and blocked NPC reject transactions before publishing any player changes', async () => {
   const world = { blocked: () => false, move: (x: number, y: number, dx: number, dy: number) => ({ x: x + dx, y: y + dy }) };
   const sim = new Simulation(world, { spawn: false }); const p = sim.player; p.x = 0; p.y = 0; p.character.gold = 9999;
   const npc = { ...smith, level: 1 }, q = quoted(p.character, npc, { type: 'buy', slot: 0 }, 1), before = JSON.stringify(p);
   let persisted = false;
-  assert.equal(executeService(p, npc, { ...world, blocked: () => true }, q, () => { persisted = true; return { ok: true }; }).ok, false);
+  assert.equal((await executeService(p, npc, { ...world, blocked: () => true }, q, () => { persisted = true; return { ok: true }; })).ok, false);
   assert.equal(persisted, false); assert.equal(JSON.stringify(p), before);
-  assert.equal(executeService(p, npc, world, q, () => ({ ok: false, message: 'Changed in another tab' })).ok, false);
+  assert.equal((await executeService(p, npc, world, q, () => ({ ok: false, message: 'Changed in another tab' }))).ok, false);
   assert.equal(JSON.stringify(p), before);
 });
 
 
-test('equipped upgrades persist in place with an empty bag and immediately refresh live stats', () => {
+test('equipped upgrades persist in place with an empty bag and immediately refresh live stats', async () => {
   const world = { blocked: () => false, move: (x: number, y: number, dx: number, dy: number) => ({ x: x + dx, y: y + dy }) };
   const sim = new Simulation(world, { spawn: false }), p = sim.player;
   p.x = 0; p.y = 0; p.level = 10; p.character.gold = 1e7; p.character.statPoints = 45; p.character.skillPoints = 9;
@@ -213,19 +213,19 @@ test('equipped upgrades persist in place with an empty bag and immediately refre
   const data = new Map<string, string>(), session = new CharacterSession(new CharacterRepository({
     getItem: k => data.get(k) ?? null, setItem: (k, v) => { data.set(k, v); },
   }), 4);
-  assert.ok(session.create(0, 'Worn upgrades', 7319, sim.captureCheckpoint(), 'equipped-upgrades', 1));
-  const persist = (character: CharacterSheet, hp: number, mana: number) => ({ ok: session.save({ ...sim.captureCheckpoint(), character, hp, mana }, 2), message: session.error });
+  assert.ok((await session.create(0, 'Worn upgrades', 7319, sim.captureCheckpoint(), 'equipped-upgrades', 1)));
+  const persist = async (character: CharacterSheet, hp: number, mana: number) => ({ ok: (await session.save({ ...sim.captureCheckpoint(), character, hp, mana }, 2)), message: session.error });
   for (const slot of ['weapon', 'offhand'] as const) {
     const original = p.character.equipped[slot]!, id = original.id;
     for (const operation of ['enhance', 'rarity', 'rerollOne', 'rerollAll', 'relevel'] as const) {
       const npc = operation === 'enhance' ? smith : enchanter;
       const q = quoted(p.character, npc, { type: 'improve', source: { equipped: slot }, operation, affix: 0 });
-      assert.ok(executeService(p, npc, world, q, persist).ok, operation);
+      assert.ok((await executeService(p, npc, world, q, persist)).ok, operation);
       assert.equal(p.character.equipped[slot]!.id, id);
       assert.ok(p.character.inventory.every(i => i === null));
       assert.equal(p.hp, 30); assert.equal(p.mana, 15);
-      assert.deepEqual(session.repository.read(0).record!.checkpoint.character, p.character);
-      assert.equal(executeService(p, npc, world, q, persist).ok, false);
+      assert.deepEqual((await session.repository.read(0)).record!.checkpoint.character, p.character);
+      assert.equal((await executeService(p, npc, world, q, persist)).ok, false);
     }
     assert.equal(p.character.equipped[slot]!.recipe.enhancement, 1);
     assert.equal(p.character.equipped[slot]!.itemLevel, 10);

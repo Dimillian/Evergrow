@@ -2,10 +2,16 @@ import { CHARACTER_SLOT_COUNT, decodeCharacterSave, type CharacterSave } from '.
 export interface CharacterStorage { getItem(key: string): string | null; setItem(key: string, value: string): void; }
 export interface SaveSlot { index: number; record: CharacterSave | null; token: string | null; state: 'empty' | 'saved' | 'recovered' | 'invalid' | 'unavailable'; }
 export type SaveResult = { ok: true; token: string } | { ok: false; message: string };
+export interface CharacterRepositoryPort {
+  read(index: number): SaveSlot | Promise<SaveSlot>;
+  list(): SaveSlot[] | Promise<SaveSlot[]>;
+  write(index: number, record: CharacterSave, expected: string | null): SaveResult | Promise<SaveResult>;
+  remove(index: number, expected: string | null): SaveResult | Promise<SaveResult>;
+}
 export const characterSlotKey = (index: number) => `evergrow:character:1:${index}`;
 const TOMBSTONE = '{"deleted":true}';
 
-/** Independent atomic slots, a last-good backup, and optimistic writer protection. */
+/** Headless record validation used inside the worker transaction and memory-only reviews. */
 export class CharacterRepository {
   private storage: CharacterStorage | null;
   constructor(storage: CharacterStorage | null) { this.storage = storage; }

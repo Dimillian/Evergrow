@@ -31,12 +31,9 @@ export type DungeonResult = {
     checkpoint: CharacterCheckpoint;
     message: string;
 };
-export type PersistDungeon = (checkpoint: CharacterCheckpoint) => {
-    ok: boolean;
-    message: string;
-};
+export type PersistDungeon = (checkpoint: CharacterCheckpoint) => { ok: boolean; message: string } | Promise<{ ok: boolean; message: string }>;
 /** Complete location and reward ownership are staged before persistence. No live mutation on failure. */
-export function planDungeonTravel(sim: Simulation, action: DungeonAction, surface: WorldQuery, persist: PersistDungeon): DungeonResult {
+export async function planDungeonTravel(sim: Simulation, action: DungeonAction, surface: WorldQuery, persist: PersistDungeon): Promise<DungeonResult> {
     const checkpoint = sim.captureCheckpoint(), state = checkpoint.expeditions!, run = currentDungeon(state), p = sim.player;
     if (p.dead && action.kind !== 'death')
         return { ok: false, message: 'Recover in town first.' };
@@ -97,7 +94,7 @@ export function planDungeonTravel(sim: Simulation, action: DungeonAction, surfac
     }
     checkpoint.x = point.x;
     checkpoint.y = point.y;
-    const result = persist(checkpoint);
+    const result = await persist(checkpoint);
     if (!result.ok)
         return { ok: false, message: result.message };
     return { ok: true, checkpoint, message: action.kind === 'enter' || action.kind === 'return' ? 'Rootbound Crypt' : 'Returned to the surface.' };
@@ -116,10 +113,7 @@ export function dungeonChestProblem(sim: Simulation, index: number): string | nu
         return 'Already claimed.';
     return null;
 }
-export function claimDungeonChest(sim: Simulation, index: number, persist: PersistDungeon): {
-    ok: boolean;
-    message: string;
-} {
+export async function claimDungeonChest(sim: Simulation, index: number, persist: PersistDungeon): Promise<{ ok: boolean; message: string }> {
     const problem = dungeonChestProblem(sim, index);
     if (problem)
         return { ok: false, message: problem };
@@ -147,7 +141,7 @@ export function claimDungeonChest(sim: Simulation, index: number, persist: Persi
     if (mask === run.chestMasks[index])
         return { ok: false, message: mask === (index === 2 ? 15 : 9) ? 'Already claimed.' : 'Collect nearby loot to make room.' };
     run.chestMasks[index] = mask;
-    const result = persist(checkpoint);
+    const result = await persist(checkpoint);
     if (!result.ok)
         return result;
     sim.expeditions = checkpoint.expeditions!;
