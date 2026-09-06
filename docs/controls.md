@@ -67,6 +67,6 @@ Touch devices have a left analog movement disc and a right hold/drag attack pad,
 
 ## AYN Thor
 
-The Android APK uses the same controller layout through native joystick/button input. The lower screen has Map, Pack and Build tabs. Tap gear to inspect; Back or B closes the item, then Resume continues play. Equip, Journey tracking and portal actions use the existing game commands. See [Android/Thor setup](android-thor.md).
+The Android APK uses the same controller layout through native joystick/button input. The lower screen has Map, Pack and Build tabs. Tap gear to inspect and equip while gameplay continues. Back or B closes the item without dodging or changing the pause state; Start pauses manually. Equip, Journey tracking and portal actions use the existing game commands. See [Android/Thor setup](android-thor.md).
 
 On the character hall, D-pad/left stick navigates the slot grid spatially and updates the preview. A on a saved slot loads that character immediately; A on an empty slot focuses creation. Pending portrait reads do not block loading, and title confirmation/busy/sign-in guards still apply.

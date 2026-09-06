@@ -18,7 +18,6 @@ export interface ThorRuntimeHost {
     readonly busy: boolean;
     readonly worldMap: WorldMap;
     readonly seed: number;
-    pause(): void;
     resume(): void;
     panel(panel: ThorPanel): void;
     equip(index: number): void;
@@ -47,8 +46,7 @@ export class ThorRuntime {
             this.session = session;
             this.commands.reset();
         }
-        if (h.phase === 'playing')
-            this.commands.selection.selected = null;
+        if (h.phase === 'dead') this.commands.selection.selected = null;
         const p = h.sim.player, run = currentDungeon(h.sim.expeditions);
         const zone = run?.entrance ?? getZoneAt(p.x, p.y, h.seed);
         const state = thorSnapshot(h.sim, session, h.session?.name ?? '', h.phase, zone.name, zone.level, this.commands.selection.selected);

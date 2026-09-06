@@ -231,7 +231,7 @@ export class Game {
         get session() { return game.session.active?.record ?? null; },
         get busy() { return game.savingAction || game.hallBusy; },
         get worldMap() { return game.worldMap; }, get seed() { return game.overworld.seed; },
-        pause: () => this.pause(), resume: () => this.resume(),
+        resume: () => this.resume(),
         panel: panel => { if(panel === 'journeys') this.journeys.open(); else if(panel === 'map') this.openMap(); else this.openCharacterPanel(panel); },
         equip: index => this.characterAction({type:'equip',index}),
         track: id => { void this.journeys.command({type:'track',id}); },
@@ -969,8 +969,11 @@ export class Game {
       this.padAimAngle = this.sim.player.angle;
     }
     if (!pad.active) { this.gamepadMenu.clear(); if (this.phase === 'character') this.inventoryPanel.updateGamepad(pad, now); if (this.phase === 'skills') this.skillPanel.updateGamepad(pad, now); return; }
+    if (pad.pressed.has(PAD.dodge) && this.thor.dismissInspection()) {
+      pad.pressed.delete(PAD.dodge); // Closing lower-screen detail must not also dodge.
+      return;
+    }
     if (pad.pressed.has(PAD.pause) || (this.phase !== 'playing' && pad.pressed.has(PAD.dodge))) {
-      if (this.thor.dismissInspection()) return;
       if (this.phase === 'character' && this.inventoryPanel.dismissPopup()) return;
       if (this.panels.activePanel) this.resume();
       else if (this.phase === 'playing' && !this.savingAction) { if (this.sim.portal.active) this.sim.portal.cancel(); else this.pause(); }

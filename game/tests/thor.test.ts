@@ -31,7 +31,7 @@ test('Native standard snapshots retain controller neutral rearm and action mappi
 function fixture(){
   const player=initialPlayer(0,0),calls:string[]=[];
   const host:ThorCommandHost={sim:{player},session:{id:'current'},busy:false,phase:'playing',
-    pause(){(this as {phase:string}).phase='paused';calls.push('pause');},resume(){(this as {phase:string}).phase='playing';calls.push('resume');},
+    resume(){(this as {phase:string}).phase='playing';calls.push('resume');},
     equip(i){calls.push(`equip:${i}`);},panel(p){calls.push(`panel:${p}`);},track(id){calls.push(`track:${id}`);},portal(){calls.push('portal');}};
   player.character.inventory[5]=generateItem(42,1,'weapon');
   const commands=new ThorCommands(host),id=player.character.inventory[5]!.id;
@@ -44,13 +44,13 @@ test('Companion rejects stale characters and busy/dead phases without changing s
   (host as {phase:string}).phase='playing';(host as {busy:boolean}).busy=true;commands.command({type:'inspect',id,session:'current'});
   assert.deepEqual(calls,[]);
 });
-test('Inspect pauses; equip resolves current identity and never uses stale bag positions',()=>{
+test('Inspect stays live; equip resolves current identity and never uses stale bag positions',()=>{
   const {commands,calls,id,player,host}=fixture();
   commands.command({type:'equip',id,session:'current'});assert.deepEqual(calls,[]);
-  commands.command({type:'inspect',id,session:'current'});assert.equal(host.phase,'paused');
+  commands.command({type:'inspect',id,session:'current'});assert.equal(host.phase,'playing');
   player.character.inventory[11]=player.character.inventory[5];player.character.inventory[5]=null;
-  commands.command({type:'equip',id,session:'current'});assert.deepEqual(calls,['pause','equip:11']);
-  player.character.inventory[11]=null;commands.command({type:'equip',id,session:'current'});assert.equal(calls.length,2);
+  commands.command({type:'equip',id,session:'current'});assert.deepEqual(calls,['equip:11']);
+  player.character.inventory[11]=null;commands.command({type:'equip',id,session:'current'});assert.equal(calls.length,1);
   commands.command({type:'resume',session:'current'});assert.equal(commands.selection.selected,null);
 });
 test('Companion zoom is bounded and panel changes use the existing phase owner',()=>{
@@ -75,11 +75,31 @@ test('Closing companion inspection clears the primary selection without spending
   const {commands,id,calls,host}=fixture();
   commands.command({type:'inspect',id,session:'current'});
   commands.command({type:'closeInspect',session:'current'});
-  assert.equal(commands.selection.selected,null);assert.equal(host.phase,'paused');
-  commands.command({type:'equip',id,session:'current'});assert.deepEqual(calls,['pause']);
+  assert.equal(commands.selection.selected,null);assert.equal(host.phase,'playing');
+  commands.command({type:'equip',id,session:'current'});assert.deepEqual(calls,[]);
 });
 test('Items inspected while the character window is open can use its equip command',()=>{
   const {commands,id,calls,host}=fixture();
   commands.command({type:'inspect',id,session:'current'});(host as {phase:string}).phase='character';
-  commands.command({type:'equip',id,session:'current'});assert.deepEqual(calls,['pause','equip:5']);
+  commands.command({type:'equip',id,session:'current'});assert.deepEqual(calls,['equip:5']);
+});
+
+
+test('Browsing and inspecting never changes a manually chosen pause state', () => {
+  for (const phase of ['playing', 'paused', 'character'] as const) {
+    const { host, commands, calls, id } = fixture();
+    (host as { phase: string }).phase = phase;
+    commands.command({ type: 'inspect', id, session: 'current' });
+    commands.command({ type: 'zoom', factor: 1.1, session: 'current' });
+    commands.command({ type: 'closeInspect', session: 'current' });
+    assert.equal(host.phase, phase); assert.deepEqual(calls, []);
+  }
+});
+test('Live inspection projects details without pausing and disappears when ownership is lost', () => {
+  const { player, commands, id } = fixture();
+  commands.command({ type: 'inspect', id, session: 'current' });
+  const sim = { player, journeys: freshJourneys() };
+  assert.equal(thorSnapshot(sim, 'current', 'Test', 'playing', 'Deadwood', 1, commands.selection.selected).detail?.id, id);
+  player.character.inventory[5] = null;
+  assert.equal(thorSnapshot(sim, 'current', 'Test', 'playing', 'Deadwood', 1, commands.selection.selected).detail, undefined);
 });

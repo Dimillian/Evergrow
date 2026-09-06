@@ -314,17 +314,16 @@ h1,h2,p {
   display: grid;
   padding-bottom: 7px;
   border-bottom: 1px solid #263c44;
-  grid-template-columns: repeat(3,minmax(0,1fr));
-  gap: 5px;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 6px;
   border: 0;
   padding: 0 0 12px
 }
 .thor-bag {
   display: grid;
-  grid-template-columns: repeat(8,minmax(0,1fr));
-  gap: 3px;
-  max-width: calc(100dvh - 232px);
-  margin-left: auto
+  grid-template-columns: repeat(6,minmax(0,1fr));
+  gap: 6px;
+  width: 100%
 }
 .thor-item {
   position: relative;
@@ -333,6 +332,7 @@ h1,h2,p {
   justify-content: center;
   aspect-ratio: 1;
   min-width: 0;
+  border: 1px solid #35454f;
   border: 1px solid color-mix(in srgb,var(--rarity,#64777d) 58%,#15232a);
   box-shadow: inset 0 0 0 3px #0b141aaa;
   overflow: hidden;
@@ -359,7 +359,7 @@ h1,h2,p {
   position: absolute;
   color: #b8c7cc;
   text-shadow: 0 1px 3px black;
-  font-size: 8px;
+  font-size: 10px;
   right: 2px;
   bottom: 0;
   padding: 0 2px;
@@ -619,25 +619,18 @@ to {
   max-width: 620px;
   margin: auto
 }}
-/* Handheld density: the entire 64-cell pack fits beside the worn equipment. */
+/* Comfortable tap targets use the available width; the 64-cell pack scrolls. */
 .thor-pack-layout {
   display: grid;
-  grid-template-columns: 120px minmax(0,1fr);
-  gap: 14px;
+  grid-template-columns: 112px minmax(0,1fr);
+  gap: 12px;
   align-items: start;
-  max-width: min(430px, calc(100dvh - 98px));
-  margin: auto
+  width: 100%;
+  margin: 0
 }
 .thor-equipped-column {
   border-right: 1px solid #32464d;
   padding-right: 12px
-}
-.thor-equipment .thor-item {
-  max-width: 40px
-}
-.thor-bag-column .thor-section-title {
-  max-width: calc(100dvh - 232px);
-  margin-left: auto
 }
 .thor-character-link {
   display: block;
@@ -708,13 +701,8 @@ to {
 }
 .thor-detail-scroll .is-loss {
   color: #da9294
-}@media(min-height:650px){
-.thor-pack-layout {
-  grid-template-columns: 105px 1fr
 }
-.thor-bag {
-  max-width: 100%
+@media(max-width:420px) {
+  .thor-pack-layout { grid-template-columns: 98px minmax(0,1fr); gap: 8px; }
+  .thor-bag { grid-template-columns: repeat(4,minmax(0,1fr)); }
 }
-.thor-bag-column .thor-section-title {
-  max-width: 100%
-}}

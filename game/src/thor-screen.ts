@@ -85,10 +85,10 @@ function render() {
         content.scrollTop = scroll;
     }
     lastContent = html;
-    const detail = get('#thor-detail'), d = s?.detail, visible = active && s.phase !== 'playing' && !!d && d.id !== detailClosed;
+    const detail = get('#thor-detail'), d = s?.detail, visible = active && s.phase !== 'dead' && !!d && d.id !== detailClosed;
     detail.hidden = !visible;
     if (visible) {
-        const value = `<div class="thor-detail-toolbar"><button class="thor-back" data-action="close-detail" aria-label="Back to pack">‹ <span>Pack</span><kbd>B</kbd></button><button data-action="close-detail" aria-label="Close item">${uiIcon('close')}</button></div><div class="thor-detail-scroll">${d.html}</div><button class="thor-equip" data-equip="${e(d.id)}" ${d.equipped || (s.phase !== 'paused' && s.phase !== 'character') ? 'disabled' : ''}>${d.equipped ? 'Equipped' : 'Equip'}</button>`;
+        const value = `<div class="thor-detail-toolbar"><button class="thor-back" data-action="close-detail" aria-label="Back to pack">‹ <span>Pack</span><kbd>B</kbd></button><button data-action="close-detail" aria-label="Close item">${uiIcon('close')}</button></div><div class="thor-detail-scroll">${d.html}</div><button class="thor-equip" data-equip="${e(d.id)}" ${d.equipped || (s.phase !== 'playing' && s.phase !== 'paused' && s.phase !== 'character') ? 'disabled' : ''}>${d.equipped ? 'Equipped' : 'Equip'}</button>`;
         detail.style.setProperty('--item-color', d.color);
         if (detail.innerHTML !== value)
             detail.innerHTML = value;

@@ -8,7 +8,6 @@ export interface ThorCommandHost {
         id: string;
     } | null;
     readonly busy: boolean;
-    pause(): void;
     resume(): void;
     panel(panel: ThorPanel): void;
     equip(index: number): void;
@@ -53,11 +52,10 @@ export class ThorCommands {
                 if (![...sheet.inventory, ...Object.values(sheet.equipped)].some(item => item?.id === c.id))
                     return;
                 this.selection.selected = c.id;
-                h.pause();
                 return;
             }
             case 'equip': {
-                if (c.id !== this.selection.selected || (h.phase !== 'paused' && h.phase !== 'character'))
+                if (c.id !== this.selection.selected || (h.phase !== 'playing' && h.phase !== 'paused' && h.phase !== 'character'))
                     return;
                 const index = h.sim.player.character.inventory.findIndex(item => item?.id === c.id);
                 if (index >= 0)

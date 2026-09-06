@@ -36,7 +36,7 @@ export function thorStudy() {
     exploration.dispose();
     let selected:string|null=null,phase='playing';
     return {state:snapshot,action(action:ThorAction){
-        if(action.type==='inspect'){selected=action.id;phase='paused';}
+        if(action.type==='inspect')selected=action.id;
         if(action.type==='closeInspect')selected=null;
         if(action.type==='resume'){selected=null;phase='playing';}
         return {...thorSnapshot({player,journeys},'review','Wayfarer',phase,'Briarwatch',8,selected),map:snapshot.map};

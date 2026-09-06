@@ -9,13 +9,13 @@ Both Android windows request a matching-resolution 60 Hz display mode. The main 
 The upper screen runs the game. The lower screen uses the Astral UI palette, shared procedural item art, Pixelify lettering, and Barlow numerals:
 
 - **Map:** explored terrain and crypt rooms, the player marker, local zoom, Journey tracking, and access to the full map/journal.
-- **Pack:** all 64 bag cells beside compact worn equipment. Tap an item to inspect its shared tooltip and comparison; Equip uses the normal character command. Back or controller B closes inspection. Inspection pauses combat; Resume returns to play.
+- **Pack:** a scrollable six-column pack with 64 cells beside two-column worn equipment. Slots use the lower display’s available width instead of shrinking to fit its height. Tap an item to inspect its shared tooltip and comparison; Equip uses the normal character command. Back or controller B closes inspection. Browsing, inspection and equipping do not pause or resume combat. Pause manually when desired.
 - **Build:** power, effective attributes, combat/resource stats, XP, and unspent-point badges. Attributes and Skill atlas open their existing upper-screen panels.
 - **Portal:** requests the existing town portal action, with the same restrictions and cancellation rules.
 
 The lower screen is a projection, not a second simulation or save writer. Primary state is published four times per second, with fog-respecting terrain images twice per second. Item recipes are sent instead of large repeated SVG strings; the companion renders/caches the shared icons locally. Transfers are bounded to 400,000 string characters, and native forwarding retains only one in-flight frame and the newest pending frame. If a map image exceeds the packet budget, the previous map remains while character information continues updating.
 
-Every command carries the active character ID. Stale sessions, busy save-backed actions, title/death phases and invalid items are rejected. Equip resolves the item ID to its current bag position and reuses validated character commands; Journey tracking uses its durable command. Main-screen Resume and controller Back cannot leave an orphaned item detail on the lower screen.
+Every command carries the active character ID. Stale sessions, busy save-backed actions, title/death phases and invalid items are rejected. Equip resolves the item ID to its current bag position and reuses validated character commands; Journey tracking uses its durable command. Inspection survives live gameplay and manual pause changes; death or character changes clear it. Controller B/native Back closes inspection first, without also dodging or resuming. Explicit links to upper-screen panels keep those panels’ normal lifecycle.
 
 Thor's own system dashboard can cover the companion. Dismiss that dashboard to see the app's lower display. Ordinary Android devices without a presentation display still run the upper-screen game.
 
