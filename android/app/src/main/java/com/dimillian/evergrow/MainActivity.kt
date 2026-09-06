@@ -83,6 +83,9 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
             settings.mediaPlaybackRequiresUserGesture = false
             settings.textZoom = 100; settings.setSupportZoom(false)
             isFocusableInTouchMode = true
+            // The game draws focus on individual controls; Android otherwise washes
+            // the entire WebView in its default controller-focus foreground.
+            defaultFocusHighlightEnabled = false
             webViewClient = object: WebViewClient() {
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse =
                     assets.shouldInterceptRequest(request.url) ?: WebResourceResponse("text/plain","utf-8",403,"Forbidden",emptyMap(),ByteArrayInputStream(byteArrayOf()))

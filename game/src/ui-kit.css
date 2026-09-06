@@ -1,3 +1,5 @@
+/* Our controls draw pressed/focused states; never tint the whole game on tap. */
+:root { -webkit-tap-highlight-color: transparent; }
 /* Token values come from installUITheme(); both DOM chrome and Canvas use them. */
 .ui-window, .ui-button, .ui-tooltip, .ui-status, .ui-key, .ui-slot, .ui-badge {
   font-family: var(--ui-font, var(--font-game));

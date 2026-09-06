@@ -991,7 +991,9 @@ export class Game {
       if (this.phase === 'skills') { this.skillPanel.updateGamepad(pad, now); return; }
       const root = this.phase === 'ready' ? this.shell.titleMount : this.phase === 'map' ? this.shell.mapMount
         : this.panels.activePanel ? this.shell.panelMount : this.canvas.parentElement!.querySelector<HTMLElement>('#overlay')!;
-      this.gamepadMenu.update(root, pad, now);
+      if (this.phase === 'ready') this.titleScreen.element.classList.add('is-controller');
+      this.gamepadMenu.update(root, pad, now, this.phase === 'ready'
+        ? { activate: target => this.titleScreen.activateGamepad(target) } : {});
     }
   }
 

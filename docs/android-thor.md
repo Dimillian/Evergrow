@@ -21,11 +21,13 @@ Thor's own system dashboard can cover the companion. Dismiss that dashboard to s
 
 ## Controls and saves
 
-Native `KeyEvent` / joystick `MotionEvent` input is normalized into the same standard snapshot consumed by `GamepadInput`. Existing dead zones, action mappings, neutral rearm, inventory/menu navigation and disconnect pause apply. See [controls](controls.md). Character names use the Android keyboard. The upper character window now shows an LB/RB section rail and gives Equipment, Inventory and Stats their own full-width handheld view. The atlas has Tree / Node / Skills sections, a pinned skill bar, A for node actions, X to reach assignment, and right-stick inspector scrolling. Its compact effect summary and assignment remain near the top; no touchscreen is needed to assign skills.
+Native `KeyEvent` / joystick `MotionEvent` input is normalized into the same standard snapshot consumed by `GamepadInput`. Existing dead zones, action mappings, neutral rearm, inventory/menu navigation and disconnect pause apply. See [controls](controls.md). On the title screen, D-pad/left stick highlights characters and A loads the highlighted save directly; A on an empty slot focuses creation. Character names use the Android keyboard. The upper character window now shows an LB/RB section rail and gives Equipment, Inventory and Stats their own full-width handheld view. The atlas has Tree / Node / Skills sections, a pinned skill bar, A for node actions, X to reach assignment, and right-stick inspector scrolling. Its compact effect summary and assignment remain near the top; no touchscreen is needed to assign skills.
 
 The app uses the same worker/IndexedDB save system at a stable bundled HTTPS asset origin. APK updates installed over the existing package preserve app data. **Android, Safari, localhost and the hosted game currently have separate local characters.** Cloud synchronization is available only in the Site-enabled web build; the Android wrapper remains local-only with no cloud tabs or network requests. Uninstalling or clearing Android app data removes its saves; there is no browser-save migration in this packaging checkpoint.
 
 Backgrounding clears input, pauses play, requests a save and mutes audio. Regular autosaves remain enabled. Android process termination can still lose changes since the last completed checkpoint. Assets are served through `WebViewAssetLoader`; external navigation/network resources and file access are blocked. WebView debugging is enabled only in debug builds.
+
+Both WebViews disable Android’s default whole-view focus foreground, and the shared UI disables the browser tap tint. Game-owned focus outlines and pressed states remain visible. This prevents controller focus from washing out the entire screen.
 
 The Thor tested here ships WebView 109. Shared item surfaces include opaque CSS fallbacks when `color-mix` is unsupported, including the upper inventory and vendor tooltips.
 

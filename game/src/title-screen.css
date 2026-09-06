@@ -126,3 +126,8 @@
   .title-brand { display:none; } .title-screen { grid-template-rows:minmax(0,1fr); }
   .title-slot-grid { padding:10px; }
 }
+
+.title-controller-hint { display: none; font: 12px system-ui,sans-serif; color: #b6c8c3; white-space: nowrap; }
+.title-screen.is-controller .title-controller-hint { display: inline; }
+.title-controller-hint kbd { font: 600 11px system-ui,sans-serif; border: 1px solid #b6c8c366; border-radius: 50%; padding: 2px 5px; margin-right: 4px; }
+.title-screen.is-controller .title-slot:focus { outline: 2px solid #c9dfe4; outline-offset: 2px; }

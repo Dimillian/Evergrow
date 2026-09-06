@@ -1,3 +1,5 @@
+import { directionalControl } from './ui-navigation.ts';
+import { titleSlotAction } from './title-slot-action.ts';
 import { FramePacer } from './frame-pacer.ts';
 import { escapeUI, uiIcon, trapDialogFocus } from './ui-components.ts';
 import { characterPower, previewCharacter } from './character-summary.ts';
@@ -42,12 +44,24 @@ export class TitleScreen {
     this.element.innerHTML = `<div class="title-vignette" aria-hidden="true"></div>
       <header class="title-brand"><span aria-hidden="true">${uiIcon('skilltree')}</span><h1>EVERGROW</h1></header>
       <section class="title-hero" aria-label="Selected character"><div class="title-halo" aria-hidden="true"></div><canvas width="560" height="720" aria-label="Selected character wearing their saved equipment"></canvas><div class="title-plinth" aria-hidden="true"></div></section>
-      <section class="title-roster ui-window" aria-labelledby="roster-title"><header class="title-roster-header"><h2 id="roster-title">Characters</h2><div class="title-sources" role="group" aria-label="Save location" hidden><button data-source="cloud">Cloud</button><button data-source="local">Local</button></div><span class="title-slot-count"></span></header>
+      <section class="title-roster ui-window" aria-labelledby="roster-title"><header class="title-roster-header"><h2 id="roster-title">Characters</h2><div class="title-sources" role="group" aria-label="Save location" hidden><button data-source="cloud">Cloud</button><button data-source="local">Local</button></div><span class="title-controller-hint"><kbd>A</kbd> Continue</span><span class="title-slot-count"></span></header>
       <div class="title-hall-body"><div class="title-slot-grid" role="group" aria-label="Eight character slots"></div><div class="title-selection"></div></div>
       <footer class="title-roster-footer"><span class="title-storage-status" role="status"></span><a class="title-signout" href="/signout-with-chatgpt?return_to=/" target="_top" hidden>Sign out</a><span class="title-transfer"><button data-action="import">Import</button><button data-action="download">Download</button></span></footer>
       <p class="title-save-message" role="status" hidden></p><input type="file" class="title-file" accept=".json,application/json" hidden></section>`;
     this.canvas = this.element.querySelector('canvas')!; mount.append(this.element);
     this.element.querySelector<HTMLElement>('.title-transfer')!.hidden = !actions.download && !actions.import;
+    this.element.addEventListener('pointerdown', () => this.element.classList.remove('is-controller'), { signal: this.abort.signal });
+    this.element.addEventListener('keydown', event => {
+      const target = event.target as HTMLElement;
+      if (!target.matches('[data-slot]') || !event.key.startsWith('Arrow')) return;
+      const slots = [...this.element.querySelectorAll<HTMLButtonElement>('[data-slot]')];
+      const next = directionalControl(slots.map(slot => slot.getBoundingClientRect()), slots.indexOf(target as HTMLButtonElement), event.key);
+      event.preventDefault(); slots[next]?.focus({ preventScroll: true });
+    }, { signal: this.abort.signal });
+    this.element.addEventListener('focusin', event => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-slot]');
+      if (button && Number(button.dataset.slot) !== this.selected && !this.confirming) this.choose(Number(button.dataset.slot));
+    }, { signal: this.abort.signal });
     this.element.addEventListener('click', event => {
       const button = (event.target as Element).closest<HTMLButtonElement>('button'); if (!button) return;
       if (button.dataset.source) { this.actions.source?.(button.dataset.source as SaveMode); return; }
@@ -85,6 +99,18 @@ export class TitleScreen {
       const name = input?.value.trim(); if (name) this.actions.create(this.selected, name, this.starter, seed);
     }, { signal: this.abort.signal });
   }
+  activateGamepad(target: HTMLElement): boolean {
+    const button = target.closest<HTMLElement>('[data-slot]');
+    if (!button) return false;
+    const index = Number(button.dataset.slot);
+    const action = titleSlotAction(this.slots[index], this.source.mode === 'local' || this.source.signedIn,
+      this.element.inert || this.source.status === 'Loading…', !!this.confirming);
+    if (action === 'continue') this.actions.continue(index);
+    else if (action === 'create') {
+      this.choose(index); this.element.querySelector<HTMLInputElement>('[name="character-name"]')?.focus();
+    }
+    return true;
+  }
   setBusy(busy: boolean) { this.element.inert = busy; this.element.classList.toggle('is-busy', busy); this.element.setAttribute('aria-busy', String(busy)); }
   setSource(source: SaveSourceUI) {
     this.source = source;
@@ -101,7 +127,7 @@ export class TitleScreen {
     this.selected = preferred ?? latest; this.confirming = null; this.element.hidden = false; this.message(''); this.setSource(this.source);
     this.choose(this.selected, false);
     this.focus?.dispose(); this.focus = trapDialogFocus(this.element, { signal: this.abort.signal, restoreFocus: false,
-      initialFocus: () => this.element.querySelector('[data-action="continue"]') ?? this.element.querySelector('[name="character-name"]') ?? this.element.querySelector('[data-source="local"]') });
+      initialFocus: () => this.element.querySelector(`[data-slot="${this.selected}"]`) ?? this.element.querySelector('[data-source="local"]') });
     if (!this.frame) this.animate();
   }
   private choose(index: number, focus = true) {
@@ -113,7 +139,9 @@ export class TitleScreen {
     this.loading = true; this.renderSelection();
     void this.actions.read(index).then(value => {
       if (ticket !== this.inspection || this.element.hidden) return;
+      const restoreSlot = (document.activeElement as HTMLElement | null)?.dataset.slot === String(index);
       this.slots[index] = value; this.loading = false; this.render();
+      if (restoreSlot) this.element.querySelector<HTMLButtonElement>(`[data-slot="${index}"]`)?.focus({ preventScroll: true });
     }).catch(() => { if (ticket === this.inspection) { this.loading = false; this.message('Save unavailable. Please retry.'); this.renderSelection(); } });
   }
   message(text: string) { const target = this.element.querySelector<HTMLElement>('.title-save-message')!; target.textContent = text; target.hidden = !text; }
