@@ -39,6 +39,7 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 
 ## Next iteration specifications
 
+- [Humanoid battle barks](battle-barks.md): proposed rare overhead speech, three-bubble screen limit, seven character voices with 20 lines each, and four visual directions awaiting selection.
 
 - [Journeys and local leads](procedural-journeys.md): proposed procedural adventures, light onboarding, level-aware routing, journal and reward/persistence rules.
 
