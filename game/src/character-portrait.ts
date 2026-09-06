@@ -1,5 +1,6 @@
 import type { Player } from './model.ts';
-import { drawHumanoid, getPlayerSwordTip } from './art.ts';
+import { drawHumanoid } from './art.ts';
+import { characterBounds, fitCharacter } from './character-framing.ts';
 import { playerPose } from './character-pose.ts';
 import { outfitFromEquipment } from './item-art.ts';
 
@@ -10,13 +11,12 @@ export function drawCharacterPortrait(ctx: CanvasRenderingContext2D, player: Pla
   pose.hitFlash = 0; pose.impact = 0; pose.cast = 0; pose.dodging = false; pose.dead = false;
   pose.outfit = outfitFromEquipment(player.character);
   ctx.clearRect(0, 0, width, height);
-  ctx.save(); ctx.scale(width / 560, height / 720); ctx.translate(280, 500);
-  const glow = ctx.createRadialGradient(0, -135, 10, 0, -135, 225);
+  // Fit a neutral pose, so breathing never makes the whole portrait pump in size.
+  const fit = fitCharacter(characterBounds({ ...pose, time: 0, gaitPhase: 0, attack: 0 }), width, height);
+  ctx.save(); ctx.translate(fit.x, fit.y); ctx.scale(fit.scale, fit.scale);
+  const glow = ctx.createRadialGradient(0, -28, 2, 0, -28, 40);
   glow.addColorStop(0, '#83adc917'); glow.addColorStop(1, '#83adc900');
-  ctx.fillStyle = glow; ctx.fillRect(-240, -430, 480, 540);
-  ctx.fillStyle = '#02070cb0'; ctx.beginPath(); ctx.ellipse(0, 12, 77, 16, 0, 0, Math.PI * 2); ctx.fill();
-  const tip = getPlayerSwordTip(pose);
-  const scale = Math.min(6.8, 240 / Math.max(22, Math.abs(tip.x) + 6),
-    460 / Math.max(50, -tip.y + 6), 160 / Math.max(20, tip.y + 6));
-  ctx.scale(scale, scale); drawHumanoid(ctx, pose); ctx.restore();
+  ctx.fillStyle = glow; ctx.fillRect(-45, -75, 90, 95);
+  ctx.fillStyle = '#02070cb0'; ctx.beginPath(); ctx.ellipse(0, 2, 13, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+  drawHumanoid(ctx, pose); ctx.restore();
 }

@@ -4,13 +4,14 @@ import { ArtLibrary, drawHumanoid, type CharacterPose } from '../src/art.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
 
 interface DrawingState {
-  globalAlpha: number; fillStyle: string; strokeStyle: string;
+  globalCompositeOperation: string; globalAlpha: number; fillStyle: string; strokeStyle: string;
   lineWidth: number; lineJoin: string; lineCap: string;
   transforms: number[][]; clips: number;
 }
 
 /** Geometry/state contract checks; intentionally no color or path snapshots. */
 class ArtContext implements DrawingState {
+  globalCompositeOperation = 'source-over';
   globalAlpha = .43;
   fillStyle = '#182736';
   strokeStyle = '#625343';
@@ -24,7 +25,7 @@ class ArtContext implements DrawingState {
   private saved: DrawingState[] = [];
   get depth() { return this.saved.length; }
   state(): DrawingState {
-    return { globalAlpha: this.globalAlpha, fillStyle: this.fillStyle, strokeStyle: this.strokeStyle,
+    return { globalCompositeOperation: this.globalCompositeOperation, globalAlpha: this.globalAlpha, fillStyle: this.fillStyle, strokeStyle: this.strokeStyle,
       lineWidth: this.lineWidth, lineJoin: this.lineJoin, lineCap: this.lineCap,
       transforms: this.transforms.map(value => [...value]), clips: this.clips };
   }
@@ -38,6 +39,10 @@ class ArtContext implements DrawingState {
   translate(...values: number[]) { this.transform(...values); }
   rotate(...values: number[]) { this.transform(...values); }
   scale(...values: number[]) { this.transform(...values); }
+  // Exercise the enlarged-portrait detail path as well as the ordinary geometry.
+  getTransform() { return { a: 4, b: 0 }; }
+  createLinearGradient(...values: number[]) { this.record(...values); return { addColorStop: (offset: number, _color: string) => this.record(offset) }; }
+  createRadialGradient(...values: number[]) { return this.createLinearGradient(...values); }
   clip() { this.clips++; }
   beginPath() {}
   closePath() {}

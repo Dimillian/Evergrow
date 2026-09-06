@@ -1,5 +1,5 @@
 import type { ArmorPiece } from './art-types.ts';
-import type { Point } from './art-primitives.ts';
+import { mixColor, type Point } from './art-primitives.ts';
 import type { GearShape } from './weapon-shapes.ts';
 
 type ArmorShapeKind = 'head' | 'chest' | 'shoulder';
@@ -11,6 +11,9 @@ const line = (points: readonly Point[], color: string, width = .6): GearShape =>
 export function armorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing = Math.PI / 2): GearShape[] {
   const { base, shadow, edge, trim } = piece.material;
   const plate = piece.style === 'plate';
+  const lit = mixColor(base, edge, plate ? .48 : .22);
+  const seam = mixColor(base, shadow, .55);
+  const fine = (shape: GearShape): GearShape => ({ ...shape, fine: true });
   if (kind === 'head') {
     const back = Math.sin(facing) < -.16;
     const face = Math.cos(facing) * 1.15;
@@ -18,7 +21,7 @@ export function armorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing = Ma
       fill(back ? [[-4.7, 2.3], [-4.8, -1.1], [-3.5, -4.1], [-.5, -5.7], [2.6, -4.7], [4.5, -1.7], [4.8, 2.6], [3.4, 4.5], [-3.4, 4.5]]
         : [[-4.7, 2.3], [-4.8, -1.1], [-3.5, -4.1], [-.5, -5.7], [2.6, -4.7], [4.5, -1.7], [4.8, 2.6], [3.4, 4.5], [2.4, 4.5], [2.8, .5], [-2.7, .5], [-2.4, 4.5], [-3.8, 4.2]], shadow),
       fill([[-4.1, .1], [-4.2, -1.3], [-3.1, -3.9], [-.6, -5], [2.2, -4.2], [3.8, -1.7], [3.8, .3], [.2, 1.4]], base),
-      fill([[-4.2, -.4], [-4.2, -1.3], [-3.1, -3.9], [-1.1, -4.7], [-1.3, -.6]], edge),
+      fill([[-4.2, -.4], [-4.2, -1.3], [-3.1, -3.9], [-1.1, -4.7], [-1.3, -.6]], lit),
       fill([[.1, -4.9], [2.2, -4.2], [3.8, -1.7], [3.8, .3], [1.1, -.6]], shadow),
       line([[-3.1, -4], [-.6, -5.1], [2.2, -4.3]], edge, .55),
     ];
@@ -47,11 +50,11 @@ export function armorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing = Ma
     return shapes;
   }
   if (kind === 'shoulder') {
-    const flare = plate ? 1 : 0;
+    const flare = plate ? .4 : -.3;
     return [
       fill([[-1.8, -1.8], [-.1, -3.1], [2.2, -2.6], [4.5 + flare, -.5], [4.9, 2.1], [3.6, 4], [.6, 4.4], [-1.3, 2]], shadow),
       fill([[-1.2, -1.5], [.1, -2.5], [2.1, -2], [4.2 + flare * .5, -.3], [4.1, 1.3], [.7, 2.2], [-1.1, .7]], base),
-      fill([[-1.2, -1.5], [.1, -2.5], [2.1, -2], [4.2 + flare * .5, -.3], [.4, -.7]], edge),
+      fill([[-1.2, -1.5], [.1, -2.5], [2.1, -2], [4.2 + flare * .5, -.3], [.4, -.7]], lit),
       line([[.2, 2], [3.9, 1.1]], trim, .65),
       fill([[.7, 3], [4.1, 2.4], [3.4, 4.3], [1.2, 4.8]], base),
       line([[1.3, 4], [3.4, 3.6]], edge, .6),
@@ -61,7 +64,7 @@ export function armorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing = Ma
   const shapes: GearShape[] = [
     fill([[-6, -5.9], [-3, -7.2], [-1.4, -5.8], [1.5, -5.8], [3.1, -7.2], [5.9, -5.7], [5.6, 1.8], [3.8, 5.5], [0, 6.6], [-4.3, 5.1], [-5.7, 1.5]], shadow),
     fill([[-5, -5.5], [-3, -6.4], [-1.2, -4.9], [1.2, -4.9], [3.1, -6.4], [4.8, -5.3], [4.8, .6], [3, 4.4], [.1, 5.7], [-3.6, 4.3], [-4.9, .8]], base),
-    fill([[-5, -5.5], [-3, -6.4], [-1.2, -4.9], [-.5, -2.4], [-1.3, 2.7], [-3.6, 4.3], [-4.9, .8]], edge),
+    fill([[-5, -5.5], [-3, -6.4], [-1.2, -4.9], [-.5, -2.4], [-1.3, 2.7], [-3.6, 4.3], [-4.9, .8]], lit),
     fill([[1.2, -4.9], [3.1, -6.4], [4.8, -5.3], [4.8, .6], [3, 4.4], [.1, 5.7], [1, .8]], shadow),
     line([[-4.8, -5.4], [-3.1, -6.3], [-1.3, -4.9], [1.3, -4.9], [3.1, -6.3], [4.7, -5.2]], trim, .65),
   ];
@@ -72,7 +75,7 @@ export function armorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing = Ma
       line([[2.7, -3.8], [3.8, -3.1]], base, .65));
     for (let mark = 0; mark < 3; mark++) {
       const y = -1.4 + mark * 1.4, x = 2.3 + ((piece.seed + mark) % 3) * .25;
-      shapes.push(line([[x, y], [x + .7, y - .45]], edge, .4));
+      shapes.push(fine(line([[x, y], [x + .7, y - .45]], edge, .22)));
     }
     shapes.push(line([[-4.3, -2.4], [-1.1, -1.6], [0, -.6], [1.2, -1.6], [4, -2.4]], shadow, .85),
       line([[-4, -3], [-1.4, -2.5]], edge, .6),
@@ -83,12 +86,20 @@ export function armorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing = Ma
     shapes.push(fill([[-4, -5.7], [-2.9, -6], [4.2, 3.2], [3.3, 4.2]], shadow),
       line([[-3.8, -5.5], [3.9, 3.5]], trim, .6),
       fill([[.8, -.4], [2.4, 1.1], [1.4, 2.1], [-.2, .6]], trim));
-    for (let row = 0; row < 4; row++) shapes.push(line([[-3.7, -3.4 + row * 1.8], [-2.9, -3.1 + row * 1.8]], shadow, .55));
+    shapes.push(line([[-3.5, -4], [-3.3, 1.8], [-2.5, 3.2]], seam, .45),
+      line([[2.9, -3.6], [3.1, 1.4]], seam, .45));
+    for (let row = 0; row < 9; row++) {
+      const y = -3.5 + row * .72;
+      shapes.push(fine(line([[-3.65, y], [-3.15, y + .08]], trim, .2)));
+    }
+  }
+  for (const x of [-4, 4]) for (const y of [-4.5, 1.5]) {
+    shapes.push(fine(fill([[x - .28, y], [x, y - .28], [x + .28, y], [x, y + .28]], trim)));
   }
   for (let band = 0; band < 3; band++) {
     const y = 4.7 + band * 1.55;
     shapes.push(fill([[-4.7, y], [0, y + 1.3], [4.5, y], [4.2, y + 1.6], [0, y + 2.6], [-4.3, y + 1.6]], band === 1 ? base : shadow),
-      line([[-4.3, y + .3], [0, y + 1.55], [4.1, y + .3]], edge, .55));
+      line([[-4.3, y + .3], [0, y + 1.55], [4.1, y + .3]], plate ? edge : lit, .4));
   }
   return shapes;
 }

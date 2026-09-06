@@ -1,10 +1,10 @@
 import { armorShapes } from './armor-shapes.ts';
 import { STARTING_SWORD } from './equipment.ts';
 import type { ShieldDefinition } from './model.ts';
-import { shieldShapes, weaponShapes, type GearShape } from './weapon-shapes.ts';
+import { shieldShapes, weaponShapes, weaponArtLength, type GearShape } from './weapon-shapes.ts';
 import type { ArmorMaterial, ArmorPiece, CharacterOutfit } from './art-types.ts';
 import { PLAYER_ATTACHMENTS } from './character-motion.ts';
-import { polygon, line, taper, type Point, type Color } from './art-primitives.ts';
+import { polygon, line, taper, mixColor, type Point, type Color } from './art-primitives.ts';
 
 const STEEL: ArmorMaterial = { base: '#728c81', shadow: '#294750', edge: '#d1d6b0', trim: '#cfaa6c' };
 
@@ -21,16 +21,46 @@ export const STARTER_OUTFIT: CharacterOutfit = {
 };
 
 export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly GearShape[], color: Color): void {
+  const matrix = ctx.getTransform(), fine = Math.hypot(matrix.a, matrix.b) >= 2.4;
   for (const shape of shapes) {
-    if (shape.fill) polygon(ctx, shape.points, color(shape.fill));
+    if (shape.fine && !fine) continue;
+    if (shape.fill) {
+      polygon(ctx, shape.points, color(shape.fill));
+      // Broad pigment variation at portrait scale; tiny world silhouettes stay crisp.
+      if (fine && !shape.fine && shape.points.length > 3) {
+        const ys = shape.points.map(point => point[1]);
+        const top = Math.min(...ys), bottom = Math.max(...ys);
+        if (bottom - top > 3) {
+          ctx.save(); ctx.clip();
+          const light = ctx.createLinearGradient(0, top, 1, bottom);
+          light.addColorStop(0, '#f4e8cb10'); light.addColorStop(.4, '#f4e8cb00'); light.addColorStop(1, '#06121a20');
+          ctx.fillStyle = light; ctx.fillRect(-100, top, 200, bottom - top); ctx.restore();
+        }
+      }
+    }
     if (shape.stroke) line(ctx, shape.points, color(shape.stroke), shape.width ?? .7);
   }
 }
 
 export function heldWeapon(ctx: CanvasRenderingContext2D, hand: Point, angle: number, color: Color,
-  visual = STARTING_SWORD.visual, draw = 0): void {
+  visual = STARTING_SWORD.visual, draw = 0, time = 0, charge = 0): void {
   ctx.save(); ctx.translate(hand[0], hand[1]); ctx.rotate(angle);
   drawGearShapes(ctx, weaponShapes(visual, draw), color);
+  if (visual.kind === 'staff' && visual.glow) {
+    const x = weaponArtLength(visual) - 1;
+    const pulse = .7 + Math.sin(time * 2.2) * .1 + charge * .3;
+    ctx.save(); ctx.globalCompositeOperation = 'screen';
+    const glow = ctx.createRadialGradient(x, 0, .2, x, 0, 4 + charge * 2);
+    glow.addColorStop(0, visual.glow + '70'); glow.addColorStop(1, visual.glow + '00');
+    const alpha = ctx.globalAlpha;
+    ctx.globalAlpha *= pulse; ctx.fillStyle = glow; ctx.fillRect(x - 6, -6, 12, 12);
+    for (let i = 0; i < 2; i++) {
+      const phase = (time * .45 + i * .5) % 1;
+      ctx.globalAlpha = alpha * Math.sin(phase * Math.PI) * .45;
+      ctx.fillStyle = visual.glow; ctx.fillRect(x + Math.sin(time + i * 3) * 1.6, -phase * 5, .5, .7);
+    }
+    ctx.restore();
+  }
   ctx.restore();
 }
 
@@ -48,11 +78,11 @@ export function heldShield(ctx: CanvasRenderingContext2D, hand: Point, angle: nu
 }
 
 export function upperArm(ctx: CanvasRenderingContext2D, shoulder: Point, elbow: Point, color: Color): void {
-  taper(ctx, shoulder, elbow, 4.5, 3.4, color('#263a39'));
+  taper(ctx, shoulder, elbow, 3.8, 3, color('#263a39'));
 }
 
 export function forearm(ctx: CanvasRenderingContext2D, elbow: Point, hand: Point, piece: ArmorPiece | null, color: Color): void {
-  taper(ctx, elbow, hand, 3.4, 2.1, color('#5b5145'));
+  taper(ctx, elbow, hand, 3, 1.8, color('#5b5145'));
   if (piece) {
     const m = piece.material;
     const cuff: Point = [elbow[0] * 0.28 + hand[0] * 0.72, elbow[1] * 0.28 + hand[1] * 0.72];
@@ -63,14 +93,23 @@ export function forearm(ctx: CanvasRenderingContext2D, elbow: Point, hand: Point
   }
 }
 
-export function gauntlet(ctx: CanvasRenderingContext2D, hand: Point, piece: ArmorPiece | null, color: Color): void {
-  const material = piece?.material ?? LEATHER;
-  polygon(ctx, [[hand[0] - 2, hand[1] - 1.7], [hand[0] + 1.5, hand[1] - 2],
-    [hand[0] + 2.1, hand[1] + 0.8], [hand[0] + 1.1, hand[1] + 2], [hand[0] - 1.5, hand[1] + 1.6]], color(material.base));
-  line(ctx, [[hand[0] - 1.4, hand[1] - 1.2], [hand[0] + 1.3, hand[1] - 1.2]], color(material.edge), 0.65);
-  for (let finger = 0; finger < 2; finger++) {
-    line(ctx, [[hand[0] - 0.5 + finger, hand[1]], [hand[0] - 0.4 + finger, hand[1] + 1.4]], color(material.shadow), 0.45);
-  }
+export function gauntlet(ctx: CanvasRenderingContext2D, hand: Point, piece: ArmorPiece | null, color: Color,
+  angle = 0, gripping = true): void {
+  const m = piece?.material ?? LEATHER;
+  ctx.save(); ctx.translate(hand[0], hand[1]); ctx.rotate(angle);
+  polygon(ctx, [[-1.6, -1.65], [.7, -1.9], [1.5, -1.1], [1.4, .6], [.8, 1.65], [-1.5, 1.4], [-1.9, .3]], color(m.shadow));
+  polygon(ctx, [[-1.3, -1.35], [.5, -1.6], [1.15, -.8], [.8, .9], [-1.4, .85]], color(m.base));
+  line(ctx, [[-1.3, -1.25], [.3, -1.45], [1, -.85]], color(m.edge), .38);
+  if (gripping) {
+    for (let finger = 0; finger < 3; finger++) {
+      const x = -1.15 + finger * .72;
+      line(ctx, [[x, -.15], [x + .12, .65], [x - .05, 1.3]], color(m.base), .52);
+      line(ctx, [[x + .2, .2], [x + .24, .9]], color(m.shadow), .22);
+    }
+    polygon(ctx, [[.4, -1.5], [1.7, -.9], [1.75, -.2], [1, .35], [.65, -.25], [1, -.6]], color(m.base));
+    line(ctx, [[1, -1.15], [1.5, -.75]], color(m.edge), .3);
+  } else line(ctx, [[-.7, -.4], [-.6, 1], [.2, 1.1]], color(m.shadow), .35);
+  ctx.restore();
 }
 
 export function armorBoot(ctx: CanvasRenderingContext2D, anchor: Point, piece: ArmorPiece | null, color: Color, direction: number): void {
@@ -81,11 +120,13 @@ export function armorBoot(ctx: CanvasRenderingContext2D, anchor: Point, piece: A
     [x + 3 + toe, y - 0.2], [x + 2.5 + toe, y + 1.2], [x - 2.2 + toe, y + 1.4], [x - 2.5, y - 1]], color(m.shadow));
   polygon(ctx, [[x - 1.7, y - 5.5], [x + 1.5, y - 5.5], [x + 1.7, y - 1],
     [x + 2.2 + toe, y], [x - 1.5 + toe, y + 0.5]], color(m.base));
+  polygon(ctx, [[x - 1.3, y - 1.5], [x + 1.5, y - 1.3], [x + 2.2 + toe, y], [x - 1.3 + toe, y + .15]], color(mixColor(m.base, m.edge, .18)));
+  line(ctx, [[x - 1.2, y - 1.7], [x + 1.4, y - 1.4]], color(m.shadow), .35);
   line(ctx, [[x - 1.5 + toe, y + 0.7], [x + 2.1 + toe, y + 0.4]], color('#1b2428'), 0.75);
   line(ctx, [[x - 1.5, y - 4], [x + 1.4, y - 4]], color(m.trim), 0.9);
   ctx.fillStyle = color(m.edge);
   ctx.fillRect(x - 0.1, y - 4.4, 0.8, 0.8);
-  line(ctx, [[x - 1.3, y - 5.4], [x - 1.2, y - 1.7], [x - 0.4 + toe, y - 0.6]], color(m.edge), 0.55);
+  line(ctx, [[x - 1.3, y - 5.4], [x - 1.2, y - 1.7], [x - 0.4 + toe, y - 0.6]], color(mixColor(m.base, m.edge, piece?.style === 'plate' ? .8 : .35)), 0.4);
   if (piece?.style === 'plate') {
     polygon(ctx, [[x - 1.6, y - 2], [x + 1.6, y - 2], [x + 2.2 + toe, y], [x - 1.8 + toe, y + 0.3]], color(m.base));
     line(ctx, [[x - 1.6, y - 2], [x + 1.6, y - 2]], color(m.edge), 0.65);

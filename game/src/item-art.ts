@@ -4,7 +4,7 @@ import type { CharacterSheet, Item } from './character-types.ts';
 import { TIER_COLORS } from './items.ts';
 import { STARTING_SWORD } from './equipment.ts';
 import { gearShapesSVG, shieldShapes, weaponShapes, type GearShape } from './weapon-shapes.ts';
-import type { Point } from './art-primitives.ts';
+import { mixColor, type Point } from './art-primitives.ts';
 
 const safeColor = (value: string) => /^#[0-9a-f]{6}$/i.test(value) ? value : '#798590';
 const escape = (value: string) => value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
@@ -67,7 +67,20 @@ export function itemIconSVG(item: Item, size = 48): string {
   const base = safeColor(item.appearance.base), shadow = safeColor(item.appearance.shadow);
   const edge = safeColor(item.appearance.edge), trim = safeColor(item.appearance.trim), rarity = TIER_COLORS[item.tier];
   const metal = `url(#${prefix}-metal)`, cloth = `url(#${prefix}-cloth)`;
+  const surface = item.appearance.style === 'plate' || item.kind === 'ring' || item.kind === 'amulet' ? metal : cloth;
   const armorPiece: ArmorPiece = { style: item.appearance.style, seed: item.seed, material: { base, shadow, edge, trim } };
+  const fine = pixels >= 96;
+  const pigment: string[] = [];
+  const detailed = (shapes: readonly GearShape[]) => {
+    const colors = [...new Set(shapes.flatMap(shape => shape.fill ? [safeColor(shape.fill)] : []))];
+    let svg = gearShapesSVG(shapes, fine);
+    for (const [index, color] of colors.entries()) {
+      const id = `${prefix}-pigment-${pigment.length}-${index}`;
+      pigment.push(`<linearGradient id="${id}" x1="0" y1="0" x2=".55" y2="1"><stop stop-color="${mixColor(color, '#eadbc3', .09)}"/><stop offset=".38" stop-color="${color}"/><stop offset="1" stop-color="${mixColor(color, '#101b26', .22)}"/></linearGradient>`);
+      svg = svg.replaceAll(`fill="${color}"`, `fill="url(#${id})"`);
+    }
+    return svg;
+  };
   let shape: string;
   switch (item.kind) {
     case 'weapon': {
@@ -79,43 +92,44 @@ export function itemIconSVG(item: Item, size = 48): string {
       const points = shapes.flatMap(shape => shape.points.map(([x, y]) => [x * Math.cos(angle) - y * Math.sin(angle), x * Math.sin(angle) + y * Math.cos(angle)]));
       const minX = Math.min(...points.map(p => p[0])), maxX = Math.max(...points.map(p => p[0]));
       const minY = Math.min(...points.map(p => p[1])), maxY = Math.max(...points.map(p => p[1]));
-      const scale = Math.min(37 / Math.max(1, maxX - minX), 40 / Math.max(1, maxY - minY));
-      shape = `<g transform="translate(24 24) scale(${scale}) translate(${-(minX + maxX) / 2} ${-(minY + maxY) / 2}) rotate(${degrees})">${gearShapesSVG(shapes)}</g>`;
+      const occupancy = visual.kind === 'dagger' ? .78 : visual.kind === 'mace' && visual.length < 26 ? .9 : 1;
+      const scale = occupancy * Math.min(37 / Math.max(1, maxX - minX), 40 / Math.max(1, maxY - minY));
+      shape = `<g transform="translate(24 24) scale(${scale}) translate(${-(minX + maxX) / 2} ${-(minY + maxY) / 2}) rotate(${degrees})">${detailed(shapes)}</g>`;
       break;
     }
     case 'shield': {
       const visual = item.shield?.visual ?? { kind: 'kite', base, edge, trim, shadow };
-      shape = `<g transform="translate(24 23) scale(1.45)">${gearShapesSVG(shieldShapes(visual))}</g>`;
+      shape = `<g transform="translate(24 23) scale(1.45)">${detailed(shieldShapes(visual))}</g>`;
       break;
     }
     case 'head':
-      shape = `<g transform="translate(24 23) scale(3.3)"><path d="M-4-.5H4V4L0 5L-4 4Z" fill="${shadow}"/>${gearShapesSVG(armorShapes('head', armorPiece))}</g>`;
+      shape = `<g transform="translate(24 23) scale(3.3)"><path d="M-4-.5H4V4L0 5L-4 4Z" fill="${shadow}"/>${detailed(armorShapes('head', armorPiece))}</g>`;
       break;
     case 'chest':
       shape = `<g transform="translate(24 19) scale(2.15)">
         <path d="M-5-5H5L6 9L3 11H-3L-6 9Z" fill="${shadow}"/>
-        <g transform="translate(-6 -4) rotate(18)">${gearShapesSVG(armorShapes('shoulder', armorPiece))}</g>
-        <g transform="translate(6 -4) scale(-1 1) rotate(18)">${gearShapesSVG(armorShapes('shoulder', armorPiece))}</g>
-        ${gearShapesSVG(armorShapes('chest', armorPiece))}</g>`;
+        <g transform="translate(-6 -4) rotate(18)">${detailed(armorShapes('shoulder', armorPiece))}</g>
+        <g transform="translate(6 -4) scale(-1 1) rotate(18)">${detailed(armorShapes('shoulder', armorPiece))}</g>
+        ${detailed(armorShapes('chest', armorPiece))}</g>`;
       break;
     case 'gloves':
-      shape = `<g transform="rotate(-14 17 26)"><path d="M10 10H23L22 24L25 29L25 34L22 33L21 42L17 43L10 40L8 30L10 24Z" fill="${metal}" stroke="${shadow}" stroke-width="1.4"/>
+      shape = `<g transform="rotate(-14 17 26)"><path d="M10 10H23L22 24L25 29L25 34L22 33L21 42L17 43L10 40L8 30L10 24Z" fill="${surface}" stroke="${shadow}" stroke-width="1.4"/>
         <path d="M10 12H22M11 21H21" stroke="${trim}" stroke-width="1.4"/>
         <path d="M12 25L18 24L21 30L19 34L11 34Z" fill="${base}" stroke="${edge}" stroke-width=".8"/>
         <path d="M12 36V40M15 36V41M18 36V41" stroke="${shadow}" stroke-width="1.1"/></g>
-        <g transform="translate(19 -3) rotate(14 17 26) scale(.88)"><path d="M10 10H23L22 24L25 29L25 34L22 33L21 42L17 43L10 40L8 30L10 24Z" fill="${metal}" stroke="${shadow}" stroke-width="1.4"/>
+        <g transform="translate(19 -3) rotate(14 17 26) scale(.88)"><path d="M10 10H23L22 24L25 29L25 34L22 33L21 42L17 43L10 40L8 30L10 24Z" fill="${surface}" stroke="${shadow}" stroke-width="1.4"/>
         <path d="M10 12H22M11 21H21M11 32H20" stroke="${trim}" stroke-width="1.2"/>
         <path d="M13 35V40M17 35V41" stroke="${shadow}" stroke-width="1.1"/></g>`;
       break;
     case 'legs':
-      shape = `<path d="M13 7H35L34 21L37 41L27 43L24 23L21 43L11 41L14 22Z" fill="${metal}" stroke="${shadow}" stroke-width="1.4"/>
+      shape = `<path d="M13 7H35L34 21L37 41L27 43L24 23L21 43L11 41L14 22Z" fill="${surface}" stroke="${shadow}" stroke-width="1.4"/>
         <path d="M13 10H35M14 15L24 19L34 15" fill="none" stroke="${trim}" stroke-width="1.2"/>
         <path d="M15 20L20 22L20 30L16 32L13 28ZM28 22L33 20L35 28L31 32L28 30Z" fill="${base}" stroke="${edge}" stroke-width=".8"/>
         <path d="M14 35L19 36M29 36L35 35" fill="none" stroke="${trim}" stroke-width="1.4"/>`;
       break;
     case 'boots':
-      shape = `<path d="M8 9L22 11L20 28L24 37L24 41L8 42L5 38L8 26Z" fill="${metal}" stroke="${shadow}" stroke-width="1.5"/>
-        <path d="M28 8H40L39 27L44 36L44 41H28L25 37L28 25Z" fill="${metal}" stroke="${shadow}" stroke-width="1.5"/>
+      shape = `<path d="M8 9L22 11L20 28L24 37L24 41L8 42L5 38L8 26Z" fill="${surface}" stroke="${shadow}" stroke-width="1.5"/>
+        <path d="M28 8H40L39 27L44 36L44 41H28L25 37L28 25Z" fill="${surface}" stroke="${shadow}" stroke-width="1.5"/>
         <path d="M8 14L21 16M9 24L20 25M28 13H40M28 23H39" stroke="${trim}" stroke-width="1.4"/>
         <path d="M9 32L18 32L22 37L8 37ZM29 32H38L41 36H28Z" fill="${base}" stroke="${edge}" stroke-width=".8"/>
         <path d="M7 40L22 39M28 39H42" stroke="${shadow}" stroke-width="2"/>`;
@@ -131,7 +145,7 @@ export function itemIconSVG(item: Item, size = 48): string {
       shape = `<path d="M17 6C4 12 9 23 20 30M31 6C44 12 39 23 28 30" fill="none" stroke="${shadow}" stroke-width="3.5"/>
         <path d="M17 6C4 12 9 23 20 30M31 6C44 12 39 23 28 30" fill="none" stroke="${trim}" stroke-width="1.7" stroke-dasharray="2.5 1"/>
         <path d="M21 26L24 23L27 26L27 29H21Z" fill="${trim}"/>
-        <path d="M24 28L34 34L31 42L24 46L17 42L14 34Z" fill="${metal}" stroke="${trim}" stroke-width="1.3"/>
+        <path d="M24 28L34 34L31 42L24 46L17 42L14 34Z" fill="${surface}" stroke="${trim}" stroke-width="1.3"/>
         <path d="M24 31L29 35L28 40L24 43L20 40L19 35Z" fill="${rarity}" stroke="${edge}" stroke-width=".7"/>
         <path d="M24 32L24 40L20 36Z" fill="${edge}" opacity=".55"/>`;
       break;
@@ -139,7 +153,7 @@ export function itemIconSVG(item: Item, size = 48): string {
       shape = `<ellipse cx="24" cy="28" rx="13" ry="14" fill="none" stroke="${shadow}" stroke-width="7"/>
         <ellipse cx="24" cy="27" rx="13" ry="14" fill="none" stroke="${trim}" stroke-width="4.5"/>
         <path d="M14 23C13 31 18 39 24 39" fill="none" stroke="${edge}" stroke-width="1.1"/>
-        <path d="M15 11L21 6H28L34 12L31 21H18Z" fill="${metal}" stroke="${trim}" stroke-width="1.4"/>
+        <path d="M15 11L21 6H28L34 12L31 21H18Z" fill="${surface}" stroke="${trim}" stroke-width="1.4"/>
         <path d="M21 9H27L30 13L28 18H21L18 13Z" fill="${rarity}" stroke="${edge}" stroke-width=".8"/>
         <path d="M21 10L24 13L20 16L19 13Z" fill="${edge}" opacity=".6"/>
         <path d="M24 13L28 10L29 13L27 17Z" fill="${shadow}" opacity=".35"/>`;
@@ -147,7 +161,7 @@ export function itemIconSVG(item: Item, size = 48): string {
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${pixels}" height="${pixels}" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><title>${escape(item.name)}</title>
     <defs><linearGradient id="${prefix}-metal" x1="0" y1="0" x2="1" y2=".65"><stop stop-color="${edge}"/><stop offset=".32" stop-color="${base}"/><stop offset=".59" stop-color="${base}"/><stop offset="1" stop-color="${shadow}"/></linearGradient>
-    <linearGradient id="${prefix}-cloth" x1="0" y1="0" x2="1" y2=".3"><stop stop-color="${shadow}"/><stop offset=".28" stop-color="${base}"/><stop offset=".55" stop-color="${base}"/><stop offset="1" stop-color="${shadow}"/></linearGradient></defs>
+    <linearGradient id="${prefix}-cloth" x1="0" y1="0" x2="1" y2=".3"><stop stop-color="${shadow}"/><stop offset=".28" stop-color="${base}"/><stop offset=".55" stop-color="${base}"/><stop offset="1" stop-color="${shadow}"/></linearGradient>${pigment.join('')}</defs>
     <ellipse cx="24" cy="42" rx="15" ry="3" fill="#05090e" opacity=".45"/>${shape}</svg>`;
 }
 

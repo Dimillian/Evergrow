@@ -4,7 +4,6 @@ import { createCharacterSheet, generateItem, ITEM_KINDS } from '../src/items.ts'
 import { itemIconSVG, itemDropShapes, outfitFromEquipment } from '../src/item-art.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
 import { armorShapes } from '../src/armor-shapes.ts';
-import { gearShapesSVG } from '../src/weapon-shapes.ts';
 
 test('every equipment family generates distinct vector art without external resources', () => {
   const icons = ITEM_KINDS.map(kind => itemIconSVG(generateItem(419, 1, kind)));
@@ -62,6 +61,12 @@ test('helmet and cuirass icons reuse the actual equipped plate geometry', () => 
   for (const kind of ['head', 'chest'] as const) {
     const item = generateItem(8901, 7, kind), { style, base, shadow, edge, trim } = item.appearance;
     const actual = armorShapes(kind, { style, seed: item.seed, material: { base, shadow, edge, trim } });
-    assert.ok(itemIconSVG(item).includes(gearShapesSVG(actual)), `${kind} icon uses its mounted armor shape`);
+    for (const size of [48, 120]) {
+      const icon = itemIconSVG(item, size);
+      for (const shape of actual.filter(shape => size >= 96 || !shape.fine)) {
+        const points = shape.points.map(p => p.map(v => Math.round(v * 100) / 100).join(',')).join(' ');
+        assert.ok(icon.includes(`points="${points}"`), `${kind} icon preserves its mounted geometry at ${size}px`);
+      }
+    }
   }
 });
