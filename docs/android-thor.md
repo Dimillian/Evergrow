@@ -21,7 +21,7 @@ Thor's own system dashboard can cover the companion. Dismiss that dashboard to s
 
 ## Controls and saves
 
-Native `KeyEvent` / joystick `MotionEvent` input is normalized into the same standard snapshot consumed by `GamepadInput`. Existing dead zones, action mappings, neutral rearm, inventory/menu navigation and disconnect pause apply. See [controls](controls.md). Character names use the Android keyboard.
+Native `KeyEvent` / joystick `MotionEvent` input is normalized into the same standard snapshot consumed by `GamepadInput`. Existing dead zones, action mappings, neutral rearm, inventory/menu navigation and disconnect pause apply. See [controls](controls.md). Character names use the Android keyboard. The upper character window now shows an LB/RB section rail and gives Equipment, Inventory and Stats their own full-width handheld view. The atlas has Tree / Node / Skills sections, a pinned skill bar, A for node actions, X to reach assignment, and right-stick inspector scrolling. Its compact effect summary and assignment remain near the top; no touchscreen is needed to assign skills.
 
 The app uses the same worker/IndexedDB save system at a stable bundled HTTPS asset origin. APK updates installed over the existing package preserve app data. **Android, Safari, localhost and the hosted game currently have separate local characters.** Cloud synchronization is available only in the Site-enabled web build; the Android wrapper remains local-only with no cloud tabs or network requests. Uninstalling or clearing Android app data removes its saves; there is no browser-save migration in this packaging checkpoint.
 

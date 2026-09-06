@@ -15,7 +15,7 @@ export class GamepadMenu {
     if (actions.switchTab && (pad.pressed.has(PAD.potion) || pad.pressed.has(PAD.skill2))) {
       actions.switchTab(pad.pressed.has(PAD.potion) ? -1 : 1); this.clear(); return;
     }
-    const controls = [...root.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex]')]
+    const controls = [...root.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, summary, [tabindex]')]
       .filter(el => el.tabIndex >= 0 && !el.matches(':disabled') && !el.closest('[hidden], [inert]') && el.getClientRects().length > 0);
     if (!controls.length) return;
     const step = (delta: number) => {
@@ -34,7 +34,7 @@ export class GamepadMenu {
       : pad.held.has(PAD.down) || pad.move.y > .5 ? 'ArrowDown' : '';
     if (key && (key !== this.direction || now >= this.nextRepeat)) {
       const delta = key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1;
-      if (target instanceof HTMLSelectElement) {
+      if (target instanceof HTMLSelectElement && (key === 'ArrowLeft' || key === 'ArrowRight')) {
         const options = [...target.options];
         let next = target.selectedIndex + delta;
         while (next >= 0 && next < options.length && options[next].disabled) next += delta;

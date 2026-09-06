@@ -165,3 +165,19 @@
 .character-equipment-slot.is-twohand-reserved svg { color: #74818a; width: 28px; height: 28px; }
 .character-reserved-label { position: absolute; inset: auto 5px 5px; font: 600 10px/1.4 system-ui, sans-serif; letter-spacing: .12em; color: #9ca7af; border-top: 1px solid #7d8b9744; padding-top: 3px; }
 .character-equipment-slot.is-twohand-reserved:hover { border-color: #a7b7c47a; }
+
+/* Handhelds expose one full-width section, with the shoulder route always visible. */
+.character-controller-nav { display: none; }
+.is-controller .character-controller-nav { display: flex; align-items: center; gap: 14px; padding: 6px 18px; flex-shrink: 0; border-bottom: 1px solid #96b8c32c; color: var(--ui-silver-dim); font-size: 13px; }
+.character-controller-nav [aria-current="true"] { color: var(--ui-ivory); border-bottom: 1px solid var(--ui-silver); }
+.character-controller-nav kbd { font: 600 11px system-ui, sans-serif; border: 1px solid #96b8c34a; border-radius: 4px; padding: 2px 5px; }
+.character-controller-nav small { margin-left: auto; font: 11px system-ui, sans-serif; }
+@media (max-width: 1080px) {
+  .character-overlay.is-controller .character-columns { display: block; overflow: hidden; }
+  .character-overlay.is-controller .character-columns > section { display: none; }
+  .character-overlay.is-controller .character-columns > .is-selected-section { display: block; height: 100%; min-height: 0; box-sizing: border-box; overflow-y: auto; padding: 12px 20px; border: 0; }
+  .character-overlay.is-controller .character-columns > .character-details.is-selected-section { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .character-overlay.is-controller .character-bag { grid-template-columns: repeat(8,minmax(44px,1fr)); max-width: 680px; margin: auto; }
+  .character-overlay.is-controller .character-doll-stage { max-width: 360px; margin: auto; }
+  .character-overlay.is-controller .character-footer { padding: 8px 20px; }
+}

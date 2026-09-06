@@ -158,3 +158,9 @@ The Thor lower screen shares the theme, local fonts, item geometry and tooltip m
 ## Compact character hall
 
 The hall uses one eight-slot roster beside a creation/continue pane with short labels, shared controls and quiet transfer actions. Sites adds Cloud / Local tabs and sync status; Android hides those tabs and browser transfer controls. Starting gear uses six native radio cards with procedural equipment icons. Portrait decoration gives way to controls on small/short displays; no essential action sits below a decorative hero. Names truncate in slot cards but remain readable in the selected pane. Sign-in links join controller navigation. The real memory-only review supports `?cloud&full`, `?cloud&signedout`, `?cloud&conflict` and `?empty`.
+
+## Handheld controller panels
+
+The character window shows a quiet LB/RB section rail only during controller use. At widths up to 1080px it displays the selected section at full width, with preserved section focus. Pointer/touch use returns to the existing responsive layout.
+
+The skill atlas separates its scrollable node inspector from a pinned five-slot loadout. Small inline node emblems, left-aligned effects, compact cost facts and optional specialization-path disclosure reduce vertical travel. Controller LB/RB chooses Tree, Node or Skills; X reaches assignment directly. Shared menu selects reserve left/right for values and up/down for focus, avoiding a controller focus trap. All actions still go through validated character commands.

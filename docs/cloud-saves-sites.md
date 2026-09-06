@@ -54,3 +54,7 @@ The schema entrypoint is `db/schema.ts`, re-exporting `game/server/schema.ts`; g
 Code tests exercise two-user isolation, two-writer races, stale deletion, duplicate requests, account mismatch, cross-origin requests, invalid stats/maps, failed R2/D1 writes, uncertain commit acknowledgements, outbox recovery/coalescing, explicit conflict replacement and atomic local import/export. Browser and Android builds are checked separately.
 
 After the first approved deployment, verify the actual Sites sign-in dispatch, provisioned bindings and a same-account save/continue round trip on two browsers with the player. Sustained large-save latency, device-offline play and visual/controller acceptance remain player testing. This checkpoint has not exercised live cloud saves.
+
+## Deployment checkpoint — 2026-09-06
+
+The cloud/local character hall and account-owned save backend were published to the existing public [Evergrow Site](https://evergrow.dimillian.chatgpt.site) after approval. Sites reported deployment success for source `302202f`. Cross-client authenticated save/continue acceptance remains a player check; Android stays local-only.

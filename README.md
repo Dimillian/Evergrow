@@ -12,7 +12,7 @@ Play on desktop with keyboard/mouse or a controller, use touch controls, or [run
 
 **AYN Thor:** [build and install the offline Android app](docs/android-thor.md), with native controls and a matching lower-screen map, compact inventory and character companion.
 
-Progress is saved in your browser. Hosted and localhost characters have separate saves; cloud saves are not available yet.
+On the hosted game, sign in with ChatGPT for cloud characters or choose Local for browser-only saves. Download and Import let you transfer a character and its explored map. Local development and Android keep local saves.
 
 ![The starting wilderness in Deadwood](docs/screenshots/deadwood.png)
 
@@ -29,7 +29,7 @@ Progress is saved in your browser. Hosted and localhost characters have separate
 
 **Town services:** procedural blacksmiths, jewelers and enchanters; buy/sell/buyback, upgrade gear to +10, raise rarity, reroll affixes and raise item level. Equipped gear can be improved in place.
 
-Character progress, shop state and each character’s explored map persist in this browser. **Save format v3 requires a new character for older saves; old slots remain stored.** Quests, respecs and cloud saves are still to come. Endless progression is the direction, not a finished endgame.
+Character progress, shop state and each character’s explored map persist in the selected save location. **Save format v3 requires a new character for older saves; old slots remain stored.** Journeys offer light activity guidance; respecs remain future work. Endless progression is the direction, not a finished endgame.
 
 ## Screenshots
 
@@ -65,7 +65,7 @@ Trade with blacksmiths, jewelers and enchanters. Improve gear to +10, raise rari
 
 ## Saves
 
-The next Sites build adds **Cloud / Local** tabs. Cloud defaults to ChatGPT sign-in and eight account-owned characters; Local keeps this browser’s saves. **Download / Import** transfers a character and its explored map through a save file. Android stays local-only. [Cloud saves and sync](docs/cloud-saves-sites.md).
+The hosted game has **Cloud / Local** tabs. Cloud defaults to ChatGPT sign-in and eight account-owned characters; Local keeps this browser’s saves. **Download / Import** transfers a character and its explored map through a save file. Android stays local-only. [Cloud saves and sync](docs/cloud-saves-sites.md).
 
 ## Android / AYN Thor
 

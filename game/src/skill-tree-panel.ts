@@ -1,3 +1,5 @@
+import { GamepadMenu } from './gamepad-menu.ts';
+import { PAD, PAD_SKILL_LABELS, type GamepadInput } from './gamepad-input.ts';
 import { bindTouchCanvas } from './touch-canvas.ts';
 import type { CharacterCommand } from './character-commands.ts';
 import { resolveSkill, learnedSkillRank, activeSkillRank, maximumSkillRank, selectedSpecialization, SKILL_SPECIALIZATIONS, specializationNode, masteryNode } from './skill-progression.ts';
@@ -58,6 +60,9 @@ export class SkillTreePanel {
   private clearTouch: (() => void) | null = null;
   private drag?: { pointer: number; x: number; y: number; startX: number; startY: number; moved: boolean };
   private shown = false;
+  private readonly controller = new GamepadMenu();
+  private controllerSection = 0;
+  private controllerTime = 0;
 
   constructor(mount: HTMLElement, actions: SkillTreeActions) {
     this.actions = actions;
@@ -67,6 +72,7 @@ export class SkillTreePanel {
     this.root.innerHTML = `<section class="ui-window skill-atlas-window" role="dialog" aria-modal="true" aria-labelledby="skill-atlas-title">
       <header class="ui-window-header skill-atlas-header"><h2 class="ui-title" id="skill-atlas-title">Skill tree</h2>
         <div class="skill-atlas-points" aria-live="polite"></div><button class="ui-button ui-button--quiet ui-button--icon" data-tree="close" aria-label="Close skill tree">${uiIcon('close')}</button></header>
+      <nav class="skill-atlas-controller" aria-label="Controller sections"><kbd>LB</kbd><span data-pad-section="0">Tree</span><span data-pad-section="1">Node</span><span data-pad-section="2">Skills</span><kbd>RB</kbd><small data-pad-help></small></nav>
       <div class="skill-atlas-main"><section class="skill-atlas-chart" aria-label="Skill atlas navigation">
         <div class="skill-atlas-toolbar"><label class="skill-atlas-search"><span>${uiIcon('center')}</span><input type="search" placeholder="Find a skill or bonus…" aria-label="Search skills and bonuses" maxlength="80"></label>
           <select class="ui-button" aria-label="Filter skill domain"><option value="all">All paths</option><option>Might</option><option>Cunning</option><option>Arcana</option></select>
@@ -77,8 +83,8 @@ export class SkillTreePanel {
           <div class="skill-atlas-zoom"><button class="ui-button ui-button--icon" data-tree="out" aria-label="Zoom out">−</button><output>80%</output><button class="ui-button ui-button--icon" data-tree="in" aria-label="Zoom in">+</button><button class="ui-button ui-button--quiet" data-tree="origin">Origin</button><button class="ui-button ui-button--quiet" data-tree="overview">All</button></div>
           <div class="skill-atlas-domains" aria-hidden="true"><span>Might</span><span>Cunning</span><span>Arcana</span></div>
         </div></section>
-        <aside class="skill-atlas-sidebar ui-scroll-area"><div class="skill-atlas-inspection" id="skill-atlas-selection" aria-live="polite"></div>
-          <section class="skill-atlas-loadout"><div class="skill-atlas-section-heading"><span class="ui-kicker">ACTIVE SKILLS</span><span class="ui-muted">5 slots</span></div><div class="skill-atlas-assignments"></div></section>
+        <aside class="skill-atlas-sidebar"><div class="skill-atlas-inspection ui-scroll-area" tabindex="-1" id="skill-atlas-selection" aria-live="polite"></div>
+          <section class="skill-atlas-loadout"><div class="skill-atlas-section-heading"><span class="ui-kicker">Skills</span><span class="ui-muted" data-slot-help></span></div><div class="skill-atlas-assignments"></div></section>
         </aside></div>
       <footer class="ui-window-footer skill-atlas-footer"><span><b>${SKILL_TREE.nodes.length.toLocaleString('en-US')}</b> nodes <i>·</i> <b>${SKILL_TREE.clusters.length}</b> clusters <i>·</i> <b>${Object.keys(SKILL_DEFINITIONS).length}</b> skills</span><span>One skill point per level</span></footer>
     </section>`;
@@ -91,6 +97,7 @@ export class SkillTreePanel {
     this.assignments = this.root.querySelector('.skill-atlas-assignments')!;
     this.zoomLabel = this.root.querySelector('output')!;
     const opts = { signal: this.life.signal };
+    this.root.addEventListener('pointerdown', () => this.root.classList.remove('is-controller'), opts);
     this.clearTouch = bindTouchCanvas(this.canvas,this.life.signal,{
       start:()=>{this.setHovered(null); this.lastClickedNode=this.doubleClickedNode=null;},
       pan:(dx,dy)=>{this.centerX-=dx/this.zoom;this.centerY-=dy/this.zoom;this.clampCenter();this.invalidate();},
@@ -168,7 +175,7 @@ export class SkillTreePanel {
   refresh(player: Player): void {
     const active = this.root.ownerDocument.activeElement;
     const focusedControl = active && this.root.contains(active)
-      ? ['data-tree', 'data-assign', 'data-clear', 'data-upgrade', 'data-config', 'data-variant', 'data-overload'].flatMap(attribute => {
+      ? ['data-tree', 'data-clear', 'data-upgrade', 'data-config', 'data-variant', 'data-overload', 'data-slot'].flatMap(attribute => {
         const value = active.getAttribute(attribute);
         return value === null ? [] : [{ attribute, value }];
       })[0] : undefined;
@@ -183,7 +190,40 @@ export class SkillTreePanel {
       (replacement ?? this.canvas).focus({ preventScroll: true });
     }
   }
+  updateGamepad(pad: GamepadInput, now: number): void {
+    if (!this.shown) return;
+    const elapsed = Math.min(50, Math.max(0, now - this.controllerTime)); this.controllerTime = now;
+    if (!pad.active) { this.controller.clear(); return; }
+    if (!this.root.classList.contains('is-controller')) {
+      this.root.classList.add('is-controller'); this.setHovered(null); this.selectControllerSection(0);
+    }
+    if (pad.pressed.has(PAD.skill3)) { this.selectControllerSection(2); return; }
+    const region = this.controllerRegion();
+    if (this.controllerSection === 1 && Math.abs(pad.aim.y) > .2) this.detail.scrollBy({ top: pad.aim.y * elapsed * .65 });
+    this.controller.update(region, pad, now, {
+      switchTab: delta => this.selectControllerSection((this.controllerSection + delta + 3) % 3),
+      activate: target => {
+        if (target !== this.canvas) return false;
+        this.selectControllerSection(1); return true;
+      },
+    });
+  }
+  private controllerRegion(): HTMLElement {
+    return this.controllerSection === 0 ? this.root.querySelector('.skill-atlas-chart')!
+      : this.controllerSection === 1 ? this.detail : this.root.querySelector('.skill-atlas-loadout')!;
+  }
+  private selectControllerSection(section: number): void {
+    this.controllerSection = section; this.controller.clear();
+    for (const label of this.root.querySelectorAll<HTMLElement>('[data-pad-section]'))
+      label.setAttribute('aria-current', String(Number(label.dataset.padSection) === section));
+    this.root.querySelector('[data-pad-help]')!.textContent = section === 0 ? 'A Node · X Assign · LT/RT Zoom · B Back' : 'A Select · RS Scroll · B Back';
+    const region = this.controllerRegion();
+    const target = section === 0 ? this.canvas
+      : region.querySelector<HTMLElement>('[data-tree="assign"], [data-tree="allocate"]:not(:disabled), [data-slot]:not(:disabled), button:not(:disabled), select') ?? this.detail;
+    target.focus({ preventScroll: true }); target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
   close(): void {
+    this.controller.clear(); this.root.classList.remove('is-controller'); this.controllerSection = 0;
     this.clearTouch?.();
     this.lastClickedNode = this.doubleClickedNode = null;
     this.atlasLayer = undefined; this.atlasDirty = true;
@@ -198,10 +238,16 @@ export class SkillTreePanel {
     const node = SKILL_NODES.get(id); if (!node) return;
     this.selected = id; this.hovered = null; this.tooltipMotion.reset();
     if (center) { this.centerX = node.x; this.centerY = node.y; this.setZoom(Math.max(.85, this.zoom)); }
-    this.updateDetail(); this.invalidate();
+    this.updateDetail(); this.updateAssignments(); this.detail.scrollTop = 0; this.invalidate();
   }
   private click(event: MouseEvent): void {
     const button = (event.target as Element).closest<HTMLButtonElement>('button'); if (!button) return;
+    if (button.dataset.slot) {
+      const index = Number(button.dataset.slot) - 1, node = SKILL_NODES.get(this.selected)!;
+      if (node.skill && this.allocated.has(node.id)) this.actions.assign(index, node.skill);
+      else { const skill = this.player?.character.skillSlots[index]; if (skill) this.inspectNode(`skill:${skill}`); }
+      return;
+    }
     if (button.dataset.upgrade) { this.actions.develop({ type: 'upgradeSkill', skill: button.dataset.upgrade as SkillId }); return; }
     if (button.dataset.variant && this.player) {
       const spec = SKILL_SPECIALIZATIONS.find(s => s.id === button.dataset.variant)!;
@@ -210,17 +256,12 @@ export class SkillTreePanel {
     if (button.hasAttribute('data-overload') && this.player) { this.actions.develop({ type: 'overload', enabled: !this.player.character.arcaneOverload }); return; }
     if (button.dataset.node) {
       this.resultsDismissed = true; this.updateResults();
-      this.inspectNode(button.dataset.node); this.canvas.focus({ preventScroll: true }); return;
-    }
-    if (button.dataset.assign) {
-      const id = button.dataset.inspected ?? this.selected;
-      const skill = SKILL_NODES.get(id)?.skill;
-      if (skill && this.allocated.has(id)) this.actions.assign(Number(button.dataset.assign) - 1, skill);
-      return;
+      this.inspectNode(button.dataset.node); this.selectControllerSection(0); return;
     }
     if (button.dataset.clear) { this.actions.assign(Number(button.dataset.clear) - 1, null); return; }
     const action = button.dataset.tree;
     if (action === 'close') this.actions.close();
+    else if (action === 'assign') this.selectControllerSection(2);
     else if (action === 'allocate') this.actions.allocate(button.dataset.inspected ?? this.selected);
     else if (action === 'origin') this.showOrigin();
     else if (action === 'overview') this.showOverview();
@@ -262,15 +303,14 @@ export class SkillTreePanel {
     const cluster = SKILL_TREE.clusters.find(cluster => cluster.id === node.cluster);
     const bonuses = (Object.entries(node.bonuses) as [StatKey, number][]).map(([key, value]) => `<div class="ui-stat"><span>${STAT_LABELS[key]}</span><b>${formatStatValue(key, value)}</b></div>`).join('');
     this.detail.classList.toggle('has-skill', !!skill);
-    this.detail.innerHTML = `<div class="skill-atlas-emblem" style="--star-color:${COLORS[node.domain]}">${skillNodeIconSVG(node, 48)}</div>
-      <p class="ui-kicker">${heading}</p><h3>${escapeUI(node.name)}</h3><p class="skill-atlas-domain" style="color:${COLORS[node.domain]}">${node.kind === 'origin' ? 'Might · Cunning · Arcana' : escapeUI(cluster ? `${node.domain} / ${cluster.name}` : node.domain)}</p>
+    this.detail.innerHTML = `<header class="skill-node-heading"><div class="skill-atlas-emblem" style="--star-color:${COLORS[node.domain]}">${skillNodeIconSVG(node, 48)}</div>
+      <div><p class="ui-kicker">${heading}</p><h3>${escapeUI(node.name)}</h3><p class="skill-atlas-domain" style="color:${COLORS[node.domain]}">${node.kind === 'origin' ? 'Might · Cunning · Arcana' : escapeUI(cluster ? `${node.domain} / ${cluster.name}` : node.domain)}</p></div></header>
       <p class="skill-atlas-description">${escapeUI(costs?.variant?.description ?? node.description)}</p>${bonuses ? `<div class="skill-atlas-bonuses ui-well">${bonuses}</div>` : ''}
-      ${skill ? `<p class="skill-atlas-requirement ${canUseSkill(skill.id, this.player.equipment) ? 'is-ready' : ''}">Requires ${escapeUI(skillRequirementLabel(skill.requirement))}<small>${canUseSkill(skill.id, this.player.equipment) ? 'Matching equipment ready' : 'Equip matching gear to use this skill'}</small></p><div class="skill-atlas-skill-costs">${owned ? `<span class="skill-casting-rank">Casting rank ${costs!.rank}</span>` : ''}<span><b>${costs!.mana}</b> mana</span><span>${costs!.cooldown ? `<b>${Number(costs!.cooldown.toFixed(2))}s</b> cooldown` : 'No cooldown'}</span>${skill.damageMultiplier ? `<span><b>${Math.round(costs!.damageMultiplier * 100)}%</b> damage${skillDamageSuffix(skill.id, costs!.recipe)}</span>` : `<span>${costs!.recipe.kind === 'guard' ? `${costs!.recipe.duration}s · ${Math.round(costs!.recipe.reduction*100)}% block` : skillUtilityLabel(skill.id)}</span>`}${costs!.upkeep ? `<span><b>${costs!.upkeep}</b> mana / second</span>` : ''}</div>` : ''}
-      ${this.progressionControls(node, owned)}
+      ${skill ? `<p class="skill-atlas-requirement ${canUseSkill(skill.id, this.player.equipment) ? 'is-ready' : ''}">Requires ${escapeUI(skillRequirementLabel(skill.requirement))}</p><div class="skill-atlas-skill-costs">${owned ? `<span class="skill-casting-rank">Casting rank ${costs!.rank}</span>` : ''}<span><b>${costs!.mana}</b> mana</span><span>${costs!.cooldown ? `<b>${Number(costs!.cooldown.toFixed(2))}s</b> cooldown` : 'No cooldown'}</span>${skill.damageMultiplier ? `<span><b>${Math.round(costs!.damageMultiplier * 100)}%</b> damage${skillDamageSuffix(skill.id, costs!.recipe)}</span>` : `<span>${costs!.recipe.kind === 'guard' ? `${costs!.recipe.duration}s · ${Math.round(costs!.recipe.reduction*100)}% block` : skillUtilityLabel(skill.id)}</span>`}${costs!.upkeep ? `<span><b>${costs!.upkeep}</b> mana / second</span>` : ''}</div>` : ''}
       <div class="skill-atlas-allocation"><span class="skill-atlas-node-state ${owned ? 'is-owned' : ''}">${owned ? '◆ Allocated' : reachable ? '◇ Connected to your path' : routeCost !== undefined ? `◇ ${routeCost} ${routeCost === 1 ? 'point' : 'points'} along the highlighted path` : '◇ No connected path'}</span>
         ${owned ? '' : `<button class="ui-button ui-button--primary" data-tree="allocate" data-inspected="${node.id}" ${routeCost === undefined || this.player.character.skillPoints < routeCost ? 'disabled' : ''}>${routeCost === 1 ? 'Allocate' : 'Allocate path'} <span>${routeCost ?? '—'} ${routeCost === 1 ? 'point' : 'points'}</span></button>`}
         ${!owned && routeCost !== undefined && this.player.character.skillPoints < routeCost ? `<small class="ui-muted">${routeCost - this.player.character.skillPoints} more ${routeCost - this.player.character.skillPoints === 1 ? 'point' : 'points'} needed.</small>` : ''}</div>
-      ${skill && owned ? `<div class="skill-atlas-equip"><p class="ui-kicker">ASSIGN TO A SLOT</p><div>${BINDINGS.map((binding, index) => `<button class="ui-button ${this.player!.character.skillSlots[index] === node.skill ? 'ui-button--primary' : 'ui-button--quiet'}" data-assign="${index + 1}" data-inspected="${node.id}" aria-label="Assign ${skill.name} to slot ${index+1}, ${binding}"><span class="desktop-binding">${binding}</span><span class="touch-only">${index+1}</span></button>`).join('')}</div></div>` : ''}`;
+      ${skill && owned ? '<button class="ui-button ui-button--quiet skill-assign-action" data-tree="assign">Assign skill <span class="controller-binding">X</span></button>' : ''}${this.progressionControls(node, owned)}`;
   }
   private progressionControls(node: SkillNode, owned: boolean): string {
     const p = this.player!, sheet = p.character;
@@ -287,21 +327,24 @@ export class SkillTreePanel {
     const current = resolveSkill(id,p.derived,sheet,learned), next = learned < max ? resolveSkill(id,p.derived,sheet,learned+1) : null;
     const variants = SKILL_SPECIALIZATIONS.filter(v=>v.skill===id), selected = selectedSpecialization(sheet,id);
     return `<section class="skill-rank-controls ui-well"><strong>Rank ${learned} / ${max}</strong>
-      ${next ? `<div class="skill-rank-preview"><span>Next rank</span><span>${next.recipe.kind === 'guard' && current.recipe.kind === 'guard' ? `${Math.round(current.recipe.reduction*100)}% → ${Math.round(next.recipe.reduction*100)}% blocked` : `${Math.round(current.damageMultiplier*100)}% → ${Math.round(next.damageMultiplier*100)}% damage`}</span><span>${current.mana} → ${next.mana} mana</span><span>${next.cooldown ? `${next.cooldown.toFixed(2)}s cooldown` : 'No cooldown'}</span></div>
+      ${next ? `<div class="skill-rank-preview"><span>Next rank</span><span>${next.recipe.kind === 'guard' && current.recipe.kind === 'guard' ? `${Math.round(current.recipe.reduction*100)}% → ${Math.round(next.recipe.reduction*100)}% blocked` : `${Math.round(current.damageMultiplier*100)}% → ${Math.round(next.damageMultiplier*100)}% damage`}</span><span>${current.mana} → ${next.mana} mana</span>${next.cooldown ? `<span>${next.cooldown.toFixed(2)}s cooldown</span>` : ''}</div>
       <button class="ui-button ui-button--primary" data-upgrade="${id}" ${sheet.skillPoints < 1 ? 'disabled' : ''}>Upgrade · 1 point</button>` : '<span class="ui-muted">Maximum purchased rank</span>'}
       <label>Cast at rank<select class="ui-button" data-config="rank" data-skill="${id}" aria-label="Active rank for ${SKILL_DEFINITIONS[id].name}">${Array.from({length:learned},(_,i)=>`<option value="${i+1}" ${i+1===active?'selected':''}>Rank ${i+1}</option>`).join('')}</select></label>
       ${variants.length ? `<label>Specialization<select class="ui-button" data-config="variant" data-skill="${id}" aria-label="Specialization for ${SKILL_DEFINITIONS[id].name}"><option value="">Original</option>${variants.map(v=>`<option value="${v.id}" ${selected?.id===v.id?'selected':''} ${!sheet.allocatedNodes.includes(specializationNode(v.id))?'disabled':''}>${v.name}${!sheet.allocatedNodes.includes(specializationNode(v.id))?' · locked':''}</option>`).join('')}</select></label>
-      <div class="skill-variant-links">${variants.map(v=>`<button class="ui-button ui-button--quiet" data-node="${specializationNode(v.id)}">${v.name} ↗</button>`).join('')}</div>` : ''}
+      <details class="skill-variant-links"><summary>Specialization paths</summary>${variants.map(v=>`<button class="ui-button ui-button--quiet" data-node="${specializationNode(v.id)}">${v.name} ↗</button>`).join('')}</details>` : ''}
       ${SKILL_NODES.has(masteryNode(id)) ? `<button class="ui-button ui-button--quiet" data-node="${masteryNode(id)}">Mastery · unlock ranks 6–7 ↗</button>` : ''}</section>`;
   }
   private updateAssignments(): void {
     if (!this.player) return;
     const skills = new Set(unlockedSkills(this.player.character.allocatedNodes));
+    const node = SKILL_NODES.get(this.selected)!, assigning = !!node.skill && this.allocated.has(node.id);
+    this.root.querySelector('[data-slot-help]')!.textContent = assigning ? `Assign ${SKILL_DEFINITIONS[node.skill!].name}` : '';
     this.assignments.innerHTML = BINDINGS.map((binding, index) => {
       const id = this.player!.character.skillSlots[index], skill = id && skills.has(id) ? SKILL_DEFINITIONS[id] : null;
-      return `<div class="skill-atlas-assigned ${skill ? 'is-filled' : ''}"><span class="skill-atlas-assigned-icon" ${skill ? `style="color:${skill.color}"` : ''}>${skill ? skillIconSVG(skill.id, 26) : '◇'}</span><div><span>${skill?.name ?? 'Empty slot'}</span><small><span class="desktop-binding">${binding}</span><span class="touch-only">Slot ${index+1}</span>${skill ? ` · rank ${activeSkillRank(this.player!.character,skill.id)}` : ''}${skill && !canUseSkill(skill.id, this.player!.equipment) ? ` · Requires ${escapeUI(skillRequirementLabel(skill.requirement))}` : ''}</small></div>${skill ? `<button class="ui-button ui-button--quiet ui-button--icon" data-clear="${index + 1}" aria-label="Remove ${skill.name} from ${binding}">×</button>` : ''}</div>`;
+      return `<div class="skill-atlas-assigned ${skill ? 'is-filled' : ''}"><button class="ui-button ui-button--quiet skill-slot-button" data-slot="${index+1}" aria-label="${assigning ? `Assign ${SKILL_DEFINITIONS[node.skill!].name} to` : 'Inspect'} ${binding}${skill ? `, ${skill.name}` : ', empty slot'}" title="${skill?.name ?? 'Empty slot'}" ${!assigning && !skill ? 'disabled' : ''}><span class="skill-atlas-assigned-icon" ${skill ? `style="color:${skill.color}"` : ''}>${skill ? skillIconSVG(skill.id, 24) : '◇'}</span><small><span class="desktop-binding">${binding}</span><span class="controller-binding">${PAD_SKILL_LABELS[index+1]}</span><span class="touch-only">${index+1}</span></small></button>${skill ? `<button class="ui-button ui-button--quiet skill-slot-clear" data-clear="${index+1}" aria-label="Remove ${skill.name} from ${binding}">×</button>` : ''}</div>`;
     }).join('');
   }
+
   private matches(node: SkillNode): boolean { return this.matching.has(node.id); }
   private updateResults(): void {
     const query = this.search.value.trim().toLowerCase();

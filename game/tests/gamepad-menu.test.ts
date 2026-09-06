@@ -107,3 +107,27 @@ test('select navigation changes enabled options and X only equips explicit inven
   root.bag = true; update([]); update([PAD.skill3]); assert.equal(shifts, 1);
   cell.location = false; update([]); update([PAD.skill3]); assert.equal(shifts, 1);
 });
+
+
+test('up/down leave a select without spending or changing skill configuration', () => {
+  const select = new Select(), assign = new Element();
+  let changes = 0; select.addEventListener('change', () => changes++);
+  const { update } = setup([select, assign]);
+  update([PAD.down]); assert.equal(doc.activeElement, assign);
+  assert.equal(changes, 0); assert.equal(select.selectedIndex, 0);
+  update([PAD.interact]); assert.equal(assign.clicks, 1);
+  update([PAD.up]); assert.equal(doc.activeElement, select);
+  update([PAD.right]); assert.equal(select.selectedIndex, 2); assert.equal(changes, 1);
+});
+
+test('canvas A can enter node actions without dispatching a second activation', () => {
+  const canvas = new Canvas(), assign = new Element(); let enters = 0, keys = 0;
+  canvas.addEventListener('keydown', () => keys++);
+  const { update } = setup([canvas, assign], { activate: target => {
+    if (target !== canvas as unknown as HTMLElement) return false;
+    enters++; assign.focus(); return true;
+  } });
+  update([PAD.interact]); assert.equal(enters, 1); assert.equal(keys, 0); assert.equal(assign.clicks, 0);
+  update([PAD.interact], 1000); assert.equal(assign.clicks, 0);
+  update([]); update([PAD.interact]); assert.equal(assign.clicks, 1);
+});

@@ -100,6 +100,7 @@ export class InventoryPanel {
         <div class="character-heading"><span class="character-sigil ui-header-emblem" aria-hidden="true">${uiIcon('star')}</span><h2 class="ui-title" id="character-title">Character &amp; inventory</h2></div>
         <div class="character-header-right"><span class="character-level" data-level></span><button type="button" class="ui-button ui-button--icon" data-close aria-label="Close character">${uiIcon('close')}</button></div>
       </header>
+      <nav class="character-controller-nav" aria-label="Controller sections"><kbd>LB</kbd><span data-pad-section="0">Equipment</span><span data-pad-section="1">Inventory</span><span data-pad-section="2">Stats</span><kbd>RB</kbd><small>A Select · B Back</small></nav>
       <div class="character-columns ui-scroll-area">
         <section class="character-equipment" id="character-section-0" data-section="0" aria-labelledby="equipment-title">
           <div class="character-section-title"><h3 id="equipment-title">Equipment</h3><span data-equipped-count></span></div>
@@ -351,6 +352,7 @@ export class InventoryPanel {
   private selectSection(index: number): void {
     this.section = index;
     const root = this.element.querySelector<HTMLElement>(`[data-section="${index}"]`)!;
+    this.updateSectionHighlight();
     const previous = this.sectionFocus.get(index);
     const target = previous && !previous.closest('[hidden], [inert]') && !previous.matches(':disabled') ? previous
       : root.querySelector<HTMLElement>('[data-bag]:not([hidden]), [data-equipment="weapon"], [data-allocate]:not(:disabled), h3[tabindex]')
@@ -360,6 +362,8 @@ export class InventoryPanel {
   }
 
   private updateSectionHighlight(): void {
+    for (const label of this.element.querySelectorAll<HTMLElement>('[data-pad-section]'))
+      label.setAttribute('aria-current', String(Number(label.dataset.padSection) === this.section));
     for (const section of this.element.querySelectorAll<HTMLElement>('[data-section]'))
       section.classList.toggle('is-selected-section', Number(section.dataset.section) === this.section);
   }
