@@ -245,6 +245,11 @@
 [data-tooltip-placement="below"]::after { bottom: auto; top: calc(100% + 9px); }
 [data-tooltip-align="end"]::after { left: auto; right: 0; transform: none; }
 [data-tooltip-align="start"]::after { left: 0; transform: none; }
+[data-tooltip-placement="left"]::after {
+  left: auto; right: calc(100% + 12px); top: 50%; bottom: auto;
+  max-width: min(220px, calc(100vw - 220px));
+  transform: translateY(-50%); text-align: left;
+}
 
 .ui-status {
   display: inline-flex;

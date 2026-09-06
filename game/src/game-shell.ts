@@ -44,8 +44,8 @@ export class GameShell {
         ${HUD_MENU_SHORTCUTS.map(shortcut => `<button type="button" class="hud-control" data-hud="${shortcut.id}"
           aria-haspopup="dialog" aria-keyshortcuts="${shortcut.key}" aria-label="${shortcut.label}" data-tooltip="${shortcut.label}"></button>`).join('')}
         <button type="button" class="hud-control" data-hud="map" aria-label="World map" aria-keyshortcuts="M"
-          aria-haspopup="dialog" data-tooltip="World map" data-tooltip-placement="below" data-tooltip-align="end"></button>
-        <button type="button" class="hud-control portal-control hud-sidebar-surface" data-hud="portal" aria-label="Town portal" aria-keyshortcuts="P" data-tooltip="Town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('portal')}<span class="portal-label">Town portal</span><kbd class="hud-sidebar-key">P</kbd><i class="portal-progress" aria-hidden="true"></i></button>
+          aria-haspopup="dialog" data-tooltip="World map" data-tooltip-placement="left"></button>
+        <button type="button" class="hud-control portal-control hud-sidebar-surface" data-hud="portal" aria-label="Town portal" aria-keyshortcuts="P" data-tooltip="Town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="left">${uiIcon('portal')}<span class="portal-label">Town portal</span><kbd class="hud-sidebar-key">P</kbd><i class="portal-progress" aria-hidden="true"></i></button>
       </nav>
       <div id="title-mount"></div>
       <div id="world-map-mount"></div>
