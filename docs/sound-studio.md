@@ -34,3 +34,5 @@ After palette approval, replace the generic runtime recipes with the selected ca
 Code tests validate every bundled PCM source and duration, and cover all variations at tuning extremes, finite bounded recipes, deterministic regeneration, cancellation during compilation, stale request suppression, repeat caching, voice limits, teardown and PCM export. Architecture checks and strict/core compilation pass. These checks do not establish listening quality or browser audio performance; those are reviewed by the user in the studio.
 
 Level-up revision: the heavy gong/bell pairing was rejected in listening feedback. Its replacement is a short reversed-cloth gather, filtered flame body and two quiet glass accents; no gong or bell layer. It remains an audition candidate.
+
+Rare-item revision: removed the bell and coin-handling overlay after listening feedback. Rare pickup now retains the common equipment/leather identity with a short reversed-cloth gather and quiet glass accent.

@@ -37,7 +37,11 @@ const definitions = [
   { id:'coin-spill', name:'Coin handful', family:'rewards', detail:'A handful of coins with uneven contacts and natural settling.', layers:()=>[sample('coins-1',.55,1)] },
   { id:'xp-pickup', name:'XP absorption', family:'rewards', detail:'A quiet reversed bell fragment and a soft, airy material pass.', layers:()=>[sample('bell',.09,1.8,0,5500,true),sample('cloth',.08,1.35)] },
   { id:'item-common', name:'Common item', family:'rewards', detail:'Leather handling and a small equipment buckle.', layers:()=>[sample('leather',.43),sample('latch',.12,1.12,.04)] },
-  { id:'item-rare', name:'Rare item', family:'rewards', detail:'A physical equipment pickup finished by a single warm bell.', layers:()=>[sample('leather',.38),sample('coins-2',.16,.96,.025),sample('bell',.28,1.23,.055,6800)] },
+  { id:'item-rare', name:'Rare item', family:'rewards', detail:'A clear equipment pickup with a brief, soft crystalline accent.', layers:()=>[
+    sample('leather',.4),sample('latch',.09,1.12,.025,4800),
+    {...sample('cloth',.085,1.8,0,3200,true),attack:.035},
+    {...sample('glass-1',.085,1.6,.11,4300),attack:.016},
+  ] },
   { id:'level-up', name:'Level up', family:'rewards', detail:'A short gathering breath, a warm release and a small crystalline finish.', layers:()=>[
     {...sample('cloth',.19,1.65,0,2400,true),attack:.055},
     {...sample('flame',.16,1.2,.17,1700),attack:.04},
