@@ -412,7 +412,7 @@ export class Renderer {
     if (this.extraUIBounds) barkReserved.push(this.extraUIBounds);
     if (this.touchActive) barkReserved.push({ x: 0, y: this.height - 190 * unit, width: this.width, height: 190 * unit });
     this.battleBarks.draw(c, sim, world, this.view, settings.phase === 'playing' && !p.dead,
-      this.cachedProps, barkReserved);
+      this.cachedProps, barkReserved, this.crownOpacity);
     c.save();
     if(phone) { c.translate(headerX,headerY); c.scale(.8*unit,.8*unit); }
     this.navigation(c, sim, world, settings);
@@ -515,12 +515,16 @@ export class Renderer {
       const occludes = crown && py < prop.y + 8 && py > prop.y - (crown.height + crown.radius) * prop.scale
         && Math.abs(px - prop.x - crown.offsetX * prop.scale) < crown.radius * prop.scale;
       let foliageOpacity = occludes ? .24 : 1;
+      if (settings.reducedMotion) {
+        if (occludes) this.crownOpacity.set(prop.id, foliageOpacity);
+        else this.crownOpacity.delete(prop.id);
+      }
       if (sprite.foliage && !settings.reducedMotion) {
         foliageOpacity += ((this.crownOpacity.get(prop.id) ?? 1) - foliageOpacity) * Math.exp(-dt * 13);
         if (!occludes && foliageOpacity > .995) this.crownOpacity.delete(prop.id);
         else this.crownOpacity.set(prop.id, foliageOpacity);
-        if (this.crownOpacity.size > 512) this.crownOpacity.delete(this.crownOpacity.keys().next().value!);
       }
+      if (this.crownOpacity.size > 512) this.crownOpacity.delete(this.crownOpacity.keys().next().value!);
       c.save(); c.translate(prop.x, prop.y); c.scale(prop.scale, prop.scale);
       // Trunks stay rooted and opaque. Only the obstructing canopy becomes translucent.
       if (!sprite.foliage && definition.radius[1] === 0) {

@@ -29,7 +29,8 @@ export class BattleBarkScene {
   reset(): void { this.barks.reset(); }
   noteEvents(events: readonly CombatEvent[]): void { this.barks.noteEvents(events); }
   draw(c: CanvasRenderingContext2D, sim: Simulation, world: World, view: CameraView,
-    enabled: boolean, props: SceneVisibility['props'], reserved: BarkRect[]): void {
+    enabled: boolean, props: SceneVisibility['props'], reserved: BarkRect[],
+    crownOpacity?: ReadonlyMap<string, number>): void {
     if (!GAME_FEATURES.battleBarks) { this.reset(); return; }
     const project = (x: number, y: number) => worldToScreen(view, x, y);
     const width = view.width * view.zoom, height = view.height * view.zoom;
@@ -74,23 +75,20 @@ export class BattleBarkScene {
       }
     }
     for (const effect of sim.groundEffects) reserved.push(rectangle(effect.x - effect.radius, effect.y - effect.radius, effect.radius * 2, effect.radius * 2));
-    // Snapshot-position checks prevent a formerly offscreen engagement appearing later.
-    const visible = (id: number, event?: Extract<CombatEvent, { type: 'engagement' }>) => {
+    // Admission uses the current head position during the bounded greeting window.
+    const visible = (id: number) => {
       const enemy = actors.get(id), at = positions.get(id);
       if (!enemy || !at || !enemyEngaged(enemy) || sim.player.dead) return false;
       const body = ENEMY_BODY_BOUNDS[enemy.kind], head = project(at.x, at.y + body.top);
       const feet = project(at.x, at.y + body.bottom);
       if (head.x < body.radiusX * view.zoom || head.x > width - body.radiusX * view.zoom || head.y < 0 || feet.y > height) return false;
-      if (event) {
-        const start = project(event.x, event.y + body.top);
-        if (start.x < 0 || start.x > width || start.y < 0 || start.y > height) return false;
-      }
       if (!hasLineOfSight(world, p.x, p.y, at.x, at.y)) return false;
-      // Roofs and foreground canopies are opaque to speech, even when foliage fades for the player.
+      // Bare branches and foliage faded by the renderer do not hide an otherwise visible speaker.
       if (world.getBuildingAt(at.x, at.y)) return false;
       const headY = at.y + body.top;
       return !props.some(prop => {
         if (prop.y < at.y) return false;
+        if (prop.kind === 'deadTree' || prop.kind === 'charredTree' || (crownOpacity?.get(prop.id) ?? 1) < .5) return false;
         const crown = propDefinition(prop.kind).canopy;
         return !!crown && Math.abs(at.x - prop.x - crown.offsetX * prop.scale) < crown.radius * prop.scale
           && headY > prop.y - (crown.height + crown.radius) * prop.scale

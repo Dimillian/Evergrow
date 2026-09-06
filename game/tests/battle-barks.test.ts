@@ -74,8 +74,8 @@ test('seven humanoid voices each have 20 unique short lines; hounds and wisps st
   update(barks, 0, ids(1, 2)); assert.equal(rolls, 0); assert.equal(barks.active.length, 0);
 });
 
-test('15% threshold rolls once per encounter; repeated alerts and failed rolls do not retry', () => {
-  for (const [random, count] of [[.149, 1], [.15, 0], [.99, 0]]) {
+test('25% threshold rolls once per encounter; repeated alerts and failed rolls do not retry', () => {
+  for (const [random, count] of [[.249, 1], [.25, 0], [.99, 0]]) {
     const barks = new BattleBarks(() => random);
     barks.noteEvents([edge(1)]); update(barks, 0); assert.equal(barks.active.length, count);
     for (let t = 1; t < 20; t++) { barks.noteEvents([edge(1, t)]); update(barks, t); }
@@ -91,8 +91,8 @@ test('all populations share spacing and the hard cap, including fading speech', 
   assert.equal(barks.active.length, 3);
   living.add(4); barks.noteEvents([edge(4, 1.85, true, 'caster')]); update(barks, 1.85, living);
   assert.equal(barks.active.length, 3, 'fade-out still occupies a slot');
-  update(barks, 2.5, living);
-  assert.equal(barks.active.some(b => b.id === 4), false, 'suppressed requests never queue');
+  update(barks, 2.9, living);
+  assert.equal(barks.active.some(b => b.id === 4), true, 'a successful greeting can use the next free slot');
   for (let id = 5; id <= 48; id++) {
     const time = 2.5 + id * .1; living.add(id); barks.noteEvents([edge(id, time)]); update(barks, time, living);
     assert.ok(barks.active.length <= BARK_RULES.maxVisible);
@@ -101,24 +101,42 @@ test('all populations share spacing and the hard cap, including fading speech', 
   }
 });
 
-test('simultaneous candidates are not biased to the first roster entry and do not queue', () => {
+test('simultaneous successful greetings share the opening window without roster bias', () => {
   const barks = new BattleBarks(() => 0);
   barks.noteEvents([edge(1), edge(2), edge(3)]); update(barks, 0, ids(1, 2, 3));
   assert.equal(barks.active.length, 1); assert.notEqual(barks.active[0].id, 1);
-  update(barks, 1, ids(1, 2, 3)); assert.equal(barks.active.length, 1);
-  update(barks, 3, ids(1, 2, 3)); assert.equal(barks.active.length, 0);
+  update(barks, .8, ids(1, 2, 3)); assert.equal(barks.active.length, 2);
+  update(barks, 1.6, ids(1, 2, 3)); assert.equal(barks.active.length, 3);
+  update(barks, 4.5, ids(1, 2, 3)); assert.equal(barks.active.length, 0);
 });
 
-test('offscreen or obstructed starts and later crowding are dropped permanently', () => {
+test('successful greetings survive brief obstruction but cannot appear after the admission deadline', () => {
   for (const hiddenAtStart of [true, false]) {
     const barks = new BattleBarks(() => 0); barks.noteEvents([edge(1)]);
     barks.update(0, ids(1), true, () => !hiddenAtStart, () => hiddenAtStart);
     assert.equal(barks.active.length, 0);
-    update(barks, 1); assert.equal(barks.active.length, 0);
+    update(barks, 1); assert.equal(barks.active.length, 1);
   }
+  const expired = new BattleBarks(() => 0); expired.noteEvents([edge(1)]);
+  expired.update(0, ids(1), true, () => false, visible);
+  update(expired, BARK_RULES.admissionWindow); assert.equal(expired.active.length, 0);
+});
+
+test('temporary overlap hides active speech without restarting its lifetime or releasing its slot', () => {
   const barks = new BattleBarks(() => 0); barks.noteEvents([edge(1)]); update(barks, 0);
-  update(barks, .5, ids(1), true, () => false); assert.equal(barks.active.length, 0);
-  update(barks, 1); assert.equal(barks.active.length, 0);
+  update(barks, .5, ids(1), true, () => false); assert.equal(barks.active.length, 1);
+  let placed = 0;
+  update(barks, 1, ids(1), true, () => { placed++; return true; });
+  assert.equal(placed, 1); assert.equal(barks.active[0].started, 0);
+  update(barks, BARK_RULES.duration); assert.equal(barks.active.length, 0);
+});
+
+test('blocked placement retains its selected line without rolling every frame', () => {
+  let rolls = 0;
+  const barks = new BattleBarks(() => { rolls++; return 0; }); barks.noteEvents([edge(1)]);
+  for (let frame = 0; frame < 120; frame++) update(barks, frame / 60, ids(1), true, () => false);
+  assert.equal(rolls, 2, 'one encounter roll and one line choice');
+  update(barks, 2); assert.equal(barks.active.length, 1);
 });
 
 test('both continuous disengagement and the per-actor attempt cooldown must elapse', () => {
@@ -245,10 +263,23 @@ test('runtime overlay yields to world walls, roofs, foreground foliage and reser
   }
 });
 
-test('runtime overlay does not show offscreen engagement after camera arrival, or leak through menus and resets', () => {
+test('visible speakers can bark through bare branches and foliage already faded by the renderer', () => {
+  for (const kind of ['deadTree', 'charredTree', 'tree'] as const) {
+    const { sim, drawn, c, w, scene } = sceneFixture(), view = cameraView(960, 600, 0, 0, 1);
+    const props = [{ id: 'test-tree', kind, x: 180, y: 30, scale: 1, radius: 10, seed: 1 }];
+    const opacity = kind === 'tree' ? new Map([['test-tree', .24]]) : undefined;
+    scene.draw(c, sim, w, view, true, props, [], opacity);
+    sim.time = .2; scene.draw(c, sim, w, view, true, props, [], opacity);
+    assert.ok(drawn.length > 0, kind);
+  }
+});
+
+test('runtime overlay admits recent offscreen engagement on arrival, but never leaks through menus and resets', () => {
   const { sim, drawn, c, w, scene } = sceneFixture(), view = cameraView(960, 600, 0, 0, 1);
   scene.draw(c, sim, w, cameraView(960, 600, -1500, 0, 1), true, [], []);
-  sim.time = .2; scene.draw(c, sim, w, view, true, [], []); assert.equal(drawn.length, 0);
+  sim.time = .2; scene.draw(c, sim, w, view, true, [], []);
+  sim.time = .4; scene.draw(c, sim, w, view, true, [], []); assert.ok(drawn.length > 0);
+  drawn.length = 0;
   scene.reset(); scene.noteEvents([edge(1, .2, true, 'brute')]);
   scene.draw(c, sim, w, view, false, [], []); sim.time = .4;
   scene.draw(c, sim, w, view, true, [], []); assert.equal(drawn.length, 0);

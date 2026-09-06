@@ -1,6 +1,6 @@
 # Ashglass battle barks — visual verification
 
-2026-09-07. Scope: implement the user's selected overhead bubble component inside the existing procedural game. No new raster assets, page redesign, deployment or gameplay automation.
+Initial checkpoint (2026-09-07). Scope: implement the user's selected overhead bubble component inside the existing procedural game. No new raster assets, page redesign, deployment or gameplay automation.
 
 ## Visual truth and evidence
 
@@ -29,8 +29,16 @@
 
 ## Behavior and limits
 
-15 dedicated code tests cover probability, encounter edges, all seven speakers, spacing/cap including fade-out, no deferred queue, cooldowns, recent-line exclusion, measured placement, wall/roof/foliage and UI exclusions, pause/reset/death/camera cleanup, zoom independence and identical simulation checkpoints with different bark RNG streams. Full `npm run check`: 747 tests passed, application and headless compilation passed, production build passed. Existing nonblocking bundle-size advisory remains.
+At the initial checkpoint, 15 dedicated code tests covered probability, encounter edges, all seven speakers, spacing/cap including fade-out, no deferred queue, cooldowns, recent-line exclusion, measured placement, wall/roof/foliage and UI exclusions, pause/reset/death/camera cleanup, zoom independence and identical simulation checkpoints with different bark RNG streams. Full `npm run check`: 747 tests passed, application and headless compilation passed, production build passed. Existing nonblocking bundle-size advisory remains.
 
-The preview reached its ready state and the in-app browser reported no warning/error logs. Combat frequency, moving crowds and readability during actual play remain user-tested, as required by AGENTS.md. This review does not claim automated gameplay validation or pixel identity with an ImageGen forest scene.
+The preview reached its ready state and the in-app browser reported no warning/error logs. That initial review left combat frequency, moving crowds and readability during actual play to user testing. This review does not claim automated gameplay validation or pixel identity with an ImageGen forest scene.
 
 final result: passed
+
+## Live encounter follow-up — 2026-09-07
+
+The user explicitly requested agent gameplay testing after reporting no barks. Used the existing Codex in-app browser, a separate Bark playtest character, seed 7319, and normal movement/potion inputs. Inspected actual encounter rolls without replacing RNG or forcing speech. Four humanoids failed their original chance rolls. A later successful roll still failed placement. The original implementation also blanket-occluded sparse dead-tree branches and discarded successful starts after a single blocked frame.
+
+Revised policy: 25% once per encounter, four-second bounded admission window, 2.8-second lifetime, unchanged 0.8-second spacing and three-slot cap. Brief obstruction hides active speech without restarting it. Bare branches and rendered translucent foliage no longer count as opaque crowns. In the subsequent live road encounter, the screenshot visibly showed a Hollow Stalker saying “These claws need work.” with its tail attached above the real model, clear of the nearby hound tell and HUD. This was a natural random outcome. Temporary observation wrappers were removed by hot replacement; no debug hooks were added to production code.
+
+Full checks passed: 752 code tests, including 20 dedicated bark tests; application/headless compilation and production build. Existing bundle-size advisory remains. This verifies live appearance and regression behavior, not a statistical survey of all biomes or final combat-frequency balance. No save reset; the test character remains separate in the local character hall.
