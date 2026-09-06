@@ -66,7 +66,7 @@ export function drawResourcePickups(c: CanvasRenderingContext2D, pickups: readon
 
 /** Crisp names and an explicit quality/level line; leaders identify packed drops. */
 export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly GroundItem[],
-  project: (x: number, y: number) => { x: number; y: number }, width: number, height: number): void {
+  project: (x: number, y: number) => { x: number; y: number }, width: number, height: number) {
   const positions = lootPositions(drops);
   const byId = new Map(drops.map(drop => [drop.id, drop]));
   const anchors = positions.map(({ drop, x, y }) => ({ id: drop.id, ...project(x, y),
@@ -89,4 +89,5 @@ export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly Grou
     c.restore();
   }
   c.restore();
+  return boxes.map(box => ({ x: box.left, y: box.top, width: box.width, height: box.height }));
 }

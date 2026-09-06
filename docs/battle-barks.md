@@ -1,6 +1,6 @@
-# Humanoid battle barks — design proposal
+# Humanoid battle barks — Ashglass
 
-2026-09-07. Proposed content and presentation, awaiting visual selection. No runtime behavior or saves changed. Text bubbles only; recorded voice is outside this proposal.
+2026-09-07. Implemented with the selected **Ashglass** treatment (option 1). Seven humanoid pools contain 20 lines each. Speech is presentation only: no combat changes, recorded voice, save-format changes or progress reset.
 
 ## Battlefield rules
 
@@ -10,8 +10,8 @@
 - Display for **2 seconds total**, including a 0.12-second fade in and 0.25-second fade out. No typewriter effect, bounce, sound, screen shake or pauses. Freeze lifetime with gameplay pause; reduced motion has no translation animation.
 - A speaker must be alive, visibly on screen, unobscured and actively engaged. An offscreen initial engagement does not leave a bark waiting for the camera. Remove speech immediately on death, loss of visibility, encounter end or location change. Menus hide speech.
 - One attempt per encounter; rearm only after **30 continuous seconds disengaged**, with a **45-second minimum between attempts** for the same actor. Brief home-return, zooming and camera movement must not manufacture new opportunities. Persist nothing to character saves.
-- Draw after world post-processing at native display resolution. Use the shared font stack after `loadGameFont()`: Pixelify Sans lettering, Evergrow Numerals/Barlow for numeric glyphs. Default text 16 CSS px, up to two lines, maximum 220 CSS px outer width. Short lines shrink to content; never shrink text to fit.
-- Anchor the short tail 8–12 CSS px above the interpolated head/crown, accounting for antlers and helmets. Text size stays independent of world zoom. Tail and body stay together; no detached edge-clamped speech.
+- Draw after world post-processing at native display resolution. Use the shared font stack after `loadGameFont()`: Pixelify Sans lettering, Evergrow Numerals/Barlow for numeric glyphs. Default text 16 logical UI px, up to two lines, maximum 220 logical UI px outer width, rasterized at native display resolution like the existing HUD. Short lines shrink to content; never shrink text to fit.
+- Anchor the short tail 10 logical UI px above the interpolated head/crown, accounting for antlers, helmets and visible health/rank markers. Text size stays independent of world zoom. Tail and body stay together; no detached edge-clamped speech.
 - Try a small bounded set of placements above the head. Reserve HUD, player silhouette, attack tells, damage numbers, enemy heads/weapons, loot labels and other bubble rectangles. If no safe placement fits, skip. Recheck moving placements; suppress instead of stacking or wandering far from the speaker. A partly offscreen bubble is suppressed.
 - Select uniformly from the speaker's 20 lines, excluding that archetype's last three emitted lines. Separate presentation RNG from AI, loot, coins and combat; speech cannot change damage, decisions, seeds or saves.
 
@@ -31,7 +31,7 @@ Seven humanoids are grounded in `EnemyKind`, `ENEMY_DEFINITIONS`, the actual bes
 | Ashen Ranger | Hood, thorn mantle, bow and quiver | Cool professional sarcasm; precise threats, impatience with moving targets | Run. I enjoy the practice. |
 | The Hollow Warden | Towering crowned tomb sentinel, ribbed plate, great axe | Formal, sepulchral authority; trespass decrees and restrained caretaker humor | Visiting hours are over. |
 
-Humor comes from their role in the world. Avoid modern memes, fourth-wall jokes, slurs, extended gore or long dialogue. Keep one shared selected bubble treatment for readability; the words carry personality rather than seven unrelated UI skins.
+Humor comes from their role in the world. Avoid modern memes, fourth-wall jokes, slurs, extended gore or long dialogue. Keep one shared Ashglass bubble treatment for readability; the words carry personality rather than seven unrelated UI skins.
 
 ## Scrap Goblin — 20 lines
 
@@ -196,15 +196,23 @@ Humor comes from their role in the world. Avoid modern memes, fourth-wall jokes,
 
 ## Four visual directions
 
-The [mockup gallery](concepts/battle-barks/README.md) contains four independent generated images using captured runtime models as references. They are design concepts, not exact runtime captures or production assets. All four use the same three lines and enemy types to compare treatments. The authoring header/footer is outside the battlefield and would not ship.
+The [historical mockup gallery](concepts/battle-barks/README.md) contains four independent generated images using captured runtime models as references. **Option 1, Ashglass, was selected and implemented.** They are design concepts, not exact runtime captures or production assets. All four use the same three lines and enemy types to compare treatments. The authoring header/footer is outside the battlefield and would not ship.
 
 1. **Ashglass:** charcoal fill, muted silver outline, small rounded corners and short tail. Closest to the existing Astral materials; recommended starting point for low obstruction.
 2. **Bonepaper:** bone-ivory paper, charcoal text, clipped corners and folded tail. Strongest contrast and clearest storybook humor, but visually louder.
 3. **Ironbite:** compact angular dark plaque, restrained ochre edge and sharp tail. More aggressive silhouette; avoid excessive spikes or a damage-number appearance.
 4. **Mistwhisper:** small smoky oval bubble, soft edge and tapered tail. Lightest framing; test contrast over bright climates before selection.
 
-## Implementation handoff after selection
+## Implementation and verification
 
-Keep the library and policy immutable and separate from presentation. Feed awareness transitions to a bounded presentation controller without importing presentation into enemy AI. One renderer pass owns admission, screen collisions and the three-bubble cap. Resolve whether each transition is eligible at that time; never infer encounters from repeated visibility checks. Track only live actors plus bounded cooldown history; clear on reset/location changes and discard stale actors.
+`battle-bark-content.ts` owns the frozen 140-line library and policy. `enemy-engagement.ts` observes fixed-tick state edges after AI, projectile and ground-effect damage, including direct alerts and the Warden. Its typed `engagement` event carries actor identity, source kind, position, time and engagement state. It neither rolls randomness nor mutates actors.
 
-Required headless checks when implemented: all seven speakers have exactly 20 unique nonempty lines; nonhumanoids excluded; one roll per encounter; seeded injected presentation randomness does not consume simulation RNG; suppression never queues; fades count toward three; global spacing; cooldown/rearm rules; death/offscreen/menu/teleport cleanup; pause behavior; bounded placement rejection. Type checking and production build remain appropriate. Gameplay testing stays with the user; no automated browser gameplay is authorized by this proposal.
+`battle-barks.ts` owns the independent chance roll, recent-line exclusion, cooldowns, global spacing and three-bubble cap. Successful rolls are considered on the next UI frame and discarded if suppressed; they never wait for space. Only current living actor records are retained, with an additional hard ceiling of 64. `Renderer.reset()` clears presentation on character reset and durable location arrivals. Character saves contain no bark state.
+
+`battle-bark-layout.ts` fits naturally measured text into at most two lines with six bounded local placements. `battle-bark-scene.ts` applies visibility, canopy/roof occlusion, the actual interpolated model heads and scene exclusions. `ENEMY_SPEECH_TOP` distinguishes authored head height from conservative aim bounds. Health/rank markers can lift the anchor. Damage-number and loot-label drawing return their actual occupied rectangles; speech yields to those as well as the top HUD strip, minimap, portal controls, Astral instrument, touch footer, Journey panel, player, enemy bodies and attack tells. The Warden fracture lanes and hound pounces consume the same warning definitions as their art. Conservative exclusions intentionally prefer silence in crowded fights.
+
+`battle-bark-art.ts` draws one continuous charcoal-glass shape with a muted silver outline, rounded corners and a short triangular tail. It uses the bundled font stack with sentence case. It draws only on the native UI surface after CRT world processing. Opacity fades use simulation time, including save-barrier and menu freezes; no animation changes under reduced motion are needed because there is no translation, bounce or typewriter effect.
+
+The local `/bestiary.html?barks=1` preview shows the same bubble art above three actual frozen models, without gameplay or save access. [Implementation capture](captures/2026-09-07/battle-barks/ashglass.jpg). The study is illustrative: gameplay still uses the chance and visibility controller. Its header/footer never appear in the game.
+
+`tests/battle-barks.test.ts` covers the seven 20-line pools, exact probability boundary, repeated alerts, global cap including fading bubbles, spacing, suppression/no queueing, cooldown/rearm rules, recent-line exclusion, bounded cleanup, pauses/resets, measured layout, real simulation engagement and RNG isolation. Scene integration checks all seven humanoids at three zoom levels plus wall/roof/canopy, HUD, menu, reset and camera-arrival suppression. Type checking and the production build cover the native overlay integration. Static review establishes bubble appearance; the user evaluates combat frequency and feel. No automated browser gameplay was run.

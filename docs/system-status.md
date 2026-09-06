@@ -1,6 +1,6 @@
 # Current system status
 
-Updated 2026-09-06 after cloud-save publication and the Thor controller/sidebar update. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
+Updated 2026-09-07 after the Ashglass battle-bark checkpoint. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
 
 ## Implemented systems
 
@@ -30,6 +30,7 @@ Updated 2026-09-06 after cloud-save publication and the Thor controller/sidebar 
 | Water | Descending drainage networks, local cell-based waves, footsteps/impact splashes, refracted shallows, distorted reflections and shader highlights | Traversable water; no swimming, flooding, erosion or boats; see [living water](living-water.md) |
 | Presentation | Procedural equipment/world art, layered trees, wind/wildlife, dynamic lighting, fixed restrained CRT/phosphor; readable native UI, enemy rank plates, animated deaths and fading remains | Hardware performance and visual acceptance remain separate from code checks |
 | UI foundation | Astral HUD, shared compact windows, consistent tooltip motion and item components; centralized panel lifecycle; point badges and compact notifications | Service panels reuse these components; equipped gear is separate and first |
+| Enemy battle barks | Ashglass overhead bubbles; 20 lines each for seven humanoids, 15% engagement chance, two-second lifetime, maximum three visible and shared spacing; no gameplay RNG or save state | Initial frequency and combat readability await player feedback; [guide](battle-barks.md) |
 | Notifications | Separate named item cards, level/point gains, discovered POIs and debounced biome entry; gold accumulates at its HUD counter, XP animates toward its rail; level and Journey completion use shared celebrations | No duplicate gold/XP feed cards |
 
 ## Starting character and core rules
@@ -70,3 +71,7 @@ Thor controller checkpoint: 21 focused controller/skill tests passed, including 
 ### Handheld optimization checkpoint — September 6
 
 Native-density static HUD chrome caching avoids rebuilding metalwork every frame. Thor skips map rasterization/PNG transfer behind Pack, Build and item details. Touch/controller directional assistance respects action reach, visibility and manual ground targeting. Routine checkpoints run every 20 seconds, cloud outbox batches at 30 seconds with explicit flushes; immediate local transactions remain unchanged. Cloud cadence awaits the next requested Site deployment.
+
+Android checkpoint stats (historical): 227 runtime TypeScript modules / 25,154 lines; 95 code-test files; 24 development review entrypoints; zero runtime dependencies. Content: seven biomes, nine enemy archetypes, 20 active skills, 2,185 skill nodes and 17 POI kinds. Source counts come from `npm run stats` at this checkpoint.
+
+Ashglass battle-bark checkpoint: 747 passing code tests, application/headless type checks and production build. The 15 bark tests cover content, encounter policy, cleanup, projection/occlusion and gameplay RNG isolation. Static in-app model review has no console warnings/errors; combat feel remains user-tested. Current source stats: 240 runtime TypeScript modules / 26,378 lines, 97 code-test files, 24 development review entrypoints and zero runtime dependencies. No save reset.

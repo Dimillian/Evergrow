@@ -1,6 +1,6 @@
 # Battle-bark visual directions
 
-2026-09-07. Four independent built-in ImageGen concepts, ordered as displayed in the design conversation. Based on actual runtime model captures; generated scenes are illustrative, not exact game renders. No runtime integration yet. See the [full proposal, cast direction and 140 barks](../../battle-barks.md) and [exact prompts/reference paths](prompts.md).
+2026-09-07. Four independent built-in ImageGen concepts, ordered as displayed in the design conversation. Based on actual runtime model captures; generated scenes are illustrative, not exact game renders. Option 1, Ashglass, was subsequently selected and implemented; see the current guide below. See the [full proposal, cast direction and 140 barks](../../battle-barks.md) and [exact prompts/reference paths](prompts.md).
 
 All four compare Scrap Goblin, Gravebound Brute and Mire Hexer with identical dialogue. The seven-speaker voice plan covers the other humanoids separately. Each battlefield shows exactly three bubbles to illustrate the ceiling, not the expected frequency. Titles and policy footers are review annotations only.
 
