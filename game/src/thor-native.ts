@@ -40,7 +40,6 @@ export interface ThorHost {
 /** Four bounded UI snapshots/second; terrain image refreshes twice/second. Never simulates a second player. */
 export class ThorNative {
     private abort = new AbortController();
-    presented = false;
     private next = 0;
     private nextMap = 0;
     private host: ThorHost;
@@ -62,8 +61,7 @@ export class ThorNative {
             return;
         this.next = now + 250;
         try {
-            this.presented = window.EvergrowAndroid.hasCompanion();
-            if (!this.presented)
+            if (!window.EvergrowAndroid.hasCompanion())
                 return;
             const map = now >= this.nextMap;
             if (map)
@@ -78,9 +76,8 @@ export class ThorNative {
                 window.EvergrowAndroid.publish(payload);
         }
         catch (error) {
-            this.presented = false;
             console.warn('Companion display update failed', error);
         }
     }
-    dispose() { this.presented = false; this.abort.abort(); }
+    dispose() { this.abort.abort(); }
 }

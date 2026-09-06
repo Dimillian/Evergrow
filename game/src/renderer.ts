@@ -156,7 +156,7 @@ export class Renderer {
     // Input targets the last displayed frame, including its small impact impulse.
     return screenToWorld(this.view, x, y);
   }
-  minimapVisible = true;
+  navigationVisible = true;
   gamepadActive = false;
   touchActive = false;
   touchTopInset = 0;
@@ -790,7 +790,7 @@ export class Renderer {
   }
 
   private pointerOverHUD() {
-    return !this.gamepadActive && !this.touchActive && isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height, this.extraUIBounds, this.minimapVisible);
+    return !this.gamepadActive && !this.touchActive && isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height, this.extraUIBounds, this.navigationVisible);
   }
 
   private cursor(c: CanvasRenderingContext2D, sim: Simulation) {

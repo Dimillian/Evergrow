@@ -6,7 +6,7 @@ Both Android windows request a matching-resolution 60 Hz display mode. The main 
 
 ## Two screens, one character
 
-The upper screen runs the game. While the lower display is on, presented and its companion UI is ready, the upper minimap (including crypts) and short Journey list are hidden. They return automatically within the 250 ms presence polling interval when the companion is unavailable. Hidden map/quest hit regions are released; full maps and the journal remain accessible. This detects the app’s Presentation, not whether another system overlay is covering it.
+The upper screen runs the game. Its minimap (including crypts), short Journey list and town portal form one navigation group, with shared visibility and hit regions. Keep this group visible on Thor even when a companion Presentation exists: the firmware dashboard can cover that window while Android reports it as presented, powered on and visible. The native presence check is suitable for transport availability only, not proof the user can see navigation. No reliable dashboard-occlusion signal was found in the normal app APIs; automatic upper-HUD hiding has been removed. Compact phone layouts still use their dedicated touch navigation.
 
 The lower screen uses the Astral UI palette, shared procedural item art, Pixelify lettering, and Barlow numerals:
 

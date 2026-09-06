@@ -66,7 +66,6 @@ export class ThorRuntime {
         }
         return state;
     }
-    get presented() { return this.bridge.presented; }
     dismissInspection(): boolean {
         if (!this.commands.selection.selected)
             return false;
