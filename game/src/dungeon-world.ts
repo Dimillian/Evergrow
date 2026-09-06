@@ -1,3 +1,4 @@
+import { drawCryptSurface } from './dungeon-surface.ts';
 import { World, TILE_SIZE } from './world.ts';
 import { DungeonGeometry, type DungeonFloor } from './dungeon.ts';
 import type { DungeonEntrance } from './dungeon.ts';
@@ -37,61 +38,10 @@ export class DungeonWorld extends World {
         tile = create ? create() : document.createElement('canvas');
         tile.width = tile.height = TILE_SIZE;
         const c = tile.getContext('2d')!;
-        c.fillStyle = '#070c12';
-        c.fillRect(0, 0, 256, 256);
-        for (let y = 0; y < 256; y += 32)
-            for (let x = 0; x < 256; x += 32) {
-                const wx = tx * 256 + x, wy = ty * 256 + y, open = !this.blocked(wx + 16, wy + 16, 0), bits = stoneHash(wx, wy, this.seed), n = bits % 10;
-                if (open) {
-                    c.fillStyle = `rgb(${29 + n},${39 + n},${42 + n})`;
-                    c.fillRect(x, y, 32, 32);
-                    c.fillStyle = '#0c1a2450';
-                    c.fillRect(x, y, 32, 1);
-                    c.fillRect(x, y, 1, 32);
-                    c.fillStyle = '#8a928b22';
-                    c.fillRect(x + 2, y + 2, 28, 1);
-                    for (let i = 0; i < 9; i++) {
-                        const h = stoneHash(wx + i * 13, wy + i * 27, this.seed);
-                        c.fillStyle = i % 3 ? '#85958c12' : '#08172030';
-                        c.fillRect(x + 2 + h % 28, y + 2 + (h >>> 8) % 28, 1 + (h >>> 16) % 3, 1);
-                    }
-                    if (bits % 7 === 0) {
-                        c.fillStyle = '#61725425';
-                        c.beginPath();
-                        c.ellipse(x + 7, y + 25, 7, 3, .3, 0, 7);
-                        c.fill();
-                    }
-                    if (bits % 13 === 0) {
-                        c.fillStyle = '#adb39a38';
-                        c.fillRect(x + 22, y + 18, 3, 2);
-                        c.fillRect(x + 17, y + 25, 2, 2);
-                    }
-                    if (n % 4 === 0) {
-                        c.strokeStyle = '#162329';
-                        c.beginPath();
-                        const k = (bits >>> 8) % 15;
-                        c.moveTo(x + 4 + k, y + 2);
-                        c.lineTo(x + 8 + k, y + 11);
-                        c.lineTo(x + 4 + k, y + 20);
-                        c.lineTo(x + 7 + k, y + 29);
-                        c.stroke();
-                    }
-                }
-                else if ([[32, 0], [-32, 0], [0, 32], [0, -32]].some(([dx, dy]) => !this.blocked(wx + 16 + dx, wy + 16 + dy, 0))) {
-                    c.fillStyle = '#435452';
-                    c.fillRect(x, y, 32, 32);
-                    c.fillStyle = '#788578';
-                    c.fillRect(x + 1, y + 1, 30, 3);
-                    c.fillStyle = '#182630';
-                    c.fillRect(x + 2, y + 17, 29, 14);
-                    c.strokeStyle = '#12212a';
-                    c.strokeRect(x + .5, y + .5, 31, 31);
-                }
-            }
+        drawCryptSurface(c, this.floor, tx, ty, TILE_SIZE);
         if (this.tiles.size >= 64)
             this.tiles.delete(this.tiles.keys().next().value!);
         this.tiles.set(key, tile);
         return tile;
     }
 }
-function stoneHash(x: number, y: number, seed: number) { let n = Math.imul(x ^ seed, 374761393) ^ Math.imul(y, 668265263); n = Math.imul(n ^ (n >>> 13), 1274126177); return (n ^ (n >>> 16)) >>> 0; }

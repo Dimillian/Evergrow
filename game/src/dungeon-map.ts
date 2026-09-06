@@ -1,3 +1,4 @@
+import { cryptOutline } from './dungeon-contours.ts';
 import type { DungeonFloor } from './dungeon.ts';
 import type { DungeonRun } from './dungeon-state.ts';
 import { getMinimapRect } from './map-view.ts';
@@ -23,18 +24,22 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
     c.fillRect(box.x, box.y, box.width, box.height);
     c.translate(box.x + box.width / 2 - cx * zoom, box.y + box.height / 2 - cy * zoom);
     c.scale(zoom, zoom);
+    const shape = (r: DungeonFloor['rooms'][number]) => {
+        c.beginPath();
+        cryptOutline(r).forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+        c.closePath();
+    };
     const seen = new Set(run.explored);
     c.fillStyle = '#263c3b';
     f.edges.forEach(([a, b], i) => { if (seen.has(a) || seen.has(b))
         for (const r of f.corridors.slice(i * 2, i * 2 + 2))
-            c.fillRect(r.x, r.y, r.width, r.height); });
+            { shape(r); c.fill(); } });
     for (const r of f.rooms)
         if (seen.has(r.id)) {
             c.fillStyle = r.kind === 'boss' ? '#49433a' : '#3b5550';
             c.strokeStyle = '#94b2a0';
             c.lineWidth = 1 / zoom;
-            c.fillRect(r.x, r.y, r.width, r.height);
-            c.strokeRect(r.x, r.y, r.width, r.height);
+            shape(r); c.fill(); c.stroke();
         }
     f.chests.forEach((ch, i) => { if (seen.has(ch.room)) {
         c.fillStyle = (run.chestMasks[i] & (i === 2 ? 15 : 9)) === (i === 2 ? 15 : 9) ? '#506459' : '#e7c485';

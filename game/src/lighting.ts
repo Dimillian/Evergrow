@@ -7,6 +7,8 @@ export interface PointLight {
   color: string;
   power: number;
   shadows?: boolean;
+  /** World-space visibility polygon, used by enclosed environments. */
+  clip?: readonly { x: number; y: number }[];
 }
 
 const stamps = new Map<string, HTMLCanvasElement>();
@@ -78,6 +80,17 @@ export class Lighting {
       scratch.globalAlpha = 1;
       scratch.globalCompositeOperation = 'source-over';
       scratch.drawImage(lightStamp(light.color), 0, 0);
+      if (light.clip?.length) {
+        scratch.globalCompositeOperation = 'destination-in';
+        scratch.fillStyle = '#fff';
+        scratch.beginPath();
+        light.clip.forEach((p, i) => {
+          const x = 128 + (p.x - light.x) * 128 / light.radius, y = 128 + (p.y - light.y) * 128 / light.radius;
+          if (i) scratch.lineTo(x, y); else scratch.moveTo(x, y);
+        });
+        scratch.closePath(); scratch.fill();
+        scratch.globalCompositeOperation = 'source-over';
+      }
       if (light.shadows && shadowCount++ < 4) this.cutShadows(light, props);
       c.globalAlpha = Math.min(1, light.power);
       c.drawImage(this.scratch, (light.x - light.radius - left) * scaleX,

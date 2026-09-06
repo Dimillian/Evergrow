@@ -15,9 +15,17 @@ Each entrance owns a separate floor, not distant overworld coordinates. Dungeon 
 - Seeded room proportions and offsets, eight graph orientations, encounter compositions and rewards. The graph is deliberately constrained to a validated template; arbitrary room graphs and additional themes are future extensions.
 - Four to six ordinary enemies per combat chamber and four per treasure chamber: **44–62 ordinary enemies**, plus the boss and four threshold guardians.
 - At most **24 living dungeon actors**. Room rosters stream wholly outside camera exclusion bounds. No ambient refill, visible materialization or reward for unloading a room. At very wide views, admission may wait for hidden space.
-- Collision, projectiles and corridor navigation share the same room/corridor union. Navigation uses bounded cached flow fields. Decorative sarcophagi, roots and masonry never obstruct those paths.
+- Collision, projectiles and corridor navigation share the same worn room/corridor contours. Navigation uses bounded cached flow fields. Decorative sarcophagi, roots and masonry never obstruct those paths.
 
 The entrance remains usable throughout. Killing the Warden unlocks the final chest and another exit near the arena. Exits return to the surface entrance.
+
+## Crypt atmosphere
+
+The crypt has its own dark ambient illumination, independent of outdoor daylight. Warm wall torches and cold suspended orbs illuminate the actual floor, walls and monsters; cached visibility fans stop each light at masonry. The player carries a modest neutral light, while attacks and spells retain their shared dynamic light budget. Hot flame/orb cores, rising embers and orbiting sparks render after surface illumination and before CRT bloom. Reduced motion freezes their animation.
+
+Room recesses and uneven corridor shoulders use one deterministic contour for terrain, collision, navigation and both maps. These contours extend the existing clear rectangles, preserving current dungeon positions, encounters and saves. The underlying thirteen-room connection template is unchanged. Chipped staggered flagstones, damp patches, exposed wall courses, worn and displaced tomb lids, roots, bones and old blood trails provide the burial-chamber detail. Decoration does not obstruct combat routes.
+
+Terrain remains tile-cached and world-aligned. Light masks are limited to 96 rays per source, cached at eight-unit positions with 256 masks per floor and a bounded occupancy cache; the renderer retains its eighteen-light budget. Fixture anchors are shared by art and illumination.
 
 ## Hollow Warden
 
@@ -54,6 +62,6 @@ One unfinished expedition is allowed per character. Up to **eight expeditions** 
 
 ## Ownership and review
 
-`dungeon.ts` owns immutable blueprints and headless geometry; `dungeon-world.ts` adapts them to rendering/collision; `dungeon-state.ts` owns persistent location contents; `dungeon-runtime.ts` admits roster actors; `dungeon-boss.ts` owns boss decisions; `dungeon-command.ts` stages transitions and chest transactions. Damage, statuses, XP, item generation and gold remain shared with the existing game.
+`dungeon.ts` owns immutable blueprints and headless geometry; `dungeon-contours.ts` shares worn outlines, `dungeon-surface.ts` draws cached masonry, and `dungeon-lighting.ts` owns fixture anchors and bounded visibility masks; `dungeon-world.ts` adapts them to rendering/collision; `dungeon-state.ts` owns persistent location contents; `dungeon-runtime.ts` admits roster actors; `dungeon-boss.ts` owns boss decisions; `dungeon-command.ts` stages transitions and chest transactions. Damage, statuses, XP, item generation and gold remain shared with the existing game.
 
-`/dungeon.html` is a local, save-free static review of the entrance, burial chamber, Warden arena and explored floor. It never advances gameplay. Tests cover deterministic seeds, collision-safe routes, offscreen admission, casualties, threshold waves, control, reward ownership, interrupted openings, full ground capacity, failed saves and town/death returns.
+`/dungeon.html` is a local, save-free review of the entrance, burial chamber, passage, Warden arena and explored floor. Lights animate at up to 30 FPS over frozen actors; it never advances gameplay and respects reduced motion. Tests cover deterministic seeds, collision-safe routes, offscreen admission, casualties, threshold waves, control, reward ownership, interrupted openings, full ground capacity, failed saves and town/death returns.

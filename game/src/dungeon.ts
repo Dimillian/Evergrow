@@ -1,3 +1,4 @@
+import { cryptContains, cryptFloorContains } from './dungeon-contours.ts';
 import type { EnemyKind, WorldQuery } from './model.ts';
 import type { EnemyRank } from './progression-content.ts';
 import type { BiomeId } from './biomes.ts';
@@ -59,7 +60,7 @@ export interface DungeonFloor {
         room: number;
     }[];
 }
-const inside = (r: Room, x: number, y: number) => x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height;
+
 export function dungeonRandom(seed: number) { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; }
 /** Construct a connected route, two optional chambers and a loop before decorating. No unbounded retries. */
 export function generateDungeon(seed: number, level = 1): DungeonFloor {
@@ -129,11 +130,11 @@ export function generateDungeon(seed: number, level = 1): DungeonFloor {
     Object.freeze(floor.exit);
     return Object.freeze(floor);
 }
-export function dungeonRoomAt(f: DungeonFloor, x: number, y: number): Room | undefined { return f.rooms.find(r => inside(r, x, y)); }
+export function dungeonRoomAt(f: DungeonFloor, x: number, y: number): Room | undefined { return f.rooms.find(r => cryptContains(r, x, y)); }
 export function dungeonBlocked(f: DungeonFloor, x: number, y: number, radius: number): boolean {
     if (![x, y, radius].every(Number.isFinite) || radius < 0 || radius > 1000)
         return true;
-    const open = (px: number, py: number) => f.rooms.some(r => inside(r, px, py)) || f.corridors.some(r => inside(r, px, py));
+    const open = (px: number, py: number) => cryptFloorContains(f, px, py);
     if (!open(x, y))
         return true;
     for (let i = 0; i < 16; i++) {

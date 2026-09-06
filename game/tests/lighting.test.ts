@@ -97,3 +97,11 @@ test('zoom reuses fixed light buffers and preserves world-space shadow wedges', 
     assert.deepEqual(scratch.context.shadowPoints, points);
   }
 });
+
+test('enclosed lights mask the source cookie in world coordinates before projection', t => {
+  const { lighting, target, scratch } = fixture(t);
+  const light: PointLight = { ...lightAt(100, 200), radius: 100,
+    clip: [{ x: 50, y: 150 }, { x: 150, y: 150 }, { x: 100, y: 250 }] };
+  lighting.apply(target, 640, 480, 0, 0, [light], [], undefined, .75);
+  assert.deepEqual(scratch.context.shadowPoints, [[64,64], [192,64], [128,192]]);
+});

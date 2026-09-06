@@ -1,6 +1,6 @@
 # Current system status
 
-Updated 2026-09-06 for the Rootbound Crypt checkpoint. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
+Updated 2026-09-06 for the Rootbound Crypt atmosphere refinement. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
 
 ## Implemented systems
 
@@ -21,7 +21,7 @@ Updated 2026-09-06 for the Rootbound Crypt checkpoint. **Playable local prototyp
 | Town economy | Blacksmith equipment shop, jeweler jewelry stock, 12-item buyback, guaranteed +10, rarity upgrades, single/all-affix rerolls and geographic relevel | Deterministic stock refresh at levels 4/7/10…; initial prices require player balance feedback |
 | Town portal | Free three-second P channel, home-town anchors, saved single-use return endpoint, safe landing, native control/map markers and arrival protection | Permanent waypoint network and map travel remain specified |
 | Camps and landmarks | Four-/six-member camps plus 10–15-goblin warbands with a ranked chief; watchtowers, graveyards, standing stones and caravans; camp casualties persist with the character | Strongboxes, caravan choices, beacons, reliquaries and guardian trials implemented |
-| Dungeons | Rootbound Crypt: 13 rooms, two treasure chambers, persistent Warden, floor chart, fixed level, town/death returns and atomic chest rewards | One theme/floor, eight retained expeditions, 24 living actors; pacing awaits playtesting |
+| Dungeons | Rootbound Crypt: 13 rooms, two treasure chambers, persistent Warden, floor chart, fixed level, town/death returns, atomic chest rewards, worn contours and wall-occluded torch/orb illumination | One theme/floor, eight retained expeditions, 24 living actors; pacing awaits playtesting |
 | Maps | Smooth 0.05-scale minimap; 600-unit normal discovery radius; explored atlas with POI hover, conservative fog and per-character chart saves | No waypoint travel; 720 units is the reveal API ceiling, not the normal reveal radius |
 | Presentation | Procedural equipment/world art, layered trees, wind/wildlife, dynamic lighting, fixed restrained CRT/phosphor; readable native UI, enemy rank plates, animated deaths and fading remains | Hardware performance and visual acceptance remain separate from code checks |
 | UI foundation | Astral HUD, shared compact windows, consistent tooltip motion and item components; centralized panel lifecycle; point badges and compact notifications | Service panels reuse these components; equipped gear is separate and first |
@@ -113,3 +113,5 @@ Goblin checkpoint verification: 593 code tests, strict application/headless Type
 ## Rootbound Crypt checkpoint (2026-09-06)
 
 The first full dungeon expedition is implemented: seeded collision-validated geometry, separate location saves, offscreen room rosters, a three-move Warden with finite adds, guarded/final chest transactions, dungeon maps, town return and death recovery. [Dungeons](dungeons.md) records the exact limits and review URL. Existing character slots need no dungeon-related reset. Gameplay difficulty and pacing await the user's playtest.
+
+Crypt atmosphere refinement (2026-09-06): darker interior ambient, shared worn terrain/collision/map outlines, warm wall torches and cold suspended orbs, bounded cached wall occlusion, animated embers and magic sparks, weathered tombs and burial debris. The local dungeon review now animates lights over frozen actors and includes a passage view. Existing clear routes, encounter identities and saved dungeon progress remain valid.

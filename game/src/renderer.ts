@@ -1,4 +1,5 @@
-import { drawCryptGate, drawCryptDecor, drawWardenWarning, cryptLights } from './dungeon-art.ts';
+import { CRYPT_AMBIENT, cryptLights, cryptLightMask } from './dungeon-lighting.ts';
+import { drawCryptGate, drawCryptDecor, drawWardenWarning, drawCryptEmission } from './dungeon-art.ts';
 import { currentDungeon } from './dungeon-state.ts';
 import { EventArt, drawEventUI } from './poi-art.ts';
 import { drawPortal, drawTownAnchor } from './travel-art.ts';
@@ -280,7 +281,7 @@ export class Renderer {
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
     this.groundLayer.draw(c, world, left, top, worldWidth, worldHeight);
     const dungeonRun=currentDungeon(sim.expeditions);
-    if(sim.dungeonFloor&&dungeonRun) drawCryptDecor(c,sim.dungeonFloor,dungeonRun,this.visualTime,sim.eventChannel.site?.kind==='cryptChest'?{index:sim.eventChannel.site.index,progress:sim.eventChannel.elapsed/sim.eventChannel.duration}:undefined);
+    if(sim.dungeonFloor&&dungeonRun) drawCryptDecor(c,sim.dungeonFloor,dungeonRun,settings.reducedMotion ? 0 : this.visualTime,sim.eventChannel.site?.kind==='cryptChest'?{index:sim.eventChannel.site.index,progress:sim.eventChannel.elapsed/sim.eventChannel.duration}:undefined);
     else for(const entrance of this.visibility.entrances)drawCryptGate(c,entrance,this.visualTime);
     for (const site of this.visibility.sites) drawSiteGround(c, site, settings.reducedMotion ? 0 : this.visualTime);
     this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime);
@@ -305,7 +306,7 @@ export class Renderer {
     const weights = biome.weights, inside = this.indoorBlend;
     const ambientChannels = biomeAmbient(weights).map((value, channel) =>
       Math.round(value * (1 - inside) + [116, 119, 141][channel] * inside));
-    const ambient = `rgb(${ambientChannels.join(',')})`;
+    const ambient = sim.dungeonFloor ? CRYPT_AMBIENT : `rgb(${ambientChannels.join(',')})`;
     this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps, ambient, zoom);
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
     this.biomeArt.drawLight(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
@@ -313,6 +314,7 @@ export class Renderer {
     this.atmosphere.drawMist(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, px, py, alpha, lights);
+    if (sim.dungeonFloor) drawCryptEmission(c, sim.dungeonFloor, settings.reducedMotion ? 0 : this.visualTime, this.view);
     drawGroundGold(c, sim.groundGold, this.visualTime, settings.reducedMotion);
     drawLevelCelebration(c, this.rewards.level, px, py, settings.reducedMotion);
     drawGroundLoot(c, sim.groundItems, this.visualTime, settings.reducedMotion);
@@ -514,8 +516,8 @@ export class Renderer {
 
   private sceneLights(sim: Simulation, px: number, py: number, reducedMotion: boolean): PointLight[] {
     const p = sim.player;
-    const lights: PointLight[] = [{ x: px, y: py - 15, radius: 185, color: '#ffcf87', power: .58, shadows: true }];
-    const environmentLights: PointLight[] = sim.dungeonFloor?cryptLights(sim.dungeonFloor):this.visibility.entrances.map(e=>({x:e.x,y:e.y-30,radius:100,color:'#9bdbc9',power:.45}));
+    const lights: PointLight[] = [{ x: px, y: py - 15, radius: sim.dungeonFloor ? 250 : 185, color: sim.dungeonFloor ? '#c0cbd8' : '#ffcf87', power: sim.dungeonFloor ? .85 : .58, shadows: true }];
+    const environmentLights: PointLight[] = sim.dungeonFloor?cryptLights(sim.dungeonFloor, reducedMotion ? 0 : this.visualTime):this.visibility.entrances.map(e=>({x:e.x,y:e.y-30,radius:100,color:'#9bdbc9',power:.45}));
     if(sim.eventChannel.site?.kind==='cryptChest')environmentLights.push({x:sim.eventChannel.site.x,y:sim.eventChannel.site.y,radius:95,color:'#d7c18a',power:.6*sim.eventChannel.elapsed/sim.eventChannel.duration});
     if (sim.portal.active) lights.push({ x: p.x, y: p.y - 30, radius: 105, color: '#b5a0ee', power: .22 + sim.portal.progress * .35 });
     for (const anchor of this.portalAnchors) if (sim.travel.returnTo?.town === anchor.band)
@@ -564,7 +566,8 @@ export class Renderer {
     const view = this.view;
     return [...lights, ...environmentLights].filter(light => light.x + light.radius >= view.left
       && light.x - light.radius <= view.left + view.width && light.y + light.radius >= view.top
-      && light.y - light.radius <= view.top + view.height);
+      && light.y - light.radius <= view.top + view.height).slice(0, 18).map(light => sim.dungeonFloor
+        ? { ...light, clip: cryptLightMask(sim.dungeonFloor, light) } : light);
   }
 
   private emitters(sim: Simulation, px: number, py: number, alpha: number, lights: PointLight[]) {
