@@ -12,7 +12,6 @@ import { InventoryPanel } from './inventory-panel.ts';
 import { SkillTreePanel } from './skill-tree-panel.ts';
 import { WorldMap } from './world-map.ts';
 import { Exploration } from './exploration.ts';
-import { forestReviewScene } from './forest-review-scene.ts';
 import { generateItem } from './items.ts';
 import { awardCharacterExperience } from './character.ts';
 import { Lifetime } from './lifetime.ts';
@@ -21,8 +20,7 @@ import { Lifetime } from './lifetime.ts';
 if (!import.meta.env.DEV) throw new Error('Touch study is local development only.');
 installUITheme(); await loadGameFont();
 const life = new Lifetime(), world = life.own(new World(7319));
-const scene = forestReviewScene(world);
-const sim = new Simulation(world, {spawn:false,startX:scene.x,startY:scene.y});
+const sim = new Simulation(world, {spawn:false});
 const player = sim.player;
 awardCharacterExperience(player, 600);
 player.hp = Math.round(player.maxHp * .83); player.mana = Math.round(player.maxMana * .72);
@@ -50,7 +48,7 @@ const touch = life.own(new TouchHUD(shell,{activate:noop,clearAttack:noop,cancel
     else if(action==='skills') {panel='skills';skills.open(player);}
     else if(action==='map') {panel='map';map.open(player);}
     shell.classList.toggle('playing',panel==='world');
-  }}));
+  }}, {forceTouch:true}));
 touch.setActive(true);
 if(panel==='inventory') inventory.open(player);
 else if(panel==='skills') skills.open(player);

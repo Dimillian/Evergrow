@@ -24,7 +24,7 @@ export class TouchHUD {
   private nextUpdate = 0;
   private mount: HTMLElement;
   private actions: { clearAttack(): void; cancelCombat(): void; activate(active: boolean): void; menu(action: MenuAction): void; unlock(): void; notice(message: string): void };
-  constructor(mount: HTMLElement, actions: TouchHUD['actions']) {
+  constructor(mount: HTMLElement, actions: TouchHUD['actions'], options: {forceTouch?: boolean} = {}) {
     this.mount = mount; this.actions = actions;
     this.element = document.createElement('div'); this.element.className = 'touch-hud'; this.element.hidden = true;
     const button = (action: string, label: string, icon: string) => `<button type="button" class="touch-button" data-touch-menu="${action}" aria-label="${label}">${icon}${action==='interact' || action==='portal' ? `<small>${action==='interact'?'Interact':'Portal'}</small>` : ''}</button>`;
@@ -46,7 +46,7 @@ export class TouchHUD {
     const signal = this.abort.signal;
     mount.addEventListener('pointerdown', e => {
       if (e.pointerType === 'touch') { this.setActive(true); this.actions.unlock(); }
-      else if (e.pointerType !== 'touch' && e.isTrusted) this.setActive(false);
+      else if (e.pointerType !== 'touch' && e.isTrusted && !options.forceTouch) this.setActive(false);
     }, { signal, capture: true });
     this.element.addEventListener('pointerdown', e => {
       const target = (e.target as Element).closest<HTMLElement>('[data-touch-action]');
@@ -97,7 +97,7 @@ export class TouchHUD {
       const action = (e.target as Element).closest<HTMLElement>('[data-touch-menu]')?.dataset.touchMenu as MenuAction;
       if(action && this.enabled) { this.clear(); this.actions.menu(action); }
     },{signal});
-    this.setActive(matchMedia('(pointer: coarse)').matches);
+    this.setActive(options.forceTouch || matchMedia('(pointer: coarse)').matches);
   }
   setActive(active: boolean) {
     if(this.active === active) return;
