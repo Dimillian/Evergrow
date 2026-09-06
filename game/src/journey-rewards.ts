@@ -5,7 +5,6 @@ import { awardCharacterExperience } from './character.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
 import { xpLevelFactor } from './progression.ts';
 
-export const JOURNEY_COMPLETION_LIMIT = 2048;
 /** Bonus measured in normal same-level stalker kills, separate from the site's own reward. */
 export const JOURNEY_XP: Readonly<Record<JourneyKind, number>> = Object.freeze({
   camp: 1.5, caravan: .5, watchtower: .5, graveyard: 1.5, standingStones: 1,
@@ -22,7 +21,7 @@ export function journeyWasCompleted(state: JourneyState, id: string): boolean {
 export function stageJourneyCompletion(checkpoint: CharacterCheckpoint, goal: JourneyGoal, player: Player, time: number,
   preAwardLevel = player.level): JourneyCompletion | null {
   const state = checkpoint.journeys ??= freshJourneys();
-  if (journeyWasCompleted(state, goal.id) || (state.completed?.length ?? 0) >= JOURNEY_COMPLETION_LIMIT) return null;
+  if (journeyWasCompleted(state, goal.id)) return null;
   const xp = journeyXP(goal.kind, goal.level, preAwardLevel);
   const finished = { ...goal, finishedAt: time, rewardXP: xp };
   const listed = [...state.accepted, ...state.offers].some(g => g.id === goal.id);

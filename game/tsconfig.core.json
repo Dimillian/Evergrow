@@ -5,7 +5,7 @@
     "types": []
   },
   "include": [
-    "src/journey-state.ts", "src/journey-rewards.ts",
+    "src/location-controller.ts", "src/journey-state.ts", "src/journey-rewards.ts",
     "src/dungeon.ts", "src/dungeon-contours.ts", "src/dungeon-state.ts", "src/dungeon-runtime.ts", "src/dungeon-boss.ts", "src/dungeon-command.ts", "src/dungeon-validation.ts",
     "src/warband.ts", "src/goblin-camps.ts",
     "src/poi-content.ts", "src/poi-runtime.ts", "src/poi-command.ts", "src/poi-rewards.ts", "src/poi-validation.ts", "src/poi-sites.ts", "src/wilderness-sites.ts", "src/world-pois.ts",

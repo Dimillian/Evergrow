@@ -4,7 +4,7 @@ import type { World } from './world.ts';
 import { text } from './font.ts';
 export class EventArt {
   private lids = new Map<string, number>();
-  draw(c: CanvasRenderingContext2D, site: EventSite, record: EventRecord | undefined, time: number, dt: number, reduced: boolean) {
+  draw(c: CanvasRenderingContext2D, site: EventSite, record: Pick<EventRecord, 'phase'> | undefined, time: number, dt: number, reduced: boolean) {
     const claimed = record?.phase === 'claimed', active = record?.phase === 'active';
     const target = claimed ? 1 : 0, old = this.lids.get(site.id) ?? target;
     const open = reduced ? target : old + (target - old) * (1 - Math.exp(-dt * 12));

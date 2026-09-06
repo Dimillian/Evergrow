@@ -20,6 +20,7 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 | Weapon profiles, skill effects and action speed | [Weapons and skills](weapons-and-skills.md) |
 | Ranks, specializations, mastery and ultimates | [Skill progression](skill-progression.md) |
 | Geographic scaling, XP, loot tables and gold | [Progression and loot](progression-and-loot.md) |
+| World history, retirement and current storage bounds | [World-state longevity](world-state-longevity.md) |
 | Character hall, starter choices and saving | [Character saves](character-saves.md) |
 | Components, typography, tooltip motion and panel ownership | [UI kit](ui-kit.md) |
 | Climate generation, props and procedural graphics | [Biomes](biomes.md), [living biomes](living-biomes.md), [graphics pass](graphics-overhaul.md) |
@@ -36,12 +37,14 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 
 ## Next iteration specifications
 
+- [ChatGPT cloud saves on Sites](cloud-saves-sites.md): researched authentication, per-user storage, atomic publication and cross-device conflicts; not implemented.
+
 - [Journeys and local leads](procedural-journeys.md): proposed procedural adventures, light onboarding, level-aware routing, journal and reward/persistence rules.
 
 - [Town portals and waypoints](travel-and-portals.md): implemented town return/home anchors; permanent waypoint network still specified.
 - [Exploration, events and dungeons](dungeons-and-events.md): proposed encounter density, new enemy roles, interactive landmarks, procedural crypt floors, bosses and persistent expedition rewards.
 
-Interactive POIs, town portals and dungeon expeditions are live. Permanent waypoint travel and procedural journeys remain specified.
+Interactive POIs, town portals and dungeon expeditions are live. Permanent waypoint travel and regional Journey chains remain specified; single-site Journeys are implemented.
 
 ## Original vision and design exploration
 

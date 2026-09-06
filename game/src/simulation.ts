@@ -154,7 +154,7 @@ export class Simulation {
 
   reserveIdentity(next:number):void { this.nextId=Math.max(this.nextId,next); }
   captureContents(): LocationContents {
-      return cloneData({ journeys:this.journeys, campWounds: this.camps.captureWounds(this.enemies), actors: this.enemies.filter(e => e.hp > 0).map(storedActor), groundItems: this.groundItems, groundGold: this.groundGold, pickups: this.pickups, clearedCamps: this.camps.clearedIds(), defeatedCampMembers: this.camps.defeatedMembers() });
+      return cloneData({ campWounds: this.camps.captureWounds(this.enemies), actors: this.enemies.filter(e => e.hp > 0).map(storedActor), groundItems: this.groundItems, groundGold: this.groundGold, pickups: this.pickups, clearedCamps: this.camps.clearedIds(), defeatedCampMembers: this.camps.defeatedMembers() });
   }
   captureCheckpoint(): CharacterCheckpoint {
     const p = this.player;

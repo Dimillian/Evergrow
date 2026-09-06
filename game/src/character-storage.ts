@@ -1,4 +1,4 @@
-import { CHARACTER_SLOT_COUNT, decodeCharacterSave, type CharacterSave } from './character-save.ts';
+import { CHARACTER_SLOT_COUNT, SAVE_MAX_CODE_UNITS, decodeCharacterSave, type CharacterSave } from './character-save.ts';
 export interface CharacterStorage { getItem(key: string): string | null; setItem(key: string, value: string): void; }
 export interface SaveSlot { index: number; record: CharacterSave | null; token: string | null; state: 'empty' | 'saved' | 'recovered' | 'invalid' | 'unavailable'; }
 export type SaveResult = { ok: true; token: string } | { ok: false; message: string };
@@ -32,6 +32,7 @@ export class CharacterRepository {
   list(): SaveSlot[] { return Array.from({ length: CHARACTER_SLOT_COUNT }, (_, i) => this.read(i)); }
   write(index: number, record: CharacterSave, expected: string | null): SaveResult {
     const raw = JSON.stringify(record);
+    if (raw.length > SAVE_MAX_CODE_UNITS) return { ok: false, message: 'This character has reached the local save-size limit. The previous save is untouched; keep this tab open.' };
     if (!decodeCharacterSave(raw)) return { ok: false, message: 'This character checkpoint is invalid. The previous save is untouched.' };
     return this.commit(index, raw, expected);
   }

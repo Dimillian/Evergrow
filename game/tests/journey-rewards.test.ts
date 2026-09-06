@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Simulation } from '../src/simulation.ts';
 import { executeEvent } from '../src/poi-command.ts';
-import { stageJourneyCompletion, journeyXP, JOURNEY_COMPLETION_LIMIT } from '../src/journey-rewards.ts';
+import { stageJourneyCompletion, journeyXP } from '../src/journey-rewards.ts';
 import { RewardFeedback } from '../src/reward-feedback.ts';
 import { xpLevelFactor, xpForNextLevel } from '../src/progression.ts';
 import { scaledEnemyStats } from '../src/zone-progression.ts';
@@ -33,8 +33,9 @@ test('source level and pre-award level set the bonus, independent of current XP 
   const s=sim();s.player.xp=xpForNextLevel(1)-1;const cp=s.captureCheckpoint();
   const receipt=stageJourneyCompletion(cp,{...site,region:'Deadwood'},s.player,0);assert.equal(receipt?.xp,10);assert.equal(cp.level,2);
   assert.equal(s.player.level,1);assert.equal(stageJourneyCompletion(cp,{...site,region:'Deadwood'},s.player,0),null);
-  const full=s.captureCheckpoint();full.journeys!.completed=Array.from({length:JOURNEY_COMPLETION_LIMIT},(_,i)=>`done:${i}`);
-  assert.equal(stageJourneyCompletion(full,{...site,region:'Deadwood'},s.player,0),null);assert.equal(full.level,1);
+  const full=s.captureCheckpoint();full.journeys!.completed=Array.from({length:4096},(_,i)=>`done:${i}`);
+  assert.ok(stageJourneyCompletion(full,{...site,region:'Deadwood'},s.player,0));assert.equal(full.journeys!.completed!.length,4097);
+  assert.equal(stageJourneyCompletion(full,{...site,region:'Deadwood'},s.player,0),null);
 });
 test('completion celebration waits for level-up, stays bounded and reset never replays it',()=>{
   const f=new RewardFeedback();f.handleEvents([{type:'journey',id:'a',name:'Ashen Watch',xp:30,x:0,y:0},{type:'level',level:2,skillPoints:1,statPoints:5,x:0,y:0}],false);

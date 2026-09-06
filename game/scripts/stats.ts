@@ -61,7 +61,7 @@ console.log(JSON.stringify({
     numericContentLevel: MAX_CONTENT_LEVEL, regionSize: ZONE_RULES.regionSize, routeUnitsPerLevel: ZONE_RULES.travelPerLevel,
     targetRoamingEnemies: { base: ENCOUNTER_RULES.basePopulation, maximum: ENCOUNTER_RULES.targetPopulationCap },
     reservedRoamingSlots: ENCOUNTER_RULES.roamingReserve, hardEnemyCap: ENCOUNTER_RULES.hardPopulationCap,
-    wildernessCells: WILDERNESS_RULES.cacheLimit, campLedger: CAMP_POPULATION_RULES.ledgerCapacity,
+    wildernessCells: WILDERNESS_RULES.cacheLimit, campActorCache: CAMP_POPULATION_RULES.actorCacheCapacity,
     climateRegions: BIOME_FIELD_RULES.cacheLimit, biomeLife: BIOME_LIFE_LIMITS,
     groundDressingStamps: GROUND_DRESSING_LIMIT, layeredTreeFamilies: Object.keys(TREE_BOUNDS).length,
     environmentSprites: ENVIRONMENT_ART_RULES.cacheLimit, environmentVariantsPerFamily: ENVIRONMENT_ART_RULES.variants,

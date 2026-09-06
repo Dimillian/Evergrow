@@ -1,3 +1,4 @@
+import { eventClaimed } from './poi-content.ts';
 import type { FrameProfiler } from './frame-profiler.ts';
 import { WaterPresentation } from './water-presentation.ts';
 import { WaterArt } from './water-art.ts';
@@ -519,7 +520,7 @@ export class Renderer {
       c.restore();
     } }));
     for (const site of this.eventSites)
-      entries.push({ y: site.y, draw: () => this.eventArt.draw(c, site, sim.eventState.sites[site.id], this.visualTime, dt, settings.reducedMotion) });
+      entries.push({ y: site.y, draw: () => this.eventArt.draw(c, site, eventClaimed(sim.eventState, site.id) ? { phase: 'claimed' } : sim.eventState.sites[site.id], this.visualTime, dt, settings.reducedMotion) });
     for (const anchor of this.portalAnchors) entries.push({ y: anchor.y, draw: () => {
       drawTownAnchor(c, anchor, sim.travel.homeTown === anchor.band);
       if (sim.travel.returnTo?.town === anchor.band) drawPortal(c, anchor.x, anchor.y, this.visualTime, 1,

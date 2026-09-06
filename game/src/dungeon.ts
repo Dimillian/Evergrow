@@ -2,7 +2,7 @@ import { cryptContains, cryptFloorContains } from './dungeon-contours.ts';
 import type { EnemyKind, WorldQuery } from './model.ts';
 import type { EnemyRank } from './progression-content.ts';
 import type { BiomeId } from './biomes.ts';
-export const DUNGEON_RULES = Object.freeze({ version: 1, rooms: 13, liveCap: 24, recordCap: 8, cell: 64, corridor: 192 });
+export const DUNGEON_RULES = Object.freeze({ version: 1, rooms: 13, liveCap: 24, cell: 64, corridor: 192 });
 export interface DungeonChestTarget {
     kind: 'cryptChest';
     name: string;

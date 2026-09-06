@@ -48,11 +48,13 @@ export interface Trial {
   guardians: GuardianRecord[];
 }
 export interface EventState {
+  /** Exact receipts; recent claims and beacon projections remain in sites. */
+  claimed?: string[];
   sites: Record<string, EventRecord>;
   trial: Trial | null;
 }
-export const EVENT_RULES = Object.freeze({ capacity: 256, reach: 78, channel: 1, beaconChannel: 2, blessingDuration: 90 });
-export const freshEvents = (): EventState => ({ sites: {}, trial: null });
+export const EVENT_RULES = Object.freeze({ reach: 78, channel: 1, beaconChannel: 2, blessingDuration: 90 });
+export const freshEvents = (): EventState => ({ claimed: [], sites: {}, trial: null });
 export const BLESSINGS: Readonly<Record<BlessingKind, {
   name: string;
   description: string;
@@ -75,7 +77,7 @@ export function eventSite(site: WildernessSite, worldSeed = 7319): EventSite {
 }
 export function eventLabel(site: Pick<EventSite, 'id' | 'kind'>, state: EventState, campCleared: boolean): string {
   const record = state.sites[site.id];
-  if (record?.phase === 'claimed')
+  if (eventClaimed(state, site.id))
     return site.kind === 'watchtower' ? 'Beacon lit' : 'Claimed';
   if (record?.phase === 'completed')
     return 'Reward waiting';
@@ -120,4 +122,18 @@ export function syncTrial(state: EventState, enemies: readonly Enemy[]): void {
     state.sites[trial.siteId].phase = 'completed';
     state.trial = null;
   }
+}
+
+export function eventClaimed(state: EventState, id: string): boolean {
+  return state.sites[id]?.phase === 'claimed' || !!state.claimed?.includes(id);
+}
+/** Keep recent art/choice records, unfinished rewards, and durable beacon map projections. */
+export function compactEvents(state: EventState): void {
+  const retired = new Set(state.claimed ?? []);
+  const claims = Object.values(state.sites).filter(r => r.phase === 'claimed' && r.kind !== 'watchtower');
+  for (const record of claims.slice(0, -32)) {
+    retired.add(record.id);
+    delete state.sites[record.id];
+  }
+  state.claimed = [...retired];
 }

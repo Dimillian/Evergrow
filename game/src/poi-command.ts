@@ -2,7 +2,7 @@ import { stageJourneyCompletion } from './journey-rewards.ts';
 import { getZoneAt } from './zone-progression.ts';
 import type { Simulation } from './simulation.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
-import { focusEvent, EVENT_RULES, blessingChoices, type EventChoice, type EventSite, type EventRecord, type BlessingKind } from './poi-content.ts';
+import { focusEvent, eventClaimed, compactEvents, EVENT_RULES, blessingChoices, type EventChoice, type EventSite, type EventRecord, type BlessingKind } from './poi-content.ts';
 import { eventRewards } from './poi-rewards.ts';
 import { CAMP_BIOME_ROSTERS, siteHash } from './wilderness-sites.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
@@ -18,10 +18,8 @@ export interface EventResult {
 export function eventProblem(sim: Simulation, site: EventSite, choice: EventChoice | null): string | null {
   if (!focusEvent([site], sim.player, sim.world))
     return 'Move closer.';
-  if (!sim.eventState.sites[site.id] && Object.keys(sim.eventState.sites).length >= EVENT_RULES.capacity)
-    return 'Event journal is full.';
   const record = sim.eventState.sites[site.id];
-  if (record?.phase === 'claimed')
+  if (eventClaimed(sim.eventState, site.id))
     return 'Already claimed.';
   if (record?.phase === 'active')
     return 'Defeat the guardians.';
@@ -88,6 +86,7 @@ export async function executeEvent(sim: Simulation, site: EventSite, choice: Eve
   }
   const oldLevel = sim.player.level;
   const completion=record.phase==='claimed'?stageJourneyCompletion(checkpoint,{...site,region:getZoneAt(site.x,site.y,sim.world.seed).name},sim.player,sim.time,oldLevel):null;
+  compactEvents(state);
   const result = await persist(checkpoint);
   if (!result.ok)
     return result;

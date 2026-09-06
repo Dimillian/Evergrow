@@ -6,10 +6,10 @@ import type { Input, WorldQuery } from '../src/model.ts';
 import { executeEvent } from '../src/poi-command.ts';
 import { eventRewards } from '../src/poi-rewards.ts';
 import { validEvents } from '../src/poi-validation.ts';
-import { EVENT_RULES, blessingChoices, syncTrial, type EventSite } from '../src/poi-content.ts';
+import { blessingChoices, syncTrial, type EventSite } from '../src/poi-content.ts';
 import { CharacterSession } from '../src/character-session.ts';
 import { CharacterRepository } from '../src/character-storage.ts';
-import { SAVE_MAX_BYTES } from '../src/character-save.ts';
+import { SAVE_MAX_CODE_UNITS } from '../src/character-save.ts';
 import { generateItem } from '../src/items.ts';
 import { refreshCharacter } from '../src/character.ts';
 import { isSpawnHidden } from '../src/spawn-visibility.ts';
@@ -222,18 +222,18 @@ test('event validation rejects forged completion, bad waves and invalid blessing
     assert.equal(validEvents(clone), false);
   }
 });
-test('the bounded event ledger stays compact and rejects additional state without evicting claims', async () => {
+test('more than 256 events remain claimable without evicting earlier beacon records', async () => {
   const { sim, persist } = (await setup());
-  for (let i = 0; i < EVENT_RULES.capacity; i++) {
+  for (let i = 0; i < 300; i++) {
     const s = site('watchtower', i + 1);
     sim.eventState.sites[s.id] = { ...s, phase: 'claimed', choice: null, delivered: 0, bonusGranted: true };
   }
   assert.ok(validEvents(sim.eventState));
   assert.ok((await persist(sim.captureCheckpoint())).ok);
   assert.ok(JSON.stringify(sim.eventState).length < 100000);
-  assert.ok(JSON.stringify(sim.captureCheckpoint()).length < SAVE_MAX_BYTES);
-  assert.equal((await executeEvent(sim, site('reliquary', 999), null, persist)).ok, false);
-  assert.equal(Object.keys(sim.eventState.sites).length, EVENT_RULES.capacity);
+  assert.ok(JSON.stringify(sim.captureCheckpoint()).length < SAVE_MAX_CODE_UNITS);
+  assert.equal((await executeEvent(sim, site('reliquary', 999), null, persist)).ok, true);
+  assert.equal(Object.keys(sim.eventState.sites).length, 301);
 });
 test('roadside reliquaries have deterministic separated safe approaches and are discoverable POIs', () => {
   const w = new World(74319);

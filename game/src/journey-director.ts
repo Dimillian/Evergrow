@@ -1,6 +1,6 @@
-import { journeyWasCompleted, JOURNEY_COMPLETION_LIMIT } from './journey-rewards.ts';
+import { journeyWasCompleted } from './journey-rewards.ts';
 import { JOURNEY_KINDS, recommendedJourney, journeyLevelFit, type JourneyGoal, type JourneyKind, type JourneyState } from './journey-state.ts';
-import type { EventState } from './poi-content.ts';
+import { eventClaimed, type EventState } from './poi-content.ts';
 import type { Expeditions } from './dungeon-state.ts';
 import type { WorldPOI } from './world-pois.ts';
 import { getZoneAt } from './zone-progression.ts';
@@ -30,9 +30,9 @@ export function journeyObjective(goal:JourneyGoal,facts:JourneyFacts):string {
   return goal.kind==='reliquary'?'Open the reliquary':'Begin the trial';
 }
 export function journeyComplete(goal:JourneyGoal,facts:JourneyFacts):boolean {
-  if(goal.kind==='dungeon')return !!facts.expeditions.runs.find(r=>r.entrance.id===goal.id&&(r.chestMasks[2]&15)===15);
+  if(goal.kind==='dungeon')return !!facts.expeditions.cleared?.includes(goal.id)||!!facts.expeditions.runs.find(r=>r.entrance.id===goal.id&&(r.chestMasks[2]&15)===15);
   if(goal.kind==='town'||goal.kind==='frontier')return !facts.expeditions.location&&Math.hypot(goal.x-facts.x,goal.y-facts.y)<(goal.kind==='town'?260:180);
-  return facts.events.sites[goal.id]?.phase==='claimed';
+  return eventClaimed(facts.events,goal.id);
 }
 /** Derive completion from durable source records; never grant a second reward. */
 export function reconcileJourneys(state:JourneyState,facts:JourneyFacts,safe:boolean):JourneyState {
@@ -54,14 +54,13 @@ export function journeyAvailable(goal:JourneyGoal,facts:JourneyFacts):boolean {
   if(journeyComplete(goal,facts))return false;
   if(goal.kind==='dungeon'){
     const run=facts.expeditions.runs.find(r=>r.entrance.id===goal.id);
-    if(!run&&(facts.expeditions.runs.length>=8||facts.expeditions.runs.some(r=>r.states.warden?.hp>0)))return false;
+    if(!run&&facts.expeditions.runs.some(r=>r.states.warden?.hp>0))return false;
   }
   if(['graveyard','standingStones'].includes(goal.kind)&&facts.events.trial&&facts.events.trial.siteId!==goal.id)return false;
-  if(!['town','frontier','dungeon'].includes(goal.kind)&&!facts.events.sites[goal.id]&&Object.keys(facts.events.sites).length>=256)return false;
   return true;
 }
 export function eligibleJourney(goal:JourneyGoal,state:JourneyState,facts:JourneyFacts):boolean {
-  return (state.completed?.length??0)<JOURNEY_COMPLETION_LIMIT&&!journeyWasCompleted(state,goal.id)&&!state.dismissed.includes(goal.id)&&![...state.accepted,...state.history].some(g=>g.id===goal.id)
+  return !journeyWasCompleted(state,goal.id)&&!state.dismissed.includes(goal.id)&&![...state.accepted,...state.history].some(g=>g.id===goal.id)
     &&!(goal.kind==='town'&&facts.discovered(goal.id))&&journeyAvailable(goal,facts);
 }
 /** Only meaningful travel, an outgrown lead or lost availability can replace an offer. */

@@ -58,7 +58,7 @@ Town portal P uses the existing cancellable channel. Its return endpoint include
 
 The minimap shows the local explored floor. The large map supports drag/zoom, discovered chest/boss hover labels and an Overworld button. Floor discovery never writes to the surface chart. Surface entrance tooltips identify active/cleared expeditions.
 
-One unfinished expedition is allowed per character. Up to **eight expeditions** are retained, including completed rosters and unresolved optional rewards; no automatic eviction or reset. The existing 700,000-character save limit also applies. A full journal or failed storage write rejects the action without erasing either location. Current v3 checkpoints can gain these optional fields without resetting characters.
+One live-Warden expedition is allowed per character. There is no eight-expedition lifetime quota. Unfinished floors, optional rewards, loose loot and return links retain their runs. Fully exhausted floors retire to exact cleared-entrance receipts during durable travel; these entrances remain marked cleared and cannot regenerate rewards. The 8,388,608-code-unit checkpoint safety ceiling still applies; failed writes preserve both locations. Current v3 characters continue without a reset. See [world-state longevity](world-state-longevity.md).
 
 ## Ownership and review
 

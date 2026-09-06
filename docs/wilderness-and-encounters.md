@@ -51,3 +51,7 @@ Enemies no longer share attack slots. Every aware enemy with a clear attack lane
 One third of nonstarter generated camps become named Rattlefang, Briarknife or Scraptooth warbands: 10–15 small, fragile knife-bearing goblins and a larger veteran/elite War Chief with a horn and trophy pennant. The chief alternates rush and surround orders, with a visible horn warning. Rush adds 20% movement and damage; surround widens the approach. Orders only reach nearby followers from the same camp with line of sight. Killing the chief briefly scatters survivors for 2.2 seconds, opening a recovery window.
 
 These packs use the existing offscreen activation, sanctuary protection, home tethers, casualty ledger and camp strongbox. The full garrison must fit before activation; no visible reinforcements appear. The 48-actor shared cap leaves sixteen slots reserved for roaming foes. Goblins have reduced individual XP/loot yields; chiefs keep normal ranked rewards. See [progression and loot](progression-and-loot.md) for numbers. Frozen art review: `/encounters.html?view=warband`; no simulation ticks or saves.
+
+## Long-run camp memory
+
+The live garrison cache retains at most 32 camp actor records. Detached pristine groups reconstruct deterministically; wounded source records and exact dead-member IDs survive eviction and saving. Cleared camps use one receipt instead of full actor/death records. There is no 1,024-camp lifetime gate. See [world-state longevity](world-state-longevity.md) for retention and storage bounds.

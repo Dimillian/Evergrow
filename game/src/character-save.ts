@@ -20,7 +20,8 @@ import { xpForNextLevel } from './progression.ts';
 
 export const CHARACTER_SLOT_COUNT = 8;
 export const CHARACTER_SAVE_VERSION = 3;
-export const SAVE_MAX_BYTES = 700_000;
+// A payload safety bound, not a lifetime activity quota. Fail without evicting progress.
+export const SAVE_MAX_CODE_UNITS = 8 * 1024 * 1024;
 export interface CharacterCheckpoint {
   journeys?: JourneyState;
   roaming?: {warmup:number;cooldown:number;requiredDistance:number};
@@ -69,7 +70,7 @@ function validSheet(v: unknown, level: number): v is CharacterSheet {
 
 /** Reject the entire checkpoint before touching the current character. No partial repair or migration. */
 export function decodeCharacterSave(raw: string): CharacterSave | null {
-  if (raw.length > SAVE_MAX_BYTES) return null;
+  if (raw.length > SAVE_MAX_CODE_UNITS) return null;
   try {
     const v: unknown = JSON.parse(raw);
     if (!object(v) || v.version !== CHARACTER_SAVE_VERSION || !text(v.id, 64) || !/^[a-zA-Z0-9-]+$/.test(v.id)
@@ -83,12 +84,11 @@ export function decodeCharacterSave(raw: string): CharacterSave | null {
       || !number(p.time) || !integer(p.kills) || !integer(p.randomState, 0, 4294967295) || !integer(p.spawnOrdinal)
       || !integer(p.killRecharge, 0, 1000) || !object(p.skillCooldowns)
       || !Object.entries(p.skillCooldowns).every(([id, n]) => unlockedSkills((p.character as CharacterSheet).allocatedNodes).includes(id as SkillId) && number(n, 0, 1000))
-      || !Array.isArray(p.clearedCamps) || p.clearedCamps.length > 1024 || !p.clearedCamps.every(id => text(id, 180))
+      || !Array.isArray(p.clearedCamps) || !p.clearedCamps.every(id => text(id, 180))
       || new Set(p.clearedCamps).size !== p.clearedCamps.length
-      || !object(p.defeatedCampMembers) || Object.keys(p.defeatedCampMembers).length > 1024
+      || !object(p.defeatedCampMembers)
       || !Object.entries(p.defeatedCampMembers).every(([id, members]) => text(id, 180) && Array.isArray(members)
         && members.length <= 32 && members.every(member => text(member, 180)) && new Set(members).size === members.length)
-      || new Set([...p.clearedCamps, ...Object.keys(p.defeatedCampMembers)]).size > 1024
       || !Array.isArray(p.groundItems) || p.groundItems.length > 96
       || !p.groundItems.every(i => object(i) && integer(i.id, 1) && number(i.x, -4e7, 4e7) && number(i.y, -4e7, 4e7) && validItem(i.item))) return null;
     if (p.groundGold !== undefined && (!Array.isArray(p.groundGold) || p.groundGold.length > GOLD_RULES.maxPiles

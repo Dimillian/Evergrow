@@ -45,6 +45,8 @@ export interface DungeonRun {
     y: number;
 }
 export interface Expeditions {
+    /** Exact tombstones for exhausted, retired floors. Never regenerate their rewards. */
+    cleared?: string[];
     location: string | null;
     runs: DungeonRun[];
     surface: LocationContents | null;
@@ -52,7 +54,7 @@ export interface Expeditions {
     surfaceY: number;
 }
 export const emptyContents = (): LocationContents => ({ actors: [], groundItems: [], groundGold: [], pickups: [], clearedCamps: [], defeatedCampMembers: {} });
-export const freshExpeditions = (): Expeditions => ({ location: null, runs: [], surface: null, surfaceX: 0, surfaceY: 0 });
+export const freshExpeditions = (): Expeditions => ({ cleared: [], location: null, runs: [], surface: null, surfaceX: 0, surfaceY: 0 });
 export function createDungeonRun(entrance: DungeonEntrance): DungeonRun { const f = generateDungeon(entrance.seed, entrance.level); return { entrance, states: Object.fromEntries(f.members.map(m => [m.id, { hp: scaledEnemyStats(m.kind, entrance.level, m.rank).maxHp, x: m.x, y: m.y, admitted: false }])), explored: [0], chestMasks: [0, 0, 0], contents: emptyContents(), x: f.entry.x, y: f.entry.y }; }
 export function storedActor(e: Enemy): StoredActor { return { kind: e.kind, rank: e.rank, level: e.level, biome: e.biome, seed: e.lootSeed, x: e.x, y: e.y, homeX: e.homeX, homeY: e.homeY, hp: e.hp, campId: e.campId, memberId: e.campMemberId, bossPhases: e.bossPhases }; }
 export function currentDungeon(state: Expeditions): DungeonRun | undefined { return state.runs.find(r => r.entrance.id === state.location); }
@@ -68,3 +70,19 @@ export function syncDungeon(run: DungeonRun, enemies: readonly Enemy[], x: numbe
         s.bossPhases = e.bossPhases;
     }
 } }
+
+/** Only exhausted floors can retire. Uncollected drops, live actors and return portals own their run. */
+export function compactExpeditions(state: Expeditions, returnDungeon?: string): void {
+    const cleared = new Set(state.cleared ?? []);
+    state.runs = state.runs.filter(run => {
+        const contents = run.contents;
+        const exhausted = state.location !== run.entrance.id && returnDungeon !== run.entrance.id
+            && Object.values(run.states).every(s => s.hp <= 0)
+            && run.chestMasks.every((mask, i) => mask === (i === 2 ? 15 : 9))
+            && !contents.actors.some(a => a.hp > 0) && !contents.groundItems.length
+            && !contents.groundGold.length && !contents.pickups.length;
+        if (exhausted) cleared.add(run.entrance.id);
+        return !exhausted;
+    });
+    state.cleared = [...cleared];
+}

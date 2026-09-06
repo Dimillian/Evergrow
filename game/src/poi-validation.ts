@@ -1,5 +1,5 @@
 import { object, number, integer, text } from './item-validation.ts';
-import { EVENT_RULES, BLESSINGS, type EventState } from './poi-content.ts';
+import { BLESSINGS, type EventState } from './poi-content.ts';
 import { BIOMES } from './biomes.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
@@ -9,8 +9,9 @@ export function validBlessing(v: unknown): boolean {
   return v === undefined || object(v) && typeof v.kind === 'string' && Object.hasOwn(BLESSINGS, v.kind) && number(v.remaining, 0, 90);
 }
 export function validEvents(v: unknown): v is EventState {
-  if (!object(v) || !object(v.sites) || Object.keys(v.sites).length > EVENT_RULES.capacity)
+  if (!object(v) || !object(v.sites))
     return false;
+  if (v.claimed !== undefined && (!Array.isArray(v.claimed) || !v.claimed.every(id => text(id, 180) && (id.startsWith('site:') || id.startsWith('reliquary:')) && !Object.hasOwn(v.sites as object, id)) || new Set(v.claimed).size !== v.claimed.length)) return false;
   for (const [id, r] of Object.entries(v.sites)) {
     if (!object(r) || !text(id, 180) || !id.startsWith('site:') && !id.startsWith('reliquary:') || r.id !== id
       || !['camp', 'caravan', 'watchtower', 'graveyard', 'standingStones', 'reliquary'].includes(String(r.kind)) || !text(r.name, 100)

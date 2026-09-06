@@ -93,16 +93,15 @@ test('whole-camp activation respects total/rank caps and rejects blocked or sanc
   }
 });
 
-test('the exact ledger budget never evicts an existing camp, falsely clears it, or farms a replacement', () => {
+test('travelling through more than 1,024 camps keeps the actor cache bounded and later camps active', () => {
   const { sim, ledger, update } = harness();
-  for (let index = 0; index < CAMP_POPULATION_RULES.ledgerCapacity + 1; index++) {
+  for (let index = 0; index < 1050; index++) {
     sim.player.x = index * 4000;
     update([blueprint(`camp-${index}`, sim.player.x)]);
+    assert.ok(ledger.cachedActorCount <= CAMP_POPULATION_RULES.actorCacheCapacity);
   }
-  assert.equal(ledger.recordedCount, CAMP_POPULATION_RULES.ledgerCapacity);
-  assert.equal(ledger.getState('camp-0'), 'active');
-  assert.equal(ledger.getState(`camp-${CAMP_POPULATION_RULES.ledgerCapacity}`), 'dormant');
-  assert.equal(sim.enemies.length, 0, 'later content stays dormant at the budget rather than refilling an old record');
+  assert.equal(ledger.getState('camp-1049'), 'active');
+  assert.equal(sim.enemies.length, 3);
   sim.player.x = 0; update([blueprint('camp-0', 0)]); assert.equal(sim.enemies.length, 3);
 });
 
@@ -322,7 +321,8 @@ test('saved camp casualties do not respawn or duplicate rewards when the rest of
   assert.equal(second.sim.kills, 0); assert.equal(second.sim.groundItems.length, 0);
   for (const enemy of second.sim.enemies) { enemy.hp = 0; enemy.state = 'dead'; }
   assert.equal(second.ledger.getState(camp.id), 'cleared');
-  assert.equal(second.ledger.defeatedMembers()[camp.id].length, 3);
+  assert.equal(second.ledger.defeatedMembers()[camp.id], undefined, 'cleared receipt replaces redundant per-member deaths');
+  assert.ok(second.ledger.clearedIds().includes(camp.id));
   const third = harness(); third.ledger.restoreCleared(second.ledger.clearedIds()); third.ledger.restoreDefeated(second.ledger.defeatedMembers());
   third.update([camp]); assert.equal(third.sim.enemies.length, 0); assert.equal(third.ledger.getState(camp.id), 'cleared');
 });
@@ -336,4 +336,23 @@ test('suspended wounded camps restore full garrisons without healing or reviving
   const next=harness();next.ledger.restoreWounds(wounds);next.ledger.restoreDefeated(first.ledger.defeatedMembers());
   next.update([camp]);assert.equal(next.sim.enemies.length,2);assert.equal(next.sim.enemies.find(e=>e.kind==='archer')!.hp,7);
   assert.equal(next.ledger.captureWounds(next.sim.enemies).length,0,'active actors own their wounds');
+});
+
+test('actor cache retirement preserves exact deaths and wounded source identity through checkpoint reconstruction', () => {
+  const { sim, ledger, update } = harness(), camp = blueprint('camp-retired');
+  update([camp]);
+  sim.enemies[0].hp = 0; sim.enemies[0].state = 'dead';
+  const wounded = sim.enemies[1]; wounded.hp = 7;
+  const source = { hp: wounded.hp, level: wounded.level, seed: wounded.lootSeed, damage: wounded.damage };
+  for (let i = 1; i < 40; i++) { sim.player.x = i * 4000; update([blueprint(`camp-travel-${i}`, sim.player.x)]); }
+  assert.ok(ledger.cachedActorCount <= CAMP_POPULATION_RULES.actorCacheCapacity);
+  const saved = { dead: ledger.defeatedMembers(), cleared: ledger.clearedIds(), wounds: ledger.captureWounds(sim.enemies) };
+  assert.deepEqual(saved.dead[camp.id], [`${camp.id}:guard`]);
+  const resumed = harness();
+  resumed.ledger.restoreCleared(saved.cleared); resumed.ledger.restoreDefeated(saved.dead); resumed.ledger.restoreWounds(saved.wounds);
+  resumed.sim.player.level = 80; resumed.update([camp]);
+  assert.equal(resumed.sim.enemies.length, 2);
+  const restored = resumed.sim.enemies.find(e => e.campMemberId === wounded.campMemberId)!;
+  assert.deepEqual({ hp: restored.hp, level: restored.level, seed: restored.lootSeed, damage: restored.damage }, source);
+  assert.equal(resumed.sim.kills, 0); assert.equal(resumed.sim.player.xp, 0); assert.equal(resumed.sim.groundItems.length, 0);
 });

@@ -7,11 +7,11 @@ Updated 2026-09-05. This tracks implementation progress and the next agreed work
 - [x] Local browser game, Git checkpoints and pushes to origin.
 - [x] Procedural character/equipment art, responsive movement/combat, lighting and fixed CRT/phosphor treatment.
 - [x] Seven blended biomes, natural roads, procedural towns/cities, furnished seamless interiors and environmental life.
-- [x] Six enemy archetypes, ranks, camps and natural offscreen roaming encounters.
+- [x] Nine enemy archetypes including the dungeon Warden, ranks, camps and natural offscreen roaming encounters.
 - [x] Geographic level scaling, rank-based loot, gear/stats, XP and point allocation.
-- [x] Connected skill atlas, 17 active skills, attack/cast speed, route allocation and hover comparisons.
+- [x] Connected skill atlas, 20 active skills, attack/cast speed, route allocation and hover comparisons.
 - [x] Shared UI kit, Astral HUD, 64-cell inventory, minimap and explored-world atlas.
-- [x] Eight saved characters, three starter weapons, title hall, automatic checkpoints and recovery safeguards.
+- [x] Eight saved characters, six starter loadouts, title hall, automatic checkpoints and recovery safeguards.
 - [x] Named loot, discrete notifications, improved ground remains/labels, gold wallet and stacked gold/XP feedback.
 - [x] Consolidated combat/content ownership, equipment planning/item presentation and panel lifecycle.
 - [x] [Town NPCs and economy](npcs-and-vendors.md): blacksmith trading/buyback/+10, jeweler and enchanting, with atomic save-backed transactions.
@@ -28,11 +28,11 @@ These are implemented foundations, not declarations of finished balance, final a
 | 4 | Enchanter rarity upgrades, one/all-affix rerolls and zone-level upgrades | Implemented | Preserved item identity/rolls where required, deterministic committed outcomes, bounded costs and no duplicate charges |
 | 5 | Static UI review and player economy testing | Static review complete; player feedback pending | Desktop/narrow captures, then affordability and usefulness tuning |
 
-Transaction commands stage item issuance, wallet, stock and buyback together, persist before live commitment, and reject stale or failed writes. Save version 2 requires new characters; older slots remain stored. Use the [NPC spec](npcs-and-vendors.md) as the service contract and the [architecture](architecture.md) for implementation ownership. Commit and push coherent checkpoints.
+Transaction commands stage item issuance, wallet, stock and buyback together, persist before live commitment, and reject stale or failed writes. Current saves use version 3 in an IndexedDB worker; this consolidation does not reset current characters. Use the [NPC spec](npcs-and-vendors.md) as the service contract and the [architecture](architecture.md) for implementation ownership. Commit and push coherent checkpoints.
 
-## Next: travel and interactive exploration
+## Travel and interactive exploration
 
-Selected 2026-09-05. Town portals implemented and code-verified; permanent waypoints and interactive POIs remain specified.
+Selected 2026-09-05. Town portals implemented and code-verified; interactive POIs are implemented; permanent waypoints remain specified.
 
 1. [Town portals and waypoints](travel-and-portals.md): free interruptible town return, saved single-use return link and home-town anchors **implemented**; permanent anchor network/map travel remains next.
 2. [Interactive POIs](interactive-pois.md): durable site/reward ledger, camp strongboxes and reliquaries; caravan choices and beacons; then graveyard/standing-stone trials.
@@ -54,7 +54,7 @@ These are candidates, not authorization to implement them now:
 - Save export/import and broader accessibility/input work when prioritized.
 - Sustained endgame goals and a tested scaling model beyond the current bounded geographic progression.
 
-Cloud saves, multiplayer, seasons, procedural quest frameworks, public hosting and release preparation are outside the current scope. Keep the game local. Avoid compatibility layers and save migrations for obsolete prototype designs unless explicitly requested.
+Cloud saves are now [studied](cloud-saves-sites.md), not implemented; single-site Journeys and the existing public Sites deployment are delivered. Multiplayer, seasons, regional quest chains and release preparation remain future work. Keep new iterations local unless deployment is requested. Avoid compatibility layers and save migrations for obsolete prototype designs unless explicitly requested.
 
 ## Quality gates for each increment
 
@@ -70,8 +70,16 @@ Upgradeable skill ranks, lower casting-rank selection, 19 specialization choices
 
 ### Interactive POIs — delivered 2026-09-06
 
-Camp strongboxes, caravan choices, watchtower reveals, graveyard and standing-stone trials, and roadside reliquaries are implemented. Persistent partial claims, guardian casualties, offscreen spawning and timed blessings share existing save/combat boundaries. Next: player feedback on encounter/reward pacing, then the separate procedural dungeon proposal.
+Camp strongboxes, caravan choices, watchtower reveals, graveyard and standing-stone trials, and roadside reliquaries are implemented. Persistent partial claims, guardian casualties, offscreen spawning and timed blessings share existing save/combat boundaries. Next: player feedback on encounter/reward pacing, then further dungeon themes; the first Rootbound Crypt is implemented.
 
-## Proposed: journeys and local leads
+## Journeys and local leads
 
 [Procedural journeys](procedural-journeys.md) specifies light guidance through existing world content, first-time character/service milestones, fixed-level route recommendations and a compact journal/tracker. Proposed delivery: single-site guidance and milestones first, then short regional chains and conservative quest XP. The [single-site foundation](journeys.md) is implemented locally: mini log, J journal, explicit tracking, source-ledger completion and map/world markers. Natural completion grants a modest, source-scaled XP bonus once, with a shared completion celebration. Regional chains and personal milestone memory remain deferred. Initial pacing and presentation remain subject to player feedback.
+
+## World-state and runtime consolidation · implemented 2026-09-06
+
+- [x] Retire sleeping camp objects and exhausted dungeon/POI state into exact persistent history; remove old lifetime activity quotas without deleting unfinished rewards.
+- [x] Extract Journey orchestration and location transitions; reconcile current documentation and preserve historical snapshots.
+- [x] [Study ChatGPT cloud saves](cloud-saves-sites.md) on the existing public Site.
+- [ ] Implement/auth-test cloud saves and explicit local import when prioritized; no cloud deployment in this pass.
+- [ ] Page very large world/chart histories and measure long-session performance; current local payload bounds still apply.

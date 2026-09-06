@@ -2,8 +2,7 @@ import { stageJourneyCompletion } from './journey-rewards.ts';
 import type { Simulation } from './simulation.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import type { DungeonEntrance } from './dungeon.ts';
-import { DUNGEON_RULES } from './dungeon.ts';
-import { currentDungeon, createDungeonRun, type LocationContents } from './dungeon-state.ts';
+import { currentDungeon, createDungeonRun, compactExpeditions, type LocationContents } from './dungeon-state.ts';
 import { portalLanding, portalDepartureProblem, type PortalAnchor } from './travel.ts';
 import type { WorldQuery } from './model.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
@@ -54,12 +53,11 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
         const target = action.kind === 'enter' ? entrance : action.anchor;
         if (Math.hypot(p.x - target.x, p.y - target.y) > 75 || !hasLineOfSight(surface, p.x, p.y, target.x, target.y))
             return { ok: false, message: 'Move closer to the entrance.' };
+        if (state.cleared?.includes(entrance.id)) return { ok: false, message: 'This crypt has been cleared.' };
         let next = state.runs.find(r => r.entrance.id === entrance.id);
         if (!next) {
             if (state.runs.some(r => r.states.warden.hp > 0))
                 return { ok: false, message: 'Finish your active expedition first.' };
-            if (state.runs.length >= DUNGEON_RULES.recordCap)
-                return { ok: false, message: 'Expedition journal full.' };
             next = createDungeonRun(entrance);
             state.runs.push(next);
         }
@@ -93,6 +91,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
         state.location = null;
         checkpoint.travel = { ...sim.travel, returnTo: action.kind === 'town' ? { x: p.x, y: p.y, town: action.anchor.band, dungeon: run.entrance.id } : null };
     }
+    compactExpeditions(state, checkpoint.travel?.returnTo?.dungeon);
     checkpoint.x = point.x;
     checkpoint.y = point.y;
     const result = await persist(checkpoint);

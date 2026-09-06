@@ -53,10 +53,12 @@ Bearings are not walking paths. Recommendation scoring checks coarse approach da
 
 `journey-state.ts` owns saved metadata; `journey-director.ts` owns bounded search and ranking; `journey-rewards.ts` owns the shared bonus formula and staged completion receipts. POI/chest commands persist XP, source claim and receipt together before committing live state. Arrival XP and its receipt change together and use the normal character autosave, just like combat XP. Failed explicit claims do not alter the character, emit completion or spend a source.
 
-A separate receipt ledger survives history trimming, so revisiting, dismissing, retracking and loading cannot repay an objective. Initial bounds: 2,048 completion receipts, three accepted activities, 12 catalogue entries, 64 displayed history records and 128 dismissed IDs. At the receipt cap, further new Journey rewards/recommendations stop; ordinary source content still works. Existing POI/expedition bounds also apply.
+A separate exact receipt ledger survives history trimming, so revisiting, dismissing, retracking and loading cannot repay an objective. There is no lifetime completion-count gate. UI bounds remain three accepted activities, 12 catalogue entries, 64 displayed history records and 128 dismissed IDs. Compacted POI/dungeon receipts still complete and exclude old leads. The character payload size bound remains; see [world-state longevity](world-state-longevity.md).
 
 Search performs at most one 2,400-unit query per frame, nine cells per pass and 64 candidates. It changes no exploration, RNG or spawns. `journey-panel.ts`, `journey-marker.ts` and the shared celebration art only project state. Regional multi-site chains and personal milestone teaching remain deferred; see the [design proposal](procedural-journeys.md).
 
 Static review: `/journeys.html?view=hud`, `view=journal`, `view=crypt`, `view=map`, `view=complete`. Real components, staged data and a frozen world; no character save access or gameplay ticks.
 
 Activity names match across the mini log, journal and markers. Distances use metres and kilometres with one shared display scale (32 world units per metre), measured directly to the activity.
+
+`journey-controller.ts` owns runtime scheduling and presentation orchestration; the director remains pure and rewards remain source-owned.

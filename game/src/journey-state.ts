@@ -70,7 +70,7 @@ export function validJourneys(value:unknown):value is JourneyState {
     &&(g.rewardXP===undefined||Number.isSafeInteger(g.rewardXP)&&g.rewardXP>=0)
     &&JOURNEY_KINDS.includes(g.kind)&&coord(g.x)&&coord(g.y)&&Number.isInteger(g.level)&&g.level>=1&&g.level<=1e6
     &&(g.finishedAt===undefined||typeof g.finishedAt==='number'&&Number.isFinite(g.finishedAt)&&g.finishedAt>=0);
-  if(v.completed!==undefined&&(!Array.isArray(v.completed)||v.completed.length>2048||!v.completed.every(id=>str(id,180))||new Set(v.completed).size!==v.completed.length))return false;
+  if(v.completed!==undefined&&(!Array.isArray(v.completed)||!v.completed.every(id=>str(id,180))||new Set(v.completed).size!==v.completed.length))return false;
   if(!Array.isArray(v.accepted)||v.accepted.length>3||!v.accepted.every(goal)||!Array.isArray(v.offers)||v.offers.length>12||!v.offers.every(goal)
     ||!Array.isArray(v.history)||v.history.length>64||!v.history.every(g=>goal(g)&&g.finishedAt!==undefined)
     ||!Array.isArray(v.dismissed)||v.dismissed.length>128||!v.dismissed.every(id=>str(id,180))||new Set(v.dismissed).size!==v.dismissed.length
