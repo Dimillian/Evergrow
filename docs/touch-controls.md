@@ -53,3 +53,5 @@ No browser gameplay automation or physical-device gameplay test was performed. T
 ## Inventory PR reconciliation
 
 Integrated PR #2 (`0e61b26`), including compact sorting/filtering, Equip Best and its weapon-type confirmation, acquisition ordering, and LB/RB section navigation with gamepad A/X activation. Touch uses the same filtered source-index projection: empty destinations are actual empty bag cells, and inert filter placeholders cannot become destinations. Opening the shared sort/Equip Best popups closes any touch item card or pending move; reorganized items invalidate stale cards. Double-tap on touch never invokes desktop double-click equip. The desktop toolbar retains its compact styling; its touch targets are 48px. Switching input modes clears the touch card, and the controller resumes from the last selected inventory section.
+
+The tab click handler matches only `button[data-touch-tab]`. The window's `data-touch-tab` attribute is layout state, not an action; matching it as an ancestor would swallow all inventory clicks, including desktop Sort, Equip Best and Close.

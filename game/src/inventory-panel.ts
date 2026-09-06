@@ -406,7 +406,8 @@ export class InventoryPanel {
     document.addEventListener('evergrow-input-mode',()=>{this.closeTouchItem();this.hideTooltip();},options);
     this.element.addEventListener('click', event => {
       const target = event.target as Element;
-      const tab = target.closest<HTMLElement>('[data-touch-tab]')?.dataset.touchTab;
+      // The window also carries data-touch-tab as layout state; only buttons are actions.
+      const tab = target.closest<HTMLButtonElement>('button[data-touch-tab]')?.dataset.touchTab;
       if(tab) { this.section = tab==='equipment'?0:tab==='stats'?2:1; this.updateSectionHighlight(); this.window.dataset.touchTab = tab; for(const b of this.window.querySelectorAll('[data-touch-tab]')) b.setAttribute('aria-pressed',String((b as HTMLElement).dataset.touchTab===tab)); return; }
       const itemAction = target.closest<HTMLElement>('[data-touch-item]');
       if(itemAction) { this.touchItemAction(itemAction.dataset.touchItem!); return; }
