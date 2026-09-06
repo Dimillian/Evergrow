@@ -8,6 +8,7 @@ import { Simulation } from './simulation.ts';
 import { Renderer } from './renderer.ts';
 import { PostFX } from './postfx.ts';
 import { TouchHUD } from './touch-hud.ts';
+import { drawEnemyPlate } from './enemy-plate.ts';
 import { InventoryPanel } from './inventory-panel.ts';
 import { SkillTreePanel } from './skill-tree-panel.ts';
 import { WorldMap } from './world-map.ts';
@@ -61,6 +62,7 @@ function draw() {
     canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);ui.width=Math.round(w*dpr);ui.height=Math.round(h*dpr);
     const logicalHeight=Math.min(680,Math.max(450,Math.round(h/1.35)));
     renderer.resize(Math.round(logicalHeight*w/h),logicalHeight);
+    renderer.touchTopInset = touch.safeTop * renderer.height / h;
   }
   renderer.cameraX=player.x;renderer.cameraY=player.y-50;
   const settings={phase:'playing' as const,reducedMotion:true,fps:60,debug:false};
@@ -68,6 +70,9 @@ function draw() {
   const c=ui.getContext('2d')!;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,ui.width,ui.height);
   c.setTransform(ui.width/renderer.width,0,0,ui.height/renderer.height,0,0);
   renderer.renderUI(c,sim,world,settings);
+  // A representative target lets the user review the pinned plate without running combat.
+  if(panel==='world')drawEnemyPlate(c,{kind:'stalker',rank:'normal',level:4,hp:36,maxHp:48},renderer.width,renderer.height,
+    {touch:true,topInset:renderer.touchTopInset,reducedMotion:true});
   if(w>=620)map.drawMinimap(c,player,renderer.width,renderer.height,0);
   touch.update(player,panel==='world'?'playing':'character',false,performance.now());
   if(++count>=3)root.dataset.ready='true';

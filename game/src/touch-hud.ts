@@ -75,7 +75,7 @@ export class TouchHUD {
       const cancel = outside || !this.cancel.hidden && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
       this.input.update(e.pointerId,{x:e.clientX,y:e.clientY},cancel);
       this.cancel.classList.toggle('is-held',!!this.input.preview?.canceled);
-      this.stick.style.transform = `translate(${this.input.move.x*36}px,${this.input.move.y*36}px)`;
+      this.stick.style.transform = `translate(${this.input.move.x*28}px,${this.input.move.y*28}px)`;
     }, {signal});
     const release = (e: PointerEvent, canceled: boolean) => {
       const target = this.captured.get(e.pointerId); if(!target) return;
@@ -88,7 +88,7 @@ export class TouchHUD {
       if(canceled && action?.startsWith('skill-')) this.actions.cancelCombat();
       this.input.up(e.pointerId,canceled); this.captured.delete(e.pointerId); target.classList.remove('is-held');
       if(target.hasPointerCapture(e.pointerId)) target.releasePointerCapture(e.pointerId);
-      this.cancel.hidden = !this.input.preview; this.stick.style.transform = `translate(${this.input.move.x*36}px,${this.input.move.y*36}px)`;
+      this.cancel.hidden = !this.input.preview; this.stick.style.transform = `translate(${this.input.move.x*28}px,${this.input.move.y*28}px)`;
     };
     this.element.addEventListener('pointerup',e=>release(e,false),{signal});
     this.element.addEventListener('pointercancel',e=>release(e,true),{signal});
@@ -99,6 +99,7 @@ export class TouchHUD {
     },{signal});
     this.setActive(options.forceTouch || matchMedia('(pointer: coarse)').matches);
   }
+  get safeTop(): number { return parseFloat(getComputedStyle(this.element).paddingTop) || 0; }
   setActive(active: boolean) {
     if(this.active === active) return;
     this.clear(); this.active = active; this.mount.classList.toggle('touch-mode',active);

@@ -34,6 +34,8 @@ Services retain inspect-then-confirm buying, selling and improvements. Native se
 
 Touch styles are scoped to `.touch-mode`. Menus, inventory, services, the atlas, journeys and event choices have scrollable layouts for small/short viewports. Safe-area margins protect the controls. The very narrow touch layout omits the drawn minimap and mini journey tracker to preserve world space; their full panels remain accessible. Desktop HUD artwork and targets remain unchanged. Touch keeps the shared delayed XP rail/reward landing point and uses compact life/mana readouts with separate thumb controls.
 
+The compact HUD uses 40px menu, skill and utility buttons, a 72px attack pad and a 108px movement disc. All bottom controls leave a dedicated clearance band for the existing XP rail, numeric readout and accumulating XP caption; reward flights retain their shared landing coordinates. Interaction/portal sit above the movement disc, and screens at most 700px wide place menus above the thumb controls. Enemy and boss plates stay centered at the top on touch, respecting the safe-area inset instead of moving below the minimap or disappearing because of the desktop HUD bounds. The local touch study includes a staged target plate for layout feedback. Desktop geometry is unchanged.
+
 ## State and lifecycle safety
 
 `Game.clearInput`, phase changes, durable transactions, focus loss and visibility changes cancel touch ownership along with existing keyboard/gamepad input. Touch UI hides immediately outside play and during blocking saves. Rotation, viewport changes, map closure and input-mode switches cancel captures. Old pointer moves/releases cannot recreate cleared actions.

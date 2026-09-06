@@ -8,6 +8,9 @@ import { getMinimapRect } from './map-view.ts';
 import { drawRankCrest, RANK_METALS } from './enemy-rank-art.ts';
 
 export interface EnemyPlateOptions {
+  touch?: boolean;
+  /** Safe-area top inset in the same logical coordinates as the UI canvas. */
+  topInset?: number;
   opacity?: number;
   /** Delayed resource value in hit points, not a normalized ratio. */
   healthTrail?: number;
@@ -22,9 +25,14 @@ const compactNumber = new Intl.NumberFormat('en-US', { notation: 'compact', maxi
 const compact = (value: number) => value >= 10_000 ? compactNumber.format(value) : `${Math.ceil(value)}`;
 
 /** A centered target readout that shares the existing navigation and map space. */
-export function getEnemyPlateLayout(width: number, height: number): { x: number; y: number; width: number; height: number } {
+export function getEnemyPlateLayout(width: number, height: number, touch = false, topInset = 0): { x: number; y: number; width: number; height: number } {
   width = Math.max(0, Number.isFinite(width) ? width : 0);
   height = Math.max(0, Number.isFinite(height) ? height : 0);
+  if (touch) {
+    const plateWidth = Math.max(0, Math.min(240, width - 24));
+    const y = Math.max(8, (Number.isFinite(topInset) ? topInset : 0) + 6);
+    return {x: (width - plateWidth) / 2, y, width: plateWidth, height: plateWidth >= 160 && y + 70 <= height ? 70 : 0};
+  }
   const map = getMinimapRect(width, height);
   const besideMap = 2 * (map.x - 12 - width / 2);
   const belowMap = besideMap < 180;
@@ -81,7 +89,7 @@ function bloodMotion(c: CanvasRenderingContext2D, x: number, y: number, width: n
 /** Native text and restrained metalwork, drawn after world post-processing. */
 export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, 'kind' | 'hp' | 'maxHp' | 'level' | 'rank'>,
   width: number, height: number, options: EnemyPlateOptions = {}): void {
-  const layout = getEnemyPlateLayout(width, height);
+  const layout = getEnemyPlateLayout(width, height, options.touch, options.topInset);
   const opacity = clamp(options.opacity ?? 1);
   if (!layout.height || opacity <= 0) return;
   const w = layout.width;

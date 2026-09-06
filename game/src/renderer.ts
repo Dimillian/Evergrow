@@ -156,6 +156,7 @@ export class Renderer {
   }
   gamepadActive = false;
   touchActive = false;
+  touchTopInset = 0;
   worldToScreen(x: number, y: number) { return worldToScreen(this.view, x, y); }
 
   /** Uses the displayed camera/body positions, then returns gameplay ground coordinates. */
@@ -395,8 +396,9 @@ export class Renderer {
     drawLevelAnnouncement(c, this.rewards.level, worldToScreen(this.view, p.x, p.y), this.width, this.height, settings.reducedMotion);
     if(!this.rewards.level)drawJourneyAnnouncement(c,this.rewards.journey,worldToScreen(this.view,p.x,p.y),this.width,this.height,settings.reducedMotion);
     const boss=sim.enemies.find(e=>e.kind==='warden'&&e.hp>0&&Math.hypot(e.x-p.x,e.y-p.y)<1100);
-    if(boss) { drawEnemyPlate(c,boss,this.width,this.height); if(this.focusedEnemy?.id===boss.id)text(c,'CONTROL DURATION −75% · BRIEF STUN IMMUNITY',this.width/2,90,.7,'#9db8a7','center'); }
+    if(boss) { drawEnemyPlate(c,boss,this.width,this.height,{touch:this.touchActive,topInset:this.touchTopInset}); if(this.focusedEnemy?.id===boss.id)text(c,'CONTROL DURATION −75% · BRIEF STUN IMMUNITY',this.width/2,90+(this.touchActive?this.touchTopInset:0),.7,'#9db8a7','center'); }
     if (!boss && this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, this.width, this.height, {
+      touch: this.touchActive, topInset: this.touchTopInset,
       time: this.visualTime, reducedMotion: settings.reducedMotion,
       opacity: this.plateOpacity,
       healthTrail: this.damageTrails.get(this.plateEnemy.id)?.value ?? this.plateEnemy.hp,
