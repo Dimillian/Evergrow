@@ -26,6 +26,8 @@ import { GameAudio } from './audio.ts';
 import { Exploration } from './exploration.ts';
 import { WorldMap } from './world-map.ts';
 import { GameInput } from './game-input.ts';
+import { GamepadInput, PAD } from './gamepad-input.ts';
+import { GamepadMenu } from './gamepad-menu.ts';
 import { GameShell } from './game-shell.ts';
 import { isGameUIPoint } from './ui-hit-test.ts';
 import type { GamePhase } from './game-phase.ts';
@@ -60,6 +62,11 @@ export class Game {
   private readonly motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
   private get reducedMotion() { return this.motionPreference.matches; }
   private input = new GameInput();
+  private gamepad = new GamepadInput();
+  private gamepadMenu = new GamepadMenu();
+  private usingGamepad = false;
+  private padAimAngle: number | null = null;
+  private padAimDistance = 180;
   private mouse = this.input.pointer;
   private last = performance.now();
   private animation = 0;
@@ -166,6 +173,7 @@ export class Game {
       clear: () => this.clearInput(),
       release: code => this.input.keyUp(code),
       press: event => {
+        if (event.isTrusted) this.usingGamepad = false;
         if (event.code === 'Escape') {
           event.preventDefault();
           if (!event.repeat) {
@@ -249,6 +257,7 @@ export class Game {
   }
 
   private updatePointer(event: { clientX: number; clientY: number }) {
+    this.usingGamepad = false;
     this.input.movePointer(event.clientX, event.clientY, this.canvas.getBoundingClientRect(),
       this.renderer.width, this.renderer.height);
     this.canvas.classList.toggle('hud-hover', this.pointerInHUD());
@@ -279,6 +288,7 @@ export class Game {
 
   clearInput() {
     this.input.clear();
+    this.gamepad.clear(); this.gamepadMenu.clear();
     this.sim.clearInput();
   }
 
@@ -427,6 +437,7 @@ export class Game {
     const result = executePortalTravel(this.sim, anchor, returning, c => this.persistTravel(c));
     if (!result.ok) { this.notify(result.message); return; }
     this.input.clear();
+    this.gamepad.clear();
     this.renderer.reset(); this.renderer.snapTo(this.sim.player);
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
     this.areaNotices.reset(this.world.sampleBiome(this.sim.player.x, this.sim.player.y).id);
@@ -456,6 +467,21 @@ export class Game {
   }
 
   private readInput(): Input {
+    if (this.usingGamepad) {
+      const pad = this.gamepad, p = this.sim.player;
+      if (pad.aim.x || pad.aim.y) {
+        this.padAimAngle = Math.atan2(pad.aim.y, pad.aim.x);
+        this.padAimDistance = 60 + Math.hypot(pad.aim.x, pad.aim.y) * 220;
+      } else if (pad.move.x || pad.move.y) this.padAimAngle = Math.atan2(pad.move.y, pad.move.x);
+      const angle = this.padAimAngle ?? p.angle;
+      const aim = { x: p.x + Math.cos(angle) * this.padAimDistance, y: p.y + Math.sin(angle) * this.padAimDistance };
+      const screen = this.renderer.worldToScreen(aim.x, aim.y);
+      this.mouse.x = screen.x; this.mouse.y = screen.y; this.mouse.present = true;
+      // Controller aiming is independent of the last mouse position and HUD hit regions.
+      const rangedAim = this.renderer.resolvePointerAim(this.sim, this.world, screen.x, screen.y, true);
+      return { ...pad.gameplay(aim),
+        ...(rangedAim ? { rangedAim: { x: rangedAim.x, y: rangedAim.y } } : {}) };
+    }
     const blocked = this.pointerInHUD();
     const p = this.sim.player;
     const aim = blocked
@@ -474,6 +500,9 @@ export class Game {
     const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
     this.last = now;
     this.fps += (1 / Math.max(dt, 0.001) - this.fps) * 0.04;
+    this.pollGamepad(now);
+    this.renderer.gamepadActive = this.usingGamepad;
+    this.shell.setGamepadActive(this.usingGamepad);
     if (this.phase === 'playing') {
       // The simulation owns the fixed 120 Hz clock and render interpolation.
       this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
@@ -529,6 +558,43 @@ export class Game {
       })));
     this.animation = requestAnimationFrame(this.frame);
   };
+
+  private pollGamepad(now: number) {
+    let pads: (Gamepad | null)[] = [];
+    try { pads = navigator.getGamepads ? [...navigator.getGamepads()] : []; } catch { /* API may be denied by the host. */ }
+    this.gamepad.poll(pads, document.hasFocus() && !document.hidden);
+    if (this.gamepad.disconnected && this.usingGamepad) {
+      this.clearInput(); this.usingGamepad = false; this.mouse.present = false;
+      if (this.phase === 'playing') this.pause();
+      this.notify('Controller disconnected.'); return;
+    }
+    const pad = this.gamepad;
+    if (pad.active && !this.usingGamepad) {
+      this.input.clear(); this.sim.clearInput(); this.usingGamepad = true;
+      this.padAimAngle = this.sim.player.angle;
+    }
+    if (!pad.active) { this.gamepadMenu.clear(); return; }
+    if (pad.pressed.has(PAD.pause) || (this.phase !== 'playing' && pad.pressed.has(PAD.dodge))) {
+      if (this.panels.activePanel) this.resume();
+      else if (this.phase === 'playing') { if (this.sim.portal.active) this.sim.portal.cancel(); else this.pause(); }
+      else if (this.phase === 'paused') this.resume();
+      else if (this.phase === 'ready') this.shell.titleMount.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+      return;
+    }
+    if (pad.pressed.has(PAD.map) && (this.panels.canOpen('map') || this.phase === 'map')) {
+      this.panels.toggle('map'); return;
+    }
+    if (this.phase === 'playing') {
+      if (pad.pressed.has(PAD.up)) { this.openCharacterPanel('skills'); return; }
+      if (pad.pressed.has(PAD.left) || pad.pressed.has(PAD.right)) { this.openCharacterPanel('character'); return; }
+      if (pad.pressed.has(PAD.down)) { this.requestPortal(); return; }
+      if (pad.pressed.has(PAD.interact)) this.interact();
+    } else {
+      const root = this.phase === 'ready' ? this.shell.titleMount : this.phase === 'map' ? this.shell.mapMount
+        : this.panels.activePanel ? this.shell.panelMount : this.canvas.parentElement!.querySelector<HTMLElement>('#overlay')!;
+      this.gamepadMenu.update(root, pad, now);
+    }
+  }
 
   private showMenu() {
     const p = this.sim.player;

@@ -1,4 +1,5 @@
 import { resolveSkill } from './skill-progression.ts';
+import { PAD_SKILL_LABELS } from './gamepad-input.ts';
 import { drawActiveSkillIcon } from './hud-active-skills.ts';
 import { SKILL_DEFINITIONS, canUseSkill } from './skill-content.ts';
 import { heldWeapon as drawEquippedWeapon } from './equipment-art.ts';
@@ -16,7 +17,7 @@ import { HUD_ART, HUD_MENU_SHORTCUTS, HUD_SKILL_SLOTS, getHUDLayout } from './hu
 export { HUD_MENU_SHORTCUTS, getHUDLayout, isHUDPoint } from './hud-layout.ts';
 export type { HUDRect, HUDShortcut, HUDLayout } from './hud-layout.ts';
 
-export interface HUDOptions { reducedMotion?: boolean; healthTrail?: number; hitPulse?: number; experience?: ExperienceDisplay; }
+export interface HUDOptions { gamepad?: boolean; reducedMotion?: boolean; healthTrail?: number; hitPulse?: number; experience?: ExperienceDisplay; }
 
 const UI = UI_THEME.palette;
 const TAU = Math.PI * 2;
@@ -33,7 +34,7 @@ function chamfer(c: CanvasRenderingContext2D, x: number, y: number, w: number, h
     x + w - cut, y + h, x + cut, y + h, x, y + h - cut, x, y + cut]);
 }
 
-function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
+function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = false) {
   const field = HUD_ART.skill;
   for (const [i, slot] of HUD_SKILL_SLOTS.entries()) {
     const x = field.x + i * field.step, y = field.y, w = field.width, h = field.height;
@@ -77,7 +78,7 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
     // An empty well has no icon, lock, cooldown, or resource cost.
     c.strokeStyle = occupied ? '#b6baa226' : '#617b8d25'; c.lineWidth = .6;
     c.beginPath(); c.moveTo(x + 7, y + 40); c.lineTo(x + w - 7, y + 40); c.stroke();
-    text(c, slot.key, x + w / 2, y + 44, 1.04,
+    text(c, gamepad ? PAD_SKILL_LABELS[i] : slot.key, x + w / 2, y + 44, 1.04,
       occupied && !p.dead ? UI.text : '#718490', 'center');
     if (active) {
       c.fillStyle = '#c4ad7a'; c.fillRect(x + 8, y + h - 1, w - 16, .8);
@@ -86,7 +87,7 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number) {
   }
 }
 
-function utilities(c: CanvasRenderingContext2D, p: Player, time: number) {
+function utilities(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = false) {
   const field = HUD_ART.utility, dodge = PLAYER_ABILITIES.dodge, potion = PLAYER_ABILITIES.potion;
   const slots = [
     { x: field.left, key: 'Q', icon: 3, charges: p.flasks, capacity: potion.charges,
@@ -116,7 +117,7 @@ function utilities(c: CanvasRenderingContext2D, p: Player, time: number) {
     }
     c.strokeStyle = '#40566580'; c.lineWidth = .6;
     c.beginPath(); c.moveTo(x + 20, y + 6); c.lineTo(x + 20, y + h - 5); c.stroke();
-    text(c, slot.key, x + 31, y + 9, slot.key === 'SPACE' ? .73 : .95,
+    text(c, gamepad ? (slot.icon === 2 ? 'B' : 'LB') : slot.key, x + 31, y + 9, slot.key === 'SPACE' ? .73 : .95,
       slot.enabled ? UI.text : UI.faint, 'center', 'interface');
     for (let charge = 0; charge < slot.capacity; charge++) {
       c.beginPath(); c.arc(x + 28.5 + charge * 5, y + 4, .9, 0, TAU);
@@ -131,7 +132,7 @@ function utilities(c: CanvasRenderingContext2D, p: Player, time: number) {
   }
 }
 
-function shortcuts(c: CanvasRenderingContext2D, p: Player) {
+function shortcuts(c: CanvasRenderingContext2D, p: Player, gamepad = false) {
   const menu = HUD_ART.menu;
   for (let i = 0; i < HUD_MENU_SHORTCUTS.length; i++) {
     const x = menu.x + i * menu.step;
@@ -149,7 +150,7 @@ function shortcuts(c: CanvasRenderingContext2D, p: Player) {
       c.beginPath(); c.moveTo(x - 1, menu.y + 5); c.lineTo(x - 1, menu.y + menu.height - 5); c.stroke();
     }
     drawHUDMenuIcon(c, i, x + 10, menu.y + 10);
-    text(c, HUD_MENU_SHORTCUTS[i].key, x + 26, menu.y + 6, 1.0,
+    text(c, gamepad ? ['←', '→', '↑', ''][i] : HUD_MENU_SHORTCUTS[i].key, x + 26, menu.y + 6, 1.0,
       enabled ? '#a0b2b7' : '#4e626c', 'center', 'interface');
     if (points > 0) {
       // Persistent numbered seals: amber attributes, violet skills. Hide as soon as spent.
@@ -184,9 +185,9 @@ export function drawHUDContents(c: CanvasRenderingContext2D, p: Player, time: nu
       mana ? 0 : (options.hitPulse ?? 0) * (options.reducedMotion ? .4 : 1));
     c.restore();
   }
-  skills(c, p, t);
-  utilities(c, p, t);
-  shortcuts(c, p);
+  skills(c, p, t, options.gamepad);
+  utilities(c, p, t, options.gamepad);
+  shortcuts(c, p, options.gamepad);
   readout(c, orb.left, Math.ceil(Math.max(0, p.hp)), p.maxHp, false);
   readout(c, orb.right, Math.floor(Math.max(0, p.mana)), p.maxMana, true);
   drawHUDExperience(c, p, t, options.experience);
