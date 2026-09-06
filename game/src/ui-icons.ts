@@ -18,6 +18,8 @@ const ICONS = {
   skilltree: '<path d="M12 21v-7m0 1-6-5m6 1 6-5M6 10V5m12 1h3M12 9V3"/><circle cx="6" cy="3" r="2"/><circle cx="12" cy="11" r="2"/><circle cx="19" cy="4" r="2"/>',
   lantern: '<path d="M8 6h8l3 5-2 9H7l-2-9Zm0-1a4 4 0 0 1 8 0M5 11h14M8 20h8M9 11l1 9m5-9-1 9"/>',
   check: '<path d="m5 12 4 4L19 6"/>',
+  sortFilter: '<path d="M4 5h16l-6 7v6l-4 3v-9ZM3 15v6m-2-2 2 2 2-2"/>',
+  equipBest: '<path d="m5 19 2-2m1-4 7-8 3-1-1 3-7 8M5 11l7 7M3 18l3 3m13-9v6m-3-3h6"/>',
 } as const;
 
 export type UIIconName = keyof typeof ICONS;

@@ -144,6 +144,8 @@ export class Game {
         equip: (index, slot) => this.characterAction({ type: 'equip', index, slot }),
         unequip: (slot, index) => this.characterAction({ type: 'unequip', slot, index }),
         move: (from, to) => this.characterAction({ type: 'moveItem', from, to }),
+        equipBest: choice => this.characterAction({ type: 'equipBest', choice }),
+        sort: mode => this.characterAction({ type: 'sortInventory', mode }),
         allocate: attribute => this.characterAction({ type: 'allocateAttribute', attribute }),
       }));
       this.skillPanel = this.lifetime.own(new SkillTreePanel(this.shell.panelMount, {
@@ -701,6 +703,7 @@ export class Game {
     if (this.savingAction) return;
     const result = executeCharacterCommand(this.sim.player, command);
     if (!result.ok) { this.notify(result.message ?? 'Action unavailable.'); return; }
+    if (result.message) this.notify(result.message);
     if (this.phase === 'character') this.inventoryPanel.refresh(this.sim.player);
     if (this.phase === 'skills') this.skillPanel.refresh(this.sim.player);
     this.saveCharacter();
@@ -924,8 +927,9 @@ export class Game {
       this.input.clear(); this.sim.clearInput(); this.usingGamepad = true;
       this.padAimAngle = this.sim.player.angle;
     }
-    if (!pad.active) { this.gamepadMenu.clear(); return; }
+    if (!pad.active) { this.gamepadMenu.clear(); if (this.phase === 'character') this.inventoryPanel.updateGamepad(pad, now); return; }
     if (pad.pressed.has(PAD.pause) || (this.phase !== 'playing' && pad.pressed.has(PAD.dodge))) {
+      if (this.phase === 'character' && this.inventoryPanel.dismissPopup()) return;
       if (this.panels.activePanel) this.resume();
       else if (this.phase === 'playing' && !this.savingAction) { if (this.sim.portal.active) this.sim.portal.cancel(); else this.pause(); }
       else if (this.phase === 'paused') this.resume();
@@ -941,6 +945,7 @@ export class Game {
       if (pad.pressed.has(PAD.down)) { this.requestPortal(); return; }
       if (pad.pressed.has(PAD.interact)) this.interact();
     } else {
+      if (this.phase === 'character') { this.inventoryPanel.updateGamepad(pad, now); return; }
       const root = this.phase === 'ready' ? this.shell.titleMount : this.phase === 'map' ? this.shell.mapMount
         : this.panels.activePanel ? this.shell.panelMount : this.canvas.parentElement!.querySelector<HTMLElement>('#overlay')!;
       this.gamepadMenu.update(root, pad, now);

@@ -1,12 +1,20 @@
 import { PAD, type GamepadInput } from './gamepad-input.ts';
 
+export interface GamepadMenuActions {
+  switchTab?(delta: number): void;
+  activate?(target: HTMLElement): boolean;
+}
+
 /** Adapt controller navigation to the panels' existing focus/keyboard contracts. */
 export class GamepadMenu {
   private direction = '';
   private nextRepeat = 0;
   clear() { this.direction = ''; this.nextRepeat = 0; }
 
-  update(root: HTMLElement, pad: GamepadInput, now: number) {
+  update(root: HTMLElement, pad: GamepadInput, now: number, actions: GamepadMenuActions = {}) {
+    if (actions.switchTab && (pad.pressed.has(PAD.potion) || pad.pressed.has(PAD.skill2))) {
+      actions.switchTab(pad.pressed.has(PAD.potion) ? -1 : 1); this.clear(); return;
+    }
     const controls = [...root.querySelectorAll<HTMLElement>('button, input, select, textarea, [tabindex]')]
       .filter(el => el.tabIndex >= 0 && !el.matches(':disabled') && !el.closest('[hidden], [inert]') && el.getClientRects().length > 0);
     if (!controls.length) return;
@@ -17,8 +25,8 @@ export class GamepadMenu {
     };
     if (pad.pressed.has(PAD.potion)) step(-1);
     else if (pad.pressed.has(PAD.skill2)) step(1);
-    if (!root.contains(document.activeElement) && pad.active) step(1);
-    const target = document.activeElement;
+    if (!controls.includes(document.activeElement as HTMLElement) && pad.active) step(1);
+    let target = document.activeElement;
     if (!(target instanceof HTMLElement) || !root.contains(target)) return;
     const key = pad.held.has(PAD.left) || pad.move.x < -.5 ? 'ArrowLeft'
       : pad.held.has(PAD.right) || pad.move.x > .5 ? 'ArrowRight'
@@ -41,13 +49,19 @@ export class GamepadMenu {
       this.nextRepeat = now + (key === this.direction ? 120 : 350);
     }
     this.direction = key;
+    target = document.activeElement;
+    if (!(target instanceof HTMLElement) || !root.contains(target)) return;
     if (pad.pressed.has(PAD.interact)) {
-      if (target instanceof HTMLCanvasElement) target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
+      if (actions.activate?.(target)) { /* Panel action consumed A. */ }
+      else if (target instanceof HTMLCanvasElement) target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
       else target.click();
     }
     // Inventory exposes equip/unequip through its ordinary Shift-click action.
-    if (pad.pressed.has(PAD.skill3) && root.querySelector('.character-bag') && target.matches('[data-location]'))
-      target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true }));
+    if (pad.pressed.has(PAD.skill3) && !pad.pressed.has(PAD.interact)) {
+      if (actions.activate) { if (target.matches('[data-location]')) actions.activate(target); }
+      else if (root.querySelector('.character-bag') && target.matches('[data-location]'))
+        target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true }));
+    }
     if (target instanceof HTMLCanvasElement) {
       for (const [button, key] of [[PAD.skill1, '-'], [PAD.attack, '+']] as const)
         if (pad.pressed.has(button)) target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));

@@ -1,5 +1,6 @@
 import type { CharacterSheet, Item, ItemTier, EquipmentSlot } from './character-types.ts';
 import { generateItem, randomSource, itemDisplayName } from './items.ts';
+import { addInventoryItem } from './inventory.ts';
 import { creditGold, spendGold, goldBalance } from './wallet.ts';
 import { hashService, type TownNPC } from './npcs.ts';
 import { improveItem, improvementProblem, ITEM_TIERS, type Improvement } from './item-improvement.ts';
@@ -96,7 +97,7 @@ export function planService(sheet: CharacterSheet, npc: TownNPC, level: number, 
     if (!spendGold(character, price)) return { ok: false, message: 'Not enough gold.' };
     if (request.type === 'buy' || request.type === 'buyback') {
       if ([...character.inventory, ...Object.values(character.equipped)].some(i => i?.id === item.id)) return { ok: false, message: 'This item is already owned.' };
-      character.inventory[character.inventory.indexOf(null)] = item;
+      if (!addInventoryItem(character, item)) return { ok: false, message: 'Cannot add this item to your inventory.' };
       if (request.type === 'buy') character.commerce.sold[npc.id] = (character.commerce.sold[npc.id] ?? 0) | 1 << request.slot;
       else character.commerce.buyback = character.commerce.buyback.filter(b => b.item.id !== item.id);
       message = `Bought ${itemDisplayName(item)}`;
