@@ -24,6 +24,16 @@ function quoted(c: CharacterSheet, npc: TownNPC, request: ServiceRequest, level 
 function trade(c: CharacterSheet, npc: TownNPC, request: ServiceRequest, level = 10) {
   const result = planService(c, npc, level, quoted(c, npc, request, level)); assert.ok(result.ok, result.ok ? '' : result.message); return result;
 }
+
+test('purchases and buyback record acquisition order without mutating the source sheet', () => {
+  const original = sheet(), first = trade(original, jeweler, { type: 'buy', slot: 0 });
+  assert.equal(original.recentItems, undefined);
+  const second = trade(first.character, jeweler, { type: 'buy', slot: 1 });
+  assert.deepEqual(second.character.recentItems, [second.item.id, first.item.id]);
+  const sold = trade(second.character, jeweler, { type: 'sell', source: { bag: 0 } });
+  const boughtBack = trade(sold.character, jeweler, { type: 'buyback', id: first.item.id });
+  assert.deepEqual(boughtBack.character.recentItems, [first.item.id, second.item.id]);
+});
 test('stock is deterministic, visible jewelry only, varied equipment and distinct issuance per vendor/epoch', () => {
   const c = sheet(), stock = vendorStock(c, smith, 10);
   assert.equal(stock.length, 12); assert.deepEqual(stock, vendorStock(c, smith, 12));

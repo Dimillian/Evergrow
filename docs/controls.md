@@ -26,9 +26,11 @@ Unlock skills in the tree, then assign them to RMB or 1–4. Empty slots do noth
 
 In shops, select an item and Buy/Sell, or Shift-click for a direct trade. The Equipped section at the blacksmith or enchanter upgrades worn gear in place. Escape closes the service.
 
-In the inventory, hover/focus inspects, Shift-click equips or unequips, and drag/drop moves or equips items. In the tree, single-click inspects; double-click or Allocate path spends points on the complete highlighted route if affordable. Wheel zooms and dragging pans the atlas.
+In the inventory, hover/focus inspects, double-click equips a bag item, Enter/Space or Shift-click equips/unequips, and drag/drop moves or equips items. The first icon beside Inventory opens Sort & filter; the second runs Equip Best by item power. A different best weapon type asks: Equip anyway, Keep current weapon only (upgrade other gear), or Cancel. The sort/filter popover organizes the whole bag by rarity, type or recent pickup and combines type and rarity filters. Escape or B closes a popup before the inventory. In the tree, single-click inspects; double-click or Allocate path spends points on the complete highlighted route if affordable. Wheel zooms and dragging pans the atlas.
 
 ## Gamepad
+
+Inventory sort priorities are Rarity → Type → Recent pickup, Type → Rarity → Recent pickup, and Recent pickup → Rarity → Type. Select multiple type or rarity filters by toggling their buttons; All clears that group. Both groups combine, and the complete bag grid stays visible even when no items match.
 
 Connect a controller, focus the local game, press a button so the browser exposes it, then release the buttons and center both sticks. Controllers exposed with the browser's [standard Gamepad mapping](https://www.w3.org/TR/gamepad/#remapping) are supported; unmapped devices are ignored. Labels use Xbox positions: A/B/X/Y correspond to the bottom/right/left/top face buttons (Cross/Circle/Square/Triangle on PlayStation).
 
@@ -50,7 +52,7 @@ Connect a controller, focus the local game, press a button so the browser expose
 
 The HUD's small bindings follow the active input device. Stick deadzones suppress drift and preserve analog movement speed. Releasing both sticks retains the last facing; ranged attacks use the existing cursor-local aim assistance without projectile homing. Skills still require unlocking, assignment and compatible equipment.
 
-In menus, use D-pad/left stick to navigate and A to activate. LB/RB move through focusable controls, including between sections. B closes gameplay panels/resumes pause and cancels the character hall's delete confirmation. In the inventory, D-pad moves through bag cells and X equips/unequips the focused item. In shops, select an item with A, then focus and activate the ordinary purchase/sale/upgrade button. On the focused map or skill-atlas canvas, D-pad pans the map or inspects connected stars; LT/RT zoom out/in. Select fields change with D-pad; A on the atlas centers the inspected star, and the ordinary Allocate/Assign controls remain reachable with LB/RB.
+In menus, use D-pad/left stick to navigate and A to activate. LB/RB move through focusable controls. B closes gameplay panels/resumes pause and cancels the character hall's delete confirmation. In the character/inventory window, LB/RB instead switches Equipment, Inventory and Attributes section tabs with remembered focus; D-pad/left stick moves spatially between cells and buttons, A/X equips or unequips, and A operates Equip Best, sorting, filters and attribute buttons. The active section and selected control stay highlighted, and navigation scrolls the selected control into view. In shops, select an item with A, then focus and activate the ordinary purchase/sale/upgrade button. On the focused map or skill-atlas canvas, D-pad pans the map or inspects connected stars; LT/RT zoom out/in. Select fields change with D-pad; A on the atlas centers the inspected star, and the ordinary Allocate/Assign controls remain reachable with LB/RB.
 
 Character names and search text still use a keyboard. Inventory drag/drop and gameplay camera zoom remain mouse controls. This is an initial fixed controller layout; remapping, rumble and an on-screen keyboard are not implemented. Hardware compatibility and combat feel await player testing.
 

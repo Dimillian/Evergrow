@@ -6,7 +6,7 @@ import { CharacterSession } from '../src/character-session.ts';
 import { decodeCharacterSave, CHARACTER_SLOT_COUNT } from '../src/character-save.ts';
 import { awardCharacterExperience, refreshCharacter } from '../src/character.ts';
 import { generateItem, createCharacterSheet, STARTER_LOADOUTS } from '../src/items.ts';
-import { equipItem } from '../src/inventory.ts';
+import { addInventoryItem, equipItem } from '../src/inventory.ts';
 import { executeCharacterCommand } from '../src/character-commands.ts';
 import { SKILL_NODES } from '../src/skill-tree.ts';
 import { Exploration } from '../src/exploration.ts';
@@ -20,6 +20,25 @@ async function setup() {
   assert.ok((await session.create(0, 'Rowan', 7319, sim.captureCheckpoint(), 'character-a', 100)), session.error);
   return { data, storage, repo, session, sim };
 }
+
+test('pickup history and sorted bag round trip; malformed histories are rejected', async () => {
+  const { session, repo, sim } = await setup();
+  const first = generateItem(919, 1, 'ring', undefined, 'legendary');
+  const latest = generateItem(920, 1, 'head', undefined, 'common');
+  addInventoryItem(sim.player.character, first); addInventoryItem(sim.player.character, latest);
+  executeCharacterCommand(sim.player, { type: 'sortInventory', mode: 'rarity' });
+  assert.ok(await session.save(sim.captureCheckpoint(), 200));
+  const record = repo.read(0).record!;
+  const decoded = decodeCharacterSave(JSON.stringify(record))!;
+  sim.restoreCheckpoint(decoded.checkpoint);
+  assert.equal(sim.player.character.inventory[0]!.id, first.id);
+  executeCharacterCommand(sim.player, { type: 'sortInventory', mode: 'recent' });
+  assert.equal(sim.player.character.inventory[0]!.id, latest.id);
+  for (const history of [[latest.id, latest.id], [9], ['x'.repeat(161)], Array.from({ length: 76 }, (_, i) => `item-${i}`)]) {
+    const bad = structuredClone(record); bad.checkpoint.character.recentItems = history as string[];
+    assert.equal(decodeCharacterSave(JSON.stringify(bad)), null);
+  }
+});
 
 test('all eight slots create independent identical starters with leather armor and empty inventories', async () => {
   const { repo, session, sim } = (await setup());

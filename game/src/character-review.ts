@@ -90,6 +90,8 @@ const inventory = life.own(new InventoryPanel(shell.panelMount, { close: () => s
   equip: (i, slot) => result(equipItem(p.character, i, p.level, slot)),
   unequip: (slot, i) => result(unequipItem(p.character, slot, i)),
   move: (from, to) => result(moveInventoryItem(p.character, from, to)),
+  equipBest: choice => result(executeCharacterCommand(p, { type: 'equipBest', choice })),
+  sort: mode => result(executeCharacterCommand(p, { type: 'sortInventory', mode })),
   allocate: attribute => result(allocateAttribute(p.character, attribute)),
 }));
 const tree = life.own(new SkillTreePanel(shell.panelMount, {

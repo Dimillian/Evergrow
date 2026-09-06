@@ -65,6 +65,10 @@ Open the local [interface review](http://127.0.0.1:5173/ui.html) to compare real
 
 ## Character panels and extension
 
+Sort prioritizes Rarity → Type → Recent, Type → Rarity → Recent, or Recent → Rarity → Type. Filter buttons are independent `aria-pressed` toggles, with OR within a group and AND between type and rarity. Empty selections mean All. The bag always retains its complete 8×8 styling: the view maps matching items first, then actual empty sources, then inert filler cells for excluded items. Each actionable cell keeps its actual bag index for equip, drag/drop and tooltip comparison; fillers never become inventory destinations. Filtering is presentation-only.
+
+The character window retains its three columns without a separate section-navigation row. Two quiet 17px icons sit immediately after the Inventory title: Sort & filter and Equip Best. Their desktop targets are 32px, expanding to 44px for coarse pointers. Sort/filter choices live in an anchored compact dialog; an active filter leaves a small dot on its icon. Equip Best shows a three-choice warning when the best eligible weapon changes family or handedness. Both dialogs make the parent content inert, contain focus, restore it to the opener, and dismiss on outside click, Escape or controller B. LB/RB still selects sections and restores their last visible, enabled focus targets. Controller focus uses an explicit high-contrast outline independent of browser `:focus-visible`; the active section receives a silver top edge. D-pad/stick follows control geometry within the active section or popup. Mutations still go through character commands.
+
 Compose the shared window, wells, slots, stat rows, badges, and tooltip surfaces. Keep equipment and item state outside the presentation helpers. Use the game's existing phase/input boundary when opening a new modal, and register its bounds with UI hit testing. Maintain 44px interactive targets, responsive overflow, native-resolution text, and keyboard access. Expand the shared primitives when a repeated pattern is needed instead of creating another independent panel theme.
 
 ## Experience presentation

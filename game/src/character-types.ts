@@ -35,6 +35,8 @@ export interface CharacterSheet extends GoldWallet {
   statPoints: number; skillPoints: number;
   allocatedNodes: string[];
   inventory: Array<Item | null>;
+  /** Newest acquired first; absent until the first tracked pickup. */
+  recentItems?: string[];
   equipped: Record<EquipmentSlot, Item | null>;
   skillSlots: Array<SkillId | null>;
   skillRanks: Partial<Record<SkillId, number>>;

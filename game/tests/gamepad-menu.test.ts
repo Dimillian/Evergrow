@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test, { after } from 'node:test';
 import { GamepadInput, PAD, type PadSnapshot } from '../src/gamepad-input.ts';
-import { GamepadMenu } from '../src/gamepad-menu.ts';
+import { GamepadMenu, type GamepadMenuActions } from '../src/gamepad-menu.ts';
 
 // Minimal event/focus boundary, without launching a browser or a gameplay session.
 const doc = { activeElement: null as Element | null };
@@ -35,7 +35,7 @@ after(() => { for (const key of Object.keys(globals)) {
   else Reflect.deleteProperty(globalThis, key);
 } });
 
-function setup(children: Element[]) {
+function setup(children: Element[], actions: GamepadMenuActions = {}) {
   const root = new Element(); root.children = children;
   const pad = new GamepadInput(), menu = new GamepadMenu();
   const poll = (buttons: number[]) => {
@@ -44,7 +44,7 @@ function setup(children: Element[]) {
     pad.poll([snapshot], true);
   };
   poll([]); doc.activeElement = children[0];
-  const update = (buttons: number[], now = 0) => { poll(buttons); menu.update(root as unknown as HTMLElement, pad, now); };
+  const update = (buttons: number[], now = 0) => { poll(buttons); menu.update(root as unknown as HTMLElement, pad, now, actions); };
   return { root, update };
 }
 
@@ -56,6 +56,34 @@ test('menu focus traversal skips disabled/hidden controls and activation runs on
   update([PAD.interact]); update([PAD.interact], 1000); assert.equal(b.clicks, 1);
   update([]); update([PAD.interact]); assert.equal(b.clicks, 2);
   update([PAD.skill2]); assert.equal(doc.activeElement, a);
+});
+
+test('focus recovers when an attribute action disables the selected control', () => {
+  const first = new Element(), second = new Element();
+  const { update } = setup([first, second]);
+  first.disabled = true;
+  update([PAD.interact]);
+  assert.equal(doc.activeElement, second); assert.equal(first.clicks, 0); assert.equal(second.clicks, 1);
+});
+
+test('inventory shoulders change sections once per edge and consume simultaneous activation', () => {
+  const first = new Element(), second = new Element(), tabs: number[] = [];
+  const { update } = setup([first, second], { switchTab: delta => { tabs.push(delta); second.focus(); } });
+  update([PAD.skill2, PAD.interact]); update([PAD.skill2, PAD.interact], 1000);
+  assert.deepEqual(tabs, [1]); assert.equal(doc.activeElement, second);
+  assert.equal(first.clicks + second.clicks, 0);
+  update([]); update([PAD.potion]); assert.deepEqual(tabs, [1, -1]);
+});
+
+test('inventory A and X consume item activation once, and directional activation uses the new focus', () => {
+  const first = new Element(), second = new Element(); first.location = true; second.location = true;
+  const activated: HTMLElement[] = [];
+  const { update } = setup([first, second], { activate: target => { activated.push(target); return true; } });
+  update([PAD.right, PAD.interact]);
+  assert.equal(activated[0], second); assert.equal(first.clicks + second.clicks, 0);
+  update([PAD.interact], 1000); assert.equal(activated.length, 1);
+  update([]); update([PAD.skill3]); assert.equal(activated.length, 2);
+  update([]); update([PAD.interact, PAD.skill3]); assert.equal(activated.length, 3);
 });
 
 test('custom canvas navigation consumes directions, repeats at bounded intervals and supports zoom', () => {

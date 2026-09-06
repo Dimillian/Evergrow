@@ -84,6 +84,8 @@ export function addInventoryItem(sheet: CharacterSheet, item: Item): boolean {
   const index = sheet.inventory.findIndex(existing => existing === null);
   if (index < 0) return false;
   sheet.inventory[index] = item;
+  const owned = new Set([...sheet.inventory, ...Object.values(sheet.equipped)].filter((i): i is Item => i !== null).map(i => i.id));
+  sheet.recentItems = [item.id, ...(sheet.recentItems ?? []).filter(id => id !== item.id && owned.has(id))];
   return true;
 }
 
