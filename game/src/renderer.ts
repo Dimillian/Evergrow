@@ -399,14 +399,15 @@ export class Renderer {
   renderUI(c: CanvasRenderingContext2D, sim: Simulation, world: World, settings: RenderSettings) {
     const p = sim.player;
     // Project popup anchors, leaving their glyph size and outline independent of camera zoom.
-    const numberBounds = this.effects.drawNumbers(c, (x, y) => worldToScreen(this.view, x, y));
+    // Speech draws later and may cover damage numbers; popups never displace a bark.
+    this.effects.drawNumbers(c, (x, y) => worldToScreen(this.view, x, y));
     const lootBounds = drawLootLabels(c, sim.groundItems, (x, y) => worldToScreen(this.view, x, y), this.width, this.height);
     const phone = this.touchActive && this.touchViewport ? phoneLandscapeLayout(this.touchViewport) : null;
     const unit = this.touchViewport ? this.width / this.touchViewport.width : 1;
     const footer = phone ? {x:phone.footer.x*unit,y:phone.footer.y*unit,scale:phone.footer.scale*unit} : undefined;
     const headerX = phone ? (phone.left-22*.8)*unit : 0;
     const headerY = phone ? (phone.top-22*.8)*unit : 0;
-    const barkReserved = [...numberBounds, ...lootBounds,
+    const barkReserved = [...lootBounds,
       getHUDLayout(this.width, this.height), getMinimapRect(this.width, this.height), getPortalControlRect(this.width, this.height),
       { x: 0, y: 0, width: this.width, height: 112 + this.touchTopInset }];
     if (this.extraUIBounds) barkReserved.push(this.extraUIBounds);

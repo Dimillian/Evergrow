@@ -1,6 +1,6 @@
 import type { EnemyKind } from './model.ts';
 
-export const BARK_RULES = Object.freeze({ chance: .25, maxVisible: 3, duration: 2.8, fadeIn: .12, fadeOut: .25, spacing: .8, admissionWindow: 4, disengagedFor: 30, retryAfter: 45, maxTracked: 64 });
+export const BARK_RULES = Object.freeze({ chance: .25, maxVisible: 3, duration: 4, fadeIn: .12, fadeOut: .25, spacing: .8, admissionWindow: 4, disengagedFor: 30, retryAfter: 45, maxTracked: 64 });
 
 /** Authored short encounter lines. Creatures without language deliberately have no pool. */
 export const BATTLE_BARKS = Object.freeze({

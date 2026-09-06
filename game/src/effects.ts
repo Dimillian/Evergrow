@@ -8,7 +8,7 @@ import { drawGlow } from './lighting.ts';
 import type { PointLight } from './lighting.ts';
 import type { CombatEvent } from './model.ts';
 import type { Simulation } from './simulation.ts';
-import { text, textWidth } from './font.ts';
+import { text } from './font.ts';
 import { SwordTrail } from './sword-trail.ts';
 import { projectileStyle, PROJECTILE_COLORS } from './projectile-art.ts';
 import { SkillEffects } from './skill-effects.ts';
@@ -230,21 +230,17 @@ export class CombatEffects {
   }
 
   drawNumbers(c: CanvasRenderingContext2D, project: (x: number, y: number) => { x: number; y: number } = (x, y) => ({ x, y })) {
-    const bounds: { x: number; y: number; width: number; height: number }[] = [];
     c.save();
     for (const popup of this.popups) {
       const elapsed = popup.max - popup.life;
       const pop = 1 + .35 * Math.exp(-elapsed * 22);
       const size = popup.size * pop;
       const { x, y } = project(popup.x, popup.y);
-      const width = textWidth(popup.value, size) + 4;
-      bounds.push({ x: x - width / 2, y: y - 2, width, height: 11 * size + 4 });
       c.globalAlpha = Math.min(1, popup.life / .2);
       text(c, popup.value, x - 1, y, size, '#04070b', 'center');
       text(c, popup.value, x + 1, y + 1, size, '#04070b', 'center');
       text(c, popup.value, x, y, size, popup.color, 'center');
     }
     c.restore();
-    return bounds;
   }
 }

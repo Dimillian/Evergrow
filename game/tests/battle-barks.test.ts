@@ -90,11 +90,12 @@ test('all populations share spacing and the hard cap, including fading speech', 
   }
   assert.equal(barks.active.length, 3);
   living.add(4); barks.noteEvents([edge(4, 1.85, true, 'caster')]); update(barks, 1.85, living);
+  update(barks, BARK_RULES.duration - BARK_RULES.fadeOut / 2, living);
   assert.equal(barks.active.length, 3, 'fade-out still occupies a slot');
-  update(barks, 2.9, living);
+  update(barks, BARK_RULES.duration + .1, living);
   assert.equal(barks.active.some(b => b.id === 4), true, 'a successful greeting can use the next free slot');
   for (let id = 5; id <= 48; id++) {
-    const time = 2.5 + id * .1; living.add(id); barks.noteEvents([edge(id, time)]); update(barks, time, living);
+    const time = BARK_RULES.duration + id * .1; living.add(id); barks.noteEvents([edge(id, time)]); update(barks, time, living);
     assert.ok(barks.active.length <= BARK_RULES.maxVisible);
     const starts = barks.active.map(b => b.started).sort((a, b) => a - b);
     assert.ok(starts.every((at, i) => i === 0 || at - starts[i - 1] >= .8 - 1e-9));
@@ -107,7 +108,7 @@ test('simultaneous successful greetings share the opening window without roster 
   assert.equal(barks.active.length, 1); assert.notEqual(barks.active[0].id, 1);
   update(barks, .8, ids(1, 2, 3)); assert.equal(barks.active.length, 2);
   update(barks, 1.6, ids(1, 2, 3)); assert.equal(barks.active.length, 3);
-  update(barks, 4.5, ids(1, 2, 3)); assert.equal(barks.active.length, 0);
+  update(barks, 1.6 + BARK_RULES.duration + .1, ids(1, 2, 3)); assert.equal(barks.active.length, 0);
 });
 
 test('successful greetings survive brief obstruction but cannot appear after the admission deadline', () => {
