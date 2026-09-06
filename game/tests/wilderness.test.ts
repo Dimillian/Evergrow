@@ -24,7 +24,7 @@ test('wilderness blueprints are seeded, immutable, bounded and independent of qu
   for (const site of sites) {
     assert.ok(Object.isFrozen(site) && Object.isFrozen(site.decor) && Object.isFrozen(site.members));
     assert.ok(site.decor.every(Object.isFrozen) && site.members.every(Object.isFrozen));
-    assert.ok(site.radius <= WILDERNESS_RULES.maxRadius && site.decor.length <= 30 && site.members.length <= 6);
+    assert.ok(site.radius <= WILDERNESS_RULES.maxRadius && site.decor.length <= 30 && site.members.length <= 16);
     assert.equal(site.biome, world.sampleBiome(site.x, site.y).id);
   }
   world.dispose(); assert.equal(world.cacheStats.wildernessSites, 0);
@@ -63,10 +63,10 @@ test('the accessible first camp and distant camps have clear authored member slo
     const camps = world.getEnemyCamps(-8000, -8000, 16000, 16000);
     assert.ok(camps.some(c => c.id === first.id));
     for (const camp of camps) {
-      assert.ok(camp.members.length >= 4 && camp.members.length <= 6);
+      assert.ok(camp.members.length >= 4 && camp.members.length <= 16);
       assert.equal(new Set(camp.members.map(m => m.id)).size, camp.members.length);
       for (const member of camp.members) {
-        assert.equal(world.blocked(camp.x + member.dx, camp.y + member.dy, 17), false, `${camp.id} ${member.id} slot is blocked`);
+        assert.equal(world.blocked(camp.x + member.dx, camp.y + member.dy, ENEMY_DEFINITIONS[member.kind].radius), false, `${camp.id} ${member.id} slot is blocked`);
         assert.equal(world.isSanctuary(camp.x + member.dx, camp.y + member.dy), false);
         if (Math.hypot(camp.x + member.dx, camp.y + member.dy) < 6400) assert.notEqual(member.rank, 'elite');
       }
@@ -163,7 +163,10 @@ test('all climates own complete camp materials and six-member roles without intr
     const world = new World(seed);
     for (const camp of world.getWildernessSites(-10000, -10000, 20000, 20000).filter(site => site.kind === 'camp')) {
       if (camp.id.endsWith(':first-camp')) continue;
-      assert.deepEqual(camp.members.map(member => member.kind), CAMP_BIOME_ROSTERS[camp.biome]);
+      if (camp.members[0].kind === 'goblinChief') {
+        assert.ok(camp.members.length >= 11 && camp.members.length <= 16);
+        assert.ok(camp.members.slice(1).every(m => m.kind === 'goblin'));
+      } else assert.deepEqual(camp.members.map(member => member.kind), CAMP_BIOME_ROSTERS[camp.biome]);
       assert.ok(camp.members[0].rank === 'veteran' || camp.members[0].rank === 'elite');
       assert.ok(camp.members.slice(1).every(member => member.rank === 'normal'));
     }

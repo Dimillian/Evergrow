@@ -15,7 +15,7 @@ test('simulation uses canonical fixed-step and impact timing', () => {
 
 test('enemy definitions have complete coherent telegraph, attack and projectile windows', () => {
   const names = new Set<string>();
-  for (const kind of ['stalker', 'brute', 'caster', 'hound', 'archer', 'wisp'] satisfies EnemyKind[]) {
+  for (const kind of Object.keys(ENEMY_DEFINITIONS) as EnemyKind[]) {
     const enemy = ENEMY_DEFINITIONS[kind];
     assert.ok(Object.isFrozen(enemy), 'runtime actor updates cannot alter shared definitions');
     assert.ok(enemy.name.length > 0); names.add(enemy.name);
@@ -38,7 +38,7 @@ test('enemy definitions have complete coherent telegraph, attack and projectile 
       assert.ok(enemy.windup - enemy.aimLock >= .8, 'ground strikes leave a readable escape window');
     }
   }
-  assert.equal(names.size, 6);
+  assert.equal(names.size, Object.keys(ENEMY_DEFINITIONS).length);
   assert.ok(Object.isFrozen(ENEMY_DEFINITIONS));
   assert.ok(Object.isFrozen(PROJECTILE_DEFINITIONS));
 });
@@ -57,7 +57,7 @@ test('player ability definitions retain cancellable casts and bounded dodge prot
 });
 
 test('spawned actors and actual melee/projectile contact use the authored enemy definitions', () => {
-  for (const kind of ['stalker', 'brute', 'caster', 'hound', 'archer', 'wisp'] satisfies EnemyKind[]) {
+  for (const kind of Object.keys(ENEMY_DEFINITIONS) as EnemyKind[]) {
     const definition = ENEMY_DEFINITIONS[kind];
     const sim = new Simulation(world, { spawn: false });
     const enemy = sim.spawnEnemy(kind, definition.attack === 'melee' ? -20 : -200, 0)!;

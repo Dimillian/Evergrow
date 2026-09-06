@@ -150,17 +150,18 @@ test('approaching camp priority sleeps distant offscreen garrisons while preserv
 });
 
 test('the reserved camp budget yields only offscreen farther groups to the approaching camp', () => {
+  const size = Math.floor((ENCOUNTER_RULES.hardPopulationCap - ENCOUNTER_RULES.roamingReserve) / 2);
   const sim = new Simulation(open, { spawn: false }), ledger = new CampPopulation();
   const camp = (id: string, x: number): EnemyCamp => ({ id, x, y: 0, radius: 150,
-    members: Array.from({ length: 6 }, (_, index) => ({ id: `${id}:${index}`, kind: 'stalker', rank: 'normal', dx: index * 25, dy: 0 })) });
+    members: Array.from({ length: size }, (_, index) => ({ id: `${id}:${index}`, kind: 'stalker', rank: 'normal', dx: index * 25, dy: 0 })) });
   const a = camp('a', 750), b = camp('b', 1000), near = camp('near', 400);
   const update = (camps: EnemyCamp[]) => ledger.update(camps, sim.player, sim.enemies, open,
     (member, x, y, source) => sim.spawnEnemy(member.kind, x, y, member.rank, source), 1000,
     { x: -250, y: -250, width: 500, height: 500 });
-  update([a, b]); assert.equal(sim.enemies.length, 12);
+  update([a, b]); assert.equal(sim.enemies.length, size * 2);
   update([near, a, b]);
-  assert.equal(sim.enemies.length, 12); assert.equal(sim.enemies.filter(enemy => enemy.campId === near.id).length, 6);
-  assert.equal(sim.enemies.filter(enemy => enemy.campId === a.id).length, 6);
+  assert.equal(sim.enemies.length, size * 2); assert.equal(sim.enemies.filter(enemy => enemy.campId === near.id).length, size);
+  assert.equal(sim.enemies.filter(enemy => enemy.campId === a.id).length, size);
   assert.equal(sim.enemies.filter(enemy => enemy.campId === b.id).length, 0);
 });
 

@@ -4,7 +4,7 @@ import type { EnemyKind } from './model.ts';
 import type { EnemyRank } from './progression-content.ts';
 import { normalizeLevel } from './progression-content.ts';
 import { generateItem } from './items.ts';
-import { BIOME_PROFILE_WEIGHTS, ENEMY_ITEM_KIND_WEIGHTS, getLootTable } from './loot-content.ts';
+import { BIOME_PROFILE_WEIGHTS, ENEMY_ITEM_KIND_WEIGHTS, ENEMY_LOOT_YIELD, getLootTable } from './loot-content.ts';
 
 export interface EnemyLootContext {
   readonly seed: number;
@@ -65,7 +65,7 @@ export function lootItemLevel(monsterLevel: number, rank: EnemyRank): number {
 /** Isolated reward RNG: combat draws, XP award order, and subsequent player levels cannot change this result. */
 export function rollEnemyLoot(context: EnemyLootContext): Item[] {
   const seed = context.seed >>> 0, random = randomSource(seed), table = getLootTable(context.rank);
-  const count = enemyLootCount(context.rank, random(), context.firstKill);
+  const count = enemyLootCount(context.rank, Math.min(1 - Number.EPSILON, random() / (ENEMY_LOOT_YIELD[context.kind] ?? 1)), context.firstKill);
   const itemLevel = lootItemLevel(context.level, context.rank);
   const items: Item[] = [];
   for (let index = 0; index < count; index++) {

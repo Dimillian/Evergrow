@@ -65,6 +65,16 @@ export type EnemyDefinition = EnemyBaseDefinition & (
 );
 
 export const ENEMY_DEFINITIONS: Readonly<Record<EnemyKind, EnemyDefinition>> = Object.freeze({
+  goblin: Object.freeze({ name: 'Scrap Goblin', hp: 22, xpReward: 6, radius: 6, speed: 132,
+    windup: .38, active: .15, recovery: .6, range: 22, damage: 5, aimLock: .13,
+    attack: 'melee', arc: Math.PI * .55, lungeSpeed: 70,
+    awarenessDistance: 260, preferredDistance: 30, role: 'flanker',
+    knockbackDistance: 22, interruptible: true }),
+  goblinChief: Object.freeze({ name: 'Goblin War Chief', hp: 170, xpReward: 65, radius: 13, speed: 86,
+    windup: .78, active: .2, recovery: .9, range: 43, damage: 17, aimLock: .26,
+    attack: 'melee', arc: Math.PI * .95, lungeSpeed: 35,
+    awarenessDistance: 310, preferredDistance: 55, role: 'heavy',
+    knockbackDistance: 7, interruptible: false }),
   stalker: Object.freeze({ name: 'Hollow Stalker', hp: 48, xpReward: 20, radius: 10, speed: 104,
     windup: .42, active: .18, recovery: .78, range: 28, damage: 8, aimLock: .17,
     attack: 'melee', arc: Math.PI * .7, lungeSpeed: 48,

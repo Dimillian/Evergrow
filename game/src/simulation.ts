@@ -1,3 +1,4 @@
+import { updateWarbands } from './warband.ts';
 import { freshEvents, syncTrial } from './poi-content.ts';
 import { EventChannel, advanceTrial } from './poi-runtime.ts';
 import { GROUND_EFFECT_RULES } from './skill-execution-content.ts';
@@ -520,6 +521,7 @@ export class Simulation {
   }
 
   private updateEnemies(dt: number): void {
+    updateWarbands(this.enemies, this.player, this.world, dt);
     const p = this.player;
     const context: EnemyAIContext = {
       player: p, enemies: this.enemies, world: this.world, time: this.time,
@@ -701,7 +703,7 @@ export class Simulation {
         const radius = index === 0 ? 0 : 65 + this.random() * 35;
         const x = anchor.x + Math.cos(angle) * radius, y = anchor.y + Math.sin(angle) * radius;
         const zone = getZoneAt(x, y), biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
-        const preferred = index ? ROAMING_GROUPS[members[0].kind][index] : undefined;
+        const preferred = index ? ROAMING_GROUPS[members[0].kind]?.[index] : undefined;
         const kind = chooseEncounterEnemy(population, zone.level, biome, () => this.random(), preferred);
         if (!kind || !isSpawnHidden(x, y, view, ENEMY_DEFINITIONS[kind].radius)
           || this.world.isSanctuary?.(x, y)

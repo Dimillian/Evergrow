@@ -1,3 +1,4 @@
+import { goblinSpeed, goblinDamage } from './warband.ts';
 import { transitionEnemy } from './enemy-state.ts';
 import { ENEMY_AI_RULES, ENEMY_DEFINITIONS, type EnemyDefinition, type ProjectileDefinition } from './combat-content.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
@@ -26,7 +27,7 @@ function separatedMotion(enemy: Enemy, vx: number, vy: number, context: EnemyAIC
       vx += dx / distance * force; vy += dy / distance * force;
     }
   }
-  const maxSpeed = ENEMY_DEFINITIONS[enemy.kind].speed;
+  const maxSpeed = ENEMY_DEFINITIONS[enemy.kind].speed * goblinSpeed(enemy);
   const length = Math.hypot(vx, vy), scale = length > maxSpeed ? maxSpeed / length : 1;
   return { vx: vx * scale, vy: vy * scale };
 }
@@ -37,8 +38,8 @@ function moveToward(enemy: Enemy, x: number, y: number, speed: number, dt: numbe
   // A patrol target drifts much more slowly than a hound can run. Arrive gently
   // instead of stepping past it and reversing on the next fixed tick.
   const arriving = enemy.state === 'patrol' || (enemy.state === 'chase' && !enemy.seesPlayer);
-  const approachSpeed = Math.min(speed, distance / dt,
-    arriving ? distance * ENEMY_AI_RULES.arrivalResponse : speed);
+  const approachSpeed = Math.min(speed * goblinSpeed(enemy), distance / dt,
+    arriving ? distance * ENEMY_AI_RULES.arrivalResponse : speed * goblinSpeed(enemy));
   const velocity = separatedMotion(enemy, dx / distance * approachSpeed, dy / distance * approachSpeed, context);
   const beforeX = enemy.x, beforeY = enemy.y;
   context.move(enemy, velocity.vx, velocity.vy, dt);
@@ -101,11 +102,17 @@ function chase(enemy: Enemy, dt: number, context: EnemyAIContext, definition: En
   const targetX = hasSight ? p.x : enemy.lastSeenX, targetY = hasSight ? p.y : enemy.lastSeenY;
   const dx = targetX - enemy.x, dy = targetY - enemy.y, distance = Math.hypot(dx, dy), angle = Math.atan2(dy, dx);
   if (hasSight) enemy.angle = angle;
+  if (enemy.kind === 'goblin' && enemy.warband?.order === 'rout') {
+    const flee = angle + Math.PI + (enemy.id % 2 ? .5 : -.5);
+    moveToward(enemy, enemy.x + Math.cos(flee) * 100, enemy.y + Math.sin(flee) * 100, definition.speed, dt, context);
+    return;
+  }
   const attackDistance = definition.attack === 'melee'
     ? definition.engageDistance ?? definition.range + p.radius - 3 : definition.maxAttackDistance;
   const minDistance = definition.attack === 'melee' ? 0 : definition.retreatDistance;
   if (hasSight && distance <= attackDistance && distance > minDistance
     && context.visible(enemy.x, enemy.y, p.x, p.y)) {
+    enemy.attackDamage = enemy.damage * goblinDamage(enemy);
     enemy.attackAngle = angle; enemy.attackTargetX = p.x; enemy.attackTargetY = p.y;
     transitionEnemy(enemy, 'windup', definition.windup); return;
   }
@@ -123,7 +130,7 @@ function chase(enemy: Enemy, dt: number, context: EnemyAIContext, definition: En
   }
   // Close into an attack lane independently; hounds approach their pounce range.
   // Separation and flanking spread the pack without parking allies in a waiting ring.
-  const spread = definition.role === 'heavy' ? 0 : ENEMY_AI_RULES.flankAngle * side;
+  const spread = definition.role === 'heavy' ? 0 : (enemy.warband?.order === 'surround' && !enemy.warband.warning ? 1.15 : ENEMY_AI_RULES.flankAngle) * side;
   const ring = definition.role === 'skirmisher' ? definition.preferredDistance * .7 : 18;
   const around = Math.atan2(enemy.y - p.y, enemy.x - p.x) + spread;
   moveToward(enemy, p.x + Math.cos(around) * ring, p.y + Math.sin(around) * ring, definition.speed, dt, context);
@@ -193,7 +200,7 @@ export function updateEnemyAI(enemy: Enemy, dt: number, context: EnemyAIContext)
       if (!enemy.attackHit && circleIntersectsSector(p.x, p.y, p.radius,
         enemy.x, enemy.y, enemy.attackAngle, definition.range, definition.arc)
         && context.visible(enemy.x, enemy.y, p.x, p.y)) {
-        enemy.attackHit = true; context.hurt(enemy.damage, enemy.attackAngle, enemy);
+        enemy.attackHit = true; context.hurt(enemy.attackDamage ?? enemy.damage, enemy.attackAngle, enemy);
       }
     }
     if (enemy.stateTime + 1e-9 >= enemy.stateDuration) transitionEnemy(enemy, 'recover', definition.recovery);

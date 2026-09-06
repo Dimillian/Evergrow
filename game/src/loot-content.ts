@@ -26,6 +26,8 @@ export function getLootTable(rank: EnemyRank): EnemyLootTable { return ENEMY_LOO
 
 /** All twelve equipment kinds remain eligible. The foe's archetype supplies a readable tendency. */
 export const ENEMY_ITEM_KIND_WEIGHTS: Readonly<Record<EnemyKind, Readonly<Record<ItemKind, number>>>> = Object.freeze({
+  goblin: Object.freeze({ grimoire: 1, orb: 1, weapon: 30, shield: 8, head: 5, chest: 5, gloves: 8, legs: 8, boots: 14, cloak: 6, amulet: 3, ring: 11 }),
+  goblinChief: Object.freeze({ grimoire: 1, orb: 1, weapon: 30, shield: 14, head: 12, chest: 10, gloves: 6, legs: 6, boots: 6, cloak: 6, amulet: 3, ring: 5 }),
   stalker: Object.freeze({ grimoire: 2, orb: 2, weapon: 28, shield: 6, head: 8, chest: 8, gloves: 10, legs: 8, boots: 12, cloak: 8, amulet: 3, ring: 5 }),
   brute: Object.freeze({ grimoire: 2, orb: 2, weapon: 23, shield: 18, head: 10, chest: 15, gloves: 7, legs: 10, boots: 5, cloak: 3, amulet: 2, ring: 3 }),
   hound: Object.freeze({ grimoire: 2, orb: 2, weapon: 14, shield: 5, head: 5, chest: 7, gloves: 13, legs: 10, boots: 22, cloak: 10, amulet: 5, ring: 5 }),
@@ -100,3 +102,6 @@ export const BIOME_PROFILE_WEIGHTS: Readonly<Record<BiomeId, BiomeProfileWeights
     shield: Object.freeze({ 'iron-buckler': 1, 'vigil-kite': 3, 'bastion-tower': 3 }),
   }),
 });
+
+/** Numerous fragile followers carry less equipment and coin than full-strength foes. */
+export const ENEMY_LOOT_YIELD: Readonly<Partial<Record<EnemyKind, number>>> = Object.freeze({ goblin: .3 });

@@ -1,3 +1,4 @@
+import { ENCOUNTER_RULES } from '../src/encounter-director.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
@@ -254,7 +255,7 @@ test('trial actors wait for population room and suspend without rewarding or hea
   executeEvent(sim, grave, null, persist);
   const view = { x: -900, y: -550, width: 1800, height: 1100 };
   sim.setSpawnExclusion(view);
-  for (let i = 0; i < 23; i++)
+  for (let i = 0; i < ENCOUNTER_RULES.hardPopulationCap - 1; i++)
     sim.spawnEnemy('stalker', 2500 + i * 50, 0, 'normal', { campId: 'capacity-fixture', memberId: String(i), lootSeed: i });
   tick(sim, .6);
   assert.equal(sim.eventState.trial!.guardians.some(g => g.admitted), false);

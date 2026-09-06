@@ -22,6 +22,8 @@ const abort = new AbortController();
 const scenes: Array<{ canvas: HTMLCanvasElement; poses: CharacterPose[]; groundItem?: ReturnType<typeof generateItem> }> = [];
 const base = { angle: 1.15, time: 2.7, moving: 0, attack: 0, attackAngle: 1.15, hitFlash: 0, dodging: false };
 const roles: Record<EnemyKind, { role: string; detail: string; attack: number }> = {
+  goblin: { role: 'Swarm', detail: 'Small blades, quick feet; rushes and flanks under a chief.', attack: .45 },
+  goblinChief: { role: 'Commander', detail: 'War horn and iron trophy banner; death scatters its followers.', attack: -.7 },
   stalker: { role: 'Flanker', detail: 'Burial shroud · split skull · hooked limbs', attack: -.72 },
   brute: { role: 'Heavy', detail: 'Ossuary cuirass · sealed grave hammer', attack: -.8 },
   caster: { role: 'Hexer', detail: 'Ceremonial stole · antlered cowl · reliquary', attack: -.78 },
@@ -29,7 +31,7 @@ const roles: Record<EnemyKind, { role: string; detail: string; attack: number }>
   archer: { role: 'Ranger', detail: 'Thorn mantle · shouldered quiver · drawn bow', attack: -.85 },
   wisp: { role: 'Spirit', detail: 'Caged flame · trailing cloth · suspended iron', attack: -.85 },
 };
-root.innerHTML = `<header class="bestiary-header"><div><div class="ui-kicker">EVERGROW / PROCEDURAL ASSET STUDY</div><h1>${armory ? 'The travelling armory' : 'Creatures of the wild'}</h1><p>${armory ? 'Shared forged geometry, dressed figures and recognisable field loot.' : 'Six silhouettes, each with a readable combat role and its own movement.'}</p></div>
+root.innerHTML = `<header class="bestiary-header"><div><div class="ui-kicker">EVERGROW / PROCEDURAL ASSET STUDY</div><h1>${armory ? 'The travelling armory' : 'Creatures of the wild'}</h1><p>${armory ? 'Shared forged geometry, dressed figures and recognisable field loot.' : 'Eight silhouettes, each with a readable combat role and its own movement.'}</p></div>
   <nav class="bestiary-nav"><a class="ui-button${!armory ? ' ui-button--primary' : ''}" href="/bestiary.html">Bestiary</a><a class="ui-button${armory ? ' ui-button--primary' : ''}" href="/bestiary.html?view=armory">Armory</a></nav></header>
   <section class="bestiary-grid${armory ? ' bestiary-armory' : ''}" aria-label="Frozen procedural figures"></section>`;
 const grid = root.querySelector<HTMLElement>('.bestiary-grid')!;

@@ -1,3 +1,4 @@
+import { ENEMY_LOOT_YIELD } from './loot-content.ts';
 import { dropGold, rollEnemyGold, type GroundGold } from './gold.ts';
 import type { CombatEvent, Enemy, Pickup, Player } from './model.ts';
 import type { GroundItem } from './character-types.ts';
@@ -18,7 +19,7 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
   const reward = Math.max(1, Math.round(enemy.xpReward * xpLevelFactor(player.level, enemy.level)));
   const levels = awardCharacterExperience(player, reward);
   context.emit({ type: 'experience', x: enemy.x, y: enemy.y, amount: reward });
-  const gold = rollEnemyGold(enemy.lootSeed, enemy.level, enemy.rank);
+  const gold = Math.round(rollEnemyGold(enemy.lootSeed, enemy.level, enemy.rank) * (ENEMY_LOOT_YIELD[enemy.kind] ?? 1));
   if (gold) dropGold(context.groundGold, { id: context.nextId(), x: enemy.x, y: enemy.y, amount: gold, age: 0 });
   if (levels) context.emit({ type: 'level', x: player.x, y: player.y,
     level: player.level, skillPoints: levels, statPoints: levels * 5, color: '#c0acf0' });

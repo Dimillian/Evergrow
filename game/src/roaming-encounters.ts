@@ -9,7 +9,7 @@ export const ROAMING_RULES = Object.freeze({
   minimumDistance: 300, leadMin: 30, leadMax: 90, groupRadius: 100, corridorHalfWidth: 140,
   retirementMargin: 650, behindDistance: 430, behindProjection: -220,
 });
-export const ROAMING_GROUPS: Readonly<Record<EnemyKind, readonly EnemyKind[]>> = Object.freeze({
+export const ROAMING_GROUPS: Readonly<Partial<Record<EnemyKind, readonly EnemyKind[]>>> = Object.freeze({
   stalker: Object.freeze(['stalker', 'stalker', 'hound'] as const),
   hound: Object.freeze(['hound', 'hound', 'hound'] as const),
   brute: Object.freeze(['brute', 'stalker', 'stalker'] as const),

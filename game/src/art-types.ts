@@ -46,6 +46,8 @@ export interface CharacterOutfit {
 
 export interface CharacterPose {
   kind: 'player' | EnemyKind;
+  command?: 'rush' | 'surround' | 'rout';
+  commandWarning?: boolean;
   /** Canvas radians: zero faces right, PI / 2 faces down. */
   angle: number;
   /** Elapsed animation time in seconds. */

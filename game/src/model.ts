@@ -157,10 +157,15 @@ export interface Player {
   dead: boolean;
 }
 
-export type EnemyKind = 'stalker' | 'brute' | 'caster' | 'hound' | 'archer' | 'wisp';
+export type EnemyKind = 'stalker' | 'brute' | 'caster' | 'hound' | 'archer' | 'wisp' | 'goblin' | 'goblinChief';
 export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
 
 export interface Enemy {
+  /** Ephemeral orders; camp membership and casualties own persistent identity. */
+  commanderId?: number;
+  commandClock?: number;
+  attackDamage?: number;
+  warband?: { order: 'rush' | 'surround' | 'rout'; remaining: number; warning: boolean };
   id: number;
   readonly level: number;
   readonly rank: EnemyRank;

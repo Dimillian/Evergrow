@@ -472,6 +472,7 @@ export class Renderer {
       if (enemy.hp <= 0) continue;
       const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);
       entries.push({ y, draw: () => this.actor(x, y, { kind: enemy.kind, angle: enemy.angle,
+        command: enemy.warband?.order, commandWarning: enemy.warband?.warning,
         time: sim.time + enemy.id, moveAngle: Math.atan2(enemy.vy, enemy.vx),
         moving: Math.min(1, Math.hypot(enemy.vx, enemy.vy) / 70),
         attack: enemy.state === 'windup' ? -Math.max(.001, enemy.stateTime / enemy.stateDuration)

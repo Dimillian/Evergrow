@@ -24,7 +24,7 @@ test('each biome selects its authored population mix and full areas consume no r
     const weights = ENCOUNTER_WEIGHTS[biome];
     assert.ok(Object.isFrozen(weights));
     assert.deepEqual(Object.keys(weights).sort(), Object.keys(ENEMY_DEFINITIONS).sort());
-    assert.ok(Object.values(weights).every(value => Number.isFinite(value) && value > 0));
+    assert.ok(Object.values(weights).every(value => Number.isFinite(value) && value >= 0));
     assert.equal(Object.values(weights).reduce((sum, weight) => sum + weight, 0), 100);
     assert.equal(chooseEncounterEnemy([], 1, biome, () => 0), 'stalker');
     assert.equal(chooseEncounterEnemy([], 1, biome, () => (weights.stalker + .1) / 100), 'brute');
@@ -67,7 +67,7 @@ test('veterans and elites unlock by area level and retain independent active cap
   assert.equal(chooseEncounterRank([elite, one, two], 10, .1), 'veteran');
 });
 
-test('every registered climate selects exactly its authored six-archetype weight distribution', () => {
+test('every registered climate selects exactly its authored roaming weight distribution and zero-weight warband exclusions', () => {
   for (const biome of Object.keys(BIOMES) as BiomeId[]) {
     const counts = Object.fromEntries(Object.keys(ENEMY_DEFINITIONS).map(kind => [kind, 0]));
     for (let index = 0; index < 100; index++) {

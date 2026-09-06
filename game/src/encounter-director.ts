@@ -5,20 +5,20 @@ import { normalizeLevel, type EnemyRank } from './progression-content.ts';
 
 export const ENCOUNTER_RULES = Object.freeze({
   maxSpawnAttempts: 24, spawnClearance: 7, minimumSeparation: 45,
-  basePopulation: 9, levelsPerPopulation: 4, targetPopulationCap: 14, hardPopulationCap: 24, roamingReserve: 9,
+  basePopulation: 9, levelsPerPopulation: 4, targetPopulationCap: 14, hardPopulationCap: 32, roamingReserve: 9,
   veteranCap: 2, eliteCap: 1,
   initialIdleMin: .45, initialIdleRange: .35, corpseDuration: .5, despawnDistance: 1800,
 });
 
 /** Available archetypes vary with the landscape; kill count never makes an old area harder. */
 export const ENCOUNTER_WEIGHTS: Readonly<Record<BiomeId, Readonly<Record<EnemyKind, number>>>> = Object.freeze({
-  deadwood: Object.freeze({ stalker: 34, brute: 20, caster: 10, hound: 14, archer: 16, wisp: 6 }),
-  verdant: Object.freeze({ stalker: 22, brute: 8, caster: 8, hound: 30, archer: 24, wisp: 8 }),
-  swamp: Object.freeze({ stalker: 22, brute: 10, caster: 24, hound: 8, archer: 10, wisp: 26 }),
-  frostpine: Object.freeze({ stalker: 16, brute: 16, caster: 8, hound: 24, archer: 14, wisp: 22 }),
-  emberfall: Object.freeze({ stalker: 18, brute: 26, caster: 26, hound: 10, archer: 12, wisp: 8 }),
-  autumn: Object.freeze({ stalker: 24, brute: 10, caster: 8, hound: 24, archer: 28, wisp: 6 }),
-  highlands: Object.freeze({ stalker: 18, brute: 28, caster: 10, hound: 10, archer: 26, wisp: 8 }),
+  deadwood: Object.freeze({ goblin: 0, goblinChief: 0, stalker: 34, brute: 20, caster: 10, hound: 14, archer: 16, wisp: 6 }),
+  verdant: Object.freeze({ goblin: 0, goblinChief: 0, stalker: 22, brute: 8, caster: 8, hound: 30, archer: 24, wisp: 8 }),
+  swamp: Object.freeze({ goblin: 0, goblinChief: 0, stalker: 22, brute: 10, caster: 24, hound: 8, archer: 10, wisp: 26 }),
+  frostpine: Object.freeze({ goblin: 0, goblinChief: 0, stalker: 16, brute: 16, caster: 8, hound: 24, archer: 14, wisp: 22 }),
+  emberfall: Object.freeze({ goblin: 0, goblinChief: 0, stalker: 18, brute: 26, caster: 26, hound: 10, archer: 12, wisp: 8 }),
+  autumn: Object.freeze({ goblin: 0, goblinChief: 0, stalker: 24, brute: 10, caster: 8, hound: 24, archer: 28, wisp: 6 }),
+  highlands: Object.freeze({ goblin: 0, goblinChief: 0, stalker: 18, brute: 28, caster: 10, hound: 10, archer: 26, wisp: 8 }),
 });
 
 export function livingEnemyCount(enemies: readonly Pick<Enemy, 'state'>[]): number {
@@ -35,14 +35,14 @@ export function encounterPopulationTarget(level: number): number {
 /** Policy is independent of placement/collision; random is read only when a roll is needed. */
 export type EncounterActor = Pick<Enemy, 'state' | 'kind' | 'rank' | 'campId'>;
 export function chooseEncounterEnemy(enemies: readonly EncounterActor[], level: number, biome: BiomeId, random: () => number, preferred?: EnemyKind): EnemyKind | null {
-  const counts: Record<EnemyKind, number> = { stalker: 0, brute: 0, caster: 0, hound: 0, archer: 0, wisp: 0 };
+  const counts: Record<EnemyKind, number> = { goblin: 0, goblinChief: 0, stalker: 0, brute: 0, caster: 0, hound: 0, archer: 0, wisp: 0 };
   let living = 0;
   for (const enemy of enemies) if (enemy.state !== 'dead' && !enemy.campId) { counts[enemy.kind]++; living++; }
   if (living >= encounterPopulationTarget(level) || livingEnemyCount(enemies) >= ENCOUNTER_RULES.hardPopulationCap) return null;
   const entries = (Object.entries(ENCOUNTER_WEIGHTS[biome]) as [EnemyKind, number][])
-    .filter(([kind]) => {
+    .filter(([kind, weight]) => {
       const role = ENEMY_DEFINITIONS[kind].role;
-      return role === 'flanker' || role === 'skirmisher' || counts[kind] < 2;
+      return weight > 0 && (role === 'flanker' || role === 'skirmisher' || counts[kind] < 2);
     });
   if (preferred && entries.some(([kind]) => kind === preferred)) return preferred;
   const total = entries.reduce((sum, [, weight]) => sum + weight, 0);

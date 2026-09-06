@@ -11,7 +11,7 @@ import type { WildernessKind } from './wilderness-sites.ts';
 
 // Frozen generated scenes only: no input, simulation ticks, exploration, or saves.
 const VIEWS = [
-  ['camp', 'Ashen Watch'], ['watchtower', 'Watchtower'], ['graveyard', 'Graveyard'],
+  ['warband', 'Goblin warband'], ['camp', 'Ashen Watch'], ['watchtower', 'Watchtower'], ['graveyard', 'Graveyard'],
   ['standingStones', 'Standing stones'], ['caravan', 'Lost caravan'], ['warning', 'Wisp warning'],
 ] as const;
 type ViewId = typeof VIEWS[number][0];
@@ -43,12 +43,19 @@ async function boot() {
   function draw(view: ViewId) {
     if (disposed) return;
     selected = view;
-    const site = view === 'camp' || view === 'warning' ? firstCamp
+    const site = view === 'warband' ? sites.find(site => site.members[0]?.kind === 'goblinChief')
+      : view === 'camp' || view === 'warning' ? firstCamp
       : sites.filter(site => site.kind === view as WildernessKind).sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y))[0];
     if (!site) throw new Error('The requested site was not generated.');
     const sim = new Simulation(sceneWorld, { seed: 7319, spawn: false, startX: site.x, startY: site.y + 158 });
     sim.time = 12; sim.player.angle = -Math.PI / 2;
-    for (const member of site.members) sim.spawnEnemy(member.kind, site.x + member.dx, site.y + member.dy, member.rank);
+    for (const member of site.members) {
+      const enemy = sim.spawnEnemy(member.kind, site.x + member.dx, site.y + member.dy, member.rank);
+      if (enemy && view === 'warband') {
+        enemy.angle = Math.PI / 2; enemy.attackAngle = Math.PI / 2;
+        enemy.warband = { order: 'rush', remaining: 5.7, warning: true };
+      }
+    }
     let warning;
     if (view === 'warning') {
       sim.enemies.length = 0;
@@ -67,6 +74,7 @@ async function boot() {
     if (warning) { c.save(); c.scale(2, 2); drawEnemyPlate(c, warning, 720, 500); c.restore(); }
     title.textContent = view === 'warning' ? 'Lantern Wisp · committed detonation' : site.name;
     description.textContent = view === 'warning' ? 'Target locks early; the circular warning fills until detonation. Staged pose, no gameplay running.'
+      : view === 'warband' ? `${site.members.length - 1} scrap goblins · War Chief sounding a rush order`
       : site.kind === 'camp' ? `${site.members.length} authored sentries · open south entrance · tents, watchfire and supplies`
       : site.description;
     canvas.setAttribute('aria-label', `${title.textContent}. ${description.textContent}`);

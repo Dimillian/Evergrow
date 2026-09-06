@@ -1,3 +1,4 @@
+import { withGoblinWarband } from './goblin-camps.ts';
 import { sampleBiome, type BiomeId } from './biomes.ts';
 import { mainPathX, pathDistance } from './road-shape.ts';
 import type { EnemyKind } from './model.ts';
@@ -123,8 +124,8 @@ function makeSite(seed: number, id: string, kind: WildernessKind, x: number, y: 
     add('bones', 90, -22, 0, 1.1); add('fire', -60, 110, 9, .6);
   }
   const entrance = Object.freeze({ x, y: y + radius });
-  return Object.freeze({ id, kind, x, y, radius, name: starter ? 'Ashen Watch' : NAMES[kind][seed % NAMES[kind].length],
-    description: DESCRIPTIONS[kind], biome, seed, entrance, decor: Object.freeze(decor), members: Object.freeze(members) });
+  return withGoblinWarband(Object.freeze({ id, kind, x, y, radius, name: starter ? 'Ashen Watch' : NAMES[kind][seed % NAMES[kind].length],
+    description: DESCRIPTIONS[kind], biome, seed, entrance, decor: Object.freeze(decor), members: Object.freeze(members) }));
 }
 
 /** A small first garrison is reachable east of the starting clearing without crossing a town. */
