@@ -182,6 +182,8 @@ export class WorldMap {
   private world: MapWorld;
   private exploration: Exploration;
   private onClose: () => void;
+  private eventStateReader: (poi: MapPOI) => string | null = () => null;
+  setEventStateReader(reader: (poi: MapPOI) => string | null) { this.eventStateReader = reader; }
   private campStateReader: (id: string) => CampMapState = () => 'dormant';
 
   constructor(world: MapWorld, exploration: Exploration, mount: HTMLElement, onClose: () => void) {
@@ -227,7 +229,7 @@ export class WorldMap {
     this.campStateReader = reader; this.render();
   }
   private isCampCleared(poi: MapPOI): boolean { return poi.kind === 'camp' && this.campStateReader(poi.id) === 'cleared'; }
-  private poiLabel(poi: MapPOI): string { return this.isCampCleared(poi) ? 'Camp · Cleared' : POI_DEFINITIONS[poi.kind].label; }
+  private poiLabel(poi: MapPOI): string { const state = this.eventStateReader(poi); if (poi.sighted) return `${POI_DEFINITIONS[poi.kind].label} · Sighted`; if (state) return `${POI_DEFINITIONS[poi.kind].label} · ${state}`; return this.isCampCleared(poi) ? 'Camp · Cleared' : POI_DEFINITIONS[poi.kind].label; }
 
   get isOpen() { return this.opened; }
   open(player: MapPlayer) {
@@ -377,7 +379,7 @@ export class WorldMap {
 
   private features(view: MapView, mini: boolean): { pois: MapPOI[]; labels: MapRegionLabel[] } {
     const pois = selectMapPOIs([...this.exploration.getDiscoveredPOIs(bounds(view))
-      .filter(poi => this.exploration.isRevealed(poi.x, poi.y)), ...this.portalMarkers()], view, mini);
+      .filter(poi => poi.sighted || this.exploration.isRevealed(poi.x, poi.y)), ...this.portalMarkers()], view, mini);
     const labels = mini ? [] : mapRegionLabels(this.world, this.exploration, view, [...pois.filter(poi => poi.kind === 'town'), this.player]);
     return { labels, pois: pois.filter(poi => poi.kind === 'portal' || poi.kind === 'town' || !labels.some(label => {
       const dx = Math.abs((poi.x - label.x) * view.zoom), dy = (poi.y - label.y) * view.zoom;
@@ -429,7 +431,7 @@ export class WorldMap {
       text(c, label.name, p.x, p.y, 1.14, palette.ivory, 'center'); c.restore();
     }
     for (const poi of pois) {
-      if (poi.kind !== 'portal' && !this.exploration.isRevealed(poi.x, poi.y)) continue;
+      if (poi.kind !== 'portal' && !poi.sighted && !this.exploration.isRevealed(poi.x, poi.y)) continue;
       const p = projectMapPoint(poi.x, poi.y, view);
       this.poiIcon(c, poi, p.x, p.y, mini ? 4.1 : view.zoom < .07 ? 5.4 : 7, this.hovered?.id === poi.id && !mini);
       if (!mini && poi.kind === 'town' && view.zoom >= .045) {
@@ -443,7 +445,7 @@ export class WorldMap {
 
   private poiIcon(c: CanvasRenderingContext2D, poi: MapPOI, x: number, y: number, size: number, selected: boolean) {
     c.save(); c.translate(x, y); c.lineWidth = selected ? 1.8 : 1.1;
-    const cleared = this.isCampCleared(poi);
+    const cleared = this.isCampCleared(poi) || ['Claimed', 'Beacon lit'].includes(this.eventStateReader(poi) ?? '');
     c.fillStyle = palette.well; c.strokeStyle = selected ? palette.ivory : cleared ? palette.jade : POI_DEFINITIONS[poi.kind].color;
     c.beginPath(); c.arc(0, 0, size + 2.5, 0, Math.PI * 2); c.fill(); if (selected) c.stroke();
     c.beginPath();
@@ -561,7 +563,7 @@ export class WorldMap {
     c.save(); c.beginPath(); c.rect(r.x + 6, r.y + r.height - 19, r.width - 12, 15); c.clip();
     text(c, name, r.x + r.width / 2, r.y + r.height - 15, .95, palette.text, 'center'); c.restore();
     if (this.minimapPointer) {
-      const poi = pickMapPOI(pois.filter(p => p.kind === 'portal' || this.exploration.isRevealed(p.x, p.y)), view, this.minimapPointer, 8);
+      const poi = pickMapPOI(pois.filter(p => p.kind === 'portal' || p.sighted || this.exploration.isRevealed(p.x, p.y)), view, this.minimapPointer, 8);
       if (poi) {
         const boxWidth = Math.min(190, width - 24), bx = Math.max(12, r.x - boxWidth - 9), by = r.y + 30;
         c.fillStyle = `${palette.panel}fa`; c.fillRect(bx, by, boxWidth, 48);
@@ -628,7 +630,7 @@ export class WorldMap {
 
   private showTooltip(poi: MapPOI, point: { x: number; y: number }) {
     this.tooltip.hidden = false; setText(this.tooltipName, poi.name);
-    setText(this.tooltipKind, `${this.poiLabel(poi)} · ${mapAreaLabel(this.world, poi.x, poi.y)}`); setText(this.tooltipDescription, this.isCampCleared(poi) ? 'The watchfire is quiet. All members of this garrison have been defeated for the current run.' : poi.description);
+    setText(this.tooltipKind, `${this.poiLabel(poi)} · ${mapAreaLabel(this.world, poi.x, poi.y)}`); setText(this.tooltipDescription, this.eventStateReader(poi) ?? (this.isCampCleared(poi) ? 'The watchfire is quiet. All members of this garrison have been defeated for the current run.' : poi.description));
     this.tooltip.style.setProperty('--poi-color', POI_DEFINITIONS[poi.kind].color);
     this.positionTooltip(point);
   }

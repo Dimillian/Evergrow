@@ -23,6 +23,7 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 | Components, typography, tooltip motion and panel ownership | [UI kit](ui-kit.md) |
 | Climate generation, props and procedural graphics | [Biomes](biomes.md), [living biomes](living-biomes.md), [graphics pass](graphics-overhaul.md) |
 | Camps, landmarks and roaming | [Wilderness and encounters](wilderness-and-encounters.md) |
+| Chests, choices, beacons and guardian trials | [Interactive POIs](interactive-pois.md) |
 | Explored map and review tooling | [Explored atlas](explored-atlas.md) |
 
 ## Town economy
@@ -33,9 +34,8 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 
 - [Town portals and waypoints](travel-and-portals.md): implemented town return/home anchors; permanent waypoint network still specified.
 - [Exploration, events and dungeons](dungeons-and-events.md): proposed encounter density, new enemy roles, interactive landmarks, procedural crypt floors, bosses and persistent expedition rewards.
-- [Interactive POIs](interactive-pois.md): camp chests, caravan choices, beacons, graveyard/stone trials and roadside reliquaries.
 
-Interactive POIs, dungeon expeditions and permanent waypoint travel are specified, not implemented. Town portals are live.
+Interactive POIs and town portals are live. Dungeon expeditions and permanent waypoint travel remain specified.
 
 ## Original vision and design exploration
 

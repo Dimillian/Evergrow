@@ -5,10 +5,10 @@ Implemented 2026-09-05. These are procedural environmental encounters in the loc
 | Place | Composition | Encounter role |
 | --- | --- | --- |
 | Enemy camp | Two stitched tents, watchfire, faction banner, supply crates and barrels, bedrolls, bones, lantern and broken perimeter posts | A fixed garrison of four enemies near the origin, six in generated camps. The simulation owns activation, individual member survival and clearing. |
-| Ruined watchtower | Broken stone beacon, surviving arch and buttress, old banner, supply court, bedroll and lantern | Environmental landmark. It does not currently contain an enterable interior, chest or quest. |
-| Graveyard | Twelve irregular headstones in rows, open central aisle, vigil altar, lanterns and a broken gate | Environmental landmark with a readable walkable layout. |
-| Standing stones | Seven engraved monoliths, inscribed ground circle and luminous altar | Environmental landmark with cyan lighting and subtle rune pulses. |
-| Abandoned caravan | Two torn covered wagons, detached wheel, scattered cargo, bedding, bones and a small fire | Environmental landmark suggesting an interrupted journey. |
+| Ruined watchtower | Broken stone beacon, surviving arch and buttress, old banner, supply court, bedroll and lantern | Two-second beacon channel reveals nearby terrain and a distant landmark. |
+| Graveyard | Twelve irregular headstones in rows, open central aisle, vigil altar, lanterns and a broken gate | Optional two-wave guardian trial with a reward casket. |
+| Standing stones | Seven engraved monoliths, inscribed ground circle and luminous altar | Choose a blessing, defeat three guardians, then claim a timed bonus. |
+| Abandoned caravan | Two torn covered wagons, detached wheel, scattered cargo, bedding, bones and a small fire | Choose two equipment items or a larger gold cache. |
 
 The first camp, **Ashen Watch**, is at **(740, 180)**, east of the starting clearing. It contains a veteran Stalker, a normal Archer, Hound and Stalker. There is no first-zone elite camp leader. Later camps draw their support composition from biome: swamp camps use Caster leaders and Wisps, while Verdant camps include more Hounds. Generated leaders can be Elite only from geographic area level 3, beyond 6,400 units; individual monster values still come from the shared geographic level and rank rules.
 
@@ -41,3 +41,7 @@ The [interactive POI specification](interactive-pois.md) defines the next pass f
 ## Verification
 
 Deterministic tests cover seed/order independence, frozen blueprints, cache/query limits, negative-coordinate partition consistency, road/town/start exclusions, site spacing, member placement, every site’s open south approach, foreground canopy visibility, shared swept collision, discovery and chart round-tripping. Static visual review uses the real renderer without advancing gameplay. Combat feel and encounter difficulty remain for the user’s playtesting.
+
+## Interactive layer (2026-09-06)
+
+[Interactive POIs](interactive-pois.md) now adds a camp strongbox and actions to all four landmark families, plus roadside reliquaries. The southern approach owns the interaction anchor. E, a nearby click or controller A interacts; one-second opening channels interrupt on movement/damage (beacons take two seconds). Tracked state, rewards and guardian casualties persist per character; generated layout blueprints stay immutable.

@@ -7,7 +7,7 @@
 | Mouse wheel over the world | Smooth camera zoom in / out |
 | Hold left mouse | Repeat the basic weapon attack |
 | Right mouse / 1–4 | Use assigned skills; empty slots do nothing |
-| E / click a nearby NPC or town anchor | Open a service, use the return portal, or set an empty anchor as home |
+| E / click a nearby NPC, town anchor or event object | Open services, use anchors or interact with a POI |
 | P / portal control below minimap | Cast town portal outside sanctuary; locate your return portal while in sanctuary |
 | C / I | Character, equipment, inventory, and attributes |
 | T | Skill tree and active skill assignments |
@@ -41,7 +41,7 @@ Connect a controller, focus the local game, press a button so the browser expose
 | RB / R1, X / Square, Y / Triangle, right-stick click | Assigned skills 1–4, once per press |
 | B / Circle | Dodge |
 | LB / L1 | Dual potion |
-| A / Cross | Interact with nearby NPC or portal anchor |
+| A / Cross | Interact with nearby NPC, portal anchor or POI |
 | D-pad left / right | Character and inventory |
 | D-pad up | Skill atlas |
 | D-pad down | Town portal |
@@ -55,3 +55,5 @@ In menus, use D-pad/left stick to navigate and A to activate. LB/RB move through
 Character names and search text still use a keyboard. Inventory drag/drop and gameplay camera zoom remain mouse controls. This is an initial fixed controller layout; remapping, rumble and an on-screen keyboard are not implemented. Hardware compatibility and combat feel await player testing.
 
 Pause, panels, focus loss and travel clear controller actions and require neutral sticks/released buttons before accepting input again. Disconnecting the active controller pauses combat. Keyboard/mouse input takes over when used; no character save format or progress reset is involved.
+
+POI openings take one second (beacons: two). Movement, combat, damage or leaving play cancels the channel. Choice windows pause combat; selecting a choice resumes play before the channel.

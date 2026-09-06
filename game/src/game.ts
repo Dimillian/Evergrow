@@ -1,3 +1,6 @@
+import { EventPanel } from './poi-panel.ts';
+import { focusEvent, eventLabel, isEventKind, type EventSite, type EventChoice } from './poi-content.ts';
+import { executeEvent, eventProblem } from './poi-command.ts';
 import { executePortalTravel, activatePortalAnchor } from './travel-command.ts';
 import { townPortalAnchor, withinPortalReach, portalMapMarkers, type PortalAnchor } from './travel.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
@@ -51,6 +54,9 @@ export class Game {
   private inventoryPanel: InventoryPanel;
   private skillPanel: SkillTreePanel;
   private servicePanel: ServicePanel;
+  private eventPanel: EventPanel;
+  private activeEvent: EventSite | null = null;
+  private projectedBeacons = new Set<string>();
   private activeNPC: TownNPC | null = null;
   readonly canvas: HTMLCanvasElement;
   private uiCanvas: HTMLCanvasElement;
@@ -100,6 +106,7 @@ export class Game {
       this.worldMap = new WorldMap(this.world, this.exploration, this.shell.mapMount, () => this.closeMap());
       this.lifetime.defer(() => this.worldMap.dispose());
       this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
+    this.worldMap.setEventStateReader(poi => { const record = this.sim.eventState.sites[poi.id]; return isEventKind(poi.kind) ? eventLabel(record ?? { id: poi.id, kind: poi.kind }, this.sim.eventState, this.sim.getCampState(poi.id) === 'cleared') : null; });
     this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.world.getPortalAnchor(band)));
       this.inventoryPanel = this.lifetime.own(new InventoryPanel(this.shell.panelMount, {
         close: () => this.closeCharacterPanel(),
@@ -121,7 +128,11 @@ export class Game {
       this.servicePanel = this.lifetime.own(new ServicePanel(this.shell.panelMount, {
         close: () => this.resume(), trade: quote => this.trade(quote),
       }));
+      this.eventPanel = this.lifetime.own(new EventPanel(this.shell.panelMount, {
+        close: () => this.resume(), choose: (site, choice) => { this.resume(); this.startEvent(site, choice); },
+      }));
       this.panels = new PanelCoordinator({
+        event: { open: () => { if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.activeEvent = null; } },
         service: { open: () => { if (this.activeNPC) this.servicePanel.open(this.sim.player, this.activeNPC); }, close: () => { this.servicePanel.close(); this.activeNPC = null; } },
         map: { open: () => { this.worldMap.open(this.sim.player); this.shell.setStatus('World map open. Game paused.'); }, close: () => this.worldMap.close() },
         character: { open: () => { this.inventoryPanel.open(this.sim.player); this.shell.setStatus('Character and inventory open. Game paused.'); }, close: () => this.inventoryPanel.close() },
@@ -314,6 +325,7 @@ export class Game {
     const record = this.session.load(index);
     if (!record) { this.titleScreen.message(this.session.error); return; }
     this.sim.restoreCheckpoint(record.checkpoint);
+    this.projectedBeacons.clear();
     if (this.sim.player.dead) this.sim.revive();
     this.sim.player.name = record.name;
     this.worldMap.dispose(); this.exploration.dispose();
@@ -326,9 +338,10 @@ export class Game {
     });
     this.worldMap = new WorldMap(this.world, this.exploration, this.shell.mapMount, () => this.closeMap());
     this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
+    this.worldMap.setEventStateReader(poi => { const record = this.sim.eventState.sites[poi.id]; return isEventKind(poi.kind) ? eventLabel(record ?? { id: poi.id, kind: poi.kind }, this.sim.eventState, this.sim.getCampState(poi.id) === 'cleared') : null; });
     this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.world.getPortalAnchor(band)));
     this.worldMap.resize(); this.titleScreen.close(); this.saveError = '';
-    this.enterWorld(); this.saveCharacter();
+    this.projectBeacons(); this.enterWorld(); this.saveCharacter();
   }
 
   private deleteCharacter(index: number) {
@@ -403,8 +416,44 @@ export class Game {
     }
     const npcs = this.world.getBuildings(p.x - 220, p.y - 220, 440, 440).map(buildingNPC).filter((npc): npc is TownNPC => npc !== null);
     const npc = focusNPC(npcs, p, this.world, pointer);
-    if (!npc) return false;
+    if (!npc) {
+      const site = focusEvent(this.world.getEventSites(p.x - 100, p.y - 100, 200, 200), p, this.world, pointer);
+      if (!site) return false;
+      const record = this.sim.eventState.sites[site.id];
+      if (!record && ['caravan', 'standingStones', 'graveyard'].includes(site.kind)) {
+        if (this.sim.eventState.trial && site.kind !== 'caravan') { this.notify('Finish the active trial.'); return true; }
+        this.activeEvent = site; this.panels.open('event');
+      } else this.startEvent(site, record?.choice ?? null);
+      return true;
+    }
     this.activeNPC = npc; this.panels.open('service'); return true;
+  }
+
+  private startEvent(site: EventSite, choice: EventChoice | null): void {
+    const problem = eventProblem(this.sim, site, choice);
+    if (problem) { this.notify(problem); return; }
+    this.sim.portal.cancel(); this.sim.clearInput();
+    this.sim.eventChannel.start(site, choice);
+  }
+
+  private finishEvent(): void {
+    const channel = this.sim.eventChannel, site = channel.site;
+    if (!site || !channel.ready) return;
+    const target = site.kind === 'watchtower' ? this.world.getPOIs(site.x - 2400, site.y - 2400, 4800, 4800)
+      .filter(poi => poi.id !== site.id && !this.exploration.isDiscovered(poi.id) && Math.hypot(poi.x-site.x,poi.y-site.y)<=2400
+        && ['camp','watchtower','graveyard','standingStones','caravan','reliquary'].includes(poi.kind))
+      .sort((a,b)=>Math.hypot(a.x-site.x,a.y-site.y)-Math.hypot(b.x-site.x,b.y-site.y))[0] : undefined;
+    const result = executeEvent(this.sim, site, channel.choice, c => this.persistTravel(c), target);
+    channel.cancel(); this.notify(result.message);
+    this.projectBeacons();
+  }
+
+  private projectBeacons(): void {
+    for (const record of Object.values(this.sim.eventState.sites)) {
+      if (record.kind !== 'watchtower' || record.phase !== 'claimed' || this.projectedBeacons.has(record.id)) continue;
+      this.exploration.revealFromBeacon(record.x, record.y, record.beaconTarget);
+      this.projectedBeacons.add(record.id);
+    }
   }
 
   private nearbyAnchor(pointer?: { x: number; y: number }): PortalAnchor | undefined {
@@ -429,6 +478,7 @@ export class Game {
       else this.notify('Explore outside the sanctuary to open a town portal.');
       return;
     }
+    this.sim.eventChannel.cancel();
     this.sim.clearCombatInput();
     const problem = this.sim.portal.start(p, this.world);
     if (problem) this.notify(problem);
@@ -519,6 +569,7 @@ export class Game {
         else if (event.type === 'notice') this.notify(event.message);
         if (!(event.type === 'cast' && event.enemyKind)) this.audio.play(event);
       }
+      if (this.sim.eventChannel.ready) this.finishEvent();
       if (this.sim.portal.ready) this.travelThrough(this.world.getPortalAnchor(this.sim.travel.homeTown), false);
       const biome = this.world.sampleBiome(this.sim.player.x, this.sim.player.y);
       if (this.areaNotices.update(biome.id, dt)) this.shell.notifications.push({ kind: 'area', id: biome.id, name: biome.name, level: getZoneAt(this.sim.player.x, this.sim.player.y).level });

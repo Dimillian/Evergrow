@@ -111,7 +111,7 @@ export class Exploration {
   }
 
   /** Reveal the current view only; teleporting never reveals an untravelled connecting path. */
-  reveal(x: number, y: number, radius = EXPLORATION_REVEAL_RADIUS) {
+  reveal(x: number, y: number, radius = EXPLORATION_REVEAL_RADIUS, sighted = false) {
     if (this.disposed || !coordinate(x) || !coordinate(y) || !Number.isFinite(radius) || radius < 0) return false;
     radius = Math.min(EXPLORATION_LIMITS.revealRadius, radius);
     if (radius === this.lastRadius && this.isRevealed(x, y) && Math.hypot(x - this.lastX, y - this.lastY) < 12) return false;
@@ -125,16 +125,24 @@ export class Exploration {
       }
     }
     for (const poi of this.world.getPOIs(x - radius, y - radius, radius * 2 + 1, radius * 2 + 1)) {
-      if (!validPOI(poi) || this.pois.has(poi.id) || Math.hypot(poi.x - x, poi.y - y) > radius) continue;
+      if (!validPOI(poi) || (this.pois.has(poi.id) && (sighted || !this.pois.get(poi.id)!.sighted)) || Math.hypot(poi.x - x, poi.y - y) > radius) continue;
       changed = this.revealCell(Math.floor(poi.x / cell), Math.floor(poi.y / cell)) || changed;
       if (!this.isRevealed(poi.x, poi.y)) continue;
-      if (this.pois.size >= EXPLORATION_LIMITS.pois) { this.capacityReached = true; break; }
-      this.pois.set(poi.id, { id: poi.id, name: poi.name, kind: poi.kind, x: poi.x, y: poi.y, description: poi.description });
+      if (!this.pois.has(poi.id) && this.pois.size >= EXPLORATION_LIMITS.pois) { this.capacityReached = true; break; }
+      this.pois.set(poi.id, { id: poi.id, name: poi.name, kind: poi.kind, x: poi.x, y: poi.y, description: poi.description, ...(sighted ? { sighted: true } : {}) });
       this.revision++; changed = true;
-      this.onDiscover?.({ ...this.pois.get(poi.id)! });
+      if (!sighted) this.onDiscover?.({ ...this.pois.get(poi.id)! });
     }
     if (changed) this.markDirty();
     return changed;
+  }
+
+  /** Replayed from durable beacon claims, without a burst of discovery notifications. */
+  revealFromBeacon(x: number, y: number, target?: WorldPOI): void {
+    this.reveal(x, y, 1000, true);
+    if (target && validPOI(target) && !this.pois.has(target.id) && this.pois.size < EXPLORATION_LIMITS.pois) {
+      this.pois.set(target.id, { ...target, sighted: true }); this.revision++; this.markDirty();
+    }
   }
 
   getDiscoveredPOIs(bounds?: MapRect): MapPOI[] {

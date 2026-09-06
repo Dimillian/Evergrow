@@ -1,5 +1,6 @@
 /** One kind registry serves generated places, saved discovery validation and map presentation. */
 export const POI_DEFINITIONS = {
+  reliquary: { label: 'Reliquary', color: '#d1bc8c' },
   portal: { label: 'Portal', color: '#bfade8' },
   town: { label: 'Settlement', color: '#e0c38b' },
   blacksmith: { label: 'Blacksmith', color: '#ee9861' },
@@ -19,6 +20,7 @@ export const POI_DEFINITIONS = {
 
 export type POIKind = keyof typeof POI_DEFINITIONS;
 export interface WorldPOI {
+  sighted?: boolean;
   id: string; name: string; kind: POIKind; x: number; y: number; description: string;
 }
 

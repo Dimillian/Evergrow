@@ -1,3 +1,5 @@
+import { validEvents, validBlessing } from './poi-validation.ts';
+import type { EventState } from './poi-content.ts';
 import { validSkillProgression } from './skill-progression.ts';
 import { validTravel, type TravelState } from './travel.ts';
 import { GOLD_RULES, type GroundGold } from './gold.ts';
@@ -15,6 +17,7 @@ export const CHARACTER_SLOT_COUNT = 8;
 export const CHARACTER_SAVE_VERSION = 3;
 export const SAVE_MAX_BYTES = 700_000;
 export interface CharacterCheckpoint {
+  events?: EventState;
   /** Absent until travel has been initialized; no portal and Briarwatch home by default. */
   travel?: TravelState;
   character: CharacterSheet; level: number; xp: number; x: number; y: number; angle: number;
@@ -30,7 +33,7 @@ export interface CharacterSave {
 }
 
 function validSheet(v: unknown, level: number): v is CharacterSheet {
-  if (!object(v) || !validCommerce(v.commerce, level) || (v.gold !== undefined && !validGold(v.gold)) || !object(v.attributes) || !['strength', 'dexterity', 'intelligence', 'vitality'].every(k => integer((v.attributes as ObjectValue)[k], 10, 5e6 + 10))
+  if (!object(v) || !validBlessing(v.blessing) || !validCommerce(v.commerce, level) || (v.gold !== undefined && !validGold(v.gold)) || !object(v.attributes) || !['strength', 'dexterity', 'intelligence', 'vitality'].every(k => integer((v.attributes as ObjectValue)[k], 10, 5e6 + 10))
     || !integer(v.statPoints, 0, 5e6) || !integer(v.skillPoints, 0, MAX_CONTENT_LEVEL)
     || !Array.isArray(v.inventory) || v.inventory.length !== INVENTORY_CAPACITY || !v.inventory.every(i => i === null || validItem(i))
     || !object(v.equipped) || Object.keys(v.equipped).length !== EQUIPMENT_SLOTS.length
@@ -61,7 +64,7 @@ export function decodeCharacterSave(raw: string): CharacterSave | null {
       || !text(v.name, 24) || !integer(v.createdAt) || !integer(v.updatedAt) || v.updatedAt < v.createdAt
       || !integer(v.worldSeed, 0, 4294967295) || !integer(v.worldVersion, 1)) return null;
     const p = v.checkpoint;
-    if (!object(p) || (p.travel !== undefined && !validTravel(p.travel)) || !integer(p.level, 1, MAX_CONTENT_LEVEL) || !integer(p.xp, 0) || (p.level < MAX_CONTENT_LEVEL && p.xp >= xpForNextLevel(p.level))
+    if (!object(p) || (p.events !== undefined && !validEvents(p.events)) || (p.travel !== undefined && !validTravel(p.travel)) || !integer(p.level, 1, MAX_CONTENT_LEVEL) || !integer(p.xp, 0) || (p.level < MAX_CONTENT_LEVEL && p.xp >= xpForNextLevel(p.level))
       || !validSheet(p.character, p.level) || !number(p.x, -4e7, 4e7) || !number(p.y, -4e7, 4e7) || !number(p.angle, -1000, 1000)
       || !number(p.hp, 0, 1e9) || !number(p.mana, 0, 1e9) || typeof p.dead !== 'boolean' || (!p.dead && p.hp <= 0)
       || !integer(p.flasks, 0, 2) || !number(p.healCooldown, 0, 1000) || !integer(p.dodgeCharges, 0, 2) || !number(p.dodgeRecharge, 0, 1000)

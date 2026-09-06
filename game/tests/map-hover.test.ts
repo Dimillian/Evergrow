@@ -40,7 +40,7 @@ test('POI cards use their measured responsive dimensions when staying inside the
   const name = { textContent: '' }, kind = { textContent: '' }, description = { textContent: '' };
   const map = Object.assign(Object.create(WorldMap.prototype), {
     view: { ...view, x: 0, y: 0, width: 800, height: 460 }, tooltip,
-    world: { isSanctuary: () => true },
+    world: { isSanctuary: () => true }, eventStateReader: () => null,
     tooltipName: name, tooltipKind: kind, tooltipDescription: description,
   }) as { showTooltip(poi: MapPOI, point: { x: number; y: number }): void; view: MapView };
   const poi = markerAt(100, 100);

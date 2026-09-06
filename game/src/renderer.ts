@@ -1,3 +1,4 @@
+import { EventArt, drawEventUI } from './poi-art.ts';
 import { drawPortal, drawTownAnchor } from './travel-art.ts';
 import { townPortalAnchor, withinPortalReach, PORTAL_RULES, type PortalAnchor } from './travel.ts';
 import { buildingNPC, focusNPC, NPC_NAMES, NPC_COLORS } from './npcs.ts';
@@ -105,6 +106,8 @@ export class Renderer {
   private plateEnemy: Enemy | null = null;
   private plateOpacity = 0;
   private rangedAim: RangedAim | null = null;
+  private eventArt = new EventArt();
+  private get eventSites() { return this.visibility.events; }
   portalGuide = 0;
   private portalAnchors: PortalAnchor[] = [];
   private fadingPortal: { x: number; y: number; progress: number; life: number } | null = null;
@@ -345,6 +348,7 @@ export class Renderer {
     });
     if (settings.phase === 'playing') {
       this.drawPortalHints(c, sim, world);
+      drawEventUI(c, sim, world, (x,y) => worldToScreen(this.view,x,y), this.gamepadActive, this.eventSites);
       this.cursor(c, sim);
       const npcs = this.cachedBuildings.flatMap(b => { const npc = buildingNPC(b); return npc ? [npc] : []; });
       const npc = focusNPC(npcs, p, world);
@@ -436,6 +440,8 @@ export class Renderer {
       }
       c.restore();
     } }));
+    for (const site of this.eventSites)
+      entries.push({ y: site.y, draw: () => this.eventArt.draw(c, site, sim.eventState.sites[site.id], this.visualTime, dt, settings.reducedMotion) });
     for (const anchor of this.portalAnchors) entries.push({ y: anchor.y, draw: () => {
       drawTownAnchor(c, anchor, sim.travel.homeTown === anchor.band);
       if (sim.travel.returnTo?.town === anchor.band) drawPortal(c, anchor.x, anchor.y, this.visualTime, 1,

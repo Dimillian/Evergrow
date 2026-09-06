@@ -1,3 +1,4 @@
+import { queryEventSites } from './poi-sites.ts';
 import { townPortalAnchor } from './travel.ts';
 import { drawGroundPatches } from './ground-art.ts';
 import { biomeGround, biomeMapColor, sampleBiome } from './biomes.ts';
@@ -151,6 +152,8 @@ export class World {
     return result.sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
   }
 
+  getEventSites(x: number, y: number, width: number, height: number) { return queryEventSites(this, x, y, width, height); }
+
   getEnemyCamps(x: number, y: number, width: number, height: number): EnemyCamp[] {
     return this.getWildernessSites(x, y, width, height).filter(site => site.kind === 'camp');
   }
@@ -172,7 +175,8 @@ export class World {
   getPOIs(x: number, y: number, width: number, height: number): POI[] {
     if (!validWorldRectangle(x, y, width, height)) return [];
     const result = [...this.getSettlements(x, y, width, height).flatMap(settlementPOIs),
-      ...this.getWildernessSites(x, y, width, height).map(wildernessPOI)];
+      ...this.getWildernessSites(x, y, width, height).map(wildernessPOI),
+      ...this.getEventSites(x, y, width, height).filter(s => s.kind === 'reliquary').map(s => ({ ...s, kind: 'reliquary' as const, description: 'Open the roadside cache.' }))];
     const first: Prop = { id: 'shrine:origin', x: -85, y: -95, radius: 15, kind: 'shrine', seed: 0, scale: 1 };
     const shrines = [first];
     for (let band = Math.floor(y / SHRINE_INTERVAL) - 1; band <= Math.floor((y + height) / SHRINE_INTERVAL) + 1; band++) {

@@ -7,6 +7,7 @@ function fixture() {
   let propQueries = 0, buildingQueries = 0, siteQueries = 0;
   const props: Prop[] = [];
   return { props, get siteQueries() { return siteQueries; }, get propQueries() { return propQueries; }, get buildingQueries() { return buildingQueries; },
+    getEventSites() { return []; },
     getWildernessSites() { siteQueries++; return []; },
     getProps() { propQueries++; return props; }, getBuildings() { buildingQueries++; return []; } };
 }

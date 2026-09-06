@@ -3,7 +3,7 @@ import type { Building } from './settlements.ts';
 import type { WildernessSite } from './wilderness-sites.ts';
 
 interface ViewBounds { left: number; top: number; width: number; height: number; }
-type SceneWorld = Pick<World, 'getProps' | 'getBuildings' | 'getWildernessSites'>;
+type SceneWorld = Pick<World, 'getProps' | 'getBuildings' | 'getWildernessSites' | 'getEventSites'>;
 const REFRESH_DISTANCE = 65;
 // Covers the tallest layered tree plus the permitted camera travel before refresh.
 const PROP_MARGIN = 300;
@@ -15,12 +15,13 @@ export class SceneVisibility {
   props: Prop[] = [];
   buildings: Building[] = [];
   sites: WildernessSite[] = [];
+  events: import('./poi-content.ts').EventSite[] = [];
   private world: SceneWorld | null = null;
   private bounds: ViewBounds | null = null;
 
   reset(): void {
     this.world = null; this.bounds = null;
-    this.props = []; this.buildings = []; this.sites = [];
+    this.props = []; this.buildings = []; this.sites = []; this.events = [];
   }
 
   update(world: SceneWorld, view: ViewBounds): void {
@@ -37,6 +38,8 @@ export class SceneVisibility {
       view.width + BUILDING_MARGIN * 2, view.height + BUILDING_MARGIN * 2);
     const sites = world.getWildernessSites(view.left - SITE_MARGIN, view.top - SITE_MARGIN,
       view.width + SITE_MARGIN * 2, view.height + SITE_MARGIN * 2);
+    const events = world.getEventSites(view.left - SITE_MARGIN, view.top - SITE_MARGIN, view.width + SITE_MARGIN * 2, view.height + SITE_MARGIN * 2);
+    this.events = events;
     this.props = props; this.buildings = buildings; this.sites = sites;
     this.world = world; this.bounds = { ...view };
   }

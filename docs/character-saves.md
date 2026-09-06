@@ -49,3 +49,7 @@ Starter choices share `STARTER_LOADOUTS` and `createStarterLoadout` in `items.ts
 Gold lives on the character wallet and saves atomically with the bounded `groundGold` list (identity, position, amount, settling age). An absent balance/list is empty. Present balances and pile amounts must be safe whole integers, pile identities must be unique across ground equipment and currency, and restore resumes from the largest saved identity. Currency is per character; new characters start with zero gold.
 
 The creation layout compacts the eight save slots into two rows above the starter grid. Each starter card shows its actual weapon and off-hand icons, a concise handling description and a visible selected state. Selecting a card updates the shared equipped portrait without erasing the entered name. Existing saves retain their own equipment; this expanded catalog does not require a save reset.
+
+## POI state (2026-09-06)
+
+Save v3 optionally carries `events`: up to 256 interacted sites, their committed choices and reward delivery masks, a fixed beacon target, and one active trial with up to six guardian identities/health/casualties. `character.blessing` stores one timed bonus. Absent fields mean no interactions or blessing; current v3 slots continue without a reset. Event commands persist a complete checkpoint before publishing rewards. Trial actors resume from recorded locations only when offscreen; missing actors do not count as defeated. Beacon discovery is an idempotent projection replayed into the character chart on load.

@@ -1,3 +1,5 @@
+import { freshEvents, syncTrial } from './poi-content.ts';
+import { EventChannel, advanceTrial } from './poi-runtime.ts';
 import { GROUND_EFFECT_RULES } from './skill-execution-content.ts';
 import { freshTravel, PortalChannel, PORTAL_RULES } from './travel.ts';
 import { advanceGold, type GroundGold } from './gold.ts';
@@ -50,6 +52,19 @@ export function initialPlayer(x: number, y: number): Player {
 
 export class Simulation {
   player: Player;
+  eventState = freshEvents();
+  readonly eventChannel = new EventChannel();
+  private eventTimer = 0;
+  get nextEntityIdentity() { return this.nextId; }
+  commitEventCheckpoint(saved: CharacterCheckpoint, xp: number, levels: number): void {
+    this.eventState = saved.events!; this.player.character = saved.character;
+    this.player.level = saved.level; this.player.xp = saved.xp;
+    this.groundItems = saved.groundItems; this.groundGold = saved.groundGold!;
+    this.nextId = Math.max(this.nextId, ...this.groundItems.map(i => i.id + 1), ...this.groundGold.map(i => i.id + 1));
+    refreshCharacter(this.player);
+    if (xp) this.events.push({ type: 'experience', x: this.player.x, y: this.player.y, amount: xp });
+    if (levels) this.events.push({ type: 'level', x: this.player.x, y: this.player.y, level: this.player.level, skillPoints: levels, statPoints: levels * 5, color: '#c0acf0' });
+  }
   travel = freshTravel();
   readonly portal = new PortalChannel();
   private arrivalProtection = 0;
@@ -88,6 +103,7 @@ export class Simulation {
   }
 
   reset(): void {
+    this.eventState = freshEvents(); this.eventChannel.cancel(); this.eventTimer = 0;
     this.travel = freshTravel(); this.portal.cancel(); this.arrivalProtection = 0;
     this.player = initialPlayer(this.options.startX!, this.options.startY!);
     this.enemies = [];
@@ -111,7 +127,8 @@ export class Simulation {
 
   captureCheckpoint(): CharacterCheckpoint {
     const p = this.player;
-    return JSON.parse(JSON.stringify({ travel: this.travel, character: p.character, level: p.level, xp: p.xp,
+    syncTrial(this.eventState, this.enemies);
+    return JSON.parse(JSON.stringify({ events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
       x: p.x, y: p.y, angle: p.angle, hp: p.hp, mana: p.mana, dead: p.dead,
       flasks: p.flasks, healCooldown: p.healCooldown, dodgeCharges: p.dodgeCharges, dodgeRecharge: p.dodgeRecharge,
       skillCooldowns: p.skillCooldowns, time: this.time, kills: this.kills,
@@ -123,6 +140,7 @@ export class Simulation {
   restoreCheckpoint(checkpoint: CharacterCheckpoint): void {
     this.reset();
     const saved = JSON.parse(JSON.stringify(checkpoint)) as CharacterCheckpoint;
+    this.eventState = saved.events ?? freshEvents();
     this.travel = saved.travel ?? freshTravel();
     if (saved.dead) this.travel.returnTo = null;
     const p = this.player;
@@ -150,6 +168,7 @@ export class Simulation {
 
   revive(): void {
     const saved = this.captureCheckpoint();
+    delete saved.character.blessing;
     if (saved.travel) saved.travel.returnTo = null;
     saved.x = this.options.startX!; saved.y = this.options.startY!; saved.dead = false;
     saved.hp = this.player.maxHp; saved.mana = this.player.maxMana;
@@ -179,7 +198,7 @@ export class Simulation {
 
   /** Call when focus/control context changes, including pause and resume. */
   clearInput(): void {
-    this.portal.cancel();
+    this.portal.cancel(); this.eventChannel.cancel();
     this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
     this.skillBuffer = null;
     this.player.vx = this.player.vy = 0;
@@ -214,7 +233,7 @@ export class Simulation {
     while (this.accumulator + 1e-10 >= FIXED_STEP && !this.player.dead) {
       this.accumulator -= FIXED_STEP;
       this.step(FIXED_STEP, input);
-      if (this.portal.ready) { this.accumulator = 0; break; }
+      if (this.portal.ready || this.eventChannel.ready) { this.accumulator = 0; break; }
     }
   }
 
@@ -264,11 +283,25 @@ export class Simulation {
     this.updatePickups(dt);
     this.groundGold = advanceGold(this.groundGold, this.player, this.world, dt, event => this.events.push(event));
     this.collectGroundItems();
+    syncTrial(this.eventState, this.enemies);
     if (this.player.dead) {
       // A death may clear input midway through this tick; freeze its final poses.
-      this.travel.returnTo = null; this.portal.cancel();
+      this.travel.returnTo = null; this.portal.cancel(); this.eventChannel.cancel();
+      if (this.player.character.blessing) { delete this.player.character.blessing; refreshCharacter(this.player); }
       this.capturePositions();
       return;
+    }
+    this.eventChannel.advance(dt, this.player, input);
+    const blessing = this.player.character.blessing;
+    if (blessing && !this.world.isSanctuary?.(this.player.x, this.player.y)) {
+      blessing.remaining = Math.max(0, blessing.remaining - dt);
+      if (!blessing.remaining) { delete this.player.character.blessing; refreshCharacter(this.player); }
+    }
+    this.eventTimer -= dt;
+    if (this.eventTimer <= 0) {
+      this.eventTimer = .5;
+      advanceTrial({ state: this.eventState, player: this.player, enemies: this.enemies, world: this.world, view: this.spawnExclusion,
+        spawn: (kind, x, y, rank, source) => this.spawnEnemy(kind, x, y, rank, source) });
     }
     this.portal.advance(dt, this.player, input);
     this.updateSpawns(dt);
@@ -552,7 +585,7 @@ export class Simulation {
     if (!damagePlayer(amount, angle, sourceLevel, {
       player: this.player, world: this.world, random: () => this.random(), emit: event => this.events.push(event),
     }, kind)) return;
-    this.portal.cancel();
+    this.portal.cancel(); this.eventChannel.cancel();
     this.hurtGuard = COMBAT_TIMING.hurtGuard;
     if (this.player.dead) this.clearInput();
   }

@@ -17,7 +17,7 @@ Progress is saved in your browser. Hosted and localhost characters have separate
 ## What works today
 
 - **Characters & saves:** eight local save slots, a forest character hall, equipped previews, level/power summaries and automatic checkpoints. Every character starts with leather armor, a choice of sword, bow or fire staff, and an empty bag.
-- **World:** seven blended biomes, procedural towns with walk-in interiors, camps and landmarks, day/night lighting, wind and ambient wildlife. Scrolling minimap and an explored-world atlas.
+- **World:** seven blended biomes, procedural towns with walk-in interiors, camp strongboxes, caravan choices, beacons, guardian trials and roadside loot, day/night lighting, wind and ambient wildlife. Scrolling minimap and an explored-world atlas.
 - **Combat:** melee, bows and elemental staves; shields and dual wield; dodging, particles, damage feedback, and six enemy archetypes across three ranks. Encounters spawn outside the camera.
 - **Builds:** 2,185 nodes, 150 passive constellations and 20 active skills. Short early routes, useful resource/speed choices, and cross-discipline bridges at every layer. Upgradeable skill ranks, deeper specializations and three Arcana ultimates. First-tier skills stay cooldown-free.
 - **Gear & progression:** procedural names, icons and visible equipment; an 8×8 inventory, drag/drop, quick equip and comparison tooltips; item tiers, enemy loot tables, geographic danger scaling, and one skill point plus five attribute points per level.

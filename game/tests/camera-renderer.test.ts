@@ -61,6 +61,7 @@ class RecordingCanvas {
 }
 
 class EmptyWorld extends World {
+  override getEventSites() { return []; }
   propQueries: Rect[] = [];
   buildingQueries: Rect[] = [];
   override getProps(left: number, top: number, width: number, height: number): Prop[] {

@@ -5,6 +5,7 @@
     "types": []
   },
   "include": [
+    "src/poi-content.ts", "src/poi-runtime.ts", "src/poi-command.ts", "src/poi-rewards.ts", "src/poi-validation.ts", "src/poi-sites.ts", "src/wilderness-sites.ts", "src/world-pois.ts",
     "src/simulation.ts", "src/combat-content.ts", "src/combat-geometry.ts", "src/encounter-director.ts", "src/enemy-ai.ts", "src/enemy-state.ts", "src/camp-population.ts", "src/progression.ts", "src/progression-content.ts", "src/zone-progression.ts", "src/loot.ts", "src/loot-content.ts",
     "src/combat-damage.ts", "src/combat-rewards.ts", "src/gold.ts", "src/wallet.ts", "src/combat-status.ts", "src/ground-effects.ts", "src/skill-execution-content.ts", "src/skill-progression.ts",
     "src/roaming-encounters.ts", "src/spawn-visibility.ts",

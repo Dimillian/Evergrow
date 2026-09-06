@@ -103,8 +103,8 @@ test('invalid reveal coordinates and extreme radius cannot cause unbounded work'
     assert.equal(e.reveal(x, y, radius), false);
   assert.equal(e.exploredCellCount, 0);
   e.reveal(0, 0, Number.MAX_VALUE);
-  assert.ok(e.exploredCellCount > 0 && e.exploredCellCount < 1000);
-  assert.equal(e.isRevealed(1000, 0), false);
+  assert.ok(e.exploredCellCount > 0 && e.exploredCellCount < 1500);
+  assert.equal(e.isRevealed(1200, 0), false);
 });
 
 test('reaching exploration capacity preserves old areas instead of silently evicting them', t => {

@@ -16,12 +16,16 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
   };
   for (const slot of EQUIPMENT_SLOTS) if (sheet.equipped[slot]) add(itemModifiers(sheet.equipped[slot]!));
   add(treeBonuses);
+  const blessing = sheet.blessing?.remaining ? sheet.blessing.kind : null;
+  if (blessing === 'haste') add({ attackSpeedPercent: 15, castSpeedPercent: 15 });
+  if (blessing === 'wellspring') add({ manaCostPercent: 20 });
+  if (blessing === 'fleet') add({ moveSpeedPercent: 15 });
   const value = (key: StatKey) => modifiers[key] ?? 0;
   const attributes = Object.fromEntries(ATTRIBUTES.map(key => [key,
     bounded(sheet.attributes[key] + value(key), 0, 1e9)])) as Record<Attribute, number>;
   const strength = Math.max(0, attributes.strength - 10), dexterity = Math.max(0, attributes.dexterity - 10);
   const intelligence = Math.max(0, attributes.intelligence - 10), vitality = Math.max(0, attributes.vitality - 10);
-  const armor = bounded(value('armor'), 0, 1e9);
+  const armor = bounded(value('armor') * (blessing === 'bulwark' ? 1.4 : 1), 0, 1e9);
   const offhand = sheet.equipped.offhand;
   const shield = sheet.equipped.weapon?.weapon?.hands !== 2 && offhand?.kind === 'shield' ? offhand.shield : undefined;
   return {

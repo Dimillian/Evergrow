@@ -61,3 +61,7 @@ Cloud saves, multiplayer, seasons, procedural quest frameworks, public hosting a
 ## Skill development · implemented 2026-09-06
 
 Upgradeable skill ranks, lower casting-rank selection, 19 specialization choices, 17 mastery nodes, Arcane Overload and three deep Arcana ultimates are implemented. See [skill progression](skill-progression.md). Save v3 requires a new character for older slots. Respecs and further skill content remain future work.
+
+### Interactive POIs — delivered 2026-09-06
+
+Camp strongboxes, caravan choices, watchtower reveals, graveyard and standing-stone trials, and roadside reliquaries are implemented. Persistent partial claims, guardian casualties, offscreen spawning and timed blessings share existing save/combat boundaries. Next: player feedback on encounter/reward pacing, then the separate procedural dungeon proposal.

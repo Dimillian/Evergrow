@@ -4,7 +4,7 @@ export const EXPLORATION_CELL_SIZE = 48;
 export const EXPLORATION_CHUNK_CELLS = 32;
 export const EXPLORATION_CHUNK_SIZE = EXPLORATION_CELL_SIZE * EXPLORATION_CHUNK_CELLS;
 export const EXPLORATION_LIMITS = Object.freeze({
-  chunks: 8192, pois: 4096, coordinate: 48_000_000, saveLength: 3_500_000, revealRadius: 720,
+  chunks: 8192, pois: 4096, coordinate: 48_000_000, saveLength: 3_500_000, revealRadius: 1000,
 });
 export interface ExplorationIdentity { seed: number; generation: string; }
 export interface ExplorationChunk { x: number; y: number; words: Uint32Array; revision: number; }
@@ -18,7 +18,7 @@ export const explorationChunkKey = (x: number, y: number) => `${x}:${y}`;
 export function validExplorationPOI(value: unknown): value is WorldPOI {
   if (!value || typeof value !== 'object') return false;
   const p = value as WorldPOI;
-  return boundedString(p.id, 120) && boundedString(p.name, 100) && boundedString(p.description, 600)
+  return (p.sighted === undefined || typeof p.sighted === 'boolean') && boundedString(p.id, 120) && boundedString(p.name, 100) && boundedString(p.description, 600)
     && isPOIKind(p.kind) && validExplorationCoordinate(p.x) && validExplorationCoordinate(p.y);
 }
 

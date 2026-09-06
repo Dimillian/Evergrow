@@ -1,0 +1,7 @@
+.event-panel { position:absolute; inset:0; z-index:18; display:grid; place-items:center; padding:18px; background:#040910aa; backdrop-filter:blur(4px); }
+.event-panel[hidden] { display:none; }
+.event-window { width:min(480px,100%); }
+.event-choices { display:grid; gap:12px; padding:24px; }
+.event-choice { display:grid; text-align:left; gap:7px; padding:16px; }
+.event-choice strong { font-weight:400; font-size:19px; }
+.event-choice span { color:var(--ui-muted); font-size:14px; }

@@ -29,6 +29,7 @@ export type SkillId = 'cleave' | 'lunge' | 'whirlwind' | 'earthshatter' | 'shiel
   | 'volley' | 'piercingShot' | 'ricochet' | 'rainOfArrows' | 'backstab'
   | 'cataclysm' | 'tempest' | 'absoluteZero' | 'fireball' | 'arcLightning' | 'iceNova' | 'frostLance' | 'meteor' | 'siphon';
 export interface CharacterSheet extends GoldWallet {
+  blessing?: import('./poi-content.ts').Blessing;
   commerce: CommerceState;
   attributes: Record<Attribute, number>;
   statPoints: number; skillPoints: number;

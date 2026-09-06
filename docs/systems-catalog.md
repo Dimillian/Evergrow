@@ -7,7 +7,7 @@ Updated 2026-09-05. Stable system IDs from the original design, with current imp
 | S01 | Coordinates and streaming | Seeded world queries, streamed/cached terrain, bounded coordinates | Truly unbounded precision; measured worker generation if needed |
 | S02 | Geography and traversal | Shared terrain/road/building geometry, natural road junctions and collision | Broader geographic structures and navigation validation |
 | S03 | Biomes | Seven climates, smooth mixed borders and biome-specific props | More content variety and player visual feedback |
-| S04 | Settlements and POIs | Procedural towns/cities, camps and four landmark families | Interactive landmarks and deeper city layout variety |
+| S04 | Settlements and POIs | Procedural towns/cities, six interactive POI families and persistent guardian trials | Dungeon entrances and deeper city layout variety |
 | S05 | Environmental life | Saved clock, day/night, wind, footsteps, foliage, birds/insects and climate effects | Weather and NPC routines |
 | S06 | Interiors | Shared exterior coordinates, open doors, furnished rooms, fading roofs, lighting and reachable NPC work areas | More interior recipes |
 | S07 | Input and interaction | Movement, aim, zoom, dodge, held-input cleanup, modal ownership and nearby NPC interaction | Broader interaction content |
@@ -19,7 +19,7 @@ Updated 2026-09-05. Stable system IDs from the original design, with current imp
 | S13 | Loot and item generation | Source-level equipment, rank-specific drop/rarity tables, procedural names/affixes and independent loot RNG | More affix identity, unique powers and loot filtering |
 | S14 | Economy | Per-character gold wallet, saved physical coins, atomic trading and 12-item buyback | Player-led economy tuning |
 | S15 | Inventory/equipment/appearance | Procedural names/icons/worn art, tiers, source-level scaling, affixes, both-hand equipment planning, complete previews and recipe-based +10/rarity/reroll/relevel services | Unique legendary powers |
-| S16 | Exploration/objectives | Per-character explored map, POI/biome discoveries and notifications | Quests, interactive events, chests and waypoint travel |
+| S16 | Exploration/objectives | Per-character explored map, beacons, POI choices, chests, trials and notifications | Quests, dungeons and waypoint travel |
 | S17 | NPC services | Procedural blacksmith, jeweler and enchanter; nearby interaction, stock and workbenches | Dialogue, quests and residential schedules |
 | S18 | Art/lighting | Code-generated assets, layered trees, dynamic lights and fixed CRT/soft phosphor | More authored variety and measured performance work |
 | S19 | HUD/panels | Astral HUD, title hall, inventory/equipment/stats, atlas, shared tooltips, service panels and panel coordinator | Further player-led refinements |
