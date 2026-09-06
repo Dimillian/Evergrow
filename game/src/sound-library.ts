@@ -4,7 +4,8 @@ export type SoundFamily = 'weapons' | 'magic' | 'creatures' | 'rewards' | 'utili
 interface LayerBase { duration: number; gain: number; delay: number; attack: number }
 export interface SampleLayer extends LayerBase { kind: 'sample'; sample: SoundSampleId; rate: number; cutoff: number; reverse: boolean }
 export interface ToneLayer extends LayerBase { kind: 'tone'; frequency: number; end: number }
-export type SoundLayer = SampleLayer | ToneLayer;
+export interface NoiseLayer extends LayerBase { kind: 'noise'; frequency: number; end: number; texture: 'air' | 'body' | 'grit'; q: number }
+export type SoundLayer = SampleLayer | ToneLayer | NoiseLayer;
 export interface SoundTuning { weight: number; brightness: number; tail: number }
 export const DEFAULT_SOUND_TUNING: Readonly<SoundTuning> = Object.freeze({ weight: 1, brightness: 1, tail: 1 });
 export const SOUND_VARIATIONS = 6;
@@ -14,6 +15,13 @@ const sample = (id: SoundSampleId, gain = .5, rate = 1, delay = 0, cutoff = 1000
 // Sub pressure supports a few large magical events; physical sounds and voices use recordings only.
 const pressure = (gain = .045, delay = 0): ToneLayer => ({ kind: 'tone', frequency: 68, end: 31, duration: .28, gain, delay, attack: .009 });
 const pair = (variation: number, a: SoundSampleId, b: SoundSampleId) => variation % 2 ? b : a;
+// Original studio reward cues, restored after the recorded reward candidates were rejected.
+const tone=(frequency:number,end:number,duration:number,gain:number,delay=0,attack=.003):ToneLayer=>
+  ({kind:'tone',frequency,end,duration,gain,delay,attack});
+const noise=(frequency:number,end:number,duration:number,gain:number,delay=0,texture:NoiseLayer['texture']='air',attack=.003):NoiseLayer=>
+  ({kind:'noise',frequency,end,duration,gain,delay,texture,attack,q:.7});
+const metal=(fundamental:number,gain:number,delay=0,decay=.32):ToneLayer[]=>
+  [1,1.47,2.13,3.71,5.19].map((ratio,i)=>tone(fundamental*ratio,fundamental*ratio*.992,decay/(1+i*.42),gain/(1+i*1.7),delay+i*.001));
 const definitions = [
   { id:'sword-sweep', name:'Sword sweep', family:'weapons', detail:'A recorded blade pass, leather movement and a quiet steel edge.', layers:(v:number)=>[sample(pair(v,'blade-1','blade-2'),.7),sample('leather',.12,1.1),sample('steel-draw',.075,1.08,.025,5400)] },
   { id:'heavy-sweep', name:'Heavy swing', family:'weapons', detail:'A weighted blade pass with cloth and equipment movement.', layers:(v:number)=>[sample(pair(v,'blade-2','blade-1'),.75,.73),sample('cloth',.22,.86,0,3700)] },
@@ -37,16 +45,13 @@ const definitions = [
   { id:'coin-spill', name:'Coin handful', family:'rewards', detail:'A handful of coins with uneven contacts and natural settling.', layers:()=>[sample('coins-1',.55,1)] },
   { id:'xp-pickup', name:'XP absorption', family:'rewards', detail:'A quiet reversed bell fragment and a soft, airy material pass.', layers:()=>[sample('bell',.09,1.8,0,5500,true),sample('cloth',.08,1.35)] },
   { id:'item-common', name:'Common item', family:'rewards', detail:'Leather handling and a small equipment buckle.', layers:()=>[sample('leather',.43),sample('latch',.12,1.12,.04)] },
-  { id:'item-rare', name:'Rare item', family:'rewards', detail:'A clear equipment pickup with a brief, soft crystalline accent.', layers:()=>[
-    sample('leather',.4),sample('latch',.09,1.12,.025,4800),
-    {...sample('cloth',.085,1.8,0,3200,true),attack:.035},
-    {...sample('glass-1',.085,1.6,.11,4300),attack:.016},
+  { id:'item-rare', name:'Rare item', family:'rewards', detail:'The original soft pickup and golden ascending resonance.', layers:()=>[
+    noise(1600,650,.085,.14,0,'grit'),tone(160,85,.08,.07),...metal(760,.04,.025,.23),
+    ...[440,660,880].map((f,i)=>tone(f,f,.55-i*.08,.047,.06+i*.045,.008)),
   ] },
-  { id:'level-up', name:'Level up', family:'rewards', detail:'A short gathering breath, a warm release and a small crystalline finish.', layers:()=>[
-    {...sample('cloth',.19,1.65,0,2400,true),attack:.055},
-    {...sample('flame',.16,1.2,.17,1700),attack:.04},
-    {...sample('glass-1',.12,1.42,.23,4700),attack:.014},
-    {...sample('glass-2',.065,1.7,.31,5600),attack:.02},
+  { id:'level-up', name:'Level up', family:'rewards', detail:'The original warm arrival and resolving ascending phrase.', layers:()=>[
+    tone(132,42,.16,.2),noise(480,90,.14,.26,0,'body'),noise(600,3300,.7,.1,.03,'air',.12),
+    ...[220,330,440,550,660].flatMap((f,i)=>[tone(f,f,1.3-i*.12,.075,.07+i*.09,.015),...metal(f*2,.018,.08+i*.09,.65)]),
   ] },
   { id:'potion-drink', name:'Dual potion', family:'utility', detail:'A stopper click and real liquid movement with a soft handling tail.', layers:()=>[sample('latch',.14,1.3),sample('water',.43,1.18,.06,5900),sample('leather',.12,.95,.19)] },
   { id:'portal-open', name:'Town portal', family:'utility', detail:'Reversed gong resonance gathers into a low, breathing flame release.', layers:()=>[sample('gong',.35,.9,0,4700,true),sample('flame',.35,.7,.62,4000),sample('bell',.15,.72,.7,4600),pressure(.055,.68)] },
@@ -68,7 +73,11 @@ export function createSoundRecipe(id:string,variation=0,tuning:Readonly<SoundTun
       const rate=layer.rate*pitch/Math.pow(weight,.32);
       return Object.freeze({...layer,rate,gain,delay,cutoff:Math.min(16000,layer.cutoff*brightness),duration:SOUND_SAMPLES[layer.sample]/rate*Math.min(1,tail)});
     }
-    return Object.freeze({...layer,gain,delay,frequency:layer.frequency/Math.sqrt(weight),end:layer.end/Math.sqrt(weight)});
+    const low=layer.frequency<400, shift=pitch*(low?1/Math.sqrt(weight):1);
+    return Object.freeze({...layer,gain:gain*(low?Math.sqrt(weight):1),delay,
+      duration:layer.duration*(layer.duration>.17?tail:1),
+      frequency:layer.frequency*shift*(layer.kind==='noise'?brightness:1),
+      end:layer.end*shift*(layer.kind==='noise'?brightness:1)});
   });
   return Object.freeze({seed,layers:Object.freeze(layers),duration:Math.max(...layers.map(l=>l.delay+l.duration))+.04});
 }

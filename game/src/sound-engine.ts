@@ -50,7 +50,7 @@ export async function renderSound(request: SoundRequest): Promise<AudioBuffer> {
     if (layer.kind === 'sample') sources.set(layer.sample, await recording(ctx, layer.sample));
   }));
   const bus = ctx.createGain(); bus.connect(ctx.destination);
-  const color = ctx.createBiquadFilter(); color.type='lowpass'; color.frequency.value=14000; color.Q.value=.4; color.connect(bus);
+  const color = ctx.createBiquadFilter(); color.type='lowpass'; color.frequency.value=request.id==='level-up'||request.id==='item-rare'?7600:14000; color.Q.value=.4; color.connect(bus);
   if (request.space !== 'dry') {
     const reverb = ctx.createConvolver(), wet = ctx.createGain();
     reverb.buffer = impulse(ctx,request.space,decay); wet.gain.value=request.space==='crypt'?.24:.1;
@@ -74,6 +74,21 @@ export async function renderSound(request: SoundRequest): Promise<AudioBuffer> {
       source.playbackRate.value=layer.rate;
       const filter=ctx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=layer.cutoff;filter.Q.value=.45;
       source.connect(filter);filter.connect(gain);source.start(start);source.stop(end+.005);
+    } else if (layer.kind === 'noise') {
+      gain.gain.exponentialRampToValueAtTime(EPSILON,end);
+      const source=ctx.createBufferSource(), random=soundRandom(recipe.seed+recipe.layers.indexOf(layer)*953);
+      const buffer=ctx.createBuffer(1,Math.ceil((layer.duration+.04)*ctx.sampleRate),ctx.sampleRate),data=buffer.getChannelData(0);
+      let brown=0,grain=1;
+      for(let i=0;i<data.length;i++){
+        const white=random()*2-1,t=i/ctx.sampleRate;
+        brown=(brown+white*.045)/1.045;
+        if(i%220===0)grain=.2+random()*.8;
+        data[i]=layer.texture==='body'?brown*5:layer.texture==='grit'?white*grain*(.6+Math.sin(t*130)*.4):white;
+      }
+      source.buffer=buffer;
+      const filter=ctx.createBiquadFilter();filter.type=layer.texture==='body'?'lowpass':'bandpass';filter.Q.value=layer.q;
+      filter.frequency.setValueAtTime(layer.frequency,start);filter.frequency.exponentialRampToValueAtTime(layer.end,end);
+      source.connect(filter);filter.connect(gain);source.start(start);source.stop(end+.012);
     } else {
       gain.gain.exponentialRampToValueAtTime(EPSILON,end);
       const source=ctx.createOscillator();source.type='sine';

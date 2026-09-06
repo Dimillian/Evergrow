@@ -77,8 +77,9 @@ test('every sampled layer has a valid local PCM source with matching duration',a
   }
   for(const sound of SOUND_LIBRARY)for(let v=0;v<SOUND_VARIATIONS;v++){
     const recipe=createSoundRecipe(sound.id,v);
-    assert.ok(recipe.layers.some(l=>l.kind==='sample'));
-    if(sound.family!=='magic'&&sound.id!=='portal-open')assert.ok(recipe.layers.every(l=>l.kind==='sample'));
+    const originalReward=sound.id==='level-up'||sound.id==='item-rare';
+    assert.ok(recipe.layers.some(l=>l.kind==='sample')!==originalReward);
+    if(sound.family!=='magic'&&sound.id!=='portal-open'&&!originalReward)assert.ok(recipe.layers.every(l=>l.kind==='sample'));
     for(const l of recipe.layers)if(l.kind==='sample')assert.ok(l.sample in SOUND_SAMPLES);
   }
 });
