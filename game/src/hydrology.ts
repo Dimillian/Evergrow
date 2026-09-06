@@ -7,7 +7,7 @@ export const DRY_WATER: Readonly<WaterSample> = Object.freeze({ coverage: 0, dep
 interface Node { cx: number; cy: number; x: number; y: number; tier: number; rain: number; }
 export interface RiverPoint { readonly x: number; readonly y: number; readonly width: number; readonly elevation: number; }
 export interface WaterFeature { readonly id: string; readonly kind: 'river' | 'lake'; readonly points: readonly RiverPoint[]; readonly runoff: number; }
-interface Segment { ax: number; ay: number; bx: number; by: number; aw: number; bw: number; flowX: number; flowY: number; }
+interface Segment { ax: number; ay: number; bx: number; by: number; aw: number; bw: number; flowAX: number; flowAY: number; flowBX: number; flowBY: number; }
 interface Lake { x: number; y: number; rx: number; ry: number; phase: number; }
 interface Bucket { segments: Segment[]; lakes: Lake[]; }
 const clamp = (n: number) => Math.max(0, Math.min(1, n));
@@ -101,7 +101,7 @@ export class Hydrology {
     const bx = Math.floor(x / HYDROLOGY.bucket), by = Math.floor(y / HYDROLOGY.bucket), key = `${bx}:${by}`;
     const cached = this.buckets.get(key); if (cached) return cached;
     const result: Bucket = { segments: [], lakes: [] }, left = bx * HYDROLOGY.bucket, top = by * HYDROLOGY.bucket;
-    const cx = Math.floor(x / HYDROLOGY.spacing), cy = Math.floor(y / HYDROLOGY.spacing);
+    const cx = Math.floor((left + HYDROLOGY.bucket / 2) / HYDROLOGY.spacing), cy = Math.floor((top + HYDROLOGY.bucket / 2) / HYDROLOGY.spacing);
     for (let iy = cy - 2; iy <= cy + 2; iy++) for (let ix = cx - 2; ix <= cx + 2; ix++) {
       const f = this.feature(ix, iy); if (!f) continue;
       if (f.kind === 'lake') {
@@ -109,11 +109,14 @@ export class Hydrology {
         if (p.x + rx * 1.2 < left || p.x - rx * 1.2 > left + 512 || p.y + ry * 1.2 < top || p.y - ry * 1.2 > top + 512) continue;
         result.lakes.push({ x: p.x, y: p.y, rx, ry, phase: hash(ix, iy, this.seed + 79) * Math.PI * 2 });
       } else for (let i = 1; i < f.points.length; i++) {
-        const a = f.points[i - 1], b = f.points[i], margin = Math.max(a.width, b.width) + 35;
+        const a = f.points[i - 1], b = f.points[i], margin = Math.max(a.width, b.width) + 80;
         if (Math.max(a.x, b.x) + margin < left || Math.min(a.x, b.x) - margin > left + 512 || Math.max(a.y, b.y) + margin < top || Math.min(a.y, b.y) - margin > top + 512) continue;
-        const length = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+        const before = f.points[Math.max(0, i - 2)], after = f.points[Math.min(f.points.length - 1, i + 1)];
+        const al = Math.hypot(b.x - before.x, b.y - before.y) || 1;
+        const bl = Math.hypot(after.x - a.x, after.y - a.y) || 1;
         result.segments.push({ ax: a.x, ay: a.y, bx: b.x, by: b.y, aw: a.width, bw: b.width,
-          flowX: (b.x - a.x) / length, flowY: (b.y - a.y) / length });
+          flowAX: (b.x - before.x) / al, flowAY: (b.y - before.y) / al,
+          flowBX: (after.x - a.x) / bl, flowBY: (after.y - a.y) / bl });
       }
     }
     return remember(this.buckets, key, result, HYDROLOGY.buckets);
@@ -126,7 +129,7 @@ export class Hydrology {
       const dx = s.bx - s.ax, dy = s.by - s.ay, t = clamp(((x - s.ax) * dx + (y - s.ay) * dy) / (dx * dx + dy * dy || 1));
       const width = s.aw + (s.bw - s.aw) * t, d = Math.hypot(x - s.ax - dx * t, y - s.ay - dy * t);
       const shore = width - d + Math.sin(x * .026 + Math.sin(y * .019)) * 5 + Math.sin(y * .053 + x * .017) * 2;
-      if (shore > edge) { edge = shore; depth = .16 + clamp(shore / width) * .9; flowX = s.flowX; flowY = s.flowY; kind = 'river'; }
+      if (shore > edge) { edge = shore; depth = .16 + clamp(shore / width) * .9; flowX = s.flowAX + (s.flowBX - s.flowAX) * t; flowY = s.flowAY + (s.flowBY - s.flowAY) * t; kind = 'river'; }
     }
     for (const lake of bucket.lakes) {
       const dx = (x - lake.x) / lake.rx, dy = (y - lake.y) / lake.ry, angle = Math.atan2(dy, dx);
@@ -136,6 +139,27 @@ export class Hydrology {
     }
     if (edge < -30) return { ...DRY_WATER };
     const coverage = smooth(edge / 15), bank = (1 - smooth(Math.abs(edge + 3) / 30));
+    if (coverage > 0) {
+      // Blend overlapping segment tangents rather than switching the whole channel
+      // to whichever capsule won its distance query. Compact support keeps bucket seams invisible.
+      let fx = 0, fy = 0, total = 0;
+      const roughness = Math.sin(x * .026 + Math.sin(y * .019)) * 5 + Math.sin(y * .053 + x * .017) * 2;
+      for (const s of bucket.segments) {
+        const dx = s.bx - s.ax, dy = s.by - s.ay;
+        const t = clamp(((x - s.ax) * dx + (y - s.ay) * dy) / (dx * dx + dy * dy || 1));
+        const shore = s.aw + (s.bw - s.aw) * t - Math.hypot(x - s.ax - dx * t, y - s.ay - dy * t) + roughness;
+        const weight = smooth(1 - (edge - shore) / 32);
+        fx += (s.flowAX + (s.flowBX - s.flowAX) * t) * weight;
+        fy += (s.flowAY + (s.flowBY - s.flowAY) * t) * weight; total += weight;
+      }
+      for (const lake of bucket.lakes) {
+        const dx = (x - lake.x) / lake.rx, dy = (y - lake.y) / lake.ry, angle = Math.atan2(dy, dx);
+        const radius = 1 + Math.sin(angle * 3 + lake.phase) * .11 + Math.sin(angle * 5 - lake.phase) * .045;
+        const shore = (radius - Math.hypot(dx, dy)) * Math.min(lake.rx, lake.ry);
+        total += smooth(1 - (edge - shore) / 32);
+      }
+      if (total > 0) { flowX = fx / total; flowY = fy / total; }
+    }
     return { coverage, depth: depth * coverage, flowX: flowX * coverage, flowY: flowY * coverage, bank, kind: coverage ? kind : 'dry' };
   }
   query(x: number, y: number, width: number, height: number): WaterFeature[] {

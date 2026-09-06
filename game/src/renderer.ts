@@ -58,6 +58,8 @@ import { drawEnemyRemains } from './death-art.ts';
 interface Ghost { x: number; y: number; angle: number; gait: number; life: number; }
 export interface RenderSettings {
   reducedMotion: boolean;
+  /** Save-free reviews can inspect long-session water optics without advancing gameplay. */
+  waterAge?: number;
   phase: GamePhase; fps: number; debug: boolean;
 }
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -314,7 +316,7 @@ export class Renderer {
         if (sprite) { this.waterArt.drawPropReflection(c, this.water.fluid, prop.x, prop.y, sprite, prop.scale, settings.reducedMotion); reflected++; }
       }
       this.waterArt.drawReflection(c, this.water.fluid, px, py, playerPose(p, sim.time), settings.reducedMotion);
-      this.waterArt.drawSurface(c, this.water.fluid, lights, settings.reducedMotion);
+      this.waterArt.drawSurface(c, this.water.fluid, lights, settings.reducedMotion, settings.waterAge);
     }
     for (const remains of this.deaths.remains) if (remains.age >= DEATH_SETTLE_SECONDS)
       drawEnemyRemains(c, remains, settings.reducedMotion);

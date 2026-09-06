@@ -1,3 +1,4 @@
+import { WATER_FLOW_GLSL } from './water-flow.ts';
 import type { WaterSimulation } from './water-simulation.ts';
 import type { PointLight } from './lighting.ts';
 
@@ -15,8 +16,8 @@ uniform vec3 lightColor[8];
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}
 float heightAt(vec2 q){vec2 v=texture2D(waves,q).rg;return (dot(v,vec2(65280.,255.))/65535.-.5)*12.;}
-vec3 microWaves(vec2 p,vec2 flow){
-  p-=flow*time*13.;
+${WATER_FLOW_GLSL}
+vec3 waveLayer(vec2 p){
   float a=dot(p,vec2(.031,.047))-time*1.3;
   float b=dot(p,vec2(-.063,.027))-time*1.7;
   float c=dot(p,vec2(.11,.085))+sin(a)*.7-time*2.1;
@@ -24,6 +25,11 @@ vec3 microWaves(vec2 p,vec2 flow){
     cos(a)*.017+cos(b)*(-.018)+cos(c)*.011,
     cos(a)*.026+cos(b)*.008+cos(c)*.0085);
 }
+vec3 microWaves(vec2 p,vec2 flow){
+  vec3 phase=flowPhases(time);
+  return mix(waveLayer(p-flow*phase.y),waveLayer(p-flow*phase.x),phase.z);
+}
+
 void main(){
   vec2 topUV=vec2(uv.x,1.-uv.y);
   vec2 world=view.xy+topUV*view.zw;
@@ -69,7 +75,8 @@ void main(){
   }
   float crest=smoothstep(.16,.8,length(slope))*smoothstep(-.12,.6,h);
   float shore=(1.-smoothstep(.09,.36,depth))*.28;
-  float foamNoise=noise(world*.18-flow*time*.9+gradient);
+  vec3 foamPhase=flowPhases(time);
+  float foamNoise=mix(noise(world*.18-flow*foamPhase.y*.069+gradient),noise(world*.18-flow*foamPhase.x*.069+gradient),foamPhase.z);
   float foam=(crest*.8+shore)*smoothstep(.45,.8,foamNoise);
   color=mix(color,vec3(.69,.86,.78),clamp(foam,0.,.7));
   gl_FragColor=vec4(color,coverage*.96);
@@ -131,7 +138,7 @@ export class WaterShader {
     finally { for (const shader of shaders) gl.deleteShader(shader); }
   }
   draw(target: CanvasRenderingContext2D, f: WaterSimulation, reflection: HTMLCanvasElement,
-    view: { left: number; top: number; width: number; height: number }, lights: readonly PointLight[], reduced: boolean): boolean {
+    view: { left: number; top: number; width: number; height: number }, lights: readonly PointLight[], reduced: boolean, age = 0): boolean {
     if (!this.setup()) return false;
     const gl = this.gl!, u = this.uniforms;
     const width = Math.min(1280, target.canvas.width), height = Math.round(target.canvas.height * width / target.canvas.width);
@@ -156,7 +163,7 @@ export class WaterShader {
     }
     gl.uniform4f(u.view, view.left, view.top, view.width, view.height);
     gl.uniform4f(u.grid, f.left, f.top, f.columns * f.cell, f.rows * f.cell); gl.uniform2f(u.gridSize, f.columns, f.rows);
-    gl.uniform1f(u.time, reduced ? 0 : f.time);
+    gl.uniform1f(u.time, reduced ? 0 : f.time + age);
     const positions = new Float32Array(32), colors = new Float32Array(24);
     for (let i = 0; i < Math.min(8, lights.length); i++) {
       const light = lights[i]; positions.set([light.x, light.y, light.radius, light.power], i * 4);

@@ -44,9 +44,9 @@ export class WaterArt {
       for (const layer of sprite.foliage ?? []) r.drawImage(layer, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
     }, 150);
   }
-  drawSurface(c: CanvasRenderingContext2D, f: WaterSimulation, lights: readonly PointLight[], reduced: boolean) {
+  drawSurface(c: CanvasRenderingContext2D, f: WaterSimulation, lights: readonly PointLight[], reduced: boolean, age = 0) {
     if (!this.active) return;
-    if (this.shader.draw(c, f, this.reflections, this.view, lights, reduced)) return;
+    if (this.shader.draw(c, f, this.reflections, this.view, lights, reduced, age)) return;
     this.drawFallback(c, f);
   }
   private drawFallback(c: CanvasRenderingContext2D, f: WaterSimulation) {

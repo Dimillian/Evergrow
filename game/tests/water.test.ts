@@ -101,3 +101,25 @@ test('hydrology cache eviction does not rewrite an explored waterway', () => {
   assert(h.cacheStats.nodes <= HYDROLOGY.nodes);
   assert.deepEqual(h.sample(p.x, p.y), expected);
 });
+
+test('flow stays continuous through polyline joins and spatial bucket boundaries', () => {
+  const h = new Hydrology(7319);
+  for (const f of h.query(-20000, -20000, 40000, 40000).filter(f => f.kind === 'river')) {
+    for (let i = 2; i < f.points.length - 2; i++) {
+      const a = f.points[i - 1], p = f.points[i], b = f.points[i + 1];
+      const dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy);
+      for (const offset of [-.6, 0, .6]) {
+        const x = p.x - dy / l * p.width * offset, y = p.y + dx / l * p.width * offset;
+        const before = h.sample(x - dx / l * .01, y - dy / l * .01), after = h.sample(x + dx / l * .01, y + dy / l * .01);
+        assert(Math.hypot(before.flowX - after.flowX, before.flowY - after.flowY) < .002, `flow join ${f.id}:${i}`);
+      }
+      for (const axis of ['x', 'y'] as const) {
+        const coordinate = Math.round(p[axis] / HYDROLOGY.bucket) * HYDROLOGY.bucket;
+        const x = axis === 'x' ? coordinate : p.x, y = axis === 'y' ? coordinate : p.y;
+        const before = h.sample(x - (axis === 'x' ? .001 : 0), y - (axis === 'y' ? .001 : 0));
+        const after = h.sample(x + (axis === 'x' ? .001 : 0), y + (axis === 'y' ? .001 : 0));
+        assert(Math.hypot(before.flowX - after.flowX, before.flowY - after.flowY) < .002, `bucket boundary ${f.id}`);
+      }
+    }
+  }
+});

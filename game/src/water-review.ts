@@ -10,6 +10,7 @@ import { waterReviewScene, stageWaterScene } from './water-review-scene.ts';
 if (!import.meta.env.DEV) throw new Error('Water study is local development only.');
 installUITheme(); await loadGameFont();
 const query = new URLSearchParams(location.search), input = document.querySelector<HTMLInputElement>('#seed')!;
+const waterAge = Math.max(0, Math.min(86400, Number(query.get('age')) || 0));
 let seed = Number(query.get('seed') ?? 7319) >>> 0, kind: 'river' | 'lake' = query.get('kind') === 'lake' ? 'lake' : 'river';
 let world = new World(seed), scene = waterReviewScene(world, kind), sim = new Simulation(world, { spawn: false, startX: scene.x, startY: scene.y });
 const renderer = new Renderer(), canvas = document.querySelector<HTMLCanvasElement>('#water')!, fx = new PostFX(canvas);
@@ -20,7 +21,7 @@ function restart() {
   document.querySelector<HTMLAnchorElement>('#atlas')!.href = `/atlas.html?seed=${seed}&view=extended&levels=1`;
   input.value = String(seed);
   for (const b of document.querySelectorAll('[data-kind]')) b.setAttribute('aria-pressed', String(b.getAttribute('data-kind') === kind));
-  history.replaceState(null, '', `?seed=${seed}&kind=${kind}`);
+  history.replaceState(null, '', `?seed=${seed}&kind=${kind}${waterAge ? `&age=${waterAge}` : ''}`);
 }
 function generate() { world.dispose(); world = new World(seed); scene = waterReviewScene(world, kind); sim = new Simulation(world, { spawn: false, startX: scene.x, startY: scene.y }); restart(); }
 for (const button of document.querySelectorAll<HTMLButtonElement>('[data-kind]')) button.addEventListener('click', () => { kind = button.dataset.kind as 'river' | 'lake'; generate(); }, { signal: abort.signal });
@@ -38,11 +39,11 @@ function draw(now: number) {
   renderer.handleEvents(stageWaterScene(sim, scene, time, time + dt), motion.matches); time += dt;
   renderer.cameraX = scene.x; renderer.cameraY = scene.y - 80;
   const renderStart = performance.now();
-  renderer.render(sim, world, dt, { phase: 'playing', reducedMotion: motion.matches, fps: 60, debug: false });
+  renderer.render(sim, world, dt, { phase: 'playing', reducedMotion: motion.matches, waterAge, fps: 60, debug: false });
   fx.render(renderer.canvas, time);
   renderAverage += (performance.now() - renderStart - renderAverage) * .04;
   canvas.dataset.renderMs = renderAverage.toFixed(2);
-  document.querySelector('#status')!.textContent = `${kind === 'river' ? 'River crossing' : 'Lakeshore'} · Seed ${seed} · ${time < 4 ? 'Walking into water' : time < 7 ? 'Blade disturbances' : time < 10 ? 'Impact waves and reflected light' : 'Walking out'} · No gameplay ticks or saves`;
+  document.querySelector('#status')!.textContent = `${kind === 'river' ? 'River crossing' : 'Lakeshore'} · Seed ${seed} · ${time < 4 ? 'Walking into water' : time < 7 ? 'Blade disturbances' : time < 10 ? 'Impact waves and reflected light' : 'Walking out'} ${waterAge ? ` · Surface age +${waterAge}s` : ''} · No gameplay ticks or saves`;
   if (time > 14) restart();
   frame = requestAnimationFrame(draw);
 }
