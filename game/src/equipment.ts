@@ -45,15 +45,15 @@ export function getSupportGripOffset(visual = STARTING_SWORD.visual): number {
 
 const positive = (value: number, fallback: number) => Number.isFinite(value) && value > 0 ? value : fallback;
 
-/** Family balance applies equally to existing gear, fresh loot, spells and item previews. */
-export const STAFF_ACTION_RULES = Object.freeze({ speedMultiplier: .8, basicManaCost: 4 });
+/** Weapon balance applies equally to existing gear, fresh loot, spells and item previews. */
+export const WEAPON_ACTION_RULES = Object.freeze({ speedMultiplier: .8, staffBasicManaCost: 4 });
 export function weaponActionRate(weapon: WeaponDefinition): number {
   return positive(weapon.baseAttacksPerSecond, STARTING_SWORD.baseAttacksPerSecond)
-    * (weapon.family === 'staff' ? STAFF_ACTION_RULES.speedMultiplier : 1);
+    * WEAPON_ACTION_RULES.speedMultiplier;
 }
 export function basicAttackManaCost(weapon: WeaponDefinition, stats: Pick<DerivedCharacterStats, 'manaCostMultiplier'>): number {
   if (weapon.family !== 'staff') return 0;
-  return Math.max(1, Math.round(STAFF_ACTION_RULES.basicManaCost * stats.manaCostMultiplier * 10) / 10);
+  return Math.max(1, Math.round(WEAPON_ACTION_RULES.staffBasicManaCost * stats.manaCostMultiplier * 10) / 10);
 }
 
 /** One derivation path for weapons now and item-provided stat modifiers later. */

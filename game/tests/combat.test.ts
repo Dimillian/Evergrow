@@ -117,7 +117,7 @@ test('holding attack repeats only the same basic strike with no combo or heavy h
 });
 
 test('weapon speed and character attack speed determine cadence without tick drift', () => {
-  for (const [weaponSpeed, multiplier, expectedRate] of [[2, 1, 2], [4, 1, 4], [2, 2, 4], [3.5, 1.5, 5.25]]) {
+  for (const [weaponSpeed, multiplier, expectedRate] of [[2, 1, 1.6], [4, 1, 3.2], [2, 2, 3.2], [3.5, 1.5, 4.2]]) {
     const sim = make();
     sim.player.equipment.mainHand.baseAttacksPerSecond = weaponSpeed;
     sim.player.stats.attackSpeedMultiplier = multiplier;
@@ -145,37 +145,37 @@ test('derived weapon damage, reach and timing are snapshotted until the next str
   assert.equal(stats.range, 70);
   sim.update(FIXED_STEP, { ...idle, attack: true });
   const first = sim.player.attack!;
-  assert.equal(first.duration, .5);
-  assert.equal(first.activeStart, .5 * BASIC_ATTACK_PHASES.activeStart);
-  assert.equal(first.activeEnd, .5 * BASIC_ATTACK_PHASES.activeEnd);
+  assert.equal(first.duration, .625);
+  assert.equal(first.activeStart, .625 * BASIC_ATTACK_PHASES.activeStart);
+  assert.equal(first.activeEnd, .625 * BASIC_ATTACK_PHASES.activeEnd);
   assert.equal(first.damage, 36);
   sim.player.stats.attackSpeedMultiplier = 2;
   sim.player.stats.attackDamageMultiplier = 2;
   advance(sim, .25, { attack: true });
   assert.equal(sim.player.attack, first, 'equipping faster gear cannot change an in-flight contact window');
-  assert.equal(first.duration, .5);
-  advance(sim, .25, { attack: true });
+  assert.equal(first.duration, .625);
+  advance(sim, .375, { attack: true });
   assert.notEqual(sim.player.attack, first);
-  assert.equal(sim.player.attack?.duration, .25);
+  assert.equal(sim.player.attack?.duration, .3125);
   assert.equal(sim.player.attack?.damage, 48);
 });
 
 test('a tap in recovery buffers exactly one next attack', () => {
   const sim = make();
   sim.update(FIXED_STEP, { ...idle, attack: true });
-  advance(sim, 0.325);
+  advance(sim, sim.player.attack!.duration - .1);
   sim.update(FIXED_STEP, { ...idle, attack: true });
   advance(sim, 0.25);
   assert.ok(sim.player.attack);
   assert.equal(sim.drainEvents().filter(event => event.type === 'swing').length, 2);
-  advance(sim, 0.55);
+  advance(sim, .7);
   assert.equal(sim.player.attack, null);
 });
 
 test('UI combat input clearing drops queued weapons without stopping movement or dodge', () => {
   const sim = make();
   sim.update(FIXED_STEP, { ...idle, moveX: 1, attack: true });
-  advance(sim, 0.15, { moveX: 1 });
+  advance(sim, sim.player.attack!.activeEnd - .04, { moveX: 1 });
   sim.update(FIXED_STEP * 0.5, { ...idle, moveX: 1, attack: true, dodge: true });
   const velocity = sim.player.vx;
   const alpha = sim.interpolationAlpha;
@@ -197,7 +197,7 @@ test('aim can correct the sword windup but contact keeps a stable hit sector', (
   advance(sim, 0.125, { aimX: 0, aimY: 200 });
   assert.equal(sim.player.attack?.angle, Math.PI / 2);
   assert.equal(above.hp, above.maxHp, 'the turning blade has not reached the center yet');
-  advance(sim, 0.05, { aimX: 200, aimY: 0 });
+  advance(sim, 0.1, { aimX: 200, aimY: 0 });
   assert.equal(sim.player.attack?.angle, Math.PI / 2);
   assert.equal(above.hp, above.maxHp - 24);
   assert.equal(front.hp, front.maxHp);
@@ -328,7 +328,7 @@ test('knockback respects enemy collision radius through the entire motion', () =
 test('dodge buffer waits for sword recovery and consumes once', () => {
   const sim = make();
   sim.update(FIXED_STEP, { ...idle, attack: true });
-  advance(sim, 0.15);
+  advance(sim, sim.player.attack!.activeEnd - .04);
   sim.update(FIXED_STEP, { ...idle, dodge: true });
   assert.equal(sim.player.dodgeCharges, 2);
   advance(sim, 0.1);

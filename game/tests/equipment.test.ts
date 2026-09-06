@@ -52,7 +52,7 @@ test('invalid weapon and modifier inputs retain a finite resolvable basic attack
   for (const invalid of [NaN, Infinity, -Infinity, 0, -1]) {
     const result = deriveAttackStats({ castSpeedMultiplier: 1, attackSpeedMultiplier: invalid, attackDamageMultiplier: invalid, spellDamageMultiplier: invalid },
       { ...STARTING_SWORD, baseAttacksPerSecond: invalid, damage: invalid, reach: invalid, arc: invalid });
-    assert.deepEqual(result, { attacksPerSecond: 2, damage: 24, range: 60, arc: STARTING_SWORD.arc });
+    assert.deepEqual(result, { attacksPerSecond: 1.6, damage: 24, range: 60, arc: STARTING_SWORD.arc });
   }
 });
 

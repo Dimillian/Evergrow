@@ -107,7 +107,7 @@ test('nonlethal damage awards no XP and a kill can cross a level without healing
   assert.equal(enemy.hp, 24);
   assert.equal(sim.player.xp, 90);
   assert.equal(sim.player.level, 1);
-  advance(sim, .5, { attack: true });
+  advance(sim, .625, { attack: true });
   assert.equal(enemy.state, 'dead');
   assert.equal(sim.player.level, 2);
   assert.equal(sim.player.xp, 10);

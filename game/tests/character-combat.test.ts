@@ -75,10 +75,10 @@ test('equipping an item changes actual melee damage and repeated attack timing t
   assert.ok(equipItem(sim.player.character, 4, sim.player.level).ok); refreshCharacter(sim.player);
   const enemy = target(sim, 35);
   advance(sim, FIXED_STEP, { attack: true });
-  close(sim.player.attack!.duration, .8); assert.equal(sim.player.attack!.damage, 60);
+  close(sim.player.attack!.duration, 1); assert.equal(sim.player.attack!.damage, 60);
   advance(sim, 4 - FIXED_STEP, { attack: true });
   const events = sim.drainEvents(), hits = events.filter(event => event.type === 'hit');
-  assert.equal(events.filter(event => event.type === 'swing').length, 5);
+  assert.equal(events.filter(event => event.type === 'swing').length, 4);
   assert.ok(hits.length >= 4); assert.ok(hits.every(event => event.value === 60));
   assert.equal(enemy.hp, 10000 - hits.length * 60);
 });
@@ -209,7 +209,7 @@ test('repeated seeded enemy deaths generate reproducible loot with unique identi
         const enemy = sim.spawnEnemy('stalker', 48, 0)!; assert.ok(enemy);
         enemy.hp = 1; enemy.stateDuration = 999;
       }
-      advance(sim, .75, { attack: true });
+      advance(sim, 1.25, { attack: true });
     }
     assert.equal(sim.kills, 40);
     assert.ok(sim.groundItems.length > 5);

@@ -6,25 +6,25 @@ Weapons supply the basic attack immediately. LMB swings a melee weapon, fires an
 
 ## Weapon profiles
 
-`weapon-content.ts` owns 13 generated weapon profiles and three shields. `equipment.ts` owns the unchanged starting Weathered Sword and the unarmed fallback. Values below include family cadence tuning, before item level, rarity, affixes, and character bonuses. Staff actions use 80% of their authored weapon rate; this applies to existing gear as well as new drops. Range is measured in world units; ranged range is projectile travel distance.
+`weapon-content.ts` owns 13 generated weapon profiles and three shields. `equipment.ts` owns the starting Weathered Sword and the unarmed fallback. Values below include shared cadence tuning, before item level, rarity, affixes, and character bonuses. All weapon actions use 80% of their authored weapon rate; this applies to existing gear as well as new drops. Range is measured in world units; ranged range is projectile travel distance.
 
 | Weapon | Profile ID | Hands | Base damage | Attacks/sec | Range | Basic attack |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
-| Longsword | `longsword` | 1 | 19 | 2.2 | 54 | Physical swing |
-| Warden Axe | `hand-axe` | 1 | 24 | 1.8 | 52 | Physical swing |
-| Flanged Mace | `flanged-mace` | 1 | 26 | 1.65 | 48 | Physical swing |
-| Rondel Dagger | `rondel-dagger` | 1 | 13 | 3 | 40 | Physical strike |
-| Greatblade | `greatblade` | 2 | 33 | 1.5 | 69 | Physical swing |
-| Greataxe | `greataxe` | 2 | 39 | 1.3 | 67 | Physical swing |
-| Grave Maul | `grave-maul` | 2 | 44 | 1.1 | 61 | Physical swing |
-| Thorn Shortbow | `thorn-shortbow` | 2 | 18 | 2.2 | 420 | Arrow |
-| Crescent Recurve | `crescent-recurve` | 2 | 24 | 1.8 | 520 | Arrow |
-| Warden Longbow | `warden-longbow` | 2 | 31 | 1.4 | 600 | Arrow |
+| Longsword | `longsword` | 1 | 19 | 1.76 | 54 | Physical swing |
+| Warden Axe | `hand-axe` | 1 | 24 | 1.44 | 52 | Physical swing |
+| Flanged Mace | `flanged-mace` | 1 | 26 | 1.32 | 48 | Physical swing |
+| Rondel Dagger | `rondel-dagger` | 1 | 13 | 2.4 | 40 | Physical strike |
+| Greatblade | `greatblade` | 2 | 33 | 1.2 | 69 | Physical swing |
+| Greataxe | `greataxe` | 2 | 39 | 1.04 | 67 | Physical swing |
+| Grave Maul | `grave-maul` | 2 | 44 | 0.88 | 61 | Physical swing |
+| Thorn Shortbow | `thorn-shortbow` | 2 | 18 | 1.76 | 420 | Arrow |
+| Crescent Recurve | `crescent-recurve` | 2 | 24 | 1.44 | 520 | Arrow |
+| Warden Longbow | `warden-longbow` | 2 | 31 | 1.12 | 600 | Arrow |
 | Ember Staff | `ember-staff` | 2 | 28 | 1.2 | 480 | Fire bolt |
 | Rime Staff | `rime-staff` | 2 | 24 | 1.32 | 440 | Frost bolt |
 | Storm Staff | `storm-staff` | 2 | 17 | 1.84 | 500 | Lightning bolt |
-| Weathered Sword — starter | `weathered-sword` | 2 | 24 | 2 | 60 | Physical swing |
-| Unarmed — empty main hand | `unarmed` | 1 | 5 | 1.8 | 24 | Physical strike |
+| Weathered Sword — starter | `weathered-sword` | 2 | 24 | 1.6 | 60 | Physical swing |
+| Unarmed — empty main hand | `unarmed` | 1 | 5 | 1.44 | 24 | Physical strike |
 
 Rime Staff's basic bolt slows movement by 20% for one second. Other basic bolts are direct projectiles; the staff's element supplies its appearance and innate attack identity. Area explosions, chaining, and stronger status effects belong to unlocked skills. Any staff can use a staff-required skill, regardless of its innate element.
 
@@ -119,8 +119,8 @@ Bow/staff cursor input compensates for the shared 16-unit projectile drawing hei
 
 The native UI draws a faint short sight line and brackets around the assisted target. Ground-targeted skills keep the raw cursor position; melee keeps raw direction. Player projectiles get five extra units of enemy contact tolerance without increasing terrain collision or enemy-shot hitboxes. Arrow trails are slightly more visible. Six new regression tests cover selection, exclusion, lead limits, direction separation and grazes/walls; all 464 code tests and the build pass. Combat feel remains for player feedback.
 
-## Staff basic balance · 2026-09-06
+## Weapon cadence and staff basic costs · 2026-09-06
 
-`STAFF_ACTION_RULES`, `weaponActionRate` and `basicAttackManaCost` in `equipment.ts` define shared staff pacing and basic costs. Staff basics and assigned spells use 80% of the weapon rate, then cast-speed bonuses. Basic bolts pay four mana at windup, reduced by the normal mana-cost multiplier, rounded to tenths with a one-mana floor. Insufficient mana prevents the windup; release never charges again. Cancelling a paid windup does not refund mana. LMB shows its effective cost and dims when unaffordable; item tooltips show tuned base cadence and base bolt cost. Existing version-3 characters and equipment receive this tuning without a reset.
+`WEAPON_ACTION_RULES`, `weaponActionRate` and `basicAttackManaCost` in `equipment.ts` define shared weapon pacing and staff basic costs. Every weapon uses 80% of its authored rate, followed by attack-speed bonuses for melee/bows or cast-speed bonuses for staves. The same cadence drives basic attacks and compatible skills. Starter sword and bow now attack at 1.6 and 1.76 attacks/second; staff cadence stays unchanged. Basic bolts pay four mana at windup, reduced by the normal mana-cost multiplier, rounded to tenths with a one-mana floor. Insufficient mana prevents the windup; release never charges again. Cancelling a paid windup does not refund mana. LMB shows its effective cost and dims when unaffordable; item tooltips show tuned base cadence and base bolt cost. Existing version-3 characters and equipment receive this tuning without a reset.
 
 Basic hit damage already grows with weapon item level, rarity, enhancement, attack/spell modifiers, attributes and critical stats; attack/cast speed scales damage per second. Purchased active-skill ranks do not affect LMB. An optional LMB-only mastery per weapon school is a design candidate, not implemented: it could trade skill points (and higher staff bolt costs) for stronger basics and later weapon-specific behavior. It should remain a deliberate basic-attack build choice rather than a required upgrade for spell builds.

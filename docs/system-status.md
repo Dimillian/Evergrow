@@ -28,7 +28,7 @@ Updated 2026-09-06 for the gamepad implementation checkpoint. **Playable local p
 
 ## Starting character and core rules
 
-Every new character begins at level 1, 0 XP and 0 gold, with ten of each attribute, no unspent points, only the free tree origin allocated, five empty skill bindings and 64 empty bag cells. The same worn leather outfit accompanies the chosen common starter weapon. Starter armor currently has no implicit/affix stat bonuses. The sword is the two-handed Weathered Sword (24 base damage, two attacks/second); bow and staff use their own profiles. See [character systems](character-systems.md) and [weapons and skills](weapons-and-skills.md).
+Every new character begins at level 1, 0 XP and 0 gold, with ten of each attribute, no unspent points, only the free tree origin allocated, five empty skill bindings and 64 empty bag cells. The same worn leather outfit accompanies the chosen common starter weapon. Starter armor currently has no implicit/affix stat bonuses. The sword is the two-handed Weathered Sword (24 base damage, 1.6 attacks/second); bow and staff use their own profiles. See [character systems](character-systems.md) and [weapons and skills](weapons-and-skills.md).
 
 Base life and mana are 100; mana regenerates at 1/second before bonuses. Q restores 42% maximum life and 40% maximum mana together, with two charges and a charge recovered every eight kills. Basic attacks cost no mana. First-row skills have no cooldown but still pay mana and obey action recovery; second-row skills cost more and have cooldowns. Attack speed, cast speed, mana-cost reduction and cooldown reduction remain distinct stats.
 
@@ -88,3 +88,9 @@ Integration with the remote gamepad checkpoint was revalidated with `npm run che
 Staff basic attacks and magic recovery are 20% slower through shared family cadence tuning; Ember/Rime/Storm rates are now 1.2/1.32/1.84 actions per second before bonuses. Staff LMB costs four mana before reductions and checks affordability at windup. HUD and item readouts use the same rules. Current v3 saves remain usable. Optional basic-attack mastery nodes remain a proposal; LMB already scales through equipment and character stats.
 
 Staff tuning verification: `npm run check` passed with 558 code tests in the shared working tree, strict application/headless-core compilation and production build. Five added combat regressions cover windup/release charging, insufficient mana, gear reductions, mana-free physical basics and shared spell/basic cadence.
+
+## Physical weapon pacing · 2026-09-06
+
+Melee and bow actions now receive the same 0.8 authored-rate factor as staves: starter sword 1.6 attacks/second, starter bow 1.76. Other physical profiles retain their relative speeds; staff rates and mana costs stay unchanged. Basics and weapon-based skill recovery share the tuned cadence, including item previews and existing equipped gear. Attack/cast-speed bonuses still apply independently. No save reset is required.
+
+Verification: `npm run check` passed with 559 code tests in the shared working tree, strict application/headless-core compilation and production build. Timing regressions cover repeated attacks, in-flight snapshots, buffered attacks/dodges, swept contact and rewards at the slower cadence. Gameplay feel remains for player testing.
