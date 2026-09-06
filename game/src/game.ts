@@ -1,3 +1,4 @@
+import { FrameProfiler } from './frame-profiler.ts';
 import { DungeonWorld } from './dungeon-world.ts';
 import { generateDungeon, type DungeonEntrance } from './dungeon.ts';
 import { currentDungeon } from './dungeon-state.ts';
@@ -83,6 +84,7 @@ export class Game {
   private padAimAngle: number | null = null;
   private padAimDistance = 180;
   private mouse = this.input.pointer;
+  readonly performance = new FrameProfiler(new URLSearchParams(location.search).has('profile'));
   private last = performance.now();
   private animation = 0;
   private fps = 60;
@@ -95,7 +97,7 @@ export class Game {
     this.lifetime.defer(() => cancelAnimationFrame(this.animation));
     this.lifetime.defer(() => { if(this.world !== this.overworld) this.world.dispose(); this.overworld.dispose(); });
     try {
-      this.renderer = new Renderer();
+      this.renderer = new Renderer(true, this.performance);
       this.audio = this.lifetime.own(new GameAudio());
       this.exploration = new Exploration(this.world, { storage: null });
       this.lifetime.defer(() => this.exploration.dispose());
@@ -655,6 +657,7 @@ export class Game {
 
   private frame = (now: number) => {
     if (this.disposed) return;
+    this.performance.begin(now);
     const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
     this.last = now;
     this.fps += (1 / Math.max(dt, 0.001) - this.fps) * 0.04;
@@ -664,7 +667,9 @@ export class Game {
     if (this.phase === 'playing') {
       // The simulation owns the fixed 120 Hz clock and render interpolation.
       this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
+      const simulationStart = this.performance.start();
       this.sim.update(dt, this.readInput());
+      this.performance.end('simulation', simulationStart);
       const events = this.sim.drainEvents();
       this.renderer.handleEvents(events, this.reducedMotion);
       for (const event of events) {
@@ -695,8 +700,13 @@ export class Game {
       this.renderer.cameraX = -90 + (this.reducedMotion ? 0 : Math.sin(now / 24000) * 45);
       this.renderer.cameraY = -180 + (this.reducedMotion ? 0 : Math.cos(now / 31000) * 25);
     }
+    const renderStart = this.performance.start();
     this.renderer.render(this.sim, this.world, dt, settings);
+    this.performance.end('world', renderStart);
+    const fxStart = this.performance.start();
     this.fx.render(this.renderer.canvas, this.renderer.hurt);
+    this.performance.end('postfx', fxStart);
+    const uiStart = this.performance.start();
     const ui = this.uiContext;
     ui.setTransform(1, 0, 0, 1, 0, 0);
     ui.clearRect(0, 0, this.uiCanvas.width, this.uiCanvas.height);
@@ -715,6 +725,7 @@ export class Game {
         x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
         y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind,
       })));
+    this.performance.end('ui', uiStart); this.performance.finish();
     this.animation = requestAnimationFrame(this.frame);
   };
 

@@ -15,6 +15,7 @@ let moduleDisposed = false;
 if (import.meta.hot) import.meta.hot.dispose(() => {
   moduleDisposed = true;
   Reflect.deleteProperty(window, '__evergrow');
+  Reflect.deleteProperty(window, '__evergrowPerformance');
   try { game?.dispose(); } catch (error) { console.error('Game cleanup failed.', error); }
 });
 
@@ -23,6 +24,7 @@ void loadGameFont().catch(error => console.warn('Local UI font unavailable; usin
   if (moduleDisposed) return;
   try {
     game = new Game(app);
+    if (game.performance.enabled) Object.assign(window, { __evergrowPerformance: { snapshot: () => game?.performance.snapshot(), reset: () => game?.performance.reset() } });
     if (import.meta.env.DEV) Object.assign(window, { __evergrow: game });
   } catch (error) {
     console.error(error);

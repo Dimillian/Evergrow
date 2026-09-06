@@ -1,3 +1,4 @@
+import type { FrameProfiler } from './frame-profiler.ts';
 import { WaterPresentation } from './water-presentation.ts';
 import { WaterArt } from './water-art.ts';
 import { CRYPT_AMBIENT, cryptLights, cryptLightMask } from './dungeon-lighting.ts';
@@ -91,7 +92,7 @@ export class Renderer {
   private experienceFeedback = new ExperienceFeedback();
   private experienceDisplay: ExperienceDisplay | undefined;
   private effects = new CombatEffects();
-  private groundLayer = new GroundLayer();
+  private groundLayer: GroundLayer;
   private groundDressing = new GroundDressing();
   private settlementArt = new SettlementArt();
   private environmentArt = new EnvironmentArt();
@@ -121,7 +122,8 @@ export class Renderer {
   private portalAnchors: PortalAnchor[] = [];
   private fadingPortal: { x: number; y: number; progress: number; life: number } | null = null;
 
-  constructor() { this.resize(960, 600); }
+  private profiler?: FrameProfiler;
+  constructor(backgroundTerrain = false, profiler?: FrameProfiler) { this.profiler = profiler; this.groundLayer = new GroundLayer(undefined, backgroundTerrain); this.resize(960, 600); }
 
   resize(width: number, height: number) {
     this.width = Math.round(width); this.height = Math.round(height);
@@ -286,6 +288,7 @@ export class Renderer {
     this.biomeLife.update(dt, this.visualTime, this.cachedProps, { x: px, y: py, vx: p.vx, vy: p.vy },
       settings.reducedMotion, (x, y) => world.sampleGroundContact(x, y));
     const lights = this.sceneLights(sim, px, py, settings.reducedMotion);
+    const waterStart = this.profiler?.start() ?? 0;
     if (!sim.dungeonFloor) {
       const a = p.attack;
       const blade = a?.kind === 'melee' && a.elapsed >= a.activeStart && a.elapsed <= a.activeEnd
@@ -294,9 +297,12 @@ export class Renderer {
         [{ id: -1, x: px, y: py }, ...sim.enemies.filter(e => e.hp > 0).map(e => ({ id: e.id, x: lerp(e.prevX, e.x, alpha), y: lerp(e.prevY, e.y, alpha) }))],
         step, settings.reducedMotion, blade ? { x: px + blade.x, y: py + blade.y } : undefined);
     } else this.water.reset();
+    this.profiler?.end('water', waterStart);
     c.fillStyle = '#101c22'; c.fillRect(0, 0, this.width, this.height);
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
+    const terrainStart = this.profiler?.start() ?? 0;
     this.groundLayer.draw(c, world, left, top, worldWidth, worldHeight);
+    this.profiler?.end('terrain', terrainStart);
     const dungeonRun=currentDungeon(sim.expeditions);
     if(sim.dungeonFloor&&dungeonRun) drawCryptDecor(c,sim.dungeonFloor,dungeonRun,settings.reducedMotion ? 0 : this.visualTime,sim.eventChannel.site?.kind==='cryptChest'?{index:sim.eventChannel.site.index,progress:sim.eventChannel.elapsed/sim.eventChannel.duration}:undefined);
     else for(const entrance of this.visibility.entrances)drawCryptGate(c,entrance,this.visualTime);
@@ -306,6 +312,7 @@ export class Renderer {
     this.biomeArt.drawGround(c, this.biomeLife, this.cachedProps, this.visualTime, settings.reducedMotion, this.view);
     this.atmosphere.drawWater(c, this.cachedProps, this.visualTime, settings.reducedMotion);
     if (!sim.dungeonFloor) {
+      const opticsStart = this.profiler?.start() ?? 0;
       this.waterArt.begin(this.water.fluid, { left, top, width: worldWidth, height: worldHeight });
       let reflected = 0;
       for (const prop of this.cachedProps) {
@@ -317,6 +324,7 @@ export class Renderer {
       }
       this.waterArt.drawReflection(c, this.water.fluid, px, py, playerPose(p, sim.time), settings.reducedMotion);
       this.waterArt.drawSurface(c, this.water.fluid, lights, settings.reducedMotion, settings.waterAge);
+      this.profiler?.end('water', opticsStart);
     }
     for (const remains of this.deaths.remains) if (remains.age >= DEATH_SETTLE_SECONDS)
       drawEnemyRemains(c, remains, settings.reducedMotion);
@@ -336,7 +344,9 @@ export class Renderer {
     const ambientChannels = biomeAmbient(weights).map((value, channel) =>
       Math.round(value * (1 - inside) + [116, 119, 141][channel] * inside));
     const ambient = sim.dungeonFloor ? CRYPT_AMBIENT : `rgb(${ambientChannels.join(',')})`;
+    const lightingStart = this.profiler?.start() ?? 0;
     this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps, ambient, zoom);
+    this.profiler?.end('lighting', lightingStart);
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
     this.biomeArt.drawLight(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
     this.biomeArt.drawAir(c, this.biomeLife, this.visualTime, settings.reducedMotion);

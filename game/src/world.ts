@@ -429,6 +429,13 @@ export class World {
     return { x, y };
   }
 
+  /** Continuous coarse underlay while full-detail worker tiles are pending. */
+  drawGroundPreview(c: CanvasRenderingContext2D, tx: number, ty: number) {
+    const x = tx * TILE_SIZE, y = ty * TILE_SIZE;
+    const towns = this.getSettlements(x - 192, y - 192, TILE_SIZE + 384, TILE_SIZE + 384);
+    for (const _ of groundSurfaceSteps(c, 0, 0, 16, (sx, sy) => this.surfaceColor(x + sx * 16, y + sy * 16, towns, false))) { /* 25 shared samples */ }
+  }
+
   /** Ground is rendered only on demand; the constructor and queries need no DOM. */
   getGroundTile(tileX: number, tileY: number, createCanvas?: CanvasFactory): HTMLCanvasElement;
   getGroundTile(tileX: number, tileY: number, createCanvas: CanvasFactory | undefined, budget: number): HTMLCanvasElement | null;
