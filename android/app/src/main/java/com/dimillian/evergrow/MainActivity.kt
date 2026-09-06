@@ -106,27 +106,29 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
                     return true
                 }
             }
-            if(secondary) addJavascriptInterface(CompanionBridge(),"EvergrowCompanion")
+            if(secondary) addJavascriptInterface(CompanionBridge(this),"EvergrowCompanion")
             else addJavascriptInterface(GameBridge(),"EvergrowAndroid")
         }
     }
     inner class GameBridge {
         @JavascriptInterface fun controller(): String = controller.snapshot()
         @JavascriptInterface fun clearController() = controller.clearEdges()
-        @JavascriptInterface fun hasCompanion(): Boolean = companion != null && resumed
+        @JavascriptInterface fun hasCompanion(): Boolean = resumed && companion?.let { it.presented && it.ready && it.display.state == Display.STATE_ON } == true
         @JavascriptInterface fun publish(value: String) {
             if(value.length > 400_000) return
             handler.post { if(resumed) { lastSnapshot=value; forward(value) } }
         }
     }
-    inner class CompanionBridge {
-        @JavascriptInterface fun ready() { handler.post { lastSnapshot?.let { forward(it) } } }
+    inner class CompanionBridge(private val source: WebView) {
+        @JavascriptInterface fun ready() { handler.post {
+            if(companion?.web === source) { companion?.ready = true; lastSnapshot?.let { forward(it) } }
+        } }
         @JavascriptInterface fun command(value: String) {
             if(value.length > 1000) return
             val parsed = try { JSONObject(value) } catch(_: Exception) { return }
-            if(parsed.optString("type") !in setOf("panel","inspect","equip","zoom","resume","portal","track","closeInspect")) return
+            if(parsed.optString("type") !in setOf("panel","inspect","equip","zoom","resume","portal","track","closeInspect","tab")) return
             handler.post {
-                if(resumed) game.evaluateJavascript("window.dispatchEvent(new CustomEvent('evergrow-native-command',{detail:${JSONObject.quote(value)}}))",null)
+                if(resumed && companion?.web === source) game.evaluateJavascript("window.dispatchEvent(new CustomEvent('evergrow-native-command',{detail:${JSONObject.quote(value)}}))",null)
             }
         }
     }
@@ -182,13 +184,17 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
     override fun onDisplayRemoved(id: Int) { if(companion?.display?.displayId == id) { companion?.dismiss(); companion=null }; connectCompanion() }
     inner class CompanionPresentation(display: Display): Presentation(this@MainActivity,display) {
         lateinit var web: WebView
+        @Volatile var ready = false
+        @Volatile var presented = false
+        override fun onStart() { super.onStart(); presented = true }
+        override fun onStop() { presented = false; super.onStop() }
         override fun onCreate(state: Bundle?) {
             super.onCreate(state)
             window?.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             window?.setDecorFitsSystemWindows(false); immersive(window)
             web=makeWebView(context,true); setContentView(web); prefer60Hz(window,display); web.loadUrl(BASE+"thor.html")
         }
-        override fun dismiss() { if(::web.isInitialized) { web.removeJavascriptInterface("EvergrowCompanion"); web.destroy() }; super.dismiss() }
+        override fun dismiss() { ready = false; presented = false; if(::web.isInitialized) { web.removeJavascriptInterface("EvergrowCompanion"); web.destroy() }; super.dismiss() }
         override fun dispatchKeyEvent(event: KeyEvent) = if(controller.key(event)) true else super.dispatchKeyEvent(event)
         override fun dispatchGenericMotionEvent(event: MotionEvent) = if(controller.motion(event)) true else super.dispatchGenericMotionEvent(event)
     }

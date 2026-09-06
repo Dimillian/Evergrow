@@ -21,6 +21,7 @@ export interface JourneyHost {
     readonly exploration: Exploration;
     readonly phase: GamePhase;
     readonly savingAction: boolean;
+    readonly companionPresented: boolean;
     readonly renderer: Pick<Renderer, 'width' | 'height' | 'extraUIBounds'>;
     readonly panels: Pick<PanelCoordinator, 'canOpen' | 'open' | 'transition'>;
     readonly worldMap: Pick<WorldMap, 'setJourneyMarker' | 'fitBounds'>;
@@ -130,12 +131,12 @@ export class JourneyController {
             this.refreshUI();
         }
         // Visibility is a phase property, not a simulation timer (menus pause that timer).
-        this.panel.mini.hidden = this.host.phase !== 'playing';
+        this.panel.mini.hidden = this.host.phase !== 'playing' || this.host.companionPresented;
         this.host.renderer.extraUIBounds = this.panel.bounds(this.host.renderer.width, this.host.renderer.height);
     }
     refreshUI() {
         const state = this.host.sim.journeys, p = this.host.sim.player, facts = this.facts();
-        this.panel.update(state, facts, this.host.phase === 'playing', this.host.renderer.width, this.host.renderer.height);
+        this.panel.update(state, facts, this.host.phase === 'playing' && !this.host.companionPresented, this.host.renderer.width, this.host.renderer.height);
         const goal = state.accepted.find(g => g.id === state.tracked && g.finishedAt === undefined);
         let marker: JourneyMarker | null = goal ? publicJourneyMarker(goal, this.facts().discovered(goal.id)) : null;
         if (this.host.phase !== 'map')

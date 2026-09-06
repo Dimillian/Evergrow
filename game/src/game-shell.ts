@@ -74,6 +74,13 @@ export class GameShell {
     this.controls.querySelector('[data-hud="journal"]')!.addEventListener('click', () => actions.openJourneys?.(), { signal });
   }
 
+  private minimapVisible = true;
+  setMinimapVisible(visible: boolean): void {
+    if (this.minimapVisible === visible) return;
+    this.minimapVisible = visible;
+    this.controls.querySelector<HTMLElement>('[data-hud="map"]')!.hidden = !visible;
+  }
+
   resizeControls(width: number, height: number): void {
     const place = (id: string, rect: HUDRect) => {
       const button = this.controls.querySelector<HTMLElement>(`[data-hud="${id}"]`)!;

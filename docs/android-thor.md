@@ -6,7 +6,9 @@ Both Android windows request a matching-resolution 60 Hz display mode. The main 
 
 ## Two screens, one character
 
-The upper screen runs the game. The lower screen uses the Astral UI palette, shared procedural item art, Pixelify lettering, and Barlow numerals:
+The upper screen runs the game. While the lower display is on, presented and its companion UI is ready, the upper minimap (including crypts) and short Journey list are hidden. They return automatically within the 250 ms presence polling interval when the companion is unavailable. Hidden map/quest hit regions are released; full maps and the journal remain accessible. This detects the app’s Presentation, not whether another system overlay is covering it.
+
+The lower screen uses the Astral UI palette, shared procedural item art, Pixelify lettering, and Barlow numerals:
 
 - **Map:** explored terrain and crypt rooms, the player marker, local zoom, Journey tracking, and access to the full map/journal.
 - **Pack:** a scrollable six-column pack with 64 cells beside two-column worn equipment. Slots use the lower display’s available width instead of shrinking to fit its height. Tap an item to inspect its shared tooltip and comparison; Equip uses the normal character command. Back or controller B closes inspection. Browsing, inspection and equipping do not pause or resume combat. Pause manually when desired.
@@ -14,6 +16,8 @@ The upper screen runs the game. The lower screen uses the Astral UI palette, sha
 - **Portal:** requests the existing town portal action, with the same restrictions and cancellation rules.
 
 The lower screen is a projection, not a second simulation or save writer. Primary state is published four times per second, with fog-respecting terrain images twice per second. Item recipes are sent instead of large repeated SVG strings; the companion renders/caches the shared icons locally. Transfers are bounded to 400,000 string characters, and native forwarding retains only one in-flight frame and the newest pending frame. If a map image exceeds the packet budget, the previous map remains while character information continues updating.
+
+Native forwarding includes companion tab changes, so hidden-map rendering suppression also works in the APK.
 
 Every command carries the active character ID. Stale sessions, busy save-backed actions, title/death phases and invalid items are rejected. Equip resolves the item ID to its current bag position and reuses validated character commands; Journey tracking uses its durable command. Inspection survives live gameplay and manual pause changes; death or character changes clear it. Controller B/native Back closes inspection first, without also dodging or resuming. Explicit links to upper-screen panels keep those panels’ normal lifecycle.
 

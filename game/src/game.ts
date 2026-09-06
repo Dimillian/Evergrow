@@ -185,6 +185,7 @@ export class Game {
       this.journeys = this.lifetime.own(new JourneyController({
         get sim() { return game.sim; }, get world() { return game.world; }, get overworld() { return game.overworld; },
         get exploration() { return game.exploration; }, get phase() { return game.phase; },
+        get companionPresented() { return game.thor?.presented ?? false; },
         get savingAction() { return game.savingAction; }, get renderer() { return game.renderer; },
         get panels() { return game.panels; }, get worldMap() { return game.worldMap; }, get dungeonMap() { return game.dungeonMap; },
         durable: (work, fallback) => this.durable(work, fallback), persistTravel: c => this.persistTravel(c), resume: () => this.resume(),
@@ -394,7 +395,7 @@ export class Game {
   }
 
   private pointerInHUD() {
-    return isGameUIPoint(this.mouse.x, this.mouse.y, this.renderer.width, this.renderer.height,this.renderer.extraUIBounds);
+    return isGameUIPoint(this.mouse.x, this.mouse.y, this.renderer.width, this.renderer.height,this.renderer.extraUIBounds,this.renderer.minimapVisible);
   }
 
   private resize() {
@@ -909,6 +910,8 @@ export class Game {
     this.renderer.pointerX = this.mouse.x;
     this.renderer.pointerY = this.mouse.y;
     this.renderer.pointerActive = this.mouse.present;
+    this.renderer.minimapVisible = !this.thor.presented && !(this.touch.active && (window.innerWidth < 620 || this.touch.phoneLandscape));
+    this.shell.setMinimapVisible(this.renderer.minimapVisible);
     this.journeys.update();
     const settings = {
       reducedMotion: this.reducedMotion, phase: this.phase, fps: this.fps, debug: this.debug,
@@ -934,7 +937,7 @@ export class Game {
     if(this.phase==='playing'&&this.journeys.marker?.known){
       const marker=this.journeys.marker,point=this.renderer.worldToScreen(marker.x,marker.y);
       if(point.x>20&&point.x<this.renderer.width-20&&point.y>35&&point.y<this.renderer.height-30
-        &&!isGameUIPoint(point.x,point.y-35,this.renderer.width,this.renderer.height,this.renderer.extraUIBounds)
+        &&!isGameUIPoint(point.x,point.y-35,this.renderer.width,this.renderer.height,this.renderer.extraUIBounds,this.renderer.minimapVisible)
         &&hasLineOfSight(this.world,this.sim.player.x,this.sim.player.y,marker.x,marker.y))questDiamond(ui,point.x,point.y-35,8);
     }
     if(this.touch.active && this.touch.input.preview && this.phase === 'playing') {
@@ -956,8 +959,8 @@ export class Game {
       y: p.prevY + (p.y - p.prevY) * alpha, angle: p.angle };
     const dungeonRun=currentDungeon(this.sim.expeditions);
     if (this.phase !== 'ready' && !dungeonRun) this.worldMap.update(mapPlayer, dt);
-    if (this.phase !== 'ready' && dungeonRun && !(this.touch.active && (window.innerWidth<620 || this.touch.phoneLandscape))) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker);
-    if (this.phase !== 'ready' && !dungeonRun && !(this.touch.active && (window.innerWidth<620 || this.touch.phoneLandscape))) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, now / 1000,
+    if (this.phase !== 'ready' && dungeonRun && this.renderer.minimapVisible) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker);
+    if (this.phase !== 'ready' && !dungeonRun && this.renderer.minimapVisible) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, now / 1000,
       this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
         x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
         y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind,
