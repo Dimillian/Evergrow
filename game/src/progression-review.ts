@@ -8,7 +8,7 @@ import { BIOMES, type BiomeId } from './biomes.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { encounterRankChances } from './encounter-director.ts';
 import { ENEMY_RANKS, MAX_CONTENT_LEVEL, normalizeLevel, itemPowerScale, itemPercentageScale, type EnemyRank } from './progression-content.ts';
-import { getZoneAt, scaledEnemyStats, ZONE_RULES } from './zone-progression.ts';
+import { scaledEnemyStats } from './zone-progression.ts';
 import { enemyXPReward, xpForNextLevel, xpLevelFactor } from './progression.ts';
 import { BIOME_PROFILE_WEIGHTS, ENEMY_ITEM_KIND_WEIGHTS, getLootTable } from './loot-content.ts';
 import { lootItemLevel } from './loot.ts';
@@ -62,7 +62,6 @@ function render() {
   const itemLevel = lootItemLevel(areaLevel, rank);
   const common = generateItem(7329, itemLevel, 'weapon', 'longsword', 'common');
   const rare = generateItem(7329, itemLevel, 'weapon', 'longsword', 'rare');
-  const zone = getZoneAt(ZONE_RULES.originX + (areaLevel - 1) * ZONE_RULES.bandWidth, ZONE_RULES.originY);
   const html = `<div class="study-summary">
     <section class="ui-window study-card">
       <header><p class="ui-kicker">01 · Encounter</p><span class="study-rank" style="color:${rankInfo.color}">${rankInfo.name} · Lv ${fmt(areaLevel)}</span></header>
@@ -70,7 +69,7 @@ function render() {
       <div class="study-pair"><span>Raw incoming hit</span><b>${fmt(stats.damage)}</b></div>
       <div class="study-pair"><span>Rank life / damage</span><b>×${fmt(rankInfo.healthMultiplier)} / ×${fmt(rankInfo.damageMultiplier)}</b></div>
       <div class="study-pair"><span>Rank roll before caps</span><b>${rankChance ? pct(rankChance) : '0% · hypothetical here'}</b></div>
-      <p class="study-note">Area ${fmt(zone.level)} · ${fmt(zone.minDistance)}–${fmt(zone.maxDistance)} units from the origin. Geography fixes threat; your level never moves it.</p>
+      <p class="study-note">Area ${fmt(areaLevel)} · Fixed regional threat follows road travel and wilderness danger, independently of player level.</p>
     </section>
     <section class="ui-window study-card study-xp">
       <header><p class="ui-kicker">02 · Experience</p><span class="study-rank">Character Lv ${fmt(playerLevel)}</span></header>

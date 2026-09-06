@@ -58,7 +58,7 @@ console.log(JSON.stringify({
     pointOfInterestKinds: Object.keys(POI_DEFINITIONS).length },
   limits: { simulationHz: Math.round(1 / COMBAT_TIMING.fixedStep),
     projectiles: MAX_PROJECTILES, groundEffects: GROUND_EFFECT_RULES.maximum,
-    numericContentLevel: MAX_CONTENT_LEVEL, areaBandWidth: ZONE_RULES.bandWidth,
+    numericContentLevel: MAX_CONTENT_LEVEL, regionSize: ZONE_RULES.regionSize, routeUnitsPerLevel: ZONE_RULES.travelPerLevel,
     targetRoamingEnemies: { base: ENCOUNTER_RULES.basePopulation, maximum: ENCOUNTER_RULES.targetPopulationCap },
     reservedRoamingSlots: ENCOUNTER_RULES.roamingReserve, hardEnemyCap: ENCOUNTER_RULES.hardPopulationCap,
     wildernessCells: WILDERNESS_RULES.cacheLimit, campLedger: CAMP_POPULATION_RULES.ledgerCapacity,

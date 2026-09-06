@@ -27,3 +27,13 @@ export function stageAtlasExploration(chart: Pick<Exploration, 'reveal'>, seed: 
   chart.reveal(0, 0, 520);
 }
 
+
+/** Larger fully surveyed disk for inspecting settlements and geographic danger. */
+export const EXTENDED_ATLAS_BOUNDS = Object.freeze({ x: -20500, y: -20500, width: 41000, height: 41000 });
+export function stageExtendedAtlasExploration(chart: Pick<Exploration, 'reveal'>) {
+  const radius = 20000;
+  for (let y = -radius; y <= radius; y += 900) for (let x = -radius; x <= radius; x += 900) {
+    if (Math.hypot(x, y) <= radius - 650) chart.reveal(x, y, 700);
+  }
+  chart.reveal(0, 0, 700);
+}

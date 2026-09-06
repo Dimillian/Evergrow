@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { World, mainPathX } from '../src/world.ts';
-import { FIRST_TOWN_Y, TOWN_INTERVAL } from '../src/settlements.ts';
+import { World } from '../src/world.ts';
+import { settlementPlace } from '../src/world-geography.ts';
 import { WORLD_QUERY_LIMITS } from '../src/world-query.ts';
 import { EXPLORATION_LIMITS } from '../src/exploration.ts';
 import { zoomMapAt, type MapView } from '../src/map-view.ts';
@@ -28,8 +28,8 @@ test('finite oversized and unsafe world requests return without entering unbound
 test('cached settlement blueprints resist consumer edits and regenerate identically after release', () => {
   const world = new World();
   const at = (band: number) => {
-    const y = FIRST_TOWN_Y + band * TOWN_INTERVAL;
-    return world.getSettlements(mainPathX(y) - 1, y - 1, 2, 2)[0];
+    const p = settlementPlace(world.seed, band, band % 3);
+    return world.getSettlements(p.x - 1, p.y - 1, 2, 2)[0];
   };
   const first = at(0), expected = JSON.stringify(first), building = first.buildings[0], version = world.generationVersion;
   assert.throws(() => { building.door.x += 200; }, TypeError);

@@ -1,6 +1,6 @@
 import { withGoblinWarband } from './goblin-camps.ts';
 import { sampleBiome, type BiomeId } from './biomes.ts';
-import { mainPathX, pathDistance } from './road-shape.ts';
+import { pathDistance } from './road-shape.ts';
 import type { EnemyKind } from './model.ts';
 import type { EnemyRank } from './progression-content.ts';
 import type { WorldPOI } from './world-pois.ts';
@@ -143,7 +143,7 @@ export function generateWildernessSite(worldSeed: number, cx: number, cy: number
     const y = (cy + .5) * WILDERNESS_RULES.cellSize + (random(seed, attempt * 2 + 2) - .5) * 560;
     if (Math.hypot(x, y) < radius + 470 || Math.hypot(x - 740, y - 180) < radius + 300) continue;
     // Distance is normalised by road slope; this margin also covers its curvature and shoulder.
-    if (pathDistance(x, y) < radius + 120 || Math.abs(x - mainPathX(y)) < radius + 120 || reserved(x, y, radius + 55)) continue;
+    if (pathDistance(x, y, worldSeed) < radius + 120 || reserved(x, y, radius + 55)) continue;
     return makeSite(seed, `site:${worldSeed}:${cx}:${cy}`, kind, x, y, false, sampleBiome(x, y, worldSeed).id);
   }
   return null;

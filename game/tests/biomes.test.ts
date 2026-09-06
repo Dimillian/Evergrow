@@ -1,19 +1,20 @@
+import { roadPaths } from '../src/road-shape.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BIOME_IDS, BIOMES, sampleBiome, biomeGround, biomeAmbient, biomeMapColor } from '../src/biomes.ts';
-import { mainPathX, World } from '../src/world.ts';
+import { World } from '../src/world.ts';
 
 test('all seven organic biomes recur in a reachable world around the stable Deadwood start', () => {
   for (const seed of [7319, 18427, 90210, 1, -127, 999]) {
     assert.equal(sampleBiome(0, 0, seed).weights.deadwood, 1);
     const found = new Set<string>();
-    for (let y = -12000; y <= 12000; y += 480) for (let x = -12000; x <= 12000; x += 480) {
+    for (let y = -36000; y <= 36000; y += 960) for (let x = -36000; x <= 36000; x += 960) {
       const sample = sampleBiome(x, y, seed);
       if (sample.weights[sample.id] > .8) found.add(sample.id);
     }
     assert.deepEqual([...found].sort(), [...BIOME_IDS].sort());
-    const vertical = new Set(Array.from({ length: 101 }, (_, i) => sampleBiome(3600, (i - 50) * 400, seed).id));
-    const horizontal = new Set(Array.from({ length: 101 }, (_, i) => sampleBiome((i - 50) * 400, 3600, seed).id));
+    const vertical = new Set(Array.from({ length: 101 }, (_, i) => sampleBiome(3600, (i - 50) * 1000, seed).id));
+    const horizontal = new Set(Array.from({ length: 101 }, (_, i) => sampleBiome((i - 50) * 1000, 3600, seed).id));
     assert.ok(vertical.size >= 4 && horizontal.size >= 4, 'regions vary in both directions instead of fixed horizontal or vertical strips');
   }
 });
@@ -58,13 +59,14 @@ test('climate memoization cannot change the world with travel order, other seeds
 test('map colors include roads and plazas without asking collision to generate map pixels', () => {
   class MapWorld extends World { override blocked(): boolean { throw new Error('Map rendering must not query collision.'); } }
   const world = new MapWorld();
-  const trail = world.mapColor(mainPathX(500), 500);
-  assert.notEqual(trail, world.mapColor(mainPathX(500) + 150, 500));
+  const road = roadPaths(-6000,-6000,12000,12000)[0], point = road.points[Math.floor(road.points.length/2)];
+  const trail = world.mapColor(point[0],point[1]);
+  assert.notEqual(trail, world.mapColor(point[0]+150,point[1]+150));
   const town = world.getSettlements(-600, -1400, 1200, 1100)[0];
   assert.notEqual(world.mapColor(town.x, town.y), trail);
   for (const building of town.buildings) {
     const y = building.door.y + 24;
-    assert.equal(world.mapColor(mainPathX(y), y), world.mapColor(building.door.x, y));
+    assert.equal(world.mapColor(town.x, y), world.mapColor(building.door.x, y));
   }
   const colors = new Set<string>();
   for (let x = -12000; x <= 12000; x += 400) colors.add(world.mapColor(x, 3400));

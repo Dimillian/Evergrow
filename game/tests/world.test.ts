@@ -1,6 +1,7 @@
+import { roadPaths } from '../src/road-shape.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { World, TILE_SIZE, mainPathX, pathDistance, type Prop } from '../src/world.ts';
+import { World, TILE_SIZE, pathDistance, type Prop } from '../src/world.ts';
 
 test('world queries are reproducible, order-independent, and safe without a DOM', () => {
   const first = new World();
@@ -38,20 +39,13 @@ test('the starting ellipse has no props except its shrine', () => {
   }
 });
 
-test('main road and connecting branches remain walkable across many positive and negative regions', () => {
+test('generated roads remain walkable across positive and negative regions', () => {
   for (const seed of [7319, 9, -127]) {
     const world = new World(seed);
-    for (let y = -12000; y <= 12000; y += 19) {
-      assert.equal(pathDistance(mainPathX(y), y), 0);
-      assert.equal(world.blocked(mainPathX(y), y, 14), false, `main road blocked at ${y}, seed ${seed}`);
-    }
-    for (let band = -3; band <= 3; band++) {
-      for (let x = -2500; x <= 2500; x += 23) {
-        const y = band * 1600 - 620 + Math.sin(x / 430) * 90 + Math.sin(x / 180) * 25;
-        // Roadside shrines can touch a crossroad shoulder but never seal the route.
-        if (world.blocked(x, y, 14)) {
-          assert.ok(!world.blocked(x, y - 36, 14) || !world.blocked(x, y + 36, 14));
-        }
+    for (const road of roadPaths(-16000, -16000, 32000, 32000, seed)) {
+      for (const [x,y] of road.points.filter((_,i)=>i%7===0)) {
+        assert.ok(pathDistance(x,y,seed)<1e-6);
+        assert.equal(world.blocked(x,y,14),false, `route blocked at ${x},${y}, seed ${seed}`);
       }
     }
   }

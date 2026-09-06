@@ -11,11 +11,11 @@ import { loadGameFont } from './font.ts';
 import { GameShell } from './game-shell.ts';
 import { WorldMap } from './world-map.ts';
 import { Exploration } from './exploration.ts';
-import { World, mainPathX } from './world.ts';
+import { World } from './world.ts';
 import { Renderer, type RenderSettings } from './renderer.ts';
 import { Simulation } from './simulation.ts';
 import { PostFX } from './postfx.ts';
-import { FIRST_TOWN_Y } from './settlements.ts';
+import { settlementPlace } from './world-geography.ts';
 import { Lifetime } from './lifetime.ts';
 
 // The iframe is a static presentation viewport, never the playable Game entry.
@@ -140,18 +140,17 @@ function foundationSheet(): HTMLElement {
 }
 
 function seedDiscovery(world: World, exploration: Exploration) {
-  for (let y = 440; y >= -2620; y -= 120) exploration.reveal(mainPathX(y), y, 285);
-  const town = world.getSettlements(mainPathX(FIRST_TOWN_Y) - 1, FIRST_TOWN_Y - 1, 2, 2)
-    .find(candidate => candidate.y === FIRST_TOWN_Y);
-  if (!town) throw new Error('The preview settlement could not be generated.');
+  const place = settlementPlace(world.seed, 0, 0);
+  for (let y = 440; y >= -2620; y -= 120) exploration.reveal(place.x, y, 285);
+  const town = world.getSettlements(place.x - 1, place.y - 1, 2, 2)[0];
   for (const building of town.buildings) {
-    const y = building.door.y + 24, start = mainPathX(y);
+    const y = building.door.y + 24, start = place.x;
     const steps = Math.max(1, Math.ceil(Math.abs(building.door.x - start) / 90));
     for (let i = 0; i <= steps; i++) exploration.reveal(start + (building.door.x - start) * i / steps, y, 180);
     exploration.reveal(building.door.x, building.y + building.height / 2, 170);
   }
-  for (let x = 0; x <= 1160; x += 120) exploration.reveal(x, FIRST_TOWN_Y - 460 + Math.sin(x / 280) * 100, 220);
-  return { x: mainPathX(FIRST_TOWN_Y + 90), y: FIRST_TOWN_Y + 90, angle: -.65 };
+  for (let x = 0; x <= 1160; x += 120) exploration.reveal(x, place.y - 460 + Math.sin(x / 280) * 100, 220);
+  return { x: place.x, y: place.y + 90, angle: -.65 };
 }
 
 function embeddedReview() {

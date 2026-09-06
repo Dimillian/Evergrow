@@ -48,7 +48,7 @@ test('site placement protects settlements, roads, the starting clearing and othe
     const world = new World(seed), sites = world.getWildernessSites(-10000, -10000, 20000, 20000);
     for (const site of sites) {
       assert.ok(Math.hypot(site.x, site.y) > 500 + site.radius);
-      assert.ok(pathDistance(site.x, site.y) > site.radius + 80);
+      assert.ok(pathDistance(site.x, site.y, seed) > site.radius + 80);
       assert.ok(!world.getSettlements(site.x - site.radius, site.y - site.radius, site.radius * 2, site.radius * 2)
         .some(town => Math.hypot(town.x - site.x, town.y - site.y) < town.radius + site.radius));
       assert.ok(sites.every(other => other.id === site.id || Math.hypot(other.x - site.x, other.y - site.y) > other.radius + site.radius));

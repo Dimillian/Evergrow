@@ -1,3 +1,4 @@
+import type { Place } from './world-geography.ts';
 import type { WorldPOI } from './world-pois.ts';
 export type POI = WorldPOI;
 
@@ -26,10 +27,8 @@ export interface Settlement {
 }
 
 
-export const FIRST_TOWN_Y = -1150;
-export const TOWN_INTERVAL = 3200;
 export const MAX_TOWN_RADIUS = 1000;
-const NAMES = ['Briarwatch', 'Hollowmere', 'Alderrest', 'Mournbridge', 'Thornhaven', 'Willow Cross'];
+const NAMES = ['Alder', 'Briar', 'Mourn', 'Thorn', 'Raven', 'Ash', 'Mist', 'Willow', 'Oak', 'Hollow', 'Wren', 'Red', 'Silver', 'Bracken', 'Dawn', 'Grey', 'Fern', 'Elder', 'Stone', 'West', 'High', 'Amber', 'White', 'Copper'];
 const BUILDING_NAMES: Record<BuildingKind, string> = {
   blacksmith: 'The Ember Forge', merchant: 'Wayfarer Goods', inn: 'The Lantern Inn', house: 'Woodland House', chapel: 'Chapel of the Vigil',
 };
@@ -103,14 +102,12 @@ function building(id: string, seed: number, kind: BuildingKind, rect: Rect): Bui
 }
 
 /** Bounded seeded layout; every building faces an unobstructed south-side street. */
-export function generateSettlement(seed: number, band: number,
-  mainPathX: (y: number) => number, pathDistance: (x: number, y: number) => number): Settlement {
-  const townSeed = (Math.imul(band, 0x45d9f3b) ^ seed ^ 0xabc719) >>> 0;
+export function generateSettlement(seed: number, place: Place): Settlement {
+  const townSeed = place.seed, band = place.id;
   const random = rng(townSeed);
-  const y = FIRST_TOWN_Y + band * TOWN_INTERVAL;
-  const x = mainPathX(y);
-  const id = `town:${seed}:${band}`;
-  const city = Math.abs(band) % 2 === 1;
+  const { x, y } = place;
+  const id = `town:${seed}:${place.id}`;
+  const city = place.city;
   const target = band === 0 ? 8 : city ? 12 + Math.floor(random() * 5) : 5 + Math.floor(random() * 4);
   const buildings: Building[] = [];
   const streets: Rect[] = [];
@@ -125,26 +122,20 @@ export function generateSettlement(seed: number, band: number,
     if (buildings.length >= target) break;
     const width = 144 + Math.floor(random() * 43), height = 116 + Math.floor(random() * 36);
     const doorY = y + site.row + 22;
-    const roadX = mainPathX(doorY);
+    const roadX = x;
     const centerX = roadX + site.side * ((site.outer ? 392 : 142) + width / 2);
     const rect = { x: centerX - width / 2, y: doorY - height, width, height };
     const requiredRadius = Math.hypot(centerX - x, rect.y + height / 2 - y) + Math.hypot(width, height) / 2 + 30;
     if (requiredRadius > (band === 0 ? 780 : MAX_TOWN_RADIUS)) continue;
-    let reserved = false;
-    for (let sx = rect.x - 20; sx <= rect.x + width + 20; sx += 12) {
-      for (let sy = rect.y - 20; sy <= rect.y + height + 20; sy += 12) {
-        if (pathDistance(sx, sy) < 43) { reserved = true; break; }
-      }
-      if (reserved) break;
-    }
-    if (reserved || buildings.some(other => intersects({ x: rect.x - 12, y: rect.y - 12, width: width + 24, height: height + 24 }, other))) continue;
+    if (buildings.some(other => intersects({ x: rect.x - 12, y: rect.y - 12, width: width + 24, height: height + 24 }, other))) continue;
     const next = building(`${id}:building:${buildings.length}`, (townSeed + buildings.length * 193) >>> 0, kinds[buildings.length] ?? 'house', rect);
     buildings.push(next);
     streets.push({ x: Math.min(roadX, next.door.x) - 28, y: doorY + 5, width: Math.abs(roadX - next.door.x) + 56, height: 44 });
     streets.push({ x: next.door.x - 28, y: doorY - 5, width: 56, height: 47 });
   }
   const radius = Math.max(310, ...buildings.map(b => Math.hypot(b.x + b.width / 2 - x, b.y + b.height / 2 - y) + Math.hypot(b.width, b.height) / 2 + 30));
-  return { id, seed: townSeed, name: band === 0 ? 'Briarwatch' : NAMES[(townSeed % NAMES.length)], kind: city ? 'city' : 'town', x, y, radius, buildings, plaza, streets };
+  streets.push({ x: x - 28, y: y - radius * .85, width: 56, height: radius * 1.7 });
+  return { id, seed: townSeed, name: band === 0 ? 'Briarwatch' : NAMES[(townSeed % NAMES.length)] + ['ford', 'haven', 'watch', 'rest', 'wick', 'mere', 'bridge', 'fall', 'brook', 'cross', 'holm', 'stead', 'gate', 'wall', 'bury', 'crest'][Math.floor(townSeed / 29) % 16], kind: city ? 'city' : 'town', x, y, radius, buildings, plaza, streets };
 }
 
 function smoothstep(a: number, b: number, value: number): number {

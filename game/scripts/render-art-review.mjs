@@ -12,18 +12,18 @@ const { createCanvas, GlobalFonts } = require(resolve(process.argv[2]));
 const source = process.argv[4] ? pathToFileURL(resolve(process.argv[4]) + '/') : new URL('../src/', import.meta.url);
 GlobalFonts.registerFromPath(fileURLToPath(new URL('assets/fonts/PixelifySans-Variable.ttf', source)), 'Pixelify Sans');
 globalThis.document = { createElement(tag) { if (tag !== 'canvas') throw new Error(tag); return createCanvas(1, 1); }, querySelector() { return null; } };
-const { World, mainPathX } = await import(new URL('world.ts', source));
+const { World } = await import(new URL('world.ts', source));
 const { Renderer } = await import(new URL('renderer.ts', source));
 const { Simulation } = await import(new URL('simulation.ts', source));
 const { biomeReviewScenes } = await import(new URL('biome-review-data.ts', source));
-const { FIRST_TOWN_Y } = await import(new URL('settlements.ts', source));
+const { settlementPlace } = await import(new URL('world-geography.ts', source));
 const world = new World(7319), renderer = new Renderer();
 const scenes = biomeReviewScenes(world).map(scene => ({ ...scene, width: 800, height: 550,
   camera: { x: scene.x, y: scene.y - 20 }, hero: { x: scene.x, y: scene.y + 100 } }));
-const town = world.getSettlements(mainPathX(FIRST_TOWN_Y) - 1, FIRST_TOWN_Y - 1, 2, 2)
-  .find(town => town.y === FIRST_TOWN_Y);
+const place = settlementPlace(world.seed, 0, 0);
+const town = world.getSettlements(place.x - 1, place.y - 1, 2, 2)[0];
 const forge = town.buildings.find(b => b.kind === 'blacksmith');
-const junction = { x: mainPathX(forge.door.y + 27), y: forge.door.y + 27 };
+const junction = { x: town.x, y: forge.door.y + 27 };
 scenes.push({ id: 'town-street', name: `${town.name} / ${forge.name}`, width: 605, height: 420,
   camera: { x: (forge.x + forge.width / 2 + junction.x) / 2, y: forge.y + forge.height * .55 - 15 },
   hero: { x: (junction.x + forge.door.x) / 2, y: junction.y } });

@@ -68,10 +68,10 @@ export function blessingChoices(site: EventSite): BlessingKind[] {
   const first = favored[site.biome], others = (Object.keys(BLESSINGS) as BlessingKind[]).filter(k => k !== first);
   return [first, others[siteHash(site.seed, 0, 39) % others.length]];
 }
-export function eventSite(site: WildernessSite): EventSite {
+export function eventSite(site: WildernessSite, worldSeed = 7319): EventSite {
   // All interaction anchors sit in the existing open southern approach, away from solid props.
   return { id: site.id, kind: site.kind, name: site.name, x: site.x, y: site.y + site.radius - 22,
-    seed: site.seed, biome: site.biome, level: getZoneAt(site.x, site.y).level };
+    seed: site.seed, biome: site.biome, level: getZoneAt(site.x, site.y, worldSeed).level };
 }
 export function eventLabel(site: Pick<EventSite, 'id' | 'kind'>, state: EventState, campCleared: boolean): string {
   const record = state.sites[site.id];

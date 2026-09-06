@@ -32,7 +32,7 @@ Every new character begins at level 1, 0 XP and 0 gold, with ten of each attribu
 
 Base life and mana are 100; mana regenerates at 1/second before bonuses. Q restores 42% maximum life and 40% maximum mana together, with two charges and a charge recovered every eight kills. Basic attacks cost no mana. First-row skills have no cooldown but still pay mana and obey action recovery; second-row skills cost more and have cooldowns. Attack speed, cast speed, mana-cost reduction and cooldown reduction remain distinct stats.
 
-Geographic area level rises every 3,200 units from the origin. Enemies retain spawn-time level/rank/stats/reward context. Gear rarity probabilities are conditional on an item dropping: normal enemies yield 75% Common / 22% Magic / 2.7% Rare / 0.28% Epic / 0.02% Legendary. The complete rank tables and growth formulas live in [progression and loot](progression-and-loot.md); the general item generator's default weights are not enemy drop rates.
+Generation 5 uses named irregular danger districts: levels follow road travel and remoteness, with higher-level wilderness pockets. Towns are distributed in two dimensions and climate regions are 6,400 units apart. See [world generation](world-generation.md). Enemies retain spawn-time level/rank/stats/reward context. Gear rarity probabilities are conditional on an item dropping: normal enemies yield 75% Common / 22% Magic / 2.7% Rare / 0.28% Epic / 0.02% Legendary. The complete rank tables and growth formulas live in [progression and loot](progression-and-loot.md); the general item generator's default weights are not enemy drop rates.
 
 ## Budgets and verification · historical gamepad checkpoint (2026-09-06)
 
@@ -100,6 +100,8 @@ Verification: `npm run check` passed with 559 code tests in the shared working t
 [Exploration, events and procedural dungeons](dungeons-and-events.md) specifies the proposed next loop: interactive landmarks, denser role-based packs, persistent procedural floors, a distinct boss and a completion chest. This is design work only; current landmarks, spawning, saves and combat remain unchanged.
 
 Caster equipment pass (2026-09-06): four one-handed wands, three grimoires, three orbs, visible 2H slot reservation and a two-hand upright staff pose. Save v3 remains valid; no test-progress reset is required. See [weapons and skills](weapons-and-skills.md).
+
+The large exploration map now uses detailed 128-pixel terrain tiles, actual woodland/rock anchors, brighter shared roads and roof plans. The minimap retains its original 32-pixel tiles and styling. Discovery masks and the shared 384-tile cache remain bounded; `/atlas.html?view=local` is the save-free close review.
 
 Interactive POIs delivered (2026-09-06): camp strongboxes, caravan goods/coin choices, watchtower reveals, two-wave graveyard vigils, three-guardian blessing trials and roadside reliquaries. Physical rewards use durable partial-delivery masks; wounds/casualties and one timed blessing persist. Bounds: 256 interacted sites, six guardian records, one active trial and the shared 24-actor population. Current v3 saves continue. `npm run check` passed with 587 tests in the shared working tree, strict/core compilation and production build. Static `/events.html` review uses the real renderer and shared panels without gameplay or saves. Dungeons remain proposed; see [Interactive POIs](interactive-pois.md).
 

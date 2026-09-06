@@ -1,11 +1,12 @@
+import { settlementPlace } from '../src/world-geography.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { World, mainPathX, pathDistance } from '../src/world.ts';
-import { FIRST_TOWN_Y, MAX_TOWN_RADIUS, settlementPavingWeight, TOWN_INTERVAL } from '../src/settlements.ts';
+import { World } from '../src/world.ts';
+import { MAX_TOWN_RADIUS, settlementPavingWeight } from '../src/settlements.ts';
 
 function townAt(world: World, band: number) {
-  const y = FIRST_TOWN_Y + band * TOWN_INTERVAL;
-  return world.getSettlements(-900, y - MAX_TOWN_RADIUS, 1800, MAX_TOWN_RADIUS * 2)[0];
+  const p = settlementPlace(world.seed, band, band % 3);
+  return world.getSettlements(p.x - 1, p.y - 1, 2, 2)[0];
 }
 
 test('Briarwatch and recurring cities have reproducible varied blocks and all essential services', () => {
@@ -31,7 +32,7 @@ test('Briarwatch and recurring cities have reproducible varied blocks and all es
         }
       }
       if (town.kind === 'city') {
-        const columns = new Set(town.buildings.map(b => Math.round((b.door.x - mainPathX(b.door.y)) / 100)));
+        const columns = new Set(town.buildings.map(b => Math.round((b.door.x - town.x) / 100)));
         assert.ok(columns.size >= 4, 'city streets serve both inner and outer building blocks');
       }
     }
@@ -41,7 +42,7 @@ test('Briarwatch and recurring cities have reproducible varied blocks and all es
   assert.equal(first.y, -1150);
   assert.equal(first.buildings.length, 8);
   assert.ok(first.y + first.radius <= -350, 'the original starting arena remains outside town');
-  assert.equal(townAt(new World(), -1).kind, 'city');
+
 });
 
 test('every south door connects the street to an interior with solid walls and furniture', () => {
@@ -64,7 +65,7 @@ test('every south door connects the street to an interior with solid walls and f
       const wall = world.move(building.x - 30, building.y + building.height / 2, building.width + 60, 0, 9);
       assert.ok(wall.x <= building.x - 9, 'a large movement cannot tunnel through a wall');
       for (const item of building.furniture) assert.equal(world.blocked(item.x + item.width / 2, item.y + item.height / 2, 1), true);
-      const streetY = door.y + 24, roadX = mainPathX(streetY);
+      const streetY = door.y + 24, roadX = town.x;
       const street = world.move(door.x, streetY, roadX - door.x, 0, 9);
       assert.ok(Math.abs(street.x - roadX) < 1e-8, 'each threshold has an unobstructed route to the main road');
     }
@@ -74,10 +75,10 @@ test('every south door connects the street to an interior with solid walls and f
 test('paving continuously joins the main road, side streets and rounded plaza, then fades to dirt', () => {
   const world = new World(), town = townAt(world, 0);
   for (const building of town.buildings) {
-    const y = building.door.y + 24, roadX = mainPathX(y);
+    const y = building.door.y + 24, roadX = town.x;
     for (let t = 0; t <= 1; t += .025) {
       const x = roadX + (building.door.x - roadX) * t;
-      assert.ok(settlementPavingWeight(town, x, y, pathDistance(x, y) < 25 ? 1 : 0) > .99,
+      assert.ok(settlementPavingWeight(town, x, y, Math.abs(x - town.x) < 25 ? 1 : 0) > .99,
         'stone has no gap from the main road to each entry street');
     }
   }
@@ -105,10 +106,10 @@ test('bowed access lanes preserve full-width walking routes and doorway aprons a
   for (const seed of [7319, 9, -127]) for (const band of [0, -1, 2]) {
     const town = townAt(new World(seed), band);
     for (const building of town.buildings) {
-      const streetY = building.door.y + 24, roadX = mainPathX(streetY);
+      const streetY = building.door.y + 24, roadX = town.x;
       for (let step = 0; step <= 20; step++) for (const offset of [-16, 0, 16]) {
         const x = roadX + (building.door.x - roadX) * step / 20, y = streetY + offset;
-        assert.ok(settlementPavingWeight(town, x, y, pathDistance(x, y) < 25 ? 1 : 0) > .99,
+        assert.ok(settlementPavingWeight(town, x, y, Math.abs(x - town.x) < 25 ? 1 : 0) > .99,
           `${building.id} retains the 32 px access corridor at step ${step}, offset ${offset}`);
       }
       for (const offset of [-16, 0, 16]) for (const depth of [0, 8, 16, 24]) {

@@ -32,8 +32,8 @@ for (const id of BIOME_IDS) {
   Object.freeze(BIOMES[id].ground); Object.freeze(BIOMES[id].moss); Object.freeze(BIOMES[id].ambient); Object.freeze(BIOMES[id]);
 }
 
-export const BIOME_FIELD_RULES = Object.freeze({ regionSize: 2400, influenceRadius: 1.18,
-  startingCore: 480, startingBlendEnd: 1350, cacheLimit: 512 });
+export const BIOME_FIELD_RULES = Object.freeze({ regionSize: 6400, influenceRadius: 1.18,
+  startingCore: 1100, startingBlendEnd: 2600, cacheLimit: 512 });
 const TAU = Math.PI * 2, UINT_RANGE = 0x100000000;
 const smooth = (t: number) => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
 function hash(x: number, y: number, seed: number): number {
@@ -74,8 +74,8 @@ export function sampleBiome(x: number, y: number, seed = 7319): BiomeSample {
   if (!Number.isFinite(x) || !Number.isFinite(y)) { const weights = emptyWeights(); weights.deadwood = 1; return { id: 'deadwood', name: BIOMES.deadwood.name, weights }; }
   seed |= 0;
   const phase = (seed % 997) / 997 * TAU;
-  const wx = x + Math.sin(y / 1130 + phase) * 245 + Math.sin(x / 741 + y / 513 - phase) * 100;
-  const wy = y + Math.sin(x / 1270 - phase) * 265 + Math.cos(y / 831 - x / 647 + phase) * 105;
+  const wx = x + Math.sin(y / 2930 + phase) * 620 + Math.sin(x / 1841 + y / 1513 - phase) * 260;
+  const wy = y + Math.sin(x / 3270 - phase) * 700 + Math.cos(y / 2231 - x / 1847 + phase) * 275;
   const gx = wx / BIOME_FIELD_RULES.regionSize, gy = wy / BIOME_FIELD_RULES.regionSize;
   const cx = Math.floor(gx), cy = Math.floor(gy), weights = emptyWeights();
   let sum = 0;

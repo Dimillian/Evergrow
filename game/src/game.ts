@@ -91,7 +91,10 @@ export class Game {
       this.lifetime.defer(() => this.exploration.dispose());
       let storage: Storage | null = null;
       try { storage = localStorage; } catch { /* The title screen explains unavailable storage. */ }
-      this.session = new CharacterSession(new CharacterRepository(storage), this.world.seed, this.world.generationVersion);
+      const repository = new CharacterRepository(storage);
+      for (const slot of repository.list()) if (slot.state === 'invalid' || slot.record && slot.record.worldVersion < this.world.generationVersion)
+        repository.remove(slot.index, slot.token);
+      this.session = new CharacterSession(repository, this.world.seed, this.world.generationVersion);
       this.shell = this.lifetime.own(new GameShell(root, {
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
         portal: () => { this.canvas.focus(); this.requestPortal(); },
@@ -358,7 +361,7 @@ export class Game {
 
   private enterWorld() {
     this.shell.notifications.clear();
-    this.areaNotices.reset(this.world.sampleBiome(this.sim.player.x, this.sim.player.y).id);
+    this.areaNotices.reset(getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed).id);
     this.sim.player.name = this.session.active?.record.name;
     this.renderer.reset();
     this.renderer.snapTo(this.sim.player);
@@ -491,7 +494,7 @@ export class Game {
     this.gamepad.clear();
     this.renderer.reset(); this.renderer.snapTo(this.sim.player);
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
-    this.areaNotices.reset(this.world.sampleBiome(this.sim.player.x, this.sim.player.y).id);
+    this.areaNotices.reset(getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed).id);
     this.worldMap.update(this.sim.player, 0);
     this.shell.portalTransition(); this.canvas.focus();
   }
@@ -571,8 +574,8 @@ export class Game {
       }
       if (this.sim.eventChannel.ready) this.finishEvent();
       if (this.sim.portal.ready) this.travelThrough(this.world.getPortalAnchor(this.sim.travel.homeTown), false);
-      const biome = this.world.sampleBiome(this.sim.player.x, this.sim.player.y);
-      if (this.areaNotices.update(biome.id, dt)) this.shell.notifications.push({ kind: 'area', id: biome.id, name: biome.name, level: getZoneAt(this.sim.player.x, this.sim.player.y).level });
+      const zone = getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed);
+      if (this.areaNotices.update(zone.id, dt)) this.shell.notifications.push({ kind: 'area', id: zone.id, name: zone.name, level: zone.level });
       if (this.sim.player.dead) {
         this.panels.transition('dead', true);
       }

@@ -6,7 +6,7 @@ import { fitMapBounds, MAP_ZOOM } from '../src/map-view.ts';
 import type { WorldPOI } from '../src/world-pois.ts';
 import { World } from '../src/world.ts';
 import { biomeMapColor } from '../src/biomes.ts';
-import { mainPathX, branchY } from '../src/road-shape.ts';
+import { roadPaths, pathDistance } from '../src/road-shape.ts';
 const near = (a: number, b: number) => assert.ok(Math.abs(a - b) < 1e-8, `${a} != ${b}`);
 
 test('area inspection reveals level only in charted terrain and respects sanctuaries', () => {
@@ -16,10 +16,10 @@ test('area inspection reveals level only in charted terrain and respects sanctua
   assert.equal(chartedMapArea(world, hidden, 6400, 0), null);
   assert.equal(chartedMapArea(world, revealed, NaN, 0), null);
   assert.equal(samples, 0, 'unknown cells do not query underlying biome or danger metadata');
-  assert.equal(chartedMapArea(world, revealed, 6400, 0)?.label, 'Area Lv 3');
-  assert.equal(chartedMapArea(world, revealed, -6400, 0)?.label, 'Area Lv 3');
+  assert.match(chartedMapArea(world, revealed, 6400, 0)!.label, /^Area Lv [1-9]/);
+  assert.match(chartedMapArea(world, revealed, -6400, 0)!.label, /^Area Lv [1-9]/);
   assert.equal(chartedMapArea(world, revealed, 0, 0)?.label, 'Sanctuary');
-  assert.equal(chartedMapArea(world, revealed, 1, 0)?.name, 'Deadwood');
+  assert.match(chartedMapArea(world, revealed, 1, 0)!.name, /Briar March/);
 });
 
 test('world/map projection is reversible at fractional centers and negative coordinates', () => {
@@ -135,13 +135,13 @@ test('coarse terrain samples disclose nothing when any fine exploration cell is 
 
 test('overview POI decluttering is stable and hover selects only actually drawn markers', () => {
   const poi = (id: string, kind: WorldPOI['kind'], x: number, y: number): WorldPOI => ({ id, kind, x, y, name: id, description: id });
-  const pois = [poi('smith', 'blacksmith', 20, 0), poi('town', 'town', 0, 0), poi('camp', 'camp', 700, 0),
-    poi('shrine', 'shrine', 705, 0), poi('stones', 'standingStones', -1400, 700)];
+  const pois = [poi('smith', 'blacksmith', 20, 0), poi('town', 'town', 0, 0), poi('camp', 'camp', 1100, 0),
+    poi('shrine', 'shrine', 1105, 0), poi('stones', 'standingStones', -1400, 700)];
   const view: MapView = { x: 0, y: 0, width: 1100, height: 650, centerX: 0, centerY: 0, zoom: .04 };
   const selected = selectMapPOIs(pois, view);
   assert.deepEqual(selected.map(poi => poi.id), ['town', 'camp', 'stones']);
   assert.deepEqual(selectMapPOIs([...pois].reverse(), view), selected);
-  const marker = projectMapPoint(705, 0, view);
+  const marker = projectMapPoint(1105, 0, view);
   assert.equal(pickMapPOI(selected, view, marker, 14)?.id, 'camp');
 });
 
@@ -159,6 +159,41 @@ test('biome region labels require revealed homogeneous land and avoid visible PO
   assert.ok(!mapRegionLabels(world, chart, view, [poi]).some(label => label.x === first.x && label.y === first.y));
 });
 
+
+test('large atlas detail is isolated from minimap tiles and stays clipped to revealed cells', t => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const canvas = () => {
+    const context = { painted: 0, fillStyle: '', globalCompositeOperation: '',
+      fillRect() {}, clearRect() { this.painted = 0; }, drawImage() { this.painted++; },
+      setTransform() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, save() {}, restore() {},
+    };
+    return { width: 0, height: 0, getContext: () => context };
+  };
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement: canvas } });
+  t.after(() => original ? Object.defineProperty(globalThis, 'document', original) : Reflect.deleteProperty(globalThis, 'document'));
+  let miniSamples = 0, atlasSamples = 0, propQueries = 0, revision = 1, hole = false;
+  const exploration = { getChunkRevision: () => revision,
+    isCellRevealed: (x: number, y: number) => x >= 0 && x < 8 && y >= 0 && y < 16 && !(hole && x === 4 && y === 4) };
+  const map = Object.assign(Object.create(WorldMap.prototype), { exploration, tiles: new Map(), world: {
+    mapColor() { miniSamples++; return '#456754'; }, atlasColor() { atlasSamples++; return '#527461'; },
+    getProps(x: number, y: number, width: number, height: number) {
+      propQueries++; assert.deepEqual([x, y, width, height], [-160, -160, 1088, 1088]); return [];
+    },
+  } }) as unknown as { tile(x: number, y: number, size: number, detailed?: boolean): {
+    base: { width: number }; charted: { getContext(): { painted: number } }; roads: unknown;
+  } };
+  const mini = map.tile(0, 0, 768);
+  assert.equal(miniSamples, 1024); assert.equal(propQueries, 0); assert.equal(atlasSamples, 0);
+  const atlas = map.tile(0, 0, 768, true);
+  assert.notEqual(atlas, mini); assert.equal(mini.base.width, 32); assert.equal(atlas.base.width, 128);
+  assert.equal(atlasSamples, 4096); assert.equal(propQueries, 1); assert.equal(atlas.roads, null, 'road ink is flattened into the masked atlas surface');
+  assert.equal(atlas.charted.getContext().painted, 8192, 'unknown half stays completely hidden');
+  hole = true; revision++;
+  assert.equal(map.tile(0, 0, 768, true), atlas);
+  assert.equal(atlas.charted.getContext().painted, 8192 - 64, 'even an internal unknown cell masks all eight-by-eight detail pixels');
+  assert.equal(atlasSamples, 4096); assert.equal(propQueries, 1, 'fog revisions reuse stable world art');
+  assert.equal(map.tile(0, 0, 768), mini); assert.equal(miniSamples, 1024);
+});
 
 test('coarse tile cache notices discoveries in every covered chunk without regenerating terrain colors', t => {
   const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
@@ -194,28 +229,20 @@ test('coarse tile cache notices discoveries in every covered chunk without regen
 
 test('overview colors omit tiny raster roads while detailed maps retain their actual surface', () => {
   const world = new World();
-  for (const y of [-5300, -200, 3700]) {
-    const x = mainPathX(y), expected = biomeMapColor(world.sampleBiome(x, y).weights).map(Math.round);
+  for (const [x,y] of roadPaths(-6000,-6000,12000,12000)[0].points.filter((_,i)=>i%30===0)) {
+    const expected = biomeMapColor(world.sampleBiome(x, y).weights).map(Math.round);
     assert.equal(world.mapColor(x, y, 96), `rgb(${expected.join(',')})`);
     assert.notEqual(world.mapColor(x, y, 24), world.mapColor(x, y, 96));
     assert.equal(world.mapColor(x, y), world.mapColor(x, y, 24));
   }
 });
 
-test('overview road paths use finite bounded samples on shared negative and positive centerlines', () => {
-  for (const [x, y] of [[-3072, -3072], [0, 0], [-768, 3072]]) {
-    const paths = mapRoadPaths(x, y, 3072);
-    assert.ok(paths.length >= 1 && paths.length <= 5);
-    for (const path of paths) {
-      assert.ok(path.points.length <= 100);
-      if (path.main) for (const [px, py] of path.points) near(px, mainPathX(py));
-      else {
-        const band = Math.round((path.points[0][1] - branchY(path.points[0][0], 0)) / 1600);
-        for (const [px, py] of path.points) near(py, branchY(px, band));
-      }
-      assert.ok(path.points.flat().every(Number.isFinite));
-    }
+test('overview roads use the same seeded polylines as ground clearance', () => {
+  for (const seed of [7319,18427]) for (const [x,y] of [[-3072,-3072],[0,0],[-768,3072]]) {
+    const paths=mapRoadPaths(x,y,3072,seed);
+    assert.deepEqual(paths,roadPaths(x,y,3072,3072,seed));
+    for(const path of paths){assert.ok(path.points.length<800);assert.ok(path.points.flat().every(Number.isFinite));
+      for(const [px,py] of path.points.filter((_,i)=>i%11===0))assert.ok(pathDistance(px,py,seed)<1e-6);}
   }
-  assert.deepEqual(mapRoadPaths(Infinity, 0, 3072), []);
-  assert.deepEqual(mapRoadPaths(0, 0, 12289), []);
+  assert.deepEqual(mapRoadPaths(Infinity,0,3072),[]); assert.deepEqual(mapRoadPaths(0,0,12289),[]);
 });

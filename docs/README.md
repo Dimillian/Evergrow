@@ -57,3 +57,5 @@ Interactive POIs and town portals are live. Dungeon expeditions and permanent wa
 When a system changes, update its guide and any affected controls/catalog entry. Update status counts from `npm run stats`; record which checkpoint actually passed `npm run check`. Update the roadmap when a deliverable becomes implemented. Keep old numbers in historical records rather than appending contradictory “current” sections. Link to authoritative tables instead of copying balance values into unrelated docs.
 
 Code checks and static reviews do not establish gameplay feel, economy balance or Safari performance. The player tests gameplay. Commit and push documentation with coherent code checkpoints.
+
+- [World generation 5](world-generation.md): dispersed settlements, connected curved roads, larger climates, fixed regional danger and three seed previews.

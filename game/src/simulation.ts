@@ -243,7 +243,7 @@ export class Simulation {
     const stats = ENEMY_DEFINITIONS[kind];
     if (this.world.isSanctuary?.(x, y)) return null;
     if (livingEnemyCount(this.enemies) >= ENCOUNTER_RULES.hardPopulationCap || this.world.blocked(x, y, stats.radius)) return null;
-    const level = getZoneAt(x, y).level, scaled = scaledEnemyStats(kind, level, rank);
+    const level = getZoneAt(x, y, this.world.seed).level, scaled = scaledEnemyStats(kind, level, rank);
     const biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
     const lootSeed = source?.lootSeed ?? enemyLootSeed(this.options.seed!, ++this.spawnOrdinal, x, y);
     const enemy: Enemy = {
@@ -690,7 +690,7 @@ export class Simulation {
   private spawnRoamingGroup(view: SpawnExclusion): number {
     const living = this.enemies.filter(enemy => enemy.state !== 'dead');
     const roamingCount = living.filter(enemy => !enemy.campId).length;
-    const room = Math.min(encounterPopulationTarget(getZoneAt(this.player.x, this.player.y).level) - roamingCount,
+    const room = Math.min(encounterPopulationTarget(getZoneAt(this.player.x, this.player.y, this.world.seed).level) - roamingCount,
       ENCOUNTER_RULES.hardPopulationCap - living.length);
     if (room <= 0) return 0;
     const size = this.roaming.groupSize(room, this.random());
@@ -702,7 +702,7 @@ export class Simulation {
         const angle = anchor.angle + index * 2.399963;
         const radius = index === 0 ? 0 : 65 + this.random() * 35;
         const x = anchor.x + Math.cos(angle) * radius, y = anchor.y + Math.sin(angle) * radius;
-        const zone = getZoneAt(x, y), biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
+        const zone = getZoneAt(x, y, this.world.seed), biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
         const preferred = index ? ROAMING_GROUPS[members[0].kind]?.[index] : undefined;
         const kind = chooseEncounterEnemy(population, zone.level, biome, () => this.random(), preferred);
         if (!kind || !isSpawnHidden(x, y, view, ENEMY_DEFINITIONS[kind].radius)

@@ -27,10 +27,10 @@ function projectile(sourceLevel: number): Projectile {
 }
 
 test('spawn geography snapshots monster health, damage, rank, biome, and XP independently of the player', () => {
-  const sim = createSim(), x = ZONE_RULES.bandWidth * 3 + 50;
+  const sim = createSim(), x = ZONE_RULES.regionSize * 3 + 50;
   const enemy = sim.spawnEnemy('brute', x, 0, 'elite')!;
-  const expected = scaledEnemyStats('brute', 4, 'elite');
-  assert.equal(getZoneAt(x, 0).level, 4); assert.equal(enemy.level, 4);
+  const areaLevel = getZoneAt(x,0).level, expected = scaledEnemyStats('brute', areaLevel, 'elite');
+  assert.equal(enemy.level, areaLevel);
   assert.equal(enemy.rank, 'elite'); assert.equal(enemy.biome, sampleBiome(x, 0).id);
   assert.equal(enemy.hp, expected.maxHp); assert.equal(enemy.maxHp, expected.maxHp);
   assert.equal(enemy.damage, expected.damage); assert.equal(enemy.xpReward, expected.xpReward);
@@ -47,12 +47,12 @@ test('spawn geography snapshots monster health, damage, rank, biome, and XP inde
   enemy.state = 'attack'; enemy.stateTime = 0; enemy.stateDuration = 999; enemy.attackAngle = 0;
   advance(sim, FIXED_STEP);
   const hurt = sim.drainEvents().find(event => event.type === 'hurt')!;
-  assert.equal(hurt.value, Math.round(expected.damage * (1 - armorReduction(120, 4))));
+  assert.equal(hurt.value, Math.round(expected.damage * (1 - armorReduction(120, areaLevel))));
   assert.notEqual(hurt.value, Math.round(expected.damage * (1 - armorReduction(120, sim.player.level))));
 });
 
 test('source-level XP and rank loot survive moving home and the kill itself gaining multiple levels', () => {
-  const sim = createSim(), enemy = sim.spawnEnemy('brute', ZONE_RULES.bandWidth * 3 + 20, 0, 'elite')!;
+  const sim = createSim(), enemy = sim.spawnEnemy('brute', ZONE_RULES.regionSize * 3 + 20, 0, 'elite')!;
   const source = { seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank, biome: enemy.biome,
     kind: enemy.kind, firstKill: true };
   sim.player.xp = 90;
@@ -90,8 +90,8 @@ test('combat RNG draws and gear/pickup entity IDs cannot change later source see
     sim.enemies = []; sim.groundItems = []; sim.pickups = [];
     advance(sim, .6);
   }
-  const a = filled.spawnEnemy('caster', -ZONE_RULES.bandWidth - 50, 0, 'elite')!;
-  const b = empty.spawnEnemy('caster', -ZONE_RULES.bandWidth - 50, 0, 'elite')!;
+  const a = filled.spawnEnemy('caster', -ZONE_RULES.regionSize - 50, 0, 'elite')!;
+  const b = empty.spawnEnemy('caster', -ZONE_RULES.regionSize - 50, 0, 'elite')!;
   assert.notEqual(a.id, b.id);
   assert.equal(a.lootSeed, b.lootSeed);
   prepareKill(a); prepareKill(b);
@@ -102,7 +102,7 @@ test('combat RNG draws and gear/pickup entity IDs cannot change later source see
 });
 
 test('a caster bolt snapshots source level and scaled damage through its caster death and a player level change', () => {
-  const sim = createSim(), caster = sim.spawnEnemy('caster', ZONE_RULES.bandWidth * 8 + 30, 0, 'veteran')!;
+  const sim = createSim(), caster = sim.spawnEnemy('caster', ZONE_RULES.regionSize * 8 + 30, 0, 'veteran')!;
   const sourceDamage = caster.damage, sourceLevel = caster.level;
   caster.x = caster.prevX = caster.homeX = -150; caster.y = caster.prevY = 0;
   caster.state = 'windup'; caster.stateDuration = 0; caster.attackAngle = 0;
@@ -117,7 +117,7 @@ test('a caster bolt snapshots source level and scaled damage through its caster 
   sim.player.level = 50; refreshCharacter(sim.player);
   const beforeHp = sim.player.hp;
   advance(sim, 1);
-  assert.equal(bolt.sourceLevel, 9); assert.equal(bolt.damage, sourceDamage);
+  assert.equal(bolt.sourceLevel, sourceLevel); assert.equal(bolt.damage, sourceDamage);
   assert.equal(beforeHp - sim.player.hp, Math.round(sourceDamage * (1 - armorReduction(120, sourceLevel))));
   assert.equal(sim.drainEvents().filter(event => event.type === 'hurt').length, 1);
 });

@@ -14,7 +14,7 @@ Evergrow now has seven recurring biomes. All terrain, props and atmosphere remai
 
 ## Regions and transitions
 
-`biomes.ts` evaluates seeded temperature, moisture and elevation fields over jittered region centers, spaced approximately 2,400 world units apart. A coordinate warp bends the region outlines. Adjacent cells can share a climate, producing larger regions; every climate can recur in either direction. This replaces the original three broad geographic strips.
+`biomes.ts` evaluates seeded temperature, moisture and elevation fields over jittered region centers, spaced approximately 6,400 world units apart. A coordinate warp bends the region outlines. Adjacent cells can share a climate, producing larger regions; every climate can recur in either direction. This replaces the original three broad geographic strips.
 
 Smooth compact kernels blend nearby region influences. All seven weights always sum to one. Ground color, map color and ambient light interpolate these weights. Props and small ground details sample their species from the weights at each object's world coordinate, so two kinds of vegetation coexist at a border. Snow, embers, pollen and leaves use local world anchors rather than following the camera's current biome.
 
@@ -33,7 +33,7 @@ A warped starting area remains Deadwood. Region queries are independent of terra
 - `/biomes.html` shows seven frozen generated environments and two real mixed borders through the game renderer and CRT pass. Props are neither moved nor replaced for the preview; no gameplay advances or exploration is saved.
 - `/atlas.html?seed=7319`, `18427`, or `90210` opens a large explored example using the real world map and memory-only discovery. See [explored atlas](explored-atlas.md).
 
-Generation version is now **4**. Earlier exploration charts are invalidated because their geography no longer matches. The current prototype has no character save or save migrations.
+Generation version is now **5**. The world-generation pass enlarges the climate and replaces settlement/road geography. Old test characters are cleared on gameplay bootstrap as authorized; no migration is provided. See [world generation](world-generation.md).
 
 Biome-specific enemies and loot biases extend the existing tables; level, XP, rank, rarity and item scaling formulas remain unchanged. Water, snow and ash are visual terrain materials in this iteration. Navigation hazards, biome bosses, weather gameplay and biome-specific town architecture are future work.
 

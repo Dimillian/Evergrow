@@ -4,10 +4,11 @@ import { loadGameFont } from './font.ts';
 import { PostFX } from './postfx.ts';
 import { Renderer } from './renderer.ts';
 import type { RenderSettings } from './renderer.ts';
-import { FIRST_TOWN_Y, TOWN_INTERVAL } from './settlements.ts';
+import { settlementPlace, queryPlaces } from './world-geography.ts';
+import { roadPaths } from './road-shape.ts';
 import type { Building, Rect, Settlement } from './settlements.ts';
 import { Simulation } from './simulation.ts';
-import { mainPathX, World } from './world.ts';
+import { World } from './world.ts';
 
 // This HTML entry is intentionally absent from Vite's production build inputs.
 // Staging only creates a frozen simulation: no input handlers or simulation ticks.
@@ -49,11 +50,11 @@ function fit(rectangles: readonly Rect[], padding: number): Pick<Stage, 'camera'
   return { camera: { x: (left + right) / 2, y: (top + bottom) / 2 }, width: Math.round(height * ASPECT), height };
 }
 
-function settlementAt(world: World, y: number): Settlement {
-  const settlement = world.getSettlements(mainPathX(y) - 1, y - 1, 2, 2)
-    .find(candidate => Math.abs(candidate.y - y) < 1);
-  if (!settlement || !settlement.buildings.length) throw new Error('The requested settlement has no generated buildings.');
-  return settlement;
+function settlementAt(world: World, city = false): Settlement {
+  const place = city ? queryPlaces(world.seed, -35000, -35000, 70000, 70000).filter(p => p.city).sort((a,b)=>Math.hypot(a.x,a.y)-Math.hypot(b.x,b.y))[0] : settlementPlace(world.seed, 0, 0);
+  const town = world.getSettlements(place.x - 1, place.y - 1, 2, 2)[0];
+  if (!town?.buildings.length) throw new Error('No settlement found for review.');
+  return town;
 }
 
 /** Find an unoccupied staging point without ever moving or advancing a character. */
@@ -89,33 +90,35 @@ function selectBuilding(settlement: Settlement, kind: Building['kind']): Buildin
 }
 
 function makeStage(world: World, view: ViewId): Stage {
-  const town = settlementAt(world, FIRST_TOWN_Y);
+  const town = settlementAt(world);
   if (view === 'town') return overview(world, town);
-  if (view === 'city') return overview(world, settlementAt(world, FIRST_TOWN_Y - TOWN_INTERVAL));
+  if (view === 'city') return overview(world, settlementAt(world, true));
   if (view === 'approach') {
     const height = 500;
     return {
       title: `${town.name} · south approach`,
       description: 'Southern homes and doorsteps · town street meets the main trail and crossroad',
       // The south row has doors at -798; the older crossroad meets the main trail near -644.
-      camera: { x: mainPathX(-700), y: -780 }, width: Math.round(height * ASPECT), height,
-      hero: clearFloor(world, { x: mainPathX(-720), y: -720 }), settlement: town,
+      camera: { x: town.x, y: -780 }, width: Math.round(height * ASPECT), height,
+      hero: clearFloor(world, { x: town.x, y: -720 }), settlement: town,
     };
   }
   if (view === 'trail') {
-    const height = 460, y = 980;
-    const camera = { x: mainPathX(y), y };
+    const height = 460;
+    const path = roadPaths(-5000, -5000, 10000, 10000, world.seed)[0];
+    const point = path.points[Math.floor(path.points.length / 2)];
+    const camera = { x: point[0], y: point[1] };
     return {
       title: `${world.sampleBiome(camera.x, camera.y).name} · wilderness crossroads`,
       description: 'Curving wilderness trails · blended shoulders and an uninterrupted junction',
       camera, width: Math.round(height * ASPECT), height,
-      hero: clearFloor(world, { x: mainPathX(1034), y: 1034 }),
-      settlement: settlementAt(world, FIRST_TOWN_Y + TOWN_INTERVAL),
+      hero: clearFloor(world, camera),
+      settlement: town,
     };
   }
   if (view === 'street') {
     const building = selectBuilding(town, 'blacksmith');
-    const junction = { x: mainPathX(building.door.y + 27), y: building.door.y + 27 };
+    const junction = { x: town.x, y: building.door.y + 27 };
     const hero = clearFloor(world, { x: (junction.x + building.door.x) / 2, y: junction.y });
     const height = 420;
     return {

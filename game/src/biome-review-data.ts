@@ -8,7 +8,7 @@ export function biomeReviewScenes(world: World): BiomeReviewScene[] {
   const candidates = new Map<BiomeId, Array<{ x: number; y: number }>>(BIOME_IDS.map(id => [id, []]));
   const edges: BiomeReviewScene[] = [];
   const pairs = [['frostpine', 'highlands'], ['autumn', 'emberfall']] as const;
-  for (let y = -9600; y <= 9600; y += 240) for (let x = -9600; x <= 9600; x += 240) {
+  for (let y = -28800; y <= 28800; y += 640) for (let x = -28800; x <= 28800; x += 640) {
     const sample = world.sampleBiome(x, y);
     if (sample.weights[sample.id] > .94) candidates.get(sample.id)!.push({ x, y });
   }
@@ -21,7 +21,7 @@ export function biomeReviewScenes(world: World): BiomeReviewScene[] {
   });
   for (const [a, b] of pairs) {
     let point: { x: number; y: number } | undefined;
-    for (let y = -6000; y <= 6000; y += 80) for (let x = -6000; x <= 6000; x += 80) {
+    for (let y = -20000; y <= 20000; y += 240) for (let x = -20000; x <= 20000; x += 240) {
       const weights = world.sampleBiome(x, y).weights;
       if (weights[a] < .4 || weights[a] > .6 || weights[b] < .4 || weights[a] + weights[b] < .96) continue;
       if ((!point || Math.hypot(x, y) < Math.hypot(point.x, point.y))

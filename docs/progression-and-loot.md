@@ -18,11 +18,9 @@ Each gained level still grants **one skill point and five attribute points**. Po
 
 ## Geographic threat
 
-Area level is based on world-space distance from the fixed origin, independent of character level, kill count, or the current biome:
+Generation 5 uses fixed named, irregular districts rather than circular distance bands. The starting district is level one. Ordinary threat follows accumulated road travel from Briarwatch (about one level per 6,000 route units), plus remoteness from a route. A subset of remote wilderness districts gains 3–5 extra levels, creating optional dangerous neighbors. Several danger districts can share a large biome. Levels remain independent of player level and kill count.
 
-`areaLevel = 1 + floor(distanceFromOrigin / 3200)`
-
-The level-one region extends 3,200 world units from the origin. The next ring is level two, and so on. Walking directly outward at the base movement speed crosses a ring in about 19.4 seconds, so travel can outpace character progression. These are danger bands, not travel gates. The biome transition remains smooth and may cross a threat boundary independently.
+The runtime large map labels discovered regions and marks hazardous districts with an orange `!`. Region entry notifications and map hover use the same seeded region query as enemy spawning, vendors, events and portal landing validation. See [world generation](world-generation.md) for the exact current rules and bounded route estimate.
 
 Towns remain protected. Their safe interiors and streets do not create leveled combat encounters. Entering a sanctuary does not convert existing enemies into rewards; withdrawing or despawning a living enemy gives neither XP nor loot.
 

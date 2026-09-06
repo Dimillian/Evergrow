@@ -18,7 +18,7 @@ export function buildingNPC(building: Building): TownNPC | null {
   if (!role) return null;
   const x = building.door.x, y = building.door.y - 57, id = `${building.id}:${role}`;
   const seed = hashService(id), names = ['Mara', 'Oswin', 'Vesper', 'Iona', 'Alden', 'Sable', 'Corvin', 'Edda'];
-  return { id, buildingId: building.id, role, x, y, seed, name: names[seed % names.length], level: getZoneAt(x, y).level };
+  return { id, buildingId: building.id, role, x, y, seed, name: names[seed % names.length], level: getZoneAt(x, y, Number(building.id.split(':')[1])).level };
 }
 export function canInteractNPC(npc: TownNPC, player: { x: number; y: number; dead?: boolean }, world: WorldQuery): boolean {
   return !player.dead && !world.blocked(npc.x, npc.y, 0) && !world.blocked(player.x, player.y, 0) && Math.hypot(player.x - npc.x, player.y - npc.y) <= 70

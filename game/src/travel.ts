@@ -14,7 +14,7 @@ export function townPortalAnchor(town: Settlement): PortalAnchor {
 }
 export function validTravel(value: unknown): value is TravelState {
   if (!value || typeof value !== 'object') return false;
-  const v = value as TravelState, band = (n: number) => Number.isSafeInteger(n) && Math.abs(n) <= 12499;
+  const v = value as TravelState, band = (n: number) => Number.isSafeInteger(n) && n >= 0 && n <= 1000000000;
   return band(v.homeTown) && (v.returnTo === null || typeof v.returnTo === 'object' && !!v.returnTo
     && band(v.returnTo.town) && [v.returnTo.x, v.returnTo.y].every(n => Number.isFinite(n) && Math.abs(n) <= 4e7));
 }
@@ -54,9 +54,9 @@ export class PortalChannel {
 }
 /** Bounded deterministic search never silently crosses a geographic level boundary. */
 export function portalLanding(world: WorldQuery, point: { x: number; y: number }, radius: number): { x: number; y: number } | null {
-  const level = getZoneAt(point.x, point.y).level;
+  const level = getZoneAt(point.x, point.y, world.seed).level;
   const valid = (x: number, y: number) => [x, y].every(n => Number.isFinite(n) && Math.abs(n) <= 4e7)
-    && getZoneAt(x, y).level === level && !world.blocked(x, y, radius);
+    && getZoneAt(x, y, world.seed).level === level && !world.blocked(x, y, radius);
   if (valid(point.x, point.y)) return { ...point };
   for (let r = 16; r <= PORTAL_RULES.landingSearch; r += 16) for (let i = 0; i < 16; i++) {
     const x = point.x + Math.cos(i * Math.PI / 8) * r, y = point.y + Math.sin(i * Math.PI / 8) * r;

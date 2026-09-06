@@ -1,57 +1,40 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { branchY, mainPathX, pathDistance, roadSurface } from '../src/road-shape.ts';
-
-test('visual road material still covers every main and branch centerline', () => {
-  for (const seed of [1, 7319, 92831]) {
-    for (let y = -4800; y <= 4800; y += 113) {
-      const x = mainPathX(y), road = roadSurface(x, y, seed);
-      assert.equal(pathDistance(x, y), 0);
-      assert.equal(road.distance, 0);
-      assert.equal(road.weight, 1);
-    }
-    for (let band = -3; band <= 3; band++) for (let x = -2500; x <= 2500; x += 133) {
-      const y = branchY(x, band), road = roadSurface(x, y, seed);
-      assert.equal(pathDistance(x, y), 0);
-      assert.equal(road.distance, 0);
-      assert.equal(road.weight, 1);
-    }
-  }
-});
-
-test('rounded road junctions remain continuous across their material shoulders', () => {
-  const epsilon = .001;
-  for (const seed of [1, 7319, 92831]) for (const band of [-2, 0, 2]) {
-    let y = branchY(0, band);
-    for (let i = 0; i < 24; i++) y = branchY(mainPathX(y), band);
-    const x = mainPathX(y);
-    let featherSamples = 0;
-    for (let dx = -70; dx <= 70; dx += 5) for (let dy = -70; dy <= 70; dy += 5) {
-      const center = roadSurface(x + dx, y + dy, seed).weight;
-      if (center > 0 && center < 1) featherSamples++;
-      for (const [ox, oy] of [[epsilon, 0], [0, epsilon]]) {
-        const next = roadSurface(x + dx + ox, y + dy + oy, seed).weight;
-        assert.ok(Math.abs(next - center) < epsilon * .2, 'crossing the shoulder has no material jump');
+import { roadPaths, pathDistance, roadSurface } from '../src/road-shape.ts';
+import { parentPlace, queryPlaces, placeId, placeCell } from '../src/world-geography.ts';
+test('settlements are widely separated in two dimensions and connected to the starting town', () => {
+  for (const seed of [7319, 18427, 90210]) {
+    const places = queryPlaces(seed, -22000, -22000, 44000, 44000, 0);
+    assert.ok(places.length >= 8 && places.length <= 24);
+    for (const a of places) {
+      assert.deepEqual(placeCell(placeId(a.cx, a.cy)), [a.cx, a.cy]);
+      for (const b of places)
+        if (a.id !== b.id)
+          assert.ok(Math.hypot(a.x - b.x, a.y - b.y) > 6000);
+      let current = a, count = 0;
+      while (current.id !== 0) {
+        const parent = parentPlace(seed, current)!;
+        assert.ok(parent.cx ** 2 + parent.cy ** 2 < current.cx ** 2 + current.cy ** 2);
+        current = parent;
+        assert.ok(++count < 20);
       }
     }
-    assert.ok(featherSamples > 0, 'the probe includes actual junction transitions');
+    assert.ok(new Set(places.map(p => Math.round(p.x / 3000))).size > 6);
   }
 });
-
-test('varying road widths and junction rounding stay within reserved clear shoulders', () => {
-  let beyondShoulders = 0;
-  for (const seed of [1, 7319, 92831]) for (let y = -1800; y <= 1800; y += 37) {
-    const centerX = mainPathX(y);
-    for (let offset = -120; offset <= 120; offset += 4) {
-      const x = centerX + offset, road = roadSurface(x, y, seed);
-      assert.ok(road.weight >= 0 && road.weight <= 1);
-      assert.ok(road.tracks >= 0 && road.tracks <= 1);
-      assert.equal(road.distance, pathDistance(x, y));
-      if (road.distance >= 76) {
-        beyondShoulders++;
-        assert.equal(road.weight, 0, 'visible road never enters the prop spawn area');
+test('curved routes and their material remain deterministic and continuous across cache boundaries', () => {
+  for (const seed of [7319, 18427]) {
+    const roads = roadPaths(-12000, -12000, 24000, 24000, seed);
+    assert.ok(roads.length > 4);
+    assert.deepEqual(roadPaths(-12000, -12000, 24000, 24000, seed), roads);
+    for (const road of roads) {
+      assert.ok(road.length > Math.hypot(road.to.x - road.from.x, road.to.y - road.from.y) * 1.02);
+      for (const [x, y] of road.points.filter((_, i) => i % 13 === 0)) {
+        assert.ok(pathDistance(x, y, seed) < 1e-6);
+        assert.ok(roadSurface(x, y, seed).weight > .99);
+        const near = roadSurface(x + .001, y - .001, seed);
+        assert.ok(Math.abs(near.weight - roadSurface(x, y, seed).weight) < .001);
       }
     }
   }
-  assert.ok(beyondShoulders > 0);
 });

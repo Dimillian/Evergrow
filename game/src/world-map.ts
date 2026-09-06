@@ -1,6 +1,9 @@
+import { drawMapZoneLevels, mapZoneLabels } from './map-zone-art.ts';
+import { drawMapProps, drawMapBuilding } from './map-terrain-art.ts';
+import type { Prop } from './world.ts';
 import { Exploration, EXPLORATION_REVEAL_RADIUS, EXPLORATION_CELL_SIZE, EXPLORATION_CHUNK_SIZE } from './exploration.ts';
 import { BIOMES, type BiomeId } from './biomes.ts';
-import { mainPathX, branchY, BRANCH_INTERVAL, BRANCH_OFFSET } from './road-shape.ts';
+import { roadPaths } from './road-shape.ts';
 import { clampMapCoordinate, fitMapBounds, getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt, type MapView } from './map-view.ts';
 import { POI_DEFINITIONS } from './world-pois.ts';
 export { getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt, type MapView } from './map-view.ts';
@@ -8,12 +11,14 @@ import type { ExplorationWorld, MapPOI, MapRect } from './exploration.ts';
 import { text } from './font.ts';
 import { uiIcon } from './ui-components.ts';
 import { UI_THEME } from './ui-theme.ts';
-import { getZoneAt } from './zone-progression.ts';
+import { getZoneAt, type ZoneProgression } from './zone-progression.ts';
 
 export interface MapPlayer { x: number; y: number; angle: number; }
 export interface MinimapEnemy { x: number; y: number; kind?: string; }
 export interface MapWorld extends ExplorationWorld {
   mapColor(x: number, y: number, sampleSize?: number): string;
+  atlasColor?(x: number, y: number): string;
+  getProps?(x: number, y: number, width: number, height: number): Prop[];
   sampleBiome(x: number, y: number): { id: string; name: string };
   getBuildings(x: number, y: number, width: number, height: number): Array<MapRect & { name?: string; kind?: string }>;
   getBuildingAt?(x: number, y: number): { name?: string } | null;
@@ -42,31 +47,17 @@ const TERRAIN_CACHE_LIMIT = MAP_TERRAIN_RULES.cacheLimit;
 interface TerrainTile { base: HTMLCanvasElement; charted: HTMLCanvasElement; roads: HTMLCanvasElement | null; chartedRoads: HTMLCanvasElement | null; revision: number; }
 export interface MapRoadPath { main: boolean; points: readonly (readonly [number, number])[] }
 /** Exact existing centerlines sampled at a fixed, bounded world interval; tile canvases clip the ends. */
-export function mapRoadPaths(x: number, y: number, size: number): MapRoadPath[] {
-  if (![x, y, size, x + size, y + size].every(Number.isFinite) || size <= 0 || size > 12288
-    || Math.abs(x) > 48_000_000 || Math.abs(y) > 48_000_000) return [];
-  const paths: MapRoadPath[] = [], step = 32;
-  if (x <= 110 && x + size >= -110) {
-    const points: Array<readonly [number, number]> = [];
-    for (let wy = y - step; wy <= y + size + step; wy += step) points.push([mainPathX(wy), wy]);
-    paths.push({ main: true, points });
-  }
-  const first = Math.floor((y - BRANCH_OFFSET - 120) / BRANCH_INTERVAL);
-  const last = Math.ceil((y + size - BRANCH_OFFSET + 120) / BRANCH_INTERVAL);
-  for (let band = first; band <= last; band++) {
-    const points: Array<readonly [number, number]> = [];
-    for (let wx = x - step; wx <= x + size + step; wx += step) points.push([wx, branchY(wx, band)]);
-    if (points.some(([, wy]) => wy >= y - step && wy <= y + size + step)) paths.push({ main: false, points });
-  }
-  return paths;
+export function mapRoadPaths(x: number, y: number, size: number, seed = 7319): MapRoadPath[] {
+  if (![x,y,size].every(Number.isFinite) || size <= 0 || size > 12288 || Math.abs(x)>48000000 || Math.abs(y)>48000000) return [];
+  return roadPaths(x,y,size,size,seed);
 }
 
-function createMapRoadLayer(x: number, y: number, size: number): HTMLCanvasElement {
+function createMapRoadLayer(x: number, y: number, size: number, seed: number): HTMLCanvasElement {
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
   const c = canvas.getContext('2d')!;
   c.setTransform(128 / size, 0, 0, 128 / size, -x * 128 / size, -y * 128 / size);
   c.lineJoin = 'round'; c.lineCap = 'round';
-  for (const road of mapRoadPaths(x, y, size)) {
+  for (const road of mapRoadPaths(x, y, size, seed)) {
     c.beginPath(); c.moveTo(...road.points[0]);
     for (const point of road.points.slice(1)) c.lineTo(...point);
     c.strokeStyle = '#15232180'; c.lineWidth = road.main ? 37 : 29; c.stroke();
@@ -84,14 +75,14 @@ const setText = (element: HTMLElement, value: string) => { if (element.textConte
 const palette = UI_THEME.palette;
 
 /** Revealed cells are the boundary for inspecting terrain and danger on the chart. */
-export function chartedMapArea(world: Pick<MapWorld, 'sampleBiome' | 'isSanctuary'>,
+export function chartedMapArea(world: Pick<MapWorld, 'sampleBiome' | 'isSanctuary'> & Partial<Pick<MapWorld, 'seed'>>,
   exploration: Pick<Exploration, 'isRevealed'>, x: number, y: number) {
   if (![x, y].every(Number.isFinite) || !exploration.isRevealed(x, y)) return null;
-  return { name: world.sampleBiome(x, y).name, label: mapAreaLabel(world, x, y), x, y };
+  return { name: getZoneAt(x, y, world.seed).name, label: mapAreaLabel(world, x, y), x, y };
 }
 
-function mapAreaLabel(world: Pick<MapWorld, 'isSanctuary'>, x: number, y: number) {
-  return world.isSanctuary?.(x, y) ? 'Sanctuary' : `Area Lv ${getZoneAt(x, y).level}`;
+function mapAreaLabel(world: Pick<MapWorld, 'isSanctuary'> & Partial<Pick<MapWorld, 'seed'>>, x: number, y: number) {
+  return world.isSanctuary?.(x, y) ? 'Sanctuary' : `Area Lv ${getZoneAt(x, y, world.seed).level}`;
 }
 
 /** Keep hover selection inside the chart and prefer the closest visible marker. */
@@ -115,7 +106,7 @@ export function selectMapPOIs(pois: readonly MapPOI[], view: MapView, mini = fal
     .map(poi => ({ poi, screen: projectMapPoint(poi.x, poi.y, view) }))
     .filter(({ screen }) => screen.x >= view.x + 6 && screen.y >= view.y + 6 && screen.x <= view.x + view.width - 6 && screen.y <= view.y + view.height - 6)
     .sort((a, b) => priority(a.poi) - priority(b.poi) || a.poi.id.localeCompare(b.poi.id));
-  const selected: typeof candidates = [], separation = mini ? 11 : view.zoom < .07 ? 23 : 19;
+  const selected: typeof candidates = [], separation = mini ? 11 : view.zoom < .07 ? 40 : 19;
   for (const candidate of candidates) if (selected.every(other => Math.hypot(candidate.screen.x - other.screen.x,
     candidate.screen.y - other.screen.y) >= separation)) selected.push(candidate);
   return selected.map(candidate => candidate.poi);
@@ -165,6 +156,8 @@ export class WorldMap {
   private tooltipKind: HTMLElement;
   private tooltipDescription: HTMLElement;
   private tiles = new Map<string, TerrainTile>();
+  private zoneLevels = true;
+  setZoneLevels(visible: boolean) { this.zoneLevels = visible; this.render(); }
   private abort = new AbortController();
   private opened = false;
   private player: MapPlayer = { x: 0, y: 0, angle: 0 };
@@ -336,31 +329,40 @@ export class WorldMap {
     }, { signal });
   }
 
-  private tile(tx: number, ty: number, size: number): TerrainTile | null {
-    const ox = tx * size, oy = ty * size, sampleSize = size / TILE_PIXELS;
+  private tile(tx: number, ty: number, size: number, detailed = false): TerrainTile | null {
+    const ox = tx * size, oy = ty * size, pixels = detailed ? 128 : TILE_PIXELS, sampleSize = size / pixels;
     let revision = 0;
     for (let cy = Math.floor(oy / EXPLORATION_CHUNK_SIZE); cy < Math.ceil((oy + size) / EXPLORATION_CHUNK_SIZE); cy++)
       for (let cx = Math.floor(ox / EXPLORATION_CHUNK_SIZE); cx < Math.ceil((ox + size) / EXPLORATION_CHUNK_SIZE); cx++)
         revision += this.exploration.getChunkRevision(cx * EXPLORATION_CHUNK_SIZE, cy * EXPLORATION_CHUNK_SIZE);
     if (!revision) return null;
-    const id = `${size}:${tx}:${ty}`;
+    const id = `${detailed ? 'atlas' : 'mini'}:${size}:${tx}:${ty}`;
     let tile = this.tiles.get(id);
     if (!tile) {
       const base = document.createElement('canvas'), charted = document.createElement('canvas');
-      base.width = base.height = charted.width = charted.height = TILE_PIXELS;
+      base.width = base.height = charted.width = charted.height = pixels;
       const c = base.getContext('2d')!;
-      for (let y = 0; y < TILE_PIXELS; y++) for (let x = 0; x < TILE_PIXELS; x++) {
-        c.fillStyle = this.world.mapColor(ox + (x + .5) * sampleSize, oy + (y + .5) * sampleSize, sampleSize); c.fillRect(x, y, 1, 1);
+      const samples = detailed ? (size <= 3072 ? 64 : 128) : TILE_PIXELS, step = size / samples, pixelStep = pixels / samples;
+      for (let y = 0; y < samples; y++) for (let x = 0; x < samples; x++) {
+        const wx = ox + (x + .5) * step, wy = oy + (y + .5) * step;
+        c.fillStyle = detailed && this.world.atlasColor ? this.world.atlasColor(wx, wy) : this.world.mapColor(wx, wy, step);
+        c.fillRect(x * pixelStep, y * pixelStep, pixelStep, pixelStep);
       }
-      const roads = sampleSize > 48 ? createMapRoadLayer(ox, oy, size) : null;
+      if (detailed && size <= 3072 && this.world.getProps) {
+        drawMapProps(c, this.world.getProps(ox - 160, oy - 160, size + 320, size + 320), ox, oy, size, pixels);
+      }
+      // Flatten atlas road ink into its terrain surface: two retained canvases,
+      // rather than a second pair of high-resolution layers for every tile.
+      if (detailed) c.drawImage(createMapRoadLayer(ox, oy, size, this.world.seed), 0, 0);
+      const roads = !detailed && sampleSize > 48 ? createMapRoadLayer(ox, oy, size, this.world.seed) : null;
       const chartedRoads = roads ? document.createElement('canvas') : null;
       if (chartedRoads) chartedRoads.width = chartedRoads.height = 128;
       tile = { base, charted, roads, chartedRoads, revision: -1 }; this.tiles.set(id, tile);
     } else { this.tiles.delete(id); this.tiles.set(id, tile); }
     if (tile.revision !== revision) {
       const c = tile.charted.getContext('2d')!;
-      c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, TILE_PIXELS, TILE_PIXELS);
-      for (let y = 0; y < TILE_PIXELS; y++) for (let x = 0; x < TILE_PIXELS; x++)
+      c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, pixels, pixels);
+      for (let y = 0; y < pixels; y++) for (let x = 0; x < pixels; x++)
         if (isMapSampleRevealed(this.exploration, ox + x * sampleSize, oy + y * sampleSize, sampleSize))
           c.drawImage(tile.base, x, y, 1, 1, x, y, 1, 1);
       if (tile.roads && tile.chartedRoads) {
@@ -377,11 +379,12 @@ export class WorldMap {
     return tile;
   }
 
-  private features(view: MapView, mini: boolean): { pois: MapPOI[]; labels: MapRegionLabel[] } {
+  private features(view: MapView, mini: boolean): { pois: MapPOI[]; labels: MapRegionLabel[]; zones: ZoneProgression[] } {
     const pois = selectMapPOIs([...this.exploration.getDiscoveredPOIs(bounds(view))
       .filter(poi => poi.sighted || this.exploration.isRevealed(poi.x, poi.y)), ...this.portalMarkers()], view, mini);
-    const labels = mini ? [] : mapRegionLabels(this.world, this.exploration, view, [...pois.filter(poi => poi.kind === 'town'), this.player]);
-    return { labels, pois: pois.filter(poi => poi.kind === 'portal' || poi.kind === 'town' || !labels.some(label => {
+    const labels = mini || this.zoneLevels ? [] : mapRegionLabels(this.world, this.exploration, view, [...pois.filter(poi => poi.kind === 'town'), this.player]);
+    const zones = mini || !this.zoneLevels ? [] : mapZoneLabels(view, this.exploration, this.world.seed, pois.filter(p => p.kind === 'town'));
+    return { labels, zones, pois: pois.filter(poi => !zones.some(z => Math.abs((z.x-poi.x)*view.zoom)<82 && Math.abs((z.y-poi.y)*view.zoom)<28)).filter(poi => poi.kind === 'portal' || poi.kind === 'town' || !labels.some(label => {
       const dx = Math.abs((poi.x - label.x) * view.zoom), dy = (poi.y - label.y) * view.zoom;
       return dx < label.name.length * 3.4 + 8 && dy > -9 && dy < 27;
     })) };
@@ -398,7 +401,7 @@ export class WorldMap {
     const roadTiles: Array<{ tile: TerrainTile; x: number; y: number }> = [];
     for (let ty = Math.floor(region.y / tileSize); ty <= Math.floor((region.y + region.height) / tileSize); ty++) {
       for (let tx = Math.floor(region.x / tileSize); tx <= Math.floor((region.x + region.width) / tileSize); tx++) {
-        const tile = this.tile(tx, ty, tileSize); if (!tile) continue;
+        const tile = this.tile(tx, ty, tileSize, !mini); if (!tile) continue;
         const p = projectMapPoint(tx * tileSize, ty * tileSize, view);
         // One backing-pixel overlap covers fractional drawImage edges while the
         // world-space projection itself remains continuous, never quantized.
@@ -414,12 +417,15 @@ export class WorldMap {
       if (!this.exploration.isRevealed(x, y) || !this.exploration.isRevealed(x + width, y)
         || !this.exploration.isRevealed(x, y + height) || !this.exploration.isRevealed(x + width, y + height)) continue;
       const p = projectMapPoint(x, y, view), w = width * view.zoom, h = height * view.zoom;
+      if (!mini && !isMapSampleRevealed(this.exploration, x, y, Math.max(width, height))) continue;
+      if (!mini) { drawMapBuilding(c, p.x, p.y, Math.max(1, w), Math.max(1, h), building.kind); continue; }
       c.fillStyle = '#111a1d'; c.fillRect(p.x + 1, p.y + 1, w, h);
       c.fillStyle = '#897951'; c.fillRect(p.x, p.y, Math.max(1, w), Math.max(1, h));
       if (w > 6 && h > 6) { c.strokeStyle = '#c4ae78'; c.lineWidth = .8; c.strokeRect(p.x + .5, p.y + .5, w - 1, h - 1);
         c.strokeStyle = '#454a37'; c.beginPath(); c.moveTo(p.x + w / 2, p.y + 2); c.lineTo(p.x + w / 2, p.y + h - 2); c.stroke(); }
     }
     const { pois, labels } = features;
+    if (!mini && this.zoneLevels) drawMapZoneLevels(c, view, this.exploration, this.world.seed, features.zones);
     for (const label of labels) {
       const p = projectMapPoint(label.x, label.y, view), biome = BIOMES[label.id as BiomeId];
       const labelColor = biome?.color ?? palette.jade;
@@ -434,7 +440,7 @@ export class WorldMap {
       if (poi.kind !== 'portal' && !poi.sighted && !this.exploration.isRevealed(poi.x, poi.y)) continue;
       const p = projectMapPoint(poi.x, poi.y, view);
       this.poiIcon(c, poi, p.x, p.y, mini ? 4.1 : view.zoom < .07 ? 5.4 : 7, this.hovered?.id === poi.id && !mini);
-      if (!mini && poi.kind === 'town' && view.zoom >= .045) {
+      if (!mini && poi.kind === 'town' && (view.zoom >= .045 || this.zoneLevels)) {
         text(c, poi.name, p.x + 1, p.y + 13, 1.15, palette.ink, 'center');
         text(c, poi.name, p.x, p.y + 12, 1.15, palette.ivory, 'center');
       }
@@ -593,14 +599,15 @@ export class WorldMap {
     if (this.pointer && !this.drag) this.hovered = pickMapPOI(features.pois, this.view, this.pointer, 14);
     this.chart(c, this.view, false, features);
     const grid = this.view.zoom < .065 ? 3200 : 1536, first = unprojectMapPoint(0, 0, this.view);
-    c.save(); c.strokeStyle = '#bfbe9720'; c.lineWidth = .65;
+    c.save(); c.strokeStyle = '#bfbe9710'; c.lineWidth = .65;
     for (let wx = Math.ceil(first.x / grid) * grid; wx < first.x + this.view.width / this.view.zoom; wx += grid) {
       const p = projectMapPoint(wx, 0, this.view); c.beginPath(); c.moveTo(p.x, 0); c.lineTo(p.x, this.view.height); c.stroke();
     }
     for (let wy = Math.ceil(first.y / grid) * grid; wy < first.y + this.view.height / this.view.zoom; wy += grid) {
       const p = projectMapPoint(0, wy, this.view); c.beginPath(); c.moveTo(0, p.y); c.lineTo(this.view.width, p.y); c.stroke();
     }
-    c.restore(); this.playerArrow(c, this.player, this.view, false);
+    c.restore();
+    this.playerArrow(c, this.player, this.view, false);
     const scale = this.view.zoom < .06 ? 2000 : this.view.zoom < .16 ? 1000 : 250;
     const scaleWidth = scale * this.view.zoom;
     c.strokeStyle = `${palette.ivory}75`; c.lineWidth = 1;

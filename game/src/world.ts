@@ -5,15 +5,16 @@ import { biomeGround, biomeMapColor, sampleBiome } from './biomes.ts';
 import type { BiomeId, BiomeSample } from './biomes.ts';
 import { chooseBiomeProp, propDefinition, type PropKind } from './biome-props.ts';
 import { drawBiomeGroundAccent } from './biome-prop-art.ts';
-import { circleHitsRect, contains, FIRST_TOWN_Y, freezeSettlement, generateSettlement, intersects, MAX_TOWN_RADIUS, settlementPavingWeight, settlementPOIs, TOWN_INTERVAL } from './settlements.ts';
+import { circleHitsRect, contains, freezeSettlement, generateSettlement, intersects, MAX_TOWN_RADIUS, settlementPavingWeight, settlementPOIs } from './settlements.ts';
 import type { Building, POI, Settlement } from './settlements.ts';
-import { mainPathX, pathDistance, roadSurface } from './road-shape.ts';
+import { pathDistance, roadSurface, roadAnchors } from './road-shape.ts';
 import { groundContact, surfaceWaterWeight } from './ground-material.ts';
 import { drawGroundSurface } from './ground-surface.ts';
 import { drawRoadDetails } from './road-art.ts';
 import { isWorldCoordinate, validWorldRectangle, WORLD_QUERY_LIMITS } from './world-query.ts';
 import { generateWildernessSite, startingEnemyCamp, wildernessPOI, WILDERNESS_RULES, type WildernessSite, type EnemyCamp } from './wilderness-sites.ts';
-export { mainPathX, pathDistance } from './road-shape.ts';
+export { pathDistance } from './road-shape.ts';
+import { placeCell, queryPlaces, settlementPlace, type Place } from './world-geography.ts';
 
 /** All coordinates are world pixels; prop positions are their ground contacts. */
 export interface Prop {
@@ -28,12 +29,11 @@ export interface Prop {
 }
 
 export const TILE_SIZE = 256;
-export const WORLD_GENERATION_VERSION = 4;
+export const WORLD_GENERATION_VERSION = 5;
 const PROP_CELL_SIZE = 80;
 const MAX_PROP_RADIUS = 15;
 const TILE_CACHE_LIMIT = 48;
 const SETTLEMENT_CACHE_LIMIT = 32;
-const SHRINE_INTERVAL = 2200;
 const UINT_RANGE = 0x100000000;
 
 type CanvasFactory = () => HTMLCanvasElement;
@@ -82,6 +82,7 @@ export class World {
   readonly generationVersion = WORLD_GENERATION_VERSION;
   private groundTiles = new Map<string, HTMLCanvasElement>();
   private settlements = new Map<number, Settlement>();
+  private settlementCells = new Map<string, readonly Place[]>();
   private wilderness = new Map<string, WildernessSite | null>();
   private firstCamp: WildernessSite;
 
@@ -93,7 +94,7 @@ export class World {
   get cacheStats() { return { groundTiles: this.groundTiles.size, settlements: this.settlements.size, wildernessSites: this.wilderness.size }; }
 
   /** Cached generated content belongs to this world instance, not global module state. */
-  dispose() { this.groundTiles.clear(); this.settlements.clear(); this.wilderness.clear(); }
+  dispose() { this.groundTiles.clear(); this.settlements.clear(); this.settlementCells.clear(); this.wilderness.clear(); }
 
   sampleBiome(x: number, y: number): BiomeSample { return sampleBiome(x, y, this.seed); }
 
@@ -102,7 +103,7 @@ export class World {
   private settlement(band: number): Settlement {
     let town = this.settlements.get(band);
     if (town) this.settlements.delete(band);
-    else town = freezeSettlement(generateSettlement(this.seed, band, mainPathX, pathDistance));
+    else town = freezeSettlement(generateSettlement(this.seed, settlementPlace(this.seed, ...placeCell(band))));
     this.settlements.set(band, town);
     if (this.settlements.size > SETTLEMENT_CACHE_LIMIT) this.settlements.delete(this.settlements.keys().next().value!);
     return town;
@@ -111,12 +112,20 @@ export class World {
   getSettlements(x: number, y: number, width: number, height: number): Settlement[] {
     if (!validWorldRectangle(x, y, width, height)) return [];
     const result: Settlement[] = [], query = { x, y, width, height };
-    const first = Math.ceil((y - MAX_TOWN_RADIUS - FIRST_TOWN_Y) / TOWN_INTERVAL);
-    const last = Math.floor((y + height + MAX_TOWN_RADIUS - FIRST_TOWN_Y) / TOWN_INTERVAL);
-    for (let band = first; band <= last; band++) {
-      const townY = FIRST_TOWN_Y + band * TOWN_INTERVAL, townX = mainPathX(townY);
-      if (!intersects(query, { x: townX - MAX_TOWN_RADIUS, y: townY - MAX_TOWN_RADIUS, width: MAX_TOWN_RADIUS * 2, height: MAX_TOWN_RADIUS * 2 })) continue;
-      const town = this.settlement(band);
+    let places: readonly Place[];
+    if (width <= 1024 && height <= 1024) {
+      const cx = Math.floor(x / 2048), cy = Math.floor(y / 2048), key = `${cx}:${cy}`;
+      let cached = this.settlementCells.get(key);
+      if (!cached) {
+        cached = queryPlaces(this.seed, cx * 2048, cy * 2048, 3072, 3072, MAX_TOWN_RADIUS);
+        if (this.settlementCells.size >= 128) this.settlementCells.delete(this.settlementCells.keys().next().value!);
+        this.settlementCells.set(key, cached);
+      }
+      places = cached;
+    } else places = queryPlaces(this.seed, x, y, width, height, MAX_TOWN_RADIUS);
+    for (const place of places) {
+      if (!intersects(query, { x: place.x - MAX_TOWN_RADIUS, y: place.y - MAX_TOWN_RADIUS, width: MAX_TOWN_RADIUS * 2, height: MAX_TOWN_RADIUS * 2 })) continue;
+      const town = this.settlement(place.id);
       if (intersects(query, { x: town.x - town.radius, y: town.y - town.radius, width: town.radius * 2, height: town.radius * 2 })) result.push(town);
     }
     return result;
@@ -179,10 +188,7 @@ export class World {
       ...this.getEventSites(x, y, width, height).filter(s => s.kind === 'reliquary').map(s => ({ ...s, kind: 'reliquary' as const, description: 'Open the roadside cache.' }))];
     const first: Prop = { id: 'shrine:origin', x: -85, y: -95, radius: 15, kind: 'shrine', seed: 0, scale: 1 };
     const shrines = [first];
-    for (let band = Math.floor(y / SHRINE_INTERVAL) - 1; band <= Math.floor((y + height) / SHRINE_INTERVAL) + 1; band++) {
-      const shrine = this.roadShrine(band);
-      if (shrine) shrines.push(shrine);
-    }
+    shrines.push(...this.roadShrines(x, y, width, height));
     for (const shrine of shrines) result.push({ id: shrine.id, kind: 'shrine', name: 'Wayfarer Shrine', x: shrine.x, y: shrine.y,
       description: 'A roadside lantern kept alight for travellers.' });
     return result.filter(poi => inRectangle(poi, x, y, width, height)).sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
@@ -197,6 +203,12 @@ export class World {
     const towns = this.getSettlements(x, y, .01, .01);
     const [r, g, b] = this.surfaceColor(x, y, towns, false).map(Math.round);
     return `rgb(${r},${g},${b})`;
+  }
+
+  /** The large atlas retains the game's ground materials, with lifted chart exposure. */
+  atlasColor(x: number, y: number): string {
+    const rgb = this.surfaceColor(x, y, this.getSettlements(x, y, .01, .01), true);
+    return `rgb(${rgb.map(value => Math.round(Math.max(0, Math.min(230, value * 1.35 + 12)))).join(',')})`;
   }
 
   private roadWeight(x: number, y: number): number {
@@ -255,12 +267,7 @@ export class World {
       }
     }
 
-    const firstBand = Math.floor(y / SHRINE_INTERVAL) - 1;
-    const lastBand = Math.floor((y + height) / SHRINE_INTERVAL) + 1;
-    for (let band = firstBand; band <= lastBand; band++) {
-      const shrine = this.roadShrine(band);
-      if (shrine && inRectangle(shrine, x, y, width, height)) result.push(shrine);
-    }
+    result.push(...this.roadShrines(x, y, width, height));
 
     const firstShrine: Prop = {
       id: 'shrine:origin', x: -85, y: -95, radius: 15, kind: 'shrine',
@@ -275,11 +282,10 @@ export class World {
     const y = (cy + 0.18 + random(cx, cy, this.seed, 2) * 0.64) * PROP_CELL_SIZE;
     if ((x / 180) ** 2 + (y / 140) ** 2 < 1) return null;
     // Keep generous shoulders clear as well as the visibly compacted road.
-    if (pathDistance(x, y) < 76) return null;
+    if (pathDistance(x, y, this.seed) < 76) return null;
     if (this.isSanctuary(x, y)) return null;
     if (this.getWildernessSites(x - 18, y - 18, 36, 36).some(site => Math.hypot(x - site.x, y - site.y) < site.radius + 18)) return null;
-    const roadsideShrine = this.roadShrine(Math.floor(y / SHRINE_INTERVAL));
-    if (roadsideShrine && Math.hypot(x - roadsideShrine.x, y - roadsideShrine.y) < 44) return null;
+    if (this.roadShrines(x - 44, y - 44, 88, 88).some(shrine => Math.hypot(x - shrine.x, y - shrine.y) < 44)) return null;
     const density = 0.40 + noise(x / 520, y / 520, this.seed + 37) * 0.39;
     if (random(cx, cy, this.seed, 3) > density) return null;
     const choice = random(cx, cy, this.seed, 4);
@@ -299,17 +305,9 @@ export class World {
     return { id: `prop:${cx}:${cy}`, x, y, radius, kind, biome, seed: hash(cx, cy, this.seed, 7), scale };
   }
 
-  private roadShrine(band: number): Prop | null {
-    if (random(band, 0, this.seed, 101) > 0.5) return null;
-    const y = band * SHRINE_INTERVAL + 500 + random(band, 0, this.seed, 102) * 950;
-    if (Math.abs(y) < 450) return null;
-    const side = random(band, 0, this.seed, 103) < 0.5 ? -1 : 1;
-    const x = mainPathX(y) + side * 53;
-    if (this.isSanctuary(x, y)) return null;
-    return {
-      id: `shrine:road:${band}`, x, y,
-      radius: 15, kind: 'shrine', seed: hash(band, 0, this.seed, 104), scale: 1,
-    };
+  private roadShrines(x: number, y: number, width: number, height: number): Prop[] {
+    return roadAnchors(x, y, width, height, this.seed, 301).filter(p => p.seed % 3 === 0 && Math.hypot(p.x, p.y) > 450 && !this.isSanctuary(p.x, p.y))
+      .map(p => ({ id: `shrine:road:${p.id}`, x: p.x, y: p.y, radius: 15, kind: 'shrine', seed: p.seed, scale: 1 }));
   }
 
   blocked(x: number, y: number, radius: number): boolean {
@@ -425,7 +423,7 @@ export class World {
         const px = wx - originX;
         const py = wy - originY;
         const pick = random(cx, cy, this.seed, 213);
-        const onRoad = pathDistance(wx, wy) < 37;
+        const onRoad = pathDistance(wx, wy, this.seed) < 37;
         if (buildings.some(building => contains(building, wx, wy, 9))
           || this.pavingWeight(towns, wx, wy, this.roadWeight(wx, wy)) > .08) continue;
         const weights = this.sampleBiome(wx, wy).weights;

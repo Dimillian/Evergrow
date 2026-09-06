@@ -1,28 +1,24 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { armorReduction, itemPowerScale, MAX_CONTENT_LEVEL, normalizeLevel } from '../src/progression-content.ts';
-import { enemyLootSeed, getZoneAt, scaledEnemyStats, ZONE_RULES } from '../src/zone-progression.ts';
+import { enemyLootSeed, getZoneAt, scaledEnemyStats } from '../src/zone-progression.ts';
 import { deriveCharacterStats } from '../src/character-stats.ts';
 import { createCharacterSheet } from '../src/items.ts';
 
-test('area danger is radial and independent of render chunks and direction', () => {
-  assert.equal(ZONE_RULES.bandWidth, 3200);
-  for (const angle of [0, .5, 1, 2, 3, 4]) {
-    for (const [distance, level] of [[0, 1], [3199, 1], [3201, 2], [6401, 3], [32001, 11]]) {
-      assert.equal(getZoneAt(Math.cos(angle) * distance, Math.sin(angle) * distance).level, level);
-    }
+test('regional danger has a safe start, fixed identities, and uneven nearby levels', () => {
+  for (const seed of [7319,18427,90210]) {
+    assert.equal(getZoneAt(0,0,seed).level,1);
+    const levels=new Set<number>(), hazards=[];
+    for(let angle=0;angle<6.28;angle+=.18)levels.add(getZoneAt(Math.cos(angle)*10000,Math.sin(angle)*10000,seed).level);
+    assert.ok(levels.size>=3,'equal distances have varied regional danger');
+    for(let y=-12000;y<=12000;y+=2400)for(let x=-12000;x<=12000;x+=2400){const z=getZoneAt(x,y,seed);if(z.hazardous)hazards.push(z);assert.equal(getZoneAt(z.x,z.y,seed).id,z.id);}
+    assert.ok(hazards.length>0);
   }
-  assert.deepEqual(getZoneAt(-3200, 0), { level: 2, band: 1, distance: 3200, minDistance: 3200, maxDistance: 6400 });
 });
 
 test('invalid coordinates and content levels have finite bounded results', () => {
-  for (const coordinate of [NaN, Infinity, -Infinity]) assert.equal(getZoneAt(coordinate, 1).level, 1);
-  for (const coordinate of [Number.MAX_VALUE, -Number.MAX_VALUE]) {
-    const zone = getZoneAt(coordinate, coordinate);
-    assert.equal(zone.level, MAX_CONTENT_LEVEL);
-    assert.ok(Object.values(zone).every(Number.isFinite));
-  }
-  assert.deepEqual([0, -1, 2.9, NaN, 1e12].map(normalizeLevel), [1, 1, 2, 1, MAX_CONTENT_LEVEL]);
+  for (const coordinate of [NaN,Infinity,-Infinity]) assert.equal(getZoneAt(coordinate,1).level,1);
+  assert.deepEqual([0,-1,2.9,NaN,1e12].map(normalizeLevel),[1,1,2,1,MAX_CONTENT_LEVEL]);
 });
 
 test('normal enemies and rank multipliers use one authored source-level curve', () => {

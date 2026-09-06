@@ -4,6 +4,7 @@ import type { EnemyCamp } from './wilderness-sites.ts';
 import type { EnemyRank } from './progression-content.ts';
 
 export interface WorldQuery {
+  readonly seed?: number;
   blocked(x: number, y: number, radius: number): boolean;
   /** Settlements suppress hostile spawns and protect the player's occupied position. */
   isSanctuary?(x: number, y: number): boolean;

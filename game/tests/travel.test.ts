@@ -1,3 +1,4 @@
+import { getZoneAt } from '../src/zone-progression.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
@@ -88,7 +89,11 @@ test('blocked return searches locally, never changes area level, and retains lin
   assert.equal(portalLanding({ ...world, blocked: () => true }, { x: 0, y: 0 }, 9), null);
   const near = portalLanding({ ...world, blocked: (x, y) => Math.hypot(x, y) < 10 }, { x: 0, y: 0 }, 9)!;
   assert.ok(Math.hypot(near.x, near.y) <= 80);
-  assert.equal(portalLanding({ ...world, blocked: x => x < 3200 }, { x: 3199, y: 0 }, 9), null);
+  let boundary = 0;
+  while (boundary < 20000 && getZoneAt(boundary,0).level === getZoneAt(boundary+16,0).level) boundary += 8;
+  const originLevel = getZoneAt(boundary,0).level;
+  assert.ok(boundary < 20000);
+  assert.equal(portalLanding({ ...world, blocked: (x,y) => getZoneAt(x,y).level === originLevel }, { x: boundary, y: 0 }, 9), null);
   const sim = new Simulation({ ...world, blocked: (_x, y) => y > -500 }, { spawn: false });
   sim.player.x = 0; sim.player.y = anchor.y; sim.travel.returnTo = { x: 0, y: 0, town: 0 };
   let saved = false;
@@ -136,7 +141,7 @@ test('town anchors are reachable and changing home is a persisted interaction wi
 
 test('travel validation rejects invalid coordinates and identities; current saves may omit an unused portal', () => {
   for (const value of [null, {}, { homeTown: 1.5, returnTo: null }, { homeTown: 0, returnTo: {} },
-    { homeTown: 0, returnTo: { x: Infinity, y: 0, town: 0 } }, { homeTown: 12500, returnTo: null }]) assert.equal(validTravel(value), false);
+    { homeTown: 0, returnTo: { x: Infinity, y: 0, town: 0 } }, { homeTown: 1000000001, returnTo: null }]) assert.equal(validTravel(value), false);
   assert.ok(validTravel(freshTravel()));
   const sim = new Simulation(world, { spawn: false });
   const record = { version: 3, id: 'current-character', name: 'Traveler', createdAt: 1, updatedAt: 1, worldSeed: 7319, worldVersion: 4, checkpoint: sim.captureCheckpoint() };
