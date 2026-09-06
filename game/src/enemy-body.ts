@@ -1,6 +1,7 @@
 import type { EnemyKind } from './model.ts';
 
 export const ENEMY_BODY_BOUNDS: Record<EnemyKind, { radiusX: number; top: number; bottom: number }> = {
+  warden: { radiusX: 45, top: -110, bottom: 8 },
   goblin: { radiusX: 16, top: -30, bottom: 3 },
   goblinChief: { radiusX: 23, top: -56, bottom: 4 },
   stalker: { radiusX: 14, top: -43, bottom: 3 },

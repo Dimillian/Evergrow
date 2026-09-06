@@ -1,3 +1,8 @@
+import { DungeonWorld } from './dungeon-world.ts';
+import { generateDungeon, type DungeonEntrance } from './dungeon.ts';
+import { currentDungeon } from './dungeon-state.ts';
+import { planDungeonTravel, claimDungeonChest, dungeonChestProblem, type DungeonAction } from './dungeon-command.ts';
+import { DungeonMap, drawCryptMinimap } from './dungeon-map.ts';
 import { EventPanel } from './poi-panel.ts';
 import { focusEvent, eventLabel, isEventKind, type EventSite, type EventChoice } from './poi-content.ts';
 import { executeEvent, eventProblem } from './poi-command.ts';
@@ -39,7 +44,10 @@ import type { Input } from './model.ts';
 /** Coordinates browser lifecycle, simulation and presentation; system rules live in their owners. */
 export class Game {
   private lifetime = new Lifetime();
-  world = this.lifetime.own(new World(7319));
+  readonly overworld = this.lifetime.own(new World(7319));
+  world: World = this.overworld;
+  private dungeonMap: DungeonMap;
+  private activeDungeonEntrance: DungeonEntrance | null = null;
   sim = new Simulation(this.world, { seed: 7319 });
   renderer: Renderer;
   audio: GameAudio;
@@ -84,6 +92,7 @@ export class Game {
   constructor(root: HTMLElement) {
     this.lifetime.defer(() => this.abort.abort());
     this.lifetime.defer(() => cancelAnimationFrame(this.animation));
+    this.lifetime.defer(() => { if(this.world !== this.overworld) this.world.dispose(); });
     try {
       this.renderer = new Renderer();
       this.audio = this.lifetime.own(new GameAudio());
@@ -106,11 +115,11 @@ export class Game {
       const uiContext = this.uiCanvas.getContext('2d');
       if (!uiContext) throw new Error('The HUD requires a 2D canvas context.');
       this.uiContext = uiContext;
-      this.worldMap = new WorldMap(this.world, this.exploration, this.shell.mapMount, () => this.closeMap());
+      this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap());
       this.lifetime.defer(() => this.worldMap.dispose());
       this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
-    this.worldMap.setEventStateReader(poi => { const record = this.sim.eventState.sites[poi.id]; return isEventKind(poi.kind) ? eventLabel(record ?? { id: poi.id, kind: poi.kind }, this.sim.eventState, this.sim.getCampState(poi.id) === 'cleared') : null; });
-    this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.world.getPortalAnchor(band)));
+    this.worldMap.setEventStateReader(poi => { if(poi.kind==='dungeon'){const run=this.sim.expeditions.runs.find(r=>r.entrance.id===poi.id);return run?(run.states.warden.hp<=0?'Cleared':'Expedition active'):null;} const record = this.sim.eventState.sites[poi.id]; return isEventKind(poi.kind) ? eventLabel(record ?? { id: poi.id, kind: poi.kind }, this.sim.eventState, this.sim.getCampState(poi.id) === 'cleared') : null; });
+    this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.overworld.getPortalAnchor(band)));
       this.inventoryPanel = this.lifetime.own(new InventoryPanel(this.shell.panelMount, {
         close: () => this.closeCharacterPanel(),
         equip: (index, slot) => this.characterAction({ type: 'equip', index, slot }),
@@ -131,13 +140,15 @@ export class Game {
       this.servicePanel = this.lifetime.own(new ServicePanel(this.shell.panelMount, {
         close: () => this.resume(), trade: quote => this.trade(quote),
       }));
+      this.dungeonMap = this.lifetime.own(new DungeonMap(this.shell.mapMount,()=>this.closeMap(),()=>this.worldMap.open({x:this.sim.expeditions.surfaceX,y:this.sim.expeditions.surfaceY,angle:0})));
       this.eventPanel = this.lifetime.own(new EventPanel(this.shell.panelMount, {
+        enter: entrance => { this.resume(); this.switchDungeon({kind:'enter',entrance}); },
         close: () => this.resume(), choose: (site, choice) => { this.resume(); this.startEvent(site, choice); },
       }));
       this.panels = new PanelCoordinator({
-        event: { open: () => { if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.activeEvent = null; } },
+        event: { open: () => { if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.activeEvent = null; this.activeDungeonEntrance = null; } },
         service: { open: () => { if (this.activeNPC) this.servicePanel.open(this.sim.player, this.activeNPC); }, close: () => { this.servicePanel.close(); this.activeNPC = null; } },
-        map: { open: () => { this.worldMap.open(this.sim.player); this.shell.setStatus('World map open. Game paused.'); }, close: () => this.worldMap.close() },
+        map: { open: () => { const run=currentDungeon(this.sim.expeditions); if(run) this.dungeonMap.open(this.sim.dungeonFloor!,run,this.sim.player); else this.worldMap.open(this.sim.player); this.shell.setStatus('World map open. Game paused.'); }, close: () => { this.worldMap.close(); this.dungeonMap.close(); } },
         character: { open: () => { this.inventoryPanel.open(this.sim.player); this.shell.setStatus('Character and inventory open. Game paused.'); }, close: () => this.inventoryPanel.close() },
         skills: { open: () => { this.skillPanel.open(this.sim.player); this.shell.setStatus('Skill tree open. Game paused.'); }, close: () => this.skillPanel.close() },
       }, {
@@ -309,6 +320,7 @@ export class Game {
   /** Defeat recovery keeps the character, allocations and loot; it never creates a new run. */
   start() {
     if (this.disposed || this.phase !== 'dead' || !this.session.active) return;
+    if(this.sim.dungeonFloor && !this.switchDungeon({kind:'death'})) return;
     this.sim.revive(); this.enterWorld(); this.saveCharacter();
   }
 
@@ -327,22 +339,23 @@ export class Game {
     if (this.phase !== 'ready') return;
     const record = this.session.load(index);
     if (!record) { this.titleScreen.message(this.session.error); return; }
+    this.setLocationWorld(record.checkpoint);
     this.sim.restoreCheckpoint(record.checkpoint);
     this.projectedBeacons.clear();
-    if (this.sim.player.dead) this.sim.revive();
+    if (this.sim.player.dead) { if(this.sim.dungeonFloor && !this.switchDungeon({kind:'death'})) return; this.sim.revive(); }
     this.sim.player.name = record.name;
     this.worldMap.dispose(); this.exploration.dispose();
-    this.exploration = new Exploration(this.world, { characterId: record.id,
+    this.exploration = new Exploration(this.overworld, { characterId: record.id,
       onDiscover: poi => {
         // Shops share their settlement announcement; landmarks deserve their own.
         if (!['blacksmith', 'merchant', 'inn', 'chapel', 'jeweler', 'enchanter'].includes(poi.kind))
           this.shell.notifications.push({ kind: 'discovery', poi });
       },
     });
-    this.worldMap = new WorldMap(this.world, this.exploration, this.shell.mapMount, () => this.closeMap());
+    this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap());
     this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
-    this.worldMap.setEventStateReader(poi => { const record = this.sim.eventState.sites[poi.id]; return isEventKind(poi.kind) ? eventLabel(record ?? { id: poi.id, kind: poi.kind }, this.sim.eventState, this.sim.getCampState(poi.id) === 'cleared') : null; });
-    this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.world.getPortalAnchor(band)));
+    this.worldMap.setEventStateReader(poi => { if(poi.kind==='dungeon'){const run=this.sim.expeditions.runs.find(r=>r.entrance.id===poi.id);return run?(run.states.warden.hp<=0?'Cleared':'Expedition active'):null;} const record = this.sim.eventState.sites[poi.id]; return isEventKind(poi.kind) ? eventLabel(record ?? { id: poi.id, kind: poi.kind }, this.sim.eventState, this.sim.getCampState(poi.id) === 'cleared') : null; });
+    this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.overworld.getPortalAnchor(band)));
     this.worldMap.resize(); this.titleScreen.close(); this.saveError = '';
     this.projectBeacons(); this.enterWorld(); this.saveCharacter();
   }
@@ -387,6 +400,7 @@ export class Game {
     const index = this.session.active.index;
     this.session.active = null;
     this.shell.notifications.clear();
+    if(this.world!==this.overworld)this.world.dispose(); this.world=this.overworld;this.sim.world=this.world;
     this.sim.reset(); this.renderer.reset();
     this.panels.transition('ready'); this.titleScreen.open(this.session.repository.list(), index);
   }
@@ -405,31 +419,75 @@ export class Game {
     if (this.phase === 'character' || this.phase === 'skills') this.resume();
   }
 
-  private interact(pointer?: { x: number; y: number }): boolean {
-    if (this.phase !== 'playing') return false;
-    const p = this.sim.player;
-    const anchor = this.nearbyAnchor(pointer);
-    if (anchor) {
-      if (this.sim.travel.returnTo?.town === anchor.band) this.travelThrough(anchor, true);
-      else {
-        const result = activatePortalAnchor(this.sim, anchor, c => this.persistTravel(c));
-        this.notify(result.message);
+  private interact(pointer?: {
+      x: number;
+      y: number;
+  }): boolean {
+      if (this.phase !== 'playing')
+          return false;
+      const p = this.sim.player;
+      const run = currentDungeon(this.sim.expeditions);
+      if (run) {
+          const f = this.sim.dungeonFloor!, hit = (q: {
+              x: number;
+              y: number;
+          }) => Math.hypot(p.x - q.x, p.y - q.y) < 75 && (!pointer || Math.hypot(pointer.x - q.x, pointer.y - (q.y - 20)) < 55);
+          const chest = f.chests.findIndex(hit);
+          if (chest >= 0) {
+              const problem = dungeonChestProblem(this.sim, chest);
+              if (problem)
+                  this.notify(problem);
+              else {
+                  this.sim.clearInput();
+                  this.sim.portal.cancel();
+                  this.sim.eventChannel.start({ ...f.chests[chest], kind: 'cryptChest', name: 'Crypt chest', index: chest }, null);
+              }
+              return true;
+          }
+          if (hit(f.entry) || (run.states.warden.hp <= 0 && hit(f.exit))) {
+              this.switchDungeon({ kind: 'exit' });
+              return true;
+          }
+          return false;
       }
+      const entrance = this.overworld.getDungeonEntrances(p.x - 80, p.y - 80, 160, 160).find(e => Math.hypot(e.x - p.x, e.y - p.y) < 75 && (!pointer || Math.hypot(pointer.x - e.x, pointer.y - (e.y - 20)) < 55));
+      if (entrance) {
+          this.activeDungeonEntrance = entrance;
+          this.panels.open('event');
+          return true;
+      }
+      const anchor = this.nearbyAnchor(pointer);
+      if (anchor) {
+          if (this.sim.travel.returnTo?.town === anchor.band)
+              this.travelThrough(anchor, true);
+          else {
+              const result = activatePortalAnchor(this.sim, anchor, c => this.persistTravel(c));
+              this.notify(result.message);
+          }
+          return true;
+      }
+      const npcs = this.world.getBuildings(p.x - 220, p.y - 220, 440, 440).map(buildingNPC).filter((npc): npc is TownNPC => npc !== null);
+      const npc = focusNPC(npcs, p, this.world, pointer);
+      if (!npc) {
+          const site = focusEvent(this.world.getEventSites(p.x - 100, p.y - 100, 200, 200), p, this.world, pointer);
+          if (!site)
+              return false;
+          const record = this.sim.eventState.sites[site.id];
+          if (!record && ['caravan', 'standingStones', 'graveyard'].includes(site.kind)) {
+              if (this.sim.eventState.trial && site.kind !== 'caravan') {
+                  this.notify('Finish the active trial.');
+                  return true;
+              }
+              this.activeEvent = site;
+              this.panels.open('event');
+          }
+          else
+              this.startEvent(site, record?.choice ?? null);
+          return true;
+      }
+      this.activeNPC = npc;
+      this.panels.open('service');
       return true;
-    }
-    const npcs = this.world.getBuildings(p.x - 220, p.y - 220, 440, 440).map(buildingNPC).filter((npc): npc is TownNPC => npc !== null);
-    const npc = focusNPC(npcs, p, this.world, pointer);
-    if (!npc) {
-      const site = focusEvent(this.world.getEventSites(p.x - 100, p.y - 100, 200, 200), p, this.world, pointer);
-      if (!site) return false;
-      const record = this.sim.eventState.sites[site.id];
-      if (!record && ['caravan', 'standingStones', 'graveyard'].includes(site.kind)) {
-        if (this.sim.eventState.trial && site.kind !== 'caravan') { this.notify('Finish the active trial.'); return true; }
-        this.activeEvent = site; this.panels.open('event');
-      } else this.startEvent(site, record?.choice ?? null);
-      return true;
-    }
-    this.activeNPC = npc; this.panels.open('service'); return true;
   }
 
   private startEvent(site: EventSite, choice: EventChoice | null): void {
@@ -440,15 +498,25 @@ export class Game {
   }
 
   private finishEvent(): void {
-    const channel = this.sim.eventChannel, site = channel.site;
-    if (!site || !channel.ready) return;
-    const target = site.kind === 'watchtower' ? this.world.getPOIs(site.x - 2400, site.y - 2400, 4800, 4800)
-      .filter(poi => poi.id !== site.id && !this.exploration.isDiscovered(poi.id) && Math.hypot(poi.x-site.x,poi.y-site.y)<=2400
-        && ['camp','watchtower','graveyard','standingStones','caravan','reliquary'].includes(poi.kind))
-      .sort((a,b)=>Math.hypot(a.x-site.x,a.y-site.y)-Math.hypot(b.x-site.x,b.y-site.y))[0] : undefined;
-    const result = executeEvent(this.sim, site, channel.choice, c => this.persistTravel(c), target);
-    channel.cancel(); this.notify(result.message);
-    this.projectBeacons();
+      const channel = this.sim.eventChannel, site = channel.site;
+      if (!site || !channel.ready)
+          return;
+      if (site.kind === 'cryptChest') {
+          const result = claimDungeonChest(this.sim, site.index, c => this.persistTravel(c));
+          channel.cancel();
+          if (result.ok)
+              this.renderer.handleEvents([{ type: 'blast', x: site.x, y: site.y, radius: 70, duration: .6, color: '#d7c18a' }], this.reducedMotion);
+          this.notify(result.message);
+          return;
+      }
+      const target = site.kind === 'watchtower' ? this.world.getPOIs(site.x - 2400, site.y - 2400, 4800, 4800)
+          .filter(poi => poi.id !== site.id && !this.exploration.isDiscovered(poi.id) && Math.hypot(poi.x - site.x, poi.y - site.y) <= 2400
+          && ['camp', 'watchtower', 'graveyard', 'standingStones', 'caravan', 'reliquary'].includes(poi.kind))
+          .sort((a, b) => Math.hypot(a.x - site.x, a.y - site.y) - Math.hypot(b.x - site.x, b.y - site.y))[0] : undefined;
+      const result = executeEvent(this.sim, site, channel.choice, c => this.persistTravel(c), target);
+      channel.cancel();
+      this.notify(result.message);
+      this.projectBeacons();
   }
 
   private projectBeacons(): void {
@@ -487,7 +555,35 @@ export class Game {
     if (problem) this.notify(problem);
   }
 
+  private setLocationWorld(checkpoint: CharacterCheckpoint) {
+      const run = checkpoint.expeditions && currentDungeon(checkpoint.expeditions);
+      if (this.world !== this.overworld)
+          this.world.dispose();
+      this.world = run ? new DungeonWorld(generateDungeon(run.entrance.seed, run.entrance.level), run.entrance) : this.overworld;
+      this.sim.world = this.world;
+  }
+  private switchDungeon(action: DungeonAction): boolean {
+      const result = planDungeonTravel(this.sim, action, this.overworld, c => this.persistTravel(c));
+      if (!result.ok) {
+          this.sim.portal.cancel();
+          this.notify(result.message);
+          return false;
+      }
+      this.setLocationWorld(result.checkpoint);
+      this.sim.restoreCheckpoint(result.checkpoint);
+      this.sim.relocate(this.sim.player.x, this.sim.player.y);
+      this.input.clear();
+      this.gamepad.clear();
+      this.renderer.reset();
+      this.renderer.snapTo(this.sim.player);
+      this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
+      this.shell.portalTransition();
+      this.canvas.focus();
+      this.notify(result.message);
+      return true;
+  }
   private travelThrough(anchor: PortalAnchor, returning: boolean) {
+    if(this.sim.dungeonFloor||returning&&this.sim.travel.returnTo?.dungeon){this.switchDungeon(returning?{kind:'return',anchor}:{kind:'town',anchor});return;}
     const result = executePortalTravel(this.sim, anchor, returning, c => this.persistTravel(c));
     if (!result.ok) { this.notify(result.message); return; }
     this.input.clear();
@@ -573,8 +669,9 @@ export class Game {
         if (!(event.type === 'cast' && event.enemyKind)) this.audio.play(event);
       }
       if (this.sim.eventChannel.ready) this.finishEvent();
-      if (this.sim.portal.ready) this.travelThrough(this.world.getPortalAnchor(this.sim.travel.homeTown), false);
-      const zone = getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed);
+      if (this.sim.portal.ready) this.travelThrough(this.overworld.getPortalAnchor(this.sim.travel.homeTown), false);
+      const run=currentDungeon(this.sim.expeditions);
+      const zone = run?{id:run.entrance.id,name:run.entrance.name,level:run.entrance.level}:getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed);
       if (this.areaNotices.update(zone.id, dt)) this.shell.notifications.push({ kind: 'area', id: zone.id, name: zone.name, level: zone.level });
       if (this.sim.player.dead) {
         this.panels.transition('dead', true);
@@ -605,8 +702,10 @@ export class Game {
     const p = this.sim.player, alpha = this.sim.interpolationAlpha;
     const mapPlayer = { x: p.prevX + (p.x - p.prevX) * alpha,
       y: p.prevY + (p.y - p.prevY) * alpha, angle: p.angle };
-    if (this.phase !== 'ready') this.worldMap.update(mapPlayer, dt);
-    if (this.phase !== 'ready') this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, now / 1000,
+    const dungeonRun=currentDungeon(this.sim.expeditions);
+    if (this.phase !== 'ready' && !dungeonRun) this.worldMap.update(mapPlayer, dt);
+    if (this.phase !== 'ready' && dungeonRun) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height);
+    if (this.phase !== 'ready' && !dungeonRun) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, now / 1000,
       this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
         x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
         y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind,

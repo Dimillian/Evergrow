@@ -15,7 +15,7 @@ Every character starts at level 1 with the same attributes, worn leather outfit,
 - Cleared camps and defeated members of partially cleared camps.
 - Explored terrain and discovered points of interest in a separate character-scoped chart.
 
-Derived stats and held equipment are rebuilt from the character sheet on load. In-flight attacks, projectiles, temporary buffs and live encounters are not serialized. Surviving enemies repopulate through the normal offscreen spawn rules; killed camp members stay dead, preventing duplicate deterministic camp loot. Loading a blocked position searches nearby clear ground and falls back to the starting refuge. Defeat preserves progression; returning to the refuge restores resources and clears combat transients.
+Derived stats and held equipment are rebuilt from the character sheet on load. In-flight attacks and projectiles are not serialized. Living actor recipes/health and wounded sleeping camp members are retained; restored actions restart safely. Timed POI blessings retain their remaining duration. New room/camp admission still follows offscreen rules; killed camp members stay dead, preventing duplicate deterministic camp loot. Loading a blocked position searches nearby clear ground and falls back to the starting refuge. Defeat preserves progression; returning to the refuge restores resources and clears combat transients.
 
 ## When saving happens
 
@@ -53,3 +53,9 @@ The creation layout compacts the eight save slots into two rows above the starte
 ## POI state (2026-09-06)
 
 Save v3 optionally carries `events`: up to 256 interacted sites, their committed choices and reward delivery masks, a fixed beacon target, and one active trial with up to six guardian identities/health/casualties. `character.blessing` stores one timed bonus. Absent fields mean no interactions or blessing; current v3 slots continue without a reset. Event commands persist a complete checkpoint before publishing rewards. Trial actors resume from recorded locations only when offscreen; missing actors do not count as defeated. Beacon discovery is an idempotent projection replayed into the character chart on load.
+
+## Dungeon checkpoints
+
+Optional v3 expedition state stores the active location, up to eight seeded floors, exact roster wounds/deaths and boss thresholds, chest-delivery masks, room discovery and suspended ground contents. Only one unfinished floor is permitted. The active location owns the checkpoint's top-level actors/loot; suspended locations own their separate contents, preventing duplicate item ownership. Travel return links can name an exact dungeon instance.
+
+Entering, leaving, town return and chest claims persist before live commitment. No location switch refills resources. Death recovery preserves dungeon progress. Surface roaming warmup and wounded sleeping camp state survive transitions; unloading grants no rewards. Validation checks floor membership, bounded collections, finite stats and item uniqueness across every retained location. The existing 700,000-character payload ceiling remains; storage failures leave live progress untouched. See [Dungeons](dungeons.md).

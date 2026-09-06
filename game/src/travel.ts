@@ -6,7 +6,7 @@ import { getZoneAt } from './zone-progression.ts';
 
 export const PORTAL_RULES = Object.freeze({ channel: 3, reach: 70, landingSearch: 80, protection: 1 });
 export interface PortalAnchor { band: number; name: string; x: number; y: number; }
-export interface TravelState { homeTown: number; returnTo: { x: number; y: number; town: number } | null; }
+export interface TravelState { homeTown: number; returnTo: { x: number; y: number; town: number; dungeon?: string } | null; }
 export const freshTravel = (): TravelState => ({ homeTown: 0, returnTo: null });
 export function townPortalAnchor(town: Settlement): PortalAnchor {
   return { band: Number(town.id.split(':').at(-1)), name: town.name,
@@ -16,7 +16,7 @@ export function validTravel(value: unknown): value is TravelState {
   if (!value || typeof value !== 'object') return false;
   const v = value as TravelState, band = (n: number) => Number.isSafeInteger(n) && n >= 0 && n <= 1000000000;
   return band(v.homeTown) && (v.returnTo === null || typeof v.returnTo === 'object' && !!v.returnTo
-    && band(v.returnTo.town) && [v.returnTo.x, v.returnTo.y].every(n => Number.isFinite(n) && Math.abs(n) <= 4e7));
+    && (v.returnTo.dungeon === undefined || typeof v.returnTo.dungeon === 'string' && v.returnTo.dungeon.startsWith('dungeon:') && v.returnTo.dungeon.length <= 180) && band(v.returnTo.town) && [v.returnTo.x, v.returnTo.y].every(n => Number.isFinite(n) && Math.abs(n) <= 4e7));
 }
 export function withinPortalReach(player: Pick<Player, 'x' | 'y' | 'dead'>, anchor: PortalAnchor, world: WorldQuery): boolean {
   return !player.dead && !world.blocked(player.x, player.y, 0) && !world.blocked(anchor.x, anchor.y, 0)
@@ -74,8 +74,8 @@ export function portalMapMarkers(state: TravelState, anchorAt: (band: number) =>
     const anchor = anchorAt(link.town);
     if (link.town === state.homeTown) markers.length = 0;
     markers.push({ id: 'travel:return', kind: 'portal', x: anchor.x, y: anchor.y,
-      name: `${anchor.name} · Return portal`, description: 'Interact in town to return to your expedition' },
-    { id: 'travel:departure', kind: 'portal', x: link.x, y: link.y,
+      name: `${anchor.name} · Return portal`, description: 'Interact in town to return to your expedition' });
+    if (!link.dungeon) markers.push({ id: 'travel:departure', kind: 'portal', x: link.x, y: link.y,
       name: 'Expedition return point', description: 'Your saved return destination' });
   }
   return markers;

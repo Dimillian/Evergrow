@@ -105,7 +105,7 @@ export function drawEventUI(c: CanvasRenderingContext2D, sim: Simulation, world:
     c.save();
     c.font = '13px "Evergrow Numerals", system-ui';
     c.textAlign = 'center';
-    const value = sim.eventChannel.site?.id === site.id ? `${label} · ${(sim.eventChannel.duration - sim.eventChannel.elapsed).toFixed(1)}s` : `${label}  [${gamepad ? 'A' : 'E'}]`;
+    const value = sim.eventChannel.site?.kind !== 'cryptChest' && sim.eventChannel.site?.id === site.id ? `${label} · ${(sim.eventChannel.duration - sim.eventChannel.elapsed).toFixed(1)}s` : `${label}  [${gamepad ? 'A' : 'E'}]`;
     const w = c.measureText(value).width + 20;
     c.fillStyle = '#071019ed';
     c.fillRect(point.x - w / 2, point.y - 16, w, 25);
@@ -114,7 +114,7 @@ export function drawEventUI(c: CanvasRenderingContext2D, sim: Simulation, world:
     c.restore();
   }
   const trial = sim.eventState.trial;
-  if (trial) {
+  if (trial && !sim.dungeonFloor) {
     const s = sim.eventState.sites[trial.siteId];
     text(c, s.name, 24, 90, 1.1, '#c5b0e1');
     text(c, eventLabel(s, sim.eventState, false), 24, 109, .95, '#d2d6cc');

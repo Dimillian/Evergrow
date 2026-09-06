@@ -1,3 +1,5 @@
+import { storedActor, type StoredActor } from './dungeon-state.ts';
+import { scaledEnemyStats } from './zone-progression.ts';
 import type { Enemy, Player, WorldQuery } from './model.ts';
 import type { CampMember, EnemyCamp } from './wilderness-sites.ts';
 import { ENCOUNTER_RULES, livingEnemyCount } from './encounter-director.ts';
@@ -15,6 +17,7 @@ export type SpawnCampMember = (member: CampMember, x: number, y: number, source:
 /** Exact, bounded run-local memory: sleeping enemies retain their original stats and life.
  * At the ledger ceiling later camps remain dormant; no existing camp is evicted or refilled. */
 export class CampPopulation {
+  private wounds = new Map<string,StoredActor>();
   private records = new Map<string, CampRecord>();
   private defeated = new Map<string, Set<string>>();
   defeatedMembers(): Record<string, string[]> {
@@ -29,7 +32,31 @@ export class CampPopulation {
   clearedIds(): string[] { return [...this.records.keys()].filter(id => this.getState(id) === 'cleared'); }
   restoreCleared(ids: readonly string[]): void { this.records.clear(); for (const id of ids) this.records.set(id, { members: [] }); }
   get recordedCount(): number { return new Set([...this.records.keys(), ...this.defeated.keys()]).size; }
-  reset(): void { this.records.clear(); this.defeated.clear(); }
+  adopt(enemies: readonly Enemy[]): void {
+      const groups = new Map<string, Enemy[]>();
+      for (const e of enemies)
+          if (e.campId && !e.campId.startsWith('event:') && !e.campId.startsWith('dungeon:')) {
+              const group = groups.get(e.campId) ?? [];
+              group.push(e);
+              groups.set(e.campId, group);
+          }
+      for (const [id, members] of groups)
+          this.records.set(id, { members });
+  }
+  captureWounds(active: readonly Enemy[]): StoredActor[] {
+      const wounds = new Map(this.wounds);
+      for (const record of this.records.values())
+          for (const e of record.members)
+              if (e.campMemberId) {
+                  if (e.hp <= 0 || active.includes(e) || e.hp >= e.maxHp)
+                      wounds.delete(e.campMemberId);
+                  else
+                      wounds.set(e.campMemberId, storedActor(e));
+              }
+      return [...wounds.values()];
+  }
+  restoreWounds(wounds: readonly StoredActor[]): void { this.wounds = new Map(wounds.map(w => [w.memberId!, w])); }
+  reset(): void { this.records.clear(); this.defeated.clear(); this.wounds.clear(); }
   getState(id: string): CampState {
     const record = this.records.get(id);
     return !record ? this.defeated.has(id) ? 'active' : 'dormant' : record.members.every(enemy => enemy.state === 'dead') ? 'cleared' : 'active';
@@ -115,9 +142,13 @@ export class CampPopulation {
       for (const member of livingMembers) {
         const enemy = spawn(member, camp.x + member.dx, camp.y + member.dy,
           { campId: camp.id, memberId: member.id, lootSeed: campMemberSeed(member.id) });
-        if (enemy) created.push(enemy);
+        if (enemy) {
+          const wound=this.wounds.get(member.id);
+          if(wound)Object.assign(enemy,scaledEnemyStats(wound.kind,wound.level,wound.rank),{hp:wound.hp,level:wound.level,biome:wound.biome,lootSeed:wound.seed});
+          created.push(enemy);
+        }
       }
-      if (created.length === livingMembers.length) this.records.set(camp.id, { members: created });
+      if (created.length === livingMembers.length) {this.records.set(camp.id, { members: created });for(const m of livingMembers)this.wounds.delete(m.id);}
       else {
         // A caller may reject a placement for an additional rule. Roll the garrison back atomically.
         for (const enemy of created) { const index = enemies.indexOf(enemy); if (index >= 0) enemies.splice(index, 1); }

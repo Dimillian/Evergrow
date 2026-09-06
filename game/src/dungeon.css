@@ -1,0 +1,6 @@
+.crypt-map { position:absolute; inset:0; z-index:35; display:grid; place-items:center; background:#020710a8; padding:24px; }
+.crypt-map[hidden] { display:none; }
+.crypt-map .ui-window { width:min(1200px,96vw); }
+.crypt-map canvas { display:block; width:100%; max-height:78vh; object-fit:contain; touch-action:none; cursor:grab; }
+
+.crypt-map-tooltip { position:fixed; z-index:90; pointer-events:none; padding:10px 14px; border:1px solid #7d9588; background:#09131bf5; color:#d7d9c4; font-size:16px; }

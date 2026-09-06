@@ -3,7 +3,7 @@ import type { Building } from './settlements.ts';
 import type { WildernessSite } from './wilderness-sites.ts';
 
 interface ViewBounds { left: number; top: number; width: number; height: number; }
-type SceneWorld = Pick<World, 'getProps' | 'getBuildings' | 'getWildernessSites' | 'getEventSites'>;
+type SceneWorld = Pick<World, 'getProps' | 'getBuildings' | 'getWildernessSites' | 'getEventSites'> & Partial<Pick<World, 'getDungeonEntrances'>>;
 const REFRESH_DISTANCE = 65;
 // Covers the tallest layered tree plus the permitted camera travel before refresh.
 const PROP_MARGIN = 300;
@@ -12,6 +12,7 @@ const SITE_MARGIN = 320;
 
 /** Only the current view is retained; world replacement always invalidates coverage. */
 export class SceneVisibility {
+  entrances: import('./dungeon.ts').DungeonEntrance[] = [];
   props: Prop[] = [];
   buildings: Building[] = [];
   sites: WildernessSite[] = [];
@@ -21,7 +22,7 @@ export class SceneVisibility {
 
   reset(): void {
     this.world = null; this.bounds = null;
-    this.props = []; this.buildings = []; this.sites = []; this.events = [];
+    this.entrances = []; this.props = []; this.buildings = []; this.sites = []; this.events = [];
   }
 
   update(world: SceneWorld, view: ViewBounds): void {
@@ -39,6 +40,7 @@ export class SceneVisibility {
     const sites = world.getWildernessSites(view.left - SITE_MARGIN, view.top - SITE_MARGIN,
       view.width + SITE_MARGIN * 2, view.height + SITE_MARGIN * 2);
     const events = world.getEventSites(view.left - SITE_MARGIN, view.top - SITE_MARGIN, view.width + SITE_MARGIN * 2, view.height + SITE_MARGIN * 2);
+    this.entrances = world.getDungeonEntrances?.(view.left - 100, view.top - 100, view.width + 200, view.height + 200) ?? [];
     this.events = events;
     this.props = props; this.buildings = buildings; this.sites = sites;
     this.world = world; this.bounds = { ...view };

@@ -1,5 +1,6 @@
 /** One kind registry serves generated places, saved discovery validation and map presentation. */
 export const POI_DEFINITIONS = {
+  dungeon: { label: 'Dungeon', color: '#a8c6ad' },
   reliquary: { label: 'Reliquary', color: '#d1bc8c' },
   portal: { label: 'Portal', color: '#bfade8' },
   town: { label: 'Settlement', color: '#e0c38b' },

@@ -1,3 +1,7 @@
+import { freshExpeditions, currentDungeon, syncDungeon, storedActor, type Expeditions, type LocationContents } from './dungeon-state.ts';
+import { dungeonFromState, updateDungeon } from './dungeon-runtime.ts';
+import type { DungeonFloor } from './dungeon.ts';
+import { updateWarden } from './dungeon-boss.ts';
 import { updateWarbands } from './warband.ts';
 import { freshEvents, syncTrial } from './poi-content.ts';
 import { EventChannel, advanceTrial } from './poi-runtime.ts';
@@ -58,6 +62,7 @@ export class Simulation {
   private eventTimer = 0;
   get nextEntityIdentity() { return this.nextId; }
   commitEventCheckpoint(saved: CharacterCheckpoint, xp: number, levels: number): void {
+    this.expeditions = saved.expeditions ?? freshExpeditions(); this.dungeonFloor = dungeonFromState(this);
     this.eventState = saved.events!; this.player.character = saved.character;
     this.player.level = saved.level; this.player.xp = saved.xp;
     this.groundItems = saved.groundItems; this.groundGold = saved.groundGold!;
@@ -79,7 +84,9 @@ export class Simulation {
   private skillBuffer: { slot: number; until: number } | null = null;
   time = 0;
   kills = 0;
-  readonly world: WorldQuery;
+  world: WorldQuery;
+  expeditions: Expeditions = freshExpeditions();
+  dungeonFloor: DungeonFloor | null = null;
   private options: SimulationOptions;
   private randomState = 1;
   private accumulator = 0;
@@ -104,6 +111,7 @@ export class Simulation {
   }
 
   reset(): void {
+    this.expeditions = freshExpeditions(); this.dungeonFloor = null;
     this.eventState = freshEvents(); this.eventChannel.cancel(); this.eventTimer = 0;
     this.travel = freshTravel(); this.portal.cancel(); this.arrivalProtection = 0;
     this.player = initialPlayer(this.options.startX!, this.options.startY!);
@@ -126,10 +134,15 @@ export class Simulation {
     this.roaming.reset(this.player.x, this.player.y);
   }
 
+  reserveIdentity(next:number):void { this.nextId=Math.max(this.nextId,next); }
+  captureContents(): LocationContents {
+      return JSON.parse(JSON.stringify({ campWounds: this.camps.captureWounds(this.enemies), actors: this.enemies.filter(e => e.hp > 0).map(storedActor), groundItems: this.groundItems, groundGold: this.groundGold, pickups: this.pickups, clearedCamps: this.camps.clearedIds(), defeatedCampMembers: this.camps.defeatedMembers() }));
+  }
   captureCheckpoint(): CharacterCheckpoint {
     const p = this.player;
+    const run = currentDungeon(this.expeditions); if (run) syncDungeon(run,this.enemies,p.x,p.y);
     syncTrial(this.eventState, this.enemies);
-    return JSON.parse(JSON.stringify({ events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
+    return JSON.parse(JSON.stringify({ campWounds:this.camps.captureWounds(this.enemies), roaming:this.roaming.capture(), expeditions: this.expeditions, actors: this.enemies.filter(e=>e.hp>0).map(storedActor), pickups: this.pickups, events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
       x: p.x, y: p.y, angle: p.angle, hp: p.hp, mana: p.mana, dead: p.dead,
       flasks: p.flasks, healCooldown: p.healCooldown, dodgeCharges: p.dodgeCharges, dodgeRecharge: p.dodgeRecharge,
       skillCooldowns: p.skillCooldowns, time: this.time, kills: this.kills,
@@ -141,6 +154,7 @@ export class Simulation {
   restoreCheckpoint(checkpoint: CharacterCheckpoint): void {
     this.reset();
     const saved = JSON.parse(JSON.stringify(checkpoint)) as CharacterCheckpoint;
+    this.expeditions = saved.expeditions ?? freshExpeditions(); this.dungeonFloor = dungeonFromState(this);
     this.eventState = saved.events ?? freshEvents();
     this.travel = saved.travel ?? freshTravel();
     if (saved.dead) this.travel.returnTo = null;
@@ -163,8 +177,16 @@ export class Simulation {
     this.randomState = saved.randomState; this.spawnOrdinal = saved.spawnOrdinal; this.killRecharge = saved.killRecharge;
     this.camps.restoreCleared(saved.clearedCamps); this.camps.restoreDefeated(saved.defeatedCampMembers); this.groundItems = saved.groundItems;
     this.groundGold = saved.groundGold ?? [];
-    this.nextId = Math.max(1, ...saved.groundItems.map(item => item.id + 1), ...this.groundGold.map(pile => pile.id + 1));
-    this.roaming.reset(p.x, p.y);
+    this.nextId = Math.max(1, ...saved.groundItems.map(item => item.id + 1), ...this.groundGold.map(pile => pile.id + 1), ...(saved.pickups??[]).map(p=>p.id+1));
+    for (const actor of saved.actors ?? []) {
+      const enemy=this.spawnEnemy(actor.kind,actor.x,actor.y,actor.rank, actor.campId ? {campId:actor.campId,memberId:actor.memberId!,lootSeed:actor.seed} : undefined);
+      if(enemy)Object.assign(enemy,scaledEnemyStats(actor.kind,actor.level,actor.rank),{level:actor.level,biome:actor.biome,lootSeed:actor.seed,hp:actor.hp,homeX:actor.homeX,homeY:actor.homeY,bossPhases:actor.bossPhases,state:'idle',stateDuration:1});
+    }
+    this.camps.adopt(this.enemies); this.camps.restoreWounds(saved.campWounds??[]); this.pickups=saved.pickups??[];
+    this.reserveIdentity(Math.max(1,...this.pickups.map(i=>i.id+1)));
+    this.randomState=saved.randomState; this.spawnOrdinal=saved.spawnOrdinal;
+    this.events=[];
+    if(saved.roaming)this.roaming.restore(saved.roaming,p.x,p.y);else this.roaming.reset(p.x, p.y);
   }
 
   revive(): void {
@@ -243,8 +265,8 @@ export class Simulation {
     const stats = ENEMY_DEFINITIONS[kind];
     if (this.world.isSanctuary?.(x, y)) return null;
     if (livingEnemyCount(this.enemies) >= ENCOUNTER_RULES.hardPopulationCap || this.world.blocked(x, y, stats.radius)) return null;
-    const level = getZoneAt(x, y, this.world.seed).level, scaled = scaledEnemyStats(kind, level, rank);
-    const biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
+    const level = this.world.dungeonLevel ?? getZoneAt(x, y, this.world.seed).level, scaled = scaledEnemyStats(kind, level, rank);
+    const biome = this.world.dungeonBiome ?? (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
     const lootSeed = source?.lootSeed ?? enemyLootSeed(this.options.seed!, ++this.spawnOrdinal, x, y);
     const enemy: Enemy = {
       id: this.nextId++, level, rank, biome, lootSeed, ...scaled,
@@ -299,15 +321,15 @@ export class Simulation {
       if (!blessing.remaining) { delete this.player.character.blessing; refreshCharacter(this.player); }
     }
     this.eventTimer -= dt;
-    if (this.eventTimer <= 0) {
+    if (!this.dungeonFloor && this.eventTimer <= 0) {
       this.eventTimer = .5;
       advanceTrial({ state: this.eventState, player: this.player, enemies: this.enemies, world: this.world, view: this.spawnExclusion,
         spawn: (kind, x, y, rank, source) => this.spawnEnemy(kind, x, y, rank, source) });
     }
     this.portal.advance(dt, this.player, input);
-    this.updateSpawns(dt);
+    if(this.dungeonFloor) updateDungeon(this,this.spawnExclusion); else this.updateSpawns(dt);
     this.enemies = this.enemies.filter(e => e.state !== 'dead' || e.stateTime < ENCOUNTER_RULES.corpseDuration);
-    if (this.spawnExclusion) this.enemies = this.enemies.filter(enemy =>
+    if (!this.dungeonFloor && this.spawnExclusion) this.enemies = this.enemies.filter(enemy =>
       !shouldRetireRoamer(enemy, this.player, this.spawnExclusion!, this.roaming.heading));
   }
 
@@ -538,7 +560,7 @@ export class Simulation {
       if (enemy.state === 'dead') continue;
       if (!advanceEnemyStatuses(enemy, dt,
         (actor, amount) => this.damageEnemy(actor, amount, 0, false, true))) continue;
-      updateEnemyAI(enemy, dt, context);
+      if(enemy.kind==='warden') updateWarden(enemy,dt,context); else updateEnemyAI(enemy, dt, context);
       if (p.dead) break;
     }
     for (const enemy of this.enemies) {

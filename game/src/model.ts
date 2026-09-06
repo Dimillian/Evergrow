@@ -4,6 +4,9 @@ import type { EnemyCamp } from './wilderness-sites.ts';
 import type { EnemyRank } from './progression-content.ts';
 
 export interface WorldQuery {
+  readonly dungeonLevel?: number;
+  readonly dungeonBiome?: BiomeId;
+  navigationTarget?(x:number,y:number,tx:number,ty:number):{x:number;y:number};
   readonly seed?: number;
   blocked(x: number, y: number, radius: number): boolean;
   /** Settlements suppress hostile spawns and protect the player's occupied position. */
@@ -158,10 +161,12 @@ export interface Player {
   dead: boolean;
 }
 
-export type EnemyKind = 'stalker' | 'brute' | 'caster' | 'hound' | 'archer' | 'wisp' | 'goblin' | 'goblinChief';
+export type EnemyKind = 'stalker' | 'brute' | 'caster' | 'hound' | 'archer' | 'wisp' | 'goblin' | 'goblinChief' | 'warden';
 export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
 
 export interface Enemy {
+  bossPhases?: number; bossTurns?: number; bossHits?: number; controlImmunity?: number;
+  bossMove?: 'sweep'|'fracture'|'summon';
   /** Ephemeral orders; camp membership and casualties own persistent identity. */
   commanderId?: number;
   commandClock?: number;

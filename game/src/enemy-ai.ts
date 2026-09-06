@@ -33,6 +33,7 @@ function separatedMotion(enemy: Enemy, vx: number, vy: number, context: EnemyAIC
 }
 
 function moveToward(enemy: Enemy, x: number, y: number, speed: number, dt: number, context: EnemyAIContext): void {
+  if (context.world.navigationTarget && !context.visible(enemy.x, enemy.y, x, y)) { const target = context.world.navigationTarget(enemy.x,enemy.y,x,y); x=target.x; y=target.y; }
   const dx = x - enemy.x, dy = y - enemy.y, distance = Math.hypot(dx, dy);
   if (distance < .1) return;
   // A patrol target drifts much more slowly than a hound can run. Arrive gently
@@ -154,7 +155,7 @@ export function updateEnemyAI(enemy: Enemy, dt: number, context: EnemyAIContext)
   sense(enemy, dt, context);
   const homeDistance = Math.hypot(enemy.x - enemy.homeX, enemy.y - enemy.homeY);
   if ((enemy.state === 'chase' || enemy.state === 'windup' || enemy.state === 'recover')
-    && (homeDistance > ENEMY_AI_RULES.tetherDistance || enemy.lostSightTime > ENEMY_AI_RULES.loseSightAfter)) {
+    && (homeDistance > (context.world.dungeonLevel ? 1800 : ENEMY_AI_RULES.tetherDistance) || enemy.lostSightTime > (context.world.dungeonLevel ? 14 : ENEMY_AI_RULES.loseSightAfter))) {
     disengage(enemy); returnHome(enemy, dt, context); return;
   }
   if (enemy.state === 'idle' || enemy.state === 'patrol') {

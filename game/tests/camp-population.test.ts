@@ -326,3 +326,14 @@ test('saved camp casualties do not respawn or duplicate rewards when the rest of
   const third = harness(); third.ledger.restoreCleared(second.ledger.clearedIds()); third.ledger.restoreDefeated(second.ledger.defeatedMembers());
   third.update([camp]); assert.equal(third.sim.enemies.length, 0); assert.equal(third.ledger.getState(camp.id), 'cleared');
 });
+
+
+test('suspended wounded camps restore full garrisons without healing or reviving casualties', () => {
+  const first=harness(),camp=blueprint();first.update([camp]);
+  first.sim.enemies[0].hp=0;first.sim.enemies[0].state='dead';first.sim.enemies[1].hp=7;
+  first.sim.player.x=4000;first.update([]);
+  const wounds=first.ledger.captureWounds(first.sim.enemies);assert.equal(wounds.length,1);
+  const next=harness();next.ledger.restoreWounds(wounds);next.ledger.restoreDefeated(first.ledger.defeatedMembers());
+  next.update([camp]);assert.equal(next.sim.enemies.length,2);assert.equal(next.sim.enemies.find(e=>e.kind==='archer')!.hp,7);
+  assert.equal(next.ledger.captureWounds(next.sim.enemies).length,0,'active actors own their wounds');
+});

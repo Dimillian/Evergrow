@@ -22,6 +22,7 @@ const abort = new AbortController();
 const scenes: Array<{ canvas: HTMLCanvasElement; poses: CharacterPose[]; groundItem?: ReturnType<typeof generateItem> }> = [];
 const base = { angle: 1.15, time: 2.7, moving: 0, attack: 0, attackAngle: 1.15, hitFlash: 0, dodging: false };
 const roles: Record<EnemyKind, { role: string; detail: string; attack: number }> = {
+  warden: { role: 'Crypt boss', detail: 'Grave sweep, root fractures and finite guardians.', attack: -.6 },
   goblin: { role: 'Swarm', detail: 'Small blades, quick feet; rushes and flanks under a chief.', attack: .45 },
   goblinChief: { role: 'Commander', detail: 'War horn and iron trophy banner; death scatters its followers.', attack: -.7 },
   stalker: { role: 'Flanker', detail: 'Burial shroud · split skull · hooked limbs', attack: -.72 },

@@ -63,6 +63,7 @@ test('spawned actors and actual melee/projectile contact use the authored enemy 
     const enemy = sim.spawnEnemy(kind, definition.attack === 'melee' ? -20 : -200, 0)!;
     assert.equal(enemy.hp, definition.hp); assert.equal(enemy.maxHp, definition.hp); assert.equal(enemy.radius, definition.radius);
     enemy.attackAngle = 0;
+    if (kind === 'warden') enemy.bossMove = 'sweep';
     if (definition.attack === 'melee') {
       enemy.state = 'attack'; enemy.stateDuration = definition.active;
       sim.update(FIXED_STEP, idle);

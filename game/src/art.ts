@@ -1,3 +1,4 @@
+import { warden } from './dungeon-art.ts';
 import { goblin, goblinChief } from './goblin-art.ts';
 import type { CharacterPose } from './art-types.ts';
 import { clamp, mixColor, type Color } from './art-primitives.ts';
@@ -14,7 +15,7 @@ export { ArtLibrary } from './prop-art.ts';
 // Adding an enemy kind must provide its drawing explicitly instead of silently
 // falling through to another creature's artwork.
 const enemies: Record<Exclude<CharacterPose['kind'], 'player'>,
-  (ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color) => void> = { stalker, brute, caster, hound, archer, wisp, goblin, goblinChief };
+  (ctx: CanvasRenderingContext2D, pose: CharacterPose, color: Color) => void> = { warden, stalker, brute, caster, hound, archer, wisp, goblin, goblinChief };
 
 /** Draw an articulated figure around (0, 0), its ground-contact point. */
 export function drawHumanoid(ctx: CanvasRenderingContext2D, pose: CharacterPose): void {

@@ -33,6 +33,8 @@ export class RoamingEncounters {
   private warmup: number = ROAMING_RULES.warmupPopulation;
   readonly heading: TravelHeading = { x: 1, y: 0 };
 
+  capture() { return { warmup:this.warmup,cooldown:this.cooldown,requiredDistance:this.requiredDistance }; }
+  restore(value:{warmup:number;cooldown:number;requiredDistance:number},x:number,y:number) { this.warmup=value.warmup;this.cooldown=value.cooldown;this.requiredDistance=value.requiredDistance;this.relocate(x,y); }
   reset(x: number, y: number): void {
     this.lastX = x; this.lastY = y; this.distance = 0;
     this.requiredDistance = ROAMING_RULES.minTravel; this.cooldown = 0;

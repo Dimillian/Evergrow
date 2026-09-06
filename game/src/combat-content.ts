@@ -65,6 +65,7 @@ export type EnemyDefinition = EnemyBaseDefinition & (
 );
 
 export const ENEMY_DEFINITIONS: Readonly<Record<EnemyKind, EnemyDefinition>> = Object.freeze({
+  warden: Object.freeze({ name: 'The Hollow Warden', hp: 1800, xpReward: 120, radius: 24, speed: 66, windup: .9, active: .22, recovery: 1, range: 125, damage: 18, aimLock: .1, attack: 'melee', arc: Math.PI * 1.3, lungeSpeed: 0, awarenessDistance: 700, preferredDistance: 100, role: 'heavy', knockbackDistance: 0, interruptible: false }),
   goblin: Object.freeze({ name: 'Scrap Goblin', hp: 22, xpReward: 6, radius: 6, speed: 132,
     windup: .38, active: .15, recovery: .6, range: 22, damage: 5, aimLock: .13,
     attack: 'melee', arc: Math.PI * .55, lungeSpeed: 70,

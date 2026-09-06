@@ -1,3 +1,4 @@
+import { dungeonEntrances } from './dungeon-entrances.ts';
 import { queryEventSites } from './poi-sites.ts';
 import { townPortalAnchor } from './travel.ts';
 import { drawGroundPatches } from './ground-art.ts';
@@ -164,6 +165,8 @@ export class World {
     return result.sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
   }
 
+  getDungeonEntrances(x:number,y:number,w:number,h:number) { return dungeonEntrances(this,x,y,w,h); }
+
   getEventSites(x: number, y: number, width: number, height: number) { return queryEventSites(this, x, y, width, height); }
 
   getEnemyCamps(x: number, y: number, width: number, height: number): EnemyCamp[] {
@@ -186,7 +189,7 @@ export class World {
 
   getPOIs(x: number, y: number, width: number, height: number): POI[] {
     if (!validWorldRectangle(x, y, width, height)) return [];
-    const result = [...this.getSettlements(x, y, width, height).flatMap(settlementPOIs),
+    const result = [...this.getDungeonEntrances(x,y,width,height).map(e=>({...e,kind:'dungeon' as const,description:`Level ${e.level} · Rootbound Crypt`})), ...this.getSettlements(x, y, width, height).flatMap(settlementPOIs),
       ...this.getWildernessSites(x, y, width, height).map(wildernessPOI),
       ...this.getEventSites(x, y, width, height).filter(s => s.kind === 'reliquary').map(s => ({ ...s, kind: 'reliquary' as const, description: 'Open the roadside cache.' }))];
     const first: Prop = { id: 'shrine:origin', x: -85, y: -95, radius: 15, kind: 'shrine', seed: 0, scale: 1 };

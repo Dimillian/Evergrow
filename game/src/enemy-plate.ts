@@ -156,6 +156,6 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
   const healthLabel = `${compact(hp)} / ${compact(maxHp)}`;
   text(c, `Lv ${compact(enemy.level)}`, 11, 61, .78, UI.muted);
   text(c, healthLabel, w / 2, 61, Math.min(.8, (w - 114) / Math.max(1, textWidth(healthLabel))), UI.text, 'center');
-  text(c, rank.name, w - 11, 61, .78, rank.color, 'right');
+  text(c, enemy.kind==='warden'?'BOSS':rank.name, w - 11, 61, .78, rank.color, 'right');
   c.restore(); c.restore();
 }

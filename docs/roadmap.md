@@ -38,6 +38,12 @@ Selected 2026-09-05. Town portals implemented and code-verified; permanent waypo
 2. [Interactive POIs](interactive-pois.md): durable site/reward ledger, camp strongboxes and reliquaries; caravan choices and beacons; then graveyard/standing-stone trials.
 3. Validate travel/event persistence and exactly-once rewards together; static visual reviews followed by player testing. Initial rewards and timings are tuning proposals.
 
+## First dungeon delivered
+
+- [x] [Rootbound Crypt](dungeons.md): generated 13-room floor, persistent enemies, Warden mechanics, guarded/final chests, separate maps and location-aware saving/travel.
+- [ ] Player validation of pacing, navigation, difficulty and rewards.
+- [ ] Additional themes, deeper floors and broader graph templates after that feedback.
+
 ## Following the economy loop
 
 These are candidates, not authorization to implement them now:

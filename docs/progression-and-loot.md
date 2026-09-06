@@ -268,3 +268,7 @@ Nonstarter camp seeds divisible by three select a veteran/elite War Chief and 10
 The chief alternates six-second rush and surround phases, each with a 0.8-second horn warning. Rush grants nearby visible followers +20% speed and attack damage; surround widens their flanking approach. Orders reach 360 units and expire shortly after losing contact. Damage is captured at windup; killing the chief never changes an already committed hit. Surviving followers flee for 2.2 seconds once their current committed action finishes, then resume ordinary AI. Chief death does not itself clear the strongbox.
 
 Normal goblin equipment chance is 30% of the ordinary normal-enemy yield (8.4% instead of 28%); dropped equipment uses the same common-heavy rarity and source-level tables. Gold amount is also multiplied by 0.3 and rounded; its independent drop chance is unchanged. First-kill equipment guarantee and ordinary potion kill credit still apply. Chiefs use ordinary rank rewards. This keeps dense packs from multiplying equipment/gold income as much as an equal number of full enemies.
+
+## Dungeon rewards
+
+Rootbound Crypt fixes its level to entrance geography + 1. Floor coordinates never affect source levels. Ordinary enemies use the existing tables. The Hollow Warden awards 120 baseline XP (six normal Stalkers), adjusted by the usual level gap, and no generic equipment/gold roll. Guarded and final chests use normal/veteran/elite source-level recipes and exactly-once physical delivery; see [Dungeons](dungeons.md) for the item/gold budgets.

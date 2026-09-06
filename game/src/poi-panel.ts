@@ -1,3 +1,4 @@
+import type { DungeonEntrance } from './dungeon.ts';
 import { BLESSINGS, blessingChoices, type EventSite, type EventChoice } from './poi-content.ts';
 import { escapeUI, trapDialogFocus } from './ui-components.ts';
 import './poi-panel.css';
@@ -7,12 +8,15 @@ export class EventPanel {
   private focus: {
     dispose(): void;
   } | null = null;
+  private entrance: DungeonEntrance | null = null;
   private site: EventSite | null = null;
   private hooks: {
+    enter?(entrance:DungeonEntrance):void;
     close(): void;
     choose(site: EventSite, choice: EventChoice | null): void;
   };
   constructor(mount: HTMLElement, hooks: {
+    enter?(entrance:DungeonEntrance):void;
     close(): void;
     choose(site: EventSite, choice: EventChoice | null): void;
   }) {
@@ -27,9 +31,14 @@ export class EventPanel {
         return;
       if (button.dataset.close !== undefined)
         this.hooks.close();
+      else if(this.entrance) this.hooks.enter?.(this.entrance);
       else if (this.site)
         this.hooks.choose(this.site, (button.dataset.choice || null) as EventChoice | null);
     }, { signal: this.lifetime.signal });
+  }
+  openDungeon(entrance:DungeonEntrance) {
+    this.entrance=entrance;this.element.innerHTML=`<section class="ui-window event-window" role="dialog" aria-modal="true" aria-label="Dungeon entrance"><header class="ui-window-header"><h2 class="ui-title">${escapeUI(entrance.name)}</h2><span class="ui-muted">Level ${entrance.level}</span><button class="ui-button ui-button--icon" data-close aria-label="Close">×</button></header><div class="ui-window-body event-choices"><p>The Hollow Warden · One floor</p><button class="ui-button" data-enter>Enter crypt</button></div></section>`;
+    this.element.hidden=false;this.focus=trapDialogFocus(this.element,{signal:this.lifetime.signal});
   }
   open(site: EventSite) {
     this.site = site;
@@ -40,6 +49,6 @@ export class EventPanel {
     this.element.hidden = false;
     this.focus = trapDialogFocus(this.element, { signal: this.lifetime.signal });
   }
-  close() { this.focus?.dispose(); this.focus = null; this.element.hidden = true; this.site = null; }
+  close() { this.focus?.dispose(); this.focus = null; this.element.hidden = true; this.site = null; this.entrance = null; }
   dispose() { this.close(); this.lifetime.abort(); this.element.remove(); }
 }

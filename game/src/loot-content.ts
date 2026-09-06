@@ -26,6 +26,7 @@ export function getLootTable(rank: EnemyRank): EnemyLootTable { return ENEMY_LOO
 
 /** All twelve equipment kinds remain eligible. The foe's archetype supplies a readable tendency. */
 export const ENEMY_ITEM_KIND_WEIGHTS: Readonly<Record<EnemyKind, Readonly<Record<ItemKind, number>>>> = Object.freeze({
+  warden: Object.freeze({ weapon: 24, shield: 6, grimoire: 4, orb: 4, head: 8, chest: 10, gloves: 7, legs: 7, boots: 7, cloak: 7, amulet: 8, ring: 8 }),
   goblin: Object.freeze({ grimoire: 1, orb: 1, weapon: 30, shield: 8, head: 5, chest: 5, gloves: 8, legs: 8, boots: 14, cloak: 6, amulet: 3, ring: 11 }),
   goblinChief: Object.freeze({ grimoire: 1, orb: 1, weapon: 30, shield: 14, head: 12, chest: 10, gloves: 6, legs: 6, boots: 6, cloak: 6, amulet: 3, ring: 5 }),
   stalker: Object.freeze({ grimoire: 2, orb: 2, weapon: 28, shield: 6, head: 8, chest: 8, gloves: 10, legs: 8, boots: 12, cloak: 8, amulet: 3, ring: 5 }),

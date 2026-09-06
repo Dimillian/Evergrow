@@ -1,6 +1,6 @@
 # Current system status
 
-Updated 2026-09-06 for the gamepad implementation checkpoint. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
+Updated 2026-09-06 for the Rootbound Crypt checkpoint. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
 
 ## Implemented systems
 
@@ -9,7 +9,7 @@ Updated 2026-09-06 for the gamepad implementation checkpoint. **Playable local p
 | Characters and saves | Eight browser-local slots; title hall, six starter loadouts in paired melee/magic/archery rows, equipped preview, level/power summary, continue/delete; autosave, backup recovery and stale-writer checks | No cloud sync, export/import or migrations |
 | Combat | Deterministic 120 Hz simulation; weapon basics, five assignable active slots, dodge, dual potion; 20 executable skills; melee/bow attack speed and independent staff/wand/magic cast speed | Player tests feel and balance; no automatic combos or default assigned spell |
 | Aiming and input | Swept ranged contacts, bounded aim assistance, aim feedback; standard gamepad analog movement/aim, combat bindings and menu navigation; neutral rearm and disconnect pause | Fixed Xbox-position labels; text entry, drag/drop and gameplay zoom still use keyboard/mouse; controller hardware/feel acceptance remains with the player |
-| Enemies | Eight archetypes, three ranks, patrol/LOS, flank/pounce/ranged/area patterns, home return; hound patrol arrival; goblin rush/surround commands and leader-death morale | No bosses or deep elite modifier pool |
+| Enemies | Eight archetypes, three ranks, patrol/LOS, flank/pounce/ranged/area patterns, home return; hound patrol arrival; goblin rush/surround commands and leader-death morale | Hollow Warden adds a ninth, dungeon-only archetype; deeper elite modifiers remain future work |
 | Spawning | 9–14 ambient target, 32 living actors total, nine slots reserved from camps; nine initial roamers, then travel/cooldown-driven groups; births fully offscreen | Larger populations need profiling; waiting on cleared ground does not refill it |
 | Progression | Fixed geographic danger, source-level rewards, XP level-gap factors, one skill and five stat points per level | Numeric level bound 1,000,000; not a balanced infinite endgame |
 | Equipment | Twelve kinds, five rarities, eleven slots; 17 generated weapons, 3 shields and 6 caster foci; shared affixes with curated caster rolls; visible procedural gear | Recipe-based +10 enhancement and enchanting; no unique legendary powers |
@@ -20,7 +20,8 @@ Updated 2026-09-06 for the gamepad implementation checkpoint. **Playable local p
 | Towns and interiors | Stable generated towns/cities, five building kinds, furnished walk-in interiors, roof fading and protected sanctuaries | Three procedural service NPC roles, nearby click/E interaction and pause-safe workbenches |
 | Town economy | Blacksmith equipment shop, jeweler jewelry stock, 12-item buyback, guaranteed +10, rarity upgrades, single/all-affix rerolls and geographic relevel | Deterministic stock refresh at levels 4/7/10…; initial prices require player balance feedback |
 | Town portal | Free three-second P channel, home-town anchors, saved single-use return endpoint, safe landing, native control/map markers and arrival protection | Permanent waypoint network and map travel remain specified |
-| Camps and landmarks | Four-/six-member camps plus 10–15-goblin warbands with a ranked chief; watchtowers, graveyards, standing stones and caravans; camp casualties persist with the character | Landmark interactions, chests and objective rewards remain absent |
+| Camps and landmarks | Four-/six-member camps plus 10–15-goblin warbands with a ranked chief; watchtowers, graveyards, standing stones and caravans; camp casualties persist with the character | Strongboxes, caravan choices, beacons, reliquaries and guardian trials implemented |
+| Dungeons | Rootbound Crypt: 13 rooms, two treasure chambers, persistent Warden, floor chart, fixed level, town/death returns and atomic chest rewards | One theme/floor, eight retained expeditions, 24 living actors; pacing awaits playtesting |
 | Maps | Smooth 0.05-scale minimap; 600-unit normal discovery radius; explored atlas with POI hover, conservative fog and per-character chart saves | No waypoint travel; 720 units is the reveal API ceiling, not the normal reveal radius |
 | Presentation | Procedural equipment/world art, layered trees, wind/wildlife, dynamic lighting, fixed restrained CRT/phosphor; readable native UI, enemy rank plates, animated deaths and fading remains | Hardware performance and visual acceptance remain separate from code checks |
 | UI foundation | Astral HUD, shared compact windows, consistent tooltip motion and item components; centralized panel lifecycle; point badges and compact notifications | Service panels reuse these components; equipped gear is separate and first |
@@ -97,14 +98,18 @@ Verification: `npm run check` passed with 559 code tests in the shared working t
 
 ## Exploration expansion proposal · 2026-09-06
 
-[Exploration, events and procedural dungeons](dungeons-and-events.md) specifies the proposed next loop: interactive landmarks, denser role-based packs, persistent procedural floors, a distinct boss and a completion chest. This is design work only; current landmarks, spawning, saves and combat remain unchanged.
+[Exploration, events and procedural dungeons](dungeons-and-events.md) specifies the proposed next loop: interactive landmarks, denser role-based packs, persistent procedural floors, a distinct boss and a completion chest. This historical proposal now has implemented POIs, warbands and a first [Rootbound Crypt](dungeons.md) floor; additional themes and deeper floors remain planned.
 
 Caster equipment pass (2026-09-06): four one-handed wands, three grimoires, three orbs, visible 2H slot reservation and a two-hand upright staff pose. Save v3 remains valid; no test-progress reset is required. See [weapons and skills](weapons-and-skills.md).
 
 The large exploration map now uses detailed 128-pixel terrain tiles, actual woodland/rock anchors, brighter shared roads and roof plans. The minimap retains its original 32-pixel tiles and styling. Discovery masks and the shared 384-tile cache remain bounded; `/atlas.html?view=local` is the save-free close review.
 
-Interactive POIs delivered (2026-09-06): camp strongboxes, caravan goods/coin choices, watchtower reveals, two-wave graveyard vigils, three-guardian blessing trials and roadside reliquaries. Physical rewards use durable partial-delivery masks; wounds/casualties and one timed blessing persist. Bounds: 256 interacted sites, six guardian records, one active trial and the shared 24-actor population. Current v3 saves continue. `npm run check` passed with 587 tests in the shared working tree, strict/core compilation and production build. Static `/events.html` review uses the real renderer and shared panels without gameplay or saves. Dungeons remain proposed; see [Interactive POIs](interactive-pois.md).
+Interactive POIs delivered (2026-09-06): camp strongboxes, caravan goods/coin choices, watchtower reveals, two-wave graveyard vigils, three-guardian blessing trials and roadside reliquaries. Physical rewards use durable partial-delivery masks; wounds/casualties and one timed blessing persist. Bounds: 256 interacted sites, six guardian records, one active trial and the shared 24-actor population. Current v3 saves continue. `npm run check` passed with 587 tests in the shared working tree, strict/core compilation and production build. Static `/events.html` review uses the real renderer and shared panels without gameplay or saves. Dungeons were still proposed at that checkpoint; the current delivery is documented in [Dungeons](dungeons.md).
 
 Goblin warbands (2026-09-06): one third of generated nonstarter camps hold 10–15 Scrap Goblins and a veteran/elite War Chief. Horn warnings precede alternating rush (+20% movement/damage) and surround orders. Killing the chief breaks morale for 2.2 seconds. The shared population ceiling is now 32, reserving nine roaming slots. Goblins have lower individual XP and gear/gold yields; chiefs use normal rank reward tables. Camp casualties and strongbox completion use the existing persistence. No new boss rank or save schema is introduced.
 
 Goblin checkpoint verification: 593 code tests, strict application/headless TypeScript and production build passed in an isolated copy of the staged tree. Full-pack art was reviewed in the in-app browser; gameplay balance remains for player feedback.
+
+## Rootbound Crypt checkpoint (2026-09-06)
+
+The first full dungeon expedition is implemented: seeded collision-validated geometry, separate location saves, offscreen room rosters, a three-move Warden with finite adds, guarded/final chest transactions, dungeon maps, town return and death recovery. [Dungeons](dungeons.md) records the exact limits and review URL. Existing character slots need no dungeon-related reset. Gameplay difficulty and pacing await the user's playtest.

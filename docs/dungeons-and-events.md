@@ -1,5 +1,8 @@
 # Exploration, events and procedural dungeons
 
+**Implementation update, 2026-09-06:** POIs, warbands and the first Rootbound Crypt are implemented. This document preserves the design proposal; [Dungeons](dungeons.md) records the shipped prototype rules and explicit first-slice limits.
+
+
 Design proposal · 2026-09-06 · **Not implemented.** This extends [interactive POIs](interactive-pois.md), whose existing interaction/reward rules remain the starting point. All new population, duration, difficulty and reward numbers below are playtest targets, not current guarantees.
 
 ## Intended loop

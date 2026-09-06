@@ -79,7 +79,7 @@ test('invalid rewards are ignored and extreme rewards remain bounded with exact 
 });
 
 test('each enemy archetype awards its authored XP once on lethal melee contact', () => {
-  const expectedRewards: Record<EnemyKind, number> = { goblin: 6, goblinChief: 65, stalker: 20, caster: 30, brute: 50, hound: 22, archer: 28, wisp: 32 };
+  const expectedRewards: Record<EnemyKind, number> = { warden: 120, goblin: 6, goblinChief: 65, stalker: 20, caster: 30, brute: 50, hound: 22, archer: 28, wisp: 32 };
   for (const kind of Object.keys(expectedRewards) as EnemyKind[]) {
     const sim = new Simulation(emptyWorld, { spawn: false });
     const enemy = sim.spawnEnemy(kind, 36, 0)!;
@@ -87,10 +87,10 @@ test('each enemy archetype awards its authored XP once on lethal melee contact',
     enemy.stateDuration = 999;
     advance(sim, .25, { attack: true });
     assert.equal(enemy.state, 'dead', kind);
-    assert.equal(sim.player.xp, expectedRewards[kind], kind);
+    assert.equal(sim.player.xp, expectedRewards[kind] % 100, kind);
     assert.equal(ENEMY_DEFINITIONS[kind].xpReward, expectedRewards[kind]);
     advance(sim, 1, { attack: true });
-    assert.equal(sim.player.xp, expectedRewards[kind], 'later swings over the corpse do not award XP');
+    assert.equal(sim.player.xp, expectedRewards[kind] % 100, 'later swings over the corpse do not award XP');
     assert.equal(sim.kills, 1);
     assert.equal(sim.drainEvents().filter(event => event.type === 'kill').length, 1);
   }

@@ -19,11 +19,11 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
   const reward = Math.max(1, Math.round(enemy.xpReward * xpLevelFactor(player.level, enemy.level)));
   const levels = awardCharacterExperience(player, reward);
   context.emit({ type: 'experience', x: enemy.x, y: enemy.y, amount: reward });
-  const gold = Math.round(rollEnemyGold(enemy.lootSeed, enemy.level, enemy.rank) * (ENEMY_LOOT_YIELD[enemy.kind] ?? 1));
+  const gold = enemy.kind === 'warden' ? 0 : Math.round(rollEnemyGold(enemy.lootSeed, enemy.level, enemy.rank) * (ENEMY_LOOT_YIELD[enemy.kind] ?? 1));
   if (gold) dropGold(context.groundGold, { id: context.nextId(), x: enemy.x, y: enemy.y, amount: gold, age: 0 });
   if (levels) context.emit({ type: 'level', x: player.x, y: player.y,
     level: player.level, skillPoints: levels, statPoints: levels * 5, color: '#c0acf0' });
-  for (const item of rollEnemyLoot({ seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank,
+  for (const item of enemy.kind === 'warden' ? [] : rollEnemyLoot({ seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank,
     biome: enemy.biome, kind: enemy.kind, firstKill: kills === 1 })) {
     if (context.groundItems.length >= LOOT_RULES.maxGroundItems) break;
     context.groundItems.push({ id: context.nextId(), x: enemy.x, y: enemy.y, item });
