@@ -14,7 +14,7 @@ import type { EnemyKind } from './model.ts';
 import { drawBattleBark, measureBattleBark } from './battle-bark-art.ts';
 import { placeBattleBark } from './battle-bark-layout.ts';
 import { ENEMY_SPEECH_TOP } from './enemy-body.ts';
-import { canBark } from './battle-bark-content.ts';
+import { BARK_RULES, canBark } from './battle-bark-content.ts';
 
 // No simulation, input bindings, ticks, or saved state. These are frozen art poses.
 if (!import.meta.env.DEV) throw new Error('Local review only.');
@@ -44,7 +44,7 @@ root.innerHTML = `<header class="bestiary-header"><div><div class="ui-kicker">EV
 const grid = root.querySelector<HTMLElement>('.bestiary-grid')!;
 if (barks) {
   root.querySelector('h1')!.textContent = 'Ashglass battle barks';
-  root.querySelector('.bestiary-header p')!.textContent = '15% on engagement · Two seconds · At most three visible · Frozen actual models';
+  root.querySelector('.bestiary-header p')!.textContent = `${Math.round(BARK_RULES.chance * 100)}% on engagement · ${BARK_RULES.duration} seconds · At most ${BARK_RULES.maxVisible} visible · Frozen actual models`;
   root.classList.add('bestiary-barks');
 }
 function card(name: string, role: string, detail: string, poses: CharacterPose[], groundItem?: ReturnType<typeof generateItem>) {

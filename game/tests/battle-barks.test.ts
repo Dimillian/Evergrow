@@ -74,8 +74,8 @@ test('seven humanoid voices each have 20 unique short lines; hounds and wisps st
   update(barks, 0, ids(1, 2)); assert.equal(rolls, 0); assert.equal(barks.active.length, 0);
 });
 
-test('25% threshold rolls once per encounter; repeated alerts and failed rolls do not retry', () => {
-  for (const [random, count] of [[.249, 1], [.25, 0], [.99, 0]]) {
+test('30% threshold rolls once per encounter; repeated alerts and failed rolls do not retry', () => {
+  for (const [random, count] of [[.299, 1], [.30, 0], [.99, 0]]) {
     const barks = new BattleBarks(() => random);
     barks.noteEvents([edge(1)]); update(barks, 0); assert.equal(barks.active.length, count);
     for (let t = 1; t < 20; t++) { barks.noteEvents([edge(1, t)]); update(barks, t); }
