@@ -50,8 +50,8 @@ test('movement, offense, dodge, focus cleanup and active actions prevent or inte
 test('saved round trip preserves equipment, gold, resources, loot and existing actors; replay cannot travel again', () => {
   const sim = new Simulation(world, { spawn: false });
   const data = new Map<string, string>();
-  const session = new CharacterSession(new CharacterRepository({ getItem: k => data.get(k) ?? null, setItem: (k, v) => { data.set(k, v); } }), 7319, 4);
-  assert.ok(session.create(0, 'Traveler', sim.captureCheckpoint(), 'portal-test', 1));
+  const session = new CharacterSession(new CharacterRepository({ getItem: k => data.get(k) ?? null, setItem: (k, v) => { data.set(k, v); } }), 4);
+  assert.ok(session.create(0, 'Traveler', 7319, sim.captureCheckpoint(), 'portal-test', 1));
   const persist = (checkpoint: ReturnType<Simulation['captureCheckpoint']>) => ({ ok: session.save(checkpoint, 2), message: session.error });
   const enemy = sim.spawnEnemy('stalker', 1100, 0)!; enemy.hp = 11;
   ready(sim);

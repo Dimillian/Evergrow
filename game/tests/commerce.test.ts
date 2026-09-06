@@ -155,8 +155,8 @@ test('save-backed trade commits exactly once, preserves resources and rolls back
   const sim = new Simulation(world, { spawn: false }); const p = sim.player;
   p.x = 0; p.y = 0; p.character.gold = 10000; p.hp = 40; p.mana = 20;
   const npc = { ...smith, level: 1 }, data = new Map<string, string>(); let reject = false;
-  const session = new CharacterSession(new CharacterRepository({ getItem: k => data.get(k) ?? null, setItem: (k, v) => { if (reject) throw new Error('quota'); data.set(k, v); } }), 7319, 4);
-  assert.ok(session.create(0, 'Mara', sim.captureCheckpoint(), 'trade-character', 1));
+  const session = new CharacterSession(new CharacterRepository({ getItem: k => data.get(k) ?? null, setItem: (k, v) => { if (reject) throw new Error('quota'); data.set(k, v); } }), 4);
+  assert.ok(session.create(0, 'Mara', 7319, sim.captureCheckpoint(), 'trade-character', 1));
   const persist = (character: CharacterSheet, hp: number, mana: number) => ({ ok: session.save({ ...sim.captureCheckpoint(), character, hp, mana }, 2), message: session.error });
   const q = quoted(p.character, npc, { type: 'buy', slot: 0 }, 1), before = JSON.stringify(p);
   reject = true; assert.equal(executeService(p, npc, world, q, persist).ok, false); assert.equal(JSON.stringify(p), before);
@@ -182,10 +182,10 @@ test('vendor mask capacity never restores sold items and worst-case bounded comm
   c.inventory = Array.from({ length: 64 }, (_, i) => generateItem(9000 + i, 10, undefined, undefined, 'legendary'));
   c.commerce.buyback = Array.from({ length: 12 }, (_, i) => ({ item: generateItem(10000 + i, 10, undefined, undefined, 'legendary'), price: 100 }));
   const data = new Map<string, string>(), repo = new CharacterRepository({ getItem: key => data.get(key) ?? null, setItem: (key, value) => { data.set(key, value); } });
-  const session = new CharacterSession(repo, 7319, 4);
+  const session = new CharacterSession(repo, 4);
   const checkpoint = sim.captureCheckpoint();
   checkpoint.groundItems = Array.from({ length: 96 }, (_, i) => ({ id: i + 1, x: 0, y: 0, item: generateItem(11000 + i, 10, undefined, undefined, 'legendary') }));
-  assert.ok(session.create(0, 'Capacity', checkpoint, 'capacity-test', 1), session.error);
+  assert.ok(session.create(0, 'Capacity', 7319, checkpoint, 'capacity-test', 1), session.error);
   const record = repo.read(0).record!; assert.ok(JSON.stringify(record).length < 700000);
   const inconsistent = JSON.parse(JSON.stringify(record));
   const stock = vendorStock(sheet(), smith, 10)[1]!; inconsistent.checkpoint.character.inventory[0] = stock;
@@ -212,8 +212,8 @@ test('equipped upgrades persist in place with an empty bag and immediately refre
   refreshCharacter(p); p.hp = 30; p.mana = 15;
   const data = new Map<string, string>(), session = new CharacterSession(new CharacterRepository({
     getItem: k => data.get(k) ?? null, setItem: (k, v) => { data.set(k, v); },
-  }), 7319, 4);
-  assert.ok(session.create(0, 'Worn upgrades', sim.captureCheckpoint(), 'equipped-upgrades', 1));
+  }), 4);
+  assert.ok(session.create(0, 'Worn upgrades', 7319, sim.captureCheckpoint(), 'equipped-upgrades', 1));
   const persist = (character: CharacterSheet, hp: number, mana: number) => ({ ok: session.save({ ...sim.captureCheckpoint(), character, hp, mana }, 2), message: session.error });
   for (const slot of ['weapon', 'offhand'] as const) {
     const original = p.character.equipped[slot]!, id = original.id;

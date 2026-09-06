@@ -5,9 +5,10 @@ import type { SaveSlot } from './character-storage.ts';
 import type { Player } from './model.ts';
 import { STARTER_LOADOUTS, createStarterLoadout, isStarterLoadoutId, type StarterLoadoutId } from './items.ts';
 import { itemIconSVG } from './item-art.ts';
+import { parseWorldSeed } from './world-seed.ts';
 import './title-screen.css';
 
-export interface TitleActions { create(index: number, name: string, weapon: StarterLoadoutId): void; continue(index: number): void; remove(index: number): void; }
+export interface TitleActions { create(index: number, name: string, weapon: StarterLoadoutId, seed: number): void; continue(index: number): void; remove(index: number): void; }
 const format = (n: number) => Math.round(n).toLocaleString('en-US');
 const powerHint = 'Build estimate from basic-attack DPS and effective life. Active skills, mana sustain and enemy mechanics are not included.';
 
@@ -17,6 +18,7 @@ export class TitleScreen {
   private slots: SaveSlot[] = [];
   private selected = 0;
   private starter: StarterLoadoutId = STARTER_LOADOUTS[0].id;
+  private seedDrafts = new Map<number, string>();
   private player: Player = previewCharacter(null);
   private canvas: HTMLCanvasElement;
   private abort = new AbortController();
@@ -43,6 +45,16 @@ export class TitleScreen {
       if (button.dataset.action === 'delete') { this.confirming = true; this.render(); this.element.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.focus(); }
       if (button.dataset.action === 'cancel') { this.confirming = false; this.render(); }
       if (button.dataset.action === 'confirm-delete') this.actions.remove(this.selected);
+      if (button.dataset.action === 'random-seed') {
+        const input = this.element.querySelector<HTMLInputElement>('[name="world-seed"]');
+        if (input) { input.value = this.rollSeed(); input.setCustomValidity(''); }
+      }
+    }, { signal: this.abort.signal });
+    this.element.addEventListener('input', event => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || input.name !== 'world-seed') return;
+      this.seedDrafts.set(this.selected, input.value);
+      this.validateSeed(input);
     }, { signal: this.abort.signal });
     this.element.addEventListener('change', event => {
       const input = event.target;
@@ -51,11 +63,16 @@ export class TitleScreen {
     }, { signal: this.abort.signal });
     this.element.addEventListener('submit', event => {
       event.preventDefault(); const input = this.element.querySelector<HTMLInputElement>('[name="character-name"]');
-      const name = input?.value.trim(); if (name) this.actions.create(this.selected, name, this.starter);
+      const seedInput = this.element.querySelector<HTMLInputElement>('[name="world-seed"]');
+      if (!seedInput) return;
+      const seed = this.validateSeed(seedInput);
+      if (seed === null) { seedInput.reportValidity(); return; }
+      const name = input?.value.trim(); if (name) this.actions.create(this.selected, name, this.starter, seed);
     }, { signal: this.abort.signal });
   }
   open(slots: SaveSlot[], preferred?: number): void {
     this.slots = slots;
+    this.seedDrafts.clear();
     if (preferred !== undefined) this.selected = preferred;
     else this.selected = slots.filter(s => s.record).sort((a, b) => b.record!.updatedAt - a.record!.updatedAt)[0]?.index ?? 0;
     this.confirming = false; this.element.hidden = false; this.render();
@@ -67,6 +84,16 @@ export class TitleScreen {
   message(text: string): void { const target = this.element.querySelector<HTMLElement>('.title-save-message')!; target.textContent = text; target.hidden = !text; }
   close(): void { this.element.hidden = true; this.focus?.dispose(); this.focus = undefined; cancelAnimationFrame(this.frame); this.frame = 0; }
   dispose(): void { this.close(); this.abort.abort(); this.element.remove(); }
+  private rollSeed(): string {
+    let seed = crypto.getRandomValues(new Uint32Array(1))[0];
+    if (seed === parseWorldSeed(this.seedDrafts.get(this.selected) ?? '')) seed = (seed + 1) >>> 0;
+    const value = String(seed); this.seedDrafts.set(this.selected, value); return value;
+  }
+  private validateSeed(input: HTMLInputElement): number | null {
+    const seed = parseWorldSeed(input.value);
+    input.setCustomValidity(seed === null ? 'Enter a whole number from 0 to 4294967295.' : '');
+    return seed;
+  }
   private render(): void {
     const selected = this.slots[this.selected], record = selected?.record;
     this.element.classList.toggle('is-creating', selected?.state === 'empty' && !this.confirming);
@@ -85,12 +112,14 @@ export class TitleScreen {
       selection.innerHTML = `<div class="title-selection-heading"><div>${selected.state === 'recovered' ? '<p class="ui-kicker">Backup recovered</p>' : ''}<h3>${escapeUI(name)}</h3></div><button class="ui-button ui-button--quiet ui-button--icon" data-action="delete" aria-label="Delete ${escapeUI(name)}" data-tooltip="Delete character" data-tooltip-align="end">${uiIcon('close')}</button></div>
         <div class="title-build-stats"><div data-tooltip="${powerHint}" tabindex="0"><strong>${format(power.power)}</strong><span>Power ⓘ</span></div><div><strong>${format(this.player.maxHp)}</strong><span>Life</span></div><div><strong>${format(this.player.derived.armor)}</strong><span>Armor</span></div><div><strong>${record.checkpoint.character.allocatedNodes.length - 1}</strong><span>Passives</span></div></div>
         <div class="title-save-meta"><span>${Math.floor(record.checkpoint.time / 60)} min played</span><span>Saved ${new Date(record.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${new Date(record.updatedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span></div>
+        <div class="title-world-seed"><span>World seed</span><span>${record.worldSeed}</span></div>
         <button class="ui-button ui-button--primary title-enter" data-action="continue"><span>Continue</span>${uiIcon('chevron')}</button>`;
     } else if (selected?.state === 'empty') {
       selection.innerHTML = `<form class="title-create"><label for="character-name">Name</label><input id="character-name" name="character-name" maxlength="24" minlength="1" required autocomplete="off" placeholder="Wayfarer" value="Wayfarer" pattern=".*\\S.*"/><fieldset class="title-weapons"><legend>Choose your starting gear</legend><div class="title-weapon-grid">${STARTER_LOADOUTS.map(option => {
           const loadout = createStarterLoadout(option.id);
           return `<label class="title-weapon-choice"><input type="radio" name="starter-weapon" value="${option.id}" ${this.starter === option.id ? 'checked' : ''}/><span class="title-weapon-icon ${loadout.offhand ? 'has-offhand' : ''}" aria-hidden="true">${itemIconSVG(loadout.weapon, 48)}${loadout.offhand ? itemIconSVG(loadout.offhand, 40) : ''}</span><span class="title-weapon-copy"><strong>${option.label}</strong><small>${option.detail}</small></span><span class="title-weapon-selected" aria-hidden="true">✦</span></label>`;
-        }).join('')}</div></fieldset><button class="ui-button ui-button--primary title-enter" type="submit"><span>Create character</span>${uiIcon('chevron')}</button></form>`;
+        }).join('')}</div></fieldset><div class="title-seed-field"><label for="world-seed">World seed</label><div class="title-seed-controls"><input id="world-seed" name="world-seed" type="text" inputmode="numeric" required autocomplete="off" spellcheck="false" value="${escapeUI(this.seedDrafts.get(this.selected) ?? this.rollSeed())}"/><button type="button" class="ui-button" data-action="random-seed" aria-label="Generate a new random world seed">Randomize</button></div></div><button class="ui-button ui-button--primary title-enter" type="submit"><span>Create character</span>${uiIcon('chevron')}</button></form>`;
+      this.validateSeed(selection.querySelector<HTMLInputElement>('[name="world-seed"]')!);
     } else {
       selection.innerHTML = `<h3>${selected?.state === 'unavailable' ? 'Storage unavailable' : 'Save could not be read'}</h3><p>${selected?.state === 'unavailable' ? 'Enable browser storage to save characters.' : 'This slot has been preserved. Try another slot, or delete this save to reclaim it.'}</p>${selected?.state === 'invalid' ? '<button class="ui-button ui-button--danger" data-action="delete">Delete unreadable save</button>' : ''}`;
     }

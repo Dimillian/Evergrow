@@ -22,8 +22,8 @@ function setup(w = world) {
   const sim = new Simulation(w, { spawn: false, seed: 7319 });
   const data = new Map<string, string>();
   const repo = new CharacterRepository({ getItem: k => data.get(k) ?? null, setItem: (k, v) => { data.set(k, v); } });
-  const session = new CharacterSession(repo, 7319, 4);
-  assert.ok(session.create(0, 'Rowan', sim.captureCheckpoint(), 'test-character', 100));
+  const session = new CharacterSession(repo, 4);
+  assert.ok(session.create(0, 'Rowan', 7319, sim.captureCheckpoint(), 'test-character', 100));
   const persist = (c: ReturnType<Simulation['captureCheckpoint']>) => ({ ok: session.save(c, 200), message: session.error });
   return { sim, repo, session, persist };
 }

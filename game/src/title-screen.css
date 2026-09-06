@@ -43,7 +43,12 @@
 .title-enter.ui-button { width: 100%; justify-content: space-between; min-height: 48px; background: linear-gradient(110deg,#56614580,#2b413f); border-color: #bac49680; color: #ece6c9; font-size: 14px; letter-spacing: .1em; }
 .title-enter .ui-icon { width: 17px; height: 17px; }
 .title-create label { display: block; color: #c6d0c3; font-size: 14px; margin-bottom: 10px; }
-.title-create input[name="character-name"] { width: 100%; height: 44px; padding: 0 12px; border: 1px solid #7f99986b; border-radius: 2px; background: #071019; color: #e6e3ce; font: 18px var(--ui-font); }
+.title-create input[name="character-name"], .title-create input[name="world-seed"] { width: 100%; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid #7f99986b; border-radius: 2px; background: #071019; color: #e6e3ce; font: 18px var(--ui-font); }
+.title-seed-field { margin-top: 16px; }
+.title-seed-controls { display: flex; align-items: center; gap: 8px; }
+.title-seed-controls .ui-button { flex: none; }
+.title-world-seed { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 15px; color: #9aadab; font-size: 13px; }
+.title-world-seed span:last-child { color: #d5d8bc; user-select: text; }
 .title-create .title-enter { margin-top: 18px; }
 .title-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
 .title-roster-footer { display: flex; align-items: center; gap: 7px; border-top: 1px solid #718c9024; padding: 13px 20px; color: #7c9690; font-size: 10px; }

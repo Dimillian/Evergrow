@@ -17,7 +17,7 @@ installUITheme();
 const SEEDS = [7319, 18427, 90210] as const;
 const params = new URLSearchParams(location.search);
 const requestedSeed = Number(params.get('seed'));
-const seed = params.has('seed') && Number.isSafeInteger(requestedSeed) ? requestedSeed | 0 : SEEDS[0];
+const seed = params.has('seed') && Number.isSafeInteger(requestedSeed) ? requestedSeed >>> 0 : SEEDS[0];
 const root = document.querySelector<HTMLElement>('#atlas-review')!;
 const world = new World(seed), chart = new Exploration(world, { storage: null });
 const abort = new AbortController();

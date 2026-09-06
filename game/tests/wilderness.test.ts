@@ -58,7 +58,7 @@ test('site placement protects settlements, roads, the starting clearing and othe
 
 test('the accessible first camp and distant camps have clear authored member slots and entrances', () => {
   for (const seed of [7319, 9, -127]) {
-    const world = new World(seed), first = startingEnemyCamp(seed);
+    const world = new World(seed), first = startingEnemyCamp(world.seed);
     assert.ok(Math.hypot(first.x, first.y) >= 600 && Math.hypot(first.x, first.y) <= 1000);
     const camps = world.getEnemyCamps(-8000, -8000, 16000, 16000);
     assert.ok(camps.some(c => c.id === first.id));

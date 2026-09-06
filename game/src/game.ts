@@ -27,6 +27,7 @@ import { SkillTreePanel } from './skill-tree-panel.ts';
 import { executeCharacterCommand, type CharacterCommand } from './character-commands.ts';
 import { Lifetime } from './lifetime.ts';
 import { World } from './world.ts';
+import { isWorldSeed } from './world-seed.ts';
 import { Simulation } from './simulation.ts';
 import { Renderer } from './renderer.ts';
 import { PostFX } from './postfx.ts';
@@ -44,7 +45,7 @@ import type { Input } from './model.ts';
 /** Coordinates browser lifecycle, simulation and presentation; system rules live in their owners. */
 export class Game {
   private lifetime = new Lifetime();
-  readonly overworld = this.lifetime.own(new World(7319));
+  overworld = new World(7319);
   world: World = this.overworld;
   private dungeonMap: DungeonMap;
   private activeDungeonEntrance: DungeonEntrance | null = null;
@@ -92,7 +93,7 @@ export class Game {
   constructor(root: HTMLElement) {
     this.lifetime.defer(() => this.abort.abort());
     this.lifetime.defer(() => cancelAnimationFrame(this.animation));
-    this.lifetime.defer(() => { if(this.world !== this.overworld) this.world.dispose(); });
+    this.lifetime.defer(() => { if(this.world !== this.overworld) this.world.dispose(); this.overworld.dispose(); });
     try {
       this.renderer = new Renderer();
       this.audio = this.lifetime.own(new GameAudio());
@@ -103,7 +104,7 @@ export class Game {
       const repository = new CharacterRepository(storage);
       for (const slot of repository.list()) if (slot.state === 'invalid' || slot.record && slot.record.worldVersion < this.world.generationVersion)
         repository.remove(slot.index, slot.token);
-      this.session = new CharacterSession(repository, this.world.seed, this.world.generationVersion);
+      this.session = new CharacterSession(repository, this.world.generationVersion);
       this.shell = this.lifetime.own(new GameShell(root, {
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
         portal: () => { this.canvas.focus(); this.requestPortal(); },
@@ -134,7 +135,7 @@ export class Game {
         assign: (slot, skill) => this.characterAction({ type: 'assignSkill', slot, skill }),
       }));
       this.titleScreen = this.lifetime.own(new TitleScreen(this.shell.titleMount, {
-        create: (index, name, weapon) => this.createCharacter(index, name, weapon),
+        create: (index, name, weapon, seed) => this.createCharacter(index, name, weapon, seed),
         continue: index => this.continueCharacter(index), remove: index => this.deleteCharacter(index),
       }));
       this.servicePanel = this.lifetime.own(new ServicePanel(this.shell.panelMount, {
@@ -324,12 +325,15 @@ export class Game {
     this.sim.revive(); this.enterWorld(); this.saveCharacter();
   }
 
-  private createCharacter(index: number, name: string, weapon: StarterLoadoutId) {
+  private createCharacter(index: number, name: string, weapon: StarterLoadoutId, seed: number) {
     if (this.phase !== 'ready') return;
-    const fresh = new Simulation(this.world, { seed: this.world.seed, spawn: false });
+    if (!isWorldSeed(seed)) { this.titleScreen.message('Enter a whole world seed from 0 to 4294967295.'); return; }
+    const world = new World(seed);
+    const fresh = new Simulation(world, { seed, spawn: false });
     fresh.player.character = createCharacterSheet(weapon); refreshCharacter(fresh.player);
     fresh.player.hp = fresh.player.maxHp; fresh.player.mana = fresh.player.maxMana;
-    if (!this.session.create(index, name, fresh.captureCheckpoint(), crypto.randomUUID(), Date.now())) {
+    const checkpoint = fresh.captureCheckpoint(); world.dispose();
+    if (!this.session.create(index, name, seed, checkpoint, crypto.randomUUID(), Date.now())) {
       this.titleScreen.message(this.session.error); return;
     }
     this.continueCharacter(index);
@@ -339,6 +343,10 @@ export class Game {
     if (this.phase !== 'ready') return;
     const record = this.session.load(index);
     if (!record) { this.titleScreen.message(this.session.error); return; }
+    if (this.world !== this.overworld) this.world.dispose();
+    this.overworld.dispose();
+    this.overworld = new World(record.worldSeed); this.world = this.overworld;
+    this.sim = new Simulation(this.world, { seed: record.worldSeed });
     this.setLocationWorld(record.checkpoint);
     this.sim.restoreCheckpoint(record.checkpoint);
     this.projectedBeacons.clear();

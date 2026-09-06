@@ -16,21 +16,21 @@ const world = { seed: 7319, generationVersion: 4, blocked: () => false, move: (x
 function setup() {
   const data = new Map<string, string>();
   const storage = { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => { data.set(key, value); } };
-  const repo = new CharacterRepository(storage), session = new CharacterSession(repo, 7319, 4), sim = new Simulation(world, { seed: 7319, spawn: false });
-  assert.ok(session.create(0, 'Rowan', sim.captureCheckpoint(), 'character-a', 100), session.error);
+  const repo = new CharacterRepository(storage), session = new CharacterSession(repo, 4), sim = new Simulation(world, { seed: 7319, spawn: false });
+  assert.ok(session.create(0, 'Rowan', 7319, sim.captureCheckpoint(), 'character-a', 100), session.error);
   return { data, storage, repo, session, sim };
 }
 
 test('all eight slots create independent identical starters with leather armor and empty inventories', () => {
   const { repo, session, sim } = setup();
-  for (let i = 1; i < CHARACTER_SLOT_COUNT; i++) assert.ok(session.create(i, `Wayfarer ${i}`, sim.captureCheckpoint(), `character-${i}`, 100));
+  for (let i = 1; i < CHARACTER_SLOT_COUNT; i++) assert.ok(session.create(i, `Wayfarer ${i}`, 7319, sim.captureCheckpoint(), `character-${i}`, 100));
   const slots = repo.list(); assert.equal(slots.length, 8); assert.equal(slots.filter(s => s.record).length, 8);
   for (const slot of slots) {
     assert.deepEqual(slot.record!.checkpoint.character, sim.player.character);
     assert.equal(slot.record!.checkpoint.character.inventory.filter(Boolean).length, 0);
     assert.equal(slot.record!.checkpoint.character.equipped.chest!.appearance.style, 'leather');
   }
-  assert.equal(session.create(0, 'Overwrite', sim.captureCheckpoint(), 'another', 101), false);
+  assert.equal(session.create(0, 'Overwrite', 7319, sim.captureCheckpoint(), 'another', 101), false);
   assert.throws(() => repo.read(8), RangeError);
 });
 
@@ -81,13 +81,13 @@ test('quota failures retain the previous save and never report success', () => {
   const { data, repo, sim } = setup();
   const before = data.get(characterSlotKey(0));
   const failing = new CharacterRepository({ getItem: key => data.get(key) ?? null, setItem: () => { throw new Error('quota'); } });
-  const session = new CharacterSession(failing, 7319, 4); assert.ok(session.load(0));
+  const session = new CharacterSession(failing, 4); assert.ok(session.load(0));
   sim.player.x = 300; assert.equal(session.save(sim.captureCheckpoint(), 200), false);
   assert.match(session.error, /storage/); assert.equal(data.get(characterSlotKey(0)), before); assert.equal(repo.read(0).record!.checkpoint.x, 0);
 });
 
 test('a stale tab cannot overwrite a newer checkpoint or deleted slot', () => {
-  const { repo, session, sim } = setup(), second = new CharacterSession(repo, 7319, 4); assert.ok(second.load(0));
+  const { repo, session, sim } = setup(), second = new CharacterSession(repo, 4); assert.ok(second.load(0));
   sim.player.x = 100; assert.ok(session.save(sim.captureCheckpoint(), 200));
   assert.equal(second.save(sim.captureCheckpoint(), 300), false); assert.match(second.error, /another tab/);
   assert.ok(repo.remove(0, repo.read(0).token).ok); assert.equal(repo.read(0).state, 'empty');
@@ -100,12 +100,12 @@ test('backup recovery is explicit, corrupt slots are reserved, and deletion cann
   assert.equal(repo.read(0).record!.updatedAt, 100);
   assert.ok(repo.remove(0, '{broken').ok); assert.equal(repo.read(0).state, 'empty');
   data.set(characterSlotKey(1), '{broken'); assert.equal(repo.read(1).state, 'invalid');
-  assert.equal(session.create(1, 'No overwrite', sim.captureCheckpoint(), 'new', 300), false);
+  assert.equal(session.create(1, 'No overwrite', 7319, sim.captureCheckpoint(), 'new', 300), false);
   assert.equal(new CharacterRepository(null).read(0).state, 'unavailable');
 });
 
 test('world version mismatches cannot activate or rewrite a save', () => {
-  const { repo } = setup(), session = new CharacterSession(repo, 7319, 5);
+  const { repo } = setup(), session = new CharacterSession(repo, 5);
   assert.equal(session.load(0), null); assert.equal(session.active, null); assert.match(session.error, /world version/);
 });
 
@@ -146,7 +146,7 @@ test('each starter choice persists with matching portrait equipment, common gear
     assert.equal(sim.player.character.equipped.offhand?.recipe.profileId ?? null, option.offhandProfileId);
     assert.ok(sim.player.character.inventory.every(item => item === null));
     assert.equal(sim.player.character.equipped.chest!.appearance.style, 'leather');
-    assert.ok(session.create(index + 1, option.label, sim.captureCheckpoint(), `starter-${option.id}`, 200));
+    assert.ok(session.create(index + 1, option.label, 7319, sim.captureCheckpoint(), `starter-${option.id}`, 200));
     const loaded = session.load(index + 1)!;
     const restored = new Simulation(world, { spawn: false }); restored.restoreCheckpoint(loaded.checkpoint);
     assert.deepEqual(restored.player.equipment, preview.equipment);
@@ -182,4 +182,34 @@ test('save validation rejects malformed currency and duplicated ground identitie
   }
   record.checkpoint.groundGold = [{ id: 7, x: 0, y: 0, age: 0, amount: 4 }, { id: 7, x: 5, y: 0, age: 0, amount: 8 }];
   assert.equal(decodeCharacterSave(JSON.stringify(record)), null);
+});
+
+test('characters retain independent world seeds when switching, saving and reopening the repository', () => {
+  const { repo, storage, session } = setup();
+  const seeds = [0, 18427, 4294967295];
+  for (const [i, seed] of seeds.entries()) {
+    const seededWorld = { ...world, seed };
+    const sim = new Simulation(seededWorld, { seed, spawn: false });
+    assert.ok(session.create(i + 1, `Seed ${seed}`, seed, sim.captureCheckpoint(), `seed-${seed}`, 100), session.error);
+  }
+  const reopened = new CharacterSession(new CharacterRepository(storage), 4);
+  for (const index of [3, 0, 2, 1, 3]) {
+    const seed = index === 0 ? 7319 : seeds[index - 1];
+    const record = reopened.load(index)!; assert.ok(record, reopened.error);
+    assert.equal(record.worldSeed, seed);
+    assert.equal(record.checkpoint.randomState, seed);
+    const sim = new Simulation({ ...world, seed }, { seed, spawn: false });
+    sim.restoreCheckpoint(record.checkpoint);
+    assert.ok(reopened.save(sim.captureCheckpoint(), 200), reopened.error);
+    assert.equal(repo.read(index).record!.worldSeed, seed);
+  }
+});
+
+test('invalid creation seeds preserve both the empty slot and active character', () => {
+  const { repo, session, sim } = setup(), active = session.active;
+  for (const seed of [-1, 4294967296, .5, NaN, Infinity]) {
+    assert.equal(session.create(1, 'Invalid seed', seed, sim.captureCheckpoint(), 'invalid-seed', 200), false);
+    assert.equal(repo.read(1).state, 'empty'); assert.equal(session.active, active);
+    assert.match(session.error, /world seed/);
+  }
 });

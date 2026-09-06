@@ -1,3 +1,4 @@
+import { isWorldSeed } from './world-seed.ts';
 import { CharacterRepository, type SaveResult } from './character-storage.ts';
 import { CHARACTER_SAVE_VERSION, type CharacterCheckpoint, type CharacterSave } from './character-save.ts';
 
@@ -6,25 +7,25 @@ export class CharacterSession {
   active: { index: number; record: CharacterSave; token: string | null } | null = null;
   error = '';
   readonly repository: CharacterRepository;
-  private worldSeed: number;
   private worldVersion: number;
-  constructor(repository: CharacterRepository, worldSeed: number, worldVersion: number) {
-    this.repository = repository; this.worldSeed = worldSeed; this.worldVersion = worldVersion;
+  constructor(repository: CharacterRepository, worldVersion: number) {
+    this.repository = repository; this.worldVersion = worldVersion;
   }
   load(index: number): CharacterSave | null {
     const slot = this.repository.read(index);
     if (!slot.record) { this.error = 'This character could not be loaded. The slot has been preserved.'; return null; }
-    if (slot.record.worldSeed !== this.worldSeed || slot.record.worldVersion !== this.worldVersion) {
+    if (slot.record.worldVersion !== this.worldVersion) {
       this.error = 'This character belongs to a different world version. Its save has been preserved.'; return null;
     }
     this.active = { index, record: slot.record, token: slot.token }; this.error = '';
     return slot.record;
   }
-  create(index: number, name: string, checkpoint: CharacterCheckpoint, id: string, now: number): boolean {
+  create(index: number, name: string, worldSeed: number, checkpoint: CharacterCheckpoint, id: string, now: number): boolean {
+    if (!isWorldSeed(worldSeed)) { this.error = 'Enter a whole world seed from 0 to 4294967295.'; return false; }
     const slot = this.repository.read(index);
     if (slot.state !== 'empty') { this.error = 'Choose an empty character slot.'; return false; }
     const record: CharacterSave = { version: CHARACTER_SAVE_VERSION, id, name: name.trim(), createdAt: now, updatedAt: now,
-      worldSeed: this.worldSeed, worldVersion: this.worldVersion, checkpoint };
+      worldSeed, worldVersion: this.worldVersion, checkpoint };
     const result = this.repository.write(index, record, slot.token);
     if (!this.accept(result)) return false;
     this.active = { index, record, token: (result as { ok: true; token: string }).token }; return true;

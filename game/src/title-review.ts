@@ -26,7 +26,7 @@ if (!new URLSearchParams(location.search).has('empty')) for (let i = 0; i < 3; i
   awardCharacterExperience(staged.player, [0, 2877, 22000][i]);
   if (i) { staged.player.character.inventory[0] = generateItem(989 + i, staged.player.level, 'weapon', i === 1 ? 'storm-staff' : 'longsword', 'rare'); equipItem(staged.player.character, 0, staged.player.level); refreshCharacter(staged.player); }
   staged.time = i * 3920;
-  new CharacterSession(repository, world.seed, world.generationVersion).create(i, ['Rowan', 'Isolde', 'Aldric'][i], staged.captureCheckpoint(), `review-${i}`, Date.now() - i * 60000);
+  new CharacterSession(repository, world.generationVersion).create(i, ['Rowan', 'Isolde', 'Aldric'][i], world.seed, staged.captureCheckpoint(), `review-${i}`, Date.now() - i * 60000);
 }
 const root = document.querySelector<HTMLElement>('#app')!;
 root.innerHTML = '<div class="game-shell"><canvas id="title-world"></canvas><div id="title-review-mount"></div></div>';

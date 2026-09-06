@@ -1,6 +1,6 @@
 # World generation 5
 
-The local generation pass replaces the north–south settlement corridor and repeated cross-roads. The playable world still uses seed **7319**; `/atlas.html?seed=7319&view=extended` also accepts any signed 32-bit seed for save-free comparisons. Suggested comparisons are **18427** and **90210**. These are generated worlds, not painted map concepts.
+The local generation pass replaces the north–south settlement corridor and repeated cross-roads. Each new character receives a random unsigned 32-bit world seed. Character creation shows an editable **World seed** field and a **Randomize** button; saved-character selection keeps the chosen seed visible. Continuing reconstructs that character’s world before restoring its position, encounters and explored chart. Existing characters retain their saved seed, including **7319**; no save reset is required. `/atlas.html?seed=7319&view=extended` also accepts any unsigned 32-bit seed for save-free comparisons. Suggested comparisons are **18427** and **90210**. These are generated worlds, not painted map concepts.
 
 ## Settlements and routes
 

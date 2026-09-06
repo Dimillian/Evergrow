@@ -91,7 +91,7 @@ export class World {
   private firstCamp: WildernessSite;
 
   constructor(seed = 7319) {
-    this.seed = seed | 0;
+    this.seed = seed >>> 0;
     this.firstCamp = startingEnemyCamp(this.seed);
   }
 
