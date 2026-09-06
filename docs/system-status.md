@@ -1,12 +1,12 @@
 # Current system status
 
-Updated 2026-09-06 after the Android 60 FPS checkpoint. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
+Updated 2026-09-06 after the compact hall and cloud-save implementation (awaiting Sites deployment). **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
 
 ## Implemented systems
 
 | System | Current implementation | Remaining boundary |
 | --- | --- | --- |
-| Characters and saves | Eight IndexedDB/worker-backed local slots; title hall, six starter loadouts in paired melee/magic/archery rows, equipped preview, level/power summary, continue/delete; autosave, backup recovery and stale-writer checks | Cloud sync is [studied](cloud-saves-sites.md), not implemented; no export/import or migrations |
+| Characters and saves | Compact eight-slot hall, six starters, level/power summaries and Continue/Create; local worker saves, portable character/chart import/export; Site-only Cloud / Local tabs with authenticated D1/R2 publication and a durable recovery outbox | Cloud implementation awaits publication and real sign-in/cross-browser acceptance; Android remains local-only; no save migrations |
 | Combat | Deterministic 120 Hz simulation; weapon basics, five assignable active slots, dodge, dual potion; 20 executable skills; melee/bow attack speed and independent staff/wand/magic cast speed | Player tests feel and balance; no automatic combos or default assigned spell |
 | Aiming and input | Swept ranged contacts, bounded aim assistance, aim feedback; standard gamepad analog movement/aim, combat bindings and menu navigation; neutral rearm and disconnect pause | Fixed Xbox-position labels; text entry, drag/drop and gameplay zoom still use keyboard/mouse; controller hardware/feel acceptance remains with the player |
 | Android / AYN Thor | Bundled offline APK, native controller adapter, hardware-accelerated game WebView capped at 60 FPS, secondary map/64-cell pack/build UI and validated shared commands | Local debug distribution; app/browser saves separate; physical gameplay and sustained performance are user-tested; see [Android/Thor](android-thor.md) |
@@ -60,4 +60,6 @@ Older implementation counts, save formats, bounds and delivery notes are preserv
 
 Android frame-pacing checkpoint: 725 passing code tests, application/headless type checking, web production build and Android APK assembly. Installed on the connected AYN Thor. Main display confirmed at 60 Hz; lower display firmware retains 120 Hz despite the app request. Combat remains fixed at 120 Hz. Static second-screen layout was reviewed at its logical display size.
 
-Current stats: 227 runtime TypeScript modules / 25,154 lines; 95 code-test files; 24 development review entrypoints; zero runtime dependencies. Content: seven biomes, nine enemy archetypes, 20 active skills, 2,185 skill nodes and 17 POI kinds. Source counts come from `npm run stats` at this checkpoint.
+Cloud/hall checkpoint: 735 code tests passed; focused save tests rerun after final persistence changes. Application/headless types, normal web build, Android APK and Site Worker/client builds pass. Live cloud authentication and visual/controller acceptance remain to be verified with the player.
+
+Current stats: 232 runtime TypeScript modules / 25,608 lines; 96 code-test files; 24 development review entrypoints; zero runtime dependencies. Content: seven biomes, nine enemy archetypes, 20 active skills, 2,185 skill nodes and 17 POI kinds. Source counts come from `npm run stats` at this checkpoint.

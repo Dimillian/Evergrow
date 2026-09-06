@@ -63,6 +63,10 @@ Trade with blacksmiths, jewelers and enchanters. Improve gear to +10, raise rari
 
 [View the complete skill atlas](docs/screenshots/skill-atlas.png) · [Town service captures](docs/captures/2026-09-05/town-services/README.md).
 
+## Saves
+
+The next Sites build adds **Cloud / Local** tabs. Cloud defaults to ChatGPT sign-in and eight account-owned characters; Local keeps this browser’s saves. **Download / Import** transfers a character and its explored map through a save file. Android stays local-only. [Cloud saves and sync](docs/cloud-saves-sites.md).
+
 ## Android / AYN Thor
 
 The Android app bundles the game for **offline play**, with native controller input and an Astral companion on the Thor’s lower screen: explored map, 64-slot pack, equipment details and character stats. Both app displays request **60 Hz**; game/title rendering is capped at **60 FPS** while combat keeps its fixed 120 Hz simulation.
@@ -107,7 +111,7 @@ npm run check   # Code tests, strict TypeScript checks, production build
 npm run stats   # Content, source and build statistics
 ```
 
-`npm run build:site` prepares the production game in root `dist/` for Sites. Deployment uses the existing project in `.openai/hosting.json`; local development remains unchanged.
+`npm run build:site` prepares the game client and cloud-save Worker in root `dist/` for Sites. Deployment uses the existing project in `.openai/hosting.json`; local development remains unchanged.
 
 TypeScript, Vite, Canvas 2D and WebGL; no runtime npm dependencies. Gameplay feel and balance are tested by the player.
 

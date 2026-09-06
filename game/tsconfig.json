@@ -7,5 +7,5 @@
     "noUnusedLocals": true, "noUnusedParameters": true,
     "noImplicitReturns": true, "noImplicitOverride": true, "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "tests", "scripts", "vite.config.ts"]
+  "include": ["src", "tests", "scripts", "vite.config.ts", "server", "vite.site.config.ts"]
 }

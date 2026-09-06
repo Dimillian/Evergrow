@@ -5,7 +5,7 @@
     "setup": "npm --prefix game ci",
     "dev": "npm --prefix game run dev",
     "build": "npm --prefix game run build",
-    "build:site": "npm run build && node scripts/stage-site.mjs",
+    "build:site": "npm run typecheck && node scripts/stage-site.mjs",
     "typecheck": "npm --prefix game run typecheck",
     "check": "npm --prefix game run check",
     "stats": "npm --prefix game run stats",

@@ -1,6 +1,6 @@
-# Character hall and local checkpoints
+# Character hall and checkpoints
 
-Evergrow opens in a procedural forest character hall. Eight independent browser-local slots show name, level, power, last save time and equipped appearance. Select an empty slot, name a character, choose Sword + Shield, Two-handed Sword, Wand + Grimoire, Fire Staff, Shortbow or Longbow, and begin. The equipped portrait updates immediately when choosing. Select an existing character to continue. Deletion requires an explicit confirmation inside the hall.
+Evergrow opens in a procedural forest character hall. Eight slots show name, level and power beside a compact Continue/Create panel. Larger displays retain the equipped portrait; handheld layouts keep the controls together. Sites offers separate cloud and local rosters; ordinary local and Android builds retain their browser-local slots. Select an empty slot, name a character, choose Sword + Shield, Two-handed Sword, Wand + Grimoire, Fire Staff, Shortbow or Longbow, and begin. The equipped portrait updates immediately when choosing. Select an existing character to continue. Deletion requires an explicit confirmation inside the hall.
 
 Every character starts at level 1 with the same attributes, worn leather outfit, the selected level-one common weapon, no allocated passives beyond the origin, empty skill-rank/specialization selections, Overload disabled, five empty skill bindings and an empty 64-cell inventory. Each character has an independently chosen world seed: creation supplies a random value from 0 through 4294967295, with an editable field and Randomize button. The seed remains visible in saved-character selection. Continuing reconstructs the saved world before restoring progress; exploration remains scoped to both the seed and character. Saved characters keep their chosen seed. The September 6 asynchronous-storage checkpoint starts fresh local slots; previous localStorage test characters are not imported.
 
@@ -35,7 +35,7 @@ Current payload version is **3**. Explicit item recipes, commerce state and skil
 
 `save-worker.ts` owns serialization and validation away from the gameplay thread. `save-database.ts` stores character slots and explored charts in the `evergrow-local` IndexedDB database. The headless `character-storage.ts` record logic runs inside one database transaction, retaining a last-good predecessor and using small revision tokens for atomic compare-and-write across tabs. Damaged primaries can recover from a valid backup; deletion writes a tombstone and clears the backup in the same transaction. Failed transactions retain the previous checkpoint. `character-session.ts` serializes saves so each write uses the preceding committed token. Memory-only reviews and headless tests use the same validation logic without browser storage.
 
-Character maps include character identity in the existing exploration namespace. Deleting a readable character also removes its chart. There is no cloud sync, account, export/import or save migration yet. Clearing browser site data removes local saves. Schema/world changes can invalidate saves during prototype development; incompatible slots are never silently overwritten.
+Character maps include character identity in the existing exploration namespace. Deleting a readable character also removes its chart. The Site-enabled build adds account-owned cloud saves and separate Cloud / Local tabs. Browser builds support validated character-and-chart Download / Import into empty slots; Android remains local-only. See [Cloud saves](cloud-saves-sites.md). Clearing browser site data removes local saves. Schema/world changes can invalidate saves during prototype development; incompatible slots are never silently overwritten.
 
 ## Power
 
@@ -45,12 +45,12 @@ Power is a comparative estimate: `round(sqrt(expected basic-attack DPS × effect
 
 `/title.html` stages three characters in memory; `/title.html?empty` shows the new-character flow. Both use the real UI, character rig and world renderer, without gameplay ticks or browser storage. `/ui.html` also uses the real title component for its ready view. Headless tests cover slot limits, complete round trips, identical empty starters, malformed data, quota failures, backup recovery, stale writers, deletion, world mismatch, separate charts, death recovery and persistent camp casualties. Gameplay and save/resume acceptance remain for the user to test.
 
-Starter choices share `STARTER_LOADOUTS` and `createStarterLoadout` in `items.ts`. The choices are Longsword + Iron Buckler, Weathered Sword, Cinder Wand + Ember Codex, Ember Staff, Thorn Shortbow and Warden Longbow. New-game selection defaults to Sword + Shield. New gear has no affixes. The entire selected loadout is equipped, with full life and mana, before the first checkpoint; continuing a save always uses its saved equipment. The creation form uses a six-option native radio group arranged in three rows of two with keyboard focus styling.
+Starter choices share `STARTER_LOADOUTS` and `createStarterLoadout` in `items.ts`. The choices are Longsword + Iron Buckler, Weathered Sword, Cinder Wand + Ember Codex, Ember Staff, Thorn Shortbow and Warden Longbow. New-game selection defaults to Sword + Shield. New gear has no affixes. The entire selected loadout is equipped, with full life and mana, before the first checkpoint; continuing a save always uses its saved equipment. The creation form uses a six-option native radio group with keyboard focus styling, in three rows of two or two rows of three on short landscape screens.
 
 
 Gold lives on the character wallet and saves atomically with the bounded `groundGold` list (identity, position, amount, settling age). An absent balance/list is empty. Present balances and pile amounts must be safe whole integers, pile identities must be unique across ground equipment and currency, and restore resumes from the largest saved identity. Currency is per character; new characters start with zero gold.
 
-The creation layout compacts the eight save slots into two rows above the starter grid. Each starter card shows its actual weapon and off-hand icons, a concise handling description and a visible selected state. Selecting a card updates the shared equipped portrait without erasing the entered name. Existing saves retain their own equipment; this expanded catalog does not require a save reset.
+The responsive hall keeps eight slots beside the create/continue panel, moving them into two rows on narrow portrait screens. Starter cards show actual weapon/off-hand icons, a brief name and selected state; handling details live in tooltips. Selecting a card updates the shared equipped portrait without erasing the entered name. Existing saves retain their own equipment; this expanded catalog does not require a save reset.
 
 ## POI state (2026-09-06)
 
@@ -72,3 +72,5 @@ Periodic saves, focus loss, panel transitions and explicit return-to-hall reques
 This prototype storage replacement deliberately starts a fresh set of eight slots and charts. Old localStorage test progress is not migrated. The database is local to the browser and origin; this is not cloud saving.
 
 Current world-state retirement preserves exact receipts and pending loot without lifetime camp/expedition/Journey count gates; see [world-state longevity](world-state-longevity.md). [Cloud saving on Sites](cloud-saves-sites.md) is researched only and has no effect on existing local storage.
+
+Cloud publication is asynchronous after the durable local checkpoint. Each cloud checkpoint captures its explored chart in the same outbox transaction; only an acknowledged server revision is Synced. Existing local saves remain in `evergrow-local`, with no automatic copying or deletion.

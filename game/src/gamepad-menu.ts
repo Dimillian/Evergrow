@@ -15,7 +15,7 @@ export class GamepadMenu {
     if (actions.switchTab && (pad.pressed.has(PAD.potion) || pad.pressed.has(PAD.skill2))) {
       actions.switchTab(pad.pressed.has(PAD.potion) ? -1 : 1); this.clear(); return;
     }
-    const controls = [...root.querySelectorAll<HTMLElement>('button, input, select, textarea, [tabindex]')]
+    const controls = [...root.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex]')]
       .filter(el => el.tabIndex >= 0 && !el.matches(':disabled') && !el.closest('[hidden], [inert]') && el.getClientRects().length > 0);
     if (!controls.length) return;
     const step = (delta: number) => {

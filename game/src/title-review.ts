@@ -17,22 +17,26 @@ import { Lifetime } from './lifetime.ts';
 if (!import.meta.env.DEV) throw new Error('Local review only.');
 installUITheme(); await loadGameFont();
 // In-memory staged saves. No gameplay input, simulation ticks or browser storage access.
+const query = new URLSearchParams(location.search);
 const storage = new Map<string, string>();
 const repository = new CharacterRepository({ getItem: key => storage.get(key) ?? null, setItem: (key, value) => { storage.set(key, value); } });
 const life = new Lifetime(), world = life.own(new World(7319));
 const sim = new Simulation(world, { spawn: false });
-if (!new URLSearchParams(location.search).has('empty')) for (let i = 0; i < 3; i++) {
+if (!new URLSearchParams(location.search).has('empty')) for (let i = 0; i < (query.has('full') ? 8 : 3); i++) {
   const staged = new Simulation(world, { spawn: false });
-  awardCharacterExperience(staged.player, [0, 2877, 22000][i]);
+  awardCharacterExperience(staged.player, [0, 2877, 22000][i % 3]);
   if (i) { staged.player.character.inventory[0] = generateItem(989 + i, staged.player.level, 'weapon', i === 1 ? 'storm-staff' : 'longsword', 'rare'); equipItem(staged.player.character, 0, staged.player.level); refreshCharacter(staged.player); }
   staged.time = i * 3920;
-  await new CharacterSession(repository, world.generationVersion).create(i, ['Rowan', 'Isolde', 'Aldric'][i], world.seed, staged.captureCheckpoint(), `review-${i}`, Date.now() - i * 60000);
+  await new CharacterSession(repository, world.generationVersion).create(i, ['Rowan', 'Isolde', 'Aldric', 'Briar', 'Morrow', 'Thorn', 'Ash', 'Ember'][i], world.seed, staged.captureCheckpoint(), `review-${i}`, Date.now() - i * 60000);
 }
 const root = document.querySelector<HTMLElement>('#app')!;
 root.innerHTML = '<div class="game-shell"><canvas id="title-world"></canvas><div id="title-review-mount"></div></div>';
 const canvas = root.querySelector<HTMLCanvasElement>('canvas')!, renderer = new Renderer(), fx = life.own(new PostFX(canvas));
-const title = life.own(new TitleScreen(root.querySelector('#title-review-mount')!, { create: () => title.message('Frozen preview — no character is saved.'), continue: () => title.message('Frozen preview — gameplay is not started.'), remove: () => title.message('Frozen preview — no character is deleted.') }));
-title.open(repository.list(), new URLSearchParams(location.search).has('empty') ? 0 : 1);
+const title = life.own(new TitleScreen(root.querySelector('#title-review-mount')!, { create: () => title.message('Frozen preview — no character is saved.'), continue: () => title.message('Frozen preview — gameplay is not started.'), remove: () => title.message('Preview only.'), download: () => title.message('Preview only.'), import: () => title.message('Preview only.'),
+  source: mode => { title.setSource({ supported: true, mode, signedIn: !query.has('signedout'), status: query.has('conflict') ? 'Conflict' : 'Synced' }); title.open(mode === 'cloud' && query.has('signedout') ? [] : repository.list()); } }));
+if (query.has('cloud')) title.setSource({ supported: true, mode: 'cloud', signedIn: !query.has('signedout'), status: query.has('conflict') ? 'Conflict' : 'Synced' });
+const slots = repository.list(); if (query.has('conflict')) slots[1].conflict = true;
+title.open(query.has('signedout') ? [] : slots, query.has('empty') ? 0 : 1);
 let frame = 0;
 const draw = () => {
   const ratio = Math.min(1.6, devicePixelRatio || 1);

@@ -59,7 +59,7 @@
 .touch-mode .skill-atlas-toolbar { flex-wrap: wrap; }
 .touch-mode .skill-atlas-search { min-width: 120px; }
 .touch-mode .skill-atlas-sidebar { overflow: auto; }
-.touch-mode .title-screen { height: var(--touch-vh,100dvh); overflow-y: auto; padding-bottom: env(safe-area-inset-bottom); }
+.touch-mode .title-screen { height: var(--touch-vh,100dvh); padding-bottom: max(12px,env(safe-area-inset-bottom)); }
 .touch-mode .title-create input { scroll-margin: 30px; }
 @media (max-width: 620px) {
   .touch-mode .touch-actions { right: max(8px,env(safe-area-inset-right)); }
@@ -69,12 +69,6 @@
   .touch-mode .skill-atlas-sidebar { flex: none; overflow: visible; }
   .touch-mode .service-body { display: block; }
   .touch-mode .service-offer, .touch-mode .service-bag { overflow: visible; }
-  .touch-mode .title-brand { padding: 16px; }
-  .touch-mode .title-brand h1 { font-size: 32px; }
-  .touch-mode .title-hero { height: 130px; }
-  .touch-mode .title-hero canvas { height: 170px; }
-  .touch-mode .title-roster.ui-window { margin: 8px; width: calc(100% - 16px); max-height: none; }
-  .touch-mode .title-screen.is-creating .title-roster.ui-window { width: calc(100% - 16px); }
 }
 /* Narrow layouts put menus on their own row, clear of both thumb clusters and the top target plate. */
 @media (max-width: 700px) {
@@ -108,7 +102,6 @@
 }
 .touch-mode .desktop-binding { display: none; }
 .touch-mode .skill-atlas-assigned small .touch-only { display: inline; }
-.touch-mode .title-roster.ui-window { max-height: none; }
 .touch-mode .overlay { padding: max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom)); }
 .touch-mode .menu-body { min-height: 0; overflow: auto; padding: 14px 20px; }
 .touch-mode .menu-seal { display: none; }

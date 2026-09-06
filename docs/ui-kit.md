@@ -154,3 +154,7 @@ Journeys now separates Recommended and Nearby, with a fixed manually tracked lea
 ## Android companion
 
 The Thor lower screen shares the theme, local fonts, item geometry and tooltip markup. Its compact equipment strip and 8×8 pack are sized for the lower display; inspection has a persistent Back control and controller B dismissal. WebView versions without `color-mix` receive opaque shared item-tooltip, rarity-badge and equipment-cell surfaces through `item-ui.css`. Never depend on an unsupported gradient as the only tooltip background. See [Android/Thor](android-thor.md).
+
+## Compact character hall
+
+The hall uses one eight-slot roster beside a creation/continue pane with short labels, shared controls and quiet transfer actions. Sites adds Cloud / Local tabs and sync status; Android hides those tabs and browser transfer controls. Starting gear uses six native radio cards with procedural equipment icons. Portrait decoration gives way to controls on small/short displays; no essential action sits below a decorative hero. Names truncate in slot cards but remain readable in the selected pane. Sign-in links join controller navigation. The real memory-only review supports `?cloud&full`, `?cloud&signedout`, `?cloud&conflict` and `?empty`.

@@ -58,6 +58,12 @@ export class SaveClient implements CharacterRepositoryPort, ExplorationPersisten
   async removeChart(key: string, seed: number, generation: string): Promise<void> {
     try { await this.request('chart-remove', { key, seed, generation }); } catch { /* Character deletion is already durable. */ }
   }
+  export(index: number): Promise<string> { return this.request('export', { index }); }
+  async import(index: number, raw: string): Promise<SaveResult> {
+    const slot = await this.read(index);
+    try { return await this.request('import', { index, raw, expected: slot.token }); }
+    catch (error) { return { ok: false, message: (error as Error).message }; }
+  }
   dispose() { this.closing = true; if (!this.pending.size) this.stop(); }
   private stop() {
     this.worker?.terminate(); this.worker = null;

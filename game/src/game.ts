@@ -34,7 +34,8 @@ import { createCharacterSheet, type StarterLoadoutId } from './items.ts';
 import { refreshCharacter } from './character.ts';
 import { AreaNoticeTracker } from './notification-queue.ts';
 import { getZoneAt } from './zone-progression.ts';
-import { SaveClient } from './save-client.ts';
+import { SaveHub, type SaveMode } from './save-hub.ts';
+import { SAVE_BUNDLE_LIMIT } from './save-bundle.ts';
 import { CharacterSession } from './character-session.ts';
 import { TitleScreen } from './title-screen.ts';
 import { InventoryPanel } from './inventory-panel.ts';
@@ -112,7 +113,7 @@ export class Game {
   private abort = new AbortController();
   private debug = false;
   private disposed = false;
-  private saveClient: SaveClient;
+  private saveClient: SaveHub;
   private _hallBusy = false;
   private get hallBusy() { return this._hallBusy; }
   private set hallBusy(value: boolean) { this._hallBusy=value; this.titleScreen?.setBusy(value); }
@@ -130,7 +131,7 @@ export class Game {
       this.audio = this.lifetime.own(new GameAudio());
       this.exploration = new Exploration(this.world, { storage: null });
       this.lifetime.defer(() => this.exploration.dispose());
-      this.saveClient = this.lifetime.own(new SaveClient());
+      this.saveClient = this.lifetime.own(new SaveHub());
       this.session = new CharacterSession(this.saveClient, this.world.generationVersion);
       this.shell = this.lifetime.own(new GameShell(root, {
         sound: () => this.toggleSound(), muted: () => this.muted, zoom: factor => this.renderer.zoomByWheel(-Math.log(factor)/.0016,0,this.canvas.getBoundingClientRect().height),
@@ -166,7 +167,10 @@ export class Game {
       }));
       this.titleScreen = this.lifetime.own(new TitleScreen(this.shell.titleMount, {
         create: (index, name, weapon, seed) => this.createCharacter(index, name, weapon, seed),
-        continue: index => this.continueCharacter(index), remove: index => this.deleteCharacter(index),
+        continue: index => this.continueCharacter(index), remove: (index, expected) => this.deleteCharacter(index, expected),
+        read: index => this.saveClient.read(index), source: mode => this.selectSaveSource(mode),
+        ...(!window.EvergrowAndroid ? { download: (index: number) => this.downloadSave(index), import: (index: number, file: File) => this.importSave(index, file) } : {}),
+        useCloud: (index, expected) => this.resolveCloudSave(index, expected),
       }));
       this.servicePanel = this.lifetime.own(new ServicePanel(this.shell.panelMount, {
         close: () => this.resume(), trade: quote => this.trade(quote),
@@ -247,7 +251,11 @@ export class Game {
       this.resize();
       this.bind();
       this.showMenu();
-      void this.loadRoster();
+      this.saveClient.chart = record => this.session.active?.record.id === record.id ? this.exploration.snapshot() : undefined;
+      this.saveClient.onChange = state => { if (!this.disposed) { this.titleScreen.setSource(state); if (state.mode === 'cloud') this.shell.setSaveStatus(state.status, state.status === 'Conflict' || state.status === 'Offline'); } };
+      this.titleScreen.setSource({ ...this.saveClient.state, supported: !!import.meta.env.VITE_SITE_CLOUD && !window.EvergrowAndroid, mode: import.meta.env.VITE_SITE_CLOUD && !window.EvergrowAndroid ? 'cloud' : 'local', status: 'Loading…' });
+      this.titleScreen.open([]);
+      void this.saveClient.initialize().then(() => this.loadRoster());
       this.animation = requestAnimationFrame(this.frame);
     } catch (error) {
       try { this.lifetime.dispose(); } catch (cleanupError) { console.error(cleanupError); }
@@ -476,12 +484,13 @@ export class Game {
     } finally { this.hallBusy = false; }
   }
 
-  private async deleteCharacter(index: number) {
+  private async deleteCharacter(index: number, expected: string | null) {
     if (this.phase !== 'ready' || this.hallBusy || this.disposed) return;
     this.hallBusy = true;
     try {
     const slot = await this.session.repository.read(index);
-    const result = await this.session.repository.remove(index, slot.token);
+    if (slot.token !== expected) { this.titleScreen.message('This character changed. Select it again before deleting.'); return; }
+    const result = await this.session.repository.remove(index, expected);
     if (!result.ok) { this.titleScreen.message(result.message); return; }
     if (slot.record) {
       await this.saveClient.removeChart(`evergrow:exploration:1:${slot.record.worldVersion}:${slot.record.worldSeed}:${slot.record.id}`, slot.record.worldSeed, String(slot.record.worldVersion));
@@ -503,13 +512,47 @@ export class Game {
     this.audio.setEnabled(!this.muted); this.last = performance.now(); this.nextAutosave = this.last + 10_000;
   }
 
-  private async loadRoster() {
+  private async loadRoster(preferred?: number) {
     this.hallBusy = true;
-    const slots = await this.session.repository.list();
-    for (const slot of slots) if (slot.state === 'invalid' || slot.record && slot.record.worldVersion < this.world.generationVersion)
-      await this.session.repository.remove(slot.index, slot.token);
-    if (!this.disposed) this.titleScreen.open(await this.session.repository.list());
-    this.hallBusy = false;
+    try {
+      const slots = await this.session.repository.list();
+      if (!this.disposed) { this.titleScreen.setSource(this.saveClient.state); this.titleScreen.open(slots, preferred); }
+    } catch { this.titleScreen.message('Saves unavailable. Please retry.'); }
+    finally { this.hallBusy = false; }
+  }
+
+  private async selectSaveSource(mode: SaveMode) {
+    if (this.phase !== 'ready' || this.hallBusy || this.session.active) return;
+    await this.saveClient.select(mode); await this.loadRoster();
+  }
+  private async downloadSave(index: number) {
+    if (this.phase !== 'ready' || this.hallBusy) return;
+    this.hallBusy = true;
+    try {
+      const raw = await this.saveClient.export(index), blob = new Blob([raw], { type: 'application/json' });
+      const url = URL.createObjectURL(blob), link = document.createElement('a');
+      link.href = url; link.download = `evergrow-character-${index + 1}.json`; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (error) { this.titleScreen.message((error as Error).message); }
+    finally { this.hallBusy = false; }
+  }
+  private async importSave(index: number, file: File) {
+    if (this.phase !== 'ready' || this.hallBusy) return;
+    this.hallBusy = true;
+    try {
+      if (file.size > SAVE_BUNDLE_LIMIT) throw new Error('Save file is too large.');
+      const result = await this.saveClient.import(index, await file.text());
+      if (!result.ok) throw new Error(result.message);
+      await this.loadRoster(index);
+    } catch (error) { this.titleScreen.message((error as Error).message); }
+    finally { this.hallBusy = false; }
+  }
+  private async resolveCloudSave(index: number, expected: string | null) {
+    if (this.phase !== 'ready' || this.hallBusy) return;
+    this.hallBusy = true;
+    try { await this.saveClient.useCloud(index, expected); await this.loadRoster(index); }
+    catch (error) { this.titleScreen.message((error as Error).message); }
+    finally { this.hallBusy = false; }
   }
 
   private saveCharacter(force = false): Promise<boolean> {
@@ -525,7 +568,7 @@ export class Game {
         if (!this.disposed) {
           if (message && message !== this.saveError) this.notify(message);
           this.saveError = message;
-          this.shell.setSaveStatus(message || 'Character saved locally.', !saved);
+          this.shell.setSaveStatus(message || (this.saveClient.mode === 'cloud' ? this.saveClient.state.status : 'Character saved locally.'), !saved);
         }
       } while (this.saveAgain && !this.savingAction && !this.disposed && saved);
       await this.exploration.save();
@@ -550,6 +593,7 @@ export class Game {
     return this.durable(async () => {
     if (!this.session.active || !await this.saveCharacter(true)) return;
     const index = this.session.active.index;
+    await this.saveClient.flush();
     this.session.active = null;
     this.shell.notifications.clear();
     if(this.world!==this.overworld)this.world.dispose(); this.world=this.overworld;this.sim.world=this.world;

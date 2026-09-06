@@ -23,7 +23,7 @@ Thor's own system dashboard can cover the companion. Dismiss that dashboard to s
 
 Native `KeyEvent` / joystick `MotionEvent` input is normalized into the same standard snapshot consumed by `GamepadInput`. Existing dead zones, action mappings, neutral rearm, inventory/menu navigation and disconnect pause apply. See [controls](controls.md). Character names use the Android keyboard.
 
-The app uses the same worker/IndexedDB save system at a stable bundled HTTPS asset origin. APK updates installed over the existing package preserve app data. **Android, Safari, localhost and the hosted game currently have separate local characters.** Cloud synchronization is not implemented. Uninstalling or clearing Android app data removes its saves; there is no browser-save migration in this packaging checkpoint.
+The app uses the same worker/IndexedDB save system at a stable bundled HTTPS asset origin. APK updates installed over the existing package preserve app data. **Android, Safari, localhost and the hosted game currently have separate local characters.** Cloud synchronization is available only in the Site-enabled web build; the Android wrapper remains local-only with no cloud tabs or network requests. Uninstalling or clearing Android app data removes its saves; there is no browser-save migration in this packaging checkpoint.
 
 Backgrounding clears input, pauses play, requests a save and mutes audio. Regular autosaves remain enabled. Android process termination can still lose changes since the last completed checkpoint. Assets are served through `WebViewAssetLoader`; external navigation/network resources and file access are blocked. WebView debugging is enabled only in debug builds.
 

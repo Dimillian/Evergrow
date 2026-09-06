@@ -1,10 +1,13 @@
+import { decodeSaveBundle, makeSaveBundle, chartKey, bundleChart } from './save-bundle.ts';
 import { CharacterRepository, type SaveSlot } from './character-storage.ts';
 import type { CharacterSave } from './character-save.ts';
 import { Exploration, type ChartResult } from './exploration.ts';
 import { decodeExploration, type DecodedExploration } from './exploration-save.ts';
 
 export type SaveRequest = { id: number } & (
-  { method: 'read' | 'list' | 'write' | 'remove'; index?: number; record?: CharacterSave; expected?: string | null }
+  { method: 'read' | 'list' | 'write' | 'remove'; index?: number; record?: CharacterSave; expected?: string | null; chart?: string; importing?: boolean }
+  | { method: 'export'; index: number }
+  | { method: 'import'; index: number; raw: string; expected: string | null }
   | { method: 'chart-read' | 'chart-write' | 'chart-remove'; key: string; seed: number; generation: string; data?: DecodedExploration });
 
 export function openSaveDatabase(factory: IDBFactory) {
@@ -17,12 +20,41 @@ const opened = new Promise<IDBDatabase>((resolve, reject) => {
 });
 
 /** JSON work lives here. A single read/write transaction makes compare-and-write atomic across tabs. */
-async function execute(message: SaveRequest) {
+async function execute(message: SaveRequest): Promise<unknown> {
   const db = await opened;
   if ('key' in message) return chartTransaction(db, message);
+  if (message.method === 'export') {
+    return new Promise<string>((resolve, reject) => {
+      const tx = db.transaction(['characters', 'charts'], 'readonly');
+      const records = tx.objectStore('characters').getAll(); let raw: string;
+      records.onsuccess = () => {
+        try {
+          const values = new Map<string, string>(records.result as [string, string][]);
+          const slot = new CharacterRepository({ getItem: key => values.get(key) ?? null, setItem: () => {} }).read(message.index);
+          if (!slot.record) throw new Error('Select a character first.');
+          const record = slot.record, chart = tx.objectStore('charts').get(chartKey(record));
+          chart.onsuccess = () => {
+            try {
+              const data = chart.result === undefined ? undefined : decodeExploration(chart.result, { seed: record.worldSeed, generation: String(record.worldVersion) });
+              if (data === null) throw new Error('The explored map could not be read.');
+              raw = JSON.stringify(makeSaveBundle(record, data));
+            } catch (error) { tx.abort(); reject(error); }
+          };
+        } catch (error) { tx.abort(); reject(error); }
+      };
+      tx.oncomplete = () => resolve(raw);
+      tx.onabort = tx.onerror = () => reject(tx.error ?? new Error('Could not export this save.'));
+    });
+  }
+  if (message.method === 'import') {
+    const bundle = decodeSaveBundle(message.raw);
+    if (!bundle) return { ok: false, message: 'Invalid or incompatible save file.' };
+    const record = { ...bundle.character, id: crypto.randomUUID(), updatedAt: Date.now() };
+    return execute({ id: message.id, method: 'write', index: message.index, record, expected: message.expected, chart: bundle.chart, importing: true });
+  }
   return new Promise<unknown>((resolve, reject) => {
     const writing = message.method === 'write' || message.method === 'remove';
-    const tx = db.transaction('characters', writing ? 'readwrite' : 'readonly');
+    const tx = db.transaction(['characters', 'charts'], writing ? 'readwrite' : 'readonly');
     const store = tx.objectStore('characters'), request = store.getAll();
     let result: unknown;
     request.onsuccess = () => {
@@ -36,13 +68,20 @@ async function execute(message: SaveRequest) {
         else if (message.method === 'read') result = publicSlot(repository.read(message.index!));
         else {
           const index = message.index!, current = token(index);
-          if ((message.expected ?? null) !== current) {
+          if (message.method === 'write' && message.importing && repository.read(index).state !== 'empty') {
+            result = { ok: false, message: 'Choose an empty slot.' };
+          } else if ((message.expected ?? null) !== current) {
             result = { ok: false, message: 'This character changed in another tab. Return to the character hall and reload it before saving.' };
           } else {
             const slot = repository.read(index);
             const saved = message.method === 'write' ? repository.write(index, message.record!, slot.token) : repository.remove(index, slot.token);
             result = saved;
             if (saved.ok) {
+              if (message.method === 'write' && message.chart) {
+                const bundle = { format: 'evergrow' as const, version: 1 as const, character: message.record!, chart: message.chart };
+                if (!bundleChart(bundle)) throw new Error('Invalid explored map.');
+                tx.objectStore('charts').put(message.chart, chartKey(message.record!));
+              }
               // Return a tiny revision token, never the serialized character, to the game thread.
               const next = String(Number(current ?? 0) + 1), key = `revision:${index}`;
               store.put([key, next], key); result = { ok: true, token: next };

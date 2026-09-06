@@ -9,6 +9,7 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 - [Systems catalog](systems-catalog.md): stable system IDs with current coverage and remaining work.
 - [Architecture](architecture.md): code ownership, boundaries and extension rules.
 - [Controls](controls.md): current player controls.
+- [Cloud saves on Sites](cloud-saves-sites.md): implemented cloud/local selection, portable saves and conflict recovery; awaiting deployment.
 - [Android and AYN Thor](android-thor.md): offline APK, native controller input, companion screen and local saves.
 - [Touch gameplay and UI](touch-controls.md): touch controls, device layouts, input lifecycle and verification.
 
@@ -38,7 +39,6 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 
 ## Next iteration specifications
 
-- [ChatGPT cloud saves on Sites](cloud-saves-sites.md): researched authentication, per-user storage, atomic publication and cross-device conflicts; not implemented.
 
 - [Journeys and local leads](procedural-journeys.md): proposed procedural adventures, light onboarding, level-aware routing, journal and reward/persistence rules.
 

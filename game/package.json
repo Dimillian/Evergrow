@@ -14,8 +14,11 @@
     "test:browser": "playwright test"
   },
   "devDependencies": {
+    "@openai/sites-vite-plugin": "^0.2.0",
     "@playwright/test": "^1.63.0",
     "@types/node": "22.19.19",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2",
     "fake-indexeddb": "^6.2.5",
     "typescript": "5.9.3",
     "vite": "^8.2.2"
