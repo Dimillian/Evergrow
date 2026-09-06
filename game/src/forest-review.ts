@@ -48,8 +48,8 @@ async function boot() {
     renderer.render(simulation, sceneWorld, dt, { phase: 'paused', reducedMotion: reduced.matches, fps: 0, debug: false });
     post!.render(renderer.canvas, time);
     c.fillStyle = '#091318'; c.fillRect(0, 0, 960, 640); c.drawImage(display, 0, 32);
-    c.font = '18px "Pixelify Sans"'; c.fillStyle = '#d8d8ab'; c.fillText('EVERGROW / THE LIVING FOREST', 16, 23);
-    c.font = '12px "Pixelify Sans"'; c.fillStyle = '#9eb9a4';
+    c.font = '18px "Evergrow Numerals", "Pixelify Sans"'; c.fillStyle = '#d8d8ab'; c.fillText('EVERGROW / THE LIVING FOREST', 16, 23);
+    c.font = '12px "Evergrow Numerals", "Pixelify Sans"'; c.fillStyle = '#9eb9a4';
     c.fillText('ACTUAL RENDERER + CRT · STAGED MOVEMENT · SEED 7319 · NO GAMEPLAY OR SAVE ACCESS', 16, 634);
     if (recorder?.state === 'recording') status.textContent = `Recording ${Math.floor(time)} / ${scene.duration} seconds…`;
     request = requestAnimationFrame(draw);

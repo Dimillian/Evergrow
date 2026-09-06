@@ -138,7 +138,7 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
   c.globalAlpha = 1;
   if (view.sheet && z >= .55) for (const node of SKILL_TREE.nodes) if (node.skill && view.allocated.has(node.id)) {
     const x = sx(node.x), y = sy(node.y) + skillNodeScreenRadius(node,z) + 4;
-    c.font = '10px system-ui'; c.textAlign = 'center'; c.fillStyle = '#efe2b5';
+    c.font = '10px "Evergrow Numerals", system-ui'; c.textAlign = 'center'; c.fillStyle = '#efe2b5';
     c.fillText(`${learnedSkillRank(view.sheet,node.skill)}/${maximumSkillRank(view.sheet,node.skill)}`,x,y+8);
   }
   // Overview preserves the three disciplines and their silhouette; local labels take over as you approach.

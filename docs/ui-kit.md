@@ -1,6 +1,6 @@
 # Evergrow interface kit
 
-The interface combines dark slate surfaces, fine brass edges, warm text, muted jade actions, and the bundled Pixelify Sans font. Ornament stays at the edges; content and actions get generous space. World post-processing never touches UI text or controls.
+The interface combines dark slate surfaces, fine brass edges, warm text, muted jade actions, and Pixelify Sans lettering paired with clear Barlow numerals. Ornament stays at the edges; content and actions get generous space. World post-processing never touches UI text or controls.
 
 The selected bottom-HUD direction is **The Astral Instrument**: calibrated silver rings, celestial engraving, and separate black-steel skill plates. The shared `silver`, `silverDim`, `steel`, and `steelDeep` tokens supply its control materials. Use these and restrained celestial edge details when expanding the inventory; keep content legible and controls familiar. `hud-frame.ts` draws the metalwork, `hud-layout.ts` owns its shared geometry, and `hud.ts` presents live resource and ability states. The six main wells reserve LMB for basic attack and RMB/1–4 for five assignable skills; Q potion and Space dodge sit in separate utility plates. Preserve this distinction when adding equipped skills, and keep unassigned wells visibly empty and inert.
 
@@ -23,6 +23,12 @@ The selected bottom-HUD direction is **The Astral Instrument**: calibrated silve
 | `.ui-slot` | Shared equipment and bag-slot presentation primitive |
 
 `ui-icons.ts` provides decorative code-defined SVG icons with a common grid and stroke. Give every icon-only button an accessible name. `ui-components.ts` exports the icons, `escapeUI()` for interpolated markup, and dialog focus management. Prefer `textContent` for dynamic labels when no markup is needed.
+
+## Numeric typography
+
+Every number uses locally bundled Barlow Medium, including HUD resources, damage, XP, levels, bindings, prices, stat values, ranks, maps, notifications and mixed labels. `font.ts` registers a numeric-only `Evergrow Numerals` face before Pixelify Sans in the shared font stack. Its Unicode range includes digits and numeric punctuation (signs, decimal/group separators, percentages, ratios and multiplication). Letters retain the retro display font; small interface labels retain system sans lettering. No per-value spans or hand-drawn numerals are needed.
+
+Use `text`/`textWidth` for Canvas readouts and `UI_THEME.typography.font` / `--ui-font` for other surfaces. Both rendering and measurement resolve the same numeric face. DOM numerals use lining, tabular figures. Await `loadGameFont()` before rendering or measuring static previews; it loads both local fonts and reuses registered faces during hot replacement. New interface-font exceptions must also put `Evergrow Numerals` first. Font licenses ship in `public/licenses/`; no remote font requests are made.
 
 ## Windows and interaction
 

@@ -1,25 +1,40 @@
 export const GAME_FONT_FAMILY = 'Pixelify Sans';
+export const NUMERIC_FONT_FAMILY = 'Evergrow Numerals';
+export const GAME_FONT_STACK = `"${NUMERIC_FONT_FAMILY}", "${GAME_FONT_FAMILY}", ui-monospace, monospace`;
+export const INTERFACE_FONT_STACK = `"${NUMERIC_FONT_FAMILY}", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`;
+// Restrict this face to figures and numeric punctuation, including mixed labels.
+const NUMERIC_RANGE = 'U+0025, U+002B-003A, U+00B1, U+00D7, U+00F7, U+2030, U+2212';
 /** 11px em gives 7.7px capitals and a typical 6.45px advance at the legacy size=1. */
 export const GAME_FONT_EM = 11;
 const FONT_WEIGHT = 400;
 const FONT_URL = new URL('./assets/fonts/PixelifySans-Variable.ttf', import.meta.url).href;
+const NUMERIC_FONT_URL = new URL('./assets/fonts/Barlow-Medium.ttf', import.meta.url).href;
 let loading: Promise<void> | null = null;
 let measuring: CanvasRenderingContext2D | null = null;
 
-/** One locally bundled face serves both Canvas labels and the DOM interface. */
+/** Both DOM and Canvas resolve numeric glyphs through the same bundled face. */
 export function loadGameFont(): Promise<void> {
   if (loading) return loading;
   if (typeof document === 'undefined' || typeof FontFace === 'undefined') {
     return Promise.reject(new Error('The game font requires the browser FontFace API'));
   }
-  // Reuse the registered face after module hot replacement instead of accumulating fonts.
-  const existing = [...document.fonts].find(face => face.family.replace(/["']/g, '') === GAME_FONT_FAMILY);
-  const face = existing ?? new FontFace(GAME_FONT_FAMILY, `url("${FONT_URL}")`, {
-    style: 'normal', weight: '400 700', display: 'block',
-  });
-  if (!existing) document.fonts.add(face);
-  loading = face.load().then(() => { measuring = null; }).catch(error => {
-    if (!existing) document.fonts.delete(face);
+  const register = (family: string, url: string, unicodeRange?: string) => {
+    // Reuse registered faces after hot replacement without accumulating fonts.
+    const existing = [...document.fonts].find(face => face.family.replace(/["']/g, '') === family);
+    const face = existing ?? new FontFace(family, `url("${url}")`, {
+      style: 'normal', weight: '400 700', display: 'block',
+      ...(unicodeRange ? { unicodeRange } : {}),
+    });
+    if (!existing) document.fonts.add(face);
+    return face.load().catch(error => {
+      if (!existing) document.fonts.delete(face);
+      throw error;
+    });
+  };
+  loading = Promise.all([
+    register(GAME_FONT_FAMILY, FONT_URL),
+    register(NUMERIC_FONT_FAMILY, NUMERIC_FONT_URL, NUMERIC_RANGE),
+  ]).then(() => { measuring = null; }).catch(error => {
     loading = null;
     throw error;
   });
@@ -29,8 +44,8 @@ export function loadGameFont(): Promise<void> {
 type TextFace = 'display' | 'interface';
 
 function font(pixelSize: number, face: TextFace = 'display') {
-  if (face === 'interface') return `600 ${pixelSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`;
-  return `${FONT_WEIGHT} ${pixelSize}px "${GAME_FONT_FAMILY}", monospace`;
+  if (face === 'interface') return `600 ${pixelSize}px ${INTERFACE_FONT_STACK}`;
+  return `${FONT_WEIGHT} ${pixelSize}px ${GAME_FONT_STACK}`;
 }
 
 /** Natural font metrics replace the previous six-pixel character-count estimate. */

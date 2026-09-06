@@ -48,7 +48,7 @@ export function drawRewardMotes(c: CanvasRenderingContext2D, feedback: RewardFee
 }
 /** Native-resolution text; camera zoom and CRT never touch reward readouts. */
 export function drawGoldBalance(c: CanvasRenderingContext2D, feedback: RewardFeedback): void {
-  c.save(); c.font = '600 13px system-ui, sans-serif'; c.textBaseline = 'middle';
+  c.save(); c.font = '600 13px "Evergrow Numerals", system-ui, sans-serif'; c.textBaseline = 'middle';
   c.shadowColor = '#02070d'; c.shadowBlur = 4;
   coin(c, 27, 62, 1.25);
   c.fillStyle = '#e3c880'; c.fillText(formatGold(feedback.balance), 40, 62);

@@ -350,7 +350,7 @@ export class Renderer {
       const npc = focusNPC(npcs, p, world);
       if (npc) {
         const point = worldToScreen(this.view, npc.x, npc.y - 65);
-        c.save(); c.font = '12px system-ui, sans-serif'; c.textAlign = 'center';
+        c.save(); c.font = '12px "Evergrow Numerals", system-ui, sans-serif'; c.textAlign = 'center';
         const label = `${NPC_NAMES[npc.role]}  [${this.gamepadActive ? 'A' : 'E'}]`, width = c.measureText(label).width + 18;
         c.fillStyle = '#071019ed'; c.fillRect(point.x - width / 2, point.y - 14, width, 23);
         c.strokeStyle = NPC_COLORS[npc.role] + '90'; c.strokeRect(point.x - width / 2, point.y - 14, width, 23);
@@ -368,7 +368,7 @@ export class Renderer {
     if (label) {
       if (this.gamepadActive) label = label.replace('[E]', '[A]');
       const point = worldToScreen(this.view, x, y);
-      c.save(); c.font = '12px system-ui, sans-serif'; c.textAlign = 'center';
+      c.save(); c.font = '12px "Evergrow Numerals", system-ui, sans-serif'; c.textAlign = 'center';
       const w = c.measureText(label).width + 18;
       c.fillStyle = '#09121deb'; c.fillRect(point.x - w / 2, point.y - 14, w, 23);
       c.strokeStyle = '#b7a9d366'; c.strokeRect(point.x - w / 2, point.y - 14, w, 23);
@@ -378,7 +378,7 @@ export class Renderer {
       const home = world.getPortalAnchor(sim.travel.returnTo.town), pos = worldToScreen(this.view, home.x, home.y - 38);
       const x = Math.max(40, Math.min(this.width - 210, pos.x)), y = Math.max(38, Math.min(this.height - 155, pos.y));
       c.save(); c.strokeStyle = '#cfbff0'; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, 22, 0, TAU); c.stroke();
-      c.font = '12px system-ui, sans-serif'; c.fillStyle = '#e3d8f7'; c.textAlign = 'center'; c.fillText('Return portal', x, y + 38);
+      c.font = '12px "Evergrow Numerals", system-ui, sans-serif'; c.fillStyle = '#e3d8f7'; c.textAlign = 'center'; c.fillText('Return portal', x, y + 38);
       if (Math.hypot(pos.x - x, pos.y - y) > 20) { const a = Math.atan2(pos.y - y, pos.x - x); c.translate(x, y); c.rotate(a);
         c.beginPath(); c.moveTo(10, 0); c.lineTo(-5, -6); c.lineTo(-5, 6); c.closePath(); c.fill(); }
       c.restore();

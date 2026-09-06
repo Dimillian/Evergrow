@@ -7,8 +7,8 @@
 .notification-icon > .ui-icon { width: 17px; height: 17px; }
 .notification-copy { min-width: 0; }
 .notification-copy strong { display: block; font-weight: 400; font-size: 13px; line-height: 1.15; color: var(--notice-accent); overflow-wrap: anywhere; }
-.notification-copy > span { display: block; margin-top: 3px; color: #899da4; font: 10px/1.25 system-ui, sans-serif; }
-.notification-number { font-family: system-ui, sans-serif; font-size: .9em; font-weight: 500; font-variant-numeric: tabular-nums; }
+.notification-copy > span { display: block; margin-top: 3px; color: #899da4; font: 10px/1.25 "Evergrow Numerals", system-ui, sans-serif; }
+.notification-number { font-family: "Evergrow Numerals", system-ui, sans-serif; font-size: .9em; font-weight: 500; font-variant-numeric: tabular-nums; }
 .notification-flourish { display: none; }
 .notification-card.is-leaving { opacity: 0; transform: translateY(-3px); animation: none; }
 @keyframes notice-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -16,7 +16,7 @@
 @media (max-height: 560px) { .notification-feed { bottom: 160px; } }
 @media (prefers-reduced-motion: reduce) { .notification-card, .notification-card.is-leaving { animation: none; transition: none; transform: none; } }
 .notification-reward-totals { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
-.notification-reward-totals b { font: 500 12px/1.4 system-ui, sans-serif; font-variant-numeric: tabular-nums; animation: notice-total 160ms ease-out; }
+.notification-reward-totals b { font: 500 12px/1.4 "Evergrow Numerals", system-ui, sans-serif; font-variant-numeric: tabular-nums; animation: notice-total 160ms ease-out; }
 .notification-reward-gold { color: #e3c880; }
 .notification-reward-xp { color: #c7aff0; }
 @keyframes notice-total { from { opacity: .65; transform: translateY(1px); } to { opacity: 1; transform: translateY(0); } }

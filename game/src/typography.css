@@ -1,13 +1,14 @@
 /*
- * Pixelify Sans is registered once by loadGameFont() in font.ts. Keeping the
+ * Pixelify Sans and Barlow numerals are registered once by loadGameFont() in font.ts. Keeping the
  * FontFace loader as the single source avoids a second CSS face/download.
  * Import after style.css; await loadGameFont() before the first game render.
  */
 :root {
-  --font-game: "Pixelify Sans", ui-monospace, monospace;
+  --font-game: "Evergrow Numerals", "Pixelify Sans", ui-monospace, monospace;
   font-family: var(--font-game);
   font-synthesis: none;
   font-kerning: normal;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 button, select, input {

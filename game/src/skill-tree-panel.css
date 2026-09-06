@@ -142,7 +142,7 @@
 .skill-atlas-requirement.is-ready small { color: #87a799; }
 
 .skill-rank-controls { display: grid; gap: 10px; padding: 14px; margin: 14px 0; }
-.skill-rank-controls > strong { color: #e3c994; font: 600 14px system-ui, sans-serif; }
+.skill-rank-controls > strong { color: #e3c994; font: 600 14px "Evergrow Numerals", system-ui, sans-serif; }
 .skill-rank-controls label { display: grid; gap: 6px; font-size: 13px; color: var(--ui-silver); }
 .skill-rank-controls select { width: 100%; min-width: 0; font-size: 13px; }
 .skill-rank-controls p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ui-silver); }

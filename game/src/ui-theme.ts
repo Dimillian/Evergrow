@@ -1,3 +1,4 @@
+import { GAME_FONT_STACK } from './font.ts';
 import { TOOLTIP_MOTION } from './ui-tooltip-motion.ts';
 
 /** Shared DOM/Canvas materials. Keep world lighting and post-processing separate. */
@@ -25,7 +26,7 @@ export const UI_THEME = Object.freeze({
     focus: '#c5d7b8',
   }),
   typography: Object.freeze({
-    font: '"Pixelify Sans", ui-monospace, monospace',
+    font: GAME_FONT_STACK,
     body: '16px', small: '14px', kicker: '12px', title: '20px',
   }),
   geometry: Object.freeze({ control: '44px', slot: '56px', radius: '3px' }),
