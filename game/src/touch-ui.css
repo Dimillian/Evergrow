@@ -1,5 +1,5 @@
 /* Input-specific presentation. Desktop selectors and layout remain unchanged. */
-.touch-hud { --touch-footer-clearance: calc(max(96px, 14vh) + env(safe-area-inset-bottom)); position: absolute; inset: 0; padding-top: env(safe-area-inset-top); z-index: 8; pointer-events: none; font: 14px var(--ui-font); color: var(--ui-text); user-select: none; -webkit-user-select: none; }
+.touch-hud { --touch-footer-clearance: calc(max(96px, 14vh) + env(safe-area-inset-bottom)); position: absolute; inset: 0; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); z-index: 8; pointer-events: none; font: 14px var(--ui-font); color: var(--ui-text); user-select: none; -webkit-user-select: none; }
 .touch-hud[hidden] { display: none; }
 .touch-mode #game { touch-action: none; }
 .touch-mode .hud-controls { display: none; }
@@ -123,3 +123,19 @@
 .touch-point-badge[hidden] { display: none; }
 /* The compact desktop toolbar keeps its PR sizing; finger targets remain 48px. */
 .touch-mode .character-inventory-heading .character-tool-icon { width: 48px; min-width: 48px; height: 48px; min-height: 48px; }
+
+/* Phone landscape leaves the center open: controls sit beside, not above, resources. */
+.touch-menu-toggle { display: none; }
+.touch-phone-landscape .touch-move { left: var(--move-x); top: var(--move-y); bottom: auto; width: 96px; height: 96px; }
+.touch-phone-landscape .touch-move i { left: 27px; top: 27px; }
+.touch-phone-landscape .touch-actions { left: var(--actions-x); top: var(--actions-y); right: auto; bottom: auto; }
+.touch-phone-landscape .touch-world-actions { left: var(--move-x); top: calc(var(--move-y) - 48px); bottom: auto; }
+.touch-phone-landscape .touch-menu-toggle { display: flex; position: absolute; top: max(8px,env(safe-area-inset-top)); right: max(12px,env(safe-area-inset-right)); font-size: 22px; }
+.touch-phone-landscape .touch-menu { display: none; left: auto; right: max(12px,env(safe-area-inset-right)); top: calc(max(8px,env(safe-area-inset-top)) + 48px); bottom: auto; transform: none; z-index: 2; }
+.touch-phone-landscape .menus-open .touch-menu { display: flex; }
+.touch-phone-landscape .journey-mini { display: none; }
+.touch-phone-landscape .notification-feed { left: 50%; transform: translateX(-50%); top: calc(max(8px,env(safe-area-inset-top)) + 58px); bottom: auto; width: min(230px,32vw); }
+.touch-phone-landscape .notification-card { min-height: 26px; padding: 3px 6px; background: #0b151e99; }
+.touch-phone-landscape .notification-card:not(:last-child), .touch-phone-landscape .notification-icon, .touch-phone-landscape .notification-copy > span { display: none; }
+.touch-phone-landscape .notification-copy strong { font-size: 11px; }
+.touch-mode .game-shell { height: var(--touch-vh,100dvh); }

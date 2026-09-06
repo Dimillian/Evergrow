@@ -248,7 +248,7 @@ export class Game {
     window.addEventListener('focus', () => this.clearInput(), { signal });
     this.canvas.addEventListener('blur', () => this.clearInput(), { signal });
     window.addEventListener('resize', () => this.resize(), { signal });
-    window.visualViewport?.addEventListener('resize', () => { this.touch.clear(); document.documentElement.style.setProperty('--touch-vh', `${window.visualViewport!.height}px`); }, {signal});
+    window.visualViewport?.addEventListener('resize', () => { if(this.touch.active) this.resize(); }, {signal});
     window.addEventListener('blur', () => {
       this.mouse.present = false;
       this.clearInput();
@@ -367,8 +367,8 @@ export class Game {
 
   private resize() {
     this.touch?.clear(); this.clearWorldTouch?.();
-    const width = window.innerWidth, height = window.innerHeight;
-    document.documentElement.style.setProperty('--touch-vh', `${window.visualViewport?.height ?? height}px`);
+    document.documentElement.style.setProperty('--touch-vh', `${window.visualViewport?.height ?? window.innerHeight}px`);
+    const width = window.innerWidth, height = this.touch?.active ? Math.round(window.visualViewport?.height ?? window.innerHeight) : window.innerHeight;
     const ratio = Math.min(1.6, window.devicePixelRatio || 1);
     this.canvas.width = Math.round(width * ratio);
     this.canvas.height = Math.round(height * ratio);
@@ -378,6 +378,8 @@ export class Game {
     this.uiCanvas.height = Math.round(height * uiRatio);
     const logicalHeight = Math.min(680, Math.max(450, Math.round(height / 1.35)));
     this.renderer.resize(Math.max(this.touch?.active ? 1 : 540, Math.round(logicalHeight * width / height)), logicalHeight);
+    this.touch?.refreshLayout();
+    this.renderer.touchViewport = this.touch?.viewport ?? null;
     this.renderer.touchTopInset = (this.touch?.safeTop ?? 0) * this.renderer.height / height;
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
     this.mouse.x = this.renderer.width * 0.6;
@@ -891,8 +893,8 @@ export class Game {
       y: p.prevY + (p.y - p.prevY) * alpha, angle: p.angle };
     const dungeonRun=currentDungeon(this.sim.expeditions);
     if (this.phase !== 'ready' && !dungeonRun) this.worldMap.update(mapPlayer, dt);
-    if (this.phase !== 'ready' && dungeonRun && !(this.touch.active && window.innerWidth<620)) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeyMarker);
-    if (this.phase !== 'ready' && !dungeonRun && !(this.touch.active && window.innerWidth<620)) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, now / 1000,
+    if (this.phase !== 'ready' && dungeonRun && !(this.touch.active && (window.innerWidth<620 || this.touch.phoneLandscape))) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeyMarker);
+    if (this.phase !== 'ready' && !dungeonRun && !(this.touch.active && (window.innerWidth<620 || this.touch.phoneLandscape))) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, now / 1000,
       this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
         x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
         y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind,

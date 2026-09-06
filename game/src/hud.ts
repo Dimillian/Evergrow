@@ -18,7 +18,7 @@ import { HUD_ART, HUD_MENU_SHORTCUTS, HUD_SKILL_SLOTS, getHUDLayout } from './hu
 export { HUD_MENU_SHORTCUTS, getHUDLayout, isHUDPoint } from './hud-layout.ts';
 export type { HUDRect, HUDShortcut, HUDLayout } from './hud-layout.ts';
 
-export interface HUDOptions { touch?: boolean; gamepad?: boolean; reducedMotion?: boolean; healthTrail?: number; hitPulse?: number; experience?: ExperienceDisplay; }
+export interface HUDOptions { layout?: {x:number;y:number;scale:number}; touch?: boolean; gamepad?: boolean; reducedMotion?: boolean; healthTrail?: number; hitPulse?: number; experience?: ExperienceDisplay; }
 
 const UI = UI_THEME.palette;
 const TAU = Math.PI * 2;
@@ -222,7 +222,7 @@ function drawTouchResources(c: CanvasRenderingContext2D, p: Player, time: number
 
 /** Drawn at native display density above the world shader. */
 export function drawFloatingHUD(c: CanvasRenderingContext2D, p: Player, width: number, height: number, time: number, options: HUDOptions = {}) {
-  const layout = getHUDLayout(width, height);
+  const layout = options.layout ?? getHUDLayout(width, height);
   if (!layout.scale) return;
   c.save(); c.translate(layout.x, layout.y); c.scale(layout.scale, layout.scale);
   if(options.touch) {

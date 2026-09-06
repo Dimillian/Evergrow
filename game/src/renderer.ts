@@ -28,6 +28,7 @@ import type { Simulation } from './simulation.ts';
 import type { CombatEvent, Enemy, Player } from './model.ts';
 import { text } from './font.ts';
 import { drawFloatingHUD } from './hud.ts';
+import { phoneLandscapeLayout, type TouchViewport } from './touch-layout.ts';
 import { ExperienceFeedback, type ExperienceDisplay } from './hud-experience.ts';
 import { Lighting, drawGlow } from './lighting.ts';
 import type { PointLight } from './lighting.ts';
@@ -157,6 +158,7 @@ export class Renderer {
   gamepadActive = false;
   touchActive = false;
   touchTopInset = 0;
+  touchViewport: TouchViewport | null = null;
   worldToScreen(x: number, y: number) { return worldToScreen(this.view, x, y); }
 
   /** Uses the displayed camera/body positions, then returns gameplay ground coordinates. */
@@ -384,26 +386,40 @@ export class Renderer {
     // Project popup anchors, leaving their glyph size and outline independent of camera zoom.
     this.effects.drawNumbers(c, (x, y) => worldToScreen(this.view, x, y));
     drawLootLabels(c, sim.groundItems, (x, y) => worldToScreen(this.view, x, y), this.width, this.height);
+    const phone = this.touchActive && this.touchViewport ? phoneLandscapeLayout(this.touchViewport) : null;
+    const unit = this.touchViewport ? this.width / this.touchViewport.width : 1;
+    const footer = phone ? {x:phone.footer.x*unit,y:phone.footer.y*unit,scale:phone.footer.scale*unit} : undefined;
+    const headerX = phone ? (phone.left-22*.8)*unit : 0;
+    const headerY = phone ? (phone.top-22*.8)*unit : 0;
+    c.save();
+    if(phone) { c.translate(headerX,headerY); c.scale(.8*unit,.8*unit); }
     this.navigation(c, sim, world, settings);
+    drawGoldBalance(c, this.rewards);
+    c.restore();
     drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
       reducedMotion: settings.reducedMotion, healthTrail: this.playerHealthTrail / Math.max(1, p.maxHp),
       hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / COMBAT_TIMING.hitFlashDuration),
       experience: this.experienceDisplay,
-      gamepad: this.gamepadActive, touch: this.touchActive,
+      gamepad: this.gamepadActive, touch: this.touchActive, layout:footer,
     });
-    drawRewardFlights(c, this.rewards, (x, y) => worldToScreen(this.view, x, y), this.width, this.height);
-    drawGoldBalance(c, this.rewards);
+    drawRewardFlights(c, this.rewards, (x, y) => worldToScreen(this.view, x, y), this.width, this.height, footer ? {hud:footer,gold:{x:headerX+27*.8*unit,y:headerY+62*.8*unit}} : undefined);
     drawLevelAnnouncement(c, this.rewards.level, worldToScreen(this.view, p.x, p.y), this.width, this.height, settings.reducedMotion);
     if(!this.rewards.level)drawJourneyAnnouncement(c,this.rewards.journey,worldToScreen(this.view,p.x,p.y),this.width,this.height,settings.reducedMotion);
+    c.save();
+    const plateScale = phone ? .72*unit : 1;
+    if(phone) c.scale(plateScale,plateScale);
+    const plateWidth=this.width/plateScale, plateHeight=this.height/plateScale;
+    const plateInset=this.touchTopInset/plateScale;
     const boss=sim.enemies.find(e=>e.kind==='warden'&&e.hp>0&&Math.hypot(e.x-p.x,e.y-p.y)<1100);
-    if(boss) { drawEnemyPlate(c,boss,this.width,this.height,{touch:this.touchActive,topInset:this.touchTopInset}); if(this.focusedEnemy?.id===boss.id)text(c,'CONTROL DURATION −75% · BRIEF STUN IMMUNITY',this.width/2,90+(this.touchActive?this.touchTopInset:0),.7,'#9db8a7','center'); }
-    if (!boss && this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, this.width, this.height, {
-      touch: this.touchActive, topInset: this.touchTopInset,
+    if(boss) { drawEnemyPlate(c,boss,plateWidth,plateHeight,{touch:this.touchActive,topInset:plateInset}); if(this.focusedEnemy?.id===boss.id)text(c,'CONTROL DURATION −75% · BRIEF STUN IMMUNITY',plateWidth/2,90+(this.touchActive?plateInset:0),.7,'#9db8a7','center'); }
+    if (!boss && this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, plateWidth, plateHeight, {
+      touch: this.touchActive, topInset: plateInset,
       time: this.visualTime, reducedMotion: settings.reducedMotion,
       opacity: this.plateOpacity,
       healthTrail: this.damageTrails.get(this.plateEnemy.id)?.value ?? this.plateEnemy.hp,
       hitPulse: settings.reducedMotion ? 0 : Math.min(1, this.plateEnemy.hitFlash / COMBAT_TIMING.hitFlashDuration),
     });
+    c.restore();
     if (settings.phase === 'playing') {
       const run=currentDungeon(sim.expeditions),f=sim.dungeonFloor;
       const points=run&&f?[{...f.entry,name:'Leave crypt'},...(run.states.warden.hp<=0?[{...f.exit,name:'Leave crypt'}]:[]),...f.chests.map(ch=>({...ch,name:'Crypt chest'}))]:this.visibility.entrances;

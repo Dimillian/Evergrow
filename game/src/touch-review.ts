@@ -57,11 +57,13 @@ else if(panel==='map') map.open(player);
 shell.classList.toggle('playing',panel==='world');
 let frame=0, count=0;
 function draw() {
-  const w=innerWidth,h=innerHeight,dpr=devicePixelRatio||1,ratio=Math.min(1.6,dpr);
+  const w=innerWidth,h=Math.round(visualViewport?.height ?? innerHeight),dpr=devicePixelRatio||1,ratio=Math.min(1.6,dpr);
+  document.documentElement.style.setProperty('--touch-vh', `${h}px`);
   if(canvas.width!==Math.round(w*ratio)||canvas.height!==Math.round(h*ratio)) {
     canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);ui.width=Math.round(w*dpr);ui.height=Math.round(h*dpr);
     const logicalHeight=Math.min(680,Math.max(450,Math.round(h/1.35)));
     renderer.resize(Math.round(logicalHeight*w/h),logicalHeight);
+    touch.refreshLayout(); renderer.touchViewport = touch.viewport;
     renderer.touchTopInset = touch.safeTop * renderer.height / h;
   }
   renderer.cameraX=player.x;renderer.cameraY=player.y-50;
@@ -71,9 +73,12 @@ function draw() {
   c.setTransform(ui.width/renderer.width,0,0,ui.height/renderer.height,0,0);
   renderer.renderUI(c,sim,world,settings);
   // A representative target lets the user review the pinned plate without running combat.
-  if(panel==='world')drawEnemyPlate(c,{kind:'stalker',rank:'normal',level:4,hp:36,maxHp:48},renderer.width,renderer.height,
-    {touch:true,topInset:renderer.touchTopInset,reducedMotion:true});
-  if(w>=620)map.drawMinimap(c,player,renderer.width,renderer.height,0);
+  const plateScale=touch.phoneLandscape ? .72*renderer.width/w : 1;
+  c.save(); c.scale(plateScale,plateScale);
+  if(panel==='world')drawEnemyPlate(c,{kind:'stalker',rank:'normal',level:4,hp:36,maxHp:48},renderer.width/plateScale,renderer.height/plateScale,
+    {touch:true,topInset:renderer.touchTopInset/plateScale,reducedMotion:true});
+  c.restore();
+  if(w>=620&&!touch.phoneLandscape)map.drawMinimap(c,player,renderer.width,renderer.height,0);
   touch.update(player,panel==='world'?'playing':'character',false,performance.now());
   if(++count>=3)root.dataset.ready='true';
   frame=requestAnimationFrame(draw);

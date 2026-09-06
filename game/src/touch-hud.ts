@@ -8,6 +8,7 @@ import { uiIcon } from './ui-components.ts';
 import type { Player } from './model.ts';
 import type { GamePhase } from './game-phase.ts';
 import './touch-ui.css';
+import { phoneLandscapeLayout, type TouchViewport } from './touch-layout.ts';
 
 type MenuAction = 'pause' | 'character' | 'skills' | 'journeys' | 'map' | 'portal' | 'interact' ;
 export class TouchHUD {
@@ -29,7 +30,7 @@ export class TouchHUD {
     this.mount = mount; this.actions = actions;
     this.element = document.createElement('div'); this.element.className = 'touch-hud'; this.element.hidden = true;
     const button = (action: string, label: string, icon: string) => `<button type="button" class="touch-button" data-touch-menu="${action}" aria-label="${label}">${icon}${action==='interact' || action==='portal' ? `<small>${action==='interact'?'Interact':'Portal'}</small>` : ''}</button>`;
-    this.element.innerHTML = `<nav class="touch-menu" aria-label="Game menus">${button('character','Character and inventory',uiIcon('character'))}${button('skills','Skill tree',uiIcon('skilltree'))}${button('journeys','Journeys',uiIcon('journal'))}${button('map','Map',uiIcon('map'))}${button('pause','Pause','Ⅱ')}</nav>
+    this.element.innerHTML = `<button type="button" class="touch-button touch-menu-toggle" aria-label="Open game menus" aria-expanded="false">☰</button><nav class="touch-menu" aria-label="Game menus">${button('character','Character and inventory',uiIcon('character'))}${button('skills','Skill tree',uiIcon('skilltree'))}${button('journeys','Journeys',uiIcon('journal'))}${button('map','Map',uiIcon('map'))}${button('pause','Pause','Ⅱ')}</nav>
       <div class="touch-resources"><div class="touch-life" role="meter" aria-label="Life" aria-valuemin="0"><span></span></div><div class="touch-mana" role="meter" aria-label="Mana" aria-valuemin="0"><span></span></div></div>
       <div class="touch-move" data-touch-action="move" role="group" aria-label="Movement stick"><i></i></div>
       <div class="touch-actions">${Array.from({length:5},(_,i)=>`<button class="touch-button touch-skill" data-touch-action="skill-${i}" aria-label="Empty skill ${i+1}"><span class="touch-icon"></span><small></small></button>`).join('')}
@@ -100,6 +101,13 @@ export class TouchHUD {
     this.element.addEventListener('pointercancel',e=>release(e,true),{signal});
     this.element.addEventListener('lostpointercapture',e=>release(e,true),{signal});
     this.element.addEventListener('click', e=> {
+      if ((e.target as Element).closest('.touch-menu-toggle')) {
+        const open = !this.element.classList.contains('menus-open');
+        this.clear(); this.actions.cancelCombat();
+        this.element.classList.toggle('menus-open', open);
+        this.element.querySelector('.touch-menu-toggle')!.setAttribute('aria-expanded', String(open));
+        return;
+      }
       const action = (e.target as Element).closest<HTMLElement>('[data-touch-menu]')?.dataset.touchMenu as MenuAction;
       if(action && this.enabled) { this.clear(); this.actions.menu(action); }
     },{signal});
@@ -109,10 +117,27 @@ export class TouchHUD {
     this.stick.style.transform = `translate(${this.input.move.x*28}px,${this.input.move.y*28}px)`;
     this.aimStick.style.transform = `translate(${this.input.attackStick.x*18}px,${this.input.attackStick.y*18}px)`;
   }
+  get viewport(): TouchViewport {
+    const style = getComputedStyle(this.element);
+    return {width:this.mount.clientWidth,height:this.mount.clientHeight,
+      top:parseFloat(style.paddingTop)||0,right:parseFloat(style.paddingRight)||0,
+      bottom:parseFloat(style.paddingBottom)||0,left:parseFloat(style.paddingLeft)||0};
+  }
+  get phoneLandscape() { return this.mount.classList.contains('touch-phone-landscape'); }
+  refreshLayout() {
+    const layout = phoneLandscapeLayout(this.viewport);
+    this.mount.classList.toggle('touch-phone-landscape', this.active && !!layout);
+    if(layout) {
+      for(const [name,rect] of [['move',layout.move],['actions',layout.actions]] as const) {
+        this.element.style.setProperty(`--${name}-x`, `${rect.x}px`);
+        this.element.style.setProperty(`--${name}-y`, `${rect.y}px`);
+      }
+    }
+  }
   get safeTop(): number { return parseFloat(getComputedStyle(this.element).paddingTop) || 0; }
   setActive(active: boolean) {
     if(this.active === active) return;
-    this.clear(); this.active = active; this.mount.classList.toggle('touch-mode',active);
+    this.clear(); this.active = active; this.refreshLayout(); this.mount.classList.toggle('touch-mode',active);
     document.documentElement.classList.toggle('touch-mode',active);
     this.mount.dispatchEvent(new CustomEvent('evergrow-input-mode',{bubbles:true,detail:{touch:active}})); this.actions.activate(active);
     this.element.hidden = !active || !this.enabled;
@@ -121,6 +146,8 @@ export class TouchHUD {
     this.input.clear(); const contacts = [...this.captured]; this.captured.clear();
     for(const [id,target] of contacts) { target.classList.remove('is-held'); if(target.hasPointerCapture(id)) target.releasePointerCapture(id); }
     this.cancel.hidden = true; this.updateSticks();
+    this.element.classList.remove('menus-open');
+    this.element.querySelector('.touch-menu-toggle')!.setAttribute('aria-expanded', 'false');
   }
   update(player: Player, phase: GamePhase, busy: boolean, now: number) {
     this.player = player;
@@ -162,5 +189,5 @@ export class TouchHUD {
     el.querySelector('small')!.textContent=progress!==null ? 'Cancel' : returning ? 'Return' : 'Portal';
     el.classList.toggle('is-held',progress!==null);
   }
-  dispose() { this.clear(); this.abort.abort(); this.element.remove(); this.mount.classList.remove('touch-mode'); document.documentElement.classList.remove('touch-mode'); }
+  dispose() { this.clear(); this.abort.abort(); this.element.remove(); this.mount.classList.remove('touch-mode'); document.documentElement.classList.remove('touch-mode'); this.mount.classList.remove('touch-phone-landscape'); }
 }

@@ -34,8 +34,9 @@ export function drawGroundGold(c: CanvasRenderingContext2D, piles: readonly Grou
 }
 /** Screen-space flights leave their source once and remain stable as the camera moves. */
 export function drawRewardFlights(c: CanvasRenderingContext2D, feedback: RewardFeedback,
-  project: (x: number, y: number) => { x: number; y: number }, width: number, height: number): void {
-  const hud = getHUDLayout(width, height), rail = HUD_ART.experience;
+  project: (x: number, y: number) => { x: number; y: number }, width: number, height: number,
+  targets?: {hud: {x:number;y:number;scale:number}; gold: {x:number;y:number}}): void {
+  const hud = targets?.hud ?? getHUDLayout(width, height), rail = HUD_ART.experience;
   c.save();
   for (const mote of feedback.motes) {
     if (!mote.screen) {
@@ -45,7 +46,7 @@ export function drawRewardFlights(c: CanvasRenderingContext2D, feedback: RewardF
     if (mote.age < 0) continue;
     const t = Math.min(1, mote.age / REWARD_FLIGHT_SECONDS), gold = mote.kind === 'gold';
     const sx = mote.screen.x * width, sy = mote.screen.y * height;
-    const ex = gold ? 27 : hud.x + (rail.x + 5) * hud.scale, ey = gold ? 62 : hud.y + (rail.y + 3) * hud.scale;
+    const ex = gold ? (targets?.gold.x ?? 27) : hud.x + (rail.x + 5) * hud.scale, ey = gold ? (targets?.gold.y ?? 62) : hud.y + (rail.y + 3) * hud.scale;
     const bend = Math.sin(mote.phase) * 32;
     const position = (v: number) => {
       const q = v * v * (2 - v), u = 1 - q;
