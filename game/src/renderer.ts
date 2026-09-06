@@ -10,7 +10,7 @@ import { townPortalAnchor, withinPortalReach, PORTAL_RULES, type PortalAnchor } 
 import { buildingNPC, focusNPC, NPC_NAMES, NPC_COLORS } from './npcs.ts';
 import { drawNPC } from './npc-art.ts';
 import { RewardFeedback } from './reward-feedback.ts';
-import { drawGroundGold, drawRewardFlights, drawGoldBalance, drawLevelCelebration, drawLevelAnnouncement } from './reward-art.ts';
+import { drawGroundGold, drawRewardFlights, drawGoldBalance, drawLevelCelebration, drawLevelAnnouncement, drawJourneyAnnouncement } from './reward-art.ts';
 import { goldBalance } from './wallet.ts';
 import { BiomeLife } from './biome-life.ts';
 import { BiomeLifeArt } from './biome-life-art.ts';
@@ -67,6 +67,7 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const TAU = Math.PI * 2;
 
 export class Renderer {
+  extraUIBounds: {x:number;y:number;width:number;height:number}|null = null;
   canvas = document.createElement('canvas');
   ctx = this.canvas.getContext('2d', { alpha: false })!;
   art = new ArtLibrary();
@@ -391,6 +392,7 @@ export class Renderer {
     drawRewardFlights(c, this.rewards, (x, y) => worldToScreen(this.view, x, y), this.width, this.height);
     drawGoldBalance(c, this.rewards);
     drawLevelAnnouncement(c, this.rewards.level, worldToScreen(this.view, p.x, p.y), this.width, this.height, settings.reducedMotion);
+    if(!this.rewards.level)drawJourneyAnnouncement(c,this.rewards.journey,worldToScreen(this.view,p.x,p.y),this.width,this.height,settings.reducedMotion);
     const boss=sim.enemies.find(e=>e.kind==='warden'&&e.hp>0&&Math.hypot(e.x-p.x,e.y-p.y)<1100);
     if(boss) { drawEnemyPlate(c,boss,this.width,this.height); if(this.focusedEnemy?.id===boss.id)text(c,'CONTROL DURATION −75% · BRIEF STUN IMMUNITY',this.width/2,90,.7,'#9db8a7','center'); }
     if (!boss && this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, this.width, this.height, {
@@ -760,7 +762,7 @@ export class Renderer {
   }
 
   private pointerOverHUD() {
-    return !this.gamepadActive && isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height);
+    return !this.gamepadActive && isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height, this.extraUIBounds);
   }
 
   private cursor(c: CanvasRenderingContext2D, sim: Simulation) {

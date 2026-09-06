@@ -40,5 +40,11 @@ export function getMinimapRect(width: number, _height: number): MapRect {
 
 export function getPortalControlRect(width: number, height: number): MapRect {
   const map = getMinimapRect(width, height);
-  return { x: map.x + map.width - 112, y: map.y + map.height + 8, width: 112, height: 32 };
+  return { x: map.x, y: map.y + map.height, width: map.width, height: 25 };
+}
+
+/** The log continues the same column immediately below its portal action. */
+export function getJourneyLogAnchor(width: number, height: number): Pick<MapRect, 'x' | 'y' | 'width'> {
+  const portal = getPortalControlRect(width, height);
+  return { x: portal.x, y: portal.y + portal.height, width: portal.width };
 }

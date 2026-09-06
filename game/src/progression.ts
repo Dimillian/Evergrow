@@ -7,11 +7,13 @@ export interface ExperienceProgress {
   xp: number;
 }
 
-/** Equal-level normal-stalker equivalents gradually grow from five to about fifty at level fifty. */
+/** Preserve the first-skill runway, then offset denser packs with a gradual, bounded XP premium. */
 export function xpForNextLevel(level: number): number {
   const current = normalizeLevel(level), n = current - 1;
   const stalkerReward = Math.round(20 * monsterExperienceScale(current));
-  return Math.round(stalkerReward * (5 + 2 * n ** .8) / 5) * 5;
+  const afterIntro = Math.max(0, current - 4);
+  const pacing = 1 + 2 * afterIntro / (afterIntro + 3);
+  return Math.round(stalkerReward * (5 + 2 * n ** .8) * pacing / 5) * 5;
 }
 
 /** Geography supplies threat. This reward factor discourages trivial farming without scaling enemies to the player. */

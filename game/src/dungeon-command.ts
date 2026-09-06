@@ -1,3 +1,4 @@
+import { stageJourneyCompletion } from './journey-rewards.ts';
 import type { Simulation } from './simulation.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import type { DungeonEntrance } from './dungeon.ts';
@@ -141,6 +142,7 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     if (mask === run.chestMasks[index])
         return { ok: false, message: mask === (index === 2 ? 15 : 9) ? 'Already claimed.' : 'Collect nearby loot to make room.' };
     run.chestMasks[index] = mask;
+    const completion=index===2&&mask===15?stageJourneyCompletion(checkpoint,{...run.entrance,kind:'dungeon',region:run.entrance.name},sim.player,sim.time):null;
     const result = await persist(checkpoint);
     if (!result.ok)
         return result;
@@ -148,5 +150,6 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     sim.groundItems = checkpoint.groundItems;
     sim.groundGold = checkpoint.groundGold!;
     sim.reserveIdentity(next);
+    if(completion)sim.commitJourneyCheckpoint(checkpoint,completion);
     return { ok: true, message: 'Crypt treasure' };
 }

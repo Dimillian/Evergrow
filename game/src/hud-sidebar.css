@@ -1,0 +1,14 @@
+/* Common material for the native-resolution controls attached to the chart. */
+.hud-sidebar-surface {
+  background:linear-gradient(110deg,#111b22f2,#0a131aed);
+  border:1px solid #6d828a70;
+  color:var(--ui-text);
+  font-family:var(--ui-font);
+  box-shadow:0 5px 14px #00000016;
+}
+.hud-sidebar-key {
+  display:inline-grid; place-items:center; min-width:16px; height:18px;
+  padding:0 3px; border:1px solid #8ca4b127; border-radius:2px;
+  color:#879da6; background:#080f1633;
+  font:11px "Evergrow Numerals",system-ui,sans-serif;
+}

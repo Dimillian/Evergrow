@@ -42,7 +42,7 @@ test('automatic populations wait for a valid view on both construction and reset
   assert.deepEqual(advance(sim, 12), [], 'reset must obtain the fresh camera view before automatic births');
 });
 
-test('wide world views still receive wholly offscreen solitary and small grouped encounters', () => {
+test('wide world views still receive wholly offscreen compact packs', () => {
   const batchSizes = new Set<number>();
   for (const width of [1300, 2600]) {
     const sim = new Simulation(open, { seed: 64391 });
@@ -50,7 +50,7 @@ test('wide world views still receive wholly offscreen solitary and small grouped
     const batches = advance(sim, 20);
     assert.ok(batches.length > 0, `${width}-unit viewport must not starve the population`);
     for (const batch of batches) {
-      batchSizes.add(batch.length); assert.ok(batch.length >= 1 && batch.length <= 3);
+      batchSizes.add(batch.length); assert.ok(batch.length >= 1 && batch.length <= 6);
       for (const event of batch) {
         const radius = ENEMY_DEFINITIONS[event.enemyKind!].radius;
         assert.ok(outsideView(event.x, event.y, radius + 70, view), 'the complete body and visual margin spawn outside view');
@@ -61,7 +61,7 @@ test('wide world views still receive wholly offscreen solitary and small grouped
     assert.ok(ambient(sim).length <= encounterPopulationTarget(1));
     assert.ok(livingEnemyCount(sim.enemies) <= ENCOUNTER_RULES.hardPopulationCap);
   }
-  assert.ok([...batchSizes].some(size => size > 1), 'seeded samples include a small group');
+  assert.ok([...batchSizes].some(size => size >= 4), 'seeded samples include full packs');
 });
 
 test('standing on cleared ground does not refill it from elapsed time or camera zoom alone', () => {
@@ -183,7 +183,7 @@ test('ordinary travel actually reaches roaming encounters instead of only spawni
       for (const enemy of ambient(sim)) if (Math.hypot(enemy.x - p.x, enemy.y - p.y) < 300) encountered.add(enemy.id);
       assert.ok(livingEnemyCount(sim.enemies) <= ENCOUNTER_RULES.hardPopulationCap);
     }
-    assert.ok(encountered.size >= 12, `${width}: a minute of travel should reach several packs`);
+    assert.ok(encountered.size >= 20, `${width}: a minute of travel should reach several packs`);
     assert.ok(encountered.size >= births * .6, `${width}: most placements should lie along the travelled route`);
   }
 });

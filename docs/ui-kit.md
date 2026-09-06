@@ -134,3 +134,11 @@ A compact native button below the minimap provides P access, channel progress/ca
 ## Large Canvas panels
 
 The skill atlas retains its native-resolution surface during tooltip animation and prepares search matches when filter/build state changes. The map coalesces input and builds new detail progressively. See [panel performance](panel-performance.md) for cache lifetimes, invalidation and CPU measurements.
+
+## Journeys
+
+`journey-panel.ts` uses shared window, button, badge, scroll, focus-trap and tooltip primitives. A compact clickable list beneath the minimap opens the same registered Journeys panel as J. Inspection and explicit tracking are separate. The HUD list joins `ui-hit-test.ts` so hovering it cannot aim at or attack actors behind it. See [Journeys](journeys.md).
+
+The minimap, portal and short log form one aligned sidebar. `map-view.ts` shares their geometry; `hud-sidebar.css` supplies the attached controls' slate surface and quiet keycaps. The portal occupies a full-width 25-unit row immediately below the map, with a code-defined arch icon, remaining cast time and a thin progress line. The log continues beneath it with an inset divider, restrained level labels and one gold accent for the tracked activity. Collapse and portal behavior remain unchanged; all control rectangles still block combat input.
+
+Journeys now separates Recommended and Nearby, with a fixed manually tracked lead. Lists show the same activity name everywhere and tint their level number for difficulty; matching levels have no repeated status text. The journal detail adds Easier/Harder only when relevant, and shows metres/kilometres instead of exposing world units. Completion shares the native level-up announcement frame; its bounded queue waits while level-up is visible, so both remain legible. No duplicate completion feed card is emitted.

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { RoamingEncounters, roamingSpawnAnchor, shouldRetireRoamer } from '../src/roaming-encounters.ts';
+import { RoamingEncounters, ROAMING_RULES, roamingSpawnAnchor, shouldRetireRoamer } from '../src/roaming-encounters.ts';
 import { isSpawnHidden } from '../src/spawn-visibility.ts';
 import { Simulation } from '../src/simulation.ts';
 import { ENEMY_DEFINITIONS } from '../src/combat-content.ts';
@@ -8,11 +8,10 @@ import type { WorldQuery } from '../src/model.ts';
 
 test('exploration and elapsed time are both required, and blocked placement preserves earned travel', () => {
   const planner = new RoamingEncounters(); planner.reset(0, 0);
-  planner.resolved(3, () => 0); planner.advance({ x: 0, y: 0 }, 1);
-  planner.resolved(3, () => 0); planner.advance({ x: 0, y: 0 }, 1);
-  planner.resolved(1, () => 0); planner.advance({ x: 0, y: 0 }, 1);
-  assert.equal(planner.groupSize(8, .99), 2, 'initial group finishes the bounded warmup');
-  planner.resolved(2, () => 0);
+  planner.resolved(6, () => 0); planner.advance({ x: 0, y: 0 }, 1);
+  planner.resolved(6, () => 0); planner.advance({ x: 0, y: 0 }, 1);
+  assert.equal(planner.groupSize(8, .99), 4, 'initial group finishes the bounded warmup');
+  planner.resolved(4, () => 0);
   for (let x = 32; x <= 256; x += 32) planner.advance({ x, y: 0 }, .05);
   assert.equal(planner.ready, false, 'fast travel cannot skip the encounter cooldown');
   planner.advance({ x: 256, y: 0 }, 4);
@@ -71,4 +70,12 @@ test('retirement only releases hidden inactive roamers and never interrupts purs
   }
   enemy.state = 'idle'; enemy.campId = 'retained-garrison';
   assert.equal(shouldRetireRoamer(enemy, player, view, heading), false, 'camp ledger owns its members');
+});
+
+test('roaming packs use four to six members while respecting capacity remainders', () => {
+  const planner = new RoamingEncounters();
+  planner.resolved(ROAMING_RULES.warmupPopulation, () => 0);
+  assert.deepEqual([0, .24, .25, .74, .75, .99].map(roll => planner.groupSize(20, roll)), [4, 4, 5, 5, 6, 6]);
+  assert.equal(planner.groupSize(2, .99), 2);
+  assert.equal(planner.groupSize(0, .99), 0);
 });

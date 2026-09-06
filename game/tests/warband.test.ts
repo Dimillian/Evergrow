@@ -61,8 +61,8 @@ test('orders respect sanctuary and home return, and damage buffs snapshot at eac
   updateWarbands(sim.enemies,sim.player,open,1);assert.equal(chief.state,'return');assert.equal(goblin.warband,undefined);
   chief.state='chase';chief.awareness=1;updateWarbands(sim.enemies,sim.player,{...open,isSanctuary:()=>true},1);assert.equal(chief.warband,undefined);
   chief.commandClock=1;goblin.x=25;goblin.prevX=25;goblin.state='chase';sim.update(FIXED_STEP,idle);
-  assert.equal(goblin.state,'windup');assert.equal(goblin.attackDamage,6);assert.equal(goblin.damage,5);
-  chief.state='dead';chief.hp=0;updateWarbands(sim.enemies,sim.player,open,FIXED_STEP);assert.equal(goblin.attackDamage,6);
+  assert.equal(goblin.state,'windup');assert.equal(goblin.attackDamage,6*1.2);assert.equal(goblin.damage,6);
+  chief.state='dead';chief.hp=0;updateWarbands(sim.enemies,sim.player,open,FIXED_STEP);assert.equal(goblin.attackDamage,6*1.2);
 });
 test('goblins remain warband-only and carry smaller independent equipment yields',()=>{
   let goblin=0,normal=0;

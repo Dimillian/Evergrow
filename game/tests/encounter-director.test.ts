@@ -14,7 +14,7 @@ function actors(kinds: EnemyKind[]) {
 }
 
 test('population follows geographic area level with a fixed simultaneous actor ceiling', () => {
-  assert.deepEqual([1, 3, 4, 6, 7, 15, 16, 10000].map(encounterPopulationTarget), [9, 9, 9, 10, 10, 12, 12, 14]);
+  assert.deepEqual([1, 3, 4, 6, 7, 15, 16, 10000].map(encounterPopulationTarget), [16, 16, 16, 17, 17, 19, 19, 24]);
   assert.ok(ENCOUNTER_RULES.targetPopulationCap <= ENCOUNTER_RULES.hardPopulationCap);
   assert.ok(Object.isFrozen(ENCOUNTER_RULES) && Object.isFrozen(ENCOUNTER_WEIGHTS));
 });

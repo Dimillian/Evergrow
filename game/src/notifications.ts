@@ -32,7 +32,7 @@ export class GameNotifications {
   /** Announce celebrations without adding a duplicate visual feed card. */
   announce(message: string): void {
     if (this.disposed) return;
-    this.announcements.set(-1, message); this.scheduleAnnouncement();
+    this.announcements.set(-1, [this.announcements.get(-1),message].filter(Boolean).join(' ')); this.scheduleAnnouncement();
   }
   info(message: string): void { this.push({ kind: 'info', message }); }
   clear(): void {

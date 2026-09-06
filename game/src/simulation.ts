@@ -1,4 +1,7 @@
+import { stageJourneyCompletion, journeyWasCompleted, type JourneyCompletion } from './journey-rewards.ts';
+import type { JourneyGoal } from './journey-state.ts';
 import { cloneData } from './data-clone.ts';
+import { freshJourneys } from './journey-state.ts';
 import { freshExpeditions, currentDungeon, syncDungeon, storedActor, type Expeditions, type LocationContents } from './dungeon-state.ts';
 import { dungeonFromState, updateDungeon } from './dungeon-runtime.ts';
 import type { DungeonFloor } from './dungeon.ts';
@@ -33,7 +36,7 @@ import type { EnemyRank } from './progression-content.ts';
 import { enemyLootSeed, getZoneAt, scaledEnemyStats } from './zone-progression.ts';
 import { CampPopulation, CAMP_POPULATION_RULES, type CampSpawnSource, type CampState } from './camp-population.ts';
 import { sampleBiome } from './biomes.ts';
-import { RoamingEncounters, ROAMING_GROUPS, roamingSpawnAnchor, shouldRetireRoamer } from './roaming-encounters.ts';
+import { RoamingEncounters, ROAMING_RULES, ROAMING_GROUPS, roamingSpawnAnchor, shouldRetireRoamer } from './roaming-encounters.ts';
 import { isSpawnHidden, type SpawnExclusion } from './spawn-visibility.ts';
 import { updateEnemyAI, type EnemyAIContext } from './enemy-ai.ts';
 
@@ -58,19 +61,32 @@ export function initialPlayer(x: number, y: number): Player {
 
 export class Simulation {
   player: Player;
+  journeys = freshJourneys();
   eventState = freshEvents();
   readonly eventChannel = new EventChannel();
   private eventTimer = 0;
   get nextEntityIdentity() { return this.nextId; }
-  commitEventCheckpoint(saved: CharacterCheckpoint, xp: number, levels: number): void {
+  commitEventCheckpoint(saved: CharacterCheckpoint, xp: number, levels: number, completion: JourneyCompletion | null = null): void {
     this.expeditions = saved.expeditions ?? freshExpeditions(); this.dungeonFloor = dungeonFromState(this);
-    this.eventState = saved.events!; this.player.character = saved.character;
-    this.player.level = saved.level; this.player.xp = saved.xp;
+    this.eventState = saved.events!;
     this.groundItems = saved.groundItems; this.groundGold = saved.groundGold!;
     this.nextId = Math.max(this.nextId, ...this.groundItems.map(i => i.id + 1), ...this.groundGold.map(i => i.id + 1));
+    this.commitJourneyCheckpoint(saved,completion,xp,levels);
+  }
+  commitJourneyCheckpoint(saved: CharacterCheckpoint, completion: JourneyCompletion | null, xp = completion?.xp ?? 0, levels = saved.level-this.player.level): void {
+    this.journeys=saved.journeys??freshJourneys();this.player.character=saved.character;this.player.level=saved.level;this.player.xp=saved.xp;
     refreshCharacter(this.player);
+    if(completion)this.events.push({type:'journey',x:this.player.x,y:this.player.y,...completion});
     if (xp) this.events.push({ type: 'experience', x: this.player.x, y: this.player.y, amount: xp });
     if (levels) this.events.push({ type: 'level', x: this.player.x, y: this.player.y, level: this.player.level, skillPoints: levels, statPoints: levels * 5, color: '#c0acf0' });
+  }
+  /** Arrival rewards follow combat's atomic XP + ledger checkpoint model. No input interruption. */
+  completeJourneyArrival(goal: JourneyGoal): boolean {
+    if(this.player.dead||this.expeditions.location||!['town','frontier'].includes(goal.kind)||journeyWasCompleted(this.journeys,goal.id)
+      ||Math.hypot(goal.x-this.player.x,goal.y-this.player.y)>=(goal.kind==='town'?260:180))return false;
+    const saved=this.captureCheckpoint(), completion=stageJourneyCompletion(saved,goal,this.player,this.time);
+    if(!completion)return false;
+    this.commitJourneyCheckpoint(saved,completion);return true;
   }
   travel = freshTravel();
   readonly portal = new PortalChannel();
@@ -112,6 +128,7 @@ export class Simulation {
   }
 
   reset(): void {
+    this.journeys = freshJourneys();
     this.expeditions = freshExpeditions(); this.dungeonFloor = null;
     this.eventState = freshEvents(); this.eventChannel.cancel(); this.eventTimer = 0;
     this.travel = freshTravel(); this.portal.cancel(); this.arrivalProtection = 0;
@@ -137,13 +154,13 @@ export class Simulation {
 
   reserveIdentity(next:number):void { this.nextId=Math.max(this.nextId,next); }
   captureContents(): LocationContents {
-      return cloneData({ campWounds: this.camps.captureWounds(this.enemies), actors: this.enemies.filter(e => e.hp > 0).map(storedActor), groundItems: this.groundItems, groundGold: this.groundGold, pickups: this.pickups, clearedCamps: this.camps.clearedIds(), defeatedCampMembers: this.camps.defeatedMembers() });
+      return cloneData({ journeys:this.journeys, campWounds: this.camps.captureWounds(this.enemies), actors: this.enemies.filter(e => e.hp > 0).map(storedActor), groundItems: this.groundItems, groundGold: this.groundGold, pickups: this.pickups, clearedCamps: this.camps.clearedIds(), defeatedCampMembers: this.camps.defeatedMembers() });
   }
   captureCheckpoint(): CharacterCheckpoint {
     const p = this.player;
     const run = currentDungeon(this.expeditions); if (run) syncDungeon(run,this.enemies,p.x,p.y);
     syncTrial(this.eventState, this.enemies);
-    return cloneData({ campWounds:this.camps.captureWounds(this.enemies), roaming:this.roaming.capture(), expeditions: this.expeditions, actors: this.enemies.filter(e=>e.hp>0).map(storedActor), pickups: this.pickups, events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
+    return cloneData({ journeys:this.journeys, campWounds:this.camps.captureWounds(this.enemies), roaming:this.roaming.capture(), expeditions: this.expeditions, actors: this.enemies.filter(e=>e.hp>0).map(storedActor), pickups: this.pickups, events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
       x: p.x, y: p.y, angle: p.angle, hp: p.hp, mana: p.mana, dead: p.dead,
       flasks: p.flasks, healCooldown: p.healCooldown, dodgeCharges: p.dodgeCharges, dodgeRecharge: p.dodgeRecharge,
       skillCooldowns: p.skillCooldowns, time: this.time, kills: this.kills,
@@ -156,6 +173,7 @@ export class Simulation {
     this.reset();
     const saved = cloneData(checkpoint) as CharacterCheckpoint;
     this.expeditions = saved.expeditions ?? freshExpeditions(); this.dungeonFloor = dungeonFromState(this);
+    this.journeys = saved.journeys ?? freshJourneys();
     this.eventState = saved.events ?? freshEvents();
     this.travel = saved.travel ?? freshTravel();
     if (saved.dead) this.travel.returnTo = null;
@@ -722,8 +740,8 @@ export class Simulation {
       const members: Array<{ kind: EnemyKind; rank: EnemyRank; x: number; y: number }> = [];
       const population: EncounterActor[] = [...living];
       for (let index = 0; index < size; index++) {
-        const angle = anchor.angle + index * 2.399963;
-        const radius = index === 0 ? 0 : 65 + this.random() * 35;
+        const angle = anchor.angle + (index - 1) * Math.PI * 2 / Math.max(1, size - 1) + (this.random() - .5) * .12;
+        const radius = index === 0 ? 0 : ROAMING_RULES.groupRadius * (.85 + this.random() * .15);
         const x = anchor.x + Math.cos(angle) * radius, y = anchor.y + Math.sin(angle) * radius;
         const zone = getZoneAt(x, y, this.world.seed), biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
         const preferred = index ? ROAMING_GROUPS[members[0].kind]?.[index] : undefined;

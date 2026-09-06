@@ -7,7 +7,7 @@ function setup() {
   const log: string[] = [], active = new Set<string>(), input = new GameInput();
   const sim = new Simulation({ blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) }, { spawn: false });
   const panel = (name: string) => ({ open: () => { assert.equal(active.size, 0); active.add(name); log.push(`open:${name}`); }, close: () => { active.delete(name); log.push(`close:${name}`); } });
-  const coordinator = new PanelCoordinator({ event: panel('event'), service: panel('service'), map: panel('map'), character: panel('character'), skills: panel('skills') }, {
+  const coordinator = new PanelCoordinator({ journeys: panel('journeys'), event: panel('event'), service: panel('service'), map: panel('map'), character: panel('character'), skills: panel('skills') }, {
     clearInput: () => { input.clear(); sim.clearInput(); log.push('clear'); },
     changed: phase => log.push(`phase:${phase}`), resumeGameplay: () => { assert.equal(active.size, 0); log.push('focus:game'); }, save: () => log.push('save'),
   });

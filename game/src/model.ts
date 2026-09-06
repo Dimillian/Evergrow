@@ -282,6 +282,7 @@ export type CombatEvent = EventAppearance & (
   | { readonly type: 'pickup'; readonly value: number; readonly heavy: boolean }
   | { readonly type: 'spawn'; readonly enemyKind: EnemyKind }
   | { readonly type: 'gold'; readonly amount: number; readonly balance: number }
+  | { readonly type: 'journey'; readonly id: string; readonly name: string; readonly xp: number }
   | { readonly type: 'experience'; readonly amount: number }
   | { readonly type: 'loot'; readonly item: Item }
   | { readonly type: 'level'; readonly level: number; readonly skillPoints: number; readonly statPoints: number }

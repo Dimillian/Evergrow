@@ -1,5 +1,5 @@
 import type { GroundGold } from './gold.ts';
-import { REWARD_FLIGHT_SECONDS, type RewardFeedback, type LevelCelebration } from './reward-feedback.ts';
+import { REWARD_FLIGHT_SECONDS, type RewardFeedback, type LevelCelebration, type JourneyCelebration } from './reward-feedback.ts';
 import { HUD_ART, getHUDLayout } from './hud-layout.ts';
 import { text } from './font.ts';
 import { formatGold } from './currency-format.ts';
@@ -111,18 +111,33 @@ export function drawLevelCelebration(c: CanvasRenderingContext2D, level: LevelCe
   c.restore();
 }
 
+/** Shared native-resolution celebration framing; completion waits for an active level-up. */
+function announcementPlate(c: CanvasRenderingContext2D, age: number, duration: number,
+  point: {x:number;y:number}, width:number, height:number, reducedMotion:boolean, paint:()=>void, ornamentY=5): void {
+  const fade=Math.min(1,age*6)*Math.min(1,(duration-age)*2);
+  const x=Math.max(125,Math.min(width-125,point.x)),y=Math.max(106,Math.min(height-180,point.y-122));
+  c.save();c.globalAlpha=fade;c.translate(x,y+(reducedMotion?0:8*Math.exp(-age*7)));
+  const halo=c.createRadialGradient(0,0,1,0,0,105);halo.addColorStop(0,'#0a111bbb');halo.addColorStop(1,'#0a111b00');
+  c.fillStyle=halo;c.fillRect(-125,-36,250,85);
+  c.strokeStyle='#d2b77a';c.lineWidth=.7;c.beginPath();c.moveTo(-109,ornamentY);c.lineTo(-77,ornamentY);c.moveTo(77,ornamentY);c.lineTo(109,ornamentY);c.stroke();
+  paint();c.restore();
+}
 export function drawLevelAnnouncement(c: CanvasRenderingContext2D, level: LevelCelebration | null,
-  point: { x: number; y: number }, width: number, height: number, reducedMotion: boolean): void {
-  if (!level) return;
-  const fade = Math.min(1, level.age * 6) * Math.min(1, (2.4 - level.age) * 2);
-  const x = Math.max(125, Math.min(width - 125, point.x)), y = Math.max(106, Math.min(height - 180, point.y - 122));
-  c.save(); c.globalAlpha = fade;
-  c.translate(x, y + (reducedMotion ? 0 : 8 * Math.exp(-level.age * 7)));
-  const halo = c.createRadialGradient(0, 0, 1, 0, 0, 105);
-  halo.addColorStop(0, '#0a111bbb'); halo.addColorStop(1, '#0a111b00'); c.fillStyle = halo; c.fillRect(-105, -36, 210, 85);
-  c.strokeStyle = '#d2b77a'; c.lineWidth = .7; c.beginPath(); c.moveTo(-109, 5); c.lineTo(-77, 5); c.moveTo(77, 5); c.lineTo(109, 5); c.stroke();
-  text(c, 'LEVEL UP', 0, -15, 1.65, '#ffedb7', 'center');
-  text(c, `${level.level}`, 0, 4, 2.7, '#fff2cc', 'center');
-  text(c, `+${level.statPoints} attributes · +${level.skillPoints} skill`, 0, 33, .9, '#d9d8c3', 'center');
-  c.restore();
+  point: {x:number;y:number}, width:number, height:number, reducedMotion:boolean): void {
+  if(!level)return;
+  announcementPlate(c,level.age,2.4,point,width,height,reducedMotion,()=>{
+    text(c,'LEVEL UP',0,-15,1.65,'#ffedb7','center');
+    text(c,`${level.level}`,0,4,2.7,'#fff2cc','center');
+    text(c,`+${level.statPoints} attributes · +${level.skillPoints} skill`,0,33,.9,'#d9d8c3','center');
+  });
+}
+export function drawJourneyAnnouncement(c: CanvasRenderingContext2D, journey: JourneyCelebration | null,
+  point: {x:number;y:number}, width:number, height:number, reducedMotion:boolean): void {
+  if(!journey)return;
+  announcementPlate(c,journey.age,3,point,width,height,reducedMotion,()=>{
+    text(c,'JOURNEY COMPLETE',0,-20,1.15,'#ffedb7','center');
+    c.save();c.beginPath();c.rect(-122,-7,244,20);c.clip();
+    text(c,journey.name,0,0,1.4,'#e9e7d7','center');c.restore();
+    text(c,`+${journey.xp.toLocaleString()} XP`,0,26,1.65,'#cebaf3','center');
+  },-20);
 }

@@ -1,14 +1,15 @@
 import { PORTAL_RULES } from './travel.ts';
 import './travel-ui.css';
+import './hud-sidebar.css';
 import { GameNotifications } from './notifications.ts';
 import { getHUDLayout, HUD_MENU_SHORTCUTS } from './hud.ts';
 import type { HUDRect } from './hud.ts';
 import { getMinimapRect, getPortalControlRect } from './map-view.ts';
 import type { GamePhase } from './game-phase.ts';
 import { gameMenuMarkup } from './game-menu.ts';
-import { trapDialogFocus } from './ui-components.ts';
+import { trapDialogFocus, uiIcon } from './ui-components.ts';
 
-interface ShellActions { portal?(): void; play(): void; returnToTitle(): void; openMap(): void; openCharacter(): void; openSkills(): void; }
+interface ShellActions { portal?(): void; play(): void; returnToTitle(): void; openMap(): void; openCharacter(): void; openSkills(): void; openJourneys?(): void; }
 
 /** Owns DOM presentation and its listeners; it never reads or mutates simulation state. */
 export class GameShell {
@@ -41,10 +42,10 @@ export class GameShell {
       <canvas id="game-ui" aria-hidden="true"></canvas>
       <nav id="hud-controls" class="hud-controls" aria-label="Character menus" hidden>
         ${HUD_MENU_SHORTCUTS.map(shortcut => `<button type="button" class="hud-control" data-hud="${shortcut.id}"
-          ${shortcut.id === 'journal' ? 'disabled' : 'aria-haspopup="dialog"'} aria-keyshortcuts="${shortcut.key}" aria-label="${shortcut.label}${shortcut.id === 'journal' ? ' (unavailable)' : ''}" data-tooltip="${shortcut.label}"></button>`).join('')}
+          aria-haspopup="dialog" aria-keyshortcuts="${shortcut.key}" aria-label="${shortcut.label}" data-tooltip="${shortcut.label}"></button>`).join('')}
         <button type="button" class="hud-control" data-hud="map" aria-label="World map" aria-keyshortcuts="M"
           aria-haspopup="dialog" data-tooltip="World map" data-tooltip-placement="below" data-tooltip-align="end"></button>
-        <button type="button" class="hud-control portal-control" data-hud="portal" aria-label="Town portal" aria-keyshortcuts="P" data-tooltip="Town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="below" data-tooltip-align="end"><span>Town portal</span><kbd>P</kbd></button>
+        <button type="button" class="hud-control portal-control hud-sidebar-surface" data-hud="portal" aria-label="Town portal" aria-keyshortcuts="P" data-tooltip="Town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('portal')}<span class="portal-label">Town portal</span><kbd class="hud-sidebar-key">P</kbd><i class="portal-progress" aria-hidden="true"></i></button>
       </nav>
       <div id="title-mount"></div>
       <div id="world-map-mount"></div>
@@ -70,6 +71,7 @@ export class GameShell {
     this.controls.querySelector('[data-hud="portal"]')!.addEventListener('click', () => actions.portal?.(), { signal });
     for (const id of ['character', 'inventory']) this.controls.querySelector(`[data-hud="${id}"]`)!.addEventListener('click', actions.openCharacter, { signal });
     this.controls.querySelector('[data-hud="skilltree"]')!.addEventListener('click', actions.openSkills, { signal });
+    this.controls.querySelector('[data-hud="journal"]')!.addEventListener('click', () => actions.openJourneys?.(), { signal });
   }
 
   resizeControls(width: number, height: number): void {
@@ -88,7 +90,7 @@ export class GameShell {
     button.classList.toggle('is-channeling', progress !== null); button.classList.toggle('is-return', returning);
     button.style.setProperty('--portal-progress', `${(progress ?? 0) * 100}%`);
     const label = progress !== null ? `Casting · ${(PORTAL_RULES.channel * (1 - progress)).toFixed(1)}s` : returning ? 'Return portal' : 'Town portal';
-    const text = button.querySelector('span')!; if (text.textContent !== label) text.textContent = label;
+    const text = button.querySelector('.portal-label')!; if (text.textContent !== label) text.textContent = label;
     button.setAttribute('aria-label', progress !== null ? 'Cancel town portal' : returning ? 'Locate return portal' : 'Town portal');
     button.dataset.tooltip = progress !== null ? 'Cancel cast' : returning ? 'Locate your return portal' : `Town portal · ${PORTAL_RULES.channel} second cast`;
   }
@@ -111,7 +113,7 @@ export class GameShell {
   showMenu(phase: GamePhase, kills: number, time: number, location = 'Deadwood'): void {
     this.menuAbort.abort(); this.menuAbort = new AbortController();
     const playing = phase === 'playing';
-    const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event';
+    const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys';
     this.overlay.hidden = playing || panel || phase === 'ready';
     this.controls.hidden = !playing;
     this.element.classList.toggle('playing', playing);

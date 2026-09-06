@@ -350,7 +350,7 @@ test('a dodge buffered too early expires before the attack can cancel', () => {
 });
 
 test('dodge protects the middle of its animation, not startup or recovery', () => {
-  for (const [elapsed, expectedHP] of [[FIXED_STEP, 92], [0.025, 100], [0.175, 100], [0.183333333333, 92]]) {
+  for (const [elapsed, expectedHP] of [[FIXED_STEP, 90], [0.025, 100], [0.175, 100], [0.183333333333, 90]]) {
     const sim = make();
     sim.player.dodgeTime = 0.22 - (elapsed! - FIXED_STEP);
     sim.player.dodgeAngle = 0;

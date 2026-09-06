@@ -1,3 +1,5 @@
+import { formatWorldDistance } from './world-distance.ts';
+import { drawJourneyMapMarker, type JourneyMarker } from './journey-marker.ts';
 import { drawMapZoneLevels, mapZoneLabels } from './map-zone-art.ts';
 import { drawMapProps, drawMapBuilding } from './map-terrain-art.ts';
 import type { Prop } from './world.ts';
@@ -164,6 +166,8 @@ export type CampMapState = 'dormant' | 'active' | 'cleared';
 
 /** A continuously translated chart built from cached world-space terrain and discovery tiles. */
 export class WorldMap {
+  private journeyMarker: JourneyMarker|null = null;
+  setJourneyMarker(marker:JourneyMarker|null) { if(JSON.stringify(marker)===JSON.stringify(this.journeyMarker))return; this.journeyMarker=marker; this.invalidate(); }
   readonly element: HTMLDivElement;
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
@@ -539,6 +543,7 @@ export class WorldMap {
         text(c, poi.name, p.x, p.y + 12, 1.15, palette.ivory, 'center');
       }
     }
+    drawJourneyMapMarker(c,view,this.journeyMarker,mini);
     c.restore();
     return pois;
   }
@@ -622,17 +627,13 @@ export class WorldMap {
     bg.addColorStop(0, `${palette.panelRaised}f5`); bg.addColorStop(1, `${palette.panel}f5`);
     c.fillStyle = '#00000040'; c.fillRect(r.x + 2, r.y + 4, r.width, r.height);
     c.fillStyle = bg; c.fillRect(r.x, r.y, r.width, r.height);
-    c.strokeStyle = active ? palette.brass : palette.lineStrong; c.lineWidth = 1;
+    c.strokeStyle = `${palette.silverDim}${active?'cc':'70'}`; c.lineWidth = 1;
     c.strokeRect(r.x + .5, r.y + .5, r.width - 1, r.height - 1);
-    c.strokeStyle = `${palette.ivory}16`; c.strokeRect(r.x + 2.5, r.y + 2.5, r.width - 5, r.height - 5);
-    c.strokeStyle = palette.brass; c.beginPath();
-    for (const [x, y, dx, dy] of [[r.x, r.y, 1, 1], [r.x + r.width, r.y, -1, 1],
-      [r.x, r.y + r.height, 1, -1], [r.x + r.width, r.y + r.height, -1, -1]]) {
-      c.moveTo(x + dx * .5, y + dy * 9); c.lineTo(x + dx * .5, y + dy * .5); c.lineTo(x + dx * 9, y + dy * .5);
-    }
-    c.stroke();
+    c.strokeStyle = `${palette.silver}25`; c.beginPath();
+    c.moveTo(r.x + 7,r.y + .5); c.lineTo(r.x + 25,r.y + .5);
+    c.moveTo(r.x + r.width - 25,r.y + .5); c.lineTo(r.x + r.width - 7,r.y + .5); c.stroke();
     // A folded chart mark shares the fine-line style of the native menu icons.
-    c.strokeStyle = palette.brass; c.beginPath();
+    c.strokeStyle = palette.silverDim; c.beginPath();
     c.moveTo(r.x + 10, r.y + 9); c.lineTo(r.x + 14, r.y + 7); c.lineTo(r.x + 18, r.y + 9);
     c.lineTo(r.x + 22, r.y + 7); c.lineTo(r.x + 22, r.y + 17); c.lineTo(r.x + 18, r.y + 19);
     c.lineTo(r.x + 14, r.y + 17); c.lineTo(r.x + 10, r.y + 19); c.closePath();
@@ -644,7 +645,7 @@ export class WorldMap {
     c.strokeStyle = palette.line; c.strokeRect(r.x + r.width - 24.5, r.y + 6.5, 15, 14);
     text(c, 'M', r.x + r.width - 17, r.y + 10, .86, palette.muted, 'center');
     const pois = this.chart(c, view, true);
-    c.strokeStyle = `${palette.brassDim}90`; c.strokeRect(view.x - .5, view.y - .5, view.width + 1, view.height + 1);
+    c.strokeStyle = `${palette.silverDim}40`; c.strokeRect(view.x - .5, view.y - .5, view.width + 1, view.height + 1);
     const center = projectMapPoint(player.x, player.y, view);
     c.save(); c.beginPath(); c.rect(view.x, view.y, view.width, view.height); c.clip();
     c.setLineDash([2, 4]); c.strokeStyle = '#c5d5b127'; c.lineWidth = .8;
@@ -721,7 +722,7 @@ export class WorldMap {
     c.strokeStyle = `${palette.ivory}75`; c.lineWidth = 1;
     c.beginPath(); c.moveTo(24, this.view.height - 25); c.lineTo(24, this.view.height - 21);
     c.lineTo(24 + scaleWidth, this.view.height - 21); c.lineTo(24 + scaleWidth, this.view.height - 25); c.stroke();
-    text(c, `${scale.toLocaleString('en-US')} units`, 24, this.view.height - 39, .9, palette.muted);
+    text(c, formatWorldDistance(scale), 24, this.view.height - 39, .9, palette.muted);
 
     text(c, 'N', this.view.width - 27, 16, 1.15, palette.brass, 'center');
     c.strokeStyle = '#a8af9566'; c.beginPath(); c.moveTo(this.view.width - 27, 34); c.lineTo(this.view.width - 27, 54); c.moveTo(this.view.width - 32, 40); c.lineTo(this.view.width - 27, 34); c.lineTo(this.view.width - 22, 40); c.stroke();
@@ -757,7 +758,13 @@ export class WorldMap {
         this.poiIcon(c, this.hovered, p.x, p.y, this.view.zoom < .07 ? 5.4 : 7, true);
       }
     }
-    if (this.hovered && this.pointer) this.showTooltip(this.hovered, this.pointer);
+    const marker=this.journeyMarker, markerPoint=marker?projectMapPoint(marker.x,marker.y,this.view):null;
+    if(marker&&markerPoint&&this.pointer&&!this.drag&&Math.hypot(markerPoint.x-this.pointer.x,markerPoint.y-this.pointer.y)<15){
+      this.tooltip.hidden=false;setText(this.tooltipName,marker.name);
+      setText(this.tooltipKind,'Journey');setText(this.tooltipDescription,marker.known?'Tracked activity':'Explore this area to find the activity');
+      this.tooltip.style.setProperty('--poi-color',palette.brass);this.positionTooltip(this.pointer);
+    }
+    else if (this.hovered && this.pointer) this.showTooltip(this.hovered, this.pointer);
     else if (this.pointer && !this.drag) {
       const point = unprojectMapPoint(this.pointer.x, this.pointer.y, this.view);
       const inspected = chartedMapArea(this.world, this.exploration, point.x, point.y);

@@ -173,8 +173,8 @@ test('armor, passive regeneration and movement gear affect simulation rather tha
   const enemy = sim.spawnEnemy('brute', -20, 0)!;
   enemy.state = 'attack'; enemy.attackAngle = 0; enemy.stateDuration = 999;
   advance(sim, FIXED_STEP);
-  assert.equal(sim.player.hp, 89);
-  assert.equal(sim.drainEvents().find(event => event.type === 'hurt')!.value, 11);
+  assert.equal(sim.player.hp, 87);
+  assert.equal(sim.drainEvents().find(event => event.type === 'hurt')!.value, 13);
   sim.enemies = []; sim.player.hp = 50; sim.player.mana = 20;
   advance(sim, 1, { moveX: 1 });
   close(sim.player.hp, 56); close(sim.player.mana, 24);

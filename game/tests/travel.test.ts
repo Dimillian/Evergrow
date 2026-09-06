@@ -181,9 +181,9 @@ test('relocation waits for destination camera coverage before births and keeps n
 });
 
 test('portal displacement does not grant encounter travel credit or restart the initial population', async () => {
-  const { RoamingEncounters } = await import('../src/roaming-encounters.ts');
+  const { RoamingEncounters, ROAMING_RULES } = await import('../src/roaming-encounters.ts');
   const director = new RoamingEncounters(); director.reset(0, 0);
-  director.resolved(9, () => 0);
+  director.resolved(ROAMING_RULES.warmupPopulation, () => 0);
   director.advance({ x: 0, y: 0 }, 10); assert.equal(director.ready, false);
   director.relocate(9000, 9000); director.advance({ x: 9000, y: 9000 }, 10);
   assert.equal(director.ready, false);

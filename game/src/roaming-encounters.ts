@@ -4,18 +4,18 @@ import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { isEnemyInactive, isSpawnHidden, SPAWN_VISIBILITY_MARGIN, type SpawnExclusion } from './spawn-visibility.ts';
 
 export const ROAMING_RULES = Object.freeze({
-  warmupPopulation: 9, warmupInterval: .65, retryInterval: .45,
+  warmupPopulation: ENCOUNTER_RULES.basePopulation, warmupInterval: .65, maxGroupSize: 6, retryInterval: .45,
   minInterval: 2.2, maxInterval: 3.8, minTravel: 180, maxTravel: 280,
   minimumDistance: 300, leadMin: 30, leadMax: 90, groupRadius: 100, corridorHalfWidth: 140,
   retirementMargin: 650, behindDistance: 430, behindProjection: -220,
 });
 export const ROAMING_GROUPS: Readonly<Partial<Record<EnemyKind, readonly EnemyKind[]>>> = Object.freeze({
-  stalker: Object.freeze(['stalker', 'stalker', 'hound'] as const),
-  hound: Object.freeze(['hound', 'hound', 'hound'] as const),
-  brute: Object.freeze(['brute', 'stalker', 'stalker'] as const),
-  caster: Object.freeze(['caster', 'stalker', 'wisp'] as const),
-  archer: Object.freeze(['archer', 'hound', 'archer'] as const),
-  wisp: Object.freeze(['wisp', 'wisp', 'stalker'] as const),
+  stalker: Object.freeze(['stalker', 'stalker', 'hound', 'stalker', 'hound', 'stalker'] as const),
+  hound: Object.freeze(['hound', 'hound', 'hound', 'hound', 'hound', 'stalker'] as const),
+  brute: Object.freeze(['brute', 'stalker', 'stalker', 'hound', 'stalker', 'stalker'] as const),
+  caster: Object.freeze(['caster', 'stalker', 'wisp', 'stalker', 'hound', 'stalker'] as const),
+  archer: Object.freeze(['archer', 'hound', 'archer', 'hound', 'stalker', 'hound'] as const),
+  wisp: Object.freeze(['wisp', 'wisp', 'stalker', 'hound', 'stalker', 'stalker'] as const),
 });
 type Position = Pick<Player, 'x' | 'y'>;
 export interface TravelHeading { x: number; y: number }
@@ -51,8 +51,8 @@ export class RoamingEncounters {
   }
   get ready(): boolean { return this.cooldown <= 0 && (this.warmup > 0 || this.distance >= this.requiredDistance); }
   groupSize(available: number, roll: number): number {
-    const size = roll < .10 ? 1 : roll < .55 ? 2 : 3;
-    return Math.max(0, Math.min(size, available, this.warmup > 0 ? this.warmup : 3));
+    const size = roll < .25 ? 4 : roll < .75 ? 5 : ROAMING_RULES.maxGroupSize;
+    return Math.max(0, Math.min(size, available, this.warmup > 0 ? this.warmup : ROAMING_RULES.maxGroupSize));
   }
   resolved(count: number, random: () => number): void {
     if (!count) { this.cooldown = ROAMING_RULES.retryInterval; return; }

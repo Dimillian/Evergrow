@@ -150,10 +150,10 @@ test('a two-wave objective counts only defeated members and pays its bonus exact
   assert.equal(sim.eventState.trial, null);
   assert.equal(sim.eventState.sites[grave.id].phase, 'completed');
   assert.ok((await executeEvent(sim, grave, null, persist)).ok);
-  assert.equal(sim.player.xp, 10);
+  assert.equal(sim.player.xp, 40);
   assert.equal(sim.drainEvents().filter(e => e.type === 'experience').length, 1);
   assert.equal((await executeEvent(sim, grave, null, persist)).ok, false);
-  assert.equal(sim.player.xp, 10);
+  assert.equal(sim.player.xp, 40);
 });
 test('blessings use shared stat derivation, expire in wilderness, pause in town and disappear on death', async () => {
   const { sim } = (await setup({ ...world, isSanctuary: x => x > 1000 }));

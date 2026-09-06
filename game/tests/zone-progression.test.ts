@@ -23,10 +23,10 @@ test('invalid coordinates and content levels have finite bounded results', () =>
 
 test('normal enemies and rank multipliers use one authored source-level curve', () => {
   assert.deepEqual([1, 5, 10, 20, 50].map(level => scaledEnemyStats('stalker', level, 'normal')),
-    [{ maxHp: 48, damage: 8, xpReward: 20 }, { maxHp: 89, damage: 12, xpReward: 34 },
-      { maxHp: 156, damage: 16, xpReward: 52 }, { maxHp: 341, damage: 25, xpReward: 88 },
-      { maxHp: 1307, damage: 51, xpReward: 196 }]);
-  assert.deepEqual(scaledEnemyStats('stalker', 1, 'elite'), { maxHp: 192, damage: 12, xpReward: 100 });
+    [{ maxHp: 48, damage: 10, xpReward: 20 }, { maxHp: 89, damage: 14, xpReward: 34 },
+      { maxHp: 156, damage: 19, xpReward: 52 }, { maxHp: 341, damage: 30, xpReward: 88 },
+      { maxHp: 1307, damage: 61, xpReward: 196 }]);
+  assert.deepEqual(scaledEnemyStats('stalker', 1, 'elite'), { maxHp: 192, damage: 14, xpReward: 100 });
   for (const kind of ['stalker', 'brute', 'caster'] as const) {
     const deep = scaledEnemyStats(kind, MAX_CONTENT_LEVEL, 'elite');
     assert.ok(Object.values(deep).every(value => Number.isSafeInteger(value) && value > 0));

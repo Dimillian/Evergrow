@@ -85,7 +85,7 @@ test('whole-camp activation respects total/rank caps and rejects blocked or sanc
     const world: WorldQuery = { ...open, blocked: x => reject && mode === 'blocked' && x > 450,
       isSanctuary: x => reject && mode === 'sanctuary' && x > 450 };
     const { sim, ledger, update } = harness(world), camp = blueprint();
-    if (mode === 'population') for (let index = 0; index < ENCOUNTER_RULES.hardPopulationCap - 2; index++) sim.spawnEnemy('stalker', -100 - index * 10, 0);
+    if (mode === 'population') for (let index = 0; index < ENCOUNTER_RULES.hardPopulationCap - 2; index++) sim.spawnEnemy('stalker', -100 - index * 2, 0);
     if (mode === 'veterans') for (let index = 0; index < ENCOUNTER_RULES.veteranCap; index++) sim.spawnEnemy('stalker', -100 - index * 30, 0, 'veteran');
     reject = true; const count = sim.enemies.length; update([camp]);
     assert.equal(sim.enemies.length, count, mode); assert.equal(ledger.getState(camp.id), 'dormant', mode);

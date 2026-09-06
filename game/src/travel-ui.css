@@ -1,8 +1,13 @@
-.hud-control.portal-control { display:flex; align-items:center; justify-content:center; gap:9px; background:#0a151eea; border:1px solid #78929d70; color:#c6c2d7; font:12px "Evergrow Numerals", system-ui,sans-serif; box-shadow:inset 0 1px #c1cfdb14; overflow:visible; }
-.portal-control::before { content:''; width:12px; height:17px; border:1px solid #b7b0d6; border-radius:50%; box-shadow:0 0 7px #b59ce830,inset 0 0 6px #b59ce82a; }
-.portal-control kbd { font:600 11px "Evergrow Numerals", system-ui,sans-serif; color:#92a1a8; }
-.portal-control.is-channeling { border-color:#c1b5e4; background:linear-gradient(90deg,#5b487955 var(--portal-progress),#0a151eea var(--portal-progress)); }
-.portal-control.is-return { color:#d0c2ef; }
+.hud-control.portal-control { display:flex; align-items:center; gap:9px; padding:0 12px; border-top:0; border-bottom:0; overflow:visible; color:#bdcbd0; font:13px var(--ui-font); }
+.portal-control .ui-icon { width:17px; height:19px; flex:none; color:#a4b6c7; }
+.portal-control .portal-label { flex:1; text-align:left; white-space:nowrap; }
+.hud-control.portal-control:not(:disabled):hover { background:#17242ded; border-color:#6d828a70; color:#e0e5db; }
+.hud-control.portal-control:focus-visible { outline:1px solid var(--ui-silver); outline-offset:-3px; }
+.portal-control .portal-progress { position:absolute; left:10px; bottom:0; width:0; height:1px; pointer-events:none; opacity:0; }
+.portal-control.is-channeling .portal-progress { left:0; width:var(--portal-progress,0%); opacity:1; background:#c0b4e1; box-shadow:0 0 5px #ab99d952; }
+.portal-control.is-channeling .ui-icon,.portal-control.is-return .ui-icon { color:#c6b5e4; }
+.portal-control.is-channeling { color:#d8cdec; }
+.portal-control:disabled { opacity:.55; }
 .portal-transition { position:absolute; inset:0; pointer-events:none; z-index:5; background:#080e16; animation:portal-arrive 240ms ease-out forwards; }
 @keyframes portal-arrive { from { opacity:.85; } to { opacity:0; } }
 @media(prefers-reduced-motion:reduce) { .portal-transition { animation:none; opacity:0; } }

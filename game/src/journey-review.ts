@@ -1,0 +1,67 @@
+import { stageJourneyCompletion } from './journey-rewards.ts';
+import { drawJourneyAnnouncement } from './reward-art.ts';
+import './ui-kit.css';
+import './style.css';
+import './typography.css';
+import './world-map.css';
+import { installUITheme } from './ui-theme.ts';
+import { loadGameFont } from './font.ts';
+import { World } from './world.ts';
+import { Simulation } from './simulation.ts';
+import { Renderer } from './renderer.ts';
+import { PostFX } from './postfx.ts';
+import { GameShell } from './game-shell.ts';
+import { Exploration } from './exploration.ts';
+import { WorldMap } from './world-map.ts';
+import { JourneyPanel } from './journey-panel.ts';
+import { freshJourneys, planJourney, type JourneyGoal } from './journey-state.ts';
+import { publicJourneyMarker, questDiamond } from './journey-marker.ts';
+import { getZoneAt } from './zone-progression.ts';
+import { Lifetime } from './lifetime.ts';
+// Frozen real UI, memory-only chart and staged goals. No gameplay ticks or character storage.
+if (!import.meta.env.DEV) throw new Error('Local review only.');
+installUITheme();await loadGameFont();
+const life=new Lifetime(),world=life.own(new World(7319)),sim=new Simulation(world,{spawn:false});
+const mode=new URLSearchParams(location.search).get('view')??'hud';
+const pois=world.getPOIs(-3600,-3600,7200,7200);
+const camp=pois.filter(p=>p.kind==='camp').sort((a,b)=>Math.hypot(a.x,a.y)-Math.hypot(b.x,b.y))[0]!;
+const toGoal=(p:typeof camp):JourneyGoal=>({id:p.id,kind:p.kind as JourneyGoal['kind'],name:p.name,x:p.x,y:p.y,level:getZoneAt(p.x,p.y,world.seed).level,region:getZoneAt(p.x,p.y,world.seed).name});
+const active=toGoal(camp),crypt=toGoal(pois.find(p=>p.kind==='dungeon')!),beacon=toGoal(pois.find(p=>p.kind==='watchtower')!);
+const state=freshJourneys();state.accepted=[active];state.tracked=active.id;state.offers=[...new Map([crypt,beacon,...pois.filter(v=>['camp','graveyard','standingStones'].includes(v.kind)&&v.id!==active.id&&Math.hypot(v.x-camp.x,v.y-camp.y)<2000).slice(0,2).map(toGoal)].map(g=>[g.id,g])).values()];state.recommended=crypt.id;
+const old=pois.find(p=>p.kind==='caravan');if(old)state.history=[{...toGoal(old),finishedAt:1}];
+sim.journeys=state;
+const p=sim.player; p.x=p.prevX=camp.x-115;p.y=p.prevY=camp.y+250;p.level=active.level;p.angle=-Math.PI/2;p.xp=32;
+const staged=sim.captureCheckpoint(),completion=mode==='complete'?stageJourneyCompletion(staged,active,p,10):null;
+if(completion)sim.commitJourneyCheckpoint(staged,completion);
+const exploration=life.own(new Exploration(world,{storage:null}));
+for(let x=camp.x-1200;x<=camp.x+1200;x+=400)for(let y=camp.y-900;y<=camp.y+900;y+=400)exploration.reveal(x,y,480);
+let panel:JourneyPanel;
+const shell=life.own(new GameShell(document.querySelector('#app')!,{play(){},returnToTitle(){},openCharacter(){},openSkills(){},portal(){},openMap:()=>showMap(),openJourneys:()=>openPanel()}));
+const map=life.own(new WorldMap(world,exploration,shell.mapMount,()=>{map.close();draw();}));
+map.setJourneyMarker(completion?null:publicJourneyMarker(active,true));
+const facts=()=>({x:p.x,y:p.y,level:p.level,time:10,events:sim.eventState,expeditions:sim.expeditions,discovered:(id:string)=>id===active.id,campCleared:()=>false});
+panel=life.own(new JourneyPanel(shell.panelMount,shell.canvas.parentElement!,{open:id=>openPanel(id),close:()=>{panel.close();draw();},map:()=>showMap(),command:c=>{const planned=planJourney(sim.journeys,c);if(!planned)return false;sim.journeys=planned;panel.update(planned,facts(),panel.element.hidden,renderer.width,renderer.height);return true;}}));
+const renderer=new Renderer(),fx=life.own(new PostFX(shell.canvas));
+function openPanel(id=mode==='crypt'?crypt.id:active.id){panel.update(sim.journeys,facts(),false,renderer.width,renderer.height);panel.open(id);}
+function showMap(){panel.close();panel.mini.hidden=true;map.open(p);map.fitBounds({x:camp.x-1800,y:camp.y-1500,width:3600,height:3000});}
+function draw(){
+  const ratio=devicePixelRatio||1;
+  shell.canvas.width=Math.round(innerWidth*Math.min(1.6,ratio));shell.canvas.height=Math.round(innerHeight*Math.min(1.6,ratio));
+  shell.uiCanvas.width=Math.round(innerWidth*ratio);shell.uiCanvas.height=Math.round(innerHeight*ratio);
+  const height=Math.min(680,Math.max(450,Math.round(innerHeight/1.35)));
+  renderer.resize(Math.max(540,Math.round(height*innerWidth/innerHeight)),height);
+  renderer.cameraX=p.x;renderer.cameraY=p.y-30;
+  const settings={phase:'playing' as const,reducedMotion:true,debug:false,fps:60};
+  renderer.render(sim,world,0,settings);fx.render(renderer.canvas,0);
+  const c=shell.uiCanvas.getContext('2d')!;c.setTransform(shell.uiCanvas.width/renderer.width,0,0,shell.uiCanvas.height/renderer.height,0,0);
+  c.clearRect(0,0,renderer.width,renderer.height);renderer.renderUI(c,sim,world,settings);
+  map.drawMinimap(c,p,renderer.width,renderer.height,0);
+  const anchor=world.getEventSites(camp.x-300,camp.y-300,600,600).find(s=>s.id===camp.id)??camp;
+  const point=renderer.worldToScreen(anchor.x,anchor.y);if(!completion)questDiamond(c,point.x,point.y-35,8);
+  if(completion)drawJourneyAnnouncement(c,{...completion,age:.8},renderer.worldToScreen(p.x,p.y),renderer.width,renderer.height,true);
+  shell.resizeControls(renderer.width,renderer.height);shell.showMenu('playing',0,0);shell.setPortalState(new URLSearchParams(location.search).has('casting') ? .4 : null,false);
+  panel.update(sim.journeys,facts(),(mode==='hud'||mode==='complete')&&panel.element.hidden,renderer.width,renderer.height);
+}
+draw();if(mode==='journal'||mode==='crypt')openPanel();else if(mode==='map')showMap();
+const abort=new AbortController();window.addEventListener('resize',draw,{signal:abort.signal});life.defer(()=>abort.abort());
+if(import.meta.hot)import.meta.hot.dispose(()=>life.dispose());

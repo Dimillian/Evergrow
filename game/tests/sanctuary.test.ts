@@ -53,5 +53,5 @@ test('sanctuary protection ends when the player returns to the wilderness', () =
   enemy.state = 'attack'; enemy.stateTime = 0; enemy.stateDuration = .18;
   enemy.attackAngle = 0; enemy.attackHit = false;
   advance(sim, FIXED_STEP);
-  assert.equal(sim.player.hp, sim.player.maxHp - 8);
+  assert.equal(sim.player.hp, sim.player.maxHp - enemy.damage);
 });

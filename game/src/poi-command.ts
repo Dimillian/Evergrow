@@ -1,3 +1,5 @@
+import { stageJourneyCompletion } from './journey-rewards.ts';
+import { getZoneAt } from './zone-progression.ts';
 import type { Simulation } from './simulation.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import { focusEvent, EVENT_RULES, blessingChoices, type EventChoice, type EventSite, type EventRecord, type BlessingKind } from './poi-content.ts';
@@ -85,11 +87,12 @@ export async function executeEvent(sim: Simulation, site: EventSite, choice: Eve
       record.phase = 'claimed';
   }
   const oldLevel = sim.player.level;
+  const completion=record.phase==='claimed'?stageJourneyCompletion(checkpoint,{...site,region:getZoneAt(site.x,site.y,sim.world.seed).name},sim.player,sim.time,oldLevel):null;
   const result = await persist(checkpoint);
   if (!result.ok)
     return result;
   // Do not restore/reset the simulation: actors, projectiles, channels and world state remain live.
   const xpGain = !bonusAlreadyGranted && record.bonusGranted ? Math.round(eventRewards(record).xp * xpLevelFactor(oldLevel, site.level)) : 0;
-  sim.commitEventCheckpoint(checkpoint, xpGain, checkpoint.level - oldLevel);
+  sim.commitEventCheckpoint(checkpoint, xpGain+(completion?.xp??0), checkpoint.level - oldLevel, completion);
   return { ok: true, message: record.phase === 'active' ? 'Guardians approaching' : record.phase === 'completed' ? 'Reward waiting' : site.kind === 'watchtower' ? 'Beacon lit' : site.kind === 'standingStones' ? 'Blessing bound' : 'Opened' };
 }

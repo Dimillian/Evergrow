@@ -5,7 +5,7 @@ import { normalizeLevel, type EnemyRank } from './progression-content.ts';
 
 export const ENCOUNTER_RULES = Object.freeze({
   maxSpawnAttempts: 24, spawnClearance: 7, minimumSeparation: 45,
-  basePopulation: 9, levelsPerPopulation: 4, targetPopulationCap: 14, hardPopulationCap: 32, roamingReserve: 9,
+  basePopulation: 16, levelsPerPopulation: 4, targetPopulationCap: 24, hardPopulationCap: 48, roamingReserve: 16,
   veteranCap: 2, eliteCap: 1,
   initialIdleMin: .45, initialIdleRange: .35, corpseDuration: .5, despawnDistance: 1800,
 });

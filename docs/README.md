@@ -26,6 +26,7 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 | Camps, landmarks and roaming | [Wilderness and encounters](wilderness-and-encounters.md) |
 | Procedural crypt floors, boss, treasure and location saves | [Dungeons](dungeons.md) |
 | Chests, choices, beacons and guardian trials | [Interactive POIs](interactive-pois.md) |
+| Minimal activity guidance, journal and tracked markers | [Journeys](journeys.md) |
 | Explored map and review tooling | [Explored atlas](explored-atlas.md) |
 
 ## Town economy

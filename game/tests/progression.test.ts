@@ -17,7 +17,7 @@ function advance(sim: Simulation, seconds: number, input: Partial<Input> = {}): 
 }
 
 test('XP thresholds pace matching-level enemies across the early and later game', () => {
-  assert.deepEqual([1, 2, 3, 5, 10, 20, 50].map(xpForNextLevel), [100, 170, 230, 375, 865, 2295, 9800]);
+  assert.deepEqual([1, 2, 3, 4, 5, 10, 20, 50].map(xpForNextLevel), [100, 170, 230, 305, 565, 2015, 6160, 28200]);
   let last = 0;
   for (let level = 1; level <= 1000; level++) {
     const threshold = xpForNextLevel(level);

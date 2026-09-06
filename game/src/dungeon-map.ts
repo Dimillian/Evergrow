@@ -1,3 +1,4 @@
+import { drawJourneyMapMarker, type JourneyMarker } from './journey-marker.ts';
 import { cryptOutline } from './dungeon-contours.ts';
 import type { DungeonFloor } from './dungeon.ts';
 import type { DungeonRun } from './dungeon-state.ts';
@@ -15,7 +16,7 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
     y: number;
     width: number;
     height: number;
-}, zoom: number, cx: number, cy: number) {
+}, zoom: number, cx: number, cy: number, marker:JourneyMarker|null=null) {
     c.save();
     c.beginPath();
     c.rect(box.x, box.y, box.width, box.height);
@@ -68,11 +69,13 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
     c.closePath();
     c.fill();
     c.restore();
+    drawJourneyMapMarker(c,{...box,zoom,centerX:cx,centerY:cy},marker,true);
     c.strokeStyle = '#718b85';
     c.lineWidth = 1;
     c.strokeRect(box.x + .5, box.y + .5, box.width - 1, box.height - 1);
 }
 export class DungeonMap {
+    marker:JourneyMarker|null=null;
     readonly element: HTMLElement;
     private canvas: HTMLCanvasElement;
     private tooltip: HTMLDivElement;
@@ -130,7 +133,7 @@ export class DungeonMap {
         this.tooltip.style.top = `${Math.min(clientY + 16, window.innerHeight - this.tooltip.offsetHeight - 12)}px`;
     }
     private draw() { if (this.floor && this.run)
-        drawDungeonMap(this.canvas.getContext('2d')!, this.floor, this.run, this.player, { x: 0, y: 0, width: 1200, height: 760 }, this.zoom, this.center.x, this.center.y); }
+        drawDungeonMap(this.canvas.getContext('2d')!, this.floor, this.run, this.player, { x: 0, y: 0, width: 1200, height: 760 }, this.zoom, this.center.x, this.center.y,this.marker); }
     close() { this.focus?.dispose(); this.focus = null; this.element.hidden = true; this.drag = null; this.tooltip.hidden = true; }
     dispose() { this.close(); this.abort.abort(); this.element.remove(); }
 }
@@ -138,4 +141,4 @@ export function drawCryptMinimap(c: CanvasRenderingContext2D, f: DungeonFloor, r
     x: number;
     y: number;
     angle: number;
-}, w: number, h: number) { const box = getMinimapRect(w, h); drawDungeonMap(c, f, r, p, box, .095, p.x, p.y); text(c, `CRYPT · ${r.entrance.level}`, box.x + box.width / 2, box.y + box.height - 8, .9, '#b9cbbb', 'center'); }
+}, w: number, h: number, marker:JourneyMarker|null=null) { const box = getMinimapRect(w, h); drawDungeonMap(c, f, r, p, box, .095, p.x, p.y,marker); text(c, `CRYPT · ${r.entrance.level}`, box.x + box.width / 2, box.y + box.height - 8, .9, '#b9cbbb', 'center'); }

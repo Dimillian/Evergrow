@@ -26,9 +26,9 @@ Towns remain protected. Their safe interiors and streets do not create leveled c
 
 Level and rank are captured at spawn. Crossing a boundary or pulling an enemy across one never changes that enemy's stats or loot level. Enemy projectiles retain their attacker's source level after launch, including after the caster dies.
 
-Ambient population targets `min(14, 9 + floor((areaLevel − 1) / 4))`. Camp members do not count toward that target; all sources still share a hard limit of **32 living enemies**. Camps can occupy at most 23 slots, reserving nine for roaming foes. Each candidate uses its own geographic level, so an area boundary can contain enemies from both levels.
+Ambient population targets `min(24, 16 + floor((areaLevel − 1) / 4))`. Camp members do not count toward that target; all sources still share a hard limit of **48 living enemies**. Camps can occupy at most 32 slots, reserving sixteen for roaming foes. Each candidate uses its own geographic level, so an area boundary can contain enemies from both levels.
 
-Automatic populations wait for valid camera bounds after construction or reset. Nine initial roaming enemies settle into the offscreen surroundings in small batches; later groups require both travel and a cooldown. Placement uses the actual camera rectangle, shared visual margins and a forward lead, so a wide zoom does not leave the old fixed-distance spawn ring entirely visible. Solitary enemies and groups of two or three use loose formations, with travel-direction-biased placement and biome-appropriate companions. Blocked ground, sanctuaries and every camp footprint remain excluded.
+Automatic populations wait for valid camera bounds after construction or reset. Sixteen initial roaming enemies settle into the offscreen surroundings in small batches; later groups require both travel and a cooldown. Placement uses the actual camera rectangle, shared visual margins and a forward lead, so a wide zoom does not leave the old fixed-distance spawn ring entirely visible. Packs of four to six enemies (smaller only when filling the remaining capacity) use loose formations, with travel-direction-biased placement and biome-appropriate companions. Blocked ground, sanctuaries and every camp footprint remain excluded.
 
 After the initial population has been placed, standing still does not refill cleared ground from elapsed time or camera zoom alone. Further groups require 180–280 units of travel and 2.2–3.8 seconds between placements. Stored travel is capped at 280 units, failed placement retries after 0.45 seconds, and a full population cannot bank an unlimited burst. Distant inactive ambient actors may retire only while wholly offscreen; forward travel can also retire hidden trailing actors to free room ahead. Visible or engaged foes remain. Retirement is not death and grants no rewards. These travel and density values are starting playtest parameters.
 
@@ -46,7 +46,7 @@ Ambient selection caps each special archetype (Brute, Hexer, Archer, Wisp) at tw
 
 ### Camps and awareness
 
-Ashen Watch at `(740, 180)` introduces a four-member garrison: a veteran Stalker, an Archer, a Hound, and another Stalker. Ordinary generated camps have six members with biome-specific support; one third instead hold 10–15 goblins plus a ranked War Chief. Frostpine camps follow a Wisp leader with hounds and a Hexer; Emberfall favors a Brute leader and a second Brute; Amberwood and Verdant camps feature an Archer leader and hounds; Highlands camps place archers behind their Brute leader. The Mire keeps its Hexer leader and Wisp support. Cloth, banners, and soil materials also follow the climate. Shared camp footprints and member slots stay unchanged. Camp leaders are an authored exception to ambient rank rolls: a veteran can appear in a level-one camp; elite leaders require at least area level three. These enemies still use the ordinary rank XP and loot tables.
+Ashen Watch at `(740, 180)` introduces a four-member garrison: a veteran Stalker, an Archer, a Hound, and another Stalker. Ordinary generated camps have eight members with biome-specific support; one third instead hold 10–15 goblins plus a ranked War Chief. Frostpine camps follow a Wisp leader with hounds and a Hexer; Emberfall favors a Brute leader and a second Brute; Amberwood and Verdant camps feature an Archer leader and hounds; Highlands camps place archers behind their Brute leader. The Mire keeps its Hexer leader and Wisp support. Cloth, banners, and soil materials also follow the climate. Shared camp footprints and member slots stay unchanged. Camp leaders are an authored exception to ambient rank rolls: a veteran can appear in a level-one camp; elite leaders require at least area level three. These enemies still use the ordinary rank XP and loot tables.
 
 Camps preload within 1,000–2,000 units according to visible world coverage. Approaching camps take priority over farther offscreen populations when the shared actor/rank budget is full. A garrison sleeps as a whole; visible, engaged and nearer foes cannot disappear to free capacity. Pursuing or attacking members must disengage naturally before their group can sleep. Its original health, level, damage, rank, reward seed, and dead member identities survive unloading. Defeating every member marks the camp cleared for this run. Returning cannot refill it, reroll its items, or award extra XP. Clearing the garrison unlocks its persistent POI strongbox.
 
@@ -75,7 +75,7 @@ For source or item level `L`, let `n = L − 1`:
 | --- | --- |
 | Weapon damage, base armor, flat implicit gear values | `G = 1 + 0.13n` |
 | Enemy maximum life | `G × (1 + 0.055n)` |
-| Enemy damage | `1 + 0.11n` |
+| Enemy damage | `1.2 × (1 + 0.11n)` |
 | Enemy base XP | `1 + 0.18n` |
 
 Archetype definitions retain their level-one values:
@@ -89,15 +89,15 @@ Archetype definitions retain their level-one values:
 | Archer | 45 | 11 | 28 |
 | Wisp | 39 | 17 | 32 |
 
- Level and rank multiply those authored values, then the result is rounded. Movement speed, windup, attack cadence, and collision size do not accelerate just because an enemy has a higher level.
+ Level and rank multiply those authored values, including the shared 1.2 damage multiplier, then the result is rounded. Movement speed, windup, attack cadence, and collision size do not accelerate just because an enemy has a higher level.
 
 | Matching level | Normal Stalker life | Hit before defenses | XP | Next-level XP | Stalker equivalents | Common Longsword damage |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | 48 | 8 | 20 | 100 | 5.0 | 19 |
-| 5 | 89 | 12 | 34 | 375 | 11.0 | 29 |
-| 10 | 156 | 16 | 52 | 865 | 16.6 | 41 |
-| 20 | 341 | 25 | 88 | 2,295 | 26.1 | 66 |
-| 50 | 1,307 | 51 | 196 | 9,800 | 50.0 | 140 |
+| 1 | 48 | 10 | 20 | 100 | 5.0 | 19 |
+| 5 | 89 | 14 | 34 | 565 | 16.6 | 29 |
+| 10 | 156 | 19 | 52 | 2,015 | 38.8 | 41 |
+| 20 | 341 | 30 | 88 | 6,160 | 70.0 | 66 |
+| 50 | 1,307 | 61 | 196 | 28,200 | 143.9 | 140 |
 
 The equivalents column divides the next-level cost by a same-level normal Stalker's XP. It is not an encounter-count or time promise: packs, archetypes, ranks, damage skills, travel, and player decisions all change actual progression speed.
 
@@ -125,7 +125,11 @@ For a character at level `L`, first calculate a same-level normal Stalker's sour
 
 Then:
 
-`nextLevelXP = roundToNearest5(S × (5 + 2 × (L − 1)^0.8))`
+`d = max(0, L − 4)`
+
+`nextLevelXP = roundToNearest5(S × (5 + 2 × (L − 1)^0.8) × (1 + 2d / (d + 3)))`
+
+Thresholds through level 4 stay at 100 / 170 / 230 / 305 XP. After that the pacing premium grows smoothly toward 3×, counterbalancing denser packs. Level 5 requires about 1.5× the previous XP; level 10 about 2.33×. Existing levels and earned XP remain intact. Actual time to level depends on clear speed and activity selection; first-skill thresholds are preserved, not guaranteed elapsed time.
 
 XP within the current level carries through every threshold crossed. Source XP is rounded when the monster's stats are built. At death, the player's **pre-award** level supplies an XP factor:
 
@@ -272,3 +276,7 @@ Normal goblin equipment chance is 30% of the ordinary normal-enemy yield (8.4% i
 ## Dungeon rewards
 
 Rootbound Crypt fixes its level to entrance geography + 1. Floor coordinates never affect source levels. Ordinary enemies use the existing tables. The Hollow Warden awards 120 baseline XP (six normal Stalkers), adjusted by the usual level gap, and no generic equipment/gold roll. Guarded and final chests use normal/veteran/elite source-level recipes and exactly-once physical delivery; see [Dungeons](dungeons.md) for the item/gold budgets.
+
+## Journey completion bonuses
+
+Completed POIs and crypts now grant modest additional source-level XP even without journal tracking. Bonuses range from 0.25 to 3 normal Stalker kill equivalents; town/frontier arrival uses 0.5. The pre-award level-gap factor applies. Completion receipts prevent repeated payouts and share their owning claim/checkpoint with XP. Existing encounter rewards remain intact; see [Journeys](journeys.md) for the table, save behavior and bounds.

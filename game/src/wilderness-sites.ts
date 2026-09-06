@@ -99,7 +99,7 @@ function makeSite(seed: number, id: string, kind: WildernessKind, x: number, y: 
     member(starter ? 'archer' : roster[1], 71, 0);
     member(starter ? 'hound' : roster[2], -56, 74);
     member(starter ? 'stalker' : roster[3], 53, 104);
-    if (!starter) { member(roster[4], -57, -11); member(roster[5], -27, 113); }
+    if (!starter) { member(roster[4], -57, -11); member(roster[5], -27, 113); member('stalker', 8, 68); member('hound', -34, -65); }
   } else if (kind === 'watchtower') {
     add('tower', 0, -48, 37, 1.15); add('lantern', 33, -51, 3, 1.2);
     add('banner', -77, -4, 5, 1.05); add('crate', 67, 45, 13); add('barrel', 89, 30, 10);

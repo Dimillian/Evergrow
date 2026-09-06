@@ -138,7 +138,7 @@ function shortcuts(c: CanvasRenderingContext2D, p: Player, gamepad = false) {
   const menu = HUD_ART.menu;
   for (let i = 0; i < HUD_MENU_SHORTCUTS.length; i++) {
     const x = menu.x + i * menu.step;
-    const enabled = i < 3;
+    const enabled = true;
     const points = i === 0 ? p.character.statPoints : i === 2 ? p.character.skillPoints : 0;
     const accent = i === 0 ? '#edbd79' : '#c9a5f3';
     // Navigation is an engraving in the shelf, not a row of competing skill buttons.

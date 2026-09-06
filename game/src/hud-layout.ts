@@ -14,7 +14,7 @@ export const HUD_MENU_SHORTCUTS = [
   { id: 'character', label: 'Character', key: 'C' },
   { id: 'inventory', label: 'Inventory', key: 'I' },
   { id: 'skilltree', label: 'Skill tree', key: 'T' },
-  { id: 'journal', label: 'Journal', key: 'J' },
+  { id: 'journal', label: 'Journeys', key: 'J' },
 ] as const;
 
 /** Empty bindings reserve room for future equipped skills; they perform no action. */

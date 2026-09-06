@@ -67,14 +67,14 @@ test('spawned actors and actual melee/projectile contact use the authored enemy 
     if (definition.attack === 'melee') {
       enemy.state = 'attack'; enemy.stateDuration = definition.active;
       sim.update(FIXED_STEP, idle);
-      assert.equal(sim.player.hp, sim.player.maxHp - definition.damage);
+      assert.equal(sim.player.hp, sim.player.maxHp - enemy.damage);
       assert.equal(sim.drainEvents().find(event => event.type === 'hurt')?.enemyKind, kind);
     } else if (definition.attack === 'projectile') {
       enemy.state = 'windup'; enemy.stateDuration = definition.windup; enemy.stateTime = definition.windup - FIXED_STEP / 2;
       sim.update(FIXED_STEP, idle);
       const projectile = sim.projectiles[0]!;
       assert.ok(projectile);
-      assert.equal(projectile.damage, definition.damage);
+      assert.equal(projectile.damage, enemy.damage);
       assert.equal(projectile.maxLife, definition.projectile.life);
       assert.equal(projectile.radius, definition.projectile.radius);
       assert.equal(projectile.owner, definition.projectile.owner);

@@ -166,7 +166,7 @@ test('all climates own complete camp materials and six-member roles without intr
       if (camp.members[0].kind === 'goblinChief') {
         assert.ok(camp.members.length >= 11 && camp.members.length <= 16);
         assert.ok(camp.members.slice(1).every(m => m.kind === 'goblin'));
-      } else assert.deepEqual(camp.members.map(member => member.kind), CAMP_BIOME_ROSTERS[camp.biome]);
+      } else assert.deepEqual(camp.members.map(member => member.kind), [...CAMP_BIOME_ROSTERS[camp.biome], 'stalker', 'hound']);
       assert.ok(camp.members[0].rank === 'veteran' || camp.members[0].rank === 'elite');
       assert.ok(camp.members.slice(1).every(member => member.rank === 'normal'));
     }
