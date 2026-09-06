@@ -64,3 +64,7 @@ POI openings take one second (beacons: two). Movement, combat, damage or leaving
 ## Touch
 
 Touch devices have a left analog movement disc and a right hold/drag attack pad, five visible skill buttons, potion, dodge, interaction and portal controls. Drag an aimed skill and release to cast, or release over Cancel. Self-centered skills can be tapped. Maps and the skill tree support pan/pinch and tap inspection. Inventory uses tap-to-inspect with Equip, Unequip and Move actions. Pause includes sound and camera zoom controls. Mouse, keyboard and gamepad bindings above remain available unchanged; typing into a native field keeps touch mode active. See [Touch gameplay and interface](touch-controls.md) for complete workflows and verification boundaries.
+
+## AYN Thor
+
+The Android APK uses the same controller layout through native joystick/button input. The lower screen has Map, Pack and Build tabs. Tap gear to inspect; Back or B closes the item, then Resume continues play. Equip, Journey tracking and portal actions use the existing game commands. See [Android/Thor setup](android-thor.md).

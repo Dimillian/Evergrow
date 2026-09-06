@@ -1,0 +1,720 @@
+
+* {
+  box-sizing: border-box
+}
+html,body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #070d12;
+  color: #d2dedc
+}
+body,button {
+  font-family: var(--ui-font);
+  font-size: 14px
+}
+button {
+  color: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  border: 0;
+  background: none
+}
+button:focus-visible {
+  outline: 2px solid #c7d8be;
+  outline-offset: -3px
+}
+button:disabled {
+  opacity: .4;
+  cursor: default
+}
+button svg {
+  width: 22px;
+  height: 22px
+}
+h1,h2,p {
+  margin: 0
+}
+#companion {
+  height: 100%;
+  padding: 8px;
+  background: radial-gradient(ellipse at 50% 0,#1b3038 0,transparent 70%),#060c10
+}
+.thor-shell {
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #52646a;
+  border-radius: 9px 9px 3px 3px;
+  box-shadow: inset 0 0 0 3px #0b151b,inset 0 0 0 4px #253840,0 10px 40px #000a;
+  background: linear-gradient(130deg,#17252e80,#080f16 65%);
+  padding: 6px;
+  overflow: hidden
+}
+.thor-header {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #45595c80;
+  min-height: 43px;
+  padding: 5px 10px;
+  gap: 9px
+}
+.thor-header h1 {
+  font-weight: 500;
+  letter-spacing: .5px;
+  color: #e1dfc9;
+  font-size: 16px
+}
+.thor-header #thor-zone {
+  color: #7e969c;
+  font-size: 10px
+}
+.thor-sigil {
+  border: 1px solid #556c74;
+  outline: 4px solid #34495122;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #b4ced4;
+  flex-shrink: 0;
+  width: 27px;
+  height: 27px
+}
+.thor-sigil svg {
+  width: 21px;
+  height: 21px
+}
+#thor-level {
+  margin-left: auto;
+  color: #b9ccc9;
+  white-space: nowrap;
+  font-size: 12px
+}
+.thor-resources {
+  display: flex;
+  padding: 7px 10px 4px;
+  gap: 10px
+}
+.thor-resources>div {
+  position: relative;
+  background: #020609;
+  flex: 1;
+  border: 1px solid #45545a;
+  border-radius: 2px;
+  overflow: hidden;
+  height: 13px
+}
+.thor-resources i {
+  display: block;
+  height: 100%;
+  transition: width .2s ease;
+  background: linear-gradient(#ba4863,#781d39);
+  box-shadow: inset 0 1px #f0879755
+}
+.thor-resources .thor-mana i {
+  background: linear-gradient(#416ebb,#223e7d);
+  box-shadow: inset 0 1px #a4dfff55
+}
+.thor-resources span {
+  position: absolute;
+  inset: 0;
+  text-align: center;
+  color: #ebefed;
+  text-shadow: 0 1px 3px #000;
+  font-size: 10px;
+  line-height: 11px
+}
+.thor-tabs {
+  display: flex;
+  border-bottom: 1px solid #42565f;
+  margin: 0 10px
+}
+.thor-tabs button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #728b94;
+  border-bottom: 2px solid transparent;
+  height: 32px;
+  font-size: 12px;
+  gap: 6px
+}
+.thor-tabs button[aria-selected=true] {
+  color: #d5e1dc;
+  border-color: #b6a87b;
+  background: linear-gradient(transparent,#66808818)
+}
+.thor-tabs svg {
+  width: 17px;
+  height: 17px
+}
+.thor-tabs em {
+  font-family: var(--ui-font);
+  font-style: normal;
+  color: #dfcd96;
+  font-size: 10px
+}
+.thor-tabs em:empty {
+  display: none
+}
+.thor-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #425963 transparent;
+  padding: 8px 10px
+}
+.thor-map {
+  position: relative;
+  min-height: 160px;
+  border: 1px solid #354b52;
+  background: #070f14;
+  overflow: hidden;
+  border-radius: 2px;
+  height: clamp(140px,38vh,260px)
+}
+.thor-map:after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 55px #03090ea0
+}
+.thor-map img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block
+}
+.thor-map img[src=""] {
+  visibility: hidden
+}
+.thor-north {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  color: #a0b3b3;
+  font-size: 11px
+}
+.thor-area-level {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  color: #8da5ae;
+  font-size: 12px;
+  z-index: 1
+}
+.thor-map-tools {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  border: 1px solid #4b6267;
+  border-radius: 4px;
+  background: #081119ed;
+  z-index: 1
+}
+.thor-map-tools button {
+  font-size: 22px;
+  color: #bbc9c9;
+  width: 34px;
+  height: 30px
+}
+.thor-map-tools button+button {
+  border-left: 1px solid #31434a
+}
+.thor-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #8ea6ab;
+  min-height: 28px;
+  font-size: 10px
+}
+.thor-section-title h2 {
+  font-weight: 500;
+  color: #b6caca;
+  font-size: 12px
+}
+.thor-section-title button {
+  height: 36px;
+  width: 38px
+}
+.thor-journeys button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  padding: 5px 5px;
+  border-top: 1px solid #2a3d4433;
+  color: #91a6ac;
+  min-height: 32px;
+  font-size: 11px
+}
+.thor-journeys .tracked {
+  color: #d8d1ad
+}
+.journey-diamond {
+  font-size: 21px;
+  color: #637e89
+}
+.tracked .journey-diamond {
+  color: #d0b881
+}
+.thor-journeys small {
+  margin-left: auto;
+  white-space: nowrap;
+  color: #809299;
+  font-size: 10px
+}
+.thor-footer {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid #34494f;
+  padding: 3px 8px
+}
+.thor-footer button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 1;
+  color: #93abb4;
+  height: 31px;
+  font-size: 11px
+}
+.thor-footer svg {
+  width: 16px;
+  height: 16px
+}
+.thor-footer #thor-resume {
+  color: #d2d0b6
+}
+.thor-footer [hidden] {
+  display: none
+}
+.thor-xp {
+  height: 3px;
+  margin: 3px 10px;
+  background: #07090e
+}
+.thor-xp i {
+  height: 100%;
+  display: block;
+  background: linear-gradient(90deg,#565273,#b5a7d9);
+  transition: width .3s
+}
+.thor-equipment {
+  display: grid;
+  padding-bottom: 7px;
+  border-bottom: 1px solid #263c44;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 5px;
+  border: 0;
+  padding: 0 0 12px
+}
+.thor-bag {
+  display: grid;
+  grid-template-columns: repeat(8,minmax(0,1fr));
+  gap: 3px;
+  max-width: calc(100dvh - 232px);
+  margin-left: auto
+}
+.thor-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb,var(--rarity,#64777d) 58%,#15232a);
+  box-shadow: inset 0 0 0 3px #0b141aaa;
+  overflow: hidden;
+  padding: 1px;
+  border-radius: 2px;
+  background: #0c1720;
+  border-color: var(--rarity,#35454f)
+}
+.thor-item:before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  background: var(--rarity);
+  width: 2px;
+  height: 2px
+}
+.thor-item svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 1px 2px #000)
+}
+.thor-item small {
+  position: absolute;
+  color: #b8c7cc;
+  text-shadow: 0 1px 3px black;
+  font-size: 8px;
+  right: 2px;
+  bottom: 0;
+  padding: 0 2px;
+  background: #081119c9;
+  line-height: 1.2
+}
+.thor-item.empty {
+  background: #0b151d;
+  border-color: #314149;
+  opacity: .6
+}
+.thor-gold {
+  color: #d7bd79;
+  display: block;
+  font-size: 12px
+}
+.thor-power {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px 20px;
+  border-bottom: 1px solid #34434b
+}
+.thor-power>span {
+  color: #c7b582;
+  width: 50px;
+  height: 50px;
+  border: 1px solid #776d50;
+  border-radius: 50%;
+  padding: 6px
+}
+.thor-power svg {
+  width: 100%;
+  height: 100%
+}
+.thor-power strong {
+  font-size: 32px;
+  line-height: 1.1;
+  color: #d9d7bd;
+  font-weight: 500;
+  display: block
+}
+.thor-power small {
+  display: block;
+  color: #7e959e;
+  font-size: 12px
+}
+.thor-build-xp {
+  margin-left: auto;
+  text-align: right
+}
+.thor-build-xp b {
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 1.7
+}
+.thor-build-actions {
+  display: flex;
+  gap: 10px;
+  padding: 16px 0
+}
+.thor-build-actions button {
+  flex: 1;
+  border: 1px solid #4b6067;
+  background: linear-gradient(#21323b66,#101a2366);
+  border-radius: 3px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around
+}
+.thor-build-actions em {
+  font-style: normal;
+  color: #e1c98e
+}
+.thor-stats>div {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 4px;
+  border-bottom: 1px solid #26363e60;
+  font-size: 13px
+}
+.thor-stats span {
+  color: #819aa3
+}
+.thor-stats strong {
+  font-weight: 500;
+  color: #c7d4d4
+}
+.thor-stats>div:nth-last-child(4) {
+  border-top: 1px solid #52666c;
+  margin-top: 16px;
+  padding-top: 16px
+}
+.thor-detail {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #6b798b;
+  border-top-color: #c3c5ce;
+  border-radius: 5px;
+  box-shadow: 0 8px 48px #000c;
+  animation: thor-appear .16s ease-out;
+  inset: 50px 13px 45px;
+  padding: 8px 12px;
+  background: linear-gradient(130deg,#1b2a38,#0b131d 75%);
+  border-color: var(--item-color,#61747b)
+}
+.thor-detail[hidden] {
+  display: none
+}
+.thor-detail-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #8aa0ac;
+  border-bottom: 1px solid #354750;
+  min-height: 34px;
+  padding: 0 0 5px
+}
+.thor-detail-toolbar button {
+  height: 30px;
+  width: 32px
+}
+.thor-detail-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 0
+}
+.thor-detail-scroll .ui-item-heading {
+  font-size: 18px;
+  padding: 8px 9px
+}
+.thor-equip {
+  border: 1px solid #71847a;
+  border-radius: 3px;
+  background: linear-gradient(#344640,#1b2b29);
+  color: #e0dfc7;
+  min-height: 34px;
+  font-size: 12px
+}
+.thor-idle {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 15px;
+  gap: 15px
+}
+.thor-idle h2 {
+  color: #cad5cf;
+  font-size: 20px;
+  font-weight: 500
+}
+.thor-idle p,.thor-quiet {
+  color: #68828e;
+  font-size: 12px
+}
+.thor-astrolabe {
+  width: 210px;
+  height: 210px;
+  border: 1px solid #3f5e67;
+  border-radius: 50%;
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin-bottom: 15px;
+  background: radial-gradient(#38535d33,transparent 70%);
+  box-shadow: 0 0 0 8px #1c303730,0 0 0 9px #32485060
+}
+.thor-astrolabe:before {
+  content: '';
+  position: absolute;
+  inset: 24px;
+  border: 1px dashed #4b626c80;
+  border-radius: 50%
+}
+.thor-astrolabe:after {
+  content: '';
+  position: absolute;
+  inset: 40px;
+  border: 1px solid #72898280;
+  transform: rotate(45deg)
+}
+.thor-astrolabe span {
+  width: 90px;
+  height: 90px;
+  color: #b4c8cb
+}
+.thor-astrolabe svg {
+  width: 100%;
+  height: 100%
+}
+.thor-astrolabe i {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #bfb487;
+  top: -4px;
+  box-shadow: 0 0 10px #ccbc7160
+}
+.thor-astrolabe i:nth-last-child(2) {
+  top: 75%;
+  left: 4%
+}
+.thor-astrolabe i:last-child {
+  top: 75%;
+  right: 4%
+}
+.is-empty .thor-resources,.is-empty .thor-tabs,.is-empty .thor-footer,.is-empty .thor-xp {
+  display: none
+}@keyframes thor-appear{
+from {
+  opacity: 0;
+  transform: translateY(6px)
+}
+to {
+  opacity: 1;
+  transform: translateY(0)
+}}@media(prefers-reduced-motion:reduce){
+*,*:before,*:after {
+  animation: none!important;
+  transition: none!important
+}}@media(max-height:560px){
+.thor-header {
+  min-height: 47px
+}
+.thor-resources {
+  padding-top: 8px;
+  padding-bottom: 6px
+}
+.thor-content {
+  padding-top: 8px
+}
+.thor-map {
+  height: 32vh
+}
+.thor-tabs button {
+  height: 36px
+}
+.thor-journeys button {
+  min-height: 36px
+}
+.thor-footer {
+  padding-top: 3px
+}
+.thor-astrolabe {
+  width: 155px;
+  height: 155px
+}}@media(min-width:700px){
+#companion {
+  max-width: 620px;
+  margin: auto
+}}
+/* Handheld density: the entire 64-cell pack fits beside the worn equipment. */
+.thor-pack-layout {
+  display: grid;
+  grid-template-columns: 120px minmax(0,1fr);
+  gap: 14px;
+  align-items: start;
+  max-width: min(430px, calc(100dvh - 98px));
+  margin: auto
+}
+.thor-equipped-column {
+  border-right: 1px solid #32464d;
+  padding-right: 12px
+}
+.thor-equipment .thor-item {
+  max-width: 40px
+}
+.thor-bag-column .thor-section-title {
+  max-width: calc(100dvh - 232px);
+  margin-left: auto
+}
+.thor-character-link {
+  display: block;
+  margin-top: 12px;
+  padding: 5px 0;
+  font-size: 10px;
+  color: #99b5c0
+}
+.thor-detail-toolbar .thor-back {
+  width: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #c9d8d7;
+  font-size: 20px
+}
+.thor-back span {
+  font-size: 12px
+}
+.thor-back kbd {
+  font-family: system-ui;
+  font-size: 10px;
+  border: 1px solid #526773;
+  border-radius: 50%;
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  color: #91a7ae
+}
+.thor-detail-scroll .ui-item-heading h4 {
+  font-size: 16px;
+  margin-top: 5px
+}
+.thor-detail-scroll .ui-item-class {
+  font-size: 10px
+}
+.thor-detail-scroll .ui-rarity-badge {
+  font-size: 8px;
+  padding: 2px 4px
+}
+.thor-detail-scroll .ui-item-meta {
+  font-size: 10px;
+  margin: 8px 0
+}
+.thor-detail-scroll .ui-item-weapon {
+  padding: 6px 0;
+  gap: 6px
+}
+.thor-detail-scroll .ui-item-weapon strong {
+  font-size: 19px
+}
+.thor-detail-scroll .ui-item-property {
+  font-size: 11px;
+  padding: 3px 0;
+  grid-template-columns: 1fr auto
+}
+.thor-detail-scroll .ui-item-properties {
+  margin: 8px 0
+}
+.thor-detail-scroll .ui-item-comparison {
+  font-size: 10px;
+  padding-top: 7px;
+  margin-top: 8px
+}
+.thor-detail-scroll .is-gain {
+  color: #a1d4b0
+}
+.thor-detail-scroll .is-loss {
+  color: #da9294
+}@media(min-height:650px){
+.thor-pack-layout {
+  grid-template-columns: 105px 1fr
+}
+.thor-bag {
+  max-width: 100%
+}
+.thor-bag-column .thor-section-title {
+  max-width: 100%
+}}

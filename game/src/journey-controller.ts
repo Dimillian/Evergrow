@@ -52,7 +52,7 @@ export class JourneyController {
         return { areaId: area.id, areaLevel: area.level, x: p.x, y: p.y, level: p.level, time: this.host.sim.time, events: this.host.sim.eventState, expeditions: this.host.sim.expeditions,
             discovered: id => { const goal = [...this.host.sim.journeys.accepted, ...this.host.sim.journeys.offers].find(g => g.id === id); return goal?.kind === 'frontier' ? this.host.exploration.isRevealed(goal.x, goal.y) : this.host.exploration.isDiscovered(id); }, campCleared: id => this.host.sim.getCampState(id) === 'cleared' || !!this.host.sim.expeditions.surface?.clearedCamps.includes(id) };
     }
-    private async command(command: JourneyCommand): Promise<boolean> {
+    async command(command: JourneyCommand): Promise<boolean> {
         return this.host.durable(async () => {
             const result = await executeJourneyCommand(this.host.sim, command, c => this.host.persistTravel(c), this.facts());
             if (!result.ok)

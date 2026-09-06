@@ -9,3 +9,11 @@
 .env
 .env.*
 !.env.example
+android/.gradle/
+android/**/build/
+android/local.properties
+*.jks
+*.keystore
+
+android/app/src/main/assets/
+game/dist-android/

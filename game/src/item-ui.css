@@ -64,3 +64,13 @@
 .ui-item-upgrade { font:12px "Evergrow Numerals", system-ui,sans-serif; color:#e6cc96; padding:8px 0; border-bottom:1px solid #c6b17b30; }
 
 .ui-item-hands { position: absolute; top: 3px; left: 4px; color: #b8c6ca; font: 600 8px/1.2 system-ui, sans-serif; text-shadow: 0 1px 2px #000; pointer-events: none; }
+
+/* Android 13's bundled WebView may lack color-mix. A rejected custom-property
+   gradient must never turn an equipment tooltip into a transparent surface. */
+@supports not (color: color-mix(in srgb, red, blue)) {
+  .ui-item-tooltip { background: linear-gradient(145deg, #192632, #0b131d 70%); border-color: var(--item-color, #607b86); }
+  .ui-item-heading { background: linear-gradient(115deg, #263544, #111c26); border-bottom-color: #41515d; }
+  .ui-rarity-badge { background: #101a24; border-color: var(--item-color, #607b86); }
+  .ui-rarity-badge > span { border-right-color: #526573; }
+  .ui-item-slot[data-filled='true'] { background: linear-gradient(145deg, #233440, #0b141d 75%); border-color: var(--item-color, #607b86); }
+}

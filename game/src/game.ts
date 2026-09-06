@@ -1,3 +1,6 @@
+import { ThorRuntime } from './thor-runtime.ts';
+import { nativeController, clearNativeController } from './thor-native.ts';
+import type { PadSnapshot } from './gamepad-input.ts';
 import { JourneyController } from './journey-controller.ts';
 import { LocationController } from './location-controller.ts';
 import { bindTouchCanvas } from './touch-canvas.ts';
@@ -55,6 +58,7 @@ import type { Input } from './model.ts';
 
 /** Coordinates browser lifecycle, simulation and presentation; system rules live in their owners. */
 export class Game {
+  private thor!: ThorRuntime;
   private journeys!: JourneyController;
   private locations!: LocationController;
 
@@ -215,6 +219,20 @@ export class Game {
           else if(action === 'portal') this.requestPortal();
           else if(action === 'interact') this.interact();
         },
+      }));
+      this.thor = this.lifetime.own(new ThorRuntime({
+        get sim() { return game.sim; }, get phase() { return game.phase; },
+        get session() { return game.session.active?.record ?? null; },
+        get busy() { return game.savingAction || game.hallBusy; },
+        get worldMap() { return game.worldMap; }, get seed() { return game.overworld.seed; },
+        pause: () => this.pause(), resume: () => this.resume(),
+        panel: panel => { if(panel === 'journeys') this.journeys.open(); else if(panel === 'map') this.openMap(); else this.openCharacterPanel(panel); },
+        equip: index => this.characterAction({type:'equip',index}),
+        track: id => { void this.journeys.command({type:'track',id}); },
+        portal: () => this.requestPortal(),
+        background: () => { this.clearInput(); this.pause(); void this.saveCharacter(); this.audio.setEnabled(false); },
+        foreground: () => { this.clearInput(); this.audio.setEnabled(!this.muted); },
+        back: () => { if(this.thor.dismissInspection()) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
       }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
       try {
@@ -394,7 +412,7 @@ export class Game {
   clearInput() {
     this.touch?.clear(); this.clearWorldTouch?.();
     this.input.clear();
-    this.gamepad.clear(); this.gamepadMenu.clear();
+    this.gamepad.clear(); this.gamepadMenu.clear(); clearNativeController();
     this.sim.clearInput();
   }
 
@@ -881,13 +899,14 @@ export class Game {
         y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind,
       })));
     this.performance.end('ui', uiStart); this.performance.finish();
+    this.thor.update(now);
     this.animation = requestAnimationFrame(this.frame);
   };
 
   private pollGamepad(now: number) {
     if (this.savingAction) return;
-    let pads: (Gamepad | null)[] = [];
-    try { pads = navigator.getGamepads ? [...navigator.getGamepads()] : []; } catch { /* API may be denied by the host. */ }
+    let pads: (PadSnapshot | null)[] = nativeController() ?? [];
+    try { if(!window.EvergrowAndroid) pads = navigator.getGamepads ? [...navigator.getGamepads()] : []; } catch { /* API may be denied by the host. */ }
     this.gamepad.poll(pads, document.hasFocus() && !document.hidden);
     if (this.gamepad.disconnected && this.usingGamepad) {
       this.clearInput(); this.usingGamepad = false; this.mouse.present = false;
@@ -901,6 +920,7 @@ export class Game {
     }
     if (!pad.active) { this.gamepadMenu.clear(); if (this.phase === 'character') this.inventoryPanel.updateGamepad(pad, now); return; }
     if (pad.pressed.has(PAD.pause) || (this.phase !== 'playing' && pad.pressed.has(PAD.dodge))) {
+      if (this.thor.dismissInspection()) return;
       if (this.phase === 'character' && this.inventoryPanel.dismissPopup()) return;
       if (this.panels.activePanel) this.resume();
       else if (this.phase === 'playing' && !this.savingAction) { if (this.sim.portal.active) this.sim.portal.cancel(); else this.pause(); }

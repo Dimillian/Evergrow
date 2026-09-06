@@ -1,6 +1,6 @@
 # Current system status
 
-Updated 2026-09-06 after world-state consolidation and runtime extraction. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
+Updated 2026-09-06 after the local Android/Thor companion checkpoint. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
 
 ## Implemented systems
 
@@ -9,6 +9,7 @@ Updated 2026-09-06 after world-state consolidation and runtime extraction. **Pla
 | Characters and saves | Eight IndexedDB/worker-backed local slots; title hall, six starter loadouts in paired melee/magic/archery rows, equipped preview, level/power summary, continue/delete; autosave, backup recovery and stale-writer checks | Cloud sync is [studied](cloud-saves-sites.md), not implemented; no export/import or migrations |
 | Combat | Deterministic 120 Hz simulation; weapon basics, five assignable active slots, dodge, dual potion; 20 executable skills; melee/bow attack speed and independent staff/wand/magic cast speed | Player tests feel and balance; no automatic combos or default assigned spell |
 | Aiming and input | Swept ranged contacts, bounded aim assistance, aim feedback; standard gamepad analog movement/aim, combat bindings and menu navigation; neutral rearm and disconnect pause | Fixed Xbox-position labels; text entry, drag/drop and gameplay zoom still use keyboard/mouse; controller hardware/feel acceptance remains with the player |
+| Android / AYN Thor | Bundled offline APK, native controller adapter, hardware-accelerated game WebView, secondary map/64-cell pack/build UI and validated shared commands | Local debug distribution; app/browser saves separate; physical gameplay and sustained performance are user-tested; see [Android/Thor](android-thor.md) |
 | Touch gameplay/UI | Analog movement and independent aim, five skill controls, utilities, touch menus; tap equipment actions; map/tree pan-pinch; native editing and cancellation across phases | Physical-device combat feel, thumb reach and sustained performance await user acceptance; see [touch controls](touch-controls.md) |
 | Enemies | Eight archetypes, three ranks, patrol/LOS, flank/pounce/ranged/area patterns, home return; hound patrol arrival; goblin rush/surround commands and leader-death morale | Hollow Warden adds a ninth, dungeon-only archetype; deeper elite modifiers remain future work |
 | Spawning | 16–24 ambient target, 48 living actors total, sixteen slots reserved from camps; sixteen initial roamers, packs of 4–6, then travel/cooldown-driven groups; births fully offscreen | Larger populations need profiling; waiting on cleared ground does not refill it |
@@ -53,8 +54,10 @@ Generation 6 retains named irregular danger districts: levels follow road travel
 
 ## Verification and history
 
-The Journey/difficulty checkpoint `7398e4c` delivered Journey guidance, higher post-intro XP thresholds and denser/harder encounters, with 673 passing code tests plus application/headless type checks and production build. Subsequent shared touch/UI checkpoints are included in the tested tree. Current consolidation passes 713 code tests, strict application/headless TypeScript and production build; details are in [world-state longevity](world-state-longevity.md).
+The Journey/difficulty checkpoint `7398e4c` delivered Journey guidance, higher post-intro XP thresholds and denser/harder encounters, with 673 passing code tests plus application/headless type checks and production build. Subsequent shared touch/UI checkpoints are included in the tested tree. The earlier consolidation passed 713 code tests, strict application/headless TypeScript and production build; details are in [world-state longevity](world-state-longevity.md).
 
 Older implementation counts, save formats, bounds and delivery notes are preserved in [the pre-consolidation snapshot](history/system-status-before-longevity.md). Those numbers are historical, not the current runtime contract. Use `npm run stats` for current source/content counts. Gameplay and browser performance remain user-tested.
 
-Current stats: 219 runtime TypeScript modules / 24,552 lines; 93 code-test files; 24 development review entrypoints; zero runtime dependencies. Content: seven biomes, nine enemy archetypes, 20 active skills, 2,185 skill nodes and 17 POI kinds. Source counts come from `npm run stats` at this checkpoint.
+Thor checkpoint: 721 passing code tests, application/headless type checking, web production build and Android APK assembly. Installed on the connected AYN Thor; static second-screen layout reviewed at its logical display size.
+
+Current stats: 226 runtime TypeScript modules / 25,125 lines; 94 code-test files; 24 development review entrypoints; zero runtime dependencies. Content: seven biomes, nine enemy archetypes, 20 active skills, 2,185 skill nodes and 17 POI kinds. Source counts come from `npm run stats` at this checkpoint.

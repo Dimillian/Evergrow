@@ -623,6 +623,13 @@ export class WorldMap {
     return this.world.sampleBiome(player.x, player.y).name;
   }
 
+  /** Secondary display projection: the same fog, terrain and POIs as the main chart. */
+  drawCompanion(c: CanvasRenderingContext2D, player: MapPlayer, width: number, height: number, zoom: number) {
+    const view = { x: 0, y: 0, width, height, centerX: player.x, centerY: player.y, zoom };
+    this.chart(c, view, true);
+    this.playerArrow(c, player, view, true);
+  }
+
   drawMinimap(c: CanvasRenderingContext2D, player: MapPlayer, width: number, height: number, _time: number,
     enemies: readonly MinimapEnemy[] = []) {
     const r = getMinimapRect(width, height);

@@ -35,6 +35,10 @@ Draw HUD and text, including damage numbers, at native display resolution after 
 
 Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-contrast RGB grille. The user requested removing settings and filter switching. Do not reintroduce selectable display modes, the HUD gear, or a settings panel. Keep Escape pause/resume and N sound toggle; reduced motion follows the operating system automatically.
 
+## Android / AYN Thor
+
+Read `docs/android-thor.md` before changing native packaging or the lower display. The local Kotlin/WebView APK lives in `android/`; build/install with `npm run android:build` / `android:install`. Keep the package/signing identity and bundled asset origin stable so updates preserve saves. Never uninstall or clear device data to update the app. One primary Game owns simulation and IndexedDB; the companion only receives bounded projections and returns typed, session-checked commands. Reuse `GamepadInput`, validated character commands and durable Journey commands. Controller B/native Back must dismiss lower-screen item inspection before resuming the primary game. Thor's bundled WebView lacks `color-mix`; preserve opaque shared item-surface fallbacks. Native install is not authorization to deploy Sites.
+
 ## Project layout
 
 - `game/`: standalone Vite + TypeScript application; no runtime package dependencies.

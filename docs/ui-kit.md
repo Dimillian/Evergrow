@@ -150,3 +150,7 @@ Journeys now separates Recommended and Nearby, with a fixed manually tracked lea
 ## Touch presentation · 2026-09-06
 
 `touch-ui.css` scopes touch layouts to `.touch-mode`; `.touch-only` controls stay hidden in desktop and static reviews. `touch-hud.ts` supplies 48px action/menu targets independently of render scale. Inventory adds touch-only Bag/Equipment/Stats tabs and a scrollable item action sheet using `itemTooltipMarkup`; commands and desktop shortcuts remain shared. Maps/atlas add touch-only gesture adapters without replacing mouse handlers. Native editing preserves touch mode, safe-area margins and visual viewport sizing. See [Touch controls](touch-controls.md).
+
+## Android companion
+
+The Thor lower screen shares the theme, local fonts, item geometry and tooltip markup. Its compact equipment strip and 8×8 pack are sized for the lower display; inspection has a persistent Back control and controller B dismissal. WebView versions without `color-mix` receive opaque shared item-tooltip, rarity-badge and equipment-cell surfaces through `item-ui.css`. Never depend on an unsupported gradient as the only tooltip background. See [Android/Thor](android-thor.md).

@@ -8,7 +8,9 @@ A gothic, top-down 2D action RPG built for the browser, inspired by Diablo and P
 
 ### [Play Evergrow in your browser →](https://evergrow.dimillian.chatgpt.site)
 
-Play on desktop with keyboard and mouse, or [run it locally](#run-locally).
+Play on desktop with keyboard/mouse or a controller, use touch controls, or [run it locally](#run-locally).
+
+**AYN Thor:** [build and install the offline Android app](docs/android-thor.md), with native controls and a matching lower-screen map, compact inventory and character companion.
 
 Progress is saved in your browser. Hosted and localhost characters have separate saves; cloud saves are not available yet.
 

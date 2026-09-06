@@ -10,6 +10,8 @@
     "check": "npm --prefix game run check",
     "stats": "npm --prefix game run stats",
     "test": "npm --prefix game test",
-    "test:browser": "npm --prefix game run test:browser"
+    "test:browser": "npm --prefix game run test:browser",
+    "android:build": "node scripts/build-android.mjs",
+    "android:install": "node scripts/build-android.mjs --install"
   }
 }
