@@ -4,11 +4,16 @@ Proposal · 2026-09-06 · not implemented. Design target: give the player a good
 
 ## Player experience
 
-One quiet recommendation answers **“What could I do next?”** It points toward an appropriate region or an interesting encounter. It is a suggestion until explicitly pinned, not an automatically accepted quest. Players can ignore it and progress entirely through ordinary combat. Existing geographic danger and level-gap XP rules still apply; ignoring guidance adds no penalty.
+A compact quest list beneath the minimap answers **“What could I do next?”** It shows a tracked activity and a few quiet alternatives. A recommendation remains a suggestion until explicitly pinned, not an automatically accepted quest. Players can ignore it and progress entirely through ordinary combat. Existing geographic danger and level-gap XP rules still apply; ignoring guidance adds no penalty.
 
-Use short titles and concrete actions. A typical tracker is just:
+Use short titles and concrete actions. A typical mini log has one emphasized activity and two muted rows:
 
-> Recommended · Watchtower · Level 5
+> ◆ Watchtower · Level 5
+> Light the beacon
+> ◇ Caravan · Level 5
+> ◇ Graveyard vigil · Level 6
+
+Click any row to open Journeys with that activity selected. Only the tracked row shows its current objective on the HUD; the other rows remain one line each.
 
 The journal provides the region, difficulty, reward and any steps needed. Avoid mandatory errands, repeated kill counts, daily tasks, deadlines, automatic point spending and tutorials that block play. A quest should make an existing place more meaningful, not require every place to become a quest.
 
@@ -17,10 +22,10 @@ The journal provides the region, difficulty, reward and any steps needed. Avoid 
 | Layer | Purpose | Presentation |
 | --- | --- | --- |
 | Journey | A short regional adventure linking two or three compatible activities, usually ending with a notable encounter or treasure | Optional pinned step; longer chains stay in the journal |
-| Local leads | Optional nearby opportunities: an unopened strongbox, a caravan, a beacon, a trial or a crypt | At most three offered leads in the journal/map; only pinned leads use the tracker |
+| Local leads | Optional nearby opportunities: an unopened strongbox, a caravan, a beacon, a trial or a crypt | A few muted rows in the mini log; more detail in the journal/map |
 | Personal milestones | Introduce character building, maps, town services and travel once per character | Internal once-per-character teaching state; relevant hints inside existing panels only |
 
-A local lead can become the tracked adventure. Maintain at most three explicitly accepted adventures and at most one pinned. The HUD shows either the pinned objective or one unpinned recommendation, never both. Alternatives stay inside the journal. Personal milestones are internal memory, not a visible completion checklist or prerequisites for regional adventures.
+A local lead can become the tracked adventure. Maintain at most three explicitly accepted adventures and at most one pinned. The HUD mini log shows at most three distinct rows: the pinned activity first, then other accepted activities, then one recommended lead if space remains. Unpinned rows are muted and never gain competing directional markers. The journal holds further alternatives. Personal milestones are internal memory, not a visible completion checklist or prerequisites for regional adventures.
 
 Town services can provide plausible leads: the blacksmith mentions a caravan or garrison cache; the enchanter points toward standing stones or burial sites. Their existence never requires talking to every NPC. Independently discovering the target starts the same opportunity. No new quest-giver NPC, dialogue tree or quest-item inventory is required for the first pass.
 
@@ -82,27 +87,50 @@ Once accepted, the target, source level, reward seed and displayed reward are fi
 
 Combat-only progression is fully supported. XP, level-ups, stat points and skill points work exactly as they do now, with no journey gate or catch-up checklist. Kills do not complete unrelated site objectives, and the director never tells a player to stop a profitable activity just because it lacks a quest label.
 
-A level change marks recommendations for reassessment; it does not publish a new message. On the next safe opportunity, evaluate whether the current suggestion still fits. Keep it when suitable. When clearly outgrown (initially at least two levels below the player), silently replace an unpinned recommendation with a suitable available activity. Several rapid level-ups coalesce into one reassessment. Never swap the HUD recommendation during combat, a channel, a dungeon expedition or an open interaction.
+A level change marks recommendations for reassessment; it does not publish a new message. On the next safe opportunity, evaluate whether the current suggestion still fits. Keep it when suitable. When clearly outgrown (initially at least two levels below the player), silently replace an unaccepted recommendation row with a suitable available activity. Explicitly accepted activities stay in the list until completed or dismissed, even when not currently pinned. Several rapid level-ups coalesce into one reassessment. Never swap the HUD recommendation during combat, a channel, a dungeon expedition or an open interaction.
 
-Pinned activities stay pinned regardless of level gain. They can be completed at their original fixed level and reward terms. A newer recommendation is available when the player opens the journal or unpins; it does not appear as a second HUD task or a nagging warning.
+Pinned activities stay pinned regardless of level gain. They can be completed at their original fixed level and reward terms. A newer recommendation may quietly occupy a free secondary row or remain in the journal. It never replaces the pinned row, gets a second directional marker or produces a warning.
 
 Example: at level 4, a level-4 camp is suggested. The player roams and reaches level 7. If unpinned, the director quietly prefers a real level-6–8 activity at a safe opportunity. If pinned, the camp remains the destination and stays level 4. If no suitable nearby activity exists, offer a verified frontier direction rather than inventing content or forcing a long exact-level detour.
 
-Initial anti-churn rule: keep an unpinned recommendation for at least 90 active-play seconds unless its target becomes unavailable; only replace it when substantially outgrown, left well behind, completed or explicitly refreshed by the player. Ignoring it does not make it pulse, repeat, escalate or enter a notification queue. Dismissing the recommendation hides ambient guidance until the player chooses to restore it from the journal; no periodic resurrection on each level-up.
+Initial anti-churn rule: keep an unpinned recommendation for at least 90 active-play seconds unless its target becomes unavailable; only replace an unaccepted recommendation when substantially outgrown, left well behind or completed. Pinning and journal inspection never reshuffle the remaining list. Ignoring it does not make it pulse, repeat, escalate or enter a notification queue. Dismissing a recommendation suppresses that offer; it is not immediately backfilled by another nag. Collapsing the mini log persists until expanded, and hiding recommendations persists until restored from the journal; no periodic resurrection on each level-up.
 
 ## Guidance and UI
 
 Use the existing Astral UI kit. Enable the journal shortcut J and its existing HUD button as the **Journeys** window, registered with `PanelCoordinator`; keyboard/controller focus, pause and input clearing follow other windows.
 
-- One muted single-line recommendation below the minimap. A player-pinned objective may use two lines. No expanding cards, sounds, pulses or automatic journal opening. Hide while full-screen panels are open; guidance can be hidden completely.
-- Journal: pinned/accepted activities, up to three alternative leads and optional recent history. No milestone checklist. Titles only in headers; descriptions are one useful sentence.
-- World map: one highlighted known target or a soft frontier direction. Exact coordinates/POI icons remain hidden until normal discovery. An undiscovered rumor gets a broad search area with no hidden room or terrain reveal.
-- Minimap: a small edge bearing for the tracked target when appropriate; no permanent world-space arrow or glowing breadcrumb trail through the forest.
-- Inside a dungeon, guidance points to the next known local objective. An unexplored boss room stays hidden. A surface objective directs the player toward a discovered exit, not toward meaningless surface coordinates on the floor.
-- Hover shows objective, fixed level, encounter category, distance and reward. Use text as well as color for difficulty.
-- Progress and completion update quietly in place. No recommendation or quest-step toasts. Actual XP/gold still use the existing shared rewards feed, and item pickups keep their existing names. Do not duplicate area discoveries, level-ups or reward announcements with a quest notification.
+### Mini log under the minimap
 
-A quest indication never hides loot labels, combat warnings or the enemy nameplate. Reduced motion uses static markers and normal shared tooltip behavior.
+- One small block aligned to the minimap's width, with a restrained **Journeys** header and collapse chevron. Thin separators and a faint dark backing; no large card borders or explanatory subtitle.
+- At most three rows. The pinned activity comes first, with a warm ivory title, a small filled diamond, its fixed level and one short objective line. Meaningful progress such as `1 / 2 beacons` can sit on that line; avoid arbitrary percentage bars.
+- Other accepted activities and the recommended alternative use muted titles, a hollow icon and level only. Mark the single recommendation with a small compass glyph rather than adding a subtitle to every row. No pulsing exclamation marks or unread badges.
+- One row is perfectly valid; do not fill the list with poor recommendations merely to reach three. If nothing is available, retain only the collapsed journal access rather than a persistent empty-state instruction.
+- Clicking the header opens the journal. Clicking a row opens it with that activity selected; this does not silently accept it, change the tracked destination or start an encounter. The panel's explicit **Track** action accepts/pins the selection.
+- Collapsing preserves a compact header and optional tracked icon; it does not abandon progress. On narrow screens, begin collapsed if necessary to protect gameplay space. Retain the player's choice across sessions.
+- Progress/completion updates in place. A quiet completed check precedes removal at a safe list-update point; no sound, notification, expanding animation or forced next selection. Longer accepted journeys advance their pinned step normally.
+
+### Click-through journal
+
+One shared window with the title **Journeys**, a compact activity list on the left and the selected activity on the right. The detail area shows the title, current objective, fixed level, encounter category, location and actual reward. Longer chains may show their few steps here; do not expand them in the mini log.
+
+The only primary action is **Track** (or **Untrack** for the pinned activity); **Show on map** focuses its discovered target or broad search area. Dismissal is secondary. Closing the window restores gameplay focus through the normal coordinator. Opening this panel pauses combat, clears buffered actions and joins the shared UI hit boundary so a click cannot also fire an attack.
+
+Accepted activities and recommendations are visually distinguishable. No milestone checklist, quest text wall or auto-opened completion window. Existing contextual teaching hints remain inside their relevant character/service panels.
+
+### Activity markers
+
+Use one shared quest-marker identity across the mini log, journal and maps: a filled pale-gold diamond for the tracked activity, with a small activity glyph inside. Shape and fill distinguish it from ordinary POIs without relying only on color. Preserve existing danger/rank symbols; a quest marker never implies that a boss is safe.
+
+- **World map:** emphasize the tracked discovered activity with a thin ring and its normal place label. Existing nearby POIs remain ordinary icons; untracked quests do not add a field of extra markers.
+- **Minimap:** show the same tracked symbol at its actual location. When outside the minimap, clamp one directional indicator to its edge. This is a bearing, not an obstacle-free walking path. Hide the edge indicator once the actual marker enters the minimap.
+- **In the world:** when the relevant entrance, chest, beacon or NPC is discovered and visibly on screen, place a small marker above its existing interaction anchor. Use a stable offset and the existing visibility/occlusion rules. No permanent light pillar, world-screen edge arrow or breadcrumb trail. The marker does not bypass interaction reach or line of sight.
+- **Undiscovered activity:** show a broad search area or frontier bearing, never the precise hidden POI or unrevealed terrain. Once normal exploration reveals it, replace the search-area marker with the precise activity marker.
+- **Dungeon and town transitions:** markers are location-aware. An outdoor crypt goal points at its entrance; inside, point only at a discovered local objective or a broad unexplored direction. An undiscovered boss room stays hidden. A surface objective while underground directs toward a discovered exit, not the surface coordinates projected onto the floor. In town, follow the saved return portal only when its destination actually serves the tracked activity; otherwise use the town exit/known route.
+- **Completion/untracking:** remove all marker projections from the same quest state update. A cleared objective cannot leave a stale arrow on one map. Tracking a new activity replaces the previous marker, rather than accumulating markers.
+
+Hovering a mini-log row or marker uses the shared tooltip motion and displays only objective, level/category and distance where meaningful. Native-resolution text/numerals and icons remain readable independently of camera zoom. Reduced motion uses static markers; no idle pulsing in the default design either.
+
+Keep the mini log outside the enemy plate, loot-label and combat-warning areas, with consistent input hit bounds. No quest-step or recommendation toasts: actual XP/gold use the shared rewards feed, named item pickups remain unchanged, and existing area/level notifications are not duplicated.
 
 ## Objectives and persistence
 
@@ -151,10 +179,10 @@ Quest completions may later support titles, regional story fragments or cosmetic
 
 ## Delivery and acceptance
 
-1. **Useful next step:** one quiet recommendation, optional pinning/journal, single existing-site leads and level-aware frontier suggestions; milestone memory only provides hints inside relevant existing panels. Preserve current characters when valid defaults suffice; no historical event replay or migration framework.
+1. **Useful next step:** compact clickable mini log, journal, one tracked activity with shared map/world markers, single existing-site leads and level-aware frontier suggestions; milestone memory only provides hints inside relevant existing panels. Preserve current characters when valid defaults suffice; no historical event replay or migration framework.
 2. **Regional journeys:** compose two or three existing compatible activities, branch on real reveal/choice outcomes, add conservative completion XP and safe offer/history persistence.
 3. **Richer authorship after playtests:** NPC-specific lead presentation, biome-specific chapter writing and additional objective templates grounded in new content.
 
-Before playtesting, verify combat-only leveling, coalesced safe-time recommendation updates, pinned-target stability, persistent dismissal, no duplicate notifications, deterministic candidate selection, bounded search, level/route fallbacks, unchanged monster/world scaling, fog-safe markers, blocked/ineligible/full expedition handling, independent RNG, no rerolls on load/dismissal, retroactive durable-step recognition, no duplicate site claims, exactly-once quest reward delivery, storage failure atomicity, and complete pause/focus cleanup.
+Before playtesting, verify combat-only leveling, coalesced safe-time recommendation updates, pinned-target stability, persistent collapse/dismissal, click-through selection without accidental acceptance or attack, one-marker ownership across locations, no duplicate notifications, deterministic candidate selection, bounded search, level/route fallbacks, unchanged monster/world scaling, fog-safe markers, blocked/ineligible/full expedition handling, independent RNG, no rerolls on load/dismissal, retroactive durable-step recognition, no duplicate site claims, exactly-once quest reward delivery, storage failure atomicity, and complete pause/focus cleanup.
 
 The player validates the important questions: Is the next adventure inviting? Does a lead arrive when needed? Are walks too long? Does guidance teach systems without interrupting combat? Do repeated journeys feel different? Are suggested challenges actually appropriate for weak and strong builds? Code tests cannot establish those outcomes.
