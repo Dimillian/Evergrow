@@ -1,4 +1,5 @@
 import type { CombatEvent } from './model.ts';
+import { GAME_FEATURES } from './game-features.ts';
 import { BARK_RULES as RULES, BATTLE_BARKS, canBark, type BarkKind } from './battle-bark-content.ts';
 
 export interface BattleBark { id: number; kind: BarkKind; text: string; started: number; }
@@ -22,6 +23,7 @@ export class BattleBarks {
     this.bubbles = []; this.nextStart = -Infinity;
   }
   noteEvents(events: readonly CombatEvent[]): void {
+    if (!GAME_FEATURES.battleBarks) { this.reset(); return; }
     for (const event of events) {
       if (event.type === 'kill') { this.remove(event.targetId); continue; }
       if (event.type !== 'engagement' || !canBark(event.enemyKind)) continue;
@@ -52,6 +54,7 @@ export class BattleBarks {
   update(time: number, livingIds: ReadonlySet<number>, enabled: boolean,
     visible: (id: number, event?: Engagement) => boolean,
     place: (bark: BattleBark) => boolean): void {
+    if (!GAME_FEATURES.battleBarks) { this.reset(); return; }
     for (const id of this.encounters.keys()) if (!livingIds.has(id)) {
       this.encounters.delete(id); this.remove(id);
     }

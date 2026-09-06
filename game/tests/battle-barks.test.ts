@@ -10,6 +10,9 @@ import { BattleBarkScene } from '../src/battle-bark-scene.ts';
 import { cameraView } from '../src/camera.ts';
 import type { World } from '../src/world.ts';
 import type { CombatEvent, EnemyKind, Input, WorldQuery } from '../src/model.ts';
+import { GAME_FEATURES } from '../src/game-features.ts';
+import { drawBattleBark } from '../src/battle-bark-art.ts';
+import type { BarkBox } from '../src/battle-bark-layout.ts';
 
 const edge = (id: number, time = 0, engaged = true, kind: EnemyKind = 'goblin'): CombatEvent => ({
   type: 'engagement', targetId: id, time, engaged, enemyKind: kind, x: 0, y: 0,
@@ -20,6 +23,43 @@ const update = (barks: BattleBarks, time: number, living = ids(1), show = true, 
   barks.update(time, living, show, visible, place);
 const world: WorldQuery = { blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) };
 const idle: Input = { moveX: 0, moveY: 0, aimX: 200, aimY: 0, attack: false, dodge: false, heal: false, skillSlot: null };
+
+test('global off switch clears active and pending barks, skips RNG/placement, and never replays discarded speech', () => {
+  const original = GAME_FEATURES.battleBarks;
+  try {
+    GAME_FEATURES.battleBarks = true;
+    let rolls = 0;
+    const barks = new BattleBarks(() => { rolls++; return 0; });
+    barks.noteEvents([edge(1)]); update(barks, 0);
+    barks.noteEvents([edge(2, 1)]);
+    const before = rolls;
+    GAME_FEATURES.battleBarks = false;
+    barks.update(.2, ids(1, 2), true, () => { throw new Error('visibility ran while disabled'); }, () => { throw new Error('placement ran while disabled'); });
+    assert.equal(barks.active.length, 0); assert.equal(barks.trackedCount, 0);
+    barks.noteEvents([edge(3, .3)]); assert.equal(rolls, before);
+    GAME_FEATURES.battleBarks = true;
+    update(barks, .5, ids(1, 2, 3)); assert.equal(barks.active.length, 0);
+    barks.noteEvents([edge(4, 1)]); update(barks, 1, ids(1, 2, 3, 4));
+    assert.equal(barks.active.length, 1); assert.equal(barks.active[0].id, 4);
+  } finally { GAME_FEATURES.battleBarks = original; }
+});
+
+test('global off switch bypasses runtime scene work and the shared static-review drawing', () => {
+  const original = GAME_FEATURES.battleBarks;
+  try {
+    GAME_FEATURES.battleBarks = true;
+    const { sim, c, w, scene, drawn } = sceneFixture(), view = cameraView(960, 600, 0, 0, 1);
+    scene.draw(c, sim, w, view, true, [], []); drawn.length = 0;
+    GAME_FEATURES.battleBarks = false;
+    w.getBuildingAt = () => { throw new Error('occlusion ran while disabled'); };
+    scene.draw(c, sim, w, view, true, [], []);
+    drawBattleBark({} as CanvasRenderingContext2D, {} as BarkBox, 1);
+    assert.equal(drawn.length, 0);
+    GAME_FEATURES.battleBarks = true;
+    w.getBuildingAt = () => null;
+    scene.draw(c, sim, w, view, true, [], []); assert.equal(drawn.length, 0);
+  } finally { GAME_FEATURES.battleBarks = original; }
+});
 
 test('seven humanoid voices each have 20 unique short lines; hounds and wisps stay silent', () => {
   assert.equal(Object.keys(BATTLE_BARKS).length, 7);

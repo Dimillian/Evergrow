@@ -1,4 +1,5 @@
 import { GAME_FONT_STACK } from './font.ts';
+import { GAME_FEATURES } from './game-features.ts';
 import { BARK_LAYOUT, type BarkBox } from './battle-bark-layout.ts';
 import { BARK_RULES } from './battle-bark-content.ts';
 
@@ -10,6 +11,7 @@ export function measureBattleBark(c: CanvasRenderingContext2D, value: string): n
 /** Ashglass: one continuous silver outline around charcoal glass and its tail.
  * Canvas text uses the native UI surface, never the world CRT or camera scale. */
 export function drawBattleBark(c: CanvasRenderingContext2D, box: BarkBox, age: number): void {
+  if (!GAME_FEATURES.battleBarks) return;
   const { x, y, width: w, bodyHeight: h, tailX, tailY } = box, radius = 7;
   c.save();
   c.globalAlpha *= Math.max(0, Math.min(1, age / BARK_RULES.fadeIn, (BARK_RULES.duration - age) / BARK_RULES.fadeOut));

@@ -7,7 +7,7 @@ export const BATTLE_BARKS = Object.freeze({
   goblin: Object.freeze([
     "Die! Leave the boots!",
     "Your boots! My size!",
-    "I will gut you!",
+    "Your plan was to win?",
     "Shiny sword. Mine now!",
     "Stop moving, pockets!",
     "I'll bite your kneecaps!",

@@ -1,4 +1,5 @@
 import { BattleBarks } from './battle-barks.ts';
+import { GAME_FEATURES } from './game-features.ts';
 import { drawBattleBark, measureBattleBark } from './battle-bark-art.ts';
 import { placeBattleBark, type BarkRect } from './battle-bark-layout.ts';
 import { enemyEngaged } from './enemy-engagement.ts';
@@ -29,6 +30,7 @@ export class BattleBarkScene {
   noteEvents(events: readonly CombatEvent[]): void { this.barks.noteEvents(events); }
   draw(c: CanvasRenderingContext2D, sim: Simulation, world: World, view: CameraView,
     enabled: boolean, props: SceneVisibility['props'], reserved: BarkRect[]): void {
+    if (!GAME_FEATURES.battleBarks) { this.reset(); return; }
     const project = (x: number, y: number) => worldToScreen(view, x, y);
     const width = view.width * view.zoom, height = view.height * view.zoom;
     const alpha = sim.interpolationAlpha;

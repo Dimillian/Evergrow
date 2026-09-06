@@ -2,6 +2,10 @@
 
 2026-09-07. Implemented with the selected **Ashglass** treatment (option 1). Seven humanoid pools contain 20 lines each. Speech is presentation only: no combat changes, recorded voice, save-format changes or progress reset.
 
+## Global feature switch
+
+The game has no dedicated settings panel. `GAME_FEATURES.battleBarks` in `game/src/game-features.ts` is the single app-wide boolean, enabled by default. Set it to `false` to disable speech for every enemy and the static review. Disabled controllers discard active/pending barks without rolling randomness; the scene skips placement/occlusion work and the shared drawing function emits nothing. Re-enabling waits for new engagement events and does not replay speech that was discarded. This is a developer switch, not a saved character preference or a new UI control.
+
 ## Battlefield rules
 
 - Roll once per humanoid when it first becomes aware of the player in an encounter: **15% chance**. Never roll per frame, attack, hit or alert propagation. A failed or suppressed attempt is consumed.
@@ -37,7 +41,7 @@ Humor comes from their role in the world. Avoid modern memes, fourth-wall jokes,
 
 1. Die! Leave the boots!
 2. Your boots! My size!
-3. I will gut you!
+3. Your plan was to win?
 4. Shiny sword. Mine now!
 5. Stop moving, pockets!
 6. I'll bite your kneecaps!
