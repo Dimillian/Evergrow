@@ -107,7 +107,7 @@ export class Game {
       this.audio = this.lifetime.own(new GameAudio());
       this.exploration = new Exploration(this.world, { storage: null });
       this.lifetime.defer(() => this.exploration.dispose());
-      this.saveClient = new SaveClient();
+      this.saveClient = this.lifetime.own(new SaveClient());
       this.session = new CharacterSession(this.saveClient, this.world.generationVersion);
       this.shell = this.lifetime.own(new GameShell(root, {
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
@@ -791,6 +791,7 @@ export class Game {
   };
 
   private pollGamepad(now: number) {
+    if (this.savingAction) return;
     let pads: (Gamepad | null)[] = [];
     try { pads = navigator.getGamepads ? [...navigator.getGamepads()] : []; } catch { /* API may be denied by the host. */ }
     this.gamepad.poll(pads, document.hasFocus() && !document.hidden);
