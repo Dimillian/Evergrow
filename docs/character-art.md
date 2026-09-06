@@ -26,6 +26,8 @@ Wands use a compact carved shaft and socketed elemental crystal, with a one-hand
 
 ## Local review
 
+The [creature death atlas](creature-death-animations.md) at `/deaths.html` compares four shared runtime death animations for each of the nine current enemy kinds. Solid articulated body parts retain depth; humanoid fourth variants end in an upright slump. Hounds and wisps use separate rigs. Each kill selects one variant with presentation-only randomness, and all remains retain actor depth sorting. No combat or save rules change.
+
 Open [/atelier.html](http://127.0.0.1:5173/atelier.html). Select any weapon, leather or plate, eight facings, and shield/dual-wield/grimoire/orb options for one-handed weapons. Rest, walking and basic attack panels use the real procedural renderer and shared action phases. A presentation clock animates those poses without simulation ticks, gameplay input or save access. All three panels reserve their motion envelope and use one scale. The item gallery shows 48-pixel cells next to enlarged art; Save PNG exports the three current poses. Playback offers normal, half and quarter speeds; the Attack frame slider pauses on an exact phase, including the resting frame at zero. `?speed=0.25` opens slow playback. Reduced motion follows the operating system.
 
 The native art tests cover finite geometry and drawing-state restoration; arm-rig tests cover joint/grip continuity. Character-art tests cover walking-staff and upright bow resting poses, front-facing staff layering, portrait containment, stance continuity and SVG resource references. Gameplay feel and preferred proportions remain subject to player feedback.

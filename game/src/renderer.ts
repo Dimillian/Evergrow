@@ -55,8 +55,8 @@ import { drawEnemyPlate } from './enemy-plate.ts';
 import { drawRankCrest } from './enemy-rank-art.ts';
 import { drawSiteGround, drawSiteDecor, wildernessLights } from './wilderness-art.ts';
 
-import { EnemyDeaths, DEATH_SETTLE_SECONDS } from './death-presentation.ts';
-import { drawEnemyRemains } from './death-art.ts';
+import { EnemyDeaths } from './death-presentation.ts';
+import { drawEnemyRemains, deathDepth, resetDeathArt } from './death-art.ts';
 interface Ghost { x: number; y: number; angle: number; gait: number; life: number; }
 export interface RenderSettings {
   reducedMotion: boolean;
@@ -191,7 +191,7 @@ export class Renderer {
     this.lastDisplayedView = this.view;
     this.groundLayer.reset(); this.groundDressing.reset(); this.biomeLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
     this.settlementArt.reset(); this.indoorBlend = 0;
-    this.deaths.reset(); this.ghosts = []; this.ghostTimer = 0;
+    this.deaths.reset(); resetDeathArt(); this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
     this.damageTrails.clear(); this.playerHealthTrail = 100; this.playerHealthHold = 0;
     this.rewards.reset(); this.experienceFeedback.reset(); this.experienceDisplay = undefined;
@@ -331,8 +331,6 @@ export class Renderer {
       this.waterArt.drawSurface(c, this.water.fluid, lights, settings.reducedMotion, settings.waterAge);
       this.profiler?.end('water', opticsStart);
     }
-    for (const remains of this.deaths.remains) if (remains.age >= DEATH_SETTLE_SECONDS)
-      drawEnemyRemains(c, remains, settings.reducedMotion);
     this.enemyFocusMark(alpha);
     drawResourcePickups(c, sim.pickups, this.visualTime, settings.reducedMotion);
     for (const ghost of this.ghosts) {
@@ -544,8 +542,8 @@ export class Renderer {
     for (const site of this.visibility.sites) for (const decor of site.decor) {
       entries.push({ y: decor.y, draw: () => drawSiteDecor(c, site, decor, settings.reducedMotion ? 0 : this.visualTime) });
     }
-    for (const remains of this.deaths.remains) if (remains.age < DEATH_SETTLE_SECONDS)
-      entries.push({ y: remains.y, draw: () => drawEnemyRemains(c, remains, settings.reducedMotion) });
+    for (const remains of this.deaths.remains)
+      entries.push({ y: deathDepth(remains), draw: () => drawEnemyRemains(c, remains, settings.reducedMotion) });
     for (const enemy of sim.enemies) {
       if (enemy.hp <= 0) continue;
       const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);

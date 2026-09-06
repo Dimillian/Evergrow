@@ -28,7 +28,7 @@ const draw = () => {
   c.fillStyle = '#071118d8'; c.fillRect(0, 0, 1000, 600);
   kinds.forEach((kind, row) => ages.forEach((age, column) => {
     drawEnemyRemains(c, { id: row + 1, x: 240 + column * 200, y: 98 + row * 54,
-      angle: -.5, facing: 1.2, kind, age, duration: kind === 'wisp' ? 5 : 14 }, false);
+      angle: -.5, facing: 1.2, kind, age, variant: 0, duration: kind === 'wisp' ? 5 : 14 }, false);
   }));
   drawGroundLoot(c, drops, 1, false);
   drawResourcePickups(c, ['health', 'mana'].map((kind, id) => ({ id, kind: kind as 'health' | 'mana', x: 460 + id * 65,
