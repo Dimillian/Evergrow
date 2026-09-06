@@ -1,3 +1,4 @@
+import { bindTouchCanvas } from './touch-canvas.ts';
 import { formatWorldDistance } from './world-distance.ts';
 import { drawJourneyMapMarker, type JourneyMarker } from './journey-marker.ts';
 import { drawMapZoneLevels, mapZoneLabels } from './map-zone-art.ts';
@@ -270,7 +271,7 @@ export class WorldMap {
     if (this.drag && this.canvas.hasPointerCapture(this.drag.id)) this.canvas.releasePointerCapture(this.drag.id);
     if (this.frame) cancelAnimationFrame(this.frame); this.frame = 0;
     this.chartLayer = undefined; this.visiblePOIs = [];
-    this.opened = false; this.element.hidden = true; this.drag = null; this.pointer = null;
+    this.clearTouch?.(); this.opened = false; this.element.hidden = true; this.drag = null; this.pointer = null;
     this.canvas.classList.remove('world-map-dragging'); this.hideTooltip(); this.exploration.save();
     if (this.returnFocus?.isConnected) this.returnFocus.focus({ preventScroll: true });
   }
@@ -301,8 +302,15 @@ export class WorldMap {
   getCanvas(): HTMLCanvasElement { return this.canvas; }
   setMinimapPointer(point: { x: number; y: number } | null) { this.minimapPointer = point; }
 
+  private clearTouch: (() => void) | null = null;
   private bind() {
     const signal = this.abort.signal;
+    this.clearTouch = bindTouchCanvas(this.canvas,signal,{
+      start:()=>{this.pointer=null;this.hideTooltip();},
+      pan:(dx,dy)=>{this.pointer=null;this.view.centerX=clampMapCoordinate(this.view.centerX-dx/this.view.zoom);this.view.centerY=clampMapCoordinate(this.view.centerY-dy/this.view.zoom);this.invalidate();},
+      zoom:(factor,p)=>{this.view=zoomMapAt(this.view,p.x,p.y,this.view.zoom*factor);this.invalidate();},
+      tap:p=>{this.pointer=p;this.invalidate(false);},
+    });
     this.element.querySelector('.world-map-close')!.addEventListener('click', () => { this.close(); this.onClose(); }, { signal });
     for (const button of this.element.querySelectorAll<HTMLButtonElement>('[data-map]')) {
       button.addEventListener('click', () => {

@@ -1,3 +1,4 @@
+import { skillTargetPoint } from './skill-target-point.ts';
 import { resolveSkill } from './skill-progression.ts';
 import type { CombatEvent, Enemy, GroundEffect, Player, ProjectileEffects, WorldQuery } from './model.ts';
 import type { SkillId } from './character-types.ts';
@@ -49,20 +50,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   };
   const blast = (radius: number, style?: ProjectileEffects['style']) => context.emit({ type: 'blast', x: p.x, y: p.y,
     skill: id, color, radius, duration: SKILL_TARGETING.blastDuration, ...(style ? { style } : {}) });
-  const aimedPoint = () => {
-    const dx = context.aimX - p.x, dy = context.aimY - p.y, distance = Math.hypot(dx, dy);
-    const angle = Number.isFinite(distance) && distance > 0 ? Math.atan2(dy, dx) : p.angle;
-    const reach = Math.min(SKILL_TARGETING.maximumRange, attack.range, Number.isFinite(distance) && distance > 0 ? distance : attack.range);
-    // A ground marker stops before solid geometry rather than appearing through a wall.
-    let result = { x: p.x, y: p.y };
-    const steps = Math.max(1, Math.ceil(reach / SKILL_TARGETING.probeStep));
-    for (let step = 1; step <= steps; step++) {
-      const t = reach * step / steps, x = p.x + Math.cos(angle) * t, y = p.y + Math.sin(angle) * t;
-      if (context.world.blocked(x, y, SKILL_TARGETING.probeRadius)) break;
-      result = { x, y };
-    }
-    return result;
-  };
+  const aimedPoint = () => skillTargetPoint(context.world,p,{x:context.aimX,y:context.aimY},attack.range);
 
   p.mana -= costs.mana;
   p.skillCooldowns[id] = costs.cooldown;

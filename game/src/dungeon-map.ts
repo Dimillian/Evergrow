@@ -1,3 +1,4 @@
+import { bindTouchCanvas } from './touch-canvas.ts';
 import { drawJourneyMapMarker, type JourneyMarker } from './journey-marker.ts';
 import { cryptOutline } from './dungeon-contours.ts';
 import type { DungeonFloor } from './dungeon.ts';
@@ -78,6 +79,7 @@ export class DungeonMap {
     marker:JourneyMarker|null=null;
     readonly element: HTMLElement;
     private canvas: HTMLCanvasElement;
+    private clearTouch: (()=>void) | null = null;
     private tooltip: HTMLDivElement;
     private abort = new AbortController();
     private focus: ReturnType<typeof trapDialogFocus> | null = null;
@@ -102,6 +104,16 @@ export class DungeonMap {
         this.element.append(this.tooltip);
         mount.append(this.element);
         this.canvas = this.element.querySelector('canvas')!;
+        this.clearTouch = bindTouchCanvas(this.canvas,this.abort.signal,{
+          start:()=>{this.tooltip.hidden=true;},
+          pan:(dx,dy)=>{const r=this.canvas.getBoundingClientRect();this.center.x-=dx*this.canvas.width/r.width/this.zoom;this.center.y-=dy*this.canvas.height/r.height/this.zoom;this.tooltip.hidden=true;this.draw();},
+          zoom:(factor,p)=>this.zoomAt(factor,p.x,p.y),
+          tap:p=>{const r=this.canvas.getBoundingClientRect();this.hover(p.x+r.left,p.y+r.top);},
+        });
+        const zoom = document.createElement('nav'); zoom.className='crypt-touch-zoom touch-only';
+        zoom.innerHTML='<button class="ui-button" aria-label="Zoom out">−</button><button class="ui-button" aria-label="Zoom in">+</button>';
+        zoom.children[0].addEventListener('click',()=>this.zoomAt(1/1.3));zoom.children[1].addEventListener('click',()=>this.zoomAt(1.3));
+        this.canvas.after(zoom);
         this.element.querySelector('[data-close]')!.addEventListener('click', onClose, { signal: this.abort.signal });
         this.element.querySelector('[data-world]')!.addEventListener('click', () => { this.close(); overworld(); }, { signal: this.abort.signal });
         this.canvas.addEventListener('wheel', e => { e.preventDefault(); this.zoom = Math.max(.08, Math.min(.8, this.zoom * Math.exp(-e.deltaY * .001))); this.draw(); }, { passive: false, signal: this.abort.signal });
@@ -134,7 +146,11 @@ export class DungeonMap {
     }
     private draw() { if (this.floor && this.run)
         drawDungeonMap(this.canvas.getContext('2d')!, this.floor, this.run, this.player, { x: 0, y: 0, width: 1200, height: 760 }, this.zoom, this.center.x, this.center.y,this.marker); }
-    close() { this.focus?.dispose(); this.focus = null; this.element.hidden = true; this.drag = null; this.tooltip.hidden = true; }
+    private zoomAt(factor: number, px?: number, py?: number) {
+        const r=this.canvas.getBoundingClientRect(), x=(px??r.width/2)*this.canvas.width/r.width-this.canvas.width/2,y=(py??r.height/2)*this.canvas.height/r.height-this.canvas.height/2;
+        const next=Math.max(.04,Math.min(.8,this.zoom*factor));this.center.x+=x/this.zoom-x/next;this.center.y+=y/this.zoom-y/next;this.zoom=next;this.tooltip.hidden=true;this.draw();
+    }
+    close() { this.clearTouch?.(); this.focus?.dispose(); this.focus = null; this.element.hidden = true; this.drag = null; this.tooltip.hidden = true; }
     dispose() { this.close(); this.abort.abort(); this.element.remove(); }
 }
 export function drawCryptMinimap(c: CanvasRenderingContext2D, f: DungeonFloor, r: DungeonRun, p: {

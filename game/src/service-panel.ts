@@ -35,6 +35,7 @@ export class ServicePanel {
     mount.append(this.element); this.tooltip = new ItemTooltip(mount, 'service-tooltip');
     this.element.addEventListener('click', e => this.click(e), { signal: this.abort.signal });
     this.element.addEventListener('change', e => {
+      if(this.saving) return;
       const target = e.target as HTMLSelectElement;
       if (target.dataset.operation !== undefined) { this.operation = target.value as Improvement; this.updateSelection(); this.render(); }
       if (target.dataset.affix !== undefined && this.selected?.type === 'improve') { this.selected.affix = Number(target.value); this.renderDetail(); this.element.querySelector<HTMLElement>('[data-affix]')?.focus(); }
@@ -111,6 +112,7 @@ export class ServicePanel {
     return item ? { item, request } : null;
   }
   private hover(target: EventTarget | null): void {
+    if(document.documentElement.classList.contains('touch-mode')) return;
     const cell = target instanceof HTMLElement ? target.closest<HTMLButtonElement>('[data-item]') : null;
     if (!cell) return;
     const value = this.resolve(cell.dataset.item!); if (!value) return;

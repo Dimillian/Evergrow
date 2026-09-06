@@ -9,6 +9,7 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 - [Systems catalog](systems-catalog.md): stable system IDs with current coverage and remaining work.
 - [Architecture](architecture.md): code ownership, boundaries and extension rules.
 - [Controls](controls.md): current player controls.
+- [Touch gameplay and UI](touch-controls.md): touch controls, device layouts, input lifecycle and verification.
 
 ## Current system guides
 

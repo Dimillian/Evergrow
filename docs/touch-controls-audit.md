@@ -4,6 +4,8 @@ Date: 2026-09-06. Code baseline: `94f1ce6`, plus the current local Journeys, HUD
 
 Scope: runtime controls, every application phase, inventory and services, both maps, skill atlas, character creation, interruptions, and device layout. This is a code audit and implementation proposal, not a touch implementation or a physical-device test. Development art-review pages are outside the player-facing acceptance scope.
 
+Implementation follow-up: [Touch gameplay and interface](touch-controls.md) records the delivered touch pass. The findings below describe the pre-implementation baseline.
+
 ## Assessment
 
 **The game is not yet fully playable by touch.** Several DOM menus already support tapping, but movement is keyboard/gamepad-only, the action HUD is mostly noninteractive artwork, inventory equipment actions rely on desktop interactions, and canvas gestures assume one pointer.

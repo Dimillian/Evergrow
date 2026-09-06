@@ -1,3 +1,9 @@
+import { bindTouchCanvas } from './touch-canvas.ts';
+import { skillTargetPoint } from './skill-target-point.ts';
+import { deriveAttackStats } from './equipment.ts';
+import { TouchHUD } from './touch-hud.ts';
+import { resolveSkill } from './skill-progression.ts';
+import { skillWeapon } from './skill-content.ts';
 import { FrameProfiler } from './frame-profiler.ts';
 import { executeJourneyCommand } from './journey-command.ts';
 import { JourneyPanel } from './journey-panel.ts';
@@ -91,6 +97,8 @@ export class Game {
   private muted = false;
   private readonly motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
   private get reducedMotion() { return this.motionPreference.matches; }
+  private touch!: TouchHUD;
+  private clearWorldTouch: (()=>void) | null = null;
   private input = new GameInput();
   private gamepad = new GamepadInput();
   private gamepadMenu = new GamepadMenu();
@@ -106,7 +114,9 @@ export class Game {
   private debug = false;
   private disposed = false;
   private saveClient: SaveClient;
-  private hallBusy = false;
+  private _hallBusy = false;
+  private get hallBusy() { return this._hallBusy; }
+  private set hallBusy(value: boolean) { this._hallBusy=value; this.titleScreen?.setBusy(value); }
   private savingAction = false;
   private actionPending: Promise<unknown> = Promise.resolve();
   private autosave: Promise<boolean> | null = null;
@@ -124,6 +134,7 @@ export class Game {
       this.saveClient = this.lifetime.own(new SaveClient());
       this.session = new CharacterSession(this.saveClient, this.world.generationVersion);
       this.shell = this.lifetime.own(new GameShell(root, {
+        sound: () => this.toggleSound(), muted: () => this.muted, zoom: factor => this.renderer.zoomByWheel(-Math.log(factor)/.0016,0,this.canvas.getBoundingClientRect().height),
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
         portal: () => { this.canvas.focus(); this.requestPortal(); },
         returnToTitle: () => this.returnToTitle(), openMap: () => this.openMap(),
@@ -181,6 +192,21 @@ export class Game {
         resumeGameplay: () => { this.refreshJourneyUI(); this.canvas.focus(); this.last = performance.now(); },
         save: () => { this.saveCharacter(); },
       });
+      this.touch = this.lifetime.own(new TouchHUD(this.canvas.parentElement!, {
+        activate: active => { this.input.clear(); this.gamepad.clear(); this.sim.clearInput(); this.usingGamepad = false; this.renderer.touchActive = active; if(this.touch) this.resize(); },
+        clearAttack: () => this.sim.clearBasicAttackInput(), cancelCombat: () => this.sim.clearCombatInput(),
+        unlock: () => { void this.audio.unlock().catch(() => {}); }, notice: message => this.notify(message),
+        menu: action => {
+          if(this.savingAction || this.phase !== 'playing') return;
+          if(action === 'pause') this.pause();
+          else if(action === 'character') this.openCharacterPanel('character');
+          else if(action === 'skills') this.openCharacterPanel('skills');
+          else if(action === 'journeys') this.openJourneys();
+          else if(action === 'map') this.openMap();
+          else if(action === 'portal') this.requestPortal();
+          else if(action === 'interact') this.interact();
+        },
+      }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
       try {
         const saved = JSON.parse(localStorage.getItem('evergrow-preferences') ?? 'null');
@@ -202,10 +228,21 @@ export class Game {
 
   private bind() {
     const signal = this.abort.signal;
+    this.clearWorldTouch = bindTouchCanvas(this.canvas,signal,{
+      enabled:()=>this.phase==='playing' && !this.savingAction && this.touch.active,
+      pan:()=>{},
+      zoom:factor=>{if(this.phase==='playing'&&!this.savingAction)this.renderer.zoomByWheel(-Math.log(factor)/.0016,0,this.canvas.getBoundingClientRect().height);},
+      tap:point=>{
+        if(this.phase!=='playing'||this.savingAction)return;
+        const r=this.canvas.getBoundingClientRect();
+        if(this.interact(this.renderer.screenToWorld(point.x*this.renderer.width/r.width,point.y*this.renderer.height/r.height))) this.touch.clear();
+      },
+    });
     window.addEventListener('pagehide', () => { this.clearInput(); this.saveCharacter(); }, { signal });
     window.addEventListener('focus', () => this.clearInput(), { signal });
     this.canvas.addEventListener('blur', () => this.clearInput(), { signal });
     window.addEventListener('resize', () => this.resize(), { signal });
+    window.visualViewport?.addEventListener('resize', () => { this.touch.clear(); document.documentElement.style.setProperty('--touch-vh', `${window.visualViewport!.height}px`); }, {signal});
     window.addEventListener('blur', () => {
       this.mouse.present = false;
       this.clearInput();
@@ -224,7 +261,7 @@ export class Game {
       release: code => this.input.keyUp(code),
       press: event => {
         if (this.savingAction) { event.preventDefault(); return; }
-        if (event.isTrusted) this.usingGamepad = false;
+        if (event.isTrusted && !(event.target instanceof HTMLInputElement) && !(event.target instanceof HTMLTextAreaElement) && !(event.target instanceof HTMLSelectElement) && !(event.target instanceof HTMLElement && event.target.isContentEditable)) { this.usingGamepad = false; this.touch.setActive(false); }
         if (event.code === 'Escape') {
           event.preventDefault();
           if (!event.repeat) {
@@ -281,7 +318,7 @@ export class Game {
       },
     }, signal);
     // Window-level tracking also follows the pointer across the DOM HUD buttons.
-    window.addEventListener('pointermove', event => this.updatePointer(event), { signal });
+    window.addEventListener('pointermove', event => { if(event.pointerType !== 'touch') this.updatePointer(event); }, { signal });
     this.canvas.addEventListener('pointerleave', () => { this.mouse.present = false; }, { signal });
     this.canvas.addEventListener('wheel', event => {
       if (this.phase !== 'playing' || event.ctrlKey || event.metaKey) return;
@@ -291,6 +328,7 @@ export class Game {
       this.renderer.zoomByWheel(event.deltaY, event.deltaMode, this.canvas.getBoundingClientRect().height);
     }, { signal, passive: false });
     this.canvas.addEventListener('pointerdown', event => {
+      if(event.pointerType === 'touch') return;
       if (this.phase !== 'playing' || this.savingAction) return;
       event.preventDefault();
       this.updatePointer(event);
@@ -302,6 +340,7 @@ export class Game {
       void this.audio.unlock().catch(() => this.notify('Sound is unavailable in this browser.'));
     }, { signal });
     window.addEventListener('pointerup', event => {
+      if(event.pointerType === 'touch') return;
       this.input.pointerUp(event.button);
       if (this.canvas.hasPointerCapture(event.pointerId)) this.canvas.releasePointerCapture(event.pointerId);
     }, { signal });
@@ -321,7 +360,9 @@ export class Game {
   }
 
   private resize() {
+    this.touch?.clear(); this.clearWorldTouch?.();
     const width = window.innerWidth, height = window.innerHeight;
+    document.documentElement.style.setProperty('--touch-vh', `${window.visualViewport?.height ?? height}px`);
     const ratio = Math.min(1.6, window.devicePixelRatio || 1);
     this.canvas.width = Math.round(width * ratio);
     this.canvas.height = Math.round(height * ratio);
@@ -330,7 +371,7 @@ export class Game {
     this.uiCanvas.width = Math.round(width * uiRatio);
     this.uiCanvas.height = Math.round(height * uiRatio);
     const logicalHeight = Math.min(680, Math.max(450, Math.round(height / 1.35)));
-    this.renderer.resize(Math.max(540, Math.round(logicalHeight * width / height)), logicalHeight);
+    this.renderer.resize(Math.max(this.touch?.active ? 1 : 540, Math.round(logicalHeight * width / height)), logicalHeight);
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
     this.mouse.x = this.renderer.width * 0.6;
     this.mouse.y = this.renderer.height * 0.43;
@@ -339,6 +380,7 @@ export class Game {
   }
 
   clearInput() {
+    this.touch?.clear(); this.clearWorldTouch?.();
     this.input.clear();
     this.gamepad.clear(); this.gamepadMenu.clear();
     this.sim.clearInput();
@@ -463,7 +505,7 @@ export class Game {
   /** Hold gameplay and new commands across save-before-commit; rendering continues. */
   private durable<T>(operation: () => Promise<T>, busy: T): Promise<T> {
     if (this.savingAction || this.disposed) return Promise.resolve(busy);
-    this.savingAction = true; this.input.clear(); this.gamepad.clear(); this.gamepadMenu.clear();
+    this.savingAction = true; this.touch.update(this.sim.player,this.phase,true,performance.now()); this.clearWorldTouch?.(); this.input.clear(); this.gamepad.clear(); this.gamepadMenu.clear();
     const result = (async () => {
       try { await this.autosave; return await operation(); }
       finally { this.savingAction = false; this.clearInput(); this.last = performance.now(); }
@@ -710,6 +752,22 @@ export class Game {
   }
 
   private readInput(): Input {
+    if (this.touch.active) {
+      const p = this.sim.player, touch = this.touch.input;
+      const preview = touch.preview;
+      const id = touch.aimingSlot !== null ? p.character.skillSlots[touch.aimingSlot] : null;
+      const weapon = id ? skillWeapon(id,p.equipment) ?? p.equipment.mainHand : p.equipment.mainHand;
+      const distance = Math.min(900,deriveAttackStats(p.stats,weapon).range) * touch.distance;
+      const raw = {x:p.x+touch.aim.x*distance,y:p.y+touch.aim.y*distance};
+      const recipe = id ? resolveSkill(id,p.derived,p.character).recipe : null;
+      const aim = recipe?.kind === 'ground' ? skillTargetPoint(this.world,p,raw,deriveAttackStats(p.stats,weapon).range) : raw;
+      const screen = this.renderer.worldToScreen(aim.x,aim.y);
+      this.mouse.x = screen.x; this.mouse.y = screen.y; this.mouse.present = true;
+      if(preview) this.sim.clearCombatInput();
+      const input = touch.consume(aim);
+      const ranged = this.renderer.resolvePointerAim(this.sim,this.world,screen.x,screen.y,true);
+      return ranged ? {...input,rangedAim:{x:ranged.x,y:ranged.y}} : input;
+    }
     if (this.usingGamepad) {
       const pad = this.gamepad, p = this.sim.player;
       if (pad.aim.x || pad.aim.y) {
@@ -745,6 +803,7 @@ export class Game {
     this.last = now;
     this.fps += (1 / Math.max(dt, 0.001) - this.fps) * 0.04;
     this.pollGamepad(now);
+    this.touch.update(this.sim.player,this.phase,this.savingAction,now);
     this.renderer.gamepadActive = this.usingGamepad;
     this.shell.setGamepadActive(this.usingGamepad);
     if (this.phase === 'playing' && !this.savingAction) {
@@ -774,6 +833,7 @@ export class Game {
     }
     this.shell.setPortalState(this.sim.portal.active ? this.sim.portal.progress : null,
       !!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x, this.sim.player.y));
+    if(this.touch.active) this.touch.setPortal(this.sim.portal.active ? this.sim.portal.progress : null,!!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x,this.sim.player.y));
     this.renderer.pointerX = this.mouse.x;
     this.renderer.pointerY = this.mouse.y;
     this.renderer.pointerActive = this.mouse.present;
@@ -805,13 +865,27 @@ export class Game {
         &&!isGameUIPoint(point.x,point.y-35,this.renderer.width,this.renderer.height,this.renderer.extraUIBounds)
         &&hasLineOfSight(this.world,this.sim.player.x,this.sim.player.y,marker.x,marker.y))questDiamond(ui,point.x,point.y-35,8);
     }
+    if(this.touch.active && this.touch.input.preview && this.phase === 'playing') {
+      const preview = this.touch.input.preview, p = this.sim.player;
+      const id = p.character.skillSlots[preview.slot];
+      if(id) {
+        const recipe = resolveSkill(id,p.derived,p.character).recipe;
+        const origin = this.renderer.worldToScreen(p.x,p.y);
+        const at = preview.targeting === 'self' ? origin : {x:this.mouse.x,y:this.mouse.y};
+        ui.save(); ui.strokeStyle = preview.canceled ? '#e393a2' : '#d4d5ac'; ui.lineWidth = 1.5;
+        ui.setLineDash([5,4]); ui.beginPath(); ui.moveTo(origin.x,origin.y); ui.lineTo(at.x,at.y); ui.stroke();
+        const radius = 'radius' in recipe ? recipe.radius : 28;
+        const edge = this.renderer.worldToScreen(p.x+radius,p.y);
+        ui.beginPath(); ui.ellipse(at.x,at.y,Math.max(8,Math.abs(edge.x-origin.x)),Math.max(6,Math.abs(edge.x-origin.x)),0,0,Math.PI*2); ui.stroke(); ui.restore();
+      }
+    }
     const p = this.sim.player, alpha = this.sim.interpolationAlpha;
     const mapPlayer = { x: p.prevX + (p.x - p.prevX) * alpha,
       y: p.prevY + (p.y - p.prevY) * alpha, angle: p.angle };
     const dungeonRun=currentDungeon(this.sim.expeditions);
     if (this.phase !== 'ready' && !dungeonRun) this.worldMap.update(mapPlayer, dt);
-    if (this.phase !== 'ready' && dungeonRun) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeyMarker);
-    if (this.phase !== 'ready' && !dungeonRun) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, now / 1000,
+    if (this.phase !== 'ready' && dungeonRun && !(this.touch.active && window.innerWidth<620)) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeyMarker);
+    if (this.phase !== 'ready' && !dungeonRun && !(this.touch.active && window.innerWidth<620)) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, now / 1000,
       this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
         x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
         y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind,
@@ -924,7 +998,7 @@ export class Game {
     }
     const pad = this.gamepad;
     if (pad.active && !this.usingGamepad) {
-      this.input.clear(); this.sim.clearInput(); this.usingGamepad = true;
+      this.input.clear(); this.sim.clearInput(); this.usingGamepad = true; this.touch.setActive(false); this.usingGamepad = true;
       this.padAimAngle = this.sim.player.angle;
     }
     if (!pad.active) { this.gamepadMenu.clear(); if (this.phase === 'character') this.inventoryPanel.updateGamepad(pad, now); return; }
@@ -953,6 +1027,7 @@ export class Game {
   }
 
   private showMenu() {
+    this.touch?.update(this.sim.player,this.phase,this.savingAction,performance.now());
     const p = this.sim.player;
     const building = this.world.getBuildingAt(p.x, p.y);
     const town = this.world.getSettlements(p.x - 1, p.y - 1, 2, 2)

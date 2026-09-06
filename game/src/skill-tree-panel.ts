@@ -1,3 +1,4 @@
+import { bindTouchCanvas } from './touch-canvas.ts';
 import type { CharacterCommand } from './character-commands.ts';
 import { resolveSkill, learnedSkillRank, activeSkillRank, maximumSkillRank, selectedSpecialization, SKILL_SPECIALIZATIONS, specializationNode, masteryNode } from './skill-progression.ts';
 import { TooltipMotion } from './ui-tooltip-motion.ts';
@@ -54,6 +55,7 @@ export class SkillTreePanel {
   private matching = new Set(SKILL_TREE.nodes.map(node => node.id));
   private lastClickedNode: string | null = null;
   private doubleClickedNode: string | null = null;
+  private clearTouch: (() => void) | null = null;
   private drag?: { pointer: number; x: number; y: number; startX: number; startY: number; moved: boolean };
   private shown = false;
 
@@ -89,6 +91,12 @@ export class SkillTreePanel {
     this.assignments = this.root.querySelector('.skill-atlas-assignments')!;
     this.zoomLabel = this.root.querySelector('output')!;
     const opts = { signal: this.life.signal };
+    this.clearTouch = bindTouchCanvas(this.canvas,this.life.signal,{
+      start:()=>{this.setHovered(null); this.lastClickedNode=this.doubleClickedNode=null;},
+      pan:(dx,dy)=>{this.centerX-=dx/this.zoom;this.centerY-=dy/this.zoom;this.clampCenter();this.invalidate();},
+      zoom:(factor,p)=>this.setZoom(this.zoom*factor,p.x,p.y),
+      tap:p=>{const r=this.canvas.getBoundingClientRect();const node=this.pick(r.left+p.x,r.top+p.y);if(node){this.inspectNode(node.id,false);if(window.innerWidth<620)this.detail.scrollIntoView({block:'nearest'});}},
+    });
     this.root.addEventListener('click', event => this.click(event), opts);
     this.root.addEventListener('change', event => {
       const input = event.target as HTMLSelectElement, id = input.dataset.skill as SkillId;
@@ -176,6 +184,7 @@ export class SkillTreePanel {
     }
   }
   close(): void {
+    this.clearTouch?.();
     this.lastClickedNode = this.doubleClickedNode = null;
     this.atlasLayer = undefined; this.atlasDirty = true;
     this.shown = false; this.root.hidden = true; this.focus?.dispose(); this.focus = undefined;
@@ -261,7 +270,7 @@ export class SkillTreePanel {
       <div class="skill-atlas-allocation"><span class="skill-atlas-node-state ${owned ? 'is-owned' : ''}">${owned ? '◆ Allocated' : reachable ? '◇ Connected to your path' : routeCost !== undefined ? `◇ ${routeCost} ${routeCost === 1 ? 'point' : 'points'} along the highlighted path` : '◇ No connected path'}</span>
         ${owned ? '' : `<button class="ui-button ui-button--primary" data-tree="allocate" data-inspected="${node.id}" ${routeCost === undefined || this.player.character.skillPoints < routeCost ? 'disabled' : ''}>${routeCost === 1 ? 'Allocate' : 'Allocate path'} <span>${routeCost ?? '—'} ${routeCost === 1 ? 'point' : 'points'}</span></button>`}
         ${!owned && routeCost !== undefined && this.player.character.skillPoints < routeCost ? `<small class="ui-muted">${routeCost - this.player.character.skillPoints} more ${routeCost - this.player.character.skillPoints === 1 ? 'point' : 'points'} needed.</small>` : ''}</div>
-      ${skill && owned ? `<div class="skill-atlas-equip"><p class="ui-kicker">ASSIGN TO A SLOT</p><div>${BINDINGS.map((binding, index) => `<button class="ui-button ${this.player!.character.skillSlots[index] === node.skill ? 'ui-button--primary' : 'ui-button--quiet'}" data-assign="${index + 1}" data-inspected="${node.id}" aria-label="Assign ${skill.name} to ${binding}">${binding}</button>`).join('')}</div></div>` : ''}`;
+      ${skill && owned ? `<div class="skill-atlas-equip"><p class="ui-kicker">ASSIGN TO A SLOT</p><div>${BINDINGS.map((binding, index) => `<button class="ui-button ${this.player!.character.skillSlots[index] === node.skill ? 'ui-button--primary' : 'ui-button--quiet'}" data-assign="${index + 1}" data-inspected="${node.id}" aria-label="Assign ${skill.name} to slot ${index+1}, ${binding}"><span class="desktop-binding">${binding}</span><span class="touch-only">${index+1}</span></button>`).join('')}</div></div>` : ''}`;
   }
   private progressionControls(node: SkillNode, owned: boolean): string {
     const p = this.player!, sheet = p.character;
@@ -290,7 +299,7 @@ export class SkillTreePanel {
     const skills = new Set(unlockedSkills(this.player.character.allocatedNodes));
     this.assignments.innerHTML = BINDINGS.map((binding, index) => {
       const id = this.player!.character.skillSlots[index], skill = id && skills.has(id) ? SKILL_DEFINITIONS[id] : null;
-      return `<div class="skill-atlas-assigned ${skill ? 'is-filled' : ''}"><span class="skill-atlas-assigned-icon" ${skill ? `style="color:${skill.color}"` : ''}>${skill ? skillIconSVG(skill.id, 26) : '◇'}</span><div><span>${skill?.name ?? 'Empty slot'}</span><small>${binding}${skill ? ` · rank ${activeSkillRank(this.player!.character,skill.id)}` : ''}${skill && !canUseSkill(skill.id, this.player!.equipment) ? ` · Requires ${escapeUI(skillRequirementLabel(skill.requirement))}` : ''}</small></div>${skill ? `<button class="ui-button ui-button--quiet ui-button--icon" data-clear="${index + 1}" aria-label="Remove ${skill.name} from ${binding}">×</button>` : ''}</div>`;
+      return `<div class="skill-atlas-assigned ${skill ? 'is-filled' : ''}"><span class="skill-atlas-assigned-icon" ${skill ? `style="color:${skill.color}"` : ''}>${skill ? skillIconSVG(skill.id, 26) : '◇'}</span><div><span>${skill?.name ?? 'Empty slot'}</span><small><span class="desktop-binding">${binding}</span><span class="touch-only">Slot ${index+1}</span>${skill ? ` · rank ${activeSkillRank(this.player!.character,skill.id)}` : ''}${skill && !canUseSkill(skill.id, this.player!.equipment) ? ` · Requires ${escapeUI(skillRequirementLabel(skill.requirement))}` : ''}</small></div>${skill ? `<button class="ui-button ui-button--quiet ui-button--icon" data-clear="${index + 1}" aria-label="Remove ${skill.name} from ${binding}">×</button>` : ''}</div>`;
     }).join('');
   }
   private matches(node: SkillNode): boolean { return this.matching.has(node.id); }
@@ -350,7 +359,7 @@ export class SkillTreePanel {
     for (const node of SKILL_TREE.nodes) {
       if (!this.matches(node)) continue;
       const d = Math.hypot(node.x - x, node.y - y), radius = skillNodeScreenRadius(node, this.zoom) / this.zoom;
-      if (d < Math.max(radius, 12 / this.zoom) && d < distance) { selected = node; distance = d; }
+      if (d < Math.max(radius, (document.documentElement.classList.contains('touch-mode') ? 20 : 12) / this.zoom) && d < distance) { selected = node; distance = d; }
     }
     return selected;
   }

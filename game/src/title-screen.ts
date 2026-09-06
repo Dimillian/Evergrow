@@ -15,6 +15,9 @@ const powerHint = 'Build estimate from basic-attack DPS and effective life. Acti
 /** Character selection is presentation only. Storage and session changes belong to Game. */
 export class TitleScreen {
   readonly element: HTMLDivElement;
+  setBusy(busy: boolean) {
+    this.element.inert=busy;this.element.setAttribute('aria-busy',String(busy));this.element.classList.toggle('is-busy',busy);
+  }
   private slots: SaveSlot[] = [];
   private selected = 0;
   private starter: StarterLoadoutId = STARTER_LOADOUTS[0].id;

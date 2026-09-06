@@ -249,6 +249,8 @@ export class Simulation {
   }
 
   /** UI hover cancels queued weapons while movement and current actions continue. */
+  clearBasicAttackInput(): void { this.attackBuffer = -1; }
+
   clearCombatInput(): void {
     this.attackBuffer = -1; this.skillBuffer = null;
   }

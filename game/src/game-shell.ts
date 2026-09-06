@@ -9,7 +9,7 @@ import type { GamePhase } from './game-phase.ts';
 import { gameMenuMarkup } from './game-menu.ts';
 import { trapDialogFocus, uiIcon } from './ui-components.ts';
 
-interface ShellActions { portal?(): void; play(): void; returnToTitle(): void; openMap(): void; openCharacter(): void; openSkills(): void; openJourneys?(): void; }
+interface ShellActions { sound?(): void; muted?(): boolean; zoom?(factor: number): void; portal?(): void; play(): void; returnToTitle(): void; openMap(): void; openCharacter(): void; openSkills(): void; openJourneys?(): void; }
 
 /** Owns DOM presentation and its listeners; it never reads or mutates simulation state. */
 export class GameShell {
@@ -129,6 +129,15 @@ export class GameShell {
     play.addEventListener('click', this.actions.play, { signal });
     this.overlay.querySelector('#title-action')?.addEventListener('click', this.actions.returnToTitle, { signal });
     this.overlay.querySelector('#close-menu')?.addEventListener('click', this.actions.play, { signal });
+    if(!dead) {
+      const controls=document.createElement('div');controls.className='touch-only touch-pause-actions';
+      controls.innerHTML='<button class="ui-button" data-sound>Sound</button><button class="ui-button" data-zoom="out" aria-label="Zoom camera out">− Zoom</button><button class="ui-button" data-zoom="in" aria-label="Zoom camera in">+ Zoom</button>';
+      const sound=controls.querySelector<HTMLButtonElement>('[data-sound]')!;
+      const update=()=>{sound.textContent=this.actions.muted?.()?'Sound off':'Sound on';sound.setAttribute('aria-pressed',String(!this.actions.muted?.()));};update();
+      sound.addEventListener('click',()=>{this.actions.sound?.();update();},{signal});
+      for(const b of controls.querySelectorAll<HTMLButtonElement>('[data-zoom]'))b.addEventListener('click',()=>this.actions.zoom?.(b.dataset.zoom==='in'?1.2:1/1.2),{signal});
+      this.overlay.querySelector('.menu-actions')!.append(controls);
+    }
     trapDialogFocus(this.overlay, { signal, initialFocus: play, restoreFocus: false });
     this.setStatus(dead ? `You fell after defeating ${kills} enemies.`
       : phase === 'paused' ? 'Game paused.' : 'Ready to enter Deadwood.');

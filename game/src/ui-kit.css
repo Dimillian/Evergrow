@@ -349,3 +349,6 @@
   .ui-window, .ui-button, .ui-key, .ui-slot, .ui-tooltip, .ui-badge { border-color: ButtonText; }
   .ui-button:focus-visible, .ui-slot:focus-visible, .ui-focus:focus-visible { outline-color: Highlight; }
 }
+
+/* Touch affordances are opt-in; static reviews and desktop retain their layout. */
+.touch-only { display: none; }

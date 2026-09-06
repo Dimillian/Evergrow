@@ -155,6 +155,7 @@ export class Renderer {
     return screenToWorld(this.view, x, y);
   }
   gamepadActive = false;
+  touchActive = false;
   worldToScreen(x: number, y: number) { return worldToScreen(this.view, x, y); }
 
   /** Uses the displayed camera/body positions, then returns gameplay ground coordinates. */
@@ -387,7 +388,7 @@ export class Renderer {
       reducedMotion: settings.reducedMotion, healthTrail: this.playerHealthTrail / Math.max(1, p.maxHp),
       hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / COMBAT_TIMING.hitFlashDuration),
       experience: this.experienceDisplay,
-      gamepad: this.gamepadActive,
+      gamepad: this.gamepadActive, touch: this.touchActive,
     });
     drawRewardFlights(c, this.rewards, (x, y) => worldToScreen(this.view, x, y), this.width, this.height);
     drawGoldBalance(c, this.rewards);
@@ -762,7 +763,7 @@ export class Renderer {
   }
 
   private pointerOverHUD() {
-    return !this.gamepadActive && isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height, this.extraUIBounds);
+    return !this.gamepadActive && !this.touchActive && isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height, this.extraUIBounds);
   }
 
   private cursor(c: CanvasRenderingContext2D, sim: Simulation) {

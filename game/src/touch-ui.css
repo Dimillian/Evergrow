@@ -1,0 +1,129 @@
+/* Input-specific presentation. Desktop selectors and layout remain unchanged. */
+.touch-hud { position: absolute; inset: 0; z-index: 8; pointer-events: none; font: 14px var(--ui-font); color: var(--ui-text); user-select: none; -webkit-user-select: none; }
+.touch-hud[hidden] { display: none; }
+.touch-mode #game { touch-action: none; }
+.touch-mode .hud-controls { display: none; }
+.touch-button { width: 48px; height: 48px; min-width: 48px; border: 1px solid #8aa2ab99; border-radius: 13px; background: linear-gradient(155deg,#253b46ec,#08121bec); color: #d5ddd2; box-shadow: inset 0 0 0 3px #0a1723,0 2px 8px #0005; display: inline-flex; align-items: center; justify-content: center; flex-direction: column; padding: 5px; pointer-events: auto; touch-action: none; }
+.touch-button svg { width: 27px; height: 27px; }
+.touch-button small { font: 11px var(--ui-font); }
+.touch-button.is-held { background: #355360; border-color: #eed69e; box-shadow: 0 0 15px #a8d6ef55; }
+.touch-button.is-unavailable { color: #71838b; }
+.touch-menu { position: absolute; top: max(8px,env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
+.touch-resources { position: absolute; left: max(16px,env(safe-area-inset-left)); top: max(60px,calc(env(safe-area-inset-top) + 50px)); width: 145px; display: grid; gap: 5px; }
+.touch-resources > div { position: relative; height: 23px; border: 1px solid #8aa2ab88; border-radius: 7px; overflow: hidden; background: #07111cd9; text-align: center; }
+.touch-resources i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(#a54060,#5d2036); }
+.touch-resources .touch-mana i { background: linear-gradient(#456cbc,#263c7a); }
+.touch-resources span { position: relative; line-height: 21px; text-shadow: 0 1px 2px #000; }
+.touch-move { position: absolute; left: max(23px,env(safe-area-inset-left)); bottom: max(40px,calc(env(safe-area-inset-bottom) + 24px)); width: 132px; height: 132px; border: 1px solid #93afaa75; border-radius: 50%; background: radial-gradient(#314b4f55,#15252d88); box-shadow: inset 0 0 0 8px #09151a40; pointer-events: auto; touch-action: none; }
+.touch-move i { position: absolute; left: 42px; top: 42px; width: 48px; height: 48px; border-radius: 50%; background: radial-gradient(at 35% 25%,#718c91ae,#203741cc); border: 1px solid #aac3c488; pointer-events: none; }
+.touch-actions { position: absolute; right: max(16px,env(safe-area-inset-right)); bottom: max(30px,calc(env(safe-area-inset-bottom) + 16px)); width: 238px; height: 174px; }
+.touch-actions > button { position: absolute; }
+.touch-skill:nth-child(1) { left: 6px; top: 63px; }
+.touch-skill:nth-child(2) { left: 42px; top: 14px; }
+.touch-skill:nth-child(3) { left: 99px; top: 0; }
+.touch-skill:nth-child(4) { left: 155px; top: 15px; }
+.touch-skill:nth-child(5) { left: 188px; top: 65px; }
+.touch-attack { left: 83px; top: 68px; width: 90px; height: 90px; border-radius: 50%; border-color: #c7b67b; }
+.touch-attack svg { width: 34px; height: 34px; }
+.touch-potion { left: 19px; top: 121px; }
+.touch-dodge { left: 181px; top: 122px; }
+.touch-world-actions { position: absolute; left: 180px; bottom: max(42px,env(safe-area-inset-bottom)); display: flex; gap: 7px; }
+.touch-cancel { position: absolute; left: calc(50% - 48px); top: 37%; width: 96px; height: 64px; display: grid; place-items: center; border: 1px solid #ce8292; border-radius: 22px; background: #3a1f32dd; color: #f3c5ca; }
+.touch-cancel[hidden] { display: none; }
+.touch-cancel.is-held { background: #983b53; }
+.touch-only { display: none; }
+.touch-mode .touch-only { display: flex; }
+.touch-mode .ui-window { max-height: calc(var(--touch-vh,100dvh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px); }
+.touch-mode input, .touch-mode select { font-size: 16px; }
+.touch-mode .ui-button { min-height: 44px; }
+.touch-mode [data-tooltip]::after, .touch-mode [data-tooltip]::before { display: none; }
+.touch-mode .journey-tracker { max-width: 200px; }
+.touch-mode .service-panel { inset: max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) auto max(8px,env(safe-area-inset-left)); width: auto; }
+.touch-mode .service-body { overflow: auto; min-height: 0; }
+.touch-mode .service-panel footer { flex-shrink: 0; }
+.touch-mode .service-grid, .touch-mode .service-stock { grid-template-columns: repeat(auto-fit,minmax(48px,1fr)); }
+.touch-mode .character-overlay, .touch-mode .skill-atlas { padding: max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left)); }
+.touch-mode .character-window { height: 100%; }
+.touch-mode .character-tabs { gap: 5px; padding: 6px 12px; flex-shrink: 0; }
+.touch-mode .character-columns { display: block; overflow: auto; }
+.touch-mode .character-columns > section { display: none; padding: 12px; overflow: visible; }
+.touch-mode .character-window[data-touch-tab="bag"] .character-inventory, .touch-mode .character-window[data-touch-tab="equipment"] .character-equipment, .touch-mode .character-window[data-touch-tab="stats"] .character-details { display: block; }
+.touch-mode .character-bag { min-width: 0; grid-template-columns: repeat(auto-fit,minmax(48px,1fr)); }
+.touch-mode .character-grid-scroll { overflow: visible; }
+.touch-item-sheet { position: absolute; z-index: 12; inset: auto 8px 8px; max-height: 85%; overflow: auto; border: 1px solid var(--ui-silver-dim); border-radius: 12px; background: #0c1822fc; padding: 12px; box-shadow: 0 -8px 35px #0008; }
+.touch-item-sheet[hidden] { display: none; }
+.touch-item-sheet header, .touch-item-sheet nav { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.touch-item-sheet nav { position: sticky; bottom: -12px; padding: 10px 0; background: #0c1822; }
+.touch-item-sheet .ui-item-tooltip { position: static; display: block; width: auto; max-width: none; pointer-events: auto; }
+.touch-mode .skill-atlas-main { grid-template-columns: minmax(0,1fr) minmax(220px,33%); }
+.touch-mode .skill-atlas-chart { min-height: 180px; }
+.touch-mode .skill-atlas-toolbar { flex-wrap: wrap; }
+.touch-mode .skill-atlas-search { min-width: 120px; }
+.touch-mode .skill-atlas-sidebar { overflow: auto; }
+.touch-mode .title-screen { height: var(--touch-vh,100dvh); overflow-y: auto; padding-bottom: env(safe-area-inset-bottom); }
+.touch-mode .title-create input { scroll-margin: 30px; }
+@media (max-width: 620px) {
+  .touch-mode .touch-menu { left: max(8px,env(safe-area-inset-left)); transform: none; top: max(8px,env(safe-area-inset-top)); gap: 4px; }
+  .touch-mode .touch-resources { top: 66px; width: 135px; }
+  .touch-mode .touch-actions { right: 8px; width: 207px; transform: scale(.9); transform-origin: right bottom; }
+  .touch-mode .touch-move { width: 110px; height: 110px; left: 12px; bottom: 48px; }
+  .touch-mode .touch-move i { left: 31px; top: 31px; }
+  .touch-mode .touch-world-actions { left: 20px; bottom: 177px; }
+  .touch-mode .skill-atlas-main { display: flex; overflow-y: auto; }
+  .touch-mode .skill-atlas-chart { flex: 0 0 46dvh; }
+  .touch-mode .skill-atlas-sidebar { flex: none; overflow: visible; }
+  .touch-mode .service-body { display: block; }
+  .touch-mode .service-offer, .touch-mode .service-bag { overflow: visible; }
+  .touch-mode .title-brand { padding: 16px; }
+  .touch-mode .title-brand h1 { font-size: 32px; }
+  .touch-mode .title-hero { height: 130px; }
+  .touch-mode .title-hero canvas { height: 170px; }
+  .touch-mode .title-roster.ui-window { margin: 8px; width: calc(100% - 16px); max-height: none; }
+  .touch-mode .title-screen.is-creating .title-roster.ui-window { width: calc(100% - 16px); }
+}
+.touch-mode .touch-actions { transform: none; width: 238px; }
+.touch-mode .touch-menu { top: auto; bottom: max(42px,calc(env(safe-area-inset-bottom) + 28px)); }
+.touch-mode .touch-pause-actions { flex-wrap: wrap; gap: 6px; justify-content: center; }
+.touch-mode .journey-mini { max-width: 195px; }
+.touch-mode .crypt-map { padding: max(8px,env(safe-area-inset-top)) 8px; }
+.touch-mode .crypt-map .ui-window { display: flex; flex-direction: column; max-height: calc(var(--touch-vh,100dvh) - 16px); overflow: auto; }
+.touch-mode .crypt-map canvas { flex: none; height: auto; aspect-ratio: 1200 / 760; max-height: none; }
+.touch-mode .crypt-touch-zoom { gap: 8px; padding: 8px; justify-content: center; }
+.touch-mode .title-screen.is-busy::after { content: 'Saving…'; position: fixed; inset: auto 25% 15%; padding: 20px; background: #101d29f5; border: 1px solid #8aa2ab; text-align: center; z-index: 80; }
+@media (max-width: 620px) {
+  .touch-mode .touch-menu { top: max(52px,calc(env(safe-area-inset-top) + 44px)); bottom: auto; left: 50%; transform: translateX(-50%); }
+  .touch-mode .touch-resources { top: max(108px,calc(env(safe-area-inset-top) + 100px)); }
+  .touch-mode .journey-mini { display: none; }
+  .touch-mode .journey-columns { display: block; overflow: auto; }
+  .touch-mode .journey-list, .touch-mode .journey-detail { overflow: visible; }
+}
+.touch-mode .touch-moving .character-columns { padding-bottom: 90px; }
+.touch-mode .touch-moving .touch-item-sheet { max-height: 80px; }
+.touch-mode .skill-atlas-search input, .touch-mode .title-weapon-copy small { font-size: 13px; }
+.touch-mode .skill-atlas-search input { font-size: 16px; }
+.touch-mode .world-map-toolbar { flex-wrap: wrap; }
+.game-shell:not(.playing) .touch-hud { display: none; }
+.touch-mode .character-footer-status { display: none; }
+@media (max-height: 500px) and (min-width: 621px) {
+  .touch-mode .skill-atlas-header { padding-block: 4px; }
+  .touch-mode .skill-atlas-viewport { min-height: 100px; }
+  .touch-mode .skill-atlas-footer { display: none; }
+  .touch-mode .skill-atlas-toolbar { padding: 5px; }
+  .touch-mode .skill-atlas-search { height: 38px; }
+  .touch-mode .touch-resources { top: 53px; }
+}
+.touch-mode .desktop-binding { display: none; }
+.touch-mode .skill-atlas-assigned small .touch-only { display: inline; }
+.touch-mode .title-roster.ui-window { max-height: none; }
+.touch-mode .overlay { padding: max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom)); }
+.touch-mode .menu-body { min-height: 0; overflow: auto; padding: 14px 20px; }
+.touch-mode .menu-seal { display: none; }
+.touch-mode .menu-brand, .touch-mode .event-window .ui-window-header { flex-shrink: 0; }
+.touch-mode .event-choices { min-height: 0; overflow: auto; padding: 12px; }
+.touch-mode .journey-columns { min-height: 0; flex: 1; }
+.touch-mode .journey-list-row, .touch-mode .journey-mini-row { min-height: 44px; }
+.touch-mode .journey-panel { padding: max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom)); }
+.touch-menu .touch-button { position: relative; }
+.touch-point-badge { position: absolute; top: -7px; right: -3px; border: 1px solid #101d23; border-radius: 5px; padding: 1px 4px; color: #121722; background: #d8b47d; font: 12px var(--ui-font); }
+[data-touch-menu="skills"] .touch-point-badge { background: #c5a8e5; }
+.touch-point-badge[hidden] { display: none; }

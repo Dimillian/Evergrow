@@ -1,5 +1,5 @@
 import { itemDisplayName } from './items.ts';
-import { updateItemSlot } from './item-ui.ts';
+import { itemTooltipMarkup, updateItemSlot } from './item-ui.ts';
 import { ItemTooltip } from './item-tooltip.ts';
 import { goldBalance } from './wallet.ts';
 import { formatGold } from './currency-format.ts';
@@ -76,6 +76,9 @@ export class InventoryPanel {
   private player: Player | null = null;
   private hovered: ItemLocation | null = null;
   private drag: ItemReference | null = null;
+  private touchItem: ItemReference | null = null;
+  private touchMoving = false;
+  private sheet!: HTMLElement;
   private animation = 0;
   private facing = Math.PI / 2;
   private readonly filters = new Set<InventoryFilter>();
@@ -141,6 +144,12 @@ export class InventoryPanel {
     </section>`;
     this.window = this.element.querySelector('.character-window')!;
     this.popupLayer = this.element.querySelector('[data-popup-layer]')!;
+    this.window.dataset.touchTab = 'bag';
+    const tabs = document.createElement('nav'); tabs.className = 'character-tabs touch-only'; tabs.setAttribute('aria-label','Character sections');
+    tabs.innerHTML = '<button class="ui-button" data-touch-tab="bag" aria-pressed="true">Bag</button><button class="ui-button" data-touch-tab="equipment" aria-pressed="false">Equipment</button><button class="ui-button" data-touch-tab="stats" aria-pressed="false">Stats</button>';
+    this.window.querySelector('.character-columns')!.before(tabs);
+    this.sheet = document.createElement('section'); this.sheet.className = 'touch-item-sheet'; this.sheet.hidden = true;
+    this.sheet.setAttribute('aria-label','Selected item'); this.window.append(this.sheet);
     this.tooltip = new ItemTooltip(this.window, 'character-item-tooltip');
     this.canvas = this.element.querySelector('.character-doll')!;
     this.element.querySelectorAll<HTMLButtonElement>('[data-location]').forEach(cell => this.cells.set(cell.dataset.location!, cell));
@@ -263,6 +272,7 @@ export class InventoryPanel {
     this.focus = null;
     this.element.hidden = true;
     this.element.classList.remove('is-controller'); this.controller.clear(); this.sectionFocus.clear();
+    this.closeTouchItem();
     this.clearDrag();
     this.hideTooltip();
     cancelAnimationFrame(this.animation);
@@ -391,8 +401,13 @@ export class InventoryPanel {
 
   private bind(): void {
     const options = { signal: this.lifetime.signal };
+    document.addEventListener('evergrow-input-mode',()=>{this.closeTouchItem();this.hideTooltip();},options);
     this.element.addEventListener('click', event => {
       const target = event.target as Element;
+      const tab = target.closest<HTMLElement>('[data-touch-tab]')?.dataset.touchTab;
+      if(tab) { this.window.dataset.touchTab = tab; for(const b of this.window.querySelectorAll('[data-touch-tab]')) b.setAttribute('aria-pressed',String((b as HTMLElement).dataset.touchTab===tab)); return; }
+      const itemAction = target.closest<HTMLElement>('[data-touch-item]');
+      if(itemAction) { this.touchItemAction(itemAction.dataset.touchItem!); return; }
       if (target.closest('[data-close]')) { this.actions.close(); return; }
       if (target === this.popupLayer || target.closest('[data-popup-close]')) { this.dismissPopup(); return; }
       if (target.closest('[data-sort-filter]')) { this.openPopup('sort', target.closest<HTMLElement>('[data-sort-filter]')!); return; }
@@ -417,6 +432,19 @@ export class InventoryPanel {
       if (attribute && Object.hasOwn(ATTRIBUTE_NAMES, attribute)) { this.actions.allocate(attribute); return; }
       const location = this.locationFrom(target);
       if (!location) return;
+      if(document.documentElement.classList.contains('touch-mode')) {
+        if(this.touchMoving && this.touchItem) {
+          this.drag = this.touchItem;
+          if(this.canDrop(location)) {
+            const source = this.touchItem; this.closeTouchItem(); this.clearDrag();
+            if(source.type==='bag' && location.type==='bag') this.actions.move(source.index,location.index);
+            else if(source.type==='bag' && location.type==='equipment') this.actions.equip(source.index,location.slot);
+            else if(source.type==='equipment' && location.type==='bag') this.actions.unequip(source.slot,location.index);
+          }
+          this.drag = null; return;
+        }
+        this.openTouchItem(location); return;
+      }
       const item = this.itemAt(location);
       if (item && event.shiftKey) { this.hideTooltip(); this.activate(location); return; }
       if (item) this.showTooltip(location);
@@ -502,6 +530,37 @@ export class InventoryPanel {
     window.addEventListener('blur', () => this.clearDrag(), options);
   }
 
+  private openTouchItem(location: ItemLocation) {
+    const item = this.itemAt(location); if(!this.player) return;
+    this.hideTooltip();
+    if(!item) {
+      if(location.type === 'equipment' && location.slot === 'offhand' && this.player.equipment.mainHand.hands === 2) {
+        this.sheet.innerHTML = '<header><strong>Both hands occupied</strong><button class="ui-button" data-touch-item="close">Close</button></header><p>Your two-handed weapon reserves this hand. Equipping an off-hand item from the bag safely stows the two-handed weapon when there is space.</p>';
+        this.sheet.hidden = false;
+      }
+      return;
+    }
+    this.touchItem = {...location,id:item.id}; this.touchMoving = false;
+    const buttons = location.type === 'equipment' ? '<button class="ui-button" data-touch-item="unequip">Unequip</button>' :
+      EQUIPMENT_SLOTS.filter(slot=>planEquipmentChange(this.player!.character,item,this.player!.level,{sourceIndex:location.index,slot}).ok)
+      .map(slot=>`<button class="ui-button" data-touch-item="equip:${slot}">Equip · ${SLOT_NAMES[slot]}</button>`).join('');
+    this.sheet.innerHTML = `<header><strong>Item details</strong><button class="ui-button" data-touch-item="close">Close</button></header><div class="ui-item-tooltip">${itemTooltipMarkup(item,{sheet:this.player.character,level:this.player.level,equipped:location.type==='equipment',sourceIndex:location.type==='bag'?location.index:undefined})}</div><nav>${buttons}<button class="ui-button" data-touch-item="move">Move to slot…</button></nav>`;
+    this.sheet.hidden = false; this.sheet.scrollTop = 0;
+  }
+  private closeTouchItem() { this.window.classList.remove('touch-moving'); this.sheet.hidden = true; this.touchItem = null; this.touchMoving = false; this.clearDrag(); }
+  private touchItemAction(action: string) {
+    if(action==='close') { this.closeTouchItem(); return; }
+    const source = this.touchItem; if(!source || this.itemAt(source)?.id!==source.id) { this.closeTouchItem(); return; }
+    if(action==='move') {
+      this.touchMoving = true; this.window.classList.add('touch-moving'); this.sheet.innerHTML = '<header><strong>Tap a destination slot</strong><button class="ui-button" data-touch-item="close">Cancel</button></header>';
+      this.drag = source; for(const [key,cell] of this.cells) { const location = this.locationFrom(cell); if(location && this.canDrop(location)) this.cells.get(key)?.classList.add('is-drop-target'); } this.drag = null;
+      return;
+    }
+    this.closeTouchItem();
+    if(action==='unequip' && source.type==='equipment') this.actions.unequip(source.slot);
+    if(action.startsWith('equip:') && source.type==='bag') this.actions.equip(source.index,action.slice(6) as EquipmentSlot);
+  }
+
   private canDrop(target: ItemLocation): boolean {
     const source = this.drag;
     if (!source || locationKey(source) === locationKey(target)) return false;
@@ -516,7 +575,7 @@ export class InventoryPanel {
   private clearDrag(): void { this.drag = null; for (const cell of this.cells.values()) cell.classList.remove('is-drop-target', 'is-dragging'); }
 
   private showTooltip(location: ItemLocation): void {
-    if (this.drag) return;
+    if (this.drag || document.documentElement.classList.contains('touch-mode')) return;
     const item = this.itemAt(location), cell = this.cells.get(locationKey(location));
     if (!item || !cell || cell.hidden || !this.player) { this.hideTooltip(); return; }
     this.hovered = location;

@@ -60,3 +60,7 @@ Character names and search text still use a keyboard. Inventory drag/drop and ga
 Pause, panels, focus loss and travel clear controller actions and require neutral sticks/released buttons before accepting input again. Disconnecting the active controller pauses combat. Keyboard/mouse input takes over when used; no character save format or progress reset is involved.
 
 POI openings take one second (beacons: two). Movement, combat, damage or leaving play cancels the channel. Choice windows pause combat; selecting a choice resumes play before the channel.
+
+## Touch
+
+Touch devices have a left analog movement disc and a right hold/drag attack pad, five visible skill buttons, potion, dodge, interaction and portal controls. Drag an aimed skill and release to cast, or release over Cancel. Self-centered skills can be tapped. Maps and the skill tree support pan/pinch and tap inspection. Inventory uses tap-to-inspect with Equip, Unequip and Move actions. Pause includes sound and camera zoom controls. Mouse, keyboard and gamepad bindings above remain available unchanged; typing into a native field keeps touch mode active. See [Touch gameplay and interface](touch-controls.md) for complete workflows and verification boundaries.
