@@ -10,3 +10,4 @@ button,select,input{font:inherit}button,select{border:1px solid #354a3d;backgrou
 @media(min-width:1450px){main{max-width:1260px}.stage>canvas{max-height:250px}}
 @media(max-width:820px){main{padding:20px 16px}.badge{display:none}.transport{flex-wrap:wrap}.transport label.scrub{order:2;flex-basis:100%;padding:2px 0}.grid{gap:14px}.card-heading{padding:13px 12px 0}.card-heading>div{gap:6px}h2{font-size:19px}.sequence{margin-left:33px;font-size:10px}.detail{font-size:12px;margin:10px 12px}.scale-label,.native-label,.stage:before{font-size:8px;letter-spacing:0}.filmstrip{margin:0 8px;gap:2px}}
 @media(max-width:590px){.grid{grid-template-columns:1fr}h1{font-size:28px}.intro{font-size:14px;line-height:1.4}header{margin-bottom:16px}footer{flex-direction:column;gap:4px}h2{font-size:23px}.sequence{font-size:12px}}
+.stage:before{content:none}.scale-label{left:18%}.native-label{right:16%}

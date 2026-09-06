@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { frame3, solveLimb, vdot, vsub, humanoidDeathPose } from '../src/death-rig.ts';
+import { frame3, solveLimb, vdot, vsub, humanoidDeathPose, humanoidDeathArm } from '../src/death-rig.ts';
 import { DEATH_KINDS, ENEMY_DEATHS } from '../src/death-content.ts';
 import { drawDeathFigure } from '../src/death-art.ts';
+import { DeathMesh } from '../src/death-mesh.ts';
+import { deathWeaponFrame, weaponReleaseTime } from '../src/death-weapon.ts';
+import { DEATH_MATERIALS } from '../src/death-humanoid-art.ts';
 
 test('rig rotations preserve all three dimensions and limb lengths even at degenerate targets',()=>{
   for(const pitch of [-1.6,-.8,0,.7,1.57])for(const yaw of [0,.4,2,5])for(const roll of [0,.5,1.6]) {
@@ -56,5 +59,40 @@ test('body, held gear and secondary parts stop moving exactly at the shared sett
     drawDeathFigure(a as unknown as CanvasRenderingContext2D,kind,variant,d.settle,.8);
     drawDeathFigure(b as unknown as CanvasRenderingContext2D,kind,variant,10,.8);
     assert.deepEqual(a.geometry,b.geometry,`${kind} ${variant} must not snap when cached`);
+  }
+});
+
+test('surface markings retain their parent floor correction and paint after its face',()=>{
+  for(const pitch of [-1.53,0,1.51])for(const facing of [0,.8,Math.PI,4.7]) {
+    const mesh=new DeathMesh(facing,1),ctx=new GeometryContext();
+    const paints:{color:string;points:number[]}[]=[];
+    ctx.beginPath=()=>{ctx.geometry=[];};
+    ctx.fill=()=>{paints.push({color:ctx.fillStyle,points:[...ctx.geometry]});};
+    const outline=[[-3,-3],[3,-3],[3,3],[-3,3]] as const;
+    const placed=mesh.solid(frame3([0,0,-1],pitch),outline,4,'#778077');
+    assert.ok(placed.origin[2]>-1,'the floor lifts this entire part');
+    mesh.detail(placed,outline,'#b39b6e');
+    mesh.draw(ctx as unknown as CanvasRenderingContext2D);
+    const surface=paints.findIndex(p=>p.color==='#778077');
+    assert.equal(paints[surface+1].color,'#b39b6e');
+    assert.deepEqual(paints[surface+1].points,paints[surface].points,'marking follows the exact visible surface through the fall');
+  }
+});
+
+test('released weapons detach continuously, stop following the hand, and rest on their side',()=>{
+  for(const kind of ['brute','caster','archer','goblin','goblinChief','warden'] as const) {
+    const width=DEATH_MATERIALS[kind].width;
+    for(const recipe of ENEMY_DEATHS[kind]) {
+      const time=weaponReleaseTime(recipe);
+      const hand=(age:number)=>humanoidDeathArm(humanoidDeathPose(recipe,age),width,1)[2];
+      const sample=(age:number)=>deathWeaponFrame(kind,recipe,age,hand(age),width);
+      if(recipe.weapon==='held') {assert.deepEqual(sample(recipe.settle).origin,hand(recipe.settle));continue;}
+      assert.ok(Math.hypot(...vsub(sample(time+1e-7).origin,sample(time).origin))<.001,`${kind} ${recipe.family}: release must not teleport`);
+      const final=sample(recipe.settle);
+      assert.ok(Math.hypot(...vsub(final.origin,hand(recipe.settle)))>5,`${kind}: weapon leaves the hand`);
+      assert.ok(Math.abs(final.forward[2])>.99,'the broad weapon face rests parallel to the floor');
+      assert.deepEqual(final,sample(30),'the cached weapon must remain still');
+      assert.deepEqual(final,deathWeaponFrame(kind,recipe,30,[999,999,999],width),'a released weapon no longer follows hand motion');
+    }
   }
 });

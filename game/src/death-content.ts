@@ -6,10 +6,11 @@ export interface DeathAnimation {
   readonly title: string; readonly sequence: string; readonly family: DeathFamily;
   readonly contact: number; readonly settle: number; readonly travel: number;
   readonly twist: number; readonly delay: number;
+  readonly weapon: 'held' | 'toss' | 'slip';
 }
 type Four = readonly [DeathAnimation, DeathAnimation, DeathAnimation, DeathAnimation];
 const a = (title: string, sequence: string, family: DeathFamily, contact: number, settle: number,
-  travel: number, twist = 0, delay = 0): DeathAnimation => Object.freeze({ title, sequence, family, contact, settle, travel, twist, delay });
+  travel: number, twist = 0, delay = 0, weapon:DeathAnimation['weapon']='held'): DeathAnimation => Object.freeze({ title, sequence, family, contact, settle, travel, twist, delay, weapon });
 /** Exhaustive, immutable recipes. Durations are shared by drawing, sorting and review. */
 export const ENEMY_DEATHS: Readonly<Record<EnemyKind, Four>> = Object.freeze({
   stalker: Object.freeze([
@@ -20,38 +21,38 @@ export const ENEMY_DEATHS: Readonly<Record<EnemyKind, Four>> = Object.freeze({
   ] as const),
   brute: Object.freeze([
     a('Heavy genuflection', 'One knee → club dips → shoulder lands', 'kneel', .8, 1.3, 4, -.25, .12),
-    a('Backbreaker fall', 'Chest recoils → heels slide → back thuds', 'back', .63, 1.18, 8, .16, .08),
-    a('Failed brace', 'Both fists reach → elbows buckle → chest drops', 'front', .72, 1.24, 6, -.1, .15),
+    a('Backbreaker fall', 'Chest recoils → hammer flies free → back thuds', 'back', .63, 1.18, 8, .16, .08,'toss'),
+    a('Failed brace', 'Hammer slips → fists brace → chest drops', 'front', .72, 1.24, 6, -.1, .15,'slip'),
     a('Dead weight', 'Hips sit → shoulders sag → club settles', 'sit', .66, 1.45, -4, -.18, .2),
   ] as const),
   caster: Object.freeze([
     a('Staff gives way', 'Staff braces → knees fold → hood drops', 'kneel', .69, 1.18, 3, .3, .13),
-    a('Broken channel', 'Casting arm recoils → back lands → staff follows', 'back', .56, 1.06, 7, -.25, .14),
-    a('Robe crumple', 'Reach → elbows fold → cloth settles', 'front', .6, 1.14, 8, .2, .17),
+    a('Broken channel', 'Casting arm recoils → staff flies free → back lands', 'back', .56, 1.06, 7, -.25, .14,'toss'),
+    a('Robe crumple', 'Staff slips → elbows fold → cloth settles', 'front', .6, 1.14, 8, .2, .17,'slip'),
     a('Last supplication', 'Sink to knees → hands sag → hood bows', 'sit', .52, 1.3, -1, -.12, .23),
   ] as const),
   archer: Object.freeze([
     a('Broken stance', 'Bow lowers → one knee drops → shoulder lands', 'kneel', .56, 1.02, 6, -.28, .05),
-    a('Reeling fall', 'Bow arm opens → heels slip → back lands', 'back', .48, .99, 11, .28, .08),
-    a('Stumbling dive', 'Last step → free hand catches → chest drops', 'front', .47, .91, 15, -.16, .06),
+    a('Reeling fall', 'Bow leaves hand → heels slip → back lands', 'back', .48, .99, 11, .28, .08,'toss'),
+    a('Stumbling dive', 'Bow slips → hands brace → chest drops', 'front', .47, .91, 15, -.16, .06,'slip'),
     a('Bowman’s slump', 'Squat → sit → chin sinks to chest', 'sit', .45, 1.1, -5, .22, .15),
   ] as const),
   goblin: Object.freeze([
     a('Scrabbling collapse', 'Knees knock → hands scramble → side settles', 'kneel', .43, .78, 7, .4),
-    a('Heel-over fall', 'Arms fling → feet slip → back bounces', 'back', .36, .73, 13, -.35),
-    a('Face-first stumble', 'Lurch → hands miss → chest lands', 'front', .34, .72, 16, .32),
+    a('Heel-over fall', 'Arms fling → blade tumbles free → back bounces', 'back', .36, .73, 13, -.35,0,'toss'),
+    a('Face-first stumble', 'Blade slips → hands miss → chest lands', 'front', .34, .72, 16, .32,0,'slip'),
     a('Scrap heap', 'Bottom drops → knees tuck → ears droop', 'sit', .33, .89, -7, -.3, .08),
   ] as const),
   goblinChief: Object.freeze([
     a('Fallen standard', 'One knee → banner sways → shoulder lands', 'kneel', .72, 1.21, 5, .28, .12),
-    a('Dethroned', 'Chest recoils → back lands → horn arm falls', 'back', .58, 1.14, 10, -.2, .1),
-    a('Last command', 'Blade reaches → elbows buckle → banner drapes', 'front', .63, 1.19, 9, .25, .17),
+    a('Dethroned', 'Chest recoils → blade flies free → horn arm falls', 'back', .58, 1.14, 10, -.2, .1,'toss'),
+    a('Last command', 'Blade slips → elbows buckle → banner drapes', 'front', .63, 1.19, 9, .25, .17,'slip'),
     a('Hollow throne', 'Sit heavily → arms hang → crowned head bows', 'sit', .55, 1.38, -5, -.18, .24),
   ] as const),
   warden: Object.freeze([
     a('The sentinel kneels', 'Knees strike → axe lowers → shoulder settles', 'kneel', 1.04, 1.8, 2, -.15, .24),
-    a('Falling monument', 'Long recoil → heels slide → armor lands', 'back', .94, 1.68, 7, .12, .2),
-    a('Broken oath', 'Axe braces → arms yield → breastplate lands', 'front', 1.12, 1.9, 5, -.22, .28),
+    a('Falling monument', 'Long recoil → axe flies free → armor lands', 'back', .94, 1.68, 7, .12, .2,'toss'),
+    a('Broken oath', 'Axe slips → arms yield → breastplate lands', 'front', 1.12, 1.9, 5, -.22, .28,'slip'),
     a('Silent vigil', 'Sink to knees → axe rests → helm bows', 'sit', .87, 2.05, -2, .1, .4),
   ] as const),
   hound: Object.freeze([

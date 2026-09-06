@@ -37,6 +37,12 @@ export interface HumanoidDeathPose {
   hip: Vec3; pitch: number; headPitch: number; twist: number;
   feet: readonly [Vec3,Vec3]; hands: readonly [Vec3,Vec3];
 }
+/** Shared hand anchor for the body rig and the exact instant a weapon releases. */
+export function humanoidDeathArm(pose:HumanoidDeathPose,width:number,index:number):readonly [Vec3,Vec3,Vec3] {
+  const side=index?1:-1,body=frame3(pose.hip,pose.pitch,pose.twist);
+  const root=at(body,side*5*width,0,10),hand=pose.hands[index];
+  return solveLimb(root,[hand[0]*width,hand[1],hand[2]],vadd(root,[side*12,-2,-7]),9,10.5);
+}
 type PoseKey = readonly [number,Vec3,number,number,readonly [Vec3,Vec3],readonly [Vec3,Vec3]];
 const restFeet: readonly [Vec3,Vec3]=[[-6,0,1],[6,0,1]];
 const restHands: readonly [Vec3,Vec3]=[[-10,1,5],[10,1,5]];

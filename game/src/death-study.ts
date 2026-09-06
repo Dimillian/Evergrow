@@ -84,14 +84,14 @@ function draw() {
   designs.forEach((_,i)=>{
     const x=i%2*480,y=Math.floor(i/2)*292;
     ctx.save();ctx.translate(x,y);ctx.drawImage(readyBackground,0,0);
-    // Both sizes use the same proposed rig and exact sampled time.
+    // Equal scale and brightness expose detail loss between the live and posed art.
     const artScale=kind==='hound'||kind==='wisp'?1:DEATH_MATERIALS[kind].scale;
-    const zoom=kind==='warden'?1.15:kind==='goblinChief'?2.55:2.9;
-    for(const [px,py,scale] of [[215,148,zoom],[kind==='warden'?410:425,167,kind==='warden'?.38:1]]) {
+    const zoom=kind==='warden'?1.05:kind==='goblinChief'||kind==='brute'?2.55:2.9;
+    for(const [px,py,scale] of [[305,143,zoom]]) {
       ctx.save();ctx.translate(px,py);ctx.scale(scale,scale);drawDeathFigure(ctx,kind,DEATH_VARIANTS[i],age,facing);ctx.restore();
     }
     // Existing live art provides an honest silhouette reference, not an animated replacement.
-    ctx.save();ctx.translate(48,168);ctx.scale(1.3/artScale,1.3/artScale);ctx.globalAlpha=.7;
+    ctx.save();ctx.translate(100,143);ctx.scale(zoom,zoom);
     drawHumanoid(ctx,{kind,angle:facing,time:1,moving:0,attack:0,attackAngle:facing,hitFlash:0,dodging:false});ctx.restore();
     for(let j=0;j<4;j++) {
       ctx.fillStyle='#111e19';ctx.fillRect(j*120,224,120,68);
@@ -108,8 +108,8 @@ function draw() {
     strips[i].forEach((strip,j)=>strip.getContext('2d')!.drawImage(filtered,x+j*120,y+224,120,68,0,0,strip.width,strip.height));
     phases[i].textContent=age===0?'Alive':age<.12?'Impact':age<design.contact?'Falling':age<design.settle?'Settling':'At rest';
     phases[i].dataset.rest=String(age>=design.settle);
-    canvases[i].parentElement!.querySelector('.scale-label')!.textContent=kind==='warden'?'ENLARGED ×1.15':'ENLARGED';
-    canvases[i].parentElement!.querySelector('.native-label')!.textContent=kind==='warden'?'×0.38 SCALE':'1× SCALE';
+    canvases[i].parentElement!.querySelector('.scale-label')!.textContent='LIVE ART';
+    canvases[i].parentElement!.querySelector('.native-label')!.textContent='DEATH · SAME SCALE';
   });
   if(document.activeElement!==slider) slider.value=String(age);
   timeLabel.value=`${age.toFixed(2)} s`;
