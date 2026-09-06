@@ -207,7 +207,7 @@
 @starting-style {
   .ui-tooltip:not([hidden]) { opacity: 0; translate: 0 var(--ui-tooltip-lift, 4px); }
 }
-[data-tooltip]::after {
+[data-tooltip]:not([data-tooltip=""])::after {
   content: attr(data-tooltip);
   font-family: var(--ui-font, var(--font-game));
   position: absolute;
@@ -236,7 +236,7 @@
     visibility var(--ui-tooltip-exit, 120ms);
   pointer-events: none;
 }
-[data-tooltip]:hover::after, [data-tooltip]:focus-visible::after {
+[data-tooltip]:not([data-tooltip=""]):hover::after, [data-tooltip]:not([data-tooltip=""]):focus-visible::after {
   visibility: visible;
   opacity: 1;
   translate: 0 0;

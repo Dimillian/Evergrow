@@ -195,7 +195,8 @@ export class InventoryPanel {
       const item = this.itemAt(location);
       const reserved = location.type === 'equipment' && location.slot === 'offhand' && player.character.equipped.weapon?.weapon?.hands === 2;
       cell.classList.toggle('is-twohand-reserved', reserved);
-      cell.dataset.tooltip = reserved ? `Both hands hold ${player.character.equipped.weapon!.name}. Equipping an off-hand will stow it.` : '';
+      if (reserved) cell.dataset.tooltip = `Both hands hold ${player.character.equipped.weapon!.name}. Equipping an off-hand will stow it.`;
+      else delete cell.dataset.tooltip;
       updateItemSlot(cell, item, { level: player.level, draggable: true,
         emptyMarkup: reserved ? `<span class="character-reserved-glyph" aria-hidden="true">${emptySlotIcon('weapon')}</span><span class="character-reserved-label">2H</span>` : location.type === 'equipment' ? emptySlotIcon(location.slot) : '<span class="ui-empty-item-mark">·</span>',
         label: reserved ? `Off-hand reserved by two-handed ${player.character.equipped.weapon!.name}` : item ? `${itemDisplayName(item)}, ${TIER_NAMES[item.tier]}, item level ${item.itemLevel}${location.type === 'equipment' ? `, equipped in ${SLOT_NAMES[location.slot]}` : ''}${item.requiredLevel > player.level ? `, requires level ${item.requiredLevel}` : ''}` : location.type === 'equipment' ? `${SLOT_NAMES[location.slot]}, empty` : `Empty inventory slot ${location.index + 1}`,
