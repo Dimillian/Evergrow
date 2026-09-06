@@ -1,7 +1,6 @@
 import { transitionEnemy } from './enemy-state.ts';
 import { ENEMY_AI_RULES, ENEMY_DEFINITIONS, type EnemyDefinition, type ProjectileDefinition } from './combat-content.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
-import { canEnemyJoinAttack } from './encounter-director.ts';
 import type { CombatEvent, Enemy, Player, ProjectileEffects, WorldQuery } from './model.ts';
 
 /** Decisions own no RNG, loot, progression, or drawing. Simulation supplies bounded world mutations. */
@@ -102,11 +101,10 @@ function chase(enemy: Enemy, dt: number, context: EnemyAIContext, definition: En
   const targetX = hasSight ? p.x : enemy.lastSeenX, targetY = hasSight ? p.y : enemy.lastSeenY;
   const dx = targetX - enemy.x, dy = targetY - enemy.y, distance = Math.hypot(dx, dy), angle = Math.atan2(dy, dx);
   if (hasSight) enemy.angle = angle;
-  const available = canEnemyJoinAttack(enemy, context.enemies);
   const attackDistance = definition.attack === 'melee'
     ? definition.engageDistance ?? definition.range + p.radius - 3 : definition.maxAttackDistance;
   const minDistance = definition.attack === 'melee' ? 0 : definition.retreatDistance;
-  if (hasSight && distance <= attackDistance && distance > minDistance && available
+  if (hasSight && distance <= attackDistance && distance > minDistance
     && context.visible(enemy.x, enemy.y, p.x, p.y)) {
     enemy.attackAngle = angle; enemy.attackTargetX = p.x; enemy.attackTargetY = p.y;
     transitionEnemy(enemy, 'windup', definition.windup); return;
@@ -123,11 +121,10 @@ function chase(enemy: Enemy, dt: number, context: EnemyAIContext, definition: En
       (Math.sin(angle) * radial + Math.cos(angle) * lateral * side) * definition.speed, context);
     context.move(enemy, velocity.vx, velocity.vy, dt); return;
   }
-  // The pack spreads around the target. Waiting attackers hold a wider support ring,
-  // while a hound approaches its pounce lane instead of crowding melee feet.
+  // Close into an attack lane independently; hounds approach their pounce range.
+  // Separation and flanking spread the pack without parking allies in a waiting ring.
   const spread = definition.role === 'heavy' ? 0 : ENEMY_AI_RULES.flankAngle * side;
-  const ring = !available ? ENEMY_AI_RULES.supportDistance + enemy.radius
-    : definition.role === 'skirmisher' ? definition.preferredDistance * .7 : 18;
+  const ring = definition.role === 'skirmisher' ? definition.preferredDistance * .7 : 18;
   const around = Math.atan2(enemy.y - p.y, enemy.x - p.x) + spread;
   moveToward(enemy, p.x + Math.cos(around) * ring, p.y + Math.sin(around) * ring, definition.speed, dt, context);
   enemy.angle = angle;

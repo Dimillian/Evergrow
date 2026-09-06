@@ -116,19 +116,37 @@ test('hound pounces commit to their advertised lane, move continuously, and resp
   assert.equal(blocked.player.hp, blocked.player.maxHp);
 });
 
-test('pack support positions spread attackers and preserve two pack plus one special attack slots', () => {
+test('a mixed pack attacks concurrently with independent windups instead of shared turns', () => {
   const sim = new Simulation(open, { spawn: false }); sim.player.hp = sim.player.maxHp = 10000;
   for (const [index, kind] of (['stalker', 'hound', 'stalker', 'hound', 'brute', 'archer', 'wisp', 'caster'] as const).entries()) {
     const angle = index * Math.PI / 4, radius = kind === 'hound' ? 100 : kind === 'stalker' ? 30 : kind === 'brute' ? 55 : 190;
-    sim.spawnEnemy(kind, Math.cos(angle) * radius, Math.sin(angle) * radius);
+    const enemy = sim.spawnEnemy(kind, Math.cos(angle) * radius, Math.sin(angle) * radius)!;
+    enemy.state = 'chase'; enemy.awareness = 1;
   }
-  for (let tick = 0; tick < 1200; tick++) {
+  advance(sim, FIXED_STEP);
+  assert.equal(sim.enemies.filter(e => e.state === 'windup').length, 8);
+  for (const enemy of sim.enemies) assert.equal(enemy.stateDuration, ENEMY_DEFINITIONS[enemy.kind].windup);
+  const committed = new Set<number>();
+  for (let tick = 0; tick < 200; tick++) {
     sim.update(FIXED_STEP, idle);
-    const active = sim.enemies.filter(enemy => enemy.state === 'windup' || enemy.state === 'attack');
-    assert.ok(active.filter(enemy => ENEMY_DEFINITIONS[enemy.kind].attackGroup === 'pack').length <= 2);
-    assert.ok(active.filter(enemy => ENEMY_DEFINITIONS[enemy.kind].attackGroup === 'special').length <= 1);
+    for (const enemy of sim.enemies) if (enemy.state === 'attack') committed.add(enemy.id);
   }
+  assert.equal(committed.size, 8, 'every ready role commits without waiting for another attacker');
   assert.ok(sim.enemies.every(enemy => Number.isFinite(enemy.x) && Number.isFinite(enemy.y)));
+});
+
+test('archers release overlapping volleys while another archer finishes its own recovery', () => {
+  const sim = new Simulation(open, { spawn: false });
+  const archers = [-60, 0, 60].map(y => sim.spawnEnemy('archer', -220, y)!);
+  for (const archer of archers) { archer.state = 'chase'; archer.awareness = 1; }
+  const recovering = sim.spawnEnemy('archer', 220, 0)!;
+  recovering.state = 'recover'; recovering.stateTime = 0; recovering.stateDuration = 2; recovering.awareness = 1;
+  advance(sim, FIXED_STEP);
+  assert.ok(archers.every(e => e.state === 'windup'));
+  assert.equal(recovering.state, 'recover', 'each enemy must still finish its personal recovery');
+  advance(sim, 1);
+  assert.equal(sim.projectiles.filter(p => p.sourceKind === 'archer').length, 3);
+  assert.equal(recovering.state, 'recover');
 });
 
 test('ranged roles retreat before starting a new shot when pressured inside their standoff distance', () => {

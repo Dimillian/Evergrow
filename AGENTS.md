@@ -127,3 +127,5 @@ Equipment commits, drag eligibility and comparison previews share `planEquipment
 ## Interactive POIs
 
 `poi-content.ts`, `poi-sites.ts`, `poi-runtime.ts`, `poi-command.ts`, `poi-rewards.ts` and `poi-validation.ts` own six interactive families, one active trial, 256 durable site records and seeded partial reward delivery. Persist complete reward/choice checkpoints before live commitment. Keep all new guardians outside padded camera coverage and within shared 24-actor/camp budgets. Preserve survivor wounds, positions, waves and deaths; absence never means a kill. Blessings derive through character stats, pause in town/menus and disappear on death. `poi-panel.ts` uses the event phase and shared UI; `/events.html` is a frozen save-free review. Current save v3 characters continue without a reset. Dungeons are still proposed.
+
+Enemy attack decisions are independent. Do not restore shared attack slots, attack-group turn budgets or waiting support rings. Each enemy owns its windup/recovery and checks sight/range; simultaneous melee, projectile and ground attacks are intentional. Population/rank limits govern spawning only.

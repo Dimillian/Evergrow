@@ -8,7 +8,6 @@ export const ENCOUNTER_RULES = Object.freeze({
   basePopulation: 9, levelsPerPopulation: 4, targetPopulationCap: 14, hardPopulationCap: 24, roamingReserve: 9,
   veteranCap: 2, eliteCap: 1,
   initialIdleMin: .45, initialIdleRange: .35, corpseDuration: .5, despawnDistance: 1800,
-  activeAttackCaps: Object.freeze({ pack: 2, special: 1 }),
 });
 
 /** Available archetypes vary with the landscape; kill count never makes an old area harder. */
@@ -41,7 +40,10 @@ export function chooseEncounterEnemy(enemies: readonly EncounterActor[], level: 
   for (const enemy of enemies) if (enemy.state !== 'dead' && !enemy.campId) { counts[enemy.kind]++; living++; }
   if (living >= encounterPopulationTarget(level) || livingEnemyCount(enemies) >= ENCOUNTER_RULES.hardPopulationCap) return null;
   const entries = (Object.entries(ENCOUNTER_WEIGHTS[biome]) as [EnemyKind, number][])
-    .filter(([kind]) => ENEMY_DEFINITIONS[kind].attackGroup === 'pack' || counts[kind] < 2);
+    .filter(([kind]) => {
+      const role = ENEMY_DEFINITIONS[kind].role;
+      return role === 'flanker' || role === 'skirmisher' || counts[kind] < 2;
+    });
   if (preferred && entries.some(([kind]) => kind === preferred)) return preferred;
   const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
   let roll = Math.max(0, Math.min(1 - Number.EPSILON, random())) * total;
@@ -63,15 +65,4 @@ export function chooseEncounterRank(enemies: readonly EncounterActor[], level: n
   if (roll < chances.elite && count('elite') < ENCOUNTER_RULES.eliteCap) return 'elite';
   if (roll >= chances.elite && roll < chances.elite + chances.veteran && count('veteran') < ENCOUNTER_RULES.veteranCap) return 'veteran';
   return 'normal';
-}
-
-/** Small enemies share two attack slots; heavy/ranged enemies share one other slot. */
-export function canEnemyJoinAttack(enemy: Enemy, enemies: readonly Enemy[]): boolean {
-  const group = ENEMY_DEFINITIONS[enemy.kind].attackGroup;
-  let attacking = 0;
-  for (const other of enemies) {
-    if (other !== enemy && (other.state === 'windup' || other.state === 'attack')
-      && ENEMY_DEFINITIONS[other.kind].attackGroup === group) attacking++;
-  }
-  return attacking < ENCOUNTER_RULES.activeAttackCaps[group];
 }

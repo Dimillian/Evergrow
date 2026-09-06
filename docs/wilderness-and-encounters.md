@@ -45,3 +45,7 @@ Deterministic tests cover seed/order independence, frozen blueprints, cache/quer
 ## Interactive layer (2026-09-06)
 
 [Interactive POIs](interactive-pois.md) now adds a camp strongbox and actions to all four landmark families, plus roadside reliquaries. The southern approach owns the interaction anchor. E, a nearby click or controller A interacts; one-second opening channels interrupt on movement/damage (beacons take two seconds). Tracked state, rewards and guardian casualties persist per character; generated layout blueprints stay immutable.
+
+## Independent attacks (2026-09-06)
+
+Enemies no longer share attack slots. Every aware enemy with a clear attack lane and valid range starts its own windup as soon as its personal recovery finishes. Melee packs close and flank without waiting in a support ring; Brutes, Archers, Hexers and Wisps can attack concurrently. Individual telegraphs, aim locks, recovery, collision, interruption and sanctuary rules still govern each action. Population/rank limits control spawning, not permission to attack.

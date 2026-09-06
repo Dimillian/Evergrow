@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canEnemyJoinAttack, chooseEncounterEnemy, encounterPopulationTarget, ENCOUNTER_RULES,
+import { chooseEncounterEnemy, encounterPopulationTarget, ENCOUNTER_RULES,
   livingEnemyCount, ENCOUNTER_WEIGHTS, encounterRankChances, chooseEncounterRank } from '../src/encounter-director.ts';
 import { Simulation } from '../src/simulation.ts';
 import { BIOMES, type BiomeId } from '../src/biomes.ts';
@@ -35,7 +35,7 @@ test('each biome selects its authored population mix and full areas consume no r
   assert.equal(chooseEncounterEnemy(full, 1, 'deadwood', () => { throw new Error('Full area rolled a spawn'); }), null);
 });
 
-test('special-enemy caps redistribute their weight without increasing simultaneous threats', () => {
+test('heavy and ranged population limits preserve roaming composition', () => {
   const capped = actors(['brute', 'brute', 'caster', 'caster']);
   for (const roll of [0, .3, .9, .999]) {
     const kind = chooseEncounterEnemy(capped, 100, 'swamp', () => roll);
@@ -66,22 +66,6 @@ test('veterans and elites unlock by area level and retain independent active cap
   assert.equal(chooseEncounterRank([elite, one, two], 10, 0), 'elite');
   assert.equal(chooseEncounterRank([elite, one, two], 10, .1), 'veteran');
 });
-
-test('attack slots independently limit pack enemies and the shared heavy/ranged group', () => {
-  const [one, two, three, brute, caster] = actors(['stalker', 'stalker', 'stalker', 'brute', 'caster']);
-  const enemies = [one, two, three, brute, caster];
-  one.state = 'windup'; two.state = 'attack'; brute.state = 'windup';
-  assert.equal(canEnemyJoinAttack(three, enemies), false);
-  assert.equal(canEnemyJoinAttack(caster, enemies), false);
-  assert.equal(canEnemyJoinAttack(one, enemies), true, 'an actor does not consume its own prospective slot');
-  two.state = 'recover'; brute.state = 'recover';
-  assert.equal(canEnemyJoinAttack(three, enemies), true);
-  assert.equal(canEnemyJoinAttack(caster, enemies), true);
-  caster.state = 'attack';
-  assert.equal(canEnemyJoinAttack(brute, enemies), false);
-  assert.equal(canEnemyJoinAttack(three, enemies), true, 'a ranged attack does not spend the pack allowance');
-});
-
 
 test('every registered climate selects exactly its authored six-archetype weight distribution', () => {
   for (const biome of Object.keys(BIOMES) as BiomeId[]) {
