@@ -44,6 +44,8 @@ The renderer preserves aspect ratio on narrow touch screens without changing the
 
 ## Verification and remaining acceptance
 
+`/touch.html` is a local, save-free responsive layout study using the actual renderer, native UI canvas, touch controls and seeded forest. `?panel=inventory`, `?panel=skills` and `?panel=map` open the real panels with staged data. It never advances gameplay or accesses character saves; mutation actions are intentionally inert. Viewport screenshots of this study establish layout only, not input or mobile performance correctness.
+
 The full code suite passed after PR reconciliation (704 tests at this checkpoint). The touch suite includes twelve tests covering simultaneous analog movement/attack, aim arbitration, quick taps, cancel/capture loss, all ten phase transitions, pointer bounds, tap/pan/pinch discrimination, two-to-one pinch transitions, all twenty targeting recipes, obstructed ground targeting and attack-repeat cancellation. Two inventory integration tests additionally cover equipping and moving through filtered source mappings without losing items or acquisition order. Strict/core type checks and the production build pass. The build retains the existing large-bundle advisory.
 
 No browser gameplay automation or physical-device gameplay test was performed. The user should check thumb reach, comfortable aiming distance, aiming while moving, long item cards, all skill targeting types, keyboard/rotation interruptions, and sustained combat on a phone/tablet. Those ergonomic and hardware-performance observations remain acceptance feedback, not claims established by the code tests.
