@@ -49,6 +49,8 @@ Interactive POIs, town portals and dungeon expeditions are live. Permanent waypo
 
 [HUD directions](hud-directions.md) records the three art studies and selection of Astral. [Concept images](concepts/README.md) are generated visual references, not game assets.
 
+[Humanoid death studies](humanoid-death-studies.md) records four animated Stalker collapse mockups. These are review-only directions; gameplay deaths are unchanged.
+
 ## Historical evidence
 
 - [Foundation checkpoints](history/foundation-checkpoints.md): older successive implementation/test snapshots, preserved with original numbers.
