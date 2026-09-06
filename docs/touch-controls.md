@@ -38,6 +38,12 @@ The compact HUD uses 40px menu, skill and utility buttons, a 72px attack pad and
 
 Touch panel chrome uses 40px header rows, 16px titles, 20px emblems and 32px close/toolbar controls. In landscape the character’s Bag/Equipment/Stats tabs share its title row; narrow portrait layouts wrap them below. Inventory section spacing and the XP footer are compact, leaving more height for actual items. Header labels suppress native text selection/callouts, while search and form inputs retain text editing. Desktop panel sizing stays unchanged.
 
+## Browser gestures and Home Screen launch
+
+Touch presentation suppresses text selection, long-press callouts and browser double-tap zoom across game surfaces. Native inputs keep editing and text selection; panel scrolling and the game/map/atlas pinch handlers remain intact. Input-scoped selection/context/double-click default guards do not synthesize clicks or intercept touchend.
+
+The web app manifest and Apple metadata configure a Home Screen launch without Safari’s browser bars. On iPhone use Share → Add to Home Screen, leave Open as Web App enabled, and launch that icon. A regular Safari tab cannot be forced into this mode by the page. Pause includes a Home Screen reminder, or a user-triggered fullscreen button when the browser exposes the Fullscreen API. The app keeps safe-area layout and does not add a service worker or cache old builds offline. Desktop gestures remain unchanged.
+
 ## Phone landscape
 
 Landscape viewports at least 650px wide and at most 500px tall use a shared CSS-pixel layout (`touch-layout.ts`). The 96px movement stick and 202×148px action cluster sit in opposite bottom corners inside safe areas. The Astral resource footer scales into the gap between them instead of lifting the controls above it. Gold and XP flights land at the same relocated counters. The target plate is a compact 173×50px at the top, and top-left counters respect the notch inset.

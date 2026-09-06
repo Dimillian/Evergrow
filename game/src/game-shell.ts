@@ -136,6 +136,27 @@ export class GameShell {
       const update=()=>{sound.textContent=this.actions.muted?.()?'Sound off':'Sound on';sound.setAttribute('aria-pressed',String(!this.actions.muted?.()));};update();
       sound.addEventListener('click',()=>{this.actions.sound?.();update();},{signal});
       for(const b of controls.querySelectorAll<HTMLButtonElement>('[data-zoom]'))b.addEventListener('click',()=>this.actions.zoom?.(b.dataset.zoom==='in'?1.2:1/1.2),{signal});
+      const standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches
+        || (navigator as Navigator & {standalone?:boolean}).standalone === true;
+      if (!standalone) {
+        const expand = document.createElement('button'); expand.className='ui-button'; expand.type='button';
+        const help = document.createElement('p'); help.className='touch-install-help'; help.hidden=true;
+        if (document.fullscreenEnabled && document.documentElement.requestFullscreen) {
+          expand.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
+          expand.addEventListener('click', async () => {
+            try {
+              if(document.fullscreenElement) await document.exitFullscreen();
+              else await document.documentElement.requestFullscreen();
+              expand.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
+            } catch { help.hidden=false; help.textContent='Fullscreen is unavailable here. Open Evergrow from your Home Screen for an app view.'; }
+          }, {signal});
+        } else {
+          expand.textContent='Home Screen'; expand.setAttribute('aria-expanded','false');
+          help.textContent='For more screen space: in Safari, tap Share → Add to Home Screen. Keep Open as Web App enabled, then launch Evergrow from its new icon.';
+          expand.addEventListener('click',()=>{help.hidden=!help.hidden;expand.setAttribute('aria-expanded',String(!help.hidden));},{signal});
+        }
+        controls.append(expand,help);
+      }
       this.overlay.querySelector('.menu-actions')!.append(controls);
     }
     trapDialogFocus(this.overlay, { signal, initialFocus: play, restoreFocus: false });

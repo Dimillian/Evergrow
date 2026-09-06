@@ -173,3 +173,10 @@
   .touch-mode .character-header { flex-wrap: wrap; }
   .touch-mode .character-tabs { order: 3; flex-basis: 100%; }
 }
+
+/* Suppress native page gestures without swallowing panel scroll or game pinch input. */
+html.touch-mode, .touch-mode :where(#app,#app *) { touch-action: manipulation; }
+.touch-mode :where(#app,#app *) { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.touch-mode :is(input,textarea,[contenteditable="true"]) { user-select: text; -webkit-user-select: text; -webkit-touch-callout: default; }
+.touch-install-help { flex-basis: 100%; margin: 4px 0 0; font: 12px/1.4 var(--ui-font); color: var(--ui-silver); }
+.touch-install-help[hidden] { display: none; }

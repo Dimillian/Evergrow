@@ -47,6 +47,15 @@ export class TouchHUD {
     this.cancel = this.element.querySelector('.touch-cancel')!; this.stick = this.element.querySelector('.touch-move i')!;
     this.aimStick = this.element.querySelector('.touch-aim-knob')!;
     const signal = this.abort.signal;
+    const suppressNativeGesture = (event: Event) => {
+      if (!this.active || !(event.target instanceof Element)
+        || event.target.closest('input,textarea,[contenteditable="true"]')) return;
+      event.preventDefault();
+    };
+    // CSS handles touch zoom; these guard native selection/callout defaults without
+    // intercepting touchend, synthesizing clicks, or changing desktop interactions.
+    for (const event of ['selectstart','contextmenu','dblclick'])
+      mount.addEventListener(event, suppressNativeGesture, {signal,capture:true});
     mount.addEventListener('pointerdown', e => {
       if (e.pointerType === 'touch') { this.setActive(true); this.actions.unlock(); }
       else if (e.pointerType !== 'touch' && e.isTrusted && !options.forceTouch) this.setActive(false);
