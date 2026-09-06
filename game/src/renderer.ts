@@ -6,7 +6,7 @@ import { townPortalAnchor, withinPortalReach, PORTAL_RULES, type PortalAnchor } 
 import { buildingNPC, focusNPC, NPC_NAMES, NPC_COLORS } from './npcs.ts';
 import { drawNPC } from './npc-art.ts';
 import { RewardFeedback } from './reward-feedback.ts';
-import { drawGroundGold, drawRewardMotes, drawGoldBalance } from './reward-art.ts';
+import { drawGroundGold, drawRewardFlights, drawGoldBalance, drawLevelCelebration, drawLevelAnnouncement } from './reward-art.ts';
 import { goldBalance } from './wallet.ts';
 import { BiomeLife } from './biome-life.ts';
 import { BiomeLifeArt } from './biome-life-art.ts';
@@ -187,6 +187,7 @@ export class Renderer {
   handleEvents(events: CombatEvent[], reducedMotion: boolean) {
     this.effects.handleEvents(events);
     this.rewards.handleEvents(events, reducedMotion);
+    this.experienceFeedback.handleEvents(events);
     this.enemyFocus.noteHits(events);
     for (const e of events) {
       if (e.type === 'hit') {
@@ -214,6 +215,7 @@ export class Renderer {
     const feedbackStep = active || settings.phase === 'dead' ? dt : 0;
     this.rewards.update(goldBalance(p.character), feedbackStep, settings.reducedMotion);
     this.experienceDisplay = this.experienceFeedback.update(p, feedbackStep, settings.reducedMotion);
+    this.experienceDisplay.pulse = Math.max(this.experienceDisplay.pulse, this.rewards.xpPulse);
     const px = lerp(p.prevX, p.x, alpha), py = lerp(p.prevY, p.y, alpha);
     this.visualTime += dt;
     this.portalGuide = Math.max(0, this.portalGuide - dt);
@@ -312,7 +314,7 @@ export class Renderer {
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, px, py, alpha, lights);
     drawGroundGold(c, sim.groundGold, this.visualTime, settings.reducedMotion);
-    drawRewardMotes(c, this.rewards, px, py);
+    drawLevelCelebration(c, this.rewards.level, px, py, settings.reducedMotion);
     drawGroundLoot(c, sim.groundItems, this.visualTime, settings.reducedMotion);
     this.effects.drawSword(c);
     this.effects.draw(c);
@@ -344,7 +346,9 @@ export class Renderer {
       experience: this.experienceDisplay,
       gamepad: this.gamepadActive,
     });
+    drawRewardFlights(c, this.rewards, (x, y) => worldToScreen(this.view, x, y), this.width, this.height);
     drawGoldBalance(c, this.rewards);
+    drawLevelAnnouncement(c, this.rewards.level, worldToScreen(this.view, p.x, p.y), this.width, this.height, settings.reducedMotion);
     const boss=sim.enemies.find(e=>e.kind==='warden'&&e.hp>0&&Math.hypot(e.x-p.x,e.y-p.y)<1100);
     if(boss) { drawEnemyPlate(c,boss,this.width,this.height); if(this.focusedEnemy?.id===boss.id)text(c,'CONTROL DURATION −75% · BRIEF STUN IMMUNITY',this.width/2,90,.7,'#9db8a7','center'); }
     if (!boss && this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, this.width, this.height, {

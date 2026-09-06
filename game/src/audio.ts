@@ -26,6 +26,10 @@ const SILENCE = .0001;
 /** Layered oscillators and filtered noise synthesize every sound; no audio assets. */
 export class GameAudio {
   enabled = true;
+  private goldSoundAt = -Infinity;
+  private xpSoundAt = -Infinity;
+  private levelSoundAt = -Infinity;
+  private goldPhrase = 0;
   private ctx: AudioContext | null = null;
   private bus: GainNode | null = null;
   private compressor: DynamicsCompressorNode | null = null;
@@ -163,6 +167,14 @@ export class GameAudio {
   play(event: CombatEvent) {
     if (!this.enabled || !this.ctx || !this.bus || this.disposed || this.ctx.state !== 'running') return;
     if (event.type === 'spawn') return;
+    const now = this.ctx.currentTime;
+    if (event.type === 'gold') {
+      if (now - this.goldSoundAt < .075) return;
+      this.goldPhrase = now - this.goldSoundAt > .7 ? 0 : (this.goldPhrase + 1) % 5;
+      this.goldSoundAt = now;
+    }
+    if (event.type === 'experience') { if (now - this.xpSoundAt < .12) return; this.xpSoundAt = now; }
+    if (event.type === 'level') { if (now - this.levelSoundAt < .7) return; this.levelSoundAt = now; }
     const gain = this.burstGain(event.type);
     const heavy = 'heavy' in event && event.heavy;
     const value = 'value' in event ? event.value : 24;
@@ -175,11 +187,17 @@ export class GameAudio {
       this.tone(a, b, duration, volume * gain, priority, type, delay, attack);
     switch (event.type) {
       case 'gold':
-        tone(2100, 1650, .09, .05, 1, 'sine');
-        tone(2900, 2350, .12, .025, 1, 'sine', .045);
+        {
+          const note = [1, 1.125, 1.25, 1.5, 1.667][this.goldPhrase];
+          noise({ duration: .04, frequency: 6500, endFrequency: 3000, volume: .04, q: 1.8 }, 1);
+          tone(1750 * note, 1640 * note, .22, .10, 1, 'sine');
+          tone(2860 * note, 2750 * note, .16, .045, 1, 'sine', .035);
+          tone(1100 * note, 1100 * note, .12, .018, 1, 'triangle', .075);
+        }
         break;
       case 'experience':
-        tone(660, 880, .16, .018, 1, 'sine');
+        tone(620, 1080, .28, .025, 1, 'sine');
+        tone(1560, 1820, .16, .012, 1, 'sine', .7);
         break;
       case 'swing':
         // Air gathers into the moving blade, with no impact sound until an actual hit.
@@ -230,6 +248,15 @@ export class GameAudio {
         noise({ duration: .22, frequency: 1700, endFrequency: 2600, volume: .065, attack: .035 }, 1);
         break;
       case 'level':
+        // A dedicated warm impact and ascending, resolving chime. Higher priority than routine pickups.
+        tone(140, 65, .5, .14, 3, 'sine', 0, .015);
+        noise({ duration: .8, frequency: 800, endFrequency: 4800, volume: .065, attack: .16, q: .4 }, 3);
+        for (const [i, note] of [523.25, 659.25, 783.99, 1046.5].entries()) {
+          tone(note, note, 1.25 - i * .12, .10, 3, 'sine', i * .11, .018);
+          tone(note * 2, note * 2.005, .9, .023, 3, 'triangle', i * .11 + .015, .025);
+        }
+        tone(392, 392, 1.5, .042, 3, 'sine', .2, .06);
+        break;
       case 'loot':
       case 'pickup':
         tone(heavy ? 610 : 790, heavy ? 820 : 1050, .086, .08, 0, 'sine');

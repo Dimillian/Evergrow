@@ -1,5 +1,4 @@
 import { itemDisplayName } from './items.ts';
-import { formatGold } from './currency-format.ts';
 import { NotificationQueue, type GameNotice, type NoticeEntry } from './notification-queue.ts';
 import { itemIconSVG } from './item-art.ts';
 import { TIER_COLORS, TIER_NAMES } from './items.ts';
@@ -29,6 +28,11 @@ export class GameNotifications {
     this.feed.push(notice);
     this.render();
     if (this.autoAdvance && !this.frame) { this.last = performance.now(); this.frame = requestAnimationFrame(this.tick); }
+  }
+  /** Announce celebrations without adding a duplicate visual feed card. */
+  announce(message: string): void {
+    if (this.disposed) return;
+    this.announcements.set(-1, message); this.scheduleAnnouncement();
   }
   info(message: string): void { this.push({ kind: 'info', message }); }
   clear(): void {
@@ -62,13 +66,6 @@ export class GameNotifications {
             title = itemDisplayName(notice.item); detail = `${TIER_NAMES[notice.item.tier]} · Item level ${notice.item.itemLevel}`;
             icon = itemIconSVG(notice.item, 46); color = TIER_COLORS[notice.item.tier];
 
-          } else if (notice.kind === 'rewards') {
-            title = [notice.gold ? `+${formatGold(notice.gold)} Gold` : '', notice.xp ? `+${formatGold(notice.xp)} XP` : ''].filter(Boolean).join(' · ');
-            detail = ''; icon = uiIcon('diamond'); color = notice.gold ? '#e3c880' : '#c7aff0';
-          } else if (notice.kind === 'level') {
-            title = `Level ${notice.level}`;
-            detail = `+${notice.skillPoints} skill ${notice.skillPoints === 1 ? 'point' : 'points'}  ·  +${notice.statPoints} stat ${notice.statPoints === 1 ? 'point' : 'points'}`;
-            icon = uiIcon('star'); color = '#c7aff0';
           } else if (notice.kind === 'discovery') {
             title = notice.poi.name; detail = `${POI_DEFINITIONS[notice.poi.kind].label} discovered`;
             icon = uiIcon(notice.poi.kind === 'camp' ? 'sword' : notice.poi.kind === 'town' ? 'map' : 'lantern');
@@ -78,9 +75,7 @@ export class GameNotifications {
           } else { title = notice.message; detail = ''; icon = uiIcon('diamond'); color = '#d8b780'; }
           card.element.dataset.kind = notice.kind;
           card.element.style.setProperty('--notice-accent', color);
-          const heading = notice.kind === 'rewards'
-            ? `<span class="notification-reward-totals">${notice.gold ? `<b class="notification-reward-gold">+${escapeUI(formatGold(notice.gold))} Gold</b>` : ''}${notice.xp ? `<b class="notification-reward-xp">+${escapeUI(formatGold(notice.xp))} XP</b>` : ''}</span>`
-            : notice.kind === 'level' ? `Level <b class="notification-number">${escapeUI(notice.level)}</b>` : escapeUI(title);
+          const heading = escapeUI(title);
           card.element.innerHTML = `<span class="notification-icon">${icon}</span><div class="notification-copy"><strong>${heading}</strong>${detail ? `<span>${escapeUI(detail)}</span>` : ''}</div><i class="notification-flourish" aria-hidden="true"></i>`;
           announced.set(entry.id, `${title}${detail ? `. ${detail}` : ''}`);
         }
@@ -90,15 +85,17 @@ export class GameNotifications {
     lane('.notification-feed', this.feed.visible, this.cards);
     if (announced.size) {
       for (const [id, message] of announced) this.announcements.set(id, message);
-      if (!this.announceScheduled) {
-        this.announceScheduled = true;
-        queueMicrotask(() => {
-          this.announceScheduled = false;
-          if (!this.disposed && this.announcements.size)
-            this.element.querySelector('[role="status"]')!.textContent = [...this.announcements.values()].join('. ');
-          this.announcements.clear();
-        });
-      }
+      this.scheduleAnnouncement();
     }
+  }
+  private scheduleAnnouncement(): void {
+    if (this.announceScheduled) return;
+    this.announceScheduled = true;
+    queueMicrotask(() => {
+      this.announceScheduled = false;
+      if (!this.disposed && this.announcements.size)
+        this.element.querySelector('[role="status"]')!.textContent = [...this.announcements.values()].join('. ');
+      this.announcements.clear();
+    });
   }
 }

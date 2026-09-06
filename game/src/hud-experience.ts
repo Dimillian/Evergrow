@@ -4,34 +4,46 @@ import { HUD_ART } from './hud-layout.ts';
 import { UI_THEME } from './ui-theme.ts';
 import { text, textWidth } from './font.ts';
 
+import type { CombatEvent } from './model.ts';
+import { RewardCounter } from './reward-counter.ts';
+
 type Progress = Pick<Player, 'level' | 'xp'>;
-export interface ExperienceDisplay { fill: number; pulse: number; }
+export interface ExperienceDisplay { fill: number; pulse: number; pendingFill: number; pending: number; level: number; xp: number; }
 
-/** Presentation only: smooth gains within a level, restart the fill on a new one. */
+/** Reward amounts advance a visual ledger; the actual character has already gained its levels. */
 export class ExperienceFeedback {
+  private counter = new RewardCounter(.6);
   private level = 0;
-  private xp = 0;
-  private fill = 0;
-  private pulse = 0;
-
-  reset(): void { this.level = this.xp = this.fill = this.pulse = 0; }
-
+  private observed: Progress = { level: 0, xp: 0 };
+  private received = 0;
+  private fullTime = 0;
+  reset(): void { this.counter.reset(); this.level = this.received = this.fullTime = 0; this.observed = { level: 0, xp: 0 }; }
+  handleEvents(events: readonly CombatEvent[]): void {
+    for (const event of events) if (event.type === 'experience') this.received += event.amount;
+  }
   update(player: Progress, dt: number, reducedMotion: boolean): ExperienceDisplay {
-    const target = player.xp / xpForNextLevel(player.level);
-    const step = Math.max(0, Number.isFinite(dt) ? dt : 0);
-    this.pulse = Math.max(0, this.pulse - step * 1.5);
-    if (!this.level || player.level < this.level || (player.level === this.level && player.xp < this.xp)) {
-      this.fill = target; this.pulse = 0;
-    } else if (player.level > this.level) {
-      this.fill = 0; this.pulse = 1;
-    } else if (player.xp > this.xp) {
-      this.pulse = Math.max(this.pulse, .45);
+    if (!this.level || player.level < this.observed.level || (player.level === this.observed.level && player.xp < this.observed.xp) || reducedMotion) {
+      this.level = player.level; this.counter.reset(player.xp); this.fullTime = 0;
+    } else {
+      const amount = this.received || (player.level === this.observed.level ? Math.max(0, player.xp - this.observed.xp) : 0);
+      if (amount) this.counter.add(amount);
+      else if (player.level !== this.observed.level) { this.level = player.level; this.counter.reset(player.xp); }
+      const needed = xpForNextLevel(this.level);
+      if (this.counter.value >= needed && this.level < player.level) {
+        this.fullTime += Math.max(0, dt);
+        if (this.fullTime >= .12) {
+          this.counter.shift(needed); this.level++; this.fullTime = 0;
+          // Huge prototype rewards compress intermediate levels rather than queuing minutes of animation.
+          if (player.level - this.level > 4) { this.level = player.level; this.counter.reset(0); this.counter.add(player.xp, 0); }
+        }
+      }
+      this.counter.update(dt, reducedMotion, xpForNextLevel(this.level));
     }
-    this.level = player.level; this.xp = player.xp;
-    if (reducedMotion) { this.fill = target; this.pulse = 0; }
-    else this.fill += (target - this.fill) * (1 - Math.exp(-step * 10));
-    if (Math.abs(this.fill - target) < .0001) this.fill = target;
-    return { fill: this.fill, pulse: this.pulse };
+    this.received = 0; this.observed = { level: player.level, xp: player.xp };
+    const needed = xpForNextLevel(this.level);
+    return { fill: Math.min(1, this.counter.value / needed), pendingFill: Math.min(1, this.counter.target / needed),
+      pending: Math.ceil(this.counter.pending), pulse: this.counter.pulse, level: this.level,
+      xp: Math.min(needed, Math.round(this.counter.value)) };
   }
 }
 
@@ -47,7 +59,7 @@ function railPath(c: CanvasRenderingContext2D, x: number, y: number, w: number, 
 export function drawHUDExperience(c: CanvasRenderingContext2D, player: Progress, time: number,
   display?: ExperienceDisplay): void {
   const { x, y, width: w, height: h, railHeight: rh } = HUD_ART.experience;
-  const needed = xpForNextLevel(player.level);
+  const needed = xpForNextLevel(display?.level ?? player.level);
   const fill = Math.max(0, Math.min(1, display?.fill ?? player.xp / needed));
   const pulse = Math.max(0, Math.min(1, display?.pulse ?? 0));
   const ui = UI_THEME.palette;
@@ -80,6 +92,14 @@ export function drawHUDExperience(c: CanvasRenderingContext2D, player: Progress,
     c.fillStyle = '#eee4ff'; c.globalAlpha = .25 + Math.sin(time * 1.5) * .08;
     c.fillRect(bx, by, bw * fill, .6); c.restore();
   }
+  const pendingFill = Math.max(fill, Math.min(1, display?.pendingFill ?? fill));
+  if (pendingFill > fill) {
+    const pending = c.createLinearGradient(bx, by, bx, by + bh);
+    pending.addColorStop(0, '#ead8ffbf'); pending.addColorStop(.5, '#ba93ef80'); pending.addColorStop(1, '#8063b944');
+    c.fillStyle = pending; c.fillRect(bx + bw * fill, by, bw * (pendingFill - fill), bh);
+    c.fillStyle = '#f5e7ff'; c.globalAlpha = .65;
+    c.fillRect(bx + bw * pendingFill - .7, by, .7, bh); c.globalAlpha = 1;
+  }
   // Short internal ticks preserve the uninterrupted glass and its clean outer edge.
   for (let i = 1; i < 4; i++) {
     c.fillStyle = '#b3bdce50'; c.fillRect(bx + bw * i / 4, by + bh - 1.2, .5, 1.2);
@@ -98,9 +118,10 @@ export function drawHUDExperience(c: CanvasRenderingContext2D, player: Progress,
   const cy = y + h - 10;
   c.beginPath(); c.moveTo(x + 5, cy - 3); c.lineTo(x + 8, cy); c.lineTo(x + 5, cy + 3); c.lineTo(x + 2, cy); c.closePath();
   c.fillStyle = '#13202c'; c.fill(); c.strokeStyle = '#9c9ebc'; c.lineWidth = .65; c.stroke();
-  const level = `LV ${player.level}`, amount = `${player.xp} / ${needed} XP`;
+  const level = `LV ${display?.level ?? player.level}`, amount = `${display?.xp ?? player.xp} / ${needed} XP`;
   const size = Math.min(1.04, (w - 24) / Math.max(1, textWidth(level) + textWidth(amount)));
   text(c, level, x + 13, cy - 3.85 * size, size, pulse > .6 ? '#e9ddff' : ui.silver);
   text(c, amount, x + w - 2, cy - 3.85 * size, size, '#b5accb', 'right');
+  if (display && display.pending > 0) text(c, `+${display.pending} XP`, x + w / 2, y - 8, .8, '#e2caff', 'center');
   c.restore();
 }

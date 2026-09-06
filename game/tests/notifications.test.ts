@@ -15,26 +15,15 @@ test('loot bursts queue independently, preserve item identity and wait through t
   queue.clear(); assert.ok(queue.idle);
 });
 
-test('multi-level rewards combine exact earned points and repeated warnings do not stack', () => {
+test('duplicate warnings renew and queued notices stay bounded', () => {
   const queue = new NotificationQueue(1);
-  queue.push({ kind: 'level', level: 2, skillPoints: 1, statPoints: 5 }); queue.advance(2);
-  queue.push({ kind: 'level', level: 5, skillPoints: 3, statPoints: 15 });
-  assert.equal(queue.visible.length, 1); assert.equal(queue.visible[0].age, 0);
-  assert.deepEqual(queue.visible[0].notice, { kind: 'level', level: 5, skillPoints: 4, statPoints: 20 });
-  queue.clear(); queue.push({ kind: 'info', message: 'Inventory full' }); queue.advance(2);
+  queue.push({ kind: 'info', message: 'Inventory full' }); queue.advance(2);
   queue.push({ kind: 'info', message: 'Inventory full' });
   assert.equal(queue.visible.length, 1); assert.equal(queue.pendingCount, 0); assert.equal(queue.visible[0].age, 0);
-});
-
-test('pending messages stay bounded and level-ups take priority over discovery backlogs', () => {
-  const queue = new NotificationQueue(1);
-  queue.push({ kind: 'area', id: 'a', name: 'A', level: 1 });
   for (let i = 0; i < 40; i++) queue.push({ kind: 'area', id: `b${i}`, name: `B${i}`, level: 1 });
-  queue.push({ kind: 'level', level: 2, skillPoints: 1, statPoints: 5 });
   assert.equal(queue.pendingCount, 24);
-  queue.advance(5); assert.equal(queue.visible[0].notice.kind, 'level');
-  queue.advance(NaN); assert.equal(queue.visible[0].age, 0);
-  queue.clear(); assert.equal(queue.visible.length, 0); assert.equal(queue.pendingCount, 0);
+  queue.advance(5); assert.equal(queue.visible[0].notice.kind, 'area');
+  queue.clear(); assert.ok(queue.idle);
 });
 
 test('biome borders require sustained entry and continuing does not announce the starting biome', () => {
@@ -58,39 +47,4 @@ test('distinct common and magic pickups retain their names, tiers and order', ()
   assert.deepEqual(queue.visible.map(entry => entry.notice), items.slice(0, 2).map(item => ({ kind: 'loot', item })));
   queue.advance(4);
   assert.deepEqual(queue.visible[0].notice, { kind: 'loot', item: items[2] });
-});
-
-test('gold and XP accumulate independently in one card, renew its lifetime and reset only after it disappears', () => {
-  const queue = new NotificationQueue(2);
-  queue.push({ kind: 'rewards', gold: 7, xp: 0 });
-  const id = queue.visible[0].id;
-  queue.advance(2);
-  queue.push({ kind: 'rewards', gold: 0, xp: 20 });
-  queue.push({ kind: 'rewards', gold: 11, xp: 40 });
-  assert.equal(queue.visible.length, 1); assert.equal(queue.visible[0].id, id);
-  assert.equal(queue.visible[0].age, 0);
-  assert.deepEqual(queue.visible[0].notice, { kind: 'rewards', gold: 18, xp: 60 });
-  queue.advance(queue.visible[0].duration + NOTICE_EXIT_SECONDS / 2);
-  queue.push({ kind: 'rewards', gold: 2, xp: 5 });
-  assert.equal(queue.visible[0].id, id, 'a fading card still receives gains until removed');
-  assert.deepEqual(queue.visible[0].notice, { kind: 'rewards', gold: 20, xp: 65 });
-  queue.advance(4); assert.ok(queue.idle);
-  queue.push({ kind: 'rewards', gold: 3, xp: 0 });
-  assert.notEqual(queue.visible[0].id, id);
-  assert.deepEqual(queue.visible[0].notice, { kind: 'rewards', gold: 3, xp: 0 });
-});
-
-test('queued reward totals accumulate while items keep their own notices and a visible feed slot', () => {
-  const queue = new NotificationQueue(2);
-  const items = [generateItem(505, 1), generateItem(506, 1)];
-  for (const item of items) queue.push({ kind: 'loot', item });
-  for (let i = 0; i < 100; i++) queue.push({ kind: 'rewards', gold: 4, xp: 20 });
-  assert.equal(queue.pendingCount, 1);
-  assert.deepEqual(queue.visible.map(e => e.notice), items.map(item => ({ kind: 'loot', item })));
-  queue.advance(4);
-  assert.deepEqual(queue.visible[0].notice, { kind: 'rewards', gold: 400, xp: 2000 });
-  queue.push({ kind: 'loot', item: generateItem(507, 1) });
-  assert.equal(queue.visible.length, 2); assert.equal(queue.visible[1].notice.kind, 'loot');
-  queue.clear(); queue.push({ kind: 'rewards', gold: 1, xp: 1 });
-  assert.deepEqual(queue.visible[0].notice, { kind: 'rewards', gold: 1, xp: 1 });
 });

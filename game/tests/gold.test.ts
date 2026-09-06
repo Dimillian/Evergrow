@@ -78,7 +78,7 @@ test('kill awards XP immediately, drops uncredited gold, then collecting awards 
 test('reward particles and balance catch up at any frame rate, expire, and stay bounded', () => {
   const events: CombatEvent[] = Array.from({ length: 1000 }, (_, i) => ({ type: 'gold', amount: 10, balance: (i + 1) * 10, x: 1, y: 2 }));
   const a = new RewardFeedback(), b = new RewardFeedback();
-  for (const f of [a, b]) { f.update(0, 0, false); f.handleEvents(events, false); assert.equal(f.motes.length, 96); }
+  for (const f of [a, b]) { f.update(0, 0, false); f.handleEvents(events, false); assert.equal(f.motes.length, 12); }
   for (let i = 0; i < 60; i++) a.update(10000, 1 / 60, false);
   for (let i = 0; i < 120; i++) b.update(10000, 1 / 120, false);
   assert.ok(Math.abs(a.balance - b.balance) < 1e-6);

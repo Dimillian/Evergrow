@@ -22,13 +22,8 @@ const canvas = root.querySelector<HTMLCanvasElement>('#review-world')!, ui = roo
 const renderer = new Renderer(), fx = life.own(new PostFX(canvas));
 const notices = life.own(new GameNotifications(shell, { autoAdvance: false }));
 const mode = new URLSearchParams(location.search).get('view');
-if (mode === 'rewards') {
-  notices.push({ kind: 'rewards', gold: 17, xp: 20 });
-  notices.push({ kind: 'rewards', gold: 8, xp: 42 });
-}
-else if (mode === 'discovery') notices.push({ kind: 'discovery', poi: { id: 'review-town', kind: 'town', name: 'Briarwatch', x: 0, y: 0, description: '' } });
+if (mode === 'discovery') notices.push({ kind: 'discovery', poi: { id: 'review-town', kind: 'town', name: 'Briarwatch', x: 0, y: 0, description: '' } });
 else if (mode === 'area') notices.push({ kind: 'area', id: 'swamp', name: 'The Mire', level: 4 });
-else notices.push({ kind: 'level', level: 5, skillPoints: 1, statPoints: 5 });
 notices.push({ kind: 'loot', item: generateItem(94, 5, 'weapon', 'longsword', 'rare') });
 notices.push({ kind: 'loot', item: generateItem(138, 4, 'boots', undefined, 'magic') });
 notices.push({ kind: 'loot', item: generateItem(279, 4, 'head', undefined, 'common') });
