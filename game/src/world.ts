@@ -9,7 +9,7 @@ import { circleHitsRect, contains, freezeSettlement, generateSettlement, interse
 import type { Building, POI, Settlement } from './settlements.ts';
 import { pathDistance, roadSurface, roadAnchors } from './road-shape.ts';
 import { groundContact, surfaceWaterWeight } from './ground-material.ts';
-import { drawGroundSurface } from './ground-surface.ts';
+import { groundSurfaceSteps } from './ground-surface.ts';
 import { drawRoadDetails } from './road-art.ts';
 import { isWorldCoordinate, validWorldRectangle, WORLD_QUERY_LIMITS } from './world-query.ts';
 import { generateWildernessSite, startingEnemyCamp, wildernessPOI, WILDERNESS_RULES, type WildernessSite, type EnemyCamp } from './wilderness-sites.ts';
@@ -32,6 +32,7 @@ export const TILE_SIZE = 256;
 export const WORLD_GENERATION_VERSION = 5;
 const PROP_CELL_SIZE = 80;
 const MAX_PROP_RADIUS = 15;
+const PROP_CACHE_LIMIT = 8192;
 const TILE_CACHE_LIMIT = 48;
 const SETTLEMENT_CACHE_LIMIT = 32;
 const UINT_RANGE = 0x100000000;
@@ -80,6 +81,8 @@ function compareProps(a: Prop, b: Prop): number {
 export class World {
   readonly seed: number;
   readonly generationVersion = WORLD_GENERATION_VERSION;
+  private propCells = new Map<string, Prop | null>();
+  private groundWork = new Map<string, { canvas: HTMLCanvasElement; steps: Generator<void> }>();
   private groundTiles = new Map<string, HTMLCanvasElement>();
   private settlements = new Map<number, Settlement>();
   private settlementCells = new Map<string, readonly Place[]>();
@@ -94,7 +97,7 @@ export class World {
   get cacheStats() { return { groundTiles: this.groundTiles.size, settlements: this.settlements.size, wildernessSites: this.wilderness.size }; }
 
   /** Cached generated content belongs to this world instance, not global module state. */
-  dispose() { this.groundTiles.clear(); this.settlements.clear(); this.settlementCells.clear(); this.wilderness.clear(); }
+  dispose() { this.groundWork.clear(); this.propCells.clear(); this.groundTiles.clear(); this.settlements.clear(); this.settlementCells.clear(); this.wilderness.clear(); }
 
   sampleBiome(x: number, y: number): BiomeSample { return sampleBiome(x, y, this.seed); }
 
@@ -278,6 +281,15 @@ export class World {
   }
 
   private cellProp(cx: number, cy: number): Prop | null {
+    const key = `${cx}:${cy}`, cached = this.propCells.get(key);
+    if (cached !== undefined) return cached;
+    const generated = this.generateCellProp(cx, cy), prop = generated ? Object.freeze(generated) : null;
+    // Cache empty cells too. Blueprints are immutable; FIFO avoids churn on hot collision queries.
+    if (this.propCells.size >= PROP_CACHE_LIMIT) this.propCells.delete(this.propCells.keys().next().value!);
+    this.propCells.set(key, prop); return prop;
+  }
+
+  private generateCellProp(cx: number, cy: number): Prop | null {
     const x = (cx + 0.18 + random(cx, cy, this.seed, 1) * 0.64) * PROP_CELL_SIZE;
     const y = (cy + 0.18 + random(cx, cy, this.seed, 2) * 0.64) * PROP_CELL_SIZE;
     if ((x / 180) ** 2 + (y / 140) ** 2 < 1) return null;
@@ -371,7 +383,9 @@ export class World {
   }
 
   /** Ground is rendered only on demand; the constructor and queries need no DOM. */
-  getGroundTile(tileX: number, tileY: number, createCanvas?: CanvasFactory): HTMLCanvasElement {
+  getGroundTile(tileX: number, tileY: number, createCanvas?: CanvasFactory): HTMLCanvasElement;
+  getGroundTile(tileX: number, tileY: number, createCanvas: CanvasFactory | undefined, budget: number): HTMLCanvasElement | null;
+  getGroundTile(tileX: number, tileY: number, createCanvas?: CanvasFactory, budget = Infinity): HTMLCanvasElement | null {
     if (![tileX, tileY, tileX * TILE_SIZE, tileY * TILE_SIZE,
       (tileX + 1) * TILE_SIZE, (tileY + 1) * TILE_SIZE].every(Number.isSafeInteger)) {
       throw new RangeError('Ground tile coordinates must be safe integers.');
@@ -383,12 +397,23 @@ export class World {
       this.groundTiles.set(key, cached);
       return cached;
     }
-    const canvas = createCanvas ? createCanvas() : document.createElement('canvas');
-    canvas.width = TILE_SIZE;
-    canvas.height = TILE_SIZE;
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('A 2D canvas context is required for ground tiles.');
-    this.drawGround(context, tileX * TILE_SIZE, tileY * TILE_SIZE);
+    if (!(budget > 0)) return null;
+    const deadline = performance.now() + budget;
+    let work = this.groundWork.get(key);
+    if (!work) {
+      const canvas = createCanvas ? createCanvas() : document.createElement('canvas');
+      canvas.width = TILE_SIZE; canvas.height = TILE_SIZE;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('A 2D canvas context is required for ground tiles.');
+      work = { canvas, steps: this.drawGroundSteps(context, tileX * TILE_SIZE, tileY * TILE_SIZE) };
+      if (this.groundWork.size >= 16) this.groundWork.delete(this.groundWork.keys().next().value!);
+      this.groundWork.set(key, work);
+    }
+    let complete = false;
+    while (performance.now() < deadline) if (work.steps.next().done) { complete = true; break; }
+    if (!complete) return null;
+    const { canvas } = work;
+    this.groundWork.delete(key);
     this.groundTiles.set(key, canvas);
     if (this.groundTiles.size > TILE_CACHE_LIMIT) {
       this.groundTiles.delete(this.groundTiles.keys().next().value!);
@@ -396,22 +421,24 @@ export class World {
     return canvas;
   }
 
-  private drawGround(context: CanvasRenderingContext2D, originX: number, originY: number): void {
+  private *drawGroundSteps(context: CanvasRenderingContext2D, originX: number, originY: number): Generator<void> {
     // Resolve nearby geometry once per tile, never while looking up individual pixels.
     const towns = this.getSettlements(originX - 192, originY - 192, TILE_SIZE + 384, TILE_SIZE + 384);
     const buildings = towns.flatMap(town => town.buildings);
     // Every material sample and detail anchor is in world space. Tile edges are
     // merely a crop of the same illustration, including at negative coordinates.
-    drawGroundSurface(context, originX, originY, TILE_SIZE, (x, y) => this.surfaceColor(x, y, towns, true));
+    yield* groundSurfaceSteps(context, originX, originY, TILE_SIZE, (x, y) => this.surfaceColor(x, y, towns, true));
     drawGroundPatches(context, originX, originY, TILE_SIZE, this.seed, (x, y) => this.sampleBiome(x, y).id,
       (x, y) => this.roadWeight(x, y) < .025 && this.pavingWeight(towns, x, y, 0) < .025
         && !buildings.some(building => contains(building, x, y, 12)));
+    yield;
     drawRoadDetails(context, originX, originY, TILE_SIZE, this.seed, (x, y) => {
       if (buildings.some(building => contains(building, x, y, 10))) return { road: 0, paved: 0 };
       const road = this.roadWeight(x, y);
       return { road, paved: this.pavingWeight(towns, x, y, road) };
     });
 
+    yield;
     const detailCell = 15;
     const margin = 22;
     for (let cy = Math.floor((originY - margin) / detailCell);
@@ -472,6 +499,7 @@ export class World {
           context.stroke();
         }
       }
+      yield;
     }
   }
 }

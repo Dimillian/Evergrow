@@ -12,7 +12,14 @@ class RecordingContext {
   transform: Matrix = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
   draws: Blit[] = [];
   private saved: Matrix[] = [];
-  drawImage(image: HTMLCanvasElement, ...args: number[]) { this.draws.push({ image, args, transform: { ...this.transform } }); }
+  drawImage(image: HTMLCanvasElement, ...args: number[]) {
+    if ((image as unknown as RecordingCanvas).context === this && args.length === 8) {
+      const [sx,sy,w,h,dx,dy] = args;
+      this.draws = this.draws.filter(draw => draw.args[0] >= sx && draw.args[1] >= sy
+        && draw.args[0] + TILE_SIZE <= sx+w && draw.args[1]+TILE_SIZE <= sy+h)
+        .map(draw => ({ ...draw, args: [draw.args[0]+dx-sx, draw.args[1]+dy-sy] }));
+    } else this.draws.push({ image, args, transform: { ...this.transform } });
+  }
   clearRect() { this.draws = []; }
   save() { this.saved.push({ ...this.transform }); }
   restore() { this.transform = this.saved.pop()!; }
@@ -127,4 +134,32 @@ test('long travel and viewport changes keep terrain storage bounded to the curre
     }
   }
   assert.equal(canvases.length, 1);
+});
+
+
+test('crossing a tile boundary requests only the exposed strip, preserving overlapping pixels', () => {
+  const { draw, world, canvases } = fixture();
+  draw(50,60,960,600); const first=world.requests;
+  draw(306,60,960,600);
+  assert.equal(world.requests-first,4,'only four new edge tiles, not the complete twenty-tile buffer');
+  const tiles=canvases[0].context.draws;
+  assert.equal(tiles.length,20);
+  const second=world.requests;
+  draw(562,316,960,600);
+  assert.equal(world.requests-second,8,'a diagonal crossing adds one row and column with the corner counted once');
+});
+
+test('movement prepares at most one offscreen tile per frame and reuses it at the next crossing', () => {
+  const { layer, draw, world }=fixture();
+  draw(120,30,960,600);
+  for(let i=1;i<40;i++) {
+    const before=world.requests; draw(120+i*3,30,960,600);
+    assert.ok(world.requests-before<=1);
+  }
+  assert.ok((layer as unknown as { prefetched: Map<string,unknown> }).prefetched.size<=16);
+  const before=world.requests;
+  draw(270,30,960,600);
+  assert.equal(world.requests,before,'the next column is already fully drawn offscreen');
+  layer.reset();
+  assert.equal((layer as unknown as { prefetched: Map<string,unknown> }).prefetched.size,0);
 });

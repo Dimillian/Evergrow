@@ -3,13 +3,22 @@ type Color = readonly number[];
 /** Interpolate a shared world grid into opaque pixels before adding fine artwork. */
 export function drawGroundSurface(c: CanvasRenderingContext2D, originX: number, originY: number,
   size: number, sample: (x: number, y: number) => Color): void {
+  for (const _ of groundSurfaceSteps(c, originX, originY, size, sample)) { /* synchronous callers finish the same work */ }
+}
+
+/** Cooperative work units preserve the exact sampler and final pixels. */
+export function* groundSurfaceSteps(c: CanvasRenderingContext2D, originX: number, originY: number,
+  size: number, sample: (x: number, y: number) => Color): Generator<void> {
   const step = 4;
   const cells = Math.ceil(size / step), stride = cells + 1;
   const colors = new Float32Array(stride * stride * 3);
-  for (let y = 0; y <= cells; y++) for (let x = 0; x <= cells; x++) {
-    const color = sample(originX + x * step, originY + y * step);
-    const index = (y * stride + x) * 3;
-    colors[index] = color[0]; colors[index + 1] = color[1]; colors[index + 2] = color[2];
+  for (let y = 0; y <= cells; y++) {
+    for (let x = 0; x <= cells; x++) {
+      const color = sample(originX + x * step, originY + y * step);
+      const index = (y * stride + x) * 3;
+      colors[index] = color[0]; colors[index + 1] = color[1]; colors[index + 2] = color[2];
+    }
+    if (y % 4 === 3) yield;
   }
   const image = c.createImageData(size, size), pixels = image.data;
   let pixel = 0;
@@ -32,6 +41,7 @@ export function drawGroundSurface(c: CanvasRenderingContext2D, originX: number, 
         pixels[pixel++] = 255;
       }
     }
+    if (y % 32 === 31) yield;
   }
   c.putImageData(image, 0, 0);
 }

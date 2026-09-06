@@ -114,9 +114,10 @@ export function pathDistance(x: number, y: number, seed = 7319): number {
   let distance = Infinity;
   for (const s of segmentsAt(x, y, seed)) {
     const t = clamp(((x - s.ax) * s.dx + (y - s.ay) * s.dy) / s.length2);
-    distance = Math.min(distance, Math.hypot(x - s.ax - t * s.dx, y - s.ay - t * s.dy));
+    const dx = x - s.ax - t * s.dx, dy = y - s.ay - t * s.dy;
+    distance = Math.min(distance, dx * dx + dy * dy);
   }
-  return distance;
+  return Math.sqrt(distance);
 }
 export function roadSurface(x: number, y: number, seed: number): {
   weight: number;

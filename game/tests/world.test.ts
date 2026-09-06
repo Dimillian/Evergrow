@@ -115,3 +115,51 @@ test('ground tiles use an injected canvas and a bounded LRU cache', () => {
   assert.notEqual(world.getGroundTile(0, -1, factory), second);
   assert.equal(created, 50);
 });
+
+
+test('repeated prop and collision queries reuse immutable cell blueprints, including empty cells', () => {
+  const world = new World(18427);
+  const internals = world as unknown as { generateCellProp(x:number,y:number): unknown; propCells: Map<string,unknown> };
+  const generate = internals.generateCellProp.bind(world); let generations=0;
+  internals.generateCellProp=(x,y)=>{generations++;return generate(x,y);};
+  const first=world.getProps(2100,1500,1400,1100), count=generations;
+  assert.ok(first.length>0 && count>first.length);
+  for(let i=0;i<20;i++) assert.deepEqual(world.getProps(2100,1500,1400,1100),first);
+  assert.equal(generations,count);
+  for(const prop of first.filter(p=>p.id.startsWith('prop:'))) assert.ok(Object.isFrozen(prop));
+  for(let i=0;i<30;i++) world.blocked(2400,1800,14);
+  assert.equal(generations,count,'collision reads reuse the same cells');
+  world.dispose(); assert.equal(internals.propCells.size,0);
+});
+
+test('prop blueprint eviction is bounded and cannot alter regenerated identities or values', () => {
+  const world = new World(7319);
+  const internals = world as unknown as { cellProp(x:number,y:number): unknown; propCells: Map<string,unknown>; generateCellProp(x:number,y:number): unknown };
+  const before=world.getProps(2100,1500,500,500);
+  // Cheap deterministic empty cells exercise capacity without generating thousands of distant towns.
+  const generate=internals.generateCellProp;
+  internals.generateCellProp=()=>null;
+  for(let i=0;i<9000;i++) internals.cellProp(100000+i,100000);
+  assert.equal(internals.propCells.size,8192);
+  internals.generateCellProp=generate;
+  assert.deepEqual(world.getProps(2100,1500,500,500),before);
+});
+
+
+test('budgeted ground preparation stays private until complete and foreground requests resume the same canvas', t => {
+  const original=Object.getOwnPropertyDescriptor(globalThis,'performance');
+  let now=0,steps=0,created=0;
+  Object.defineProperty(globalThis,'performance',{configurable:true,value:{now:()=>now}});
+  t.after(()=>original ? Object.defineProperty(globalThis,'performance',original) : Reflect.deleteProperty(globalThis,'performance'));
+  const world=new World();
+  const internals=world as unknown as {drawGroundSteps():Generator<void>;groundWork:Map<string,unknown>};
+  internals.drawGroundSteps=function*(){for(let i=0;i<20;i++){steps++;now++;yield;}};
+  const factory=()=>{created++;return {width:0,height:0,getContext:()=>({})} as unknown as HTMLCanvasElement;};
+  assert.equal(world.getGroundTile(0,0,factory,0),null);assert.equal(created,0);
+  assert.equal(world.getGroundTile(0,0,factory,2),null);assert.equal(steps,2);assert.equal(world.cacheStats.groundTiles,0);
+  const ready=world.getGroundTile(0,0,factory);assert.ok(ready);assert.equal(steps,20);assert.equal(created,1);
+  assert.equal(world.getGroundTile(0,0,factory,2),ready);assert.equal(steps,20);
+  for(let i=1;i<40;i++)world.getGroundTile(i,0,factory,1);
+  assert.equal(internals.groundWork.size,16,'abandoned preparation cannot grow indefinitely');
+  world.dispose();assert.equal(internals.groundWork.size,0);
+});

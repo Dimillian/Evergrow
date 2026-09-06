@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { drawGroundSurface } from '../src/ground-surface.ts';
+import { drawGroundSurface, groundSurfaceSteps } from '../src/ground-surface.ts';
 
 interface Pixels { width: number; height: number; data: Uint8ClampedArray; }
 type Sample = (x: number, y: number) => readonly number[];
@@ -80,4 +80,15 @@ test('surface allocation is opaque and sampling stays bounded to the shared coar
     }
     if (size === 256) assert.equal(calls.length, 4225, 'a tile must not query its material independently for every pixel');
   }
+});
+
+
+test('cooperative sampling yields before completion and publishes the same complete opaque surface', () => {
+  const c = new RecordingContext(); let calls=0;
+  const iterator=groundSurfaceSteps(c as unknown as CanvasRenderingContext2D,-256,256,256,(x,y)=>{calls++;return [80+x/100,90+y/100,100];});
+  assert.equal(iterator.next().done,false);assert.ok(calls>0&&calls<4225);assert.equal(c.writes.length,0);
+  for(const _ of iterator) { /* resume without publishing partial pixels */ }
+  assert.equal(calls,4225);assert.equal(c.writes.length,1);
+  const expected=render(-256,256,256,(x,y)=>[80+x/100,90+y/100,100]).image;
+  assert.deepEqual(c.writes[0].image.data,expected.data);
 });
