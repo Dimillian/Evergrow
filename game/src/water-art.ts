@@ -11,13 +11,18 @@ export class WaterArt {
   private mask = document.createElement('canvas');
   private reflections = document.createElement('canvas');
   private stamp = document.createElement('canvas');
+  private staticReflections = document.createElement('canvas');
+  private propStamps: Array<{ sprite: Sprite; scale: number; image: HTMLCanvasElement; id: number }> = [];
+  private propDraws: Array<{ image: HTMLCanvasElement; id: number; x: number; y: number }> = [];
+  private staticKey = '';
+  private stampSerial = 0;
   private image: ImageData | undefined;
   private maskImage: ImageData | undefined;
   private active = false;
   private view = { left: 0, top: 0, width: 1, height: 1 };
-  reset() { this.shader.reset(); this.active = false; }
+  reset() { this.shader.reset(); this.active = false; this.propStamps.length = 0; this.propDraws.length = 0; this.staticKey = ''; }
   begin(f: WaterSimulation, view: { left: number; top: number; width: number; height: number }) {
-    this.view = view;
+    this.view = view; this.propDraws.length = 0;
     this.active = Number.isFinite(f.left) && f.hasWater;
     if (!this.active) return;
     const width = Math.min(1024, f.columns * f.cell), height = Math.round(width * f.rows / f.columns);
@@ -36,14 +41,37 @@ export class WaterArt {
     this.reflections.getContext('2d')!.drawImage(this.stamp, x - 170, y);
   }
   drawReflection(_c: CanvasRenderingContext2D, f: WaterSimulation, x: number, y: number, pose: CharacterPose, _reduced: boolean) {
+    if (this.active) {
+      const key = `${f.left}:${f.top}:${f.cell}:` + this.propDraws.map(p => `${p.id}:${p.x}:${p.y}`).join(';');
+      const width = this.reflections.width, height = this.reflections.height, scale = width / (f.columns * f.cell);
+      const c = this.staticReflections.getContext('2d')!;
+      if (key !== this.staticKey || this.staticReflections.width !== width || this.staticReflections.height !== height) {
+        this.staticReflections.width = width; this.staticReflections.height = height;
+        c.setTransform(scale, 0, 0, scale, -f.left * scale, -f.top * scale);
+        for (const p of this.propDraws) c.drawImage(p.image, p.x - 170, p.y);
+        this.staticKey = key;
+      }
+      const r = this.reflections.getContext('2d')!; r.save(); r.setTransform(1, 0, 0, 1, 0, 0); r.drawImage(this.staticReflections, 0, 0); r.restore();
+    }
     this.reflect(f, x, y, r => drawHumanoid(r, pose), 95);
   }
   drawPropReflection(_c: CanvasRenderingContext2D, f: WaterSimulation, x: number, y: number, sprite: Sprite, scale: number, _reduced: boolean) {
-    this.reflect(f, x, y, r => {
-      r.scale(scale, scale); r.drawImage(sprite.image, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
+    if (!this.active || Math.max(f.wetAt(x, y + 20), f.wetAt(x, y + 70)) < .05) return;
+    let cached = this.propStamps.find(p => p.sprite === sprite && p.scale === scale);
+    if (!cached) {
+      const image = document.createElement('canvas'); image.width = 340; image.height = 220;
+      const r = image.getContext('2d')!; r.save(); r.translate(170, 0); r.scale(scale, -.62 * scale); r.globalAlpha = .55;
+      r.drawImage(sprite.image, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
       for (const layer of sprite.foliage ?? []) r.drawImage(layer, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
-    }, 150);
+      r.restore(); r.globalCompositeOperation = 'destination-in';
+      const fade = r.createLinearGradient(0, 0, 0, 150); fade.addColorStop(0, '#ffffff'); fade.addColorStop(1, '#ffffff00');
+      r.fillStyle = fade; r.fillRect(0, 0, 340, 220);
+      cached = { sprite, scale, image, id: ++this.stampSerial };
+      if (this.propStamps.length >= 24) this.propStamps.shift(); this.propStamps.push(cached);
+    }
+    this.propDraws.push({ ...cached, x, y });
   }
+
   drawSurface(c: CanvasRenderingContext2D, f: WaterSimulation, lights: readonly PointLight[], reduced: boolean, age = 0) {
     if (!this.active) return;
     if (this.shader.draw(c, f, this.reflections, this.view, lights, reduced, age)) return;

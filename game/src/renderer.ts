@@ -179,7 +179,7 @@ export class Renderer {
   }
 
   reset() {
-    this.water.reset(); this.waterArt.reset();
+    this.water.reset(); this.waterArt.reset(); this.lighting.reset();
     this.portalGuide = 0; this.portalAnchors = []; this.fadingPortal = null;
     this.cameraX = 0; this.cameraY = 0; this.effects.reset(); this.rangedAim = null;
     this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
@@ -603,6 +603,7 @@ export class Renderer {
         color: enemy.kind === 'wisp' ? '#93c6ff' : '#54e8b8', power: enemy.state === 'windup' ? .65 : .28 });
     }
     // Combat illumination gets the finite light budget before distant lanterns.
+    for (const light of environmentLights) light.stationary = true;
     environmentLights.sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py));
     const view = this.view;
     return [...lights, ...environmentLights].filter(light => light.x + light.radius >= view.left

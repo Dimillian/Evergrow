@@ -22,12 +22,13 @@ export class WaterSimulation {
   waveRevision = 0;
   wetCells = 0;
   hasWater = false;
+  waterBounds: { left: number; top: number; width: number; height: number } | undefined;
   private awake = false;
   private scratch = new Float32Array(this.height.length);
   readonly droplets: WaterDroplet[] = [];
   cell = 8; left = Infinity; top = Infinity; time = 0;
   private remainder = 0; private emissions = 0; private serial = 0;
-  reset() { this.height.fill(0); this.u.fill(0); this.v.fill(0); this.wet.fill(0); this.depth.fill(0); this.flowX.fill(0); this.flowY.fill(0); this.left = this.top = Infinity; this.remainder = this.time = this.emissions = 0; this.droplets.length = 0; this.wetCells = 0; this.hasWater = this.awake = false; this.bedRevision++; this.waveRevision++; }
+  reset() { this.height.fill(0); this.u.fill(0); this.v.fill(0); this.wet.fill(0); this.depth.fill(0); this.flowX.fill(0); this.flowY.fill(0); this.left = this.top = Infinity; this.remainder = this.time = this.emissions = 0; this.droplets.length = 0; this.wetCells = 0; this.waterBounds = undefined; this.hasWater = this.awake = false; this.bedRevision++; this.waveRevision++; }
   fit(bounds: { x: number; y: number; width: number; height: number }, sample: WaterSampler) {
     const cell = 8 * 2 ** Math.max(0, Math.ceil(Math.log2(Math.max(bounds.width / ((this.columns - 16) * 8), bounds.height / ((this.rows - 16) * 8)))));
     const left = Math.floor((bounds.x + bounds.width / 2) / (cell * 4)) * cell * 4 - this.columns / 2 * cell;
@@ -55,7 +56,14 @@ export class WaterSimulation {
       this.wet[i] = w.coverage; this.depth[i] = w.depth; this.flowX[i] = w.flowX; this.flowY[i] = w.flowY;
     }
     this.wetCells = 0; this.hasWater = false;
-    for (const w of this.wet) { if (w > .05) this.wetCells++; if (w > .02) this.hasWater = true; }
+    let minX: number = this.columns, minY: number = this.rows, maxX = -1, maxY = -1;
+    for (let i = 0; i < this.wet.length; i++) {
+      const w = this.wet[i]; if (w > .05) this.wetCells++;
+      if (w > .02) { this.hasWater = true; const x = i % this.columns, y = Math.floor(i / this.columns);
+        minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); }
+    }
+    this.waterBounds = this.hasWater ? { left: this.left + (minX - 2) * this.cell, top: this.top + (minY - 2) * this.cell,
+      width: (maxX - minX + 5) * this.cell, height: (maxY - minY + 5) * this.cell } : undefined;
     if (!this.hasWater) this.awake = false;
     this.bedRevision++; this.waveRevision++;
   }

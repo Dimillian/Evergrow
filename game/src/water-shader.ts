@@ -1,3 +1,4 @@
+import { waterView } from './water-view.ts';
 import { WATER_FLOW_GLSL } from './water-flow.ts';
 import type { WaterSimulation } from './water-simulation.ts';
 import type { PointLight } from './lighting.ts';
@@ -8,7 +9,7 @@ export const WATER_FRAGMENT = `
 precision highp float;
 varying vec2 uv;
 uniform sampler2D scene, state, waves, reflections;
-uniform vec4 view, grid;
+uniform vec4 view, grid, sceneView;
 uniform vec2 gridSize;
 uniform float time;
 uniform vec4 lightPosition[8];
@@ -48,7 +49,8 @@ void main(){
   vec3 eye=normalize(vec3(0.,-.65,1.));
   float fresnel=.18+.65*pow(1.-max(0.,dot(normal,eye)),3.);
   vec2 bend=gradient*vec2(13.,9.);
-  vec2 refractUV=uv+vec2(bend.x,-bend.y)/view.zw;
+  vec2 refractUV=(world+bend-sceneView.xy)/sceneView.zw;
+  refractUV.y=1.-refractUV.y;
   // The baked shallow bed remains visible below the deformed surface.
   vec3 bed=texture2D(scene,refractUV).rgb;
   float clouds=noise(world*.003+gradient*.2)*.65+noise(world*.009-vec2(time*.018,0.))*.35;
@@ -87,6 +89,7 @@ void main(){
 /** One bounded viewport pass; byte textures work without float-texture extensions. */
 export class WaterShader {
   readonly canvas = document.createElement('canvas');
+  private sceneCrop = document.createElement('canvas');
   private gl: WebGLRenderingContext | null | undefined;
   private program: WebGLProgram | null = null;
   private buffer: WebGLBuffer | null = null;
@@ -140,7 +143,7 @@ export class WaterShader {
       gl.useProgram(this.program);
       this.buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
-      for (const name of ['scene','state','waves','reflections','view','grid','gridSize','time','lightPosition[0]','lightColor[0]']) this.uniforms[name] = gl.getUniformLocation(this.program, name);
+      for (const name of ['scene','state','waves','reflections','view','sceneView','grid','gridSize','time','lightPosition[0]','lightColor[0]']) this.uniforms[name] = gl.getUniformLocation(this.program, name);
       for (let i = 0; i < 4; i++) {
         const texture = gl.createTexture()!; this.textures.push(texture); gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -153,9 +156,22 @@ export class WaterShader {
   }
   draw(target: CanvasRenderingContext2D, f: WaterSimulation, reflection: HTMLCanvasElement,
     view: { left: number; top: number; width: number; height: number }, lights: readonly PointLight[], reduced: boolean, age = 0): boolean {
+    const bounds = waterView(view, f.waterBounds); if (!bounds) return true;
     if (!this.setup()) return false;
-    const gl = this.gl!, u = this.uniforms;
-    const width = Math.min(1280, target.canvas.width), height = Math.round(target.canvas.height * width / target.canvas.width);
+    const gl = this.gl!, u = this.uniforms, fullView = view;
+    view = bounds.crop;
+    const pixelScale = Math.min(1280, target.canvas.width) / fullView.width;
+    // Quantized allocation sizes avoid reallocating textures on every subpixel camera step.
+    const width = Math.min(1280, Math.ceil(view.width * pixelScale / 64) * 64), height = Math.max(1, Math.ceil(view.height * pixelScale / 64) * 64);
+    const source = bounds.source, sw = Math.min(1280, Math.ceil(source.width * pixelScale / 64) * 64), sh = Math.max(1, Math.ceil(source.height * pixelScale / 64) * 64);
+    const cropped = source.width < fullView.width || source.height < fullView.height || target.canvas.width > 1280;
+    if (cropped) {
+    if (this.sceneCrop.width !== sw || this.sceneCrop.height !== sh) { this.sceneCrop.width = sw; this.sceneCrop.height = sh; }
+    const capture = this.sceneCrop.getContext('2d')!;
+    capture.drawImage(target.canvas, (source.left - fullView.left) / fullView.width * target.canvas.width,
+      (source.top - fullView.top) / fullView.height * target.canvas.height, source.width / fullView.width * target.canvas.width,
+      source.height / fullView.height * target.canvas.height, 0, 0, sw, sh);
+    }
     if (this.canvas.width !== width || this.canvas.height !== height) { this.canvas.width = width; this.canvas.height = height; }
     const size = f.height.length * 4;
     if (this.state.length !== size) { this.state = new Uint8Array(size); this.waves = new Uint8Array(size); }
@@ -172,7 +188,7 @@ export class WaterShader {
     }
     gl.useProgram(this.program); gl.viewport(0, 0, width, height);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-    const sources = [target.canvas, this.state, this.waves, reflection];
+    const sources = [cropped ? this.sceneCrop : target.canvas, this.state, this.waves, reflection];
     for (let i = 0; i < 4; i++) {
       if ((i === 1 && !bedChanged) || (i === 2 && !wavesChanged)) continue;
       gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, this.textures[i]);
@@ -190,6 +206,7 @@ export class WaterShader {
       this.textureWidths[i] = w; this.textureHeights[i] = h;
     }
     this.uploadedFluid = f; this.bedRevision = f.bedRevision; this.waveRevision = f.waveRevision;
+    gl.uniform4f(u.sceneView, source.left, source.top, source.width, source.height);
     gl.uniform4f(u.view, view.left, view.top, view.width, view.height);
     gl.uniform4f(u.grid, f.left, f.top, f.columns * f.cell, f.rows * f.cell); gl.uniform2f(u.gridSize, f.columns, f.rows);
     gl.uniform1f(u.time, reduced ? 0 : f.time + age);

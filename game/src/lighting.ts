@@ -7,6 +7,8 @@ export interface PointLight {
   color: string;
   power: number;
   shadows?: boolean;
+  /** Fixed environmental anchor; dynamic lights render through the reusable scratch. */
+  stationary?: boolean;
   /** World-space visibility polygon, used by enclosed environments. */
   clip?: readonly { x: number; y: number }[];
 }
@@ -46,6 +48,10 @@ export class Lighting {
   private map = document.createElement('canvas');
   private context = this.map.getContext('2d')!;
   private scratch = document.createElement('canvas');
+  private observed = new Set<string>();
+  private nextObserved = new Set<string>();
+  private cookies = new Map<string, HTMLCanvasElement>();
+  private cookieProps: Prop[] | null = null;
   private scratchContext: CanvasRenderingContext2D;
 
   constructor() {
@@ -53,8 +59,11 @@ export class Lighting {
     this.scratchContext = this.scratch.getContext('2d')!;
   }
 
+  reset() { this.cookies.clear(); this.observed.clear(); this.nextObserved.clear(); this.cookieProps = null; }
+
   apply(target: CanvasRenderingContext2D, width: number, height: number,
     left: number, top: number, lights: PointLight[], props: Prop[], ambient = '#839cae', zoom = 1) {
+    if (props !== this.cookieProps) { this.cookies.clear(); this.cookieProps = props; }
     const mw = Math.ceil(width / 2), mh = Math.ceil(height / 2);
     const worldWidth = width / zoom, worldHeight = height / zoom;
     // Use the real map ratios so odd-sized viewports upscale back onto the same
@@ -70,32 +79,48 @@ export class Lighting {
     c.fillStyle = ambient;
     c.fillRect(0, 0, mw, mh);
     c.globalCompositeOperation = 'lighter';
+    this.nextObserved.clear();
     let shadowCount = 0;
     for (const light of lights.slice(0, 18)) {
       if (light.x + light.radius < left || light.x - light.radius > left + worldWidth
         || light.y + light.radius < top || light.y - light.radius > top + worldHeight) continue;
-      const scratch = this.scratchContext;
-      scratch.setTransform(1, 0, 0, 1, 0, 0);
-      scratch.clearRect(0, 0, 256, 256);
-      scratch.globalAlpha = 1;
-      scratch.globalCompositeOperation = 'source-over';
-      scratch.drawImage(lightStamp(light.color), 0, 0);
-      if (light.clip?.length) {
-        scratch.globalCompositeOperation = 'destination-in';
-        scratch.fillStyle = '#fff';
-        scratch.beginPath();
-        light.clip.forEach((p, i) => {
-          const x = 128 + (p.x - light.x) * 128 / light.radius, y = 128 + (p.y - light.y) * 128 / light.radius;
-          if (i) scratch.lineTo(x, y); else scratch.moveTo(x, y);
-        });
-        scratch.closePath(); scratch.fill();
+      const shadows = !!light.shadows && shadowCount++ < 4;
+      // Power changes (fire flicker, roof fading) do not alter the reusable cookie.
+      const key = `${light.x}:${light.y}:${light.radius}:${light.color}:${shadows}:` + (light.clip?.map(p => `${p.x},${p.y}`).join(';') ?? '');
+      if (light.stationary) this.nextObserved.add(key);
+      let cookie = !shadows && !light.clip?.length ? lightStamp(light.color) : light.stationary ? this.cookies.get(key) : undefined;
+      if (!cookie) {
+        const scratch = this.scratchContext;
+        scratch.setTransform(1, 0, 0, 1, 0, 0);
+        scratch.clearRect(0, 0, 256, 256);
+        scratch.globalAlpha = 1;
         scratch.globalCompositeOperation = 'source-over';
+        scratch.drawImage(lightStamp(light.color), 0, 0);
+        if (light.clip?.length) {
+          scratch.globalCompositeOperation = 'destination-in';
+          scratch.fillStyle = '#fff';
+          scratch.beginPath();
+          light.clip.forEach((p, i) => {
+            const x = 128 + (p.x - light.x) * 128 / light.radius, y = 128 + (p.y - light.y) * 128 / light.radius;
+            if (i) scratch.lineTo(x, y); else scratch.moveTo(x, y);
+          });
+          scratch.closePath(); scratch.fill();
+          scratch.globalCompositeOperation = 'source-over';
+        }
+        if (shadows) this.cutShadows(light, props);
+        cookie = this.scratch;
+        if (light.stationary && this.observed.has(key)) {
+        cookie = document.createElement('canvas'); cookie.width = cookie.height = 256;
+        cookie.getContext('2d')!.drawImage(this.scratch, 0, 0);
+        if (this.cookies.size >= 32) this.cookies.delete(this.cookies.keys().next().value!);
+        this.cookies.set(key, cookie);
+        }
       }
-      if (light.shadows && shadowCount++ < 4) this.cutShadows(light, props);
       c.globalAlpha = Math.min(1, light.power);
-      c.drawImage(this.scratch, (light.x - light.radius - left) * scaleX,
+      c.drawImage(cookie, (light.x - light.radius - left) * scaleX,
         (light.y - light.radius - top) * scaleY, light.radius * 2 * scaleX, light.radius * 2 * scaleY);
     }
+    const previous = this.observed; this.observed = this.nextObserved; this.nextObserved = previous;
     c.globalAlpha = 1;
     target.save();
     target.globalCompositeOperation = 'multiply';

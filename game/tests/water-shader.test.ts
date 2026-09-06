@@ -17,7 +17,7 @@ test('water uploads only dirty field textures, reuses allocations and restores a
     texSubImage2D: () => uploads.push({ unit, allocate: false }),
   }, { get: (object, key) => key in object ? Reflect.get(object, key) : () => {} });
   Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement: () => ({
-    width: 1, height: 1, getContext: () => gl,
+    width: 1, height: 1, getContext: (kind: string) => kind === '2d' ? { drawImage() {} } : gl,
     addEventListener: (name: string, callback: (event: { preventDefault(): void }) => void) => handlers.set(name, callback),
   }) } });
   t.after(() => { if (previous) Object.defineProperty(globalThis, 'document', previous); else Reflect.deleteProperty(globalThis, 'document'); });
@@ -44,4 +44,15 @@ test('water uploads only dirty field textures, reuses allocations and restores a
   assert.deepEqual(draw(), [0, 1, 2, 3]); assert(uploads.every(u => u.allocate));
   shader.reset();
   assert.deepEqual(draw(), [0, 1, 2, 3]); assert(uploads.every(u => u.allocate));
+});
+
+test('water upload bounds exclude dry space while retaining refraction samples at banks', async () => {
+  const { waterView } = await import('../src/water-view.ts');
+  const view = { left: -500, top: -300, width: 1000, height: 600 };
+  assert.equal(waterView(view, { left: 900, top: 0, width: 20, height: 20 }), null);
+  const result = waterView(view, { left: -50, top: -150, width: 100, height: 300 })!;
+  assert.deepEqual(result.crop, { left: -50, top: -150, width: 100, height: 300 });
+  assert.deepEqual(result.source, { left: -242, top: -300, width: 484, height: 600 });
+  assert(result.source.width * result.source.height < view.width * view.height / 2);
+  assert.deepEqual(waterView(view, view)?.source, view);
 });
