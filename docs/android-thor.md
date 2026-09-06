@@ -2,6 +2,8 @@
 
 The local Android app bundles the game into an offline APK. A hardware-accelerated WebView runs the existing TypeScript game; a Kotlin shell supplies native controller input, full-screen landscape display, audio/lifecycle handling, and a second-display Presentation. It does not connect to Sites or require the development server.
 
+Both Android windows request a matching-resolution 60 Hz display mode. The main game and title portrait also cap presentation at 60 FPS if the OS keeps a higher refresh rate. Skipped display callbacks preserve elapsed time, so combat continues to run its fixed 120 Hz simulation. Browser rendering and system-wide refresh/performance settings are unchanged. On the connected Thor, Android confirmed the main panel switched to 60 Hz; the lower panel remained physically at 120 Hz despite registering the companion’s 60 Hz request. The companion still receives state at 4 Hz and map images at 2 Hz; it does not run a second game simulation.
+
 ## Two screens, one character
 
 The upper screen runs the game. The lower screen uses the Astral UI palette, shared procedural item art, Pixelify lettering, and Barlow numerals:
@@ -51,4 +53,4 @@ Output: `android/app/build/outputs/apk/debug/app-debug.apk`. The script builds b
 - `thor-state.ts`, `thor-screen.ts` / `.css`: state projection and compact lower-screen UI.
 - `/thor.html?preview`: save-free static interface fixture for the in-app browser. It never creates a gameplay simulation or accesses character storage.
 
-Code tests cover invalid bridge input, native snapshot rearm, stale/busy/dead command rejection, pause/close/equip ownership, moved-item resolution, zoom bounds and full-bag transfer size. Native build/install and both display surfaces were checked on the connected Thor. Gameplay feel, physical controller acceptance and sustained performance remain user-tested.
+Code tests cover invalid bridge input, native snapshot rearm, stale/busy/dead command rejection, pause/close/equip ownership, moved-item resolution, zoom bounds and full-bag transfer size. Frame-pacing tests cover 60/90/120/144 Hz callbacks, timestamp jitter, preserved simulation time and suspension recovery. Native build/install and both display surfaces were checked on the connected Thor. Gameplay feel, physical controller acceptance and sustained performance remain user-tested.

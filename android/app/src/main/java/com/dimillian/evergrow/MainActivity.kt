@@ -57,6 +57,21 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
             window.insetsController?.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
     }
+    /** Per-window request; never changes the user's global display/performance settings. */
+    private fun prefer60Hz(window: Window?, display: Display?) {
+        if(window == null || display == null) return
+        val current = display.mode
+        val mode = display.supportedModes.filter {
+            it.physicalWidth == current.physicalWidth && it.physicalHeight == current.physicalHeight &&
+                kotlin.math.abs(it.refreshRate - 60f) < 1f
+        }.minByOrNull { kotlin.math.abs(it.refreshRate - 60f) }
+        val attributes = window.attributes
+        val modeId = mode?.modeId ?: 0
+        if(attributes.preferredDisplayModeId == modeId && attributes.preferredRefreshRate == 60f) return
+        attributes.preferredDisplayModeId = modeId
+        attributes.preferredRefreshRate = 60f
+        window.attributes = attributes
+    }
     @SuppressLint("SetJavaScriptEnabled")
     private fun makeWebView(context: Context, secondary: Boolean): WebView {
         val assets = WebViewAssetLoader.Builder().addPathHandler("/assets/",WebViewAssetLoader.AssetsPathHandler(this)).build()
@@ -130,7 +145,7 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
     }
     override fun onResume() {
         super.onResume(); resumed=true
-        if(::game.isInitialized) { game.onResume(); immersive(window); lifecycle("resume"); audio.requestAudioFocus(audioRequest) }
+        if(::game.isInitialized) { game.onResume(); immersive(window); prefer60Hz(window,display); lifecycle("resume"); audio.requestAudioFocus(audioRequest) }
         if(::displays.isInitialized) connectCompanion()
     }
     override fun onPause() {
@@ -143,7 +158,7 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
         displays.unregisterDisplayListener(this); companion?.dismiss(); companion=null
         game.removeJavascriptInterface("EvergrowAndroid"); game.destroy(); super.onDestroy()
     }
-    override fun onConfigurationChanged(config: Configuration) { super.onConfigurationChanged(config); immersive(window); connectCompanion() }
+    override fun onConfigurationChanged(config: Configuration) { super.onConfigurationChanged(config); immersive(window); prefer60Hz(window,display); connectCompanion() }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean = if(controller.key(event)) true else super.dispatchKeyEvent(event)
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean = if(controller.motion(event)) true else super.dispatchGenericMotionEvent(event)
     @Deprecated("Deprecated in Java") override fun onBackPressed() {
@@ -152,7 +167,7 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
     private fun connectCompanion() {
         if(!resumed) return
         val secondary = displays.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).firstOrNull { it.displayId != display?.displayId }
-        if(secondary?.displayId == companion?.display?.displayId) { companion?.web?.onResume(); return }
+        if(secondary?.displayId == companion?.display?.displayId) { companion?.web?.onResume(); prefer60Hz(companion?.window,secondary); return }
         companion?.dismiss(); companion=null; forwarding=false; pendingSnapshot=null
         if(secondary != null) {
             try { companion=CompanionPresentation(secondary).also { it.show() } }
@@ -160,7 +175,7 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
         }
     }
     override fun onDisplayAdded(id: Int) = connectCompanion()
-    override fun onDisplayChanged(id: Int) = connectCompanion()
+    override fun onDisplayChanged(id: Int) { prefer60Hz(window,display); connectCompanion() }
     override fun onDisplayRemoved(id: Int) { if(companion?.display?.displayId == id) { companion?.dismiss(); companion=null }; connectCompanion() }
     inner class CompanionPresentation(display: Display): Presentation(this@MainActivity,display) {
         lateinit var web: WebView
@@ -168,7 +183,7 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
             super.onCreate(state)
             window?.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             window?.setDecorFitsSystemWindows(false); immersive(window)
-            web=makeWebView(context,true); setContentView(web); web.loadUrl(BASE+"thor.html")
+            web=makeWebView(context,true); setContentView(web); prefer60Hz(window,display); web.loadUrl(BASE+"thor.html")
         }
         override fun dismiss() { if(::web.isInitialized) { web.removeJavascriptInterface("EvergrowCompanion"); web.destroy() }; super.dismiss() }
         override fun dispatchKeyEvent(event: KeyEvent) = if(controller.key(event)) true else super.dispatchKeyEvent(event)

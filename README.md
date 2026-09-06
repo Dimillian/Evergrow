@@ -63,6 +63,32 @@ Trade with blacksmiths, jewelers and enchanters. Improve gear to +10, raise rari
 
 [View the complete skill atlas](docs/screenshots/skill-atlas.png) · [Town service captures](docs/captures/2026-09-05/town-services/README.md).
 
+## Android / AYN Thor
+
+The Android app bundles the game for **offline play**, with native controller input and an Astral companion on the Thor’s lower screen: explored map, 64-slot pack, equipment details and character stats. Both app displays request **60 Hz**; game/title rendering is capped at **60 FPS** while combat keeps its fixed 120 Hz simulation.
+
+Requires **Node.js 22.13+**, **Java 17**, Android SDK **platform 35 + build-tools 35.0.0**, and `adb` on your PATH. Set `ANDROID_HOME` to your SDK directory, or set `sdk.dir` in `android/local.properties`. Enable USB debugging on the Thor and authorize the computer.
+
+Run from the repository root:
+
+```sh
+npm run setup
+npm run android:build    # Build the bundled debug APK
+npm run android:install  # Build, install and launch on the connected USB device
+```
+
+APK: `android/app/build/outputs/apk/debug/app-debug.apk`.
+
+Launch an already installed build with the **Evergrow** app icon, or:
+
+```sh
+adb -d shell am start -n com.dimillian.evergrow/.MainActivity
+# If multiple devices are connected:
+ANDROID_SERIAL=your-device-id npm run android:install
+```
+
+No local server is needed. Install updates over the existing app to preserve its saves; keep the same signing key. Android and browser characters are currently separate. This is a debug APK for testing, not a store release. [Android architecture, controls and troubleshooting](docs/android-thor.md).
+
 ## Run locally
 
 Requires **Node.js 22.13+**.
@@ -83,7 +109,7 @@ npm run stats   # Content, source and build statistics
 
 `npm run build:site` prepares the production game in root `dist/` for Sites. Deployment uses the existing project in `.openai/hosting.json`; local development remains unchanged.
 
-TypeScript, Vite, Canvas 2D and WebGL; no runtime package dependencies. **519 code tests pass** at this checkpoint. Gameplay feel and balance are tested by the player.
+TypeScript, Vite, Canvas 2D and WebGL; no runtime npm dependencies. Gameplay feel and balance are tested by the player.
 
 [Documentation index](docs/README.md) · [Current status](docs/system-status.md) · [Character saves](docs/character-saves.md) · [Game brief](docs/game-brief.md) · [Roadmap](docs/roadmap.md) · [Architecture](docs/architecture.md) · [Skills & weapons](docs/weapons-and-skills.md) · [Progression & loot](docs/progression-and-loot.md) · [NPC services](docs/npcs-and-vendors.md)
 

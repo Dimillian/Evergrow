@@ -1,3 +1,4 @@
+import { FramePacer } from './frame-pacer.ts';
 import { ThorRuntime } from './thor-runtime.ts';
 import { nativeController, clearNativeController } from './thor-native.ts';
 import type { PadSnapshot } from './gamepad-input.ts';
@@ -106,6 +107,7 @@ export class Game {
   readonly performance = new FrameProfiler(new URLSearchParams(location.search).has('profile'));
   private last = performance.now();
   private animation = 0;
+  private framePacer = new FramePacer(60);
   private fps = 60;
   private abort = new AbortController();
   private debug = false;
@@ -806,6 +808,10 @@ export class Game {
 
   private frame = (now: number) => {
     if (this.disposed) return;
+    if (window.EvergrowAndroid && !this.framePacer.ready(now)) {
+      this.animation = requestAnimationFrame(this.frame);
+      return;
+    }
     this.performance.begin(now);
     const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
     this.last = now;

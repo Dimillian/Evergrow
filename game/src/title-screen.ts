@@ -1,3 +1,4 @@
+import { FramePacer } from './frame-pacer.ts';
 import { escapeUI, uiIcon, trapDialogFocus } from './ui-components.ts';
 import { characterPower, previewCharacter } from './character-summary.ts';
 import { drawCharacterPortrait } from './character-portrait.ts';
@@ -27,6 +28,7 @@ export class TitleScreen {
   private abort = new AbortController();
   private focus?: { dispose(): void };
   private frame = 0;
+  private framePacer = new FramePacer(60);
   private confirming = false;
   private motion = matchMedia('(prefers-reduced-motion: reduce)');
   private actions: TitleActions;
@@ -130,6 +132,10 @@ export class TitleScreen {
   }
   private animate = (): void => {
     if (this.element.hidden) return;
+    if (window.EvergrowAndroid && !this.framePacer.ready(performance.now())) {
+      this.frame = requestAnimationFrame(this.animate);
+      return;
+    }
     const ctx = this.canvas.getContext('2d');
     if (ctx) drawCharacterPortrait(ctx, this.player, this.motion.matches ? 3 : performance.now() / 1000, Math.PI / 2 + .18, 560, 720);
     this.frame = requestAnimationFrame(this.animate);
