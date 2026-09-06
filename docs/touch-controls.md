@@ -9,7 +9,7 @@ Devices whose primary pointer is coarse show touch controls automatically. A rea
 | Control | Behavior |
 | --- | --- |
 | Left movement disc | Drag in any direction for analog movement, independently of aiming |
-| Attack pad | Hold to repeat the basic attack; drag away from the initial contact to aim |
+| Right aim/attack stick | Hold to repeat the basic attack; drag around its fixed center to face and aim through 360°. The bounded silver thumb moves with the drag and recenters on release; last facing is retained |
 | Five skill buttons | Touch and drag to aim, then release; self-centered skills can simply be tapped |
 | Cancel target | Drag a skill finger into Cancel and release to discard its preview without spending mana |
 | Potion | Tap to use the existing dual potion; shows charges and cooldown |

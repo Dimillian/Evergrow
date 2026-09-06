@@ -9,6 +9,7 @@ export type TouchPoint = { x: number; y: number };
 export class TouchInput {
   private contacts = new Map<number, Contact>();
   readonly move = { x: 0, y: 0 };
+  readonly attackStick = { x: 0, y: 0 };
   aim = { x: 0, y: 1 };
   distance = .6;
   private attackEdge = false;
@@ -36,6 +37,11 @@ export class TouchInput {
     if (!c || !Number.isFinite(point.x + point.y)) return;
     const dx = point.x - c.x, dy = point.y - c.y, length = Math.hypot(dx, dy);
     c.canceled = canceled;
+    if (c.action === 'attack') {
+      const strength = Math.min(1, Math.max(0, (length - 8) / 24));
+      this.attackStick.x = length ? dx / length * strength : 0;
+      this.attackStick.y = length ? dy / length * strength : 0;
+    }
     if (c.action === 'move') {
       const strength = Math.min(1, Math.max(0, (length - 7) / 43));
       this.move.x = length ? dx / length * strength : 0;
@@ -50,6 +56,7 @@ export class TouchInput {
     if (!c) return;
     this.contacts.delete(id);
     if (c.action === 'move') this.move.x = this.move.y = 0;
+    if (c.action === 'attack') this.attackStick.x = this.attackStick.y = 0;
     if (c.action === 'attack' && cancel) this.attackEdge = false;
     if (cancel || c.canceled) return;
     if (c.action === 'heal') this.heal = true;
@@ -65,6 +72,7 @@ export class TouchInput {
   }
   clear() {
     this.contacts.clear(); this.move.x = this.move.y = 0;
+    this.attackStick.x = this.attackStick.y = 0;
     this.attackEdge = this.heal = this.dodge = false; this.skill = null;
   }
 }

@@ -94,3 +94,21 @@ test('dropping a touch attack buffer does not cancel an already committed swing'
   assert.equal(sim.player.attack,null);
   assert.equal(sim.drainEvents().filter(e=>e.type==='swing').length,1);
 });
+
+
+test('aim stick is bounded, retains facing at center, and recenters independently on release or cancel',()=>{
+  const input=new TouchInput();
+  input.down(1,'move',point);input.update(1,{x:150,y:100});
+  input.down(2,'attack',point);input.update(2,{x:100,y:-900});
+  assert.deepEqual(input.attackStick,{x:0,y:-1});
+  assert.deepEqual(input.aim,{x:0,y:-1});
+  input.update(2,point);
+  assert.deepEqual(input.attackStick,{x:0,y:0});
+  assert.deepEqual(input.aim,{x:0,y:-1},'recentering does not snap facing');
+  input.update(2,{x:140,y:100});input.up(2,true);
+  assert.deepEqual(input.attackStick,{x:0,y:0});
+  assert.equal(input.move.x,1,'releasing aim does not interrupt movement');
+  input.down(3,'attack',point);input.update(3,{x:130,y:130});input.clear();
+  input.update(3,{x:160,y:160});
+  assert.deepEqual(input.attackStick,{x:0,y:0},'stale pointer cannot move the knob after a panel opens');
+});

@@ -21,6 +21,7 @@ export class TouchHUD {
   private icons = new Map<number, string | null>();
   private cancel: HTMLElement;
   private stick: HTMLElement;
+  private aimStick: HTMLElement;
   private nextUpdate = 0;
   private mount: HTMLElement;
   private actions: { clearAttack(): void; cancelCombat(): void; activate(active: boolean): void; menu(action: MenuAction): void; unlock(): void; notice(message: string): void };
@@ -32,7 +33,7 @@ export class TouchHUD {
       <div class="touch-resources"><div class="touch-life" role="meter" aria-label="Life" aria-valuemin="0"><span></span></div><div class="touch-mana" role="meter" aria-label="Mana" aria-valuemin="0"><span></span></div></div>
       <div class="touch-move" data-touch-action="move" role="group" aria-label="Movement stick"><i></i></div>
       <div class="touch-actions">${Array.from({length:5},(_,i)=>`<button class="touch-button touch-skill" data-touch-action="skill-${i}" aria-label="Empty skill ${i+1}"><span class="touch-icon"></span><small></small></button>`).join('')}
-      <button class="touch-button touch-attack" data-touch-action="attack" aria-label="Hold basic attack and drag to aim">${uiIcon('sword')}<small>Attack</small></button>
+      <button class="touch-button touch-attack" data-touch-action="attack" aria-label="Aim stick: drag to face and attack in any direction"><span class="touch-aim-knob">${uiIcon('sword')}</span></button>
       <button class="touch-button touch-potion" data-touch-action="heal" aria-label="Potion">${uiIcon('potion')}<small></small></button>
       <button class="touch-button touch-dodge" data-touch-action="dodge" aria-label="Dodge">${uiIcon('dodge')}<small></small></button></div>
       <div class="touch-world-actions">${button('interact','Interact','✦')}${button('portal','Town portal',uiIcon('portal'))}</div>
@@ -43,6 +44,7 @@ export class TouchHUD {
       this.element.querySelector(`[data-touch-menu="${menu}"]`)!.append(badge);
     }
     this.cancel = this.element.querySelector('.touch-cancel')!; this.stick = this.element.querySelector('.touch-move i')!;
+    this.aimStick = this.element.querySelector('.touch-aim-knob')!;
     const signal = this.abort.signal;
     mount.addEventListener('pointerdown', e => {
       if (e.pointerType === 'touch') { this.setActive(true); this.actions.unlock(); }
@@ -62,7 +64,11 @@ export class TouchHUD {
         if(cooldown>0 || this.player.mana<cost) { this.actions.notice(cooldown>0?'Skill is recharging.':'Not enough mana.'); return; }
       }
       const targeting = id && this.player ? touchTargeting(resolveSkill(id, this.player.derived, this.player.character).recipe) : 'direction';
-      if (this.input.down(e.pointerId, action, {x:e.clientX,y:e.clientY}, targeting)) {
+      const bounds = target.getBoundingClientRect();
+      const origin = action === 'attack' ? {x:bounds.left + bounds.width / 2,y:bounds.top + bounds.height / 2} : {x:e.clientX,y:e.clientY};
+      if (this.input.down(e.pointerId, action, origin, targeting)) {
+        this.input.update(e.pointerId, {x:e.clientX,y:e.clientY});
+        this.updateSticks();
         target.setPointerCapture(e.pointerId); this.captured.set(e.pointerId,target); target.classList.add('is-held');
         if(slot>=0) this.cancel.hidden = false;
       }
@@ -75,7 +81,7 @@ export class TouchHUD {
       const cancel = outside || !this.cancel.hidden && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
       this.input.update(e.pointerId,{x:e.clientX,y:e.clientY},cancel);
       this.cancel.classList.toggle('is-held',!!this.input.preview?.canceled);
-      this.stick.style.transform = `translate(${this.input.move.x*28}px,${this.input.move.y*28}px)`;
+      this.updateSticks();
     }, {signal});
     const release = (e: PointerEvent, canceled: boolean) => {
       const target = this.captured.get(e.pointerId); if(!target) return;
@@ -88,7 +94,7 @@ export class TouchHUD {
       if(canceled && action?.startsWith('skill-')) this.actions.cancelCombat();
       this.input.up(e.pointerId,canceled); this.captured.delete(e.pointerId); target.classList.remove('is-held');
       if(target.hasPointerCapture(e.pointerId)) target.releasePointerCapture(e.pointerId);
-      this.cancel.hidden = !this.input.preview; this.stick.style.transform = `translate(${this.input.move.x*28}px,${this.input.move.y*28}px)`;
+      this.cancel.hidden = !this.input.preview; this.updateSticks();
     };
     this.element.addEventListener('pointerup',e=>release(e,false),{signal});
     this.element.addEventListener('pointercancel',e=>release(e,true),{signal});
@@ -98,6 +104,10 @@ export class TouchHUD {
       if(action && this.enabled) { this.clear(); this.actions.menu(action); }
     },{signal});
     this.setActive(options.forceTouch || matchMedia('(pointer: coarse)').matches);
+  }
+  private updateSticks() {
+    this.stick.style.transform = `translate(${this.input.move.x*28}px,${this.input.move.y*28}px)`;
+    this.aimStick.style.transform = `translate(${this.input.attackStick.x*18}px,${this.input.attackStick.y*18}px)`;
   }
   get safeTop(): number { return parseFloat(getComputedStyle(this.element).paddingTop) || 0; }
   setActive(active: boolean) {
@@ -110,7 +120,7 @@ export class TouchHUD {
   clear() {
     this.input.clear(); const contacts = [...this.captured]; this.captured.clear();
     for(const [id,target] of contacts) { target.classList.remove('is-held'); if(target.hasPointerCapture(id)) target.releasePointerCapture(id); }
-    this.cancel.hidden = true; this.stick.style.transform = '';
+    this.cancel.hidden = true; this.updateSticks();
   }
   update(player: Player, phase: GamePhase, busy: boolean, now: number) {
     this.player = player;
