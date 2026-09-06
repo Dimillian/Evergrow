@@ -3,7 +3,7 @@ import test from 'node:test';
 import { activateSkill, type SkillContext } from '../src/skill-combat.ts';
 import { SKILL_DEFINITIONS, canUseSkill, skillWeapon, skillIconSVG, skillRequirementLabel, type SkillRequirement } from '../src/skill-content.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
-import { deriveAttackStats } from '../src/equipment.ts';
+import { deriveAttackStats, weaponActionRate } from '../src/equipment.ts';
 import { Simulation } from '../src/simulation.ts';
 import type { CombatEvent, Enemy, Equipment, GroundEffect, ProjectileEffects, WeaponFamily, WorldQuery } from '../src/model.ts';
 import type { ProjectileDefinition } from '../src/combat-content.ts';
@@ -209,7 +209,7 @@ test('first-row skills repeat after action recovery while second-row skills reta
 test('attack and cast speed independently govern weapon and active skill recovery', () => {
   for (const id of ['cleave', 'volley', 'shieldBash', 'fireball', 'iceNova', 'arcLightning'] as SkillId[]) {
     const h = harness(id), magical = SKILL_DEFINITIONS[id].requirement === 'staff';
-    const baseRate = h.player.equipment.mainHand.baseAttacksPerSecond;
+    const baseRate = weaponActionRate(h.player.equipment.mainHand);
     h.player.stats.attackSpeedMultiplier = 2;
     h.player.stats.castSpeedMultiplier = 3;
     const expectedDuration = 1 / (baseRate * (magical ? 3 : 2));

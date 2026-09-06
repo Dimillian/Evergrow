@@ -48,7 +48,7 @@ These windows pause combat, clear buffered inputs, trap modal keyboard focus, an
 
 ## Progression and attribute rules
 
-A new run starts at **level 1, 0 XP**, with **10 Strength, Dexterity, Intelligence, and Vitality**, zero unspent points, a free allocated origin, and five empty active slots. Each character chooses Sword, Bow or Fire Staff and starts with zero gold and 64 empty bag cells. The shared worn leather outfit has no stat bonuses. The Weathered Sword retains its 24 damage and 2 attacks/second; the bow and staff use their own profiles. LMB supplies the equipped weapon’s innate melee, arrow, or elemental-bolt attack; these basics require no skill unlock or mana.
+A new run starts at **level 1, 0 XP**, with **10 Strength, Dexterity, Intelligence, and Vitality**, zero unspent points, a free allocated origin, and five empty active slots. Each character chooses Sword, Bow or Fire Staff and starts with zero gold and 64 empty bag cells. The shared worn leather outfit has no stat bonuses. The Weathered Sword retains its 24 damage and 2 attacks/second; the bow and staff use their own profiles. LMB supplies the equipped weapon’s innate melee, arrow, or elemental-bolt attack; these basics require no skill unlock. Melee and bows remain mana-free; staff basics cost four mana before reductions.
 
 Level-one normal enemies award **20 XP** for a Hollow Stalker, **30** for a Mire Hexer, and **50** for a Gravebound Brute. Geographic area level increases every 3,200 world units from the origin; enemies snapshot their spawn level and normal/veteran/elite rank. Enemy XP scales by `1 + 0.18 × (enemyLevel − 1)`, then by rank (×1 / ×2 / ×5), with a bounded player-level-difference factor applied on death. Source level also controls life, damage, and item level; player level never upgrades an enemy's loot.
 
@@ -146,7 +146,7 @@ Code tests cover graph connectivity, stable unique nodes, themed cluster members
 
 ### Repeatable skills and action-speed split
 
-The first skill in each of the nine weapon schools has zero cooldown; second skills retain cooldowns and cost 24–40 base mana. All skills still consume mana and respect their action animation/recovery. Attack speed scales melee/bow actions; cast speed scales staff basics and magic actions. Both apply to the weapon's base action rate. Gear and passives can reduce mana costs (75% maximum), with the same effective value used in activation and UI. See the current [skill catalog](weapons-and-skills.md) for costs and sources.
+The first skill in each of the nine weapon schools has zero cooldown; second skills retain cooldowns and cost 24–40 base mana. All skills still consume mana and respect their action animation/recovery. Attack speed scales melee/bow actions; cast speed scales staff basics and magic actions. Both apply to the weapon's base action rate; staff basics and spells also use the shared 0.8 family cadence factor. Gear and passives can reduce mana costs (75% maximum), with the same effective value used in activation and UI. See the current [skill catalog](weapons-and-skills.md) for costs and sources.
 
 Each of the five terraces now has a direct bridge between every pair of disciplines (15 guaranteed outer bridges), in addition to the three inner bridges and organically selected routes. Crossing a border needs at most two intermediate travel nodes.
 

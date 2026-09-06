@@ -4,7 +4,7 @@ import { advanceGold, type GroundGold } from './gold.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, ProjectileEffects, GroundEffect, SimulationOptions, WorldQuery } from './model.ts';
 import type { Pickup } from './model.ts';
-import { createBaseStats, createStartingEquipment, deriveAttackStats } from './equipment.ts';
+import { createBaseStats, createStartingEquipment, deriveAttackStats, basicAttackManaCost } from './equipment.ts';
 import { getActiveSwingOffset } from './attack-motion.ts';
 import { BASIC_ATTACK_PHASES, COMBAT_TIMING, SKILL_CAST_MOTION, ENEMY_DEFINITIONS, LOOT_RULES, PLAYER_ABILITIES,
   PLAYER_DEFAULTS, PLAYER_MOVEMENT, type ProjectileDefinition } from './combat-content.ts';
@@ -432,6 +432,9 @@ export class Simulation {
     const dual = off?.kind === 'weapon' && p.equipment.mainHand.hands === 1;
     const hand = dual ? p.nextAttackHand : 'main';
     const weapon = hand === 'off' && off?.kind === 'weapon' ? off.weapon : p.equipment.mainHand;
+    const manaCost = basicAttackManaCost(weapon, p.derived);
+    if (p.mana < manaCost) return;
+    p.mana -= manaCost;
     const stats = deriveAttackStats(p.stats, weapon);
     const duration = 1 / stats.attacksPerSecond;
     const ranged = weapon.attackKind !== 'melee';

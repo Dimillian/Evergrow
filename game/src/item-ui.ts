@@ -1,3 +1,4 @@
+import { weaponActionRate, basicAttackManaCost } from './equipment.ts';
 import type { CharacterSheet, EquipmentSlot, Item, ItemTier } from './character-types.ts';
 import { TIER_COLORS, TIER_NAMES, STAT_LABELS, itemModifiers, formatStatValue, itemDisplayName } from './items.ts';
 import { itemIconSVG } from './item-art.ts';
@@ -46,7 +47,7 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
   let weapon = '';
   if (item.weapon) {
     const w = item.weapon;
-    weapon = `<div class="ui-item-weapon"><div><strong>${number(w.damage)}</strong><span>${escapeUI(w.damageType)} damage</span></div><div><strong>${number(w.baseAttacksPerSecond, 2)}</strong><span>${w.family === 'staff' ? 'Casts' : 'Attacks'} / second</span></div></div><p class="ui-item-comparison">${w.hands === 2 ? 'Two-handed' : 'One-handed'} · ${escapeUI(w.family)} · ${number(w.reach)} reach</p>`;
+    weapon = `<div class="ui-item-weapon"><div><strong>${number(w.damage)}</strong><span>${escapeUI(w.damageType)} damage</span></div><div><strong>${number(weaponActionRate(w), 2)}</strong><span>${w.family === 'staff' ? 'Casts' : 'Attacks'} / second</span></div></div><p class="ui-item-comparison">${w.hands === 2 ? 'Two-handed' : 'One-handed'} · ${escapeUI(w.family)} · ${number(w.reach)} reach${w.family === 'staff' ? ` · ${basicAttackManaCost(w, { manaCostMultiplier: 1 })} base mana / bolt` : ''}</p>`;
   }
   if (item.shield) weapon = `<div class="ui-item-weapon"><div><strong>${number(item.shield.blockChance)}%</strong><span>Block chance</span></div><div><strong>${number(item.shield.blockReduction)}%</strong><span>Damage blocked</span></div></div>`;
   let comparison = '';

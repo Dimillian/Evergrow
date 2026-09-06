@@ -82,3 +82,9 @@ Implemented [skill ranks and specializations](skill-progression.md): 20 active s
 Verification for the skill progression work: `npm run check` passed (542 code tests in the shared working tree, strict application/headless-core TypeScript, production build). The rank panel was inspected in the in-app browser using the frozen, save-free review. Gameplay balance remains for player testing.
 
 Integration with the remote gamepad checkpoint was revalidated with `npm run check`: 551 shared-working-tree code tests passed, strict compilation and production build passed. HUD controller bindings retain the shared ranked-skill cost calculation.
+
+## Staff balance · 2026-09-06
+
+Staff basic attacks and magic recovery are 20% slower through shared family cadence tuning; Ember/Rime/Storm rates are now 1.2/1.32/1.84 actions per second before bonuses. Staff LMB costs four mana before reductions and checks affordability at windup. HUD and item readouts use the same rules. Current v3 saves remain usable. Optional basic-attack mastery nodes remain a proposal; LMB already scales through equipment and character stats.
+
+Staff tuning verification: `npm run check` passed with 558 code tests in the shared working tree, strict application/headless-core compilation and production build. Five added combat regressions cover windup/release charging, insufficient mana, gear reductions, mana-free physical basics and shared spell/basic cadence.

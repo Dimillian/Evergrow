@@ -1,3 +1,4 @@
+import type { DerivedCharacterStats } from './character-types.ts';
 import type { CharacterStats, Equipment, WeaponDefinition } from './model.ts';
 export type { CharacterStats, Equipment, WeaponDefinition, WeaponVisual } from './model.ts';
 
@@ -44,11 +45,22 @@ export function getSupportGripOffset(visual = STARTING_SWORD.visual): number {
 
 const positive = (value: number, fallback: number) => Number.isFinite(value) && value > 0 ? value : fallback;
 
+/** Family balance applies equally to existing gear, fresh loot, spells and item previews. */
+export const STAFF_ACTION_RULES = Object.freeze({ speedMultiplier: .8, basicManaCost: 4 });
+export function weaponActionRate(weapon: WeaponDefinition): number {
+  return positive(weapon.baseAttacksPerSecond, STARTING_SWORD.baseAttacksPerSecond)
+    * (weapon.family === 'staff' ? STAFF_ACTION_RULES.speedMultiplier : 1);
+}
+export function basicAttackManaCost(weapon: WeaponDefinition, stats: Pick<DerivedCharacterStats, 'manaCostMultiplier'>): number {
+  if (weapon.family !== 'staff') return 0;
+  return Math.max(1, Math.round(STAFF_ACTION_RULES.basicManaCost * stats.manaCostMultiplier * 10) / 10);
+}
+
 /** One derivation path for weapons now and item-provided stat modifiers later. */
 export function deriveAttackStats(stats: CharacterStats, weapon: WeaponDefinition): DerivedAttackStats {
   // Keep even extreme debug gear within a readable, resolvable 120 Hz attack window.
   const attacksPerSecond = Math.min(12, Math.max(.25,
-    positive(weapon.baseAttacksPerSecond, STARTING_SWORD.baseAttacksPerSecond) * positive(weapon.family === 'staff' ? stats.castSpeedMultiplier : stats.attackSpeedMultiplier, 1)));
+    weaponActionRate(weapon) * positive(weapon.family === 'staff' ? stats.castSpeedMultiplier : stats.attackSpeedMultiplier, 1)));
   return {
     attacksPerSecond,
     // Finite item values can still overflow when multiplied; never emit Infinity damage.

@@ -2,11 +2,11 @@
 
 2026-09-05 · current local prototype catalog.
 
-Weapons supply the basic attack immediately. LMB swings a melee weapon, fires an arrow from a bow, or releases an elemental bolt from a staff. The five active slots remain empty on a new run; major tree nodes unlock skills for assignment to RMB and 1–4. Basic attacks cost no mana. Potion and dodge keep their separate Q and Space shortcuts.
+Weapons supply the basic attack immediately. LMB swings a melee weapon, fires an arrow from a bow, or releases an elemental bolt from a staff. The five active slots remain empty on a new run; major tree nodes unlock skills for assignment to RMB and 1–4. Melee/bow basic attacks cost no mana; staff bolts cost 4 base mana, reduced by mana efficiency. Potion and dodge keep their separate Q and Space shortcuts.
 
 ## Weapon profiles
 
-`weapon-content.ts` owns 13 generated weapon profiles and three shields. `equipment.ts` owns the unchanged starting Weathered Sword and the unarmed fallback. Values below are the authored bases before item level, rarity, affixes, and character bonuses. Range is measured in world units; ranged range is projectile travel distance.
+`weapon-content.ts` owns 13 generated weapon profiles and three shields. `equipment.ts` owns the unchanged starting Weathered Sword and the unarmed fallback. Values below include family cadence tuning, before item level, rarity, affixes, and character bonuses. Staff actions use 80% of their authored weapon rate; this applies to existing gear as well as new drops. Range is measured in world units; ranged range is projectile travel distance.
 
 | Weapon | Profile ID | Hands | Base damage | Attacks/sec | Range | Basic attack |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
@@ -20,9 +20,9 @@ Weapons supply the basic attack immediately. LMB swings a melee weapon, fires an
 | Thorn Shortbow | `thorn-shortbow` | 2 | 18 | 2.2 | 420 | Arrow |
 | Crescent Recurve | `crescent-recurve` | 2 | 24 | 1.8 | 520 | Arrow |
 | Warden Longbow | `warden-longbow` | 2 | 31 | 1.4 | 600 | Arrow |
-| Ember Staff | `ember-staff` | 2 | 28 | 1.5 | 480 | Fire bolt |
-| Rime Staff | `rime-staff` | 2 | 24 | 1.65 | 440 | Frost bolt |
-| Storm Staff | `storm-staff` | 2 | 17 | 2.3 | 500 | Lightning bolt |
+| Ember Staff | `ember-staff` | 2 | 28 | 1.2 | 480 | Fire bolt |
+| Rime Staff | `rime-staff` | 2 | 24 | 1.32 | 440 | Frost bolt |
+| Storm Staff | `storm-staff` | 2 | 17 | 1.84 | 500 | Lightning bolt |
 | Weathered Sword — starter | `weathered-sword` | 2 | 24 | 2 | 60 | Physical swing |
 | Unarmed — empty main hand | `unarmed` | 1 | 5 | 1.8 | 24 | Physical strike |
 
@@ -72,7 +72,7 @@ Skills now support purchased ranks, optional lower casting ranks, deeper special
 
 ## Active skill catalog
 
-First-row skills have no cooldown; the eight second-row skills cost 24–40 base mana and retain cooldowns. Both tiers respect action recovery. All tiers respect action recovery. Costs and cooldowns below are rank-1 authored bases; mana-cost reduction and cooldown reduction independently change their effective values. Mana reduction adds across gear and tree, caps at 75%, and costs round to tenths with a minimum of one mana. Damage potency multiplies the selected compatible weapon’s derived hit. “Melee” means sword, axe, mace, or dagger; “blade” means sword, axe, or dagger. Heavy skills accept an axe or mace of either handedness.
+First-row skills have no cooldown; the eight second-row skills cost 24–40 base mana and retain cooldowns. All tiers respect action recovery. Costs and cooldowns below are rank-1 authored bases; mana-cost reduction and cooldown reduction independently change their effective values. Mana reduction adds across gear and tree, caps at 75%, and costs round to tenths with a minimum of one mana. Damage potency multiplies the selected compatible weapon’s derived hit. “Melee” means sword, axe, mace, or dagger; “blade” means sword, axe, or dagger. Heavy skills accept an axe or mace of either handedness.
 
 | Skill | Requirement | Mana | Cooldown | Potency | Effect |
 | --- | --- | ---: | ---: | ---: | --- |
@@ -118,3 +118,9 @@ Gear can roll Invocation (cast speed) and Efficiency (mana-cost reduction), with
 Bow/staff cursor input compensates for the shared 16-unit projectile drawing height. Close to a visible creature silhouette, a small assist region (10 horizontal / 8 vertical units beyond its body ellipse) resolves to the creature's ground position. A modest preference keeps adjacent targets from flickering; leaving the region immediately restores free aim. Assistance rejects dead, obscured, offscreen and out-of-weapon-range targets, with shared obstruction checks. Moving targets receive a partial lead capped at 18 units. The aim controls anticipation and locks at release; projectiles never home.
 
 The native UI draws a faint short sight line and brackets around the assisted target. Ground-targeted skills keep the raw cursor position; melee keeps raw direction. Player projectiles get five extra units of enemy contact tolerance without increasing terrain collision or enemy-shot hitboxes. Arrow trails are slightly more visible. Six new regression tests cover selection, exclusion, lead limits, direction separation and grazes/walls; all 464 code tests and the build pass. Combat feel remains for player feedback.
+
+## Staff basic balance · 2026-09-06
+
+`STAFF_ACTION_RULES`, `weaponActionRate` and `basicAttackManaCost` in `equipment.ts` define shared staff pacing and basic costs. Staff basics and assigned spells use 80% of the weapon rate, then cast-speed bonuses. Basic bolts pay four mana at windup, reduced by the normal mana-cost multiplier, rounded to tenths with a one-mana floor. Insufficient mana prevents the windup; release never charges again. Cancelling a paid windup does not refund mana. LMB shows its effective cost and dims when unaffordable; item tooltips show tuned base cadence and base bolt cost. Existing version-3 characters and equipment receive this tuning without a reset.
+
+Basic hit damage already grows with weapon item level, rarity, enhancement, attack/spell modifiers, attributes and critical stats; attack/cast speed scales damage per second. Purchased active-skill ranks do not affect LMB. An optional LMB-only mastery per weapon school is a design candidate, not implemented: it could trade skill points (and higher staff bolt costs) for stronger basics and later weapon-specific behavior. It should remain a deliberate basic-attack build choice rather than a required upgrade for spell builds.

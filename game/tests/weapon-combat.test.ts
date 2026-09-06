@@ -248,3 +248,56 @@ test('a spirit already in flight cannot restore life after an enemy kills the pl
   assert.ok(enemy.hp < enemy.maxHp, 'the in-flight projectile still contacts its enemy');
   assert.equal(sim.drainEvents().filter(event => event.type === 'heal').length, 0);
 });
+
+test('staff basics pay mana once at windup, never again at projectile release', () => {
+  const sim = make(); equip(sim, 'ember-staff');
+  const p = sim.player; p.derived.manaRegeneration = 0;
+  sim.update(FIXED_STEP, { ...idle, attack: true });
+  assert.equal(p.mana, 96); assert.ok(p.attack);
+  close(p.attack.duration, 1 / 1.2);
+  advance(sim, p.attack.activeStart + FIXED_STEP);
+  assert.equal(sim.drainEvents().filter(e => e.type === 'cast').length, 1);
+  assert.equal(p.mana, 96);
+  advance(sim, 1); assert.equal(p.mana, 96);
+});
+
+test('staff basics cannot begin a windup or emit a bolt without sufficient mana', () => {
+  const sim = make(); equip(sim, 'ember-staff');
+  const p = sim.player; p.mana = 3.9; p.derived.manaRegeneration = 0;
+  advance(sim, 1, { attack: true });
+  assert.equal(p.mana, 3.9); assert.equal(p.attack, null); assert.equal(sim.projectiles.length, 0);
+  assert.equal(sim.drainEvents().filter(e => e.type === 'cast').length, 0);
+  p.mana = 4;
+  sim.update(FIXED_STEP, { ...idle, attack: true });
+  assert.ok(p.attack); assert.equal(p.mana, 0);
+});
+
+test('mana efficiency from gear reduces staff basic costs and a paid windup retains its price', () => {
+  const sim = make(); equip(sim, 'ember-staff');
+  const p = sim.player;
+  p.character.equipped.chest!.implicit = { manaCostPercent: 50 };
+  refreshCharacter(p); p.mana = 2; p.derived.manaRegeneration = 0;
+  sim.update(FIXED_STEP, { ...idle, attack: true });
+  assert.ok(p.attack); assert.equal(p.mana, 0);
+  p.derived.manaCostMultiplier = 1;
+  advance(sim, 1);
+  assert.equal(p.mana, 0); assert.equal(sim.drainEvents().filter(e => e.type === 'cast').length, 1);
+});
+
+test('sword and bow basics remain usable with an empty mana pool', () => {
+  for (const profile of ['longsword', 'thorn-shortbow']) {
+    const sim = make(); equip(sim, profile);
+    sim.player.mana = 0; sim.player.derived.manaRegeneration = 0;
+    sim.update(FIXED_STEP, { ...idle, attack: true });
+    assert.ok(sim.player.attack); assert.equal(sim.player.mana, 0);
+  }
+});
+
+test('staff family pacing slows both basic cycles and spell recovery on existing equipment', () => {
+  const sim = skillSim('fireball');
+  const weapon = sim.player.equipment.mainHand;
+  close(weapon.baseAttacksPerSecond, 1.5);
+  const expectedRate = 1.2 * sim.player.stats.castSpeedMultiplier;
+  close(deriveAttackStats(sim.player.stats, weapon).attacksPerSecond, expectedRate);
+  cast(sim); close(sim.player.castDuration, 1 / expectedRate);
+});

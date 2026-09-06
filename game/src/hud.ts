@@ -1,3 +1,4 @@
+import { basicAttackManaCost } from './equipment.ts';
 import { resolveSkill } from './skill-progression.ts';
 import { PAD_SKILL_LABELS } from './gamepad-input.ts';
 import { drawActiveSkillIcon } from './hud-active-skills.ts';
@@ -44,7 +45,8 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = 
     const occupied = i === 0 || !!skill, active = i === 0 ? !!p.attack : !!skill && p.activeSkill === skill;
     const compatible = !skill || canUseSkill(skill, p.equipment);
     const resolved = skill ? resolveSkill(skill, p.derived, p.character) : null;
-    const usable = !p.dead && compatible && cooldown <= 0 && (!definition || p.mana >= resolved!.mana);
+    const manaCost = resolved?.mana ?? (i === 0 ? basicAttackManaCost(p.equipment.mainHand, p.derived) : 0);
+    const usable = !p.dead && compatible && cooldown <= 0 && p.mana >= manaCost;
     c.save();
     chamfer(c, x, y, w, h, 3);
     const well = c.createLinearGradient(x, y, x, y + h);
@@ -73,7 +75,7 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = 
       } else if (definition && cooldown > 0) {
         c.fillStyle = '#030a10a8'; c.fillRect(x + 2, y + 2, w - 4, 37 * clamp(cooldown / Math.max(.001, resolved!.cooldown)));
         text(c, cooldown.toFixed(1), x + w / 2, y + 18, 1.3, UI.ivory, 'center');
-      } else if (definition) text(c, String(resolved!.mana), x + w - 5, y + 3, .8, '#91bddd', 'right');
+      } else if (manaCost > 0) text(c, String(manaCost), x + w - 5, y + 3, .8, '#91bddd', 'right');
     }
     // An empty well has no icon, lock, cooldown, or resource cost.
     c.strokeStyle = occupied ? '#b6baa226' : '#617b8d25'; c.lineWidth = .6;

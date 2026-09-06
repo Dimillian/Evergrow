@@ -2,7 +2,7 @@ import { stockTestGear } from './fixtures/character-pack.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBaseStats, createStartingEquipment, deriveAttackStats, getGripLength, getSupportGripOffset, getWeaponGrip,
-  STARTING_SWORD } from '../src/equipment.ts';
+  STARTING_SWORD, weaponActionRate } from '../src/equipment.ts';
 import { WEAPON_PROFILES } from '../src/weapon-content.ts';
 import { refreshCharacter } from '../src/character.ts';
 import { equipItem } from '../src/inventory.ts';
@@ -63,7 +63,7 @@ test('weapon profile selects the authored grip and attack or spell scaling indep
     assert.equal(getWeaponGrip({ mainHand: weapon, offHand: null }), weapon.hands === 2 ? 'two-handed' : 'one-handed');
     const attack = deriveAttackStats(stats, weapon);
     assert.equal(attack.damage, Math.round(weapon.damage * (weapon.attackKind === 'bolt' ? 3 : 2)));
-    assert.equal(attack.attacksPerSecond, weapon.baseAttacksPerSecond * (weapon.family === 'staff' ? stats.castSpeedMultiplier : stats.attackSpeedMultiplier));
+    assert.equal(attack.attacksPerSecond, weaponActionRate(weapon) * (weapon.family === 'staff' ? stats.castSpeedMultiplier : stats.attackSpeedMultiplier));
   }
 });
 
