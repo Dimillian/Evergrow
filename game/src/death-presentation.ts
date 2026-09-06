@@ -1,26 +1,29 @@
 import type { CombatEvent, EnemyKind } from './model.ts';
+import { enemyDeathAnimation, type DeathVariant } from './death-content.ts';
+import { ease, clamp01 } from './death-rig.ts';
 
 export interface EnemyRemains {
   id: number; x: number; y: number; angle: number; facing: number;
   kind: EnemyKind; age: number; duration: number;
+  readonly variant: DeathVariant;
 }
-export const DEATH_SETTLE_SECONDS = .65;
-const clamp = (v: number) => Math.max(0, Math.min(1, v));
 export function deathPose(remains: EnemyRemains, reducedMotion = false) {
-  const t = reducedMotion ? 1 : clamp(remains.age / DEATH_SETTLE_SECONDS);
-  const fall = t * t * (3 - 2 * t);
-  const fade = clamp((remains.duration - remains.age) / 3);
-  return { fall, opacity: fade * fade * (3 - 2 * fade),
-    x: Math.cos(remains.angle) * fall * 9, y: Math.sin(remains.angle) * fall * 5,
-    dust: reducedMotion ? 0 : Math.sin(clamp((remains.age - .25) / .9) * Math.PI) };
+  const recipe=enemyDeathAnimation(remains.kind,remains.variant);
+  const age=reducedMotion?recipe.settle:remains.age;
+  return { age, settled:age>=recipe.settle, opacity:ease((remains.duration-remains.age)/3),
+    dust:reducedMotion?0:Math.sin(clamp01((age-recipe.contact)/.38)*Math.PI) };
 }
 
 /** Transient presentation only: no corpses in collision, rewards or saves. */
 export class EnemyDeaths {
   readonly remains: EnemyRemains[] = [];
+  // Presentation-local entropy. Never advance Simulation or loot RNG for art.
+  private readonly random: () => number;
+  constructor(random: () => number = Math.random) { this.random=random; }
   handle(event: CombatEvent): void {
     if (event.type !== 'kill' || this.remains.some(r => r.id === event.targetId)) return;
-    this.remains.push({ id: event.targetId, x: event.x, y: event.y, angle: event.angle,
+    const variant=Math.min(3,Math.max(0,Math.floor(this.random()*4))) as DeathVariant;
+    this.remains.push({ id: event.targetId, x: event.x, y: event.y, angle: event.angle, variant,
       facing: event.facing, kind: event.enemyKind, age: 0, duration: event.enemyKind === 'wisp' ? 5 : 14 });
     if (this.remains.length > 45) this.remains.shift();
   }

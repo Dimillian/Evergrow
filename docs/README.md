@@ -53,6 +53,8 @@ Interactive POIs, town portals and dungeon expeditions are live. Permanent waypo
 
 [HUD directions](hud-directions.md) records the three art studies and selection of Astral. [Concept images](concepts/README.md) are generated visual references, not game assets.
 
+[Creature death animations](creature-death-animations.md) records the 36 shared gameplay/review animations, four per current creature and boss, and the random selection rule.
+
 ## Historical evidence
 
 - [Foundation checkpoints](history/foundation-checkpoints.md): older successive implementation/test snapshots, preserved with original numbers.

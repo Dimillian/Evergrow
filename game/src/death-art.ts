@@ -1,40 +1,67 @@
 import { drawHumanoid } from './art.ts';
-import { polygon, randomFromSeed } from './art-primitives.ts';
+import { drawHumanoidDeath, DEATH_MATERIALS } from './death-humanoid-art.ts';
+import { drawHoundDeath, drawWispDeath } from './death-creature-art.ts';
+import { enemyDeathAnimation, type DeathVariant } from './death-content.ts';
 import { deathPose, type EnemyRemains } from './death-presentation.ts';
+import { ease, humanoidDeathPose } from './death-rig.ts';
+import type { EnemyKind } from './model.ts';
 
-/** The actual creature folds into the ground, retaining its silhouette and gear. */
-export function drawEnemyRemains(c: CanvasRenderingContext2D, r: EnemyRemains, reducedMotion: boolean): void {
-  const pose = deathPose(r, reducedMotion), random = randomFromSeed(r.id);
-  const large = r.kind === 'brute', spectral = r.kind === 'wisp';
-  const side = Math.cos(r.angle) >= 0 ? 1 : -1;
-  c.save(); c.translate(r.x + pose.x, r.y + pose.y); c.globalAlpha = pose.opacity;
-  c.fillStyle = spectral ? '#16343170' : '#080f13a0';
-  c.beginPath(); c.ellipse(side * pose.fall * 7, 1, large ? 24 : 18, 4 + pose.fall * 3, 0, 0, Math.PI * 2); c.fill();
-  // Small, stable shards and scraps scatter only once; they never emit light.
-  for (let i = 0; i < (spectral ? 9 : 12); i++) {
-    const a = random() * Math.PI * 2, spread = (6 + random() * 17) * pose.fall;
-    const x = Math.cos(a) * spread, y = Math.sin(a) * spread * .46;
-    const size = .7 + random() * 1.4;
-    c.globalAlpha = pose.opacity * pose.fall * (spectral ? .4 : .65);
-    polygon(c, [[x-size,y], [x,y-size*.7], [x+size*1.7,y+.4], [x+.2,y+size]],
-      spectral ? '#5b9b90' : i % 3 ? '#716b53' : '#343f37');
-  }
-  c.globalAlpha = pose.opacity * (spectral ? Math.max(0, 1 - r.age / 1.1) : 1 - pose.fall * .22);
+/** Shared by the gameplay renderer and the complete creature comparison. */
+export function drawDeathFigure(c:CanvasRenderingContext2D,kind:EnemyKind,variant:DeathVariant,age:number,facing:number):void {
+  const recipe=enemyDeathAnimation(kind,variant);
+  const scale=kind==='hound'||kind==='wisp'?1:DEATH_MATERIALS[kind].scale;
+  const travel=recipe.travel*ease(age/recipe.contact)*scale;
   c.save();
-  // Directional shear, loss of height and a small impact bounce, all anchored at the feet.
-  const bounce = reducedMotion ? 0 : Math.sin(pose.fall * Math.PI) * 2;
-  c.transform(1, side * pose.fall * .07, -side * pose.fall * .72, 1 - pose.fall * .72, 0, -bounce);
-  if (spectral) c.scale(1 - pose.fall * .7, 1 - pose.fall * .6);
-  drawHumanoid(c, { kind: r.kind, angle: r.facing, time: r.id,
-    moving: 0, attack: 0, attackAngle: r.facing, hitFlash: 0, dodging: false });
-  c.restore();
-  // A short low dust plume replaces the old death ring and persistent glowing spot.
-  c.globalAlpha = pose.opacity * pose.dust * .19;
-  c.fillStyle = spectral ? '#7ca99c' : '#b0a184';
-  for (let i = 0; i < 6; i++) {
-    const angle = random() * Math.PI * 2, distance = 8 + Math.min(1, r.age) * 18;
-    c.beginPath(); c.ellipse(Math.cos(angle) * distance, Math.sin(angle) * distance * .4 - 2,
-      2 + pose.dust * 3, 1.2 + pose.dust, angle, 0, Math.PI * 2); c.fill();
+  c.fillStyle='#050c0990';c.beginPath();
+  c.ellipse(Math.cos(facing)*travel*.45,Math.sin(facing)*travel*.25+1,kind==='warden'?32:kind==='brute'?20:14,kind==='warden'?10:4,0,0,Math.PI*2);c.fill();
+  // Short silhouette handoff. There is no transformation of the standing image.
+  const blend=ease(age/.1);
+  if(blend<1) {
+    c.save();c.globalAlpha*=1-blend;
+    drawHumanoid(c,{kind,angle:facing,time:0,moving:0,attack:0,attackAngle:facing,hitFlash:0,dodging:false});c.restore();
   }
+  if(blend>0) {
+    c.save();c.globalAlpha*=blend;
+    if(kind==='hound')drawHoundDeath(c,recipe,age,facing);
+    else if(kind==='wisp')drawWispDeath(c,recipe,age,facing);
+    else drawHumanoidDeath(c,kind,recipe,age,facing);
+    c.restore();
+  }
+  const impact=(age-recipe.contact)/.38;
+  if(impact>0&&impact<1&&age<recipe.settle) {
+    c.save();c.globalAlpha*=(1-impact)*.16;c.fillStyle='#b0a184';
+    for(let i=0;i<7;i++) {
+      const angle=i*2.399,spread=(3+impact*15)*scale;
+      c.beginPath();c.ellipse(Math.cos(facing)*travel+Math.cos(angle)*spread,Math.sin(facing)*travel*.55+Math.sin(angle)*spread*.4-2*scale,
+        (1+impact*2)*scale,(.6+impact)*scale,0,0,Math.PI*2);c.fill();
+    }
+    c.restore();
+  }
+  c.restore();
+}
+
+const settledArt=new Map<EnemyRemains,HTMLCanvasElement>();
+/** A bounded, disposable raster cache of final articulated poses. */
+export function resetDeathArt():void { settledArt.clear(); }
+export function deathDepth(r:EnemyRemains):number {
+  const recipe=enemyDeathAnimation(r.kind,r.variant);
+  const distance=r.kind==='hound'||r.kind==='wisp'?recipe.travel*ease(r.age/recipe.contact):humanoidDeathPose(recipe,r.age).hip[1]*DEATH_MATERIALS[r.kind].scale;
+  return r.y+Math.sin(r.facing)*distance*.55;
+}
+export function drawEnemyRemains(c:CanvasRenderingContext2D,r:EnemyRemains,reducedMotion:boolean):void {
+  const pose=deathPose(r,reducedMotion);
+  c.save();c.translate(r.x,r.y);c.globalAlpha*=pose.opacity;
+  if(pose.settled&&typeof document!=='undefined') {
+    let art=settledArt.get(r);
+    const size=r.kind==='warden'?384:192;
+    if(!art) {
+      art=document.createElement('canvas');art.width=art.height=size*2;
+      const ctx=art.getContext('2d')!;ctx.translate(size,size);ctx.scale(2,2);
+      drawDeathFigure(ctx,r.kind,r.variant,enemyDeathAnimation(r.kind,r.variant).settle,r.facing);
+      if(settledArt.size>=45) settledArt.delete(settledArt.keys().next().value!);
+      settledArt.set(r,art);
+    }
+    c.drawImage(art,-size/2,-size/2,size,size);
+  } else drawDeathFigure(c,r.kind,r.variant,pose.age,r.facing);
   c.restore();
 }
