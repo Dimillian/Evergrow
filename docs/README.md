@@ -32,9 +32,10 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 ## Next iteration specifications
 
 - [Town portals and waypoints](travel-and-portals.md): implemented town return/home anchors; permanent waypoint network still specified.
+- [Exploration, events and dungeons](dungeons-and-events.md): proposed encounter density, new enemy roles, interactive landmarks, procedural crypt floors, bosses and persistent expedition rewards.
 - [Interactive POIs](interactive-pois.md): camp chests, caravan choices, beacons, graveyard/stone trials and roadside reliquaries.
 
-Interactive POIs and permanent waypoint travel are specified, not implemented. Town portals are live.
+Interactive POIs, dungeon expeditions and permanent waypoint travel are specified, not implemented. Town portals are live.
 
 ## Original vision and design exploration
 

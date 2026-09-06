@@ -2,6 +2,8 @@
 
 Specification · 2026-09-05 · **Not implemented.** Selected next work with [portals and waypoints](travel-and-portals.md). Existing camps, watchtowers, graveyards, standing stones and caravans supply the layouts; this pass gives them actions, stakes and outcomes. Counts, weights and durations are initial tuning.
 
+The [exploration and dungeon proposal](dungeons-and-events.md) extends this foundation with denser roaming packs, enemy roles, dungeon entrances, floor persistence and bosses. Its dungeon rules are proposed separately; the six interactions below retain their initial reward/claim contracts.
+
 ## Six encounters
 
 | Place | Player action | Payoff and visual identity |

@@ -94,3 +94,7 @@ Staff tuning verification: `npm run check` passed with 558 code tests in the sha
 Melee and bow actions now receive the same 0.8 authored-rate factor as staves: starter sword 1.6 attacks/second, starter bow 1.76. Other physical profiles retain their relative speeds; staff rates and mana costs stay unchanged. Basics and weapon-based skill recovery share the tuned cadence, including item previews and existing equipped gear. Attack/cast-speed bonuses still apply independently. No save reset is required.
 
 Verification: `npm run check` passed with 559 code tests in the shared working tree, strict application/headless-core compilation and production build. Timing regressions cover repeated attacks, in-flight snapshots, buffered attacks/dodges, swept contact and rewards at the slower cadence. Gameplay feel remains for player testing.
+
+## Exploration expansion proposal · 2026-09-06
+
+[Exploration, events and procedural dungeons](dungeons-and-events.md) specifies the proposed next loop: interactive landmarks, denser role-based packs, persistent procedural floors, a distinct boss and a completion chest. This is design work only; current landmarks, spawning, saves and combat remain unchanged.
