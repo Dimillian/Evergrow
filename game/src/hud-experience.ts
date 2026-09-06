@@ -35,6 +35,14 @@ export class ExperienceFeedback {
   }
 }
 
+/** Shared chamfer keeps every metal lip, glass edge and pulse on the same contour. */
+function railPath(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, cut: number): void {
+  c.beginPath(); c.moveTo(x + cut, y); c.lineTo(x + w - cut, y);
+  c.lineTo(x + w, y + cut); c.lineTo(x + w, y + h - cut);
+  c.lineTo(x + w - cut, y + h); c.lineTo(x + cut, y + h);
+  c.lineTo(x, y + h - cut); c.lineTo(x, y + cut); c.closePath();
+}
+
 /** A violet enamel rail and engraved readout tuck beneath the six skill leaves. */
 export function drawHUDExperience(c: CanvasRenderingContext2D, player: Progress, time: number,
   display?: ExperienceDisplay): void {
@@ -44,15 +52,20 @@ export function drawHUDExperience(c: CanvasRenderingContext2D, player: Progress,
   const pulse = Math.max(0, Math.min(1, display?.pulse ?? 0));
   const ui = UI_THEME.palette;
   c.save();
-  // A thin, tapered metal lip makes this part of the instrument, not a new window.
-  c.beginPath(); c.moveTo(x + 4, y - 1); c.lineTo(x + w - 4, y - 1);
-  c.lineTo(x + w, y + 3); c.lineTo(x + w - 3, y + rh + 3);
-  c.lineTo(x + 3, y + rh + 3); c.lineTo(x, y + 3); c.closePath();
-  const metal = c.createLinearGradient(0, y, 0, y + rh + 3);
-  metal.addColorStop(0, '#516575'); metal.addColorStop(.22, '#182531'); metal.addColorStop(1, '#0b141f');
-  c.fillStyle = metal; c.fill(); c.strokeStyle = '#647b8b'; c.lineWidth = .65; c.stroke();
-  const bx = x + 4, by = y + 1, bw = w - 8, bh = rh - 1;
-  c.fillStyle = '#060c15'; c.fillRect(bx, by, bw, bh);
+  const top = y - .5, height = rh + 2, corner = 2.6, inset = 1.35;
+  const bx = x + inset, by = top + inset, bw = w - inset * 2, bh = height - inset * 2;
+  // Parallel chamfers and equal top/bottom insets give the glass a continuous fine bezel.
+  const innerCorner = corner - inset * (2 - Math.SQRT2);
+  c.lineJoin = 'round';
+  railPath(c, x, top + 1, w, height, corner);
+  c.fillStyle = '#03081090'; c.fill();
+  railPath(c, x, top, w, height, corner);
+  const metal = c.createLinearGradient(0, top, 0, top + height);
+  metal.addColorStop(0, '#637985'); metal.addColorStop(.25, '#344954'); metal.addColorStop(1, '#1a2a35');
+  c.fillStyle = metal; c.fill(); c.strokeStyle = '#748894'; c.lineWidth = .5; c.stroke();
+  railPath(c, bx, by, bw, bh, innerCorner);
+  c.fillStyle = '#060c15'; c.fill();
+  c.save(); c.clip();
   if (fill > 0) {
     const enamel = c.createLinearGradient(0, by, 0, by + bh);
     enamel.addColorStop(0, '#d3c5f4'); enamel.addColorStop(.2, '#a798d6');
@@ -67,14 +80,19 @@ export function drawHUDExperience(c: CanvasRenderingContext2D, player: Progress,
     c.fillStyle = '#eee4ff'; c.globalAlpha = .25 + Math.sin(time * 1.5) * .08;
     c.fillRect(bx, by, bw * fill, .6); c.restore();
   }
-  // Quiet quarter marks give the long gauge a calibrated, astronomical scale.
+  // Short internal ticks preserve the uninterrupted glass and its clean outer edge.
   for (let i = 1; i < 4; i++) {
-    c.fillStyle = '#070c1880'; c.fillRect(bx + bw * i / 4, by, .7, bh);
-    c.fillStyle = '#8294a8'; c.fillRect(bx + bw * i / 4, y + rh + 1.5, .65, 1);
+    c.fillStyle = '#b3bdce50'; c.fillRect(bx + bw * i / 4, by + bh - 1.2, .5, 1.2);
   }
+  c.restore();
+  railPath(c, bx, by, bw, bh, innerCorner);
+  c.strokeStyle = '#020710b8'; c.lineWidth = .55; c.stroke();
+  c.beginPath(); c.moveTo(x + corner + 1, top + .4); c.lineTo(x + w - corner - 1, top + .4);
+  c.strokeStyle = '#c4d2d747'; c.lineWidth = .4; c.stroke();
   if (pulse > 0) {
-    c.globalAlpha = pulse * .7; c.strokeStyle = '#dcd0ff'; c.lineWidth = .8;
-    c.strokeRect(bx, by, bw, bh); c.globalAlpha = 1;
+    c.globalAlpha = pulse * .55;
+    railPath(c, bx, by, bw, bh, innerCorner);
+    c.strokeStyle = '#dcd0ff'; c.lineWidth = .65; c.stroke(); c.globalAlpha = 1;
   }
   // An engraved diamond leads the level; the exact current/required XP stays visible.
   const cy = y + h - 10;
