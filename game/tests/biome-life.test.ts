@@ -138,3 +138,10 @@ test('shared wildlife and particle limits hold across mixed-biome streaming and 
   life.update(.05, 36, [], subject(10000), false, forestGround);
   assert.equal(life.footsteps.length, 0); assert.equal(life.trails.length, 0);
 });
+
+test('simulated rivers have one water reaction owner and no duplicate biome ripple strokes', () => {
+  const life = new BiomeLife();
+  const contact = (): GroundContact => ({ ...forestGround(), water: 1, simulatedWater: true });
+  for (let i = 0; i < 20; i++) life.update(1 / 60, i / 60, [], { x: i * 5, y: 0, vx: 300, vy: 0 }, false, contact);
+  assert.equal(life.footsteps.length, 0); assert.equal(life.trails.length, 0); assert.equal(life.particles.length, 0);
+});

@@ -5,6 +5,8 @@ export interface GroundContact {
   readonly water: number;
   readonly natural: number;
   readonly indoors: boolean;
+  /** Large waterways route reactions through the cell-based water owner. */
+  readonly simulatedWater?: boolean;
 }
 export function surfaceWaterWeight(weights: BiomeWeights, damp: number, road: number) {
   const t = Math.max(0, Math.min(1, (damp - .48) / (.75 - .48)));

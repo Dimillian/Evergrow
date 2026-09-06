@@ -1,3 +1,4 @@
+import { hydrology } from './hydrology.ts';
 import { sampleBiome } from './biomes.ts';
 import { validWorldRectangle } from './world-query.ts';
 export const GEOGRAPHY_RULES = Object.freeze({ settlementSpacing: 11000, jitter: .22, cacheLimit: 512 });
@@ -46,14 +47,20 @@ export function settlementPlace(seed: number, cx: number, cy: number): Place {
   if (cached)
     return cached;
   const s = geoHash(cx, cy, seed), a = angle(seed), spacing = GEOGRAPHY_RULES.settlementSpacing;
-  let x = 0, y = -1150, score = -Infinity;
+  let x = 0, y = -1150, score = -Infinity, dryCandidate = false;
   if (cx || cy)
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      if (attempt >= 3 && dryCandidate) break;
       const u = (cx + (geoHash(cx, cy, seed + attempt * 31 + 71) / 4294967296 - .5) * .44) * spacing;
       const v = (cy + (geoHash(cx, cy, seed + attempt * 37 + 93) / 4294967296 - .5) * .44) * spacing;
       const px = u * Math.cos(a) - v * Math.sin(a), py = u * Math.sin(a) + v * Math.cos(a) - 1150;
       const w = sampleBiome(px, py, seed).weights;
-      const suitability = w.verdant + w.autumn * .7 - w.swamp - w.emberfall * .8 - w.highlands * .4;
+      const drainage = hydrology(seed);
+      let waterPenalty = 0;
+      for (const [dx, dy] of [[0, 0], [-650, 0], [650, 0], [0, -650], [0, 650], [-460, -460], [460, 460]])
+        waterPenalty += drainage.sample(px + dx, py + dy).coverage;
+      if (waterPenalty === 0) dryCandidate = true;
+      const suitability = -waterPenalty * 20 + w.verdant + w.autumn * .7 - w.swamp - w.emberfall * .8 - w.highlands * .4;
       if (suitability > score) {
         score = suitability;
         x = px;

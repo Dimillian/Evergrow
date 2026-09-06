@@ -54,7 +54,7 @@ export class BiomeLife {
         const x = subject.x + Math.cos(angle + Math.PI / 2) * this.side * 4;
         const y = subject.y + Math.sin(angle + Math.PI / 2) * this.side * 3;
         const contact = groundAt(x, y);
-        if (!contact.indoors) {
+        if (!contact.indoors && !contact.simulatedWater) {
           const random = randomFromSeed(hash(++this.serial + Math.floor(x * 7 + y * 13)));
           const biome = biomeForDebris(contact.weights, random());
           const wet = contact.water, natural = random() < contact.natural;

@@ -22,6 +22,7 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 | Character hall, starter choices and saving | [Character saves](character-saves.md) |
 | Components, typography, tooltip motion and panel ownership | [UI kit](ui-kit.md) |
 | Climate generation, props and procedural graphics | [Biomes](biomes.md), [living biomes](living-biomes.md), [graphics pass](graphics-overhaul.md) |
+| Drainage, cell-based water and shader optics | [Living water](living-water.md) |
 | Camps, landmarks and roaming | [Wilderness and encounters](wilderness-and-encounters.md) |
 | Procedural crypt floors, boss, treasure and location saves | [Dungeons](dungeons.md) |
 | Chests, choices, beacons and guardian trials | [Interactive POIs](interactive-pois.md) |

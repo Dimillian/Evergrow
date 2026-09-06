@@ -1,3 +1,5 @@
+import { WaterPresentation } from './water-presentation.ts';
+import { WaterArt } from './water-art.ts';
 import { CRYPT_AMBIENT, cryptLights, cryptLightMask } from './dungeon-lighting.ts';
 import { drawCryptGate, drawCryptDecor, drawWardenWarning, drawCryptEmission } from './dungeon-art.ts';
 import { currentDungeon } from './dungeon-state.ts';
@@ -93,6 +95,8 @@ export class Renderer {
   private environmentArt = new EnvironmentArt();
   private atmosphere = new AtmosphereArt();
   private biomeLife = new BiomeLife();
+  private water = new WaterPresentation();
+  private waterArt = new WaterArt();
   private biomeArt = new BiomeLifeArt();
   private crownOpacity = new Map<string, number>();
   private visibility = new SceneVisibility();
@@ -171,6 +175,7 @@ export class Renderer {
   }
 
   reset() {
+    this.water.reset(); this.waterArt.reset();
     this.portalGuide = 0; this.portalAnchors = []; this.fadingPortal = null;
     this.cameraX = 0; this.cameraY = 0; this.effects.reset(); this.rangedAim = null;
     this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
@@ -186,6 +191,7 @@ export class Renderer {
   }
 
   handleEvents(events: CombatEvent[], reducedMotion: boolean) {
+    this.water.handleEvents(events, reducedMotion);
     this.effects.handleEvents(events);
     this.rewards.handleEvents(events, reducedMotion);
     this.experienceFeedback.handleEvents(events);
@@ -277,6 +283,15 @@ export class Renderer {
     const biome = world.sampleBiome(px, py);
     this.biomeLife.update(dt, this.visualTime, this.cachedProps, { x: px, y: py, vx: p.vx, vy: p.vy },
       settings.reducedMotion, (x, y) => world.sampleGroundContact(x, y));
+    const lights = this.sceneLights(sim, px, py, settings.reducedMotion);
+    if (!sim.dungeonFloor) {
+      const a = p.attack;
+      const blade = a?.kind === 'melee' && a.elapsed >= a.activeStart && a.elapsed <= a.activeEnd
+        ? getPlayerSwordTip(playerPose(p, sim.time)) : undefined;
+      this.water.update(world, { x: left, y: top, width: worldWidth, height: worldHeight }, (x, y) => world.sampleWater(x, y),
+        [{ id: -1, x: px, y: py }, ...sim.enemies.filter(e => e.hp > 0).map(e => ({ id: e.id, x: lerp(e.prevX, e.x, alpha), y: lerp(e.prevY, e.y, alpha) }))],
+        step, settings.reducedMotion, blade ? { x: px + blade.x, y: py + blade.y } : undefined);
+    } else this.water.reset();
     c.fillStyle = '#101c22'; c.fillRect(0, 0, this.width, this.height);
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
     this.groundLayer.draw(c, world, left, top, worldWidth, worldHeight);
@@ -288,6 +303,19 @@ export class Renderer {
     this.groundDressing.draw(c, this.cachedProps, this.view);
     this.biomeArt.drawGround(c, this.biomeLife, this.cachedProps, this.visualTime, settings.reducedMotion, this.view);
     this.atmosphere.drawWater(c, this.cachedProps, this.visualTime, settings.reducedMotion);
+    if (!sim.dungeonFloor) {
+      this.waterArt.begin(this.water.fluid, { left, top, width: worldWidth, height: worldHeight });
+      let reflected = 0;
+      for (const prop of this.cachedProps) {
+        if (reflected >= 10) break;
+        if (Math.max(this.water.fluid.wetAt(prop.x, prop.y + 30), this.water.fluid.wetAt(prop.x, prop.y + 70)) < .1) continue;
+        const sprite = this.environmentArt.getSprite(prop) ?? (prop.kind === 'tree' || prop.kind === 'deadTree'
+          ? this.art.getTree(prop.seed, prop.kind === 'deadTree') : prop.kind === 'rock' ? this.art.getRock(prop.seed) : null);
+        if (sprite) { this.waterArt.drawPropReflection(c, this.water.fluid, prop.x, prop.y, sprite, prop.scale, settings.reducedMotion); reflected++; }
+      }
+      this.waterArt.drawReflection(c, this.water.fluid, px, py, playerPose(p, sim.time), settings.reducedMotion);
+      this.waterArt.drawSurface(c, this.water.fluid, lights, settings.reducedMotion);
+    }
     for (const remains of this.deaths.remains) if (remains.age >= DEATH_SETTLE_SECONDS)
       drawEnemyRemains(c, remains, settings.reducedMotion);
     this.enemyFocusMark(alpha);
@@ -302,7 +330,6 @@ export class Renderer {
     this.settlementArt.drawRoofs(c, this.cachedBuildings, this.visualTime);
     c.restore();
 
-    const lights = this.sceneLights(sim, px, py, settings.reducedMotion);
     const weights = biome.weights, inside = this.indoorBlend;
     const ambientChannels = biomeAmbient(weights).map((value, channel) =>
       Math.round(value * (1 - inside) + [116, 119, 141][channel] * inside));
@@ -320,6 +347,7 @@ export class Renderer {
     drawGroundLoot(c, sim.groundItems, this.visualTime, settings.reducedMotion);
     this.effects.drawSword(c);
     this.effects.draw(c);
+    if (!sim.dungeonFloor) this.waterArt.drawSplashes(c, this.water.fluid);
     this.damageDirection(px, py);
     if(!sim.dungeonFloor) this.motes(world, left, top, worldWidth, worldHeight, sim.time, settings.reducedMotion);
     if(!sim.dungeonFloor) this.environmentArt.drawAmbient(c, (x, y) => world.sampleBiome(x, y).weights, { x: left, y: top, width: worldWidth, height: worldHeight },
@@ -509,9 +537,10 @@ export class Renderer {
 
   private actor(x: number, y: number, pose: CharacterPose) {
     const c = this.ctx;
-    c.fillStyle = '#02091190'; c.beginPath();
+    c.fillStyle = this.water.fluid.wetAt(x, y) > .5 ? '#02091128' : '#02091190'; c.beginPath();
     c.ellipse(x, y + 2, pose.kind === 'brute' ? 17 : pose.kind === 'player' ? 11 * PLAYER_ART_SCALE : 11, pose.kind === 'brute' ? 8 : 5, 0, 0, TAU); c.fill();
     c.save(); c.translate(x, y); if (pose.dead) c.globalAlpha = .4; drawHumanoid(c, pose); drawCharacterStatus(c, pose); c.restore();
+    this.waterArt.drawFeet(c, this.water.fluid, x, y, pose.kind === 'brute' ? 18 : pose.kind === 'player' ? 13 * PLAYER_ART_SCALE : 12);
   }
 
   private sceneLights(sim: Simulation, px: number, py: number, reducedMotion: boolean): PointLight[] {

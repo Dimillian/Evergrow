@@ -1,3 +1,5 @@
+import { drawWaterTerrain } from './water-terrain-art.ts';
+import { hydrology, type WaterSample } from './hydrology.ts';
 import { dungeonEntrances } from './dungeon-entrances.ts';
 import { queryEventSites } from './poi-sites.ts';
 import { townPortalAnchor } from './travel.ts';
@@ -9,7 +11,7 @@ import { drawBiomeGroundAccent } from './biome-prop-art.ts';
 import { circleHitsRect, contains, freezeSettlement, generateSettlement, intersects, MAX_TOWN_RADIUS, settlementPavingWeight, settlementPOIs } from './settlements.ts';
 import type { Building, POI, Settlement } from './settlements.ts';
 import { pathDistance, roadSurface, roadAnchors } from './road-shape.ts';
-import { groundContact, surfaceWaterWeight } from './ground-material.ts';
+import { groundContact, surfaceWaterWeight, type GroundContact } from './ground-material.ts';
 import { groundSurfaceSteps } from './ground-surface.ts';
 import { drawRoadDetails } from './road-art.ts';
 import { isWorldCoordinate, validWorldRectangle, WORLD_QUERY_LIMITS } from './world-query.ts';
@@ -30,7 +32,7 @@ export interface Prop {
 }
 
 export const TILE_SIZE = 256;
-export const WORLD_GENERATION_VERSION = 5;
+export const WORLD_GENERATION_VERSION = 6;
 const PROP_CELL_SIZE = 80;
 const MAX_PROP_RADIUS = 15;
 const PROP_CACHE_LIMIT = 8192;
@@ -81,6 +83,7 @@ function compareProps(a: Prop, b: Prop): number {
 
 export class World {
   readonly seed: number;
+  readonly hydrology;
   readonly generationVersion = WORLD_GENERATION_VERSION;
   private propCells = new Map<string, Prop | null>();
   private groundWork = new Map<string, { canvas: HTMLCanvasElement; steps: Generator<void> }>();
@@ -92,6 +95,7 @@ export class World {
 
   constructor(seed = 7319) {
     this.seed = seed >>> 0;
+    this.hydrology = hydrology(this.seed);
     this.firstCamp = startingEnemyCamp(this.seed);
   }
 
@@ -142,7 +146,7 @@ export class World {
       this.wilderness.delete(key); this.wilderness.set(key, site); return site;
     }
     const site = generateWildernessSite(this.seed, cx, cy, (x, y, radius) =>
-      this.getSettlements(x - radius, y - radius, radius * 2, radius * 2).some(town =>
+      this.hydrology.sample(x, y).coverage > .05 || this.getSettlements(x - radius, y - radius, radius * 2, radius * 2).some(town =>
         Math.hypot(x - town.x, y - town.y) < town.radius + radius));
     this.wilderness.set(key, site);
     if (this.wilderness.size > WILDERNESS_RULES.cacheLimit) this.wilderness.delete(this.wilderness.keys().next().value!);
@@ -203,7 +207,8 @@ export class World {
   /** Cheap map samples share terrain/road colors without querying collision. */
   mapColor(x: number, y: number, sampleSize = 24): string {
     if (sampleSize > 48) {
-      const [r, g, b] = biomeMapColor(this.sampleBiome(x, y).weights).map(Math.round);
+      const water = this.hydrology.sample(x, y).coverage;
+      const [r, g, b] = biomeMapColor(this.sampleBiome(x, y).weights).map((v, i) => Math.round(v * (1 - water) + [29, 73, 85][i] * water));
       return `rgb(${r},${g},${b})`;
     }
     const towns = this.getSettlements(x, y, .01, .01);
@@ -233,26 +238,40 @@ export class World {
     const profile = roadSurface(x, y, this.seed), road = profile.weight;
     const paved = this.pavingWeight(towns, x, y, road);
     const base = detail ? biomeGround(weights, smoothstep(.50, .85, damp) * .65) : biomeMapColor(weights);
-    const water = surfaceWaterWeight(weights, damp, road);
+    const hydro = this.hydrology.sample(x, y);
+    const water = Math.max(surfaceWaterWeight(weights, damp, road), hydro.coverage * (1 - paved));
     const wet = smoothstep(.35, .85, damp) * (.35 + weights.swamp * .65);
-    const pool = [15, 48, 60];
+    const shallows = Math.max(0, 1 - hydro.depth / .65);
+    const pool = [17 + shallows * 22, 51 + shallows * 25, 60 + shallows * 16];
     const dirt = [58 - wet * 9, 51 - wet * 5, 39 - wet * 2];
     const stone = [68, 68, 59];
     const weather = detail ? (noise(x / 93, y / 93, this.seed + 203) - .5) * 18 : 0;
     const grain = detail ? (noise(x / 18, y / 18, this.seed + 202) - .5) * 5 : 0;
     const track = profile.tracks * road * (1 - paved) * 3;
-    const bank = detail ? weights.swamp * (smoothstep(.40, .50, damp) - smoothstep(.50, .64, damp)) * (1 - road) : 0;
-    return base.map((value, i) => (((value + weather * .65 + [8, 16, 10][i] * bank) * (1 - water) + pool[i] * water) * (1 - road)
-      + (dirt[i] + weather - track) * road) * (1 - paved)
+    const bank = hydro.bank * .7 + (detail ? weights.swamp * (smoothstep(.40, .50, damp) - smoothstep(.50, .64, damp)) * (1 - road) : 0);
+    const dryRoad = road * (1 - hydro.coverage * .88);
+    return base.map((value, i) => (((value + weather * .65 + [22, 23, 15][i] * bank) * (1 - water) + pool[i] * water) * (1 - dryRoad)
+      + (dirt[i] + weather - track) * dryRoad) * (1 - paved)
       + (stone[i] + weather * .7 - (detail ? wet * 4 : 0)) * paved + grain);
   }
 
-  /** Presentation samples the actual terrain materials only when a foot lands. */
-  sampleGroundContact(x: number, y: number) {
+  /** River/lake masks are shared by art and contact. Paving stays dry; roads become shallow fords. */
+  sampleWater(x: number, y: number): WaterSample {
+    const w = this.hydrology.sample(x, y);
+    if (w.coverage <= 0) return w;
+    const towns = this.getSettlements(x, y, .01, .01), road = this.roadWeight(x, y);
+    const paved = this.pavingWeight(towns, x, y, road);
+    const dry = Math.max(paved, towns.some(t => t.buildings.some(b => contains(b, x, y, 8))) ? 1 : 0);
+    return { ...w, coverage: w.coverage * (1 - dry), depth: w.depth * (1 - dry) * (1 - road * .78) };
+  }
+
+  sampleGroundContact(x: number, y: number): GroundContact {
     const weights = this.sampleBiome(x, y).weights;
     const road = this.roadWeight(x, y), towns = this.getSettlements(x, y, .01, .01);
-    return groundContact(weights, noise(x / 180, y / 180, this.seed + 201), road,
+    const contact = groundContact(weights, noise(x / 180, y / 180, this.seed + 201), road,
       this.pavingWeight(towns, x, y, road), !!this.getBuildingAt(x, y));
+    const river = this.sampleWater(x, y).coverage;
+    return { ...contact, simulatedWater: river > .1, water: contact.indoors ? 0 : Math.max(contact.water, river) };
   }
 
   /** Half-open rectangle of ground contacts, returned in stable depth order. */
@@ -301,6 +320,7 @@ export class World {
     if (this.isSanctuary(x, y)) return null;
     if (this.getWildernessSites(x - 18, y - 18, 36, 36).some(site => Math.hypot(x - site.x, y - site.y) < site.radius + 18)) return null;
     if (this.roadShrines(x - 44, y - 44, 88, 88).some(shrine => Math.hypot(x - shrine.x, y - shrine.y) < 44)) return null;
+    if (this.hydrology.sample(x, y).coverage > .12) return null;
     const density = 0.40 + noise(x / 520, y / 520, this.seed + 37) * 0.39;
     if (random(cx, cy, this.seed, 3) > density) return null;
     const choice = random(cx, cy, this.seed, 4);
@@ -431,8 +451,10 @@ export class World {
     // Every material sample and detail anchor is in world space. Tile edges are
     // merely a crop of the same illustration, including at negative coordinates.
     yield* groundSurfaceSteps(context, originX, originY, TILE_SIZE, (x, y) => this.surfaceColor(x, y, towns, true));
+    drawWaterTerrain(context, originX, originY, TILE_SIZE, (x, y) => this.hydrology.sample(x, y));
+    yield;
     drawGroundPatches(context, originX, originY, TILE_SIZE, this.seed, (x, y) => this.sampleBiome(x, y).id,
-      (x, y) => this.roadWeight(x, y) < .025 && this.pavingWeight(towns, x, y, 0) < .025
+      (x, y) => this.roadWeight(x, y) < .025 && this.pavingWeight(towns, x, y, 0) < .025 && this.hydrology.sample(x, y).coverage < .02
         && !buildings.some(building => contains(building, x, y, 12)));
     yield;
     drawRoadDetails(context, originX, originY, TILE_SIZE, this.seed, (x, y) => {
@@ -454,7 +476,7 @@ export class World {
         const py = wy - originY;
         const pick = random(cx, cy, this.seed, 213);
         const onRoad = pathDistance(wx, wy, this.seed) < 37;
-        if (buildings.some(building => contains(building, wx, wy, 9))
+        if (this.hydrology.sample(wx, wy).coverage > .08 || buildings.some(building => contains(building, wx, wy, 9))
           || this.pavingWeight(towns, wx, wy, this.roadWeight(wx, wy)) > .08) continue;
         const weights = this.sampleBiome(wx, wy).weights;
         const { biome } = chooseBiomeProp(weights, random(cx, cy, this.seed, 217), 0);
