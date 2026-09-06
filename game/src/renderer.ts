@@ -139,6 +139,8 @@ export class Renderer {
     // Input targets the last displayed frame, including its small impact impulse.
     return screenToWorld(this.view, x, y);
   }
+  gamepadActive = false;
+  worldToScreen(x: number, y: number) { return worldToScreen(this.view, x, y); }
 
   /** Uses the displayed camera/body positions, then returns gameplay ground coordinates. */
   resolvePointerAim(sim: Simulation, world: World, x: number, y: number, enabled: boolean): RangedAim | null {
@@ -332,6 +334,7 @@ export class Renderer {
       reducedMotion: settings.reducedMotion, healthTrail: this.playerHealthTrail / Math.max(1, p.maxHp),
       hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / COMBAT_TIMING.hitFlashDuration),
       experience: this.experienceDisplay,
+      gamepad: this.gamepadActive,
     });
     drawGoldBalance(c, this.rewards);
     if (this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, this.width, this.height, {
@@ -348,7 +351,7 @@ export class Renderer {
       if (npc) {
         const point = worldToScreen(this.view, npc.x, npc.y - 65);
         c.save(); c.font = '12px system-ui, sans-serif'; c.textAlign = 'center';
-        const label = `${NPC_NAMES[npc.role]}  [E]`, width = c.measureText(label).width + 18;
+        const label = `${NPC_NAMES[npc.role]}  [${this.gamepadActive ? 'A' : 'E'}]`, width = c.measureText(label).width + 18;
         c.fillStyle = '#071019ed'; c.fillRect(point.x - width / 2, point.y - 14, width, 23);
         c.strokeStyle = NPC_COLORS[npc.role] + '90'; c.strokeRect(point.x - width / 2, point.y - 14, width, 23);
         c.fillStyle = '#e1dfcd'; c.fillText(label, point.x, point.y + 2); c.restore();
@@ -363,6 +366,7 @@ export class Renderer {
     else if (anchor) { x = anchor.x; y = anchor.y - (sim.travel.returnTo?.town === anchor.band ? 82 : 28);
       label = sim.travel.returnTo?.town === anchor.band ? 'Return to expedition  [E]' : sim.travel.homeTown === anchor.band ? `${anchor.name} · Home  [E]` : 'Set home town  [E]'; }
     if (label) {
+      if (this.gamepadActive) label = label.replace('[E]', '[A]');
       const point = worldToScreen(this.view, x, y);
       c.save(); c.font = '12px system-ui, sans-serif'; c.textAlign = 'center';
       const w = c.measureText(label).width + 18;
@@ -686,7 +690,7 @@ export class Renderer {
   }
 
   private pointerOverHUD() {
-    return isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height);
+    return !this.gamepadActive && isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height);
   }
 
   private cursor(c: CanvasRenderingContext2D, sim: Simulation) {

@@ -1,6 +1,6 @@
 # Current system status
 
-Updated 2026-09-05 for the town-portal implementation checkpoint. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
+Updated 2026-09-06 for the gamepad implementation checkpoint. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
 
 ## Implemented systems
 
@@ -8,7 +8,7 @@ Updated 2026-09-05 for the town-portal implementation checkpoint. **Playable loc
 | --- | --- | --- |
 | Characters and saves | Eight browser-local slots; title hall, starter choice (Sword / Bow / Fire Staff), equipped preview, level/power summary, continue/delete; autosave, backup recovery and stale-writer checks | No cloud sync, export/import or migrations |
 | Combat | Deterministic 120 Hz simulation; weapon basics, five assignable active slots, dodge, dual potion; 17 executable skills; melee/bow attack speed and independent staff/magic cast speed | Player tests feel and balance; no automatic combos or default assigned spell |
-| Aiming and input | Swept ranged contacts, bounded aim assistance, aim feedback; held controls cleared around focus loss, native shortcuts and modal transitions | Browser gameplay acceptance remains with the player |
+| Aiming and input | Swept ranged contacts, bounded aim assistance, aim feedback; standard gamepad analog movement/aim, combat bindings and menu navigation; neutral rearm and disconnect pause | Fixed Xbox-position labels; text entry, drag/drop and gameplay zoom still use keyboard/mouse; controller hardware/feel acceptance remains with the player |
 | Enemies | Six archetypes, three ranks, patrol/LOS, flank/pounce/ranged/area patterns, home return; corrected hound patrol arrival and idle facing | No bosses or deep elite modifier pool |
 | Spawning | 9–14 ambient target, 24 living actors total, nine slots reserved from camps; nine initial roamers, then travel/cooldown-driven groups; births fully offscreen | Larger populations need profiling; waiting on cleared ground does not refill it |
 | Progression | Fixed geographic danger, source-level rewards, XP level-gap factors, one skill and five stat points per level | Numeric level bound 1,000,000; not a balanced infinite endgame |
@@ -38,10 +38,10 @@ Geographic area level rises every 3,200 units from the origin. Enemies retain sp
 
 | Resource / metric | Current value |
 | --- | --- |
-| Code verification | 519 tests passed for town portals; strict application/core TypeScript and production build passed |
-| Runtime code | 150 modules / 17,092 lines; zero runtime dependencies |
-| All TypeScript / review entrypoints | 175 modules / 19,453 lines; 18 review entrypoints |
-| Test files | 69 code-test files; one optional browser-test file |
+| Code verification | 528 tests passed including gamepad input and menu boundaries; strict application/core TypeScript and production build passed |
+| Runtime code | 152 modules / 17,299 lines; zero runtime dependencies |
+| All TypeScript / review entrypoints | 177 modules / 19,660 lines; 18 review entrypoints |
+| Test files | 71 code-test files; one optional browser-test file |
 | Projectiles / timed ground effects | 128 / 16 |
 | Ground equipment / coin piles | 96 / 128 |
 | Character saves | Eight slots; 700,000-character serialized checkpoint limit per slot |
@@ -51,7 +51,7 @@ Geographic area level rises every 3,200 units from the origin. Enemies retain sp
 | Wilderness cells / camp ledger | 128 cached cells / 1,024 persisted camps, up to six members each |
 | Climate regions / chart tiles | 512 cached regions / 384 cached chart tiles, at most 256 visible |
 | Biome life | 40 disturbances, 48 footprints, 100 particles, six birds, ten insects |
-| Last build (stats script) | JS 528,168 bytes / 178,690 gzip; CSS 63,760 bytes / 14,149 gzip; font separate |
+| Last build (stats script) | JS 534,681 bytes / 181,624 gzip; CSS 63,810 bytes / 14,098 gzip; font separate |
 
 Counts were refreshed with `npm run stats` after the implementation checks. Build sizes describe the last successful build, not a performance measurement. Vite emits its initial-JS-chunk size advisory above 500 kB. Save payload version 2 requires a new character for earlier saves; old slots remain stored and incompatible. All service mutations persist before live commitment, and failed writes leave gold/items unchanged. Browser playtests are opt-in and remain with the player; static reviews do not prove gameplay balance or long-session Safari performance.
 
@@ -59,6 +59,7 @@ Counts were refreshed with `npm run stats` after the implementation checks. Buil
 
 | Checkpoint | Result |
 | --- | --- |
+| Gamepad support (2026-09-06) | Standard controller movement/aim, all combat actions, panel navigation, device-aware HUD bindings and disconnect pause; 528 code tests and application/core checks/build passed; hardware playtesting remains with the player |
 | `434705f` | Three starter weapon choices |
 | `f20bb6f` | Lower starting mana regeneration and dual resource potion |
 | `e17bdcf` | Persistent gold wallet/piles and reward feedback |

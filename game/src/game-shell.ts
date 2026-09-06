@@ -25,6 +25,14 @@ export class GameShell {
   private readonly abort = new AbortController();
   private menuAbort = new AbortController();
   private readonly actions: ShellActions;
+  private gamepadActive = false;
+
+  setGamepadActive(active: boolean) {
+    if (active === this.gamepadActive) return;
+    this.gamepadActive = active;
+    const key = this.controls.querySelector('kbd');
+    if (key) key.textContent = active ? '↓' : 'P';
+  }
 
   constructor(root: HTMLElement, actions: ShellActions) {
     this.actions = actions;
