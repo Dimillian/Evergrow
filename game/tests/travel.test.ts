@@ -134,12 +134,12 @@ test('town anchors are reachable and changing home is a persisted interaction wi
   assert.ok(towns.some(t => townPortalAnchor(t).band === 0)); real.dispose();
 });
 
-test('travel validation rejects invalid coordinates and identities; untouched v2 saves remain readable', () => {
+test('travel validation rejects invalid coordinates and identities; current saves may omit an unused portal', () => {
   for (const value of [null, {}, { homeTown: 1.5, returnTo: null }, { homeTown: 0, returnTo: {} },
     { homeTown: 0, returnTo: { x: Infinity, y: 0, town: 0 } }, { homeTown: 12500, returnTo: null }]) assert.equal(validTravel(value), false);
   assert.ok(validTravel(freshTravel()));
   const sim = new Simulation(world, { spawn: false });
-  const record = { version: 2, id: 'old-character', name: 'Traveler', createdAt: 1, updatedAt: 1, worldSeed: 7319, worldVersion: 4, checkpoint: sim.captureCheckpoint() };
+  const record = { version: 3, id: 'current-character', name: 'Traveler', createdAt: 1, updatedAt: 1, worldSeed: 7319, worldVersion: 4, checkpoint: sim.captureCheckpoint() };
   delete record.checkpoint.travel;
   assert.ok(decodeCharacterSave(JSON.stringify(record)));
   sim.restoreCheckpoint(record.checkpoint); assert.deepEqual(sim.travel, freshTravel());

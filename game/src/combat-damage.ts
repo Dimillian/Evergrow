@@ -1,7 +1,6 @@
 import type { CombatEvent, Enemy, EnemyKind, Player, WorldQuery } from './model.ts';
 import { COMBAT_TIMING, ENEMY_DEFINITIONS } from './combat-content.ts';
 import { ENCOUNTER_RULES } from './encounter-director.ts';
-import { SKILL_EXECUTION } from './skill-execution-content.ts';
 import { armorReduction } from './progression-content.ts';
 import { alertEnemy, transitionEnemy } from './enemy-state.ts';
 
@@ -60,7 +59,7 @@ export function damagePlayer(amount: number, angle: number, sourceLevel: number,
   if (p.dead || p.invulnerable > 0 || context.world.isSanctuary?.(p.x, p.y)) return false;
   amount = Math.max(1, Math.round(amount * (1 - armorReduction(p.derived.armor, sourceLevel))));
   if (p.equipment.offHand?.kind === 'shield' && (p.guardTime > 0 || context.random() < p.derived.blockChance)) {
-    const reduction = p.guardTime > 0 ? Math.max(SKILL_EXECUTION.bulwark.reduction, p.derived.blockReduction) : p.derived.blockReduction;
+    const reduction = p.guardTime > 0 ? Math.max(p.guardReduction, p.derived.blockReduction) : p.derived.blockReduction;
     const blocked = Math.floor(amount * reduction);
     amount = Math.max(1, amount - blocked);
     context.emit({ type: 'block', x: p.x, y: p.y, angle, value: blocked, color: '#a9daca' });

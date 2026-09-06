@@ -1,14 +1,16 @@
+import { resolveSkill } from './skill-progression.ts';
 import type { CombatEvent, Enemy, GroundEffect, Player, ProjectileEffects, WorldQuery } from './model.ts';
 import type { SkillId } from './character-types.ts';
-import { skillWeapon, skillCosts, SKILL_DEFINITIONS } from './skill-content.ts';
+import { skillWeapon, SKILL_DEFINITIONS } from './skill-content.ts';
 import { unlockedSkills } from './skill-tree.ts';
 import { deriveAttackStats } from './equipment.ts';
 import { BASIC_ATTACK_PHASES, type ProjectileDefinition } from './combat-content.ts';
-import { SKILL_EXECUTION, SKILL_TARGETING, type SkillExecution } from './skill-execution-content.ts';
+import { SKILL_TARGETING, type SkillExecution } from './skill-execution-content.ts';
 import { applySlow, applyStun } from './combat-status.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
 
 export interface SkillContext {
+  availableGroundEffects: number;
   player: Player; world: WorldQuery; enemies: Enemy[]; aimX: number; aimY: number;
   damage(enemy: Enemy, amount: number, angle: number, melee: boolean): void;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
@@ -28,13 +30,15 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   const weapon = skillWeapon(id, p.equipment);
   if (!weapon) return false;
   const definition = SKILL_DEFINITIONS[id];
-  const costs = skillCosts(id, p.derived);
-  const recipe: SkillExecution = SKILL_EXECUTION[id];
+  const costs = resolveSkill(id, p.derived, p.character);
+  const recipe: SkillExecution = costs.recipe;
+  const groundSlots = recipe.kind === 'ground' ? recipe.scatter ?? 1 : recipe.kind === 'radial' && recipe.echo ? 1 : 0;
+  if (groundSlots > context.availableGroundEffects) return false;
   if ((p.skillCooldowns[id] ?? 0) > 0 || p.mana < costs.mana) return false;
 
   const attack = deriveAttackStats(p.stats, weapon);
   // Staff weapon derivation already applies spell bonuses; applying them here again would square scaling.
-  const damage = attack.damage * definition.damageMultiplier;
+  const damage = attack.damage * costs.damageMultiplier;
   const color = definition.color;
   const living = () => enemies.filter(enemy => enemy.state !== 'dead');
   const visible = (enemy: Enemy) => context.visible(p.x, p.y, enemy.x, enemy.y);
@@ -86,6 +90,8 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
         if (recipe.stun) applyStun(enemy, recipe.stun);
         if (recipe.slow) applySlow(enemy, recipe.slow);
       });
+      if (recipe.echo) context.schedule({ kind: 'frost', x: p.x, y: p.y, radius: recipe.radius * 1.2, delay: .6, duration: 0, interval: 1,
+        damage: damage * .6, skill: id, style: 'frost', slow: recipe.slow });
       blast(recipe.radius, recipe.style);
       break;
     case 'cone':
@@ -93,7 +99,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
         context.damage(enemy, damage, p.angle, true); applyStun(enemy, recipe.stun);
       }
       break;
-    case 'guard': p.guardTime = Math.max(p.guardTime, recipe.duration); break;
+    case 'guard': p.guardTime = Math.max(p.guardTime, recipe.duration); p.guardReduction = recipe.reduction; break;
     case 'backstab': {
       const target = living().filter(enemy => circleIntersectsSector(enemy.x, enemy.y, enemy.radius, p.x, p.y, p.angle, Math.max(recipe.minRange, attack.range * recipe.reachMultiplier), recipe.arc) && visible(enemy))
         .sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
@@ -113,10 +119,17 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
       break;
     }
     case 'ground': {
-      const point = aimedPoint();
-      context.schedule({ kind: recipe.effect, ...point, radius: recipe.radius, delay: recipe.delay,
-        duration: recipe.duration, interval: recipe.interval, damage, skill: id, style: recipe.style,
-        ...(recipe.burn ? { burn: { duration: recipe.burn.duration, dps: damage * recipe.burn.damageMultiplier } } : {}) });
+      const point = recipe.follow || recipe.effect === 'frost' ? { x: p.x, y: p.y } : aimedPoint();
+      const count = recipe.scatter ?? 1;
+      for (let i = 0; i < count; i++) {
+        const angle = i * Math.PI * 2 / count, radius = i ? recipe.radius * .7 : 0;
+        const candidate = { x: point.x + Math.cos(angle) * radius, y: point.y + Math.sin(angle) * radius };
+        const target = context.world.blocked(candidate.x, candidate.y, 1) || !context.visible(point.x, point.y, candidate.x, candidate.y) ? point : candidate;
+        context.schedule({ kind: recipe.effect, ...target, radius: recipe.radius, delay: recipe.delay + i * .18,
+          duration: recipe.duration, interval: recipe.interval, damage, skill: id, style: recipe.style,
+          follow: recipe.follow, upkeep: costs.upkeep, slow: recipe.slow, stun: recipe.stun,
+          ...(recipe.burn ? { burn: { duration: recipe.burn.duration, dps: damage * recipe.burn.damageMultiplier } } : {}) });
+      }
       break;
     }
     case 'chain': {
@@ -129,7 +142,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
         context.emit({ type: 'chain', x: from.x, y: from.y, toX: target.x, toY: target.y, skill: id, color, style: recipe.style, duration: recipe.duration });
         context.damage(target, amount, Math.atan2(target.y - from.y, target.x - from.x), false);
         hit.add(target.id); from = { x: target.x, y: target.y }; amount *= recipe.falloff;
-        next = living().filter(enemy => !hit.has(enemy.id) && Math.hypot(enemy.x - from.x, enemy.y - from.y) <= recipe.range + enemy.radius
+        next = living().filter(enemy => enemy.id !== target.id && (recipe.revisit || !hit.has(enemy.id)) && Math.hypot(enemy.x - from.x, enemy.y - from.y) <= recipe.range + enemy.radius
           && context.visible(from.x, from.y, enemy.x, enemy.y))
           .sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y))[0];
       }

@@ -1,3 +1,4 @@
+import { GROUND_EFFECT_RULES } from './skill-execution-content.ts';
 import { freshTravel, PortalChannel, PORTAL_RULES } from './travel.ts';
 import { advanceGold, type GroundGold } from './gold.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
@@ -36,7 +37,7 @@ export function initialPlayer(x: number, y: number): Player {
   const character = createCharacterSheet();
   return {
     character, derived: deriveCharacterStats(character), skillCooldowns: {}, activeSkill: null,
-    nextAttackHand: 'main', guardTime: 0, dash: null,
+    nextAttackHand: 'main', guardTime: 0, guardReduction: .75, dash: null,
     x, y, prevX: x, prevY: y, vx: 0, vy: 0, angle: 0,
     hp: PLAYER_DEFAULTS.maxHp, maxHp: PLAYER_DEFAULTS.maxHp, mana: PLAYER_DEFAULTS.maxMana, maxMana: PLAYER_DEFAULTS.maxMana,
     level: 1, xp: 0,
@@ -159,6 +160,7 @@ export class Simulation {
 
   /** Travel preserves actors, loot, clocks and camp memory. It is not a reset/load. */
   relocate(x: number, y: number): void {
+    this.groundEffects = this.groundEffects.filter(effect => !effect.follow);
     const p = this.player;
     this.clearInput(); this.portal.cancel();
     p.x = p.prevX = x; p.y = p.prevY = y;
@@ -359,6 +361,7 @@ export class Simulation {
     }
 
     if (this.skillBuffer && this.skillBuffer.until >= this.time && activateSkill({
+      availableGroundEffects: GROUND_EFFECT_RULES.maximum - this.groundEffects.length,
       player: p, world: this.world, enemies: this.enemies,
       aimX: input.aimX, aimY: input.aimY,
       damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),
@@ -566,6 +569,7 @@ export class Simulation {
       hurt: (amount, angle, sourceLevel, sourceKind) => this.damagePlayer(amount, angle, sourceLevel, sourceKind),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       emit: event => this.events.push(event),
+      schedule: effect => this.scheduleGroundEffect(effect),
     });
     this.projectiles = this.projectiles.filter(projectile => projectile.life > 0);
   }
@@ -578,6 +582,7 @@ export class Simulation {
 
   private updateGroundEffects(dt: number): void {
     this.groundEffects = advanceGroundEffects(this.groundEffects, dt, {
+      player: this.player,
       enemies: this.enemies, visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),
       emit: event => this.events.push(event),

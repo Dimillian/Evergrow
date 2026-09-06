@@ -24,7 +24,7 @@ function harness(id: SkillId) {
   const hits: Array<{ enemy: Enemy; amount: number }> = [], events: CombatEvent[] = [];
   const missiles: Array<{ angle: number; definition: ProjectileDefinition; skill: SkillId; effects?: ProjectileEffects }> = [];
   const scheduled: Array<Omit<GroundEffect, 'id' | 'tick'>> = [];
-  const context: SkillContext = { player, world: emptyWorld, enemies: sim.enemies, aimX: 100, aimY: 0,
+  const context: SkillContext = { availableGroundEffects: 16, player, world: emptyWorld, enemies: sim.enemies, aimX: 100, aimY: 0,
     damage: (enemy, amount) => { hits.push({ enemy, amount }); enemy.hp = Math.max(0, enemy.hp - amount); if (!enemy.hp) enemy.state = 'dead'; },
     visible: () => true,
     projectile: (_x, _y, angle, definition, skill, effects) => { missiles.push({ angle, definition, skill, effects }); },
@@ -192,7 +192,7 @@ test('first-row skills repeat after action recovery while second-row skills reta
   const basic: SkillId[] = ['cleave', 'whirlwind', 'shieldBash', 'volley', 'ricochet', 'backstab', 'fireball', 'iceNova', 'arcLightning'];
   for (const skill of Object.values(SKILL_DEFINITIONS)) {
     const h = harness(skill.id);
-    assert.equal(skill.tier, basic.includes(skill.id) ? 'basic' : 'advanced');
+    assert.equal(skill.tier === 'basic', basic.includes(skill.id));
     assert.equal(activateSkill(h.context, 0), true);
     assert.equal(activateSkill(h.context, 0), false, 'actions cannot overlap even without a cooldown');
     h.player.attack = null; h.player.dash = null; h.player.castTime = 0;
@@ -231,4 +231,42 @@ test('effective mana cost is used both to validate and spend, with independent c
     assert.equal(activateSkill(h.context, 0), true);
     close(h.player.mana, 0); close(h.player.skillCooldowns[id]!, definition.cooldown * .75);
   }
+});
+
+test('ranked forked fireballs snapshot three stronger projectiles and their actual mana cost', () => {
+  const h=harness('fireball');
+  h.player.character.skillRanks.fireball=5;
+  h.player.character.allocatedNodes.push('specialization:fireball-fork');
+  h.player.character.skillSpecializations.fireball='fireball-fork';
+  assert.ok(activateSkill(h.context,0));
+  assert.equal(h.missiles.length,3);
+  close(h.player.mana,100-12*2*1.8);
+  close(h.missiles[0].definition.damage,deriveAttackStats(h.player.stats,h.player.equipment.mainHand).damage*SKILL_DEFINITIONS.fireball.damageMultiplier*1.6*.65);
+  assert.deepEqual(h.missiles.map(m=>m.angle),[-.24,0,.24]);
+});
+
+test('Storm Circuit can revisit two enemies for eight bounded jumps with diminishing damage',()=>{
+  const h=harness('arcLightning'); h.context.aimX=40; h.target(40); h.target(90);
+  h.player.character.allocatedNodes.push('specialization:arc-circuit'); h.player.character.skillSpecializations.arcLightning='arc-circuit';
+  assert.ok(activateSkill(h.context,0)); assert.equal(h.hits.length,8);
+  assert.equal(new Set(h.hits.map(h=>h.enemy.id)).size,2);
+  for(let i=1;i<h.hits.length;i++) close(h.hits[i].amount,h.hits[i-1].amount*.7);
+});
+
+test('Echoing Frost schedules its second impact and Cataclysm schedules seven staggered meteors',()=>{
+  const frost=harness('iceNova'); frost.target(40);
+  frost.player.character.allocatedNodes.push('specialization:nova-echo'); frost.player.character.skillSpecializations.iceNova='nova-echo';
+  assert.ok(activateSkill(frost.context,0)); assert.equal(frost.scheduled.length,1);
+  close(frost.scheduled[0].damage,frost.hits[0].amount*.6); assert.equal(frost.scheduled[0].delay,.6);
+  const fire=harness('cataclysm'); assert.ok(activateSkill(fire.context,0)); assert.equal(fire.scheduled.length,7);
+  assert.equal(new Set(fire.scheduled.map(e=>`${e.x}:${e.y}`)).size,7);
+  for(let i=1;i<7;i++) assert.ok(fire.scheduled[i].delay>fire.scheduled[i-1].delay);
+});
+
+test('expensive multi-impact casts refuse insufficient ground capacity before spending mana',()=>{
+  const h=harness('cataclysm'); h.context.availableGroundEffects=6;
+  assert.equal(activateSkill(h.context,0),false); assert.equal(h.player.mana,100);
+  assert.equal(h.scheduled.length,0); assert.equal(h.player.skillCooldowns.cataclysm,undefined);
+  h.context.availableGroundEffects=7;
+  assert.ok(activateSkill(h.context,0)); assert.equal(h.scheduled.length,7);
 });

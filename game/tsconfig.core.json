@@ -6,7 +6,7 @@
   },
   "include": [
     "src/simulation.ts", "src/combat-content.ts", "src/combat-geometry.ts", "src/encounter-director.ts", "src/enemy-ai.ts", "src/enemy-state.ts", "src/camp-population.ts", "src/progression.ts", "src/progression-content.ts", "src/zone-progression.ts", "src/loot.ts", "src/loot-content.ts",
-    "src/combat-damage.ts", "src/combat-rewards.ts", "src/gold.ts", "src/wallet.ts", "src/combat-status.ts", "src/ground-effects.ts", "src/skill-execution-content.ts",
+    "src/combat-damage.ts", "src/combat-rewards.ts", "src/gold.ts", "src/wallet.ts", "src/combat-status.ts", "src/ground-effects.ts", "src/skill-execution-content.ts", "src/skill-progression.ts",
     "src/roaming-encounters.ts", "src/spawn-visibility.ts",
     "src/equipment.ts", "src/weapon-content.ts", "src/projectile-combat.ts", "src/ranged-aim.ts", "src/enemy-body.ts", "src/game-input.ts", "src/panel-coordinator.ts", "src/lifetime.ts",
     "src/travel.ts", "src/travel-command.ts", "src/commerce-command.ts", "src/commerce.ts", "src/npcs.ts", "src/item-improvement.ts", "src/character-session.ts", "src/character-summary.ts", "src/character-save.ts", "src/character-storage.ts", "src/character-commands.ts", "src/character.ts", "src/character-stats.ts", "src/items.ts", "src/inventory.ts", "src/equipment-preview.ts",

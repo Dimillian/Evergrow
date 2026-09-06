@@ -40,3 +40,7 @@ Updated 2026-09-05. Stable system IDs from the original design, with current imp
 - Numerical, cache and save bounds are explicit prototype limits. More content does not remove the need to profile and playtest.
 
 See [NPCs and vendors](npcs-and-vendors.md) for implemented service rules, [architecture](architecture.md) for code ownership, and [documentation index](README.md) for current guides versus historical proposals.
+
+## Skill development · implemented 2026-09-06
+
+Upgradeable skill ranks, lower casting-rank selection, 19 specialization choices, 17 mastery nodes, Arcane Overload and three deep Arcana ultimates are implemented. See [skill progression](skill-progression.md). Save v3 requires a new character for older slots. Respecs and further skill content remain future work.

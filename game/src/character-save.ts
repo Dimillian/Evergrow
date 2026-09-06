@@ -1,3 +1,4 @@
+import { validSkillProgression } from './skill-progression.ts';
 import { validTravel, type TravelState } from './travel.ts';
 import { GOLD_RULES, type GroundGold } from './gold.ts';
 import { validGold } from './wallet.ts';
@@ -11,7 +12,7 @@ import { MAX_CONTENT_LEVEL } from './progression-content.ts';
 import { xpForNextLevel } from './progression.ts';
 
 export const CHARACTER_SLOT_COUNT = 8;
-export const CHARACTER_SAVE_VERSION = 2;
+export const CHARACTER_SAVE_VERSION = 3;
 export const SAVE_MAX_BYTES = 700_000;
 export interface CharacterCheckpoint {
   /** Absent until travel has been initialized; no portal and Briarwatch home by default. */
@@ -37,13 +38,14 @@ function validSheet(v: unknown, level: number): v is CharacterSheet {
     || !Array.isArray(v.allocatedNodes) || v.allocatedNodes.length > SKILL_NODES.size || !v.allocatedNodes.includes('origin')
     || !v.allocatedNodes.every(id => typeof id === 'string' && SKILL_NODES.has(id)) || new Set(v.allocatedNodes).size !== v.allocatedNodes.length) return false;
   const sheet = v as unknown as CharacterSheet;
+  if (!validSkillProgression(sheet)) return false;
   const ids = [...sheet.inventory, ...Object.values(sheet.equipped)].filter((i): i is Item => i !== null).map(i => i.id);
   if (new Set(ids).size !== ids.length || sheet.equipped.weapon?.weapon?.hands === 2 && sheet.equipped.offhand !== null) return false;
   const allocated = new Set(sheet.allocatedNodes), connected = new Set(['origin']), queue = ['origin'];
   for (let i = 0; i < queue.length; i++) for (const next of SKILL_NODES.get(queue[i])!.neighbors) {
     if (allocated.has(next) && !connected.has(next)) { connected.add(next); queue.push(next); }
   }
-  if (connected.size !== allocated.size || sheet.skillPoints + allocated.size - 1 !== level - 1
+  if (connected.size !== allocated.size || sheet.skillPoints + allocated.size - 1 + Object.values(sheet.skillRanks).reduce((sum, rank) => sum + rank - 1, 0) !== level - 1
     || sheet.statPoints + Object.values(sheet.attributes).reduce((sum, n) => sum + n - 10, 0) !== (level - 1) * 5) return false;
   const unlocked = unlockedSkills(sheet.allocatedNodes);
   return Array.isArray(v.skillSlots) && v.skillSlots.length === 5 && v.skillSlots.every(id => id === null || unlocked.includes(id))

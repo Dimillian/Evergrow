@@ -1,3 +1,4 @@
+import type { GroundEffectRequest } from './ground-effects.ts';
 import type { CombatEvent, Enemy, EnemyKind, Player, Projectile, WorldQuery } from './model.ts';
 import { applySlow, applyBurn } from './combat-status.ts';
 import { PLAYER_PROJECTILE_FORGIVENESS } from './ranged-aim.ts';
@@ -5,6 +6,7 @@ import { segmentDistanceSquared } from './combat-geometry.ts';
 
 export const MAX_PROJECTILES = 128;
 export interface ProjectileContext {
+  schedule(effect: GroundEffectRequest): void;
   player: Player; enemies: Enemy[]; world: WorldQuery;
   damage(enemy: Enemy, amount: number, angle: number, melee: boolean): void;
   hurt(amount: number, angle: number, sourceLevel: number, sourceKind?: EnemyKind): void;
@@ -37,6 +39,11 @@ function blast(projectile: Projectile, context: ProjectileContext): void {
   const radius = projectile.effects?.blastRadius ?? 0;
   context.emit({ type: 'blast', x: projectile.x, y: projectile.y, radius: radius || 14,
     style: projectile.effects?.style ?? 'arcane', skill: projectile.skill });
+  if (projectile.skill && projectile.effects?.groundDuration) context.schedule({
+    kind: 'embers', x: projectile.x, y: projectile.y, radius, delay: .5,
+    duration: projectile.effects.groundDuration, interval: .5, damage: projectile.damage * .12,
+    skill: projectile.skill, style: 'fire',
+  });
   if (!radius) return;
   for (const enemy of context.enemies) {
     if (enemy.state === 'dead' || projectile.hitIds.has(enemy.id)

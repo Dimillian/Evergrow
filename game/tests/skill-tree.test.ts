@@ -5,7 +5,7 @@ import { SKILL_DEFINITIONS, skillIconSVG } from '../src/skill-content.ts';
 import type { CharacterSheet, SkillId } from '../src/character-types.ts';
 
 function sheet(points = 10): CharacterSheet {
-  return { commerce: { epoch: 0, revision: 0, operations: 0, sold: {}, buyback: [] }, attributes: { strength: 0, dexterity: 0, intelligence: 0, vitality: 0 }, statPoints: 0,
+  return { skillRanks: {}, activeSkillRanks: {}, skillSpecializations: {}, arcaneOverload: false, commerce: { epoch: 0, revision: 0, operations: 0, sold: {}, buyback: [] }, attributes: { strength: 0, dexterity: 0, intelligence: 0, vitality: 0 }, statPoints: 0,
     skillPoints: points, allocatedNodes: [SKILL_TREE_ORIGIN], inventory: [],
     equipped: { weapon: null, offhand: null, head: null, chest: null, gloves: null, legs: null, boots: null, cloak: null, amulet: null, ring1: null, ring2: null },
     skillSlots: [null, null, null, null, null] };
@@ -46,7 +46,9 @@ test('all active skills have approachable connected paths through their weapon s
   assert.equal(majors.length, Object.keys(SKILL_DEFINITIONS).length);
   assert.deepEqual(new Set(majors.map(node => node.skill)), new Set(Object.keys(SKILL_DEFINITIONS)));
   for (const major of majors) {
-    const path = paths.get(major.id)!; assert.equal(path.length, SKILL_DEFINITIONS[major.skill!].tier === 'basic' ? 3 : 4);
+    const path = paths.get(major.id)!, tier = SKILL_DEFINITIONS[major.skill!].tier;
+    if (tier === 'ultimate') assert.ok(path.length >= 20 && path.length <= 35);
+    else assert.equal(path.length, tier === 'basic' ? 3 : 4);
     assert.ok(path.some(id => id.startsWith('school:')), 'every skill follows a named weapon school');
     assert.equal(major.domain, SKILL_DEFINITIONS[major.skill!].domain);
     const character = sheet(path.length);
@@ -91,7 +93,7 @@ test('repeated and unknown allocations cannot stack bonuses or unlock duplicate 
 
 test('domain minor and notable bonuses have finite supported values and active skills share meaningful definitions', () => {
   for (const node of SKILL_TREE.nodes) {
-    if (node.kind === 'minor' || node.kind === 'notable') assert.ok(Object.keys(node.bonuses).length);
+    if ((node.kind === 'minor' || node.kind === 'notable') && !node.specialization && !node.mastery && !node.keystone) assert.ok(Object.keys(node.bonuses).length);
     for (const value of Object.values(node.bonuses)) assert.ok(Number.isFinite(value) && value > 0);
   }
   for (const [id, skill] of Object.entries(SKILL_DEFINITIONS)) {
@@ -106,10 +108,11 @@ test('domain minor and notable bonuses have finite supported values and active s
 
 
 test('constellations have coherent specialties, varied spacing, and bounds enclosing their actual members', () => {
-  assert.equal(SKILL_TREE.clusters.length, 150);
+  const passiveClusters = SKILL_TREE.clusters.filter(cluster => cluster.id.includes(':terrace:'));
+  assert.equal(passiveClusters.length, 150);
   assert.ok(Object.isFrozen(SKILL_TREE.clusters)); assert.ok(Object.isFrozen(SKILL_TREE.bounds));
   const memberCounts = new Set<number>();
-  for (const cluster of SKILL_TREE.clusters) {
+  for (const cluster of passiveClusters) {
     const members = SKILL_TREE.nodes.filter(node => node.cluster === cluster.id);
     const minors = members.filter(node => node.kind === 'minor');
     assert.ok(members.length >= 8 && members.length <= 14);
@@ -126,7 +129,7 @@ test('constellations have coherent specialties, varied spacing, and bounds enclo
     for (const key of Object.keys(minors[0].bonuses)) assert.ok((notable.bonuses[key as keyof typeof notable.bonuses] ?? 0) > minors[0].bonuses[key as keyof typeof notable.bonuses]!);
   }
   assert.ok(memberCounts.size >= 5, 'specialties have different lengths and silhouettes');
-  for (const domain of ['Might', 'Cunning', 'Arcana']) assert.equal(SKILL_TREE.clusters.filter(cluster => cluster.domain === domain).length, 50);
+  for (const domain of ['Might', 'Cunning', 'Arcana']) assert.equal(passiveClusters.filter(cluster => cluster.domain === domain).length, 50);
   for (const node of SKILL_TREE.nodes) {
     assert.ok(node.x > SKILL_TREE.bounds.minX && node.x < SKILL_TREE.bounds.maxX);
     assert.ok(node.y > SKILL_TREE.bounds.minY && node.y < SKILL_TREE.bounds.maxY);

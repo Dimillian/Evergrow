@@ -131,7 +131,7 @@ for (const id of Object.keys(SKILL_DEFINITIONS) as SkillId[]) {
       assert.ok(player.x > 0 && player.x < 10, 'dash advances over time, not a teleport');
     } else if (id === 'bulwark') assert.ok(player.guardTime > 2.9);
     else if (id === 'meteor' || id === 'rainOfArrows') assert.equal(sim.groundEffects.length, 1);
-    advance(sim, id === 'meteor' ? 1 : .5, { aimX: enemy.x });
+    advance(sim, id === 'meteor' || id === 'cataclysm' ? 1.1 : .5, { aimX: enemy.x });
     const laterEvents = sim.drainEvents();
     assert.equal(laterEvents.filter(event => event.type === 'cast' || event.type === 'swing').length, 0);
     if (id !== 'bulwark') assert.ok(enemy.hp < enemy.maxHp, `${id} must damage the actual enemy`);
@@ -280,4 +280,25 @@ test('held no-cooldown magic repeats at cast speed, never at physical attack spe
   assert.ok(normal >= 2);
   assert.equal(casts(1, 3), normal);
   assert.ok(casts(2, 1) >= normal * 2 - 1);
+});
+
+test('Living Ember creates snapshotted damaging ground at the actual fireball impact',()=>{
+  const sim=createSim(); unlock(sim,'fireball'); const p=sim.player;
+  p.character.allocatedNodes.push('specialization:fireball-ember'); p.character.skillSpecializations.fireball='fireball-ember';
+  target(sim,80); advance(sim,FIXED_STEP,{skillSlot:0,aimX:80});
+  const released=sim.projectiles[0].damage;
+  delete p.character.skillSpecializations.fireball;
+  advance(sim,.3);
+  const embers=sim.groundEffects.find(e=>e.kind==='embers'); assert.ok(embers);
+  close(embers.damage,released*.12); assert.equal(embers.pulsesLeft,6);
+  sim.drainEvents(); advance(sim,.6);
+  assert.ok(sim.drainEvents().some(e=>e.type==='blast'&&e.skill==='fireball'));
+});
+
+test('relocation ends a following storm while preserving unrelated ground attacks',()=>{
+  const sim=createSim(); unlock(sim,'tempest');
+  advance(sim,FIXED_STEP,{skillSlot:0}); assert.ok(sim.groundEffects.some(e=>e.follow));
+  sim.groundEffects.push({id:999,kind:'meteor',skill:'meteor',x:50,y:0,radius:50,delay:1,duration:0,interval:1,damage:10,style:'fire',tick:0,pulsesLeft:1});
+  sim.relocate(2000,0);
+  assert.equal(sim.groundEffects.length,1); assert.equal(sim.groundEffects[0].id,999);
 });

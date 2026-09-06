@@ -69,7 +69,7 @@ function shot(owner: 'enemy' | 'player', y: number): Projectile {
 test('player projectiles accept small grazes without enlarging enemy shots or crossing walls', () => {
   const sim = new Simulation(world, { spawn: false }), enemy = sim.spawnEnemy('stalker', 100, 0)!;
   let hits = 0, hurts = 0;
-  const context = { player: sim.player, enemies: [enemy], world,
+  const context = { schedule: () => {}, player: sim.player, enemies: [enemy], world,
     damage: () => { hits++; }, hurt: () => { hurts++; }, visible: () => true, emit: () => {} };
   const grazingY = enemy.radius + 2 + PLAYER_PROJECTILE_FORGIVENESS - 1;
   advanceProjectiles([shot('player', grazingY)], .24, context);

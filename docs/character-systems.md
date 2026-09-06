@@ -34,7 +34,7 @@ These windows pause combat, clear buffered inputs, trap modal keyboard focus, an
 | `skill-tree-routes.ts` | Pure shortest-route and remaining-point-cost previews from the current allocation |
 | `skill-tree-art.ts`, `skill-tree-glyphs.ts` | Culled native-resolution atlas drawing and shared procedural stat/skill engravings |
 | `skill-content.ts` | Shared names, costs, cooldowns, damage multipliers, colors, and procedural skill icons |
-| `skill-combat.ts` | Execute seventeen unlocked, assigned, equipment-compatible active actions |
+| `skill-combat.ts` | Execute twenty unlocked, assigned, equipment-compatible active actions |
 | `projectile-combat.ts` | Swept projectile contacts, pierce/chain/explosion payloads, and direct-hit status/life-steal application |
 | `simulation.ts` | Deterministic tick ordering, state, RNG/IDs, movement, spawning and pickup |
 | `combat-damage.ts`, `combat-rewards.ts` | Damage/death commitment and exactly-once source-level XP/loot/flask rewards |
@@ -99,14 +99,14 @@ Every item retains a source recipe with profile, starter flag, normalized affix 
 
 ## Skill atlas and active skills
 
-The fixed atlas contains **2,113 nodes**, **2,925 undirected curved connections**, and **150 irregular constellations** across **Might, Cunning, and Arcana**:
+The fixed atlas contains **2,185 nodes**, **3,047 undirected curved connections**, and **150 passive constellations and 12 development groups** across **Might, Cunning, and Arcana**:
 
 - 1 free origin.
 - 1,662 minor nodes within themed constellations.
-- 247 minor travel nodes connecting specialties; these grant their discipline's attribute.
+- 279 minor travel nodes connecting specialties; these grant their discipline's attribute.
 - 36 early choice nodes granting speed, resources, critical chance, or mana efficiency.
-- 150 notable nodes, one concentrated reward in each constellation.
-- 17 major nodes, each unlocking one executable active skill.
+- 150 passive notable nodes, plus 19 specialization nodes, 17 mastery nodes and Arcane Overload.
+- 20 major nodes, each unlocking one executable active skill.
 
 Three distinct petals each contain five staggered terraces (3, 6, 10, 14 and 17 specialties). Ellipses, open crescents, fans and branching boughs contain 9–14 nodes. Focal notables connect multiple entrances, so crossing a specialty does not require buying half its circumference. Inter-cluster roads contain at most two intermediate travel nodes. Inner cross-discipline bridges and local circuits add alternatives. Node centers remain at least 22 world units apart, and cluster bounds include their actual geometry.
 
@@ -116,7 +116,7 @@ All nodes have stable IDs from deterministic content recipes. There are no class
 
 The shortest-route preview starts at any already allocated node, highlights the fewest additional points to the hovered or selected destination, and reports that cost. Double-click or Allocate path commits the complete highlighted route atomically, spending only missing nodes. Insufficient points or an invalid route leave all allocations and points unchanged. Equivalent builds resolve tied routes deterministically.
 
-The seventeen skills cover melee sweeps and dashes, heavy-weapon shocks, shield strikes/guarding, bow fans/piercing/ricochets/area rain, dagger backstabs, fire/ice/lightning spells, and life-stealing spirits. Shared metadata includes equipment requirements, mana costs, cooldowns, potency, and icons. The full [weapon and skill catalog](weapons-and-skills.md) lists every school, skill, and profile.
+The twenty skills cover melee sweeps and dashes, heavy-weapon shocks, shield strikes/guarding, bow fans/piercing/ricochets/area rain, dagger backstabs, fire/ice/lightning spells, and life-stealing spirits. Shared metadata includes equipment requirements, mana costs, cooldowns, potency, and icons. The full [weapon and skill catalog](weapons-and-skills.md) lists every school, skill, and profile.
 
 Physical melee and bow attacks use the derived attack-damage multiplier; staff bolts use the derived spell-damage multiplier. Melee and bows use attack-speed modifiers; staff basics and magic skills use independent cast-speed modifiers. A skill multiplies the compatible weapon's derived hit by its authored potency; spell scaling is applied once. When a melee skill can use either held weapon, the main hand takes priority. Bow/staff skills require their two-handed main weapon; shield skills require a usable equipped shield. Assignments survive gear changes, but incompatible slots cannot activate.
 
@@ -149,3 +149,7 @@ Code tests cover graph connectivity, stable unique nodes, themed cluster members
 The first skill in each of the nine weapon schools has zero cooldown; second skills retain cooldowns and cost 24–40 base mana. All skills still consume mana and respect their action animation/recovery. Attack speed scales melee/bow actions; cast speed scales staff basics and magic actions. Both apply to the weapon's base action rate. Gear and passives can reduce mana costs (75% maximum), with the same effective value used in activation and UI. See the current [skill catalog](weapons-and-skills.md) for costs and sources.
 
 Each of the five terraces now has a direct bridge between every pair of disciplines (15 guaranteed outer bridges), in addition to the three inner bridges and organically selected routes. Crossing a border needs at most two intermediate travel nodes.
+
+### Skill development (2026-09-06)
+
+[Skill progression](skill-progression.md) documents purchased ranks, lower casting ranks, selectable specializations, mastery, Overload and three deep Arcana ultimates. `skill-progression.ts` is the shared resolution path for combat and UI. Rank purchases consume skill points but never gate traversal. Save v3 includes this state and its point accounting.

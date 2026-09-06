@@ -140,3 +140,22 @@
 .skill-atlas-requirement small { display: block; font-size: 11px; color: #ac9891; margin-top: 5px; }
 .skill-atlas-requirement.is-ready { border-color: #7baf9644; color: #b3cbb9; background: #20312825; }
 .skill-atlas-requirement.is-ready small { color: #87a799; }
+
+.skill-rank-controls { display: grid; gap: 10px; padding: 14px; margin: 14px 0; }
+.skill-rank-controls > strong { color: #e3c994; font: 600 14px system-ui, sans-serif; }
+.skill-rank-controls label { display: grid; gap: 6px; font-size: 13px; color: var(--ui-silver); }
+.skill-rank-controls select { width: 100%; min-width: 0; font-size: 13px; }
+.skill-rank-controls p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ui-silver); }
+.skill-rank-preview { display: grid; gap: 5px; font-size: 13px; color: #b7c8c7; }
+.skill-rank-preview > span:first-child { color: #c6b1e1; }
+.skill-variant-links { display: grid; gap: 5px; }
+.skill-variant-links .ui-button { font-size: 12px; justify-content: flex-start; }
+.skill-atlas-inspection.has-skill { padding: 18px; }
+.skill-atlas-inspection.has-skill .skill-atlas-emblem { width: 44px; height: 44px; margin-bottom: 12px; outline-offset: 3px; }
+.skill-atlas-inspection.has-skill .skill-atlas-emblem svg { width: 28px; height: 28px; }
+.skill-atlas-inspection.has-skill h3 { font-size: 22px; }
+.skill-atlas-inspection.has-skill .skill-atlas-domain { margin-bottom: 10px; }
+.skill-atlas-inspection.has-skill .skill-atlas-description { font-size: 13px; line-height: 1.4; margin-bottom: 12px; }
+.skill-atlas-inspection.has-skill .skill-atlas-requirement { margin-bottom: 10px; }
+.skill-atlas-inspection.has-skill .skill-atlas-skill-costs { padding: 10px 0; gap: 6px 12px; }
+.skill-casting-rank { width: 100%; color: var(--ui-text); }

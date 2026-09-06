@@ -2,12 +2,12 @@
 
 Evergrow opens in a procedural forest character hall. Eight independent browser-local slots show name, level, power, last save time and equipped appearance. Select an empty slot, name a character, choose Sword, Bow or Fire Staff, and begin. The equipped portrait updates immediately when choosing. Select an existing character to continue. Deletion requires an explicit confirmation inside the hall.
 
-Every character starts at level 1 with the same attributes, worn leather outfit, the selected level-one common weapon, no allocated passives beyond the origin, five empty skill bindings and an empty 64-cell inventory. The world seed is 7319 for all slots; geography and starting conditions are identical, while exploration belongs to each character.
+Every character starts at level 1 with the same attributes, worn leather outfit, the selected level-one common weapon, no allocated passives beyond the origin, empty skill-rank/specialization selections, Overload disabled, five empty skill bindings and an empty 64-cell inventory. The world seed is 7319 for all slots; geography and starting conditions are identical, while exploration belongs to each character.
 
 ## Checkpoint contents
 
 - Name/identity, level, current-level XP, attributes, unspent points and allocated nodes.
-- All equipment and inventory item properties, appearances, source recipes, normalized affix rolls, enhancement/reroll counters and five skill assignments.
+- All equipment and inventory item properties, appearances, source recipes, normalized affix rolls, enhancement/reroll counters and five skill assignments; purchased ranks, chosen casting ranks, selected specializations and Overload.
 - Gold wallet, ground coins, current stock epoch/purchase masks, last 12 buyback items and transaction revisions.
 - Home town and optional expedition return point, scoped to this character.
 - Position/facing, health/mana, flask charges, dodge charges and recharge, potion and skill cooldowns.
@@ -21,15 +21,15 @@ Derived stats and held equipment are rebuilt from the character sheet on load. I
 
 A new character must be saved successfully before entering the world. Checkpoints are written every ten seconds during play, after successful equipment/attribute/tree/assignment commands, when opening a panel or map, on pause/defeat, on document hiding/page exit, and during application teardown. **Save & Character Hall** saves before switching characters. If that write fails, the character stays open and the error is shown. Browser exit hooks are best effort; periodic checkpoints bound loss if a process is killed without delivering an exit event.
 
-Town-portal travel and home-anchor activation persist their proposed position/travel state before publishing it. Cast progress and arrival protection are transient. Absent travel state defaults to Briarwatch/no link, so the portal addition does not invalidate existing v2 saves.
+Town-portal travel and home-anchor activation persist their proposed position/travel state before publishing it. Cast progress and arrival protection are transient. Absent travel state defaults to Briarwatch/no link, within the current format.
 
 Successful NPC transactions persist the entire proposed checkpoint before changing the live player. Storage errors and stale writers leave the wallet, gear, stock and random-operation counter unchanged.
 
 ## Storage integrity
 
-Current payload version is **2**. Explicit item recipes and commerce state are required. Previous version-1 slots remain stored and visible as incompatible; start a new character. This prototype intentionally has no save migration.
+Current payload version is **3**. Explicit item recipes, commerce state and skill progression are required. Previous version-1/2 slots remain stored and visible as incompatible; start a new character. This prototype intentionally has no save migration.
 
-`character-save.ts` validates a versioned, size-bounded payload before any runtime state is changed. It checks item types/materials, inventory bounds, unique identities, valid connected node allocations, point budgets, unlocked skill bindings and finite resources/coordinates. Shared `item-validation.ts` and `commerce-validation.ts` validate recipes, affix uniqueness, tier counts, counter/record limits and stock issuance. Ownership checks also cover buyback and available stock. Commerce retains at most 2,048 current-epoch vendor masks and 12 buyback items within the existing 700,000-character payload limit. Unknown/incompatible data is preserved rather than partially repaired.
+`character-save.ts` validates a versioned, size-bounded payload before any runtime state is changed. It checks item types/materials, inventory bounds, unique identities, valid connected node allocations, point budgets including purchased ranks, owned mastery/specialization constraints, unlocked skill bindings and finite resources/coordinates. Shared `item-validation.ts` and `commerce-validation.ts` validate recipes, affix uniqueness, tier counts, counter/record limits and stock issuance. Ownership checks also cover buyback and available stock. Commerce retains at most 2,048 current-epoch vendor masks and 12 buyback items within the existing 700,000-character payload limit. Unknown/incompatible data is preserved rather than partially repaired.
 
 `character-storage.ts` stores each slot independently in one atomic localStorage value, retaining its last valid predecessor in a backup key. A damaged primary can recover from that backup; the hall explicitly marks this case. Unreadable slots remain reserved. Deletion writes a tombstone first so an old backup cannot resurrect the deleted character. Per-session raw-value tokens reject overwrites from a stale tab. `character-session.ts` owns the active slot, world compatibility and save results; simulation owns checkpoint capture/restore.
 

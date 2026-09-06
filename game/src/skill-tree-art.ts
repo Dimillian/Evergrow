@@ -1,14 +1,17 @@
+import { skillDamageSuffix } from './skill-execution-content.ts';
+import { resolveSkill, learnedSkillRank, maximumSkillRank } from './skill-progression.ts';
 import { SKILL_TREE, SKILL_NODES, type SkillNode } from './skill-tree.ts';
 import { drawSkillGlyph } from './skill-tree-glyphs.ts';
-import type { DerivedCharacterStats, StatKey } from './character-types.ts';
+import type { CharacterSheet, DerivedCharacterStats, StatKey } from './character-types.ts';
 import { STAT_LABELS, formatStatValue } from './items.ts';
-import { SKILL_DEFINITIONS, skillCosts, skillRequirementLabel } from './skill-content.ts';
+import { SKILL_DEFINITIONS, skillRequirementLabel } from './skill-content.ts';
 import { UI_THEME } from './ui-theme.ts';
 
 export const SKILL_DOMAIN_COLORS = { Might: '#c69b71', Cunning: '#80b29d', Arcana: '#a49ecb' } as const;
 export interface SkillAtlasView {
   width: number; height: number; zoom: number; centerX: number; centerY: number;
   allocated: ReadonlySet<string>; reachable: ReadonlySet<string>;
+  sheet?: CharacterSheet;
   costStats?: Pick<DerivedCharacterStats, 'manaCostMultiplier' | 'cooldownMultiplier'>;
   tooltip?: { id: string | null; opacity: number; lift: number };
   selected: string; hovered: string | null; route: readonly string[];
@@ -133,6 +136,11 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     }
   }
   c.globalAlpha = 1;
+  if (view.sheet && z >= .55) for (const node of SKILL_TREE.nodes) if (node.skill && view.allocated.has(node.id)) {
+    const x = sx(node.x), y = sy(node.y) + skillNodeScreenRadius(node,z) + 4;
+    c.font = '10px system-ui'; c.textAlign = 'center'; c.fillStyle = '#efe2b5';
+    c.fillText(`${learnedSkillRank(view.sheet,node.skill)}/${maximumSkillRank(view.sheet,node.skill)}`,x,y+8);
+  }
   // Overview preserves the three disciplines and their silhouette; local labels take over as you approach.
   if (z < .25) for (const domain of ['Might', 'Cunning', 'Arcana'] as const) {
     const clusters = SKILL_TREE.clusters.filter(cluster => cluster.domain === domain);
@@ -143,7 +151,7 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
   const priorityNodes = SKILL_TREE.nodes.filter(node => node.kind === 'major' || node.kind === 'origin' || node.id === view.selected);
   for (const node of priorityNodes) {
     if (z < .15 || z < .36 && node.id !== view.selected) continue;
-    label(node.kind === 'origin' ? 'THE FIRST STAR' : node.name, sx(node.x), sy(node.y) + skillNodeScreenRadius(node, z) + 11,
+    label(node.kind === 'origin' ? 'THE FIRST STAR' : node.name, sx(node.x), sy(node.y) + skillNodeScreenRadius(node, z) + (node.skill && view.allocated.has(node.id) && z >= .55 ? 26 : 11),
       view.allocated.has(node.id) ? '#efdaad' : '#c8bba0', 12);
   }
   if (z >= .27 && z <= 1.6) for (const cluster of SKILL_TREE.clusters) {
@@ -183,14 +191,17 @@ function drawNodeTooltip(c: CanvasRenderingContext2D, node: SkillNode, view: Ski
   const owned = view.allocated.has(node.id);
   c.save();
   add(node.name, '#eee0bf', 17, 8);
-  add(`${node.domain} · ${skill ? 'Active skill' : node.kind === 'notable' ? 'Notable' : node.role === 'travel' ? 'Travel node' : node.kind === 'origin' ? 'Origin' : 'Passive'}`, color, 12, 12);
+  add(`${node.domain} · ${skill ? `${skill.tier === 'ultimate' ? 'Ultimate' : 'Active skill'}${view.sheet && owned ? ` · Rank ${learnedSkillRank(view.sheet, skill.id)}` : ''}` : node.kind === 'notable' ? 'Notable' : node.role === 'travel' ? 'Travel node' : node.kind === 'origin' ? 'Origin' : 'Passive'}`, color, 12, 12);
   for (const [key, value] of Object.entries(node.bonuses) as [StatKey, number][]) {
     add(`${formatStatValue(key, value)} ${STAT_LABELS[key]}`, '#d5e8ca', 15, 6);
   }
   if (skill) {
-    add(skill.description, '#b5c2ca', 13, 10);
+    add(view.sheet ? resolveSkill(skill.id, view.costStats ?? { manaCostMultiplier: 1, cooldownMultiplier: 1 }, view.sheet).variant?.description ?? skill.description : skill.description, '#b5c2ca', 13, 10);
     add(`Requires ${skillRequirementLabel(skill.requirement)}`, color, 12, 6);
-    const costs = skillCosts(skill.id, view.costStats ?? { manaCostMultiplier: 1, cooldownMultiplier: 1 });
+    const stats = view.costStats ?? { manaCostMultiplier: 1, cooldownMultiplier: 1 };
+    const costs = resolveSkill(skill.id, stats, view.sheet);
+    if (costs.damageMultiplier) add(`${Math.round(costs.damageMultiplier * 100)}% weapon damage${skillDamageSuffix(skill.id, costs.recipe)}`, '#d5e8ca', 13, 6);
+    if (costs.upkeep) add(`${costs.upkeep} mana / second while active`, '#cfc4df', 13, 6);
     add(`${costs.mana} mana · ${costs.cooldown ? `${Number(costs.cooldown.toFixed(2))}s cooldown` : 'No cooldown'}`, '#cfc4df', 13, 10);
   } else if (!Object.keys(node.bonuses).length) add(node.description, '#b5c2ca', 13, 10);
   const cost = view.route.filter(id => !view.allocated.has(id)).length;

@@ -1,5 +1,5 @@
 import { SKILL_EXECUTION, groundEffectPulseCount } from './skill-execution-content.ts';
-import type { DerivedCharacterStats, SkillId } from './character-types.ts';
+import type { SkillId } from './character-types.ts';
 import type { Equipment, WeaponDefinition } from './model.ts';
 
 export type SkillRequirement = 'melee' | 'blade' | 'heavy' | 'dagger' | 'bow' | 'staff' | 'shield';
@@ -9,7 +9,7 @@ export interface SkillDefinition {
   readonly description: string;
   readonly requirement: SkillRequirement;
   readonly domain: 'Might' | 'Cunning' | 'Arcana';
-  readonly tier: 'basic' | 'advanced';
+  readonly tier: 'basic' | 'advanced' | 'ultimate';
   readonly manaCost: number;
   readonly cooldown: number;
   readonly damageMultiplier: number;
@@ -18,6 +18,9 @@ export interface SkillDefinition {
 
 /** Costs, potency and equipment requirements are shared by the atlas, HUD and combat. */
 export const SKILL_DEFINITIONS: Readonly<Record<SkillId, Readonly<SkillDefinition>>> = Object.freeze({
+  cataclysm: Object.freeze({ id: 'cataclysm', name: 'Cataclysm', description: 'Seven meteors converge on a wide area, each igniting its impact zone.', requirement: 'staff', domain: 'Arcana', tier: 'ultimate', manaCost: 80, cooldown: 30, damageMultiplier: 2.8, color: '#ffa46b' }),
+  tempest: Object.freeze({ id: 'tempest', name: 'Tempest', description: 'A moving lightning storm strikes nearby enemies for up to six seconds. Each pulse consumes mana; exhaustion ends the storm.', requirement: 'staff', domain: 'Arcana', tier: 'ultimate', manaCost: 35, cooldown: 24, damageMultiplier: .65, color: '#c4c4ff' }),
+  absoluteZero: Object.freeze({ id: 'absoluteZero', name: 'Absolute Zero', description: 'Two vast freezing waves damage and chill surrounding enemies. Elite enemies resist the freeze.', requirement: 'staff', domain: 'Arcana', tier: 'ultimate', manaCost: 75, cooldown: 28, damageMultiplier: 2.4, color: '#b7efff' }),
   cleave: Object.freeze({ id: 'cleave', name: 'Crescent Cleave', description: 'Sweep a melee weapon through a broad crescent, striking each nearby enemy once.', requirement: 'melee', domain: 'Might', tier: 'basic', manaCost: 12, cooldown: 0, damageMultiplier: 1.8, color: '#e6bd7b' }),
   lunge: Object.freeze({ id: 'lunge', name: 'Rift Lunge', description: 'Drive your blade forward in a swift dash, cutting enemies along your path.', requirement: 'blade', domain: 'Might', tier: 'advanced', manaCost: 24, cooldown: 4, damageMultiplier: 1.5, color: '#add9ca' }),
   whirlwind: Object.freeze({ id: 'whirlwind', name: 'Whirlwind', description: 'Turn a full circle with your melee weapon, sweeping through enemies on every side.', requirement: 'melee', domain: 'Might', tier: 'basic', manaCost: 12, cooldown: 0, damageMultiplier: 1.6, color: '#d8c28c' }),
@@ -65,6 +68,9 @@ export function skillWeapon(id: SkillId, equipment: Equipment): WeaponDefinition
 export function canUseSkill(id: SkillId, equipment: Equipment): boolean { return skillWeapon(id, equipment) !== null; }
 
 const SKILL_PATHS: Readonly<Record<SkillId, string>> = Object.freeze({
+  cataclysm: '<path d="M5 3 15 15M20 1 24 10M35 5 29 18M4 34l8-12 8 14 9-17 8 16M3 38h34"/><circle cx="20" cy="20" r="5"/>',
+  tempest: '<circle cx="20" cy="20" r="16"/><path d="m23 3-14 20 12-4-4 18 15-23-11 5M2 12l6 2M32 27l6 2"/>',
+  absoluteZero: '<circle cx="20" cy="20" r="17"/><path d="M20 2v36M4 10l32 20M4 30l32-20M14 7l6 6 6-6M14 33l6-6 6 6M7 16l6 4-6 4M33 16l-6 4 6 4"/>',
   cleave: '<path d="M8 27 25 6l3 2-16 23-5 2Z"/><path d="m6 23 12 9M17 6C32 4 39 16 31 27M23 4c13 3 17 14 10 22"/>',
   lunge: '<path d="m7 30 20-21 5-2-2 6-20 20ZM5 25l8 8M3 15l10-3M3 21l7-2M18 4l-3 5"/>',
   whirlwind: '<path d="M9 12C16 2 32 7 33 20c1 11-11 18-21 12C4 27 4 18 9 12Zm1-7-1 7 7-1M29 35l3-8-8 2M15 24l10-12 3-1-1 4-10 11Zm-3-3 8 7M15 25l-4 5"/>',
@@ -88,11 +94,4 @@ const SKILL_PATHS: Readonly<Record<SkillId, string>> = Object.freeze({
 export function skillIconSVG(id: SkillId, size = 36): string {
   const dimension = Number.isFinite(size) ? Math.max(8, Math.min(256, size)) : 36;
   return `<svg aria-hidden="true" width="${dimension}" height="${dimension}" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${SKILL_PATHS[id]}</svg>`;
-}
-
-/** Shared effective costs for activation, HUD availability, and skill inspection. */
-export function skillCosts(id: SkillId, stats: Pick<DerivedCharacterStats, 'manaCostMultiplier' | 'cooldownMultiplier'>) {
-  const skill = SKILL_DEFINITIONS[id];
-  return { mana: Math.max(1, Math.round(skill.manaCost * stats.manaCostMultiplier * 10) / 10),
-    cooldown: skill.cooldown * stats.cooldownMultiplier };
 }

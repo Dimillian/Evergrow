@@ -102,6 +102,7 @@ export class Game {
         allocate: attribute => this.characterAction({ type: 'allocateAttribute', attribute }),
       }));
       this.skillPanel = this.lifetime.own(new SkillTreePanel(this.shell.panelMount, {
+        develop: command => this.characterAction(command),
         close: () => this.closeCharacterPanel(),
         allocate: id => this.characterAction({ type: 'allocateNode', id }),
         assign: (slot, skill) => this.characterAction({ type: 'assignSkill', slot, skill }),

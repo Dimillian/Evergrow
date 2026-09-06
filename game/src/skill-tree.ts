@@ -1,3 +1,4 @@
+import { SKILL_SPECIALIZATIONS, specializationNode, masteryNode, OVERLOAD_NODE } from './skill-progression.ts';
 import type { ActionResult, CharacterSheet, SkillId, StatKey, StatModifiers } from './character-types.ts';
 import { SKILL_DEFINITIONS, skillRequirementLabel } from './skill-content.ts';
 
@@ -9,6 +10,9 @@ export interface SkillNode {
   readonly domain: SkillDomain;
   readonly bonuses: Readonly<StatModifiers>;
   readonly skill?: SkillId;
+  readonly specialization?: string;
+  readonly mastery?: SkillId;
+  readonly keystone?: boolean;
   readonly cluster?: string;
   readonly role?: 'travel' | 'cluster' | 'choice';
   readonly neighbors: readonly string[];
@@ -333,12 +337,65 @@ function buildTree() {
     if (a.domain !== b.domain) link(a.id, b.id, polar(235, Math.atan2(a.y + b.y, a.x + b.x)));
   }
 
+  // Skill growth occupies the gaps between passive terraces, preserving their organic loops.
+  const developmentClusters: SkillCluster[] = [];
+  const openPosition = (point: Point): Point => {
+    if (nodes.every(node => distance(node, point) >= 30)) return point;
+    for (let ring = 1; ring <= 12; ring++) for (let step = 0; step < 24; step++) {
+      const offset = polar(ring * 12, step * Math.PI / 12);
+      const candidate = { x: point.x + offset.x, y: point.y + offset.y };
+      if (nodes.every(node => distance(node, candidate) >= 30)) return candidate;
+    }
+    throw new Error('No clear skill development position.');
+  };
+  for (const region of REGIONS) for (const school of region.schools) {
+    const angle = region.angle + school.angle * 1.05;
+    const variants = SKILL_SPECIALIZATIONS.filter(v => school.skills.includes(v.skill));
+    const baseCluster = blueprints.filter(b => b.domain === region.domain).slice(0, 3)[region.schools.indexOf(school)];
+    const outward = blueprints.filter(b => b.domain === region.domain && b.id.includes(':terrace:1:'))
+      .sort((a, b) => distance(a, polar(1370, angle)) - distance(b, polar(1370, angle)))[0];
+    const development: MutableNode[] = [];
+    variants.forEach((variant, index) => {
+      const point = openPosition(polar(1090 + (index % 2) * 34, angle + (index - (variants.length - 1) / 2) * .13));
+      const node = add({ id: specializationNode(variant.id), ...point, kind: 'notable', domain: region.domain,
+        name: variant.name, description: variant.description, specialization: variant.id, cluster: `development:${school.id}`, bonuses: {} });
+      development.push(node);
+      if (index) link(development[index - 1].id, node.id, polar(1150, angle + (index - variants.length / 2) * .13));
+      road(`development:${variant.id}:in`, nearest(baseCluster, node), node, region.domain, region.domain);
+      road(`development:${variant.id}:out`, node, nearest(outward, node), region.domain, region.domain);
+    });
+    developmentClusters.push({ id: `development:${school.id}`, name: school.name.replace('Way of the ', '') + ' · Specializations', domain: region.domain, ...polar(1100, angle), radius: Math.max(...development.map(node => distance(node, polar(1100, angle)))) + 30 });
+    school.skills.forEach((skill, index) => {
+      const node = add({ id: masteryNode(skill), ...openPosition(polar(1690, angle + (index ? .065 : -.065))), kind: 'notable', domain: region.domain,
+        name: `${SKILL_DEFINITIONS[skill].name} Mastery`, description: 'Raises the purchased rank ceiling from 5 to 7. Each additional rank still costs one skill point.', mastery: skill, bonuses: {} });
+      road(`mastery:${skill}:in`, nearest(outward, node), node, region.domain, region.domain);
+      const next = blueprints.filter(b => b.domain === region.domain && b.id.includes(':terrace:2:')).sort((a,b) => distance(a,node)-distance(b,node))[0];
+      road(`mastery:${skill}:out`, node, nearest(next,node), region.domain, region.domain);
+    });
+  }
+  for (const [index, skill] of (['cataclysm', 'absoluteZero', 'tempest'] as const).entries()) {
+    const angle = -1.55 + (index - 1) * .5, definition = SKILL_DEFINITIONS[skill];
+    const node = add({ id: `skill:${skill}`, ...openPosition(polar(3010, angle)), cluster: `ultimate:${skill}`, kind: 'major', domain: 'Arcana', skill,
+      name: definition.name, description: definition.description, bonuses: {} });
+    for (const terrace of [3, 4]) {
+      const near = blueprints.filter(b => b.domain === 'Arcana' && b.id.includes(`:terrace:${terrace}:`)).sort((a,b)=>distance(a,node)-distance(b,node))[0];
+      road(`ultimate:${skill}:${terrace}`, nearest(near,node), node, 'Arcana', 'Arcana');
+    }
+    developmentClusters.push({ id: `ultimate:${skill}`, name: definition.name, domain: 'Arcana', x: node.x, y: node.y, radius: 65 });
+  }
+  const overload = add({ id: OVERLOAD_NODE, ...openPosition(polar(2350,-1.55)), kind: 'notable', domain: 'Arcana', keystone: true,
+    name: 'Arcane Overload', description: 'Optional: Arcana skills deal 30% more damage and cost 60% more mana, including Tempest upkeep. Toggle in this node after allocation.', bonuses: {} });
+  for (const terrace of [2,3]) {
+    const near = blueprints.filter(b=>b.domain === 'Arcana' && b.id.includes(`:terrace:${terrace}:`)).sort((a,b)=>distance(a,overload)-distance(b,overload))[0];
+    road(`overload:${terrace}`, nearest(near,overload), overload, 'Arcana','Arcana');
+  }
+
   const clusters = blueprints.map(cluster => Object.freeze({ id: cluster.id, name: cluster.family.name, domain: cluster.domain, x: cluster.x, y: cluster.y,
     radius: Math.max(...members.get(cluster.id)!.map(node => distance(node, cluster))) + 8 }));
   const bounds = Object.freeze({ minX: Math.min(...nodes.map(node => node.x)) - 90, minY: Math.min(...nodes.map(node => node.y)) - 90,
     maxX: Math.max(...nodes.map(node => node.x)) + 90, maxY: Math.max(...nodes.map(node => node.y)) + 90 });
   for (const node of nodes) { Object.freeze(node.neighbors); Object.freeze(node); }
-  return Object.freeze({ nodes: Object.freeze(nodes) as readonly SkillNode[], edges: Object.freeze(edges), clusters: Object.freeze(clusters), bounds });
+  return Object.freeze({ nodes: Object.freeze(nodes) as readonly SkillNode[], edges: Object.freeze(edges), clusters: Object.freeze([...clusters, ...developmentClusters.map(cluster => Object.freeze(cluster))]), bounds });
 }
 
 /** Three terraced petals, early choice fans, and short interconnected specialty routes. */

@@ -1,8 +1,10 @@
+import type { CharacterCommand } from './character-commands.ts';
+import { resolveSkill, learnedSkillRank, activeSkillRank, maximumSkillRank, selectedSpecialization, SKILL_SPECIALIZATIONS, specializationNode, masteryNode } from './skill-progression.ts';
 import { TooltipMotion } from './ui-tooltip-motion.ts';
 import { skillDamageSuffix, skillUtilityLabel } from './skill-execution-content.ts';
 import type { Player } from './model.ts';
 import type { SkillId, StatKey } from './character-types.ts';
-import { SKILL_DEFINITIONS, skillCosts, skillIconSVG, canUseSkill, skillRequirementLabel } from './skill-content.ts';
+import { SKILL_DEFINITIONS, skillIconSVG, canUseSkill, skillRequirementLabel } from './skill-content.ts';
 import { SKILL_TREE, SKILL_NODES, SKILL_TREE_ORIGIN, unlockedSkills, type SkillDomain, type SkillNode } from './skill-tree.ts';
 import { escapeUI, trapDialogFocus, uiIcon } from './ui-components.ts';
 import { drawSkillAtlas, SKILL_DOMAIN_COLORS, skillNodeScreenRadius } from './skill-tree-art.ts';
@@ -11,7 +13,7 @@ import { buildSkillRoutes, previewSkillRoute, type SkillRouteStep } from './skil
 import { STAT_LABELS, formatStatValue } from './items.ts';
 import './skill-tree-panel.css';
 
-interface SkillTreeActions { close(): void; allocate(id: string): void; assign(slot: number, skill: SkillId | null): void; }
+interface SkillTreeActions { develop(command: CharacterCommand): void; close(): void; allocate(id: string): void; assign(slot: number, skill: SkillId | null): void; }
 const COLORS = SKILL_DOMAIN_COLORS;
 const BINDINGS = ['RMB', '1', '2', '3', '4'];
 
@@ -83,6 +85,14 @@ export class SkillTreePanel {
     this.zoomLabel = this.root.querySelector('output')!;
     const opts = { signal: this.life.signal };
     this.root.addEventListener('click', event => this.click(event), opts);
+    this.root.addEventListener('change', event => {
+      const input = event.target as HTMLSelectElement, id = input.dataset.skill as SkillId;
+      if (!id || !this.player) return;
+      const sheet = this.player.character;
+      this.actions.develop({ type: 'configureSkill', skill: id,
+        rank: input.dataset.config === 'rank' ? Number(input.value) : Math.max(1, activeSkillRank(sheet,id)),
+        specialization: input.dataset.config === 'variant' ? input.value || null : sheet.skillSpecializations[id] ?? null });
+    }, opts);
     this.search.addEventListener('input', () => { this.resultsDismissed = false; this.updateResults(); this.invalidate(); }, opts);
     this.root.querySelector('select')!.addEventListener('change', event => {
       this.domain = (event.target as HTMLSelectElement).value as SkillDomain | 'all'; this.resultsDismissed = false; this.updateResults(); this.invalidate();
@@ -115,8 +125,9 @@ export class SkillTreePanel {
     this.canvas.addEventListener('dblclick', event => {
       event.preventDefault();
       const node = this.pick(event.clientX, event.clientY);
-      if (event.button === 0 && node && node.id === this.doubleClickedNode && !this.allocated.has(node.id)) {
-        this.actions.allocate(node.id);
+      if (event.button === 0 && node && node.id === this.doubleClickedNode) {
+        if (this.allocated.has(node.id) && node.skill) this.actions.develop({ type: 'upgradeSkill', skill: node.skill });
+        else if (!this.allocated.has(node.id)) this.actions.allocate(node.id);
       }
       this.lastClickedNode = this.doubleClickedNode = null;
     }, opts);
@@ -144,7 +155,7 @@ export class SkillTreePanel {
   refresh(player: Player): void {
     const active = this.root.ownerDocument.activeElement;
     const focusedControl = active && this.root.contains(active)
-      ? ['data-tree', 'data-assign', 'data-clear'].flatMap(attribute => {
+      ? ['data-tree', 'data-assign', 'data-clear', 'data-upgrade', 'data-config', 'data-variant', 'data-overload'].flatMap(attribute => {
         const value = active.getAttribute(attribute);
         return value === null ? [] : [{ attribute, value }];
       })[0] : undefined;
@@ -154,7 +165,7 @@ export class SkillTreePanel {
     this.points.innerHTML = `<strong>${player.character.skillPoints}</strong><span>SKILL ${player.character.skillPoints === 1 ? 'POINT' : 'POINTS'}</span>`;
     this.updateDetail(); this.updateAssignments(); this.updateResults(); this.invalidate();
     if (this.shown && focusedControl) {
-      const replacement = [...this.root.querySelectorAll<HTMLButtonElement>(`button[${focusedControl.attribute}]`)]
+      const replacement = [...this.root.querySelectorAll<HTMLButtonElement>(`[${focusedControl.attribute}]`)]
         .find(button => button.getAttribute(focusedControl.attribute) === focusedControl.value && !button.disabled);
       (replacement ?? this.canvas).focus({ preventScroll: true });
     }
@@ -176,6 +187,12 @@ export class SkillTreePanel {
   }
   private click(event: MouseEvent): void {
     const button = (event.target as Element).closest<HTMLButtonElement>('button'); if (!button) return;
+    if (button.dataset.upgrade) { this.actions.develop({ type: 'upgradeSkill', skill: button.dataset.upgrade as SkillId }); return; }
+    if (button.dataset.variant && this.player) {
+      const spec = SKILL_SPECIALIZATIONS.find(s => s.id === button.dataset.variant)!;
+      this.actions.develop({ type: 'configureSkill', skill: spec.skill, rank: activeSkillRank(this.player.character, spec.skill), specialization: spec.id }); return;
+    }
+    if (button.hasAttribute('data-overload') && this.player) { this.actions.develop({ type: 'overload', enabled: !this.player.character.arcaneOverload }); return; }
     if (button.dataset.node) {
       this.resultsDismissed = true; this.updateResults();
       this.inspectNode(button.dataset.node); this.canvas.focus({ preventScroll: true }); return;
@@ -224,26 +241,50 @@ export class SkillTreePanel {
     if (!this.player) return;
     const node = SKILL_NODES.get(this.hovered ?? this.selected)!, owned = this.allocated.has(node.id), reachable = this.reachable.has(node.id);
     const skill = node.skill ? SKILL_DEFINITIONS[node.skill] : undefined;
-    const costs = skill ? skillCosts(skill.id, this.player.derived) : undefined;
-    const heading = node.kind === 'origin' ? 'YOUR ORIGIN' : node.kind === 'major' ? 'MAJOR · ACTIVE SKILL' : node.kind === 'notable' ? 'NOTABLE · SPECIALIZATION' : node.role === 'travel' ? 'TRAVEL NODE' : 'MINOR · PASSIVE';
+    const costs = skill ? resolveSkill(skill.id, this.player.derived, this.player.character) : undefined;
+    const heading = node.kind === 'origin' ? 'YOUR ORIGIN' : node.kind === 'major' ? skill?.tier === 'ultimate' ? 'ULTIMATE' : 'ACTIVE SKILL' : node.specialization ? 'SKILL SPECIALIZATION' : node.mastery ? 'SKILL MASTERY' : node.keystone ? 'KEYSTONE' : node.kind === 'notable' ? 'NOTABLE · SPECIALIZATION' : node.role === 'travel' ? 'TRAVEL NODE' : 'MINOR · PASSIVE';
     const routeCost = this.routes.get(node.id)?.cost;
     const cluster = SKILL_TREE.clusters.find(cluster => cluster.id === node.cluster);
     const bonuses = (Object.entries(node.bonuses) as [StatKey, number][]).map(([key, value]) => `<div class="ui-stat"><span>${STAT_LABELS[key]}</span><b>${formatStatValue(key, value)}</b></div>`).join('');
+    this.detail.classList.toggle('has-skill', !!skill);
     this.detail.innerHTML = `<div class="skill-atlas-emblem" style="--star-color:${COLORS[node.domain]}">${skillNodeIconSVG(node, 48)}</div>
       <p class="ui-kicker">${heading}</p><h3>${escapeUI(node.name)}</h3><p class="skill-atlas-domain" style="color:${COLORS[node.domain]}">${node.kind === 'origin' ? 'Might · Cunning · Arcana' : escapeUI(cluster ? `${node.domain} / ${cluster.name}` : node.domain)}</p>
-      <p class="skill-atlas-description">${escapeUI(node.description)}</p>${bonuses ? `<div class="skill-atlas-bonuses ui-well">${bonuses}</div>` : ''}
-      ${skill ? `<p class="skill-atlas-requirement ${canUseSkill(skill.id, this.player.equipment) ? 'is-ready' : ''}">Requires ${escapeUI(skillRequirementLabel(skill.requirement))}<small>${canUseSkill(skill.id, this.player.equipment) ? 'Matching equipment ready' : 'Equip matching gear to use this skill'}</small></p><div class="skill-atlas-skill-costs"><span><b>${costs!.mana}</b> mana</span><span>${costs!.cooldown ? `<b>${Number(costs!.cooldown.toFixed(2))}s</b> cooldown` : 'No cooldown'}</span>${skill.damageMultiplier ? `<span><b>${Math.round(skill.damageMultiplier * 100)}%</b> damage${skillDamageSuffix(skill.id)}</span>` : `<span>${skillUtilityLabel(skill.id)}</span>`}</div>` : ''}
+      <p class="skill-atlas-description">${escapeUI(costs?.variant?.description ?? node.description)}</p>${bonuses ? `<div class="skill-atlas-bonuses ui-well">${bonuses}</div>` : ''}
+      ${skill ? `<p class="skill-atlas-requirement ${canUseSkill(skill.id, this.player.equipment) ? 'is-ready' : ''}">Requires ${escapeUI(skillRequirementLabel(skill.requirement))}<small>${canUseSkill(skill.id, this.player.equipment) ? 'Matching equipment ready' : 'Equip matching gear to use this skill'}</small></p><div class="skill-atlas-skill-costs">${owned ? `<span class="skill-casting-rank">Casting rank ${costs!.rank}</span>` : ''}<span><b>${costs!.mana}</b> mana</span><span>${costs!.cooldown ? `<b>${Number(costs!.cooldown.toFixed(2))}s</b> cooldown` : 'No cooldown'}</span>${skill.damageMultiplier ? `<span><b>${Math.round(costs!.damageMultiplier * 100)}%</b> damage${skillDamageSuffix(skill.id, costs!.recipe)}</span>` : `<span>${costs!.recipe.kind === 'guard' ? `${costs!.recipe.duration}s · ${Math.round(costs!.recipe.reduction*100)}% block` : skillUtilityLabel(skill.id)}</span>`}${costs!.upkeep ? `<span><b>${costs!.upkeep}</b> mana / second</span>` : ''}</div>` : ''}
+      ${this.progressionControls(node, owned)}
       <div class="skill-atlas-allocation"><span class="skill-atlas-node-state ${owned ? 'is-owned' : ''}">${owned ? '◆ Allocated' : reachable ? '◇ Connected to your path' : routeCost !== undefined ? `◇ ${routeCost} ${routeCost === 1 ? 'point' : 'points'} along the highlighted path` : '◇ No connected path'}</span>
         ${owned ? '' : `<button class="ui-button ui-button--primary" data-tree="allocate" data-inspected="${node.id}" ${routeCost === undefined || this.player.character.skillPoints < routeCost ? 'disabled' : ''}>${routeCost === 1 ? 'Allocate' : 'Allocate path'} <span>${routeCost ?? '—'} ${routeCost === 1 ? 'point' : 'points'}</span></button>`}
         ${!owned && routeCost !== undefined && this.player.character.skillPoints < routeCost ? `<small class="ui-muted">${routeCost - this.player.character.skillPoints} more ${routeCost - this.player.character.skillPoints === 1 ? 'point' : 'points'} needed.</small>` : ''}</div>
       ${skill && owned ? `<div class="skill-atlas-equip"><p class="ui-kicker">ASSIGN TO A SLOT</p><div>${BINDINGS.map((binding, index) => `<button class="ui-button ${this.player!.character.skillSlots[index] === node.skill ? 'ui-button--primary' : 'ui-button--quiet'}" data-assign="${index + 1}" data-inspected="${node.id}" aria-label="Assign ${skill.name} to ${binding}">${binding}</button>`).join('')}</div></div>` : ''}`;
+  }
+  private progressionControls(node: SkillNode, owned: boolean): string {
+    const p = this.player!, sheet = p.character;
+    if (node.keystone && owned) return `<button class="ui-button ui-button--primary" data-overload aria-pressed="${sheet.arcaneOverload}">Overload ${sheet.arcaneOverload ? 'on' : 'off'}</button>`;
+    if (node.mastery) return `<button class="ui-button ui-button--quiet" data-node="skill:${node.mastery}">View ${SKILL_DEFINITIONS[node.mastery].name}</button>`;
+    if (node.specialization) {
+      const variant = SKILL_SPECIALIZATIONS.find(s => s.id === node.specialization)!;
+      const learned = learnedSkillRank(sheet, variant.skill);
+      return `<div class="skill-rank-controls"><button class="ui-button ui-button--quiet" data-node="skill:${variant.skill}">View ${SKILL_DEFINITIONS[variant.skill].name}</button>
+        ${owned ? `<button class="ui-button ui-button--primary" data-variant="${variant.id}" ${!learned ? 'disabled' : ''}>${sheet.skillSpecializations[variant.skill] === variant.id ? 'Selected' : 'Use specialization'}</button>` : ''}</div>`;
+    }
+    if (!node.skill || !owned) return '';
+    const id = node.skill, learned = learnedSkillRank(sheet,id), max = maximumSkillRank(sheet,id), active = activeSkillRank(sheet,id);
+    const current = resolveSkill(id,p.derived,sheet,learned), next = learned < max ? resolveSkill(id,p.derived,sheet,learned+1) : null;
+    const variants = SKILL_SPECIALIZATIONS.filter(v=>v.skill===id), selected = selectedSpecialization(sheet,id);
+    return `<section class="skill-rank-controls ui-well"><strong>Rank ${learned} / ${max}</strong>
+      ${next ? `<div class="skill-rank-preview"><span>Next rank</span><span>${next.recipe.kind === 'guard' && current.recipe.kind === 'guard' ? `${Math.round(current.recipe.reduction*100)}% → ${Math.round(next.recipe.reduction*100)}% blocked` : `${Math.round(current.damageMultiplier*100)}% → ${Math.round(next.damageMultiplier*100)}% damage`}</span><span>${current.mana} → ${next.mana} mana</span><span>${next.cooldown ? `${next.cooldown.toFixed(2)}s cooldown` : 'No cooldown'}</span></div>
+      <button class="ui-button ui-button--primary" data-upgrade="${id}" ${sheet.skillPoints < 1 ? 'disabled' : ''}>Upgrade · 1 point</button>` : '<span class="ui-muted">Maximum purchased rank</span>'}
+      <label>Cast at rank<select class="ui-button" data-config="rank" data-skill="${id}" aria-label="Active rank for ${SKILL_DEFINITIONS[id].name}">${Array.from({length:learned},(_,i)=>`<option value="${i+1}" ${i+1===active?'selected':''}>Rank ${i+1}</option>`).join('')}</select></label>
+      ${variants.length ? `<label>Specialization<select class="ui-button" data-config="variant" data-skill="${id}" aria-label="Specialization for ${SKILL_DEFINITIONS[id].name}"><option value="">Original</option>${variants.map(v=>`<option value="${v.id}" ${selected?.id===v.id?'selected':''} ${!sheet.allocatedNodes.includes(specializationNode(v.id))?'disabled':''}>${v.name}${!sheet.allocatedNodes.includes(specializationNode(v.id))?' · locked':''}</option>`).join('')}</select></label>
+      <div class="skill-variant-links">${variants.map(v=>`<button class="ui-button ui-button--quiet" data-node="${specializationNode(v.id)}">${v.name} ↗</button>`).join('')}</div>` : ''}
+      ${SKILL_NODES.has(masteryNode(id)) ? `<button class="ui-button ui-button--quiet" data-node="${masteryNode(id)}">Mastery · unlock ranks 6–7 ↗</button>` : ''}</section>`;
   }
   private updateAssignments(): void {
     if (!this.player) return;
     const skills = new Set(unlockedSkills(this.player.character.allocatedNodes));
     this.assignments.innerHTML = BINDINGS.map((binding, index) => {
       const id = this.player!.character.skillSlots[index], skill = id && skills.has(id) ? SKILL_DEFINITIONS[id] : null;
-      return `<div class="skill-atlas-assigned ${skill ? 'is-filled' : ''}"><span class="skill-atlas-assigned-icon" ${skill ? `style="color:${skill.color}"` : ''}>${skill ? skillIconSVG(skill.id, 26) : '◇'}</span><div><span>${skill?.name ?? 'Empty slot'}</span><small>${binding}${skill && !canUseSkill(skill.id, this.player!.equipment) ? ` · Requires ${escapeUI(skillRequirementLabel(skill.requirement))}` : ''}</small></div>${skill ? `<button class="ui-button ui-button--quiet ui-button--icon" data-clear="${index + 1}" aria-label="Remove ${skill.name} from ${binding}">×</button>` : ''}</div>`;
+      return `<div class="skill-atlas-assigned ${skill ? 'is-filled' : ''}"><span class="skill-atlas-assigned-icon" ${skill ? `style="color:${skill.color}"` : ''}>${skill ? skillIconSVG(skill.id, 26) : '◇'}</span><div><span>${skill?.name ?? 'Empty slot'}</span><small>${binding}${skill ? ` · rank ${activeSkillRank(this.player!.character,skill.id)}` : ''}${skill && !canUseSkill(skill.id, this.player!.equipment) ? ` · Requires ${escapeUI(skillRequirementLabel(skill.requirement))}` : ''}</small></div>${skill ? `<button class="ui-button ui-button--quiet ui-button--icon" data-clear="${index + 1}" aria-label="Remove ${skill.name} from ${binding}">×</button>` : ''}</div>`;
     }).join('');
   }
   private matches(node: SkillNode): boolean {
@@ -317,7 +358,7 @@ export class SkillTreePanel {
     ctx.setTransform(this.canvas.width / this.width, 0, 0, this.canvas.height / this.height, 0, 0);
     drawSkillAtlas(ctx, { width: this.width, height: this.height, zoom: this.zoom,
       centerX: this.centerX, centerY: this.centerY, allocated: this.allocated, reachable: this.reachable,
-      tooltip, costStats: this.player?.derived, selected: this.selected, hovered: this.hovered, route: previewSkillRoute(this.routes, this.hovered ?? this.selected),
+      tooltip, costStats: this.player?.derived, sheet: this.player?.character, selected: this.selected, hovered: this.hovered, route: previewSkillRoute(this.routes, this.hovered ?? this.selected),
       matches: node => this.matches(node) });
     if (tooltip.active) this.invalidate();
   }

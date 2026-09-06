@@ -7,14 +7,14 @@ Updated 2026-09-05 for the town-portal implementation checkpoint. **Playable loc
 | System | Current implementation | Remaining boundary |
 | --- | --- | --- |
 | Characters and saves | Eight browser-local slots; title hall, starter choice (Sword / Bow / Fire Staff), equipped preview, level/power summary, continue/delete; autosave, backup recovery and stale-writer checks | No cloud sync, export/import or migrations |
-| Combat | Deterministic 120 Hz simulation; weapon basics, five assignable active slots, dodge, dual potion; 17 executable skills; melee/bow attack speed and independent staff/magic cast speed | Player tests feel and balance; no automatic combos or default assigned spell |
+| Combat | Deterministic 120 Hz simulation; weapon basics, five assignable active slots, dodge, dual potion; 20 executable skills; melee/bow attack speed and independent staff/magic cast speed | Player tests feel and balance; no automatic combos or default assigned spell |
 | Aiming and input | Swept ranged contacts, bounded aim assistance, aim feedback; held controls cleared around focus loss, native shortcuts and modal transitions | Browser gameplay acceptance remains with the player |
 | Enemies | Six archetypes, three ranks, patrol/LOS, flank/pounce/ranged/area patterns, home return; corrected hound patrol arrival and idle facing | No bosses or deep elite modifier pool |
 | Spawning | 9–14 ambient target, 24 living actors total, nine slots reserved from camps; nine initial roamers, then travel/cooldown-driven groups; births fully offscreen | Larger populations need profiling; waiting on cleared ground does not refill it |
 | Progression | Fixed geographic danger, source-level rewards, XP level-gap factors, one skill and five stat points per level | Numeric level bound 1,000,000; not a balanced infinite endgame |
 | Equipment | Ten kinds, five rarities, eleven slots; thirteen generated weapon profiles, three shields; 19 general and two shield affix families; visible procedural gear | Recipe-based +10 enhancement and enchanting; no wands or unique legendary powers |
 | Inventory | 64 cells, three-column panel, drag/drop, Shift-click equip/unequip; shared complete equipment planning and effective-stat tooltips, including both-hand displacement | Shop sales and buyback; no stash or manual ground disposal |
-| Skill atlas | 2,113 nodes, 2,925 edges, 150 constellations, three domains, nine schools; short cross-connected routes, hover stat previews, search/filters, double-click and atomic path allocation | Reused authored bonus families need balancing; no respec |
+| Skill atlas | 2,185 nodes, 3,047 edges, 150 passive constellations + 12 development groups, three domains, nine schools; short cross-connected routes, hover stat previews, search/filters, double-click and atomic path allocation | Reused authored bonus families need balancing; no respec |
 | Gold and loot | Independent gear/gold rolls; physical saved coin piles, magnet pickup, wallet in HUD/inventory; corrected common-heavy loot tables; individual named ground items | Purchases, enhancements and enchanting provide gold sinks; affordability awaits playtesting |
 | World | Seven blended biomes, 23 prop families, seeded roads, streamed terrain, day/night and climate-specific environmental life | Finite coordinate/cache/save bounds; no weather or procedural quests |
 | Towns and interiors | Stable generated towns/cities, five building kinds, furnished walk-in interiors, roof fading and protected sanctuaries | Three procedural service NPC roles, nearby click/E interaction and pause-safe workbenches |
@@ -34,9 +34,9 @@ Base life and mana are 100; mana regenerates at 1/second before bonuses. Q resto
 
 Geographic area level rises every 3,200 units from the origin. Enemies retain spawn-time level/rank/stats/reward context. Gear rarity probabilities are conditional on an item dropping: normal enemies yield 75% Common / 22% Magic / 2.7% Rare / 0.28% Epic / 0.02% Legendary. The complete rank tables and growth formulas live in [progression and loot](progression-and-loot.md); the general item generator's default weights are not enemy drop rates.
 
-## Budgets and verification
+## Budgets and verification · historical portal checkpoint (2026-09-05)
 
-| Resource / metric | Current value |
+| Resource / metric | Value at the portal checkpoint |
 | --- | --- |
 | Code verification | 519 tests passed for town portals; strict application/core TypeScript and production build passed |
 | Runtime code | 150 modules / 17,092 lines; zero runtime dependencies |
@@ -53,7 +53,7 @@ Geographic area level rises every 3,200 units from the origin. Enemies retain sp
 | Biome life | 40 disturbances, 48 footprints, 100 particles, six birds, ten insects |
 | Last build (stats script) | JS 528,168 bytes / 178,690 gzip; CSS 63,760 bytes / 14,149 gzip; font separate |
 
-Counts were refreshed with `npm run stats` after the implementation checks. Build sizes describe the last successful build, not a performance measurement. Vite emits its initial-JS-chunk size advisory above 500 kB. Save payload version 2 requires a new character for earlier saves; old slots remain stored and incompatible. All service mutations persist before live commitment, and failed writes leave gold/items unchanged. Browser playtests are opt-in and remain with the player; static reviews do not prove gameplay balance or long-session Safari performance.
+Counts were refreshed with `npm run stats` after the implementation checks. Build sizes describe the last successful build, not a performance measurement. Vite emits its initial-JS-chunk size advisory above 500 kB. Save payload version 3 requires a new character for earlier saves; old slots remain stored and incompatible. All service mutations persist before live commitment, and failed writes leave gold/items unchanged. Browser playtests are opt-in and remain with the player; static reviews do not prove gameplay balance or long-session Safari performance.
 
 ## Latest completed checkpoints
 
@@ -72,4 +72,10 @@ The prior checkpoints above were pushed to `origin/main`. The town-services chec
 
 ## Selected next work
 
-[Town portals](travel-and-portals.md) are implemented without invalidating existing v2 saves. Permanent waypoint travel and [interactive POIs](interactive-pois.md) remain specified; gameplay feedback on the portal loop comes first.
+[Town portals](travel-and-portals.md) are implemented; skill progression now requires save v3. Permanent waypoint travel and [interactive POIs](interactive-pois.md) remain specified; gameplay feedback on the portal loop comes first.
+
+## Skill progression checkpoint · 2026-09-06
+
+Implemented [skill ranks and specializations](skill-progression.md): 20 active skills, 19 specialization nodes, 17 masteries, optional Arcane Overload, and Cataclysm/Tempest/Absolute Zero. The atlas has 2,185 nodes and 3,047 edges. Combat, HUD, atlas and save v3 share rank/variant costs and potency. Previous numeric checkpoint metrics above remain historical; balance and gameplay feel await player testing.
+
+Verification for the skill progression work: `npm run check` passed (542 code tests in the shared working tree, strict application/headless-core TypeScript, production build). The rank panel was inspected in the in-app browser using the frozen, save-free review. Gameplay balance remains for player testing.

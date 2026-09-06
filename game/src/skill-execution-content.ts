@@ -2,18 +2,18 @@ import type { SkillId } from './character-types.ts';
 import type { ProjectileEffects, ProjectileStyle } from './model.ts';
 import type { SlowEffect } from './combat-status.ts';
 
-export type SkillExecution = Readonly<
+export type SkillExecution = (
   | { kind: 'sweep'; reachMultiplier: number; arc: number; blast: boolean }
   | { kind: 'dash'; duration: number; speed: number; radius: number }
-  | { kind: 'radial'; radius: number; melee: boolean; stun?: number; slow?: SlowEffect; style?: ProjectileStyle }
+  | { kind: 'radial'; radius: number; melee: boolean; stun?: number; slow?: SlowEffect; style?: ProjectileStyle; echo?: boolean }
   | { kind: 'cone'; radius: number; arc: number; stun: number }
   | { kind: 'guard'; duration: number; reduction: number }
   | { kind: 'backstab'; minRange: number; reachMultiplier: number; arc: number; rearAngle: number; rearMultiplier: number }
   | { kind: 'projectile'; speed: number; radius: number; offsets: readonly number[];
       effects: Readonly<Omit<ProjectileEffects, 'burnDps'> & { burnDamageMultiplier?: number }> }
-  | { kind: 'ground'; effect: 'meteor' | 'arrowRain'; radius: number; delay: number; duration: number; interval: number;
-      style: ProjectileStyle; burn?: { readonly duration: number; readonly damageMultiplier: number } }
-  | { kind: 'chain'; jumps: number; range: number; falloff: number; duration: number; style: ProjectileStyle }>;
+  | { kind: 'ground'; effect: 'meteor' | 'arrowRain' | 'storm' | 'frost'; radius: number; delay: number; duration: number; interval: number;
+      style: ProjectileStyle; scatter?: number; slow?: SlowEffect; stun?: number; follow?: boolean; burn?: { readonly duration: number; readonly damageMultiplier: number } }
+  | { kind: 'chain'; jumps: number; range: number; falloff: number; duration: number; style: ProjectileStyle; revisit?: boolean });
 
 export const GROUND_EFFECT_RULES = Object.freeze({ maximum: 16, minimumInterval: .05 });
 export function groundEffectPulseCount(effect: { duration: number; interval: number }): number {
@@ -25,6 +25,9 @@ export const SKILL_TARGETING = Object.freeze({ maximumRange: 900, probeStep: 4, 
 
 /** Execution tuning is content. Handlers operate on these recipes, never skill-name branches. */
 export const SKILL_EXECUTION = {
+  cataclysm: { kind: 'ground', effect: 'meteor', radius: 105, delay: 1, duration: 0, interval: .5, style: 'fire', scatter: 7, burn: { duration: 3, damageMultiplier: .12 } },
+  tempest: { kind: 'ground', effect: 'storm', radius: 195, delay: .4, duration: 6, interval: .5, style: 'lightning', follow: true },
+  absoluteZero: { kind: 'ground', effect: 'frost', radius: 240, delay: .5, duration: 1.3, interval: 1.2, style: 'frost', slow: { duration: 4, factor: .25 }, stun: 1.5 },
   cleave: { kind: 'sweep', reachMultiplier: 1.4, arc: Math.PI * 1.4, blast: false },
   whirlwind: { kind: 'sweep', reachMultiplier: 1.25, arc: Math.PI * 2, blast: true },
   lunge: { kind: 'dash', duration: .24, speed: 520, radius: 23 },
@@ -51,9 +54,9 @@ function freeze(value: object): void {
 freeze(SKILL_EXECUTION);
 
 /** Numeric UI labels read the same recipe as execution. */
-export function skillDamageSuffix(id: SkillId): string {
-  const recipe = SKILL_EXECUTION[id];
-  if (recipe.kind === 'projectile' && recipe.effects.style === 'arrow' && recipe.offsets.length > 1) return ' / arrow';
+export function skillDamageSuffix(id: SkillId, recipe: SkillExecution = SKILL_EXECUTION[id]): string {
+  if (recipe.kind === 'projectile' && recipe.offsets.length > 1) return recipe.effects.style === 'arrow' ? ' / arrow' : ' / projectile';
+  if (recipe.kind === 'ground' && recipe.scatter) return ' / impact';
   if (recipe.kind === 'ground' && groundEffectPulseCount(recipe) > 1) return ' / wave';
   return '';
 }

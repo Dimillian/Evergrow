@@ -50,7 +50,7 @@ New characters choose Sword (Weathered Sword), Bow (Thorn Shortbow) or Fire Staf
 
 ## Skill schools and requirements
 
-The atlas contains **2,113 nodes**, **2,925 curved connections**, **150 themed constellations**, and **17 skill majors**. Nine schools branch from the central Might, Cunning, and Arcana arteries. A school's first skill costs three points along its shortest origin route; its advanced skill costs four total. The dagger school currently has one skill. Crosslinks allow movement between specialties and disciplines.
+The atlas contains **2,185 nodes**, **3,047 curved connections**, **150 passive constellations plus 12 development groups**, and **20 skill majors**. Nine schools branch from the central Might, Cunning, and Arcana arteries. A school's first skill costs three points along its shortest origin route; its advanced skill costs four total. The dagger school currently has one skill. Crosslinks allow movement between specialties and disciplines.
 
 | Domain | School | First skill — 3 points | Advanced skill — 4 total points |
 | --- | --- | --- | --- |
@@ -66,9 +66,13 @@ The atlas contains **2,113 nodes**, **2,925 curved connections**, **150 themed c
 
 Each skill requires allocation, an assigned slot, suitable equipment, enough mana, and a ready cooldown. Gear changes retain assignments, but incompatible slots cannot activate. Cooldowns belong to skill IDs and survive reassignment. The UI and combat consume the same requirement and cost metadata.
 
+## Skill development
+
+Skills now support purchased ranks, optional lower casting ranks, deeper specializations, mastery and three Arcana ultimates. See [skill progression](skill-progression.md) for implemented formulas, choices and the full ultimate catalog.
+
 ## Active skill catalog
 
-First-row skills have no cooldown; the eight second-row skills cost 24–40 base mana and retain cooldowns. Both tiers respect action recovery. Costs and cooldowns below are authored bases; mana-cost reduction and cooldown reduction independently change their effective values. Mana reduction adds across gear and tree, caps at 75%, and costs round to tenths with a minimum of one mana. Damage potency multiplies the selected compatible weapon’s derived hit. “Melee” means sword, axe, mace, or dagger; “blade” means sword, axe, or dagger. Heavy skills accept an axe or mace of either handedness.
+First-row skills have no cooldown; the eight second-row skills cost 24–40 base mana and retain cooldowns. Both tiers respect action recovery. All tiers respect action recovery. Costs and cooldowns below are rank-1 authored bases; mana-cost reduction and cooldown reduction independently change their effective values. Mana reduction adds across gear and tree, caps at 75%, and costs round to tenths with a minimum of one mana. Damage potency multiplies the selected compatible weapon’s derived hit. “Melee” means sword, axe, mace, or dagger; “blade” means sword, axe, or dagger. Heavy skills accept an axe or mace of either handedness.
 
 | Skill | Requirement | Mana | Cooldown | Potency | Effect |
 | --- | --- | ---: | ---: | ---: | --- |
@@ -98,7 +102,7 @@ Fireball and Meteor burns deal a nominal 12% of their pre-critical direct-hit pa
 
 Gear, XP, attributes, allocations, assignments, resources and skill cooldowns persist in each character’s local save slot. Each character also has a separate explored map. Temporary statuses, projectiles and ground effects are rebuilt when continuing; see [Character saves](character-saves.md). The expanded schools replace the earlier six-skill layout and IDs directly; no legacy save or skill adapter is retained.
 
-This is a concrete initial catalog for testing. Element labels and status effects are implemented, but an elemental resistance/penetration model, ammunition, durability, skill ranks, respecs, trading and crafting are not. Persistent characters are implemented through the eight-slot save system. Skills remain authored action recipes, rather than a general scripting system. Balance and combat feel remain for the user's playtesting.
+This is a concrete initial catalog for testing. Element labels and status effects are implemented, but an elemental resistance/penetration model, ammunition, durability and respecs are not. Persistent characters are implemented through the eight-slot save system. Skills remain authored action recipes, rather than a general scripting system. Balance and combat feel remain for the user's playtesting.
 
 See [character systems](character-systems.md) for item tiers, point rewards, stat formulas, and inventory rules. Add weapon/profile content in `weapon-content.ts`, shared skill requirements/costs/icons in `skill-content.ts`, typed execution profiles in `skill-execution-content.ts`, execution-kind handlers in `skill-combat.ts`, projectile behavior in `projectile-combat.ts`, shared statuses in `combat-status.ts`, and delayed pulses in `ground-effects.ts`. Damage/death and rewards live in `combat-damage.ts` and `combat-rewards.ts`; Simulation preserves their ordered fixed-tick integration. Rendering consumes those definitions and events without awarding damage or effects.
 

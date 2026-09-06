@@ -57,3 +57,7 @@ Cloud saves, multiplayer, seasons, procedural quest frameworks, public hosting a
 3. Shared UI/art components are reused, with concise labels and readable controls above post-processing.
 4. Static in-app reviews can check layout; the player evaluates gameplay, progression and feel.
 5. Update the affected system guide, this roadmap when scope changes, and [system status](system-status.md) when implementation changes. Clearly distinguish completed code, design proposals and historical evidence.
+
+## Skill development · implemented 2026-09-06
+
+Upgradeable skill ranks, lower casting-rank selection, 19 specialization choices, 17 mastery nodes, Arcane Overload and three deep Arcana ultimates are implemented. See [skill progression](skill-progression.md). Save v3 requires a new character for older slots. Respecs and further skill content remain future work.

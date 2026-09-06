@@ -1,3 +1,4 @@
+import { SKILL_SPECIALIZATIONS } from './skill-progression.ts';
 import type { StatKey } from './character-types.ts';
 import { skillIconSVG } from './skill-content.ts';
 import type { SkillNode } from './skill-tree.ts';
@@ -52,7 +53,7 @@ const STAT_GLYPHS: Readonly<Record<StatKey, StatGlyph>> = Object.freeze({
 });
 
 function engravingFor(node: SkillNode): EngravingId {
-  if (node.kind === 'origin') return 'origin';
+  if (node.kind === 'origin' || node.keystone) return 'origin';
   let engraving: EngravingId = node.domain === 'Might' ? 'sword' : node.domain === 'Cunning' ? 'daggers' : 'book';
   let strongest = 0;
   for (const [stat, value] of Object.entries(node.bonuses) as [StatKey, number][]) {
@@ -64,7 +65,8 @@ function engravingFor(node: SkillNode): EngravingId {
 
 /** Native UI and Canvas both consume the original active-skill illustration. */
 export function skillNodeIconSVG(node: SkillNode, size = 32): string {
-  if (node.skill) return skillIconSVG(node.skill, size);
+  const skill = node.skill ?? node.mastery ?? SKILL_SPECIALIZATIONS.find(s => s.id === node.specialization)?.skill;
+  if (skill) return skillIconSVG(skill, size);
   const dimension = Number.isFinite(size) ? Math.max(8, Math.min(256, size)) : 32;
   return `<svg aria-hidden="true" width="${dimension}" height="${dimension}" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${ENGRAVINGS[engravingFor(node)]}"/></svg>`;
 }
@@ -78,7 +80,7 @@ const canvasGlyphs = new Map<string, CanvasGlyph>();
  * geometry is needed. Path2D objects are created lazily in the rendering layer.
  */
 function canvasGlyph(node: SkillNode): CanvasGlyph {
-  const key = node.skill ? `skill:${node.skill}` : engravingFor(node);
+  const key = node.skill || node.mastery || node.specialization ? node.id : engravingFor(node);
   const cached = canvasGlyphs.get(key);
   if (cached) return cached;
   const svg = skillNodeIconSVG(node), paths: Path2D[] = [];

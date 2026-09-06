@@ -19,7 +19,7 @@ Progress is saved in your browser. Hosted and localhost characters have separate
 - **Characters & saves:** eight local save slots, a forest character hall, equipped previews, level/power summaries and automatic checkpoints. Every character starts with leather armor, a choice of sword, bow or fire staff, and an empty bag.
 - **World:** seven blended biomes, procedural towns with walk-in interiors, camps and landmarks, day/night lighting, wind and ambient wildlife. Scrolling minimap and an explored-world atlas.
 - **Combat:** melee, bows and elemental staves; shields and dual wield; dodging, particles, damage feedback, and six enemy archetypes across three ranks. Encounters spawn outside the camera.
-- **Builds:** 2,113 nodes, 150 constellations and 17 active skills. Short early routes, useful resource/speed choices, and cross-discipline bridges at every layer. Attack and cast speed are independent; first-tier skills have no cooldown.
+- **Builds:** 2,185 nodes, 150 passive constellations and 20 active skills. Short early routes, useful resource/speed choices, and cross-discipline bridges at every layer. Upgradeable skill ranks, deeper specializations and three Arcana ultimates. First-tier skills stay cooldown-free.
 - **Gear & progression:** procedural names, icons and visible equipment; an 8×8 inventory, drag/drop, quick equip and comparison tooltips; item tiers, enemy loot tables, geographic danger scaling, and one skill point plus five attribute points per level.
 - **Presentation:** code-generated artwork, dynamic lighting, restrained CRT/phosphor, a shared retro-modern UI kit, and compact loot, gold, XP and discovery notifications.
 
@@ -27,7 +27,7 @@ Progress is saved in your browser. Hosted and localhost characters have separate
 
 **Town services:** procedural blacksmiths, jewelers and enchanters; buy/sell/buyback, upgrade gear to +10, raise rarity, reroll affixes and raise item level. Equipped gear can be improved in place.
 
-Character progress, shop state and each character’s explored map persist in this browser. **Save format v2 requires a new character for older saves; old slots remain stored.** Quests, respecs and cloud saves are still to come. Endless progression is the direction, not a finished endgame.
+Character progress, shop state and each character’s explored map persist in this browser. **Save format v3 requires a new character for older saves; old slots remain stored.** Quests, respecs and cloud saves are still to come. Endless progression is the direction, not a finished endgame.
 
 ## Screenshots
 

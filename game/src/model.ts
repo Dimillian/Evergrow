@@ -92,7 +92,7 @@ export interface ProjectileEffects {
   style: ProjectileStyle;
   pierce?: number; chain?: number; chainRange?: number; blastRadius?: number;
   slowFactor?: number; slowDuration?: number; lifeSteal?: number;
-  burnDuration?: number; burnDps?: number;
+  burnDuration?: number; burnDps?: number; groundDuration?: number;
 }
 
 export interface Equipment {
@@ -123,6 +123,7 @@ export interface Player {
   activeSkill: SkillId | null;
   nextAttackHand: 'main' | 'off';
   guardTime: number;
+  guardReduction: number;
   dash: { angle: number; remaining: number; speed: number; damage: number; radius: number; skill: SkillId; hitIds: Set<number> } | null;
   stats: CharacterStats;
   equipment: Equipment;
@@ -229,9 +230,10 @@ export interface Projectile {
 }
 
 export interface GroundEffect {
-  id: number; kind: 'meteor' | 'arrowRain'; x: number; y: number; radius: number;
+  id: number; kind: 'meteor' | 'arrowRain' | 'storm' | 'frost' | 'embers'; x: number; y: number; radius: number;
   delay: number; duration: number; interval: number; tick: number;
   damage: number; skill: SkillId; style: ProjectileStyle;
+  slow?: { duration: number; factor: number }; stun?: number; follow?: boolean; upkeep?: number;
   burn?: { readonly duration: number; readonly dps: number };
 }
 

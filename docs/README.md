@@ -1,6 +1,6 @@
 # Documentation
 
-Updated 2026-09-05. Use the current guides for implementation. Proposed designs and historical captures are labeled separately; they do not override current code or user decisions.
+Updated 2026-09-06. Use the current guides for implementation. Proposed designs and historical captures are labeled separately; they do not override current code or user decisions.
 
 ## Start here
 
@@ -14,8 +14,10 @@ Updated 2026-09-05. Use the current guides for implementation. Proposed designs 
 
 | Area | Guide |
 | --- | --- |
+| Character proportions, equipment materials and art review | [Character art](character-art.md) |
 | Character, gear, attributes and allocation | [Character systems](character-systems.md) |
 | Weapon profiles, skill effects and action speed | [Weapons and skills](weapons-and-skills.md) |
+| Ranks, specializations, mastery and ultimates | [Skill progression](skill-progression.md) |
 | Geographic scaling, XP, loot tables and gold | [Progression and loot](progression-and-loot.md) |
 | Character hall, starter choices and saving | [Character saves](character-saves.md) |
 | Components, typography, tooltip motion and panel ownership | [UI kit](ui-kit.md) |

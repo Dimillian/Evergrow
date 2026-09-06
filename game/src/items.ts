@@ -193,7 +193,7 @@ export function createCharacterSheet(starter: StarterWeaponId = 'sword'): Charac
   }
   equipped.weapon = createStarterWeapon(starter);
   const inventory: CharacterSheet['inventory'] = Array.from({ length: INVENTORY_CAPACITY }, () => null);
-  return { gold: 0, commerce: { epoch: 0, revision: 0, operations: 0, sold: {}, buyback: [] }, attributes: { strength: 10, dexterity: 10, intelligence: 10, vitality: 10 },
+  return { skillRanks: {}, activeSkillRanks: {}, skillSpecializations: {}, arcaneOverload: false, gold: 0, commerce: { epoch: 0, revision: 0, operations: 0, sold: {}, buyback: [] }, attributes: { strength: 10, dexterity: 10, intelligence: 10, vitality: 10 },
     statPoints: 0, skillPoints: 0, allocatedNodes: ['origin'], inventory, equipped, skillSlots: Array.from({ length: 5 }, () => null) };
 }
 

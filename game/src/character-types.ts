@@ -27,7 +27,7 @@ export interface Item {
 }
 export type SkillId = 'cleave' | 'lunge' | 'whirlwind' | 'earthshatter' | 'shieldBash' | 'bulwark'
   | 'volley' | 'piercingShot' | 'ricochet' | 'rainOfArrows' | 'backstab'
-  | 'fireball' | 'arcLightning' | 'iceNova' | 'frostLance' | 'meteor' | 'siphon';
+  | 'cataclysm' | 'tempest' | 'absoluteZero' | 'fireball' | 'arcLightning' | 'iceNova' | 'frostLance' | 'meteor' | 'siphon';
 export interface CharacterSheet extends GoldWallet {
   commerce: CommerceState;
   attributes: Record<Attribute, number>;
@@ -36,6 +36,10 @@ export interface CharacterSheet extends GoldWallet {
   inventory: Array<Item | null>;
   equipped: Record<EquipmentSlot, Item | null>;
   skillSlots: Array<SkillId | null>;
+  skillRanks: Partial<Record<SkillId, number>>;
+  activeSkillRanks: Partial<Record<SkillId, number>>;
+  skillSpecializations: Partial<Record<SkillId, string>>;
+  arcaneOverload: boolean;
 }
 export interface DerivedCharacterStats {
   attackSpeedMultiplier: number; castSpeedMultiplier: number; attackDamageMultiplier: number;
