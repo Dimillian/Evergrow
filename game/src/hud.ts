@@ -10,7 +10,7 @@ import { UI_THEME } from './ui-theme.ts';
 import { text, textWidth } from './font.ts';
 import { drawHUDSkillIcon, drawHUDMenuIcon } from './hud-icons.ts';
 import { drawHUDOrb } from './hud-orb.ts';
-import { drawHUDFrame } from './hud-frame.ts';
+import { drawHUDFrame, drawHUDOrbFrame } from './hud-frame.ts';
 import { drawHUDExperience, type ExperienceDisplay } from './hud-experience.ts';
 import { HUD_ART, HUD_MENU_SHORTCUTS, HUD_SKILL_SLOTS, getHUDLayout } from './hud-layout.ts';
 
@@ -195,12 +195,40 @@ export function drawHUDContents(c: CanvasRenderingContext2D, p: Player, time: nu
   drawHUDExperience(c, p, t, options.experience);
 }
 
+/** Compact Astral instruments flank the unchanged XP rail and reward landing point. */
+function drawTouchResources(c: CanvasRenderingContext2D, p: Player, time: number, options: HUDOptions) {
+  const t = options.reducedMotion ? 0 : time;
+  for (const mana of [false, true]) {
+    const x = mana ? 436 : 84;
+    c.save(); c.translate(x, 120); c.scale(.72, .72);
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    drawHUDOrbFrame(c, 0, 0, mana ? 1 : -1, t);
+    c.scale(HUD_ART.orb.scale, HUD_ART.orb.scale);
+    drawHUDOrb(c, 0, 0, mana ? p.mana / Math.max(1, p.maxMana) : p.hp / Math.max(1, p.maxHp),
+      t + (mana && !options.reducedMotion ? 7 : 0), mana, mana ? undefined : options.healthTrail,
+      mana ? 0 : (options.hitPulse ?? 0) * (options.reducedMotion ? .4 : 1));
+    c.restore();
+    // Keep the numeric plate larger than the scaled instrument for phone readability.
+    chamfer(c, x - 44, 153, 88, 18, 4);
+    const metal = c.createLinearGradient(0, 153, 0, 171);
+    metal.addColorStop(0, '#263943'); metal.addColorStop(1, '#0a141c');
+    c.fillStyle = metal; c.fill(); c.strokeStyle = '#77929c'; c.lineWidth = .8; c.stroke();
+    const current = mana ? Math.floor(Math.max(0, p.mana)) : Math.ceil(Math.max(0, p.hp));
+    const value = `${current} / ${mana ? p.maxMana : p.maxHp}`;
+    const size = Math.min(1.6, 78 / Math.max(1, textWidth(value)));
+    text(c, value, x, 162 - size * 3.85, size, mana ? '#b9cee0' : '#dfb9af', 'center');
+  }
+}
+
 /** Drawn at native display density above the world shader. */
 export function drawFloatingHUD(c: CanvasRenderingContext2D, p: Player, width: number, height: number, time: number, options: HUDOptions = {}) {
   const layout = getHUDLayout(width, height);
   if (!layout.scale) return;
   c.save(); c.translate(layout.x, layout.y); c.scale(layout.scale, layout.scale);
-  if(options.touch) drawHUDExperience(c,p,options.reducedMotion ? 0 : time,options.experience);
+  if(options.touch) {
+    drawTouchResources(c, p, time, options);
+    drawHUDExperience(c, p, options.reducedMotion ? 0 : time, options.experience);
+  }
   else { drawHUDFrame(c, options.reducedMotion ? 0 : time); drawHUDContents(c, p, time, options); }
   c.restore();
 }

@@ -29,7 +29,7 @@ export class TouchHUD {
     this.element = document.createElement('div'); this.element.className = 'touch-hud'; this.element.hidden = true;
     const button = (action: string, label: string, icon: string) => `<button type="button" class="touch-button" data-touch-menu="${action}" aria-label="${label}">${icon}${action==='interact' || action==='portal' ? `<small>${action==='interact'?'Interact':'Portal'}</small>` : ''}</button>`;
     this.element.innerHTML = `<nav class="touch-menu" aria-label="Game menus">${button('character','Character and inventory',uiIcon('character'))}${button('skills','Skill tree',uiIcon('skilltree'))}${button('journeys','Journeys',uiIcon('journal'))}${button('map','Map',uiIcon('map'))}${button('pause','Pause','Ⅱ')}</nav>
-      <div class="touch-resources"><div class="touch-life" role="meter" aria-label="Life" aria-valuemin="0"><i></i><span></span></div><div class="touch-mana" role="meter" aria-label="Mana" aria-valuemin="0"><i></i><span></span></div></div>
+      <div class="touch-resources"><div class="touch-life" role="meter" aria-label="Life" aria-valuemin="0"><span></span></div><div class="touch-mana" role="meter" aria-label="Mana" aria-valuemin="0"><span></span></div></div>
       <div class="touch-move" data-touch-action="move" role="group" aria-label="Movement stick"><i></i></div>
       <div class="touch-actions">${Array.from({length:5},(_,i)=>`<button class="touch-button touch-skill" data-touch-action="skill-${i}" aria-label="Empty skill ${i+1}"><span class="touch-icon"></span><small></small></button>`).join('')}
       <button class="touch-button touch-attack" data-touch-action="attack" aria-label="Hold basic attack and drag to aim">${uiIcon('sword')}<small>Attack</small></button>
@@ -124,7 +124,6 @@ export class TouchHUD {
       const el = this.element.querySelector<HTMLElement>(`.touch-${kind}`)!;
       el.setAttribute('aria-valuenow',String(Math.ceil(value))); el.setAttribute('aria-valuemax',String(max));
       el.querySelector('span')!.textContent = `${Math.ceil(value)} / ${max}`;
-      el.querySelector<HTMLElement>('i')!.style.width = `${Math.max(0,Math.min(100,value/max*100))}%`;
     }
     for(const [menu,points] of [['character',player.character.statPoints],['skills',player.character.skillPoints]] as const) {
       const badge=this.element.querySelector<HTMLElement>(`[data-touch-menu="${menu}"] .touch-point-badge`)!;

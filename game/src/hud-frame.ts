@@ -36,8 +36,8 @@ function metal(c: CanvasRenderingContext2D, top: number, bottom: number) {
   return gradient;
 }
 
-function glassInstrument(c: CanvasRenderingContext2D, x: number, side: number, time: number) {
-  c.save(); c.translate(x, HUD_ART.orb.y);
+export function drawHUDOrbFrame(c: CanvasRenderingContext2D, x: number, y: number, side: number, time: number) {
+  c.save(); c.translate(x, y);
 
   // Nested, calibrated circles surround an unobstructed 36.6-radius glass area.
   c.beginPath(); c.arc(0, 0, 43.5, 0, TAU); c.arc(0, 0, 37.5, 0, TAU, true);
@@ -181,8 +181,8 @@ export function drawHUDFrame(c: CanvasRenderingContext2D, time: number): void {
   drawHUDEnergy(c, t);
   actionTray(c);
   shortcutRail(c);
-  glassInstrument(c, HUD_ART.orb.left, -1, t);
-  glassInstrument(c, HUD_ART.orb.right, 1, t);
+  drawHUDOrbFrame(c, HUD_ART.orb.left, HUD_ART.orb.y, -1, t);
+  drawHUDOrbFrame(c, HUD_ART.orb.right, HUD_ART.orb.y, 1, t);
   resourceShelf(c, HUD_ART.orb.left); resourceShelf(c, HUD_ART.orb.right);
   c.restore();
 }

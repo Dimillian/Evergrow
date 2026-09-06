@@ -1,21 +1,17 @@
 /* Input-specific presentation. Desktop selectors and layout remain unchanged. */
-.touch-hud { --touch-footer-clearance: calc(max(76px, 9vh) + env(safe-area-inset-bottom)); position: absolute; inset: 0; padding-top: env(safe-area-inset-top); z-index: 8; pointer-events: none; font: 14px var(--ui-font); color: var(--ui-text); user-select: none; -webkit-user-select: none; }
+.touch-hud { --touch-footer-clearance: calc(max(96px, 14vh) + env(safe-area-inset-bottom)); position: absolute; inset: 0; padding-top: env(safe-area-inset-top); z-index: 8; pointer-events: none; font: 14px var(--ui-font); color: var(--ui-text); user-select: none; -webkit-user-select: none; }
 .touch-hud[hidden] { display: none; }
 .touch-mode #game { touch-action: none; }
 .touch-mode .hud-controls { display: none; }
-.touch-button { width: 40px; height: 40px; min-width: 40px; border: 1px solid #8aa2ab99; border-radius: 10px; background: linear-gradient(155deg,#253b46ec,#08121bec); color: #d5ddd2; box-shadow: inset 0 0 0 2px #0a1723,0 2px 8px #0005; display: inline-flex; align-items: center; justify-content: center; flex-direction: column; padding: 3px; pointer-events: auto; touch-action: none; }
+.touch-button { width: 40px; height: 40px; min-width: 40px; border: 1px solid #8aa2ab99; border-radius: 4px; background: linear-gradient(160deg,#293f49f5 0%,#101d26f5 38%,#08121bf5 100%); color: #b9ccd0; box-shadow: inset 0 0 0 2px #08131c,inset 0 0 0 3px #4b657280,0 2px 8px #0005; display: inline-flex; align-items: center; justify-content: center; flex-direction: column; padding: 3px; pointer-events: auto; touch-action: none; }
 .touch-button svg { width: 22px; height: 22px; }
 .touch-icon { display: flex; align-items: center; justify-content: center; height: 22px; }
 .touch-button small { font: 10px var(--ui-font); }
 .touch-button.is-held { background: #355360; border-color: #eed69e; box-shadow: 0 0 15px #a8d6ef55; }
 .touch-button.is-unavailable { color: #71838b; }
-.touch-menu { position: absolute; bottom: var(--touch-footer-clearance); left: 50%; transform: translateX(-50%); display: flex; gap: 4px; }
-.touch-resources { position: absolute; left: max(16px,env(safe-area-inset-left)); top: max(60px,calc(env(safe-area-inset-top) + 50px)); width: 145px; display: grid; gap: 5px; }
-.touch-resources > div { position: relative; height: 23px; border: 1px solid #8aa2ab88; border-radius: 7px; overflow: hidden; background: #07111cd9; text-align: center; }
-.touch-resources i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(#a54060,#5d2036); }
-.touch-resources .touch-mana i { background: linear-gradient(#456cbc,#263c7a); }
-.touch-resources span { position: relative; line-height: 21px; text-shadow: 0 1px 2px #000; }
-.touch-move { position: absolute; left: max(23px,env(safe-area-inset-left)); bottom: var(--touch-footer-clearance); width: 108px; height: 108px; border: 1px solid #93afaa75; border-radius: 50%; background: radial-gradient(#314b4f55,#15252d88); box-shadow: inset 0 0 0 6px #09151a40; pointer-events: auto; touch-action: none; }
+.touch-resources { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.touch-menu { padding: 5px 8px; border-block: 1px solid #78929c85; border-radius: 8px; background: linear-gradient(#192c35e8,#0a151ee8); box-shadow: inset 0 2px #a7bdc325,inset 0 -2px #030b13; position: absolute; bottom: var(--touch-footer-clearance); left: 50%; transform: translateX(-50%); display: flex; gap: 4px; }
+.touch-move { position: absolute; left: max(23px,env(safe-area-inset-left)); bottom: var(--touch-footer-clearance); width: 108px; height: 108px; border: 1px solid #93afaa75; border-radius: 50%; background: radial-gradient(#314b4f55,#15252d88); box-shadow: inset 0 0 0 3px #09151a80,inset 0 0 0 4px #78959a55,inset 0 0 0 9px #09151a40; pointer-events: auto; touch-action: none; }
 .touch-move i { position: absolute; left: 34px; top: 34px; width: 40px; height: 40px; border-radius: 50%; background: radial-gradient(at 35% 25%,#718c91ae,#203741cc); border: 1px solid #aac3c488; pointer-events: none; }
 .touch-actions { position: absolute; right: max(16px,env(safe-area-inset-right)); bottom: var(--touch-footer-clearance); width: 202px; height: 148px; }
 .touch-actions > button { position: absolute; }
@@ -24,7 +20,7 @@
 .touch-skill:nth-child(3) { left: 80px; top: 0; }
 .touch-skill:nth-child(4) { left: 128px; top: 10px; }
 .touch-skill:nth-child(5) { left: 162px; top: 53px; }
-.touch-attack { left: 65px; top: 57px; width: 72px; height: 72px; border-radius: 50%; border-color: #c7b67b; }
+.touch-attack { left: 65px; top: 57px; width: 72px; height: 72px; border-radius: 50%; border-color: #9bb8c0; box-shadow: inset 0 0 0 3px #07121b,inset 0 0 0 4px #688490,inset 0 0 18px #83b5c522,0 2px 8px #0006; }
 .touch-attack svg { width: 28px; height: 28px; }
 .touch-potion { left: 11px; top: 108px; }
 .touch-dodge { left: 151px; top: 108px; }
@@ -64,7 +60,6 @@
 .touch-mode .title-screen { height: var(--touch-vh,100dvh); overflow-y: auto; padding-bottom: env(safe-area-inset-bottom); }
 .touch-mode .title-create input { scroll-margin: 30px; }
 @media (max-width: 620px) {
-  .touch-mode .touch-resources { width: 135px; }
   .touch-mode .touch-actions { right: max(8px,env(safe-area-inset-right)); }
   .touch-mode .touch-move { left: max(12px,env(safe-area-inset-left)); }
   .touch-mode .skill-atlas-main { display: flex; overflow-y: auto; }
@@ -91,7 +86,6 @@
 .touch-mode .crypt-touch-zoom { gap: 8px; padding: 8px; justify-content: center; }
 .touch-mode .title-screen.is-busy::after { content: 'Saving…'; position: fixed; inset: auto 25% 15%; padding: 20px; background: #101d29f5; border: 1px solid #8aa2ab; text-align: center; z-index: 80; }
 @media (max-width: 620px) {
-  .touch-mode .touch-resources { top: max(108px,calc(env(safe-area-inset-top) + 100px)); }
   .touch-mode .journey-mini { display: none; }
   .touch-mode .journey-columns { display: block; overflow: auto; }
   .touch-mode .journey-list, .touch-mode .journey-detail { overflow: visible; }
@@ -109,7 +103,6 @@
   .touch-mode .skill-atlas-footer { display: none; }
   .touch-mode .skill-atlas-toolbar { padding: 5px; }
   .touch-mode .skill-atlas-search { height: 38px; }
-  .touch-mode .touch-resources { top: 53px; }
 }
 .touch-mode .desktop-binding { display: none; }
 .touch-mode .skill-atlas-assigned small .touch-only { display: inline; }
