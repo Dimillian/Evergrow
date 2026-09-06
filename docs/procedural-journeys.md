@@ -4,12 +4,11 @@ Proposal · 2026-09-06 · not implemented. Design target: give the player a good
 
 ## Player experience
 
-One small tracked objective answers **“What could I do next?”** It points toward an appropriate region, an interesting encounter or a useful character system. Players can ignore it, pursue another lead or explore independently without penalties.
+One quiet recommendation answers **“What could I do next?”** It points toward an appropriate region or an interesting encounter. It is a suggestion until explicitly pinned, not an automatically accepted quest. Players can ignore it and progress entirely through ordinary combat. Existing geographic danger and level-gap XP rules still apply; ignoring guidance adds no penalty.
 
 Use short titles and concrete actions. A typical tracker is just:
 
-> The Broken Road · Level 5
-> Open the garrison strongbox
+> Recommended · Watchtower · Level 5
 
 The journal provides the region, difficulty, reward and any steps needed. Avoid mandatory errands, repeated kill counts, daily tasks, deadlines, automatic point spending and tutorials that block play. A quest should make an existing place more meaningful, not require every place to become a quest.
 
@@ -17,11 +16,11 @@ The journal provides the region, difficulty, reward and any steps needed. Avoid 
 
 | Layer | Purpose | Presentation |
 | --- | --- | --- |
-| Journey | A short regional adventure linking two or three compatible activities, usually ending with a notable encounter or treasure | One tracked step; the player chooses the next journey when the current one ends |
+| Journey | A short regional adventure linking two or three compatible activities, usually ending with a notable encounter or treasure | Optional pinned step; longer chains stay in the journal |
 | Local leads | Optional nearby opportunities: an unopened strongbox, a caravan, a beacon, a trial or a crypt | At most three offered leads in the journal/map; only pinned leads use the tracker |
-| Personal milestones | Introduce character building, maps, town services and travel once per character | Small contextual suggestions, not another permanent checklist |
+| Personal milestones | Introduce character building, maps, town services and travel once per character | Internal once-per-character teaching state; relevant hints inside existing panels only |
 
-A local lead can become the tracked adventure. Maintain at most three accepted adventures, with exactly one tracked; do not put three trackers on the screen. Personal milestones occupy their own compact journal section. They are not prerequisites for regional adventures.
+A local lead can become the tracked adventure. Maintain at most three explicitly accepted adventures and at most one pinned. The HUD shows either the pinned objective or one unpinned recommendation, never both. Alternatives stay inside the journal. Personal milestones are internal memory, not a visible completion checklist or prerequisites for regional adventures.
 
 Town services can provide plausible leads: the blacksmith mentions a caravan or garrison cache; the enchanter points toward standing stones or burial sites. Their existence never requires talking to every NPC. Independently discovering the target starts the same opportunity. No new quest-giver NPC, dialogue tree or quest-item inventory is required for the first pass.
 
@@ -42,7 +41,7 @@ These are contextual introductions, not a fixed chain that every character must 
 
 Do not require a purchase, sale, enhancement or reroll to progress the main journey. Expensive services are introduced through their preview, not subsidized with mandatory gold sinks. A full bag, a build saving points or an unlucky loot roll must never block the next adventure. Introductions can be dismissed; opening panels does not award repeatable XP or gold.
 
-Starting weapons tailor wording and relevant suggestions without choosing a build. A bow character might see compatible skill choices highlighted in the atlas; nothing is auto-allocated, unlocked or assigned. Show one introduction at a time, after combat or during an appropriate panel interaction.
+Starting weapons tailor wording and relevant suggestions without choosing a build. A bow character might see compatible skill choices highlighted in the atlas; nothing is auto-allocated, unlocked or assigned. Show an introduction only inside a relevant panel the player opens. Reuse existing unspent-point badges; do not add another level-up toast, force a panel open or queue tutorials while fighting.
 
 ## Procedural composition
 
@@ -77,19 +76,31 @@ Search on explicit triggers: character entry, journey completion/dismissal, dist
 
 If no suitable site is found within the bounded search, offer **Explore the northern road** or another verified local frontier direction, with the level information currently known. Do not invent an exact-level zone, create a dungeon, force a distant expedition or generate actors to satisfy the quest. Expand the search after actual travel.
 
-Once accepted, the target, source level, reward seed and displayed reward are fixed. Leveling up may produce a separate suggestion; it never moves an accepted destination. Reassess unaccepted suggestions after meaningful context changes, rather than shuffling them whenever the journal opens.
+Once accepted, the target, source level, reward seed and displayed reward are fixed. Reassess unaccepted suggestions after meaningful context changes, rather than shuffling them whenever the journal opens.
+
+### Leveling through ordinary combat
+
+Combat-only progression is fully supported. XP, level-ups, stat points and skill points work exactly as they do now, with no journey gate or catch-up checklist. Kills do not complete unrelated site objectives, and the director never tells a player to stop a profitable activity just because it lacks a quest label.
+
+A level change marks recommendations for reassessment; it does not publish a new message. On the next safe opportunity, evaluate whether the current suggestion still fits. Keep it when suitable. When clearly outgrown (initially at least two levels below the player), silently replace an unpinned recommendation with a suitable available activity. Several rapid level-ups coalesce into one reassessment. Never swap the HUD recommendation during combat, a channel, a dungeon expedition or an open interaction.
+
+Pinned activities stay pinned regardless of level gain. They can be completed at their original fixed level and reward terms. A newer recommendation is available when the player opens the journal or unpins; it does not appear as a second HUD task or a nagging warning.
+
+Example: at level 4, a level-4 camp is suggested. The player roams and reaches level 7. If unpinned, the director quietly prefers a real level-6–8 activity at a safe opportunity. If pinned, the camp remains the destination and stays level 4. If no suitable nearby activity exists, offer a verified frontier direction rather than inventing content or forcing a long exact-level detour.
+
+Initial anti-churn rule: keep an unpinned recommendation for at least 90 active-play seconds unless its target becomes unavailable; only replace it when substantially outgrown, left well behind, completed or explicitly refreshed by the player. Ignoring it does not make it pulse, repeat, escalate or enter a notification queue. Dismissing the recommendation hides ambient guidance until the player chooses to restore it from the journal; no periodic resurrection on each level-up.
 
 ## Guidance and UI
 
 Use the existing Astral UI kit. Enable the journal shortcut J and its existing HUD button as the **Journeys** window, registered with `PanelCoordinator`; keyboard/controller focus, pause and input clearing follow other windows.
 
-- One compact tracker tucked below the minimap; two lines normally. Hide it while a full-screen panel is open. It can be unpinned entirely from the journal.
-- Journal: active adventure, up to three available leads, personal milestones and a short completed history. Titles only in headers; descriptions are one useful sentence.
+- One muted single-line recommendation below the minimap. A player-pinned objective may use two lines. No expanding cards, sounds, pulses or automatic journal opening. Hide while full-screen panels are open; guidance can be hidden completely.
+- Journal: pinned/accepted activities, up to three alternative leads and optional recent history. No milestone checklist. Titles only in headers; descriptions are one useful sentence.
 - World map: one highlighted known target or a soft frontier direction. Exact coordinates/POI icons remain hidden until normal discovery. An undiscovered rumor gets a broad search area with no hidden room or terrain reveal.
 - Minimap: a small edge bearing for the tracked target when appropriate; no permanent world-space arrow or glowing breadcrumb trail through the forest.
 - Inside a dungeon, guidance points to the next known local objective. An unexplored boss room stays hidden. A surface objective directs the player toward a discovered exit, not toward meaningless surface coordinates on the floor.
 - Hover shows objective, fixed level, encounter category, distance and reward. Use text as well as color for difficulty.
-- Progress counters update quietly in place. Completion uses the existing compact notification feed once, combining any awarded XP/gold through the shared rewards notification. Do not announce every footstep, ordinary kill or intermediate state change.
+- Progress and completion update quietly in place. No recommendation or quest-step toasts. Actual XP/gold still use the existing shared rewards feed, and item pickups keep their existing names. Do not duplicate area discoveries, level-ups or reward announcements with a quest notification.
 
 A quest indication never hides loot labels, combat warnings or the enemy nameplate. Reduced motion uses static markers and normal shared tooltip behavior.
 
@@ -140,10 +151,10 @@ Quest completions may later support titles, regional story fragments or cosmetic
 
 ## Delivery and acceptance
 
-1. **Useful next step:** typed state/commands and journal/tracker; single existing-site leads, level-aware frontier suggestions and first-time system milestones. Preserve current characters when valid defaults suffice; no historical event replay or migration framework.
+1. **Useful next step:** one quiet recommendation, optional pinning/journal, single existing-site leads and level-aware frontier suggestions; milestone memory only provides hints inside relevant existing panels. Preserve current characters when valid defaults suffice; no historical event replay or migration framework.
 2. **Regional journeys:** compose two or three existing compatible activities, branch on real reveal/choice outcomes, add conservative completion XP and safe offer/history persistence.
 3. **Richer authorship after playtests:** NPC-specific lead presentation, biome-specific chapter writing and additional objective templates grounded in new content.
 
-Before playtesting, verify deterministic candidate selection, bounded search, level/route fallbacks, unchanged monster/world scaling, fog-safe markers, blocked/ineligible/full expedition handling, independent RNG, no rerolls on load/dismissal, retroactive durable-step recognition, no duplicate site claims, exactly-once quest reward delivery, storage failure atomicity, and complete pause/focus cleanup.
+Before playtesting, verify combat-only leveling, coalesced safe-time recommendation updates, pinned-target stability, persistent dismissal, no duplicate notifications, deterministic candidate selection, bounded search, level/route fallbacks, unchanged monster/world scaling, fog-safe markers, blocked/ineligible/full expedition handling, independent RNG, no rerolls on load/dismissal, retroactive durable-step recognition, no duplicate site claims, exactly-once quest reward delivery, storage failure atomicity, and complete pause/focus cleanup.
 
 The player validates the important questions: Is the next adventure inviting? Does a lead arrive when needed? Are walks too long? Does guidance teach systems without interrupting combat? Do repeated journeys feel different? Are suggested challenges actually appropriate for weak and strong builds? Code tests cannot establish those outcomes.
