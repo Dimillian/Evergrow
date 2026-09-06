@@ -1,4 +1,4 @@
-import { drawWaterTerrain } from './water-terrain-art.ts';
+import { waterTerrainSteps } from './water-terrain-art.ts';
 import { hydrology, type WaterSample } from './hydrology.ts';
 import { dungeonEntrances } from './dungeon-entrances.ts';
 import { queryEventSites } from './poi-sites.ts';
@@ -37,6 +37,8 @@ const PROP_CELL_SIZE = 80;
 const MAX_PROP_RADIUS = 15;
 const PROP_CACHE_LIMIT = 8192;
 const TILE_CACHE_LIMIT = 48;
+const COLLISION_CACHE_LIMIT = 256;
+const COLLISION_CELL = 256;
 const SETTLEMENT_CACHE_LIMIT = 32;
 const UINT_RANGE = 0x100000000;
 
@@ -92,6 +94,7 @@ export class World {
   private settlementCells = new Map<string, readonly Place[]>();
   private wilderness = new Map<string, WildernessSite | null>();
   private firstCamp: WildernessSite;
+  private collisionRegions = new Map<string, { props: Prop[]; sites: WildernessSite[]; buildings: Building[] }>();
 
   constructor(seed = 7319) {
     this.seed = seed >>> 0;
@@ -102,7 +105,7 @@ export class World {
   get cacheStats() { return { groundTiles: this.groundTiles.size, settlements: this.settlements.size, wildernessSites: this.wilderness.size }; }
 
   /** Cached generated content belongs to this world instance, not global module state. */
-  dispose() { this.groundWork.clear(); this.propCells.clear(); this.groundTiles.clear(); this.settlements.clear(); this.settlementCells.clear(); this.wilderness.clear(); }
+  dispose() { this.collisionRegions.clear(); this.groundWork.clear(); this.propCells.clear(); this.groundTiles.clear(); this.settlements.clear(); this.settlementCells.clear(); this.wilderness.clear(); }
 
   sampleBiome(x: number, y: number): BiomeSample { return sampleBiome(x, y, this.seed); }
 
@@ -345,18 +348,36 @@ export class World {
       .map(p => ({ id: `shrine:road:${p.id}`, x: p.x, y: p.y, radius: 15, kind: 'shrine', seed: p.seed, scale: 1 }));
   }
 
+  /** Immutable broad phase shared by footsteps, AI sight and projectile probes.
+   * Exact query clipping and narrow-phase contacts below retain the original rules. */
+  private collisionRegion(x: number, y: number, width: number, height: number) {
+    const minX = Math.floor(x / COLLISION_CELL), minY = Math.floor(y / COLLISION_CELL);
+    const maxX = Math.floor((x + width) / COLLISION_CELL), maxY = Math.floor((y + height) / COLLISION_CELL);
+    const key = `${minX}:${minY}:${maxX}:${maxY}`, cached = this.collisionRegions.get(key);
+    if (cached) return cached;
+    const left = minX * COLLISION_CELL, top = minY * COLLISION_CELL;
+    const w = (maxX - minX + 1) * COLLISION_CELL, h = (maxY - minY + 1) * COLLISION_CELL;
+    const region = { props: this.getProps(left, top, w, h).filter(p => p.radius > 0),
+      sites: this.getWildernessSites(left, top, w, h), buildings: this.getBuildings(left, top, w, h) };
+    if (this.collisionRegions.size >= COLLISION_CACHE_LIMIT) this.collisionRegions.delete(this.collisionRegions.keys().next().value!);
+    this.collisionRegions.set(key, region);
+    return region;
+  }
+
   blocked(x: number, y: number, radius: number): boolean {
     if (![x, y].every(isWorldCoordinate) || !Number.isFinite(radius)
       || radius < 0 || radius > WORLD_QUERY_LIMITS.collisionRadius) return true;
     const extent = radius + MAX_PROP_RADIUS;
     if (!validWorldRectangle(x - extent, y - extent, extent * 2, extent * 2)) return true;
-    if (this.getProps(x - extent, y - extent, extent * 2, extent * 2).some(prop => prop.radius > 0 &&
+    const region = this.collisionRegion(x - extent, y - extent, extent * 2, extent * 2);
+    if (region.props.some(prop => inRectangle(prop, x - extent, y - extent, extent * 2, extent * 2) &&
       (x - prop.x) ** 2 + (y - prop.y) ** 2 < (radius + prop.radius) ** 2 - 1e-7)) return true;
     const reach = Math.max(radius, .1);
-    if (this.getWildernessSites(x - reach, y - reach, reach * 2, reach * 2).some(site =>
+    const query = { x: x - reach, y: y - reach, width: reach * 2, height: reach * 2 };
+    if (region.sites.some(site => intersects(query, { x: site.x - site.radius, y: site.y - site.radius, width: site.radius * 2, height: site.radius * 2 }) &&
       site.decor.some(decor => decor.radius > 0 && (x - decor.x) ** 2 + (y - decor.y) ** 2 < (radius + decor.radius) ** 2 - 1e-7))) return true;
-    return this.getBuildings(x - reach, y - reach, reach * 2, reach * 2).some(building =>
-      [...building.walls, ...building.furniture].some(rect => circleHitsRect(x, y, radius, rect)));
+    return region.buildings.some(building => intersects(query, building) &&
+      (building.walls.some(rect => circleHitsRect(x, y, radius, rect)) || building.furniture.some(rect => circleHitsRect(x, y, radius, rect))));
   }
 
   /** Sweep short segments against trunk circles, preserving the unblocked axis. */
@@ -367,12 +388,15 @@ export class World {
     const extent = radius + MAX_PROP_RADIUS + 1;
     if (!validWorldRectangle(Math.min(x, x + dx) - extent, Math.min(y, y + dy) - extent,
       Math.abs(dx) + extent * 2, Math.abs(dy) + extent * 2)) return { x, y };
-    const props = this.getProps(Math.min(x, x + dx) - extent, Math.min(y, y + dy) - extent,
-      Math.abs(dx) + extent * 2, Math.abs(dy) + extent * 2).filter(prop => prop.radius > 0);
-    const obstacles = [...props, ...this.getWildernessSites(Math.min(x, x + dx) - radius, Math.min(y, y + dy) - radius,
-      Math.abs(dx) + radius * 2 + .1, Math.abs(dy) + radius * 2 + .1).flatMap(site => site.decor).filter(decor => decor.radius > 0)];
-    const furniture = this.getBuildings(Math.min(x, x + dx) - radius, Math.min(y, y + dy) - radius,
-      Math.abs(dx) + radius * 2 + .1, Math.abs(dy) + radius * 2 + .1).flatMap(building => [...building.walls, ...building.furniture]);
+    const left = Math.min(x, x + dx), top = Math.min(y, y + dy);
+    const width = Math.abs(dx), height = Math.abs(dy);
+    const region = this.collisionRegion(left - extent, top - extent, width + extent * 2, height + extent * 2);
+    const obstacles: Array<{ x: number; y: number; radius: number }> = region.props.filter(prop => inRectangle(prop, left - extent, top - extent, width + extent * 2, height + extent * 2));
+    const query = { x: left - radius, y: top - radius, width: width + radius * 2 + .1, height: height + radius * 2 + .1 };
+    for (const site of region.sites) if (intersects(query, { x: site.x - site.radius, y: site.y - site.radius, width: site.radius * 2, height: site.radius * 2 })) {
+      for (const decor of site.decor) if (decor.radius > 0) obstacles.push(decor);
+    }
+    const furniture = region.buildings.filter(building => intersects(query, building)).flatMap(building => [...building.walls, ...building.furniture]);
     const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 4));
     const sx = dx / steps;
     const sy = dy / steps;
@@ -451,7 +475,7 @@ export class World {
     // Every material sample and detail anchor is in world space. Tile edges are
     // merely a crop of the same illustration, including at negative coordinates.
     yield* groundSurfaceSteps(context, originX, originY, TILE_SIZE, (x, y) => this.surfaceColor(x, y, towns, true));
-    drawWaterTerrain(context, originX, originY, TILE_SIZE, (x, y) => this.hydrology.sample(x, y));
+    yield* waterTerrainSteps(context, originX, originY, TILE_SIZE, (x, y) => this.hydrology.sample(x, y));
     yield;
     drawGroundPatches(context, originX, originY, TILE_SIZE, this.seed, (x, y) => this.sampleBiome(x, y).id,
       (x, y) => this.roadWeight(x, y) < .025 && this.pavingWeight(towns, x, y, 0) < .025 && this.hydrology.sample(x, y).coverage < .02

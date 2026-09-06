@@ -17,12 +17,17 @@ export class WaterSimulation {
   readonly wet = new Float32Array(this.height.length);
   readonly flowX = new Float32Array(this.height.length);
   readonly flowY = new Float32Array(this.height.length);
+  /** Upload revisions change only when their texture contents change. */
+  bedRevision = 0;
+  waveRevision = 0;
+  wetCells = 0;
+  hasWater = false;
+  private awake = false;
   private scratch = new Float32Array(this.height.length);
   readonly droplets: WaterDroplet[] = [];
   cell = 8; left = Infinity; top = Infinity; time = 0;
   private remainder = 0; private emissions = 0; private serial = 0;
-  get wetCells() { let count = 0; for (const w of this.wet) if (w > .05) count++; return count; }
-  reset() { this.height.fill(0); this.u.fill(0); this.v.fill(0); this.wet.fill(0); this.depth.fill(0); this.flowX.fill(0); this.flowY.fill(0); this.left = this.top = Infinity; this.remainder = this.time = this.emissions = 0; this.droplets.length = 0; }
+  reset() { this.height.fill(0); this.u.fill(0); this.v.fill(0); this.wet.fill(0); this.depth.fill(0); this.flowX.fill(0); this.flowY.fill(0); this.left = this.top = Infinity; this.remainder = this.time = this.emissions = 0; this.droplets.length = 0; this.wetCells = 0; this.hasWater = this.awake = false; this.bedRevision++; this.waveRevision++; }
   fit(bounds: { x: number; y: number; width: number; height: number }, sample: WaterSampler) {
     const cell = 8 * 2 ** Math.max(0, Math.ceil(Math.log2(Math.max(bounds.width / ((this.columns - 16) * 8), bounds.height / ((this.rows - 16) * 8)))));
     const left = Math.floor((bounds.x + bounds.width / 2) / (cell * 4)) * cell * 4 - this.columns / 2 * cell;
@@ -32,19 +37,27 @@ export class WaterSimulation {
     const preserve = cell === this.cell && Math.abs(dx) < this.columns && Math.abs(dy) < this.rows;
     for (const buffer of [this.height, this.u, this.v, this.depth, this.wet, this.flowX, this.flowY]) {
       this.scratch.fill(0);
-      if (preserve) for (let y = 0; y < this.rows; y++) for (let x = 0; x < this.columns; x++) {
-        const ox = x + dx, oy = y + dy;
-        if (ox >= 0 && ox < this.columns && oy >= 0 && oy < this.rows) this.scratch[y * this.columns + x] = buffer[oy * this.columns + ox];
+      if (preserve) {
+        const minX = Math.max(0, -dx), maxX = Math.min(this.columns, this.columns - dx);
+        const minY = Math.max(0, -dy), maxY = Math.min(this.rows, this.rows - dy);
+        for (let y = minY; y < maxY; y++) {
+          const source = (y + dy) * this.columns + minX + dx;
+          this.scratch.set(buffer.subarray(source, source + maxX - minX), y * this.columns + minX);
+        }
       }
       buffer.set(this.scratch);
     }
-    if (!preserve) { this.droplets.length = 0; this.remainder = 0; }
+    if (!preserve) { this.droplets.length = 0; this.remainder = 0; this.awake = false; }
     this.left = left; this.top = top; this.cell = cell;
     for (let y = 0; y < this.rows; y++) for (let x = 0; x < this.columns; x++) {
       if (preserve && x + dx >= 0 && x + dx < this.columns && y + dy >= 0 && y + dy < this.rows) continue;
       const i = y * this.columns + x, w = sample(left + (x + .5) * cell, top + (y + .5) * cell);
       this.wet[i] = w.coverage; this.depth[i] = w.depth; this.flowX[i] = w.flowX; this.flowY[i] = w.flowY;
     }
+    this.wetCells = 0; this.hasWater = false;
+    for (const w of this.wet) { if (w > .05) this.wetCells++; if (w > .02) this.hasWater = true; }
+    if (!this.hasWater) this.awake = false;
+    this.bedRevision++; this.waveRevision++;
   }
   wetAt(x: number, y: number) { const i = this.index(x, y); return i < 0 ? 0 : this.wet[i]; }
   private index(x: number, y: number) {
@@ -66,6 +79,7 @@ export class WaterSimulation {
       this.height[i] = Math.max(-4, Math.min(4, this.height[i] + shape * strength)); touched = true;
     }
     if (!touched) return false;
+    this.awake = true; this.waveRevision++;
     this.emissions++;
     if (splash && this.wetAt(x, y) > .1) for (let i = 0; i < Math.min(12, 3 + Math.ceil(Math.abs(strength) * 3)) && this.droplets.length < WATER_LIMITS.droplets; i++) {
       const phase = ++this.serial * 2.399963, speed = 14 + (this.serial % 7) * 5;
@@ -75,12 +89,16 @@ export class WaterSimulation {
   }
   update(dt: number, reducedMotion = false) {
     this.emissions = 0;
-    if (reducedMotion) { this.height.fill(0); this.u.fill(0); this.v.fill(0); this.droplets.length = 0; this.remainder = 0; return; }
+    if (reducedMotion) {
+      if (this.awake) { this.height.fill(0); this.u.fill(0); this.v.fill(0); this.waveRevision++; }
+      this.awake = false; this.droplets.length = 0; this.remainder = 0; return;
+    }
     if (!Number.isFinite(dt) || dt <= 0) return;
     const step = Math.min(WATER_LIMITS.tick * WATER_LIMITS.substeps, dt);
     this.time += step; this.remainder += step;
     for (let ticks = 0; this.remainder + 1e-9 >= WATER_LIMITS.tick && ticks < WATER_LIMITS.substeps; ticks++) {
-      this.remainder = Math.max(0, this.remainder - WATER_LIMITS.tick); this.tick();
+      this.remainder = Math.max(0, this.remainder - WATER_LIMITS.tick);
+      if (this.awake) { this.tick(); this.waveRevision++; }
     }
     for (let i = this.droplets.length - 1; i >= 0; i--) {
       const p = this.droplets[i]; p.age += step; p.x += p.vx * step; p.y += p.vy * step; p.vz -= 180 * step; p.z += p.vz * step;

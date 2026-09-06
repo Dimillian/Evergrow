@@ -163,3 +163,16 @@ test('movement prepares at most one offscreen tile per frame and reuses it at th
   layer.reset();
   assert.equal((layer as unknown as { prefetched: Map<string,unknown> }).prefetched.size,0);
 });
+
+test('subpixel travel at 240 Hz prepares the next terrain column before crossing', t => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'performance');
+  let time = 0;
+  Object.defineProperty(globalThis, 'performance', { configurable: true, value: { now: () => time } });
+  t.after(() => Object.defineProperty(globalThis, 'performance', original!));
+  const { draw, world } = fixture();
+  draw(120, 30, 960, 600);
+  for (let frame = 1; frame <= 270; frame++) { time += 1000 / 240; draw(120 + frame * .5, 30, 960, 600); }
+  const before = world.requests;
+  time += 1000 / 240; draw(258, 30, 960, 600);
+  assert.equal(world.requests, before, 'small high-refresh camera steps must not disable prefetch');
+});

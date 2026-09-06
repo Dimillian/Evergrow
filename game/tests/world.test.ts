@@ -163,3 +163,36 @@ test('budgeted ground preparation stays private until complete and foreground re
   assert.equal(internals.groundWork.size,16,'abandoned preparation cannot grow indefinitely');
   world.dispose();assert.equal(internals.groundWork.size,0);
 });
+
+test('static collision regions serve nearby combat probes without repeating world queries', () => {
+  const world = new World(7319);
+  world.blocked(2200, 1700, 14);
+  let queries = 0;
+  const props = world.getProps.bind(world), sites = world.getWildernessSites.bind(world), buildings = world.getBuildings.bind(world);
+  world.getProps = (...args) => { queries++; return props(...args); };
+  world.getWildernessSites = (...args) => { queries++; return sites(...args); };
+  world.getBuildings = (...args) => { queries++; return buildings(...args); };
+  for (let i = 0; i < 120; i++) {
+    world.blocked(2200 + i / 10, 1700, 14);
+    world.move(2200 + i / 10, 1700, 1, 1, 14);
+  }
+  assert.equal(queries, 0, 'movement and line-of-sight share the warmed broad phase');
+  world.dispose(); world.blocked(2200, 1700, 14);
+  assert.ok(queries > 0, 'disposing clears static collision coverage');
+});
+
+test('collision broad phase agrees with uncached geometry at cell edges and negative coordinates', () => {
+  const world = new World(18427);
+  const regions = world as unknown as { collisionRegions: Map<string, unknown> };
+  for (let y = -1280; y <= 1280; y += 128) for (let x = -1280; x <= 1280; x += 128) {
+    const before = world.blocked(x - .01, y + .01, 14);
+    const move = world.move(x - .01, y + .01, 25, -17, 14);
+    regions.collisionRegions.clear();
+    assert.equal(world.blocked(x - .01, y + .01, 14), before);
+    assert.deepEqual(world.move(x - .01, y + .01, 25, -17, 14), move);
+  }
+  // Cheap empty geometry isolates cache capacity from far-away blueprint generation.
+  world.getProps = () => []; world.getBuildings = () => []; world.getWildernessSites = () => [];
+  for (let i = 0; i < 300; i++) world.blocked(100000 + i * 512, 100000, 14);
+  assert.equal(regions.collisionRegions.size, 256);
+});

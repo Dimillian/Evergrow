@@ -18,7 +18,7 @@ export class WaterArt {
   reset() { this.shader.reset(); this.active = false; }
   begin(f: WaterSimulation, view: { left: number; top: number; width: number; height: number }) {
     this.view = view;
-    this.active = Number.isFinite(f.left) && f.wet.some(value => value > .02);
+    this.active = Number.isFinite(f.left) && f.hasWater;
     if (!this.active) return;
     const width = Math.min(1024, f.columns * f.cell), height = Math.round(width * f.rows / f.columns);
     if (this.reflections.width !== width || this.reflections.height !== height) { this.reflections.width = width; this.reflections.height = height; }

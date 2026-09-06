@@ -15,6 +15,7 @@ export class GroundLayer {
   private maxY = -1;
   private lastLeft = 0;
   private lastTop = 0;
+  private lastTime = 0;
   private prefetched = new Map<string, HTMLCanvasElement>();
 
   constructor(createCanvas: CanvasFactory = () => document.createElement('canvas')) {
@@ -29,6 +30,9 @@ export class GroundLayer {
   /** The destination uses world coordinates, including the unsnapped camera transform. */
   draw(destination: CanvasRenderingContext2D, world: World,
     left: number, top: number, width: number, height: number) {
+    const now = performance.now();
+    const frameSeconds = Math.max(1 / 240, Math.min(.05, (now - this.lastTime) / 1000 || 1 / 60));
+    this.lastTime = now;
     const minX = Math.floor((left - 2) / TILE_SIZE);
     const minY = Math.floor((top - 2) / TILE_SIZE);
     const maxX = minX + Math.ceil((width + 4) / TILE_SIZE);
@@ -65,15 +69,15 @@ export class GroundLayer {
     }
     destination.drawImage(this.canvas, minX * TILE_SIZE, minY * TILE_SIZE);
     // Spread upcoming full-quality tiles over ordinary movement frames, not the crossing frame.
-    if (!changed && Math.hypot(dx, dy) > .75) this.prefetch(world, dx, dy, left, top);
+    if (!changed && Math.hypot(dx, dy) > .01) this.prefetch(world, dx, dy, left, top, frameSeconds);
     this.lastLeft = left; this.lastTop = top;
   }
 
-  private prefetch(world: World, dx: number, dy: number, left: number, top: number): void {
+  private prefetch(world: World, dx: number, dy: number, left: number, top: number, frameSeconds: number): void {
     const length = Math.hypot(dx, dy), cx = (this.minX + this.maxX) / 2, cy = (this.minY + this.maxY) / 2;
     const candidates: Array<{ x: number; y: number; key: string; score: number }> = [];
     // Only prepare the strip predicted to enter soon, rather than an unused ring behind the player.
-    const lead = (delta: number) => Math.max(-TILE_SIZE, Math.min(TILE_SIZE, delta * 48));
+    const lead = (delta: number) => Math.max(-TILE_SIZE, Math.min(TILE_SIZE, delta * .8 / frameSeconds));
     const firstX = Math.floor((left + lead(dx) - 2) / TILE_SIZE), firstY = Math.floor((top + lead(dy) - 2) / TILE_SIZE);
     const lastX = firstX + this.maxX - this.minX, lastY = firstY + this.maxY - this.minY;
     for (let y = firstY; y <= lastY; y++) for (let x = firstX; x <= lastX; x++) {
@@ -85,7 +89,7 @@ export class GroundLayer {
     for (const key of this.prefetched.keys()) if (!keys.has(key)) this.prefetched.delete(key);
     const next = ahead.find(p => !this.prefetched.has(p.key));
     if (next) {
-      const tile = world.getGroundTile(next.x, next.y, undefined, 2);
+      const tile = world.getGroundTile(next.x, next.y, undefined, Math.min(2, frameSeconds * 120));
       if (tile) this.prefetched.set(next.key, tile);
     }
   }

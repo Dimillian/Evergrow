@@ -122,13 +122,15 @@ export class Hydrology {
     return remember(this.buckets, key, result, HYDROLOGY.buckets);
   }
   sample(x: number, y: number): WaterSample {
-    if (![x, y].every(isWorldCoordinate)) return { ...DRY_WATER };
+    if (!isWorldCoordinate(x) || !isWorldCoordinate(y)) return DRY_WATER;
     const bucket = this.bucket(x, y);
+    if (!bucket.segments.length && !bucket.lakes.length) return DRY_WATER;
+    const roughness = Math.sin(x * .026 + Math.sin(y * .019)) * 5 + Math.sin(y * .053 + x * .017) * 2;
     let edge = -Infinity, depth = 0, flowX = 0, flowY = 0, kind: WaterSample['kind'] = 'dry';
     for (const s of bucket.segments) {
       const dx = s.bx - s.ax, dy = s.by - s.ay, t = clamp(((x - s.ax) * dx + (y - s.ay) * dy) / (dx * dx + dy * dy || 1));
       const width = s.aw + (s.bw - s.aw) * t, d = Math.hypot(x - s.ax - dx * t, y - s.ay - dy * t);
-      const shore = width - d + Math.sin(x * .026 + Math.sin(y * .019)) * 5 + Math.sin(y * .053 + x * .017) * 2;
+      const shore = width - d + roughness;
       if (shore > edge) { edge = shore; depth = .16 + clamp(shore / width) * .9; flowX = s.flowAX + (s.flowBX - s.flowAX) * t; flowY = s.flowAY + (s.flowBY - s.flowAY) * t; kind = 'river'; }
     }
     for (const lake of bucket.lakes) {
@@ -137,13 +139,12 @@ export class Hydrology {
       const shore = (radius - Math.hypot(dx, dy)) * Math.min(lake.rx, lake.ry);
       if (shore > edge) { edge = shore; depth = .2 + clamp(shore / 260) * 1.6; flowX = flowY = 0; kind = 'lake'; }
     }
-    if (edge < -30) return { ...DRY_WATER };
+    if (edge < -30) return DRY_WATER;
     const coverage = smooth(edge / 15), bank = (1 - smooth(Math.abs(edge + 3) / 30));
     if (coverage > 0) {
       // Blend overlapping segment tangents rather than switching the whole channel
       // to whichever capsule won its distance query. Compact support keeps bucket seams invisible.
       let fx = 0, fy = 0, total = 0;
-      const roughness = Math.sin(x * .026 + Math.sin(y * .019)) * 5 + Math.sin(y * .053 + x * .017) * 2;
       for (const s of bucket.segments) {
         const dx = s.bx - s.ax, dy = s.by - s.ay;
         const t = clamp(((x - s.ax) * dx + (y - s.ay) * dy) / (dx * dx + dy * dy || 1));

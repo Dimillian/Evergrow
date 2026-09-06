@@ -123,3 +123,38 @@ test('flow stays continuous through polyline joins and spatial bucket boundaries
     }
   }
 });
+
+test('undisturbed fluid skips solver work but wakes immediately and invalidates only changed textures', () => {
+  const f = new WaterSimulation(); f.fit(bounds, wet);
+  const bed = f.bedRevision, waves = f.waveRevision;
+  for (let i = 0; i < 240; i++) { f.fit(bounds, wet); f.update(1 / 120); }
+  assert.equal(f.bedRevision, bed); assert.equal(f.waveRevision, waves);
+  assert(Math.abs(f.time - 2) < 1e-9, 'ambient shader time advances while the fluid sleeps');
+  assert.equal(f.wetCells, f.columns * f.rows); assert.equal(f.hasWater, true);
+  f.disturb({ x: 0, y: 0, radius: 25, strength: 1 }, false);
+  assert(f.waveRevision > waves); assert(energy(f) > 0);
+  const disturbed = f.waveRevision; f.update(1 / 60);
+  assert(f.waveRevision > disturbed); assert.equal(f.bedRevision, bed);
+  f.update(1 / 60, true); const frozen = f.waveRevision;
+  f.update(1 / 60, true); assert.equal(f.waveRevision, frozen); assert.equal(energy(f), 0);
+  f.fit({ ...bounds, x: bounds.x + 32 }, wet);
+  assert(f.bedRevision > bed); assert(f.waveRevision > frozen);
+  f.reset(); assert.equal(f.wetCells, 0); assert.equal(f.hasWater, false);
+});
+
+test('rolling fluid bed samples only exposed strips and keeps exact world-space values', () => {
+  const f = new WaterSimulation(); let calls = 0;
+  const sample = (x: number, y: number) => { calls++; return { ...wet(), depth: 1 + x / 10000, flowX: y / 10000 }; };
+  f.fit(bounds, sample); assert.equal(calls, f.columns * f.rows);
+  for (const [dx, dy] of [[32, 0], [-32, -32], [0, 32], [32, 32]]) {
+    const oldLeft = f.left, oldTop = f.top; calls = 0;
+    f.fit({ ...bounds, x: bounds.x + dx, y: bounds.y + dy }, sample);
+    const shiftX = Math.abs((f.left - oldLeft) / f.cell), shiftY = Math.abs((f.top - oldTop) / f.cell);
+    assert.equal(calls, f.columns * f.rows - (f.columns - shiftX) * (f.rows - shiftY));
+    for (let row = 0; row < f.rows; row++) for (let column = 0; column < f.columns; column++) {
+      const i = row * f.columns + column;
+      assert.equal(f.depth[i], Math.fround(1 + (f.left + (column + .5) * f.cell) / 10000));
+      assert.equal(f.flowX[i], Math.fround((f.top + (row + .5) * f.cell) / 10000));
+    }
+  }
+});

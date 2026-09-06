@@ -68,8 +68,10 @@ void main(){
   color+=vec3(.19,.35,.25)*caustic*.32*(1.-smoothstep(.25,1.15,depth));
   for(int i=0;i<8;i++){
     vec4 light=lightPosition[i];
+    if(light.w<=0.) continue;
     vec2 delta=world-light.xy+bend*2.;
     float falloff=max(0.,1.-length(delta/vec2(max(1.,light.z*.5),max(1.,light.z*.85))));
+    if(falloff<=0.) continue;
     float glint=.2+pow(max(0.,dot(normal,normalize(vec3(-delta/max(1.,light.z)*.4,1.)))),32.)*.8;
     color+=lightColor[i]*pow(falloff,2.5)*glint*light.w*.7;
   }
@@ -92,14 +94,26 @@ export class WaterShader {
   private uniforms: Record<string, WebGLUniformLocation | null> = {};
   private state = new Uint8Array(0);
   private waves = new Uint8Array(0);
+  private uploadedFluid: WaterSimulation | undefined;
+  private bedRevision = -1;
+  private waveRevision = -1;
+  private textureWidths = new Int32Array(4);
+  private textureHeights = new Int32Array(4);
+  private lightPositions = new Float32Array(32);
+  private lightColors = new Float32Array(24);
   private lost = false;
   private failed = false;
   constructor() {
     // Native CPU review canvases intentionally have no browser event surface or WebGL.
-    this.canvas.addEventListener?.('webglcontextlost', event => { event.preventDefault(); this.lost = true; this.program = null; this.textures = []; this.buffer = null; });
+    this.canvas.addEventListener?.('webglcontextlost', event => { event.preventDefault(); this.lost = true; this.program = null; this.textures = []; this.buffer = null; this.invalidateUploads(); });
     this.canvas.addEventListener?.('webglcontextrestored', () => { this.lost = false; this.failed = false; });
   }
+  private invalidateUploads() {
+    this.uploadedFluid = undefined; this.bedRevision = this.waveRevision = -1;
+    this.textureWidths.fill(0); this.textureHeights.fill(0);
+  }
   reset() {
+    this.invalidateUploads();
     const gl = this.gl;
     if (gl && this.program) gl.deleteProgram(this.program);
     if (gl && this.buffer) gl.deleteBuffer(this.buffer);
@@ -145,29 +159,46 @@ export class WaterShader {
     if (this.canvas.width !== width || this.canvas.height !== height) { this.canvas.width = width; this.canvas.height = height; }
     const size = f.height.length * 4;
     if (this.state.length !== size) { this.state = new Uint8Array(size); this.waves = new Uint8Array(size); }
-    for (let i = 0; i < f.height.length; i++) {
-      const p = i * 4, encoded = Math.round(Math.max(0, Math.min(1, f.height[i] / 12 + .5)) * 65535);
+    const bedChanged = this.uploadedFluid !== f || this.bedRevision !== f.bedRevision;
+    const wavesChanged = this.uploadedFluid !== f || this.waveRevision !== f.waveRevision;
+    if (bedChanged) for (let i = 0; i < f.height.length; i++) {
+      const p = i * 4;
       this.state[p] = f.wet[i] * 255; this.state[p + 1] = Math.min(1, f.depth[i] / 2) * 255;
       this.state[p + 2] = (f.flowX[i] * .5 + .5) * 255; this.state[p + 3] = (f.flowY[i] * .5 + .5) * 255;
+    }
+    if (wavesChanged) for (let i = 0; i < f.height.length; i++) {
+      const p = i * 4, encoded = Math.round(Math.max(0, Math.min(1, f.height[i] / 12 + .5)) * 65535);
       this.waves[p] = encoded >> 8; this.waves[p + 1] = encoded & 255; this.waves[p + 2] = 0; this.waves[p + 3] = 255;
     }
     gl.useProgram(this.program); gl.viewport(0, 0, width, height);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     const sources = [target.canvas, this.state, this.waves, reflection];
     for (let i = 0; i < 4; i++) {
+      if ((i === 1 && !bedChanged) || (i === 2 && !wavesChanged)) continue;
       gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, this.textures[i]);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, i === 0);
-      const source = sources[i];
-      if (source instanceof Uint8Array) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, f.columns, f.rows, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
-      else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+      const source = sources[i], bytes = source instanceof Uint8Array;
+      const w = bytes ? f.columns : source.width, h = bytes ? f.rows : source.height;
+      const allocated = this.textureWidths[i] === w && this.textureHeights[i] === h;
+      if (bytes) {
+        if (allocated) gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, source);
+        else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+      } else {
+        if (allocated) gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+        else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+      }
+      this.textureWidths[i] = w; this.textureHeights[i] = h;
     }
+    this.uploadedFluid = f; this.bedRevision = f.bedRevision; this.waveRevision = f.waveRevision;
     gl.uniform4f(u.view, view.left, view.top, view.width, view.height);
     gl.uniform4f(u.grid, f.left, f.top, f.columns * f.cell, f.rows * f.cell); gl.uniform2f(u.gridSize, f.columns, f.rows);
     gl.uniform1f(u.time, reduced ? 0 : f.time + age);
-    const positions = new Float32Array(32), colors = new Float32Array(24);
+    const positions = this.lightPositions, colors = this.lightColors;
+    positions.fill(0); colors.fill(0);
     for (let i = 0; i < Math.min(8, lights.length); i++) {
-      const light = lights[i]; positions.set([light.x, light.y, light.radius, light.power], i * 4);
-      colors.set([1, 3, 5].map(j => parseInt(light.color.slice(j, j + 2), 16) / 255), i * 3);
+      const light = lights[i], p = i * 4, color = parseInt(light.color.slice(1), 16);
+      positions[p] = light.x; positions[p + 1] = light.y; positions[p + 2] = light.radius; positions[p + 3] = light.power;
+      colors[i * 3] = (color >> 16 & 255) / 255; colors[i * 3 + 1] = (color >> 8 & 255) / 255; colors[i * 3 + 2] = (color & 255) / 255;
     }
     gl.uniform4fv(u['lightPosition[0]'], positions); gl.uniform3fv(u['lightColor[0]'], colors);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
