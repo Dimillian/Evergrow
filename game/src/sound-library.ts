@@ -38,7 +38,12 @@ const definitions = [
   { id:'xp-pickup', name:'XP absorption', family:'rewards', detail:'A quiet reversed bell fragment and a soft, airy material pass.', layers:()=>[sample('bell',.09,1.8,0,5500,true),sample('cloth',.08,1.35)] },
   { id:'item-common', name:'Common item', family:'rewards', detail:'Leather handling and a small equipment buckle.', layers:()=>[sample('leather',.43),sample('latch',.12,1.12,.04)] },
   { id:'item-rare', name:'Rare item', family:'rewards', detail:'A physical equipment pickup finished by a single warm bell.', layers:()=>[sample('leather',.38),sample('coins-2',.16,.96,.025),sample('bell',.28,1.23,.055,6800)] },
-  { id:'level-up', name:'Level up', family:'rewards', detail:'A deep struck gong and a clear answering bell, with natural metal decay.', layers:()=>[sample('gong',.52,.82,0,4400),sample('bell',.54,1,.16,7600)] },
+  { id:'level-up', name:'Level up', family:'rewards', detail:'A short gathering breath, a warm release and a small crystalline finish.', layers:()=>[
+    {...sample('cloth',.19,1.65,0,2400,true),attack:.055},
+    {...sample('flame',.16,1.2,.17,1700),attack:.04},
+    {...sample('glass-1',.12,1.42,.23,4700),attack:.014},
+    {...sample('glass-2',.065,1.7,.31,5600),attack:.02},
+  ] },
   { id:'potion-drink', name:'Dual potion', family:'utility', detail:'A stopper click and real liquid movement with a soft handling tail.', layers:()=>[sample('latch',.14,1.3),sample('water',.43,1.18,.06,5900),sample('leather',.12,.95,.19)] },
   { id:'portal-open', name:'Town portal', family:'utility', detail:'Reversed gong resonance gathers into a low, breathing flame release.', layers:()=>[sample('gong',.35,.9,0,4700,true),sample('flame',.35,.7,.62,4000),sample('bell',.15,.72,.7,4600),pressure(.055,.68)] },
 ] as const satisfies readonly {id:string;name:string;family:SoundFamily;detail:string;layers:(variation:number)=>SoundLayer[]}[];
