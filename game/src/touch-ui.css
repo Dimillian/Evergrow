@@ -121,8 +121,7 @@
 .touch-point-badge { position: absolute; top: -7px; right: -3px; border: 1px solid #101d23; border-radius: 5px; padding: 1px 4px; color: #121722; background: #d8b47d; font: 12px var(--ui-font); }
 [data-touch-menu="skills"] .touch-point-badge { background: #c5a8e5; }
 .touch-point-badge[hidden] { display: none; }
-/* The compact desktop toolbar keeps its PR sizing; finger targets remain 48px. */
-.touch-mode .character-inventory-heading .character-tool-icon { width: 48px; min-width: 48px; height: 48px; min-height: 48px; }
+
 
 /* Phone landscape leaves the center open: controls sit beside, not above, resources. */
 .touch-menu-toggle { display: none; }
@@ -139,3 +138,38 @@
 .touch-phone-landscape .notification-card:not(:last-child), .touch-phone-landscape .notification-icon, .touch-phone-landscape .notification-copy > span { display: none; }
 .touch-phone-landscape .notification-copy strong { font-size: 11px; }
 .touch-mode .game-shell { height: var(--touch-vh,100dvh); }
+
+/* Compact panel chrome preserves body space on short touch viewports. */
+.touch-mode :is(.ui-window-header,.ui-window__header) { padding: 4px 10px; gap: 8px; min-height: 40px; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.touch-mode :is(.ui-window-header,.ui-window__header) .ui-title { font-size: 16px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.touch-mode :is(.ui-window-header,.ui-window__header) .ui-button { min-height: 32px; min-width: 32px; height: 32px; padding: 4px 8px; font-size: 13px; }
+.touch-mode :is(.ui-window-header,.ui-window__header) .ui-button--icon { width: 32px; flex: 0 0 32px; padding: 6px; }
+.touch-mode .ui-header-emblem, .touch-mode .world-map-emblem { width: 20px; height: 20px; flex: 0 0 20px; }
+.touch-mode .ui-header-emblem > .ui-icon, .touch-mode .world-map-emblem .ui-icon { width: 14px; height: 14px; }
+.touch-mode :is(.character-heading,.character-header-right,.world-map-heading) { gap: 6px; min-width: 0; }
+.touch-mode .character-heading { flex: 1; }
+.touch-mode .character-header-right { flex: none; }
+.touch-mode .character-level { font-size: 11px; }
+.touch-mode .character-tabs { padding: 0; gap: 3px; flex: none; }
+.touch-mode .character-tabs .ui-button { padding-inline: 9px; }
+.touch-mode .character-columns > section { padding: 6px 10px; }
+.touch-mode .character-section-title { gap: 6px; margin-bottom: 6px; user-select: none; -webkit-user-select: none; }
+.touch-mode .character-section-title h3 { font-size: 14px; }
+.touch-mode .character-inventory-heading .character-tool-icon { width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 6px; }
+.touch-mode .character-footer { padding: 6px 10px; gap: 6px; }
+.touch-mode .character-experience { width: 100%; }
+.touch-mode .character-experience > div:first-child { font-size: 10px; margin-bottom: 4px; }
+.touch-mode :is(.skill-atlas-toolbar,.world-map-toolbar,.service-tabs) { padding: 4px 10px; gap: 5px; user-select: none; -webkit-user-select: none; }
+.touch-mode :is(.skill-atlas-toolbar,.world-map-toolbar,.service-tabs) .ui-button { min-height: 32px; height: 32px; padding: 4px 8px; font-size: 12px; }
+.touch-mode .skill-atlas-window { min-height: 0; }
+.touch-mode .skill-atlas-results { top: 41px; left: 10px; }
+.touch-mode .skill-atlas-search { height: 32px; padding-inline: 8px; }
+.touch-mode .skill-atlas-search input { user-select: text; -webkit-user-select: text; }
+.touch-mode .skill-atlas-points { padding: 0 6px; gap: 4px; }
+.touch-mode .skill-atlas-points strong { font-size: 16px; }
+.touch-mode .skill-atlas-points span { font-size: 10px; letter-spacing: 0; }
+.touch-mode :is(.ui-window-footer,.ui-window__footer,.world-map-footer,.skill-atlas-footer) { padding: 6px 10px; gap: 6px; }
+@media (max-width: 650px) {
+  .touch-mode .character-header { flex-wrap: wrap; }
+  .touch-mode .character-tabs { order: 3; flex-basis: 100%; }
+}

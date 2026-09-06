@@ -147,7 +147,7 @@ export class InventoryPanel {
     this.window.dataset.touchTab = 'bag';
     const tabs = document.createElement('nav'); tabs.className = 'character-tabs touch-only'; tabs.setAttribute('aria-label','Character sections');
     tabs.innerHTML = '<button class="ui-button" data-touch-tab="bag" aria-pressed="true">Bag</button><button class="ui-button" data-touch-tab="equipment" aria-pressed="false">Equipment</button><button class="ui-button" data-touch-tab="stats" aria-pressed="false">Stats</button>';
-    this.window.querySelector('.character-columns')!.before(tabs);
+    this.window.querySelector('.character-header-right')!.before(tabs);
     this.sheet = document.createElement('section'); this.sheet.className = 'touch-item-sheet'; this.sheet.hidden = true;
     this.sheet.setAttribute('aria-label','Selected item'); this.window.append(this.sheet);
     this.tooltip = new ItemTooltip(this.window, 'character-item-tooltip');
