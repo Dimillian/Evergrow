@@ -49,7 +49,7 @@ import { CAMERA_FOLLOW, CameraZoom, cameraFollowTarget, cameraSpawnExclusion,
   cameraView, screenToWorld, worldToScreen } from './camera.ts';
 import { EnemyFocus } from './enemy-focus.ts';
 import { ENEMY_BODY_BOUNDS } from './enemy-body.ts';
-import { resolveRangedAim, PROJECTILE_HEIGHT, type RangedAim } from './ranged-aim.ts';
+import { resolveRangedAim, resolveDirectionalAim, PROJECTILE_HEIGHT, type RangedAim } from './ranged-aim.ts';
 import { deriveAttackStats } from './equipment.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { drawEnemyPlate } from './enemy-plate.ts';
@@ -173,6 +173,15 @@ export class Renderer {
       alpha: sim.interpolationAlpha, previousTargetId: this.rangedAim?.targetId ?? null,
       bounds: this.lastDisplayedView,
       visible: (ax, ay, bx, by) => hasLineOfSight(world, ax, ay, bx, by),
+    });
+    return this.rangedAim;
+  }
+
+  resolveDirectionAim(sim: Simulation, world: World, aim: { x: number; y: number }, profile: { range: number; speed: number } | null): RangedAim | null {
+    if (!profile || sim.player.dead) { this.rangedAim = null; return null; }
+    this.rangedAim = resolveDirectionalAim(sim.player, aim, sim.enemies, {
+      ...profile, alpha: sim.interpolationAlpha, previousTargetId: this.rangedAim?.targetId ?? null,
+      bounds: this.lastDisplayedView, visible: (ax, ay, bx, by) => hasLineOfSight(world, ax, ay, bx, by),
     });
     return this.rangedAim;
   }
@@ -788,7 +797,7 @@ export class Renderer {
     const x = this.pointerX, y = this.pointerY;
     const aim = this.rangedAim, player = sim.player;
     const target = aim?.targetId == null ? null : sim.enemies.find(e => e.id === aim.targetId && e.hp > 0);
-    if (aim && player.equipment.mainHand.attackKind !== 'melee') {
+    if (aim && (player.equipment.mainHand.attackKind !== 'melee' || this.gamepadActive || this.touchActive)) {
       const origin = worldToScreen(this.view, player.x, player.y - PROJECTILE_HEIGHT);
       const end = worldToScreen(this.view, aim.x, aim.y - PROJECTILE_HEIGHT);
       const dx = end.x - origin.x, dy = end.y - origin.y, distance = Math.hypot(dx, dy);

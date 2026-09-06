@@ -1,6 +1,6 @@
 # Cloud saves on Sites
 
-Implemented locally · 2026-09-06 · **Prepared for the next Sites deployment; not yet live.**
+Cloud saves deployed · 2026-09-06. The cadence refinement below is validated locally and awaits the next requested Sites deployment.
 
 ## Player flow
 
@@ -18,7 +18,7 @@ Localhost, Safari and Android storage remain separate from the hosted domain. A 
 - `cloud-client.ts` implements the same repository interface as `SaveClient`. Gameplay writes a durable local recovery bundle first, then uploads asynchronously. NPC transactions and reward commitments still wait for the local transaction, not a network round trip.
 - `cloud-worker.ts` / `cloud-cache.ts` own serialization, validation and an account-scoped IndexedDB outbox. Character, map and upload state share one transaction. An immutable in-flight operation survives new checkpoints, interrupted uploads and browser restarts. Acknowledging an older upload never discards newer local progress.
 - The server’s D1 row is the publication boundary. It holds owner, slot, monotonic revision, summary, current/previous private R2 keys and the last operation receipt. R2 objects are immutable. Failed upload/publication leaves the previous checkpoint readable; uncertain commits are checked before cleanup.
-- Only acknowledged uploads show **Synced**. Other compact states are **Saving…**, **Offline**, **Conflict** and **Sign in again**. Pending uploads retry every 15 seconds and on subsequent saves/return to the hall. Browser exit is best effort; leave the game open until Synced before switching devices.
+- Only acknowledged uploads show **Synced**. Other compact states are **Saving…**, **Offline**, **Conflict** and **Sign in again**. Routine checkpoints are durable locally every 20 seconds; explicit gear/point and transactional saves remain immediate. Pending uploads coalesce and publish every 30 seconds, plus explicit flushes on return to the hall, import/delete and backgrounding. Clean slots generate no PUT requests. Offline uploads retry on the same cadence. Browser exit is best effort; leave the game open until Synced before switching devices.
 
 The server retains one predecessor; older referenced backups are pruned after successful publication. Interrupted, unreferenced uploads can remain in R2 if cleanup cannot be confirmed. Scheduled orphan collection and an in-product server-backup restore flow are deferred.
 

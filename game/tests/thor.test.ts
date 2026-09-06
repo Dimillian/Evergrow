@@ -103,3 +103,14 @@ test('Live inspection projects details without pausing and disappears when owner
   player.character.inventory[5] = null;
   assert.equal(thorSnapshot(sim, 'current', 'Test', 'playing', 'Deadwood', 1, commands.selection.selected).detail, undefined);
 });
+
+test('Companion tab visibility is session checked and does not pause gameplay',()=>{
+  const {commands,host,calls}=fixture();
+  commands.command({type:'tab',tab:'pack',session:'old'});assert.equal(commands.selection.tab,'map');
+  commands.command({type:'tab',tab:'pack',session:'current'});assert.equal(commands.selection.tab,'pack');
+  (host as {busy:boolean}).busy=true;
+  commands.command({type:'tab',tab:'map',session:'current'});assert.equal(commands.selection.tab,'map');
+  assert.equal(host.phase,'playing');assert.deepEqual(calls,[]);
+  assert.equal(parseThorCommand(JSON.stringify({type:'tab',tab:'pack',session:'current'}))?.type,'tab');
+  assert.equal(parseThorCommand(JSON.stringify({type:'tab',tab:'unknown',session:'current'})),null);
+});

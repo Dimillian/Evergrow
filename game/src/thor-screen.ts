@@ -2,7 +2,7 @@ import { loadGameFont } from './font.ts';
 import { installUITheme } from './ui-theme.ts';
 import { escapeUI as e, uiIcon } from './ui-components.ts';
 import { itemIconSVG } from './item-art.ts';
-import type { ThorSnapshot, ThorAction, ThorItem } from './thor-protocol.ts';
+import type { ThorSnapshot, ThorAction, ThorItem, ThorTab } from './thor-protocol.ts';
 import type {} from './thor-native.ts';
 import './typography.css';
 import './ui-kit.css';
@@ -12,7 +12,7 @@ await loadGameFont();
 installUITheme();
 const root = document.querySelector<HTMLElement>('#companion')!;
 let previewAction: ((action:ThorAction)=>void)|null=null;
-let state: ThorSnapshot | null = null, tab = 'map', map = '', detailClosed: string | null = null, lastContent = '';
+let state: ThorSnapshot | null = null, tab: ThorTab = 'map', map = '', detailClosed: string | null = null, lastContent = '';
 const icons = new Map<string, {
     signature: string;
     svg: string;
@@ -58,11 +58,12 @@ function render() {
     get('#thor-resume').hidden = !active || s.phase === 'playing';
     for (const b of root.querySelectorAll<HTMLButtonElement>('.thor-footer button'))
         b.disabled = !active;
+    const mapSource = lastContent && tab === 'map' && content.querySelector('.thor-map') ? '' : map;
     let html = '';
     if (!active)
         html = `<div class="thor-idle"><div class="thor-astrolabe"><span>${uiIcon('star')}</span><i></i><i></i><i></i></div><p>Select a character on the upper screen</p></div>`;
     else if (tab === 'map')
-        html = `<div class="thor-map"><img src="${map}" alt="Explored terrain"><span class="thor-north">N</span><div class="thor-map-tools"><button data-zoom="0.8" aria-label="Zoom out">−</button><button data-zoom="1.25" aria-label="Zoom in">+</button><button data-panel="map" aria-label="Open full map">${uiIcon('map')}</button></div><span class="thor-area-level">Lv ${n(s.zoneLevel)}</span></div><div class="thor-section-title"><h2>Nearby</h2><button data-panel="journeys" aria-label="Open journal">${uiIcon('journal')}</button></div><div class="thor-journeys">${s.journeys.length ? s.journeys.map(g => `<button data-track="${e(g.id)}" class="${g.tracked ? 'tracked' : ''}"><span class="journey-diamond">◇</span><span>${e(g.name)}</span><small>${e(g.distance)}</small></button>`).join('') : '<p class="thor-quiet">Explore to discover nearby activities</p>'}</div>`;
+        html = `<div class="thor-map"><img src="${mapSource}" alt="Explored terrain"><span class="thor-north">N</span><div class="thor-map-tools"><button data-zoom="0.8" aria-label="Zoom out">−</button><button data-zoom="1.25" aria-label="Zoom in">+</button><button data-panel="map" aria-label="Open full map">${uiIcon('map')}</button></div><span class="thor-area-level">Lv ${n(s.zoneLevel)}</span></div><div class="thor-section-title"><h2>Nearby</h2><button data-panel="journeys" aria-label="Open journal">${uiIcon('journal')}</button></div><div class="thor-journeys">${s.journeys.length ? s.journeys.map(g => `<button data-track="${e(g.id)}" class="${g.tracked ? 'tracked' : ''}"><span class="journey-diamond">◇</span><span>${e(g.name)}</span><small>${e(g.distance)}</small></button>`).join('') : '<p class="thor-quiet">Explore to discover nearby activities</p>'}</div>`;
     else if (tab === 'pack')
         html = `<div class="thor-pack-layout"><section class="thor-equipped-column"><div class="thor-section-title"><h2>Worn</h2></div><div class="thor-equipment">${s.equipment.map(itemCell).join('')}</div><span class="thor-gold">◈ ${n(s.gold)}</span><button class="thor-character-link" data-panel="character">Character ↗</button></section><section class="thor-bag-column"><div class="thor-section-title"><h2>Pack</h2><span>${s.bag.filter(Boolean).length} / 64</span></div><div class="thor-bag">${s.bag.map(itemCell).join('')}</div></section></div>`;
     else
@@ -100,7 +101,8 @@ root.addEventListener('click', event => {
         return;
     const d = button.dataset;
     if (d.tab) {
-        tab = d.tab;
+        tab = d.tab as ThorTab;
+        send({ type: 'tab', tab });
         lastContent = '';
         for (const b of root.querySelectorAll<HTMLElement>('[data-tab]'))
             b.setAttribute('aria-selected', String(b.dataset.tab === tab));
@@ -127,12 +129,14 @@ root.addEventListener('click', event => {
         send({ type: d.action });
 });
 function receive(next: ThorSnapshot) {
+    const changedSession = next.session !== state?.session;
     if (next.session !== state?.session) {
         map = '';
         detailClosed = null;
         lastContent = '';
     }
     state = next;
+    if (changedSession) send({ type: 'tab', tab });
     if (next.map)
         map = next.map;
     render();

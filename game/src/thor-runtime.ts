@@ -50,7 +50,7 @@ export class ThorRuntime {
         const p = h.sim.player, run = currentDungeon(h.sim.expeditions);
         const zone = run?.entrance ?? getZoneAt(p.x, p.y, h.seed);
         const state = thorSnapshot(h.sim, session, h.session?.name ?? '', h.phase, zone.name, zone.level, this.commands.selection.selected);
-        if (map && session) {
+        if (map && session && this.commands.selection.tab === 'map' && !state.detail) {
             this.canvas ??= document.createElement('canvas');
             if (this.canvas.width !== 512) {
                 this.canvas.width = 512;

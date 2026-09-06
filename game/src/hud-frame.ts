@@ -1,5 +1,6 @@
 /** Astral Instrument HUD frame; geometry is shared with native input and content. */
 import { HUD_ART } from './hud-layout.ts';
+import { drawCachedUIArt } from './ui-art-cache.ts';
 import { drawHUDEnergy } from './hud-energy.ts';
 
 const TAU = Math.PI * 2;
@@ -36,8 +37,7 @@ function metal(c: CanvasRenderingContext2D, top: number, bottom: number) {
   return gradient;
 }
 
-export function drawHUDOrbFrame(c: CanvasRenderingContext2D, x: number, y: number, side: number, time: number) {
-  c.save(); c.translate(x, y);
+function orbMetal(c: CanvasRenderingContext2D, side: number) {
 
   // Nested, calibrated circles surround an unobstructed 36.6-radius glass area.
   c.beginPath(); c.arc(0, 0, 43.5, 0, TAU); c.arc(0, 0, 37.5, 0, TAU, true);
@@ -84,12 +84,21 @@ export function drawHUDOrbFrame(c: CanvasRenderingContext2D, x: number, y: numbe
   c.bezierCurveTo(moonX - 1.8, moonY + 2, moonX - 1, moonY - 2.4, moonX + 2.2, moonY - 2.8);
   c.closePath(); c.fillStyle = '#afc4ca'; c.fill();
 
+}
+
+function orbGlint(c: CanvasRenderingContext2D, side: number, time: number) {
   const angle = Math.PI * (1.18 + .46 * (.5 + .5 * Math.sin(time * .16 + side)));
   const glintX = Math.cos(angle) * 49.6, glintY = Math.sin(angle) * 49.6;
   const glow = c.createRadialGradient(glintX, glintY, 0, glintX, glintY, 5);
   glow.addColorStop(0, '#a7d5d264'); glow.addColorStop(1, '#79b8c000');
   c.fillStyle = glow; c.fillRect(glintX - 5, glintY - 5, 10, 10);
   star(c, glintX, glintY, 2.2, '#bdd8d9');
+}
+
+export function drawHUDOrbFrame(c: CanvasRenderingContext2D, x: number, y: number, side: number, time: number) {
+  c.save(); c.translate(x, y);
+  drawCachedUIArt(c, `orb:${side}`, -60, -62, 120, 124, art => orbMetal(art, side));
+  orbGlint(c, side, time);
   c.restore();
 }
 
@@ -179,10 +188,18 @@ export function drawHUDFrame(c: CanvasRenderingContext2D, time: number): void {
   c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
   const t = Number.isFinite(time) ? time : 0;
   drawHUDEnergy(c, t);
-  actionTray(c);
-  shortcutRail(c);
-  drawHUDOrbFrame(c, HUD_ART.orb.left, HUD_ART.orb.y, -1, t);
-  drawHUDOrbFrame(c, HUD_ART.orb.right, HUD_ART.orb.y, 1, t);
-  resourceShelf(c, HUD_ART.orb.left); resourceShelf(c, HUD_ART.orb.right);
+  drawCachedUIArt(c, 'frame', 0, 0, HUD_ART.width, HUD_ART.height, art => {
+    art.lineCap = 'round'; art.lineJoin = 'round';
+    actionTray(art); shortcutRail(art);
+    for (const side of [-1, 1]) {
+      art.save(); art.translate(side < 0 ? HUD_ART.orb.left : HUD_ART.orb.right, HUD_ART.orb.y);
+      orbMetal(art, side); art.restore();
+    }
+    resourceShelf(art, HUD_ART.orb.left); resourceShelf(art, HUD_ART.orb.right);
+  });
+  for (const side of [-1, 1]) {
+    c.save(); c.translate(side < 0 ? HUD_ART.orb.left : HUD_ART.orb.right, HUD_ART.orb.y);
+    orbGlint(c, side, t); c.restore();
+  }
   c.restore();
 }

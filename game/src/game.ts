@@ -1,3 +1,4 @@
+import { directionalAimProfile } from './ranged-aim.ts';
 import { FramePacer } from './frame-pacer.ts';
 import { ThorRuntime } from './thor-runtime.ts';
 import { nativeController, clearNativeController } from './thor-native.ts';
@@ -275,7 +276,7 @@ export class Game {
         if(this.interact(this.renderer.screenToWorld(point.x*this.renderer.width/r.width,point.y*this.renderer.height/r.height))) this.touch.clear();
       },
     });
-    window.addEventListener('pagehide', () => { this.clearInput(); this.saveCharacter(); }, { signal });
+    window.addEventListener('pagehide', () => { this.clearInput(); void this.saveAndSync(); }, { signal });
     window.addEventListener('focus', () => this.clearInput(), { signal });
     this.canvas.addEventListener('blur', () => this.clearInput(), { signal });
     window.addEventListener('resize', () => this.resize(), { signal });
@@ -289,7 +290,7 @@ export class Game {
       if (document.hidden) {
         this.clearInput();
         if (this.phase === 'playing') this.pause();
-        else this.saveCharacter();
+        void this.saveAndSync();
       }
       this.last = performance.now();
     }, { signal });
@@ -509,7 +510,7 @@ export class Game {
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
     this.panels.transition('playing');
     void this.audio.unlock().catch(() => this.notify('Sound is unavailable in this browser.'));
-    this.audio.setEnabled(!this.muted); this.last = performance.now(); this.nextAutosave = this.last + 10_000;
+    this.audio.setEnabled(!this.muted); this.last = performance.now(); this.nextAutosave = this.last + 20_000;
   }
 
   private async loadRoster(preferred?: number) {
@@ -575,6 +576,11 @@ export class Game {
       return saved;
     })().finally(() => { this.autosave = null; });
     return this.autosave;
+  }
+
+  /** Best effort on browser suspension; the recovery checkpoint is durable before uploading. */
+  private async saveAndSync() {
+    if (await this.saveCharacter()) await this.saveClient.flush();
   }
 
   /** Hold gameplay and new commands across save-before-commit; rendering continues. */
@@ -814,13 +820,15 @@ export class Game {
       const distance = Math.min(900,deriveAttackStats(p.stats,weapon).range) * touch.distance;
       const raw = {x:p.x+touch.aim.x*distance,y:p.y+touch.aim.y*distance};
       const recipe = id ? resolveSkill(id,p.derived,p.character).recipe : null;
-      const aim = recipe?.kind === 'ground' ? skillTargetPoint(this.world,p,raw,deriveAttackStats(p.stats,weapon).range) : raw;
+      let aim = recipe?.kind === 'ground' ? skillTargetPoint(this.world,p,raw,deriveAttackStats(p.stats,weapon).range) : raw;
+      const assisted = this.renderer.resolveDirectionAim(this.sim, this.world, aim,
+        directionalAimProfile(deriveAttackStats(p.stats,weapon).range, weapon.attackKind, recipe));
+      if (assisted) aim = assisted;
       const screen = this.renderer.worldToScreen(aim.x,aim.y);
       this.mouse.x = screen.x; this.mouse.y = screen.y; this.mouse.present = true;
       if(preview) this.sim.clearCombatInput();
       const input = touch.consume(aim);
-      const ranged = this.renderer.resolvePointerAim(this.sim,this.world,screen.x,screen.y,true);
-      return ranged ? {...input,rangedAim:{x:ranged.x,y:ranged.y}} : input;
+      return assisted ? {...input,rangedAim:{x:assisted.x,y:assisted.y}} : input;
     }
     if (this.usingGamepad) {
       const pad = this.gamepad, p = this.sim.player;
@@ -829,13 +837,19 @@ export class Game {
         this.padAimDistance = 60 + Math.hypot(pad.aim.x, pad.aim.y) * 220;
       } else if (pad.move.x || pad.move.y) this.padAimAngle = Math.atan2(pad.move.y, pad.move.x);
       const angle = this.padAimAngle ?? p.angle;
-      const aim = { x: p.x + Math.cos(angle) * this.padAimDistance, y: p.y + Math.sin(angle) * this.padAimDistance };
+      let aim = { x: p.x + Math.cos(angle) * this.padAimDistance, y: p.y + Math.sin(angle) * this.padAimDistance };
+      const input = pad.gameplay(aim);
+      const id = input.skillSlot !== null ? p.character.skillSlots[input.skillSlot] : null;
+      const weapon = id ? skillWeapon(id,p.equipment) ?? p.equipment.mainHand : p.equipment.mainHand;
+      const recipe = id ? resolveSkill(id,p.derived,p.character).recipe : null;
+      const assisted = this.renderer.resolveDirectionAim(this.sim, this.world, aim,
+        directionalAimProfile(deriveAttackStats(p.stats,weapon).range, weapon.attackKind, recipe));
+      if (assisted) aim = assisted;
       const screen = this.renderer.worldToScreen(aim.x, aim.y);
       this.mouse.x = screen.x; this.mouse.y = screen.y; this.mouse.present = true;
       // Controller aiming is independent of the last mouse position and HUD hit regions.
-      const rangedAim = this.renderer.resolvePointerAim(this.sim, this.world, screen.x, screen.y, true);
-      return { ...pad.gameplay(aim),
-        ...(rangedAim ? { rangedAim: { x: rangedAim.x, y: rangedAim.y } } : {}) };
+      return { ...input, aimX: aim.x, aimY: aim.y,
+        ...(assisted ? { rangedAim: { x: assisted.x, y: assisted.y } } : {}) };
     }
     const blocked = this.pointerInHUD();
     const p = this.sim.player;
@@ -887,7 +901,7 @@ export class Game {
       if (this.sim.player.dead) {
         this.panels.transition('dead', true);
       }
-      if (now >= this.nextAutosave) { this.saveCharacter(); this.nextAutosave = now + 10_000; }
+      if (now >= this.nextAutosave) { this.saveCharacter(); this.nextAutosave = now + 20_000; }
     }
     this.shell.setPortalState(this.sim.portal.active ? this.sim.portal.progress : null,
       !!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x, this.sim.player.y));
@@ -948,8 +962,8 @@ export class Game {
         x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
         y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind,
       })));
-    this.performance.end('ui', uiStart); this.performance.finish();
     this.thor.update(now);
+    this.performance.end('ui', uiStart); this.performance.finish();
     this.animation = requestAnimationFrame(this.frame);
   };
 

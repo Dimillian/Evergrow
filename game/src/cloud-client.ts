@@ -25,7 +25,7 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
     this.worker.onmessage = ({ data }) => { const r = this.requests.get(data.id); if (!r) return; this.requests.delete(data.id); if (data.error) r.reject(new Error(data.error)); else r.resolve(data.result); };
     this.worker.onerror = () => { this.unavailable = true; for (const r of this.requests.values()) r.reject(new Error('Local recovery storage unavailable.')); this.requests.clear(); };
     this.ready = this.rpc('init', { account });
-    this.timer = setInterval(() => { void this.flush(); }, 15000);
+    this.timer = setInterval(() => { void this.flush(); }, 30000);
   }
   private rpc<T>(method: string, data: object = {}): Promise<T> {
     if (this.disposed || this.unavailable) return Promise.reject(new Error('Save storage closed.'));
@@ -76,7 +76,8 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
       if (!chart) { const old = await this.cache<CloudRow | null>({ kind: 'read', index }); chart = old?.bundle?.character.id === record.id ? bundleChart(old.bundle) : undefined; }
       const row = await this.rpc<{ token: string; conflict: boolean } | null>('write-bundle', { index, record, chart, expected, operation: crypto.randomUUID() });
       if (!row) return { ok: false, message: 'Character changed in another tab. Reopen it before saving.' };
-      this.setStatus(row.conflict ? 'Conflict' : 'Saving…'); queueMicrotask(() => { void this.flush(); });
+      this.setStatus(row.conflict ? 'Conflict' : 'Saving…');
+      // Durable local writes coalesce until the next 30-second upload window.
       return { ok: true, token: row.token };
     } catch (error) { return { ok: false, message: (error as Error).message }; }
   }

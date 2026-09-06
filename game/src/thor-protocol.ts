@@ -1,5 +1,6 @@
 import type { Item } from './character-types.ts';
 import type { PadSnapshot } from './gamepad-input.ts';
+export type ThorTab = 'map' | 'pack' | 'build';
 export type ThorPanel = 'map' | 'character' | 'skills' | 'journeys';
 export type ThorCommand = {
     type: 'resume' | 'portal' | 'closeInspect';
@@ -11,6 +12,10 @@ export type ThorCommand = {
 } | {
     type: 'inspect' | 'equip' | 'track';
     id: string;
+    session: string;
+} | {
+    type: 'tab';
+    tab: ThorTab;
     session: string;
 } | {
     type: 'zoom';
@@ -73,6 +78,7 @@ export function parseThorCommand(raw: unknown): ThorCommand | null {
             return null;
         if (v.type === 'resume' || v.type === 'portal' || v.type === 'closeInspect')
             return v as ThorCommand;
+        if (v.type === 'tab' && ['map', 'pack', 'build'].includes(String(v.tab))) return v as ThorCommand;
         if (v.type === 'panel' && ['map', 'character', 'skills', 'journeys'].includes(String(v.panel)))
             return v as ThorCommand;
         if (['inspect', 'equip', 'track'].includes(String(v.type)) && typeof v.id === 'string' && v.id.length > 0 && v.id.length <= 200)

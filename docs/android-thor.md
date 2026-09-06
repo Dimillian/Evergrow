@@ -56,3 +56,11 @@ Output: `android/app/build/outputs/apk/debug/app-debug.apk`. The script builds b
 - `/thor.html?preview`: save-free static interface fixture for the in-app browser. It never creates a gameplay simulation or accesses character storage.
 
 Code tests cover invalid bridge input, native snapshot rearm, stale/busy/dead command rejection, pause/close/equip ownership, moved-item resolution, zoom bounds and full-bag transfer size. Frame-pacing tests cover 60/90/120/144 Hz callbacks, timestamp jitter, preserved simulation time and suspension recovery. Native build/install and both display surfaces were checked on the connected Thor. Gameplay feel, physical controller acceptance and sustained performance remain user-tested.
+
+## Aim assistance and rendering checkpoint — September 6
+
+Touch/controller direction now selects nearby visible enemies in a forward cone, including directional skills. The real resolved weapon/skill reach bounds assistance; ground/self skills remain manually placed. Existing mouse assistance, enemy projectiles and collision rules are unchanged.
+
+A read-only 10-second CPU profile on the connected Thor identified repeated native HUD frame drawing and lower-map PNG encoding (about 271 ms of self time for PNG encoding in that sample). Static Astral metalwork is now cached at native display density with four bounded entries per drawing context; animated glass, energy, glints and text remain live. The companion reports its active tab via session-checked commands, so hidden maps and maps covered by item inspection no longer redraw/encode. Visible maps retain 2 Hz updates; telemetry remains 4 Hz. Frame CPU measurements now include the companion work. These remove specific costs; sustained FPS and combat feel still need player acceptance.
+
+Routine local autosaves now run every 20 seconds; important actions retain their immediate checkpoint. Android never contacts the save server.

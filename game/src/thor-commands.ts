@@ -1,4 +1,4 @@
-import type { ThorCommand, ThorPanel } from './thor-protocol.ts';
+import type { ThorCommand, ThorPanel, ThorTab } from './thor-protocol.ts';
 import type { Simulation } from './simulation.ts';
 import type { GamePhase } from './game-phase.ts';
 export interface ThorCommandHost {
@@ -16,12 +16,13 @@ export interface ThorCommandHost {
 }
 /** Second-display commands never trust a bag index or an earlier character snapshot. */
 export class ThorCommands {
-    readonly selection = { selected: null as string | null, zoom: .085 };
+    readonly selection = { selected: null as string | null, zoom: .085, tab: 'map' as ThorTab };
     private host: ThorCommandHost;
     constructor(host: ThorCommandHost) { this.host = host; }
     reset() { this.selection.selected = null; this.selection.zoom = .085; }
     command(c: ThorCommand) {
         const h = this.host;
+        if (c.type === 'tab' && h.session && c.session === h.session.id) { this.selection.tab = c.tab; return; }
         if (!h.session || c.session !== h.session.id || h.busy || h.phase === 'ready' || h.phase === 'dead')
             return;
         switch (c.type) {

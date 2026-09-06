@@ -20,7 +20,7 @@ Devices whose primary pointer is coarse show touch controls automatically. A rea
 | Camera | Pinch with two free fingers on the world, or use zoom buttons in Pause |
 | Sound | Touch-only sound control in Pause, using the same N-key preference |
 
-Aim persists between attacks. Skill aiming temporarily takes ownership from the basic-attack finger while movement remains available. All five slots retain their original assignments; empty slots do nothing. Resource cost, gear compatibility, action recovery and cooldown still go through the existing combat rules. This is manual independent aiming with the existing bounded ranged assistance, not automatic enemy targeting or tap-to-move pathfinding.
+Aim persists between attacks. Skill aiming temporarily takes ownership from the basic-attack finger while movement remains available. All five slots retain their original assignments; empty slots do nothing. Resource cost, gear compatibility, action recovery and cooldown still go through the existing combat rules. Aiming in a monster’s direction selects a nearby visible foe inside a 56-degree forward cone. A modest retention bias keeps the target steady; moving the aim away releases it. Directional basics and skills share this assistance, while ground/self skills retain manual placement. Targets behind walls or outside the screen are excluded; released projectiles never home.
 
 `touch-input.ts` owns bounded contact IDs, analog vectors, aim ownership and one-shot edges. `touch-targeting.ts` classifies every resolved skill recipe, including specializations. `skill-target-point.ts` is the shared ground-target range/obstruction calculation used by combat and previews. Preview circles and direction lines render after world post-processing.
 
