@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { WorldMap, mapTerrainSize, isMapSampleRevealed, selectMapPOIs, mapRegionLabels, MAP_TERRAIN_RULES, mapRoadPaths, pickMapPOI, chartedMapArea, getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt } from '../src/world-map.ts';
+import { WorldMap, mapTileBlend, mapTerrainSize, isMapSampleRevealed, selectMapPOIs, mapRegionLabels, MAP_TERRAIN_RULES, mapRoadPaths, pickMapPOI, chartedMapArea, getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt } from '../src/world-map.ts';
 import type { MapView } from '../src/world-map.ts';
 import { fitMapBounds, MAP_ZOOM } from '../src/map-view.ts';
 import type { WorldPOI } from '../src/world-pois.ts';
@@ -113,6 +113,7 @@ test('minimap chart keeps detailed terrain when its display size grows', () => {
   const map = Object.assign(Object.create(WorldMap.prototype), {
     tile(_x: number, _y: number, size: number) { sizes.add(size); return null; },
     world: { getBuildings: () => [] },
+    previewTile: () => null,
   }) as unknown as { chart(context: unknown, view: MapView, mini: boolean, features: unknown): void };
   const context = { save() {}, beginPath() {}, rect() {}, clip() {}, fillRect() {}, restore() {},
     getTransform: () => ({ a: 1, b: 0 }) };
@@ -164,7 +165,7 @@ test('large atlas detail is isolated from minimap tiles and stays clipped to rev
   const original = Object.getOwnPropertyDescriptor(globalThis, 'document');
   const canvas = () => {
     const context = { painted: 0, fillStyle: '', globalCompositeOperation: '',
-      fillRect() {}, clearRect() { this.painted = 0; }, drawImage() { this.painted++; },
+      fillRect() {}, clearRect() { this.painted = 0; }, drawImage(...args: unknown[]) { this.painted += args.length === 9 ? Number(args[7]) * Number(args[8]) : 1; },
       setTransform() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, save() {}, restore() {},
     };
     return { width: 0, height: 0, getContext: () => context };
@@ -201,8 +202,8 @@ test('coarse tile cache notices discoveries in every covered chunk without regen
   const contexts: Array<{ painted: number; maskSource: unknown }> = [];
   const canvas = () => {
     const context = { fillStyle: '', globalCompositeOperation: '', painted: 0, maskSource: null as unknown,
-      fillRect() {}, clearRect() { this.painted = 0; }, drawImage(source: unknown) {
-        this.painted++; if (this.globalCompositeOperation === 'destination-in') this.maskSource = source;
+      fillRect() {}, clearRect() { this.painted = 0; }, drawImage(source: unknown, ...args: number[]) {
+        this.painted += args.length === 8 ? args[6] * args[7] : 1; if (this.globalCompositeOperation === 'destination-in') this.maskSource = source;
       }, setTransform() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {},
     };
     contexts.push(context); return { width: 0, height: 0, getContext: () => context };
@@ -245,4 +246,97 @@ test('overview roads use the same seeded polylines as ground clearance', () => {
       for(const [px,py] of path.points.filter((_,i)=>i%11===0))assert.ok(pathDistance(px,py,seed)<1e-6);}
   }
   assert.deepEqual(mapRoadPaths(Infinity,0,3072),[]); assert.deepEqual(mapRoadPaths(0,0,12289),[]);
+});
+
+
+test('map pointer bursts coalesce into one frame and keep hover off the chart draw path', t => {
+  const raf = Object.getOwnPropertyDescriptor(globalThis, 'requestAnimationFrame');
+  const cancel = Object.getOwnPropertyDescriptor(globalThis, 'cancelAnimationFrame');
+  let callback: FrameRequestCallback | undefined, scheduled = 0, charts = 0, hovers = 0;
+  Object.defineProperty(globalThis, 'requestAnimationFrame', { configurable: true, value: (fn: FrameRequestCallback) => { callback = fn; return ++scheduled; } });
+  Object.defineProperty(globalThis, 'cancelAnimationFrame', { configurable: true, value: () => { callback = undefined; } });
+  t.after(() => {
+    for (const [key, descriptor] of [['requestAnimationFrame', raf], ['cancelAnimationFrame', cancel]] as const)
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor); else Reflect.deleteProperty(globalThis, key);
+  });
+  const map = Object.assign(Object.create(WorldMap.prototype), {
+    opened: true, disposed: false, frame: 0, chartDirty: false,
+    render() { charts++; this.chartDirty = false; }, drawHover() { hovers++; },
+  }) as { invalidate(chart?: boolean): void; opened: boolean };
+  for (let i = 0; i < 100; i++) map.invalidate(false);
+  assert.equal(scheduled, 1); callback!(0); assert.equal(hovers, 1); assert.equal(charts, 0);
+  map.invalidate(false); map.invalidate(true); map.invalidate(false);
+  assert.equal(scheduled, 2); callback!(0); assert.equal(charts, 1, 'a camera change upgrades an already pending hover frame');
+  map.opened = false; map.invalidate(); assert.equal(scheduled, 2);
+});
+
+test('progressive atlas tiles yield, finish each terrain sample once, and keep applying discovery masks', t => {
+  const doc = Object.getOwnPropertyDescriptor(globalThis, 'document'), clock = Object.getOwnPropertyDescriptor(globalThis, 'performance');
+  let now = 0, samples = 0, props = 0, revision = 1, revealed = true;
+  const canvas = () => {
+    const context = { painted: 0, fillRect() {}, clearRect() { this.painted = 0; },
+      drawImage(...args: unknown[]) { this.painted += args.length === 9 ? Number(args[7])*Number(args[8]) : 1; },
+      save() {}, restore() {}, setTransform() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {},
+    };
+    return { width: 0, height: 0, getContext: () => context };
+  };
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement: canvas } });
+  Object.defineProperty(globalThis, 'performance', { configurable: true, value: { now: () => now } });
+  t.after(() => {
+    for (const [key, descriptor] of [['document', doc], ['performance', clock]] as const)
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor); else Reflect.deleteProperty(globalThis, key);
+  });
+  const map = Object.assign(Object.create(WorldMap.prototype), {
+    tiles: new Map(), buildBudget: 0, pendingTerrain: false,
+    exploration: { getChunkRevision: () => revision, isCellRevealed: () => revealed },
+    world: { seed: 7319, mapColor: () => '#445544',
+      atlasColor() { samples++; now++; return '#557755'; }, getProps() { props++; return []; } },
+  });
+  assert.equal(map.tile(0,0,768,true), null); assert.equal(samples,0); assert.equal(map.pendingTerrain,true);
+  map.buildBudget = 128;
+  let tile = map.tile(0,0,768,true);
+  assert.equal(tile.nextRow, 2); assert.equal(tile.decorated,false); assert.equal(samples,128);
+  assert.equal(tile.charted.getContext().painted,0, "partial detailed rows are never presented");
+  // Fog changes are applied even while geometry is still being built.
+  revealed = false; revision++; map.buildBudget = 128;
+  map.tile(0,0,768,true); assert.equal(tile.charted.getContext().painted,0);
+  revealed = true; revision++;
+  let frames = 0;
+  while (!tile.decorated && frames++ < 100) { map.buildBudget = 128; tile = map.tile(0,0,768,true); }
+  assert.ok(tile.decorated); assert.equal(samples,4096); assert.equal(props,1);
+  assert.equal(tile.charted.getContext().painted,16384);
+  map.tile(0,0,768,true); assert.equal(samples,4096); assert.equal(props,1);
+});
+
+
+test('detail crossfade is bounded, eases both ends, and respects reduced motion', () => {
+  assert.equal(mapTileBlend(100, 50),0); assert.equal(mapTileBlend(100,100),0);
+  assert.equal(mapTileBlend(100,220),.5); assert.equal(mapTileBlend(100,340),1);
+  assert.equal(mapTileBlend(100,10000),1); assert.equal(mapTileBlend(100,100,true),1);
+  assert.ok(mapTileBlend(100,110) < 10/240);
+});
+
+test('a zero detail budget still paints every revealed preview and refreshes its fog mask', t => {
+  const original = Object.getOwnPropertyDescriptor(globalThis,'document');
+  const makeCanvas = () => {
+    const context = { painted: 0, fillRect() {}, clearRect() { this.painted=0; },
+      drawImage(...args: unknown[]) { this.painted += args.length === 9 ? Number(args[7])*Number(args[8]) : 1; } };
+    return { width:0,height:0,getContext:()=>context };
+  };
+  Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement:makeCanvas}});
+  t.after(()=>original ? Object.defineProperty(globalThis,'document',original) : Reflect.deleteProperty(globalThis,'document'));
+  let samples=0, revision=1, revealed=true, copies=0;
+  const map=Object.assign(Object.create(WorldMap.prototype),{tiles:new Map(),buildBudget:0,pendingTerrain:false,
+    exploration:{getChunkRevision:()=>revision,isCellRevealed:()=>revealed},
+    world:{mapColor(){samples++;return '#445544';},getBuildings:()=>[]},
+  });
+  const c={save(){},restore(){},beginPath(){},rect(){},clip(){},fillRect(){},getTransform:()=>({a:1,b:0}),drawImage(){copies++;}};
+  const view={x:0,y:0,width:128,height:128,centerX:0,centerY:0,zoom:.25};
+  map.chart(c,view,false,{pois:[],labels:[],zones:[]});
+  assert.equal(map.tiles.size,0); assert.equal(copies,4,'all four tiles have an immediate preview even with no detailed tiles');
+  assert.equal(samples,400,'preview uses only a ten-by-ten padded color grid per tile');
+  const preview=map.previewTile(0,0,768); assert.equal(preview.getContext().painted,1024);
+  revealed=false;revision++;
+  assert.equal(map.previewTile(0,0,768),preview);assert.equal(preview.getContext().painted,0);
+  assert.equal(samples,400,'discovery changes reuse preview colors');
 });

@@ -7,7 +7,7 @@ import type { SkillId, StatKey } from './character-types.ts';
 import { SKILL_DEFINITIONS, skillIconSVG, canUseSkill, skillRequirementLabel } from './skill-content.ts';
 import { SKILL_TREE, SKILL_NODES, SKILL_TREE_ORIGIN, unlockedSkills, type SkillDomain, type SkillNode } from './skill-tree.ts';
 import { escapeUI, trapDialogFocus, uiIcon } from './ui-components.ts';
-import { drawSkillAtlas, SKILL_DOMAIN_COLORS, skillNodeScreenRadius } from './skill-tree-art.ts';
+import { drawSkillAtlas, drawSkillAtlasTooltip, type SkillAtlasView, SKILL_DOMAIN_COLORS, skillNodeScreenRadius } from './skill-tree-art.ts';
 import { skillNodeIconSVG } from './skill-tree-glyphs.ts';
 import { buildSkillRoutes, previewSkillRoute, type SkillRouteStep } from './skill-tree-routes.ts';
 import { STAT_LABELS, formatStatValue } from './items.ts';
@@ -15,6 +15,8 @@ import './skill-tree-panel.css';
 
 interface SkillTreeActions { develop(command: CharacterCommand): void; close(): void; allocate(id: string): void; assign(slot: number, skill: SkillId | null): void; }
 const COLORS = SKILL_DOMAIN_COLORS;
+const SEARCH_TEXT = new Map(SKILL_TREE.nodes.map(node => [node.id,
+  `${node.name} ${node.domain} ${node.description} ${Object.keys(node.bonuses).map(key => STAT_LABELS[key as StatKey]).join(' ')}`.toLowerCase()]));
 const BINDINGS = ['RMB', '1', '2', '3', '4'];
 
 /** Native-resolution atlas, drawn only when its view/state changes. Simulation owns allocations. */
@@ -47,6 +49,9 @@ export class SkillTreePanel {
   private width = 1;
   private height = 1;
   private frame = 0;
+  private atlasDirty = true;
+  private atlasLayer?: HTMLCanvasElement;
+  private matching = new Set(SKILL_TREE.nodes.map(node => node.id));
   private lastClickedNode: string | null = null;
   private doubleClickedNode: string | null = null;
   private drag?: { pointer: number; x: number; y: number; startX: number; startY: number; moved: boolean };
@@ -172,6 +177,7 @@ export class SkillTreePanel {
   }
   close(): void {
     this.lastClickedNode = this.doubleClickedNode = null;
+    this.atlasLayer = undefined; this.atlasDirty = true;
     this.shown = false; this.root.hidden = true; this.focus?.dispose(); this.focus = undefined;
     this.drag = undefined; this.hovered = null; this.tooltipMotion.reset();
     if (this.frame) cancelAnimationFrame(this.frame); this.frame = 0;
@@ -287,13 +293,13 @@ export class SkillTreePanel {
       return `<div class="skill-atlas-assigned ${skill ? 'is-filled' : ''}"><span class="skill-atlas-assigned-icon" ${skill ? `style="color:${skill.color}"` : ''}>${skill ? skillIconSVG(skill.id, 26) : '◇'}</span><div><span>${skill?.name ?? 'Empty slot'}</span><small>${binding}${skill ? ` · rank ${activeSkillRank(this.player!.character,skill.id)}` : ''}${skill && !canUseSkill(skill.id, this.player!.equipment) ? ` · Requires ${escapeUI(skillRequirementLabel(skill.requirement))}` : ''}</small></div>${skill ? `<button class="ui-button ui-button--quiet ui-button--icon" data-clear="${index + 1}" aria-label="Remove ${skill.name} from ${binding}">×</button>` : ''}</div>`;
     }).join('');
   }
-  private matches(node: SkillNode): boolean {
-    if (this.domain !== 'all' && node.domain !== this.domain && node.kind !== 'origin') return false;
-    if (this.reachableOnly && !this.reachable.has(node.id)) return false;
-    const query = this.search.value.trim().toLowerCase();
-    return !query || `${node.name} ${node.domain} ${node.description} ${Object.keys(node.bonuses).map(key => STAT_LABELS[key as StatKey]).join(' ')}`.toLowerCase().includes(query);
-  }
+  private matches(node: SkillNode): boolean { return this.matching.has(node.id); }
   private updateResults(): void {
+    const query = this.search.value.trim().toLowerCase();
+    this.matching = new Set(SKILL_TREE.nodes.filter(node =>
+      (this.domain === 'all' || node.domain === this.domain || node.kind === 'origin')
+      && (!this.reachableOnly || this.reachable.has(node.id))
+      && (!query || SEARCH_TEXT.get(node.id)!.includes(query))).map(node => node.id));
     const active = !this.resultsDismissed && (!!this.search.value.trim() || this.reachableOnly);
     this.results.hidden = !active;
     if (!active) return;
@@ -348,18 +354,31 @@ export class SkillTreePanel {
     }
     return selected;
   }
-  private invalidate(): void {
+  private invalidate(atlas = true): void {
+    this.atlasDirty ||= atlas;
     if (!this.shown || this.frame) return;
     this.frame = requestAnimationFrame(() => { this.frame = 0; this.draw(); });
   }
   private draw(): void {
     const ctx = this.canvas.getContext('2d'); if (!ctx) return;
     const tooltip = this.tooltipMotion.sample(performance.now());
-    ctx.setTransform(this.canvas.width / this.width, 0, 0, this.canvas.height / this.height, 0, 0);
-    drawSkillAtlas(ctx, { width: this.width, height: this.height, zoom: this.zoom,
+    const view: SkillAtlasView = { width: this.width, height: this.height, zoom: this.zoom,
       centerX: this.centerX, centerY: this.centerY, allocated: this.allocated, reachable: this.reachable,
       tooltip, costStats: this.player?.derived, sheet: this.player?.character, selected: this.selected, hovered: this.hovered, route: previewSkillRoute(this.routes, this.hovered ?? this.selected),
-      matches: node => this.matches(node) });
-    if (tooltip.active) this.invalidate();
+      matches: node => this.matches(node) };
+    const layer = this.atlasLayer ??= document.createElement('canvas');
+    if (layer.width !== this.canvas.width || layer.height !== this.canvas.height) {
+      layer.width = this.canvas.width; layer.height = this.canvas.height; this.atlasDirty = true;
+    }
+    if (this.atlasDirty) {
+      const base = layer.getContext('2d')!;
+      base.setTransform(this.canvas.width / this.width, 0, 0, this.canvas.height / this.height, 0, 0);
+      drawSkillAtlas(base, view, false); this.atlasDirty = false;
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.drawImage(layer, 0, 0);
+    ctx.setTransform(this.canvas.width / this.width, 0, 0, this.canvas.height / this.height, 0, 0);
+    drawSkillAtlasTooltip(ctx, view);
+    if (tooltip.active) this.invalidate(false);
   }
 }

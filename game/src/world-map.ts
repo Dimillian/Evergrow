@@ -44,7 +44,27 @@ export function isMapSampleRevealed(exploration: Pick<Exploration, 'isCellReveal
   return true;
 }
 const TERRAIN_CACHE_LIMIT = MAP_TERRAIN_RULES.cacheLimit;
-interface TerrainTile { base: HTMLCanvasElement; charted: HTMLCanvasElement; roads: HTMLCanvasElement | null; chartedRoads: HTMLCanvasElement | null; revision: number; }
+interface TerrainTile { base: HTMLCanvasElement; charted: HTMLCanvasElement; roads: HTMLCanvasElement | null; chartedRoads: HTMLCanvasElement | null; revision: number; nextRow: number; decorated: boolean; readyAt?: number; }
+interface PreviewTile { base: HTMLCanvasElement; charted: HTMLCanvasElement; revision: number; }
+export function mapTileBlend(readyAt: number, now: number, reducedMotion = false): number {
+  if (reducedMotion) return 1;
+  const t = Math.max(0, Math.min(1, (now - readyAt) / 240));
+  return t * t * (3 - 2 * t);
+}
+
+function maskMapTile(c: CanvasRenderingContext2D, source: HTMLCanvasElement, exploration: Exploration,
+  ox: number, oy: number, size: number, pixels: number): void {
+  const sampleSize = size / pixels;
+  c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, pixels, pixels);
+  for (let y = 0; y < pixels; y++) {
+    let run = -1;
+    for (let x = 0; x <= pixels; x++) {
+      const revealed = x < pixels && isMapSampleRevealed(exploration, ox + x * sampleSize, oy + y * sampleSize, sampleSize);
+      if (revealed && run < 0) run = x;
+      if (!revealed && run >= 0) { c.drawImage(source, run, y, x - run, 1, run, y, x - run, 1); run = -1; }
+    }
+  }
+}
 export interface MapRoadPath { main: boolean; points: readonly (readonly [number, number])[] }
 /** Exact existing centerlines sampled at a fixed, bounded world interval; tile canvases clip the ends. */
 export function mapRoadPaths(x: number, y: number, size: number, seed = 7319): MapRoadPath[] {
@@ -156,6 +176,14 @@ export class WorldMap {
   private tooltipKind: HTMLElement;
   private tooltipDescription: HTMLElement;
   private tiles = new Map<string, TerrainTile>();
+  private previewTiles = new Map<string, PreviewTile>();
+  private frame = 0;
+  private chartDirty = false;
+  private buildBudget?: number;
+  private pendingTerrain = false;
+  private chartLayer?: HTMLCanvasElement;
+  private chartLayerValid = false;
+  private visiblePOIs: MapPOI[] = [];
   private zoneLevels = true;
   setZoneLevels(visible: boolean) { this.zoneLevels = visible; this.render(); }
   private abort = new AbortController();
@@ -231,11 +259,13 @@ export class WorldMap {
     this.returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     this.opened = true; this.element.hidden = false;
     this.view.centerX = clampMapCoordinate(player.x); this.view.centerY = clampMapCoordinate(player.y);
-    this.resize(); this.render(); this.canvas.focus({ preventScroll: true });
+    this.resize(); this.canvas.focus({ preventScroll: true });
   }
   close() {
     if (!this.opened) return;
     if (this.drag && this.canvas.hasPointerCapture(this.drag.id)) this.canvas.releasePointerCapture(this.drag.id);
+    if (this.frame) cancelAnimationFrame(this.frame); this.frame = 0;
+    this.chartLayer = undefined; this.visiblePOIs = [];
     this.opened = false; this.element.hidden = true; this.drag = null; this.pointer = null;
     this.canvas.classList.remove('world-map-dragging'); this.hideTooltip(); this.exploration.save();
     if (this.returnFocus?.isConnected) this.returnFocus.focus({ preventScroll: true });
@@ -277,7 +307,7 @@ export class WorldMap {
         }
         else this.view = zoomMapAt(this.view, this.view.width / 2, this.view.height / 2,
           this.view.zoom * (button.dataset.map === 'in' ? 1.3 : 1 / 1.3));
-        this.render();
+        this.invalidate();
       }, { signal });
     }
     const local = (event: PointerEvent | WheelEvent) => { const r = this.canvas.getBoundingClientRect(); return { x: event.clientX - r.left, y: event.clientY - r.top }; };
@@ -293,16 +323,17 @@ export class WorldMap {
         this.view.centerX = clampMapCoordinate(this.drag.centerX - (p.x - this.drag.x) / this.view.zoom);
         this.view.centerY = clampMapCoordinate(this.drag.centerY - (p.y - this.drag.y) / this.view.zoom);
       }
-      this.render();
+      this.invalidate(!!this.drag);
     }, { signal });
-    const release = () => { this.drag = null; this.canvas.classList.remove('world-map-dragging'); };
+    const release = () => { this.drag = null; this.canvas.classList.remove('world-map-dragging'); this.invalidate(false); };
     this.canvas.addEventListener('pointerup', release, { signal });
     this.canvas.addEventListener('pointercancel', release, { signal });
     this.canvas.addEventListener('lostpointercapture', release, { signal });
-    this.canvas.addEventListener('pointerleave', () => { if (!this.drag) { this.pointer = null; this.hideTooltip(); } }, { signal });
+    this.canvas.addEventListener('pointerleave', () => { if (!this.drag) { this.pointer = null; this.hideTooltip(); this.invalidate(false); } }, { signal });
     this.canvas.addEventListener('wheel', event => {
       event.preventDefault(); const p = local(event);
-      this.view = zoomMapAt(this.view, p.x, p.y, this.view.zoom * Math.exp(-event.deltaY * .0016)); this.render();
+      const delta = Math.max(-240, Math.min(240, event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? this.view.height : 1)));
+      this.view = zoomMapAt(this.view, p.x, p.y, this.view.zoom * Math.exp(-delta * .0016)); this.invalidate();
     }, { signal, passive: false });
     this.element.addEventListener('keydown', event => {
       // Escape/M remain owned by the game's phase/input coordinator.
@@ -325,7 +356,7 @@ export class WorldMap {
       else return;
       this.view.centerX = clampMapCoordinate(this.view.centerX);
       this.view.centerY = clampMapCoordinate(this.view.centerY);
-      event.preventDefault(); event.stopPropagation(); this.render();
+      event.preventDefault(); event.stopPropagation(); this.invalidate();
     }, { signal });
   }
 
@@ -338,33 +369,44 @@ export class WorldMap {
     if (!revision) return null;
     const id = `${detailed ? 'atlas' : 'mini'}:${size}:${tx}:${ty}`;
     let tile = this.tiles.get(id);
+    const building = !tile?.decorated, started = performance.now();
+    // Charge generation only: cached painting/label work must not starve unfinished edge tiles.
+    const deadline = detailed && this.buildBudget !== undefined ? started + this.buildBudget : Infinity;
     if (!tile) {
+      if (performance.now() >= deadline) { this.pendingTerrain = true; return null; }
       const base = document.createElement('canvas'), charted = document.createElement('canvas');
       base.width = base.height = charted.width = charted.height = pixels;
-      const c = base.getContext('2d')!;
-      const samples = detailed ? (size <= 3072 ? 64 : 128) : TILE_PIXELS, step = size / samples, pixelStep = pixels / samples;
-      for (let y = 0; y < samples; y++) for (let x = 0; x < samples; x++) {
-        const wx = ox + (x + .5) * step, wy = oy + (y + .5) * step;
-        c.fillStyle = detailed && this.world.atlasColor ? this.world.atlasColor(wx, wy) : this.world.mapColor(wx, wy, step);
-        c.fillRect(x * pixelStep, y * pixelStep, pixelStep, pixelStep);
-      }
-      if (detailed && size <= 3072 && this.world.getProps) {
-        drawMapProps(c, this.world.getProps(ox - 160, oy - 160, size + 320, size + 320), ox, oy, size, pixels);
-      }
-      // Flatten atlas road ink into its terrain surface: two retained canvases,
-      // rather than a second pair of high-resolution layers for every tile.
-      if (detailed) c.drawImage(createMapRoadLayer(ox, oy, size, this.world.seed), 0, 0);
-      const roads = !detailed && sampleSize > 48 ? createMapRoadLayer(ox, oy, size, this.world.seed) : null;
-      const chartedRoads = roads ? document.createElement('canvas') : null;
-      if (chartedRoads) chartedRoads.width = chartedRoads.height = 128;
-      tile = { base, charted, roads, chartedRoads, revision: -1 }; this.tiles.set(id, tile);
+      tile = { base, charted, roads: null, chartedRoads: null, revision: -1, nextRow: 0, decorated: false };
+      this.tiles.set(id, tile);
     } else { this.tiles.delete(id); this.tiles.set(id, tile); }
-    if (tile.revision !== revision) {
+    if (!tile.decorated) {
+      const c = tile.base.getContext('2d')!;
+      const samples = detailed ? (size <= 3072 ? 64 : 128) : TILE_PIXELS, step = size / samples, pixelStep = pixels / samples;
+      let changed = false;
+      while (tile.nextRow < samples && performance.now() < deadline) {
+        const y = tile.nextRow++;
+        for (let x = 0; x < samples; x++) {
+          const wx = ox + (x + .5) * step, wy = oy + (y + .5) * step;
+          c.fillStyle = detailed && this.world.atlasColor ? this.world.atlasColor(wx, wy) : this.world.mapColor(wx, wy, step);
+          c.fillRect(x * pixelStep, y * pixelStep, pixelStep, pixelStep);
+        }
+        changed = true;
+      }
+      if (tile.nextRow === samples && performance.now() < deadline) {
+        if (detailed && size <= 3072 && this.world.getProps)
+          drawMapProps(c, this.world.getProps(ox - 160, oy - 160, size + 320, size + 320), ox, oy, size, pixels);
+        if (detailed) c.drawImage(createMapRoadLayer(ox, oy, size, this.world.seed), 0, 0);
+        tile.roads = !detailed && sampleSize > 48 ? createMapRoadLayer(ox, oy, size, this.world.seed) : null;
+        tile.chartedRoads = tile.roads ? document.createElement('canvas') : null;
+        if (tile.chartedRoads) tile.chartedRoads.width = tile.chartedRoads.height = 128;
+        tile.decorated = true; tile.readyAt = Number.isFinite(deadline) ? performance.now() : undefined; changed = true;
+      } else this.pendingTerrain = true;
+      if (changed) tile.revision = -1;
+    }
+    if (tile.decorated && tile.revision !== revision) {
       const c = tile.charted.getContext('2d')!;
-      c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, pixels, pixels);
-      for (let y = 0; y < pixels; y++) for (let x = 0; x < pixels; x++)
-        if (isMapSampleRevealed(this.exploration, ox + x * sampleSize, oy + y * sampleSize, sampleSize))
-          c.drawImage(tile.base, x, y, 1, 1, x, y, 1, 1);
+      // One copy per contiguous revealed row run, retaining the exact fine-cell mask.
+      maskMapTile(c, tile.base, this.exploration, ox, oy, size, pixels);
       if (tile.roads && tile.chartedRoads) {
         const roads = tile.chartedRoads.getContext('2d')!;
         roads.globalCompositeOperation = 'source-over'; roads.clearRect(0, 0, 128, 128);
@@ -375,8 +417,43 @@ export class WorldMap {
       }
       tile.revision = revision;
     }
+    if (building && detailed && this.buildBudget !== undefined)
+      this.buildBudget = Math.max(0, this.buildBudget - (performance.now() - started));
     if (this.tiles.size > TERRAIN_CACHE_LIMIT) this.tiles.delete(this.tiles.keys().next().value!);
     return tile;
+  }
+
+  /** Cheap, complete overview under unfinished detail; its own fog mask never exposes unknown cells. */
+  private previewTile(tx: number, ty: number, size: number): HTMLCanvasElement | null {
+    const ox = tx * size, oy = ty * size;
+    let revision = 0;
+    for (let cy = Math.floor(oy / EXPLORATION_CHUNK_SIZE); cy < Math.ceil((oy + size) / EXPLORATION_CHUNK_SIZE); cy++)
+      for (let cx = Math.floor(ox / EXPLORATION_CHUNK_SIZE); cx < Math.ceil((ox + size) / EXPLORATION_CHUNK_SIZE); cx++)
+        revision += this.exploration.getChunkRevision(cx * EXPLORATION_CHUNK_SIZE, cy * EXPLORATION_CHUNK_SIZE);
+    if (!revision) return null;
+    const cache = this.previewTiles ??= new Map<string, PreviewTile>(), key = `${size}:${tx}:${ty}`;
+    let tile = cache.get(key);
+    if (!tile) {
+      // Padded samples interpolate continuously through tile edges.
+      const coarse = document.createElement('canvas'); coarse.width = coarse.height = 10;
+      const samples = coarse.getContext('2d')!, step = size / 8;
+      for (let y = 0; y < 10; y++) for (let x = 0; x < 10; x++) {
+        samples.fillStyle = this.world.mapColor(ox + (x - .5) * step, oy + (y - .5) * step, Math.max(96, step));
+        samples.fillRect(x, y, 1, 1);
+      }
+      const base = document.createElement('canvas'), charted = document.createElement('canvas');
+      base.width = base.height = charted.width = charted.height = 32;
+      const c = base.getContext('2d')!; c.imageSmoothingEnabled = true;
+      c.drawImage(coarse, 1, 1, 8, 8, 0, 0, 32, 32);
+      tile = { base, charted, revision: -1 };
+    } else cache.delete(key);
+    cache.set(key, tile);
+    if (tile.revision !== revision) {
+      maskMapTile(tile.charted.getContext('2d')!, tile.base, this.exploration, ox, oy, size, 32);
+      tile.revision = revision;
+    }
+    if (cache.size > TERRAIN_CACHE_LIMIT) cache.delete(cache.keys().next().value!);
+    return tile.charted;
   }
 
   private features(view: MapView, mini: boolean): { pois: MapPOI[]; labels: MapRegionLabel[]; zones: ZoneProgression[] } {
@@ -399,16 +476,33 @@ export class WorldMap {
     const transform = c.getTransform();
     const bleed = 1 / Math.max(.1, Math.hypot(transform.a, transform.b));
     const roadTiles: Array<{ tile: TerrainTile; x: number; y: number }> = [];
-    for (let ty = Math.floor(region.y / tileSize); ty <= Math.floor((region.y + region.height) / tileSize); ty++) {
-      for (let tx = Math.floor(region.x / tileSize); tx <= Math.floor((region.x + region.width) / tileSize); tx++) {
-        const tile = this.tile(tx, ty, tileSize, !mini); if (!tile) continue;
-        const p = projectMapPoint(tx * tileSize, ty * tileSize, view);
-        // One backing-pixel overlap covers fractional drawImage edges while the
-        // world-space projection itself remains continuous, never quantized.
-        c.drawImage(tile.charted, p.x, p.y, tileSize * view.zoom + bleed, tileSize * view.zoom + bleed);
-        if (tile.chartedRoads) roadTiles.push({ tile, x: p.x, y: p.y });
-      }
+    const visibleTiles: Array<{ tx: number; ty: number }> = [];
+    for (let ty = Math.floor(region.y / tileSize); ty <= Math.floor((region.y + region.height) / tileSize); ty++)
+      for (let tx = Math.floor(region.x / tileSize); tx <= Math.floor((region.x + region.width) / tileSize); tx++) visibleTiles.push({ tx, ty });
+    if (!mini) visibleTiles.sort((a, b) =>
+      Math.hypot((a.tx + .5) * tileSize - view.centerX, (a.ty + .5) * tileSize - view.centerY)
+      - Math.hypot((b.tx + .5) * tileSize - view.centerX, (b.ty + .5) * tileSize - view.centerY));
+    const now = performance.now(), reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const layers = visibleTiles.map(({ tx, ty }) => {
+      const tile = this.tile(tx, ty, tileSize, !mini);
+      const blend = !tile?.decorated ? 0 : mini || tile.readyAt === undefined || this.buildBudget === undefined ? 1 : mapTileBlend(tile.readyAt, now, reducedMotion);
+      if (tile?.decorated && blend < 1) this.pendingTerrain = true;
+      return { tx, ty, tile, blend };
+    });
+    // Populate every revealed low-resolution tile in this frame, before refining the center outward.
+    if (!mini && this.pendingTerrain) for (const { tx, ty } of visibleTiles) {
+      const preview = this.previewTile(tx, ty, tileSize); if (!preview) continue;
+      const p = projectMapPoint(tx * tileSize, ty * tileSize, view);
+      c.drawImage(preview, p.x, p.y, tileSize * view.zoom + bleed, tileSize * view.zoom + bleed);
     }
+    for (const { tx, ty, tile, blend } of layers) {
+      if (!tile || !blend) continue;
+      const p = projectMapPoint(tx * tileSize, ty * tileSize, view);
+      c.globalAlpha = blend;
+      c.drawImage(tile.charted, p.x, p.y, tileSize * view.zoom + bleed, tileSize * view.zoom + bleed);
+      if (tile.chartedRoads) roadTiles.push({ tile, x: p.x, y: p.y });
+    }
+    c.globalAlpha = 1;
     c.imageSmoothingEnabled = true;
     for (const road of roadTiles) c.drawImage(road.tile.chartedRoads!, road.x, road.y, tileSize * view.zoom, tileSize * view.zoom);
     c.imageSmoothingEnabled = false;
@@ -583,9 +677,23 @@ export class WorldMap {
     c.restore();
   }
 
+  /** Pointer bursts commit once per display frame; hover never regenerates the chart. */
+  private invalidate(chart = true) {
+    this.chartDirty ||= chart;
+    if (!this.opened || this.disposed || this.frame) return;
+    this.frame = requestAnimationFrame(() => {
+      this.frame = 0;
+      if (this.chartDirty) this.render(); else this.drawHover();
+    });
+  }
+
   private render() {
     if (!this.opened || this.disposed) return;
-    this.drawChart();
+    if (this.frame) cancelAnimationFrame(this.frame); this.frame = 0;
+    this.chartDirty = false; this.pendingTerrain = false;
+    this.buildBudget = 5;
+    try { this.drawChart(); } finally { this.buildBudget = undefined; }
+    if (this.pendingTerrain) this.invalidate();
     this.presentation = { x: this.player.x, y: this.player.y, angle: this.player.angle,
       revision: this.exploration.revision, status: this.exploration.storageStatus,
       message: this.exploration.persistenceMessage };
@@ -594,9 +702,9 @@ export class WorldMap {
   private drawChart() {
     const c = this.context;
     c.setTransform(this.ratio, 0, 0, this.ratio, 0, 0); c.clearRect(0, 0, this.view.width, this.view.height);
-    this.hovered = null;
+    this.hovered = null; this.chartLayerValid = false;
     const features = this.features(this.view, false);
-    if (this.pointer && !this.drag) this.hovered = pickMapPOI(features.pois, this.view, this.pointer, 14);
+    this.visiblePOIs = features.pois;
     this.chart(c, this.view, false, features);
     const grid = this.view.zoom < .065 ? 3200 : 1536, first = unprojectMapPoint(0, 0, this.view);
     c.save(); c.strokeStyle = '#bfbe9710'; c.lineWidth = .65;
@@ -623,6 +731,32 @@ export class WorldMap {
     setText(this.status, `${area} · ${this.exploration.persistenceMessage || (this.exploration.storageStatus === 'pending' ? 'Charting…' : 'Chart saved')}`);
     this.status.dataset.state = this.exploration.storageStatus;
     setText(this.coordinates, `X ${Math.round(this.player.x)} · Y ${Math.round(this.player.y)}`);
+    this.drawHover();
+  }
+
+  private drawHover() {
+    const previous = this.hovered;
+    this.hovered = this.pointer && !this.drag ? pickMapPOI(this.visiblePOIs, this.view, this.pointer, 14) : null;
+    if (previous?.id !== this.hovered?.id) {
+      const c = this.context;
+      if (!this.chartLayerValid) {
+        const layer = this.chartLayer ??= document.createElement('canvas');
+        if (layer.width !== this.canvas.width || layer.height !== this.canvas.height) {
+          layer.width = this.canvas.width; layer.height = this.canvas.height;
+        }
+        const saved = layer.getContext('2d')!;
+        saved.clearRect(0, 0, layer.width, layer.height); saved.drawImage(this.canvas, 0, 0);
+        this.chartLayerValid = true;
+      } else {
+        c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        c.drawImage(this.chartLayer!, 0, 0);
+      }
+      c.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
+      if (this.hovered) {
+        const p = projectMapPoint(this.hovered.x, this.hovered.y, this.view);
+        this.poiIcon(c, this.hovered, p.x, p.y, this.view.zoom < .07 ? 5.4 : 7, true);
+      }
+    }
     if (this.hovered && this.pointer) this.showTooltip(this.hovered, this.pointer);
     else if (this.pointer && !this.drag) {
       const point = unprojectMapPoint(this.pointer.x, this.pointer.y, this.view);
@@ -648,6 +782,6 @@ export class WorldMap {
   private hideTooltip() { this.tooltip.hidden = true; }
   dispose() {
     if (this.disposed) return;
-    this.close(); this.disposed = true; this.abort.abort(); this.tiles.clear(); this.element.remove(); this.exploration.save();
+    this.close(); this.disposed = true; this.abort.abort(); this.tiles.clear(); this.previewTiles.clear(); this.element.remove(); this.exploration.save();
   }
 }

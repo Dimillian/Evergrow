@@ -27,7 +27,7 @@ export const skillNodeScreenRadius = (node: SkillNode, zoom: number) =>
   Math.max(.72, skillNodeRadius(node) * (zoom < .3 ? zoom / Math.sqrt(.3) : Math.sqrt(zoom)));
 
 /** One map projection owns all strokes, medallions and level-of-detail decisions. */
-export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView): void {
+export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView, withTooltip = true): void {
   const { width: w, height: h, zoom: z } = view;
   const sx = (x: number) => (x - view.centerX) * z + w / 2;
   const sy = (y: number) => (y - view.centerY) * z + h / 2;
@@ -159,6 +159,13 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     if (x < 40 || x > w - 40 || y < 10 || y > h - 60) continue;
     label(cluster.name.toUpperCase(), x, y, SKILL_DOMAIN_COLORS[cluster.domain] + 'be', 10);
   }
+  if (withTooltip) drawSkillAtlasTooltip(c, view);
+}
+
+/** Tooltip animation can reuse the unchanged atlas beneath it. */
+export function drawSkillAtlasTooltip(c: CanvasRenderingContext2D, view: SkillAtlasView): void {
+  const sx = (x: number) => (x - view.centerX) * view.zoom + view.width / 2;
+  const sy = (y: number) => (y - view.centerY) * view.zoom + view.height / 2;
   // Native-resolution details follow the hovered node, including an already selected star.
   const tooltipId = view.tooltip ? view.tooltip.id : view.hovered;
   if (tooltipId) {

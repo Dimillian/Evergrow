@@ -26,56 +26,54 @@ export function mapZoneLabels(view: MapView, exploration: Pick<Exploration, 'isR
   }
   return result;
 }
-/** Marching boundaries follow the exact gameplay region query and stop at fog. */
-export function drawMapZoneLevels(c: CanvasRenderingContext2D, view: MapView, exploration: Pick<Exploration, 'isRevealed'>, seed = 7319, labels: readonly ZoneProgression[] = mapZoneLabels(view, exploration, seed, [])): void {
-  const step = Math.max(96, 10 / view.zoom), left = view.centerX - view.width / view.zoom / 2, top = view.centerY - view.height / view.zoom / 2;
-  const startX = Math.floor(left / step) * step, startY = Math.floor(top / step) * step;
-  const nx = Math.min(300, Math.ceil(view.width / view.zoom / step) + 1), ny = Math.min(300, Math.ceil(view.height / view.zoom / step) + 1);
-  const rows: Array<Array<ZoneProgression | null>> = [];
-  for (let j = 0; j <= ny; j++) {
-    const row: Array<ZoneProgression | null> = [];
-    for (let i = 0; i <= nx; i++) {
-      const x = startX + i * step, y = startY + j * step;
-      const zone = exploration.isRevealed(x, y) ? getZoneAt(x, y, seed) : null;
-      row.push(zone);
-    }
-    rows.push(row);
+type Point = readonly [number, number];
+interface ContourSegment { a: Point; b: Point; corners: readonly Point[]; }
+const CONTOUR_CELLS = 16, CONTOUR_LIMIT = 512;
+const contours = new Map<string, readonly ContourSegment[]>();
+
+/** World-aligned contour geometry survives camera movement and never caches discovery state. */
+function contourTile(tx: number, ty: number, step: number, seed: number): readonly ContourSegment[] {
+  const key = `${seed}:${step}:${tx}:${ty}`, cached = contours.get(key);
+  if (cached) { contours.delete(key); contours.set(key, cached); return cached; }
+  const x0 = tx * step * CONTOUR_CELLS, y0 = ty * step * CONTOUR_CELLS;
+  const rows = Array.from({ length: CONTOUR_CELLS + 1 }, (_, y) =>
+    Array.from({ length: CONTOUR_CELLS + 1 }, (_, x) => getZoneAt(x0 + x * step, y0 + y * step, seed).id));
+  const result: ContourSegment[] = [];
+  for (let j = 0; j < CONTOUR_CELLS; j++) for (let i = 0; i < CONTOUR_CELLS; i++) {
+    const ids = [rows[j][i], rows[j][i+1], rows[j+1][i+1], rows[j+1][i]];
+    if (ids.every(id => id === ids[0])) continue;
+    const x = x0 + i * step, y = y0 + j * step;
+    const corners: Point[] = [[x,y],[x+step,y],[x+step,y+step],[x,y+step]];
+    const edges: Point[] = [[x+step/2,y],[x+step,y+step/2],[x+step/2,y+step],[x,y+step/2]];
+    const crossings = edges.filter((_, k) => ids[k] !== ids[(k+1)%4]);
+    if (crossings.length === 2) result.push({ a: crossings[0], b: crossings[1], corners });
+    else for (const edge of crossings) result.push({ a: edge, b: [x+step/2,y+step/2], corners });
   }
-  c.save();
-  c.beginPath();
-  c.rect(view.x, view.y, view.width, view.height);
-  c.clip();
-  const segment = (a: readonly number[], b: readonly number[]) => {
-    const steps = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 24));
-    for (let i = 0; i <= steps; i++)
-      if (!exploration.isRevealed(a[0] + (b[0] - a[0]) * i / steps, a[1] + (b[1] - a[1]) * i / steps))
-        return;
-    const p = projectMapPoint(a[0], a[1], view), q = projectMapPoint(b[0], b[1], view);
-    c.moveTo(p.x, p.y);
-    c.lineTo(q.x, q.y);
-  };
-  c.lineWidth = 1;
-  c.strokeStyle = '#e6cd9380';
-  c.setLineDash([3, 4]);
-  c.beginPath();
-  for (let j = 0; j < ny; j++)
-    for (let i = 0; i < nx; i++) {
-      const corners = [rows[j][i], rows[j][i + 1], rows[j + 1][i + 1], rows[j + 1][i]];
-      if (corners.some(z => !z))
-        continue;
-      const x = startX + i * step, y = startY + j * step;
-      const edges = [[x + step / 2, y], [x + step, y + step / 2], [x + step / 2, y + step], [x, y + step / 2]];
-      const crossings = edges.filter((_, k) => corners[k]!.id !== corners[(k + 1) % 4]!.id);
-      if (crossings.length === 2) {
-        segment(crossings[0], crossings[1]);
+  if (contours.size >= CONTOUR_LIMIT) contours.delete(contours.keys().next().value!);
+  contours.set(key, result); return result;
+}
+
+/** Marching boundaries follow gameplay districts and recheck every segment against current fog. */
+export function drawMapZoneLevels(c: CanvasRenderingContext2D, view: MapView, exploration: Pick<Exploration, 'isRevealed'>, seed = 7319, labels: readonly ZoneProgression[] = mapZoneLabels(view, exploration, seed, [])): void {
+  // Stable LOD bands avoid rebuilding geometry for every fractional wheel delta.
+  const step = 96 * Math.max(1, Math.ceil(10 / view.zoom / 96)), size = step * CONTOUR_CELLS;
+  const left = view.centerX - view.width / view.zoom / 2, top = view.centerY - view.height / view.zoom / 2;
+  const right = left + Math.min(view.width / view.zoom, step * 300), bottom = top + Math.min(view.height / view.zoom, step * 300);
+  c.save(); c.beginPath(); c.rect(view.x, view.y, view.width, view.height); c.clip();
+  c.lineWidth = 1; c.strokeStyle = '#e6cd9380'; c.setLineDash([3, 4]); c.beginPath();
+  for (let ty = Math.floor(top / size); ty <= Math.floor(bottom / size); ty++)
+    for (let tx = Math.floor(left / size); tx <= Math.floor(right / size); tx++)
+      for (const { a, b, corners } of contourTile(tx, ty, step, seed)) {
+        if (Math.max(a[0],b[0]) < left || Math.min(a[0],b[0]) > right || Math.max(a[1],b[1]) < top || Math.min(a[1],b[1]) > bottom) continue;
+        if (!corners.every(p => exploration.isRevealed(...p))) continue;
+        const count = Math.max(1, Math.ceil(Math.hypot(b[0]-a[0], b[1]-a[1]) / 24));
+        let revealed = true;
+        for (let i = 0; i <= count; i++) if (!exploration.isRevealed(a[0]+(b[0]-a[0])*i/count, a[1]+(b[1]-a[1])*i/count)) { revealed = false; break; }
+        if (!revealed) continue;
+        const p = projectMapPoint(...a, view), q = projectMapPoint(...b, view);
+        c.moveTo(p.x, p.y); c.lineTo(q.x, q.y);
       }
-      else if (crossings.length > 2)
-        for (const edge of crossings) {
-          segment(edge, [x + step / 2, y + step / 2]);
-        }
-    }
-  c.stroke();
-  c.setLineDash([]);
+  c.stroke(); c.setLineDash([]);
   for (const zone of labels) {
     const p = projectMapPoint(zone.x, zone.y, view), color = zone.hazardous ? '#ffb28b' : '#f0dba6';
     c.shadowColor = '#030b10';

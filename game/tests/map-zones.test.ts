@@ -34,3 +34,23 @@ test('danger contour strokes never cross a hidden discovery hole', () => {
   drawMapZoneLevels(context as unknown as CanvasRenderingContext2D, view, known, 7319, []);
   assert.ok(strokes > 50);
 });
+
+
+test('cached district contours recheck discovery and remain anchored across small pans', () => {
+  let revealed = true;
+  const known = { isRevealed: () => revealed };
+  const capture = (camera: MapView) => {
+    const lines: number[][] = []; let start = { x: 0, y: 0 };
+    const context = { save() {}, restore() {}, beginPath() {}, rect() {}, clip() {}, setLineDash() {}, stroke() {},
+      moveTo(x: number, y: number) { start = unprojectMapPoint(x,y,camera); },
+      lineTo(x: number, y: number) { const end = unprojectMapPoint(x,y,camera); lines.push([start.x,start.y,end.x,end.y].map(v => Math.round(v))); } };
+    drawMapZoneLevels(context as unknown as CanvasRenderingContext2D,camera,known,90210,[]); return lines;
+  };
+  const first = capture(view); assert.ok(first.length > 0);
+  assert.deepEqual(capture(view), first);
+  revealed = false; assert.deepEqual(capture(view), [], 'cached geometry cannot disclose a newly unknown chart');
+  revealed = true;
+  const moved = capture({ ...view, centerX: view.centerX + 8, zoom: view.zoom + .00001 });
+  const keys = new Set(first.map(v => v.join(':')));
+  assert.ok(moved.filter(v => keys.has(v.join(':'))).length > first.length * .9);
+});

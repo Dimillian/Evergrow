@@ -130,3 +130,7 @@ Successful inventory insertion emits a typed item payload; a full bag emits a se
 ## Portal control
 
 A compact native button below the minimap provides P access, channel progress/cancellation and return-portal location. Its bounds are shared with game UI hit testing; hovering or clicking it cannot fire a weapon. Native world labels use the same concise framing as NPC hints. Arrival fades follow reduced motion, and canceled channels unravel over 250ms. Permanent travel selection is still deferred. See [portal captures](captures/2026-09-05/town-portal/README.md).
+
+## Large Canvas panels
+
+The skill atlas retains its native-resolution surface during tooltip animation and prepares search matches when filter/build state changes. The map coalesces input and builds new detail progressively. See [panel performance](panel-performance.md) for cache lifetimes, invalidation and CPU measurements.

@@ -59,3 +59,5 @@ When a system changes, update its guide and any affected controls/catalog entry.
 Code checks and static reviews do not establish gameplay feel, economy balance or Safari performance. The player tests gameplay. Commit and push documentation with coherent code checkpoints.
 
 - [World generation 5](world-generation.md): dispersed settlements, connected curved roads, larger climates, fixed regional danger and three seed previews.
+
+- [Panel performance](panel-performance.md): map/skill-atlas rendering, progressive loading and CPU verification.

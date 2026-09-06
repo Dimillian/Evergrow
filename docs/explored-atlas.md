@@ -39,3 +39,7 @@ The images in `docs/captures/2026-09-05/biome-atlas/` are **direct CPU exports o
 `/atlas.html?seed=7319&view=extended&levels=1` stages a roughly 40,000-unit-wide surveyed disk in memory. Seed tabs compare 7319, 18427 and 90210; arbitrary signed 32-bit seed parameters are also supported. These previews use actual generated roads, terrain, settlements and regional danger without touching gameplay saves.
 
 Generation 5 spreads settlements across both dimensions, enlarges the climate field, and connects towns with curved routes. Named, irregular danger districts replace the old radial bands. The full in-game map and this review both show revealed boundaries, names and levels, with orange `!` labels for more dangerous wilderness pockets. Regions avoid towns and suppress overlapping minor POIs before hover testing. Towns remain sanctuaries. See [world generation](world-generation.md) for current geography, tuning, query bounds and the authorized test-progress reset.
+
+## Interaction performance
+
+Map input is coalesced into display frames, ordinary hover does not repaint terrain, and new atlas detail builds progressively within a cooperative generation budget. A complete low-resolution preview covers revealed terrain immediately and finished tiles crossfade into it over 240 ms (instant with reduced motion). Fine fog masks use row-run copies; district contours are cached in world-aligned tiles and rechecked against current discovery. See [panel performance](panel-performance.md) for budgets, verification and measured limits.
