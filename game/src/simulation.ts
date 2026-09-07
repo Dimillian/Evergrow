@@ -1,4 +1,5 @@
 import { stageJourneyCompletion, journeyWasCompleted, type JourneyCompletion } from './journey-rewards.ts';
+import { EnemyEngagements } from './enemy-engagement.ts';
 import type { JourneyGoal } from './journey-state.ts';
 import { cloneData } from './data-clone.ts';
 import { freshJourneys } from './journey-state.ts';
@@ -110,6 +111,7 @@ export class Simulation {
   private nextId = 1;
   private spawnOrdinal = 0;
   private events: CombatEvent[] = [];
+  private engagements = new EnemyEngagements();
   private attackBuffer = -1;
   private dodgeBuffer = -1;
   private healBuffer = -1;
@@ -144,7 +146,7 @@ export class Simulation {
     this.accumulator = 0;
     this.nextId = 1;
     this.spawnOrdinal = 0; this.camps.reset(); this.campTimer = 0;
-    this.events = [];
+    this.events = []; this.engagements.reset();
     this.randomState = this.options.seed! >>> 0;
     this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
     this.hurtGuard = this.killRecharge = 0;
@@ -324,6 +326,7 @@ export class Simulation {
     this.updateEnemies(dt);
     this.updateProjectiles(dt);
     this.updateGroundEffects(dt);
+    this.engagements.update(this.enemies, this.time, event => this.events.push(event));
     this.updatePickups(dt);
     this.groundGold = advanceGold(this.groundGold, this.player, this.world, dt, event => this.events.push(event));
     this.collectGroundItems();

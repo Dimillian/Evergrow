@@ -269,6 +269,8 @@ interface EventAppearance {
   readonly color?: string; readonly style?: ProjectileStyle; readonly skill?: SkillId;
 }
 export type CombatEvent = EventAppearance & (
+  | { readonly type: 'engagement'; readonly targetId: number; readonly enemyKind: EnemyKind;
+      readonly engaged: boolean; readonly time: number }
   | { readonly type: 'swing'; readonly angle: number }
   | { readonly type: 'hit'; readonly angle: number; readonly value: number; readonly targetId: number;
       readonly remainingHp: number; readonly enemyKind: EnemyKind; readonly heavy: boolean }

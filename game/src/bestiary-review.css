@@ -12,6 +12,7 @@ body { margin: 0; background: #080f16; color: var(--ui-text); }
 .bestiary-card h2 { color: var(--ui-ivory); font-size: 18px; margin: 0; font-weight: 500; }
 .bestiary-card .ui-kicker { font-size: 11px; white-space: nowrap; }
 .bestiary-card canvas { width: 100%; height: 170px; display: block; }
+.bestiary-barks .bestiary-card canvas { height: 290px; }
 .bestiary-card p { color: #a1b1a9; font-size: 13px; padding: 0 16px 12px; margin: 0; min-height: 16px; }
 .bestiary-armory { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .bestiary-armory canvas { height: 240px; }

@@ -166,7 +166,7 @@ export class GameAudio {
 
   play(event: CombatEvent) {
     if (!this.enabled || !this.ctx || !this.bus || this.disposed || this.ctx.state !== 'running') return;
-    if (event.type === 'spawn') return;
+    if (event.type === 'spawn' || event.type === 'engagement') return;
     const now = this.ctx.currentTime;
     if (event.type === 'gold') {
       if (now - this.goldSoundAt < .075) return;

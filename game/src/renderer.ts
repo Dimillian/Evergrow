@@ -48,6 +48,9 @@ import { COMBAT_TIMING, ENEMY_DEFINITIONS, PLAYER_ABILITIES, PLAYER_MOVEMENT } f
 import { CAMERA_FOLLOW, CameraZoom, cameraFollowTarget, cameraSpawnExclusion,
   cameraView, screenToWorld, worldToScreen } from './camera.ts';
 import { EnemyFocus } from './enemy-focus.ts';
+import { BattleBarkScene } from './battle-bark-scene.ts';
+import { getHUDLayout } from './hud-layout.ts';
+import { getMinimapRect, getPortalControlRect } from './map-view.ts';
 import { ENEMY_BODY_BOUNDS } from './enemy-body.ts';
 import { resolveRangedAim, resolveDirectionalAim, PROJECTILE_HEIGHT, type RangedAim } from './ranged-aim.ts';
 import { deriveAttackStats } from './equipment.ts';
@@ -115,6 +118,7 @@ export class Renderer {
   private visualTime = 0;
   private get cachedProps() { return this.visibility.props; }
   private enemyFocus = new EnemyFocus();
+  private battleBarks = new BattleBarkScene();
   private focusedEnemy: Enemy | null = null;
   private plateEnemy: Enemy | null = null;
   private plateOpacity = 0;
@@ -195,6 +199,7 @@ export class Renderer {
   }
 
   reset() {
+    this.battleBarks.reset();
     this.water.reset(); this.waterArt.reset(); this.lighting.reset();
     this.portalGuide = 0; this.portalAnchors = []; this.fadingPortal = null;
     this.cameraX = 0; this.cameraY = 0; this.effects.reset(); this.rangedAim = null;
@@ -216,6 +221,7 @@ export class Renderer {
     this.rewards.handleEvents(events, reducedMotion);
     this.experienceFeedback.handleEvents(events);
     this.enemyFocus.noteHits(events);
+    this.battleBarks.noteEvents(events);
     for (const e of events) {
       if (e.type === 'hit') {
         const previous = this.damageTrails.get(e.targetId)?.value ?? 0;
@@ -393,13 +399,21 @@ export class Renderer {
   renderUI(c: CanvasRenderingContext2D, sim: Simulation, world: World, settings: RenderSettings) {
     const p = sim.player;
     // Project popup anchors, leaving their glyph size and outline independent of camera zoom.
+    // Speech draws later and may cover damage numbers; popups never displace a bark.
     this.effects.drawNumbers(c, (x, y) => worldToScreen(this.view, x, y));
-    drawLootLabels(c, sim.groundItems, (x, y) => worldToScreen(this.view, x, y), this.width, this.height);
+    const lootBounds = drawLootLabels(c, sim.groundItems, (x, y) => worldToScreen(this.view, x, y), this.width, this.height);
     const phone = this.touchActive && this.touchViewport ? phoneLandscapeLayout(this.touchViewport) : null;
     const unit = this.touchViewport ? this.width / this.touchViewport.width : 1;
     const footer = phone ? {x:phone.footer.x*unit,y:phone.footer.y*unit,scale:phone.footer.scale*unit} : undefined;
     const headerX = phone ? (phone.left-22*.8)*unit : 0;
     const headerY = phone ? (phone.top-22*.8)*unit : 0;
+    const barkReserved = [...lootBounds,
+      getHUDLayout(this.width, this.height), getMinimapRect(this.width, this.height), getPortalControlRect(this.width, this.height),
+      { x: 0, y: 0, width: this.width, height: 112 + this.touchTopInset }];
+    if (this.extraUIBounds) barkReserved.push(this.extraUIBounds);
+    if (this.touchActive) barkReserved.push({ x: 0, y: this.height - 190 * unit, width: this.width, height: 190 * unit });
+    this.battleBarks.draw(c, sim, world, this.view, settings.phase === 'playing' && !p.dead,
+      this.cachedProps, barkReserved, this.crownOpacity);
     c.save();
     if(phone) { c.translate(headerX,headerY); c.scale(.8*unit,.8*unit); }
     this.navigation(c, sim, world, settings);
@@ -502,12 +516,16 @@ export class Renderer {
       const occludes = crown && py < prop.y + 8 && py > prop.y - (crown.height + crown.radius) * prop.scale
         && Math.abs(px - prop.x - crown.offsetX * prop.scale) < crown.radius * prop.scale;
       let foliageOpacity = occludes ? .24 : 1;
+      if (settings.reducedMotion) {
+        if (occludes) this.crownOpacity.set(prop.id, foliageOpacity);
+        else this.crownOpacity.delete(prop.id);
+      }
       if (sprite.foliage && !settings.reducedMotion) {
         foliageOpacity += ((this.crownOpacity.get(prop.id) ?? 1) - foliageOpacity) * Math.exp(-dt * 13);
         if (!occludes && foliageOpacity > .995) this.crownOpacity.delete(prop.id);
         else this.crownOpacity.set(prop.id, foliageOpacity);
-        if (this.crownOpacity.size > 512) this.crownOpacity.delete(this.crownOpacity.keys().next().value!);
       }
+      if (this.crownOpacity.size > 512) this.crownOpacity.delete(this.crownOpacity.keys().next().value!);
       c.save(); c.translate(prop.x, prop.y); c.scale(prop.scale, prop.scale);
       // Trunks stay rooted and opaque. Only the obstructing canopy becomes translucent.
       if (!sprite.foliage && definition.radius[1] === 0) {

@@ -5,6 +5,8 @@
     "types": []
   },
   "include": [
+    "src/game-features.ts",
+    "src/battle-bark-content.ts", "src/battle-barks.ts", "src/battle-bark-layout.ts", "src/enemy-engagement.ts",
     "src/location-controller.ts", "src/journey-state.ts", "src/journey-rewards.ts",
     "src/dungeon.ts", "src/dungeon-contours.ts", "src/dungeon-state.ts", "src/dungeon-runtime.ts", "src/dungeon-boss.ts", "src/dungeon-command.ts", "src/dungeon-validation.ts",
     "src/warband.ts", "src/goblin-camps.ts",

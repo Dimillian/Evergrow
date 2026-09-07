@@ -24,6 +24,7 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 | Geographic scaling, XP, loot tables and gold | [Progression and loot](progression-and-loot.md) |
 | World history, retirement and current storage bounds | [World-state longevity](world-state-longevity.md) |
 | Character hall, starter choices and saving | [Character saves](character-saves.md) |
+| Enemy speech and visual density | [Ashglass battle barks](battle-barks.md) |
 | Components, typography, tooltip motion and panel ownership | [UI kit](ui-kit.md) |
 | Climate generation, props and procedural graphics | [Biomes](biomes.md), [living biomes](living-biomes.md), [graphics pass](graphics-overhaul.md) |
 | Drainage, cell-based water and shader optics | [Living water](living-water.md) |
