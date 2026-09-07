@@ -106,9 +106,9 @@ test('trial admission waits for camera coverage and budgets, then preserves sour
   assert.equal(sim.enemies.length, 0);
   const view = { x: -900, y: -550, width: 1800, height: 1100 };
   sim.setSpawnExclusion(view);
-  tick(sim, .6);
+  for (let i = 0; i < 120 && !sim.enemies.length; i++) tick(sim, FIXED_STEP);
   assert.equal(sim.enemies.length, 3);
-  assert.ok(sim.enemies.every(e => isSpawnHidden(e.x, e.y, view, e.radius)));
+  assert.ok(sim.enemies.every(e => { const g = sim.eventState.trial!.guardians[Number(e.campMemberId)]; return isSpawnHidden(g.x, g.y, view, e.radius); }), 'admission is hidden; guardians may then walk into view');
   assert.ok(sim.enemies.every(e => e.level === 1 && e.biome === 'deadwood'));
   const first = sim.enemies[0];
   first.hp = 3;
@@ -120,7 +120,7 @@ test('trial admission waits for camera coverage and budgets, then preserves sour
   resumed.restoreCheckpoint(repo.read(0).record!.checkpoint);
   assert.equal(resumed.eventState.trial!.guardians[0].dead, true);
   assert.equal(resumed.eventState.trial!.guardians[1].hp, 4);
-  resumed.setSpawnExclusion(view);
+  resumed.setSpawnExclusion({ x: -400, y: -250, width: 800, height: 500 });
   tick(resumed, .6);
   assert.equal(resumed.enemies.length, 2);
   assert.ok(resumed.enemies.some(e => e.hp === 4));
@@ -274,6 +274,9 @@ test('trial actors wait for population room and suspend without rewarding or hea
   sim.player.x = 0;
   sim.setSpawnExclusion(view);
   tick(sim, .6);
+  assert.equal(sim.enemies.length, 0, 'survivors cannot reappear inside padded camera coverage');
+  sim.setSpawnExclusion({ x: -400, y: -250, width: 800, height: 500 });
+  tick(sim, .6);
   assert.equal(sim.enemies.length, 3);
   assert.ok(sim.enemies.some(e => e.hp === 7));
 });
@@ -292,4 +295,56 @@ test('landed enemy damage cancels an opening before it can award anything', asyn
   assert.equal(sim.eventChannel.site, null);
   assert.equal(sim.groundItems.length, 0);
   assert.deepEqual(sim.eventState.sites, {});
+});
+
+test('both vigil waves spawn near the event and actively arrive to attack instead of idling at home', async () => {
+  const { sim, persist } = await setup();
+  const grave = site('graveyard');
+  assert.ok((await executeEvent(sim, grave, null, persist)).ok);
+  const view = { x: -400, y: -200, width: 800, height: 400 };
+  sim.setSpawnExclusion(view);
+  sim.player.hp = sim.player.maxHp = 10000;
+  tick(sim, FIXED_STEP);
+  const first = sim.enemies.filter(e => e.campId === `event:${grave.id}`);
+  assert.equal(first.length, 3);
+  for (const enemy of first) {
+    assert.ok(isSpawnHidden(enemy.x, enemy.y, view, enemy.radius));
+    assert.ok(Math.hypot(enemy.x - grave.x, enemy.y - grave.y) < 380, 'use the nearby viewport edge, not its distant diagonal');
+    assert.equal(enemy.state, 'chase');
+    assert.equal(enemy.awareness, 1);
+  }
+  // Reproduce the old return-home state on already-admitted guardians.
+  first.forEach(e => { e.state = 'return'; e.awareness = 0; });
+  tick(sim, 8);
+  assert.ok(first.every(e => Math.hypot(e.x - sim.player.x, e.y - sim.player.y) < 300));
+  assert.ok(first.every(e => !['return', 'idle', 'patrol'].includes(e.state)));
+  assert.ok(sim.drainEvents().some(e => e.type === 'hurt'), 'the wave must actually reach combat');
+  first.forEach(e => { e.state = 'dead'; e.hp = 0; });
+  tick(sim, .6);
+  const second = sim.enemies.filter(e => e.state !== 'dead');
+  assert.equal(second.length, 3);
+  assert.ok(second.every(e => Math.hypot(e.x - grave.x, e.y - grave.y) < 380), 'later member indices cannot push the second wave farther away');
+  tick(sim, 8);
+  assert.ok(second.every(e => Math.hypot(e.x - sim.player.x, e.y - sim.player.y) < 300));
+  assert.ok(sim.drainEvents().some(e => e.type === 'hurt'));
+});
+
+test('suspended wounded guardians resume their exact clustered positions even behind an obstacle', async () => {
+  const wall: WorldQuery = { ...world, blocked: x => x >= 300 && x <= 310 };
+  const { sim, persist } = await setup(wall);
+  const grave = site('graveyard');
+  assert.ok((await executeEvent(sim, grave, null, persist)).ok);
+  const records = sim.eventState.trial!.guardians.slice(0, 3);
+  records.forEach((g, i) => { g.admitted = true; g.x = 700; g.y = i * 20; g.hp = 7; });
+  sim.setSpawnExclusion({ x: -200, y: -200, width: 400, height: 400 });
+  tick(sim, FIXED_STEP);
+  assert.equal(sim.enemies.length, 3);
+  sim.enemies.forEach((e, i) => {
+    assert.equal(e.x, 700); assert.equal(e.y, i * 20); assert.equal(e.hp, 7);
+    assert.equal(e.state, 'chase');
+    assert.equal(e.lootSeed, records[i].seed);
+  });
+  tick(sim, .6);
+  assert.ok(sim.enemies.every(e => e.state === 'chase' && e.x < 700));
+  assert.equal(sim.player.hp, sim.player.maxHp, 'ritual tracking is not permission to attack through the wall');
 });

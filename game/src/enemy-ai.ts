@@ -1,5 +1,5 @@
 import { goblinSpeed, goblinDamage } from './warband.ts';
-import { transitionEnemy } from './enemy-state.ts';
+import { alertEnemy, transitionEnemy } from './enemy-state.ts';
 import { ENEMY_AI_RULES, ENEMY_DEFINITIONS, type EnemyDefinition, type ProjectileDefinition } from './combat-content.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
 import type { CombatEvent, Enemy, Player, ProjectileEffects, WorldQuery } from './model.ts';
@@ -10,6 +10,7 @@ export interface EnemyAIContext {
   enemies: readonly Enemy[];
   world: WorldQuery;
   time: number;
+  trial: { campId: string; x: number; y: number; radius: number } | null;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
   move(enemy: Enemy, vx: number, vy: number, dt: number): void;
   hurt(amount: number, angle: number, enemy: Enemy): void;
@@ -153,11 +154,18 @@ export function updateEnemyAI(enemy: Enemy, dt: number, context: EnemyAIContext)
     } else returnHome(enemy, dt, context);
     return;
   }
+  const trial = context.trial;
+  const guardingTrial = trial && !p.dead && enemy.campId === trial.campId
+    && Math.hypot(p.x - trial.x, p.y - trial.y) <= trial.radius;
+  // The ritual tells its guardians where the intruder is. Keep ordinary line-of-sight
+  // and attack locks: awareness guides pursuit but never permits a hit through walls.
+  if (guardingTrial) alertEnemy(enemy, p);
   if (enemy.state === 'return') { returnHome(enemy, dt, context); return; }
   sense(enemy, dt, context);
   const homeDistance = Math.hypot(enemy.x - enemy.homeX, enemy.y - enemy.homeY);
   if ((enemy.state === 'chase' || enemy.state === 'windup' || enemy.state === 'recover')
-    && (homeDistance > (context.world.dungeonLevel ? 1800 : ENEMY_AI_RULES.tetherDistance) || enemy.lostSightTime > (context.world.dungeonLevel ? 14 : ENEMY_AI_RULES.loseSightAfter))) {
+    && (homeDistance > (guardingTrial ? trial.radius : context.world.dungeonLevel ? 1800 : ENEMY_AI_RULES.tetherDistance)
+      || !guardingTrial && enemy.lostSightTime > (context.world.dungeonLevel ? 14 : ENEMY_AI_RULES.loseSightAfter))) {
     disengage(enemy); returnHome(enemy, dt, context); return;
   }
   if (enemy.state === 'idle' || enemy.state === 'patrol') {

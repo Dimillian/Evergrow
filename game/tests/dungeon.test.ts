@@ -108,7 +108,7 @@ test('boss threshold waves and controls are finite; warnings are not resumed mid
     sim.player.y = b.y;
     e.hp = e.maxHp * .2;
     e.state = 'chase';
-    const c = { player: sim.player, enemies: sim.enemies, world: sim.world, time: 0, visible: () => true, move: () => { }, hurt: () => { }, shoot: () => { }, emit: () => { } };
+    const c = { player: sim.player, enemies: sim.enemies, world: sim.world, time: 0, trial: null, visible: () => true, move: () => { }, hurt: () => { }, shoot: () => { }, emit: () => { } };
     updateWarden(e, FIXED_STEP, c);
     assert.equal(e.bossPhases, 1);
     assert.equal(e.bossMove, 'summon');
@@ -210,7 +210,7 @@ test('Warden fracture locks three lanes and commits at most one hit during their
     e.attackAngle = 0;
     e.stateDuration = .6;
     let hits = 0;
-    const c = { player: sim.player, enemies: sim.enemies, world: sim.world, time: 0, visible: () => true, move: () => { }, hurt: () => hits++, shoot: () => { }, emit: () => { } };
+    const c = { player: sim.player, enemies: sim.enemies, world: sim.world, time: 0, trial: null, visible: () => true, move: () => { }, hurt: () => hits++, shoot: () => { }, emit: () => { } };
     e.stateTime = .01;
     updateWarden(e, .01, c);
     assert.equal(hits, 0, 'first side lane misses center');

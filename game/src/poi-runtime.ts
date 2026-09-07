@@ -1,8 +1,9 @@
+import { alertEnemy } from './enemy-state.ts';
 import { type EventState, type EventSite, type EventChoice, EVENT_RULES, syncTrial } from './poi-content.ts';
 import type { Enemy, Input, Player, WorldQuery } from './model.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { ENCOUNTER_RULES } from './encounter-director.ts';
-import { isSpawnHidden, type SpawnExclusion } from './spawn-visibility.ts';
+import { isSpawnHidden, SPAWN_VISIBILITY_MARGIN, type SpawnExclusion } from './spawn-visibility.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
 import type { CampSpawnSource } from './camp-population.ts';
@@ -42,7 +43,7 @@ export function advanceTrial(context: TrialContext): void {
   if (!trial)
     return;
   const site = state.sites[trial.siteId];
-  const far = player.dead || world.isSanctuary?.(player.x, player.y) || Math.hypot(player.x - site.x, player.y - site.y) > 1800;
+  const far = player.dead || world.isSanctuary?.(player.x, player.y) || Math.hypot(player.x - site.x, player.y - site.y) > EVENT_RULES.trialRadius;
   if (far) {
     for (let i = enemies.length - 1; i >= 0; i--)
       if (enemies[i].campId === `event:${site.id}` && view && isSpawnHidden(enemies[i].x, enemies[i].y, view, enemies[i].radius))
@@ -68,19 +69,31 @@ export function advanceTrial(context: TrialContext): void {
     index: number;
   }[] = [];
   for (const { g, i } of missing) {
-    const valid = (x: number, y: number) => isSpawnHidden(x, y, view, ENEMY_DEFINITIONS[g.kind].radius)
-      && !world.blocked(x, y, ENEMY_DEFINITIONS[g.kind].radius + 8) && !world.isSanctuary?.(x, y)
+    const clear = (x: number, y: number) => isSpawnHidden(x, y, view, ENEMY_DEFINITIONS[g.kind].radius)
+      && !world.blocked(x, y, ENEMY_DEFINITIONS[g.kind].radius) && !world.isSanctuary?.(x, y);
+    const valid = (x: number, y: number) => clear(x, y) && !world.blocked(x, y, ENEMY_DEFINITIONS[g.kind].radius + 8)
       && hasLineOfSight(world, x, y, site.x, site.y) && [...live, ...placements].every(e => Math.hypot(e.x - x, e.y - y) > 45);
-    let point = g.admitted && valid(g.x, g.y) ? { x: g.x, y: g.y } : null;
+    let point = g.admitted && clear(g.x, g.y) ? { x: g.x, y: g.y } : null;
     // Previously admitted survivors keep their exact location; wait until hidden rather than teleporting them.
     if (g.admitted && !point)
       return;
-    for (let attempt = 0; !point && attempt < 32; attempt++) {
-      const angle = (attempt / 32 + i * .09) * Math.PI * 2;
-      const r = Math.hypot(view.width, view.height) * .5 + 230 + i * 55;
-      const x = player.x + Math.cos(angle) * r, y = player.y + Math.sin(angle) * r;
-      if (valid(x, y))
-        point = { x, y };
+    // Search just outside the nearest padded viewport edges, not a diagonal-sized
+    // circle. Offsets provide adjacent clear lanes without pushing later members farther away.
+    const radius = ENEMY_DEFINITIONS[g.kind].radius;
+    const left = view.x - SPAWN_VISIBILITY_MARGIN.horizontal - radius - 12;
+    const right = view.x + view.width + SPAWN_VISIBILITY_MARGIN.horizontal + radius + 12;
+    const top = view.y - SPAWN_VISIBILITY_MARGIN.vertical - radius - 12;
+    const bottom = view.y + view.height + SPAWN_VISIBILITY_MARGIN.vertical + radius + 12;
+    const candidates: { x: number; y: number }[] = [];
+    for (const offset of [0, -56, 56, -112, 112, -168, 168, 224]) {
+      const x = Math.max(left, Math.min(right, site.x + offset));
+      const y = Math.max(top, Math.min(bottom, site.y + offset));
+      candidates.push({ x, y: top }, { x, y: bottom }, { x: left, y }, { x: right, y });
+    }
+    candidates.sort((a, b) => Math.hypot(a.x - site.x, a.y - site.y) - Math.hypot(b.x - site.x, b.y - site.y));
+    for (const candidate of candidates) {
+      if (point) break;
+      if (Math.hypot(candidate.x - site.x, candidate.y - site.y) <= EVENT_RULES.trialRadius && valid(candidate.x, candidate.y)) point = candidate;
     }
     if (!point)
       return;
@@ -91,7 +104,8 @@ export function advanceTrial(context: TrialContext): void {
     const actor = context.spawn(g.kind, point.x, point.y, g.rank, { campId: `event:${site.id}`, memberId: String(point.index), lootSeed: g.seed });
     if (!actor)
       throw new Error('Preflighted event guardian could not be admitted');
-    Object.assign(actor, scaledEnemyStats(g.kind, site.level, g.rank), { level: site.level, biome: site.biome, hp: g.hp, homeX: site.x, homeY: site.y, state: 'return' });
+    Object.assign(actor, scaledEnemyStats(g.kind, site.level, g.rank), { level: site.level, biome: site.biome, hp: g.hp, homeX: site.x, homeY: site.y });
+    alertEnemy(actor, player);
     g.admitted = true;
     g.x = actor.x;
     g.y = actor.y;

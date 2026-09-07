@@ -9,7 +9,7 @@ import { dungeonFromState, updateDungeon } from './dungeon-runtime.ts';
 import type { DungeonFloor } from './dungeon.ts';
 import { updateWarden } from './dungeon-boss.ts';
 import { updateWarbands } from './warband.ts';
-import { freshEvents, syncTrial } from './poi-content.ts';
+import { freshEvents, syncTrial, EVENT_RULES } from './poi-content.ts';
 import { EventChannel, advanceTrial } from './poi-runtime.ts';
 import { GROUND_EFFECT_RULES } from './skill-execution-content.ts';
 import { freshTravel, PortalChannel, PORTAL_RULES } from './travel.ts';
@@ -577,8 +577,10 @@ export class Simulation {
   private updateEnemies(dt: number): void {
     updateWarbands(this.enemies, this.player, this.world, dt);
     const p = this.player;
+    const trial = this.eventState.trial && !this.dungeonFloor ? this.eventState.sites[this.eventState.trial.siteId] : null;
     const context: EnemyAIContext = {
       player: p, enemies: this.enemies, world: this.world, time: this.time,
+      trial: trial ? { campId: `event:${trial.id}`, x: trial.x, y: trial.y, radius: EVENT_RULES.trialRadius } : null,
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       move: (actor, vx, vy, delta) => this.moveEnemy(actor, vx, vy, delta),
       hurt: (amount, angle, actor) => this.damagePlayer(amount, angle, actor.level, actor.kind),

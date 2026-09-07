@@ -53,7 +53,7 @@ export interface EventState {
   sites: Record<string, EventRecord>;
   trial: Trial | null;
 }
-export const EVENT_RULES = Object.freeze({ reach: 78, channel: 1, beaconChannel: 2, blessingDuration: 90 });
+export const EVENT_RULES = Object.freeze({ reach: 78, channel: 1, beaconChannel: 2, blessingDuration: 90, trialRadius: 1800 });
 export const freshEvents = (): EventState => ({ claimed: [], sites: {}, trial: null });
 export const BLESSINGS: Readonly<Record<BlessingKind, {
   name: string;
