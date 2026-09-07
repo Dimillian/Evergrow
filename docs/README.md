@@ -42,6 +42,7 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 
 - [Character editor feasibility](character-editor-feasibility.md): source-based assessment of creation-time appearance, modular hair/skin/accessories, body presets, rendering integration and save implications; not implemented.
 - [Character editor MVP mockup](character-editor-mockup.md): local appearance study using the real rig, paged hair/skin options, armor tints and proposed inventory editor entry; fixed body proportions and no saves or live creation integration.
+- [Smartphone editor mockups](http://127.0.0.1:5173/character-editor-phone.html): interactive Character, Armor and Inventory phone studies with a persistent preview and touch-sized editing controls; local server required.
 
 - [Journeys and local leads](procedural-journeys.md): proposed procedural adventures, light onboarding, level-aware routing, journal and reward/persistence rules.
 

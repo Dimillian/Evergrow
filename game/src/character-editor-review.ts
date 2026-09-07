@@ -21,7 +21,8 @@ const abort = new AbortController(), reduced = matchMedia('(prefers-reduced-moti
 let appearance: CharacterAppearance = { ...DEFAULT_APPEARANCE, hair: 'braid', hairColor: 'copper', skin: 'sand' };
 const initial = { ...appearance };
 let facing = Math.PI / 2, loadout: StarterLoadoutId = 'sword-shield', showHood = false;
-let tints:ArmorTints={}, selectedPart:ArmorPart='chest', tab:'character'|'armor'='character';
+const studyView=new URLSearchParams(location.search).get('view');
+let tints:ArmorTints={}, selectedPart:ArmorPart='chest', tab:'character'|'armor'=studyView==='armor'?'armor':'character';
 let inventoryReview:AppearanceInventoryReview|undefined, inventoryLoading=false, inventoryOpen=false;
 const pages={skin:0,hair:0,hairColor:0};
 let frame = 0, disposed = false;
@@ -30,7 +31,7 @@ const selectOptions = (options: readonly { id: string; name: string }[]) => opti
 const swatches = (key: 'skin' | 'hairColor', palettes: readonly AppearancePalette[]) => palettes.map((p,index) => `<button type="button" class="swatch" style="--swatch:${p.base}" data-choice="${key}" data-value="${p.id}" data-page="${Math.floor(index/8)}" aria-label="${key === 'skin' ? 'Skin tone' : 'Hair color'}: ${p.name}" title="${p.name}" aria-pressed="false"></button>`).join('');
 const pager=(key:keyof typeof pages,title:string)=>`<span class="section-pager"><button type="button" class="page-arrow prev" data-page-key="${key}" data-step="-1" aria-label="Previous ${title} page">${uiIcon('chevron')}</button><output data-page-label="${key}" aria-live="polite"></output><button type="button" class="page-arrow" data-page-key="${key}" data-step="1" aria-label="Next ${title} page">${uiIcon('chevron')}</button></span>`;
 root.innerHTML = `<div class="editor-shell">
-  <header class="editor-header"><div class="editor-brand">${uiIcon('star')}<span>EVERGROW</span></div><button type="button" class="ui-button ui-button--quiet" id="inventory-preview">${uiIcon('inventory')} Inventory preview</button></header>
+  <header class="editor-header"><div class="editor-brand">${uiIcon('star')}<span>EVERGROW</span></div><button type="button" class="ui-button ui-button--quiet" id="inventory-preview" aria-label="Inventory preview">${uiIcon('inventory')} <span>Inventory preview</span></button></header>
   <div class="editor-layout">
     <section class="editor-stage" aria-label="Character preview">
       <div class="stage-title"><h1 id="preview-name">Rowan</h1><span>Appearance preview</span></div>
@@ -57,15 +58,13 @@ root.innerHTML = `<div class="editor-shell">
         <p class="armor-note" id="armor-note">Select a part to tint. Shading and trim keep their original detail.</p>
         <button type="button" class="ui-button ui-button--quiet" id="reset-armor">Reset all armor colors</button>
       </div>
-      <div class="editor-actions"><button type="button" class="ui-button ui-button--quiet" id="randomize">Randomize</button><button type="button" class="ui-button ui-button--primary" id="review">Review look ${uiIcon('chevron')}</button></div>
+      <div class="editor-actions"><button type="button" class="ui-button ui-button--quiet" id="randomize">Randomize</button><button type="button" class="ui-button ui-button--quiet" id="reset">Reset appearance</button></div>
     </section>
   </div>
-  <footer class="editor-footer"><span>Local mockup · appearance only · no character is saved</span><button type="button" id="reset">Reset appearance</button></footer>
-  <dialog class="look-dialog" aria-labelledby="look-title"><h2 id="look-title">Rowan</h2><canvas id="review-portrait" role="img" aria-label="Reviewed character appearance"></canvas><p id="look-description"></p><div class="dialog-actions"><button type="button" class="ui-button" id="edit">Back to editor</button><button type="button" class="ui-button ui-button--primary" id="export">Save portrait</button></div></dialog>
+  <footer class="editor-footer"><span>Local mockup · appearance only · no character is saved</span><a href="/character-editor-phone.html">Smartphone mockups</a></footer>
 </div>`;
 const canvas = (id: string) => root.querySelector<HTMLCanvasElement>(`#${id}`)!;
-const figure = canvas('figure'), face = canvas('face'), small = canvas('world-size'), portrait = canvas('review-portrait');
-const dialog = root.querySelector<HTMLDialogElement>('dialog')!;
+const figure = canvas('figure'), face = canvas('face'), small = canvas('world-size');
 const name = root.querySelector<HTMLInputElement>('#name')!;
 const gear = root.querySelector<HTMLSelectElement>('#gear')!;
 const hood = root.querySelector<HTMLInputElement>('#hood')!;
@@ -110,9 +109,9 @@ function draw(time = 0) {
   if (disposed) return;
   if(inventoryOpen) return;
   drawFigure(figure, time); drawFigure(small, 0, true); drawHead(face, appearance, facing, showHood);
-  if (dialog.open) drawFigure(portrait, time);
 }
 function refresh() {
+  document.documentElement.classList.toggle('touch-mode',matchMedia('(max-width:700px)').matches);
   // Resolve geometry only on editor changes, never rebuild items/bounds per animation frame.
   const neutral = pose(0);
   const bounds = Array.from({length:8}, (_,i) => characterBounds({...neutral, angle:i * Math.PI / 4, attackAngle:i * Math.PI / 4}));
@@ -130,7 +129,7 @@ function refresh() {
   root.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach(b=>{b.setAttribute('aria-selected',String(b.dataset.tab===tab));b.tabIndex=b.dataset.tab===tab?0:-1;});
   root.querySelector<HTMLElement>('#character-options')!.hidden=tab!=='character';
   root.querySelector<HTMLElement>('#armor-options')!.hidden=tab!=='armor';
-  root.querySelector<HTMLButtonElement>('#randomize')!.hidden=tab==='armor';
+  root.querySelector<HTMLElement>('.editor-actions')!.hidden=tab==='armor';
   helmet.checked=showHood;hood.checked=showHood;
   const slotFor=(part:ArmorPart)=>part==='shoulders'?'chest':part==='hands'?'gloves':part;
   for(const part of ARMOR_PARTS) {
@@ -160,7 +159,7 @@ root.addEventListener('click', event => {
   const button = (event.target as Element).closest<HTMLButtonElement>('button'); if (!button) return;
   const value = button.dataset.value;
   if(button.dataset.pageKey) {const key=button.dataset.pageKey as keyof typeof pages;pages[key]=Math.max(0,Math.min(key==='hair'?2:1,pages[key]+Number(button.dataset.step)));}
-  if(button.dataset.tab==='character'||button.dataset.tab==='armor')tab=button.dataset.tab;
+  if(button.dataset.tab==='character'||button.dataset.tab==='armor'){tab=button.dataset.tab;root.querySelector('.editor-controls')!.scrollTop=0;}
   if(ARMOR_PARTS.some(p=>p.id===button.dataset.part))selectedPart=button.dataset.part as ArmorPart;
   if(ARMOR_TINTS.some(p=>p.id===button.dataset.tint))tints={...tints,[selectedPart]:button.dataset.tint};
   if(button.id==='original-color'){tints={...tints};delete tints[selectedPart];}
@@ -178,25 +177,12 @@ root.addEventListener('click', event => {
     pages.skin=Math.floor(SKIN_PALETTES.findIndex(p=>p.id===appearance.skin)/8);pages.hair=Math.floor(HAIR_STYLES.findIndex(p=>p.id===appearance.hair)/8);pages.hairColor=Math.floor(HAIR_PALETTES.findIndex(p=>p.id===appearance.hairColor)/8);
   }
   if (button.id === 'reset') { appearance = {...initial}; facing = Math.PI / 2; pages.skin=0;pages.hair=0;pages.hairColor=0; }
-  if (button.id === 'review') {
-    root.querySelector('#look-title')!.textContent = name.value.trim() || 'Wayfarer';
-    root.querySelector('#look-description')!.textContent = `${label(HAIR_STYLES, appearance.hair)} · ${label(HAIR_PALETTES, appearance.hairColor)} · ${label(SKIN_PALETTES, appearance.skin)}`;
-    dialog.showModal();
-  }
-  if (button.id === 'edit') dialog.close();
-  if (button.id === 'export') {
-    const output = document.createElement('canvas'); output.width = 720; output.height = 900;
-    const ctx = output.getContext('2d')!; ctx.fillStyle = '#101d24'; ctx.fillRect(0,0,720,900);
-    const current = pose(0), fit = fitCharacter(characterBounds(current),720,900,.12);
-    ctx.translate(fit.x,fit.y); ctx.scale(fit.scale,fit.scale); drawHumanoid(ctx,current);
-    const link = document.createElement('a'); link.download = 'evergrow-character-look.png'; link.href = output.toDataURL('image/png'); link.click();
-  }
   refresh();
 }, { signal:abort.signal });
 gear.addEventListener('change', () => { if (isStarterLoadoutId(gear.value)) { loadout = gear.value; sheet = createCharacterSheet(loadout); refresh(); } }, { signal:abort.signal });
 hood.addEventListener('change', () => { showHood = hood.checked; refresh(); }, { signal:abort.signal });
 helmet.addEventListener('change',()=>{showHood=helmet.checked;refresh();},{signal:abort.signal});
-root.querySelector('.editor-tabs')!.addEventListener('keydown',event=>{const e=event as KeyboardEvent;if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();tab=tab==='character'?'armor':'character';refresh();root.querySelector<HTMLButtonElement>(`[data-tab="${tab}"]`)!.focus();}},{signal:abort.signal});
+root.querySelector('.editor-tabs')!.addEventListener('keydown',event=>{const e=event as KeyboardEvent;if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();tab=tab==='character'?'armor':'character';root.querySelector('.editor-controls')!.scrollTop=0;refresh();root.querySelector<HTMLButtonElement>(`[data-tab="${tab}"]`)!.focus();}},{signal:abort.signal});
 facial.addEventListener('change', () => { appearance.facialHair = facial.value as CharacterAppearance['facialHair']; refresh(); }, { signal:abort.signal });
 accessory.addEventListener('change', () => { appearance.accessory = accessory.value as CharacterAppearance['accessory']; refresh(); }, { signal:abort.signal });
 name.addEventListener('input', refresh, { signal:abort.signal });
@@ -215,14 +201,16 @@ async function openInventory(){
       inventoryReview=new AppearanceInventoryReview(root,(ctx,player,time,angle,width,height)=>{
         const current=pose(time,player.character,angle),fit=fitCharacter(characterBounds({...current,time:0}),width,height,.09);
         ctx.clearRect(0,0,width,height);ctx.save();ctx.translate(fit.x,fit.y);ctx.scale(fit.scale,fit.scale);drawHumanoid(ctx,current);ctx.restore();
-      },()=>{close();tab='character';refresh();root.querySelector<HTMLButtonElement>('#character-tab')!.focus();},close);
+      },()=>{close();tab='character';root.querySelector('.editor-controls')!.scrollTop=0;refresh();root.querySelector<HTMLButtonElement>('#character-tab')!.focus();},close);
     }
     inventoryOpen=true;inventoryReview.open(sheet);
   } finally {inventoryLoading=false;}
 }
 await loadGameFont();
 if (!disposed) {
-  refresh(); let previous = 0;
+  refresh();
+  if(studyView==='inventory')await openInventory();
+  let previous = 0;
   const tick = (now:number) => {
     if (!document.hidden && !reduced.matches && now - previous >= 1000 / 60) { draw(now / 1000); previous = now; }
     frame = requestAnimationFrame(tick);
