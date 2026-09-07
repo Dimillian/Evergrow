@@ -1,3 +1,4 @@
+import type { GroundLootLabel } from './ground-loot-hover.ts';
 import { eventClaimed } from './poi-content.ts';
 import type { FrameProfiler } from './frame-profiler.ts';
 import { WaterPresentation } from './water-presentation.ts';
@@ -117,6 +118,7 @@ export class Renderer {
   private ghostTimer = 0;
   private visualTime = 0;
   private get cachedProps() { return this.visibility.props; }
+  groundLootLabels: GroundLootLabel[] = [];
   private enemyFocus = new EnemyFocus();
   private battleBarks = new BattleBarkScene();
   private focusedEnemy: Enemy | null = null;
@@ -402,7 +404,7 @@ export class Renderer {
     // Project popup anchors, leaving their glyph size and outline independent of camera zoom.
     // Speech draws later and may cover damage numbers; popups never displace a bark.
     this.effects.drawNumbers(c, (x, y) => worldToScreen(this.view, x, y));
-    const lootBounds = drawLootLabels(c, sim.groundItems, (x, y) => worldToScreen(this.view, x, y), this.width, this.height);
+    const lootBounds = this.groundLootLabels = drawLootLabels(c, sim.groundItems, (x, y) => worldToScreen(this.view, x, y), this.width, this.height);
     const phone = this.touchActive && this.touchViewport ? phoneLandscapeLayout(this.touchViewport) : null;
     const unit = this.touchViewport ? this.width / this.touchViewport.width : 1;
     const footer = phone ? {x:phone.footer.x*unit,y:phone.footer.y*unit,scale:phone.footer.scale*unit} : undefined;

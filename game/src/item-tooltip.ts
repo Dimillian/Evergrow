@@ -10,7 +10,7 @@ export class ItemTooltip {
     this.element = document.createElement('div'); this.element.className = 'ui-tooltip ui-item-tooltip-group';
     this.element.id = id; this.element.setAttribute('role', 'tooltip'); this.element.hidden = true; mount.append(this.element);
   }
-  show(item: Item, view: ItemPresentation, anchor: HTMLElement): void {
+  show(item: Item, view: ItemPresentation, anchor: HTMLElement, bounds = anchor.getBoundingClientRect() as Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>): void {
     if (this.anchor !== anchor) this.detach();
     this.anchor = anchor;
     const cards = itemHoverCards(item, view);
@@ -19,7 +19,10 @@ export class ItemTooltip {
     this.element.hidden = false;
     const descriptions = new Set((anchor.getAttribute('aria-describedby') ?? '').split(' ').filter(Boolean));
     descriptions.add(this.element.id); anchor.setAttribute('aria-describedby', [...descriptions].join(' '));
-    const bounds = anchor.getBoundingClientRect(), viewportWidth = document.documentElement.clientWidth, viewportHeight = document.documentElement.clientHeight;
+    this.position(bounds);
+  }
+  position(bounds: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>): void {
+    const viewportWidth = document.documentElement.clientWidth, viewportHeight = document.documentElement.clientHeight;
     const width = this.element.offsetWidth, height = this.element.offsetHeight;
     let left = bounds.right + 12, top = bounds.top - 12;
     if (left + width > viewportWidth - 12) left = bounds.left - width - 12;

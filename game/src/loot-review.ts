@@ -1,3 +1,8 @@
+import './ui-kit.css';
+import './typography.css';
+import { installUITheme } from './ui-theme.ts';
+import { GroundLootTooltip } from './ground-loot-tooltip.ts';
+import type { GroundLootLabel } from './ground-loot-hover.ts';
 import { drawEnemyRemains } from './death-art.ts';
 import { drawGroundLoot, drawLootLabels, drawResourcePickups } from './loot-art.ts';
 import { generateItem } from './items.ts';
@@ -9,10 +14,13 @@ import { Simulation } from './simulation.ts';
 import { Renderer } from './renderer.ts';
 import { PostFX } from './postfx.ts';
 if (!import.meta.env.DEV) throw new Error('Local review only');
-await loadGameFont();
-// Frozen art study. No gameplay ticks, browser storage or input handlers.
+await loadGameFont(); installUITheme();
+// Frozen art study with passive item inspection; no gameplay ticks or browser storage.
 const canvas = document.querySelector<HTMLCanvasElement>('#review')!;
+const tooltip = new GroundLootTooltip(document.body, canvas);
+let labels: GroundLootLabel[] = [];
 const world = new World(7319), sim = new Simulation(world, { spawn: false }), renderer = new Renderer();
+sim.player.level = 10;
 const stage = document.createElement('canvas'), fx = new PostFX(stage);
 const ages = [.15, .4, 1.2, 12.6];
 const kinds: EnemyKind[] = ['stalker', 'brute', 'caster', 'hound', 'archer', 'wisp'];
@@ -34,13 +42,27 @@ const draw = () => {
   drawResourcePickups(c, ['health', 'mana'].map((kind, id) => ({ id, kind: kind as 'health' | 'mana', x: 460 + id * 65,
     y: 550, life: 10, radius: 4, restoreFraction: .1 })), 1, true);
   fx.render(renderer.canvas, 0);
-  const ui = canvas.getContext('2d')!; ui.drawImage(stage, 0, 0);
-  ui.setTransform(canvas.width / 1000, 0, 0, canvas.height / 600, 0, 0);
+  const ui = canvas.getContext('2d')!;
+  const scale = Math.min(canvas.width / 1000, canvas.height / 600);
+  const left = (canvas.width - 1000 * scale) / 2, top = (canvas.height - 600 * scale) / 2;
+  ui.fillStyle = '#081217'; ui.fillRect(0, 0, canvas.width, canvas.height);
+  ui.drawImage(stage, left, top, 1000 * scale, 600 * scale);
+  ui.setTransform(scale, 0, 0, scale, left, top);
   text(ui, 'Death & ground loot', 35, 20, 1.7, '#d9e4de');
   ages.forEach((age, i) => text(ui, `${age}s`, 240 + i * 200, 52, 1, '#a3b8bf', 'center', 'interface'));
   kinds.forEach((kind, i) => text(ui, kind, 35, 85 + i * 54, 1.1, '#a3b8bf'));
-  drawLootLabels(ui, drops, (x, y) => ({ x, y }), 1000, 600);
+  labels = drawLootLabels(ui, drops, (x, y) => ({ x, y }), 1000, 600).map(b => ({
+    ...b, x: left + b.x * scale, y: top + b.y * scale, width: b.width * scale, height: b.height * scale,
+    anchorX: left + b.anchorX * scale, anchorY: top + b.anchorY * scale,
+  }));
   text(ui, 'Health', 460, 565, .9, '#d09b90', 'center'); text(ui, 'Mana', 525, 565, .9, '#9bbbcf', 'center');
 };
+const hover = (event: PointerEvent) => {
+  const rect = canvas.getBoundingClientRect();
+  tooltip.update(sim.player, drops, [], [], labels, { x: 0, y: 0, width: 1000, height: 600 }, canvas.width, canvas.height,
+    event.pointerType === 'touch' ? null : { x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height });
+};
+const leave = () => tooltip.hide();
+canvas.addEventListener('pointermove', hover); canvas.addEventListener('pointerleave', leave);
 draw(); window.addEventListener('resize', draw);
-if (import.meta.hot) import.meta.hot.dispose(() => { window.removeEventListener('resize', draw); fx.dispose(); world.dispose(); });
+if (import.meta.hot) import.meta.hot.dispose(() => { window.removeEventListener('resize', draw); canvas.removeEventListener('pointermove', hover); canvas.removeEventListener('pointerleave', leave); tooltip.dispose(); fx.dispose(); world.dispose(); });

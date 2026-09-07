@@ -1,12 +1,11 @@
-import { itemDisplayName } from './items.ts';
 import type { GroundItem } from './character-types.ts';
 import type { Pickup } from './model.ts';
-import { TIER_COLORS, TIER_NAMES } from './items.ts';
+import { TIER_COLORS } from './items.ts';
 import { text, textWidth } from './font.ts';
 import { itemDropShapes } from './item-art.ts';
 import { drawGearShapes } from './equipment-art.ts';
 import { polygon } from './art-primitives.ts';
-import { layoutLootLabels } from './loot-label-layout.ts';
+import { layoutLootLabels, groundLootName, fitLootName, LOOT_LABEL_STYLE } from './loot-label-layout.ts';
 
 /** Separate silhouettes in a multi-item drop without changing pickup/save positions. */
 function lootPositions(drops: readonly GroundItem[]) {
@@ -64,30 +63,38 @@ export function drawResourcePickups(c: CanvasRenderingContext2D, pickups: readon
   c.restore();
 }
 
-/** Crisp names and an explicit quality/level line; leaders identify packed drops. */
+/** Compact single-line ground names; full generated names belong in item inspection. */
 export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly GroundItem[],
   project: (x: number, y: number) => { x: number; y: number }, width: number, height: number) {
+  const { nameSize, levelSize, maxWidth } = LOOT_LABEL_STYLE;
+  const measure = (value: string) => textWidth(value, nameSize);
   const positions = lootPositions(drops);
-  const byId = new Map(drops.map(drop => [drop.id, drop]));
-  const anchors = positions.map(({ drop, x, y }) => ({ id: drop.id, ...project(x, y),
-    width: Math.max(textWidth(itemDisplayName(drop.item), 1.05), textWidth(`${TIER_NAMES[drop.item.tier]} · iLv ${drop.item.itemLevel}`, .72, 'interface')) + 22 }));
+  const labels = new Map(drops.map(drop => [drop.id, { drop, name: groundLootName(drop.item),
+    level: `Lv ${drop.item.itemLevel}`, levelWidth: textWidth(`Lv ${drop.item.itemLevel}`, levelSize, 'interface') }]));
+  const anchors = positions.map(({ drop, x, y }) => {
+    const label = labels.get(drop.id)!;
+    return { id: drop.id, ...project(x, y), width: Math.min(maxWidth, measure(label.name) + label.levelWidth + 34) };
+  });
   const boxes = layoutLootLabels(anchors, width, height);
   c.save();
   for (const b of boxes) {
-    const drop = byId.get(b.id)!, color = TIER_COLORS[drop.item.tier];
+    const { drop, name, level, levelWidth } = labels.get(b.id)!, color = TIER_COLORS[drop.item.tier];
     const center = b.left + b.width / 2;
-    c.strokeStyle = color + '65'; c.lineWidth = .65;
-    c.beginPath(); c.moveTo(b.x, b.y - 6); c.lineTo(center, b.top + b.height / 2); c.stroke();
-    const fill = c.createLinearGradient(b.left, b.top, b.left, b.top + b.height);
-    fill.addColorStop(0, '#1b2930f5'); fill.addColorStop(1, '#080f16f0');
-    c.fillStyle = fill; c.fillRect(b.left, b.top, b.width, b.height);
-    c.strokeStyle = color + '65'; c.lineWidth = .7; c.strokeRect(b.left + .5, b.top + .5, b.width - 1, b.height - 1);
-    c.fillStyle = color; c.fillRect(b.left, b.top + 5, 2, b.height - 10);
-    c.save(); c.beginPath(); c.rect(b.left + 6, b.top, b.width - 12, b.height); c.clip();
-    text(c, itemDisplayName(drop.item), center, b.top + 5, 1.05, color, 'center');
-    text(c, `${TIER_NAMES[drop.item.tier]} · iLv ${drop.item.itemLevel}`, center, b.top + 18, .72, '#a9b9bc', 'center', 'interface');
-    c.restore();
+    // Only displaced labels need a connector; a nearby label already identifies its drop.
+    if (Math.abs(center - b.x) > 10 || b.y - b.top - b.height > 18 || b.top > b.y) {
+      c.strokeStyle = '#91aab53d'; c.lineWidth = .6;
+      c.beginPath(); c.moveTo(b.x, b.y - 5); c.lineTo(center, b.top + b.height / 2); c.stroke();
+    }
+    c.fillStyle = '#0d171ee8'; c.beginPath(); c.roundRect(b.left, b.top, b.width, b.height, 4); c.fill();
+    // A tiny rarity diamond replaces the bright outline, stripe and subtitle.
+    c.strokeStyle = color; c.fillStyle = color; c.lineWidth = .8;
+    c.beginPath(); c.moveTo(b.left + 8, b.top + 7); c.lineTo(b.left + 10.5, b.top + 9.5);
+    c.lineTo(b.left + 8, b.top + 12); c.lineTo(b.left + 5.5, b.top + 9.5); c.closePath();
+    if (drop.item.tier === 'common') c.stroke(); else c.fill();
+    const available = b.width - levelWidth - 34;
+    text(c, fitLootName(name, available, measure), b.left + 16, b.top + 6, nameSize, color);
+    if (b.width > levelWidth + 26) text(c, level, b.left + b.width - 7, b.top + 7, levelSize, '#92a6b0', 'right', 'interface');
   }
   c.restore();
-  return boxes.map(box => ({ x: box.left, y: box.top, width: box.width, height: box.height }));
+  return boxes.map(box => ({ id: box.id, x: box.left, y: box.top, width: box.width, height: box.height, anchorX: box.x, anchorY: box.y }));
 }

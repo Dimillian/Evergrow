@@ -1,7 +1,8 @@
+import { generateItem } from '../src/items.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { EnemyDeaths, deathPose } from '../src/death-presentation.ts';
-import { layoutLootLabels } from '../src/loot-label-layout.ts';
+import { layoutLootLabels, groundLootName, fitLootName } from '../src/loot-label-layout.ts';
 import { enemyDeathAnimation, DEATH_KINDS, ENEMY_DEATHS } from '../src/death-content.ts';
 
 test('death presentation retains facing, settles, fades, expires and stays bounded independently of actors', () => {
@@ -60,4 +61,20 @@ test('loot labels pack pileups without overlap or clipping at any viewport edge'
   }
   const pile = Array.from({ length: 8 }, (_, id) => ({ id, x: 150, y: 300, width: 180 }));
   assert.equal(layoutLootLabels(pile, 400, 600).length, 8, 'individual names stay visible in an ordinary loot pile');
+});
+
+
+test('compact ground names preserve the full item identity and enhancement', () => {
+  for (const tier of ['common', 'magic', 'rare', 'epic', 'legendary'] as const) {
+    const item = generateItem(8392, 12, 'ring', undefined, tier);
+    item.recipe.enhancement = 4;
+    const before = structuredClone(item);
+    assert.equal(groundLootName(item), `${tier === 'common' || tier === 'magic' ? item.baseName : item.name} +4`);
+    assert.deepEqual(item, before);
+  }
+  const measure = (text: string) => text.length * 6;
+  assert.equal(fitLootName('Signet', 60, measure), 'Signet');
+  const shortened = fitLootName('A very long generated item name', 90, measure);
+  assert.ok(shortened.endsWith('…')); assert.ok(measure(shortened) <= 90);
+  assert.equal(fitLootName('Signet', 0, measure), '');
 });

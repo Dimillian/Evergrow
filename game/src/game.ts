@@ -1,3 +1,4 @@
+import { GroundLootTooltip } from './ground-loot-tooltip.ts';
 import { directionalAimProfile } from './ranged-aim.ts';
 import { FramePacer } from './frame-pacer.ts';
 import { ThorRuntime } from './thor-runtime.ts';
@@ -81,6 +82,7 @@ export class Game {
   private saveError = '';
   private worldMap: WorldMap;
   private shell: GameShell;
+  private groundLootTooltip: GroundLootTooltip;
   private inventoryPanel: InventoryPanel;
   private skillPanel: SkillTreePanel;
   private servicePanel: ServicePanel;
@@ -142,6 +144,7 @@ export class Game {
         openCharacter: () => this.openCharacterPanel('character'), openSkills: () => this.openCharacterPanel('skills'), openJourneys: () => this.journeys.open(),
       }));
       this.canvas = this.shell.canvas;
+      this.groundLootTooltip = this.lifetime.own(new GroundLootTooltip(root, this.canvas));
       this.uiCanvas = this.shell.uiCanvas;
       const uiContext = this.uiCanvas.getContext('2d');
       if (!uiContext) throw new Error('The HUD requires a 2D canvas context.');
@@ -939,6 +942,10 @@ export class Game {
     ui.setTransform(this.uiCanvas.width / this.renderer.width, 0, 0,
       this.uiCanvas.height / this.renderer.height, 0, 0);
     if (this.phase !== 'ready') this.renderer.renderUI(ui, this.sim, this.world, settings);
+    this.groundLootTooltip.update(this.sim.player, this.sim.groundItems, this.sim.enemies, this.sim.projectiles,
+      this.renderer.groundLootLabels, this.renderer.combatViewport, this.renderer.width, this.renderer.height,
+      this.phase === 'playing' && !this.savingAction && !this.touch.active && !this.usingGamepad
+        && this.mouse.present && !this.pointerInHUD() ? this.mouse : null);
     if(this.phase==='playing'&&this.journeys.marker?.known){
       const marker=this.journeys.marker,point=this.renderer.worldToScreen(marker.x,marker.y);
       if(point.x>20&&point.x<this.renderer.width-20&&point.y>35&&point.y<this.renderer.height-30
