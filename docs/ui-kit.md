@@ -180,3 +180,8 @@ Tooltip surfaces are owned by `tooltip-material.css`, shared by item cards, gene
 The skill atlas now mounts one DOM tooltip over its cached Canvas, using that same material and a domain-colored corner glow. Live bonuses, gear ranks, costs and route requirements still come from the current character; the shared visibility envelope retains outgoing details through its fade without rebuilding the atlas. World-map tips use the same corner glow instead of a stripe, and dungeon-map tips inherit the shared surface rather than painting an opaque override. Tooltip geometry remains clamped to its viewport and does not capture input.
 
 Skill hover cards separate node identity, the owning skill, effects, cast facts and allocation status. The sidebar uses the same `skill-node-presentation.ts` ownership/role projection, including specialization/passive/mastery nodes. Skill-specific passive leaves state that their bonuses apply across all variants. Hover emphasizes a skill's leaf connections; only focused specialization names appear at close zoom, avoiding repeated school labels.
+
+
+## Main-menu changelog
+
+What's new opens a read-only release panel from the character hall. A compact dated history sits beside New/Tweaks/Fixes notes; narrow layouts turn the history into a horizontal strip. Notes use the shared game/numeral fonts, restrained category colors and the existing window shell. Focus is trapped in the reader and returns to the opener; Escape, controller B and native Back dismiss it first. LB/RB changes releases and the right stick scrolls notes. The same bundled `CHANGELOG.md` powers the repository and panel, with no network or save access. See [release workflow](releases.md).

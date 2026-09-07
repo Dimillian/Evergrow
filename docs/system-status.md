@@ -1,5 +1,9 @@
 # Current system status
 
+## Player changelog · 2026-09-07
+
+The character hall now opens a dated What’s new panel with New/Tweaks/Fixes sections, historical development recaps and controller/touch/keyboard navigation. `CHANGELOG.md` is its single bundled source. The release workflow requires committed, refreshed player-facing notes before each Sites publication. This panel does not access saves. See [release workflow](releases.md).
+
 ## Skill-owned specialization leaves · 2026-09-07
 
 All 20 skills have three implemented selectable variants (60 total). Each skill has three independent, three-point leaves with two skill-specific improvements before each specialization. Shared hover/details name the owning skill and separate effects/costs/unlock state. All 864 code tests and production compilation/build pass. Old school-specialization paths have been removed; characters invested in them may require a fresh test character. See [skill progression](skill-progression.md).

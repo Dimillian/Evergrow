@@ -4,6 +4,8 @@ Updated 2026-09-07. Use the current guides for implementation. Proposed designs 
 
 ## Start here
 
+- [Player changelog](../CHANGELOG.md) and [release workflow](releases.md): update, commit and verify player-facing notes before each Sites publication.
+
 - [Current system status](system-status.md): implemented features, source/content counts, limits, verification and recent checkpoints.
 - [Roadmap](roadmap.md): completed foundations, town economy delivery status and later candidates.
 - [Systems catalog](systems-catalog.md): stable system IDs with current coverage and remaining work.

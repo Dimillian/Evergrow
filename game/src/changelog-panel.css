@@ -1,0 +1,45 @@
+.changelog-overlay { position:absolute; inset:0; z-index:95; display:grid; place-items:center; padding:clamp(10px,3vw,32px); background:#03090dbc; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+.changelog-overlay[hidden] { display:none; }
+.changelog-window.ui-window { width:min(920px,100%); height:min(720px,100%); min-height:0; display:flex; flex-direction:column; background:radial-gradient(ellipse at 0 0,#263b43,#0b141c 65%); border-color:#8ba6ad55; box-shadow:0 24px 80px #0009; }
+.changelog-window .ui-window-header { flex:none; padding:12px 18px; }
+.changelog-window .ui-title { font-size:20px; }
+.changelog-layout { min-height:0; flex:1; display:grid; grid-template-columns:200px minmax(0,1fr); }
+.changelog-history { min-height:0; padding:12px; overflow:auto; border-right:1px solid #96b2bb20; }
+.changelog-release { display:flex; flex-direction:column; align-items:flex-start; gap:6px; width:100%; border:1px solid transparent; border-radius:4px; background:none; color:#8da4ad; padding:12px; text-align:left; cursor:pointer; }
+.changelog-release + .changelog-release { margin-top:5px; }
+.changelog-release time { font-size:12px; color:#83969f; }
+.changelog-release span { font-size:15px; line-height:1.3; }
+.changelog-release small { font-size:12px; color:#adcdb7; }
+.changelog-release[aria-current='true'] { background:#8cacb014; border-color:#9cc2c52b; color:#e1dfce; }
+.changelog-release:hover { background:#8cacb01a; }
+.changelog-release:focus-visible { outline:2px solid #c2d9d9; outline-offset:-2px; }
+.changelog-entry { min-width:0; min-height:0; overflow:auto; overscroll-behavior:contain; padding:24px clamp(18px,4vw,38px); }
+.changelog-entry:focus-visible { outline:1px solid #9ebac575; outline-offset:-4px; }
+.changelog-entry header time { color:#8aa1aa; font-size:13px; }
+.changelog-entry h3 { margin:6px 0 20px; color:#e3e1ce; font-size:25px; font-weight:500; line-height:1.2; }
+.changelog-notice { margin:0 0 18px; padding:10px 12px; background:#b2a46f0f; border:1px solid #b2a46f26; border-radius:4px; color:#c0bba8; font-size:14px; line-height:1.5; }
+.changelog-section + .changelog-section { margin-top:26px; }
+.changelog-section h4 { margin:0 0 13px; padding-bottom:8px; border-bottom:1px solid #9bb3bc20; color:#b1cdb9; font-size:15px; font-weight:500; }
+.changelog-section[data-kind='Tweaks'] h4 { color:#a6c4db; }
+.changelog-section[data-kind='Fixes'] h4 { color:#c4b7da; }
+.changelog-section ul { margin:0; padding-left:18px; }
+.changelog-section li { padding-left:4px; color:#b0c0c5; font-size:16px; line-height:1.6; overflow-wrap:anywhere; }
+.changelog-section li + li { margin-top:12px; }
+.changelog-section li::marker { color:#657f8b; font-size:11px; }
+.changelog-section strong { color:#dfdfd1; font-weight:500; }
+.changelog-footer { flex:none; font-size:12px; padding:10px 18px; color:#8da4ad; }
+.changelog-footer > span:last-child { margin-left:auto; }
+.changelog-footer > span:last-child span { margin-left:6px; }
+.title-updates { flex:none; padding:7px 0; border:0; background:none; color:#d6d7bb; font:13px var(--ui-font); cursor:pointer; }
+.title-updates:focus-visible { outline:2px solid #bfd6dc; outline-offset:3px; }
+@media(max-width:620px) {
+  .changelog-layout { grid-template-columns:1fr; grid-template-rows:auto minmax(0,1fr); }
+  .changelog-history { display:flex; overflow-x:auto; border-right:0; border-bottom:1px solid #96b2bb20; padding:8px; gap:5px; }
+  .changelog-release { flex:0 0 160px; padding:8px; }
+  .changelog-release + .changelog-release { margin:0; }
+  .changelog-release span { font-size:14px; }
+  .changelog-release small { display:none; }
+  .changelog-entry { padding-top:18px; }
+  .title-roster-footer { flex-wrap:wrap; }
+}
+@media(max-height:480px) and (min-width:621px) { .changelog-footer { display:none; } }

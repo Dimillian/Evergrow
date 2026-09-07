@@ -1,5 +1,7 @@
 # Evergrow
 
+[What’s new](CHANGELOG.md) · Read the same update notes from the game’s main menu.
+
 A gothic, top-down 2D action RPG built for the browser, inspired by Diablo and Path of Exile. Explore a growing wilderness, find gear, and build a character across a vast classless skill tree.
 
 **Playable prototype · actively iterating · not released.**

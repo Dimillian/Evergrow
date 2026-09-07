@@ -12,6 +12,7 @@
     "test": "npm --prefix game test",
     "test:browser": "npm --prefix game run test:browser",
     "android:build": "node scripts/build-android.mjs",
-    "android:install": "node scripts/build-android.mjs --install"
+    "android:install": "node scripts/build-android.mjs --install",
+    "release:check": "node --experimental-strip-types scripts/check-release.ts"
   }
 }

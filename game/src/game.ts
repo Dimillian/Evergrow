@@ -251,7 +251,7 @@ export class Game {
         portal: () => this.requestPortal(),
         background: () => { this.clearInput(); this.pause(); void this.saveCharacter(); this.audio.setEnabled(false); },
         foreground: () => { this.clearInput(); this.audio.setEnabled(!this.muted); },
-        back: () => { if(this.appearanceEditor){this.appearanceEditor.cancel();return;} if(this.thor.dismissInspection() || (this.phase === 'paused' && this.shell.backInMenu())) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
+        back: () => { if(this.phase === 'ready' && this.titleScreen.dismissChangelog()) return; if(this.appearanceEditor){this.appearanceEditor.cancel();return;} if(this.thor.dismissInspection() || (this.phase === 'paused' && this.shell.backInMenu())) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
       }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
       try {
@@ -315,6 +315,7 @@ export class Game {
         if (event.isTrusted && !(event.target instanceof HTMLInputElement) && !(event.target instanceof HTMLTextAreaElement) && !(event.target instanceof HTMLSelectElement) && !(event.target instanceof HTMLElement && event.target.isContentEditable)) { this.usingGamepad = false; this.touch.setActive(false); }
         if (event.code === 'Escape') {
           event.preventDefault();
+          if (this.phase === 'ready' && this.titleScreen.dismissChangelog()) return;
           if (!event.repeat) {
             if (this.sim.portal.active) { this.sim.portal.cancel(); return; }
             if (this.panels.activePanel) this.resume();
@@ -1038,6 +1039,7 @@ export class Game {
       this.notify('Controller disconnected.'); return;
     }
     const pad = this.gamepad;
+    if (this.phase === 'ready' && this.titleScreen.updateChangelogGamepad(pad, now)) return;
     if(this.appearanceEditor){
       if(pad.pressed.has(PAD.dodge)||pad.pressed.has(PAD.pause))this.appearanceEditor.cancel();
       else this.appearanceEditor.updateGamepad(pad,now);
