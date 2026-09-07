@@ -235,7 +235,7 @@ export interface Enemy {
 
 /** Frozen launch pose used only to connect the visible bolt to its emitting tip. */
 export interface BasicBoltLaunch {
-  weapon: WeaponVisual; hands: 1 | 2; facing: number; time: number;
+  weapon: WeaponVisual; mainWeapon: WeaponVisual; hand: 'main' | 'off'; hands: 1 | 2; facing: number; time: number;
   gaitPhase: number; moving: number; moveAngle: number; start: number; end: number;
 }
 export interface Projectile {

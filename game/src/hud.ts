@@ -1,3 +1,4 @@
+import { basicAttackWeapon } from './equipment.ts';
 import { basicAttackManaCost } from './equipment.ts';
 import { resolveSkill } from './skill-progression.ts';
 import { PAD_SKILL_LABELS } from './gamepad-input.ts';
@@ -45,7 +46,7 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = 
     const occupied = i === 0 || !!skill, active = i === 0 ? !!p.attack : !!skill && p.activeSkill === skill;
     const compatible = !skill || canUseSkill(skill, p.equipment);
     const resolved = skill ? resolveSkill(skill, p.derived, p.character) : null;
-    const manaCost = resolved?.mana ?? (i === 0 ? basicAttackManaCost(p.equipment.mainHand, p.derived) : 0);
+    const manaCost = resolved?.mana ?? (i === 0 ? basicAttackManaCost(basicAttackWeapon(p), p.derived) : 0);
     const usable = !p.dead && compatible && cooldown <= 0 && p.mana >= manaCost;
     c.save();
     chamfer(c, x, y, w, h, 3);
@@ -62,10 +63,10 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = 
       c.globalAlpha = usable ? 1 : .42;
       c.save(); c.translate(x + w / 2, y + 22); c.scale(1.08, 1.08);
       if (skill) drawActiveSkillIcon(c, skill);
-      else if (p.equipment.mainHand.family === 'unarmed') drawHUDSkillIcon(c, 0, 0, 0, time, active);
+      else if (basicAttackWeapon(p).family === 'unarmed') drawHUDSkillIcon(c, 0, 0, 0, time, active);
       else {
         c.save(); c.scale(.66, .66);
-        drawEquippedWeapon(c, [0, 9], -Math.PI / 3, color => color, p.equipment.mainHand.visual);
+        drawEquippedWeapon(c, [0, 9], -Math.PI / 3, color => color, basicAttackWeapon(p).visual);
         c.restore();
       }
       c.restore(); c.globalAlpha = 1;

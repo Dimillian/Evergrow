@@ -7,10 +7,11 @@ export const BOLT_LAUNCH_BLEND = .18;
 const tips = new WeakMap<BasicBoltLaunch, { x: number; y: number }>();
 /** The release pose stays independent of later aim, movement or gear changes. */
 export function basicBoltReleasePose(launch: BasicBoltLaunch): CharacterPose {
-  return { kind: 'player', weapon: launch.weapon, grip: launch.hands === 2 ? 'two-handed' : 'one-handed',
+  return { kind: 'player', weapon: launch.hand === 'off' ? launch.mainWeapon : launch.weapon,
+    offHand: launch.hand === 'off' ? { kind: 'weapon', visual: launch.weapon } : null, grip: launch.hands === 2 ? 'two-handed' : 'one-handed',
     angle: launch.facing, attackAngle: launch.facing, time: launch.time, gaitPhase: launch.gaitPhase,
     moving: launch.moving, moveAngle: launch.moveAngle, attack: launch.start, attackStart: launch.start,
-    attackEnd: launch.end, attackKind: 'ranged', attackHand: 'main', hitFlash: 0, dodging: false };
+    attackEnd: launch.end, attackKind: 'ranged', attackHand: launch.hand, hitFlash: 0, dodging: false };
 }
 export function basicBoltTip(launch: BasicBoltLaunch) {
   let tip = tips.get(launch);

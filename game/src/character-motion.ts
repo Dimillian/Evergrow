@@ -101,10 +101,12 @@ export function playerMotion(pose: CharacterPose) {
     : 1 - smooth((attack - start) / Math.max(.06, (end - start) * .75))) : 0);
   // Basic bolts lift/flick toward release, then ease back into carry. Keep their
   // pose separate from full skill casting, which may turn the weapon to aim.
-  const magicBasic = ranged && (pose.weapon?.kind === 'staff' || pose.weapon?.kind === 'wand') && pose.attackHand !== 'off';
+  const basicVisual = pose.attackHand === 'off' && pose.offHand?.kind === 'weapon' ? pose.offHand.visual : pose.weapon;
+  const magicBasic = ranged && (basicVisual?.kind === 'staff' || basicVisual?.kind === 'wand');
   const boltPulse = magicBasic && attack > 0 ? attack < start ? smooth(attack / start)
     : 1 - smooth((attack - start) / Math.max(.01, 1 - start)) : 0;
-  const basicImpulse = boltPulse * (1 - cast);
+  const basicImpulse = pose.attackHand === 'off' ? 0 : boltPulse * (1 - cast);
+  const offBasicImpulse = pose.attackHand === 'off' ? boltPulse * (1 - cast) : 0;
   const wandFlick = magicBasic && attack > 0 ? attack < start
     ? -.32 * Math.sin(Math.PI * attack / start) + .48 * smooth(attack / start)
     : .48 * (1 - smooth((attack - start) / Math.max(.01, 1 - start))) : 0;
@@ -152,6 +154,7 @@ export function playerMotion(pose: CharacterPose) {
     ? offRestAngle + Math.atan2(Math.sin(activeWeaponAngle - offRestAngle), Math.cos(activeWeaponAngle - offRestAngle)) * offBlend
     : activeWeaponAngle : offRestAngle;
   if (offWandCast > 0) offWeaponAngle = offRestAngle + Math.atan2(Math.sin(pose.angle - offRestAngle), Math.cos(pose.angle - offRestAngle)) * offWandCast;
+  if (offVisual?.kind === 'wand' && pose.attackHand === 'off') offWeaponAngle -= (Math.cos(pose.angle) >= 0 ? 1 : -1) * wandFlick * (1 - cast);
   if (offAttacking) weaponAngle = mainRestAngle + idleSway * (pose.weapon?.kind === 'wand' ? .3 : 1);
   const hipX = -moveY * step * 0.65 + Math.cos(pose.attackAngle) * commitment * 0.55;
   const hipY = Math.cos(phase * 2) * moving * 0.25 + crouch;
@@ -239,6 +242,8 @@ export function playerMotion(pose: CharacterPose) {
     offHand3[1] * (1 - offWandCast) + (Math.sin(pose.angle) * 16 - Math.cos(pose.angle) * 3) * offWandCast,
     offHand3[2] + offWandCast * 3,
   ];
+  if (offBasicImpulse > 0) offHand3 = [offHand3[0] + Math.cos(pose.angle) * offBasicImpulse * 4.2,
+    offHand3[1] + Math.sin(pose.angle) * offBasicImpulse * 4.2, offHand3[2] + offBasicImpulse * 2.8];
   let mainHand3: RigPoint = offAttacking && pose.weapon?.kind !== 'wand' ? [restHand[0], restingDepth, restingDepth * ARM_DEPTH_SCALE - restHand[1]] : weaponHand;
   // Keep the blade mount and sweep fixed; seat sword/dagger palms down
   // the actual hilt, with the forearm following that same contact point.

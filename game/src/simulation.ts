@@ -1,4 +1,4 @@
-import { alternatesBasicAttacks } from './equipment.ts';
+import { alternatesBasicAttacks, basicAttackWeapon } from './equipment.ts';
 import { skillWeapon } from './skill-content.ts';
 import { weaponImpactStyle } from './elemental-weapon.ts';
 import { breakContainer, strikeContainers, strikeContainerSegment, type ContainerAttackContext } from './breakable-containers.ts';
@@ -404,7 +404,7 @@ export class Simulation {
       }
     }
     const aimingSkill = this.skillBuffer && this.skillBuffer.until >= this.time ? p.character.skillSlots[this.skillBuffer.slot] : null;
-    const aimingWeapon = aimingSkill ? skillWeapon(aimingSkill, p.equipment) ?? p.equipment.mainHand : p.equipment.mainHand;
+    const aimingWeapon = aimingSkill ? skillWeapon(aimingSkill, p.equipment) ?? basicAttackWeapon(p) : basicAttackWeapon(p);
     const direction = aimingWeapon.attackKind !== 'melee' && input.rangedAim
       && Number.isFinite(input.rangedAim.x) && Number.isFinite(input.rangedAim.y) ? input.rangedAim : { x: input.aimX, y: input.aimY };
     if (direction.x !== p.x || direction.y !== p.y) p.angle = Math.atan2(direction.y - p.y, direction.x - p.x);
@@ -432,7 +432,7 @@ export class Simulation {
           { owner: 'player', damage: attack.damage, speed, life: attack.range / speed, radius: style === 'arrow' ? 2 : 5 },
           undefined, attack.projectile);
         if (shot && attack.weapon.attackKind === 'bolt') shot.launch = {
-          weapon: { ...attack.weapon.visual }, hands: attack.weapon.hands, facing: attack.angle, time: this.time,
+          weapon: { ...attack.weapon.visual }, mainWeapon: { ...p.equipment.mainHand.visual }, hand: attack.hand, hands: attack.weapon.hands, facing: attack.angle, time: this.time,
           gaitPhase: p.walkTime, moving: Math.min(1, Math.hypot(p.vx, p.vy) / 130), moveAngle: Math.atan2(p.vy, p.vx),
           start: attack.activeStart / attack.duration, end: attack.activeEnd / attack.duration,
         };

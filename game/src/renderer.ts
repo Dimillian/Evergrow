@@ -1,3 +1,4 @@
+import { basicAttackWeapon } from './equipment.ts';
 import { projectilePresentation } from './projectile-launch.ts';
 import { heldEquipmentLights } from './weapon-emission.ts';
 import { MaterialResponses } from './material-response.ts';
@@ -175,7 +176,7 @@ export class Renderer {
   worldToScreen(x: number, y: number) { return worldToScreen(this.view, x, y); }
 
   /** Uses the displayed camera/body positions, then returns gameplay ground coordinates. */
-  resolvePointerAim(sim: Simulation, world: World, x: number, y: number, enabled: boolean, weapon = sim.player.equipment.mainHand): RangedAim | null {
+  resolvePointerAim(sim: Simulation, world: World, x: number, y: number, enabled: boolean, weapon = basicAttackWeapon(sim.player)): RangedAim | null {
     const p = sim.player;
     if (!enabled || p.dead || weapon.attackKind === 'melee') { this.rangedAim = null; return null; }
     const cursor = screenToWorld(this.lastDisplayedView, x, y);
@@ -823,7 +824,7 @@ export class Renderer {
     const x = this.pointerX, y = this.pointerY;
     const aim = this.rangedAim, player = sim.player;
     const target = aim?.targetId == null ? null : sim.enemies.find(e => e.id === aim.targetId && e.hp > 0);
-    if (aim && (player.equipment.mainHand.attackKind !== 'melee' || this.gamepadActive || this.touchActive)) {
+    if (aim && (basicAttackWeapon(player).attackKind !== 'melee' || this.gamepadActive || this.touchActive)) {
       const origin = worldToScreen(this.view, player.x, player.y - PROJECTILE_HEIGHT);
       const end = worldToScreen(this.view, aim.x, aim.y - PROJECTILE_HEIGHT);
       const dx = end.x - origin.x, dy = end.y - origin.y, distance = Math.hypot(dx, dy);

@@ -1,5 +1,5 @@
 import type { DerivedCharacterStats } from './character-types.ts';
-import type { CharacterStats, Equipment, WeaponDefinition } from './model.ts';
+import type { CharacterStats, Equipment, WeaponDefinition, Player } from './model.ts';
 export type { CharacterStats, Equipment, WeaponDefinition, WeaponVisual } from './model.ts';
 
 export interface DerivedAttackStats {
@@ -78,8 +78,16 @@ export const UNARMED_WEAPON: WeaponDefinition = {
   visual: { ...STARTING_SWORD.visual, kind: 'unarmed', length: 0, width: 0 },
 };
 
-/** Only paired melee weapons alternate basics; mixed builds use the main-hand basic. */
+/** One action at a time: any two valid one-handed weapons alternate basics. */
 export function alternatesBasicAttacks(equipment: Equipment): boolean {
-  return equipment.mainHand.hands === 1 && equipment.mainHand.attackKind === 'melee'
-    && equipment.offHand?.kind === 'weapon' && equipment.offHand.weapon.hands === 1 && equipment.offHand.weapon.attackKind === 'melee';
+  return equipment.mainHand.hands === 1 && equipment.mainHand.family !== 'unarmed'
+    && equipment.offHand?.kind === 'weapon' && equipment.offHand.weapon.hands === 1;
+}
+
+/** Shared current/next basic weapon for aiming, mana hints and action presentation. */
+export function basicAttackWeapon(player: Pick<Player, 'equipment' | 'nextAttackHand' | 'attack'>): WeaponDefinition {
+  if (player.attack) return player.attack.weapon;
+  const off = player.equipment.offHand;
+  return alternatesBasicAttacks(player.equipment) && player.nextAttackHand === 'off' && off?.kind === 'weapon'
+    ? off.weapon : player.equipment.mainHand;
 }

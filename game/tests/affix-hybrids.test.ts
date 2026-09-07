@@ -53,7 +53,7 @@ test('elemental weapon affixes remain uncommon rolls in generation and enchantin
   }
   for (const value of [drops, rerolls]) assert.ok(value / count > .02 && value / count < .08, `${value}/${count}`);
 });
-test('sword + offhand wand casts Fireball, keeps sword basics mana-free and round-trips saves', () => {
+test('sword + offhand wand casts Fireball, keeps the sword swing mana-free and round-trips saves', () => {
   const sim = new Simulation(world, { spawn: false }), p = sim.player;
   p.character.equipped.weapon = generateItem(3, 1, 'weapon', 'longsword', 'common'); p.character.equipped.offhand = null;
   p.character.inventory[0] = generateItem(4, 1, 'weapon', 'cinder-wand', 'common');
@@ -61,7 +61,9 @@ test('sword + offhand wand casts Fireball, keeps sword basics mana-free and roun
   assert.equal(skillWeapon('fireball', p.equipment), p.character.equipped.offhand!.weapon);
   const checkpoint = sim.captureCheckpoint();
   assert.ok(decodeCharacterSave(JSON.stringify({ version: CHARACTER_SAVE_VERSION, id: 'hybrid-save', name: 'Hybrid', createdAt: 1, updatedAt: 1, worldSeed: 7319, worldVersion: 4, checkpoint })));
-  for (let i = 0; i < 180; i++) { sim.update(FIXED_STEP, { ...idle, attack: true }); if (p.attack) assert.equal(p.attack.hand, 'main'); }
+  sim.update(FIXED_STEP, { ...idle, attack: true });
+  assert.equal(p.attack!.hand, 'main');
+  for (let i = 0; i < 180; i++) sim.update(FIXED_STEP, idle);
   assert.equal(p.mana, p.maxMana);
   for (let i = 0; i < 120; i++) sim.update(FIXED_STEP, idle);
   p.character.allocatedNodes.push('skill:fireball'); p.character.skillSlots[0] = 'fireball';

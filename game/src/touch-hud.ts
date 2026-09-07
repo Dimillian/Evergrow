@@ -1,3 +1,4 @@
+import { basicAttackWeapon } from './equipment.ts';
 import { PORTAL_RULES } from './travel.ts';
 import { TouchInput, type TouchAction } from './touch-input.ts';
 import { touchTargeting } from './touch-targeting.ts';
@@ -188,7 +189,7 @@ export class TouchHUD {
     this.element.querySelector('.touch-potion')!.classList.toggle('is-unavailable',player.flasks===0||player.healCooldown>0||(player.hp>=player.maxHp&&player.mana>=player.maxMana));
     this.element.querySelector('.touch-dodge small')!.textContent = String(player.dodgeCharges);
     this.element.querySelector('.touch-dodge')!.classList.toggle('is-unavailable',player.dodgeCharges===0);
-    this.element.querySelector('.touch-attack')!.classList.toggle('is-unavailable',player.mana<basicAttackManaCost(player.equipment.mainHand,player.derived));
+    this.element.querySelector('.touch-attack')!.classList.toggle('is-unavailable',player.mana<basicAttackManaCost(basicAttackWeapon(player),player.derived));
   }
   setPortal(progress: number | null, returning: boolean) {
     if(!this.active) return;

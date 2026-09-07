@@ -1,3 +1,4 @@
+import { basicAttackWeapon } from './equipment.ts';
 import { GroundLootTooltip } from './ground-loot-tooltip.ts';
 import { createAppearanceEditor } from './character-editor.ts';
 import { executeAppearanceChange } from './character-commands.ts';
@@ -865,7 +866,7 @@ export class Game {
       const p = this.sim.player, touch = this.touch.input;
       const preview = touch.preview;
       const id = touch.aimingSlot !== null ? p.character.skillSlots[touch.aimingSlot] : null;
-      const weapon = id ? skillWeapon(id,p.equipment) ?? p.equipment.mainHand : p.equipment.mainHand;
+      const weapon = id ? skillWeapon(id,p.equipment) ?? basicAttackWeapon(p) : basicAttackWeapon(p);
       const distance = Math.min(900,deriveAttackStats(p.stats,weapon).range) * touch.distance;
       const raw = {x:p.x+touch.aim.x*distance,y:p.y+touch.aim.y*distance};
       const recipe = id ? resolveSkill(id,p.derived,p.character).recipe : null;
@@ -889,7 +890,7 @@ export class Game {
       let aim = { x: p.x + Math.cos(angle) * this.padAimDistance, y: p.y + Math.sin(angle) * this.padAimDistance };
       const input = pad.gameplay(aim);
       const id = input.skillSlot !== null ? p.character.skillSlots[input.skillSlot] : null;
-      const weapon = id ? skillWeapon(id,p.equipment) ?? p.equipment.mainHand : p.equipment.mainHand;
+      const weapon = id ? skillWeapon(id,p.equipment) ?? basicAttackWeapon(p) : basicAttackWeapon(p);
       const recipe = id ? resolveSkill(id,p.derived,p.character).recipe : null;
       const assisted = this.renderer.resolveDirectionAim(this.sim, this.world, aim,
         directionalAimProfile(deriveAttackStats(p.stats,weapon).range, weapon.attackKind, recipe));
@@ -910,7 +911,7 @@ export class Game {
     if (blocked) this.sim.clearCombatInput();
     const input = this.input.consume(aim, blocked);
     const aimSkill = input.skillSlot !== null ? p.character.skillSlots[input.skillSlot] : null;
-    const aimWeapon = aimSkill ? skillWeapon(aimSkill, p.equipment) ?? p.equipment.mainHand : p.equipment.mainHand;
+    const aimWeapon = aimSkill ? skillWeapon(aimSkill, p.equipment) ?? basicAttackWeapon(p) : basicAttackWeapon(p);
     const rangedAim = this.renderer.resolvePointerAim(this.sim, this.world, this.mouse.x, this.mouse.y, !blocked && this.mouse.present, aimWeapon);
     return rangedAim ? { ...input, rangedAim: { x: rangedAim.x, y: rangedAim.y } } : input;
   }

@@ -52,7 +52,7 @@ for (const [index, [label, profile, extra]] of samples.entries()) {
       const age = (attackPhase - start) * duration, speed = 380, vx = Math.cos(sim.player.angle) * speed, vy = Math.sin(sim.player.angle) * speed;
       sim.projectiles.push({ id: 1, sourceLevel: 8, owner: 'player', x: x + vx * age, y: y + vy * age,
         prevX: x + vx * age, prevY: y + vy * age, vx, vy, angle: sim.player.angle, radius: 5, damage: stats.damage,
-        life: 2 - age, maxLife: 2, effects: { style }, hitIds: new Set(), launch: { weapon: weapon.visual, hands: weapon.hands,
+        life: 2 - age, maxLife: 2, effects: { style }, hitIds: new Set(), launch: { weapon: weapon.visual, mainWeapon: weapon.visual, hand: 'main', hands: weapon.hands,
           facing: sim.player.angle, time: sim.time, gaitPhase: 0, moving: 0, moveAngle: 0, start, end } });
     }
   }
