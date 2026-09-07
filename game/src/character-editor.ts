@@ -27,7 +27,7 @@ const initialLook=structuredClone(options.look??options.sheet.look);
 const abort = new AbortController(), reduced = matchMedia('(prefers-reduced-motion: reduce)');
 let appearance:CharacterAppearance={...initialLook.appearance};
 const initial = { ...appearance };
-let facing = Math.PI / 2, loadout: StarterLoadoutId = 'sword-shield', showHood = initialLook.showHelmet;
+let facing = Math.PI / 2, loadout: StarterLoadoutId = 'sword-shield', showHelmet = initialLook.showHelmet;
 const studyView=options.view;
 let tints:ArmorTints={...initialLook.armorTints}, selectedPart:ArmorPart='chest', tab:'character'|'armor'=studyView==='armor'?'armor':'character';
 let busy=false;
@@ -51,7 +51,7 @@ root.innerHTML = `<div class="editor-shell">
         <div class="face-study"><canvas id="face" role="img" aria-label="Face close-up"></canvas><span>Face detail</span></div>
         <div class="world-study"><canvas id="world-size" role="img" aria-label="Small character preview"></canvas><span>Small scale</span></div></div>
       <div class="rotation"><button type="button" class="ui-button ui-button--quiet ui-button--icon rotate-left" id="rotate-left" aria-label="Rotate left">${uiIcon('chevron')}</button><output id="direction">Front</output><button type="button" class="ui-button ui-button--quiet ui-button--icon" id="rotate-right" aria-label="Rotate right">${uiIcon('chevron')}</button></div>
-      <div class="stage-options"><label class="check-label"><input type="checkbox" id="hood">Show helmet</label><label class="gear-choice">Gear<select id="gear">${STARTER_LOADOUTS.map(p => `<option value="${p.id}">${p.label}</option>`).join('')}</select></label></div>
+      <div class="stage-options"><label class="gear-choice">Gear<select id="gear">${STARTER_LOADOUTS.map(p => `<option value="${p.id}">${p.label}</option>`).join('')}</select></label></div>
     </section>
     <section class="editor-controls ui-window" aria-label="Appearance editor">
       <div class="editor-tabs" role="tablist" aria-label="Appearance category"><button type="button" role="tab" id="character-tab" data-tab="character" aria-controls="character-options" aria-selected="true">Character</button><button type="button" role="tab" id="armor-tab" data-tab="armor" aria-controls="armor-options" aria-selected="false">Armor</button></div>
@@ -79,20 +79,19 @@ const canvas = (id: string) => root.querySelector<HTMLCanvasElement>(`#${id}`)!;
 const figure = canvas('figure'), face = canvas('face'), small = canvas('world-size');
 const name = root.querySelector<HTMLInputElement>('#name')!;
 const gear = root.querySelector<HTMLSelectElement>('#gear')!;
-const hood = root.querySelector<HTMLInputElement>('#hood')!;
 const facial = root.querySelector<HTMLSelectElement>('#facial-hair')!;
 const accessory = root.querySelector<HTMLSelectElement>('#accessory')!;
 const helmet = root.querySelector<HTMLInputElement>('#helmet-visible')!;
 gear.value = loadout;
 let sheet = structuredClone(options.sheet);
-if(!options.study)root.querySelector<HTMLElement>('.gear-choice')!.hidden=true;
+if(!options.study)root.querySelector<HTMLElement>('.stage-options')!.hidden=true;
 let envelope: CharacterBounds = { left:-60, right:60, top:-70, bottom:20 };
 const label = <T extends {id: string; name: string}>(catalog: readonly T[], id: string) => catalog.find(p => p.id === id)!.name;
 function pose(time: number, source:CharacterSheet=sheet, angle=facing): CharacterPose {
   const main = source.equipped.weapon?.weapon ?? UNARMED_WEAPON;
   const off = source.equipped.offhand;
   return { kind: 'player', appearance, time, angle, attackAngle: angle, moving: 0, attack: 0, hitFlash: 0, dodging: false,
-    outfit: tintedOutfit(outfitFromEquipment(source),tints,showHood),
+    outfit: tintedOutfit(outfitFromEquipment(source),tints,showHelmet),
     weapon: main.visual, grip: main.hands === 2 ? 'two-handed' : 'one-handed',
     offHand: off?.shield ? { kind: 'shield', visual: off.shield.visual } : off?.focus ? { kind: 'focus', visual: off.focus.visual } : off?.weapon ? {kind:'weapon',visual:off.weapon.visual}:null };
 }
@@ -121,7 +120,7 @@ function drawHead(target: HTMLCanvasElement, recipe: CharacterAppearance, angle:
 function draw(time = 0) {
   if (disposed) return;
 
-  drawFigure(figure, time); drawFigure(small, 0, true); drawHead(face, appearance, facing, showHood);
+  drawFigure(figure, time); drawFigure(small, 0, true); drawHead(face, appearance, facing, showHelmet);
 }
 function refresh() {
 
@@ -143,7 +142,7 @@ function refresh() {
   root.querySelector<HTMLElement>('#character-options')!.hidden=tab!=='character';
   root.querySelector<HTMLElement>('#armor-options')!.hidden=tab!=='armor';
   root.querySelector<HTMLElement>('.editor-actions')!.hidden=tab==='armor';
-  helmet.checked=showHood;hood.checked=showHood;
+  helmet.checked=showHelmet;
   const slotFor=(part:ArmorPart)=>part==='shoulders'?'chest':part==='hands'?'gloves':part;
   for(const part of ARMOR_PARTS) {
     root.querySelector(`[data-part="${part.id}"]`)!.setAttribute('aria-pressed',String(selectedPart===part.id));
@@ -155,12 +154,12 @@ function refresh() {
   root.querySelector('#tint-label')!.textContent=ARMOR_TINTS.find(p=>p.id===tints[selectedPart])?.name??'Original';
   root.querySelector('#original-color')!.setAttribute('aria-pressed',String(!tints[selectedPart]));
   root.querySelectorAll<HTMLButtonElement>('[data-tint]').forEach(b=>b.setAttribute('aria-pressed',String(tints[selectedPart]===b.dataset.tint)));
-  root.querySelector('#armor-note')!.textContent=selectedPart==='head'&&!showHood?'Helmet is hidden. Enable Show helmet to preview its tint.':'Select a part to tint. Shading and trim keep their original detail.';
+  root.querySelector('#armor-note')!.textContent=selectedPart==='head'&&!showHelmet?'Helmet is hidden. Enable Show helmet to preview its tint.':'Select a part to tint. Shading and trim keep their original detail.';
   root.querySelector('#skin-label')!.textContent = label(SKIN_PALETTES, appearance.skin);
   root.querySelector('#hair-label')!.textContent = label(HAIR_STYLES, appearance.hair);
   root.querySelector('#color-label')!.textContent = label(HAIR_PALETTES, appearance.hairColor);
   root.querySelector('#direction')!.textContent = directions[Math.round(((facing % (Math.PI * 2)) + Math.PI * 2) / (Math.PI / 4)) % 8];
-  root.querySelector('#coverage-note')!.textContent = showHood ? 'The hood covers hair, hoops and circlets.' : 'Hair and accessories follow your selected facing.';
+  root.querySelector('#coverage-note')!.textContent = showHelmet ? 'The hood covers hair, hoops and circlets.' : 'Hair and accessories follow your selected facing.';
   root.querySelector('#preview-name')!.textContent = name.value.trim() || 'Wayfarer';
   facial.value = appearance.facialHair; accessory.value = appearance.accessory;
   for (const target of root.querySelectorAll<HTMLCanvasElement>('.hair-option:not([hidden]) [data-hair]')) {
@@ -195,8 +194,7 @@ root.addEventListener('click', event => {
   refresh();
 }, { signal:abort.signal });
 gear.addEventListener('change', () => { if (isStarterLoadoutId(gear.value)) { loadout = gear.value; sheet = createCharacterSheet(loadout); refresh(); } }, { signal:abort.signal });
-hood.addEventListener('change', () => { showHood = hood.checked; refresh(); }, { signal:abort.signal });
-helmet.addEventListener('change',()=>{showHood=helmet.checked;refresh();},{signal:abort.signal});
+helmet.addEventListener('change',()=>{showHelmet=helmet.checked;refresh();},{signal:abort.signal});
 root.querySelector('.editor-tabs')!.addEventListener('keydown',event=>{const e=event as KeyboardEvent;if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();tab=tab==='character'?'armor':'character';root.querySelector('.editor-controls')!.scrollTop=0;refresh();root.querySelector<HTMLButtonElement>(`[data-tab="${tab}"]`)!.focus();}},{signal:abort.signal});
 facial.addEventListener('change', () => { appearance.facialHair = facial.value as CharacterAppearance['facialHair']; refresh(); }, { signal:abort.signal });
 accessory.addEventListener('change', () => { appearance.accessory = accessory.value as CharacterAppearance['accessory']; refresh(); }, { signal:abort.signal });
@@ -207,7 +205,7 @@ figure.addEventListener('pointermove', event => { if (drag?.id !== event.pointer
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) figure.addEventListener(type, () => { drag = null; }, { signal:abort.signal });
 window.addEventListener('resize', refresh, { signal:abort.signal });
 reduced.addEventListener('change', refresh, { signal:abort.signal });
-function currentLook():CharacterLook{return {appearance:{...appearance},armorTints:{...tints},showHelmet:showHood};}
+function currentLook():CharacterLook{return {appearance:{...appearance},armorTints:{...tints},showHelmet:showHelmet};}
 function cancel(){if(!busy&&!disposed)options.onCancel(currentLook());}
 async function save(){
   if(busy||!options.onSave)return;busy=true;

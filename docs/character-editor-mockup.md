@@ -16,7 +16,7 @@ Open [the character editor](http://127.0.0.1:5173/character-editor.html) with th
 - Armor tab with sixteen tints for helmet, chest, shoulders, gloves, legs, boots and cloak independently. Each part can use its original color; reset restores all original colors. Helmet visibility is an independent checkbox and survives color resets.
 - **Inventory preview** opens the actual inventory panel around a disposable character. The edit icon immediately after the **Equipment** title uses the same sizing as the inventory sort tools and opens the Character tab directly, with the draft intact. Armor remains available through its tab. This entry point is now enabled in gameplay through the shared component.
 - Full equipped character, face close-up, desktop small-scale view, eight facing buttons and drag-to-rotate.
-- All six starter loadouts and a Show helmet preview toggle, labeled consistently with the Armor tab. Switching gear preserves the appearance draft.
+- All six starter loadouts and one Show helmet toggle in the Armor tab; the duplicate preview-side checkbox was removed. Switching gear preserves the appearance draft.
 - Name preview, independent cosmetic randomization and appearance reset. The live character view is the preview; the redundant Review look dialog and its portrait export were removed.
 - Keyboard/pointer/touch controls, reduced-motion handling, and a fixed phone preview above independently scrolling controls with sticky Character/Armor tabs. Gamepad navigation and native packaging are not part of this mockup.
 
