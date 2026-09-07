@@ -1,3 +1,4 @@
+import { isBossKind } from './wilderness-boss-content.ts';
 import { WARDEN_RULES } from './dungeon-boss.ts';
 import type { Enemy, ProjectileStyle } from './model.ts';
 import { interruptStaggeredEnemy } from './enemy-state.ts';
@@ -10,7 +11,7 @@ export const STATUS_RULES = Object.freeze({ burnInterval: .5 });
  * it does not add stacks or restart the accrued burn tick. Dead targets ignore effects. */
 export function applySlow(enemy: Enemy, effect: SlowEffect): void {
   if (enemy.state === 'dead') return;
-  if (enemy.kind === 'warden') effect = { duration: effect.duration * .5, factor: Math.max(.65, effect.factor) };
+  if (isBossKind(enemy.kind)) effect = { duration: effect.duration * .5, factor: Math.max(.65, effect.factor) };
   enemy.slowTime = Math.max(enemy.slowTime, effect.duration);
   enemy.slowFactor = Math.min(enemy.slowFactor, effect.factor);
 }
@@ -21,7 +22,7 @@ export function applyBurn(enemy: Enemy, effect: BurnEffect): void {
 }
 export function applyStun(enemy: Enemy, duration: number, kind: 'stun' | 'freeze' | 'stagger' = 'stun'): void {
   if (enemy.state === 'dead') return;
-  if (enemy.kind === 'warden') { if ((enemy.controlImmunity ?? 0) > 0) return; duration = Math.min(.35, duration * WARDEN_RULES.controlFactor); enemy.controlImmunity = WARDEN_RULES.controlImmunity; }
+  if (isBossKind(enemy.kind)) { if ((enemy.controlImmunity ?? 0) > 0) return; duration = Math.min(.35, duration * WARDEN_RULES.controlFactor); enemy.controlImmunity = WARDEN_RULES.controlImmunity; }
   enemy.stagger = Math.max(enemy.stagger, duration); enemy.interrupted = true;
   if (kind === 'freeze') enemy.freezeTime = Math.max(enemy.freezeTime ?? 0, duration);
   if (kind === 'stun') enemy.stunTime = Math.max(enemy.stunTime ?? 0, duration);

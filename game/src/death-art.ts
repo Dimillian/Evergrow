@@ -1,3 +1,4 @@
+import { isBossKind } from './wilderness-boss-content.ts';
 import { drawHumanoid } from './art.ts';
 import { drawHumanoidDeath, DEATH_MATERIALS } from './death-humanoid-art.ts';
 import { drawHoundDeath, drawWispDeath } from './death-creature-art.ts';
@@ -13,7 +14,7 @@ export function drawDeathFigure(c:CanvasRenderingContext2D,kind:EnemyKind,varian
   const travel=recipe.travel*ease(age/recipe.contact)*scale;
   c.save();
   c.fillStyle='#050c0990';c.beginPath();
-  c.ellipse(Math.cos(facing)*travel*.45,Math.sin(facing)*travel*.25+1,kind==='warden'?32:kind==='brute'?20:14,kind==='warden'?10:4,0,0,Math.PI*2);c.fill();
+  c.ellipse(Math.cos(facing)*travel*.45,Math.sin(facing)*travel*.25+1,isBossKind(kind)?32:kind==='brute'?20:14,isBossKind(kind)?10:4,0,0,Math.PI*2);c.fill();
   // Short silhouette handoff. There is no transformation of the standing image.
   const blend=ease(age/.1);
   if(blend<1) {
@@ -55,7 +56,7 @@ export function drawEnemyRemains(c:CanvasRenderingContext2D,r:EnemyRemains,reduc
   c.save();c.translate(r.x,r.y);c.globalAlpha*=pose.opacity;
   if((pose.settled || r.element === 'frost')&&typeof document!=='undefined') {
     let art=settledArt.get(r);
-    const size=r.kind==='warden'?384:192;
+    const size=isBossKind(r.kind)?384:192;
     if(!art) {
       art=document.createElement('canvas');art.width=art.height=size*2;
       const ctx=art.getContext('2d')!;ctx.translate(size,size);ctx.scale(2,2);

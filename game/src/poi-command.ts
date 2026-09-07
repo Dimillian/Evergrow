@@ -19,6 +19,7 @@ export interface EventResult {
   message: string;
 }
 export function eventProblem(sim: Simulation, site: EventSite, choice: EventChoice | null): string | null {
+  if(site.kind==='bossLair')return 'Defeat the boss to open its hoard.';
   if (!focusEvent([site], sim.player, sim.world))
     return 'Move closer.';
   const record = sim.eventState.sites[site.id];
@@ -113,7 +114,7 @@ async function commitEvent(sim: Simulation, site: EventSite, choice: EventChoice
 
 /** Completed trials deliver automatically; capacity delays never require another interaction. */
 export function pendingEventReward(sim:Simulation,record:EventRecord):boolean {
-  if(!isTrialKind(record.kind)||record.phase!=='completed'||sim.player.dead||sim.dungeonFloor||Math.hypot(sim.player.x-record.x,sim.player.y-record.y)>EVENT_RULES.trialRadius)return false;
+  if((!isTrialKind(record.kind)&&record.kind!=='bossLair')||record.phase!=='completed'||sim.player.dead||sim.dungeonFloor||Math.hypot(sim.player.x-record.x,sim.player.y-record.y)>EVENT_RULES.trialRadius)return false;
   if(!record.bonusGranted)return true;
   const bundle=eventRewards(record);
   return (sim.groundItems.length<LOOT_RULES.maxGroundItems&&bundle.items.some((_,i)=>!(record.delivered&(1<<i))))

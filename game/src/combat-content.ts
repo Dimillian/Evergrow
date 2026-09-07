@@ -1,3 +1,4 @@
+import { LAIR_RULES } from './wilderness-boss-content.ts';
 import type { EnemyKind, Projectile } from './model.ts';
 
 /** Authored balance is immutable; each simulation owns its mutable actor state. */
@@ -65,6 +66,9 @@ export type EnemyDefinition = EnemyBaseDefinition & (
 );
 
 export const ENEMY_DEFINITIONS: Readonly<Record<EnemyKind, EnemyDefinition>> = Object.freeze({
+  briarMatriarch: Object.freeze({ name: 'Briar Matriarch', hp: 1450, xpReward: 160, radius: 27, speed: 88, windup: .85, active: .28, recovery: 1.1, range: LAIR_RULES.sweepReach, damage: 21, aimLock: 0, attack: 'melee', arc: LAIR_RULES.sweepArc, lungeSpeed: 0, awarenessDistance: 430, preferredDistance: 110, role: 'heavy', knockbackDistance: 0, interruptible: false }),
+  ashColossus: Object.freeze({ name: 'Ashbound Colossus', hp: 1900, xpReward: 160, radius: 27, speed: 57, windup: .85, active: .28, recovery: 1.1, range: LAIR_RULES.sweepReach, damage: 26, aimLock: 0, attack: 'melee', arc: LAIR_RULES.sweepArc, lungeSpeed: 0, awarenessDistance: 430, preferredDistance: 110, role: 'heavy', knockbackDistance: 0, interruptible: false }),
+  graveMarshal: Object.freeze({ name: 'Grave Marshal', hp: 1650, xpReward: 160, radius: 27, speed: 75, windup: .85, active: .28, recovery: 1.1, range: LAIR_RULES.sweepReach, damage: 23, aimLock: 0, attack: 'melee', arc: LAIR_RULES.sweepArc, lungeSpeed: 0, awarenessDistance: 430, preferredDistance: 110, role: 'heavy', knockbackDistance: 0, interruptible: false }),
   warden: Object.freeze({ name: 'The Hollow Warden', hp: 1800, xpReward: 120, radius: 24, speed: 66, windup: .9, active: .22, recovery: 0.8, range: 125, damage: 18, aimLock: .1, attack: 'melee', arc: Math.PI * 1.3, lungeSpeed: 0, awarenessDistance: 700, preferredDistance: 100, role: 'heavy', knockbackDistance: 0, interruptible: false }),
   goblin: Object.freeze({ name: 'Scrap Goblin', hp: 22, xpReward: 6, radius: 6, speed: 132,
     windup: .38, active: .15, recovery: 0.48, range: 22, damage: 5, aimLock: .13,

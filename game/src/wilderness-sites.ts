@@ -1,3 +1,5 @@
+import { bossForBiome, BOSS_NAMES, LAIR_RULES } from './wilderness-boss-content.ts';
+import { getZoneAt } from './zone-progression.ts';
 import { withGoblinWarband } from './goblin-camps.ts';
 import { sampleBiome, type BiomeId } from './biomes.ts';
 import { roadPaths, pathDistance } from './road-shape.ts';
@@ -5,8 +7,8 @@ import type { EnemyKind } from './model.ts';
 import type { EnemyRank } from './progression-content.ts';
 import type { WorldPOI } from './world-pois.ts';
 
-export const WILDERNESS_RULES = Object.freeze({ cellSize: 1400, maxRadius: 280, cacheLimit: 128, maxQueryCells: 4096 });
-export type WildernessKind = 'camp' | 'watchtower' | 'graveyard' | 'standingStones' | 'caravan' | 'cursedChest' | 'ruinedChapel' | 'beastDen' | 'quarry' | 'hamlet' | 'crossing' | 'corruptedGrove';
+export const WILDERNESS_RULES = Object.freeze({ cellSize: 1400, maxRadius: 370, cacheLimit: 128, maxQueryCells: 4096 });
+export type WildernessKind = 'bossLair' | 'camp' | 'watchtower' | 'graveyard' | 'standingStones' | 'caravan' | 'cursedChest' | 'ruinedChapel' | 'beastDen' | 'quarry' | 'hamlet' | 'crossing' | 'corruptedGrove';
 export type SiteDecorKind = 'tent' | 'fire' | 'crate' | 'barrel' | 'banner' | 'fence' | 'bones' | 'bedroll'
   | 'nest' | 'arch' | 'crystal' | 'cottage' | 'root' | 'barricade' | 'tower' | 'gravestone' | 'standingStone' | 'altar' | 'wagon' | 'wheel' | 'lantern';
 export interface SiteDecor {
@@ -66,6 +68,7 @@ export function siteHash(x: number, y: number, seed: number, salt = 0): number {
 const random = (seed: number, salt: number) => siteHash(seed, salt, 97183) / UINT_RANGE;
 const KINDS: readonly WildernessKind[] = ['camp', 'camp', 'watchtower', 'graveyard', 'standingStones', 'caravan', 'cursedChest', 'ruinedChapel', 'beastDen', 'quarry', 'hamlet', 'crossing', 'corruptedGrove'];
 const DESCRIPTIONS: Record<WildernessKind, string> = {
+  bossLair: 'A wilderness boss and its elite retinue. Clear the perimeter, then challenge the ruler for a rare hoard.',
   cursedChest:'A chained hoard. Clear waves before the curse expires.', ruinedChapel:'Broken arches shelter a forbidden ritual.', beastDen:'Tracks converge around a hungry brood.', quarry:'Cut stone and exposed crystal beneath abandoned workings.', hamlet:'Occupied homes around a ruined square.', crossing:'A guarded passage along the trade road.', corruptedGrove:'Living roots bind an infected heartwood.',
   camp: 'A watchfire among stitched hides and stolen supplies. Its sentries guard the approaches; defeating the whole garrison clears this camp for the current run.',
   watchtower: 'A broken signal tower, its lantern still burning above an overgrown patrol court.',
@@ -74,6 +77,7 @@ const DESCRIPTIONS: Record<WildernessKind, string> = {
   caravan: 'A stranded caravan with torn canvas, scattered cargo and a lantern left for the missing travellers.',
 };
 const NAMES: Record<WildernessKind, readonly string[]> = {
+  bossLair: ['Boss lair'],
   cursedChest:['The Hungry Hoard','Widow’s Fortune','The Bound Coffer'], ruinedChapel:['Chapel of Ash','The Broken Covenant','Moonfall Chapel'], beastDen:['The Gnawing Hollow','Briarfang Den','The Red Nest'], quarry:['Shiverstone Quarry','The Hollow Cut','Old Silverworks'], hamlet:['Forsaken Hearths','Blackthorn Hamlet','The Empty Square'], crossing:['Warden’s Crossing','The Broken Toll','Ashford Blockade'], corruptedGrove:['The Blighted Heart','Weeping Roots','The Twisted Orchard'],
   camp: ['Ashen Watch', 'Blackbriar Camp', 'The Ragged Vigil', 'Emberfang Hollow'],
   watchtower: ['The Hollow Beacon', 'Mournwatch Ruin', 'The Last Signal'],
@@ -83,7 +87,7 @@ const NAMES: Record<WildernessKind, readonly string[]> = {
 };
 
 function makeSite(seed: number, id: string, kind: WildernessKind, x: number, y: number, starter = false, biome: BiomeId = sampleBiome(x, y, seed).id, worldSeed = seed): WildernessSite {
-  const radius = ['hamlet','quarry','ruinedChapel'].includes(kind) ? 270 : kind === 'camp' ? 205 : kind === 'graveyard' ? 172 : kind === 'standingStones' ? 165 : 160;
+  const radius = kind === 'bossLair' ? LAIR_RULES.radius : ['hamlet','quarry','ruinedChapel'].includes(kind) ? 270 : kind === 'camp' ? 205 : kind === 'graveyard' ? 172 : kind === 'standingStones' ? 165 : 160;
   const decor: SiteDecor[] = [], members: CampMember[] = [];
   const add = (kind: SiteDecorKind, dx: number, dy: number, radius: number, scale = 1, angle = 0) => {
     decor.push(Object.freeze({ id: `${id}:decor:${decor.length}`, kind, x: x + dx, y: y + dy, radius, scale, angle,
@@ -92,7 +96,20 @@ function makeSite(seed: number, id: string, kind: WildernessKind, x: number, y: 
   const member = (kind: EnemyKind, dx: number, dy: number, rank: EnemyRank = 'normal') => {
     members.push(Object.freeze({ id: `${id}:member:${members.length}`, kind, rank, dx, dy }));
   };
-  if (kind === 'camp') {
+  if (kind === 'bossLair') {
+    const boss=bossForBiome(biome);member(boss,0,0);
+    const roster=boss==='briarMatriarch'?['hound','stalker','hound','caster'] as const:boss==='ashColossus'?['brute','caster','stalker','wisp'] as const:['stalker','archer','brute','caster'] as const;
+    member(roster[0],-130,-85,'elite');member(roster[1],130,-85,'elite');
+    for(let i=0;i<8;i++){const a=i*Math.PI/4;member(roster[i%4],Math.cos(a)*270,Math.sin(a)*270,'veteran');}
+    for(let i=0;i<7;i++){
+      const a=(i/8+.125)*Math.PI*2,dx=Math.cos(a)*335,dy=Math.sin(a)*335;
+      if(Math.abs(dx)<90&&dy>0)continue;
+      add(boss==='briarMatriarch'?'root':boss==='ashColossus'?'crystal':'gravestone',dx,dy,12,1.2+(i%3)*.25);
+      if(i%2===0)add(boss==='ashColossus'?'fire':'lantern',dx*.9,dy*.9,0,.9);
+    }
+    add(boss==='briarMatriarch'?'nest':boss==='ashColossus'?'standingStone':'arch',0,-325,18,1.5);
+    add('bones',-100,145,0,1.2);add('bones',90,180,0,1);
+  } else if (kind === 'camp') {
     add('tent', -87, -75, 34, 1.15); add('tent', 88, -91, 31, 1.02);
     add('fire', 0, 0, 13); add('banner', 132, -10, 5, 1.15);
     add('crate', -112, 28, 12); add('crate', -132, 4, 11, .85); add('barrel', -129, 49, 10);
@@ -152,7 +169,7 @@ function makeSite(seed: number, id: string, kind: WildernessKind, x: number, y: 
     for(const side of [-1,1]){add('gravestone',side*65,-10,9,1.2);add('bones',side*45,40,0);add('lantern',side*28,12,0,.7);}
   }
   const entrance = Object.freeze({ x, y: y + radius });
-  const raw = withGoblinWarband({ id, kind, x, y, radius, name: starter ? 'Ashen Watch' : NAMES[kind][seed % NAMES[kind].length],
+  const raw = withGoblinWarband({ id, kind, x, y, radius, name: kind==='bossLair'?BOSS_NAMES[bossForBiome(biome)]:starter ? 'Ashen Watch' : NAMES[kind][seed % NAMES[kind].length],
     description: DESCRIPTIONS[kind], biome, seed, entrance, decor, members });
   // Front-facing chapel architecture needs an aligned aisle and entrance.
   // Other sites orient their approach toward nearby roads or vary freely inland.
@@ -163,7 +180,7 @@ function makeSite(seed: number, id: string, kind: WildernessKind, x: number, y: 
     const px=a[0]+dx*t,py=a[1]+dy*t,distance=Math.hypot(px-x,py-y);
     if(!roadPoint||distance<roadPoint.distance)roadPoint={x:px,y:py,distance};
   }
-  const angle=starter||kind==='ruinedChapel'?0:roadPoint&&roadPoint.distance<1500?Math.atan2(roadPoint.y-y,roadPoint.x-x)-Math.PI/2:random(seed,911)*Math.PI*2;
+  const angle=starter||kind==='ruinedChapel'||kind==='bossLair'?0:roadPoint&&roadPoint.distance<1500?Math.atan2(roadPoint.y-y,roadPoint.x-x)-Math.PI/2:random(seed,911)*Math.PI*2;
   const rotate=(dx:number,dy:number)=>({x:dx*Math.cos(angle)-dy*Math.sin(angle),y:dx*Math.sin(angle)+dy*Math.cos(angle)});
   const entry=rotate(0,radius);
   return Object.freeze({...raw,entrance:Object.freeze({x:x+entry.x,y:y+entry.y}),
@@ -204,4 +221,23 @@ export function generateWildernessSite(worldSeed: number, cx: number, cy: number
 
 export function wildernessPOI(site: WildernessSite): WorldPOI {
   return { id: site.id, name: site.name, kind: site.kind, x: site.x, y: site.y, description: site.description };
+}
+
+/** A separate sparse layer preserves all existing landmark IDs and event recipes. */
+export function bossLairCell(worldSeed:number,cx:number,cy:number):boolean {
+  return ((cx%3+3)%3===1)&&((cy%3+3)%3===1)&&random(siteHash(cx,cy,worldSeed,0xb055),772)<.65;
+}
+export function generateBossLair(worldSeed:number,cx:number,cy:number,reserved:SiteReservation):WildernessSite|null {
+  if(!bossLairCell(worldSeed,cx,cy))return null;
+  const seed=siteHash(cx,cy,worldSeed,0xb055),radius=LAIR_RULES.radius;
+  for(let attempt=0;attempt<24;attempt++){
+    const x=(cx+.5)*WILDERNESS_RULES.cellSize+(random(seed,attempt*2+1)-.5)*1200;
+    const y=(cy+.5)*WILDERNESS_RULES.cellSize+(random(seed,attempt*2+2)-.5)*1200;
+    if(getZoneAt(x,y,worldSeed).level<LAIR_RULES.minimumLevel||Math.hypot(x,y)<radius+1200||Math.hypot(x-740,y-180)<radius+500)continue;
+    if(pathDistance(x,y,worldSeed)<radius+120||reserved(x,y,radius+60))continue;
+    // Check both perimeter and inner guard ring against water and reserved land.
+    if([170,270,370].some(r=>Array.from({length:8},(_,i)=>i*Math.PI/4).some(a=>reserved(x+Math.cos(a)*r,y+Math.sin(a)*r,35))))continue;
+    return makeSite(seed,`site:${worldSeed}:lair:${cx}:${cy}`,'bossLair',x,y,false,sampleBiome(x,y,worldSeed).id,worldSeed);
+  }
+  return null;
 }

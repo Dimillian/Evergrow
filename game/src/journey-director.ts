@@ -18,6 +18,7 @@ export function journeyObjective(goal:JourneyGoal,facts:JourneyFacts):string {
     const run=facts.expeditions.runs.find(r=>r.entrance.id===goal.id);
     return !run?'Enter the crypt':run.states.warden?.hp>0?'Defeat the Hollow Warden':'Claim the Warden’s chest';
   }
+  if(goal.kind==='bossLair')return 'Defeat the boss';
   if(goal.kind==='camp')return facts.campCleared(goal.id)?'Open the strongbox':'Clear the garrison';
   if(goal.kind==='caravan')return 'Choose goods or coin';
   if(goal.kind==='watchtower')return 'Light the beacon';
@@ -84,7 +85,7 @@ export function journeyNeedsRefresh(state:JourneyState,facts:JourneyFacts):boole
 /** Stable scoring: level match, proximity, route access and activity variety. No combat RNG. */
 export function rankJourneyCandidates(candidates:JourneyGoal[],state:JourneyState,facts:JourneyFacts,seed:number):JourneyGoal[]{
   const last=state.history.at(-1)?.kind;
-  return candidates.filter(g=>eligibleJourney(g,state,facts)&&g.level<=facts.level+2).map(g=>{
+  return candidates.filter(g=>eligibleJourney(g,state,facts)&&g.level<=facts.level+2&&(g.kind!=='bossLair'||facts.level>=g.level+2)).map(g=>{
     const currentLevel=facts.areaLevel??getZoneAt(facts.x,facts.y,seed).level;
     const gap=g.level-facts.level, distance=Math.hypot(g.x-facts.x,g.y-facts.y);
     const danger=gap>1?(gap-1)*1200:gap< -1?(-gap-1)*1700:Math.abs(gap)*80;

@@ -1,5 +1,7 @@
 # Current system status
 
+Local wilderness boss lairs add Briar Matriarch, Ashbound Colossus and Grave Marshal, each guarded by two Elites and eight Veterans. Sparse additive placement preserves existing POIs and saves. Red warnings, phase-two cadence, automatic rare hoards, map/Journeys discovery and three Chronicle families are implemented. See [wilderness bosses](wilderness-bosses.md).
+
 Local vendor polish adds multi-select selling and rarity selection, an exact receipt, atomic bulk transactions, and pickup-style coin flights into the wallet. Existing 12-item buyback stays bounded. See [vendor rules](npcs-and-vendors.md).
 
 Chronicle is published in v0.5.0: account/character histories, 32 achievement families, detailed statistics and title/pause/inventory entry points. The matching cloud API/schema deployment succeeded; cross-device acceptance remains a player check. See [Chronicle](chronicle.md).

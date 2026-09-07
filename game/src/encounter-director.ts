@@ -10,15 +10,15 @@ export const ENCOUNTER_RULES = Object.freeze({
 
 /** Available archetypes vary with the landscape; kill count never makes an old area harder. */
 export const ENCOUNTER_WEIGHTS: Readonly<Record<BiomeId, Readonly<Record<EnemyKind, number>>>> = Object.freeze({
-  steppe: Object.freeze({ warden: 0, goblin: 0, goblinChief: 0, stalker: 18, brute: 12, caster: 8, hound: 32, archer: 26, wisp: 4 }),
-  sunscar: Object.freeze({ warden: 0, goblin: 0, goblinChief: 0, stalker: 24, brute: 20, caster: 22, hound: 12, archer: 18, wisp: 4 }),
-  deadwood: Object.freeze({ warden: 0, goblin: 0, goblinChief: 0, stalker: 34, brute: 20, caster: 10, hound: 14, archer: 16, wisp: 6 }),
-  verdant: Object.freeze({ warden: 0, goblin: 0, goblinChief: 0, stalker: 22, brute: 8, caster: 8, hound: 30, archer: 24, wisp: 8 }),
-  swamp: Object.freeze({ warden: 0, goblin: 0, goblinChief: 0, stalker: 22, brute: 10, caster: 24, hound: 8, archer: 10, wisp: 26 }),
-  frostpine: Object.freeze({ warden: 0, goblin: 0, goblinChief: 0, stalker: 16, brute: 16, caster: 8, hound: 24, archer: 14, wisp: 22 }),
-  emberfall: Object.freeze({ warden: 0, goblin: 0, goblinChief: 0, stalker: 18, brute: 26, caster: 26, hound: 10, archer: 12, wisp: 8 }),
-  autumn: Object.freeze({ warden: 0, goblin: 0, goblinChief: 0, stalker: 24, brute: 10, caster: 8, hound: 24, archer: 28, wisp: 6 }),
-  highlands: Object.freeze({ warden: 0, goblin: 0, goblinChief: 0, stalker: 18, brute: 28, caster: 10, hound: 10, archer: 26, wisp: 8 }),
+  steppe: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 18, brute: 12, caster: 8, hound: 32, archer: 26, wisp: 4 }),
+  sunscar: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 24, brute: 20, caster: 22, hound: 12, archer: 18, wisp: 4 }),
+  deadwood: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 34, brute: 20, caster: 10, hound: 14, archer: 16, wisp: 6 }),
+  verdant: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 22, brute: 8, caster: 8, hound: 30, archer: 24, wisp: 8 }),
+  swamp: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 22, brute: 10, caster: 24, hound: 8, archer: 10, wisp: 26 }),
+  frostpine: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 16, brute: 16, caster: 8, hound: 24, archer: 14, wisp: 22 }),
+  emberfall: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 18, brute: 26, caster: 26, hound: 10, archer: 12, wisp: 8 }),
+  autumn: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 24, brute: 10, caster: 8, hound: 24, archer: 28, wisp: 6 }),
+  highlands: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 18, brute: 28, caster: 10, hound: 10, archer: 26, wisp: 8 }),
 });
 
 export function livingEnemyCount(enemies: readonly Pick<Enemy, 'state'>[]): number {

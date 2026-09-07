@@ -9,7 +9,7 @@ import { getZoneAt } from './zone-progression.ts';
 import type { WorldPOI } from './world-pois.ts';
 export type EventKind = WildernessKind | 'reliquary';
 export function isEventKind(kind: string): kind is EventKind {
-  return ['camp', 'caravan', 'watchtower', 'graveyard', 'standingStones', 'reliquary', 'cursedChest', 'ruinedChapel', 'beastDen', 'quarry', 'hamlet', 'crossing', 'corruptedGrove'].includes(kind);
+  return ['bossLair', 'camp', 'caravan', 'watchtower', 'graveyard', 'standingStones', 'reliquary', 'cursedChest', 'ruinedChapel', 'beastDen', 'quarry', 'hamlet', 'crossing', 'corruptedGrove'].includes(kind);
 }
 export type BlessingKind = 'haste' | 'wellspring' | 'bulwark' | 'fleet';
 export interface Blessing {
@@ -77,6 +77,7 @@ export function blessingChoices(site: EventSite): BlessingKind[] {
   return [first, others[siteHash(site.seed, 0, 39) % others.length]];
 }
 export function eventSite(site: WildernessSite, worldSeed = 7319): EventSite {
+  if(site.kind==='bossLair')return {id:site.id,kind:site.kind,name:site.name,x:site.x,y:site.y+155,seed:site.seed,biome:site.biome,level:getZoneAt(site.x,site.y,worldSeed).level};
   // Interactions sit just inside each oriented, open approach.
   return { id: site.id, kind: site.kind, name: site.name, x: site.x+(site.entrance.x-site.x)*(1-22/site.radius), y: site.y+(site.entrance.y-site.y)*(1-22/site.radius),
     seed: site.seed, biome: site.biome, level: getZoneAt(site.x, site.y, worldSeed).level };
@@ -101,6 +102,7 @@ export function eventLabel(site: Pick<EventSite, 'id' | 'kind'>, state: EventSta
   }
   if (site.kind === 'camp' && !campCleared)
     return 'Clear the camp';
+  if(site.kind==='bossLair')return 'Defeat the boss';
   const recipe = eventRecipe(site as EventSite);
   if (recipe) return recipe.action;
   return ({ camp: 'Open strongbox', caravan: 'Recover cargo', watchtower: 'Light beacon', graveyard: 'Disturb the vigil', standingStones: 'Choose blessing', reliquary: 'Open reliquary' } as Partial<Record<EventKind,string>>)[site.kind] ?? 'Interact';
@@ -141,7 +143,7 @@ export function compactEvents(state: EventState): void {
 }
 
 export function eventInteractionSites(sites: readonly EventSite[],state:EventState):EventSite[] {
-  sites=sites.filter(site=>!isTrialKind(site.kind)||(!eventClaimed(state,site.id)&&state.sites[site.id]?.phase!=='completed'));
+  sites=sites.filter(site=>site.kind!=='bossLair'&&(!isTrialKind(site.kind)||(!eventClaimed(state,site.id)&&state.sites[site.id]?.phase!=='completed')));
   const trial=state.trial;if(!trial?.sealReady)return [...sites];
   const site=state.sites[trial.siteId],point=sealPoint(site,trial.wave);
   return [...sites.filter(s=>s.id!==site.id),{...site,...point}];

@@ -7,7 +7,7 @@ import { scaledEnemyStats } from './zone-progression.ts';
 import { xpLevelFactor } from './progression.ts';
 
 /** Bonus measured in normal same-level stalker kills, separate from the site's own reward. */
-export const JOURNEY_XP: Readonly<Record<JourneyKind, number>> = Object.freeze({
+export const JOURNEY_XP: Readonly<Record<JourneyKind, number>> = Object.freeze({ bossLair: 3,
   cursedChest:2,ruinedChapel:2,beastDen:2,quarry:2,hamlet:2,crossing:2,corruptedGrove:2,
   camp: 1.5, caravan: .5, watchtower: .5, graveyard: 1.5, standingStones: 1,
   reliquary: .25, dungeon: 3, town: .5, frontier: .5,

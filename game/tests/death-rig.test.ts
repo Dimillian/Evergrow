@@ -1,3 +1,4 @@
+import { isBossKind } from '../src/wilderness-boss-content.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { frame3, solveLimb, vdot, vsub, humanoidDeathPose, humanoidDeathArm } from '../src/death-rig.ts';
@@ -42,12 +43,12 @@ class GeometryContext {
   ellipse(...args:number[]){assert.ok(args.every(Number.isFinite));assert.ok(args[2]>0&&args[3]>0);}
   get depth(){return this.stack.length;}
 }
-test('all 36 animations draw finite bounded volume geometry at eight facings and contact boundaries',()=>{
+test('all enemy animations draw finite bounded volume geometry at eight facings and contact boundaries',()=>{
   for(const kind of DEATH_KINDS)for(const variant of [0,1,2,3] as const) {
     const d=ENEMY_DEATHS[kind][variant];assert.ok(d.contact>0&&d.settle>d.contact);
     for(const age of [.1,d.contact*.6,d.contact,d.contact+.05,d.settle,10])for(let i=0;i<8;i++) {
       const ctx=new GeometryContext();drawDeathFigure(ctx as unknown as CanvasRenderingContext2D,kind,variant,age,i*Math.PI/4);
-      assert.ok(ctx.points>20);assert.ok(ctx.max<(kind==='warden'?192:96),`${kind} ${variant} ${age}: ${ctx.max}`);
+      assert.ok(ctx.points>20);assert.ok(ctx.max<(isBossKind(kind)?192:96),`${kind} ${variant} ${age}: ${ctx.max}`);
       assert.equal(ctx.depth,0);assert.equal(ctx.globalAlpha,.6);
     }
   }

@@ -3,10 +3,14 @@ import type { EnemyKind } from './model.ts';
 /** Speech clears authored heads/crowns, rather than the larger aiming envelope.
  * Brute helmet reaches -39; hexer antlers -44; chief banner -54. */
 export const ENEMY_SPEECH_TOP = Object.freeze({
+  briarMatriarch: -127, ashColossus: -112, graveMarshal: -120,
   goblin: -30, goblinChief: -56, stalker: -37, brute: -40, caster: -44, archer: -48, warden: -110,
 });
 
 export const ENEMY_BODY_BOUNDS: Record<EnemyKind, { radiusX: number; top: number; bottom: number }> = {
+  briarMatriarch: { radiusX: 82, top: -127, bottom: 10 },
+  ashColossus: { radiusX: 82, top: -127, bottom: 10 },
+  graveMarshal: { radiusX: 130, top: -127, bottom: 10 },
   warden: { radiusX: 45, top: -110, bottom: 8 },
   goblin: { radiusX: 16, top: -30, bottom: 3 },
   goblinChief: { radiusX: 23, top: -56, bottom: 4 },

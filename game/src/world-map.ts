@@ -584,6 +584,9 @@ export class WorldMap {
     } else if (poi.kind === 'watchtower') {
       c.moveTo(-size * .7, size); c.lineTo(-size * .7, -size); c.lineTo(-size * .25, -size * .5); c.lineTo(size * .1, -size); c.lineTo(size * .7, -size * .65); c.lineTo(size * .7, size); c.closePath();
       c.moveTo(0, size * .5); c.lineTo(0, -size * .2); c.stroke();
+    } else if (poi.kind === 'bossLair') {
+      c.moveTo(-size,size*.55);c.lineTo(-size*1.05,-size*.65);c.lineTo(-size*.4,-size*.15);c.lineTo(0,-size);c.lineTo(size*.4,-size*.15);c.lineTo(size*1.05,-size*.65);c.lineTo(size,size*.55);c.closePath();c.stroke();
+      c.moveTo(-size*.65,size*.9);c.lineTo(size*.65,size*.9);c.stroke();
     } else if (poi.kind === 'graveyard') {
       c.moveTo(-size * .7, size); c.lineTo(-size * .7, -size * .35); c.quadraticCurveTo(0, -size * 1.4, size * .7, -size * .35); c.lineTo(size * .7, size); c.closePath();
       c.moveTo(0, -size * .4); c.lineTo(0, size * .5); c.moveTo(-size * .3, 0); c.lineTo(size * .3, 0); c.stroke();

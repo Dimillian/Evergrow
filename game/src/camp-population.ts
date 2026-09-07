@@ -1,5 +1,5 @@
 import { storedActor, type StoredActor } from './dungeon-state.ts';
-import { scaledEnemyStats } from './zone-progression.ts';
+import { getZoneAt, scaledEnemyStats } from './zone-progression.ts';
 import type { Enemy, Player, WorldQuery } from './model.ts';
 import type { CampMember, EnemyCamp } from './wilderness-sites.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
@@ -107,6 +107,7 @@ export class CampPopulation {
         const enemy = spawn(member, camp.x + member.dx, camp.y + member.dy,
           { campId: camp.id, memberId: member.id, lootSeed: campMemberSeed(member.id) });
         if (enemy) {
+          if(camp.id.includes(':lair:')){const level=getZoneAt(camp.x,camp.y,world.seed).level;const stats=scaledEnemyStats(member.kind,level,member.rank);Object.assign(enemy,stats,{level,hp:stats.maxHp});}
           const wound=this.wounds.get(member.id);
           if(wound)Object.assign(enemy,scaledEnemyStats(wound.kind,wound.level,wound.rank),{hp:wound.hp,level:wound.level,biome:wound.biome,lootSeed:wound.seed});
           created.push(enemy);

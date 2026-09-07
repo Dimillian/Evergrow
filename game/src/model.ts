@@ -181,12 +181,14 @@ export interface Player {
   dead: boolean;
 }
 
-export type EnemyKind = 'stalker' | 'brute' | 'caster' | 'hound' | 'archer' | 'wisp' | 'goblin' | 'goblinChief' | 'warden';
+export type EnemyKind = 'stalker' | 'brute' | 'caster' | 'hound' | 'archer' | 'wisp' | 'goblin' | 'goblinChief' | 'warden' | 'briarMatriarch' | 'ashColossus' | 'graveMarshal';
 export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
 
 export interface Enemy {
   bossPhases?: number; bossTurns?: number; bossHits?: number; controlImmunity?: number;
-  bossMove?: 'sweep'|'fracture'|'summon';
+  bossMove?: 'sweep'|'fracture'|'summon'|'rush'|'eruption'|'command';
+  bossOriginX?: number; bossOriginY?: number;
+  rallyTime?: number;
   /** Ephemeral orders; camp membership and casualties own persistent identity. */
   commanderId?: number;
   commandClock?: number;

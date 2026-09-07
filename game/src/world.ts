@@ -1,3 +1,4 @@
+import { bossLairCell, generateBossLair } from './wilderness-sites.ts';
 import { landscapePropProbability, landscapeRelief } from './natural-landscape.ts';
 import { WorldNavigation } from './world-navigation.ts';
 import type { MaterialId } from './material-content.ts';
@@ -162,6 +163,20 @@ export class World {
     return site;
   }
 
+  private bossLair(cx:number,cy:number):WildernessSite|null {
+    if(!bossLairCell(this.seed,cx,cy))return null;
+    const key=`lair:${cx}:${cy}`;
+    if(this.wilderness.has(key)){const site=this.wilderness.get(key)!;this.wilderness.delete(key);this.wilderness.set(key,site);return site;}
+    const neighbors:WildernessSite[]=[this.firstCamp];
+    for(let y=cy-1;y<=cy+1;y++)for(let x=cx-1;x<=cx+1;x++){const s=this.wildernessSite(x,y);if(s)neighbors.push(s);}
+    const site=generateBossLair(this.seed,cx,cy,(x,y,radius)=>this.hydrology.sample(x,y).coverage>.05
+      ||neighbors.some(s=>Math.hypot(s.x-x,s.y-y)<s.radius+radius)
+      ||this.getSettlements(x-radius,y-radius,radius*2,radius*2).some(t=>Math.hypot(t.x-x,t.y-y)<t.radius+radius));
+    this.wilderness.set(key,site);
+    if(this.wilderness.size>WILDERNESS_RULES.cacheLimit)this.wilderness.delete(this.wilderness.keys().next().value!);
+    return site;
+  }
+
   /** Overlapping blueprints for rendering/collision. Center-based POI queries remain half open. */
   getWildernessSites(x: number, y: number, width: number, height: number): WildernessSite[] {
     if (!validWorldRectangle(x, y, width, height)) return [];
@@ -174,7 +189,7 @@ export class World {
       if (site && intersects(query, { x: site.x - site.radius, y: site.y - site.radius, width: site.radius * 2, height: site.radius * 2 })) result.push(site);
     };
     include(this.firstCamp);
-    for (let cy = minY; cy <= maxY; cy++) for (let cx = minX; cx <= maxX; cx++) include(this.wildernessSite(cx, cy));
+    for (let cy = minY; cy <= maxY; cy++) for (let cx = minX; cx <= maxX; cx++) {include(this.wildernessSite(cx, cy));include(this.bossLair(cx,cy));}
     return result.sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
   }
 
@@ -183,7 +198,7 @@ export class World {
   getEventSites(x: number, y: number, width: number, height: number) { return queryEventSites(this, x, y, width, height); }
 
   getEnemyCamps(x: number, y: number, width: number, height: number): EnemyCamp[] {
-    return this.getWildernessSites(x, y, width, height).filter(site => site.kind === 'camp');
+    return this.getWildernessSites(x, y, width, height).filter(site => site.kind === 'camp' || site.kind === 'bossLair');
   }
 
   getBuildings(x: number, y: number, width: number, height: number): Building[] {

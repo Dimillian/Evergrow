@@ -1,3 +1,4 @@
+import { isBossKind, isWildernessBoss, BOSS_PALETTES } from './wilderness-boss-content.ts';
 import { sampleGearLight } from './gear-scene-light.ts';
 import { withGearLight } from './gear-material.ts';
 import { drawEnemyWarning, enemyWarningLight } from './enemy-warning-art.ts';
@@ -454,7 +455,7 @@ export class Renderer {
     if(phone) c.scale(plateScale,plateScale);
     const plateWidth=this.width/plateScale, plateHeight=this.height/plateScale;
     const plateInset=this.touchTopInset/plateScale;
-    const boss=sim.enemies.find(e=>e.kind==='warden'&&e.hp>0&&Math.hypot(e.x-p.x,e.y-p.y)<1100);
+    const boss=sim.enemies.find(e=>isBossKind(e.kind)&&e.hp>0&&e.state!=='return'&&Math.hypot(e.x-p.x,e.y-p.y)<(isWildernessBoss(e.kind)?650:1100));
     if (boss) {
       drawEnemyPlate(c, boss, plateWidth, plateHeight, { touch: this.touchActive, topInset: plateInset });
       const plate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, enemyDebuffs(boss).length > 0);
@@ -674,7 +675,7 @@ export class Renderer {
       .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py)).slice(0, 3));
     lights.push(...this.effects.getLights(), ...this.materials.lights(reducedMotion));
     for (const shot of sim.projectiles.slice(0, 8)) lights.push(projectileLight(shot, alpha));
-    for(const e of sim.enemies)if(e.kind==='warden'&&e.hp>0)lights.push({x:e.x,y:e.y-50,radius:150,color:'#a3d4b9',power:e.state==='windup'?.48:.23});
+    for(const e of sim.enemies)if(isBossKind(e.kind)&&e.hp>0)lights.push({x:e.x,y:e.y-50,radius:150,color:isWildernessBoss(e.kind)?BOSS_PALETTES[e.kind]:'#a3d4b9',power:e.state==='windup'?.48:.23});
     for (const enemy of sim.enemies) if (enemy.hp > 0 && (enemy.kind === 'caster' || enemy.kind === 'wisp')) {
       lights.push({ x: enemy.x, y: enemy.y - 22, radius: enemy.state === 'windup' ? 100 : 53,
         color: enemy.kind === 'wisp' ? '#93c6ff' : '#54e8b8', power: enemy.state === 'windup' ? .65 : .28 });

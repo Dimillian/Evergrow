@@ -49,6 +49,24 @@ export const ENEMY_DEATHS: Readonly<Record<EnemyKind, Four>> = Object.freeze({
     a('Last command', 'Blade slips → elbows buckle → banner drapes', 'front', .63, 1.19, 9, .25, .17,'slip'),
     a('Hollow throne', 'Sit heavily → arms hang → crowned head bows', 'sit', .55, 1.38, -5, -.18, .24),
   ] as const),
+  briarMatriarch: Object.freeze([
+    a('The sentinel kneels', 'Knees strike → axe lowers → shoulder settles', 'kneel', 1.04, 1.8, 2, -.15, .24),
+    a('Falling monument', 'Long recoil → axe flies free → armor lands', 'back', .94, 1.68, 7, .12, .2,'toss'),
+    a('Broken oath', 'Axe slips → arms yield → breastplate lands', 'front', 1.12, 1.9, 5, -.22, .28,'slip'),
+    a('Silent vigil', 'Sink to knees → axe rests → helm bows', 'sit', .87, 2.05, -2, .1, .4),
+  ] as const),
+  ashColossus: Object.freeze([
+    a('The sentinel kneels', 'Knees strike → axe lowers → shoulder settles', 'kneel', 1.04, 1.8, 2, -.15, .24),
+    a('Falling monument', 'Long recoil → axe flies free → armor lands', 'back', .94, 1.68, 7, .12, .2,'toss'),
+    a('Broken oath', 'Axe slips → arms yield → breastplate lands', 'front', 1.12, 1.9, 5, -.22, .28,'slip'),
+    a('Silent vigil', 'Sink to knees → axe rests → helm bows', 'sit', .87, 2.05, -2, .1, .4),
+  ] as const),
+  graveMarshal: Object.freeze([
+    a('The sentinel kneels', 'Knees strike → axe lowers → shoulder settles', 'kneel', 1.04, 1.8, 2, -.15, .24),
+    a('Falling monument', 'Long recoil → axe flies free → armor lands', 'back', .94, 1.68, 7, .12, .2,'toss'),
+    a('Broken oath', 'Axe slips → arms yield → breastplate lands', 'front', 1.12, 1.9, 5, -.22, .28,'slip'),
+    a('Silent vigil', 'Sink to knees → axe rests → helm bows', 'sit', .87, 2.05, -2, .1, .4),
+  ] as const),
   warden: Object.freeze([
     a('The sentinel kneels', 'Knees strike → axe lowers → shoulder settles', 'kneel', 1.04, 1.8, 2, -.15, .24),
     a('Falling monument', 'Long recoil → axe flies free → armor lands', 'back', .94, 1.68, 7, .12, .2,'toss'),

@@ -15,6 +15,9 @@ export const DEATH_MATERIALS: Readonly<Record<HumanoidKind,Material>>={
   archer:{scale:1,width:.95,skin:'#a0a587',bone:'#cec6a3',cloth:'#233d39',chest:'#565c40',metal:'#a5a16e'},
   goblin:{scale:.76,width:1,skin:'#819963',bone:'#b6be7a',cloth:'#4a4042',chest:'#82634b',metal:'#c7cdac'},
   goblinChief:{scale:1.14,width:1,skin:'#76834e',bone:'#b6be7a',cloth:'#9c4941',chest:'#536574',metal:'#697781'},
+  briarMatriarch:{scale:2.4,width:1.4,skin:'#5d7055',bone:'#b6bf94',cloth:'#344c37',chest:'#566544',metal:'#829878'},
+  ashColossus:{scale:2.4,width:1.6,skin:'#75685d',bone:'#ae8c63',cloth:'#372d29',chest:'#665b51',metal:'#a57957'},
+  graveMarshal:{scale:2.4,width:1.3,skin:'#71807c',bone:'#c6c2a6',cloth:'#352f44',chest:'#667785',metal:'#a8b7bb'},
   warden:{scale:2.42,width:1.4,skin:'#69786b',bone:'#969c81',cloth:'#263a3a',chest:'#9a9f80',metal:'#65746b'},
 };
 

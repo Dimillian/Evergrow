@@ -116,7 +116,7 @@ function chase(enemy: Enemy, dt: number, context: EnemyAIContext, definition: En
   const minDistance = definition.attack === 'melee' ? 0 : definition.retreatDistance;
   if (hasSight && distance <= attackDistance && distance > minDistance
     && context.visible(enemy.x, enemy.y, p.x, p.y)) {
-    enemy.attackDamage = enemy.damage * goblinDamage(enemy);
+    enemy.attackDamage = enemy.damage * goblinDamage(enemy) * ((enemy.rallyTime??0)>0?1.25:1);
     enemy.attackAngle = angle; enemy.attackTargetX = p.x; enemy.attackTargetY = p.y;
     transitionEnemy(enemy, 'windup', definition.windup); return;
   }
@@ -191,7 +191,7 @@ export function updateEnemyAI(enemy: Enemy, dt: number, context: EnemyAIContext)
       transitionEnemy(enemy, 'attack', definition.active);
       if (definition.attack === 'projectile') {
         for (const offset of definition.shotOffsets) context.shoot(enemy, enemy.attackAngle + offset,
-          { ...definition.projectile, damage: enemy.damage }, { style: definition.projectileStyle });
+          { ...definition.projectile, damage: enemy.attackDamage ?? enemy.damage }, { style: definition.projectileStyle });
         context.emit({ type: 'cast', x: enemy.x, y: enemy.y, angle: enemy.attackAngle,
           enemyKind: enemy.kind, style: definition.projectileStyle });
       } else if (definition.attack === 'ground') {
@@ -199,7 +199,7 @@ export function updateEnemyAI(enemy: Enemy, dt: number, context: EnemyAIContext)
         context.emit({ type: 'blast', x: tx, y: ty, radius: definition.blastRadius, style: 'frost', enemyKind: enemy.kind });
         if (Math.hypot(p.x - tx, p.y - ty) <= definition.blastRadius + p.radius
           && context.visible(enemy.x, enemy.y, tx, ty) && context.visible(tx, ty, p.x, p.y)) {
-          context.hurt(enemy.damage, Math.atan2(p.y - ty, p.x - tx), enemy);
+          context.hurt(enemy.attackDamage ?? enemy.damage, Math.atan2(p.y - ty, p.x - tx), enemy);
         }
         enemy.attackHit = true;
       }

@@ -38,6 +38,7 @@ Updated 2026-09-07. Use the current guides for implementation. Proposed designs 
 | Components, typography, tooltip motion and panel ownership | [UI kit](ui-kit.md) |
 | Climate generation, props and procedural graphics | [Biomes](biomes.md), [natural landscapes](natural-landscapes.md), [living biomes](living-biomes.md), [graphics pass](graphics-overhaul.md) |
 | Drainage, cell-based water and shader optics | [Living water](living-water.md) |
+| Wilderness bosses, lairs and hoards | [Wilderness bosses](wilderness-bosses.md) |
 | Camps, landmarks and roaming | [Wilderness and encounters](wilderness-and-encounters.md) |
 | Procedural crypt floors, boss, treasure and location saves | [Dungeons](dungeons.md) |
 | Chests, timed waves, regional POIs and guardian recipes | [Interactive POIs](interactive-pois.md) |

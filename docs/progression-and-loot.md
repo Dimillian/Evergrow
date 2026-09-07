@@ -1,5 +1,7 @@
 # Progression, threat, and loot
 
+Local addition: [wilderness boss lairs](wilderness-bosses.md) add three bosses, Elite/Veteran retinues and automatic Rare-or-better hoards through a separate placement layer. Existing landmark identities and save formats remain unchanged.
+
 Equipment construction now has independent weighted material pools and stronger rare bases. See [equipment materials](item-materials.md) for exact rates and multipliers. Material affects base stats and armor affix affinity, independently of affix rarity. Higher source levels and difficult encounters improve material weights.
 
 

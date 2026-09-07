@@ -20,7 +20,7 @@ test('wilderness blueprints are seeded, immutable, bounded and independent of qu
   world.getWildernessSites(120000, 50000, 10000, 10000);
   assert.deepEqual(sites, world.getWildernessSites(-8000, -8000, 16000, 16000));
   assert.ok(world.cacheStats.wildernessSites <= WILDERNESS_RULES.cacheLimit);
-  assert.ok(new Set(sites.map(s => s.kind)).size === 12);
+  assert.ok(new Set(sites.map(s => s.kind)).size === 13);
   for (const site of sites) {
     assert.ok(Object.isFrozen(site) && Object.isFrozen(site.decor) && Object.isFrozen(site.members));
     assert.ok(site.decor.every(Object.isFrozen) && site.members.every(Object.isFrozen));
@@ -68,7 +68,7 @@ test('the accessible first camp and distant camps have clear authored member slo
       for (const member of camp.members) {
         assert.equal(world.blocked(camp.x + member.dx, camp.y + member.dy, ENEMY_DEFINITIONS[member.kind].radius), false, `${camp.id} ${member.id} slot is blocked`);
         assert.equal(world.isSanctuary(camp.x + member.dx, camp.y + member.dy), false);
-        if (Math.hypot(camp.x + member.dx, camp.y + member.dy) < 6400) assert.notEqual(member.rank, 'elite');
+        if (!camp.id.includes(':lair:') && Math.hypot(camp.x + member.dx, camp.y + member.dy) < 6400) assert.notEqual(member.rank, 'elite');
       }
       // The road-facing gate retains a full player-radius corridor.
       for (let dy = 30; dy <= camp.radius; dy += 10) assert.equal(world.blocked(camp.x + (('entrance' in camp ? (camp as ReturnType<typeof startingEnemyCamp>).entrance.x : camp.x)-camp.x)*dy/camp.radius, camp.y + (('entrance' in camp ? (camp as ReturnType<typeof startingEnemyCamp>).entrance.y : camp.y+camp.radius)-camp.y)*dy/camp.radius, 12), false, `${camp.id} entrance blocked at ${dy}`);

@@ -1,3 +1,4 @@
+import { isBossKind } from './wilderness-boss-content.ts';
 import './ui-kit.css';
 import './typography.css';
 import './bestiary-review.css';
@@ -21,6 +22,7 @@ if (!import.meta.env.DEV) throw new Error('Local review only.');
 installUITheme();
 await loadGameFont();
 const root = document.querySelector<HTMLElement>('#bestiary-review')!;
+const bosses = new URLSearchParams(location.search).has('bosses');
 const armory = new URLSearchParams(location.search).get('view') === 'armory';
 const barks = !armory && new URLSearchParams(location.search).has('barks');
 const barkSamples: Partial<Record<EnemyKind, string>> = { goblin: 'Your boots! My size!', brute: 'Hold still. Heavy hammer.', caster: 'May your socks stay wet!' };
@@ -28,6 +30,9 @@ const abort = new AbortController();
 const scenes: Array<{ canvas: HTMLCanvasElement; poses: CharacterPose[]; groundItem?: ReturnType<typeof generateItem> }> = [];
 const base = { angle: 1.15, time: 2.7, moving: 0, attack: 0, attackAngle: 1.15, hitFlash: 0, dodging: false };
 const roles: Record<EnemyKind, { role: string; detail: string; attack: number }> = {
+  briarMatriarch: {role:'Wilderness boss',detail:'Thorn sweeps, hunting lunges and erupting roots.',attack:-.6},
+  ashColossus: {role:'Wilderness boss',detail:'Crushing blows and staggered molten fractures.',attack:-.6},
+  graveMarshal: {role:'Wilderness boss',detail:'Sword charges and a rally for surviving guards.',attack:-.6},
   warden: { role: 'Crypt boss', detail: 'Grave sweep, root fractures and finite guardians.', attack: -.6 },
   goblin: { role: 'Swarm', detail: 'Small blades, quick feet; rushes and flanks under a chief.', attack: .45 },
   goblinChief: { role: 'Commander', detail: 'War horn and iron trophy banner; death scatters its followers.', attack: -.7 },
@@ -38,7 +43,7 @@ const roles: Record<EnemyKind, { role: string; detail: string; attack: number }>
   archer: { role: 'Ranger', detail: 'Thorn mantle · shouldered quiver · drawn bow', attack: -.85 },
   wisp: { role: 'Spirit', detail: 'Caged flame · trailing cloth · suspended iron', attack: -.85 },
 };
-root.innerHTML = `<header class="bestiary-header"><div><div class="ui-kicker">EVERGROW / PROCEDURAL ASSET STUDY</div><h1>${armory ? 'The travelling armory' : 'Creatures of the wild'}</h1><p>${armory ? 'Shared forged geometry, dressed figures and recognisable field loot.' : 'Eight silhouettes, each with a readable combat role and its own movement.'}</p></div>
+root.innerHTML = `<header class="bestiary-header"><div><div class="ui-kicker">EVERGROW / PROCEDURAL ASSET STUDY</div><h1>${armory ? 'The travelling armory' : 'Creatures of the wild'}</h1><p>${armory ? 'Shared forged geometry, dressed figures and recognisable field loot.' : 'Distinct silhouettes, each with a readable combat role and its own movement.'}</p></div>
   <nav class="bestiary-nav"><a class="ui-button${!armory ? ' ui-button--primary' : ''}" href="/bestiary.html">Bestiary</a><a class="ui-button${armory ? ' ui-button--primary' : ''}" href="/bestiary.html?view=armory">Armory</a></nav></header>
   <section class="bestiary-grid${armory ? ' bestiary-armory' : ''}" aria-label="Frozen procedural figures"></section>`;
 const grid = root.querySelector<HTMLElement>('.bestiary-grid')!;
@@ -55,6 +60,7 @@ function card(name: string, role: string, detail: string, poses: CharacterPose[]
 if (!armory) {
   for (const kind of Object.keys(ENEMY_DEFINITIONS) as EnemyKind[]) {
     if (barks && !barkSamples[kind]) continue;
+    if(bosses&&!isBossKind(kind))continue;
     const role = roles[kind];
     card(ENEMY_DEFINITIONS[kind].name, role.role, role.detail,
       barks ? [{ ...base, kind, angle: .5, attackAngle: .5 }]
@@ -102,7 +108,7 @@ function draw() {
     for (const [index, pose] of poses.entries()) {
       c.fillStyle = '#050d1399'; c.beginPath(); c.ellipse(positions[index], floor + 3, pose.kind === 'brute' ? 38 : 27, 7, 0, 0, Math.PI * 2); c.fill();
       c.strokeStyle = '#68756c25'; c.lineWidth = .65; c.beginPath(); c.ellipse(positions[index], floor + 3, 37, 11, 0, 0, Math.PI * 2); c.stroke();
-      c.save(); c.translate(positions[index], floor); c.scale(scale, scale); drawHumanoid(c, pose); c.restore();
+      c.save(); c.translate(positions[index], floor); c.scale(pose.kind!=='player'&&isBossKind(pose.kind)?Math.min(1.55,(height-30)/135):scale, pose.kind!=='player'&&isBossKind(pose.kind)?Math.min(1.55,(height-30)/135):scale); drawHumanoid(c, pose); c.restore();
       if (barks && pose.kind !== 'player' && canBark(pose.kind)) {
         const box = placeBattleBark(barkSamples[pose.kind]!, { x: positions[index], y: floor + ENEMY_SPEECH_TOP[pose.kind] * scale },
           { width, height }, line => measureBattleBark(c, line), []);

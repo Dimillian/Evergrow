@@ -1,5 +1,6 @@
 /** One kind registry serves generated places, saved discovery validation and map presentation. */
 export const POI_DEFINITIONS = {
+  bossLair: {label:'Wilderness boss',color:'#e8788f'},
   cursedChest:{label:'Cursed chest',color:'#d696c3'}, ruinedChapel:{label:'Ruined chapel',color:'#b8add6'}, beastDen:{label:'Beast den',color:'#c7a57c'}, quarry:{label:'Quarry',color:'#9ebed2'}, hamlet:{label:'Occupied hamlet',color:'#c89776'}, crossing:{label:'Contested crossing',color:'#b8aa84'}, corruptedGrove:{label:'Corrupted grove',color:'#98be9a'},
   dungeon: { label: 'Dungeon', color: '#a8c6ad' },
   reliquary: { label: 'Reliquary', color: '#d1bc8c' },

@@ -37,6 +37,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'atlas',group:'world',name:'World atlas',path:'/atlas.html',description:'Seeded explored-map studies with danger districts and PNG export.'},
   {id:'biomes',group:'world',name:'Climates',path:'/biomes.html',description:'All seven biomes and blended transitions using the game renderer.'},
   {id:'encounters',group:'world',name:'Camps & landmarks',path:'/encounters.html',description:'Frozen wilderness placements, camps and encounter warnings.'},
+  {id:'bosses',group:'world',name:'Wilderness bosses',path:'/bosses.html',description:'Three guarded lairs, committed attack warnings and automatic hoards.',tags:'boss elite arena'},
   {id:'events',group:'world',name:'Events',path:'/events.html',description:'Interactive landmark and reward presentation.'},
   {id:'dungeon',group:'world',name:'Dungeons',path:'/dungeon.html',description:'Staged crypt geometry, rooms and dungeon artwork.'},
   {id:'forest',group:'world',name:'Forest motion',path:'/forest.html',description:'Wind, foliage, wildlife and canopy light; recording support.'},

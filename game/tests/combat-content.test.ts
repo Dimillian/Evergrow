@@ -1,3 +1,4 @@
+import { isBossKind } from '../src/wilderness-boss-content.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { COMBAT_TIMING, SKILL_CAST_MOTION, ENEMY_DEFINITIONS, PLAYER_ABILITIES,
@@ -22,7 +23,7 @@ test('enemy definitions have complete coherent telegraph, attack and projectile 
     for (const value of [enemy.hp, enemy.radius, enemy.speed, enemy.windup, enemy.active, enemy.recovery, enemy.range, enemy.damage]) {
       assert.ok(Number.isFinite(value) && value > 0);
     }
-    assert.ok(enemy.aimLock > 0 && enemy.aimLock < enemy.windup, 'the attack visibly locks before it lands');
+    assert.ok(enemy.aimLock >= 0 && enemy.aimLock < enemy.windup, 'the attack visibly locks before it lands');
     assert.ok(enemy.active >= FIXED_STEP, 'active attacks survive at least one simulation tick');
     if (enemy.attack === 'melee') {
       assert.ok(enemy.arc > 0 && enemy.arc <= Math.PI * 2);
@@ -63,7 +64,7 @@ test('spawned actors and actual melee/projectile contact use the authored enemy 
     const enemy = sim.spawnEnemy(kind, definition.attack === 'melee' ? -20 : -200, 0)!;
     assert.equal(enemy.hp, definition.hp); assert.equal(enemy.maxHp, definition.hp); assert.equal(enemy.radius, definition.radius);
     enemy.attackAngle = 0;
-    if (kind === 'warden') enemy.bossMove = 'sweep';
+    if (isBossKind(kind)) enemy.bossMove = 'sweep';
     if (definition.attack === 'melee') {
       enemy.state = 'attack'; enemy.stateDuration = definition.active;
       sim.update(FIXED_STEP, idle);

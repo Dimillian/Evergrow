@@ -5,6 +5,7 @@
     "types": []
   },
   "include": [
+    "src/wilderness-boss-content.ts", "src/wilderness-boss.ts", "src/wilderness-boss-rewards.ts",
     "src/chronicle.ts", "src/chronicle-content.ts", "src/chronicle-tracking.ts",
     "src/jewelry-content.ts", "src/item-materials.ts", "src/gear-material-content.ts", "src/game-features.ts", "src/affix-combat.ts", "src/equipment-affix-content.ts",
     "src/battle-bark-content.ts", "src/battle-barks.ts", "src/battle-bark-layout.ts", "src/enemy-engagement.ts",

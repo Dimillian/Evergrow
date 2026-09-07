@@ -1,3 +1,4 @@
+import { isBossKind, isWildernessBoss } from './wilderness-boss-content.ts';
 import { metric, type ChronicleProgress } from './chronicle.ts';
 import type { CombatEvent, Enemy, Player } from './model.ts';
 const hybridHits=new WeakMap<Player,Map<number,number>>();
@@ -14,7 +15,9 @@ export function trackChronicleEvent(p:Player,enemies:readonly Enemy[],e:CombatEv
  }
  case 'kill':{if(hybridHits.get(p)?.get(e.targetId)===3)metric(c,'feat:spellblade');hybridHits.get(p)?.delete(e.targetId);metric(c,'kills');metric(c,'enemy:'+e.enemyKind);const enemy=enemies.find(a=>a.id===e.targetId);
    if(enemy){metric(c,'rank:'+enemy.rank);metric(c,'highestEnemy',enemy.level);if(enemy.rank==='elite'&&p.hp/p.maxHp<.1)metric(c,'feat:lastbreath');
-     if(enemy.campMemberId==='warden'){metric(c,'bosses');metric(c,'crypts');}}
+     if(isBossKind(enemy.kind))metric(c,'bosses');
+     if(isWildernessBoss(enemy.kind))metric(c,'boss:'+enemy.kind);
+     if(enemy.campMemberId==='warden')metric(c,'crypts');}
    break;}
  case 'hurt': metric(c,'damageTaken',e.actualValue??e.value);if(e.remainingHp===0){metric(c,'deaths');const s=c.sources.find(s=>s.id===c.active)!;metric(c,'highestDeathTime',s.values.time??0);}break;
  case 'heal':metric(c,'healing',e.value);break;

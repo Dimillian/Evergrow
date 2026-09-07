@@ -1,3 +1,5 @@
+import { drawWildernessBossImpact } from './wilderness-boss-effect-art.ts';
+import { isWildernessBoss, LAIR_RULES as R } from './wilderness-boss-content.ts';
 import type { Enemy } from './model.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { WARDEN_RULES } from './dungeon-boss.ts';
@@ -10,6 +12,14 @@ export function enemyWarnings(e: Enemy, alpha = 1): Warning[] {
   const d = ENEMY_DEFINITIONS[e.kind], x = e.prevX + (e.x - e.prevX) * alpha, y = e.prevY + (e.y - e.prevY) * alpha;
   const progress = e.state === 'attack' ? 1 : Math.min(1, e.stateTime / Math.max(.01, e.stateDuration));
   const base = { x, y, angle: e.attackAngle, progress, locked: e.state === 'attack' || e.stateTime >= d.aimLock, color: '#f34e60' };
+  if(isWildernessBoss(e.kind)) {
+    const origin={...base,x:e.bossOriginX??x,y:e.bossOriginY??y,locked:true};
+    if(e.bossMove==='rush')return [{...origin,shape:{kind:'lane',length:R.rushLength,width:R.rushWidth}}];
+    if(e.bossMove==='fracture')return [-.55,0,.55].map(offset=>({...origin,angle:e.attackAngle+offset,shape:{kind:'lane',length:R.fractureLength,width:R.fractureWidth}}));
+    if(e.bossMove==='eruption')return [{...base,x:e.attackTargetX,y:e.attackTargetY,locked:true,shape:{kind:'circle',radius:R.eruptionRadius}}];
+    if(e.bossMove==='sweep')return [{...base,locked:true,shape:{kind:'sector',radius:R.sweepReach,arc:R.sweepArc}}];
+    return [];
+  }
   if (e.kind === 'warden') {
     if (e.bossMove === 'fracture') return [-.5, 0, .5].map(offset => ({ ...base, angle: e.attackAngle + offset,
       shape: { kind: 'lane', length: WARDEN_RULES.fractureLength, width: WARDEN_RULES.fractureWidth } }));
@@ -25,6 +35,9 @@ export function enemyWarnings(e: Enemy, alpha = 1): Warning[] {
   return [{ ...base, shape: { kind: 'sector', radius: d.range, arc: d.arc } }];
 }
 export function drawEnemyWarning(c: CanvasRenderingContext2D, e: Enemy, alpha: number, time: number, reduced: boolean): void {
+  drawWildernessBossImpact(c,e,time,reduced);
+  if(e.bossMove==='command'&&(e.state==='windup'||e.state==='attack'))drawGlow(c,e.x,e.y-35,100,'#b4a3eb',.3);
+  if((e.rallyTime??0)>0)drawGlow(c,e.x,e.y-15,34,'#b4a3eb',.24);
   if (e.kind === 'warden' && e.bossMove === 'summon' && (e.state === 'windup' || e.state === 'attack'))
     drawGlow(c, e.x, e.y - 25, 70, '#e83d59', .25 + Math.min(1, e.stateTime / Math.max(.01, e.stateDuration)) * .3);
   for (const w of enemyWarnings(e, alpha)) {

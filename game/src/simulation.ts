@@ -1,3 +1,6 @@
+import { updateWildernessBoss } from './wilderness-boss.ts';
+import { completeBossLair } from './wilderness-boss-rewards.ts';
+import { isWildernessBoss } from './wilderness-boss-content.ts';
 import { freshChronicle, metric } from './chronicle.ts';
 import { trackChronicleEvent } from './chronicle-tracking.ts';
 import { TREASURE_FLIGHT_DURATION } from './treasure-flight.ts';
@@ -612,6 +615,7 @@ export class Simulation {
       player: this.player, enemies: this.enemies, random: () => this.random(),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by), emit: event => this.emit(event),
       killed: actor => {
+        completeBossLair(actor, this.eventState);
         const reward = awardKillRewards(actor, this.kills, this.killRecharge, {
           player: this.player, groundGold: this.groundGold, groundItems: this.groundItems, pickups: this.pickups,
           nextId: () => this.nextId++, emit: event => this.emit(event),
@@ -639,9 +643,10 @@ export class Simulation {
       this.updateKnockback(enemy, dt);
       enemy.stateTime += dt;
       if (enemy.state === 'dead') continue;
+      enemy.rallyTime=Math.max(0,(enemy.rallyTime??0)-dt);
       if (!advanceEnemyStatuses(enemy, dt,
         (actor, amount) => this.damageEnemy(actor, amount, 0, false, true, 'fire'))) continue;
-      if(enemy.kind==='warden') updateWarden(enemy,dt,context); else updateEnemyAI(enemy, dt, context);
+      if(isWildernessBoss(enemy.kind)) updateWildernessBoss(enemy,dt,context); else if(enemy.kind==='warden') updateWarden(enemy,dt,context); else updateEnemyAI(enemy, dt, context);
       if (p.dead) break;
     }
     for (const enemy of this.enemies) {

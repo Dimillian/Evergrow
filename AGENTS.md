@@ -175,3 +175,7 @@ Read `docs/equipment-affixes.md` before tuning affix pools or elemental damage. 
 ## Recipe events and world expansion (2026-09-07)
 
 `event-recipes.ts` owns immutable assault/defense/seal/timed rosters and `wave-system.ts` owns admission-aware wave clocks. Cursed chests run for ninety active-play seconds, score completed waves and pay physical loot through durable commands. No actor cap or reserved spawn slots. Offscreen, collision and sanctuary admission remain mandatory. Timed trials bank on death/departure/location changes; surviving actors retain rewards. Finite trials retain exact wounds/deaths across suspension. Seal anchors are checked and saved before starting. `chest-art.ts` and `treasure-flight.ts` share opening effects, checked landings and delayed pickup with dungeon chests. Read `docs/interactive-pois.md`, `docs/wilderness-and-encounters.md` and `docs/dungeons.md`.
+
+## Wilderness bosses (2026-09-07)
+
+Read `docs/wilderness-bosses.md` before changing lair placement, boss AI or hoards. Three explicit boss archetypes use a separate sparse additive layer, preserving ordinary POI identities. CampPopulation owns their 1 boss / 2 Elite / 8 Veteran rosters and exact casualties. Boss death stages a completed `bossLair` event receipt; normal automatic durable reward delivery opens its Rare-or-better hoard. No E activation, generic boss equipment/gold drop, resurrection or ambient boss spawning. Shared warning geometry lives in `wilderness-boss-content.ts`; presentation cannot change contact. `/bosses.html` is a save-free static review.

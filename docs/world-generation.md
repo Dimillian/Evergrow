@@ -1,5 +1,7 @@
 # World generation 9
 
+Local addition: [wilderness boss lairs](wilderness-bosses.md) add three bosses, Elite/Veteran retinues and automatic Rare-or-better hoards through a separate placement layer. Existing landmark identities and save formats remain unchanged.
+
 The local generation pass replaces the north–south settlement corridor and repeated cross-roads. Each new character receives a random unsigned 32-bit world seed. Character creation shows an editable **World seed** field and a **Randomize** button; saved-character selection keeps the chosen seed visible. Continuing reconstructs that character’s world before restoring its position, encounters and explored chart. Generation 9 adds Steppe and Sunscar and applies clustered vegetation, open glades and geological prop bands everywhere. Fresh test characters are required. The default review seed remains **7319**. `/atlas.html?seed=7319&view=extended` also accepts any unsigned 32-bit seed for save-free comparisons. Suggested comparisons are **18427** and **90210**. These are generated worlds, not painted map concepts.
 
 ## Settlements and routes
