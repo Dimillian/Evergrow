@@ -72,6 +72,39 @@ test('shared tooltip distinguishes effective changes from item values, escapes c
   assert.ok(itemSlotMarkup(item).includes('ui-item-tier'));
 });
 
+test('candidate rows merge matching stats while retaining losses, derived effects and capped changes', () => {
+  const p = initialPlayer(0, 0);
+  const boots = generateItem(2650, 1, 'boots', undefined, 'common');
+  boots.implicit = { armor: 8, lifeOnHit: 2, critChance: 100 };
+  boots.affixes = [];
+  p.character.equipped.boots = boots;
+  const incoming = generateItem(2651, 1, 'boots', undefined, 'magic');
+  incoming.implicit = { armor: 4, maxMana: 7.4, castSpeedPercent: 10, intelligence: 2, critChance: 110 };
+  incoming.affixes = [];
+  p.character.inventory[0] = incoming;
+  const before = structuredClone(p);
+  const cards = itemHoverCards(incoming, { sheet: p.character, level: 1, sourceIndex: 0 });
+  assert.equal(cards.length, 2);
+  const [candidate, equipped] = cards;
+  const row = (label: string) => {
+    const matches = [...candidate.matchAll(new RegExp(`<tr><th scope="row">${label}</th>(.*?)</tr>`, 'g'))];
+    assert.equal(matches.length, 1, `${label} appears exactly once`);
+    return matches[0][1];
+  };
+  assert.match(row('Armor'), /<td>\+4<\/td><td class="is-loss">-4<\/td>/);
+  assert.match(row('Maximum mana'), /<td>\+7\.4<\/td><td class="is-gain">/);
+  assert.match(row('Cast speed'), /<td>\+10%<\/td><td class="is-gain">\+10%<\/td>/);
+  assert.match(row('Critical chance'), /<td>\+110%<\/td><td class="ui-item-stat-empty" aria-label="No change">—<\/td>/);
+  assert.match(row('Life on hit'), /aria-label="Not an item bonus">—<\/td><td class="is-loss">-2<\/td>/);
+  assert.match(row('Spell damage'), /aria-label="Not an item bonus">—<\/td><td class="is-gain">/);
+  assert.equal((candidate.match(/On equip/g) ?? []).length, 1);
+  assert.doesNotMatch(candidate, /Replaces|ui-item-change/);
+  assert.match(equipped, /Equipped · Boots/);
+  assert.match(equipped, /Armor/);
+  assert.doesNotMatch(equipped, /On equip|ui-item-stat-table/);
+  assert.deepEqual(p, before);
+});
+
 
 test('hover comparison cards show exactly the gear displaced, without changing the build', () => {
   const p = initialPlayer(0, 0); put(p, 0, 'longsword'); put(p, 1, 'iron-buckler', true);

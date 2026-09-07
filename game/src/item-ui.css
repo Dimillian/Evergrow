@@ -30,6 +30,16 @@
 .ui-item-property > strong { color: var(--ui-ivory); font-weight: 400; }
 .ui-item-property > em { font-size: 11px; font-style: normal; text-align: right; }
 .ui-item-property.is-removed > span, .ui-item-property.is-removed > strong { color: var(--ui-silver-dim); }
+.ui-item-stat-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+.ui-item-stat-table th { text-align: left; font-weight: 400; overflow-wrap: anywhere; }
+.ui-item-stat-table thead th { padding: 0 0 7px; color: var(--ui-silver-dim); font: 500 10px/1.4 "Evergrow Numerals", system-ui, sans-serif; }
+.ui-item-stat-table tbody th, .ui-item-stat-table td { padding: 4px 0; vertical-align: baseline; }
+.ui-item-stat-table td, .ui-item-stat-table thead th:not(:first-child) { width: 1%; padding-left: 12px; text-align: right; white-space: nowrap; }
+.ui-item-stat-table td { color: var(--ui-ivory); font-variant-numeric: tabular-nums; }
+.ui-item-stat-table td.is-gain { color: #a1d4b0; }
+.ui-item-stat-table td.is-loss { color: #da9294; }
+.ui-item-stat-table td.ui-item-stat-empty { color: var(--ui-silver-dim); }
+.ui-item-stat-table .ui-item-affix-note { margin: 4px 0 2px; }
 .ui-item-weapon { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid #96b8c319; border-bottom: 1px solid #96b8c319; }
 .ui-item-weapon > div { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: baseline; }
 .ui-item-weapon strong { color: var(--ui-ivory); font-size: 21px; font-weight: 400; }
@@ -64,8 +74,6 @@
 .ui-item-tooltip .is-gain { color: #a1d4b0; }
 .ui-item-tooltip .is-loss { color: #da9294; }
 .ui-item-tooltip .ui-item-property { grid-template-columns: minmax(0, 1fr) auto; }
-.ui-item-change { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
-.ui-item-change strong { font: 500 11px/1.4 "Evergrow Numerals", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 .ui-item-comparison p { margin: 6px 0 0; }
 
 .ui-item-enhancement { position:absolute; top:3px; right:3px; padding:1px 3px; border:1px solid #b9b6a775; background:#111a24; color:#f0deb1; font:600 11px "Evergrow Numerals", system-ui,sans-serif; text-shadow:0 1px #000; }
