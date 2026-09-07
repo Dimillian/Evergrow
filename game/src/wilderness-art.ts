@@ -32,8 +32,8 @@ export function drawSiteGround(c: CanvasRenderingContext2D, site: WildernessSite
   }
   c.restore();
   c.lineCap = 'round';
-  // Tracks join actual rotated prop anchors rather than a second, unrotated gate.
-  const tracks=site.decor.filter(d=>['tent','wagon','altar','cottage','nest'].includes(d.kind)).slice(0,4);
+  // Natural tracks join occupied anchors; cottages already share a paved square.
+  const tracks=site.decor.filter(d=>['tent','wagon','altar','nest'].includes(d.kind)).slice(0,4);
   for(const d of tracks) {
     const x=d.x-site.x,y=d.y-site.y,ex=site.entrance.x-site.x,ey=site.entrance.y-site.y;
     c.beginPath();c.moveTo(ex,ey);c.bezierCurveTo(ex*.55,ey*.55,x*.35,y*.35,x,y);
