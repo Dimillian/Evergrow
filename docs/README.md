@@ -40,6 +40,7 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 
 ## Next iteration specifications
 
+- [Character editor feasibility](character-editor-feasibility.md): source-based assessment of creation-time appearance, modular hair/skin/accessories, body presets, rendering integration and save implications; not implemented.
 
 - [Journeys and local leads](procedural-journeys.md): proposed procedural adventures, light onboarding, level-aware routing, journal and reward/persistence rules.
 
