@@ -24,6 +24,7 @@ export interface CharacterEditorOptions {
 export function createAppearanceEditor(mount:HTMLElement,options:CharacterEditorOptions) {
 installUITheme();
 const root=document.createElement('section');root.className='appearance-editor';root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-label','Edit character');mount.append(root);
+const displayName=options.name.trim()||'Wayfarer';
 const initialLook=structuredClone(options.look??options.sheet.look);
 const abort = new AbortController(), reduced = matchMedia('(prefers-reduced-motion: reduce)');
 let appearance:CharacterAppearance={...initialLook.appearance};
@@ -57,7 +58,7 @@ root.innerHTML = `<div class="editor-shell">
     <section class="editor-controls ui-window" aria-label="Appearance editor">
       <div class="editor-tabs" role="tablist" aria-label="Appearance category"><button type="button" role="tab" id="character-tab" data-tab="character" aria-controls="character-options" aria-selected="true">Character</button><button type="button" role="tab" id="armor-tab" data-tab="armor" aria-controls="armor-options" aria-selected="false">Armor</button></div>
       <div id="character-options" class="editor-tab-panel" role="tabpanel" aria-labelledby="character-tab">
-      <label class="editor-name">Name<input type="text" id="name" maxlength="24" value="${escapeUI(options.name)}" autocomplete="off" ${options.study?'':'readonly'}></label>
+      <div class="editor-name"><span>Name</span><span class="editor-name-value">${escapeUI(displayName)}</span></div>
       <fieldset class="paged-section"><legend>Skin tone <span class="choice-value" id="skin-label"></span>${pager('skin','skin tone')}</legend><div class="swatches">${swatches('skin', SKIN_PALETTES)}</div></fieldset>
       <fieldset class="paged-section"><legend>Hairstyle <span class="choice-value" id="hair-label"></span>${pager('hair','hairstyle')}</legend><div class="hair-options">${HAIR_STYLES.map((p,index) => `<button type="button" class="hair-option" data-choice="hair" data-value="${p.id}" data-page="${Math.floor(index/8)}" aria-pressed="false"><canvas aria-hidden="true" data-hair="${p.id}"></canvas><span>${p.name}</span></button>`).join('')}</div></fieldset>
       <fieldset class="paged-section"><legend>Hair color <span class="choice-value" id="color-label"></span>${pager('hairColor','hair color')}</legend><div class="swatches">${swatches('hairColor', HAIR_PALETTES)}</div></fieldset>
@@ -78,7 +79,6 @@ root.innerHTML = `<div class="editor-shell">
 </div>`;
 const canvas = (id: string) => root.querySelector<HTMLCanvasElement>(`#${id}`)!;
 const figure = canvas('figure'), face = canvas('face'), small = canvas('world-size');
-const name = root.querySelector<HTMLInputElement>('#name')!;
 const gear = root.querySelector<HTMLSelectElement>('#gear')!;
 const facial = root.querySelector<HTMLSelectElement>('#facial-hair')!;
 const accessory = root.querySelector<HTMLSelectElement>('#accessory')!;
@@ -167,7 +167,7 @@ function refresh() {
   root.querySelector('#color-label')!.textContent = label(HAIR_PALETTES, appearance.hairColor);
   root.querySelector('#direction')!.textContent = directions[Math.round(((facing % (Math.PI * 2)) + Math.PI * 2) / (Math.PI / 4)) % 8];
   root.querySelector('#coverage-note')!.textContent = showHelmet ? 'The hood covers hair, hoops and circlets.' : 'Hair and accessories follow your selected facing.';
-  root.querySelector('#preview-name')!.textContent = name.value.trim() || 'Wayfarer';
+  root.querySelector('#preview-name')!.textContent = displayName;
   facial.value = appearance.facialHair; accessory.value = appearance.accessory;
   for (const target of root.querySelectorAll<HTMLCanvasElement>('.hair-option:not([hidden]) [data-hair]')) {
     drawHead(target, { ...appearance, hair:target.dataset.hair as CharacterAppearance['hair'], facialHair:'none', accessory:'none' }, Math.PI / 2);
@@ -205,7 +205,6 @@ helmet.addEventListener('change',()=>{showHelmet=helmet.checked;refresh();},{sig
 root.querySelector('.editor-tabs')!.addEventListener('keydown',event=>{const e=event as KeyboardEvent;if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();tab=tab==='character'?'armor':'character';root.querySelector('.editor-controls')!.scrollTop=0;refresh();root.querySelector<HTMLButtonElement>(`[data-tab="${tab}"]`)!.focus();}},{signal:abort.signal});
 facial.addEventListener('change', () => { appearance.facialHair = facial.value as CharacterAppearance['facialHair']; refresh(); }, { signal:abort.signal });
 accessory.addEventListener('change', () => { appearance.accessory = accessory.value as CharacterAppearance['accessory']; refresh(); }, { signal:abort.signal });
-name.addEventListener('input', refresh, { signal:abort.signal });
 root.addEventListener('keydown',event=>{
   if(busy||!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key))return;
   const target=event.target as HTMLElement,grid=target.closest('.swatches, .hair-options, .armor-parts');

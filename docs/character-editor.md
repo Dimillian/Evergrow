@@ -16,7 +16,7 @@ Armor colors apply independently to helmet, chest, shoulders, gloves, legs, boot
 
 `CharacterSheet.look` is a required `CharacterLook`: head appearance IDs, a sparse map of armor tint IDs and a boolean helmet visibility flag. `character-look.ts` validates bounded catalog IDs and rejects unknown keys. `appearance-armor-content.ts` keeps cosmetic content within the headless compiler boundary.
 
-`appearance-command.ts`, exported through the character command entrypoint, stages a detached sheet and persists it before live commitment. Game holds new commands and simulation while saving. `character-editor.ts` owns only a disposable draft and Canvas presentation. The hall remains the owner of name, seed and starting loadout; appearance editing does not rename existing characters.
+`appearance-command.ts`, exported through the character command entrypoint, stages a detached sheet and persists it before live commitment. Game holds new commands and simulation while saving. `character-editor.ts` owns only a disposable draft and Canvas presentation. The hall remains the owner of name, seed and starting loadout; appearance editing does not rename existing characters. The editor shows the name as plain text in both production and mockup views, without a textbox or keyboard/controller focus stop.
 
 `playerPose` supplies the same appearance and tinted outfit to world rendering and `drawCharacterPortrait` (hall and inventory). `character-framing.ts` includes actual hair/accessory contours. Cosmetic choices do not alter collision, targeting, attack geometry or stat derivation. Long hair remains head-local procedural art without independent physics; existing hood coverage rules hide hair/ear jewelry/circlets.
 

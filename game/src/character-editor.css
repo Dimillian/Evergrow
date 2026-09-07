@@ -80,8 +80,8 @@
 .appearance-editor .editor-controls legend { padding:0; width:100%; display:flex; align-items:center; justify-content:space-between; font-size:15px; color:var(--ui-ivory); margin-bottom:10px; }
 .appearance-editor .choice-value { font-size:13px; color:var(--ui-muted); }
 .appearance-editor .editor-name { display:flex; align-items:center; justify-content:space-between; gap:22px; font-size:15px; color:var(--ui-ivory); }
-.appearance-editor .editor-name input { width:70%; }
-.appearance-editor .editor-controls input[type=text], .appearance-editor select { color:var(--ui-ivory); background:#0b151b; border:1px solid #53676388; border-radius:2px; min-height:42px; padding:0 12px; }
+.appearance-editor .editor-name-value { max-width:70%;padding-block:8px;line-height:1.5;text-align:right;overflow-wrap:anywhere; }
+.appearance-editor select { color:var(--ui-ivory); background:#0b151b; border:1px solid #53676388; border-radius:2px; min-height:42px; padding:0 12px; }
 .appearance-editor .swatches { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:8px; }
 .appearance-editor .swatch { position:relative; height:40px; border:1px solid #82968d40; border-radius:3px; padding:5px; background:#0a131a; }
 .appearance-editor .swatch::before { content:''; display:block; width:100%; height:100%; border-radius:1px; background:var(--swatch); box-shadow:inset 0 1px 0 #ffffff25, inset 0 -5px 10px #0002; }
@@ -115,7 +115,7 @@
 .appearance-editor .editor-controls legend { margin-bottom:8px; }
 .appearance-editor .hair-option { height:66px; }
 .appearance-editor .hair-option canvas { height:39px; }
-.appearance-editor .editor-controls input[type=text], .appearance-editor .detail-row select { min-height:38px; }
+.appearance-editor .detail-row select { min-height:38px; }
 .appearance-editor .editor-notice { display:none; }
 .appearance-editor .detail-row { margin-top:14px; }
 .appearance-editor .editor-actions { margin-top:16px; padding-top:14px; }
@@ -163,7 +163,7 @@
 .appearance-editor .editor-tabs { position:sticky; top:0; z-index:3; margin:0 -12px 16px; padding:0 12px; background:#142128; gap:0; }
 .appearance-editor .editor-tabs button { flex:1; min-height:48px; padding:12px 2px; font-size:18px; }
 .appearance-editor .editor-name { gap:12px; }
-.appearance-editor .editor-name input { min-height:44px; width:72%; }
+.appearance-editor .editor-name { min-height:44px; }
 .appearance-editor .editor-controls fieldset { margin-top:18px; }
 .appearance-editor .paged-section legend { min-height:44px; margin-bottom:8px; padding-bottom:17px; align-items:flex-start; }
 .appearance-editor .paged-section .choice-value { position:absolute; bottom:0; left:0; font-size:11px; padding:0; opacity:1!important; }
