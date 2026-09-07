@@ -30,6 +30,8 @@ The server retains one predecessor; older referenced backups are pruned after su
 
 Every upload compares the server revision it started from. Two devices can play independently, but only one divergent branch can publish. The other remains a durable recovery copy with **Conflict**. Returning to the hall offers **Download**, **Continue recovery**, or a confirmed **Use cloud version** action. Download the recovery first and import it into a free slot to keep both builds. No field-level merging of XP, gold, items or world claims occurs.
 
+**Delete** also works during a conflict. Its confirmation explicitly deletes both the cloud save and this device’s recovery copy; downloading a backup is optional. Conflict deletion requires a connection and compares the latest server revision before deleting. Recovery remains intact until the server acknowledges deletion. A failed request or concurrent server save leaves recovery available and shows a retry message; a concurrent recovery edit is retained. This deletion fix is validated locally and awaits publication.
+
 There is no exclusive gameplay lease in this first implementation. Optimistic revision checks and idempotent operation receipts protect shared progress. Account changes invalidate requests rather than writing an old session into a different account.
 
 ## Authentication and API

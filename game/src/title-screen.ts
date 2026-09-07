@@ -192,7 +192,10 @@ export class TitleScreen {
     }
     if (this.loading) { selection.innerHTML = '<p class="title-loading" role="status">Loading…</p>'; return; }
     if (this.confirming) {
-      selection.innerHTML = `<div class="title-confirm"><h3>${this.confirming === 'delete' ? 'Delete character?' : 'Use cloud version?'}</h3><p>${this.confirming === 'delete' ? 'This cannot be undone.' : 'Replaces this device’s recovery copy. Download it first to keep it.'}</p><div class="title-actions"><button class="ui-button" data-action="cancel">Cancel</button><button class="ui-button ui-button--danger" data-action="confirm-${this.confirming}">${this.confirming === 'delete' ? 'Delete' : 'Use cloud'}</button></div></div>`; return;
+      const deleteMessage = slot?.conflict
+        ? 'Deletes the cloud save and this device’s recovery copy. This cannot be undone. Download first if you want a backup.'
+        : 'This cannot be undone.';
+      selection.innerHTML = `<div class="title-confirm"><h3>${this.confirming === 'delete' ? 'Delete character?' : 'Use cloud version?'}</h3><p>${this.confirming === 'delete' ? deleteMessage : 'Replaces this device’s recovery copy. Download it first to keep it.'}</p><div class="title-actions"><button class="ui-button" data-action="cancel">Cancel</button><button class="ui-button ui-button--danger" data-action="confirm-${this.confirming}">${this.confirming === 'delete' ? 'Delete' : 'Use cloud'}</button></div></div>`; return;
     }
     if (record) {
       const power = characterPower(this.player);

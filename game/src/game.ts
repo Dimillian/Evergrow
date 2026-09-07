@@ -537,6 +537,7 @@ export class Game {
   private async deleteCharacter(index: number, expected: string | null) {
     if (this.phase !== 'ready' || this.hallBusy || this.disposed) return;
     this.hallBusy = true;
+    this.titleScreen.setBusy(true);
     try {
     const slot = await this.session.repository.read(index);
     if (slot.token !== expected) { this.titleScreen.message('This character changed. Select it again before deleting.'); return; }
@@ -547,7 +548,7 @@ export class Game {
     }
     this.shell.notifications.clear();
     this.titleScreen.open(await this.session.repository.list(), index);
-    } finally { this.hallBusy = false; }
+    } finally { this.hallBusy = false; this.titleScreen.setBusy(false); }
   }
 
   private enterWorld() {

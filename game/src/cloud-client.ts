@@ -92,9 +92,27 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
     } catch (error) { return { ok: false, message: (error as Error).message }; }
   }
   async remove(index: number, expected: string | null): Promise<SaveResult> {
-    const row = await this.cache<CloudRow | null>({ kind: 'read', index });
-    if (row?.conflict) return { ok: false, message: 'Download your recovery save before resolving this conflict.' };
-    return this.commit(index, expected, null);
+    try {
+      const row = await this.cache<CloudRow | null>({ kind: 'read', index });
+      if (!row?.conflict) return this.commit(index, expected, null);
+      if (row.token !== expected) return { ok: false, message: 'Recovery changed. Select it again before deleting.' };
+      // The hall confirms deletion of both branches. Keep recovery until the server
+      // acknowledges its revision-checked tombstone; a failed request remains retryable.
+      await this.flush();
+      const remote = await this.api<{ revision: number }>(`characters/${index}`);
+      const current = await this.cache<CloudRow | null>({ kind: 'read', index });
+      if (current?.token !== expected || !current.conflict) return { ok: false, message: 'Recovery changed. Select it again before deleting.' };
+      const result = await this.api<{ revision: number }>(`characters/${index}`, { expected: remote.revision, operation: crypto.randomUUID(), bundle: null });
+      const resolved = await this.cache<CloudRow | null>({ kind: 'resolve', index, expected: row.token, bundle: null, base: result.revision });
+      if (!resolved) return { ok: false, message: 'Cloud save deleted, but recovery changed in another tab. Select it again before deleting that copy.' };
+      await this.flush();
+      return { ok: true, token: resolved.token };
+    } catch (error) {
+      this.failed(error);
+      return { ok: false, message: error instanceof CloudError && error.status === 409
+        ? 'Cloud save changed during deletion. Your recovery is still available. Select the character and try again.'
+        : 'Could not confirm cloud deletion. Your recovery is still available. Check your connection and sign-in, then try again.' };
+    }
   }
   async export(index: number): Promise<string> {
     const row = await this.cache<CloudRow | null>({ kind: 'read', index });
