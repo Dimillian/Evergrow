@@ -1,3 +1,4 @@
+@import './tooltip-material.css';
 .ui-item-slot { --ui-slot: 46px; padding: 3px; min-width: 0; width: 100%; aspect-ratio: 1; border-radius: 1px; border-color: #819ba527; cursor: pointer; transition: border-color 120ms, background 120ms, box-shadow 120ms; touch-action: manipulation; }
 .ui-item-slot::before { inset: 3px; border-color: #99b7c210; }
 .ui-item-slot svg { width: 85%; height: 85%; pointer-events: none; }
@@ -37,11 +38,11 @@
 .ui-item-affixes { color: var(--ui-silver-dim); font-size: 11px; line-height: 1.5; margin: 10px 0; }
 .ui-item-comparison { color: var(--ui-silver-dim); font-size: 11px; line-height: 1.45; padding-top: 11px; margin-top: 12px; border-top: 1px solid #96b8c31c; }
 .ui-item-comparison span { color: var(--ui-text); }
-.ui-item-tooltip { position: fixed; z-index: 80; width: min(310px, calc(100vw - 16px)); box-sizing: border-box; max-height: calc(100vh - 16px); overflow: auto; border-color: #526774; background: #101a22; box-shadow: 0 8px 28px #0008; }
-.ui-item-tooltip-group { position: fixed; z-index: 80; display: grid; grid-template-columns: repeat(var(--tooltip-columns), minmax(0, 1fr)); align-items: start; gap: 8px; width: min(calc(var(--tooltip-columns) * 300px + (var(--tooltip-columns) - 1) * 8px), calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow: auto; padding: 0; border: 0; background: none; box-shadow: none; border-radius: 6px; }
-.ui-item-hover-card { position: relative; isolation: isolate; min-width: 0; padding: 14px; box-sizing: border-box; border: 1px solid #526774; border-radius: 6px; background: #101a22; box-shadow: 0 8px 24px #0006; }
-.ui-item-hover-card::before { content: ''; position: absolute; z-index: -1; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(ellipse 230px 170px at 0 0, var(--item-color), transparent 80%); opacity: .14; }
-.ui-item-hover-card:not(:first-child) { background: #0d161e; border-color: #354651; }
+.ui-item-tooltip { position: fixed; z-index: 80; width: min(310px, calc(100vw - 16px)); box-sizing: border-box; max-height: calc(100vh - 16px); overflow: auto; }
+.ui-item-tooltip-group { position: fixed; z-index: 80; display: grid; grid-template-columns: repeat(var(--tooltip-columns), minmax(0, 1fr)); align-items: start; gap: 8px; width: min(calc(var(--tooltip-columns) * 300px + (var(--tooltip-columns) - 1) * 8px), calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow: auto; }
+.ui-item-hover-card { position: relative; isolation: isolate; min-width: 0; padding: 14px; box-sizing: border-box; }
+.ui-item-hover-card::before { content: ''; position: absolute; z-index: -1; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(ellipse 280px 210px at 0 0, var(--item-color), transparent 76%); opacity: .18; }
+.ui-item-hover-card:not(:first-child) { border-color: #abc7d21a; }
 .ui-item-hover-card .ui-item-property { font-size: 12px; padding: 3px 0; }
 .ui-item-hover-card:not(:first-child) .ui-item-equipped, .ui-item-hover-card .ui-item-affixes { display: none; }
 .ui-item-section-label { display: block; margin-bottom: 6px; color: #a6bac4; font: 500 10px/1.4 "Evergrow Numerals", system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; }

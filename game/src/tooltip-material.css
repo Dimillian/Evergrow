@@ -1,0 +1,42 @@
+/* Shared smoked glass. Unsupported blur keeps a readable, opaque ink surface. */
+.ui-tooltip:not(.ui-item-tooltip-group), .ui-item-tooltip, .ui-item-hover-card,
+[data-tooltip]:where(:not([data-tooltip=""]))::after {
+  border: 1px solid #abc7d226;
+  border-radius: 8px;
+  background-color: #0d1821;
+  background-image: radial-gradient(ellipse at 0 0, #a9d4e00c, transparent 65%),
+    linear-gradient(155deg, #bedde507, transparent 48%, #03080d24);
+  box-shadow: 0 12px 32px #0007, 0 0 18px #a8d7e008, inset 0 0 18px #c5e7ef04;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ui-tooltip:not(.ui-item-tooltip-group), .ui-item-tooltip, .ui-item-hover-card,
+  [data-tooltip]:where(:not([data-tooltip=""]))::after {
+    background-color: #0c1720d1;
+    -webkit-backdrop-filter: blur(24px) saturate(1.15);
+    backdrop-filter: blur(24px) saturate(1.15);
+  }
+}
+/* The comparison host owns placement/motion only. Never paint a second surface
+   around its cards, regardless of stylesheet/HMR import order. */
+.ui-tooltip.ui-item-tooltip-group {
+  padding: 6px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+@media (prefers-reduced-transparency: reduce) {
+  .ui-tooltip:not(.ui-item-tooltip-group), .ui-item-tooltip, .ui-item-hover-card,
+  [data-tooltip]:where(:not([data-tooltip=""]))::after {
+    background-color: #0d1821;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (forced-colors: active) {
+  .ui-tooltip:not(.ui-item-tooltip-group), .ui-item-tooltip, .ui-item-hover-card,
+  [data-tooltip]:where(:not([data-tooltip=""]))::after { border-color: CanvasText; background: Canvas; box-shadow: none; }
+}
