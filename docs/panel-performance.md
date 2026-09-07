@@ -15,11 +15,11 @@ The September 6, 2026 pass targets repeated Canvas work and cold map generation.
 
 The existing atlas already coalesces drawing into animation frames, culls offscreen geometry and reduces detail at distant zoom. Search now prepares a matching-ID set when the query, discipline, reachability or build changes, instead of rebuilding searchable strings during rendering and picking.
 
-The atlas surface is retained at native display resolution while a tooltip fades or slides. Only the tooltip is repainted during those animation frames. Camera, selection, hover target, search, allocation, ranks and resize invalidate the underlying atlas. Closing releases the retained surface. This preserves all node glyphs, labels, route highlighting and tooltip motion; pan/zoom still redraw visible vector geometry.
+The atlas surface is retained at native display resolution while a tooltip fades or slides. Only the DOM tooltip opacity and position change during those animation frames; the Canvas is untouched. Camera, selection, hover target, search, allocation, ranks and resize invalidate the underlying atlas. No extra backing Canvas is needed for tooltip animation. This preserves all node glyphs, labels, route highlighting and tooltip motion; pan/zoom still redraw visible vector geometry.
 
 ## Verification and measurements
 
-`game/scripts/benchmark-panels.mjs` uses an already installed `@napi-rs/canvas` supplied through `CANVAS_MODULE`. It adds no runtime dependency, opens no browser, advances no gameplay and uses memory-only exploration. Run with `--progressive` to measure actual budgeted map rendering; omit it for synchronous cold-build comparison. An optional first argument writes JSON. `PANEL_CAPTURE_DIR` exports static renderer images to an existing directory. The tool also compares direct and retained tooltip pixels (maximum allowed channel difference: one).
+`game/scripts/benchmark-panels.mjs` uses an already installed `@napi-rs/canvas` supplied through `CANVAS_MODULE`. It adds no runtime dependency, opens no browser, advances no gameplay and uses memory-only exploration. Run with `--progressive` to measure actual budgeted map rendering; omit it for synchronous cold-build comparison. An optional first argument writes JSON. `PANEL_CAPTURE_DIR` exports static renderer images to an existing directory. Tooltip material and motion now belong to the DOM and are outside this Canvas benchmark.
 
 At a 1,000 × 700 backing surface on the development Mac, representative sequential CPU samples were:
 

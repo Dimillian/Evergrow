@@ -40,3 +40,16 @@
   .ui-tooltip:not(.ui-item-tooltip-group), .ui-item-tooltip, .ui-item-hover-card,
   [data-tooltip]:where(:not([data-tooltip=""]))::after { border-color: CanvasText; background: Canvas; box-shadow: none; }
 }
+
+/* Non-item tooltips use the same fading corner accent as equipment cards. */
+.ui-tooltip:not(.ui-item-tooltip-group):not(.ui-item-tooltip) { isolation: isolate; }
+.ui-tooltip:not(.ui-item-tooltip-group):not(.ui-item-tooltip)::before {
+  content: ''; position: absolute; z-index: -1; inset: 0;
+  border-radius: inherit; pointer-events: none;
+  background: radial-gradient(ellipse 280px 210px at 0 0,
+    var(--tooltip-color, var(--poi-color, #a9d4e0)), transparent 76%);
+  opacity: .18;
+}
+@media (forced-colors: active) {
+  .ui-tooltip:not(.ui-item-tooltip-group):not(.ui-item-tooltip)::before { display: none; }
+}

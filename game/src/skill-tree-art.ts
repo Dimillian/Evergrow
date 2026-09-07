@@ -1,10 +1,7 @@
-import { skillDamageSuffix } from './skill-execution-content.ts';
-import { resolveSkill, learnedSkillRank, maximumSkillRank } from './skill-progression.ts';
+import { learnedSkillRank, maximumSkillRank } from './skill-progression.ts';
 import { SKILL_TREE, SKILL_NODES, type SkillNode } from './skill-tree.ts';
 import { drawSkillGlyph } from './skill-tree-glyphs.ts';
-import type { CharacterSheet, DerivedCharacterStats, StatKey } from './character-types.ts';
-import { STAT_LABELS, formatStatValue } from './items.ts';
-import { SKILL_DEFINITIONS, skillRequirementLabel } from './skill-content.ts';
+import type { CharacterSheet } from './character-types.ts';
 import { UI_THEME } from './ui-theme.ts';
 
 export const SKILL_DOMAIN_COLORS = { Might: '#c69b71', Cunning: '#80b29d', Arcana: '#a49ecb' } as const;
@@ -12,8 +9,6 @@ export interface SkillAtlasView {
   width: number; height: number; zoom: number; centerX: number; centerY: number;
   allocated: ReadonlySet<string>; reachable: ReadonlySet<string>;
   sheet?: CharacterSheet;
-  costStats?: Pick<DerivedCharacterStats, 'manaCostMultiplier' | 'cooldownMultiplier'>;
-  tooltip?: { id: string | null; opacity: number; lift: number };
   selected: string; hovered: string | null; route: readonly string[];
   matches(node: SkillNode): boolean;
 }
@@ -27,7 +22,7 @@ export const skillNodeScreenRadius = (node: SkillNode, zoom: number) =>
   Math.max(.72, skillNodeRadius(node) * (zoom < .3 ? zoom / Math.sqrt(.3) : Math.sqrt(zoom)));
 
 /** One map projection owns all strokes, medallions and level-of-detail decisions. */
-export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView, withTooltip = true): void {
+export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView): void {
   const { width: w, height: h, zoom: z } = view;
   const sx = (x: number) => (x - view.centerX) * z + w / 2;
   const sy = (y: number) => (y - view.centerY) * z + h / 2;
@@ -159,77 +154,4 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     if (x < 40 || x > w - 40 || y < 10 || y > h - 60) continue;
     label(cluster.name.toUpperCase(), x, y, SKILL_DOMAIN_COLORS[cluster.domain] + 'be', 10);
   }
-  if (withTooltip) drawSkillAtlasTooltip(c, view);
-}
-
-/** Tooltip animation can reuse the unchanged atlas beneath it. */
-export function drawSkillAtlasTooltip(c: CanvasRenderingContext2D, view: SkillAtlasView): void {
-  const sx = (x: number) => (x - view.centerX) * view.zoom + view.width / 2;
-  const sy = (y: number) => (y - view.centerY) * view.zoom + view.height / 2;
-  // Native-resolution details follow the hovered node, including an already selected star.
-  const tooltipId = view.tooltip ? view.tooltip.id : view.hovered;
-  if (tooltipId) {
-    const node = SKILL_NODES.get(tooltipId)!;
-    c.save();
-    c.globalAlpha = view.tooltip?.opacity ?? 1;
-    c.translate(0, view.tooltip?.lift ?? 0);
-    drawNodeTooltip(c, node, view, sx(node.x), sy(node.y));
-    c.restore();
-  }
-}
-
-function drawNodeTooltip(c: CanvasRenderingContext2D, node: SkillNode, view: SkillAtlasView, nodeX: number, nodeY: number): void {
-  const width = Math.min(310, view.width - 16), padding = 15;
-  const rows: Array<{ text: string; color: string; size: number; gap: number }> = [];
-  const add = (text: string, color: string, size = 14, gap = 5) => {
-    c.font = `${size}px ${UI_THEME.typography.font}`;
-    const words = text.split(/\s+/);
-    let line = '';
-    for (const word of words) {
-      const candidate = line ? `${line} ${word}` : word;
-      if (line && c.measureText(candidate).width > width - padding * 2) {
-        rows.push({ text: line, color, size, gap: 3 }); line = word;
-      } else line = candidate;
-    }
-    if (line) rows.push({ text: line, color, size, gap });
-  };
-  const color = SKILL_DOMAIN_COLORS[node.domain];
-  const skill = node.skill ? SKILL_DEFINITIONS[node.skill] : undefined;
-  const owned = view.allocated.has(node.id);
-  c.save();
-  add(node.name, '#eee0bf', 17, 8);
-  add(`${node.domain} · ${skill ? `${skill.tier === 'ultimate' ? 'Ultimate' : 'Active skill'}${view.sheet && owned ? ` · Rank ${learnedSkillRank(view.sheet, skill.id)}` : ''}` : node.kind === 'notable' ? 'Notable' : node.role === 'travel' ? 'Travel node' : node.kind === 'origin' ? 'Origin' : 'Passive'}`, color, 12, 12);
-  for (const [key, value] of Object.entries(node.bonuses) as [StatKey, number][]) {
-    add(`${formatStatValue(key, value)} ${STAT_LABELS[key]}`, '#d5e8ca', 15, 6);
-  }
-  if (skill) {
-    add(view.sheet ? resolveSkill(skill.id, view.costStats ?? { manaCostMultiplier: 1, cooldownMultiplier: 1 }, view.sheet).variant?.description ?? skill.description : skill.description, '#b5c2ca', 13, 10);
-    add(`Requires ${skillRequirementLabel(skill.requirement)}`, color, 12, 6);
-    const stats = view.costStats ?? { manaCostMultiplier: 1, cooldownMultiplier: 1 };
-    const costs = resolveSkill(skill.id, stats, view.sheet);
-    if (costs.bonusRanks) add(`Rank ${costs.rank} + ${costs.bonusRanks} gear = ${costs.effectiveRank}`, color, 13, 6);
-    if (costs.damageMultiplier) add(`${Math.round(costs.damageMultiplier * 100)}% weapon damage${skillDamageSuffix(skill.id, costs.recipe)}`, '#d5e8ca', 13, 6);
-    if (costs.upkeep) add(`${costs.upkeep} mana / second while active`, '#cfc4df', 13, 6);
-    add(`${costs.mana} mana · ${costs.cooldown ? `${Number(costs.cooldown.toFixed(2))}s cooldown` : 'No cooldown'}`, '#cfc4df', 13, 10);
-  } else if (!Object.keys(node.bonuses).length) add(node.description, '#b5c2ca', 13, 10);
-  const cost = view.route.filter(id => !view.allocated.has(id)).length;
-  add(owned ? '◆ Allocated' : view.reachable.has(node.id) ? '◇ Available · 1 skill point' : cost ? `◇ ${cost} skill points along this path` : '◇ Not connected', '#b8ab8d', 12, 0);
-  const height = padding * 2 + rows.reduce((sum, row) => sum + row.size + row.gap, 0);
-  const radius = skillNodeScreenRadius(node, view.zoom);
-  const x = Math.max(8, Math.min(view.width - width - 8, nodeX - width / 2));
-  const above = nodeY - radius - height - 14;
-  const y = Math.max(8, Math.min(view.height - height - 8, above >= 8 ? above : nodeY + radius + 14));
-  c.shadowColor = '#0009'; c.shadowBlur = 18; c.shadowOffsetY = 5;
-  c.fillStyle = '#0b141af7'; c.fillRect(x, y, width, height);
-  c.shadowBlur = 0; c.shadowOffsetY = 0;
-  c.strokeStyle = '#93876b'; c.lineWidth = 1; c.strokeRect(x + .5, y + .5, width - 1, height - 1);
-  c.fillStyle = color; c.fillRect(x + 1, y + 1, width - 2, 2);
-  c.textAlign = 'left'; c.textBaseline = 'top';
-  let textY = y + padding;
-  for (const row of rows) {
-    c.font = `${row.size}px ${UI_THEME.typography.font}`;
-    c.fillStyle = row.color; c.fillText(row.text, x + padding, textY);
-    textY += row.size + row.gap;
-  }
-  c.restore();
 }

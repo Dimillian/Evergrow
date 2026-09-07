@@ -3,6 +3,7 @@ import { PAD, PAD_SKILL_LABELS, type GamepadInput } from './gamepad-input.ts';
 import { bindTouchCanvas } from './touch-canvas.ts';
 import type { CharacterCommand } from './character-commands.ts';
 import { resolveSkill, learnedSkillRank, activeSkillRank, maximumSkillRank, selectedSpecialization, SKILL_SPECIALIZATIONS, specializationNode, masteryNode } from './skill-progression.ts';
+import { skillTooltipMarkup } from './skill-tree-tooltip.ts';
 import { TooltipMotion } from './ui-tooltip-motion.ts';
 import { skillDamageSuffix, skillUtilityLabel } from './skill-execution-content.ts';
 import type { Player } from './model.ts';
@@ -10,7 +11,7 @@ import type { SkillId, StatKey } from './character-types.ts';
 import { SKILL_DEFINITIONS, skillIconSVG, canUseSkill, skillRequirementLabel } from './skill-content.ts';
 import { SKILL_TREE, SKILL_NODES, SKILL_TREE_ORIGIN, unlockedSkills, type SkillDomain, type SkillNode } from './skill-tree.ts';
 import { escapeUI, trapDialogFocus, uiIcon } from './ui-components.ts';
-import { drawSkillAtlas, drawSkillAtlasTooltip, type SkillAtlasView, SKILL_DOMAIN_COLORS, skillNodeScreenRadius } from './skill-tree-art.ts';
+import { drawSkillAtlas, type SkillAtlasView, SKILL_DOMAIN_COLORS, skillNodeScreenRadius } from './skill-tree-art.ts';
 import { skillNodeIconSVG } from './skill-tree-glyphs.ts';
 import { buildSkillRoutes, previewSkillRoute, type SkillRouteStep } from './skill-tree-routes.ts';
 import { STAT_LABELS, formatStatValue } from './items.ts';
@@ -26,6 +27,8 @@ const BINDINGS = ['RMB', '1', '2', '3', '4'];
 export class SkillTreePanel {
   private root: HTMLDivElement;
   private canvas: HTMLCanvasElement;
+  private tooltip: HTMLDivElement;
+  private tooltipMarkup = '';
   private detail: HTMLElement;
   private results: HTMLElement;
   private search: HTMLInputElement;
@@ -53,7 +56,6 @@ export class SkillTreePanel {
   private height = 1;
   private frame = 0;
   private atlasDirty = true;
-  private atlasLayer?: HTMLCanvasElement;
   private matching = new Set(SKILL_TREE.nodes.map(node => node.id));
   private lastClickedNode: string | null = null;
   private doubleClickedNode: string | null = null;
@@ -79,6 +81,7 @@ export class SkillTreePanel {
           <button class="ui-button ui-button--quiet" data-tree="reachable" aria-pressed="false">Reachable</button></div>
         <div class="skill-atlas-results ui-scroll-area" hidden aria-label="Matching stars"></div>
         <div class="skill-atlas-viewport"><canvas tabindex="0" role="application" aria-label="Skill constellation map. Arrow keys inspect connected stars, Enter centers the selected star, plus and minus zoom." aria-describedby="skill-atlas-selection"></canvas>
+          <div class="ui-tooltip skill-atlas-tooltip" role="tooltip" hidden></div>
           <div class="skill-atlas-compass" aria-hidden="true"><span>✦</span><small>EVERY PATH, A CHOICE</small></div>
           <div class="skill-atlas-zoom"><button class="ui-button ui-button--icon" data-tree="out" aria-label="Zoom out">−</button><output>80%</output><button class="ui-button ui-button--icon" data-tree="in" aria-label="Zoom in">+</button><button class="ui-button ui-button--quiet" data-tree="origin">Origin</button><button class="ui-button ui-button--quiet" data-tree="overview">All</button></div>
           <div class="skill-atlas-domains" aria-hidden="true"><span>Might</span><span>Cunning</span><span>Arcana</span></div>
@@ -90,6 +93,7 @@ export class SkillTreePanel {
     </section>`;
     mount.append(this.root);
     this.canvas = this.root.querySelector('canvas')!;
+    this.tooltip = this.root.querySelector('.skill-atlas-tooltip')!;
     this.detail = this.root.querySelector('.skill-atlas-inspection')!;
     this.results = this.root.querySelector('.skill-atlas-results')!;
     this.search = this.root.querySelector('input')!;
@@ -226,9 +230,9 @@ export class SkillTreePanel {
     this.controller.clear(); this.root.classList.remove('is-controller'); this.controllerSection = 0;
     this.clearTouch?.();
     this.lastClickedNode = this.doubleClickedNode = null;
-    this.atlasLayer = undefined; this.atlasDirty = true;
+    this.atlasDirty = true;
     this.shown = false; this.root.hidden = true; this.focus?.dispose(); this.focus = undefined;
-    this.drag = undefined; this.hovered = null; this.tooltipMotion.reset();
+    this.drag = undefined; this.hovered = null; this.tooltipMotion.reset(); this.tooltip.hidden = true;
     if (this.frame) cancelAnimationFrame(this.frame); this.frame = 0;
   }
   dispose(): void { this.close(); this.life.abort(); this.observer.disconnect(); this.root.remove(); }
@@ -236,7 +240,7 @@ export class SkillTreePanel {
   /** Also used by frozen review scenes; it changes presentation only. */
   inspectNode(id: string, center = true): void {
     const node = SKILL_NODES.get(id); if (!node) return;
-    this.selected = id; this.hovered = null; this.tooltipMotion.reset();
+    this.selected = id; this.hovered = null; this.tooltipMotion.reset(); this.tooltip.hidden = true;
     if (center) { this.centerX = node.x; this.centerY = node.y; this.setZoom(Math.max(.85, this.zoom)); }
     this.updateDetail(); this.updateAssignments(); this.detail.scrollTop = 0; this.invalidate();
   }
@@ -416,21 +420,29 @@ export class SkillTreePanel {
     const tooltip = this.tooltipMotion.sample(performance.now());
     const view: SkillAtlasView = { width: this.width, height: this.height, zoom: this.zoom,
       centerX: this.centerX, centerY: this.centerY, allocated: this.allocated, reachable: this.reachable,
-      tooltip, costStats: this.player?.derived, sheet: this.player?.character, selected: this.selected, hovered: this.hovered, route: previewSkillRoute(this.routes, this.hovered ?? this.selected),
+      sheet: this.player?.character, selected: this.selected, hovered: this.hovered, route: previewSkillRoute(this.routes, this.hovered ?? this.selected),
       matches: node => this.matches(node) };
-    const layer = this.atlasLayer ??= document.createElement('canvas');
-    if (layer.width !== this.canvas.width || layer.height !== this.canvas.height) {
-      layer.width = this.canvas.width; layer.height = this.canvas.height; this.atlasDirty = true;
-    }
     if (this.atlasDirty) {
-      const base = layer.getContext('2d')!;
-      base.setTransform(this.canvas.width / this.width, 0, 0, this.canvas.height / this.height, 0, 0);
-      drawSkillAtlas(base, view, false); this.atlasDirty = false;
+      ctx.setTransform(this.canvas.width / this.width, 0, 0, this.canvas.height / this.height, 0, 0);
+      drawSkillAtlas(ctx, view); this.atlasDirty = false;
     }
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.drawImage(layer, 0, 0);
-    ctx.setTransform(this.canvas.width / this.width, 0, 0, this.canvas.height / this.height, 0, 0);
-    drawSkillAtlasTooltip(ctx, view);
+    const node = tooltip.id ? SKILL_NODES.get(tooltip.id) : undefined;
+    this.tooltip.hidden = !node;
+    if (node) {
+      const markup = skillTooltipMarkup(node, { allocated: this.allocated, reachable: this.reachable,
+        sheet: this.player?.character, costStats: this.player?.derived, routes: this.routes });
+      if (markup !== this.tooltipMarkup) { this.tooltip.innerHTML = markup; this.tooltipMarkup = markup; }
+      this.tooltip.style.setProperty('--tooltip-color', COLORS[node.domain]);
+      this.tooltip.style.opacity = String(tooltip.opacity);
+      this.tooltip.style.translate = `0 ${tooltip.lift}px`;
+      const width = this.tooltip.offsetWidth, height = this.tooltip.offsetHeight;
+      const x = (node.x - this.centerX) * this.zoom + this.width / 2;
+      const y = (node.y - this.centerY) * this.zoom + this.height / 2;
+      const radius = skillNodeScreenRadius(node, this.zoom);
+      const above = y - radius - height - 14;
+      this.tooltip.style.left = `${Math.max(8, Math.min(this.width - width - 8, x - width / 2))}px`;
+      this.tooltip.style.top = `${Math.max(8, Math.min(this.height - height - 8, above >= 8 ? above : y + radius + 14))}px`;
+    }
     if (tooltip.active) this.invalidate(false);
   }
 }

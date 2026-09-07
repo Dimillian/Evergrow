@@ -195,3 +195,12 @@
 .skill-assign-action { width: 100%; margin-top: 8px; display: flex; justify-content: space-between; }
 .skill-atlas-section-heading .ui-muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-height: 600px) and (min-width: 621px) { .skill-atlas-viewport { min-height: 100px; } }
+
+/* Motion uses the shared envelope so older WebViews also retain outgoing details. */
+.skill-atlas-tooltip.ui-tooltip {
+  position: absolute; z-index: 5; width: min(310px, calc(100% - 16px));
+  box-sizing: border-box; max-height: calc(100% - 16px); overflow: hidden;
+  padding: 14px 16px; line-height: 1.4; overflow-wrap: anywhere;
+  transition: none;
+}
+.skill-atlas-tooltip h3 { font-weight: 500; }
