@@ -78,10 +78,7 @@ export function drawCryptGate(c: CanvasRenderingContext2D, p: Pick<DungeonEntran
     c.stroke();
     c.restore();
 }
-export function drawCryptDecor(c: CanvasRenderingContext2D, f: DungeonFloor, run: DungeonRun, time: number, opening?: {
-    index: number;
-    progress: number;
-}, chests:ChestArt=defaultChests, reduced=false) {
+export function drawCryptDecor(c: CanvasRenderingContext2D, f: DungeonFloor, run: DungeonRun, time: number, chests:ChestArt=defaultChests, reduced=false) {
     for (const r of f.rooms) {
         c.save(); c.beginPath();
         cryptOutline(r).forEach((p,i) => i ? c.lineTo(p.x,p.y) : c.moveTo(p.x,p.y)); c.closePath(); c.clip();
@@ -177,7 +174,7 @@ export function drawCryptDecor(c: CanvasRenderingContext2D, f: DungeonFloor, run
     drawCryptGate(c, f.entry, time);
     if (run.states.warden.hp <= 0)
         drawCryptGate(c, f.exit, time);
-    f.chests.forEach((p,i)=>chests.draw(c,`${run.entrance.id}:chest:${i}`,p.x,p.y,run.chestMasks[i]!==0,time,opening?.index===i?opening.progress:0,false,reduced));
+    f.chests.forEach((p,i)=>chests.draw(c,`${run.entrance.id}:chest:${i}`,p.x,p.y,run.chestMasks[i]!==0,time,0,false,reduced));
 }
 
 

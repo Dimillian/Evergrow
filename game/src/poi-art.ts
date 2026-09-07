@@ -80,7 +80,7 @@ export function drawEventUI(c: CanvasRenderingContext2D, sim: Simulation, world:
     c.save();
     c.font = '13px "Evergrow Numerals", system-ui';
     c.textAlign = 'center';
-    const value = sim.eventChannel.site?.kind !== 'cryptChest' && sim.eventChannel.site?.id === site.id ? `${label} · ${(sim.eventChannel.duration - sim.eventChannel.elapsed).toFixed(1)}s` : `${label}  [${gamepad ? 'A' : 'E'}]`;
+    const value = sim.eventChannel.site?.id === site.id ? `${label} · ${(sim.eventChannel.duration - sim.eventChannel.elapsed).toFixed(1)}s` : `${label}  [${gamepad ? 'A' : 'E'}]`;
     const w = c.measureText(value).width + 20;
     c.fillStyle = '#071019ed';
     c.fillRect(point.x - w / 2, point.y - 16, w, 25);

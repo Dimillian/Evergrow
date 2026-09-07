@@ -71,19 +71,18 @@ async function boot() {
   root.querySelector('.state-button')!.addEventListener('click', () => { claimed = !claimed; draw(); }, { signal: lifetime.signal });
   root.querySelector('.choice-button')!.addEventListener('click', () => panel!.open(selected), { signal: lifetime.signal });
   root.querySelector('.opening-button')!.addEventListener('click', () => {
-    claimed = false; draw(); sim.eventChannel.start(selected, null);
+    claimed = false; draw();
     const start = performance.now(); let previous = start, opened = false;
     function animate(now: number) {
       if (disposed) return;
       const elapsed = (now - start) / 1000; sim.time = 12 + elapsed;
-      if (!opened) sim.eventChannel.elapsed = Math.min(1, elapsed);
-      if (elapsed >= 1 && !opened) {
+      if (!opened) {
         opened = true; sim.eventChannel.cancel(); const record = reviewRecord('claimed');
         sim.eventState.sites[selected.id] = record; const bundle = eventRewards(record);
-        sim.groundItems = bundle.items.map((item, i) => ({ id: i + 1, item, ...treasureLanding(scene, selected.x, selected.y, i, selected.seed), flight: { x: selected.x, y: selected.y, at: 13, delay: i * .11 } }));
-        if (bundle.gold) sim.groundGold = [{ id: 100, amount: bundle.gold, age: 0, ...treasureLanding(scene, selected.x, selected.y, 12, selected.seed), flight: { x: selected.x, y: selected.y, at: 13, delay: .1 } }];
+        sim.groundItems = bundle.items.map((item, i) => ({ id: i + 1, item, ...treasureLanding(scene, selected.x, selected.y, i, selected.seed), flight: { x: selected.x, y: selected.y, at: 12, delay: i * .11 } }));
+        if (bundle.gold) sim.groundGold = [{ id: 100, amount: bundle.gold, age: 0, ...treasureLanding(scene, selected.x, selected.y, 12, selected.seed), flight: { x: selected.x, y: selected.y, at: 12, delay: .1 } }];
       }
-      for (const pile of sim.groundGold) pile.age = Math.max(0, elapsed - 1);
+      for (const pile of sim.groundGold) pile.age = elapsed;
       paint(true, Math.min(.05, (now - previous) / 1000)); previous = now;
       if (elapsed < 4) frame = requestAnimationFrame(animate);
     }

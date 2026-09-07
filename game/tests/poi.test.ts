@@ -271,7 +271,7 @@ test('trial actors exceed the former population limit and suspend without reward
   assert.equal(sim.enemies.length, eventRecipe(grave)!.size);
   assert.ok(sim.enemies.some(e => e.hp === 7));
 });
-test('landed enemy damage cancels an opening before it can award anything', async () => {
+test('landed enemy damage cancels a beacon channel before it can award anything', async () => {
   const { sim } = (await setup());
   const enemy = sim.spawnEnemy('stalker', 0, 25)!;
   enemy.state = 'windup';
@@ -280,7 +280,7 @@ test('landed enemy damage cancels an opening before it can award anything', asyn
   enemy.attackAngle = -Math.PI / 2;
   enemy.attackTargetX = 0;
   enemy.attackTargetY = 0;
-  sim.eventChannel.start(site('reliquary'), null);
+  sim.eventChannel.start(site('watchtower'), null);
   tick(sim, .1);
   assert.ok(sim.player.hp < sim.player.maxHp);
   assert.equal(sim.eventChannel.site, null);

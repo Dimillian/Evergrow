@@ -341,7 +341,7 @@ export class Renderer {
     this.groundLayer.draw(c, world, left, top, worldWidth, worldHeight);
     this.profiler?.end('terrain', terrainStart);
     const dungeonRun=currentDungeon(sim.expeditions);
-    if(sim.dungeonFloor&&dungeonRun) drawCryptDecor(c,sim.dungeonFloor,dungeonRun,settings.reducedMotion ? 0 : this.visualTime,sim.eventChannel.site?.kind==='cryptChest'?{index:sim.eventChannel.site.index,progress:sim.eventChannel.elapsed/sim.eventChannel.duration}:undefined,this.eventArt.chests,settings.reducedMotion);
+    if(sim.dungeonFloor&&dungeonRun) drawCryptDecor(c,sim.dungeonFloor,dungeonRun,settings.reducedMotion ? 0 : this.visualTime,this.eventArt.chests,settings.reducedMotion);
     else for(const entrance of this.visibility.entrances)drawCryptGate(c,entrance,this.visualTime);
     for (const site of this.visibility.sites) drawSiteGround(c, site, settings.reducedMotion ? 0 : this.visualTime);
     this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime);
@@ -572,7 +572,7 @@ export class Renderer {
       c.restore();
     } }));
     for (const site of this.eventSites)
-      entries.push({ y: site.y, draw: () => this.eventArt.draw(c, site, eventClaimed(sim.eventState, site.id) ? { phase: 'claimed' } : sim.eventState.sites[site.id], this.visualTime, dt, settings.reducedMotion, sim.eventChannel.site?.kind!=='cryptChest' && sim.eventChannel.site?.id===site.id ? sim.eventChannel.elapsed/sim.eventChannel.duration : 0) });
+      entries.push({ y: site.y, draw: () => this.eventArt.draw(c, site, eventClaimed(sim.eventState, site.id) ? { phase: 'claimed' } : sim.eventState.sites[site.id], this.visualTime, dt, settings.reducedMotion, sim.eventChannel.site?.id===site.id ? sim.eventChannel.elapsed/sim.eventChannel.duration : 0) });
     for (const anchor of this.portalAnchors) entries.push({ y: anchor.y, draw: () => {
       drawTownAnchor(c, anchor, sim.travel.homeTown === anchor.band);
       if (sim.travel.returnTo?.town === anchor.band) drawPortal(c, anchor.x, anchor.y, this.visualTime, 1,
@@ -639,7 +639,6 @@ export class Renderer {
     const heldLights = this.equipmentEmitters = heldEquipmentLights(heldPose, px, py);
     const lights: PointLight[] = [{ x: px, y: py - 15, radius: sim.dungeonFloor ? 250 : 185, color: sim.dungeonFloor || heldLights.length ? '#c0cbd8' : '#ffcf87', power: (sim.dungeonFloor ? .85 : .58) * (heldLights.length ? .65 : 1), shadows: true }, ...heldLights];
     const environmentLights: PointLight[] = sim.dungeonFloor?cryptLights(sim.dungeonFloor, reducedMotion ? 0 : this.visualTime):this.visibility.entrances.map(e=>({x:e.x,y:e.y-30,radius:100,color:'#9bdbc9',power:.45}));
-    if(sim.eventChannel.site?.kind==='cryptChest')environmentLights.push({x:sim.eventChannel.site.x,y:sim.eventChannel.site.y,radius:95,color:'#d7c18a',power:.6*sim.eventChannel.elapsed/sim.eventChannel.duration});
     if (sim.portal.active) lights.push({ x: p.x, y: p.y - 30, radius: 105, color: '#b5a0ee', power: .22 + sim.portal.progress * .35 });
     for (const anchor of this.portalAnchors) if (sim.travel.returnTo?.town === anchor.band)
       environmentLights.push({ x: anchor.x, y: anchor.y - 30, radius: 130, color: '#b5a0ee', power: .6 });

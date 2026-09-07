@@ -9,13 +9,13 @@ import { hasLineOfSight } from './combat-geometry.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
 import type { CampSpawnSource } from './camp-population.ts';
 export class EventChannel {
-  site: EventSite | import('./dungeon.ts').DungeonChestTarget | null = null;
+  site: EventSite | null = null;
   choice: EventChoice | null = null;
   elapsed = 0;
   get duration() { return this.site?.kind === 'watchtower' ? EVENT_RULES.beaconChannel : EVENT_RULES.channel; }
   get ready() { return !!this.site && this.elapsed + 1e-9 >= this.duration; }
   cancel() { this.site = null; this.choice = null; this.elapsed = 0; }
-  start(site: EventSite | import('./dungeon.ts').DungeonChestTarget, choice: EventChoice | null) { this.site = site; this.choice = choice; this.elapsed = 0; }
+  start(site: EventSite, choice: EventChoice | null) { this.site = site; this.choice = choice; this.elapsed = 0; }
   advance(dt: number, p: Player, input: Input) {
     if (!this.site)
       return;

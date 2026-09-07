@@ -179,7 +179,7 @@ test('dungeon portal and death preserve the exact instance and suspended progres
     assert.equal(death.checkpoint.expeditions!.runs[0].states.warden.hp, 711);
 });
 test('save validation rejects malformed and oversized expedition state', () => { const state = freshExpeditions(); assert.equal(validExpeditions(state), true); state.runs.push(createDungeonRun(entrance)); assert.equal(validExpeditions(state), true); state.location = entrance.id; assert.equal(validExpeditions(state), false); state.location = null; state.runs[0].states.warden.hp = Infinity; assert.equal(validExpeditions(state), false); });
-test('full ground storage preserves a partial chest bundle and an interrupted opening awards nothing', async () => {
+test('full ground storage preserves a partial chest bundle for the next interaction', async () => {
     const { sim, f, run } = (await setup());
     run.states.warden.hp = 0;
     sim.player.x = f.chests[2].x;
@@ -195,11 +195,7 @@ test('full ground storage preserves a partial chest bundle and an interrupted op
     assert.equal(sim.groundItems.length, 2);
     assert.ok(sim.groundItems.every(i => i.item.id !== first));
     assert.equal(sim.groundGold.length, 1);
-    const before = JSON.stringify(sim.captureCheckpoint());
-    sim.eventChannel.start({ ...f.chests[0], kind: 'cryptChest', index: 0, name: 'Chest' }, null);
-    sim.eventChannel.advance(.5, sim.player, { moveX: 1, moveY: 0, attack: false, dodge: false, heal: false, skillSlot: null, aimX: 0, aimY: 0 });
-    assert.equal(sim.eventChannel.site, null);
-    assert.equal(JSON.stringify(sim.captureCheckpoint()), before);
+
 });
 test('Warden fracture locks three lanes and commits at most one hit during their sequence', async () => {
     const { sim, f } = (await setup()), b = f.members.find(m => m.id === 'warden')!, e = sim.spawnEnemy('warden', b.x, b.y)!;

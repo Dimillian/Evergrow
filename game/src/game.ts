@@ -22,7 +22,7 @@ import { FrameProfiler } from './frame-profiler.ts';
 import { questDiamond } from './journey-marker.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { DungeonWorld } from './dungeon-world.ts';
-import { generateDungeon, type DungeonEntrance } from './dungeon.ts';
+import { generateDungeon, type DungeonEntrance, type DungeonChestTarget } from './dungeon.ts';
 import { currentDungeon } from './dungeon-state.ts';
 import { claimDungeonChest, dungeonChestProblem, type DungeonAction } from './dungeon-command.ts';
 import { DungeonMap, drawCryptMinimap } from './dungeon-map.ts';
@@ -709,7 +709,7 @@ export class Game {
               else {
                   this.sim.clearInput();
                   this.sim.portal.cancel();
-                  this.sim.eventChannel.start({ ...f.chests[chest], kind: 'cryptChest', name: 'Crypt chest', index: chest }, null);
+                  void this.finishEvent({ ...f.chests[chest], kind: 'cryptChest', name: 'Crypt chest', index: chest }, null);
               }
               return true;
           }
@@ -766,13 +766,14 @@ export class Game {
     const problem = eventProblem(this.sim, site, choice);
     if (problem) { this.notify(problem); return; }
     this.sim.portal.cancel(); this.sim.clearInput();
-    this.sim.eventChannel.start(site, choice);
+    if(site.kind==='watchtower'||site.kind==='standingStones')this.sim.eventChannel.start(site, choice);
+    else void this.finishEvent(site,choice);
   }
 
-  private async finishEvent(): Promise<void> {
+  private async finishEvent(site:EventSite|DungeonChestTarget|null = this.sim.eventChannel.ready?this.sim.eventChannel.site:null, choice:EventChoice|null = this.sim.eventChannel.choice): Promise<void> {
     return this.durable(async () => {
-      const channel = this.sim.eventChannel, site = channel.site;
-      if (!site || !channel.ready)
+      const channel = this.sim.eventChannel;
+      if (!site)
           return;
       if (site.kind === 'cryptChest') {
           const result = await claimDungeonChest(this.sim, site.index, c => this.persistTravel(c));
@@ -786,7 +787,7 @@ export class Game {
           .filter(poi => poi.id !== site.id && !this.exploration.isDiscovered(poi.id) && Math.hypot(poi.x - site.x, poi.y - site.y) <= 2400
           && isEventKind(poi.kind))
           .sort((a, b) => Math.hypot(a.x - site.x, a.y - site.y) - Math.hypot(b.x - site.x, b.y - site.y))[0] : undefined;
-      const result = await executeEvent(this.sim, site, channel.choice, c => this.persistTravel(c), target);
+      const result = await executeEvent(this.sim, site, choice, c => this.persistTravel(c), target);
       channel.cancel();
       this.notify(result.message);
       this.projectBeacons();
