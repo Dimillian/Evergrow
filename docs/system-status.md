@@ -2,7 +2,8 @@
 
 ## Adaptive music · 2026-09-08
 
-Four original GarageBand loops now follow town, field, crypt and engaged-enemy
+Four original loops composed by GPT6-Astra using GarageBand on a Mac now follow
+town, field, crypt and engaged-enemy
 situations with crossfades, six-second surface combat release and quieter panel music.
 Crypts retain their location track through combat. Default music gain is 0.49
 (70% of the previous level); sound effects retain their existing volume.

@@ -1,11 +1,28 @@
 # Adaptive music
 
+**Music attribution: all four tracks were composed by GPT6-Astra using GarageBand
+on a Mac.** These are precomposed recordings; the game selects and blends them,
+rather than generating new music during play.
+
 Implemented locally on `codex/adaptive-music`, 2026-09-08. The four original
-GarageBand cues now play in the game. Only the four final `.webm` assets live
+cues now play in the game. Only the four final `.webm` assets live
 under `music/evergrow-loops/loops/`. Authoring projects, MIDI, WAV/MP3 copies,
 render intermediates, generation scripts and measurement reports stay outside
 the repository. The music branch contains the controller, tests, documentation
 and final WebMs only.
+
+## Track themes
+
+The four cues give each part of the journey a distinct emotional role:
+
+| Track | Theme |
+| --- | --- |
+| Lanterns in the Ash | A small refuge in a damaged world: warmth, shelter and a moment to recover before returning to danger. It gives the main menu and towns a shared sense of home. |
+| Under the Black Canopy | Curiosity mixed with unease beneath an ancient forest. It supports wandering and discovery while keeping the wilderness faintly threatening. |
+| Rootbound Vigil | A solemn watch among buried ruins and encroaching roots. The crypt keeps this atmosphere through both exploration and fighting, without switching to the surface battle cue. |
+| Embers at the Gate | The refuge's warmth turning into urgency as danger closes in. It marks an active surface encounter and the need to stand, fight or retreat. |
+
+## In-game selection
 
 | Situation | Cue | Transition |
 | --- | --- | --- |
