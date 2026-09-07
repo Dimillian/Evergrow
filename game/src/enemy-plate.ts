@@ -1,3 +1,5 @@
+import { enemyDebuffs, type EnemyDebuffState } from './enemy-debuffs.ts';
+import { drawEnemyDebuffs } from './enemy-debuff-art.ts';
 import type { Enemy } from './model.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { ENEMY_RANKS } from './progression-content.ts';
@@ -25,13 +27,14 @@ const compactNumber = new Intl.NumberFormat('en-US', { notation: 'compact', maxi
 const compact = (value: number) => value >= 10_000 ? compactNumber.format(value) : `${Math.ceil(value)}`;
 
 /** A centered target readout that shares the existing navigation and map space. */
-export function getEnemyPlateLayout(width: number, height: number, touch = false, topInset = 0): { x: number; y: number; width: number; height: number } {
+export function getEnemyPlateLayout(width: number, height: number, touch = false, topInset = 0, hasDebuffs = false): { x: number; y: number; width: number; height: number } {
+  const plateHeight = hasDebuffs ? 94 : 70;
   width = Math.max(0, Number.isFinite(width) ? width : 0);
   height = Math.max(0, Number.isFinite(height) ? height : 0);
   if (touch) {
     const plateWidth = Math.max(0, Math.min(240, width - 24));
     const y = Math.max(8, (Number.isFinite(topInset) ? topInset : 0) + 6);
-    return {x: (width - plateWidth) / 2, y, width: plateWidth, height: plateWidth >= 160 && y + 70 <= height ? 70 : 0};
+    return {x: (width - plateWidth) / 2, y, width: plateWidth, height: plateWidth >= 160 && y + 70 <= height ? (y + plateHeight <= height ? plateHeight : 70) : 0};
   }
   const map = getMinimapRect(width, height);
   const besideMap = 2 * (map.x - 12 - width / 2);
@@ -42,7 +45,7 @@ export function getEnemyPlateLayout(width: number, height: number, touch = false
   // The actual game uses at least 450 logical pixels of height. If embedded in a
   // smaller surface, omit the plate when neither the map nor the HUD can move.
   const fits = plateWidth >= 180 && y + 70 <= bottom;
-  return { x: (width - plateWidth) / 2, y: Math.min(y, height), width: plateWidth, height: fits ? 70 : 0 };
+  return { x: (width - plateWidth) / 2, y: Math.min(y, height), width: plateWidth, height: fits ? (y + plateHeight <= bottom ? plateHeight : 70) : 0 };
 }
 
 function chamfer(c: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, cut: number) {
@@ -87,9 +90,10 @@ function bloodMotion(c: CanvasRenderingContext2D, x: number, y: number, width: n
 }
 
 /** Native text and restrained metalwork, drawn after world post-processing. */
-export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, 'kind' | 'hp' | 'maxHp' | 'level' | 'rank'>,
+export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, 'kind' | 'hp' | 'maxHp' | 'level' | 'rank'> & EnemyDebuffState,
   width: number, height: number, options: EnemyPlateOptions = {}): void {
-  const layout = getEnemyPlateLayout(width, height, options.touch, options.topInset);
+  const debuffs = enemyDebuffs(enemy);
+  const layout = getEnemyPlateLayout(width, height, options.touch, options.topInset, debuffs.length > 0);
   const opacity = clamp(options.opacity ?? 1);
   if (!layout.height || opacity <= 0) return;
   const w = layout.width;
@@ -165,5 +169,7 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
   text(c, `Lv ${compact(enemy.level)}`, 11, 61, .78, UI.muted);
   text(c, healthLabel, w / 2, 61, Math.min(.8, (w - 114) / Math.max(1, textWidth(healthLabel))), UI.text, 'center');
   text(c, enemy.kind==='warden'?'BOSS':rank.name, w - 11, 61, .78, rank.color, 'right');
-  c.restore(); c.restore();
+  c.restore();
+  if (layout.height > 70) drawEnemyDebuffs(c, debuffs, w, 76);
+  c.restore();
 }

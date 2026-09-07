@@ -4,7 +4,7 @@ import { loadGameFont, text, textWidth } from './font.ts';
 import { Simulation } from './simulation.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
 import { drawEnemyPlate, getEnemyPlateLayout } from './enemy-plate.ts';
-import type { Enemy, Player, WorldQuery } from './model.ts';
+import type { Player, WorldQuery } from './model.ts';
 
 // This dev-only entry never binds gameplay input, ticks a simulation or accesses saves.
 const params = new URLSearchParams(location.search);
@@ -26,7 +26,7 @@ let disposed = false;
 
 interface Stage {
   name: string; detail: string; player: Player; time: number; options: HUDOptions;
-  enemy: Pick<Enemy, 'kind' | 'hp' | 'maxHp' | 'level' | 'rank'>;
+  enemy: Parameters<typeof drawEnemyPlate>[1];
   enemyOptions?: Parameters<typeof drawEnemyPlate>[4];
 }
 const emptyWorld: WorldQuery = {
@@ -50,10 +50,10 @@ function makeStages(): Stage[] {
     { name: 'Healthy', detail: 'Full vitality · abilities ready', player: healthy, time: 5.7, options: {},
       enemy: { kind: 'stalker', hp: 48, maxHp: 48, level: 1, rank: 'normal' } },
     { name: 'Damaged', detail: 'Recent impact · trailing vitality · one dodge charge', player: damaged,
-      time: 9.2, options: { healthTrail: .83, hitPulse: .5 }, enemy: { kind: 'brute', hp: Math.round(brute.maxHp * .62), maxHp: brute.maxHp, level: 2, rank: 'veteran' },
+      time: 9.2, options: { healthTrail: .83, hitPulse: .5 }, enemy: { kind: 'brute', hp: Math.round(brute.maxHp * .62), maxHp: brute.maxHp, level: 2, rank: 'veteran', burnTime: 2.4, burnDps: 6, slowTime: 1.2, slowFactor: .8 },
       enemyOptions: { healthTrail: brute.maxHp * .87, hitPulse: .5 } },
     { name: 'Depleted', detail: 'Low resources · recovery timers · empty flask', player: depleted, time: 14.4, options: {},
-      enemy: { kind: 'caster', hp: Math.round(caster.maxHp * .14), maxHp: caster.maxHp, level: 4, rank: 'elite' } },
+      enemy: { kind: 'caster', hp: Math.round(caster.maxHp * .14), maxHp: caster.maxHp, level: 4, rank: 'elite', burnTime: 1.8, burnDps: 8, slowTime: 2.1, slowFactor: .6, stagger: .4 } },
   ];
 }
 

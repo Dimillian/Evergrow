@@ -1,3 +1,4 @@
+import { enemyDebuffs } from './enemy-debuffs.ts';
 import { basicAttackWeapon } from './equipment.ts';
 import { projectilePresentation } from './projectile-launch.ts';
 import { heldEquipmentLights } from './weapon-emission.ts';
@@ -59,7 +60,7 @@ import { ENEMY_BODY_BOUNDS } from './enemy-body.ts';
 import { resolveRangedAim, resolveDirectionalAim, PROJECTILE_HEIGHT, type RangedAim } from './ranged-aim.ts';
 import { deriveAttackStats } from './equipment.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
-import { drawEnemyPlate } from './enemy-plate.ts';
+import { drawEnemyPlate, getEnemyPlateLayout } from './enemy-plate.ts';
 import { drawRankCrest } from './enemy-rank-art.ts';
 import { drawSiteGround, drawSiteDecor, wildernessLights } from './wilderness-art.ts';
 
@@ -442,7 +443,12 @@ export class Renderer {
     const plateWidth=this.width/plateScale, plateHeight=this.height/plateScale;
     const plateInset=this.touchTopInset/plateScale;
     const boss=sim.enemies.find(e=>e.kind==='warden'&&e.hp>0&&Math.hypot(e.x-p.x,e.y-p.y)<1100);
-    if(boss) { drawEnemyPlate(c,boss,plateWidth,plateHeight,{touch:this.touchActive,topInset:plateInset}); if(this.focusedEnemy?.id===boss.id)text(c,'CONTROL DURATION −75% · BRIEF STUN IMMUNITY',plateWidth/2,90+(this.touchActive?plateInset:0),.7,'#9db8a7','center'); }
+    if (boss) {
+      drawEnemyPlate(c, boss, plateWidth, plateHeight, { touch: this.touchActive, topInset: plateInset });
+      const plate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, enemyDebuffs(boss).length > 0);
+      if (plate.height && this.focusedEnemy?.id === boss.id) text(c, 'CONTROL DURATION −75% · BRIEF STUN IMMUNITY',
+        plateWidth / 2, plate.y + plate.height + 4, .7, '#9db8a7', 'center');
+    }
     if (!boss && this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, plateWidth, plateHeight, {
       touch: this.touchActive, topInset: plateInset,
       time: this.visualTime, reducedMotion: settings.reducedMotion,

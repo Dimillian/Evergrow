@@ -115,3 +115,5 @@ Slot-specific weighted affix pools now drive drops and enchanting, with stronger
 Affix/hybrid checkpoint verification: all 836 code tests pass, including weighted generation/rerolls, specialist bounds, sword + wand save/casting/aim checks, and snapshotted elemental statuses. Application/headless TypeScript and production build pass. Combat feel remains player-tested; no Site or Android deployment in this checkpoint.
 
 Sword/wand follow-up: mixed one-handed basics now alternate one action per click (or sequentially while held), with independent weapon speed, mana cost and release. Next-hand HUD/aim assistance and offhand wand-tip launch share the same selection. Unaffordable wand turns wait without skipping or firing both hands.
+
+Enemy debuff HUD: target and boss plates now show compact Burn/Chill/Stagger indicators and actual remaining durations. Shared projection hides expired/dead effects; narrow layouts retain icons/timers, and the boss resistance note clears the row. Verified 19 focused status/focus/layout tests plus application/headless checks and production build.
