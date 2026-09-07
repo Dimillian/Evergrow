@@ -18,7 +18,7 @@ export class SkillAssignmentPanel {
   private anchor!: { left: number; top: number; width: number; height: number };
   private viewport = { width: 1, height: 1 };
   private readonly actions: {
-    close(): void; atlas(): void; assign(slot: number, skill: SkillId): Promise<ActionResult>;
+    close(): void; assign(slot: number, skill: SkillId): Promise<ActionResult>;
   };
   constructor(mount: HTMLElement, actions: SkillAssignmentPanel['actions']) {
     this.actions = actions;
@@ -28,7 +28,6 @@ export class SkillAssignmentPanel {
       if (this.busy) return;
       const target = event.target as Element;
       if (target === this.element || target.closest('[data-picker-close]')) { this.actions.close(); return; }
-      if (target.closest('[data-picker-atlas]')) { this.actions.atlas(); return; }
       const skill = target.closest<HTMLElement>('[data-assign-skill]')?.dataset.assignSkill as SkillId | undefined;
       if (skill) void this.assign(skill);
     }, { signal: this.abort.signal });
@@ -46,6 +45,7 @@ export class SkillAssignmentPanel {
   private render(): void {
     this.focus?.dispose();
     const skills = assignableSkills(this.player), off = this.player.character.equipped.offhand;
+    if (skills.length === 0) { this.actions.close(); return; }
     const equipment = `${this.player.character.equipped.weapon?.name ?? 'Unarmed'}${off ? ` + ${off.name}` : ''}`;
     this.element.innerHTML = `<section class="skill-assignment ui-well" role="dialog" aria-modal="true" aria-labelledby="skill-assignment-title">
       <header><h3 id="skill-assignment-title">Assign skill · ${HUD_SKILL_SLOTS[this.slot + 1].key}</h3><button class="ui-button ui-button--quiet ui-button--icon" data-picker-close aria-label="Close skill picker">${uiIcon('close')}</button></header>
@@ -53,11 +53,11 @@ export class SkillAssignmentPanel {
       <div class="skill-assignment-list ui-scroll-area">${skills.map(id => {
         const skill = resolveSkill(id, this.player.derived, this.player.character), definition = SKILL_DEFINITIONS[id];
         return `<button type="button" class="ui-button ui-button--quiet skill-assignment-choice" data-assign-skill="${id}" aria-label="Assign ${definition.name}, ${skill.mana} mana${skill.cooldown ? `, ${skill.cooldown} second cooldown` : ''}"><span class="skill-assignment-icon" style="color:${definition.color}">${skillIconSVG(id, 30)}</span><span>${definition.name}</span><small>${skill.mana} mana${skill.cooldown ? ` · ${Number(skill.cooldown.toFixed(1))}s` : ''}</small></button>`;
-      }).join('') || '<p class="skill-assignment-empty">No unlocked, unassigned skills match your equipment.</p><button class="ui-button" data-picker-atlas>Open skill atlas</button>'}</div>
+      }).join('')}</div>
       <p class="skill-assignment-message" role="status"></p><footer><span>A Assign</span><span>B Back</span></footer></section>`;
     this.position();
     this.focus = trapDialogFocus(this.element, { restoreFocus: false,
-      initialFocus: () => this.element.querySelector<HTMLElement>('[data-assign-skill], [data-picker-atlas]') });
+      initialFocus: () => this.element.querySelector<HTMLElement>('[data-assign-skill]') });
   }
   private position(): void {
     const panel = this.element.firstElementChild as HTMLElement, bounds = this.element.getBoundingClientRect();
@@ -74,7 +74,7 @@ export class SkillAssignmentPanel {
     finally { this.busy = false; }
     if (this.element.hidden) return;
     if (result.ok) this.actions.close();
-    else { this.render(); this.element.querySelector('[role="status"]')!.textContent = result.message ?? 'Could not assign this skill.'; }
+    else { this.render(); if (!this.element.hidden) this.element.querySelector('[role="status"]')!.textContent = result.message ?? 'Could not assign this skill.'; }
   }
   close(): void { this.focus?.dispose(); this.focus = null; this.element.hidden = true; }
   dispose(): void { this.close(); this.abort.abort(); this.element.remove(); }

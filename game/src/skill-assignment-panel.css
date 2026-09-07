@@ -9,7 +9,6 @@
 .skill-assignment-choice { display: grid; grid-template-columns: 30px 1fr; align-items: center; column-gap: 10px; min-height: 52px; text-align: left; padding: 6px 8px; }
 .skill-assignment-icon { grid-row: span 2; }
 .skill-assignment-choice small { grid-column: 2; font-size: 12px; color: var(--ui-silver-dim); }
-.skill-assignment-empty { font-size: 14px; line-height: 1.5; color: var(--ui-silver-dim); }
 .skill-assignment-message { margin: 4px 0 0; color: var(--ui-brass); font-size: 13px; }
 .skill-assignment-message:empty { display: none; }
 .skill-assignment footer { display: flex; gap: 24px; justify-content: center; margin-top: 8px; font-size: 12px; color: var(--ui-silver-dim); }

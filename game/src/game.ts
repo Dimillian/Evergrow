@@ -1,5 +1,6 @@
 import { PAD_SKILL_BUTTONS } from './gamepad-input.ts';
 import { SkillAssignmentPanel } from './skill-assignment-panel.ts';
+import { assignableSkills } from './skill-assignment.ts';
 import { getHUDSkillRect } from './hud-layout.ts';
 import { basicAttackWeapon } from './equipment.ts';
 import { GroundLootTooltip } from './ground-loot-tooltip.ts';
@@ -194,7 +195,7 @@ export class Game {
         close: () => this.resume(), trade: quote => this.trade(quote), sort: mode => this.characterAction({ type: 'sortInventory', mode }),
       }));
       this.skillAssignmentPanel = this.lifetime.own(new SkillAssignmentPanel(this.shell.panelMount, {
-        close: () => this.resume(), atlas: () => this.openCharacterPanel('skills'),
+        close: () => this.resume(),
         assign: (slot, skill) => this.assignEmptySkill(slot, skill),
       }));
       this.dungeonMap = this.lifetime.own(new DungeonMap(this.shell.mapMount,()=>this.closeMap(),()=>this.worldMap.open({x:this.sim.expeditions.surfaceX,y:this.sim.expeditions.surfaceY,angle:0})));
@@ -869,6 +870,7 @@ export class Game {
 
   private openSkillAssignment(slot: number, anchor?: { left: number; top: number; width: number; height: number }): boolean {
     if (this.phase !== 'playing' || this.savingAction || !Number.isInteger(slot) || slot < 0 || slot >= 5 || this.sim.player.character.skillSlots[slot] !== null) return false;
+    if (assignableSkills(this.sim.player).length === 0) return true;
     this.assignmentSlot = slot;
     const rect = getHUDSkillRect(slot, this.renderer.width, this.renderer.height), bounds = this.canvas.getBoundingClientRect();
     this.assignmentAnchor = anchor ?? { left: bounds.left + rect.x / this.renderer.width * bounds.width, top: bounds.top + rect.y / this.renderer.height * bounds.height,

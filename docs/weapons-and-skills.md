@@ -199,5 +199,7 @@ The picker pauses combat, clears pending input, and supports controller navigati
 A to assign, and B/Escape to dismiss. Assignment revalidates the empty slot and skill,
 persists through the active character session, then commits. It cannot move an
 existing assignment, cast, consume mana, reset cooldowns or heal. A failed save leaves
-the slot unchanged. If no skills qualify, the list offers the existing skill atlas.
+the slot unchanged. If no skills qualify, activating an empty slot does nothing and
+does not pause combat. If equipment changes leave an open picker with no choices,
+it closes.
 The atlas retains its explicit reassignment behavior. No save-format change or reset.

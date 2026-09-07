@@ -21,7 +21,7 @@ The character sheet now connects equipment, attributes, tree allocations, active
 - **T:** open the skill atlas. Pan, zoom, search names/bonuses, filter a domain or reachable stars, inspect a node, and allocate a connected node or an affordable complete route. Hovering or selecting a distant node previews the shortest route from the current build and its remaining point cost. Double-click commits the shortest affordable route; the native Allocate path button does the same. Hover updates the stat preview immediately. Canvas keyboard navigation follows neighboring stars.
 - Assign unlocked skills to **RMB, 1, 2, 3, 4** from a major node's detail panel. Assigning a skill to a new slot moves its existing assignment; one skill cannot occupy multiple slots. LMB stays the basic attack, Q the potion, and Space the dodge.
 
-These windows pause combat, clear buffered inputs, trap modal keyboard focus, and close with Escape or their shortcut. Unassigned skill slots open a compact assignment picker on click, tap or their keyboard/controller binding. Only unlocked, equipment-compatible skills absent from the other slots appear. Selection saves before updating the slot and never casts. Empty lists link to the atlas. Journeys opens with J.
+These windows pause combat, clear buffered inputs, trap modal keyboard focus, and close with Escape or their shortcut. Unassigned skill slots open a compact assignment picker on click, tap or their keyboard/controller binding. Only unlocked, equipment-compatible skills absent from the other slots appear. Selection saves before updating the slot and never casts. If no skills qualify, activating an empty slot does nothing and does not pause combat. Journeys opens with J.
 
 ## State and ownership
 
