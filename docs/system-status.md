@@ -128,7 +128,7 @@ Enemy debuff HUD: target and boss plates now show compact Burn/Chill/Stagger ind
 
 ### Spell anticipation and aftermath · 2026-09-07
 
-Shared animated warnings cover enemy sectors, projectile/pounce lanes, Warden fractures and player ground skills, using actual combat geometry and the bounded scene light pass. Live ground presentation replaces independent warning lifetimes. Meteor/Cataclysm now descend visibly, explode with stone/ember material responses, and leave four seconds of tunable non-stacking burning ground. Arrow rain, frost fields, Tempest and elemental blast materials share this treatment. No save reset; local gameplay/visual tuning remains player testing.
+Shared animated warnings cover enemy sectors, pounce lanes, Warden fractures and player ground skills, using actual combat geometry and the bounded scene light pass. Live ground presentation replaces independent warning lifetimes. Meteor/Cataclysm now descend visibly, explode with stone/ember material responses, and leave four seconds of tunable non-stacking burning ground. Arrow rain, frost fields, Tempest and elemental blast materials share this treatment. No save reset; local gameplay/visual tuning remains player testing.
 
 Checkpoint verification: 847 code tests pass; application/headless TypeScript and production build pass. Material budgets remain 48 bursts / 384 fragments; total scene lights remain capped at 18.
 
@@ -144,3 +144,5 @@ Affix checkpoint verification: all 858 code tests, application/headless type che
 Early schools now have separate skill branches beside simple passive backbones: 2,182 nodes and 2,923 connections. Basic and advanced unlock costs remain three/four points; all 60 specializations retain two passive improvements. A Details toggle expands the atlas, domain selection centers starter skills, and overview styling emphasizes backbone connections. Route changes can invalidate older invested paths; saves are preserved. Visually approved by the user; Site publication remains separate. See `skill-progression.md`.
 
 The redesign also replaces the stretched outer clusters with five balanced silhouettes and adds cached, bounded path-light animation (gold allocations, blue previews), subtle nebulae and dust. Reduced motion is respected. Validation: 870 full-suite tests plus the added preview-priority regression pass; TypeScript and production build pass.
+
+Basic ranged attacks (Archer arrows and the Hexer’s three bolts) no longer project warning lanes or their associated lights. Ground attacks, pounces, heavy attacks and boss warnings remain; combat timing and projectile behavior are unchanged.

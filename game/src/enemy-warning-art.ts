@@ -17,8 +17,9 @@ export function enemyWarnings(e: Enemy, alpha = 1): Warning[] {
     return []; // Summoning has no damage footprint; show an aura rather than a false hit boundary.
   }
   if (d.attack === 'ground') return [{ ...base, x: e.attackTargetX, y: e.attackTargetY, color: '#e83d59', shape: { kind: 'circle', radius: d.blastRadius } }];
-  if (d.attack === 'projectile') return d.shotOffsets.map(offset => ({ ...base, angle: e.attackAngle + offset,
-    color: '#ff6676', shape: { kind: 'lane', length: d.projectile.speed * d.projectile.life, width: d.projectile.radius } }));
+  // Basic arrows and the Hexer's three bolts are readable from their projectiles.
+  // Suppress both the floor footprint and its warning light; preserve the cast pose/aim lock.
+  if (d.attack === 'projectile') return [];
   if (d.engageDistance) return [{ ...base, shape: { kind: 'lane', width: 11,
     length: d.lungeSpeed * Math.max(0, d.active - (e.state === 'attack' ? e.stateTime : 0)) + d.range } }];
   return [{ ...base, shape: { kind: 'sector', radius: d.range, arc: d.arc } }];
