@@ -88,9 +88,11 @@ export class InventoryPanel {
   private readonly sectionFocus = new Map<number, HTMLElement>();
   private readonly tooltip: ItemTooltip;
   private readonly canvas: HTMLCanvasElement;
+  private readonly portraitRenderer: typeof drawCharacterPortrait;
   private readonly cells = new Map<string, HTMLButtonElement>();
 
-  constructor(mount: HTMLElement, actions: InventoryPanelActions) {
+  constructor(mount: HTMLElement, actions: InventoryPanelActions, portraitRenderer: typeof drawCharacterPortrait = drawCharacterPortrait) {
+    this.portraitRenderer = portraitRenderer;
     this.actions = actions;
     this.element = document.createElement('div');
     this.element.className = 'character-overlay';
@@ -605,7 +607,7 @@ export class InventoryPanel {
     if (ctx) {
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const time = reduced ? 3 : performance.now() / 1000;
-      drawCharacterPortrait(ctx, this.player, time, this.facing, this.canvas.width, this.canvas.height);
+      this.portraitRenderer(ctx, this.player, time, this.facing, this.canvas.width, this.canvas.height);
     }
     this.animation = requestAnimationFrame(this.animate);
   };

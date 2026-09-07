@@ -2,6 +2,7 @@
 @import './ui-kit.css';
 
 * { box-sizing:border-box; }
+[hidden] { display:none!important; }
 body { margin:0; background:#080f14; color:var(--ui-text); font:16px var(--ui-font); }
 button, input, select { font:inherit; }
 button, select, input { touch-action:manipulation; }
@@ -40,6 +41,38 @@ button svg { width:18px; height:18px; }
 .gear-choice select { max-width:190px; }
 .editor-controls.ui-window { background:linear-gradient(145deg,#17242bf2,#0f191ff2); padding:22px 24px; }
 .editor-controls h2 { font-size:20px; font-weight:500; color:var(--ui-ivory); margin:0 0 22px; }
+.editor-tabs { display:flex; gap:24px; border-bottom:1px solid #78908b40; margin:0 0 18px; }
+.editor-tabs button { padding:0 2px 10px; border:0; border-bottom:2px solid transparent; color:var(--ui-muted); background:none; font-size:20px; }
+.editor-tabs button[aria-selected=true] { color:var(--ui-ivory); border-bottom-color:var(--ui-jade); }
+.editor-tab-panel { flex:1; min-width:0; }
+.paged-section legend { position:relative; }
+.section-pager { position:absolute; right:-3px; top:-6px; height:30px; display:flex; align-items:center; gap:3px; opacity:0; pointer-events:none; transition:opacity 120ms; }
+.section-pager output { width:38px; text-align:center; font-size:12px; color:var(--ui-muted); }
+.page-arrow { display:grid; place-items:center; width:30px; height:30px; padding:4px; color:var(--ui-silver); background:#17272d; border:1px solid #778e8545; border-radius:2px; }
+.page-arrow.prev svg { transform:rotate(180deg); }
+.page-arrow:disabled { cursor:default; opacity:.3; }
+.page-arrow:hover:not(:disabled) { background:#29423f; color:var(--ui-ivory); }
+.paged-section:hover .section-pager, .paged-section:focus-within .section-pager { opacity:1; pointer-events:auto; }
+.paged-section:hover .choice-value, .paged-section:focus-within .choice-value { opacity:0; }
+.armor-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:4px 0 16px; }
+.armor-heading h2 { font-size:16px; margin:0; }
+.armor-parts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.armor-part { display:flex; flex-direction:column; align-items:center; min-width:0; padding:6px 4px; color:var(--ui-text); border:1px solid #6a858340; background:#0c171e; border-radius:3px; font-size:13px; }
+.armor-part[aria-pressed=true] { border-color:var(--ui-jade); background:#213d36; }
+.armor-part-icon { display:flex; height:34px; width:34px; align-items:center; justify-content:center; margin-bottom:2px; }
+.armor-part-icon svg { width:34px; height:34px; }
+.armor-part-color { color:var(--ui-muted); font-size:10px; min-height:13px; margin-top:3px; }
+.original-color { width:100%; height:36px; margin:0 0 10px; border:1px solid #718b8045; background:#0c171e; color:var(--ui-text); border-radius:2px; font-size:14px; }
+.original-color[aria-pressed=true] { border-color:var(--ui-jade); background:#213d36; }
+.armor-swatches { row-gap:8px; }
+.armor-note { font-size:12px; color:var(--ui-muted); min-height:28px; line-height:1.5; margin:16px 0 8px; }
+#reset-armor { font-size:13px; padding:8px 0; min-height:32px; }
+#editor > .character-overlay { position:fixed; }
+.appearance-inventory-tools { position:absolute; right:62px; top:8px; z-index:5; }
+.appearance-inventory-tools > button { width:36px; min-width:36px; height:36px; min-height:36px; padding:8px; border:1px solid #708b8655; background:#12212af2; }
+.appearance-inventory-menu { position:absolute; top:42px; right:0; width:172px; padding:5px; border:1px solid #829990; background:#15242c; box-shadow:0 10px 30px #0008; }
+.appearance-inventory-menu button { display:block; width:100%; border:0; background:none; color:var(--ui-ivory); padding:12px 10px; text-align:left; font-size:14px; }
+.appearance-inventory-menu button:hover { background:#29443d; }
 .editor-controls fieldset { padding:0; border:0; margin:20px 0 0; min-width:0; }
 .editor-controls legend { padding:0; width:100%; display:flex; align-items:center; justify-content:space-between; font-size:15px; color:var(--ui-ivory); margin-bottom:10px; }
 .choice-value { font-size:13px; color:var(--ui-muted); }
@@ -62,7 +95,7 @@ button svg { width:18px; height:18px; }
 .detail-row label { display:flex; flex-direction:column; gap:9px; color:var(--ui-ivory); font-size:15px; min-width:0; }
 .detail-row select { width:100%; min-width:0; }
 .editor-actions { display:flex; justify-content:space-between; gap:12px; margin-top:24px; padding-top:18px; border-top:1px solid #52666245; }
-.editor-actions .ui-button--primary { min-width:180px; }
+.editor-actions .ui-button--primary { min-width:180px; margin-left:auto; }
 .editor-footer { display:flex; justify-content:space-between; align-items:center; gap:16px; padding-top:18px; font-size:12px; color:var(--ui-muted); }
 .editor-footer button { color:var(--ui-muted); background:none; border:0; padding:8px 0; font:inherit; text-decoration:underline; text-underline-offset:4px; }
 .editor-notice { min-height:17px; margin:10px 0 0; font-size:12px; color:var(--ui-muted); }
@@ -77,6 +110,11 @@ button svg { width:18px; height:18px; }
   .editor-header { margin-bottom:10px; height:46px; }
   .editor-controls.ui-window { padding:16px 20px; }
   .editor-controls h2 { margin-bottom:12px; }
+  .armor-heading h2 { margin-bottom:0; }
+  .editor-tabs { margin-bottom:12px; }
+  .editor-tabs button { font-size:18px; padding-bottom:8px; }
+  .armor-part { padding:4px; }
+  .armor-note { margin-top:12px; }
   .editor-controls fieldset { margin-top:12px; }
   .editor-controls legend { margin-bottom:8px; }
   .hair-option { height:66px; }
@@ -118,3 +156,9 @@ button svg { width:18px; height:18px; }
   .swatches { gap:6px; }
 }
 @media(prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
+@media(hover:none),(pointer:coarse) {
+  .section-pager {opacity:1;pointer-events:auto;top:-8px;height:34px;}
+  .page-arrow {width:34px;height:34px;}
+  .paged-section .choice-value {padding-right:110px;font-size:11px;}
+  .paged-section:hover .choice-value,.paged-section:focus-within .choice-value {opacity:1;}
+}

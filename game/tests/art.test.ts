@@ -82,7 +82,7 @@ test('appearance study parts preserve finite drawing and canvas state across cov
       drawHumanoid(c as unknown as CanvasRenderingContext2D, {
         kind:'player', angle:facing * Math.PI / 8, attackAngle:facing * Math.PI / 8, time:2,
         moving:0, attack:0, hitFlash:0, dodging:false, ...action, ...(covered ? {} : {outfit:{head:null}}),
-        appearance:{...DEFAULT_APPEARANCE, hair:hair.id, skin:SKIN_PALETTES[index].id,
+        appearance:{...DEFAULT_APPEARANCE, hair:hair.id, skin:SKIN_PALETTES[index % SKIN_PALETTES.length].id,
           accessory:ACCESSORIES[facing % ACCESSORIES.length].id, facialHair:FACIAL_HAIR[facing % FACIAL_HAIR.length].id},
       });
       assert.deepEqual(c.state(), before, `${hair.id} restores the drawing state`);

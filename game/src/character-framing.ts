@@ -1,4 +1,5 @@
 import { focusShapes } from './focus-shapes.ts';
+import { appearanceHeadShapes } from './appearance-shapes.ts';
 import type { CharacterPose } from './art-types.ts';
 import { characterTransform, PLAYER_ART_SCALE, playerMotion } from './character-motion.ts';
 import { transformPoint, type Point } from './art-primitives.ts';
@@ -18,6 +19,9 @@ export function characterBounds(pose: CharacterPose): CharacterBounds {
     points.push(transformPoint(outer, [local[0] * PLAYER_ART_SCALE, local[1] * PLAYER_ART_SCALE]));
   };
   for (const x of [-20, 20]) for (const y of [-42, 10]) add([x, y]);
+  if(pose.appearance) for(const shape of appearanceHeadShapes(pose.appearance,pose.angle,!!pose.outfit?.head)) for(const [x,y] of shape.points) {
+    add([x+Math.cos(pose.angle)*1.4-motion.lean*12,y-33-motion.bob*.3]);
+  }
   for (const x of [-19, 19]) for (const y of [-16, 12]) add([x, y], false);
   for (const arm of [motion.weaponArm, motion.offArm]) for (const joint of [arm.shoulder, arm.elbow, arm.hand]) {
     const p = projectArmPoint(joint);
