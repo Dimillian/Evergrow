@@ -150,7 +150,8 @@ function makeSite(seed: number, id: string, kind: WildernessKind, x: number, y: 
   const entrance = Object.freeze({ x, y: y + radius });
   const raw = withGoblinWarband({ id, kind, x, y, radius, name: starter ? 'Ashen Watch' : NAMES[kind][seed % NAMES[kind].length],
     description: DESCRIPTIONS[kind], biome, seed, entrance, decor, members });
-  // Orient the clear approach toward a nearby road; wilderness sites vary freely.
+  // Front-facing chapel architecture needs an aligned aisle and entrance.
+  // Other sites orient their approach toward nearby roads or vary freely inland.
   const roads = starter ? [] : roadPaths(x-1800,y-1800,3600,3600,worldSeed);
   let roadPoint:{x:number;y:number;distance:number}|undefined;
   for(const road of roads)for(let i=1;i<road.points.length;i++){
@@ -158,7 +159,7 @@ function makeSite(seed: number, id: string, kind: WildernessKind, x: number, y: 
     const px=a[0]+dx*t,py=a[1]+dy*t,distance=Math.hypot(px-x,py-y);
     if(!roadPoint||distance<roadPoint.distance)roadPoint={x:px,y:py,distance};
   }
-  const angle=starter?0:roadPoint&&roadPoint.distance<1500?Math.atan2(roadPoint.y-y,roadPoint.x-x)-Math.PI/2:random(seed,911)*Math.PI*2;
+  const angle=starter||kind==='ruinedChapel'?0:roadPoint&&roadPoint.distance<1500?Math.atan2(roadPoint.y-y,roadPoint.x-x)-Math.PI/2:random(seed,911)*Math.PI*2;
   const rotate=(dx:number,dy:number)=>({x:dx*Math.cos(angle)-dy*Math.sin(angle),y:dx*Math.sin(angle)+dy*Math.cos(angle)});
   const entry=rotate(0,radius);
   return Object.freeze({...raw,entrance:Object.freeze({x:x+entry.x,y:y+entry.y}),

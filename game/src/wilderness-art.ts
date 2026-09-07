@@ -98,8 +98,6 @@ export function drawSiteGround(c: CanvasRenderingContext2D, site: WildernessSite
       line(c, [stone[3], stone[4], stone[5]], '#aaa08080', .7);
     }
   }
-  // Worn approach follows the actual rotated entrance.
-  c.strokeStyle='#a2927130';c.lineWidth=16;c.lineCap='round';c.beginPath();c.moveTo(0,0);c.quadraticCurveTo((site.entrance.x-site.x)*.3+12,(site.entrance.y-site.y)*.5,site.entrance.x-site.x,site.entrance.y-site.y);c.stroke();
   c.restore();
 }
 

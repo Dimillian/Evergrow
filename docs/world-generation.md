@@ -18,7 +18,7 @@ The climate-region spacing increases from 2,400 to **6,400 units**. Adjacent cel
 
 ## Regional landmarks
 
-Twelve landmark families occupy a 1,400-unit seeded lattice, with twelve scored candidates, regional/biome kind weights, road-adjacent caravans/hamlets/crossings and quieter inland sites. Placement checks centers and perimeter samples against water and settlements. Approaches face the nearest road segment and share their orientation with decor, camp members and ground tracks. All six new POIs and cursed chests participate in map discovery and Journeys. See [wilderness places](wilderness-and-encounters.md).
+Twelve landmark families occupy a 1,400-unit seeded lattice, with twelve scored candidates, regional/biome kind weights, road-adjacent caravans/hamlets/crossings and quieter inland sites. Placement checks centers and perimeter samples against water and settlements. Approaches face the nearest road segment and share their orientation with decor, camp members and ground tracks; chapels retain a front-facing aisle to match their upright architecture. All six new POIs and cursed chests participate in map discovery and Journeys. See [wilderness places](wilderness-and-encounters.md).
 
 ## Fixed regional danger
 
