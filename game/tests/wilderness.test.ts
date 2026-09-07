@@ -97,7 +97,7 @@ test('decor collision is shared by point checks and swept movement while clearin
 });
 
 test('foreground tree crowns leave caravan and watchtower activity spaces visible in a sampled forest', () => {
-  const world = new World(), sites = world.getWildernessSites(-30000, -30000, 60000, 60000);
+  const world = new World(1), sites = world.getWildernessSites(-30000, -30000, 60000, 60000);
   for (const kind of ['caravan', 'watchtower'] as const) {
     const site = sites.filter(site => site.kind === kind && site.biome === 'verdant').sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y))[0];
     assert.ok(site && site.biome === 'verdant');

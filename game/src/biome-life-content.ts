@@ -22,6 +22,12 @@ interface LifeProfile {
   readonly insectAnchors: readonly PropKind[];
 }
 export const BIOME_LIFE: Readonly<Record<BiomeId, LifeProfile>> = {
+  steppe: { wind: 1.7, debris: 'seed', colors: ['#ddd29c','#bcb77e'], grass: ['#89904e','#c8bd79'], grassHeight: 1.2,
+    footColor: '#615334', light: '#e9dba0', dapple: .1, emitters: ['dryGrass','thornBrush'], ground: ['dryGrass','thornBrush'],
+    bird: 'moorbird', perches: ['steppeStone','thornBrush'], insect: 'butterfly', insectColor: '#d9c896', insectAnchors: ['flowers','dryGrass'] },
+  sunscar: { wind: 1.25, debris: 'dust', colors: ['#e1c69a','#b89971'], grass: ['#a58a58','#c9b57c'], grassHeight: .25,
+    footColor: '#92734e', light: '#ffe0ad', dapple: 0, emitters: ['desertScrub','sandstone'], ground: ['desertScrub'],
+    bird: null, perches: [], insect: null, insectColor: '#ceb181', insectAnchors: [] },
   deadwood: { wind: .8, debris: 'dust', colors: ['#9a9078', '#777f79', '#a9a593'], grass: ['#53645a', '#929782'], grassHeight: .65,
     footColor: '#142727', light: '#a9c3c7', dapple: .12, emitters: ['deadTree', 'tussock', 'stump'], ground: ['deadTree', 'tussock', 'stump', 'mushrooms'],
     bird: 'crow', perches: ['stump', 'rock', 'deadTree'], insect: 'moth', insectColor: '#bcbda9', insectAnchors: ['mushrooms', 'stump'] },

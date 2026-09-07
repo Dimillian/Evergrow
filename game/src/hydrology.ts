@@ -47,7 +47,7 @@ export class Hydrology {
     const w = sampleBiome(x, y, this.seed).weights;
     const elevation = clamp(noise(cx * .43, cy * .43, this.seed + 701) * .57 + hash(cx, cy, this.seed + 73) * .43 + w.highlands * .12);
     const tier = Math.min(5, Math.floor(elevation * 6));
-    const wet = .17 + w.swamp * .22 + w.verdant * .08 + w.frostpine * .04 - w.emberfall * .13;
+    const wet = .17 + w.swamp * .22 + w.verdant * .08 + w.frostpine * .04 - w.emberfall * .13 - w.sunscar * .14 - w.steppe * .04;
     const rain = hash(cx, cy, this.seed + 101) < wet && tier > 0 ? 1 + w.swamp * .6 : 0;
     return remember(this.nodes, key, Object.freeze({ cx, cy, x, y, tier, rain }), HYDROLOGY.nodes);
   }
@@ -86,7 +86,7 @@ export class Hydrology {
         const t = i / count;
         const bend = Math.sin(Math.PI * t) * (Math.sin(t * Math.PI * 2 + phase) * length * .08 + Math.sin(t * Math.PI * 6 + phase) * length * .016);
         let x = a.x + dx * t + nx * bend, y = a.y + dy * t + ny * bend;
-        // The fixed starting settlement occupies a dry island; route channels around its outer bank.
+        // The seeded home settlement occupies dry ground; route channels around its outer bank.
         const ox = x, oy = y + 850, r = Math.hypot(ox, oy);
         if (r < 1500) { const angle = r > 1 ? Math.atan2(oy, ox) : phase; x = Math.cos(angle) * 1500; y = -850 + Math.sin(angle) * 1500; }
         points.push(Object.freeze({ x, y, width: (width + (endWidth - width) * t) * (source ? .22 + .78 * smooth(t / .2) : 1), elevation: (a.tier + (b.tier - a.tier) * t) * 80 }));
@@ -139,6 +139,11 @@ export class Hydrology {
       const shore = (radius - Math.hypot(dx, dy)) * Math.min(lake.rx, lake.ry);
       if (shore > edge) { edge = shore; depth = .2 + clamp(shore / 260) * 1.6; flowX = flowY = 0; kind = 'lake'; }
     }
+    // The home town (including city layouts) and southern arrival stay on dry land.
+    // Clip lake shores as well as rivers through the same continuous distance field;
+    // terrain, water optics, maps and collision all consume this sample.
+    const homeDistance = Math.hypot(x, y - Math.max(-1150, Math.min(0, y)));
+    edge = Math.min(edge, homeDistance - 1100 + roughness);
     if (edge < -30) return DRY_WATER;
     const coverage = smooth(edge / 15), bank = (1 - smooth(Math.abs(edge + 3) / 30));
     if (coverage > 0) {

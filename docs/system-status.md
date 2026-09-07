@@ -14,9 +14,13 @@ previous 192 kbps assets, with the same musical lengths and decoded memory use.
 See [music ownership, resource bounds and validation](music.md). Player listening
 and balance acceptance remain pending.
 
+## Natural landscapes · v0.4.0, 2026-09-07
+
+Generation 9 is enabled in local gameplay: nine biomes, clustered trees and rock outcrops, open glades, Steppe grassland and Sunscar sand formations. Each seed chooses a starting biome and a generated home town/city; a dry southern approach, level-one start and initial home portal remain guaranteed. Gameplay, maps, hydrology and terrain workers share the generator. Fresh characters required; older saves are preserved but incompatible. Included in the v0.4.0 release source. See [natural landscapes](natural-landscapes.md).
+
 ## World expansion · local, 2026-09-07
 
-Generation 7 adds six regional POIs and cursed chests, recipe-driven assault/defense/seal/timed events, scored ninety-second waves, shared chest opening/loot-flight presentation, road-facing placement and branching 13–19-room crypts. Actor, rank and archetype count caps are removed; hidden admission and travel pacing remain. Fresh test characters required. [Rules and rewards](interactive-pois.md). This pass is not deployed.
+Generation 7 adds six regional POIs and cursed chests, recipe-driven assault/defense/seal/timed events, scored ninety-second waves, shared chest opening/loot-flight presentation, road-facing placement and branching 13–19-room crypts. Actor, rank and archetype count caps are removed; hidden admission and travel pacing remain. Fresh test characters required. [Rules and rewards](interactive-pois.md). Included in the v0.4.0 release source.
 
 Checkpoint verification: 904 code tests pass, along with strict type checking and the production build. Event difficulty and pacing await player testing.
 
@@ -86,7 +90,7 @@ Every new character begins at level 1, 0 XP and 0 gold, with ten of each attribu
 
 Base life and mana are 100; mana regenerates at 1/second before bonuses. Q restores 42% maximum life and 40% maximum mana together, with two charges and a charge recovered every eight kills. Melee/bow basics cost no mana; staff basics cost four and wand basics two before reductions. First-row skills have no cooldown but still pay mana and obey action recovery; second-row skills cost more and have cooldowns. Attack speed, cast speed, mana-cost reduction and cooldown reduction remain distinct stats.
 
-Generation 7 retains named irregular danger districts: levels follow road travel and remoteness, with higher-level wilderness pockets. Towns are distributed in two dimensions and climate regions are 6,400 units apart. See [world generation](world-generation.md). Enemies retain spawn-time level/rank/stats/reward context. Gear rarity probabilities are conditional on an item dropping: normal enemies yield 75% Common / 22% Magic / 2.7% Rare / 0.28% Epic / 0.02% Legendary. The complete rank tables and growth formulas live in [progression and loot](progression-and-loot.md); the general item generator's default weights are not enemy drop rates.
+Generation 9 retains named irregular danger districts: levels follow road travel and remoteness, with higher-level wilderness pockets. Towns are distributed in two dimensions and climate regions are 6,400 units apart. See [world generation](world-generation.md). Enemies retain spawn-time level/rank/stats/reward context. Gear rarity probabilities are conditional on an item dropping: normal enemies yield 75% Common / 22% Magic / 2.7% Rare / 0.28% Epic / 0.02% Legendary. The complete rank tables and growth formulas live in [progression and loot](progression-and-loot.md); the general item generator's default weights are not enemy drop rates.
 
 ## Current consolidation
 

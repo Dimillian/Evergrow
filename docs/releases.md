@@ -2,6 +2,14 @@
 
 `CHANGELOG.md` is the single source for both the repository changelog and **What's new** in the character hall. The reader bundles it into the game; no save, login, network request or external Markdown renderer is involved. Android includes the same reader when its next APK is built.
 
+## Last verified publication
+
+- Game v0.4.0 / Sites version 19, publicly deployed on 2026-09-07 at 17:38:49 UTC.
+- Published source: `da1058841cb350749a4ccf06370e0f907501f6a9`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_a8ba733fe4248191a4b2e6c75060b473`.
+- Deployment: `appgdep_6a9ef69c8d208191aa67af1061a7e552`; Sites returned `succeeded`.
+- Isolated release source passed 917 code tests, the cloud-enabled build and release-note validation. Uncommitted skill experiments were excluded.
+
 ## Before each requested Sites publication
 
 1. Resolve the source of the last **successful publication** from the Sites history/current release record. A saved version alone is not proof of publication. For the initial changelog release the known published baseline is `1978bf9d210533cb83b11c8c9863e766f7c13562` (Sites version 14).

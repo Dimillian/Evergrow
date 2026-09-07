@@ -71,7 +71,7 @@ export const BLESSINGS: Readonly<Record<BlessingKind, {
   fleet: { name: 'Fleet', description: '+15% movement speed', color: '#a3dec5' },
 });
 export function blessingChoices(site: EventSite): BlessingKind[] {
-  const favored: Record<BiomeId, BlessingKind> = { deadwood: 'haste', verdant: 'fleet', swamp: 'wellspring', frostpine: 'bulwark', emberfall: 'haste', autumn: 'fleet', highlands: 'bulwark' };
+  const favored: Record<BiomeId, BlessingKind> = { steppe: 'fleet', sunscar: 'wellspring', deadwood: 'haste', verdant: 'fleet', swamp: 'wellspring', frostpine: 'bulwark', emberfall: 'haste', autumn: 'fleet', highlands: 'bulwark' };
   const first = favored[site.biome], others = (Object.keys(BLESSINGS) as BlessingKind[]).filter(k => k !== first);
   return [first, others[siteHash(site.seed, 0, 39) % others.length]];
 }

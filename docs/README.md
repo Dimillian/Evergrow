@@ -35,7 +35,7 @@ Updated 2026-09-07. Use the current guides for implementation. Proposed designs 
 | Enemy speech and visual density | [Ashglass battle barks](battle-barks.md) |
 | Situation-based music, crossfades and sound lifecycle | [Adaptive music](music.md) |
 | Components, typography, tooltip motion and panel ownership | [UI kit](ui-kit.md) |
-| Climate generation, props and procedural graphics | [Biomes](biomes.md), [living biomes](living-biomes.md), [graphics pass](graphics-overhaul.md) |
+| Climate generation, props and procedural graphics | [Biomes](biomes.md), [natural landscapes](natural-landscapes.md), [living biomes](living-biomes.md), [graphics pass](graphics-overhaul.md) |
 | Drainage, cell-based water and shader optics | [Living water](living-water.md) |
 | Camps, landmarks and roaming | [Wilderness and encounters](wilderness-and-encounters.md) |
 | Procedural crypt floors, boss, treasure and location saves | [Dungeons](dungeons.md) |

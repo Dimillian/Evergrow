@@ -1,3 +1,4 @@
+import { landscapePropProbability, landscapeRelief } from './natural-landscape.ts';
 import { WorldNavigation } from './world-navigation.ts';
 import type { MaterialId } from './material-content.ts';
 import { furnitureContainer, furnitureContainerId, type BreakableContainer } from './breakable-containers.ts';
@@ -35,7 +36,7 @@ export interface Prop {
 }
 
 export const TILE_SIZE = 256;
-export const WORLD_GENERATION_VERSION = 7;
+export const WORLD_GENERATION_VERSION = 9;
 const PROP_CELL_SIZE = 80;
 const MAX_PROP_RADIUS = 15;
 const PROP_CACHE_LIMIT = 8192;
@@ -252,11 +253,12 @@ export class World {
     const dirt = [58 - wet * 9, 51 - wet * 5, 39 - wet * 2];
     const stone = [68, 68, 59];
     const weather = detail ? (noise(x / 93, y / 93, this.seed + 203) - .5) * 18 : 0;
+    const relief = detail ? landscapeRelief(x,y,this.seed,weights) : 0;
     const grain = detail ? (noise(x / 18, y / 18, this.seed + 202) - .5) * 5 : 0;
     const track = profile.tracks * road * (1 - paved) * 3;
     const bank = hydro.bank * .7 + (detail ? weights.swamp * (smoothstep(.40, .50, damp) - smoothstep(.50, .64, damp)) * (1 - road) : 0);
     const dryRoad = road * (1 - hydro.coverage * .88);
-    return base.map((value, i) => (((value + weather * .65 + [22, 23, 15][i] * bank) * (1 - water) + pool[i] * water) * (1 - dryRoad)
+    return base.map((value, i) => (((value + relief + weather * .65 + [22, 23, 15][i] * bank) * (1 - water) + pool[i] * water) * (1 - dryRoad)
       + (dirt[i] + weather - track) * dryRoad) * (1 - paved)
       + (stone[i] + weather * .7 - (detail ? wet * 4 : 0)) * paved + grain);
   }
@@ -327,11 +329,10 @@ export class World {
     if (this.getWildernessSites(x - 18, y - 18, 36, 36).some(site => Math.hypot(x - site.x, y - site.y) < site.radius + 18)) return null;
     if (this.roadShrines(x - 44, y - 44, 88, 88).some(shrine => Math.hypot(x - shrine.x, y - shrine.y) < 44)) return null;
     if (this.hydrology.sample(x, y).coverage > .12) return null;
-    const density = 0.40 + noise(x / 520, y / 520, this.seed + 37) * 0.39;
-    if (random(cx, cy, this.seed, 3) > density) return null;
     const choice = random(cx, cy, this.seed, 4);
     const weights = this.sampleBiome(x, y).weights;
     const { biome, kind } = chooseBiomeProp(weights, random(cx, cy, this.seed, 41), choice);
+    if (random(cx, cy, this.seed, 3) > landscapePropProbability(x,y,this.seed,kind,biome)) return null;
     const definition = propDefinition(kind);
     const scale = definition.scale[0] + random(cx, cy, this.seed, 5) * (definition.scale[1] - definition.scale[0]);
     if (definition.canopy) {

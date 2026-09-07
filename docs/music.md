@@ -94,10 +94,11 @@ publication, save reset or migration is part of this change.
 
 ## Verification
 
-PR integration with upstream `619e098` passes all **923 code tests**, application/
+PR integration with upstream `b848cac` passes all **929 code tests**, application/
 headless type checks and the production build. Music does not change saves;
-that upstream world-generation-7 update requires fresh test characters when
-coming from the earlier local build.
+that upstream world-generation-9 update requires fresh test characters when
+coming from the earlier local build. Older characters remain stored but cannot
+load into the new generation.
 
 Code tests cover main-menu town playback with a receiver-sensitive browser fetch,
 location/engagement priority, town-boundary grace, combat hold,

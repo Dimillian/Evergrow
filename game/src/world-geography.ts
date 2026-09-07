@@ -60,14 +60,14 @@ export function settlementPlace(seed: number, cx: number, cy: number): Place {
       for (const [dx, dy] of [[0, 0], [-650, 0], [650, 0], [0, -650], [0, 650], [-460, -460], [460, 460]])
         waterPenalty += drainage.sample(px + dx, py + dy).coverage;
       if (waterPenalty === 0) dryCandidate = true;
-      const suitability = -waterPenalty * 20 + w.verdant + w.autumn * .7 - w.swamp - w.emberfall * .8 - w.highlands * .4;
+      const suitability = -waterPenalty * 20 + w.verdant + w.autumn * .7 + w.steppe * .5 - w.sunscar * .65 - w.swamp - w.emberfall * .8 - w.highlands * .4;
       if (suitability > score) {
         score = suitability;
         x = px;
         y = py;
       }
     }
-  const value = Object.freeze({ id: placeId(cx, cy), cx, cy, x, y, seed: s, city: !!(cx || cy) && s % 5 === 0 });
+  const value = Object.freeze({ id: placeId(cx, cy), cx, cy, x, y, seed: s, city: s % 5 === 0 });
   if (places.size >= 512)
     places.delete(places.keys().next().value!);
   places.set(key, value);

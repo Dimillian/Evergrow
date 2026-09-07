@@ -66,7 +66,7 @@ export function getZoneAt(x: number, y: number, seed = 7319): ZoneProgression {
   const hazardous = !starting && route.remoteness > 2500 && hash % 7 < 2;
   const level = starting ? 1 : normalizeLevel(1 + Math.floor((route.travel + route.remoteness * 1.1) / ZONE_RULES.travelPerLevel) + (hazardous ? 3 + hash % 3 : 0));
   const biome = sampleBiome(px, py, seed).name;
-  const name = starting ? 'Briar March' : `${['Raven', 'Ashen', 'Silver', 'Thorn', 'Gloam', 'Elder', 'Moon', 'Wandering', 'Sable', 'Hollow', 'Bramble', 'Whispering', 'Iron', 'Copper', 'Wren', 'Dusk', 'Windswept', 'Shrouded', 'Silent', 'Lost', 'Pale', 'Gilded', 'Cinder', 'Fallow'][hash % 24]} ${hazardous ? ['Wilds', 'Deeps', 'Banes', 'Wastes'][hash >>> 8 & 3] : ['March', 'Vale', 'Reach', 'Expanse', 'Glen', 'Basin'][Math.floor(hash / 13) % 6]}`;
+  const name = `${['Raven', 'Ashen', 'Silver', 'Thorn', 'Gloam', 'Elder', 'Moon', 'Wandering', 'Sable', 'Hollow', 'Bramble', 'Whispering', 'Iron', 'Copper', 'Wren', 'Dusk', 'Windswept', 'Shrouded', 'Silent', 'Lost', 'Pale', 'Gilded', 'Cinder', 'Fallow'][hash % 24]} ${hazardous ? ['Wilds', 'Deeps', 'Banes', 'Wastes'][hash >>> 8 & 3] : ['March', 'Vale', 'Reach', 'Expanse', 'Glen', 'Basin'][Math.floor(hash / 13) % 6]}`;
   const zone = Object.freeze({ id, name: `${name} · ${biome}`, level, x: px, y: py, hazardous, travel: route.travel });
   if (zones.size >= 2048)
     zones.delete(zones.keys().next().value!);

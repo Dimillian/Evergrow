@@ -1,5 +1,28 @@
 # Evergrow changelog
 
+## v0.4.0 — 2026-09-07T17:36:00Z
+
+### New
+
+- Whispering Steppe grasslands and Sunscar deserts.
+- Seeded starting towns in any biome, with safe level-one surroundings.
+- Ruined chapels, beast dens, quarries, occupied hamlets, crossings and corrupted groves.
+- Timed cursed-chest waves: defeat more waves to earn more treasure.
+
+### Tweaks
+
+- More open glades, clustered forests and natural rock formations.
+- More varied assaults, defenses and rituals; larger encounters no longer share an enemy cap.
+- Branching crypts with 13–19 rooms and more varied layouts.
+- Animated chest openings scatter their rewards across the ground.
+
+### Fixes
+
+- Corrected chapel orientation, den hollows and overlapping paths around chests and hamlets.
+- Starting towns and their southern approaches stay dry and clear.
+
+> New world generation requires a fresh character. Older saves are preserved but cannot be continued in this version.
+
 ## v0.3.3 — 2026-09-07T13:30:00Z
 
 ### New

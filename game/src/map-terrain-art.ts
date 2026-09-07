@@ -6,7 +6,7 @@ export function drawMapProps(c: CanvasRenderingContext2D, props: readonly Prop[]
   c.save(); c.setTransform(pixels / size, 0, 0, pixels / size, -x * pixels / size, -y * pixels / size);
   if (size >= 3072) c.globalAlpha *= .62;
   const trees = new Set(['tree', 'canopy', 'willow', 'snowPine', 'autumnTree', 'windTree']);
-  const rocks = new Set(['rock', 'limestone', 'basalt', 'emberRock', 'iceCrystal']);
+  const rocks = new Set(['sandstone', 'sandstoneShard', 'steppeStone', 'rock', 'limestone', 'basalt', 'emberRock', 'iceCrystal']);
   for (const prop of props) {
     const { kind, scale, seed } = prop;
     if (!trees.has(kind) && !rocks.has(kind) && kind !== 'deadTree' && kind !== 'charredTree') continue;
@@ -20,7 +20,7 @@ export function drawMapProps(c: CanvasRenderingContext2D, props: readonly Prop[]
     }
     const color = kind === 'snowPine' ? ['#6c989a', '#bdd3c8'] : kind === 'autumnTree' ? ['#815b35', '#bf9651']
       : kind === 'willow' ? ['#315b53', '#54806a'] : kind === 'windTree' ? ['#515f45', '#89996a']
-      : rocks.has(kind) ? kind === 'iceCrystal' ? ['#598e9b', '#abd5d9'] : kind === 'emberRock' ? ['#594538', '#a87853']
+      : rocks.has(kind) ? (kind === 'sandstone'||kind==='sandstoneShard') ? ['#97704d','#d3ad7d'] : kind === 'iceCrystal' ? ['#598e9b', '#abd5d9'] : kind === 'emberRock' ? ['#594538', '#a87853']
         : ['#59625a', '#929782'] : ['#294c3d', '#577552'];
     if (kind === 'tree' || kind === 'snowPine') {
       for (let tier = 0; tier < 3; tier++) {

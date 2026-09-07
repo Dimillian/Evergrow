@@ -54,7 +54,7 @@ test('all biome sprite families emit finite unclipped geometry from reproducible
   }
   for (const kind of ['tree', 'deadTree', 'rock', 'shrine'] as const) assert.equal(art.getSprite(prop(kind)), null, 'base atlas owns this family');
   art.reset(); assert.deepEqual(art.cacheStats, { sprites: 0, pixels: 0 });
-  assert.equal(Object.keys(BIOME_PROP_BOUNDS).length, 10);
+  assert.equal(Object.keys(BIOME_PROP_BOUNDS).length, 16);
 });
 
 test('ambient families sample their own world cells, respect reduced motion, and bound oversized views', () => {
