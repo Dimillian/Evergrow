@@ -10,9 +10,9 @@
 .service-tabs button[aria-pressed=true] { color:var(--service-color); border-color:color-mix(in srgb,var(--service-color) 50%,transparent); background:#22313a; }
 .service-tabs small { font:11px "Evergrow Numerals", system-ui,sans-serif; opacity:.7; }
 .service-body { display:grid; grid-template-columns:minmax(280px,.9fr) minmax(360px,1.1fr); flex:1; min-height:0; }
-.service-offer,.service-bag { padding:22px; overflow:auto; min-height:0; }
+.service-offer,.service-bag { padding:16px 22px; overflow:auto; min-height:0; }
 .service-offer { border-right:1px solid #8099a128; background:radial-gradient(ellipse at 50% 10%,color-mix(in srgb,var(--service-color) 8%,transparent),transparent 70%); }
-.service-section-heading { display:flex; align-items:center; justify-content:flex-start; gap:4px; margin:0 0 16px; }
+.service-section-heading { display:flex; align-items:center; justify-content:flex-start; gap:4px; margin:0 0 12px; line-height:20px; }
 .service-panel h3 { font-size:16px; margin:0; font-weight:500; color:#c7d4cf; }
 .service-section-heading span,.service-stock small,.service-equipment small { font:11px "Evergrow Numerals", system-ui,sans-serif; color:#95a6a9; }
 .service-stock { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
@@ -20,7 +20,7 @@
 .service-grid { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:5px; }
 .service-equipment { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; }
 .service-equipment small { display:block; text-align:center; margin-top:4px; text-transform:capitalize; }
-.service-equipped-section { padding-bottom:22px; margin-bottom:22px; border-bottom:1px solid #8099a138; }
+.service-equipped-section { padding-bottom:16px; margin-bottom:16px; border-bottom:1px solid #8099a138; }
 .service-empty-bag { margin:0; padding:20px 12px; color:#819694; font:13px "Evergrow Numerals", system-ui,sans-serif; border:1px dashed #8099a128; text-align:center; }
 .service-panel .ui-slot { position:relative; display:block; min-height:0; }
 .service-panel .ui-item-slot:disabled { opacity:.6; cursor:default; }
@@ -61,7 +61,8 @@
 
 .service-section-heading h3 { margin-right: 0; }
 .service-section-heading > span { margin-left: auto; }
-.service-filter { position: relative; width: 28px; height: 28px; min-height: 28px; padding: 5px; flex: none; }
+/* Keep the hit area centered without increasing the heading's line height. */
+.service-filter { position: relative; width: 28px; min-width: 28px; height: 28px; min-height: 28px; margin: -4px 0; padding: 5px; flex: none; }
 .service-filter .ui-icon { width: 17px; height: 17px; }
 .service-filter.has-filter { color: var(--ui-ivory); border-color: var(--ui-silver); }
 .service-filter-status { color: var(--ui-silver-dim); font-size: 13px; margin: 12px 0 0; }
