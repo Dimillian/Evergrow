@@ -18,7 +18,7 @@ const entrance: DungeonEntrance = { id: 'dungeon:test', name: 'Rootbound Crypt',
 const surface = { seed: 7319, blocked: () => false, move: (x: number, y: number, dx: number, dy: number) => ({ x: x + dx, y: y + dy }), isSanctuary: (x: number) => x === 0 };
 const ok = () => ({ ok: true, message: '' });
 async function setup() { const sim = new Simulation(surface, { spawn: false, startX: 600, startY: 0 }); const result = (await planDungeonTravel(sim, { kind: 'enter', entrance }, surface, ok)); assert.ok(result.ok); const f = generateDungeon(entrance.seed, entrance.level); sim.world = new DungeonWorld(f, entrance); sim.restoreCheckpoint(result.checkpoint); return { sim, f, run: currentDungeon(sim.expeditions)! }; }
-function decoded(c: CharacterCheckpoint) { return decodeCharacterSave(JSON.stringify({ version: 3, id: 'test', name: 'Test', worldSeed: 7319, worldVersion: 5, createdAt: 1, updatedAt: 2, checkpoint: c })); }
+function decoded(c: CharacterCheckpoint) { return decodeCharacterSave(JSON.stringify({ version: 4, id: 'test', name: 'Test', worldSeed: 7319, worldVersion: 5, createdAt: 1, updatedAt: 2, checkpoint: c })); }
 test('crypt seeds produce bounded connected rooms, two branches, a loop and collision-safe rosters', () => {
     for (let seed = 0; seed < 150; seed++) {
         const f = generateDungeon(seed, 4);

@@ -1,12 +1,13 @@
 # Character hall and checkpoints
 
-Evergrow opens in a procedural forest character hall. Eight slots show name, level and power beside a compact Continue/Create panel. Larger displays retain the equipped portrait; handheld layouts keep the controls together. Sites offers separate cloud and local rosters; ordinary local and Android builds retain their browser-local slots. Select an empty slot, name a character, choose Sword + Shield, Two-handed Sword, Wand + Grimoire, Fire Staff, Shortbow or Longbow, and begin. The equipped portrait updates immediately when choosing. Select an existing character to continue. Deletion requires an explicit confirmation inside the hall.
+Evergrow opens in a procedural forest character hall. Eight slots show name, level and power beside a compact Continue/Create panel. Larger displays retain the equipped portrait; handheld layouts keep the controls together. Sites offers separate cloud and local rosters; ordinary local and Android builds retain their browser-local slots. Select an empty slot, name a character, choose Sword + Shield, Two-handed Sword, Wand + Grimoire, Fire Staff, Shortbow or Longbow, then select Create character to customize appearance before saving and entering the world. See [Character appearance editor](character-editor.md). The equipped portrait updates immediately when choosing. Select an existing character to continue. Deletion requires an explicit confirmation inside the hall.
 
 Every character starts at level 1 with the same attributes, worn leather outfit, the selected level-one common weapon, no allocated passives beyond the origin, empty skill-rank/specialization selections, Overload disabled, five empty skill bindings and an empty 64-cell inventory. Each character has an independently chosen world seed: creation supplies a random value from 0 through 4294967295, with an editable field and Randomize button. The seed remains visible in saved-character selection. Continuing reconstructs the saved world before restoring progress; exploration remains scoped to both the seed and character. Saved characters keep their chosen seed. The September 6 asynchronous-storage checkpoint starts fresh local slots; previous localStorage test characters are not imported.
 
 ## Checkpoint contents
 
 - Name/identity, level, current-level XP, attributes, unspent points and allocated nodes.
+- Required character appearance, per-part armor tint IDs and helmet visibility.
 - All equipment and inventory item properties, appearances, source recipes, normalized affix rolls, enhancement/reroll counters and five skill assignments; purchased ranks, chosen casting ranks, selected specializations and Overload.
 - Gold wallet, ground coins, current stock epoch/purchase masks, last 12 buyback items and transaction revisions.
 - Home town and optional expedition return point, scoped to this character.
@@ -19,9 +20,9 @@ Derived stats and held equipment are rebuilt from the character sheet on load. I
 
 ## When saving happens
 
-The optional `recentItems` character field records newest-first acquired item IDs, bounded to 75 unique entries (bag plus equipment capacity). Pickups, purchases and buyback record acquisitions; sorting and equipment swaps preserve the history. Characters in the current IndexedDB format remain valid without an additional progress reset; earlier pickup chronology is unknown. The separate asynchronous-storage checkpoint starts fresh slots as described above. Sort commands persist the resulting bag order through the ordinary character-command checkpoint.
+The optional `recentItems` character field records newest-first acquired item IDs, bounded to 75 unique entries (bag plus equipment capacity). Pickups, purchases and buyback record acquisitions; sorting and equipment swaps preserve the history. That historical sorting checkpoint did not require a progress reset; earlier pickup chronology was unknown. The current appearance schema v4 requires fresh characters as described below. The separate asynchronous-storage checkpoint starts fresh slots as described above. Sort commands persist the resulting bag order through the ordinary character-command checkpoint.
 
-A new character must be saved successfully before entering the world. Checkpoints are written every twenty seconds during play, after successful equipment/attribute/tree/assignment commands, when opening a panel or map, on pause/defeat, on document hiding/page exit, and during application teardown. **Save & Character Hall** saves before switching characters. If that write fails, the character stays open and the error is shown. Browser exit hooks are best effort; periodic checkpoints bound loss if a process is killed without delivering an exit event.
+A new character must be saved successfully before entering the world. Checkpoints are written every twenty seconds during play, after successful equipment/attribute/tree/assignment/appearance commands, when opening a panel or map, on pause/defeat, on document hiding/page exit, and during application teardown. **Save & Character Hall** saves before switching characters. If that write fails, the character stays open and the error is shown. Browser exit hooks are best effort; periodic checkpoints bound loss if a process is killed without delivering an exit event.
 
 Town-portal travel and home-anchor activation persist their proposed position/travel state before publishing it. Cast progress and arrival protection are transient. Absent travel state defaults to Briarwatch/no link, within the current format.
 
@@ -29,7 +30,7 @@ Successful NPC transactions persist the entire proposed checkpoint before changi
 
 ## Storage integrity
 
-Current payload version is **3**. Explicit item recipes, commerce state and skill progression are required. Previous version-1/2 slots remain stored and visible as incompatible; start a new character. This prototype intentionally has no save migration.
+Current payload version is **4**. Explicit item recipes, commerce state, skill progression and the appearance recipe are required. Previous version-1/2/3 slots remain stored and visible as incompatible; start a new character. This prototype intentionally has no save migration.
 
 `character-save.ts` validates a versioned, size-bounded payload before any runtime state is changed. It checks item types/materials, inventory bounds, unique identities, valid connected node allocations, point budgets including purchased ranks, owned mastery/specialization constraints, unlocked skill bindings and finite resources/coordinates. Shared `item-validation.ts` and `commerce-validation.ts` validate recipes, affix uniqueness, tier counts, counter/record limits and stock issuance. Ownership checks also cover buyback and available stock. Commerce retains at most 2,048 current-epoch vendor masks and 12 buyback items within the 8,388,608-code-unit payload safety limit. Unknown/incompatible data is preserved rather than partially repaired.
 

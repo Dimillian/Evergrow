@@ -2,7 +2,7 @@
 
 2026-09-07 · Analysis and proposed design, not implemented. Based on source checkpoint `1978bf9`; work branch: `character-editor`.
 
-Follow-up: a [save-free MVP mockup](character-editor-mockup.md) now explores the appearance controls with the real rig. The user excluded height and body-proportion changes from that mockup. Live creation and save integration remain proposed.
+Follow-up: the [character appearance editor](character-editor.md) is now integrated on the branch, following the [MVP mockup](character-editor-mockup.md). Height and body-proportion changes were excluded. The assessment below remains the historical pre-implementation analysis.
 
 ## Assessment
 

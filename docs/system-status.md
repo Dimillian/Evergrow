@@ -1,5 +1,8 @@
 # Current system status
 
+
+[Character appearance](character-editor.md) is integrated in creation and inventory with shared world/portrait rendering. Save v4 requires the appearance recipe; older v3 test characters remain stored but require new characters.
+
 Updated 2026-09-07 after the Ashglass battle-bark checkpoint. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
 
 ## Implemented systems

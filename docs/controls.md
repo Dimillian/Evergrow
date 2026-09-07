@@ -27,6 +27,8 @@ Unlock skills in the tree, then assign them to RMB or 1–4. Empty slots do noth
 
 In shops, select an item and Buy/Sell, or Shift-click for a direct trade. The Equipped section at the blacksmith or enchanter upgrades worn gear in place. Escape closes the service.
 
+The edit icon beside **Equipment** opens the Character/Armor editor directly. Save changes applies the saved look; Cancel, Escape or controller B discards the draft and returns to inventory. The live preview stays visible while editing.
+
 In the inventory, hover/focus inspects, double-click equips a bag item, Enter/Space or Shift-click equips/unequips, and drag/drop moves or equips items. The first icon beside Inventory opens Sort & filter; the second runs Equip Best by item power. A different best weapon type asks: Equip anyway, Keep current weapon only (upgrade other gear), or Cancel. The sort/filter popover organizes the whole bag by rarity, type or recent pickup and combines type and rarity filters. Escape or B closes a popup before the inventory. In the tree, single-click inspects; double-click or Allocate path spends points on the complete highlighted route if affordable. Wheel zooms and dragging pans the atlas.
 
 ## Gamepad

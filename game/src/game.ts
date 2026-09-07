@@ -1,4 +1,7 @@
 import { GroundLootTooltip } from './ground-loot-tooltip.ts';
+import { createAppearanceEditor } from './character-editor.ts';
+import { executeAppearanceChange } from './character-commands.ts';
+import { validCharacterLook, type CharacterLook } from './character-look.ts';
 import { directionalAimProfile } from './ranged-aim.ts';
 import { FramePacer } from './frame-pacer.ts';
 import { ThorRuntime } from './thor-runtime.ts';
@@ -84,6 +87,8 @@ export class Game {
   private shell: GameShell;
   private groundLootTooltip: GroundLootTooltip;
   private inventoryPanel: InventoryPanel;
+  private appearanceEditor?:ReturnType<typeof createAppearanceEditor>;
+  private creationLooks=new Map<number,CharacterLook>();
   private skillPanel: SkillTreePanel;
   private servicePanel: ServicePanel;
   private eventPanel: EventPanel;
@@ -157,6 +162,7 @@ export class Game {
     this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.overworld.getPortalAnchor(band)));
       this.inventoryPanel = this.lifetime.own(new InventoryPanel(this.shell.panelMount, {
         close: () => this.closeCharacterPanel(),
+        editAppearance:()=>this.editAppearance(),
         equip: (index, slot) => this.characterAction({ type: 'equip', index, slot }),
         unequip: (slot, index) => this.characterAction({ type: 'unequip', slot, index }),
         move: (from, to) => this.characterAction({ type: 'moveItem', from, to }),
@@ -171,7 +177,7 @@ export class Game {
         assign: (slot, skill) => this.characterAction({ type: 'assignSkill', slot, skill }),
       }));
       this.titleScreen = this.lifetime.own(new TitleScreen(this.shell.titleMount, {
-        create: (index, name, weapon, seed) => this.createCharacter(index, name, weapon, seed),
+        create: (index, name, weapon, seed) => this.editNewCharacter(index, name, weapon, seed),
         continue: index => this.continueCharacter(index), remove: (index, expected) => this.deleteCharacter(index, expected),
         read: index => this.saveClient.read(index), source: mode => this.selectSaveSource(mode),
         ...(!window.EvergrowAndroid ? { download: (index: number) => this.downloadSave(index), import: (index: number, file: File) => this.importSave(index, file) } : {}),
@@ -244,7 +250,7 @@ export class Game {
         portal: () => this.requestPortal(),
         background: () => { this.clearInput(); this.pause(); void this.saveCharacter(); this.audio.setEnabled(false); },
         foreground: () => { this.clearInput(); this.audio.setEnabled(!this.muted); },
-        back: () => { if(this.thor.dismissInspection() || (this.phase === 'paused' && this.shell.backInMenu())) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
+        back: () => { if(this.appearanceEditor){this.appearanceEditor.cancel();return;} if(this.thor.dismissInspection() || (this.phase === 'paused' && this.shell.backInMenu())) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
       }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
       try {
@@ -303,6 +309,7 @@ export class Game {
       clear: () => this.clearInput(),
       release: code => this.input.keyUp(code),
       press: event => {
+        if(this.appearanceEditor)return;
         if (this.savingAction) { event.preventDefault(); return; }
         if (event.isTrusted && !(event.target instanceof HTMLInputElement) && !(event.target instanceof HTMLTextAreaElement) && !(event.target instanceof HTMLSelectElement) && !(event.target instanceof HTMLElement && event.target.isContentEditable)) { this.usingGamepad = false; this.touch.setActive(false); }
         if (event.code === 'Escape') {
@@ -440,20 +447,54 @@ export class Game {
     this.sim.revive(); this.enterWorld(); this.saveCharacter();
   }
 
-  private async createCharacter(index: number, name: string, weapon: StarterLoadoutId, seed: number) {
-    if (this.phase !== 'ready' || this.hallBusy || this.disposed) return;
-    if (!isWorldSeed(seed)) { this.titleScreen.message('Enter a whole world seed from 0 to 4294967295.'); return; }
+  private closeAppearanceEditor() {
+    this.appearanceEditor?.dispose();this.appearanceEditor=undefined;this.clearInput();
+    if(this.disposed)return;
+    this.titleScreen.setEditorOpen(false);
+    if(this.phase==='character'){this.inventoryPanel.open(this.sim.player);this.inventoryPanel.element.querySelector<HTMLButtonElement>('[data-edit-appearance]')?.focus();}
+  }
+  private editNewCharacter(index:number,name:string,weapon:StarterLoadoutId,seed:number) {
+    if(this.phase!=='ready'||this.hallBusy||this.appearanceEditor)return;
+    const sheet=createCharacterSheet(weapon),look=this.creationLooks.get(index)??sheet.look;
+    this.titleScreen.setEditorOpen(true);this.clearInput();
+    this.appearanceEditor=createAppearanceEditor(this.shell.panelMount,{sheet,name,look,saveLabel:'Create character',
+      onCancel:draft=>{this.creationLooks.set(index,draft);this.closeAppearanceEditor();},
+      onSave:async draft=>{
+        this.creationLooks.set(index,structuredClone(draft));
+        if(!await this.createCharacter(index,name,weapon,seed,draft))return {ok:false,message:this.session.error||'Could not create character. Try again.'};
+        this.creationLooks.delete(index);this.closeAppearanceEditor();return {ok:true};
+      },
+    });
+  }
+  private editAppearance() {
+    if(this.phase!=='character'||this.savingAction||this.appearanceEditor||!this.session.active)return;
+    this.inventoryPanel.close();this.clearInput();
+    this.appearanceEditor=createAppearanceEditor(this.shell.panelMount,{sheet:this.sim.player.character,name:this.session.active.record.name,
+      onCancel:()=>this.closeAppearanceEditor(),
+      onSave:look=>this.durable(async()=>{
+        const result=await executeAppearanceChange(this.sim.player,look,async character=>{
+          const checkpoint=this.sim.captureCheckpoint();checkpoint.character=character;
+          const ok=await this.session.save(checkpoint,Date.now());return {ok,message:this.session.error};
+        });
+        if(result.ok)this.closeAppearanceEditor();return result;
+      },{ok:false,message:'A save is already in progress.'}),
+    });
+  }
+  private async createCharacter(index: number, name: string, weapon: StarterLoadoutId, seed: number, look:CharacterLook):Promise<boolean> {
+    if (this.phase !== 'ready' || this.hallBusy || this.disposed) return false;
+    if (!isWorldSeed(seed)) { this.titleScreen.message('Enter a whole world seed from 0 to 4294967295.'); return false; }
+    if(!validCharacterLook(look))return false;
     const world = new World(seed);
     const fresh = new Simulation(world, { seed, spawn: false });
-    fresh.player.character = createCharacterSheet(weapon); refreshCharacter(fresh.player);
+    fresh.player.character = createCharacterSheet(weapon); fresh.player.character.look=structuredClone(look); refreshCharacter(fresh.player);
     fresh.player.hp = fresh.player.maxHp; fresh.player.mana = fresh.player.maxMana;
     const checkpoint = fresh.captureCheckpoint(); world.dispose();
     this.hallBusy = true;
-    if (!await this.session.create(index, name, seed, checkpoint, crypto.randomUUID(), Date.now())) {
-      this.hallBusy = false; this.titleScreen.message(this.session.error); return;
-    }
-    this.hallBusy = false;
+    try {
+      if (!await this.session.create(index, name, seed, checkpoint, crypto.randomUUID(), Date.now())) {this.titleScreen.message(this.session.error);return false;}
+    } finally {this.hallBusy=false;}
     await this.continueCharacter(index);
+    return true;
   }
 
   private async continueCharacter(index: number) {
@@ -994,6 +1035,11 @@ export class Game {
       this.notify('Controller disconnected.'); return;
     }
     const pad = this.gamepad;
+    if(this.appearanceEditor){
+      if(pad.active){if(pad.pressed.has(PAD.dodge)||pad.pressed.has(PAD.pause))this.appearanceEditor.cancel();else this.gamepadMenu.update(this.appearanceEditor.element,pad,now);}
+      else this.gamepadMenu.clear();
+      return;
+    }
     if (pad.active && !this.usingGamepad) {
       this.input.clear(); this.sim.clearInput(); this.usingGamepad = true; this.touch.setActive(false); this.usingGamepad = true;
       this.padAimAngle = this.sim.player.angle;
@@ -1059,6 +1105,7 @@ export class Game {
   }
 
   dispose() {
+    this.appearanceEditor?.dispose();this.appearanceEditor=undefined;
     if (this.disposed) return;
     this.disposed = true;
     this.abort.abort(); cancelAnimationFrame(this.animation); this.clearInput();

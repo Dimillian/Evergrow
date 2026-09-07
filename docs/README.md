@@ -1,6 +1,6 @@
 # Documentation
 
-Updated 2026-09-06. Use the current guides for implementation. Proposed designs and historical captures are labeled separately; they do not override current code or user decisions.
+Updated 2026-09-07. Use the current guides for implementation. Proposed designs and historical captures are labeled separately; they do not override current code or user decisions.
 
 ## Start here
 
@@ -18,6 +18,7 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 | Area | Guide |
 | --- | --- |
 | Character proportions, equipment materials and art review | [Character art](character-art.md) |
+| Character appearance, armor colors, phone editor and save v4 | [Character appearance editor](character-editor.md) |
 | Character, gear, attributes and allocation | [Character systems](character-systems.md) |
 | Weapon profiles, skill effects and action speed | [Weapons and skills](weapons-and-skills.md) |
 | Ranks, specializations, mastery and ultimates | [Skill progression](skill-progression.md) |
@@ -40,8 +41,8 @@ Updated 2026-09-06. Use the current guides for implementation. Proposed designs 
 
 ## Next iteration specifications
 
-- [Character editor feasibility](character-editor-feasibility.md): source-based assessment of creation-time appearance, modular hair/skin/accessories, body presets, rendering integration and save implications; not implemented.
-- [Character editor MVP mockup](character-editor-mockup.md): local appearance study using the real rig, paged hair/skin options, armor tints and proposed inventory editor entry; fixed body proportions and no saves or live creation integration.
+- [Character editor feasibility](character-editor-feasibility.md): source-based assessment of creation-time appearance, modular hair/skin/accessories, body presets, rendering integration and save implications; historical proposal, with the selected MVP now integrated.
+- [Character editor MVP mockup](character-editor-mockup.md): local appearance study using the real rig, paged hair/skin options, armor tints and the inventory editor entry; save-free harnesses now share the production component.
 - [Smartphone editor mockups](http://127.0.0.1:5173/character-editor-phone.html): interactive Character, Armor and Inventory phone studies with a persistent preview and touch-sized editing controls; local server required.
 
 - [Journeys and local leads](procedural-journeys.md): proposed procedural adventures, light onboarding, level-aware routing, journal and reward/persistence rules.

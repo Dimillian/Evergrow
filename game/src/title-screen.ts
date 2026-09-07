@@ -130,6 +130,11 @@ export class TitleScreen {
       initialFocus: () => this.element.querySelector(`[data-slot="${this.selected}"]`) ?? this.element.querySelector('[data-source="local"]') });
     if (!this.frame) this.animate();
   }
+  setEditorOpen(open:boolean) {
+    this.focus?.dispose();this.focus=undefined;
+    this.element.inert=open;this.element.style.visibility=open?'hidden':'';
+    if(!open&&!this.element.hidden)this.focus=trapDialogFocus(this.element,{signal:this.abort.signal,restoreFocus:false,initialFocus:()=>this.element.querySelector(`[data-slot="${this.selected}"]`)});
+  }
   private choose(index: number, focus = true) {
     this.selected = index; this.confirming = null; this.loading = false; const ticket = ++this.inspection;
     this.render();

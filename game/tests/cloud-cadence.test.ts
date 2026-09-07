@@ -30,7 +30,7 @@ test('durable save bursts upload only the latest checkpoint each window; flush a
   const client=new CloudClient('cadence-test');t.after(()=>client.dispose());
   const world={seed:7319,blocked:()=>false,move:(x:number,y:number,dx:number,dy:number)=>({x:x+dx,y:y+dy})};
   const sim=new Simulation(world,{spawn:false});
-  let record:CharacterSave={version:3,id:'cadence',name:'Rowan',createdAt:1,updatedAt:1,worldSeed:7319,worldVersion:WORLD_GENERATION_VERSION,checkpoint:sim.captureCheckpoint()};
+  let record:CharacterSave={version:4,id:'cadence',name:'Rowan',createdAt:1,updatedAt:1,worldSeed:7319,worldVersion:WORLD_GENERATION_VERSION,checkpoint:sim.captureCheckpoint()};
   let token:string|null=null;
   for(let i=1;i<=12;i++){
     record={...record,updatedAt:i};const saved=await client.write(0,record,token);

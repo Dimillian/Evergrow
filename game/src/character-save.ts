@@ -1,3 +1,4 @@
+import { validCharacterLook } from './character-look.ts';
 import { ROAMING_RULES } from './roaming-encounters.ts';
 import { validJourneys, type JourneyState } from './journey-state.ts';
 import type { Expeditions, StoredActor } from './dungeon-state.ts';
@@ -19,7 +20,7 @@ import { MAX_CONTENT_LEVEL } from './progression-content.ts';
 import { xpForNextLevel } from './progression.ts';
 
 export const CHARACTER_SLOT_COUNT = 8;
-export const CHARACTER_SAVE_VERSION = 3;
+export const CHARACTER_SAVE_VERSION = 4;
 // A payload safety bound, not a lifetime activity quota. Fail without evicting progress.
 export const SAVE_MAX_CODE_UNITS = 8 * 1024 * 1024;
 export interface CharacterCheckpoint {
@@ -47,7 +48,7 @@ function validSheet(v: unknown, level: number): v is CharacterSheet {
   if (object(v) && v.recentItems !== undefined && (!Array.isArray(v.recentItems)
     || v.recentItems.length > INVENTORY_CAPACITY + EQUIPMENT_SLOTS.length
     || !v.recentItems.every(id => text(id, 160)) || new Set(v.recentItems).size !== v.recentItems.length)) return false;
-  if (!object(v) || !validBlessing(v.blessing) || !validCommerce(v.commerce, level) || (v.gold !== undefined && !validGold(v.gold)) || !object(v.attributes) || !['strength', 'dexterity', 'intelligence', 'vitality'].every(k => integer((v.attributes as ObjectValue)[k], 10, 5e6 + 10))
+  if (!object(v) || !validCharacterLook(v.look) || !validBlessing(v.blessing) || !validCommerce(v.commerce, level) || (v.gold !== undefined && !validGold(v.gold)) || !object(v.attributes) || !['strength', 'dexterity', 'intelligence', 'vitality'].every(k => integer((v.attributes as ObjectValue)[k], 10, 5e6 + 10))
     || !integer(v.statPoints, 0, 5e6) || !integer(v.skillPoints, 0, MAX_CONTENT_LEVEL)
     || !Array.isArray(v.inventory) || v.inventory.length !== INVENTORY_CAPACITY || !v.inventory.every(i => i === null || validItem(i))
     || !object(v.equipped) || Object.keys(v.equipped).length !== EQUIPMENT_SLOTS.length

@@ -1,5 +1,8 @@
 # Character systems foundation
 
+
+[Character appearance](character-editor.md) is integrated in creation and inventory with shared world/portrait rendering. Save v4 requires the appearance recipe; older v3 test characters remain stored but require new characters.
+
 2026-09-05 · local, unreleased prototype.
 
 The character sheet now connects equipment, attributes, tree allocations, active skills, and loot to real combat. This is an extensible first foundation, with bounded rules and shared data. Its many tree nodes reuse authored bonus families; it is not a claim of thousands of distinct abilities or a balanced endgame.

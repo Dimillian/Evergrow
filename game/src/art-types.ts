@@ -46,7 +46,7 @@ export interface CharacterOutfit {
 }
 
 export interface CharacterPose {
-  /** Optional appearance study recipe; not persisted or enabled in character creation yet. */
+  /** Personal appearance for players; enemy recipes use their own art. */
   appearance?: Readonly<CharacterAppearance>;
   kind: 'player' | EnemyKind;
   command?: 'rush' | 'surround' | 'rout';

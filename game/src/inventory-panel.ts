@@ -19,6 +19,7 @@ import './inventory-panel.css';
 
 export interface InventoryPanelActions {
   close(): void;
+  editAppearance?():void;
   equip(index: number, slot?: EquipmentSlot): void;
   unequip(slot: EquipmentSlot, index?: number): void;
   move(from: number, to: number): void;
@@ -88,11 +89,9 @@ export class InventoryPanel {
   private readonly sectionFocus = new Map<number, HTMLElement>();
   private readonly tooltip: ItemTooltip;
   private readonly canvas: HTMLCanvasElement;
-  private readonly portraitRenderer: typeof drawCharacterPortrait;
   private readonly cells = new Map<string, HTMLButtonElement>();
 
-  constructor(mount: HTMLElement, actions: InventoryPanelActions, portraitRenderer: typeof drawCharacterPortrait = drawCharacterPortrait) {
-    this.portraitRenderer = portraitRenderer;
+  constructor(mount: HTMLElement, actions: InventoryPanelActions) {
     this.actions = actions;
     this.element = document.createElement('div');
     this.element.className = 'character-overlay';
@@ -105,7 +104,7 @@ export class InventoryPanel {
       <nav class="character-controller-nav" aria-label="Controller sections"><kbd>LB</kbd><span data-pad-section="0">Equipment</span><span data-pad-section="1">Inventory</span><span data-pad-section="2">Stats</span><kbd>RB</kbd><small>A Select · B Back</small></nav>
       <div class="character-columns ui-scroll-area">
         <section class="character-equipment" id="character-section-0" data-section="0" aria-labelledby="equipment-title">
-          <div class="character-section-title"><h3 id="equipment-title">Equipment</h3><span data-equipped-count></span></div>
+          <div class="character-section-title character-inventory-heading"><h3 id="equipment-title">Equipment</h3>${actions.editAppearance?`<div class="character-heading-actions"><button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-edit-appearance aria-label="Edit character" data-tooltip="Edit character" data-tooltip-placement="below">${uiIcon('character')}</button></div>`:''}<span class="character-inventory-counts" data-equipped-count></span></div>
           <div class="character-doll-stage"><div class="character-orbit" aria-hidden="true"></div><canvas class="character-doll" width="560" height="720" aria-label="Your character wearing the current equipment"></canvas>
             <div class="character-equipment-rail character-equipment-rail--crown">${this.equipmentMarkup('head')}</div>
             <div class="character-equipment-rail character-equipment-rail--left">${LEFT_SLOTS.map(slot => this.equipmentMarkup(slot)).join('')}</div>
@@ -154,6 +153,7 @@ export class InventoryPanel {
     this.sheet = document.createElement('section'); this.sheet.className = 'touch-item-sheet'; this.sheet.hidden = true;
     this.sheet.setAttribute('aria-label','Selected item'); this.window.append(this.sheet);
     this.tooltip = new ItemTooltip(this.window, 'character-item-tooltip');
+    this.element.querySelector('[data-edit-appearance]')?.addEventListener('click',()=>actions.editAppearance?.());
     this.canvas = this.element.querySelector('.character-doll')!;
     this.element.querySelectorAll<HTMLButtonElement>('[data-location]').forEach(cell => this.cells.set(cell.dataset.location!, cell));
     mount.append(this.element);
@@ -607,7 +607,7 @@ export class InventoryPanel {
     if (ctx) {
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const time = reduced ? 3 : performance.now() / 1000;
-      this.portraitRenderer(ctx, this.player, time, this.facing, this.canvas.width, this.canvas.height);
+      drawCharacterPortrait(ctx, this.player, time, this.facing, this.canvas.width, this.canvas.height);
     }
     this.animation = requestAnimationFrame(this.animate);
   };

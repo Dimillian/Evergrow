@@ -1,3 +1,4 @@
+import { createCharacterLook } from './character-look.ts';
 import { FOCUS_PROFILES } from './focus-content.ts';
 import { STARTING_SWORD } from './equipment.ts';
 import { SHIELD_PROFILES, WEAPON_PROFILES } from './weapon-content.ts';
@@ -224,7 +225,7 @@ export function createCharacterSheet(starter: StarterLoadoutId = 'sword'): Chara
   const loadout = createStarterLoadout(starter);
   equipped.weapon = loadout.weapon; equipped.offhand = loadout.offhand;
   const inventory: CharacterSheet['inventory'] = Array.from({ length: INVENTORY_CAPACITY }, () => null);
-  return { skillRanks: {}, activeSkillRanks: {}, skillSpecializations: {}, arcaneOverload: false, gold: 0, commerce: { epoch: 0, revision: 0, operations: 0, sold: {}, buyback: [] }, attributes: { strength: 10, dexterity: 10, intelligence: 10, vitality: 10 },
+  return { look: createCharacterLook(), skillRanks: {}, activeSkillRanks: {}, skillSpecializations: {}, arcaneOverload: false, gold: 0, commerce: { epoch: 0, revision: 0, operations: 0, sold: {}, buyback: [] }, attributes: { strength: 10, dexterity: 10, intelligence: 10, vitality: 10 },
     statPoints: 0, skillPoints: 0, allocatedNodes: ['origin'], inventory, equipped, skillSlots: Array.from({ length: 5 }, () => null) };
 }
 
