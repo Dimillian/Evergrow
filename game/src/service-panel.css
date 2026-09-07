@@ -12,7 +12,7 @@
 .service-body { display:grid; grid-template-columns:minmax(280px,.9fr) minmax(360px,1.1fr); flex:1; min-height:0; }
 .service-offer,.service-bag { padding:22px; overflow:auto; min-height:0; }
 .service-offer { border-right:1px solid #8099a128; background:radial-gradient(ellipse at 50% 10%,color-mix(in srgb,var(--service-color) 8%,transparent),transparent 70%); }
-.service-section-heading { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:0 0 16px; }
+.service-section-heading { display:flex; align-items:center; justify-content:flex-start; gap:4px; margin:0 0 16px; }
 .service-panel h3 { font-size:16px; margin:0; font-weight:500; color:#c7d4cf; }
 .service-section-heading span,.service-stock small,.service-equipment small { font:11px "Evergrow Numerals", system-ui,sans-serif; color:#95a6a9; }
 .service-stock { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
