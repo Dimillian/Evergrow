@@ -10,6 +10,10 @@ const ring = (x: number, y: number, rx: number, ry = rx, start = 0, end = TAU, t
     return [x + u * Math.cos(tilt) - v * Math.sin(tilt), y + u * Math.sin(tilt) + v * Math.cos(tilt)];
   });
 
+/** Shared palm-relative light anchor; orb art and lighting must bob together. */
+export const focusGlowCenter = (v: FocusDefinition['visual'], time = 0): Point =>
+  v.kind === 'orb' ? [0, -8.8 + Math.sin(time * 1.6) * .35] : [-.5, -6];
+
 /** Decorated covers face outward; an open book's reading surface faces its owner.
  * Orbs float above the palm. All motion stays inside the same bounded silhouette. */
 export function focusShapes(v: FocusDefinition['visual'], time = 0, facing = Math.PI / 2): GearShape[] {
@@ -53,7 +57,7 @@ export function focusShapes(v: FocusDefinition['visual'], time = 0, facing = Mat
     return shapes.map(shape => ({ ...shape, points: shape.points.map(([x, y]): Point => [x * width + y * skew, y]) }));
   }
 
-  const cy = -8.8 + Math.sin(time * 1.6) * .35, r = 3.8;
+  const cy = focusGlowCenter(v, time)[1], r = 3.8;
   const tilt = -.5 + Math.sin(time * .65) * .16;
   // Thin orbital traces behind the glass, with a gap between the focus and palm.
   line(ring(0, cy, 6.3, 2.1, Math.PI, TAU, tilt), mixColor(v.glow, v.shadow, .55), .4);

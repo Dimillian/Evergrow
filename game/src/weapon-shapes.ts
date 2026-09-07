@@ -141,6 +141,14 @@ export function weaponShapes(visual: WeaponVisual, draw = 0): GearShape[] {
     points: shape.points.map(([x, y]): Point => [x, y * .62]),
     ...(shape.width !== undefined ? { width: shape.width * .8 } : {}),
   }));
+  if (['sword', 'axe', 'mace', 'dagger'].includes(visual.kind) && visual.element && visual.element !== 'physical' && visual.glow) {
+    const start = length * (visual.kind === 'axe' || visual.kind === 'mace' ? .65 : .25);
+    shapes.push(stroke([[start, 0], [length * .9, 0]], visual.glow, .65));
+    for (let i = 0; i < 3; i++) {
+      const x = start + (length * .87 - start) * i / 2;
+      shapes.push(stroke([[x - .8, -.9], [x + .5, 0], [x - .8, .9]], visual.glow, .45));
+    }
+  }
   return shapes;
 }
 

@@ -1,3 +1,4 @@
+import { isElementalAffix, meleeEnchantment } from './elemental-weapon.ts';
 import { FOCUS_PROFILES } from './focus-content.ts';
 import type { Item } from './character-types.ts';
 import { ITEM_KINDS, TIER_NAMES, STAT_LABELS, TIER_AFFIXES } from './items.ts';
@@ -28,6 +29,8 @@ export function validItem(v: unknown): v is Item {
   if (v.kind === 'weapon' && !(profile === STARTING_SWORD.id || WEAPON_PROFILES.some(p => p.id === profile))) return false;
   if (v.kind === 'shield' && !SHIELD_PROFILES.some(p => p.id === profile)) return false;
   if (v.kind !== 'weapon' && v.kind !== 'shield' && v.kind !== 'grimoire' && v.kind !== 'orb' && profile !== undefined) return false;
+  const elemental = v.affixes.filter(a => isElementalAffix(a.stat));
+  if (elemental.length > 1 || elemental.length && (v.kind !== 'weapon' || !object(v.weapon) || v.weapon.attackKind !== 'melee' || elemental.some(a => a.value <= 0))) return false;
   const a = v.appearance;
   if (!object(a) || !oneOf(a.style, ['plate', 'leather']) || !['base', 'shadow', 'edge', 'trim'].every(key => color(a[key]))) return false;
   const w = v.weapon;
@@ -39,6 +42,8 @@ export function validItem(v: unknown): v is Item {
       || !oneOf(w.hands, [1, 2]) || !oneOf(w.attackKind, ['melee', 'arrow', 'bolt'])
       || !oneOf(w.damageType, ['physical', 'fire', 'frost', 'lightning', 'arcane'])
       || !number(w.damage, 1) || !number(w.baseAttacksPerSecond, .01, 100) || !number(w.reach, 1, 2000) || !number(w.arc, 0, Math.PI * 2)) return false;
+    const enchantment = meleeEnchantment(v.affixes as Item['affixes']);
+    if (enchantment ? !object(w.enchantment) || w.enchantment.element !== enchantment.element || w.enchantment.damage !== enchantment.damage : w.enchantment !== undefined) return false;
     const visual = w.visual;
     if (!object(visual) || visual.kind !== w.family || !number(visual.length, 0, 500) || !number(visual.width, 0, 100)
       || !['metal', 'edge', 'grip', 'guard'].every(key => color(visual[key]))

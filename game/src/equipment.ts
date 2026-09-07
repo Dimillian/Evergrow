@@ -65,7 +65,7 @@ export function deriveAttackStats(stats: CharacterStats, weapon: WeaponDefinitio
     attacksPerSecond,
     // Finite item values can still overflow when multiplied; never emit Infinity damage.
     damage: Math.max(1, Math.min(Number.MAX_SAFE_INTEGER,
-      Math.round(positive(weapon.damage, STARTING_SWORD.damage) * positive(weapon.attackKind === 'bolt' ? stats.spellDamageMultiplier : stats.attackDamageMultiplier, 1)))),
+      Math.round((positive(weapon.damage, STARTING_SWORD.damage) + (weapon.enchantment?.damage ?? 0)) * positive(weapon.attackKind === 'bolt' ? stats.spellDamageMultiplier : stats.attackDamageMultiplier, 1)))),
     range: positive(weapon.reach, STARTING_SWORD.reach),
     arc: Math.min(Math.PI * 2, positive(weapon.arc, STARTING_SWORD.arc)),
   };

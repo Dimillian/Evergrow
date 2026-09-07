@@ -68,7 +68,7 @@ test('multi-level rewards grant one skill and five attribute points per level wi
 });
 
 test('equipping an item changes actual melee damage and repeated attack timing through shared stats', () => {
-  const sim = createSim(), weapon = generateItem(455, 1, 'weapon', 'longsword');
+  const sim = createSim(), weapon = generateItem(455, 1, 'weapon', 'longsword', 'common');
   weapon.weapon!.damage = 40; weapon.weapon!.baseAttacksPerSecond = 1;
   weapon.implicit = { damagePercent: 50, attackSpeedPercent: 25 }; weapon.affixes = [];
   sim.player.character.inventory[4] = weapon;

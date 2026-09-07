@@ -1,3 +1,4 @@
+import { ELEMENTAL_AFFIXES, ELEMENT_COLORS } from './elemental-weapon.ts';
 import { weaponActionRate, basicAttackManaCost } from './equipment.ts';
 import type { CharacterSheet, EquipmentSlot, Item, ItemTier } from './character-types.ts';
 import { TIER_COLORS, TIER_NAMES, STAT_LABELS, itemModifiers, formatStatValue, itemDisplayName } from './items.ts';
@@ -44,8 +45,10 @@ export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, optio
 
 /** Item data and effective equipment changes are distinct; no inventory DOM location is required. */
 export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
-  const rows = Object.entries(itemModifiers(item)).map(([key, value]) =>
-    `<div class="ui-item-property"><span>${escapeUI(STAT_LABELS[key as keyof typeof STAT_LABELS])}</span><strong>${formatStatValue(key as keyof typeof STAT_LABELS, value)}</strong></div>`);
+  const rows = Object.entries(itemModifiers(item)).map(([key, value]) => {
+    const element = ELEMENTAL_AFFIXES.find(a => a.stat === key)?.element;
+    return `<div class="ui-item-property"${element ? ` style="color:${ELEMENT_COLORS[element]}"` : ''}><span>${escapeUI(STAT_LABELS[key as keyof typeof STAT_LABELS])}</span><strong>${formatStatValue(key as keyof typeof STAT_LABELS, value)}</strong></div>`;
+  });
   let weapon = '';
   if (item.weapon) {
     const w = item.weapon;

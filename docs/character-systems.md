@@ -163,3 +163,8 @@ Each of the five terraces now has a direct bridge between every pair of discipli
 ### Skill development (2026-09-06)
 
 [Skill progression](skill-progression.md) documents purchased ranks, lower casting ranks, selectable specializations, mastery, Overload and three deep Arcana ultimates. `skill-progression.ts` is the shared resolution path for combat and UI. Rank purchases consume skill points but never gate traversal. Save v3 includes this state and its point accounting.
+
+
+### Elemental melee affixes · 2026-09-07
+
+Melee weapons may roll one weapon-local fire, frost or lightning added-damage affix in an ordinary affix slot. Both basics and weapon skills include this damage, scaled by attack bonuses; offhand affixes never increase main-hand damage. All item services rebuild its damage and elemental appearance from the recipe. Shared tooltips and equip comparisons include it. See [elemental weapons and held lighting](weapons-and-skills.md#elemental-weapons-and-held-lighting--2026-09-07) for rules and presentation bounds.

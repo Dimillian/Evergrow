@@ -1,10 +1,11 @@
-import { focusShapes } from './focus-shapes.ts';
+import { drawWeaponEnchantment, drawEquipmentGlow } from './weapon-enchantment-art.ts';
+import { focusShapes, focusGlowCenter } from './focus-shapes.ts';
 import { appearanceHeadShapes } from './appearance-shapes.ts';
 import { appearancePalette, SKIN_PALETTES, type CharacterAppearance } from './appearance-content.ts';
 import { armorShapes } from './armor-shapes.ts';
 import { STARTING_SWORD } from './equipment.ts';
 import type { FocusDefinition, ShieldDefinition } from './model.ts';
-import { shieldShapes, weaponShapes, weaponArtLength, type GearShape } from './weapon-shapes.ts';
+import { shieldShapes, weaponShapes, type GearShape } from './weapon-shapes.ts';
 import type { ArmorMaterial, ArmorPiece, CharacterOutfit } from './art-types.ts';
 import { PLAYER_ATTACHMENTS } from './character-motion.ts';
 import { polygon, line, taper, mixColor, type Point, type Color } from './art-primitives.ts';
@@ -49,21 +50,7 @@ export function heldWeapon(ctx: CanvasRenderingContext2D, hand: Point, angle: nu
   visual = STARTING_SWORD.visual, draw = 0, time = 0, charge = 0, lengthScale = 1): void {
   ctx.save(); ctx.translate(hand[0], hand[1]); ctx.rotate(angle); ctx.scale(lengthScale, 1);
   drawGearShapes(ctx, weaponShapes(visual, draw), color);
-  if ((visual.kind === 'staff' || visual.kind === 'wand') && visual.glow) {
-    const x = weaponArtLength(visual) - 1;
-    const pulse = .7 + Math.sin(time * 2.2) * .1 + charge * .3;
-    ctx.save(); ctx.globalCompositeOperation = 'screen';
-    const glow = ctx.createRadialGradient(x, 0, .2, x, 0, 4 + charge * 2);
-    glow.addColorStop(0, visual.glow + '70'); glow.addColorStop(1, visual.glow + '00');
-    const alpha = ctx.globalAlpha;
-    ctx.globalAlpha *= pulse; ctx.fillStyle = glow; ctx.fillRect(x - 6, -6, 12, 12);
-    for (let i = 0; i < 2; i++) {
-      const phase = (time * .45 + i * .5) % 1;
-      ctx.globalAlpha = alpha * Math.sin(phase * Math.PI) * .45;
-      ctx.fillStyle = visual.glow; ctx.fillRect(x + Math.sin(time + i * 3) * 1.6, -phase * 5, .5, .7);
-    }
-    ctx.restore();
-  }
+  drawWeaponEnchantment(ctx, visual, time, charge);
   ctx.restore();
 }
 
@@ -203,12 +190,7 @@ export function headArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | nul
 export function heldFocus(ctx: CanvasRenderingContext2D, hand: Point, visual: FocusDefinition['visual'], color: Color, time = 0, facing = Math.PI / 2): void {
   ctx.save(); ctx.translate(hand[0], hand[1]);
   drawGearShapes(ctx, focusShapes(visual, time, facing), color);
-  if (visual.kind === 'orb') {
-    const cy = -8.8 + Math.sin(time * 1.6) * .35;
-    const glow = ctx.createRadialGradient(0, cy, 1, 0, cy, 7);
-    glow.addColorStop(0, visual.glow + '45'); glow.addColorStop(1, visual.glow + '00');
-    ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha *= .75 + Math.sin(time * 1.6) * .15;
-    ctx.fillStyle = glow; ctx.fillRect(-8, cy - 8, 16, 16);
-  }
+  const [cx, cy] = focusGlowCenter(visual, time);
+  drawEquipmentGlow(ctx, cx, cy, visual.kind === 'orb' ? 10 : 5, visual.glow, .5 + Math.sin(time * 1.6) * .06);
   ctx.restore();
 }

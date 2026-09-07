@@ -1,3 +1,4 @@
+import { ELEMENT_COLORS } from './elemental-weapon.ts';
 import type { DamageType, ShieldDefinition, WeaponDefinition, WeaponFamily } from './model.ts';
 
 interface WeaponRecipe {
@@ -5,7 +6,6 @@ interface WeaponRecipe {
   damage: number; speed: number; reach: number; arc: number;
   length: number; width: number; gripLength: number; damageType?: DamageType;
 }
-const ELEMENT_COLORS: Partial<Record<DamageType, string>> = { fire: '#f7995c', frost: '#91d4ee', lightning: '#bcb0ff', arcane: '#a5b9ff' };
 function weapon(recipe: WeaponRecipe): Readonly<WeaponDefinition> {
   const damageType = recipe.damageType ?? 'physical';
   return Object.freeze({ id: recipe.id, name: recipe.name, family: recipe.family, hands: recipe.hands,

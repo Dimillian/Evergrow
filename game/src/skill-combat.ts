@@ -1,3 +1,4 @@
+import { weaponImpactStyle } from './elemental-weapon.ts';
 import type { ProjectileStyle } from './model.ts';
 import { containerVisible, strikeContainers, type ContainerAttackContext } from './breakable-containers.ts';
 import { skillTargetPoint } from './skill-target-point.ts';
@@ -45,7 +46,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   // Staff weapon derivation already applies spell bonuses; applying them here again would square scaling.
   const damage = attack.damage * costs.damageMultiplier;
   const color = definition.color;
-  const hitStyle = 'style' in recipe ? recipe.style : weapon.damageType === 'physical' ? undefined : weapon.damageType;
+  const hitStyle = 'style' in recipe ? recipe.style : weaponImpactStyle(weapon);
   const damageTarget = (enemy: Enemy, amount: number, angle: number, melee: boolean) => context.damage(enemy, amount, angle, melee, hitStyle);
   const living = () => enemies.filter(enemy => enemy.state !== 'dead');
   const visible = (enemy: Enemy) => context.visible(p.x, p.y, enemy.x, enemy.y);
@@ -75,7 +76,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   p.castTime = 1 / attack.attacksPerSecond; p.castAngle = p.angle;
   switch (recipe.kind) {
     case 'dash':
-      p.dash = { angle: p.angle, remaining: recipe.duration, speed: recipe.speed, damage, radius: recipe.radius, skill: id, hitIds: new Set() };
+      p.dash = { angle: p.angle, remaining: recipe.duration, speed: recipe.speed, damage, radius: recipe.radius, skill: id, style: hitStyle, hitIds: new Set() };
       p.castTime = Math.max(p.castTime, recipe.duration);
       break;
     case 'radial':

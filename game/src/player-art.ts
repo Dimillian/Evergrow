@@ -65,7 +65,7 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
     }
     if (pose.offHand?.kind === 'shield') heldShield(ctx, offHand, pose.angle, pose.offHand.visual, color, pose.guard);
     if (pose.offHand?.kind === 'weapon') {
-      heldWeapon(ctx, offWeaponOrigin, offWeaponAngle, color, pose.offHand.visual, 0, 0, 0, offWeaponScale);
+      heldWeapon(ctx, offWeaponOrigin, offWeaponAngle, color, pose.offHand.visual, 0, pose.effectTime ?? pose.time, 0, offWeaponScale);
       gauntlet(ctx, offHand, outfit.hands, color, offWeaponAngle);
     }
   };

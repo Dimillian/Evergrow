@@ -1,3 +1,4 @@
+import { weaponImpactStyle } from './elemental-weapon.ts';
 import { breakContainer, strikeContainers, strikeContainerSegment, type ContainerAttackContext } from './breakable-containers.ts';
 import { enemyInCombatViewport, type CombatViewport } from './combat-visibility.ts';
 import { stageJourneyCompletion, journeyWasCompleted, type JourneyCompletion } from './journey-rewards.ts';
@@ -482,7 +483,7 @@ export class Simulation {
       for (const enemy of this.enemies) if (enemy.state !== 'dead' && !dash.hitIds.has(enemy.id)
         && segmentDistanceSquared(enemy.x, enemy.y, startX, startY, p.x, p.y) <= (enemy.radius + dash.radius) ** 2
         && this.lineOfSight(p.x, p.y, enemy.x, enemy.y)) {
-        dash.hitIds.add(enemy.id); this.damageEnemy(enemy, dash.damage, dash.angle, true);
+        dash.hitIds.add(enemy.id); this.damageEnemy(enemy, dash.damage, dash.angle, true, false, dash.style);
       }
       strikeContainerSegment(this.containerContext(), startX, startY, p.x, p.y, dash.radius + p.radius);
       dash.remaining = Math.max(0, dash.remaining - dt);
@@ -559,7 +560,7 @@ export class Simulation {
       if (!circleIntersectsSector(enemy.x, enemy.y, enemy.radius, p.x, p.y, angle, attack.range, to - from)) continue;
       if (!this.lineOfSight(p.x, p.y, enemy.x, enemy.y)) continue;
       attack.hitIds.add(enemy.id);
-      this.damageEnemy(enemy, attack.damage, Math.atan2(enemy.y - p.y, enemy.x - p.x), true, false, attack.weapon.damageType === 'physical' ? undefined : attack.weapon.damageType);
+      this.damageEnemy(enemy, attack.damage, Math.atan2(enemy.y - p.y, enemy.x - p.x), true, false, weaponImpactStyle(attack.weapon));
     }
     // One solid-surface response per swing; scenery impact never changes its collision.
     if (!attack.surfaceHit && this.world.impactMaterial) for (let reach = p.radius + 4; reach <= attack.range; reach += 4) {

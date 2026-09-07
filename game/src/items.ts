@@ -1,3 +1,4 @@
+import { ELEMENTAL_AFFIXES, ELEMENT_COLORS, isElementalAffix, meleeEnchantment } from './elemental-weapon.ts';
 import { createCharacterLook } from './character-look.ts';
 import { FOCUS_PROFILES } from './focus-content.ts';
 import { STARTING_SWORD } from './equipment.ts';
@@ -18,6 +19,7 @@ export const TIER_NAMES: Readonly<Record<ItemTier, string>> = Object.freeze({
   common: 'Common', magic: 'Magic', rare: 'Rare', epic: 'Epic', legendary: 'Legendary',
 });
 export const STAT_LABELS: Readonly<Record<StatKey, string>> = Object.freeze({
+  fireDamage: 'Added fire damage', frostDamage: 'Added frost damage', lightningDamage: 'Added lightning damage',
   strength: 'Strength', dexterity: 'Dexterity', intelligence: 'Intelligence', vitality: 'Vitality',
   maxHp: 'Maximum life', maxMana: 'Maximum mana', armor: 'Armor', damagePercent: 'Attack damage',
   attackSpeedPercent: 'Attack speed', castSpeedPercent: 'Cast speed', critChance: 'Critical chance', critDamage: 'Critical damage',
@@ -95,6 +97,7 @@ export function itemAffixPool(item: { kind: ItemKind; weapon?: { family: string 
   if (item.kind === 'grimoire' || item.kind === 'orb' || item.weapon?.family === 'wand') {
     return AFFIXES.filter(a => !['strength', 'dexterity', 'damagePercent', 'attackSpeedPercent', 'lifeOnHit', 'armor'].includes(a.stat));
   }
+  if (item.kind === 'weapon' && ['sword', 'axe', 'mace', 'dagger'].includes(item.weapon?.family ?? '')) return [...AFFIXES, ...ELEMENTAL_AFFIXES];
   return AFFIXES;
 }
 function focusImplicit(profileId: string, level: number, quality: number): StatModifiers {
@@ -139,6 +142,7 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
     const rollQuality = random(); rolls.push(rollQuality);
     const value = Math.round((definition.base + growthLevel * definition.growth) * (.85 + rollQuality * .3) * quality * 10) / 10;
     affixes.push({ name: definition.name, stat: definition.stat, value });
+    if (isElementalAffix(definition.stat)) for (let i = remaining.length - 1; i >= 0; i--) if (isElementalAffix(remaining[i].stat)) remaining.splice(i, 1);
   }
   const implicit: StatModifiers = focusProfile ? focusImplicit(focusProfile.id, level, quality) : {};
   const armorBase: Partial<Record<ItemKind, number>> = { head: 5, chest: 11, gloves: 3, legs: 7, boots: 4 };
@@ -158,15 +162,14 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
   };
   if (weaponProfile) {
     item.weapon = { ...weaponProfile, id: item.id, name, damage: Math.round(weaponProfile.damage * growth),
-      visual: { ...weaponProfile.visual, metal: appearance.base, edge: appearance.edge, grip: appearance.shadow, guard: appearance.trim,
-        ...(!weaponProfile.visual.glow && (tier === 'epic' || tier === 'legendary') ? { glow: TIER_COLORS[tier] } : {}) } };
+      visual: { ...weaponProfile.visual, metal: appearance.base, edge: appearance.edge, grip: appearance.shadow, guard: appearance.trim } };
   }
   if (shieldProfile) {
     item.shield = { ...shieldProfile, id: item.id, name,
       visual: { ...shieldProfile.visual, base: appearance.base, edge: appearance.edge, trim: appearance.trim, shadow: appearance.shadow } };
   }
   if (focusProfile) item.focus = { id: item.id, name, visual: { ...focusProfile.visual, base: appearance.base, edge: appearance.edge, trim: appearance.trim, shadow: appearance.shadow } };
-  return item;
+  return applyWeaponEnchantment(item);
 }
 
 /** Display order is deliberate: melee, magic, then archery; light before heavy. */
@@ -250,13 +253,24 @@ export function deriveItem(item: Item): Item {
     blockChance: Math.round(shield.blockChance * enhance * 10) / 10,
     blockReduction: Math.round(shield.blockReduction * enhance * 10) / 10 };
   next.affixes = item.affixes.map((affix, index) => {
-    const definition = [...AFFIXES, ...SHIELD_AFFIXES].find(a => a.stat === affix.stat)!;
+    const definition = [...AFFIXES, ...SHIELD_AFFIXES, ...ELEMENTAL_AFFIXES].find(a => a.stat === affix.stat)!;
     const level = PERCENT_STATS.has(affix.stat) ? itemAffixGrowthLevel(item.itemLevel) : item.itemLevel - 1;
     return { name: definition.name, stat: definition.stat,
       value: Math.round((definition.base + level * definition.growth) * (.85 + r.rolls[index] * .3) * quality * enhance * 10) / 10 };
   });
   next.requiredLevel = Math.max(1, item.itemLevel - 2);
   next.power = Math.round((item.itemLevel * 10 + quality * 12 + item.affixes.length * 7) * enhance);
-  return next;
+  return applyWeaponEnchantment(next);
+}
+
+/** Rebuild elemental projection after generation or services, clearing removed affixes. */
+function applyWeaponEnchantment(item: Item): Item {
+  if (!item.weapon || item.weapon.attackKind !== 'melee') return item;
+  const enchantment = meleeEnchantment(item.affixes);
+  const { enchantment: _old, ...weapon } = item.weapon;
+  const { glow: _glow, element: _element, ...visual } = weapon.visual;
+  item.weapon = { ...weapon, ...(enchantment ? { enchantment } : {}), visual: { ...visual, element: enchantment?.element ?? 'physical',
+    ...(enchantment ? { glow: ELEMENT_COLORS[enchantment.element] } : {}) } };
+  return item;
 }
 export const itemDisplayName = (item: Item): string => `${item.name}${item.recipe.enhancement ? ` +${item.recipe.enhancement}` : ''}`;

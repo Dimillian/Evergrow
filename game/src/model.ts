@@ -82,6 +82,8 @@ export interface WeaponDefinition {
   hands: 1 | 2;
   attackKind: 'melee' | 'arrow' | 'bolt';
   damageType: DamageType;
+  /** Added weapon-local damage; the physical base remains separate. */
+  enchantment?: { element: 'fire' | 'frost' | 'lightning'; damage: number };
   baseAttacksPerSecond: number;
   damage: number;
   reach: number;
@@ -139,7 +141,7 @@ export interface Player {
   nextAttackHand: 'main' | 'off';
   guardTime: number;
   guardReduction: number;
-  dash: { angle: number; remaining: number; speed: number; damage: number; radius: number; skill: SkillId; hitIds: Set<number> } | null;
+  dash: { angle: number; remaining: number; speed: number; damage: number; radius: number; skill: SkillId; style?: ProjectileStyle; hitIds: Set<number> } | null;
   stats: CharacterStats;
   equipment: Equipment;
   attack: Attack | null;

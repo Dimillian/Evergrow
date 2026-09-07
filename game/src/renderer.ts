@@ -1,3 +1,4 @@
+import { heldEquipmentLights } from './weapon-emission.ts';
 import { MaterialResponses } from './material-response.ts';
 import { drawMaterialBurst } from './material-response-art.ts';
 import type { GroundLootLabel } from './ground-loot-hover.ts';
@@ -21,9 +22,7 @@ import { BiomeLifeArt } from './biome-life-art.ts';
 import { biomeWind } from './biome-wind.ts';
 import { AtmosphereArt } from './atmosphere-art.ts';
 import { GroundDressing } from './ground-art.ts';
-import { SKILL_CAST_MOTION } from './combat-content.ts';
 import { drawGroundLoot, drawLootLabels, drawResourcePickups } from './loot-art.ts';
-import { SKILL_DEFINITIONS } from './skill-content.ts';
 import { ArtLibrary, drawHumanoid, getPlayerSwordTip, PLAYER_ART_SCALE } from './art.ts';
 import type { CharacterPose } from './art.ts';
 import { World } from './world.ts';
@@ -115,6 +114,7 @@ export class Renderer {
   private get cachedBuildings() { return this.visibility.buildings; }
   private indoorBlend = 0;
   private lighting = new Lighting();
+  private equipmentEmitters: ReturnType<typeof heldEquipmentLights> = [];
   private deaths = new EnemyDeaths();
   private materials = new MaterialResponses();
   private ghosts: Ghost[] = [];
@@ -378,7 +378,7 @@ export class Renderer {
     this.biomeArt.drawAir(c, this.biomeLife, this.visualTime, settings.reducedMotion);
     this.atmosphere.drawMist(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
     // Emission is composed after surface illumination, so a hot core stays luminous.
-    this.emitters(sim, px, py, alpha, lights);
+    this.emitters(sim, alpha, lights);
     if (sim.dungeonFloor) drawCryptEmission(c, sim.dungeonFloor, settings.reducedMotion ? 0 : this.visualTime, this.view);
     drawGroundGold(c, sim.groundGold, this.visualTime, settings.reducedMotion);
     drawLevelCelebration(c, this.rewards.level, px, py, settings.reducedMotion);
@@ -614,7 +614,10 @@ export class Renderer {
 
   private sceneLights(sim: Simulation, px: number, py: number, reducedMotion: boolean): PointLight[] {
     const p = sim.player;
-    const lights: PointLight[] = [{ x: px, y: py - 15, radius: sim.dungeonFloor ? 250 : 185, color: sim.dungeonFloor ? '#c0cbd8' : '#ffcf87', power: sim.dungeonFloor ? .85 : .58, shadows: true }];
+    const heldPose = playerPose(p, sim.time);
+    heldPose.effectTime = reducedMotion ? 0 : sim.time;
+    const heldLights = this.equipmentEmitters = heldEquipmentLights(heldPose, px, py);
+    const lights: PointLight[] = [{ x: px, y: py - 15, radius: sim.dungeonFloor ? 250 : 185, color: sim.dungeonFloor || heldLights.length ? '#c0cbd8' : '#ffcf87', power: (sim.dungeonFloor ? .85 : .58) * (heldLights.length ? .65 : 1), shadows: true }, ...heldLights];
     const environmentLights: PointLight[] = sim.dungeonFloor?cryptLights(sim.dungeonFloor, reducedMotion ? 0 : this.visualTime):this.visibility.entrances.map(e=>({x:e.x,y:e.y-30,radius:100,color:'#9bdbc9',power:.45}));
     if(sim.eventChannel.site?.kind==='cryptChest')environmentLights.push({x:sim.eventChannel.site.x,y:sim.eventChannel.site.y,radius:95,color:'#d7c18a',power:.6*sim.eventChannel.elapsed/sim.eventChannel.duration});
     if (sim.portal.active) lights.push({ x: p.x, y: p.y - 30, radius: 105, color: '#b5a0ee', power: .22 + sim.portal.progress * .35 });
@@ -644,15 +647,8 @@ export class Renderer {
         radius: 105, color: a.weapon.visual.glow ?? '#ffbf67',
         power: .55 * Math.sin(Math.PI * Math.min(1, (a.elapsed - a.activeStart) / (a.activeEnd - a.activeStart + .05))), shadows: true });
     }
-    if (p.equipment.mainHand.attackKind === 'bolt' && p.castTime > (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction)) lights.push({ x: px + Math.cos(p.castAngle) * 17, y: py - 17,
-      radius: 110, color: p.activeSkill ? SKILL_DEFINITIONS[p.activeSkill].color : '#c0acf0', power: (p.castDuration - p.castTime)
-        / (p.castDuration - (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction)) * .8 });
     if (p.healFlash > 0) lights.push({ x: px, y: py - 8, radius: 150, color: '#54e8b8', power: p.healFlash * .8 });
     lights.push(...this.effects.getLights(), ...this.materials.lights(reducedMotion));
-    if (p.equipment.mainHand.attackKind === 'bolt') {
-      const tip = getPlayerSwordTip(playerPose(p, sim.time));
-      lights.push({ x: px + tip.x, y: py + tip.y, radius: 64, color: p.equipment.mainHand.visual.glow ?? '#c0acf0', power: .3 });
-    }
     for (const shot of sim.projectiles.slice(0, 8)) lights.push(projectileLight(shot));
     for(const e of sim.enemies)if(e.kind==='warden'&&e.hp>0)lights.push({x:e.x,y:e.y-50,radius:150,color:'#a3d4b9',power:e.state==='windup'?.48:.23});
     for (const enemy of sim.enemies) if (enemy.hp > 0 && (enemy.kind === 'caster' || enemy.kind === 'wisp')) {
@@ -669,8 +665,8 @@ export class Renderer {
         ? { ...light, clip: cryptLightMask(sim.dungeonFloor, light) } : light);
   }
 
-  private emitters(sim: Simulation, px: number, py: number, alpha: number, lights: PointLight[]) {
-    const c = this.ctx, p = sim.player;
+  private emitters(sim: Simulation, alpha: number, lights: PointLight[]) {
+    const c = this.ctx;
     for (const prop of this.cachedProps) if (prop.kind === 'shrine') {
       const x = prop.x - 18, y = prop.y - 31;
       drawGlow(c, x, y, 72, '#ffad48', .4);
@@ -678,13 +674,14 @@ export class Renderer {
       c.fillStyle = '#fff0b4'; c.fillRect(x - 1.5, y - 3, 3, 6);
     }
     for (const light of lights.slice(1, 12)) drawGlow(c, light.x, light.y, light.radius * .27, light.color, light.power * .2);
-    if (p.equipment.mainHand.attackKind === 'bolt' && p.castTime > (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction)) {
-      const charge = Math.max(.1, (p.castDuration - p.castTime)
-        / (p.castDuration - (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction)));
-      const tip = getPlayerSwordTip(playerPose(p, sim.time));
-      const x = px + tip.x, y = py + tip.y;
-      drawGlow(c, x, y, 37, p.activeSkill ? SKILL_DEFINITIONS[p.activeSkill].color : p.equipment.mainHand.visual.glow ?? '#c0acf0', charge * .8);
-      c.fillStyle = '#fff2c0'; c.beginPath(); c.arc(x, y, 1 + charge * 3, 0, TAU); c.fill();
+    // Emissive cores are drawn after scene darkening, before bloom/CRT, like projectiles.
+    for (const light of this.equipmentEmitters) if (light.core > 0) {
+      drawGlow(c, light.x, light.y, light.core * 12, light.color, .72);
+      drawGlow(c, light.x, light.y, light.core * 3, light.color, .95);
+      c.save(); c.globalCompositeOperation = 'lighter';
+      c.fillStyle = light.fire ? '#fff3bf' : '#ecfaff';
+      c.beginPath(); c.ellipse(light.x, light.y, light.core * .7, light.core * (light.fire ? 1.3 : .9), 0, 0, TAU); c.fill();
+      c.restore();
     }
     for (const shot of sim.projectiles) {
       const x = lerp(shot.prevX, shot.x, alpha), y = lerp(shot.prevY, shot.y, alpha);

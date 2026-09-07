@@ -1,5 +1,10 @@
 # Current system status
 
+## Held elemental light and melee enchantments · 2026-09-07
+
+Staves/wands and offhand orbs/grimoires now cast type-colored, rig-anchored lights. Caster cores stay bright after world darkening; two held sources share the existing 18-light cap and dungeon clipping. Kindling/Rime/Stormbound are mutually exclusive ordinary melee affixes with real flat added damage, weapon-local scaling, elemental engravings/sheaths/trails and impact/death feedback. Generation, services, previews and save validation share the recipe; no save reset. `/weapon-lights.html` is the frozen crypt gallery. Checkpoint verification: 828 code tests and production build passed. See [weapon rules](weapons-and-skills.md).
+
+
 The character-editor rebase onto upstream `91b3279` passes 817 code tests, strict application/headless compilation and the production build. Its [25-image screenshot gallery](captures/2026-09-07/character-editor/README.md) includes desktop/phone UI, all procedural parts and six frozen world-rendered looks. Hall/inventory portraits preserve tint and helmet projection, and tint materials retain the hex format required by downstream shading.
 
 Updated 2026-09-07 after rebasing the character editor onto the upstream pause-menu, ground-loot and destructible-container updates. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).

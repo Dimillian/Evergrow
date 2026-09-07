@@ -29,6 +29,9 @@ interface StatGlyph { readonly engraving: EngravingId; readonly unit: number; }
 // Compare contributions in the same units as an ordinary minor node. This keeps
 // a raw pool bonus such as +24 life from outweighing every smaller-valued stat.
 const STAT_GLYPHS: Readonly<Record<StatKey, StatGlyph>> = Object.freeze({
+  fireDamage: { engraving: 'flame', unit: 4 },
+  frostDamage: { engraving: 'mana', unit: 4 },
+  lightningDamage: { engraving: 'impact', unit: 4 },
   strength: { engraving: 'sword', unit: 2 },
   vitality: { engraving: 'heart', unit: 2 },
   dexterity: { engraving: 'daggers', unit: 2 },

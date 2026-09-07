@@ -1,3 +1,4 @@
+import { isElementalAffix } from './elemental-weapon.ts';
 import type { Item } from './character-types.ts';
 import { itemAffixPool, TIER_AFFIXES, deriveItem, randomSource } from './items.ts';
 export type Improvement = 'enhance' | 'rarity' | 'rerollOne' | 'rerollAll' | 'relevel';
@@ -18,7 +19,7 @@ export function improveItem(item: Item, operation: Improvement, zoneLevel: numbe
   const random = randomSource(seed), definitions = [...itemAffixPool(item)];
   const roll = (index: number, excluded?: string) => {
     const occupied = new Set(next.affixes.filter((_, i) => i !== index).map(a => a.stat));
-    const pool = definitions.filter(a => !occupied.has(a.stat) && a.stat !== excluded);
+    const pool = definitions.filter(a => !occupied.has(a.stat) && a.stat !== excluded && !(isElementalAffix(a.stat) && [...occupied].some(isElementalAffix)));
     const definition = pool[Math.floor(random() * pool.length)];
     next.affixes[index] = { name: definition.name, stat: definition.stat, value: 0 };
     next.recipe.rolls[index] = random();

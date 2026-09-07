@@ -153,3 +153,16 @@ Basic hit damage already grows with weapon item level, rarity, enhancement, atta
 ## Six starting loadouts
 
 The new-game screen presents three paired rows: Sword + Shield / Two-handed Sword; Wand + Grimoire / Fire Staff; Shortbow / Longbow. `STARTER_LOADOUTS` owns this order and `createStarterLoadout` supplies the same actual equipment to the card icons, portrait and first saved checkpoint. Starting off-hands retain their ordinary base defenses or caster implicits and support normal enhancements. All starting gear is level-one common with no affixes; the bag and five assigned skill slots start empty.
+
+
+## Elemental weapons and held lighting · 2026-09-07
+
+Magic and higher melee weapons can roll **Kindling**, **Rime** or **Stormbound**, adding fire, frost or lightning damage respectively. An item has at most one elemental affix, occupying an ordinary affix slot; bows, staves, wands and nonweapon equipment cannot roll these weapon-local bonuses. Generation, rarity upgrades and single/all-affix rerolls share that restriction.
+
+The flat added damage is `(4 + 0.52 × (itemLevel − 1)) × roll × tierQuality × (1 + 0.05 × enhancement)`, rounded to tenths. The roll is 0.85–1.15. Physical base damage remains separate. Basic attacks and compatible weapon skills use `(base + elemental bonus) × attack damage multiplier`, followed by the normal skill multiplier/crit rules. It does not borrow spell damage or add damage to the other hand. Dual-wield attacks use the striking weapon's enchantment; swings/dashes snapshot their damage and impact element. Elemental damage currently has no resistance/penetration interaction and does not itself add burn, slow or chain mechanics.
+
+`elemental-weapon.ts` owns affix definitions, element colors and weapon-local projection. `deriveItem` rebuilds that projection after services and clears removed powers. Shared item tooltips show the physical base and a colored added-damage line; equip comparisons include the total bonus. Recipe validation rejects mismatched bonus projections. Existing saves continue without a reset; existing melee gear gains these powers only through future rolls/rerolls/upgrades.
+
+Staves, wands, orbs, grimoires and enchanted melee weapons illuminate their surroundings through at most two held-equipment lights. `weapon-emission.ts` uses the same arm/body projection as the actual held geometry, including offhand movement, staff length and orb bob. Element-colored light falls on terrain and uses the existing dungeon wall clipping, shadow and eighteen-light scene budget. Caster tips and orb cores draw after scene darkening and before bloom/CRT so they remain luminous while idle. Fire has warm embers, frost cold glints, lightning short arcs and arcane a soft mote halo. Melee weapons retain their steel silhouette with elemental engravings, a thin moving sheath and a matching sweep/impact response. Reduced motion freezes decorative flicker and drift.
+
+`/weapon-lights.html` is a static, save-free nine-loadout crypt study; `?sample=0` opens the staff close-up. No gameplay or save access is needed to review the lighting.
