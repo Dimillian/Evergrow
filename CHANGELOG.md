@@ -1,5 +1,21 @@
 # Evergrow changelog
 
+## v0.3.1 — 2026-09-07T12:04:00Z
+
+### Tweaks
+
+- Redesigned skill tree with clearer skill branches and balanced passive clusters.
+- Flowing gold paths, blue route previews, and a subtle starfield background.
+- Expandable map view and quicker navigation between skill domains.
+- Red enemy warnings; basic arrows and Hexer bolts no longer show ground telegraphs.
+- Shorter changelog entries with versions, dates, and times.
+
+### Fixes
+
+- Removed crowded skill paths and stretched cluster shapes.
+
+> Characters using removed skill-tree paths may need a fresh start. Original saves are preserved.
+
 ## v0.3.0 — 2026-09-07T11:19:00Z
 
 ### New
