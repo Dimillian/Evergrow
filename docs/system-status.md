@@ -3,7 +3,9 @@
 ## Adaptive music · 2026-09-08
 
 Four original GarageBand loops now follow town, field, crypt and engaged-enemy
-situations with crossfades, six-second combat release and quieter panel music.
+situations with crossfades, six-second surface combat release and quieter panel music.
+Crypts retain their location track through combat. Default music gain is 0.49
+(70% of the previous level); sound effects retain their existing volume.
 The shared sound toggle and browser/native background lifecycle control music
 and effects. Lazy local WebM/Opus playback prepares explicit loop seams; no save changes.
 See [music ownership, resource bounds and validation](music.md). Player listening

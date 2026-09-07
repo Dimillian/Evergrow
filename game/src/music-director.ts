@@ -33,7 +33,8 @@ export class MusicDirector {
         if (state.engaged || this.fieldDelay >= 1.25) this.setLocation(state.location);
       } else this.setLocation(state.location);
     } else this.fieldDelay = 0;
-    if (this.location === 'town') this.combatHold = 0;
+    // Only surface wilderness uses battle music; crypts keep their own cue.
+    if (this.location !== 'field') this.combatHold = 0;
     else if (state.phase === 'playing') {
       if (state.engaged) this.combatHold = 6;
       else this.combatHold = Math.max(0, this.combatHold - dt);

@@ -21,7 +21,13 @@ test('music follows sanctuary, field, crypt and real engagement with a six-secon
   for (let i = 0; i < 23; i++) assert.equal(d.update(field, .25).cue, 'encounter');
   assert.equal(d.update(field, .25).cue, 'field');
   assert.equal(d.update({ ...field, location: 'crypt' }, .1).cue, 'crypt');
-  assert.equal(d.update({ ...fight, location: 'crypt' }, .1).cue, 'encounter');
+  for (const engaged of [true, false, true]) {
+    assert.equal(d.update({ ...field, location: 'crypt', engaged }, .1).cue, 'crypt',
+      'crypt combat never changes the location track');
+    const paused = d.update({ phase: 'paused', location: 'crypt', engaged }, .1);
+    assert.equal(paused.cue, 'crypt'); assert.equal(paused.level, .4);
+  }
+  assert.equal(d.update(field, .1).cue, 'field', 'crypt combat leaves no surface combat hold');
   assert.equal(d.update({ ...fight, location: 'town' }, .1).cue, 'town');
   assert.equal(d.update(fight, .1).cue, 'encounter', 'real combat bypasses town departure grace');
   assert.equal(d.update({ ...field, location: 'crypt' }, .1).cue, 'crypt', 'travel clears old combat hold');
@@ -116,6 +122,9 @@ test('native buffer looping, crossfades, in-progress ramp reversal and position 
   assert.deepEqual(f.gains[1].gain.calls.at(-1), ['ramp', 0, 8]);
   f.ctx.currentTime = 6;
   f.music.update({ ...crypt, engaged: true }, .1);
+  assert.equal(f.sources.length, 2, 'crypt combat does not start another voice');
+  assert.deepEqual(f.gains[1].gain.calls.at(-1), ['ramp', 0, 8], 'crypt combat does not reverse the arrival fade');
+  f.music.update(fight, .1);
   assert.equal(f.sources.length, 2, 'reverse existing voices without duplicate playback');
   assert.ok(Math.abs(f.gains[1].gain.calls.at(-2)![1] - 2 / 3) < 1e-8, 'ramp continues at actual current gain');
   f.ctx.currentTime = 10;

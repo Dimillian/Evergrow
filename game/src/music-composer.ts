@@ -12,7 +12,7 @@ interface Voice {
   offset: number;
   duration: number;
 }
-const MUSIC_VOLUME = .7;
+const MUSIC_VOLUME = .49;
 const flat = (value: number): Envelope => ({ from: value, to: value, start: 0, end: 0 });
 function valueAt(e: Envelope, now: number): number {
   if (now >= e.end) return e.to;

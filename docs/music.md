@@ -11,12 +11,13 @@ and final WebMs only.
 | --- | --- | --- |
 | Character hall or protected town, including interiors/vendors | Lanterns in the Ash | Three-second crossfade |
 | Surface wilderness | Under the Black Canopy | Three-second crossfade after 1.25 seconds outside town |
-| Rootbound Crypt without active enemies | Rootbound Vigil | Three-second crossfade |
-| A living enemy chasing, winding up, attacking or recovering | Embers at the Gate | 1.2-second crossfade; hold for six seconds after engagement ends |
+| Rootbound Crypt, including combat | Rootbound Vigil | Three-second crossfade on entry; keep the same track throughout combat |
+| Surface wilderness with a living enemy chasing, winding up, attacking or recovering | Embers at the Gate | 1.2-second crossfade; hold for six seconds after engagement ends |
 | Pause, map, inventory, skills, Journeys and other panels | Keep the current cue | Lower music to 40%; freeze the combat-release timer |
 | Death | Silence | Two-second fade |
 
-Sanctuary arrival takes priority over enemies pursuing outside town. Crypt or
+Sanctuary arrival takes priority over enemies pursuing outside town. Crypt combat
+never switches to the encounter cue. Crypt or
 surface location changes discard the previous location's combat hold. A real
 engagement bypasses the short town-departure delay. Standing near an idle camp
 does not trigger battle music; dead, returning and patrolling actors do not
@@ -40,6 +41,8 @@ remembered cue positions and teardown. Game passes current phase, sanctuary/cryp
 location and actor engagement once per frame. The director has no save state.
 `GameAudio` owns the context and common mute/background lifecycle; music connects
 to a clean output bus, bypassing combat's compressor and wave distortion.
+Default music gain is 0.49, 70% of the previous 0.70 level. Panel ducking remains
+40% of that music level; sound-effect volume is unchanged.
 
 `music-loop.ts` prepares each decoded WebM once: trim the 250 ms circular guards
 and blend the last 120 ms toward the matching audio immediately before the loop

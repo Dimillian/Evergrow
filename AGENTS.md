@@ -13,6 +13,8 @@ local, preserve the verified loop boundaries, use `enemyEngaged` rather than
 bark rolls, and never restart a file on every frame. Read `docs/music.md` before
 changing selection, fades, asset formats or memory budgets. Music and effects
 share N/Options sound; background suppression must not rewrite that preference.
+Crypts keep their location cue during combat; only surface wilderness switches
+to the encounter track.
 
 ## User preferences
 
