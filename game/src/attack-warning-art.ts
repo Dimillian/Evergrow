@@ -13,7 +13,7 @@ function outline(c: CanvasRenderingContext2D, shape: WarningShape, scale = 1): v
 }
 /** Stable true contact boundary, with gathering material/light inside it. No hit geometry lives here. */
 export function drawAttackWarning(c: CanvasRenderingContext2D, shape: WarningShape, progress: number,
-  color: string, time: number, reducedMotion = false, locked = true): void {
+  color: string, time: number, reducedMotion = false, locked = true, highlight = '#fff0d6'): void {
   const t = Math.max(0, Math.min(1, progress)), reach = shape.kind === 'lane' ? shape.length : shape.radius;
   const phase = reducedMotion ? .6 : (time * .65) % 1;
   c.save();
@@ -46,7 +46,7 @@ export function drawAttackWarning(c: CanvasRenderingContext2D, shape: WarningSha
   outline(c, shape); c.strokeStyle = color; c.globalAlpha = .08 + t * .12; c.lineWidth = 6; c.stroke();
   c.globalAlpha = (locked ? .52 : .32) + t * .32; c.lineWidth = 1.1; c.stroke();
   c.globalCompositeOperation = 'lighter'; c.globalAlpha = .55;
-  c.strokeStyle = '#fff0d6'; c.lineWidth = 1;
+  c.strokeStyle = highlight; c.lineWidth = 1;
   if (shape.kind === 'circle') { c.beginPath(); c.arc(0, 0, reach - 3, -Math.PI / 2, -Math.PI / 2 + TAU * t); c.stroke(); }
   else { outline(c, shape, .22 + t * .78); c.stroke(); }
   drawGlow(c, 0, 0, Math.min(30, reach * .3), color, .12 + t * .18);
