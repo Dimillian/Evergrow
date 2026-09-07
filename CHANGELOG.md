@@ -1,5 +1,25 @@
 # Evergrow changelog
 
+## v0.5.0 — 2026-09-07T18:42:00Z
+
+### New
+
+- Chronicle: account-wide achievements and detailed character statistics, accessible from the hall, inventory and pause menu.
+- Track combat, exploration, treasure and milestones across current and retired characters.
+
+### Tweaks
+
+- Item tooltips show bonuses and equipment comparisons together.
+- Clearer skill effects, elemental sounds, specialization previews and active guard/storm timers.
+- Higher Iron Aegis ranks extend protection; Living Ember leaves non-stacking burning ground.
+
+### Fixes
+
+- Fixed Chronicle history failing to load and blocking saves.
+- Melee hits preserve longer stuns and freezes; maintained storms end correctly after travel or gear changes.
+- Projectile skills no longer spend mana when there is no room for their shots.
+- Corrected ultimate targeting previews, Executioner damage and Shattered Sky blast sizes.
+
 ## v0.4.0 — 2026-09-07T17:36:00Z
 
 ### New
