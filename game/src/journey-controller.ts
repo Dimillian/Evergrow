@@ -1,6 +1,6 @@
 import { JourneyPanel } from './journey-panel.ts';
 import { executeJourneyCommand } from './journey-command.ts';
-import type { JourneyCommand } from './journey-state.ts';
+import { guidedJourney, type JourneyCommand } from './journey-state.ts';
 import { JourneySearch, reconcileJourneys, journeyNeedsRefresh, type JourneyFacts } from './journey-director.ts';
 import { publicJourneyMarker, type JourneyMarker } from './journey-marker.ts';
 import { currentDungeon } from './dungeon-state.ts';
@@ -137,7 +137,7 @@ export class JourneyController {
     refreshUI() {
         const state = this.host.sim.journeys, p = this.host.sim.player, facts = this.facts();
         this.panel.update(state, facts, this.host.phase === 'playing' && this.host.navigationVisible, this.host.renderer.width, this.host.renderer.height);
-        const goal = state.accepted.find(g => g.id === state.tracked && g.finishedAt === undefined);
+        const goal = guidedJourney(state);
         let marker: JourneyMarker | null = goal ? publicJourneyMarker(goal, this.facts().discovered(goal.id)) : null;
         if (this.host.phase !== 'map')
             this.journeyMapPreview = null;

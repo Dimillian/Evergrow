@@ -8,11 +8,12 @@ The compact list beneath the minimap and the **J** panel share one activity cata
 
 - **Recommended** selects one suitable next activity. In an area within two levels of the character, a suitable activity within 2,400 units takes priority over a distant alternative. In outgrown or dangerous areas, recommendations can point toward a better-fit activity or an outward/inward road destination.
 - **Nearby** lists local activities by distance, including ones above or below the character's level. Level numerals subtly indicate difficulty: muted for easier, neutral for a match, warm for harder. A match means within two levels. The journal detail only spells out Easier/Harder when relevant; the mini log has no repeated status captions. This does not guarantee a boss is easy for every build.
-- **Tracked** remains a deliberate choice. Track accepts and pins the destination; inspection alone does not. Up to three activities may be accepted, one tracked. The pinned lead stays fixed as recommendations change.
+- **Automatic guidance** follows Recommended by default, including The road ahead. Its marker and highlighted row advance as the recommendation changes during travel or after completion. It does not consume an accepted slot or require repeated clicks.
+- **Pin** accepts and fixes a destination until completion or Unpin; inspection alone does not. Up to three activities may be accepted, one pinned. Finishing or unpinning resumes automatic guidance. Hiding suggestions also hides automatic guidance, while an explicit pin remains visible.
 
 The mini log has at most three activity rows: pinned activity, recommendation and nearest other options as space permits. Untracked accepted activities remain in the panel. Recommendations appear above Nearby in the panel, with accepted and completed sections also available. Collapse and hiding suggestions affect presentation; the catalogue can still update.
 
-A district change or level-up allows a quiet refresh after eight active seconds; moving 700 units or completing/losing a recommendation allows it after fifteen seconds. Refresh only runs during surface play, outside nearby combat, attacks, channels and save transactions. Menus pause the clock. Boundary crossings coalesce instead of generating announcements. Changing recommendations never rescales a source or moves a pinned objective.
+A district change or level-up allows a quiet refresh after eight active seconds; moving 700 units or losing a recommendation allows it after fifteen seconds. Completing an activity allows a fresh search after a two-second completion beat. Refresh only runs during surface play, outside nearby combat, attacks, channels and save transactions. Menus pause the clock. Boundary crossings coalesce instead of generating announcements. Changing recommendations never rescales a source or moves a pinned objective.
 
 ## Natural completion
 
@@ -45,7 +46,7 @@ A brief **Journey complete** celebration shows the activity name and actual bonu
 
 ## Navigation
 
-One pale-gold diamond links the tracked activity to maps and its visible world anchor. The minimap clamps offscreen bearings to its edge. Show on map inspects another lead without accepting it. Unknown sites expose a coarse 768-unit search cell, never hidden terrain or exact POI coordinates. Normal discovery reveals the anchor. Underground, outside objectives point toward the entrance, and crypt objectives only identify discovered rooms. Useful saved return portals become the next marker while in town.
+One pale-gold diamond links the pinned activity, or the recommendation when unpinned, to maps and its visible world anchor. The minimap clamps offscreen bearings to its edge. Show on map inspects another lead without accepting it. Unknown sites expose a coarse 768-unit search cell, never hidden terrain or exact POI coordinates. Normal discovery reveals the anchor. Underground, outside objectives point toward the entrance, and crypt objectives only identify discovered rooms. Useful saved return portals become the next marker while in town.
 
 Bearings are not walking paths. Recommendation scoring checks coarse approach danger and road access, including escape from a higher-level district, but does not solve terrain-aware routing. Geography and build suitability need player testing.
 

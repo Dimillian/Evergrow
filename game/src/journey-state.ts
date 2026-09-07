@@ -52,6 +52,11 @@ export function journeyLevelFit(level:number, playerLevel:number): 'Easier'|'Goo
 export function recommendedJourney(state:JourneyState):JourneyGoal|undefined {
   return state.offers.find(g=>g.id===(state.recommended===undefined?state.offers[0]?.id:state.recommended)&&g.finishedAt===undefined);
 }
+/** Explicit pins win; otherwise navigation follows the live recommendation without accepting it. */
+export function guidedJourney(state:JourneyState):JourneyGoal|undefined {
+  return state.accepted.find(g=>g.id===state.tracked&&g.finishedAt===undefined)
+    ??(state.suggestions?recommendedJourney(state):undefined);
+}
 export function nearbyJourneys(state:JourneyState,position:{x:number;y:number}=state):JourneyGoal[] {
   return state.offers.filter(g=>g.finishedAt===undefined&&g.kind!=='frontier'&&Math.hypot(g.x-position.x,g.y-position.y)<=2400)
     .sort((a,b)=>Math.hypot(a.x-position.x,a.y-position.y)-Math.hypot(b.x-position.x,b.y-position.y));

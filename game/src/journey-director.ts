@@ -68,6 +68,10 @@ export function eligibleJourney(goal:JourneyGoal,state:JourneyState,facts:Journe
 /** Only meaningful travel, an outgrown lead or lost availability can replace an offer. */
 export function journeyNeedsRefresh(state:JourneyState,facts:JourneyFacts):boolean {
   const elapsed=facts.time-state.refreshedAt;
+  // Hand off promptly after completion; a finished search advances refreshedAt so
+  // old receipts cannot trigger repeated scans while the player stands still.
+  if(elapsed>=2&&[...state.accepted,...state.offers,...state.history].some(g=>
+    g.finishedAt!==undefined&&g.finishedAt>state.refreshedAt&&facts.time-g.finishedAt>=2))return true;
   if(elapsed<8)return false;
   const lead=recommendedJourney(state);
   return (facts.areaId!==undefined&&facts.areaId!==state.areaId)||state.level!==facts.level

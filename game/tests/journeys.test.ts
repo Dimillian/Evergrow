@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { freshJourneys, planJourney, validJourneys, miniJourneys, type JourneyGoal } from '../src/journey-state.ts';
+import { guidedJourney, freshJourneys, planJourney, validJourneys, miniJourneys, type JourneyGoal } from '../src/journey-state.ts';
 import { journeyComplete, journeyObjective, reconcileJourneys, journeyNeedsRefresh, eligibleJourney, rankJourneyCandidates, JourneySearch, type JourneyFacts } from '../src/journey-director.ts';
 import { executeJourneyCommand } from '../src/journey-command.ts';
 import { publicJourneyMarker } from '../src/journey-marker.ts';
@@ -113,4 +113,37 @@ test('nearby and recommendation projections stay distinct and label all level ba
   assert.equal(recommendedJourney(s)?.id,'best');assert.equal(nearbyJourneys(s,{x:0,y:0})[0].id,'hard');
   assert.equal(journeyLevelFit(12,5),'Harder');assert.equal(journeyLevelFit(1,5),'Easier');assert.equal(journeyLevelFit(4,5),'Good level');
   s.accepted=[goal('pinned','camp',1)];s.tracked='pinned';assert.equal(miniJourneys(s,{x:0,y:0})[0].id,'pinned');
+});
+
+
+test('automatic navigation follows recommendations without consuming accepted slots or moving a pin',()=>{
+  let state=freshJourneys();const road=goal('frontier:next','frontier'),camp=goal('next-camp');
+  state.offers=[road,camp];state.recommended=road.id;
+  assert.equal(guidedJourney(state)?.id,road.id);assert.equal(state.tracked,null);assert.equal(state.accepted.length,0);
+  state.recommended=camp.id;assert.equal(guidedJourney(state)?.id,camp.id);
+  state=planJourney(state,{type:'track',id:road.id})!;
+  assert.equal(guidedJourney(state)?.id,road.id);
+  state=planJourney(state,{type:'untrack',id:road.id})!;
+  assert.equal(guidedJourney(state)?.id,camp.id);
+  state.suggestions=false;assert.equal(guidedJourney(state),undefined);
+  state=planJourney(state,{type:'track',id:road.id})!;
+  assert.equal(guidedJourney(state)?.id,road.id);assert.ok(validJourneys(state));
+});
+test('finishing a pinned road lead returns to automatic guidance and arrival rewards stay exactly once',()=>{
+  const sim=simulation(),road={...goal('frontier:arrival','frontier'),x:sim.player.x,y:sim.player.y},next=goal('next-camp');
+  sim.journeys.accepted=[road];sim.journeys.tracked=road.id;sim.journeys.offers=[next];sim.journeys.recommended=next.id;
+  assert.ok(sim.completeJourneyArrival(road));assert.equal(guidedJourney(sim.journeys)?.id,next.id);
+  const checkpoint=sim.captureCheckpoint(),restored=simulation();restored.restoreCheckpoint(checkpoint);
+  assert.equal(guidedJourney(restored.journeys)?.id,next.id);
+  assert.equal(restored.completeJourneyArrival(road),false);assert.equal(restored.player.xp,sim.player.xp);
+  assert.ok(validJourneys(restored.journeys));
+});
+test('completed recommendations refresh after a short beat, then old receipts cannot retrigger searches',()=>{
+  const s=freshJourneys(),f=facts();s.refreshedAt=10;s.level=f.level;s.x=f.x;s.y=f.y;
+  s.offers=[{...goal('frontier:done','frontier'),finishedAt:11}];s.recommended=null;
+  f.time=12;assert.equal(journeyNeedsRefresh(s,f),false);
+  f.time=13;assert.equal(journeyNeedsRefresh(s,f),true);
+  assert.equal(guidedJourney(s),undefined);
+  s.history=s.offers;s.offers=[goal('next')];s.recommended='next';s.refreshedAt=13;
+  f.time=30;assert.equal(journeyNeedsRefresh(s,f),false);
 });
