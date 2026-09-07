@@ -232,7 +232,7 @@ export class InventoryPanel {
     this.text('[data-xp-total]', `${number(player.xp)} / ${number(xpForNextLevel(player.level))} XP`);
     this.element.querySelector<HTMLElement>('[data-xp-fill]')!.style.width = `${Math.min(100, 100 * player.xp / xpForNextLevel(player.level))}%`;
     for (const attribute of Object.keys(ATTRIBUTE_NAMES) as Attribute[]) {
-      this.text(`[data-attribute-value="${attribute}"]`, number(stats.attributes[attribute], 1));
+      this.text(`[data-attribute-value="${attribute}"]`, number(stats.attributes[attribute]));
       const button = this.element.querySelector<HTMLButtonElement>(`[data-allocate="${attribute}"]`)!;
       button.disabled = sheet.statPoints <= 0;
       button.dataset.tooltipAlign = 'end';
