@@ -1,3 +1,4 @@
+import { drawWildernessDetail } from './wilderness-details-art.ts';
 import { weatherStone } from './material-art.ts';
 import { line, polygon, randomFromSeed, type Point } from './art-primitives.ts';
 import { drawGlow, type PointLight } from './lighting.ts';
@@ -31,13 +32,25 @@ export function drawSiteGround(c: CanvasRenderingContext2D, site: WildernessSite
   }
   c.restore();
   c.lineCap = 'round';
-  // Several scuffed tracks lead from the open south gate to the authored activity centers.
-  const tracks = site.kind === 'camp' ? [[-87, -55], [88, -71], [-108, 28]]
-    : site.kind === 'graveyard' ? [[0, -98]] : site.kind === 'caravan' ? [[-52, -51], [66, 32]] : [[0, -45]];
-  for (const [x, y] of tracks) {
-    c.beginPath(); c.moveTo(0, site.radius * .99); c.bezierCurveTo(-8, 85, x * .34 - 12, y * .3, x, y);
-    c.lineWidth = 29; c.strokeStyle = '#171e1920'; c.stroke();
-    c.lineWidth = 20; c.strokeStyle = '#baac7a13'; c.stroke();
+  // Natural tracks join occupied anchors; cottages already share a paved square.
+  const tracks=site.decor.filter(d=>['tent','wagon','altar','nest'].includes(d.kind)).slice(0,4);
+  for(const d of tracks) {
+    const x=d.x-site.x,y=d.y-site.y,ex=site.entrance.x-site.x,ey=site.entrance.y-site.y;
+    c.beginPath();c.moveTo(ex,ey);c.bezierCurveTo(ex*.55,ey*.55,x*.35,y*.35,x,y);
+    c.lineWidth=29;c.strokeStyle='#171e1920';c.stroke();c.lineWidth=20;c.strokeStyle='#baac7a13';c.stroke();
+  }
+  if(['ruinedChapel','hamlet','quarry'].includes(site.kind)) {
+    c.save();c.rotate(Math.atan2(site.entrance.y-site.y,site.entrance.x-site.x)-Math.PI/2);
+    for(let row=-4;row<=4;row++)for(let col=-4;col<=4;col++) {
+      if(random()<.15)continue;const x=col*27+(row%2)*10,y=row*30;
+      polygon(c,[[x,y],[x+23,y-1],[x+24,y+25],[x-1,y+24]],site.kind==='quarry'?'#8e979136':'#697f7352');
+      line(c,[[x,y],[x+23,y-1]],'#b3b59b40',.8);
+    }
+    if(site.kind==='ruinedChapel'){
+      c.strokeStyle='#cab88755';c.lineWidth=2;c.beginPath();c.ellipse(0,-55,58,45,0,0,TAU);c.stroke();
+      for(let i=0;i<8;i++){const a=i*TAU/8;line(c,[[Math.cos(a)*18,Math.sin(a)*14-55],[Math.cos(a)*54,Math.sin(a)*42-55]],'#bba88b50',1);}
+    }
+    c.restore();
   }
   for (let i = 0; i < 130; i++) {
     const angle = random() * TAU, distance = Math.sqrt(random()) * site.radius * .84;
@@ -191,6 +204,7 @@ export function drawSiteDecor(c: CanvasRenderingContext2D, site: WildernessSite,
   c.save(); c.translate(decor.x, decor.y); c.rotate(decor.angle); c.scale(decor.scale, decor.scale);
   c.fillStyle = '#07141668'; c.beginPath(); c.ellipse(4, 3, Math.max(8, decor.radius / decor.scale + 4), Math.max(3, decor.radius / decor.scale * .35), 0, 0, TAU); c.fill();
   switch (decor.kind) {
+    case 'arch': case 'cottage': case 'nest': case 'crystal': case 'root': case 'barricade': drawWildernessDetail(c,decor,time); break;
     case 'tent': tent(c, site, decor.seed, time); break;
     case 'fire': fire(c, time, decor.seed); break;
     case 'crate': crate(c); break;
@@ -252,6 +266,8 @@ export function wildernessLights(site: WildernessSite, time: number): PointLight
       color: '#ffad60', power: .72 + Math.sin(time * 6 + decor.seed) * .06, shadows: true }];
     if (decor.kind === 'lantern') return [{ x: decor.x + 7, y: decor.y - 20, radius: 84, color: '#f7d89e', power: .45, shadows: true }];
     if (decor.kind === 'standingStone') return [{ x: decor.x, y: decor.y - 30, radius: 61, color: '#77d0cb', power: .3 }];
+    if (decor.kind === 'crystal') return [{x:decor.x,y:decor.y-24,radius:95,color:'#a2dce1',power:.3}];
+    if (decor.kind === 'root') return [{x:decor.x,y:decor.y-24,radius:85,color:'#91c69d',power:.25}];
     if (decor.kind === 'altar' && site.kind === 'standingStones') return [{ x: decor.x, y: decor.y - 20, radius: 100, color: '#83ddd6', power: .4 }];
     return [];
   });

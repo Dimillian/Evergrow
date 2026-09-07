@@ -34,7 +34,7 @@ async function boot() {
     function draw(view: string) {
         present = null;
         const room = view === 'corridor' ? floor.corridors.find(r => Math.max(r.width,r.height)>600)!
-            : floor.rooms[view === 'boss' ? 12 : view === 'chamber' ? 4 : 0];
+            : floor.rooms[view === 'boss' ? floor.rooms.length-1 : view === 'chamber' ? 4 : 0];
         const x = room.x + room.width / 2, y = room.y + room.height / 2;
         const sim = new Simulation(scene, { spawn: false, startX: x, startY: y + (view === 'corridor' ? 0 : 100) });
         sim.expeditions = { location: entrance.id, runs: [run], surface: emptyContents(), surfaceX: 0, surfaceY: 0 };

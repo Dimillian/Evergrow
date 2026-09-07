@@ -1,3 +1,5 @@
+import { ChestArt } from './chest-art.ts';
+const defaultChests=new ChestArt();
 import type { CharacterPose } from './art-types.ts';
 import { polygon, line, taper, type Color } from './art-primitives.ts';
 import type { DungeonFloor, DungeonEntrance } from './dungeon.ts';
@@ -79,7 +81,7 @@ export function drawCryptGate(c: CanvasRenderingContext2D, p: Pick<DungeonEntran
 export function drawCryptDecor(c: CanvasRenderingContext2D, f: DungeonFloor, run: DungeonRun, time: number, opening?: {
     index: number;
     progress: number;
-}) {
+}, chests:ChestArt=defaultChests, reduced=false) {
     for (const r of f.rooms) {
         c.save(); c.beginPath();
         cryptOutline(r).forEach((p,i) => i ? c.lineTo(p.x,p.y) : c.moveTo(p.x,p.y)); c.closePath(); c.clip();
@@ -175,7 +177,7 @@ export function drawCryptDecor(c: CanvasRenderingContext2D, f: DungeonFloor, run
     drawCryptGate(c, f.entry, time);
     if (run.states.warden.hp <= 0)
         drawCryptGate(c, f.exit, time);
-    f.chests.forEach((p, i) => { const open = (run.chestMasks[i] & (i === 2 ? 15 : 9)) === (i === 2 ? 15 : 9); c.save(); c.translate(p.x, p.y); c.fillStyle = '#233936'; c.fillRect(-24, -15, 48, 28); c.strokeStyle = '#b9aa71'; c.lineWidth = 2; c.strokeRect(-24, -15, 48, 28); c.fillStyle = '#6d7258'; const lift = open ? 1 : opening?.index === i ? opening.progress : 0; c.fillRect(-24, -21 - lift * 14, 48, 12 + lift * 2); c.strokeRect(-24, -21 - lift * 14, 48, 12 + lift * 2); c.fillStyle = '#e0c88c'; c.fillRect(-3, -8, 6, 9); c.restore(); });
+    f.chests.forEach((p,i)=>chests.draw(c,`${run.entrance.id}:chest:${i}`,p.x,p.y,run.chestMasks[i]!==0,time,opening?.index===i?opening.progress:0,false,reduced));
 }
 
 

@@ -2,6 +2,8 @@ import { PAD_SKILL_BUTTONS } from './gamepad-input.ts';
 import { SkillAssignmentPanel } from './skill-assignment-panel.ts';
 import { assignableSkills } from './skill-assignment.ts';
 import { getHUDSkillRect } from './hud-layout.ts';
+import { isTrialKind } from './event-recipes.ts';
+import { eventInteractionSites } from './poi-content.ts';
 import { basicAttackWeapon } from './equipment.ts';
 import { GroundLootTooltip } from './ground-loot-tooltip.ts';
 import { createAppearanceEditor } from './character-editor.ts';
@@ -30,7 +32,7 @@ import { claimDungeonChest, dungeonChestProblem, type DungeonAction } from './du
 import { DungeonMap, drawCryptMinimap } from './dungeon-map.ts';
 import { EventPanel } from './poi-panel.ts';
 import { focusEvent, eventLabel, eventClaimed, isEventKind, type EventSite, type EventChoice } from './poi-content.ts';
-import { executeEvent, eventProblem } from './poi-command.ts';
+import { executeEvent, eventProblem, claimCursedChest } from './poi-command.ts';
 import { activatePortalAnchor } from './travel-command.ts';
 import { townPortalAnchor, withinPortalReach, portalMapMarkers, type PortalAnchor } from './travel.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
@@ -134,6 +136,7 @@ export class Game {
   private get hallBusy() { return this._hallBusy; }
   private set hallBusy(value: boolean) { this._hallBusy=value; this.titleScreen?.setBusy(value); }
   private savingAction = false;
+  private nextCursedClaim = 0;
   private actionPending: Promise<unknown> = Promise.resolve();
   private autosave: Promise<boolean> | null = null;
   private saveAgain = false;
@@ -741,11 +744,11 @@ export class Game {
       const npcs = this.world.getBuildings(p.x - 220, p.y - 220, 440, 440).map(buildingNPC).filter((npc): npc is TownNPC => npc !== null);
       const npc = focusNPC(npcs, p, this.world, pointer);
       if (!npc) {
-          const site = focusEvent(this.world.getEventSites(p.x - 100, p.y - 100, 200, 200), p, this.world, pointer);
+          const site = focusEvent(eventInteractionSites(this.world.getEventSites(p.x - 100, p.y - 100, 200, 200), this.sim.eventState), p, this.world, pointer);
           if (!site)
               return false;
           const record = this.sim.eventState.sites[site.id];
-          if (!record && !eventClaimed(this.sim.eventState, site.id) && ['caravan', 'standingStones', 'graveyard'].includes(site.kind)) {
+          if (!record && !eventClaimed(this.sim.eventState, site.id) && (site.kind==='caravan'||isTrialKind(site.kind))) {
               if (this.sim.eventState.trial && site.kind !== 'caravan') {
                   this.notify('Finish the active trial.');
                   return true;
@@ -785,7 +788,7 @@ export class Game {
       }
       const target = site.kind === 'watchtower' ? this.world.getPOIs(site.x - 2400, site.y - 2400, 4800, 4800)
           .filter(poi => poi.id !== site.id && !this.exploration.isDiscovered(poi.id) && Math.hypot(poi.x - site.x, poi.y - site.y) <= 2400
-          && ['camp', 'watchtower', 'graveyard', 'standingStones', 'caravan', 'reliquary'].includes(poi.kind))
+          && isEventKind(poi.kind))
           .sort((a, b) => Math.hypot(a.x - site.x, a.y - site.y) - Math.hypot(b.x - site.x, b.y - site.y))[0] : undefined;
       const result = await executeEvent(this.sim, site, channel.choice, c => this.persistTravel(c), target);
       channel.cancel();
@@ -990,6 +993,11 @@ export class Game {
         if (!(event.type === 'cast' && event.enemyKind)) this.audio.play(event);
       }
       if (this.sim.eventChannel.ready) this.finishEvent();
+      else if(!this.savingAction&&!this.sim.player.dead&&!this.sim.dungeonFloor&&(!this.sim.portal.ready)&&now>=this.nextCursedClaim) {
+        this.nextCursedClaim=now+1000;
+        const chest=Object.values(this.sim.eventState.sites).find(r=>r.kind==='cursedChest'&&r.phase==='completed'&&!r.bonusGranted&&Math.hypot(r.x-this.sim.player.x,r.y-this.sim.player.y)<=1800);
+        if(chest){this.nextCursedClaim=now+30000;void this.durable(async()=>{const result=await claimCursedChest(this.sim,chest.id,c=>this.persistTravel(c));if(!result.ok)this.notify(result.message);},undefined);}
+      }
       if (this.sim.portal.ready) this.travelThrough(this.overworld.getPortalAnchor(this.sim.travel.homeTown), false);
       const run=currentDungeon(this.sim.expeditions);
       const zone = run?{id:run.entrance.id,name:run.entrance.name,level:run.entrance.level}:getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed);

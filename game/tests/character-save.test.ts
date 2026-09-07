@@ -1,4 +1,3 @@
-import { ENCOUNTER_RULES } from '../src/encounter-director.ts';
 import { ROAMING_RULES } from '../src/roaming-encounters.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -237,17 +236,17 @@ test('invalid creation seeds preserve both the empty slot and active character',
 
 test('full encounter population and fresh roaming warmup survive an atomic character checkpoint', async () => {
   const { session, repo, sim } = await setup();
-  for (let i = 0; i < ENCOUNTER_RULES.hardPopulationCap; i++)
+  for (let i = 0; i < 128; i++)
     assert.ok(sim.spawnEnemy('stalker', 500 + i * 50, 0));
   const checkpoint = sim.captureCheckpoint();
-  assert.equal(checkpoint.actors?.length, 48);
+  assert.equal(checkpoint.actors?.length, 128);
   assert.equal(checkpoint.roaming?.warmup, ROAMING_RULES.warmupPopulation);
   assert.ok(await session.save(checkpoint, 200), session.error);
   const saved = repo.read(0).record!;
   assert.ok(decodeCharacterSave(JSON.stringify(saved)));
   const restored = new Simulation(world, { spawn: false });
   restored.restoreCheckpoint(saved.checkpoint);
-  assert.equal(restored.enemies.length, 48);
+  assert.equal(restored.enemies.length, 128);
   assert.equal(restored.captureCheckpoint().roaming?.warmup, 16);
-  assert.equal(restored.spawnEnemy('stalker', 3000, 0), null);
+  assert.ok(restored.spawnEnemy('stalker', 3000, 0));
 });

@@ -1,3 +1,4 @@
+import { treasurePose } from './treasure-flight.ts';
 import type { GroundItem } from './character-types.ts';
 import type { Pickup } from './model.ts';
 import { TIER_COLORS } from './items.ts';
@@ -20,15 +21,18 @@ function lootPositions(drops: readonly GroundItem[]) {
   })));
 }
 
-export function drawGroundLoot(c: CanvasRenderingContext2D, drops: readonly GroundItem[], time: number, reducedMotion = false): void {
+export function drawGroundLoot(c: CanvasRenderingContext2D, drops: readonly GroundItem[], time: number, reducedMotion = false, worldTime = time): void {
   c.save();
   for (const { drop, x, y } of lootPositions(drops)) {
+    if(drop.flight&&worldTime<drop.flight.at+drop.flight.delay)continue;
+    const flight=treasurePose(drop,worldTime,reducedMotion);
     const color = TIER_COLORS[drop.item.tier];
     const precious = ['rare', 'epic', 'legendary'].includes(drop.item.tier);
-    c.fillStyle = '#040a10b0'; c.beginPath(); c.ellipse(x, y + 2, 12, 4, -.12, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#040a10b0'; c.beginPath(); c.ellipse(flight.landed?x:flight.x, (flight.landed?y:flight.y) + 2, 12, 4, -.12, 0, Math.PI * 2); c.fill();
     // Equipment rests on the floor, not suspended inside a beam of light.
-    c.save(); c.translate(x, y - 3); c.rotate(Math.sin(drop.item.seed) * .18); c.scale(1.2, .95);
+    c.save(); c.translate(flight.landed?x:flight.x, (flight.landed?y:flight.y)-3-flight.height); c.rotate(flight.spin); c.rotate(Math.sin(drop.item.seed) * .18); c.scale(1.2, .95);
     drawGearShapes(c, itemDropShapes(drop.item), value => value); c.restore();
+    if(!flight.landed)continue;
     c.strokeStyle = color + (precious ? 'ae' : '65'); c.lineWidth = .7;
     for (const side of [-1, 1]) {
       c.beginPath(); c.moveTo(x + side * 12, y - 2); c.lineTo(x + side * 15, y + 1);

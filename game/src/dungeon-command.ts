@@ -1,3 +1,5 @@
+import { interruptTimedTrial } from './poi-content.ts';
+import { treasureLanding } from './treasure-flight.ts';
 import { stageJourneyCompletion } from './journey-rewards.ts';
 import type { Simulation } from './simulation.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
@@ -61,6 +63,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
             next = createDungeonRun(entrance);
             state.runs.push(next);
         }
+        interruptTimedTrial(checkpoint.events!,contents.actors);
         state.surface = contents;
         state.surfaceX = p.x;
         state.surfaceY = p.y;
@@ -131,11 +134,11 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     let mask = run.chestMasks[index], next = Math.max(1, ...sim.groundItems.map(i => i.id + 1), ...sim.groundGold.map(i => i.id + 1), ...sim.pickups.map(i => i.id + 1), ...sim.enemies.map(i => i.id + 1), ...sim.projectiles.map(i => i.id + 1));
     for (let i = 0; i < items.length; i++)
         if (!(mask & 1 << i) && checkpoint.groundItems.length < LOOT_RULES.maxGroundItems) {
-            checkpoint.groundItems.push({ id: next++, x: chest.x + (i - 1) * 26, y: chest.y - 32, item: items[i] });
+            checkpoint.groundItems.push({ id: next++, ...treasureLanding(sim.world,chest.x,chest.y,i,run.entrance.seed), flight:{x:chest.x,y:chest.y,at:sim.time,delay:i*.12}, item: items[i] });
             mask |= 1 << i;
         }
     if (!(mask & 8) && (checkpoint.groundGold ??= []).length < GOLD_RULES.maxPiles) {
-        checkpoint.groundGold.push({ id: next++, x: chest.x + 30, y: chest.y - 25, age: 0, amount: gold });
+        checkpoint.groundGold.push({ id: next++, ...treasureLanding(sim.world,chest.x,chest.y,12,run.entrance.seed), flight:{x:chest.x,y:chest.y,at:sim.time,delay:.15}, age: 0, amount: gold });
         mask |= 8;
     }
     if (mask === run.chestMasks[index])

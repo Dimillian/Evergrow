@@ -1,3 +1,5 @@
+import { isTrialKind } from './event-recipes.ts';
+import { eventLabel } from './poi-content.ts';
 import { journeyWasCompleted } from './journey-rewards.ts';
 import { JOURNEY_KINDS, recommendedJourney, journeyLevelFit, type JourneyGoal, type JourneyKind, type JourneyState } from './journey-state.ts';
 import { eventClaimed, type EventState } from './poi-content.ts';
@@ -25,7 +27,7 @@ export function journeyObjective(goal:JourneyGoal,facts:JourneyFacts):string {
   if(record?.phase==='completed')return 'Claim the reward';
   if(record?.phase==='active'){
     const trial=facts.events.trial;
-    return trial?.siteId===goal.id?`Guardians ${trial.guardians.filter(g=>g.dead).length} / ${trial.guardians.length}`:'Complete the trial';
+    return trial?.siteId===goal.id?eventLabel(record,facts.events,false):'Complete the trial';
   }
   return goal.kind==='reliquary'?'Open the reliquary':'Begin the trial';
 }
@@ -56,7 +58,7 @@ export function journeyAvailable(goal:JourneyGoal,facts:JourneyFacts):boolean {
     const run=facts.expeditions.runs.find(r=>r.entrance.id===goal.id);
     if(!run&&facts.expeditions.runs.some(r=>r.states.warden?.hp>0))return false;
   }
-  if(['graveyard','standingStones'].includes(goal.kind)&&facts.events.trial&&facts.events.trial.siteId!==goal.id)return false;
+  if(isTrialKind(goal.kind)&&facts.events.trial&&facts.events.trial.siteId!==goal.id)return false;
   return true;
 }
 export function eligibleJourney(goal:JourneyGoal,state:JourneyState,facts:JourneyFacts):boolean {
@@ -80,7 +82,7 @@ export function rankJourneyCandidates(candidates:JourneyGoal[],state:JourneyStat
     const currentLevel=facts.areaLevel??getZoneAt(facts.x,facts.y,seed).level;
     const gap=g.level-facts.level, distance=Math.hypot(g.x-facts.x,g.y-facts.y);
     const danger=gap>1?(gap-1)*1200:gap< -1?(-gap-1)*1700:Math.abs(gap)*80;
-    const challenge=['dungeon','graveyard','standingStones'].includes(g.kind)?550:0;
+    const challenge=(g.kind==='dungeon'||isTrialKind(g.kind))?550:0;
     // Reject obvious hazardous direct approaches; a coarse hint is never advertised as pathfinding.
     let unsafe=false;
     for(let i=1;i<=4;i++){const t=i/5;if(getZoneAt(facts.x+(g.x-facts.x)*t,facts.y+(g.y-facts.y)*t,seed).level>Math.max(facts.level+3,g.level+1,currentLevel))unsafe=true;}

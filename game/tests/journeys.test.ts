@@ -30,7 +30,7 @@ test('failed persistence leaves accepted goals, progression and resources untouc
 });
 test('completion uses claimed site and final chest ledgers, never missing actors or a boss kill alone',()=>{
   const f=facts(),g=goal();f.campCleared=()=>true;assert.equal(journeyObjective(g,f),'Open the strongbox');assert.equal(journeyComplete(g,f),false);
-  f.events.sites[g.id]={...g,kind:'camp',seed:1,biome:'deadwood',phase:'completed',choice:null,delivered:0,bonusGranted:false};assert.equal(journeyComplete(g,f),false);
+  f.events.sites[g.id]={...g,kind:'camp',seed:1,biome:'deadwood',phase:'completed',choice:null,wavesCleared: 0, delivered:0,bonusGranted:false};assert.equal(journeyComplete(g,f),false);
   f.events.sites[g.id].phase='claimed';assert.equal(journeyComplete(g,f),true);
   let state=freshJourneys();state.accepted=[g];state.tracked=g.id;f.time=4;
   state=reconcileJourneys(state,f,false);assert.equal(state.tracked,null);assert.equal(state.accepted[0].finishedAt,4);

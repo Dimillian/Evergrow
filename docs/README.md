@@ -1,5 +1,7 @@
 # Documentation
 
+[Local development tools](development-tools.md) · [Open Tools](http://127.0.0.1:5173/tools/) — the canonical hub for game data, generated gear, skill animations and world reviews.
+
 - [Equipment materials](item-materials.md): base construction, drop weights, stats, pricing and the local gallery.
 
 
@@ -36,7 +38,7 @@ Updated 2026-09-07. Use the current guides for implementation. Proposed designs 
 | Drainage, cell-based water and shader optics | [Living water](living-water.md) |
 | Camps, landmarks and roaming | [Wilderness and encounters](wilderness-and-encounters.md) |
 | Procedural crypt floors, boss, treasure and location saves | [Dungeons](dungeons.md) |
-| Chests, choices, beacons and guardian trials | [Interactive POIs](interactive-pois.md) |
+| Chests, timed waves, regional POIs and guardian recipes | [Interactive POIs](interactive-pois.md) |
 | Minimal activity guidance, journal and tracked markers | [Journeys](journeys.md) |
 | Explored map and review tooling | [Explored atlas](explored-atlas.md) |
 

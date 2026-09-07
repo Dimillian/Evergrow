@@ -61,4 +61,4 @@ export interface DerivedCharacterStats {
   attributes: Record<Attribute, number>;
 }
 export interface ActionResult { ok: boolean; message?: string; }
-export interface GroundItem { id: number; x: number; y: number; item: Item; }
+export interface GroundItem { flight?: import('./treasure-flight.ts').TreasureFlight; id: number; x: number; y: number; item: Item; }

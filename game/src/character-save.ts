@@ -1,3 +1,4 @@
+import { validTreasureFlight } from './treasure-flight.ts';
 import { createCharacterLook, validCharacterLook } from './character-look.ts';
 import { ROAMING_RULES } from './roaming-encounters.ts';
 import { validJourneys, type JourneyState } from './journey-state.ts';
@@ -97,12 +98,12 @@ export function decodeCharacterSave(raw: string): CharacterSave | null {
       || !Object.entries(p.defeatedCampMembers).every(([id, members]) => text(id, 180) && Array.isArray(members)
         && members.length <= 32 && members.every(member => text(member, 180)) && new Set(members).size === members.length)
       || !Array.isArray(p.groundItems) || p.groundItems.length > 96
-      || !p.groundItems.every(i => object(i) && integer(i.id, 1) && number(i.x, -4e7, 4e7) && number(i.y, -4e7, 4e7) && validItem(i.item))) return null;
+      || !p.groundItems.every(i => object(i) && integer(i.id, 1) && number(i.x, -4e7, 4e7) && number(i.y, -4e7, 4e7) && validItem(i.item) && validTreasureFlight(i.flight))) return null;
     if (p.brokenContainers !== undefined && (!Array.isArray(p.brokenContainers)
       || !p.brokenContainers.every(id => text(id, 180)) || new Set(p.brokenContainers).size !== p.brokenContainers.length)) return null;
     if (p.groundGold !== undefined && (!Array.isArray(p.groundGold) || p.groundGold.length > GOLD_RULES.maxPiles
       || !p.groundGold.every(i => object(i) && integer(i.id, 1) && number(i.x, -4e7, 4e7)
-        && number(i.y, -4e7, 4e7) && integer(i.amount, 1) && number(i.age, 0, 10)))) return null;
+        && number(i.y, -4e7, 4e7) && integer(i.amount, 1) && validTreasureFlight(i.flight) && number(i.age, 0, 10)))) return null;
     const groundIds = [...p.groundItems, ...((p.groundGold ?? []) as GroundGold[])].map(i => i.id);
     if (new Set(groundIds).size !== groundIds.length) return null;
     const expedition=p.expeditions as Expeditions | undefined;

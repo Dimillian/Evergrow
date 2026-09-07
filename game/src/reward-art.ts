@@ -1,3 +1,4 @@
+import { treasurePose } from './treasure-flight.ts';
 import type { GroundGold } from './gold.ts';
 import { REWARD_FLIGHT_SECONDS, type RewardFeedback, type LevelCelebration, type JourneyCelebration } from './reward-feedback.ts';
 import { HUD_ART, getHUDLayout } from './hud-layout.ts';
@@ -14,17 +15,20 @@ function coin(c: CanvasRenderingContext2D, x: number, y: number, scale = 1): voi
 export function drawGroundGold(c: CanvasRenderingContext2D, piles: readonly GroundGold[], time: number, reducedMotion: boolean): void {
   c.save();
   for (const pile of piles) {
+    if(pile.flight&&pile.age<pile.flight.delay)continue;
+    const flight=treasurePose(pile,(pile.flight?.at??0)+pile.age,reducedMotion);
     const count = Math.min(7, 2 + Math.floor(Math.log2(1 + pile.amount) / 2));
-    c.fillStyle = '#04090cbc'; c.beginPath(); c.ellipse(pile.x, pile.y + 2, 8, 3, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#04090cbc'; c.beginPath(); c.ellipse(flight.x, flight.y + 2, 8, 3, 0, 0, Math.PI * 2); c.fill();
     for (let i = 0; i < count; i++) {
       const phase = i * 2.399 + pile.id;
       const spread = Math.sqrt(i) * 5 * Math.min(1, pile.age * 4);
-      const bounce = reducedMotion ? 0 : Math.abs(Math.sin(pile.age * 11)) * (23 + i * 2) * Math.max(0, 1 - pile.age / .8);
-      const x = pile.x + Math.cos(phase) * spread, y = pile.y + Math.sin(phase) * spread * .5;
+      const bounce = reducedMotion || pile.flight ? 0 : Math.abs(Math.sin(pile.age * 11)) * (23 + i * 2) * Math.max(0, 1 - pile.age / .8);
+      const x = flight.x + Math.cos(phase) * spread, y = flight.y-flight.height + Math.sin(phase) * spread * .5;
       c.save(); c.translate(x, y - bounce - i * .4);
       c.rotate(reducedMotion ? 0 : Math.sin(pile.age * 9 + phase) * Math.max(0, 1 - pile.age / .8) * 1.4);
       coin(c, 0, 0, 1.35); c.restore();
     }
+    if(!flight.landed)continue;
     const glint = reducedMotion ? .15 : Math.pow(Math.max(0, Math.sin(time * 2.3 + pile.id)), 18);
     c.globalAlpha = glint * .85; c.strokeStyle = '#fff0b7'; c.lineWidth = .7;
     c.beginPath(); c.moveTo(pile.x - 4, pile.y - 3); c.lineTo(pile.x + 4, pile.y - 3);

@@ -1,3 +1,4 @@
+import { TREASURE_FLIGHT_DURATION } from './treasure-flight.ts';
 import { advanceAffixBuffs, consumeSpellweave } from './affix-combat.ts';
 import { alternatesBasicAttacks, basicAttackWeapon } from './equipment.ts';
 import { skillWeapon } from './skill-content.ts';
@@ -14,6 +15,8 @@ import { dungeonFromState, updateDungeon } from './dungeon-runtime.ts';
 import type { DungeonFloor } from './dungeon.ts';
 import { updateWarden } from './dungeon-boss.ts';
 import { updateWarbands } from './warband.ts';
+import { eventRecipe } from './event-recipes.ts';
+import { finishTrial } from './poi-runtime.ts';
 import { freshEvents, syncTrial, EVENT_RULES } from './poi-content.ts';
 import { EventChannel, advanceTrial } from './poi-runtime.ts';
 import { GROUND_EFFECT_RULES } from './skill-execution-content.ts';
@@ -26,7 +29,7 @@ import { createBaseStats, createStartingEquipment, deriveAttackStats, basicAttac
 import { getActiveSwingOffset } from './attack-motion.ts';
 import { RANGED_BASIC_ATTACK_PHASES, BASIC_ATTACK_PHASES, COMBAT_TIMING, SKILL_CAST_MOTION, ENEMY_DEFINITIONS, LOOT_RULES, PLAYER_ABILITIES,
   PLAYER_DEFAULTS, PLAYER_MOVEMENT, type ProjectileDefinition } from './combat-content.ts';
-import { chooseEncounterEnemy, chooseEncounterRank, ENCOUNTER_RULES, livingEnemyCount, encounterPopulationTarget, type EncounterActor } from './encounter-director.ts';
+import { chooseEncounterEnemy, chooseEncounterRank, ENCOUNTER_RULES } from './encounter-director.ts';
 import { circleIntersectsSector, segmentDistanceSquared, hasLineOfSight } from './combat-geometry.ts';
 import { refreshCharacter } from './character.ts';
 import { createCharacterSheet, TIER_COLORS } from './items.ts';
@@ -302,7 +305,7 @@ export class Simulation {
   spawnEnemy(kind: EnemyKind, x: number, y: number, rank: EnemyRank = 'normal', source?: CampSpawnSource): Enemy | null {
     const stats = ENEMY_DEFINITIONS[kind];
     if (this.world.isSanctuary?.(x, y)) return null;
-    if (livingEnemyCount(this.enemies) >= ENCOUNTER_RULES.hardPopulationCap || this.world.blocked(x, y, stats.radius)) return null;
+    if (this.world.blocked(x, y, stats.radius)) return null;
     const level = this.world.dungeonLevel ?? getZoneAt(x, y, this.world.seed).level, scaled = scaledEnemyStats(kind, level, rank);
     const biome = this.world.dungeonBiome ?? (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
     const lootSeed = source?.lootSeed ?? enemyLootSeed(this.options.seed!, ++this.spawnOrdinal, x, y);
@@ -347,6 +350,7 @@ export class Simulation {
     this.collectGroundItems();
     syncTrial(this.eventState, this.enemies);
     if (this.player.dead) {
+      if(this.eventState.trial&&eventRecipe(this.eventState.sites[this.eventState.trial.siteId])?.mode==='timed') finishTrial({state:this.eventState,player:this.player,enemies:this.enemies,world:this.world,view:this.spawnExclusion,spawn:()=>null});
       // A death may clear input midway through this tick; freeze its final poses.
       this.travel.returnTo = null; this.portal.cancel(); this.eventChannel.cancel();
       if (this.player.character.blessing) { delete this.player.character.blessing; refreshCharacter(this.player); }
@@ -753,6 +757,7 @@ export class Simulation {
   private collectGroundItems(): void {
     if (this.player.dead) return;
     this.groundItems = this.groundItems.filter(drop => {
+      if(drop.flight&&this.time<drop.flight.at+drop.flight.delay+TREASURE_FLIGHT_DURATION)return true;
       if (Math.hypot(drop.x - this.player.x, drop.y - this.player.y) > LOOT_RULES.equipmentCollectDistance
         || !this.lineOfSight(this.player.x, this.player.y, drop.x, drop.y)) return true;
       if (!addInventoryItem(this.player.character, drop.item)) {
@@ -786,30 +791,25 @@ export class Simulation {
 
   private spawnRoamingGroup(view: SpawnExclusion): number {
     const living = this.enemies.filter(enemy => enemy.state !== 'dead');
-    const roamingCount = living.filter(enemy => !enemy.campId).length;
-    const room = Math.min(encounterPopulationTarget(getZoneAt(this.player.x, this.player.y, this.world.seed).level) - roamingCount,
-      ENCOUNTER_RULES.hardPopulationCap - living.length);
-    if (room <= 0) return 0;
-    const size = this.roaming.groupSize(room, this.random());
+    const size = this.roaming.groupSize(ROAMING_RULES.maxGroupSize, this.random());
     for (let attempt = 0; attempt < ENCOUNTER_RULES.maxSpawnAttempts; attempt++) {
       const anchor = roamingSpawnAnchor(this.player, view, this.roaming.heading, () => this.random(), attempt);
       const members: Array<{ kind: EnemyKind; rank: EnemyRank; x: number; y: number }> = [];
-      const population: EncounterActor[] = [...living];
       for (let index = 0; index < size; index++) {
         const angle = anchor.angle + (index - 1) * Math.PI * 2 / Math.max(1, size - 1) + (this.random() - .5) * .12;
         const radius = index === 0 ? 0 : ROAMING_RULES.groupRadius * (.85 + this.random() * .15);
         const x = anchor.x + Math.cos(angle) * radius, y = anchor.y + Math.sin(angle) * radius;
         const zone = getZoneAt(x, y, this.world.seed), biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
         const preferred = index ? ROAMING_GROUPS[members[0].kind]?.[index] : undefined;
-        const kind = chooseEncounterEnemy(population, zone.level, biome, () => this.random(), preferred);
-        if (!kind || !isSpawnHidden(x, y, view, ENEMY_DEFINITIONS[kind].radius)
+        const kind = chooseEncounterEnemy(biome, () => this.random(), preferred);
+        if (!isSpawnHidden(x, y, view, ENEMY_DEFINITIONS[kind].radius)
           || this.world.isSanctuary?.(x, y)
           || this.world.blocked(x, y, ENEMY_DEFINITIONS[kind].radius + ENCOUNTER_RULES.spawnClearance)
           || this.world.getEnemyCamps?.(x - 60, y - 60, 120, 120)
             .some(camp => Math.hypot(camp.x - x, camp.y - y) < camp.radius + 60)
           || [...living, ...members].some(enemy => Math.hypot(enemy.x - x, enemy.y - y) < ENCOUNTER_RULES.minimumSeparation)) break;
-        const rank = chooseEncounterRank(population, zone.level, this.random());
-        members.push({ kind, rank, x, y }); population.push({ kind, rank, state: 'idle' });
+        const rank = chooseEncounterRank(zone.level, this.random());
+        members.push({ kind, rank, x, y });
       }
       if (members.length !== size) continue;
       // A loose encounter is validated together, so a single blocked member does

@@ -1,14 +1,14 @@
 import { withGoblinWarband } from './goblin-camps.ts';
 import { sampleBiome, type BiomeId } from './biomes.ts';
-import { pathDistance } from './road-shape.ts';
+import { roadPaths, pathDistance } from './road-shape.ts';
 import type { EnemyKind } from './model.ts';
 import type { EnemyRank } from './progression-content.ts';
 import type { WorldPOI } from './world-pois.ts';
 
-export const WILDERNESS_RULES = Object.freeze({ cellSize: 1600, maxRadius: 220, cacheLimit: 128, maxQueryCells: 4096 });
-export type WildernessKind = 'camp' | 'watchtower' | 'graveyard' | 'standingStones' | 'caravan';
+export const WILDERNESS_RULES = Object.freeze({ cellSize: 1400, maxRadius: 280, cacheLimit: 128, maxQueryCells: 4096 });
+export type WildernessKind = 'camp' | 'watchtower' | 'graveyard' | 'standingStones' | 'caravan' | 'cursedChest' | 'ruinedChapel' | 'beastDen' | 'quarry' | 'hamlet' | 'crossing' | 'corruptedGrove';
 export type SiteDecorKind = 'tent' | 'fire' | 'crate' | 'barrel' | 'banner' | 'fence' | 'bones' | 'bedroll'
-  | 'tower' | 'gravestone' | 'standingStone' | 'altar' | 'wagon' | 'wheel' | 'lantern';
+  | 'nest' | 'arch' | 'crystal' | 'cottage' | 'root' | 'barricade' | 'tower' | 'gravestone' | 'standingStone' | 'altar' | 'wagon' | 'wheel' | 'lantern';
 export interface SiteDecor {
   readonly id: string; readonly kind: SiteDecorKind; readonly x: number; readonly y: number;
   readonly radius: number; readonly scale: number; readonly angle: number; readonly seed: number;
@@ -60,8 +60,9 @@ export function siteHash(x: number, y: number, seed: number, salt = 0): number {
   return (n ^ n >>> 16) >>> 0;
 }
 const random = (seed: number, salt: number) => siteHash(seed, salt, 97183) / UINT_RANGE;
-const KINDS: readonly WildernessKind[] = ['camp', 'camp', 'camp', 'watchtower', 'graveyard', 'standingStones', 'caravan'];
+const KINDS: readonly WildernessKind[] = ['camp', 'camp', 'watchtower', 'graveyard', 'standingStones', 'caravan', 'cursedChest', 'ruinedChapel', 'beastDen', 'quarry', 'hamlet', 'crossing', 'corruptedGrove'];
 const DESCRIPTIONS: Record<WildernessKind, string> = {
+  cursedChest:'A chained hoard. Clear waves before the curse expires.', ruinedChapel:'Broken arches shelter a forbidden ritual.', beastDen:'Tracks converge around a hungry brood.', quarry:'Cut stone and exposed crystal beneath abandoned workings.', hamlet:'Occupied homes around a ruined square.', crossing:'A guarded passage along the trade road.', corruptedGrove:'Living roots bind an infected heartwood.',
   camp: 'A watchfire among stitched hides and stolen supplies. Its sentries guard the approaches; defeating the whole garrison clears this camp for the current run.',
   watchtower: 'A broken signal tower, its lantern still burning above an overgrown patrol court.',
   graveyard: 'Weathered names, crooked vigil stones and an open iron gate beneath the trees.',
@@ -69,6 +70,7 @@ const DESCRIPTIONS: Record<WildernessKind, string> = {
   caravan: 'A stranded caravan with torn canvas, scattered cargo and a lantern left for the missing travellers.',
 };
 const NAMES: Record<WildernessKind, readonly string[]> = {
+  cursedChest:['The Hungry Hoard','Widow’s Fortune','The Bound Coffer'], ruinedChapel:['Chapel of Ash','The Broken Covenant','Moonfall Chapel'], beastDen:['The Gnawing Hollow','Briarfang Den','The Red Nest'], quarry:['Shiverstone Quarry','The Hollow Cut','Old Silverworks'], hamlet:['Forsaken Hearths','Blackthorn Hamlet','The Empty Square'], crossing:['Warden’s Crossing','The Broken Toll','Ashford Blockade'], corruptedGrove:['The Blighted Heart','Weeping Roots','The Twisted Orchard'],
   camp: ['Ashen Watch', 'Blackbriar Camp', 'The Ragged Vigil', 'Emberfang Hollow'],
   watchtower: ['The Hollow Beacon', 'Mournwatch Ruin', 'The Last Signal'],
   graveyard: ['The Nameless Rest', 'Briargrave', 'The Silent Acre'],
@@ -76,8 +78,8 @@ const NAMES: Record<WildernessKind, readonly string[]> = {
   caravan: ['The Broken Procession', 'Wayfarer’s End', 'The Abandoned Convoy'],
 };
 
-function makeSite(seed: number, id: string, kind: WildernessKind, x: number, y: number, starter = false, biome: BiomeId = sampleBiome(x, y, seed).id): WildernessSite {
-  const radius = kind === 'camp' ? 205 : kind === 'graveyard' ? 172 : kind === 'standingStones' ? 165 : 160;
+function makeSite(seed: number, id: string, kind: WildernessKind, x: number, y: number, starter = false, biome: BiomeId = sampleBiome(x, y, seed).id, worldSeed = seed): WildernessSite {
+  const radius = ['hamlet','quarry','ruinedChapel'].includes(kind) ? 270 : kind === 'camp' ? 205 : kind === 'graveyard' ? 172 : kind === 'standingStones' ? 165 : 160;
   const decor: SiteDecor[] = [], members: CampMember[] = [];
   const add = (kind: SiteDecorKind, dx: number, dy: number, radius: number, scale = 1, angle = 0) => {
     decor.push(Object.freeze({ id: `${id}:decor:${decor.length}`, kind, x: x + dx, y: y + dy, radius, scale, angle,
@@ -117,15 +119,52 @@ function makeSite(seed: number, id: string, kind: WildernessKind, x: number, y: 
       add('standingStone', Math.cos(angle) * 109, Math.sin(angle) * 91, 14, .9 + random(seed, i) * .4, (random(seed, i + 30) - .5) * .08);
     }
     add('bones', -44, 24, 0); add('lantern', 59, 28, 0, .65);
-  } else {
+  } else if (kind === 'caravan') {
     add('wagon', -52, -51, 29, 1.18, -.07); add('wagon', 66, 32, 25, .95, .2);
     add('wheel', -104, -6, 0, 1, .3); add('crate', -50, 36, 11); add('crate', -76, 46, 11, .85);
     add('barrel', 18, -60, 10); add('bedroll', 3, 55, 0, 1, -.4); add('lantern', -17, -45, 3);
     add('bones', 90, -22, 0, 1.1); add('fire', -60, 110, 9, .6);
   }
+  if (kind === 'ruinedChapel') {
+    add('arch',0,-110,30,1.7); add('altar',0,-45,21,1.4);
+    for(const side of [-1,1])for(let i=0;i<3;i++){add('standingStone',side*125,-100+i*65,15,.8);add('lantern',side*70,-80+i*65,0,.7);}
+    add('gravestone',-190,30,7); add('bones',65,88,0);
+  } else if(kind === 'beastDen') {
+    for(let i=0;i<3;i++){const a=i*Math.PI*2/3;add('nest',Math.cos(a)*95,Math.sin(a)*65-35,16,1.1+i*.1);}
+    add('arch',0,-100,26,1.2);for(let i=0;i<6;i++)add('bones',(i-2.5)*32,70+Math.sin(i)*25,0,1);
+  } else if(kind === 'quarry') {
+    for(const side of [-1,1])for(let i=0;i<3;i++){add('standingStone',side*(145+i*13),-130+i*95,18,1.3);add('crystal',side*105,-115+i*90,10,1+i*.2);}
+    add('wheel',-55,75,0);add('crate',60,70,11);add('lantern',-80,-80,0);
+  } else if(kind === 'hamlet') {
+    for(const [dx,dy] of [[-145,-110],[145,-100],[-145,65],[145,70]])add('cottage',dx,dy,36,1.05);
+    add('banner',0,-70,4,1.5);add('fire',0,10,10);add('crate',65,75,10);
+  } else if(kind === 'crossing') {
+    for(const side of [-1,1]){add('barricade',side*100,0,15,1.2);add('banner',side*140,-48,4);add('crate',side*85,60,10);}
+    add('wagon',150,-90,25,.8);add('lantern',-130,45,0);
+  } else if(kind === 'corruptedGrove') {
+    add('root',0,-80,24,1.8);for(let i=0;i<5;i++){const a=i*Math.PI*2/5;add('root',Math.cos(a)*118,Math.sin(a)*78-20,12,.8);}
+    add('altar',-48,45,12,.7);
+  } else if(kind === 'cursedChest') {
+    for(const side of [-1,1]){add('gravestone',side*65,-10,9,1.2);add('bones',side*45,40,0);add('lantern',side*28,12,0,.7);}
+  }
   const entrance = Object.freeze({ x, y: y + radius });
-  return withGoblinWarband(Object.freeze({ id, kind, x, y, radius, name: starter ? 'Ashen Watch' : NAMES[kind][seed % NAMES[kind].length],
-    description: DESCRIPTIONS[kind], biome, seed, entrance, decor: Object.freeze(decor), members: Object.freeze(members) }));
+  const raw = withGoblinWarband({ id, kind, x, y, radius, name: starter ? 'Ashen Watch' : NAMES[kind][seed % NAMES[kind].length],
+    description: DESCRIPTIONS[kind], biome, seed, entrance, decor, members });
+  // Front-facing chapel architecture needs an aligned aisle and entrance.
+  // Other sites orient their approach toward nearby roads or vary freely inland.
+  const roads = starter ? [] : roadPaths(x-1800,y-1800,3600,3600,worldSeed);
+  let roadPoint:{x:number;y:number;distance:number}|undefined;
+  for(const road of roads)for(let i=1;i<road.points.length;i++){
+    const a=road.points[i-1],b=road.points[i],dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/(dx*dx+dy*dy||1)));
+    const px=a[0]+dx*t,py=a[1]+dy*t,distance=Math.hypot(px-x,py-y);
+    if(!roadPoint||distance<roadPoint.distance)roadPoint={x:px,y:py,distance};
+  }
+  const angle=starter||kind==='ruinedChapel'?0:roadPoint&&roadPoint.distance<1500?Math.atan2(roadPoint.y-y,roadPoint.x-x)-Math.PI/2:random(seed,911)*Math.PI*2;
+  const rotate=(dx:number,dy:number)=>({x:dx*Math.cos(angle)-dy*Math.sin(angle),y:dx*Math.sin(angle)+dy*Math.cos(angle)});
+  const entry=rotate(0,radius);
+  return Object.freeze({...raw,entrance:Object.freeze({x:x+entry.x,y:y+entry.y}),
+    decor:Object.freeze(raw.decor.map(d=>{const p=rotate(d.x-x,d.y-y);return Object.freeze({...d,x:x+p.x,y:y+p.y,angle:['fence','bedroll','wheel','bones'].includes(d.kind)?d.angle+angle:d.angle});})),
+    members:Object.freeze(raw.members.map(m=>{const p=rotate(m.dx,m.dy);return Object.freeze({...m,dx:p.x,dy:p.y});}))});
 }
 
 /** A small first garrison is reachable east of the starting clearing without crossing a town. */
@@ -136,16 +175,26 @@ export function startingEnemyCamp(seed: number): WildernessSite {
 /** Each cell owns at most one immutable site; placement never depends on query order or live entities. */
 export function generateWildernessSite(worldSeed: number, cx: number, cy: number, reserved: SiteReservation): WildernessSite | null {
   const seed = siteHash(cx, cy, worldSeed, 0x87231);
-  const kind = KINDS[seed % KINDS.length];
-  const radius = kind === 'camp' ? 205 : 172;
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const x = (cx + .5) * WILDERNESS_RULES.cellSize + (random(seed, attempt * 2 + 1) - .5) * 560;
-    const y = (cy + .5) * WILDERNESS_RULES.cellSize + (random(seed, attempt * 2 + 2) - .5) * 560;
-    if (Math.hypot(x, y) < radius + 470 || Math.hypot(x - 740, y - 180) < radius + 300) continue;
-    // Distance is normalised by road slope; this margin also covers its curvature and shoulder.
-    if (pathDistance(x, y, worldSeed) < radius + 120 || reserved(x, y, radius + 55)) continue;
-    return makeSite(seed, `site:${worldSeed}:${cx}:${cy}`, kind, x, y, false, sampleBiome(x, y, worldSeed).id);
+  const centerX=(cx+.5)*WILDERNESS_RULES.cellSize,centerY=(cy+.5)*WILDERNESS_RULES.cellSize;
+  const biome=sampleBiome(centerX,centerY,worldSeed).id;
+  const favored:Record<BiomeId,readonly WildernessKind[]>={deadwood:['graveyard','ruinedChapel','cursedChest'],verdant:['beastDen','corruptedGrove'],swamp:['corruptedGrove','standingStones'],frostpine:['beastDen','quarry'],emberfall:['quarry','cursedChest'],autumn:['hamlet','caravan'],highlands:['quarry','watchtower']};
+  const region=siteHash(Math.floor(cx/4),Math.floor(cy/4),worldSeed,819);
+  const pool=[...KINDS,...favored[biome],KINDS[region%KINDS.length],KINDS[region%KINDS.length]];
+  const kind=pool[seed%pool.length],radius=['hamlet','quarry','ruinedChapel'].includes(kind)?270:205;
+  const roadside=['caravan','crossing','hamlet'].includes(kind);
+  let best:{x:number;y:number;score:number}|null=null;
+  for(let attempt=0;attempt<12;attempt++){
+    const x=centerX+(random(seed,attempt*2+1)-.5)*640,y=centerY+(random(seed,attempt*2+2)-.5)*640;
+    if(Math.hypot(x,y)<radius+510||Math.hypot(x-740,y-180)<radius+300)continue;
+    const road=pathDistance(x,y,worldSeed);
+    if(road<(roadside?radius+35:radius+120)||roadside&&road>radius+450)continue;
+    if(reserved(x,y,radius+55))continue;
+    // Validate the whole footprint, including approaches, against water/settlements.
+    if(Array.from({length:8},(_,i)=>i*Math.PI/4).some(a=>reserved(x+Math.cos(a)*radius,y+Math.sin(a)*radius,35)))continue;
+    const score=roadside?Math.abs(road-(radius+100)):Math.abs(road-1000)*.15+random(seed,attempt+81)*220;
+    if(!best||score<best.score)best={x,y,score};
   }
+  if(best)return makeSite(seed,`site:${worldSeed}:${cx}:${cy}`,kind,best.x,best.y,false,sampleBiome(best.x,best.y,worldSeed).id,worldSeed);
   return null;
 }
 
