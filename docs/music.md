@@ -1,0 +1,115 @@
+# Adaptive music
+
+Implemented locally on `codex/adaptive-music`, 2026-09-08. The four original
+GarageBand cues now play in the game. Only the four final `.webm` assets live
+under `music/evergrow-loops/loops/`. Authoring projects, MIDI, WAV/MP3 copies,
+render intermediates, generation scripts and measurement reports stay outside
+the repository. The music branch contains the controller, tests, documentation
+and final WebMs only.
+
+| Situation | Cue | Transition |
+| --- | --- | --- |
+| Character hall or protected town, including interiors/vendors | Lanterns in the Ash | Three-second crossfade |
+| Surface wilderness | Under the Black Canopy | Three-second crossfade after 1.25 seconds outside town |
+| Rootbound Crypt without active enemies | Rootbound Vigil | Three-second crossfade |
+| A living enemy chasing, winding up, attacking or recovering | Embers at the Gate | 1.2-second crossfade; hold for six seconds after engagement ends |
+| Pause, map, inventory, skills, Journeys and other panels | Keep the current cue | Lower music to 40%; freeze the combat-release timer |
+| Death | Silence | Two-second fade |
+
+Sanctuary arrival takes priority over enemies pursuing outside town. Crypt or
+surface location changes discard the previous location's combat hold. A real
+engagement bypasses the short town-departure delay. Standing near an idle camp
+does not trigger battle music; dead, returning and patrolling actors do not
+keep it playing. Music reads the existing `enemyEngaged` predicate, independently
+of random battle barks or camera visibility. It never changes AI or simulation.
+
+## Playback and lifecycle
+
+The first click/key interaction unlocks the shared Web Audio context. Before
+that gesture, no music downloads or autoplay are attempted. Audio is also
+unlocked through existing touch/controller entry paths. N and Options > Sound
+control both music and effects. Browser visibility and native Android background
+events suppress both without changing the saved sound preference. Foregrounding
+preserves that preference; normal browser autoplay restrictions still apply.
+
+`music-director.ts` owns the headless situation policy. `music-composer.ts` owns
+lazy fetching/decoding, native looping buffer sources, crossfades, a small cache,
+remembered cue positions and teardown. Game passes current phase, sanctuary/crypt
+location and actor engagement once per frame. The director has no save state.
+`GameAudio` owns the context and common mute/background lifecycle; music connects
+to a clean output bus, bypassing combat's compressor and wave distortion.
+
+`music-loop.ts` prepares each decoded WebM once: trim the 250 ms circular guards
+and blend the last 120 ms toward the matching audio immediately before the loop
+start. This reconciles Opus reconstruction differences without inserting silence.
+Exact musical frame counts are converted to the AudioContext's sample rate.
+The resulting buffer repeats through `AudioBufferSourceNode.loop`, with no timer
+restarts or codec startup/tail inside the musical loop. Crossfades interpolate
+from the current gain when interrupted, and a returning active cue reuses its voice. Once a silent
+voice is released, its next playback resumes from its remembered loop position.
+The outgoing cue remains audible while the incoming file loads. Late results
+cannot switch to an outdated selection. Failed requests retry at most once per
+thirty audio-clock seconds and never block gameplay or effects.
+
+Resource bounds: four possible voices, two retained decoded-cache entries, one
+in-flight load/decode, and one cleanup timer. In ordinary steady playback only
+one source runs. All gains/sources, pending fetches and caches are released on
+teardown. Temporary memory can include all four cues during rapid transitions
+(about 74 MB of stereo float PCM at 44.1 kHz, plus temporary decode data; the
+browser's output sample rate may increase that, with guarded/cropped buffers
+overlapping briefly during preparation). Runtime WebM compression reduces
+download and bundle size without reducing decoded audio memory. Only requested
+cues are downloaded/decoded; the WAV masters and MP3 listening previews are not
+shipped in the game bundle.
+
+Vite's development allowlist includes only the shared loop directory alongside
+its normal workspace root, so local music URLs can be served. Vite emits the
+compressed WebMs as local build assets, including the offline
+Android bundle. There is no CDN or music service. No native installation, Sites
+publication, save reset or migration is part of this change.
+
+## Verification
+
+Code tests cover location/engagement priority, town-boundary grace, combat hold,
+menu ducking, interrupted fades, guard trimming and musical frame counts at
+44.1/48 kHz, remembered positions,
+stale loads, mute during decode, retry throttling, background preference
+preservation and disposal during asynchronous work. Build checks cover local
+asset emission. Gameplay listening, transition feel and final balance against
+effects remain user-tested.
+
+## WebM compression checkpoint · 2026-09-08
+
+The runtime ships **5,509,923 bytes** of audio-only WebM instead of 55,000,074
+bytes of WAV: **89.98% smaller**. Authoring files are retained separately on
+the authoring machine, outside the repository and branch history.
+
+The final assets use stereo Opus at 48 kHz, 192 kbps VBR,
+20 ms packets and maximum encoder effort (10), with the music/audio application
+setting. These are high-quality lossy copies, not bit-identical masters; an
+inaudible difference cannot be guaranteed without listening comparison. The
+bitrate preserves room for plucked transients and sustained reverb instead of
+chasing the smallest possible file at any quality. See
+[FFmpeg's libopus options](https://ffmpeg.org/ffmpeg-codecs.html#libopus).
+
+Each file contains 250 ms of circular audio before and after the musical loop.
+Playing the entire WebM on repeat in a generic media player includes these guards;
+the game uses its explicit musical length and prepares the seamless buffer.
+Before delivery, offline decoding checked complete frame counts, finite PCM and
+seam steps. Code tests pin the final WebM sizes and SHA-256 hashes, verify musical
+frame counts, and exercise loop preparation at both output rates and playback
+lifecycle. They require neither authoring files nor an installed audio encoder.
+Music failure remains isolated from
+sound effects. Physical Thor/WebView playback and subjective audio quality
+remain user listening checks.
+
+WebM checkpoint validation: all **911 tests** passed, including ten music tests;
+application/headless type checks, production build and Android web-bundle build
+passed. Both builds contain exactly the four verified WebMs and no WAV/MP3
+assets. All four development URLs return the encoded bytes. Offline FFmpeg
+decoding plus the actual runtime preparation function verified musical lengths
+and continuous seam steps for every cue at both 44.1 and 48 kHz. No gameplay
+automation or native installation was performed.
+
+Web Audio reference: [native buffer looping](https://developer.mozilla.org/en-US/docs/Web/API/AudioBufferSourceNode/loop)
+and [loop end boundaries](https://developer.mozilla.org/en-US/docs/Web/API/AudioBufferSourceNode/loopEnd).

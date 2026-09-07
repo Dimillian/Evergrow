@@ -1,6 +1,7 @@
 import { MATERIALS } from './material-content.ts';
 import { eventMaterial } from './material-response.ts';
 import type { CombatEvent } from './model.ts';
+import type { MusicComposer } from './music-composer.ts';
 
 interface Voice {
   source: AudioScheduledSourceNode;
@@ -25,7 +26,7 @@ const MASTER_VOLUME = .34;
 const MAX_VOICES = 96;
 const SILENCE = .0001;
 
-/** Layered oscillators and filtered noise synthesize every sound; no audio assets. */
+/** Synthesized combat effects and the shared audio context/mute lifecycle. */
 export class GameAudio {
   enabled = true;
   private goldSoundAt = -Infinity;
@@ -42,6 +43,10 @@ export class GameAudio {
   private voices = new Set<Voice>();
   private bursts = new Map<CombatEvent['type'], { time: number; count: number }>();
   private disposed = false;
+  private backgrounded = false;
+  private music?: MusicComposer;
+
+  constructor(music?: MusicComposer) { this.music = music; }
 
   async unlock() {
     if (this.disposed) return;
@@ -62,11 +67,13 @@ export class GameAudio {
       this.peakGuard.curve = curve;
       this.peakGuard.oversample = '2x';
       this.master = ctx.createGain();
-      this.master.gain.value = this.enabled ? MASTER_VOLUME : 0;
+      this.master.gain.value = this.enabled && !this.backgrounded ? MASTER_VOLUME : 0;
       this.bus.connect(this.compressor);
       this.compressor.connect(this.peakGuard);
       this.peakGuard.connect(this.master);
       this.master.connect(ctx.destination);
+      this.music?.setEnabled(this.enabled && !this.backgrounded);
+      this.music?.attach(ctx);
       this.noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       this.bodyNoise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const white = this.noise.getChannelData(0), body = this.bodyNoise.getChannelData(0);
@@ -77,14 +84,26 @@ export class GameAudio {
         body[i] = Math.max(-1, Math.min(1, previous * 4.5));
       }
     }
-    if (this.ctx.state === 'suspended') await this.ctx.resume();
+    if (!this.backgrounded && this.ctx.state === 'suspended') await this.ctx.resume();
+    if (!this.disposed) this.music?.setEnabled(this.enabled && !this.backgrounded);
   }
 
   setEnabled(value: boolean) {
     this.enabled = value;
+    this.applyEnabled();
+  }
+
+  setBackgrounded(value: boolean): void {
+    this.backgrounded = value;
+    this.applyEnabled();
+  }
+
+  private applyEnabled(): void {
+    const audible = this.enabled && !this.backgrounded;
+    this.music?.setEnabled(audible);
     if (this.master && this.ctx && !this.disposed) {
       this.master.gain.cancelScheduledValues(this.ctx.currentTime);
-      this.master.gain.setTargetAtTime(value ? MASTER_VOLUME : 0, this.ctx.currentTime, .015);
+      this.master.gain.setTargetAtTime(audible ? MASTER_VOLUME : 0, this.ctx.currentTime, .015);
     }
   }
 
@@ -167,7 +186,7 @@ export class GameAudio {
   }
 
   play(event: CombatEvent) {
-    if (!this.enabled || !this.ctx || !this.bus || this.disposed || this.ctx.state !== 'running') return;
+    if (!this.enabled || this.backgrounded || !this.ctx || !this.bus || this.disposed || this.ctx.state !== 'running') return;
     if (event.type === 'spawn' || event.type === 'engagement') return;
     const now = this.ctx.currentTime;
     if (event.type === 'gold') {
@@ -284,6 +303,7 @@ export class GameAudio {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    this.music?.dispose();
     for (const voice of [...this.voices]) this.finish(voice, true);
     for (const node of [this.bus, this.compressor, this.peakGuard, this.master]) node?.disconnect();
     const ctx = this.ctx;

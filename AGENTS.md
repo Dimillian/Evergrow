@@ -1,5 +1,19 @@
 # Working on Evergrow
 
+## Adaptive music
+
+`music-director.ts` owns headless town/field/crypt/encounter selection and combat
+release; `music-composer.ts` owns bounded lazy native-buffer looping, crossfades
+and cue positions. `music-loop.ts` trims circular guards and reconciles decoded
+seams. `music-content.ts` references final guarded WebM/Opus outputs under
+`music/evergrow-loops/loops/`. Keep music authoring projects, source formats,
+intermediates and generation scripts outside the repository. `GameAudio` shares its AudioContext and mute/background
+lifecycle; music bypasses combat distortion. Keep music presentation-only and
+local, preserve the verified loop boundaries, use `enemyEngaged` rather than
+bark rolls, and never restart a file on every frame. Read `docs/music.md` before
+changing selection, fades, asset formats or memory budgets. Music and effects
+share N/Options sound; background suppression must not rewrite that preference.
+
 ## User preferences
 
 - Keep the game local. Do not create, connect, publish, or deploy a Site unless the user explicitly requests it.

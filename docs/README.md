@@ -31,6 +31,7 @@ Updated 2026-09-07. Use the current guides for implementation. Proposed designs 
 | World history, retirement and current storage bounds | [World-state longevity](world-state-longevity.md) |
 | Character hall, starter choices and saving | [Character saves](character-saves.md) |
 | Enemy speech and visual density | [Ashglass battle barks](battle-barks.md) |
+| Situation-based music, crossfades and sound lifecycle | [Adaptive music](music.md) |
 | Components, typography, tooltip motion and panel ownership | [UI kit](ui-kit.md) |
 | Climate generation, props and procedural graphics | [Biomes](biomes.md), [living biomes](living-biomes.md), [graphics pass](graphics-overhaul.md) |
 | Drainage, cell-based water and shader optics | [Living water](living-water.md) |

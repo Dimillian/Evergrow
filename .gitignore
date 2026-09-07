@@ -17,3 +17,11 @@ android/local.properties
 
 android/app/src/main/assets/
 game/dist-android/
+
+# Music delivery contains only final WebM outputs; authoring stays outside Git.
+/music/*
+!/music/evergrow-loops/
+/music/evergrow-loops/*
+!/music/evergrow-loops/loops/
+/music/evergrow-loops/loops/*
+!/music/evergrow-loops/loops/*.webm

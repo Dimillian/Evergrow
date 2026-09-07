@@ -1,5 +1,14 @@
 # Current system status
 
+## Adaptive music · 2026-09-08
+
+Four original GarageBand loops now follow town, field, crypt and engaged-enemy
+situations with crossfades, six-second combat release and quieter panel music.
+The shared sound toggle and browser/native background lifecycle control music
+and effects. Lazy local WebM/Opus playback prepares explicit loop seams; no save changes.
+See [music ownership, resource bounds and validation](music.md). Player listening
+and balance acceptance remain pending.
+
 ## Equipment materials · v0.3.3, 2026-09-07
 
 196 profile/material combinations share real loot, vendor and upgrade recipes. Common foundations dominate; silver, gold and crystal are rarer bases with stronger implicit stats, independent of affix rarity. No save reset. [Rates and rules](item-materials.md).

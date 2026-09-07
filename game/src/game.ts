@@ -54,6 +54,9 @@ import { Simulation } from './simulation.ts';
 import { Renderer } from './renderer.ts';
 import { PostFX } from './postfx.ts';
 import { GameAudio } from './audio.ts';
+import { MusicComposer } from './music-composer.ts';
+import { MUSIC_TRACKS } from './music-content.ts';
+import { enemyEngaged } from './enemy-engagement.ts';
 import { Exploration } from './exploration.ts';
 import { WorldMap } from './world-map.ts';
 import { GameInput } from './game-input.ts';
@@ -78,6 +81,8 @@ export class Game {
   sim = new Simulation(this.world, { seed: 7319 });
   renderer: Renderer;
   audio: GameAudio;
+  private music = new MusicComposer(MUSIC_TRACKS);
+  private nativeBackgrounded = false;
   private exploration: Exploration;
   private titleScreen: TitleScreen;
   private session: CharacterSession;
@@ -137,7 +142,7 @@ export class Game {
     this.lifetime.defer(() => { if(this.world !== this.overworld) this.world.dispose(); this.overworld.dispose(); });
     try {
       this.renderer = new Renderer(true, this.performance);
-      this.audio = this.lifetime.own(new GameAudio());
+      this.audio = this.lifetime.own(new GameAudio(this.music));
       this.exploration = new Exploration(this.world, { storage: null });
       this.lifetime.defer(() => this.exploration.dispose());
       this.saveClient = this.lifetime.own(new SaveHub());
@@ -249,8 +254,8 @@ export class Game {
         equip: index => this.characterAction({type:'equip',index}),
         track: id => { void this.journeys.command({type:'track',id}); },
         portal: () => this.requestPortal(),
-        background: () => { this.clearInput(); this.pause(); void this.saveCharacter(); this.audio.setEnabled(false); },
-        foreground: () => { this.clearInput(); this.audio.setEnabled(!this.muted); },
+        background: () => { this.nativeBackgrounded = true; this.clearInput(); this.pause(); void this.saveCharacter(); this.audio.setBackgrounded(true); },
+        foreground: () => { this.nativeBackgrounded = false; this.clearInput(); this.audio.setBackgrounded(document.hidden); },
         back: () => { if(this.phase === 'ready' && this.titleScreen.dismissChangelog()) return; if(this.appearanceEditor){this.appearanceEditor.cancel();return;} if(this.thor.dismissInspection() || (this.phase === 'paused' && this.shell.backInMenu())) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
       }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
@@ -278,6 +283,12 @@ export class Game {
 
   private bind() {
     const signal = this.abort.signal;
+    // Unlock in the actual gesture, before asynchronous character/save work.
+    // This also lets the character hall play after its first interaction.
+    const unlockAudio = () => { void this.audio.unlock().catch(() => {}); };
+    window.addEventListener('pointerdown', unlockAudio, { signal, capture: true });
+    window.addEventListener('keydown', unlockAudio, { signal, capture: true });
+    this.audio.setBackgrounded(document.hidden);
     this.clearWorldTouch = bindTouchCanvas(this.canvas,signal,{
       enabled:()=>this.phase==='playing' && !this.savingAction && this.touch.active,
       pan:()=>{},
@@ -288,7 +299,8 @@ export class Game {
         if(this.interact(this.renderer.screenToWorld(point.x*this.renderer.width/r.width,point.y*this.renderer.height/r.height))) this.touch.clear();
       },
     });
-    window.addEventListener('pagehide', () => { this.clearInput(); void this.saveAndSync(); }, { signal });
+    window.addEventListener('pagehide', () => { this.clearInput(); this.audio.setBackgrounded(true); void this.saveAndSync(); }, { signal });
+    window.addEventListener('pageshow', () => this.audio.setBackgrounded(document.hidden || this.nativeBackgrounded), { signal });
     window.addEventListener('focus', () => this.clearInput(), { signal });
     this.canvas.addEventListener('blur', () => this.clearInput(), { signal });
     window.addEventListener('resize', () => this.resize(), { signal });
@@ -299,6 +311,7 @@ export class Game {
       if (this.phase === 'playing') this.pause();
     }, { signal });
     document.addEventListener('visibilitychange', () => {
+      this.audio.setBackgrounded(document.hidden || this.nativeBackgrounded);
       if (document.hidden) {
         this.clearInput();
         if (this.phase === 'playing') this.pause();
@@ -958,6 +971,11 @@ export class Game {
       }
       if (now >= this.nextAutosave) { this.saveCharacter(); this.nextAutosave = now + 20_000; }
     }
+    this.music.update({
+      phase: this.phase,
+      location: this.sim.dungeonFloor ? 'crypt' : this.world.isSanctuary(this.sim.player.x, this.sim.player.y) ? 'town' : 'field',
+      engaged: this.sim.enemies.some(enemyEngaged),
+    }, this.savingAction ? 0 : dt);
     this.shell.setPortalState(this.sim.portal.active ? this.sim.portal.progress : null,
       !!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x, this.sim.player.y));
     if(this.touch.active) this.touch.setPortal(this.sim.portal.active ? this.sim.portal.progress : null,!!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x,this.sim.player.y));
