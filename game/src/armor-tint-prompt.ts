@@ -4,7 +4,7 @@ import { PAD, type GamepadInput } from './gamepad-input.ts';
 import { escapeUI } from './ui-components.ts';
 
 /** Gesture and confirmation ownership for every armor tint swatch in one editor draft. */
-export function bindArmorTintPrompt(root:HTMLElement, available:()=>boolean, apply:(tint:string)=>void) {
+export function bindArmorTintPrompt(root:HTMLElement, available:()=>boolean, apply:(tint:string)=>void, switchTab:(delta:number)=>void) {
   const abort=new AbortController(),signal=abort.signal,menu=new GamepadMenu();
   const shell=root.querySelector<HTMLElement>('.editor-shell')!;
   const overlay=document.createElement('div');overlay.className='armor-tint-overlay';overlay.hidden=true;
@@ -13,14 +13,14 @@ export function bindArmorTintPrompt(root:HTMLElement, available:()=>boolean, app
   let source:HTMLButtonElement|null=null,tint:string|null=null,suppressClick=false;
   let pointer:{id:number;x:number;y:number;button:HTMLButtonElement;timer:ReturnType<typeof setTimeout>}|null=null;
   let held:{button:HTMLButtonElement;since:number}|null=null;
-  const swatch=(target:EventTarget|null)=>target instanceof Element?target.closest<HTMLButtonElement>('button[data-tint]'):null;
+  const swatch=(target:EventTarget|null)=>target instanceof Element?target.closest<HTMLButtonElement>('button[data-tint], #original-color'):null;
   function clearPointer(){if(pointer)clearTimeout(pointer.timer);pointer=null;}
   function clearHold(){clearPointer();held=null;}
   function request(button:HTMLButtonElement){
     const color=ARMOR_TINTS.find(c=>c.id===button.dataset.tint);
-    if(!available()||tint||!color||button.disabled||button.closest('[hidden], [inert]'))return;
-    clearHold();source=button;tint=color.id;shell.inert=true;overlay.hidden=false;menu.clear();
-    overlay.querySelector('#all-tint-message')!.innerHTML=`Use <strong>${escapeUI(color.name)}</strong> on every armor part?`;
+    if(!available()||tint||(!color&&button.id!=='original-color')||button.disabled||button.closest('[hidden], [inert]'))return;
+    clearHold();source=button;tint=color?.id??'original';shell.inert=true;overlay.hidden=false;menu.clear();
+    overlay.querySelector('#all-tint-message')!.innerHTML=color?`Use <strong>${escapeUI(color.name)}</strong> on every armor part?`:'Restore the original colors on every armor part?';
     overlay.querySelector<HTMLButtonElement>('[data-tint-cancel]')!.focus();
   }
   function cancel(){
@@ -34,7 +34,7 @@ export function bindArmorTintPrompt(root:HTMLElement, available:()=>boolean, app
   },{signal});
   root.addEventListener('dblclick',event=>{const button=swatch(event.target);if(button){event.preventDefault();request(button);}},{signal});
   root.addEventListener('pointerdown',event=>{
-    suppressClick=false;clearPointer();
+    root.classList.remove('is-controller');suppressClick=false;clearHold();
     const button=swatch(event.target);
     if(!button||!event.isPrimary||event.button!==0||!available()||tint)return;
     pointer={id:event.pointerId,x:event.clientX,y:event.clientY,button,timer:setTimeout(()=>{
@@ -50,12 +50,17 @@ export function bindArmorTintPrompt(root:HTMLElement, available:()=>boolean, app
   root.addEventListener('contextmenu',event=>{if(swatch(event.target))event.preventDefault();},{signal});
   window.addEventListener('blur',clearHold,{signal});
   document.addEventListener('visibilitychange',clearHold,{signal});
+  root.addEventListener('focusout',event=>{
+    if(pointer&&event.relatedTarget!==pointer.button)clearPointer();
+    if(held&&event.relatedTarget!==held.button)held=null;
+  },{signal});
   return {
     cancel,
     updateGamepad(pad:GamepadInput,now:number){
       if(!available()||document.hidden){clearHold();return;}
       if(!pad.active){held=null;menu.clear();return;}
-      menu.update(tint?overlay:root,pad,now,{activate:target=>{
+      root.classList.add('is-controller');
+      menu.update(tint?overlay:root,pad,now,{switchTab:tint?undefined:delta=>{clearHold();switchTab(delta);},activate:target=>{
         const button=swatch(target);
         if(button&&!tint)held={button,since:now};
         return false;

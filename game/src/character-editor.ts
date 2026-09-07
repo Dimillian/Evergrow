@@ -86,7 +86,10 @@ const helmet = root.querySelector<HTMLInputElement>('#helmet-visible')!;
 gear.value = loadout;
 let sheet = structuredClone(options.sheet);
 const tintPrompt=bindArmorTintPrompt(root,()=>!busy&&!disposed,tint=>{
-  tints=Object.fromEntries(ARMOR_PARTS.map(part=>[part.id,tint]));refresh();
+  tints=tint==='original'?{}:Object.fromEntries(ARMOR_PARTS.map(part=>[part.id,tint]));refresh();
+},delta=>{
+  tab=delta<0?'character':'armor';root.querySelector('.editor-controls')!.scrollTop=0;refresh();
+  root.querySelector<HTMLButtonElement>(`[data-tab="${tab}"]`)!.focus();
 });
 if(!options.study)root.querySelector<HTMLElement>('.stage-options')!.hidden=true;
 let envelope: CharacterBounds = { left:-60, right:60, top:-70, bottom:20 };
@@ -203,6 +206,17 @@ root.querySelector('.editor-tabs')!.addEventListener('keydown',event=>{const e=e
 facial.addEventListener('change', () => { appearance.facialHair = facial.value as CharacterAppearance['facialHair']; refresh(); }, { signal:abort.signal });
 accessory.addEventListener('change', () => { appearance.accessory = accessory.value as CharacterAppearance['accessory']; refresh(); }, { signal:abort.signal });
 name.addEventListener('input', refresh, { signal:abort.signal });
+root.addEventListener('keydown',event=>{
+  if(busy||!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key))return;
+  const target=event.target as HTMLElement,grid=target.closest('.swatches, .hair-options, .armor-parts');
+  if(!grid||!target.matches('button'))return;
+  const buttons=[...grid.querySelectorAll<HTMLButtonElement>('button')].filter(b=>!b.hidden&&!b.disabled);
+  const index=buttons.indexOf(target as HTMLButtonElement);if(index<0)return;
+  const columns=buttons.filter(b=>Math.abs(b.getBoundingClientRect().top-buttons[0].getBoundingClientRect().top)<2).length;
+  const delta=event.key==='ArrowUp'?-columns:event.key==='ArrowDown'?columns:event.key==='ArrowLeft'?-1:1;
+  const next=buttons[index+delta];
+  if(next){event.preventDefault();next.focus();next.scrollIntoView({block:'nearest',inline:'nearest'});}
+},{signal:abort.signal});
 let drag: { id:number; x:number; angle:number } | null = null;
 figure.addEventListener('pointerdown', event => { if (event.button !== 0) return; drag = {id:event.pointerId,x:event.clientX,angle:facing}; figure.setPointerCapture(event.pointerId); }, { signal:abort.signal });
 figure.addEventListener('pointermove', event => { if (drag?.id !== event.pointerId) return; facing = drag.angle + (event.clientX - drag.x) * .015; refresh(); }, { signal:abort.signal });

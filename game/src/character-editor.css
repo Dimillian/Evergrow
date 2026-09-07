@@ -3,7 +3,7 @@
 
 .appearance-editor * { box-sizing:border-box; }
 .appearance-editor [hidden] { display:none!important; }
-.appearance-editor .armor-tint-overlay { position:fixed;inset:0;z-index:2;display:grid;place-items:center;padding:20px;background:#03080cbd; }
+.appearance-editor .armor-tint-overlay { position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:20px;background:#03080cbd; }
 .appearance-editor .armor-tint-dialog { width:min(100%,440px);padding:24px;background:#142229;border:1px solid #728780;box-shadow:0 16px 48px #0008; }
 .appearance-editor .armor-tint-dialog h2 { margin:0 0 16px;font-size:22px;font-weight:500;color:var(--ui-ivory); }
 .appearance-editor .armor-tint-dialog p { margin:0 0 24px;line-height:1.5;color:var(--ui-text); }
@@ -16,6 +16,8 @@
 .appearance-editor button, .appearance-editor select, .appearance-editor input { touch-action:manipulation; }
 .appearance-editor button { cursor:pointer; }
 .appearance-editor button:focus-visible, .appearance-editor select:focus-visible, .appearance-editor input:focus-visible { outline:2px solid var(--ui-focus); outline-offset:3px; }
+.appearance-editor.is-controller :is(button,select,input):focus { outline:2px solid var(--ui-focus);outline-offset:3px; }
+.appearance-editor :is(button,input,select) { scroll-margin-block:68px 12px; }
 .appearance-editor button svg { width:18px; height:18px; }
 .appearance-editor { min-height:100dvh; padding:24px 32px; background:radial-gradient(ellipse at 23% 46%, #233a3c66, transparent 52%), radial-gradient(ellipse at 86% 5%, #26362d33, transparent 42%); }
 .appearance-editor .editor-shell { max-width:1180px; margin:auto; }
@@ -149,7 +151,7 @@
 .appearance-editor .face-study span { font-size:10px; margin-top:4px; }
 .appearance-editor .world-study { display:none; }
 .appearance-editor .rotation { height:40px; margin:0; gap:8px; }
-.appearance-editor .rotation button { min-height:40px; height:40px; }
+.appearance-editor .rotation button { min-width:44px; min-height:44px; height:44px; }
 .appearance-editor .stage-options { flex-direction:row; align-items:center; padding-top:4px; gap:8px; border:0; }
 .appearance-editor .check-label { min-height:44px; font-size:13px; }
 .appearance-editor .gear-choice { width:auto; gap:6px; font-size:12px; }
@@ -193,8 +195,8 @@
 @media(prefers-reduced-motion:reduce) {
 .appearance-editor *, .appearance-editor *::before, .appearance-editor *::after { animation:none!important; transition:none!important; } }
 @media(min-width:701px) and (hover:none), (min-width:701px) and (pointer:coarse) {
-.appearance-editor .section-pager {opacity:1;pointer-events:auto;top:-8px;height:34px;}
-.appearance-editor .page-arrow {width:34px;height:34px;}
+.appearance-editor .section-pager {opacity:1;pointer-events:auto;top:-8px;height:44px;}
+.appearance-editor .page-arrow {width:44px;height:44px;}
 .appearance-editor .paged-section .choice-value {padding-right:110px;font-size:11px;}
 .appearance-editor .paged-section:hover .choice-value, .appearance-editor .paged-section:focus-within .choice-value {opacity:1;}
 }
@@ -205,3 +207,10 @@
 @media(max-width:700px){.appearance-editor .editor-commit {flex-wrap:wrap;gap:8px;padding:8px 0;}.appearance-editor #editor-error {width:100%;font-size:12px;}.appearance-editor #editor-error:empty{display:none;}.appearance-editor .editor-commit button {flex:1;min-height:44px;font-size:16px;white-space:nowrap;padding-inline:8px;}}
 
 .appearance-editor .swatch.original-color::before { background:linear-gradient(to bottom right,#fff calc(50% - 2px),#dc3545 calc(50% - 2px),#dc3545 calc(50% + 2px),#fff calc(50% + 2px)); }
+@media(max-width:700px), (pointer:coarse) {
+  .appearance-editor :is(.ui-button,.swatch,.check-label,.editor-tabs button,select) { min-height:44px; }
+  .appearance-editor .ui-button--icon { min-width:44px; }
+}
+@media(pointer:coarse) and (min-width:701px) {
+  .appearance-editor .swatches { grid-template-columns:repeat(6,minmax(44px,1fr)); }
+}

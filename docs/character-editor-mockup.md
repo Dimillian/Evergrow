@@ -18,7 +18,7 @@ Open [the character editor](http://127.0.0.1:5173/character-editor.html) with th
 - Full equipped character, face close-up, desktop small-scale view, eight facing buttons and drag-to-rotate.
 - All six starter loadouts and one Show helmet toggle in the Armor tab; the duplicate preview-side checkbox was removed. Switching gear preserves the appearance draft.
 - Name preview, independent cosmetic randomization and appearance reset. The live character view is the preview; the redundant Review look dialog and its portrait export were removed.
-- Keyboard/pointer/touch controls, reduced-motion handling, and a fixed phone preview above independently scrolling controls with sticky Character/Armor tabs. Gamepad navigation and native packaging are not part of this mockup.
+- Keyboard/pointer/touch controls, reduced-motion handling, and a fixed phone preview above independently scrolling controls with sticky Character/Armor tabs. The focused mockup now supports the production gamepad navigation; native packaging remains separate.
 
 Height, body proportions and body presets are deliberately excluded by the user's MVP direction. There are no simulation ticks, combat controls, character sessions, storage reads/writes or cloud requests. No existing test progress is reset. No Site was created or deployed.
 
