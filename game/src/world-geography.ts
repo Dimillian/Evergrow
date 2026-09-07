@@ -73,6 +73,14 @@ export function settlementPlace(seed: number, cx: number, cy: number): Place {
   places.set(key, value);
   return value;
 }
+/** The nearest jittered grid site lies in the surrounding 3×3 cells.
+ * Own-cell distance is at most sqrt(2) * .72 cells; outside this ring is >=1.28. */
+export function nearestPlace(seed:number,x:number,y:number):Place {
+  const [u,v]=geographyCoordinates(x,y,seed),cx=Math.round(u),cy=Math.round(v);
+  const candidates:Place[]=[];
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)candidates.push(settlementPlace(seed,cx+dx,cy+dy));
+  return candidates.sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y)||a.id-b.id)[0];
+}
 export function queryPlaces(seed: number, x: number, y: number, width: number, height: number, margin = 1000): Place[] {
   if (!validWorldRectangle(x, y, width, height))
     return [];

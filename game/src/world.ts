@@ -21,7 +21,7 @@ import { drawRoadDetails } from './road-art.ts';
 import { isWorldCoordinate, validWorldRectangle, WORLD_QUERY_LIMITS } from './world-query.ts';
 import { generateWildernessSite, startingEnemyCamp, wildernessPOI, WILDERNESS_RULES, type WildernessSite, type EnemyCamp } from './wilderness-sites.ts';
 export { pathDistance } from './road-shape.ts';
-import { placeCell, queryPlaces, settlementPlace, type Place } from './world-geography.ts';
+import { nearestPlace, placeCell, queryPlaces, settlementPlace, type Place } from './world-geography.ts';
 
 /** All coordinates are world pixels; prop positions are their ground contacts. */
 export interface Prop {
@@ -112,6 +112,8 @@ export class World {
   dispose() { this.collisionRegions.clear(); this.groundWork.clear(); this.propCells.clear(); this.groundTiles.clear(); this.settlements.clear(); this.settlementCells.clear(); this.wilderness.clear(); }
 
   sampleBiome(x: number, y: number): BiomeSample { return sampleBiome(x, y, this.seed); }
+
+  getNearestSettlement(x:number,y:number):Settlement { return this.settlement(nearestPlace(this.seed,x,y).id); }
 
   getPortalAnchor(band: number) { return townPortalAnchor(this.settlement(band)); }
 

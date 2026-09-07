@@ -45,6 +45,7 @@ export function reconcileJourneys(state:JourneyState,facts:JourneyFacts,safe:boo
     if(safe&&goal.finishedAt!==undefined&&facts.time-goal.finishedAt>=2)next.history.push(goal);
     else next[collection].push(goal);
   }
+  if(next.townPin&&journeyComplete(next.townPin,facts))delete next.townPin;
   next.history=next.history.slice(-64);if(next.recommended&&!next.offers.some(g=>g.id===next.recommended&&g.finishedAt===undefined))next.recommended=null;return next;
 }
 export interface JourneyWorld {

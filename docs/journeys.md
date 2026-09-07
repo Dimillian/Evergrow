@@ -15,6 +15,12 @@ The mini log has at most three activity rows: pinned activity, recommendation an
 
 A district change or level-up allows a quiet refresh after eight active seconds; moving 700 units or losing a recommendation allows it after fifteen seconds. Completing an activity allows a fresh search after a two-second completion beat. Refresh only runs during surface play, outside nearby combat, attacks, channels and save transactions. Menus pause the clock. Boundary crossings coalesce instead of generating announcements. Changing recommendations never rescales a source or moves a pinned objective.
 
+## Nearest city
+
+The journal always includes the nearest settlement, including visited towns and cities, with its name, level, distance and a Pin action. This navigation entry is independent of completed/dismissed quests and the three accepted-activity slots. It updates with the player's location (or the surface entrance while underground); a city already pinned stays fixed when a different city becomes nearest. City pins use the existing map/return-portal navigation, survive saving, and clear on arrival. Town markers name the actual destination without revealing map terrain. Returning to a visited town grants no repeat arrival XP.
+
+Nearest settlement lookup checks nine seeded geography anchors, then loads only the closest town layout through the existing cache. It does not scan the whole map or generate encounters.
+
 ## Natural completion
 
 **Tracking is not required for credit or bonus XP.** POI completion and the final crypt chest create journal history even if the activity was never offered or was dismissed. Town arrival also counts naturally. Frontier arrival counts for generated leads in the catalogue; arbitrary walking does not invent new objectives.

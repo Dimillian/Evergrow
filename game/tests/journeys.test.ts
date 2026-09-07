@@ -147,3 +147,42 @@ test('completed recommendations refresh after a short beat, then old receipts ca
   s.history=s.offers;s.offers=[goal('next')];s.recommended='next';s.refreshedAt=13;
   f.time=30;assert.equal(journeyNeedsRefresh(s,f),false);
 });
+
+
+test('nearest city remains pinnable after completion and dismissal with a full accepted list',async()=>{
+  const sim=simulation(),f=facts(),city=goal('town:nearest','town');
+  sim.journeys.nearestTown=city;sim.journeys.completed=[city.id];sim.journeys.dismissed=[city.id];
+  sim.journeys.history=[{...city,finishedAt:1,rewardXP:10}];sim.journeys.accepted=[goal('a'),goal('b'),goal('c')];
+  const before=sim.captureCheckpoint();
+  const failed=await executeJourneyCommand(sim,{type:'track',id:city.id},()=>({ok:false,message:'Unavailable'}),f);
+  assert.equal(failed.ok,false);assert.deepEqual(sim.captureCheckpoint(),before);
+  const pinned=await executeJourneyCommand(sim,{type:'track',id:city.id},()=>({ok:true,message:''}),f);
+  assert.ok(pinned.ok);assert.equal(guidedJourney(sim.journeys)?.id,city.id);assert.equal(sim.journeys.accepted.length,3);
+  sim.journeys.nearestTown=goal('town:closer','town');assert.equal(guidedJourney(sim.journeys)?.id,city.id);
+  assert.ok(validJourneys(sim.journeys));
+  const restored=simulation();restored.restoreCheckpoint(sim.captureCheckpoint());
+  assert.deepEqual(restored.journeys.townPin,city);
+  restored.player.x=city.x;restored.player.y=city.y;
+  assert.equal(restored.completeJourneyArrival(city),false);assert.equal(restored.player.xp,before.xp);
+  restored.journeys=reconcileJourneys(restored.journeys,{...f,x:city.x,y:city.y},true);
+  assert.equal(restored.journeys.townPin,undefined);assert.equal(restored.journeys.nearestTown?.id,'town:closer');
+});
+test('city navigation pins cannot carry completion rewards or replace another explicit pin silently',()=>{
+  let s=freshJourneys();s.nearestTown=goal('town:nearest','town');s.offers=[goal('activity')];
+  s=planJourney(s,{type:'track',id:s.nearestTown.id})!;
+  s=planJourney(s,{type:'track',id:'activity'})!;
+  assert.equal(s.townPin,undefined);assert.equal(s.tracked,'activity');
+  assert.ok(validJourneys(s));
+  s.townPin=goal('town:nearest','town');assert.equal(validJourneys(s),false);
+  s.tracked=null;s.townPin.rewardXP=10;assert.equal(validJourneys(s),false);
+  delete s.townPin.rewardXP;s.townPin.kind='camp';assert.equal(validJourneys(s),false);
+});
+test('nearest settlement lookup matches a wider exhaustive neighborhood across geography boundaries',async()=>{
+  const {nearestPlace,settlementPlace,geographyCoordinates}=await import('../src/world-geography.ts');
+  for(const seed of [7319,18427])for(const [x,y]of [[0,0],[7800,-19000],[-26000,10000],[25000,26000]]){
+    const [u,v]=geographyCoordinates(x,y,seed),cx=Math.round(u),cy=Math.round(v),all=[];
+    for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++)all.push(settlementPlace(seed,cx+dx,cy+dy));
+    all.sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y)||a.id-b.id);
+    assert.equal(nearestPlace(seed,x,y).id,all[0].id);
+  }
+});

@@ -3,6 +3,7 @@ export const JOURNEY_KINDS = ['camp','caravan','watchtower','graveyard','standin
 export type JourneyKind = typeof JOURNEY_KINDS[number];
 export interface JourneyGoal { id:string; kind:JourneyKind; name:string; x:number; y:number; level:number; region:string; finishedAt?:number; rewardXP?:number }
 export interface JourneyState {
+  nearestTown?:JourneyGoal; townPin?:JourneyGoal;
   completed?:string[]; recommended?:string|null; areaId?:string;
   accepted:JourneyGoal[]; offers:JourneyGoal[]; history:JourneyGoal[]; dismissed:string[];
   tracked:string|null; collapsed:boolean; suggestions:boolean; refreshedAt:number; level:number; x:number; y:number;
@@ -26,6 +27,10 @@ export function planJourney(state:JourneyState,command:JourneyCommand):JourneySt
   const next:JourneyState=JSON.parse(JSON.stringify(state));
   if(command.type==='collapse'){next.collapsed=command.value;return next;}
   if(command.type==='suggestions'){next.suggestions=command.value;return next;}
+  if(command.type==='untrack'&&next.townPin?.id===command.id){delete next.townPin;return next;}
+  if(command.type==='track'&&(next.nearestTown?.id===command.id||next.townPin?.id===command.id)){
+    next.townPin=next.townPin?.id===command.id?next.townPin:next.nearestTown;next.tracked=null;return next;
+  }
   if(command.type==='untrack'){if(next.tracked!==command.id)return null;next.tracked=null;return next;}
   if(!('id' in command))return null;
   const goal=[...next.accepted,...next.offers].find(g=>g.id===command.id);
@@ -35,7 +40,7 @@ export function planJourney(state:JourneyState,command:JourneyCommand):JourneySt
       if(next.accepted.length>=3)return null;
       next.accepted.push(goal);next.offers=next.offers.filter(g=>g.id!==goal.id);
     }
-    next.tracked=goal.id;
+    delete next.townPin;next.tracked=goal.id;
     if(next.recommended===goal.id)next.recommended=null;
   }else{
     if(next.offers.some(g=>g.id===goal.id))next.suggestions=false;
@@ -54,7 +59,7 @@ export function recommendedJourney(state:JourneyState):JourneyGoal|undefined {
 }
 /** Explicit pins win; otherwise navigation follows the live recommendation without accepting it. */
 export function guidedJourney(state:JourneyState):JourneyGoal|undefined {
-  return state.accepted.find(g=>g.id===state.tracked&&g.finishedAt===undefined)
+  return state.townPin??state.accepted.find(g=>g.id===state.tracked&&g.finishedAt===undefined)
     ??(state.suggestions?recommendedJourney(state):undefined);
 }
 export function nearbyJourneys(state:JourneyState,position:{x:number;y:number}=state):JourneyGoal[] {
@@ -62,10 +67,10 @@ export function nearbyJourneys(state:JourneyState,position:{x:number;y:number}=s
     .sort((a,b)=>Math.hypot(a.x-position.x,a.y-position.y)-Math.hypot(b.x-position.x,b.y-position.y));
 }
 export function miniJourneys(state:JourneyState,position:{x:number;y:number}=state):JourneyGoal[]{
-  const tracked=state.accepted.find(g=>g.id===state.tracked&&g.finishedAt===undefined);
+  const tracked=state.townPin??state.accepted.find(g=>g.id===state.tracked&&g.finishedAt===undefined);
   const recommended=state.suggestions?recommendedJourney(state):undefined;
   const nearby=state.suggestions?nearbyJourneys(state,position).filter(g=>g.id!==recommended?.id):[];
-  return [...(tracked?[tracked]:[]),...(recommended?[recommended]:[]),...nearby].slice(0,3);
+  return [...(tracked?[tracked]:[]),...(recommended&&recommended.id!==tracked?.id?[recommended]:[]),...nearby.filter(g=>g.id!==tracked?.id)].slice(0,3);
 }
 export function validJourneys(value:unknown):value is JourneyState {
   if(!value||typeof value!=='object')return false;
@@ -76,6 +81,8 @@ export function validJourneys(value:unknown):value is JourneyState {
     &&(g.rewardXP===undefined||Number.isSafeInteger(g.rewardXP)&&g.rewardXP>=0)
     &&JOURNEY_KINDS.includes(g.kind)&&coord(g.x)&&coord(g.y)&&Number.isInteger(g.level)&&g.level>=1&&g.level<=1e6
     &&(g.finishedAt===undefined||typeof g.finishedAt==='number'&&Number.isFinite(g.finishedAt)&&g.finishedAt>=0);
+  for(const city of [v.nearestTown,v.townPin])if(city!==undefined&&(!goal(city)||city.kind!=='town'||city.finishedAt!==undefined||city.rewardXP!==undefined))return false;
+  if(v.townPin&&v.tracked!==null)return false;
   if(v.completed!==undefined&&(!Array.isArray(v.completed)||!v.completed.every(id=>str(id,180))||new Set(v.completed).size!==v.completed.length))return false;
   if(!Array.isArray(v.accepted)||v.accepted.length>3||!v.accepted.every(goal)||!Array.isArray(v.offers)||v.offers.length>12||!v.offers.every(goal)
     ||!Array.isArray(v.history)||v.history.length>64||!v.history.every(g=>goal(g)&&g.finishedAt!==undefined)

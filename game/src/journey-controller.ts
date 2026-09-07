@@ -51,7 +51,7 @@ export class JourneyController {
         const p = this.host.sim.player;
         const area = getZoneAt(p.x, p.y, this.host.overworld.seed);
         return { areaId: area.id, areaLevel: area.level, x: p.x, y: p.y, level: p.level, time: this.host.sim.time, events: this.host.sim.eventState, expeditions: this.host.sim.expeditions,
-            discovered: id => { const goal = [...this.host.sim.journeys.accepted, ...this.host.sim.journeys.offers].find(g => g.id === id); return goal?.kind === 'frontier' ? this.host.exploration.isRevealed(goal.x, goal.y) : this.host.exploration.isDiscovered(id); }, campCleared: id => this.host.sim.getCampState(id) === 'cleared' || !!this.host.sim.expeditions.surface?.clearedCamps.includes(id) };
+            discovered: id => { const goal = [this.host.sim.journeys.townPin, this.host.sim.journeys.nearestTown, ...this.host.sim.journeys.accepted, ...this.host.sim.journeys.offers].filter(g=>g!==undefined).find(g => g.id === id); return goal?.kind === 'frontier' ? this.host.exploration.isRevealed(goal.x, goal.y) : this.host.exploration.isDiscovered(id); }, campCleared: id => this.host.sim.getCampState(id) === 'cleared' || !!this.host.sim.expeditions.surface?.clearedCamps.includes(id) };
     }
     async command(command: JourneyCommand): Promise<boolean> {
         return this.host.durable(async () => {
@@ -74,7 +74,7 @@ export class JourneyController {
     private showMap(id: string) {
         if (this.host.savingAction)
             return;
-        const goal = [...this.host.sim.journeys.accepted, ...this.host.sim.journeys.offers].find(g => g.id === id);
+        const goal = [this.host.sim.journeys.townPin, this.host.sim.journeys.nearestTown, ...this.host.sim.journeys.accepted, ...this.host.sim.journeys.offers].filter(g=>g!==undefined).find(g => g.id === id);
         if (!goal)
             return;
         this.host.panels.transition('map');
@@ -135,6 +135,11 @@ export class JourneyController {
         this.host.renderer.extraUIBounds = this.panel.bounds(this.host.renderer.width, this.host.renderer.height);
     }
     refreshUI() {
+        // Dungeon coordinates belong to another map: measure from its surface entrance.
+        const origin = currentDungeon(this.host.sim.expeditions)?.entrance ?? this.host.sim.player;
+        const town = this.host.overworld.getNearestSettlement(origin.x,origin.y);
+        const zone = getZoneAt(town.x,town.y,this.host.overworld.seed);
+        this.host.sim.journeys.nearestTown = {id:town.id,kind:'town',name:town.name,x:town.x,y:town.y,level:zone.level,region:zone.name};
         const state = this.host.sim.journeys, p = this.host.sim.player, facts = this.facts();
         this.panel.update(state, facts, this.host.phase === 'playing' && this.host.navigationVisible, this.host.renderer.width, this.host.renderer.height);
         const goal = guidedJourney(state);

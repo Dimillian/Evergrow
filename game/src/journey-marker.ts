@@ -2,6 +2,7 @@ import { projectMapPoint, type MapView } from './map-view.ts';
 import type { JourneyGoal } from './journey-state.ts';
 export interface JourneyMarker { x:number;y:number;known:boolean;name:string; }
 export function publicJourneyMarker(goal:JourneyGoal,discovered:boolean):JourneyMarker {
+  discovered ||= goal.kind==='town';
   return {x:discovered?goal.x:(Math.floor(goal.x/768)+.5)*768,y:discovered?goal.y:(Math.floor(goal.y/768)+.5)*768,known:discovered,name:discovered?goal.name:'Search area'};
 }
 export function questDiamond(c:CanvasRenderingContext2D,x:number,y:number,size=7){
