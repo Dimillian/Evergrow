@@ -1,3 +1,5 @@
+import { drawEnemyWarning, enemyWarningLight } from './enemy-warning-art.ts';
+import { drawGroundSpell, groundSpellLights } from './ground-spell-art.ts';
 import { enemyDebuffs } from './enemy-debuffs.ts';
 import { basicAttackWeapon } from './equipment.ts';
 import { projectilePresentation } from './projectile-launch.ts';
@@ -10,7 +12,7 @@ import type { FrameProfiler } from './frame-profiler.ts';
 import { WaterPresentation } from './water-presentation.ts';
 import { WaterArt } from './water-art.ts';
 import { CRYPT_AMBIENT, cryptLights, cryptLightMask } from './dungeon-lighting.ts';
-import { drawCryptGate, drawCryptDecor, drawWardenWarning, drawCryptEmission } from './dungeon-art.ts';
+import { drawCryptGate, drawCryptDecor, drawCryptEmission } from './dungeon-art.ts';
 import { currentDungeon } from './dungeon-state.ts';
 import { EventArt, drawEventUI } from './poi-art.ts';
 import { drawPortal, drawTownAnchor } from './travel-art.ts';
@@ -49,7 +51,7 @@ import { propDefinition } from './biome-props.ts';
 import { SceneVisibility } from './scene-visibility.ts';
 import { isGameUIPoint } from './ui-hit-test.ts';
 import type { GamePhase } from './game-phase.ts';
-import { COMBAT_TIMING, ENEMY_DEFINITIONS, PLAYER_ABILITIES, PLAYER_MOVEMENT } from './combat-content.ts';
+import { COMBAT_TIMING, PLAYER_ABILITIES, PLAYER_MOVEMENT } from './combat-content.ts';
 import { CAMERA_FOLLOW, CameraZoom, cameraFollowTarget, cameraSpawnExclusion,
   cameraView, screenToWorld, worldToScreen } from './camera.ts';
 import { EnemyFocus } from './enemy-focus.ts';
@@ -387,13 +389,18 @@ export class Renderer {
     drawLevelCelebration(c, this.rewards.level, px, py, settings.reducedMotion);
     drawGroundLoot(c, sim.groundItems, this.visualTime, settings.reducedMotion);
     this.effects.drawSword(c);
-    this.effects.draw(c);
+    for (const effect of sim.groundEffects) {
+      if (effect.x + effect.radius < left || effect.x - effect.radius - 180 > left + worldWidth
+        || effect.y + effect.radius < top || effect.y - effect.radius - 500 > top + worldHeight) continue;
+      drawGroundSpell(c, effect, this.visualTime, settings.reducedMotion);
+    }
+    this.effects.draw(c, settings.reducedMotion);
     if (!sim.dungeonFloor) this.waterArt.drawSplashes(c, this.water.fluid);
     this.damageDirection(px, py);
     if(!sim.dungeonFloor) this.motes(world, left, top, worldWidth, worldHeight, sim.time, settings.reducedMotion);
     if(!sim.dungeonFloor) this.environmentArt.drawAmbient(c, (x, y) => world.sampleBiome(x, y).weights, { x: left, y: top, width: worldWidth, height: worldHeight },
       this.visualTime, settings.reducedMotion);
-    for (const enemy of sim.enemies) { if(enemy.kind==='warden') drawWardenWarning(c,enemy); else this.telegraph(enemy, alpha); }
+    for (const enemy of sim.enemies) drawEnemyWarning(c, enemy, alpha, this.visualTime, settings.reducedMotion);
     this.healthBars(sim, alpha);
     c.restore();
 
@@ -656,6 +663,11 @@ export class Renderer {
         power: .55 * Math.sin(Math.PI * Math.min(1, (a.elapsed - a.activeStart) / (a.activeEnd - a.activeStart + .05))), shadows: true });
     }
     if (p.healFlash > 0) lights.push({ x: px, y: py - 8, radius: 150, color: '#54e8b8', power: p.healFlash * .8 });
+    lights.push(...sim.groundEffects.flatMap(effect => groundSpellLights(effect, reducedMotion)).filter(light => light.x + light.radius >= this.view.left
+      && light.x - light.radius <= this.view.left + this.view.width && light.y + light.radius >= this.view.top
+      && light.y - light.radius <= this.view.top + this.view.height).slice(-5));
+    lights.push(...sim.enemies.map(enemyWarningLight).filter((light): light is PointLight => light !== null)
+      .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py)).slice(0, 3));
     lights.push(...this.effects.getLights(), ...this.materials.lights(reducedMotion));
     for (const shot of sim.projectiles.slice(0, 8)) lights.push(projectileLight(shot, alpha));
     for(const e of sim.enemies)if(e.kind==='warden'&&e.hp>0)lights.push({x:e.x,y:e.y-50,radius:150,color:'#a3d4b9',power:e.state==='windup'?.48:.23});
@@ -716,58 +728,6 @@ export class Renderer {
       }
     }
     c.globalAlpha = 1;
-  }
-
-  private telegraph(enemy: Enemy, alpha: number) {
-    if (enemy.state !== 'windup' && enemy.state !== 'attack') return;
-    const c = this.ctx, t = enemy.state === 'attack' ? 1 : Math.min(1, enemy.stateTime / Math.max(.01, enemy.stateDuration));
-    const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);
-    c.save();
-    const definition = ENEMY_DEFINITIONS[enemy.kind];
-    const locked = enemy.stateTime >= definition.aimLock || enemy.state === 'attack';
-    if (definition.attack === 'ground') {
-      const { blastRadius } = definition;
-      c.translate(enemy.attackTargetX, enemy.attackTargetY);
-      c.fillStyle = `rgba(117,144,240,${.035 + t * .1})`;
-      c.beginPath(); c.arc(0, 0, blastRadius, 0, TAU); c.fill();
-      c.strokeStyle = `rgba(163,206,255,${.35 + t * .5})`; c.lineWidth = 1.2;
-      c.setLineDash(locked ? [] : [4, 4]); c.stroke(); c.setLineDash([]);
-      c.lineWidth = 2; c.beginPath(); c.arc(0, 0, blastRadius - 4, -Math.PI / 2, -Math.PI / 2 + TAU * t); c.stroke();
-      c.globalAlpha = .35 + t * .4;
-      for (let i = 0; i < 4; i++) {
-        c.save(); c.rotate(i * TAU / 4); c.beginPath(); c.moveTo(blastRadius - 10, -3);
-        c.lineTo(blastRadius - 14, 0); c.lineTo(blastRadius - 10, 3); c.stroke(); c.restore();
-      }
-      drawGlow(c, 0, 0, 16 + t * 15, '#b6caff', .12 + t * .25);
-    } else if (definition.attack === 'projectile') {
-      const color = definition.projectileStyle === 'arrow' ? '255,183,117' : '113,255,184';
-      c.strokeStyle = `rgba(${color},${.12 + t * .4})`; c.lineWidth = locked ? 1 : .75;
-      c.setLineDash(locked ? [8, 5] : [2, 6]);
-      for (const offset of definition.shotOffsets) {
-        const aim = enemy.attackAngle + offset;
-        c.beginPath(); c.moveTo(x + Math.cos(aim) * 15, y + Math.sin(aim) * 15);
-        c.lineTo(x + Math.cos(aim) * definition.range, y + Math.sin(aim) * definition.range); c.stroke();
-      }
-    } else if (definition.engageDistance) {
-      // A pounce is a committed travel lane; its warning spans the actual lunge distance.
-      c.translate(x, y); c.rotate(enemy.attackAngle);
-      const remaining = Math.max(0, definition.active - (enemy.state === 'attack' ? enemy.stateTime : 0));
-      const reach = definition.lungeSpeed * remaining + definition.range;
-      c.fillStyle = `rgba(255,141,78,${.025 + t * .07})`; c.strokeStyle = `rgba(255,181,119,${.2 + t * .55})`;
-      c.lineWidth = 1; c.beginPath(); c.moveTo(8, -11); c.lineTo(reach - 15, -11);
-      c.lineTo(reach, 0); c.lineTo(reach - 15, 11); c.lineTo(8, 11); c.closePath(); c.fill(); c.stroke();
-      c.beginPath(); c.moveTo(12 + (reach - 30) * t, -5); c.lineTo(18 + (reach - 30) * t, 0);
-      c.lineTo(12 + (reach - 30) * t, 5); c.stroke();
-    } else {
-      const { range, arc } = definition;
-      c.fillStyle = `rgba(255,102,58,${.025 + t * .09})`; c.strokeStyle = `rgba(255,160,83,${.22 + t * .62})`;
-      c.lineWidth = enemy.kind === 'brute' ? 1.5 : 1;
-      c.beginPath(); c.moveTo(x, y); c.arc(x, y, range, enemy.attackAngle - arc / 2, enemy.attackAngle + arc / 2); c.closePath(); c.fill(); c.stroke();
-      if (enemy.kind === 'brute') {
-        c.strokeStyle = '#ffc579'; c.beginPath(); c.arc(x, y, range * (.4 + t * .6), enemy.attackAngle - arc / 2, enemy.attackAngle + arc / 2); c.stroke();
-      }
-    }
-    c.restore();
   }
 
   private healthBars(sim: Simulation, alpha: number) {

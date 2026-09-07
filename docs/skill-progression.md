@@ -75,3 +75,7 @@ The atlas now has 2,185 nodes, 3,047 curved edges and 162 labeled groups: 150 pa
 `skill-progression.ts` resolves active rank, specialization, potency, execution recipe, mana and cooldown for combat, HUD and atlas. Character commands own validated purchases/configuration. Save format **3** persists purchased ranks, chosen casting ranks, selected specializations and Overload, and validates point conservation including extra ranks. Older slots remain stored but require a new character; no migration is provided.
 
 Frozen local review: `/character.html?panel=skills&progression=1`. Add `&zoom=overview` or `&node=skill:cataclysm` to inspect outer content. This uses memory-only staged progression, never a saved character or gameplay ticks. Player playtesting is still needed for balance and combat feel.
+
+### Meteor ground fire
+
+Meteor, Shattered Sky and Cataclysm leave four-second burning patches after each impact. Their non-stacking burn uses 12% of the resolved impact damage per second; rank and specialization damage multipliers therefore also affect the ground fire. Duration and refresh interval are authored in `SkillExecution.scorch` and snapshotted on release; no additional duration upgrade is introduced yet. See [weapons and skills](weapons-and-skills.md#spell-anticipation-and-meteor-aftermath--2026-09-07).

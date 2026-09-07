@@ -22,7 +22,7 @@ Implemented 2026-09-07. One procedural presentation system serves containers, co
 
 Frost deaths briefly retain a cracked, icy silhouette before dispersing. Fire deaths collapse into darkened remains with rising embers and an earlier fade. `EnemyDeaths` snapshots these choices; it never modifies living actors. The original four articulated physical death variants remain.
 
-A melee swing produces at most one non-destructive scenery response. Swept projectile obstruction contacts classify the actual tree, ice crystal, site decor or wall; a shattered container already owns its burst and cannot trigger a duplicate surface response. Stone walls and trees remain solid. Chests and boss reveals are future consumers, not new gameplay in this pass.
+A melee swing produces at most one non-destructive scenery response. Swept projectile obstruction contacts classify the actual tree, ice crystal, site decor or wall; a shattered container already owns its burst and cannot trigger a duplicate surface response. Stone walls and trees remain solid. Meteor impacts now share this budget for stone fragments plus rising embers. Fire/frost blasts add their corresponding material response, and Earthshatter adds stone. Burning patches do not emit repeated blast fragments. Chests and boss reveals remain future consumers.
 
 Material noise layers add quiet texture to elemental impacts, kills and blocks. Container/scenery impacts use their material's crack/body recipe. Existing loot, XP and level-up sounds remain unchanged.
 

@@ -181,7 +181,7 @@ test('ground skills schedule delayed effects inside weapon range and before bloc
     assert.ok(effect.delay > 0 && effect.damage > 0);
     assert.ok(Math.hypot(effect.x, effect.y) <= h.player.equipment.mainHand.reach);
     if (id === 'rainOfArrows') close(effect.duration / effect.interval, 4);
-    else assert.equal(effect.duration, 0);
+    else { assert.equal(effect.duration, 0); assert.equal(effect.scorch?.duration, 4); close(effect.scorch!.dps, effect.damage * .12); }
     const walled = harness(id); walled.context.aimX = 400;
     walled.context.world = { ...emptyWorld, blocked: x => x >= 100 && x < 120 };
     assert.ok(activateSkill(walled.context, 0)); assert.ok(walled.scheduled[0].x < 100);

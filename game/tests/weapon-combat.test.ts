@@ -202,16 +202,17 @@ test('rain of arrows waits for its marker then produces exactly four actual dama
   advance(sim, 1); assert.equal(hitEvents(sim.drainEvents(), enemy).length, 0);
 });
 
-test('meteor waits for impact, explodes exactly once, and applies its burning status', () => {
+test('meteor waits for impact, explodes once and sustains burning ground until expiry', () => {
   const sim = skillSim('meteor'), enemy = target(sim, 180);
   cast(sim, 180); advance(sim, .7); assert.equal(enemy.hp, enemy.maxHp);
   advance(sim, .25);
   const events = sim.drainEvents();
   assert.equal(hitEvents(events, enemy).length, 1); assert.equal(events.filter(event => event.type === 'blast' && event.skill === 'meteor').length, 1);
-  assert.equal(sim.groundEffects.length, 0); assert.ok(enemy.burnTime > 2.8 && enemy.burnDps > 0);
+  assert.equal(sim.groundEffects.length, 1); assert.equal(sim.groundEffects[0].kind, 'embers'); assert.ok(enemy.burnTime > 2.8 && enemy.burnDps > 0);
   advance(sim, 3.2);
   assert.equal(sim.drainEvents().filter(event => event.type === 'blast' && event.skill === 'meteor').length, 0);
-  assert.equal(enemy.burnTime, 0);
+  assert.ok(enemy.burnTime > 0);
+  advance(sim, 1.5); assert.equal(sim.groundEffects.length, 0); assert.equal(enemy.burnTime, 0);
 });
 
 test('shield blocks apply their reduction, while Bulwark guarantees stronger reduction then expires', () => {

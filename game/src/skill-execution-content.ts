@@ -12,7 +12,7 @@ export type SkillExecution = (
   | { kind: 'projectile'; speed: number; radius: number; offsets: readonly number[];
       effects: Readonly<Omit<ProjectileEffects, 'burnDps'> & { burnDamageMultiplier?: number }> }
   | { kind: 'ground'; effect: 'meteor' | 'arrowRain' | 'storm' | 'frost'; radius: number; delay: number; duration: number; interval: number;
-      style: ProjectileStyle; scatter?: number; slow?: SlowEffect; stun?: number; follow?: boolean; burn?: { readonly duration: number; readonly damageMultiplier: number } }
+      style: ProjectileStyle; scorch?: { readonly duration: number; readonly interval: number; readonly damageMultiplier: number }; scatter?: number; slow?: SlowEffect; stun?: number; follow?: boolean; burn?: { readonly duration: number; readonly damageMultiplier: number } }
   | { kind: 'chain'; jumps: number; range: number; falloff: number; duration: number; style: ProjectileStyle; revisit?: boolean });
 
 export const GROUND_EFFECT_RULES = Object.freeze({ maximum: 16, minimumInterval: .05 });
@@ -25,7 +25,7 @@ export const SKILL_TARGETING = Object.freeze({ maximumRange: 900, probeStep: 4, 
 
 /** Execution tuning is content. Handlers operate on these recipes, never skill-name branches. */
 export const SKILL_EXECUTION = {
-  cataclysm: { kind: 'ground', effect: 'meteor', radius: 105, delay: 1, duration: 0, interval: .5, style: 'fire', scatter: 7, burn: { duration: 3, damageMultiplier: .12 } },
+  cataclysm: { kind: 'ground', effect: 'meteor', radius: 105, delay: 1, duration: 0, interval: .5, style: 'fire', scatter: 7, scorch: { duration: 4, interval: .25, damageMultiplier: .12 }, burn: { duration: 3, damageMultiplier: .12 } },
   tempest: { kind: 'ground', effect: 'storm', radius: 195, delay: .4, duration: 6, interval: .5, style: 'lightning', follow: true },
   absoluteZero: { kind: 'ground', effect: 'frost', radius: 240, delay: .5, duration: 1.3, interval: 1.2, style: 'frost', slow: { duration: 4, factor: .25 }, stun: 1.5 },
   cleave: { kind: 'sweep', reachMultiplier: 1.4, arc: Math.PI * 1.4, blast: false },
@@ -43,7 +43,7 @@ export const SKILL_EXECUTION = {
   frostLance: { kind: 'projectile', speed: 440, radius: 5, offsets: [0], effects: { style: 'frost', pierce: 3, slowFactor: .5, slowDuration: 2.5 } },
   siphon: { kind: 'projectile', speed: 350, radius: 5, offsets: [0], effects: { style: 'spirit', lifeSteal: .35 } },
   iceNova: { kind: 'radial', radius: 115, melee: false, slow: { duration: 2.5, factor: .5 }, style: 'frost' },
-  meteor: { kind: 'ground', effect: 'meteor', radius: 125, delay: .85, duration: 0, interval: 1, style: 'fire', burn: { duration: 3, damageMultiplier: .12 } },
+  meteor: { kind: 'ground', effect: 'meteor', radius: 125, delay: .85, duration: 0, interval: 1, style: 'fire', scorch: { duration: 4, interval: .25, damageMultiplier: .12 }, burn: { duration: 3, damageMultiplier: .12 } },
   arcLightning: { kind: 'chain', jumps: 5, range: 145, falloff: .78, duration: .28, style: 'lightning' },
 } as const satisfies Record<SkillId, SkillExecution>;
 

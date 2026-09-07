@@ -125,6 +125,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
         context.schedule({ kind: recipe.effect, ...target, radius: recipe.radius, delay: recipe.delay + i * .18,
           duration: recipe.duration, interval: recipe.interval, damage, skill: id, style: recipe.style,
           follow: recipe.follow, upkeep: costs.upkeep, slow: recipe.slow, stun: recipe.stun,
+          ...(recipe.scorch ? { scorch: { duration: recipe.scorch.duration, interval: recipe.scorch.interval, dps: damage * recipe.scorch.damageMultiplier } } : {}),
           ...(recipe.burn ? { burn: { duration: recipe.burn.duration, dps: damage * recipe.burn.damageMultiplier } } : {}) });
       }
       break;

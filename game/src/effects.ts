@@ -173,7 +173,7 @@ export class CombatEffects {
 
   drawSword(c: CanvasRenderingContext2D) { this.sword.draw(c); }
 
-  draw(c: CanvasRenderingContext2D) {
+  draw(c: CanvasRenderingContext2D, reducedMotion = false) {
     c.save();
     for (const flash of this.flashes) {
       c.globalAlpha = 1;
@@ -185,7 +185,7 @@ export class CombatEffects {
         c.beginPath(); c.ellipse(flash.x, flash.y + 14, 8 + (1 - t) * 47, 4 + (1 - t) * 24, 0, 0, Math.PI * 2); c.stroke();
       }
     }
-    this.skillEffects.draw(c);
+    this.skillEffects.draw(c, reducedMotion);
     for (const impact of this.impacts) this.drawImpact(c, impact);
     for (const spark of this.sparks) {
       const t = Math.min(1, spark.life / spark.max * 1.8), y = spark.y - spark.z;

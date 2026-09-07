@@ -6,7 +6,7 @@ import { PROJECTILE_COLORS } from './projectile-art.ts';
 
 interface Area {
   x: number; y: number; radius: number; life: number; max: number; color: string;
-  style: ProjectileStyle; kind: 'blast' | 'ground' | 'block'; seed: number;
+  style: ProjectileStyle; kind: 'blast' | 'block'; seed: number; meteor: boolean;
 }
 interface Link { points: Point[]; life: number; max: number; color: string; style: ProjectileStyle; }
 const TAU = Math.PI * 2;
@@ -35,10 +35,11 @@ export class SkillEffects {
       this.links.push({ points, life: max, max, color, style });
       if (this.links.length > 24) this.links.shift();
     }
-    if (event.type === 'blast' || event.type === 'ground' || event.type === 'block') {
-      const max = event.type === 'ground' ? bounds(event.duration, .15, 8, 1.2) : event.type === 'block' ? .32 : style === 'frost' ? .7 : .56;
+    if (event.type === 'blast' || event.type === 'block') {
+      const meteor = event.type === 'blast' && event.groundKind === 'meteor';
+      const max = meteor ? 1.15 : event.type === 'block' ? .32 : style === 'frost' ? .7 : .56;
       this.areas.push({ x: event.x, y: event.y, radius: event.type === 'block' ? 22 : bounds(event.radius, 8, 250, 55),
-        life: max, max, style, color, kind: event.type, seed: this.sequence++ });
+        life: max, max, style, color, kind: event.type, meteor, seed: this.sequence++ });
       if (this.areas.length > 20) this.areas.shift();
     }
   }
@@ -51,14 +52,14 @@ export class SkillEffects {
   }
 
   getLights(): PointLight[] {
-    return this.areas.filter(area => area.kind !== 'ground').slice(-3).map(area => ({
+    return this.areas.slice(-3).map(area => ({
       x: area.x, y: area.y - 12, radius: Math.max(65, area.radius * 2.1), color: area.color, power: area.life / area.max * .95,
     }));
   }
 
-  draw(c: CanvasRenderingContext2D): void {
+  draw(c: CanvasRenderingContext2D, reducedMotion = false): void {
     c.save();
-    for (const area of this.areas) this.drawArea(c, area);
+    for (const area of this.areas) this.drawArea(c, area, reducedMotion);
     c.globalCompositeOperation = 'lighter';
     for (const link of this.links) {
       const life = Math.max(0, link.life / link.max);
@@ -75,7 +76,7 @@ export class SkillEffects {
     c.restore();
   }
 
-  private drawArea(c: CanvasRenderingContext2D, area: Area): void {
+  private drawArea(c: CanvasRenderingContext2D, area: Area, reducedMotion: boolean): void {
     const life = Math.max(0, area.life / area.max), progress = 1 - life;
     c.save(); c.translate(area.x, area.y);
     if (area.kind === 'block') {
@@ -86,24 +87,24 @@ export class SkillEffects {
       line(c, [[0, -6], [0, 5]], '#e4faff', 1.3);
       c.restore(); return;
     }
-    if (area.kind === 'ground') {
-      c.globalAlpha = .23 * Math.min(1, progress * 6) * Math.min(1, life * 8);
-      c.fillStyle = area.color; c.beginPath(); c.ellipse(0, 0, area.radius, area.radius * .62, 0, 0, TAU); c.fill();
-      c.globalAlpha = .64 * Math.min(1, life * 8); c.strokeStyle = area.color; c.lineWidth = 1;
-      c.beginPath(); c.ellipse(0, 0, area.radius, area.radius * .62, 0, 0, TAU); c.stroke();
-      for (let i = 0; i < 12; i++) {
-        const angle = i / 12 * TAU, r = area.radius * .9;
-        line(c, [[Math.cos(angle) * r, Math.sin(angle) * r * .62], [Math.cos(angle) * (r + 5), Math.sin(angle) * (r + 5) * .62]], area.color, .8);
+    if (area.meteor) {
+      c.globalCompositeOperation = 'source-over';
+      c.globalAlpha = life * .22; c.fillStyle = '#292321';
+      c.beginPath(); c.arc(0, 0, area.radius * (.65 + progress * .35), 0, TAU); c.fill();
+      c.globalCompositeOperation = 'lighter';
+      // Rolling pressure front and tall flame crown, not another persistent damage pulse.
+      const spread = reducedMotion ? .8 : 1 - Math.pow(life, 4);
+      c.strokeStyle = '#ffc77e'; c.lineWidth = 2 + life * 10; c.globalAlpha = life * .55;
+      c.beginPath(); c.arc(0, 0, area.radius * spread, 0, TAU); c.stroke();
+      for (let i = 0; i < 11; i++) {
+        const x = Math.sin(i * 2.4) * area.radius * spread * .65;
+        const y = Math.cos(i * 2.4) * area.radius * spread * .35;
+        const height = reducedMotion ? 15 : (35 + i % 4 * 17) * Math.sin(Math.PI * Math.min(1, progress * 1.5));
+        c.globalAlpha = life * .5;
+        polygon(c, [[x - 10 * life, y], [x - 7, y - height * .5], [x + 3, y - height], [x + 12 * life, y]], i % 2 ? '#ff853d' : '#ffce79');
       }
-      if (area.style === 'arrow') for (let i = 0; i < 8; i++) {
-        const cycle = (progress * 6 + i * .137) % 1, angle = i * 2.4 + area.seed, r = Math.sqrt((i + .5) / 8) * area.radius * .8;
-        const x = Math.cos(angle) * r, y = Math.sin(angle) * r * .62;
-        c.globalAlpha = Math.sin(cycle * Math.PI) * .7;
-        line(c, [[x - (1 - cycle) * 18, y - (1 - cycle) * 80], [x, y]], '#cadbb8', 1);
-      }
-      c.restore(); return;
     }
-    const radius = area.radius * (1 - Math.pow(life, 3));
+    const radius = area.radius * (reducedMotion ? 1 : 1 - Math.pow(life, 3));
     c.globalCompositeOperation = 'lighter';
     drawGlow(c, 0, -8, area.radius * .85, area.color, life * .8);
     c.globalAlpha = life * .65; c.strokeStyle = area.color;

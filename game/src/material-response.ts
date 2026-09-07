@@ -16,6 +16,12 @@ export function eventMaterial(event: CombatEvent): MaterialId | null {
   if (event.type === 'container-break') return 'wood';
   if (event.type === 'surface-hit') return event.material;
   if (event.type === 'block') return 'metal';
+  if (event.type === 'blast') {
+    if (event.groundKind === 'meteor' || event.skill === 'earthshatter') return 'stone';
+    if (event.style === 'frost') return 'ice';
+    if (event.style === 'fire') return 'ember';
+    return null;
+  }
   if (event.type !== 'hit' && event.type !== 'kill') return null;
   if (event.style === 'frost') return 'ice';
   if (event.style === 'fire') return 'ember';
@@ -63,11 +69,13 @@ export class MaterialResponses {
     const material = eventMaterial(event); if (!material) return;
     // A lethal hit's death owns the response; avoid a duplicate burst for the same contact.
     if (event.type === 'hit' && event.remainingHp <= 0) return;
-    const big = event.type === 'kill' || event.type === 'container-break';
+    const meteor = event.type === 'blast' && event.groundKind === 'meteor';
+    const big = meteor || event.type === 'kill' || event.type === 'container-break';
     const seed = event.type === 'container-break' ? event.seed : ('targetId' in event ? event.targetId : Math.round(event.x * 31 + event.y * 17)) ^ Math.round(event.x + event.y);
     this.add({ x: event.x, y: event.y, angle: 'angle' in event ? event.angle : 0, seed, material,
       height: event.type === 'kill' ? 24 : 12, count: big ? 18 : event.type === 'block' ? 7 : 5, strength: big ? 1 : .5,
       ...(event.type === 'container-break' ? { count: 14, hoops: event.kind === 'barrel' ? 2 : 0 } : {}) });
+    if (meteor) this.add({ x: event.x, y: event.y, angle: 0, seed: seed + 17, material: 'ember', strength: 1.5, count: 14 });
   }
   lights(reducedMotion: boolean): Array<{ x: number; y: number; radius: number; color: string; power: number }> {
     if (reducedMotion) return [];
