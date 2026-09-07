@@ -3,7 +3,7 @@ body { margin: 0; background: #080f16; color: var(--ui-text); }
 .bestiary-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
 .bestiary-header h1 { color: var(--ui-ivory); font-weight: 500; font-size: 27px; margin: 4px 0; }
 .bestiary-header p { margin: 0; color: var(--ui-muted); font-size: 14px; }
-.bestiary-nav { display: flex; gap: 8px; }
+.bestiary-nav { display: flex; flex-wrap: wrap; gap: 8px; }
 .bestiary-nav a { text-decoration: none; font-size: 14px; padding: 0 18px; }
 .bestiary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .bestiary-card { border: 1px solid #3c4c4f; background: linear-gradient(145deg, #15232b, #0b151d 66%); min-width: 0; position: relative; }

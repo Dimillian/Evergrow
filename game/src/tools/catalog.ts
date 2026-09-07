@@ -30,6 +30,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'hall',group:'characters',name:'Character hall',path:'/title.html',description:'Memory-only title screen and staged character slots.'},
   {id:'skills',group:'combat',name:'Skill atlas',path:'/character.html?panel=skills',description:'Inspect the real tree, routes, allocations and specialization panels.'},
   {id:'bestiary',group:'combat',name:'Bestiary',path:'/bestiary.html',description:'Actual enemy models, player loadouts and procedural art.',tags:'enemy monster creatures'},
+  {id:'regional-monsters',group:'combat',name:'Regional creatures',path:'/bestiary.html?regional',description:'Six biome-native creatures and their signature attacks.',tags:'enemy biome monster'},
   {id:'barks',group:'combat',name:'Battle speech',path:'/bestiary.html?barks=1',description:'Bestiary with staged encounter speech bubbles.'},
   {id:'deaths',group:'combat',name:'Death animations',path:'/deaths.html',description:'Play creature death recipes with variant and facing controls.'},
   {id:'lights',group:'combat',name:'Weapon enchantments',path:'/weapon-lights.html',description:'Caster emission, melee enchantments and basic cast poses.'},

@@ -13,6 +13,42 @@ const a = (title: string, sequence: string, family: DeathFamily, contact: number
   travel: number, twist = 0, delay = 0, weapon:DeathAnimation['weapon']='held'): DeathAnimation => Object.freeze({ title, sequence, family, contact, settle, travel, twist, delay, weapon });
 /** Exhaustive, immutable recipes. Durations are shared by drawing, sorting and review. */
 export const ENEMY_DEATHS: Readonly<Record<EnemyKind, Four>> = Object.freeze({
+  thornReaver: Object.freeze([
+    a('Buckling collapse', 'Limbs fold → body settles', 'front', .5, .95, 5, .15),
+    a('Reeling impact', 'Recoil → joints fold → settles', 'back', .55, 1.1, 10, -.3),
+    a('Sideward fall', 'Twist → limbs yield → settles', 'roll', .46, .9, 7, .55),
+    a('Last breath', 'Sink → limbs curl → settles', 'curl', .62, 1.2, -3, -.15),
+  ] as const),
+  mireSpitter: Object.freeze([
+    a('Buckling collapse', 'Limbs fold → body settles', 'front', .5, .95, 5, .15),
+    a('Reeling impact', 'Recoil → joints fold → settles', 'back', .55, 1.1, 10, -.3),
+    a('Sideward fall', 'Twist → limbs yield → settles', 'roll', .46, .9, 7, .55),
+    a('Last breath', 'Sink → limbs curl → settles', 'curl', .62, 1.2, -3, -.15),
+  ] as const),
+  frostRevenant: Object.freeze([
+    a('Buckling collapse', 'Limbs fold → body settles', 'front', .5, .95, 5, .15),
+    a('Reeling impact', 'Recoil → joints fold → settles', 'back', .55, 1.1, 10, -.3),
+    a('Sideward fall', 'Twist → limbs yield → settles', 'roll', .46, .9, 7, .55),
+    a('Last breath', 'Sink → limbs curl → settles', 'curl', .62, 1.2, -3, -.15),
+  ] as const),
+  emberAcolyte: Object.freeze([
+    a('Buckling collapse', 'Limbs fold → body settles', 'front', .5, .95, 5, .15),
+    a('Reeling impact', 'Recoil → joints fold → settles', 'back', .55, 1.1, 10, -.3),
+    a('Sideward fall', 'Twist → limbs yield → settles', 'roll', .46, .9, 7, .55),
+    a('Last breath', 'Sink → limbs curl → settles', 'curl', .62, 1.2, -3, -.15),
+  ] as const),
+  duneScuttler: Object.freeze([
+    a('Buckling collapse', 'Limbs fold → body settles', 'front', .5, .95, 5, .15),
+    a('Reeling impact', 'Recoil → joints fold → settles', 'back', .55, 1.1, 10, -.3),
+    a('Sideward fall', 'Twist → limbs yield → settles', 'roll', .46, .9, 7, .55),
+    a('Last breath', 'Sink → limbs curl → settles', 'curl', .62, 1.2, -3, -.15),
+  ] as const),
+  stormSentinel: Object.freeze([
+    a('Buckling collapse', 'Limbs fold → body settles', 'front', .5, .95, 5, .15),
+    a('Reeling impact', 'Recoil → joints fold → settles', 'back', .55, 1.1, 10, -.3),
+    a('Sideward fall', 'Twist → limbs yield → settles', 'roll', .46, .9, 7, .55),
+    a('Last breath', 'Sink → limbs curl → settles', 'curl', .62, 1.2, -3, -.15),
+  ] as const),
   stalker: Object.freeze([
     a('Knees give way', 'Buckle → knees → shoulder', 'kneel', .58, .96, 5, .18),
     a('Backwards impact', 'Recoil → hips → back', 'back', .47, .85, 10, -.12),

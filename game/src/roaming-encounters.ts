@@ -10,6 +10,12 @@ export const ROAMING_RULES = Object.freeze({
   retirementMargin: 650, behindDistance: 430, behindProjection: -220,
 });
 export const ROAMING_GROUPS: Readonly<Partial<Record<EnemyKind, readonly EnemyKind[]>>> = Object.freeze({
+  thornReaver: Object.freeze(['thornReaver', 'hound', 'thornReaver', 'stalker', 'thornReaver', 'hound'] as const),
+  mireSpitter: Object.freeze(['mireSpitter', 'thornReaver', 'stalker', 'mireSpitter', 'stalker', 'wisp'] as const),
+  frostRevenant: Object.freeze(['frostRevenant', 'hound', 'frostRevenant', 'wisp', 'hound', 'frostRevenant'] as const),
+  emberAcolyte: Object.freeze(['emberAcolyte', 'brute', 'duneScuttler', 'emberAcolyte', 'stalker', 'brute'] as const),
+  duneScuttler: Object.freeze(['duneScuttler', 'duneScuttler', 'duneScuttler', 'archer', 'duneScuttler', 'hound'] as const),
+  stormSentinel: Object.freeze(['stormSentinel', 'brute', 'frostRevenant', 'stormSentinel', 'archer', 'brute'] as const),
   stalker: Object.freeze(['stalker', 'stalker', 'hound', 'stalker', 'hound', 'stalker'] as const),
   hound: Object.freeze(['hound', 'hound', 'hound', 'hound', 'hound', 'stalker'] as const),
   brute: Object.freeze(['brute', 'stalker', 'stalker', 'hound', 'stalker', 'stalker'] as const),

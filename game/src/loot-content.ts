@@ -26,6 +26,12 @@ export function getLootTable(rank: EnemyRank): EnemyLootTable { return ENEMY_LOO
 
 /** All twelve equipment kinds remain eligible. The foe's archetype supplies a readable tendency. */
 export const ENEMY_ITEM_KIND_WEIGHTS: Readonly<Record<EnemyKind, Readonly<Record<ItemKind, number>>>> = Object.freeze({
+  thornReaver: Object.freeze({ grimoire: 2, orb: 2, weapon: 14, shield: 5, head: 5, chest: 7, gloves: 13, legs: 10, boots: 22, cloak: 10, amulet: 5, ring: 5 }),
+  mireSpitter: Object.freeze({ grimoire: 10, orb: 10, weapon: 28, shield: 3, head: 6, chest: 6, gloves: 5, legs: 5, boots: 5, cloak: 14, amulet: 4, ring: 4 }),
+  frostRevenant: Object.freeze({ grimoire: 2, orb: 2, weapon: 23, shield: 18, head: 10, chest: 15, gloves: 7, legs: 10, boots: 5, cloak: 3, amulet: 2, ring: 3 }),
+  emberAcolyte: Object.freeze({ grimoire: 10, orb: 10, weapon: 28, shield: 3, head: 6, chest: 6, gloves: 5, legs: 5, boots: 5, cloak: 14, amulet: 4, ring: 4 }),
+  duneScuttler: Object.freeze({ grimoire: 2, orb: 2, weapon: 14, shield: 5, head: 5, chest: 7, gloves: 13, legs: 10, boots: 22, cloak: 10, amulet: 5, ring: 5 }),
+  stormSentinel: Object.freeze({ grimoire: 10, orb: 10, weapon: 20, shield: 3, head: 8, chest: 4, gloves: 4, legs: 4, boots: 6, cloak: 15, amulet: 8, ring: 8 }),
   briarMatriarch: Object.freeze({ weapon: 24, shield: 6, grimoire: 4, orb: 4, head: 8, chest: 10, gloves: 7, legs: 7, boots: 7, cloak: 7, amulet: 8, ring: 8 }),
   ashColossus: Object.freeze({ weapon: 24, shield: 6, grimoire: 4, orb: 4, head: 8, chest: 10, gloves: 7, legs: 7, boots: 7, cloak: 7, amulet: 8, ring: 8 }),
   graveMarshal: Object.freeze({ weapon: 24, shield: 6, grimoire: 4, orb: 4, head: 8, chest: 10, gloves: 7, legs: 7, boots: 7, cloak: 7, amulet: 8, ring: 8 }),

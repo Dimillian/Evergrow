@@ -10,15 +10,15 @@ export const ENCOUNTER_RULES = Object.freeze({
 
 /** Available archetypes vary with the landscape; kill count never makes an old area harder. */
 export const ENCOUNTER_WEIGHTS: Readonly<Record<BiomeId, Readonly<Record<EnemyKind, number>>>> = Object.freeze({
-  steppe: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 18, brute: 12, caster: 8, hound: 32, archer: 26, wisp: 4 }),
-  sunscar: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 24, brute: 20, caster: 22, hound: 12, archer: 18, wisp: 4 }),
-  deadwood: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 34, brute: 20, caster: 10, hound: 14, archer: 16, wisp: 6 }),
-  verdant: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 22, brute: 8, caster: 8, hound: 30, archer: 24, wisp: 8 }),
-  swamp: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 22, brute: 10, caster: 24, hound: 8, archer: 10, wisp: 26 }),
-  frostpine: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 16, brute: 16, caster: 8, hound: 24, archer: 14, wisp: 22 }),
-  emberfall: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 18, brute: 26, caster: 26, hound: 10, archer: 12, wisp: 8 }),
-  autumn: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 24, brute: 10, caster: 8, hound: 24, archer: 28, wisp: 6 }),
-  highlands: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, stalker: 18, brute: 28, caster: 10, hound: 10, archer: 26, wisp: 8 }),
+  steppe: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, thornReaver: 5, mireSpitter: 0, frostRevenant: 0, emberAcolyte: 0, duneScuttler: 30, stormSentinel: 0, stalker: 12, brute: 8, caster: 3, hound: 24, archer: 15, wisp: 3 }),
+  sunscar: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, thornReaver: 0, mireSpitter: 0, frostRevenant: 0, emberAcolyte: 18, duneScuttler: 42, stormSentinel: 0, stalker: 10, brute: 10, caster: 6, hound: 4, archer: 8, wisp: 2 }),
+  deadwood: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, thornReaver: 32, mireSpitter: 8, frostRevenant: 6, emberAcolyte: 0, duneScuttler: 0, stormSentinel: 0, stalker: 19, brute: 10, caster: 8, hound: 7, archer: 6, wisp: 4 }),
+  verdant: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, thornReaver: 40, mireSpitter: 8, frostRevenant: 0, emberAcolyte: 0, duneScuttler: 0, stormSentinel: 0, stalker: 10, brute: 4, caster: 4, hound: 20, archer: 10, wisp: 4 }),
+  swamp: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, thornReaver: 10, mireSpitter: 45, frostRevenant: 0, emberAcolyte: 0, duneScuttler: 0, stormSentinel: 0, stalker: 10, brute: 5, caster: 15, hound: 3, archer: 2, wisp: 10 }),
+  frostpine: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, thornReaver: 0, mireSpitter: 0, frostRevenant: 45, emberAcolyte: 0, duneScuttler: 0, stormSentinel: 10, stalker: 6, brute: 8, caster: 3, hound: 14, archer: 6, wisp: 8 }),
+  emberfall: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, thornReaver: 0, mireSpitter: 0, frostRevenant: 0, emberAcolyte: 45, duneScuttler: 12, stormSentinel: 0, stalker: 7, brute: 15, caster: 10, hound: 4, archer: 5, wisp: 2 }),
+  autumn: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, thornReaver: 32, mireSpitter: 0, frostRevenant: 0, emberAcolyte: 0, duneScuttler: 12, stormSentinel: 0, stalker: 10, brute: 6, caster: 4, hound: 18, archer: 14, wisp: 4 }),
+  highlands: Object.freeze({ briarMatriarch: 0, ashColossus: 0, graveMarshal: 0, warden: 0, goblin: 0, goblinChief: 0, thornReaver: 0, mireSpitter: 0, frostRevenant: 12, emberAcolyte: 0, duneScuttler: 8, stormSentinel: 40, stalker: 7, brute: 12, caster: 3, hound: 5, archer: 10, wisp: 3 }),
 });
 
 export function livingEnemyCount(enemies: readonly Pick<Enemy, 'state'>[]): number {

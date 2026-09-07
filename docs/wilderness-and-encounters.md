@@ -1,5 +1,7 @@
 # Wilderness places and camps
 
+Local regional monster expansion adds six biome-weighted archetypes, mixed packs, two-basic/one-signature attack cycles, procedural anatomy and matching remains. See [regional monsters](regional-monsters.md) for combat and spawn weights. Existing characters remain compatible.
+
 Local addition: [wilderness boss lairs](wilderness-bosses.md) add three bosses, Elite/Veteran retinues and automatic Rare-or-better hoards through a separate placement layer. Existing landmark identities and save formats remain unchanged.
 
 Updated 2026-09-07 for generation 7. Twelve landmark families share world coordinates for procedural art, collision, discovery and encounter ownership; roadside reliquaries form a separate thirteenth interaction family. See [interactive POIs](interactive-pois.md) for recipes and rewards.

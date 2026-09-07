@@ -5,6 +5,7 @@ export interface MaterialFragment { angle: number; spread: number; flight: numbe
 export interface MaterialRequest { x: number; y: number; angle: number; seed: number; material: MaterialId; strength: number; count: number; hoops?: number; height?: number; }
 export interface MaterialBurst extends MaterialRequest { age: number; duration: number; fragments: readonly MaterialFragment[]; }
 export const ENEMY_MATERIAL: Readonly<Record<EnemyKind, MaterialId>> = Object.freeze({
+  thornReaver: 'wood', mireSpitter: 'bone', frostRevenant: 'ice', emberAcolyte: 'ember', duneScuttler: 'bone', stormSentinel: 'glass',
   stalker: 'bone', brute: 'bone', caster: 'glass', hound: 'bone', archer: 'bone', wisp: 'glass', goblin: 'bone', goblinChief: 'metal', warden: 'stone', briarMatriarch: 'wood', ashColossus: 'stone', graveMarshal: 'metal',
 });
 function random(seed: number, salt: number): number {

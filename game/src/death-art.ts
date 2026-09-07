@@ -1,3 +1,5 @@
+import { isRegionalEnemy } from './combat-content.ts';
+import { drawRegionalDeath } from './regional-enemy-art.ts';
 import { isBossKind } from './wilderness-boss-content.ts';
 import { drawHumanoid } from './art.ts';
 import { drawHumanoidDeath, DEATH_MATERIALS } from './death-humanoid-art.ts';
@@ -10,7 +12,7 @@ import type { EnemyKind } from './model.ts';
 /** Shared by the gameplay renderer and the complete creature comparison. */
 export function drawDeathFigure(c:CanvasRenderingContext2D,kind:EnemyKind,variant:DeathVariant,age:number,facing:number):void {
   const recipe=enemyDeathAnimation(kind,variant);
-  const scale=kind==='hound'||kind==='wisp'?1:DEATH_MATERIALS[kind].scale;
+  const scale=kind==='hound'||kind==='wisp'||isRegionalEnemy(kind)?1:DEATH_MATERIALS[kind].scale;
   const travel=recipe.travel*ease(age/recipe.contact)*scale;
   c.save();
   c.fillStyle='#050c0990';c.beginPath();
@@ -23,7 +25,8 @@ export function drawDeathFigure(c:CanvasRenderingContext2D,kind:EnemyKind,varian
   }
   if(blend>0) {
     c.save();c.globalAlpha*=blend;
-    if(kind==='hound')drawHoundDeath(c,recipe,age,facing);
+    if(isRegionalEnemy(kind))drawRegionalDeath(c,kind,recipe,age,facing);
+    else if(kind==='hound')drawHoundDeath(c,recipe,age,facing);
     else if(kind==='wisp')drawWispDeath(c,recipe,age,facing);
     else drawHumanoidDeath(c,kind,recipe,age,facing);
     c.restore();
@@ -46,7 +49,7 @@ const settledArt=new Map<EnemyRemains,HTMLCanvasElement>();
 export function resetDeathArt():void { settledArt.clear(); }
 export function deathDepth(r:EnemyRemains):number {
   const recipe=enemyDeathAnimation(r.kind,r.variant);
-  const distance=r.kind==='hound'||r.kind==='wisp'?recipe.travel*ease(r.age/recipe.contact):humanoidDeathPose(recipe,r.age).hip[1]*DEATH_MATERIALS[r.kind].scale;
+  const distance=r.kind==='hound'||r.kind==='wisp'||isRegionalEnemy(r.kind)?recipe.travel*ease(r.age/recipe.contact):humanoidDeathPose(recipe,r.age).hip[1]*DEATH_MATERIALS[r.kind].scale;
   return r.y+Math.sin(r.facing)*distance*.55;
 }
 export function drawEnemyRemains(c:CanvasRenderingContext2D,r:EnemyRemains,reducedMotion:boolean):void {

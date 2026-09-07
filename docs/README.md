@@ -1,5 +1,7 @@
 # Documentation
 
+- [Regional monsters](regional-monsters.md): six biome-native archetypes, attack cycles, population weights and the local bestiary.
+
 - [Chronicle](chronicle.md): account/character achievements and statistics; local review and persistence contract.
 
 [Local development tools](development-tools.md) · [Open Tools](http://127.0.0.1:5173/tools/) — the canonical hub for game data, generated gear, skill animations and world reviews.

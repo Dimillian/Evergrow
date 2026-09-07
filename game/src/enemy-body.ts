@@ -7,7 +7,13 @@ export const ENEMY_SPEECH_TOP = Object.freeze({
   goblin: -30, goblinChief: -56, stalker: -37, brute: -40, caster: -44, archer: -48, warden: -110,
 });
 
-export const ENEMY_BODY_BOUNDS: Record<EnemyKind, { radiusX: number; top: number; bottom: number }> = {
+export const ENEMY_BODY_BOUNDS: Record<EnemyKind, { radiusX: number; top: number; bottom: number; headTop?: number }> = {
+  thornReaver: { radiusX: 46, top: -76, bottom: 20 },
+  mireSpitter: { radiusX: 34, top: -47, bottom: 16 },
+  frostRevenant: { radiusX: 44, top: -98, bottom: 6, headTop: -60 },
+  emberAcolyte: { radiusX: 35, top: -70, bottom: 6 },
+  duneScuttler: { radiusX: 44, top: -58, bottom: 20 },
+  stormSentinel: { radiusX: 34, top: -69, bottom: 8 },
   briarMatriarch: { radiusX: 82, top: -127, bottom: 10 },
   ashColossus: { radiusX: 82, top: -127, bottom: 10 },
   graveMarshal: { radiusX: 130, top: -127, bottom: 10 },

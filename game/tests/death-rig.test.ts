@@ -1,3 +1,4 @@
+import { isRegionalEnemy } from '../src/combat-content.ts';
 import { isBossKind } from '../src/wilderness-boss-content.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -24,7 +25,7 @@ test('rig rotations preserve all three dimensions and limb lengths even at degen
 });
 
 test('fourth humanoid pose retains a seated torso and delayed head bend for every humanoid',()=>{
-  for(const kind of DEATH_KINDS.filter(k=>k!=='hound'&&k!=='wisp')) {
+  for(const kind of DEATH_KINDS.filter(k=>k!=='hound'&&k!=='wisp'&&!isRegionalEnemy(k))) {
     const d=ENEMY_DEATHS[kind][3],pose=humanoidDeathPose(d,d.settle);
     assert.equal(d.family,'sit');assert.ok(pose.hip[2]>=4);
     assert.ok(Math.cos(pose.pitch)>.9,'torso keeps its vertical height');

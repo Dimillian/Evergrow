@@ -1,3 +1,4 @@
+import type { RegionalEnemyKind } from './combat-content.ts';
 import type { EnemyKind } from './model.ts';
 import type { DeathAnimation } from './death-content.ts';
 import { DeathMesh } from './death-mesh.ts';
@@ -6,7 +7,7 @@ import { mixColor } from './art-primitives.ts';
 import { weaponShapes } from './weapon-shapes.ts';
 import { deathWeaponFrame } from './death-weapon.ts';
 
-export type HumanoidKind=Exclude<EnemyKind,'hound'|'wisp'>;
+export type HumanoidKind=Exclude<EnemyKind,'hound'|'wisp'|RegionalEnemyKind>;
 interface Material { scale:number; width:number; skin:string; bone:string; cloth:string; chest:string; metal:string }
 export const DEATH_MATERIALS: Readonly<Record<HumanoidKind,Material>>={
   stalker:{scale:1,width:1,skin:'#8e9579',bone:'#b0ac8c',cloth:'#394f49',chest:'#777f64',metal:'#a9a78a'},

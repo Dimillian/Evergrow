@@ -1,7 +1,7 @@
 import { drawWildernessBossImpact } from './wilderness-boss-effect-art.ts';
 import { isWildernessBoss, LAIR_RULES as R } from './wilderness-boss-content.ts';
 import type { Enemy } from './model.ts';
-import { ENEMY_DEFINITIONS } from './combat-content.ts';
+import { enemyAttackDefinition } from './combat-content.ts';
 import { WARDEN_RULES } from './dungeon-boss.ts';
 import { drawAttackWarning, type WarningShape } from './attack-warning-art.ts';
 import { drawGlow, type PointLight } from './lighting.ts';
@@ -9,7 +9,7 @@ import { drawGlow, type PointLight } from './lighting.ts';
 interface Warning { x: number; y: number; angle: number; shape: WarningShape; color: string; progress: number; locked: boolean }
 export function enemyWarnings(e: Enemy, alpha = 1): Warning[] {
   if (e.hp <= 0 || (e.state !== 'windup' && e.state !== 'attack')) return [];
-  const d = ENEMY_DEFINITIONS[e.kind], x = e.prevX + (e.x - e.prevX) * alpha, y = e.prevY + (e.y - e.prevY) * alpha;
+  const d = enemyAttackDefinition(e), x = e.prevX + (e.x - e.prevX) * alpha, y = e.prevY + (e.y - e.prevY) * alpha;
   const progress = e.state === 'attack' ? 1 : Math.min(1, e.stateTime / Math.max(.01, e.stateDuration));
   const base = { x, y, angle: e.attackAngle, progress, locked: e.state === 'attack' || e.stateTime >= d.aimLock, color: '#f34e60' };
   if(isWildernessBoss(e.kind)) {
@@ -29,7 +29,8 @@ export function enemyWarnings(e: Enemy, alpha = 1): Warning[] {
   if (d.attack === 'ground') return [{ ...base, x: e.attackTargetX, y: e.attackTargetY, color: '#e83d59', shape: { kind: 'circle', radius: d.blastRadius } }];
   // Basic arrows and the Hexer's three bolts are readable from their projectiles.
   // Suppress both the floor footprint and its warning light; preserve the cast pose/aim lock.
-  if (d.attack === 'projectile') return [];
+  if (d.attack === 'projectile') return d.warning ? d.shotOffsets.map(offset => ({ ...base, angle: e.attackAngle + offset,
+    shape: { kind: 'lane', width: d.projectile.radius, length: d.projectile.speed * d.projectile.life } })) : [];
   if (d.engageDistance) return [{ ...base, shape: { kind: 'lane', width: 11,
     length: d.lungeSpeed * Math.max(0, d.active - (e.state === 'attack' ? e.stateTime : 0)) + d.range } }];
   return [{ ...base, shape: { kind: 'sector', radius: d.range, arc: d.arc } }];

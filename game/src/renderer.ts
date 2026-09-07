@@ -676,9 +676,9 @@ export class Renderer {
     lights.push(...this.effects.getLights(), ...this.materials.lights(reducedMotion));
     for (const shot of sim.projectiles.slice(0, 8)) lights.push(projectileLight(shot, alpha));
     for(const e of sim.enemies)if(isBossKind(e.kind)&&e.hp>0)lights.push({x:e.x,y:e.y-50,radius:150,color:isWildernessBoss(e.kind)?BOSS_PALETTES[e.kind]:'#a3d4b9',power:e.state==='windup'?.48:.23});
-    for (const enemy of sim.enemies) if (enemy.hp > 0 && (enemy.kind === 'caster' || enemy.kind === 'wisp')) {
+    for (const enemy of sim.enemies) if (enemy.hp > 0 && (enemy.kind === 'caster' || enemy.kind === 'wisp' || enemy.kind === 'emberAcolyte' || enemy.kind === 'stormSentinel' || enemy.kind === 'mireSpitter')) {
       lights.push({ x: enemy.x, y: enemy.y - 22, radius: enemy.state === 'windup' ? 100 : 53,
-        color: enemy.kind === 'wisp' ? '#93c6ff' : '#54e8b8', power: enemy.state === 'windup' ? .65 : .28 });
+        color: enemy.kind === 'emberAcolyte' ? '#ffac63' : enemy.kind === 'stormSentinel' ? '#a5baff' : enemy.kind === 'wisp' ? '#93c6ff' : '#8fc88c', power: enemy.state === 'windup' ? .65 : .28 });
     }
     // Combat illumination gets the finite light budget before distant lanterns.
     for (const light of environmentLights) light.stationary = true;
@@ -740,7 +740,7 @@ export class Renderer {
     for (const enemy of sim.enemies) {
       if (enemy.hp <= 0) continue;
       const width = enemy.kind === 'brute' ? 40 : 31;
-      const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha) + ENEMY_BODY_BOUNDS[enemy.kind].top - 5;
+      const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha) + (ENEMY_BODY_BOUNDS[enemy.kind].headTop ?? ENEMY_BODY_BOUNDS[enemy.kind].top) - 5;
       if (enemy.rank !== 'normal') drawRankCrest(c, enemy.rank, x, y - 10, .5);
       if (enemy.hp >= enemy.maxHp && enemy.state !== 'windup') continue;
       c.fillStyle = enemy.hitFlash > .1 ? '#efcea0' : '#080c12';

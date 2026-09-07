@@ -12,8 +12,7 @@ test('each biome selects its authored population mix', () => {
     assert.deepEqual(Object.keys(weights).sort(), Object.keys(ENEMY_DEFINITIONS).sort());
     assert.ok(Object.values(weights).every(value => Number.isFinite(value) && value >= 0));
     assert.equal(Object.values(weights).reduce((sum, weight) => sum + weight, 0), 100);
-    assert.equal(chooseEncounterEnemy(biome, () => 0), 'stalker');
-    assert.equal(chooseEncounterEnemy(biome, () => (weights.stalker + .1) / 100), 'brute');
+    assert.equal(chooseEncounterEnemy(biome, () => 0), Object.keys(weights).find(kind => weights[kind as keyof typeof weights] > 0));
     assert.equal(chooseEncounterEnemy(biome, () => .999), 'wisp');
   }
   assert.deepEqual(Object.keys(ENCOUNTER_WEIGHTS).sort(), Object.keys(BIOMES).sort());

@@ -1,3 +1,4 @@
+import { isRegionalEnemy } from './combat-content.ts';
 import './death-study.css';
 import { loadGameFont } from './font.ts';
 import { randomFromSeed, polygon, line } from './art-primitives.ts';
@@ -85,7 +86,7 @@ function draw() {
     const x=i%2*480,y=Math.floor(i/2)*292;
     ctx.save();ctx.translate(x,y);ctx.drawImage(readyBackground,0,0);
     // Equal scale and brightness expose detail loss between the live and posed art.
-    const artScale=kind==='hound'||kind==='wisp'?1:DEATH_MATERIALS[kind].scale;
+    const artScale=kind==='hound'||kind==='wisp'||isRegionalEnemy(kind)?1:DEATH_MATERIALS[kind].scale;
     const zoom=kind==='warden'?1.05:kind==='goblinChief'||kind==='brute'?2.55:2.9;
     for(const [px,py,scale] of [[305,143,zoom]]) {
       ctx.save();ctx.translate(px,py);ctx.scale(scale,scale);drawDeathFigure(ctx,kind,DEATH_VARIANTS[i],age,facing);ctx.restore();

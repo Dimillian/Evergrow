@@ -181,10 +181,13 @@ export interface Player {
   dead: boolean;
 }
 
-export type EnemyKind = 'stalker' | 'brute' | 'caster' | 'hound' | 'archer' | 'wisp' | 'goblin' | 'goblinChief' | 'warden' | 'briarMatriarch' | 'ashColossus' | 'graveMarshal';
+export type EnemyKind = 'thornReaver' | 'mireSpitter' | 'frostRevenant' | 'emberAcolyte' | 'duneScuttler' | 'stormSentinel' | 'stalker' | 'brute' | 'caster' | 'hound' | 'archer' | 'wisp' | 'goblin' | 'goblinChief' | 'warden' | 'briarMatriarch' | 'ashColossus' | 'graveMarshal';
 export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
 
 export interface Enemy {
+  /** Regional enemies commit two basic actions, then one signature attack. */
+  attackTurns?: number;
+  attackVariant?: 0 | 1;
   bossPhases?: number; bossTurns?: number; bossHits?: number; controlImmunity?: number;
   bossMove?: 'sweep'|'fracture'|'summon'|'rush'|'eruption'|'command';
   bossOriginX?: number; bossOriginY?: number;

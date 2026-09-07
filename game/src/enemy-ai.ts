@@ -1,6 +1,6 @@
 import { goblinSpeed, goblinDamage } from './warband.ts';
 import { alertEnemy, transitionEnemy } from './enemy-state.ts';
-import { ENEMY_AI_RULES, ENEMY_DEFINITIONS, type EnemyDefinition, type ProjectileDefinition } from './combat-content.ts';
+import { ENEMY_AI_RULES, ENEMY_DEFINITIONS, ENEMY_SIGNATURE_ATTACKS, enemyAttackDefinition, type EnemyDefinition, type ProjectileDefinition } from './combat-content.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
 import type { CombatEvent, Enemy, Player, ProjectileEffects, WorldQuery } from './model.ts';
 
@@ -116,8 +116,9 @@ function chase(enemy: Enemy, dt: number, context: EnemyAIContext, definition: En
   const minDistance = definition.attack === 'melee' ? 0 : definition.retreatDistance;
   if (hasSight && distance <= attackDistance && distance > minDistance
     && context.visible(enemy.x, enemy.y, p.x, p.y)) {
-    enemy.attackDamage = enemy.damage * goblinDamage(enemy) * ((enemy.rallyTime??0)>0?1.25:1);
+    enemy.attackDamage = enemy.damage * (definition.damage / ENEMY_DEFINITIONS[enemy.kind].damage) * goblinDamage(enemy) * ((enemy.rallyTime??0)>0?1.25:1);
     enemy.attackAngle = angle; enemy.attackTargetX = p.x; enemy.attackTargetY = p.y;
+    enemy.attackTurns = ((enemy.attackTurns ?? 0) + 1) % 3;
     transitionEnemy(enemy, 'windup', definition.windup); return;
   }
 
@@ -143,7 +144,8 @@ function chase(enemy: Enemy, dt: number, context: EnemyAIContext, definition: En
 
 /** Tick only a living, unstaggered actor; status/damage integration remains simulation-owned. */
 export function updateEnemyAI(enemy: Enemy, dt: number, context: EnemyAIContext): void {
-  const p = context.player, definition = ENEMY_DEFINITIONS[enemy.kind];
+  if (enemy.state === 'chase') enemy.attackVariant = ENEMY_SIGNATURE_ATTACKS[enemy.kind] && (enemy.attackTurns ?? 0) % 3 === 2 ? 1 : 0;
+  const p = context.player, definition = enemyAttackDefinition(enemy);
   if (context.world.isSanctuary?.(p.x, p.y)) {
     if (enemy.state !== 'return') disengage(enemy);
     const distance = Math.hypot(enemy.x - p.x, enemy.y - p.y);
@@ -196,7 +198,7 @@ export function updateEnemyAI(enemy: Enemy, dt: number, context: EnemyAIContext)
           enemyKind: enemy.kind, style: definition.projectileStyle });
       } else if (definition.attack === 'ground') {
         const tx = enemy.attackTargetX, ty = enemy.attackTargetY;
-        context.emit({ type: 'blast', x: tx, y: ty, radius: definition.blastRadius, style: 'frost', enemyKind: enemy.kind });
+        context.emit({ type: 'blast', x: tx, y: ty, radius: definition.blastRadius, style: definition.blastStyle ?? 'frost', enemyKind: enemy.kind });
         if (Math.hypot(p.x - tx, p.y - ty) <= definition.blastRadius + p.radius
           && context.visible(enemy.x, enemy.y, tx, ty) && context.visible(tx, ty, p.x, p.y)) {
           context.hurt(enemy.attackDamage ?? enemy.damage, Math.atan2(p.y - ty, p.x - tx), enemy);

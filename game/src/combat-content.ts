@@ -1,5 +1,5 @@
 import { LAIR_RULES } from './wilderness-boss-content.ts';
-import type { EnemyKind, Projectile } from './model.ts';
+import type { Enemy, EnemyKind, Projectile, ProjectileStyle } from './model.ts';
 
 /** Authored balance is immutable; each simulation owns its mutable actor state. */
 export const COMBAT_TIMING = Object.freeze({
@@ -61,11 +61,38 @@ export type EnemyDefinition = EnemyBaseDefinition & (
   { readonly attack: 'melee'; readonly arc: number; readonly lungeSpeed: number; readonly engageDistance?: number }
   | { readonly attack: 'projectile'; readonly projectile: ProjectileDefinition;
     readonly maxAttackDistance: number; readonly retreatDistance: number;
-    readonly projectileStyle: 'spirit' | 'arrow'; readonly shotOffsets: readonly number[] }
-  | { readonly attack: 'ground'; readonly blastRadius: number; readonly maxAttackDistance: number; readonly retreatDistance: number }
+    readonly warning?: boolean; readonly projectileStyle: ProjectileStyle; readonly shotOffsets: readonly number[] }
+  | { readonly attack: 'ground'; readonly blastStyle?: ProjectileStyle; readonly blastRadius: number; readonly maxAttackDistance: number; readonly retreatDistance: number }
 );
 
 export const ENEMY_DEFINITIONS: Readonly<Record<EnemyKind, EnemyDefinition>> = Object.freeze({
+  thornReaver: Object.freeze({ name: 'Thorn Reaver', hp: 76, xpReward: 32, radius: 13, speed: 93,
+    windup: .53, active: .2, recovery: .76, range: 39, damage: 12, aimLock: .17,
+    attack: 'melee', arc: Math.PI * .7, lungeSpeed: 45, awarenessDistance: 370, preferredDistance: 35,
+    role: 'flanker', knockbackDistance: 10, interruptible: true }),
+  mireSpitter: Object.freeze({ name: 'Mire Spitter', hp: 61, xpReward: 31, radius: 13, speed: 67,
+    windup: .8, active: .14, recovery: .93, range: 290, damage: 12, aimLock: .25,
+    attack: 'projectile', projectile: Object.freeze({ owner: 'enemy', speed: 170, life: 2.1, radius: 5, damage: 12 }),
+    projectileStyle: 'spirit', shotOffsets: Object.freeze([0]), maxAttackDistance: 250, retreatDistance: 70,
+    awarenessDistance: 390, preferredDistance: 180, role: 'ranged', knockbackDistance: 12, interruptible: true }),
+  frostRevenant: Object.freeze({ name: 'Rime Revenant', hp: 115, xpReward: 43, radius: 15, speed: 74,
+    windup: .72, active: .2, recovery: .86, range: 44, damage: 17, aimLock: .22,
+    attack: 'melee', arc: Math.PI * .85, lungeSpeed: 20, awarenessDistance: 370, preferredDistance: 40,
+    role: 'heavy', knockbackDistance: 7, interruptible: false }),
+  emberAcolyte: Object.freeze({ name: 'Ember Acolyte', hp: 54, xpReward: 34, radius: 11, speed: 87,
+    windup: .85, active: .14, recovery: .85, range: 315, damage: 14, aimLock: .25,
+    attack: 'projectile', projectile: Object.freeze({ owner: 'enemy', speed: 190, life: 2, radius: 5, damage: 14 }),
+    projectileStyle: 'fire', shotOffsets: Object.freeze([0]), maxAttackDistance: 270, retreatDistance: 90,
+    awarenessDistance: 410, preferredDistance: 220, role: 'ranged', knockbackDistance: 16, interruptible: true }),
+  duneScuttler: Object.freeze({ name: 'Dune Scuttler', hp: 43, xpReward: 25, radius: 10, speed: 120,
+    windup: .44, active: .16, recovery: .64, range: 29, damage: 9, aimLock: .14,
+    attack: 'melee', arc: Math.PI * .65, lungeSpeed: 55, awarenessDistance: 370, preferredDistance: 24,
+    role: 'flanker', knockbackDistance: 15, interruptible: true }),
+  stormSentinel: Object.freeze({ name: 'Storm Sentinel', hp: 82, xpReward: 39, radius: 13, speed: 72,
+    windup: .85, active: .14, recovery: 1, range: 320, damage: 15, aimLock: .24,
+    attack: 'projectile', projectile: Object.freeze({ owner: 'enemy', speed: 175, life: 2.2, radius: 4, damage: 15 }),
+    projectileStyle: 'lightning', shotOffsets: Object.freeze([0]), maxAttackDistance: 270, retreatDistance: 100,
+    awarenessDistance: 420, preferredDistance: 225, role: 'ranged', knockbackDistance: 8, interruptible: true }),
   briarMatriarch: Object.freeze({ name: 'Briar Matriarch', hp: 1450, xpReward: 160, radius: 27, speed: 88, windup: .85, active: .28, recovery: 1.1, range: LAIR_RULES.sweepReach, damage: 21, aimLock: 0, attack: 'melee', arc: LAIR_RULES.sweepArc, lungeSpeed: 0, awarenessDistance: 430, preferredDistance: 110, role: 'heavy', knockbackDistance: 0, interruptible: false }),
   ashColossus: Object.freeze({ name: 'Ashbound Colossus', hp: 1900, xpReward: 160, radius: 27, speed: 57, windup: .85, active: .28, recovery: 1.1, range: LAIR_RULES.sweepReach, damage: 26, aimLock: 0, attack: 'melee', arc: LAIR_RULES.sweepArc, lungeSpeed: 0, awarenessDistance: 430, preferredDistance: 110, role: 'heavy', knockbackDistance: 0, interruptible: false }),
   graveMarshal: Object.freeze({ name: 'Grave Marshal', hp: 1650, xpReward: 160, radius: 27, speed: 75, windup: .85, active: .28, recovery: 1.1, range: LAIR_RULES.sweepReach, damage: 23, aimLock: 0, attack: 'melee', arc: LAIR_RULES.sweepArc, lungeSpeed: 0, awarenessDistance: 430, preferredDistance: 110, role: 'heavy', knockbackDistance: 0, interruptible: false }),
@@ -113,6 +140,32 @@ export const ENEMY_DEFINITIONS: Readonly<Record<EnemyKind, EnemyDefinition>> = O
     awarenessDistance: 390, preferredDistance: 210, role: 'ranged',
     knockbackDistance: 18, interruptible: true }),
 });
+
+export const REGIONAL_ENEMY_KINDS = Object.freeze(['thornReaver', 'mireSpitter', 'frostRevenant', 'emberAcolyte', 'duneScuttler', 'stormSentinel'] as const);
+export type RegionalEnemyKind = typeof REGIONAL_ENEMY_KINDS[number];
+export function isRegionalEnemy(kind: EnemyKind): kind is RegionalEnemyKind { return (REGIONAL_ENEMY_KINDS as readonly EnemyKind[]).includes(kind); }
+
+/** Signature actions use the same commitment, contact and rendering definitions as basic attacks.
+ * Damage is a ratio of the actor's original geographic damage, never the player's level. */
+export const ENEMY_SIGNATURE_ATTACKS: Readonly<Partial<Record<EnemyKind, EnemyDefinition>>> = Object.freeze({
+  thornReaver: Object.freeze({ ...ENEMY_DEFINITIONS.thornReaver, attack: 'melee', arc: Math.PI * 1.3,
+    lungeSpeed: 0, range: 70, damage: 19, windup: .95, aimLock: .23, active: .24, recovery: 1.1 }),
+  mireSpitter: Object.freeze({ ...ENEMY_DEFINITIONS.mireSpitter, attack: 'ground', blastRadius: 60,
+    blastStyle: 'spirit', maxAttackDistance: 250, retreatDistance: 0, damage: 19, windup: 1.25, aimLock: .2, recovery: 1.1 }),
+  frostRevenant: Object.freeze({ ...ENEMY_DEFINITIONS.frostRevenant, attack: 'ground', blastRadius: 65,
+    blastStyle: 'frost', range: 180, maxAttackDistance: 180, retreatDistance: 0, damage: 25, windup: 1.25, aimLock: .25, recovery: 1.15 }),
+  emberAcolyte: Object.freeze({ ...ENEMY_DEFINITIONS.emberAcolyte, attack: 'ground', blastRadius: 76,
+    blastStyle: 'fire', maxAttackDistance: 270, retreatDistance: 0, damage: 23, windup: 1.4, aimLock: .25, recovery: 1.2 }),
+  duneScuttler: Object.freeze({ ...ENEMY_DEFINITIONS.duneScuttler, attack: 'melee', arc: Math.PI * .45,
+    lungeSpeed: 340, engageDistance: 140, range: 30, damage: 16, windup: .85, aimLock: .2, active: .32, recovery: .95 }),
+  stormSentinel: Object.freeze({ ...ENEMY_DEFINITIONS.stormSentinel, attack: 'projectile',
+    projectile: Object.freeze({ owner: 'enemy', speed: 210, life: 1.7, radius: 5, damage: 11 }),
+    projectileStyle: 'lightning', shotOffsets: Object.freeze([-.44,-.22,0,.22,.44]), warning: true,
+    maxAttackDistance: 270, retreatDistance: 70, damage: 11, windup: 1.25, aimLock: .2, recovery: 1.3 }),
+});
+export function enemyAttackDefinition(enemy: Pick<Enemy, 'kind' | 'attackVariant'>): EnemyDefinition {
+  return (enemy.attackVariant === 1 ? ENEMY_SIGNATURE_ATTACKS[enemy.kind] : undefined) ?? ENEMY_DEFINITIONS[enemy.kind];
+}
 
 /** Sensing/steering budgets and pacing never scale with monster level. */
 export const ENEMY_AI_RULES = Object.freeze({

@@ -5,7 +5,7 @@ import './bestiary-review.css';
 import { installUITheme } from './ui-theme.ts';
 import { loadGameFont } from './font.ts';
 import { drawHumanoid, type CharacterPose } from './art.ts';
-import { ENEMY_DEFINITIONS } from './combat-content.ts';
+import { ENEMY_DEFINITIONS, isRegionalEnemy } from './combat-content.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from './weapon-content.ts';
 import { generateItem } from './items.ts';
 import { itemIconSVG } from './item-art.ts';
@@ -14,7 +14,7 @@ import { escapeUI } from './ui-components.ts';
 import type { EnemyKind } from './model.ts';
 import { drawBattleBark, measureBattleBark } from './battle-bark-art.ts';
 import { placeBattleBark } from './battle-bark-layout.ts';
-import { ENEMY_SPEECH_TOP } from './enemy-body.ts';
+import { ENEMY_SPEECH_TOP, ENEMY_BODY_BOUNDS } from './enemy-body.ts';
 import { BARK_RULES, canBark } from './battle-bark-content.ts';
 
 // No simulation, input bindings, ticks, or saved state. These are frozen art poses.
@@ -23,6 +23,7 @@ installUITheme();
 await loadGameFont();
 const root = document.querySelector<HTMLElement>('#bestiary-review')!;
 const bosses = new URLSearchParams(location.search).has('bosses');
+const regional = new URLSearchParams(location.search).has('regional');
 const armory = new URLSearchParams(location.search).get('view') === 'armory';
 const barks = !armory && new URLSearchParams(location.search).has('barks');
 const barkSamples: Partial<Record<EnemyKind, string>> = { goblin: 'Your boots! My size!', brute: 'Hold still. Heavy hammer.', caster: 'May your socks stay wet!' };
@@ -30,6 +31,12 @@ const abort = new AbortController();
 const scenes: Array<{ canvas: HTMLCanvasElement; poses: CharacterPose[]; groundItem?: ReturnType<typeof generateItem> }> = [];
 const base = { angle: 1.15, time: 2.7, moving: 0, attack: 0, attackAngle: 1.15, hitFlash: 0, dodging: false };
 const roles: Record<EnemyKind, { role: string; detail: string; attack: number }> = {
+  thornReaver: {role:'Forest / Amberwood',detail:'Hooked claws; every third action is a broad thorn sweep.',attack:-.75},
+  mireSpitter: {role:'Mire',detail:'Single spit; every third action bursts at a locked location.',attack:-.8},
+  frostRevenant: {role:'Frostpine',detail:'Frost-cleaver strikes followed by a ground eruption.',attack:-.8},
+  emberAcolyte: {role:'Emberfall / Sunscar',detail:'Visible firebolts; every third cast calls a larger flare.',attack:-.8},
+  duneScuttler: {role:'Sunscar / Steppe',detail:'Pincer strikes followed by a committed rushing sting.',attack:-.75},
+  stormSentinel: {role:'Highlands',detail:'Crystal bolts followed by a charged five-bolt fan.',attack:-.8},
   briarMatriarch: {role:'Wilderness boss',detail:'Thorn sweeps, hunting lunges and erupting roots.',attack:-.6},
   ashColossus: {role:'Wilderness boss',detail:'Crushing blows and staggered molten fractures.',attack:-.6},
   graveMarshal: {role:'Wilderness boss',detail:'Sword charges and a rally for surviving guards.',attack:-.6},
@@ -44,7 +51,7 @@ const roles: Record<EnemyKind, { role: string; detail: string; attack: number }>
   wisp: { role: 'Spirit', detail: 'Caged flame · trailing cloth · suspended iron', attack: -.85 },
 };
 root.innerHTML = `<header class="bestiary-header"><div><div class="ui-kicker">EVERGROW / PROCEDURAL ASSET STUDY</div><h1>${armory ? 'The travelling armory' : 'Creatures of the wild'}</h1><p>${armory ? 'Shared forged geometry, dressed figures and recognisable field loot.' : 'Distinct silhouettes, each with a readable combat role and its own movement.'}</p></div>
-  <nav class="bestiary-nav"><a class="ui-button${!armory ? ' ui-button--primary' : ''}" href="/bestiary.html">Bestiary</a><a class="ui-button${armory ? ' ui-button--primary' : ''}" href="/bestiary.html?view=armory">Armory</a></nav></header>
+  <nav class="bestiary-nav"><a class="ui-button${regional ? ' ui-button--primary' : ''}" href="/bestiary.html?regional">New creatures</a><a class="ui-button${!armory && !regional ? ' ui-button--primary' : ''}" href="/bestiary.html">Bestiary</a><a class="ui-button${armory ? ' ui-button--primary' : ''}" href="/bestiary.html?view=armory">Armory</a></nav></header>
   <section class="bestiary-grid${armory ? ' bestiary-armory' : ''}" aria-label="Frozen procedural figures"></section>`;
 const grid = root.querySelector<HTMLElement>('.bestiary-grid')!;
 if (barks) {
@@ -61,6 +68,7 @@ if (!armory) {
   for (const kind of Object.keys(ENEMY_DEFINITIONS) as EnemyKind[]) {
     if (barks && !barkSamples[kind]) continue;
     if(bosses&&!isBossKind(kind))continue;
+    if(regional&&!isRegionalEnemy(kind))continue;
     const role = roles[kind];
     card(ENEMY_DEFINITIONS[kind].name, role.role, role.detail,
       barks ? [{ ...base, kind, angle: .5, attackAngle: .5 }]
@@ -106,9 +114,13 @@ function draw() {
     const vignette = c.createRadialGradient(width / 2, height * .5, 0, width / 2, height * .5, width * .56);
     vignette.addColorStop(0, '#355c572a'); vignette.addColorStop(1, '#10212900'); c.fillStyle = vignette; c.fillRect(0, 0, width, height);
     for (const [index, pose] of poses.entries()) {
-      c.fillStyle = '#050d1399'; c.beginPath(); c.ellipse(positions[index], floor + 3, pose.kind === 'brute' ? 38 : 27, 7, 0, 0, Math.PI * 2); c.fill();
-      c.strokeStyle = '#68756c25'; c.lineWidth = .65; c.beginPath(); c.ellipse(positions[index], floor + 3, 37, 11, 0, 0, Math.PI * 2); c.stroke();
-      c.save(); c.translate(positions[index], floor); c.scale(pose.kind!=='player'&&isBossKind(pose.kind)?Math.min(1.55,(height-30)/135):scale, pose.kind!=='player'&&isBossKind(pose.kind)?Math.min(1.55,(height-30)/135):scale); drawHumanoid(c, pose); c.restore();
+      const regionalBounds=pose.kind!=='player'&&isRegionalEnemy(pose.kind)?ENEMY_BODY_BOUNDS[pose.kind]:null;
+      const modelScale=pose.kind!=='player'&&isBossKind(pose.kind)?Math.min(1.55,(height-30)/135)
+        :regionalBounds?Math.min(scale,(height-24)/(Math.abs(regionalBounds.top)+regionalBounds.bottom)):scale;
+      const groundY=regionalBounds?height-12-regionalBounds.bottom*modelScale:floor;
+      c.fillStyle = '#050d1399'; c.beginPath(); c.ellipse(positions[index], groundY + 3, pose.kind === 'brute' ? 38 : 27, 7, 0, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = '#68756c25'; c.lineWidth = .65; c.beginPath(); c.ellipse(positions[index], groundY + 3, 37, 11, 0, 0, Math.PI * 2); c.stroke();
+      c.save(); c.translate(positions[index], groundY); c.scale(modelScale,modelScale); drawHumanoid(c, pose); c.restore();
       if (barks && pose.kind !== 'player' && canBark(pose.kind)) {
         const box = placeBattleBark(barkSamples[pose.kind]!, { x: positions[index], y: floor + ENEMY_SPEECH_TOP[pose.kind] * scale },
           { width, height }, line => measureBattleBark(c, line), []);

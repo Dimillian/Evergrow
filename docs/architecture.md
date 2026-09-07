@@ -193,3 +193,7 @@ The controllers are narrow current owners, not service locators or compatibility
 
 
 Each skill has three exclusive three-point leaves: potency, efficiency, specialization. `skill-progression.ts` owns leaf IDs, per-skill bonuses and resolved recipe changes; the graph's fixed fan orientations require no runtime placement search. `skill-node-presentation.ts` shares owner/role labels across hover, inspector, search and branch emphasis. `skill-tree-tooltip.ts` builds structured glass hover cards while Canvas keeps the geometry. Removed school-specialization connector allocations are not migrated.
+
+## Regional enemy actions
+
+`combat-content.ts` owns basic/signature enemy profiles and `enemyAttackDefinition`; normal AI and warning drawing consume the same snapshotted choice. Regional enemies cycle two basic windups and one signature, with source-damage ratios captured at commitment. `regional-enemy-art.ts` shares depth-sorted anatomy between living figures and articulated collapses. See [regional monsters](regional-monsters.md).
