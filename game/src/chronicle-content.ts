@@ -45,3 +45,31 @@ export const STAT_GROUPS:Record<string,readonly [string,string][]>={
  Exploration:[['distance','Distance travelled'],['places','Places discovered'],['events','Events completed'],['crypts','Crypts cleared'],['bestWaves','Best cursed-chest waves'],['journeys','Journey objectives']],
  Progression:[['time','Active playtime'],['highestLevel','Highest level'],['xp','Experience earned'],['casts','Skills used'],['basics','Basic attacks']],
 };
+
+/** Explain measurement rules without filling the statistics screen with extra copy. */
+export const CHRONICLE_STAT_HELP:Readonly<Record<string,string>>={
+ time:'Time spent playing. Paused menus and closed sessions do not count.',
+ damage:'Actual enemy life removed by your attacks and effects. Overkill is excluded.',
+ directDamage:'Damage from direct hits, excluding damage over time.',
+ periodicDamage:'Damage from ongoing effects such as burning.',
+ largestHit:'The most enemy life removed by one hit. Overkill is excluded.',
+ highestEnemy:'The highest-level enemy you have defeated.',
+ damageTaken:'Actual life lost to incoming damage.',
+ damageBlocked:'Damage prevented by successful blocks.',
+ healing:'Missing life restored. Healing beyond maximum life does not count.',
+ manaRestored:'Missing mana restored. Restoration beyond maximum mana does not count.',
+ manaSpent:'Mana paid for attacks, assigned skills and maintained spells.',
+ longestLife:'Longest active time without dying. Pauses do not count.',
+ goldEarned:'Gold collected from the ground plus proceeds from vendor sales.',
+ goldSpent:'Gold spent at vendors, including purchases and item improvements.',
+ largestGold:'The largest single pile of gold collected.',
+ highestEnhancement:'Highest enhancement reached on a piece of equipment.',
+ distance:'Distance travelled on foot. Teleports do not count.',
+ events:'Completed wilderness events whose rewards have been awarded.',
+ crypts:'Crypts cleared by defeating their final boss.',
+ bestWaves:'Most waves cleared in one cursed-chest challenge.',
+ journeys:'Completed Journey objectives, including those completed without tracking them.',
+ highestLevel:'Highest character level reached in this history.',
+ casts:'Successful activations of assigned skills. Basic weapon attacks are counted separately.',
+ basics:'Basic weapon attacks started. Each attack counts once, even when it hits multiple enemies.',
+};
