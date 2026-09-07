@@ -8,7 +8,7 @@ import { uiIcon } from './ui-components.ts';
 import { World } from './world.ts';
 import { Exploration } from './exploration.ts';
 import { WorldMap } from './world-map.ts';
-import { BIOMES, type BiomeId } from './biomes.ts';
+import { BIOME_IDS, type BiomeId } from './biomes.ts';
 import { stageAtlasExploration, ATLAS_REVIEW_BOUNDS, stageExtendedAtlasExploration, EXTENDED_ATLAS_BOUNDS } from './atlas-review-data.ts';
 
 // Static exploration staging uses the real generation and map; no simulation or localStorage.
@@ -45,7 +45,7 @@ async function start() {
   const found = new Set<BiomeId>();
   for (let y = -9000; y <= 9000; y += 480) for (let x = -11000; x <= 11000; x += 480)
     if (chart.isRevealed(x, y)) found.add(world.sampleBiome(x, y).id);
-  root.querySelector('.atlas-biomes')!.textContent = `${found.size} of ${Object.keys(BIOMES).length} biomes charted`;
+  root.querySelector('.atlas-biomes')!.textContent = `${found.size} of ${BIOME_IDS.length} biomes charted`;
   root.setAttribute('aria-busy', 'false');
   window.addEventListener('resize', () => { map?.resize(); map?.fitBounds(reviewBounds, 24); }, { signal: abort.signal });
   root.querySelector('.atlas-export')!.addEventListener('click', event => {

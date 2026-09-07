@@ -2,6 +2,7 @@ import { BIOME_IDS, type BiomeId, type BiomeWeights } from './biomes.ts';
 
 export type PropKind = 'tree' | 'deadTree' | 'rock' | 'shrine' | 'willow' | 'reeds' | 'fern' | 'flowers'
   | 'canopy' | 'snowPine' | 'iceCrystal' | 'charredTree' | 'basalt' | 'emberRock' | 'autumnTree'
+  | 'sandstoneShard' | 'dryGrass' | 'sandstone' | 'thornBrush' | 'steppeStone' | 'desertScrub'
   | 'leafPile' | 'windTree' | 'heather' | 'limestone' | 'tussock' | 'mushrooms' | 'stump' | 'lilies';
 
 export interface PropDefinition {
@@ -23,6 +24,12 @@ const crown = (height: number, radius: number, offsetX = 0) => ({ height, radius
 
 /** Collision, silhouette, wind and emitted light all consume this same immutable vocabulary. */
 export const PROP_DEFINITIONS: Readonly<Record<PropKind, PropDefinition>> = Object.freeze({
+  sandstoneShard: definition([7, 10], null, [13, 4]),
+  dryGrass: definition([0, 0], null, [0, 0], 1.1, null, [.8, 1.2]),
+  desertScrub: definition([0, 0], null, [0, 0], .3),
+  thornBrush: definition([7, 10], null, [18, 5], .3),
+  sandstone: definition([11, 14], null, [24, 9], 0, null, [.9, 1.2]),
+  steppeStone: definition([9, 13], null, [19, 7], 0, null, [.9, 1.2]),
   tree: definition([9, 14], crown(90, 66), [24, 9], .7),
   deadTree: definition([9, 14], crown(79, 55), [18, 7], .25),
   rock: definition([8, 13]),
@@ -57,6 +64,8 @@ const table = (...entries: readonly (readonly [PropKind, number])[]): readonly P
 /** Relative local abundance. At an ecotone, both biome identity and species are
  * sampled from the continuous material weights at the prop's actual position. */
 export const BIOME_PROP_TABLES: Readonly<Record<BiomeId, readonly PropWeight[]>> = Object.freeze({
+  steppe: table(['dryGrass', 72], ['thornBrush', 9], ['steppeStone', 9], ['flowers', 8], ['desertScrub', 2]),
+  sunscar: table(['sandstone', 22], ['desertScrub', 61], ['dryGrass', 8], ['sandstoneShard', 7], ['thornBrush', 2]),
   deadwood: table(['deadTree', 48], ['tree', 14], ['rock', 14], ['stump', 10], ['mushrooms', 9], ['tussock', 5]),
   verdant: table(['canopy', 48], ['tree', 6], ['fern', 15], ['flowers', 10], ['mushrooms', 9], ['stump', 6], ['rock', 6]),
   swamp: table(['willow', 35], ['reeds', 22], ['lilies', 17], ['deadTree', 10], ['mushrooms', 7], ['stump', 4], ['rock', 5]),

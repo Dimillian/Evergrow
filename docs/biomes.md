@@ -1,6 +1,8 @@
 # Biome generation
 
-Evergrow now has seven recurring biomes. All terrain, props and atmosphere remain generated in code; no biome artwork is loaded from image files.
+[Natural landscapes](natural-landscapes.md) are now enabled in local gameplay: generation 9 adds more open distributions, Whispering Steppe and Sunscar Expanse. Fresh characters are required; older saves remain stored but cannot be loaded into generation 9.
+
+Evergrow now has nine recurring biomes. All terrain, props and atmosphere remain generated in code; no biome artwork is loaded from image files.
 
 | Biome | Visual identity | Main props and details |
 | --- | --- | --- |
@@ -11,29 +13,31 @@ Evergrow now has seven recurring biomes. All terrain, props and atmosphere remai
 | Emberfall | Charcoal and muted copper | Burnt trunks, columnar basalt, ember-veined rocks, ash and rising sparks |
 | Amberwood | Copper and gold woodland | Scalloped autumn crowns, leaf piles, mushrooms and drifting leaves |
 | Hollow Highlands | Heather and weathered stone | Wind-bent trees, limestone outcrops, heather, grasses and windborne seeds |
+| Whispering Steppe | Open wind-combed grassland | Dry grasses, thorn scrub and tall weathered stones |
+| Sunscar Expanse | Sand relief and exposed rock | Layered sandstone, fragments and sparse desert scrub |
 
 ## Regions and transitions
 
 `biomes.ts` evaluates seeded temperature, moisture and elevation fields over jittered region centers, spaced approximately 6,400 world units apart. A coordinate warp bends the region outlines. Adjacent cells can share a climate, producing larger regions; every climate can recur in either direction. This replaces the original three broad geographic strips.
 
-Smooth compact kernels blend nearby region influences. All seven weights always sum to one. Ground color, map color and ambient light interpolate these weights. Props and small ground details sample their species from the weights at each object's world coordinate, so two kinds of vegetation coexist at a border. Snow, embers, pollen and leaves use local world anchors rather than following the camera's current biome.
+Smooth compact kernels blend nearby region influences. All nine weights always sum to one. Ground color, map color and ambient light interpolate these weights. Props and small ground details sample their species from the weights at each object's world coordinate, so two kinds of vegetation coexist at a border. Snow, embers, pollen and leaves use local world anchors rather than following the camera's current biome.
 
 The dominant biome ID supplies a location name and enemy/loot content bias. It never selects the whole screen's terrain or vegetation. Enemy spawn snapshots retain their original biome if the enemy later crosses a border.
 
-A warped starting area remains Deadwood. Region queries are independent of terrain tiles and travel order, with a bounded 512-entry climate cache. Rendering uses the existing world-aligned ground surface, including across negative coordinates and tile edges.
+The seed chooses any of the nine starting climates with equal weight. A continuous home-climate capsule covers the generated town and southern arrival, then blends into the regional field. Region queries are independent of terrain tiles and travel order, with a bounded 512-entry climate cache. Rendering uses the existing world-aligned ground surface, including across negative coordinates and tile edges.
 
 ## Procedural art contract
 
-`biome-props.ts` owns 23 named prop families and immutable weighted species tables. Each family defines collision radius, scale, projected canopy bounds, shadow, wind sway and optional emitted light. World generation and rendering consume the same metadata. Decorative groundcover remains passable. Roads, settlements, shrines and wilderness approaches keep their existing clearance rules; foreground crowns also avoid obscuring protected sites.
+`biome-props.ts` owns 29 named prop families and immutable weighted species tables. Each family defines collision radius, scale, projected canopy bounds, shadow, wind sway and optional emitted light. World generation and rendering consume the same metadata. Decorative groundcover remains passable. Roads, settlements, shrines and wilderness approaches keep their existing clearance rules; foreground crowns also avoid obscuring protected sites.
 
 `tree-art.ts` now owns eight tree families, each with three growth habits, furrowed trunks and layered crowns. Living trees have a stable trunk surface and two independently moving canopy surfaces; only foliage fades around the player. `biome-prop-art.ts` owns ten smaller climate families. `environment-art.ts` caches 24 seeded variants per family in a 96-entry LRU. Base trees, rocks and shrines stay in `ArtLibrary`; its trees use the same layered generator. Ice crystals, ember stones and fungi add restrained emitted light within the existing light budget.
 
 ## Local review
 
-- `/biomes.html` shows seven frozen generated environments and two real mixed borders through the game renderer and CRT pass. Props are neither moved nor replaced for the preview; no gameplay advances or exploration is saved.
+- `/biomes.html` shows nine frozen generated environments and available real mixed borders through the game renderer and CRT pass. Props are neither moved nor replaced for the preview; no gameplay advances or exploration is saved.
 - `/atlas.html?seed=7319`, `18427`, or `90210` opens a large explored example using the real world map and memory-only discovery. See [explored atlas](explored-atlas.md).
 
-Generation version is now **5**. The world-generation pass enlarges the climate and replaces settlement/road geography. Old test characters are cleared on gameplay bootstrap as authorized; no migration is provided. See [world generation](world-generation.md).
+Generation version is **9**. New worlds use the shared climate and density rules above. Existing characters remain stored but require the matching older world version; create a fresh character for this generation. See [world generation](world-generation.md).
 
 Biome-specific enemies and loot biases extend the existing tables; level, XP, rank, rarity and item scaling formulas remain unchanged. Water, snow and ash are visual terrain materials in this iteration. Navigation hazards, biome bosses, weather gameplay and biome-specific town architecture are future work.
 

@@ -1,11 +1,13 @@
+import { dryGrass, thornBrush, openStone } from './open-biome-art.ts';
 import { weatherStone } from './material-art.ts';
 import type { PropKind } from './biome-props.ts';
 import { randomFromSeed, polygon, line, taper, type Point, type Random } from './art-primitives.ts';
 import type { BiomeId } from './biomes.ts';
 
-type Family = 'iceCrystal' | 'basalt' | 'emberRock'
+type Family = 'sandstoneShard' | 'dryGrass' | 'desertScrub' | 'sandstone' | 'steppeStone' | 'thornBrush' | 'iceCrystal' | 'basalt' | 'emberRock'
   | 'leafPile' | 'heather' | 'limestone' | 'tussock' | 'mushrooms' | 'stump' | 'lilies';
 export const BIOME_PROP_BOUNDS: Readonly<Partial<Record<PropKind, readonly [number, number]>>> = Object.freeze({
+  sandstoneShard: [52, 48], dryGrass: [82, 56], desertScrub: [72, 35], sandstone: [82, 85], steppeStone: [58, 98], thornBrush: [76, 53],
   iceCrystal: [68, 82], basalt: [72, 61],
   emberRock: [68, 48], leafPile: [68, 30],
   heather: [64, 54], limestone: [70, 56], tussock: [64, 57], mushrooms: [50, 40], stump: [60, 44], lilies: [72, 36],
@@ -118,6 +120,8 @@ function lilies(c: CanvasRenderingContext2D, random: Random) {
 export function drawBiomeProp(c: CanvasRenderingContext2D, kind: PropKind, seed: number): void {
   const random = randomFromSeed(seed);
   const draw: Record<Family, (c: CanvasRenderingContext2D, random: Random) => void> = {
+    sandstoneShard: (ctx,r) => openStone(ctx,r,true,true),
+    dryGrass, desertScrub: (ctx,r) => dryGrass(ctx,r,true), thornBrush, sandstone: (ctx,r) => openStone(ctx,r,true), steppeStone: (ctx,r) => openStone(ctx,r,false),
     iceCrystal: crystal, basalt: (ctx, r) => basalt(ctx, r, false),
     emberRock: (ctx, r) => basalt(ctx, r, true), heather, limestone, tussock, mushrooms, stump, lilies,
     leafPile: (ctx, r) => { for (let i = 0; i < 27; i++) leaf(ctx, between(r, -27, 27), between(r, -12, 1), between(r, 1.4, 4.6), ['#a77c45', '#c59c56', '#825a39'][i % 3], between(r, -1.3, 1.3)); },
@@ -131,6 +135,14 @@ export function drawBiomeGroundAccent(c: CanvasRenderingContext2D, biome: BiomeI
   pick: number, seed: number, onRoad: boolean): boolean {
   const random = randomFromSeed(seed);
   if (onRoad) return false;
+  if (biome === 'sunscar') {
+    if(pick<.45) line(c,[[x-6,y],[x,y-1],[x+9,y]],'#e8c89725',.6);
+    return true;
+  }
+  if (biome === 'steppe') {
+    if(pick<.7) for(let i=0;i<3;i++) line(c,[[x+i*2,y],[x+i*2+2,y-3],[x+i*2+6,y-7-random()*4]],i%2?'#c8bb7648':'#79834550',.65);
+    return true;
+  }
   if (biome === 'frostpine') {
     if (pick < .42) {
       polygon(c, [[x - 5, y], [x - 1, y - 1.3], [x + 7, y], [x + 2, y + 1.4]], '#c4d3d42e');

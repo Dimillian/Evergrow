@@ -68,7 +68,7 @@ test('source-level XP and rank loot survive moving home and the kill itself gain
   assert.equal(sim.player.character.skillPoints, expectedProgress.level - 1);
   assert.equal(sim.player.character.statPoints, (expectedProgress.level - 1) * 5);
   assert.deepEqual(sim.groundItems.map(drop => drop.item), rollEnemyLoot(source));
-  assert.ok(sim.groundItems.every(drop => drop.item.itemLevel === 6));
+  assert.ok(sim.groundItems.every(drop => drop.item.itemLevel === source.level + 2));
   const count = sim.groundItems.length;
   advance(sim, .6, { attack: true });
   assert.equal(sim.kills, 1); assert.equal(sim.groundItems.length, count);

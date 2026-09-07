@@ -5,6 +5,8 @@ import type { Prop } from './world.ts';
 
 interface GroundPalette { soil: string; cover: string; light: string; dark: string; litter: string; }
 export const GROUND_PALETTES: Readonly<Record<BiomeId, GroundPalette>> = Object.freeze({
+  steppe: { soil: '#746747', cover: '#858146', light: '#b3ae6d', dark: '#4c5135', litter: '#bbab6b' },
+  sunscar: { soil: '#b49265', cover: '#bda172', light: '#e0c493', dark: '#7c6248', litter: '#aa885c' },
   deadwood: { soil: '#45473a', cover: '#344c43', light: '#7d8c69', dark: '#192d2a', litter: '#8d8762' },
   verdant: { soil: '#504b32', cover: '#3a5937', light: '#829451', dark: '#1d342a', litter: '#a29a5b' },
   swamp: { soil: '#294a48', cover: '#42654e', light: '#809b77', dark: '#142f36', litter: '#8a9765' },

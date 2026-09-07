@@ -103,12 +103,12 @@ function building(id: string, seed: number, kind: BuildingKind, rect: Rect): Bui
 
 /** Bounded seeded layout; every building faces an unobstructed south-side street. */
 export function generateSettlement(seed: number, place: Place): Settlement {
-  const townSeed = place.seed, band = place.id;
+  const townSeed = place.seed;
   const random = rng(townSeed);
   const { x, y } = place;
   const id = `town:${seed}:${place.id}`;
   const city = place.city;
-  const target = band === 0 ? 8 : city ? 12 + Math.floor(random() * 5) : 5 + Math.floor(random() * 4);
+  const target = city ? 12 + Math.floor(random() * 5) : 5 + Math.floor(random() * 4);
   const buildings: Building[] = [];
   const streets: Rect[] = [];
   const plaza = { x: x - 105, y: y - 78, width: 210, height: 156 };
@@ -126,7 +126,7 @@ export function generateSettlement(seed: number, place: Place): Settlement {
     const centerX = roadX + site.side * ((site.outer ? 392 : 142) + width / 2);
     const rect = { x: centerX - width / 2, y: doorY - height, width, height };
     const requiredRadius = Math.hypot(centerX - x, rect.y + height / 2 - y) + Math.hypot(width, height) / 2 + 30;
-    if (requiredRadius > (band === 0 ? 780 : MAX_TOWN_RADIUS)) continue;
+    if (requiredRadius > MAX_TOWN_RADIUS) continue;
     if (buildings.some(other => intersects({ x: rect.x - 12, y: rect.y - 12, width: width + 24, height: height + 24 }, other))) continue;
     const next = building(`${id}:building:${buildings.length}`, (townSeed + buildings.length * 193) >>> 0, kinds[buildings.length] ?? 'house', rect);
     buildings.push(next);
@@ -135,7 +135,7 @@ export function generateSettlement(seed: number, place: Place): Settlement {
   }
   const radius = Math.max(310, ...buildings.map(b => Math.hypot(b.x + b.width / 2 - x, b.y + b.height / 2 - y) + Math.hypot(b.width, b.height) / 2 + 30));
   streets.push({ x: x - 28, y: y - radius * .85, width: 56, height: radius * 1.7 });
-  return { id, seed: townSeed, name: band === 0 ? 'Briarwatch' : NAMES[(townSeed % NAMES.length)] + ['ford', 'haven', 'watch', 'rest', 'wick', 'mere', 'bridge', 'fall', 'brook', 'cross', 'holm', 'stead', 'gate', 'wall', 'bury', 'crest'][Math.floor(townSeed / 29) % 16], kind: city ? 'city' : 'town', x, y, radius, buildings, plaza, streets };
+  return { id, seed: townSeed, name: NAMES[(townSeed % NAMES.length)] + ['ford', 'haven', 'watch', 'rest', 'wick', 'mere', 'bridge', 'fall', 'brook', 'cross', 'holm', 'stead', 'gate', 'wall', 'bury', 'crest'][Math.floor(townSeed / 29) % 16], kind: city ? 'city' : 'town', x, y, radius, buildings, plaza, streets };
 }
 
 function smoothstep(a: number, b: number, value: number): number {

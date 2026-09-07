@@ -86,7 +86,21 @@ export const BIOME_PROFILE_WEIGHTS: Readonly<Record<BiomeId, BiomeProfileWeights
     orb: Object.freeze({ 'cinder-orb': 5, 'rime-orb': 1, 'astral-orb': 1 }),
     shield: Object.freeze({ 'iron-buckler': 1, 'vigil-kite': 2, 'bastion-tower': 4 }),
   }),
-  autumn: Object.freeze({
+  steppe: Object.freeze({
+    weapon: Object.freeze({ longsword: 2, 'hand-axe': 3, 'flanged-mace': 1, 'rondel-dagger': 4,
+      greatblade: 1, greataxe: 1, 'grave-maul': 1, 'thorn-shortbow': 3, 'crescent-recurve': 3,
+      'warden-longbow': 2, 'ember-staff': 1, 'rime-staff': 1, 'storm-staff': 2, 'cinder-wand': 1, 'hoarfrost-wand': 1, 'spark-wand': 2, 'star-wand': 2 }),
+    grimoire: Object.freeze({ 'ember-codex': 1, 'rime-folio': 1, 'astral-grimoire': 2 }),
+    orb: Object.freeze({ 'cinder-orb': 1, 'rime-orb': 1, 'astral-orb': 2 }),
+    shield: Object.freeze({ 'iron-buckler': 4, 'vigil-kite': 2, 'bastion-tower': 1 }),
+  }),  sunscar: Object.freeze({
+    weapon: Object.freeze({ longsword: 2, 'hand-axe': 3, 'flanged-mace': 1, 'rondel-dagger': 4,
+      greatblade: 1, greataxe: 1, 'grave-maul': 1, 'thorn-shortbow': 3, 'crescent-recurve': 3,
+      'warden-longbow': 2, 'ember-staff': 1, 'rime-staff': 1, 'storm-staff': 2, 'cinder-wand': 1, 'hoarfrost-wand': 1, 'spark-wand': 2, 'star-wand': 2 }),
+    grimoire: Object.freeze({ 'ember-codex': 1, 'rime-folio': 1, 'astral-grimoire': 2 }),
+    orb: Object.freeze({ 'cinder-orb': 1, 'rime-orb': 1, 'astral-orb': 2 }),
+    shield: Object.freeze({ 'iron-buckler': 4, 'vigil-kite': 2, 'bastion-tower': 1 }),
+  }),  autumn: Object.freeze({
     weapon: Object.freeze({ longsword: 2, 'hand-axe': 3, 'flanged-mace': 1, 'rondel-dagger': 4,
       greatblade: 1, greataxe: 1, 'grave-maul': 1, 'thorn-shortbow': 3, 'crescent-recurve': 3,
       'warden-longbow': 2, 'ember-staff': 1, 'rime-staff': 1, 'storm-staff': 2, 'cinder-wand': 1, 'hoarfrost-wand': 1, 'spark-wand': 2, 'star-wand': 2 }),

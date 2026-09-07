@@ -1,4 +1,4 @@
-export const BIOME_IDS = Object.freeze(['deadwood', 'verdant', 'swamp', 'frostpine', 'emberfall', 'autumn', 'highlands'] as const);
+export const BIOME_IDS = Object.freeze(['deadwood', 'verdant', 'swamp', 'frostpine', 'emberfall', 'autumn', 'highlands', 'steppe', 'sunscar'] as const);
 export type BiomeId = typeof BIOME_IDS[number];
 export type BiomeWeights = Record<BiomeId, number>;
 export interface BiomeSample { id: BiomeId; name: string; weights: BiomeWeights; }
@@ -13,6 +13,8 @@ export interface BiomeDefinition {
 }
 
 export const BIOMES: Readonly<Record<BiomeId, BiomeDefinition>> = Object.freeze({
+  steppe: { id: 'steppe', name: 'Whispering Steppe', description: 'Wind-combed grasslands, thorn thickets and solitary weathered stones.', color: '#85815a', ground: [76, 80, 45], moss: [19, 24, 7], ambient: [184, 188, 159] },
+  sunscar: { id: 'sunscar', name: 'Sunscar Expanse', description: 'Pale wind-carved sand, weathered sandstone and sheltered desert scrub.', color: '#b6956b', ground: [139, 108, 70], moss: [16, 11, 3], ambient: [210, 184, 150] },
   deadwood: { id: 'deadwood', name: 'Deadwood', description: 'Ashen trunks, old shrines and pale fungi among the burial woods.',
     color: '#354a51', ground: [22, 40, 43], moss: [10, 35, 13], ambient: [131, 156, 174] },
   verdant: { id: 'verdant', name: 'Verdant Forest', description: 'Deep green canopies, ferns and luminous woodland flowers.',
@@ -42,6 +44,11 @@ function hash(x: number, y: number, seed: number): number {
   n = Math.imul(n ^ n >>> 16, 0x7feb352d); n = Math.imul(n ^ n >>> 15, 0x846ca68b);
   return (n ^ n >>> 16) >>> 0;
 }
+/** Equal starting-climate chances, independent of terrain density and town suitability. */
+export function startingBiome(seed: number): BiomeId {
+  return BIOME_IDS[hash(0, 0, seed ^ 0x5f3759df) % BIOME_IDS.length];
+}
+
 function noise(x: number, y: number, seed: number): number {
   const ix = Math.floor(x), iy = Math.floor(y), tx = smooth(x - ix), ty = smooth(y - iy);
   const a = hash(ix, iy, seed) / UINT_RANGE, b = hash(ix + 1, iy, seed) / UINT_RANGE;
@@ -58,15 +65,17 @@ function region(cx: number, cy: number, seed: number): Region {
   const temperature = noise(cx / 2.35 + 17.3, cy / 2.35 - 9.7, seed + 311);
   const moisture = noise(cx / 2.05 - 13.6, cy / 2.05 + 5.1, seed + 773);
   const elevation = noise(cx / 1.9 + 6.8, cy / 1.9 + 21.4, seed + 1297);
-  const biome: BiomeId = temperature < .30 ? 'frostpine' : temperature > .72 ? 'emberfall'
+  const biome: BiomeId = temperature > .54 && moisture < .44 ? 'sunscar'
+    : temperature >= .30 && moisture < .44 ? 'steppe' : temperature < .30 ? 'frostpine' : temperature > .72 ? 'emberfall'
     : elevation > .66 ? 'highlands' : moisture > .61 ? 'swamp'
+      : temperature < .52 && moisture < .53 ? 'deadwood'
       : temperature > .52 && moisture < .57 ? 'autumn' : moisture > .40 ? 'verdant' : 'deadwood';
   const value = Object.freeze({ x: cx + .5 + (hash(cx, cy, seed + 89) / UINT_RANGE - .5) * .52,
     y: cy + .5 + (hash(cx, cy, seed + 197) / UINT_RANGE - .5) * .52, biome });
   if (regions.size >= BIOME_FIELD_RULES.cacheLimit) regions.delete(regions.keys().next().value!);
   regions.set(key, value); return value;
 }
-const emptyWeights = (): BiomeWeights => ({ deadwood: 0, verdant: 0, swamp: 0, frostpine: 0, emberfall: 0, autumn: 0, highlands: 0 });
+const emptyWeights = (): BiomeWeights => ({ deadwood: 0, verdant: 0, swamp: 0, frostpine: 0, emberfall: 0, autumn: 0, highlands: 0, steppe: 0, sunscar: 0 });
 
 /** Warped two-dimensional climate regions. Compact, smooth influence kernels blend
  * all neighboring materials; neither terrain chunks nor dominant IDs form seams. */
@@ -87,11 +96,13 @@ export function sampleBiome(x: number, y: number, seed = 7319): BiomeSample {
   }
   // Nine cells contain every non-zero kernel: omitted cells are at least 1.24
   // region units away; kernels vanish smoothly at 1.18. There is always coverage.
-  const startDistance = Math.hypot(wx - 145 * Math.sin(phase), wy + 265 * Math.sin(phase) - 105 * Math.cos(phase));
+  // A soft capsule covers the home settlement and its southern arrival clearing.
+  // Coordinates stay local to home; its climate is chosen independently for every seed.
+  const startDistance = Math.hypot(x, y - Math.max(-1150, Math.min(0, y)));
   const start = 1 - smooth((startDistance - BIOME_FIELD_RULES.startingCore)
     / (BIOME_FIELD_RULES.startingBlendEnd - BIOME_FIELD_RULES.startingCore));
   for (const id of BIOME_IDS) weights[id] = weights[id] / sum * (1 - start);
-  weights.deadwood += start;
+  weights[startingBiome(seed)] += start;
   let id: BiomeId = 'deadwood';
   for (const candidate of BIOME_IDS) if (weights[candidate] > weights[id]) id = candidate;
   return { id, name: BIOMES[id].name, weights };

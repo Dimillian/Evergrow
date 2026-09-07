@@ -21,7 +21,7 @@ On the hosted game, sign in with ChatGPT for cloud characters or choose Local fo
 ## What works today
 
 - **Characters & saves:** eight local save slots, a forest character hall, equipped previews, level/power summaries and automatic checkpoints. Every character starts with leather armor, a choice of sword, bow or fire staff, and an empty bag.
-- **World:** seven blended biomes, procedural towns, twelve wilderness landmarks, cursed chests and varied assault/defense/ritual events. Regional placement, branching 13–19-room crypts, day/night lighting and ambient wildlife. Scrolling minimap and explored-world atlas.
+- **World:** nine blended biomes, natural groves and clearings, open steppe and desert, procedural towns, twelve wilderness landmarks, cursed chests and varied assault/defense/ritual events. Regional placement, branching 13–19-room crypts, day/night lighting and ambient wildlife. Scrolling minimap and explored-world atlas.
 
   The latest world expansion is local for testing; it requires a fresh character. The hosted version remains unchanged until publication.
 - **Combat:** melee, bows and elemental staves; shields and dual wield; dodging, particles, damage feedback, and six enemy archetypes across three ranks. Encounters spawn outside the camera.

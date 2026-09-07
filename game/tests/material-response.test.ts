@@ -76,7 +76,7 @@ test('released projectiles preserve their element after weapon changes; death ef
 });
 
 test('surface classification follows actual scenery while leaving it solid', () => {
-  const world = new World(7319), props = world.getProps(-1000, -1000, 2000, 2000);
+  const world = new World(4), props = world.getProps(-1600, -1600, 3200, 3200); // Deadwood home: wood and stone fixtures.
   for (const [kind, material] of [['deadTree','wood'], ['rock','stone']] as const) {
     const prop = props.find(p => p.kind === kind)!; assert.ok(prop);
     assert.equal(world.impactMaterial(prop.x, prop.y, 1), material); assert.ok(world.blocked(prop.x, prop.y, 1));

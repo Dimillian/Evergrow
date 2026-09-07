@@ -32,6 +32,8 @@ export interface WildernessBiomeTheme {
   readonly cloth: string; readonly lining: string; readonly trim: string; readonly banner: string; readonly earthRgb: string;
 }
 export const WILDERNESS_BIOME_THEMES: Readonly<Record<BiomeId, WildernessBiomeTheme>> = Object.freeze({
+  steppe: Object.freeze({ cloth: '#666a43', lining: '#979568', trim: '#d0bf8a', banner: '#859068', earthRgb: '147,138,89' }),
+  sunscar: Object.freeze({ cloth: '#8f6b4a', lining: '#c7aa79', trim: '#e5ca9a', banner: '#bd855c', earthRgb: '168,139,98' }),
   deadwood: Object.freeze({ cloth: '#875146', lining: '#94815e', trim: '#c5b384', banner: '#9b4e49', earthRgb: '141,120,82' }),
   verdant: Object.freeze({ cloth: '#586e47', lining: '#8b9263', trim: '#c1bd85', banner: '#728b49', earthRgb: '119,134,86' }),
   swamp: Object.freeze({ cloth: '#46726c', lining: '#809587', trim: '#b5bfa3', banner: '#3f8e88', earthRgb: '134,121,84' }),
@@ -43,6 +45,8 @@ export const WILDERNESS_BIOME_THEMES: Readonly<Record<BiomeId, WildernessBiomeTh
 
 /** Six authored roles, in the shared leader / sentry / hunter / guard / support / rear-guard slots. */
 export const CAMP_BIOME_ROSTERS: Readonly<Record<BiomeId, readonly [EnemyKind, EnemyKind, EnemyKind, EnemyKind, EnemyKind, EnemyKind]>> = Object.freeze({
+  steppe: Object.freeze(['hound','archer','hound','stalker','archer','brute'] as const),
+  sunscar: Object.freeze(['stalker','caster','brute','archer','hound','stalker'] as const),
   deadwood: Object.freeze(['brute', 'archer', 'hound', 'stalker', 'caster', 'stalker'] as const),
   verdant: Object.freeze(['archer', 'archer', 'hound', 'stalker', 'caster', 'hound'] as const),
   swamp: Object.freeze(['caster', 'archer', 'hound', 'stalker', 'wisp', 'stalker'] as const),
@@ -177,7 +181,7 @@ export function generateWildernessSite(worldSeed: number, cx: number, cy: number
   const seed = siteHash(cx, cy, worldSeed, 0x87231);
   const centerX=(cx+.5)*WILDERNESS_RULES.cellSize,centerY=(cy+.5)*WILDERNESS_RULES.cellSize;
   const biome=sampleBiome(centerX,centerY,worldSeed).id;
-  const favored:Record<BiomeId,readonly WildernessKind[]>={deadwood:['graveyard','ruinedChapel','cursedChest'],verdant:['beastDen','corruptedGrove'],swamp:['corruptedGrove','standingStones'],frostpine:['beastDen','quarry'],emberfall:['quarry','cursedChest'],autumn:['hamlet','caravan'],highlands:['quarry','watchtower']};
+  const favored:Record<BiomeId,readonly WildernessKind[]>={steppe:['beastDen','crossing'],sunscar:['quarry','cursedChest'],deadwood:['graveyard','ruinedChapel','cursedChest'],verdant:['beastDen','corruptedGrove'],swamp:['corruptedGrove','standingStones'],frostpine:['beastDen','quarry'],emberfall:['quarry','cursedChest'],autumn:['hamlet','caravan'],highlands:['quarry','watchtower']};
   const region=siteHash(Math.floor(cx/4),Math.floor(cy/4),worldSeed,819);
   const pool=[...KINDS,...favored[biome],KINDS[region%KINDS.length],KINDS[region%KINDS.length]];
   const kind=pool[seed%pool.length],radius=['hamlet','quarry','ruinedChapel'].includes(kind)?270:205;

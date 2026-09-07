@@ -1,12 +1,12 @@
 import { roadPaths } from '../src/road-shape.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BIOME_IDS, BIOMES, sampleBiome, biomeGround, biomeAmbient, biomeMapColor } from '../src/biomes.ts';
+import { BIOME_IDS, BIOMES, startingBiome, sampleBiome, biomeGround, biomeAmbient, biomeMapColor } from '../src/biomes.ts';
 import { World } from '../src/world.ts';
 
-test('all seven organic biomes recur in a reachable world around the stable Deadwood start', () => {
+test('all nine organic biomes recur in a reachable world around the seeded home climate', () => {
   for (const seed of [7319, 18427, 90210, 1, -127, 999]) {
-    assert.equal(sampleBiome(0, 0, seed).weights.deadwood, 1);
+    assert.equal(sampleBiome(0, 0, seed).weights[startingBiome(seed)], 1);
     const found = new Set<string>();
     for (let y = -36000; y <= 36000; y += 960) for (let x = -36000; x <= 36000; x += 960) {
       const sample = sampleBiome(x, y, seed);

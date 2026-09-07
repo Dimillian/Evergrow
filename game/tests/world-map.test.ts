@@ -1,3 +1,4 @@
+import { getZoneAt } from '../src/zone-progression.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WorldMap, mapTileBlend, mapTerrainSize, isMapSampleRevealed, selectMapPOIs, mapRegionLabels, MAP_TERRAIN_RULES, mapRoadPaths, pickMapPOI, chartedMapArea, getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt } from '../src/world-map.ts';
@@ -19,7 +20,7 @@ test('area inspection reveals level only in charted terrain and respects sanctua
   assert.match(chartedMapArea(world, revealed, 6400, 0)!.label, /^Area Lv [1-9]/);
   assert.match(chartedMapArea(world, revealed, -6400, 0)!.label, /^Area Lv [1-9]/);
   assert.equal(chartedMapArea(world, revealed, 0, 0)?.label, 'Sanctuary');
-  assert.match(chartedMapArea(world, revealed, 1, 0)!.name, /Briar March/);
+  assert.equal(chartedMapArea(world, revealed, 1, 0)!.name, getZoneAt(1, 0).name);
 });
 
 test('world/map projection is reversible at fractional centers and negative coordinates', () => {

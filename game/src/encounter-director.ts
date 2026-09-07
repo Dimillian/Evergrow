@@ -10,6 +10,8 @@ export const ENCOUNTER_RULES = Object.freeze({
 
 /** Available archetypes vary with the landscape; kill count never makes an old area harder. */
 export const ENCOUNTER_WEIGHTS: Readonly<Record<BiomeId, Readonly<Record<EnemyKind, number>>>> = Object.freeze({
+  steppe: Object.freeze({ warden: 0, goblin: 0, goblinChief: 0, stalker: 18, brute: 12, caster: 8, hound: 32, archer: 26, wisp: 4 }),
+  sunscar: Object.freeze({ warden: 0, goblin: 0, goblinChief: 0, stalker: 24, brute: 20, caster: 22, hound: 12, archer: 18, wisp: 4 }),
   deadwood: Object.freeze({ warden: 0, goblin: 0, goblinChief: 0, stalker: 34, brute: 20, caster: 10, hound: 14, archer: 16, wisp: 6 }),
   verdant: Object.freeze({ warden: 0, goblin: 0, goblinChief: 0, stalker: 22, brute: 8, caster: 8, hound: 30, archer: 24, wisp: 8 }),
   swamp: Object.freeze({ warden: 0, goblin: 0, goblinChief: 0, stalker: 22, brute: 10, caster: 24, hound: 8, archer: 10, wisp: 26 }),

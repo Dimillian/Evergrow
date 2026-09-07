@@ -23,7 +23,7 @@ export class DungeonWorld extends World {
     override getDungeonEntrances() { return []; }
     override getPOIs() { return []; }
     override isSanctuary(x: number, y: number) { return Math.hypot(x - this.floor.entry.x, y - this.floor.entry.y) < 120; }
-    override sampleBiome(_x: number, _y: number) { return { ...BIOMES.deadwood, weights: { deadwood: 1, verdant: 0, swamp: 0, frostpine: 0, emberfall: 0, autumn: 0, highlands: 0 } }; }
+    override sampleBiome(_x: number, _y: number) { return { ...BIOMES.deadwood, weights: { deadwood: 1, verdant: 0, swamp: 0, frostpine: 0, emberfall: 0, autumn: 0, highlands: 0, steppe: 0, sunscar: 0 } }; }
     override sampleWater() { return { ...DRY_WATER }; }
     override sampleGroundContact(x: number, y: number) { return { weights: this.sampleBiome(x, y).weights, water: 0, natural: 0, indoors: true }; }
     override blocked(x: number, y: number, r: number) { return this.geometry.blocked(x, y, r); }
