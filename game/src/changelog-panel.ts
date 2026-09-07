@@ -23,7 +23,7 @@ export class ChangelogPanel {
     this.element.className = 'changelog-overlay'; this.element.hidden = true;
     this.element.innerHTML = `<section class="ui-window changelog-window" role="dialog" aria-modal="true" aria-labelledby="changelog-title">
       <header class="ui-window-header"><h2 class="ui-title" id="changelog-title">What's new</h2><button class="ui-button ui-button--quiet ui-button--icon" data-changelog-close aria-label="Close changelog">${uiIcon('close')}</button></header>
-      <div class="changelog-layout"><nav class="changelog-history ui-scroll-area" aria-label="Updates">${entries.map((entry, i) => `<button class="changelog-release" data-release="${i}" aria-controls="changelog-entry"><time datetime="${entry.date}">${changelogDate(entry.date)}</time><span>${escapeUI(entry.title)}</span>${i === 0 ? '<small>Latest</small>' : ''}</button>`).join('')}</nav>
+      <div class="changelog-layout"><nav class="changelog-history ui-scroll-area" aria-label="Updates">${entries.map((entry, i) => `<button class="changelog-release" data-release="${i}" aria-controls="changelog-entry"><time datetime="${entry.date}">${changelogDate(entry.date)}</time><span>v${escapeUI(entry.version)}</span>${i === 0 ? '<small>Latest</small>' : ''}</button>`).join('')}</nav>
       <article id="changelog-entry" class="changelog-entry ui-scroll-area" tabindex="0" aria-label="Update notes"></article></div>
       <footer class="ui-window-footer changelog-footer"><span>EVERGROW</span><span>Esc / B <span>Close</span></span></footer></section>`;
     mount.append(this.element);
@@ -57,7 +57,7 @@ export class ChangelogPanel {
     this.selected = index;
     for (const button of this.element.querySelectorAll<HTMLElement>('[data-release]')) button.setAttribute('aria-current', String(Number(button.dataset.release) === index));
     const entry = entries[index], body = this.element.querySelector<HTMLElement>('#changelog-entry')!;
-    body.innerHTML = `<header><time datetime="${entry.date}">${changelogDate(entry.date)}</time><h3>${escapeUI(entry.title)}</h3></header>
+    body.innerHTML = `<header><time datetime="${entry.date}">${changelogDate(entry.date)}</time><h3>v${escapeUI(entry.version)}</h3></header>
       ${entry.notices.map(n => `<p class="changelog-notice">${inline(n)}</p>`).join('')}
       ${entry.sections.map(section => `<section class="changelog-section" data-kind="${section.title}"><h4>${section.title}</h4><ul>${section.items.map(item => `<li>${inline(item)}</li>`).join('')}</ul></section>`).join('')}`;
     body.scrollTop = 0;

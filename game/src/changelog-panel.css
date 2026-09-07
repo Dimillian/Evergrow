@@ -16,15 +16,15 @@
 .changelog-entry { min-width:0; min-height:0; overflow:auto; overscroll-behavior:contain; padding:24px clamp(18px,4vw,38px); }
 .changelog-entry:focus-visible { outline:1px solid #9ebac575; outline-offset:-4px; }
 .changelog-entry header time { color:#8aa1aa; font-size:13px; }
-.changelog-entry h3 { margin:6px 0 20px; color:#e3e1ce; font-size:25px; font-weight:500; line-height:1.2; }
+.changelog-entry h3 { margin:6px 0 20px; color:#e3e1ce; font-size:20px; font-weight:500; line-height:1.2; }
 .changelog-notice { margin:0 0 18px; padding:10px 12px; background:#b2a46f0f; border:1px solid #b2a46f26; border-radius:4px; color:#c0bba8; font-size:14px; line-height:1.5; }
-.changelog-section + .changelog-section { margin-top:26px; }
+.changelog-section + .changelog-section { margin-top:20px; }
 .changelog-section h4 { margin:0 0 13px; padding-bottom:8px; border-bottom:1px solid #9bb3bc20; color:#b1cdb9; font-size:15px; font-weight:500; }
 .changelog-section[data-kind='Tweaks'] h4 { color:#a6c4db; }
 .changelog-section[data-kind='Fixes'] h4 { color:#c4b7da; }
 .changelog-section ul { margin:0; padding-left:18px; }
-.changelog-section li { padding-left:4px; color:#b0c0c5; font-size:16px; line-height:1.6; overflow-wrap:anywhere; }
-.changelog-section li + li { margin-top:12px; }
+.changelog-section li { padding-left:4px; color:#b0c0c5; font-size:16px; line-height:1.45; overflow-wrap:anywhere; }
+.changelog-section li + li { margin-top:8px; }
 .changelog-section li::marker { color:#657f8b; font-size:11px; }
 .changelog-section strong { color:#dfdfd1; font-weight:500; }
 .changelog-footer { flex:none; font-size:12px; padding:10px 18px; color:#8da4ad; }
