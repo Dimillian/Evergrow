@@ -1,6 +1,15 @@
 import { decodeSaveBundle, type SaveBundle } from './save-bundle.ts';
 export interface CloudUpload { operation: string; base: number; bundle: SaveBundle | null; }
 export interface CloudRow { upload?: CloudUpload; index: number; token: string; base: number; bundle: SaveBundle | null; dirty: boolean; operation: string; conflict: boolean; }
+/** Migrate the live read projection without rewriting cached bytes or an immutable upload retry. */
+function currentRow(row:CloudRow):CloudRow {
+  if(row.bundle && Number(row.bundle.character.version)===3){
+    const bundle=decodeSaveBundle(JSON.stringify(row.bundle));
+    if(!bundle)throw new Error('Invalid save file.');
+    return {...row,bundle};
+  }
+  return row;
+}
 export type CacheCommand =
   | { kind: 'list' } | { kind: 'read'; index: number }
   | { kind: 'write'; index: number; expected: string | null; bundle: SaveBundle | null; operation: string }
@@ -46,7 +55,10 @@ export function openCloudCache(factory: IDBFactory, account: string) {
         }
         if (result) store.put(result);
       };
-      tx.oncomplete = () => resolve(result);
+      tx.oncomplete = () => {
+        try { resolve(Array.isArray(result)?result.map(currentRow):result?currentRow(result):null); }
+        catch(error){reject(error);}
+      };
       tx.onabort = tx.onerror = () => reject(tx.error ?? new Error('Save storage unavailable.'));
     });
   } };

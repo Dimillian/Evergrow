@@ -14,7 +14,7 @@ Localhost, Safari and Android storage remain separate from the hosted domain. A 
 
 ## Appearance schema checkpoint - 2026-09-07
 
-The character-editor branch now uses save v4 with a required validated appearance recipe (head parts/colors, armor tints and helmet visibility). Older v3 characters remain stored but require new characters; no migration or deletion occurs. Local saves, portable bundles and shared server validation use the same contract. The hosted Site has not been redeployed; cross-version saves are not portable until compatible builds are used. No database migration is needed.
+The character-editor branch now uses save v4 with a required validated appearance recipe (head parts/colors, armor tints and helmet visibility). Valid pre-editor v3 characters migrate on decode with the default appearance, preserving progress and chart identity. Reads leave the original bytes untouched; the next successful save writes v4. Local saves, portable bundles and shared server validation use the same contract. The hosted Site has not been redeployed; this updated build accepts v3 bundles, but old deployed builds cannot read v4 exports. Compatible client/server builds are still required for synchronization. No database migration is needed.
 
 ## Storage and synchronization
 

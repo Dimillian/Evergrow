@@ -1,4 +1,4 @@
-import { validCharacterLook } from './character-look.ts';
+import { createCharacterLook, validCharacterLook } from './character-look.ts';
 import { ROAMING_RULES } from './roaming-encounters.ts';
 import { validJourneys, type JourneyState } from './journey-state.ts';
 import type { Expeditions, StoredActor } from './dungeon-state.ts';
@@ -70,11 +70,16 @@ function validSheet(v: unknown, level: number): v is CharacterSheet {
     && new Set(v.skillSlots.filter(Boolean)).size === v.skillSlots.filter(Boolean).length;
 }
 
-/** Reject the entire checkpoint before touching the current character. No partial repair or migration. */
+/** Upgrade pre-editor v3 appearance on the parsed copy, then validate the entire checkpoint. */
 export function decodeCharacterSave(raw: string): CharacterSave | null {
   if (raw.length > SAVE_MAX_CODE_UNITS) return null;
   try {
     const v: unknown = JSON.parse(raw);
+    if (object(v) && v.version === 3 && object(v.checkpoint) && object(v.checkpoint.character)) {
+      // v3 predates appearance. Preserve any existing recipe and let validation reject malformed data.
+      if (!Object.hasOwn(v.checkpoint.character, 'look')) v.checkpoint.character.look = createCharacterLook();
+      v.version = CHARACTER_SAVE_VERSION;
+    }
     if (!object(v) || v.version !== CHARACTER_SAVE_VERSION || !text(v.id, 64) || !/^[a-zA-Z0-9-]+$/.test(v.id)
       || !text(v.name, 24) || !integer(v.createdAt) || !integer(v.updatedAt) || v.updatedAt < v.createdAt
       || !integer(v.worldSeed, 0, 4294967295) || !integer(v.worldVersion, 1)) return null;

@@ -1,7 +1,7 @@
 # Character systems foundation
 
 
-[Character appearance](character-editor.md) is integrated in creation and inventory with shared world/portrait rendering. Save v4 requires the appearance recipe; older v3 test characters remain stored but require new characters.
+[Character appearance](character-editor.md) is integrated in creation and inventory with shared world/portrait rendering. Save v4 requires the appearance recipe; valid pre-editor v3 characters migrate automatically with the default look, preserving progress.
 
 2026-09-05 · local, unreleased prototype.
 
