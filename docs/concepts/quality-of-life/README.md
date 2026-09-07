@@ -90,6 +90,12 @@ candidate checkboxes or extra confirmation is part of this implementation.
 [Refined visual target](05-selected-design.png) illustrates that combination;
 incidental generated labels and icon inaccuracies do not change the rules.
 
+The final empty-slot behavior also supersedes the proposed empty-list message:
+if no unlocked, unassigned, equipment-compatible skills qualify, activating an
+empty slot does nothing and does not pause combat.
+Actual implementation screenshots are in
+[the UI capture record](../../screenshots/quality-of-life/README.md).
+
 Verification: `npm run check` passes (908 code tests, strict/core TypeScript and
 production build). The local server remains on port 5173. No automated browser
 playtest, Sites publication, APK install or save reset was performed.
