@@ -1,6 +1,6 @@
 # Chronicle
 
-Implemented locally for review, 2026-09-07. Cloud schema/API changes await an explicitly requested deployment.
+Published in v0.5.0 on 2026-09-07 with matching cloud client, API and additive D1 migration. Sites confirmed deployment success; cross-device acceptance remains a player check.
 
 ## Player flow
 
@@ -38,4 +38,4 @@ Existing saves contribute recorded kills, playtime and current level. Previously
 
 Headless regression coverage includes cumulative/import deduplication, earliest receipts, deleted-slot retention, stale writes, old-history recovery, cloud account isolation and conflict exclusion, overkill/element splits, deaths, Spellblade, movement/teleports, commerce, save dates, and panel return behavior. Standard type checking includes the new measurement modules in the headless boundary.
 
-Before publishing this feature, apply `drizzle/0001_worthless_slipstream.sql` through the normal Sites migration workflow and deploy matching client/server code. Do not deploy the cloud client independently of the new endpoint/schema.
+The v0.5.0 deployment packages `drizzle/0001_worthless_slipstream.sql` through the normal Sites migration workflow with matching client/server code. Do not deploy the cloud client independently of its endpoint/schema. See [release record](releases.md).

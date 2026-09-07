@@ -1,6 +1,6 @@
 # Cloud saves on Sites
 
-Cloud saves deployed · 2026-09-06. The cadence refinement below is validated locally and awaits the next requested Sites deployment.
+Cloud saves deployed · 2026-09-06. Chronicle and the current cadence are included in the verified v0.5.0 publication on 2026-09-07.
 
 ## Player flow
 
@@ -14,7 +14,7 @@ Localhost, Safari and Android storage remain separate from the hosted domain. A 
 
 ## Appearance schema checkpoint - 2026-09-07
 
-The character-editor branch now uses save v4 with a required validated appearance recipe (head parts/colors, armor tints and helmet visibility). Valid pre-editor v3 characters migrate on decode with the default appearance, preserving progress and chart identity. Reads leave the original bytes untouched; the next successful save writes v4. Local saves, portable bundles and shared server validation use the same contract. The hosted Site has not been redeployed; this updated build accepts v3 bundles, but old deployed builds cannot read v4 exports. Compatible client/server builds are still required for synchronization. No database migration is needed.
+The character-editor branch now uses save v4 with a required validated appearance recipe (head parts/colors, armor tints and helmet visibility). Valid pre-editor v3 characters migrate on decode with the default appearance, preserving progress and chart identity. Reads leave the original bytes untouched; the next successful save writes v4. Local saves, portable bundles and shared server validation use the same contract. The hosted client/server now include the appearance-aware save contract; older builds cannot read v4 exports. Compatible client/server builds are still required for synchronization. No database migration is needed.
 
 ## Storage and synchronization
 
@@ -30,7 +30,7 @@ The server retains one predecessor; older referenced backups are pruned after su
 
 Every upload compares the server revision it started from. Two devices can play independently, but only one divergent branch can publish. The other remains a durable recovery copy with **Conflict**. Returning to the hall offers **Download**, **Continue recovery**, or a confirmed **Use cloud version** action. Download the recovery first and import it into a free slot to keep both builds. No field-level merging of XP, gold, items or world claims occurs.
 
-**Delete** also works during a conflict. Its confirmation explicitly deletes both the cloud save and this device’s recovery copy; downloading a backup is optional. Conflict deletion requires a connection and compares the latest server revision before deleting. Recovery remains intact until the server acknowledges deletion. A failed request or concurrent server save leaves recovery available and shows a retry message; a concurrent recovery edit is retained. This deletion fix is validated locally and awaits publication.
+**Delete** also works during a conflict. Its confirmation explicitly deletes both the cloud save and this device’s recovery copy; downloading a backup is optional. Conflict deletion requires a connection and compares the latest server revision before deleting. Recovery remains intact until the server acknowledges deletion. A failed request or concurrent server save leaves recovery available and shows a retry message; a concurrent recovery edit is retained. This deletion fix was published in v0.3.2.
 
 There is no exclusive gameplay lease in this first implementation. Optimistic revision checks and idempotent operation receipts protect shared progress. Account changes invalidate requests rather than writing an old session into a different account.
 
@@ -65,6 +65,6 @@ After the first approved deployment, verify the actual Sites sign-in dispatch, p
 
 The cloud/local character hall and account-owned save backend were published to the existing public [Evergrow Site](https://evergrow.dimillian.chatgpt.site) after approval. Sites reported deployment success for source `302202f`. Cross-client authenticated save/continue acceptance remains a player check; Android stays local-only.
 
-## Chronicle — local implementation, not deployed
+## Chronicle — published in v0.5.0
 
-Chronicle counters travel in the existing character checkpoint. D1 stores a validated history summary alongside each slot (including deleted-slot tombstones), updated by the same revision-checked publication. The authenticated Chronicle endpoint merges only the current account. IndexedDB cloud cache v2 preserves fetched account history offline; imports retain source identities and branch future progress to avoid double counting. No extra per-event upload requests. The next deployment needs `drizzle/0001_worthless_slipstream.sql` and matching client/server code. See [Chronicle](chronicle.md).
+Chronicle counters travel in the existing character checkpoint. D1 stores a validated history summary alongside each slot (including deleted-slot tombstones), updated by the same revision-checked publication. The authenticated Chronicle endpoint merges only the current account. IndexedDB cloud cache v2 preserves fetched account history offline; imports retain source identities and branch future progress to avoid double counting. No extra per-event upload requests. The successful v0.5.0 deployment includes `drizzle/0001_worthless_slipstream.sql` and matching client/server code. See [Chronicle](chronicle.md).

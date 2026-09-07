@@ -1,6 +1,6 @@
 # Current system status
 
-Chronicle is implemented locally for review: account/character histories, 32 achievement families, detailed statistics and title/pause/inventory entry points. Cloud API/schema changes are not deployed yet. See [Chronicle](chronicle.md).
+Chronicle is published in v0.5.0: account/character histories, 32 achievement families, detailed statistics and title/pause/inventory entry points. The matching cloud API/schema deployment succeeded; cross-device acceptance remains a player check. See [Chronicle](chronicle.md).
 
 ## Natural landscapes · v0.4.0, 2026-09-07
 
@@ -109,7 +109,7 @@ Thor controller checkpoint: 21 focused controller/skill tests passed, including 
 
 ### Handheld optimization checkpoint — September 6
 
-Native-density static HUD chrome caching avoids rebuilding metalwork every frame. Thor skips map rasterization/PNG transfer behind Pack, Build and item details. Touch/controller directional assistance respects action reach, visibility and manual ground targeting. Routine checkpoints run every 20 seconds, cloud outbox batches at 30 seconds with explicit flushes; immediate local transactions remain unchanged. Cloud cadence awaits the next requested Site deployment.
+Native-density static HUD chrome caching avoids rebuilding metalwork every frame. Thor skips map rasterization/PNG transfer behind Pack, Build and item details. Touch/controller directional assistance respects action reach, visibility and manual ground targeting. Routine checkpoints run every 20 seconds, cloud outbox batches at 30 seconds with explicit flushes; immediate local transactions remain unchanged. Cloud cadence is included in the published v0.5.0 source.
 
 Android checkpoint stats (historical): 227 runtime TypeScript modules / 25,154 lines; 95 code-test files; 24 development review entrypoints; zero runtime dependencies. Content: seven biomes, nine enemy archetypes, 20 active skills, 2,185 skill nodes and 17 POI kinds. Source counts come from `npm run stats` at this checkpoint.
 

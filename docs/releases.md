@@ -4,11 +4,12 @@
 
 ## Last verified publication
 
-- Game v0.4.0 / Sites version 19, publicly deployed on 2026-09-07 at 17:38:49 UTC.
-- Published source: `da1058841cb350749a4ccf06370e0f907501f6a9`.
-- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_a8ba733fe4248191a4b2e6c75060b473`.
-- Deployment: `appgdep_6a9ef69c8d208191aa67af1061a7e552`; Sites returned `succeeded`.
-- Isolated release source passed 917 code tests, the cloud-enabled build and release-note validation. Uncommitted skill experiments were excluded.
+- Game v0.5.0 / Sites version 20, publicly deployed on 2026-09-07 at 18:43:53 UTC.
+- Published source: `3d1e281f24c3f60eb8eb82b9cf0dc99339d565b8`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_18594df3a1d081918023342f49788060`.
+- Deployment: `appgdep_6a9f05dbfccc8191ae07e7db1a628b56`; Sites returned `succeeded`.
+- The implementation passed 949 code tests. Release source passed the cloud-enabled client/server build and release-note validation; the archive includes the additive Chronicle D1 migration.
+- Authenticated cross-device save/Chronicle acceptance remains a player check.
 
 ## Before each requested Sites publication
 
