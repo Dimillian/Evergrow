@@ -50,7 +50,6 @@ root.innerHTML = `<div class="editor-shell">
     <section class="editor-stage" aria-label="Character preview">
       <div class="stage-title"><h1 id="preview-name">Rowan</h1><span>Appearance preview</span></div>
       <div class="figure-space"><canvas id="figure" role="img" aria-label="Full character wearing selected appearance and starting gear"></canvas>
-        <div class="face-study"><canvas id="face" role="img" aria-label="Face close-up"></canvas><span>Face detail</span></div>
         <div class="world-study"><canvas id="world-size" role="img" aria-label="Small character preview"></canvas><span>Small scale</span></div></div>
       <div class="rotation"><button type="button" class="ui-button ui-button--quiet ui-button--icon rotate-left" id="rotate-left" aria-label="Rotate left">${uiIcon('chevron')}</button><output id="direction">Front</output><button type="button" class="ui-button ui-button--quiet ui-button--icon" id="rotate-right" aria-label="Rotate right">${uiIcon('chevron')}</button></div>
       <div class="stage-options"><label class="gear-choice">Gear<select id="gear">${STARTER_LOADOUTS.map(p => `<option value="${p.id}">${p.label}</option>`).join('')}</select></label></div>
@@ -78,7 +77,7 @@ root.innerHTML = `<div class="editor-shell">
   ${options.study?'<footer class="editor-footer"><span>Local mockup · appearance only · no character is saved</span><a href="/character-editor-phone.html">Smartphone mockups</a></footer>':`<footer class="editor-commit"><p id="editor-error" role="status"></p><button type="button" class="ui-button ui-button--quiet" id="cancel-editor">Cancel</button><button type="button" class="ui-button ui-button--primary" id="save-editor">${escapeUI(options.saveLabel??'Save changes')}</button></footer>`}
 </div>`;
 const canvas = (id: string) => root.querySelector<HTMLCanvasElement>(`#${id}`)!;
-const figure = canvas('figure'), face = canvas('face'), small = canvas('world-size');
+const figure = canvas('figure'), small = canvas('world-size');
 const gear = root.querySelector<HTMLSelectElement>('#gear')!;
 const facial = root.querySelector<HTMLSelectElement>('#facial-hair')!;
 const accessory = root.querySelector<HTMLSelectElement>('#accessory')!;
@@ -118,16 +117,16 @@ function drawFigure(target: HTMLCanvasElement, time: number, miniature = false) 
   ctx.fillStyle = '#02080ba0'; ctx.beginPath(); ctx.ellipse(0, 3, 16, 3.5, 0, 0, Math.PI * 2); ctx.fill();
   drawHumanoid(ctx, current); ctx.restore();
 }
-function drawHead(target: HTMLCanvasElement, recipe: CharacterAppearance, angle: number, equipped = false) {
+function drawHead(target: HTMLCanvasElement, recipe: CharacterAppearance, angle: number) {
   const { ctx, width, height } = surface(target);
   const scale = Math.min(width / 17, height / 24);
   ctx.save(); ctx.translate(width / 2, height * .52); ctx.scale(scale, scale); ctx.translate(0, 33);
-  headArmor(ctx, equipped ? tintedOutfit(outfitFromEquipment(sheet),tints,true).head ?? null : null, c => c, angle, recipe); ctx.restore();
+  headArmor(ctx, null, c => c, angle, recipe); ctx.restore();
 }
 function draw(time = 0) {
   if (disposed) return;
 
-  drawFigure(figure, time); drawFigure(small, 0, true); drawHead(face, appearance, facing, showHelmet);
+  drawFigure(figure, time); drawFigure(small, 0, true);
 }
 function refresh() {
 

@@ -15,7 +15,7 @@ Open [the character editor](http://127.0.0.1:5173/character-editor.html) with th
 - Section-wide hover or keyboard focus reveals previous/next paging arrows and a page counter. Touch devices show them continuously. Paging preserves the selected look.
 - Armor tab with sixteen tints for helmet, chest, shoulders, gloves, legs, boots and cloak independently. Each part can use its original color; reset restores all original colors. Helmet visibility is an independent checkbox and survives color resets.
 - **Inventory preview** opens the actual inventory panel around a disposable character. The edit icon immediately after the **Equipment** title uses the same sizing as the inventory sort tools and opens the Character tab directly, with the draft intact. Armor remains available through its tab. This entry point is now enabled in gameplay through the shared component.
-- Full equipped character, face close-up, desktop small-scale view, eight facing buttons and drag-to-rotate.
+- Full equipped character, desktop small-scale view, eight facing buttons and drag-to-rotate. The redundant face close-up is removed. Both tabs retain identical preview/panel dimensions.
 - All six starter loadouts and one Show helmet toggle in the Armor tab; the duplicate preview-side checkbox was removed. Switching gear preserves the appearance draft.
 - Name preview, independent cosmetic randomization and appearance reset. The live character view is the preview; the redundant Review look dialog and its portrait export were removed.
 - Keyboard/pointer/touch controls, reduced-motion handling, and a fixed phone preview above independently scrolling controls with sticky Character/Armor tabs. The focused mockup now supports the production gamepad navigation; native packaging remains separate.
@@ -26,7 +26,7 @@ Height, body proportions and body presets are deliberately excluded by the user'
 
 Open [Smartphone study](http://127.0.0.1:5173/character-editor-phone.html) for three independent interactive 390 × 844 views: Character, Armor and Inventory. They embed the same local editor, using `?view=armor` or `?view=inventory` for their starting screen; drafts are separate and disappear on reload.
 
-Below 700 CSS pixels, the character and face remain visible above a scrolling control sheet. Paging arrows are always visible with 44-pixel targets, palettes use four columns, and the tab strip stays at the sheet's top. Short displays use a smaller preview. Inventory reuses the existing touch Bag/Equipment/Stats sections; the Equipment heading icon opens Character directly. The same responsive editor is integrated into gameplay; these embedded review instances remain save-free. Native packaging was not changed.
+Below 700 CSS pixels, the character remains visible above a scrolling control sheet. Paging arrows are always visible with 44-pixel targets, palettes use four columns, and the tab strip stays at the sheet's top. Short displays use a smaller preview. Inventory reuses the existing touch Bag/Equipment/Stats sections; the Equipment heading icon opens Character directly. The same responsive editor is integrated into gameplay; these embedded review instances remain save-free. Native packaging was not changed.
 
 ## Implementation
 
