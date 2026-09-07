@@ -1,3 +1,4 @@
+import type { MaterialId } from './material-content.ts';
 import { furnitureContainer, furnitureContainerId, type BreakableContainer } from './breakable-containers.ts';
 import { waterTerrainSteps } from './water-terrain-art.ts';
 import { hydrology, type WaterSample } from './hydrology.ts';
@@ -363,6 +364,18 @@ export class World {
     if (this.collisionRegions.size >= COLLISION_CACHE_LIMIT) this.collisionRegions.delete(this.collisionRegions.keys().next().value!);
     this.collisionRegions.set(key, region);
     return region;
+  }
+
+  impactMaterial(x: number, y: number, radius: number): MaterialId {
+    const extent = radius + MAX_PROP_RADIUS;
+    const region = this.collisionRegion(x - extent, y - extent, extent * 2, extent * 2);
+    for (const prop of region.props) if (Math.hypot(x - prop.x, y - prop.y) < radius + prop.radius) {
+      if (prop.kind === 'iceCrystal') return 'ice';
+      return propDefinition(prop.kind).canopy || prop.kind === 'stump' ? 'wood' : 'stone';
+    }
+    for (const site of region.sites) for (const d of site.decor) if (d.radius > 0 && Math.hypot(x - d.x, y - d.y) < radius + d.radius)
+      return ['crate', 'barrel', 'fence', 'wagon', 'wheel', 'tent', 'banner'].includes(d.kind) ? 'wood' : 'stone';
+    return 'stone';
   }
 
   private brokenContainers: ReadonlySet<string> = new Set();

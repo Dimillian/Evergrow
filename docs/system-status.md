@@ -89,3 +89,7 @@ Battle-bark PR checkpoint: encounter chance increased to 30%, keeping the 2.8-se
 ### Breakable containers · 2026-09-07
 
 Crates and barrels in wilderness sites and buildings now break from player attack contacts, emit bounded procedural debris, and sometimes drop physical gold. Shared collision, immutable scenery rendering and saved destruction receipts agree; returning or reloading cannot pay them twice. See [progression and loot](progression-and-loot.md#breakable-containers).
+
+### Shared material responses · 2026-09-07
+
+Seven immutable material recipes now drive containers, combat contacts, scenery impacts and elemental deaths. Wood, stone, metal, ice, bone, glass and embers share bounded fragments, motion, light and sound textures. Physical death variants and reward/save ownership stay unchanged. See [material responses](material-responses.md).

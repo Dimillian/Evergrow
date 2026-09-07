@@ -61,15 +61,11 @@ export class CombatEffects {
       const count = event.type === 'blast' ? 46 : event.type === 'block' ? 22 : event.type === 'hit' ? 30 : event.type === 'kill' ? 16
         : event.type === 'hurt' ? 32 : event.type === 'cast' ? 18 : restoring ? 30
         : event.type === 'loot' ? 8 : event.type === 'pickup' ? 10 : event.type === 'dodge' ? 14 : 0;
-      const bodyColor = event.type === 'hurt' ? '#b64143' : enemyKind === 'wisp' ? '#b1e5d6'
-        : enemyKind === 'caster' ? '#809b8b' : enemyKind === 'brute' ? '#b6a184'
-          : enemyKind === 'hound' || enemyKind === 'stalker' ? '#cec6a0' : '#788b69';
-      for (let i = 0; i < count; i++) {
-        const radial = ['kill', 'heal', 'potion', 'pickup', 'level', 'blast'].includes(event.type) || event.skill === 'iceNova';
+      // MaterialResponses owns solid debris. Retain the short luminous contact accents here.
+      for (let i = 0; i < (contact ? event.type === 'kill' ? 0 : 8 : count); i++) {
+        const radial = ['heal', 'potion', 'pickup', 'level', 'blast'].includes(event.type) || event.skill === 'iceNova';
         const angle = radial ? Math.random() * Math.PI * 2 : eventAngle + (Math.random() - .5) * 2.8;
-        const debris = contact && (event.type === 'kill' || i % 3 === 0) && enemyKind !== 'wisp';
-        this.spark(event.x, event.y, angle, debris ? bodyColor : i % 4 === 0 ? '#fff7db' : color,
-          contact ? 1.2 : 1, true, !debris);
+        this.spark(event.x, event.y, angle, i % 4 === 0 ? '#fff7db' : color, contact ? 1.2 : 1);
       }
       const contactY = event.y - (event.type === 'hurt' ? 24 : enemyKind === 'brute' ? 25 : 18);
       if (contact) this.impacts.push({ x: event.x, y: contactY, angle: eventAngle,

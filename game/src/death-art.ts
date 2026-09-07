@@ -50,14 +50,23 @@ export function deathDepth(r:EnemyRemains):number {
 }
 export function drawEnemyRemains(c:CanvasRenderingContext2D,r:EnemyRemains,reducedMotion:boolean):void {
   const pose=deathPose(r,reducedMotion);
+  if (r.element === 'frost') { pose.age = .06; pose.settled = false; pose.opacity = Math.max(0, 1 - ease((r.age - .1) / .4)); }
+  if (r.element === 'fire') pose.opacity *= Math.max(0, 1 - ease((r.age - .4) / 1.7));
   c.save();c.translate(r.x,r.y);c.globalAlpha*=pose.opacity;
-  if(pose.settled&&typeof document!=='undefined') {
+  if((pose.settled || r.element === 'frost')&&typeof document!=='undefined') {
     let art=settledArt.get(r);
     const size=r.kind==='warden'?384:192;
     if(!art) {
       art=document.createElement('canvas');art.width=art.height=size*2;
       const ctx=art.getContext('2d')!;ctx.translate(size,size);ctx.scale(2,2);
-      drawDeathFigure(ctx,r.kind,r.variant,enemyDeathAnimation(r.kind,r.variant).settle,r.facing);
+      drawDeathFigure(ctx,r.kind,r.variant,r.element === 'frost' ? .06 : enemyDeathAnimation(r.kind,r.variant).settle,r.facing);
+      if (r.element === 'frost' || r.element === 'fire') {
+        ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = r.element === 'frost' ? '#83d9eeb5' : '#211e20b8';
+        ctx.fillRect(-size, -size, size * 2, size * 2);
+        if (r.element === 'frost') { ctx.strokeStyle = '#e5fcffb0'; ctx.lineWidth = .65;
+          for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.moveTo(-32 + i * 8, -60); ctx.lineTo(-19 + i * 5, -29); ctx.lineTo(-30 + i * 8, 10); ctx.stroke(); }
+        }
+      }
       if(settledArt.size>=45) settledArt.delete(settledArt.keys().next().value!);
       settledArt.set(r,art);
     }

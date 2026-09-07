@@ -1,3 +1,4 @@
+import type { ProjectileStyle } from './model.ts';
 import { strikeContainers, strikeContainerSegment, type ContainerAttackContext } from './breakable-containers.ts';
 import type { GroundEffectRequest } from './ground-effects.ts';
 import type { CombatEvent, Enemy, EnemyKind, Player, Projectile, WorldQuery } from './model.ts';
@@ -10,7 +11,7 @@ export interface ProjectileContext {
   containers?: ContainerAttackContext;
   schedule(effect: GroundEffectRequest): void;
   player: Player; enemies: Enemy[]; world: WorldQuery;
-  damage(enemy: Enemy, amount: number, angle: number, melee: boolean): void;
+  damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle): void;
   hurt(amount: number, angle: number, sourceLevel: number, sourceKind?: EnemyKind): void;
   onScreen(enemy: Enemy): boolean;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
@@ -21,7 +22,7 @@ function hit(projectile: Projectile, enemy: Enemy, context: ProjectileContext): 
   const effects = projectile.effects;
   projectile.hitIds.add(enemy.id);
   const lifeBefore = enemy.hp;
-  context.damage(enemy, projectile.damage, projectile.angle, false);
+  context.damage(enemy, projectile.damage, projectile.angle, false, projectile.effects?.style);
   if (enemy.state !== 'dead') {
     if (effects?.slowDuration) {
       applySlow(enemy, { duration: effects.slowDuration, factor: effects.slowFactor ?? .6 });
@@ -70,7 +71,9 @@ export function advanceProjectiles(projectiles: Projectile[], dt: number, contex
       projectile.y += projectile.vy * dt / steps;
       if (projectile.owner === 'enemy' && context.world.isSanctuary?.(projectile.x, projectile.y)) { projectile.life = 0; break; }
       if (context.world.blocked(projectile.x, projectile.y, projectile.radius)) {
-        if (projectile.owner === 'player') strikeContainerSegment(context.containers, oldX, oldY, projectile.x, projectile.y, projectile.radius);
+        const broken = projectile.owner === 'player' && strikeContainerSegment(context.containers, oldX, oldY, projectile.x, projectile.y, projectile.radius);
+        if (!broken) context.emit({ type: 'surface-hit', x: oldX, y: oldY, angle: projectile.angle,
+          material: context.world.impactMaterial?.(projectile.x, projectile.y, projectile.radius) ?? 'stone', style: projectile.effects?.style });
         projectile.x = oldX; projectile.y = oldY;
         if (projectile.owner === 'player') blast(projectile, context);
         projectile.life = 0; break;

@@ -1,3 +1,4 @@
+import type { ProjectileStyle } from './model.ts';
 import { containerVisible, strikeContainers, type ContainerAttackContext } from './breakable-containers.ts';
 import { skillTargetPoint } from './skill-target-point.ts';
 import { resolveSkill } from './skill-progression.ts';
@@ -15,7 +16,7 @@ export interface SkillContext {
   containers?: ContainerAttackContext;
   availableGroundEffects: number;
   player: Player; world: WorldQuery; enemies: Enemy[]; aimX: number; aimY: number;
-  damage(enemy: Enemy, amount: number, angle: number, melee: boolean): void;
+  damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle): void;
   onScreen(enemy: Enemy): boolean;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
   projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill: SkillId, effects?: ProjectileEffects): void;
@@ -44,6 +45,8 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   // Staff weapon derivation already applies spell bonuses; applying them here again would square scaling.
   const damage = attack.damage * costs.damageMultiplier;
   const color = definition.color;
+  const hitStyle = 'style' in recipe ? recipe.style : weapon.damageType === 'physical' ? undefined : weapon.damageType;
+  const damageTarget = (enemy: Enemy, amount: number, angle: number, melee: boolean) => context.damage(enemy, amount, angle, melee, hitStyle);
   const living = () => enemies.filter(enemy => enemy.state !== 'dead');
   const visible = (enemy: Enemy) => context.visible(p.x, p.y, enemy.x, enemy.y);
   const radial = (radius: number, hit: (enemy: Enemy, angle: number) => void) => {
@@ -78,7 +81,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
     case 'radial':
       strikeContainers(context.containers, p.x, p.y, recipe.radius);
       radial(recipe.radius, (enemy, angle) => {
-        context.damage(enemy, damage, angle, recipe.melee);
+        damageTarget(enemy, damage, angle, recipe.melee);
         if (recipe.stun) applyStun(enemy, recipe.stun);
         if (recipe.slow) applySlow(enemy, recipe.slow);
       });
@@ -89,7 +92,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
     case 'cone':
       strikeContainers(context.containers, p.x, p.y, recipe.radius, p.angle, recipe.arc);
       for (const enemy of living()) if (circleIntersectsSector(enemy.x, enemy.y, enemy.radius, p.x, p.y, p.angle, recipe.radius, recipe.arc) && visible(enemy)) {
-        context.damage(enemy, damage, p.angle, true); applyStun(enemy, recipe.stun);
+        damageTarget(enemy, damage, p.angle, true); applyStun(enemy, recipe.stun);
       }
       break;
     case 'guard': p.guardTime = Math.max(p.guardTime, recipe.duration); p.guardReduction = recipe.reduction; break;
@@ -98,7 +101,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
         .sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
       if (target) {
         const behind = angularDistance(Math.atan2(p.y - target.y, p.x - target.x), target.angle) > recipe.rearAngle;
-        context.damage(target, damage * (behind ? recipe.rearMultiplier : 1), p.angle, true);
+        damageTarget(target, damage * (behind ? recipe.rearMultiplier : 1), p.angle, true);
       } else strikeContainers(context.containers, p.x, p.y, Math.max(recipe.minRange, attack.range * recipe.reachMultiplier), p.angle, recipe.arc);
       break;
     }
@@ -144,7 +147,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
       for (let jump = 0; next && jump < recipe.jumps; jump++) {
         const target = next;
         context.emit({ type: 'chain', x: from.x, y: from.y, toX: target.x, toY: target.y, skill: id, color, style: recipe.style, duration: recipe.duration });
-        context.damage(target, amount, Math.atan2(target.y - from.y, target.x - from.x), false);
+        damageTarget(target, amount, Math.atan2(target.y - from.y, target.x - from.x), false);
         hit.add(target.id); from = { x: target.x, y: target.y }; amount *= recipe.falloff;
         next = living().filter(enemy => context.onScreen(enemy) && enemy.id !== target.id && (recipe.revisit || !hit.has(enemy.id)) && Math.hypot(enemy.x - from.x, enemy.y - from.y) <= recipe.range + enemy.radius
           && context.visible(from.x, from.y, enemy.x, enemy.y))

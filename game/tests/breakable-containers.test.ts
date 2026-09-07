@@ -4,7 +4,6 @@ import { World } from '../src/world.ts';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
 import { startingEnemyCamp } from '../src/wilderness-sites.ts';
 import { breakContainer, containerGold, strikeContainers, furnitureContainer, type BreakableContainer } from '../src/breakable-containers.ts';
-import { ContainerDebris, CONTAINER_DEBRIS_LIMIT } from '../src/container-debris.ts';
 import { advanceGroundEffects, scheduleGroundEffect } from '../src/ground-effects.ts';
 import { decodeCharacterSave, CHARACTER_SAVE_VERSION } from '../src/character-save.ts';
 import { GOLD_RULES } from '../src/gold.ts';
@@ -108,12 +107,4 @@ test('indoor barrels use stable furniture identity and release their collision o
   assert.equal(world.blocked(target.x, target.y, 1), false);
   assert.ok(world.blocked(building.x, building.y, 1), 'building walls remain solid');
   world.dispose();
-});
-
-test('wood remains are bounded, expire, and never create rewards', () => {
-  const debris = new ContainerDebris();
-  for (let i = 0; i < 100; i++) debris.handle({ type: 'container-break', containerId: String(i), x: 0, y: 0, angle: 0, seed: i, kind: 'barrel' });
-  assert.equal(debris.remains.length, CONTAINER_DEBRIS_LIMIT);
-  debris.update(.3); assert.equal(debris.remains[0].age, .3);
-  debris.update(7); assert.equal(debris.remains.length, 0);
 });

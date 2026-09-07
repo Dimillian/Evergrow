@@ -1,3 +1,5 @@
+import { MATERIALS } from './material-content.ts';
+import { eventMaterial } from './material-response.ts';
 import type { CombatEvent } from './model.ts';
 
 interface Voice {
@@ -185,14 +187,20 @@ export class GameAudio {
     const tone = (a: number, b: number, duration: number, volume: number, priority = 2,
       type: OscillatorType = 'triangle', delay = 0, attack = .003) =>
       this.tone(a, b, duration, volume * gain, priority, type, delay, attack);
+    const material = eventMaterial(event);
+    if (material && (event.type === 'kill' || event.type === 'block' || event.type === 'hit' && !!event.style && event.remainingHp > 0)) {
+      const texture = MATERIALS[material].sound;
+      noise({ duration: texture.duration * .7, frequency: texture.crack, endFrequency: texture.body,
+        volume: texture.gain * .3, q: .6 }, 1);
+    }
     switch (event.type) {
-      case 'container-break':
-        noise({ duration: .035, frequency: 2900, endFrequency: 800, volume: .26, q: .7 });
-        noise({ duration: .18, frequency: 560, endFrequency: 110, volume: .3, body: true, type: 'lowpass' });
-        noise({ duration: .10, frequency: 1900, endFrequency: 500, volume: .10, delay: .08 });
-        noise({ duration: .08, frequency: 1200, endFrequency: 350, volume: .065, delay: .19 });
-        tone(130, 48, .11, .10, 2, 'triangle');
+      case 'container-break': case 'surface-hit': {
+        const sound = MATERIALS[eventMaterial(event)!].sound;
+        noise({ duration: .035, frequency: sound.crack, endFrequency: sound.crack * .28, volume: sound.gain * .85, q: .7 });
+        noise({ duration: sound.duration, frequency: sound.body, endFrequency: sound.body * .2, volume: sound.gain, body: true, type: 'lowpass' });
+        noise({ duration: .08, frequency: sound.crack * .6, endFrequency: sound.body, volume: sound.gain * .28, delay: .09 });
         break;
+      }
       case 'gold':
         {
           const note = [1, 1.125, 1.25, 1.5, 1.667][this.goldPhrase];

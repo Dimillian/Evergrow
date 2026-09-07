@@ -1,4 +1,4 @@
-import type { CombatEvent, Enemy, EnemyKind, Player, WorldQuery } from './model.ts';
+import type { CombatEvent, Enemy, EnemyKind, Player, ProjectileStyle, WorldQuery } from './model.ts';
 import { COMBAT_TIMING, ENEMY_DEFINITIONS } from './combat-content.ts';
 import { ENCOUNTER_RULES } from './encounter-director.ts';
 import { armorReduction } from './progression-content.ts';
@@ -16,7 +16,7 @@ export interface PlayerDamageContext {
 
 /** One contact owner: damage, awareness, impulse, interruption and death commitment. */
 export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean,
-  context: EnemyDamageContext, periodic = false): void {
+  context: EnemyDamageContext, periodic = false, style?: ProjectileStyle): void {
   if (enemy.state === 'dead') return;
   if (!periodic) {
     alertEnemy(enemy, context.player);
@@ -37,12 +37,12 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
     enemy.knockbackX += Math.cos(angle) * shove / COMBAT_TIMING.knockbackDecay;
     enemy.knockbackY += Math.sin(angle) * shove / COMBAT_TIMING.knockbackDecay;
   }
-  context.emit({ type: 'hit', x: enemy.x, y: enemy.y, angle, value: damage,
+  context.emit({ ...(style ? { style } : {}), type: 'hit', x: enemy.x, y: enemy.y, angle, value: damage,
     targetId: enemy.id, remainingHp: enemy.hp, enemyKind: enemy.kind, heavy: critical });
   if (enemy.hp <= 0) {
     transitionEnemy(enemy, 'dead', ENCOUNTER_RULES.corpseDuration);
     context.killed(enemy);
-    context.emit({ type: 'kill', x: enemy.x, y: enemy.y, angle, facing: enemy.angle,
+    context.emit({ ...(style ? { style } : {}), type: 'kill', x: enemy.x, y: enemy.y, angle, facing: enemy.angle,
       targetId: enemy.id, remainingHp: 0, enemyKind: enemy.kind });
   } else if (definition.interruptible && melee) {
     enemy.stagger = COMBAT_TIMING.staggerDuration;

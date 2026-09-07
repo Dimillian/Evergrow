@@ -16,7 +16,7 @@ import { GROUND_EFFECT_RULES } from './skill-execution-content.ts';
 import { freshTravel, PortalChannel, PORTAL_RULES } from './travel.ts';
 import { advanceGold, type GroundGold } from './gold.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
-import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, ProjectileEffects, GroundEffect, SimulationOptions, WorldQuery } from './model.ts';
+import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, ProjectileStyle, ProjectileEffects, GroundEffect, SimulationOptions, WorldQuery } from './model.ts';
 import type { Pickup } from './model.ts';
 import { createBaseStats, createStartingEquipment, deriveAttackStats, basicAttackManaCost } from './equipment.ts';
 import { getActiveSwingOffset } from './attack-motion.ts';
@@ -457,7 +457,7 @@ export class Simulation {
       player: p, world: this.world, enemies: this.enemies,
       aimX: input.aimX, aimY: input.aimY,
       onScreen: enemy => enemyInCombatViewport(enemy, this.combatViewport),
-      damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),
+      damage: (enemy, amount, angle, melee, style) => this.damageEnemy(enemy, amount, angle, melee, false, style),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       projectile: (x, y, angle, definition, skill, effects) => this.projectile(x, y, angle, definition, skill, effects),
       schedule: effect => this.scheduleGroundEffect(effect),
@@ -559,7 +559,15 @@ export class Simulation {
       if (!circleIntersectsSector(enemy.x, enemy.y, enemy.radius, p.x, p.y, angle, attack.range, to - from)) continue;
       if (!this.lineOfSight(p.x, p.y, enemy.x, enemy.y)) continue;
       attack.hitIds.add(enemy.id);
-      this.damageEnemy(enemy, attack.damage, Math.atan2(enemy.y - p.y, enemy.x - p.x), true);
+      this.damageEnemy(enemy, attack.damage, Math.atan2(enemy.y - p.y, enemy.x - p.x), true, false, attack.weapon.damageType === 'physical' ? undefined : attack.weapon.damageType);
+    }
+    // One solid-surface response per swing; scenery impact never changes its collision.
+    if (!attack.surfaceHit && this.world.impactMaterial) for (let reach = p.radius + 4; reach <= attack.range; reach += 4) {
+      const x = p.x + Math.cos(angle) * reach, y = p.y + Math.sin(angle) * reach;
+      if (!this.world.blocked(x, y, 2)) continue;
+      attack.surfaceHit = true;
+      this.events.push({ type: 'surface-hit', x, y, angle, material: this.world.impactMaterial(x, y, 2) });
+      break;
     }
   }
 
@@ -567,7 +575,7 @@ export class Simulation {
     return hasLineOfSight(this.world, ax, ay, bx, by);
   }
 
-  private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean, periodic = false): void {
+  private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean, periodic = false, style?: ProjectileStyle): void {
     damageEnemy(enemy, damage, angle, melee, {
       player: this.player, enemies: this.enemies, random: () => this.random(),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by), emit: event => this.events.push(event),
@@ -578,7 +586,7 @@ export class Simulation {
         });
         this.kills = reward.kills; this.killRecharge = reward.recharge;
       },
-    }, periodic);
+    }, periodic, style);
   }
 
   private updateEnemies(dt: number): void {
@@ -600,7 +608,7 @@ export class Simulation {
       enemy.stateTime += dt;
       if (enemy.state === 'dead') continue;
       if (!advanceEnemyStatuses(enemy, dt,
-        (actor, amount) => this.damageEnemy(actor, amount, 0, false, true))) continue;
+        (actor, amount) => this.damageEnemy(actor, amount, 0, false, true, 'fire'))) continue;
       if(enemy.kind==='warden') updateWarden(enemy,dt,context); else updateEnemyAI(enemy, dt, context);
       if (p.dead) break;
     }
@@ -676,7 +684,7 @@ export class Simulation {
       containers: this.containerContext(),
       player: this.player, enemies: this.enemies, world: this.world,
       onScreen: enemy => enemyInCombatViewport(enemy, this.combatViewport),
-      damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),
+      damage: (enemy, amount, angle, melee, style) => this.damageEnemy(enemy, amount, angle, melee, false, style),
       hurt: (amount, angle, sourceLevel, sourceKind) => this.damagePlayer(amount, angle, sourceLevel, sourceKind),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       emit: event => this.events.push(event),
@@ -696,7 +704,7 @@ export class Simulation {
       containers: this.containerContext(),
       player: this.player,
       enemies: this.enemies, visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
-      damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),
+      damage: (enemy, amount, angle, melee, style) => this.damageEnemy(enemy, amount, angle, melee, false, style),
       emit: event => this.events.push(event),
     });
   }

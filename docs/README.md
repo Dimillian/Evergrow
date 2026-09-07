@@ -74,3 +74,5 @@ Code checks and static reviews do not establish gameplay feel, economy balance o
 - [World generation 5](world-generation.md): dispersed settlements, connected curved roads, larger climates, fixed regional danger and three seed previews.
 
 - [Panel performance](panel-performance.md): map/skill-atlas rendering, progressive loading and CPU verification.
+
+- [Material responses](material-responses.md): shared procedural debris, impacts and elemental death presentation.

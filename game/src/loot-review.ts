@@ -1,4 +1,6 @@
-import { drawContainerDebris } from './container-debris.ts';
+import { drawMaterialBurst } from './material-response-art.ts';
+import { createMaterialBurst } from './material-response.ts';
+import { MATERIALS, type MaterialId } from './material-content.ts';
 import { drawSiteDecor } from './wilderness-art.ts';
 import { startingEnemyCamp } from './wilderness-sites.ts';
 import './ui-kit.css';
@@ -25,6 +27,8 @@ let labels: GroundLootLabel[] = [];
 const world = new World(7319), sim = new Simulation(world, { spawn: false }), renderer = new Renderer();
 sim.player.level = 10;
 const stage = document.createElement('canvas'), fx = new PostFX(stage);
+const deathElement = new URLSearchParams(location.search).get('element');
+const materialsView = new URLSearchParams(location.search).has('materials');
 const containersView = new URLSearchParams(location.search).has('containers');
 const ages = [.15, .4, 1.2, 12.6];
 const kinds: EnemyKind[] = ['stalker', 'brute', 'caster', 'hound', 'archer', 'wisp'];
@@ -38,22 +42,27 @@ const draw = () => {
   renderer.render(sim, world, 0, { phase: 'ready', reducedMotion: true, debug: false, fps: 60 });
   const c = renderer.ctx;
   c.fillStyle = '#071118d8'; c.fillRect(0, 0, 1000, 600);
-  if (!containersView) {
+  if (!containersView && !materialsView) {
   kinds.forEach((kind, row) => ages.forEach((age, column) => {
     drawEnemyRemains(c, { id: row + 1, x: 240 + column * 200, y: 98 + row * 54,
-      angle: -.5, facing: 1.2, kind, age, variant: 0, duration: kind === 'wisp' ? 5 : 14 }, false);
+      angle: -.5, facing: 1.2, kind, age, ...(deathElement === 'frost' || deathElement === 'fire' ? { element: deathElement } : {}), variant: 0, duration: kind === 'wisp' ? 5 : 14 }, false);
   }));
   drawGroundLoot(c, drops, 1, false);
   drawResourcePickups(c, ['health', 'mana'].map((kind, id) => ({ id, kind: kind as 'health' | 'mana', x: 460 + id * 65,
     y: 550, life: 10, radius: 4, restoreFraction: .1 })), 1, true);
+  } else if (materialsView) {
+    (Object.keys(MATERIALS) as MaterialId[]).forEach((material, col) => {
+      for (let row = 0; row < 2; row++) { c.save(); c.translate(85 + col * 140, 235 + row * 230); c.scale(1.8, 1.8);
+        drawMaterialBurst(c, { ...createMaterialBurst({ x: 0, y: 0, angle: -.5, seed: 372, material, count: 18, strength: 1 }), age: row ? .7 : .2 }, false); c.restore(); }
+    });
   } else {
     const site = startingEnemyCamp(7319);
     for (const [row, kind] of (['crate', 'barrel'] as const).entries()) for (let col = 0; col < 5; col++) {
       const source = site.decor.find(d => d.kind === kind)!;
       c.save(); c.translate(120 + col * 190, 215 + row * 215); c.scale(2.5, 2.5);
       if (col === 0) drawSiteDecor(c, site, { ...source, x: 0, y: 0 }, 0);
-      else drawContainerDebris(c, { type: 'container-break', containerId: source.id, x: 0, y: 0, kind,
-        seed: source.seed, angle: -.5, age: [.08, .08, .28, 1.2, 5.8][col] }, false);
+      else drawMaterialBurst(c, { ...createMaterialBurst({ x: 0, y: 0, material: 'wood', count: 14, strength: 1, hoops: kind === 'barrel' ? 2 : 0,
+        seed: source.seed, angle: -.5 }), age: [.08, .08, .28, 1.2, 5.8][col] }, false);
       c.restore();
     }
   }
@@ -64,7 +73,7 @@ const draw = () => {
   ui.fillStyle = '#081217'; ui.fillRect(0, 0, canvas.width, canvas.height);
   ui.drawImage(stage, left, top, 1000 * scale, 600 * scale);
   ui.setTransform(scale, 0, 0, scale, left, top);
-  if (!containersView) {
+  if (!containersView && !materialsView) {
   text(ui, 'Death & ground loot', 35, 20, 1.7, '#d9e4de');
   ages.forEach((age, i) => text(ui, `${age}s`, 240 + i * 200, 52, 1, '#a3b8bf', 'center', 'interface'));
   kinds.forEach((kind, i) => text(ui, kind, 35, 85 + i * 54, 1.1, '#a3b8bf'));
@@ -73,6 +82,10 @@ const draw = () => {
     anchorX: left + b.anchorX * scale, anchorY: top + b.anchorY * scale,
   }));
   text(ui, 'Health', 460, 565, .9, '#d09b90', 'center'); text(ui, 'Mana', 525, 565, .9, '#9bbbcf', 'center');
+  } else if (materialsView) {
+    text(ui, 'Material responses', 35, 30, 1.7, '#d9e4de');
+    Object.keys(MATERIALS).forEach((name, i) => text(ui, name, 85 + i * 140, 85, 1.15, '#a3b8bf', 'center'));
+    text(ui, 'Impact', 35, 120, .9, '#a3b8bf'); text(ui, 'Aftermath', 35, 355, .9, '#a3b8bf');
   } else {
     text(ui, 'Breakable containers', 35, 30, 1.7, '#d9e4de');
     ['Intact', 'Impact', 'Splinters', 'Settled', 'Fading'].forEach((label, i) => text(ui, label, 120 + i * 190, 78, 1.1, '#a3b8bf', 'center'));

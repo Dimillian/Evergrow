@@ -1,10 +1,11 @@
-import type { CombatEvent, EnemyKind } from './model.ts';
+import type { CombatEvent, EnemyKind, ProjectileStyle } from './model.ts';
 import { enemyDeathAnimation, type DeathVariant } from './death-content.ts';
 import { ease, clamp01 } from './death-rig.ts';
 
 export interface EnemyRemains {
   id: number; x: number; y: number; angle: number; facing: number;
   kind: EnemyKind; age: number; duration: number;
+  readonly element?: ProjectileStyle;
   readonly variant: DeathVariant;
 }
 export function deathPose(remains: EnemyRemains, reducedMotion = false) {
@@ -24,7 +25,7 @@ export class EnemyDeaths {
     if (event.type !== 'kill' || this.remains.some(r => r.id === event.targetId)) return;
     const variant=Math.min(3,Math.max(0,Math.floor(this.random()*4))) as DeathVariant;
     this.remains.push({ id: event.targetId, x: event.x, y: event.y, angle: event.angle, variant,
-      facing: event.facing, kind: event.enemyKind, age: 0, duration: event.enemyKind === 'wisp' ? 5 : 14 });
+      facing: event.facing, kind: event.enemyKind, element: event.style, age: 0, duration: event.style === 'frost' ? .55 : event.style === 'fire' ? 2.1 : event.enemyKind === 'wisp' ? 5 : 14 });
     if (this.remains.length > 45) this.remains.shift();
   }
   update(dt: number): void {
