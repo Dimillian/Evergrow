@@ -1,5 +1,7 @@
 # Current system status
 
+Local vendor polish adds multi-select selling and rarity selection, an exact receipt, atomic bulk transactions, and pickup-style coin flights into the wallet. Existing 12-item buyback stays bounded. See [vendor rules](npcs-and-vendors.md).
+
 Chronicle is published in v0.5.0: account/character histories, 32 achievement families, detailed statistics and title/pause/inventory entry points. The matching cloud API/schema deployment succeeded; cross-device acceptance remains a player check. See [Chronicle](chronicle.md).
 
 ## Natural landscapes · v0.4.0, 2026-09-07

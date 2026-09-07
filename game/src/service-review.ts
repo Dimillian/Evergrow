@@ -15,6 +15,7 @@ import type { Improvement } from './item-improvement.ts';
 import { generateItem, deriveItem } from './items.ts';
 import { planService } from './commerce.ts';
 import { refreshCharacter } from './character.ts';
+import { GameAudio } from './audio.ts';
 import { Lifetime } from './lifetime.ts';
 
 // Frozen review: no simulation updates, persistence, input or live character access.
@@ -32,9 +33,11 @@ for (let i = 0; i < (params.has('empty') ? 0 : 18); i++) {
 }
 refreshCharacter(p);
 const shell = life.own(new GameShell(document.querySelector('#app')!, { play() {}, returnToTitle() {}, openMap() {}, openCharacter() {}, openSkills() {} }));
+const audio=life.own(new GameAudio());
 const panel = life.own(new ServicePanel(shell.panelMount, { close: () => panel.close(), trade: async quote => {
+  if(params.has('sound'))await audio.unlock();
   const plan = planService(p.character, npc, p.level, quote);
-  if (plan.ok) { p.character = plan.character; refreshCharacter(p); }
+  if (plan.ok) { p.character = plan.character; refreshCharacter(p); if(params.has('sound')&&(quote.request.type==='sell'||quote.request.type==='sellMany'))audio.play({type:'gold',x:p.x,y:p.y,amount:quote.price,balance:p.character.gold??0}); }
   return { ok: plan.ok, message: plan.message };
 } }));
 const renderer = new Renderer(), fx = life.own(new PostFX(shell.canvas));
@@ -47,6 +50,7 @@ function draw() {
 shell.showMenu('service', 0, 0); draw();
 if (params.get('view') !== 'town') {
   panel.open(p, npc);
+  if(params.has('sell'))panel.selectSales('common');
   const operation = params.get('operation');
   if (operation) panel.inspect(params.has('empty') ? { equipped: 'weapon' } : { bag: Number(params.get('item') ?? 1) }, operation as Improvement);
 }

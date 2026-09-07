@@ -47,7 +47,9 @@ export function vendorStock(sheet: CharacterSheet, npc: TownNPC, level: number):
   });
 }
 export type ItemSource = { bag: number } | { equipped: EquipmentSlot };
+export interface SaleItem { bag: number; id: string; revision: number; }
 export type ServiceRequest = { type: 'buy'; slot: number } | { type: 'sell'; source: ItemSource }
+  | { type: 'sellMany'; items: SaleItem[] }
   | { type: 'buyback'; id: string } | { type: 'improve'; source: ItemSource; operation: Improvement; affix?: number };
 export interface ServiceQuote { npcId: string; revision: number; epoch: number; itemId: string; itemRevision: number; price: number; request: ServiceRequest; }
 export type QuoteResult = { ok: false; message: string } | { ok: true; quote: ServiceQuote; item: Item };
@@ -57,7 +59,17 @@ export function sourceItem(sheet: CharacterSheet, source: ItemSource): Item | nu
 export function quoteService(sheet: CharacterSheet, npc: TownNPC, level: number, request: ServiceRequest): QuoteResult {
   let item: Item | null = null, price = 0;
   const fail = (message: string): QuoteResult => ({ ok: false, message });
-  if (request.type === 'buy' || request.type === 'sell' || request.type === 'buyback') {
+  if (request.type === 'sellMany') {
+    if (npc.role === 'enchanter') return fail('This service is not available here.');
+    if (!Array.isArray(request.items) || !request.items.length || request.items.length > sheet.inventory.length) return fail('Select items to sell.');
+    const slots = new Set<number>(), ids = new Set<string>();
+    for (const selected of request.items) {
+      if (!selected || !Number.isInteger(selected.bag) || selected.bag < 0 || selected.bag >= sheet.inventory.length || slots.has(selected.bag) || ids.has(selected.id)) return fail('Invalid item selection.');
+      const owned = sheet.inventory[selected.bag];
+      if (!owned || owned.id !== selected.id || owned.recipe.revision !== selected.revision) return fail('The selection changed. Select the items again.');
+      slots.add(selected.bag); ids.add(selected.id); item ??= owned; price += itemPrice(owned, 'sell');
+    }
+  } else if (request.type === 'buy' || request.type === 'sell' || request.type === 'buyback') {
     if (npc.role === 'enchanter') return fail('This service is not available here.');
     if (request.type === 'buy') { item = vendorStock(sheet, npc, level)[request.slot] ?? null; if (item) price = itemPrice(item, 'buy'); }
     else if (request.type === 'buyback') { const entry = sheet.commerce.buyback.find(b => b.item.id === request.id); item = entry?.item ?? null; price = entry?.price ?? 0; }
@@ -74,7 +86,7 @@ export function quoteService(sheet: CharacterSheet, npc: TownNPC, level: number,
   if (!item) return fail('This item is no longer available.');
   if (!Number.isSafeInteger(price) || price < 0 || sheet.commerce.revision >= Number.MAX_SAFE_INTEGER || sheet.commerce.operations >= Number.MAX_SAFE_INTEGER) return fail('This transaction exceeds the supported limit.');
   return { ok: true, item, quote: { npcId: npc.id, revision: sheet.commerce.revision, epoch: stockEpoch(level), itemId: item.id,
-    itemRevision: item.recipe.revision, price, request: { ...request } } };
+    itemRevision: item.recipe.revision, price, request: request.type === 'sellMany' ? { type: 'sellMany', items: request.items.map(i => ({ ...i })) } : { ...request } } };
 }
 export type TradePlan = { ok: false; message: string } | { ok: true; character: CharacterSheet; message: string; item: Item };
 /** No live mutation: the caller persists this complete sheet before publishing it. */
@@ -87,9 +99,18 @@ export function planService(sheet: CharacterSheet, npc: TownNPC, level: number, 
     epoch: stockEpoch(level), revision: sheet.commerce.revision + 1, operations: sheet.commerce.operations + 1, buyback: [...sheet.commerce.buyback],
   } };
   const { request, price } = quote; let item = current.item, message = '';
-  if (request.type !== 'sell' && goldBalance(sheet) < price) return { ok: false, message: 'Not enough gold.' };
+  if (request.type !== 'sell' && request.type !== 'sellMany' && goldBalance(sheet) < price) return { ok: false, message: 'Not enough gold.' };
   if ((request.type === 'buy' || request.type === 'buyback') && !character.inventory.includes(null)) return { ok: false, message: 'Inventory full.' };
-  if (request.type === 'sell') {
+  if (request.type === 'sellMany') {
+    if (!creditGold(character, price)) return { ok: false, message: 'Gold limit reached.' };
+    for (const selected of request.items) {
+      const sold = character.inventory[selected.bag]!;
+      character.inventory[selected.bag] = null;
+      character.commerce.buyback.unshift({ item: sold, price: itemPrice(sold, 'sell') });
+    }
+    character.commerce.buyback.length = Math.min(COMMERCE_LIMITS.buyback, character.commerce.buyback.length);
+    message = `Sold ${request.items.length} items · +${price.toLocaleString()} gold`;
+  } else if (request.type === 'sell') {
     if (!creditGold(character, price)) return { ok: false, message: 'Gold limit reached.' };
     if ('bag' in request.source) character.inventory[request.source.bag] = null;
     character.commerce.buyback.unshift({ item, price }); character.commerce.buyback.length = Math.min(COMMERCE_LIMITS.buyback, character.commerce.buyback.length);

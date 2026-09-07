@@ -865,7 +865,10 @@ export class Game {
       if (!saved) this.shell.setSaveStatus(this.session.error, true);
       return { ok: saved, message: this.session.error };
     });
-    if (result.ok) { p.chronicle=progress; this.saveError = ''; this.shell.setSaveStatus('Character saved locally.'); this.notify(result.message); }
+    if (result.ok) { p.chronicle=progress; this.saveError = ''; this.shell.setSaveStatus('Character saved locally.');
+      if(quote.request.type==='sell'||quote.request.type==='sellMany')this.audio.play({type:'gold',x:p.x,y:p.y,amount:quote.price,balance:p.character.gold??0});
+      else this.notify(result.message);
+    }
     return result;
     }, { ok: false, message: 'Saving the previous action…' });
   }

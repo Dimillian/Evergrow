@@ -245,3 +245,55 @@ test('equipped upgrades persist in place with an empty bag and immediately refre
   refreshCharacter(p);
   assert.equal(JSON.stringify({ derived: p.derived }), projection);
 });
+
+test('bulk selling commits the whole selection, exact proceeds and bounded buyback in one revision',()=>{
+  const c=sheet();c.gold=0;
+  c.inventory=Array.from({length:64},(_,i)=>generateItem(62000+i,10,undefined,undefined,(['common','magic','rare','epic','legendary'] as const)[i%5]));
+  const items=c.inventory.map((item,bag)=>({bag,id:item!.id,revision:item!.recipe.revision}));
+  const expected=c.inventory.reduce((sum,item)=>sum+itemPrice(item!,'sell'),0), before=JSON.stringify(c);
+  const quote=quoted(c,smith,{type:'sellMany',items});
+  const plan=planService(c,smith,10,quote);assert.ok(plan.ok);
+  assert.equal(JSON.stringify(c),before);assert.equal(plan.character.gold,expected);
+  assert.ok(plan.character.inventory.every(item=>item===null));
+  assert.deepEqual(plan.character.equipped,c.equipped);
+  assert.equal(plan.character.commerce.revision,c.commerce.revision+1);
+  assert.equal(plan.character.commerce.operations,c.commerce.operations+1);
+  assert.deepEqual(plan.character.commerce.buyback.map(b=>b.item.id),items.slice(-12).reverse().map(i=>i.id));
+  assert.equal(planService(plan.character,smith,10,quote).ok,false,'replays cannot credit twice');
+  const last=c.inventory[63]!;
+  const back=trade(plan.character,jeweler,{type:'buyback',id:last.id});
+  assert.deepEqual(back.item,last);assert.equal(back.character.gold,expected-itemPrice(last,'sell'));
+});
+
+test('bulk quotes reject empty, duplicate, missing, replaced, revised and non-bag selections',()=>{
+  const c=sheet();c.inventory[0]=generateItem(70000,10,'weapon');c.inventory[1]=generateItem(70001,10,'ring');
+  const first={bag:0,id:c.inventory[0].id,revision:c.inventory[0].recipe.revision};
+  const second={bag:1,id:c.inventory[1].id,revision:c.inventory[1].recipe.revision};
+  for(const items of [[],[first,first],[{...first,bag:-1}],[{...first,bag:64}],[{...first,bag:2}],[{...first,bag:.5}],[{...first,id:'different'}],[{...first,revision:99}],[{...first,bag:undefined}]]){
+    assert.equal(quoteService(c,smith,10,{type:'sellMany',items} as ServiceRequest).ok,false);
+  }
+  assert.equal(quoteService(c,enchanter,10,{type:'sellMany',items:[first]}).ok,false);
+  const request:ServiceRequest={type:'sellMany',items:[{...first},{...second}]};
+  const quote=quoted(c,smith,request);
+  request.items[0].bag=3;
+  assert.ok(planService(c,smith,10,quote).ok,'quote owns its selection snapshot');
+  c.inventory[1]=generateItem(70002,10,'ring');
+  assert.equal(planService(c,smith,10,quote).ok,false,'one replaced item rejects the whole batch');
+  c.inventory[1]=generateItem(70001,10,'ring');c.inventory[1].recipe.revision++;
+  assert.equal(planService(c,smith,10,quote).ok,false);
+  c.gold=Number.MAX_SAFE_INTEGER;
+  assert.equal(planService(c,smith,10,quoted(c,smith,{type:'sellMany',items:[first]})).ok,false);
+});
+
+test('bulk sale is persisted once before any live inventory or wallet change; failures keep all items',async()=>{
+  const world={blocked:()=>false,move:(x:number,y:number,dx:number,dy:number)=>({x:x+dx,y:y+dy})};
+  const sim=new Simulation(world,{spawn:false}),p=sim.player;p.x=0;p.y=0;p.hp=40;p.mana=20;
+  p.character.inventory[0]=generateItem(72000,1,'weapon');p.character.inventory[5]=generateItem(72001,1,'boots');
+  const items=[0,5].map(bag=>({bag,id:p.character.inventory[bag]!.id,revision:p.character.inventory[bag]!.recipe.revision}));
+  const quote=quoted(p.character,smith,{type:'sellMany',items},1),before=JSON.stringify(p);let writes=0;
+  const failed=await executeService(p,smith,world,quote,async()=>{writes++;assert.equal(JSON.stringify(p),before);return {ok:false,message:'Storage unavailable'};});
+  assert.equal(failed.ok,false);assert.equal(JSON.stringify(p),before);assert.equal(writes,1);
+  const success=await executeService(p,smith,world,quote,async(character)=>{writes++;assert.equal(JSON.stringify(p),before);assert.equal(character.inventory[0],null);assert.equal(character.inventory[5],null);return {ok:true};});
+  assert.ok(success.ok);assert.equal(writes,2);assert.equal(p.hp,40);assert.equal(p.mana,20);
+  assert.equal(p.character.gold,JSON.parse(before).character.gold+quote.price);
+});
