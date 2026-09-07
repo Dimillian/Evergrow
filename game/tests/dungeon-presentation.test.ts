@@ -25,7 +25,7 @@ test('crypt fixtures are deterministic, bounded and share visible source/light a
         const f = generateDungeon(seed), fixtures = cryptFixtures(f);
         assert.deepEqual(fixtures, cryptFixtures(generateDungeon(seed)));
         assert.ok(Object.isFrozen(fixtures));
-        assert.ok(fixtures.length >= 30 && fixtures.length <= 100);
+        assert.ok(fixtures.length >= 30 && fixtures.length <= 160);
         assert.ok(fixtures.some(p => p.kind === 'orb'));
         for (const p of fixtures) assert.equal(dungeonBlocked(f, p.x, p.y, 0), false);
         const a = cryptLights(f, 0), b = cryptLights(f, 1);

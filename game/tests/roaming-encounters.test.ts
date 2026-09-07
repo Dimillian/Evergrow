@@ -1,7 +1,8 @@
+import { ROAMING_RULES } from '../src/roaming-encounters.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
-import { ENCOUNTER_RULES, encounterPopulationTarget, livingEnemyCount } from '../src/encounter-director.ts';
+import { livingEnemyCount } from '../src/encounter-director.ts';
 import { ENEMY_DEFINITIONS } from '../src/combat-content.ts';
 import { getZoneAt, scaledEnemyStats } from '../src/zone-progression.ts';
 import { rollEnemyLoot } from '../src/loot.ts';
@@ -58,8 +59,8 @@ test('wide world views still receive wholly offscreen compact packs', () => {
       for (const event of batch) assert.ok(Math.hypot(event.x - batch[0].x, event.y - batch[0].y) < 250,
         'members of one roaming group share a compact formation');
     }
-    assert.ok(ambient(sim).length <= encounterPopulationTarget(1));
-    assert.ok(livingEnemyCount(sim.enemies) <= ENCOUNTER_RULES.hardPopulationCap);
+    assert.ok(ambient(sim).length <= ROAMING_RULES.warmupPopulation);
+
   }
   assert.ok([...batchSizes].some(size => size >= 4), 'seeded samples include full packs');
 });
@@ -75,15 +76,15 @@ test('standing on cleared ground does not refill it from elapsed time or camera 
   sim.setSpawnExclusion(viewAt()); assert.deepEqual(advance(sim, 20), []);
 });
 
-test('camp garrisons do not consume the ambient target while all actors share the hard cap', () => {
+test('camp garrisons do not consume the ambient target even beyond the former global cap', () => {
   const sim = new Simulation(open, { seed: 356 }); sim.setSpawnExclusion(viewAt());
-  for (let index = 0; index < ENCOUNTER_RULES.hardPopulationCap - encounterPopulationTarget(1); index++) assert.ok(sim.spawnEnemy('stalker', -1100, -250 + index * 45, 'normal', {
+  for (let index = 0; index < 48 - ROAMING_RULES.warmupPopulation; index++) assert.ok(sim.spawnEnemy('stalker', -1100, -250 + index * 45, 'normal', {
     campId: 'authored', memberId: `authored:${index}`, lootSeed: 500 + index,
   }));
   sim.drainEvents(); advance(sim, 20);
-  assert.equal(ambient(sim).length, encounterPopulationTarget(1));
-  assert.equal(livingEnemyCount(sim.enemies), ENCOUNTER_RULES.hardPopulationCap);
-  assert.equal(sim.spawnEnemy('stalker', 1500, 100), null, 'manual and automatic sources share the final guard');
+  assert.equal(ambient(sim).length,ROAMING_RULES.warmupPopulation);
+  assert.equal(livingEnemyCount(sim.enemies), 48);
+  assert.ok(sim.spawnEnemy('stalker',1500,100),'additional actors are admitted beyond 48');
 });
 
 test('automatic placement rejects blocked terrain and sanctuary regions', () => {
@@ -181,7 +182,7 @@ test('ordinary travel actually reaches roaming encounters instead of only spawni
         assert.ok(outsideView(event.x, event.y, ENEMY_DEFINITIONS[event.enemyKind!].radius + 70, view));
       }
       for (const enemy of ambient(sim)) if (Math.hypot(enemy.x - p.x, enemy.y - p.y) < 300) encountered.add(enemy.id);
-      assert.ok(livingEnemyCount(sim.enemies) <= ENCOUNTER_RULES.hardPopulationCap);
+
     }
     assert.ok(encountered.size >= 20, `${width}: a minute of travel should reach several packs`);
     assert.ok(encountered.size >= births * .6, `${width}: most placements should lie along the travelled route`);

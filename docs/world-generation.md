@@ -1,6 +1,6 @@
-# World generation 6
+# World generation 7
 
-The local generation pass replaces the north–south settlement corridor and repeated cross-roads. Each new character receives a random unsigned 32-bit world seed. Character creation shows an editable **World seed** field and a **Randomize** button; saved-character selection keeps the chosen seed visible. Continuing reconstructs that character’s world before restoring its position, encounters and explored chart. Existing characters retain their saved seed, including **7319**; no save reset is required. `/atlas.html?seed=7319&view=extended` also accepts any unsigned 32-bit seed for save-free comparisons. Suggested comparisons are **18427** and **90210**. These are generated worlds, not painted map concepts.
+The local generation pass replaces the north–south settlement corridor and repeated cross-roads. Each new character receives a random unsigned 32-bit world seed. Character creation shows an editable **World seed** field and a **Randomize** button; saved-character selection keeps the chosen seed visible. Continuing reconstructs that character’s world before restoring its position, encounters and explored chart. Generation 7 changes landmarks and dungeon recipes and requires fresh test characters. The default review seed remains **7319**. `/atlas.html?seed=7319&view=extended` also accepts any unsigned 32-bit seed for save-free comparisons. Suggested comparisons are **18427** and **90210**. These are generated worlds, not painted map concepts.
 
 ## Settlements and routes
 
@@ -15,6 +15,10 @@ Seeded memoization is bounded: 512 place records, 512 roads, 512 local segment b
 ## Larger climates
 
 The climate-region spacing increases from 2,400 to **6,400 units**. Adjacent cells can share climates, giving larger irregular interiors. Broader coordinate warps preserve uneven boundaries and smooth transitions. The Deadwood starting core expands to 1,100 units, blending out by 2,600. Actual ground, trees, atmosphere, loot biases and the map share the same climate field.
+
+## Regional landmarks
+
+Twelve landmark families occupy a 1,400-unit seeded lattice, with twelve scored candidates, regional/biome kind weights, road-adjacent caravans/hamlets/crossings and quieter inland sites. Placement checks centers and perimeter samples against water and settlements. Approaches face the nearest road segment and share their orientation with decor, camp members and ground tracks. All six new POIs and cursed chests participate in map discovery and Journeys. See [wilderness places](wilderness-and-encounters.md).
 
 ## Fixed regional danger
 
@@ -32,6 +36,6 @@ The extended atlas stages a roughly 40,000-unit-wide surveyed disk through memor
 
 ## Prototype reset and verification
 
-Generation version is **6**. Rivers/lakes, water-aware settlements and dry-ground prop placement change the previous geography. On the next gameplay bootstrap, older-generation character slots are removed through the normal repository deletion API, as authorized by the user. Generation-keyed exploration never imports the old chart. This deliberately resets test progress; there is no migration.
+Generation version is **7**. Expanded regional landmarks, oriented approaches and new dungeon layouts change the previous geography. On the next gameplay bootstrap, older-generation character slots are removed through the normal repository deletion API, as authorized by the user. Generation-keyed exploration never imports the old chart. This deliberately resets test progress; there is no migration.
 
 Code tests cover minimum settlement separation, two-dimensional dispersion, connectivity to the start, shared walkable road geometry, deterministic generation, interiors and entrances, seeded regional danger and hazards, spawn snapshots, same-level portal landings, conservative map fog and label placement. Gameplay pacing and combat feel remain the user's playtest responsibility.

@@ -2,7 +2,7 @@ import { cryptContains, cryptFloorContains } from './dungeon-contours.ts';
 import type { EnemyKind, WorldQuery } from './model.ts';
 import type { EnemyRank } from './progression-content.ts';
 import type { BiomeId } from './biomes.ts';
-export const DUNGEON_RULES = Object.freeze({ version: 1, rooms: 13, liveCap: 24, cell: 64, corridor: 192 });
+export const DUNGEON_RULES = Object.freeze({ version: 2, minimumRooms: 13, maximumRooms: 19, cell: 64, corridor: 192 });
 export interface DungeonChestTarget {
     kind: 'cryptChest';
     name: string;
@@ -62,42 +62,55 @@ export interface DungeonFloor {
 }
 
 export function dungeonRandom(seed: number) { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; }
-/** Construct a connected route, two optional chambers and a loop before decorating. No unbounded retries. */
+/** Grow a branching core, add two optional treasure leaves, then an exterior boss chamber. */
 export function generateDungeon(seed: number, level = 1): DungeonFloor {
-    const random = dungeonRandom(seed), cells = [[0, 0], [1, 0], [2, 0], [2, 1], [1, 1], [0, 1], [0, 2], [1, 2], [2, 2], [2, 3], [0, 3], [1, 3], [3.5, 3]];
-    const rooms: Room[] = cells.map(([cx, cy], id) => {
-        const width = id === 12 ? 1408 : 448 + Math.floor(random() * 3) * 64, height = id === 12 ? 1088 : 448 + Math.floor(random() * 3) * 64;
-        const offsetX=id===0?0:(Math.floor(random()*3)-1)*64,offsetY=id===0?0:(Math.floor(random()*3)-1)*64;
-        return { id, x: cx * 896 + offsetX - width / 2, y: cy * 896 + offsetY - height / 2, width, height, kind: id === 0 ? 'entry' : id === 12 ? 'boss' : id >= 10 ? 'treasure' : 'combat' };
+    const random=dungeonRandom(seed), ordinary=12+Math.floor(random()*7), style=(seed>>>7)%3;
+    const cells:number[][]=[[0,0]],edges:[number,number][]=[];
+    const occupied=new Map<string,number>([['0:0',0]]);
+    for(let attempt=0;cells.length<ordinary-2&&attempt<3000;attempt++){
+      const parent=random()<(style===0?.75:style===1?.3:.9)?cells.length-1:Math.floor(random()*cells.length);
+      const [cx,cy]=cells[parent],directions=[[1,0],[0,1],[-1,0],[0,-1]],d=directions[Math.floor(random()*4)],x=cx+d[0],y=cy+d[1];
+      if(occupied.has(`${x}:${y}`))continue;
+      occupied.set(`${x}:${y}`,cells.length);edges.push([parent,cells.length]);cells.push([x,y]);
+    }
+    if(cells.length!==ordinary-2)throw new Error('Dungeon growth exhausted');
+    const core=cells.length;
+    for(let treasure=0;treasure<2;treasure++) {
+      const candidates=cells.slice(1,core).flatMap(([x,y],i)=>[[1,0],[0,1],[-1,0],[0,-1]].map(([dx,dy])=>({parent:i+1,x:x+dx,y:y+dy}))).filter(p=>!occupied.has(`${p.x}:${p.y}`));
+      const p=candidates[Math.floor(random()*candidates.length)];
+      occupied.set(`${p.x}:${p.y}`,cells.length);edges.push([p.parent,cells.length]);cells.push([p.x,p.y]);
+    }
+    // Adjacent loops never cut through an unrelated room; dead ends retain treasure.
+    for(let i=1;i<cells.length-2;i++)for(let j=i+1;j<cells.length-2;j++)if(Math.abs(cells[i][0]-cells[j][0])+Math.abs(cells[i][1]-cells[j][1])===1&&!edges.some(([a,b])=>a===i&&b===j||a===j&&b===i)&&random()<.35)edges.push([i,j]);
+    const furthest=[...cells.keys()].filter(i=>i<ordinary-2).sort((a,b)=>Math.hypot(...cells[b] as [number,number])-Math.hypot(...cells[a] as [number,number]));
+    let bossParent=-1,bossCell:number[]=[];
+    for(const i of furthest){const [x,y]=cells[i];for(const [dx,dy]of [[1,0],[0,1],[-1,0],[0,-1]])if(!occupied.has(`${x+dx}:${y+dy}`)){bossParent=i;bossCell=[x+dx,y+dy];break;}if(bossParent>=0)break;}
+    const bossId=cells.length,treasureIds=[ordinary-2,ordinary-1];cells.push(bossCell);edges.push([bossParent,bossId]);
+    const rooms:Room[]=cells.map(([cx,cy],id)=>{
+      const boss=id===bossId,w=boss?1408:(style===1?640:style===2?704:448)+Math.floor(random()*4)*64,h=boss?1088:(style===1?576:448)+Math.floor(random()*4)*64;
+      return {id,x:cx*1280-w/2+(id?Math.floor(random()*3-1)*64:0),y:cy*1280-h/2+(id?Math.floor(random()*3-1)*64:0),width:w,height:h,kind:id===0?'entry':boss?'boss':treasureIds.includes(id)?'treasure':'combat'};
     });
-    const edges: [
-        number,
-        number
-    ][] = [];
-    for (let i = 0; i < 9; i++)
-        edges.push([i, i + 1]);
-    edges.push([6, 10], [10, 11], [11, 8], [9, 12]);
     const center = (r: Room) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
     const corridors: Room[] = [];
     for (const [a, b] of edges) {
-        const p = center(rooms[a]), q = center(rooms[b]), w = DUNGEON_RULES.corridor;
+        const p = center(rooms[a]), q = center(rooms[b]), w = DUNGEON_RULES.corridor + (style===1?32:style===2?-32:0);
         corridors.push({ id: -1, kind: 'combat', x: Math.min(p.x, q.x) - w / 2, y: p.y - w / 2, width: Math.abs(p.x - q.x) + w, height: w }, { id: -1, kind: 'combat', x: q.x - w / 2, y: Math.min(p.y, q.y) - w / 2, width: w, height: Math.abs(p.y - q.y) + w });
     }
     const members: DungeonMember[] = [];
     for (const room of rooms) {
         if (room.kind === 'entry' || room.kind === 'boss')
             continue;
-        const c = center(room), count = room.kind === 'treasure' ? 4 : 4 + Math.floor(random() * 3);
+        const c = center(room), count = room.kind === 'treasure' ? 6 : 6 + Math.floor(random() * 5);
         for (let i = 0; i < count; i++) {
             const kind: EnemyKind = room.id === 7 ? 'goblin' : (['stalker', 'stalker', 'hound', 'archer', 'caster', 'brute'] as const)[(i + room.id) % 6];
-            members.push({ id: `room:${room.id}:${i}`, kind, rank: i === 0 && room.id % 3 === 0 ? 'veteran' : room.id === 11 && i === 0 && level >= 3 ? 'elite' : 'normal', room: room.id, x: c.x + (i % 3 - 1) * 85, y: c.y + (Math.floor(i / 3) - .5) * 100, seed: Math.floor(random() * 4294967296) });
+            members.push({ id: `room:${room.id}:${i}`, kind, rank: i === 0 && room.id % 3 === 0 ? 'veteran' : room.id === treasureIds[1] && i === 0 && level >= 3 ? 'elite' : 'normal', room: room.id, x: c.x + (i % 3 - 1) * 85, y: c.y + (Math.floor(i / 3) - (Math.ceil(count / 3) - 1) / 2) * 90, seed: Math.floor(random() * 4294967296) });
         }
     }
-    const boss = center(rooms[12]);
-    members.push({ id: 'warden', kind: 'warden', rank: 'normal', room: 12, x: boss.x, y: boss.y, seed: (seed ^ 731) >>> 0 });
+    const boss = center(rooms[bossId]);
+    members.push({ id: 'warden', kind: 'warden', rank: 'normal', room: bossId, x: boss.x, y: boss.y, seed: (seed ^ 731) >>> 0 });
     for (let i = 0; i < 4; i++)
-        members.push({ id: `buried:${i}`, kind: i % 2 ? 'stalker' : 'archer', rank: 'normal', room: 12, x: boss.x + (i % 2 ? 560 : -560), y: boss.y + (i < 2 ? -400 : 400), seed: (seed + i + 900) >>> 0, wave: i < 2 ? 1 : 2 });
-    const floor: DungeonFloor = { seed, rooms, edges, corridors, members, entry: center(rooms[0]), exit: { x: boss.x + 260, y: boss.y + 220 }, chests: [10, 11, 12].map(id => { const p = center(rooms[id]); return { x: p.x + 100, y: p.y + 160, room: id }; }) };
+        members.push({ id: `buried:${i}`, kind: i % 2 ? 'stalker' : 'archer', rank: 'normal', room: bossId, x: boss.x + (i % 2 ? 560 : -560), y: boss.y + (i < 2 ? -400 : 400), seed: (seed + i + 900) >>> 0, wave: i < 2 ? 1 : 2 });
+    const floor: DungeonFloor = { seed, rooms, edges, corridors, members, entry: center(rooms[0]), exit: { x: boss.x + 260, y: boss.y + 220 }, chests: [...treasureIds, bossId].map(id => { const p = center(rooms[id]); return { x: p.x + 100, y: p.y + 160, room: id }; }) };
     // Rotate and mirror the authored graph; proportions and encounter recipes remain seeded.
     const turn = (seed >>> 4) % 4, mirror = (seed & 1) ? -1 : 1;
     const rotate = (p: {

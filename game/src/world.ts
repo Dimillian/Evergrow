@@ -1,3 +1,4 @@
+import { WorldNavigation } from './world-navigation.ts';
 import type { MaterialId } from './material-content.ts';
 import { furnitureContainer, furnitureContainerId, type BreakableContainer } from './breakable-containers.ts';
 import { waterTerrainSteps } from './water-terrain-art.ts';
@@ -34,7 +35,7 @@ export interface Prop {
 }
 
 export const TILE_SIZE = 256;
-export const WORLD_GENERATION_VERSION = 6;
+export const WORLD_GENERATION_VERSION = 7;
 const PROP_CELL_SIZE = 80;
 const MAX_PROP_RADIUS = 15;
 const PROP_CACHE_LIMIT = 8192;
@@ -342,6 +343,8 @@ export class World {
         .some(site => Math.hypot(crownX - site.x, crownY - site.y) < site.radius + crownMargin)) return null;
     }
     const radius = definition.radius[0] + random(cx, cy, this.seed, 6) * (definition.radius[1] - definition.radius[0]);
+    const clearance=radius+18;
+    if(this.getWildernessSites(x-clearance,y-clearance,clearance*2,clearance*2).some(site=>Math.hypot(x-site.x,y-site.y)<site.radius+clearance))return null;
     return { id: `prop:${cx}:${cy}`, x, y, radius, kind, biome, seed: hash(cx, cy, this.seed, 7), scale };
   }
 
@@ -408,6 +411,8 @@ export class World {
   }
 
   /** Sweep short segments against trunk circles, preserving the unblocked axis. */
+  private navigation = new WorldNavigation(this);
+  navigationTarget(x:number,y:number,tx:number,ty:number) { return this.navigation.target(x,y,tx,ty); }
   move(x: number, y: number, dx: number, dy: number, radius: number): { x: number; y: number } {
     if (![x, y, x + dx, y + dy].every(isWorldCoordinate) || ![dx, dy, radius].every(Number.isFinite)
       || radius < 0 || radius > WORLD_QUERY_LIMITS.collisionRadius

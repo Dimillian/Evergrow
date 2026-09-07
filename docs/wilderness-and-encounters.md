@@ -1,59 +1,46 @@
 # Wilderness places and camps
 
-Implemented 2026-09-05. These are procedural environmental encounters in the local prototype, using the same world coordinates for drawing, collision, map discovery and camp members.
+Updated 2026-09-07 for generation 7. Twelve landmark families share world coordinates for procedural art, collision, discovery and encounter ownership; roadside reliquaries form a separate thirteenth interaction family. See [interactive POIs](interactive-pois.md) for recipes and rewards.
 
-| Place | Composition | Encounter role |
-| --- | --- | --- |
-| Enemy camp | Two stitched tents, watchfire, faction banner, supply crates and barrels, bedrolls, bones, lantern and broken perimeter posts | A fixed garrison of four enemies near the origin, six in ordinary generated camps, or 10–15 goblins plus a War Chief. The simulation owns activation, individual member survival and clearing. |
-| Ruined watchtower | Broken stone beacon, surviving arch and buttress, old banner, supply court, bedroll and lantern | Two-second beacon channel reveals nearby terrain and a distant landmark. |
-| Graveyard | Twelve irregular headstones in rows, open central aisle, vigil altar, lanterns and a broken gate | Optional two-wave guardian trial with a reward casket. |
-| Standing stones | Seven engraved monoliths, inscribed ground circle and luminous altar | Choose a blessing, defeat three guardians, then claim a timed bonus. |
-| Abandoned caravan | Two torn covered wagons, detached wheel, scattered cargo, bedding, bones and a small fire | Choose two equipment items or a larger gold cache. |
+| Place | Visual identity |
+| --- | --- |
+| Camp | Stitched tents, watchfire, faction banner, supplies and broken posts |
+| Watchtower | Ruined beacon, banner and supply court |
+| Graveyard | Headstone rows, vigil altar, lanterns and open aisle |
+| Standing stones | Seven monoliths, engraved circle and luminous altar |
+| Caravan | Torn wagons, detached wheel and scattered cargo |
+| Cursed chest | Chained coffer, bones, grave markers and violet light |
+| Ruined chapel | Weathered arch, column remnants, lantern aisle and broken paving |
+| Beast den | Woven nests, eggs, bones and a rocky opening |
+| Quarry | Exposed crystals, stone workings, abandoned supplies and paving |
+| Occupied hamlet | Four ruined cottages around a firelit square |
+| Contested crossing | Paired barricades, standards and a guarded wagon |
+| Corrupted grove | Glowing fractured roots around infected heartwood |
 
-The first camp, **Ashen Watch**, is at **(740, 180)**, east of the starting clearing. It contains a veteran Stalker, a normal Archer, Hound and Stalker. There is no first-zone elite camp leader. Later camps draw their support composition from biome: swamp camps use Caster leaders and Wisps, while Verdant camps include more Hounds. Generated leaders can be Elite only from geographic area level 3; individual monster values still come from the shared geographic level and rank rules.
+## Placement
 
-For the default world seed, the nearest landmarks are Mournwatch Ruin at approximately (-2497, 629), Briargrave at (911, -2522), The Elder Choir at (2484, -1033), and Wayfarer’s End at (-2197, -2467). These coordinates describe content placement rather than revealing the map to the player.
+A 1,400-unit cell owns at most one immutable site. Twelve deterministic candidate positions compete by road distance; per-biome preferences and a four-by-four-cell regional theme weight the kind pool. Forests favor dens/groves, marshes groves/stones, rocky climates quarries, and autumn regions hamlets/caravans. These are biases, not exclusive biome locks.
 
-## Generation and ownership
+Caravans, crossings and hamlets must be close to a road, with enough clearance for their complete footprint. Inland sites favor quieter clearings. Center and eight perimeter samples reject wet ground and settlements; the start and first camp remain protected. Cell margins keep neighboring footprints separated. Approaches rotate toward the nearest actual road segment when nearby, otherwise use a seeded heading. Props, members and the gate share that rotation. Ground tracks connect the actual anchors, and ambient collision/canopies preserve the activity clearing and approach.
 
-`wilderness-sites.ts` is a headless blueprint generator. A 1,600-unit cell owns at most one seeded place; up to four deterministic placement candidates avoid the main road, branches, settlements and starting clearing. Each accepted blueprint has a stable ID, one of five kinds, a name, biome, radius, world-space decorative objects and stable camp member offsets. Geometry and arrays are frozen. Cells use high coordinate bits to avoid repeating at 2^32 cell intervals.
+Default seed 7319 sampled over a 16,000-unit square currently contains 110 landmarks, including all twelve kinds. This is a sampled count, not a population target or placement guarantee. The chart reveals only visited/sighted sites. New coordinates replace the previous generation's placements.
 
-`World.getWildernessSites` and `World.getEnemyCamps` return blueprints intersecting a requested rectangle, including objects whose center falls outside its edge. `World.getPOIs` uses half-open center inclusion so partitioned discovery queries do not duplicate places. The per-world generation cache holds at most 128 cells, including rejected candidates. A single query may enumerate at most 4,096 cells. Site radii remain at or below 220 units, with at most 30 decorative anchors and sixteen camp members per site.
+**Ashen Watch**, at `(740, 180)`, remains the introductory four-member camp: veteran Stalker, Archer, Hound and Stalker. Ordinary camps contain eight foes. One third of nonstarter camps become warbands with 10–15 goblins and a veteran/elite War Chief. Camp source level and rank are fixed geographically.
 
-Ambient trunks and rocks are cleared from each site footprint. Tree and willow placement also reserves the projected crown above each trunk, preserving the view of fires and supplies without thinning the surrounding forest. Solid decorative anchors have collision circles shared by point checks and swept movement; drawing cannot change passability. South entrances into each site’s central walking space remain open, and authored camp positions have enough space for the largest current monster body. Camps and landmarks never overwrite town protection or the shared road centerlines.
+## Population and pursuit
 
-`wilderness-art.ts` provides a ground pass, depth-sorted object drawing and bounded light candidates. Disturbed soil uses feathered stains rather than hard stamps. Tent stitching, runes, planks, damaged stone, fabric motion, fire and embers are generated from code. Actor depth is interleaved with individual object ground contacts rather than placing the whole site over the player.
+Actor-count caps, ambient population targets, reserved camp slots and concurrent rank/archetype ceilings have been removed. New roaming groups still require travel and cooldown after sixteen initial enemies; standing still or changing zoom cannot refill cleared ground. Packs contain four to six foes. Regional rank odds and authored rosters control composition.
 
-`WorldMap.setCampStateReader` reads the current simulation without copying encounter state into saved exploration. A cleared camp becomes a jade tent/check icon, with a **Camp · Cleared** label and a changed tooltip. Unvisited places remain hidden. World-generation identity 4 selects the seven-biome chart namespace. Camp clear state and surviving member health persist in character checkpoints; live actors are reconstructed on continue. Population changes do not reset the chart.
+The renderer supplies current/pending coverage before automatic births. Shared margins add 80 horizontal and 120 vertical units plus body radius. Fresh camps validate the whole garrison against visibility, collision and sanctuaries. Trials admit reachable members independently. Dungeons stream nearby room rosters. None can visibly materialize because of a teleport or wide zoom.
 
-## Roaming and visibility
+Distant, wholly hidden inactive roamers can retire without rewards. Camps sleep only when distance and combat/visibility state permit; they never sleep merely to make room for a new camp. Wounds, casualty IDs and source reward identities survive unloading. Thirty-two inactive garrison records may be cached; this is a memory cache, not a limit on living actors or visited camps. Exact receipts persist beyond eviction.
 
-Roaming encounters complement fixed camp garrisons. Their target is sixteen to twenty-four living ambient enemies by area level, independently of camp membership, within the shared forty-eight-actor ceiling. At least sixteen actor slots remain reserved for roaming populations. Camp priority may sleep a farther wholly hidden garrison, but cannot remove visible actors or consume that reserve.
+Enemy attacks remain independent. Each aware enemy uses its own sight, range, windup and recovery. Shared local flow fields provide obstacle detours for pursuit. Sanctuary, source stats, locked attacks and line-of-sight damage rules remain unchanged.
 
-The current renderer supplies actual world-space camera coverage before automatic births. `spawn-visibility.ts` adds 80 horizontal and 120 vertical units plus each body radius, shared by ambient births, camp activation, waking and removal. Every member of a camp must pass visibility, collision and sanctuary checks before population budgets change. A delayed camp remains dormant while its authored positions are visible, including after a direct teleport or a wide zoom. Waking restores surviving members; it never refills dead slots or heals wounds.
+War Chiefs alternate rush and surround orders. Rush adds 20% movement/damage for nearby followers; chief death briefly scatters survivors for 2.2 seconds. Orders affect existing same-camp followers and do not summon replacements. Clearing the full garrison unlocks its strongbox.
 
-Roaming groups contain four to six enemies (or fewer when filling the final available slots) and prefer the direction of travel. The first sixteen are placed outside view during startup; subsequent groups require travel as well as time. Once that initial population is placed, waiting or changing zoom on cleared ground cannot generate replacements by itself. Hidden, distant inactive foes may retire as travel carries the player onward. All new foes retain normal geographic level, rank and loot snapshots; retirement grants no XP or items. Detailed limits and tuning values live in [progression and loot](progression-and-loot.md).
+## Review and checks
 
-## Verification
+`/events.html` shows every interaction family and replays chest openings without gameplay or storage. `/encounters.html?view=warband` retains the frozen goblin study. Tests cover seeded order independence, frozen blueprints, whole-footprint exclusion, oriented approaches, reachable seals, canopy clearance, hidden admission, unlimited actor admission, source identity, exact casualties and rewards. Combat pressure and sustained hardware performance are player checks.
 
-Deterministic tests cover seed/order independence, frozen blueprints, cache/query limits, negative-coordinate partition consistency, road/town/start exclusions, site spacing, member placement, every site’s open south approach, foreground canopy visibility, shared swept collision, discovery and chart round-tripping. Static visual review uses the real renderer without advancing gameplay. Combat feel and encounter difficulty remain for the user’s playtesting.
-
-## Interactive layer (2026-09-06)
-
-[Interactive POIs](interactive-pois.md) now adds a camp strongbox and actions to all four landmark families, plus roadside reliquaries. The southern approach owns the interaction anchor. E, a nearby click or controller A interacts; one-second opening channels interrupt on movement/damage (beacons take two seconds). Tracked state, rewards and guardian casualties persist per character; generated layout blueprints stay immutable.
-
-## Independent attacks (2026-09-06)
-
-Regular enemies now acquire sight at 330–430 world units (War Chiefs 410); awareness fills in 0.16 seconds once sight is established. Pursuit moves 15% faster than patrol/base locomotion, with tighter separation and more direct flanking. Attack recovery is 20% shorter, while windups and aim locks retain their dodge windows. Wilderness pursuit remembers lost sight for 4.5 seconds and permits a 650-unit home tether; dungeon limits remain separate.
-
-Enemies no longer share attack slots. Every aware enemy with a clear attack lane and valid range starts its own windup as soon as its personal recovery finishes. Melee packs close and flank without waiting in a support ring; Brutes, Archers, Hexers and Wisps can attack concurrently. Individual telegraphs, aim locks, recovery, collision, interruption and sanctuary rules still govern each action. Population/rank limits control spawning, not permission to attack.
-
-## Goblin warbands (2026-09-06)
-
-One third of nonstarter generated camps become named Rattlefang, Briarknife or Scraptooth warbands: 10–15 small, fragile knife-bearing goblins and a larger veteran/elite War Chief with a horn and trophy pennant. The chief alternates rush and surround orders, with a visible horn warning. Rush adds 20% movement and damage; surround widens the approach. Orders only reach nearby followers from the same camp with line of sight. Killing the chief briefly scatters survivors for 2.2 seconds, opening a recovery window.
-
-These packs use the existing offscreen activation, sanctuary protection, home tethers, casualty ledger and camp strongbox. The full garrison must fit before activation; no visible reinforcements appear. The 48-actor shared cap leaves sixteen slots reserved for roaming foes. Goblins have reduced individual XP/loot yields; chiefs keep normal ranked rewards. See [progression and loot](progression-and-loot.md) for numbers. Frozen art review: `/encounters.html?view=warband`; no simulation ticks or saves.
-
-## Long-run camp memory
-
-The live garrison cache retains at most 32 camp actor records. Detached pristine groups reconstruct deterministically; wounded source records and exact dead-member IDs survive eviction and saving. Cleared camps use one receipt instead of full actor/death records. There is no 1,024-camp lifetime gate. See [world-state longevity](world-state-longevity.md) for retention and storage bounds.
+Generation 7 requires fresh test characters. See [world generation](world-generation.md) and [world-state longevity](world-state-longevity.md).

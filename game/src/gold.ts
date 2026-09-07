@@ -1,9 +1,10 @@
+import { TREASURE_FLIGHT_DURATION } from './treasure-flight.ts';
 import type { EnemyRank } from './progression-content.ts';
 import type { CombatEvent, Player, WorldQuery } from './model.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { creditGold, goldBalance } from './wallet.ts';
 
-export interface GroundGold { id: number; x: number; y: number; amount: number; age: number; }
+export interface GroundGold { flight?: import('./treasure-flight.ts').TreasureFlight; id: number; x: number; y: number; amount: number; age: number; }
 export const GOLD_RULES = { maxPiles: 128, magnetRadius: 100, collectRadius: 15, settleTime: .3 } as const;
 const TABLE: Record<EnemyRank, { chance: number; min: number; max: number }> = {
   normal: { chance: .55, min: 4, max: 10 }, veteran: { chance: .85, min: 12, max: 25 },
@@ -34,7 +35,7 @@ export function advanceGold(piles: GroundGold[], player: Player, world: WorldQue
   emit: (event: CombatEvent) => void): GroundGold[] {
   return piles.filter(pile => {
     pile.age = Math.min(10, pile.age + dt);
-    if (player.dead || pile.age < GOLD_RULES.settleTime) return true;
+    if (player.dead || pile.age < (pile.flight ? TREASURE_FLIGHT_DURATION + pile.flight.delay : GOLD_RULES.settleTime)) return true;
     const dx = player.x - pile.x, dy = player.y - pile.y, distance = Math.hypot(dx, dy);
     if (distance > GOLD_RULES.magnetRadius || !hasLineOfSight(world, pile.x, pile.y, player.x, player.y)) return true;
     if (distance <= GOLD_RULES.collectRadius && creditGold(player.character, pile.amount)) {

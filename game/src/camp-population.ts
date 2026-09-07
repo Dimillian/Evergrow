@@ -2,7 +2,6 @@ import { storedActor, type StoredActor } from './dungeon-state.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
 import type { Enemy, Player, WorldQuery } from './model.ts';
 import type { CampMember, EnemyCamp } from './wilderness-sites.ts';
-import { ENCOUNTER_RULES, livingEnemyCount } from './encounter-director.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { transitionEnemy } from './enemy-state.ts';
 import { isEnemyInactive, isSpawnHidden, type SpawnExclusion } from './spawn-visibility.ts';
@@ -93,50 +92,12 @@ export class CampPopulation {
       if (previous && !missing!.length) continue;
       if (this.cleared.has(camp.id)) continue;
       const livingMembers = camp.members.filter(member => !this.defeated.get(camp.id)?.has(member.id));
-      const additions = missing ?? livingMembers;
-      const campBudget = ENCOUNTER_RULES.hardPopulationCap - ENCOUNTER_RULES.roamingReserve;
-      if (additions.length > campBudget || additions.filter(member => member.rank === 'veteran').length > ENCOUNTER_RULES.veteranCap
-        || additions.filter(member => member.rank === 'elite').length > ENCOUNTER_RULES.eliteCap) continue;
       // Never materialize even one visible member, including a returning wounded
       // garrison. Validate before eviction so a deferred camp has no side effects.
       const placements = missing ? missing.map(enemy => ({ x: enemy.x, y: enemy.y, radius: enemy.radius }))
         : livingMembers.map(member => ({ x: camp.x + member.dx, y: camp.y + member.dy, radius: ENEMY_DEFINITIONS[member.kind].radius }));
       if (placements.some(point => !isSpawnHidden(point.x, point.y, exclusion, point.radius)
         || world.blocked(point.x, point.y, point.radius) || world.isSanctuary?.(point.x, point.y))) continue;
-      const rankCount = (rank: Enemy['rank']) => enemies.filter(enemy => enemy.state !== 'dead' && enemy.rank === rank).length
-        + additions.filter(member => member.rank === rank).length;
-      const campCount = () => enemies.filter(enemy => enemy.state !== 'dead' && enemy.campId).length;
-      const hasRoom = () => livingEnemyCount(enemies) + additions.length <= ENCOUNTER_RULES.hardPopulationCap
-        && campCount() + additions.length <= campBudget
-        && rankCount('veteran') <= ENCOUNTER_RULES.veteranCap && rankCount('elite') <= ENCOUNTER_RULES.eliteCap;
-      if (!hasRoom()) {
-        // Approaching camps take priority over distant offscreen populations. Whole
-        // garrisons sleep together; actors on screen or nearer the player stay put.
-        const distance = Math.hypot(camp.x - player.x, camp.y - player.y);
-        const candidates = [...this.records.entries()].filter(([id, record]) => id !== camp.id
-          && record.members.some(enemy => enemies.includes(enemy) && enemy.state !== 'dead')
-          && record.members.filter(enemy => enemies.includes(enemy)).every(enemy => canLeave(enemy)
-            && Math.hypot(enemy.homeX - player.x, enemy.homeY - player.y) > distance + 140))
-          .sort(([, a], [, b]) => Math.hypot(b.members[0].homeX - player.x, b.members[0].homeY - player.y)
-            - Math.hypot(a.members[0].homeX - player.x, a.members[0].homeY - player.y));
-        for (const [, record] of candidates) {
-          for (const enemy of record.members) if (enemies.includes(enemy)) sleepActor(enemy, enemies);
-          if (hasRoom()) break;
-        }
-        // Removing roamers cannot solve a camp-only capacity/rank conflict.
-        const campRankCount = (rank: Enemy['rank']) => enemies.filter(enemy => enemy.state !== 'dead' && enemy.campId && enemy.rank === rank).length
-          + additions.filter(member => member.rank === rank).length;
-        if (!hasRoom() && campCount() + additions.length <= campBudget
-          && campRankCount('veteran') <= ENCOUNTER_RULES.veteranCap && campRankCount('elite') <= ENCOUNTER_RULES.eliteCap) for (const enemy of [...enemies]) {
-          if (enemies.filter(enemy => !enemy.campId && enemy.state !== 'dead').length <= ENCOUNTER_RULES.roamingReserve) break;
-          if (!enemy.campId && enemy.state !== 'dead' && canLeave(enemy)
-            && Math.hypot(enemy.x - player.x, enemy.y - player.y) > distance + 140) {
-            enemies.splice(enemies.indexOf(enemy), 1);
-            if (hasRoom()) break;
-          }
-        }
-      }
-      if (!hasRoom()) continue;
       if (missing) {
         for (const enemy of missing) { enemy.prevX = enemy.x; enemy.prevY = enemy.y; enemies.push(enemy); }
         continue;

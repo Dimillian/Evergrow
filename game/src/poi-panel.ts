@@ -1,3 +1,4 @@
+import { eventRecipe } from './event-recipes.ts';
 import type { DungeonEntrance } from './dungeon.ts';
 import { BLESSINGS, blessingChoices, type EventSite, type EventChoice } from './poi-content.ts';
 import { escapeUI, trapDialogFocus } from './ui-components.ts';
@@ -44,7 +45,7 @@ export class EventPanel {
     this.site = site;
     const choices = site.kind === 'caravan' ? [{ id: 'goods', name: 'Recover goods', description: 'Two equipment items' }, { id: 'coin', name: 'Take coin', description: 'A larger gold cache' }]
       : site.kind === 'standingStones' ? blessingChoices(site).map(id => ({ id, ...BLESSINGS[id] }))
-        : [{ id: '', name: 'Disturb the vigil', description: 'Defeat six guardians · equipment and XP' }];
+        : [{ id: '', name: eventRecipe(site)?.action ?? 'Open', description: eventRecipe(site)?.objective ?? 'Claim the reward' }];
     this.element.innerHTML = `<section class="ui-window event-window" role="dialog" aria-modal="true" aria-labelledby="event-title"><header class="ui-window-header"><h2 class="ui-title" id="event-title">${escapeUI(site.name)}</h2><span class="ui-muted">Level ${site.level}</span><button class="ui-button ui-button--icon" data-close aria-label="Close">×</button></header><div class="ui-window-body event-choices">${choices.map(c => `<button class="ui-button event-choice" data-choice="${c.id}"><strong>${c.name}</strong><span>${c.description}</span></button>`).join('')}</div></section>`;
     this.element.hidden = false;
     this.focus = trapDialogFocus(this.element, { signal: this.lifetime.signal });

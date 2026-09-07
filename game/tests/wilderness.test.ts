@@ -13,14 +13,14 @@ const sort = <T extends { id: string }>(items: T[]) => items.sort((a, b) => a.id
 test('wilderness blueprints are seeded, immutable, bounded and independent of query order', () => {
   const world = new World(), same = new World(), other = new World(42);
   const sites = world.getWildernessSites(-8000, -8000, 16000, 16000);
-  assert.ok(sites.length > 35 && sites.length < 110);
+  assert.ok(sites.length > 35 && sites.length < 160);
   assert.equal(new Set(sites.map(s => s.id)).size, sites.length);
   assert.deepEqual(sites, same.getWildernessSites(-8000, -8000, 16000, 16000));
   assert.notDeepEqual(sites, other.getWildernessSites(-8000, -8000, 16000, 16000));
   world.getWildernessSites(120000, 50000, 10000, 10000);
   assert.deepEqual(sites, world.getWildernessSites(-8000, -8000, 16000, 16000));
   assert.ok(world.cacheStats.wildernessSites <= WILDERNESS_RULES.cacheLimit);
-  assert.ok(new Set(sites.map(s => s.kind)).size === 5);
+  assert.ok(new Set(sites.map(s => s.kind)).size === 12);
   for (const site of sites) {
     assert.ok(Object.isFrozen(site) && Object.isFrozen(site.decor) && Object.isFrozen(site.members));
     assert.ok(site.decor.every(Object.isFrozen) && site.members.every(Object.isFrozen));
@@ -48,7 +48,7 @@ test('site placement protects settlements, roads, the starting clearing and othe
     const world = new World(seed), sites = world.getWildernessSites(-10000, -10000, 20000, 20000);
     for (const site of sites) {
       assert.ok(Math.hypot(site.x, site.y) > 500 + site.radius);
-      assert.ok(pathDistance(site.x, site.y, seed) > site.radius + 80);
+      assert.ok(pathDistance(site.x, site.y, seed) > site.radius + (['caravan','crossing','hamlet'].includes(site.kind)?35:80));
       assert.ok(!world.getSettlements(site.x - site.radius, site.y - site.radius, site.radius * 2, site.radius * 2)
         .some(town => Math.hypot(town.x - site.x, town.y - site.y) < town.radius + site.radius));
       assert.ok(sites.every(other => other.id === site.id || Math.hypot(other.x - site.x, other.y - site.y) > other.radius + site.radius));
@@ -70,17 +70,17 @@ test('the accessible first camp and distant camps have clear authored member slo
         assert.equal(world.isSanctuary(camp.x + member.dx, camp.y + member.dy), false);
         if (Math.hypot(camp.x + member.dx, camp.y + member.dy) < 6400) assert.notEqual(member.rank, 'elite');
       }
-      // The south gate leads into the court with a full player-radius corridor.
-      for (let dy = 30; dy <= camp.radius; dy += 10) assert.equal(world.blocked(camp.x, camp.y + dy, 12), false, `${camp.id} entrance blocked at ${dy}`);
+      // The road-facing gate retains a full player-radius corridor.
+      for (let dy = 30; dy <= camp.radius; dy += 10) assert.equal(world.blocked(camp.x + (('entrance' in camp ? (camp as ReturnType<typeof startingEnemyCamp>).entrance.x : camp.x)-camp.x)*dy/camp.radius, camp.y + (('entrance' in camp ? (camp as ReturnType<typeof startingEnemyCamp>).entrance.y : camp.y+camp.radius)-camp.y)*dy/camp.radius, 12), false, `${camp.id} entrance blocked at ${dy}`);
     }
   }
 });
 
-test('every authored place has an unobstructed south approach into its central walking space', () => {
+test('every authored place has an unobstructed oriented approach into its central walking space', () => {
   const world = new World();
   for (const site of world.getWildernessSites(-8000, -8000, 16000, 16000)) {
-    for (let dy = 35; dy <= site.radius; dy += 5) assert.equal(world.blocked(site.x, site.y + dy, 12), false,
-      `${site.kind} ${site.id} south approach blocked at ${dy}`);
+    for (let dy = 35; dy <= site.radius; dy += 5) assert.equal(world.blocked(site.x+(site.entrance.x-site.x)*dy/site.radius, site.y+(site.entrance.y-site.y)*dy/site.radius, 12), false,
+      `${site.kind} ${site.id} approach blocked at ${dy}`);
   }
 });
 
@@ -97,7 +97,7 @@ test('decor collision is shared by point checks and swept movement while clearin
 });
 
 test('foreground tree crowns leave caravan and watchtower activity spaces visible in a sampled forest', () => {
-  const world = new World(), sites = world.getWildernessSites(-16000, -16000, 32000, 32000);
+  const world = new World(), sites = world.getWildernessSites(-30000, -30000, 60000, 60000);
   for (const kind of ['caravan', 'watchtower'] as const) {
     const site = sites.filter(site => site.kind === kind && site.biome === 'verdant').sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y))[0];
     assert.ok(site && site.biome === 'verdant');

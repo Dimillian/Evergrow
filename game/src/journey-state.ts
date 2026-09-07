@@ -1,5 +1,5 @@
 /** Per-character guidance, source identities and bounded completion receipts. */
-export const JOURNEY_KINDS = ['camp','caravan','watchtower','graveyard','standingStones','reliquary','dungeon','town','frontier'] as const;
+export const JOURNEY_KINDS = ['camp','caravan','watchtower','graveyard','standingStones','reliquary','cursedChest','ruinedChapel','beastDen','quarry','hamlet','crossing','corruptedGrove','dungeon','town','frontier'] as const;
 export type JourneyKind = typeof JOURNEY_KINDS[number];
 export interface JourneyGoal { id:string; kind:JourneyKind; name:string; x:number; y:number; level:number; region:string; finishedAt?:number; rewardXP?:number }
 export interface JourneyState {
@@ -9,6 +9,7 @@ export interface JourneyState {
 }
 export const freshJourneys=():JourneyState=>({completed:[],recommended:null,accepted:[],offers:[],history:[],dismissed:[],tracked:null,collapsed:false,suggestions:true,refreshedAt:-90,level:1,x:0,y:0});
 export const JOURNEY_CONTENT:Readonly<Record<JourneyKind,{reward:string;category:string}>>=Object.freeze({
+  cursedChest:{reward:'Wave treasure',category:'Timed challenge'}, ruinedChapel:{reward:'Magic equipment',category:'Ritual'}, beastDen:{reward:'Leather equipment',category:'Hunt'}, quarry:{reward:'Equipment, gold',category:'Assault'}, hamlet:{reward:'Supplies, gold',category:'Liberation'}, crossing:{reward:'Gold, supplies',category:'Defense'}, corruptedGrove:{reward:'Caster equipment',category:'Ritual'},
   camp:{reward:'Equipment, gold',category:'Garrison'},
   caravan:{reward:'Equipment or gold',category:'Discovery'},
   watchtower:{reward:'Map reveal',category:'Exploration'},

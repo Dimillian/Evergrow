@@ -52,11 +52,11 @@ test('hundreds of POI claims compact without losing opened art, beacons, partial
   const sim = new Simulation(world,{spawn:false}); const state=sim.eventState;
   for(let i=0;i<350;i++){
     const id=`site:7319:caravan:${i}`;
-    state.sites[id]={id,kind:'caravan',name:'Caravan',x:0,y:0,seed:18,biome:'deadwood',level:1,phase:'claimed',choice:'coin',delivered:4,bonusGranted:true};
+    state.sites[id]={id,kind:'caravan',name:'Caravan',x:0,y:0,seed:18,biome:'deadwood',level:1,phase:'claimed',choice:'coin',wavesCleared: 0, delivered:1,bonusGranted:true};
   }
   const old=state.sites['site:7319:caravan:0'];
-  state.sites['site:beacon']={...old,id:'site:beacon',kind:'watchtower',choice:null,delivered:0};
-  state.sites['site:pending']={...old,id:'site:pending',phase:'completed',delivered:0,bonusGranted:false};
+  state.sites['site:beacon']={...old,id:'site:beacon',kind:'watchtower',choice:null,wavesCleared: 0, delivered:0};
+  state.sites['site:pending']={...old,id:'site:pending',phase:'completed',wavesCleared: 0, delivered:0,bonusGranted:false};
   compactEvents(state);
   assert.equal(state.claimed!.length,318);assert.equal(Object.keys(state.sites).length,34);
   assert.ok(validEvents(state)); assert.ok(eventClaimed(state,old.id)); assert.equal(eventLabel(old,state,false),'Claimed');
