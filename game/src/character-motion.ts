@@ -144,7 +144,7 @@ export function playerMotion(pose: CharacterPose) {
       + (Math.cos(pose.angle) >= 0 ? 1 : -1) * wandFlick * (1 - cast);
   }
   if (pose.gesture === 'thrust') weaponAngle += (pose.angle - weaponAngle) * cast;
-  if (pose.gesture === 'slam') weaponAngle -= cast * .9;
+  if (pose.gesture === 'slam') weaponAngle += cast * .9;
   let activeWeaponAngle = weaponAngle;
   const offAttacking = (swinging || !!pose.gesture) && pose.attackHand === 'off';
   const offBlend = pose.gesture ? cast : attackBlend;
@@ -203,7 +203,7 @@ export function playerMotion(pose: CharacterPose) {
   }
   if (pose.gesture === 'thrust' || pose.gesture === 'slam') {
     const reach = 10 + cast * (pose.gesture === 'thrust' ? 12 : 5);
-    const gestureHand: RigPoint = [Math.cos(pose.angle) * reach, Math.sin(pose.angle) * reach, 20 + (pose.gesture === 'slam' ? cast * 8 : 0)];
+    const gestureHand: RigPoint = [Math.cos(pose.angle) * reach, Math.sin(pose.angle) * reach, 20 - (pose.gesture === 'slam' ? cast * 9 : 0)];
     weaponHand = [weaponHand[0] * (1 - cast) + gestureHand[0] * cast,
       weaponHand[1] * (1 - cast) + gestureHand[1] * cast, weaponHand[2] * (1 - cast) + gestureHand[2] * cast];
   }

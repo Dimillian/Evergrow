@@ -140,20 +140,21 @@ test('a dual-wield off-hand attack animates the matching arm without exchanging 
   }
 });
 
-test('casting releases the support hand and returns continuously to the same grip', () => {
+test('instant casting starts at contact and returns continuously to the same grip', () => {
   const sim = new Simulation({ blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) }, { spawn: false });
   const player = sim.player;
   player.angle = player.castAngle = -.8;
   const restingPose = playerPose(player, 3.5);
   const restingRig = getPlayerArmRig(restingPose);
   player.castDuration = player.castTime = .22;
-  assertContinuous(restingRig, getPlayerArmRig(playerPose(player, 3.5)), 'cast begins on the grip');
-  player.castTime = .22 * .55;
+  assert.equal(playerPose(player, 3.5).cast, 1, 'instant release begins at its contact pose');
   const releasedPose = playerPose(player, 3.5);
-  assert.ok((releasedPose.cast ?? 0) > .95, 'the middle of the cast clearly releases the support hand');
+  assert.ok((releasedPose.cast ?? 0) > .95, 'the release pose clearly releases the support hand');
   const released = getPlayerArmRig(releasedPose);
   assert.ok(distance(projectArmPoint(released.offhand.hand), projectArmPoint(restingRig.offhand.hand)) > 4,
     'casting produces a distinct support-hand gesture');
+  player.castTime = .22 * .5;
+  assert.ok((playerPose(player, 3.5).cast ?? 0) < 1, 'the released gesture relaxes through recovery');
   player.castTime = 1e-7;
   const returning = getPlayerArmRig(playerPose(player, 3.5));
   player.castTime = 0;

@@ -291,9 +291,9 @@ test('Living Ember creates snapshotted damaging ground at the actual fireball im
   delete p.character.skillSpecializations.fireball;
   advance(sim,.3);
   const embers=sim.groundEffects.find(e=>e.kind==='embers'); assert.ok(embers);
-  close(embers.damage,released*.12); assert.equal(embers.pulsesLeft,6);
+  assert.equal(embers.damage,0); close(embers.burn!.dps,released*.24); assert.ok(embers.pulsesLeft>0&&embers.pulsesLeft<=12);
   sim.drainEvents(); advance(sim,.6);
-  assert.ok(sim.drainEvents().some(e=>e.type==='blast'&&e.skill==='fireball'));
+  assert.equal(sim.drainEvents().some(e=>e.type==='blast'&&e.skill==='fireball'),false);
 });
 
 test('relocation ends a following storm while preserving unrelated ground attacks',()=>{

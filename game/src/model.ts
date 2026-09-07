@@ -35,7 +35,12 @@ export interface Input {
   skillSlot: number | null;
 }
 
+export type HitSnapshot = Readonly<Pick<DerivedCharacterStats, 'critChance' | 'critMultiplier' | 'lifeOnHit'>>;
+
 export interface Attack {
+  offense?: HitSnapshot;
+  skill?: SkillId;
+  specialization?: string;
   surfaceHit?: boolean;
   kind: 'melee' | 'ranged';
   weapon: WeaponDefinition;
@@ -104,10 +109,11 @@ export interface ShieldDefinition {
 }
 /** Payload snapshots travel with a projectile; equipment changes cannot rewrite it in flight. */
 export interface ProjectileEffects {
+  offense?: HitSnapshot;
   style: ProjectileStyle;
   pierce?: number; chain?: number; chainRange?: number; blastRadius?: number;
   slowFactor?: number; slowDuration?: number; lifeSteal?: number;
-  burnDuration?: number; burnDps?: number; groundDuration?: number;
+  burnDuration?: number; burnDps?: number; groundDuration?: number; groundDps?: number;
 }
 
 export interface FocusDefinition {
@@ -145,7 +151,7 @@ export interface Player {
   affixBuffs?: import('./affix-combat.ts').AffixBuffs;
   guardTime: number;
   guardReduction: number;
-  dash: { angle: number; remaining: number; speed: number; damage: number; elementalDamage?: number; radius: number; skill: SkillId; style?: ProjectileStyle; hitIds: Set<number> } | null;
+  dash: { angle: number; remaining: number; speed: number; damage: number; elementalDamage?: number; offense?: HitSnapshot; radius: number; skill: SkillId; style?: ProjectileStyle; hitIds: Set<number> } | null;
   stats: CharacterStats;
   equipment: Equipment;
   attack: Attack | null;
@@ -227,6 +233,8 @@ export interface Enemy {
   hitAngle: number;
   radius: number;
   stagger: number;
+  freezeTime?: number;
+  stunTime?: number;
   attackHit: boolean;
   interrupted: boolean;
   slowTime: number;
@@ -237,7 +245,8 @@ export interface Enemy {
 }
 
 /** Frozen launch pose used only to connect the visible bolt to its emitting tip. */
-export interface BasicBoltLaunch {
+export interface WeaponLaunch {
+  skill?: SkillId;
   weapon: WeaponVisual; mainWeapon: WeaponVisual; hand: 'main' | 'off'; hands: 1 | 2; facing: number; time: number;
   gaitPhase: number; moving: number; moveAngle: number; start: number; end: number;
 }
@@ -258,7 +267,7 @@ export interface Projectile {
   maxLife: number;
   owner: 'player' | 'enemy';
   skill?: SkillId;
-  launch?: BasicBoltLaunch;
+  launch?: WeaponLaunch;
   effects?: ProjectileEffects;
   hitIds: Set<number>;
 }
@@ -266,7 +275,7 @@ export interface Projectile {
 export interface GroundEffect {
   id: number; kind: 'meteor' | 'arrowRain' | 'storm' | 'frost' | 'embers'; x: number; y: number; radius: number;
   delay: number; duration: number; interval: number; tick: number;
-  damage: number; skill: SkillId; style: ProjectileStyle;
+  damage: number; skill: SkillId; style: ProjectileStyle; offense?: HitSnapshot;
   slow?: { duration: number; factor: number }; stun?: number; follow?: boolean; upkeep?: number;
   burn?: { readonly duration: number; readonly dps: number };
   scorch?: { readonly duration: number; readonly interval: number; readonly dps: number };
@@ -292,11 +301,12 @@ export type CombatEvent = EventAppearance & (
   | { readonly type: 'container-break'; readonly containerId: string; readonly kind: 'crate' | 'barrel'; readonly seed: number; readonly angle: number }
   | { readonly type: 'engagement'; readonly targetId: number; readonly enemyKind: EnemyKind;
       readonly engaged: boolean; readonly time: number }
+  | { readonly type: 'skill-strike'; readonly skill: SkillId; readonly angle: number; readonly range: number; readonly arc: number; readonly rear: boolean }
   | { readonly type: 'swing'; readonly angle: number }
   | { readonly type: 'hit'; readonly angle: number; readonly value: number; readonly targetId: number;
       readonly remainingHp: number; readonly enemyKind: EnemyKind; readonly heavy: boolean }
   | { readonly type: 'kill'; readonly angle: number; readonly facing: number; readonly targetId: number; readonly remainingHp: 0; readonly enemyKind: EnemyKind }
-  | { readonly type: 'cast'; readonly angle: number; readonly launch?: BasicBoltLaunch; readonly enemyKind?: EnemyKind }
+  | { readonly type: 'cast'; readonly angle: number; readonly launch?: WeaponLaunch; readonly enemyKind?: EnemyKind }
   | { readonly type: 'hurt'; readonly angle: number; readonly value: number; readonly remainingHp: number;
       readonly enemyKind?: EnemyKind; readonly heavy: boolean }
   | { readonly type: 'dodge'; readonly angle: number }

@@ -1,3 +1,4 @@
+import { previewSkillVariant } from './skill-variant-preview.ts';
 import { skillDamageSuffix } from './skill-execution-content.ts';
 import { resolveSkill } from './skill-progression.ts';
 import type { SkillNode } from './skill-tree.ts';
@@ -26,7 +27,8 @@ export function skillTooltipMarkup(node: SkillNode, view: SkillTooltipView): str
   const state = selected ? 'Selected' : owned ? node.specialization ? 'Unlocked' : 'Allocated' : cost ? `${cost} ${cost === 1 ? 'point' : 'points'} to unlock` : 'Not connected';
   return `<header class="skill-tip-heading"><small>${escapeUI(skillNodeRole(node))} <span>· ${node.domain}</span></small><h3>${escapeUI(node.name)}</h3>
     ${owner && !skill ? `<p class="skill-tip-owner">${escapeUI(owner.name)}</p>` : ''}</header>
-    <section class="skill-tip-effects">${rows || `<p>${escapeUI(costs?.variant?.description ?? node.description)}</p>`}
+    <section class="skill-tip-effects">${rows || `<p>${escapeUI(node.description)}${node.skill && costs?.variant ? `</p><p>${escapeUI(costs.variant.description)}` : ''}</p>`}
+    ${node.specialization && view.sheet ? specializationPreviewMarkup(node.specialization, view.costStats ?? { manaCostMultiplier: 1, cooldownMultiplier: 1 }, view.sheet) : ''}
     ${node.specialization ? '<small>Unlocks a selectable variant. One active per skill.</small>' : node.improvement ? '<small>Applies to all variants of this skill.</small>' : ''}</section>
     ${costs && skill ? `<section class="skill-tip-facts"><div><b>${costs.mana}</b><small>Mana</small></div><div><b>${costs.cooldown ? `${Number(costs.cooldown.toFixed(2))}s` : 'None'}</b><small>Cooldown</small></div>
       ${costs.damageMultiplier ? `<div class="skill-tip-wide"><b>${Math.round(costs.damageMultiplier * 100)}%</b><small>Weapon damage${skillDamageSuffix(skill.id, costs.recipe)}</small></div>` : costs.recipe.kind === 'guard' ? `<div class="skill-tip-wide"><b>${Number(costs.recipe.duration.toFixed(2))}s · ${Math.round(costs.recipe.reduction * 100)}%</b><small>Guard · damage blocked</small></div>` : ''}
@@ -34,4 +36,19 @@ export function skillTooltipMarkup(node: SkillNode, view: SkillTooltipView): str
       <p class="skill-tip-wide">${escapeUI(skillRequirementLabel(skill.requirement))}${owned ? ` · Rank ${costs.rank}${costs.bonusRanks ? ` + ${costs.bonusRanks} gear` : ''}` : ''}</p>
       ${costs.variant ? `<p class="skill-tip-wide">${escapeUI(costs.variant.name)}</p>` : ''}</section>` : ''}
     <footer class="skill-tip-state ${owned ? 'is-owned' : ''}">${state}</footer>`;
+}
+
+/** Shared alternate-selection preview for the hover card and details pane. */
+export function specializationPreviewMarkup(id: string, stats: Parameters<typeof previewSkillVariant>[1], sheet: CharacterSheet): string {
+  const preview = previewSkillVariant(id, stats, sheet);
+  if (!preview) return '';
+  const { before, after } = preview;
+  const potency = (r: typeof before) => r.recipe.kind === 'guard'
+    ? `${Number(r.recipe.duration.toFixed(2))}s · ${Math.round(r.recipe.reduction * 100)}% block`
+    : `${Math.round(r.damageMultiplier * 100)}% damage${skillDamageSuffix(after.variant!.skill, r.recipe)}`;
+  return `<div class="ui-well skill-variant-preview"><small>Current → with this specialization and required passives</small>
+    <div class="ui-stat"><span>Mana</span><b>${before.mana} → ${after.mana}</b></div>
+    <div class="ui-stat"><span>Cooldown</span><b>${Number(before.cooldown.toFixed(2))}s → ${Number(after.cooldown.toFixed(2))}s</b></div>
+    <div class="ui-stat"><span>${potency(before)}</span><b>→ ${potency(after)}</b></div>
+    ${after.upkeep ? `<div class="ui-stat"><span>Mana / second</span><b>${before.upkeep} → ${after.upkeep}</b></div>` : ''}</div>`;
 }

@@ -1,4 +1,5 @@
-import { basicBoltTip } from './projectile-launch.ts';
+import { SkillMeleeArt } from './skill-melee-art.ts';
+import { weaponReleaseTip } from './projectile-launch.ts';
 import { PROJECTILE_HEIGHT } from './ranged-aim.ts';
 import { SKILL_CAST_MOTION } from './combat-content.ts';
 import { SKILL_DEFINITIONS, skillWeapon } from './skill-content.ts';
@@ -33,10 +34,11 @@ export class CombatEffects {
   private emitterTime = 0;
   private sword = new SwordTrail();
   private skillEffects = new SkillEffects();
+  private meleeSkills = new SkillMeleeArt();
 
   reset() {
     this.sparks = []; this.flashes = []; this.impacts = []; this.popups = [];
-    this.emitterTime = 0; this.sword.reset(); this.skillEffects.reset();
+    this.emitterTime = 0; this.sword.reset(); this.skillEffects.reset(); this.meleeSkills.reset();
   }
 
   private spark(x: number, y: number, angle: number, color: string, strength = 1, airborne = true, luminous = true) {
@@ -55,7 +57,7 @@ export class CombatEffects {
       const heavy = 'heavy' in event && event.heavy;
       const eventAngle = 'angle' in event ? event.angle : 0;
       const restoring = event.type === 'heal' || event.type === 'potion';
-      const tip = event.type === 'cast' && event.launch ? basicBoltTip(event.launch) : null;
+      const tip = event.type === 'cast' && event.launch ? weaponReleaseTip(event.launch) : null;
       const enemyCast = event.type === 'cast' && event.enemyKind;
       const contact = event.type === 'hit' || event.type === 'hurt' || event.type === 'kill';
       const color = event.color ?? (event.style ? PROJECTILE_COLORS[event.style] : undefined) ?? (event.type === 'hurt' ? '#ff5e4e' : restoring || enemyCast ? MINT
@@ -111,6 +113,7 @@ export class CombatEffects {
     if (!Number.isFinite(dt) || dt <= 0) return;
     this.sword.update(sim.player, dt, sim.time, sim.interpolationAlpha);
     this.skillEffects.update(dt);
+    this.meleeSkills.update(sim.player, dt, sim.interpolationAlpha);
     for (const spark of this.sparks) {
       spark.life -= dt;
       const angle = spark.curl * dt, cos = Math.cos(angle), sin = Math.sin(angle);
@@ -186,6 +189,7 @@ export class CombatEffects {
       }
     }
     this.skillEffects.draw(c, reducedMotion);
+    this.meleeSkills.draw(c, reducedMotion);
     for (const impact of this.impacts) this.drawImpact(c, impact);
     for (const spark of this.sparks) {
       const t = Math.min(1, spark.life / spark.max * 1.8), y = spark.y - spark.z;

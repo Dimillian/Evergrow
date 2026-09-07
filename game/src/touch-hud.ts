@@ -6,7 +6,8 @@ import { resolveSkill } from './skill-progression.ts';
 import { canUseSkill, SKILL_DEFINITIONS, skillIconSVG } from './skill-content.ts';
 import { basicAttackManaCost } from './equipment.ts';
 import { uiIcon } from './ui-components.ts';
-import type { Player } from './model.ts';
+import { skillSustain } from './skill-sustain.ts';
+import type { GroundEffect, Player } from './model.ts';
 import type { GamePhase } from './game-phase.ts';
 import './touch-ui.css';
 import { phoneLandscapeLayout, type TouchViewport } from './touch-layout.ts';
@@ -159,7 +160,7 @@ export class TouchHUD {
     this.element.classList.remove('menus-open');
     this.element.querySelector('.touch-menu-toggle')!.setAttribute('aria-expanded', 'false');
   }
-  update(player: Player, phase: GamePhase, busy: boolean, now: number) {
+  update(player: Player, phase: GamePhase, busy: boolean, now: number, effects: readonly GroundEffect[] = []) {
     this.player = player;
     const enabled = phase === 'playing' && !busy && !player.dead;
     if(enabled !== this.enabled) { this.clear(); this.enabled = enabled; }
@@ -183,7 +184,10 @@ export class TouchHUD {
       const cost = id ? resolveSkill(id,player.derived,player.character).mana : 0;
       el.classList.toggle('is-unavailable',!id || cooldown>0 || player.mana<cost || !canUseSkill(id,player.equipment));
       el.setAttribute('aria-label',id ? `${SKILL_DEFINITIONS[id].name}${cooldown>0?`, ${cooldown.toFixed(1)} seconds`:player.mana<cost?', Not enough mana':''}` : `Empty skill ${i+1}`);
-      el.querySelector('small')!.textContent = cooldown>0 ? cooldown.toFixed(1) : id ? `${i+1} · ${cost}` : '—';
+      const sustain = skillSustain(id, player, effects);
+      el.classList.toggle('is-sustained', !!sustain);
+      if (sustain) el.setAttribute('aria-label', `${SKILL_DEFINITIONS[id!].name}, active ${sustain.remaining.toFixed(1)} seconds${sustain.upkeep ? `, ${sustain.upkeep} mana per second` : ''}, cooldown ${cooldown.toFixed(1)} seconds`);
+      el.querySelector('small')!.textContent = sustain ? `${sustain.remaining.toFixed(1)}s · ${cooldown.toFixed(1)}` : cooldown>0 ? cooldown.toFixed(1) : id ? `${i+1} · ${cost}` : '—';
     }
     this.element.querySelector('.touch-potion small')!.textContent = player.healCooldown>0 ? player.healCooldown.toFixed(1) : String(player.flasks);
     this.element.querySelector('.touch-potion')!.classList.toggle('is-unavailable',player.flasks===0||player.healCooldown>0||(player.hp>=player.maxHp&&player.mana>=player.maxMana));

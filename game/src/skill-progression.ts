@@ -35,7 +35,7 @@ export const SKILL_SPECIALIZATIONS: readonly SkillSpecialization[] = Object.free
   spec('arc-focus', 'arcLightning', 'Concentrated Current', '60% more damage, but only three targets. Costs 45% more mana.', 1.45, 1.6),
   spec('nova-echo', 'iceNova', 'Echoing Frost', 'A second nova expands after 0.6 seconds at 60% damage. Costs 70% more mana.', 1.7),
   spec('nova-deep', 'iceNova', 'Deep Winter', '30% more radius and a stronger, longer slow; 15% less damage. Costs 40% more mana.', 1.4, .85),
-  spec('meteor-shards', 'meteor', 'Shattered Sky', 'Five smaller impacts spread across the target area at 45% damage each. Costs 90% more mana; 25% longer cooldown.', 1.9, .45, 1.25),
+  spec('meteor-shards', 'meteor', 'Shattered Sky', 'Five impacts with 35% smaller radius spread across the target area at 45% damage each. Costs 90% more mana; 25% longer cooldown.', 1.9, .45, 1.25),
   spec("cleave-economy", "cleave", "Measured Cut", "25% less mana, 15% less damage.", 0.75, 0.85, 1, change('sweep', { arc: Math.PI * 1.4 })),
   spec("whirlwind-economy", "whirlwind", "Steady Revolutions", "30% less mana, 20% less damage.", 0.7, 0.8, 1, change('sweep', { arc: Math.PI * 2 })),
   spec("shield-control", "shieldBash", "Concussion", "2-second stun, 30% less damage. Costs 20% more mana.", 1.2, 0.7, 1, change('cone', { stun: 2 })),
@@ -54,19 +54,19 @@ export const SKILL_SPECIALIZATIONS: readonly SkillSpecialization[] = Object.free
   spec("earthshatter-force", "earthshatter", "Seismic Hammer", "60% more damage and 2-second stun; 20% smaller radius. Costs 60% more mana; 25% longer cooldown.", 1.6, 1.6, 1.25, change('radial', { radius: 100, stun: 2 })),
   spec("earthshatter-swift", "earthshatter", "Tremor", "35% shorter cooldown, 25% less damage; stun lasts 0.6 seconds.", 1, 0.75, 0.65, change('radial', { stun: .6 })),
   spec("bulwark-duration", "bulwark", "Enduring Guard", "Guard lasts 5 seconds. Costs 50% more mana; 25% longer cooldown.", 1.5, 1, 1.25, change('guard', { duration: 5 })),
-  spec("bulwark-reduction", "bulwark", "Iron Aegis", "Base block reduction rises to 85%, guard lasts 2 seconds. Costs 35% more mana.", 1.35, 1, 1, change('guard', { reduction: .85, duration: 2 })),
+  spec("bulwark-reduction", "bulwark", "Iron Aegis", "Base block reduction rises to 85%, guard lasts 2 seconds. Ranks above the 90% block cap add 0.25 seconds each. Costs 35% more mana.", 1.35, 1, 1, change('guard', { reduction: .85, duration: 2 })),
   spec("bulwark-swift", "bulwark", "Ready Guard", "25% less mana and 25% shorter cooldown; guard lasts 2 seconds.", 0.75, 1, 0.75, change('guard', { duration: 2 })),
-  spec("piercing-depth", "piercingShot", "Unbroken Flight", "Pierces 7 enemies; 15% less damage. Costs 40% more mana.", 1.4, 0.85, 1, change('projectile', { effects: { ...SKILL_EXECUTION.piercingShot.effects, pierce: 7 } })),
-  spec("piercing-force", "piercingShot", "Siegebreaker", "60% more damage, pierces only one enemy. Costs 40% more mana; 20% longer cooldown.", 1.4, 1.6, 1.2, change('projectile', { effects: { ...SKILL_EXECUTION.piercingShot.effects, pierce: 1 } })),
+  spec("piercing-depth", "piercingShot", "Unbroken Flight", "Hits up to 8 enemies; 15% less damage. Costs 40% more mana.", 1.4, 0.85, 1, change('projectile', { effects: { ...SKILL_EXECUTION.piercingShot.effects, pierce: 7 } })),
+  spec("piercing-force", "piercingShot", "Siegebreaker", "60% more damage, hits up to 2 enemies. Costs 40% more mana; 20% longer cooldown.", 1.4, 1.6, 1.2, change('projectile', { effects: { ...SKILL_EXECUTION.piercingShot.effects, pierce: 1 } })),
   spec("piercing-twin", "piercingShot", "Twin Needles", "Two piercing arrows at 65% damage each. Costs 50% more mana.", 1.5, 0.65, 1, change('projectile', { offsets: [-.075, .075] })),
   spec("rain-wide", "rainOfArrows", "Blanket of Thorns", "50% larger radius; 25% less damage per wave. Costs 35% more mana.", 1.35, 0.75, 1, change('ground', { radius: 138 })),
   spec("rain-lasting", "rainOfArrows", "Relentless Rain", "Eight waves over 2.4 seconds, each at 75% damage. Costs 65% more mana; 25% longer cooldown.", 1.65, 0.75, 1.25, change('ground', { duration: 2.4 })),
   spec("rain-burst", "rainOfArrows", "Hail of Barbs", "Three rapid waves at 45% more damage. Costs 40% more mana.", 1.4, 1.45, 1, change('ground', { duration: .6, interval: .2, delay: .2 })),
   spec("lance-fan", "frostLance", "Glacial Trident", "Three lances at 55% damage each. Costs 70% more mana.", 1.7, 0.55, 1, change('projectile', { offsets: [-.18, 0, .18] })),
   spec("lance-chill", "frostLance", "Permafrost Spear", "70% slow for 5 seconds, 20% less damage. Costs 30% more mana.", 1.3, 0.8, 1, change('projectile', { effects: { ...SKILL_EXECUTION.frostLance.effects, slowFactor: .3, slowDuration: 5 } })),
-  spec("lance-force", "frostLance", "Diamond Lance", "60% more damage, pierces only one enemy. Costs 45% more mana; 20% longer cooldown.", 1.45, 1.6, 1.2, change('projectile', { effects: { ...SKILL_EXECUTION.frostLance.effects, pierce: 1 } })),
+  spec("lance-force", "frostLance", "Diamond Lance", "60% more damage, hits up to 2 enemies. Costs 45% more mana; 20% longer cooldown.", 1.45, 1.6, 1.2, change('projectile', { effects: { ...SKILL_EXECUTION.frostLance.effects, pierce: 1 } })),
   spec("siphon-drain", "siphon", "Soul Feast", "Heals 60% of actual damage dealt, but deals 20% less damage. Costs 35% more mana.", 1.35, 0.8, 1, change('projectile', { effects: { ...SKILL_EXECUTION.siphon.effects, lifeSteal: .6 } })),
-  spec("siphon-pierce", "siphon", "Hollow Passage", "Pierces two enemies, 15% less damage. Costs 50% more mana.", 1.5, 0.85, 1, change('projectile', { effects: { ...SKILL_EXECUTION.siphon.effects, pierce: 2 } })),
+  spec("siphon-pierce", "siphon", "Hollow Passage", "Hits up to 3 enemies, 15% less damage. Costs 50% more mana.", 1.5, 0.85, 1, change('projectile', { effects: { ...SKILL_EXECUTION.siphon.effects, pierce: 2 } })),
   spec("siphon-force", "siphon", "Soul Rend", "60% more damage, healing reduced to 15%. Costs 40% more mana; 20% longer cooldown.", 1.4, 1.6, 1.2, change('projectile', { effects: { ...SKILL_EXECUTION.siphon.effects, lifeSteal: .15 } })),
   spec("cataclysm-many", "cataclysm", "Falling Stars", "Eleven impacts at 65% damage each. Costs 60% more mana; 20% longer cooldown.", 1.6, 0.65, 1.2, change('ground', { scatter: 11 })),
   spec("cataclysm-force", "cataclysm", "Extinction", "Three impacts with 100% more damage and 40% more radius. Costs 40% more mana; 25% longer cooldown.", 1.4, 2, 1.25, change('ground', { scatter: 3, radius: 147 })),
@@ -148,7 +148,7 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
   }
   if (recipe.kind === 'backstab') {
     if (v === 'backstab-reach') { recipe.reachMultiplier *= 1.5; recipe.minRange *= 1.5; }
-    if (v === 'backstab-rear') recipe.rearMultiplier = 3;
+    if (v === 'backstab-rear') recipe.rearMultiplier = 3 / .85;
   }
   if (recipe.kind === 'projectile') {
     if (v === 'volley-fan') recipe.offsets = [-.4, -.2, 0, .2, .4];
@@ -156,7 +156,7 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
     if (v === 'ricochet-chain') recipe.effects = { ...recipe.effects, chain: 6 };
     if (v === 'ricochet-force') recipe.effects = { ...recipe.effects, chain: 1 };
     if (v === 'fireball-fork') recipe.offsets = [-.24, 0, .24];
-    if (v === 'fireball-ember') recipe.effects = { ...recipe.effects, groundDuration: 3 };
+    if (v === 'fireball-ember') recipe.effects = { ...recipe.effects, groundDuration: 3, groundDamageMultiplier: .24 };
   }
   if (recipe.kind === 'chain') {
     if (v === 'arc-circuit') { recipe.jumps = 8; recipe.revisit = true; recipe.falloff = .7; }
@@ -166,9 +166,15 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
     if (v === 'nova-echo') recipe.echo = true;
     if (v === 'nova-deep') { recipe.radius *= 1.3; recipe.slow = { factor: .3, duration: 4 }; }
   }
-  if (recipe.kind === 'ground' && v === 'meteor-shards') recipe.scatter = 5;
+  if (recipe.kind === 'ground' && v === 'meteor-shards') { recipe.scatter = 5; recipe.radius *= .65; }
   variant?.modify?.(recipe);
-  if (recipe.kind === 'guard') recipe.reduction = Math.min(.9, recipe.reduction + .025 * (effectiveRank - 1));
+  if (recipe.kind === 'guard') {
+    const growth = .025 * (effectiveRank - 1);
+    // Once reduction caps, additional ranks extend the guard instead of only raising its cost.
+    const excessRanks = Math.max(0, (recipe.reduction + growth - .9) / .025);
+    recipe.duration += excessRanks * .25;
+    recipe.reduction = Math.min(.9, recipe.reduction + growth);
+  }
   if (recipe.kind === 'guard') recipe.duration *= 1 + development.potency;
   const area = stats.areaMultiplier ?? 1;
   if (recipe.kind === 'sweep') recipe.reachMultiplier *= area;

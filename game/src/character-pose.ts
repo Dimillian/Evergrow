@@ -33,7 +33,8 @@ export function playerPose(player: Player, time: number,
     attackStart: attack ? attack.activeStart / attack.duration : undefined,
     attackEnd: attack ? attack.activeEnd / attack.duration : undefined,
     attackArc: attack?.arc,
-    cast: smooth(castProgress / .3) * (1 - smooth((castProgress - .6) / .4)),
+    // Instant actions begin at contact/release, then recover over their snapshotted cadence.
+    cast: player.castTime > 0 ? 1 - smooth(castProgress) : 0,
     hitFlash: player.hitFlash, impact: Math.min(1, player.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: player.hitAngle,
     dodging: player.dodgeTime > 0, dodgeProgress: 1 - player.dodgeTime / PLAYER_ABILITIES.dodge.duration, dead: player.dead,
   };

@@ -1,5 +1,7 @@
 # Existing skills and specializations audit — 2026-09-07
 
+> **Follow-up:** The findings below describe the pre-fix audit. The subsequent implementation is tracked in the [resolution matrix](#implementation-follow-up--2026-09-07); visual and listening acceptance remain with the player.
+
 Audited the current working tree based on `27db29a`, including its existing uncommitted work. This is an audit, not an implementation change or a release record. Gameplay, saves, the development server and the user's browser session were not touched.
 
 There are **20 executable active skills, 60 selectable specializations, 120 skill-specific passive stars, 17 mastery nodes and Arcane Overload**. All 20 skills have three variants. The older “nineteen selectable specialization recipes” entry in AGENTS.md is stale. There are no empty skill executors or wholly unwired specialization selections in the current catalog.
@@ -127,3 +129,29 @@ The lack of advanced dagger skills or non-Arcana ultimates is an intentional cat
 The all-sixty-variants test mostly checks successful activation, resource spending and projectile/scheduled-area counts against the resolved recipe. It does not assert every variant's final damage, status duration after later hits, exact collision count, lifecycle cancellation or visual contact timing. Existing snapshot tests mainly cover base damage/payload changes rather than critical/life-on-hit equipment changes.
 
 Recommended order: preserve authored control durations; fix maintained-storm cancellation; make paid effects reliable under capacity; correct targeting previews and resolve description/rank ambiguities; align action/contact and reach visuals; then add distinct freeze, physical-skill and spell-audio feedback. Add focused regression tests alongside those fixes. No gameplay fixes or balance changes are included in this audit.
+
+
+## Implementation follow-up — 2026-09-07
+
+| Finding | Resolution |
+| --- | --- |
+| Control shortened by melee | Ordinary stagger preserves longer control. Frozen/stunned targets have distinct timers, labels and sustained art. |
+| Storm Anchor cancellation | All storm variants share gear, death, travel and upkeep cancellation, independent of following position. |
+| Contact/release presentation | Instant actions start at contact and recover over the existing cadence. Active ranged projectiles, lights and sparks share the releasing weapon-tip pose. Sweep contacts remain timed. |
+| Cleave/Whirlwind reach | Dedicated tapered gold energy sweeps consume actual range/arc/hand/progression, with variant reach and a separate Whirlwind wake. |
+| Paid effects lost to capacity | Whole-fan admission and in-flight Living Ember ground reservations precede mana/Spellweave spending. Existing bounds retained. |
+| Iron Aegis plateau | Effective ranks beyond capped reduction add 0.25 seconds of base guard duration each; next-rank details show duration. |
+| Ultimate targeting | Following Tempest and Absolute Zero preview at self; Storm Anchor at the aimed point. |
+| Pierce wording / Executioner | Total-target wording matches runtime. Executioner rear hits now deliver 3× Original frontal potency; only other hits take the penalty. |
+| Shattered Sky | Five 45%-damage impacts have 35% smaller radius and correspondingly smaller stones. |
+| Physical / spell identity | Bash cone, Backstab thrust/rear marker, collision-following Lunge afterimages, Earthshatter cracks, Siphon soul return and pulse-phased arrow rain added. Numeric/economy variants retain a shared family by design. |
+| Audio | Nine skill families plus blast/chain handlers and Meteor landing sound; listening/balance acceptance remains pending. |
+| Sustained HUD | Guard/storm duration appears separately from cooldown; storm upkeep and early-end notices are exposed. |
+| Variant previews | Nonmutating resolved before/after costs, potency and upkeep include required leaf passives; the base mechanic description remains visible. |
+| Offensive snapshot boundary | Critical chance/multiplier and life on hit now accompany basic/skill attacks, dashes, projectiles and scheduled direct hits. |
+| Living Ember | Three-second strongest-burn patch at nominal 24% impact damage/second, replacing repeated direct explosions. Overlapping patches no longer stack; no periodic crit/life-on-hit. |
+| Catalog/scope | AGENTS catalog corrected to 60 specializations. Existing wand + shield scaling retained. New schools, respec and resistance systems remain future content. |
+
+The regression suite now directly exercises control preservation, both storm modes, full/partial projectile capacity, future patch reservation, offensive snapshots, capped/equipment ranks, tradeoff formulas, ultimate target origins, release alignment, skill-sweep geometry, prospective previews and sustained/audio projections. Existing tests continue to cover all sixty variant activations. No save-format change or test-progress reset is required. This is local implementation work, not a publication record.
+
+Validation of the isolated skill checkpoint: **930 code tests passed**, both browser/headless-core TypeScript checks passed, and the Vite production build passed. Visual composition, listening balance and gameplay feel remain pending player review.

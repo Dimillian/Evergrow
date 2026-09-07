@@ -13,7 +13,7 @@ export function meteorPose(effect: ActiveGroundEffect) {
   const descent = Math.max(0, (progress - .15) / .85);
   const height = 460 * (1 - descent ** 1.65);
   return { x: effect.x - height * .34, y: effect.y - height, progress,
-    size: 9 + descent * 14, opacity: Math.min(1, progress * 7) };
+    size: (9 + descent * 14) * Math.max(.45, Math.min(2, effect.radius / 125)), opacity: Math.min(1, progress * 7) };
 }
 export function groundSpellLights(effect: ActiveGroundEffect, reduced = false): PointLight[] {
   const color = PROJECTILE_COLORS[effect.style];
@@ -32,6 +32,12 @@ export function drawGroundSpell(c: CanvasRenderingContext2D, effect: ActiveGroun
   c.save(); c.translate(effect.x, effect.y);
   if (effect.delay > 0 && effect.kind !== 'embers') {
     drawAttackWarning(c, { kind: 'circle', radius: r }, progress, color, t, reduced);
+    if (effect.kind === 'arrowRain') for (let i = 0; i < 16; i++) {
+      const a = i * 2.39996 + effect.id, d = Math.sqrt((i + .5) / 16) * r * .88;
+      const x = Math.cos(a) * d, y = Math.sin(a) * d, height = reduced ? 20 : 110 * (1 - progress);
+      c.globalAlpha = .65 * progress;
+      line(c, [[x - height * .24, y - height - 14], [x - height * .24 + 3, y - height]], '#dce8cc', 1.2);
+    }
   } else {
     const fade = Math.min(1, Math.max(0, effect.duration) / .45);
     c.globalAlpha = fade;
@@ -62,7 +68,8 @@ export function drawGroundSpell(c: CanvasRenderingContext2D, effect: ActiveGroun
       for (let i = 0; i < 16; i++) {
         const a = i * 2.39996 + effect.id, d = Math.sqrt((i + .5) / 16) * r * .88;
         const x = Math.cos(a) * d, y = Math.sin(a) * d;
-        const cycle = reduced ? .65 : (t * 1.8 + i * .137) % 1;
+        const cycle = reduced ? .65 : effect.kind === 'arrowRain'
+          ? Math.max(0, Math.min(1, 1 - effect.tick / effect.interval)) : (t * 1.8 + i * .137) % 1;
         c.globalAlpha = fade * (reduced ? .5 : Math.sin(cycle * Math.PI) * .65);
         if (effect.kind === 'arrowRain') {
           line(c, [[x - (1 - cycle) * 26, y - (1 - cycle) * 110], [x, y]], '#dce8cc', 1.2);

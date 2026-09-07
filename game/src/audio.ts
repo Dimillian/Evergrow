@@ -1,3 +1,4 @@
+import { skillSoundFamily, SKILL_SOUNDS } from './skill-audio-content.ts';
 import { MATERIALS } from './material-content.ts';
 import { eventMaterial } from './material-response.ts';
 import type { CombatEvent } from './model.ts';
@@ -193,7 +194,29 @@ export class GameAudio {
       noise({ duration: texture.duration * .7, frequency: texture.crack, endFrequency: texture.body,
         volume: texture.gain * .3, q: .6 }, 1);
     }
+    const family = skillSoundFamily(event), signature = SKILL_SOUNDS[family];
+    if (event.type === 'cast' && event.skill || event.type === 'swing' && event.skill) {
+      const volume = event.type === 'swing' ? .15 : .1;
+      noise({ duration: signature.duration * .7, frequency: signature.noise, endFrequency: signature.noise * .35,
+        volume, attack: .003, type: family === 'fire' || family === 'earth' ? 'lowpass' : 'bandpass' }, 1);
+      tone(signature.start, signature.end, signature.duration, volume * .6, 1,
+        family === 'frost' || family === 'spirit' ? 'sine' : 'triangle');
+      if (family === 'frost' || family === 'lightning') tone(signature.start * 1.6, signature.end * 1.2, .12, .04, 1, 'sine', .025);
+      return;
+    }
     switch (event.type) {
+      case 'blast': {
+        const impact = event.groundKind === 'meteor' || event.skill === 'earthshatter';
+        noise({ duration: signature.duration * (impact ? 1.5 : .7), frequency: signature.noise,
+          endFrequency: impact ? 90 : signature.noise * .3, volume: impact ? .3 : .08,
+          body: impact, type: impact ? 'lowpass' : 'bandpass' }, impact ? 2 : 1);
+        tone(signature.start, signature.end, signature.duration, impact ? .2 : .05, impact ? 2 : 1, 'sine');
+        break;
+      }
+      case 'chain':
+        tone(signature.start, signature.end, signature.duration * .5, .035, 1, 'sine');
+        if (family === 'lightning') noise({ duration: .06, frequency: 7500, endFrequency: 900, volume: .06 }, 1);
+        break;
       case 'container-break': case 'surface-hit': {
         const sound = MATERIALS[eventMaterial(event)!].sound;
         noise({ duration: .035, frequency: sound.crack, endFrequency: sound.crack * .28, volume: sound.gain * .85, q: .7 });

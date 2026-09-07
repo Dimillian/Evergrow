@@ -932,7 +932,7 @@ export class Game {
     this.last = now;
     this.fps += (1 / Math.max(dt, 0.001) - this.fps) * 0.04;
     this.pollGamepad(now);
-    this.touch.update(this.sim.player,this.phase,this.savingAction,now);
+    this.touch.update(this.sim.player,this.phase,this.savingAction,now,this.sim.groundEffects);
     this.renderer.gamepadActive = this.usingGamepad;
     this.shell.setGamepadActive(this.usingGamepad);
     if (this.phase === 'playing' && !this.savingAction) {

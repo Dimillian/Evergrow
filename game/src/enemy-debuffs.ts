@@ -1,9 +1,9 @@
 import type { Enemy } from './model.ts';
 
 export type EnemyDebuffState = Pick<Enemy, 'hp'> & Partial<Pick<Enemy,
-  'state' | 'burnTime' | 'burnDps' | 'slowTime' | 'slowFactor' | 'stagger'>>;
+  'state' | 'burnTime' | 'burnDps' | 'slowTime' | 'slowFactor' | 'stagger' | 'freezeTime' | 'stunTime'>>;
 export interface EnemyDebuff {
-  id: 'burn' | 'chill' | 'stagger'; label: string; color: string; remaining: number;
+  id: 'burn' | 'chill' | 'stagger' | 'freeze' | 'stun'; label: string; color: string; remaining: number;
 }
 const active = (n: number | undefined): n is number => Number.isFinite(n) && n! > 0;
 /** Read actual combat timers, without retaining an expired effect or inferring one from hit art. */
@@ -14,7 +14,9 @@ export function enemyDebuffs(enemy: EnemyDebuffState): EnemyDebuff[] {
   if (active(enemy.slowTime) && Number.isFinite(enemy.slowFactor) && enemy.slowFactor! < 1)
     result.push({ id: 'chill', label: 'Chill', color: '#9bdbea', remaining: enemy.slowTime });
   // Stagger is the shared control timer for melee reactions, stuns and lightning interrupts.
-  if (active(enemy.stagger)) result.push({ id: 'stagger', label: 'Stagger', color: '#c5b6ef', remaining: enemy.stagger });
+  if (active(enemy.freezeTime)) result.push({ id: 'freeze', label: 'Frozen', color: '#c0f5ff', remaining: enemy.freezeTime });
+  else if (active(enemy.stunTime)) result.push({ id: 'stun', label: 'Stunned', color: '#ffe1a1', remaining: enemy.stunTime });
+  else if (active(enemy.stagger)) result.push({ id: 'stagger', label: 'Stagger', color: '#c5b6ef', remaining: enemy.stagger });
   return result;
 }
 export function debuffDuration(remaining: number): string {

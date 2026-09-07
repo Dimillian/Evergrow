@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
 import { generateItem } from '../src/items.ts';
 import { refreshCharacter } from '../src/character.ts';
-import { basicBoltTip, projectilePresentation, BOLT_LAUNCH_BLEND } from '../src/projectile-launch.ts';
+import { weaponReleaseTip, projectilePresentation, PROJECTILE_LAUNCH_BLEND } from '../src/projectile-launch.ts';
 import { projectileLight } from '../src/projectile-art.ts';
 import { PROJECTILE_HEIGHT } from '../src/ranged-aim.ts';
 
@@ -31,14 +31,14 @@ test('staff/wand basics snapshot a tip launch once; arrows retain their establis
 test('bolt art and light start at the tip, converge continuously and cannot mutate combat coordinates', () => {
   const sim = release('ember-staff'), shot = sim.projectiles[0];
   shot.x = shot.prevX = 0; shot.y = shot.prevY = 0; shot.life = shot.maxLife;
-  const before = structuredClone(shot), tip = basicBoltTip(shot.launch!);
+  const before = structuredClone(shot), tip = weaponReleaseTip(shot.launch!);
   assert.deepEqual(projectilePresentation(shot), tip);
   assert.deepEqual({ x: projectileLight(shot).x, y: projectileLight(shot).y }, tip);
   assert.deepEqual(shot, before);
-  for (const age of [0, .02, .08, .15, BOLT_LAUNCH_BLEND - 1e-7, BOLT_LAUNCH_BLEND, .4]) {
+  for (const age of [0, .02, .08, .15, PROJECTILE_LAUNCH_BLEND - 1e-7, PROJECTILE_LAUNCH_BLEND, .4]) {
     shot.life = shot.maxLife - age; shot.x = shot.prevX = age * shot.vx;
     const p = projectilePresentation(shot), l = projectileLight(shot);
     assert.equal(p.x, l.x); assert.equal(p.y, l.y); assert.ok(Number.isFinite(p.x + p.y));
-    if (age >= BOLT_LAUNCH_BLEND) assert.deepEqual(p, { x: shot.x, y: -PROJECTILE_HEIGHT });
+    if (age >= PROJECTILE_LAUNCH_BLEND) assert.deepEqual(p, { x: shot.x, y: -PROJECTILE_HEIGHT });
   }
 });

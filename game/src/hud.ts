@@ -1,3 +1,4 @@
+import { skillSustain } from './skill-sustain.ts';
 import { basicAttackWeapon } from './equipment.ts';
 import { basicAttackManaCost } from './equipment.ts';
 import { resolveSkill } from './skill-progression.ts';
@@ -5,7 +6,7 @@ import { PAD_SKILL_LABELS } from './gamepad-input.ts';
 import { drawActiveSkillIcon } from './hud-active-skills.ts';
 import { SKILL_DEFINITIONS, canUseSkill } from './skill-content.ts';
 import { heldWeapon as drawEquippedWeapon } from './equipment-art.ts';
-import type { Player } from './model.ts';
+import type { GroundEffect, Player } from './model.ts';
 import { PLAYER_ABILITIES } from './combat-content.ts';
 import { UI_THEME } from './ui-theme.ts';
 import { text, textWidth } from './font.ts';
@@ -19,7 +20,7 @@ import { HUD_ART, HUD_MENU_SHORTCUTS, HUD_SKILL_SLOTS, getHUDLayout } from './hu
 export { HUD_MENU_SHORTCUTS, getHUDLayout, isHUDPoint } from './hud-layout.ts';
 export type { HUDRect, HUDShortcut, HUDLayout } from './hud-layout.ts';
 
-export interface HUDOptions { layout?: {x:number;y:number;scale:number}; touch?: boolean; gamepad?: boolean; reducedMotion?: boolean; healthTrail?: number; hitPulse?: number; experience?: ExperienceDisplay; }
+export interface HUDOptions { groundEffects?: readonly GroundEffect[]; layout?: {x:number;y:number;scale:number}; touch?: boolean; gamepad?: boolean; reducedMotion?: boolean; healthTrail?: number; hitPulse?: number; experience?: ExperienceDisplay; }
 
 const UI = UI_THEME.palette;
 const TAU = Math.PI * 2;
@@ -36,14 +37,15 @@ function chamfer(c: CanvasRenderingContext2D, x: number, y: number, w: number, h
     x + w - cut, y + h, x + cut, y + h, x, y + h - cut, x, y + cut]);
 }
 
-function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = false) {
+function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = false, groundEffects: readonly GroundEffect[] = []) {
   const field = HUD_ART.skill;
   for (const [i, slot] of HUD_SKILL_SLOTS.entries()) {
     const x = field.x + i * field.step, y = field.y, w = field.width, h = field.height;
     const skill = i > 0 ? p.character.skillSlots[i - 1] : null;
     const definition = skill ? SKILL_DEFINITIONS[skill] : null;
     const cooldown = skill ? p.skillCooldowns[skill] ?? 0 : 0;
-    const occupied = i === 0 || !!skill, active = i === 0 ? !!p.attack : !!skill && p.activeSkill === skill;
+    const sustain = skillSustain(skill, p, groundEffects);
+    const occupied = i === 0 || !!skill, active = i === 0 ? !!p.attack : !!skill && (p.activeSkill === skill || !!sustain);
     const compatible = !skill || canUseSkill(skill, p.equipment);
     const resolved = skill ? resolveSkill(skill, p.derived, p.character) : null;
     const manaCost = resolved?.mana ?? (i === 0 ? basicAttackManaCost(basicAttackWeapon(p), p.derived) : 0);
@@ -77,6 +79,10 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = 
         c.fillStyle = '#030a10a8'; c.fillRect(x + 2, y + 2, w - 4, 37 * clamp(cooldown / Math.max(.001, resolved!.cooldown)));
         text(c, cooldown.toFixed(1), x + w / 2, y + 18, 1.3, UI.ivory, 'center');
       } else if (manaCost > 0) text(c, String(manaCost), x + w - 5, y + 3, .8, '#91bddd', 'right');
+    }
+    if (sustain) {
+      if (sustain.upkeep) text(c, `${sustain.upkeep}/s`, x + w - 4, y + 3, .65, '#91bddd', 'right');
+      text(c, `${sustain.remaining.toFixed(1)}s`, x + w / 2, y + 33, .76, '#adead2', 'center');
     }
     // An empty well has no icon, lock, cooldown, or resource cost.
     c.strokeStyle = occupied ? '#b6baa226' : '#617b8d25'; c.lineWidth = .6;
@@ -188,7 +194,7 @@ export function drawHUDContents(c: CanvasRenderingContext2D, p: Player, time: nu
       mana ? 0 : (options.hitPulse ?? 0) * (options.reducedMotion ? .4 : 1));
     c.restore();
   }
-  skills(c, p, t, options.gamepad);
+  skills(c, p, t, options.gamepad, options.groundEffects);
   utilities(c, p, t, options.gamepad);
   shortcuts(c, p, options.gamepad);
   readout(c, orb.left, Math.ceil(Math.max(0, p.hp)), p.maxHp, false);

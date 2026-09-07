@@ -443,7 +443,7 @@ export class Renderer {
     drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
       reducedMotion: settings.reducedMotion, healthTrail: this.playerHealthTrail / Math.max(1, p.maxHp),
       hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / COMBAT_TIMING.hitFlashDuration),
-      experience: this.experienceDisplay,
+      experience: this.experienceDisplay, groundEffects: sim.groundEffects,
       gamepad: this.gamepadActive, touch: this.touchActive, layout:footer,
     });
     drawRewardFlights(c, this.rewards, (x, y) => worldToScreen(this.view, x, y), this.width, this.height, footer ? {hud:footer,gold:{x:headerX+27*.8*unit,y:headerY+62*.8*unit}} : undefined);
@@ -607,11 +607,11 @@ export class Renderer {
       const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);
       entries.push({ y, draw: () => this.actor(x, y, { kind: enemy.kind, angle: enemy.angle,
         command: enemy.warband?.order, commandWarning: enemy.warband?.warning,
-        time: sim.time + enemy.id, moveAngle: Math.atan2(enemy.vy, enemy.vx),
+        time: sim.time + enemy.id, effectTime: settings.reducedMotion ? 0 : sim.time + enemy.id, moveAngle: Math.atan2(enemy.vy, enemy.vx),
         moving: Math.min(1, Math.hypot(enemy.vx, enemy.vy) / 70),
         attack: enemy.state === 'windup' ? -Math.max(.001, enemy.stateTime / enemy.stateDuration)
           : enemy.state === 'attack' ? Math.min(1, enemy.stateTime / enemy.stateDuration) : 0,
-        attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash, slow: enemy.slowTime, burning: enemy.burnTime,
+        attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash, slow: enemy.slowTime, burning: enemy.burnTime, frozen: enemy.freezeTime, stunned: enemy.stunTime,
         impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false }) });
     }
     if (settings.phase !== 'ready') entries.push({ y: py, draw: () => {

@@ -1,6 +1,6 @@
 import { primeSpellweave, primeAfterguard, effectiveArmor } from './affix-combat.ts';
 import { applyElementalContact } from './combat-status.ts';
-import type { CombatEvent, Enemy, EnemyKind, Player, ProjectileStyle, WorldQuery } from './model.ts';
+import type { HitSnapshot, CombatEvent, Enemy, EnemyKind, Player, ProjectileStyle, WorldQuery } from './model.ts';
 import { COMBAT_TIMING, ENEMY_DEFINITIONS } from './combat-content.ts';
 import { ENCOUNTER_RULES } from './encounter-director.ts';
 import { armorReduction } from './progression-content.ts';
@@ -18,7 +18,7 @@ export interface PlayerDamageContext {
 
 /** One contact owner: damage, awareness, impulse, interruption and death commitment. */
 export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean,
-  context: EnemyDamageContext, periodic = false, style?: ProjectileStyle, elementalDamage?: number): void {
+  context: EnemyDamageContext, periodic = false, style?: ProjectileStyle, elementalDamage?: number, offense?: HitSnapshot): void {
   if (enemy.state === 'dead') return;
   if (!periodic) {
     alertEnemy(enemy, context.player);
@@ -31,10 +31,11 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
   const statusDamage = elementalDamage ?? (style === 'fire' || style === 'frost' || style === 'lightning' ? damage : 0);
   if (!periodic) primeSpellweave(context.player, melee, style);
   if (!periodic) applyElementalContact(enemy, style, statusDamage);
-  const critical = !periodic && context.player.derived.critChance > 0 && context.random() < context.player.derived.critChance;
-  damage = Math.max(1, Math.round(damage * (critical ? context.player.derived.critMultiplier : 1)));
+  const hitStats = offense ?? context.player.derived;
+  const critical = !periodic && hitStats.critChance > 0 && context.random() < hitStats.critChance;
+  damage = Math.max(1, Math.round(damage * (critical ? hitStats.critMultiplier : 1)));
   enemy.hp = Math.max(0, enemy.hp - damage);
-  if (!periodic && !context.player.dead) context.player.hp = Math.min(context.player.maxHp, context.player.hp + context.player.derived.lifeOnHit);
+  if (!periodic && !context.player.dead) context.player.hp = Math.min(context.player.maxHp, context.player.hp + hitStats.lifeOnHit);
   enemy.hitFlash = COMBAT_TIMING.hitFlashDuration;
   enemy.hitAngle = angle;
   const definition = ENEMY_DEFINITIONS[enemy.kind];
@@ -51,7 +52,7 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
     context.emit({ ...(style ? { style } : {}), type: 'kill', x: enemy.x, y: enemy.y, angle, facing: enemy.angle,
       targetId: enemy.id, remainingHp: 0, enemyKind: enemy.kind });
   } else if (definition.interruptible && melee) {
-    enemy.stagger = COMBAT_TIMING.staggerDuration;
+    enemy.stagger = Math.max(enemy.stagger, COMBAT_TIMING.staggerDuration);
     if (enemy.state === 'windup') {
       enemy.interrupted = true;
       transitionEnemy(enemy, 'recover', COMBAT_TIMING.interruptedRecovery);

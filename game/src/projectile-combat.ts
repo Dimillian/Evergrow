@@ -1,4 +1,4 @@
-import type { ProjectileStyle } from './model.ts';
+import type { ProjectileStyle, HitSnapshot } from './model.ts';
 import { strikeContainers, strikeContainerSegment, type ContainerAttackContext } from './breakable-containers.ts';
 import type { GroundEffectRequest } from './ground-effects.ts';
 import type { CombatEvent, Enemy, EnemyKind, Player, Projectile, WorldQuery } from './model.ts';
@@ -11,7 +11,7 @@ export interface ProjectileContext {
   containers?: ContainerAttackContext;
   schedule(effect: GroundEffectRequest): void;
   player: Player; enemies: Enemy[]; world: WorldQuery;
-  damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle): void;
+  damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle, offense?: HitSnapshot): void;
   hurt(amount: number, angle: number, sourceLevel: number, sourceKind?: EnemyKind): void;
   onScreen(enemy: Enemy): boolean;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
@@ -22,7 +22,7 @@ function hit(projectile: Projectile, enemy: Enemy, context: ProjectileContext): 
   const effects = projectile.effects;
   projectile.hitIds.add(enemy.id);
   const lifeBefore = enemy.hp;
-  context.damage(enemy, projectile.damage, projectile.angle, false, projectile.effects?.style);
+  context.damage(enemy, projectile.damage, projectile.angle, false, projectile.effects?.style, projectile.effects?.offense);
   if (enemy.state !== 'dead') {
     if (effects?.slowDuration) {
       applySlow(enemy, { duration: effects.slowDuration, factor: effects.slowFactor ?? .6 });
@@ -35,7 +35,10 @@ function hit(projectile: Projectile, enemy: Enemy, context: ProjectileContext): 
   if (effects?.lifeSteal && !p.dead) {
     const healed = Math.min(p.maxHp - p.hp, Math.max(0, lifeBefore - enemy.hp) * effects.lifeSteal);
     p.hp += healed;
-    if (healed > 0) context.emit({ type: 'heal', x: p.x, y: p.y, value: healed });
+    if (healed > 0) {
+      context.emit({ type: 'heal', x: p.x, y: p.y, value: healed });
+      context.emit({ type: 'chain', x: enemy.x, y: enemy.y, toX: p.x, toY: p.y, style: 'spirit', skill: projectile.skill, duration: .45 });
+    }
   }
 }
 
@@ -44,8 +47,9 @@ function blast(projectile: Projectile, context: ProjectileContext): void {
   context.emit({ type: 'blast', x: projectile.x, y: projectile.y, radius: radius || 14,
     style: projectile.effects?.style ?? 'arcane', skill: projectile.skill });
   if (projectile.skill && projectile.effects?.groundDuration) context.schedule({
-    kind: 'embers', x: projectile.x, y: projectile.y, radius, delay: .5,
-    duration: projectile.effects.groundDuration, interval: .5, damage: projectile.damage * .12,
+    kind: 'embers', x: projectile.x, y: projectile.y, radius, delay: 0,
+    duration: projectile.effects.groundDuration, interval: .25, damage: 0,
+    burn: { duration: .5, dps: projectile.effects.groundDps ?? 0 },
     skill: projectile.skill, style: 'fire',
   });
   if (!radius) return;

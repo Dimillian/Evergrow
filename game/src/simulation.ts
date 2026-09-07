@@ -38,6 +38,7 @@ import { addInventoryItem } from './inventory.ts';
 import { damageEnemy, damagePlayer } from './combat-damage.ts';
 import { awardKillRewards } from './combat-rewards.ts';
 import { advanceEnemyStatuses } from './combat-status.ts';
+import type { HitSnapshot } from './model.ts';
 import { scheduleGroundEffect, advanceGroundEffects, type ActiveGroundEffect } from './ground-effects.ts';
 import { activateSkill } from './skill-combat.ts';
 import { advanceProjectiles, MAX_PROJECTILES } from './projectile-combat.ts';
@@ -236,7 +237,7 @@ export class Simulation {
 
   /** Travel preserves actors, loot, clocks and camp memory. It is not a reset/load. */
   relocate(x: number, y: number): void {
-    this.groundEffects = this.groundEffects.filter(effect => !effect.follow);
+    this.groundEffects = this.groundEffects.filter(effect => effect.kind !== 'storm');
     const p = this.player;
     this.clearInput(); this.portal.cancel();
     p.x = p.prevX = x; p.y = p.prevY = y;
@@ -469,11 +470,13 @@ export class Simulation {
 
     if (this.skillBuffer && this.skillBuffer.until >= this.time && activateSkill({
       containers: this.containerContext(),
-      availableGroundEffects: GROUND_EFFECT_RULES.maximum - this.groundEffects.length,
+      availableGroundEffects: GROUND_EFFECT_RULES.maximum - this.groundEffects.length
+        - this.projectiles.filter(shot => shot.life > 0 && shot.effects?.groundDuration).length,
+      availableProjectiles: MAX_PROJECTILES - this.projectiles.length,
       player: p, world: this.world, enemies: this.enemies,
       aimX: input.aimX, aimY: input.aimY,
       onScreen: enemy => enemyInCombatViewport(enemy, this.combatViewport),
-      damage: (enemy, amount, angle, melee, style, elementalDamage?: number) => this.damageEnemy(enemy, amount, angle, melee, false, style, elementalDamage),
+      damage: (enemy, amount, angle, melee, style, elementalDamage, offense) => this.damageEnemy(enemy, amount, angle, melee, false, style, elementalDamage, offense),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       projectile: (x, y, angle, definition, skill, effects) => this.projectile(x, y, angle, definition, skill, effects),
       schedule: effect => this.scheduleGroundEffect(effect),
@@ -498,7 +501,7 @@ export class Simulation {
       for (const enemy of this.enemies) if (enemy.state !== 'dead' && !dash.hitIds.has(enemy.id)
         && segmentDistanceSquared(enemy.x, enemy.y, startX, startY, p.x, p.y) <= (enemy.radius + dash.radius) ** 2
         && this.lineOfSight(p.x, p.y, enemy.x, enemy.y)) {
-        dash.hitIds.add(enemy.id); this.damageEnemy(enemy, dash.damage, dash.angle, true, false, dash.style, dash.elementalDamage);
+        dash.hitIds.add(enemy.id); this.damageEnemy(enemy, dash.damage, dash.angle, true, false, dash.style, dash.elementalDamage, dash.offense);
       }
       strikeContainerSegment(this.containerContext(), startX, startY, p.x, p.y, dash.radius + p.radius);
       dash.remaining = Math.max(0, dash.remaining - dt);
@@ -555,7 +558,8 @@ export class Simulation {
       elapsed, duration, activeStart: duration * (ranged ? RANGED_BASIC_ATTACK_PHASES.activeStart : BASIC_ATTACK_PHASES.activeStart),
       activeEnd: duration * (ranged ? RANGED_BASIC_ATTACK_PHASES.activeEnd : BASIC_ATTACK_PHASES.activeEnd), angle: this.player.angle,
       range: stats.range, arc: stats.arc, damage: stats.damage * weave, elementalDamage: stats.elementalDamage * weave, hitIds: new Set<number>(),
-      ...(ranged ? { projectile: { style, pierce: p.derived.projectilePierce } } : {}),
+      offense: { critChance: p.derived.critChance, critMultiplier: p.derived.critMultiplier, lifeOnHit: p.derived.lifeOnHit },
+      ...(ranged ? { projectile: { style, pierce: p.derived.projectilePierce, offense: { critChance: p.derived.critChance, critMultiplier: p.derived.critMultiplier, lifeOnHit: p.derived.lifeOnHit } } } : {}),
     };
     p.nextAttackHand = hand === 'main' ? 'off' : 'main';
     if (!ranged) this.events.push({ type: 'swing', x: p.x, y: p.y, angle: p.angle });
@@ -576,7 +580,7 @@ export class Simulation {
       if (!circleIntersectsSector(enemy.x, enemy.y, enemy.radius, p.x, p.y, angle, attack.range, to - from)) continue;
       if (!this.lineOfSight(p.x, p.y, enemy.x, enemy.y)) continue;
       attack.hitIds.add(enemy.id);
-      this.damageEnemy(enemy, attack.damage, Math.atan2(enemy.y - p.y, enemy.x - p.x), true, false, weaponImpactStyle(attack.weapon), attack.elementalDamage ?? 0);
+      this.damageEnemy(enemy, attack.damage, Math.atan2(enemy.y - p.y, enemy.x - p.x), true, false, weaponImpactStyle(attack.weapon), attack.elementalDamage ?? 0, attack.offense);
     }
     // One solid-surface response per swing; scenery impact never changes its collision.
     if (!attack.surfaceHit && this.world.impactMaterial) for (let reach = p.radius + 4; reach <= attack.range; reach += 4) {
@@ -592,7 +596,7 @@ export class Simulation {
     return hasLineOfSight(this.world, ax, ay, bx, by);
   }
 
-  private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean, periodic = false, style?: ProjectileStyle, elementalDamage?: number): void {
+  private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean, periodic = false, style?: ProjectileStyle, elementalDamage?: number, offense?: HitSnapshot): void {
     damageEnemy(enemy, damage, angle, melee, {
       player: this.player, enemies: this.enemies, random: () => this.random(),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by), emit: event => this.events.push(event),
@@ -603,7 +607,7 @@ export class Simulation {
         });
         this.kills = reward.kills; this.killRecharge = reward.recharge;
       },
-    }, periodic, style, elementalDamage);
+    }, periodic, style, elementalDamage, offense);
   }
 
   private updateEnemies(dt: number): void {
@@ -685,7 +689,15 @@ export class Simulation {
     const { speed, life, radius, damage, owner } = definition;
     const shot: Projectile = { id: this.nextId++, sourceLevel, sourceKind, x, y, prevX: x, prevY: y,
       vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, radius, damage, life, maxLife: life, owner, skill,
-      effects: effects ? { ...effects } : undefined, hitIds: new Set() };
+      effects: effects ? { ...effects, ...(effects.offense ? { offense: { ...effects.offense } } : {}) } : undefined, hitIds: new Set() };
+    if (skill) {
+      const p = this.player, weapon = skillWeapon(skill, p.equipment);
+      if (weapon && weapon.attackKind !== 'melee') shot.launch = {
+        skill, weapon: { ...weapon.visual }, mainWeapon: { ...p.equipment.mainHand.visual },
+        hand: weapon === p.equipment.mainHand ? 'main' : 'off', hands: weapon.hands, facing: p.angle, time: this.time,
+        gaitPhase: p.walkTime, moving: Math.min(1, Math.hypot(p.vx, p.vy) / 130), moveAngle: Math.atan2(p.vy, p.vx), start: 0, end: 1,
+      };
+    }
     this.projectiles.push(shot);
     return shot;
   }
@@ -703,7 +715,7 @@ export class Simulation {
       containers: this.containerContext(),
       player: this.player, enemies: this.enemies, world: this.world,
       onScreen: enemy => enemyInCombatViewport(enemy, this.combatViewport),
-      damage: (enemy, amount, angle, melee, style, elementalDamage?: number) => this.damageEnemy(enemy, amount, angle, melee, false, style, elementalDamage),
+      damage: (enemy, amount, angle, melee, style, offense) => this.damageEnemy(enemy, amount, angle, melee, false, style, undefined, offense),
       hurt: (amount, angle, sourceLevel, sourceKind) => this.damagePlayer(amount, angle, sourceLevel, sourceKind),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       emit: event => this.events.push(event),
@@ -723,7 +735,7 @@ export class Simulation {
       containers: this.containerContext(),
       player: this.player,
       enemies: this.enemies, visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
-      damage: (enemy, amount, angle, melee, style, periodic = false) => this.damageEnemy(enemy, amount, angle, melee, periodic, style),
+      damage: (enemy, amount, angle, melee, style, periodic = false, offense) => this.damageEnemy(enemy, amount, angle, melee, periodic, style, undefined, offense),
       emit: event => this.events.push(event),
     });
   }

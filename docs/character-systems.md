@@ -54,7 +54,7 @@ These windows pause combat, clear buffered inputs, trap modal keyboard focus, an
 | `inventory-panel.ts`, `skill-tree-panel.ts` | UI state and player actions; no independent stat calculation or mutation rules |
 | `item-art.ts`, `loot-art.ts` | Equipment icon/worn appearance and ground-marker/label presentation |
 
-`deriveCharacterStats(sheet, treeBonuses, level)` is pure. `refreshCharacter(player)` supplies tree bonuses and character level, updating combat projections inside `executeCharacterCommand` after successful character actions, and inside the XP award operation after level gain. UI callers submit commands rather than remembering a separate refresh step. Raising maximum life or mana does not refill it; reducing a maximum clamps the current amount. Existing basic-attack snapshots retain their start-time attack stats. Presentation never grants points, damage, gear, or XP.
+`deriveCharacterStats(sheet, treeBonuses, level)` is pure. `refreshCharacter(player)` supplies tree bonuses and character level, updating combat projections inside `executeCharacterCommand` after successful character actions, and inside the XP award operation after level gain. UI callers submit commands rather than remembering a separate refresh step. Raising maximum life or mana does not refill it; reducing a maximum clamps the current amount. Basic attacks and active skills retain their accepted damage, critical chance/multiplier and life-on-hit snapshots through delayed contact. Presentation never grants points, damage, gear, or XP.
 
 ## Progression and attribute rules
 
@@ -171,3 +171,5 @@ Each of the five terraces now has a direct bridge between every pair of discipli
 ### Elemental melee affixes · 2026-09-07
 
 Melee weapons may roll one weapon-local fire, frost or lightning added-damage affix in an ordinary affix slot. Both basics and weapon skills include this damage, scaled by attack bonuses; offhand affixes never increase main-hand damage. All item services rebuild its damage and elemental appearance from the recipe. Shared tooltips and equip comparisons include it. See [elemental weapons and held lighting](weapons-and-skills.md#elemental-weapons-and-held-lighting--2026-09-07) for rules and presentation bounds.
+
+The [2026-09-07 skill corrections](skill-progression.md#audit-corrections--2026-09-07) add prospective specialization costs/potency, sustained guard/storm duration, reliable effect admission, and distinct control/skill feedback. They do not change save version or reset character progress.

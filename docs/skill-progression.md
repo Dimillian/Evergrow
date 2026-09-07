@@ -34,7 +34,7 @@ Every one of the 20 skills has **three specializations (60 total)**. Each skill 
 
 Each potency star grants **+6% damage to that skill** (Bulwark instead gets +6% guard duration); each efficiency star grants **4% reduced mana cost to that skill**, including Tempest upkeep. These skill-specific passives apply across all variants and stack additively within their family: owning all leaves gives +18% potency and 12% cost reduction. They do not modify LMB or other skills. The damage and cost factors multiply the existing rank/equipment/global-stat calculation.
 
-Tooltips and details explicitly identify the affected skill, distinguish passive improvements from selectable variants, and separate effects, cast costs and allocation state. Hovering a skill or its leaf emphasizes its three branches; specialization tips reuse the owning skill's icon. Ordinary notable passives are no longer mislabeled as specializations.
+Tooltips and details explicitly identify the affected skill, distinguish passive improvements from selectable variants, and separate effects, cast costs and allocation state. Hovering a skill or its leaf emphasizes its three branches; specialization tips reuse the owning skill's icon. Specialization leaves preview resolved mana, cooldown, potency and upkeep before/after the variant and its required passives, without allocating or selecting anything. Selected variants retain the base mechanic description beside their tradeoff. Ordinary notable passives are no longer mislabeled as specializations.
 
 | Skill | Specialization | Effect / tradeoff |
 | --- | --- | --- |
@@ -48,7 +48,7 @@ Tooltips and details explicitly identify the affected skill, distinguish passive
 | Backstab | Executioner | Rear strikes deal 3× instead of 2× damage; other hits deal 15% less. Costs 70% more mana. |
 | Backstab | Quiet Blade | 35% less mana; rear strikes deal 1.6× instead of 2× damage. |
 | Bulwark | Enduring Guard | Guard lasts 5 seconds. Costs 50% more mana; 25% longer cooldown. |
-| Bulwark | Iron Aegis | Base block reduction rises to 85%, guard lasts 2 seconds. Costs 35% more mana. |
+| Bulwark | Iron Aegis | Base block reduction rises to 85%, guard lasts 2 seconds. Each effective rank above the 90% reduction cap adds 0.25 seconds before passive duration bonuses. Costs 35% more mana. |
 | Bulwark | Ready Guard | 25% less mana and 25% shorter cooldown; guard lasts 2 seconds. |
 | Cataclysm | Falling Stars | Eleven impacts at 65% damage each. Costs 60% more mana; 20% longer cooldown. |
 | Cataclysm | Extinction | Three impacts with 100% more damage and 40% more radius. Costs 40% more mana; 25% longer cooldown. |
@@ -60,19 +60,19 @@ Tooltips and details explicitly identify the affected skill, distinguish passive
 | Earthshatter | Seismic Hammer | 60% more damage and 2-second stun; 20% smaller radius. Costs 60% more mana; 25% longer cooldown. |
 | Earthshatter | Tremor | 35% shorter cooldown, 25% less damage; stun lasts 0.6 seconds. |
 | Fireball | Forked Flame | Three fireballs, each dealing 35% less damage. Costs 80% more mana. |
-| Fireball | Living Ember | Explosions leave burning ground for three seconds. Costs 65% more mana. |
+| Fireball | Living Ember | Explosions leave non-stacking burning ground for three seconds at 24% impact damage per second. Costs 65% more mana. |
 | Fireball | Flashfire | 40% wider explosion, 20% less damage. Costs 40% more mana. |
 | Frost Lance | Glacial Trident | Three lances at 55% damage each. Costs 70% more mana. |
 | Frost Lance | Permafrost Spear | 70% slow for 5 seconds, 20% less damage. Costs 30% more mana. |
-| Frost Lance | Diamond Lance | 60% more damage, pierces only one enemy. Costs 45% more mana; 20% longer cooldown. |
+| Frost Lance | Diamond Lance | 60% more damage, hits up to 2 enemies. Costs 45% more mana; 20% longer cooldown. |
 | Ice Nova | Echoing Frost | A second nova expands after 0.6 seconds at 60% damage. Costs 70% more mana. |
 | Ice Nova | Deep Winter | 30% more radius and a stronger, longer slow; 15% less damage. Costs 40% more mana. |
 | Ice Nova | Snap Freeze | Freezes for 0.6 seconds; 20% smaller radius, 20% less damage. Costs 35% more mana. |
-| Meteor | Shattered Sky | Five smaller impacts spread across the target area at 45% damage each. Costs 90% more mana; 25% longer cooldown. |
+| Meteor | Shattered Sky | Five impacts with 35% smaller radius spread across the target area at 45% damage each. Costs 90% more mana; 25% longer cooldown. |
 | Meteor | Lasting Inferno | Ground fire lasts 8 seconds at 18% impact damage per second. Costs 45% more mana. |
 | Meteor | Worldbreaker | 60% more impact damage, 25% larger radius; no ground fire. Costs 50% more mana; 20% longer cooldown. |
-| Piercing Shot | Unbroken Flight | Pierces 7 enemies; 15% less damage. Costs 40% more mana. |
-| Piercing Shot | Siegebreaker | 60% more damage, pierces only one enemy. Costs 40% more mana; 20% longer cooldown. |
+| Piercing Shot | Unbroken Flight | Hits up to 8 enemies; 15% less damage. Costs 40% more mana. |
+| Piercing Shot | Siegebreaker | 60% more damage, hits up to 2 enemies. Costs 40% more mana; 20% longer cooldown. |
 | Piercing Shot | Twin Needles | Two piercing arrows at 65% damage each. Costs 50% more mana. |
 | Rain of Arrows | Blanket of Thorns | 50% larger radius; 25% less damage per wave. Costs 35% more mana. |
 | Rain of Arrows | Relentless Rain | Eight waves over 2.4 seconds, each at 75% damage. Costs 65% more mana; 25% longer cooldown. |
@@ -87,7 +87,7 @@ Tooltips and details explicitly identify the affected skill, distinguish passive
 | Shield Bash | Bellringer | 40% more damage and a longer stun. Costs 75% more mana. |
 | Shield Bash | Concussion | 2-second stun, 30% less damage. Costs 20% more mana. |
 | Soul Siphon | Soul Feast | Heals 60% of actual damage dealt, but deals 20% less damage. Costs 35% more mana. |
-| Soul Siphon | Hollow Passage | Pierces two enemies, 15% less damage. Costs 50% more mana. |
+| Soul Siphon | Hollow Passage | Hits up to 3 enemies, 15% less damage. Costs 50% more mana. |
 | Soul Siphon | Soul Rend | 60% more damage, healing reduced to 15%. Costs 40% more mana; 20% longer cooldown. |
 | Tempest | Stormfront | 40% larger storm, 25% less damage. Casting and upkeep cost 30% more mana. |
 | Tempest | Thunderhead | Strikes every 0.3 seconds at 80% damage. Casting and upkeep cost 70% more mana. |
@@ -99,7 +99,7 @@ Tooltips and details explicitly identify the affected skill, distinguish passive
 | Whirlwind | Iron Cyclone | 40% more damage, 15% less reach. Costs 70% more mana. |
 | Whirlwind | Steady Revolutions | 30% less mana, 20% less damage. |
 
-Specializations use the same projectile, sweep, chain, status and ground-effect executors as the original skills. Their values and damage are snapshotted on release. Later equipment, rank or specialization changes cannot rewrite an attack already in flight. Rank upgrades do not change ordinary LMB attacks.
+Specializations use the same projectile, sweep, chain, status and ground-effect executors as the original skills. Their values, damage, critical chance/multiplier and life on hit are snapshotted when the action is accepted; scheduled pulses and released projectiles keep these values. Later equipment, rank or specialization changes cannot rewrite an attack already in flight. Rank upgrades do not change ordinary LMB attacks.
 
 ## Deep Arcana
 
@@ -141,3 +141,16 @@ The Details toggle expands the canvas; controller Node/Skills navigation restore
 This redesign changes early connections and some route IDs. Existing characters invested in removed routes may require a fresh character; original saves stay preserved. Frozen review URLs use memory-only characters: `/character.html?panel=skills&node=origin&zoom=starter&map`, `&node=skill:fireball&zoom=arcana&map`, or `&node=skill:fireball&zoom=school`.
 
 The outer atlas uses five balanced constellation silhouettes (diamond, hexagon, rays, wings and compass). Clusters retain their proportions when the atlas spreads outward; their internal stars stay at least 50 world units apart. Allocated routes carry flowing gold light, while the selected/hovered route uses pale blue light. A cached atlas surface keeps geometry and text out of the 30 Hz animation pass; visible light threads are capped at 160 and batched into at most 64 strokes. Reduced motion freezes the light and dust, and closing the atlas releases its cached surface. Domain-colored background haze stays faint beneath the graph.
+
+
+## Audit corrections — 2026-09-07
+
+Ordinary melee reactions preserve longer stuns/freezes. The runtime keeps separate freeze/stun presentation timers while the shared stagger timer owns AI suppression. Frozen shells, stun markers and target labels now distinguish these conditions.
+
+Every Tempest variant ends on death, incompatible casting gear, relocation or exhausted upkeep, including stationary Storm Anchor. Following storms and Absolute Zero are self-targeted in touch/controller previews; Storm Anchor retains ground placement. Bulwark and Tempest show active duration independently of cooldown in desktop/touch skill slots, with storm upkeep and a notice when mana or casting gear ends it.
+
+Projectile fans require all their projectile slots before paying mana or consuming Spellweave. Living Ember reserves its future ground slot while the projectile is in flight; other ground casts count those reservations. The existing 128-projectile and 16-ground-effect bounds remain. Rejected casts spend nothing. Living Ember now uses the same strongest-burn refresh rules as meteor aftermath, with no repeated explosion or direct-hit procs. Its nominal damage rate remains 24% of resolved impact damage per second, but overlapping patches no longer stack. Each patch lasts three seconds and refreshes a half-second burn every quarter-second.
+
+Executioner's rear strike now deals 3× the equivalent Original frontal potency; only non-rear hits receive its 15% penalty. Shattered Sky has five impacts at 65% Original radius, and its falling stones scale with that radius. Iron Aegis gains duration after capping reduction, including effective ranks from equipment. These are deliberate corrections to the published tradeoffs and rank plateau; no save-format change or progress reset is introduced.
+
+See [weapons and skills](weapons-and-skills.md#skill-contact-and-feedback--2026-09-07) for the contact/GFX pass and [the audit](skill-audit-2026-09-07.md#implementation-follow-up--2026-09-07) for its resolution matrix. Combat feel, sound balance and visual composition still need player acceptance.

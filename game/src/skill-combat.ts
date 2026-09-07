@@ -1,6 +1,6 @@
 import { consumeSpellweave } from './affix-combat.ts';
 import { weaponImpactStyle } from './elemental-weapon.ts';
-import type { ProjectileStyle } from './model.ts';
+import type { ProjectileStyle, HitSnapshot, Projectile, WeaponLaunch } from './model.ts';
 import { containerVisible, strikeContainers, type ContainerAttackContext } from './breakable-containers.ts';
 import { skillTargetPoint } from './skill-target-point.ts';
 import { resolveSkill } from './skill-progression.ts';
@@ -17,11 +17,12 @@ import { circleIntersectsSector } from './combat-geometry.ts';
 export interface SkillContext {
   containers?: ContainerAttackContext;
   availableGroundEffects: number;
+  availableProjectiles: number;
   player: Player; world: WorldQuery; enemies: Enemy[]; aimX: number; aimY: number;
-  damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle, elementalDamage?: number): void;
+  damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle, elementalDamage?: number, offense?: HitSnapshot): void;
   onScreen(enemy: Enemy): boolean;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
-  projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill: SkillId, effects?: ProjectileEffects): void;
+  projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill: SkillId, effects?: ProjectileEffects): Projectile | void;
   schedule(effect: Omit<GroundEffect, 'id' | 'tick'>): void;
   emit(event: CombatEvent): void;
 }
@@ -39,7 +40,10 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   const definition = SKILL_DEFINITIONS[id];
   const costs = resolveSkill(id, p.derived, p.character);
   const recipe: SkillExecution = costs.recipe;
-  const groundSlots = recipe.kind === 'ground' ? recipe.scatter ?? 1 : recipe.kind === 'radial' && recipe.echo ? 1 : 0;
+  const projectileSlots = recipe.kind === 'projectile' ? recipe.offsets.length : 0;
+  const groundSlots = recipe.kind === 'ground' ? recipe.scatter ?? 1 : recipe.kind === 'radial' && recipe.echo ? 1
+    : recipe.kind === 'projectile' && recipe.effects.groundDuration ? projectileSlots : 0;
+  if (projectileSlots > context.availableProjectiles) return false;
   if (groundSlots > context.availableGroundEffects) return false;
   if ((p.skillCooldowns[id] ?? 0) > 0 || p.mana < costs.mana) return false;
 
@@ -47,9 +51,11 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   // Staff weapon derivation already applies spell bonuses; applying them here again would square scaling.
   const weave = recipe.kind === 'guard' ? 1 : consumeSpellweave(p, definition.requirement === 'magic' ? 'spell' : weapon.attackKind === 'melee' ? 'melee' : 'other');
   const damage = attack.damage * costs.damageMultiplier * weave;
+  const offense: HitSnapshot = { critChance: p.derived.critChance, critMultiplier: p.derived.critMultiplier, lifeOnHit: p.derived.lifeOnHit };
+  let launch: WeaponLaunch | undefined;
   const color = definition.color;
   const hitStyle = 'style' in recipe ? recipe.style : weaponImpactStyle(weapon);
-  const damageTarget = (enemy: Enemy, amount: number, angle: number, melee: boolean) => context.damage(enemy, amount, angle, melee, hitStyle, weapon.attackKind === 'melee' ? attack.elementalDamage * (damage > 0 ? amount / attack.damage : 0) : undefined);
+  const damageTarget = (enemy: Enemy, amount: number, angle: number, melee: boolean) => context.damage(enemy, amount, angle, melee, hitStyle, weapon.attackKind === 'melee' ? attack.elementalDamage * (damage > 0 ? amount / attack.damage : 0) : undefined, offense);
   const living = () => enemies.filter(enemy => enemy.state !== 'dead');
   const visible = (enemy: Enemy) => context.visible(p.x, p.y, enemy.x, enemy.y);
   const radial = (radius: number, hit: (enemy: Enemy, angle: number) => void) => {
@@ -66,33 +72,33 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   p.activeSkill = id;
   if (recipe.kind === 'sweep') {
     const duration = 1 / attack.attacksPerSecond;
-    p.attack = { kind: 'melee', weapon, hand: weapon === p.equipment.mainHand ? 'main' : 'off', elapsed: 0, duration,
+    p.attack = { kind: 'melee', offense, skill: id, specialization: costs.variant?.id, weapon, hand: weapon === p.equipment.mainHand ? 'main' : 'off', elapsed: 0, duration,
       activeStart: duration * BASIC_ATTACK_PHASES.activeStart, activeEnd: duration * BASIC_ATTACK_PHASES.activeEnd,
       angle: p.angle, range: attack.range * recipe.reachMultiplier,
       arc: recipe.arc, damage, elementalDamage: attack.elementalDamage * costs.damageMultiplier * weave, hitIds: new Set() };
     context.emit({ type: 'swing', x: p.x, y: p.y, angle: p.angle, skill: id, color });
-    if (recipe.blast) blast(attack.range * recipe.reachMultiplier);
     return true;
   }
 
   p.castTime = 1 / attack.attacksPerSecond; p.castAngle = p.angle;
   switch (recipe.kind) {
     case 'dash':
-      p.dash = { angle: p.angle, remaining: recipe.duration, speed: recipe.speed, damage, elementalDamage: attack.elementalDamage * costs.damageMultiplier * weave, radius: recipe.radius, skill: id, style: hitStyle, hitIds: new Set() };
+      p.dash = { angle: p.angle, remaining: recipe.duration, speed: recipe.speed, damage, offense, elementalDamage: attack.elementalDamage * costs.damageMultiplier * weave, radius: recipe.radius, skill: id, style: hitStyle, hitIds: new Set() };
       p.castTime = Math.max(p.castTime, recipe.duration);
       break;
     case 'radial':
       strikeContainers(context.containers, p.x, p.y, recipe.radius);
       radial(recipe.radius, (enemy, angle) => {
         damageTarget(enemy, damage, angle, recipe.melee);
-        if (recipe.stun) applyStun(enemy, recipe.stun);
+        if (recipe.stun) applyStun(enemy, recipe.stun, recipe.style === 'frost' ? 'freeze' : 'stun');
         if (recipe.slow) applySlow(enemy, recipe.slow);
       });
       if (recipe.echo) context.schedule({ kind: 'frost', x: p.x, y: p.y, radius: recipe.radius * 1.2, delay: .6, duration: 0, interval: 1,
-        damage: damage * .6, skill: id, style: 'frost', slow: recipe.slow });
+        damage: damage * .6, offense, skill: id, style: 'frost', slow: recipe.slow });
       blast(recipe.radius, recipe.style);
       break;
     case 'cone':
+      context.emit({ type: 'skill-strike', x: p.x, y: p.y, skill: id, color, angle: p.angle, range: recipe.radius, arc: recipe.arc, rear: false });
       strikeContainers(context.containers, p.x, p.y, recipe.radius, p.angle, recipe.arc);
       for (const enemy of living()) if (circleIntersectsSector(enemy.x, enemy.y, enemy.radius, p.x, p.y, p.angle, recipe.radius, recipe.arc) && visible(enemy)) {
         damageTarget(enemy, damage, p.angle, true); applyStun(enemy, recipe.stun);
@@ -105,16 +111,25 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
       if (target) {
         const behind = angularDistance(Math.atan2(p.y - target.y, p.x - target.x), target.angle) > recipe.rearAngle;
         damageTarget(target, damage * (behind ? recipe.rearMultiplier : 1), p.angle, true);
-      } else strikeContainers(context.containers, p.x, p.y, Math.max(recipe.minRange, attack.range * recipe.reachMultiplier), p.angle, recipe.arc);
+        context.emit({ type: 'skill-strike', x: p.x, y: p.y, skill: id, color, angle: p.angle, range: Math.hypot(target.x - p.x, target.y - p.y), arc: recipe.arc, rear: behind });
+      } else {
+        const range = Math.max(recipe.minRange, attack.range * recipe.reachMultiplier);
+        strikeContainers(context.containers, p.x, p.y, range, p.angle, recipe.arc);
+        context.emit({ type: 'skill-strike', x: p.x, y: p.y, skill: id, color, angle: p.angle, range, arc: recipe.arc, rear: false });
+      }
       break;
     }
     case 'projectile': {
-      const { burnDamageMultiplier, ...payload } = recipe.effects;
-      const effects: ProjectileEffects = { ...payload,
+      const { burnDamageMultiplier, groundDamageMultiplier, ...payload } = recipe.effects;
+      const effects: ProjectileEffects = { ...payload, offense,
+        ...(groundDamageMultiplier !== undefined ? { groundDps: damage * groundDamageMultiplier } : {}),
         ...(burnDamageMultiplier !== undefined ? { burnDps: damage * burnDamageMultiplier } : {}) };
-      for (const offset of recipe.offsets) context.projectile(p.x, p.y, p.angle + offset,
+      for (const offset of recipe.offsets) {
+        const shot = context.projectile(p.x, p.y, p.angle + offset,
         { owner: 'player', speed: recipe.speed, life: Math.max(SKILL_TARGETING.minimumProjectileLife, attack.range / recipe.speed),
           radius: recipe.radius, damage }, id, effects);
+        if (shot) launch ??= shot.launch;
+      }
       break;
     }
     case 'ground': {
@@ -125,7 +140,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
         const candidate = { x: point.x + Math.cos(angle) * radius, y: point.y + Math.sin(angle) * radius };
         const target = context.world.blocked(candidate.x, candidate.y, 1) || !context.visible(point.x, point.y, candidate.x, candidate.y) ? point : candidate;
         context.schedule({ kind: recipe.effect, ...target, radius: recipe.radius, delay: recipe.delay + i * .18,
-          duration: recipe.duration, interval: recipe.interval, damage, skill: id, style: recipe.style,
+          duration: recipe.duration, interval: recipe.interval, damage, offense, skill: id, style: recipe.style,
           follow: recipe.follow, upkeep: costs.upkeep, slow: recipe.slow, stun: recipe.stun,
           ...(recipe.scorch ? { scorch: { duration: recipe.scorch.duration, interval: recipe.scorch.interval, dps: damage * recipe.scorch.damageMultiplier } } : {}),
           ...(recipe.burn ? { burn: { duration: recipe.burn.duration, dps: damage * recipe.burn.damageMultiplier } } : {}) });
@@ -166,6 +181,6 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
     }
   }
   p.castDuration = p.castTime;
-  context.emit({ type: 'cast', x: p.x, y: p.y, angle: p.angle, skill: id, color });
+  context.emit({ type: 'cast', x: p.x, y: p.y, angle: p.angle, skill: id, color, ...(launch ? { launch } : {}) });
   return true;
 }

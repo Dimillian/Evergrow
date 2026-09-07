@@ -81,6 +81,8 @@ export interface CharacterPose {
   offHand?: { kind: 'weapon'; visual: WeaponVisual } | { kind: 'shield'; visual: ShieldDefinition['visual'] } | { kind: 'focus'; visual: FocusDefinition['visual'] } | null;
   guard?: number;
   castColor?: string;
+  frozen?: number;
+  stunned?: number;
   slow?: number;
   burning?: number;
   /** Slots can be replaced or set to null independently, without altering the rig. */

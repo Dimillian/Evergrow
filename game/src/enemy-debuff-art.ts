@@ -6,7 +6,7 @@ function icon(c: CanvasRenderingContext2D, id: EnemyDebuff['id'], x: number, y: 
   if (id === 'burn') {
     c.moveTo(0, -5); c.bezierCurveTo(2, -2, 5, 0, 3, 4); c.bezierCurveTo(1, 6, -4, 5, -4, 1);
     c.quadraticCurveTo(-4, -1, -2, -2); c.quadraticCurveTo(-2, 1, 0, 1); c.quadraticCurveTo(2, 0, 0, -5);
-  } else if (id === 'chill') {
+  } else if (id === 'chill' || id === 'freeze') {
     for (let i = 0; i < 3; i++) {
       const a = i * Math.PI / 3, dx = Math.cos(a), dy = Math.sin(a);
       c.moveTo(-dx * 5, -dy * 5); c.lineTo(dx * 5, dy * 5);

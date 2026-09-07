@@ -19,15 +19,19 @@ export function applyBurn(enemy: Enemy, effect: BurnEffect): void {
   enemy.burnTime = Math.max(enemy.burnTime, effect.duration);
   enemy.burnDps = Math.max(enemy.burnDps, effect.dps);
 }
-export function applyStun(enemy: Enemy, duration: number): void {
+export function applyStun(enemy: Enemy, duration: number, kind: 'stun' | 'freeze' | 'stagger' = 'stun'): void {
   if (enemy.state === 'dead') return;
   if (enemy.kind === 'warden') { if ((enemy.controlImmunity ?? 0) > 0) return; duration = Math.min(.35, duration * WARDEN_RULES.controlFactor); enemy.controlImmunity = WARDEN_RULES.controlImmunity; }
   enemy.stagger = Math.max(enemy.stagger, duration); enemy.interrupted = true;
+  if (kind === 'freeze') enemy.freezeTime = Math.max(enemy.freezeTime ?? 0, duration);
+  if (kind === 'stun') enemy.stunTime = Math.max(enemy.stunTime ?? 0, duration);
 }
 
 /** Run after state time advances and before AI. False suppresses this tick's AI. */
 export function advanceEnemyStatuses(enemy: Enemy, dt: number, damage: (enemy: Enemy, amount: number) => void): boolean {
   if (enemy.state === 'dead') return false;
+  enemy.freezeTime = Math.max(0, (enemy.freezeTime ?? 0) - dt);
+  enemy.stunTime = Math.max(0, (enemy.stunTime ?? 0) - dt);
   enemy.controlImmunity = Math.max(0, (enemy.controlImmunity ?? 0) - dt);
   if (enemy.slowTime > 0) enemy.slowTime = Math.max(0, enemy.slowTime - dt);
   if (enemy.slowTime <= 0) enemy.slowFactor = 1;
@@ -57,5 +61,5 @@ export function applyElementalContact(enemy: Enemy, style: ProjectileStyle | und
   if (damage <= 0 || !Number.isFinite(damage) || enemy.state === 'dead') return;
   if (style === 'fire') applyBurn(enemy, { duration: ELEMENTAL_CONTACT.burnDuration, dps: damage * ELEMENTAL_CONTACT.burnFractionPerSecond });
   else if (style === 'frost') applySlow(enemy, { duration: ELEMENTAL_CONTACT.chillDuration, factor: ELEMENTAL_CONTACT.chillFactor });
-  else if (style === 'lightning') applyStun(enemy, ELEMENTAL_CONTACT.lightningInterrupt);
+  else if (style === 'lightning') applyStun(enemy, ELEMENTAL_CONTACT.lightningInterrupt, 'stagger');
 }
