@@ -26,7 +26,7 @@ function harness(id: SkillId) {
   const scheduled: Array<Omit<GroundEffect, 'id' | 'tick'>> = [];
   const context: SkillContext = { availableGroundEffects: 16, player, world: emptyWorld, enemies: sim.enemies, aimX: 100, aimY: 0,
     damage: (enemy, amount) => { hits.push({ enemy, amount }); enemy.hp = Math.max(0, enemy.hp - amount); if (!enemy.hp) enemy.state = 'dead'; },
-    visible: () => true,
+    visible: () => true, onScreen: () => true,
     projectile: (_x, _y, angle, definition, skill, effects) => { missiles.push({ angle, definition, skill, effects }); },
     schedule: effect => { scheduled.push(effect); }, emit: event => { events.push(event); },
   };

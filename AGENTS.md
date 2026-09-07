@@ -96,7 +96,8 @@ Read `docs/android-thor.md` before changing native packaging or the lower displa
 - `game/src/character-pose.ts`: common player pose for the character, ribbon, sparks, and weapon light.
 - `game/src/renderer.ts`: interpolated scene composition, camera, actors, and a separate native-resolution UI pass.
 - `game/src/scene-visibility.ts`: padded viewport coverage for props/buildings/wilderness sites, invalidated when the world or visible bounds change.
-- `game/src/camera.ts`: smooth bounded wheel zoom and shared world/screen projection. Keep the HUD and damage-text size independent of camera zoom; terrain, object coverage, and lights must follow the visible world bounds.
+- `game/src/combat-visibility.ts`: actual displayed viewport/body intersection for Arc Lightning acquisition and all chain/ricochet target selection. Never use padded spawn coverage to permit offscreen automatic targets. Missing camera coverage rejects acquisition; ordinary projectile flight stays physical.
+- `game/src/camera.ts`: smooth 0.8–1.8× bounded wheel zoom and shared world/screen projection. Keep the HUD and damage-text size independent of camera zoom; terrain, object coverage, and lights must follow the visible world bounds.
 - `game/src/lighting.ts`: bounded dynamic light map, cached light stamps, and prop shadows.
 - `game/src/effects.ts`: bounded combat particles, trails, flashes, and damage numbers; effects never drive gameplay.
 - `game/src/sword-trail.ts`: sampled world-space metal-gold ribbons following the weapon.

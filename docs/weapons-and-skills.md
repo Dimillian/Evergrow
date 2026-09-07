@@ -117,6 +117,8 @@ First-row skills have no cooldown; the eight second-row skills cost 24–40 base
 | Meteor | Staff or wand | 40 | 7 s | 3.4× | Aimed 125-unit blast after 0.85 s; ignites survivors. |
 | Soul Siphon | Staff or wand | 30 | 4.5 s | 1.65× | Spirit projectile restores 35% of the actual enemy life removed by its direct hit, capped by missing player life. |
 
+Arc Lightning checks the actual displayed camera rectangle for its first target and every jump; ricochets also require an on-screen body when choosing a new target. Partly visible silhouettes qualify. `combat-visibility.ts` shares this rule, and missing/invalid viewport data prevents automatic acquisition. Spawn exclusion padding is deliberately separate. Released projectiles retain their physical flight and collisions.
+
 A projectile cannot hit the same enemy again after piercing or ricocheting. Fireball's primary target is not struck twice by its own explosion. Walls block projectiles and relevant area/chain line-of-sight checks; aimed ground markers stop before solid terrain.
 
 Fireball and Meteor burns deal a nominal 12% of their pre-critical direct-hit payload damage per second for three seconds. Burns tick every 0.5 seconds, with each tick rounded to integer damage (minimum one), do not critically strike, and do not trigger life on hit. Reapplication keeps the stronger burn rate and longer remaining duration rather than stacking independent burns. Soul Siphon uses actual direct-hit life removed, so overkill does not produce excess healing; normal life-on-hit healing remains a separate effect.

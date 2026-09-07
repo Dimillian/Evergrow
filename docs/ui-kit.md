@@ -164,3 +164,5 @@ The hall uses one eight-slot roster beside a creation/continue pane with short l
 The character window shows a quiet LB/RB section rail only during controller use. At widths up to 1080px it displays the selected section at full width, with preserved section focus. Pointer/touch use returns to the existing responsive layout.
 
 The skill atlas separates its scrollable node inspector from a pinned five-slot loadout. Small inline node emblems, left-aligned effects, compact cost facts and optional specialization-path disclosure reduce vertical travel. Controller LB/RB chooses Tree, Node or Skills; X reaches assignment directly. Shared menu selects reserve left/right for values and up/down for focus, avoiding a controller focus trap. All actions still go through validated character commands.
+
+Camera wheel zoom is bounded to 0.8–1.8× with the existing smooth response. The zoom-out limit shows 18.75% less world width/height than the former 0.65× limit. Combat target selection uses the last displayed viewport; spawning retains its wider predictive exclusion envelope.

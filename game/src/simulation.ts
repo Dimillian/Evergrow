@@ -1,3 +1,4 @@
+import { enemyInCombatViewport, type CombatViewport } from './combat-visibility.ts';
 import { stageJourneyCompletion, journeyWasCompleted, type JourneyCompletion } from './journey-rewards.ts';
 import { EnemyEngagements } from './enemy-engagement.ts';
 import type { JourneyGoal } from './journey-state.ts';
@@ -119,6 +120,7 @@ export class Simulation {
   private roaming = new RoamingEncounters();
   private campTimer = 0;
   private camps = new CampPopulation();
+  private combatViewport: CombatViewport | null = null;
   private spawnExclusion: SpawnExclusion | null = null;
   private killRecharge = 0;
 
@@ -150,7 +152,7 @@ export class Simulation {
     this.randomState = this.options.seed! >>> 0;
     this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
     this.hurtGuard = this.killRecharge = 0;
-    this.spawnExclusion = null;
+    this.spawnExclusion = null; this.combatViewport = null;
     this.roaming.reset(this.player.x, this.player.y);
   }
 
@@ -229,12 +231,17 @@ export class Simulation {
     p.x = p.prevX = x; p.y = p.prevY = y;
     p.attack = null; p.dash = null; p.activeSkill = null; p.castTime = p.castDuration = p.dodgeTime = 0;
     this.arrivalProtection = PORTAL_RULES.protection; p.invulnerable = Math.max(p.invulnerable, this.arrivalProtection);
-    this.spawnExclusion = null; this.roaming.relocate(x, y);
+    this.spawnExclusion = null; this.combatViewport = null; this.roaming.relocate(x, y);
   }
 
   /** Automatic population waits for the camera's current/pending visible envelope. */
   setSpawnExclusion(bounds: { x: number; y: number; width: number; height: number } | null): void {
     this.spawnExclusion = bounds && [bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)
+      && bounds.width > 0 && bounds.height > 0 ? { ...bounds } : null;
+  }
+
+  setCombatViewport(bounds: CombatViewport | null): void {
+    this.combatViewport = bounds && [bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)
       && bounds.width > 0 && bounds.height > 0 ? { ...bounds } : null;
   }
 
@@ -444,6 +451,7 @@ export class Simulation {
       availableGroundEffects: GROUND_EFFECT_RULES.maximum - this.groundEffects.length,
       player: p, world: this.world, enemies: this.enemies,
       aimX: input.aimX, aimY: input.aimY,
+      onScreen: enemy => enemyInCombatViewport(enemy, this.combatViewport),
       damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       projectile: (x, y, angle, definition, skill, effects) => this.projectile(x, y, angle, definition, skill, effects),
@@ -649,6 +657,7 @@ export class Simulation {
   private updateProjectiles(dt: number): void {
     advanceProjectiles(this.projectiles, dt, {
       player: this.player, enemies: this.enemies, world: this.world,
+      onScreen: enemy => enemyInCombatViewport(enemy, this.combatViewport),
       damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),
       hurt: (amount, angle, sourceLevel, sourceKind) => this.damagePlayer(amount, angle, sourceLevel, sourceKind),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),

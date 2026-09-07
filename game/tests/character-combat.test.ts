@@ -114,6 +114,7 @@ test('all five empty slots and a locked skill are inert and cannot consume mana'
 for (const id of Object.keys(SKILL_DEFINITIONS) as SkillId[]) {
   test(`${id} unlocks through connected nodes, pays its cost once and produces its actual combat effect`, () => {
     const sim = createSim(); unlock(sim, id);
+    sim.setCombatViewport({ x: -600, y: -400, width: 1200, height: 800 });
     const player = sim.player, definition = SKILL_DEFINITIONS[id];
     const enemy = target(sim, id === 'fireball' || id === 'volley' || id === 'siphon' ? 80 : 45);
     if (id === 'siphon') player.hp = 20;

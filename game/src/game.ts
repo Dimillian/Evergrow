@@ -415,6 +415,7 @@ export class Game {
     this.renderer.touchViewport = this.touch?.viewport ?? null;
     this.renderer.touchTopInset = (this.touch?.safeTop ?? 0) * this.renderer.height / height;
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
+    this.sim.setCombatViewport(this.renderer.combatViewport);
     this.mouse.x = this.renderer.width * 0.6;
     this.mouse.y = this.renderer.height * 0.43;
     this.shell.resizeControls(this.renderer.width, this.renderer.height);
@@ -509,6 +510,7 @@ export class Game {
     this.renderer.reset();
     this.renderer.snapTo(this.sim.player);
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
+    this.sim.setCombatViewport(this.renderer.combatViewport);
     this.panels.transition('playing');
     void this.audio.unlock().catch(() => this.notify('Sound is unavailable in this browser.'));
     this.audio.setEnabled(!this.muted); this.last = performance.now(); this.nextAutosave = this.last + 20_000;
@@ -782,6 +784,7 @@ export class Game {
     this.clearInput();
     this.renderer.reset(); this.renderer.snapTo(this.sim.player);
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
+    this.sim.setCombatViewport(this.renderer.combatViewport);
     this.areaNotices.reset(getZoneAt(this.sim.player.x, this.sim.player.y, this.overworld.seed).id);
     this.worldMap.update(this.sim.player, 0);
     this.shell.portalTransition(); this.canvas.focus();
@@ -882,6 +885,7 @@ export class Game {
     if (this.phase === 'playing' && !this.savingAction) {
       // The simulation owns the fixed 120 Hz clock and render interpolation.
       this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
+      this.sim.setCombatViewport(this.renderer.combatViewport);
       const simulationStart = this.performance.start();
       this.sim.update(dt, this.readInput());
       this.performance.end('simulation', simulationStart);

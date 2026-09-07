@@ -27,7 +27,8 @@ function separatedMotion(enemy: Enemy, vx: number, vy: number, context: EnemyAIC
       vx += dx / distance * force; vy += dy / distance * force;
     }
   }
-  const maxSpeed = ENEMY_DEFINITIONS[enemy.kind].speed * goblinSpeed(enemy);
+  const maxSpeed = ENEMY_DEFINITIONS[enemy.kind].speed * goblinSpeed(enemy)
+    * (enemy.state === 'chase' ? ENEMY_AI_RULES.pursuitSpeedMultiplier : 1);
   const length = Math.hypot(vx, vy), scale = length > maxSpeed ? maxSpeed / length : 1;
   return { vx: vx * scale, vy: vy * scale };
 }
@@ -100,6 +101,7 @@ function returnHome(enemy: Enemy, dt: number, context: EnemyAIContext): void {
 
 function chase(enemy: Enemy, dt: number, context: EnemyAIContext, definition: EnemyDefinition): void {
   const p = context.player, hasSight = enemy.seesPlayer;
+  const pursuitSpeed = definition.speed * ENEMY_AI_RULES.pursuitSpeedMultiplier;
   const targetX = hasSight ? p.x : enemy.lastSeenX, targetY = hasSight ? p.y : enemy.lastSeenY;
   const dx = targetX - enemy.x, dy = targetY - enemy.y, distance = Math.hypot(dx, dy), angle = Math.atan2(dy, dx);
   if (hasSight) enemy.angle = angle;
@@ -118,15 +120,15 @@ function chase(enemy: Enemy, dt: number, context: EnemyAIContext, definition: En
     transitionEnemy(enemy, 'windup', definition.windup); return;
   }
 
-  if (!hasSight) { moveToward(enemy, targetX, targetY, definition.speed * .8, dt, context); return; }
+  if (!hasSight) { moveToward(enemy, targetX, targetY, pursuitSpeed * .8, dt, context); return; }
   const side = enemy.id % 2 ? 1 : -1;
   if (definition.role === 'ranged') {
     const radial = distance < definition.preferredDistance - 28 ? -.75
       : distance > definition.preferredDistance + 30 ? 1 : 0;
     const lateral = Math.abs(radial) < .1 ? .45 : .25;
     const velocity = separatedMotion(enemy,
-      (Math.cos(angle) * radial - Math.sin(angle) * lateral * side) * definition.speed,
-      (Math.sin(angle) * radial + Math.cos(angle) * lateral * side) * definition.speed, context);
+      (Math.cos(angle) * radial - Math.sin(angle) * lateral * side) * pursuitSpeed,
+      (Math.sin(angle) * radial + Math.cos(angle) * lateral * side) * pursuitSpeed, context);
     context.move(enemy, velocity.vx, velocity.vy, dt); return;
   }
   // Close into an attack lane independently; hounds approach their pounce range.
@@ -134,7 +136,7 @@ function chase(enemy: Enemy, dt: number, context: EnemyAIContext, definition: En
   const spread = definition.role === 'heavy' ? 0 : (enemy.warband?.order === 'surround' && !enemy.warband.warning ? 1.15 : ENEMY_AI_RULES.flankAngle) * side;
   const ring = definition.role === 'skirmisher' ? definition.preferredDistance * .7 : 18;
   const around = Math.atan2(enemy.y - p.y, enemy.x - p.x) + spread;
-  moveToward(enemy, p.x + Math.cos(around) * ring, p.y + Math.sin(around) * ring, definition.speed, dt, context);
+  moveToward(enemy, p.x + Math.cos(around) * ring, p.y + Math.sin(around) * ring, pursuitSpeed, dt, context);
   enemy.angle = angle;
 }
 

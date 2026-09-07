@@ -193,3 +193,14 @@ test('crowded, obstructed camp patrols keep a steady facing and still notice the
   assert.equal(hound.awareness, 1);
   assert.ok(['chase', 'windup', 'attack'].includes(hound.state));
 });
+
+test('wilderness enemies notice at medium distance and pursue promptly at the faster pace', () => {
+  const sim = new Simulation(open, { spawn: false });
+  const foe = sim.spawnEnemy('stalker', 300, 0)!;
+  advance(sim, .35);
+  assert.equal(foe.awareness, 1);
+  assert.equal(foe.state, 'chase');
+  const distance = Math.hypot(foe.x, foe.y);
+  advance(sim, .5);
+  assert.ok(distance - Math.hypot(foe.x, foe.y) > 55, 'pursuit closes faster than the old 104 units/s pace');
+});

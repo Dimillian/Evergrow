@@ -14,6 +14,7 @@ export interface SkillContext {
   availableGroundEffects: number;
   player: Player; world: WorldQuery; enemies: Enemy[]; aimX: number; aimY: number;
   damage(enemy: Enemy, amount: number, angle: number, melee: boolean): void;
+  onScreen(enemy: Enemy): boolean;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
   projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill: SkillId, effects?: ProjectileEffects): void;
   schedule(effect: Omit<GroundEffect, 'id' | 'tick'>): void;
@@ -123,14 +124,14 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
     case 'chain': {
       const point = aimedPoint(), hit = new Set<number>();
       let from = { x: p.x, y: p.y }, amount = damage;
-      let next = living().filter(enemy => Math.hypot(enemy.x - p.x, enemy.y - p.y) <= attack.range + enemy.radius && visible(enemy))
+      let next = living().filter(enemy => context.onScreen(enemy) && Math.hypot(enemy.x - p.x, enemy.y - p.y) <= attack.range + enemy.radius && visible(enemy))
         .sort((a, b) => Math.hypot(a.x - point.x, a.y - point.y) - Math.hypot(b.x - point.x, b.y - point.y))[0];
       for (let jump = 0; next && jump < recipe.jumps; jump++) {
         const target = next;
         context.emit({ type: 'chain', x: from.x, y: from.y, toX: target.x, toY: target.y, skill: id, color, style: recipe.style, duration: recipe.duration });
         context.damage(target, amount, Math.atan2(target.y - from.y, target.x - from.x), false);
         hit.add(target.id); from = { x: target.x, y: target.y }; amount *= recipe.falloff;
-        next = living().filter(enemy => enemy.id !== target.id && (recipe.revisit || !hit.has(enemy.id)) && Math.hypot(enemy.x - from.x, enemy.y - from.y) <= recipe.range + enemy.radius
+        next = living().filter(enemy => context.onScreen(enemy) && enemy.id !== target.id && (recipe.revisit || !hit.has(enemy.id)) && Math.hypot(enemy.x - from.x, enemy.y - from.y) <= recipe.range + enemy.radius
           && context.visible(from.x, from.y, enemy.x, enemy.y))
           .sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y))[0];
       }

@@ -1,4 +1,4 @@
-export const MIN_CAMERA_ZOOM = .65;
+export const MIN_CAMERA_ZOOM = .8;
 export const MAX_CAMERA_ZOOM = 1.8;
 
 const WHEEL_LINE_HEIGHT = 16;

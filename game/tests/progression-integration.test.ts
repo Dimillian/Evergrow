@@ -44,7 +44,8 @@ test('spawn geography snapshots monster health, damage, rank, biome, and XP inde
   advance(sim, .1);
   assert.deepEqual({ hp: enemy.hp, maxHp: enemy.maxHp, damage: enemy.damage, xpReward: enemy.xpReward,
     lootSeed: enemy.lootSeed, level: enemy.level, rank: enemy.rank, biome: enemy.biome }, snapshot);
-  enemy.state = 'attack'; enemy.stateTime = 0; enemy.stateDuration = 999; enemy.attackAngle = 0;
+  // Stage a fresh contact even if the faster awareness already caused a tether return.
+  enemy.state = 'attack'; enemy.stateTime = 0; enemy.stateDuration = 999; enemy.attackAngle = 0; enemy.attackHit = false;
   advance(sim, FIXED_STEP);
   const hurt = sim.drainEvents().find(event => event.type === 'hurt')!;
   assert.equal(hurt.value, Math.round(expected.damage * (1 - armorReduction(120, areaLevel))));

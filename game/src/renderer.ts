@@ -141,6 +141,7 @@ export class Renderer {
     this.visibility.reset();
   }
 
+  get combatViewport() { const v = this.lastDisplayedView; return { x: v.left, y: v.top, width: v.width, height: v.height }; }
   get worldHeight() { return this.view.height; }
   get worldBounds() { return { x: this.view.left, y: this.view.top, width: this.view.width, height: this.view.height }; }
   spawnExclusionBounds(player: Player) {

@@ -14,7 +14,11 @@ import type { SkillId } from '../src/character-types.ts';
 
 const openWorld: WorldQuery = { blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) };
 const idle: Input = { moveX: 0, moveY: 0, aimX: 400, aimY: 0, attack: false, dodge: false, heal: false, skillSlot: null };
-const make = (world = openWorld) => new Simulation(world, { spawn: false, seed: 984319 });
+const make = (world = openWorld) => {
+  const sim = new Simulation(world, { spawn: false, seed: 984319 });
+  sim.setCombatViewport({ x: -600, y: -400, width: 1200, height: 800 });
+  return sim;
+};
 const close = (actual: number, expected: number) => assert.ok(Math.abs(actual - expected) < 1e-7, `${actual} should equal ${expected}`);
 function advance(sim: Simulation, seconds: number, input: Partial<Input> = {}): void {
   for (let tick = 0; tick < Math.round(seconds / FIXED_STEP); tick++) sim.update(FIXED_STEP, { ...idle, ...input });
@@ -300,4 +304,39 @@ test('staff family pacing slows both basic cycles and spell recovery on existing
   const expectedRate = 1.2 * sim.player.stats.castSpeedMultiplier;
   close(deriveAttackStats(sim.player.stats, weapon).attacksPerSecond, expectedRate);
   cast(sim); close(sim.player.castDuration, 1 / expectedRate);
+});
+
+test('Arc Lightning acquires and bounces only inside the actual combat viewport', () => {
+  const sim = skillSim('arcLightning');
+  sim.setCombatViewport({ x: -100, y: -100, width: 210, height: 200 });
+  sim.setSpawnExclusion({ x: -1000, y: -1000, width: 2000, height: 2000 });
+  const visible = target(sim, 60), offscreen = target(sim, 155);
+  cast(sim, 60);
+  assert.equal(hitEvents(sim.drainEvents(), visible).length, 1);
+  assert.equal(offscreen.hp, offscreen.maxHp, 'padded spawn coverage cannot permit a bounce');
+
+  const outside = skillSim('arcLightning'), foe = target(outside, 180);
+  outside.setCombatViewport({ x: -100, y: -100, width: 200, height: 200 });
+  cast(outside, 180);
+  assert.equal(foe.hp, foe.maxHp, 'the first target also needs a visible body');
+  assert.equal(outside.drainEvents().filter(e => e.type === 'chain').length, 0);
+});
+
+test('ricochet cannot choose an offscreen secondary target', () => {
+  const sim = skillSim('ricochet');
+  sim.setCombatViewport({ x: -100, y: -100, width: 210, height: 200 });
+  const first = target(sim, 65), outside = target(sim, 170, 60);
+  cast(sim, 400); advance(sim, .8);
+  const events = sim.drainEvents();
+  assert.equal(hitEvents(events, first).length, 1);
+  assert.equal(outside.hp, outside.maxHp);
+  assert.equal(events.filter(e => e.type === 'chain').length, 0);
+});
+
+test('missing or invalid camera coverage cannot acquire chain targets', () => {
+  for (const view of [null, { x: NaN, y: 0, width: 400, height: 400 }, { x: 0, y: 0, width: 0, height: 400 }]) {
+    const sim = skillSim('arcLightning'), foe = target(sim, 60);
+    sim.setCombatViewport(view); cast(sim, 60);
+    assert.equal(foe.hp, foe.maxHp);
+  }
 });

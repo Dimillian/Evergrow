@@ -10,6 +10,7 @@ export interface ProjectileContext {
   player: Player; enemies: Enemy[]; world: WorldQuery;
   damage(enemy: Enemy, amount: number, angle: number, melee: boolean): void;
   hurt(amount: number, angle: number, sourceLevel: number, sourceKind?: EnemyKind): void;
+  onScreen(enemy: Enemy): boolean;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
   emit(event: CombatEvent): void;
 }
@@ -86,7 +87,7 @@ export function advanceProjectiles(projectiles: Projectile[], dt: number, contex
       const effects = projectile.effects;
       if (effects?.blastRadius) { blast(projectile, context); projectile.life = 0; break; }
       if (effects && (effects.chain ?? 0) > 0) {
-        const next = context.enemies.filter(target => target.state !== 'dead' && !projectile.hitIds.has(target.id)
+        const next = context.enemies.filter(target => context.onScreen(target) && target.state !== 'dead' && !projectile.hitIds.has(target.id)
           && Math.hypot(target.x - enemy.x, target.y - enemy.y) <= (effects?.chainRange ?? 180)
           && context.visible(projectile.x, projectile.y, target.x, target.y))
           .sort((a, b) => Math.hypot(a.x - enemy.x, a.y - enemy.y) - Math.hypot(b.x - enemy.x, b.y - enemy.y) || a.id - b.id)[0];

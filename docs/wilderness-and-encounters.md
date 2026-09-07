@@ -44,6 +44,8 @@ Deterministic tests cover seed/order independence, frozen blueprints, cache/quer
 
 ## Independent attacks (2026-09-06)
 
+Regular enemies now acquire sight at 330–430 world units (War Chiefs 410); awareness fills in 0.16 seconds once sight is established. Pursuit moves 15% faster than patrol/base locomotion, with tighter separation and more direct flanking. Attack recovery is 20% shorter, while windups and aim locks retain their dodge windows. Wilderness pursuit remembers lost sight for 4.5 seconds and permits a 650-unit home tether; dungeon limits remain separate.
+
 Enemies no longer share attack slots. Every aware enemy with a clear attack lane and valid range starts its own windup as soon as its personal recovery finishes. Melee packs close and flank without waiting in a support ring; Brutes, Archers, Hexers and Wisps can attack concurrently. Individual telegraphs, aim locks, recovery, collision, interruption and sanctuary rules still govern each action. Population/rank limits control spawning, not permission to attack.
 
 ## Goblin warbands (2026-09-06)
