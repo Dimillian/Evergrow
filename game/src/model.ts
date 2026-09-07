@@ -1,9 +1,12 @@
+import type { BreakableContainer } from './breakable-containers.ts';
 import type { CharacterSheet, DerivedCharacterStats, SkillId, Item } from './character-types.ts';
 import type { BiomeId } from './biomes.ts';
 import type { EnemyCamp } from './wilderness-sites.ts';
 import type { EnemyRank } from './progression-content.ts';
 
 export interface WorldQuery {
+  getContainers?(x: number, y: number, radius: number): readonly BreakableContainer[];
+  setBrokenContainers?(ids: ReadonlySet<string>): void;
   readonly dungeonLevel?: number;
   readonly dungeonBiome?: BiomeId;
   navigationTarget?(x:number,y:number,tx:number,ty:number):{x:number;y:number};
@@ -269,6 +272,7 @@ interface EventAppearance {
   readonly color?: string; readonly style?: ProjectileStyle; readonly skill?: SkillId;
 }
 export type CombatEvent = EventAppearance & (
+  | { readonly type: 'container-break'; readonly containerId: string; readonly kind: 'crate' | 'barrel'; readonly seed: number; readonly angle: number }
   | { readonly type: 'engagement'; readonly targetId: number; readonly enemyKind: EnemyKind;
       readonly engaged: boolean; readonly time: number }
   | { readonly type: 'swing'; readonly angle: number }

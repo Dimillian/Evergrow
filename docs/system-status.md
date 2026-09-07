@@ -85,3 +85,7 @@ Battle-bark readability follow-up (historical): speech lasts four seconds and dr
 Battle-bark duration correction: restored the requested 2.8-second lifetime while retaining speech over damage numbers. Rebased the bark branch onto upstream/main at 1978bf9, preserving the merged death animations and newer HUD/save changes. Verified all 779 code tests, application/headless type checks and production build. No save reset.
 
 Battle-bark PR checkpoint: encounter chance increased to 30%, keeping the 2.8-second lifetime, three-bubble cap and speech over damage numbers. Review timing labels now consume shared runtime rules. Captured the current real-model study for the PR and verified all 779 code tests, application/headless type checks and production build. No save reset.
+
+### Breakable containers · 2026-09-07
+
+Crates and barrels in wilderness sites and buildings now break from player attack contacts, emit bounded procedural debris, and sometimes drop physical gold. Shared collision, immutable scenery rendering and saved destruction receipts agree; returning or reloading cannot pay them twice. See [progression and loot](progression-and-loot.md#breakable-containers).

@@ -1,3 +1,4 @@
+import { strikeContainers, type ContainerAttackContext } from './breakable-containers.ts';
 import type { CombatEvent, Enemy, GroundEffect, Player } from './model.ts';
 import { GROUND_EFFECT_RULES, groundEffectPulseCount } from './skill-execution-content.ts';
 import { applyBurn, applySlow, applyStun } from './combat-status.ts';
@@ -7,6 +8,7 @@ export type ActiveGroundEffect = GroundEffect & { pulsesLeft: number };
 export type GroundEffectRequest = Omit<GroundEffect, 'id' | 'tick'>;
 interface ScheduleContext { nextId(): number; emit(event: CombatEvent): void }
 export interface GroundEffectContext {
+  containers?: ContainerAttackContext;
   player: Player;
   enemies: readonly Enemy[];
   visible(ax: number, ay: number, bx: number, by: number): boolean;
@@ -43,6 +45,7 @@ export function advanceGroundEffects(effects: ActiveGroundEffect[], dt: number, 
         if (p.dead || p.mana < cost) { effect.pulsesLeft = 0; continue; }
         p.mana -= cost;
       }
+      if (effect.damage > 0) strikeContainers(context.containers, effect.x, effect.y, effect.radius);
       for (const enemy of context.enemies) if (enemy.state !== 'dead'
         && Math.hypot(enemy.x - effect.x, enemy.y - effect.y) <= effect.radius + enemy.radius
         && context.visible(effect.x, effect.y, enemy.x, enemy.y)) {

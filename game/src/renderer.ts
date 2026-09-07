@@ -1,3 +1,4 @@
+import { ContainerDebris, drawContainerDebris } from './container-debris.ts';
 import type { GroundLootLabel } from './ground-loot-hover.ts';
 import { eventClaimed } from './poi-content.ts';
 import type { FrameProfiler } from './frame-profiler.ts';
@@ -114,6 +115,7 @@ export class Renderer {
   private indoorBlend = 0;
   private lighting = new Lighting();
   private deaths = new EnemyDeaths();
+  private containerDebris = new ContainerDebris();
   private ghosts: Ghost[] = [];
   private ghostTimer = 0;
   private visualTime = 0;
@@ -210,7 +212,7 @@ export class Renderer {
     this.lastDisplayedView = this.view;
     this.groundLayer.reset(); this.groundDressing.reset(); this.biomeLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
     this.settlementArt.reset(); this.indoorBlend = 0;
-    this.deaths.reset(); resetDeathArt(); this.ghosts = []; this.ghostTimer = 0;
+    this.containerDebris.reset(); this.deaths.reset(); resetDeathArt(); this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
     this.damageTrails.clear(); this.playerHealthTrail = 100; this.playerHealthHold = 0;
     this.rewards.reset(); this.experienceFeedback.reset(); this.experienceDisplay = undefined;
@@ -241,7 +243,7 @@ export class Renderer {
         this.kickY = Math.max(-5, Math.min(5, this.kickY - Math.sin(e.angle) * strength * .7));
         this.shake = Math.max(this.shake, e.type === 'hurt' ? 1.6 : .65);
       }
-      this.deaths.handle(e);
+      this.containerDebris.handle(e); this.deaths.handle(e);
     }
   }
 
@@ -278,7 +280,7 @@ export class Renderer {
       this.cameraY += (target.y - this.cameraY) * follow;
     }
     this.effects.update(sim, feedbackStep);
-    this.deaths.update(feedbackStep);
+    this.deaths.update(feedbackStep); this.containerDebris.update(feedbackStep);
     for (const ghost of this.ghosts) ghost.life -= step;
     this.ghosts = this.ghosts.filter(ghost => ghost.life > 0);
     this.ghostTimer -= step;
@@ -567,11 +569,14 @@ export class Renderer {
     for (const building of this.cachedBuildings) {
       const npc = buildingNPC(building);
       if (npc) entries.push({ y: npc.y, draw: () => drawNPC(c, npc, this.visualTime, settings.reducedMotion) });
-      for (const layer of this.settlementArt.getStructureLayers(building, this.visualTime)) {
+      for (const layer of this.settlementArt.getStructureLayers(building, this.visualTime, sim.brokenContainers)) {
         entries.push({ y: layer.y, draw: () => layer.draw(c) });
       }
     }
+    for (const remains of this.containerDebris.remains)
+      entries.push({ y: remains.y, draw: () => drawContainerDebris(c, remains, settings.reducedMotion) });
     for (const site of this.visibility.sites) for (const decor of site.decor) {
+      if (sim.brokenContainers.has(decor.id)) continue;
       entries.push({ y: decor.y, draw: () => drawSiteDecor(c, site, decor, settings.reducedMotion ? 0 : this.visualTime) });
     }
     for (const remains of this.deaths.remains)

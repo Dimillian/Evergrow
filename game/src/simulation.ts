@@ -1,3 +1,4 @@
+import { breakContainer, strikeContainers, strikeContainerSegment, type ContainerAttackContext } from './breakable-containers.ts';
 import { enemyInCombatViewport, type CombatViewport } from './combat-visibility.ts';
 import { stageJourneyCompletion, journeyWasCompleted, type JourneyCompletion } from './journey-rewards.ts';
 import { EnemyEngagements } from './enemy-engagement.ts';
@@ -98,6 +99,7 @@ export class Simulation {
   pickups: Pickup[] = [];
   groundItems: GroundItem[] = [];
   groundGold: GroundGold[] = [];
+  readonly brokenContainers = new Set<string>();
   groundEffects: ActiveGroundEffect[] = [];
   private lootNoticeAt = -10;
   private skillBuffer: { slot: number; until: number } | null = null;
@@ -132,6 +134,7 @@ export class Simulation {
   }
 
   reset(): void {
+    this.brokenContainers.clear(); this.world.setBrokenContainers?.(this.brokenContainers);
     this.journeys = freshJourneys();
     this.expeditions = freshExpeditions(); this.dungeonFloor = null;
     this.eventState = freshEvents(); this.eventChannel.cancel(); this.eventTimer = 0;
@@ -164,7 +167,7 @@ export class Simulation {
     const p = this.player;
     const run = currentDungeon(this.expeditions); if (run) syncDungeon(run,this.enemies,p.x,p.y);
     syncTrial(this.eventState, this.enemies);
-    return cloneData({ journeys:this.journeys, campWounds:this.camps.captureWounds(this.enemies), roaming:this.roaming.capture(), expeditions: this.expeditions, actors: this.enemies.filter(e=>e.hp>0).map(storedActor), pickups: this.pickups, events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
+    return cloneData({ brokenContainers: [...this.brokenContainers], journeys:this.journeys, campWounds:this.camps.captureWounds(this.enemies), roaming:this.roaming.capture(), expeditions: this.expeditions, actors: this.enemies.filter(e=>e.hp>0).map(storedActor), pickups: this.pickups, events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
       x: p.x, y: p.y, angle: p.angle, hp: p.hp, mana: p.mana, dead: p.dead,
       flasks: p.flasks, healCooldown: p.healCooldown, dodgeCharges: p.dodgeCharges, dodgeRecharge: p.dodgeRecharge,
       skillCooldowns: p.skillCooldowns, time: this.time, kills: this.kills,
@@ -176,6 +179,7 @@ export class Simulation {
   restoreCheckpoint(checkpoint: CharacterCheckpoint): void {
     this.reset();
     const saved = cloneData(checkpoint) as CharacterCheckpoint;
+    for (const id of saved.brokenContainers ?? []) this.brokenContainers.add(id);
     this.expeditions = saved.expeditions ?? freshExpeditions(); this.dungeonFloor = dungeonFromState(this);
     this.journeys = saved.journeys ?? freshJourneys();
     this.eventState = saved.events ?? freshEvents();
@@ -448,6 +452,7 @@ export class Simulation {
     }
 
     if (this.skillBuffer && this.skillBuffer.until >= this.time && activateSkill({
+      containers: this.containerContext(),
       availableGroundEffects: GROUND_EFFECT_RULES.maximum - this.groundEffects.length,
       player: p, world: this.world, enemies: this.enemies,
       aimX: input.aimX, aimY: input.aimY,
@@ -479,6 +484,7 @@ export class Simulation {
         && this.lineOfSight(p.x, p.y, enemy.x, enemy.y)) {
         dash.hitIds.add(enemy.id); this.damageEnemy(enemy, dash.damage, dash.angle, true);
       }
+      strikeContainerSegment(this.containerContext(), startX, startY, p.x, p.y, dash.radius + p.radius);
       dash.remaining = Math.max(0, dash.remaining - dt);
       p.walkTime += Math.hypot(p.x - startX, p.y - startY) / PLAYER_MOVEMENT.gaitDistance;
       p.vx = p.vy = 0;
@@ -547,6 +553,7 @@ export class Simulation {
     const from = Math.max(-attack.arc / 2, Math.min(before, after) - PLAYER_ABILITIES.basicAttack.bladeHalfAngle);
     const to = Math.min(attack.arc / 2, Math.max(before, after) + PLAYER_ABILITIES.basicAttack.bladeHalfAngle);
     const angle = attack.angle + (from + to) / 2;
+    strikeContainers(this.containerContext(), p.x, p.y, attack.range, angle, to - from);
     for (const enemy of this.enemies) {
       if (enemy.state === 'dead' || attack.hitIds.has(enemy.id)) continue;
       if (!circleIntersectsSector(enemy.x, enemy.y, enemy.radius, p.x, p.y, angle, attack.range, to - from)) continue;
@@ -656,8 +663,17 @@ export class Simulation {
       effects: effects ? { ...effects } : undefined, hitIds: new Set() });
   }
 
+  private containerContext(): ContainerAttackContext {
+    return { world: this.world, break: (target, angle) => {
+      const level = getZoneAt(target.x, target.y, this.world.seed ?? this.options.seed!).level;
+      breakContainer(target, angle, level, this.brokenContainers, this.groundGold,
+        () => this.nextId++, event => this.events.push(event));
+    } };
+  }
+
   private updateProjectiles(dt: number): void {
     advanceProjectiles(this.projectiles, dt, {
+      containers: this.containerContext(),
       player: this.player, enemies: this.enemies, world: this.world,
       onScreen: enemy => enemyInCombatViewport(enemy, this.combatViewport),
       damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),
@@ -677,6 +693,7 @@ export class Simulation {
 
   private updateGroundEffects(dt: number): void {
     this.groundEffects = advanceGroundEffects(this.groundEffects, dt, {
+      containers: this.containerContext(),
       player: this.player,
       enemies: this.enemies, visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       damage: (enemy, amount, angle, melee) => this.damageEnemy(enemy, amount, angle, melee),

@@ -186,6 +186,13 @@ export class GameAudio {
       type: OscillatorType = 'triangle', delay = 0, attack = .003) =>
       this.tone(a, b, duration, volume * gain, priority, type, delay, attack);
     switch (event.type) {
+      case 'container-break':
+        noise({ duration: .035, frequency: 2900, endFrequency: 800, volume: .26, q: .7 });
+        noise({ duration: .18, frequency: 560, endFrequency: 110, volume: .3, body: true, type: 'lowpass' });
+        noise({ duration: .10, frequency: 1900, endFrequency: 500, volume: .10, delay: .08 });
+        noise({ duration: .08, frequency: 1200, endFrequency: 350, volume: .065, delay: .19 });
+        tone(130, 48, .11, .10, 2, 'triangle');
+        break;
       case 'gold':
         {
           const note = [1, 1.125, 1.25, 1.5, 1.667][this.goldPhrase];

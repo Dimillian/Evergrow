@@ -1,3 +1,4 @@
+import { containerVisible, strikeContainers, type ContainerAttackContext } from './breakable-containers.ts';
 import { skillTargetPoint } from './skill-target-point.ts';
 import { resolveSkill } from './skill-progression.ts';
 import type { CombatEvent, Enemy, GroundEffect, Player, ProjectileEffects, WorldQuery } from './model.ts';
@@ -11,6 +12,7 @@ import { applySlow, applyStun } from './combat-status.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
 
 export interface SkillContext {
+  containers?: ContainerAttackContext;
   availableGroundEffects: number;
   player: Player; world: WorldQuery; enemies: Enemy[]; aimX: number; aimY: number;
   damage(enemy: Enemy, amount: number, angle: number, melee: boolean): void;
@@ -74,6 +76,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
       p.castTime = Math.max(p.castTime, recipe.duration);
       break;
     case 'radial':
+      strikeContainers(context.containers, p.x, p.y, recipe.radius);
       radial(recipe.radius, (enemy, angle) => {
         context.damage(enemy, damage, angle, recipe.melee);
         if (recipe.stun) applyStun(enemy, recipe.stun);
@@ -84,6 +87,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
       blast(recipe.radius, recipe.style);
       break;
     case 'cone':
+      strikeContainers(context.containers, p.x, p.y, recipe.radius, p.angle, recipe.arc);
       for (const enemy of living()) if (circleIntersectsSector(enemy.x, enemy.y, enemy.radius, p.x, p.y, p.angle, recipe.radius, recipe.arc) && visible(enemy)) {
         context.damage(enemy, damage, p.angle, true); applyStun(enemy, recipe.stun);
       }
@@ -95,7 +99,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
       if (target) {
         const behind = angularDistance(Math.atan2(p.y - target.y, p.x - target.x), target.angle) > recipe.rearAngle;
         context.damage(target, damage * (behind ? recipe.rearMultiplier : 1), p.angle, true);
-      }
+      } else strikeContainers(context.containers, p.x, p.y, Math.max(recipe.minRange, attack.range * recipe.reachMultiplier), p.angle, recipe.arc);
       break;
     }
     case 'projectile': {
@@ -126,6 +130,17 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
       let from = { x: p.x, y: p.y }, amount = damage;
       let next = living().filter(enemy => context.onScreen(enemy) && Math.hypot(enemy.x - p.x, enemy.y - p.y) <= attack.range + enemy.radius && visible(enemy))
         .sort((a, b) => Math.hypot(a.x - point.x, a.y - point.y) - Math.hypot(b.x - point.x, b.y - point.y))[0];
+      // In a quiet area, an aimed bolt can discharge into a nearby container.
+      // Enemy chains retain their own target budget and never jump through scenery.
+      if (!next && context.containers) {
+        const target = [...context.world.getContainers?.(p.x, p.y, attack.range) ?? []]
+          .filter(t => Math.hypot(t.x - point.x, t.y - point.y) <= t.radius + 40 && containerVisible(context.world, p.x, p.y, t))
+          .sort((a, b) => Math.hypot(a.x - point.x, a.y - point.y) - Math.hypot(b.x - point.x, b.y - point.y))[0];
+        if (target) {
+          context.emit({ type: 'chain', x: p.x, y: p.y, toX: target.x, toY: target.y, skill: id, color, style: recipe.style, duration: recipe.duration });
+          context.containers.break(target, Math.atan2(target.y - p.y, target.x - p.x));
+        }
+      }
       for (let jump = 0; next && jump < recipe.jumps; jump++) {
         const target = next;
         context.emit({ type: 'chain', x: from.x, y: from.y, toX: target.x, toY: target.y, skill: id, color, style: recipe.style, duration: recipe.duration });

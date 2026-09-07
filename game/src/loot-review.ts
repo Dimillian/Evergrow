@@ -1,3 +1,6 @@
+import { drawContainerDebris } from './container-debris.ts';
+import { drawSiteDecor } from './wilderness-art.ts';
+import { startingEnemyCamp } from './wilderness-sites.ts';
 import './ui-kit.css';
 import './typography.css';
 import { installUITheme } from './ui-theme.ts';
@@ -22,6 +25,7 @@ let labels: GroundLootLabel[] = [];
 const world = new World(7319), sim = new Simulation(world, { spawn: false }), renderer = new Renderer();
 sim.player.level = 10;
 const stage = document.createElement('canvas'), fx = new PostFX(stage);
+const containersView = new URLSearchParams(location.search).has('containers');
 const ages = [.15, .4, 1.2, 12.6];
 const kinds: EnemyKind[] = ['stalker', 'brute', 'caster', 'hound', 'archer', 'wisp'];
 const tiers: ItemTier[] = ['common', 'magic', 'rare', 'epic', 'legendary'];
@@ -34,6 +38,7 @@ const draw = () => {
   renderer.render(sim, world, 0, { phase: 'ready', reducedMotion: true, debug: false, fps: 60 });
   const c = renderer.ctx;
   c.fillStyle = '#071118d8'; c.fillRect(0, 0, 1000, 600);
+  if (!containersView) {
   kinds.forEach((kind, row) => ages.forEach((age, column) => {
     drawEnemyRemains(c, { id: row + 1, x: 240 + column * 200, y: 98 + row * 54,
       angle: -.5, facing: 1.2, kind, age, variant: 0, duration: kind === 'wisp' ? 5 : 14 }, false);
@@ -41,6 +46,17 @@ const draw = () => {
   drawGroundLoot(c, drops, 1, false);
   drawResourcePickups(c, ['health', 'mana'].map((kind, id) => ({ id, kind: kind as 'health' | 'mana', x: 460 + id * 65,
     y: 550, life: 10, radius: 4, restoreFraction: .1 })), 1, true);
+  } else {
+    const site = startingEnemyCamp(7319);
+    for (const [row, kind] of (['crate', 'barrel'] as const).entries()) for (let col = 0; col < 5; col++) {
+      const source = site.decor.find(d => d.kind === kind)!;
+      c.save(); c.translate(120 + col * 190, 215 + row * 215); c.scale(2.5, 2.5);
+      if (col === 0) drawSiteDecor(c, site, { ...source, x: 0, y: 0 }, 0);
+      else drawContainerDebris(c, { type: 'container-break', containerId: source.id, x: 0, y: 0, kind,
+        seed: source.seed, angle: -.5, age: [.08, .08, .28, 1.2, 5.8][col] }, false);
+      c.restore();
+    }
+  }
   fx.render(renderer.canvas, 0);
   const ui = canvas.getContext('2d')!;
   const scale = Math.min(canvas.width / 1000, canvas.height / 600);
@@ -48,6 +64,7 @@ const draw = () => {
   ui.fillStyle = '#081217'; ui.fillRect(0, 0, canvas.width, canvas.height);
   ui.drawImage(stage, left, top, 1000 * scale, 600 * scale);
   ui.setTransform(scale, 0, 0, scale, left, top);
+  if (!containersView) {
   text(ui, 'Death & ground loot', 35, 20, 1.7, '#d9e4de');
   ages.forEach((age, i) => text(ui, `${age}s`, 240 + i * 200, 52, 1, '#a3b8bf', 'center', 'interface'));
   kinds.forEach((kind, i) => text(ui, kind, 35, 85 + i * 54, 1.1, '#a3b8bf'));
@@ -56,6 +73,10 @@ const draw = () => {
     anchorX: left + b.anchorX * scale, anchorY: top + b.anchorY * scale,
   }));
   text(ui, 'Health', 460, 565, .9, '#d09b90', 'center'); text(ui, 'Mana', 525, 565, .9, '#9bbbcf', 'center');
+  } else {
+    text(ui, 'Breakable containers', 35, 30, 1.7, '#d9e4de');
+    ['Intact', 'Impact', 'Splinters', 'Settled', 'Fading'].forEach((label, i) => text(ui, label, 120 + i * 190, 78, 1.1, '#a3b8bf', 'center'));
+  }
 };
 const hover = (event: PointerEvent) => {
   const rect = canvas.getBoundingClientRect();

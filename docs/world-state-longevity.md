@@ -6,6 +6,7 @@ Implemented locally, 2026-09-06. This pass removes lifetime activity-count gates
 
 | State | Retained | Safe compaction |
 | --- | --- | --- |
+| Broken containers | One exact container ID per character | Never discard a receipt or respawn a paid container. Wood debris expires independently after 6.5 seconds; gold and the broken receipt share a character checkpoint. |
 | Camp actors | Up to 32 cached garrisons; active/visible actors cannot be evicted | Detached, pristine members reconstruct from stable source IDs and geography. Injured members keep their stored source, rank, level, seed and life; dead members keep exact IDs. |
 | Cleared camps | One exact camp ID | Replaces redundant member-death lists and full enemy objects. Never respawns or generates unloading rewards. |
 | Dungeon expeditions | Every unfinished or reward-bearing floor, and any floor owning a return portal | Only a floor with every member dead, all three chest masks complete, no loose equipment/gold/pickups or living stored actor, and no active/return ownership becomes one cleared-entrance ID. |

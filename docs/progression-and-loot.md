@@ -280,3 +280,11 @@ Rootbound Crypt fixes its level to entrance geography + 1. Floor coordinates nev
 ## Journey completion bonuses
 
 Completed POIs and crypts now grant modest additional source-level XP even without journal tracking. Bonuses range from 0.25 to 3 normal Stalker kill equivalents; town/frontier arrival uses 0.5. The pre-award level-gap factor applies. Completion receipts prevent repeated payouts and share their owning claim/checkpoint with XP. Existing encounter rewards remain intact; see [Journeys](journeys.md) for the table, save behavior and bounds.
+
+## Breakable containers
+
+Camp, watchtower and caravan crates/barrels, plus indoor barrels, shatter on a successful player attack. Sword sweeps, arrows/bolts, area damage and damaging dashes use real contact/line-of-sight checks; windup and enemy attacks do not break them. Chain spells can discharge into an aimed container when no valid enemy is available. Breaking removes collision immediately, with wood shards, barrel hoops and a short cracking sound. Debris settles and fades over 6.5 seconds; it has no collision or reward state.
+
+Each container independently has a **35% gold chance**, yielding **2–7 gold at zone level 1**, scaled by `1 + 0.1 × (zone level − 1)`. Its stable seed is separate from enemy, equipment and combat RNG. Gold uses the existing physical piles, attraction, wallet and reward counter; containers grant no XP, kill count or potion recharge. Destruction IDs and loose coins persist in the same checkpoint, including across dungeon trips. Existing characters continue without a reset. Opening a saved game or revisiting a camp cannot refill containers. Chests and POI rewards retain their existing interactions.
+
+`breakable-containers.ts` owns stable container identities, contact queries and exactly-once currency rolls. `World` projects those receipts onto immutable decor and furniture collision. `container-debris.ts` owns at most 32 transient fragment bursts. `/loot.html?containers` stages intact, impact, airborne, settled and fading art without gameplay or saves.

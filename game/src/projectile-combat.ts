@@ -1,3 +1,4 @@
+import { strikeContainers, strikeContainerSegment, type ContainerAttackContext } from './breakable-containers.ts';
 import type { GroundEffectRequest } from './ground-effects.ts';
 import type { CombatEvent, Enemy, EnemyKind, Player, Projectile, WorldQuery } from './model.ts';
 import { applySlow, applyBurn } from './combat-status.ts';
@@ -6,6 +7,7 @@ import { segmentDistanceSquared } from './combat-geometry.ts';
 
 export const MAX_PROJECTILES = 128;
 export interface ProjectileContext {
+  containers?: ContainerAttackContext;
   schedule(effect: GroundEffectRequest): void;
   player: Player; enemies: Enemy[]; world: WorldQuery;
   damage(enemy: Enemy, amount: number, angle: number, melee: boolean): void;
@@ -46,6 +48,7 @@ function blast(projectile: Projectile, context: ProjectileContext): void {
     skill: projectile.skill, style: 'fire',
   });
   if (!radius) return;
+  strikeContainers(context.containers, projectile.x, projectile.y, radius);
   for (const enemy of context.enemies) {
     if (enemy.state === 'dead' || projectile.hitIds.has(enemy.id)
       || Math.hypot(enemy.x - projectile.x, enemy.y - projectile.y) > radius + enemy.radius
@@ -67,6 +70,7 @@ export function advanceProjectiles(projectiles: Projectile[], dt: number, contex
       projectile.y += projectile.vy * dt / steps;
       if (projectile.owner === 'enemy' && context.world.isSanctuary?.(projectile.x, projectile.y)) { projectile.life = 0; break; }
       if (context.world.blocked(projectile.x, projectile.y, projectile.radius)) {
+        if (projectile.owner === 'player') strikeContainerSegment(context.containers, oldX, oldY, projectile.x, projectile.y, projectile.radius);
         projectile.x = oldX; projectile.y = oldY;
         if (projectile.owner === 'player') blast(projectile, context);
         projectile.life = 0; break;

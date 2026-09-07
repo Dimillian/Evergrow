@@ -1,3 +1,4 @@
+import { furnitureContainer, furnitureContainerId, type BreakableContainer } from './breakable-containers.ts';
 import { waterTerrainSteps } from './water-terrain-art.ts';
 import { hydrology, type WaterSample } from './hydrology.ts';
 import { dungeonEntrances } from './dungeon-entrances.ts';
@@ -364,6 +365,19 @@ export class World {
     return region;
   }
 
+  private brokenContainers: ReadonlySet<string> = new Set();
+  setBrokenContainers(ids: ReadonlySet<string>): void { this.brokenContainers = ids; }
+  getContainers(x: number, y: number, radius: number): readonly BreakableContainer[] {
+    if (!validWorldRectangle(x - radius, y - radius, radius * 2, radius * 2)) return [];
+    const region = this.collisionRegion(x - radius, y - radius, radius * 2, radius * 2);
+    const containers: BreakableContainer[] = region.sites.flatMap(site =>
+      site.decor.filter((d): d is typeof d & { kind: 'crate' | 'barrel' } => d.kind === 'crate' || d.kind === 'barrel'));
+    for (const building of region.buildings) for (let i = 0; i < building.furniture.length; i++) {
+      const target = furnitureContainer(building, i); if (target) containers.push(target);
+    }
+    return containers.filter(d => !this.brokenContainers.has(d.id) && Math.hypot(d.x - x, d.y - y) <= radius + d.radius);
+  }
+
   blocked(x: number, y: number, radius: number): boolean {
     if (![x, y].every(isWorldCoordinate) || !Number.isFinite(radius)
       || radius < 0 || radius > WORLD_QUERY_LIMITS.collisionRadius) return true;
@@ -375,9 +389,9 @@ export class World {
     const reach = Math.max(radius, .1);
     const query = { x: x - reach, y: y - reach, width: reach * 2, height: reach * 2 };
     if (region.sites.some(site => intersects(query, { x: site.x - site.radius, y: site.y - site.radius, width: site.radius * 2, height: site.radius * 2 }) &&
-      site.decor.some(decor => decor.radius > 0 && (x - decor.x) ** 2 + (y - decor.y) ** 2 < (radius + decor.radius) ** 2 - 1e-7))) return true;
+      site.decor.some(decor => decor.radius > 0 && !this.brokenContainers.has(decor.id) && (x - decor.x) ** 2 + (y - decor.y) ** 2 < (radius + decor.radius) ** 2 - 1e-7))) return true;
     return region.buildings.some(building => intersects(query, building) &&
-      (building.walls.some(rect => circleHitsRect(x, y, radius, rect)) || building.furniture.some(rect => circleHitsRect(x, y, radius, rect))));
+      (building.walls.some(rect => circleHitsRect(x, y, radius, rect)) || building.furniture.some((rect, i) => !(rect.kind === 'barrel' && this.brokenContainers.has(furnitureContainerId(building, i))) && circleHitsRect(x, y, radius, rect))));
   }
 
   /** Sweep short segments against trunk circles, preserving the unblocked axis. */
@@ -394,9 +408,9 @@ export class World {
     const obstacles: Array<{ x: number; y: number; radius: number }> = region.props.filter(prop => inRectangle(prop, left - extent, top - extent, width + extent * 2, height + extent * 2));
     const query = { x: left - radius, y: top - radius, width: width + radius * 2 + .1, height: height + radius * 2 + .1 };
     for (const site of region.sites) if (intersects(query, { x: site.x - site.radius, y: site.y - site.radius, width: site.radius * 2, height: site.radius * 2 })) {
-      for (const decor of site.decor) if (decor.radius > 0) obstacles.push(decor);
+      for (const decor of site.decor) if (decor.radius > 0 && !this.brokenContainers.has(decor.id)) obstacles.push(decor);
     }
-    const furniture = region.buildings.filter(building => intersects(query, building)).flatMap(building => [...building.walls, ...building.furniture]);
+    const furniture = region.buildings.filter(building => intersects(query, building)).flatMap(building => [...building.walls, ...building.furniture.filter((rect, i) => !(rect.kind === 'barrel' && this.brokenContainers.has(furnitureContainerId(building, i))))]);
     const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 4));
     const sx = dx / steps;
     const sy = dy / steps;

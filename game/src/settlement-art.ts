@@ -1,3 +1,4 @@
+import { furnitureContainerId } from './breakable-containers.ts';
 import { drawRoofCourses, drawBuildingApron, drawWallWeathering } from './architecture-art.ts';
 import type { Building, Rect } from './settlements.ts';
 import type { PointLight } from './lighting.ts';
@@ -279,7 +280,7 @@ export class SettlementArt {
   }
 
   /** Insert each footprint depth alongside actors so furnishings cannot cover someone in front. */
-  getStructureLayers(b: Building, time: number): StructureLayer[] {
+  getStructureLayers(b: Building, time: number, brokenContainers?: ReadonlySet<string>): StructureLayer[] {
     const opacity = this.reveal.get(b.id)?.opacity ?? 1;
     const t = this.reducedMotion ? 0 : time;
     const layers: StructureLayer[] = [];
@@ -292,7 +293,8 @@ export class SettlementArt {
         c.save(); this.wall(c, wall, height, b.kind); c.restore();
       } });
     }
-    for (const item of this.art(b).furniture) {
+    for (const [index, item] of this.art(b).furniture.entries()) {
+      if (item.kind === 'barrel' && brokenContainers?.has(furnitureContainerId(b, index))) continue;
       layers.push({ y: b.y + item.depth, draw: c => {
         c.save(); c.drawImage(item.image, b.x + item.x, b.y + item.y);
         if (item.kind === 'forge' && opacity < .96) {
