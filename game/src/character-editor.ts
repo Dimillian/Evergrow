@@ -1,4 +1,5 @@
 import './character-editor.css';
+import { bindArmorTintPrompt } from './armor-tint-prompt.ts';
 import { trapDialogFocus, escapeUI } from './ui-components.ts';
 import { type CharacterLook } from './character-look.ts';
 import type { ActionResult } from './character-types.ts';
@@ -84,6 +85,9 @@ const accessory = root.querySelector<HTMLSelectElement>('#accessory')!;
 const helmet = root.querySelector<HTMLInputElement>('#helmet-visible')!;
 gear.value = loadout;
 let sheet = structuredClone(options.sheet);
+const tintPrompt=bindArmorTintPrompt(root,()=>!busy&&!disposed,tint=>{
+  tints=Object.fromEntries(ARMOR_PARTS.map(part=>[part.id,tint]));refresh();
+});
 if(!options.study)root.querySelector<HTMLElement>('.stage-options')!.hidden=true;
 let envelope: CharacterBounds = { left:-60, right:60, top:-70, bottom:20 };
 const label = <T extends {id: string; name: string}>(catalog: readonly T[], id: string) => catalog.find(p => p.id === id)!.name;
@@ -206,7 +210,7 @@ for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) figure.
 window.addEventListener('resize', refresh, { signal:abort.signal });
 reduced.addEventListener('change', refresh, { signal:abort.signal });
 function currentLook():CharacterLook{return {appearance:{...appearance},armorTints:{...tints},showHelmet:showHelmet};}
-function cancel(){if(!busy&&!disposed)options.onCancel(currentLook());}
+function cancel(){if(tintPrompt.cancel())return;if(!busy&&!disposed)options.onCancel(currentLook());}
 async function save(){
   if(busy||!options.onSave)return;busy=true;
   const controls=[...root.querySelectorAll<HTMLButtonElement|HTMLInputElement|HTMLSelectElement>('button,input,select')];
@@ -222,7 +226,7 @@ const focus=trapDialogFocus(root,{signal:abort.signal,restoreFocus:false});
 let previous=0;
 const tick=(now:number)=>{if(!disposed){if(!document.hidden&&!root.hidden&&!reduced.matches&&now-previous>=1000/60){draw(now/1000);previous=now;}frame=requestAnimationFrame(tick);}};
 frame=requestAnimationFrame(tick);
-return {element:root,cancel,getLook:currentLook,getSheet:()=>sheet,
-  dispose:()=>{disposed=true;focus.dispose();abort.abort();cancelAnimationFrame(frame);root.remove();},
+return {element:root,cancel,updateGamepad:tintPrompt.updateGamepad,getLook:currentLook,getSheet:()=>sheet,
+  dispose:()=>{disposed=true;tintPrompt.dispose();focus.dispose();abort.abort();cancelAnimationFrame(frame);root.remove();},
 };
 }

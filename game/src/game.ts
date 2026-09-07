@@ -1036,8 +1036,8 @@ export class Game {
     }
     const pad = this.gamepad;
     if(this.appearanceEditor){
-      if(pad.active){if(pad.pressed.has(PAD.dodge)||pad.pressed.has(PAD.pause))this.appearanceEditor.cancel();else this.gamepadMenu.update(this.appearanceEditor.element,pad,now);}
-      else this.gamepadMenu.clear();
+      if(pad.pressed.has(PAD.dodge)||pad.pressed.has(PAD.pause))this.appearanceEditor.cancel();
+      else this.appearanceEditor.updateGamepad(pad,now);
       return;
     }
     if (pad.active && !this.usingGamepad) {

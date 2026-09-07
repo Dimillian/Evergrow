@@ -3,6 +3,14 @@
 
 .appearance-editor * { box-sizing:border-box; }
 .appearance-editor [hidden] { display:none!important; }
+.appearance-editor .armor-tint-overlay { position:fixed;inset:0;z-index:2;display:grid;place-items:center;padding:20px;background:#03080cbd; }
+.appearance-editor .armor-tint-dialog { width:min(100%,440px);padding:24px;background:#142229;border:1px solid #728780;box-shadow:0 16px 48px #0008; }
+.appearance-editor .armor-tint-dialog h2 { margin:0 0 16px;font-size:22px;font-weight:500;color:var(--ui-ivory); }
+.appearance-editor .armor-tint-dialog p { margin:0 0 24px;line-height:1.5;color:var(--ui-text); }
+.appearance-editor .armor-tint-dialog strong { color:var(--ui-ivory);font-weight:500; }
+.appearance-editor .armor-tint-dialog-actions { display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap; }
+.appearance-editor .armor-tint-dialog-actions button { min-height:44px;font-size:16px; }
+.appearance-editor [data-tint] { -webkit-touch-callout:none;user-select:none; }
 .appearance-editor { margin:0; background:#080f14; color:var(--ui-text); font:16px var(--ui-font); }
 .appearance-editor button, .appearance-editor input, .appearance-editor select { font:inherit; }
 .appearance-editor button, .appearance-editor select, .appearance-editor input { touch-action:manipulation; }
