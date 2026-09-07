@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ArtLibrary, drawHumanoid, type CharacterPose } from '../src/art.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
+import { HAIR_STYLES, SKIN_PALETTES, ACCESSORIES, FACIAL_HAIR, DEFAULT_APPEARANCE } from '../src/appearance-content.ts';
 
 interface DrawingState {
   globalCompositeOperation: string; globalAlpha: number; fillStyle: string; strokeStyle: string;
@@ -69,6 +70,22 @@ test('all character layers emit finite geometry and restore the caller state acr
       });
       assert.ok(c.commands > 0);
       assert.deepEqual(c.state(), before, `${kind} restores transforms, alpha and drawing styles`);
+      assert.equal(c.depth, 0);
+    }
+  }
+});
+
+test('appearance study parts preserve finite drawing and canvas state across coverage, facings and actions', () => {
+  for (const [index, hair] of HAIR_STYLES.entries()) for (let facing = 0; facing < 16; facing++) {
+    for (const covered of [false, true]) for (const action of [{}, {moving:1, gaitPhase:2.7}, {attack:.4}, {cast:.6}, {dead:true}]) {
+      const c = new ArtContext(), before = c.state();
+      drawHumanoid(c as unknown as CanvasRenderingContext2D, {
+        kind:'player', angle:facing * Math.PI / 8, attackAngle:facing * Math.PI / 8, time:2,
+        moving:0, attack:0, hitFlash:0, dodging:false, ...action, ...(covered ? {} : {outfit:{head:null}}),
+        appearance:{...DEFAULT_APPEARANCE, hair:hair.id, skin:SKIN_PALETTES[index].id,
+          accessory:ACCESSORIES[facing % ACCESSORIES.length].id, facialHair:FACIAL_HAIR[facing % FACIAL_HAIR.length].id},
+      });
+      assert.deepEqual(c.state(), before, `${hair.id} restores the drawing state`);
       assert.equal(c.depth, 0);
     }
   }

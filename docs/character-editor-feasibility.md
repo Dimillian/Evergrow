@@ -2,6 +2,8 @@
 
 2026-09-07 · Analysis and proposed design, not implemented. Based on source checkpoint `1978bf9`; work branch: `character-editor`.
 
+Follow-up: a [save-free MVP mockup](character-editor-mockup.md) now explores the appearance controls with the real rig. The user excluded height and body-proportion changes from that mockup. Live creation and save integration remain proposed.
+
 ## Assessment
 
 A creation-time character editor is highly feasible within the existing procedural Canvas engine. The hall, inventory portrait and world already share one articulated character renderer. A selected hairstyle can follow existing movement, attacks, casting, dodging and defeat transforms without a separate set of animation sprites. No engine replacement, external art dependency or gameplay-system rewrite is needed for the initial appearance controls.

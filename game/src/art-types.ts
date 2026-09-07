@@ -1,5 +1,6 @@
 import type { WeaponVisual, WeaponGrip } from './equipment.ts';
 import type { EnemyKind, FocusDefinition, ShieldDefinition } from './model.ts';
+import type { CharacterAppearance } from './appearance-content.ts';
 
 /** Procedural art only: every cached image below is drawn from geometry. */
 export interface Sprite {
@@ -45,6 +46,8 @@ export interface CharacterOutfit {
 }
 
 export interface CharacterPose {
+  /** Optional appearance study recipe; not persisted or enabled in character creation yet. */
+  appearance?: Readonly<CharacterAppearance>;
   kind: 'player' | EnemyKind;
   command?: 'rush' | 'surround' | 'rout';
   commandWarning?: boolean;

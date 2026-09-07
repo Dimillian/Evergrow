@@ -1,4 +1,6 @@
 import { focusShapes } from './focus-shapes.ts';
+import { appearanceHeadShapes } from './appearance-shapes.ts';
+import { appearancePalette, SKIN_PALETTES, type CharacterAppearance } from './appearance-content.ts';
 import { armorShapes } from './armor-shapes.ts';
 import { STARTING_SWORD } from './equipment.ts';
 import type { FocusDefinition, ShieldDefinition } from './model.ts';
@@ -161,15 +163,20 @@ export function shoulderArmor(ctx: CanvasRenderingContext2D, anchor: Point, elbo
   ctx.restore();
 }
 
-export function headArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | null, color: Color, facing: number): void {
+export function headArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | null, color: Color, facing: number, appearance?: Readonly<CharacterAppearance>): void {
   ctx.save(); ctx.translate(Math.cos(facing) * 1.4, PLAYER_ATTACHMENTS.head[1]);
   const back = Math.sin(facing) < -.16;
   const side = Math.cos(facing), look = side * .8;
   const m = piece?.material ?? LEATHER;
   // A skin neck seated inside a dark gorget gives the helmet a separate volume.
-  polygon(ctx, [[-1.7, 3.8], [1.9, 3.8], [2.1, 6.7], [-2, 6.7]], color('#9e8069'));
+  polygon(ctx, [[-1.7, 3.8], [1.9, 3.8], [2.1, 6.7], [-2, 6.7]], color(appearance ? appearancePalette(SKIN_PALETTES, appearance.skin).shadow : '#9e8069'));
   polygon(ctx, [[-3.5, 5.4], [-1.9, 5.8], [0, 6.9], [2.3, 5.6], [3.6, 5.2], [3.1, 7.3], [0, 8], [-3.1, 7]], color(m.shadow));
   line(ctx, [[-3, 5.8], [0, 7.2], [3.1, 5.6]], color(m.edge), .65);
+  if (appearance) {
+    drawGearShapes(ctx, appearanceHeadShapes(appearance, facing, !!piece), color);
+    if (piece) drawGearShapes(ctx, armorShapes('head', piece, facing), color);
+    ctx.restore(); return;
+  }
   polygon(ctx, [[-4.2, -.8], [-3.2, -3.9], [.6, -4.8], [3.7, -2.7], [4.2, .6], [2.7, 4.1], [.7, 5.3], [-2, 4.6], [-3.9, 1.8]], color('#403b39'));
   if (!back) {
     polygon(ctx, [[-3 + look, -1.4], [.2 + look, -2.6], [2.7 + look, -1.3], [3 + look, 2.4], [1.1 + look, 4.7], [-1.1 + look, 4.4], [-2.6 + look, 2.6]], color('#b89a7d'));
