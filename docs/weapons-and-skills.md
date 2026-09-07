@@ -73,7 +73,7 @@ New characters choose Sword (Weathered Sword), Bow (Thorn Shortbow) or Fire Staf
 
 ## Skill schools and requirements
 
-The atlas contains **2,333 nodes**, **3,166 curved connections**, **150 passive constellations plus 23 development groups**, and **20 skill majors**. Nine schools branch from the central Might, Cunning, and Arcana arteries. A school's first skill costs three points along its shortest origin route; its advanced skill costs four total. The dagger school currently has one skill. Crosslinks allow movement between specialties and disciplines.
+The atlas contains **2,182 nodes**, **2,923 connections**, **150 passive constellations plus 23 development groups**, and **20 skill majors**. Nine schools branch from the central Might, Cunning, and Arcana arteries. A school's first skill costs three points along its shortest origin route; its advanced skill costs four total. The dagger school currently has one skill. Crosslinks allow movement between specialties and disciplines.
 
 | Domain | School | First skill — 3 points | Advanced skill — 4 total points |
 | --- | --- | --- | --- |

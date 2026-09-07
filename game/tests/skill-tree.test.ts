@@ -125,11 +125,15 @@ test('constellations have coherent specialties, varied spacing, and bounds enclo
       assert.equal(member.role, 'cluster');
       assert.ok(Math.hypot(member.x - cluster.x, member.y - cluster.y) < cluster.radius);
     }
+    for (let i = 0; i < members.length; i++) for (let j = 0; j < i; j++) {
+      assert.ok(Math.hypot(members[i].x - members[j].x, members[i].y - members[j].y) >= 50,
+        `${cluster.id} preserves room between its stars after atlas projection`);
+    }
     for (const minor of minors) assert.deepEqual(minor.bonuses, minors[0].bonuses, 'one stat family develops consistently through each specialty');
     const notable = members.find(node => node.kind === 'notable')!;
     for (const key of Object.keys(minors[0].bonuses)) assert.ok((notable.bonuses[key as keyof typeof notable.bonuses] ?? 0) > minors[0].bonuses[key as keyof typeof notable.bonuses]!);
   }
-  assert.ok(memberCounts.size >= 5, 'specialties have different lengths and silhouettes');
+  assert.ok(memberCounts.size >= 4, 'specialties have different lengths and silhouettes');
   for (const domain of ['Might', 'Cunning', 'Arcana']) assert.equal(passiveClusters.filter(cluster => cluster.domain === domain).length, 50);
   for (const node of SKILL_TREE.nodes) {
     assert.ok(node.x > SKILL_TREE.bounds.minX && node.x < SKILL_TREE.bounds.maxX);
@@ -155,7 +159,7 @@ test('organic routes leave readable node clearance and provide interconnected hy
     const deviation = Math.abs((b.x - a.x) * (edge.control.y - a.y) - (b.y - a.y) * (edge.control.x - a.x)) / Math.hypot(b.x - a.x, b.y - a.y);
     if (deviation > .2) curved++;
   }
-  assert.ok(curved > SKILL_TREE.edges.length * .6, 'routes carry actual curved geometry, rather than straight visual placeholders');
+  assert.ok(curved > 100, 'long roads retain gentle curves between the straight constellation branches');
 });
 
 test('Arcana offers mana, cast speed and efficiency within two points, before any skill purchase', () => {
@@ -166,8 +170,8 @@ test('Arcana offers mana, cast speed and efficiency within two points, before an
     assert.ok(nearest && paths.get(nearest.id)!.length <= 2, stat);
     assert.ok(paths.get(nearest.id)!.every(id => !SKILL_NODES.get(id)!.skill));
   }
-  const early = SKILL_TREE.nodes.filter(node => node.domain === 'Arcana' && node.role === 'choice' && paths.get(node.id)!.length <= 4);
-  assert.ok(early.length >= 12, 'three entrances and nine branching choices');
+  const early = SKILL_TREE.nodes.filter(node => node.domain === 'Arcana' && node.role === 'choice' && paths.get(node.id)!.length <= 5);
+  assert.ok(early.length >= 12, 'three entrances and nine backbone choices within five points');
   for (const cluster of SKILL_TREE.clusters.filter(cluster => cluster.id.startsWith('arcana:terrace:1:'))) {
     const cost = Math.min(...SKILL_TREE.nodes.filter(node => node.cluster === cluster.id).map(node => paths.get(node.id)!.length));
     assert.ok(cost <= 12, `${cluster.name} requires ${cost} points`);
@@ -202,5 +206,18 @@ test('every terrace connects each pair of disciplines directly across their oute
       }
     }
     assert.ok(connected, `${home} → ${away}, terrace ${terrace}`);
+  }
+});
+
+
+test('skill branches have one backbone entrance and generous clearance from unrelated stars', () => {
+  for (const major of SKILL_TREE.nodes.filter(node => node.skill && SKILL_DEFINITIONS[node.skill].tier !== 'ultimate')) {
+    const entrances = major.neighbors.filter(id => !SKILL_NODES.get(id)!.developmentSkill);
+    assert.equal(entrances.length, 1, `${major.name} must not be a transit junction`);
+    assert.equal(major.neighbors.length, 4, 'one entrance and three specialization branches');
+  }
+  for (const node of SKILL_TREE.nodes.filter(node => node.developmentSkill)) {
+    for (const other of SKILL_TREE.nodes) if (other.id !== node.id)
+      assert.ok(Math.hypot(node.x - other.x, node.y - other.y) >= 44, `${node.id} crowds ${other.id}`);
   }
 });

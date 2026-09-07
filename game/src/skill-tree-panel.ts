@@ -1,3 +1,4 @@
+import { buildAtlasLightPlan, drawAtlasLight, type AtlasLightPlan } from './skill-tree-light.ts';
 import { GamepadMenu } from './gamepad-menu.ts';
 import { PAD, PAD_SKILL_LABELS, type GamepadInput } from './gamepad-input.ts';
 import { bindTouchCanvas } from './touch-canvas.ts';
@@ -24,7 +25,7 @@ const SEARCH_TEXT = new Map(SKILL_TREE.nodes.map(node => [node.id,
   `${node.name} ${skillNodeOwner(node)?.name ?? ''} ${node.domain} ${node.description} ${Object.keys(node.bonuses).map(key => STAT_LABELS[key as StatKey]).join(' ')}`.toLowerCase()]));
 const BINDINGS = ['RMB', '1', '2', '3', '4'];
 
-/** Native-resolution atlas, drawn only when its view/state changes. Simulation owns allocations. */
+/** Cached native-resolution atlas with a bounded 30 Hz light pass. Simulation owns allocations. */
 export class SkillTreePanel {
   private root: HTMLDivElement;
   private canvas: HTMLCanvasElement;
@@ -57,6 +58,10 @@ export class SkillTreePanel {
   private height = 1;
   private frame = 0;
   private atlasDirty = true;
+  private readonly atlasSurface = document.createElement('canvas');
+  private lightPlan?: AtlasLightPlan;
+  private lastLightFrame = -Infinity;
+  private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   private matching = new Set(SKILL_TREE.nodes.map(node => node.id));
   private lastClickedNode: string | null = null;
   private doubleClickedNode: string | null = null;
@@ -69,6 +74,8 @@ export class SkillTreePanel {
 
   constructor(mount: HTMLElement, actions: SkillTreeActions) {
     this.actions = actions;
+    this.reducedMotion.addEventListener('change', () => this.invalidate(), { signal: this.life.signal });
+    document.addEventListener('visibilitychange', () => this.invalidate(), { signal: this.life.signal });
     this.root = document.createElement('div');
     this.root.className = 'skill-atlas';
     this.root.hidden = true;
@@ -84,10 +91,10 @@ export class SkillTreePanel {
         <div class="skill-atlas-viewport"><canvas tabindex="0" role="application" aria-label="Skill constellation map. Arrow keys inspect connected stars, Enter centers the selected star, plus and minus zoom." aria-describedby="skill-atlas-selection"></canvas>
           <div class="ui-tooltip skill-atlas-tooltip" role="tooltip" hidden></div>
           <div class="skill-atlas-compass" aria-hidden="true"><span>✦</span><small>EVERY PATH, A CHOICE</small></div>
-          <div class="skill-atlas-zoom"><button class="ui-button ui-button--icon" data-tree="out" aria-label="Zoom out">−</button><output>80%</output><button class="ui-button ui-button--icon" data-tree="in" aria-label="Zoom in">+</button><button class="ui-button ui-button--quiet" data-tree="origin">Origin</button><button class="ui-button ui-button--quiet" data-tree="overview">All</button></div>
+          <div class="skill-atlas-zoom"><button class="ui-button ui-button--icon" data-tree="out" aria-label="Zoom out">−</button><output>80%</output><button class="ui-button ui-button--icon" data-tree="in" aria-label="Zoom in">+</button><button class="ui-button ui-button--quiet" data-tree="origin">Origin</button><button class="ui-button ui-button--quiet" data-tree="overview">All</button><button class="ui-button ui-button--quiet" data-tree="details" aria-expanded="true" aria-controls="skill-atlas-sidebar">Details</button></div>
           <div class="skill-atlas-domains" aria-hidden="true"><span>Might</span><span>Cunning</span><span>Arcana</span></div>
         </div></section>
-        <aside class="skill-atlas-sidebar"><div class="skill-atlas-inspection ui-scroll-area" tabindex="-1" id="skill-atlas-selection" aria-live="polite"></div>
+        <aside class="skill-atlas-sidebar" id="skill-atlas-sidebar"><div class="skill-atlas-inspection ui-scroll-area" tabindex="-1" id="skill-atlas-selection" aria-live="polite"></div>
           <section class="skill-atlas-loadout"><div class="skill-atlas-section-heading"><span class="ui-kicker">Skills</span><span class="ui-muted" data-slot-help></span></div><div class="skill-atlas-assignments"></div></section>
         </aside></div>
       <footer class="ui-window-footer skill-atlas-footer"><span><b>${SKILL_TREE.nodes.length.toLocaleString('en-US')}</b> nodes <i>·</i> <b>${SKILL_TREE.clusters.length}</b> clusters <i>·</i> <b>${Object.keys(SKILL_DEFINITIONS).length}</b> skills</span><span>One skill point per level</span></footer>
@@ -120,7 +127,15 @@ export class SkillTreePanel {
     }, opts);
     this.search.addEventListener('input', () => { this.resultsDismissed = false; this.updateResults(); this.invalidate(); }, opts);
     this.root.querySelector('select')!.addEventListener('change', event => {
-      this.domain = (event.target as HTMLSelectElement).value as SkillDomain | 'all'; this.resultsDismissed = false; this.updateResults(); this.invalidate();
+      this.domain = (event.target as HTMLSelectElement).value as SkillDomain | 'all'; this.resultsDismissed = false; this.updateResults();
+      if (this.domain === 'all') this.showOrigin();
+      else {
+        const starters = SKILL_TREE.nodes.filter(node => node.skill && node.domain === this.domain && SKILL_DEFINITIONS[node.skill].tier === 'basic');
+        const x = starters.reduce((sum, node) => sum + node.x, 0) / starters.length;
+        const y = starters.reduce((sum, node) => sum + node.y, 0) / starters.length;
+        this.setView(x, y, Math.min(.65, (this.width - 100) / 1250, (this.height - 100) / 900));
+      }
+      this.invalidate();
     }, opts);
     this.canvas.addEventListener('pointerdown', event => {
       if (event.button !== 0) return;
@@ -218,6 +233,7 @@ export class SkillTreePanel {
       : this.controllerSection === 1 ? this.detail : this.root.querySelector('.skill-atlas-loadout')!;
   }
   private selectControllerSection(section: number): void {
+    if (section !== 0) this.setDetailsVisible(true);
     this.controllerSection = section; this.controller.clear();
     for (const label of this.root.querySelectorAll<HTMLElement>('[data-pad-section]'))
       label.setAttribute('aria-current', String(Number(label.dataset.padSection) === section));
@@ -231,7 +247,8 @@ export class SkillTreePanel {
     this.controller.clear(); this.root.classList.remove('is-controller'); this.controllerSection = 0;
     this.clearTouch?.();
     this.lastClickedNode = this.doubleClickedNode = null;
-    this.atlasDirty = true;
+    this.atlasDirty = true; this.lightPlan = undefined;
+    this.atlasSurface.width = this.atlasSurface.height = 0;
     this.shown = false; this.root.hidden = true; this.focus?.dispose(); this.focus = undefined;
     this.drag = undefined; this.hovered = null; this.tooltipMotion.reset(); this.tooltip.hidden = true;
     if (this.frame) cancelAnimationFrame(this.frame); this.frame = 0;
@@ -270,6 +287,7 @@ export class SkillTreePanel {
     else if (action === 'allocate') this.actions.allocate(button.dataset.inspected ?? this.selected);
     else if (action === 'origin') this.showOrigin();
     else if (action === 'overview') this.showOverview();
+    else if (action === 'details') this.setDetailsVisible(this.root.classList.contains('is-map-only'));
     else if (action === 'in') this.setZoom(this.zoom * 1.15);
     else if (action === 'out') this.setZoom(this.zoom / 1.15);
     else if (action === 'reachable') {
@@ -386,8 +404,15 @@ export class SkillTreePanel {
   }
   private showOrigin(): void {
     this.centerX = 0; this.centerY = -35;
-    this.setZoom(Math.max(.7, Math.min(1, (this.width - 60) / 680, (this.height - 60) / 480)));
+    this.setZoom(Math.min(.5, (this.width - 100) / 1800, (this.height - 100) / 1600));
     this.inspectNode(SKILL_TREE_ORIGIN, false);
+  }
+  setDetailsVisible(visible: boolean): void {
+    const sidebar = this.root.querySelector<HTMLElement>('.skill-atlas-sidebar')!;
+    if (!visible && sidebar.contains(document.activeElement)) this.canvas.focus();
+    sidebar.hidden = !visible; this.root.classList.toggle('is-map-only', !visible);
+    this.root.querySelector('[data-tree="details"]')!.setAttribute('aria-expanded', String(visible));
+    this.resize();
   }
   /** Presentation-only camera access for frozen review and atlas navigation. */
   setView(centerX: number, centerY: number, zoom: number): void {
@@ -424,13 +449,22 @@ export class SkillTreePanel {
       centerX: this.centerX, centerY: this.centerY, allocated: this.allocated, reachable: this.reachable,
       sheet: this.player?.character, selected: this.selected, hovered: this.hovered, route: previewSkillRoute(this.routes, this.hovered ?? this.selected),
       matches: node => this.matches(node) };
-    if (this.atlasDirty) {
+    const now = performance.now(), dirty = this.atlasDirty;
+    if (dirty) {
+      this.atlasSurface.width = this.canvas.width; this.atlasSurface.height = this.canvas.height;
+      const base = this.atlasSurface.getContext('2d')!;
+      base.setTransform(this.canvas.width / this.width, 0, 0, this.canvas.height / this.height, 0, 0);
+      drawSkillAtlas(base, view); this.lightPlan = buildAtlasLightPlan(view); this.atlasDirty = false;
+    }
+    if (dirty || now - this.lastLightFrame >= 1000 / 30) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(this.atlasSurface, 0, 0);
       ctx.setTransform(this.canvas.width / this.width, 0, 0, this.canvas.height / this.height, 0, 0);
-      drawSkillAtlas(ctx, view); this.atlasDirty = false;
+      if (this.lightPlan) drawAtlasLight(ctx, this.lightPlan, this.reducedMotion.matches ? 0 : now / 1000);
+      this.lastLightFrame = now;
     }
     const node = tooltip.id ? SKILL_NODES.get(tooltip.id) : undefined;
     this.tooltip.hidden = !node;
-    if (node) {
+    if (node && (dirty || tooltip.active)) {
       const markup = skillTooltipMarkup(node, { allocated: this.allocated, reachable: this.reachable,
         sheet: this.player?.character, costStats: this.player?.derived, routes: this.routes });
       if (markup !== this.tooltipMarkup) { this.tooltip.innerHTML = markup; this.tooltipMarkup = markup; }
@@ -445,6 +479,6 @@ export class SkillTreePanel {
       this.tooltip.style.left = `${Math.max(8, Math.min(this.width - width - 8, x - width / 2))}px`;
       this.tooltip.style.top = `${Math.max(8, Math.min(this.height - height - 8, above >= 8 ? above : y + radius + 14))}px`;
     }
-    if (tooltip.active) this.invalidate(false);
+    if (tooltip.active || !this.reducedMotion.matches && !document.hidden) this.invalidate(false);
   }
 }

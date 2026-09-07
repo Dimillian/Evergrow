@@ -109,7 +109,7 @@ Every item retains a source recipe with profile, starter flag, normalized affix 
 
 ## Skill atlas and active skills
 
-The fixed atlas contains **2,333 nodes**, **3,166 undirected curved connections**, and **150 passive constellations and 23 development groups** across **Might, Cunning, and Arcana**:
+The fixed atlas contains **2,182 nodes**, **2,923 undirected connections**, and **150 passive constellations and 23 development groups** across **Might, Cunning, and Arcana**:
 
 - 1 free origin.
 - 1,662 minor nodes within themed constellations.

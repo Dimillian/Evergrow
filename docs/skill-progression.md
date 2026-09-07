@@ -115,7 +115,7 @@ All require a staff, normal assignment and a connected deep-tree path (20–35 p
 
 ## Layout and ownership
 
-The atlas now has 2,333 nodes, 3,166 curved edges and 173 groups: 150 passive constellations, 20 skill-owned leaf groups and three ultimate landmarks. Development groups do not repeat their parent name as a floating map label. Existing three-/four-point school paths, early mana/speed options and cross-domain bridges remain. Specializations remain beside their parent skill, with fixed curved leaves and at least 22 units of node clearance. Masteries retain their deeper routes through the passive terraces.
+The atlas now has 2,182 nodes, 2,923 edges and 173 groups: 150 passive constellations, 20 skill-owned leaf groups and three ultimate landmarks. Development groups do not repeat their parent name as a floating map label. Existing three-/four-point school paths, early mana/speed options and cross-domain bridges remain. Specializations remain beside their parent skill, with fixed curved leaves and at least 22 units of node clearance. Masteries retain their deeper routes through the passive terraces.
 
 `skill-progression.ts` resolves active rank, specialization, potency, execution recipe, mana and cooldown for combat, HUD and atlas. Character commands own validated purchases/configuration. Save format **4** persists purchased ranks, chosen casting ranks, selected specializations and Overload, and validates point conservation including extra ranks. The leaf redesign removes old school-specialization connector nodes. Characters invested in those old routes may fail current graph validation and require a new test character; no path migration is provided. Unaffected builds remain valid.
 
@@ -128,3 +128,16 @@ Meteor, Shattered Sky and Cataclysm leave four-second burning patches after each
 ### Equipment bonus ranks · 2026-09-07
 
 Named +1–5 skill affixes can raise effective potency beyond purchased ranks, up to +10 total equipment ranks per skill. They require the skill unlocked and compatible gear, do not grant specializations, and do not raise mana/cooldown costs. The chosen casting rank and point ledger remain unchanged. Tooltips and upgrade previews use the same resolver as combat. See [equipment affixes](equipment-affixes.md#equipment-skill-ranks) for weighted pools, level gates and precise odds.
+
+
+## Skill atlas layout · 2026-09-07
+
+The starter network has nine repeated school layouts. Each has a passive backbone with a basic and advanced skill branching off it; active skills are no longer transit junctions. Each skill has exactly one incoming backbone link and three separate potency → efficiency → specialization branches. Short, mostly straight connections replace the previous bypass loops. School crosslinks meet at inner gates and outer junctions, away from the skill branches. The 150 outer passive constellations remain interconnected.
+
+Basic/advanced unlock costs stay at three/four points. Mana, cast speed and efficiency are still available within two points. Three backbone choices per school are reachable within five points. Opening paths uses more space, not additional travel taxes. Specializations retain their own three-point cost and existing effects.
+
+The Details toggle expands the canvas; controller Node/Skills navigation restores the sidebar. Choosing a domain centers its starter skills. Overview keeps skill icons/names and stronger backbone lines, with finer passive detail appearing as you zoom.
+
+This redesign changes early connections and some route IDs. Existing characters invested in removed routes may require a fresh character; original saves stay preserved. Frozen review URLs use memory-only characters: `/character.html?panel=skills&node=origin&zoom=starter&map`, `&node=skill:fireball&zoom=arcana&map`, or `&node=skill:fireball&zoom=school`.
+
+The outer atlas uses five balanced constellation silhouettes (diamond, hexagon, rays, wings and compass). Clusters retain their proportions when the atlas spreads outward; their internal stars stay at least 50 world units apart. Allocated routes carry flowing gold light, while the selected/hovered route uses pale blue light. A cached atlas surface keeps geometry and text out of the 30 Hz animation pass; visible light threads are capped at 160 and batched into at most 64 strokes. Reduced motion freezes the light and dust, and closing the atlas releases its cached surface. Domain-colored background haze stays faint beneath the graph.

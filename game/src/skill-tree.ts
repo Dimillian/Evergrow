@@ -27,32 +27,15 @@ interface Point { x: number; y: number; }
 interface Family { name: string; description: string; minor: StatModifiers; notable: StatModifiers; }
 interface WeaponSchool { id: string; name: string; angle: number; skills: readonly SkillId[]; }
 interface Region { domain: SkillDomain; angle: number; schools: readonly WeaponSchool[]; attribute: StatKey; }
-interface Blueprint extends SkillCluster { family: Family; shape: number; rotation: number; count: number; }
+interface Blueprint extends SkillCluster { family: Family; shape: number; rotation: number; }
 interface Route { a: number; b: number; }
 type MutableNode = Omit<SkillNode, 'neighbors'> & { neighbors: string[] };
 const TAU = Math.PI * 2;
-const SPECIALIZATION_FAN_ANGLES: Readonly<Record<SkillId, number>> = Object.freeze({
-  cleave: 3.6800627894,
-  lunge: 3.3309969390,
-  whirlwind: -1.9551225178,
-  earthshatter: 1.0992036732,
-  shieldBash: -1.3071225178,
-  bulwark: 1.7472036732,
-  volley: 1.5100627894,
-  piercingShot: 1.2482634016,
-  ricochet: 2.1580627894,
-  rainOfArrows: -1.0707963268,
-  backstab: 2.8060627894,
-  fireball: -0.5399372106,
-  meteor: -0.8017365984,
-  iceNova: 0.1080627894,
-  frostLance: 3.1623889804,
-  arcLightning: 0.7560627894,
-  siphon: 3.8103889804,
-  cataclysm: 2.6623889804,
-  absoluteZero: -1.6411342542,
-  tempest: 3.6623889804,
-});
+const ULTIMATE_BRANCH_ANGLES: Partial<Record<SkillId, number>> = {
+  cataclysm: 5.437462,
+  absoluteZero: 6.042182,
+  tempest: 3.29587,
+};
 const REGIONS: readonly Region[] = [
   { domain: 'Might', angle: 2.67, attribute: 'strength', schools: [
     { id: 'blade', name: 'Way of the Blade', angle: -.48, skills: ['cleave', 'lunge'] },
@@ -104,6 +87,10 @@ const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 const polar = (radius: number, angle: number): Point => ({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
 const mix = (a: Point, b: Point, t: number): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
 const quadratic = (a: Point, control: Point, b: Point, t: number): Point => mix(mix(a, control, t), mix(control, b, t), t);
+const bendBetween = (a: Point, b: Point, bend: number): Point => {
+  const mid = mix(a, b, .5), length = distance(a, b);
+  return { x: mid.x - (b.y - a.y) / length * bend, y: mid.y + (b.x - a.x) / length * bend };
+};
 function segmentDistance(p: Point, a: Point, b: Point): number {
   const lengthSquared = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
   const t = Math.max(0, Math.min(1, ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / lengthSquared));
@@ -146,13 +133,13 @@ function buildTree() {
       for (let slot = 0; slot < count; slot++) {
         const fraction = count === 1 ? 0 : slot / (count - 1) - .5;
         const angle = region.angle + fraction * 1.42 + Math.sin(terrace * 1.7 + regionIndex) * .025;
-        const radius = [790, 1370, 2000, 2670, 3370][terrace] + Math.cos(fraction * TAU) * 48 + Math.sin(slot * 2.4) * 20;
+        const radius = [950, 1530, 2160, 2830, 3530][terrace] + Math.cos(fraction * TAU) * 48 + Math.sin(slot * 2.4) * 20;
         const familyIndex = terrace === 0 ? (region.domain === 'Arcana' ? [0, 1, 2][slot] : [0, 1, 6][slot]) : (slot + terrace * 2) % FAMILIES[region.domain].length;
         const family = FAMILIES[region.domain][familyIndex];
         blueprints.push({ id: `${region.domain.toLowerCase()}:terrace:${terrace}:${slot}`, ...polar(radius, angle), domain: region.domain,
           name: `${family.name} · ${EPITHETS[(slot + terrace) % EPITHETS.length]}`, family,
-          radius: 118 + random() * 8, rotation: angle + Math.PI / 2 + Math.sin(slot) * .16,
-          shape: (slot + terrace) % 4, count: 12 + (slot + terrace) % 3 });
+          radius: 118 + random() * 8, rotation: angle + Math.PI / 2,
+          shape: (slot + terrace) % 5 });
       }
     }
   }
@@ -160,7 +147,6 @@ function buildTree() {
   const members = new Map<string, MutableNode[]>();
   for (const cluster of blueprints) {
     const group: MutableNode[] = [];
-    const count = cluster.shape === 3 ? 9 + cluster.count % 2 : cluster.shape === 2 ? Math.min(cluster.count, 13) : cluster.count;
     const local = (x: number, y: number) => ({ x: cluster.x + x * Math.cos(cluster.rotation) - y * Math.sin(cluster.rotation),
       y: cluster.y + x * Math.sin(cluster.rotation) + y * Math.cos(cluster.rotation) });
     const put = (p: Point, notable: boolean) => {
@@ -171,44 +157,39 @@ function buildTree() {
         description: cluster.family.description,
         bonuses: notable ? cluster.family.notable : cluster.family.minor }));
     };
+    // Authored silhouettes share a central notable and evenly spaced travel ports.
+    // Diamond, hexagon, three rays, wings and compass remain balanced at every scale.
+    put(local(0, 0), true);
+    const connect = (a: number, b: number) => link(group[a].id, group[b].id, mix(group[a], group[b], .5));
     if (cluster.shape < 2) {
-      // A focal notable with a looped crown: three entrances avoid paying to traverse half a circle.
-      put(local(0, 0), true);
-      const ringCount = cluster.count - 1;
-      const span = cluster.shape === 0 ? TAU : Math.PI * 1.65;
-      for (let i = 0; i < ringCount; i++) {
-        const angle = -.825 * Math.PI + i / (cluster.shape === 0 ? ringCount : ringCount - 1) * span;
-        const r = cluster.radius * (1 + .07 * Math.cos(angle * 2));
-        put(local(Math.cos(angle) * r, Math.sin(angle) * r * .8), false);
+      const corners = cluster.shape === 0 ? 4 : 6;
+      const subdivisions = cluster.shape === 0 ? 3 : 2;
+      for (let corner = 0; corner < corners; corner++) {
+        const a = polar(cluster.radius, -Math.PI / 2 + corner * TAU / corners);
+        const b = polar(cluster.radius, -Math.PI / 2 + (corner + 1) * TAU / corners);
+        for (let step = 0; step < subdivisions; step++) {
+          const p = mix(a, b, step / subdivisions); put(local(p.x, p.y), false);
+        }
       }
-      for (let i = 2; i < group.length; i++) {
-        const a = group[i - 1], b = group[i], mid = mix(a, b, .5);
-        link(a.id, b.id, { x: cluster.x + (mid.x - cluster.x) * 1.05, y: cluster.y + (mid.y - cluster.y) * 1.05 });
-      }
-      if (cluster.shape === 0) {
-        const a = group[1], b = group[group.length - 1], mid = mix(a, b, .5);
-        link(a.id, b.id, { x: cluster.x + (mid.x - cluster.x) * 1.05, y: cluster.y + (mid.y - cluster.y) * 1.05 });
-      }
-      for (const index of [1, 1 + Math.floor(ringCount / 3), 1 + Math.floor(ringCount * 2 / 3)]) {
-        const a = group[0], b = group[index], mid = mix(a, b, .5);
-        link(a.id, b.id, { x: mid.x + (b.y - a.y) * .08, y: mid.y - (b.x - a.x) * .08 });
+      for (let i = 1; i <= 12; i++) connect(i, i === 12 ? 1 : i + 1);
+      for (let i = 1; i <= 12; i += cluster.shape === 0 ? 3 : 4) connect(0, i);
+    } else if (cluster.shape === 3) {
+      // Two mirrored boughs, with a generous opening around the focal star.
+      for (const side of [-1, 1]) {
+        let previous = 0;
+        for (const [x, y] of [[42, -35], [76, -65], [112, -34], [112, 22], [76, 65]]) {
+          put(local(x * side, y), false); connect(previous, group.length - 1); previous = group.length - 1;
+        }
+        connect(previous, 0);
       }
     } else {
-      // Three curved fingers create fans; a two-sided bough gives an asymmetrical branching silhouette.
-      put(local(0, 0), true);
-      const fingers = cluster.shape === 2 ? 3 : 2;
-      for (let finger = 0; finger < fingers; finger++) {
-        const steps = Math.floor((count - 1 + finger) / fingers);
-        let previous = group[0];
+      const arms = cluster.shape === 2 ? 3 : 4;
+      const steps = cluster.shape === 2 ? 3 : 2;
+      for (let arm = 0; arm < arms; arm++) {
+        let previous = 0;
         for (let step = 1; step <= steps; step++) {
-          const baseAngle = cluster.shape === 2 ? -.72 * Math.PI + finger * .72 * Math.PI : finger * Math.PI + .35;
-          const angle = baseAngle + Math.sin(step / steps * Math.PI) * (finger % 2 ? -.4 : .4);
-          const r = cluster.radius * step / steps;
-          put(local(Math.cos(angle) * r, Math.sin(angle) * r), false);
-          const current = group[group.length - 1], midpoint = mix(previous, current, .5);
-          link(previous.id, current.id, { x: midpoint.x + Math.cos(baseAngle + cluster.rotation + Math.PI / 2) * 5,
-            y: midpoint.y + Math.sin(baseAngle + cluster.rotation + Math.PI / 2) * 5 });
-          previous = current;
+          const p = polar(cluster.radius * step / steps, -Math.PI / 2 + arm * TAU / arms);
+          put(local(p.x, p.y), false); connect(previous, group.length - 1); previous = group.length - 1;
         }
       }
     }
@@ -251,7 +232,7 @@ function buildTree() {
   }
 
   const nearest = (cluster: Blueprint, point: Point) => members.get(cluster.id)!.reduce((a, b) => distance(a, point) < distance(b, point) ? a : b);
-  const road = (id: string, a: MutableNode, b: MutableNode, home: SkillDomain, away: SkillDomain, ignore: readonly string[] = []) => {
+  const road = (id: string, a: MutableNode, b: MutableNode, home: SkillDomain, away: SkillDomain, ignore: readonly string[] = [], maxSteps = 3) => {
     const length = distance(a, b), mid = mix(a, b, .5), nx = -(b.y - a.y) / length, ny = (b.x - a.x) / length;
     let control = mid;
     for (const bend of [Math.min(45, length * .11), -Math.min(45, length * .11), 0]) {
@@ -263,7 +244,7 @@ function buildTree() {
       }
       if (valid) { control = candidate; break; }
     }
-    const count = Math.max(1, Math.min(3, Math.round(length / 180)));
+    const count = Math.max(1, Math.min(maxSteps, Math.round(length / 180)));
     let previous = a, previousT = 0;
     for (let step = 1; step <= count; step++) {
       const t = step / count, p = quadratic(a, control, b, t);
@@ -312,45 +293,50 @@ function buildTree() {
     const schoolStarts: MutableNode[] = [], exits: MutableNode[] = [];
     for (const [schoolIndex, school] of region.schools.entries()) {
       const angle = region.angle + school.angle * 1.35;
+      const local = (outward: number, side = 0): Point => ({
+        x: Math.cos(angle) * outward - Math.sin(angle) * side,
+        y: Math.sin(angle) * outward + Math.cos(angle) * side,
+      });
       const family = earlyChoices[region.domain][schoolIndex];
       const entrance = add({ id: `school:${school.id}`, ...polar(185, angle), kind: 'minor', domain: region.domain, role: 'choice',
         name: family.name, description: `${family.description} Opens ${school.name.toLowerCase()}.`, bonuses: family.minor });
       schoolStarts.push(entrance);
       link(first.id, entrance.id, polar(132, region.angle + school.angle * .65));
       const skill = school.skills[0], definition = SKILL_DEFINITIONS[skill];
-      const major = add({ id: `skill:${skill}`, ...polar(292, angle), kind: 'major', domain: region.domain,
+      const major = add({ id: `skill:${skill}`, ...local(292, -35), kind: 'major', domain: region.domain,
         name: definition.name, description: `${definition.description} Requires: ${skillRequirementLabel(definition.requirement)}.`, skill, bonuses: {} });
-      link(entrance.id, major.id, polar(239, angle + .035));
+      link(entrance.id, major.id, mix(entrance, major, .5));
       const choices: MutableNode[] = [];
       for (let branch = 0; branch < 3; branch++) {
         const specialty = earlyChoices[region.domain][branch];
-        const choice = add({ id: `choice:${school.id}:${branch}`, ...polar(410, angle + (branch - 1) * .19),
+        const choice = add({ id: `choice:${school.id}:${branch}`, ...local([410, 525, 635][branch], 80),
           kind: 'minor', domain: region.domain, role: 'choice', name: specialty.name, description: specialty.description,
           bonuses: specialty.minor });
         choices.push(choice);
-        link(major.id, choice.id, polar(355, angle + (branch - 1) * .09));
-        if (branch !== 1) link(entrance.id, choice.id, polar(292, angle + (branch - 1) * .37));
-        if (branch > 0) link(choices[branch - 1].id, choice.id, polar(419, angle + (branch - 1.5) * .19));
+        const previous = branch === 0 ? entrance : choices[branch - 1];
+        link(previous.id, choice.id, mix(previous, choice, .5));
       }
-      let exit = choices[1];
+      const exit = choices[2];
       if (school.skills[1]) {
         const skill = school.skills[1], definition = SKILL_DEFINITIONS[skill];
-        exit = add({ id: `skill:${skill}`, ...polar(540, angle), kind: 'major', domain: region.domain,
+        const advanced = add({ id: `skill:${skill}`, ...local(540, -35), kind: 'major', domain: region.domain,
           name: definition.name, description: `${definition.description} Requires: ${skillRequirementLabel(definition.requirement)}.`, skill, bonuses: {} });
-        for (const choice of choices) link(choice.id, exit.id, mix(choice, exit, .5));
+        link(choices[0].id, advanced.id, mix(choices[0], advanced, .5));
       }
       exits.push(exit);
       const cluster = blueprints.filter(b => b.domain === region.domain).slice(0, 3)[schoolIndex];
       const arrival = nearest(cluster, exit);
-      road(`path:${school.id}:arrival`, exit, arrival, region.domain, region.domain, [cluster.id]);
-      // Passives may continue outward without buying an active skill they won't use.
-      const bypass = choices[schoolIndex === 0 ? 0 : 2];
-      road(`path:${school.id}:passives`, bypass, arrival, region.domain, region.domain, [cluster.id]);
+      road(`path:${school.id}:arrival`, exit, arrival, region.domain, region.domain, [cluster.id], 1);
+      const focal = members.get(cluster.id)!.find(node => node.kind === 'notable')!;
+      if (focal.id !== arrival.id) link(arrival.id, focal.id, mix(arrival, focal, .5));
     }
     for (let school = 1; school < schoolStarts.length; school++) {
       const a = schoolStarts[school - 1], b = schoolStarts[school];
-      link(a.id, b.id, polar(205, region.angle + (region.schools[school - 1].angle + region.schools[school].angle) * .675));
-      road(`bridge:${region.domain}:${school}`, exits[school - 1], exits[school], region.domain, region.domain);
+      link(a.id, b.id, mix(a, b, .5));
+      const midAngle = region.angle + (region.schools[school - 1].angle + region.schools[school].angle) * .675;
+      const junction = travel(`bridge:${region.domain}:${school}:1`, polar(730, midAngle), region.domain);
+      link(exits[school - 1].id, junction.id, mix(exits[school - 1], junction, .5));
+      link(junction.id, exits[school].id, bendBetween(junction, exits[school], -30));
     }
     innerBorders.push([schoolStarts[0], schoolStarts[2]]);
   }
@@ -358,7 +344,7 @@ function buildTree() {
   const borderNodes = innerBorders.flat().sort((a, b) => Math.atan2(a.y, a.x) - Math.atan2(b.y, b.x));
   for (let i = 0; i < borderNodes.length; i++) {
     const a = borderNodes[i], b = borderNodes[(i + 1) % borderNodes.length];
-    if (a.domain !== b.domain) link(a.id, b.id, polar(235, Math.atan2(a.y + b.y, a.x + b.x)));
+    if (a.domain !== b.domain) link(a.id, b.id, mix(a, b, .5));
   }
 
   // Skill growth occupies the gaps between passive terraces, preserving their organic loops.
@@ -375,9 +361,9 @@ function buildTree() {
   for (const region of REGIONS) for (const school of region.schools) {
     const angle = region.angle + school.angle * 1.05;
     const outward = blueprints.filter(b => b.domain === region.domain && b.id.includes(':terrace:1:'))
-      .sort((a, b) => distance(a, polar(1370, angle)) - distance(b, polar(1370, angle)))[0];
+      .sort((a, b) => distance(a, polar(1530, angle)) - distance(b, polar(1530, angle)))[0];
     school.skills.forEach((skill, index) => {
-      const node = add({ id: masteryNode(skill), ...openPosition(polar(1690, angle + (index ? .065 : -.065))), kind: 'notable', domain: region.domain,
+      const node = add({ id: masteryNode(skill), ...openPosition(polar(1850, angle + (index ? .065 : -.065))), kind: 'notable', domain: region.domain,
         name: `${SKILL_DEFINITIONS[skill].name} Mastery`, description: 'Raises the purchased rank ceiling from 5 to 7. Each additional rank still costs one skill point.', mastery: skill, bonuses: {} });
       road(`mastery:${skill}:in`, nearest(outward, node), node, region.domain, region.domain);
       const next = blueprints.filter(b => b.domain === region.domain && b.id.includes(':terrace:2:')).sort((a,b) => distance(a,node)-distance(b,node))[0];
@@ -386,7 +372,7 @@ function buildTree() {
   }
   for (const [index, skill] of (['cataclysm', 'absoluteZero', 'tempest'] as const).entries()) {
     const angle = -1.55 + (index - 1) * .5, definition = SKILL_DEFINITIONS[skill];
-    const node = add({ id: `skill:${skill}`, ...openPosition(polar(3010, angle)), cluster: `ultimate:${skill}`, kind: 'major', domain: 'Arcana', skill,
+    const node = add({ id: `skill:${skill}`, ...openPosition(polar(3170, angle)), cluster: `ultimate:${skill}`, kind: 'major', domain: 'Arcana', skill,
       name: definition.name, description: definition.description, bonuses: {} });
     for (const terrace of [3, 4]) {
       const near = blueprints.filter(b => b.domain === 'Arcana' && b.id.includes(`:terrace:${terrace}:`)).sort((a,b)=>distance(a,node)-distance(b,node))[0];
@@ -394,21 +380,64 @@ function buildTree() {
     }
     developmentClusters.push({ id: `ultimate:${skill}`, name: definition.name, domain: 'Arcana', x: node.x, y: node.y, radius: 65 });
   }
-  const overload = add({ id: OVERLOAD_NODE, ...openPosition(polar(2350,-1.55)), kind: 'notable', domain: 'Arcana', keystone: true,
+  const overload = add({ id: OVERLOAD_NODE, ...openPosition(polar(2510,-1.55)), kind: 'notable', domain: 'Arcana', keystone: true,
     name: 'Arcane Overload', description: 'Optional: Arcana skills deal 30% more damage and cost 60% more mana, including Tempest upkeep. Toggle in this node after allocation.', bonuses: {} });
   for (const terrace of [2,3]) {
     const near = blueprints.filter(b=>b.domain === 'Arcana' && b.id.includes(`:terrace:${terrace}:`)).sort((a,b)=>distance(a,overload)-distance(b,overload))[0];
     road(`overload:${terrace}`, nearest(near,overload), overload, 'Arcana','Arcana');
   }
 
-  // Three compact, independent leaves belong to each skill, never to a nearby
-  // passive constellation. Authored orientations preserve clearance without a runtime layout search.
+  // Open the starter garden without changing any node IDs, links or point costs.
+  // The inner schools get the most room; the outer atlas keeps its silhouette.
+  const spread = (p: Point): Point => {
+    const radius = Math.hypot(p.x, p.y);
+    const scale = radius < 900 ? 2.5 : (radius + 1350) / radius;
+    return { x: p.x * scale, y: p.y * scale };
+  };
+  const originalPositions = new Map(nodes.map(node => [node.id, { x: node.x, y: node.y }]));
+  const clusterById = new Map(blueprints.map(cluster => [cluster.id, cluster]));
+  const spreadMember = (p: Point, cluster: Blueprint): Point => {
+    const center = spread(cluster);
+    return { x: center.x + (p.x - cluster.x) * 1.45, y: center.y + (p.y - cluster.y) * 1.45 };
+  };
+  for (const node of nodes) {
+    const cluster = node.cluster && clusterById.get(node.cluster);
+    Object.assign(node, cluster ? spreadMember(node, cluster) : spread(node));
+  }
+  for (let i = 0; i < edges.length; i++) {
+    const edge = edges[i], a = byId.get(edge.from)!, b = byId.get(edge.to)!;
+    const cluster = a.cluster === b.cluster && a.cluster && clusterById.get(a.cluster);
+    if (!edge.control) continue;
+    const control = cluster ? spreadMember(edge.control, cluster) : spread(edge.control);
+    if (!cluster) {
+      // Reanchor roads to the rigid constellation ports without distorting their interiors.
+      for (const node of [a, b]) {
+        const warped = spread(originalPositions.get(node.id)!);
+        control.x += (node.x - warped.x) / 2; control.y += (node.y - warped.y) / 2;
+      }
+    }
+    edges[i] = Object.freeze({ ...edge, control: Object.freeze(control) });
+  }
+  for (const cluster of developmentClusters) Object.assign(cluster, spread(cluster));
+  // Small outer-road deflections keep the ultimate branches clear.
+  for (const [from, to, bend] of [
+    ['road:130:146:1', 'road:130:146:2', 25],
+  ] as const) {
+    const index = edges.findIndex(edge => edge.from === from && edge.to === to);
+    if (index >= 0) edges[index] = Object.freeze({ ...edges[index],
+      control: Object.freeze(bendBetween(byId.get(from)!, byId.get(to)!, bend)) });
+  }
+
+  // Each skill is a self-contained three-pronged branch beside the passive backbone.
   for (const parent of [...nodes].filter(node => node.skill)) {
     const skill = parent.skill!, variants = SKILL_SPECIALIZATIONS.filter(v => v.skill === skill);
-    const rotation = SPECIALIZATION_FAN_ANGLES[skill];
-    const fan = variants.map((_, leaf) => [1, 2, 3].map(depth => {
-      const offset = polar(48 * depth, rotation + (leaf - 1) * (.68 + depth * .035));
-      return { x: parent.x + offset.x, y: parent.y + offset.y };
+    const school = REGIONS.flatMap(region => region.schools).find(school => school.skills.includes(skill));
+    const gate = school && byId.get(`school:${school.id}`)!;
+    const rotation = ULTIMATE_BRANCH_ANGLES[skill] ?? Math.atan2(gate!.y, gate!.x);
+    const fan = variants.map((_, leaf) => [85, 170, 255].map((outward, depth) => {
+      const side = (leaf - 1) * (105 + depth * 10);
+      return { x: parent.x + Math.cos(rotation) * outward - Math.sin(rotation) * side,
+        y: parent.y + Math.sin(rotation) * outward + Math.cos(rotation) * side };
     }));
     const cluster = `development:${skill}`, members: MutableNode[] = [];
     variants.forEach((variant, leaf) => {
@@ -421,22 +450,21 @@ function buildTree() {
         const node = add({ id: specializationPassiveNode(variant.id, improvement), ...fan[leaf][index],
           kind: 'minor', domain: parent.domain, cluster, developmentSkill: skill, improvement,
           name: improvement === 'potency' ? duration ? 'Endurance' : 'Potency' : 'Efficiency', description, bonuses: {} });
-        const control = mix(previous, node, .5), offset = polar(4, Math.atan2(node.y - previous.y, node.x - previous.x) + Math.PI / 2);
-        link(previous.id, node.id, { x: control.x + offset.x, y: control.y + offset.y });
+        link(previous.id, node.id, mix(previous, node, .5));
         members.push(node); previous = node;
       }
       const node = add({ id: specializationNode(variant.id), ...fan[leaf][2], kind: 'notable', domain: parent.domain,
         name: variant.name, description: variant.description, specialization: variant.id, developmentSkill: skill, cluster, bonuses: {} });
       const control = mix(previous, node, .5);
-      link(previous.id, node.id, { x: control.x + 3, y: control.y - 3 }); members.push(node);
+      link(previous.id, node.id, control); members.push(node);
     });
     const center = { x: members.reduce((sum, n) => sum + n.x, 0) / members.length, y: members.reduce((sum, n) => sum + n.y, 0) / members.length };
     developmentClusters.push({ id: cluster, name: SKILL_DEFINITIONS[skill].name, domain: parent.domain, ...center,
       radius: Math.max(...members.map(node => distance(node, center))) + 20 });
   }
 
-  const clusters = blueprints.map(cluster => Object.freeze({ id: cluster.id, name: cluster.family.name, domain: cluster.domain, x: cluster.x, y: cluster.y,
-    radius: Math.max(...members.get(cluster.id)!.map(node => distance(node, cluster))) + 8 }));
+  const clusters = blueprints.map(cluster => Object.freeze({ id: cluster.id, name: cluster.family.name, domain: cluster.domain, ...spread(cluster),
+    radius: Math.max(...members.get(cluster.id)!.map(node => distance(node, spread(cluster)))) + 8 }));
   const bounds = Object.freeze({ minX: Math.min(...nodes.map(node => node.x)) - 90, minY: Math.min(...nodes.map(node => node.y)) - 90,
     maxX: Math.max(...nodes.map(node => node.x)) + 90, maxY: Math.max(...nodes.map(node => node.y)) + 90 });
   for (const node of nodes) { Object.freeze(node.neighbors); Object.freeze(node); }

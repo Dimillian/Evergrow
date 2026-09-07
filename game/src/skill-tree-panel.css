@@ -73,9 +73,9 @@
 @media (max-width: 900px) {
   .skill-atlas { padding: 12px; }
   .skill-atlas-main { grid-template-columns: minmax(0, 1fr) 300px; }
-  .skill-atlas-toolbar { gap: 6px; padding: 10px; flex-wrap: wrap; }
-  .skill-atlas-search { flex-basis: calc(100% - 150px); }
-  .skill-atlas-toolbar [data-tree="reachable"] { flex-grow: 1; }
+  .skill-atlas-toolbar { gap: 6px; padding: 8px; flex-wrap: nowrap; }
+  .skill-atlas-search { flex: 1 1 140px; min-width: 80px; }
+  .skill-atlas-toolbar [data-tree="reachable"] { flex: none; font-size: 12px; padding: 0 8px; }
   .skill-atlas-inspection, .skill-atlas-loadout { padding-left: 17px; padding-right: 17px; }
   .skill-atlas-domains { display: none; }
   .skill-atlas-results { top: 118px; left: 10px; width: calc(100% - 20px); }
@@ -222,3 +222,6 @@
 .skill-tip-wide { grid-column: 1 / -1; }
 .skill-tip-state { padding-top: 8px; border-top: 1px solid #b0c8d214; color: #bead8c; font-size: 12px; }
 .skill-tip-state.is-owned { color: #a4c9b4; }
+
+.skill-atlas.is-map-only .skill-atlas-main { grid-template-columns:minmax(0,1fr); }
+.skill-atlas-sidebar[hidden] { display:none; }

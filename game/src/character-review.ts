@@ -110,8 +110,17 @@ function show(panel: string) {
   selected = panel; inventory.close(); tree.close(); shell.showMenu(panel === 'skills' ? 'skills' : 'character', 0, 0);
   if (panel === 'skills') {
     tree.open(p); tree.inspectNode(new URLSearchParams(location.search).get('node') ?? (progressionReview ? 'skill:fireball' : 'skill:cleave'), true);
+    if (new URLSearchParams(location.search).has('map')) tree.setDetailsVisible(false);
     const zoom = new URLSearchParams(location.search).get('zoom');
     if (zoom === 'overview') tree.showOverview();
+    else if (zoom === 'starter') tree.setView(0, -50, .2);
+    else if (zoom === 'arcana') tree.setView(0, -1000, .34);
+    else if (zoom === 'school') {
+      const node = SKILL_NODES.get(new URLSearchParams(location.search).get('node') ?? 'skill:fireball')!;
+      const family = [node, ...SKILL_TREE.nodes.filter(n => n.developmentSkill === node.skill)];
+      tree.setView((Math.min(...family.map(n => n.x)) + Math.max(...family.map(n => n.x))) / 2,
+        (Math.min(...family.map(n => n.y)) + Math.max(...family.map(n => n.y))) / 2, .85);
+    }
     else if (zoom === 'region' || zoom === 'detail') {
       const cluster = SKILL_TREE.clusters.find(cluster => cluster.domain === 'Might' && cluster.name === 'Heart of Iron')!;
       const notable = SKILL_TREE.nodes.find(node => node.cluster === cluster.id && node.kind === 'notable')!;

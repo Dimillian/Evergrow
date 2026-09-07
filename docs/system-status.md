@@ -137,3 +137,10 @@ Checkpoint verification: 847 code tests pass; application/headless TypeScript an
 Wellsip, Expanse, Deep Draught, Piercing, Spellweave and Afterguard now run through shared item derivation and combat owners. Named +1–5 skill rolls use slot/family/element weights, geographic item-level gates and validated discrete recipes. Equipment ranks improve unlocked skill potency without increasing costs or modifying purchased ranks. Loot, vendor stock, enchanting, equipped-item comparisons, skill previews and saves share these rules. Temporary combat buffs expire independently; no save reset.
 
 Affix checkpoint verification: all 858 code tests, application/headless type checks and production build pass. Tests cover weighted slot pools, discrete rank odds/gates, enhancement/releveling, save round trips, failed-action buff preservation, projectile snapshots, potion restoration and block/kill ownership. Gameplay feel remains player testing.
+
+
+### Skill atlas redesign · 2026-09-07
+
+Early schools now have separate skill branches beside simple passive backbones: 2,182 nodes and 2,923 connections. Basic and advanced unlock costs remain three/four points; all 60 specializations retain two passive improvements. A Details toggle expands the atlas, domain selection centers starter skills, and overview styling emphasizes backbone connections. Route changes can invalidate older invested paths; saves are preserved. Visually approved by the user; Site publication remains separate. See `skill-progression.md`.
+
+The redesign also replaces the stretched outer clusters with five balanced silhouettes and adds cached, bounded path-light animation (gold allocations, blue previews), subtle nebulae and dust. Reduced motion is respected. Validation: 870 full-suite tests plus the added preview-priority regression pass; TypeScript and production build pass.

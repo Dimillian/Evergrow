@@ -31,6 +31,13 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
   const background = c.createRadialGradient(w * .5, h * .45, 10, w * .5, h * .5, Math.max(w, h) * .8);
   background.addColorStop(0, '#142127'); background.addColorStop(.5, '#10181e'); background.addColorStop(1, '#080e14');
   c.fillStyle = background; c.fillRect(0, 0, w, h);
+  // Broad, feathered nebulae sit behind the atlas, not behind every individual star.
+  for (const [wx, wy, color] of [[-1800, 1500, '#bb7948'], [2000, 700, '#459e88'], [0, -2100, '#7264b6']] as const) {
+    const x = sx(wx), y = sy(wy), radius = Math.max(350, 2300 * z);
+    const cloud = c.createRadialGradient(x, y, 0, x, y, radius);
+    cloud.addColorStop(0, color + '16'); cloud.addColorStop(.45, color + '09'); cloud.addColorStop(1, color + '00');
+    c.fillStyle = cloud; c.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  }
   // Subtle world-anchored dust and pools of domain color preserve orientation while panning.
   for (let i = 0; i < 700; i++) {
     const x = sx(((i * 1777 + 871) % 8011) - 4000), y = sy(((i * 2311 + 643) % 8009) - 4000);
@@ -44,22 +51,7 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     const haze = c.createRadialGradient(x, y, 0, x, y, r * 1.8);
     haze.addColorStop(0, color + '12'); haze.addColorStop(1, color + '00');
     c.fillStyle = haze; c.fillRect(x - r * 1.8, y - r * 1.8, r * 3.6, r * 3.6);
-    if (z > .06) {
-      c.strokeStyle = color + '16'; c.lineWidth = .6;
-      c.beginPath(); c.arc(x, y, r * .78, -.3, .9); c.stroke();
-      c.beginPath(); c.arc(x, y, r * .82, Math.PI - .25, Math.PI + .45); c.stroke();
-    }
-  }
-  const ox = sx(0), oy = sy(0);
-  if (z > .18) {
-    c.save(); c.translate(ox, oy); c.scale(z, z);
-    c.strokeStyle = '#a7906035'; c.lineWidth = .6 / Math.sqrt(z);
-    for (const radius of [39, 44, 80]) { c.beginPath(); c.arc(0, 0, radius, 0, TAU); c.stroke(); }
-    for (let i = 0; i < 48; i++) {
-      const a = i * TAU / 48, inside = i % 4 === 0 ? 72 : 77;
-      c.beginPath(); c.moveTo(Math.cos(a) * inside, Math.sin(a) * inside); c.lineTo(Math.cos(a) * 81, Math.sin(a) * 81); c.stroke();
-    }
-    c.restore();
+
   }
   const routeEdges = new Set(view.route.slice(1).map((id, i) => edgeKey(id, view.route[i])));
   const routeNodes = new Set(view.route);
@@ -74,16 +66,17 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     const owned = view.allocated.has(a.id) && view.allocated.has(b.id);
     const route = routeEdges.has(edgeKey(a.id, b.id));
     const available = view.allocated.has(a.id) || view.allocated.has(b.id);
+    const development = a.developmentSkill || b.developmentSkill;
     const family = focusedSkill && (a.developmentSkill === focusedSkill || b.developmentSkill === focusedSkill);
     const sameCluster = a.cluster && a.cluster === b.cluster;
+    const schoolPath = Math.max(Math.hypot(a.x, a.y), Math.hypot(b.x, b.y)) < 1800;
     const color = a.domain === b.domain ? SKILL_DOMAIN_COLORS[a.domain] : '#b6ad8c';
-    c.globalAlpha = owned || route || view.matches(a) || view.matches(b) ? 1 : .12;
+    c.globalAlpha = owned || route ? 1 : !view.matches(a) && !view.matches(b) ? .12 : development && !family ? .72 : 1;
     c.beginPath(); c.moveTo(ax, ay); c.quadraticCurveTo(cx, cy, bx, by);
     c.strokeStyle = '#040a10'; c.lineWidth = Math.max(1, 3 * Math.sqrt(z)); c.stroke();
     if (owned) { c.strokeStyle = '#e7be5b26'; c.lineWidth = Math.max(3, 7 * Math.sqrt(z)); c.stroke(); }
-    c.strokeStyle = owned ? '#e9d094' : route ? '#d3c29d' : family ? color : available ? '#b0a17d' : color + (sameCluster ? 'a0' : '83');
-    c.lineWidth = owned ? Math.max(1.3, 1.8 * Math.sqrt(z)) : route || family ? 1.2 : Math.max(.45, .9 * Math.sqrt(z));
-    if (route && !owned) c.setLineDash([4, 4]);
+    c.strokeStyle = owned ? '#e9d094' : route ? '#99baca' : family ? color : available ? '#b0a17d' : color + (schoolPath ? 'ce' : sameCluster ? 'a0' : '83');
+    c.lineWidth = owned ? Math.max(1.3, 1.8 * Math.sqrt(z)) : route || family ? 1.2 : schoolPath ? .9 : Math.max(.55, .9 * Math.sqrt(z));
     c.stroke(); c.setLineDash([]);
   }
   c.globalAlpha = 1;
@@ -127,7 +120,7 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
         }
       }
     }
-    if (radius > 4.5) drawSkillGlyph(c, node, x, y, radius * (major ? 1.33 : 1.35), owned ? '#f3dda7' : color);
+    if (radius > 4.5 && (!node.developmentSkill || node.specialization || z >= .55 || selected || hover)) drawSkillGlyph(c, node, x, y, radius * (major ? 1.33 : 1.35), owned ? '#f3dda7' : color);
     else if (owned && radius > 1.8) { c.fillStyle = '#ffe5a8'; c.beginPath(); c.arc(x, y, radius * .4, 0, TAU); c.fill(); }
     if (selected || hover) {
       c.strokeStyle = selected ? '#f0d597' : '#b5c7bf'; c.lineWidth = 1;
@@ -149,11 +142,11 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
   }
   const priorityNodes = SKILL_TREE.nodes.filter(node => (z >= .7 && node.specialization && node.developmentSkill === focusedSkill) || node.kind === 'major' || node.kind === 'origin' || node.id === view.selected);
   for (const node of priorityNodes) {
-    if (z < .15 || z < .36 && node.id !== view.selected) continue;
+    if (z < .15 || z < .18 && node.id !== view.selected) continue;
     label(node.kind === 'origin' ? 'THE FIRST STAR' : node.name, sx(node.x), sy(node.y) + skillNodeScreenRadius(node, z) + (node.skill && view.allocated.has(node.id) && z >= .55 ? 26 : 11),
       view.allocated.has(node.id) ? '#efdaad' : '#c8bba0', 12);
   }
-  if (z >= .27 && z <= 1.6) for (const cluster of SKILL_TREE.clusters) {
+  if (z >= .45 && z <= 1.6) for (const cluster of SKILL_TREE.clusters) {
     if (cluster.id.startsWith('development:')) continue;
     const x = sx(cluster.x), y = sy(cluster.y + cluster.radius + 22);
     if (x < 40 || x > w - 40 || y < 10 || y > h - 60) continue;
