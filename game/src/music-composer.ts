@@ -116,7 +116,10 @@ export class MusicComposer {
     const job = { cue, abort: new AbortController() };
     this.loading = job;
     try {
-      const response = await this.fetchAudio(this.tracks[cue].url, { signal: job.abort.signal });
+      // Call the platform function without binding its receiver to this composer.
+      // Native Window.fetch rejects a MusicComposer receiver.
+      const fetchAudio = this.fetchAudio;
+      const response = await fetchAudio(this.tracks[cue].url, { signal: job.abort.signal });
       if (!response.ok) throw new Error(`Music request failed: ${response.status}`);
       const bytes = await response.arrayBuffer();
       if (this.disposed || job.abort.signal.aborted) return;

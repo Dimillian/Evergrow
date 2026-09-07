@@ -25,8 +25,10 @@ of random battle barks or camera visibility. It never changes AI or simulation.
 
 ## Playback and lifecycle
 
-The first click/key interaction unlocks the shared Web Audio context. Before
-that gesture, no music downloads or autoplay are attempted. Audio is also
+The main menu/character hall uses the town cue, even when the selected character
+is saved in the wilderness or crypt. The first click/key interaction unlocks
+the shared Web Audio context. Before that gesture, no music downloads or autoplay
+are attempted. Audio is also
 unlocked through existing touch/controller entry paths. N and Options > Sound
 control both music and effects. Browser visibility and native Android background
 events suppress both without changing the saved sound preference. Foregrounding
@@ -72,7 +74,8 @@ publication, save reset or migration is part of this change.
 
 ## Verification
 
-Code tests cover location/engagement priority, town-boundary grace, combat hold,
+Code tests cover main-menu town playback with a receiver-sensitive browser fetch,
+location/engagement priority, town-boundary grace, combat hold,
 menu ducking, interrupted fades, guard trimming and musical frame counts at
 44.1/48 kHz, remembered positions,
 stale loads, mute during decode, retry throttling, background preference

@@ -83,6 +83,27 @@ function setup(fetchAudio: typeof fetch = async () => new Response(new ArrayBuff
 }
 async function flush() { for (let i = 0; i < 12; i++) await Promise.resolve(); }
 
+test('the main menu loads town music without rebinding the browser fetch receiver', async t => {
+  const requests: string[] = [];
+  const fetcher = async function(this: unknown, url: RequestInfo | URL, init?: RequestInit) {
+    // Browser fetch accepts a global/undefined receiver, not a MusicComposer.
+    if (this !== undefined && this !== globalThis) throw new TypeError('Illegal invocation');
+    requests.push(String(url));
+    assert.ok(init?.signal instanceof AbortSignal);
+    return new Response(new ArrayBuffer(4));
+  };
+  const f = setup(fetcher); t.after(() => f.music.dispose());
+  const menu: MusicSituation = { phase: 'ready', location: 'crypt', engaged: true };
+  f.music.update(menu, .016);
+  assert.equal(requests.length, 0, 'the menu still waits for audio unlock');
+  f.attach(); await flush();
+  assert.deepEqual(requests, ['town'], 'the main menu overrides the character location and engagement');
+  assert.equal(f.sources.length, 1, 'town audio reaches looping playback');
+  assert.equal(f.sources[0].loop, true);
+  for (let i = 0; i < 120; i++) f.music.update(menu, .016);
+  assert.equal(f.sources.length, 1, 'menu frames do not restart the track');
+});
+
 test('native buffer looping, crossfades, in-progress ramp reversal and position resumption', async t => {
   const f = setup(); t.after(() => f.music.dispose());
   f.attach(); f.music.update(fight, .1); await flush();
