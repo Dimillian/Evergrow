@@ -1,11 +1,10 @@
 # Current system status
 
-The character-editor upstream review checkpoint passes 797 code tests, strict application/headless compilation and the production build. Its [25-image screenshot gallery](captures/2026-09-07/character-editor/README.md) includes desktop/phone UI, all procedural parts and six frozen world-rendered looks. Hall/inventory portraits preserve tint and helmet projection, and tint materials retain the hex format required by downstream shading.
+The character-editor rebase onto upstream `91b3279` passes 817 code tests, strict application/headless compilation and the production build. Its [25-image screenshot gallery](captures/2026-09-07/character-editor/README.md) includes desktop/phone UI, all procedural parts and six frozen world-rendered looks. Hall/inventory portraits preserve tint and helmet projection, and tint materials retain the hex format required by downstream shading.
 
-Updated 2026-09-07 after character-editor integration and the Ashglass battle-bark checkpoint. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
+Updated 2026-09-07 after rebasing the character editor onto the upstream pause-menu, ground-loot and destructible-container updates. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
 
 [Character appearance](character-editor.md) is integrated in creation and inventory with shared world/portrait rendering. Save v4 requires the appearance recipe; valid pre-editor v3 characters migrate automatically with the default look, preserving progress.
-
 
 ## Implemented systems
 
