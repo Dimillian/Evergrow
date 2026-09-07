@@ -99,12 +99,15 @@ export function playerMotion(pose: CharacterPose) {
   const cast = pose.dead ? 0 : smooth(pose.cast ?? 0);
   const rangedDraw = Math.max(pose.weapon?.kind === 'bow' ? cast : 0, ranged && attack > 0 ? (attack < start ? smooth(attack / start)
     : 1 - smooth((attack - start) / Math.max(.06, (end - start) * .75))) : 0);
-  // Basic bolts gather at the grip and release with a small impulse. Keep their
+  // Basic bolts lift/flick toward release, then ease back into carry. Keep their
   // pose separate from full skill casting, which may turn the weapon to aim.
   const magicBasic = ranged && (pose.weapon?.kind === 'staff' || pose.weapon?.kind === 'wand') && pose.attackHand !== 'off';
   const boltPulse = magicBasic && attack > 0 ? attack < start ? smooth(attack / start)
-    : 1 - smooth((attack - start) / Math.min(.28, 1 - start)) : 0;
+    : 1 - smooth((attack - start) / Math.max(.01, 1 - start)) : 0;
   const basicImpulse = boltPulse * (1 - cast);
+  const wandFlick = magicBasic && attack > 0 ? attack < start
+    ? -.32 * Math.sin(Math.PI * attack / start) + .48 * smooth(attack / start)
+    : .48 * (1 - smooth((attack - start) / Math.max(.01, 1 - start))) : 0;
   const weaponCharge = Math.max(cast, boltPulse);
   const staffCharge = pose.weapon?.kind === 'staff' ? cast : 0;
   const staffPalmOffset = 12 * (1 - staffCharge);
@@ -130,13 +133,13 @@ export function playerMotion(pose: CharacterPose) {
     // Upright two-hand carry: the lower palm supports the shaft below the lead grip.
     const carry = -Math.PI / 2 + Math.cos(pose.angle) * .035 + idleSway * .12;
     const turn = Math.atan2(Math.sin(pose.angle - carry), Math.cos(pose.angle - carry));
-    weaponAngle = carry + turn * staffCharge + (Math.cos(pose.angle) * .065 - Math.sin(pose.angle) * .025) * basicImpulse;
+    weaponAngle = carry + turn * staffCharge + (Math.cos(pose.angle) * .11 - Math.sin(pose.angle) * .045) * basicImpulse;
   }
   const wandCharge = pose.weapon?.kind === 'wand' && pose.attackHand !== 'off' ? cast : 0;
   if (pose.weapon?.kind === 'wand' && pose.attackHand !== 'off') {
     const carry = -Math.PI / 2 - Math.sin(pose.angle) * .25 + idleSway * .3;
     weaponAngle = carry + Math.atan2(Math.sin(pose.angle - carry), Math.cos(pose.angle - carry)) * wandCharge
-      + (Math.cos(pose.angle) * .13 - Math.sin(pose.angle) * .055) * basicImpulse;
+      + (Math.cos(pose.angle) >= 0 ? 1 : -1) * wandFlick * (1 - cast);
   }
   if (pose.gesture === 'thrust') weaponAngle += (pose.angle - weaponAngle) * cast;
   if (pose.gesture === 'slam') weaponAngle -= cast * .9;
@@ -181,17 +184,17 @@ export function playerMotion(pose: CharacterPose) {
     hand = projectArmPoint(weaponHand);
   }
   if (pose.weapon?.kind === 'staff') {
-    const reach = 6 + staffCharge * 10 + basicImpulse * 1.1, shoulderSide = 9 * (1 - staffCharge);
+    const reach = 6 + staffCharge * 10 + basicImpulse * 2.8, shoulderSide = 9 * (1 - staffCharge);
     const palm: RigPoint = [Math.cos(pose.angle) * reach - Math.sin(pose.angle) * shoulderSide,
       Math.sin(pose.angle) * reach + Math.cos(pose.angle) * shoulderSide,
-      26 - staffCharge * 4.5 + basicImpulse * .2];
+      26 - staffCharge * 4.5 + basicImpulse * 7.5];
     weaponHand = gripAt(palm, weaponAngle, -staffPalmOffset);
     hand = projectArmPoint(weaponHand);
   }
   if (pose.weapon?.kind === 'wand') {
-    const reach = 7 + wandCharge * 9 + basicImpulse * 1.7, side = 9 * (1 - wandCharge);
+    const reach = 7 + wandCharge * 9 + basicImpulse * 4.2, side = 9 * (1 - wandCharge);
     weaponHand = [Math.cos(pose.angle) * reach - Math.sin(pose.angle) * side,
-      Math.sin(pose.angle) * reach + Math.cos(pose.angle) * side, 23 - wandCharge * 1.5 + basicImpulse * .35];
+      Math.sin(pose.angle) * reach + Math.cos(pose.angle) * side, 23 - wandCharge * 1.5 + basicImpulse * 2.8];
   }
   if (pose.gesture === 'thrust' || pose.gesture === 'slam') {
     const reach = 10 + cast * (pose.gesture === 'thrust' ? 12 : 5);

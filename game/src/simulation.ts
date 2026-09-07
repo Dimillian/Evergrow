@@ -424,11 +424,16 @@ export class Simulation {
       if (p.attack.kind === 'ranged' && !p.attack.released && p.attack.elapsed >= p.attack.activeStart) {
         const attack = p.attack, style = attack.projectile?.style ?? 'arrow';
         const speed = style === 'arrow' ? 560 : 380;
-        this.projectile(p.x, p.y, attack.angle,
+        const shot = this.projectile(p.x, p.y, attack.angle,
           { owner: 'player', damage: attack.damage, speed, life: attack.range / speed, radius: style === 'arrow' ? 2 : 5 },
           undefined, attack.projectile);
+        if (shot && attack.weapon.attackKind === 'bolt') shot.launch = {
+          weapon: { ...attack.weapon.visual }, hands: attack.weapon.hands, facing: attack.angle, time: this.time,
+          gaitPhase: p.walkTime, moving: Math.min(1, Math.hypot(p.vx, p.vy) / 130), moveAngle: Math.atan2(p.vy, p.vx),
+          start: attack.activeStart / attack.duration, end: attack.activeEnd / attack.duration,
+        };
         attack.released = true;
-        this.events.push({ type: 'cast', x: p.x, y: p.y, angle: attack.angle, style });
+        this.events.push({ type: 'cast', x: p.x, y: p.y, angle: attack.angle, style, ...(shot?.launch ? { launch: shot.launch } : {}) });
       }
       if (p.attack.elapsed + 1e-9 >= p.attack.duration) {
         // Carry sub-tick recovery time so repeated swings keep the derived rate.
@@ -664,12 +669,14 @@ export class Simulation {
     if (this.player.dead) this.clearInput();
   }
 
-  private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill?: SkillId, effects?: ProjectileEffects, sourceLevel = this.player.level, sourceKind?: EnemyKind): void {
+  private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill?: SkillId, effects?: ProjectileEffects, sourceLevel = this.player.level, sourceKind?: EnemyKind): Projectile | undefined {
     if (this.projectiles.length >= MAX_PROJECTILES) return;
     const { speed, life, radius, damage, owner } = definition;
-    this.projectiles.push({ id: this.nextId++, sourceLevel, sourceKind, x, y, prevX: x, prevY: y,
+    const shot: Projectile = { id: this.nextId++, sourceLevel, sourceKind, x, y, prevX: x, prevY: y,
       vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, radius, damage, life, maxLife: life, owner, skill,
-      effects: effects ? { ...effects } : undefined, hitIds: new Set() });
+      effects: effects ? { ...effects } : undefined, hitIds: new Set() };
+    this.projectiles.push(shot);
+    return shot;
   }
 
   private containerContext(): ContainerAttackContext {

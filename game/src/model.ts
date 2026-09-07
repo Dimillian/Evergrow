@@ -232,6 +232,11 @@ export interface Enemy {
   burnTick: number;
 }
 
+/** Frozen launch pose used only to connect the visible bolt to its emitting tip. */
+export interface BasicBoltLaunch {
+  weapon: WeaponVisual; hands: 1 | 2; facing: number; time: number;
+  gaitPhase: number; moving: number; moveAngle: number; start: number; end: number;
+}
 export interface Projectile {
   id: number;
   readonly sourceLevel: number;
@@ -249,6 +254,7 @@ export interface Projectile {
   maxLife: number;
   owner: 'player' | 'enemy';
   skill?: SkillId;
+  launch?: BasicBoltLaunch;
   effects?: ProjectileEffects;
   hitIds: Set<number>;
 }
@@ -285,7 +291,7 @@ export type CombatEvent = EventAppearance & (
   | { readonly type: 'hit'; readonly angle: number; readonly value: number; readonly targetId: number;
       readonly remainingHp: number; readonly enemyKind: EnemyKind; readonly heavy: boolean }
   | { readonly type: 'kill'; readonly angle: number; readonly facing: number; readonly targetId: number; readonly remainingHp: 0; readonly enemyKind: EnemyKind }
-  | { readonly type: 'cast'; readonly angle: number; readonly enemyKind?: EnemyKind }
+  | { readonly type: 'cast'; readonly angle: number; readonly launch?: BasicBoltLaunch; readonly enemyKind?: EnemyKind }
   | { readonly type: 'hurt'; readonly angle: number; readonly value: number; readonly remainingHp: number;
       readonly enemyKind?: EnemyKind; readonly heavy: boolean }
   | { readonly type: 'dodge'; readonly angle: number }

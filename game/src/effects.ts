@@ -1,3 +1,4 @@
+import { basicBoltTip } from './projectile-launch.ts';
 import { PROJECTILE_HEIGHT } from './ranged-aim.ts';
 import { SKILL_CAST_MOTION } from './combat-content.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
@@ -54,6 +55,7 @@ export class CombatEffects {
       const heavy = 'heavy' in event && event.heavy;
       const eventAngle = 'angle' in event ? event.angle : 0;
       const restoring = event.type === 'heal' || event.type === 'potion';
+      const tip = event.type === 'cast' && event.launch ? basicBoltTip(event.launch) : null;
       const enemyCast = event.type === 'cast' && event.enemyKind;
       const contact = event.type === 'hit' || event.type === 'hurt' || event.type === 'kill';
       const color = event.color ?? (event.style ? PROJECTILE_COLORS[event.style] : undefined) ?? (event.type === 'hurt' ? '#ff5e4e' : restoring || enemyCast ? MINT
@@ -65,7 +67,7 @@ export class CombatEffects {
       for (let i = 0; i < (contact ? event.type === 'kill' ? 0 : 8 : count); i++) {
         const radial = ['heal', 'potion', 'pickup', 'level', 'blast'].includes(event.type) || event.skill === 'iceNova';
         const angle = radial ? Math.random() * Math.PI * 2 : eventAngle + (Math.random() - .5) * 2.8;
-        this.spark(event.x, event.y, angle, i % 4 === 0 ? '#fff7db' : color, contact ? 1.2 : 1);
+        this.spark(event.x + (tip?.x ?? 0), event.y + (tip ? tip.y + 15 : 0), angle, i % 4 === 0 ? '#fff7db' : color, contact ? 1.2 : 1);
       }
       const contactY = event.y - (event.type === 'hurt' ? 24 : enemyKind === 'brute' ? 25 : 18);
       if (contact) this.impacts.push({ x: event.x, y: contactY, angle: eventAngle,
@@ -73,7 +75,7 @@ export class CombatEffects {
         color, hurt: event.type === 'hurt', lethal: event.type === 'kill' });
       if (count > 5) {
         const max = restoring ? .55 : event.type === 'kill' ? .16 : .22;
-        this.flashes.push({ x: event.x, y: contact ? contactY : event.y - 10, life: max, max,
+        this.flashes.push({ x: event.x + (tip?.x ?? 0), y: tip ? event.y + tip.y : contact ? contactY : event.y - 10, life: max, max,
           radius: event.type === 'kill' ? 62 : heavy ? 145 : contact ? 118 : event.type === 'loot' || event.type === 'pickup' ? 35 : 90, color,
           ring: restoring || event.type === 'level' || event.skill === 'iceNova' });
       }

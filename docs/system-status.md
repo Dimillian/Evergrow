@@ -1,5 +1,10 @@
 # Current system status
 
+## Basic caster motion · 2026-09-07
+
+Staff basics lift vertically with both hands attached; wands use a compact casting flick. Bolt cores, lights and release sparks use a frozen animated-tip launch pose, easing onto the existing aimed flight plane without changing collision, range, mana or cadence. Projectile wakes grow on release. Static casting stages are available in the weapon-light study. See [weapon rules](weapons-and-skills.md).
+
+
 ## Held elemental light and melee enchantments · 2026-09-07
 
 Staves/wands and offhand orbs/grimoires now cast type-colored, rig-anchored lights. Caster cores stay bright after world darkening; two held sources share the existing 18-light cap and dungeon clipping. Kindling/Rime/Stormbound are mutually exclusive ordinary melee affixes with real flat added damage, weapon-local scaling, elemental engravings/sheaths/trails and impact/death feedback. Generation, services, previews and save validation share the recipe; no save reset. `/weapon-lights.html` is the frozen crypt gallery. Checkpoint verification: 828 code tests and production build passed. See [weapon rules](weapons-and-skills.md).

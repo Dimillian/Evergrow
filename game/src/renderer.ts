@@ -1,3 +1,4 @@
+import { projectilePresentation } from './projectile-launch.ts';
 import { heldEquipmentLights } from './weapon-emission.ts';
 import { MaterialResponses } from './material-response.ts';
 import { drawMaterialBurst } from './material-response-art.ts';
@@ -315,7 +316,7 @@ export class Renderer {
     const biome = world.sampleBiome(px, py);
     this.biomeLife.update(dt, this.visualTime, this.cachedProps, { x: px, y: py, vx: p.vx, vy: p.vy },
       settings.reducedMotion, (x, y) => world.sampleGroundContact(x, y));
-    const lights = this.sceneLights(sim, px, py, settings.reducedMotion);
+    const lights = this.sceneLights(sim, px, py, settings.reducedMotion, alpha);
     const waterStart = this.profiler?.start() ?? 0;
     if (!sim.dungeonFloor) {
       const a = p.attack;
@@ -612,7 +613,7 @@ export class Renderer {
     this.waterArt.drawFeet(c, this.water.fluid, x, y, pose.kind === 'brute' ? 18 : pose.kind === 'player' ? 13 * PLAYER_ART_SCALE : 12);
   }
 
-  private sceneLights(sim: Simulation, px: number, py: number, reducedMotion: boolean): PointLight[] {
+  private sceneLights(sim: Simulation, px: number, py: number, reducedMotion: boolean, alpha: number): PointLight[] {
     const p = sim.player;
     const heldPose = playerPose(p, sim.time);
     heldPose.effectTime = reducedMotion ? 0 : sim.time;
@@ -649,7 +650,7 @@ export class Renderer {
     }
     if (p.healFlash > 0) lights.push({ x: px, y: py - 8, radius: 150, color: '#54e8b8', power: p.healFlash * .8 });
     lights.push(...this.effects.getLights(), ...this.materials.lights(reducedMotion));
-    for (const shot of sim.projectiles.slice(0, 8)) lights.push(projectileLight(shot));
+    for (const shot of sim.projectiles.slice(0, 8)) lights.push(projectileLight(shot, alpha));
     for(const e of sim.enemies)if(e.kind==='warden'&&e.hp>0)lights.push({x:e.x,y:e.y-50,radius:150,color:'#a3d4b9',power:e.state==='windup'?.48:.23});
     for (const enemy of sim.enemies) if (enemy.hp > 0 && (enemy.kind === 'caster' || enemy.kind === 'wisp')) {
       lights.push({ x: enemy.x, y: enemy.y - 22, radius: enemy.state === 'windup' ? 100 : 53,
@@ -684,8 +685,8 @@ export class Renderer {
       c.restore();
     }
     for (const shot of sim.projectiles) {
-      const x = lerp(shot.prevX, shot.x, alpha), y = lerp(shot.prevY, shot.y, alpha);
-      drawProjectile(c, shot, x, y - PROJECTILE_HEIGHT, this.visualTime);
+      const { x, y } = projectilePresentation(shot, alpha);
+      drawProjectile(c, shot, x, y, this.visualTime);
     }
   }
 

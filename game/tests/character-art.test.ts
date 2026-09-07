@@ -175,7 +175,7 @@ test('inventory detail keeps every SVG reference local and all procedural coordi
   }
 });
 
-test('staff and wand basics keep an upright guard, small palm travel and continuous release recovery', () => {
+test('staff basics lift vertically and wand basics flick, with attached grips and continuous recovery', () => {
   for (const weapon of WEAPON_PROFILES.filter(w => w.family === 'staff' || w.family === 'wand')) {
     for (let facing = 0; facing < 16; facing++) {
       const angle = facing * Math.PI / 8;
@@ -184,13 +184,16 @@ test('staff and wand basics keep an upright guard, small palm travel and continu
       const rest = playerMotion(base);
       for (const attack of [.001, .12, .3, .42, .5, .6, .7, .85, .999]) {
         const motion = playerMotion({ ...base, attack });
-        assert.ok(Math.abs(motion.weaponAngle - rest.weaponAngle) < .145, 'basic bolt never sweeps the weapon toward the target');
-        assert.ok(Math.sin(motion.weaponAngle) < -.9, 'weapon remains upright through the whole cycle');
+        assert.ok(Math.abs(motion.weaponAngle - rest.weaponAngle) < (weapon.family === 'staff' ? .15 : .5), 'staff stays upright; wand has a compact flick');
+        assert.ok(Math.sin(motion.weaponAngle) < (weapon.family === 'staff' ? -.97 : -.65), 'weapon stays in its guarded casting envelope');
         const palmTravel = Math.hypot(...motion.weaponArm.hand.map((v, i) => v - rest.weaponArm.hand[i]));
-        assert.ok(palmTravel < 1.8, 'only a small forward hand impulse');
+        assert.ok(palmTravel < 9, 'casting hand remains within the arm reach');
         if (weapon.family === 'staff') assert.equal(motion.supportHolding, true);
         else assert.deepEqual(motion.offArm.hand, rest.offArm.hand, 'off-hand book, orb or shield stays steady');
       }
+      const released = playerMotion({ ...base, attack: .42 });
+      if (weapon.family === 'staff') assert.ok(released.weaponArm.hand[2] - rest.weaponArm.hand[2] > 7, 'staff rises visibly at release');
+      else assert.ok(Math.abs(released.weaponAngle - rest.weaponAngle) > .4, 'wand visibly flicks at release');
       assert.equal(playerMotion({ ...base, attack: .42 }).weaponCharge, 1, 'core glow peaks at projectile release');
       for (const boundary of [0, .42, .7, 1]) {
         const before = playerMotion({ ...base, attack: Math.max(0, boundary - 1e-7) });
