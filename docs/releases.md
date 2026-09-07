@@ -4,11 +4,12 @@
 
 ## Last verified publication
 
-- Game v0.5.0 / Sites version 20, publicly deployed on 2026-09-07 at 18:43:53 UTC.
-- Published source: `3d1e281f24c3f60eb8eb82b9cf0dc99339d565b8`.
-- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_18594df3a1d081918023342f49788060`.
-- Deployment: `appgdep_6a9f05dbfccc8191ae07e7db1a628b56`; Sites returned `succeeded`.
-- The implementation passed 949 code tests. Release source passed the cloud-enabled client/server build and release-note validation; the archive includes the additive Chronicle D1 migration.
+- Game v0.5.1 / Sites version 21, publicly deployed on 2026-09-07 at 19:39:23 UTC.
+- Published source: `d9a3d1cb7b7e066a76c3c4b033c8d72e54c3c45f`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_9413d1dbb5808191aa6202cf2ffc4cd5`.
+- Deployment: `appgdep_6a9f12e02fd081919ad87da2f62349c4`; Sites returned `succeeded`.
+- Includes vendor multi-sell, Chronicle polish/tooltips, automatic Journey guidance, nearest-city pins, resumable distant events, whole-number headline stats and instant chest opening.
+- Each checkpoint passed its focused code checks. Release source passed the cloud-enabled client/server build, three changelog tests and release validation; existing D1 migrations remain included.
 - Authenticated cross-device save/Chronicle acceptance remains a player check.
 
 ## Before each requested Sites publication
