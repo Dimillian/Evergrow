@@ -1,3 +1,4 @@
+import { tintedOutfit } from './appearance-armor.ts';
 import { SKILL_DEFINITIONS, skillWeapon } from './skill-content.ts';
 import { outfitFromEquipment } from './item-art.ts';
 import type { CharacterPose } from './art.ts';
@@ -19,7 +20,7 @@ export function playerPose(player: Player, time: number,
     ? { kind: 'weapon', visual: attack?.hand === 'off' ? attack.weapon.visual : off.weapon.visual }
     : off?.kind === 'shield' ? { kind: 'shield', visual: off.shield.visual } : off?.kind === 'focus' ? { kind: 'focus', visual: off.focus.visual } : null;
   return {
-    kind: 'player', outfit: outfitFromEquipment(player.character), angle: player.castTime > 0 ? player.castAngle : player.angle,
+    kind: 'player', appearance:player.character.look.appearance, outfit:tintedOutfit(outfitFromEquipment(player.character),player.character.look.armorTints,player.character.look.showHelmet), angle: player.castTime > 0 ? player.castAngle : player.angle,
     time, gaitPhase: player.walkTime, moveAngle: Math.atan2(player.vy, player.vx),
     moving: Math.min(1, Math.hypot(player.vx, player.vy) / 130),
     attack: attack ? elapsed / attack.duration : 0,

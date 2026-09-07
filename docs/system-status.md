@@ -1,12 +1,16 @@
 # Current system status
 
-Updated 2026-09-07 after the Ashglass battle-bark checkpoint. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
+The character-editor rebase onto upstream `91b3279` passes 817 code tests, strict application/headless compilation and the production build. Its [25-image screenshot gallery](captures/2026-09-07/character-editor/README.md) includes desktop/phone UI, all procedural parts and six frozen world-rendered looks. Hall/inventory portraits preserve tint and helmet projection, and tint materials retain the hex format required by downstream shading.
+
+Updated 2026-09-07 after rebasing the character editor onto the upstream pause-menu, ground-loot and destructible-container updates. **Playable local prototype; unreleased.** This is the current implementation summary. Earlier snapshots live in [historical checkpoints](history/foundation-checkpoints.md); planned work lives in the [roadmap](roadmap.md).
+
+[Character appearance](character-editor.md) is integrated in creation and inventory with shared world/portrait rendering. Save v4 requires the appearance recipe; valid pre-editor v3 characters migrate automatically with the default look, preserving progress.
 
 ## Implemented systems
 
 | System | Current implementation | Remaining boundary |
 | --- | --- | --- |
-| Characters and saves | Compact eight-slot hall, six starters, level/power summaries and Continue/Create; local worker saves, portable character/chart import/export; Site-only Cloud / Local tabs with authenticated D1/R2 publication and a durable recovery outbox | Cloud deployment succeeded; real sign-in/cross-browser acceptance remains a player check; Android remains local-only; no save migrations |
+| Characters and saves | Compact eight-slot hall, six starters, level/power summaries and Continue/Create; local worker saves, portable character/chart import/export; Site-only Cloud / Local tabs with authenticated D1/R2 publication and a durable recovery outbox | Cloud deployment succeeded; real sign-in/cross-browser acceptance remains a player check; Android remains local-only; pre-editor v3 appearance migrates to v4 |
 | Combat | Deterministic 120 Hz simulation; weapon basics, five assignable active slots, dodge, dual potion; 20 executable skills; melee/bow attack speed and independent staff/wand/magic cast speed | Player tests feel and balance; no automatic combos or default assigned spell |
 | Aiming and input | Swept ranged contacts, directional touch/controller target assistance with bounded prediction, cursor-local mouse assistance, aim feedback; standard gamepad analog movement/aim, combat bindings and menu navigation; neutral rearm and disconnect pause | Fixed Xbox-position labels; text entry, drag/drop and gameplay zoom still use keyboard/mouse; controller hardware/feel acceptance remains with the player |
 | Android / AYN Thor | Bundled offline APK, native controller adapter, hardware-accelerated game WebView capped at 60 FPS, secondary map/64-cell pack/build UI and validated shared commands | Local debug distribution; app/browser saves separate; physical gameplay and sustained performance are user-tested; see [Android/Thor](android-thor.md) |

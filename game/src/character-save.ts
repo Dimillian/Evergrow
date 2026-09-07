@@ -1,3 +1,4 @@
+import { createCharacterLook, validCharacterLook } from './character-look.ts';
 import { ROAMING_RULES } from './roaming-encounters.ts';
 import { validJourneys, type JourneyState } from './journey-state.ts';
 import type { Expeditions, StoredActor } from './dungeon-state.ts';
@@ -19,7 +20,7 @@ import { MAX_CONTENT_LEVEL } from './progression-content.ts';
 import { xpForNextLevel } from './progression.ts';
 
 export const CHARACTER_SLOT_COUNT = 8;
-export const CHARACTER_SAVE_VERSION = 3;
+export const CHARACTER_SAVE_VERSION = 4;
 // A payload safety bound, not a lifetime activity quota. Fail without evicting progress.
 export const SAVE_MAX_CODE_UNITS = 8 * 1024 * 1024;
 export interface CharacterCheckpoint {
@@ -47,7 +48,7 @@ function validSheet(v: unknown, level: number): v is CharacterSheet {
   if (object(v) && v.recentItems !== undefined && (!Array.isArray(v.recentItems)
     || v.recentItems.length > INVENTORY_CAPACITY + EQUIPMENT_SLOTS.length
     || !v.recentItems.every(id => text(id, 160)) || new Set(v.recentItems).size !== v.recentItems.length)) return false;
-  if (!object(v) || !validBlessing(v.blessing) || !validCommerce(v.commerce, level) || (v.gold !== undefined && !validGold(v.gold)) || !object(v.attributes) || !['strength', 'dexterity', 'intelligence', 'vitality'].every(k => integer((v.attributes as ObjectValue)[k], 10, 5e6 + 10))
+  if (!object(v) || !validCharacterLook(v.look) || !validBlessing(v.blessing) || !validCommerce(v.commerce, level) || (v.gold !== undefined && !validGold(v.gold)) || !object(v.attributes) || !['strength', 'dexterity', 'intelligence', 'vitality'].every(k => integer((v.attributes as ObjectValue)[k], 10, 5e6 + 10))
     || !integer(v.statPoints, 0, 5e6) || !integer(v.skillPoints, 0, MAX_CONTENT_LEVEL)
     || !Array.isArray(v.inventory) || v.inventory.length !== INVENTORY_CAPACITY || !v.inventory.every(i => i === null || validItem(i))
     || !object(v.equipped) || Object.keys(v.equipped).length !== EQUIPMENT_SLOTS.length
@@ -69,11 +70,16 @@ function validSheet(v: unknown, level: number): v is CharacterSheet {
     && new Set(v.skillSlots.filter(Boolean)).size === v.skillSlots.filter(Boolean).length;
 }
 
-/** Reject the entire checkpoint before touching the current character. No partial repair or migration. */
+/** Upgrade pre-editor v3 appearance on the parsed copy, then validate the entire checkpoint. */
 export function decodeCharacterSave(raw: string): CharacterSave | null {
   if (raw.length > SAVE_MAX_CODE_UNITS) return null;
   try {
     const v: unknown = JSON.parse(raw);
+    if (object(v) && v.version === 3 && object(v.checkpoint) && object(v.checkpoint.character)) {
+      // v3 predates appearance. Preserve any existing recipe and let validation reject malformed data.
+      if (!Object.hasOwn(v.checkpoint.character, 'look')) v.checkpoint.character.look = createCharacterLook();
+      v.version = CHARACTER_SAVE_VERSION;
+    }
     if (!object(v) || v.version !== CHARACTER_SAVE_VERSION || !text(v.id, 64) || !/^[a-zA-Z0-9-]+$/.test(v.id)
       || !text(v.name, 24) || !integer(v.createdAt) || !integer(v.updatedAt) || v.updatedAt < v.createdAt
       || !integer(v.worldSeed, 0, 4294967295) || !integer(v.worldVersion, 1)) return null;

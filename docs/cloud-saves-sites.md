@@ -12,6 +12,10 @@ Select a character and **Continue**, or choose an empty slot and **Create charac
 
 Localhost, Safari and Android storage remain separate from the hosted domain. A browser-local character can be downloaded there and imported into Cloud on the Site. No automatic migration or save reset is required.
 
+## Appearance schema checkpoint - 2026-09-07
+
+The character-editor branch now uses save v4 with a required validated appearance recipe (head parts/colors, armor tints and helmet visibility). Valid pre-editor v3 characters migrate on decode with the default appearance, preserving progress and chart identity. Reads leave the original bytes untouched; the next successful save writes v4. Local saves, portable bundles and shared server validation use the same contract. The hosted Site has not been redeployed; this updated build accepts v3 bundles, but old deployed builds cannot read v4 exports. Compatible client/server builds are still required for synchronization. No database migration is needed.
+
 ## Storage and synchronization
 
 - `save-hub.ts` selects the active repository and chart persistence. The Site-only build flag enables capability discovery; the Android bridge explicitly disables it.

@@ -137,7 +137,7 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
   }
   // The neck counterbalances the moving torso; small facial features stay legible.
   ctx.save(); ctx.translate(lean * -12, -bob * 0.3);
-  headArmor(ctx, outfit.head, color, pose.angle);
+  headArmor(ctx, outfit.head, color, pose.angle, pose.appearance);
   ctx.restore();
   const equipmentLayers = [
     ...(!weaponBehind ? [{ depth: weaponArm.hand[1], draw: mainWeapon }] : []),

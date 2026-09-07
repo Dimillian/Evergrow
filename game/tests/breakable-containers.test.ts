@@ -76,13 +76,18 @@ test('container gold is modest, occasional, deterministic and conserves value at
   assert.equal(events.length, 1);
 });
 
-test('broken receipts and coins round-trip together without rerolling or respawning', () => {
+for (const version of [3, CHARACTER_SAVE_VERSION]) test(`broken receipts and coins survive save v${version} load without rerolling or respawning`, () => {
   const world = new World(7319), target = targetFor(world);
   const sim = new Simulation(world, { spawn: false, startX: target.x + 40, startY: target.y });
   advance(sim, .6, { attack: true, aimX: target.x, aimY: target.y });
   const checkpoint = sim.captureCheckpoint();
-  const record = { version: CHARACTER_SAVE_VERSION, id: 'test-container', name: 'Test', createdAt: 1, updatedAt: 2, worldSeed: 7319, worldVersion: 6, checkpoint };
-  const decoded = decodeCharacterSave(JSON.stringify(record)); assert.ok(decoded);
+  const record = { version, id: 'test-container', name: 'Test', createdAt: 1, updatedAt: 2, worldSeed: 7319, worldVersion: 6, checkpoint };
+  const { look: originalLook, ...preEditorCharacter } = checkpoint.character;
+  const input = version === 3 ? { ...record, checkpoint: { ...checkpoint, character: preEditorCharacter } } : record;
+  const decoded = decodeCharacterSave(JSON.stringify(input)); assert.ok(decoded);
+  assert.equal(decoded.version, CHARACTER_SAVE_VERSION);
+  assert.deepEqual(decoded.checkpoint.character.look, originalLook);
+  assert.deepEqual(decoded.checkpoint.brokenContainers, checkpoint.brokenContainers);
   const nextWorld = new World(7319), next = new Simulation(nextWorld, { spawn: false });
   next.restoreCheckpoint(decoded.checkpoint);
   assert.ok(next.brokenContainers.has(target.id)); assert.equal(nextWorld.blocked(target.x, target.y, 1), false);
@@ -90,7 +95,7 @@ test('broken receipts and coins round-trip together without rerolling or respawn
   assert.equal(nextWorld.getContainers(target.x, target.y, 1).some(t => t.id === target.id), false);
   assert.equal(next.drainEvents().some(e => e.type === 'container-break'), false);
   for (const invalid of [[target.id, target.id], [5], ['x'.repeat(181)]]) {
-    const bad = structuredClone(record); bad.checkpoint.brokenContainers = invalid as string[];
+    const bad = structuredClone(input); bad.checkpoint.brokenContainers = invalid as string[];
     assert.equal(decodeCharacterSave(JSON.stringify(bad)), null);
   }
   next.reset(); assert.equal(nextWorld.blocked(target.x, target.y, 1), true, 'a new character starts intact');

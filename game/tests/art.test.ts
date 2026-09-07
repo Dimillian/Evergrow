@@ -1,7 +1,11 @@
+import { drawCharacterPortrait } from '../src/character-portrait.ts';
+import { initialPlayer } from '../src/simulation.ts';
+import { playerPose } from '../src/character-pose.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ArtLibrary, drawHumanoid, type CharacterPose } from '../src/art.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
+import { HAIR_STYLES, SKIN_PALETTES, ACCESSORIES, FACIAL_HAIR, DEFAULT_APPEARANCE } from '../src/appearance-content.ts';
 
 interface DrawingState {
   globalCompositeOperation: string; globalAlpha: number; fillStyle: string; strokeStyle: string;
@@ -21,6 +25,7 @@ class ArtContext implements DrawingState {
   transforms = [[1, 0, 0, 1, 123.25, -456.75]];
   clips = 1;
   commands = 0;
+  fillColors = new Set<string>();
   imageSmoothingEnabled = true;
   private saved: DrawingState[] = [];
   get depth() { return this.saved.length; }
@@ -48,8 +53,10 @@ class ArtContext implements DrawingState {
   closePath() {}
   moveTo(...values: number[]) { this.record(...values); }
   lineTo(...values: number[]) { this.record(...values); }
-  fillRect(...values: number[]) { this.record(...values); }
-  fill() { this.record(); }
+  clearRect(...values: number[]) { this.record(...values); }
+  ellipse(...values: number[]) { this.record(...values); }
+  fillRect(...values: number[]) { this.fillColors.add(this.fillStyle); this.record(...values); }
+  fill() { this.fillColors.add(this.fillStyle); this.record(); }
   stroke() { this.record(this.lineWidth); }
 }
 
@@ -69,6 +76,22 @@ test('all character layers emit finite geometry and restore the caller state acr
       });
       assert.ok(c.commands > 0);
       assert.deepEqual(c.state(), before, `${kind} restores transforms, alpha and drawing styles`);
+      assert.equal(c.depth, 0);
+    }
+  }
+});
+
+test('appearance study parts preserve finite drawing and canvas state across coverage, facings and actions', () => {
+  for (const [index, hair] of HAIR_STYLES.entries()) for (let facing = 0; facing < 16; facing++) {
+    for (const covered of [false, true]) for (const action of [{}, {moving:1, gaitPhase:2.7}, {attack:.4}, {cast:.6}, {dead:true}]) {
+      const c = new ArtContext(), before = c.state();
+      drawHumanoid(c as unknown as CanvasRenderingContext2D, {
+        kind:'player', angle:facing * Math.PI / 8, attackAngle:facing * Math.PI / 8, time:2,
+        moving:0, attack:0, hitFlash:0, dodging:false, ...action, ...(covered ? {} : {outfit:{head:null}}),
+        appearance:{...DEFAULT_APPEARANCE, hair:hair.id, skin:SKIN_PALETTES[index % SKIN_PALETTES.length].id,
+          accessory:ACCESSORIES[facing % ACCESSORIES.length].id, facialHair:FACIAL_HAIR[facing % FACIAL_HAIR.length].id},
+      });
+      assert.deepEqual(c.state(), before, `${hair.id} restores the drawing state`);
       assert.equal(c.depth, 0);
     }
   }
@@ -110,5 +133,21 @@ test('every weapon family and shield silhouette draws finite connected equipment
         hitFlash: .05, dodging: false });
       assert.ok(c.commands > 0, weapon.name); assert.deepEqual(c.state(), before); assert.equal(c.depth, 0);
     }
+  }
+});
+
+
+test('inventory and hall portraits retain saved armor colors and helmet visibility', () => {
+  const player=initialPlayer(0,0);
+  player.character.look.armorTints={chest:'teal',head:'violet'};
+  player.character.look.showHelmet=true;
+  const outfit=playerPose(player,0).outfit!;
+  const chest=outfit.chest!.material.base,helmet=outfit.head!.material.base;
+  for(const visible of [false,true]){
+    player.character.look.showHelmet=visible;
+    const ctx=new ArtContext();
+    drawCharacterPortrait(ctx as unknown as CanvasRenderingContext2D,player,0,Math.PI/2,300,400);
+    assert.ok(ctx.fillColors.has(chest),'portrait draws the saved chest tint');
+    assert.equal(ctx.fillColors.has(helmet),visible,'portrait follows the saved helmet visibility');
   }
 });

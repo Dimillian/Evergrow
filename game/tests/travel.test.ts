@@ -144,7 +144,7 @@ test('travel validation rejects invalid coordinates and identities; current save
     { homeTown: 0, returnTo: { x: Infinity, y: 0, town: 0 } }, { homeTown: 1000000001, returnTo: null }]) assert.equal(validTravel(value), false);
   assert.ok(validTravel(freshTravel()));
   const sim = new Simulation(world, { spawn: false });
-  const record = { version: 3, id: 'current-character', name: 'Traveler', createdAt: 1, updatedAt: 1, worldSeed: 7319, worldVersion: 4, checkpoint: sim.captureCheckpoint() };
+  const record = { version: 4, id: 'current-character', name: 'Traveler', createdAt: 1, updatedAt: 1, worldSeed: 7319, worldVersion: 4, checkpoint: sim.captureCheckpoint() };
   delete record.checkpoint.travel;
   assert.ok(decodeCharacterSave(JSON.stringify(record)));
   sim.restoreCheckpoint(record.checkpoint); assert.deepEqual(sim.travel, freshTravel());
