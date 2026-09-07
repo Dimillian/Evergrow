@@ -1,3 +1,4 @@
+import { gearSurface, materializeGear } from './gear-material.ts';
 import type { ArmorPiece } from './art-types.ts';
 import { mixColor, type Point } from './art-primitives.ts';
 import type { GearShape } from './weapon-shapes.ts';
@@ -8,10 +9,54 @@ const line = (points: readonly Point[], color: string, width = .6): GearShape =>
 
 /** The armory icon and the dressed character use the same forged plates. Coordinates
  * are local to a piece's mount; the articulated rig still owns every attachment. */
+const armorCache = new WeakMap<ArmorPiece, Map<ArmorShapeKind, GearShape[]>>();
 export function armorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing = Math.PI / 2): GearShape[] {
+  const cached=kind!=='head' && armorCache.get(piece)?.get(kind); if(cached) return cached;
+  const material=piece.material.surface ?? (piece.style==='plate'?'steel':'leather');
+  const shapes=materializeGear(buildArmorShapes(kind,piece,facing),material,piece.seed,
+    new Map([[piece.material.trim,piece.style==='plate'?'brass':'leather']])).map((shape,index) => {
+      if (!shape.fill || shape.fill === piece.material.trim) return shape;
+      const cx=shape.points.reduce((sum,p)=>sum+p[0],0)/shape.points.length;
+      const cy=shape.points.reduce((sum,p)=>sum+p[1],0)/shape.points.length;
+      const nx=Math.max(-.65,Math.min(.65,(cx-(kind==='shoulder'?1:0))*.12));
+      const ny=Math.max(-.5,Math.min(.3,cy*.06-.18));
+      return {...shape,surface:{...gearSurface(material,piece.seed,[nx,ny,Math.sqrt(1-nx*nx-ny*ny)]),...(index>=1&&index<=3?{albedo:piece.material.base}:{})}};
+    });
+  if(kind!=='head') {let cache=armorCache.get(piece);if(!cache){cache=new Map();armorCache.set(piece,cache);}cache.set(kind,shapes);}
+  return shapes;
+}
+function buildArmorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing: number): GearShape[] {
   const { base, shadow, edge, trim } = piece.material;
   const plate = piece.style === 'plate';
-  const lit = mixColor(base, edge, plate ? .48 : .22);
+  if(piece.style==='cloth'&&kind!=='head') {
+    if(kind==='shoulder')return [
+      fill([[-1.8,-2],[1,-3],[4.7,-1.1],[4.3,3.5],[2.4,4.6],[.2,3.2]],shadow),
+      fill([[-1.1,-1.8],[1,-2.4],[4,-.9],[3.5,2.6],[1.5,3.3],[.2,2.4]],base),
+      line([[.2,2.4],[1.5,3.3],[3.5,2.6]],trim,.3),
+      line([[1,-1.7],[1.5,2]],edge,.2),
+    ];
+    // Long split robe panels hang over the legs, with soft folds and woven edging.
+    const robe:GearShape[] = [
+      fill([[-5.5,-6],[-2.5,-7],[0,-5.5],[2.6,-7],[5.5,-6],[5.2,3],[8,17],[2.4,18],[0,12],[-2.4,18],[-8,17],[-5.2,3]],shadow),
+      fill([[-4.9,-5.6],[-2.5,-6.4],[0,-4.8],[-.9,3],[-1.4,12],[-3,17.2],[-7.3,16.5],[-4.6,3]],base),
+      fill([[2.5,-6.4],[4.9,-5.6],[4.6,3],[7.3,16.5],[3,17.2],[1.4,12],[.9,3],[0,-4.8]],mixColor(base,shadow,.16)),
+      fill([[-3.6,-4.8],[-1.3,-3.7],[-2,3],[-3.2,15.8],[-4.8,16],[-3.2,3]],mixColor(base,edge,.16)),
+      line([[-2.5,-6.4],[0,-4.8],[-.9,3],[-1.4,12],[-3,17.2],[-7.3,16.5]],trim,.3),
+      line([[2.5,-6.4],[0,-4.8],[.9,3],[1.4,12],[3,17.2],[7.3,16.5]],trim,.3),
+      line([[3.2,3],[4.9,15.6]],edge,.18),
+      fill([[-4.7,2.7],[4.7,2.7],[4.8,3.8],[-4.8,3.8]],trim),
+      fill([[-.7,2.4],[.7,2.4],[.9,4],[-.9,4]],shadow),
+      line([[.3,3.5],[1,9],[.2,10]],trim,.45),
+    ];
+    if(piece.material.surface==='starweave')for(const side of [-1,1])for(const y of [7,11,15]){
+      const x=side*(2.4+(y-7)*.2),r=.28;
+      robe.push({ ...fill([[x-r,y],[x,y-r*1.8],[x+r,y],[x,y+r*1.8]],edge),fine:true });
+    }
+    return robe;
+  }
+
+  const lit = mixColor(base, edge, plate ? .48 : .28);
+  const binding = plate ? trim : mixColor(trim, base, .48);
   const seam = mixColor(base, shadow, .55);
   const fine = (shape: GearShape): GearShape => ({ ...shape, fine: true });
   if (kind === 'head') {
@@ -26,7 +71,7 @@ export function armorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing = Ma
       line([[-3.1, -4], [-.6, -5.1], [2.2, -4.3]], edge, .55),
     ];
     if (plate) {
-      shapes.push(fill([[-.5, -6.1], [.8, -5.9], [1.1, -.6], [.2, .4], [-.8, -.3]], trim),
+      shapes.push(fill([[-.35, -5.6], [.5, -5.45], [.6, -.6], [.1, .3], [-.5, -.3]], base),
         line([[-.3, -5.5], [.1, -1]], edge, .65));
       if (!back) {
         // An open sallet: deep brow, cheek plates, then a visible jaw below.
@@ -66,11 +111,11 @@ export function armorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing = Ma
     fill([[-5, -5.5], [-3, -6.4], [-1.2, -4.9], [1.2, -4.9], [3.1, -6.4], [4.8, -5.3], [4.8, .6], [3, 4.4], [.1, 5.7], [-3.6, 4.3], [-4.9, .8]], base),
     fill([[-5, -5.5], [-3, -6.4], [-1.2, -4.9], [-.5, -2.4], [-1.3, 2.7], [-3.6, 4.3], [-4.9, .8]], lit),
     fill([[1.2, -4.9], [3.1, -6.4], [4.8, -5.3], [4.8, .6], [3, 4.4], [.1, 5.7], [1, .8]], shadow),
-    line([[-4.8, -5.4], [-3.1, -6.3], [-1.3, -4.9], [1.3, -4.9], [3.1, -6.3], [4.7, -5.2]], trim, .65),
+    line([[-4.8, -5.4], [-3.1, -6.3], [-1.3, -4.9], [1.3, -4.9], [3.1, -6.3], [4.7, -5.2]], binding, .4),
   ];
   if (plate) {
     // A broad polished bevel and small chased marks survive the world resolution.
-    shapes.push(fill([[-4.7, -4.6], [-3.4, -5.3], [-2.6, -3], [-3.1, 1.9], [-4.2, .9]], edge),
+    shapes.push(fill([[-4.7, -4.6], [-4.15, -4.95], [-3.55, -2.8], [-3.65, 1.3], [-4.2, .9]], lit),
       line([[-3.7, -4.8], [-3.2, -3.8]], trim, .7),
       line([[2.7, -3.8], [3.8, -3.1]], base, .65));
     for (let mark = 0; mark < 3; mark++) {
@@ -80,12 +125,23 @@ export function armorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing = Ma
     shapes.push(line([[-4.3, -2.4], [-1.1, -1.6], [0, -.6], [1.2, -1.6], [4, -2.4]], shadow, .85),
       line([[-4, -3], [-1.4, -2.5]], edge, .6),
       fill([[-.7, -3.5], [0, -4.5], [.8, -3.5], [.4, 2.8], [0, 4.6], [-.6, 2.9]], base),
-      line([[0, -3.7], [0, 3.4]], edge, .65),
+      line([[0, -3.7], [0, 3.4]], lit, .28),
       fill([[-1, -3.8], [0, -4.8], [1, -3.8], [0, -2.8]], trim));
   } else {
+    // Shaped leather panels, recessed seams and a raised harness buckle.
+    shapes.push(fill([[-3,-4.1],[-.65,-3.4],[-.7,3.2],[-2.7,3.8],[-3.5,1.2]],mixColor(base,lit,.4)),
+      fill([[.55,-3.3],[2.9,-4.1],[3.6,1.2],[2.7,3.9],[.6,3.2]],mixColor(base,shadow,.22)),
+      line([[-.15,-3.5],[-.15,3.5]],shadow,.35));
+    for(let row=0;row<6;row++) {
+      const y=-2.8+row*.95;
+      shapes.push(fine(line([[-.65,y],[-.4,y+.2]],trim,.14)),fine(line([[.4,y],[.65,y+.2]],trim,.14)));
+    }
     shapes.push(fill([[-4, -5.7], [-2.9, -6], [4.2, 3.2], [3.3, 4.2]], shadow),
-      line([[-3.8, -5.5], [3.9, 3.5]], trim, .6),
-      fill([[.8, -.4], [2.4, 1.1], [1.4, 2.1], [-.2, .6]], trim));
+      line([[-3.8, -5.5], [3.9, 3.5]], binding, .36),
+      fill([[.7, -.55], [2.5, 1.05], [1.4, 2.25], [-.4, .6]], shadow),
+      fill([[.8, -.4], [2.4, 1.1], [1.4, 2.1], [-.2, .6]], trim),
+      fill([[.83, .12], [1.82, 1.04], [1.33, 1.54], [.36, .6]], shadow),
+      line([[.45,.5],[1.75,1.45]],edge,.17));
     shapes.push(line([[-3.5, -4], [-3.3, 1.8], [-2.5, 3.2]], seam, .45),
       line([[2.9, -3.6], [3.1, 1.4]], seam, .45));
     for (let row = 0; row < 9; row++) {
@@ -96,10 +152,10 @@ export function armorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing = Ma
   for (const x of [-4, 4]) for (const y of [-4.5, 1.5]) {
     shapes.push(fine(fill([[x - .28, y], [x, y - .28], [x + .28, y], [x, y + .28]], trim)));
   }
-  for (let band = 0; band < 3; band++) {
-    const y = 4.7 + band * 1.55;
+  for (let band = 0; band < (plate ? 3 : 2); band++) {
+    const y = 4.7 + band * (plate ? 1.55 : 2.1);
     shapes.push(fill([[-4.7, y], [0, y + 1.3], [4.5, y], [4.2, y + 1.6], [0, y + 2.6], [-4.3, y + 1.6]], band === 1 ? base : shadow),
-      line([[-4.3, y + .3], [0, y + 1.55], [4.1, y + .3]], plate ? edge : lit, .4));
+      line([[-4.3, y + .3], [0, y + 1.55], [4.1, y + .3]], plate ? edge : lit, plate ? .4 : .23));
   }
   return shapes;
 }

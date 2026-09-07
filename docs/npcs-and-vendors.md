@@ -1,5 +1,8 @@
 # NPCs, vendors and item improvement
 
+New stock rolls the shared [equipment material pools](item-materials.md). Material persists through services and uses full trade-value multipliers but gentler service premiums (silver 1.2×, gold 1.5×, crystal 2×); services cannot change an item's material.
+
+
 Implemented service contract · 2026-09-05. Blacksmith, jeweler and enchanter are available in town. Prices, stock weights and enhancement strength are initial playtest tuning. Static captures live in [town services](captures/2026-09-05/town-services/README.md). Save payload version 2 adds explicit item recipes and commerce state; older slots remain stored but require a new character, with no migration.
 
 ## Town services

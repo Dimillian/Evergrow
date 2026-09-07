@@ -25,7 +25,7 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
   if (levels) context.emit({ type: 'level', x: player.x, y: player.y,
     level: player.level, skillPoints: levels, statPoints: levels * 5, color: '#c0acf0' });
   for (const item of enemy.kind === 'warden' ? [] : rollEnemyLoot({ seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank,
-    biome: enemy.biome, kind: enemy.kind, firstKill: kills === 1 })) {
+    biome: enemy.biome, kind: enemy.kind, encounter: enemy.bossPhases!==undefined||enemy.kind==='goblinChief'?'boss':undefined, firstKill: kills === 1 })) {
     if (context.groundItems.length >= LOOT_RULES.maxGroundItems) break;
     context.groundItems.push({ id: context.nextId(), x: enemy.x, y: enemy.y, item });
   }

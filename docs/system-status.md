@@ -1,5 +1,10 @@
 # Current system status
 
+## Equipment materials · v0.3.3, 2026-09-07
+
+196 profile/material combinations share real loot, vendor and upgrade recipes. Common foundations dominate; silver, gold and crystal are rarer bases with stronger implicit stats, independent of affix rarity. No save reset. [Rates and rules](item-materials.md).
+
+
 ## Player changelog · 2026-09-07
 
 The character hall now opens a dated What’s new panel with New/Tweaks/Fixes sections, historical development recaps and controller/touch/keyboard navigation. `CHANGELOG.md` is its single bundled source. The release workflow requires committed, refreshed player-facing notes before each Sites publication. This panel does not access saves. See [release workflow](releases.md).
@@ -146,3 +151,7 @@ Early schools now have separate skill branches beside simple passive backbones: 
 The redesign also replaces the stretched outer clusters with five balanced silhouettes and adds cached, bounded path-light animation (gold allocations, blue previews), subtle nebulae and dust. Reduced motion is respected. Validation: 870 full-suite tests plus the added preview-priority regression pass; TypeScript and production build pass.
 
 Basic ranged attacks (Archer arrows and the Hexer’s three bolts) no longer project warning lanes or their associated lights. Ground attacks, pounces, heavy attacks and boss warnings remain; combat timing and projectile behavior are unchanged.
+
+Local specialist equipment adds cloth robes and a matching caster outfit, leather/ranger affix pools, eight jewelry bases, gentler service premiums and material odds that improve with geographic level and encounter difficulty. The gallery exposes level/encounter controls. See [equipment materials](item-materials.md).
+
+Caster armor has four fabric constructions: linen, silk, velvet and starweave. They share cloth silhouettes and caster affix pools, with distinct nonmetallic finishes, stronger bases and increasingly rare, difficulty-weighted drops.

@@ -1,3 +1,4 @@
+import { isClothMaterial } from './item-materials.ts';
 import type { ItemKind, SkillId, StatKey } from './character-types.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
 
@@ -38,15 +39,16 @@ export function discreteAffixValue(stat: StatKey, roll: number, level: number): 
   return isSkillStat(stat) ? skillAffixRank(roll, level) : stat === 'projectilePierce' ? 1 : undefined;
 }
 /** A single modest family weight is divided among relevant skills, not multiplied by skill count. */
-export function skillAffixPool(item: { kind: ItemKind; weapon?: { family: string; damageType?: string }; focus?: { visual: { motif: string } } }): readonly (AffixDefinition & { weight: number })[] {
-  const family = item.weapon?.family, magic = family === 'wand' || family === 'staff' || item.kind === 'grimoire' || item.kind === 'orb';
+export function skillAffixPool(item: { kind: ItemKind; weapon?: { family: string; damageType?: string }; focus?: { visual: { motif: string } }; recipe?:{materialId?:string} }): readonly (AffixDefinition & { weight: number })[] {
+  const armor=['head','chest','gloves','legs','boots'].includes(item.kind), leather=armor&&item.recipe?.materialId==='leather';
+  const family = item.weapon?.family, magic = armor&&isClothMaterial(item.recipe?.materialId) || family === 'wand' || family === 'staff' || item.kind === 'grimoire' || item.kind === 'orb';
   const budget = item.kind === 'weapon' ? .5 : item.kind === 'grimoire' || item.kind === 'orb' ? .45 : item.kind === 'shield' ? .35 : item.kind === 'head' ? .25 : item.kind === 'amulet' ? .4 : item.kind === 'ring' ? .18 : 0;
   if (!budget) return [];
   const element = item.weapon?.damageType ?? ({ ember: 'fire', rime: 'frost', astral: 'lightning' }[item.focus?.visual.motif ?? '']);
   const fire: SkillId[] = ['fireball', 'meteor', 'cataclysm'], frost: SkillId[] = ['iceNova', 'frostLance', 'absoluteZero'], lightning: SkillId[] = ['arcLightning', 'tempest'];
   const candidates = SKILL_AFFIXES.flatMap(a => {
     const id = a.stat.slice(6) as SkillId, s = SKILL_DEFINITIONS[id];
-    const eligible = magic ? s.requirement === 'magic' : item.kind === 'shield' ? s.requirement === 'shield'
+    const eligible = magic ? s.requirement === 'magic' : leather ? s.requirement==='bow'||s.requirement==='dagger'||s.requirement==='blade' : item.kind === 'shield' ? s.requirement === 'shield'
       : item.kind !== 'weapon' ? true : family === 'bow' ? s.requirement === 'bow'
       : s.requirement === 'melee' || s.requirement === 'blade' && ['sword', 'axe', 'dagger'].includes(family ?? '')
         || s.requirement === 'heavy' && ['axe', 'mace'].includes(family ?? '') || s.requirement === 'dagger' && family === 'dagger';

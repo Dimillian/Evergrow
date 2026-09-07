@@ -1,3 +1,4 @@
+import { itemMaterialValue, itemMaterialService } from './item-materials.ts';
 import type { CharacterSheet, Item, ItemTier, EquipmentSlot } from './character-types.ts';
 import { generateItem, randomSource, itemDisplayName } from './items.ts';
 import { addInventoryItem } from './inventory.ts';
@@ -10,17 +11,17 @@ const RARITY_COST: Record<ItemTier, number> = { common: 1, magic: 2, rare: 5, ep
 export const stockEpoch = (level: number) => Math.floor((level - 1) / 3);
 const budget = (level: number) => 30 + 3 * (level - 1);
 export function itemPrice(item: Item, mode: 'buy' | 'sell'): number {
-  return mode === 'sell' ? Math.floor(.15 * budget(item.itemLevel) * RARITY_COST[item.tier])
-    : Math.ceil(budget(item.itemLevel) * RARITY_COST[item.tier] * (item.kind === 'ring' || item.kind === 'amulet' ? 2.5 : 1));
+  return mode === 'sell' ? Math.floor(.15 * budget(item.itemLevel) * RARITY_COST[item.tier] * itemMaterialValue(item))
+    : Math.ceil(budget(item.itemLevel) * RARITY_COST[item.tier] * itemMaterialValue(item) * (item.kind === 'ring' || item.kind === 'amulet' ? 2.5 : 1));
 }
 export function improvementPrice(item: Item, operation: Improvement, zoneLevel: number): number {
-  const r = item.recipe, base = budget(item.itemLevel) * RARITY_COST[item.tier], h = 1 + .1 * r.enhancement;
+  const r = item.recipe, base = budget(item.itemLevel) * RARITY_COST[item.tier] * itemMaterialService(item), h = 1 + .1 * r.enhancement;
   switch (operation) {
     case 'enhance': return Math.ceil(3 * base * 1.65 ** r.enhancement);
-    case 'rarity': return Math.ceil(8 * budget(item.itemLevel) * (RARITY_COST[ITEM_TIERS[ITEM_TIERS.indexOf(item.tier) + 1]] ?? Infinity) * h);
+    case 'rarity': return Math.ceil(8 * budget(item.itemLevel) * itemMaterialService(item) * (RARITY_COST[ITEM_TIERS[ITEM_TIERS.indexOf(item.tier) + 1]] ?? Infinity) * h);
     case 'rerollOne': return Math.ceil(15 * base * h * 1.25 ** r.targetedRolls);
     case 'rerollAll': return Math.ceil(5 * base * h * 1.2 ** r.fullRolls);
-    case 'relevel': return Math.ceil(3 * RARITY_COST[item.tier] * h * (zoneLevel - item.itemLevel)
+    case 'relevel': return Math.ceil(3 * RARITY_COST[item.tier] * itemMaterialService(item) * h * (zoneLevel - item.itemLevel)
       * (budget(item.itemLevel + 1) + budget(zoneLevel)) / 2);
   }
 }

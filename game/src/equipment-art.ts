@@ -1,3 +1,6 @@
+import { armorAccessoryShapes, type ArmorAccessory } from './armor-accessory-shapes.ts';
+import { bootShapes } from './boot-shapes.ts';
+import { gearMaterialStops, gearMaterialMarks, gearCanvasLight } from './gear-material.ts';
 import { drawWeaponEnchantment, drawEquipmentGlow } from './weapon-enchantment-art.ts';
 import { focusShapes, focusGlowCenter } from './focus-shapes.ts';
 import { appearanceHeadShapes } from './appearance-shapes.ts';
@@ -8,7 +11,7 @@ import type { FocusDefinition, ShieldDefinition } from './model.ts';
 import { shieldShapes, weaponShapes, type GearShape } from './weapon-shapes.ts';
 import type { ArmorMaterial, ArmorPiece, CharacterOutfit } from './art-types.ts';
 import { PLAYER_ATTACHMENTS } from './character-motion.ts';
-import { polygon, line, taper, mixColor, type Point, type Color } from './art-primitives.ts';
+import { polygon, line, taper, type Point, type Color } from './art-primitives.ts';
 
 const STEEL: ArmorMaterial = { base: '#728c81', shadow: '#294750', edge: '#d1d6b0', trim: '#cfaa6c' };
 
@@ -24,25 +27,35 @@ export const STARTER_OUTFIT: CharacterOutfit = {
   cloak: { base: '#92364e', shadow: '#4e2a3e', highlight: '#cf5e69', trim: '#d4a070', seed: 71 },
 };
 
+const shadingCache = new WeakMap<GearShape,{key:string;stops:Array<readonly [number,string]>}>();
 export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly GearShape[], color: Color): void {
   const matrix = ctx.getTransform(), fine = Math.hypot(matrix.a, matrix.b) >= 2.4;
+  const lighting = gearCanvasLight(ctx), facing = Math.round(Math.atan2(matrix.b,matrix.a)*128)/128;
+  const lightKey=`${facing}:${lighting.direction.map(v=>Math.round(v*64)).join(',')}:${lighting.color}:${Math.round(lighting.power*64)}`;
   for (const shape of shapes) {
     if (shape.fine && !fine) continue;
+    let stops:Array<readonly [number,string]>|undefined;
+    if(shape.surface) {
+      const cached=shadingCache.get(shape);
+      if(cached?.key===lightKey)stops=cached.stops;
+      else {stops=gearMaterialStops(shape.fill??shape.stroke??'#808080',shape.surface,facing,lighting);shadingCache.set(shape,{key:lightKey,stops});}
+    }
     if (shape.fill) {
-      polygon(ctx, shape.points, color(shape.fill));
-      // Broad pigment variation at portrait scale; tiny world silhouettes stay crisp.
-      if (fine && !shape.fine && shape.points.length > 3) {
-        const ys = shape.points.map(point => point[1]);
-        const top = Math.min(...ys), bottom = Math.max(...ys);
-        if (bottom - top > 3) {
-          ctx.save(); ctx.clip();
-          const light = ctx.createLinearGradient(0, top, 1, bottom);
-          light.addColorStop(0, '#f4e8cb10'); light.addColorStop(.4, '#f4e8cb00'); light.addColorStop(1, '#06121a20');
-          ctx.fillStyle = light; ctx.fillRect(-100, top, 200, bottom - top); ctx.restore();
+      polygon(ctx, shape.points, color(!fine && stops ? stops[1][1] : shape.fill));
+      if (fine && shape.surface && !shape.fine) {
+        const xs=shape.points.map(p=>p[0]),ys=shape.points.map(p=>p[1]);
+        const left=Math.min(...xs),top=Math.min(...ys),w=Math.max(...xs)-left,h=Math.max(...ys)-top;
+        if(w*h>1) {
+          ctx.save();ctx.clip();
+          const light=ctx.createLinearGradient(left,top,left+w*.8,top+h);
+          for(const [at,value] of stops!) light.addColorStop(at,color(value));
+          ctx.fillStyle=light;ctx.fillRect(left,top,w,h);
+          if(w*h>5) {ctx.globalAlpha*=.13;for(const mark of gearMaterialMarks(shape.surface,[left,top,w,h])) line(ctx,mark,color(shape.fill),.1);}
+          ctx.restore();
         }
       }
     }
-    if (shape.stroke) line(ctx, shape.points, color(shape.stroke), shape.width ?? .7);
+    if (shape.stroke) line(ctx, shape.points, color(stops ? stops[1][1] : shape.stroke), shape.width ?? .7);
   }
 }
 
@@ -74,12 +87,8 @@ export function upperArm(ctx: CanvasRenderingContext2D, shoulder: Point, elbow: 
 export function forearm(ctx: CanvasRenderingContext2D, elbow: Point, hand: Point, piece: ArmorPiece | null, color: Color): void {
   taper(ctx, elbow, hand, 3, 1.8, color('#5b5145'));
   if (piece) {
-    const m = piece.material;
-    const cuff: Point = [elbow[0] * 0.28 + hand[0] * 0.72, elbow[1] * 0.28 + hand[1] * 0.72];
-    taper(ctx, elbow, cuff, piece.style === 'plate' ? 4.4 : 3.4, 3, color(m.shadow));
-    taper(ctx, [elbow[0] - 0.5, elbow[1] - 0.6], [cuff[0] - 0.5, cuff[1] - 0.3], 3.1, 2.2, color(m.base));
-    line(ctx, [[elbow[0] - 1.4, elbow[1]], [cuff[0] - 1.2, cuff[1]]], color(m.edge), 0.65);
-    line(ctx, [[cuff[0] - 1.6, cuff[1] - 0.7], [cuff[0] + 1.6, cuff[1] + 0.7]], color(m.trim), 0.8);
+    const cuff: Point = [elbow[0] * .28 + hand[0] * .72, elbow[1] * .28 + hand[1] * .72];
+    armorSegment(ctx,elbow,cuff,piece,color,'bracer');
   }
 }
 
@@ -87,9 +96,7 @@ export function gauntlet(ctx: CanvasRenderingContext2D, hand: Point, piece: Armo
   angle = 0, gripping = true): void {
   const m = piece?.material ?? LEATHER;
   ctx.save(); ctx.translate(hand[0], hand[1]); ctx.rotate(angle);
-  polygon(ctx, [[-1.6, -1.65], [.7, -1.9], [1.5, -1.1], [1.4, .6], [.8, 1.65], [-1.5, 1.4], [-1.9, .3]], color(m.shadow));
-  polygon(ctx, [[-1.3, -1.35], [.5, -1.6], [1.15, -.8], [.8, .9], [-1.4, .85]], color(m.base));
-  line(ctx, [[-1.3, -1.25], [.3, -1.45], [1, -.85]], color(m.edge), .38);
+  drawGearShapes(ctx,armorAccessoryShapes('glove',piece ?? BARE_BOOT),color);
   if (gripping) {
     for (let finger = 0; finger < 3; finger++) {
       const x = -1.15 + finger * .72;
@@ -102,25 +109,20 @@ export function gauntlet(ctx: CanvasRenderingContext2D, hand: Point, piece: Armo
   ctx.restore();
 }
 
+export function armorSegment(ctx:CanvasRenderingContext2D, from:Point, to:Point, piece:ArmorPiece, color:Color, kind:Extract<ArmorAccessory,'bracer'|'thigh'>):void {
+  const dx=to[0]-from[0],dy=to[1]-from[1],length=Math.hypot(dx,dy);
+  ctx.save();ctx.translate(...from);ctx.rotate(-Math.atan2(dx,dy));ctx.scale(1,length/(kind==='thigh'?7:6));
+  drawGearShapes(ctx,armorAccessoryShapes(kind,piece),color);ctx.restore();
+}
+export function kneeArmor(ctx:CanvasRenderingContext2D, point:Point, piece:ArmorPiece, color:Color):void {
+  ctx.save();ctx.translate(...point);drawGearShapes(ctx,armorAccessoryShapes('knee',piece),color);ctx.restore();
+}
+
+const BARE_BOOT: ArmorPiece = { style: 'leather', seed: 11, material: LEATHER };
 export function armorBoot(ctx: CanvasRenderingContext2D, anchor: Point, piece: ArmorPiece | null, color: Color, direction: number): void {
-  const [x, y] = anchor;
-  const m = piece?.material ?? LEATHER;
-  const toe = direction * 0.85;
-  polygon(ctx, [[x - 2.2, y - 6], [x + 2, y - 6], [x + 2.3, y - 2],
-    [x + 3 + toe, y - 0.2], [x + 2.5 + toe, y + 1.2], [x - 2.2 + toe, y + 1.4], [x - 2.5, y - 1]], color(m.shadow));
-  polygon(ctx, [[x - 1.7, y - 5.5], [x + 1.5, y - 5.5], [x + 1.7, y - 1],
-    [x + 2.2 + toe, y], [x - 1.5 + toe, y + 0.5]], color(m.base));
-  polygon(ctx, [[x - 1.3, y - 1.5], [x + 1.5, y - 1.3], [x + 2.2 + toe, y], [x - 1.3 + toe, y + .15]], color(mixColor(m.base, m.edge, .18)));
-  line(ctx, [[x - 1.2, y - 1.7], [x + 1.4, y - 1.4]], color(m.shadow), .35);
-  line(ctx, [[x - 1.5 + toe, y + 0.7], [x + 2.1 + toe, y + 0.4]], color('#1b2428'), 0.75);
-  line(ctx, [[x - 1.5, y - 4], [x + 1.4, y - 4]], color(m.trim), 0.9);
-  ctx.fillStyle = color(m.edge);
-  ctx.fillRect(x - 0.1, y - 4.4, 0.8, 0.8);
-  line(ctx, [[x - 1.3, y - 5.4], [x - 1.2, y - 1.7], [x - 0.4 + toe, y - 0.6]], color(mixColor(m.base, m.edge, piece?.style === 'plate' ? .8 : .35)), 0.4);
-  if (piece?.style === 'plate') {
-    polygon(ctx, [[x - 1.6, y - 2], [x + 1.6, y - 2], [x + 2.2 + toe, y], [x - 1.8 + toe, y + 0.3]], color(m.base));
-    line(ctx, [[x - 1.6, y - 2], [x + 1.6, y - 2]], color(m.edge), 0.65);
-  }
+  ctx.save(); ctx.translate(...anchor);
+  drawGearShapes(ctx, bootShapes(piece ?? BARE_BOOT, direction), color);
+  ctx.restore();
 }
 
 export function chestArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | null, color: Color): void {
@@ -131,6 +133,7 @@ export function chestArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | nu
     line(ctx, [[-4.5, 4 + row * 2], [0, 5 + row * 2], [4, 4 + row * 2]], color('#496257'), 0.6);
   }
   if (piece) drawGearShapes(ctx, armorShapes('chest', piece), color);
+  if(piece?.style==='cloth'){ctx.restore();return;}
   line(ctx, [[-5.3, 8.1], [5.3, 8.1]], color('#644834'), 2);
   ctx.fillStyle = color('#d4ae72'); ctx.fillRect(-1.4, 6.8, 2.8, 2.4);
   ctx.fillStyle = color('#392e2b'); ctx.fillRect(-0.5, 7.4, 1, 1.1);

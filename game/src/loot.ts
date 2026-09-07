@@ -1,3 +1,4 @@
+import type { MaterialSource } from './item-materials.ts';
 import type { BiomeId } from './biomes.ts';
 import type { Item } from './character-types.ts';
 import type { EnemyKind } from './model.ts';
@@ -13,6 +14,7 @@ export interface EnemyLootContext {
   readonly biome: BiomeId;
   readonly kind: EnemyKind;
   readonly firstKill?: boolean;
+  readonly encounter?:MaterialSource['encounter'];
 }
 
 function randomSource(seed: number): () => number {
@@ -75,7 +77,7 @@ export function rollEnemyLoot(context: EnemyLootContext): Item[] {
       ? selectLootWeight(BIOME_PROFILE_WEIGHTS[context.biome][kind], random()) : undefined;
     // Consecutive rewards receive different item-local seeds, independent of how many table draws were needed.
     const itemSeed = (seed + Math.imul(index + 1, 0x9E3779B9)) >>> 0;
-    items.push(generateItem(itemSeed, itemLevel, kind, profileId, tier));
+    items.push(generateItem(itemSeed, itemLevel, kind, profileId, tier, undefined, {level:context.level,rank:context.rank,encounter:context.encounter}));
   }
   return items;
 }

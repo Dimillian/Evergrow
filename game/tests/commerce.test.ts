@@ -126,7 +126,7 @@ test('rarity progresses exactly once with no duplicate affixes; targeted reroll 
   assert.equal(all.recipe.targetedRolls, 1); assert.ok(validItem(all));
 });
 test('prices match the specification, rise with repeat use and reject numeric overflow', () => {
-  const item = generateItem(51, 10, 'weapon', 'longsword', 'rare');
+  const item = generateItem(51, 10, 'weapon', 'longsword', 'rare', 'iron');
   assert.equal(improvementPrice(item, 'enhance', 10), 855); assert.equal(improvementPrice(item, 'rarity', 10), 5472);
   assert.equal(improvementPrice(item, 'relevel', 15), 4950); assert.equal(improvementPrice(item, 'rerollOne', 10), 4275);
   assert.equal(improvementPrice(item, 'rerollAll', 10), 1425);

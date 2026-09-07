@@ -26,6 +26,7 @@ class ArtContext implements DrawingState {
   clips = 1;
   commands = 0;
   fillColors = new Set<string>();
+  fillOrder: string[] = [];
   imageSmoothingEnabled = true;
   private saved: DrawingState[] = [];
   get depth() { return this.saved.length; }
@@ -56,7 +57,7 @@ class ArtContext implements DrawingState {
   clearRect(...values: number[]) { this.record(...values); }
   ellipse(...values: number[]) { this.record(...values); }
   fillRect(...values: number[]) { this.fillColors.add(this.fillStyle); this.record(...values); }
-  fill() { this.fillColors.add(this.fillStyle); this.record(); }
+  fill() { this.fillColors.add(this.fillStyle); this.fillOrder.push(this.fillStyle); this.record(); }
   stroke() { this.record(this.lineWidth); }
 }
 
@@ -149,5 +150,23 @@ test('inventory and hall portraits retain saved armor colors and helmet visibili
     drawCharacterPortrait(ctx as unknown as CanvasRenderingContext2D,player,0,Math.PI/2,300,400);
     assert.ok(ctx.fillColors.has(chest),'portrait draws the saved chest tint');
     assert.equal(ctx.fillColors.has(helmet),visible,'portrait follows the saved helmet visibility');
+  }
+});
+
+
+test('front-facing cape renders behind the legs; rear-facing cape covers them', () => {
+  for (const angle of [Math.PI / 2, -Math.PI / 2]) {
+    const ctx = new ArtContext();
+    drawHumanoid(ctx as unknown as CanvasRenderingContext2D, {
+      kind: 'player', angle, attackAngle: angle, time: 0, moving: 0, attack: 0, hitFlash: 0, dodging: false,
+      outfit: {
+        cloak: { base: '#a11233', shadow: '#443322', highlight: '#b13355', trim: '#ccbb99', seed: 1 },
+        legs: { style: 'leather', seed: 2, material: { base: '#617231', shadow: '#334422', edge: '#aabb88', trim: '#998877' } },
+      },
+    });
+    const cape = ctx.fillOrder.indexOf('#a11233'), leg = ctx.fillOrder.indexOf('#617231');
+    assert.ok(cape >= 0 && leg >= 0);
+    assert.equal(cape < leg, angle > 0);
+    assert.equal(ctx.depth, 0);
   }
 });

@@ -1,5 +1,8 @@
 # Documentation
 
+- [Equipment materials](item-materials.md): base construction, drop weights, stats, pricing and the local gallery.
+
+
 Updated 2026-09-07. Use the current guides for implementation. Proposed designs and historical captures are labeled separately; they do not override current code or user decisions.
 
 ## Start here

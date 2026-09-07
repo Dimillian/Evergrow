@@ -1,3 +1,4 @@
+import type { GearMaterial } from './gear-material-content.ts';
 import type { WeaponVisual, WeaponGrip } from './equipment.ts';
 import type { EnemyKind, FocusDefinition, ShieldDefinition } from './model.ts';
 import type { CharacterAppearance } from './appearance-content.ts';
@@ -14,6 +15,7 @@ export interface Sprite {
 }
 
 export interface ArmorMaterial {
+  readonly surface?: GearMaterial;
   readonly base: string;
   readonly shadow: string;
   readonly edge: string;
@@ -22,7 +24,7 @@ export interface ArmorMaterial {
 
 /** Geometry style and material are independent, so equipment needs no textures. */
 export interface ArmorPiece {
-  readonly style: 'plate' | 'leather';
+  readonly style: 'plate' | 'leather' | 'cloth';
   readonly seed: number;
   readonly material: ArmorMaterial;
 }

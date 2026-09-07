@@ -1,3 +1,5 @@
+import { JEWELRY_PROFILES, jewelryProfiles } from './jewelry-content.ts';
+import { ITEM_MATERIALS, isClothMaterial, sourceMaterialPool, type MaterialSource, itemMaterialPool, rollItemMaterial, itemMaterialScale, materialBaseName, type ItemMaterialId } from './item-materials.ts';
 import { SPECIAL_AFFIXES, SPECIAL_AFFIX_LABELS, SKILL_AFFIXES, SKILL_STATS, isSkillStat, skillAffixPool, discreteAffixValue, type AffixDefinition } from './equipment-affix-content.ts';
 import { ELEMENTAL_AFFIXES, ELEMENT_COLORS, isElementalAffix, meleeEnchantment } from './elemental-weapon.ts';
 import { createCharacterLook } from './character-look.ts';
@@ -60,14 +62,6 @@ const BASE_NAMES: Readonly<Record<Exclude<ItemKind, 'weapon' | 'shield' | 'grimo
 const PREFIXES = ['Ashen', 'Starbound', 'Thornwrought', 'Gloaming', 'Hollow', 'Dawnforged', 'Mournful', 'Graveglass', 'Moonlit', 'Briar'];
 const SUFFIXES = ['of the Watch', 'of Embers', 'of the Hollow', 'of Still Water', 'of the Pilgrim', 'of Thorns', 'of the Pale Star', 'of Dusk'];
 const TITLES = ['Oath', 'Vigil', 'Remnant', 'Requiem', 'Promise', 'Echo', 'Witness', 'Memory'];
-const PALETTES: readonly Item['appearance'][] = [
-  { base: '#728c81', shadow: '#294750', edge: '#d1d6b0', trim: '#cfaa6c', style: 'plate' },
-  { base: '#647e9b', shadow: '#29364c', edge: '#c8ddec', trim: '#bec0bc', style: 'plate' },
-  { base: '#837075', shadow: '#3d303f', edge: '#d5bdb4', trim: '#d5ac78', style: 'plate' },
-  { base: '#657962', shadow: '#293e36', edge: '#afbea0', trim: '#b99763', style: 'leather' },
-  { base: '#735942', shadow: '#322a30', edge: '#c4ab86', trim: '#d5b270', style: 'leather' },
-  { base: '#786994', shadow: '#343249', edge: '#c6badf', trim: '#c7d4d6', style: 'plate' },
-];
 export const AFFIXES: readonly AffixDefinition[] = [
   ...SPECIAL_AFFIXES,
   { name: 'Might', stat: 'strength', base: 2, growth: .25 },
@@ -102,21 +96,26 @@ const SLOT_AFFIXES: Partial<Record<ItemKind, readonly StatKey[]>> = {
   legs: ['maxHp', 'armor', 'vitality', 'lifeRegen', 'strength', 'dexterity'],
   boots: ['moveSpeedPercent', 'maxHp', 'armor', 'vitality', 'dexterity'],
   cloak: ['potionPercent', 'lifeRegen', 'manaRegen', 'cooldownPercent', 'maxHp', 'maxMana', 'intelligence'],
-  ring: ['manaOnKill', 'critChance', 'critDamage', 'damagePercent', 'spellDamagePercent', 'strength', 'dexterity', 'intelligence', 'maxMana', 'manaRegen'],
+  ring: ['maxHp', 'vitality', 'lifeRegen', 'manaOnKill', 'critChance', 'critDamage', 'damagePercent', 'spellDamagePercent', 'strength', 'dexterity', 'intelligence', 'maxMana', 'manaRegen'],
   shield: ['afterguardPercent', 'blockChance', 'blockReduction', 'armor', 'maxHp', 'vitality', 'lifeRegen', 'strength'],
   grimoire: ['manaOnKill', 'spellweavePercent', 'maxMana', 'manaRegen', 'manaCostPercent', 'cooldownPercent', 'intelligence', 'spellDamagePercent'],
   orb: ['spellDamagePercent', 'critChance', 'critDamage', 'intelligence', 'maxMana', 'manaCostPercent'],
 };
-export function itemAffixPool(item: { kind: ItemKind; weapon?: { family: string; damageType?: string }; focus?: { visual: { motif: string } } }): typeof AFFIXES {
+export function itemAffixPool(item: { kind: ItemKind; weapon?: { family: string; damageType?: string }; focus?: { visual: { motif: string } }; recipe?: {materialId?: ItemMaterialId; profileId?:string} }): typeof AFFIXES {
   const melee = item.kind === 'weapon' && ['sword', 'axe', 'mace', 'dagger'].includes(item.weapon?.family ?? '');
-  const stats = item.kind === 'amulet' ? [...AFFIXES, ...SHIELD_AFFIXES].map(a => a.stat)
+  const armor=['head','chest','gloves','legs','boots'].includes(item.kind), construction=item.recipe?.materialId;
+  const leather=armor&&construction==='leather', cloth=armor&&isClothMaterial(construction);
+  const specialty:StatKey[]=leather?['dexterity','damagePercent','critChance','critDamage','lifeOnHit']:cloth?['intelligence','maxMana','manaRegen','spellDamagePercent','manaCostPercent']:[];
+  const jewelry=JEWELRY_PROFILES.find(p=>p.id===item.recipe?.profileId);
+  const preferred=jewelry?.affinity??specialty;
+  const stats = leather||cloth ? [...specialty,'maxHp','armor',...(item.kind==='gloves'?[cloth?'castSpeedPercent':'attackSpeedPercent']:item.kind==='boots'?['moveSpeedPercent']:item.kind==='head'&&cloth?['cooldownPercent']:[])] : item.kind === 'amulet' ? [...AFFIXES, ...SHIELD_AFFIXES].map(a => a.stat)
     : item.kind === 'weapon' ? melee
       ? ['areaPercent', 'damagePercent', 'critChance', 'critDamage', 'lifeOnHit', 'strength', 'dexterity', 'intelligence', 'spellDamagePercent']
       : item.weapon?.family === 'bow' ? ['projectilePierce', 'damagePercent', 'critChance', 'critDamage', 'dexterity', 'lifeOnHit', 'strength']
       : [item.weapon?.family === 'staff' ? 'areaPercent' : 'projectilePierce', 'spellDamagePercent', 'intelligence', 'maxMana', 'critChance', 'critDamage', 'manaCostPercent', 'manaRegen']
     : SLOT_AFFIXES[item.kind] ?? [];
   return [...AFFIXES, ...SHIELD_AFFIXES].filter(a => stats.includes(a.stat)).map(a => ({ ...a,
-    weight: ['cooldownPercent', 'manaCostPercent', 'critChance', 'lifeOnHit'].includes(a.stat) ? .55 : a.weight ?? 1,
+    weight: (['cooldownPercent', 'manaCostPercent', 'critChance', 'lifeOnHit'].includes(a.stat) ? .55 : a.weight ?? 1) * (preferred.includes(a.stat)?2.2:preferred.length?.75:1),
   })).concat(melee ? ELEMENTAL_AFFIXES.map(a => ({ ...a, weight: .12 })) : [], skillAffixPool(item));
 }
 /** Shared weighted selection for drops and every enchanter operation. */
@@ -147,21 +146,26 @@ function focusImplicit(profileId: string, level: number, quality: number): StatM
   return Object.fromEntries(Object.entries(profile.implicit).map(([stat, value]) => [stat,
     Math.round(value! * quality * (PERCENT_STATS.has(stat as StatKey) ? itemPercentageScale(level) : itemPowerScale(level)) * 10) / 10]));
 }
+function jewelryImplicit(profileId:string,level:number,quality:number):StatModifiers {
+  const profile=JEWELRY_PROFILES.find(p=>p.id===profileId)!;
+  return Object.fromEntries(Object.entries(profile.implicit).map(([stat,value])=>[stat,Math.round(value!*quality*(PERCENT_STATS.has(stat as StatKey)?itemPercentageScale(level):itemPowerScale(level))*10)/10]));
+}
 export const TIER_AFFIXES: Readonly<Record<ItemTier, number>> = { common: 0, magic: 1, rare: 2, epic: 3, legendary: 4 };
 export const TIER_POWER: Readonly<Record<ItemTier, number>> = { common: 1, magic: 1.09, rare: 1.2, epic: 1.34, legendary: 1.5 };
 
 /** Item-local generation; reward sources may supply an explicitly rolled tier. Callers own seed uniqueness. */
-export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, profileId?: string, tierOverride?: ItemTier): Item {
+export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, profileId?: string, tierOverride?: ItemTier, materialOverride?: ItemMaterialId, source:MaterialSource={}): Item {
   if (tierOverride !== undefined && !Object.hasOwn(TIER_POWER, tierOverride)) throw new RangeError(`Unknown item tier: ${tierOverride}`);
   seed = seed >>> 0;
   const level = normalizeLevel(itemLevel);
   const random = randomSource(seed), choose = <T>(values: readonly T[]): T => values[Math.floor(random() * values.length)];
+  const selectedJewelry = profileId ? JEWELRY_PROFILES.find(p=>p.id===profileId) : undefined;
   const selectedWeapon = profileId ? WEAPON_PROFILES.find(profile => profile.id === profileId) : undefined;
   const selectedShield = profileId ? SHIELD_PROFILES.find(profile => profile.id === profileId) : undefined;
   const selectedFocus = profileId ? FOCUS_PROFILES.find(profile => profile.id === profileId) : undefined;
-  if (profileId && !selectedWeapon && !selectedShield && !selectedFocus) throw new RangeError(`Unknown equipment profile: ${profileId}`);
-  const itemKind = kind ?? (selectedWeapon ? 'weapon' : selectedShield ? 'shield' : selectedFocus ? selectedFocus.visual.kind : choose(ITEM_KINDS));
-  if (profileId && (itemKind === 'weapon' ? !selectedWeapon : itemKind === 'shield' ? !selectedShield : selectedFocus?.visual.kind !== itemKind)) {
+  if (profileId && !selectedWeapon && !selectedShield && !selectedFocus && !selectedJewelry) throw new RangeError(`Unknown equipment profile: ${profileId}`);
+  const itemKind = kind ?? (selectedWeapon ? 'weapon' : selectedShield ? 'shield' : selectedFocus ? selectedFocus.visual.kind : selectedJewelry ? selectedJewelry.kind : choose(ITEM_KINDS));
+  if (profileId && (itemKind === 'weapon' ? !selectedWeapon : itemKind === 'shield' ? !selectedShield : itemKind==='ring'||itemKind==='amulet' ? selectedJewelry?.kind!==itemKind : selectedFocus?.visual.kind !== itemKind)) {
     throw new RangeError(`Profile ${profileId} does not describe an item of kind ${itemKind}.`);
   }
   const roll = random();
@@ -173,11 +177,19 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
   const shieldProfile = itemKind === 'shield' ? selectedShield ?? SHIELD_PROFILES[Math.floor(variant * SHIELD_PROFILES.length)] : undefined;
   const focusProfiles = FOCUS_PROFILES.filter(p => p.visual.kind === itemKind);
   const focusProfile = selectedFocus ?? focusProfiles[Math.floor(variant * focusProfiles.length)];
-  const baseName = weaponProfile?.name ?? shieldProfile?.name ?? focusProfile?.name ?? BASE_NAMES[itemKind as Exclude<ItemKind, 'weapon' | 'shield' | 'grimoire' | 'orb'>][Math.floor(variant * 3)];
-  const appearance = { ...choose(PALETTES) }, quality = TIER_POWER[tier];
-  const growth = itemPowerScale(level) * quality;
+  const jewelryOptions=jewelryProfiles(itemKind), jewelryProfile=selectedJewelry??jewelryOptions[Math.floor(variant*jewelryOptions.length)];
+  const profileName = weaponProfile?.name ?? shieldProfile?.name ?? focusProfile?.name ?? jewelryProfile?.name ?? BASE_NAMES[itemKind as Exclude<ItemKind, 'weapon' | 'shield' | 'grimoire' | 'orb'>][Math.floor(variant * 3)];
+  random(); // Preserve the affix/name draw sequence; construction uses its own RNG.
+  const materials = sourceMaterialPool(itemKind, weaponProfile?.family, {level,...source});
+  const materialId = materialOverride ?? rollItemMaterial(materials, randomSource(seed ^ 0x73a45d91)());
+  if (!materials.some(m => m.id === materialId)) throw new RangeError(`Invalid ${itemKind} material: ${materialId}`);
+  const material = ITEM_MATERIALS[materialId], baseScale = materials.find(m => m.id === materialId)!.baseScale;
+  const { base, shadow, edge, trim, surface } = material;
+  const appearance: Item['appearance'] = { base, shadow, edge, trim, surface, style: isClothMaterial(materialId) ? 'cloth' : ['leather','wood'].includes(surface) ? 'leather' : 'plate' };
+  const baseName = materialBaseName(itemKind, profileName, materialId), quality = TIER_POWER[tier];
+  const growth = itemPowerScale(level) * quality * baseScale;
   const rolls: number[] = [];
-  const affixes: ItemAffix[] = [], remaining = [...itemAffixPool({ kind: itemKind, weapon: weaponProfile, focus: focusProfile })];
+  const affixes: ItemAffix[] = [], remaining = [...itemAffixPool({ kind: itemKind, weapon: weaponProfile, focus: focusProfile, recipe:{materialId,profileId:jewelryProfile?.id} })];
   for (let index = 0; index < TIER_AFFIXES[tier]; index++) {
     const definition = rollAffix(remaining, random);
     const growthLevel = PERCENT_STATS.has(definition.stat) ? itemAffixGrowthLevel(level) : level - 1;
@@ -186,31 +198,30 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
     affixes.push({ name: definition.name, stat: definition.stat, value });
     for (let i = remaining.length - 1; i >= 0; i--) if (affixConflicts(remaining[i].stat, affixes.map(a => a.stat))) remaining.splice(i, 1);
   }
-  const implicit: StatModifiers = focusProfile ? focusImplicit(focusProfile.id, level, quality) : {};
+  const implicit: StatModifiers = focusProfile ? focusImplicit(focusProfile.id, level, quality * baseScale) : {};
   const armorBase: Partial<Record<ItemKind, number>> = { head: 5, chest: 11, gloves: 3, legs: 7, boots: 4 };
   if (armorBase[itemKind]) implicit.armor = Math.max(1, Math.round(armorBase[itemKind]! * growth));
   if (shieldProfile) implicit.armor = Math.max(1, Math.round(({ buckler: 7, kite: 15, tower: 22 }[shieldProfile.visual.kind]) * growth));
   if (itemKind === 'cloak') implicit.maxHp = Math.round(6 * growth);
-  if (itemKind === 'amulet') implicit.maxMana = Math.round(7 * growth);
-  if (itemKind === 'ring') implicit.damagePercent = Math.round(2 * itemPercentageScale(level) * quality * 10) / 10;
+  if (jewelryProfile) Object.assign(implicit,jewelryImplicit(jewelryProfile.id,level,quality*baseScale));
   const prefix = choose(PREFIXES), suffix = choose(SUFFIXES);
   const name = tier === 'common' ? `${prefix} ${baseName}` : tier === 'magic' ? `${prefix} ${baseName} ${suffix}`
     : `${prefix} ${choose(TITLES)}`;
   const item: Item = {
-    recipe: { ...((weaponProfile ?? shieldProfile ?? focusProfile) ? { profileId: (weaponProfile ?? shieldProfile ?? focusProfile)!.id } : {}), starter: false, enhancement: 0, revision: 0, targetedRolls: 0, fullRolls: 0, rolls },
-    id: `item-${seed.toString(36)}-${level}-${weaponProfile?.id ?? shieldProfile?.id ?? focusProfile?.id ?? itemKind}-${tier}`, seed, name, baseName, kind: itemKind, tier,
+    recipe: { materialId, ...((weaponProfile ?? shieldProfile ?? focusProfile ?? jewelryProfile) ? { profileId: (weaponProfile ?? shieldProfile ?? focusProfile ?? jewelryProfile)!.id } : {}), starter: false, enhancement: 0, revision: 0, targetedRolls: 0, fullRolls: 0, rolls },
+    id: `item-${seed.toString(36)}-${level}-${weaponProfile?.id ?? shieldProfile?.id ?? focusProfile?.id ?? jewelryProfile?.id ?? itemKind}-${materialId}-${tier}`, seed, name, baseName, kind: itemKind, tier,
     itemLevel: level, requiredLevel: Math.max(1, level - 2),
-    power: Math.round(level * 10 + quality * 12 + affixes.length * 7), implicit, affixes, appearance,
+    power: Math.round(level * 10 + quality * baseScale * 12 + affixes.length * 7), implicit, affixes, appearance,
   };
   if (weaponProfile) {
     item.weapon = { ...weaponProfile, id: item.id, name, damage: Math.round(weaponProfile.damage * growth),
-      visual: { ...weaponProfile.visual, metal: appearance.base, edge: appearance.edge, grip: appearance.shadow, guard: appearance.trim } };
+      visual: { ...weaponProfile.visual, material: surface, metal: appearance.base, edge: appearance.edge, grip: appearance.shadow, guard: appearance.trim } };
   }
   if (shieldProfile) {
     item.shield = { ...shieldProfile, id: item.id, name,
-      visual: { ...shieldProfile.visual, base: appearance.base, edge: appearance.edge, trim: appearance.trim, shadow: appearance.shadow } };
+      visual: { ...shieldProfile.visual, material: surface, base: appearance.base, edge: appearance.edge, trim: appearance.trim, shadow: appearance.shadow } };
   }
-  if (focusProfile) item.focus = { id: item.id, name, visual: { ...focusProfile.visual, base: appearance.base, edge: appearance.edge, trim: appearance.trim, shadow: appearance.shadow } };
+  if (focusProfile) item.focus = { id: item.id, name, visual: { ...focusProfile.visual, material: surface, base: appearance.base, edge: appearance.edge, trim: appearance.trim, shadow: appearance.shadow } };
   return applyWeaponEnchantment(item);
 }
 
@@ -231,7 +242,7 @@ export function createStarterLoadout(id: StarterLoadoutId): { weapon: Item; offh
   const option = STARTER_LOADOUTS.find(option => option.id === id);
   if (!option) throw new RangeError('Unknown starter loadout');
   const profile = id === 'sword' ? STARTING_SWORD : WEAPON_PROFILES.find(profile => profile.id === option.profileId)!;
-  const item = generateItem(1, 1, 'weapon', id === 'sword' ? 'longsword' : profile.id, 'common');
+  const item = generateItem(1, 1, 'weapon', id === 'sword' ? 'longsword' : profile.id, 'common', itemMaterialPool('weapon', profile.family)[0].id);
   item.id = 'starter-weapon'; item.baseName = profile.name;
   item.name = id === 'sword' ? profile.name : `Worn ${profile.name}`;
   item.implicit = {}; item.affixes = []; item.power = 1;
@@ -241,7 +252,7 @@ export function createStarterLoadout(id: StarterLoadoutId): { weapon: Item; offh
     edge: profile.visual.edge, trim: profile.visual.guard, style: 'plate' };
   let offhand: Item | null = null;
   if (option.offhandProfileId) {
-    offhand = generateItem(2, 1, undefined, option.offhandProfileId, 'common');
+    offhand = generateItem(2, 1, undefined, option.offhandProfileId, 'common', option.id === 'wand' ? 'leather' : 'iron');
     offhand.id = 'starter-offhand'; offhand.name = `Worn ${offhand.baseName}`;
     offhand.recipe = { ...offhand.recipe, starter: true };
     if (offhand.shield) offhand.shield = { ...offhand.shield, id: offhand.id, name: offhand.name };
@@ -255,7 +266,7 @@ export function createCharacterSheet(starter: StarterLoadoutId = 'sword'): Chara
   const equipped = Object.fromEntries(EQUIPMENT_SLOTS.map(slot => [slot, null])) as CharacterSheet['equipped'];
   const starterPieces: readonly [EquipmentSlot, number][] = [['head', 31], ['chest', 17], ['gloves', 23], ['legs', 59], ['boots', 11], ['cloak', 71]];
   for (const [slot, seed] of starterPieces) {
-    const item = generateItem(seed, 1, slot as ItemKind);
+    const item = generateItem(seed, 1, slot as ItemKind, undefined, 'common', slot === 'cloak' ? 'cloth' : 'leather');
     const wornNames: Partial<Record<EquipmentSlot, string>> = { head: 'Leather Hood', chest: 'Leather Jerkin',
       gloves: 'Leather Gloves', legs: 'Leather Trousers', boots: 'Leather Boots', cloak: 'Travel Cloak' };
     item.baseName = wornNames[slot]!;
@@ -278,18 +289,20 @@ export function createCharacterSheet(starter: StarterLoadoutId = 'sword'): Chara
 export function deriveItem(item: Item): Item {
   const next: Item = { ...item, implicit: {}, affixes: [], recipe: { ...item.recipe, rolls: [...item.recipe.rolls] } };
   const r = item.recipe, quality = TIER_POWER[item.tier], enhance = 1 + .05 * r.enhancement;
-  const growth = itemPowerScale(item.itemLevel) * quality * enhance;
+  const baseScale = itemMaterialScale(item);
+  const growth = itemPowerScale(item.itemLevel) * quality * enhance * baseScale;
   const weapon = r.profileId === STARTING_SWORD.id ? STARTING_SWORD : WEAPON_PROFILES.find(p => p.id === r.profileId);
   const shield = SHIELD_PROFILES.find(p => p.id === r.profileId);
   const armor: Partial<Record<ItemKind, number>> = { head: 5, chest: 11, gloves: 3, legs: 7, boots: 4 };
-  if (item.focus) next.implicit = focusImplicit(r.profileId!, item.itemLevel, quality * enhance);
+  if (item.focus) next.implicit = focusImplicit(r.profileId!, item.itemLevel, quality * enhance * baseScale);
   if (shield) next.implicit.armor = Math.round(({ buckler: 7, kite: 15, tower: 22 }[shield.visual.kind]) * growth);
   if (!r.starter) {
     if (armor[item.kind]) next.implicit.armor = Math.round(armor[item.kind]! * growth);
     if (item.kind === 'cloak') next.implicit.maxHp = Math.round(6 * growth);
     if (item.kind === 'amulet') next.implicit.maxMana = Math.round(7 * growth);
-    if (item.kind === 'ring') next.implicit.damagePercent = Math.round(2 * itemPercentageScale(item.itemLevel) * quality * enhance * 10) / 10;
+    if (item.kind === 'ring') next.implicit.damagePercent = Math.round(2 * itemPercentageScale(item.itemLevel) * quality * enhance * baseScale * 10) / 10;
   }
+  if (JEWELRY_PROFILES.some(p=>p.id===r.profileId)) next.implicit=jewelryImplicit(r.profileId!,item.itemLevel,quality*enhance*baseScale);
   if (weapon && item.weapon) next.weapon = { ...item.weapon, damage: Math.round(weapon.damage * growth) };
   if (shield && item.shield) next.shield = { ...item.shield,
     blockChance: Math.round(shield.blockChance * enhance * 10) / 10,
@@ -301,7 +314,7 @@ export function deriveItem(item: Item): Item {
       value: discreteAffixValue(definition.stat, r.rolls[index], item.itemLevel) ?? Math.round((definition.base + level * definition.growth) * (.85 + r.rolls[index] * .3) * quality * enhance * affixPotency(item.kind, definition.stat) * 10) / 10 };
   });
   next.requiredLevel = Math.max(1, item.itemLevel - 2);
-  next.power = Math.round((item.itemLevel * 10 + quality * 12 + item.affixes.length * 7) * enhance);
+  next.power = Math.round((item.itemLevel * 10 + quality * baseScale * 12 + item.affixes.length * 7) * enhance);
   return applyWeaponEnchantment(next);
 }
 

@@ -1,7 +1,8 @@
+import { gearSurface, materializeGear, gearMaterialStops, gearMaterialMarks, type GearMaterial, type GearSurface } from './gear-material.ts';
 import type { ShieldDefinition, WeaponVisual } from './model.ts';
 import { mixColor, type Point } from './art-primitives.ts';
 
-export interface GearShape { points: readonly Point[]; fill?: string; stroke?: string; width?: number; fine?: boolean; }
+export interface GearShape { points: readonly Point[]; fill?: string; stroke?: string; width?: number; fine?: boolean; surface?: GearSurface; }
 const clamp = (n: number, low: number, high: number) => Math.max(low, Math.min(high, n));
 const poly = (points: readonly Point[], fill: string): GearShape => ({ points, fill });
 const stroke = (points: readonly Point[], color: string, width = .7): GearShape => ({ points, stroke: color, width });
@@ -14,7 +15,20 @@ export const weaponArtLength = (visual: WeaponVisual) => clamp(visual.length, 8,
 export const bowStringOffset = (draw: number) => -5 - clamp(draw, 0, 1) * 11;
 
 /** Shared procedural silhouettes for worn weapons and inventory icons. +X is the attack direction. */
+const weaponCache = new WeakMap<WeaponVisual, GearShape[]>();
 export function weaponShapes(visual: WeaponVisual, draw = 0): GearShape[] {
+  if (draw === 0) { const cached = weaponCache.get(visual); if (cached) return cached; }
+  const shapes = buildWeaponShapes(visual, draw);
+  const accents = new Map<string, GearMaterial>([[visual.guard, 'brass'], [visual.grip, ['bow','staff','wand','axe','mace'].includes(visual.kind) ? 'wood' : 'leather']]);
+  if (visual.glow) accents.set(visual.glow, 'gem');
+  accents.set(visual.metal, 'steel');
+  accents.set(mixColor(visual.metal, '#121c28', .72), 'steel');
+  accents.set(mixColor(visual.metal, '#bdc7cc', .25), 'steel');
+  const result = materializeGear(shapes, visual.kind === 'wand' || visual.kind === 'staff' || visual.kind === 'bow' ? 'wood' : 'steel', Math.round(visual.length * 13 + visual.width * 71), accents).map(shape => shape.surface && visual.material && (shape.surface.material === 'steel' || (['staff','wand','bow'].includes(visual.kind) && shape.surface.material === 'wood')) ? { ...shape, surface: { ...shape.surface, material: visual.material } } : shape);
+  if (draw === 0) weaponCache.set(visual, result);
+  return result;
+}
+function buildWeaponShapes(visual: WeaponVisual, draw: number): GearShape[] {
   if (visual.kind === 'unarmed') return [];
   const length = weaponArtLength(visual), half = Math.max(.7, visual.width * .5);
   const grip = clamp(visual.gripLength ?? 12, 6, visual.kind === 'staff' ? 13 : 22), shapes: GearShape[] = [];
@@ -42,17 +56,20 @@ export function weaponShapes(visual: WeaponVisual, draw = 0): GearShape[] {
     }
     return shapes;
   }
+  if (visual.kind !== 'wand') {
   shapes.push(poly([[-grip, -1.35], [length * .8, -1.35], [length * .8, 1.35], [-grip, 1.35]], visual.grip));
-  const wrappedEnd = visual.kind === 'sword' || visual.kind === 'dagger' ? 1 : length * .5;
+  const wrappedEnd = visual.kind === 'sword' || visual.kind === 'dagger' ? 1 : 0;
   for (let wrap = -grip + 1; wrap < wrappedEnd; wrap += 2) shapes.push(stroke([[wrap, -1.2], [wrap + .8, 1.2]], visual.guard, .45));
+  }
   if (visual.kind === 'sword' || visual.kind === 'dagger') {
-    const broad = visual.kind === 'dagger' ? half * 1.4 : half;
+    const broad = visual.kind === 'dagger' ? half * 1.4 : half * .88;
     shapes.push(poly([[3, -broad], [length * .77, -broad * .66], [length, 0], [length * .77, broad * .68], [3, broad]], '#233b43'));
     shapes.push(poly([[3.5, -broad * .73], [length * .77, -broad * .43], [length, 0], [length * .77, broad * .48], [3.5, broad * .8]], visual.metal));
     shapes.push(poly([[3, -broad], [length * .77, -broad * .66], [length, 0], [length * .76, -broad * .34], [4, -.15]], visual.edge));
-    shapes.push(poly([[5, .25], [length * .77, 0], [length * .69, broad * .35], [5, broad * .52]], '#476572'));
+    shapes.push({ ...poly([[5, .05], [length * .77, -.1], [length * .69, broad * .33], [5, broad * .48]], mixColor(visual.metal, '#152533', .55)), surface: gearSurface('steel', 3, [.65, .4, .65]) });
+    shapes.push({ ...poly([[5, -.13], [length * .73, -.2], [length * .84, 0], [length * .73, .12], [5, .1]], visual.metal), surface: gearSurface('steel', 7, [-.4, -.7, .6]) });
     shapes.push(stroke([[6, -.1], [length * .7, -.1]], visual.edge, .35));
-    const guard = Math.max(3.6, broad * 2.4);
+    const guard = Math.max(3.6, broad * 2.1);
     const dagger = visual.kind === 'dagger';
     shapes.push(poly(dagger
       ? [[.1, -guard + 1], [1.5, -guard], [3.5, -guard + 1], [3.5, guard - 1], [1.5, guard], [.1, guard - 1]]
@@ -67,30 +84,43 @@ export function weaponShapes(visual: WeaponVisual, draw = 0): GearShape[] {
     shapes.push(stroke([[head - 2, -3], [length - 4, -blade + 4]], visual.guard, .8));
     shapes.push(poly([[head - 3, -4], [head - 4, -blade + 3], [length - 5, -blade + 4], [length - 3, -4], [head + 1, -2]], '#39515a'));
     shapes.push(stroke([[head - 1, -5], [head - 2, -blade + 5], [length - 6, -blade + 5]], visual.metal, 1.1));
-    shapes.push(poly(gem(length - 5, -blade * .55, 1.3, 1.7), visual.guard));
+    shapes.push({...poly([[head-2,-2],[head+2,-2],[head+2,2],[head-2,2]],visual.metal),surface:gearSurface('steel',8,[-.5,-.2,.84])});
+    shapes.push({...poly([[head-6,-blade+.8],[head-4,-blade+2.5],[length-3,-blade+3],[length+.5,-blade*.25],[length-2,-1],[length-1,-blade+1.8]],mixColor(visual.metal,visual.edge,.48)),surface:{...gearSurface('steel',9,[-.3,-.75,.58]),facet:true}});
+    shapes.push({...stroke([[head-2,-4],[head-1,-5],[head,-4]],visual.guard,.22),fine:true});
     if (length > 31) {
       shapes.push(poly([[head - 3, 3], [head - 6, blade * .7], [length - 1, blade * .75], [length + 1, blade * .2], [length - 2, 1]], visual.metal));
       shapes.push(stroke([[head - 6, blade * .7], [length - 1, blade * .75], [length + 1, blade * .2]], visual.edge, 1));
     } else shapes.push(poly([[head, 0], [head - 1, 5], [length - 2, 2], [length - 3, 0]], visual.guard));
     shapes.push(poly(gem(head, 0, 2.5, 2), visual.guard));
   } else if (visual.kind === 'mace') {
-    const head = length - 6, breadth = 4 + half * .75;
-    shapes.push(poly([[head - 5, -breadth], [head + 5, -breadth], [length + 1, -breadth + 3], [length + 1, breadth - 3], [head + 5, breadth], [head - 5, breadth], [head - 7, breadth - 3], [head - 7, -breadth + 3]], visual.metal));
-    shapes.push(poly([[head - 5, -breadth], [head + 5, -breadth], [length + 1, -breadth + 3], [head - 4, -breadth + 3]], visual.edge));
-    for (const y of [-breadth + 2, 0, breadth - 2]) {
-      shapes.push(poly([[head - 6, y], [head - 3, y - 1.3], [length - 1, y - 1.3], [length + 2, y], [length - 1, y + 1.5], [head - 3, y + 1.5]], y === 0 ? visual.guard : '#3e5656'));
-      shapes.push(stroke([[head - 3, y - 1.2], [length - 1, y - 1.2], [length + 1, y]], visual.edge, .55));
+    const head=length-7, radius=length>30?5.8:3.9;
+    shapes.push(poly([[head-2,-1.8],[head+.7,-2],[head+.7,2],[head-2,1.8]],visual.guard));
+    // Forged head with dark joins between the flanges, not stacked gold bars.
+    shapes.push(poly([[head,-radius*.6],[length-1,-radius],[length+1,0],[length-1,radius],[head,radius*.6]],mixColor(visual.metal,'#15232b',.42)));
+    for(const side of [-1,0,1]) {
+      const y=side*radius*.67;
+      shapes.push({...poly([[head-.4,y],[head+1.3,y-1],[length-1.3,y-1.15],[length+.7,y-.25],[length-.8,y+1],[head+1,y+.8]],visual.metal),surface:gearSurface('steel',11+side,[0,side*.55,.84])});
+      shapes.push({...poly([[head+1.3,y-1],[length-1.3,y-1.15],[length+.7,y-.25],[length-1,y-.52],[head+1.5,y-.55]],mixColor(visual.metal,visual.edge,.4)),surface:{...gearSurface('steel',12,[0,-.8,.6]),facet:true}});
     }
-    shapes.push(poly(gem(head + 1, 0, 2.5, 2.5), visual.guard));
+    shapes.push(poly([[head+1,-.7],[head+2,-.7],[head+2,.7],[head+1,.7]],visual.guard));
   } else if (visual.kind === 'wand') {
-    const glow = visual.glow ?? '#b4a5ef', tip = length - 2;
-    shapes.push(poly([[-grip, -1.2], [4, -1.8], [tip - 3, -.8], [tip - 3, .8], [4, 1.8], [-grip, 1.2]], visual.grip));
-    shapes.push(stroke([[2, -1.3], [tip - 3, -.6]], visual.edge, .45));
-    shapes.push(poly([[tip - 5, -2], [tip - 2, -2.5], [tip + 2, 0], [tip - 2, 2.5], [tip - 5, 2]], visual.metal));
-    shapes.push(poly(gem(tip, 0, 3.5, visual.element === 'frost' ? 2 : 1.6), glow));
-    shapes.push(poly([[tip - 2, -.2], [tip, -1.5], [tip + 3, 0], [tip, -.3]], visual.edge));
-    for (const x of [2, tip - 5]) shapes.push(stroke([[x, -1.7], [x, 1.7]], visual.guard, 1));
-    if (visual.element === 'lightning') shapes.push(stroke([[5, -.4], [8, .4], [9, -.4], [12, .2]], glow, .45));
+    const glow = visual.glow ?? '#b4a5ef', tip = length - 1.6;
+    const wood = mixColor(visual.grip, '#283034', .2), grain = mixColor(visual.grip, visual.edge, .24);
+    // Continuous tapered wood, with a short grip rather than a sword hilt.
+    shapes.push(poly([[-grip,-.64],[-2,-.76],[2,-.58],[tip-2.6,-.27],[tip-1.3,0],[tip-2.6,.27],[2,.58],[-2,.76],[-grip,.64]], wood));
+    shapes.push(stroke([[-grip+.4,-.38],[-1,-.48],[6,-.26],[tip-2.5,-.12]],grain,.22));
+    shapes.push(poly([[-grip-.35,-.5],[-grip,-.67],[-grip+.6,-.62],[-grip+.6,.62],[-grip,.67],[-grip-.35,.5]],visual.guard));
+    shapes.push(poly([[-.4,-.75],[.35,-.72],[.35,.72],[-.4,.75]],visual.guard));
+    for(let x=-grip+1.1;x<-1;x+=1.1) shapes.push({ ...stroke([[x,-.52],[x+.25,.52]],mixColor(wood,'#202329',.25),.15),fine:true });
+    // A small socket holds the crystal on the shaft's axis. No broad cage or guard.
+    shapes.push(poly([[tip-3.1,-.38],[tip-1.8,-.62],[tip-.8,0],[tip-1.8,.62],[tip-3.1,.38]],visual.guard));
+    const radius=visual.element==='frost'?.82:visual.element==='arcane'?.72:.62;
+    const crystal:Point[] = [[tip-1.5,0],[tip-.5,-radius],[tip+.8,-radius*.45],[tip+1.6,0],[tip+.5,radius],[tip-.5,radius*.8]];
+    shapes.push({...poly(crystal,glow),surface:gearSurface('gem',19)});
+    shapes.push({...poly([[tip-1.5,0],[tip-.5,-radius],[tip+.8,-radius*.45],[tip+1.6,0],[tip-.1,-.1]],mixColor(glow,'#efffff',.55)),surface:{...gearSurface('gem',20,[-.1,-.6,.8]),facet:true}});
+    if(visual.element==='lightning') shapes.push({ ...stroke([[6,-.2],[8,.2],[9,-.2],[11,0]],glow,.2),fine:true });
+    if(visual.element==='arcane') shapes.push({ ...stroke([[tip-4.6,-.35],[tip-4.2,0],[tip-4.6,.35]],visual.guard,.2),fine:true });
+    return shapes;
   } else if (visual.kind === 'staff') {
     const head = length - 4, glow = visual.glow ?? '#a99acf';
     const iron = mixColor(visual.metal, '#121c28', .72), lit = mixColor(visual.metal, '#bdc7cc', .25);
@@ -126,8 +156,8 @@ export function weaponShapes(visual: WeaponVisual, draw = 0): GearShape[] {
   const pommel: Point[] = [[-2, -.7], [-1.1, -1.7], [.2, -1.4], [.8, -.6], [.8, .6], [.2, 1.4], [-1.1, 1.7], [-2, .7]];
   shapes.push(poly(pommel.map(([x, y]) => [x - grip, y]), mixColor(visual.guard, '#23313a', .25)));
   shapes.push(stroke([[-grip - 1.6, -.5], [-grip - 1, -1.2], [-grip + .1, -.9]], visual.edge, .35));
-  if (visual.glow && visual.kind !== 'staff' && visual.kind !== 'wand') shapes.push(stroke([[Math.max(5, length * .35), -half], [length * .8, -half * .6], [length, 0]], visual.glow, .6));
-  if (visual.kind !== 'staff' && visual.kind !== 'wand') {
+  if (visual.glow && visual.kind !== 'staff') shapes.push(stroke([[Math.max(5, length * .35), -half], [length * .8, -half * .6], [length, 0]], visual.glow, .6));
+  if (visual.kind !== 'staff') {
     const dark = mixColor(visual.metal, '#101b24', .65);
     for (let i = 0; i < 3; i++) {
       const x = length * (.32 + i * .16);
@@ -153,39 +183,51 @@ export function weaponShapes(visual: WeaponVisual, draw = 0): GearShape[] {
 }
 
 /** Shields face the viewer; wrist attachment remains centered behind their boss. */
+const shieldCache = new WeakMap<ShieldDefinition['visual'], GearShape[]>();
 export function shieldShapes(visual: ShieldDefinition['visual']): GearShape[] {
-  const edge: Point[] = visual.kind === 'buckler'
-    ? Array.from({ length: 12 }, (_, i): Point => [Math.cos(i * Math.PI / 6) * 8.8, Math.sin(i * Math.PI / 6) * 9.5])
+  const cached = shieldCache.get(visual); if (cached) return cached;
+  const round = visual.kind === 'buckler';
+  const edge: Point[] = round
+    ? Array.from({ length: 16 }, (_, i): Point => [Math.cos(i * Math.PI / 8) * 8.8, Math.sin(i * Math.PI / 8) * 9.5])
     : visual.kind === 'tower' ? [[-7, -11], [0, -13], [7, -11], [8, 9], [4, 12], [-4, 12], [-8, 9]]
       : [[0, -11], [8, -8], [7, 4], [0, 14], [-7, 4], [-8, -8]];
-  const inner = edge.map(([x, y]): Point => [x * .79, y * .84]);
-  const shapes = [poly(edge, '#172832'), stroke([...edge, edge[0]], visual.edge, 1.3),
-    poly(inner, visual.base), stroke([...inner, inner[0]], visual.trim, .65),
-    poly([[0, -9], [5.7, -6.5], [5.7, 3.5], [0, visual.kind === 'buckler' ? 7.5 : 10.8]], visual.shadow),
-    stroke([[-5.8, -6.4], [-6.1, 0], [-4.4, 4]], visual.edge, .65)];
-  if (visual.kind === 'buckler') {
-    const ring = Array.from({ length: 13 }, (_, i): Point => [Math.cos(i * Math.PI / 6) * 5.4, Math.sin(i * Math.PI / 6) * 5.8]);
-    shapes.push(stroke(ring, visual.shadow, 1.3), stroke(ring, visual.trim, .6));
-    for (let spoke = 0; spoke < 8; spoke++) {
-      const angle = spoke * Math.PI / 4;
-      shapes.push(stroke([[Math.cos(angle) * 4.6, Math.sin(angle) * 4.8], [Math.cos(angle) * 6.6, Math.sin(angle) * 7]], visual.trim, .65));
-    }
-    shapes.push(poly([[-3.3, 0], [-2.1, -2.8], [.2, -3.4], [2.7, -1.8], [3.3, .7], [1.2, 3], [-1.7, 2.6]], visual.shadow),
-      poly([[-2.7, -.5], [-1.7, -2.3], [.2, -2.7], [2.2, -1.3], [1.1, .6], [-1.1, 1.2]], visual.edge));
-  } else if (visual.kind === 'kite') {
-    // A split heraldic wing follows the shield ridge instead of a generic cross.
-    shapes.push(stroke([[0, -8.7], [0, 10.8]], visual.edge, .9),
-      poly([[-.8, -2.4], [-5, -6.3], [-4.8, -2.1], [-2.2, -.2], [-4.4, -.8], [-3.1, 2.7], [-.8, 4.1]], visual.trim),
-      poly([[.8, -2.4], [5, -6.3], [4.8, -2.1], [2.2, -.2], [4.4, -.8], [3.1, 2.7], [.8, 4.1]], visual.trim),
-      poly(gem(0, -2, 1.9, 2.5), visual.shadow), poly(gem(-.3, -2.4, 1, 1.6), visual.edge));
-  } else {
-    shapes.push(stroke([[-4.9, 7.5], [-4.9, -6], [0, -9.7], [4.9, -6], [4.9, 7.5]], visual.trim, 1),
-      stroke([[-2.9, 6], [-2.9, -4.8], [0, -7.3], [2.9, -4.8], [2.9, 6]], visual.edge, .6),
-      poly([[0, -4.2], [1.8, -1.4], [.8, .3], [1.3, 5.7], [0, 8.8], [-1.3, 5.7], [-.8, .3], [-1.8, -1.4]], visual.trim),
-      poly(gem(-.2, -1.1, .8, 1.7), visual.edge));
+  const inset = edge.map(([x,y]): Point => [x * .85, y * .85]);
+  const shapes: GearShape[] = [poly(edge.map(([x,y]): Point=>[x,y+.65]), visual.shadow), poly(edge, visual.shadow)];
+  // Separate forged rim facets: only the light-facing bevel is bright.
+  for (let i=0;i<edge.length;i++) {
+    const next=(i+1)%edge.length, nx=(edge[i][0]+edge[next][0])/18, ny=(edge[i][1]+edge[next][1])/20;
+    const light = Math.max(0, -.6*nx-.8*ny);
+    shapes.push({ ...poly([edge[i], edge[next], inset[next], inset[i]], mixColor(visual.base, visual.edge, .15+light*.62)),
+      surface: { ...gearSurface('steel', i, [nx,ny,.65]), facet: true } });
   }
-  for (const [x, y] of [[-5, -6], [5, -6], [-4, 5], [4, 5]]) shapes.push(poly(gem(x, y, .7, .7), visual.trim));
-  return shapes;
+  shapes.push(poly(inset, visual.shadow));
+  const face=inset.map(([x,y]): Point=>[x*.94,y*.94]);
+  shapes.push({ ...poly(face, visual.base), surface: gearSurface('steel', 51, [-.2,-.15,.96]) });
+  shapes.push(stroke([...face,face[0]], mixColor(visual.base,visual.shadow,.4), .28));
+  if (round) {
+    // Broad dished face and raised boss replace the concentric outlined spokes.
+    for (let i=0;i<8;i++) {
+      const a=i*Math.PI/4,b=(i+1)*Math.PI/4;
+      shapes.push({ ...poly([[0,0],[Math.cos(a)*6.6,Math.sin(a)*7.1],[Math.cos(b)*6.6,Math.sin(b)*7.1]],
+        mixColor(visual.base, i<4?visual.shadow:visual.edge,i<4?.16:.11)), surface:gearSurface('steel',i,[Math.cos((a+b)/2)*.3,Math.sin((a+b)/2)*.3,.95]) });
+    }
+    const boss=Array.from({length:8},(_,i):Point=>[Math.cos(i*Math.PI/4)*3.15,Math.sin(i*Math.PI/4)*3.15+.5]);
+    shapes.push(poly(boss.map(([x,y]):Point=>[x*1.14,y*1.14+.3]),visual.shadow));
+    for(let i=0;i<8;i++) {
+      const angle=(i+.5)*Math.PI/4;
+      shapes.push({...poly([[-.35,-.4],boss[i],boss[(i+1)%8]],mixColor(visual.base,visual.edge,Math.max(.08,(-Math.cos(angle)-Math.sin(angle))*.32+.22))),surface:{...gearSurface('steel',i,[Math.cos(angle)*.7,Math.sin(angle)*.7,.7]),facet:true}});
+    }
+  } else {
+    for (const side of [-1,1]) shapes.push({...poly([[0,-9],[side*5.8,-7],[side*5,3],[0,11]],mixColor(visual.base,side<0?visual.edge:visual.shadow,.12)),surface:gearSurface('steel',5,[side*.4,-.1,.91])});
+    shapes.push({...poly([[-.5,-8],[.3,-9.5],[1,4],[0,10],[-.6,4]], visual.trim),surface:gearSurface('brass',4)});
+    for(const side of [-1,1]) shapes.push({...poly([[side*.8,-4],[side*4.5,-6.5],[side*3.8,-1.5],[side*1.3,1.8]],visual.trim),surface:gearSurface('brass',6)});
+  }
+  for (let i=0;i<(round?8:edge.length);i++) {
+    const p=round ? [Math.cos(i*Math.PI/4)*7.45,Math.sin(i*Math.PI/4)*8.05] : [edge[i][0]*.91,edge[i][1]*.91];
+    shapes.push(poly(gem(p[0],p[1]+.12,.42,.42),visual.shadow),poly(gem(p[0]-.07,p[1]-.12,.27,.27),visual.trim));
+  }
+  const result=materializeGear(shapes,'steel',29,new Map([[visual.trim,'brass']])).map(shape=>shape.surface?.material==='steel'&&visual.material?{...shape,surface:{...shape.surface,material:visual.material}}:shape);
+  shieldCache.set(visual,result); return result;
 }
 
 /** SVG and Canvas use these same points, keeping icons faithful to equipped silhouettes. */
@@ -197,7 +239,22 @@ export function gearShapeColor(value: string): string {
   return '#829487';
 }
 
-export function gearShapesSVG(shapes: readonly GearShape[], fine = true): string {
-  const color = gearShapeColor;
-  return shapes.filter(shape => fine || !shape.fine).map(shape => `<${shape.fill ? 'polygon' : 'polyline'} points="${shape.points.map(p => p.map(v => Math.round(v * 100) / 100).join(',')).join(' ')}" fill="${shape.fill ? color(shape.fill) : 'none'}"${shape.stroke ? ` stroke="${color(shape.stroke)}" stroke-width="${shape.width ?? .7}" stroke-linejoin="round" stroke-linecap="round"` : ''}/>`).join('');
+export function gearShapesSVG(shapes: readonly GearShape[], fine = true, prefix = 'gear'): string {
+  const definitions: string[] = [];
+  const result = shapes.filter(shape => fine || !shape.fine).map((shape,i) => {
+    const points=shape.points.map(p=>p.map(v=>Math.round(v*100)/100).join(',')).join(' ');
+    let fill=shape.fill ? gearShapeColor(shape.fill) : 'none', marks='';
+    if (shape.fill && shape.surface) {
+      const id=`${prefix}-surface-${i}`, xs=shape.points.map(p=>p[0]),ys=shape.points.map(p=>p[1]);
+      const x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x,h=Math.max(...ys)-y;
+      definitions.push(`<linearGradient id="${id}" x1="0" y1="0" x2=".8" y2="1">${gearMaterialStops(fill,shape.surface).map(([at,color])=>`<stop offset="${at}" stop-color="${gearShapeColor(color)}"/>`).join('')}</linearGradient>`);
+      fill=`url(#${id})`;
+      if(fine && !shape.fine && w*h>5) {
+        definitions.push(`<clipPath id="${id}-clip"><polygon points="${points}"/></clipPath>`);
+        marks=`<g clip-path="url(#${id}-clip)" stroke="${gearShapeColor(shape.fill)}" opacity=".13" stroke-width=".1">${gearMaterialMarks(shape.surface,[x,y,w,h]).map(mark=>`<polyline fill="none" points="${mark.map(p=>p.join(',')).join(' ')}"/>`).join('')}</g>`;
+      }
+    }
+    return `<${shape.fill?'polygon':'polyline'} points="${points}" fill="${fill}"${shape.stroke?` stroke="${gearShapeColor(shape.stroke)}" stroke-width="${shape.width??.7}" stroke-linejoin="round" stroke-linecap="round"`:''}/>${marks}`;
+  }).join('');
+  return `<defs>${definitions.join('')}</defs>${result}`;
 }

@@ -22,7 +22,7 @@ export function eventRewards(site: EventRecord) {
         break;
       }
     }
-    const item = generateItem(siteHash(site.seed, i, 497), Math.min(1e6, site.level + Number(veteran)), site.kind === 'caravan' ? (i === 0 ? 'weapon' : 'chest') : undefined, undefined, tier);
+    const item = generateItem(siteHash(site.seed, i, 497), Math.min(1e6, site.level + Number(veteran)), site.kind === 'caravan' ? (i === 0 ? 'weapon' : 'chest') : undefined, undefined, tier, undefined, {level:site.level,encounter:site.kind==='graveyard'||site.kind==='camp'?'event':undefined});
     item.id = `poi:${site.id}:${i}`;
     return item;
   });

@@ -1,5 +1,8 @@
 # Progression, threat, and loot
 
+Equipment construction now has independent weighted material pools and stronger rare bases. See [equipment materials](item-materials.md) for exact rates and multipliers. Material affects base stats and armor affix affinity, independently of affix rarity. Higher source levels and difficult encounters improve material weights.
+
+
 2026-09-05 · first connected balance model for the local prototype.
 
 The world supplies the danger; the character chooses how far to venture. An enemy keeps the level, rank, combat stats, biome, and reward context it received when it spawned. Leveling up does not strengthen existing enemies or improve their items. Better areas offer higher-level equipment and more XP, while returning to an earlier area makes the character's growth tangible.

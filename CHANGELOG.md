@@ -1,5 +1,25 @@
 # Evergrow changelog
 
+## v0.3.3 — 2026-09-07T13:30:00Z
+
+### New
+
+- New weapon and armor materials, from everyday iron to rare crystal.
+- Caster robes in linen, silk, velvet and starweave.
+- Eight jewelry bases with distinct bonuses and matching gems.
+
+### Tweaks
+
+- Refined equipment shapes, textures and reactions to nearby light.
+- Leather favors ranger builds; robes favor spellcasters.
+- Harder zones, bosses and guarded chests favor better materials.
+- Reduced service premiums for expensive materials.
+
+### Fixes
+
+- Fixed blackened shields and capes overlapping front-facing gear.
+- Reshaped bulky wands and awkward boots.
+
 ## v0.3.2 — 2026-09-07T12:17:00Z
 
 ### Fixes

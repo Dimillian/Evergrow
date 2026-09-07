@@ -1,3 +1,6 @@
+import { JEWELRY_PROFILES } from './jewelry-content.ts';
+import { ITEM_MATERIALS, itemMaterialPool } from './item-materials.ts';
+import { GEAR_MATERIAL_IDS } from './gear-material-content.ts';
 import { isSkillStat, skillAffixRank } from './equipment-affix-content.ts';
 import { isElementalAffix, meleeEnchantment } from './elemental-weapon.ts';
 import { FOCUS_PROFILES } from './focus-content.ts';
@@ -26,17 +29,19 @@ export function validItem(v: unknown): v is Item {
     || !integer(r.targetedRolls) || !integer(r.fullRolls) || !Array.isArray(r.rolls) || r.rolls.length !== v.affixes.length
     || !r.rolls.every(n => number(n, 0, 1)) || new Set(v.affixes.map(a => a.stat)).size !== v.affixes.length
     || v.affixes.length !== TIER_AFFIXES[v.tier as Item['tier']]) return false;
+  if (r.materialId !== undefined && (typeof r.materialId !== 'string' || !Object.hasOwn(ITEM_MATERIALS, r.materialId) || !itemMaterialPool(v.kind as Item['kind'], object(v.weapon) ? v.weapon.family as NonNullable<Item['weapon']>['family'] : undefined).some(m => m.id === r.materialId))) return false;
   const profile = r.profileId;
   if (v.kind === 'weapon' && !(profile === STARTING_SWORD.id || WEAPON_PROFILES.some(p => p.id === profile))) return false;
   if (v.kind === 'shield' && !SHIELD_PROFILES.some(p => p.id === profile)) return false;
-  if (v.kind !== 'weapon' && v.kind !== 'shield' && v.kind !== 'grimoire' && v.kind !== 'orb' && profile !== undefined) return false;
+  if (v.kind !== 'weapon' && v.kind !== 'shield' && v.kind !== 'grimoire' && v.kind !== 'orb' && v.kind !== 'ring' && v.kind !== 'amulet' && profile !== undefined) return false;
+  if ((v.kind==='ring'||v.kind==='amulet')&&profile!==undefined&&!JEWELRY_PROFILES.some(p=>p.id===profile&&p.kind===v.kind))return false;
   if (v.affixes.filter(a => isSkillStat(a.stat)).length > 1
     || Object.keys(v.implicit as ObjectValue).some(isSkillStat)
     || v.affixes.some((a, i) => isSkillStat(a.stat) ? !integer(a.value, 1, 5) || a.value !== skillAffixRank((r.rolls as number[])[i], v.itemLevel as number) : a.stat === 'projectilePierce' && a.value !== 1)) return false;
   const elemental = v.affixes.filter(a => isElementalAffix(a.stat));
   if (elemental.length > 1 || elemental.length && (v.kind !== 'weapon' || !object(v.weapon) || v.weapon.attackKind !== 'melee' || elemental.some(a => a.value <= 0))) return false;
   const a = v.appearance;
-  if (!object(a) || !oneOf(a.style, ['plate', 'leather']) || !['base', 'shadow', 'edge', 'trim'].every(key => color(a[key]))) return false;
+  if (!object(a) || a.surface !== undefined && !oneOf(a.surface, GEAR_MATERIAL_IDS) || !oneOf(a.style, ['plate', 'leather', 'cloth']) || !['base', 'shadow', 'edge', 'trim'].every(key => color(a[key]))) return false;
   const w = v.weapon;
   const weaponProfile = profile === STARTING_SWORD.id ? STARTING_SWORD : WEAPON_PROFILES.find(p => p.id === profile);
   const shieldProfile = SHIELD_PROFILES.find(p => p.id === profile);
@@ -49,7 +54,7 @@ export function validItem(v: unknown): v is Item {
     const enchantment = meleeEnchantment(v.affixes as Item['affixes']);
     if (enchantment ? !object(w.enchantment) || w.enchantment.element !== enchantment.element || w.enchantment.damage !== enchantment.damage : w.enchantment !== undefined) return false;
     const visual = w.visual;
-    if (!object(visual) || visual.kind !== w.family || !number(visual.length, 0, 500) || !number(visual.width, 0, 100)
+    if (!object(visual) || visual.material !== undefined && !oneOf(visual.material, GEAR_MATERIAL_IDS) || visual.kind !== w.family || !number(visual.length, 0, 500) || !number(visual.width, 0, 100)
       || !['metal', 'edge', 'grip', 'guard'].every(key => color(visual[key]))
       || visual.glow !== undefined && !color(visual.glow)
       || visual.gripLength !== undefined && !number(visual.gripLength, 0, 100)
@@ -59,12 +64,14 @@ export function validItem(v: unknown): v is Item {
   if (v.kind === 'shield') {
     if (!object(shield) || !shieldProfile || !text(shield.id) || !text(shield.name) || !number(shield.blockChance, 0, 100)
       || !number(shield.blockReduction, 0, 150) || !object(shield.visual)
+      || shield.visual.material !== undefined && !oneOf(shield.visual.material, GEAR_MATERIAL_IDS)
       || shield.visual.kind !== shieldProfile.visual.kind
       || !['base', 'shadow', 'edge', 'trim'].every(key => color((shield.visual as ObjectValue)[key]))) return false;
   } else if (shield !== undefined) return false;
   if (v.kind === 'grimoire' || v.kind === 'orb') {
     const f = v.focus, p = FOCUS_PROFILES.find(p => p.id === profile && p.visual.kind === v.kind);
     if (!p || !object(f) || !text(f.id, 160) || !text(f.name) || !object(f.visual)
+      || f.visual.material !== undefined && !oneOf(f.visual.material, GEAR_MATERIAL_IDS)
       || f.visual.kind !== p.visual.kind || f.visual.motif !== p.visual.motif
       || !['base', 'edge', 'trim', 'shadow', 'glow'].every(key => color((f.visual as ObjectValue)[key]))) return false;
   } else if (v.focus !== undefined) return false;

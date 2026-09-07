@@ -13,10 +13,10 @@ export function drawEquipmentGlow(c: CanvasRenderingContext2D, x: number, y: num
 /** Local-space bounded effects: no particles allocated per frame, no gameplay state. */
 export function drawWeaponEnchantment(c: CanvasRenderingContext2D, v: WeaponVisual, time: number, charge: number) {
   if (!v.glow || !v.element || v.element === 'physical' || v.kind === 'bow' || v.kind === 'unarmed') return;
-  const caster = v.kind === 'staff' || v.kind === 'wand', length = weaponArtLength(v);
+  const wand = v.kind === 'wand', caster = v.kind === 'staff' || wand, length = weaponArtLength(v);
   const start = caster ? length - 3 : length * (v.kind === 'axe' || v.kind === 'mace' ? .65 : .23);
   const end = length - 1, pulse = .65 + Math.sin(time * 2.2) * .08 + charge * .25;
-  drawEquipmentGlow(c, (start + end) / 2, 0, caster ? 7 + charge * 3 : 6, v.glow, pulse * .55);
+  drawEquipmentGlow(c, (start + end) / 2, 0, wand ? 4 + charge * 2 : caster ? 7 + charge * 3 : 6, v.glow, pulse * .55);
   c.save(); c.globalCompositeOperation = 'screen';
   if (!caster) {
     c.globalAlpha *= .5;
@@ -26,16 +26,17 @@ export function drawWeaponEnchantment(c: CanvasRenderingContext2D, v: WeaponVisu
   }
   if (v.element === 'lightning') {
     const points: Point[] = Array.from({ length: 8 }, (_, i) => [start + (end - start + 3) * i / 7,
-      Math.sin(i * 13.1 + Math.floor(time * 9)) * (i === 0 || i === 7 ? .3 : 2.3)]);
+      Math.sin(i * 13.1 + Math.floor(time * 9)) * (i === 0 || i === 7 ? .3 : wand ? .8 : 2.3)]);
     c.globalAlpha *= .7; line(c, points, v.glow, .9); line(c, points, '#eef5ff', .3);
   } else for (let i = 0; i < 4; i++) {
     const phase = ((time * (v.element === 'fire' ? .55 : .22) + i * .25) % 1 + 1) % 1;
-    const x = start + (end - start) * (i / 3), y = -phase * (v.element === 'fire' ? 7 : 4);
+    const x = start + (end - start) * (i / 3), y = -phase * (wand ? 2.5 : v.element === 'fire' ? 7 : 4);
     c.save(); c.globalAlpha *= Math.sin(phase * Math.PI) * .8;
     if (v.element === 'fire') {
-      polygon(c, [[x - .7, y], [x + Math.sin(time * 3 + i) * 1.2, y - 2.8], [x + .8, y + .7]], v.glow);
+      const size = wand ? .4 : 1;
+      polygon(c, [[x - .7 * size, y], [x + Math.sin(time * 3 + i) * 1.2 * size, y - 2.8 * size], [x + .8 * size, y + .7 * size]], v.glow);
     } else {
-      const size = v.element === 'frost' ? .8 : .55;
+      const size = (v.element === 'frost' ? .8 : .55) * (wand ? .65 : 1);
       polygon(c, [[x, y - size], [x + size * .6, y], [x, y + size], [x - size * .6, y]], v.glow);
     }
     c.restore();

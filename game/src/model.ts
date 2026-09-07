@@ -1,3 +1,4 @@
+import type { GearMaterial } from './gear-material-content.ts';
 import type { MaterialId } from './material-content.ts';
 import type { BreakableContainer } from './breakable-containers.ts';
 import type { CharacterSheet, DerivedCharacterStats, SkillId, Item } from './character-types.ts';
@@ -63,6 +64,7 @@ export interface CharacterStats {
 }
 
 export interface WeaponVisual {
+  material?: GearMaterial;
   kind: WeaponFamily;
   element?: DamageType;
   length: number;
@@ -98,7 +100,7 @@ export type DamageType = 'physical' | 'fire' | 'frost' | 'lightning' | 'arcane';
 export type ProjectileStyle = 'arrow' | 'fire' | 'frost' | 'lightning' | 'arcane' | 'spirit';
 export interface ShieldDefinition {
   id: string; name: string; blockChance: number; blockReduction: number;
-  visual: { kind: 'buckler' | 'kite' | 'tower'; base: string; edge: string; trim: string; shadow: string };
+  visual: { material?: GearMaterial; kind: 'buckler' | 'kite' | 'tower'; base: string; edge: string; trim: string; shadow: string };
 }
 /** Payload snapshots travel with a projectile; equipment changes cannot rewrite it in flight. */
 export interface ProjectileEffects {
@@ -110,7 +112,7 @@ export interface ProjectileEffects {
 
 export interface FocusDefinition {
   id: string; name: string;
-  visual: { kind: 'grimoire' | 'orb'; motif: 'ember' | 'rime' | 'astral'; base: string; edge: string; trim: string; shadow: string; glow: string };
+  visual: { material?: GearMaterial; kind: 'grimoire' | 'orb'; motif: 'ember' | 'rime' | 'astral'; base: string; edge: string; trim: string; shadow: string; glow: string };
 }
 
 export interface Equipment {

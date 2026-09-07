@@ -1,3 +1,4 @@
+import { gearSurface, materializeGear } from './gear-material.ts';
 import type { FocusDefinition } from './model.ts';
 import { gearShapeColor, type GearShape } from './weapon-shapes.ts';
 import { mixColor as mixRGB, type Point } from './art-primitives.ts';
@@ -54,7 +55,7 @@ export function focusShapes(v: FocusDefinition['visual'], time = 0, facing = Mat
     fill([[.9, 1.2], [2, 1], [2.4, 4.2], [1.6, 3.6], [1, 4.3]], mixColor(v.glow, v.shadow, .45));
     // The cover narrows continuously in side views instead of staying billboard-flat.
     const width = .62 + .38 * Math.abs(Math.sin(facing)), skew = Math.cos(facing) * .12;
-    return shapes.map(shape => ({ ...shape, points: shape.points.map(([x, y]): Point => [x * width + y * skew, y]) }));
+    return materializeGear(shapes,v.material??'leather',41,new Map([[v.trim,'brass'],[v.glow,'gem'],['#b8b39e','cloth'],['#ece2c4','cloth']])).map(shape => ({ ...shape, points: shape.points.map(([x, y]): Point => [x * width + y * skew, y]) }));
   }
 
   const cy = focusGlowCenter(v, time)[1], r = 3.8;
@@ -62,12 +63,12 @@ export function focusShapes(v: FocusDefinition['visual'], time = 0, facing = Mat
   // Thin orbital traces behind the glass, with a gap between the focus and palm.
   line(ring(0, cy, 6.3, 2.1, Math.PI, TAU, tilt), mixColor(v.glow, v.shadow, .55), .4);
   line(ring(0, cy, 5.1, 4.8, .2, 2.9, -tilt), mixColor(v.trim, v.shadow, .4), .3);
-  fill(ring(0, cy, r + .4), mixColor(v.glow, '#071523', .8));
+  fill(ring(0, cy, r + .4), mixColor(v.base, '#071523', .45));
   // Nested pigment layers form round luminous glass in both Canvas and SVG;
   // no large triangular facets or solid metal cage interrupt the sphere.
   for (let i = 0; i < 16; i++) {
     const t = i / 15, radius = r * (1 - t * .84);
-    const color = mixColor(mixColor(v.glow, '#112238', .72), v.glow, t * .88);
+    const color = mixColor(mixColor(v.base, '#112238', .32), v.glow, t * .88);
     fill(ring(-t * .6, cy - t * .7, radius), color);
   }
   line(ring(0, cy, r, r, 3.55, 5.35), mixColor(v.glow, '#f1f8ff', .5), .4);
@@ -86,5 +87,5 @@ export function focusShapes(v: FocusDefinition['visual'], time = 0, facing = Mat
   }
   // A faint suspended sigil directly above the open palm anchors the levitation.
   line([[-1.8, -1.2], [0, -1.8], [1.8, -1.2], [0, -.65], [-1.8, -1.2]], mixColor(v.glow, v.shadow, .3), .35);
-  return shapes;
+  return shapes.map(shape=>({...shape,surface:gearSurface(v.material??'gem',17,[-.25,-.35,.9])}));
 }

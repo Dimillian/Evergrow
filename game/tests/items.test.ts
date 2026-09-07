@@ -40,7 +40,7 @@ test('the seed corpus generates all five tiers and every equipment kind with coh
 
 test('item level raises power, requirements and stats without changing a seeded weapon identity or cadence', () => {
   for (let seed = 1; seed <= 300; seed++) {
-    const low = generateItem(seed, 1, 'weapon'), high = generateItem(seed, 40, 'weapon');
+    const low = generateItem(seed, 1, 'weapon'), high = generateItem(seed, 40, 'weapon', undefined, undefined, low.recipe.materialId);
     assert.equal(low.tier, high.tier); assert.equal(low.name, high.name);
     assert.ok(high.power > low.power); assert.ok(high.requiredLevel > low.requiredLevel);
     assert.ok(high.weapon!.damage > low.weapon!.damage);
@@ -55,7 +55,7 @@ test('explicit authored profiles cover one-hand, two-hand, bow, staff, and shiel
   const families = new Set<string>();
   for (const profile of WEAPON_PROFILES) {
     const item = generateItem(872, 1, 'weapon', profile.id), high = generateItem(872, 30, 'weapon', profile.id);
-    assert.equal(item.baseName, profile.name); assert.equal(item.weapon!.family, profile.family); families.add(profile.family);
+    assert.equal(item.recipe.profileId, profile.id); assert.ok(item.baseName.endsWith(profile.name)); assert.equal(item.weapon!.family, profile.family); families.add(profile.family);
     assert.equal(item.weapon!.hands, profile.hands); assert.equal(item.weapon!.attackKind, profile.attackKind);
     assert.equal(item.weapon!.damageType, profile.damageType); assert.ok(high.weapon!.damage > item.weapon!.damage);
     assert.deepEqual(item, generateItem(872, 1, undefined, profile.id));
@@ -114,7 +114,7 @@ test('explicit reward tiers control quality and affix count, preserving the base
     assert.equal(item.tier, tiers[index]);
     assert.equal(item.affixes.length, index);
     assert.deepEqual(item, generateItem(813, 12, 'weapon', 'longsword', tiers[index]));
-    assert.equal(item.baseName, 'Longsword');
+    assert.equal(item.recipe.profileId, 'longsword'); assert.equal(item.baseName, variants[0].baseName);
     assert.deepEqual(item.appearance, variants[0].appearance);
     if (index > 0) assert.ok(item.weapon!.damage > variants[index - 1].weapon!.damage);
   });
@@ -132,8 +132,8 @@ test('percentage affixes approach bounded quality ranges while flat stats and ba
   const seen = new Set<string>();
   for (const kind of ITEM_KINDS) for (let seed = 0; seed < 200; seed++) {
     const low = generateItem(seed, 1, kind, undefined, 'legendary');
-    const mid = generateItem(seed, 100, kind, undefined, 'legendary');
-    const high = generateItem(seed, 1_000_000, kind, undefined, 'legendary');
+    const mid = generateItem(seed, 100, kind, undefined, 'legendary', low.recipe.materialId);
+    const high = generateItem(seed, 1_000_000, kind, undefined, 'legendary', low.recipe.materialId);
     if (high.implicit.armor) assert.ok(high.implicit.armor > mid.implicit.armor! * 1000);
     high.affixes.forEach((affix, index) => {
       assert.equal(affix.stat, mid.affixes[index].stat);
@@ -148,8 +148,8 @@ test('percentage affixes approach bounded quality ranges while flat stats and ba
     });
   }
   assert.deepEqual([...seen].sort(), Object.keys(percentBounds).sort());
-  const lowRing = generateItem(915, 1, 'ring', undefined, 'legendary');
-  const highRing = generateItem(915, 1_000_000, 'ring', undefined, 'legendary');
+  const lowRing = generateItem(915, 1, 'ring', 'garnet-band', 'legendary', 'iron');
+  const highRing = generateItem(915, 1_000_000, 'ring', 'garnet-band', 'legendary', 'iron');
   assert.equal(lowRing.implicit.damagePercent, 3);
   assert.ok(highRing.implicit.damagePercent! > lowRing.implicit.damagePercent!);
   assert.ok(highRing.implicit.damagePercent! <= 2 * 1.65 * 1.5 + .05);

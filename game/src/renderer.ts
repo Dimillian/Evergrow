@@ -1,3 +1,5 @@
+import { sampleGearLight } from './gear-scene-light.ts';
+import { withGearLight } from './gear-material.ts';
 import { drawEnemyWarning, enemyWarningLight } from './enemy-warning-art.ts';
 import { drawGroundSpell, groundSpellLights } from './ground-spell-art.ts';
 import { enemyDebuffs } from './enemy-debuffs.ts';
@@ -119,6 +121,7 @@ export class Renderer {
   private get cachedBuildings() { return this.visibility.buildings; }
   private indoorBlend = 0;
   private lighting = new Lighting();
+  private materialLights: readonly PointLight[] = [];
   private equipmentEmitters: ReturnType<typeof heldEquipmentLights> = [];
   private deaths = new EnemyDeaths();
   private materials = new MaterialResponses();
@@ -321,6 +324,7 @@ export class Renderer {
     this.biomeLife.update(dt, this.visualTime, this.cachedProps, { x: px, y: py, vx: p.vx, vy: p.vy },
       settings.reducedMotion, (x, y) => world.sampleGroundContact(x, y));
     const lights = this.sceneLights(sim, px, py, settings.reducedMotion, alpha);
+    this.materialLights = lights;
     const waterStart = this.profiler?.start() ?? 0;
     if (!sim.dungeonFloor) {
       const a = p.attack;
@@ -623,7 +627,7 @@ export class Renderer {
     const c = this.ctx;
     c.fillStyle = this.water.fluid.wetAt(x, y) > .5 ? '#02091128' : '#02091190'; c.beginPath();
     c.ellipse(x, y + 2, pose.kind === 'brute' ? 17 : pose.kind === 'player' ? 11 * PLAYER_ART_SCALE : 11, pose.kind === 'brute' ? 8 : 5, 0, 0, TAU); c.fill();
-    c.save(); c.translate(x, y); if (pose.dead) c.globalAlpha = .4; drawHumanoid(c, pose); drawCharacterStatus(c, pose); c.restore();
+    c.save(); c.translate(x, y); if (pose.dead) c.globalAlpha = .4; withGearLight(c,sampleGearLight(x,y-24,this.materialLights),()=>drawHumanoid(c, pose)); drawCharacterStatus(c, pose); c.restore();
     this.waterArt.drawFeet(c, this.water.fluid, x, y, pose.kind === 'brute' ? 18 : pose.kind === 'player' ? 13 * PLAYER_ART_SCALE : 12);
   }
 

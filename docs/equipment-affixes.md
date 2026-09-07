@@ -4,6 +4,8 @@ Current rules · September 7, 2026. Generation, rarity upgrades and rerolls shar
 
 ## Slot pools
 
+The head/chest/gloves/legs/boots rows below describe metal armor. Leather and cloth now have construction-specific pools: leather favors Dexterity, physical damage and critical hits; cloth favors Intelligence, mana and spell stats. Eight jewelry profiles also bias related rolls. See [material identities and weights](item-materials.md#armor-identities-and-jewelry).
+
 | Slot / family | Eligible explicit affixes |
 | --- | --- |
 | Head | Mana, Intelligence, mana cost reduction, cooldown reduction, life, armor; any skill rank |
@@ -12,7 +14,7 @@ Current rules · September 7, 2026. Generation, rarity upgrades and rerolls shar
 | Legs | Life, armor, Vitality, life regeneration, Strength, Dexterity |
 | Boots | Movement speed, life, armor, Vitality, Dexterity |
 | Cloak | Life/mana regeneration, cooldown reduction, life, mana, Intelligence, Deep Draught |
-| Rings | Critical chance/damage, attack/spell damage, Strength/Dexterity/Intelligence, mana, mana regeneration, Wellsip; any skill rank |
+| Rings | Life, Vitality, life regeneration, critical chance/damage, attack/spell damage, Strength/Dexterity/Intelligence, mana, mana regeneration, Wellsip; any skill rank |
 | Amulet | All 25 general affixes plus both block affixes; any skill rank; weaker movement/speed rolls |
 | Shields | Block chance/reduction, armor, life, Vitality, life regeneration, Strength, Afterguard; shield skill ranks |
 | Melee weapons | Attack damage, critical chance/damage, life on hit, Strength, Dexterity, Intelligence, spell damage, Expanse, one fire/frost/lightning enchantment; compatible melee skill ranks |
@@ -25,7 +27,7 @@ Amulets are the explicit exception to boots-only movement and gloves-only speed.
 
 ## Weights and specialist budgets
 
-Ordinary affixes have weight **1**. Critical chance, life on hit, cooldown reduction and mana cost reduction have weight **0.55**. Each of the three melee elemental affixes has weight **0.12**. Draw without replacement, removing conflicting families after each choice. Weights apply equally to drops and enchanting. With Expanse and the skill-rank family, an initial melee affix is elemental with probability `0.36 / 8.51 ≈ 4.2%`; higher tiers provide additional opportunities, never two elements. Item rarity/drop tables are unchanged.
+Ordinary affixes have weight **1**. Critical chance, life on hit, cooldown reduction and mana cost reduction have weight **0.55**. Each of the three melee elemental affixes has weight **0.12**. Draw without replacement, removing conflicting families after each choice. Construction and jewelry affinity multiply favored weights by 2.2 and fallback weights by 0.75; the unmodified weapon pools below retain their original probabilities. Weights apply equally to drops and enchanting. With Expanse and the skill-rank family, an initial melee affix is elemental with probability `0.36 / 8.51 ≈ 4.2%`; higher tiers provide additional opportunities, never two elements. Item rarity/drop tables are unchanged.
 
 Multiply the existing affix base and growth by these slot budgets before rounding:
 

@@ -116,10 +116,10 @@ test('archetypes and biomes create authored tendencies without excluding any equ
     const profiles = new Set<string>();
     for (let seed = 0; seed < 3000; seed++) {
       for (const item of rollEnemyLoot({ ...source, biome, seed, firstKill: true })) {
-        if (item.weapon || item.shield) profiles.add(item.baseName);
+        if (item.weapon || item.shield) profiles.add(item.recipe.profileId!);
       }
     }
-    assert.deepEqual([...profiles].sort(), [...WEAPON_PROFILES, ...SHIELD_PROFILES].map(profile => profile.name).sort());
+    assert.deepEqual([...profiles].sort(), [...WEAPON_PROFILES, ...SHIELD_PROFILES].map(profile => profile.id).sort());
   }
 });
 

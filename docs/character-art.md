@@ -1,6 +1,6 @@
 # Character and equipment art
 
-Local refinement pass, 2026-09-06. The angular, procedural illustration style remains the source of truth for equipped items, portraits, inventory and ground loot.
+Local refinement pass, 2026-09-07. The angular, procedural illustration style remains the source of truth for equipped items, portraits, inventory and ground loot.
 
 ## Proportions and motion
 
@@ -14,17 +14,24 @@ Attack speed, active windows, damage, movement and saves are unchanged by this a
 
 `weapon-shapes.ts` owns all seventeen weapon silhouettes and three shield shapes. Axes and maces have more restrained head widths, and pommels are smaller. Elemental staves use tapered wood, metal collars and a dark cage around a smaller fire, frost or storm core. Their light and sparse moving motes are confined to the core.
 
-`armor-shapes.ts` supplies both worn armor and matching helmet/cuirass icons. Leather has softer lit planes and stitched seams; metal retains sharper bevels. Fine rivets, engraving and wear marks are tagged as detail. `equipment-art.ts` includes those marks and broad pigment shading when the current Canvas scale reaches 2.4 physical pixels per local art unit. Smaller world silhouettes keep their clear color planes.
+`armor-shapes.ts` supplies both worn armor and matching helmet/cuirass icons. Leather has softer lit planes and stitched seams; metal retains sharper bevels. Fine rivets, engraving and wear marks are tagged as detail. `gear-material.ts` supplies shared steel, brass, leather, wood, cloth and gem responses to Canvas and SVG. Authored face normals give breastplates, helmets, shield rims, raised bosses and jewelry settings directional facets. `armor-accessory-shapes.ts` shares tapered bracers, articulated gauntlet panels, thigh/knee plates and woven cloak folds across icons and equipped mounts. Axe bevels, steel mace flanges and reinforced shield panels use the same material metadata. Broad metal reflections stay soft; wear is sparse and omitted from small facets. RGB pigments can be blended repeatedly without losing their color. `equipment-art.ts` includes fine marks and material shading when the current Canvas scale reaches 2.4 physical pixels per local art unit. Smaller world silhouettes use one material-lit color per plane. `gear-scene-light.ts` samples the existing eighteen-light scene budget once per actor, weights direction/color smoothly by range, and respects crypt visibility masks. Canvas material shading follows these lights and the actual equipment transform; cached per-shape responses avoid repeating pigment work for unchanged lighting. The existing scene light map still supplies ambient darkness and prop shadows. This is a stylized surface model, not full 3D physically based rendering.
 
 `item-art.ts` renders the same weapon and armor contours with local SVG pigment gradients. Small daggers occupy less of an inventory cell than long weapons. Leather accessories use the softer surface gradient. Icons at 96 pixels or larger include fine marks; normal 48-pixel cells emphasize silhouette and material. No external images, textures, fonts or rendering dependencies were added.
 
-Wands use a compact carved shaft and socketed elemental crystal, with a one-handed raised wrist that turns toward the cast. `focus-shapes.ts` supplies outward-facing leather grimoire covers with metal corner guards, clasps and illuminated seals, and floating glass orbs with luminous cores and moving runic orbits. Staff shafts and cages are 38% narrower, with slightly shorter upper shafts. These exact contours feed equipped art, inventory SVGs, ground drops and portrait bounds. Orb motion stays within a small bounded envelope and freezes with reduced motion. Procedural RGB blends are normalized to safe hex colors before SVG pigment shading so inventory icons preserve their magical material colors.
+Wands use a slender tapered shaft, short wrapped grip and small socketed elemental crystal. The four elemental variants have no sword pommel or broad cage; their shared geometry keeps the original tip and hand anchors. They retain a one-handed raised wrist that turns toward the cast. `focus-shapes.ts` supplies outward-facing leather grimoire covers with metal corner guards, clasps and illuminated seals, and floating glass orbs with luminous cores and moving runic orbits. Staff shafts and cages are 38% narrower, with slightly shorter upper shafts. These exact contours feed equipped art, inventory SVGs, ground drops and portrait bounds. Orb motion stays within a small bounded envelope and freezes with reduced motion. Procedural RGB blends are normalized to safe hex colors before SVG pigment shading so inventory icons preserve their magical material colors.
+
+`boot-shapes.ts` shares a slim shaft, raised instep, chamfered toe and thin sole between worn boots, inventory icons and drops. Facing changes the toe direction without moving the ankle or ground contact. Front-facing capes render before both legs and the torso; rear-facing capes remain over the body.
 
 ## Portrait framing
 
 `character-framing.ts` combines conservative body/cloth bounds with actual weapon, grip, bow-limb and off-hand contours. `character-portrait.ts` fits that full envelope uniformly to either portrait aspect ratio. Neutral framing stays fixed while the character breathes, preventing size pumping. The same equipped player rig remains in the character hall and inventory portrait.
 
 ## Local review
+
+`/equipment.html` is a development-only, save-free gallery of all 196 equipment profiles and armor variants: seventeen weapons, three shields, ten iron/leather armor pieces, six foci, and three accessories. Category filters keep the full collection easy to browse. Select an item to inspect its materials or equip it on the real character rig. The old comparison page and reference assets have been removed.
+
+The inspector offers moonlight, daylight and firelight, light intensity, pointer positioning and optional rotation. One reusable WebGL context and two cached 512-pixel textures (pigment and surface normal/material identity) serve the selected item; the other cards are static SVG. Roughness and metalness come from the same six material definitions as Canvas. Steel/brass have sharper, stronger reflections; leather and wood have broader restrained highlights, cloth stays matte, and crystal has a tight sheen. Animation is capped at 30 FPS, pauses when hidden and respects reduced motion. The equipped inspector uses the actual Canvas material pass. Gameplay retains Canvas plus its existing lighting pipeline rather than adding a per-item GPU pass. Device performance still needs player validation. No stats, saves or combat rules change.
+
 
 The [creature death atlas](creature-death-animations.md) at `/deaths.html` compares four shared runtime death animations for each of the nine current enemy kinds. Solid articulated body parts retain depth; humanoid fourth variants end in an upright slump. Hounds and wisps use separate rigs. Each kill selects one variant with presentation-only randomness, and all remains retain actor depth sorting. No combat or save rules change.
 
@@ -33,3 +40,11 @@ Open [/atelier.html](http://127.0.0.1:5173/atelier.html). Select any weapon, lea
 The native art tests cover finite geometry and drawing-state restoration; arm-rig tests cover joint/grip continuity. Character-art tests cover walking-staff and upright bow resting poses, front-facing staff layering, portrait containment, stance continuity and SVG resource references. Gameplay feel and preferred proportions remain subject to player feedback.
 
 Basic staff and wand bolts keep the resting upright guard. Their palms advance by at most 1.1 / 1.7 art units and their wrist rotation stays below 4 / 8.1 degrees, with a small core-light pulse peaking at release. Both staff hands remain attached; an equipped caster off-hand stays steady. Full active-skill casting retains its separate aiming gesture. The atelier consumes the actual tuned weapon cadence and shared ranged release phases from `combat-content.ts`, so its basic-attack study matches runtime timing.
+
+### Material variants · v0.3.3
+
+Every melee profile now has iron, steel, silver, gold and crystal construction; armor has leather and four metals. Caster gear uses wood/metal/crystal bindings and glass/quartz/astralite orbs. Explicit surface identities drive the shared Canvas, SVG and gallery lighting response. The gallery contains 196 real generated combinations, with material filters and base-stat/drop-rate inspection. See [equipment material rules](item-materials.md).
+
+Local specialist equipment adds cloth robes and a matching caster outfit, leather/ranger affix pools, eight jewelry bases, gentler service premiums and material odds that improve with geographic level and encounter difficulty. The gallery exposes level/encounter controls. See [equipment materials](item-materials.md).
+
+Caster armor has four fabric constructions: linen, silk, velvet and starweave. They share cloth silhouettes and caster affix pools, with distinct nonmetallic finishes, stronger bases and increasingly rare, difficulty-weighted drops.

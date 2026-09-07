@@ -1,3 +1,5 @@
+import type { ItemMaterialId } from './item-materials.ts';
+import type { GearMaterial } from './gear-material-content.ts';
 import type { GoldWallet } from './wallet.ts';
 import type { WeaponDefinition, FocusDefinition, ShieldDefinition } from './model.ts';
 
@@ -12,6 +14,7 @@ export type ItemKind = Exclude<EquipmentSlot, 'offhand' | 'ring1' | 'ring2'> | '
 export type ItemTier = 'common' | 'magic' | 'rare' | 'epic' | 'legendary';
 export interface ItemAffix { name: string; stat: StatKey; value: number; }
 export interface ItemRecipe {
+  materialId?: ItemMaterialId;
   profileId?: string; starter: boolean; enhancement: number; revision: number;
   targetedRolls: number; fullRolls: number; rolls: number[];
 }
@@ -24,7 +27,7 @@ export interface Item {
   id: string; seed: number; name: string; baseName: string; kind: ItemKind; tier: ItemTier;
   itemLevel: number; requiredLevel: number; power: number;
   implicit: StatModifiers; affixes: ItemAffix[]; weapon?: WeaponDefinition; shield?: ShieldDefinition; focus?: FocusDefinition;
-  appearance: { base: string; shadow: string; edge: string; trim: string; style: 'plate' | 'leather' };
+  appearance: { surface?: GearMaterial; base: string; shadow: string; edge: string; trim: string; style: 'plate' | 'leather' | 'cloth' };
 }
 export type SkillId = 'cleave' | 'lunge' | 'whirlwind' | 'earthshatter' | 'shieldBash' | 'bulwark'
   | 'volley' | 'piercingShot' | 'ricochet' | 'rainOfArrows' | 'backstab'

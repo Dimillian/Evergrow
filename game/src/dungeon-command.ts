@@ -126,7 +126,7 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     if (index === 2 ? run.states.warden.hp > 0 : floor.members.some(m => m.room === chest.room && run.states[m.id].hp > 0))
         return { ok: false, message: index === 2 ? 'Defeat the Hollow Warden.' : 'Defeat the chamber guards.' };
     const ranks = index === 2 ? ['normal', 'veteran', 'elite'] as const : ['veteran'] as const;
-    const items = ranks.map((rank, i) => rollEnemyLoot({ seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: run.entrance.level, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true })[0]);
+    const items = ranks.map((rank, i) => rollEnemyLoot({ seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: run.entrance.level, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true, encounter:index===2?'bossChest':'chest' })[0]);
     const gold = Math.round((index === 2 ? 45 + run.entrance.seed % 26 : 18) * (1 + .1 * (run.entrance.level - 1)));
     let mask = run.chestMasks[index], next = Math.max(1, ...sim.groundItems.map(i => i.id + 1), ...sim.groundGold.map(i => i.id + 1), ...sim.pickups.map(i => i.id + 1), ...sim.enemies.map(i => i.id + 1), ...sim.projectiles.map(i => i.id + 1));
     for (let i = 0; i < items.length; i++)

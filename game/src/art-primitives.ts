@@ -104,8 +104,15 @@ export function taper(
 }
 
 export function mixColor(from: string, to: string, amount: number): string {
-  const a = Number.parseInt(from.slice(1), 16);
-  const b = Number.parseInt(to.slice(1), 16);
+  // Procedural palettes mix previously mixed pigments as well as authored hex.
+  // Parsing our rgb() output as hexadecimal turned subsequent shading black.
+  const packed = (value: string): number => {
+    if (value[0] === '#') return Number.parseInt(value.slice(1), 16);
+    const channels = value.match(/^rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)$/);
+    return channels ? (Number(channels[1]) << 16) | (Number(channels[2]) << 8) | Number(channels[3]) : 0;
+  };
+  const a = packed(from);
+  const b = packed(to);
   const red = Math.round(((a >>> 16) & 255) * (1 - amount) + ((b >>> 16) & 255) * amount);
   const green = Math.round(((a >>> 8) & 255) * (1 - amount) + ((b >>> 8) & 255) * amount);
   const blue = Math.round((a & 255) * (1 - amount) + (b & 255) * amount);
