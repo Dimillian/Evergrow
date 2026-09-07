@@ -288,3 +288,7 @@ Camp, watchtower and caravan crates/barrels, plus indoor barrels, shatter on a s
 Each container independently has a **35% gold chance**, yielding **2–7 gold at zone level 1**, scaled by `1 + 0.1 × (zone level − 1)`. Its stable seed is separate from enemy, equipment and combat RNG. Gold uses the existing physical piles, attraction, wallet and reward counter; containers grant no XP, kill count or potion recharge. Destruction IDs and loose coins persist in the same checkpoint, including across dungeon trips. Existing characters continue without a reset. Opening a saved game or revisiting a camp cannot refill containers. Chests and POI rewards retain their existing interactions.
 
 `breakable-containers.ts` owns stable container identities, contact queries and exactly-once currency rolls. `World` projects those receipts onto immutable decor and furniture collision. `material-response.ts` / `material-response-art.ts` own the shared material debris, bounded across containers and combat to 48 bursts / 384 fragments. `/loot.html?containers` stages intact, impact, airborne, settled and fading art without gameplay or saves.
+
+## Slot-specific affix budgets
+
+The September 7 affix pass keeps the above drop counts, tier tables, item-level curves and affix counts. Explicit rolls now use weighted slot/family pools and stronger specialist multipliers; see [equipment affixes and hybrids](equipment-affixes.md) for the current tables and hybrid damage formula.

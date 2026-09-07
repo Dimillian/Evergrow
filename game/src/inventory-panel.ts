@@ -34,7 +34,7 @@ type ItemReference = ItemLocation & { id: string };
 const ATTRIBUTE_NAMES: Record<Attribute, string> = { strength: 'Strength', dexterity: 'Dexterity', intelligence: 'Intelligence', vitality: 'Vitality' };
 const ATTRIBUTE_DESCRIPTIONS: Record<Attribute, string> = {
   strength: 'Physical attack damage', dexterity: 'Attack speed and critical chance',
-  intelligence: 'Spell damage and maximum mana', vitality: 'Maximum life',
+  intelligence: 'Spell & elemental damage, mana', vitality: 'Maximum life',
 };
 const SLOT_NAMES: Record<EquipmentSlot, string> = {
   weapon: 'Main hand', offhand: 'Off hand', head: 'Head', chest: 'Chest', gloves: 'Gloves', legs: 'Legs', boots: 'Boots',

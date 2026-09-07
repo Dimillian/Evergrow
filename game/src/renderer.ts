@@ -175,13 +175,13 @@ export class Renderer {
   worldToScreen(x: number, y: number) { return worldToScreen(this.view, x, y); }
 
   /** Uses the displayed camera/body positions, then returns gameplay ground coordinates. */
-  resolvePointerAim(sim: Simulation, world: World, x: number, y: number, enabled: boolean): RangedAim | null {
+  resolvePointerAim(sim: Simulation, world: World, x: number, y: number, enabled: boolean, weapon = sim.player.equipment.mainHand): RangedAim | null {
     const p = sim.player;
-    if (!enabled || p.dead || p.equipment.mainHand.attackKind === 'melee') { this.rangedAim = null; return null; }
+    if (!enabled || p.dead || weapon.attackKind === 'melee') { this.rangedAim = null; return null; }
     const cursor = screenToWorld(this.lastDisplayedView, x, y);
     this.rangedAim = resolveRangedAim(p, cursor, sim.enemies, {
-      range: deriveAttackStats(p.stats, p.equipment.mainHand).range,
-      speed: p.equipment.mainHand.attackKind === 'arrow' ? 560 : 380,
+      range: deriveAttackStats(p.stats, weapon).range,
+      speed: weapon.attackKind === 'arrow' ? 560 : 380,
       alpha: sim.interpolationAlpha, previousTargetId: this.rangedAim?.targetId ?? null,
       bounds: this.lastDisplayedView,
       visible: (ax, ay, bx, by) => hasLineOfSight(world, ax, ay, bx, by),

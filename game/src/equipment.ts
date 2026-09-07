@@ -5,6 +5,7 @@ export type { CharacterStats, Equipment, WeaponDefinition, WeaponVisual } from '
 export interface DerivedAttackStats {
   attacksPerSecond: number;
   damage: number;
+  elementalDamage: number;
   range: number;
   arc: number;
 }
@@ -61,11 +62,12 @@ export function deriveAttackStats(stats: CharacterStats, weapon: WeaponDefinitio
   // Keep even extreme debug gear within a readable, resolvable 120 Hz attack window.
   const attacksPerSecond = Math.min(12, Math.max(.25,
     weaponActionRate(weapon) * positive(weapon.attackKind === 'bolt' ? stats.castSpeedMultiplier : stats.attackSpeedMultiplier, 1)));
+  const elementalDamage = Math.min(Number.MAX_SAFE_INTEGER, (weapon.enchantment?.damage ?? 0) * positive(stats.spellDamageMultiplier, 1));
   return {
-    attacksPerSecond,
+    attacksPerSecond, elementalDamage,
     // Finite item values can still overflow when multiplied; never emit Infinity damage.
     damage: Math.max(1, Math.min(Number.MAX_SAFE_INTEGER,
-      Math.round((positive(weapon.damage, STARTING_SWORD.damage) + (weapon.enchantment?.damage ?? 0)) * positive(weapon.attackKind === 'bolt' ? stats.spellDamageMultiplier : stats.attackDamageMultiplier, 1)))),
+      Math.round(positive(weapon.damage, STARTING_SWORD.damage) * positive(weapon.attackKind === 'bolt' ? stats.spellDamageMultiplier : stats.attackDamageMultiplier, 1) + elementalDamage))),
     range: positive(weapon.reach, STARTING_SWORD.reach),
     arc: Math.min(Math.PI * 2, positive(weapon.arc, STARTING_SWORD.arc)),
   };
@@ -75,3 +77,9 @@ export const UNARMED_WEAPON: WeaponDefinition = {
   id: 'unarmed', name: 'Unarmed', family: 'unarmed', hands: 1, attackKind: 'melee', damageType: 'physical', damage: 5, baseAttacksPerSecond: 1.8, reach: 24, arc: Math.PI / 2,
   visual: { ...STARTING_SWORD.visual, kind: 'unarmed', length: 0, width: 0 },
 };
+
+/** Only paired melee weapons alternate basics; mixed builds use the main-hand basic. */
+export function alternatesBasicAttacks(equipment: Equipment): boolean {
+  return equipment.mainHand.hands === 1 && equipment.mainHand.attackKind === 'melee'
+    && equipment.offHand?.kind === 'weapon' && equipment.offHand.weapon.hands === 1 && equipment.offHand.weapon.attackKind === 'melee';
+}

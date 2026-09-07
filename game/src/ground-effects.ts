@@ -1,3 +1,4 @@
+import { skillWeapon } from './skill-content.ts';
 import type { ProjectileStyle } from './model.ts';
 import { strikeContainers, type ContainerAttackContext } from './breakable-containers.ts';
 import type { CombatEvent, Enemy, GroundEffect, Player } from './model.ts';
@@ -31,7 +32,7 @@ export function advanceGroundEffects(effects: ActiveGroundEffect[], dt: number, 
   for (const effect of effects) {
     if (effect.follow) {
       const p = context.player;
-      if (p.dead || p.equipment.mainHand.attackKind !== 'bolt') { effect.pulsesLeft = 0; continue; }
+      if (p.dead || !skillWeapon(effect.skill, p.equipment)) { effect.pulsesLeft = 0; continue; }
       effect.x = p.x; effect.y = p.y;
     }
     const beforeDelay = effect.delay;

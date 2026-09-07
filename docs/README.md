@@ -80,3 +80,5 @@ Code checks and static reviews do not establish gameplay feel, economy balance o
 - [Panel performance](panel-performance.md): map/skill-atlas rendering, progressive loading and CPU verification.
 
 - [Material responses](material-responses.md): shared procedural debris, impacts and elemental death presentation.
+
+- [Equipment affixes and hybrids](equipment-affixes.md): current slot pools, roll weights, specialist budgets and elemental combat.

@@ -1,3 +1,5 @@
+import { alternatesBasicAttacks } from './equipment.ts';
+import { skillWeapon } from './skill-content.ts';
 import { weaponImpactStyle } from './elemental-weapon.ts';
 import { breakContainer, strikeContainers, strikeContainerSegment, type ContainerAttackContext } from './breakable-containers.ts';
 import { enemyInCombatViewport, type CombatViewport } from './combat-visibility.ts';
@@ -401,7 +403,9 @@ export class Simulation {
         if (p.dodgeCharges === PLAYER_ABILITIES.dodge.charges) p.dodgeRecharge = 0;
       }
     }
-    const direction = p.equipment.mainHand.attackKind !== 'melee' && input.rangedAim
+    const aimingSkill = this.skillBuffer && this.skillBuffer.until >= this.time ? p.character.skillSlots[this.skillBuffer.slot] : null;
+    const aimingWeapon = aimingSkill ? skillWeapon(aimingSkill, p.equipment) ?? p.equipment.mainHand : p.equipment.mainHand;
+    const direction = aimingWeapon.attackKind !== 'melee' && input.rangedAim
       && Number.isFinite(input.rangedAim.x) && Number.isFinite(input.rangedAim.y) ? input.rangedAim : { x: input.aimX, y: input.aimY };
     if (direction.x !== p.x || direction.y !== p.y) p.angle = Math.atan2(direction.y - p.y, direction.x - p.x);
     if (this.healBuffer >= this.time && p.flasks > 0 && (p.hp < p.maxHp || p.mana < p.maxMana) && p.healCooldown <= 0) {
@@ -463,7 +467,7 @@ export class Simulation {
       player: p, world: this.world, enemies: this.enemies,
       aimX: input.aimX, aimY: input.aimY,
       onScreen: enemy => enemyInCombatViewport(enemy, this.combatViewport),
-      damage: (enemy, amount, angle, melee, style) => this.damageEnemy(enemy, amount, angle, melee, false, style),
+      damage: (enemy, amount, angle, melee, style, elementalDamage?: number) => this.damageEnemy(enemy, amount, angle, melee, false, style, elementalDamage),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       projectile: (x, y, angle, definition, skill, effects) => this.projectile(x, y, angle, definition, skill, effects),
       schedule: effect => this.scheduleGroundEffect(effect),
@@ -488,7 +492,7 @@ export class Simulation {
       for (const enemy of this.enemies) if (enemy.state !== 'dead' && !dash.hitIds.has(enemy.id)
         && segmentDistanceSquared(enemy.x, enemy.y, startX, startY, p.x, p.y) <= (enemy.radius + dash.radius) ** 2
         && this.lineOfSight(p.x, p.y, enemy.x, enemy.y)) {
-        dash.hitIds.add(enemy.id); this.damageEnemy(enemy, dash.damage, dash.angle, true, false, dash.style);
+        dash.hitIds.add(enemy.id); this.damageEnemy(enemy, dash.damage, dash.angle, true, false, dash.style, dash.elementalDamage);
       }
       strikeContainerSegment(this.containerContext(), startX, startY, p.x, p.y, dash.radius + p.radius);
       dash.remaining = Math.max(0, dash.remaining - dt);
@@ -529,7 +533,7 @@ export class Simulation {
 
   private startAttack(elapsed = 0): void {
     const p = this.player, off = p.equipment.offHand;
-    const dual = off?.kind === 'weapon' && p.equipment.mainHand.hands === 1;
+    const dual = alternatesBasicAttacks(p.equipment);
     const hand = dual ? p.nextAttackHand : 'main';
     const weapon = hand === 'off' && off?.kind === 'weapon' ? off.weapon : p.equipment.mainHand;
     const manaCost = basicAttackManaCost(weapon, p.derived);
@@ -543,8 +547,8 @@ export class Simulation {
       kind: ranged ? 'ranged' : 'melee', weapon, hand,
       elapsed, duration, activeStart: duration * (ranged ? RANGED_BASIC_ATTACK_PHASES.activeStart : BASIC_ATTACK_PHASES.activeStart),
       activeEnd: duration * (ranged ? RANGED_BASIC_ATTACK_PHASES.activeEnd : BASIC_ATTACK_PHASES.activeEnd), angle: this.player.angle,
-      range: stats.range, arc: stats.arc, damage: stats.damage, hitIds: new Set<number>(),
-      ...(ranged ? { projectile: { style, ...(style === 'frost' ? { slowFactor: .8, slowDuration: 1 } : {}) } } : {}),
+      range: stats.range, arc: stats.arc, damage: stats.damage, elementalDamage: stats.elementalDamage, hitIds: new Set<number>(),
+      ...(ranged ? { projectile: { style } } : {}),
     };
     p.nextAttackHand = hand === 'main' ? 'off' : 'main';
     if (!ranged) this.events.push({ type: 'swing', x: p.x, y: p.y, angle: p.angle });
@@ -565,7 +569,7 @@ export class Simulation {
       if (!circleIntersectsSector(enemy.x, enemy.y, enemy.radius, p.x, p.y, angle, attack.range, to - from)) continue;
       if (!this.lineOfSight(p.x, p.y, enemy.x, enemy.y)) continue;
       attack.hitIds.add(enemy.id);
-      this.damageEnemy(enemy, attack.damage, Math.atan2(enemy.y - p.y, enemy.x - p.x), true, false, weaponImpactStyle(attack.weapon));
+      this.damageEnemy(enemy, attack.damage, Math.atan2(enemy.y - p.y, enemy.x - p.x), true, false, weaponImpactStyle(attack.weapon), attack.elementalDamage ?? 0);
     }
     // One solid-surface response per swing; scenery impact never changes its collision.
     if (!attack.surfaceHit && this.world.impactMaterial) for (let reach = p.radius + 4; reach <= attack.range; reach += 4) {
@@ -581,7 +585,7 @@ export class Simulation {
     return hasLineOfSight(this.world, ax, ay, bx, by);
   }
 
-  private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean, periodic = false, style?: ProjectileStyle): void {
+  private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean, periodic = false, style?: ProjectileStyle, elementalDamage?: number): void {
     damageEnemy(enemy, damage, angle, melee, {
       player: this.player, enemies: this.enemies, random: () => this.random(),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by), emit: event => this.events.push(event),
@@ -592,7 +596,7 @@ export class Simulation {
         });
         this.kills = reward.kills; this.killRecharge = reward.recharge;
       },
-    }, periodic, style);
+    }, periodic, style, elementalDamage);
   }
 
   private updateEnemies(dt: number): void {
@@ -692,7 +696,7 @@ export class Simulation {
       containers: this.containerContext(),
       player: this.player, enemies: this.enemies, world: this.world,
       onScreen: enemy => enemyInCombatViewport(enemy, this.combatViewport),
-      damage: (enemy, amount, angle, melee, style) => this.damageEnemy(enemy, amount, angle, melee, false, style),
+      damage: (enemy, amount, angle, melee, style, elementalDamage?: number) => this.damageEnemy(enemy, amount, angle, melee, false, style, elementalDamage),
       hurt: (amount, angle, sourceLevel, sourceKind) => this.damagePlayer(amount, angle, sourceLevel, sourceKind),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       emit: event => this.events.push(event),
@@ -712,7 +716,7 @@ export class Simulation {
       containers: this.containerContext(),
       player: this.player,
       enemies: this.enemies, visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
-      damage: (enemy, amount, angle, melee, style) => this.damageEnemy(enemy, amount, angle, melee, false, style),
+      damage: (enemy, amount, angle, melee, style, elementalDamage?: number) => this.damageEnemy(enemy, amount, angle, melee, false, style, elementalDamage),
       emit: event => this.events.push(event),
     });
   }

@@ -47,7 +47,7 @@ export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, optio
 export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
   const rows = Object.entries(itemModifiers(item)).map(([key, value]) => {
     const element = ELEMENTAL_AFFIXES.find(a => a.stat === key)?.element;
-    return `<div class="ui-item-property"${element ? ` style="color:${ELEMENT_COLORS[element]}"` : ''}><span>${escapeUI(STAT_LABELS[key as keyof typeof STAT_LABELS])}</span><strong>${formatStatValue(key as keyof typeof STAT_LABELS, value)}</strong></div>`;
+    return `<div class="ui-item-property"${element ? ` style="color:${ELEMENT_COLORS[element]}"` : ''}><span>${escapeUI(STAT_LABELS[key as keyof typeof STAT_LABELS])}${element ? ` · ${{ fire: 'Burn', frost: 'Chill', lightning: 'Interrupt' }[element]}` : ''}</span><strong>${formatStatValue(key as keyof typeof STAT_LABELS, value)}</strong></div>`;
   });
   let weapon = '';
   if (item.weapon) {

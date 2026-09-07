@@ -909,7 +909,9 @@ export class Game {
     // Clear queued weapon inputs as well as suppressing the held buttons.
     if (blocked) this.sim.clearCombatInput();
     const input = this.input.consume(aim, blocked);
-    const rangedAim = this.renderer.resolvePointerAim(this.sim, this.world, this.mouse.x, this.mouse.y, !blocked && this.mouse.present);
+    const aimSkill = input.skillSlot !== null ? p.character.skillSlots[input.skillSlot] : null;
+    const aimWeapon = aimSkill ? skillWeapon(aimSkill, p.equipment) ?? p.equipment.mainHand : p.equipment.mainHand;
+    const rangedAim = this.renderer.resolvePointerAim(this.sim, this.world, this.mouse.x, this.mouse.y, !blocked && this.mouse.present, aimWeapon);
     return rangedAim ? { ...input, rangedAim: { x: rangedAim.x, y: rangedAim.y } } : input;
   }
 

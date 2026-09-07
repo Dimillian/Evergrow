@@ -17,7 +17,7 @@ export interface SkillContext {
   containers?: ContainerAttackContext;
   availableGroundEffects: number;
   player: Player; world: WorldQuery; enemies: Enemy[]; aimX: number; aimY: number;
-  damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle): void;
+  damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle, elementalDamage?: number): void;
   onScreen(enemy: Enemy): boolean;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
   projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill: SkillId, effects?: ProjectileEffects): void;
@@ -47,7 +47,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   const damage = attack.damage * costs.damageMultiplier;
   const color = definition.color;
   const hitStyle = 'style' in recipe ? recipe.style : weaponImpactStyle(weapon);
-  const damageTarget = (enemy: Enemy, amount: number, angle: number, melee: boolean) => context.damage(enemy, amount, angle, melee, hitStyle);
+  const damageTarget = (enemy: Enemy, amount: number, angle: number, melee: boolean) => context.damage(enemy, amount, angle, melee, hitStyle, weapon.attackKind === 'melee' ? attack.elementalDamage * (damage > 0 ? amount / attack.damage : 0) : undefined);
   const living = () => enemies.filter(enemy => enemy.state !== 'dead');
   const visible = (enemy: Enemy) => context.visible(p.x, p.y, enemy.x, enemy.y);
   const radial = (radius: number, hit: (enemy: Enemy, angle: number) => void) => {
@@ -67,7 +67,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
     p.attack = { kind: 'melee', weapon, hand: weapon === p.equipment.mainHand ? 'main' : 'off', elapsed: 0, duration,
       activeStart: duration * BASIC_ATTACK_PHASES.activeStart, activeEnd: duration * BASIC_ATTACK_PHASES.activeEnd,
       angle: p.angle, range: attack.range * recipe.reachMultiplier,
-      arc: recipe.arc, damage, hitIds: new Set() };
+      arc: recipe.arc, damage, elementalDamage: attack.elementalDamage * costs.damageMultiplier, hitIds: new Set() };
     context.emit({ type: 'swing', x: p.x, y: p.y, angle: p.angle, skill: id, color });
     if (recipe.blast) blast(attack.range * recipe.reachMultiplier);
     return true;
@@ -76,7 +76,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   p.castTime = 1 / attack.attacksPerSecond; p.castAngle = p.angle;
   switch (recipe.kind) {
     case 'dash':
-      p.dash = { angle: p.angle, remaining: recipe.duration, speed: recipe.speed, damage, radius: recipe.radius, skill: id, style: hitStyle, hitIds: new Set() };
+      p.dash = { angle: p.angle, remaining: recipe.duration, speed: recipe.speed, damage, elementalDamage: attack.elementalDamage * costs.damageMultiplier, radius: recipe.radius, skill: id, style: hitStyle, hitIds: new Set() };
       p.castTime = Math.max(p.castTime, recipe.duration);
       break;
     case 'radial':

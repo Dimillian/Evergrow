@@ -47,6 +47,7 @@ export interface Attack {
   range: number;
   arc: number;
   damage: number;
+  elementalDamage?: number;
   hitIds: Set<number>;
   projectile?: ProjectileEffects;
   released?: boolean;
@@ -141,7 +142,7 @@ export interface Player {
   nextAttackHand: 'main' | 'off';
   guardTime: number;
   guardReduction: number;
-  dash: { angle: number; remaining: number; speed: number; damage: number; radius: number; skill: SkillId; style?: ProjectileStyle; hitIds: Set<number> } | null;
+  dash: { angle: number; remaining: number; speed: number; damage: number; elementalDamage?: number; radius: number; skill: SkillId; style?: ProjectileStyle; hitIds: Set<number> } | null;
   stats: CharacterStats;
   equipment: Equipment;
   attack: Attack | null;

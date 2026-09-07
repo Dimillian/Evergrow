@@ -1,5 +1,5 @@
 import { WARDEN_RULES } from './dungeon-boss.ts';
-import type { Enemy } from './model.ts';
+import type { Enemy, ProjectileStyle } from './model.ts';
 import { interruptStaggeredEnemy } from './enemy-state.ts';
 
 export interface SlowEffect { readonly duration: number; readonly factor: number }
@@ -49,4 +49,13 @@ export function advanceEnemyStatuses(enemy: Enemy, dt: number, damage: (enemy: E
     return false;
   }
   return true;
+}
+
+/** Elemental contacts share one non-stacking status rule across weapons and spells. */
+export const ELEMENTAL_CONTACT = Object.freeze({ burnDuration: 2, burnFractionPerSecond: .15, chillDuration: 1.5, chillFactor: .8, lightningInterrupt: .12 });
+export function applyElementalContact(enemy: Enemy, style: ProjectileStyle | undefined, damage: number): void {
+  if (damage <= 0 || !Number.isFinite(damage) || enemy.state === 'dead') return;
+  if (style === 'fire') applyBurn(enemy, { duration: ELEMENTAL_CONTACT.burnDuration, dps: damage * ELEMENTAL_CONTACT.burnFractionPerSecond });
+  else if (style === 'frost') applySlow(enemy, { duration: ELEMENTAL_CONTACT.chillDuration, factor: ELEMENTAL_CONTACT.chillFactor });
+  else if (style === 'lightning') applyStun(enemy, ELEMENTAL_CONTACT.lightningInterrupt);
 }

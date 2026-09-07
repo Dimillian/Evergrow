@@ -1,7 +1,7 @@
 import { basicBoltTip } from './projectile-launch.ts';
 import { PROJECTILE_HEIGHT } from './ranged-aim.ts';
 import { SKILL_CAST_MOTION } from './combat-content.ts';
-import { SKILL_DEFINITIONS } from './skill-content.ts';
+import { SKILL_DEFINITIONS, skillWeapon } from './skill-content.ts';
 import { playerMotion } from './character-motion.ts';
 import { getPlayerSwordTip } from './art.ts';
 import { playerPose } from './character-pose.ts';
@@ -156,7 +156,8 @@ export class CombatEffects {
             i ? '#ffd674' : color, style === 'fire' ? .45 : .22, false);
         }
       }
-      if (p.equipment.mainHand.attackKind === 'bolt' && p.castTime > (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction)) {
+      const castingWeapon = p.activeSkill ? skillWeapon(p.activeSkill, p.equipment) : p.equipment.mainHand;
+      if (castingWeapon?.attackKind === 'bolt' && p.castTime > (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction)) {
         const angle = sim.time * 22, tip = getPlayerSwordTip(playerPose(p, sim.time));
         this.spark(p.x + tip.x + Math.cos(angle) * 8,
           p.y + tip.y + Math.sin(angle) * 8, angle + Math.PI / 2, p.activeSkill ? SKILL_DEFINITIONS[p.activeSkill].color : p.equipment.mainHand.visual.glow ?? GOLD, .25, false);

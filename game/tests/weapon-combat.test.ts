@@ -75,7 +75,7 @@ for (const profile of ['thorn-shortbow', 'ember-staff', 'cinder-wand', 'hoarfros
     assert.equal(casts.length, Math.floor((6 - FIXED_STEP - release) / duration) + 1);
     assert.equal(events.filter(event => event.type === 'swing').length, 0);
     assert.ok(straight.hp < straight.maxHp); assert.equal(beside.hp, beside.maxHp);
-    assert.ok(hitEvents(events, straight).length <= casts.length, 'one release cannot repeatedly hit its target');
+    assert.ok(hitEvents(events, straight).filter(hit => hit.value === attack.damage).length <= casts.length, 'one release cannot repeatedly hit its target (burn ticks are separate)');
   });
 }
 

@@ -33,9 +33,9 @@ test('melee affixes roll one real elemental identity; all ranged and nonweapon p
   assert.equal(seen.size, 3);
   for (const kind of ['shield', 'orb', 'grimoire', 'ring', 'chest'] as const) assert.ok(itemAffixPool({ kind }).every(a => !isElementalAffix(a.stat)));
 });
-test('enchantment damage scales with gear and physical attack bonuses once; the other hand receives no bonus', () => {
+test('enchantment damage scales with spell bonuses separately from physical damage; the other hand receives no bonus', () => {
   const item = enchanted(), stats = { ...createBaseStats(), attackDamageMultiplier: 2, spellDamageMultiplier: 100 };
-  assert.equal(deriveAttackStats(stats, item.weapon!).damage, Math.round((item.weapon!.damage + item.affixes[0].value) * 2));
+  assert.equal(deriveAttackStats(stats, item.weapon!).damage, Math.round(item.weapon!.damage * 2 + item.affixes[0].value * 100));
   const sim = new Simulation(world, { spawn: false });
   sim.player.character = createCharacterSheet(); sim.player.character.equipped.weapon = generateItem(7, 1, 'weapon', 'longsword', 'common');
   sim.player.character.equipped.offhand = null; refreshCharacter(sim.player);

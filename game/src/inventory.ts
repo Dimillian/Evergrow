@@ -7,7 +7,7 @@ const validIndex = (sheet: CharacterSheet, index: number) => Number.isInteger(in
 export function itemFitsSlot(item: Item, slot: EquipmentSlot): boolean {
   if (item.kind === 'ring') return slot === 'ring1' || slot === 'ring2';
   if (item.kind === 'shield' || item.kind === 'grimoire' || item.kind === 'orb') return slot === 'offhand';
-  if (item.kind === 'weapon') return slot === 'weapon' || slot === 'offhand' && item.weapon?.hands === 1 && item.weapon.attackKind === 'melee';
+  if (item.kind === 'weapon') return slot === 'weapon' || slot === 'offhand' && item.weapon?.hands === 1 && (item.weapon.attackKind === 'melee' || item.weapon.family === 'wand');
   return item.kind === slot;
 }
 

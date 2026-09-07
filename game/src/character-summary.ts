@@ -3,7 +3,7 @@ import type { CharacterSave } from './character-save.ts';
 import { createCharacterSheet, type StarterLoadoutId } from './items.ts';
 import { initialPlayer } from './simulation.ts';
 import { refreshCharacter } from './character.ts';
-import { deriveAttackStats } from './equipment.ts';
+import { alternatesBasicAttacks, deriveAttackStats } from './equipment.ts';
 
 export function previewCharacter(record: CharacterSave | null, starter: StarterLoadoutId = 'sword'): Player {
   const player = initialPlayer(0, 0);
@@ -19,7 +19,7 @@ export function previewCharacter(record: CharacterSave | null, starter: StarterL
 /** Comparative equipment/build estimate, not a combat rule or a promise about skill DPS. */
 export function characterPower(player: Player): { power: number; dps: number; effectiveLife: number } {
   const attack = deriveAttackStats(player.stats, player.equipment.mainHand);
-  const offhand = player.equipment.offHand?.kind === 'weapon' ? deriveAttackStats(player.stats, player.equipment.offHand.weapon) : null;
+  const offhand = alternatesBasicAttacks(player.equipment) && player.equipment.offHand?.kind === 'weapon' ? deriveAttackStats(player.stats, player.equipment.offHand.weapon) : null;
   const baseDps = offhand ? (attack.damage + offhand.damage) / (1 / attack.attacksPerSecond + 1 / offhand.attacksPerSecond) : attack.damage * attack.attacksPerSecond;
   const dps = baseDps * (1 + player.derived.critChance * (player.derived.critMultiplier - 1));
   const effectiveLife = player.maxHp / Math.max(.05, (1 - player.derived.damageReduction)

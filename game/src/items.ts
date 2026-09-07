@@ -66,7 +66,7 @@ const PALETTES: readonly Item['appearance'][] = [
   { base: '#735942', shadow: '#322a30', edge: '#c4ab86', trim: '#d5b270', style: 'leather' },
   { base: '#786994', shadow: '#343249', edge: '#c6badf', trim: '#c7d4d6', style: 'plate' },
 ];
-export const AFFIXES: readonly { name: string; stat: StatKey; base: number; growth: number }[] = [
+export const AFFIXES: readonly { name: string; stat: StatKey; base: number; growth: number; weight?: number }[] = [
   { name: 'Might', stat: 'strength', base: 2, growth: .25 },
   { name: 'Grace', stat: 'dexterity', base: 2, growth: .25 },
   { name: 'Insight', stat: 'intelligence', base: 2, growth: .25 },
@@ -91,14 +91,53 @@ export const SHIELD_AFFIXES: typeof AFFIXES = [
   { name: 'Deflection', stat: 'blockChance', base: 2, growth: .08 },
   { name: 'The Bulwark', stat: 'blockReduction', base: 4, growth: .12 },
 ];
-/** Shared pool for rolling, improving and previewing caster equipment. */
+/** Explicit slot identity. Amulets share general stats, never weapon-local enchantments. */
+const SLOT_AFFIXES: Partial<Record<ItemKind, readonly StatKey[]>> = {
+  head: ['maxMana', 'intelligence', 'manaCostPercent', 'cooldownPercent', 'maxHp', 'armor'],
+  chest: ['maxHp', 'armor', 'vitality', 'lifeRegen', 'strength'],
+  gloves: ['attackSpeedPercent', 'castSpeedPercent', 'critChance', 'damagePercent', 'spellDamagePercent', 'dexterity', 'armor'],
+  legs: ['maxHp', 'armor', 'vitality', 'lifeRegen', 'strength', 'dexterity'],
+  boots: ['moveSpeedPercent', 'maxHp', 'armor', 'vitality', 'dexterity'],
+  cloak: ['lifeRegen', 'manaRegen', 'cooldownPercent', 'maxHp', 'maxMana', 'intelligence'],
+  ring: ['critChance', 'critDamage', 'damagePercent', 'spellDamagePercent', 'strength', 'dexterity', 'intelligence', 'maxMana', 'manaRegen'],
+  shield: ['blockChance', 'blockReduction', 'armor', 'maxHp', 'vitality', 'lifeRegen', 'strength'],
+  grimoire: ['maxMana', 'manaRegen', 'manaCostPercent', 'cooldownPercent', 'intelligence', 'spellDamagePercent'],
+  orb: ['spellDamagePercent', 'critChance', 'critDamage', 'intelligence', 'maxMana', 'manaCostPercent'],
+};
 export function itemAffixPool(item: { kind: ItemKind; weapon?: { family: string } }): typeof AFFIXES {
-  if (item.kind === 'shield') return [...AFFIXES, ...SHIELD_AFFIXES];
-  if (item.kind === 'grimoire' || item.kind === 'orb' || item.weapon?.family === 'wand') {
-    return AFFIXES.filter(a => !['strength', 'dexterity', 'damagePercent', 'attackSpeedPercent', 'lifeOnHit', 'armor'].includes(a.stat));
-  }
-  if (item.kind === 'weapon' && ['sword', 'axe', 'mace', 'dagger'].includes(item.weapon?.family ?? '')) return [...AFFIXES, ...ELEMENTAL_AFFIXES];
-  return AFFIXES;
+  const melee = item.kind === 'weapon' && ['sword', 'axe', 'mace', 'dagger'].includes(item.weapon?.family ?? '');
+  const stats = item.kind === 'amulet' ? [...AFFIXES, ...SHIELD_AFFIXES].map(a => a.stat)
+    : item.kind === 'weapon' ? melee
+      ? ['damagePercent', 'critChance', 'critDamage', 'lifeOnHit', 'strength', 'dexterity', 'intelligence', 'spellDamagePercent']
+      : item.weapon?.family === 'bow' ? ['damagePercent', 'critChance', 'critDamage', 'dexterity', 'lifeOnHit', 'strength']
+      : ['spellDamagePercent', 'intelligence', 'maxMana', 'critChance', 'critDamage', 'manaCostPercent', 'manaRegen']
+    : SLOT_AFFIXES[item.kind] ?? [];
+  return [...AFFIXES, ...SHIELD_AFFIXES].filter(a => stats.includes(a.stat)).map(a => ({ ...a,
+    weight: ['cooldownPercent', 'manaCostPercent', 'critChance', 'lifeOnHit'].includes(a.stat) ? .55 : 1,
+  })).concat(melee ? ELEMENTAL_AFFIXES.map(a => ({ ...a, weight: .12 })) : []);
+}
+/** Shared weighted selection for drops and every enchanter operation. */
+export function rollAffix(pool: typeof AFFIXES, random: () => number): (typeof AFFIXES)[number] {
+  if (!pool.length) throw new RangeError('No eligible affix');
+  let value = random() * pool.reduce((sum, a) => sum + (a.weight ?? 1), 0);
+  return pool.find(a => (value -= a.weight ?? 1) < 0) ?? pool[pool.length - 1];
+}
+export function affixConflicts(stat: StatKey, occupied: readonly StatKey[]): boolean {
+  return occupied.includes(stat) || isElementalAffix(stat) && occupied.some(isElementalAffix)
+    || ['attackSpeedPercent', 'castSpeedPercent'].includes(stat) && occupied.some(s => ['attackSpeedPercent', 'castSpeedPercent'].includes(s));
+}
+/** Concentrated slots need meaningful rolls; percentage growth remains bounded. */
+export function affixPotency(kind: ItemKind, stat: StatKey): number {
+  if (stat === 'moveSpeedPercent') return kind === 'boots' ? 5 : 2.5;
+  if (stat === 'attackSpeedPercent' || stat === 'castSpeedPercent') return kind === 'gloves' ? 4 : 2;
+  if (kind === 'chest' && ['maxHp', 'armor', 'lifeRegen'].includes(stat)) return 1.75;
+  if (kind === 'head' && ['maxMana', 'manaCostPercent'].includes(stat)) return 1.5;
+  if (kind === 'cloak' && ['lifeRegen', 'manaRegen', 'cooldownPercent'].includes(stat)) return 1.5;
+  if (kind === 'grimoire' && ['maxMana', 'manaRegen', 'manaCostPercent'].includes(stat)) return 1.5;
+  if (kind === 'orb' && ['spellDamagePercent', 'critChance', 'critDamage'].includes(stat)) return 1.5;
+  if (kind === 'shield' && ['blockChance', 'blockReduction'].includes(stat)) return 2;
+  if (kind === 'weapon' && ['damagePercent', 'spellDamagePercent'].includes(stat)) return 2;
+  return 1;
 }
 function focusImplicit(profileId: string, level: number, quality: number): StatModifiers {
   const profile = FOCUS_PROFILES.find(p => p.id === profileId)!;
@@ -137,12 +176,12 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
   const rolls: number[] = [];
   const affixes: ItemAffix[] = [], remaining = [...itemAffixPool({ kind: itemKind, weapon: weaponProfile })];
   for (let index = 0; index < TIER_AFFIXES[tier]; index++) {
-    const definition = remaining.splice(Math.floor(random() * remaining.length), 1)[0];
+    const definition = rollAffix(remaining, random);
     const growthLevel = PERCENT_STATS.has(definition.stat) ? itemAffixGrowthLevel(level) : level - 1;
     const rollQuality = random(); rolls.push(rollQuality);
-    const value = Math.round((definition.base + growthLevel * definition.growth) * (.85 + rollQuality * .3) * quality * 10) / 10;
+    const value = Math.round((definition.base + growthLevel * definition.growth) * (.85 + rollQuality * .3) * quality * affixPotency(itemKind, definition.stat) * 10) / 10;
     affixes.push({ name: definition.name, stat: definition.stat, value });
-    if (isElementalAffix(definition.stat)) for (let i = remaining.length - 1; i >= 0; i--) if (isElementalAffix(remaining[i].stat)) remaining.splice(i, 1);
+    for (let i = remaining.length - 1; i >= 0; i--) if (affixConflicts(remaining[i].stat, affixes.map(a => a.stat))) remaining.splice(i, 1);
   }
   const implicit: StatModifiers = focusProfile ? focusImplicit(focusProfile.id, level, quality) : {};
   const armorBase: Partial<Record<ItemKind, number>> = { head: 5, chest: 11, gloves: 3, legs: 7, boots: 4 };
@@ -256,7 +295,7 @@ export function deriveItem(item: Item): Item {
     const definition = [...AFFIXES, ...SHIELD_AFFIXES, ...ELEMENTAL_AFFIXES].find(a => a.stat === affix.stat)!;
     const level = PERCENT_STATS.has(affix.stat) ? itemAffixGrowthLevel(item.itemLevel) : item.itemLevel - 1;
     return { name: definition.name, stat: definition.stat,
-      value: Math.round((definition.base + level * definition.growth) * (.85 + r.rolls[index] * .3) * quality * enhance * 10) / 10 };
+      value: Math.round((definition.base + level * definition.growth) * (.85 + r.rolls[index] * .3) * quality * enhance * affixPotency(item.kind, definition.stat) * 10) / 10 };
   });
   next.requiredLevel = Math.max(1, item.itemLevel - 2);
   next.power = Math.round((item.itemLevel * 10 + quality * 12 + item.affixes.length * 7) * enhance);

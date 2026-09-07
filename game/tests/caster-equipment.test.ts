@@ -40,7 +40,7 @@ test('wands use cast speed, spell power and cheaper bolts while supporting every
     const p = initialPlayer(0, 0); put(p, wand.id, 21); put(p, 'vigil-kite', 22);
     for (const [id, definition] of Object.entries(SKILL_DEFINITIONS)) if (definition.requirement === 'magic') assert.equal(skillWeapon(id as SkillId, p.equipment), p.equipment.mainHand);
     assert.ok(skillWeapon('shieldBash', p.equipment));
-    assert.equal(itemFitsSlot(p.character.equipped.weapon!, 'offhand'), false, 'wands belong in the main hand');
+    assert.equal(itemFitsSlot(p.character.equipped.weapon!, 'offhand'), true, 'one-handed wands also fit the off hand');
   }
 });
 test('caster recipes survive every tier, level, upgrade, relevel and reroll with appropriate affixes', () => {

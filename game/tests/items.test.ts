@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { affixPotency } from '../src/items.ts';
 import { createCharacterSheet, EQUIPMENT_SLOTS, generateItem, ITEM_KINDS, itemModifiers, TIER_NAMES } from '../src/items.ts';
 import { STARTING_SWORD } from '../src/equipment.ts';
 import { SHIELD_PROFILES, WEAPON_PROFILES } from '../src/weapon-content.ts';
@@ -127,11 +128,11 @@ test('percentage affixes approach bounded quality ranges while flat stats and ba
     cooldownPercent: 2 + 25 * .1, blockChance: 2 + 25 * .08, blockReduction: 4 + 25 * .12,
   };
   const seen = new Set<string>();
-  for (let seed = 0; seed < 200; seed++) {
-    const low = generateItem(seed, 1, 'shield', 'iron-buckler', 'legendary');
-    const mid = generateItem(seed, 100, 'shield', 'iron-buckler', 'legendary');
-    const high = generateItem(seed, 1_000_000, 'shield', 'iron-buckler', 'legendary');
-    assert.ok(high.implicit.armor! > mid.implicit.armor! * 1000);
+  for (const kind of ITEM_KINDS) for (let seed = 0; seed < 200; seed++) {
+    const low = generateItem(seed, 1, kind, undefined, 'legendary');
+    const mid = generateItem(seed, 100, kind, undefined, 'legendary');
+    const high = generateItem(seed, 1_000_000, kind, undefined, 'legendary');
+    if (high.implicit.armor) assert.ok(high.implicit.armor > mid.implicit.armor! * 1000);
     high.affixes.forEach((affix, index) => {
       assert.equal(affix.stat, mid.affixes[index].stat);
       assert.ok(mid.affixes[index].value > low.affixes[index].value);
@@ -139,7 +140,7 @@ test('percentage affixes approach bounded quality ranges while flat stats and ba
       const bound = percentBounds[affix.stat];
       if (bound !== undefined) {
         seen.add(affix.stat);
-        assert.ok(affix.value <= bound * 1.15 * 1.5 + .05);
+        assert.ok(affix.value <= bound * affixPotency(kind, affix.stat) * 1.15 * 1.5 + .05);
       } else assert.ok(affix.value > mid.affixes[index].value * 1000);
     });
   }

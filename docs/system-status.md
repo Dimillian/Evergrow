@@ -107,3 +107,9 @@ Crates and barrels in wilderness sites and buildings now break from player attac
 ### Shared material responses · 2026-09-07
 
 Seven immutable material recipes now drive containers, combat contacts, scenery impacts and elemental deaths. Wood, stone, metal, ice, bone, glass and embers share bounded fragments, motion, light and sound textures. Physical death variants and reward/save ownership stay unchanged. See [material responses](material-responses.md).
+
+### Equipment identity and elemental hybrids · 2026-09-07
+
+Slot-specific weighted affix pools now drive drops and enchanting, with stronger specialist rolls and rare melee enchantments. Sword + wand supports offhand magic skills; physical and added elemental damage scale separately through Strength/attack and Intelligence/spell bonuses. Fire burns, frost chills and lightning interrupts through shared contact rules. Existing saves remain loadable. See [equipment affixes](equipment-affixes.md).
+
+Affix/hybrid checkpoint verification: all 836 code tests pass, including weighted generation/rerolls, specialist bounds, sword + wand save/casting/aim checks, and snapshotted elemental statuses. Application/headless TypeScript and production build pass. Combat feel remains player-tested; no Site or Android deployment in this checkpoint.

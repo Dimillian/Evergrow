@@ -118,7 +118,7 @@ export function playerMotion(pose: CharacterPose) {
   const hilted = mainKind === 'sword' || mainKind === 'dagger';
   const mainGuard = meleeGuardAngle(mainKind, pose.angle, pose.grip !== 'one-handed');
   const offVisual = pose.offHand?.kind === 'weapon' ? pose.offHand.visual : undefined;
-  const offGuardAngle = offVisual && meleeGuard(offVisual.kind) ? meleeGuardAngle(offVisual.kind, pose.angle, false, -1) : pose.angle - .7;
+  const offGuardAngle = offVisual && meleeGuard(offVisual.kind) ? meleeGuardAngle(offVisual.kind, pose.angle, false, -1) : offVisual?.kind === 'wand' ? -Math.PI / 2 + Math.sin(pose.angle) * .25 : pose.angle - .7;
   const mainRestAngle = guardedMelee ? mainGuard : mainKind === 'wand'
     ? -Math.PI / 2 - Math.sin(pose.angle) * .25 : pose.angle + WEAPON_REST_ANGLE;
   let weaponAngle = swinging
@@ -146,10 +146,12 @@ export function playerMotion(pose: CharacterPose) {
   let activeWeaponAngle = weaponAngle;
   const offAttacking = (swinging || !!pose.gesture) && pose.attackHand === 'off';
   const offBlend = pose.gesture ? cast : attackBlend;
+  const offWandCast = offVisual?.kind === 'wand' && pose.attackHand === 'off' ? cast : 0;
   const offRestAngle = offGuardAngle + idleSway * .7;
   let offWeaponAngle = offAttacking ? pose.gesture
     ? offRestAngle + Math.atan2(Math.sin(activeWeaponAngle - offRestAngle), Math.cos(activeWeaponAngle - offRestAngle)) * offBlend
     : activeWeaponAngle : offRestAngle;
+  if (offWandCast > 0) offWeaponAngle = offRestAngle + Math.atan2(Math.sin(pose.angle - offRestAngle), Math.cos(pose.angle - offRestAngle)) * offWandCast;
   if (offAttacking) weaponAngle = mainRestAngle + idleSway * (pose.weapon?.kind === 'wand' ? .3 : 1);
   const hipX = -moveY * step * 0.65 + Math.cos(pose.attackAngle) * commitment * 0.55;
   const hipY = Math.cos(phase * 2) * moving * 0.25 + crouch;
@@ -231,6 +233,11 @@ export function playerMotion(pose: CharacterPose) {
     restOffHand[0] * (1 - release) + castHand[0] * release,
     restOffHand[1] * (1 - release) + castHand[1] * release,
     restOffHand[2] * (1 - release) + castHand[2] * release,
+  ];
+  if (offWandCast > 0) offHand3 = [
+    offHand3[0] * (1 - offWandCast) + (Math.cos(pose.angle) * 16 + Math.sin(pose.angle) * 3) * offWandCast,
+    offHand3[1] * (1 - offWandCast) + (Math.sin(pose.angle) * 16 - Math.cos(pose.angle) * 3) * offWandCast,
+    offHand3[2] + offWandCast * 3,
   ];
   let mainHand3: RigPoint = offAttacking && pose.weapon?.kind !== 'wand' ? [restHand[0], restingDepth, restingDepth * ARM_DEPTH_SCALE - restHand[1]] : weaponHand;
   // Keep the blade mount and sweep fixed; seat sword/dagger palms down

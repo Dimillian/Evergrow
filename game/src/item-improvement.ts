@@ -1,6 +1,5 @@
-import { isElementalAffix } from './elemental-weapon.ts';
 import type { Item } from './character-types.ts';
-import { itemAffixPool, TIER_AFFIXES, deriveItem, randomSource } from './items.ts';
+import { affixConflicts, rollAffix, itemAffixPool, TIER_AFFIXES, deriveItem, randomSource } from './items.ts';
 export type Improvement = 'enhance' | 'rarity' | 'rerollOne' | 'rerollAll' | 'relevel';
 export const ITEM_TIERS = ['common', 'magic', 'rare', 'epic', 'legendary'] as const;
 export function improvementProblem(item: Item, operation: Improvement, zoneLevel: number, affix?: number): string | null {
@@ -19,8 +18,8 @@ export function improveItem(item: Item, operation: Improvement, zoneLevel: numbe
   const random = randomSource(seed), definitions = [...itemAffixPool(item)];
   const roll = (index: number, excluded?: string) => {
     const occupied = new Set(next.affixes.filter((_, i) => i !== index).map(a => a.stat));
-    const pool = definitions.filter(a => !occupied.has(a.stat) && a.stat !== excluded && !(isElementalAffix(a.stat) && [...occupied].some(isElementalAffix)));
-    const definition = pool[Math.floor(random() * pool.length)];
+    const pool = definitions.filter(a => a.stat !== excluded && !affixConflicts(a.stat, [...occupied]));
+    const definition = rollAffix(pool, random);
     next.affixes[index] = { name: definition.name, stat: definition.stat, value: 0 };
     next.recipe.rolls[index] = random();
   };

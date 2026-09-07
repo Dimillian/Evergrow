@@ -1,3 +1,4 @@
+import { applyElementalContact } from './combat-status.ts';
 import type { CombatEvent, Enemy, EnemyKind, Player, ProjectileStyle, WorldQuery } from './model.ts';
 import { COMBAT_TIMING, ENEMY_DEFINITIONS } from './combat-content.ts';
 import { ENCOUNTER_RULES } from './encounter-director.ts';
@@ -16,7 +17,7 @@ export interface PlayerDamageContext {
 
 /** One contact owner: damage, awareness, impulse, interruption and death commitment. */
 export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean,
-  context: EnemyDamageContext, periodic = false, style?: ProjectileStyle): void {
+  context: EnemyDamageContext, periodic = false, style?: ProjectileStyle, elementalDamage?: number): void {
   if (enemy.state === 'dead') return;
   if (!periodic) {
     alertEnemy(enemy, context.player);
@@ -25,6 +26,9 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
       && ally.state !== 'dead' && Math.hypot(ally.x - enemy.x, ally.y - enemy.y) < 190
       && context.visible(ally.x, ally.y, enemy.x, enemy.y)) alertEnemy(ally, context.player);
   }
+  // Contact status uses the elemental portion, never physical damage or recursive burn ticks.
+  const statusDamage = elementalDamage ?? (style === 'fire' || style === 'frost' || style === 'lightning' ? damage : 0);
+  if (!periodic) applyElementalContact(enemy, style, statusDamage);
   const critical = !periodic && context.player.derived.critChance > 0 && context.random() < context.player.derived.critChance;
   damage = Math.max(1, Math.round(damage * (critical ? context.player.derived.critMultiplier : 1)));
   enemy.hp = Math.max(0, enemy.hp - damage);
