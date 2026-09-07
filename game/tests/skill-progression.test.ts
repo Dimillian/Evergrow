@@ -4,8 +4,8 @@ import { Simulation } from '../src/simulation.ts';
 import { executeCharacterCommand } from '../src/character-commands.ts';
 import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
 import { SKILL_EXECUTION } from '../src/skill-execution-content.ts';
-import { SKILL_TREE } from '../src/skill-tree.ts';
-import { resolveSkill, learnedSkillRank, activeSkillRank, maximumSkillRank, SKILL_SPECIALIZATIONS, masteryNode, specializationNode, OVERLOAD_NODE } from '../src/skill-progression.ts';
+import { SKILL_TREE, SKILL_NODES } from '../src/skill-tree.ts';
+import { resolveSkill, learnedSkillRank, activeSkillRank, maximumSkillRank, SKILL_SPECIALIZATIONS, masteryNode, specializationNode, specializationPassiveNode, skillLeafBonuses, OVERLOAD_NODE } from '../src/skill-progression.ts';
 import { CHARACTER_SAVE_VERSION, decodeCharacterSave } from '../src/character-save.ts';
 import type { SkillId } from '../src/character-types.ts';
 
@@ -81,12 +81,12 @@ test('specializations require their own node, remain exclusive, and never mutate
     assert.ok(command({type:'configureSkill',skill:variant.skill,rank:1,specialization:variant.id}).ok);
     const resolved=resolveSkill(variant.skill,p.derived,sheet);
     assert.equal(resolved.variant?.id,variant.id);
-    close(resolved.damageMultiplier,SKILL_DEFINITIONS[variant.skill].damageMultiplier*variant.damage);
+    close(resolved.damageMultiplier,SKILL_DEFINITIONS[variant.skill].damageMultiplier*variant.damage*(1+skillLeafBonuses(sheet,variant.skill).potency));
     assert.ok(command({type:'configureSkill',skill:variant.skill,rank:1,specialization:null}).ok);
     assert.equal(resolveSkill(variant.skill,p.derived,sheet).variant,undefined);
   }
   assert.equal(JSON.stringify(SKILL_EXECUTION),base);
-  for(const skill of Object.values(SKILL_DEFINITIONS).filter(s=>s.tier==='basic')) assert.equal(SKILL_SPECIALIZATIONS.filter(s=>s.skill===skill.id).length,2);
+  for(const skill of Object.values(SKILL_DEFINITIONS)) assert.equal(SKILL_SPECIALIZATIONS.filter(s=>s.skill===skill.id).length,3);
 });
 
 test('Overload is optional and raises only Arcana damage, casting costs and storm upkeep', () => {
@@ -133,4 +133,51 @@ test('development groups are frozen, bounded and attached to actual skill nodes'
   assert.equal(masteries.length,17);
   for(const n of masteries) assert.ok(SKILL_TREE.nodes.some(s=>s.skill===n.mastery));
   assert.equal(SKILL_TREE.nodes.filter(n=>n.skill && SKILL_DEFINITIONS[n.skill as SkillId].tier==='ultimate').length,3);
+});
+
+
+test('every skill owns three exclusive three-point leaves with no sideways entrance', () => {
+  assert.equal(SKILL_SPECIALIZATIONS.length, 60);
+  for (const variant of SKILL_SPECIALIZATIONS) {
+    const potency = specializationPassiveNode(variant.id, 'potency'), efficiency = specializationPassiveNode(variant.id, 'efficiency');
+    const tip = specializationNode(variant.id);
+    assert.deepEqual(SKILL_NODES.get(tip)!.neighbors, [efficiency]);
+    assert.deepEqual(new Set(SKILL_NODES.get(efficiency)!.neighbors), new Set([potency, tip]));
+    assert.deepEqual(new Set(SKILL_NODES.get(potency)!.neighbors), new Set([`skill:${variant.skill}`, efficiency]));
+    for (const id of [potency, efficiency, tip]) assert.equal(SKILL_NODES.get(id)!.developmentSkill, variant.skill);
+  }
+});
+
+test('leaf passives affect only their owning skill and unlocking all choices never changes the selected variant', () => {
+  for (const skill of Object.values(SKILL_DEFINITIONS)) {
+    const {p,sheet,command,unlock}=setup(); unlock(`skill:${skill.id}`);
+    const before=resolveSkill(skill.id,p.derived,sheet), other=skill.id==='fireball'?'cleave':'fireball';
+    const unrelated=resolveSkill(other,p.derived,sheet), points=sheet.skillPoints;
+    const variants=SKILL_SPECIALIZATIONS.filter(v=>v.skill===skill.id);
+    for(const v of variants) unlock(specializationNode(v.id));
+    assert.equal(sheet.skillPoints,points-9);
+    assert.equal(sheet.skillSpecializations[skill.id],undefined);
+    const after=resolveSkill(skill.id,p.derived,sheet);
+    close(after.damageMultiplier,before.damageMultiplier*1.18);
+    if(after.recipe.kind==='guard' && before.recipe.kind==='guard') close(after.recipe.duration,before.recipe.duration*1.18);
+    assert.ok(after.mana<before.mana);
+    assert.deepEqual(resolveSkill(other,p.derived,sheet),unrelated);
+    p.skillCooldowns[skill.id]=7; const available=sheet.skillPoints;
+    const {variant: originalVariant, ...originalMechanics}=after;
+    void originalVariant;
+    const configurations = new Set([JSON.stringify(originalMechanics)]);
+    for(const v of variants) {
+      assert.ok(command({type:'configureSkill',skill:skill.id,rank:1,specialization:v.id}).ok);
+      const resolved=resolveSkill(skill.id,p.derived,sheet);
+      // Compare mechanical output, not variant names or IDs.
+      const {variant: _, ...mechanics}=resolved;
+      const {variant: __, ...original}=after;
+      assert.notDeepEqual(mechanics,original,v.id);
+      configurations.add(JSON.stringify(mechanics));
+    }
+    assert.equal(configurations.size,4);
+    assert.equal(sheet.skillPoints,available); assert.equal(p.skillCooldowns[skill.id],7);
+    assert.ok(command({type:'configureSkill',skill:skill.id,rank:1,specialization:null}).ok);
+    assert.deepEqual(resolveSkill(skill.id,p.derived,sheet),after);
+  }
 });

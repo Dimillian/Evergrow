@@ -1,4 +1,4 @@
-import { SKILL_SPECIALIZATIONS, specializationNode, masteryNode, OVERLOAD_NODE } from './skill-progression.ts';
+import { SKILL_SPECIALIZATIONS, specializationNode, specializationPassiveNode, SKILL_LEAF_BONUSES, masteryNode, OVERLOAD_NODE } from './skill-progression.ts';
 import type { ActionResult, CharacterSheet, SkillId, StatKey, StatModifiers } from './character-types.ts';
 import { SKILL_DEFINITIONS, skillRequirementLabel } from './skill-content.ts';
 
@@ -11,6 +11,8 @@ export interface SkillNode {
   readonly bonuses: Readonly<StatModifiers>;
   readonly skill?: SkillId;
   readonly specialization?: string;
+  readonly developmentSkill?: SkillId;
+  readonly improvement?: 'potency' | 'efficiency';
   readonly mastery?: SkillId;
   readonly keystone?: boolean;
   readonly cluster?: string;
@@ -29,6 +31,28 @@ interface Blueprint extends SkillCluster { family: Family; shape: number; rotati
 interface Route { a: number; b: number; }
 type MutableNode = Omit<SkillNode, 'neighbors'> & { neighbors: string[] };
 const TAU = Math.PI * 2;
+const SPECIALIZATION_FAN_ANGLES: Readonly<Record<SkillId, number>> = Object.freeze({
+  cleave: 3.6800627894,
+  lunge: 3.3309969390,
+  whirlwind: -1.9551225178,
+  earthshatter: 1.0992036732,
+  shieldBash: -1.3071225178,
+  bulwark: 1.7472036732,
+  volley: 1.5100627894,
+  piercingShot: 1.2482634016,
+  ricochet: 2.1580627894,
+  rainOfArrows: -1.0707963268,
+  backstab: 2.8060627894,
+  fireball: -0.5399372106,
+  meteor: -0.8017365984,
+  iceNova: 0.1080627894,
+  frostLance: 3.1623889804,
+  arcLightning: 0.7560627894,
+  siphon: 3.8103889804,
+  cataclysm: 2.6623889804,
+  absoluteZero: -1.6411342542,
+  tempest: 3.6623889804,
+});
 const REGIONS: readonly Region[] = [
   { domain: 'Might', angle: 2.67, attribute: 'strength', schools: [
     { id: 'blade', name: 'Way of the Blade', angle: -.48, skills: ['cleave', 'lunge'] },
@@ -350,21 +374,8 @@ function buildTree() {
   };
   for (const region of REGIONS) for (const school of region.schools) {
     const angle = region.angle + school.angle * 1.05;
-    const variants = SKILL_SPECIALIZATIONS.filter(v => school.skills.includes(v.skill));
-    const baseCluster = blueprints.filter(b => b.domain === region.domain).slice(0, 3)[region.schools.indexOf(school)];
     const outward = blueprints.filter(b => b.domain === region.domain && b.id.includes(':terrace:1:'))
       .sort((a, b) => distance(a, polar(1370, angle)) - distance(b, polar(1370, angle)))[0];
-    const development: MutableNode[] = [];
-    variants.forEach((variant, index) => {
-      const point = openPosition(polar(1090 + (index % 2) * 34, angle + (index - (variants.length - 1) / 2) * .13));
-      const node = add({ id: specializationNode(variant.id), ...point, kind: 'notable', domain: region.domain,
-        name: variant.name, description: variant.description, specialization: variant.id, cluster: `development:${school.id}`, bonuses: {} });
-      development.push(node);
-      if (index) link(development[index - 1].id, node.id, polar(1150, angle + (index - variants.length / 2) * .13));
-      road(`development:${variant.id}:in`, nearest(baseCluster, node), node, region.domain, region.domain);
-      road(`development:${variant.id}:out`, node, nearest(outward, node), region.domain, region.domain);
-    });
-    developmentClusters.push({ id: `development:${school.id}`, name: school.name.replace('Way of the ', '') + ' · Specializations', domain: region.domain, ...polar(1100, angle), radius: Math.max(...development.map(node => distance(node, polar(1100, angle)))) + 30 });
     school.skills.forEach((skill, index) => {
       const node = add({ id: masteryNode(skill), ...openPosition(polar(1690, angle + (index ? .065 : -.065))), kind: 'notable', domain: region.domain,
         name: `${SKILL_DEFINITIONS[skill].name} Mastery`, description: 'Raises the purchased rank ceiling from 5 to 7. Each additional rank still costs one skill point.', mastery: skill, bonuses: {} });
@@ -388,6 +399,40 @@ function buildTree() {
   for (const terrace of [2,3]) {
     const near = blueprints.filter(b=>b.domain === 'Arcana' && b.id.includes(`:terrace:${terrace}:`)).sort((a,b)=>distance(a,overload)-distance(b,overload))[0];
     road(`overload:${terrace}`, nearest(near,overload), overload, 'Arcana','Arcana');
+  }
+
+  // Three compact, independent leaves belong to each skill, never to a nearby
+  // passive constellation. Authored orientations preserve clearance without a runtime layout search.
+  for (const parent of [...nodes].filter(node => node.skill)) {
+    const skill = parent.skill!, variants = SKILL_SPECIALIZATIONS.filter(v => v.skill === skill);
+    const rotation = SPECIALIZATION_FAN_ANGLES[skill];
+    const fan = variants.map((_, leaf) => [1, 2, 3].map(depth => {
+      const offset = polar(48 * depth, rotation + (leaf - 1) * (.68 + depth * .035));
+      return { x: parent.x + offset.x, y: parent.y + offset.y };
+    }));
+    const cluster = `development:${skill}`, members: MutableNode[] = [];
+    variants.forEach((variant, leaf) => {
+      let previous = parent;
+      for (const [index, improvement] of (['potency', 'efficiency'] as const).entries()) {
+        const duration = skill === 'bulwark';
+        const description = improvement === 'potency'
+          ? `+${SKILL_LEAF_BONUSES.potency * 100}% ${SKILL_DEFINITIONS[skill].name} ${duration ? 'guard duration' : 'damage'}.`
+          : `${SKILL_LEAF_BONUSES.efficiency * 100}% reduced ${SKILL_DEFINITIONS[skill].name} mana cost${skill === 'tempest' ? ' and upkeep' : ''}.`;
+        const node = add({ id: specializationPassiveNode(variant.id, improvement), ...fan[leaf][index],
+          kind: 'minor', domain: parent.domain, cluster, developmentSkill: skill, improvement,
+          name: improvement === 'potency' ? duration ? 'Endurance' : 'Potency' : 'Efficiency', description, bonuses: {} });
+        const control = mix(previous, node, .5), offset = polar(4, Math.atan2(node.y - previous.y, node.x - previous.x) + Math.PI / 2);
+        link(previous.id, node.id, { x: control.x + offset.x, y: control.y + offset.y });
+        members.push(node); previous = node;
+      }
+      const node = add({ id: specializationNode(variant.id), ...fan[leaf][2], kind: 'notable', domain: parent.domain,
+        name: variant.name, description: variant.description, specialization: variant.id, developmentSkill: skill, cluster, bonuses: {} });
+      const control = mix(previous, node, .5);
+      link(previous.id, node.id, { x: control.x + 3, y: control.y - 3 }); members.push(node);
+    });
+    const center = { x: members.reduce((sum, n) => sum + n.x, 0) / members.length, y: members.reduce((sum, n) => sum + n.y, 0) / members.length };
+    developmentClusters.push({ id: cluster, name: SKILL_DEFINITIONS[skill].name, domain: parent.domain, ...center,
+      radius: Math.max(...members.map(node => distance(node, center))) + 20 });
   }
 
   const clusters = blueprints.map(cluster => Object.freeze({ id: cluster.id, name: cluster.family.name, domain: cluster.domain, x: cluster.x, y: cluster.y,

@@ -1,3 +1,4 @@
+import { SKILL_SPECIALIZATIONS, specializationNode, resolveSkill } from '../src/skill-progression.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { activateSkill, type SkillContext } from '../src/skill-combat.ts';
@@ -269,4 +270,38 @@ test('expensive multi-impact casts refuse insufficient ground capacity before sp
   assert.equal(h.scheduled.length,0); assert.equal(h.player.skillCooldowns.cataclysm,undefined);
   h.context.availableGroundEffects=7;
   assert.ok(activateSkill(h.context,0)); assert.equal(h.scheduled.length,7);
+});
+
+
+test('all sixty selected specializations activate through the real combat executors', () => {
+  for(const variant of SKILL_SPECIALIZATIONS) {
+    const h=harness(variant.skill); h.player.mana=10000;
+    h.player.character.allocatedNodes.push(specializationNode(variant.id));
+    h.player.character.skillSpecializations[variant.skill]=variant.id;
+    h.target(35); h.target(75);
+    assert.ok(activateSkill(h.context,0),variant.id);
+    const recipe=resolveSkill(variant.skill,h.player.derived,h.player.character).recipe;
+    if(recipe.kind==='projectile') assert.equal(h.missiles.length,recipe.offsets.length,variant.id);
+    if(recipe.kind==='ground') assert.equal(h.scheduled.length,recipe.scatter??1,variant.id);
+    assert.ok(h.player.mana<10000,variant.id);
+    if(SKILL_DEFINITIONS[variant.skill].tier==='basic') assert.equal(h.player.skillCooldowns[variant.skill]??0,0);
+  }
+});
+
+test('specialized meteor snapshots long-burning ground and eleven-star casts reserve full capacity', () => {
+  const fire=harness('meteor'); fire.player.mana=1000;
+  fire.player.character.allocatedNodes.push(specializationNode('meteor-inferno'));
+  fire.player.character.skillSpecializations.meteor='meteor-inferno';
+  assert.ok(activateSkill(fire.context,0));
+  assert.equal(fire.scheduled[0].scorch?.duration,8);
+  close(fire.scheduled[0].scorch!.dps,fire.scheduled[0].damage*.18);
+  fire.player.character.skillSpecializations.meteor='meteor-impact';
+  assert.equal(fire.scheduled[0].scorch?.duration,8,'released effect retains its snapshot');
+  const sky=harness('cataclysm'); sky.player.mana=1000;
+  sky.player.character.allocatedNodes.push(specializationNode('cataclysm-many'));
+  sky.player.character.skillSpecializations.cataclysm='cataclysm-many';
+  sky.context.availableGroundEffects=10;
+  assert.equal(activateSkill(sky.context,0),false); assert.equal(sky.player.mana,1000);
+  sky.context.availableGroundEffects=11;
+  assert.ok(activateSkill(sky.context,0)); assert.equal(sky.scheduled.length,11);
 });

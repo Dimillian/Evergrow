@@ -1,5 +1,9 @@
 # Current system status
 
+## Skill-owned specialization leaves · 2026-09-07
+
+All 20 skills have three implemented selectable variants (60 total). Each skill has three independent, three-point leaves with two skill-specific improvements before each specialization. Shared hover/details name the owning skill and separate effects/costs/unlock state. All 864 code tests and production compilation/build pass. Old school-specialization paths have been removed; characters invested in them may require a fresh test character. See [skill progression](skill-progression.md).
+
 ## Basic caster motion · 2026-09-07
 
 Staff basics lift vertically with both hands attached; wands use a compact casting flick. Bolt cores, lights and release sparks use a frozen animated-tip launch pose, easing onto the existing aimed flight plane without changing collision, range, mana or cadence. Projectile wakes grow on release. Static casting stages are available in the weapon-light study. See [weapon rules](weapons-and-skills.md).
@@ -31,7 +35,7 @@ Updated 2026-09-07 after rebasing the character editor onto the upstream pause-m
 | Progression | Fixed geographic danger, source-level rewards, XP level-gap factors, unchanged thresholds through level 4 and a rising post-intro premium, one skill and five stat points per level | Numeric level bound 1,000,000; not a balanced infinite endgame |
 | Equipment | Twelve kinds, five rarities, eleven slots; 17 generated weapons, 3 shields and 6 caster foci; shared affixes with curated caster rolls; visible procedural gear | Recipe-based +10 enhancement and enchanting; no unique legendary powers |
 | Inventory | 64 cells, three columns, subtle title-row Sort & filter / Equip Best icons; compact filtering popover and three-choice weapon-type warning; double-click/keyboard equip; LB/RB section switching and highlighted controller navigation | Equip Best uses item power; weapon changes require a choice, keeping the current weapon still upgrades other gear; no stash or manual ground disposal |
-| Skill atlas | 2,185 nodes, 3,047 edges, 150 passive constellations + 12 development groups, three domains, nine schools; short cross-connected routes, hover stat previews, search/filters, double-click and atomic path allocation | Reused authored bonus families need balancing; no respec |
+| Skill atlas | 2,333 nodes, 3,166 edges, 150 passive constellations + 23 development groups, three domains, nine schools; short cross-connected routes, hover stat previews, search/filters, double-click and atomic path allocation | Reused authored bonus families need balancing; no respec |
 | Gold and loot | Independent gear/gold rolls; physical saved coin piles, magnet pickup, wallet in HUD/inventory; corrected common-heavy loot tables; individual named ground items | Purchases, enhancements and enchanting provide gold sinks; affordability awaits playtesting |
 | World | Seven blended biomes, 23 prop families, seeded roads/rivers/lakes, water-aware settlements, streamed terrain and climate-specific environmental life | Finite coordinate/cache/save bounds; no weather or multi-site quest chains |
 | Towns and interiors | Stable generated towns/cities, five building kinds, furnished walk-in interiors, roof fading and protected sanctuaries | Three procedural service NPC roles, nearby click/E interaction and pause-safe workbenches |
@@ -78,7 +82,7 @@ Android frame-pacing checkpoint: 725 passing code tests, application/headless ty
 
 Cloud/hall checkpoint: 735 code tests passed; focused save tests rerun after final persistence changes. Application/headless types, normal web build, Android APK and Site Worker/client builds pass. Live cloud authentication and visual/controller acceptance remain to be verified with the player.
 
-Current stats: 232 runtime TypeScript modules / 25,656 lines; 96 code-test files; 24 development review entrypoints; zero runtime dependencies. Content: seven biomes, nine enemy archetypes, 20 active skills, 2,185 skill nodes and 17 POI kinds. Source counts come from `npm run stats` at this checkpoint.
+Earlier checkpoint stats (historical): 232 runtime TypeScript modules / 25,656 lines; 96 code-test files; 24 development review entrypoints; zero runtime dependencies. Content: seven biomes, nine enemy archetypes, 20 active skills, 2,185 skill nodes and 17 POI kinds. Source counts come from `npm run stats` at this checkpoint.
 
 Thor controller checkpoint: 21 focused controller/skill tests passed, including select-field escape and single-press node-action routing. Application/headless type checks and Android APK assembly passed. The compact inspector was reviewed in the in-app browser at 832 × 468. Installed over the existing Thor package without clearing data; app launch succeeded with no observed startup errors. Gameplay/controller feel remains player-tested.
 

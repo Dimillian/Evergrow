@@ -94,7 +94,7 @@ test('repeated and unknown allocations cannot stack bonuses or unlock duplicate 
 
 test('domain minor and notable bonuses have finite supported values and active skills share meaningful definitions', () => {
   for (const node of SKILL_TREE.nodes) {
-    if ((node.kind === 'minor' || node.kind === 'notable') && !node.specialization && !node.mastery && !node.keystone) assert.ok(Object.keys(node.bonuses).length);
+    if ((node.kind === 'minor' || node.kind === 'notable') && !node.specialization && !node.improvement && !node.mastery && !node.keystone) assert.ok(Object.keys(node.bonuses).length);
     for (const value of Object.values(node.bonuses)) assert.ok(Number.isFinite(value) && value > 0);
   }
   for (const [id, skill] of Object.entries(SKILL_DEFINITIONS)) {

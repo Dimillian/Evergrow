@@ -1,5 +1,6 @@
 import { learnedSkillRank, maximumSkillRank } from './skill-progression.ts';
 import { SKILL_TREE, SKILL_NODES, type SkillNode } from './skill-tree.ts';
+import { skillNodeOwner } from './skill-node-presentation.ts';
 import { drawSkillGlyph } from './skill-tree-glyphs.ts';
 import type { CharacterSheet } from './character-types.ts';
 import { UI_THEME } from './ui-theme.ts';
@@ -62,6 +63,8 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
   }
   const routeEdges = new Set(view.route.slice(1).map((id, i) => edgeKey(id, view.route[i])));
   const routeNodes = new Set(view.route);
+  const focusedNode = SKILL_NODES.get(view.hovered ?? view.selected);
+  const focusedSkill = focusedNode && skillNodeOwner(focusedNode)?.id;
   // Curved connectors sit beneath nodes, with a dark engraving and a fine metal edge.
   for (const edge of edges) {
     const { a, b, control } = edge;
@@ -71,14 +74,15 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     const owned = view.allocated.has(a.id) && view.allocated.has(b.id);
     const route = routeEdges.has(edgeKey(a.id, b.id));
     const available = view.allocated.has(a.id) || view.allocated.has(b.id);
+    const family = focusedSkill && (a.developmentSkill === focusedSkill || b.developmentSkill === focusedSkill);
     const sameCluster = a.cluster && a.cluster === b.cluster;
     const color = a.domain === b.domain ? SKILL_DOMAIN_COLORS[a.domain] : '#b6ad8c';
     c.globalAlpha = owned || route || view.matches(a) || view.matches(b) ? 1 : .12;
     c.beginPath(); c.moveTo(ax, ay); c.quadraticCurveTo(cx, cy, bx, by);
     c.strokeStyle = '#040a10'; c.lineWidth = Math.max(1, 3 * Math.sqrt(z)); c.stroke();
     if (owned) { c.strokeStyle = '#e7be5b26'; c.lineWidth = Math.max(3, 7 * Math.sqrt(z)); c.stroke(); }
-    c.strokeStyle = owned ? '#e9d094' : route ? '#d3c29d' : available ? '#b0a17d' : color + (sameCluster ? 'a0' : '83');
-    c.lineWidth = owned ? Math.max(1.3, 1.8 * Math.sqrt(z)) : route ? 1.2 : Math.max(.45, .9 * Math.sqrt(z));
+    c.strokeStyle = owned ? '#e9d094' : route ? '#d3c29d' : family ? color : available ? '#b0a17d' : color + (sameCluster ? 'a0' : '83');
+    c.lineWidth = owned ? Math.max(1.3, 1.8 * Math.sqrt(z)) : route || family ? 1.2 : Math.max(.45, .9 * Math.sqrt(z));
     if (route && !owned) c.setLineDash([4, 4]);
     c.stroke(); c.setLineDash([]);
   }
@@ -143,13 +147,14 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     const y = clusters.reduce((sum, cluster) => sum + cluster.y, 0) / clusters.length;
     label(domain.toUpperCase(), sx(x * 1.12), sy(y * 1.12), SKILL_DOMAIN_COLORS[domain], 15);
   }
-  const priorityNodes = SKILL_TREE.nodes.filter(node => node.kind === 'major' || node.kind === 'origin' || node.id === view.selected);
+  const priorityNodes = SKILL_TREE.nodes.filter(node => (z >= .7 && node.specialization && node.developmentSkill === focusedSkill) || node.kind === 'major' || node.kind === 'origin' || node.id === view.selected);
   for (const node of priorityNodes) {
     if (z < .15 || z < .36 && node.id !== view.selected) continue;
     label(node.kind === 'origin' ? 'THE FIRST STAR' : node.name, sx(node.x), sy(node.y) + skillNodeScreenRadius(node, z) + (node.skill && view.allocated.has(node.id) && z >= .55 ? 26 : 11),
       view.allocated.has(node.id) ? '#efdaad' : '#c8bba0', 12);
   }
   if (z >= .27 && z <= 1.6) for (const cluster of SKILL_TREE.clusters) {
+    if (cluster.id.startsWith('development:')) continue;
     const x = sx(cluster.x), y = sy(cluster.y + cluster.radius + 22);
     if (x < 40 || x > w - 40 || y < 10 || y > h - 60) continue;
     label(cluster.name.toUpperCase(), x, y, SKILL_DOMAIN_COLORS[cluster.domain] + 'be', 10);

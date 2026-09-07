@@ -26,33 +26,78 @@ The nine basic skills always have **zero cooldown**, while respecting weapon att
 
 Damage is compatible weapon damage × skill potency × rank factor × specialization factor × optional Overload. Weapon damage already includes the relevant physical/spell bonuses exactly once. Mana is base cost × rank factor × specialization cost × Overload cost × character mana-cost multiplier, rounded to tenths with a minimum of one. Cooldown reduction applies after rank/specialization factors; Bulwark has a four-second minimum and ultimates a twelve-second minimum. Original cost-reduction and cast/attack-speed stat limits remain in force.
 
-Example: ordinary Fireball costs 12 mana at rank 1, 17 at rank 3, and 24 at rank 5 before reductions. Forked Flame at rank 5 costs 43.2 mana. Faster casting increases mana demand per second. This gives mana regeneration, maximum mana, reductions and potion management a purpose: supporting a stronger chosen loadout. It does not establish infinitely increasing skill ranks or promise indefinite player/monster balance.
+Example: ordinary Fireball costs 12 mana at rank 1, 17 at rank 3, and 24 at rank 5 before reductions. Forked Flame at rank 5 costs 41.5 mana with its one required efficiency star, before global reductions. Faster casting increases mana demand per second. This gives mana regeneration, maximum mana, reductions and potion management a purpose: supporting a stronger chosen loadout. It does not establish infinitely increasing skill ranks or promise indefinite player/monster balance.
 
 ## Deeper specializations
 
-The atlas has 19 specialization nodes in nine school branches. Buy their connected paths, then choose one unlocked specialization per skill; **Original** remains available. Allocating another specialization does not automatically replace the current selection. The basic skills each offer two alternatives; Meteor offers Shattered Sky.
+Every one of the 20 skills has **three specializations (60 total)**. Each skill grows three independent leaves: **skill → potency → efficiency → specialization**. A leaf costs three points after unlocking its parent skill, and has no entrance from another school. All three may be unlocked; choose one or Original in the owning skill's details. Purchases never switch the selected variant, and switching spends no points or resets no cooldowns.
 
-| Skill | Specialization | Effect | Mana factor |
-| --- | --- | --- | ---: |
-| Crescent Cleave | Reaching Crescent | +40% reach, −15% damage | 1.30× |
-| Crescent Cleave | Crushing Crescent | +35% damage, −20% reach | 1.60× |
-| Whirlwind | Gathering Steel | +45% reach, −20% damage | 1.35× |
-| Whirlwind | Iron Cyclone | +40% damage, −15% reach | 1.70× |
-| Shield Bash | Shield Wall | Wider arc, +30% reach, −15% damage | 1.35× |
-| Shield Bash | Bellringer | +40% damage, 1.5-second stun | 1.75× |
-| Thorn Volley | Thornburst | Five arrows, −25% damage per arrow | 1.50× |
-| Thorn Volley | Barbed Volley | Each arrow pierces one additional enemy | 1.65× |
-| Ricochet | Endless Pursuit | Six rebounds, −15% damage | 1.55× |
-| Ricochet | Heavy Rebound | One rebound, +50% damage | 1.40× |
-| Backstab | Long Shadow | +50% reach, −10% damage | 1.30× |
-| Backstab | Executioner | Rear multiplier rises from 2× to 3×; all hits use 85% normal potency before that multiplier | 1.70× |
-| Fireball | Forked Flame | Three fireballs at 65% damage each | 1.80× |
-| Fireball | Living Ember | Three seconds of burning ground after impact; six pulses at 12% of the projectile's snapshotted damage | 1.65× |
-| Arc Lightning | Storm Circuit | Eight jumps; may revisit another target; each jump retains 70% damage | 1.70× |
-| Arc Lightning | Concentrated Current | Three targets, +60% damage | 1.45× |
-| Ice Nova | Echoing Frost | Second, 20% wider nova after 0.6 seconds at 60% damage | 1.70× |
-| Ice Nova | Deep Winter | +30% radius; 70% slow for four seconds; −15% damage | 1.40× |
-| Meteor | Shattered Sky | Five staggered impacts at 45% damage each; +25% cooldown | 1.90× |
+Each potency star grants **+6% damage to that skill** (Bulwark instead gets +6% guard duration); each efficiency star grants **4% reduced mana cost to that skill**, including Tempest upkeep. These skill-specific passives apply across all variants and stack additively within their family: owning all leaves gives +18% potency and 12% cost reduction. They do not modify LMB or other skills. The damage and cost factors multiply the existing rank/equipment/global-stat calculation.
+
+Tooltips and details explicitly identify the affected skill, distinguish passive improvements from selectable variants, and separate effects, cast costs and allocation state. Hovering a skill or its leaf emphasizes its three branches; specialization tips reuse the owning skill's icon. Ordinary notable passives are no longer mislabeled as specializations.
+
+| Skill | Specialization | Effect / tradeoff |
+| --- | --- | --- |
+| Absolute Zero | Polar Horizon | 40% larger waves, 25% less damage. Costs 35% more mana. |
+| Absolute Zero | Frozen Eternity | Freeze lasts 2.5 seconds; 80% slow for 6 seconds. Costs 50% more mana; 25% longer cooldown. |
+| Absolute Zero | Shattering Winter | One wave deals 140% more damage, 25% smaller radius. Costs 25% more mana. |
+| Arc Lightning | Storm Circuit | Three extra jumps may revisit targets at reduced damage. Costs 70% more mana. |
+| Arc Lightning | Concentrated Current | 60% more damage, but only three targets. Costs 45% more mana. |
+| Arc Lightning | Static Thread | 30% less mana, 20% less damage; jumps retain 85% damage. |
+| Backstab | Long Shadow | 50% more reach, 10% less damage. Costs 30% more mana. |
+| Backstab | Executioner | Rear strikes deal 3× instead of 2× damage; other hits deal 15% less. Costs 70% more mana. |
+| Backstab | Quiet Blade | 35% less mana; rear strikes deal 1.6× instead of 2× damage. |
+| Bulwark | Enduring Guard | Guard lasts 5 seconds. Costs 50% more mana; 25% longer cooldown. |
+| Bulwark | Iron Aegis | Base block reduction rises to 85%, guard lasts 2 seconds. Costs 35% more mana. |
+| Bulwark | Ready Guard | 25% less mana and 25% shorter cooldown; guard lasts 2 seconds. |
+| Cataclysm | Falling Stars | Eleven impacts at 65% damage each. Costs 60% more mana; 20% longer cooldown. |
+| Cataclysm | Extinction | Three impacts with 100% more damage and 40% more radius. Costs 40% more mana; 25% longer cooldown. |
+| Cataclysm | Sea of Cinders | Ground fire lasts 9 seconds at 20% impact damage per second; 15% less impact damage. Costs 50% more mana. |
+| Crescent Cleave | Reaching Crescent | 40% more reach, 15% less hit damage. Costs 30% more mana. |
+| Crescent Cleave | Crushing Crescent | 35% more damage, 20% less reach. Costs 60% more mana. |
+| Crescent Cleave | Measured Cut | 25% less mana, 15% less damage. |
+| Earthshatter | Faultline | 40% wider shockwave, 20% less damage. Costs 30% more mana. |
+| Earthshatter | Seismic Hammer | 60% more damage and 2-second stun; 20% smaller radius. Costs 60% more mana; 25% longer cooldown. |
+| Earthshatter | Tremor | 35% shorter cooldown, 25% less damage; stun lasts 0.6 seconds. |
+| Fireball | Forked Flame | Three fireballs, each dealing 35% less damage. Costs 80% more mana. |
+| Fireball | Living Ember | Explosions leave burning ground for three seconds. Costs 65% more mana. |
+| Fireball | Flashfire | 40% wider explosion, 20% less damage. Costs 40% more mana. |
+| Frost Lance | Glacial Trident | Three lances at 55% damage each. Costs 70% more mana. |
+| Frost Lance | Permafrost Spear | 70% slow for 5 seconds, 20% less damage. Costs 30% more mana. |
+| Frost Lance | Diamond Lance | 60% more damage, pierces only one enemy. Costs 45% more mana; 20% longer cooldown. |
+| Ice Nova | Echoing Frost | A second nova expands after 0.6 seconds at 60% damage. Costs 70% more mana. |
+| Ice Nova | Deep Winter | 30% more radius and a stronger, longer slow; 15% less damage. Costs 40% more mana. |
+| Ice Nova | Snap Freeze | Freezes for 0.6 seconds; 20% smaller radius, 20% less damage. Costs 35% more mana. |
+| Meteor | Shattered Sky | Five smaller impacts spread across the target area at 45% damage each. Costs 90% more mana; 25% longer cooldown. |
+| Meteor | Lasting Inferno | Ground fire lasts 8 seconds at 18% impact damage per second. Costs 45% more mana. |
+| Meteor | Worldbreaker | 60% more impact damage, 25% larger radius; no ground fire. Costs 50% more mana; 20% longer cooldown. |
+| Piercing Shot | Unbroken Flight | Pierces 7 enemies; 15% less damage. Costs 40% more mana. |
+| Piercing Shot | Siegebreaker | 60% more damage, pierces only one enemy. Costs 40% more mana; 20% longer cooldown. |
+| Piercing Shot | Twin Needles | Two piercing arrows at 65% damage each. Costs 50% more mana. |
+| Rain of Arrows | Blanket of Thorns | 50% larger radius; 25% less damage per wave. Costs 35% more mana. |
+| Rain of Arrows | Relentless Rain | Eight waves over 2.4 seconds, each at 75% damage. Costs 65% more mana; 25% longer cooldown. |
+| Rain of Arrows | Hail of Barbs | Three rapid waves at 45% more damage. Costs 40% more mana. |
+| Ricochet | Endless Pursuit | Three extra rebounds, 15% less damage. Costs 55% more mana. |
+| Ricochet | Heavy Rebound | 50% more damage, only one rebound. Costs 40% more mana. |
+| Ricochet | Skipping Arrow | 30% less mana; two rebounds instead of three. |
+| Rift Lunge | Farstrike | 50% longer dash, 15% less damage. Costs 20% more mana. |
+| Rift Lunge | Impaling Rush | 50% more damage, 30% wider contact. Costs 50% more mana; 25% longer cooldown. |
+| Rift Lunge | Fleeting Step | 30% shorter cooldown and 20% less mana; 25% less damage, shorter dash. |
+| Shield Bash | Shield Wall | A wider, longer shield strike; 15% less damage. Costs 35% more mana. |
+| Shield Bash | Bellringer | 40% more damage and a longer stun. Costs 75% more mana. |
+| Shield Bash | Concussion | 2-second stun, 30% less damage. Costs 20% more mana. |
+| Soul Siphon | Soul Feast | Heals 60% of actual damage dealt, but deals 20% less damage. Costs 35% more mana. |
+| Soul Siphon | Hollow Passage | Pierces two enemies, 15% less damage. Costs 50% more mana. |
+| Soul Siphon | Soul Rend | 60% more damage, healing reduced to 15%. Costs 40% more mana; 20% longer cooldown. |
+| Tempest | Stormfront | 40% larger storm, 25% less damage. Casting and upkeep cost 30% more mana. |
+| Tempest | Thunderhead | Strikes every 0.3 seconds at 80% damage. Casting and upkeep cost 70% more mana. |
+| Tempest | Storm Anchor | Stationary storm lasts 9 seconds, deals 20% more damage. Casting and upkeep cost 35% more mana; 25% longer cooldown. |
+| Thorn Volley | Thornburst | Five arrows instead of three, each dealing 25% less damage. Costs 50% more mana. |
+| Thorn Volley | Barbed Volley | Each arrow pierces one additional enemy. Costs 65% more mana. |
+| Thorn Volley | Needle Fan | A tight three-arrow fan; 20% more damage. Costs 35% more mana. |
+| Whirlwind | Gathering Steel | 45% more reach, 20% less damage. Costs 35% more mana. |
+| Whirlwind | Iron Cyclone | 40% more damage, 15% less reach. Costs 70% more mana. |
+| Whirlwind | Steady Revolutions | 30% less mana, 20% less damage. |
 
 Specializations use the same projectile, sweep, chain, status and ground-effect executors as the original skills. Their values and damage are snapshotted on release. Later equipment, rank or specialization changes cannot rewrite an attack already in flight. Rank upgrades do not change ordinary LMB attacks.
 
@@ -70,15 +115,15 @@ All require a staff, normal assignment and a connected deep-tree path (20–35 p
 
 ## Layout and ownership
 
-The atlas now has 2,185 nodes, 3,047 curved edges and 162 labeled groups: 150 passive constellations, nine specialization branches and three ultimate landmarks. Existing three-/four-point school paths, early mana/speed options and cross-domain bridges remain. New development stars are positioned with deterministic clearance and retain multiple routes through surrounding passive terraces.
+The atlas now has 2,333 nodes, 3,166 curved edges and 173 groups: 150 passive constellations, 20 skill-owned leaf groups and three ultimate landmarks. Development groups do not repeat their parent name as a floating map label. Existing three-/four-point school paths, early mana/speed options and cross-domain bridges remain. Specializations remain beside their parent skill, with fixed curved leaves and at least 22 units of node clearance. Masteries retain their deeper routes through the passive terraces.
 
-`skill-progression.ts` resolves active rank, specialization, potency, execution recipe, mana and cooldown for combat, HUD and atlas. Character commands own validated purchases/configuration. Save format **3** persists purchased ranks, chosen casting ranks, selected specializations and Overload, and validates point conservation including extra ranks. Older slots remain stored but require a new character; no migration is provided.
+`skill-progression.ts` resolves active rank, specialization, potency, execution recipe, mana and cooldown for combat, HUD and atlas. Character commands own validated purchases/configuration. Save format **4** persists purchased ranks, chosen casting ranks, selected specializations and Overload, and validates point conservation including extra ranks. The leaf redesign removes old school-specialization connector nodes. Characters invested in those old routes may fail current graph validation and require a new test character; no path migration is provided. Unaffected builds remain valid.
 
 Frozen local review: `/character.html?panel=skills&progression=1`. Add `&zoom=overview` or `&node=skill:cataclysm` to inspect outer content. This uses memory-only staged progression, never a saved character or gameplay ticks. Player playtesting is still needed for balance and combat feel.
 
 ### Meteor ground fire
 
-Meteor, Shattered Sky and Cataclysm leave four-second burning patches after each impact. Their non-stacking burn uses 12% of the resolved impact damage per second; rank and specialization damage multipliers therefore also affect the ground fire. Duration and refresh interval are authored in `SkillExecution.scorch` and snapshotted on release; no additional duration upgrade is introduced yet. See [weapons and skills](weapons-and-skills.md#spell-anticipation-and-meteor-aftermath--2026-09-07).
+Meteor, Shattered Sky and Cataclysm leave four-second burning patches after each impact. The base non-stacking burn uses 12% of the resolved impact damage per second; Lasting Inferno uses 18% for eight seconds and Sea of Cinders uses 20% for nine seconds; rank and specialization damage multipliers therefore also affect the ground fire. Duration and refresh interval are authored in `SkillExecution.scorch` and snapshotted on release; specialization changes use that same recipe. See [weapons and skills](weapons-and-skills.md#spell-anticipation-and-meteor-aftermath--2026-09-07).
 
 ### Equipment bonus ranks · 2026-09-07
 

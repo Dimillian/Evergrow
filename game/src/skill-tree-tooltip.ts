@@ -1,10 +1,10 @@
 import { skillDamageSuffix } from './skill-execution-content.ts';
-import { resolveSkill, learnedSkillRank } from './skill-progression.ts';
+import { resolveSkill } from './skill-progression.ts';
 import type { SkillNode } from './skill-tree.ts';
 import type { CharacterSheet, DerivedCharacterStats, StatKey } from './character-types.ts';
 import { STAT_LABELS, formatStatValue } from './items.ts';
 import { SKILL_DEFINITIONS, skillRequirementLabel } from './skill-content.ts';
-import { SKILL_DOMAIN_COLORS } from './skill-tree-art.ts';
+import { skillNodeOwner, skillNodeRole } from './skill-node-presentation.ts';
 import { previewSkillRoute, type SkillRouteStep } from './skill-tree-routes.ts';
 import { escapeUI } from './ui-components.ts';
 
@@ -14,32 +14,24 @@ interface SkillTooltipView {
   routes: ReadonlyMap<string, SkillRouteStep>;
 }
 
-/** DOM details share the toolkit material; the atlas remains a culled Canvas. */
+/** A clear reading order: identity, affected skill, effects, cost, allocation. */
 export function skillTooltipMarkup(node: SkillNode, view: SkillTooltipView): string {
-  const rows: string[] = [];
-  const add = (text: string, color: string, size = 14, gap = 5) => {
-    const tag = rows.length ? 'p' : 'h3';
-    rows.push(`<${tag} style="color:${color};font-size:${size}px;margin:0 0 ${gap}px">${escapeUI(text)}</${tag}>`);
-  };
-  const color = SKILL_DOMAIN_COLORS[node.domain];
-  const skill = node.skill ? SKILL_DEFINITIONS[node.skill] : undefined;
+  const skill = node.skill ? SKILL_DEFINITIONS[node.skill] : undefined, owner = skillNodeOwner(node);
   const owned = view.allocated.has(node.id);
-  add(node.name, '#eee0bf', 17, 8);
-  add(`${node.domain} · ${skill ? `${skill.tier === 'ultimate' ? 'Ultimate' : 'Active skill'}${view.sheet && owned ? ` · Rank ${learnedSkillRank(view.sheet, skill.id)}` : ''}` : node.kind === 'notable' ? 'Notable' : node.role === 'travel' ? 'Travel node' : node.kind === 'origin' ? 'Origin' : 'Passive'}`, color, 12, 12);
-  for (const [key, value] of Object.entries(node.bonuses) as [StatKey, number][]) {
-    add(`${formatStatValue(key, value)} ${STAT_LABELS[key]}`, '#d5e8ca', 15, 6);
-  }
-  if (skill) {
-    add(view.sheet ? resolveSkill(skill.id, view.costStats ?? { manaCostMultiplier: 1, cooldownMultiplier: 1 }, view.sheet).variant?.description ?? skill.description : skill.description, '#b5c2ca', 13, 10);
-    add(`Requires ${skillRequirementLabel(skill.requirement)}`, color, 12, 6);
-    const stats = view.costStats ?? { manaCostMultiplier: 1, cooldownMultiplier: 1 };
-    const costs = resolveSkill(skill.id, stats, view.sheet);
-    if (costs.bonusRanks) add(`Rank ${costs.rank} + ${costs.bonusRanks} gear = ${costs.effectiveRank}`, color, 13, 6);
-    if (costs.damageMultiplier) add(`${Math.round(costs.damageMultiplier * 100)}% weapon damage${skillDamageSuffix(skill.id, costs.recipe)}`, '#d5e8ca', 13, 6);
-    if (costs.upkeep) add(`${costs.upkeep} mana / second while active`, '#cfc4df', 13, 6);
-    add(`${costs.mana} mana · ${costs.cooldown ? `${Number(costs.cooldown.toFixed(2))}s cooldown` : 'No cooldown'}`, '#cfc4df', 13, 10);
-  } else if (!Object.keys(node.bonuses).length) add(node.description, '#b5c2ca', 13, 10);
+  const costs = skill ? resolveSkill(skill.id, view.costStats ?? { manaCostMultiplier: 1, cooldownMultiplier: 1 }, view.sheet) : undefined;
+  const bonuses = Object.entries(node.bonuses) as [StatKey, number][];
+  const rows = bonuses.map(([key, value]) => `<div class="skill-tip-stat"><span>${escapeUI(STAT_LABELS[key])}</span><b>${escapeUI(formatStatValue(key, value))}</b></div>`).join('');
   const cost = previewSkillRoute(view.routes, node.id).filter(id => !view.allocated.has(id)).length;
-  add(owned ? '◆ Allocated' : view.reachable.has(node.id) ? '◇ Available · 1 skill point' : cost ? `◇ ${cost} skill points along this path` : '◇ Not connected', '#b8ab8d', 12, 0);
-  return rows.join('');
+  const selected = node.specialization && owner && view.sheet?.skillSpecializations[owner.id] === node.specialization;
+  const state = selected ? 'Selected' : owned ? node.specialization ? 'Unlocked' : 'Allocated' : cost ? `${cost} ${cost === 1 ? 'point' : 'points'} to unlock` : 'Not connected';
+  return `<header class="skill-tip-heading"><small>${escapeUI(skillNodeRole(node))} <span>· ${node.domain}</span></small><h3>${escapeUI(node.name)}</h3>
+    ${owner && !skill ? `<p class="skill-tip-owner">${escapeUI(owner.name)}</p>` : ''}</header>
+    <section class="skill-tip-effects">${rows || `<p>${escapeUI(costs?.variant?.description ?? node.description)}</p>`}
+    ${node.specialization ? '<small>Unlocks a selectable variant. One active per skill.</small>' : node.improvement ? '<small>Applies to all variants of this skill.</small>' : ''}</section>
+    ${costs && skill ? `<section class="skill-tip-facts"><div><b>${costs.mana}</b><small>Mana</small></div><div><b>${costs.cooldown ? `${Number(costs.cooldown.toFixed(2))}s` : 'None'}</b><small>Cooldown</small></div>
+      ${costs.damageMultiplier ? `<div class="skill-tip-wide"><b>${Math.round(costs.damageMultiplier * 100)}%</b><small>Weapon damage${skillDamageSuffix(skill.id, costs.recipe)}</small></div>` : costs.recipe.kind === 'guard' ? `<div class="skill-tip-wide"><b>${Number(costs.recipe.duration.toFixed(2))}s · ${Math.round(costs.recipe.reduction * 100)}%</b><small>Guard · damage blocked</small></div>` : ''}
+      ${costs.upkeep ? `<div class="skill-tip-wide"><b>${costs.upkeep}</b><small>Mana / second</small></div>` : ''}
+      <p class="skill-tip-wide">${escapeUI(skillRequirementLabel(skill.requirement))}${owned ? ` · Rank ${costs.rank}${costs.bonusRanks ? ` + ${costs.bonusRanks} gear` : ''}` : ''}</p>
+      ${costs.variant ? `<p class="skill-tip-wide">${escapeUI(costs.variant.name)}</p>` : ''}</section>` : ''}
+    <footer class="skill-tip-state ${owned ? 'is-owned' : ''}">${state}</footer>`;
 }

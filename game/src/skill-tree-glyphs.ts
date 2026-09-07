@@ -61,6 +61,7 @@ const STAT_GLYPHS: Readonly<Record<StatKey, StatGlyph>> = Object.freeze({
 });
 
 function engravingFor(node: SkillNode): EngravingId {
+  if (node.improvement) return node.improvement === 'efficiency' ? 'hourglass' : node.developmentSkill === 'bulwark' ? 'shield' : 'impact';
   if (node.kind === 'origin' || node.keystone) return 'origin';
   let engraving: EngravingId = node.domain === 'Might' ? 'sword' : node.domain === 'Cunning' ? 'daggers' : 'book';
   let strongest = 0;

@@ -109,13 +109,14 @@ Every item retains a source recipe with profile, starter flag, normalized affix 
 
 ## Skill atlas and active skills
 
-The fixed atlas contains **2,185 nodes**, **3,047 undirected curved connections**, and **150 passive constellations and 12 development groups** across **Might, Cunning, and Arcana**:
+The fixed atlas contains **2,333 nodes**, **3,166 undirected curved connections**, and **150 passive constellations and 23 development groups** across **Might, Cunning, and Arcana**:
 
 - 1 free origin.
 - 1,662 minor nodes within themed constellations.
-- 279 minor travel nodes connecting specialties; these grant their discipline's attribute.
+- 266 minor travel nodes connecting specialties; these grant their discipline's attribute.
 - 36 early choice nodes granting speed, resources, critical chance, or mana efficiency.
-- 150 passive notable nodes, plus 19 specialization nodes, 17 mastery nodes and Arcane Overload.
+- 150 passive notable nodes, plus 60 specialization nodes, 17 mastery nodes and Arcane Overload.
+- 120 skill-specific passive improvements in specialization leaves.
 - 20 major nodes, each unlocking one executable active skill.
 
 Three distinct petals each contain five staggered terraces (3, 6, 10, 14 and 17 specialties). Ellipses, open crescents, fans and branching boughs contain 9–14 nodes. Focal notables connect multiple entrances, so crossing a specialty does not require buying half its circumference. Inter-cluster roads contain at most two intermediate travel nodes. Inner cross-discipline bridges and local circuits add alternatives. Node centers remain at least 22 world units apart, and cluster bounds include their actual geometry.
