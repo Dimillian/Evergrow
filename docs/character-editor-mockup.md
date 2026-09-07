@@ -12,7 +12,7 @@ Open [the character editor](http://127.0.0.1:5173/character-editor.html) with th
 - Eight accessory choices: none, gold hoops, moon circlet, eyepatch, spectacles, silver studs, ear cuff and nose ring. Eyepatch straps terminate on the eye-centered patch; glasses have contrasting rims.
 - Section-wide hover or keyboard focus reveals previous/next paging arrows and a page counter. Touch devices show them continuously. Paging preserves the selected look.
 - Armor tab with sixteen tints for helmet, chest, shoulders, gloves, legs, boots and cloak independently. Each part can use its original color; reset restores all original colors. Helmet visibility is an independent checkbox and survives color resets.
-- **Inventory preview** opens the actual inventory panel around a disposable character. The icon at the figure's top right opens **Edit character / Edit armor**, returning to the chosen tab with the draft intact. This proposed entry point is not enabled in gameplay yet.
+- **Inventory preview** opens the actual inventory panel around a disposable character. The edit icon immediately after the **Equipment** title uses the same sizing as the inventory sort tools and opens the Character tab directly, with the draft intact. Armor remains available through its tab. This proposed entry point is not enabled in gameplay yet.
 - Full equipped character, face close-up, desktop small-scale view, eight facing buttons and drag-to-rotate.
 - All six starter loadouts and a show-hood preview. Switching gear preserves the appearance draft.
 - Name preview, independent cosmetic randomization, appearance reset and a review dialog with PNG portrait export.
@@ -38,6 +38,6 @@ The small-scale view is an unlit art preview, not a claim of final world/CRT rea
 
 The first mockup checkpoint passed 760 code tests (historical). The expanded checkpoint ran 762 code tests: 761 passed initially; the existing cloud-save concurrency test failed because it assumes the first concurrent request wins. Its full ten-test file passed on rerun. Strict application/core compilation and the local production build passed. The art contract covers every hairstyle across sixteen angles, covered/uncovered heads and rest, movement, attack, cast and defeat, checking finite drawing and restoration of Canvas state. Tint tests cover all part/color combinations, input isolation, original-color restoration and independent helmet visibility.
 
-The in-app browser was used to inspect layouts, all part comparison sheets, paging, individual/all color resets and both inventory editing entry points. No automated gameplay browser suite or playable-session testing was run. User acceptance of the new looks remains the next step.
+The in-app browser was used to inspect layouts, all part comparison sheets, paging, individual/all color resets and the inventory editing entry point. The subsequent header-icon simplification passed type checking and visual/direct-opening review. No automated gameplay browser suite or playable-session testing was run. User acceptance of the new looks remains the next step.
 
 The [feasibility analysis](character-editor-feasibility.md) describes the later creation/save integration. Its body-preset suggestions are outside the current MVP scope.

@@ -215,7 +215,7 @@ async function openInventory(){
       inventoryReview=new AppearanceInventoryReview(root,(ctx,player,time,angle,width,height)=>{
         const current=pose(time,player.character,angle),fit=fitCharacter(characterBounds({...current,time:0}),width,height,.09);
         ctx.clearRect(0,0,width,height);ctx.save();ctx.translate(fit.x,fit.y);ctx.scale(fit.scale,fit.scale);drawHumanoid(ctx,current);ctx.restore();
-      },selected=>{close();tab=selected;refresh();root.querySelector<HTMLButtonElement>(`[data-tab="${tab}"]`)!.focus();},close);
+      },()=>{close();tab='character';refresh();root.querySelector<HTMLButtonElement>('#character-tab')!.focus();},close);
     }
     inventoryOpen=true;inventoryReview.open(sheet);
   } finally {inventoryLoading=false;}
