@@ -38,7 +38,7 @@ export class SkillEffects {
     if (event.type === 'blast' || event.type === 'block') {
       const meteor = event.type === 'blast' && event.groundKind === 'meteor';
       const max = meteor ? 1.15 : event.type === 'block' ? .32 : style === 'frost' ? .7 : .56;
-      this.areas.push({ x: event.x, y: event.y, radius: event.type === 'block' ? 22 : bounds(event.radius, 8, 250, 55),
+      this.areas.push({ x: event.x, y: event.y, radius: event.type === 'block' ? 22 : bounds(event.radius, 8, 400, 55),
         life: max, max, style, color, kind: event.type, meteor, seed: this.sequence++ });
       if (this.areas.length > 20) this.areas.shift();
     }

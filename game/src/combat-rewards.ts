@@ -16,6 +16,7 @@ export interface KillRewardContext {
 export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, context: KillRewardContext): { kills: number; recharge: number } {
   const { player } = context;
   kills++;
+  if (!player.dead) player.mana = Math.min(player.maxMana, player.mana + player.derived.manaOnKill);
   const reward = Math.max(1, Math.round(enemy.xpReward * xpLevelFactor(player.level, enemy.level)));
   const levels = awardCharacterExperience(player, reward);
   context.emit({ type: 'experience', x: enemy.x, y: enemy.y, amount: reward });

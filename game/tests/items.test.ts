@@ -1,3 +1,4 @@
+import { isSkillStat } from '../src/equipment-affix-content.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { affixPotency } from '../src/items.ts';
@@ -45,7 +46,7 @@ test('item level raises power, requirements and stats without changing a seeded 
     assert.ok(high.weapon!.damage > low.weapon!.damage);
     assert.equal(low.weapon!.baseAttacksPerSecond, high.weapon!.baseAttacksPerSecond);
     assert.equal(low.weapon!.reach, high.weapon!.reach);
-    low.affixes.forEach((affix, index) => assert.ok(high.affixes[index].value > affix.value));
+    low.affixes.forEach((affix, index) => assert.ok(isSkillStat(affix.stat) || affix.stat === 'projectilePierce' ? high.affixes[index].value >= affix.value : high.affixes[index].value > affix.value));
   }
 });
 
@@ -125,6 +126,7 @@ test('percentage affixes approach bounded quality ranges while flat stats and ba
     manaCostPercent: 4 + 25 * .15, castSpeedPercent: 3 + 25 * .18, damagePercent: 4 + 25 * .35, attackSpeedPercent: 3 + 25 * .18,
     critChance: 1 + 25 * .08, critDamage: 6 + 25 * .35,
     moveSpeedPercent: 2 + 25 * .12, spellDamagePercent: 5 + 25 * .45,
+    areaPercent: 10 + 25 * .3, potionPercent: 12 + 25 * .35, spellweavePercent: 16 + 25 * .4, afterguardPercent: 20 + 25 * .5,
     cooldownPercent: 2 + 25 * .1, blockChance: 2 + 25 * .08, blockReduction: 4 + 25 * .12,
   };
   const seen = new Set<string>();
@@ -135,6 +137,7 @@ test('percentage affixes approach bounded quality ranges while flat stats and ba
     if (high.implicit.armor) assert.ok(high.implicit.armor > mid.implicit.armor! * 1000);
     high.affixes.forEach((affix, index) => {
       assert.equal(affix.stat, mid.affixes[index].stat);
+      if (isSkillStat(affix.stat) || affix.stat === 'projectilePierce') { assert.ok(affix.value >= low.affixes[index].value && affix.value <= 5); return; }
       assert.ok(mid.affixes[index].value > low.affixes[index].value);
       assert.ok(affix.value >= mid.affixes[index].value);
       const bound = percentBounds[affix.stat];

@@ -1,3 +1,4 @@
+import { SKILL_STATS, type SkillStat } from './equipment-affix-content.ts';
 import { SKILL_SPECIALIZATIONS } from './skill-progression.ts';
 import type { StatKey } from './character-types.ts';
 import { skillIconSVG } from './skill-content.ts';
@@ -29,6 +30,10 @@ interface StatGlyph { readonly engraving: EngravingId; readonly unit: number; }
 // Compare contributions in the same units as an ordinary minor node. This keeps
 // a raw pool bonus such as +24 life from outweighing every smaller-valued stat.
 const STAT_GLYPHS: Readonly<Record<StatKey, StatGlyph>> = Object.freeze({
+  ...Object.fromEntries(Object.keys(SKILL_STATS).map(key => [key, { engraving: 'book', unit: 1 }])) as Record<SkillStat, StatGlyph>,
+  manaOnKill: { engraving: 'current', unit: 2 }, areaPercent: { engraving: 'impact', unit: 10 },
+  potionPercent: { engraving: 'mana', unit: 12 }, projectilePierce: { engraving: 'daggers', unit: 1 },
+  spellweavePercent: { engraving: 'book', unit: 16 }, afterguardPercent: { engraving: 'shield', unit: 20 },
   fireDamage: { engraving: 'flame', unit: 4 },
   frostDamage: { engraving: 'mana', unit: 4 },
   lightningDamage: { engraving: 'impact', unit: 4 },

@@ -326,7 +326,7 @@ export class SkillTreePanel {
     const id = node.skill, learned = learnedSkillRank(sheet,id), max = maximumSkillRank(sheet,id), active = activeSkillRank(sheet,id);
     const current = resolveSkill(id,p.derived,sheet,learned), next = learned < max ? resolveSkill(id,p.derived,sheet,learned+1) : null;
     const variants = SKILL_SPECIALIZATIONS.filter(v=>v.skill===id), selected = selectedSpecialization(sheet,id);
-    return `<section class="skill-rank-controls ui-well"><strong>Rank ${learned} / ${max}</strong>
+    return `<section class="skill-rank-controls ui-well"><strong>Rank ${learned} / ${max}${current.bonusRanks ? ` · +${current.bonusRanks} gear` : ''}</strong>
       ${next ? `<div class="skill-rank-preview"><span>Next rank</span><span>${next.recipe.kind === 'guard' && current.recipe.kind === 'guard' ? `${Math.round(current.recipe.reduction*100)}% → ${Math.round(next.recipe.reduction*100)}% blocked` : `${Math.round(current.damageMultiplier*100)}% → ${Math.round(next.damageMultiplier*100)}% damage`}</span><span>${current.mana} → ${next.mana} mana</span>${next.cooldown ? `<span>${next.cooldown.toFixed(2)}s cooldown</span>` : ''}</div>
       <button class="ui-button ui-button--primary" data-upgrade="${id}" ${sheet.skillPoints < 1 ? 'disabled' : ''}>Upgrade · 1 point</button>` : '<span class="ui-muted">Maximum purchased rank</span>'}
       <label>Cast at rank<select class="ui-button" data-config="rank" data-skill="${id}" aria-label="Active rank for ${SKILL_DEFINITIONS[id].name}">${Array.from({length:learned},(_,i)=>`<option value="${i+1}" ${i+1===active?'selected':''}>Rank ${i+1}</option>`).join('')}</select></label>

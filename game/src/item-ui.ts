@@ -1,3 +1,4 @@
+import { AFFIX_DESCRIPTIONS, SPECIAL_AFFIX_LABELS, SKILL_STATS, isSkillStat } from './equipment-affix-content.ts';
 import { ELEMENTAL_AFFIXES, ELEMENT_COLORS } from './elemental-weapon.ts';
 import { weaponActionRate, basicAttackManaCost } from './equipment.ts';
 import type { CharacterSheet, EquipmentSlot, Item, ItemTier } from './character-types.ts';
@@ -16,6 +17,7 @@ export interface ItemPresentation {
   adjacentComparison?: boolean;
 }
 export const CHANGE_LABELS: Record<PreviewStat, string> = {
+  ...SPECIAL_AFFIX_LABELS, ...SKILL_STATS,
   damage: 'Main-hand damage', cadence: 'Main-hand actions / s', offDamage: 'Off-hand damage', offCadence: 'Off-hand attacks / s',
   maxHp: 'Maximum life', maxMana: 'Maximum mana', armor: 'Armor', blockChance: 'Block chance', blockReduction: 'Blocked damage reduction',
   critChance: 'Critical chance', critMultiplier: 'Critical damage', lifeRegeneration: 'Life / s', manaRegeneration: 'Mana / s',
@@ -47,8 +49,10 @@ export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, optio
 export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
   const rows = Object.entries(itemModifiers(item)).map(([key, value]) => {
     const element = ELEMENTAL_AFFIXES.find(a => a.stat === key)?.element;
-    return `<div class="ui-item-property"${element ? ` style="color:${ELEMENT_COLORS[element]}"` : ''}><span>${escapeUI(STAT_LABELS[key as keyof typeof STAT_LABELS])}${element ? ` · ${{ fire: 'Burn', frost: 'Chill', lightning: 'Interrupt' }[element]}` : ''}</span><strong>${formatStatValue(key as keyof typeof STAT_LABELS, value)}</strong></div>`;
+    const description = AFFIX_DESCRIPTIONS[key as keyof typeof AFFIX_DESCRIPTIONS];
+    return `<div class="ui-item-property"${element ? ` style="color:${ELEMENT_COLORS[element]}"` : ''}><span>${escapeUI(STAT_LABELS[key as keyof typeof STAT_LABELS])}${element ? ` · ${{ fire: 'Burn', frost: 'Chill', lightning: 'Interrupt' }[element]}` : ''}</span><strong>${formatStatValue(key as keyof typeof STAT_LABELS, value)}</strong></div>${description ? `<p class="ui-item-affix-note">${escapeUI(description)}</p>` : ''}`;
   });
+  if (item.affixes.some(a => isSkillStat(a.stat))) rows.push('<p class="ui-item-affix-note">Bonus ranks require the skill unlocked. No extra mana or cooldown.</p>');
   let weapon = '';
   if (item.weapon) {
     const w = item.weapon;
@@ -64,14 +68,15 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
       const changes = preview.changes.map(change => {
         const difference = change.after - change.before, percentage = PREVIEW_PERCENT.has(change.key);
         const delta = difference * (percentage ? 100 : 1);
-        return `<div class="ui-item-change"><span>${CHANGE_LABELS[change.key]}</span><strong class="${delta > 0 ? 'is-gain' : 'is-loss'}">${delta > 0 ? '+' : ''}${number(delta, 2)}${percentage ? '%' : ''}</strong></div>`;
+        const wholePercent = ['areaPercent', 'potionPercent', 'spellweavePercent', 'afterguardPercent'].includes(change.key);
+        return `<div class="ui-item-change"><span>${CHANGE_LABELS[change.key]}</span><strong class="${delta > 0 ? 'is-gain' : 'is-loss'}">${delta > 0 ? '+' : ''}${number(delta, 2)}${percentage || wholePercent ? '%' : ''}</strong></div>`;
       }).join('');
       comparison = `<div class="ui-item-comparison"><span class="ui-item-section-label">On equip</span>${changes || '<p>No stat change</p>'}${preview.displaced.length && !view.adjacentComparison ? `<p>Replaces ${preview.displaced.map(entry => escapeUI(entry.item.name)).join(' + ')}</p>` : ''}</div>`;
     }
   }
   return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span></span><h4>${escapeUI(itemDisplayName(item))}</h4></div></div>
     <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${view.equipped ? '<span class="ui-item-equipped">Equipped</span>' : ''}</div>
-    ${item.recipe.enhancement ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% item stats</div>` : ''}
+    ${item.recipe.enhancement ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% scalable item stats</div>` : ''}
     ${weapon}<div class="ui-item-properties">${rows.join('')}</div>
     ${item.affixes.length ? `<div class="ui-item-affixes">${item.affixes.map(a => escapeUI(a.name)).join(' · ')}</div>` : ''}
     ${comparison}${view.context ? `<div class="ui-item-comparison">${escapeUI(view.context)}</div>` : ''}`;

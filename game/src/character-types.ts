@@ -4,6 +4,7 @@ import type { WeaponDefinition, FocusDefinition, ShieldDefinition } from './mode
 export type Attribute = 'strength' | 'dexterity' | 'intelligence' | 'vitality';
 export type StatKey = Attribute | 'maxHp' | 'maxMana' | 'armor' | 'damagePercent' | 'attackSpeedPercent' | 'castSpeedPercent'
   | 'critChance' | 'critDamage' | 'moveSpeedPercent' | 'spellDamagePercent' | 'manaRegen'
+  | `skill:${SkillId}` | 'manaOnKill' | 'areaPercent' | 'potionPercent' | 'projectilePierce' | 'spellweavePercent' | 'afterguardPercent'
   | 'lifeRegen' | 'manaCostPercent' | 'cooldownPercent' | 'lifeOnHit' | 'blockChance' | 'blockReduction' | 'fireDamage' | 'frostDamage' | 'lightningDamage';
 export type StatModifiers = Partial<Record<StatKey, number>>;
 export type EquipmentSlot = 'weapon' | 'offhand' | 'head' | 'chest' | 'gloves' | 'legs' | 'boots' | 'cloak' | 'amulet' | 'ring1' | 'ring2';
@@ -52,6 +53,8 @@ export interface DerivedCharacterStats {
   spellDamageMultiplier: number; manaRegeneration: number; lifeRegeneration: number;
   manaCostMultiplier: number; cooldownMultiplier: number; lifeOnHit: number;
   blockChance: number; blockReduction: number;
+  manaOnKill: number; areaMultiplier: number; potionMultiplier: number; projectilePierce: number;
+  spellweavePercent: number; afterguardPercent: number; skillBonuses: Partial<Record<SkillId, number>>;
   attributes: Record<Attribute, number>;
 }
 export interface ActionResult { ok: boolean; message?: string; }

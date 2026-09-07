@@ -258,10 +258,16 @@ export class InventoryPanel {
         ['Maximum life', number(stats.maxHp)], ['Life regeneration', `${number(stats.lifeRegeneration, 2)} / s`],
         ['Life on hit', number(stats.lifeOnHit, 1)], ['Maximum mana', number(stats.maxMana)],
         ['Mana regeneration', `${number(stats.manaRegeneration, 2)} / s`],
+        ...(stats.manaOnKill ? [['Mana on kill', number(stats.manaOnKill, 1)] as [string, string]] : []),
+        ...(stats.potionMultiplier > 1 ? [['Potion restoration', percent(stats.potionMultiplier)] as [string, string]] : []),
       ] },
       { title: 'Utility & efficiency', tone: 'utility', rows: [
         ['Movement speed', percent(stats.moveSpeedMultiplier)], ['Mana cost reduction', percent(1 - stats.manaCostMultiplier)],
         ['Cooldown reduction', percent(1 - stats.cooldownMultiplier)],
+        ...(stats.areaMultiplier > 1 ? [['Area of effect', `+${number((stats.areaMultiplier ** 2 - 1) * 100)}%`] as [string, string]] : []),
+        ...(stats.projectilePierce ? [['Projectile pierce', number(stats.projectilePierce)] as [string, string]] : []),
+        ...(stats.spellweavePercent ? [['Spellweave damage', `+${number(stats.spellweavePercent)}%`] as [string, string]] : []),
+        ...(stats.afterguardPercent ? [['Armor after block', `+${number(stats.afterguardPercent)}%`] as [string, string]] : []),
       ] },
     ];
     const markup = groups.map(group => `<section class="character-stat-group character-stat-group--${group.tone}" aria-labelledby="stats-${group.tone}">

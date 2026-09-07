@@ -207,6 +207,7 @@ function drawNodeTooltip(c: CanvasRenderingContext2D, node: SkillNode, view: Ski
     add(`Requires ${skillRequirementLabel(skill.requirement)}`, color, 12, 6);
     const stats = view.costStats ?? { manaCostMultiplier: 1, cooldownMultiplier: 1 };
     const costs = resolveSkill(skill.id, stats, view.sheet);
+    if (costs.bonusRanks) add(`Rank ${costs.rank} + ${costs.bonusRanks} gear = ${costs.effectiveRank}`, color, 13, 6);
     if (costs.damageMultiplier) add(`${Math.round(costs.damageMultiplier * 100)}% weapon damage${skillDamageSuffix(skill.id, costs.recipe)}`, '#d5e8ca', 13, 6);
     if (costs.upkeep) add(`${costs.upkeep} mana / second while active`, '#cfc4df', 13, 6);
     add(`${costs.mana} mana · ${costs.cooldown ? `${Number(costs.cooldown.toFixed(2))}s cooldown` : 'No cooldown'}`, '#cfc4df', 13, 10);

@@ -140,6 +140,7 @@ export interface Player {
   skillCooldowns: Partial<Record<SkillId, number>>;
   activeSkill: SkillId | null;
   nextAttackHand: 'main' | 'off';
+  affixBuffs?: import('./affix-combat.ts').AffixBuffs;
   guardTime: number;
   guardReduction: number;
   dash: { angle: number; remaining: number; speed: number; damage: number; elementalDamage?: number; radius: number; skill: SkillId; style?: ProjectileStyle; hitIds: Set<number> } | null;

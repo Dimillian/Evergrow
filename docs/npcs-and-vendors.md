@@ -145,3 +145,7 @@ All five delivery areas below are implemented and have static in-app review capt
 5. **Static in-app review:** capture town NPCs, vendor layout and +0/+5/+10 tooltip treatments at normal and narrow widths. Leave gameplay and economy testing to the player. Commit and push each coherent implementation checkpoint.
 
 No quest framework, wandering schedules, reputation, materials, repairs, haggling or unique-item powers are required for this first system.
+
+### Specialist affixes and skill ranks · 2026-09-07
+
+Stock, loot, rarity upgrades and rerolls share the expanded slot pools in [equipment affixes](equipment-affixes.md). Enhancement improves scalable rolls but leaves +skill and +pierce integers unchanged. Releveling retains roll quality and can unlock a higher saved skill-rank quantile at the new item level. Ordinary service previews show those exact changes before purchase. Skill-family exclusion allows at most one named skill affix on an item.

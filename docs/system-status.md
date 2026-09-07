@@ -123,3 +123,9 @@ Enemy debuff HUD: target and boss plates now show compact Burn/Chill/Stagger ind
 Shared animated warnings cover enemy sectors, projectile/pounce lanes, Warden fractures and player ground skills, using actual combat geometry and the bounded scene light pass. Live ground presentation replaces independent warning lifetimes. Meteor/Cataclysm now descend visibly, explode with stone/ember material responses, and leave four seconds of tunable non-stacking burning ground. Arrow rain, frost fields, Tempest and elemental blast materials share this treatment. No save reset; local gameplay/visual tuning remains player testing.
 
 Checkpoint verification: 847 code tests pass; application/headless TypeScript and production build pass. Material budgets remain 48 bursts / 384 fragments; total scene lights remain capped at 18.
+
+### Build-defining affixes · 2026-09-07
+
+Wellsip, Expanse, Deep Draught, Piercing, Spellweave and Afterguard now run through shared item derivation and combat owners. Named +1–5 skill rolls use slot/family/element weights, geographic item-level gates and validated discrete recipes. Equipment ranks improve unlocked skill potency without increasing costs or modifying purchased ranks. Loot, vendor stock, enchanting, equipped-item comparisons, skill previews and saves share these rules. Temporary combat buffs expire independently; no save reset.
+
+Affix checkpoint verification: all 858 code tests, application/headless type checks and production build pass. Tests cover weighted slot pools, discrete rank odds/gates, enhancement/releveling, save round trips, failed-action buff preservation, projectile snapshots, potion restoration and block/kill ownership. Gameplay feel remains player testing.

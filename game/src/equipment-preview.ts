@@ -1,3 +1,5 @@
+import { SKILL_STATS, type SkillStat } from './equipment-affix-content.ts';
+import type { SkillId } from './character-types.ts';
 import type { CharacterSheet, Item } from './character-types.ts';
 import { planEquipmentChange, type EquipmentTarget } from './inventory.ts';
 import { deriveCharacterStats } from './character-stats.ts';
@@ -17,6 +19,10 @@ function values(sheet: CharacterSheet, level: number) {
     cooldownReduction: 1 - stats.cooldownMultiplier, lifeOnHit: stats.lifeOnHit,
     attackSpeedMultiplier: stats.attackSpeedMultiplier, castSpeedMultiplier: stats.castSpeedMultiplier,
     spellDamageMultiplier: stats.spellDamageMultiplier,
+    manaOnKill: stats.manaOnKill, areaPercent: (stats.areaMultiplier ** 2 - 1) * 100,
+    potionPercent: (stats.potionMultiplier - 1) * 100, projectilePierce: stats.projectilePierce,
+    spellweavePercent: stats.spellweavePercent, afterguardPercent: stats.afterguardPercent,
+    ...Object.fromEntries(Object.keys(SKILL_STATS).map(key => [key, stats.skillBonuses[key.slice(6) as SkillId] ?? 0])) as Record<SkillStat, number>,
     ...stats.attributes };
 }
 export type PreviewStat = keyof ReturnType<typeof values>;

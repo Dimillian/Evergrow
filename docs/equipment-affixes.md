@@ -1,31 +1,31 @@
 # Equipment affixes and hybrids
 
-Current rules · September 7, 2026. Generation, rarity upgrades and rerolls share `itemAffixPool`, `rollAffix` and `affixConflicts` in `items.ts`. There are still 24 affix definitions; this pass adds no new stat families. Tier counts remain 0 / 1 / 2 / 3 / 4.
+Current rules · September 7, 2026. Generation, rarity upgrades and rerolls share `itemAffixPool`, `rollAffix` and `affixConflicts` in `items.ts`. There are 50 explicit definitions: 24 original affixes, six specialist affixes and 20 individual skill-rank rolls (one shared rarity family). Tier counts remain 0 / 1 / 2 / 3 / 4.
 
 ## Slot pools
 
 | Slot / family | Eligible explicit affixes |
 | --- | --- |
-| Head | Mana, Intelligence, mana cost reduction, cooldown reduction, life, armor |
+| Head | Mana, Intelligence, mana cost reduction, cooldown reduction, life, armor; any skill rank |
 | Chest | Life, armor, Vitality, life regeneration, Strength |
 | Gloves | Attack speed **or** cast speed, critical chance, attack damage, spell damage, Dexterity, armor |
 | Legs | Life, armor, Vitality, life regeneration, Strength, Dexterity |
 | Boots | Movement speed, life, armor, Vitality, Dexterity |
-| Cloak | Life/mana regeneration, cooldown reduction, life, mana, Intelligence |
-| Rings | Critical chance/damage, attack/spell damage, Strength/Dexterity/Intelligence, mana, mana regeneration |
-| Amulet | All 19 general affixes plus both block affixes; weaker specialist rolls |
-| Shields | Block chance/reduction, armor, life, Vitality, life regeneration, Strength |
-| Melee weapons | Attack damage, critical chance/damage, life on hit, Strength, Dexterity, Intelligence, spell damage, one fire/frost/lightning enchantment |
-| Bows | Attack damage, critical chance/damage, Dexterity, life on hit, Strength |
-| Staves / wands | Spell damage, Intelligence, mana, critical chance/damage, mana cost reduction, mana regeneration |
-| Grimoires | Mana, mana regeneration, mana cost/cooldown reduction, Intelligence, spell damage |
-| Orbs | Spell damage, critical chance/damage, Intelligence, mana, mana cost reduction |
+| Cloak | Life/mana regeneration, cooldown reduction, life, mana, Intelligence, Deep Draught |
+| Rings | Critical chance/damage, attack/spell damage, Strength/Dexterity/Intelligence, mana, mana regeneration, Wellsip; any skill rank |
+| Amulet | All 25 general affixes plus both block affixes; any skill rank; weaker movement/speed rolls |
+| Shields | Block chance/reduction, armor, life, Vitality, life regeneration, Strength, Afterguard; shield skill ranks |
+| Melee weapons | Attack damage, critical chance/damage, life on hit, Strength, Dexterity, Intelligence, spell damage, Expanse, one fire/frost/lightning enchantment; compatible melee skill ranks |
+| Bows | Attack damage, critical chance/damage, Dexterity, life on hit, Strength, Piercing; bow skill ranks |
+| Staves / wands | Spell damage, Intelligence, mana, critical chance/damage, mana cost reduction, mana regeneration; Expanse (staff) / Piercing (wand); magic skill ranks |
+| Grimoires | Mana, mana regeneration, mana cost/cooldown reduction, Intelligence, spell damage, Wellsip, Spellweave; magic skill ranks |
+| Orbs | Spell damage, critical chance/damage, Intelligence, mana, mana cost reduction; magic skill ranks |
 
 Amulets are the explicit exception to boots-only movement and gloves-only speed. Weapon elemental affixes are local to melee weapons and are not in the amulet pool. Amulet block affixes still require a shield to function. Attack/cast-speed rolls are mutually exclusive on one item. These restrictions concern explicit rolls; attribute/tree bonuses and existing focus implicits retain their roles.
 
 ## Weights and specialist budgets
 
-Ordinary affixes have weight **1**. Critical chance, life on hit, cooldown reduction and mana cost reduction have weight **0.55**. Each of the three melee elemental affixes has weight **0.12**. Draw without replacement, removing conflicting families after each choice. Weights apply equally to drops and enchanting. An initial melee affix is elemental with probability `0.36 / 7.46 ≈ 4.8%`; higher tiers provide additional opportunities, never two elements. Item rarity/drop tables are unchanged.
+Ordinary affixes have weight **1**. Critical chance, life on hit, cooldown reduction and mana cost reduction have weight **0.55**. Each of the three melee elemental affixes has weight **0.12**. Draw without replacement, removing conflicting families after each choice. Weights apply equally to drops and enchanting. With Expanse and the skill-rank family, an initial melee affix is elemental with probability `0.36 / 8.51 ≈ 4.2%`; higher tiers provide additional opportunities, never two elements. Item rarity/drop tables are unchanged.
 
 Multiply the existing affix base and growth by these slot budgets before rounding:
 
@@ -65,3 +65,38 @@ All player elemental weapon/spell contacts share `ELEMENTAL_CONTACT` through the
 - **Arcane:** direct damage; no generic additional status.
 
 Melee burn potency uses only the snapshotted elemental portion, not the physical portion or later equipment. Stronger skill-authored burns/slows remain stronger; reapplication preserves strongest potency and longest duration without adding stacks. Periodic burn damage cannot crit, trigger life on hit or recursively ignite. Lightning enchantments do not automatically chain; chaining and explosions belong to skills. Enemy damage/defense rules are unchanged; separate elemental resistances are not implemented.
+
+## Specialist affixes · 2026-09-07
+
+| Affix | Effect | Slots | Relative weight |
+| --- | --- | --- | ---: |
+| Wellsip | Restore flat mana on a committed enemy kill, capped at maximum mana; no credit after player death | Rings, grimoires, amulets | 1 |
+| Expanse | Increased skill area: sweep reach, cone/nova/ground radii and projectile explosions | Melee weapons, staves, amulets | 0.55 |
+| Deep Draught | More life **and** mana restored by the dual potion, still one charge | Cloaks, amulets | 1 |
+| Piercing | +1 additional target for non-explosive player projectiles | Bows, wands, amulets | 0.12 |
+| Spellweave | A direct melee hit primes the next spell/bolt; a direct magic hit primes the next melee action | Grimoires, amulets | 0.18 |
+| Afterguard | Blocking grants increased armor for three seconds, against subsequent hits | Shields, amulets | 0.55 |
+
+These are relative selection weights within each slot pool, not drop percentages. Base/growth: Wellsip 2 + 0.12 per level; Expanse 10% + 0.3; Deep Draught 12% + 0.35; Spellweave 16% + 0.4; Afterguard 20% + 0.5. Percentage growth uses the existing tapered budget, then roll quality, rarity and enhancement. Piercing always stays +1, even with enhancement/releveling. Rerolls and rarity upgrades share the same pools and exclusions.
+
+Expanse adds **area**, so radius/reach scales by the square root of the increased-area factor; it does not extend projectile travel, chain distance, dashes or basic weapon reach. Total increased area caps at 100%. Deep Draught caps at 100% increased restoration. Piercing adds to skill-native pierce, with at most four equipment pierces; ricochets keep their existing priority and explosions still detonate on contact instead of piercing. Payloads retain their bonus after release.
+
+Spellweave lasts four seconds, refreshes rather than stacks, and is consumed once when a valid opposite-type action begins. It multiplies that whole action's snapshotted damage, including its projectiles/ground payload; failed activation keeps the buff, and a missed valid action still spends it. Physical arrows do not prime it. Periodic burn/ember damage cannot prime Spellweave, crit or trigger life on hit. Afterguard refreshes its three-second timer without stacking, uses source-level armor mitigation and ends when shield/affix eligibility is lost. Spellweave and Afterguard each cap at 100%. These temporary buffs are not saved or part of the character's permanent armor/DPS projection.
+
+## Equipment skill ranks
+
+At most **one skill affix per item**, naming a particular active skill. Equipment ranks require that skill unlocked and its normal weapon requirement; they never grant tree ownership, ranks purchased with points, mastery, specializations or hotbar assignments. They add to the chosen casting rank for potency (including Bulwark's existing reduction cap), without changing that rank's mana/cooldown costs. Bonuses sum across equipped items up to +10 per skill and can exceed the ordinary purchased-rank limit. Unequipping removes them immediately; released actions keep their damage snapshot.
+
+| Roll | Minimum item level | Chance among skill-rank rolls at level 80+ |
+| --- | ---: | ---: |
+| +1 | 1 | 88% |
+| +2 | 12 | 10% |
+| +3 | 30 | 1.7% |
+| +4 | 55 | 0.27% |
+| +5 | 80 | 0.03% |
+
+Below a threshold, higher quantiles collapse to the highest eligible rank. Enhancement and rarity never multiply this integer. Geographic releveling re-evaluates the saved quantile against the new level gate, shown in the service preview; rerolling draws a new quantile. Save validation checks the integer against the exact stored roll and item level.
+
+The **entire skill family** has weight 0.50 on weapons, 0.45 on grimoires/orbs, 0.35 on shields, 0.25 on helmets, 0.18 on rings and 0.40 on amulets. This budget is split among eligible skills, so adding more skills does not flood the affix pool. Weapons favor compatible skills, shields their two skills, caster foci magic, and helmets/jewelry can roll any skill. Fire/frost/lightning profiles and focus motifs give matching skills three times the individual weight; ultimate skills receive one quarter of ordinary weight. Generation depends on the item's identity, never the current player's build or post-kill level. Existing item rarity/quantity tables are unchanged.
+
+The skill atlas shows purchased ranks and extra gear ranks separately; item and equipment-comparison tooltips show the exact named bonus. Existing saves remain usable, and old items are not randomly rerolled on load.

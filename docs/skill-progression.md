@@ -79,3 +79,7 @@ Frozen local review: `/character.html?panel=skills&progression=1`. Add `&zoom=ov
 ### Meteor ground fire
 
 Meteor, Shattered Sky and Cataclysm leave four-second burning patches after each impact. Their non-stacking burn uses 12% of the resolved impact damage per second; rank and specialization damage multipliers therefore also affect the ground fire. Duration and refresh interval are authored in `SkillExecution.scorch` and snapshotted on release; no additional duration upgrade is introduced yet. See [weapons and skills](weapons-and-skills.md#spell-anticipation-and-meteor-aftermath--2026-09-07).
+
+### Equipment bonus ranks · 2026-09-07
+
+Named +1–5 skill affixes can raise effective potency beyond purchased ranks, up to +10 total equipment ranks per skill. They require the skill unlocked and compatible gear, do not grant specializations, and do not raise mana/cooldown costs. The chosen casting rank and point ledger remain unchanged. Tooltips and upgrade previews use the same resolver as combat. See [equipment affixes](equipment-affixes.md#equipment-skill-ranks) for weighted pools, level gates and precise odds.

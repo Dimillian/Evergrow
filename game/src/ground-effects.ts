@@ -14,7 +14,7 @@ export interface GroundEffectContext {
   player: Player;
   enemies: readonly Enemy[];
   visible(ax: number, ay: number, bx: number, by: number): boolean;
-  damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle): void;
+  damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle, periodic?: boolean): void;
   emit(event: CombatEvent): void;
 }
 
@@ -52,7 +52,7 @@ export function advanceGroundEffects(effects: ActiveGroundEffect[], dt: number, 
       for (const enemy of context.enemies) if (enemy.state !== 'dead'
         && Math.hypot(enemy.x - effect.x, enemy.y - effect.y) <= effect.radius + enemy.radius
         && context.visible(effect.x, effect.y, enemy.x, enemy.y)) {
-        if (effect.damage > 0) context.damage(enemy, effect.damage, Math.atan2(enemy.y - effect.y, enemy.x - effect.x), false, effect.style);
+        if (effect.damage > 0) context.damage(enemy, effect.damage, Math.atan2(enemy.y - effect.y, enemy.x - effect.x), false, effect.style, effect.kind === 'embers');
         if (effect.burn) applyBurn(enemy, effect.burn);
         if (effect.slow) applySlow(enemy, effect.slow);
         if (effect.stun) applyStun(enemy, effect.stun * (enemy.rank === 'elite' ? .2 : 1));

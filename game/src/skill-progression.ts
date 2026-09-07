@@ -1,3 +1,4 @@
+import { AFFIX_COMBAT_RULES } from './equipment-affix-content.ts';
 import type { ActionResult, CharacterSheet, DerivedCharacterStats, SkillId } from './character-types.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
 import { SKILL_EXECUTION, type SkillExecution } from './skill-execution-content.ts';
@@ -61,8 +62,10 @@ export function configureSkill(sheet: CharacterSheet, id: SkillId, rank: number,
 }
 
 /** One immutable cast configuration for combat and every cost/potency readout. */
-export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'manaCostMultiplier' | 'cooldownMultiplier'>, sheet?: CharacterSheet, rankOverride?: number) {
+export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'manaCostMultiplier' | 'cooldownMultiplier'> & Partial<Pick<DerivedCharacterStats, 'skillBonuses' | 'areaMultiplier' | 'projectilePierce'>>, sheet?: CharacterSheet, rankOverride?: number) {
   const base = SKILL_DEFINITIONS[id], rank = rankOverride ?? Math.max(1, sheet ? activeSkillRank(sheet, id) : 1);
+  const bonusRanks = sheet && learnedSkillRank(sheet, id) ? Math.min(AFFIX_COMBAT_RULES.maxBonusRanks, stats.skillBonuses?.[id] ?? 0) : 0;
+  const effectiveRank = rank + bonusRanks;
   const variant = sheet ? selectedSpecialization(sheet, id) : undefined;
   const overload = sheet?.arcaneOverload && sheet.allocatedNodes.includes(OVERLOAD_NODE) && base.domain === 'Arcana';
   const manaGrowth = [1, 14 / 12, 17 / 12, 20 / 12, 2, 2.4, 2.9][rank - 1];
@@ -70,7 +73,7 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
   const cooldownFloor = id === 'bulwark' ? 4 : base.tier === 'ultimate' ? 12 : 0;
   const rankCooldown = base.tier === 'basic' ? 1 : 1 + .05 * (rank - 1);
   const cooldown = Math.max(cooldownFloor, base.cooldown * stats.cooldownMultiplier * rankCooldown * (variant?.id === 'meteor-shards' ? 1.25 : 1));
-  const damageMultiplier = base.damageMultiplier * (1 + .15 * (rank - 1)) * (variant?.damage ?? 1) * (overload ? 1.3 : 1);
+  const damageMultiplier = base.damageMultiplier * (1 + .15 * (effectiveRank - 1)) * (variant?.damage ?? 1) * (overload ? 1.3 : 1);
   const recipe: SkillExecution = { ...SKILL_EXECUTION[id] };
   // Resolve variations once at release, never by inspecting a player's current gear mid-flight.
   const v = variant?.id;
@@ -105,8 +108,15 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
     if (v === 'nova-deep') { recipe.radius *= 1.3; recipe.slow = { factor: .3, duration: 4 }; }
   }
   if (recipe.kind === 'ground' && v === 'meteor-shards') recipe.scatter = 5;
-  if (recipe.kind === 'guard') recipe.reduction = Math.min(.9, recipe.reduction + .025 * (rank - 1));
-  return { rank, variant, damageMultiplier, recipe, mana: Math.max(1, Math.round(base.manaCost * stats.manaCostMultiplier * multiplier * 10) / 10),
+  if (recipe.kind === 'guard') recipe.reduction = Math.min(.9, recipe.reduction + .025 * (effectiveRank - 1));
+  const area = stats.areaMultiplier ?? 1;
+  if (recipe.kind === 'sweep') recipe.reachMultiplier *= area;
+  if (recipe.kind === 'ground' || recipe.kind === 'radial' || recipe.kind === 'cone') recipe.radius *= area;
+  if (recipe.kind === 'projectile') recipe.effects = { ...recipe.effects,
+    ...(recipe.effects.blastRadius ? { blastRadius: recipe.effects.blastRadius * area } : {}),
+    ...(!recipe.effects.blastRadius && stats.projectilePierce ? { pierce: Math.min(12, (recipe.effects.pierce ?? 0) + stats.projectilePierce) } : {}) };
+
+  return { rank, bonusRanks, effectiveRank, variant, damageMultiplier, recipe, mana: Math.max(1, Math.round(base.manaCost * stats.manaCostMultiplier * multiplier * 10) / 10),
     cooldown, upkeep: id === 'tempest' ? Math.round(18 * stats.manaCostMultiplier * multiplier * 10) / 10 : 0 };
 }
 

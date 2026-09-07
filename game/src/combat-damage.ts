@@ -1,3 +1,4 @@
+import { primeSpellweave, primeAfterguard, effectiveArmor } from './affix-combat.ts';
 import { applyElementalContact } from './combat-status.ts';
 import type { CombatEvent, Enemy, EnemyKind, Player, ProjectileStyle, WorldQuery } from './model.ts';
 import { COMBAT_TIMING, ENEMY_DEFINITIONS } from './combat-content.ts';
@@ -28,6 +29,7 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
   }
   // Contact status uses the elemental portion, never physical damage or recursive burn ticks.
   const statusDamage = elementalDamage ?? (style === 'fire' || style === 'frost' || style === 'lightning' ? damage : 0);
+  if (!periodic) primeSpellweave(context.player, melee, style);
   if (!periodic) applyElementalContact(enemy, style, statusDamage);
   const critical = !periodic && context.player.derived.critChance > 0 && context.random() < context.player.derived.critChance;
   damage = Math.max(1, Math.round(damage * (critical ? context.player.derived.critMultiplier : 1)));
@@ -61,11 +63,12 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
 export function damagePlayer(amount: number, angle: number, sourceLevel: number, context: PlayerDamageContext, kind?: EnemyKind): boolean {
   const p = context.player;
   if (p.dead || p.invulnerable > 0 || context.world.isSanctuary?.(p.x, p.y)) return false;
-  amount = Math.max(1, Math.round(amount * (1 - armorReduction(p.derived.armor, sourceLevel))));
+  amount = Math.max(1, Math.round(amount * (1 - armorReduction(effectiveArmor(p), sourceLevel))));
   if (p.equipment.offHand?.kind === 'shield' && (p.guardTime > 0 || context.random() < p.derived.blockChance)) {
     const reduction = p.guardTime > 0 ? Math.max(p.guardReduction, p.derived.blockReduction) : p.derived.blockReduction;
     const blocked = Math.floor(amount * reduction);
     amount = Math.max(1, amount - blocked);
+    primeAfterguard(p);
     context.emit({ type: 'block', x: p.x, y: p.y, angle, value: blocked, color: '#a9daca' });
   }
   p.hp = Math.max(0, p.hp - amount);
@@ -75,7 +78,7 @@ export function damagePlayer(amount: number, angle: number, sourceLevel: number,
   context.emit({ type: 'hurt', x: p.x, y: p.y, angle, value: amount,
     remainingHp: p.hp, enemyKind: kind, heavy: amount >= 20 });
   if (p.hp <= 0) {
-    p.dead = true;
+    p.dead = true; p.affixBuffs = undefined;
     p.attack = null;
     p.dash = null; p.guardTime = 0;
     p.castTime = p.dodgeTime = 0;

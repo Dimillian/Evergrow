@@ -1,3 +1,4 @@
+import { consumeSpellweave } from './affix-combat.ts';
 import { weaponImpactStyle } from './elemental-weapon.ts';
 import type { ProjectileStyle } from './model.ts';
 import { containerVisible, strikeContainers, type ContainerAttackContext } from './breakable-containers.ts';
@@ -44,7 +45,8 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
 
   const attack = deriveAttackStats(p.stats, weapon);
   // Staff weapon derivation already applies spell bonuses; applying them here again would square scaling.
-  const damage = attack.damage * costs.damageMultiplier;
+  const weave = recipe.kind === 'guard' ? 1 : consumeSpellweave(p, definition.requirement === 'magic' ? 'spell' : weapon.attackKind === 'melee' ? 'melee' : 'other');
+  const damage = attack.damage * costs.damageMultiplier * weave;
   const color = definition.color;
   const hitStyle = 'style' in recipe ? recipe.style : weaponImpactStyle(weapon);
   const damageTarget = (enemy: Enemy, amount: number, angle: number, melee: boolean) => context.damage(enemy, amount, angle, melee, hitStyle, weapon.attackKind === 'melee' ? attack.elementalDamage * (damage > 0 ? amount / attack.damage : 0) : undefined);
@@ -67,7 +69,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
     p.attack = { kind: 'melee', weapon, hand: weapon === p.equipment.mainHand ? 'main' : 'off', elapsed: 0, duration,
       activeStart: duration * BASIC_ATTACK_PHASES.activeStart, activeEnd: duration * BASIC_ATTACK_PHASES.activeEnd,
       angle: p.angle, range: attack.range * recipe.reachMultiplier,
-      arc: recipe.arc, damage, elementalDamage: attack.elementalDamage * costs.damageMultiplier, hitIds: new Set() };
+      arc: recipe.arc, damage, elementalDamage: attack.elementalDamage * costs.damageMultiplier * weave, hitIds: new Set() };
     context.emit({ type: 'swing', x: p.x, y: p.y, angle: p.angle, skill: id, color });
     if (recipe.blast) blast(attack.range * recipe.reachMultiplier);
     return true;
@@ -76,7 +78,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   p.castTime = 1 / attack.attacksPerSecond; p.castAngle = p.angle;
   switch (recipe.kind) {
     case 'dash':
-      p.dash = { angle: p.angle, remaining: recipe.duration, speed: recipe.speed, damage, elementalDamage: attack.elementalDamage * costs.damageMultiplier, radius: recipe.radius, skill: id, style: hitStyle, hitIds: new Set() };
+      p.dash = { angle: p.angle, remaining: recipe.duration, speed: recipe.speed, damage, elementalDamage: attack.elementalDamage * costs.damageMultiplier * weave, radius: recipe.radius, skill: id, style: hitStyle, hitIds: new Set() };
       p.castTime = Math.max(p.castTime, recipe.duration);
       break;
     case 'radial':

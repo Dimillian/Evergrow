@@ -1,3 +1,4 @@
+import { advanceAffixBuffs, consumeSpellweave } from './affix-combat.ts';
 import { alternatesBasicAttacks, basicAttackWeapon } from './equipment.ts';
 import { skillWeapon } from './skill-content.ts';
 import { weaponImpactStyle } from './elemental-weapon.ts';
@@ -391,6 +392,7 @@ export class Simulation {
     this.hurtGuard = Math.max(0, this.hurtGuard - dt);
     p.healCooldown = Math.max(0, p.healCooldown - dt);
     p.guardTime = Math.max(0, p.guardTime - dt);
+    advanceAffixBuffs(p, dt);
     for (const id of Object.keys(p.skillCooldowns) as SkillId[]) p.skillCooldowns[id] = Math.max(0, p.skillCooldowns[id]! - dt);
     p.healFlash = Math.max(0, p.healFlash - dt);
     p.mana = Math.min(p.maxMana, p.mana + p.derived.manaRegeneration * dt);
@@ -409,8 +411,8 @@ export class Simulation {
       && Number.isFinite(input.rangedAim.x) && Number.isFinite(input.rangedAim.y) ? input.rangedAim : { x: input.aimX, y: input.aimY };
     if (direction.x !== p.x || direction.y !== p.y) p.angle = Math.atan2(direction.y - p.y, direction.x - p.x);
     if (this.healBuffer >= this.time && p.flasks > 0 && (p.hp < p.maxHp || p.mana < p.maxMana) && p.healCooldown <= 0) {
-      const healed = Math.min(p.maxHp * PLAYER_ABILITIES.potion.lifeFraction, p.maxHp - p.hp);
-      const mana = Math.min(p.maxMana * PLAYER_ABILITIES.potion.manaFraction, p.maxMana - p.mana);
+      const healed = Math.min(p.maxHp * PLAYER_ABILITIES.potion.lifeFraction * p.derived.potionMultiplier, p.maxHp - p.hp);
+      const mana = Math.min(p.maxMana * PLAYER_ABILITIES.potion.manaFraction * p.derived.potionMultiplier, p.maxMana - p.mana);
       p.hp += healed; p.mana += mana;
       p.flasks--;
       p.healCooldown = PLAYER_ABILITIES.potion.cooldown * p.derived.cooldownMultiplier;
@@ -540,6 +542,7 @@ export class Simulation {
     if (p.mana < manaCost) return;
     p.mana -= manaCost;
     const stats = deriveAttackStats(p.stats, weapon);
+    const weave = consumeSpellweave(p, weapon.attackKind === 'melee' ? 'melee' : weapon.attackKind === 'bolt' ? 'spell' : 'other');
     const duration = 1 / stats.attacksPerSecond;
     const ranged = weapon.attackKind !== 'melee';
     const style = weapon.attackKind === 'arrow' ? 'arrow' : weapon.damageType === 'physical' ? 'arcane' : weapon.damageType;
@@ -547,8 +550,8 @@ export class Simulation {
       kind: ranged ? 'ranged' : 'melee', weapon, hand,
       elapsed, duration, activeStart: duration * (ranged ? RANGED_BASIC_ATTACK_PHASES.activeStart : BASIC_ATTACK_PHASES.activeStart),
       activeEnd: duration * (ranged ? RANGED_BASIC_ATTACK_PHASES.activeEnd : BASIC_ATTACK_PHASES.activeEnd), angle: this.player.angle,
-      range: stats.range, arc: stats.arc, damage: stats.damage, elementalDamage: stats.elementalDamage, hitIds: new Set<number>(),
-      ...(ranged ? { projectile: { style } } : {}),
+      range: stats.range, arc: stats.arc, damage: stats.damage * weave, elementalDamage: stats.elementalDamage * weave, hitIds: new Set<number>(),
+      ...(ranged ? { projectile: { style, pierce: p.derived.projectilePierce } } : {}),
     };
     p.nextAttackHand = hand === 'main' ? 'off' : 'main';
     if (!ranged) this.events.push({ type: 'swing', x: p.x, y: p.y, angle: p.angle });
@@ -716,7 +719,7 @@ export class Simulation {
       containers: this.containerContext(),
       player: this.player,
       enemies: this.enemies, visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
-      damage: (enemy, amount, angle, melee, style, elementalDamage?: number) => this.damageEnemy(enemy, amount, angle, melee, false, style, elementalDamage),
+      damage: (enemy, amount, angle, melee, style, periodic = false) => this.damageEnemy(enemy, amount, angle, melee, periodic, style),
       emit: event => this.events.push(event),
     });
   }

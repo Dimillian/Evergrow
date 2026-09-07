@@ -1,3 +1,4 @@
+import { isSkillStat, skillAffixRank } from './equipment-affix-content.ts';
 import { isElementalAffix, meleeEnchantment } from './elemental-weapon.ts';
 import { FOCUS_PROFILES } from './focus-content.ts';
 import type { Item } from './character-types.ts';
@@ -29,6 +30,9 @@ export function validItem(v: unknown): v is Item {
   if (v.kind === 'weapon' && !(profile === STARTING_SWORD.id || WEAPON_PROFILES.some(p => p.id === profile))) return false;
   if (v.kind === 'shield' && !SHIELD_PROFILES.some(p => p.id === profile)) return false;
   if (v.kind !== 'weapon' && v.kind !== 'shield' && v.kind !== 'grimoire' && v.kind !== 'orb' && profile !== undefined) return false;
+  if (v.affixes.filter(a => isSkillStat(a.stat)).length > 1
+    || Object.keys(v.implicit as ObjectValue).some(isSkillStat)
+    || v.affixes.some((a, i) => isSkillStat(a.stat) ? !integer(a.value, 1, 5) || a.value !== skillAffixRank((r.rolls as number[])[i], v.itemLevel as number) : a.stat === 'projectilePierce' && a.value !== 1)) return false;
   const elemental = v.affixes.filter(a => isElementalAffix(a.stat));
   if (elemental.length > 1 || elemental.length && (v.kind !== 'weapon' || !object(v.weapon) || v.weapon.attackKind !== 'melee' || elemental.some(a => a.value <= 0))) return false;
   const a = v.appearance;

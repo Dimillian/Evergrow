@@ -1,3 +1,4 @@
+import { AFFIX_COMBAT_RULES, SKILL_STATS, type SkillStat } from './equipment-affix-content.ts';
 import { PLAYER_DEFAULTS } from './combat-content.ts';
 import { armorReduction } from './progression-content.ts';
 import { EQUIPMENT_SLOTS, itemModifiers } from './items.ts';
@@ -30,6 +31,13 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
   const shield = sheet.equipped.weapon?.weapon?.hands !== 2 && offhand?.kind === 'shield' ? offhand.shield : undefined;
   return {
     attributes,
+    manaOnKill: bounded(value('manaOnKill'), 0, 1e6),
+    areaMultiplier: Math.sqrt(1 + bounded(value('areaPercent'), 0, AFFIX_COMBAT_RULES.maxAreaPercent) / 100),
+    potionMultiplier: 1 + bounded(value('potionPercent'), 0, 100) / 100,
+    projectilePierce: Math.floor(bounded(value('projectilePierce'), 0, AFFIX_COMBAT_RULES.maxPierce)),
+    spellweavePercent: bounded(value('spellweavePercent'), 0, 100), afterguardPercent: bounded(value('afterguardPercent'), 0, 100),
+    skillBonuses: Object.fromEntries((Object.keys(SKILL_STATS) as SkillStat[]).filter(key => value(key) > 0)
+      .map(key => [key.slice(6), Math.floor(bounded(value(key), 0, AFFIX_COMBAT_RULES.maxBonusRanks))])),
     maxHp: Math.round(bounded(PLAYER_DEFAULTS.maxHp + vitality * 6 + value('maxHp'), 1, 1e9)),
     maxMana: Math.round(bounded(PLAYER_DEFAULTS.maxMana + intelligence * 4 + value('maxMana'), 1, 1e9)),
     attackDamageMultiplier: bounded(1 + (strength * 2 + value('damagePercent')) / 100, .1, 1e6),

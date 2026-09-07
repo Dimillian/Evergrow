@@ -184,3 +184,7 @@ Equipment planning now lives in `inventory.ts:planEquipmentChange`; equipment co
 `location-controller.ts` routes surface and dungeon portal actions, stages/persists a transition, then requests world replacement and one arrival callback. Game's shared arrival boundary clears keyboard/gamepad/touch input, resets and snaps the renderer, establishes spawn coverage, updates area/map presentation and focuses the canvas. Failed writes never replace the world. The application durable-action barrier continues to serialize saves and block conflicting actions.
 
 The controllers are narrow current owners, not service locators or compatibility adapters. Rendering, command validation, damage/rewards, item derivation and database logic retain their existing boundaries.
+
+### Equipment affix behavior
+
+`equipment-affix-content.ts` owns specialist metadata, discrete skill-rank quantiles, skill-family weighting and combat caps. `items.ts` combines these with slot pools; `item-improvement.ts` and validation consume the same roll recipes. `affix-combat.ts` owns short-lived Spellweave/Afterguard timers and consumption; damage/reward owners trigger them, simulation advances them, and attacks snapshot their potency. Neither module imports rendering or storage. `resolveSkill` separates purchased/casting ranks from gear potency and applies area/pierce bonuses to immutable execution recipes used by both combat and UI.
