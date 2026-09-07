@@ -14,7 +14,7 @@ Implemented locally, 2026-09-06. This pass removes lifetime activity-count gates
 | Interactive sites | Active trials, partial delivery masks, beacon projections, 32 recent non-beacon claims | Older fully claimed non-beacon sites become exact IDs. Opening state, availability, Journey completion and repeat-claim rejection consume those receipts. Beacons retain their location/target for chart recovery. |
 | Journeys | Exact completion IDs independent of the visible log | The UI keeps three accepted activities, 12 offers, 64 history entries and 128 dismissals. Trimming that UI never permits a second XP payment. |
 
-The old eight-expedition, 1,024-camp, 256-interaction and 2,048-Journey lifetime gates are removed. The one-live-Warden expedition rule and one guardian trial at a time remain gameplay constraints. Population, visibility, actor and ground-drop bounds remain unchanged.
+The old eight-expedition, 1,024-camp, 256-interaction and 2,048-Journey lifetime gates are removed. The one-live-Warden expedition rule and one guardian trial at a time remain gameplay constraints. The September 7 world pass removes actor-count/rank caps. Visibility, inactive caches and ground-drop bounds remain; see [interactive POIs](interactive-pois.md).
 
 Compaction does not abandon optional rewards. A boss-dead dungeon with an unopened side chest or dropped sword remains revisitable. Exhausted floors retire during a staged location transaction; a failed save leaves the live floor/return link untouched. POI compaction shares the reward transaction. Camp cache retirement changes representation only, with durable capture retaining exact deaths and wounds.
 

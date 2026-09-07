@@ -29,11 +29,11 @@ Towns remain protected. Their safe interiors and streets do not create leveled c
 
 Level and rank are captured at spawn. Crossing a boundary or pulling an enemy across one never changes that enemy's stats or loot level. Enemy projectiles retain their attacker's source level after launch, including after the caster dies.
 
-Ambient population targets `min(24, 16 + floor((areaLevel − 1) / 4))`. Camp members do not count toward that target; all sources still share a hard limit of **48 living enemies**. Camps can occupy at most 32 slots, reserving sixteen for roaming foes. Each candidate uses its own geographic level, so an area boundary can contain enemies from both levels.
+There is no living-actor cap, ambient target, camp reserve or concurrent rank/archetype ceiling. Geographic levels still determine source stats and rank odds; area boundaries can contain enemies from both levels.
 
-Automatic populations wait for valid camera bounds after construction or reset. Sixteen initial roaming enemies settle into the offscreen surroundings in small batches; later groups require both travel and a cooldown. Placement uses the actual camera rectangle, shared visual margins and a forward lead, so a wide zoom does not leave the old fixed-distance spawn ring entirely visible. Packs of four to six enemies (smaller only when filling the remaining capacity) use loose formations, with travel-direction-biased placement and biome-appropriate companions. Blocked ground, sanctuaries and every camp footprint remain excluded.
+Automatic populations wait for valid camera bounds after construction or reset. Sixteen initial roaming enemies settle into the offscreen surroundings in small batches; later groups require both travel and a cooldown. Placement uses the actual camera rectangle, shared visual margins and a forward lead, so a wide zoom does not leave the old fixed-distance spawn ring entirely visible. Packs of four to six enemies use loose formations, with travel-direction-biased placement and biome-appropriate companions. Blocked ground, sanctuaries and every camp footprint remain excluded.
 
-After the initial population has been placed, standing still does not refill cleared ground from elapsed time or camera zoom alone. Further groups require 180–280 units of travel and 2.2–3.8 seconds between placements. Stored travel is capped at 280 units, failed placement retries after 0.45 seconds, and a full population cannot bank an unlimited burst. Distant inactive ambient actors may retire only while wholly offscreen; forward travel can also retire hidden trailing actors to free room ahead. Visible or engaged foes remain. Retirement is not death and grants no rewards. These travel and density values are starting playtest parameters.
+After the initial population has been placed, standing still does not refill cleared ground from elapsed time or camera zoom alone. Further groups require 180–280 units of travel and 2.2–3.8 seconds between placements. Stored travel is capped at 280 units, failed placement retries after 0.45 seconds, preventing an unlimited banked spawn burst. Distant inactive ambient actors may retire only while wholly offscreen; forward travel can also retire hidden trailing actors to free room ahead. Visible or engaged foes remain. Retirement is not death and grants no rewards. These travel and density values are starting playtest parameters.
 
 | Biome | Stalker | Brute | Hexer | Hound | Archer | Wisp |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -45,15 +45,15 @@ After the initial population has been placed, standing still does not refill cle
 | Amberwood | 24 | 10 | 8 | 24 | 28 | 6 |
 | Hollow Highlands | 18 | 28 | 10 | 10 | 26 | 8 |
 
-Ambient selection caps each special archetype (Brute, Hexer, Archer, Wisp) at two and renormalizes the remaining weights. Authored camps supply their own fixed mixture without consuming this ambient composition allowance. The total population and rank caps apply to both sources. Attacks are independent: each enemy uses its own range, sight, windup and recovery. Level increases never shorten anticipation or increase movement speed. Goblin rush orders supply an explicit temporary movement/damage bonus.
+Ambient selection uses each biome's authored weights without per-kind count caps. Camps and event recipes supply their own compositions. Attacks remain independent: sight, range, windup and personal recovery govern each enemy.
 
 ### Camps and awareness
 
 Ashen Watch at `(740, 180)` introduces a four-member garrison: a veteran Stalker, an Archer, a Hound, and another Stalker. Ordinary generated camps have eight members with biome-specific support; one third instead hold 10–15 goblins plus a ranked War Chief. Frostpine camps follow a Wisp leader with hounds and a Hexer; Emberfall favors a Brute leader and a second Brute; Amberwood and Verdant camps feature an Archer leader and hounds; Highlands camps place archers behind their Brute leader. The Mire keeps its Hexer leader and Wisp support. Cloth, banners, and soil materials also follow the climate. Shared camp footprints and member slots stay unchanged. Camp leaders are an authored exception to ambient rank rolls: a veteran can appear in a level-one camp; elite leaders require at least area level three. These enemies still use the ordinary rank XP and loot tables.
 
-Camps preload within 1,000–2,000 units according to visible world coverage. Approaching camps take priority over farther offscreen populations when the shared actor/rank budget is full. A garrison sleeps as a whole; visible, engaged and nearer foes cannot disappear to free capacity. Pursuing or attacking members must disengage naturally before their group can sleep. Its original health, level, damage, rank, reward seed, and dead member identities survive unloading. Defeating every member marks the camp cleared for this run. Returning cannot refill it, reroll its items, or award extra XP. Clearing the garrison unlocks its persistent POI strongbox.
+Camps preload within 1,000–2,000 units according to camera coverage. They coexist without capacity eviction. Distant hidden garrisons sleep only after their fighters disengage; exact wounds, source stats and casualties persist. Clearing all members unlocks the strongbox.
 
-Every member must be wholly offscreen before a fresh or sleeping garrison can appear. Direct teleports, wide views and capacity delays have no visible-population exception: an unpopulated camp remains dormant until its complete garrison can be placed outside view and within the shared budgets. Existing sleeping members retain their identity and wounds. No actors are removed to make room for a camp that is still visible or otherwise ineligible.
+Every camp member must be wholly offscreen and collision-safe before fresh/waking admission. Teleports and wide views have no visible-spawn exception. Trials admit independently along reachable offscreen lanes; no actor-count budget blocks them.
 
 The exact run ledger holds up to 1,024 camp records. At that ceiling new camps remain dormant; existing records are never evicted or falsely marked cleared. Character checkpoints retain cleared camps and dead members; continuing rebuilds surviving encounters. Exploration persists separately per character.
 
@@ -118,7 +118,7 @@ Rank is a separate modifier on an archetype, not another enemy behavior implemen
 
 Veterans and elites retain the existing readable attack timings. Their additional life, damage, XP, and better loot distinguish the threat. Unique elite affixes, champion pack mechanics, boss behavior, and boss-specific tables are future content.
 
-Veterans start at a 12% rank chance in level-two areas, increasing by one percentage point per area level to a 20% cap. Elites start at 4% in level-three areas, increasing by half a percentage point per area level to an 8% cap. Level-one ambient rolls are normal; authored camp leaders may be veterans. At most two veterans and one elite are alive concurrently; a roll for a capped rank becomes normal rather than upgrading another rank.
+Veterans start at a 12% rank chance in level-two areas, increasing by one percentage point per area level to a 20% cap. Elites start at 4% in level-three areas, increasing by half a percentage point per area level to an 8% cap. Level-one ambient rolls are normal; authored camp leaders may be veterans. Rank rolls are independent of already living veterans/elites.
 
 ## XP costs and level differences
 

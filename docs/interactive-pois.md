@@ -1,92 +1,56 @@
 # Interactive points of interest
 
-Implemented locally · 2026-09-06. Companion to [town portals](travel-and-portals.md). Existing camps, watchtowers, graveyards, standing stones and caravans supply the layouts; this pass gives them actions, stakes and outcomes. Counts, weights and durations are initial tuning.
+Updated 2026-09-07. This local pass adds recipe-driven encounters, six new landmarks and timed cursed chests. All tuning remains subject to player testing. [World placement](wilderness-and-encounters.md) and [dungeons](dungeons.md) share the same geographic levels and reward owners.
 
-The [exploration and dungeon proposal](dungeons-and-events.md) extends this foundation with denser roaming packs, enemy roles, dungeon entrances, floor persistence and bosses. Its dungeon rules are proposed separately; the six interactions below retain their initial reward/claim contracts.
+## Activities
 
-## Six encounters
-
-| Place | Player action | Payoff and visual identity |
+| Place | Encounter | Reward beyond enemy drops |
 | --- | --- | --- |
-| Camp strongbox | Defeat the existing garrison, then open its locked supply chest. No additional wave. | One equipment roll and a small coin spill. Hinged iron straps, a lock glow that extinguishes when the camp clears, then an open chest that stays empty. |
-| Abandoned caravan | Choose **Recover goods** or **Take coin** at the cargo seal. The choice is visible before interaction and excludes the other reward. | Goods: two item rolls biased toward weapons/armor. Coin: a larger physical coin cache. Broken cart cloth and hanging straps settle as the hidden compartment opens. |
-| Watchtower beacon | Approach the ruined beacon and channel for two seconds, interruptible by movement or damage. | Permanently reveal terrain in a 1,000-unit circle and the nearest undiscovered landmark within 2,400 units, if one exists. No item chest. A single upward light pulse and map ripple make the exploration reward readable. |
-| Graveyard vigil | Explicitly start **Disturb the vigil**. Defeat two groups of three guardians before opening the sealed grave. | One equipment roll and bonus XP, plus the enemies' ordinary rewards. A sealed casket marks the interaction; rising motes distinguish an active or completed trial. |
-| Standing-stone trial | Choose one of two displayed blessings, then defeat three guardians to bind it. Blessings favor different builds. | A 90-second temporary combat blessing and a small XP reward. The interaction plinth lights during the trial; the selected blessing appears with its remaining duration. |
-| Roadside reliquary | Open a small optional container tucked beside the main road, with no forced encounter. | A little gold and a 25% chance of one equipment item. Low stone casket, grass framing and a brief rarity glint. A quick discovery between larger places. |
+| Camp | Clear the existing garrison; open its strongbox | One equipment roll, small coin cache |
+| Caravan | Choose goods or coin | Two equipment rolls or a larger coin cache |
+| Watchtower | Two-second beacon channel | Reveal nearby terrain and one distant landmark |
+| Graveyard | Three guardian waves or three seals | One equipment roll and XP |
+| Standing stones | Choose a blessing; defend the circle through two waves | A 90-second build bonus and XP |
+| Roadside reliquary | One-second opening | Small coin cache; 25% chance of an item |
+| Cursed chest | Clear increasingly large waves within 90 seconds | More completed waves produce more items and gold |
+| Ruined chapel | Break three ritual anchors or fight tomb guardians | Grimoire/amulet rolls and gold |
+| Beast den | Destroy three nests or fight hunting packs | Leather chest/boots and gold |
+| Quarry | Fight crystal guardians or hold the extraction site | Weapon/armor rolls and gold |
+| Occupied hamlet | Clear occupying forces or dismantle three standards | Equipment and supplies |
+| Contested crossing | Break a blockade or defend the cache | Equipment and gold |
+| Corrupted grove | Cleanse three roots or defend the heartwood | Caster equipment and gold |
 
-These are individual site states, not repeatable map services. A completed chest, caravan, beacon or trial never resets for that character. New areas provide new instances. The camp strongbox uses the existing persistent garrison ledger rather than a duplicate clear condition.
+The seed selects each site's recipe. These are one-time character-owned encounters; revisiting never rerolls or resets them. All new landmarks appear in discovery, map hover and Journeys. The compact active-trial label shows the current wave, casualties and, where relevant, remaining time or hold progress.
 
-### Blessings
+## Reusable waves
 
-Choose two distinct options from a biome-weighted pool, fixed by site seed. Display the bonus before committing:
+`event-recipes.ts` owns immutable mode, roster, wave count, growth, time and hold rules. `wave-system.ts` is a pure clock/progress engine. Admission, AI, deaths, persistence and rewards remain separate owners.
 
-- **Haste:** +15% attack speed and +15% cast speed.
-- **Wellspring:** 20 percentage points of mana-cost reduction; does not bypass the normal 75% cap or grant a mana refill.
-- **Bulwark:** +40% armor, applied once to the ordinary derived armor total before its existing reduction cap.
-- **Fleet:** +15 percentage points of movement speed, within the existing movement cap.
+- Assault: defeat every admitted member; two seconds between waves.
+- Defense: defeat the wave and spend twelve cumulative seconds inside the marked objective. Leaving pauses hold progress.
+- Seals: defeat the current wave, then interact with its reachable objective before the next wave. Three distinct anchors are checked and saved when starting.
+- Timed: ninety seconds of active gameplay, starting after the first actual admission. The clock includes intermissions. Waves begin at five actors, grow by two to eighteen, and have a twenty-wave recipe limit.
 
-One active POI blessing at a time; a new blessing replaces it rather than stacking. Its timer advances only during active wilderness play, pauses in town/menus and persists across save/continue. Death removes it. A compact buff label and remaining duration appear beside existing status indicators; damage and stat changes go through the shared character derivation, never renderer-only bonuses. The 90 seconds start when the completed trial reward is claimed, not when the trial is selected.
+Finite recipes contain two or three waves, generally starting with five to eight foes. Every wave has a veteran; final waves can have an elite from geographic level three, and later waves add another veteran. Cursed chests place an elite leader every third wave when eligible. Existing enemy archetypes supply distinct themed rosters.
 
-Biome variation changes silhouette, material, light and enemy composition. Deadwood favors grave candles and stalkers; the Mire uses drowned stone, reeds and casters; Frostpine has ice cracks and brittle chimes; Emberfall uses charred metal and sparks. Keep variants recognizable as the same interaction at normal gameplay zoom. Existing enemies supply these variants; this pass does not require new archetypes or bosses.
+There is **no total, ambient, camp, event, dungeon, concurrent-rank or per-archetype actor cap**. Sixteen initial roamers and travel/cooldown-driven packs remain pacing rules. Admission still requires collision-safe, non-sanctuary positions fully outside padded camera coverage. Event members admit independently: one blocked lane cannot stall every other guardian. A bounded search favors nearby viewport edges; shared local navigation routes around obstacles. All guardians start alerted and track the player inside the trial area; attack range and sight checks remain intact.
 
-## Placement and pacing
+One trial is active per character. Finite trials suspend on departure and preserve exact wounds, deaths and admitted positions. Timed challenges bank completed waves on expiry, death, leaving the area, town travel or dungeon entry. Surviving enemies keep their source stats and rewards; ending an event does not kill or delete them. Location transitions bank the result in their durable checkpoint. Menus and closed sessions pause game time; reloading resumes the saved clock.
 
-Attach the first five actions to their existing deterministic landmark blueprints. Place the reliquary through a separate sparse seeded roadside query with stable IDs, keeping the existing clear approaches, road corridors and town protection. Do not scatter one in every visible chunk.
+## Rewards and chest presentation
 
-Initial target: a meaningful optional interaction roughly every 60–90 seconds of fresh exploration, with quick reliquaries between some major sites. Measure actual walking paths before changing the present 1,600-unit landmark cell grid. Respect a 450-unit minimum separation between reliquaries and 300 units from a major-site reward; cap candidate work and reject obstructed placements. No loot containers inside towns or the immediate starting clearing.
+For cursed chests with `W` cleared waves, equipment count is `min(10, floor(W / 2) + (W > 0 ? 1 : 0))`. Gold is a seeded integer between `10W` and `15W`, multiplied by `1 + 0.1 × (siteLevel − 1)`. Every completed wave increases gold; item thresholds add larger rewards. The chest opens automatically while the living player is nearby. Full-ground leftovers remain manually claimable.
 
-The first camp strongbox and one nearby roadside reliquary demonstrate the loop early. Graveyard/stone trials remain optional, show their area level and reward type, and use normal/veteran guardians in zones 1–2. This first pass uses one veteran followed by normal guardians at every zone level; elite trial variants remain future work.
+Other new trial rewards contain two veteran-weight item rolls and 20–35 base gold. Trials use item level `siteLevel + 1`, bounded by the existing level ceiling, and a small completion XP bonus. Geographic level-gap adjustments and Journey rewards remain shared. Rarity is not guaranteed; difficult-event material weighting uses the ordinary item generator. Guardians also drop their normal rank/source rewards.
 
-## Combat and encounter rules
+`chest-art.ts` supplies shared anticipation, hinged lid motion, light burst and dispersing particles for surface and dungeon chests. `treasure-flight.ts` plans collision-checked landing points and staggered arcs. Ground items and coins own saved flight metadata; pickup waits for landing. Presentation never creates or grants loot. Reduced motion suppresses flight animation without changing rewards or pickup timing.
 
-E/click interacts only within reach and line of sight. Nearby hostiles do not universally lock every chest; a one-second opening channel, interrupted by movement/damage, creates a small commitment. A locked camp chest instead shows **Clear the camp**. Modal choice panels pause combat and clear held input like existing windows; starting the action resumes play.
+`poi-command.ts` persists the entire reward/choice change before publishing it. Delivery bits belong to each item and the gold component, including large cursed bundles. Save failure, full ground capacity and reload cannot reroll or duplicate rewards. Ordinary openings take one second and cancel on movement, combat or damage. Claimed chests stay open; partial delivery also opens the lid.
 
-Trials are kill objectives with no escort AI, damageable defense target or countdown failure in this first pass. Guardians enter from the nearest clear padded viewport edge, allocated through the existing actor budget and spawned completely outside the padded viewport. A bounded 32-candidate search favors approaches closest to the event; the second wave uses the same distances as the first. Guardians begin alerted and keep tracking the player within the 1,800-unit trial area, including already-admitted guardians that were returning or idle. Their ordinary line-of-sight attack checks, windups and recovery remain intact; ritual awareness guides pursuit without allowing attacks through walls. No ordinary enemy visibly appears on screen. Ritual light and ground dust can be visible while guardians approach. If valid offscreen space/capacity is unavailable, show **Guardians approaching** and retry bounded placement; never create invisible enemies or advance the wave before admission.
+## Blessings and retained state
 
-Keep the 48-actor total and sixteen roaming slots reserved. Event actors share the remaining camp/event budget. Sleep only eligible offscreen camp/ambient actors using their existing rules. At most one active trial per character. Switching to another displays **Finish the active trial**; do not silently discard it.
+Standing stones offer two biome-weighted choices: Haste (+15% attack/cast speed), Wellspring (20 points of mana-cost reduction), Bulwark (+40% armor), or Fleet (+15 points of movement speed). Normal derived-stat caps apply. One blessing lasts ninety seconds after claiming, pauses in town/menus and disappears on death.
 
-Leaving, portaling or loading suspends a trial rather than resetting it. Save admitted guardian identities, wounds, dead members and the next wave. Hidden survivors resume at their exact recorded positions, without requiring fresh-wave approach spacing or a new sightline to the event; visible survivors wait rather than teleport. Do not recreate defeated guardians or grant completion for missing/unloaded actors. On death the trial remains resumable with its recorded casualties; the character loses any active blessing under the ordinary death rule. There is no repeatable failure-farming loop.
+Generated geometry remains immutable. `EventState` retains one trial, casualty records, score, seal anchors, partial deliveries and beacon projections. Older full claims compact into exact IDs; no lifetime interaction quota. Finite payload, presentation and ground-drop bounds remain. Generation **7** changes geography and event recipes and requires fresh test characters; no migration is supplied.
 
-## Rewards and scaling
-
-Rewards are authored separately from monster loot quantities. All sources capture **site geographic level and biome**, not the player's level or where the player opens the reward. Equipment starts at +0. Affix recipes use the ordinary item generator and NPC upgrades remain an investment.
-
-Let `G(L) = 1 + 0.1 × (L − 1)`. Initial bonus rewards:
-
-| Source | Equipment | Gold / XP beyond guardian rewards |
-| --- | --- | --- |
-| Camp strongbox | Exactly 1, normal rarity weights, item level L | Uniform 8–14 × G(L) gold |
-| Caravan: goods | Exactly 2, normal rarity weights, item level L | No bonus gold |
-| Caravan: coin | None | Uniform 22–34 × G(L) gold |
-| Graveyard vigil | Exactly 1, veteran rarity weights, item level L+1 | Half one same-level normal Stalker's XP |
-| Standing-stone trial | None | Blessing and half one same-level normal Stalker's XP |
-| Reliquary | 25% chance of 1, normal rarity weights, item level L | Uniform 4–8 × G(L) gold |
-| Watchtower | None | Terrain and landmark reveal only |
-
-Round gold once to whole units, clamp item levels at the existing numeric bound, and apply the normal player/source-level XP factor to bonus XP. Reuse the current normal/veteran rarity tables: a chest or trial does **not** guarantee Rare gear. Guardian kills independently use their ordinary rank/level rewards; count those rewards when assessing total profitability. Beacon-revealed POIs are marked **Sighted**, never activated, completed or waypoint-unlocked.
-
-Use separate deterministic reward identities/RNG for each site and reward choice. Opening, camera changes, revisiting, reload or a full bag never rerolls the result. Rewards are physical ground items/coins; XP uses the existing reward accumulator and item pickups retain individual names.
-
-When ground capacity is full, retain a bounded pending reward bundle on the site and show **Reward waiting**. Do not evict existing loot or mark the reward delivered. Later interaction releases what fits, with each issued component committed exactly once. Claimed, pending and partially delivered states all persist atomically with the checkpoint's ground objects and wallet/XP. No backpack-space requirement to finish a fight.
-
-## State, map and presentation
-
-Use stable generated identities and one character-owned site ledger: unseen/discovered, available, active, completed with pending reward, and claimed. Discovery remains in exploration; runtime reads the interaction ledger for availability/completion. Keep generated geometry immutable. Distinguish sighted versus physically visited metadata for beacon reveals.
-
-There is no lifetime 256-interaction quota. Active/partially delivered records and beacon map projections stay intact; only the latest 32 non-beacon full claims retain detailed records, with older claims compacted to exact IDs. The one active trial/six guardian bound remains. UI labels/art, availability and reward commands share those receipts, preventing repeat rewards after reload. The payload safety bound still applies; a failed save never discards history. See [world-state longevity](world-state-longevity.md).
-
-Plan interaction activation/completion/claim as whole commands. Persist before publishing player rewards or committed site state. Save failure/stale-writer rejection changes neither side; combat results awaiting persistence cannot be awarded a second time. Save v3 now includes optional event state and a timed blessing. Existing v3 characters continue without a reset; older invalid versions remain unsupported.
-
-Maps show concise states: Locked, Available, Active, Reward waiting, Claimed, or Beacon lit. Completed markers dim; active/pending rewards remain legible. Hover gives the action and zone level, not a flavor paragraph. The focused world object gets one small E hint. Reuse shared window, tooltip, notifications and ground-loot presentation. Revealing several POIs from a beacon produces one discovery notification, not a burst of cards.
-
-## Verification and review
-
-1. Shared interaction/reward ledger, camp strongbox and reliquary: full inventory/ground capacity, save failure, reload and exactly-once ownership.
-2. Caravan choice and beacon exploration: irreversible choice with preview, fixed RNG, bounded conservative map reveal, no accidental waypoint activation.
-3. Graveyard and standing-stone trials: real admitted-actor accounting, offscreen spawning, preserved casualties/waves, interruption, travel and death behavior, shared timed-stat modifiers.
-4. Frozen in-app captures for each family and map state; the player tests reward pacing, visibility and combat feel.
-
-Portals/waypoints are the companion delivery, not a prerequisite for opening a chest. Do not add quest journals, materials, keys, inventory puzzle items, escort routines or procedural dialogue to deliver these encounters.
-
-Implementation owners: `poi-content.ts`, `poi-sites.ts`, `poi-command.ts`, `poi-rewards.ts`, `poi-runtime.ts`, `poi-validation.ts`, `poi-panel.ts` and `poi-art.ts`. `Simulation` owns the live ledger and guardian snapshots. `/events.html` stages all six families and claimed states without gameplay or storage. Headless tests cover atomic rewards, capacity, reload, guardian admission/suspension, channel interruption, blessings and beacon fog. Dungeon floors, new enemy archetypes and directional approach arrows are deferred.
+Local review: `/events.html`. All thirteen interaction families use real frozen scenes. **Preview opening** advances presentation only and shows a six-wave cursed payout; it never ticks combat or accesses saves.

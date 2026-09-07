@@ -1,3 +1,5 @@
+import { eventRecipe, sealPoint } from './event-recipes.ts';
+import type { WaveProgress } from './wave-system.ts';
 import { siteHash, type WildernessSite, type WildernessKind } from './wilderness-sites.ts';
 import type { BiomeId } from './biomes.ts';
 import type { EnemyKind, Enemy, WorldQuery, Player } from './model.ts';
@@ -7,7 +9,7 @@ import { getZoneAt } from './zone-progression.ts';
 import type { WorldPOI } from './world-pois.ts';
 export type EventKind = WildernessKind | 'reliquary';
 export function isEventKind(kind: string): kind is EventKind {
-  return ['camp', 'caravan', 'watchtower', 'graveyard', 'standingStones', 'reliquary'].includes(kind);
+  return ['camp', 'caravan', 'watchtower', 'graveyard', 'standingStones', 'reliquary', 'cursedChest', 'ruinedChapel', 'beastDen', 'quarry', 'hamlet', 'crossing', 'corruptedGrove'].includes(kind);
 }
 export type BlessingKind = 'haste' | 'wellspring' | 'bulwark' | 'fleet';
 export interface Blessing {
@@ -29,10 +31,13 @@ export interface EventRecord extends EventSite {
   phase: 'active' | 'completed' | 'claimed';
   choice: EventChoice | null;
   delivered: number;
+  wavesCleared: number;
   bonusGranted: boolean;
   beaconTarget?: WorldPOI;
+  seals?: { x: number; y: number }[];
 }
 export interface GuardianRecord {
+  wave: number;
   kind: EnemyKind;
   rank: EnemyRank;
   seed: number;
@@ -42,9 +47,9 @@ export interface GuardianRecord {
   admitted: boolean;
   dead: boolean;
 }
-export interface Trial {
+export interface Trial extends WaveProgress {
+  sealReady: boolean;
   siteId: string;
-  wave: number;
   guardians: GuardianRecord[];
 }
 export interface EventState {
@@ -71,8 +76,8 @@ export function blessingChoices(site: EventSite): BlessingKind[] {
   return [first, others[siteHash(site.seed, 0, 39) % others.length]];
 }
 export function eventSite(site: WildernessSite, worldSeed = 7319): EventSite {
-  // All interaction anchors sit in the existing open southern approach, away from solid props.
-  return { id: site.id, kind: site.kind, name: site.name, x: site.x, y: site.y + site.radius - 22,
+  // Interactions sit just inside each oriented, open approach.
+  return { id: site.id, kind: site.kind, name: site.name, x: site.x+(site.entrance.x-site.x)*(1-22/site.radius), y: site.y+(site.entrance.y-site.y)*(1-22/site.radius),
     seed: site.seed, biome: site.biome, level: getZoneAt(site.x, site.y, worldSeed).level };
 }
 export function eventLabel(site: Pick<EventSite, 'id' | 'kind'>, state: EventState, campCleared: boolean): string {
@@ -85,12 +90,18 @@ export function eventLabel(site: Pick<EventSite, 'id' | 'kind'>, state: EventSta
     const trial = state.trial;
     if (!trial || trial.siteId !== site.id)
       return 'Active';
-    const wave = trial.guardians.slice(trial.wave * 3, trial.wave * 3 + 3);
-    return wave.some(g => !g.admitted && !g.dead) ? 'Guardians approaching' : `Guardians ${trial.guardians.filter(g => g.dead).length} / ${trial.guardians.length}`;
+    const r = eventRecipe(state.sites[site.id])!;
+    if (trial.sealReady) return `${({beastDen:'Destroy nest',hamlet:'Dismantle standard',corruptedGrove:'Cleanse root'} as Partial<Record<EventKind,string>>)[site.kind]??'Break seal'} · ${trial.wave+1}/3`;
+    const wave = trial.guardians.filter(g => g.wave === trial.wave);
+    const progress = r.mode === 'timed' ? `${Math.max(0,Math.ceil(r.rules.duration-trial.elapsed))}s · ${trial.cleared} waves` : `Wave ${Math.min(trial.wave+1,r.rules.count)} / ${r.rules.count}`;
+    const hold=r.mode==='defend'&&trial.held<r.rules.hold?` · Hold ${Math.ceil(r.rules.hold-trial.held)}s`:'';
+    return `${progress} · ${wave.filter(g=>g.dead).length} / ${wave.length}${hold}`;
   }
   if (site.kind === 'camp' && !campCleared)
     return 'Clear the camp';
-  return ({ camp: 'Open strongbox', caravan: 'Recover cargo', watchtower: 'Light beacon', graveyard: 'Disturb the vigil', standingStones: 'Choose blessing', reliquary: 'Open reliquary' })[site.kind];
+  const recipe = eventRecipe(site as EventSite);
+  if (recipe) return recipe.action;
+  return ({ camp: 'Open strongbox', caravan: 'Recover cargo', watchtower: 'Light beacon', graveyard: 'Disturb the vigil', standingStones: 'Choose blessing', reliquary: 'Open reliquary' } as Partial<Record<EventKind,string>>)[site.kind] ?? 'Interact';
 }
 export function focusEvent(sites: readonly EventSite[], player: Pick<Player, 'x' | 'y' | 'dead'>, world: WorldQuery, pointer?: {
   x: number;
@@ -107,8 +118,9 @@ export function syncTrial(state: EventState, enemies: readonly Enemy[]): void {
   const trial = state.trial;
   if (!trial)
     return;
+  const actors=new Map(enemies.filter(e=>e.campId===`event:${trial.siteId}`).map(e=>[e.campMemberId,e]));
   trial.guardians.forEach((g, i) => {
-    const actor = enemies.find(e => e.campId === `event:${trial.siteId}` && e.campMemberId === String(i));
+    const actor = actors.get(String(i));
     if (actor) {
       g.hp = actor.hp;
       g.x = actor.x;
@@ -116,12 +128,7 @@ export function syncTrial(state: EventState, enemies: readonly Enemy[]): void {
       g.dead = actor.state === 'dead';
     }
   });
-  if (trial.guardians.slice(trial.wave * 3, trial.wave * 3 + 3).every(g => g.dead))
-    trial.wave++;
-  if (trial.guardians.every(g => g.dead)) {
-    state.sites[trial.siteId].phase = 'completed';
-    state.trial = null;
-  }
+
 }
 
 export function eventClaimed(state: EventState, id: string): boolean {
@@ -136,4 +143,19 @@ export function compactEvents(state: EventState): void {
     delete state.sites[record.id];
   }
   state.claimed = [...retired];
+}
+
+export function eventInteractionSites(sites: readonly EventSite[],state:EventState):EventSite[] {
+  const trial=state.trial;if(!trial?.sealReady)return [...sites];
+  const site=state.sites[trial.siteId],point=sealPoint(site,trial.wave);
+  return [...sites.filter(s=>s.id!==site.id),{...site,...point}];
+}
+
+/** Bank timed challenges in the same durable checkpoint as a location change. */
+export function interruptTimedTrial(state:EventState,actors:{campId?:string;memberId?:string;campMemberId?:string}[]):void {
+  const trial=state.trial;if(!trial)return;const site=state.sites[trial.siteId];
+  if(eventRecipe(site)?.mode!=='timed')return;
+  site.wavesCleared=trial.cleared;site.phase='completed';
+  for(const actor of actors)if(actor.campId===`event:${site.id}`){delete actor.campId;delete actor.memberId;delete actor.campMemberId;}
+  state.trial=null;
 }

@@ -4,7 +4,7 @@ import { Simulation, FIXED_STEP } from '../src/simulation.ts';
 import { updateWarbands, goblinSpeed, goblinDamage } from '../src/warband.ts';
 import { World } from '../src/world.ts';
 import { CampPopulation } from '../src/camp-population.ts';
-import { ENCOUNTER_RULES, chooseEncounterEnemy } from '../src/encounter-director.ts';
+import { chooseEncounterEnemy } from '../src/encounter-director.ts';
 import { ENEMY_DEFINITIONS } from '../src/combat-content.ts';
 import { rollEnemyLoot } from '../src/loot.ts';
 import { isSpawnHidden } from '../src/spawn-visibility.ts';
@@ -36,7 +36,7 @@ test('a complete warband shares the population cap, stays offscreen and preserve
   const view={x:-400,y:-300,width:800,height:600};
   const spawn=(m:CampMember,x:number,y:number,source:Parameters<Simulation['spawnEnemy']>[4])=>sim.spawnEnemy(m.kind,x,y,m.rank,source);
   ledger.update([camp],sim.player,sim.enemies,open,spawn,1200,{x:700,y:-300,width:800,height:600});assert.equal(sim.enemies.length,9);
-  ledger.update([camp],sim.player,sim.enemies,open,spawn,1200,view);assert.equal(sim.enemies.length,25);assert.ok(sim.enemies.length<=ENCOUNTER_RULES.hardPopulationCap);
+  ledger.update([camp],sim.player,sim.enemies,open,spawn,1200,view);assert.equal(sim.enemies.length,25);assert.ok(sim.enemies.length<=48);
   assert.ok(sim.enemies.filter(e=>e.campId).every(e=>isSpawnHidden(e.x,e.y,view,e.radius)));
   const chief=sim.enemies.find(e=>e.kind==='goblinChief')!;chief.hp=0;chief.state='dead';
   const resumed=new CampPopulation();resumed.restoreDefeated(ledger.defeatedMembers());sim.enemies.length=0;
@@ -69,7 +69,7 @@ test('goblins remain warband-only and carry smaller independent equipment yields
   for(let seed=0;seed<3000;seed++){
     const context={seed,level:1,rank:'normal' as const,biome:'deadwood' as const};
     goblin+=rollEnemyLoot({...context,kind:'goblin'}).length;normal+=rollEnemyLoot({...context,kind:'stalker'}).length;
-    assert.ok(!['goblin','goblinChief'].includes(chooseEncounterEnemy([],1,'deadwood',()=>seed/3000)!));
+    assert.ok(!['goblin','goblinChief'].includes(chooseEncounterEnemy('deadwood',()=>seed/3000)!));
   }
   assert.ok(goblin/normal>.23&&goblin/normal<.37);
   assert.equal(rollEnemyLoot({seed:100,level:1,rank:'normal',biome:'deadwood',kind:'goblin',firstKill:true}).length,1);

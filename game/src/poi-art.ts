@@ -1,17 +1,17 @@
+import { ChestArt } from './chest-art.ts';
+import { eventRecipe, sealPoint } from './event-recipes.ts';
+import { eventInteractionSites, type EventState } from './poi-content.ts';
 import { BLESSINGS, eventLabel, focusEvent, type EventSite, type EventRecord } from './poi-content.ts';
 import type { Simulation } from './simulation.ts';
 import type { World } from './world.ts';
 import { text } from './font.ts';
 export class EventArt {
-  private lids = new Map<string, number>();
-  draw(c: CanvasRenderingContext2D, site: EventSite, record: Pick<EventRecord, 'phase'> | undefined, time: number, dt: number, reduced: boolean) {
+  readonly chests = new ChestArt();
+  draw(c: CanvasRenderingContext2D, site: EventSite, record: Pick<EventRecord, 'phase'> & Partial<Pick<EventRecord,'delivered'>> | undefined, time: number, _dt: number, reduced: boolean, preparation=0) {
     const claimed = record?.phase === 'claimed', active = record?.phase === 'active';
-    const target = claimed ? 1 : 0, old = this.lids.get(site.id) ?? target;
-    const open = reduced ? target : old + (target - old) * (1 - Math.exp(-dt * 12));
-    this.lids.delete(site.id);
-    this.lids.set(site.id, open);
-    if (this.lids.size > 64)
-      this.lids.delete(this.lids.keys().next().value!);
+    if(site.kind!=='standingStones'&&site.kind!=='watchtower') {
+      this.chests.draw(c,site.id,site.x,site.y,claimed||!!record?.delivered,time,Math.max(preparation,active?.2:0),site.kind==='cursedChest',reduced);return;
+    }
     c.save();
     c.translate(site.x, site.y);
     c.fillStyle = '#02060a88';
@@ -19,7 +19,7 @@ export class EventArt {
     c.ellipse(0, 5, 26, 8, 0, 0, Math.PI * 2);
     c.fill();
     const ritual = site.kind === 'standingStones' || site.kind === 'watchtower';
-    const color = ritual ? '#95dacc' : site.kind === 'graveyard' ? '#b6a4d9' : '#d2b77b';
+    const color = '#95dacc';
     if (!claimed || ritual) {
       const glow = c.createRadialGradient(0, -10, 2, 0, -10, 45);
       glow.addColorStop(0, color + '35');
@@ -60,31 +60,6 @@ export class EventArt {
         c.stroke();
       }
     }
-    else {
-      c.fillStyle = site.kind === 'graveyard' || site.kind === 'reliquary' ? '#4a5353' : '#534332';
-      c.fillRect(-18, -14, 36, 17);
-      c.strokeStyle = '#ad9570';
-      c.strokeRect(-18, -14, 36, 17);
-      c.fillStyle = '#0a1013';
-      c.fillRect(-15, -13, 30, 6);
-      c.save();
-      c.translate(0, -14);
-      c.scale(1, 1 - open * 1.8);
-      c.fillStyle = '#665842';
-      c.fillRect(-19, -8, 38, 10);
-      c.strokeStyle = color;
-      c.strokeRect(-19, -8, 38, 10);
-      c.fillStyle = '#aa9875';
-      c.fillRect(-13, -8, 3, 10);
-      c.fillRect(10, -8, 3, 10);
-      c.restore();
-      if (!claimed) {
-        c.fillStyle = color;
-        c.fillRect(-3, -11, 6, 7);
-        c.fillStyle = '#273335';
-        c.fillRect(-1, -9, 2, 3);
-      }
-    }
     if (active || record?.phase === 'completed')
       for (let i = 0; i < 5; i++) {
         const phase = reduced ? i / 5 : (time * .25 + i / 5) % 1;
@@ -99,7 +74,7 @@ export function drawEventUI(c: CanvasRenderingContext2D, sim: Simulation, world:
   x: number;
   y: number;
 }, gamepad: boolean, sites: readonly EventSite[]) {
-  const p = sim.player, site = focusEvent(sites, p, world);
+  const p = sim.player, site = focusEvent(eventInteractionSites(sites,sim.eventState), p, world);
   if (site) {
     const point = project(site.x, site.y - 52), label = eventLabel(site, sim.eventState, sim.getCampState(site.id) === 'cleared');
     c.save();
@@ -122,4 +97,15 @@ export function drawEventUI(c: CanvasRenderingContext2D, sim: Simulation, world:
   const blessing = p.character.blessing;
   if (blessing)
     text(c, `${BLESSINGS[blessing.kind].name} · ${Math.ceil(blessing.remaining)}s`, 24, 138, 1, BLESSINGS[blessing.kind].color);
+}
+
+export function drawEventObjectives(c:CanvasRenderingContext2D,state:EventState,time:number):void {
+  const trial=state.trial;if(!trial)return;const site=state.sites[trial.siteId],r=eventRecipe(site)!;
+  if(r.mode!=='defend'&&r.mode!=='seals')return;
+  const point=r.mode==='seals'?sealPoint(site,trial.wave):site;
+  c.save();c.translate(point.x,point.y);const radius=r.mode==='defend'?175:24;
+  const glow=c.createRadialGradient(0,0,0,0,0,radius);glow.addColorStop(0,'#9bd6c21a');glow.addColorStop(.8,'#9bd6c209');glow.addColorStop(1,'#9bd6c200');c.fillStyle=glow;c.fillRect(-radius,-radius,radius*2,radius*2);
+  c.strokeStyle=trial.sealReady?'#f3d79c':'#9bd6c299';c.lineWidth=1.5;c.setLineDash([8,12]);c.lineDashOffset=-time*9;c.beginPath();c.ellipse(0,0,radius,radius*.72,0,0,Math.PI*2);c.stroke();c.setLineDash([]);
+  if(r.mode==='seals'){c.fillStyle=trial.sealReady?'#efd3a0':'#516d69';c.beginPath();c.moveTo(0,-28);c.lineTo(10,-12);c.lineTo(0,1);c.lineTo(-10,-12);c.closePath();c.fill();}
+  c.restore();
 }

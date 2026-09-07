@@ -16,7 +16,7 @@ import { WaterArt } from './water-art.ts';
 import { CRYPT_AMBIENT, cryptLights, cryptLightMask } from './dungeon-lighting.ts';
 import { drawCryptGate, drawCryptDecor, drawCryptEmission } from './dungeon-art.ts';
 import { currentDungeon } from './dungeon-state.ts';
-import { EventArt, drawEventUI } from './poi-art.ts';
+import { drawEventObjectives, EventArt, drawEventUI } from './poi-art.ts';
 import { drawPortal, drawTownAnchor } from './travel-art.ts';
 import { townPortalAnchor, withinPortalReach, PORTAL_RULES, type PortalAnchor } from './travel.ts';
 import { buildingNPC, focusNPC, NPC_NAMES, NPC_COLORS } from './npcs.ts';
@@ -341,7 +341,7 @@ export class Renderer {
     this.groundLayer.draw(c, world, left, top, worldWidth, worldHeight);
     this.profiler?.end('terrain', terrainStart);
     const dungeonRun=currentDungeon(sim.expeditions);
-    if(sim.dungeonFloor&&dungeonRun) drawCryptDecor(c,sim.dungeonFloor,dungeonRun,settings.reducedMotion ? 0 : this.visualTime,sim.eventChannel.site?.kind==='cryptChest'?{index:sim.eventChannel.site.index,progress:sim.eventChannel.elapsed/sim.eventChannel.duration}:undefined);
+    if(sim.dungeonFloor&&dungeonRun) drawCryptDecor(c,sim.dungeonFloor,dungeonRun,settings.reducedMotion ? 0 : this.visualTime,sim.eventChannel.site?.kind==='cryptChest'?{index:sim.eventChannel.site.index,progress:sim.eventChannel.elapsed/sim.eventChannel.duration}:undefined,this.eventArt.chests,settings.reducedMotion);
     else for(const entrance of this.visibility.entrances)drawCryptGate(c,entrance,this.visualTime);
     for (const site of this.visibility.sites) drawSiteGround(c, site, settings.reducedMotion ? 0 : this.visualTime);
     this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime);
@@ -391,7 +391,8 @@ export class Renderer {
     if (sim.dungeonFloor) drawCryptEmission(c, sim.dungeonFloor, settings.reducedMotion ? 0 : this.visualTime, this.view);
     drawGroundGold(c, sim.groundGold, this.visualTime, settings.reducedMotion);
     drawLevelCelebration(c, this.rewards.level, px, py, settings.reducedMotion);
-    drawGroundLoot(c, sim.groundItems, this.visualTime, settings.reducedMotion);
+    if(!sim.dungeonFloor)drawEventObjectives(c,sim.eventState,settings.reducedMotion?0:this.visualTime);
+    drawGroundLoot(c, sim.groundItems, this.visualTime, settings.reducedMotion, sim.time);
     this.effects.drawSword(c);
     for (const effect of sim.groundEffects) {
       if (effect.x + effect.radius < left || effect.x - effect.radius - 180 > left + worldWidth
@@ -421,7 +422,7 @@ export class Renderer {
     // Project popup anchors, leaving their glyph size and outline independent of camera zoom.
     // Speech draws later and may cover damage numbers; popups never displace a bark.
     this.effects.drawNumbers(c, (x, y) => worldToScreen(this.view, x, y));
-    const lootBounds = this.groundLootLabels = drawLootLabels(c, sim.groundItems, (x, y) => worldToScreen(this.view, x, y), this.width, this.height);
+    const lootBounds = this.groundLootLabels = drawLootLabels(c, sim.groundItems.filter(d=>!d.flight||sim.time>=d.flight.at+d.flight.delay+1.05), (x, y) => worldToScreen(this.view, x, y), this.width, this.height);
     const phone = this.touchActive && this.touchViewport ? phoneLandscapeLayout(this.touchViewport) : null;
     const unit = this.touchViewport ? this.width / this.touchViewport.width : 1;
     const footer = phone ? {x:phone.footer.x*unit,y:phone.footer.y*unit,scale:phone.footer.scale*unit} : undefined;
@@ -571,7 +572,7 @@ export class Renderer {
       c.restore();
     } }));
     for (const site of this.eventSites)
-      entries.push({ y: site.y, draw: () => this.eventArt.draw(c, site, eventClaimed(sim.eventState, site.id) ? { phase: 'claimed' } : sim.eventState.sites[site.id], this.visualTime, dt, settings.reducedMotion) });
+      entries.push({ y: site.y, draw: () => this.eventArt.draw(c, site, eventClaimed(sim.eventState, site.id) ? { phase: 'claimed' } : sim.eventState.sites[site.id], this.visualTime, dt, settings.reducedMotion, sim.eventChannel.site?.kind!=='cryptChest' && sim.eventChannel.site?.id===site.id ? sim.eventChannel.elapsed/sim.eventChannel.duration : 0) });
     for (const anchor of this.portalAnchors) entries.push({ y: anchor.y, draw: () => {
       drawTownAnchor(c, anchor, sim.travel.homeTown === anchor.band);
       if (sim.travel.returnTo?.town === anchor.band) drawPortal(c, anchor.x, anchor.y, this.visualTime, 1,

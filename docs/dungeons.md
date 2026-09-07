@@ -1,6 +1,6 @@
 # Rootbound Crypt
 
-Implemented 2026-09-06. One complete, persistent dungeon floor; pacing, difficulty and art remain subject to player feedback. The original proposal is in [dungeons and events](dungeons-and-events.md).
+Updated 2026-09-07. One complete, persistent dungeon floor; pacing, difficulty and art remain subject to player feedback. The original proposal is in [dungeons and events](dungeons-and-events.md).
 
 ## Finding and entering
 
@@ -10,11 +10,11 @@ Each entrance owns a separate floor, not distant overworld coordinates. Dungeon 
 
 ## Floor and encounters
 
-- Thirteen rooms: a safe vestibule, nine combat chambers, two guarded treasure chambers and the Warden arena.
-- A connected main route plus an optional loop through the treasure chambers. Doors stay open; clearing every ordinary enemy is optional.
-- Seeded room proportions and offsets, eight graph orientations, encounter compositions and rewards. The graph is deliberately constrained to a validated template; arbitrary room graphs and additional themes are future extensions.
-- Four to six ordinary enemies per combat chamber and four per treasure chamber: **44–62 ordinary enemies**, plus the boss and four threshold guardians.
-- At most **24 living dungeon actors**. Room rosters stream wholly outside camera exclusion bounds. No ambient refill, visible materialization or reward for unloading a room. At very wide views, admission may wait for hidden space.
+- Seeded 13–19-room floors: an entry chamber, branching combat routes, two optional treasure leaves and an exterior Warden arena.
+- Three layout tendencies vary how strongly growth follows the latest room: winding routes, branching interiors and longer galleries. Room dimensions and corridor widths vary with the layout. Adjacent connections may create loops; each treasure chamber remains a separate optional leaf.
+- Eight whole-floor orientations, seeded room proportions/offsets, and fixed encounter/reward identities. The previous fixed thirteen-room template has been removed.
+- Six to ten foes per ordinary chamber, six per treasure chamber, plus the Warden and four threshold guardians.
+- No living-actor count cap. Nearby room rosters still admit entirely outside camera exclusion bounds. No ambient refill or reward for unloading a room; wide views may defer admission until hidden positions exist.
 - Collision, projectiles and corridor navigation share the same worn room/corridor contours. Navigation uses bounded cached flow fields. Decorative sarcophagi, roots and masonry never obstruct those paths.
 
 The entrance remains usable throughout. Killing the Warden unlocks the final chest and another exit near the arena. Exits return to the surface entrance.
@@ -23,7 +23,7 @@ The entrance remains usable throughout. Killing the Warden unlocks the final che
 
 The crypt has its own dark ambient illumination, independent of outdoor daylight. Warm wall torches and cold suspended orbs illuminate the actual floor, walls and monsters; cached visibility fans stop each light at masonry. The player carries a modest neutral light, while attacks and spells retain their shared dynamic light budget. Hot flame/orb cores, rising embers and orbiting sparks render after surface illumination and before CRT bloom. Reduced motion freezes their animation.
 
-Room recesses and uneven corridor shoulders use one deterministic contour for terrain, collision, navigation and both maps. These contours extend the existing clear rectangles, preserving current dungeon positions, encounters and saves. The underlying thirteen-room connection template is unchanged. Chipped staggered flagstones, damp patches, exposed wall courses, worn and displaced tomb lids, roots, bones and old blood trails provide the burial-chamber detail. Decoration does not obstruct combat routes.
+Room recesses and uneven corridor shoulders use one deterministic contour for terrain, collision, navigation and both maps. These contours extend the existing clear rectangles, preserving current dungeon positions, encounters and saves. The generated graph uses the same contour and lighting pipeline. Chipped staggered flagstones, damp patches, exposed wall courses, worn and displaced tomb lids, roots, bones and old blood trails provide the burial-chamber detail. Decoration does not obstruct combat routes.
 
 Terrain remains tile-cached and world-aligned. Light masks are limited to 96 rays per source, cached at eight-unit positions with 256 masks per floor and a bounded occupancy cache; the renderer retains its eighteen-light budget. Fixture anchors are shared by art and illumination.
 
@@ -48,7 +48,7 @@ Ordinary enemies keep the existing source-level loot tables. The Warden awards s
 
 Each optional chest provides one veteran-weight item at D + 1 and 18 × (1 + 0.1 × (D − 1)) gold. The final chest provides three items using normal/veteran/elite rarity tables at D / D + 1 / D + 2, and 45–70 × (1 + 0.1 × (D − 1)) gold. Shared item-level limits apply. No guaranteed Rare item or enhancement bonus.
 
-Chests use the shared interruptible one-second interaction channel, animated lids and warm light feedback. Items and coins appear physically and use existing pickup notifications. Delivery masks and ground insertion persist together before commitment. Full ground capacity leaves the remaining bundle pending; subsequent interaction delivers only the missing rewards. A full bag does not erase treasure or block the exit. The current burst is simultaneous; staggered emergence is a later presentation refinement.
+Chests use the shared interruptible one-second interaction channel, animated lids and warm light feedback. Items and coins appear physically and use existing pickup notifications. Delivery masks and ground insertion persist together before commitment. Full ground capacity leaves the remaining bundle pending; subsequent interaction delivers only the missing rewards. A full bag does not erase treasure or block the exit. Shared chest art animates anticipation, hinged lids and a burst of light. Staggered item/coin arcs use checked landing positions and persist their flight metadata; pickup waits for landing.
 
 ## Travel, maps and saving
 
@@ -58,7 +58,7 @@ Town portal P uses the existing cancellable channel. Its return endpoint include
 
 The minimap shows the local explored floor. The large map supports drag/zoom, discovered chest/boss hover labels and an Overworld button. Floor discovery never writes to the surface chart. Surface entrance tooltips identify active/cleared expeditions.
 
-One live-Warden expedition is allowed per character. There is no eight-expedition lifetime quota. Unfinished floors, optional rewards, loose loot and return links retain their runs. Fully exhausted floors retire to exact cleared-entrance receipts during durable travel; these entrances remain marked cleared and cannot regenerate rewards. The 8,388,608-code-unit checkpoint safety ceiling still applies; failed writes preserve both locations. Current v3 characters continue without a reset. See [world-state longevity](world-state-longevity.md).
+One live-Warden expedition is allowed per character. There is no eight-expedition lifetime quota. Unfinished floors, optional rewards, loose loot and return links retain their runs. Fully exhausted floors retire to exact cleared-entrance receipts during durable travel; these entrances remain marked cleared and cannot regenerate rewards. The 8,388,608-code-unit checkpoint safety ceiling still applies; failed writes preserve both locations. Generation 7 and dungeon generator version 2 require fresh test characters. See [world-state longevity](world-state-longevity.md).
 
 ## Ownership and review
 
