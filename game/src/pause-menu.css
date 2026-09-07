@@ -1,0 +1,61 @@
+.menu-window.pause-menu { width: min(580px, 100%); text-align: left; border-color: #657c8580; background: radial-gradient(ellipse at 90% 10%, #29414a3b, transparent 70%), #0b151c; }
+.pause-menu .pause-header { min-height: 52px; padding: 6px 12px 6px 22px; background: transparent; }
+.pause-header .ui-title { font-size: 19px; letter-spacing: .03em; }
+.pause-header .ui-button { width: 36px; min-height: 36px; }
+.pause-layout { display: grid; grid-template-columns: 195px minmax(0,1fr); padding: 18px; gap: 22px; }
+.pause-actions { display: flex; flex-direction: column; gap: 6px; }
+.pause-actions .ui-button { justify-content: flex-start; gap: 12px; min-height: 44px; padding: 10px 13px; font-size: 14px; text-transform: none; letter-spacing: .01em; }
+.pause-actions .ui-icon { width: 18px; height: 18px; flex: none; opacity: .75; }
+.pause-actions #title-action { margin-top: 8px; border-top: 1px solid var(--ui-line); border-radius: 0; color: var(--ui-muted); }
+.pause-actions #options-action[aria-expanded="true"] { color: var(--ui-ivory); background: #3249504d; border-color: #71888f5c; }
+.pause-detail { min-width: 0; padding: 3px 2px 0 20px; border-left: 1px solid var(--ui-line); }
+.pause-place { display: flex; gap: 10px; align-items: center; color: var(--ui-ivory); font-size: 15px; min-height: 38px; overflow-wrap: anywhere; }
+.pause-place svg { width: 25px; height: 25px; color: var(--ui-brass); flex: none; }
+.pause-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 22px 0 0; }
+.pause-stats dt { color: var(--ui-muted); font-size: 12px; margin-bottom: 7px; }
+.pause-stats dd { margin: 0; font-size: 26px; color: var(--ui-ivory); font-variant-numeric: tabular-nums; }
+.pause-decoration { display: flex; align-items: center; gap: 13px; color: #7c929c70; margin-top: 28px; }
+.pause-decoration span { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, #8299a34d); }
+.pause-decoration span:last-child { transform: rotate(180deg); }
+.pause-decoration svg { width: 18px; height: 18px; }
+.pause-footer { display: flex; align-items: center; gap: 8px; padding: 12px 22px; border-top: 1px solid var(--ui-line); background: #00000016; min-height: 41px; }
+.pause-footer i { width: 4px; height: 4px; border-radius: 50%; background: #94afa1; flex: none; }
+.pause-footer .menu-save-state { margin: 0; font-size: 11px; color: var(--ui-muted); }
+.pause-options-heading { display: flex; align-items: center; justify-content: space-between; margin-top: -5px; }
+.pause-options-heading h2 { margin: 0; font-size: 15px; font-weight: 500; color: var(--ui-ivory); }
+.pause-options-heading .ui-button { min-height: 28px; width: 28px; padding: 4px; }
+.pause-option { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 42px; border-bottom: 1px solid var(--ui-line); font-size: 12px; color: var(--ui-text); }
+.pause-option[hidden], .pause-detail [hidden] { display: none; }
+.pause-option .ui-button { height: 30px; min-height: 30px; padding: 5px 10px; font-size: 12px; }
+.pause-toggle { min-width: 56px; }
+.pause-toggle[aria-pressed="true"] { color: #c6dfcd; border-color: #6d987e80; background: #29433966; }
+.pause-stepper { display: flex; gap: 5px; }
+.pause-stepper .ui-button { width: 32px; padding: 6px; }
+.pause-controls { margin-top: 12px; color: var(--ui-muted); font-size: 12px; }
+.pause-controls summary { cursor: pointer; padding: 4px 0; }
+.pause-controls dl { margin: 8px 0 0; display: grid; gap: 8px; }
+.pause-controls dl div { display: flex; gap: 10px; justify-content: space-between; }
+.pause-controls dd { margin: 0; text-align: right; color: var(--ui-text); font-size: 11px; }
+@media (max-width: 480px) {
+  .pause-layout { grid-template-columns: 1fr; gap: 14px; padding: 14px; }
+  .pause-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .pause-actions .ui-button { font-size: 13px; gap: 8px; }
+  .pause-actions #title-action { margin: 0; border-top: 0; }
+  .pause-detail { border-left: 0; border-top: 1px solid var(--ui-line); padding: 12px 4px 0; }
+  .pause-stats { margin-top: 12px; }
+  .pause-decoration { display: none; }
+}
+@media (max-height: 500px) and (min-width: 481px) {
+  .pause-layout { padding: 12px 16px; gap: 16px; }
+  .pause-actions .ui-button { min-height: 36px; padding-block: 6px; }
+  .pause-header .ui-title { font-size: 17px; }
+  .pause-menu .pause-header { min-height: 42px; }
+  .pause-footer { padding-block: 8px; min-height: 32px; }
+}
+
+.pause-options-heading [data-options-back] svg { transform: rotate(180deg); }
+@media (pointer: coarse) {
+  .pause-option { min-height: 50px; }
+  .pause-option .ui-button { height: 44px; min-height: 44px; min-width: 44px; }
+  .pause-controls summary { padding-block: 12px; }
+}

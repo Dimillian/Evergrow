@@ -1,3 +1,4 @@
+import { pauseMenuMarkup } from './pause-menu-markup.ts';
 import { escapeUI } from './ui-components.ts';
 import { uiIcon } from './ui-icons.ts';
 
@@ -8,24 +9,24 @@ export function gameMenuMarkup(phase: 'paused' | 'dead',
   const count = Math.max(0, Math.floor(Number.isFinite(kills) ? kills : 0));
   const seconds = Math.max(0, Math.floor(Number.isFinite(time) ? time : 0));
   const duration = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
-  return `<section class="ui-window menu-window${dead ? ' menu-window--fallen' : ''}">
+  if (!dead) return pauseMenuMarkup(count, duration, location);
+  return `<section class="ui-window menu-window menu-window--fallen">
     <header class="ui-window-header menu-brand">
-      <h1 id="menu-title" class="ui-title">${dead ? 'YOU FELL' : 'PAUSED'}</h1>
-      ${phase === 'paused' ? `<button type="button" id="close-menu" class="ui-button ui-button--quiet ui-button--icon"
-        aria-label="Resume game" data-tooltip="Resume game" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('close')}</button>` : `<span class="menu-brand-mark" aria-hidden="true">${uiIcon('diamond')}</span>`}
+      <h1 id="menu-title" class="ui-title">YOU FELL</h1>
+      <span class="menu-brand-mark" aria-hidden="true">${uiIcon('diamond')}</span>
     </header>
     <div class="ui-window-body menu-body">
-      <div class="menu-seal" aria-hidden="true">${uiIcon(dead ? 'skull' : 'leaf')}</div>
+      <div class="menu-seal" aria-hidden="true">${uiIcon('skull')}</div>
       <div class="menu-location"><span class="menu-location-line" aria-hidden="true"></span>
         <span>${escapeUI(location)}</span><span class="menu-location-line" aria-hidden="true"></span></div>
       <dl class="menu-stats">
         <div class="ui-stat"><dt class="ui-stat-label">Slain</dt><dd class="ui-stat-value">${count}</dd></div>
-        <div class="ui-stat"><dt class="ui-stat-label">${dead ? 'Survived' : 'Time in the wild'}</dt><dd class="ui-stat-value">${duration}</dd></div>
+        <div class="ui-stat"><dt class="ui-stat-label">Survived</dt><dd class="ui-stat-value">${duration}</dd></div>
       </dl>
       <p class="menu-save-state" role="status"></p>
       <div class="menu-actions">
         <button type="button" class="ui-button ui-button--primary menu-primary" id="play-action">
-          <span>${dead ? 'RETURN TO THE REFUGE' : 'RESUME'}</span>${uiIcon('chevron')}</button>
+          <span>RETURN TO THE REFUGE</span>${uiIcon('chevron')}</button>
         <button type="button" class="ui-button ui-button--quiet menu-secondary" id="title-action">SAVE & CHARACTER HALL</button>
       </div>
     </div>

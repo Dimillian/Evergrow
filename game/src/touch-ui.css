@@ -74,7 +74,6 @@
 @media (max-width: 700px) {
   .touch-mode .touch-menu { bottom: calc(var(--touch-footer-clearance) + 168px); }
 }
-.touch-mode .touch-pause-actions { flex-wrap: wrap; gap: 6px; justify-content: center; }
 .touch-mode .journey-mini { max-width: 195px; }
 .touch-mode .crypt-map { padding: max(8px,env(safe-area-inset-top)) 8px; }
 .touch-mode .crypt-map .ui-window { display: flex; flex-direction: column; max-height: calc(var(--touch-vh,100dvh) - 16px); overflow: auto; }

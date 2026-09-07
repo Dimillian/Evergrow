@@ -1,4 +1,7 @@
 const ICONS = {
+  options: '<path d="M4 7h16M4 17h16M9 4v6m6 4v6"/>',
+  save: '<path d="M5 3h12l3 3v15H4V3Zm3 0v6h8V3M8 21v-8h8v8"/>',
+  exit: '<path d="M10 4H4v16h6m-1-8h12m-4-4 4 4-4 4"/>',
   potion: '<path d="M9 3h6v5l4 6v5c0 2-14 2-14 0v-5l4-6ZM8 3h8M8 14h8M9 17h6"/>',
   dodge: '<path d="m13 4 6 5-5 5 4 6M13 9l-5 5-5 1M10 17l-4 4M2 6h7M1 10h5"/><circle cx="18" cy="3" r="2"/>',
   portal: '<path d="M6 20V10a6 6 0 0 1 12 0v10M3 20h18M9 17v-7a3 3 0 0 1 6 0v7"/><path d="m12 11 1 2-1 2-1-2Z"/>',

@@ -158,7 +158,10 @@ function embeddedReview() {
   const simulation = new Simulation(world, { seed: SEED, spawn: false });
   const exploration = lifetime.own(new Exploration(world, { storage: null }));
   const mapPlayer = seedDiscovery(world, exploration);
+  let muted = false;
   const shell = lifetime.own(new GameShell(root, {
+    muted: () => muted, sound: () => { muted = !muted; }, zoom: () => {},
+    save: async () => { shell.setSaveStatus('Preview · no save written'); return true; },
     play: () => shell.notifications.info('Static preview · no simulation is running'),
     returnToTitle: () => selectView('ready'), openCharacter: () => {}, openSkills: () => {}, openMap: () => selectView('map'),
   }));
@@ -206,6 +209,7 @@ function embeddedReview() {
     if (disposed) return;
     view = next; setURL(); map.close(); foundation.hidden = next !== 'components';
     shell.showMenu(next === 'components' ? 'map' : next, 17, 218, 'Deadwood');
+    if (next === 'paused' || next === 'dead') shell.setSaveStatus('Preview · no save written');
     if (next === 'ready') title.open(emptySlots); else title.close();
     if (next === 'map') map.open(mapPlayer);
     drawFrozenBackground();

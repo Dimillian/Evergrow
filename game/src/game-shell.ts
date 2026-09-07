@@ -1,3 +1,4 @@
+import { PauseMenu } from './pause-menu.ts';
 import { PORTAL_RULES } from './travel.ts';
 import './travel-ui.css';
 import './hud-sidebar.css';
@@ -9,7 +10,7 @@ import type { GamePhase } from './game-phase.ts';
 import { gameMenuMarkup } from './game-menu.ts';
 import { trapDialogFocus, uiIcon } from './ui-components.ts';
 
-interface ShellActions { sound?(): void; muted?(): boolean; zoom?(factor: number): void; portal?(): void; play(): void; returnToTitle(): void; openMap(): void; openCharacter(): void; openSkills(): void; openJourneys?(): void; }
+interface ShellActions { save?(): Promise<boolean>; sound?(): void; muted?(): boolean; zoom?(factor: number): void; portal?(): void; play(): void; returnToTitle(): void | Promise<void>; openMap(): void; openCharacter(): void; openSkills(): void; openJourneys?(): void; }
 
 /** Owns DOM presentation and its listeners; it never reads or mutates simulation state. */
 export class GameShell {
@@ -27,6 +28,9 @@ export class GameShell {
   private menuAbort = new AbortController();
   private readonly actions: ShellActions;
   private gamepadActive = false;
+  private pauseMenu: PauseMenu | null = null;
+  backInMenu(): boolean { return this.pauseMenu?.back() ?? false; }
+  refreshOptions(): void { this.pauseMenu?.refresh(); }
 
   setGamepadActive(active: boolean) {
     if (active === this.gamepadActive) return;
@@ -119,7 +123,7 @@ export class GameShell {
   setStatus(message: string): void { this.status.textContent = message; }
 
   showMenu(phase: GamePhase, kills: number, time: number, location = 'Deadwood'): void {
-    this.menuAbort.abort(); this.menuAbort = new AbortController();
+    this.menuAbort.abort(); this.menuAbort = new AbortController(); this.pauseMenu = null;
     const playing = phase === 'playing';
     const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys';
     this.overlay.hidden = playing || panel || phase === 'ready';
@@ -135,38 +139,9 @@ export class GameShell {
     const signal = this.menuAbort.signal;
     const play = this.overlay.querySelector<HTMLButtonElement>('#play-action')!;
     play.addEventListener('click', this.actions.play, { signal });
-    this.overlay.querySelector('#title-action')?.addEventListener('click', this.actions.returnToTitle, { signal });
+    if (dead) this.overlay.querySelector('#title-action')?.addEventListener('click', this.actions.returnToTitle, { signal });
     this.overlay.querySelector('#close-menu')?.addEventListener('click', this.actions.play, { signal });
-    if(!dead) {
-      const controls=document.createElement('div');controls.className='touch-only touch-pause-actions';
-      controls.innerHTML='<button class="ui-button" data-sound>Sound</button><button class="ui-button" data-zoom="out" aria-label="Zoom camera out">− Zoom</button><button class="ui-button" data-zoom="in" aria-label="Zoom camera in">+ Zoom</button>';
-      const sound=controls.querySelector<HTMLButtonElement>('[data-sound]')!;
-      const update=()=>{sound.textContent=this.actions.muted?.()?'Sound off':'Sound on';sound.setAttribute('aria-pressed',String(!this.actions.muted?.()));};update();
-      sound.addEventListener('click',()=>{this.actions.sound?.();update();},{signal});
-      for(const b of controls.querySelectorAll<HTMLButtonElement>('[data-zoom]'))b.addEventListener('click',()=>this.actions.zoom?.(b.dataset.zoom==='in'?1.2:1/1.2),{signal});
-      const standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches
-        || (navigator as Navigator & {standalone?:boolean}).standalone === true;
-      if (!standalone) {
-        const expand = document.createElement('button'); expand.className='ui-button'; expand.type='button';
-        const help = document.createElement('p'); help.className='touch-install-help'; help.hidden=true;
-        if (document.fullscreenEnabled && document.documentElement.requestFullscreen) {
-          expand.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
-          expand.addEventListener('click', async () => {
-            try {
-              if(document.fullscreenElement) await document.exitFullscreen();
-              else await document.documentElement.requestFullscreen();
-              expand.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
-            } catch { help.hidden=false; help.textContent='Fullscreen is unavailable here. Open Evergrow from your Home Screen for an app view.'; }
-          }, {signal});
-        } else {
-          expand.textContent='Home Screen'; expand.setAttribute('aria-expanded','false');
-          help.textContent='For more screen space: in Safari, tap Share → Add to Home Screen. Keep Open as Web App enabled, then launch Evergrow from its new icon.';
-          expand.addEventListener('click',()=>{help.hidden=!help.hidden;expand.setAttribute('aria-expanded',String(!help.hidden));},{signal});
-        }
-        controls.append(expand,help);
-      }
-      this.overlay.querySelector('.menu-actions')!.append(controls);
-    }
+    if (!dead) this.pauseMenu = new PauseMenu(this.overlay, this.actions, signal);
     trapDialogFocus(this.overlay, { signal, initialFocus: play, restoreFocus: false });
     this.setStatus(dead ? `You fell after defeating ${kills} enemies.`
       : phase === 'paused' ? 'Game paused.' : 'Ready to enter Deadwood.');

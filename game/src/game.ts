@@ -140,6 +140,7 @@ export class Game {
         sound: () => this.toggleSound(), muted: () => this.muted, zoom: factor => this.renderer.zoomByWheel(-Math.log(factor)/.0016,0,this.canvas.getBoundingClientRect().height),
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
         portal: () => { this.canvas.focus(); this.requestPortal(); },
+        save: () => this.durable(async () => { const saved = await this.saveCharacter(true); if (saved) await this.saveClient.flush(); return saved; }, false),
         returnToTitle: () => this.returnToTitle(), openMap: () => this.openMap(),
         openCharacter: () => this.openCharacterPanel('character'), openSkills: () => this.openCharacterPanel('skills'), openJourneys: () => this.journeys.open(),
       }));
@@ -243,7 +244,7 @@ export class Game {
         portal: () => this.requestPortal(),
         background: () => { this.clearInput(); this.pause(); void this.saveCharacter(); this.audio.setEnabled(false); },
         foreground: () => { this.clearInput(); this.audio.setEnabled(!this.muted); },
-        back: () => { if(this.thor.dismissInspection()) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
+        back: () => { if(this.thor.dismissInspection() || (this.phase === 'paused' && this.shell.backInMenu())) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
       }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
       try {
@@ -310,7 +311,7 @@ export class Game {
             if (this.sim.portal.active) { this.sim.portal.cancel(); return; }
             if (this.panels.activePanel) this.resume();
             else if (this.phase === 'playing') this.pause();
-            else if (this.phase === 'paused') this.resume();
+            else if (this.phase === 'paused' && !this.shell.backInMenu()) this.resume();
           }
           return;
         }
@@ -1006,7 +1007,7 @@ export class Game {
       if (this.phase === 'character' && this.inventoryPanel.dismissPopup()) return;
       if (this.panels.activePanel) this.resume();
       else if (this.phase === 'playing' && !this.savingAction) { if (this.sim.portal.active) this.sim.portal.cancel(); else this.pause(); }
-      else if (this.phase === 'paused') this.resume();
+      else if (this.phase === 'paused' && !this.shell.backInMenu()) this.resume();
       else if (this.phase === 'ready') this.shell.titleMount.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
       return;
     }
@@ -1042,6 +1043,7 @@ export class Game {
   toggleSound() {
     if (this.disposed) return;
     this.muted = !this.muted;
+    this.shell.refreshOptions();
     this.audio.setEnabled(!this.muted);
     void this.audio.unlock().catch(() => {});
     this.savePreferences();

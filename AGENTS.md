@@ -33,7 +33,7 @@ The sword needs a clearly visible metal-gold arc that sweeps, tapers, and disper
 
 Draw HUD and text, including damage numbers, at native display resolution after world post-processing. Use locally bundled Pixelify Sans for display lettering and Barlow Medium for ALL numerals and numeric punctuation, including mixed labels. The shared Evergrow Numerals Unicode-range face comes first in Canvas and DOM font stacks; small HUD shortcut lettering still uses system sans-serif. Await loadGameFont() for both faces before rendering. Use natural glyph metrics; do not recreate letters from individually rounded pixel rectangles. Font files are a deliberate exception to procedural world/equipment art, with their license bundled locally.
 
-Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-contrast RGB grille. The user requested removing settings and filter switching. Do not reintroduce selectable display modes, the HUD gear, or a settings panel. Keep Escape pause/resume and N sound toggle; reduced motion follows the operating system automatically.
+Use one fixed CRT treatment with soft phosphor glow, faint scanlines, and a low-contrast RGB grille. The user requested removing settings and filter switching. Do not reintroduce selectable display modes or the HUD gear. The user-requested Escape menu now exposes compact Options for sound, bounded camera zoom, supported fullscreen and a controls disclosure; the CRT treatment stays fixed. Keep Escape pause/resume and N sound toggle; reduced motion follows the operating system automatically.
 
 ## Android / AYN Thor
 
