@@ -52,8 +52,10 @@ cannot switch to an outdated selection. Failed requests retry at most once per
 thirty audio-clock seconds and never block gameplay or effects.
 
 Resource bounds: four possible voices, two retained decoded-cache entries, one
-in-flight load/decode, and one cleanup timer. In ordinary steady playback only
-one source runs. All gains/sources, pending fetches and caches are released on
+in-flight load/decode, and one cleanup timer. Cleanup reschedules while a fade
+remains pending, including when backgrounding starts a later fade or the audio
+clock is suspended; it does not require animation frames. In ordinary steady
+playback only one source runs. All gains/sources, pending fetches and caches are released on
 teardown. Temporary memory can include all four cues during rapid transitions
 (about 74 MB of stereo float PCM at 44.1 kHz, plus temporary decode data; the
 browser's output sample rate may increase that, with guarded/cropped buffers
@@ -74,8 +76,9 @@ Code tests cover location/engagement priority, town-boundary grace, combat hold,
 menu ducking, interrupted fades, guard trimming and musical frame counts at
 44.1/48 kHz, remembered positions,
 stale loads, mute during decode, retry throttling, background preference
-preservation and disposal during asynchronous work. Build checks cover local
-asset emission. Gameplay listening, transition feel and final balance against
+preservation, overlapping background cleanup deadlines and disposal during
+asynchronous work. Build checks cover local asset emission. Gameplay listening,
+transition feel and final balance against
 effects remain user-tested.
 
 ## WebM compression checkpoint · 2026-09-08

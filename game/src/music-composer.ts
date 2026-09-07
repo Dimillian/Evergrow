@@ -158,7 +158,12 @@ export class MusicComposer {
     // One bounded timer releases silent sources while a tab is in background.
     this.cleanup = setTimeout(() => {
       this.cleanup = null;
-      if (!this.disposed && this.ctx) this.reap(this.ctx.currentTime);
+      if (!this.disposed && this.ctx) {
+        this.reap(this.ctx.currentTime);
+        // A newer fade or a suspended audio clock can outlast this timer.
+        // Keep cleanup alive without relying on another animation frame.
+        this.scheduleCleanup();
+      }
     }, 3200);
   }
 

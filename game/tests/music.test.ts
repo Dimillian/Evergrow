@@ -156,6 +156,25 @@ test('muting fades out and stops voices; resuming does not lose position', async
   assert.ok(f.sources.every(s => s.stops === 1 && s.disconnected));
 });
 
+test('background cleanup retries when a newer fade outlasts the pending timer', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const f = setup(); t.after(() => f.music.dispose());
+  f.attach(); f.music.update(fight, .1); await flush();
+  f.ctx.currentTime = 5; t.mock.timers.tick(5000);
+  f.music.update({ ...field, location: 'crypt' }, .1); await flush();
+  assert.equal(f.sources.length, 2);
+  f.ctx.currentTime = 8.19; t.mock.timers.tick(3190);
+  f.music.setEnabled(false); // Background event: no more update/render calls.
+  f.ctx.currentTime = 8.2; t.mock.timers.tick(10);
+  assert.equal(f.sources[0].stops, 1);
+  assert.equal(f.sources[1].stops, 0, 'the newer fade must finish before cleanup');
+  f.ctx.currentTime = 11.4; t.mock.timers.tick(3200);
+  assert.ok(f.sources.every(s => s.stops === 1 && s.disconnected),
+    'every silent source is released without another animation frame');
+  f.ctx.currentTime = 20; t.mock.timers.tick(8600);
+  assert.ok(f.sources.every(s => s.stops === 1), 'completed sources are stopped only once');
+});
+
 test('shipped WebMs match verified Opus outputs and musical lengths', () => {
   const expected = [
     { bytes: 1359405, frames: 2560000, sha256: '7cf2f9eb1e59a8b5d197661ffac5e6bb9b9a65187a940586502dd2f7269f0f36' },
