@@ -12,7 +12,7 @@ Published in v0.5.0 on 2026-09-07 with matching cloud client, API and additive D
 - Keyboard focus, controller A/B, LB/RB tab switching and right-stick scrolling use the shared UI controls. Small screens scroll within the panel.
 - No stat bonuses, currencies or rewards come from achievements, and no milestone popup feed competes with combat. Hover or focus a badge to see its requirement, progress, next milestone and recorded unlock date in a shared smoked-glass tooltip. Touch users can tap. Detailed statistics also explain their measurement rules on hover/focus; explanations no longer occupy a separate panel.
 
-Local polish after v0.5.0 adds inset, softly highlighted tabs and cached-first cloud loading. Inventory initially focuses its dialog surface instead of highlighting Close; Tab and controller navigation remain available. These refinements await the next requested Site publication.
+Local polish after v0.5.0 adds inset, softly highlighted tabs and cached-first cloud loading. Inventory initially focuses its dialog surface instead of highlighting Close; Tab and controller navigation remain available. These refinements are included in the v0.5.1 release source.
 
 `/chronicle.html` is an authored sample with three characters, one archived. It never reads saves, starts gameplay or calls a server.
 

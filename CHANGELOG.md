@@ -1,5 +1,24 @@
 # Evergrow changelog
 
+## v0.5.1 — 2026-09-07T19:37:00Z
+
+### New
+
+- Sell multiple items together, with rarity shortcuts and animated gold rewards.
+- Journeys automatically follow the next recommendation; the nearest city is always available to pin.
+- Hover Chronicle achievements and statistics for compact explanations and progress.
+
+### Tweaks
+
+- Chests open on one E press; completed events release their treasure automatically.
+- Leaving an event clears it from active play. Return to resume regular trials; cursed chests bank cleared waves.
+- Prominent character stats now display whole numbers.
+
+### Fixes
+
+- Chronicle opens faster and has cleaner, better-spaced tabs.
+- Opening inventory no longer highlights the close button.
+
 ## v0.5.0 — 2026-09-07T18:42:00Z
 
 ### New
