@@ -1,7 +1,7 @@
 import { eventRecipe } from './event-recipes.ts';
 import { advanceWaves } from './wave-system.ts';
 import { alertEnemy } from './enemy-state.ts';
-import { type EventState, type EventSite, type EventChoice, EVENT_RULES, syncTrial } from './poi-content.ts';
+import { type EventState, type EventSite, type EventChoice, EVENT_RULES, syncTrial, interruptTrial } from './poi-content.ts';
 import type { Enemy, Input, Player, WorldQuery } from './model.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { isSpawnHidden, SPAWN_VISIBILITY_MARGIN, type SpawnExclusion } from './spawn-visibility.ts';
@@ -41,18 +41,17 @@ export interface TrialContext {
 export function advanceTrial(context: TrialContext): void {
   const { state, player, enemies, world, view } = context;
   syncTrial(state, enemies);
-  const trial = state.trial;
-  if (!trial)
-    return;
-  const site = state.sites[trial.siteId];
-  const far = player.dead || world.isSanctuary?.(player.x, player.y) || Math.hypot(player.x - site.x, player.y - site.y) > EVENT_RULES.trialRadius;
-  if (far && eventRecipe(site)?.mode==='timed') { finishTrial(context); return; }
-  if (far) {
-    for (let i = enemies.length - 1; i >= 0; i--)
-      if (enemies[i].campId === `event:${site.id}` && view && isSpawnHidden(enemies[i].x, enemies[i].y, view, enemies[i].radius))
-        enemies.splice(i, 1);
-    return;
+  const active=state.trial,site=active?state.sites[active.siteId]:undefined;
+  if(site&&(player.dead||world.isSanctuary?.(player.x,player.y)||Math.hypot(player.x-site.x,player.y-site.y)>EVENT_RULES.abandonRadius))
+    interruptTrial(state,enemies);
+  // Park only hidden survivors. Visible opponents keep fighting and retain their
+  // identity; syncing parked trials preserves any later wounds or kills.
+  if(view)for(let i=enemies.length-1;i>=0;i--){
+    const enemy=enemies[i],record=enemy.campId?.startsWith('event:')?state.sites[enemy.campId.slice(6)]:undefined;
+    if(record?.phase==='paused'&&isSpawnHidden(enemy.x,enemy.y,view,enemy.radius))enemies.splice(i,1);
   }
+  const trial=state.trial;
+  if(!trial||!site)return;
   if (!view)
     return;
   const recipe = eventRecipe(site)!;

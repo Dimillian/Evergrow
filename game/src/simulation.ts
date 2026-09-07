@@ -17,9 +17,7 @@ import { dungeonFromState, updateDungeon } from './dungeon-runtime.ts';
 import type { DungeonFloor } from './dungeon.ts';
 import { updateWarden } from './dungeon-boss.ts';
 import { updateWarbands } from './warband.ts';
-import { eventRecipe } from './event-recipes.ts';
-import { finishTrial } from './poi-runtime.ts';
-import { freshEvents, syncTrial, EVENT_RULES } from './poi-content.ts';
+import { interruptTrial, freshEvents, syncTrial, EVENT_RULES } from './poi-content.ts';
 import { EventChannel, advanceTrial } from './poi-runtime.ts';
 import { GROUND_EFFECT_RULES } from './skill-execution-content.ts';
 import { freshTravel, PortalChannel, PORTAL_RULES } from './travel.ts';
@@ -362,7 +360,7 @@ export class Simulation {
     this.collectGroundItems();
     syncTrial(this.eventState, this.enemies);
     if (this.player.dead) {
-      if(this.eventState.trial&&eventRecipe(this.eventState.sites[this.eventState.trial.siteId])?.mode==='timed') finishTrial({state:this.eventState,player:this.player,enemies:this.enemies,world:this.world,view:this.spawnExclusion,spawn:()=>null});
+      interruptTrial(this.eventState,this.enemies);
       // A death may clear input midway through this tick; freeze its final poses.
       this.travel.returnTo = null; this.portal.cancel(); this.eventChannel.cancel();
       if (this.player.character.blessing) { delete this.player.character.blessing; refreshCharacter(this.player); }

@@ -1,4 +1,4 @@
-import { interruptTimedTrial } from './poi-content.ts';
+import { interruptTrial } from './poi-content.ts';
 import { treasureLanding } from './treasure-flight.ts';
 import { stageJourneyCompletion } from './journey-rewards.ts';
 import type { Simulation } from './simulation.ts';
@@ -63,7 +63,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
             next = createDungeonRun(entrance);
             state.runs.push(next);
         }
-        interruptTimedTrial(checkpoint.events!,contents.actors);
+        interruptTrial(checkpoint.events!,contents.actors);
         state.surface = contents;
         state.surfaceX = p.x;
         state.surfaceY = p.y;

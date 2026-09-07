@@ -24,6 +24,7 @@ export function journeyObjective(goal:JourneyGoal,facts:JourneyFacts):string {
   if(goal.kind==='town')return 'Reach the settlement';
   if(goal.kind==='frontier')return 'Follow the road into new territory';
   const record=facts.events.sites[goal.id];
+  if(record?.phase==='paused')return 'Resume the trial';
   if(record?.phase==='completed')return 'Claim the reward';
   if(record?.phase==='active'){
     const trial=facts.events.trial;

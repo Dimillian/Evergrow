@@ -7,7 +7,7 @@ import { eventRecipe } from '../src/event-recipes.ts';
 import { advanceTrial } from '../src/poi-runtime.ts';
 import { eventRewards } from '../src/poi-rewards.ts';
 import { validEvents } from '../src/poi-validation.ts';
-import { blessingChoices, syncTrial, type EventSite } from '../src/poi-content.ts';
+import { EVENT_RULES, eventLabel, blessingChoices, syncTrial, type EventSite } from '../src/poi-content.ts';
 import { CharacterSession } from '../src/character-session.ts';
 import { CharacterRepository } from '../src/character-storage.ts';
 import { SAVE_MAX_CODE_UNITS } from '../src/character-save.ts';
@@ -257,10 +257,12 @@ test('trial actors exceed the former population limit and suspend without reward
   sim.setSpawnExclusion({ x: 3500, y: -400, width: 1000, height: 800 });
   tick(sim, .6);
   assert.equal(sim.enemies.length, 0);
-  assert.equal(sim.eventState.trial!.guardians[1].hp, 7);
+  assert.equal(sim.eventState.trial,null);
+  assert.equal(sim.eventState.sites[grave.id].pausedTrial!.guardians[1].hp, 7);
   assert.equal(sim.player.xp, xp);
   assert.equal(sim.kills, kills);
   sim.player.x = 0;
+  assert.ok((await executeEvent(sim,grave,null,persist)).ok);
   sim.setSpawnExclusion(view);
   tick(sim, .6);
   assert.equal(sim.enemies.length, 0, 'survivors cannot reappear inside padded camera coverage');
@@ -336,4 +338,49 @@ test('suspended wounded guardians resume their exact clustered positions even be
   tick(sim, .6);
   assert.ok(sim.enemies.every(e => e.state === 'chase' && e.x < 700));
   assert.equal(sim.player.hp, sim.player.maxHp, 'ritual tracking is not permission to attack through the wall');
+});
+
+
+test('leaving the event clears its slot independently of zoom and resumes only with an explicit interaction',async()=>{
+  const {sim,persist}=await setup(),grave=site('graveyard');
+  assert.ok((await executeEvent(sim,grave,null,persist)).ok);
+  const actor=sim.spawnEnemy('stalker',100,30,'normal',{campId:`event:${grave.id}`,memberId:'0',lootSeed:1})!;
+  // Preserve the generated member's source contract while staging a visible wounded survivor.
+  const g=sim.eventState.trial!.guardians[0];actor.kind=g.kind;actor.hp=g.hp=7;g.admitted=true;
+  sim.player.x=EVENT_RULES.abandonRadius-1;sim.player.y=grave.y;
+  const advance=(view:{x:number;y:number;width:number;height:number})=>advanceTrial({state:sim.eventState,player:sim.player,enemies:sim.enemies,world,view,spawn:()=>null,dt:0});
+  // Keep all candidate spawn positions blocked to inspect departure without admitting new members.
+  const context={state:sim.eventState,player:sim.player,enemies:sim.enemies,world:{...world,blocked:()=>true},view:{x:-5000,y:-5000,width:10000,height:10000},spawn:()=>null,dt:0};
+  advanceTrial(context);assert.ok(sim.eventState.trial);
+  sim.player.x=EVENT_RULES.abandonRadius+1;advanceTrial(context);
+  assert.equal(sim.eventState.trial,null);assert.equal(sim.eventState.sites[grave.id].phase,'paused');
+  assert.equal(sim.enemies.length,1,'visible survivors must not disappear');
+  assert.equal(sim.player.xp,0);assert.equal(sim.eventState.sites[grave.id].bonusGranted,false);
+  actor.hp=3;syncTrial(sim.eventState,sim.enemies);
+  assert.equal(sim.eventState.sites[grave.id].pausedTrial!.guardians[0].hp,3);
+  advance({x:3000,y:3000,width:500,height:400});assert.equal(sim.enemies.length,0);
+  assert.ok(validEvents(sim.eventState));
+  const saved=sim.captureCheckpoint();sim.restoreCheckpoint(saved);
+  sim.player.x=0;advanceTrial({...context,state:sim.eventState,enemies:sim.enemies,player:sim.player});
+  assert.equal(sim.eventState.trial,null);assert.equal(eventLabel(grave,sim.eventState,false),'Resume trial');
+  const second=site('quarry',2);assert.ok((await executeEvent(sim,second,null,persist)).ok);
+  assert.equal((await executeEvent(sim,grave,null,persist)).ok,false,'resuming cannot overwrite another active trial');
+  sim.player.x=EVENT_RULES.abandonRadius+1;advanceTrial({...context,state:sim.eventState,enemies:sim.enemies,player:sim.player});
+  sim.player.x=0;const before=sim.captureCheckpoint();
+  assert.equal((await executeEvent(sim,grave,null,()=>({ok:false,message:'Save failed'}))).ok,false);
+  assert.deepEqual(sim.captureCheckpoint(),before);
+  assert.ok((await executeEvent(sim,grave,null,persist)).ok);
+  assert.equal(sim.captureCheckpoint().events!.trial!.guardians[0].hp,3);assert.equal(sim.eventState.sites[grave.id].pausedTrial,undefined);
+  assert.ok(validEvents(sim.eventState));
+});
+test('departing cursed challenges banks only cleared waves and never parks a running timer',async()=>{
+  const {sim,persist}=await setup(),chest=site('cursedChest');
+  assert.ok((await executeEvent(sim,chest,null,persist)).ok);
+  const trial=sim.eventState.trial!;trial.wave=trial.cleared=1;
+  trial.guardians.filter(g=>g.wave===0).forEach(g=>{g.hp=0;g.dead=g.admitted=true;});
+  sim.player.x=EVENT_RULES.abandonRadius+1;sim.player.y=chest.y;
+  advanceTrial({state:sim.eventState,player:sim.player,enemies:sim.enemies,world,view:null,spawn:()=>null});
+  assert.equal(sim.eventState.trial,null);assert.equal(sim.eventState.sites[chest.id].phase,'completed');
+  assert.equal(sim.eventState.sites[chest.id].wavesCleared,1);assert.equal(sim.eventState.sites[chest.id].pausedTrial,undefined);
+  assert.equal(sim.player.xp,0);assert.ok(validEvents(sim.eventState));
 });

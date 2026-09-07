@@ -16,7 +16,7 @@ export function validEvents(v: unknown): v is EventState {
     if (!object(r) || !text(id, 180) || !id.startsWith('site:') && !id.startsWith('reliquary:') || r.id !== id
       || !isEventKind(String(r.kind)) || !text(r.name, 100)
       || !number(r.x, -4e7, 4e7) || !number(r.y, -4e7, 4e7) || !integer(r.level, 1, 1e6) || !integer(r.seed, 0, 4294967295)
-      || !Object.hasOwn(BIOMES, String(r.biome)) || !['active', 'completed', 'claimed'].includes(String(r.phase))
+      || !Object.hasOwn(BIOMES, String(r.biome)) || !['active', 'paused', 'completed', 'claimed'].includes(String(r.phase))
       || !(r.choice === null || ['goods', 'coin', ...Object.keys(BLESSINGS)].includes(String(r.choice)))
       || !integer(r.wavesCleared, 0, 20) || !integer(r.delivered, 0, 2047) || typeof r.bonusGranted !== 'boolean'
       || r.beaconTarget !== undefined && !validExplorationPOI(r.beaconTarget))
@@ -25,20 +25,28 @@ export function validEvents(v: unknown): v is EventState {
       return false;
     if(r.seals!==undefined&&(!Array.isArray(r.seals)||r.seals.length!==3||!r.seals.every(p=>object(p)&&number(p.x,-4e7,4e7)&&number(p.y,-4e7,4e7)&&Math.hypot(Number(p.x)-Number(r.x),Number(p.y)-Number(r.y))<=250)))return false;
     if(eventRecipe(r as unknown as EventState['sites'][string])?.mode==='seals'&&!r.seals)return false;
+    if(r.phase==='paused'){
+      if(!validTrial(r.pausedTrial,r as unknown as EventState['sites'][string])||eventRecipe(r as unknown as EventState['sites'][string])?.mode==='timed')return false;
+    }else if(r.pausedTrial!==undefined)return false;
     const reward = eventRewards(r as unknown as EventState['sites'][string]);
     const mask = (1 << reward.items.length) - 1 | (reward.gold ? 1 << reward.items.length : 0);
     if ((Number(r.delivered) & ~mask) !== 0 || r.phase === 'claimed' && (r.delivered !== mask || !r.bonusGranted)
-      || r.phase === 'active' && (r.delivered !== 0 || r.bonusGranted))
+      || (r.phase === 'active'||r.phase==='paused') && (r.delivered !== 0 || r.bonusGranted))
       return false;
   }
   const active = Object.values(v.sites).filter(r => object(r) && r.phase === 'active');
   if (v.trial === null)
     return active.length === 0;
   const t = v.trial;
-  if (!object(t) || !text(t.siteId, 180) || active.length !== 1 || !object(v.sites[t.siteId]) || active[0] !== v.sites[t.siteId]
+  if(!object(t)||!text(t.siteId,180)||active.length!==1||!object(v.sites[t.siteId])||active[0]!==v.sites[t.siteId])return false;
+  return validTrial(t,v.sites[t.siteId] as EventState['sites'][string]);
+}
+function validTrial(value:unknown,site:EventState['sites'][string]):boolean {
+  const t=value;
+  if(!object(t)||t.siteId!==site.id
     || !integer(t.wave,0,19) || !integer(t.cleared,0,20) || !number(t.elapsed,0,1e9) || !number(t.rest,0,2) || !number(t.held,0,12)
     || typeof t.started!=='boolean'||t.finished!==false||typeof t.sealReady!=='boolean'||!Array.isArray(t.guardians)) return false;
-  const site=v.sites[t.siteId] as EventState['sites'][string],recipe=eventRecipe(site);
+  const recipe=eventRecipe(site);
   if(!recipe||Number(t.wave)>=recipe.rules.count||t.cleared!==t.wave||recipe.rules.duration&&Number(t.elapsed)>recipe.rules.duration)return false;
   const expected=recipeMembers(site);
   if(t.guardians.length!==expected.length)return false;

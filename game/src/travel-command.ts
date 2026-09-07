@@ -1,4 +1,4 @@
-import { interruptTimedTrial } from './poi-content.ts';
+import { interruptTrial } from './poi-content.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import type { Simulation } from './simulation.ts';
 import { portalDepartureProblem, portalLanding, withinPortalReach, type PortalAnchor } from './travel.ts';
@@ -20,12 +20,12 @@ export async function executePortalTravel(sim: Simulation, anchor: PortalAnchor,
     sim.portal.cancel(); return { ok: false, message: returning ? 'Return point blocked.' : 'Town arrival blocked.' };
   }
   const checkpoint = sim.captureCheckpoint();
-  if(!returning)interruptTimedTrial(checkpoint.events!,checkpoint.actors??[]);
+  if(!returning)interruptTrial(checkpoint.events!,checkpoint.actors??[]);
   checkpoint.x = point.x; checkpoint.y = point.y;
   checkpoint.travel = { ...sim.travel, returnTo: returning ? null : { x: p.x, y: p.y, town: anchor.band } };
   const result = await persist(checkpoint);
   if (!result.ok) { sim.portal.cancel(); return result; }
-  if(!returning)interruptTimedTrial(sim.eventState,sim.enemies);
+  if(!returning)interruptTrial(sim.eventState,sim.enemies);
   sim.travel = checkpoint.travel; sim.relocate(point.x, point.y);
   return { ok: true, message: returning ? 'Returned to your expedition.' : anchor.name };
 }

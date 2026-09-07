@@ -22,9 +22,10 @@ export function eventProblem(sim: Simulation, site: EventSite, choice: EventChoi
   if (!focusEvent([site], sim.player, sim.world))
     return 'Move closer.';
   const record = sim.eventState.sites[site.id];
-  if(record?.phase==='active'&&sim.eventState.trial?.sealReady&&!focusEvent([{...record,...sealPoint(record,sim.eventState.trial.wave)}],sim.player,sim.world))return 'Move to the seal.';
+  if(record?.phase==='active'&&sim.eventState.trial?.siteId===site.id&&sim.eventState.trial.sealReady&&!focusEvent([{...record,...sealPoint(record,sim.eventState.trial.wave)}],sim.player,sim.world))return 'Move to the seal.';
   if (eventClaimed(sim.eventState, site.id))
     return 'Already claimed.';
+  if(record?.phase==='paused'&&sim.eventState.trial)return 'Finish the active trial.';
   if (record?.phase === 'active' && !(sim.eventState.trial?.siteId===site.id&&sim.eventState.trial.sealReady))
     return 'Defeat the guardians.';
   if (site.kind === 'camp' && sim.getCampState(site.id) !== 'cleared')
@@ -54,7 +55,8 @@ async function commitEvent(sim: Simulation, site: EventSite, choice: EventChoice
   const existing = state.sites[site.id], bonusAlreadyGranted = existing?.bonusGranted ?? false;
   const record: EventRecord = existing ?? { ...site, phase: 'completed', choice, delivered: 0, wavesCleared: 0, bonusGranted: false };
   state.sites[site.id] = record;
-  if (existing?.phase==='active'&&state.trial?.sealReady) {
+  if(existing?.phase==='paused'){state.trial=existing.pausedTrial!;delete existing.pausedTrial;existing.phase='active';}
+  else if (existing?.phase==='active'&&state.trial?.sealReady) {
     const trial=state.trial;trial.sealReady=false;trial.cleared++;trial.wave++;
     const r=eventRecipe(existing)!;
     if(trial.wave>=r.rules.count){existing.wavesCleared=trial.cleared;existing.phase='completed';state.trial=null;}

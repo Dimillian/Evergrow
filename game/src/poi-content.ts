@@ -28,7 +28,8 @@ export interface EventSite {
   level: number;
 }
 export interface EventRecord extends EventSite {
-  phase: 'active' | 'completed' | 'claimed';
+  phase: 'active' | 'paused' | 'completed' | 'claimed';
+  pausedTrial?: Trial;
   choice: EventChoice | null;
   delivered: number;
   wavesCleared: number;
@@ -58,7 +59,7 @@ export interface EventState {
   sites: Record<string, EventRecord>;
   trial: Trial | null;
 }
-export const EVENT_RULES = Object.freeze({ reach: 78, channel: 1, beaconChannel: 2, blessingDuration: 90, trialRadius: 1800 });
+export const EVENT_RULES = Object.freeze({ reach: 78, channel: 1, beaconChannel: 2, blessingDuration: 90, trialRadius: 1800, abandonRadius: 700 });
 export const freshEvents = (): EventState => ({ claimed: [], sites: {}, trial: null });
 export const BLESSINGS: Readonly<Record<BlessingKind, {
   name: string;
@@ -86,6 +87,7 @@ export function eventLabel(site: Pick<EventSite, 'id' | 'kind'>, state: EventSta
     return site.kind === 'watchtower' ? 'Beacon lit' : 'Claimed';
   if (record?.phase === 'completed')
     return 'Reward waiting';
+  if (record?.phase === 'paused') return 'Resume trial';
   if (record?.phase === 'active') {
     const trial = state.trial;
     if (!trial || trial.siteId !== site.id)
@@ -115,20 +117,13 @@ export function focusEvent(sites: readonly EventSite[], player: Pick<Player, 'x'
     .sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y))[0];
 }
 export function syncTrial(state: EventState, enemies: readonly Enemy[]): void {
-  const trial = state.trial;
-  if (!trial)
-    return;
-  const actors=new Map(enemies.filter(e=>e.campId===`event:${trial.siteId}`).map(e=>[e.campMemberId,e]));
-  trial.guardians.forEach((g, i) => {
-    const actor = actors.get(String(i));
-    if (actor) {
-      g.hp = actor.hp;
-      g.x = actor.x;
-      g.y = actor.y;
-      g.dead = actor.state === 'dead';
-    }
-  });
-
+  // Visit live actors only; distant parked trials require no per-tick work.
+  for(const actor of enemies){
+    if(!actor.campId?.startsWith('event:'))continue;
+    const id=actor.campId.slice(6),trial=state.trial?.siteId===id?state.trial:state.sites[id]?.pausedTrial;
+    const guardian=trial?.guardians[Number(actor.campMemberId)];
+    if(guardian){guardian.hp=actor.hp;guardian.x=actor.x;guardian.y=actor.y;guardian.dead=actor.state==='dead';}
+  }
 }
 
 export function eventClaimed(state: EventState, id: string): boolean {
@@ -152,10 +147,10 @@ export function eventInteractionSites(sites: readonly EventSite[],state:EventSta
   return [...sites.filter(s=>s.id!==site.id),{...site,...point}];
 }
 
-/** Bank timed challenges in the same durable checkpoint as a location change. */
-export function interruptTimedTrial(state:EventState,actors:{campId?:string;memberId?:string;campMemberId?:string}[]):void {
+/** Release the active slot: bank timed scores, or park exact finite-trial progress. */
+export function interruptTrial(state:EventState,actors:{campId?:string;memberId?:string;campMemberId?:string}[]):void {
   const trial=state.trial;if(!trial)return;const site=state.sites[trial.siteId];
-  if(eventRecipe(site)?.mode!=='timed')return;
+  if(eventRecipe(site)?.mode!=='timed'){site.phase='paused';site.pausedTrial=trial;state.trial=null;return;}
   site.wavesCleared=trial.cleared;site.phase='completed';
   for(const actor of actors)if(actor.campId===`event:${site.id}`){delete actor.campId;delete actor.memberId;delete actor.campMemberId;}
   state.trial=null;
