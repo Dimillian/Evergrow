@@ -17,10 +17,7 @@ export function drawWildernessDetail(c: CanvasRenderingContext2D, d: SiteDecor, 
         line(c, [[-20, -60], [-8, -78], [12, -80], [28, -61]], '#b2b59a', 1.3);
         weatherStone(c, [[-21, -57], [-8, -78], [12, -80], [28, -61], [17, -54], [3, -64], [-11, -52]], d.seed);
         line(c, [[-25, 2], [-22, -11], [-24, -24]], '#8e987454', 3);
-        c.fillStyle = '#101a16';
-        c.beginPath();
-        c.ellipse(0, 3, 21, 7, 0, 0, Math.PI * 2);
-        c.fill();
+        groundShade(c, 0, 3, 30, 9, '#14201b70');
     }
     else if (d.kind === 'cottage') {
         polygon(c, [[-40, 3], [-39, -45], [31, -44], [42, 7], [0, 20]], '#414c45');
@@ -42,20 +39,43 @@ export function drawWildernessDetail(c: CanvasRenderingContext2D, d: SiteDecor, 
         line(c, [[25, -41], [33, -2]], '#91836b', 3);
     }
     else if (d.kind === 'nest') {
-        c.fillStyle = '#131b1b';
-        c.beginPath();
-        c.ellipse(0, 1, 36, 19, 0, 0, Math.PI * 2);
-        c.fill();
-        for (let i = 0; i < 30; i++) {
-            const a = random() * Math.PI * 2, r = 22 + random() * 12, x = Math.cos(a) * r, y = Math.sin(a) * r * .5;
-            line(c, [[x - 8, y - 3], [x + 9, y + 2]], i % 3 ? '#625447' : '#938369', 1.5);
+        // A shallow leaf-lined hollow, with a broken rim rather than a cut-out disk.
+        groundShade(c, 0, 3, 44, 24, '#20241bd0');
+        groundShade(c, -2, 1, 27, 14, '#101b1ba0');
+        const litter = ['#514c37', '#645b42', '#706448', '#474f36', '#807151'];
+        for (let i = 0; i < 64; i++) {
+            const a = random() * Math.PI * 2, r = 20 + random() * 17;
+            const x = Math.cos(a) * r, y = Math.sin(a) * r * .52;
+            const size = 2 + random() * 4, lean = random() * 3 - 1.5;
+            polygon(c, [[x-size,y], [x+lean,y-size*.55], [x+size,y+1], [x-lean,y+size*.4]], litter[i % litter.length]);
         }
-        for (const x of [-12, 0, 13]) {
-            c.fillStyle = '#a0a48a';
+        // Short curved twigs follow the bowl, each with its own angle and length.
+        for (let i = 0; i < 28; i++) {
+            const a = random() * Math.PI * 2, r = 24 + random() * 11, span = .12 + random() * .24;
             c.beginPath();
-            c.ellipse(x, -4, 6, 9, .3, 0, Math.PI * 2);
-            c.fill();
-            line(c, [[x - 2, -10], [x + 2, -5], [x - 1, -2]], '#526158', .8);
+            c.moveTo(Math.cos(a-span)*r, Math.sin(a-span)*r*.5);
+            c.quadraticCurveTo(Math.cos(a)*(r+2), Math.sin(a)*(r+2)*.5-1, Math.cos(a+span)*r, Math.sin(a+span)*r*.5);
+            c.strokeStyle = i % 4 ? '#6a5942' : '#8d7956';
+            c.lineWidth = .7 + random() * .8; c.stroke();
+        }
+        // Unevenly nestled eggs: warm shells, soft volume and small mottled marks.
+        for (const [x, y, tilt] of [[-10, -2, -.35], [2, -6, .15], [13, 0, .5]]) {
+            const h = 7 + random() * 2;
+            groundShade(c, x+1, y+3, 9, 4, '#15201bcc');
+            c.save(); c.translate(x, y-3); c.rotate(tilt); c.beginPath();
+            c.ellipse(0, 0, 5.5, h, 0, 0, Math.PI*2); c.clip();
+            const shell = c.createLinearGradient(-5, -h, 5, h);
+            shell.addColorStop(0, '#c0b795'); shell.addColorStop(.45, '#998f70'); shell.addColorStop(1, '#5d624e');
+            c.fillStyle = shell; c.fillRect(-6, -h, 12, h*2);
+            for (let fleck = 0; fleck < 8; fleck++) {
+                c.fillStyle = '#5c604744'; c.fillRect((random()-.5)*10, (random()-.5)*h*1.7, .7+random(), .7);
+            }
+            c.restore();
+        }
+        // A little foreground moss embeds the shells into the rim.
+        for (let i = 0; i < 12; i++) {
+            const x = (random()-.5)*48, y = 8+random()*6;
+            line(c, [[x-2,y+1], [x,y-1], [x+3,y]], i%2 ? '#626348' : '#50583c', 1.2);
         }
     }
     else if (d.kind === 'crystal') {
@@ -84,4 +104,12 @@ export function drawWildernessDetail(c: CanvasRenderingContext2D, d: SiteDecor, 
         line(c, [[-36, -8], [36, -13]], '#46524e', 5);
         line(c, [[-36, -25], [36, -20]], '#7b7961', 3);
     }
+}
+
+/** Feathered contact shading; no opaque oval silhouette on the forest floor. */
+function groundShade(c: CanvasRenderingContext2D, x: number, y: number, rx: number, ry: number, color: string): void {
+    c.save(); c.translate(x,y); c.scale(1,ry/rx);
+    const shade=c.createRadialGradient(0,0,0,0,0,rx);
+    shade.addColorStop(0,color); shade.addColorStop(.45,color); shade.addColorStop(1,'#18201900');
+    c.fillStyle=shade; c.fillRect(-rx,-rx,rx*2,rx*2); c.restore();
 }
