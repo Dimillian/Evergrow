@@ -16,7 +16,7 @@ import { itemIconSVG } from './item-art.ts';
 import { parseWorldSeed } from './world-seed.ts';
 import './title-screen.css';
 export interface TitleActions {
-  chronicle?(): Promise<ChronicleLedger>;
+  chronicle?(onCached?:(ledger:ChronicleLedger)=>void): Promise<ChronicleLedger>;
   create(index: number, name: string, weapon: StarterLoadoutId, seed: number): void;
   continue(index: number): void; remove(index: number, expected: string | null): void;
   read?(index: number): Promise<SaveSlot>; source?(mode: SaveMode): void;
@@ -76,7 +76,7 @@ export class TitleScreen {
       if (button.dataset.source) { this.actions.source?.(button.dataset.source as SaveMode); return; }
       if (button.dataset.slot !== undefined) { this.choose(Number(button.dataset.slot)); return; }
       const action = button.dataset.action;
-      if (action === 'chronicle') { this.focus?.dispose(); this.focus = undefined; this.element.inert = true; void this.chronicle.open(() => actions.chronicle?.() ?? Promise.resolve(emptyChronicle())); return; }
+      if (action === 'chronicle') { this.focus?.dispose(); this.focus = undefined; this.element.inert = true; void this.chronicle.open(onCached => actions.chronicle?.(onCached) ?? Promise.resolve(emptyChronicle())); return; }
       if (action === 'changelog') { this.focus?.dispose(); this.focus = undefined; this.element.inert = true; this.changelog.open(); return; }
       if (action === 'retry') window.location.reload();
       if (action === 'continue') this.actions.continue(this.selected);

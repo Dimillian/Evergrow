@@ -37,3 +37,18 @@ test('early local Chronicle history is upgraded without blocking saves or losing
  await new Promise<void>((resolve,reject)=>{const open=factory.open('evergrow-local');open.onerror=()=>reject(open.error);open.onsuccess=()=>{const raw=open.result,tx=raw.transaction('characters','readwrite');tx.objectStore('characters').put(['chronicle',JSON.stringify(early)],'chronicle');tx.oncomplete=()=>{raw.close();resolve();};tx.onerror=()=>{raw.close();reject(tx.error);};};});
  const recovered=await db.execute({id:2,method:'chronicle'}) as ChronicleLedger;assert.equal(counts(recovered).kills,100);metric(r.checkpoint.chronicle,'kills',1);assert.ok((await db.execute({id:3,method:'write',index:0,expected:saved.token,record:r}) as SaveResult).ok);assert.equal(counts(await db.execute({id:4,method:'chronicle'}) as ChronicleLedger).kills,101);
  }finally{await db.close();}});
+
+test('compact cloud history shows pending progress but excludes conflicted recovery and preserves acknowledged history',async()=>{
+ const cache=openCloudCache(new IDBFactory(),'projection');
+ try{
+  const accepted=record('rowan',20);
+  let row=await cache.execute({kind:'adopt',index:0,expected:null,bundle:makeSaveBundle(accepted),base:1}) as CloudRow;
+  row=await cache.execute({kind:'write',index:0,expected:row.token,bundle:makeSaveBundle(record('rowan',80)),operation:'pending'}) as CloudRow;
+  assert.equal(counts(await cache.execute({kind:'chronicle'}) as ChronicleLedger).kills,80);
+  await cache.execute({kind:'conflict',index:0,base:1});
+  const view=await cache.execute({kind:'chronicle'}) as ChronicleLedger;
+  assert.equal(counts(view).kills,20);
+  assert.equal('bundle' in view,false);
+  assert.equal(counts(await cache.execute({kind:'read-history'}) as ChronicleLedger).kills,undefined,'viewing pending progress does not permanently merge it');
+ }finally{await cache.close();}
+});

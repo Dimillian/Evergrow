@@ -12,7 +12,7 @@ function currentRow(row:CloudRow):CloudRow {
   return row;
 }
 export type CacheCommand =
-  | {kind:'read-history'} | {kind:'history'; ledger:ChronicleLedger}
+  | {kind:'chronicle'} | {kind:'read-history'} | {kind:'history'; ledger:ChronicleLedger}
   | { kind: 'list' } | { kind: 'read'; index: number }
   | { kind: 'write'; index: number; expected: string | null; bundle: SaveBundle | null; operation: string }
   | { kind: 'upload'; index: number }
@@ -32,6 +32,17 @@ export function openCloudCache(factory: IDBFactory, account: string) {
     if ('index' in command && (!Number.isInteger(command.index) || command.index < 0 || command.index > 7)) throw new Error('Invalid slot.');
     if ((command.kind === 'write' || command.kind === 'adopt' || command.kind === 'resolve') && command.bundle && !decodeSaveBundle(JSON.stringify(command.bundle))) throw new Error('Invalid save file.');
     const db = await opened;
+    if(command.kind==='chronicle')return new Promise<ChronicleLedger>((resolve,reject)=>{
+      const tx=db.transaction(['slots','history'],'readonly');
+      const rows=tx.objectStore('slots').getAll(), stored=tx.objectStore('history').get('account');
+      tx.oncomplete=()=>{try{
+        const entries=(rows.result as CloudRow[]).map(currentRow);
+        let ledger=mergeChronicles(parseChronicleLedger(stored.result),...entries.map(row=>row.history??emptyChronicle()));
+        for(const row of entries)if(row.bundle&&!row.conflict)ledger=recordChronicle(ledger,row.bundle.character);
+        resolve(ledger);
+      }catch(error){reject(error);}};
+      tx.onerror=tx.onabort=()=>reject(tx.error??new Error('Chronicle unavailable.'));
+    });
     if(command.kind==='read-history'||command.kind==='history')return new Promise<ChronicleLedger>((resolve,reject)=>{
       const tx=db.transaction('history',command.kind==='history'?'readwrite':'readonly'),store=tx.objectStore('history'),read=store.get('account');let ledger:ChronicleLedger;
       read.onsuccess=()=>{try{ledger=parseChronicleLedger(read.result);if(command.kind==='history'){ledger=mergeChronicles(ledger,parseChronicleLedger(JSON.stringify(command.ledger)));store.put(JSON.stringify(ledger),'account');}}catch(error){tx.abort();reject(error);}};

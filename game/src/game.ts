@@ -188,7 +188,7 @@ export class Game {
       }));
       this.chronicle = this.lifetime.own(new ChroniclePanel(this.shell.panelMount,()=>this.resume()));
       this.titleScreen = this.lifetime.own(new TitleScreen(this.shell.titleMount, {
-        chronicle: () => this.saveClient.chronicle(),
+        chronicle: onCached => this.saveClient.chronicle(onCached),
         create: (index, name, weapon, seed) => this.editNewCharacter(index, name, weapon, seed),
         continue: index => this.continueCharacter(index), remove: (index, expected) => this.deleteCharacter(index, expected),
         read: index => this.saveClient.read(index), source: mode => this.selectSaveSource(mode),
@@ -218,7 +218,7 @@ export class Game {
         arrived: () => this.finishTravel(), notify: message => this.notify(message),
       });
       this.panels = new PanelCoordinator({
-        chronicle:{open:()=>{void this.chronicle.open(async()=>{await this.saveCharacter(true);return this.saveClient.chronicle();},this.session.active?.record.id);},close:()=>this.chronicle.close(false)},
+        chronicle:{open:()=>{void this.chronicle.open(async onCached=>{await this.saveCharacter(true);return this.saveClient.chronicle(onCached);},this.session.active?.record.id);},close:()=>this.chronicle.close(false)},
         journeys:{open:()=>this.journeys.panel.open(this.journeys.selected),close:()=>this.journeys.panel.close()},
         event: { open: () => { if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.activeEvent = null; this.activeDungeonEntrance = null; } },
         service: { open: () => { if (this.activeNPC) this.servicePanel.open(this.sim.player, this.activeNPC); }, close: () => { this.servicePanel.close(); this.activeNPC = null; } },

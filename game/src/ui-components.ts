@@ -30,7 +30,7 @@ export function trapDialogFocus(container: HTMLElement, options: DialogFocusOpti
   const controls = () => [...container.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(available);
   const focusInside = () => {
     const requested = typeof options.initialFocus === 'function' ? options.initialFocus() : options.initialFocus;
-    const target = requested && container.contains(requested) && available(requested)
+    const target = requested && container.contains(requested) && (requested === container || available(requested))
       ? requested : controls()[0] ?? container;
     redirecting = true;
     target.focus({ preventScroll: true });

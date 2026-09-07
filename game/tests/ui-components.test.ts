@@ -123,3 +123,13 @@ test('an already-aborted dialog lifetime never takes focus or mutates its contai
   assert.equal(doc.activeElement, previous);
   assert.equal(dialog.hasAttribute('tabindex'), false);
 });
+
+test('dialog can initially focus its surface without selecting Close, while Tab still reaches controls',()=>{
+  const doc=new FocusDocument(),dialog=new FocusElement(doc,false),close=new FocusElement(doc),last=new FocusElement(doc);
+  dialog.append(close,last);
+  const handle=trapDialogFocus(dialog as unknown as HTMLElement,{initialFocus:dialog as unknown as HTMLElement,restoreFocus:false});
+  assert.equal(doc.activeElement,dialog);
+  press(dialog,'Tab');assert.equal(doc.activeElement,close);
+  dialog.focus();press(dialog,'Tab',true);assert.equal(doc.activeElement,last);
+  handle.dispose();
+});

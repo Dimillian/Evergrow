@@ -12,6 +12,8 @@ Published in v0.5.0 on 2026-09-07 with matching cloud client, API and additive D
 - Keyboard focus, controller A/B, LB/RB tab switching and right-stick scrolling use the shared UI controls. Small screens scroll within the panel.
 - No stat bonuses, currencies or rewards come from achievements, and no milestone popup feed competes with combat. Select a badge to see its requirement and recorded unlock date.
 
+Local polish after v0.5.0 adds inset, softly highlighted tabs and cached-first cloud loading. Inventory initially focuses its dialog surface instead of highlighting Close; Tab and controller navigation remain available. These refinements await the next requested Site publication.
+
 `/chronicle.html` is an authored sample with three characters, one archived. It never reads saves, starts gameplay or calls a server.
 
 ## Measurement
@@ -29,7 +31,7 @@ Existing saves contribute recorded kills, playtime and current level. Previously
 - Local writes update the character, revision and Chronicle ledger in one IndexedDB transaction. Deleting a slot archives its last accepted history. Stale/failed writes cannot alter history. The initial local preview's missing achievement index is reconstructed without deleting counters.
 - Cloud writes retain an account-owned history summary in the existing D1 slot row, including tombstones. Its compare-and-swap is the same publication boundary as the R2 checkpoint. A new authenticated `/api/cloud/chronicle` GET merges only that owner's accepted histories. Existing unindexed slots backfill recorded facts on read/write.
 - Account-scoped IndexedDB v2 retains fetched cloud history offline. Unacknowledged conflicting recovery is not merged into permanent account totals. Download/import creates a distinct branch when the player chooses to preserve that recovery.
-- No per-event network traffic. Chronicle travels with the existing 20-second local / 30-second cloud checkpoint cadence; opening it saves the current character and performs a single history read. Main-menu account history uses the same source selector as characters.
+- No per-event network traffic. Chronicle travels with the existing 20-second local / 30-second cloud checkpoint cadence; opening it saves the current character locally, shows a compact worker-built history projection immediately, then refreshes from one server history read. It never flushes the upload queue just to view statistics. Refreshing preserves the selected tab, character, focused control, detail and scroll position. Main-menu account history uses the same source selector as characters.
 - Local bounds: 256 source branches per portable character, 768 counter keys per source, 4,096 archived sources/characters per ledger. Counters clamp at JavaScript's safe integer ceiling. A malformed ledger aborts the transaction; errors distinguish validation/interruption from actual quota failure.
 
 ## Integration / checks

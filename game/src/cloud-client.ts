@@ -1,4 +1,4 @@
-import { emptyChronicle, mergeChronicles, recordChronicle, forkChronicle, type ChronicleLedger } from './chronicle.ts';
+import { forkChronicle, type ChronicleLedger } from './chronicle.ts';
 import type { CharacterSave } from './character-save.ts';
 import type { CharacterRepositoryPort, SaveResult, SaveSlot, SaveSummary } from './character-storage.ts';
 import type { ChartResult, ExplorationPersistence } from './exploration.ts';
@@ -61,14 +61,16 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
       const cached = local.find(c => c.index === index); return cached ? { index, token: cached.token, record: null, summary: cached.summary, state: cached.summary ? 'saved' : 'empty', pending: cached.dirty, conflict: cached.conflict } : { index, record: null, token: null, state: 'unavailable' };
     }); }
   }
-  async chronicle():Promise<ChronicleLedger> {
-    await this.flush();
-    const rows=await this.cache<CloudRow[]>({kind:'list'});
-    let history=mergeChronicles(await this.cache<ChronicleLedger>({kind:'read-history'}),...rows.map(r=>r.history??emptyChronicle()));
-    try { const remote=await this.api<ChronicleLedger>('chronicle');history=mergeChronicles(history,await this.cache<ChronicleLedger>({kind:'history',ledger:remote})); }
-    catch(error){this.failed(error);}
-    for(const row of rows)if(row.bundle&&!row.conflict)history=recordChronicle(history,row.bundle.character);
-    return history;
+  async chronicle(onCached?:(ledger:ChronicleLedger)=>void):Promise<ChronicleLedger> {
+    // A read must not flush the save outbox or wait for a network round trip to display.
+    const cached=await this.cache<ChronicleLedger>({kind:'chronicle'});
+    onCached?.(cached);
+    try {
+      const remote=await this.api<ChronicleLedger>('chronicle');
+      await this.cache({kind:'history',ledger:remote});
+      // Read again so a concurrent upload/conflict decision is respected.
+      return await this.cache<ChronicleLedger>({kind:'chronicle'});
+    } catch(error){this.failed(error);return cached;}
   }
   async read(index: number): Promise<SaveSlot> {
     const cached = await this.cache<CloudRow | null>({ kind: 'read', index });

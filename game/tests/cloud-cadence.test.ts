@@ -112,3 +112,36 @@ test('confirmed conflict deletion removes both branches without requiring a down
     });
   }
 });
+
+test('Chronicle displays local progress before the network responds without flushing saves',async t=>{
+  const old=Object.getOwnPropertyDescriptor(globalThis,'Worker');
+  Object.defineProperty(globalThis,'Worker',{value:BrowserWorker,configurable:true});
+  t.after(()=>{if(old)Object.defineProperty(globalThis,'Worker',old);else Reflect.deleteProperty(globalThis,'Worker');});
+  t.mock.timers.enable({apis:['setInterval']});
+  const {emptyChronicle,recordChronicle,chronicleValues}=await import('../src/chronicle.ts');
+  let respond!:(response:Response)=>void, requests=0;
+  t.mock.method(globalThis,'fetch',async (url:unknown,options:RequestInit)=>{
+    requests++;assert.equal(options.method,'GET','opening history never uploads a checkpoint');
+    assert.equal(url,'/api/cloud/chronicle');
+    return await new Promise<Response>(resolve=>{respond=resolve;});
+  });
+  const client=new CloudClient('chronicle-speed');t.after(()=>client.dispose());
+  const world={seed:7319,blocked:()=>false,move:(x:number,y:number,dx:number,dy:number)=>({x:x+dx,y:y+dy})};
+  const sim=new Simulation(world,{spawn:false});
+  const record:CharacterSave={version:4,id:'quick-history',name:'Rowan',createdAt:1,updatedAt:1,worldSeed:7319,worldVersion:WORLD_GENERATION_VERSION,checkpoint:sim.captureCheckpoint()};
+  record.checkpoint.chronicle!.sources[0].values.kills=42;
+  assert.ok((await client.write(0,record,null)).ok);
+  let shown=false,finished=false;
+  const loading=client.chronicle(cached=>{
+    assert.equal(chronicleValues(Object.values(cached.sources)).kills,42);
+    assert.equal(finished,false);shown=true;
+  }).then(ledger=>{finished=true;return ledger;});
+  await until(()=>shown&&!!respond);
+  assert.equal(finished,false,'cached content is usable while the server is pending');
+  respond(Response.json(recordChronicle(emptyChronicle(),record)));
+  assert.equal(chronicleValues(Object.values((await loading).sources)).kills,42);
+  assert.equal(requests,1);
+  assert.equal(client.status,'Saving…','history reads do not claim pending saves are synced');
+  t.mock.method(globalThis,'fetch',async()=>{throw new Error('Offline');});
+  assert.equal(chronicleValues(Object.values((await client.chronicle()).sources)).kills,42);
+});

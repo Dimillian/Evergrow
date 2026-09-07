@@ -172,7 +172,7 @@ export class InventoryPanel {
     this.element.hidden = false;
     this.refresh(player);
     if (!wasOpen) {
-      this.focus = trapDialogFocus(this.window, { signal: this.lifetime.signal, restoreFocus: false, initialFocus: () => this.element.querySelector('[data-close]') });
+      this.focus = trapDialogFocus(this.window, { signal: this.lifetime.signal, restoreFocus: false, initialFocus: this.window });
       this.animate();
     }
   }

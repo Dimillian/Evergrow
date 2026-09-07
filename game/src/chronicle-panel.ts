@@ -33,12 +33,31 @@ export class ChroniclePanel {
   this.element.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();this.close();}},{signal:this.life.signal});
  }
  get opened(){return !this.element.hidden;}
- async open(load:()=>Promise<ChronicleLedger>,selected='all') {
+ async open(load:(onCached:(ledger:ChronicleLedger)=>void)=>Promise<ChronicleLedger>,selected='all') {
   const revision=++this.revision;this.selected=selected;this.tab=0;this.group='All';this.element.hidden=false;
-  this.element.innerHTML=`<section class="ui-window chronicle-window" role="dialog" aria-modal="true" aria-label="Chronicle"><header class="ui-window-header"><h2 class="ui-title">Chronicle</h2><button class="ui-button ui-button--quiet" data-close>Close</button></header><p class="chronicle-loading" role="status">Loading…</p></section>`;
-  this.focus?.dispose();this.focus=trapDialogFocus(this.element,{signal:this.life.signal,restoreFocus:false,initialFocus:()=>this.element.querySelector('[data-close]')});
-  try {const ledger=await load();if(revision!==this.revision)return;this.ledger=ledger;if(selected!=='all'&&!ledger.characters[selected])this.selected='all';this.render();this.element.querySelector<HTMLElement>('[data-tab="0"]')?.focus();}
-  catch (error) {console.error('Chronicle could not open',error);if(revision===this.revision)this.element.querySelector('.chronicle-loading')!.textContent='History unavailable. Close and try again.';}
+  this.element.innerHTML=`<section class="ui-window chronicle-window" role="dialog" aria-modal="true" aria-label="Chronicle"><header class="ui-window-header"><h2 class="ui-title">Chronicle</h2><button class="ui-button ui-button--quiet ui-button--icon" data-close aria-label="Close Chronicle">${uiIcon('close')}</button></header><p class="chronicle-loading" role="status">Loading…</p></section>`;
+  this.focus?.dispose();this.focus=trapDialogFocus(this.element,{signal:this.life.signal,restoreFocus:false,initialFocus:this.element});
+  let shown=false;
+  const show=(ledger:ChronicleLedger,final=false)=>{
+    if(revision!==this.revision)return;
+    if(!final&&!Object.keys(ledger.characters).length)return;
+    if(shown&&JSON.stringify(this.ledger)===JSON.stringify(ledger)&&(this.selected==='all'||ledger.characters[this.selected]))return;
+    const active=document.activeElement as HTMLElement|null;
+    const focusKey=['data-tab','data-group','data-character','data-achievement','data-close'].find(key=>active?.hasAttribute(key));
+    const focusValue=focusKey?active!.getAttribute(focusKey):null;
+    const scroll=this.element.querySelector('.chronicle-content')?.scrollTop??0;
+    const detail=this.element.querySelector<HTMLElement>('.chronicle-detail')?.dataset.achievement;
+    this.ledger=ledger;
+    if(final&&this.selected!=='all'&&!ledger.characters[this.selected])this.selected='all';
+    this.render();
+    if(detail)this.detail(detail);
+    this.element.querySelector('.chronicle-content')!.scrollTop=scroll;
+    const target=focusKey?[...this.element.querySelectorAll<HTMLElement>(`[${focusKey}]`)].find(el=>el.getAttribute(focusKey)===focusValue):null;
+    (target??this.element).focus({preventScroll:true});
+    shown=true;
+  };
+  try {show(await load(ledger=>show(ledger)),true);}
+  catch (error) {console.error('Chronicle could not open',error);if(revision===this.revision&&!shown)this.element.querySelector('.chronicle-loading')!.textContent='History unavailable. Close and try again.';}
  }
  close(notify=true){if(!this.opened)return;this.revision++;this.element.hidden=true;this.focus?.dispose();this.focus=undefined;this.controller.clear();if(notify)this.onClose();}
  private sources():ChronicleSource[]{const c=this.ledger.characters[this.selected];return c?c.sources.map(id=>this.ledger.sources[id]).filter(Boolean):Object.values(this.ledger.sources);}
@@ -63,7 +82,7 @@ export class ChroniclePanel {
   const breakdown:[string,string][]=[['enemy:','Enemy families'],['rank:','Enemy ranks'],['damage:','Damage by element'],['skillDamage:','Damage by skill'],['skillUses:','Skill usage'],['items:','Equipment rarity'],['material:','Equipment materials'],['itemKind:','Equipment types'],['seen:biome:','Biomes visited'],['place:','Discoveries'],['event:','Events']];
   return `<div class="chronicle-stat-grid">${groups.join('')}${breakdown.filter(([prefix])=>Object.keys(v).some(k=>k.startsWith(prefix))).map(([prefix,title])=>`<section class="chronicle-stat-group"><h3>${title}</h3><dl>${Object.entries(v).filter(([k])=>k.startsWith(prefix)).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<div><dt>${esc(label(k.slice(prefix.length)))}</dt><dd>${prefix==='seen:biome:'?'Visited':number(n)}</dd></div>`).join('')}</dl></section>`).join('')}</div>`;
  }
- private detail(id:string){const a=ACHIEVEMENTS.find(a=>a.id===id);if(!a)return;const v=chronicleValues(this.sources()),tier=achievementTier(a,v),at=this.unlocks()[id+':'+tier],el=this.element.querySelector<HTMLElement>('.chronicle-detail')!;el.hidden=false;el.innerHTML=`${badge(a,tier)}<div><strong>${a.name}</strong><p>${a.description}</p><small>${at?`Earned ${new Date(at).toLocaleDateString()}`:tier?'Earned across your characters':`Next milestone: ${number(a.tiers[tier])}`}</small></div>`;}
- updateGamepad(pad:GamepadInput,now:number){if(!this.opened)return false;if(pad.pressed.has(PAD.dodge)||pad.pressed.has(PAD.pause))this.close();else{this.controller.update(this.element,pad,now,{switchTab:d=>{this.tab=(this.tab+d+tabs.length)%tabs.length;this.render();this.element.querySelector<HTMLElement>(`[data-tab="${this.tab}"]`)?.focus();}});const dt=this.lastTime?Math.min(.05,(now-this.lastTime)/1000):0;if(Math.abs(pad.aim.y)>.2)this.element.querySelector('.chronicle-content')!.scrollTop+=pad.aim.y*dt*550;}this.lastTime=now;return true;}
+ private detail(id:string){const a=ACHIEVEMENTS.find(a=>a.id===id);if(!a)return;const v=chronicleValues(this.sources()),tier=achievementTier(a,v),at=this.unlocks()[id+':'+tier],el=this.element.querySelector<HTMLElement>('.chronicle-detail')!;el.hidden=false;el.dataset.achievement=id;el.innerHTML=`${badge(a,tier)}<div><strong>${a.name}</strong><p>${a.description}</p><small>${at?`Earned ${new Date(at).toLocaleDateString()}`:tier?'Earned across your characters':`Next milestone: ${number(a.tiers[tier])}`}</small></div>`;}
+ updateGamepad(pad:GamepadInput,now:number){if(!this.opened)return false;if(pad.pressed.has(PAD.dodge)||pad.pressed.has(PAD.pause))this.close();else if(this.element.querySelector('.chronicle-content')){this.controller.update(this.element,pad,now,{switchTab:d=>{this.tab=(this.tab+d+tabs.length)%tabs.length;this.render();this.element.querySelector<HTMLElement>(`[data-tab="${this.tab}"]`)?.focus();}});const dt=this.lastTime?Math.min(.05,(now-this.lastTime)/1000):0;if(Math.abs(pad.aim.y)>.2)this.element.querySelector('.chronicle-content')!.scrollTop+=pad.aim.y*dt*550;}this.lastTime=now;return true;}
  dispose(){this.close(false);this.life.abort();this.element.remove();}
 }
