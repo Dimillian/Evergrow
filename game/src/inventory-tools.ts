@@ -33,8 +33,15 @@ export function inventoryGridSources(inventory: CharacterSheet['inventory'], fil
 /** Explicit organization changes bag order; acquisition history is independent of cells. */
 export function sortInventory(sheet: CharacterSheet, mode: InventorySort): ActionResult {
   if (!['rarity', 'type', 'recent'].includes(mode)) return { ok: false, message: 'Unknown inventory sort.' };
-  const recency = new Map((sheet.recentItems ?? []).map((id, index) => [id, index]));
-  sheet.inventory = [...sheet.inventory].sort((a, b) => {
+  sheet.inventory = sortedItemIndices(sheet.inventory, mode, sheet.recentItems).map(index => sheet.inventory[index]);
+  return { ok: true };
+}
+
+/** Stable source indices let shop sorting retain original stock and buyback identities. */
+export function sortedItemIndices(items: readonly (Item | null)[], mode: InventorySort, recentItems: readonly string[] = []): number[] {
+  const recency = new Map(recentItems.map((id, index) => [id, index]));
+  return items.map((_, index) => index).sort((left, right) => {
+    const a = items[left], b = items[right];
     if (!a || !b) return a ? -1 : b ? 1 : 0;
     const comparisons: Record<InventorySort, number> = {
       rarity: tiers.indexOf(b.tier) - tiers.indexOf(a.tier),
@@ -44,7 +51,6 @@ export function sortInventory(sheet: CharacterSheet, mode: InventorySort): Actio
     for (const priority of INVENTORY_SORT_PRIORITY[mode]) if (comparisons[priority]) return comparisons[priority];
     return 0;
   });
-  return { ok: true };
 }
 
 /** Item power is an estimate, including the shared enhancement multiplier. */

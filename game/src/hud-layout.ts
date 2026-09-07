@@ -17,7 +17,7 @@ export const HUD_MENU_SHORTCUTS = [
   { id: 'journal', label: 'Journeys', key: 'J' },
 ] as const;
 
-/** Empty bindings reserve room for future equipped skills; they perform no action. */
+/** Empty assignable slots open the skill picker; the basic attack stays fixed. */
 export const HUD_SKILL_SLOTS = [
   { id: 'basic', key: 'LMB', action: 'attack' },
   { id: 'skill-1', key: 'RMB', action: null },
@@ -30,6 +30,12 @@ export const HUD_SKILL_SLOTS = [
 export interface HUDRect { x: number; y: number; width: number; height: number; }
 export interface HUDShortcut extends HUDRect { id: string; label: string; key: string; }
 export interface HUDLayout extends HUDRect { scale: number; shortcuts: HUDShortcut[]; }
+
+export function getHUDSkillRect(slot: number, width: number, height: number): HUDRect {
+  const hud = getHUDLayout(width, height), skill = HUD_ART.skill;
+  return { x: hud.x + (skill.x + (slot + 1) * skill.step) * hud.scale, y: hud.y + skill.y * hud.scale,
+    width: skill.width * hud.scale, height: skill.height * hud.scale };
+}
 
 /** Art and native menu targets use the same responsive transform. */
 export function getHUDLayout(width: number, height: number): HUDLayout {

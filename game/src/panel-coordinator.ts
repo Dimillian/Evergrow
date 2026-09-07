@@ -5,7 +5,8 @@ export interface PanelHooks {
   clearInput(): void; changed(phase: GamePhase): void; resumeGameplay(): void; save(): void;
 }
 const OPEN_FROM: Record<PanelPhase, readonly GamePhase[]> = {
-  journeys: ['playing'], event: ['playing'], service: ['playing'], map: ['playing'], character: ['playing', 'character', 'skills'], skills: ['playing', 'character', 'skills'],
+  skillAssignment: ['playing'],
+  journeys: ['playing'], event: ['playing'], service: ['playing'], map: ['playing'], character: ['playing', 'character', 'skills'], skills: ['playing', 'character', 'skills', 'skillAssignment'],
 };
 /** One control-context owner. Panel views own their focus traps; this owner closes
  * the old trap before opening a new view and returns focus only when play resumes. */

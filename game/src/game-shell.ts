@@ -1,3 +1,4 @@
+import { getHUDSkillRect, HUD_SKILL_SLOTS } from './hud-layout.ts';
 import { PauseMenu } from './pause-menu.ts';
 import { PORTAL_RULES } from './travel.ts';
 import './travel-ui.css';
@@ -10,7 +11,7 @@ import type { GamePhase } from './game-phase.ts';
 import { gameMenuMarkup } from './game-menu.ts';
 import { trapDialogFocus, uiIcon } from './ui-components.ts';
 
-interface ShellActions { save?(): Promise<boolean>; sound?(): void; muted?(): boolean; zoom?(factor: number): void; portal?(): void; play(): void; returnToTitle(): void | Promise<void>; openMap(): void; openCharacter(): void; openSkills(): void; openJourneys?(): void; }
+interface ShellActions { assignSkill?(slot: number): void; save?(): Promise<boolean>; sound?(): void; muted?(): boolean; zoom?(factor: number): void; portal?(): void; play(): void; returnToTitle(): void | Promise<void>; openMap(): void; openCharacter(): void; openSkills(): void; openJourneys?(): void; }
 
 /** Owns DOM presentation and its listeners; it never reads or mutates simulation state. */
 export class GameShell {
@@ -50,6 +51,7 @@ export class GameShell {
         <button type="button" class="hud-control" data-hud="map" aria-label="World map" aria-keyshortcuts="M"
           aria-haspopup="dialog" data-tooltip="World map" data-tooltip-placement="left"></button>
         <button type="button" class="hud-control portal-control hud-sidebar-surface" data-hud="portal" aria-label="Town portal" aria-keyshortcuts="P" data-tooltip="Town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="left">${uiIcon('portal')}<span class="portal-label">Town portal</span><kbd class="hud-sidebar-key">P</kbd><i class="portal-progress" aria-hidden="true"></i></button>
+        ${Array.from({ length: 5 }, (_, slot) => `<button type="button" class="hud-control" data-hud="empty-skill-${slot}" aria-label="Assign skill to ${HUD_SKILL_SLOTS[slot + 1].key}" aria-haspopup="dialog" hidden></button>`).join('')}
       </nav>
       <div id="title-mount"></div>
       <div id="world-map-mount"></div>
@@ -70,12 +72,20 @@ export class GameShell {
     this.notifications = new GameNotifications(this.element);
     const signal = this.abort.signal;
     this.element.addEventListener('contextmenu', event => event.preventDefault(), { signal });
+    for (let slot = 0; slot < 5; slot++) this.controls.querySelector(`[data-hud="empty-skill-${slot}"]`)!.addEventListener('click', () => actions.assignSkill?.(slot), { signal });
     this.controls.querySelector('[data-hud="map"]')!.addEventListener('click', actions.openMap, { signal });
     this.controls.querySelector<HTMLButtonElement>('[data-hud="portal"]')!.disabled = !actions.portal;
     this.controls.querySelector('[data-hud="portal"]')!.addEventListener('click', () => actions.portal?.(), { signal });
     for (const id of ['character', 'inventory']) this.controls.querySelector(`[data-hud="${id}"]`)!.addEventListener('click', actions.openCharacter, { signal });
     this.controls.querySelector('[data-hud="skilltree"]')!.addEventListener('click', actions.openSkills, { signal });
     this.controls.querySelector('[data-hud="journal"]')!.addEventListener('click', () => actions.openJourneys?.(), { signal });
+  }
+
+  setEmptySkillSlots(empty: readonly boolean[]): void {
+    for (let slot = 0; slot < 5; slot++) {
+      const button = this.controls.querySelector<HTMLElement>(`[data-hud="empty-skill-${slot}"]`)!, hidden = !this.actions.assignSkill || !empty[slot];
+      if (button.hidden !== hidden) button.hidden = hidden;
+    }
   }
 
   private navigationVisible = true;
@@ -93,6 +103,7 @@ export class GameShell {
       button.style.width = `${rect.width / width * 100}%`; button.style.height = `${rect.height / height * 100}%`;
     };
     for (const shortcut of getHUDLayout(width, height).shortcuts) place(shortcut.id, shortcut);
+    for (let slot = 0; slot < 5; slot++) place(`empty-skill-${slot}`, getHUDSkillRect(slot, width, height));
     place('map', getMinimapRect(width, height));
     place('portal', getPortalControlRect(width, height));
   }
@@ -125,7 +136,7 @@ export class GameShell {
   showMenu(phase: GamePhase, kills: number, time: number, location = 'Deadwood'): void {
     this.menuAbort.abort(); this.menuAbort = new AbortController(); this.pauseMenu = null;
     const playing = phase === 'playing';
-    const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys';
+    const panel = phase === 'skillAssignment' || phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys';
     this.overlay.hidden = playing || panel || phase === 'ready';
     this.controls.hidden = !playing;
     this.element.classList.toggle('playing', playing);

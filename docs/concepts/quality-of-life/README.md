@@ -2,8 +2,9 @@
 
 2026-09-07. Branch: `codex/quality-of-life-improvements`.
 
-Status: four visual proposals awaiting the player's selection. No runtime changes,
-save changes, browser gameplay tests or publication are part of this checkpoint.
+Historical status: the initial checkpoint contained four proposals only. The player
+subsequently chose the direction 1 skill picker, the existing inventory filter UI,
+and a simple five-entry Sell… menu. See the selected behavior below.
 Each board pairs a shop state with a separate gameplay skill-picker state; these
 are not intended to be open together in the game.
 
@@ -77,3 +78,18 @@ artifacts, not proposed behavior. The shared rules above take precedence.
 Grounding: the user's Blacksmith screenshot, the existing desktop inventory
 capture, the historical Astral HUD study, `inventory-panel.ts`,
 `inventory-tools.ts`, `skill-content.ts`, and `docs/npcs-and-vendors.md`.
+
+
+## Selected behavior (supersedes the proposed sale review above)
+
+The player selected direction 1 for quick skill assignment, requested the exact
+existing inventory sort/filter UI, and replaced all sale-review proposals with a
+Sell… footer button when no item is selected. Its direct actions are All Common,
+Magic and lower, Rare and lower, Epic and lower, and All. No preview drawer,
+candidate checkboxes or extra confirmation is part of this implementation.
+[Refined visual target](05-selected-design.png) illustrates that combination;
+incidental generated labels and icon inaccuracies do not change the rules.
+
+Verification: `npm run check` passes (908 code tests, strict/core TypeScript and
+production build). The local server remains on port 5173. No automated browser
+playtest, Sites publication, APK install or save reset was performed.

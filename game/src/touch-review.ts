@@ -43,7 +43,7 @@ const close = () => { panel='world'; inventory.close(); skills.close(); map.clos
 const inventory = life.own(new InventoryPanel(mount,{close,equip:noop,unequip:noop,move:noop,equipBest:noop,sort:noop,allocate:noop}));
 const skills = life.own(new SkillTreePanel(mount,{close,develop:noop,allocate:noop,assign:noop}));
 const map = life.own(new WorldMap(world,exploration,mount,close));
-const touch = life.own(new TouchHUD(shell,{activate:noop,clearAttack:noop,cancelCombat:noop,unlock:noop,notice:noop,
+const touch = life.own(new TouchHUD(shell,{assignSkill:noop,activate:noop,clearAttack:noop,cancelCombat:noop,unlock:noop,notice:noop,
   menu: action => {
     if(action==='character') {panel='inventory';inventory.open(player);}
     else if(action==='skills') {panel='skills';skills.open(player);}

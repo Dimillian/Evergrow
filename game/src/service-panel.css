@@ -58,3 +58,14 @@
 .service-effective b.is-loss { color:#e7a297; }
 .service-panel .ui-item-slot.is-selected { outline:2px solid var(--service-color); outline-offset:1px; }
 .service-changes .is-selected-affix { color:var(--service-color); background:#aaaaff08; }
+
+.service-section-heading h3 { margin-right: 0; }
+.service-section-heading > span { margin-left: auto; }
+.service-filter { position: relative; width: 28px; height: 28px; min-height: 28px; padding: 5px; flex: none; }
+.service-filter.has-filter { color: var(--ui-ivory); border-color: var(--ui-silver); }
+.service-filter-status { color: var(--ui-silver-dim); font-size: 13px; margin: 12px 0 0; }
+.service-popup-layer { position: absolute; inset: 0; z-index: 80; }
+.service-popup-layer[hidden] { display: none; }
+.service-sell-menu { width: min(220px, calc(100% - 24px)); display: grid; gap: 2px; padding: 6px; }
+.service-sell-menu .ui-button { text-align: left; min-height: 44px; }
+.service-popup-layer :focus { outline: 2px solid var(--ui-ivory); outline-offset: 1px; }

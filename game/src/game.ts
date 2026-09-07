@@ -1,3 +1,6 @@
+import { PAD_SKILL_BUTTONS } from './gamepad-input.ts';
+import { SkillAssignmentPanel } from './skill-assignment-panel.ts';
+import { getHUDSkillRect } from './hud-layout.ts';
 import { basicAttackWeapon } from './equipment.ts';
 import { GroundLootTooltip } from './ground-loot-tooltip.ts';
 import { createAppearanceEditor } from './character-editor.ts';
@@ -32,7 +35,7 @@ import { townPortalAnchor, withinPortalReach, portalMapMarkers, type PortalAncho
 import type { CharacterCheckpoint } from './character-save.ts';
 import { ServicePanel } from './service-panel.ts';
 import { buildingNPC, focusNPC, canInteractNPC, type TownNPC } from './npcs.ts';
-import type { ServiceQuote } from './commerce.ts';
+import type { CommerceQuote } from './commerce-command.ts';
 import { executeService } from './commerce-command.ts';
 import { PanelCoordinator } from './panel-coordinator.ts';
 import { bindGameKeyboard } from './game-keyboard.ts';
@@ -46,7 +49,7 @@ import { CharacterSession } from './character-session.ts';
 import { TitleScreen } from './title-screen.ts';
 import { InventoryPanel } from './inventory-panel.ts';
 import { SkillTreePanel } from './skill-tree-panel.ts';
-import { executeCharacterCommand, type CharacterCommand } from './character-commands.ts';
+import { executeCharacterCommand, executeEmptySkillAssignment, type CharacterCommand } from './character-commands.ts';
 import { Lifetime } from './lifetime.ts';
 import { World } from './world.ts';
 import { isWorldSeed } from './world-seed.ts';
@@ -92,6 +95,9 @@ export class Game {
   private creationLooks=new Map<number,CharacterLook>();
   private skillPanel: SkillTreePanel;
   private servicePanel: ServicePanel;
+  private skillAssignmentPanel: SkillAssignmentPanel;
+  private assignmentSlot = 0;
+  private assignmentAnchor = { left: 0, top: 0, width: 0, height: 0 };
   private eventPanel: EventPanel;
   private activeEvent: EventSite | null = null;
   private projectedBeacons = new Set<string>();
@@ -148,7 +154,7 @@ export class Game {
         portal: () => { this.canvas.focus(); this.requestPortal(); },
         save: () => this.durable(async () => { const saved = await this.saveCharacter(true); if (saved) await this.saveClient.flush(); return saved; }, false),
         returnToTitle: () => this.returnToTitle(), openMap: () => this.openMap(),
-        openCharacter: () => this.openCharacterPanel('character'), openSkills: () => this.openCharacterPanel('skills'), openJourneys: () => this.journeys.open(),
+        assignSkill: slot => this.openSkillAssignment(slot), openCharacter: () => this.openCharacterPanel('character'), openSkills: () => this.openCharacterPanel('skills'), openJourneys: () => this.journeys.open(),
       }));
       this.canvas = this.shell.canvas;
       this.groundLootTooltip = this.lifetime.own(new GroundLootTooltip(root, this.canvas));
@@ -185,7 +191,11 @@ export class Game {
         useCloud: (index, expected) => this.resolveCloudSave(index, expected),
       }));
       this.servicePanel = this.lifetime.own(new ServicePanel(this.shell.panelMount, {
-        close: () => this.resume(), trade: quote => this.trade(quote),
+        close: () => this.resume(), trade: quote => this.trade(quote), sort: mode => this.characterAction({ type: 'sortInventory', mode }),
+      }));
+      this.skillAssignmentPanel = this.lifetime.own(new SkillAssignmentPanel(this.shell.panelMount, {
+        close: () => this.resume(), atlas: () => this.openCharacterPanel('skills'),
+        assign: (slot, skill) => this.assignEmptySkill(slot, skill),
       }));
       this.dungeonMap = this.lifetime.own(new DungeonMap(this.shell.mapMount,()=>this.closeMap(),()=>this.worldMap.open({x:this.sim.expeditions.surfaceX,y:this.sim.expeditions.surfaceY,angle:0})));
       this.eventPanel = this.lifetime.own(new EventPanel(this.shell.panelMount, {
@@ -207,6 +217,7 @@ export class Game {
         arrived: () => this.finishTravel(), notify: message => this.notify(message),
       });
       this.panels = new PanelCoordinator({
+        skillAssignment: { open: () => this.skillAssignmentPanel.open(this.sim.player, this.assignmentSlot, this.assignmentAnchor), close: () => this.skillAssignmentPanel.close() },
         journeys:{open:()=>this.journeys.panel.open(this.journeys.selected),close:()=>this.journeys.panel.close()},
         event: { open: () => { if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.activeEvent = null; this.activeDungeonEntrance = null; } },
         service: { open: () => { if (this.activeNPC) this.servicePanel.open(this.sim.player, this.activeNPC); }, close: () => { this.servicePanel.close(); this.activeNPC = null; } },
@@ -226,6 +237,7 @@ export class Game {
           this.sim.clearInput(); this.usingGamepad = false; this.renderer.touchActive = active;
           if(this.touch) this.resize();
         },
+        assignSkill: (slot, anchor) => this.openSkillAssignment(slot, anchor),
         clearAttack: () => this.sim.clearBasicAttackInput(), cancelCombat: () => this.sim.clearCombatInput(),
         unlock: () => { void this.audio.unlock().catch(() => {}); }, notice: message => this.notify(message),
         menu: action => {
@@ -251,7 +263,7 @@ export class Game {
         portal: () => this.requestPortal(),
         background: () => { this.clearInput(); this.pause(); void this.saveCharacter(); this.audio.setEnabled(false); },
         foreground: () => { this.clearInput(); this.audio.setEnabled(!this.muted); },
-        back: () => { if(this.phase === 'ready' && this.titleScreen.dismissChangelog()) return; if(this.appearanceEditor){this.appearanceEditor.cancel();return;} if(this.thor.dismissInspection() || (this.phase === 'paused' && this.shell.backInMenu())) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
+        back: () => { if(this.phase === 'ready' && this.titleScreen.dismissChangelog()) return; if(this.appearanceEditor){this.appearanceEditor.cancel();return;} if((this.phase === 'service' && this.servicePanel.dismissPopup()) || this.thor.dismissInspection() || (this.phase === 'paused' && this.shell.backInMenu())) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
       }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
       try {
@@ -366,6 +378,7 @@ export class Game {
         if (this.phase !== 'playing') return;
         if (event.code === 'KeyP') { event.preventDefault(); this.requestPortal(); return; }
         if (event.code === 'KeyE') { event.preventDefault(); this.interact(); return; }
+        if (/^Digit[1-4]$/.test(event.code) && this.openSkillAssignment(Number(event.code.at(-1)))) { event.preventDefault(); return; }
         this.input.keyDown(event.code);
       },
     }, signal);
@@ -385,6 +398,7 @@ export class Game {
       event.preventDefault();
       this.updatePointer(event);
       if (this.pointerInHUD()) return;
+      if (event.button === 2 && this.openSkillAssignment(0)) return;
       if (event.button === 0 && this.interact(this.renderer.screenToWorld(this.mouse.x, this.mouse.y))) return;
       this.canvas.focus();
       this.canvas.setPointerCapture(event.pointerId);
@@ -838,7 +852,7 @@ export class Game {
     this.shell.portalTransition(); this.canvas.focus();
   }
 
-  private async trade(quote: ServiceQuote): Promise<{ ok: boolean; message: string }> {
+  private async trade(quote: CommerceQuote): Promise<{ ok: boolean; message: string }> {
     return this.durable(async () => {
     const npc = this.activeNPC, p = this.sim.player;
     if (this.phase !== 'service' || !npc || !this.session.active || !canInteractNPC(npc, p, this.world))
@@ -853,6 +867,28 @@ export class Game {
     }, { ok: false, message: 'Saving the previous action…' });
   }
 
+  private openSkillAssignment(slot: number, anchor?: { left: number; top: number; width: number; height: number }): boolean {
+    if (this.phase !== 'playing' || this.savingAction || !Number.isInteger(slot) || slot < 0 || slot >= 5 || this.sim.player.character.skillSlots[slot] !== null) return false;
+    this.assignmentSlot = slot;
+    const rect = getHUDSkillRect(slot, this.renderer.width, this.renderer.height), bounds = this.canvas.getBoundingClientRect();
+    this.assignmentAnchor = anchor ?? { left: bounds.left + rect.x / this.renderer.width * bounds.width, top: bounds.top + rect.y / this.renderer.height * bounds.height,
+      width: rect.width / this.renderer.width * bounds.width, height: rect.height / this.renderer.height * bounds.height };
+    return this.panels.open('skillAssignment');
+  }
+
+  private async assignEmptySkill(slot: number, skill: import('./character-types.ts').SkillId) {
+    return this.durable(async () => {
+      if (this.phase !== 'skillAssignment' || !this.session.active) return { ok: false, message: 'This skill picker is no longer active.' };
+      const result = await executeEmptySkillAssignment(this.sim.player, slot, skill, async character => {
+        const saved = await this.session.save({ ...this.sim.captureCheckpoint(), character }, Date.now());
+        this.saveError = saved ? '' : this.session.error;
+        this.shell.setSaveStatus(saved ? 'Character saved locally.' : this.session.error, !saved);
+        return { ok: saved, message: this.session.error };
+      });
+      return result;
+    }, { ok: false, message: 'Saving the previous action…' });
+  }
+
   private characterAction(command: CharacterCommand) {
     if (this.savingAction) return;
     const result = executeCharacterCommand(this.sim.player, command);
@@ -860,6 +896,8 @@ export class Game {
     if (result.message) this.notify(result.message);
     if (this.phase === 'character') this.inventoryPanel.refresh(this.sim.player);
     if (this.phase === 'skills') this.skillPanel.refresh(this.sim.player);
+    if (this.phase === 'service') this.servicePanel.refresh(this.sim.player);
+    if (this.phase === 'skillAssignment') this.skillAssignmentPanel.refresh(this.sim.player);
     this.saveCharacter();
   }
 
@@ -932,6 +970,7 @@ export class Game {
     this.touch.update(this.sim.player,this.phase,this.savingAction,now);
     this.renderer.gamepadActive = this.usingGamepad;
     this.shell.setGamepadActive(this.usingGamepad);
+    this.shell.setEmptySkillSlots(this.sim.player.character.skillSlots.map(id => id === null));
     if (this.phase === 'playing' && !this.savingAction) {
       // The simulation owns the fixed 120 Hz clock and render interpolation.
       this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
@@ -1057,6 +1096,7 @@ export class Game {
     }
     if (pad.pressed.has(PAD.pause) || (this.phase !== 'playing' && pad.pressed.has(PAD.dodge))) {
       if (this.phase === 'character' && this.inventoryPanel.dismissPopup()) return;
+      if (this.phase === 'service' && this.servicePanel.dismissPopup()) { this.gamepadMenu.clear(); return; }
       if (this.panels.activePanel) this.resume();
       else if (this.phase === 'playing' && !this.savingAction) { if (this.sim.portal.active) this.sim.portal.cancel(); else this.pause(); }
       else if (this.phase === 'paused' && !this.shell.backInMenu()) this.resume();
@@ -1067,6 +1107,8 @@ export class Game {
       this.panels.toggle('map'); return;
     }
     if (this.phase === 'playing' && !this.savingAction) {
+      const slot = PAD_SKILL_BUTTONS.findIndex(button => pad.pressed.has(button));
+      if (slot >= 0 && this.openSkillAssignment(slot)) return;
       if (pad.pressed.has(PAD.up)) { this.openCharacterPanel('skills'); return; }
       if (pad.pressed.has(PAD.left) || pad.pressed.has(PAD.right)) { this.openCharacterPanel('character'); return; }
       if (pad.pressed.has(PAD.down)) { this.requestPortal(); return; }

@@ -1,3 +1,5 @@
+import { planBulkSale } from './commerce-bulk.ts';
+import { sortInventory } from './inventory-tools.ts';
 import './ui-kit.css';
 import './style.css';
 import './typography.css';
@@ -32,8 +34,8 @@ for (let i = 0; i < (params.has('empty') ? 0 : 18); i++) {
 }
 refreshCharacter(p);
 const shell = life.own(new GameShell(document.querySelector('#app')!, { play() {}, returnToTitle() {}, openMap() {}, openCharacter() {}, openSkills() {} }));
-const panel = life.own(new ServicePanel(shell.panelMount, { close: () => panel.close(), trade: async quote => {
-  const plan = planService(p.character, npc, p.level, quote);
+const panel: ServicePanel = life.own(new ServicePanel(shell.panelMount, { close: () => panel.close(), sort: mode => { sortInventory(p.character, mode); panel.refresh(p); }, trade: async quote => {
+  const plan = 'type' in quote ? planBulkSale(p.character, npc, p.level, quote) : planService(p.character, npc, p.level, quote);
   if (plan.ok) { p.character = plan.character; refreshCharacter(p); }
   return { ok: plan.ok, message: plan.message };
 } }));

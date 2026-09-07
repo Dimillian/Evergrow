@@ -155,3 +155,17 @@ Basic ranged attacks (Archer arrows and the Hexer’s three bolts) no longer pro
 Local specialist equipment adds cloth robes and a matching caster outfit, leather/ranger affix pools, eight jewelry bases, gentler service premiums and material odds that improve with geographic level and encounter difficulty. The gallery exposes level/encounter controls. See [equipment materials](item-materials.md).
 
 Caster armor has four fabric constructions: linen, silk, velvet and starweave. They share cloth silhouettes and caster affix pools, with distinct nonmetallic finishes, stronger bases and increasingly rare, difficulty-weighted drops.
+
+
+### Quality of life (2026-09-07, local feature branch)
+
+- Shop bags reuse the player inventory's sort/filter component; stock/buyback keep
+  independent presentation filters and stable source identities.
+- The unselected shop footer offers Sell… with five direct inclusive-rarity sales.
+  Whole-bag sales commit wallet, inventory and bounded buyback in one saved action.
+- Empty HUD/touch/controller skill slots open an anchored list of unlocked,
+  equipment-compatible skills absent from current assignments. Assignment is saved
+  before commit; the opening input never casts. No save reset.
+- Checkpoint verification: 908 code tests, strict/core TypeScript checks and the
+  production build pass. Gameplay and visual acceptance
+  remain with the player; this change is not a Sites publication or APK installation.

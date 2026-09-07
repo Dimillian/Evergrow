@@ -21,7 +21,7 @@ The character sheet now connects equipment, attributes, tree allocations, active
 - **T:** open the skill atlas. Pan, zoom, search names/bonuses, filter a domain or reachable stars, inspect a node, and allocate a connected node or an affordable complete route. Hovering or selecting a distant node previews the shortest route from the current build and its remaining point cost. Double-click commits the shortest affordable route; the native Allocate path button does the same. Hover updates the stat preview immediately. Canvas keyboard navigation follows neighboring stars.
 - Assign unlocked skills to **RMB, 1, 2, 3, 4** from a major node's detail panel. Assigning a skill to a new slot moves its existing assignment; one skill cannot occupy multiple slots. LMB stays the basic attack, Q the potion, and Space the dodge.
 
-These windows pause combat, clear buffered inputs, trap modal keyboard focus, and close with Escape or their shortcut. Unassigned skill slots stay empty and do nothing. The journal is still unavailable.
+These windows pause combat, clear buffered inputs, trap modal keyboard focus, and close with Escape or their shortcut. Unassigned skill slots open a compact assignment picker on click, tap or their keyboard/controller binding. Only unlocked, equipment-compatible skills absent from the other slots appear. Selection saves before updating the slot and never casts. Empty lists link to the atlas. Journeys opens with J.
 
 ## State and ownership
 
@@ -33,6 +33,8 @@ These windows pause combat, clear buffered inputs, trap modal keyboard focus, an
 | `item-improvement.ts`, `commerce.ts`, `commerce-command.ts` | Recipe-based enhancement/enchanting, deterministic stock and pricing, pure transaction planning and save-before-commit execution |
 | `weapon-content.ts` | Thirteen immutable generated weapon profiles and three shield profiles; handedness, attack family, element, cadence, reach, defense, and silhouette |
 | `inventory.ts` | Pure equipment planning shared by previews/drop eligibility/commits; atomic equip/unequip/hand-conflict stow, bag swap, insertion, and attribute allocation |
+| `item-filter-controls.ts` | Shared inventory/shop sort and multi-filter controls |
+| `skill-assignment.ts` / `skill-assignment-panel.ts` | Empty-slot eligibility and anchored input-neutral assignment menu |
 | `inventory-tools.ts` | Headless bulk equipment planning, deterministic bag organization and composed filter matching |
 | `equipment-preview.ts`, `item-ui.ts`, `item-tooltip.ts` | Complete effective equipment comparisons and reusable item presentation |
 | `panel-coordinator.ts` | Shared phase, input, focus, panel transition and save-request lifecycle |

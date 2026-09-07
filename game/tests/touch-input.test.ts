@@ -39,10 +39,10 @@ test('quick taps deliver one action; duplicate releases and held utilities do no
   input.down(3,'dodge',point);input.up(3,true);assert.equal(input.consume(aim).dodge,false);
 });
 test('every application phase discards held and queued touch input before later releases',()=>{
-  const phases=['ready','playing','paused','dead','map','character','skills','service','event','journeys'] as const;
+  const phases=['ready','playing','paused','dead','map','character','skills','skillAssignment','service','event','journeys'] as const;
   for(const phase of phases) {
     const input=new TouchInput();const panels={} as Record<PanelPhase,{open():void;close():void}>;
-    for(const id of ['map','character','skills','service','event','journeys'] as PanelPhase[])panels[id]={open(){},close(){}};
+    for(const id of ['map','character','skills','skillAssignment','service','event','journeys'] as PanelPhase[])panels[id]={open(){},close(){}};
     const coordinator=new PanelCoordinator(panels,{clearInput:()=>input.clear(),changed(){},resumeGameplay(){},save(){}});
     input.down(1,'move',point);input.update(1,{x:160,y:100});input.down(2,'attack',point);input.down(3,'skill-1',point);input.down(4,'heal',point);input.up(4);
     coordinator.transition(phase);

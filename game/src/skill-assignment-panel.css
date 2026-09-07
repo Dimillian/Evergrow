@@ -1,0 +1,17 @@
+.skill-assignment-layer { position: fixed; inset: 0; z-index: 36; background: #03091030; }
+.skill-assignment-layer[hidden] { display: none; }
+.skill-assignment { position: absolute; box-sizing: border-box; width: min(330px, calc(100% - 24px)); max-height: calc(100% - 24px); display: flex; flex-direction: column; padding: 12px; background: var(--ui-panel); border: 1px solid var(--ui-silver-dim); box-shadow: 0 12px 32px #0009; }
+.skill-assignment header { display: flex; align-items: center; gap: 8px; }
+.skill-assignment h3 { flex: 1; margin: 0; font-size: 16px; font-weight: 400; }
+.skill-assignment header .ui-button { width: 32px; height: 32px; min-height: 32px; }
+.skill-assignment-equipment { color: var(--ui-silver-dim); margin: 0 0 10px; font-size: 12px; }
+.skill-assignment-list { min-height: 0; overflow-y: auto; display: grid; gap: 4px; }
+.skill-assignment-choice { display: grid; grid-template-columns: 30px 1fr; align-items: center; column-gap: 10px; min-height: 52px; text-align: left; padding: 6px 8px; }
+.skill-assignment-icon { grid-row: span 2; }
+.skill-assignment-choice small { grid-column: 2; font-size: 12px; color: var(--ui-silver-dim); }
+.skill-assignment-empty { font-size: 14px; line-height: 1.5; color: var(--ui-silver-dim); }
+.skill-assignment-message { margin: 4px 0 0; color: var(--ui-brass); font-size: 13px; }
+.skill-assignment-message:empty { display: none; }
+.skill-assignment footer { display: flex; gap: 24px; justify-content: center; margin-top: 8px; font-size: 12px; color: var(--ui-silver-dim); }
+.skill-assignment :focus { outline: 2px solid var(--ui-brass); outline-offset: -2px; }
+.touch-mode .skill-assignment footer { display: none; }

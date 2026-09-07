@@ -152,3 +152,28 @@ No quest framework, wandering schedules, reputation, materials, repairs, hagglin
 ### Specialist affixes and skill ranks · 2026-09-07
 
 Stock, loot, rarity upgrades and rerolls share the expanded slot pools in [equipment affixes](equipment-affixes.md). Enhancement improves scalable rolls but leaves +skill and +pierce integers unchanged. Releveling retains roll quality and can unlock a higher saved skill-rank quantile at the new item level. Ordinary service previews show those exact changes before purchase. Skill-family exclusion allows at most one named skill affix on an item.
+
+
+### Shared filters and direct bulk sale (2026-09-07)
+
+Stock/buyback and the player bag have separate Sort & filter buttons. They reuse the
+player inventory's shared control markup, styles and multi-selection behavior.
+Bag sorts use the same Rarity / Type / Recent pickup priorities and persist its
+organization. Stock/buyback sorts are presentation-only Rarity / Type, retaining
+original source identities for quotes. Exact rarity filters do not include lower
+tiers. Escape/controller B closes the popup before the shop.
+
+When no item is selected in Shop or Buyback, the footer shows **Sell…**. Its menu
+contains exactly **All Common**, **Magic and lower**, **Rare and lower**, **Epic and
+lower**, and **All**. Choosing an entry sells matching items from the entire bag,
+independently of the browsing filters. All includes Legendary. Equipped gear is
+excluded. Clicking a selected item again clears its selection. Empty bags disable
+the button; a choice with no matches reports that result without a transaction.
+
+The chosen ceiling is quoted and revalidated against every candidate's identity,
+source cell, item revision, price, vendor and commerce revision. One staged change
+credits the wallet, removes the matching items, and retains the latest 12 buyback
+items in reverse bag order. One durable checkpoint precedes live commitment. No
+review drawer or extra confirmation step is used. Failures preserve all items and
+gold; duplicate or stale requests fail. Commerce revision/operation counters advance
+once for a batch. No save-format change or reset is required.

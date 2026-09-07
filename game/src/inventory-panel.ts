@@ -1,11 +1,12 @@
+import { ItemFilterControls } from './item-filter-controls.ts';
 import { itemDisplayName } from './items.ts';
 import { itemTooltipMarkup, updateItemSlot } from './item-ui.ts';
 import { ItemTooltip } from './item-tooltip.ts';
 import { goldBalance } from './wallet.ts';
 import { formatGold } from './currency-format.ts';
 import type { Player } from './model.ts';
-import type { Attribute, EquipmentSlot, Item, ItemTier } from './character-types.ts';
-import { matchesInventoryFilter, inventoryGridSources, planBestEquipment, type EquipBestChoice, type InventorySort, type InventoryFilter } from './inventory-tools.ts';
+import type { Attribute, EquipmentSlot, Item } from './character-types.ts';
+import { matchesInventoryFilter, inventoryGridSources, planBestEquipment, type EquipBestChoice, type InventorySort } from './inventory-tools.ts';
 import { GamepadMenu } from './gamepad-menu.ts';
 import type { GamepadInput } from './gamepad-input.ts';
 import { directionalControl } from './ui-navigation.ts';
@@ -82,8 +83,7 @@ export class InventoryPanel {
   private sheet!: HTMLElement;
   private animation = 0;
   private facing = Math.PI / 2;
-  private readonly filters = new Set<InventoryFilter>();
-  private readonly rarities = new Set<ItemTier>();
+  private readonly filterControls = new ItemFilterControls();
   private section = 1;
   private readonly controller = new GamepadMenu();
   private readonly sectionFocus = new Map<number, HTMLElement>();
@@ -130,12 +130,8 @@ export class InventoryPanel {
       </div>
       <footer class="ui-window-footer character-footer"><div class="character-experience"><div><span data-xp-label></span><span data-xp-total></span></div><div class="character-experience-track"><i data-xp-fill></i></div></div><span class="character-footer-status">${uiIcon('diamond')}<span data-allocated-label></span></span></footer>
       <div class="character-popup-layer" data-popup-layer hidden>
-        <section class="character-mini-dialog ui-well" id="inventory-sort-dialog" data-mini="sort" role="dialog" aria-modal="true" aria-labelledby="inventory-sort-title" hidden>
-          <header><h3 id="inventory-sort-title">Sort &amp; filter</h3><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-popup-close aria-label="Close sort and filter">${uiIcon('close')}</button></header>
-          <div class="character-tool-row" role="group" aria-label="Sort inventory"><span>Sort</span>${(['rarity', 'type', 'recent'] as const).map(mode => `<button type="button" class="ui-button ui-button--quiet" data-sort="${mode}">${mode === 'rarity' ? 'Rarity' : mode === 'type' ? 'Type' : 'Recent pickup'}</button>`).join('')}</div>
-          <div class="character-tool-row" role="group" aria-label="Filter item type"><span>Type</span>${(['all', 'weapons', 'armor', 'jewelry', 'offhand'] as const).map(filter => `<button type="button" class="ui-button ui-button--quiet" data-filter="${filter}" aria-pressed="${filter === 'all'}">${filter === 'offhand' ? 'Off-hand' : filter[0].toUpperCase() + filter.slice(1)}</button>`).join('')}</div>
-          <div class="character-tool-row" role="group" aria-label="Filter item rarity"><span>Rarity</span><button type="button" class="ui-button ui-button--quiet" data-rarity="all" aria-pressed="true">All</button>${Object.entries(TIER_NAMES).map(([tier, name]) => `<button type="button" class="ui-button ui-button--quiet" data-rarity="${tier}" aria-pressed="false">${name}</button>`).join('')}</div>
-          <button type="button" class="ui-button ui-button--quiet" data-clear-filters>Clear filters</button>
+        <section class="item-filter-dialog ui-well" id="inventory-sort-dialog" data-mini="sort" role="dialog" aria-modal="true" aria-labelledby="inventory-sort-title" hidden>
+          ${this.filterControls.markup('inventory-sort-title')}
         </section>
         <section class="character-mini-dialog ui-well" data-mini="weapon" role="alertdialog" aria-modal="true" aria-labelledby="inventory-weapon-title" aria-describedby="inventory-weapon-warning" hidden>
           <header><h3 id="inventory-weapon-title">Change weapon type?</h3></header>
@@ -179,7 +175,7 @@ export class InventoryPanel {
     this.player = player;
     if (this.element.hidden) return;
     if(this.touchItem && this.itemAt(this.touchItem)?.id !== this.touchItem.id) this.closeTouchItem();
-    const sources = inventoryGridSources(player.character.inventory, this.filters, this.rarities);
+    const sources = inventoryGridSources(player.character.inventory, this.filterControls.filters, this.filterControls.rarities);
     this.cells.clear();
     this.element.querySelectorAll<HTMLButtonElement>('.character-bag-slot').forEach((cell, index) => {
       const source = sources[index];
@@ -205,15 +201,12 @@ export class InventoryPanel {
         label: reserved ? `Off-hand reserved by two-handed ${player.character.equipped.weapon!.name}` : item ? `${itemDisplayName(item)}, ${TIER_NAMES[item.tier]}, item level ${item.itemLevel}${location.type === 'equipment' ? `, equipped in ${SLOT_NAMES[location.slot]}` : ''}${item.requiredLevel > player.level ? `, requires level ${item.requiredLevel}` : ''}` : location.type === 'equipment' ? `${SLOT_NAMES[location.slot]}, empty` : `Empty inventory slot ${location.index + 1}`,
       });
     }
-    const filtered = this.filters.size > 0 || this.rarities.size > 0;
-    const matching = player.character.inventory.filter(item => matchesInventoryFilter(item, this.filters, this.rarities)).length;
+    const filtered = this.filterControls.filters.size > 0 || this.filterControls.rarities.size > 0;
+    const matching = player.character.inventory.filter(item => matchesInventoryFilter(item, this.filterControls.filters, this.filterControls.rarities)).length;
     this.text('[data-filter-status]', matching ? `${matching} matching ${matching === 1 ? 'item' : 'items'}` : 'No matching items. Choose All to clear each filter.');
     this.element.querySelector<HTMLElement>('[data-filter-status]')!.hidden = !filtered;
     this.element.querySelector('[data-sort-filter]')!.classList.toggle('has-filter', filtered);
-    for (const button of this.element.querySelectorAll<HTMLElement>('[data-filter]'))
-      button.setAttribute('aria-pressed', String(button.dataset.filter === 'all' ? !this.filters.size : this.filters.has(button.dataset.filter as InventoryFilter)));
-    for (const button of this.element.querySelectorAll<HTMLElement>('[data-rarity]'))
-      button.setAttribute('aria-pressed', String(button.dataset.rarity === 'all' ? !this.rarities.size : this.rarities.has(button.dataset.rarity as ItemTier)));
+    this.filterControls.refresh(this.element);
     const active = document.activeElement;
     if (active instanceof HTMLElement && this.element.contains(active) && (active.hidden || active.matches(':disabled'))) this.selectSection(this.section);
     const sheet = player.character, stats = player.derived;
@@ -430,16 +423,7 @@ export class InventoryPanel {
       if (target.closest('[data-equip-best]')) { this.requestEquipBest(); return; }
       const choice = target.closest<HTMLElement>('[data-best-choice]')?.dataset.bestChoice as EquipBestChoice | undefined;
       if (choice) { this.dismissPopup(); this.actions.equipBest(choice); return; }
-      if (target.closest('[data-clear-filters]')) { this.filters.clear(); this.rarities.clear(); if (this.player) this.refresh(this.player); return; }
-      const sort = target.closest<HTMLElement>('[data-sort]')?.dataset.sort as InventorySort | undefined;
-      if (sort) { this.hideTooltip(); this.actions.sort(sort); return; }
-      const filter = target.closest<HTMLElement>('[data-filter]')?.dataset.filter as InventoryFilter | 'all' | undefined;
-      const rarity = target.closest<HTMLElement>('[data-rarity]')?.dataset.rarity as ItemTier | 'all' | undefined;
-      if (filter || rarity) {
-        if (filter === 'all') this.filters.clear();
-        else if (filter) { if (this.filters.has(filter)) this.filters.delete(filter); else this.filters.add(filter); }
-        if (rarity === 'all') this.rarities.clear();
-        else if (rarity) { if (this.rarities.has(rarity)) this.rarities.delete(rarity); else this.rarities.add(rarity); }
+      if (this.filterControls.click(target, mode => this.actions.sort(mode))) {
         this.hideTooltip(); if (this.player) this.refresh(this.player); return;
       }
       const turn = target.closest<HTMLElement>('[data-turn]');

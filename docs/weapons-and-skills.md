@@ -185,3 +185,19 @@ Attack warnings share a stable contact boundary with gathering light and moving 
 Meteor and Cataclysm now show a molten rock descending into their marked target, followed by an expanding pressure front, flame crown, stone fragments and embers. Each impact still deals its original direct damage exactly once. Its reserved ground-effect slot then becomes **four seconds of burning ground**, refreshing a non-stacking burn on visible enemies within the impact radius every 0.25 seconds. New entrants also burn. Ground burn potency is **12% of the snapshotted impact damage per second**; a stronger existing burn remains strongest under the shared status rules. The ground itself never crits, triggers life on hit, or repeats the explosion. A refreshed burn can persist up to 0.5 seconds after leaving the patch.
 
 `SkillExecution.scorch` owns duration, refresh interval and damage multiplier, so future rank/specialization tuning can change the same resolved recipe without a new executor. Current upgrades already scale its damage through their impact snapshot; base duration remains four seconds at every rank, while Lasting Inferno and Sea of Cinders extend it through their specialization recipes. Shattered Sky and Cataclysm share the aftermath; overlapping patches refresh the strongest burn rather than stacking it. This pass does not change cooldowns, mana costs, attack ranges or saves.
+
+
+### Empty-slot quick assignment (2026-09-07)
+
+Click an empty Astral slot, tap its touch button, or press its keyboard/controller
+binding to open an anchored skill list. Only unlocked, unassigned skills compatible
+with current equipment appear, using the same main/off-hand compatibility rules as
+combat. Mana and cooldown availability do not prevent assignment. Costs and cooldowns
+in the list use the character's resolved skill ranks and reductions.
+
+The picker pauses combat, clears pending input, and supports controller navigation,
+A to assign, and B/Escape to dismiss. Assignment revalidates the empty slot and skill,
+persists through the active character session, then commits. It cannot move an
+existing assignment, cast, consume mana, reset cooldowns or heal. A failed save leaves
+the slot unchanged. If no skills qualify, the list offers the existing skill atlas.
+The atlas retains its explicit reassignment behavior. No save-format change or reset.

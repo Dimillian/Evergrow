@@ -26,7 +26,7 @@ export class TouchHUD {
   private aimStick: HTMLElement;
   private nextUpdate = 0;
   private mount: HTMLElement;
-  private actions: { clearAttack(): void; cancelCombat(): void; activate(active: boolean): void; menu(action: MenuAction): void; unlock(): void; notice(message: string): void };
+  private actions: { assignSkill(slot: number, anchor: DOMRect): void; clearAttack(): void; cancelCombat(): void; activate(active: boolean): void; menu(action: MenuAction): void; unlock(): void; notice(message: string): void };
   constructor(mount: HTMLElement, actions: TouchHUD['actions'], options: {forceTouch?: boolean} = {}) {
     this.mount = mount; this.actions = actions;
     this.element = document.createElement('div'); this.element.className = 'touch-hud'; this.element.hidden = true;
@@ -68,7 +68,7 @@ export class TouchHUD {
       const action = target.dataset.touchAction as TouchAction;
       const slot = action.startsWith('skill-') ? Number(action.slice(6)) : -1;
       const id = this.player?.character.skillSlots[slot];
-      if (slot >= 0 && (!id || !this.player)) return;
+      if (slot >= 0 && !id) { if (this.player) this.actions.assignSkill(slot, target.getBoundingClientRect()); return; }
       if (id && this.player && !canUseSkill(id, this.player.equipment)) { this.actions.notice('Equip a compatible weapon to use this skill.'); return; }
       if(id && this.player) {
         const cooldown=this.player.skillCooldowns[id]??0, cost=resolveSkill(id,this.player.derived,this.player.character).mana;
@@ -181,8 +181,9 @@ export class TouchHUD {
       if(this.icons.get(i)!==id) { el.querySelector('.touch-icon')!.innerHTML = id ? skillIconSVG(id,29) : ''; this.icons.set(i,id); }
       const cooldown = id ? player.skillCooldowns[id]??0 : 0;
       const cost = id ? resolveSkill(id,player.derived,player.character).mana : 0;
-      el.classList.toggle('is-unavailable',!id || cooldown>0 || player.mana<cost || !canUseSkill(id,player.equipment));
-      el.setAttribute('aria-label',id ? `${SKILL_DEFINITIONS[id].name}${cooldown>0?`, ${cooldown.toFixed(1)} seconds`:player.mana<cost?', Not enough mana':''}` : `Empty skill ${i+1}`);
+      el.classList.toggle('is-unavailable',!!id && (cooldown>0 || player.mana<cost || !canUseSkill(id,player.equipment)));
+      el.classList.toggle('is-empty', !id);
+      el.setAttribute('aria-label',id ? `${SKILL_DEFINITIONS[id].name}${cooldown>0?`, ${cooldown.toFixed(1)} seconds`:player.mana<cost?', Not enough mana':''}` : `Assign skill ${i+1}`);
       el.querySelector('small')!.textContent = cooldown>0 ? cooldown.toFixed(1) : id ? `${i+1} · ${cost}` : '—';
     }
     this.element.querySelector('.touch-potion small')!.textContent = player.healCooldown>0 ? player.healCooldown.toFixed(1) : String(player.flasks);

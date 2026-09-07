@@ -1,13 +1,15 @@
 export { executeAppearanceChange } from './appearance-command.ts';
 import { upgradeSkill, configureSkill, OVERLOAD_NODE } from './skill-progression.ts';
 import type { Player } from './model.ts';
-import type { ActionResult, Attribute, EquipmentSlot, SkillId } from './character-types.ts';
+import type { ActionResult, Attribute, CharacterSheet, EquipmentSlot, SkillId } from './character-types.ts';
 import { equipItem, unequipItem, moveInventoryItem, allocateAttribute } from './inventory.ts';
 import { allocateSkillRoute } from './skill-tree-routes.ts';
 import { assignSkill, refreshCharacter } from './character.ts';
+import { assignEmptySkill } from './skill-assignment.ts';
 import { equipBest, sortInventory, type InventorySort, type EquipBestChoice } from './inventory-tools.ts';
 
 export type CharacterCommand =
+  | { type: 'assignEmptySkill'; slot: number; skill: SkillId }
   | { type: 'equipBest'; choice?: EquipBestChoice }
   | { type: 'sortInventory'; mode: InventorySort }
   | { type: 'upgradeSkill'; skill: SkillId }
@@ -26,6 +28,7 @@ export type CharacterCommand =
 export function executeCharacterCommand(player: Player, command: CharacterCommand): ActionResult {
   let result: ActionResult;
   switch (command.type) {
+    case 'assignEmptySkill': result = assignEmptySkill(player, command.slot, command.skill); break;
     case 'equipBest': result = equipBest(player.character, player.level, command.choice); break;
     case 'sortInventory': result = sortInventory(player.character, command.mode); break;
     case 'upgradeSkill': result = upgradeSkill(player.character, command.skill); break;
@@ -46,4 +49,16 @@ export function executeCharacterCommand(player: Player, command: CharacterComman
   }
   if (result.ok) refreshCharacter(player);
   return result;
+}
+
+/** Quick assignment is staged and saved once before publishing the slot change. */
+export async function executeEmptySkillAssignment(player: Player, slot: number, skill: SkillId,
+  persist: (character: CharacterSheet) => Promise<ActionResult>): Promise<ActionResult> {
+  const candidate = { ...player, character: { ...player.character, skillSlots: [...player.character.skillSlots] } };
+  const result = executeCharacterCommand(candidate, { type: 'assignEmptySkill', slot, skill });
+  if (!result.ok) return result;
+  const saved = await persist(candidate.character);
+  if (!saved.ok) return saved;
+  player.character = candidate.character; refreshCharacter(player);
+  return { ok: true };
 }
