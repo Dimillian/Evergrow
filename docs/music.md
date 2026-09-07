@@ -87,13 +87,35 @@ asynchronous work. Build checks cover local asset emission. Gameplay listening,
 transition feel and final balance against
 effects remain user-tested.
 
-## WebM compression checkpoint · 2026-09-08
+## 128 kbps WebM checkpoint · 2026-09-08
 
-The runtime ships **5,509,923 bytes** of audio-only WebM instead of 55,000,074
+The four runtime loops now total **3,766,060 bytes**, down from 5,509,923 bytes:
+**1,743,863 bytes saved (31.65% smaller)**. They use stereo 48 kHz Opus with a
+128 kbps VBR target, 20 ms packets, encoder effort 10 and the audio application.
+Actual average bitrate varies with each cue.
+
+At the user's request, these were transcoded from the existing 192 kbps WebMs;
+lossless masters were not used. This adds a lossy encoding generation, so final
+quality remains a listening check. The 250 ms circular guards, musical lengths,
+runtime seam preparation, music gain and cue-selection rules are unchanged.
+Decoded memory use is unchanged; this reduces downloaded and bundled bytes.
+
+Offline decoding verified unchanged frame counts and finite, non-silent PCM for
+all four outputs at both 44.1 and 48 kHz. The actual runtime preparation function
+produced the expected musical frame counts and continuous adjacent seam samples.
+Tests pin the new file sizes and SHA-256 hashes. Encoding scripts and measurement
+outputs remain outside the repository; only the final four WebMs are shipped.
+All 913 code tests, application/headless type checks and the production build
+passed. The build emits all four smaller WebMs, and their development URLs
+return the verified bytes. No gameplay automation or native install was run.
+
+## Historical 192 kbps WebM checkpoint · 2026-09-08
+
+This checkpoint shipped **5,509,923 bytes** of audio-only WebM instead of 55,000,074
 bytes of WAV: **89.98% smaller**. Authoring files are retained separately on
 the authoring machine, outside the repository and branch history.
 
-The final assets use stereo Opus at 48 kHz, 192 kbps VBR,
+Those assets used stereo Opus at 48 kHz, 192 kbps VBR,
 20 ms packets and maximum encoder effort (10), with the music/audio application
 setting. These are high-quality lossy copies, not bit-identical masters; an
 inaudible difference cannot be guaranteed without listening comparison. The

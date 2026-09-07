@@ -8,6 +8,8 @@ Crypts retain their location track through combat. Default music gain is 0.49
 (70% of the previous level); sound effects retain their existing volume.
 The shared sound toggle and browser/native background lifecycle control music
 and effects. Lazy local WebM/Opus playback prepares explicit loop seams; no save changes.
+The four stereo 128 kbps VBR loops total 3,766,060 bytes, 31.65% smaller than the
+previous 192 kbps assets, with the same musical lengths and decoded memory use.
 See [music ownership, resource bounds and validation](music.md). Player listening
 and balance acceptance remain pending.
 

@@ -207,10 +207,10 @@ test('background cleanup retries when a newer fade outlasts the pending timer', 
 
 test('shipped WebMs match verified Opus outputs and musical lengths', () => {
   const expected = [
-    { bytes: 1359405, frames: 2560000, sha256: '7cf2f9eb1e59a8b5d197661ffac5e6bb9b9a65187a940586502dd2f7269f0f36' },
-    { bytes: 1399760, frames: 2425264, sha256: '29918f19b3cb4b985fb47bc257885f85729d5bdae857729ee64635611ca8d61e' },
-    { bytes: 1629698, frames: 3072000, sha256: '921c9c1005332c86851cff9b462a5df41284e237631fe08455b8d46e5400f6b4' },
-    { bytes: 1121060, frames: 1920000, sha256: '8bc5d73fd33a42ecca9a54115ce34508b3cf9f7a36153fa0da93565b7890d7a1' },
+    { bytes: 920324, frames: 2560000, sha256: '99e595c44c2e1d2191cf1fbb85059cf5c2587d5e975bfa6303a8e9cc173ad559' },
+    { bytes: 967082, frames: 2425264, sha256: '15173ad725aeac5d155ce3bcc88afe20bda286f4c82044a62472c808ebd2ef9a' },
+    { bytes: 1107464, frames: 3072000, sha256: 'c70232f1aad5be4c22b22e574e94c9e1d09f771fbce930a28dd2336bfb1eada7' },
+    { bytes: 771190, frames: 1920000, sha256: 'dc7c56d3ebf5f59ca72ba72afeeb599436d094cd87195385ddbe97f7805ed5aa' },
   ];
   for (const [i, track] of Object.values(MUSIC_TRACKS).entries()) {
     const file = readFileSync(new URL(track.url));
