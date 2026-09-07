@@ -62,6 +62,7 @@
 .service-section-heading h3 { margin-right: 0; }
 .service-section-heading > span { margin-left: auto; }
 .service-filter { position: relative; width: 28px; height: 28px; min-height: 28px; padding: 5px; flex: none; }
+.service-filter .ui-icon { width: 17px; height: 17px; }
 .service-filter.has-filter { color: var(--ui-ivory); border-color: var(--ui-silver); }
 .service-filter-status { color: var(--ui-silver-dim); font-size: 13px; margin: 12px 0 0; }
 .service-popup-layer { position: absolute; inset: 0; z-index: 80; }
