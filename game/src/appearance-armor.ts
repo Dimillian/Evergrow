@@ -1,7 +1,13 @@
 import type { CharacterOutfit, ArmorMaterial } from './art-types.ts';
-import { mixColor } from './art-primitives.ts';
 import { ARMOR_PARTS, ARMOR_TINTS, type ArmorTints } from './appearance-armor-content.ts';
 export { ARMOR_PARTS, ARMOR_TINTS, type ArmorPart, type ArmorTints } from './appearance-armor-content.ts';
+// Armor shading performs additional hex-only blends; keep every projected material in that format.
+function mixColor(from:string,to:string,amount:number):string {
+  return '#'+[1,3,5].map(offset=>Math.round(
+    Number.parseInt(from.slice(offset,offset+2),16)*(1-amount)
+    +Number.parseInt(to.slice(offset,offset+2),16)*amount
+  ).toString(16).padStart(2,'0')).join('');
+}
 /** Recolor a projection only. Trim, seeds, contours and authoritative items remain untouched. */
 export function tintedOutfit(outfit:Partial<CharacterOutfit>, tints:ArmorTints, showHelmet:boolean):Partial<CharacterOutfit> {
   const result={...outfit};

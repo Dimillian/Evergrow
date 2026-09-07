@@ -36,3 +36,15 @@ test('original colors and helmet visibility are independent reversible projectio
   assert.deepEqual(tintedOutfit(outfit,{head:'crimson'},true).head,tintedOutfit(outfit,{head:'crimson',chest:'teal'},true).head);
   assert.deepEqual(tintedOutfit({head:null,chest:null},{head:'crimson',chest:'teal'},true),{head:null,chest:null});
 });
+
+
+test('tinted materials remain hex colors for subsequent armor shading blends', () => {
+  const material={base:'#808080',shadow:'#202020',edge:'#dddddd',trim:'#eeeeee'};
+  const outfit={chest:{style:'leather' as const,seed:1,material}};
+  const tinted=tintedOutfit(outfit,{chest:'teal'},true).chest!.material;
+  assert.equal(tinted.base,'#538289');
+  for(const tint of ARMOR_TINTS){
+    const result=tintedOutfit(outfit,{chest:tint.id},true).chest!.material;
+    for(const color of [result.base,result.shadow,result.edge])assert.match(color,/^#[0-9a-f]{6}$/);
+  }
+});
