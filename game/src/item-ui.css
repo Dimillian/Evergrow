@@ -18,35 +18,45 @@
 .ui-item-tier i { width: 3px; height: 3px; background: var(--item-color); transform: rotate(45deg); box-shadow: 0 0 3px #000; }
 .ui-item-slot[data-tier='common'] .ui-item-tier i { background: transparent; border: 1px solid var(--item-color); box-sizing: border-box; }
 .ui-empty-item-mark { position: absolute; color: #67809129; font-size: 17px; }
-.ui-item-heading { display: flex; align-items: center; gap: 12px; padding: 13px 12px; border-top: 2px solid var(--item-color); border-bottom: 1px solid color-mix(in srgb, var(--item-color) 25%, transparent); background: linear-gradient(115deg, color-mix(in srgb, var(--item-color) 16%, transparent), transparent 90%); }
+.ui-item-heading { display: flex; align-items: center; gap: 10px; padding: 0 0 11px; border-bottom: 1px solid #a5bec21c; }
 .ui-item-class { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 11px; letter-spacing: .025em; color: #afc0c7; }
-.ui-item-heading h4 { margin: 9px 0 0; color: var(--item-color); font-size: 20px; font-weight: 400; line-height: 1.2; }
-.ui-item-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 15px; color: var(--ui-muted); font-size: 11px; margin: 11px 0 13px; }
+.ui-item-heading h4 { margin: 9px 0 0; color: var(--item-color); font-size: 19px; font-weight: 400; line-height: 1.25; overflow-wrap: anywhere; }
+.ui-item-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 15px; color: var(--ui-muted); font-size: 11px; margin: 9px 0 11px; }
 .ui-item-equipped { color: #aacbb9; margin-left: auto; }
 .ui-item-properties { margin: 12px 0; }
-.ui-item-property { display: grid; grid-template-columns: minmax(0, 1fr) auto 46px; align-items: baseline; gap: 8px; padding: 4px 0; font-size: 13px; }
+.ui-item-property { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 8px; padding: 4px 0; font-size: 13px; }
 .ui-item-property > span { color: var(--ui-text); }
 .ui-item-property > strong { color: var(--ui-ivory); font-weight: 400; }
 .ui-item-property > em { font-size: 11px; font-style: normal; text-align: right; }
 .ui-item-property.is-removed > span, .ui-item-property.is-removed > strong { color: var(--ui-silver-dim); }
 .ui-item-weapon { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid #96b8c319; border-bottom: 1px solid #96b8c319; }
 .ui-item-weapon > div { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: baseline; }
-.ui-item-weapon strong { color: var(--ui-ivory); font-size: 23px; font-weight: 400; }
+.ui-item-weapon strong { color: var(--ui-ivory); font-size: 21px; font-weight: 400; }
 .ui-item-weapon span { grid-row: 2; grid-column: 1 / -1; color: var(--ui-muted); font-size: 11px; }
 .ui-item-weapon em { font-size: 11px; font-style: normal; }
 .ui-item-affixes { color: var(--ui-silver-dim); font-size: 11px; line-height: 1.5; margin: 10px 0; }
 .ui-item-comparison { color: var(--ui-silver-dim); font-size: 11px; line-height: 1.45; padding-top: 11px; margin-top: 12px; border-top: 1px solid #96b8c31c; }
 .ui-item-comparison span { color: var(--ui-text); }
-.ui-item-tooltip { position: fixed; z-index: 80; width: min(325px, calc(100vw - 16px)); box-sizing: border-box; max-height: calc(100vh - 16px); overflow: auto; border-color: color-mix(in srgb, var(--item-color) 62%, #293b43); background: linear-gradient(145deg, color-mix(in srgb, var(--item-color) 8%, #111b25), #090f17 70%); box-shadow: 0 15px 55px #000c, 0 0 0 3px #070b127a; }
-.ui-item-tooltip .ui-item-heading h4 { font-size: 20px; }
-.ui-item-tooltip .ui-item-class { font-size: 10px; }
-.ui-item-tooltip .ui-item-property { font-size: 12px; grid-template-columns: minmax(0, 1fr) auto 40px; gap: 6px; }
+.ui-item-tooltip { position: fixed; z-index: 80; width: min(310px, calc(100vw - 16px)); box-sizing: border-box; max-height: calc(100vh - 16px); overflow: auto; border-color: #526774; background: #101a22; box-shadow: 0 8px 28px #0008; }
+.ui-item-tooltip-group { position: fixed; z-index: 80; display: grid; grid-template-columns: repeat(var(--tooltip-columns), minmax(0, 1fr)); align-items: start; gap: 8px; width: min(calc(var(--tooltip-columns) * 300px + (var(--tooltip-columns) - 1) * 8px), calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow: auto; padding: 0; border: 0; background: none; box-shadow: none; border-radius: 6px; }
+.ui-item-hover-card { position: relative; isolation: isolate; min-width: 0; padding: 14px; box-sizing: border-box; border: 1px solid #526774; border-radius: 6px; background: #101a22; box-shadow: 0 8px 24px #0006; }
+.ui-item-hover-card::before { content: ''; position: absolute; z-index: -1; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(ellipse 230px 170px at 0 0, var(--item-color), transparent 80%); opacity: .14; }
+.ui-item-hover-card:not(:first-child) { background: #0d161e; border-color: #354651; }
+.ui-item-hover-card .ui-item-property { font-size: 12px; padding: 3px 0; }
+.ui-item-hover-card:not(:first-child) .ui-item-equipped, .ui-item-hover-card .ui-item-affixes { display: none; }
+.ui-item-section-label { display: block; margin-bottom: 6px; color: #a6bac4; font: 500 10px/1.4 "Evergrow Numerals", system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.ui-item-comparison-label { padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1px solid #a5bec21c; }
+.ui-item-description { color: var(--ui-muted); font-size: 11px; line-height: 1.45; margin: 9px 0; }
+.ui-item-hover-card .ui-item-comparison { padding-top: 9px; margin-top: 10px; }
+.ui-item-hover-card .is-gain { color: #a1d4b0; }
+.ui-item-hover-card .is-loss { color: #da9294; }
+@media (max-width: 620px) {
+  .ui-item-tooltip-group { grid-template-columns: 1fr; width: min(310px, calc(100vw - 16px)); }
+}
 @media (prefers-reduced-motion: reduce) { .ui-item-slot { transition: none; } }
 @media (forced-colors: active) { .ui-item-slot, .ui-item-tooltip { border-color: ButtonText; } .ui-item-slot:focus-visible { outline: 2px solid Highlight; } }
-.ui-rarity-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 7px; color: var(--item-color); background: color-mix(in srgb, var(--item-color) 14%, #0b131b); border: 1px solid color-mix(in srgb, var(--item-color) 65%, #26343e); font: 600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
-.ui-rarity-badge > span { padding-right: 6px; border-right: 1px solid color-mix(in srgb, var(--item-color) 40%, transparent); }
-.ui-rarity-badge[data-tier='epic'], .ui-rarity-badge[data-tier='legendary'] { box-shadow: 0 0 9px color-mix(in srgb, var(--item-color) 18%, transparent); }
-.ui-item-tooltip .ui-item-heading { margin: -5px -5px 0; }
+.ui-rarity-badge { display: inline-flex; align-items: center; gap: 5px; color: var(--item-color); font: 600 10px "Evergrow Numerals", system-ui, sans-serif; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.ui-rarity-badge::before { content: ''; width: 4px; height: 4px; background: currentColor; transform: rotate(45deg); }
 .ui-item-slot[data-filled='true']:hover { border-color: var(--item-color); box-shadow: 0 0 0 1px color-mix(in srgb, var(--item-color) 45%, transparent), inset 0 0 18px color-mix(in srgb, var(--item-color) 15%, transparent); }
 .ui-item-slot.is-drop-target { border-color: #d9efde; outline: 2px solid #b4dcca; }
 .ui-item-level { padding: 1px 3px; border-radius: 2px; background: #081119c9; font: 600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #e0e9ed; text-shadow: none; }
@@ -68,9 +78,5 @@
 /* Android 13's bundled WebView may lack color-mix. A rejected custom-property
    gradient must never turn an equipment tooltip into a transparent surface. */
 @supports not (color: color-mix(in srgb, red, blue)) {
-  .ui-item-tooltip { background: linear-gradient(145deg, #192632, #0b131d 70%); border-color: var(--item-color, #607b86); }
-  .ui-item-heading { background: linear-gradient(115deg, #263544, #111c26); border-bottom-color: #41515d; }
-  .ui-rarity-badge { background: #101a24; border-color: var(--item-color, #607b86); }
-  .ui-rarity-badge > span { border-right-color: #526573; }
   .ui-item-slot[data-filled='true'] { background: linear-gradient(145deg, #233440, #0b141d 75%); border-color: var(--item-color, #607b86); }
 }

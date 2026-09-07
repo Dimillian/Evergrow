@@ -183,12 +183,12 @@
 }
 
 .ui-tooltip {
-  padding: 14px 16px;
-  border: 1px solid var(--ui-line-strong);
-  border-radius: 2px;
+  padding: 12px 14px;
+  border: 1px solid #526774;
+  border-radius: 6px;
   color: var(--ui-text);
-  background: linear-gradient(145deg, var(--ui-panel-raised), var(--ui-well));
-  box-shadow: 0 10px 26px #0008, inset 0 1px #dbd7bc15;
+  background: #101a22;
+  box-shadow: 0 8px 28px #0008;
   font-size: var(--ui-type-small);
   line-height: 1.45;
   pointer-events: none;
@@ -220,10 +220,10 @@
   width: max-content;
   max-width: 220px;
   padding: 6px 10px;
-  border: 1px solid var(--ui-line-strong);
-  border-radius: 2px;
+  border: 1px solid #526774;
+  border-radius: 5px;
   color: var(--ui-ivory);
-  background: var(--ui-well);
+  background: #101a22;
   box-shadow: 0 5px 15px #0008;
   font-size: var(--ui-type-small);
   font-weight: 400;

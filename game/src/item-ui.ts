@@ -11,6 +11,8 @@ export interface ItemPresentation {
   sheet: CharacterSheet; level: number; equipped?: boolean; sourceIndex?: number; targetSlot?: EquipmentSlot;
   /** Optional functional context, e.g. a vendor's price. Always escaped. */
   context?: string;
+  /** Hover comparisons name displaced gear in adjacent cards instead. */
+  adjacentComparison?: boolean;
 }
 export const CHANGE_LABELS: Record<PreviewStat, string> = {
   damage: 'Main-hand damage', cadence: 'Main-hand actions / s', offDamage: 'Off-hand damage', offCadence: 'Off-hand attacks / s',
@@ -47,9 +49,9 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
   let weapon = '';
   if (item.weapon) {
     const w = item.weapon;
-    weapon = `<div class="ui-item-weapon"><div><strong>${number(w.damage)}</strong><span>${escapeUI(w.damageType)} damage</span></div><div><strong>${number(weaponActionRate(w), 2)}</strong><span>${w.attackKind === 'bolt' ? 'Casts' : 'Attacks'} / second</span></div></div><p class="ui-item-comparison">${w.hands === 2 ? 'Two-handed' : 'One-handed'} · ${escapeUI(w.family)} · ${number(w.reach)} reach${w.attackKind === 'bolt' ? ` · ${basicAttackManaCost(w, { manaCostMultiplier: 1 })} base mana / bolt` : ''}</p>`;
+    weapon = `<div class="ui-item-weapon"><div><strong>${number(w.damage)}</strong><span>${escapeUI(w.damageType)} damage</span></div><div><strong>${number(weaponActionRate(w), 2)}</strong><span>${w.attackKind === 'bolt' ? 'Casts' : 'Attacks'} / second</span></div></div><p class="ui-item-description">${w.hands === 2 ? 'Two-handed' : 'One-handed'} · ${escapeUI(w.family)} · ${number(w.reach)} reach${w.attackKind === 'bolt' ? ` · ${basicAttackManaCost(w, { manaCostMultiplier: 1 })} base mana / bolt` : ''}</p>`;
   }
-  if (item.focus) weapon = `<p class="ui-item-comparison">Off-hand · ${item.kind === 'grimoire' ? 'Grimoire · Mana & spell sustain' : 'Orb · Spell potency'}<br>Pairs with a one-handed weapon</p>`;
+  if (item.focus) weapon = `<p class="ui-item-description">Off-hand · ${item.kind === 'grimoire' ? 'Grimoire · Mana & spell sustain' : 'Orb · Spell potency'}<br>Pairs with a one-handed weapon</p>`;
   if (item.shield) weapon = `<div class="ui-item-weapon"><div><strong>${number(item.shield.blockChance)}%</strong><span>Block chance</span></div><div><strong>${number(item.shield.blockReduction)}%</strong><span>Damage blocked</span></div></div>`;
   let comparison = '';
   if (!view.equipped) {
@@ -61,13 +63,30 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
         const delta = difference * (percentage ? 100 : 1);
         return `<div class="ui-item-change"><span>${CHANGE_LABELS[change.key]}</span><strong class="${delta > 0 ? 'is-gain' : 'is-loss'}">${delta > 0 ? '+' : ''}${number(delta, 2)}${percentage ? '%' : ''}</strong></div>`;
       }).join('');
-      comparison = `<div class="ui-item-comparison"><span>On equip</span>${changes || '<p>No stat change</p>'}${preview.displaced.length ? `<p>Replaces ${preview.displaced.map(entry => escapeUI(entry.item.name)).join(' + ')}</p>` : ''}</div>`;
+      comparison = `<div class="ui-item-comparison"><span class="ui-item-section-label">On equip</span>${changes || '<p>No stat change</p>'}${preview.displaced.length && !view.adjacentComparison ? `<p>Replaces ${preview.displaced.map(entry => escapeUI(entry.item.name)).join(' + ')}</p>` : ''}</div>`;
     }
   }
-  return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}"><span aria-hidden="true">${['I', 'II', 'III', 'IV', 'V'][TIER_RANK[item.tier] - 1]}</span>${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span></span><h4>${escapeUI(itemDisplayName(item))}</h4></div></div>
+  return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span></span><h4>${escapeUI(itemDisplayName(item))}</h4></div></div>
     <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${view.equipped ? '<span class="ui-item-equipped">Equipped</span>' : ''}</div>
     ${item.recipe.enhancement ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% item stats</div>` : ''}
     ${weapon}<div class="ui-item-properties">${rows.join('')}</div>
     ${item.affixes.length ? `<div class="ui-item-affixes">${item.affixes.map(a => escapeUI(a.name)).join(' · ')}</div>` : ''}
     ${comparison}${view.context ? `<div class="ui-item-comparison">${escapeUI(view.context)}</div>` : ''}`;
+}
+
+const EQUIPPED_LABELS: Record<EquipmentSlot, string> = {
+  weapon: 'Main hand', offhand: 'Off hand', head: 'Head', chest: 'Chest', gloves: 'Gloves',
+  legs: 'Legs', boots: 'Boots', cloak: 'Cloak', amulet: 'Amulet', ring1: 'Ring 1', ring2: 'Ring 2',
+};
+
+/** Use the real equip transaction's displacement, including hand conflicts and ring targets. */
+export function itemHoverCards(item: Item, view: ItemPresentation): string[] {
+  const preview = view.equipped ? null : previewEquipmentChange(view.sheet, item, view.level,
+    { sourceIndex: view.sourceIndex, slot: view.targetSlot });
+  const displaced = preview?.ok ? preview.displaced : [];
+  const card = (gear: Item, content: string, label = '') =>
+    `<section class="ui-item-hover-card" data-tier="${gear.tier}" style="--item-color:${TIER_COLORS[gear.tier]}">${label ? `<div class="ui-item-section-label ui-item-comparison-label">Equipped · ${label}</div>` : ''}${content}</section>`;
+  return [card(item, itemTooltipMarkup(item, { ...view, adjacentComparison: displaced.length > 0 })),
+    ...displaced.map(({ item: gear, slot }) => card(gear,
+      itemTooltipMarkup(gear, { sheet: view.sheet, level: view.level, equipped: true }), EQUIPPED_LABELS[slot]))];
 }

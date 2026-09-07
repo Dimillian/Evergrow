@@ -5,7 +5,7 @@ import { generateItem } from '../src/items.ts';
 import { executeCharacterCommand } from '../src/character-commands.ts';
 import { planEquipmentChange } from '../src/inventory.ts';
 import { previewEquipmentChange } from '../src/equipment-preview.ts';
-import { itemTooltipMarkup, itemSlotMarkup } from '../src/item-ui.ts';
+import { itemTooltipMarkup, itemSlotMarkup, itemHoverCards } from '../src/item-ui.ts';
 const put = (player: ReturnType<typeof initialPlayer>, index: number, profile: string, shield = false) => {
   player.character.inventory[index] = generateItem(1010 + index, 1, shield ? 'shield' : 'weapon', profile, 'common');
   assert.ok(executeCharacterCommand(player, { type: 'equip', index }).ok);
@@ -70,4 +70,41 @@ test('shared tooltip distinguishes effective changes from item values, escapes c
   assert.ok(!markup.includes('<script>'));
   assert.ok(!itemTooltipMarkup(item, { sheet: p.character, level: 1, equipped: true }).includes('On equip'));
   assert.ok(itemSlotMarkup(item).includes('ui-item-tier'));
+});
+
+
+test('hover comparison cards show exactly the gear displaced, without changing the build', () => {
+  const p = initialPlayer(0, 0); put(p, 0, 'longsword'); put(p, 1, 'iron-buckler', true);
+  const item = generateItem(2700, 1, 'weapon', 'ember-staff', 'common');
+  p.character.inventory[2] = item;
+  const before = structuredClone(p);
+  const cards = itemHoverCards(item, { sheet: p.character, level: 1, sourceIndex: 2 });
+  assert.equal(cards.length, 3);
+  assert.match(cards[0], /On equip/);
+  assert.doesNotMatch(cards[0], /Replaces/);
+  assert.match(cards[1], /Equipped · Main hand/);
+  assert.match(cards[1], new RegExp(p.character.equipped.weapon!.name));
+  assert.match(cards[2], /Equipped · Off hand/);
+  assert.match(cards[2], new RegExp(p.character.equipped.offhand!.name));
+  assert.doesNotMatch(cards.slice(1).join(''), /On equip/);
+  assert.deepEqual(p, before);
+  assert.equal(itemHoverCards(item, { sheet: p.character, level: 1, sourceIndex: 3 }).length, 1);
+  assert.equal(itemHoverCards(generateItem(2701, 20, 'head'), { sheet: p.character, level: 1 }).length, 1);
+  assert.equal(itemHoverCards(p.character.equipped.weapon!, { sheet: p.character, level: 1, equipped: true }).length, 1);
+});
+
+test('hover comparisons respect an empty ring slot and an explicitly targeted occupied ring', () => {
+  const p = initialPlayer(0, 0);
+  const first = generateItem(2800, 1, 'ring'), second = generateItem(2801, 1, 'ring');
+  p.character.equipped.ring1 = first;
+  p.character.equipped.ring2 = null;
+  p.character.inventory[0] = second;
+  const view = { sheet: p.character, level: 1, sourceIndex: 0 };
+  assert.equal(itemHoverCards(second, view).length, 1, 'default equip fills the empty ring');
+  first.name = '<equipped & ring>';
+  const cards = itemHoverCards(second, { ...view, targetSlot: 'ring1' });
+  assert.equal(cards.length, 2);
+  assert.match(cards[1], /Equipped · Ring 1/);
+  assert.match(cards[1], /&lt;equipped &amp; ring&gt;/);
+  assert.doesNotMatch(cards[1], /<equipped/);
 });
