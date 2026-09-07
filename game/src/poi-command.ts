@@ -1,3 +1,4 @@
+import { metric } from './chronicle.ts';
 import { treasureLanding } from './treasure-flight.ts';
 import { eventRecipe, isTrialKind, recipeMembers, planSeals, sealPoint } from './event-recipes.ts';
 import { freshWaves } from './wave-system.ts';
@@ -77,10 +78,13 @@ async function commitEvent(sim: Simulation, site: EventSite, choice: EventChoice
       record.delivered |= (1 << bundle.items.length);
     }
     if (!record.bonusGranted) {
+      metric(checkpoint.chronicle,'events');metric(checkpoint.chronicle,'event:'+site.kind);
+      if(site.kind==='cursedChest')metric(checkpoint.chronicle,'bestWaves',record.wavesCleared);
       const reward = Math.round(bundle.xp * xpLevelFactor(checkpoint.level, site.level));
       const staged = { ...sim.player, character: checkpoint.character, level: checkpoint.level, xp: checkpoint.xp };
       if (reward)
         awardCharacterExperience(staged, reward);
+      metric(checkpoint.chronicle,'xp',reward);metric(checkpoint.chronicle,'highestLevel',staged.level);
       if (site.kind === 'standingStones')
         staged.character.blessing = { kind: record.choice as BlessingKind, remaining: EVENT_RULES.blessingDuration };
       checkpoint.character = staged.character;

@@ -7,7 +7,7 @@ function setup() {
   const log: string[] = [], active = new Set<string>(), input = new GameInput();
   const sim = new Simulation({ blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) }, { spawn: false });
   const panel = (name: string) => ({ open: () => { assert.equal(active.size, 0); active.add(name); log.push(`open:${name}`); }, close: () => { active.delete(name); log.push(`close:${name}`); } });
-  const coordinator = new PanelCoordinator({ journeys: panel('journeys'), event: panel('event'), service: panel('service'), map: panel('map'), character: panel('character'), skills: panel('skills') }, {
+  const coordinator = new PanelCoordinator({chronicle:panel('chronicle'), journeys: panel('journeys'), event: panel('event'), service: panel('service'), map: panel('map'), character: panel('character'), skills: panel('skills') }, {
     clearInput: () => { input.clear(); sim.clearInput(); log.push('clear'); },
     changed: phase => log.push(`phase:${phase}`), resumeGameplay: () => { assert.equal(active.size, 0); log.push('focus:game'); }, save: () => log.push('save'),
   });
@@ -21,7 +21,7 @@ test('switching panels closes the old focus owner before opening the next, savin
   assert.deepEqual(log, ['clear', 'close:skills', 'phase:playing', 'focus:game']);
 });
 test('all registered panels clear held movement/actions and simulation velocity on entry and resume', () => {
-  for (const name of ['map', 'character', 'skills', 'service', 'event'] as PanelPhase[]) {
+  for (const name of ['map', 'character', 'skills', 'service', 'event','chronicle'] as PanelPhase[]) {
     const { coordinator: c, input, sim } = setup(); c.transition('playing');
     input.keyDown('KeyW'); input.keyDown('Space'); input.pointerDown(0); sim.player.vy = -100;
     assert.ok(c.open(name)); assert.equal(sim.player.vy, 0);
@@ -33,7 +33,7 @@ test('all registered panels clear held movement/actions and simulation velocity 
   }
 });
 test('title and defeat close every active panel without returning focus to gameplay', () => {
-  for (const next of ['ready', 'dead'] as const) for (const name of ['map', 'character', 'skills', 'service', 'event'] as PanelPhase[]) {
+  for (const next of ['ready', 'dead'] as const) for (const name of ['map', 'character', 'skills', 'service', 'event','chronicle'] as PanelPhase[]) {
     const { coordinator: c, log, active } = setup(); c.transition('playing'); c.open(name); log.length = 0;
     c.transition(next, true); assert.equal(active.size, 0); assert.equal(c.activePanel, null);
     assert.deepEqual(log, ['clear', `close:${name}`, `phase:${next}`, 'save']);
@@ -47,3 +47,7 @@ test('phase eligibility, repeated opens, toggle and pause remain consistent', ()
   c.resume(); assert.ok(c.toggle('character')); assert.equal(c.open('character'), false);
   assert.equal(c.open('map'), false); assert.ok(c.toggle('character')); assert.equal(c.phase, 'playing');
 });
+
+test('Chronicle returns to pause when opened from pause, and cannot open at the title',()=>{const {coordinator:c}=setup();assert.equal(c.open('chronicle'),false);c.transition('playing');c.pause();assert.ok(c.open('chronicle'));assert.equal(c.phase,'chronicle');assert.ok(c.resume());assert.equal(c.phase,'paused');c.resume();c.open('chronicle');c.resume();assert.equal(c.phase,'playing');});
+
+test("Chronicle returns to character inventory without resuming simulation",()=>{const {coordinator:c,active}=setup();c.transition("playing");c.open("character");c.open("chronicle");assert.deepEqual([...active],["chronicle"]);c.resume();assert.equal(c.phase,"character");assert.deepEqual([...active],["character"]);});

@@ -1,6 +1,7 @@
 import './pause-menu.css';
 
 export interface PauseActions {
+  openChronicle?(): void;
   sound?(): void; muted?(): boolean; zoom?(factor: number): void;
   save?(): Promise<boolean>;
   returnToTitle(): void | Promise<void>;
@@ -14,6 +15,7 @@ export class PauseMenu {
   private busy = false;
   constructor(root: HTMLElement, actions: PauseActions, signal: AbortSignal) {
     this.root = root; this.actions = actions; this.signal = signal;
+    const chronicle=root.querySelector<HTMLButtonElement>('#chronicle-action')!;chronicle.disabled=!actions.openChronicle;chronicle.addEventListener('click',()=>actions.openChronicle?.(),{signal});
     root.querySelector('#options-action')!.addEventListener('click', () => this.showOptions(!this.options), { signal });
     root.querySelector('[data-options-back]')!.addEventListener('click', () => this.back(), { signal });
     root.querySelector('[data-sound]')!.addEventListener('click', () => { actions.sound?.(); this.refresh(); }, { signal });

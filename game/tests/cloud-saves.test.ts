@@ -20,6 +20,7 @@ function fixture() {
 }
 function server() {
   const db = new DatabaseSync(':memory:'); db.exec(readFileSync(new URL('../../drizzle/0000_conscious_kingpin.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../../drizzle/0001_worthless_slipstream.sql', import.meta.url),'utf8'));
   const blobs = new Map<string, string>(); let failPut = false, failCommit = false, uncertainCommit = false;
   const env: CloudEnv = {
     DB: { prepare(sql) {
@@ -63,8 +64,9 @@ test('two users have independent eight-slot rosters and owned blobs', async t =>
   assert.equal((await s.request('A', 'characters/8', write(fixture()))).status, 404);
 });
 test('concurrent device writes commit once; retries are idempotent and stale saves cannot resurrect deletes', async t => {
-  const s = server(); t.after(() => s.db.close()); const initial = write(fixture());
-  const results = await Promise.all([s.request('A', 'characters/0', initial), s.request('A', 'characters/0', write(fixture()))]);
+  const s = server(); t.after(() => s.db.close()); const candidates = [write(fixture()),write(fixture())];
+  const results = await Promise.all(candidates.map(candidate=>s.request('A','characters/0',candidate)));
+  const initial=candidates[results.findIndex(r=>r.status===200)];
   assert.deepEqual(results.map(r => r.status).sort(), [200, 409]);
   assert.equal((await s.request('A', 'characters/0', initial)).status, 200); assert.equal(s.blobs.size, 1);
   assert.equal((await s.request('A', 'characters/0', { ...initial, bundle: null })).status, 409);
@@ -126,4 +128,15 @@ test('an uncertain acknowledgement cannot delete a blob already published by D1'
   const response = await s.request('A', 'characters/0', write(fixture()));
   assert.equal(response.status, 200); assert.equal(s.blobs.size, 1);
   assert.equal((await (await s.request('A')).json()).bundle.character.name, 'Rowan');
+});
+
+test('Chronicle follows accepted cloud checkpoints, retains deletion and isolates accounts',async t=>{
+ const s=server();t.after(()=>s.db.close());const bundle=fixture();bundle.character.checkpoint.chronicle!.sources[0].values.kills=100;
+ const first=write(bundle);assert.equal((await s.request('A','characters/0',first)).status,200);
+ const chronicle=await(await s.request('A','chronicle')).json();assert.equal(Object.values(chronicle.sources).reduce((n:number,r:any)=>n+(r.values.kills??0),0),100);
+ bundle.character.checkpoint.chronicle!.sources[0].values.kills=1000;
+ assert.equal((await s.request('A','characters/0',write(bundle,0))).status,409);
+ assert.equal((await s.request('A','characters/0',write(null,1))).status,200);
+ const deleted=await(await s.request('A','chronicle')).json();assert.equal(deleted.characters['cloud-test'].deleted,true);assert.equal(Object.values(deleted.sources).reduce((n:number,r:any)=>n+(r.values.kills??0),0),100);
+ assert.deepEqual((await(await s.request('B','chronicle')).json()).sources,{});
 });

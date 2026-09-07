@@ -5,6 +5,7 @@
     "types": []
   },
   "include": [
+    "src/chronicle.ts", "src/chronicle-content.ts", "src/chronicle-tracking.ts",
     "src/jewelry-content.ts", "src/item-materials.ts", "src/gear-material-content.ts", "src/game-features.ts", "src/affix-combat.ts", "src/equipment-affix-content.ts",
     "src/battle-bark-content.ts", "src/battle-barks.ts", "src/battle-bark-layout.ts", "src/enemy-engagement.ts",
     "src/character-look.ts", "src/appearance-content.ts", "src/appearance-armor-content.ts", "src/appearance-command.ts",

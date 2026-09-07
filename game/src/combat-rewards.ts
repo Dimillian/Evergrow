@@ -1,3 +1,4 @@
+import { metric } from './chronicle.ts';
 import { ENEMY_LOOT_YIELD } from './loot-content.ts';
 import { dropGold, rollEnemyGold, type GroundGold } from './gold.ts';
 import type { CombatEvent, Enemy, Pickup, Player } from './model.ts';
@@ -16,6 +17,7 @@ export interface KillRewardContext {
 export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, context: KillRewardContext): { kills: number; recharge: number } {
   const { player } = context;
   kills++;
+  if (!player.dead) metric(player.chronicle,'manaRestored',Math.min(player.maxMana-player.mana,player.derived.manaOnKill));
   if (!player.dead) player.mana = Math.min(player.maxMana, player.mana + player.derived.manaOnKill);
   const reward = Math.max(1, Math.round(enemy.xpReward * xpLevelFactor(player.level, enemy.level)));
   const levels = awardCharacterExperience(player, reward);

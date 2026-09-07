@@ -1,3 +1,4 @@
+import type { ChronicleLedger } from './chronicle.ts';
 import type { ChartResult, ExplorationPersistence } from './exploration.ts';
 import type { DecodedExploration } from './exploration-save.ts';
 import type { CharacterSave } from './character-save.ts';
@@ -31,6 +32,7 @@ export class SaveClient implements CharacterRepositoryPort, ExplorationPersisten
       catch (error) { this.pending.delete(id); reject(error); }
     });
   }
+  chronicle():Promise<ChronicleLedger> { return this.request('chronicle'); }
   async read(index: number): Promise<SaveSlot> {
     try { return await this.request('read', { index }); }
     catch { return { index, state: 'unavailable', record: null, token: null }; }

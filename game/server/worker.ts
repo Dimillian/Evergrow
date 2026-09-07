@@ -1,7 +1,8 @@
+import { parseChronicleLedger, mergeChronicles, recordChronicle } from '../src/chronicle.ts';
 import { decodeSaveBundle, SAVE_BUNDLE_LIMIT } from '../src/save-bundle.ts';
 import { characterPower, previewCharacter } from '../src/character-summary.ts';
 import { WORLD_GENERATION_VERSION } from '../src/world.ts';
-interface Row { owner: string; slot: number; revision: number; object: string | null; previous: string | null; summary: string | null; operation: string; digest: string; }
+interface Row { chronicle?: string | null; owner: string; slot: number; revision: number; object: string | null; previous: string | null; summary: string | null; operation: string; digest: string; }
 interface Statement { bind(...values: unknown[]): Statement; first<T>(): Promise<T | null>; all<T>(): Promise<{ results: T[] }>; run(): Promise<{ meta: { changes: number } }>; }
 export interface CloudEnv {
   DB: { prepare(sql: string): Statement };
@@ -29,6 +30,11 @@ export async function cloudAPI(request: Request, env: CloudEnv): Promise<Respons
   if (request.method !== 'GET' && (request.headers.get('Origin') !== url.origin || request.headers.get('Sec-Fetch-Site') === 'cross-site'
     || !request.headers.get('Content-Type')?.startsWith('application/json'))) return json({ error: 'Invalid request origin.' }, 403);
   const owner = user;
+  if (url.pathname === '/api/cloud/chronicle' && request.method === 'GET') {
+    const {results}=await env.DB.prepare('SELECT chronicle, object FROM characters WHERE owner = ?').bind(owner).all<Row>();
+    const histories=await Promise.all(results.map(async r=>{let history=parseChronicleLedger(r.chronicle);if(!r.chronicle&&r.object){const object=await env.SAVES.get(r.object);if(!object)throw new Error('History unavailable');const bundle=decodeSaveBundle(await object.text());if(!bundle)throw new Error('Invalid history');history=recordChronicle(history,bundle.character);}return history;}));
+    return json(mergeChronicles(...histories));
+  }
   if (url.pathname === '/api/cloud/characters' && request.method === 'GET') {
     const { results } = await env.DB.prepare('SELECT slot, revision, summary FROM characters WHERE owner = ?').bind(owner).all<Row>();
     return json({ slots: Array.from({ length: 8 }, (_, index) => {
@@ -58,15 +64,22 @@ export async function cloudAPI(request: Request, env: CloudEnv): Promise<Respons
   if (input.bundle !== null && (!bundle || bundle.character.worldVersion !== WORLD_GENERATION_VERSION)) return json({ error: 'Invalid or incompatible save file.' }, 422);
   const r = bundle?.character;
   const summary = r ? JSON.stringify({ name: r.name, level: r.checkpoint.level, power: characterPower(previewCharacter(r)).power, updatedAt: r.updatedAt }) : null;
+  let history=parseChronicleLedger(row?.chronicle);
+  if(row?.object){const previous=await env.SAVES.get(row.object);if(!previous) return json({error:'Previous checkpoint unavailable.'},503);
+    const old=decodeSaveBundle(await previous.text());if(!old)return json({error:'Previous checkpoint invalid.'},503);
+    history=recordChronicle(history,old.character,!bundle);
+  }
+  if(bundle)history=recordChronicle(history,bundle.character);
+  const historyRaw=JSON.stringify(history);parseChronicleLedger(historyRaw);
   const key = bundle ? `${await hash(owner)}/${slot}/${crypto.randomUUID()}.json` : null;
   if (key) await env.SAVES.put(key, raw);
   let committed = false, safeToDelete = false;
   try {
-    const result = await env.DB.prepare(`INSERT INTO characters (owner, slot, revision, object, previous, summary, operation, digest, updated_at)
-      VALUES (?, ?, 1, ?, NULL, ?, ?, ?, ?)
+    const result = await env.DB.prepare(`INSERT INTO characters (owner, slot, revision, object, previous, summary, operation, digest, updated_at, chronicle)
+      VALUES (?, ?, 1, ?, NULL, ?, ?, ?, ?, ?)
       ON CONFLICT(owner, slot) DO UPDATE SET revision = characters.revision + 1, previous = characters.object,
-      object = excluded.object, summary = excluded.summary, operation = excluded.operation, digest = excluded.digest, updated_at = excluded.updated_at
-      WHERE characters.revision = ?`).bind(owner, slot, key, summary, input.operation, digest, Date.now(), input.expected).run();
+      object = excluded.object, summary = excluded.summary, chronicle = excluded.chronicle, operation = excluded.operation, digest = excluded.digest, updated_at = excluded.updated_at
+      WHERE characters.revision = ?`).bind(owner, slot, key, summary, input.operation, digest, Date.now(), historyRaw, input.expected).run();
     committed = result.meta.changes === 1; safeToDelete = !committed;
     if (!committed) {
       const winner = await current();

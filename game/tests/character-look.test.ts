@@ -1,3 +1,4 @@
+import { progressForRecord } from '../src/chronicle.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCharacterLook, validCharacterLook, type CharacterLook } from '../src/character-look.ts';
@@ -117,7 +118,7 @@ test('v3 slots migrate on read and save v4 durably with failure and stale-writer
   assert.equal(await other.save(loaded.checkpoint,5),false);
   assert.deepEqual(repo.read(0).record!.checkpoint,edited);
   data.set(key,'{damaged');assert.equal(repo.read(0).state,'recovered');
-  assert.deepEqual(repo.read(0).record!.checkpoint,loaded.checkpoint);
+  const backup=repo.read(0).record!;assert.deepEqual({...backup.checkpoint,chronicle:progressForRecord(backup)},loaded.checkpoint);
 });
 
 test('portable and cloud bundle decoding upgrades v3 appearance while retaining its chart and identity',()=>{
@@ -140,7 +141,7 @@ test('cloud cached v3 reads migrate without modifying stored recovery bytes or p
     assert.deepEqual(read,staged);
     const rows=await cache.execute({kind:'list'}) as CloudRow[];assert.deepEqual(rows,[read]);
     const stored=await new Promise<CloudRow>((resolve,reject)=>{
-      const open=factory.open('evergrow-cloud:appearance-migration',1);
+      const open=factory.open('evergrow-cloud:appearance-migration');
       open.onerror=()=>reject(open.error);
       open.onsuccess=()=>{const db=open.result,tx=db.transaction('slots','readonly'),request=tx.objectStore('slots').get(0);
         tx.oncomplete=()=>{db.close();resolve(request.result);};tx.onerror=()=>{db.close();reject(tx.error);};};

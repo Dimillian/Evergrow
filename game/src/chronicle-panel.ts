@@ -1,0 +1,69 @@
+import { formatWorldDistance } from './world-distance.ts';
+import { ACHIEVEMENTS, achievementTier, achievementValue, STAT_GROUPS, type Achievement } from './chronicle-content.ts';
+import { chronicleValues, emptyChronicle, type ChronicleLedger, type ChronicleSource } from './chronicle.ts';
+import { escapeUI as esc, trapDialogFocus, uiIcon } from './ui-components.ts';
+import { GamepadMenu } from './gamepad-menu.ts';
+import { PAD, type GamepadInput } from './gamepad-input.ts';
+import './chronicle-panel.css';
+const tabs = ['Overview', 'Achievements', 'Statistics'] as const;
+const number = (n:number) => Math.floor(n).toLocaleString();
+const duration = (n:number) => n < 3600 ? `${Math.floor(n/60)}m` : `${Math.floor(n/3600)}h ${Math.floor(n%3600/60)}m`;
+const label = (s:string) => s.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[-_]/g,' ').replace(/^./,c=>c.toUpperCase());
+const format = (key:string,n:number) => ['time','longestLife'].includes(key)?duration(n):key==='distance'?formatWorldDistance(n):number(n);
+const engraving:Record<string,string> = {
+ blade:'M17 32 32 11 29 25 19 34M15 28 24 35M17 32 12 39', crown:'m10 19 7 7 7-14 7 14 7-7-4 18H14Z',
+ spark:'m28 8-14 19h10l-4 13 15-21H25Z', flame:'M25 8c4 12 13 14 11 23-2 13-22 13-24 0-1-6 4-12 8-16-1 7 1 10 3 10 4-3 4-10 2-17Z',
+ star:'m24 9 4 11 12 4-12 4-4 12-4-12-12-4 12-4Z',heart:'M24 37 11 25C0 10 20 9 24 18c4-9 24-8 13 7Z',
+ shield:'m24 9 14 5-2 15-12 12-12-12-2-15Z',flask:'M19 9h10m-8 1v12L12 35q-2 6 5 6h14q7 0 5-6l-9-13V10M16 30h16',
+ compass:'m31 15-5 13-13 5 5-13ZM24 5v4m0 31v4M5 24h4m31 0h4',coin:'M24 10a14 14 0 1 0 0 28 14 14 0 1 0 0-28m0 7v14m-4-11 4-3 4 3',
+ gem:'m11 17 6-7h14l6 7-13 23ZM11 17h26M17 10l7 30 7-30',hammer:'m13 14 7-7 17 17-7 7ZM23 24 10 37l4 4 13-13',
+};
+function badge(a:Achievement,tier:number) {return `<svg class="chronicle-badge ${tier?'is-earned':''}" viewBox="0 0 64 64" aria-hidden="true"><path class="badge-frame" d="m32 2 26 15v30L32 62 6 47V17Z"/><path class="badge-inner" d="m32 7 22 13v24L32 57 10 44V20Z"/><g transform="translate(8 7)"><path d="${engraving[a.glyph]??engraving.star}"/></g></svg>`;}
+/** Read-only projection: no storage writes or gameplay ownership. */
+export class ChroniclePanel {
+ readonly element:HTMLDivElement;
+ private ledger=emptyChronicle(); private selected='all'; private tab=0; private group='All';
+ private life=new AbortController(); private focus?:{dispose():void}; private controller=new GamepadMenu(); private revision=0; private lastTime=0;
+ private onClose:()=>void;
+ constructor(mount:HTMLElement,onClose:()=>void) {
+  this.onClose=onClose;
+  this.element=document.createElement('div');this.element.className='chronicle-overlay';this.element.hidden=true;mount.append(this.element);
+  this.element.addEventListener('click',e=>{const b=(e.target as HTMLElement).closest<HTMLButtonElement>('button');if(e.target===this.element||b?.hasAttribute('data-close'))this.close();else if(b?.dataset.tab!==undefined){this.tab=Number(b.dataset.tab);this.render();this.element.querySelector<HTMLElement>(`[data-tab="${this.tab}"]`)?.focus();}else if(b?.dataset.group){this.group=b.dataset.group;this.render();this.element.querySelector<HTMLElement>(`[data-group="${this.group}"]`)?.focus();}else if(b?.dataset.achievement){this.detail(b.dataset.achievement);}},{signal:this.life.signal});
+  this.element.addEventListener('change',e=>{const s=e.target as HTMLSelectElement;if(s.matches('[data-character]')){this.selected=s.value;this.render();this.element.querySelector<HTMLElement>('[data-character]')?.focus();}},{signal:this.life.signal});
+  this.element.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();this.close();}},{signal:this.life.signal});
+ }
+ get opened(){return !this.element.hidden;}
+ async open(load:()=>Promise<ChronicleLedger>,selected='all') {
+  const revision=++this.revision;this.selected=selected;this.tab=0;this.group='All';this.element.hidden=false;
+  this.element.innerHTML=`<section class="ui-window chronicle-window" role="dialog" aria-modal="true" aria-label="Chronicle"><header class="ui-window-header"><h2 class="ui-title">Chronicle</h2><button class="ui-button ui-button--quiet" data-close>Close</button></header><p class="chronicle-loading" role="status">Loading…</p></section>`;
+  this.focus?.dispose();this.focus=trapDialogFocus(this.element,{signal:this.life.signal,restoreFocus:false,initialFocus:()=>this.element.querySelector('[data-close]')});
+  try {const ledger=await load();if(revision!==this.revision)return;this.ledger=ledger;if(selected!=='all'&&!ledger.characters[selected])this.selected='all';this.render();this.element.querySelector<HTMLElement>('[data-tab="0"]')?.focus();}
+  catch (error) {console.error('Chronicle could not open',error);if(revision===this.revision)this.element.querySelector('.chronicle-loading')!.textContent='History unavailable. Close and try again.';}
+ }
+ close(notify=true){if(!this.opened)return;this.revision++;this.element.hidden=true;this.focus?.dispose();this.focus=undefined;this.controller.clear();if(notify)this.onClose();}
+ private sources():ChronicleSource[]{const c=this.ledger.characters[this.selected];return c?c.sources.map(id=>this.ledger.sources[id]).filter(Boolean):Object.values(this.ledger.sources);}
+ private unlocks(){const out:Record<string,number>=this.selected==='all'?{...this.ledger.unlocked}:{};for(const s of this.sources())for(const[k,v]of Object.entries(s.unlocked))out[k]=Math.min(out[k]??v,v);return out;}
+ private card(a:Achievement,values:Record<string,number>) {const tier=achievementTier(a,values),value=achievementValue(a,values),target=a.tiers[Math.min(tier,a.tiers.length-1)],done=tier===a.tiers.length;
+  return `<button class="chronicle-achievement ${tier?'is-earned':''}" data-achievement="${a.id}" aria-label="${esc(a.name)}. ${esc(a.description)} ${number(value)} of ${number(target)}">${badge(a,tier)}<span class="achievement-copy"><strong>${a.name}</strong><span class="achievement-tiers" aria-hidden="true">${a.tiers.map((_,i)=>`<i class="${i<tier?'earned':''}"></i>`).join('')}</span><span class="achievement-track"><i style="width:${Math.min(100,value/target*100)}%"></i></span><small>${done?'Complete':`${number(value)} <span>/ ${number(target)}</span>`}</small></span></button>`;
+ }
+ private render(){const sources=this.sources(),values=chronicleValues(sources),earned=ACHIEVEMENTS.reduce((n,a)=>n+achievementTier(a,values),0),total=ACHIEVEMENTS.reduce((n,a)=>n+a.tiers.length,0);
+  const chars=Object.values(this.ledger.characters).sort((a,b)=>Number(a.deleted)-Number(b.deleted)||b.updatedAt-a.updatedAt);
+  this.element.innerHTML=`<section class="ui-window chronicle-window" role="dialog" aria-modal="true" aria-labelledby="chronicle-title"><header class="ui-window-header"><h2 id="chronicle-title" class="ui-title">Chronicle</h2><select data-character aria-label="Character history"><option value="all">All characters</option>${chars.map(c=>`<option value="${esc(c.id)}" ${c.id===this.selected?'selected':''}>${esc(c.name)} · Lv ${c.level}${c.deleted?' · Archived':''}</option>`).join('')}</select><button class="ui-button ui-button--quiet ui-button--icon" data-close aria-label="Close Chronicle">${uiIcon('close')}</button></header>
+   <nav class="chronicle-tabs" aria-label="Chronicle sections">${tabs.map((t,i)=>`<button data-tab="${i}" aria-current="${i===this.tab?'page':'false'}">${t}</button>`).join('')}<span>${earned} <small>/ ${total}</small></span></nav>
+   <div class="chronicle-content ui-scroll-area">${this.tab===0?this.overview(values):this.tab===1?this.achievements(values):this.statistics(values)}</div>
+   <footer class="chronicle-footer"><span>${values['seen:legacy']?'Older history is partial.':this.selected==='all'?`${chars.length} characters · Deleted characters retained`:'Character history'}</span><span>Esc / B <span>Close</span></span></footer><div class="chronicle-detail" hidden></div></section>`;
+ }
+ private overview(v:Record<string,number>){const near=ACHIEVEMENTS.filter(a=>achievementTier(a,v)<a.tiers.length).sort((a,b)=>achievementValue(b,v)/b.tiers[achievementTier(b,v)]-achievementValue(a,v)/a.tiers[achievementTier(a,v)]).slice(0,4),unlocks=this.unlocks();
+  const recent=ACHIEVEMENTS.filter(a=>achievementTier(a,v)>0).sort((a,b)=>(unlocks[b.id+':'+achievementTier(b,v)]??0)-(unlocks[a.id+':'+achievementTier(a,v)]??0)).slice(0,4);
+  const totals:[string,string][]=[['time','Time played'],['kills','Enemies slain'],['highestLevel','Highest level'],['goldEarned','Gold earned'],['events','Events completed'],['crypts','Crypts cleared']];
+  return `<div class="chronicle-totals">${totals.map(([k,l])=>`<div><strong>${format(k,v[k]??0)}</strong><span>${l}</span></div>`).join('')}</div><section><h3>Within reach</h3><div class="chronicle-grid">${near.map(a=>this.card(a,v)).join('')}</div></section><section><h3>Personal bests</h3><div class="chronicle-records">${[['largestHit','Largest hit'],['highestEnemy','Strongest enemy'],['bestWaves','Cursed-chest waves'],['longestLife','Longest life']].map(([k,l])=>{const owner=this.sources().filter(s=>(s.values[k]??0)>0).sort((a,b)=>(b.values[k]??0)-(a.values[k]??0))[0];return `<div><span>${l}</span><strong>${format(k,v[k]??0)}</strong><small>${owner?esc(owner.name):'—'}</small></div>`;}).join('')}</div></section><section><h3>Earned</h3>${recent.length?`<div class="chronicle-grid">${recent.map(a=>this.card(a,v)).join('')}</div>`:'<p class="chronicle-empty">Your first milestones begin here.</p>'}</section>`;
+ }
+ private achievements(v:Record<string,number>){return `<div class="chronicle-filters">${['All',...new Set(ACHIEVEMENTS.map(a=>a.group))].map(g=>`<button data-group="${g}" aria-pressed="${this.group===g}">${g}</button>`).join('')}</div><div class="chronicle-grid">${ACHIEVEMENTS.filter(a=>this.group==='All'||a.group===this.group).map(a=>this.card(a,v)).join('')}</div>`;}
+ private statistics(v:Record<string,number>){const groups=Object.entries(STAT_GROUPS).map(([title,rows])=>`<section class="chronicle-stat-group"><h3>${title}</h3><dl>${rows.map(([k,l])=>`<div><dt>${l}</dt><dd>${v[k]===undefined&&v['seen:legacy']?'—':format(k,v[k]??0)}</dd></div>`).join('')}</dl></section>`);
+  const breakdown:[string,string][]=[['enemy:','Enemy families'],['rank:','Enemy ranks'],['damage:','Damage by element'],['skillDamage:','Damage by skill'],['skillUses:','Skill usage'],['items:','Equipment rarity'],['material:','Equipment materials'],['itemKind:','Equipment types'],['seen:biome:','Biomes visited'],['place:','Discoveries'],['event:','Events']];
+  return `<div class="chronicle-stat-grid">${groups.join('')}${breakdown.filter(([prefix])=>Object.keys(v).some(k=>k.startsWith(prefix))).map(([prefix,title])=>`<section class="chronicle-stat-group"><h3>${title}</h3><dl>${Object.entries(v).filter(([k])=>k.startsWith(prefix)).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<div><dt>${esc(label(k.slice(prefix.length)))}</dt><dd>${prefix==='seen:biome:'?'Visited':number(n)}</dd></div>`).join('')}</dl></section>`).join('')}</div>`;
+ }
+ private detail(id:string){const a=ACHIEVEMENTS.find(a=>a.id===id);if(!a)return;const v=chronicleValues(this.sources()),tier=achievementTier(a,v),at=this.unlocks()[id+':'+tier],el=this.element.querySelector<HTMLElement>('.chronicle-detail')!;el.hidden=false;el.innerHTML=`${badge(a,tier)}<div><strong>${a.name}</strong><p>${a.description}</p><small>${at?`Earned ${new Date(at).toLocaleDateString()}`:tier?'Earned across your characters':`Next milestone: ${number(a.tiers[tier])}`}</small></div>`;}
+ updateGamepad(pad:GamepadInput,now:number){if(!this.opened)return false;if(pad.pressed.has(PAD.dodge)||pad.pressed.has(PAD.pause))this.close();else{this.controller.update(this.element,pad,now,{switchTab:d=>{this.tab=(this.tab+d+tabs.length)%tabs.length;this.render();this.element.querySelector<HTMLElement>(`[data-tab="${this.tab}"]`)?.focus();}});const dt=this.lastTime?Math.min(.05,(now-this.lastTime)/1000):0;if(Math.abs(pad.aim.y)>.2)this.element.querySelector('.chronicle-content')!.scrollTop+=pad.aim.y*dt*550;}this.lastTime=now;return true;}
+ dispose(){this.close(false);this.life.abort();this.element.remove();}
+}

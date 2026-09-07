@@ -1,5 +1,7 @@
 # Current system status
 
+Chronicle is implemented locally for review: account/character histories, 32 achievement families, detailed statistics and title/pause/inventory entry points. Cloud API/schema changes are not deployed yet. See [Chronicle](chronicle.md).
+
 ## Natural landscapes · v0.4.0, 2026-09-07
 
 Generation 9 is enabled in local gameplay: nine biomes, clustered trees and rock outcrops, open glades, Steppe grassland and Sunscar sand formations. Each seed chooses a starting biome and a generated home town/city; a dry southern approach, level-one start and initial home portal remain guaranteed. Gameplay, maps, hydrology and terrain workers share the generator. Fresh characters required; older saves are preserved but incompatible. Included in the v0.4.0 release source. See [natural landscapes](natural-landscapes.md).

@@ -20,6 +20,7 @@ import './inventory-panel.css';
 export interface InventoryPanelActions {
   close(): void;
   editAppearance?():void;
+  openChronicle?():void;
   equip(index: number, slot?: EquipmentSlot): void;
   unequip(slot: EquipmentSlot, index?: number): void;
   move(from: number, to: number): void;
@@ -128,7 +129,7 @@ export class InventoryPanel {
           <div class="character-statistics"><div class="character-section-title character-section-title--secondary"><h3 tabindex="0">Combat details</h3><span>Effective</span></div><div data-combat-stats></div></div>
         </section>
       </div>
-      <footer class="ui-window-footer character-footer"><div class="character-experience"><div><span data-xp-label></span><span data-xp-total></span></div><div class="character-experience-track"><i data-xp-fill></i></div></div><span class="character-footer-status">${uiIcon('diamond')}<span data-allocated-label></span></span></footer>
+      <footer class="ui-window-footer character-footer"><div class="character-experience"><div><span data-xp-label></span><span data-xp-total></span></div><div class="character-experience-track"><i data-xp-fill></i></div></div>${actions.openChronicle?'<button type="button" class="ui-button ui-button--quiet" data-chronicle>Chronicle</button>':''}<span class="character-footer-status">${uiIcon('diamond')}<span data-allocated-label></span></span></footer>
       <div class="character-popup-layer" data-popup-layer hidden>
         <section class="character-mini-dialog ui-well" id="inventory-sort-dialog" data-mini="sort" role="dialog" aria-modal="true" aria-labelledby="inventory-sort-title" hidden>
           <header><h3 id="inventory-sort-title">Sort &amp; filter</h3><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-popup-close aria-label="Close sort and filter">${uiIcon('close')}</button></header>
@@ -145,6 +146,7 @@ export class InventoryPanel {
       </div>
     </section>`;
     this.window = this.element.querySelector('.character-window')!;
+    this.element.querySelector('[data-chronicle]')?.addEventListener('click',()=>actions.openChronicle?.(),{signal:this.lifetime.signal});
     this.popupLayer = this.element.querySelector('[data-popup-layer]')!;
     this.window.dataset.touchTab = 'bag';
     const tabs = document.createElement('nav'); tabs.className = 'character-tabs touch-only'; tabs.setAttribute('aria-label','Character sections');

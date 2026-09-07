@@ -1,3 +1,4 @@
+import { emptyChronicle, mergeChronicles, recordChronicle, forkChronicle, type ChronicleLedger } from './chronicle.ts';
 import type { CharacterSave } from './character-save.ts';
 import type { CharacterRepositoryPort, SaveResult, SaveSlot, SaveSummary } from './character-storage.ts';
 import type { ChartResult, ExplorationPersistence } from './exploration.ts';
@@ -59,6 +60,15 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
     } catch (error) { this.failed(error); return Array.from({ length: 8 }, (_, index) => {
       const cached = local.find(c => c.index === index); return cached ? { index, token: cached.token, record: null, summary: cached.summary, state: cached.summary ? 'saved' : 'empty', pending: cached.dirty, conflict: cached.conflict } : { index, record: null, token: null, state: 'unavailable' };
     }); }
+  }
+  async chronicle():Promise<ChronicleLedger> {
+    await this.flush();
+    const rows=await this.cache<CloudRow[]>({kind:'list'});
+    let history=mergeChronicles(await this.cache<ChronicleLedger>({kind:'read-history'}),...rows.map(r=>r.history??emptyChronicle()));
+    try { const remote=await this.api<ChronicleLedger>('chronicle');history=mergeChronicles(history,await this.cache<ChronicleLedger>({kind:'history',ledger:remote})); }
+    catch(error){this.failed(error);}
+    for(const row of rows)if(row.bundle&&!row.conflict)history=recordChronicle(history,row.bundle.character);
+    return history;
   }
   async read(index: number): Promise<SaveSlot> {
     const cached = await this.cache<CloudRow | null>({ kind: 'read', index });
@@ -123,7 +133,8 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
     const bundle = await this.rpc<SaveBundle | null>('decode', { raw });
     if (!bundle) return { ok: false, message: 'Invalid or incompatible save file.' };
     const slot = await this.read(index); if (slot.state !== 'empty') return { ok: false, message: 'Choose an empty slot.' };
-    bundle.character = { ...bundle.character, id: crypto.randomUUID(), updatedAt: Date.now() };
+    const id=crypto.randomUUID();
+    bundle.character = { ...bundle.character, id, checkpoint:{...bundle.character.checkpoint,chronicle:forkChronicle(bundle.character,id)}, updatedAt: Date.now() };
     return this.commit(index, slot.token, bundle);
   }
   async readChart(key: string, _seed: number, _generation: string): Promise<ChartResult> {

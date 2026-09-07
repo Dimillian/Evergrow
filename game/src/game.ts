@@ -35,6 +35,9 @@ import type { CharacterCheckpoint } from './character-save.ts';
 import { ServicePanel } from './service-panel.ts';
 import { buildingNPC, focusNPC, canInteractNPC, type TownNPC } from './npcs.ts';
 import type { ServiceQuote } from './commerce.ts';
+import { ChroniclePanel } from './chronicle-panel.ts';
+import { metric } from './chronicle.ts';
+import { trackCommerce } from './chronicle-tracking.ts';
 import { executeService } from './commerce-command.ts';
 import { PanelCoordinator } from './panel-coordinator.ts';
 import { bindGameKeyboard } from './game-keyboard.ts';
@@ -103,6 +106,7 @@ export class Game {
   private uiContext: CanvasRenderingContext2D;
   fx: PostFX;
   private panels: PanelCoordinator;
+  private chronicle: ChroniclePanel;
   get phase(): GamePhase { return this.panels?.phase ?? 'ready'; }
   private muted = false;
   private readonly motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
@@ -150,6 +154,7 @@ export class Game {
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
         portal: () => { this.canvas.focus(); this.requestPortal(); },
         save: () => this.durable(async () => { const saved = await this.saveCharacter(true); if (saved) await this.saveClient.flush(); return saved; }, false),
+        openChronicle: () => { if(!this.savingAction)this.panels.open('chronicle'); },
         returnToTitle: () => this.returnToTitle(), openMap: () => this.openMap(),
         openCharacter: () => this.openCharacterPanel('character'), openSkills: () => this.openCharacterPanel('skills'), openJourneys: () => this.journeys.open(),
       }));
@@ -167,6 +172,7 @@ export class Game {
       this.inventoryPanel = this.lifetime.own(new InventoryPanel(this.shell.panelMount, {
         close: () => this.closeCharacterPanel(),
         editAppearance:()=>this.editAppearance(),
+        openChronicle:()=>{if(!this.savingAction)this.panels.open('chronicle');},
         equip: (index, slot) => this.characterAction({ type: 'equip', index, slot }),
         unequip: (slot, index) => this.characterAction({ type: 'unequip', slot, index }),
         move: (from, to) => this.characterAction({ type: 'moveItem', from, to }),
@@ -180,7 +186,9 @@ export class Game {
         allocate: id => this.characterAction({ type: 'allocateNode', id }),
         assign: (slot, skill) => this.characterAction({ type: 'assignSkill', slot, skill }),
       }));
+      this.chronicle = this.lifetime.own(new ChroniclePanel(this.shell.panelMount,()=>this.resume()));
       this.titleScreen = this.lifetime.own(new TitleScreen(this.shell.titleMount, {
+        chronicle: () => this.saveClient.chronicle(),
         create: (index, name, weapon, seed) => this.editNewCharacter(index, name, weapon, seed),
         continue: index => this.continueCharacter(index), remove: (index, expected) => this.deleteCharacter(index, expected),
         read: index => this.saveClient.read(index), source: mode => this.selectSaveSource(mode),
@@ -210,6 +218,7 @@ export class Game {
         arrived: () => this.finishTravel(), notify: message => this.notify(message),
       });
       this.panels = new PanelCoordinator({
+        chronicle:{open:()=>{void this.chronicle.open(async()=>{await this.saveCharacter(true);return this.saveClient.chronicle();},this.session.active?.record.id);},close:()=>this.chronicle.close(false)},
         journeys:{open:()=>this.journeys.panel.open(this.journeys.selected),close:()=>this.journeys.panel.close()},
         event: { open: () => { if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.activeEvent = null; this.activeDungeonEntrance = null; } },
         service: { open: () => { if (this.activeNPC) this.servicePanel.open(this.sim.player, this.activeNPC); }, close: () => { this.servicePanel.close(); this.activeNPC = null; } },
@@ -254,7 +263,7 @@ export class Game {
         portal: () => this.requestPortal(),
         background: () => { this.clearInput(); this.pause(); void this.saveCharacter(); this.audio.setEnabled(false); },
         foreground: () => { this.clearInput(); this.audio.setEnabled(!this.muted); },
-        back: () => { if(this.phase === 'ready' && this.titleScreen.dismissChangelog()) return; if(this.appearanceEditor){this.appearanceEditor.cancel();return;} if(this.thor.dismissInspection() || (this.phase === 'paused' && this.shell.backInMenu())) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
+        back: () => { if(this.phase === 'ready' && this.titleScreen.dismissOverlay()) return; if(this.appearanceEditor){this.appearanceEditor.cancel();return;} if(this.thor.dismissInspection() || (this.phase === 'paused' && this.shell.backInMenu())) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
       }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
       try {
@@ -318,7 +327,8 @@ export class Game {
         if (event.isTrusted && !(event.target instanceof HTMLInputElement) && !(event.target instanceof HTMLTextAreaElement) && !(event.target instanceof HTMLSelectElement) && !(event.target instanceof HTMLElement && event.target.isContentEditable)) { this.usingGamepad = false; this.touch.setActive(false); }
         if (event.code === 'Escape') {
           event.preventDefault();
-          if (this.phase === 'ready' && this.titleScreen.dismissChangelog()) return;
+          if (this.phase === 'ready' && this.titleScreen.dismissOverlay()) {event.stopPropagation();return;}
+          if(this.phase==='chronicle'){event.stopPropagation();if(!event.repeat)this.resume();return;}
           if (!event.repeat) {
             if (this.sim.portal.active) { this.sim.portal.cancel(); return; }
             if (this.panels.activePanel) this.resume();
@@ -521,6 +531,7 @@ export class Game {
     this.worldMap.dispose(); this.exploration.dispose();
     this.exploration = new Exploration(this.overworld, { characterId: record.id, persistence: this.saveClient,
       onDiscover: poi => {
+        metric(this.sim.player.chronicle,'places');metric(this.sim.player.chronicle,'place:'+poi.kind);
         // Shops share their settlement announcement; landmarks deserve their own.
         if (!['blacksmith', 'merchant', 'inn', 'chapel', 'jeweler', 'enchanter'].includes(poi.kind))
           this.shell.notifications.push({ kind: 'discovery', poi });
@@ -846,12 +857,15 @@ export class Game {
     const npc = this.activeNPC, p = this.sim.player;
     if (this.phase !== 'service' || !npc || !this.session.active || !canInteractNPC(npc, p, this.world))
       return { ok: false, message: 'This service is no longer in reach.' };
+    let progress=p.chronicle;
     const result = await executeService(p, npc, this.world, quote, async (character, hp, mana) => {
-      const saved = await this.session.save({ ...this.sim.captureCheckpoint(), character, hp, mana }, Date.now());
+      progress=structuredClone(p.chronicle);
+      trackCommerce(progress,p.character.gold??0,character.gold??0,Math.max(0,...Object.values(character.equipped).filter(Boolean).map(i=>i!.recipe?.enhancement??0),...character.inventory.filter(Boolean).map(i=>i!.recipe?.enhancement??0)));
+      const saved = await this.session.save({ ...this.sim.captureCheckpoint(), character, hp, mana, chronicle:progress }, Date.now());
       if (!saved) this.shell.setSaveStatus(this.session.error, true);
       return { ok: saved, message: this.session.error };
     });
-    if (result.ok) { this.saveError = ''; this.shell.setSaveStatus('Character saved locally.'); this.notify(result.message); }
+    if (result.ok) { p.chronicle=progress; this.saveError = ''; this.shell.setSaveStatus('Character saved locally.'); this.notify(result.message); }
     return result;
     }, { ok: false, message: 'Saving the previous action…' });
   }
@@ -1048,7 +1062,8 @@ export class Game {
       this.notify('Controller disconnected.'); return;
     }
     const pad = this.gamepad;
-    if (this.phase === 'ready' && this.titleScreen.updateChangelogGamepad(pad, now)) return;
+    if (this.phase === 'ready' && this.titleScreen.updateOverlayGamepad(pad, now)) return;
+    if(this.chronicle.updateGamepad(pad,now))return;
     if(this.appearanceEditor){
       if(pad.pressed.has(PAD.dodge)||pad.pressed.has(PAD.pause))this.appearanceEditor.cancel();
       else this.appearanceEditor.updateGamepad(pad,now);

@@ -1,3 +1,5 @@
+import { ChroniclePanel } from './chronicle-panel.ts';
+import { emptyChronicle, type ChronicleLedger } from './chronicle.ts';
 import { ChangelogPanel } from './changelog-panel.ts';
 import type { GamepadInput } from './gamepad-input.ts';
 import { directionalControl } from './ui-navigation.ts';
@@ -14,6 +16,7 @@ import { itemIconSVG } from './item-art.ts';
 import { parseWorldSeed } from './world-seed.ts';
 import './title-screen.css';
 export interface TitleActions {
+  chronicle?(): Promise<ChronicleLedger>;
   create(index: number, name: string, weapon: StarterLoadoutId, seed: number): void;
   continue(index: number): void; remove(index: number, expected: string | null): void;
   read?(index: number): Promise<SaveSlot>; source?(mode: SaveMode): void;
@@ -24,6 +27,7 @@ const format = (n: number) => Math.round(n).toLocaleString('en-US');
 export class TitleScreen {
   readonly element: HTMLDivElement;
   private readonly changelog: ChangelogPanel;
+  private readonly chronicle: ChroniclePanel;
   private slots: SaveSlot[] = [];
   private selected = 0;
   private starter: StarterLoadoutId = STARTER_LOADOUTS[0].id;
@@ -49,10 +53,11 @@ export class TitleScreen {
       <section class="title-hero" aria-label="Selected character"><div class="title-halo" aria-hidden="true"></div><canvas width="560" height="720" aria-label="Selected character wearing their saved equipment"></canvas><div class="title-plinth" aria-hidden="true"></div></section>
       <section class="title-roster ui-window" aria-labelledby="roster-title"><header class="title-roster-header"><h2 id="roster-title">Characters</h2><div class="title-sources" role="group" aria-label="Save location" hidden><button data-source="cloud">Cloud</button><button data-source="local">Local</button></div><span class="title-controller-hint"><kbd>A</kbd> Continue</span><span class="title-slot-count"></span></header>
       <div class="title-hall-body"><div class="title-slot-grid" role="group" aria-label="Eight character slots"></div><div class="title-selection"></div></div>
-      <footer class="title-roster-footer"><button class="title-updates" data-action="changelog" aria-haspopup="dialog">What’s new</button><span class="title-storage-status" role="status"></span><a class="title-signout" href="/signout-with-chatgpt?return_to=/" target="_top" hidden>Sign out</a><span class="title-transfer"><button data-action="import">Import</button><button data-action="download">Download</button></span></footer>
+      <footer class="title-roster-footer"><button class="title-updates" data-action="chronicle" aria-haspopup="dialog">Chronicle</button><button class="title-updates" data-action="changelog" aria-haspopup="dialog">What’s new</button><span class="title-storage-status" role="status"></span><a class="title-signout" href="/signout-with-chatgpt?return_to=/" target="_top" hidden>Sign out</a><span class="title-transfer"><button data-action="import">Import</button><button data-action="download">Download</button></span></footer>
       <p class="title-save-message" role="status" hidden></p><input type="file" class="title-file" accept=".json,application/json" hidden></section>`;
     this.canvas = this.element.querySelector('canvas')!; mount.append(this.element);
-    this.changelog = new ChangelogPanel(mount, () => this.restoreFromChangelog());
+    this.changelog = new ChangelogPanel(mount, () => this.restoreFromOverlay());
+    this.chronicle = new ChroniclePanel(mount, () => this.restoreFromOverlay('chronicle'));
     this.element.querySelector<HTMLElement>('.title-transfer')!.hidden = !actions.download && !actions.import;
     this.element.addEventListener('pointerdown', () => this.element.classList.remove('is-controller'), { signal: this.abort.signal });
     this.element.addEventListener('keydown', event => {
@@ -71,6 +76,7 @@ export class TitleScreen {
       if (button.dataset.source) { this.actions.source?.(button.dataset.source as SaveMode); return; }
       if (button.dataset.slot !== undefined) { this.choose(Number(button.dataset.slot)); return; }
       const action = button.dataset.action;
+      if (action === 'chronicle') { this.focus?.dispose(); this.focus = undefined; this.element.inert = true; void this.chronicle.open(() => actions.chronicle?.() ?? Promise.resolve(emptyChronicle())); return; }
       if (action === 'changelog') { this.focus?.dispose(); this.focus = undefined; this.element.inert = true; this.changelog.open(); return; }
       if (action === 'retry') window.location.reload();
       if (action === 'continue') this.actions.continue(this.selected);
@@ -116,7 +122,7 @@ export class TitleScreen {
     }
     return true;
   }
-  setBusy(busy: boolean) { this.element.inert = busy || this.changelog.opened; this.element.classList.toggle('is-busy', busy); this.element.setAttribute('aria-busy', String(busy)); }
+  setBusy(busy: boolean) { this.element.inert = busy || this.changelog.opened || this.chronicle.opened; this.element.classList.toggle('is-busy', busy); this.element.setAttribute('aria-busy', String(busy)); }
   setSource(source: SaveSourceUI) {
     this.source = source;
     this.element.querySelector<HTMLAnchorElement>('.title-signout')!.hidden = source.mode !== 'cloud' || !source.signedIn;
@@ -127,7 +133,7 @@ export class TitleScreen {
     status.dataset.status = source.status;
   }
   open(slots: SaveSlot[], preferred?: number) {
-    this.changelog.close(false); this.element.inert = false;
+    this.changelog.close(false); this.chronicle.close(false); this.element.inert = false;
     this.slots = slots; this.names.clear(); this.seedDrafts.clear();
     const latest = [...slots].sort((a, b) => (b.record?.updatedAt ?? b.summary?.updatedAt ?? 0) - (a.record?.updatedAt ?? a.summary?.updatedAt ?? 0))[0]?.index ?? 0;
     this.selected = preferred ?? latest; this.confirming = null; this.element.hidden = false; this.message(''); this.setSource(this.source);
@@ -141,15 +147,16 @@ export class TitleScreen {
     this.element.inert=open;this.element.style.visibility=open?'hidden':'';
     if(!open&&!this.element.hidden)this.focus=trapDialogFocus(this.element,{signal:this.abort.signal,restoreFocus:false,initialFocus:()=>this.element.querySelector(`[data-slot="${this.selected}"]`)});
   }
-  dismissChangelog(): boolean {
+  dismissOverlay(): boolean {
+    if(this.chronicle.opened){this.chronicle.close();return true;}
     if (!this.changelog.opened) return false;
     this.changelog.close(); return true;
   }
-  updateChangelogGamepad(pad: GamepadInput, now: number): boolean { return this.changelog.updateGamepad(pad, now); }
-  private restoreFromChangelog() {
+  updateOverlayGamepad(pad: GamepadInput, now: number): boolean { return this.chronicle.updateGamepad(pad,now) || this.changelog.updateGamepad(pad, now); }
+  private restoreFromOverlay(action='changelog') {
     this.element.inert = this.element.classList.contains('is-busy');
     if (!this.element.hidden) this.focus = trapDialogFocus(this.element, { signal: this.abort.signal, restoreFocus: false,
-      initialFocus: () => this.element.querySelector('[data-action="changelog"]') });
+      initialFocus: () => this.element.querySelector(`[data-action="${action}"]`) });
   }
   private choose(index: number, focus = true) {
     this.selected = index; this.confirming = null; this.loading = false; const ticket = ++this.inspection;
@@ -166,8 +173,8 @@ export class TitleScreen {
     }).catch(() => { if (ticket === this.inspection) { this.loading = false; this.message('Save unavailable. Please retry.'); this.renderSelection(); } });
   }
   message(text: string) { const target = this.element.querySelector<HTMLElement>('.title-save-message')!; target.textContent = text; target.hidden = !text; }
-  close() { this.changelog.close(false); this.element.inert = false; this.inspection++; this.element.hidden = true; this.focus?.dispose(); this.focus = undefined; cancelAnimationFrame(this.frame); this.frame = 0; }
-  dispose() { this.close(); this.changelog.dispose(); this.abort.abort(); this.element.remove(); }
+  close() { this.changelog.close(false); this.chronicle.close(false); this.element.inert = false; this.inspection++; this.element.hidden = true; this.focus?.dispose(); this.focus = undefined; cancelAnimationFrame(this.frame); this.frame = 0; }
+  dispose() { this.close(); this.changelog.dispose(); this.chronicle.dispose(); this.abort.abort(); this.element.remove(); }
   private rollSeed() { const value = String(crypto.getRandomValues(new Uint32Array(1))[0]); this.seedDrafts.set(this.selected, value); return value; }
   private validateSeed(input: HTMLInputElement) { const seed = parseWorldSeed(input.value); input.setCustomValidity(seed === null ? 'Use a whole number from 0 to 4294967295.' : ''); return seed; }
   private render() {

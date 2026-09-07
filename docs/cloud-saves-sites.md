@@ -64,3 +64,7 @@ After the first approved deployment, verify the actual Sites sign-in dispatch, p
 ## Deployment checkpoint — 2026-09-06
 
 The cloud/local character hall and account-owned save backend were published to the existing public [Evergrow Site](https://evergrow.dimillian.chatgpt.site) after approval. Sites reported deployment success for source `302202f`. Cross-client authenticated save/continue acceptance remains a player check; Android stays local-only.
+
+## Chronicle — local implementation, not deployed
+
+Chronicle counters travel in the existing character checkpoint. D1 stores a validated history summary alongside each slot (including deleted-slot tombstones), updated by the same revision-checked publication. The authenticated Chronicle endpoint merges only the current account. IndexedDB cloud cache v2 preserves fetched account history offline; imports retain source identities and branch future progress to avoid double counting. No extra per-event upload requests. The next deployment needs `drizzle/0001_worthless_slipstream.sql` and matching client/server code. See [Chronicle](chronicle.md).

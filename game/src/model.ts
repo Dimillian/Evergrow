@@ -1,3 +1,4 @@
+import type { ChronicleProgress } from './chronicle.ts';
 import type { GearMaterial } from './gear-material-content.ts';
 import type { MaterialId } from './material-content.ts';
 import type { BreakableContainer } from './breakable-containers.ts';
@@ -35,7 +36,7 @@ export interface Input {
   skillSlot: number | null;
 }
 
-export type HitSnapshot = Readonly<Pick<DerivedCharacterStats, 'critChance' | 'critMultiplier' | 'lifeOnHit'>>;
+export type HitSnapshot = Readonly<Pick<DerivedCharacterStats, 'critChance' | 'critMultiplier' | 'lifeOnHit'>> & { readonly skill?: SkillId };
 
 export interface Attack {
   offense?: HitSnapshot;
@@ -127,6 +128,7 @@ export interface Equipment {
 }
 
 export interface Player {
+  chronicle?: ChronicleProgress;
   name?: string;
   x: number;
   y: number;
@@ -303,11 +305,11 @@ export type CombatEvent = EventAppearance & (
       readonly engaged: boolean; readonly time: number }
   | { readonly type: 'skill-strike'; readonly skill: SkillId; readonly angle: number; readonly range: number; readonly arc: number; readonly rear: boolean }
   | { readonly type: 'swing'; readonly angle: number }
-  | { readonly type: 'hit'; readonly angle: number; readonly value: number; readonly targetId: number;
+  | { readonly type: 'hit'; actualValue?: number; elementalValue?: number; melee?: boolean; periodic?: boolean; readonly angle: number; readonly value: number; readonly targetId: number;
       readonly remainingHp: number; readonly enemyKind: EnemyKind; readonly heavy: boolean }
   | { readonly type: 'kill'; readonly angle: number; readonly facing: number; readonly targetId: number; readonly remainingHp: 0; readonly enemyKind: EnemyKind }
   | { readonly type: 'cast'; readonly angle: number; readonly launch?: WeaponLaunch; readonly enemyKind?: EnemyKind }
-  | { readonly type: 'hurt'; readonly angle: number; readonly value: number; readonly remainingHp: number;
+  | { readonly type: 'hurt'; readonly actualValue?: number; readonly angle: number; readonly value: number; readonly remainingHp: number;
       readonly enemyKind?: EnemyKind; readonly heavy: boolean }
   | { readonly type: 'dodge'; readonly angle: number }
   | { readonly type: 'heal'; readonly value: number }

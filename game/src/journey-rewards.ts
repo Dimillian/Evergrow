@@ -1,3 +1,4 @@
+import { metric } from './chronicle.ts';
 import { freshJourneys, type JourneyGoal, type JourneyKind, type JourneyState } from './journey-state.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import type { Player } from './model.ts';
@@ -35,5 +36,6 @@ export function stageJourneyCompletion(checkpoint: CharacterCheckpoint, goal: Jo
   const staged = { ...player, character: checkpoint.character, level: checkpoint.level, xp: checkpoint.xp };
   awardCharacterExperience(staged, xp);
   checkpoint.character = staged.character; checkpoint.level = staged.level; checkpoint.xp = staged.xp;
+  metric(checkpoint.chronicle,'journeys');metric(checkpoint.chronicle,'xp',xp);metric(checkpoint.chronicle,'highestLevel',staged.level);
   return { id: goal.id, name: goal.name, xp };
 }

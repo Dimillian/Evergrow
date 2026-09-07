@@ -1,3 +1,4 @@
+import { parseChronicleLedger, recordChronicle, forkChronicle } from './chronicle.ts';
 import { decodeSaveBundle, makeSaveBundle, chartKey, bundleChart } from './save-bundle.ts';
 import { CharacterRepository, type SaveSlot } from './character-storage.ts';
 import type { CharacterSave } from './character-save.ts';
@@ -5,7 +6,7 @@ import { Exploration, type ChartResult } from './exploration.ts';
 import { decodeExploration, type DecodedExploration } from './exploration-save.ts';
 
 export type SaveRequest = { id: number } & (
-  { method: 'read' | 'list' | 'write' | 'remove'; index?: number; record?: CharacterSave; expected?: string | null; chart?: string; importing?: boolean }
+  { method: 'read' | 'list' | 'write' | 'remove' | 'chronicle'; index?: number; record?: CharacterSave; expected?: string | null; chart?: string; importing?: boolean }
   | { method: 'export'; index: number }
   | { method: 'import'; index: number; raw: string; expected: string | null }
   | { method: 'chart-read' | 'chart-write' | 'chart-remove'; key: string; seed: number; generation: string; data?: DecodedExploration });
@@ -49,7 +50,8 @@ async function execute(message: SaveRequest): Promise<unknown> {
   if (message.method === 'import') {
     const bundle = decodeSaveBundle(message.raw);
     if (!bundle) return { ok: false, message: 'Invalid or incompatible save file.' };
-    const record = { ...bundle.character, id: crypto.randomUUID(), updatedAt: Date.now() };
+    const id=crypto.randomUUID();
+    const record = { ...bundle.character, id, checkpoint:{...bundle.character.checkpoint,chronicle:forkChronicle(bundle.character,id)}, updatedAt: Date.now() };
     return execute({ id: message.id, method: 'write', index: message.index, record, expected: message.expected, chart: bundle.chart, importing: true });
   }
   return new Promise<unknown>((resolve, reject) => {
@@ -64,7 +66,11 @@ async function execute(message: SaveRequest): Promise<unknown> {
           setItem: (key, value) => { values.set(key, value); store.put([key, value], key); } });
         const token = (index: number) => values.get(`revision:${index}`) ?? null;
         const publicSlot = (slot: SaveSlot): SaveSlot => ({ ...slot, token: token(slot.index) });
-        if (message.method === 'list') result = repository.list().map(publicSlot);
+        if (message.method === 'chronicle') {
+          let ledger=parseChronicleLedger(values.get('chronicle'));
+          for(const slot of repository.list())if(slot.record)ledger=recordChronicle(ledger,slot.record);
+          result=ledger;
+        } else if (message.method === 'list') result = repository.list().map(publicSlot);
         else if (message.method === 'read') result = publicSlot(repository.read(message.index!));
         else {
           const index = message.index!, current = token(index);
@@ -77,6 +83,11 @@ async function execute(message: SaveRequest): Promise<unknown> {
             const saved = message.method === 'write' ? repository.write(index, message.record!, slot.token) : repository.remove(index, slot.token);
             result = saved;
             if (saved.ok) {
+              let ledger=parseChronicleLedger(values.get('chronicle'));
+              if(slot.record)ledger=recordChronicle(ledger,slot.record,message.method==='remove');
+              if(message.method==='write')ledger=recordChronicle(ledger,message.record!);
+              const history=JSON.stringify(ledger);parseChronicleLedger(history);
+              store.put(['chronicle',history],'chronicle');
               if (message.method === 'write' && message.chart) {
                 const bundle = { format: 'evergrow' as const, version: 1 as const, character: message.record!, chart: message.chart };
                 if (!bundleChart(bundle)) throw new Error('Invalid explored map.');

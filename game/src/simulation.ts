@@ -1,3 +1,5 @@
+import { freshChronicle, metric } from './chronicle.ts';
+import { trackChronicleEvent } from './chronicle-tracking.ts';
 import { TREASURE_FLIGHT_DURATION } from './treasure-flight.ts';
 import { advanceAffixBuffs, consumeSpellweave } from './affix-combat.ts';
 import { alternatesBasicAttacks, basicAttackWeapon } from './equipment.ts';
@@ -58,7 +60,7 @@ const TAU = Math.PI * 2;
 export function initialPlayer(x: number, y: number): Player {
   const character = createCharacterSheet();
   return {
-    character, derived: deriveCharacterStats(character), skillCooldowns: {}, activeSkill: null,
+    chronicle:freshChronicle(), character, derived: deriveCharacterStats(character), skillCooldowns: {}, activeSkill: null,
     nextAttackHand: 'main', guardTime: 0, guardReduction: .75, dash: null,
     x, y, prevX: x, prevY: y, vx: 0, vy: 0, angle: 0,
     hp: PLAYER_DEFAULTS.maxHp, maxHp: PLAYER_DEFAULTS.maxHp, mana: PLAYER_DEFAULTS.maxMana, maxMana: PLAYER_DEFAULTS.maxMana,
@@ -85,6 +87,7 @@ export class Simulation {
     this.commitJourneyCheckpoint(saved,completion,xp,levels);
   }
   commitJourneyCheckpoint(saved: CharacterCheckpoint, completion: JourneyCompletion | null, xp = completion?.xp ?? 0, levels = saved.level-this.player.level): void {
+    this.player.chronicle=saved.chronicle;
     this.journeys=saved.journeys??freshJourneys();this.player.character=saved.character;this.player.level=saved.level;this.player.xp=saved.xp;
     refreshCharacter(this.player);
     if(completion)this.events.push({type:'journey',x:this.player.x,y:this.player.y,...completion});
@@ -175,7 +178,7 @@ export class Simulation {
     const p = this.player;
     const run = currentDungeon(this.expeditions); if (run) syncDungeon(run,this.enemies,p.x,p.y);
     syncTrial(this.eventState, this.enemies);
-    return cloneData({ brokenContainers: [...this.brokenContainers], journeys:this.journeys, campWounds:this.camps.captureWounds(this.enemies), roaming:this.roaming.capture(), expeditions: this.expeditions, actors: this.enemies.filter(e=>e.hp>0).map(storedActor), pickups: this.pickups, events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
+    return cloneData({ chronicle:p.chronicle, brokenContainers: [...this.brokenContainers], journeys:this.journeys, campWounds:this.camps.captureWounds(this.enemies), roaming:this.roaming.capture(), expeditions: this.expeditions, actors: this.enemies.filter(e=>e.hp>0).map(storedActor), pickups: this.pickups, events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
       x: p.x, y: p.y, angle: p.angle, hp: p.hp, mana: p.mana, dead: p.dead,
       flasks: p.flasks, healCooldown: p.healCooldown, dodgeCharges: p.dodgeCharges, dodgeRecharge: p.dodgeRecharge,
       skillCooldowns: p.skillCooldowns, time: this.time, kills: this.kills,
@@ -190,6 +193,7 @@ export class Simulation {
     for (const id of saved.brokenContainers ?? []) this.brokenContainers.add(id);
     this.expeditions = saved.expeditions ?? freshExpeditions(); this.dungeonFloor = dungeonFromState(this);
     this.journeys = saved.journeys ?? freshJourneys();
+    this.player.chronicle = saved.chronicle ?? freshChronicle();
     this.eventState = saved.events ?? freshEvents();
     this.travel = saved.travel ?? freshTravel();
     if (saved.dead) this.travel.returnTo = null;
@@ -281,6 +285,8 @@ export class Simulation {
     return Math.max(0, Math.min(1, this.accumulator / FIXED_STEP));
   }
 
+  private emit(event: CombatEvent): void { trackChronicleEvent(this.player,this.enemies,event); this.events.push(event); }
+
   drainEvents(): CombatEvent[] {
     const result = this.events;
     this.events = [];
@@ -322,7 +328,7 @@ export class Simulation {
       slowTime: 0, slowFactor: 1, burnTime: 0, burnDps: 0, burnTick: 0,
     };
     this.enemies.push(enemy);
-    this.events.push({ type: 'spawn', x, y, enemyKind: kind });
+    this.emit({ type: 'spawn', x, y, enemyKind: kind });
     return enemy;
   }
 
@@ -339,15 +345,20 @@ export class Simulation {
     // Decrement before damage resolves so every new impact gets a full flash.
     this.player.hitFlash = Math.max(0, this.player.hitFlash - dt);
     for (const enemy of this.enemies) enemy.hitFlash = Math.max(0, enemy.hitFlash - dt);
-    this.time += dt;
+    this.time += dt; metric(this.player.chronicle,'time',dt);
+    const history=this.player.chronicle?.sources.find(s=>s.id===this.player.chronicle?.active);
+    if(history)metric(this.player.chronicle,'longestLife',(history.values.time??0)-(history.values.highestDeathTime??0));
     if (input.attack) this.attackBuffer = this.time + COMBAT_TIMING.attackBuffer;
+    const beforeX=this.player.x,beforeY=this.player.y;
     this.updatePlayer(dt, input);
+    metric(this.player.chronicle,'distance',Math.hypot(this.player.x-beforeX,this.player.y-beforeY));
+    if(!this.dungeonFloor&&Math.floor(this.time)!==Math.floor(this.time-dt)) metric(this.player.chronicle,'seen:biome:'+sampleBiome(this.player.x,this.player.y,this.options.seed!).id,1);
     this.updateEnemies(dt);
     this.updateProjectiles(dt);
     this.updateGroundEffects(dt);
-    this.engagements.update(this.enemies, this.time, event => this.events.push(event));
+    this.engagements.update(this.enemies, this.time, event => this.emit(event));
     this.updatePickups(dt);
-    this.groundGold = advanceGold(this.groundGold, this.player, this.world, dt, event => this.events.push(event));
+    this.groundGold = advanceGold(this.groundGold, this.player, this.world, dt, event => this.emit(event));
     this.collectGroundItems();
     syncTrial(this.eventState, this.enemies);
     if (this.player.dead) {
@@ -400,7 +411,9 @@ export class Simulation {
     advanceAffixBuffs(p, dt);
     for (const id of Object.keys(p.skillCooldowns) as SkillId[]) p.skillCooldowns[id] = Math.max(0, p.skillCooldowns[id]! - dt);
     p.healFlash = Math.max(0, p.healFlash - dt);
+    metric(p.chronicle,'manaRestored',Math.min(p.maxMana-p.mana,p.derived.manaRegeneration*dt));
     p.mana = Math.min(p.maxMana, p.mana + p.derived.manaRegeneration * dt);
+    metric(p.chronicle,'healing',Math.min(p.maxHp-p.hp,p.derived.lifeRegeneration*dt));
     p.hp = Math.min(p.maxHp, p.hp + p.derived.lifeRegeneration * dt);
     if (p.dodgeCharges < PLAYER_ABILITIES.dodge.charges) {
       p.dodgeRecharge += dt / p.derived.cooldownMultiplier;
@@ -423,7 +436,7 @@ export class Simulation {
       p.healCooldown = PLAYER_ABILITIES.potion.cooldown * p.derived.cooldownMultiplier;
       p.healFlash = PLAYER_ABILITIES.potion.flashDuration;
       this.healBuffer = -1;
-      this.events.push({ type: 'potion', x: p.x, y: p.y, life: healed, mana, color: '#a9bfea' });
+      this.emit({ type: 'potion', x: p.x, y: p.y, life: healed, mana, color: '#a9bfea' });
     }
 
     if (p.attack) {
@@ -444,7 +457,7 @@ export class Simulation {
           start: attack.activeStart / attack.duration, end: attack.activeEnd / attack.duration,
         };
         attack.released = true;
-        this.events.push({ type: 'cast', x: p.x, y: p.y, angle: attack.angle, style, ...(shot?.launch ? { launch: shot.launch } : {}) });
+        this.emit({ type: 'cast', x: p.x, y: p.y, angle: attack.angle, style, ...(shot?.launch ? { launch: shot.launch } : {}) });
       }
       if (p.attack.elapsed + 1e-9 >= p.attack.duration) {
         // Carry sub-tick recovery time so repeated swings keep the derived rate.
@@ -465,7 +478,7 @@ export class Simulation {
       p.dash = null;
       p.castTime = 0;
       this.dodgeBuffer = -1;
-      this.events.push({ type: 'dodge', x: p.x, y: p.y, angle: p.dodgeAngle });
+      this.emit({ type: 'dodge', x: p.x, y: p.y, angle: p.dodgeAngle });
     }
 
     if (this.skillBuffer && this.skillBuffer.until >= this.time && activateSkill({
@@ -480,7 +493,7 @@ export class Simulation {
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       projectile: (x, y, angle, definition, skill, effects) => this.projectile(x, y, angle, definition, skill, effects),
       schedule: effect => this.scheduleGroundEffect(effect),
-      emit: event => this.events.push(event),
+      emit: event => this.emit(event),
     }, this.skillBuffer.slot)) this.skillBuffer = null;
 
     if (p.dodgeTime <= 0 && p.castTime <= 0 && !p.dash && this.attackBuffer >= this.time && !p.attack) {
@@ -547,7 +560,7 @@ export class Simulation {
     const weapon = hand === 'off' && off?.kind === 'weapon' ? off.weapon : p.equipment.mainHand;
     const manaCost = basicAttackManaCost(weapon, p.derived);
     if (p.mana < manaCost) return;
-    p.mana -= manaCost;
+    p.mana -= manaCost; metric(p.chronicle,'manaSpent',manaCost);metric(p.chronicle,'basics');
     const stats = deriveAttackStats(p.stats, weapon);
     const weave = consumeSpellweave(p, weapon.attackKind === 'melee' ? 'melee' : weapon.attackKind === 'bolt' ? 'spell' : 'other');
     const duration = 1 / stats.attacksPerSecond;
@@ -562,7 +575,7 @@ export class Simulation {
       ...(ranged ? { projectile: { style, pierce: p.derived.projectilePierce, offense: { critChance: p.derived.critChance, critMultiplier: p.derived.critMultiplier, lifeOnHit: p.derived.lifeOnHit } } } : {}),
     };
     p.nextAttackHand = hand === 'main' ? 'off' : 'main';
-    if (!ranged) this.events.push({ type: 'swing', x: p.x, y: p.y, angle: p.angle });
+    if (!ranged) this.emit({ type: 'swing', x: p.x, y: p.y, angle: p.angle });
   }
 
   private resolveMelee(attack: Attack, previousElapsed: number): void {
@@ -587,7 +600,7 @@ export class Simulation {
       const x = p.x + Math.cos(angle) * reach, y = p.y + Math.sin(angle) * reach;
       if (!this.world.blocked(x, y, 2)) continue;
       attack.surfaceHit = true;
-      this.events.push({ type: 'surface-hit', x, y, angle, material: this.world.impactMaterial(x, y, 2) });
+      this.emit({ type: 'surface-hit', x, y, angle, material: this.world.impactMaterial(x, y, 2) });
       break;
     }
   }
@@ -599,11 +612,11 @@ export class Simulation {
   private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean, periodic = false, style?: ProjectileStyle, elementalDamage?: number, offense?: HitSnapshot): void {
     damageEnemy(enemy, damage, angle, melee, {
       player: this.player, enemies: this.enemies, random: () => this.random(),
-      visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by), emit: event => this.events.push(event),
+      visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by), emit: event => this.emit(event),
       killed: actor => {
         const reward = awardKillRewards(actor, this.kills, this.killRecharge, {
           player: this.player, groundGold: this.groundGold, groundItems: this.groundItems, pickups: this.pickups,
-          nextId: () => this.nextId++, emit: event => this.events.push(event),
+          nextId: () => this.nextId++, emit: event => this.emit(event),
         });
         this.kills = reward.kills; this.killRecharge = reward.recharge;
       },
@@ -622,7 +635,7 @@ export class Simulation {
       hurt: (amount, angle, actor) => this.damagePlayer(amount, angle, actor.level, actor.kind),
       shoot: (actor, angle, definition, effects) => this.projectile(actor.x, actor.y, angle,
         definition, undefined, effects, actor.level, actor.kind),
-      emit: event => this.events.push(event),
+      emit: event => this.emit(event),
     };
     for (const enemy of this.enemies) {
       this.updateKnockback(enemy, dt);
@@ -677,7 +690,7 @@ export class Simulation {
 
   private damagePlayer(amount: number, angle: number, sourceLevel: number, kind?: EnemyKind): void {
     if (!damagePlayer(amount, angle, sourceLevel, {
-      player: this.player, world: this.world, random: () => this.random(), emit: event => this.events.push(event),
+      player: this.player, world: this.world, random: () => this.random(), emit: event => this.emit(event),
     }, kind)) return;
     this.portal.cancel(); this.eventChannel.cancel();
     this.hurtGuard = COMBAT_TIMING.hurtGuard;
@@ -706,7 +719,7 @@ export class Simulation {
     return { world: this.world, break: (target, angle) => {
       const level = getZoneAt(target.x, target.y, this.world.seed ?? this.options.seed!).level;
       breakContainer(target, angle, level, this.brokenContainers, this.groundGold,
-        () => this.nextId++, event => this.events.push(event));
+        () => this.nextId++, event => this.emit(event));
     } };
   }
 
@@ -718,7 +731,7 @@ export class Simulation {
       damage: (enemy, amount, angle, melee, style, offense) => this.damageEnemy(enemy, amount, angle, melee, false, style, undefined, offense),
       hurt: (amount, angle, sourceLevel, sourceKind) => this.damagePlayer(amount, angle, sourceLevel, sourceKind),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
-      emit: event => this.events.push(event),
+      emit: event => this.emit(event),
       schedule: effect => this.scheduleGroundEffect(effect),
     });
     this.projectiles = this.projectiles.filter(projectile => projectile.life > 0);
@@ -726,7 +739,7 @@ export class Simulation {
 
   private scheduleGroundEffect(effect: Omit<GroundEffect, 'id' | 'tick'>): void {
     scheduleGroundEffect(this.groundEffects, effect, {
-      nextId: () => this.nextId++, emit: event => this.events.push(event),
+      nextId: () => this.nextId++, emit: event => this.emit(event),
     });
   }
 
@@ -736,7 +749,7 @@ export class Simulation {
       player: this.player,
       enemies: this.enemies, visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       damage: (enemy, amount, angle, melee, style, periodic = false, offense) => this.damageEnemy(enemy, amount, angle, melee, periodic, style, undefined, offense),
-      emit: event => this.events.push(event),
+      emit: event => this.emit(event),
     });
   }
 
@@ -755,7 +768,7 @@ export class Simulation {
         else p.mana = Math.min(p.maxMana, p.mana + p.maxMana * pickup.restoreFraction);
         const value = (pickup.kind === 'health' ? p.hp : p.mana) - before;
         pickup.life = 0;
-        this.events.push({ type: 'pickup', x: pickup.x, y: pickup.y, value, heavy: pickup.kind === 'health' });
+        this.emit({ type: 'pickup', x: pickup.x, y: pickup.y, value, heavy: pickup.kind === 'health' });
       } else if (distance < LOOT_RULES.magnetDistance) {
         const destination = this.world.move(pickup.x, pickup.y, dx / distance * LOOT_RULES.magnetSpeed * dt,
           dy / distance * LOOT_RULES.magnetSpeed * dt, pickup.radius);
@@ -774,12 +787,12 @@ export class Simulation {
         || !this.lineOfSight(this.player.x, this.player.y, drop.x, drop.y)) return true;
       if (!addInventoryItem(this.player.character, drop.item)) {
         if (this.time - this.lootNoticeAt > 4) {
-          this.events.push({ type: 'notice', x: drop.x, y: drop.y, message: 'Inventory full · item left on the ground' });
+          this.emit({ type: 'notice', x: drop.x, y: drop.y, message: 'Inventory full · item left on the ground' });
           this.lootNoticeAt = this.time;
         }
         return true;
       }
-      this.events.push({ type: 'loot', x: drop.x, y: drop.y, item: drop.item, color: TIER_COLORS[drop.item.tier] });
+      this.emit({ type: 'loot', x: drop.x, y: drop.y, item: drop.item, color: TIER_COLORS[drop.item.tier] });
       return false;
     });
   }

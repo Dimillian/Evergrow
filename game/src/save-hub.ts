@@ -41,6 +41,7 @@ export class SaveHub implements CharacterRepositoryPort, ExplorationPersistence 
     if (this.mode === 'cloud' && !this.cloud) return [];
     return this.repository.list();
   }
+  async chronicle() { return this.repository.chronicle(); }
   async read(index: number) { return this.repository.read(index); }
   async write(index: number, record: CharacterSave, expected: string | null) { return this.repository.write(index, record, expected); }
   async remove(index: number, expected: string | null) { return this.repository.remove(index, expected); }

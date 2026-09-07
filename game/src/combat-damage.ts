@@ -1,3 +1,4 @@
+import { metric } from './chronicle.ts';
 import { primeSpellweave, primeAfterguard, effectiveArmor } from './affix-combat.ts';
 import { applyElementalContact } from './combat-status.ts';
 import type { HitSnapshot, CombatEvent, Enemy, EnemyKind, Player, ProjectileStyle, WorldQuery } from './model.ts';
@@ -31,10 +32,13 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
   const statusDamage = elementalDamage ?? (style === 'fire' || style === 'frost' || style === 'lightning' ? damage : 0);
   if (!periodic) primeSpellweave(context.player, melee, style);
   if (!periodic) applyElementalContact(enemy, style, statusDamage);
+  const elementFraction=style==='arcane'?1:Math.min(1,Math.max(0,statusDamage/Math.max(1,damage)));
   const hitStats = offense ?? context.player.derived;
   const critical = !periodic && hitStats.critChance > 0 && context.random() < hitStats.critChance;
   damage = Math.max(1, Math.round(damage * (critical ? hitStats.critMultiplier : 1)));
+  const actualValue = Math.min(enemy.hp, damage);
   enemy.hp = Math.max(0, enemy.hp - damage);
+  if (!periodic && !context.player.dead) metric(context.player.chronicle,'healing',Math.min(context.player.maxHp-context.player.hp,hitStats.lifeOnHit));
   if (!periodic && !context.player.dead) context.player.hp = Math.min(context.player.maxHp, context.player.hp + hitStats.lifeOnHit);
   enemy.hitFlash = COMBAT_TIMING.hitFlashDuration;
   enemy.hitAngle = angle;
@@ -44,7 +48,7 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
     enemy.knockbackX += Math.cos(angle) * shove / COMBAT_TIMING.knockbackDecay;
     enemy.knockbackY += Math.sin(angle) * shove / COMBAT_TIMING.knockbackDecay;
   }
-  context.emit({ ...(style ? { style } : {}), type: 'hit', x: enemy.x, y: enemy.y, angle, value: damage,
+  context.emit({ ...(style ? { style } : {}), type: 'hit', actualValue, elementalValue:actualValue*elementFraction, melee, periodic, ...(offense?.skill?{skill:offense.skill}:{}), x: enemy.x, y: enemy.y, angle, value: damage,
     targetId: enemy.id, remainingHp: enemy.hp, enemyKind: enemy.kind, heavy: critical });
   if (enemy.hp <= 0) {
     transitionEnemy(enemy, 'dead', ENCOUNTER_RULES.corpseDuration);
@@ -72,11 +76,12 @@ export function damagePlayer(amount: number, angle: number, sourceLevel: number,
     primeAfterguard(p);
     context.emit({ type: 'block', x: p.x, y: p.y, angle, value: blocked, color: '#a9daca' });
   }
+  const actualValue = Math.min(p.hp, amount);
   p.hp = Math.max(0, p.hp - amount);
   p.hitFlash = COMBAT_TIMING.hitFlashDuration;
   p.hitAngle = angle;
   p.invulnerable = COMBAT_TIMING.hurtGuard;
-  context.emit({ type: 'hurt', x: p.x, y: p.y, angle, value: amount,
+  context.emit({ type: 'hurt', actualValue, x: p.x, y: p.y, angle, value: amount,
     remainingHp: p.hp, enemyKind: kind, heavy: amount >= 20 });
   if (p.hp <= 0) {
     p.dead = true; p.affixBuffs = undefined;

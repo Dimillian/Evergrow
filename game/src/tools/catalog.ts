@@ -42,6 +42,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'forest',group:'world',name:'Forest motion',path:'/forest.html',description:'Wind, foliage, wildlife and canopy light; recording support.'},
   {id:'water',group:'world',name:'Water motion',path:'/water.html',description:'Seeded river and lake surfaces, waves and reflections.'},
   {id:'portal',group:'world',name:'Portals',path:'/portal.html',description:'Town travel effects and portal artwork.'},
+  {id:'chronicle',group:'interface',name:'Chronicle',path:'/chronicle.html',description:'Account and character milestones, achievements and detailed statistics with sample history.'},
   {id:'ui',group:'interface',name:'Windows & components',path:'/ui.html',description:'Start, pause, defeat, map and shared controls at desktop or narrow widths.'},
   {id:'hud',group:'interface',name:'HUD states',path:'/hud.html',description:'Healthy, damaged and depleted resources and enemy plates.'},
   {id:'rewards',group:'interface',name:'Reward animations',path:'/rewards.html',description:'Replay gold, XP and level-up feedback with optional sound.'},

@@ -1,3 +1,4 @@
+import { progressForRecord } from './chronicle.ts';
 import { isWorldSeed } from './world-seed.ts';
 import { type CharacterRepositoryPort, type SaveResult } from './character-storage.ts';
 import { CHARACTER_SAVE_VERSION, type CharacterCheckpoint, type CharacterSave } from './character-save.ts';
@@ -18,6 +19,7 @@ export class CharacterSession {
     if (slot.record.worldVersion !== this.worldVersion) {
       this.error = 'This character belongs to a different world version. Its save has been preserved.'; return null;
     }
+    slot.record.checkpoint.chronicle = progressForRecord(slot.record);
     this.active = { index, record: slot.record, token: slot.token }; this.error = '';
     return slot.record;
   }
@@ -28,6 +30,7 @@ export class CharacterSession {
     if (slot.state !== 'empty') { this.error = 'Choose an empty character slot.'; return false; }
     const record: CharacterSave = { version: CHARACTER_SAVE_VERSION, id, name: name.trim(), createdAt: now, updatedAt: now,
       worldSeed, worldVersion: this.worldVersion, checkpoint };
+    record.checkpoint.chronicle = progressForRecord(record);
     const result = await this.repository.write(index, record, slot.token);
     if (!this.accept(result)) return false;
     this.active = { index, record, token: (result as { ok: true; token: string }).token }; return true;
@@ -40,6 +43,8 @@ export class CharacterSession {
       if (this.active?.record.id !== owner) { this.error = 'The active character changed before saving.'; return false; }
       const { index, record, token } = this.active;
       const next = { ...record, updatedAt: Math.max(record.updatedAt + 1, now), checkpoint };
+      next.checkpoint.chronicle = progressForRecord(next);
+      for(const old of record.checkpoint.chronicle?.sources??[]){const source=next.checkpoint.chronicle.sources.find(s=>s.id===old.id);if(source)for(const[k,at]of Object.entries(old.unlocked))source.unlocked[k]=Math.min(source.unlocked[k]??at,at);}
       const result = await this.repository.write(index, next, token);
       if (!this.accept(result)) return false;
       this.active = { index, record: next, token: (result as { ok: true; token: string }).token }; return true;

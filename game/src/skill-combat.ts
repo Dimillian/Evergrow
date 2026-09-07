@@ -1,3 +1,4 @@
+import { metric } from './chronicle.ts';
 import { consumeSpellweave } from './affix-combat.ts';
 import { weaponImpactStyle } from './elemental-weapon.ts';
 import type { ProjectileStyle, HitSnapshot, Projectile, WeaponLaunch } from './model.ts';
@@ -51,7 +52,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   // Staff weapon derivation already applies spell bonuses; applying them here again would square scaling.
   const weave = recipe.kind === 'guard' ? 1 : consumeSpellweave(p, definition.requirement === 'magic' ? 'spell' : weapon.attackKind === 'melee' ? 'melee' : 'other');
   const damage = attack.damage * costs.damageMultiplier * weave;
-  const offense: HitSnapshot = { critChance: p.derived.critChance, critMultiplier: p.derived.critMultiplier, lifeOnHit: p.derived.lifeOnHit };
+  const offense: HitSnapshot = { skill:id, critChance: p.derived.critChance, critMultiplier: p.derived.critMultiplier, lifeOnHit: p.derived.lifeOnHit };
   let launch: WeaponLaunch | undefined;
   const color = definition.color;
   const hitStyle = 'style' in recipe ? recipe.style : weaponImpactStyle(weapon);
@@ -67,7 +68,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
     skill: id, color, radius, duration: SKILL_TARGETING.blastDuration, ...(style ? { style } : {}) });
   const aimedPoint = () => skillTargetPoint(context.world,p,{x:context.aimX,y:context.aimY},attack.range);
 
-  p.mana -= costs.mana;
+  p.mana -= costs.mana; metric(p.chronicle,'manaSpent',costs.mana); metric(p.chronicle,'casts'); metric(p.chronicle,'skillUses:'+id);
   p.skillCooldowns[id] = costs.cooldown;
   p.activeSkill = id;
   if (recipe.kind === 'sweep') {

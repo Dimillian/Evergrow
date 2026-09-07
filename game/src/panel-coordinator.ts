@@ -5,12 +5,13 @@ export interface PanelHooks {
   clearInput(): void; changed(phase: GamePhase): void; resumeGameplay(): void; save(): void;
 }
 const OPEN_FROM: Record<PanelPhase, readonly GamePhase[]> = {
-  journeys: ['playing'], event: ['playing'], service: ['playing'], map: ['playing'], character: ['playing', 'character', 'skills'], skills: ['playing', 'character', 'skills'],
+  chronicle: ['playing','paused','character'], journeys: ['playing'], event: ['playing'], service: ['playing'], map: ['playing'], character: ['playing', 'character', 'skills'], skills: ['playing', 'character', 'skills'],
 };
 /** One control-context owner. Panel views own their focus traps; this owner closes
  * the old trap before opening a new view and returns focus only when play resumes. */
 export class PanelCoordinator {
   private current: GamePhase = 'ready';
+  private chronicleReturn: 'playing'|'paused'|'character' = 'playing';
   private readonly panels: Record<PanelPhase, PanelLifecycle>;
   private readonly hooks: PanelHooks;
   constructor(panels: Record<PanelPhase, PanelLifecycle>, hooks: PanelHooks) { this.panels = panels; this.hooks = hooks; }
@@ -19,6 +20,7 @@ export class PanelCoordinator {
   canOpen(panel: PanelPhase): boolean { return OPEN_FROM[panel].includes(this.current); }
   open(panel: PanelPhase): boolean {
     if (!this.canOpen(panel) || this.current === panel) return false;
+    if(panel==='chronicle')this.chronicleReturn=this.current==='paused'?'paused':this.current==='character'?'character':'playing';
     this.transition(panel, true); return true;
   }
   toggle(panel: PanelPhase): boolean { return this.current === panel ? this.resume() : this.open(panel); }
@@ -28,7 +30,7 @@ export class PanelCoordinator {
   }
   resume(): boolean {
     if (this.current !== 'paused' && !this.activePanel) return false;
-    this.transition('playing'); return true;
+    this.transition(this.current==='chronicle'?this.chronicleReturn:'playing'); return true;
   }
   /** Explicit lifecycle changes: character entry, title return and defeat use the same cleanup. */
   transition(next: GamePhase, save = false): void {
