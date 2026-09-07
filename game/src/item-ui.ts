@@ -26,7 +26,7 @@ export const PREVIEW_PERCENT = new Set<PreviewStat>(['blockChance', 'blockReduct
   'manaCostReduction', 'cooldownReduction', 'attackSpeedMultiplier', 'castSpeedMultiplier', 'spellDamageMultiplier']);
 
 export function itemSlotMarkup(item: Item, size = 44): string {
-  return `${itemIconSVG(item, size)}${item.weapon ? `<span class="ui-item-hands">${item.weapon.hands}H</span>` : ''}${item.recipe.enhancement ? `<span class="ui-item-enhancement">+${item.recipe.enhancement}</span>` : ''}<span class="ui-item-level">${number(item.itemLevel, 0)}</span><span class="ui-item-tier" aria-hidden="true">${'<i></i>'.repeat(TIER_RANK[item.tier])}</span>`;
+  return `${itemIconSVG(item, size)}${item.recipe.enhancement ? `<span class="ui-item-enhancement">+${item.recipe.enhancement}</span>` : ''}<span class="ui-item-level">${number(item.itemLevel, 0)}</span><span class="ui-item-tier" aria-hidden="true">${'<i></i>'.repeat(TIER_RANK[item.tier])}</span>`;
 }
 export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, options: { level: number; emptyMarkup: string; label: string; draggable?: boolean }): void {
   cell.classList.add('ui-item-slot');

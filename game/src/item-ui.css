@@ -73,7 +73,6 @@
 .ui-item-slot[data-enhancement="10"] { outline:1px solid #eadab35c; outline-offset:2px; }
 .ui-item-upgrade { font:12px "Evergrow Numerals", system-ui,sans-serif; color:#e6cc96; padding:8px 0; border-bottom:1px solid #c6b17b30; }
 
-.ui-item-hands { position: absolute; top: 3px; left: 4px; color: #b8c6ca; font: 600 8px/1.2 system-ui, sans-serif; text-shadow: 0 1px 2px #000; pointer-events: none; }
 
 /* Android 13's bundled WebView may lack color-mix. A rejected custom-property
    gradient must never turn an equipment tooltip into a transparent surface. */
