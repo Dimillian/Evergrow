@@ -38,7 +38,7 @@ root.innerHTML = `<div class="editor-shell">
         <div class="face-study"><canvas id="face" role="img" aria-label="Face close-up"></canvas><span>Face detail</span></div>
         <div class="world-study"><canvas id="world-size" role="img" aria-label="Small character preview"></canvas><span>Small scale</span></div></div>
       <div class="rotation"><button type="button" class="ui-button ui-button--quiet ui-button--icon rotate-left" id="rotate-left" aria-label="Rotate left">${uiIcon('chevron')}</button><output id="direction">Front</output><button type="button" class="ui-button ui-button--quiet ui-button--icon" id="rotate-right" aria-label="Rotate right">${uiIcon('chevron')}</button></div>
-      <div class="stage-options"><label class="check-label"><input type="checkbox" id="hood">Show hood</label><label class="gear-choice">Gear<select id="gear">${STARTER_LOADOUTS.map(p => `<option value="${p.id}">${p.label}</option>`).join('')}</select></label></div>
+      <div class="stage-options"><label class="check-label"><input type="checkbox" id="hood">Show helmet</label><label class="gear-choice">Gear<select id="gear">${STARTER_LOADOUTS.map(p => `<option value="${p.id}">${p.label}</option>`).join('')}</select></label></div>
     </section>
     <section class="editor-controls ui-window" aria-label="Appearance editor">
       <div class="editor-tabs" role="tablist" aria-label="Appearance category"><button type="button" role="tab" id="character-tab" data-tab="character" aria-controls="character-options" aria-selected="true">Character</button><button type="button" role="tab" id="armor-tab" data-tab="armor" aria-controls="armor-options" aria-selected="false">Armor</button></div>
