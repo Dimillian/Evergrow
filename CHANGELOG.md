@@ -1,5 +1,12 @@
 # Evergrow changelog
 
+## v0.3.2 — 2026-09-07T12:17:00Z
+
+### Fixes
+
+- Cloud characters with save conflicts can now be deleted without downloading first.
+- Delete confirmation explains which copies are removed; failed requests keep recovery available.
+
 ## v0.3.1 — 2026-09-07T12:04:00Z
 
 ### Tweaks
