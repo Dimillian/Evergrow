@@ -4,8 +4,8 @@ import { advanceWaves, freshWaves } from '../src/wave-system.ts';
 import { eventRecipe, EVENT_RECIPES, recipeMembers, sealPoint } from '../src/event-recipes.ts';
 import { Simulation } from '../src/simulation.ts';
 import type { WorldQuery } from '../src/model.ts';
-import type { EventSite } from '../src/poi-content.ts';
-import { executeEvent } from '../src/poi-command.ts';
+import { eventInteractionSites, type EventSite } from '../src/poi-content.ts';
+import { executeEvent, claimCompletedEvent, pendingEventReward } from '../src/poi-command.ts';
 import { advanceTrial } from '../src/poi-runtime.ts';
 import { validEvents } from '../src/poi-validation.ts';
 import { eventRewards } from '../src/poi-rewards.ts';
@@ -42,8 +42,10 @@ test('each event recipe admits, progresses, validates and claims its physical re
   }
   if(kind==='cursedChest')advance(sim,90);
   assert.equal(sim.eventState.trial,null);const r=sim.eventState.sites[s.id];assert.equal(r.wavesCleared,rounds);
-  assert.equal((await executeEvent(sim,s,r.choice,persist)).ok,true);assert.ok(validEvents(sim.eventState));
-  const count=sim.groundItems.length;assert.equal(count,eventRewards(r).items.length);assert.equal((await executeEvent(sim,s,r.choice,persist)).ok,false);assert.equal(sim.groundItems.length,count);
+  sim.player.x=300;assert.ok(pendingEventReward(sim,r));
+  assert.equal(eventInteractionSites([s],sim.eventState).length,0,'no extra interaction prompt');
+  assert.equal((await claimCompletedEvent(sim,s.id,persist)).ok,true);assert.ok(validEvents(sim.eventState));
+  const count=sim.groundItems.length;assert.equal(count,eventRewards(r).items.length);assert.equal((await claimCompletedEvent(sim,s.id,persist)).ok,false);assert.equal(sim.groundItems.length,count);
  }
 });
 test('cursed score, remaining time and wounds survive checkpoint reconstruction',async()=>{
@@ -64,13 +66,12 @@ test('automatic cursed payouts are durable, exactly once and preserve surviving 
  advance(sim);for(const e of sim.enemies){e.hp=0;e.state='dead';}advance(sim);for(let i=0;i<6;i++)advance(sim);
  const survivors=sim.enemies.filter(e=>e.hp>0);advance(sim,90);assert.ok(survivors.length>0);
  const before=sim.captureCheckpoint();
- const {claimCursedChest}=await import('../src/poi-command.ts');
- assert.equal((await claimCursedChest(sim,s.id,()=>({ok:false,message:'Failed'}))).ok,false);
+ assert.equal((await claimCompletedEvent(sim,s.id,()=>({ok:false,message:'Failed'}))).ok,false);
  assert.deepEqual(sim.captureCheckpoint(),before);
- sim.player.x=300;assert.equal((await claimCursedChest(sim,s.id,persist)).ok,true);
+ sim.player.x=300;assert.equal((await claimCompletedEvent(sim,s.id,persist)).ok,true);
  assert.equal(sim.groundItems.length,1);assert.ok(sim.groundItems[0].flight);
  assert.ok(survivors.every(e=>sim.enemies.includes(e)&&!e.campId));
- assert.equal((await claimCursedChest(sim,s.id,persist)).ok,false);
+ assert.equal((await claimCompletedEvent(sim,s.id,persist)).ok,false);
 });
 
 test('surface travel banks a timed score only after the departure checkpoint is saved',async()=>{
@@ -102,4 +103,42 @@ test('shared navigation supplies an obstacle detour without moving its target or
  const nav=new WorldNavigation({...world,blocked:(x:number,y:number)=>Math.abs(x)<30&&Math.abs(y)<160});
  let point={x:-240,y:0};for(let i=0;i<60&&point.x===-240&&point.y===0;i++)point=nav.target(-240,0,240,0);
  assert.ok(point.x!==-240||point.y!==0);assert.ok(Math.abs(point.y)>0,'the first route step detours around the wall');
+});
+
+test('automatic rewards resume after capacity clears or reload, without repeating XP or drops',async()=>{
+ const {LOOT_RULES}=await import('../src/combat-content.ts');
+ const {GOLD_RULES}=await import('../src/gold.ts');
+ const {generateItem}=await import('../src/items.ts');
+ const sim=new Simulation(world,{spawn:false}),s=site('quarry');
+ await executeEvent(sim,s,null,persist);
+ sim.eventState.trial=null;
+ sim.eventState.sites[s.id].phase='completed';sim.eventState.sites[s.id].wavesCleared=3;
+ sim.groundItems=Array.from({length:LOOT_RULES.maxGroundItems},(_,i)=>({id:100+i,x:500,y:500,item:generateItem(80000+i,1)}));
+ sim.groundGold=Array.from({length:GOLD_RULES.maxPiles},(_,i)=>({id:1000+i,x:500,y:500,amount:1,age:1}));
+ assert.ok((await claimCompletedEvent(sim,s.id,persist)).ok);
+ assert.equal(sim.eventState.sites[s.id].bonusGranted,true);
+ assert.equal(sim.eventState.sites[s.id].delivered,0);
+ assert.equal(pendingEventReward(sim,sim.eventState.sites[s.id]),false,'full ground does not trigger empty save retries');
+ const restored=new Simulation(world,{spawn:false});restored.restoreCheckpoint(sim.captureCheckpoint());
+ const xp=restored.player.xp, level=restored.player.level;
+ restored.groundItems.splice(0,1);
+ assert.ok((await claimCompletedEvent(restored,s.id,persist)).ok);
+ assert.equal(restored.groundItems.filter(i=>i.item.id.startsWith('poi:')).length,1);
+ assert.equal(restored.player.xp,xp);assert.equal(restored.player.level,level);
+ restored.groundItems.splice(0,1);restored.groundGold.splice(0,1);
+ assert.ok((await claimCompletedEvent(restored,s.id,persist)).ok);
+ assert.equal(restored.eventState.sites[s.id].phase,'claimed');
+ assert.equal(restored.groundItems.filter(i=>i.item.id.startsWith('poi:')).length,2);
+ assert.equal((await claimCompletedEvent(restored,s.id,persist)).ok,false);
+});
+
+test('automatic event payout leaves unstarted, active, distant and dead-player events alone',async()=>{
+ const sim=new Simulation(world,{spawn:false}),s=site('quarry');
+ assert.equal((await claimCompletedEvent(sim,s.id,persist)).ok,false);
+ await executeEvent(sim,s,null,persist);
+ assert.equal((await claimCompletedEvent(sim,s.id,persist)).ok,false);
+ sim.eventState.trial=null;sim.eventState.sites[s.id].phase='completed';
+ sim.player.dead=true;assert.equal(pendingEventReward(sim,sim.eventState.sites[s.id]),false);
+ sim.player.dead=false;sim.player.x=5000;assert.equal(pendingEventReward(sim,sim.eventState.sites[s.id]),false);
+ sim.player.x=300;assert.ok(pendingEventReward(sim,sim.eventState.sites[s.id]));
 });

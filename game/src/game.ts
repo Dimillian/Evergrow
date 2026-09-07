@@ -28,7 +28,7 @@ import { claimDungeonChest, dungeonChestProblem, type DungeonAction } from './du
 import { DungeonMap, drawCryptMinimap } from './dungeon-map.ts';
 import { EventPanel } from './poi-panel.ts';
 import { focusEvent, eventLabel, eventClaimed, isEventKind, type EventSite, type EventChoice } from './poi-content.ts';
-import { executeEvent, eventProblem, claimCursedChest } from './poi-command.ts';
+import { executeEvent, eventProblem, claimCompletedEvent, pendingEventReward } from './poi-command.ts';
 import { activatePortalAnchor } from './travel-command.ts';
 import { townPortalAnchor, withinPortalReach, portalMapMarkers, type PortalAnchor } from './travel.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
@@ -133,7 +133,7 @@ export class Game {
   private get hallBusy() { return this._hallBusy; }
   private set hallBusy(value: boolean) { this._hallBusy=value; this.titleScreen?.setBusy(value); }
   private savingAction = false;
-  private nextCursedClaim = 0;
+  private nextEventClaim = 0;
   private actionPending: Promise<unknown> = Promise.resolve();
   private autosave: Promise<boolean> | null = null;
   private saveAgain = false;
@@ -969,10 +969,10 @@ export class Game {
         if (!(event.type === 'cast' && event.enemyKind)) this.audio.play(event);
       }
       if (this.sim.eventChannel.ready) this.finishEvent();
-      else if(!this.savingAction&&!this.sim.player.dead&&!this.sim.dungeonFloor&&(!this.sim.portal.ready)&&now>=this.nextCursedClaim) {
-        this.nextCursedClaim=now+1000;
-        const chest=Object.values(this.sim.eventState.sites).find(r=>r.kind==='cursedChest'&&r.phase==='completed'&&!r.bonusGranted&&Math.hypot(r.x-this.sim.player.x,r.y-this.sim.player.y)<=1800);
-        if(chest){this.nextCursedClaim=now+30000;void this.durable(async()=>{const result=await claimCursedChest(this.sim,chest.id,c=>this.persistTravel(c));if(!result.ok)this.notify(result.message);},undefined);}
+      else if(!this.savingAction&&!this.sim.player.dead&&!this.sim.dungeonFloor&&(!this.sim.portal.ready)&&now>=this.nextEventClaim) {
+        this.nextEventClaim=now+250;
+        const chest=Object.values(this.sim.eventState.sites).find(r=>pendingEventReward(this.sim,r));
+        if(chest){void this.durable(async()=>{const result=await claimCompletedEvent(this.sim,chest.id,c=>this.persistTravel(c));if(!result.ok){this.nextEventClaim=performance.now()+30000;this.notify(result.message);}},undefined);}
       }
       if (this.sim.portal.ready) this.travelThrough(this.overworld.getPortalAnchor(this.sim.travel.homeTown), false);
       const run=currentDungeon(this.sim.expeditions);

@@ -1,4 +1,4 @@
-import { eventRecipe, sealPoint } from './event-recipes.ts';
+import { eventRecipe, sealPoint, isTrialKind } from './event-recipes.ts';
 import type { WaveProgress } from './wave-system.ts';
 import { siteHash, type WildernessSite, type WildernessKind } from './wilderness-sites.ts';
 import type { BiomeId } from './biomes.ts';
@@ -146,6 +146,7 @@ export function compactEvents(state: EventState): void {
 }
 
 export function eventInteractionSites(sites: readonly EventSite[],state:EventState):EventSite[] {
+  sites=sites.filter(site=>!isTrialKind(site.kind)||(!eventClaimed(state,site.id)&&state.sites[site.id]?.phase!=='completed'));
   const trial=state.trial;if(!trial?.sealReady)return [...sites];
   const site=state.sites[trial.siteId],point=sealPoint(site,trial.wave);
   return [...sites.filter(s=>s.id!==site.id),{...site,...point}];
