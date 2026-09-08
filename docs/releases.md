@@ -4,6 +4,17 @@
 
 ## Last verified publication
 
+- Game v0.9.0 / Sites version 28, publicly deployed on 2026-09-08 at 19:19:56 UTC.
+- Published source: `87d3172333451b9c3b8ed1aefd0b32bb462b0bf1`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_0bfdf63d6b9881919cf9e715ef473a61`.
+- Deployment: `appgdep_6aa05fcf6e048191abbfbb80bb502469`; Sites returned `succeeded`.
+- Three dungeon themes, compact 7–9-room floors with winding passages, two optional chamber events and automatically opening event treasure.
+- Shared event approaches and body-sized navigation reduce distant or stranded reinforcements.
+- Dungeon layout version 4 deliberately rejects older expedition payloads. Characters containing older saved expeditions require a fresh character; existing saves remain stored. Characters without an older expedition are unaffected. Client and Worker validators were published together; no database migration.
+- Passed 1,032 code tests, three release-note checks, type checking, the cloud-enabled client/Worker build, archive validation and clean-source release validation. Dungeon workshop remains local-only and excluded from the production archive.
+
+## Previous verified publication
+
 - Game v0.8.0 / Sites version 27, publicly deployed on 2026-09-08 at 17:57:50 UTC.
 - Published source: `7bc26887d942089f54ba565bbaf38578af37c46c`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_1962625b91dc81919b5702fd7b8ab456`.
@@ -13,7 +24,7 @@
 - Existing generation-9 characters and activated encounter progress are preserved. Matching client/server save validators were published together; no database migration or character reset.
 - Passed 1,023 code tests, three release-note checks, type checking, the cloud-enabled client/Worker build, archive validation and clean-source release validation. Expanded atlas surveys are committed for local development and excluded from the production archive.
 
-## Previous verified publication
+## Earlier verified publication
 
 - Game v0.7.1 / Sites version 26, publicly deployed on 2026-09-08 at 16:24:20 UTC.
 - Published source: `89e073dbc30de27d0a6bd573e67b1c38d8ff9e1b`.
