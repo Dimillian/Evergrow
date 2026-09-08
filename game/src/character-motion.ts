@@ -128,8 +128,12 @@ export function playerMotion(pose: CharacterPose) {
       pose.attackHand === 'off' && offVisual ? offGuardAngle : guardedMelee ? mainGuard : undefined) + idleSway * (pose.attackHand === 'off' ? .7 : 1) * (1 - attackBlend)
     : mainRestAngle + idleSway;
   if (pose.weapon?.kind === 'bow') {
-    const carry = .12 + Math.cos(pose.angle) * .12 + idleSway * .18;
-    weaponAngle = carry + Math.atan2(Math.sin(pose.angle - carry), Math.cos(pose.angle - carry)) * rangedDraw;
+    // Carry upright at either side, turning continuously through front/back
+    // views. A right-only rest pose makes westward draws cross the angle seam.
+    const carry = Math.atan2(Math.sin(pose.angle) * .28, Math.cos(pose.angle))
+      + Math.cos(pose.angle) * (.12 + idleSway * .18);
+    const carryOffset = Math.atan2(Math.sin(carry - pose.angle), Math.cos(carry - pose.angle));
+    weaponAngle = pose.angle + carryOffset * (1 - rangedDraw);
   }
   if (pose.weapon?.kind === 'staff') {
     // Upright two-hand carry: the lower palm supports the shaft below the lead grip.

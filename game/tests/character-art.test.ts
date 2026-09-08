@@ -107,13 +107,16 @@ test('all weapon and off-hand silhouettes fit both tall and wide portraits with 
     }
   }
 });
-test('resting staves and bow limbs stay upright in every facing', () => {
+test('staves stay upright and bows carry upright at either side, facing forward', () => {
   for (const weapon of WEAPON_PROFILES.filter(w => w.family === 'staff' || w.family === 'bow')) {
     for (let facing = 0; facing < 64; facing++) {
       const angle = facing * Math.PI / 32;
       const motion = playerMotion({ ...pose, angle, attackAngle: angle, weapon: weapon.visual });
       if (weapon.family === 'staff') assert.ok(Math.sin(motion.weaponAngle) < -.99);
-      else assert.ok(Math.abs(Math.sin(motion.weaponAngle)) < .3);
+      else {
+        assert.ok(Math.cos(motion.weaponAngle - angle) > .7, 'bow faces forward rather than back toward the player');
+        if (Math.abs(Math.sin(angle)) < .4) assert.ok(Math.abs(Math.sin(motion.weaponAngle)) < .3, 'side-facing bow limbs stay upright');
+      }
     }
   }
 });

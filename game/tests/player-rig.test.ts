@@ -125,6 +125,41 @@ test('bows attach to the string and staff palms stay eight units apart on the sh
   }
 });
 
+test('bow draws face the target and never spin through left-facing or vertical angle boundaries', () => {
+  const angleDelta = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+  for (const weapon of WEAPON_PROFILES.filter(profile => profile.family === 'bow')) {
+    for (let facing = 0; facing < 64; facing++) {
+      const angle = facing / 64 * TAU;
+      const pose: CharacterPose = { ...rest, angle, attackAngle: angle, weapon: weapon.visual,
+        grip: 'two-handed', attackKind: 'ranged', moving: 1, gaitPhase: 1.4 };
+      const idle = playerMotion(pose);
+      let previous = idle.weaponAngle, travel = 0;
+      for (let frame = 0; frame <= 200; frame++) {
+        const motion = playerMotion({ ...pose, attack: frame / 200 });
+        const delta = Math.abs(angleDelta(motion.weaponAngle, previous));
+        assert.ok(delta < .12, `${weapon.name}: draw/release has no sudden turn`);
+        assert.ok(Math.cos(motion.weaponAngle - angle) > .7, 'bow and nocked arrow always point toward the target');
+        travel += delta;
+        previous = motion.weaponAngle;
+      }
+      assert.ok(travel < Math.PI / 2, 'complete shot is a compact draw and return, not a half/full spin');
+      near(angleDelta(previous, idle.weaponAngle), 0, 'recovery returns to the original facing');
+      const released = playerMotion({ ...pose, attack: pose.attackStart! });
+      near(angleDelta(released.weaponAngle, angle), 0, 'arrow aligns with aim at release');
+    }
+    for (const boundary of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) for (const action of actions) {
+      const pose: CharacterPose = { ...rest, ...action, weapon: weapon.visual,
+        grip: 'two-handed', attackKind: 'ranged', moving: 1, gaitPhase: 1.4 };
+      const before = { ...pose, angle: boundary - 1e-6, attackAngle: boundary - 1e-6 };
+      const afterAngle = boundary === Math.PI ? -Math.PI + 1e-6 : boundary + 1e-6;
+      const after = { ...pose, angle: afterAngle, attackAngle: afterAngle };
+      assertContinuous(getPlayerArmRig(before), getPlayerArmRig(after), 'bow facing boundary');
+      assert.ok(Math.abs(angleDelta(playerMotion(before).weaponAngle, playerMotion(after).weaponAngle)) < .0001,
+        'bow orientation stays continuous across facing boundaries');
+    }
+  }
+});
+
 test('a dual-wield off-hand attack animates the matching arm without exchanging anatomical shoulder mounts', () => {
   const weapon = WEAPON_PROFILES.find(profile => profile.family === 'sword' && profile.hands === 1)!;
   const dagger = WEAPON_PROFILES.find(profile => profile.family === 'dagger')!;
