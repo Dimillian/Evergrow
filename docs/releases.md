@@ -4,6 +4,17 @@
 
 ## Last verified publication
 
+- Game v0.8.0 / Sites version 27, publicly deployed on 2026-09-08 at 17:57:50 UTC.
+- Published source: `7bc26887d942089f54ba565bbaf38578af37c46c`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_1962625b91dc81919b5702fd7b8ab456`.
+- Deployment: `appgdep_6aa04c7e71d481919ad096613f3dd864`; Sites returned `succeeded`.
+- Bounded regional enemy, encounter, reward and vendor scaling; consistent rank advantages; onward journal guidance and accurate shop stock levels.
+- All event families and wilderness bosses are eligible from level one outside the protected arrival area.
+- Existing generation-9 characters and activated encounter progress are preserved. Matching client/server save validators were published together; no database migration or character reset.
+- Passed 1,023 code tests, three release-note checks, type checking, the cloud-enabled client/Worker build, archive validation and clean-source release validation. Expanded atlas surveys are committed for local development and excluded from the production archive.
+
+## Previous verified publication
+
 - Game v0.7.1 / Sites version 26, publicly deployed on 2026-09-08 at 16:24:20 UTC.
 - Published source: `89e073dbc30de27d0a6bd573e67b1c38d8ff9e1b`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_08a45de33f008191b8f1c500d521db75`.

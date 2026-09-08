@@ -1,4 +1,4 @@
-# Regional progression — local, 2026-09-08
+# Regional progression — published in v0.8.0, 2026-09-08
 
 Regions now provide a level range rather than a single fixed level. Terrain, settlements, roads, climates, region names and exploration remain generation 9. Ordinary threat follows the player within each region’s bounds; returning after outgrowing its cap makes the region easier.
 
@@ -40,7 +40,7 @@ At the ordinary regional ceiling, Recommended favors The road ahead toward a dis
 
 Current generation-9 v4 characters remain compatible. No world reset, character deletion, lost inventory or exploration migration is needed. Saved actors retain exact levels and wounds. Active/paused events and entered dungeons without the new optional snapshot retain their fixed original levels. Already visited old camps with death/wound records retain their previous geographic difficulty; newly encountered content adopts scaling. Old full-health camps that were never retained in a checkpoint have no persisted encounter to preserve.
 
-The existing v3 appearance migration still preserves progress. Unsupported older world generations remain unsupported; this change does not alter that rule. Cloud saves will require the matching client/server publication of the shared validators; local and Android continue using the same local save contract.
+The existing v3 appearance migration still preserves progress. Unsupported older world generations remain unsupported; this change does not alter that rule. The v0.8.0 publication includes matching client/server shared validators; local and Android continue using the same local save contract.
 
 ## Verification
 
