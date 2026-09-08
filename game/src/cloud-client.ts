@@ -1,4 +1,4 @@
-import { forkChronicle, type ChronicleLedger } from './chronicle.ts';
+import type { ChronicleLedger } from './chronicle.ts';
 import type { CharacterSave } from './character-save.ts';
 import type { CharacterRepositoryPort, SaveResult, SaveSlot, SaveSummary } from './character-storage.ts';
 import type { ChartResult, ExplorationPersistence } from './exploration.ts';
@@ -126,19 +126,6 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
         : 'Could not confirm cloud deletion. Your recovery is still available. Check your connection and sign-in, then try again.' };
     }
   }
-  async export(index: number): Promise<string> {
-    const row = await this.cache<CloudRow | null>({ kind: 'read', index });
-    if (!row?.bundle) throw new Error('Select a character first.');
-    return this.rpc('encode', { bundle: row.bundle });
-  }
-  async import(index: number, raw: string): Promise<SaveResult> {
-    const bundle = await this.rpc<SaveBundle | null>('decode', { raw });
-    if (!bundle) return { ok: false, message: 'Invalid or incompatible save file.' };
-    const slot = await this.read(index); if (slot.state !== 'empty') return { ok: false, message: 'Choose an empty slot.' };
-    const id=crypto.randomUUID();
-    bundle.character = { ...bundle.character, id, checkpoint:{...bundle.character.checkpoint,chronicle:forkChronicle(bundle.character,id)}, updatedAt: Date.now() };
-    return this.commit(index, slot.token, bundle);
-  }
   async readChart(key: string, _seed: number, _generation: string): Promise<ChartResult> {
     return { status: 'saved', data: await this.rpc<DecodedExploration | undefined>('read-chart', { key }) };
   }
@@ -172,7 +159,7 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
     })().finally(() => { this.syncing = null; });
     return this.syncing;
   }
-  /** Explicit discard only, after the hall's confirmation. Export keeps the alternative branch. */
+  /** Explicit discard only, after the hall confirms replacing the recovery branch. */
   async useCloud(index: number, expected: string | null): Promise<void> {
     await this.flush();
     const remote = await this.api<{ revision: number; bundle: SaveBundle | null }>(`characters/${index}`);

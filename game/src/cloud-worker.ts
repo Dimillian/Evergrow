@@ -2,7 +2,7 @@ import { characterPower, previewCharacter } from './character-summary.ts';
 import { bundleChart, chartKey, encodeChart } from './save-bundle.ts';
 import type { CloudRow } from './cloud-cache.ts';
 import { openCloudCache, type CacheCommand } from './cloud-cache.ts';
-import { makeSaveBundle, decodeSaveBundle, type SaveBundle } from './save-bundle.ts';
+import { makeSaveBundle } from './save-bundle.ts';
 import type { CharacterSave } from './character-save.ts';
 import type { DecodedExploration } from './exploration-save.ts';
 const scope = globalThis as unknown as { onmessage: (event: MessageEvent) => void; postMessage(value: unknown): void };
@@ -35,8 +35,6 @@ scope.onmessage = ({ data }) => {
         result = bundle ? bundleChart(bundle) : undefined;
       }
       else if (data.method === 'encode-request') result = JSON.stringify(data.body);
-      else if (data.method === 'encode') result = JSON.stringify(data.bundle as SaveBundle);
-      else if (data.method === 'decode') result = decodeSaveBundle(data.raw);
       else result = await cache.execute(data.command as CacheCommand);
       scope.postMessage({ id: data.id, result });
     } catch (error) { scope.postMessage({ id: data.id, error: (error as Error).message }); }

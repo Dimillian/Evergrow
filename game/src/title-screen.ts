@@ -84,8 +84,8 @@ export class TitleScreen {
       if (action === 'cancel') { this.confirming = null; this.renderSelection(); }
       if (action === 'confirm-delete') this.actions.remove(this.selected, this.slots[this.selected]?.token ?? null);
       if (action === 'confirm-cloud') this.actions.useCloud?.(this.selected, this.slots[this.selected]?.token ?? null);
-      if (action === 'download') this.actions.download?.(this.selected);
-      if (action === 'import') this.element.querySelector<HTMLInputElement>('.title-file')!.click();
+      if (action === 'download' && this.source.mode === 'local') this.actions.download?.(this.selected);
+      if (action === 'import' && this.source.mode === 'local') this.element.querySelector<HTMLInputElement>('.title-file')!.click();
       if (action === 'random-seed') { const input = this.element.querySelector<HTMLInputElement>('[name="world-seed"]'); if (input) { input.value = this.rollSeed(); input.setCustomValidity(''); } }
     }, { signal: this.abort.signal });
     this.element.addEventListener('input', event => {
@@ -100,7 +100,7 @@ export class TitleScreen {
         this.element.querySelectorAll<HTMLInputElement>('[name="starter-weapon"]').forEach(radio => { radio.checked = radio.value === this.starter; }); return;
       }
       if (!(input instanceof HTMLInputElement)) return;
-      if (input.type === 'file' && input.files?.[0]) { this.actions.import?.(this.selected, input.files[0]); input.value = ''; }
+      if (this.source.mode === 'local' && input.type === 'file' && input.files?.[0]) { this.actions.import?.(this.selected, input.files[0]); input.value = ''; }
       if (input.name === 'starter-weapon' && isStarterLoadoutId(input.value)) { this.starter = input.value; this.player = previewCharacter(null, this.starter); const select = this.element.querySelector<HTMLSelectElement>('[name="compact-starter"]'); if (select) select.value = this.starter; }
     }, { signal: this.abort.signal });
     this.element.addEventListener('submit', event => {
@@ -125,6 +125,8 @@ export class TitleScreen {
   setBusy(busy: boolean) { this.element.inert = busy || this.changelog.opened || this.chronicle.opened; this.element.classList.toggle('is-busy', busy); this.element.setAttribute('aria-busy', String(busy)); }
   setSource(source: SaveSourceUI) {
     this.source = source;
+    this.element.querySelector<HTMLElement>('.title-transfer')!.hidden = source.mode !== 'local' || (!this.actions.download && !this.actions.import);
+    if (source.mode !== 'local') this.element.querySelector<HTMLInputElement>('.title-file')!.value = '';
     this.element.querySelector<HTMLAnchorElement>('.title-signout')!.hidden = source.mode !== 'cloud' || !source.signedIn;
     this.element.querySelector<HTMLElement>('.title-sources')!.hidden = !source.supported;
     this.element.querySelectorAll<HTMLButtonElement>('[data-source]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.source === source.mode)));
@@ -190,8 +192,8 @@ export class TitleScreen {
     this.player = previewCharacter(record ?? null, this.starter);
     const selection = this.element.querySelector('.title-selection')!;
     const canUse = this.source.mode === 'local' || this.source.signedIn;
-    this.element.querySelector<HTMLButtonElement>('[data-action="download"]')!.disabled = !record || !this.actions.download;
-    this.element.querySelector<HTMLButtonElement>('[data-action="import"]')!.disabled = !canUse || slot?.state !== 'empty' || this.loading || !this.actions.import;
+    this.element.querySelector<HTMLButtonElement>('[data-action="download"]')!.disabled = this.source.mode !== 'local' || !record || !this.actions.download;
+    this.element.querySelector<HTMLButtonElement>('[data-action="import"]')!.disabled = this.source.mode !== 'local' || !canUse || slot?.state !== 'empty' || this.loading || !this.actions.import;
     if (this.source.status === 'Loading…') { selection.innerHTML = '<p class="title-loading" role="status">Loading…</p>'; return; }
     if (!canUse) {
       if (this.source.status === 'Unavailable') { selection.innerHTML = '<div class="title-signin"><p>Cloud unavailable</p><button class="ui-button" data-action="retry">Retry</button></div>'; return; }
@@ -200,9 +202,9 @@ export class TitleScreen {
     if (this.loading) { selection.innerHTML = '<p class="title-loading" role="status">Loading…</p>'; return; }
     if (this.confirming) {
       const deleteMessage = slot?.conflict
-        ? 'Deletes the cloud save and this device’s recovery copy. This cannot be undone. Download first if you want a backup.'
+        ? 'Deletes the cloud save and this device’s recovery copy. This cannot be undone.'
         : 'This cannot be undone.';
-      selection.innerHTML = `<div class="title-confirm"><h3>${this.confirming === 'delete' ? 'Delete character?' : 'Use cloud version?'}</h3><p>${this.confirming === 'delete' ? deleteMessage : 'Replaces this device’s recovery copy. Download it first to keep it.'}</p><div class="title-actions"><button class="ui-button" data-action="cancel">Cancel</button><button class="ui-button ui-button--danger" data-action="confirm-${this.confirming}">${this.confirming === 'delete' ? 'Delete' : 'Use cloud'}</button></div></div>`; return;
+      selection.innerHTML = `<div class="title-confirm"><h3>${this.confirming === 'delete' ? 'Delete character?' : 'Use cloud version?'}</h3><p>${this.confirming === 'delete' ? deleteMessage : 'Replaces this device’s recovery copy with the saved cloud version. This cannot be undone.'}</p><div class="title-actions"><button class="ui-button" data-action="cancel">Cancel</button><button class="ui-button ui-button--danger" data-action="confirm-${this.confirming}">${this.confirming === 'delete' ? 'Delete' : 'Use cloud'}</button></div></div>`; return;
     }
     if (record) {
       const power = characterPower(this.player);

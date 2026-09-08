@@ -1,5 +1,7 @@
 # Current system status
 
+Pending publication, 2026-09-08: Cloud character file import/download are removed from the hall and cloud repository. Local browser transfers remain available. Existing saves are preserved; leaderboard eligibility and competitive validation remain separate work.
+
 Local regional monster expansion adds six biome-weighted archetypes, mixed packs, two-basic/one-signature attack cycles, procedural anatomy and matching remains. See [regional monsters](regional-monsters.md) for combat and spawn weights. Existing characters remain compatible.
 
 Local wilderness boss lairs add Briar Matriarch, Ashbound Colossus and Grave Marshal, each guarded by two Elites and eight Veterans. Sparse additive placement preserves existing POIs and saves. Red warnings, phase-two cadence, automatic rare hoards, map/Journeys discovery and three Chronicle families are implemented. See [wilderness bosses](wilderness-bosses.md).

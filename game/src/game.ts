@@ -592,7 +592,7 @@ export class Game {
     await this.saveClient.select(mode); await this.loadRoster();
   }
   private async downloadSave(index: number) {
-    if (this.phase !== 'ready' || this.hallBusy) return;
+    if (this.saveClient.mode !== 'local' || this.phase !== 'ready' || this.hallBusy) return;
     this.hallBusy = true;
     try {
       const raw = await this.saveClient.export(index), blob = new Blob([raw], { type: 'application/json' });
@@ -603,7 +603,7 @@ export class Game {
     finally { this.hallBusy = false; }
   }
   private async importSave(index: number, file: File) {
-    if (this.phase !== 'ready' || this.hallBusy) return;
+    if (this.saveClient.mode !== 'local' || this.phase !== 'ready' || this.hallBusy) return;
     this.hallBusy = true;
     try {
       if (file.size > SAVE_BUNDLE_LIMIT) throw new Error('Save file is too large.');

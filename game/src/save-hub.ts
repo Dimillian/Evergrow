@@ -52,11 +52,15 @@ export class SaveHub implements CharacterRepositoryPort, ExplorationPersistence 
   async readChart(key: string, seed: number, generation: string): Promise<ChartResult> { return this.repository.readChart(key, seed, generation); }
   async writeChart(key: string, seed: number, generation: string, data: DecodedExploration) { return this.repository.writeChart(key, seed, generation, data); }
   async removeChart(key: string, seed: number, generation: string) { if (this.mode === 'local') await this.local.removeChart(key, seed, generation); }
-  async export(index: number) { await this.read(index); return this.repository.export(index); }
+  async export(index: number) {
+    if (this.mode !== 'local') throw new Error('File transfers are only available for local saves.');
+    return this.local.export(index);
+  }
   async import(index: number, raw: string): Promise<SaveResult> {
+    if (this.mode !== 'local') return { ok: false, message: 'File transfers are only available for local saves.' };
     const bundle = decodeSaveBundle(raw);
     if (!bundle || bundle.character.worldVersion !== WORLD_GENERATION_VERSION) return { ok: false, message: 'Invalid or incompatible save file.' };
-    return this.repository.import(index, raw);
+    return this.local.import(index, raw);
   }
   async useCloud(index: number, expected: string | null) { if (this.mode === 'cloud') await this.cloud?.useCloud(index, expected); }
   async flush() { if (this.mode === 'cloud') await this.cloud?.flush(); }

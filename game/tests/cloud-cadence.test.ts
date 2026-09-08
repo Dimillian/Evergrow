@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Worker as NodeWorker } from 'node:worker_threads';
 import { CloudClient } from '../src/cloud-client.ts';
+import { SaveHub } from '../src/save-hub.ts';
 import { Simulation } from '../src/simulation.ts';
 import { WORLD_GENERATION_VERSION } from '../src/world.ts';
 import type { CharacterSave } from '../src/character-save.ts';
@@ -49,8 +50,8 @@ test('durable save bursts upload only the latest checkpoint each window; flush a
   assert.equal(uploads.at(-1)?.updatedAt,14,'failed uploads remain durable until retried');
 });
 
-test('confirmed conflict deletion removes both branches without requiring a download and preserves recovery on failure',async t=>{
-  for (const scenario of ['delete', 'download-first', 'offline', 'signed-out', 'server-race', 'stale-token', 'edit-during-read', 'edit-during-delete', 'lost-response'] as const) {
+test('confirmed conflict deletion removes both branches preserves recovery on failure',async t=>{
+  for (const scenario of ['delete', 'offline', 'signed-out', 'server-race', 'stale-token', 'edit-during-read', 'edit-during-delete', 'lost-response'] as const) {
     await t.test(scenario,async t=>{
       const old=Object.getOwnPropertyDescriptor(globalThis,'Worker');
       Object.defineProperty(globalThis,'Worker',{value:BrowserWorker,configurable:true});
@@ -86,20 +87,18 @@ test('confirmed conflict deletion removes both branches without requiring a down
       });
       await client.flush();assert.equal(client.status,'Conflict');
       const before=await client.read(0);
-      if(scenario==='download-first')assert.equal(JSON.parse(await client.export(0)).character.id,record.id);
       const result=await client.remove(0,scenario==='stale-token'?'stale':token);
-      const success=scenario==='delete'||scenario==='download-first';
+      const success=scenario==='delete';
       assert.equal(result.ok,success);
       if(success){
         assert.equal(remote,null);assert.equal(client.status,'Synced');
         const empty=await client.read(0);assert.equal(empty.state,'empty');assert.equal(empty.conflict,false);assert.equal(empty.pending,false);
-        await assert.rejects(client.export(0),/Select a character/);
         assert.equal(deletes,1);
       }else{
         assert.ok(!result.ok&&result.message);
         const recovery=await client.read(0);assert.equal(recovery.conflict,true);assert.ok(recovery.record);
         if(scenario.startsWith('edit-during'))assert.equal(recovery.record.updatedAt,3);
-        else assert.deepEqual(JSON.parse(await client.export(0)).character,before.record);
+        else assert.deepEqual(recovery.record,before.record);
         if(scenario==='stale-token')assert.equal(reads,0);
         if(['offline','signed-out','stale-token','edit-during-read'].includes(scenario))assert.equal(deletes,0);
         if(scenario==='lost-response'){
@@ -144,4 +143,17 @@ test('Chronicle displays local progress before the network responds without flus
   assert.equal(client.status,'Saving…','history reads do not claim pending saves are synced');
   t.mock.method(globalThis,'fetch',async()=>{throw new Error('Offline');});
   assert.equal(chronicleValues(Object.values((await client.chronicle()).sources)).kills,42);
+});
+
+
+test('cloud file transfers fail before touching storage or the network',async t=>{
+  const hub=new SaveHub();t.after(()=>hub.dispose());
+  hub.mode='cloud';
+  t.mock.method(globalThis,'fetch',()=>{throw new Error('Unexpected network access');});
+  await assert.rejects(hub.export(0),/only available for local saves/);
+  const rejected=await hub.import(0,'invalid file must not reach decoding');
+  assert.equal(rejected.ok,false);
+  if(!rejected.ok)assert.match(rejected.message,/only available for local saves/);
+  assert.equal('import' in CloudClient.prototype,false);
+  assert.equal('export' in CloudClient.prototype,false);
 });
