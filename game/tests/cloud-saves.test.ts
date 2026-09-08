@@ -4,6 +4,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { IDBFactory } from 'fake-indexeddb';
 import { cloudAPI, type CloudEnv } from '../server/worker.ts';
+import { backfillGearPower, savedGearPower } from '../server/leaderboard-backfill.ts';
+import { equippedGearPower } from '../src/leaderboard.ts';
 import { openCloudCache, type CloudRow } from '../src/cloud-cache.ts';
 import { makeSaveBundle, decodeSaveBundle, bundleChart, chartKey } from '../src/save-bundle.ts';
 import { openSaveDatabase } from '../src/save-database.ts';
@@ -22,6 +24,7 @@ function server() {
   const db = new DatabaseSync(':memory:'); db.exec(readFileSync(new URL('../../drizzle/0000_conscious_kingpin.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../../drizzle/0001_worthless_slipstream.sql', import.meta.url),'utf8'));
   db.exec(readFileSync(new URL('../../drizzle/0002_amazing_old_lace.sql', import.meta.url),'utf8'));
+  db.exec(readFileSync(new URL('../../drizzle/0003_blue_mercury.sql', import.meta.url),'utf8'));
   const blobs = new Map<string, string>(); let failPut = false, failCommit = false, uncertainCommit = false;
   const env: CloudEnv = {
     DB: { prepare(sql) {
@@ -39,9 +42,61 @@ function server() {
   const request = (owner: string | null, path = 'characters/0', body?: unknown, headers: Record<string, string> = {}) => cloudAPI(new Request('https://evergrow.test/api/cloud/' + path, {
     method: body === undefined ? 'GET' : 'PUT', headers: { ...(owner ? { 'oai-authenticated-user-id': owner, 'X-Evergrow-Account': owner } : {}), Origin: 'https://evergrow.test', 'Content-Type': 'application/json', ...headers }, body: body === undefined ? undefined : JSON.stringify(body),
   }), env);
-  return { db, blobs, request, uncertainCommit: () => { uncertainCommit = true; }, failPut: (v: boolean) => { failPut = v; }, failCommit: (v: boolean) => { failCommit = v; } };
+  return { db, blobs, env, request, uncertainCommit: () => { uncertainCommit = true; }, failPut: (v: boolean) => { failPut = v; }, failCommit: (v: boolean) => { failCommit = v; } };
 }
 const write = (bundle: ReturnType<typeof fixture> | null, expected = 0, operation = crypto.randomUUID()) => ({ bundle, expected, operation });
+
+function legacy(s:ReturnType<typeof server>,owner:string,bundle=fixture()) {
+  const key=`${owner}/old.json`, raw=JSON.stringify(bundle);
+  s.blobs.set(key,raw);
+  s.db.prepare(`INSERT INTO characters(owner,slot,revision,object,summary,operation,digest,updated_at,rank_name,rank_level)
+    VALUES(?,0,7,?,?,'old-operation','old-digest',42,?,?)`).run(owner,key,JSON.stringify({name:bundle.character.name,power:999}),bundle.character.name,bundle.character.checkpoint.level);
+  return {key,raw};
+}
+test('existing gear is backfilled in bounded batches without rewriting saves or requiring their owner',async t=>{
+  const s=server();t.after(()=>s.db.close());const bundle=fixture();
+  const expected=equippedGearPower(bundle.character.checkpoint.character);
+  for(let i=0;i<11;i++)legacy(s,`owner-${i}`,bundle);
+  const before=s.db.prepare('SELECT revision,object,summary,operation,digest,updated_at FROM characters ORDER BY owner').all();
+  const blobs=[...s.blobs];
+  const first=await(await s.request(null,'leaderboard')).json();
+  assert.equal(first.updating,true);assert.equal(first.entries.filter((r:any)=>r.gearPower!==null).length,8);
+  const second=await(await s.request(null,'leaderboard?order=gear')).json();
+  assert.equal(second.updating,false);assert(second.entries.every((r:any)=>r.gearPower===expected));
+  assert.deepEqual(s.db.prepare('SELECT revision,object,summary,operation,digest,updated_at FROM characters ORDER BY owner').all(),before);
+  assert.deepEqual([...s.blobs],blobs);
+  s.env.SAVES.get=async()=>{assert.fail('Completed scores must not read save objects again');};
+  assert.equal((await s.request(null,'leaderboard')).status,200);
+});
+test('gear projection tolerates historical world/chart data but rejects damaged equipment',()=>{
+  const bundle=fixture();bundle.character.worldVersion=-1;bundle.chart='historical chart';
+  assert.equal(savedGearPower(JSON.stringify(bundle)),equippedGearPower(bundle.character.checkpoint.character));
+  delete (bundle.character.checkpoint.character.equipped as any).weapon;
+  assert.equal(savedGearPower(JSON.stringify(bundle)),null);
+  assert.equal(savedGearPower('{bad json'),null);
+});
+test('unavailable backfill objects retry later without blocking other characters',async t=>{
+  const s=server();t.after(()=>s.db.close());const old=legacy(s,'A');legacy(s,'B');s.blobs.delete(old.key);
+  assert.equal(await backfillGearPower(s.env,1000000),false);
+  assert.equal(s.db.prepare('SELECT rank_gear FROM characters WHERE owner=?').get('A')!.rank_gear,null);
+  s.blobs.set(old.key,old.raw);
+  await backfillGearPower(s.env,1000001);
+  assert.equal(s.db.prepare('SELECT rank_gear FROM characters WHERE owner=?').get('A')!.rank_gear,null);
+  await backfillGearPower(s.env,1300001);
+  assert.equal(s.db.prepare('SELECT rank_gear FROM characters WHERE owner=?').get('A')!.rank_gear,savedGearPower(old.raw));
+});
+test('backfill cannot overwrite a newer save or resurrect a deleted ranking',async t=>{
+  const s=server();t.after(()=>s.db.close());legacy(s,'A');legacy(s,'B');
+  const get=s.env.SAVES.get;
+  s.env.SAVES.get=async key=>{
+    if(key.startsWith('A/'))s.db.prepare("UPDATE characters SET revision=8,object='new',rank_gear=999 WHERE owner='A'").run();
+    else s.db.prepare("UPDATE characters SET revision=8,object=NULL,rank_gear=NULL,rank_name=NULL WHERE owner='B'").run();
+    return get(key);
+  };
+  await backfillGearPower(s.env);
+  const result=await(await s.request(null,'leaderboard')).json();
+  assert.equal(result.total,1);assert.equal(result.entries[0].gearPower,999);
+});
 
 test('portable saves retain the character and exact chart, rejecting corruption and mismatched worlds', () => {
   const bundle = fixture(), loaded = decodeSaveBundle(JSON.stringify(bundle)); assert(loaded);

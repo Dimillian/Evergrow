@@ -2,7 +2,7 @@ import type { CharacterSheet } from './character-types.ts';
 import { deriveItem } from './items.ts';
 export type LeaderboardOrder = 'level' | 'gear';
 export interface LeaderboardEntry { rank: number; name: string; level: number; gearPower: number | null; updatedAt: number; mine: boolean; }
-export interface LeaderboardSnapshot { entries: LeaderboardEntry[]; own: LeaderboardEntry[]; signedIn: boolean; total: number; }
+export interface LeaderboardSnapshot { entries: LeaderboardEntry[]; own: LeaderboardEntry[]; signedIn: boolean; total: number; updating?: boolean; }
 /** Eleven occupied slot equivalents. A two-handed weapon fills both hand slots;
  * empty slots contribute zero. Rebuild recipe scores instead of trusting stored power. */
 export function equippedGearPower(sheet: Pick<CharacterSheet, 'equipped'>): number {

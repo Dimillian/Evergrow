@@ -57,7 +57,7 @@ The schema entrypoint is `db/schema.ts`, re-exporting `game/server/schema.ts`; g
 
 ## Leaderboard and home — published in v0.6.0
 
-Every Cloud character now has an automatic public ranking projection: character name, level and equipped gear power. Multiple characters per account can appear. The read-only home leaderboard queries D1 summaries without reading R2 saves or flushing the outbox. Local/Android saves remain private to their device. Migration `0002_amazing_old_lace.sql` adds the projections and backfills existing names/levels; gear scores appear after the next successful save. See [leaderboard and home](leaderboard.md) for scoring, controls and API details.
+Every Cloud character now has an automatic public ranking projection: character name, level and equipped gear power. Multiple characters per account can appear. The home leaderboard queries D1 summaries without flushing the outbox; only missing gear scores trigger a bounded server-side read of existing R2 equipment. Local/Android saves remain private to their device. Migration `0002_amazing_old_lace.sql` adds the projections and backfills existing names/levels; migration `0003_blue_mercury.sql` enables automatic gear-score backfill without another player save. Backfill updates only ranking metadata and guards against concurrent saves/deletions. See [leaderboard and home](leaderboard.md) for scoring, controls and API details.
 
 ## Verification and remaining acceptance
 

@@ -1,0 +1,1 @@
+ALTER TABLE `characters` ADD `rank_gear_checked_at` integer;

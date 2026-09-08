@@ -13,6 +13,7 @@ export class LeaderboardPanel {
   private cache=new Map<LeaderboardOrder,{at:number;value:LeaderboardSnapshot}>();
   private revision=0;private busy=false;private error='';private controller=new GamepadMenu();private lastTime=0;
   private life=new AbortController();private load:LeaderboardLoader;private onClose:()=>void;
+  private refreshTimer:ReturnType<typeof setTimeout>|undefined;
   constructor(mount:HTMLElement,load:LeaderboardLoader,onClose:()=>void){
     this.load=load;this.onClose=onClose;this.element.className='leaderboard-panel';this.element.hidden=true;this.element.setAttribute('aria-label','Leaderboard');mount.append(this.element);
     this.element.addEventListener('click',e=>{
@@ -29,15 +30,18 @@ export class LeaderboardPanel {
   }
   get opened(){return !this.element.hidden;}
   open(){this.element.hidden=false;this.controller.clear();void this.refresh();}
-  close(){this.revision++;this.element.hidden=true;this.controller.clear();}
+  close(){this.revision++;clearTimeout(this.refreshTimer);this.element.hidden=true;this.controller.clear();}
   private async refresh(){
+    clearTimeout(this.refreshTimer);
     const ticket=++this.revision;
     const cached=this.cache.get(this.order);this.value=cached?.value??null;this.error='';
-    if(cached&&Date.now()-cached.at<30000){this.busy=false;this.render();return;}
+    if(cached&&!cached.value.updating&&Date.now()-cached.at<30000){this.busy=false;this.render();return;}
     this.busy=true;this.render();
     try {const value=await this.load(this.order);if(ticket!==this.revision)return;this.value=value;this.cache.set(this.order,{at:Date.now(),value});}
     catch(error){if(ticket!==this.revision)return;this.error=error instanceof Error?error.message:'Leaderboard unavailable.';}
-    finally {if(ticket===this.revision){this.busy=false;this.render();}}
+    finally {if(ticket===this.revision){this.busy=false;this.render();
+      if(this.value?.updating&&!this.error&&this.opened)this.refreshTimer=setTimeout(()=>{void this.refresh();},2000);
+    }}
   }
   private row(entry:LeaderboardEntry,pinned=false){return `<div class="rank-row${entry.mine?' is-mine':''}${pinned?' is-pinned':''}" role="row">
     <span class="rank-place${entry.rank<=3?' is-medal':''}" role="cell">${num(entry.rank)}</span>

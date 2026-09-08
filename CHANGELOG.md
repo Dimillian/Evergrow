@@ -1,5 +1,11 @@
 # Evergrow changelog
 
+## v0.6.1 — 2026-09-08T06:08:00Z
+
+### Fixes
+
+- Existing Cloud characters now show gear power in the leaderboard without needing to play or save again.
+
 ## v0.6.0 — 2026-09-08T06:00:00Z
 
 ### New
