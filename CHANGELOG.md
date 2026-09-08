@@ -1,5 +1,11 @@
 # Evergrow changelog
 
+## v0.6.2 — 2026-09-08T06:15:00Z
+
+### Tweaks
+
+- Cleaner leaderboard with a compact heading and less text.
+
 ## v0.6.1 — 2026-09-08T06:08:00Z
 
 ### Fixes
