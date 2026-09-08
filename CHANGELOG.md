@@ -1,5 +1,18 @@
 # Evergrow changelog
 
+## v0.7.0 — 2026-09-08T08:19:00Z
+
+### New
+
+- A gothic soundtrack for the menu, towns, biomes and dungeons, with distinct event and boss music.
+- Music changes smoothly as you explore, with regional variations and quieter moments between tracks.
+- Separate music and sound-effect volume controls, plus subtle sounds when opening and closing panels.
+
+### Fixes
+
+- Bows face correctly to the left and no longer spin during firing.
+- Arrows leave the animated bow's center, including while moving and using bow skills.
+
 ## v0.6.2 — 2026-09-08T06:15:00Z
 
 ### Tweaks
