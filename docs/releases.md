@@ -4,13 +4,13 @@
 
 ## Last verified publication
 
-- Game v0.6.2 / Sites version 24, publicly deployed on 2026-09-08 at 06:16:57 UTC.
-- Published source: `0035eca3521bbd0684524377429de8497f2d0e1c`.
-- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_b4e3d63c272c819183a56e1d32658633`.
-- Deployment: `appgdep_6a9fa84be47c81919cbb66e27fce92e4`; Sites returned `succeeded`.
-- Removed the leaderboard eyebrow, subtitle and promotional footer copy, with a more compact heading.
-- Passed three changelog checks, type checking, the cloud-enabled client/server build and release validation.
-- No persistence or schema changes. The preceding v0.6.1 publication verified gear scores for all 89 existing Cloud characters.
+- Game v0.7.0 / Sites version 25, publicly deployed on 2026-09-08 at 08:23:29 UTC.
+- Published source: `d19216be3a5d09bfa835317b6cc60c7e03e11c8d`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_d6ef4751d8b88191b6a361b85a531157`.
+- Deployment: `appgdep_6a9fc5e8c1788191863bbafc22c95f22`; Sites returned `succeeded`.
+- Added the regional soundtrack, event/boss music, music/SFX controls and panel sounds; fixed left-facing bow motion and arrow release origins.
+- Passed focused audio and bow checks, three changelog checks, type checking, the cloud-enabled client/server build and release validation.
+- No persistence or schema changes. Existing characters are preserved.
 - Authenticated cross-device save/Chronicle acceptance remains a player check.
 
 ## Before each requested Sites publication
