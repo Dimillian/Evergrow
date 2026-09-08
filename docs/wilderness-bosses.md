@@ -41,7 +41,7 @@ The hoard contains:
 - 65–100 gold, multiplied by `1 + 0.1 × (level − 1)` and rounded once.
 - The existing Journey completion XP, once when the entire hoard is delivered.
 
-Ground capacity can delay individual components. Delivery bits, stable seeds and the boss casualty are saved together; failed saves and reloads do not reroll or duplicate a component. No second interaction is required. Pending automatic rewards use the existing nearby/dead/location checks and retry cadence.
+Equipment always delivers, replacing the oldest ground drops when the 1,024-item queue is full. Gold capacity can still delay the coin component. Delivery bits, stable seeds and the boss casualty are saved together; failed saves and reloads do not reroll or duplicate a component. No second interaction is required. Pending automatic rewards use the existing nearby/dead/location checks and retry cadence.
 
 Chronicle counts wilderness bosses toward Kingslayer and adds three boss-specific achievement families, each at 1 / 5 / 20 defeats across distinct lairs. There are now 35 achievement families and 100 tiers.
 

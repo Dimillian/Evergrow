@@ -11,6 +11,7 @@ import { applyStun } from '../src/combat-status.ts';
 import { updateWarden } from '../src/dungeon-boss.ts';
 import { awardKillRewards } from '../src/combat-rewards.ts';
 import { updateDungeon } from '../src/dungeon-runtime.ts';
+import { LOOT_RULES } from '../src/combat-content.ts';
 import { generateItem } from '../src/items.ts';
 import { World } from '../src/world.ts';
 import type { CharacterCheckpoint } from '../src/character-save.ts';
@@ -179,23 +180,26 @@ test('dungeon portal and death preserve the exact instance and suspended progres
     assert.equal(death.checkpoint.expeditions!.runs[0].states.warden.hp, 711);
 });
 test('save validation rejects malformed and oversized expedition state', () => { const state = freshExpeditions(); assert.equal(validExpeditions(state), true); state.runs.push(createDungeonRun(entrance)); assert.equal(validExpeditions(state), true); state.location = entrance.id; assert.equal(validExpeditions(state), false); state.location = null; state.runs[0].states.warden.hp = Infinity; assert.equal(validExpeditions(state), false); });
-test('full ground storage preserves a partial chest bundle for the next interaction', async () => {
+test('full dungeon ground replaces oldest equipment and retries only undelivered gold', async () => {
     const { sim, f, run } = (await setup());
     run.states.warden.hp = 0;
     sim.player.x = f.chests[2].x;
     sim.player.y = f.chests[2].y;
-    sim.groundItems = Array.from({ length: 95 }, (_, i) => ({ id: i + 1000, x: 0, y: 0, item: generateItem(i + 19000, 1, 'ring') }));
+    sim.groundItems = Array.from({ length: LOOT_RULES.maxGroundItems }, (_, i) => ({ id: i + 1000, x: 0, y: 0, item: generateItem(i + 19000, 1, 'ring') }));
     sim.groundGold = Array.from({ length: 128 }, (_, i) => ({ id: i + 3000, x: 0, y: 0, amount: 1, age: 0 }));
+    const before=sim.captureCheckpoint();
+    assert.equal((await claimDungeonChest(sim,2,()=>({ok:false,message:'offline'}))).ok,false);
+    assert.deepEqual(sim.captureCheckpoint(),before);
     assert.equal((await claimDungeonChest(sim, 2, ok)).ok, true);
-    assert.equal(currentDungeon(sim.expeditions)!.chestMasks[2], 1);
-    const first = sim.groundItems.at(-1)!.item.id;
-    sim.groundItems = [];
+    assert.equal(currentDungeon(sim.expeditions)!.chestMasks[2], 7);
+    assert.equal(sim.groundItems.length,LOOT_RULES.maxGroundItems);
+    assert.equal(sim.groundItems[0].id,1003);
+    const items=structuredClone(sim.groundItems);
     sim.groundGold = [];
     assert.equal((await claimDungeonChest(sim, 2, ok)).ok, true);
-    assert.equal(sim.groundItems.length, 2);
-    assert.ok(sim.groundItems.every(i => i.item.id !== first));
+    assert.deepEqual(sim.groundItems,items);
     assert.equal(sim.groundGold.length, 1);
-
+    assert.equal(currentDungeon(sim.expeditions)!.chestMasks[2],15);
 });
 test('Warden fracture locks three lanes and commits at most one hit during their sequence', async () => {
     const { sim, f } = (await setup()), b = f.members.find(m => m.id === 'warden')!, e = sim.spawnEnemy('warden', b.x, b.y)!;

@@ -10,7 +10,7 @@ import type { WorldQuery } from './model.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { rollEnemyLoot } from './loot.ts';
 import { GOLD_RULES } from './gold.ts';
-import { LOOT_RULES } from './combat-content.ts';
+import { addGroundItem } from './ground-loot.ts';
 export type DungeonAction = {
     kind: 'enter';
     entrance: DungeonEntrance;
@@ -133,8 +133,8 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     const gold = Math.round((index === 2 ? 45 + run.entrance.seed % 26 : 18) * (1 + .1 * (run.entrance.level - 1)));
     let mask = run.chestMasks[index], next = Math.max(1, ...sim.groundItems.map(i => i.id + 1), ...sim.groundGold.map(i => i.id + 1), ...sim.pickups.map(i => i.id + 1), ...sim.enemies.map(i => i.id + 1), ...sim.projectiles.map(i => i.id + 1));
     for (let i = 0; i < items.length; i++)
-        if (!(mask & 1 << i) && checkpoint.groundItems.length < LOOT_RULES.maxGroundItems) {
-            checkpoint.groundItems.push({ id: next++, ...treasureLanding(sim.world,chest.x,chest.y,i,run.entrance.seed), flight:{x:chest.x,y:chest.y,at:sim.time,delay:i*.12}, item: items[i] });
+        if (!(mask & 1 << i)) {
+            addGroundItem(checkpoint.groundItems, { id: next++, ...treasureLanding(sim.world,chest.x,chest.y,i,run.entrance.seed), flight:{x:chest.x,y:chest.y,at:sim.time,delay:i*.12}, item: items[i] });
             mask |= 1 << i;
         }
     if (!(mask & 8) && (checkpoint.groundGold ??= []).length < GOLD_RULES.maxPiles) {

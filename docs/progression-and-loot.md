@@ -13,6 +13,12 @@ The world supplies the danger; the character chooses how far to venture. An enem
 
 These are authored starting curves for playtesting. They establish consistent rules and expose their numbers; they do not establish a balanced endgame. Character progress, equipment, gold, uncollected loot and camp casualties persist in eight browser-local slots; each character also has its own explored chart.
 
+## Ground equipment retention
+
+Each active location retains its newest 1,024 uncollected equipment drops in insertion order. New enemy, event and dungeon-chest items always enter the queue; at capacity, each new item removes the oldest ground item. Old drops never suppress fresh equipment rewards. Picking up items preserves the remaining order, and saving/loading retains that order. No expiry rewards, gold or XP are granted. Inventory and equipped items are unaffected.
+
+Chest delivery bits and any old-item eviction are saved atomically before changing live state. Previously pending equipment is eligible for delivery even when the queue is full. Gold piles keep their separate existing capacity and pending-delivery rules. Existing saves load without a reset; client/server validators share the new equipment limit.
+
 ## The progression loop
 
 1. Explore into a geographic area with a fixed threat level.

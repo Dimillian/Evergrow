@@ -12,6 +12,9 @@ import { executeCharacterCommand } from '../src/character-commands.ts';
 import { SKILL_NODES } from '../src/skill-tree.ts';
 import { Exploration } from '../src/exploration.ts';
 import { characterPower, previewCharacter } from '../src/character-summary.ts';
+import { LOOT_RULES } from '../src/combat-content.ts';
+import { addGroundItem } from '../src/ground-loot.ts';
+import { validContents } from '../src/dungeon-validation.ts';
 
 const world = { seed: 7319, generationVersion: 4, blocked: () => false, move: (x: number, y: number, dx: number, dy: number) => ({ x: x + dx, y: y + dy }), getPOIs: () => [] };
 async function setup() {
@@ -21,6 +24,29 @@ async function setup() {
   assert.ok((await session.create(0, 'Rowan', 7319, sim.captureCheckpoint(), 'character-a', 100)), session.error);
   return { data, storage, repo, session, sim };
 }
+
+test('expanded ground loot preserves oldest-first order through saves and location validation', async () => {
+  const { session, repo, sim } = await setup();
+  for (let i = 0; i < LOOT_RULES.maxGroundItems; i++) addGroundItem(sim.groundItems,
+    { id: 1000 + i, x: i, y: 0, item: generateItem(70000 + i, 5) });
+  assert.ok(await session.save(sim.captureCheckpoint(), 200));
+  const record = decodeCharacterSave(JSON.stringify(repo.read(0).record))!;
+  assert.ok(record);
+  sim.restoreCheckpoint(record.checkpoint);
+  assert.equal(sim.groundItems.length, 1024);
+  addGroundItem(sim.groundItems, { id: 9999, x: 0, y: 0, item: generateItem(90000, 6) });
+  assert.equal(sim.groundItems[0].id, 1001);
+  assert.equal(sim.groundItems.at(-1)!.id, 9999);
+  assert.equal(sim.groundItems.length, LOOT_RULES.maxGroundItems);
+  const contents = { actors: [], pickups: [], groundItems: sim.groundItems, groundGold: [], clearedCamps: [], defeatedCampMembers: {} };
+  assert.equal(validContents(contents), true);
+  assert.ok(await session.save(sim.captureCheckpoint(), 300));
+  const saved = repo.read(0).record!;
+  assert.deepEqual(saved.checkpoint.groundItems, sim.groundItems);
+  saved.checkpoint.groundItems.push({ id: 10000, x: 0, y: 0, item: generateItem(90001, 6) });
+  assert.equal(decodeCharacterSave(JSON.stringify(saved)), null, 'over-limit payload is rejected');
+  assert.equal(validContents({ ...contents, groundItems: saved.checkpoint.groundItems }), false);
+});
 
 test('pickup history and sorted bag round trip; malformed histories are rejected', async () => {
   const { session, repo, sim } = await setup();

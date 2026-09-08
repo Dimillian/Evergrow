@@ -81,12 +81,16 @@ test('combat RNG draws and gear/pickup entity IDs cannot change later source see
   filled.groundItems = Array.from({ length: LOOT_RULES.maxGroundItems }, (_, index) => ({
     id: 50_000 + index, x: 10_000, y: 10_000, item: generateItem(9000 + index, 1),
   }));
+  filled.reserveIdentity(100_000);
   for (const sim of [filled, empty]) {
     const first = sim.spawnEnemy('stalker', 45, 0)!;
     prepareKill(first); advance(sim, .25, { attack: true });
     assert.equal(sim.kills, 1);
   }
-  assert.notEqual(filled.pickups[0].id, empty.pickups[0].id, 'different gear outcomes consumed different entity IDs');
+  assert.notEqual(filled.pickups[0].id, empty.pickups[0].id, 'different entity histories cannot change reward rolls');
+  assert.equal(filled.groundItems.length, LOOT_RULES.maxGroundItems);
+  assert.equal(filled.groundItems[0].id, 50_001, 'fresh kill replaces the oldest item even when it is far away');
+  assert.deepEqual(filled.groundItems.at(-1)!.item, empty.groundItems.at(-1)!.item, 'full ground cannot suppress the new drop');
   for (const sim of [filled, empty]) {
     sim.enemies = []; sim.groundItems = []; sim.pickups = [];
     advance(sim, .6);

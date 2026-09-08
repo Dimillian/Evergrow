@@ -176,7 +176,7 @@ export const ENEMY_AI_RULES = Object.freeze({
 });
 
 export const LOOT_RULES = Object.freeze({
-  maxGroundItems: 96, equipmentCollectDistance: 30,
+  maxGroundItems: 1024, equipmentCollectDistance: 30,
   maxPickups: 32, life: 20, radius: 4, healthEveryKills: 3, healthFraction: .12, manaFraction: .16,
   collectDistance: 18, magnetDistance: 55, magnetSpeed: 100,
 });

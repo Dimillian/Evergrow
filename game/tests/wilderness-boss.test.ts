@@ -86,16 +86,35 @@ test('boss hoards guarantee a rare, use stable rolls, and require no E interacti
  assert.ok((await claimCompletedEvent(sim,record.id,ok)).ok);assert.equal(sim.groundItems.length,3);assert.equal(sim.groundGold.length,1);assert.ok(validEvents(sim.eventState));
  completeBossLair(boss,sim.eventState);assert.ok(!(await claimCompletedEvent(sim,record.id,ok)).ok);assert.equal(sim.groundItems.length,3);
 });
-test('full ground and reload preserve every pending boss reward without duplicating XP',async()=>{
+test('full ground delivers the entire boss hoard atomically and reload never duplicates it',async()=>{
  const {sim,boss}=setup();completeBossLair(boss,sim.eventState);const id=boss.campId!;
- const item=generateItem(77,1);sim.groundItems=Array.from({length:LOOT_RULES.maxGroundItems},(_,i)=>({id:i+100,item,x:0,y:0}));
- assert.ok((await claimCompletedEvent(sim,id,ok)).ok);assert.equal(sim.eventState.sites[id].phase,'completed');
- const xp=sim.player.xp,checkpoint=sim.captureCheckpoint(),restored=new Simulation(flat,{spawn:false});restored.restoreCheckpoint(checkpoint);restored.groundItems=[];
- assert.ok((await claimCompletedEvent(restored,id,ok)).ok);assert.equal(restored.groundItems.length,3);assert.ok(restored.player.xp>=xp);const paidXP=restored.player.xp;assert.ok(!(await claimCompletedEvent(restored,id,ok)).ok);assert.equal(restored.player.xp,paidXP);assert.equal(restored.groundGold.length,1);assert.ok(validEvents(restored.eventState));
+ sim.groundItems=Array.from({length:LOOT_RULES.maxGroundItems},(_,i)=>({id:i+100,item:generateItem(77000+i,1),x:0,y:0}));
+ const before=sim.captureCheckpoint();
+ assert.equal((await claimCompletedEvent(sim,id,()=>({ok:false,message:'offline'}))).ok,false);
+ assert.deepEqual(sim.captureCheckpoint(),before,'failed save cannot evict old items or pay the reward');
+ assert.ok((await claimCompletedEvent(sim,id,ok)).ok);
+ assert.equal(sim.groundItems.length,LOOT_RULES.maxGroundItems);
+ assert.equal(sim.groundItems[0].id,103);
+ assert.equal(sim.groundItems.filter(i=>i.item.id.startsWith('poi:')).length,3);
+ const checkpoint=sim.captureCheckpoint(),restored=new Simulation(flat,{spawn:false});restored.restoreCheckpoint(checkpoint);
+ const xp=restored.player.xp;
+ assert.ok(!(await claimCompletedEvent(restored,id,ok)).ok);
+ assert.deepEqual(restored.groundItems,sim.groundItems);assert.equal(restored.player.xp,xp);
+ assert.equal(restored.groundGold.length,1);assert.ok(validEvents(restored.eventState));
 });
 test('boss corpses do not add generic equipment or gold on top of the hoard',()=>{
  const {sim,boss}=setup();awardKillRewards(boss,0,0,{player:sim.player,groundGold:sim.groundGold,groundItems:sim.groundItems,pickups:sim.pickups,nextId:()=>99,emit:()=>{}});
  assert.equal(sim.groundGold.length,0);assert.equal(sim.groundItems.length,0);
+});
+test('previously gold-only boss hoards automatically release their pending equipment',async()=>{
+ const {sim,boss}=setup();completeBossLair(boss,sim.eventState);const id=boss.campId!;
+ const record=sim.eventState.sites[id];record.delivered=8;record.bonusGranted=true;
+ sim.groundItems=Array.from({length:LOOT_RULES.maxGroundItems},(_,i)=>({id:i+100,item:generateItem(88000+i,1),x:0,y:0}));
+ assert.ok(pendingEventReward(sim,record));
+ assert.ok((await claimCompletedEvent(sim,id,ok)).ok);
+ assert.equal(sim.groundItems.filter(i=>i.item.id.startsWith('poi:')).length,3);
+ assert.equal(sim.groundGold.length,0,'already delivered gold never repeats');
+ assert.equal((await claimCompletedEvent(sim,id,ok)).ok,false);
 });
 test('nearby lairs stay pinnable but are not recommended to an underprepared character',()=>{
  const goal={id:'site:lair',name:'Briar Matriarch',kind:'bossLair' as const,x:0,y:0,level:3,region:'Test'};

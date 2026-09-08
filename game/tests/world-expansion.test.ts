@@ -105,7 +105,7 @@ test('shared navigation supplies an obstacle detour without moving its target or
  assert.ok(point.x!==-240||point.y!==0);assert.ok(Math.abs(point.y)>0,'the first route step detours around the wall');
 });
 
-test('automatic rewards resume after capacity clears or reload, without repeating XP or drops',async()=>{
+test('automatic equipment replaces oldest drops while pending gold survives reload without duplicates',async()=>{
  const {LOOT_RULES}=await import('../src/combat-content.ts');
  const {GOLD_RULES}=await import('../src/gold.ts');
  const {generateItem}=await import('../src/items.ts');
@@ -114,22 +114,23 @@ test('automatic rewards resume after capacity clears or reload, without repeatin
  sim.eventState.trial=null;
  sim.eventState.sites[s.id].phase='completed';sim.eventState.sites[s.id].wavesCleared=3;
  sim.groundItems=Array.from({length:LOOT_RULES.maxGroundItems},(_,i)=>({id:100+i,x:500,y:500,item:generateItem(80000+i,1)}));
- sim.groundGold=Array.from({length:GOLD_RULES.maxPiles},(_,i)=>({id:1000+i,x:500,y:500,amount:1,age:1}));
+ sim.groundGold=Array.from({length:GOLD_RULES.maxPiles},(_,i)=>({id:2000+i,x:500,y:500,amount:1,age:1}));
  assert.ok((await claimCompletedEvent(sim,s.id,persist)).ok);
+ assert.equal(sim.groundItems.length,LOOT_RULES.maxGroundItems);
+ assert.equal(sim.groundItems[0].id,102,'oldest two items make room');
  assert.equal(sim.eventState.sites[s.id].bonusGranted,true);
- assert.equal(sim.eventState.sites[s.id].delivered,0);
- assert.equal(pendingEventReward(sim,sim.eventState.sites[s.id]),false,'full ground does not trigger empty save retries');
+ assert.equal(sim.eventState.sites[s.id].delivered,3);
+ assert.equal(pendingEventReward(sim,sim.eventState.sites[s.id]),false,'only full gold storage remains pending');
  const restored=new Simulation(world,{spawn:false});restored.restoreCheckpoint(sim.captureCheckpoint());
  const xp=restored.player.xp, level=restored.player.level;
- restored.groundItems.splice(0,1);
- assert.ok((await claimCompletedEvent(restored,s.id,persist)).ok);
- assert.equal(restored.groundItems.filter(i=>i.item.id.startsWith('poi:')).length,1);
- assert.equal(restored.player.xp,xp);assert.equal(restored.player.level,level);
- restored.groundItems.splice(0,1);restored.groundGold.splice(0,1);
+ restored.groundGold.splice(0,1);
  assert.ok((await claimCompletedEvent(restored,s.id,persist)).ok);
  assert.equal(restored.eventState.sites[s.id].phase,'claimed');
  assert.equal(restored.groundItems.filter(i=>i.item.id.startsWith('poi:')).length,2);
+ assert.ok(restored.player.xp>=xp||restored.player.level>level,'final gold delivery may award Journey completion');
+ const completedXP=restored.player.xp;
  assert.equal((await claimCompletedEvent(restored,s.id,persist)).ok,false);
+ assert.equal(restored.player.xp,completedXP);
 });
 
 test('automatic event payout leaves unstarted, active, distant and dead-player events alone',async()=>{

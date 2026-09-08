@@ -11,7 +11,7 @@ import { eventRewards } from './poi-rewards.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
 import { awardCharacterExperience } from './character.ts';
 import { xpLevelFactor } from './progression.ts';
-import { LOOT_RULES } from './combat-content.ts';
+import { addGroundItem } from './ground-loot.ts';
 import { GOLD_RULES } from './gold.ts';
 import type { WorldPOI } from './world-pois.ts';
 export interface EventResult {
@@ -71,9 +71,9 @@ async function commitEvent(sim: Simulation, site: EventSite, choice: EventChoice
     const bundle = eventRewards(record);
     let nextId = sim.nextEntityIdentity;
     bundle.items.forEach((item, i) => {
-      if ((record.delivered & 1 << i) || checkpoint.groundItems.length >= LOOT_RULES.maxGroundItems)
+      if (record.delivered & 1 << i)
         return;
-      checkpoint.groundItems.push({ id: nextId++, ...treasureLanding(sim.world,site.x,site.y,i,site.seed), flight:{x:site.x,y:site.y,at:sim.time,delay:i*.11}, item });
+      addGroundItem(checkpoint.groundItems, { id: nextId++, ...treasureLanding(sim.world,site.x,site.y,i,site.seed), flight:{x:site.x,y:site.y,at:sim.time,delay:i*.11}, item });
       record.delivered |= 1 << i;
     });
     if (bundle.gold && !(record.delivered & (1 << bundle.items.length)) && checkpoint.groundGold!.length < GOLD_RULES.maxPiles) {
@@ -112,12 +112,12 @@ async function commitEvent(sim: Simulation, site: EventSite, choice: EventChoice
   return { ok: true, message: record.phase === 'active' ? 'Guardians approaching' : record.phase === 'completed' ? 'Reward waiting' : site.kind === 'watchtower' ? 'Beacon lit' : site.kind === 'standingStones' ? 'Blessing bound' : 'Opened' };
 }
 
-/** Completed trials deliver automatically; capacity delays never require another interaction. */
+/** Equipment always makes room; any remaining gold retries when pile capacity is available. */
 export function pendingEventReward(sim:Simulation,record:EventRecord):boolean {
   if((!isTrialKind(record.kind)&&record.kind!=='bossLair')||record.phase!=='completed'||sim.player.dead||sim.dungeonFloor||Math.hypot(sim.player.x-record.x,sim.player.y-record.y)>EVENT_RULES.trialRadius)return false;
   if(!record.bonusGranted)return true;
   const bundle=eventRewards(record);
-  return (sim.groundItems.length<LOOT_RULES.maxGroundItems&&bundle.items.some((_,i)=>!(record.delivered&(1<<i))))
+  return bundle.items.some((_,i)=>!(record.delivered&(1<<i)))
     || (sim.groundGold.length<GOLD_RULES.maxPiles&&bundle.gold>0&&!(record.delivered&(1<<bundle.items.length)));
 }
 export async function claimCompletedEvent(sim:Simulation,id:string,persist:(checkpoint:CharacterCheckpoint)=>EventResult|Promise<EventResult>):Promise<EventResult> {

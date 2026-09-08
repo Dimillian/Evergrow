@@ -20,6 +20,7 @@ import { itemFitsSlot } from './inventory.ts';
 import { SKILL_NODES, unlockedSkills } from './skill-tree.ts';
 import { MAX_CONTENT_LEVEL } from './progression-content.ts';
 import { xpForNextLevel } from './progression.ts';
+import { LOOT_RULES } from './combat-content.ts';
 
 export const CHARACTER_SLOT_COUNT = 8;
 export const CHARACTER_SAVE_VERSION = 4;
@@ -99,7 +100,7 @@ export function decodeCharacterSave(raw: string): CharacterSave | null {
       || !object(p.defeatedCampMembers)
       || !Object.entries(p.defeatedCampMembers).every(([id, members]) => text(id, 180) && Array.isArray(members)
         && members.length <= 32 && members.every(member => text(member, 180)) && new Set(members).size === members.length)
-      || !Array.isArray(p.groundItems) || p.groundItems.length > 96
+      || !Array.isArray(p.groundItems) || p.groundItems.length > LOOT_RULES.maxGroundItems
       || !p.groundItems.every(i => object(i) && integer(i.id, 1) && number(i.x, -4e7, 4e7) && number(i.y, -4e7, 4e7) && validItem(i.item) && validTreasureFlight(i.flight))) return null;
     if (p.brokenContainers !== undefined && (!Array.isArray(p.brokenContainers)
       || !p.brokenContainers.every(id => text(id, 180)) || new Set(p.brokenContainers).size !== p.brokenContainers.length)) return null;

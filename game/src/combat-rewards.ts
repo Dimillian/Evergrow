@@ -8,6 +8,7 @@ import { LOOT_RULES, PLAYER_ABILITIES } from './combat-content.ts';
 import { awardCharacterExperience } from './character.ts';
 import { xpLevelFactor } from './progression.ts';
 import { rollEnemyLoot } from './loot.ts';
+import { addGroundItem } from './ground-loot.ts';
 
 export interface KillRewardContext {
   player: Player; groundGold: GroundGold[]; groundItems: GroundItem[]; pickups: Pickup[];
@@ -29,8 +30,7 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
     level: player.level, skillPoints: levels, statPoints: levels * 5, color: '#c0acf0' });
   for (const item of isBossKind(enemy.kind) ? [] : rollEnemyLoot({ seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank,
     biome: enemy.biome, kind: enemy.kind, encounter: enemy.bossPhases!==undefined||enemy.kind==='goblinChief'?'boss':undefined, firstKill: kills === 1 })) {
-    if (context.groundItems.length >= LOOT_RULES.maxGroundItems) break;
-    context.groundItems.push({ id: context.nextId(), x: enemy.x, y: enemy.y, item });
+    addGroundItem(context.groundItems, { id: context.nextId(), x: enemy.x, y: enemy.y, item });
   }
   recharge++;
   if (recharge >= PLAYER_ABILITIES.potion.killsPerCharge) {
