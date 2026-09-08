@@ -13,7 +13,7 @@ export interface WorldQuery {
   setBrokenContainers?(ids: ReadonlySet<string>): void;
   readonly dungeonLevel?: number;
   readonly dungeonBiome?: BiomeId;
-  navigationTarget?(x:number,y:number,tx:number,ty:number):{x:number;y:number};
+  navigationTarget?(x:number,y:number,tx:number,ty:number,radius?:number):{x:number;y:number};
   readonly seed?: number;
   blocked(x: number, y: number, radius: number): boolean;
   /** Settlements suppress hostile spawns and protect the player's occupied position. */

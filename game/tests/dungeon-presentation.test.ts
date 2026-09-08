@@ -4,18 +4,23 @@ import { generateDungeon, dungeonBlocked, type DungeonFloor, type Room } from '.
 import { cryptOutline, cryptContains } from '../src/dungeon-contours.ts';
 import { cryptFixtures, cryptLights, cryptLightMask } from '../src/dungeon-lighting.ts';
 
-test('worn outlines keep original travel rectangles and saved positions clear across orientations', () => {
+test('shaped chambers share their exact walkable silhouettes across maps and terrain', () => {
     for (let seed = 0; seed < 32; seed++) {
         const floor = generateDungeon(seed);
         for (const room of [...floor.rooms, ...floor.corridors]) {
             assert.ok(Object.isFrozen(cryptOutline(room)));
+            const outline=cryptOutline(room);
+            assert.ok(outline.reduce((area,p,i)=>{const q=outline[(i+1)%outline.length];return area+p.x*q.y-q.x*p.y;},0)>0,'all outlines share winding so overlapping doorways remain filled');
             for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) {
                 const x = room.x + room.width * i / 8, y = room.y + room.height * j / 8;
-                assert.ok(cryptContains(room, x, y));
-                assert.equal(dungeonBlocked(floor, x, y, 0), false);
+                if (cryptContains(room, x, y)) assert.equal(dungeonBlocked(floor, x, y, 0), false);
             }
             assert.equal(cryptContains(room, room.x - 100, room.y - 100), false);
-            assert.ok(cryptOutline(room).some(p => p.x < room.x || p.y < room.y));
+            if(room.path) for(const p of room.path.slice(1,-1)) assert.ok(cryptContains(room,p.x,p.y));
+            else {
+                assert.ok(cryptContains(room,room.x+room.width/2,room.y+room.height/2));
+                assert.ok(cryptOutline(room).some(p => p.x < room.x || p.y < room.y));
+            }
         }
     }
 });
@@ -25,7 +30,7 @@ test('crypt fixtures are deterministic, bounded and share visible source/light a
         const f = generateDungeon(seed), fixtures = cryptFixtures(f);
         assert.deepEqual(fixtures, cryptFixtures(generateDungeon(seed)));
         assert.ok(Object.isFrozen(fixtures));
-        assert.ok(fixtures.length >= 30 && fixtures.length <= 160);
+        assert.ok(fixtures.length >= 20 && fixtures.length <= 100);
         assert.ok(fixtures.some(p => p.kind === 'orb'));
         for (const p of fixtures) assert.equal(dungeonBlocked(f, p.x, p.y, 0), false);
         const a = cryptLights(f, 0), b = cryptLights(f, 1);

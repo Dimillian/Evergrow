@@ -10,7 +10,7 @@ export function updateWildernessBoss(e: Enemy, dt: number, c: EnemyAIContext): v
   if (!isWildernessBoss(e.kind)) return;
   const p=c.player, d=Math.hypot(p.x-e.x,p.y-e.y), angle=Math.atan2(p.y-e.y,p.x-e.x), def=ENEMY_DEFINITIONS[e.kind];
   const walk=(x:number,y:number,speed:number)=>{
-    const target=c.world.navigationTarget?.(e.x,e.y,x,y)??{x,y};
+    const target=c.world.navigationTarget?.(e.x,e.y,x,y,e.radius + 1)??{x,y};
     const length=Math.hypot(target.x-e.x,target.y-e.y);
     if(length>.5){e.angle=Math.atan2(target.y-e.y,target.x-e.x);c.move(e,(target.x-e.x)/length*speed,(target.y-e.y)/length*speed,dt);}
   };

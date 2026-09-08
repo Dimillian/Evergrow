@@ -1,3 +1,5 @@
+import { drawDungeonProps } from './dungeon-prop-art.ts';
+import { dungeonTheme } from './dungeon-content.ts';
 import { ChestArt } from './chest-art.ts';
 const defaultChests=new ChestArt();
 import type { CharacterPose } from './art-types.ts';
@@ -45,7 +47,8 @@ export function warden(c: CanvasRenderingContext2D, p: CharacterPose, color: Col
     c.restore();
     c.restore();
 }
-export function drawCryptGate(c: CanvasRenderingContext2D, p: Pick<DungeonEntrance, 'x' | 'y'>, time: number) {
+export function drawCryptGate(c: CanvasRenderingContext2D, p: Pick<DungeonEntrance, 'x' | 'y'> & {seed?:number}, time: number) {
+    const theme=dungeonTheme(p.seed??0);
     c.save();
     c.translate(p.x, p.y);
     c.fillStyle = '#071218';
@@ -66,12 +69,12 @@ export function drawCryptGate(c: CanvasRenderingContext2D, p: Pick<DungeonEntran
         c.fillStyle = '#deb77b';
         c.fillRect(side * 38 - 2, -25, 4, 6);
         const g = c.createRadialGradient(side * 38, -25, 0, side * 38, -25, 35);
-        g.addColorStop(0, '#97d7c43a');
-        g.addColorStop(1, '#97d7c400');
+        g.addColorStop(0, theme.accent+'3a');
+        g.addColorStop(1, theme.accent+'00');
         c.fillStyle = g;
         c.fillRect(side * 38 - 35, -60, 70, 70);
     }
-    c.strokeStyle = '#83bdad';
+    c.strokeStyle = theme.accent;
     c.lineWidth = 1;
     c.beginPath();
     c.ellipse(0, 5, 28 + Math.sin(time) * 1.5, 9, 0, 0, Math.PI * 2);
@@ -83,7 +86,7 @@ export function drawCryptDecor(c: CanvasRenderingContext2D, f: DungeonFloor, run
         c.save(); c.beginPath();
         cryptOutline(r).forEach((p,i) => i ? c.lineTo(p.x,p.y) : c.moveTo(p.x,p.y)); c.closePath(); c.clip();
         // Old drag marks and scattered bones interrupt the ordered burial masonry.
-        if (r.kind !== 'entry') {
+        if (r.kind !== 'entry' && dungeonTheme(f.seed).id==='rootbound') {
             const sx=r.x+r.width*.33, sy=r.y+r.height*.35;
             for(let i=0;i<9;i++) {
                 const h=cryptHash(r.id,i,f.seed), x=sx+h%80, y=sy+(h>>>8)%130;
@@ -115,42 +118,8 @@ export function drawCryptDecor(c: CanvasRenderingContext2D, f: DungeonFloor, run
             }
             c.restore();
         }
-        for (const side of [-1, 1]) {
-            const x = r.x + r.width / 2 + side * (r.width / 2 - 40);
-            for (let i = 0; i < 3; i++) {
-                const sy = r.y + 160 + i * 76;
-                const wear = cryptHash(r.id, i + side * 17, f.seed);
-                c.save(); c.translate(x, sy + 25); c.rotate(((wear % 7) - 3) * .025); c.translate(-x, -sy - 25);
-                c.fillStyle = '#040e1770';
-                c.beginPath();
-                c.ellipse(x + 5, sy + 35, 21, 29, 0, 0, 7);
-                c.fill();
-                polygon(c, [[x - 16, sy + 7], [x - 10, sy - 2], [x + 10, sy - 2], [x + 16, sy + 7], [x + 16, sy + 48], [x + 10, sy + 55], [x - 10, sy + 55], [x - 16, sy + 48]], '#273b3d');
-                c.save();
-                if (wear % 4 === 0) { c.translate(side * 11, -6); c.translate(x,sy); c.rotate(side*.14); c.translate(-x,-sy); }
-                polygon(c, [[x - 12, sy + 4], [x - 7, sy - 2], [x + 7, sy - 2], [x + 12, sy + 4], [x + 12, sy + 44], [x + 7, sy + 49], [x - 7, sy + 49], [x - 12, sy + 44]], '#505b57');
-                line(c, [[x - 10, sy + 8], [x - 10, sy + 43], [x - 5, sy + 47], [x + 7, sy + 47]], '#a4ad892f', 1);
-                c.fillStyle = '#8c8e7c';
-                c.beginPath();
-                c.ellipse(x, sy + 12, 4, 5, 0, 0, 7);
-                c.fill();
-                polygon(c, [[x - 6, sy + 20], [x, sy + 17], [x + 6, sy + 20], [x + 3, sy + 38], [x - 3, sy + 38]], '#717b6d');
-                line(c, [[x - 5, sy + 22], [x + 3, sy + 28], [x + 5, sy + 22], [x - 3, sy + 28]], '#263c3b', 1);
-                line(c, [[x - 12, sy + 33], [x - 2, sy + 30], [x + 8, sy + 34]], '#1c313244', 1);
-                for(let chip=0;chip<8;chip++) {
-                    const h=cryptHash(wear,chip,f.seed);
-                    c.fillStyle=chip%2?'#111e2855':'#c5bda030'; c.fillRect(x-10+h%20,sy+4+(h>>>8)%42,2,1);
-                }
-                c.restore(); c.restore();
-            }
-            c.strokeStyle = '#4d6050';
-            c.lineWidth = 3;
-            c.beginPath();
-            c.moveTo(x, r.y - 18);
-            c.bezierCurveTo(x - side * 20, r.y + 30, x + side * 24, r.y + 68, x - side * 35, r.y + 115);
-            c.stroke();
-        }
     }
+    drawDungeonProps(c,f,run,time);
     for (const p of cryptFixtures(f)) {
         const {x, y} = p;
         if (p.kind === 'torch') {
@@ -171,9 +140,9 @@ export function drawCryptDecor(c: CanvasRenderingContext2D, f: DungeonFloor, run
             c.strokeStyle = '#50829266'; c.lineWidth = 1; c.beginPath(); c.ellipse(x,y+37,38,16,0,0,7); c.stroke();
         }
     }
-    drawCryptGate(c, f.entry, time);
+    drawCryptGate(c, {...f.entry,seed:f.seed}, time);
     if (run.states.warden.hp <= 0)
-        drawCryptGate(c, f.exit, time);
+        drawCryptGate(c, {...f.exit,seed:f.seed}, time);
     f.chests.forEach((p,i)=>chests.draw(c,`${run.entrance.id}:chest:${i}`,p.x,p.y,run.chestMasks[i]!==0,time,0,false,reduced));
 }
 
@@ -200,10 +169,10 @@ export function drawCryptEmission(c: CanvasRenderingContext2D, f: DungeonFloor, 
             c.globalAlpha=1;
         } else {
             const bob=Math.sin(time*1.8+p.phase)*3;
-            drawGlow(c,x,y+bob,86,'#388bd5',.4*flicker);
-            drawGlow(c,x,y+bob,31,'#68dbe9',.65);
+            drawGlow(c,x,y+bob,86,dungeonTheme(f.seed).light,.4*flicker);
+            drawGlow(c,x,y+bob,31,dungeonTheme(f.seed).accent,.65);
             const sphere=c.createRadialGradient(x-2,y-3+bob,1,x,y+bob,9);
-            sphere.addColorStop(0,'#f0ffff'); sphere.addColorStop(.35,'#9af3ef'); sphere.addColorStop(.75,'#499bc7'); sphere.addColorStop(1,'#235895');
+            sphere.addColorStop(0,'#f0ffff'); sphere.addColorStop(.35,dungeonTheme(f.seed).accent); sphere.addColorStop(.75,dungeonTheme(f.seed).light); sphere.addColorStop(1,'#235895');
             c.fillStyle=sphere; c.beginPath(); c.arc(x,y+bob,9,0,7); c.fill();
             c.save(); c.translate(x,y+bob); c.strokeStyle='#9ce9f3a0'; c.lineWidth=.8;
             for(let ring=0;ring<2;ring++) {

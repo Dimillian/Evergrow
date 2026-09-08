@@ -1,3 +1,4 @@
+import { dungeonTheme } from './dungeon-content.ts';
 import { encounterScaleAt, encounterRewardLevel } from './encounter-scaling.ts';
 import { interruptTrial } from './poi-content.ts';
 import { treasureLanding } from './treasure-flight.ts';
@@ -56,7 +57,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
         const target = action.kind === 'enter' ? entrance : action.anchor;
         if (Math.hypot(p.x - target.x, p.y - target.y) > 75 || !hasLineOfSight(surface, p.x, p.y, target.x, target.y))
             return { ok: false, message: 'Move closer to the entrance.' };
-        if (state.cleared?.includes(entrance.id)) return { ok: false, message: 'This crypt has been cleared.' };
+        if (state.cleared?.includes(entrance.id)) return { ok: false, message: 'This dungeon has been cleared.' };
         let next = state.runs.find(r => r.entrance.id === entrance.id);
         if (!next) {
             if (state.runs.some(r => r.states.warden.hp > 0))
@@ -102,7 +103,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
     const result = await persist(checkpoint);
     if (!result.ok)
         return { ok: false, message: result.message };
-    return { ok: true, checkpoint, message: action.kind === 'enter' || action.kind === 'return' ? 'Rootbound Crypt' : 'Returned to the surface.' };
+    return { ok: true, checkpoint, message: action.kind === 'enter' || action.kind === 'return' ? dungeonTheme(currentDungeon(state)!.entrance.seed).name : 'Returned to the surface.' };
 }
 function applyContents(c: CharacterCheckpoint, contents: LocationContents) { c.encounterScales = contents.encounterScales ?? {}; c.campWounds = contents.campWounds ?? []; c.actors = contents.actors; c.groundItems = contents.groundItems; c.groundGold = contents.groundGold; c.pickups = contents.pickups; c.clearedCamps = contents.clearedCamps; c.defeatedCampMembers = contents.defeatedCampMembers; }
 export function dungeonChestProblem(sim: Simulation, index: number): string | null {
@@ -110,8 +111,11 @@ export function dungeonChestProblem(sim: Simulation, index: number): string | nu
     if (!run || !floor || !Number.isInteger(index) || index < 0 || index > 2)
         return 'Chest unavailable.';
     const chest = floor.chests[index];
-    if (sim.player.dead || Math.hypot(sim.player.x - chest.x, sim.player.y - chest.y) > 75 || !hasLineOfSight(sim.world, sim.player.x, sim.player.y, chest.x, chest.y))
+    const event=floor.events?.find(e=>e.chest===index);
+    const reach=event?250:75;
+    if (sim.player.dead || Math.hypot(sim.player.x - chest.x, sim.player.y - chest.y) > reach || !hasLineOfSight(sim.world, sim.player.x, sim.player.y, chest.x, chest.y))
         return 'Move closer to the chest.';
+    if(event&&!run.events?.[event.id]?.finished)return 'Complete the chamber encounter.';
     if (index === 2 ? run.states.warden.hp > 0 : floor.members.some(m => m.room === chest.room && run.states[m.id].hp > 0))
         return index === 2 ? 'Defeat the Hollow Warden.' : 'Defeat the chamber guards.';
     if (run.chestMasks[index] === (index === 2 ? 15 : 9))
@@ -126,10 +130,6 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     if (!run || !Number.isInteger(index) || index < 0 || index > 2)
         return { ok: false, message: 'Chest unavailable.' };
     const floor = sim.dungeonFloor!, chest = floor.chests[index];
-    if (sim.player.dead || Math.hypot(sim.player.x - chest.x, sim.player.y - chest.y) > 75 || !hasLineOfSight(sim.world, sim.player.x, sim.player.y, chest.x, chest.y))
-        return { ok: false, message: 'Move closer to the chest.' };
-    if (index === 2 ? run.states.warden.hp > 0 : floor.members.some(m => m.room === chest.room && run.states[m.id].hp > 0))
-        return { ok: false, message: index === 2 ? 'Defeat the Hollow Warden.' : 'Defeat the chamber guards.' };
     const rewardLevel = run.entrance.scaling ? encounterRewardLevel(run.entrance.scaling, index === 2 ? 3 : 1) : run.entrance.level;
     const ranks = index === 2 ? ['normal', 'veteran', 'elite'] as const : ['veteran'] as const;
     const items = ranks.map((rank, i) => rollEnemyLoot({ seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: rewardLevel, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true, encounter:index===2?'bossChest':'chest' })[0]);
@@ -156,5 +156,5 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     sim.groundGold = checkpoint.groundGold!;
     sim.reserveIdentity(next);
     if(completion)sim.commitJourneyCheckpoint(checkpoint,completion);
-    return { ok: true, message: 'Crypt treasure' };
+    return { ok: true, message: 'Dungeon treasure' };
 }

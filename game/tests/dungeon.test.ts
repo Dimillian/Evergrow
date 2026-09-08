@@ -1,3 +1,4 @@
+import { isSpawnHidden } from '../src/spawn-visibility.ts';
 import { dungeonMemberLevel } from '../src/dungeon-state.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,15 +22,22 @@ const surface = { seed: 7319, blocked: () => false, move: (x: number, y: number,
 const ok = () => ({ ok: true, message: '' });
 async function setup() { const sim = new Simulation(surface, { spawn: false, startX: 600, startY: 0 }); const result = (await planDungeonTravel(sim, { kind: 'enter', entrance }, surface, ok)); assert.ok(result.ok); const resolved = currentDungeon(result.checkpoint.expeditions!)!.entrance; const f = generateDungeon(resolved.seed, resolved.level); sim.world = new DungeonWorld(f, resolved); sim.restoreCheckpoint(result.checkpoint); return { sim, f, run: currentDungeon(sim.expeditions)! }; }
 function decoded(c: CharacterCheckpoint) { return decodeCharacterSave(JSON.stringify({ version: 4, id: 'test', name: 'Test', worldSeed: 7319, worldVersion: 5, createdAt: 1, updatedAt: 2, checkpoint: c })); }
-test('crypt seeds produce bounded connected rooms, two branches, a loop and collision-safe rosters', () => {
+test('crypt seeds produce bounded connected rooms, two branches, sparse shortcuts and collision-safe rosters', () => {
     for (let seed = 0; seed < 150; seed++) {
         const f = generateDungeon(seed, 4);
         assert.deepEqual(f, generateDungeon(seed, 4));
-        assert.ok(f.rooms.length>=13&&f.rooms.length<=19);
+        assert.ok(f.rooms.length>=7&&f.rooms.length<=9);
         assert.equal(f.rooms.filter(r => r.kind === 'treasure').length, 2);
         assert.ok(f.edges.length >= f.rooms.length-1);
-        assert.ok(f.members.length >= 70 && f.members.length <= 200);
+        assert.ok(f.members.length >= 40 && f.members.length <= 100);
         assert.ok(Object.isFrozen(f.rooms));
+        for(const corridor of f.corridors) {
+            assert.ok(corridor.outline && Object.isFrozen(corridor.outline));
+            assert.ok(corridor.path && corridor.path.length>10);
+            for(const point of corridor.path) assert.equal(dungeonBlocked(f,point.x,point.y,25),false);
+        }
+        for(const room of f.rooms.filter(r=>r.kind==='treasure'))
+            assert.equal(f.edges.filter(edge=>edge.includes(room.id)).length,1,'optional encounters remain side trips');
         for (const m of f.members)
             assert.equal(dungeonBlocked(f, m.x, m.y, 25), false);
         const reached = new Set([0]);
@@ -48,7 +56,7 @@ test('crypt seeds produce bounded connected rooms, two branches, a loop and coll
             for (let i = 0; i < 400 && Math.hypot(tx - x, ty - y) > 10; i++) {
                 const v = geo.navigationTarget(x, y, tx, ty), d = Math.hypot(v.x - x, v.y - y);
                 if (d < .01)
-                    break;
+                    continue;
                 ({ x, y } = geo.move(x, y, (v.x - x) / d * Math.min(20, d), (v.y - y) / d * Math.min(20, d), 24));
             }
             assert.ok(Math.hypot(tx - x, ty - y) < 70, `seed ${seed}: ${a}->${b}`);
@@ -91,7 +99,7 @@ test('dungeon actors use snapshotted entrance and rank levels, keep casualties, 
     const view = { x: -400, y: -300, width: 800, height: 600 };
     updateDungeon(sim, view);
     assert.ok(sim.enemies.length > 0);
-    assert.ok(sim.enemies.length <= 24);
+    assert.ok(sim.enemies.every(e=>isSpawnHidden(e.x,e.y,view,e.radius)), 'admission has no actor cap but stays hidden');
     assert.ok(sim.enemies.every(e => e.level === dungeonMemberLevel(run.entrance, f.members.find(m=>m.id===e.campMemberId)!)));
     const e = sim.enemies[0], id = e.campMemberId!;
     e.hp = 0;

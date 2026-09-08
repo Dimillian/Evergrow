@@ -12,7 +12,7 @@
     "src/battle-bark-content.ts", "src/battle-barks.ts", "src/battle-bark-layout.ts", "src/enemy-engagement.ts",
     "src/character-look.ts", "src/appearance-content.ts", "src/appearance-armor-content.ts", "src/appearance-command.ts",
     "src/location-controller.ts", "src/journey-state.ts", "src/journey-rewards.ts",
-    "src/dungeon.ts", "src/dungeon-contours.ts", "src/dungeon-state.ts", "src/dungeon-runtime.ts", "src/dungeon-boss.ts", "src/dungeon-command.ts", "src/dungeon-validation.ts",
+    "src/dungeon-passage.ts", "src/dungeon-layout.ts", "src/dungeon-content.ts", "src/dungeon-events.ts", "src/encounter-approaches.ts", "src/dungeon.ts", "src/dungeon-contours.ts", "src/dungeon-state.ts", "src/dungeon-runtime.ts", "src/dungeon-boss.ts", "src/dungeon-command.ts", "src/dungeon-validation.ts",
     "src/warband.ts", "src/goblin-camps.ts",
     "src/event-recipes.ts", "src/wave-system.ts", "src/treasure-flight.ts", "src/world-navigation.ts", "src/poi-content.ts", "src/poi-runtime.ts", "src/poi-command.ts", "src/poi-rewards.ts", "src/poi-validation.ts", "src/poi-sites.ts", "src/wilderness-sites.ts", "src/world-pois.ts",
     "src/data-clone.ts", "src/simulation.ts", "src/combat-content.ts", "src/combat-geometry.ts", "src/encounter-director.ts", "src/enemy-ai.ts", "src/enemy-state.ts", "src/camp-population.ts", "src/progression.ts", "src/progression-content.ts", "src/zone-progression.ts", "src/loot.ts", "src/loot-content.ts",

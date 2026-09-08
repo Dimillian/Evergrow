@@ -5,8 +5,8 @@ import { alertEnemy } from './enemy-state.ts';
 import { type EventState, type EventSite, type EventChoice, EVENT_RULES, syncTrial, interruptTrial } from './poi-content.ts';
 import type { Enemy, Input, Player, WorldQuery } from './model.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
-import { isSpawnHidden, SPAWN_VISIBILITY_MARGIN, type SpawnExclusion } from './spawn-visibility.ts';
-import { hasLineOfSight } from './combat-geometry.ts';
+import { isSpawnHidden, type SpawnExclusion } from './spawn-visibility.ts';
+import { encounterApproaches } from './encounter-approaches.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
 import type { CampSpawnSource } from './camp-population.ts';
 export class EventChannel {
@@ -65,40 +65,18 @@ export function advanceTrial(context: TrialContext): void {
   const missing = trial.guardians.map((g,i)=>({g,i})).filter(({g,i})=>g.wave===trial.wave&&!g.dead&&!enemies.some(e=>e.campId===`event:${site.id}`&&e.campMemberId===String(i)));
   if(!missing.length)return;
   const live=enemies.filter(e=>e.state!=='dead');
-  // Admit each reachable member independently along offscreen routes into the objective.
-  const placements: {
-    x: number;
-    y: number;
-    index: number;
-  }[] = [];
+  const clearance = Math.max(...missing.map(({ g }) => ENEMY_DEFINITIONS[g.kind].radius)) + 2;
+  const approaches = encounterApproaches(world, view, player, site, clearance, EVENT_RULES.trialRadius);
+  const placements: { x: number; y: number; index: number }[] = [];
   for (const { g, i } of missing) {
-    const clear = (x: number, y: number) => isSpawnHidden(x, y, view, ENEMY_DEFINITIONS[g.kind].radius)
-      && !world.blocked(x, y, ENEMY_DEFINITIONS[g.kind].radius) && !world.isSanctuary?.(x, y);
-    const valid = (x: number, y: number) => clear(x, y) && !world.blocked(x, y, ENEMY_DEFINITIONS[g.kind].radius + 8)
-      && (hasLineOfSight(world,x,y,site.x,site.y)||(()=>{const p=world.navigationTarget?.(x,y,site.x,site.y);return p&&Math.hypot(p.x-x,p.y-y)>1;})()) && [...live, ...placements].every(e => Math.hypot(e.x - x, e.y - y) > 45);
-    let point = g.admitted && clear(g.x, g.y) ? { x: g.x, y: g.y } : null;
-    // Previously admitted survivors keep their exact location; wait until hidden rather than teleporting them.
-    if (g.admitted && !point) continue;
-    // Search just outside the nearest padded viewport edges, not a diagonal-sized
-    // circle. Offsets provide adjacent clear lanes without pushing later members farther away.
     const radius = ENEMY_DEFINITIONS[g.kind].radius;
-    const left = view.x - SPAWN_VISIBILITY_MARGIN.horizontal - radius - 12;
-    const right = view.x + view.width + SPAWN_VISIBILITY_MARGIN.horizontal + radius + 12;
-    const top = view.y - SPAWN_VISIBILITY_MARGIN.vertical - radius - 12;
-    const bottom = view.y + view.height + SPAWN_VISIBILITY_MARGIN.vertical + radius + 12;
-    const candidates: { x: number; y: number }[] = [];
-    for (const offset of [0, -56, 56, -112, 112, -168, 168, 224]) {
-      const x = Math.max(left, Math.min(right, site.x + offset));
-      const y = Math.max(top, Math.min(bottom, site.y + offset));
-      candidates.push({ x, y: top }, { x, y: bottom }, { x: left, y }, { x: right, y });
-    }
-    candidates.sort((a, b) => Math.hypot(a.x - site.x, a.y - site.y) - Math.hypot(b.x - site.x, b.y - site.y));
-    for (const candidate of candidates) {
-      if (point) break;
-      if (Math.hypot(candidate.x - site.x, candidate.y - site.y) <= EVENT_RULES.trialRadius && valid(candidate.x, candidate.y)) point = candidate;
-    }
-    if (!point) continue;
-    placements.push({ ...point, index: i });
+    const clear = (x: number, y: number) => isSpawnHidden(x, y, view, radius)
+      && !world.blocked(x, y, radius) && !world.isSanctuary?.(x, y);
+    // Saved survivors keep their exact positions, health and identity.
+    const point = g.admitted ? clear(g.x, g.y) ? { x: g.x, y: g.y } : null
+      : approaches.find(p => clear(p.x, p.y) && live.every(e => Math.hypot(e.x - p.x, e.y - p.y) > Math.max(45, radius + e.radius + 8))
+        && placements.every(e => Math.hypot(e.x - p.x, e.y - p.y) > 45));
+    if (point) placements.push({ x: point.x, y: point.y, index: i });
   }
   for (const point of placements) {
     const g = trial.guardians[point.index];

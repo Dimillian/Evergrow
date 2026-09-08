@@ -1,8 +1,10 @@
+import { dungeonTheme } from './dungeon-content.ts';
 import type { DungeonFloor } from './dungeon.ts';
 import { cryptFloorContains, cryptHash, cryptOutline } from './dungeon-contours.ts';
 
 /** World-aligned masonry and eroded wall faces; tile crops always sample the same surface. */
 export function drawCryptSurface(c: CanvasRenderingContext2D, f: DungeonFloor, tx: number, ty: number, size: number) {
+    const theme=dungeonTheme(f.seed);
     const ox = tx * size, oy = ty * size;
     const margin = 40, stride = (size + margin * 2) / 8, cells = new Uint8Array(stride * stride);
     for (let gy = 0; gy < stride; gy++) for (let gx = 0; gx < stride; gx++)
@@ -20,7 +22,7 @@ export function drawCryptSurface(c: CanvasRenderingContext2D, f: DungeonFloor, t
         if (distance > 32) continue;
         const h = cryptHash(Math.floor(x / 32), Math.floor(y / 16), f.seed), n = h % 14;
         const face = distance < 16 ? 48 : distance < 25 ? 76 : 33;
-        c.fillStyle = `rgb(${face + n},${face + n - 2},${face + n - 6})`;
+        c.fillStyle = `rgb(${theme.stone[0]+face-60+n},${theme.stone[1]+face-60+n},${theme.stone[2]+face-60+n})`;
         c.fillRect(x, y, 8, 8);
         if (y % 16 === 0 || (x + (Math.floor(y / 16) % 2) * 16) % 32 === 0) {
             c.fillStyle = '#14171b'; c.fillRect(x, y, y % 16 === 0 ? 8 : 1, y % 16 === 0 ? 1 : 8);
@@ -33,14 +35,14 @@ export function drawCryptSurface(c: CanvasRenderingContext2D, f: DungeonFloor, t
         cryptOutline(r).forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)); c.closePath();
     }
     c.clip();
-    c.fillStyle = '#3a3b3b'; c.fillRect(ox, oy, size, size);
+    c.fillStyle = theme.map; c.fillRect(ox, oy, size, size);
     // Staggered, chipped flagstones avoid an uninterrupted square grid.
     for (let y = Math.floor(oy / 16) * 16 - 16; y < oy + size + 16; y += 16) {
         const shift = (Math.floor(y / 16) & 1) * 12;
         for (let x = Math.floor((ox - shift) / 24) * 24 + shift; x < ox + size + 24; x += 24) {
             const h = cryptHash(x, y, f.seed), n = h % 18, chip = 2 + (h >>> 8) % 5;
             c.save(); c.translate(x, y); c.scale(.5, .5);
-            c.fillStyle = `rgb(${65 + n},${64 + n},${61 + n})`;
+            c.fillStyle = `rgb(${theme.floor[0]+n},${theme.floor[1]+n},${theme.floor[2]+n})`;
             c.beginPath(); c.moveTo(chip, 1); c.lineTo(45, 2); c.lineTo(47, 27);
             c.lineTo(40, 31); c.lineTo(2, 30); c.lineTo(1, 8); c.closePath(); c.fill();
             c.strokeStyle = '#a499791c'; c.lineWidth = 1; c.stroke();
@@ -53,6 +55,20 @@ export function drawCryptSurface(c: CanvasRenderingContext2D, f: DungeonFloor, t
                 c.strokeStyle = '#1a2026'; c.beginPath(); c.moveTo(12, 1); c.lineTo(19, 13); c.lineTo(14, 21); c.lineTo(27, 30); c.stroke();
             }
             c.restore();
+        }
+    }
+    if(theme.id==='foundry') {
+        for(let y=Math.floor(oy/80)*80;y<oy+size;y+=80)for(let x=Math.floor(ox/96)*96;x<ox+size;x+=96){
+            const h=cryptHash(x,y,f.seed);if(h%3)continue;
+            c.fillStyle='#29292cf0';c.fillRect(x+3,y+3,87,70);c.strokeStyle='#b1875a44';c.lineWidth=2;c.strokeRect(x+4,y+4,86,69);
+            for(const dx of [10,82])for(const dy of [10,64]){c.fillStyle='#b09979';c.fillRect(x+dx,y+dy,3,3);}
+            for(let i=0;i<6;i++){c.fillStyle='#0c1016';c.fillRect(x+17+i*10,y+17,4,40);}
+        }
+    } else if(theme.id==='drowned') {
+        for(let y=Math.floor(oy/160)*160;y<oy+size;y+=160)for(let x=Math.floor(ox/160)*160;x<ox+size;x+=160){
+            if(cryptHash(x,y,f.seed)%3)continue;
+            const g=c.createRadialGradient(x+70,y+70,8,x+70,y+70,95);g.addColorStop(0,'#23799677');g.addColorStop(1,'#163c5900');c.fillStyle=g;c.fillRect(x-30,y-30,200,200);
+            c.strokeStyle='#b2e3ed35';c.lineWidth=1;for(let i=0;i<3;i++){c.beginPath();c.ellipse(x+70,y+70,28+i*17,10+i*6,-.4,.2,4.8);c.stroke();}
         }
     }
     // Seeded damp patches, dust, rubble and bone fragments belong to fixed world cells.

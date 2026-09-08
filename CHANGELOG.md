@@ -1,5 +1,24 @@
 # Evergrow changelog
 
+## v0.9.0 — 2026-09-08T19:18:00Z
+
+### New
+
+- Explore Rootbound Crypts, Cinder Foundries and Drowned Vaults, each with themed lighting, scenery and enemies.
+- Discover reliquary waves, defensive wards and elite sentinel encounters inside dungeons.
+
+### Tweaks
+
+- Dungeons have 7–9 varied rooms, winding passages, optional chambers and occasional shortcuts.
+- Completed dungeon-event chests open automatically nearby.
+
+### Fixes
+
+- Event reinforcements arrive from closer, reachable approaches instead of getting stranded behind obstacles.
+- Enemies navigate narrow passages and curved bends more reliably.
+
+> Characters with an older saved dungeon expedition cannot load this version; start a fresh character. Existing saves remain stored. Characters without an older expedition are unaffected.
+
 ## v0.8.0 — 2026-09-08T17:55:00Z
 
 ### New

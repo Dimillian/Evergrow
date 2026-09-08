@@ -387,7 +387,7 @@ export class Simulation {
         spawn: (kind, x, y, rank, source) => this.spawnEnemy(kind, x, y, rank, source) });
     }
     this.portal.advance(dt, this.player, input);
-    if(this.dungeonFloor) updateDungeon(this,this.spawnExclusion); else this.updateSpawns(dt);
+    if(this.dungeonFloor) updateDungeon(this,this.spawnExclusion,dt,event=>this.emit(event)); else this.updateSpawns(dt);
     this.enemies = this.enemies.filter(e => e.state !== 'dead' || e.stateTime < ENCOUNTER_RULES.corpseDuration);
     if (!this.dungeonFloor && this.spawnExclusion) this.enemies = this.enemies.filter(enemy =>
       !shouldRetireRoamer(enemy, this.player, this.spawnExclusion!, this.roaming.heading));
@@ -725,8 +725,8 @@ export class Simulation {
   private containerContext(): ContainerAttackContext {
     return { world: this.world, break: (target, angle) => {
       const level = this.world.dungeonLevel ?? encounterScaleAt(target.x, target.y, this.world.seed ?? this.options.seed!, this.player.level).base;
-      breakContainer(target, angle, level, this.brokenContainers, this.groundGold,
-        () => this.nextId++, event => this.emit(event));
+      if (breakContainer(target, angle, level, this.brokenContainers, this.groundGold,
+        () => this.nextId++, event => this.emit(event))) this.world.setBrokenContainers?.(this.brokenContainers);
     } };
   }
 

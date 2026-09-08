@@ -1,3 +1,4 @@
+import { startDungeonEvent } from './dungeon-events.ts';
 import { encounterScaleAt } from './encounter-scaling.ts';
 import { MUSIC_FILES } from './music-content.ts';
 import { audioVolume, DEFAULT_AUDIO, type AudioChannel } from './audio-preferences.ts';
@@ -728,6 +729,12 @@ export class Game {
               x: number;
               y: number;
           }) => Math.hypot(p.x - q.x, p.y - q.y) < 75 && (!pointer || Math.hypot(pointer.x - q.x, pointer.y - (q.y - 20)) < 55);
+          const event=f.events?.find(hit);
+          if(event){
+              this.sim.clearInput();this.sim.portal.cancel();
+              void this.durable(async()=>{const result=await startDungeonEvent(this.sim,event.id,c=>this.persistTravel(c));this.notify(result.message);},undefined);
+              return true;
+          }
           const chest = f.chests.findIndex(hit);
           if (chest >= 0) {
               const problem = dungeonChestProblem(this.sim, chest);
@@ -1003,6 +1010,11 @@ export class Game {
         this.nextEventClaim=now+250;
         const chest=Object.values(this.sim.eventState.sites).find(r=>pendingEventReward(this.sim,r));
         if(chest){void this.durable(async()=>{const result=await claimCompletedEvent(this.sim,chest.id,c=>this.persistTravel(c));if(!result.ok){this.nextEventClaim=performance.now()+30000;this.notify(result.message);}},undefined);}
+      }
+      if(!this.savingAction&&!this.sim.player.dead&&this.sim.dungeonFloor&&!this.sim.portal.ready&&now>=this.nextEventClaim){
+          this.nextEventClaim=now+250;
+          const index=this.sim.dungeonFloor.chests.findIndex((_,i)=>!dungeonChestProblem(this.sim,i));
+          if(index>=0)void this.durable(async()=>{const result=await claimDungeonChest(this.sim,index,c=>this.persistTravel(c));if(!result.ok){this.nextEventClaim=performance.now()+30000;this.notify(result.message);}},undefined);
       }
       if (this.sim.portal.ready) this.travelThrough(this.overworld.getPortalAnchor(this.sim.travel.homeTown), false);
       const run=currentDungeon(this.sim.expeditions);

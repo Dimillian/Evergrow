@@ -28,7 +28,7 @@ export class DungeonWorld extends World {
     override sampleGroundContact(x: number, y: number) { return { weights: this.sampleBiome(x, y).weights, water: 0, natural: 0, indoors: true }; }
     override blocked(x: number, y: number, r: number) { return this.geometry.blocked(x, y, r); }
     override move(x: number, y: number, dx: number, dy: number, r: number) { return this.geometry.move(x, y, dx, dy, r); }
-    override navigationTarget(x: number, y: number, tx: number, ty: number) { return this.geometry.navigationTarget(x, y, tx, ty); }
+    override navigationTarget(x: number, y: number, tx: number, ty: number, radius=24) { return this.geometry.navigationTarget(x, y, tx, ty, radius); }
     override mapColor(x: number, y: number) { return this.blocked(x, y, 0) ? '#080d14' : '#465653'; }
     override atlasColor(x: number, y: number) { return this.mapColor(x, y); }
     override dispose() { this.tiles.clear(); super.dispose(); }

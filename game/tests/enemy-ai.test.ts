@@ -204,3 +204,20 @@ test('wilderness enemies notice at medium distance and pursue promptly at the fa
   advance(sim, .5);
   assert.ok(distance - Math.hypot(foe.x, foe.y) > 55, 'pursuit closes faster than the old 104 units/s pace');
 });
+
+test('ranged guardians pursue around new cover even before their next sight refresh', async () => {
+  const { worldNavigation } = await import('../src/world-navigation.ts');
+  let routeRequests = 0;
+  const world: WorldQuery = {
+    blocked: (x, y, r) => Math.abs(x + 100) < 12 + r && Math.abs(y) < 90 + r,
+    move(x, y, dx, dy, r) { return this.blocked(x + dx, y + dy, r) ? { x, y } : { x: x + dx, y: y + dy }; },
+    navigationTarget(x, y, tx, ty, r) { routeRequests++; return worldNavigation(this).target(x, y, tx, ty, r); },
+  };
+  const sim = new Simulation(world, { spawn: false }), archer = sim.spawnEnemy('archer', -200, 0)!;
+  archer.state = 'chase'; archer.awareness = 1; archer.seesPlayer = true; archer.senseTime = .3;
+  archer.lastSeenX = archer.lastSeenY = 0;
+  advance(sim, .2);
+  assert.ok(routeRequests > 0, 'request a walking route instead of strafing at preferred firing distance');
+  assert.ok(Math.hypot(archer.x + 200, archer.y) > 10, 'advance along the detour');
+  assert.equal(sim.projectiles.length, 0, 'cover still blocks firing');
+});

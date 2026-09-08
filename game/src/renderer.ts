@@ -1,3 +1,5 @@
+import { dungeonEventLabel } from './dungeon-prop-art.ts';
+import { dungeonTheme } from './dungeon-content.ts';
 import { isBossKind, isWildernessBoss, BOSS_PALETTES } from './wilderness-boss-content.ts';
 import { sampleGearLight } from './gear-scene-light.ts';
 import { withGearLight } from './gear-material.ts';
@@ -14,7 +16,7 @@ import { eventClaimed } from './poi-content.ts';
 import type { FrameProfiler } from './frame-profiler.ts';
 import { WaterPresentation } from './water-presentation.ts';
 import { WaterArt } from './water-art.ts';
-import { CRYPT_AMBIENT, cryptLights, cryptLightMask } from './dungeon-lighting.ts';
+import { cryptLights, cryptLightMask } from './dungeon-lighting.ts';
 import { drawCryptGate, drawCryptDecor, drawCryptEmission } from './dungeon-art.ts';
 import { currentDungeon } from './dungeon-state.ts';
 import { drawEventObjectives, EventArt, drawEventUI } from './poi-art.ts';
@@ -379,7 +381,7 @@ export class Renderer {
     const weights = biome.weights, inside = this.indoorBlend;
     const ambientChannels = biomeAmbient(weights).map((value, channel) =>
       Math.round(value * (1 - inside) + [116, 119, 141][channel] * inside));
-    const ambient = sim.dungeonFloor ? CRYPT_AMBIENT : `rgb(${ambientChannels.join(',')})`;
+    const ambient = sim.dungeonFloor ? dungeonTheme(sim.dungeonFloor.seed).ambient : `rgb(${ambientChannels.join(',')})`;
     const lightingStart = this.profiler?.start() ?? 0;
     this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps, ambient, zoom);
     this.profiler?.end('lighting', lightingStart);
@@ -472,9 +474,17 @@ export class Renderer {
     c.restore();
     if (settings.phase === 'playing') {
       const run=currentDungeon(sim.expeditions),f=sim.dungeonFloor;
-      const points=run&&f?[{...f.entry,name:'Leave crypt'},...(run.states.warden.hp<=0?[{...f.exit,name:'Leave crypt'}]:[]),...f.chests.map(ch=>({...ch,name:'Crypt chest'}))]:this.visibility.entrances;
+      const points=run&&f?[{...f.entry,name:'Leave dungeon'},...(run.states.warden.hp<=0?[{...f.exit,name:'Leave dungeon'}]:[]),...f.chests.map(ch=>({...ch,name:'Treasure chest'}))]:this.visibility.entrances;
       const target=points.find(q=>Math.hypot(q.x-p.x,q.y-p.y)<75);
       if(target){const point=worldToScreen(this.view,target.x,target.y-75);text(c,`${target.name}  [${this.gamepadActive?'A':'E'}]`,point.x,point.y,1,'#d6d7b3','center');}
+      if(run&&f)for(const event of f.events??[]){
+          if(Math.hypot(event.x-p.x,event.y-p.y)>650)continue;
+          const state=run.events?.[event.id];if(state?.finished)continue;
+          if(!state?.started&&Math.hypot(event.x-p.x,event.y-p.y)>100)continue;
+          const point=worldToScreen(this.view,event.x,event.y-60);
+          const label=dungeonEventLabel(run,event).replace('[E]',this.gamepadActive?'[A]':'[E]');
+          text(c,label,point.x,point.y,1,'#d6d7b3','center');
+      }
       this.drawPortalHints(c, sim, world);
       drawEventUI(c, sim, world, (x,y) => worldToScreen(this.view,x,y), this.gamepadActive, this.eventSites);
       this.cursor(c, sim);
@@ -779,7 +789,7 @@ export class Renderer {
     const p = sim.player;
     const building = world.getBuildingAt(p.x, p.y);
     const town = world.getSettlements(p.x - 1, p.y - 1, 2, 2).find(town => Math.hypot(p.x - town.x, p.y - town.y) <= town.radius);
-    text(c, sim.dungeonFloor ? `Rootbound Crypt · ${currentDungeon(sim.expeditions)!.entrance.level}` : building?.name ?? town?.name ?? world.sampleBiome(p.x, p.y).name, 22, 22, 1.2, '#d7c99d');
+    text(c, sim.dungeonFloor ? `${dungeonTheme(sim.dungeonFloor.seed).name} · ${currentDungeon(sim.expeditions)!.entrance.level}` : building?.name ?? town?.name ?? world.sampleBiome(p.x, p.y).name, 22, 22, 1.2, '#d7c99d');
     text(c, world.isSanctuary(p.x, p.y) ? 'SANCTUARY' : String(sim.kills).padStart(2, '0') + ' SLAIN',
       22, 37, 1, '#91b69e');
     if (settings.debug) text(c, `${Math.round(settings.fps)} FPS / ${sim.enemies.length} MOBS / ${Math.round(p.x)},${Math.round(p.y)}`,

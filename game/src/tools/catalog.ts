@@ -40,7 +40,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'encounters',group:'world',name:'Camps & landmarks',path:'/encounters.html',description:'Frozen wilderness placements, camps and encounter warnings.'},
   {id:'bosses',group:'world',name:'Wilderness bosses',path:'/bosses.html',description:'Three guarded lairs, committed attack warnings and automatic hoards.',tags:'boss elite arena'},
   {id:'events',group:'world',name:'Events',path:'/events.html',description:'Interactive landmark and reward presentation.'},
-  {id:'dungeon',group:'world',name:'Dungeons',path:'/dungeon.html',description:'Staged crypt geometry, rooms and dungeon artwork.'},
+  {id:'dungeon',group:'world',name:'Dungeons',path:'/dungeon.html?view=gallery',description:'Compare three dungeon themes, generate seeded layouts, inspect rooms and encounters, and export maps.'},
   {id:'forest',group:'world',name:'Forest motion',path:'/forest.html',description:'Wind, foliage, wildlife and canopy light; recording support.'},
   {id:'water',group:'world',name:'Water motion',path:'/water.html',description:'Seeded river and lake surfaces, waves and reflections.'},
   {id:'portal',group:'world',name:'Portals',path:'/portal.html',description:'Town travel effects and portal artwork.'},

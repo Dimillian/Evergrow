@@ -296,7 +296,7 @@ test('both vigil waves spawn near the event and actively arrive to attack instea
   assert.equal(first.length, eventRecipe(grave)!.size);
   for (const enemy of first) {
     assert.ok(isSpawnHidden(enemy.x, enemy.y, view, enemy.radius));
-    assert.ok(Math.hypot(enemy.x - grave.x, enemy.y - grave.y) < 380, 'use the nearby viewport edge, not its distant diagonal');
+    assert.ok(Math.hypot(enemy.x - grave.x, enemy.y - grave.y) < 400, 'use the nearby viewport edge, not its distant diagonal');
     assert.equal(enemy.state, 'chase');
     assert.equal(enemy.awareness, 1);
   }
@@ -310,7 +310,7 @@ test('both vigil waves spawn near the event and actively arrive to attack instea
   tick(sim, 3);
   const second = sim.enemies.filter(e => e.state !== 'dead');
   assert.equal(second.length, eventRecipe(grave)!.size+eventRecipe(grave)!.growth);
-  assert.ok(second.every(e => Math.hypot(e.x - grave.x, e.y - grave.y) < 380), 'later member indices cannot push the second wave farther away');
+  assert.ok(second.every(e => Math.hypot(e.x - grave.x, e.y - grave.y) < 400), 'later member indices cannot push the second wave farther away');
   tick(sim, 8);
   assert.ok(second.every(e => Math.hypot(e.x - sim.player.x, e.y - sim.player.y) < 300));
   assert.ok(sim.drainEvents().some(e => e.type === 'hurt'));

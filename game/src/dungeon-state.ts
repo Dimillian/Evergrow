@@ -1,10 +1,11 @@
+import { freshWaves, type WaveProgress } from './wave-system.ts';
 import { encounterMemberLevel, isBossKind } from './encounter-scaling.ts';
 import type { Enemy } from './model.ts';
 import type { GroundItem } from './character-types.ts';
 import type { GroundGold } from './gold.ts';
 import type { Pickup } from './model.ts';
 import type { DungeonEntrance } from './dungeon.ts';
-import { generateDungeon } from './dungeon.ts';
+import { generateDungeon, DUNGEON_RULES } from './dungeon.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
 export interface StoredActor {
     kind: Enemy['kind'];
@@ -32,6 +33,8 @@ export interface LocationContents {
     defeatedCampMembers: Record<string, string[]>;
 }
 export interface DungeonRun {
+    layoutVersion: number;
+    events?: Record<number, WaveProgress>;
     entrance: DungeonEntrance;
     states: Record<string, {
         hp: number;
@@ -57,7 +60,7 @@ export interface Expeditions {
 }
 export const emptyContents = (): LocationContents => ({ actors: [], groundItems: [], groundGold: [], pickups: [], clearedCamps: [], defeatedCampMembers: {} });
 export const freshExpeditions = (): Expeditions => ({ cleared: [], location: null, runs: [], surface: null, surfaceX: 0, surfaceY: 0 });
-export function createDungeonRun(entrance: DungeonEntrance): DungeonRun { const f = generateDungeon(entrance.seed, entrance.level); return { entrance, states: Object.fromEntries(f.members.map(m => [m.id, { hp: scaledEnemyStats(m.kind, dungeonMemberLevel(entrance, m), m.rank).maxHp, x: m.x, y: m.y, admitted: false }])), explored: [0], chestMasks: [0, 0, 0], contents: emptyContents(), x: f.entry.x, y: f.entry.y }; }
+export function createDungeonRun(entrance: DungeonEntrance): DungeonRun { const f = generateDungeon(entrance.seed, entrance.level); return { entrance, layoutVersion:DUNGEON_RULES.version, events:Object.fromEntries((f.events??[]).map(e=>[e.id,freshWaves()])), states: Object.fromEntries(f.members.map(m => [m.id, { hp: scaledEnemyStats(m.kind, dungeonMemberLevel(entrance, m), m.rank).maxHp, x: m.x, y: m.y, admitted: false }])), explored: [0], chestMasks: [0, 0, 0], contents: emptyContents(), x: f.entry.x, y: f.entry.y }; }
 export function storedActor(e: Enemy): StoredActor { return { kind: e.kind, rank: e.rank, level: e.level, biome: e.biome, seed: e.lootSeed, x: e.x, y: e.y, homeX: e.homeX, homeY: e.homeY, hp: e.hp, campId: e.campId, memberId: e.campMemberId, bossPhases: e.bossPhases }; }
 export function currentDungeon(state: Expeditions): DungeonRun | undefined { return state.runs.find(r => r.entrance.id === state.location); }
 export function syncDungeon(run: DungeonRun, enemies: readonly Enemy[], x: number, y: number) { run.x = x; run.y = y; for (const e of enemies) {

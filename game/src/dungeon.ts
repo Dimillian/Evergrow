@@ -1,8 +1,11 @@
+import { buildDungeonLayout } from './dungeon-layout.ts';
+import { worldNavigation } from './world-navigation.ts';
+import { dungeonTheme, type DungeonThemeId, type DungeonEventKind, DUNGEON_EVENTS } from './dungeon-content.ts';
 import { cryptContains, cryptFloorContains } from './dungeon-contours.ts';
 import type { EnemyKind, WorldQuery } from './model.ts';
 import type { EnemyRank } from './progression-content.ts';
 import type { BiomeId } from './biomes.ts';
-export const DUNGEON_RULES = Object.freeze({ version: 2, minimumRooms: 13, maximumRooms: 19, cell: 64, corridor: 192 });
+export const DUNGEON_RULES = Object.freeze({ version: 4, minimumRooms: 7, maximumRooms: 9, cell: 64, corridor: 192 });
 export interface DungeonChestTarget {
     kind: 'cryptChest';
     name: string;
@@ -27,6 +30,10 @@ export interface Room {
     width: number;
     height: number;
     kind: 'entry' | 'combat' | 'treasure' | 'boss';
+    shape?: 'hall' | 'cross' | 'octagon';
+    connection?: number;
+    outline?: readonly { x: number; y: number }[];
+    path?: readonly { x: number; y: number }[];
 }
 export interface DungeonMember {
     id: string;
@@ -37,8 +44,15 @@ export interface DungeonMember {
     y: number;
     seed: number;
     wave?: number;
+    event?: number;
+    eventWave?: number;
 }
+export interface DungeonProp { id: string; x: number; y: number; kind: 'tomb' | 'roots' | 'anvil' | 'furnace' | 'crystal' | 'pool' | 'barrel' | 'crate'; seed: number }
+export interface DungeonEvent { id: number; room: number; kind: DungeonEventKind; x: number; y: number; chest: number }
 export interface DungeonFloor {
+    theme?: DungeonThemeId;
+    events?: readonly DungeonEvent[];
+    props?: readonly DungeonProp[];
     seed: number;
     rooms: readonly Room[];
     edges: readonly (readonly [
@@ -64,54 +78,28 @@ export interface DungeonFloor {
 
 export function dungeonRandom(seed: number) { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; }
 /** Grow a branching core, add two optional treasure leaves, then an exterior boss chamber. */
-export function generateDungeon(seed: number, level = 1): DungeonFloor {
-    const random=dungeonRandom(seed), ordinary=12+Math.floor(random()*7), style=(seed>>>7)%3;
-    const cells:number[][]=[[0,0]],edges:[number,number][]=[];
-    const occupied=new Map<string,number>([['0:0',0]]);
-    for(let attempt=0;cells.length<ordinary-2&&attempt<3000;attempt++){
-      const parent=random()<(style===0?.75:style===1?.3:.9)?cells.length-1:Math.floor(random()*cells.length);
-      const [cx,cy]=cells[parent],directions=[[1,0],[0,1],[-1,0],[0,-1]],d=directions[Math.floor(random()*4)],x=cx+d[0],y=cy+d[1];
-      if(occupied.has(`${x}:${y}`))continue;
-      occupied.set(`${x}:${y}`,cells.length);edges.push([parent,cells.length]);cells.push([x,y]);
-    }
-    if(cells.length!==ordinary-2)throw new Error('Dungeon growth exhausted');
-    const core=cells.length;
-    for(let treasure=0;treasure<2;treasure++) {
-      const candidates=cells.slice(1,core).flatMap(([x,y],i)=>[[1,0],[0,1],[-1,0],[0,-1]].map(([dx,dy])=>({parent:i+1,x:x+dx,y:y+dy}))).filter(p=>!occupied.has(`${p.x}:${p.y}`));
-      const p=candidates[Math.floor(random()*candidates.length)];
-      occupied.set(`${p.x}:${p.y}`,cells.length);edges.push([p.parent,cells.length]);cells.push([p.x,p.y]);
-    }
-    // Adjacent loops never cut through an unrelated room; dead ends retain treasure.
-    for(let i=1;i<cells.length-2;i++)for(let j=i+1;j<cells.length-2;j++)if(Math.abs(cells[i][0]-cells[j][0])+Math.abs(cells[i][1]-cells[j][1])===1&&!edges.some(([a,b])=>a===i&&b===j||a===j&&b===i)&&random()<.35)edges.push([i,j]);
-    const furthest=[...cells.keys()].filter(i=>i<ordinary-2).sort((a,b)=>Math.hypot(...cells[b] as [number,number])-Math.hypot(...cells[a] as [number,number]));
-    let bossParent=-1,bossCell:number[]=[];
-    for(const i of furthest){const [x,y]=cells[i];for(const [dx,dy]of [[1,0],[0,1],[-1,0],[0,-1]])if(!occupied.has(`${x+dx}:${y+dy}`)){bossParent=i;bossCell=[x+dx,y+dy];break;}if(bossParent>=0)break;}
-    const bossId=cells.length,treasureIds=[ordinary-2,ordinary-1];cells.push(bossCell);edges.push([bossParent,bossId]);
-    const rooms:Room[]=cells.map(([cx,cy],id)=>{
-      const boss=id===bossId,w=boss?1408:(style===1?640:style===2?704:448)+Math.floor(random()*4)*64,h=boss?1088:(style===1?576:448)+Math.floor(random()*4)*64;
-      return {id,x:cx*1280-w/2+(id?Math.floor(random()*3-1)*64:0),y:cy*1280-h/2+(id?Math.floor(random()*3-1)*64:0),width:w,height:h,kind:id===0?'entry':boss?'boss':treasureIds.includes(id)?'treasure':'combat'};
-    });
+export function generateDungeon(seed: number, _level = 1): DungeonFloor {
+    const theme=dungeonTheme(seed), random=dungeonRandom(seed);
+    const {rooms,edges,corridors,treasureIds,bossId}=buildDungeonLayout(random,theme.id);
     const center = (r: Room) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
-    const corridors: Room[] = [];
-    for (const [a, b] of edges) {
-        const p = center(rooms[a]), q = center(rooms[b]), w = DUNGEON_RULES.corridor + (style===1?32:style===2?-32:0);
-        corridors.push({ id: -1, kind: 'combat', x: Math.min(p.x, q.x) - w / 2, y: p.y - w / 2, width: Math.abs(p.x - q.x) + w, height: w }, { id: -1, kind: 'combat', x: q.x - w / 2, y: Math.min(p.y, q.y) - w / 2, width: w, height: Math.abs(p.y - q.y) + w });
-    }
+    const events: DungeonEvent[] = treasureIds.map((room,id)=>({id,room,kind: id===0 ? (theme.id==='foundry'?'champion':'reliquary') : (theme.id==='rootbound'?'champion':'ward'),...center(rooms[room]),chest:id}));
     const members: DungeonMember[] = [];
     for (const room of rooms) {
         if (room.kind === 'entry' || room.kind === 'boss')
             continue;
-        const c = center(room), count = room.kind === 'treasure' ? 6 : 6 + Math.floor(random() * 5);
+        const c = center(room), event=events.find(e=>e.room===room.id), recipe=event?DUNGEON_EVENTS[event.kind]:null, count = recipe ? recipe.size * recipe.rules.count : 6 + Math.floor(random() * 5);
         for (let i = 0; i < count; i++) {
-            const kind: EnemyKind = room.id === 7 ? 'goblin' : (['stalker', 'stalker', 'hound', 'archer', 'caster', 'brute'] as const)[(i + room.id) % 6];
-            members.push({ id: `room:${room.id}:${i}`, kind, rank: i === 0 && room.id % 3 === 0 ? 'veteran' : room.id === treasureIds[1] && i === 0 && level >= 3 ? 'elite' : 'normal', room: room.id, x: c.x + (i % 3 - 1) * 85, y: c.y + (Math.floor(i / 3) - (Math.ceil(count / 3) - 1) / 2) * 90, seed: Math.floor(random() * 4294967296) });
+            const kind: EnemyKind = theme.roster[(i + room.id) % theme.roster.length];
+            const slot=recipe?i%recipe.size:i;
+            members.push({ id: `room:${room.id}:${i}`, kind, rank: recipe && slot === 0 ? (event!.kind === 'champion' || i >= count-recipe.size ? 'elite' : 'veteran') : i === 0 && room.id % 3 === 0 ? 'veteran' : 'normal', room: room.id, x: c.x + (slot % 3 - 1) * 70, y: c.y + (Math.floor(slot / 3) - (Math.ceil((recipe?.size??count) / 3) - 1) / 2) * 75, seed: Math.floor(random() * 4294967296), ...(event?{event:event.id,eventWave:Math.floor(i/recipe!.size)}:{}) });
         }
     }
     const boss = center(rooms[bossId]);
     members.push({ id: 'warden', kind: 'warden', rank: 'normal', room: bossId, x: boss.x, y: boss.y, seed: (seed ^ 731) >>> 0 });
     for (let i = 0; i < 4; i++)
         members.push({ id: `buried:${i}`, kind: i % 2 ? 'stalker' : 'archer', rank: 'normal', room: bossId, x: boss.x + (i % 2 ? 560 : -560), y: boss.y + (i < 2 ? -400 : 400), seed: (seed + i + 900) >>> 0, wave: i < 2 ? 1 : 2 });
-    const floor: DungeonFloor = { seed, rooms, edges, corridors, members, entry: center(rooms[0]), exit: { x: boss.x + 260, y: boss.y + 220 }, chests: [...treasureIds, bossId].map(id => { const p = center(rooms[id]); return { x: p.x + 100, y: p.y + 160, room: id }; }) };
+    const props: DungeonProp[] = [];
+    const floor: DungeonFloor = { theme:theme.id, events, props, seed, rooms, edges, corridors, members, entry: center(rooms[0]), exit: { x: boss.x + 260, y: boss.y + 220 }, chests: [...treasureIds, bossId].map(id => { const p = center(rooms[id]); return { x: p.x, y: p.y + 140, room: id }; }) };
     // Rotate and mirror the authored graph; proportions and encounter recipes remain seeded.
     const turn = (seed >>> 4) % 4, mirror = (seed & 1) ? -1 : 1;
     const rotate = (p: {
@@ -123,6 +111,11 @@ export function generateDungeon(seed: number, level = 1): DungeonFloor {
         x = next;
     } p.x = x; p.y = y; };
     for (const r of [...rooms, ...corridors]) {
+        for (const p of [...(r.outline??[]), ...(r.path??[])]) rotate(p);
+        // Shared nonzero canvas clips need matching winding at room overlaps,
+        // including mirrored floors, or doorway overlaps become punched-out holes.
+        if(r.outline && r.outline.reduce((area,p,i)=>{const q=r.outline![(i+1)%r.outline!.length];return area+p.x*q.y-q.x*p.y;},0)<0)
+            r.outline=[...r.outline].reverse();
         const a = { x: r.x, y: r.y }, b = { x: r.x + r.width, y: r.y + r.height };
         rotate(a);
         rotate(b);
@@ -131,8 +124,24 @@ export function generateDungeon(seed: number, level = 1): DungeonFloor {
         r.width = Math.abs(a.x - b.x);
         r.height = Math.abs(a.y - b.y);
     }
-    for (const p of [...members, ...floor.chests, floor.entry, floor.exit])
+    for (const p of [...members, ...floor.chests, ...events, floor.entry, floor.exit])
         rotate(p);
+    // Decorate perimeter alcoves, leaving room centers, doors and combat lanes clear.
+    for(const room of rooms) {
+        for(let i=0;i<8;i++) {
+            const x=room.x+room.width*(i%2?.82:.18),y=room.y+room.height*(.18+Math.floor(i/2)*.21);
+            if(corridors.some(r=>x>r.x-55&&x<r.x+r.width+55&&y>r.y-55&&y<r.y+r.height+55))continue;
+            const kinds: DungeonProp['kind'][]=theme.id==='foundry'?['anvil','furnace','crate','barrel']:theme.id==='drowned'?['pool','crystal','barrel','crystal']:['tomb','roots','crate','tomb'];
+            if(dungeonBlocked(floor,x,y,40))continue;
+            props.push({id:`dungeon-prop:${room.id}:${i}`,x,y,kind:kinds[(i+room.id)%kinds.length],seed:(seed+room.id*71+i*137)>>>0});
+        }
+    }
+    events.forEach(Object.freeze);Object.freeze(events);
+    props.forEach(Object.freeze);Object.freeze(props);
+    for (const r of corridors) {
+        r.outline?.forEach(Object.freeze); r.path?.forEach(Object.freeze);
+        if(r.outline)Object.freeze(r.outline);if(r.path)Object.freeze(r.path);
+    }
     for (const value of [...rooms, ...corridors, ...members, ...edges, ...floor.chests])
         Object.freeze(value);
     Object.freeze(rooms);
@@ -161,10 +170,6 @@ export function dungeonBlocked(f: DungeonFloor, x: number, y: number, radius: nu
 /** Collision and navigation share the same room/corridor union. */
 export class DungeonGeometry implements WorldQuery {
     readonly seed: number;
-    private flows = new Map<string, Map<string, {
-        x: number;
-        y: number;
-    }>>();
     readonly floor: DungeonFloor;
     constructor(floor: DungeonFloor) { this.floor = floor; this.seed = floor.seed; }
     blocked(x: number, y: number, r: number) { return dungeonBlocked(this.floor, x, y, r); }
@@ -186,29 +191,7 @@ export class DungeonGeometry implements WorldQuery {
         }
         return { x, y };
     }
-    navigationTarget(x: number, y: number, tx: number, ty: number) {
-        const cell = 64, gx = Math.round(tx / cell), gy = Math.round(ty / cell), key = `${gx}:${gy}`;
-        if (this.blocked(gx * cell, gy * cell, 24))
-            return { x: tx, y: ty };
-        let flow = this.flows.get(key);
-        if (!flow) {
-            flow = new Map();
-            const queue = [{ x: gx, y: gy }];
-            flow.set(key, { x: tx, y: ty });
-            for (let i = 0; i < queue.length && i < 12000; i++) {
-                const p = queue[i];
-                for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-                    const q = { x: p.x + dx, y: p.y + dy }, k = `${q.x}:${q.y}`;
-                    if (!flow.has(k) && !this.blocked(q.x * cell, q.y * cell, 24)) {
-                        flow.set(k, { x: p.x * cell, y: p.y * cell });
-                        queue.push(q);
-                    }
-                }
-            }
-            if (this.flows.size >= 4)
-                this.flows.delete(this.flows.keys().next().value!);
-            this.flows.set(key, flow);
-        }
-        return flow.get(`${Math.round(x / cell)}:${Math.round(y / cell)}`) ?? { x: tx, y: ty };
+    navigationTarget(x: number, y: number, tx: number, ty: number, radius = 24) {
+        return worldNavigation(this).target(x,y,tx,ty,radius);
     }
 }

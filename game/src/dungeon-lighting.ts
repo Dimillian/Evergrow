@@ -1,8 +1,8 @@
+import { dungeonTheme } from './dungeon-content.ts';
 import type { DungeonFloor } from './dungeon.ts';
 import { cryptFloorContains, cryptHash, type CryptPoint } from './dungeon-contours.ts';
 import type { PointLight } from './lighting.ts';
 
-export const CRYPT_AMBIENT = '#171c29';
 export interface CryptFixture { readonly x: number; readonly y: number; readonly kind: 'torch' | 'orb'; readonly phase: number; readonly side: number }
 const fixtures = new WeakMap<DungeonFloor, readonly CryptFixture[]>();
 /** Stable shared anchors for fixtures, illumination and emissive effects. */
@@ -29,6 +29,20 @@ export function cryptFixtures(f: DungeonFloor): readonly CryptFixture[] {
             add(r.x + r.width * .5 + side * 290, r.y + r.height * .65, 'orb');
     }
     for (const r of f.corridors) {
+        if(r.path && r.outline) {
+            // Follow the actual curved bank, not its rectangular bounds.
+            let distance=0;
+            for(let i=1;i<r.path.length-1;i++){
+                distance+=Math.hypot(r.path[i].x-r.path[i-1].x,r.path[i].y-r.path[i-1].y);
+                if(distance<320)continue;
+                distance=0;
+                const bank=r.outline[i],mid=r.path[i];
+                const x=bank.x+(mid.x-bank.x)*.28,y=bank.y+(mid.y-bank.y)*.28;
+                if(f.rooms.some(room=>x>room.x-70&&x<room.x+room.width+70&&y>room.y-70&&y<room.y+room.height+70))continue;
+                add(x,y,'torch');
+            }
+            continue;
+        }
         if (Math.max(r.width, r.height) < 400) continue;
         const horizontal = r.width > r.height;
         const count = Math.floor(Math.max(r.width, r.height) / 420) * 2 + 1;
@@ -44,6 +58,7 @@ export function cryptFixtures(f: DungeonFloor): readonly CryptFixture[] {
             add(x, y, 'torch', horizontal ? 0 : -1);
         }
     }
+    for(const p of f.props??[])if(p.kind==='furnace'||p.kind==='crystal')add(p.x,p.y-16,p.kind==='furnace'?'torch':'orb');
     const frozen = Object.freeze(result);
     fixtures.set(f, frozen);
     return frozen;
@@ -54,7 +69,7 @@ export function cryptFlicker(p: CryptFixture, time: number): number {
 }
 export function cryptLights(f: DungeonFloor, time: number): PointLight[] {
     return cryptFixtures(f).map(p => ({ x: p.x, y: p.y, radius: p.kind === 'orb' ? 270 : 265,
-        color: p.kind === 'orb' ? '#67bde3' : '#ffc079', power: cryptFlicker(p, time) * (p.kind === 'orb' ? .9 : 1) }));
+        color: p.kind === 'orb' ? dungeonTheme(f.seed).light : '#ffc079', power: cryptFlicker(p, time) * (p.kind === 'orb' ? .9 : 1) }));
 }
 interface LightCache { masks: Map<string, readonly CryptPoint[]>; samples: Map<string, boolean> }
 const masks = new WeakMap<DungeonFloor, LightCache>();

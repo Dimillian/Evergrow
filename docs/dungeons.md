@@ -1,8 +1,8 @@
-# Rootbound Crypt
+# Themed dungeons
 
-Local regional scaling, 2026-09-08: New expeditions capture the regional baseline on first entry. Members use normal variation and rank offsets; the Warden is +3. Final treasure uses the boss level, side treasure baseline +1. Existing expeditions keep their saved floor, levels and chest receipts. See [regional scaling](region-scaling.md).
+Local regional scaling, 2026-09-08: New expeditions capture the regional baseline on first entry. Members use normal variation and rank offsets; the Warden is +3. Final treasure uses the boss level, side treasure baseline +1. New expeditions keep their captured levels and chest receipts. The layout-version change below deliberately invalidates older expedition payloads. See [regional scaling](region-scaling.md).
 
-Updated 2026-09-07. One complete, persistent dungeon floor; pacing, difficulty and art remain subject to player feedback. The original proposal is in [dungeons and events](dungeons-and-events.md).
+Updated 2026-09-08. Three themed variants of a complete, persistent dungeon floor; pacing, difficulty and art remain subject to player feedback. The original proposal is in [dungeons and events](dungeons-and-events.md).
 
 ## Finding and entering
 
@@ -12,22 +12,38 @@ Each entrance owns a separate floor, not distant overworld coordinates. On first
 
 ## Floor and encounters
 
-- Seeded 13–19-room floors: an entry chamber, branching combat routes, two optional treasure leaves and an exterior Warden arena.
-- Three layout tendencies vary how strongly growth follows the latest room: winding routes, branching interiors and longer galleries. Room dimensions and corridor widths vary with the layout. Adjacent connections may create loops; each treasure chamber remains a separate optional leaf.
-- Eight whole-floor orientations, seeded room proportions/offsets, and fixed encounter/reward identities. The previous fixed thirteen-room template has been removed.
-- Six to ten foes per ordinary chamber, six per treasure chamber, plus the Warden and four threshold guardians.
-- No living-actor count cap. Nearby room rosters still admit entirely outside camera exclusion bounds. No ambient refill or reward for unloading a room; wide views may defer admission until hidden positions exist.
-- Collision, projectiles and corridor navigation share the same worn room/corridor contours. Navigation uses bounded cached flow fields. Decorative sarcophagi, roots and masonry never obstruct those paths.
+- Seeded 7–9-room floors: entry, branching combat routes, two optional encounter leaves and an exterior Warden arena.
+- A short main route with two optional side chambers, occasional clear-wall shortcuts and eight whole-floor orientations. Rooms pack at varied offsets without a fixed grid. Passages join actual doorways, span 260–600-unit room gaps and can sweep around a longer corner. Continuous curves widen into small landings; their 128–160-unit base width expands along worn banks. There is no forced loop or repeated right-angle connector.
+- Mostly rectangular halls, occasional cross-shaped chambers and clipped octagonal rooms vary their dimensions and proportions by theme; the final arena is larger. Wall wear stays subtle so the architecture remains readable. Maps, collision and navigation consume the same worn contours.
+- Six to ten foes per ordinary chamber, authored event wave rosters, the Warden and four threshold guardians. Theme-specific enemy mixtures retain shared regional level and loot rules.
+- No actor-count cap. Ordinary members admit individually outside camera exclusion bounds. Event reinforcements use nearby hidden, body-clear approaches connected to the player through the shared navigation field. Admission retries are throttled to twice per second; wave clocks advance every simulation tick.
+- Decorative tombs, roots, anvils, furnaces, crystals, pools and containers sit in perimeter alcoves away from corridor mouths. They do not add invisible collision or obstruct navigation.
+
+## Chamber encounters
+
+Each floor has two optional encounter chambers drawn from three reusable recipes. Approach the altar and press E/controller interaction to begin; starting is persisted before live commitment.
+
+- **Bound Reliquary:** defeat three waves of five awakened guards.
+- **Fading Ward:** hold its circle for ten seconds per wave and defeat two waves of six guardians. Hold time only accumulates inside the circle.
+- **Oathbound Sentinel:** defeat an elite leader and its seven retainers.
+
+The shared wave system owns admission, two-second intermissions where applicable, hold progress and completion. A wave cannot clear before every roster member is defeated. Progress pauses when the player moves more than 650 units away and survives saves and travel. Other chamber events wait until the active event finishes. Completion unlocks the chamber treasure; approaching a cleared chest opens it automatically through the normal durable reward transaction.
 
 The entrance remains usable throughout. Killing the Warden unlocks the final chest and another exit near the arena. Exits return to the surface entrance.
 
-## Crypt atmosphere
+## Themes and atmosphere
 
-The crypt has its own dark ambient illumination, independent of outdoor daylight. Warm wall torches and cold suspended orbs illuminate the actual floor, walls and monsters; cached visibility fans stop each light at masonry. The player carries a modest neutral light, while attacks and spells retain their shared dynamic light budget. Hot flame/orb cores, rising embers and orbiting sparks render after surface illumination and before CRT bloom. Reduced motion freezes their animation.
+The entrance seed selects one of three named themes, shared by entrance labels, maps and the interior renderer:
 
-Room recesses and uneven corridor shoulders use one deterministic contour for terrain, collision, navigation and both maps. These contours extend the existing clear rectangles, preserving current dungeon positions, encounters and saves. The generated graph uses the same contour and lighting pipeline. Chipped staggered flagstones, damp patches, exposed wall courses, worn and displaced tomb lids, roots, bones and old blood trails provide the burial-chamber detail. Decoration does not obstruct combat routes.
+| Theme | Materials and props | Light and monsters |
+| --- | --- | --- |
+| Rootbound Crypt | Mossy masonry, split tombs, exposed roots and burial debris | Green witchlight; stalkers, hounds, archers, brutes and casters |
+| Cinder Foundry | Warm basalt, riveted plates, anvils and burning furnaces | Ember-orange cores; acolytes, brutes, archers and storm sentinels |
+| Drowned Vault | Blue limestone, shallow water patches and crystal alcoves | Cold blue light; revenants, mire spitters, wisps and archers |
 
-Terrain remains tile-cached and world-aligned. Light masks are limited to 96 rays per source, cached at eight-unit positions with 256 masks per floor and a bounded occupancy cache; the renderer retains its eighteen-light budget. Fixture anchors are shared by art and illumination.
+Each uses dark ambient illumination independent of outdoor daylight. Wall torches, suspended orbs and emissive furnace/crystal fixtures illuminate actual floor, walls and actors, with masonry-aware cached visibility fans. Player/spell lights retain the shared dynamic budget. Hot cores and sparks render before CRT bloom; reduced motion freezes animation.
+
+Terrain remains tile-cached and world-aligned. Light masks are limited to 96 rays per source, cached at eight-unit positions with 256 masks per floor and a bounded occupancy cache; the renderer retains its eighteen-light budget. Fixture anchors are shared by art and illumination. The Hollow Warden remains the shared final boss in this pass.
 
 ## Hollow Warden
 
@@ -48,9 +64,9 @@ The arena stays escapable. Wounds, deaths and triggered guardian waves persist; 
 
 Ordinary enemies keep the existing source-level loot tables. The Warden awards six normal Stalkers' baseline XP through the normal level-gap adjustment, and one kill's potion credit, with no extra generic equipment or coin roll.
 
-Each optional chest provides one veteran-weight item at D + 1 and 18 × (1 + 0.1 × (D − 1)) gold. The final chest provides three items using normal/veteran/elite rarity tables at D / D + 1 / D + 2, and 45–70 × (1 + 0.1 × (D − 1)) gold. Shared item-level limits apply. No guaranteed Rare item or enhancement bonus.
+Each optional chest provides one veteran-weight item at baseline +1. The final chest provides three items using normal/veteran/elite rarity tables at the Warden’s level (baseline +3). Gold is 18 for side treasure or 45–70 for final treasure, multiplied by 1 + 0.1 × (reward level − 1). Shared regional reward ceilings and item-level limits apply. No guaranteed Rare item or enhancement bonus.
 
-Chests open with one E press, without a channel or countdown; animated lids and warm light feedback play after the durable claim. Items and coins appear physically and use existing pickup notifications. Delivery masks and ground insertion persist together before commitment. Equipment always delivers into the newest-1,024 ground queue, replacing its oldest items as needed. Full gold-pile capacity leaves only gold pending; subsequent interaction delivers the missing gold without repeating equipment. A full bag does not erase treasure or block the exit. Shared chest art animates anticipation, hinged lids and a burst of light. Staggered item/coin arcs use checked landing positions and persist their flight metadata; pickup waits for landing.
+Cleared chests open automatically when approached, with E also supported and no channel or countdown; animated lids and warm light feedback play after the durable claim. Items and coins appear physically and use existing pickup notifications. Delivery masks and ground insertion persist together before commitment. Equipment always delivers into the newest-1,024 ground queue, replacing its oldest items as needed. Full gold-pile capacity leaves only gold pending; subsequent interaction delivers the missing gold without repeating equipment. A full bag does not erase treasure or block the exit. Shared chest art animates anticipation, hinged lids and a burst of light. Staggered item/coin arcs use checked landing positions and persist their flight metadata; pickup waits for landing.
 
 ## Travel, maps and saving
 
@@ -60,10 +76,10 @@ Town portal P uses the existing cancellable channel. Its return endpoint include
 
 The minimap shows the local explored floor. The large map supports drag/zoom, discovered chest/boss hover labels and an Overworld button. Floor discovery never writes to the surface chart. Surface entrance tooltips identify active/cleared expeditions.
 
-One live-Warden expedition is allowed per character. There is no eight-expedition lifetime quota. Unfinished floors, optional rewards, loose loot and return links retain their runs. Fully exhausted floors retire to exact cleared-entrance receipts during durable travel; these entrances remain marked cleared and cannot regenerate rewards. The 8,388,608-code-unit checkpoint safety ceiling still applies; failed writes preserve both locations. Generation 7 and dungeon generator version 2 require fresh test characters. See [world-state longevity](world-state-longevity.md).
+One live-Warden expedition is allowed per character. There is no eight-expedition lifetime quota. Unfinished floors, optional rewards, loose loot and return links retain their runs. Fully exhausted floors retire to exact cleared-entrance receipts during durable travel; these entrances remain marked cleared and cannot regenerate rewards. The 8,388,608-code-unit checkpoint safety ceiling still applies; failed writes preserve both locations. Dungeon layout version 4 is stored explicitly per expedition. Older saved expeditions cannot load into these new layouts; their saves remain stored and are never deleted. Use a fresh test character if an old character contains an expedition. Characters without an old expedition are unaffected by this layout change. See [world-state longevity](world-state-longevity.md).
 
 ## Ownership and review
 
-`dungeon.ts` owns immutable blueprints and headless geometry; `dungeon-contours.ts` shares worn outlines, `dungeon-surface.ts` draws cached masonry, and `dungeon-lighting.ts` owns fixture anchors and bounded visibility masks; `dungeon-world.ts` adapts them to rendering/collision; `dungeon-state.ts` owns persistent location contents; `dungeon-runtime.ts` admits roster actors; `dungeon-boss.ts` owns boss decisions; `dungeon-command.ts` stages transitions and chest transactions. Damage, statuses, XP, item generation and gold remain shared with the existing game.
+`dungeon-layout.ts` packs chambers and connects doors; `dungeon-passage.ts` builds shared curved passage polygons; `dungeon-content.ts` owns theme/event recipes; `dungeon-events.ts` advances persisted chamber encounters; `dungeon.ts` owns immutable blueprints and headless geometry; `dungeon-contours.ts` shares worn outlines, `dungeon-surface.ts` draws cached masonry, and `dungeon-lighting.ts` owns fixture anchors and bounded visibility masks; `dungeon-world.ts` adapts them to rendering/collision; `dungeon-state.ts` owns persistent location contents; `dungeon-runtime.ts` admits roster actors; `dungeon-boss.ts` owns boss decisions; `dungeon-command.ts` stages transitions and chest transactions. Damage, statuses, XP, item generation and gold remain shared with the existing game.
 
-`/dungeon.html` is a local, save-free review of the entrance, burial chamber, passage, Warden arena and explored floor. Lights animate at up to 30 FPS over frozen actors; it never advances gameplay and respects reduced motion. Tests cover deterministic seeds, collision-safe routes, offscreen admission, casualties, threshold waves, control, reward ownership, full ground capacity, failed saves and town/death returns.
+`/dungeon.html?view=gallery&seed=7319` is the local, save-free Dungeon workshop in the World workspace. Compare three themed maps, enter a seed, generate a new seed, click rooms, inspect chambers/corridors/encounters and export maps to PNG. It uses the actual generator, map and scene renderer. Lights animate at up to 30 FPS over frozen actors; it never advances gameplay and respects reduced motion. Tests cover deterministic seeds, collision-safe routes, offscreen admission, casualties, threshold waves, control, reward ownership, full ground capacity, failed saves and town/death returns.

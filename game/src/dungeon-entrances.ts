@@ -1,3 +1,4 @@
+import { dungeonTheme } from './dungeon-content.ts';
 import type { DungeonEntrance } from './dungeon.ts';
 import type { World } from './world.ts';
 import { getZoneAt } from './zone-progression.ts';
@@ -7,7 +8,7 @@ export function dungeonEntrances(world: Pick<World, 'seed' | 'getWildernessSites
         return [];
     const out: DungeonEntrance[] = [];
     const add = (id: string, px: number, py: number, seed: number) => { if (px < x || py < y || px >= x + w || py >= y + h)
-        return; out.push({ id, name: 'Rootbound Crypt', x: px, y: py, seed: seed >>> 0, level: Math.min(1e6, getZoneAt(px, py, world.seed).level + 1), biome: world.sampleBiome(px, py).id }); };
+        return; out.push({ id, name: dungeonTheme(seed).name, x: px, y: py, seed: seed >>> 0, level: Math.min(1e6, getZoneAt(px, py, world.seed).level + 1), biome: world.sampleBiome(px, py).id }); };
     if (x < 0 && x + w > -1000 && y < 1000 && y + h > 0)
         for (let i = 0; i < 32; i++) {
             const px = -520 + (i % 8) * 48, py = 380 + Math.floor(i / 8) * 56;

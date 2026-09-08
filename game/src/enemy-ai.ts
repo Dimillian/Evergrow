@@ -1,3 +1,4 @@
+import { hasWalkableSegment } from './world-navigation.ts';
 import { goblinSpeed, goblinDamage } from './warband.ts';
 import { alertEnemy, transitionEnemy } from './enemy-state.ts';
 import { ENEMY_AI_RULES, ENEMY_DEFINITIONS, ENEMY_SIGNATURE_ATTACKS, enemyAttackDefinition, type EnemyDefinition, type ProjectileDefinition } from './combat-content.ts';
@@ -35,7 +36,12 @@ function separatedMotion(enemy: Enemy, vx: number, vy: number, context: EnemyAIC
 }
 
 function moveToward(enemy: Enemy, x: number, y: number, speed: number, dt: number, context: EnemyAIContext): void {
-  if (context.world.navigationTarget && !context.visible(enemy.x, enemy.y, x, y)) { const target = context.world.navigationTarget(enemy.x,enemy.y,x,y); x=target.x; y=target.y; }
+  // A flanking point may land inside scenery. Keep closing on the player instead
+  // of asking navigation to reach an occupied decorative anchor.
+  if (enemy.state === 'chase' && enemy.seesPlayer && context.world.blocked(x, y, enemy.radius + 1)) {
+    x = context.player.x; y = context.player.y;
+  }
+  if (context.world.navigationTarget && !hasWalkableSegment(context.world, enemy.x, enemy.y, x, y, enemy.radius + 1)) { const target = context.world.navigationTarget(enemy.x,enemy.y,x,y,enemy.radius + 1); x=target.x; y=target.y; }
   const dx = x - enemy.x, dy = y - enemy.y, distance = Math.hypot(dx, dy);
   if (distance < .1) return;
   // A patrol target drifts much more slowly than a hound can run. Arrive gently
@@ -122,7 +128,7 @@ function chase(enemy: Enemy, dt: number, context: EnemyAIContext, definition: En
     transitionEnemy(enemy, 'windup', definition.windup); return;
   }
 
-  if (!hasSight) { moveToward(enemy, targetX, targetY, pursuitSpeed * .8, dt, context); return; }
+  if (!hasSight || !context.visible(enemy.x, enemy.y, targetX, targetY)) { moveToward(enemy, targetX, targetY, pursuitSpeed * .8, dt, context); return; }
   const side = enemy.id % 2 ? 1 : -1;
   if (definition.role === 'ranged') {
     const radial = distance < definition.preferredDistance - 28 ? -.75

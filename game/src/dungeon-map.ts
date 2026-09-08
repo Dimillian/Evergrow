@@ -1,3 +1,4 @@
+import { dungeonTheme, DUNGEON_EVENTS } from './dungeon-content.ts';
 import { bindTouchCanvas } from './touch-canvas.ts';
 import { drawJourneyMapMarker, type JourneyMarker } from './journey-marker.ts';
 import { cryptOutline } from './dungeon-contours.ts';
@@ -7,7 +8,7 @@ import { getMinimapRect } from './map-view.ts';
 import { trapDialogFocus } from './ui-components.ts';
 import { text } from './font.ts';
 import './dungeon.css';
-export function dungeonMapBounds(f: DungeonFloor) { const left = Math.min(...f.rooms.map(r => r.x)) - 100, top = Math.min(...f.rooms.map(r => r.y)) - 100, right = Math.max(...f.rooms.map(r => r.x + r.width)) + 100, bottom = Math.max(...f.rooms.map(r => r.y + r.height)) + 100; return { x: (left + right) / 2, y: (top + bottom) / 2, width: right - left, height: bottom - top }; }
+export function dungeonMapBounds(f: DungeonFloor) { const left = Math.min(...[...f.rooms,...f.corridors].map(r => r.x)) - 100, top = Math.min(...[...f.rooms,...f.corridors].map(r => r.y)) - 100, right = Math.max(...[...f.rooms,...f.corridors].map(r => r.x + r.width)) + 100, bottom = Math.max(...[...f.rooms,...f.corridors].map(r => r.y + r.height)) + 100; return { x: (left + right) / 2, y: (top + bottom) / 2, width: right - left, height: bottom - top }; }
 export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run: DungeonRun, p: {
     x: number;
     y: number;
@@ -32,17 +33,28 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
         c.closePath();
     };
     const seen = new Set(run.explored);
-    c.fillStyle = '#263c3b';
+    const theme=dungeonTheme(f.seed);
+    c.fillStyle = theme.map;
     f.edges.forEach(([a, b], i) => { if (seen.has(a) || seen.has(b))
-        for (const r of f.corridors.slice(i * 2, i * 2 + 2))
+        for (const r of f.corridors.filter(r=>r.connection===i))
             { shape(r); c.fill(); } });
     for (const r of f.rooms)
         if (seen.has(r.id)) {
-            c.fillStyle = r.kind === 'boss' ? '#49433a' : '#3b5550';
-            c.strokeStyle = '#94b2a0';
+            c.fillStyle = r.kind === 'boss' ? '#67533e' : theme.map;
+            c.strokeStyle = theme.wall;
             c.lineWidth = 1 / zoom;
             shape(r); c.fill(); c.stroke();
         }
+    for(const prop of f.props??[]) {
+        const room=f.rooms.find(r=>prop.x>=r.x&&prop.x<=r.x+r.width&&prop.y>=r.y&&prop.y<=r.y+r.height);
+        if(!room||!seen.has(room.id))continue;
+        c.fillStyle=prop.kind==='pool'?'#6bb3c455':theme.wall+'70';
+        c.fillRect(prop.x-14,prop.y-20,28,40);
+    }
+    for(const event of f.events??[])if(seen.has(event.room)){
+        c.strokeStyle=run.events?.[event.id]?.finished?'#688879':theme.accent;c.lineWidth=2/zoom;
+        c.beginPath();c.arc(event.x,event.y,7/zoom,0,7);c.stroke();
+    }
     f.chests.forEach((ch, i) => { if (seen.has(ch.room)) {
         c.fillStyle = (run.chestMasks[i] & (i === 2 ? 15 : 9)) === (i === 2 ? 15 : 9) ? '#506459' : '#e7c485';
         c.fillRect(ch.x - 4 / zoom, ch.y - 3 / zoom, 8 / zoom, 6 / zoom);
@@ -52,7 +64,7 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
     c.beginPath();
     c.arc(f.entry.x, f.entry.y, 5 / zoom, 0, 7);
     c.stroke();
-    if (seen.has(12)) {
+    if (seen.has(f.rooms.find(r=>r.kind==='boss')!.id)) {
         const b = f.members.find(m => m.id === 'warden')!;
         c.fillStyle = run.states.warden.hp > 0 ? '#e48c73' : '#78887f';
         c.beginPath();
@@ -135,7 +147,7 @@ export class DungeonMap {
         if (!this.floor || !this.run)
             return;
         const r = this.canvas.getBoundingClientRect(), x = this.center.x + ((clientX - r.left) * 1200 / r.width - 600) / this.zoom, y = this.center.y + ((clientY - r.top) * 760 / r.height - 380) / this.zoom;
-        const targets = [{ ...this.floor.entry, label: 'Exit to overworld', room: 0 }, ...this.floor.chests.map((ch, i) => ({ ...ch, label: this.run!.chestMasks[i] === (i === 2 ? 15 : 9) ? 'Chest · Claimed' : i === 2 ? 'Warden chest' : 'Guarded chest' })), { ...this.floor.members.find(m => m.id === 'warden')!, label: this.run.states.warden.hp > 0 ? 'The Hollow Warden' : 'The Hollow Warden · Defeated', room: 12 }];
+        const targets = [...(this.floor.events??[]).map(e=>({...e,label:DUNGEON_EVENTS[e.kind].name})), { ...this.floor.entry, label: 'Exit to overworld', room: 0 }, ...this.floor.chests.map((ch, i) => ({ ...ch, label: this.run!.chestMasks[i] === (i === 2 ? 15 : 9) ? 'Chest · Claimed' : i === 2 ? 'Warden chest' : 'Guarded chest' })), { ...this.floor.members.find(m => m.id === 'warden')!, label: this.run.states.warden.hp > 0 ? 'The Hollow Warden' : 'The Hollow Warden · Defeated', room: this.floor.rooms.find(r=>r.kind==='boss')!.id }];
         const target = targets.find(p => this.run!.explored.includes(p.room) && Math.hypot(p.x - x, p.y - y) < 16 / this.zoom);
         this.tooltip.hidden = !target;
         if (!target)

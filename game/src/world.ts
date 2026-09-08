@@ -1,6 +1,6 @@
 import { bossLairCell, generateBossLair } from './wilderness-sites.ts';
 import { landscapePropProbability, landscapeRelief } from './natural-landscape.ts';
-import { WorldNavigation } from './world-navigation.ts';
+import { worldNavigation } from './world-navigation.ts';
 import type { MaterialId } from './material-content.ts';
 import { furnitureContainer, furnitureContainerId, type BreakableContainer } from './breakable-containers.ts';
 import { waterTerrainSteps } from './water-terrain-art.ts';
@@ -400,7 +400,7 @@ export class World {
   }
 
   private brokenContainers: ReadonlySet<string> = new Set();
-  setBrokenContainers(ids: ReadonlySet<string>): void { this.brokenContainers = ids; }
+  setBrokenContainers(ids: ReadonlySet<string>): void { this.brokenContainers = ids; worldNavigation(this).clear(); }
   getContainers(x: number, y: number, radius: number): readonly BreakableContainer[] {
     if (!validWorldRectangle(x - radius, y - radius, radius * 2, radius * 2)) return [];
     const region = this.collisionRegion(x - radius, y - radius, radius * 2, radius * 2);
@@ -429,8 +429,7 @@ export class World {
   }
 
   /** Sweep short segments against trunk circles, preserving the unblocked axis. */
-  private navigation = new WorldNavigation(this);
-  navigationTarget(x:number,y:number,tx:number,ty:number) { return this.navigation.target(x,y,tx,ty); }
+  navigationTarget(x:number,y:number,tx:number,ty:number,radius = 18) { return worldNavigation(this).target(x,y,tx,ty,radius); }
   move(x: number, y: number, dx: number, dy: number, radius: number): { x: number; y: number } {
     if (![x, y, x + dx, y + dy].every(isWorldCoordinate) || ![dx, dy, radius].every(Number.isFinite)
       || radius < 0 || radius > WORLD_QUERY_LIMITS.collisionRadius
