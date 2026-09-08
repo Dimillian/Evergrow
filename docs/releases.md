@@ -4,13 +4,13 @@
 
 ## Last verified publication
 
-- Game v0.6.1 / Sites version 23, publicly deployed on 2026-09-08 at 06:10:06 UTC.
-- Published source: `0db7bef9f96efbf5c2c4f19feb0074f6fadc5f0e`.
-- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_a975a22ca79881919a97a68895650b53`.
-- Deployment: `appgdep_6a9fa6ae705881919b83850a01915b79`; Sites returned `succeeded`.
-- Existing Cloud characters now receive equipped gear scores automatically, without returning to play or saving again.
-- Passed 21 focused cloud/ranking tests, type checking, the cloud-enabled client/server build and release validation.
-- Additive migration `0003_blue_mercury.sql` was packaged and applied. Live public verification confirmed all 89 existing characters have gear scores and the backfill reports complete. Save payloads and progress remain unchanged.
+- Game v0.6.2 / Sites version 24, publicly deployed on 2026-09-08 at 06:16:57 UTC.
+- Published source: `0035eca3521bbd0684524377429de8497f2d0e1c`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_b4e3d63c272c819183a56e1d32658633`.
+- Deployment: `appgdep_6a9fa84be47c81919cbb66e27fce92e4`; Sites returned `succeeded`.
+- Removed the leaderboard eyebrow, subtitle and promotional footer copy, with a more compact heading.
+- Passed three changelog checks, type checking, the cloud-enabled client/server build and release validation.
+- No persistence or schema changes. The preceding v0.6.1 publication verified gear scores for all 89 existing Cloud characters.
 - Authenticated cross-device save/Chronicle acceptance remains a player check.
 
 ## Before each requested Sites publication
