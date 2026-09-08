@@ -1,0 +1,19 @@
+{
+  "id": "dark-forest-long",
+  "title": "Dark forest",
+  "description": "Slow baritone guitar, hanging harmonics and a quiet sense of danger.",
+  "bpm": 58,
+  "keyscale": "C minor",
+  "duration": 120,
+  "seed": 8732003,
+  "caption": "Quiet dark woodland acoustic instrumental. A low baritone acoustic guitar plays very slow broken minor chords and a sparse questioning melody, leaving long spaces between phrases. Delicate ringing steel-string harmonics and a faint woody bowed drone hover behind the guitar. A handful of dry branch-like wood clicks, almost no rhythmic percussion. Still mist in an ancient dead forest, soft footsteps through moss, melancholy solitude and subtle lurking danger. Calmer outdoor exploration music for a late-1990s gothic role playing game. Raw intimate fingerpicking, dark muted timbres, natural string noises, irregular human pacing, restrained small ensemble. A quiet musical miniature with a wistful recurring phrase and an unresolved ending. A complete two minute evolving composition: an intimate opening, a contrasting quiet middle passage, a restrained return of the main motif, then a natural unresolved decaying ending. Patient pacing with long breathing spaces. No abrupt ending.",
+  "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music, driving drums, fast rhythm, oud, desert music, dramatic horror stingers, aggressive dissonant noise",
+  "model": "acestep-v15-turbo",
+  "languageModel": "acestep-5Hz-lm-1.7B",
+  "backend": "MLX",
+  "shift": 3.0,
+  "generationSeconds": 171.23,
+  "sourceRevision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+  "master": "/Users/dimillian/.local/share/evergrow-music/masters/9d85d5da-2140-e6d8-a74b-c445a4b649bc.wav",
+  "output": "dark-forest-long.mp3"
+}

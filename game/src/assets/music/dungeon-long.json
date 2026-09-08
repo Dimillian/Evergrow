@@ -1,0 +1,19 @@
+{
+  "id": "dungeon-long",
+  "title": "Dungeon",
+  "description": "Subterranean drones, prepared piano, scraping metal and uneven ritual pulses.",
+  "bpm": 48,
+  "keyscale": "C minor",
+  "duration": 120,
+  "seed": 8732002,
+  "caption": "Experimental electroacoustic horror instrumental, oppressive subterranean dungeon soundscape. Deep unstable analog bass drones, stretched bowed cymbals, scraped metal, isolated low prepared-piano clusters, and distant irregular ritual drum thuds. Slowly beating dissonant tones drift against each other, brief reverse echoes emerge from the dark and decay into silence. Claustrophobic forgotten crypt, ancient machinery, approaching unseen danger. Sparse atonal late-1990s gothic game horror score with gritty tape texture, deep low end and hollow stone reverberation. Long tense spaces interrupted by disturbing small sounds. A continuous evolving atmosphere, not a conventional song. A complete two minute evolving composition: an intimate opening, a contrasting quiet middle passage, a restrained return of the main motif, then a natural unresolved decaying ending. Patient pacing with long breathing spaces. No abrupt ending.",
+  "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music",
+  "model": "acestep-v15-turbo",
+  "languageModel": "acestep-5Hz-lm-1.7B",
+  "backend": "MLX",
+  "shift": 3.0,
+  "generationSeconds": 124.8,
+  "sourceRevision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+  "master": "/Users/dimillian/.local/share/evergrow-music/masters/8657576b-1a10-5f3a-0650-435ddf8fbed2.wav",
+  "output": "dungeon-long.mp3"
+}

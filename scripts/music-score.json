@@ -1,0 +1,135 @@
+[
+  {
+    "id": "menu-long",
+    "title": "Home",
+    "description": "Raw twelve-string guitar, uneasy fingerpicking and a lonely descending motif.",
+    "bpm": 76,
+    "keyscale": "A minor",
+    "duration": 120,
+    "seed": 8732000,
+    "caption": "Dark acoustic folk instrumental, intimate twelve-string steel-string guitar duet. A solitary fingerpicked guitar starts immediately with a memorable descending minor-key motif, ringing open strings, unsettling semitone suspensions and dissonant harmonics. A second lower guitar answers with sparse bass notes and imperfect arpeggios. Dry close-miked picks and string squeaks against a distant low ominous drone. Haunted medieval village at night, sorrowful, earthy, mysterious, old 1990s gothic dungeon-crawler soundtrack atmosphere. Restrained raw acoustic recording with shifting phrases, musical tension and audible space. Through-composed instrumental cue. A complete two minute evolving composition: an intimate opening, a contrasting quiet middle passage, a restrained return of the main motif, then a natural unresolved decaying ending. Patient pacing with long breathing spaces. No abrupt ending.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music"
+  },
+  {
+    "id": "wilderness-long",
+    "title": "Arid wilds",
+    "description": "Restless hand drums, dry plucked strings and unsettling low reed phrases.",
+    "bpm": 94,
+    "keyscale": "E minor",
+    "duration": 120,
+    "seed": 8732001,
+    "caption": "Dark ritual folk instrumental, driving hand percussion and plucked strings. Interlocking frame drums, rattles and dry wood knocks create an irregular hypnotic walking rhythm. Low oud and steel-string guitar repeat angular Phrygian figures, with occasional nasal duduk phrases and sudden breaks into silence. Desolate dangerous wilderness, strange ancient ruins, primitive earthy energy, tense exploration music for a 1990s gothic action role playing game. Raw tactile percussion, deep bass drone, lean ensemble, unsettling rather than heroic. The pulse builds and recedes while the plucked-string motif mutates. Instrumental underground folk soundtrack. A complete two minute evolving composition: an intimate opening, a contrasting quiet middle passage, a restrained return of the main motif, then a natural unresolved decaying ending. Patient pacing with long breathing spaces. No abrupt ending.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music"
+  },
+  {
+    "id": "dungeon-long",
+    "title": "Dungeon",
+    "description": "Subterranean drones, prepared piano, scraping metal and uneven ritual pulses.",
+    "bpm": 48,
+    "keyscale": "C minor",
+    "duration": 120,
+    "seed": 8732002,
+    "caption": "Experimental electroacoustic horror instrumental, oppressive subterranean dungeon soundscape. Deep unstable analog bass drones, stretched bowed cymbals, scraped metal, isolated low prepared-piano clusters, and distant irregular ritual drum thuds. Slowly beating dissonant tones drift against each other, brief reverse echoes emerge from the dark and decay into silence. Claustrophobic forgotten crypt, ancient machinery, approaching unseen danger. Sparse atonal late-1990s gothic game horror score with gritty tape texture, deep low end and hollow stone reverberation. Long tense spaces interrupted by disturbing small sounds. A continuous evolving atmosphere, not a conventional song. A complete two minute evolving composition: an intimate opening, a contrasting quiet middle passage, a restrained return of the main motif, then a natural unresolved decaying ending. Patient pacing with long breathing spaces. No abrupt ending.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music"
+  },
+  {
+    "id": "dark-forest-long",
+    "title": "Dark forest",
+    "description": "Slow baritone guitar, hanging harmonics and a quiet sense of danger.",
+    "bpm": 58,
+    "keyscale": "C minor",
+    "duration": 120,
+    "seed": 8732003,
+    "caption": "Quiet dark woodland acoustic instrumental. A low baritone acoustic guitar plays very slow broken minor chords and a sparse questioning melody, leaving long spaces between phrases. Delicate ringing steel-string harmonics and a faint woody bowed drone hover behind the guitar. A handful of dry branch-like wood clicks, almost no rhythmic percussion. Still mist in an ancient dead forest, soft footsteps through moss, melancholy solitude and subtle lurking danger. Calmer outdoor exploration music for a late-1990s gothic role playing game. Raw intimate fingerpicking, dark muted timbres, natural string noises, irregular human pacing, restrained small ensemble. A quiet musical miniature with a wistful recurring phrase and an unresolved ending. A complete two minute evolving composition: an intimate opening, a contrasting quiet middle passage, a restrained return of the main motif, then a natural unresolved decaying ending. Patient pacing with long breathing spaces. No abrupt ending.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music, driving drums, fast rhythm, oud, desert music, dramatic horror stingers, aggressive dissonant noise"
+  },
+  {
+    "id": "verdant-forest-long",
+    "title": "Verdant forest",
+    "description": "Warm wandering guitar, wooden flute and soft woodland rhythms.",
+    "bpm": 78,
+    "keyscale": "D minor",
+    "timesignature": "6",
+    "duration": 120,
+    "seed": 8732004,
+    "caption": "Earthy atmospheric woodland folk instrumental. Warm fingerpicked nylon-string guitar and a low wooden flute gently trade an original wandering Dorian melody. Light lute countermelodies, soft brushed frame-drum taps and quiet woody textures create a relaxed flowing six-eight pulse. Ancient green forest, moss and filtered sunlight, gentle movement in the canopy, a feeling of discovery with lingering mystery. Rustic late-1990s fantasy role playing game exploration music, understated and intimate, wistful rather than celebratory. Sparse human acoustic performances, warm midrange, organic uneven phrasing, clear melody with breathing space. The flute appears only for short answering phrases while the guitar remains central. A complete two minute evolving composition: an intimate opening, a contrasting quiet middle passage, a restrained return of the main motif, then a natural unresolved decaying ending. Patient pacing with long breathing spaces. No abrupt ending.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music, fast Celtic jig, festive folk dance, epic orchestra, panpipe relaxation music, oud, desert music, strong driving percussion"
+  },
+  {
+    "id": "cold-wilds",
+    "title": "Cold wilds",
+    "description": "Cold wilds",
+    "bpm": 56,
+    "keyscale": "E minor",
+    "duration": 120,
+    "seed": 8732010,
+    "caption": "Sparse cold acoustic exploration instrumental. Widely spaced steel-string guitar harmonics, bowed psaltery, a low wooden flute with breathy short replies and deep resonant plucked bass strings. Lonely windswept northern moorlands and snowy pines, austere ancient beauty, restrained melancholy and mystery. Intimate raw acoustic gothic 1990s role playing game score, human uneven phrasing. Mostly guitar and silence, no large orchestra. A full two minute evolving instrumental with contrasting phrases, a quieter middle section and a natural decaying ending.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music"
+  },
+  {
+    "id": "cold-wilds-2",
+    "title": "Northern stones",
+    "description": "Northern stones",
+    "bpm": 62,
+    "keyscale": "A minor",
+    "duration": 120,
+    "seed": 8732011,
+    "caption": "Quiet northern wilderness acoustic instrumental, dark steel-string guitar ostinato with low viola da gamba and occasional hollow wooden knocks. Windswept ruins in snow, solitary travel, very subtle danger and wistful restraint. Thin icy upper harmonics against warm low strings, unhurried incomplete melodic phrases. Raw small ensemble gothic game soundtrack with generous silences, never a heroic orchestral score. A full two minute evolving instrumental with contrasting phrases, a quieter middle section and a natural decaying ending.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music"
+  },
+  {
+    "id": "ember-wilds",
+    "title": "Emberfall",
+    "description": "Emberfall",
+    "bpm": 64,
+    "keyscale": "C minor",
+    "duration": 120,
+    "seed": 8732012,
+    "caption": "Restrained scorched wilderness electroacoustic instrumental. Low prepared acoustic guitar plucks, dry rattles, sparse frame drum strokes, bowed bronze and a barely audible gravelly bass drone. Blackened forests, volcanic ash, red embers under dark basalt. Uneasy earthy exploration, strange dissonant intervals and patient pauses. Raw tactile gothic game soundtrack, shadowy and mysterious, very sparse rather than aggressive or cinematic. A full two minute evolving instrumental with contrasting phrases, a quieter middle section and a natural decaying ending.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music"
+  },
+  {
+    "id": "ember-wilds-2",
+    "title": "Ashen road",
+    "description": "Ashen road",
+    "bpm": 54,
+    "keyscale": "E minor",
+    "duration": 120,
+    "seed": 8732013,
+    "caption": "Dark atmospheric acoustic instrumental for a scorched ancient landscape. Slow detuned baritone guitar figures, hollow clay drum taps spaced far apart, creaking bowed strings and faint metallic scrapes. A lonely unresolved melody returns through a bed of smouldering low drones. Intimate, raw and subtle 1990s gothic exploration score, long rests, restrained tension, absolutely no epic crescendo. A full two minute evolving instrumental with contrasting phrases, a quieter middle section and a natural decaying ending.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music"
+  },
+  {
+    "id": "town",
+    "title": "Hearth",
+    "description": "Hearth",
+    "bpm": 68,
+    "keyscale": "A minor",
+    "duration": 120,
+    "seed": 8732014,
+    "caption": "Intimate fingerpicked acoustic guitar instrumental for a small medieval refuge in a dangerous world. Warm nylon guitar plays a quiet wistful minor melody, a second guitar answers gently, with occasional wooden flute breath and low bowed bass notes. Candlelit shelter, modest comfort mixed with sorrow, soft human string noises and raw close recording. Restrained gothic village music, no cheerful tavern dance, no percussion groove. A full two minute evolving instrumental with contrasting phrases, a quieter middle section and a natural decaying ending.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music"
+  },
+  {
+    "id": "event",
+    "title": "The gathering",
+    "description": "The gathering",
+    "bpm": 88,
+    "keyscale": "C minor",
+    "duration": 120,
+    "seed": 8732015,
+    "caption": "Tense dark ritual acoustic instrumental for a dangerous sustained encounter. Repeating low plucked guitar and oud patterns, irregular frame drum pulses, dry wooden clacks and low bowed string tremors. Growing pressure, hostile ancient magic and purposeful movement, controlled earthy energy. Raw small ensemble gothic 1990s action role playing game score, sparse ominous motif, dynamic rises and brief retreats, no heroic fanfare or modern epic orchestra. A full two minute evolving instrumental with contrasting phrases, a quieter middle section and a natural decaying ending.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music"
+  },
+  {
+    "id": "boss",
+    "title": "Ancient hunger",
+    "description": "Ancient hunger",
+    "bpm": 96,
+    "keyscale": "C minor",
+    "duration": 120,
+    "seed": 8732016,
+    "caption": "Menacing gothic boss encounter instrumental. Heavy resonant ritual skin drums in an uneven insistent pulse, deep bowed bass drones, jagged low prepared piano and rough plucked steel strings. Brief high scraping-metal answers and ominous descending figures. A huge ancient creature waking beneath the earth, sustained focused danger. Raw dark electroacoustic 1990s dungeon crawler soundtrack, powerful but spacious enough for combat sounds, no heroic melody, no choir, no epic trailer orchestra. A full two minute evolving instrumental with contrasting phrases, a quieter middle section and a natural decaying ending.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music"
+  }
+]

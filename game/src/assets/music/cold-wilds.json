@@ -1,0 +1,19 @@
+{
+  "id": "cold-wilds",
+  "title": "Cold wilds",
+  "description": "Cold wilds",
+  "bpm": 56,
+  "keyscale": "E minor",
+  "duration": 120,
+  "seed": 8732010,
+  "caption": "Sparse cold acoustic exploration instrumental. Widely spaced steel-string guitar harmonics, bowed psaltery, a low wooden flute with breathy short replies and deep resonant plucked bass strings. Lonely windswept northern moorlands and snowy pines, austere ancient beauty, restrained melancholy and mystery. Intimate raw acoustic gothic 1990s role playing game score, human uneven phrasing. Mostly guitar and silence, no large orchestra. A full two minute evolving instrumental with contrasting phrases, a quieter middle section and a natural decaying ending.",
+  "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music",
+  "model": "acestep-v15-turbo",
+  "languageModel": "acestep-5Hz-lm-1.7B",
+  "backend": "MLX",
+  "shift": 3.0,
+  "generationSeconds": 222.76,
+  "sourceRevision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+  "master": "/Users/dimillian/.local/share/evergrow-music/masters/8588c176-44f3-5ef6-bac0-56db5731327f.wav",
+  "output": "cold-wilds.mp3"
+}

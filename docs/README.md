@@ -1,5 +1,6 @@
 # Documentation
 
+- [Dynamic soundtrack](dynamic-soundtrack.md): regional/encounter music, mix controls and audio lifecycle.
 - [Local music auditions](music-auditions.md): ACE-Step setup, repeatable prompts and the soundtrack listening page.
 
 - [Regional monsters](regional-monsters.md): six biome-native archetypes, attack cycles, population weights and the local bestiary.

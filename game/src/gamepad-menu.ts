@@ -34,7 +34,11 @@ export class GamepadMenu {
       : pad.held.has(PAD.down) || pad.move.y > .5 ? 'ArrowDown' : '';
     if (key && (key !== this.direction || now >= this.nextRepeat)) {
       const delta = key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1;
-      if (target instanceof HTMLSelectElement && (key === 'ArrowLeft' || key === 'ArrowRight')) {
+      if (target instanceof HTMLInputElement && target.type === 'range' && (key === 'ArrowLeft' || key === 'ArrowRight')) {
+        if (delta < 0) target.stepDown(); else target.stepUp();
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+        target.dispatchEvent(new Event('change', { bubbles: true }));
+      } else if (target instanceof HTMLSelectElement && (key === 'ArrowLeft' || key === 'ArrowRight')) {
         const options = [...target.options];
         let next = target.selectedIndex + delta;
         while (next >= 0 && next < options.length && options[next].disabled) next += delta;

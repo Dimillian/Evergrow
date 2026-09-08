@@ -1,0 +1,19 @@
+{
+  "id": "town",
+  "title": "Hearth",
+  "description": "Hearth",
+  "bpm": 68,
+  "keyscale": "A minor",
+  "duration": 120,
+  "seed": 8732014,
+  "caption": "Intimate fingerpicked acoustic guitar instrumental for a small medieval refuge in a dangerous world. Warm nylon guitar plays a quiet wistful minor melody, a second guitar answers gently, with occasional wooden flute breath and low bowed bass notes. Candlelit shelter, modest comfort mixed with sorrow, soft human string noises and raw close recording. Restrained gothic village music, no cheerful tavern dance, no percussion groove. A full two minute evolving instrumental with contrasting phrases, a quieter middle section and a natural decaying ending.",
+  "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music",
+  "model": "acestep-v15-turbo",
+  "languageModel": "acestep-5Hz-lm-1.7B",
+  "backend": "MLX",
+  "shift": 3.0,
+  "generationSeconds": 163.67,
+  "sourceRevision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+  "master": "/Users/dimillian/.local/share/evergrow-music/masters/f3c77fe9-fa30-2301-fb92-db38e72f1e1b.wav",
+  "output": "town.mp3"
+}

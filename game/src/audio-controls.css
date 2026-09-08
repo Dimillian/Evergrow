@@ -1,0 +1,19 @@
+.audio-sliders{display:grid;gap:14px;padding:14px 0;min-width:0}
+.audio-slider{display:grid;grid-template-columns:40px minmax(60px,1fr) 36px;gap:10px;align-items:center;color:var(--ui-text,#c4d2cc);font-size:14px}
+.audio-slider input{width:100%;min-width:0;margin:0;height:24px;accent-color:#b9b087;cursor:pointer}
+.audio-slider output{text-align:right;color:var(--ui-muted,#91a5a3);font-family:'Evergrow Numerals',sans-serif;font-size:13px}
+.audio-slider input:focus-visible{outline:1px solid #c4bb90;outline-offset:3px}
+.title-audio{position:absolute;bottom:22px;left:28px;z-index:8;font-size:14px;color:#bbc9c3}
+.title-audio>summary{cursor:pointer;list-style:none;padding:9px 16px;background:#101e24df;border:1px solid #778e865c}
+.title-audio>summary::-webkit-details-marker{display:none}
+.title-audio .audio-sliders{position:absolute;bottom:calc(100% + 8px);left:0;width:280px;padding:20px;background:#0b171ff5;border:1px solid #778e8660;box-shadow:0 12px 45px #0008}
+@media(max-width:620px){.title-audio{bottom:10px;left:12px}.title-audio .audio-sliders{width:250px}}
+
+.audio-pad-key{display:none;margin-left:8px;color:#c6ba88}.is-controller .audio-pad-key{display:inline}
+
+.audio-master{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #778e8640;padding-bottom:12px}.audio-master button{border:1px solid #778e8660;border-radius:0;background:#20332d;color:#c8d7cd;font:inherit;padding:5px 15px;cursor:pointer}
+.audio-slider input[type=range]{appearance:none;-webkit-appearance:none;background:transparent;border:0;border-radius:0;height:32px;padding:0}
+.audio-slider input::-webkit-slider-runnable-track{height:3px;background:#50665f;border:0}
+.audio-slider input::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height:17px;margin-top:-7px;border:1px solid #d7cc9e;border-radius:0;background:#b8ad83;box-shadow:0 0 9px #bdad7130}
+.audio-slider input::-moz-range-track{height:3px;background:#50665f;border:0}
+.audio-slider input::-moz-range-thumb{width:7px;height:15px;border:1px solid #d7cc9e;border-radius:0;background:#b8ad83}

@@ -1,3 +1,6 @@
+import { DEFAULT_AUDIO, audioVolume, type AudioChannel } from './audio-preferences.ts';
+import { MusicPolicy, type MusicIntent, type MusicScene } from './music-policy.ts';
+import { MusicPlayer } from './music-player.ts';
 import { skillSoundFamily, SKILL_SOUNDS } from './skill-audio-content.ts';
 import { MATERIALS } from './material-content.ts';
 import { eventMaterial } from './material-response.ts';
@@ -26,9 +29,48 @@ const MASTER_VOLUME = .34;
 const MAX_VOICES = 96;
 const SILENCE = .0001;
 
-/** Layered oscillators and filtered noise synthesize every sound; no audio assets. */
+/** Procedural SFX and streamed music share one context and master mute; their mixes stay independent. */
 export class GameAudio {
+  private musicFiles: Readonly<Record<string, string>>;
+  constructor(musicFiles: Readonly<Record<string, string>> = {}) { this.musicFiles = musicFiles; }
   enabled = true;
+  private volumes: Record<AudioChannel, number> = { ...DEFAULT_AUDIO };
+  private foreground = true;
+  private music?: MusicPlayer;
+  private musicPolicy = new MusicPolicy();
+  private intent: MusicIntent = { mood: 'home', duck: 1 };
+  private sfxGain: GainNode | null = null;
+  private panelAt = -Infinity;
+  getVolumes() { return { ...this.volumes }; }
+  setVolume(channel: AudioChannel, value: number) {
+    this.volumes[channel] = audioVolume(value, DEFAULT_AUDIO[channel]);
+    if (this.ctx && this.sfxGain) this.sfxGain.gain.setTargetAtTime(MASTER_VOLUME * this.volumes.sfx, this.ctx.currentTime, .03);
+    this.updateMusic();
+  }
+  score(now: number, scene: MusicScene) {
+    this.intent = this.musicPolicy.update(now, scene);
+    this.updateMusic();
+  }
+  private updateMusic() { this.music?.update(this.intent, this.volumes.music, this.enabled && this.foreground); }
+  setForeground(value: boolean) {
+    this.foreground = value;
+    this.music?.setRunning(value && this.enabled && this.volumes.music > 0);
+    if (this.ctx && !this.disposed) {
+      if (!value) void this.ctx.suspend().catch(() => {});
+      else if (this.enabled) void this.ctx.resume().catch(() => {});
+    }
+  }
+  panel(open: boolean) {
+    if (!this.enabled || !this.foreground || this.volumes.sfx <= 0 || !this.ctx || this.ctx.state !== 'running' || this.disposed) return;
+    const now = this.ctx.currentTime;
+    if (now - this.panelAt < .08) return;
+    this.panelAt = now;
+    // A soft leather/paper movement and muted wooden seating sound, without a bell.
+    this.hiss({ duration: open ? .16 : .12, frequency: open ? 950 : 650, endFrequency: 220,
+      volume: .12, attack: .012, body: true, type: 'lowpass' }, 1);
+    this.hiss({ duration: .045, frequency: 1600, endFrequency: 450, volume: .035, delay: open ? 0 : .065 }, 1);
+    this.tone(open ? 125 : 105, 65, .085, .07, 1, 'sine', open ? .025 : .07, .008);
+  }
   private goldSoundAt = -Infinity;
   private xpSoundAt = -Infinity;
   private levelSoundAt = -Infinity;
@@ -45,7 +87,7 @@ export class GameAudio {
   private disposed = false;
 
   async unlock() {
-    if (this.disposed) return;
+    if (this.disposed || !this.foreground) return;
     if (!this.ctx) {
       const ctx = new AudioContext();
       this.ctx = ctx;
@@ -63,11 +105,13 @@ export class GameAudio {
       this.peakGuard.curve = curve;
       this.peakGuard.oversample = '2x';
       this.master = ctx.createGain();
-      this.master.gain.value = this.enabled ? MASTER_VOLUME : 0;
+      this.master.gain.value = this.enabled ? 1 : 0;
+      this.sfxGain = ctx.createGain(); this.sfxGain.gain.value = MASTER_VOLUME * this.volumes.sfx;
       this.bus.connect(this.compressor);
       this.compressor.connect(this.peakGuard);
-      this.peakGuard.connect(this.master);
+      this.peakGuard.connect(this.sfxGain); this.sfxGain.connect(this.master);
       this.master.connect(ctx.destination);
+      if (Object.keys(this.musicFiles).length) this.music = new MusicPlayer(ctx, this.master, this.musicFiles);
       this.noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       this.bodyNoise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const white = this.noise.getChannelData(0), body = this.bodyNoise.getChannelData(0);
@@ -78,14 +122,18 @@ export class GameAudio {
         body[i] = Math.max(-1, Math.min(1, previous * 4.5));
       }
     }
-    if (this.ctx.state === 'suspended') await this.ctx.resume();
+    if (this.enabled && this.volumes.music > 0) this.music?.prime();
+    this.music?.activate();
+    this.updateMusic();
+    if (this.ctx.state !== 'running' && this.ctx.state !== 'closed') await this.ctx.resume();
   }
 
   setEnabled(value: boolean) {
     this.enabled = value;
+    this.updateMusic();
     if (this.master && this.ctx && !this.disposed) {
       this.master.gain.cancelScheduledValues(this.ctx.currentTime);
-      this.master.gain.setTargetAtTime(value ? MASTER_VOLUME : 0, this.ctx.currentTime, .015);
+      this.master.gain.setTargetAtTime(value ? 1 : 0, this.ctx.currentTime, .015);
     }
   }
 
@@ -168,7 +216,7 @@ export class GameAudio {
   }
 
   play(event: CombatEvent) {
-    if (!this.enabled || !this.ctx || !this.bus || this.disposed || this.ctx.state !== 'running') return;
+    if (!this.enabled || !this.foreground || this.volumes.sfx <= 0 || !this.ctx || !this.bus || this.disposed || this.ctx.state !== 'running') return;
     if (event.type === 'spawn' || event.type === 'engagement') return;
     const now = this.ctx.currentTime;
     if (event.type === 'gold') {
@@ -307,8 +355,9 @@ export class GameAudio {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    this.music?.dispose(); this.music = undefined;
     for (const voice of [...this.voices]) this.finish(voice, true);
-    for (const node of [this.bus, this.compressor, this.peakGuard, this.master]) node?.disconnect();
+    for (const node of [this.bus, this.compressor, this.peakGuard, this.sfxGain, this.master]) node?.disconnect();
     const ctx = this.ctx;
     this.ctx = null; this.bus = null; this.compressor = null; this.peakGuard = null; this.master = null;
     this.noise = null; this.bodyNoise = null; this.bursts.clear();

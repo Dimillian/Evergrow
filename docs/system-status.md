@@ -175,3 +175,7 @@ Basic ranged attacks (Archer arrows and the Hexer’s three bolts) no longer pro
 Local specialist equipment adds cloth robes and a matching caster outfit, leather/ranger affix pools, eight jewelry bases, gentler service premiums and material odds that improve with geographic level and encounter difficulty. The gallery exposes level/encounter controls. See [equipment materials](item-materials.md).
 
 Caster armor has four fabric constructions: linen, silk, velvet and starweave. They share cloth silhouettes and caster affix pools, with distinct nonmetallic finishes, stronger bases and increasingly rare, difficulty-weighted drops.
+
+## Dynamic soundtrack — September 8
+
+The local runtime now includes regional, settlement, dungeon and major-encounter music, independent remembered SFX/music levels, quiet panel sounds and shared mute/background handling. See [dynamic soundtrack](dynamic-soundtrack.md) for the 17-track catalogue and transition rules. Site publication and Android installation are separate.

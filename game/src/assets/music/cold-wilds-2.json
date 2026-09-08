@@ -1,0 +1,19 @@
+{
+  "id": "cold-wilds-2",
+  "title": "Northern stones",
+  "description": "Northern stones",
+  "bpm": 62,
+  "keyscale": "A minor",
+  "duration": 120,
+  "seed": 8732011,
+  "caption": "Quiet northern wilderness acoustic instrumental, dark steel-string guitar ostinato with low viola da gamba and occasional hollow wooden knocks. Windswept ruins in snow, solitary travel, very subtle danger and wistful restraint. Thin icy upper harmonics against warm low strings, unhurried incomplete melodic phrases. Raw small ensemble gothic game soundtrack with generous silences, never a heroic orchestral score. A full two minute evolving instrumental with contrasting phrases, a quieter middle section and a natural decaying ending.",
+  "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music",
+  "model": "acestep-v15-turbo",
+  "languageModel": "acestep-5Hz-lm-1.7B",
+  "backend": "MLX",
+  "shift": 3.0,
+  "generationSeconds": 167.47,
+  "sourceRevision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+  "master": "/Users/dimillian/.local/share/evergrow-music/masters/b9b6f8bc-0b41-673b-dd5f-3762500d259a.wav",
+  "output": "cold-wilds-2.mp3"
+}

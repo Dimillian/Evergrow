@@ -1,3 +1,6 @@
+import { MUSIC_FILES } from './music-content.ts';
+import { audioVolume, DEFAULT_AUDIO, type AudioChannel } from './audio-preferences.ts';
+import { isBossKind } from './wilderness-boss-content.ts';
 import { isTrialKind } from './event-recipes.ts';
 import { eventInteractionSites } from './poi-content.ts';
 import { basicAttackWeapon } from './equipment.ts';
@@ -27,7 +30,7 @@ import { currentDungeon } from './dungeon-state.ts';
 import { claimDungeonChest, dungeonChestProblem, type DungeonAction } from './dungeon-command.ts';
 import { DungeonMap, drawCryptMinimap } from './dungeon-map.ts';
 import { EventPanel } from './poi-panel.ts';
-import { focusEvent, eventLabel, eventClaimed, isEventKind, type EventSite, type EventChoice } from './poi-content.ts';
+import { EVENT_RULES, focusEvent, eventLabel, eventClaimed, isEventKind, type EventSite, type EventChoice } from './poi-content.ts';
 import { executeEvent, eventProblem, claimCompletedEvent, pendingEventReward } from './poi-command.ts';
 import { activatePortalAnchor } from './travel-command.ts';
 import { townPortalAnchor, withinPortalReach, portalMapMarkers, type PortalAnchor } from './travel.ts';
@@ -109,6 +112,9 @@ export class Game {
   private chronicle: ChroniclePanel;
   get phase(): GamePhase { return this.panels?.phase ?? 'ready'; }
   private muted = false;
+  private nextScore = 0;
+  private audioPhase: GamePhase = 'ready';
+  private nativeBackground = false;
   private readonly motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
   private get reducedMotion() { return this.motionPreference.matches; }
   private touch!: TouchHUD;
@@ -144,12 +150,13 @@ export class Game {
     this.lifetime.defer(() => { if(this.world !== this.overworld) this.world.dispose(); this.overworld.dispose(); });
     try {
       this.renderer = new Renderer(true, this.performance);
-      this.audio = this.lifetime.own(new GameAudio());
+      this.audio = this.lifetime.own(new GameAudio(MUSIC_FILES));
       this.exploration = new Exploration(this.world, { storage: null });
       this.lifetime.defer(() => this.exploration.dispose());
       this.saveClient = this.lifetime.own(new SaveHub());
       this.session = new CharacterSession(this.saveClient, this.world.generationVersion);
       this.shell = this.lifetime.own(new GameShell(root, {
+        volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
         sound: () => this.toggleSound(), muted: () => this.muted, zoom: factor => this.renderer.zoomByWheel(-Math.log(factor)/.0016,0,this.canvas.getBoundingClientRect().height),
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
         portal: () => { this.canvas.focus(); this.requestPortal(); },
@@ -188,6 +195,8 @@ export class Game {
       }));
       this.chronicle = this.lifetime.own(new ChroniclePanel(this.shell.panelMount,()=>this.resume()));
       this.titleScreen = this.lifetime.own(new TitleScreen(this.shell.titleMount, {
+        sound: () => this.toggleSound(), muted: () => this.muted,
+        volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
         chronicle: onCached => this.saveClient.chronicle(onCached),
         create: (index, name, weapon, seed) => this.editNewCharacter(index, name, weapon, seed),
         continue: index => this.continueCharacter(index), remove: (index, expected) => this.deleteCharacter(index, expected),
@@ -227,7 +236,13 @@ export class Game {
         character: { open: () => { this.inventoryPanel.open(this.sim.player); this.shell.setStatus('Character and inventory open. Game paused.'); }, close: () => this.inventoryPanel.close() },
         skills: { open: () => { this.skillPanel.open(this.sim.player); this.shell.setStatus('Skill tree open. Game paused.'); }, close: () => this.skillPanel.close() },
       }, {
-        clearInput: () => this.clearInput(), changed: () => this.showMenu(),
+        clearInput: () => this.clearInput(), changed: phase => {
+          if (phase !== this.audioPhase) {
+            if (phase !== 'dead' && this.audioPhase !== 'dead') this.audio.panel(phase !== 'playing' && phase !== 'ready');
+            this.audioPhase = phase; this.nextScore = 0;
+          }
+          this.showMenu();
+        },
         resumeGameplay: () => { this.journeys.refreshUI(); this.canvas.focus(); this.last = performance.now(); },
         save: () => { this.saveCharacter(); },
       });
@@ -253,6 +268,7 @@ export class Game {
         },
       }));
       this.thor = this.lifetime.own(new ThorRuntime({
+        panelSound: open => this.audio.panel(open),
         get sim() { return game.sim; }, get phase() { return game.phase; },
         get session() { return game.session.active?.record ?? null; },
         get busy() { return game.savingAction || game.hallBusy; },
@@ -262,14 +278,15 @@ export class Game {
         equip: index => this.characterAction({type:'equip',index}),
         track: id => { void this.journeys.command({type:'track',id}); },
         portal: () => this.requestPortal(),
-        background: () => { this.clearInput(); this.pause(); void this.saveCharacter(); this.audio.setEnabled(false); },
-        foreground: () => { this.clearInput(); this.audio.setEnabled(!this.muted); },
+        background: () => { this.clearInput(); this.pause(); void this.saveCharacter(); this.nativeBackground = true; this.audio.setForeground(false); },
+        foreground: () => { this.clearInput(); this.nativeBackground = false; this.audio.setForeground(!document.hidden); },
         back: () => { if(this.phase === 'ready' && this.titleScreen.dismissOverlay()) return; if(this.appearanceEditor){this.appearanceEditor.cancel();return;} if(this.thor.dismissInspection() || (this.phase === 'paused' && this.shell.backInMenu())) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
       }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
       try {
         const saved = JSON.parse(localStorage.getItem('evergrow-preferences') ?? 'null');
         if (typeof saved?.muted === 'boolean') this.muted = saved.muted;
+        for (const channel of ['sfx', 'music'] as const) this.audio.setVolume(channel, audioVolume(saved?.[channel], DEFAULT_AUDIO[channel]));
       } catch { /* Preferences are optional when storage is disabled. */ }
       // Presentation is fixed and motion follows the OS.
       this.savePreferences();
@@ -301,8 +318,12 @@ export class Game {
         if(this.interact(this.renderer.screenToWorld(point.x*this.renderer.width/r.width,point.y*this.renderer.height/r.height))) this.touch.clear();
       },
     });
-    window.addEventListener('pagehide', () => { this.clearInput(); void this.saveAndSync(); }, { signal });
+    window.addEventListener('pagehide', () => { this.audio.setForeground(false); this.clearInput(); void this.saveAndSync(); }, { signal });
     window.addEventListener('focus', () => this.clearInput(), { signal });
+    window.addEventListener('pageshow', () => this.audio.setForeground(!document.hidden && !this.nativeBackground), { signal });
+    const unlockAudio = () => { void this.audio.unlock().catch(() => {}); };
+    window.addEventListener('pointerdown', unlockAudio, { signal, capture: true, passive: true });
+    window.addEventListener('keydown', unlockAudio, { signal, capture: true });
     this.canvas.addEventListener('blur', () => this.clearInput(), { signal });
     window.addEventListener('resize', () => this.resize(), { signal });
     window.visualViewport?.addEventListener('resize', () => { if(this.touch.active) this.resize(); }, {signal});
@@ -312,6 +333,7 @@ export class Game {
       if (this.phase === 'playing') this.pause();
     }, { signal });
     document.addEventListener('visibilitychange', () => {
+      this.audio.setForeground(!document.hidden && !this.nativeBackground);
       if (document.hidden) {
         this.clearInput();
         if (this.phase === 'playing') this.pause();
@@ -951,6 +973,7 @@ export class Game {
     this.last = now;
     this.fps += (1 / Math.max(dt, 0.001) - this.fps) * 0.04;
     this.pollGamepad(now);
+    if (now >= this.nextScore) { this.updateScore(now); this.nextScore = now + 250; }
     this.touch.update(this.sim.player,this.phase,this.savingAction,now,this.sim.groundEffects);
     this.renderer.gamepadActive = this.usingGamepad;
     this.shell.setGamepadActive(this.usingGamepad);
@@ -1067,6 +1090,7 @@ export class Game {
       this.notify('Controller disconnected.'); return;
     }
     const pad = this.gamepad;
+    if (pad.pressed.size) void this.audio.unlock().catch(() => {});
     if (this.phase === 'ready' && this.titleScreen.updateOverlayGamepad(pad, now)) return;
     if(this.chronicle.updateGamepad(pad,now))return;
     if(this.appearanceEditor){
@@ -1123,14 +1147,29 @@ export class Game {
   toggleSound() {
     if (this.disposed) return;
     this.muted = !this.muted;
-    this.shell.refreshOptions();
+    this.shell.refreshOptions(); this.titleScreen.refreshSound();
     this.audio.setEnabled(!this.muted);
     void this.audio.unlock().catch(() => {});
     this.savePreferences();
   }
 
+  private updateScore(now: number) {
+    const p = this.sim.player;
+    const town = !this.sim.dungeonFloor && this.world.isSanctuary(p.x, p.y);
+    const boss = this.sim.enemies.some(e => e.hp > 0 && isBossKind(e.kind)
+      && ['chase', 'windup', 'attack', 'recover'].includes(e.state)
+      && Math.hypot(e.x - p.x, e.y - p.y) < 1000);
+    const trial = this.sim.eventState.trial;
+    const event = trial ? this.sim.eventState.sites[trial.siteId] : undefined;
+    this.audio.score(now / 1000, { phase: this.phase, biome: this.world.sampleBiome(p.x, p.y).id,
+      town, dungeon: !!this.sim.dungeonFloor,
+      encounter: boss ? 'boss' : event?.phase === 'active' && Math.hypot(event.x - p.x, event.y - p.y) < EVENT_RULES.abandonRadius ? 'event' : 'none' });
+  }
+  private setAudioVolume(channel: AudioChannel, value: number) {
+    this.audio.setVolume(channel, value); this.savePreferences();
+  }
   private savePreferences() {
-    try { localStorage.setItem('evergrow-preferences', JSON.stringify({ muted: this.muted })); } catch { /* Storage may be disabled. */ }
+    try { localStorage.setItem('evergrow-preferences', JSON.stringify({ muted: this.muted, ...this.audio.getVolumes() })); } catch { /* Storage may be disabled. */ }
   }
 
   private notify(message: string) {
@@ -1142,6 +1181,7 @@ export class Game {
     this.appearanceEditor?.dispose();this.appearanceEditor=undefined;
     if (this.disposed) return;
     this.disposed = true;
+    this.audio.setForeground(false);
     this.abort.abort(); cancelAnimationFrame(this.animation); this.clearInput();
     void this.actionPending.catch(error => console.error(error)).then(async () => {
       try { await this.saveCharacter(true); await this.session.flush(); }

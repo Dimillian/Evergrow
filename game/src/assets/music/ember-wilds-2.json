@@ -1,0 +1,19 @@
+{
+  "id": "ember-wilds-2",
+  "title": "Ashen road",
+  "description": "Ashen road",
+  "bpm": 54,
+  "keyscale": "E minor",
+  "duration": 120,
+  "seed": 8732013,
+  "caption": "Dark atmospheric acoustic instrumental for a scorched ancient landscape. Slow detuned baritone guitar figures, hollow clay drum taps spaced far apart, creaking bowed strings and faint metallic scrapes. A lonely unresolved melody returns through a bed of smouldering low drones. Intimate, raw and subtle 1990s gothic exploration score, long rests, restrained tension, absolutely no epic crescendo. A full two minute evolving instrumental with contrasting phrases, a quieter middle section and a natural decaying ending.",
+  "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music",
+  "model": "acestep-v15-turbo",
+  "languageModel": "acestep-5Hz-lm-1.7B",
+  "backend": "MLX",
+  "shift": 3.0,
+  "generationSeconds": 128.6,
+  "sourceRevision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+  "master": "/Users/dimillian/.local/share/evergrow-music/masters/1d62dac3-8abb-5cb2-35a5-baffe09d0ef9.wav",
+  "output": "ember-wilds-2.mp3"
+}

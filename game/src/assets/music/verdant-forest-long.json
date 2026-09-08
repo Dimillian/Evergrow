@@ -1,0 +1,20 @@
+{
+  "id": "verdant-forest-long",
+  "title": "Verdant forest",
+  "description": "Warm wandering guitar, wooden flute and soft woodland rhythms.",
+  "bpm": 78,
+  "keyscale": "D minor",
+  "timesignature": "6",
+  "duration": 120,
+  "seed": 8732004,
+  "caption": "Earthy atmospheric woodland folk instrumental. Warm fingerpicked nylon-string guitar and a low wooden flute gently trade an original wandering Dorian melody. Light lute countermelodies, soft brushed frame-drum taps and quiet woody textures create a relaxed flowing six-eight pulse. Ancient green forest, moss and filtered sunlight, gentle movement in the canopy, a feeling of discovery with lingering mystery. Rustic late-1990s fantasy role playing game exploration music, understated and intimate, wistful rather than celebratory. Sparse human acoustic performances, warm midrange, organic uneven phrasing, clear melody with breathing space. The flute appears only for short answering phrases while the guitar remains central. A complete two minute evolving composition: an intimate opening, a contrasting quiet middle passage, a restrained return of the main motif, then a natural unresolved decaying ending. Patient pacing with long breathing spaces. No abrupt ending.",
+  "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music, fast Celtic jig, festive folk dance, epic orchestra, panpipe relaxation music, oud, desert music, strong driving percussion",
+  "model": "acestep-v15-turbo",
+  "languageModel": "acestep-5Hz-lm-1.7B",
+  "backend": "MLX",
+  "shift": 3.0,
+  "generationSeconds": 214.32,
+  "sourceRevision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+  "master": "/Users/dimillian/.local/share/evergrow-music/masters/336e9064-aa1e-7beb-15be-3817c0cd25fe.wav",
+  "output": "verdant-forest-long.mp3"
+}

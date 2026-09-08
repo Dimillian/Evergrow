@@ -26,6 +26,7 @@ export interface ThorRuntimeHost {
     background(): void;
     foreground(): void;
     back(): void;
+    panelSound?(open: boolean): void;
 }
 /** The lower screen owns presentation only. Every action returns to the primary command boundary. */
 export class ThorRuntime {
@@ -37,7 +38,13 @@ export class ThorRuntime {
     constructor(host: ThorRuntimeHost) {
         this.host = host;
         this.commands = new ThorCommands(host);
-        this.bridge = new ThorNative({ snapshot: map => this.snapshot(map), command: c => this.commands.command(c),
+        this.bridge = new ThorNative({ snapshot: map => this.snapshot(map), command: c => {
+            const { selected, tab } = this.commands.selection;
+            this.commands.command(c);
+            if ((c.type === 'inspect' || c.type === 'closeInspect') && selected !== this.commands.selection.selected)
+                host.panelSound?.(!!this.commands.selection.selected);
+            else if (c.type === 'tab' && tab !== this.commands.selection.tab) host.panelSound?.(true);
+        },
             background: () => host.background(), foreground: () => host.foreground(), back: () => host.back() });
     }
     private snapshot(map: boolean) {
@@ -70,6 +77,7 @@ export class ThorRuntime {
         if (!this.commands.selection.selected)
             return false;
         this.commands.selection.selected = null;
+        this.host.panelSound?.(false);
         return true;
     }
     update(now: number) { this.bridge.update(now); }

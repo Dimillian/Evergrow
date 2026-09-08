@@ -1,6 +1,7 @@
+import { bindAudioControls, type AudioControlActions } from './audio-controls.ts';
 import './pause-menu.css';
 
-export interface PauseActions {
+export interface PauseActions extends AudioControlActions {
   openChronicle?(): void;
   sound?(): void; muted?(): boolean; zoom?(factor: number): void;
   save?(): Promise<boolean>;
@@ -33,6 +34,7 @@ export class PauseMenu {
     root.querySelector<HTMLButtonElement>('#save-action')!.disabled = !actions.save;
     root.querySelector('#save-action')!.addEventListener('click', () => { void this.save(false); }, { signal });
     root.querySelector('#title-action')!.addEventListener('click', () => { void this.save(true); }, { signal });
+    bindAudioControls(root, actions, signal);
     this.refresh();
   }
   refresh(): void {
@@ -48,6 +50,7 @@ export class PauseMenu {
   }
   private showOptions(open: boolean): void {
     if (this.busy) return;
+    this.actions.panelSound?.(open);
     this.options = open;
     this.root.querySelector<HTMLElement>('#pause-options')!.hidden = !open;
     this.root.querySelector<HTMLElement>('#pause-summary')!.hidden = open;

@@ -1,4 +1,4 @@
-"""Local ACE-Step auditions. Run with the separately installed ACE-Step Python environment."""
+"""Local ACE-Step soundtrack generation. Run with the separately installed ACE-Step Python environment."""
 import argparse
 import json
 import os
@@ -8,8 +8,13 @@ import subprocess
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-tracks = json.loads((ROOT/'scripts/music-auditions.json').read_text())
+early = argparse.ArgumentParser(add_help=False)
+early.add_argument('--catalog', type=Path, default=ROOT/'scripts/music-auditions.json')
+catalog, _ = early.parse_known_args()
+tracks = json.loads(catalog.catalog.read_text())
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--catalog', type=Path, default=catalog.catalog)
+parser.add_argument('--skip-existing', action='store_true')
 parser.add_argument('--model-root', type=Path, default=Path.home()/'.local/share/evergrow-music/ACE-Step-1.5')
 parser.add_argument('--track', nargs='+', choices=[track['id'] for track in tracks]+['all'], default=['all'])
 parser.add_argument('--no-thinking', action='store_true', help='Skip the language model for a faster diffusion-only audition.')
@@ -49,6 +54,11 @@ for track in tracks:
         continue
     duration = args.duration or track['duration']
     seed = track['seed'] + args.seed_offset
+    prior_path = output/f"{track['id']}.json"
+    if args.skip_existing and (output/f"{track['id']}.mp3").exists() and prior_path.exists():
+        prior = json.loads(prior_path.read_text())
+        if prior.get('caption') == track['caption'] and prior.get('seed') == seed and prior.get('duration') == duration:
+            continue
     params = GenerationParams(caption=track['caption'], lyrics='[Instrumental]', instrumental=True,
         bpm=track['bpm'], keyscale=track['keyscale'], timesignature=track.get('timesignature','4'), duration=duration, seed=seed,
         inference_steps=8, shift=3.0, lm_negative_prompt=track.get('negative', 'NO USER INPUT'),
@@ -62,7 +72,7 @@ for track in tracks:
         raise RuntimeError(result.error or result.status_message)
     source = Path(result.audios[0]['path'])
     target = output/f"{track['id']}.mp3"
-    # Audition mastering only; these are complete pieces, not yet edited into game loops.
+    # Complete mastered cues; the runtime handles rests and crossfades between recordings.
     subprocess.run([ffmpeg, '-hide_banner', '-loglevel', 'error', '-y', '-i', str(source),
         '-af', f'loudnorm=I=-20:TP=-2:LRA=9,afade=t=in:d=1,afade=t=out:st={max(1,duration-3)}:d=3',
         '-t', str(duration), '-ar', '44100', '-codec:a', 'libmp3lame', '-b:a', '192k', str(target)], check=True)

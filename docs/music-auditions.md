@@ -1,6 +1,6 @@
 # Local soundtrack auditions
 
-`/music.html` is a save-free listening page for original AI-generated gothic game soundtrack studies for Home, Arid Wilds, Dark Forest, Verdant Forest and Dungeon. It has one active player, replay, seeking, volume and MP3 downloads. Nothing changes the game's SFX, playback or saves. The music is not integrated into gameplay or published to Sites.
+`/music.html` is a save-free listening page for original AI-generated gothic game soundtrack studies covering the home, five wilderness moods, towns, dungeons and major encounters. It has one active player, replay, seeking, volume and MP3 downloads. The approved recordings and longer companion cues are now integrated locally; see [dynamic soundtrack](dynamic-soundtrack.md) for runtime selection and mix controls. No Site publication is implied.
 
 ## Current direction: second pass
 
@@ -41,6 +41,6 @@ Use `--track menu`, `--track wilderness`, `--track dungeon`, `--track dark-fores
 
 The script selects Apple Silicon MPS with native MLX diffusion/VAE and the MLX language model backend. It renders sequentially, writes lossless originals under `~/.local/share/evergrow-music/masters`, then exports MP3s and per-track provenance to `game/src/assets/music-auditions`. Regenerating a track replaces its audition MP3/JSON; the raw masters remain separate. Models unload when the process exits; there is no persistent inference server.
 
-Exports target -20 LUFS with a -2 dB true-peak ceiling, short fade-in and three-second fade-out. These are complete auditions, not seamless game loops. Listening feedback decides which direction to develop; the next production step is arranging longer cues and deliberate transitions.
+Exports target -20 LUFS with a -2 dB true-peak ceiling, short fade-in and three-second fade-out. These are complete cues, not seamless source loops. The runtime now handles deliberate crossfades and rests; the approved originals remain alongside longer companion compositions. Listening feedback decides further refinements.
 
-The review is a separate Vite entrypoint and is not imported by the gameplay entrypoint. Model weights, Python packages and lossless masters never enter the game build.
+The review is a separate Vite entrypoint. The runtime imports the music URL catalogue and requests tracks on demand. Model weights, Python packages and lossless masters never enter the game build.

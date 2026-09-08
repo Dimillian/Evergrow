@@ -1,3 +1,5 @@
+import { GamepadMenu } from './gamepad-menu.ts';
+import { audioControlsMarkup, bindAudioControls, type AudioControlActions } from './audio-controls.ts';
 import { LeaderboardPanel, type LeaderboardLoader } from './leaderboard-panel.ts';
 import { equippedGearPower } from './leaderboard.ts';
 import { ChroniclePanel } from './chronicle-panel.ts';
@@ -18,7 +20,7 @@ import { itemIconSVG } from './item-art.ts';
 import { parseWorldSeed } from './world-seed.ts';
 import './title-screen.css';
 import './home-screen.css';
-export interface TitleActions {
+export interface TitleActions extends AudioControlActions {
   leaderboard?: LeaderboardLoader;
   chronicle?(onCached?:(ledger:ChronicleLedger)=>void): Promise<ChronicleLedger>;
   create(index: number, name: string, weapon: StarterLoadoutId, seed: number): void;
@@ -36,6 +38,9 @@ export class TitleScreen {
   private readonly changelog: ChangelogPanel;
   private readonly leaderboard: LeaderboardPanel;
   private page: HomePage = 'characters';
+  private audioPad = new GamepadMenu();
+  private refreshAudio?: () => void;
+  refreshSound() { this.refreshAudio?.(); }
   private readonly chronicle: ChroniclePanel;
   private slots: SaveSlot[] = [];
   private selected = 0;
@@ -57,13 +62,17 @@ export class TitleScreen {
   constructor(mount: HTMLElement, actions: TitleActions) {
     this.actions = actions;
     this.element = document.createElement('div'); this.element.className = 'title-screen'; this.element.hidden = true;
-    this.element.innerHTML = `<div class="title-vignette" aria-hidden="true"></div>
+    this.element.innerHTML = `<details class="title-audio"><summary aria-label="Audio options">Sound <kbd class="audio-pad-key">Y</kbd></summary>${audioControlsMarkup(true)}</details><div class="title-vignette" aria-hidden="true"></div>
       <header class="title-brand"><span aria-hidden="true">${uiIcon('skilltree')}</span><h1>EVERGROW</h1><nav class="title-home-nav" aria-label="Home">${homePages.map(page=>`<button data-home-page="${page}" aria-current="${page==='characters'?'page':'false'}">${homeLabels[page]}${page==='changelog'?'<i class="home-unread" aria-label="Unread update" hidden></i>':''}</button>`).join('')}</nav><span class="home-pad-hint">LB / RB</span></header>
       <section class="title-hero" aria-label="Selected character"><div class="title-halo" aria-hidden="true"></div><canvas width="560" height="720" aria-label="Selected character wearing their saved equipment"></canvas><div class="title-plinth" aria-hidden="true"></div></section>
       <section class="title-roster ui-window" aria-labelledby="roster-title"><header class="title-roster-header"><h2 id="roster-title">Characters</h2><div class="title-sources" role="group" aria-label="Save location" hidden><button data-source="cloud">Cloud</button><button data-source="local">Local</button></div><span class="title-controller-hint"><kbd>A</kbd> Continue</span><span class="title-slot-count"></span></header>
       <div class="title-hall-body"><div class="title-slot-grid" role="group" aria-label="Eight character slots"></div><div class="title-selection"></div></div>
       <footer class="title-roster-footer"><span class="title-storage-status" role="status"></span><a class="title-signout" href="/signout-with-chatgpt?return_to=/" target="_top" hidden>Sign out</a><span class="title-transfer"><button data-action="import">Import</button><button data-action="download">Download</button></span></footer>
       <p class="title-save-message" role="status" hidden></p><input type="file" class="title-file" accept=".json,application/json" hidden></section><section class="title-library ui-window" hidden aria-label="Home content"></section>`;
+    const refreshAudio = this.refreshAudio = bindAudioControls(this.element, actions, this.abort.signal);
+    this.element.querySelector('details.title-audio')!.addEventListener('toggle', event => {
+      refreshAudio(); actions.panelSound?.((event.target as HTMLDetailsElement).open);
+    }, { signal: this.abort.signal });
     this.canvas = this.element.querySelector('canvas')!; mount.append(this.element);
     const library=this.element.querySelector<HTMLElement>('.title-library')!;
     this.changelog = new ChangelogPanel(library, () => this.selectPage('characters'), true);
@@ -74,7 +83,7 @@ export class TitleScreen {
     this.element.addEventListener('pointerdown', () => this.element.classList.remove('is-controller'), { signal: this.abort.signal });
     this.element.addEventListener('keydown', event => {
       const target = event.target as HTMLElement;
-      if(event.key==='Escape'&&this.page!=='characters'){event.preventDefault();event.stopPropagation();this.selectPage('characters');return;}
+      if(event.key==='Escape'&&this.dismissOverlay()){event.preventDefault();event.stopPropagation();return;}
       if(target.matches('[data-home-page]')&&['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) {
         event.preventDefault();const pages=this.availablePages(),index=pages.indexOf(this.page);
         this.selectPage(event.key==='Home'?pages[0]:event.key==='End'?pages.at(-1)!:pages[(index+(event.key==='ArrowLeft'?-1:1)+pages.length)%pages.length]);return;
@@ -171,6 +180,7 @@ export class TitleScreen {
   selectPage(page: HomePage, focus=true) {
     if(page==='leaderboard'&&!this.source.supported)return;
     this.changelog.close(false);this.chronicle.close(false);this.leaderboard.close();
+    if (this.page !== page) this.actions.panelSound?.(page !== 'characters');
     this.page=page;this.element.dataset.homePage=page;
     this.element.querySelector<HTMLElement>('.title-roster')!.hidden=page!=='characters';
     this.element.querySelector<HTMLElement>('.title-library')!.hidden=page==='characters';
@@ -183,10 +193,23 @@ export class TitleScreen {
     }
     if(focus)this.element.querySelector<HTMLElement>(`[data-home-page="${page}"]`)?.focus({preventScroll:true});
   }
-  dismissOverlay(): boolean { if(this.page==='characters')return false;this.selectPage('characters');return true; }
+  dismissOverlay(): boolean {
+    const audio = this.element.querySelector<HTMLDetailsElement>('.title-audio')!;
+    if (audio.open) { audio.open = false; audio.querySelector('summary')!.focus(); return true; }
+    if(this.page==='characters')return false;this.selectPage('characters');return true; }
   updateOverlayGamepad(pad: GamepadInput, now: number): boolean {
     if(this.element.inert)return true;
     if(pad.active)this.element.classList.add('is-controller');
+    const audio = this.element.querySelector<HTMLDetailsElement>('.title-audio')!;
+    if (pad.pressed.has(PAD.skill4)) {
+      audio.open = !audio.open; this.audioPad.clear();
+      audio.querySelector<HTMLElement>(audio.open ? 'input' : 'summary')!.focus(); return true;
+    }
+    if (audio.open) {
+      if (pad.pressed.has(PAD.dodge) || pad.pressed.has(PAD.pause)) this.dismissOverlay();
+      else this.audioPad.update(audio, pad, now);
+      return true;
+    }
     if(pad.pressed.has(PAD.potion)||pad.pressed.has(PAD.skill2)) {
       const pages=this.availablePages(),delta=pad.pressed.has(PAD.potion)?-1:1;
       this.selectPage(pages[(pages.indexOf(this.page)+delta+pages.length)%pages.length]);return true;

@@ -1,0 +1,19 @@
+{
+  "id": "event",
+  "title": "The gathering",
+  "description": "The gathering",
+  "bpm": 88,
+  "keyscale": "C minor",
+  "duration": 120,
+  "seed": 8732015,
+  "caption": "Tense dark ritual acoustic instrumental for a dangerous sustained encounter. Repeating low plucked guitar and oud patterns, irregular frame drum pulses, dry wooden clacks and low bowed string tremors. Growing pressure, hostile ancient magic and purposeful movement, controlled earthy energy. Raw small ensemble gothic 1990s action role playing game score, sparse ominous motif, dynamic rises and brief retreats, no heroic fanfare or modern epic orchestra. A full two minute evolving instrumental with contrasting phrases, a quieter middle section and a natural decaying ending.",
+  "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music",
+  "model": "acestep-v15-turbo",
+  "languageModel": "acestep-5Hz-lm-1.7B",
+  "backend": "MLX",
+  "shift": 3.0,
+  "generationSeconds": 135.74,
+  "sourceRevision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+  "master": "/Users/dimillian/.local/share/evergrow-music/masters/1ad940e2-e54a-1617-2bb5-5197966cc58d.wav",
+  "output": "event.mp3"
+}

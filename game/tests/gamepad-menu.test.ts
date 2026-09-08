@@ -19,6 +19,7 @@ class Element extends EventTarget {
   click() { this.clicks++; }
 }
 class Select extends Element { selectedIndex = 0; options = [{ disabled: false }, { disabled: true }, { disabled: false }]; }
+class Range extends Element { type = 'range'; value = 50; stepUp() { this.value = Math.min(100, this.value + 5); } stepDown() { this.value = Math.max(0, this.value - 5); } }
 class Canvas extends Element {}
 class Key extends Event {
   key: string; shiftKey: boolean;
@@ -26,7 +27,7 @@ class Key extends Event {
     super(type, options); this.key = options.key ?? ''; this.shiftKey = options.shiftKey ?? false;
   }
 }
-const globals = { document: doc, HTMLElement: Element, HTMLSelectElement: Select, HTMLCanvasElement: Canvas, KeyboardEvent: Key, MouseEvent: Key };
+const globals = { document: doc, HTMLElement: Element, HTMLSelectElement: Select, HTMLInputElement: Range, HTMLCanvasElement: Canvas, KeyboardEvent: Key, MouseEvent: Key };
 const descriptors = Object.fromEntries(Object.keys(globals).map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
 Object.assign(globalThis, globals);
 after(() => { for (const key of Object.keys(globals)) {
@@ -130,4 +131,14 @@ test('canvas A can enter node actions without dispatching a second activation', 
   update([PAD.interact]); assert.equal(enters, 1); assert.equal(keys, 0); assert.equal(assign.clicks, 0);
   update([PAD.interact], 1000); assert.equal(assign.clicks, 0);
   update([]); update([PAD.interact]); assert.equal(assign.clicks, 1);
+});
+
+
+test('controller left/right adjusts audio sliders; up/down changes focus', () => {
+  const slider = new Range(), next = new Element(); let changes = 0;
+  slider.addEventListener('input', () => changes++);
+  const { update } = setup([slider, next]);
+  update([PAD.right]); assert.equal(slider.value, 55); assert.equal(doc.activeElement, slider);
+  update([PAD.left]); assert.equal(slider.value, 50); assert.equal(changes, 2);
+  update([PAD.down]); assert.equal(doc.activeElement, next); assert.equal(changes, 2);
 });

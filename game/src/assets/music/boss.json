@@ -1,0 +1,19 @@
+{
+  "id": "boss",
+  "title": "Ancient hunger",
+  "description": "Ancient hunger",
+  "bpm": 96,
+  "keyscale": "C minor",
+  "duration": 120,
+  "seed": 8732016,
+  "caption": "Menacing gothic boss encounter instrumental. Heavy resonant ritual skin drums in an uneven insistent pulse, deep bowed bass drones, jagged low prepared piano and rough plucked steel strings. Brief high scraping-metal answers and ominous descending figures. A huge ancient creature waking beneath the earth, sustained focused danger. Raw dark electroacoustic 1990s dungeon crawler soundtrack, powerful but spacious enough for combat sounds, no heroic melody, no choir, no epic trailer orchestra. A full two minute evolving instrumental with contrasting phrases, a quieter middle section and a natural decaying ending.",
+  "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music",
+  "model": "acestep-v15-turbo",
+  "languageModel": "acestep-5Hz-lm-1.7B",
+  "backend": "MLX",
+  "shift": 3.0,
+  "generationSeconds": 123.75,
+  "sourceRevision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+  "master": "/Users/dimillian/.local/share/evergrow-music/masters/0464dd79-5641-f19f-aac1-ee3bfe3c452e.wav",
+  "output": "boss.mp3"
+}

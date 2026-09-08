@@ -1,0 +1,19 @@
+{
+  "id": "ember-wilds",
+  "title": "Emberfall",
+  "description": "Emberfall",
+  "bpm": 64,
+  "keyscale": "C minor",
+  "duration": 120,
+  "seed": 8732012,
+  "caption": "Restrained scorched wilderness electroacoustic instrumental. Low prepared acoustic guitar plucks, dry rattles, sparse frame drum strokes, bowed bronze and a barely audible gravelly bass drone. Blackened forests, volcanic ash, red embers under dark basalt. Uneasy earthy exploration, strange dissonant intervals and patient pauses. Raw tactile gothic game soundtrack, shadowy and mysterious, very sparse rather than aggressive or cinematic. A full two minute evolving instrumental with contrasting phrases, a quieter middle section and a natural decaying ending.",
+  "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music",
+  "model": "acestep-v15-turbo",
+  "languageModel": "acestep-5Hz-lm-1.7B",
+  "backend": "MLX",
+  "shift": 3.0,
+  "generationSeconds": 154.21,
+  "sourceRevision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+  "master": "/Users/dimillian/.local/share/evergrow-music/masters/bcb4571e-ca41-c94e-5689-93cb140cf863.wav",
+  "output": "ember-wilds.mp3"
+}

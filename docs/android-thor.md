@@ -68,3 +68,7 @@ Touch/controller direction now selects nearby visible enemies in a forward cone,
 A read-only 10-second CPU profile on the connected Thor identified repeated native HUD frame drawing and lower-map PNG encoding (about 271 ms of self time for PNG encoding in that sample). Static Astral metalwork is now cached at native display density with four bounded entries per drawing context; animated glass, energy, glints and text remain live. The companion reports its active tab via session-checked commands, so hidden maps and maps covered by item inspection no longer redraw/encode. Visible maps retain 2 Hz updates; telemetry remains 4 Hz. Frame CPU measurements now include the companion work. These remove specific costs; sustained FPS and combat feel still need player acceptance.
 
 Routine local autosaves now run every 20 seconds; important actions retain their immediate checkpoint. Android never contacts the save server.
+
+## Soundtrack and mix controls — September 8
+
+The shared runtime owns a two-stream soundtrack player only on the primary screen. Native background/foreground callbacks pause/resume music and suspend/resume the shared audio context. Bundled music stays offline. Home Sound (Y) and pause Options provide remembered music/SFX sliders; left/right adjust, up/down navigate, B dismisses. The companion never starts an audio player. This source update does not itself install a new APK.

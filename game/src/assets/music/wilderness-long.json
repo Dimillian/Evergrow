@@ -1,0 +1,19 @@
+{
+  "id": "wilderness-long",
+  "title": "Arid wilds",
+  "description": "Restless hand drums, dry plucked strings and unsettling low reed phrases.",
+  "bpm": 94,
+  "keyscale": "E minor",
+  "duration": 120,
+  "seed": 8732001,
+  "caption": "Dark ritual folk instrumental, driving hand percussion and plucked strings. Interlocking frame drums, rattles and dry wood knocks create an irregular hypnotic walking rhythm. Low oud and steel-string guitar repeat angular Phrygian figures, with occasional nasal duduk phrases and sudden breaks into silence. Desolate dangerous wilderness, strange ancient ruins, primitive earthy energy, tense exploration music for a 1990s gothic action role playing game. Raw tactile percussion, deep bass drone, lean ensemble, unsettling rather than heroic. The pulse builds and recedes while the plucked-string motif mutates. Instrumental underground folk soundtrack. A complete two minute evolving composition: an intimate opening, a contrasting quiet middle passage, a restrained return of the main motif, then a natural unresolved decaying ending. Patient pacing with long breathing spaces. No abrupt ending.",
+  "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music",
+  "model": "acestep-v15-turbo",
+  "languageModel": "acestep-5Hz-lm-1.7B",
+  "backend": "MLX",
+  "shift": 3.0,
+  "generationSeconds": 112.97,
+  "sourceRevision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+  "master": "/Users/dimillian/.local/share/evergrow-music/masters/05e292ec-e5aa-a92a-2129-435e7e9c0ffa.wav",
+  "output": "wilderness-long.mp3"
+}

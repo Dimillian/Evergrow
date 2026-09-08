@@ -14,3 +14,8 @@
 .wilderness{--tint:#c5a276}.wilderness .music-art{background:radial-gradient(ellipse at 45% 100%,#7b583a50,transparent 70%),#201914}
 .dark-forest{--tint:#9aabae}.dark-forest .music-art{background:radial-gradient(ellipse at 40% 100%,#48606138,transparent 70%),#10191e}
 .verdant-forest{--tint:#9ac191}.verdant-forest .music-art{background:radial-gradient(ellipse at 45% 100%,#51734750,transparent 70%),#102119}
+
+/* A compact catalogue for the complete score. */
+@media(min-width:621px){.music-card.menu,.music-card.dungeon{grid-column:span 2}.music-art,.menu .music-art,.dungeon .music-art{height:100px}}
+.music-art:before{width:70px;height:70px}.music-art:after{width:95px;height:95px}.music-art span{font-size:46px}
+[class*="dark-forest"]{--tint:#9aabae}[class*="verdant-forest"]{--tint:#9ac191}[class*="cold-wilds"]{--tint:#a6c7d8}[class*="ember-wilds"]{--tint:#c59778}.boss,.event{--tint:#c68f91}
