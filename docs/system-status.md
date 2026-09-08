@@ -1,6 +1,6 @@
 # Current system status
 
-Pending publication, 2026-09-08: Cloud character file import/download are removed from the hall and cloud repository. Local browser transfers remain available. Existing saves are preserved; leaderboard eligibility and competitive validation remain separate work.
+Pending publication, 2026-09-08: Cloud character file import/download are removed from the hall and cloud repository. Local browser transfers remain available. Existing saves are preserved; all Cloud characters automatically rank individually in the new home leaderboard. Character names, levels and equipped gear power are public; account identities remain private. Characters, Chronicle, Leaderboard and What’s new share home navigation. See [home and rankings](leaderboard.md). Competitive validation remains future work.
 
 Local regional monster expansion adds six biome-weighted archetypes, mixed packs, two-basic/one-signature attack cycles, procedural anatomy and matching remains. See [regional monsters](regional-monsters.md) for combat and spawn weights. Existing characters remain compatible.
 

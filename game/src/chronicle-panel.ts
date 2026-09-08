@@ -26,14 +26,15 @@ export class ChroniclePanel {
  readonly element:HTMLDivElement;
  private ledger=emptyChronicle(); private selected='all'; private tab=0; private group='All';
  private life=new AbortController(); private focus?:{dispose():void}; private controller=new GamepadMenu(); private revision=0; private lastTime=0;
+ private embedded:boolean;
  private onClose:()=>void;
  private tooltip:UITooltip;
  private explainedAnchor:HTMLElement|null=null;
  private hideTimer:ReturnType<typeof setTimeout>|undefined;
- constructor(mount:HTMLElement,onClose:()=>void) {
-  this.onClose=onClose;
-  this.element=document.createElement('div');this.element.className='chronicle-overlay';this.element.hidden=true;mount.append(this.element);
-  this.tooltip=new UITooltip(mount,`chronicle-tooltip-${++nextTooltipId}`,'chronicle-tooltip');
+ constructor(mount:HTMLElement,onClose:()=>void,embedded=false) {
+  this.onClose=onClose;this.embedded=embedded;
+  this.element=document.createElement('div');this.element.className='chronicle-overlay'+(embedded?' home-embedded':'');this.element.hidden=true;mount.append(this.element);
+  this.tooltip=new UITooltip(embedded?(mount.parentElement??mount):mount,`chronicle-tooltip-${++nextTooltipId}`,'chronicle-tooltip');
   this.element.addEventListener('click',e=>{const anchor=(e.target as HTMLElement).closest<HTMLElement>('[data-achievement],[data-stat-help]');if(anchor)this.explain(anchor);else this.hideTooltip();
    const b=(e.target as HTMLElement).closest<HTMLButtonElement>('button');if(e.target===this.element||b?.hasAttribute('data-close'))this.close();else if(b?.dataset.tab!==undefined){this.tab=Number(b.dataset.tab);this.render();this.element.querySelector<HTMLElement>(`[data-tab="${this.tab}"]`)?.focus();}else if(b?.dataset.group){this.group=b.dataset.group;this.render();this.element.querySelector<HTMLElement>(`[data-group="${this.group}"]`)?.focus();}},{signal:this.life.signal});
   this.element.addEventListener('change',e=>{const s=e.target as HTMLSelectElement;if(s.matches('[data-character]')){this.selected=s.value;this.render();this.element.querySelector<HTMLElement>('[data-character]')?.focus();}},{signal:this.life.signal});
@@ -56,8 +57,8 @@ export class ChroniclePanel {
  async open(load:(onCached:(ledger:ChronicleLedger)=>void)=>Promise<ChronicleLedger>,selected='all') {
   this.hideTooltip();
   const revision=++this.revision;this.selected=selected;this.tab=0;this.group='All';this.element.hidden=false;
-  this.element.innerHTML=`<section class="ui-window chronicle-window" role="dialog" aria-modal="true" aria-label="Chronicle"><header class="ui-window-header"><h2 class="ui-title">Chronicle</h2><button class="ui-button ui-button--quiet ui-button--icon" data-close aria-label="Close Chronicle">${uiIcon('close')}</button></header><p class="chronicle-loading" role="status">Loading…</p></section>`;
-  this.focus?.dispose();this.focus=trapDialogFocus(this.element,{signal:this.life.signal,restoreFocus:false,initialFocus:this.element});
+  this.element.innerHTML=`<section class="ui-window chronicle-window" role="${this.embedded?'region':'dialog'}" ${this.embedded?'':'aria-modal="true"'} aria-label="Chronicle"><header class="ui-window-header"><h2 class="ui-title">Chronicle</h2><button class="ui-button ui-button--quiet ui-button--icon" data-close aria-label="Close Chronicle">${uiIcon('close')}</button></header><p class="chronicle-loading" role="status">Loading…</p></section>`;
+  this.focus?.dispose();if(!this.embedded)this.focus=trapDialogFocus(this.element,{signal:this.life.signal,restoreFocus:false,initialFocus:this.element});
   let shown=false;
   const show=(ledger:ChronicleLedger,final=false)=>{
     if(revision!==this.revision)return;
@@ -72,7 +73,7 @@ export class ChroniclePanel {
     this.render();
     this.element.querySelector('.chronicle-content')!.scrollTop=scroll;
     const target=focusKey?[...this.element.querySelectorAll<HTMLElement>(`[${focusKey}]`)].find(el=>el.getAttribute(focusKey)===focusValue):null;
-    (target??this.element).focus({preventScroll:true});
+    if(!this.embedded||this.element.contains(active))(target??this.element).focus({preventScroll:true});
     shown=true;
   };
   try {show(await load(ledger=>show(ledger)),true);}
@@ -86,7 +87,7 @@ export class ChroniclePanel {
  }
  private render(){this.hideTooltip();const sources=this.sources(),values=chronicleValues(sources),earned=ACHIEVEMENTS.reduce((n,a)=>n+achievementTier(a,values),0),total=ACHIEVEMENTS.reduce((n,a)=>n+a.tiers.length,0);
   const chars=Object.values(this.ledger.characters).sort((a,b)=>Number(a.deleted)-Number(b.deleted)||b.updatedAt-a.updatedAt);
-  this.element.innerHTML=`<section class="ui-window chronicle-window" role="dialog" aria-modal="true" aria-labelledby="chronicle-title"><header class="ui-window-header"><h2 id="chronicle-title" class="ui-title">Chronicle</h2><select data-character aria-label="Character history"><option value="all">All characters</option>${chars.map(c=>`<option value="${esc(c.id)}" ${c.id===this.selected?'selected':''}>${esc(c.name)} · Lv ${c.level}${c.deleted?' · Archived':''}</option>`).join('')}</select><button class="ui-button ui-button--quiet ui-button--icon" data-close aria-label="Close Chronicle">${uiIcon('close')}</button></header>
+  this.element.innerHTML=`<section class="ui-window chronicle-window" role="${this.embedded?'region':'dialog'}" ${this.embedded?'':'aria-modal="true"'} aria-labelledby="chronicle-title"><header class="ui-window-header"><h2 id="chronicle-title" class="ui-title">Chronicle</h2><select data-character aria-label="Character history"><option value="all">All characters</option>${chars.map(c=>`<option value="${esc(c.id)}" ${c.id===this.selected?'selected':''}>${esc(c.name)} · Lv ${c.level}${c.deleted?' · Archived':''}</option>`).join('')}</select><button class="ui-button ui-button--quiet ui-button--icon" data-close aria-label="Close Chronicle">${uiIcon('close')}</button></header>
    <nav class="chronicle-tabs" aria-label="Chronicle sections">${tabs.map((t,i)=>`<button data-tab="${i}" aria-current="${i===this.tab?'page':'false'}">${t}</button>`).join('')}<span>${earned} <small>/ ${total}</small></span></nav>
    <div class="chronicle-content ui-scroll-area">${this.tab===0?this.overview(values):this.tab===1?this.achievements(values):this.statistics(values)}</div>
    <footer class="chronicle-footer"><span>${values['seen:legacy']?'Older history is partial.':this.selected==='all'?`${chars.length} characters · Deleted characters retained`:'Character history'}</span><span>Esc / B <span>Close</span></span></footer></section>`;

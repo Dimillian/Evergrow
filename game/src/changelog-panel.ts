@@ -6,6 +6,7 @@ import { PAD, type GamepadInput } from './gamepad-input.ts';
 import './changelog-panel.css';
 
 const entries = parseChangelog(source);
+export const latestChangelogVersion = entries[0]?.version ?? '';
 const inline = (text: string) => escapeUI(text).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
 /** Read-only title-screen overlay. It never touches characters or save storage. */
@@ -16,12 +17,13 @@ export class ChangelogPanel {
   private readonly controller = new GamepadMenu();
   private selected = 0;
   private lastPadTime = 0;
+  private embedded: boolean;
   private readonly onClose: () => void;
-  constructor(mount: HTMLElement, onClose: () => void) {
-    this.onClose = onClose;
+  constructor(mount: HTMLElement, onClose: () => void, embedded = false) {
+    this.onClose = onClose; this.embedded = embedded;
     this.element = document.createElement('div');
-    this.element.className = 'changelog-overlay'; this.element.hidden = true;
-    this.element.innerHTML = `<section class="ui-window changelog-window" role="dialog" aria-modal="true" aria-labelledby="changelog-title">
+    this.element.className = 'changelog-overlay' + (embedded ? ' home-embedded' : ''); this.element.hidden = true;
+    this.element.innerHTML = `<section class="ui-window changelog-window" role="${this.embedded?'region':'dialog'}" ${this.embedded?'':'aria-modal="true"'} aria-labelledby="changelog-title">
       <header class="ui-window-header"><h2 class="ui-title" id="changelog-title">What's new</h2><button class="ui-button ui-button--quiet ui-button--icon" data-changelog-close aria-label="Close changelog">${uiIcon('close')}</button></header>
       <div class="changelog-layout"><nav class="changelog-history ui-scroll-area" aria-label="Updates">${entries.map((entry, i) => `<button class="changelog-release" data-release="${i}" aria-controls="changelog-entry"><time datetime="${entry.date}">${changelogDate(entry.date)}</time><span>v${escapeUI(entry.version)}</span>${i === 0 ? '<small>Latest</small>' : ''}</button>`).join('')}</nav>
       <article id="changelog-entry" class="changelog-entry ui-scroll-area" tabindex="0" aria-label="Update notes"></article></div>
@@ -44,7 +46,7 @@ export class ChangelogPanel {
   open() {
     this.element.hidden = false; this.select(0); this.controller.clear(); this.lastPadTime = 0;
     this.focus?.dispose();
-    this.focus = trapDialogFocus(this.element, { signal: this.life.signal, restoreFocus: false,
+    if (!this.embedded) this.focus = trapDialogFocus(this.element, { signal: this.life.signal, restoreFocus: false,
       initialFocus: () => this.element.querySelector('[data-changelog-close]') });
   }
   close(notify = true) {

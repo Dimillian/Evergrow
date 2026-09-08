@@ -94,3 +94,5 @@ Code checks and static reviews do not establish gameplay feel, economy balance o
 - [Material responses](material-responses.md): shared procedural debris, impacts and elemental death presentation.
 
 - [Equipment affixes and hybrids](equipment-affixes.md): current slot pools, roll weights, specialist budgets and elemental combat.
+
+- [Home and leaderboard](leaderboard.md): automatic Cloud character rankings, shared home navigation and equipped gear scoring (local, pending publication).

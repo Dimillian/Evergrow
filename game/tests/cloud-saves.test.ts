@@ -21,6 +21,7 @@ function fixture() {
 function server() {
   const db = new DatabaseSync(':memory:'); db.exec(readFileSync(new URL('../../drizzle/0000_conscious_kingpin.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../../drizzle/0001_worthless_slipstream.sql', import.meta.url),'utf8'));
+  db.exec(readFileSync(new URL('../../drizzle/0002_amazing_old_lace.sql', import.meta.url),'utf8'));
   const blobs = new Map<string, string>(); let failPut = false, failCommit = false, uncertainCommit = false;
   const env: CloudEnv = {
     DB: { prepare(sql) {
@@ -139,4 +140,46 @@ test('Chronicle follows accepted cloud checkpoints, retains deletion and isolate
  assert.equal((await s.request('A','characters/0',write(null,1))).status,200);
  const deleted=await(await s.request('A','chronicle')).json();assert.equal(deleted.characters['cloud-test'].deleted,true);assert.equal(Object.values(deleted.sources).reduce((n:number,r:any)=>n+(r.values.kills??0),0),100);
  assert.deepEqual((await(await s.request('B','chronicle')).json()).sources,{});
+});
+
+test('leaderboard includes every cloud character and exposes no account identity or save data', async t => {
+  const s=server();t.after(()=>s.db.close());
+  for(const [owner,slot,name] of [['private-A',0,'Rowan'],['private-A',1,'Isolde'],['private-B',0,'Ash']] as const){
+    const bundle=fixture();bundle.character.name=name;
+    assert.equal((await s.request(owner,`characters/${slot}`,write(bundle))).status,200);
+  }
+  const publicRanks=await(await s.request(null,'leaderboard')).json();
+  assert.equal(publicRanks.total,3);assert.equal(publicRanks.entries.length,3);assert.deepEqual(publicRanks.own,[]);
+  assert.deepEqual(publicRanks.entries.map((r:any)=>r.name).sort(),['Ash','Isolde','Rowan']);
+  for(const r of publicRanks.entries)assert.deepEqual(Object.keys(r).sort(),['gearPower','level','mine','name','rank','updatedAt']);
+  assert(!JSON.stringify(publicRanks).includes('private-'));
+  const mine=await(await s.request('private-A','leaderboard')).json();assert.equal(mine.own.length,2);assert.equal(mine.entries.filter((r:any)=>r.mine).length,2);
+  assert.equal((await s.request('private-A','leaderboard',undefined,{'X-Evergrow-Account':'private-B'})).status,401);
+  assert.equal((await s.request(null,'leaderboard?order=invalid')).status,400);
+  assert.equal((await s.request('private-A','characters/1',write(null,1))).status,200);
+  assert.equal((await(await s.request(null,'leaderboard')).json()).total,2);
+});
+test('rankings sort characters by level or gear and retain every owned character beyond top 100', async t=>{
+  const s=server();t.after(()=>s.db.close());
+  for(let i=0;i<105;i++)s.db.prepare("INSERT INTO characters(owner,slot,revision,object,rank_name,rank_level,rank_gear,updated_at,operation,digest) VALUES(?,0,1,?,?,?,?,1,'test','test')").run('account-'+i,'blob-'+i,'Hero '+i,105-i,i);
+  s.db.prepare("INSERT INTO characters(owner,slot,revision,object,rank_name,rank_level,rank_gear,updated_at,operation,digest) VALUES(?,1,1,?,?,?,?,1,'test','test')").run('account-104','blob-extra','Another hero',1,1);
+  const level=await(await s.request('account-104','leaderboard')).json();
+  assert.equal(level.total,106);assert.equal(level.entries.length,100);assert.equal(level.own.length,2);assert(level.own.every((r:any)=>r.rank>100));
+  assert.equal(level.entries[0].name,'Hero 0');
+  const gear=await(await s.request(null,'leaderboard?order=gear')).json();assert.equal(gear.entries[0].name,'Hero 104');
+});
+test('failed or stale writes cannot publish leaderboard changes', async t=>{
+  const s=server();t.after(()=>s.db.close());await s.request('A','characters/0',write(fixture()));
+  const changed=fixture();changed.character.name='Changed';s.failPut(true);
+  await assert.rejects(s.request('A','characters/0',write(changed,1)));s.failPut(false);
+  assert.equal((await s.request('A','characters/0',write(changed,0))).status,409);
+  assert.equal((await(await s.request(null,'leaderboard')).json()).entries[0].name,'Rowan');
+});
+test('ranking migration includes existing cloud character names and levels without confusing build power with gear power',()=>{
+ const db=new DatabaseSync(':memory:');try{
+ db.exec(readFileSync(new URL('../../drizzle/0000_conscious_kingpin.sql',import.meta.url),'utf8'));
+ db.exec("INSERT INTO characters(owner,slot,revision,object,summary,updated_at,operation,digest) VALUES ('private',0,1,'blob','{\"name\":\"Rowan\",\"level\":12,\"power\":999}',1,'test','test')");
+ db.exec(readFileSync(new URL('../../drizzle/0002_amazing_old_lace.sql',import.meta.url),'utf8'));
+ const row=db.prepare('SELECT rank_name,rank_level,rank_gear FROM characters').get()!;assert.equal(row.rank_name,'Rowan');assert.equal(row.rank_level,12);assert.equal(row.rank_gear,null);
+ }finally{db.close();}
 });

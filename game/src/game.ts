@@ -192,6 +192,7 @@ export class Game {
         create: (index, name, weapon, seed) => this.editNewCharacter(index, name, weapon, seed),
         continue: index => this.continueCharacter(index), remove: (index, expected) => this.deleteCharacter(index, expected),
         read: index => this.saveClient.read(index), source: mode => this.selectSaveSource(mode),
+        leaderboard: order => this.saveClient.leaderboard(order),
         ...(!window.EvergrowAndroid ? { download: (index: number) => this.downloadSave(index), import: (index: number, file: File) => this.importSave(index, file) } : {}),
         useCloud: (index, expected) => this.resolveCloudSave(index, expected),
       }));

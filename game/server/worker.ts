@@ -1,3 +1,5 @@
+import { leaderboardAPI } from './leaderboard.ts';
+import { equippedGearPower } from '../src/leaderboard.ts';
 import { parseChronicleLedger, mergeChronicles, recordChronicle } from '../src/chronicle.ts';
 import { decodeSaveBundle, SAVE_BUNDLE_LIMIT } from '../src/save-bundle.ts';
 import { characterPower, previewCharacter } from '../src/character-summary.ts';
@@ -24,6 +26,11 @@ async function boundedBody(request: Request): Promise<string> {
 export async function cloudAPI(request: Request, env: CloudEnv): Promise<Response> {
   const url = new URL(request.url), user = request.headers.get('oai-authenticated-user-id');
   if (url.pathname === '/api/cloud/session' && request.method === 'GET') return json({ supported: true, user: user || null });
+  if (url.pathname === '/api/cloud/leaderboard') {
+    if (!env.DB) return json({error:'Leaderboard unavailable.'},503);
+    if (user && (user.length > 512 || request.headers.get('X-Evergrow-Account') !== user)) return json({error:'Account changed. Reopen the leaderboard.'},401);
+    return leaderboardAPI(request,env,user);
+  }
   if (!user || user.length > 512) return json({ error: 'Sign in to use cloud saves.' }, 401);
   if (request.headers.get('X-Evergrow-Account') !== user) return json({ error: 'Account changed. Return to the character screen.' }, 401);
   if (!env.DB || !env.SAVES) return json({ error: 'Cloud saves are unavailable.' }, 503);
@@ -63,7 +70,7 @@ export async function cloudAPI(request: Request, env: CloudEnv): Promise<Respons
   const bundle = input.bundle === null ? null : decodeSaveBundle(raw);
   if (input.bundle !== null && (!bundle || bundle.character.worldVersion !== WORLD_GENERATION_VERSION)) return json({ error: 'Invalid or incompatible save file.' }, 422);
   const r = bundle?.character;
-  const summary = r ? JSON.stringify({ name: r.name, level: r.checkpoint.level, power: characterPower(previewCharacter(r)).power, updatedAt: r.updatedAt }) : null;
+  const summary = r ? JSON.stringify({ name: r.name, level: r.checkpoint.level, power: characterPower(previewCharacter(r)).power, gearPower: equippedGearPower(r.checkpoint.character), updatedAt: r.updatedAt }) : null;
   let history=parseChronicleLedger(row?.chronicle);
   if(row?.object){const previous=await env.SAVES.get(row.object);if(!previous) return json({error:'Previous checkpoint unavailable.'},503);
     const old=decodeSaveBundle(await previous.text());if(!old)return json({error:'Previous checkpoint invalid.'},503);
@@ -75,11 +82,12 @@ export async function cloudAPI(request: Request, env: CloudEnv): Promise<Respons
   if (key) await env.SAVES.put(key, raw);
   let committed = false, safeToDelete = false;
   try {
-    const result = await env.DB.prepare(`INSERT INTO characters (owner, slot, revision, object, previous, summary, operation, digest, updated_at, chronicle)
-      VALUES (?, ?, 1, ?, NULL, ?, ?, ?, ?, ?)
+    const result = await env.DB.prepare(`INSERT INTO characters (owner, slot, revision, object, previous, summary, operation, digest, updated_at, chronicle, rank_name, rank_level, rank_gear )
+      VALUES (?, ?, 1, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(owner, slot) DO UPDATE SET revision = characters.revision + 1, previous = characters.object,
-      object = excluded.object, summary = excluded.summary, chronicle = excluded.chronicle, operation = excluded.operation, digest = excluded.digest, updated_at = excluded.updated_at
-      WHERE characters.revision = ?`).bind(owner, slot, key, summary, input.operation, digest, Date.now(), historyRaw, input.expected).run();
+      object = excluded.object, summary = excluded.summary, chronicle = excluded.chronicle, operation = excluded.operation, digest = excluded.digest, updated_at = excluded.updated_at,
+      rank_name = excluded.rank_name, rank_level = excluded.rank_level, rank_gear = excluded.rank_gear
+      WHERE characters.revision = ?`).bind(owner, slot, key, summary, input.operation, digest, Date.now(), historyRaw, r?.name??null, r?.checkpoint.level??null, r?equippedGearPower(r.checkpoint.character):null, input.expected).run();
     committed = result.meta.changes === 1; safeToDelete = !committed;
     if (!committed) {
       const winner = await current();

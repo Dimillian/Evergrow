@@ -1,3 +1,4 @@
+import type { LeaderboardOrder, LeaderboardSnapshot } from './leaderboard.ts';
 import type { ChronicleLedger } from './chronicle.ts';
 import { decodeSaveBundle } from './save-bundle.ts';
 import { WORLD_GENERATION_VERSION } from './world.ts';
@@ -41,6 +42,13 @@ export class SaveHub implements CharacterRepositoryPort, ExplorationPersistence 
   async list() {
     if (this.mode === 'cloud' && !this.cloud) return [];
     return this.repository.list();
+  }
+  async leaderboard(order: LeaderboardOrder): Promise<LeaderboardSnapshot> {
+    if (!this.supported) throw new Error('The leaderboard is available in the online game.');
+    if (this.cloud) return this.cloud.leaderboard(order);
+    const response = await fetch(`/api/cloud/leaderboard?order=${order}`, { cache: 'no-store', credentials: 'same-origin', signal: AbortSignal.timeout(10000) });
+    if (!response.ok) throw new Error('Leaderboard unavailable. Try again shortly.');
+    return response.json();
   }
   async chronicle(onCached?:(ledger:ChronicleLedger)=>void) {
     const repository=this.repository;

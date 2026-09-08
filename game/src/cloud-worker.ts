@@ -1,3 +1,4 @@
+import { equippedGearPower } from './leaderboard.ts';
 import { characterPower, previewCharacter } from './character-summary.ts';
 import { bundleChart, chartKey, encodeChart } from './save-bundle.ts';
 import type { CloudRow } from './cloud-cache.ts';
@@ -22,7 +23,7 @@ scope.onmessage = ({ data }) => {
         const rows = await cache.execute({ kind: 'list' }) as CloudRow[];
         result = rows.map(({ index, token, base, dirty, conflict, bundle }) => ({ index, token, base, dirty, conflict,
           summary: bundle ? { name: bundle.character.name, level: bundle.character.checkpoint.level, updatedAt: bundle.character.updatedAt,
-            power: characterPower(previewCharacter(bundle.character)).power } : undefined }));
+            power: characterPower(previewCharacter(bundle.character)).power, gearPower: equippedGearPower(bundle.character.checkpoint.character) } : undefined }));
       }
       else if (data.method === 'chart-status') {
         const rows = await cache.execute({ kind: 'list' }) as CloudRow[];

@@ -15,6 +15,13 @@
       "when": 1788803522886,
       "tag": "0001_worthless_slipstream",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788845879553,
+      "tag": "0002_amazing_old_lace",
+      "breakpoints": true
     }
   ]
 }

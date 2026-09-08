@@ -1,0 +1,55 @@
+/* One home frame: character hall and account libraries share the same navigation. */
+.title-brand { gap:16px; }
+.title-home-nav { display:flex; align-items:center; gap:4px; margin-left:auto; padding:5px; border:1px solid #a1bbb520; border-radius:11px; background:#07121990; }
+.title-home-nav button { position:relative; border:0; border-radius:7px; background:transparent; padding:12px 17px; color:#93aaa9; font:16px var(--ui-font); white-space:nowrap; cursor:pointer; transition:color .18s,background .18s; }
+.title-home-nav button:hover { color:#e3dec8; background:#a4b9af0b; }
+.title-home-nav button[aria-current=page] { color:#e9dfb9; background:linear-gradient(120deg,#bfb58723,#a0bdb30b); box-shadow:inset 0 0 0 1px #c5b78026; }
+.title-home-nav button:focus-visible { outline:2px solid #c7d8b6; outline-offset:2px; }
+.title-home-nav button[hidden],.home-unread[hidden] { display:none; }
+.home-unread { position:absolute; right:8px; top:8px; width:4px; height:4px; border-radius:50%; background:#dfc98f; box-shadow:0 0 8px #dfc98f88; }
+.title-brand > .home-pad-hint { display:none; width:auto; height:auto; transform:none; border:0; color:#90a5a8; font:11px system-ui; white-space:nowrap; }
+.title-screen.is-controller .home-pad-hint { display:block; }
+.title-roster[hidden],.title-library[hidden] { display:none; }
+.title-screen:not([data-home-page=characters]) .title-hero { display:none; }
+.title-library.ui-window { grid-column:1/-1; grid-row:2; position:relative; width:100%; height:100%; min-height:0; max-width:1200px; margin:auto; overflow:hidden; background:radial-gradient(ellipse at 0 0,#30464b66,transparent 55%),#0a141ce8; border:1px solid #8da7a43b; border-radius:12px; box-shadow:0 24px 80px #0006; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); }
+.title-library .home-embedded { position:relative; inset:auto; padding:0; height:100%; width:100%; background:none; backdrop-filter:none; -webkit-backdrop-filter:none; display:flex; }
+.title-library .home-embedded[hidden] { display:none; }
+.title-library .home-embedded > .ui-window { width:100%; height:100%; max-height:none; min-height:0; border:0; border-radius:0; background:none; box-shadow:none; }
+.title-library .home-embedded > .ui-window::before,.title-library .home-embedded > .ui-window::after { display:none; }
+.title-library .home-embedded [data-changelog-close],.title-library .home-embedded [data-close] { display:none; }
+.title-library .changelog-footer { display:none; }
+.title-library .ui-window-header { padding:20px 28px; }
+.title-library .chronicle-content { padding:22px 28px; }
+.title-library .chronicle-footer { padding:10px 28px; }
+.rank-own { max-height:150px; overflow:auto; flex-shrink:0; }
+@media(max-width:1050px), (max-height:600px) {
+ .title-screen { grid-template-rows:48px minmax(0,1fr); }
+ .title-brand { gap:12px; }
+ .title-home-nav button { padding:10px 12px; font-size:14px; }
+ .title-library .ui-window-header { padding:12px 20px; }
+}
+@media(max-width:700px) {
+ .title-screen { grid-template-rows:82px minmax(0,1fr); }
+ .title-brand { flex-wrap:wrap; gap:8px 12px; }
+ .title-brand h1 { font-size:25px; }
+ .title-home-nav { order:3; flex-basis:100%; justify-content:space-between; padding:3px; }
+ .title-home-nav button { flex:1; padding:9px 5px; font-size:14px; }
+ .title-screen.is-controller .home-pad-hint { margin-left:auto; }
+ .title-library .ui-window-header { padding:12px 16px; }
+ .title-library .chronicle-content { padding:16px; }
+}
+@media(max-height:440px) and (min-width:701px) {
+ .title-screen { grid-template-rows:38px minmax(0,1fr); }
+ .title-brand { display:flex; }
+ .title-home-nav { padding:2px; }
+ .title-home-nav button { padding:7px 10px; }
+ .title-library .ui-window-header { padding:8px 16px; }
+}
+@media(prefers-reduced-motion:reduce) { .title-home-nav button { transition:none; } }
+/* Tall tablet windows keep the hero above the compact roster rather than an empty backdrop. */
+@media(min-width:601px) and (max-width:1050px) and (min-height:740px) {
+ .title-screen[data-home-page=characters] .title-hero { display:grid; grid-column:1; grid-row:2; align-self:start; height:calc(100% - 370px); width:100%; }
+ .title-screen[data-home-page=characters] .title-roster { grid-column:1; grid-row:2; align-self:end; margin:0 auto; }
+ .title-hero .title-halo { width:220px; }
+ .title-hero .title-plinth { display:none; }
+}

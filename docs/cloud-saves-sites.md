@@ -55,6 +55,10 @@ The schema entrypoint is `db/schema.ts`, re-exporting `game/server/schema.ts`; g
 
 `/title.html?cloud&full` stages the real hall with eight memory-only characters. Add `empty`, `signedout` or `conflict` for alternate states. This preview never signs in, contacts save APIs or starts gameplay.
 
+## Leaderboard and home — pending publication
+
+Every Cloud character now has an automatic public ranking projection: character name, level and equipped gear power. Multiple characters per account can appear. The read-only home leaderboard queries D1 summaries without reading R2 saves or flushing the outbox. Local/Android saves remain private to their device. Migration `0002_amazing_old_lace.sql` adds the projections and backfills existing names/levels; gear scores appear after the next successful save. See [leaderboard and home](leaderboard.md) for scoring, controls and API details.
+
 ## Verification and remaining acceptance
 
 Code tests exercise two-user isolation, two-writer races, stale deletion, duplicate requests, account mismatch, cross-origin requests, invalid stats/maps, failed R2/D1 writes, uncertain commit acknowledgements, outbox recovery/coalescing, explicit conflict replacement and atomic local import/export. Browser and Android builds are checked separately.

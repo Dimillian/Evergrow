@@ -1,3 +1,4 @@
+import type { LeaderboardOrder, LeaderboardSnapshot } from './leaderboard.ts';
 import type { ChronicleLedger } from './chronicle.ts';
 import type { CharacterSave } from './character-save.ts';
 import type { CharacterRepositoryPort, SaveResult, SaveSlot, SaveSummary } from './character-storage.ts';
@@ -60,6 +61,9 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
     } catch (error) { this.failed(error); return Array.from({ length: 8 }, (_, index) => {
       const cached = local.find(c => c.index === index); return cached ? { index, token: cached.token, record: null, summary: cached.summary, state: cached.summary ? 'saved' : 'empty', pending: cached.dirty, conflict: cached.conflict } : { index, record: null, token: null, state: 'unavailable' };
     }); }
+  }
+  async leaderboard(order: LeaderboardOrder): Promise<LeaderboardSnapshot> {
+    return this.api(`leaderboard?order=${order}`);
   }
   async chronicle(onCached?:(ledger:ChronicleLedger)=>void):Promise<ChronicleLedger> {
     // A read must not flush the save outbox or wait for a network round trip to display.

@@ -1,12 +1,14 @@
+import { LeaderboardPanel, type LeaderboardLoader } from './leaderboard-panel.ts';
+import { equippedGearPower } from './leaderboard.ts';
 import { ChroniclePanel } from './chronicle-panel.ts';
 import { emptyChronicle, type ChronicleLedger } from './chronicle.ts';
-import { ChangelogPanel } from './changelog-panel.ts';
-import type { GamepadInput } from './gamepad-input.ts';
+import { ChangelogPanel, latestChangelogVersion } from './changelog-panel.ts';
+import { PAD, type GamepadInput } from './gamepad-input.ts';
 import { directionalControl } from './ui-navigation.ts';
 import { titleSlotAction } from './title-slot-action.ts';
 import { FramePacer } from './frame-pacer.ts';
 import { escapeUI, uiIcon, trapDialogFocus } from './ui-components.ts';
-import { characterPower, previewCharacter } from './character-summary.ts';
+import { previewCharacter } from './character-summary.ts';
 import { drawCharacterPortrait } from './character-portrait.ts';
 import type { SaveSlot } from './character-storage.ts';
 import type { SaveMode, SaveSourceUI } from './save-hub.ts';
@@ -15,18 +17,25 @@ import { STARTER_LOADOUTS, createStarterLoadout, isStarterLoadoutId, type Starte
 import { itemIconSVG } from './item-art.ts';
 import { parseWorldSeed } from './world-seed.ts';
 import './title-screen.css';
+import './home-screen.css';
 export interface TitleActions {
+  leaderboard?: LeaderboardLoader;
   chronicle?(onCached?:(ledger:ChronicleLedger)=>void): Promise<ChronicleLedger>;
   create(index: number, name: string, weapon: StarterLoadoutId, seed: number): void;
   continue(index: number): void; remove(index: number, expected: string | null): void;
   read?(index: number): Promise<SaveSlot>; source?(mode: SaveMode): void;
   download?(index: number): void; import?(index: number, file: File): void; useCloud?(index: number, expected: string | null): void;
 }
+export type HomePage = 'characters' | 'chronicle' | 'leaderboard' | 'changelog';
+const homePages: readonly HomePage[] = ['characters','chronicle','leaderboard','changelog'];
+const homeLabels = { characters: 'Characters', chronicle: 'Chronicle', leaderboard: 'Leaderboard', changelog: 'What’s new' };
 const format = (n: number) => Math.round(n).toLocaleString('en-US');
 /** One compact screen; storage and validated character mutations remain outside the view. */
 export class TitleScreen {
   readonly element: HTMLDivElement;
   private readonly changelog: ChangelogPanel;
+  private readonly leaderboard: LeaderboardPanel;
+  private page: HomePage = 'characters';
   private readonly chronicle: ChroniclePanel;
   private slots: SaveSlot[] = [];
   private selected = 0;
@@ -49,19 +58,27 @@ export class TitleScreen {
     this.actions = actions;
     this.element = document.createElement('div'); this.element.className = 'title-screen'; this.element.hidden = true;
     this.element.innerHTML = `<div class="title-vignette" aria-hidden="true"></div>
-      <header class="title-brand"><span aria-hidden="true">${uiIcon('skilltree')}</span><h1>EVERGROW</h1></header>
+      <header class="title-brand"><span aria-hidden="true">${uiIcon('skilltree')}</span><h1>EVERGROW</h1><nav class="title-home-nav" aria-label="Home">${homePages.map(page=>`<button data-home-page="${page}" aria-current="${page==='characters'?'page':'false'}">${homeLabels[page]}${page==='changelog'?'<i class="home-unread" aria-label="Unread update" hidden></i>':''}</button>`).join('')}</nav><span class="home-pad-hint">LB / RB</span></header>
       <section class="title-hero" aria-label="Selected character"><div class="title-halo" aria-hidden="true"></div><canvas width="560" height="720" aria-label="Selected character wearing their saved equipment"></canvas><div class="title-plinth" aria-hidden="true"></div></section>
       <section class="title-roster ui-window" aria-labelledby="roster-title"><header class="title-roster-header"><h2 id="roster-title">Characters</h2><div class="title-sources" role="group" aria-label="Save location" hidden><button data-source="cloud">Cloud</button><button data-source="local">Local</button></div><span class="title-controller-hint"><kbd>A</kbd> Continue</span><span class="title-slot-count"></span></header>
       <div class="title-hall-body"><div class="title-slot-grid" role="group" aria-label="Eight character slots"></div><div class="title-selection"></div></div>
-      <footer class="title-roster-footer"><button class="title-updates" data-action="chronicle" aria-haspopup="dialog">Chronicle</button><button class="title-updates" data-action="changelog" aria-haspopup="dialog">What’s new</button><span class="title-storage-status" role="status"></span><a class="title-signout" href="/signout-with-chatgpt?return_to=/" target="_top" hidden>Sign out</a><span class="title-transfer"><button data-action="import">Import</button><button data-action="download">Download</button></span></footer>
-      <p class="title-save-message" role="status" hidden></p><input type="file" class="title-file" accept=".json,application/json" hidden></section>`;
+      <footer class="title-roster-footer"><span class="title-storage-status" role="status"></span><a class="title-signout" href="/signout-with-chatgpt?return_to=/" target="_top" hidden>Sign out</a><span class="title-transfer"><button data-action="import">Import</button><button data-action="download">Download</button></span></footer>
+      <p class="title-save-message" role="status" hidden></p><input type="file" class="title-file" accept=".json,application/json" hidden></section><section class="title-library ui-window" hidden aria-label="Home content"></section>`;
     this.canvas = this.element.querySelector('canvas')!; mount.append(this.element);
-    this.changelog = new ChangelogPanel(mount, () => this.restoreFromOverlay());
-    this.chronicle = new ChroniclePanel(mount, () => this.restoreFromOverlay('chronicle'));
+    const library=this.element.querySelector<HTMLElement>('.title-library')!;
+    this.changelog = new ChangelogPanel(library, () => this.selectPage('characters'), true);
+    this.chronicle = new ChroniclePanel(library, () => this.selectPage('characters'), true);
+    this.leaderboard = new LeaderboardPanel(library, order => actions.leaderboard?.(order) ?? Promise.reject(new Error('The leaderboard is available in the online game.')), () => this.selectPage('characters'));
+    try { this.element.querySelector<HTMLElement>('.home-unread')!.hidden = localStorage.getItem('evergrow:last-update-seen') === latestChangelogVersion; } catch { /* Optional read marker. */ }
     this.element.querySelector<HTMLElement>('.title-transfer')!.hidden = !actions.download && !actions.import;
     this.element.addEventListener('pointerdown', () => this.element.classList.remove('is-controller'), { signal: this.abort.signal });
     this.element.addEventListener('keydown', event => {
       const target = event.target as HTMLElement;
+      if(event.key==='Escape'&&this.page!=='characters'){event.preventDefault();event.stopPropagation();this.selectPage('characters');return;}
+      if(target.matches('[data-home-page]')&&['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) {
+        event.preventDefault();const pages=this.availablePages(),index=pages.indexOf(this.page);
+        this.selectPage(event.key==='Home'?pages[0]:event.key==='End'?pages.at(-1)!:pages[(index+(event.key==='ArrowLeft'?-1:1)+pages.length)%pages.length]);return;
+      }
       if (!target.matches('[data-slot]') || !event.key.startsWith('Arrow')) return;
       const slots = [...this.element.querySelectorAll<HTMLButtonElement>('[data-slot]')];
       const next = directionalControl(slots.map(slot => slot.getBoundingClientRect()), slots.indexOf(target as HTMLButtonElement), event.key);
@@ -73,11 +90,10 @@ export class TitleScreen {
     }, { signal: this.abort.signal });
     this.element.addEventListener('click', event => {
       const button = (event.target as Element).closest<HTMLButtonElement>('button'); if (!button) return;
+      if (button.dataset.homePage) { this.selectPage(button.dataset.homePage as HomePage); return; }
       if (button.dataset.source) { this.actions.source?.(button.dataset.source as SaveMode); return; }
       if (button.dataset.slot !== undefined) { this.choose(Number(button.dataset.slot)); return; }
       const action = button.dataset.action;
-      if (action === 'chronicle') { this.focus?.dispose(); this.focus = undefined; this.element.inert = true; void this.chronicle.open(onCached => actions.chronicle?.(onCached) ?? Promise.resolve(emptyChronicle())); return; }
-      if (action === 'changelog') { this.focus?.dispose(); this.focus = undefined; this.element.inert = true; this.changelog.open(); return; }
       if (action === 'retry') window.location.reload();
       if (action === 'continue') this.actions.continue(this.selected);
       if (action === 'delete' || action === 'cloud') { this.confirming = action; this.renderSelection(); this.element.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.focus(); }
@@ -122,9 +138,11 @@ export class TitleScreen {
     }
     return true;
   }
-  setBusy(busy: boolean) { this.element.inert = busy || this.changelog.opened || this.chronicle.opened; this.element.classList.toggle('is-busy', busy); this.element.setAttribute('aria-busy', String(busy)); }
+  setBusy(busy: boolean) { this.element.inert = busy; this.element.classList.toggle('is-busy', busy); this.element.setAttribute('aria-busy', String(busy)); }
   setSource(source: SaveSourceUI) {
     this.source = source;
+    this.element.querySelector<HTMLElement>('[data-home-page=leaderboard]')!.hidden = !source.supported;
+    if (!source.supported && this.page === 'leaderboard') this.selectPage('characters');
     this.element.querySelector<HTMLElement>('.title-transfer')!.hidden = source.mode !== 'local' || (!this.actions.download && !this.actions.import);
     if (source.mode !== 'local') this.element.querySelector<HTMLInputElement>('.title-file')!.value = '';
     this.element.querySelector<HTMLAnchorElement>('.title-signout')!.hidden = source.mode !== 'cloud' || !source.signedIn;
@@ -135,7 +153,7 @@ export class TitleScreen {
     status.dataset.status = source.status;
   }
   open(slots: SaveSlot[], preferred?: number) {
-    this.changelog.close(false); this.chronicle.close(false); this.element.inert = false;
+    this.selectPage('characters', false); this.element.inert = false;
     this.slots = slots; this.names.clear(); this.seedDrafts.clear();
     const latest = [...slots].sort((a, b) => (b.record?.updatedAt ?? b.summary?.updatedAt ?? 0) - (a.record?.updatedAt ?? a.summary?.updatedAt ?? 0))[0]?.index ?? 0;
     this.selected = preferred ?? latest; this.confirming = null; this.element.hidden = false; this.message(''); this.setSource(this.source);
@@ -149,16 +167,31 @@ export class TitleScreen {
     this.element.inert=open;this.element.style.visibility=open?'hidden':'';
     if(!open&&!this.element.hidden)this.focus=trapDialogFocus(this.element,{signal:this.abort.signal,restoreFocus:false,initialFocus:()=>this.element.querySelector(`[data-slot="${this.selected}"]`)});
   }
-  dismissOverlay(): boolean {
-    if(this.chronicle.opened){this.chronicle.close();return true;}
-    if (!this.changelog.opened) return false;
-    this.changelog.close(); return true;
+  private availablePages() { return homePages.filter(page=>page!=='leaderboard'||this.source.supported); }
+  selectPage(page: HomePage, focus=true) {
+    if(page==='leaderboard'&&!this.source.supported)return;
+    this.changelog.close(false);this.chronicle.close(false);this.leaderboard.close();
+    this.page=page;this.element.dataset.homePage=page;
+    this.element.querySelector<HTMLElement>('.title-roster')!.hidden=page!=='characters';
+    this.element.querySelector<HTMLElement>('.title-library')!.hidden=page==='characters';
+    this.element.querySelectorAll<HTMLElement>('[data-home-page]').forEach(b=>b.setAttribute('aria-current',b.dataset.homePage===page?'page':'false'));
+    if(page==='chronicle')void this.chronicle.open(onCached=>this.actions.chronicle?.(onCached)??Promise.resolve(emptyChronicle()));
+    if(page==='leaderboard')this.leaderboard.open();
+    if(page==='changelog') {
+      this.changelog.open();this.element.querySelector<HTMLElement>('.home-unread')!.hidden=true;
+      try{localStorage.setItem('evergrow:last-update-seen',latestChangelogVersion);}catch{/* Optional read marker. */}
+    }
+    if(focus)this.element.querySelector<HTMLElement>(`[data-home-page="${page}"]`)?.focus({preventScroll:true});
   }
-  updateOverlayGamepad(pad: GamepadInput, now: number): boolean { return this.chronicle.updateGamepad(pad,now) || this.changelog.updateGamepad(pad, now); }
-  private restoreFromOverlay(action='changelog') {
-    this.element.inert = this.element.classList.contains('is-busy');
-    if (!this.element.hidden) this.focus = trapDialogFocus(this.element, { signal: this.abort.signal, restoreFocus: false,
-      initialFocus: () => this.element.querySelector(`[data-action="${action}"]`) });
+  dismissOverlay(): boolean { if(this.page==='characters')return false;this.selectPage('characters');return true; }
+  updateOverlayGamepad(pad: GamepadInput, now: number): boolean {
+    if(this.element.inert)return true;
+    if(pad.active)this.element.classList.add('is-controller');
+    if(pad.pressed.has(PAD.potion)||pad.pressed.has(PAD.skill2)) {
+      const pages=this.availablePages(),delta=pad.pressed.has(PAD.potion)?-1:1;
+      this.selectPage(pages[(pages.indexOf(this.page)+delta+pages.length)%pages.length]);return true;
+    }
+    return this.chronicle.updateGamepad(pad,now)||this.changelog.updateGamepad(pad,now)||this.leaderboard.updateGamepad(pad,now);
   }
   private choose(index: number, focus = true) {
     this.selected = index; this.confirming = null; this.loading = false; const ticket = ++this.inspection;
@@ -175,15 +208,15 @@ export class TitleScreen {
     }).catch(() => { if (ticket === this.inspection) { this.loading = false; this.message('Save unavailable. Please retry.'); this.renderSelection(); } });
   }
   message(text: string) { const target = this.element.querySelector<HTMLElement>('.title-save-message')!; target.textContent = text; target.hidden = !text; }
-  close() { this.changelog.close(false); this.chronicle.close(false); this.element.inert = false; this.inspection++; this.element.hidden = true; this.focus?.dispose(); this.focus = undefined; cancelAnimationFrame(this.frame); this.frame = 0; }
-  dispose() { this.close(); this.changelog.dispose(); this.chronicle.dispose(); this.abort.abort(); this.element.remove(); }
+  close() { this.changelog.close(false); this.chronicle.close(false); this.leaderboard.close(); this.element.inert = false; this.inspection++; this.element.hidden = true; this.focus?.dispose(); this.focus = undefined; cancelAnimationFrame(this.frame); this.frame = 0; }
+  dispose() { this.close(); this.changelog.dispose(); this.chronicle.dispose(); this.leaderboard.dispose(); this.abort.abort(); this.element.remove(); }
   private rollSeed() { const value = String(crypto.getRandomValues(new Uint32Array(1))[0]); this.seedDrafts.set(this.selected, value); return value; }
   private validateSeed(input: HTMLInputElement) { const seed = parseWorldSeed(input.value); input.setCustomValidity(seed === null ? 'Use a whole number from 0 to 4294967295.' : ''); return seed; }
   private render() {
     this.element.querySelector('.title-slot-count')!.textContent = `${this.slots.filter(s => s.record || s.summary).length} / 8`;
     this.element.querySelector('.title-slot-grid')!.innerHTML = this.slots.map(slot => {
-      const r = slot.record, summary = r ? { name: r.name, level: r.checkpoint.level, power: characterPower(previewCharacter(r)).power } : slot.summary;
-      return `<button class="title-slot" data-slot="${slot.index}" aria-pressed="${slot.index === this.selected}" aria-label="Slot ${slot.index + 1}: ${summary ? escapeUI(summary.name) : 'New character'}"><span class="title-slot-number">${slot.index + 1}</span><span class="title-slot-copy"><strong>${summary ? escapeUI(summary.name) : slot.state === 'empty' ? '+ New' : 'Unavailable'}</strong>${summary ? `<small>Lv ${summary.level} <i>·</i> ${format(summary.power)} power</small>` : ''}</span>${slot.conflict ? '<span class="title-slot-alert" aria-label="Save conflict">!</span>' : ''}</button>`;
+      const r = slot.record, summary = r ? { name: r.name, level: r.checkpoint.level, gearPower: equippedGearPower(r.checkpoint.character) } : slot.summary;
+      return `<button class="title-slot" data-slot="${slot.index}" aria-pressed="${slot.index === this.selected}" aria-label="Slot ${slot.index + 1}: ${summary ? escapeUI(summary.name) : 'New character'}"><span class="title-slot-number">${slot.index + 1}</span><span class="title-slot-copy"><strong>${summary ? escapeUI(summary.name) : slot.state === 'empty' ? '+ New' : 'Unavailable'}</strong>${summary ? `<small>Lv ${summary.level} ${summary.gearPower!==undefined?`<i>·</i> ${format(summary.gearPower)} gear`:''}</small>` : ''}</span>${slot.conflict ? '<span class="title-slot-alert" aria-label="Save conflict">!</span>' : ''}</button>`;
     }).join('');
     this.renderSelection();
   }
@@ -207,9 +240,9 @@ export class TitleScreen {
       selection.innerHTML = `<div class="title-confirm"><h3>${this.confirming === 'delete' ? 'Delete character?' : 'Use cloud version?'}</h3><p>${this.confirming === 'delete' ? deleteMessage : 'Replaces this device’s recovery copy with the saved cloud version. This cannot be undone.'}</p><div class="title-actions"><button class="ui-button" data-action="cancel">Cancel</button><button class="ui-button ui-button--danger" data-action="confirm-${this.confirming}">${this.confirming === 'delete' ? 'Delete' : 'Use cloud'}</button></div></div>`; return;
     }
     if (record) {
-      const power = characterPower(this.player);
+      const power = equippedGearPower(record.checkpoint.character);
       selection.innerHTML = `<div class="title-selection-heading"><h3>${escapeUI(record.name)}</h3><button class="ui-button ui-button--quiet ui-button--icon" data-action="delete" aria-label="Delete character">${uiIcon('close')}</button></div>
-        <div class="title-build-stats"><div><strong>${record.checkpoint.level}</strong><span>Level</span></div><div data-tooltip="Estimate from attack damage and effective life." tabindex="0"><strong>${format(power.power)}</strong><span>Power</span></div></div>
+        <div class="title-build-stats"><div><strong>${record.checkpoint.level}</strong><span>Level</span></div><div data-tooltip="Average equipped item power. Two-handed weapons count for both hands." tabindex="0"><strong>${format(power)}</strong><span>Gear power</span></div></div>
         <div class="title-save-meta"><span>${Math.floor(record.checkpoint.time / 60)} min</span><span>${new Date(record.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span></div>
         ${slot.conflict ? '<div class="title-conflict"><span>Another device has a newer save.</span><button class="ui-button" data-action="cloud">Use cloud version</button></div>' : ''}
         <button class="ui-button ui-button--primary title-enter" data-action="continue"><span>${slot.conflict ? 'Continue recovery' : 'Continue'}</span>${uiIcon('chevron')}</button>`;

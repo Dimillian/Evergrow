@@ -1,0 +1,28 @@
+.leaderboard-panel { display:flex; flex-direction:column; min-width:0; min-height:0; height:100%; padding:24px 32px 18px; color:var(--ui-text); }
+.leaderboard-panel[hidden] { display:none; }
+.home-eyebrow { font:11px var(--ui-font); letter-spacing:.16em; color:#a7b394; }
+.rank-heading { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:22px; }
+.rank-heading h2 { margin:7px 0; color:#e4dfcb; font:400 32px var(--ui-font); }
+.rank-heading p { margin:0; color:#8ba3a5; font-size:13px; }.rank-heading p span { margin:0 8px; color:#aaa37b; }
+.rank-total { text-align:right; }.rank-total strong { display:block; font-size:30px; color:#d9d9bd; font-weight:500; }.rank-total span { color:#8b9f9c; font-size:12px; }
+.rank-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:18px; }
+.rank-switch { display:flex; gap:4px; padding:4px; border:1px solid #829da52a; border-radius:8px; background:#06101788; }
+.rank-switch button { border:0; border-radius:5px; background:transparent; color:#8da4a8; font:14px var(--ui-font); padding:9px 18px; cursor:pointer; }
+.rank-switch button[aria-pressed=true] { color:#e4ddb6; background:#a6ad8324; box-shadow:inset 0 1px #d0c99c20; }
+.rank-score-help { color:#879f9f; font-size:12px; }
+.rank-table { display:flex; flex-direction:column; flex:1; min-height:0; }
+.rank-columns,.rank-row { display:grid; grid-template-columns:58px minmax(0,1fr) 90px 120px; align-items:center; gap:14px; padding:0 18px; }
+.rank-columns { height:32px; flex:none; color:#7e969b; font-size:12px; border-bottom:1px solid #a7c0bd26; }
+.rank-columns>span:nth-child(n+3),.rank-level,.rank-power { text-align:right; }
+.rank-scroll { min-height:0; flex:1; overflow:auto; scrollbar-gutter:stable; }
+.rank-row { min-height:52px; border-bottom:1px solid #93b5b011; border-radius:4px; }
+.rank-row:hover { background:#9cb8b608; }.rank-row.is-mine { background:linear-gradient(90deg,#bcb58416,#adcab409); }
+.rank-place { width:28px; height:28px; display:grid; place-items:center; color:#839b9f; font-size:14px; }
+.rank-place.is-medal { color:#e0c480; background:radial-gradient(ellipse,#c5a86821,transparent 75%); border:1px solid #c5b37c50; border-radius:8px 3px; }
+.rank-name { display:flex; gap:10px; align-items:center; min-width:0; }.rank-name strong { color:#c6d5d0; font-size:17px; font-weight:400; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }.rank-name small { color:#d1c58d; font-size:10px; }
+.rank-level { color:#dfddc5; font-size:20px; }.rank-power { color:#a9c4c4; font-size:18px; }
+.rank-own { border:1px solid #b3b48044; border-radius:5px; margin-top:8px; flex:none; }.rank-own .rank-row { min-height:48px; }
+.rank-footer { display:flex; justify-content:space-between; align-items:center; gap:18px; padding-top:16px; flex:none; }.rank-footer>div { display:flex; flex-direction:column; gap:4px; }.rank-footer strong { color:#b8c9c4; font-size:14px; font-weight:400; }.rank-footer span { color:#829b9e; font-size:12px; }.rank-footer .ui-button { flex:none; min-height:38px; font-size:13px; }
+.rank-footer .rank-error { color:#e1b49a; }.rank-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; min-height:140px; text-align:center; padding:20px; }.rank-empty-star { font-size:42px; color:#aab89a; }.rank-empty h3 { color:#d1d3bd; font-size:21px; font-weight:400; margin:8px; }.rank-empty p { color:#8c9ea2; font-size:14px; }
+@media(max-width:700px),(max-height:620px) { .leaderboard-panel { padding:14px 18px; }.rank-heading { padding-bottom:12px; }.rank-heading h2 { font-size:24px; margin:4px 0; }.rank-toolbar { padding-bottom:10px; }.rank-row { min-height:42px; }.rank-heading .home-eyebrow { display:none; }.rank-footer { padding-top:10px; } }
+@media(max-width:500px) { .leaderboard-panel { padding:12px; }.rank-columns,.rank-row { grid-template-columns:28px minmax(0,1fr) 40px 78px; gap:8px; padding-inline:6px; }.rank-score-help { display:none; }.rank-name strong { font-size:15px; }.rank-footer { align-items:start; }.rank-footer span { max-width:160px; }.rank-heading p { font-size:11px; }.rank-heading p span { margin:0 2px; } }
