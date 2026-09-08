@@ -4,12 +4,13 @@
 
 ## Last verified publication
 
-- Game v0.5.1 / Sites version 21, publicly deployed on 2026-09-07 at 19:39:23 UTC.
-- Published source: `d9a3d1cb7b7e066a76c3c4b033c8d72e54c3c45f`.
-- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_9413d1dbb5808191aa6202cf2ffc4cd5`.
-- Deployment: `appgdep_6a9f12e02fd081919ad87da2f62349c4`; Sites returned `succeeded`.
-- Includes vendor multi-sell, Chronicle polish/tooltips, automatic Journey guidance, nearest-city pins, resumable distant events, whole-number headline stats and instant chest opening.
-- Each checkpoint passed its focused code checks. Release source passed the cloud-enabled client/server build, three changelog tests and release validation; existing D1 migrations remain included.
+- Game v0.6.0 / Sites version 22, publicly deployed on 2026-09-08 at 06:01:44 UTC.
+- Published source: `2e0fd5125f5e63ba28ffdd34367fc4986a83e182`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_5c6f7e641ef481918cd44714fbc93165`.
+- Deployment: `appgdep_6a9fa4bc7b788191add366ae54186b46`; Sites returned `succeeded`.
+- Includes individual Cloud character rankings, unified home navigation, square home/vendor controls, local-only file transfers, three wilderness boss lairs and six regional monsters.
+- The full implementation passed 986 code tests; the release passed 20 focused changelog/cloud/ranking tests, the cloud-enabled client/server build and release validation.
+- Migration `0002_amazing_old_lace.sql` was packaged and applied. A public leaderboard read returned HTTP 200 and 89 existing characters after publication. Older gear scores remain unknown until the next accepted save.
 - Authenticated cross-device save/Chronicle acceptance remains a player check.
 
 ## Before each requested Sites publication

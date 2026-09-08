@@ -8,9 +8,9 @@ The Sites build defaults to **Cloud** in the character hall. Sign in with ChatGP
 
 Select a character and **Continue**, or choose an empty slot and **Create character**. The compact hall keeps the roster, starting gear and primary action together. Larger screens retain the equipped portrait; handheld layouts prioritize the controls. Extremely small split windows and enlarged text retain overflow as an accessibility fallback.
 
-**File transfers are local-only** in the next update (2026-09-08, pending publication). The Local tab retains Download/Import for a character and its explored chart; imports require an empty slot and create a new identity. Cloud hides both controls, the save hub rejects file transfers in Cloud mode, and the cloud repository/worker no longer expose bundle import/export operations. Android remains local-only without browser transfer controls.
+**File transfers are local-only** starting in v0.6.0 (2026-09-08). The Local tab retains Download/Import for a character and its explored chart; imports require an empty slot and create a new identity. Cloud hides both controls, the save hub rejects file transfers in Cloud mode, and the cloud repository/worker no longer expose bundle import/export operations. Android remains local-only without browser transfer controls.
 
-Cloud characters are created in the cloud character hall. Localhost, Safari, Android and the hosted domain keep separate storage. Previously imported cloud characters are retained; this change does not reset progress or establish eligibility for the proposed leaderboard. Normal authenticated save reads/uploads remain necessary for playing and synchronization. Removing supported file transfers is not competitive anti-cheat.
+Cloud characters are created in the cloud character hall. Localhost, Safari, Android and the hosted domain keep separate storage. Previously imported cloud characters are retained; this change does not reset progress, and all existing Cloud characters are included in the leaderboard. Normal authenticated save reads/uploads remain necessary for playing and synchronization. Removing supported file transfers is not competitive anti-cheat.
 
 ## Appearance schema checkpoint - 2026-09-07
 
@@ -55,7 +55,7 @@ The schema entrypoint is `db/schema.ts`, re-exporting `game/server/schema.ts`; g
 
 `/title.html?cloud&full` stages the real hall with eight memory-only characters. Add `empty`, `signedout` or `conflict` for alternate states. This preview never signs in, contacts save APIs or starts gameplay.
 
-## Leaderboard and home — pending publication
+## Leaderboard and home — published in v0.6.0
 
 Every Cloud character now has an automatic public ranking projection: character name, level and equipped gear power. Multiple characters per account can appear. The read-only home leaderboard queries D1 summaries without reading R2 saves or flushing the outbox. Local/Android saves remain private to their device. Migration `0002_amazing_old_lace.sql` adds the projections and backfills existing names/levels; gear scores appear after the next successful save. See [leaderboard and home](leaderboard.md) for scoring, controls and API details.
 

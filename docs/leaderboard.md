@@ -1,6 +1,6 @@
 # Home and cloud character leaderboard
 
-Implemented locally, 2026-09-08. Not yet published to Sites.
+Published in v0.6.0, 2026-09-08. A public endpoint check confirmed 89 existing Cloud characters after the migration.
 
 ## Player experience
 
@@ -32,4 +32,4 @@ The server validates save structure and derives the displayed score, but progres
 
 `/title.html?cloud&full&home=leaderboard` uses clearly labelled sample characters with multiple owned rows. `home=chronicle` and `home=changelog` stage the other destinations. These previews use memory-only fixtures and no live leaderboard, gameplay input or save requests.
 
-Tests cover public field isolation, multiple characters from one account, ranking sorts/top-100/own positions, deletion, stale/failed saves, additive backfill and recipe-based gear scoring. Production client and Sites worker builds must pass before publication. Publishing requires the matching migration and server/client together; this local checkpoint does not deploy them.
+Tests cover public field isolation, multiple characters from one account, ranking sorts/top-100/own positions, deletion, stale/failed saves, additive backfill and recipe-based gear scoring. Production client and Sites worker builds must pass before publication. Publishing requires the matching migration and server/client together; v0.6.0 deployed the matching migration, server and client together.

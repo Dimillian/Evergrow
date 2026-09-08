@@ -1,10 +1,10 @@
 # Current system status
 
-Pending publication, 2026-09-08: Cloud character file import/download are removed from the hall and cloud repository. Local browser transfers remain available. Existing saves are preserved; all Cloud characters automatically rank individually in the new home leaderboard. Character names, levels and equipped gear power are public; account identities remain private. Characters, Chronicle, Leaderboard and What’s new share home navigation. See [home and rankings](leaderboard.md). Competitive validation remains future work.
+Published in v0.6.0, 2026-09-08: Cloud character file import/download are removed from the hall and cloud repository. Local browser transfers remain available. Existing saves are preserved; all Cloud characters automatically rank individually in the new home leaderboard. Character names, levels and equipped gear power are public; account identities remain private. Characters, Chronicle, Leaderboard and What’s new share home navigation. See [home and rankings](leaderboard.md). Competitive validation remains future work.
 
-Local regional monster expansion adds six biome-weighted archetypes, mixed packs, two-basic/one-signature attack cycles, procedural anatomy and matching remains. See [regional monsters](regional-monsters.md) for combat and spawn weights. Existing characters remain compatible.
+The v0.6.0 regional monster expansion adds six biome-weighted archetypes, mixed packs, two-basic/one-signature attack cycles, procedural anatomy and matching remains. See [regional monsters](regional-monsters.md) for combat and spawn weights. Existing characters remain compatible.
 
-Local wilderness boss lairs add Briar Matriarch, Ashbound Colossus and Grave Marshal, each guarded by two Elites and eight Veterans. Sparse additive placement preserves existing POIs and saves. Red warnings, phase-two cadence, automatic rare hoards, map/Journeys discovery and three Chronicle families are implemented. See [wilderness bosses](wilderness-bosses.md).
+The v0.6.0 wilderness boss lairs add Briar Matriarch, Ashbound Colossus and Grave Marshal, each guarded by two Elites and eight Veterans. Sparse additive placement preserves existing POIs and saves. Red warnings, phase-two cadence, automatic rare hoards, map/Journeys discovery and three Chronicle families are implemented. See [wilderness bosses](wilderness-bosses.md).
 
 Local vendor polish adds multi-select selling and rarity selection, an exact receipt, atomic bulk transactions, and pickup-style coin flights into the wallet. Existing 12-item buyback stays bounded. See [vendor rules](npcs-and-vendors.md).
 
