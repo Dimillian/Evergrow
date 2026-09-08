@@ -4,7 +4,7 @@ Implemented locally, 2026-09-08. Not yet published to Sites.
 
 ## Player experience
 
-The home has four destinations: **Characters**, **Chronicle**, **Leaderboard** and **What’s new**. Characters remains the default, with the roster and Continue/Create action together. Chronicle and release notes open inside the shared home frame; in-game Chronicle retains its modal presentation. The latest unread release has a small dot.
+The home has four destinations: **Characters**, **Chronicle**, **Leaderboard** and **What’s new**. Characters remains the default, with the roster and Continue/Create action together. Chronicle and release notes open inside the shared home frame; in-game Chronicle retains its modal presentation. The latest unread release has a small dot. Home, Chronicle, ranking rows and release tabs use square corners, matching the vendor selling controls.
 
 Every non-deleted Cloud character automatically appears in the rankings. Multiple characters belonging to the same account can rank independently. Public rows show only character name, level, equipped gear power and rank—never the account name, identifier, slot, save object, inventory or character payload. Your own rows receive a quiet highlight; your characters outside the top 100 appear below the list. Duplicate character names are allowed.
 
@@ -26,7 +26,7 @@ The accepted cloud save transaction updates `rank_name`, `rank_level` and `rank_
 
 Additive migration `0002_amazing_old_lace.sql` seeds existing names and levels from stored summaries. Old summaries lack equipped gear power: these rows show **—** until the character next saves, at which point the shared score is computed. They still participate immediately by level; unknown gear scores sort last. Existing save payloads and local databases are unchanged.
 
-The server validates save structure and derives the displayed score, but progression is still client-simulated. Removing cloud file transfers does not make this an authoritative or cheat-proof competitive system.
+The server validates save structure and derives the displayed score, but progression is still client-simulated. Removing cloud file transfers does not make this an authoritative or cheat-proof competitive system. See the [save integrity review](cloud-save-integrity.md) for confirmed gaps and the proposed hardening order.
 
 ## Review and verification
 

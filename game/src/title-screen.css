@@ -14,13 +14,13 @@
 .title-roster-header { display:flex; align-items:center; gap:16px; padding:14px 18px; border-bottom:1px solid #84999730; }
 .title-roster-header h2 { margin:0; font-size:18px; font-weight:400; color:#d6dfd8; }
 .title-slot-count { margin-left:auto; color:#9aafa9; font-size:14px; white-space:nowrap; }
-.title-sources { display:flex; border:1px solid #879b9838; padding:3px; gap:3px; border-radius:3px; background:#061018; }
+.title-sources { display:flex; border:1px solid #879b9838; padding:3px; gap:3px; border-radius:0; background:#061018; }
 .title-sources[hidden] { display:none; }
 .title-sources button { border:0; padding:8px 13px; background:transparent; color:#8b9d9f; font:14px var(--ui-font); cursor:pointer; }
 .title-sources button[aria-pressed='true'] { color:#e9dfbd; background:#b8b48a20; box-shadow:inset 0 -1px #c5bc8a; }
 .title-hall-body { display:grid; grid-template-columns:minmax(145px,.75fr) minmax(240px,1.25fr); min-height:0; }
 .title-slot-grid { padding:14px; display:grid; grid-template-columns:1fr; grid-template-rows:repeat(8,minmax(42px,1fr)); gap:5px; border-right:1px solid #84999730; }
-.title-slot { position:relative; display:flex; align-items:center; gap:10px; min-width:0; min-height:44px; text-align:left; padding:6px 9px; border:1px solid #708d9328; border-radius:2px; background:#040d1655; color:var(--ui-text); transition:background 160ms,border-color 160ms; cursor:pointer; }
+.title-slot { position:relative; display:flex; align-items:center; gap:10px; min-width:0; min-height:44px; text-align:left; padding:6px 9px; border:1px solid #708d9328; border-radius:0; background:#040d1655; color:var(--ui-text); transition:background 160ms,border-color 160ms; cursor:pointer; }
 .title-slot:hover { border-color:#b7cbb377; background:#25383d8a; }
 .title-slot[aria-pressed='true'] { border-color:#b8b18299; background:linear-gradient(110deg,#a8a47622,#192931); box-shadow:inset 2px 0 #c1bb8c; }
 .title-slot-number { color:#718b91; font-size:12px; flex:none; }
@@ -43,7 +43,7 @@
 .title-create { display:flex; flex-direction:column; gap:18px; }
 .title-create-fields { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .title-create-fields label { min-width:0; display:flex; flex-direction:column; gap:7px; color:#a2b4b2; font-size:13px; }
-.title-create input:not([type='radio']) { width:100%; min-width:0; height:42px; padding:0 9px; border:1px solid #7f999850; border-radius:2px; background:#071019; color:#e6e3ce; font:15px var(--ui-font); }
+.title-create input:not([type='radio']) { width:100%; min-width:0; height:42px; padding:0 9px; border:1px solid #7f999850; border-radius:0; background:#071019; color:#e6e3ce; font:15px var(--ui-font); }
 .title-seed-controls { display:flex; position:relative; }
 .title-seed-controls input { padding-right:29px !important; font-size:13px !important; }
 .title-seed-controls button { position:absolute; right:1px; top:1px; bottom:1px; width:28px; color:#b5c4b7; border:0; background:#142229; font-size:21px; cursor:pointer; }
@@ -118,7 +118,7 @@
   .title-weapons legend { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
 }
 @media (max-height:440px) and (min-width:601px) { .title-save-meta { display:none; } .title-conflict > span { display:none; } }
-.title-compact-starter { display:none; width:100%; height:44px; padding:0 10px; border:1px solid #7f999850; border-radius:2px; background:#071019; color:#e6e3ce; font:14px var(--ui-font); }
+.title-compact-starter { display:none; width:100%; height:44px; padding:0 10px; border:1px solid #7f999850; border-radius:0; background:#071019; color:#e6e3ce; font:14px var(--ui-font); }
 @media (max-height:420px) and (min-width:601px), (max-height:630px) and (max-width:600px) {
   .title-weapon-grid { display:none; } .title-compact-starter { display:block; }
 }

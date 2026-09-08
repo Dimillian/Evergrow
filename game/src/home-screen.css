@@ -1,7 +1,7 @@
 /* One home frame: character hall and account libraries share the same navigation. */
 .title-brand { gap:16px; }
-.title-home-nav { display:flex; align-items:center; gap:4px; margin-left:auto; padding:5px; border:1px solid #a1bbb520; border-radius:11px; background:#07121990; }
-.title-home-nav button { position:relative; border:0; border-radius:7px; background:transparent; padding:12px 17px; color:#93aaa9; font:16px var(--ui-font); white-space:nowrap; cursor:pointer; transition:color .18s,background .18s; }
+.title-home-nav { display:flex; align-items:center; gap:4px; margin-left:auto; padding:5px; border:1px solid #a1bbb520; border-radius:0; background:#07121990; }
+.title-home-nav button { position:relative; border:0; border-radius:0; background:transparent; padding:12px 17px; color:#93aaa9; font:16px var(--ui-font); white-space:nowrap; cursor:pointer; transition:color .18s,background .18s; }
 .title-home-nav button:hover { color:#e3dec8; background:#a4b9af0b; }
 .title-home-nav button[aria-current=page] { color:#e9dfb9; background:linear-gradient(120deg,#bfb58723,#a0bdb30b); box-shadow:inset 0 0 0 1px #c5b78026; }
 .title-home-nav button:focus-visible { outline:2px solid #c7d8b6; outline-offset:2px; }
@@ -11,7 +11,7 @@
 .title-screen.is-controller .home-pad-hint { display:block; }
 .title-roster[hidden],.title-library[hidden] { display:none; }
 .title-screen:not([data-home-page=characters]) .title-hero { display:none; }
-.title-library.ui-window { grid-column:1/-1; grid-row:2; position:relative; width:100%; height:100%; min-height:0; max-width:1200px; margin:auto; overflow:hidden; background:radial-gradient(ellipse at 0 0,#30464b66,transparent 55%),#0a141ce8; border:1px solid #8da7a43b; border-radius:12px; box-shadow:0 24px 80px #0006; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); }
+.title-library.ui-window { grid-column:1/-1; grid-row:2; position:relative; width:100%; height:100%; min-height:0; max-width:1200px; margin:auto; overflow:hidden; background:radial-gradient(ellipse at 0 0,#30464b66,transparent 55%),#0a141ce8; border:1px solid #8da7a43b; border-radius:0; box-shadow:0 24px 80px #0006; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); }
 .title-library .home-embedded { position:relative; inset:auto; padding:0; height:100%; width:100%; background:none; backdrop-filter:none; -webkit-backdrop-filter:none; display:flex; }
 .title-library .home-embedded[hidden] { display:none; }
 .title-library .home-embedded > .ui-window { width:100%; height:100%; max-height:none; min-height:0; border:0; border-radius:0; background:none; box-shadow:none; }
@@ -53,3 +53,6 @@
  .title-hero .title-halo { width:220px; }
  .title-hero .title-plinth { display:none; }
 }
+
+.title-screen { --ui-radius:0px; }
+.title-screen .ui-button, .title-screen .ui-slot, .title-screen .ui-key { border-radius:0; }
