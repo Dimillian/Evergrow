@@ -1,5 +1,13 @@
 # Evergrow changelog
 
+## v0.7.1 — 2026-09-08T16:22:00Z
+
+### Fixes
+
+- Enemy and chest equipment no longer stops dropping when old loot fills the map.
+- The ground now keeps the newest 1,024 items instead of 96, replacing the oldest drops when full.
+- Previously blocked boss-chest equipment can now be delivered when you return nearby.
+
 ## v0.7.0 — 2026-09-08T08:19:00Z
 
 ### New
