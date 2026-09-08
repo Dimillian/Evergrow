@@ -1,0 +1,19 @@
+{
+  "id": "menu",
+  "title": "Home",
+  "description": "Raw twelve-string guitar, uneasy fingerpicking and a lonely descending motif.",
+  "bpm": 76,
+  "keyscale": "A minor",
+  "duration": 60,
+  "seed": 8731901,
+  "caption": "Dark acoustic folk instrumental, intimate twelve-string steel-string guitar duet. A solitary fingerpicked guitar starts immediately with a memorable descending minor-key motif, ringing open strings, unsettling semitone suspensions and dissonant harmonics. A second lower guitar answers with sparse bass notes and imperfect arpeggios. Dry close-miked picks and string squeaks against a distant low ominous drone. Haunted medieval village at night, sorrowful, earthy, mysterious, old 1990s gothic dungeon-crawler soundtrack atmosphere. Restrained raw acoustic recording with shifting phrases, musical tension and audible space. Through-composed instrumental cue.",
+  "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music",
+  "model": "acestep-v15-turbo",
+  "languageModel": "acestep-5Hz-lm-1.7B",
+  "backend": "MLX",
+  "shift": 3.0,
+  "generationSeconds": 99.62,
+  "sourceRevision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+  "master": "/Users/dimillian/.local/share/evergrow-music/masters/d60d5aa5-778f-6250-745d-0dc58d2b027e.wav",
+  "output": "menu.mp3"
+}

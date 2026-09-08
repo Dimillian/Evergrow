@@ -48,6 +48,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'ui',group:'interface',name:'Windows & components',path:'/ui.html',description:'Start, pause, defeat, map and shared controls at desktop or narrow widths.'},
   {id:'hud',group:'interface',name:'HUD states',path:'/hud.html',description:'Healthy, damaged and depleted resources and enemy plates.'},
   {id:'rewards',group:'interface',name:'Reward animations',path:'/rewards.html',description:'Replay gold, XP and level-up feedback with optional sound.'},
+  {id:'music',group:'interface',name:'Soundtrack studies',path:'/music.html',description:'Listen to local menu, wilderness and dungeon music auditions.'},
   {id:'notifications',group:'interface',name:'Notifications',path:'/notifications.html',description:'Item pickups and discovery messages.'},
   {id:'journeys',group:'interface',name:'Journeys',path:'/journeys.html',description:'Activity guidance, tracked goals and journal presentation.'},
   {id:'touch',group:'interface',name:'Touch controls',path:'/touch.html',description:'Touch layout and mobile controls.'},

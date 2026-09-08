@@ -1,0 +1,35 @@
+[
+  {
+    "id": "menu",
+    "title": "Home",
+    "description": "Raw twelve-string guitar, uneasy fingerpicking and a lonely descending motif.",
+    "bpm": 76,
+    "keyscale": "A minor",
+    "duration": 60,
+    "seed": 8731901,
+    "caption": "Dark acoustic folk instrumental, intimate twelve-string steel-string guitar duet. A solitary fingerpicked guitar starts immediately with a memorable descending minor-key motif, ringing open strings, unsettling semitone suspensions and dissonant harmonics. A second lower guitar answers with sparse bass notes and imperfect arpeggios. Dry close-miked picks and string squeaks against a distant low ominous drone. Haunted medieval village at night, sorrowful, earthy, mysterious, old 1990s gothic dungeon-crawler soundtrack atmosphere. Restrained raw acoustic recording with shifting phrases, musical tension and audible space. Through-composed instrumental cue.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music"
+  },
+  {
+    "id": "wilderness",
+    "title": "Wilderness",
+    "description": "Restless hand drums, dry plucked strings and unsettling low reed phrases.",
+    "bpm": 94,
+    "keyscale": "E minor",
+    "duration": 60,
+    "seed": 8731902,
+    "caption": "Dark ritual folk instrumental, driving hand percussion and plucked strings. Interlocking frame drums, rattles and dry wood knocks create an irregular hypnotic walking rhythm. Low oud and steel-string guitar repeat angular Phrygian figures, with occasional nasal duduk phrases and sudden breaks into silence. Desolate dangerous wilderness, strange ancient ruins, primitive earthy energy, tense exploration music for a 1990s gothic action role playing game. Raw tactile percussion, deep bass drone, lean ensemble, unsettling rather than heroic. The pulse builds and recedes while the plucked-string motif mutates. Instrumental underground folk soundtrack.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music"
+  },
+  {
+    "id": "dungeon",
+    "title": "Dungeon",
+    "description": "Subterranean drones, prepared piano, scraping metal and uneven ritual pulses.",
+    "bpm": 48,
+    "keyscale": "C minor",
+    "duration": 60,
+    "seed": 8731903,
+    "caption": "Experimental electroacoustic horror instrumental, oppressive subterranean dungeon soundscape. Deep unstable analog bass drones, stretched bowed cymbals, scraped metal, isolated low prepared-piano clusters, and distant irregular ritual drum thuds. Slowly beating dissonant tones drift against each other, brief reverse echoes emerge from the dark and decay into silence. Claustrophobic forgotten crypt, ancient machinery, approaching unseen danger. Sparse atonal late-1990s gothic game horror score with gritty tape texture, deep low end and hollow stone reverberation. Long tense spaces interrupted by disturbing small sounds. A continuous evolving atmosphere, not a conventional song.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music"
+  }
+]

@@ -1,5 +1,7 @@
 # Documentation
 
+- [Local music auditions](music-auditions.md): ACE-Step setup, repeatable prompts and the soundtrack listening page.
+
 - [Regional monsters](regional-monsters.md): six biome-native archetypes, attack cycles, population weights and the local bestiary.
 
 - [Chronicle](chronicle.md): account/character achievements and statistics; local review and persistence contract.
