@@ -13,8 +13,8 @@ import { GROUND_EFFECT_RULES } from '../src/skill-execution-content.ts';
 import { MAX_PROJECTILES } from '../src/projectile-combat.ts';
 import { touchTargeting } from '../src/touch-targeting.ts';
 import { playerPose } from '../src/character-pose.ts';
-import { weaponReleaseTip, projectilePresentation } from '../src/projectile-launch.ts';
-import { getPlayerSwordTip } from '../src/character-motion.ts';
+import { weaponReleasePoint, projectilePresentation } from '../src/projectile-launch.ts';
+import { getPlayerProjectileOrigin } from '../src/character-motion.ts';
 import { skillSweepPoint, SkillMeleeArt } from '../src/skill-melee-art.ts';
 import { getActiveSwingOffset } from '../src/attack-motion.ts';
 import { enemyDebuffs } from '../src/enemy-debuffs.ts';
@@ -134,11 +134,11 @@ test('touch targets following/frost ultimates at the caster and anchored storms 
   }
 });
 
-test('instant actions start at the release/contact pose; projectile, light and sparks share the weapon tip',()=>{
+test('instant actions start at the release/contact pose; projectile, light and sparks share the weapon release point',()=>{
   for(const id of ['fireball','frostLance','siphon','volley','earthshatter','shieldBash','backstab'] as const){
     const h=setup(id);h.cast();const pose=playerPose(h.p,h.sim.time);close(pose.cast!,1);
     const shot=h.sim.projectiles[0];
-    if(shot){assert.equal(shot.launch?.skill,id);const tip=weaponReleaseTip(shot.launch!);const liveTip=getPlayerSwordTip(pose);close(tip.x,liveTip.x);close(tip.y,liveTip.y);
+    if(shot){assert.equal(shot.launch?.skill,id);const tip=weaponReleasePoint(shot.launch!);const liveTip=getPlayerProjectileOrigin(pose);close(tip.x,liveTip.x);close(tip.y,liveTip.y);
       // Simulation may have advanced the shot within the release tick; inspect its release age.
       shot.life=shot.maxLife;shot.prevX=shot.x=0;shot.prevY=shot.y=0;const at=projectilePresentation(shot);close(at.x,tip.x);close(at.y,tip.y);
       const event=h.sim.drainEvents().find(e=>e.type==='cast');assert.ok(event?.type==='cast'&&event.launch===shot.launch);

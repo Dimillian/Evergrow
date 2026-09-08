@@ -452,7 +452,7 @@ export class Simulation {
         const shot = this.projectile(p.x, p.y, attack.angle,
           { owner: 'player', damage: attack.damage, speed, life: attack.range / speed, radius: style === 'arrow' ? 2 : 5 },
           undefined, attack.projectile);
-        if (shot && attack.weapon.attackKind === 'bolt') shot.launch = {
+        if (shot) shot.launch = {
           weapon: { ...attack.weapon.visual }, mainWeapon: { ...p.equipment.mainHand.visual }, hand: attack.hand, hands: attack.weapon.hands, facing: attack.angle, time: this.time,
           gaitPhase: p.walkTime, moving: Math.min(1, Math.hypot(p.vx, p.vy) / 130), moveAngle: Math.atan2(p.vy, p.vx),
           start: attack.activeStart / attack.duration, end: attack.activeEnd / attack.duration,

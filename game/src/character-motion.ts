@@ -302,9 +302,19 @@ export function getPlayerArmRig(pose: CharacterPose) {
 
 /** Exact blade tip in scaled player-local coordinates, relative to the ground anchor. */
 export function getPlayerSwordTip(pose: CharacterPose): { x: number; y: number } {
+  return playerWeaponPoint(pose, false);
+}
+
+/** Arrows leave the bow's central grip; bolts leave their staff/wand tip. */
+export function getPlayerProjectileOrigin(pose: CharacterPose): { x: number; y: number } {
+  const weapon = pose.attackHand === 'off' && pose.offHand?.kind === 'weapon' ? pose.offHand.visual : pose.weapon;
+  return playerWeaponPoint(pose, weapon?.kind === 'bow');
+}
+
+function playerWeaponPoint(pose: CharacterPose, atGrip: boolean): { x: number; y: number } {
   const motion = playerMotion(pose);
   const activeWeapon = pose.attackHand === 'off' && pose.offHand?.kind === 'weapon' ? pose.offHand.visual : pose.weapon;
-  const length = weaponArtLength(activeWeapon ?? STARTING_SWORD.visual) * motion.activeWeaponScale;
+  const length = atGrip ? 0 : weaponArtLength(activeWeapon ?? STARTING_SWORD.visual) * motion.activeWeaponScale;
   const local: Point = [motion.activeWeaponOrigin[0] + Math.cos(motion.activeWeaponAngle) * length,
     motion.activeWeaponOrigin[1] + Math.sin(motion.activeWeaponAngle) * length];
   const body = transformPoint(motion.body, local);

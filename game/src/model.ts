@@ -251,7 +251,7 @@ export interface Enemy {
   burnTick: number;
 }
 
-/** Frozen launch pose used only to connect the visible bolt to its emitting tip. */
+/** Frozen launch pose connecting visible arrows to the bow grip and bolts to the emitting tip. */
 export interface WeaponLaunch {
   skill?: SkillId;
   weapon: WeaponVisual; mainWeapon: WeaponVisual; hand: 'main' | 'off'; hands: 1 | 2; facing: number; time: number;

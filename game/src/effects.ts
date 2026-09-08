@@ -1,5 +1,5 @@
 import { SkillMeleeArt } from './skill-melee-art.ts';
-import { weaponReleaseTip } from './projectile-launch.ts';
+import { weaponReleasePoint } from './projectile-launch.ts';
 import { PROJECTILE_HEIGHT } from './ranged-aim.ts';
 import { SKILL_CAST_MOTION } from './combat-content.ts';
 import { SKILL_DEFINITIONS, skillWeapon } from './skill-content.ts';
@@ -57,7 +57,7 @@ export class CombatEffects {
       const heavy = 'heavy' in event && event.heavy;
       const eventAngle = 'angle' in event ? event.angle : 0;
       const restoring = event.type === 'heal' || event.type === 'potion';
-      const tip = event.type === 'cast' && event.launch ? weaponReleaseTip(event.launch) : null;
+      const tip = event.type === 'cast' && event.launch ? weaponReleasePoint(event.launch) : null;
       const enemyCast = event.type === 'cast' && event.enemyKind;
       const contact = event.type === 'hit' || event.type === 'hurt' || event.type === 'kill';
       const color = event.color ?? (event.style ? PROJECTILE_COLORS[event.style] : undefined) ?? (event.type === 'hurt' ? '#ff5e4e' : restoring || enemyCast ? MINT

@@ -5,7 +5,7 @@ import { Simulation, FIXED_STEP } from '../src/simulation.ts';
 import { generateItem } from '../src/items.ts';
 import { refreshCharacter } from '../src/character.ts';
 import { basicAttackWeapon, basicAttackManaCost, deriveAttackStats } from '../src/equipment.ts';
-import { weaponReleaseTip } from '../src/projectile-launch.ts';
+import { weaponReleasePoint } from '../src/projectile-launch.ts';
 import { playerPose } from '../src/character-pose.ts';
 import { getPlayerSwordTip, playerMotion } from '../src/character-motion.ts';
 const world = { blocked: () => false, move: (x: number, y: number, dx: number, dy: number) => ({ x: x + dx, y: y + dy }) };
@@ -42,7 +42,7 @@ for (const reverse of [false, true]) test(`mixed basics alternate one action per
     const launch = events.find(e => e.type === 'cast');
     if (launch?.type === 'cast' && launch.launch) {
       const snapshotPose = playerPose(p, launch.launch.time, attack, attack.activeStart);
-      assert.deepEqual(weaponReleaseTip(launch.launch), getPlayerSwordTip(snapshotPose));
+      assert.deepEqual(weaponReleasePoint(launch.launch), getPlayerSwordTip(snapshotPose));
       assert.equal(launch.launch.hand, attack.hand);
     }
   }
