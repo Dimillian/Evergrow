@@ -1,5 +1,21 @@
 # Evergrow changelog
 
+## v0.6.0 — 2026-09-08T06:00:00Z
+
+### New
+
+- Cloud character leaderboard: compare level and equipped gear power, including existing characters.
+- A unified home for Characters, Chronicle, Leaderboard and What’s new.
+- Three wilderness bosses with Elite and Veteran guards, rare treasure and new Chronicle milestones.
+- Six regional creatures with distinct silhouettes, mixed packs and signature attacks across the biomes.
+
+### Tweaks
+
+- Home panels and selling controls now use the game’s square-edged styling.
+- Save-file import and download are now limited to Local characters; Cloud progress continues syncing automatically.
+
+> Existing characters are preserved. Older Cloud characters show gear power after their next successful save.
+
 ## v0.5.1 — 2026-09-07T19:37:00Z
 
 ### New
