@@ -1,6 +1,6 @@
 # Home and cloud character leaderboard
 
-Published in v0.6.0, 2026-09-08. A public endpoint check confirmed 89 existing Cloud characters after the migration.
+Published in v0.6.0, with automatic gear backfill in v0.6.1 on 2026-09-08. Public verification confirmed all 89 existing Cloud characters have gear scores after backfill.
 
 ## Player experience
 

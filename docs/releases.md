@@ -4,13 +4,13 @@
 
 ## Last verified publication
 
-- Game v0.6.0 / Sites version 22, publicly deployed on 2026-09-08 at 06:01:44 UTC.
-- Published source: `2e0fd5125f5e63ba28ffdd34367fc4986a83e182`.
-- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_5c6f7e641ef481918cd44714fbc93165`.
-- Deployment: `appgdep_6a9fa4bc7b788191add366ae54186b46`; Sites returned `succeeded`.
-- Includes individual Cloud character rankings, unified home navigation, square home/vendor controls, local-only file transfers, three wilderness boss lairs and six regional monsters.
-- The full implementation passed 986 code tests; the release passed 20 focused changelog/cloud/ranking tests, the cloud-enabled client/server build and release validation.
-- Migration `0002_amazing_old_lace.sql` was packaged and applied. A public leaderboard read returned HTTP 200 and 89 existing characters after publication. Older gear scores remain unknown until the next accepted save.
+- Game v0.6.1 / Sites version 23, publicly deployed on 2026-09-08 at 06:10:06 UTC.
+- Published source: `0db7bef9f96efbf5c2c4f19feb0074f6fadc5f0e`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_a975a22ca79881919a97a68895650b53`.
+- Deployment: `appgdep_6a9fa6ae705881919b83850a01915b79`; Sites returned `succeeded`.
+- Existing Cloud characters now receive equipped gear scores automatically, without returning to play or saving again.
+- Passed 21 focused cloud/ranking tests, type checking, the cloud-enabled client/server build and release validation.
+- Additive migration `0003_blue_mercury.sql` was packaged and applied. Live public verification confirmed all 89 existing characters have gear scores and the backfill reports complete. Save payloads and progress remain unchanged.
 - Authenticated cross-device save/Chronicle acceptance remains a player check.
 
 ## Before each requested Sites publication
