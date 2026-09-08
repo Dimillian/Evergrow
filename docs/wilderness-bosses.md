@@ -14,7 +14,7 @@ Every lair contains one boss, two Elite lieutenants and eight Veterans. Guards o
 
 The silhouettes use procedural bark/antlers/claws, furnace masonry and crowned iron armor respectively. Shared world lighting illuminates their cores, eyes and warning surfaces. Damage warnings stay red. Impact roots, cracks and sparks share the collision origins and dimensions. Corpses use the articulated death system with boss-sized bounds.
 
-Base health is 1,450 / 1,900 / 1,650; base damage is 21 / 26 / 23 before ordinary geographic scaling and the shared damage multiplier. Each boss awards 160 base XP through normal level-gap adjustment. They have normal rank internally; their authored boss stats are not multiplied by Elite rank. All members use the lair center's geographic level. Ambient archetype weights for these bosses are zero.
+Base health is 1,450 / 1,900 / 1,650; base damage is 21 / 26 / 23 before snapshotted regional scaling and the shared damage multiplier. Each boss awards 160 base XP through normal level-gap adjustment. They have normal rank internally; their authored boss stats are not multiplied by Elite rank. New lairs snapshot one regional baseline: Veterans +1, Elites +2, boss +3. Existing actors retain their source levels. Ambient archetype weights for these bosses are zero.
 
 Below 50% health, recovery falls from 1.2 to 0.75 seconds. Warning windows stay unchanged: 0.85 seconds for a sweep, one second for a charge, 1.15 seconds for roots/eruption/rally. Rally recovery remains 1.5 seconds. Sweeps reach 150 units; charges travel 330 with 32-unit half-width; fractures reach 410 with 24-unit half-width; eruptions cover a 105-unit radius. A damaging action hits each player at most once, including staggered fractures. Bosses use the Warden's reduced hard-control durations and slow resistance; burn damage remains effective.
 
@@ -22,11 +22,11 @@ Leaving the 670-unit home tether, dying or entering sanctuary sends the boss hom
 
 ## Placement and guidance
 
-A separate lair layer considers one cell per 3×3 block of the existing 1,400-unit wilderness lattice, with a 65% eligibility roll. Up to 24 bounded position attempts fit its 370-unit clearing around existing landmarks, roads, water and settlements. This yields a minimum 3,000-unit center spacing before terrain rejection; it is not a guaranteed encounter every travel interval. Candidates require geographic level 3 or higher. The starting corridor and initial camp remain protected.
+A separate lair layer considers one cell per 3×3 block of the existing 1,400-unit wilderness lattice, with a 65% eligibility roll. Up to 24 bounded position attempts fit its 370-unit clearing around existing landmarks, roads, water and settlements. This yields a minimum 3,000-unit center spacing before terrain rejection; it is not a guaranteed encounter every travel interval. All ordinary regional ranges are eligible, including 1–12. Existing anchors are preserved; new low-region lairs fill formerly ineligible cells. The starting corridor and initial camp remain protected.
 
 Lairs are frozen, bounded-cache blueprints with their own `site:<seed>:lair:<cell>` identity. Ordinary sites are generated first and retain priority. Prop and crown generation respects the larger clearing. The south approach and guard placements are collision checked in code tests. Normal camera exclusion prevents visible births, including on reload.
 
-Discovery adds a red crown marker and a pinnable Journeys entry with geographic level and the Wilderness boss category. Nearby lists can include difficult lairs; automatic recommendations require the character to be at least two levels above the lair. Player equipment strength is not inspected or used to rescale enemies.
+Discovery adds a red crown marker and a pinnable Journeys entry with its resolved or previewed boss level and the Wilderness boss category. Nearby lists can include difficult lairs; automatic recommendations allow the intentional +3 boss challenge. Player equipment strength is not inspected or used to rescale enemies.
 
 ## Victory and rewards
 

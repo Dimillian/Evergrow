@@ -1,3 +1,5 @@
+import { cloneData } from './data-clone.ts';
+import { captureEncounterScale, encounterMemberLevel, isBossKind, type EncounterScale, type EncounterScales } from './encounter-scaling.ts';
 import { storedActor, type StoredActor } from './dungeon-state.ts';
 import { getZoneAt, scaledEnemyStats } from './zone-progression.ts';
 import type { Enemy, Player, WorldQuery } from './model.ts';
@@ -10,11 +12,15 @@ export const CAMP_POPULATION_RULES = Object.freeze({ actorCacheCapacity: 32, upd
   activationDistance: 1000, maximumActivationDistance: 2000, sleepMargin: 260 });
 export type CampState = 'dormant' | 'active' | 'cleared';
 interface CampRecord { members: readonly Enemy[] }
-export interface CampSpawnSource { readonly campId: string; readonly memberId: string; readonly lootSeed: number }
+export interface CampSpawnSource { readonly campId: string; readonly memberId: string; readonly lootSeed: number; readonly level?: number }
 export type SpawnCampMember = (member: CampMember, x: number, y: number, source: CampSpawnSource) => Enemy | null;
 
 /** Bounded actor cache, with exact durable deaths and wounds outside the cache. */
 export class CampPopulation {
+  private scales: EncounterScales = {};
+  captureScales(): EncounterScales { return cloneData(this.scales); }
+  scaleFor(id: string): EncounterScale | undefined { return this.scales[id]; }
+  restoreScales(scales: EncounterScales = {}): void { this.scales = cloneData(scales); }
   private cleared = new Set<string>();
   private wounds = new Map<string,StoredActor>();
   private records = new Map<string, CampRecord>();
@@ -40,8 +46,11 @@ export class CampPopulation {
               group.push(e);
               groups.set(e.campId, group);
           }
-      for (const [id, members] of groups)
+      for (const [id, members] of groups) {
           this.records.set(id, { members });
+          const level = members[0].level;
+          this.scales[id] ??= { base: level, min: level, max: level, fixed: true };
+      }
   }
   captureWounds(active: readonly Enemy[]): StoredActor[] {
       const wounds = new Map(this.wounds);
@@ -56,14 +65,14 @@ export class CampPopulation {
       return [...wounds.values()];
   }
   restoreWounds(wounds: readonly StoredActor[]): void { this.wounds = new Map(wounds.map(w => [w.memberId!, w])); }
-  reset(): void { this.records.clear(); this.defeated.clear(); this.wounds.clear(); this.cleared.clear(); }
+  reset(): void { this.scales = {}; this.records.clear(); this.defeated.clear(); this.wounds.clear(); this.cleared.clear(); }
   getState(id: string): CampState {
     if (this.cleared.has(id)) return 'cleared';
     const record = this.records.get(id);
     return !record ? this.defeated.has(id) ? 'active' : 'dormant' : record.members.every(enemy => enemy.state === 'dead') ? 'cleared' : 'active';
   }
 
-  update(camps: readonly EnemyCamp[], player: Pick<Player, 'x' | 'y'>, enemies: Enemy[], world: WorldQuery,
+  update(camps: readonly EnemyCamp[], player: Pick<Player, 'x' | 'y'> & Partial<Pick<Player, 'level'>>, enemies: Enemy[], world: WorldQuery,
     spawn: SpawnCampMember, activationDistance: number, exclusion: SpawnExclusion | null = null): void {
     if (![player.x, player.y, activationDistance].every(Number.isFinite)) return;
     activationDistance = Math.min(CAMP_POPULATION_RULES.maximumActivationDistance,
@@ -102,18 +111,23 @@ export class CampPopulation {
         for (const enemy of missing) { enemy.prevX = enemy.x; enemy.prevY = enemy.y; enemies.push(enemy); }
         continue;
       }
+      const zone = getZoneAt(camp.x, camp.y, world.seed);
+      // Old saves have exact deaths/wounds but no baseline. Keep those encounters at their former difficulty.
+      const old = this.defeated.has(camp.id) || livingMembers.some(m => this.wounds.has(m.id));
+      const scale = this.scales[camp.id] ?? (old
+        ? { base: zone.originalLevel, min: zone.originalLevel, max: zone.originalLevel, fixed: true as const }
+        : captureEncounterScale(zone, player.level ?? 1));
       const created: Enemy[] = [];
       for (const member of livingMembers) {
         const enemy = spawn(member, camp.x + member.dx, camp.y + member.dy,
-          { campId: camp.id, memberId: member.id, lootSeed: campMemberSeed(member.id) });
+          { campId: camp.id, memberId: member.id, lootSeed: campMemberSeed(member.id), level: encounterMemberLevel(scale, member.rank, campMemberSeed(member.id), isBossKind(member.kind)) });
         if (enemy) {
-          if(camp.id.includes(':lair:')){const level=getZoneAt(camp.x,camp.y,world.seed).level;const stats=scaledEnemyStats(member.kind,level,member.rank);Object.assign(enemy,stats,{level,hp:stats.maxHp});}
           const wound=this.wounds.get(member.id);
           if(wound)Object.assign(enemy,scaledEnemyStats(wound.kind,wound.level,wound.rank),{hp:wound.hp,level:wound.level,biome:wound.biome,lootSeed:wound.seed});
           created.push(enemy);
         }
       }
-      if (created.length === livingMembers.length) {this.records.set(camp.id, { members: created });for(const m of livingMembers)this.wounds.delete(m.id);}
+      if (created.length === livingMembers.length) {this.scales[camp.id] = scale; this.records.set(camp.id, { members: created });for(const m of livingMembers)this.wounds.delete(m.id);}
       else {
         // A caller may reject a placement for an additional rule. Roll the garrison back atomically.
         for (const enemy of created) { const index = enemies.indexOf(enemy); if (index >= 0) enemies.splice(index, 1); }

@@ -1,3 +1,4 @@
+import { dungeonMemberLevel } from '../src/dungeon-state.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateDungeon, DungeonGeometry, dungeonBlocked, type DungeonEntrance } from '../src/dungeon.ts';
@@ -18,7 +19,7 @@ import type { CharacterCheckpoint } from '../src/character-save.ts';
 const entrance: DungeonEntrance = { id: 'dungeon:test', name: 'Rootbound Crypt', seed: 7319, level: 4, biome: 'deadwood', x: 600, y: 0 };
 const surface = { seed: 7319, blocked: () => false, move: (x: number, y: number, dx: number, dy: number) => ({ x: x + dx, y: y + dy }), isSanctuary: (x: number) => x === 0 };
 const ok = () => ({ ok: true, message: '' });
-async function setup() { const sim = new Simulation(surface, { spawn: false, startX: 600, startY: 0 }); const result = (await planDungeonTravel(sim, { kind: 'enter', entrance }, surface, ok)); assert.ok(result.ok); const f = generateDungeon(entrance.seed, entrance.level); sim.world = new DungeonWorld(f, entrance); sim.restoreCheckpoint(result.checkpoint); return { sim, f, run: currentDungeon(sim.expeditions)! }; }
+async function setup() { const sim = new Simulation(surface, { spawn: false, startX: 600, startY: 0 }); const result = (await planDungeonTravel(sim, { kind: 'enter', entrance }, surface, ok)); assert.ok(result.ok); const resolved = currentDungeon(result.checkpoint.expeditions!)!.entrance; const f = generateDungeon(resolved.seed, resolved.level); sim.world = new DungeonWorld(f, resolved); sim.restoreCheckpoint(result.checkpoint); return { sim, f, run: currentDungeon(sim.expeditions)! }; }
 function decoded(c: CharacterCheckpoint) { return decodeCharacterSave(JSON.stringify({ version: 4, id: 'test', name: 'Test', worldSeed: 7319, worldVersion: 5, createdAt: 1, updatedAt: 2, checkpoint: c })); }
 test('crypt seeds produce bounded connected rooms, two branches, a loop and collision-safe rosters', () => {
     for (let seed = 0; seed < 150; seed++) {
@@ -82,7 +83,7 @@ test('location transitions persist atomically and keep equipment, resources and 
     assert.equal(sim.enemies[0].hp, 12);
     assert.equal(sim.player.hp, 47);
 });
-test('dungeon actors use fixed entrance level, keep casualties, and never visibly refill rooms', async () => {
+test('dungeon actors use snapshotted entrance and rank levels, keep casualties, and never visibly refill rooms', async () => {
     const { sim, f, run } = (await setup());
     const visible = { x: -4000, y: -4000, width: 10000, height: 10000 };
     updateDungeon(sim, visible);
@@ -91,7 +92,7 @@ test('dungeon actors use fixed entrance level, keep casualties, and never visibl
     updateDungeon(sim, view);
     assert.ok(sim.enemies.length > 0);
     assert.ok(sim.enemies.length <= 24);
-    assert.ok(sim.enemies.every(e => e.level === 4));
+    assert.ok(sim.enemies.every(e => e.level === dungeonMemberLevel(run.entrance, f.members.find(m=>m.id===e.campMemberId)!)));
     const e = sim.enemies[0], id = e.campMemberId!;
     e.hp = 0;
     e.state = 'dead';

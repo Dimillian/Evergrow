@@ -1,5 +1,7 @@
 # Documentation
 
+- [Regional scaling](region-scaling.md) — current local ranges, encounter snapshots, rewards and save compatibility.
+
 - [Dynamic soundtrack](dynamic-soundtrack.md): regional/encounter music, mix controls and audio lifecycle.
 - [Local music auditions](music-auditions.md): ACE-Step setup, repeatable prompts and the soundtrack listening page.
 

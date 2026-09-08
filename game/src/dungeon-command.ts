@@ -1,3 +1,4 @@
+import { encounterScaleAt, encounterRewardLevel } from './encounter-scaling.ts';
 import { interruptTrial } from './poi-content.ts';
 import { treasureLanding } from './treasure-flight.ts';
 import { stageJourneyCompletion } from './journey-rewards.ts';
@@ -60,7 +61,8 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
         if (!next) {
             if (state.runs.some(r => r.states.warden.hp > 0))
                 return { ok: false, message: 'Finish your active expedition first.' };
-            next = createDungeonRun(entrance);
+            const scaling = encounterScaleAt(entrance.x, entrance.y, surface.seed, p.level);
+            next = createDungeonRun({ ...entrance, scaling, level: scaling.base });
             state.runs.push(next);
         }
         interruptTrial(checkpoint.events!,contents.actors);
@@ -102,7 +104,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
         return { ok: false, message: result.message };
     return { ok: true, checkpoint, message: action.kind === 'enter' || action.kind === 'return' ? 'Rootbound Crypt' : 'Returned to the surface.' };
 }
-function applyContents(c: CharacterCheckpoint, contents: LocationContents) { c.campWounds = contents.campWounds ?? []; c.actors = contents.actors; c.groundItems = contents.groundItems; c.groundGold = contents.groundGold; c.pickups = contents.pickups; c.clearedCamps = contents.clearedCamps; c.defeatedCampMembers = contents.defeatedCampMembers; }
+function applyContents(c: CharacterCheckpoint, contents: LocationContents) { c.encounterScales = contents.encounterScales ?? {}; c.campWounds = contents.campWounds ?? []; c.actors = contents.actors; c.groundItems = contents.groundItems; c.groundGold = contents.groundGold; c.pickups = contents.pickups; c.clearedCamps = contents.clearedCamps; c.defeatedCampMembers = contents.defeatedCampMembers; }
 export function dungeonChestProblem(sim: Simulation, index: number): string | null {
     const run = currentDungeon(sim.expeditions), floor = sim.dungeonFloor;
     if (!run || !floor || !Number.isInteger(index) || index < 0 || index > 2)
@@ -128,9 +130,10 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
         return { ok: false, message: 'Move closer to the chest.' };
     if (index === 2 ? run.states.warden.hp > 0 : floor.members.some(m => m.room === chest.room && run.states[m.id].hp > 0))
         return { ok: false, message: index === 2 ? 'Defeat the Hollow Warden.' : 'Defeat the chamber guards.' };
+    const rewardLevel = run.entrance.scaling ? encounterRewardLevel(run.entrance.scaling, index === 2 ? 3 : 1) : run.entrance.level;
     const ranks = index === 2 ? ['normal', 'veteran', 'elite'] as const : ['veteran'] as const;
-    const items = ranks.map((rank, i) => rollEnemyLoot({ seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: run.entrance.level, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true, encounter:index===2?'bossChest':'chest' })[0]);
-    const gold = Math.round((index === 2 ? 45 + run.entrance.seed % 26 : 18) * (1 + .1 * (run.entrance.level - 1)));
+    const items = ranks.map((rank, i) => rollEnemyLoot({ seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: rewardLevel, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true, encounter:index===2?'bossChest':'chest' })[0]);
+    const gold = Math.round((index === 2 ? 45 + run.entrance.seed % 26 : 18) * (1 + .1 * (rewardLevel - 1)));
     let mask = run.chestMasks[index], next = Math.max(1, ...sim.groundItems.map(i => i.id + 1), ...sim.groundGold.map(i => i.id + 1), ...sim.pickups.map(i => i.id + 1), ...sim.enemies.map(i => i.id + 1), ...sim.projectiles.map(i => i.id + 1));
     for (let i = 0; i < items.length; i++)
         if (!(mask & 1 << i)) {
@@ -144,7 +147,7 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     if (mask === run.chestMasks[index])
         return { ok: false, message: mask === (index === 2 ? 15 : 9) ? 'Already claimed.' : 'Collect nearby loot to make room.' };
     run.chestMasks[index] = mask;
-    const completion=index===2&&mask===15?stageJourneyCompletion(checkpoint,{...run.entrance,kind:'dungeon',region:run.entrance.name},sim.player,sim.time):null;
+    const completion=index===2&&mask===15?stageJourneyCompletion(checkpoint,{...run.entrance,level:rewardLevel,kind:'dungeon',region:run.entrance.name},sim.player,sim.time):null;
     const result = await persist(checkpoint);
     if (!result.ok)
         return result;

@@ -1,3 +1,5 @@
+import { activityLevel } from './activity-level.ts';
+import { captureEncounterScale } from './encounter-scaling.ts';
 import { JourneyPanel } from './journey-panel.ts';
 import { executeJourneyCommand } from './journey-command.ts';
 import { guidedJourney, type JourneyCommand } from './journey-state.ts';
@@ -47,10 +49,10 @@ export class JourneyController {
         });
     }
     dispose() { this.panel.dispose(); }
-    private facts(): JourneyFacts {
+    facts(): JourneyFacts {
         const p = this.host.sim.player;
         const area = getZoneAt(p.x, p.y, this.host.overworld.seed);
-        return { areaId: area.id, areaLevel: area.level, x: p.x, y: p.y, level: p.level, time: this.host.sim.time, events: this.host.sim.eventState, expeditions: this.host.sim.expeditions,
+        return { areaId: area.id, areaLevel: captureEncounterScale(area,p.level).base, encounterScale: id=>this.host.sim.encounterScale(id) ?? this.host.sim.expeditions.surface?.encounterScales?.[id], x: p.x, y: p.y, level: p.level, time: this.host.sim.time, events: this.host.sim.eventState, expeditions: this.host.sim.expeditions,
             discovered: id => { const goal = [this.host.sim.journeys.townPin, this.host.sim.journeys.nearestTown, ...this.host.sim.journeys.accepted, ...this.host.sim.journeys.offers].filter(g=>g!==undefined).find(g => g.id === id); return goal?.kind === 'frontier' ? this.host.exploration.isRevealed(goal.x, goal.y) : this.host.exploration.isDiscovered(id); }, campCleared: id => this.host.sim.getCampState(id) === 'cleared' || !!this.host.sim.expeditions.surface?.clearedCamps.includes(id) };
     }
     async command(command: JourneyCommand): Promise<boolean> {
@@ -118,7 +120,7 @@ export class JourneyController {
             if (this.host.phase === 'playing' && !this.host.sim.dungeonFloor) {
                 const towns = this.host.overworld.getSettlements(p.x - 260, p.y - 260, 520, 520);
                 const arrivals = [...this.host.sim.journeys.accepted, ...this.host.sim.journeys.offers,
-                    ...towns.map(t => ({ id: t.id, kind: 'town' as const, name: t.name, x: t.x, y: t.y, level: getZoneAt(t.x, t.y, this.host.overworld.seed).level, region: getZoneAt(t.x, t.y, this.host.overworld.seed).name }))];
+                    ...towns.map(t => ({ id: t.id, kind: 'town' as const, name: t.name, x: t.x, y: t.y, level: captureEncounterScale(getZoneAt(t.x, t.y, this.host.overworld.seed),p.level).base, region: getZoneAt(t.x, t.y, this.host.overworld.seed).name }))];
                 for (const goal of arrivals)
                     this.host.sim.completeJourneyArrival(goal);
                 facts.level = p.level;
@@ -139,8 +141,10 @@ export class JourneyController {
         const origin = currentDungeon(this.host.sim.expeditions)?.entrance ?? this.host.sim.player;
         const town = this.host.overworld.getNearestSettlement(origin.x,origin.y);
         const zone = getZoneAt(town.x,town.y,this.host.overworld.seed);
-        this.host.sim.journeys.nearestTown = {id:town.id,kind:'town',name:town.name,x:town.x,y:town.y,level:zone.level,region:zone.name};
+        this.host.sim.journeys.nearestTown = {id:town.id,kind:'town',name:town.name,x:town.x,y:town.y,level:captureEncounterScale(zone,this.host.sim.player.level).base,region:zone.name};
         const state = this.host.sim.journeys, p = this.host.sim.player, facts = this.facts();
+        for (const list of [state.accepted,state.offers]) for (const g of list)
+            if(g.finishedAt===undefined)g.level=activityLevel(g,facts,this.host.overworld.seed);
         this.panel.update(state, facts, this.host.phase === 'playing' && this.host.navigationVisible, this.host.renderer.width, this.host.renderer.height);
         const goal = guidedJourney(state);
         let marker: JourneyMarker | null = goal ? publicJourneyMarker(goal, this.facts().discovered(goal.id)) : null;

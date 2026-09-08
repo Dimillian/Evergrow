@@ -4,7 +4,7 @@ import type { WorldPOI } from './world-pois.ts';
 export type GameNotice =
   | { kind: 'loot'; item: Item }
   | { kind: 'discovery'; poi: WorldPOI }
-  | { kind: 'area'; id: string; name: string; level: number }
+  | { kind: 'area'; id: string; name: string; level: number; maxLevel?: number }
   | { kind: 'info'; message: string };
 export interface NoticeEntry { id: number; notice: GameNotice; age: number; duration: number; }
 export const NOTICE_EXIT_SECONDS = .22;

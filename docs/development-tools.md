@@ -29,3 +29,9 @@ The home page presents six workspace cards rather than every review. Search reve
 ## Verification
 
 `game/tests/development-tools.test.ts` checks registry coverage of every review HTML, local navigation boundaries, deterministic forge derivation across kinds/materials, every skill/specialization activation, delayed effect completion, source-backed catalog coverage and bounded deterministic placement surveys. Run `npm run check`; do not run optional browser gameplay tests without the player's request. Inspect the production output to confirm only `index.html` is emitted and no tools modules are bundled.
+
+### Expanded world atlas
+
+The atlas now surveys a complete square through the runtime `World`, with Local (24,576 world units), Wide (49,152, default) and Vast (98,304) coverage. The selector displays the shared in-game metre scale. Seed input, New seed, Fit survey and PNG export stay in the atlas workspace; `?seed=18427&size=vast` links directly to a survey. Terrain renders progressively, while small, cancellable spatial batches enumerate landmarks. The disposable survey owns its complete POI index so large studies do not truncate at a character chart's discovery limit. Its 4,096 maximum revealed chunks remain within the normal exploration capacity. No character storage is read or written.
+
+The atlas alone uses a 0.001 minimum zoom; gameplay retains 0.025. Shared terrain LOD keeps a maximum of 256 visible tiles even at the larger overview scale, and normal detail returns when zooming in.

@@ -17,8 +17,8 @@ test('area inspection reveals level only in charted terrain and respects sanctua
   assert.equal(chartedMapArea(world, hidden, 6400, 0), null);
   assert.equal(chartedMapArea(world, revealed, NaN, 0), null);
   assert.equal(samples, 0, 'unknown cells do not query underlying biome or danger metadata');
-  assert.match(chartedMapArea(world, revealed, 6400, 0)!.label, /^Area Lv [1-9]/);
-  assert.match(chartedMapArea(world, revealed, -6400, 0)!.label, /^Area Lv [1-9]/);
+  assert.match(chartedMapArea(world, revealed, 6400, 0)!.label, /^Lv [1-9][0-9]*–[1-9][0-9]*/);
+  assert.match(chartedMapArea(world, revealed, -6400, 0)!.label, /^Lv [1-9][0-9]*–[1-9][0-9]*/);
   assert.equal(chartedMapArea(world, revealed, 0, 0)?.label, 'Sanctuary');
   assert.equal(chartedMapArea(world, revealed, 1, 0)!.name, getZoneAt(1, 0).name);
 });

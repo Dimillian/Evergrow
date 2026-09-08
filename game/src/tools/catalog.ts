@@ -35,7 +35,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'deaths',group:'combat',name:'Death animations',path:'/deaths.html',description:'Play creature death recipes with variant and facing controls.'},
   {id:'lights',group:'combat',name:'Weapon enchantments',path:'/weapon-lights.html',description:'Caster emission, melee enchantments and basic cast poses.'},
   {id:'layouts',group:'world',name:'Towns & roads',path:'/layouts.html',description:'Town, city, road and enterable interior studies with PNG export.'},
-  {id:'atlas',group:'world',name:'World atlas',path:'/atlas.html',description:'Seeded explored-map studies with danger districts and PNG export.'},
+  {id:'atlas',group:'world',name:'World atlas',path:'/atlas.html',description:'Local, wide and vast world surveys with region levels, custom seeds and PNG export.'},
   {id:'biomes',group:'world',name:'Climates',path:'/biomes.html',description:'All seven biomes and blended transitions using the game renderer.'},
   {id:'encounters',group:'world',name:'Camps & landmarks',path:'/encounters.html',description:'Frozen wilderness placements, camps and encounter warnings.'},
   {id:'bosses',group:'world',name:'Wilderness bosses',path:'/bosses.html',description:'Three guarded lairs, committed attack warnings and automatic hoards.',tags:'boss elite arena'},

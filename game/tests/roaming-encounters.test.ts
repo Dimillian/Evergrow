@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
 import { livingEnemyCount } from '../src/encounter-director.ts';
 import { ENEMY_DEFINITIONS } from '../src/combat-content.ts';
-import { getZoneAt, scaledEnemyStats } from '../src/zone-progression.ts';
+import { scaledEnemyStats } from '../src/zone-progression.ts';
 import { rollEnemyLoot } from '../src/loot.ts';
 import type { CombatEvent, Enemy, Input, WorldQuery } from '../src/model.ts';
 import type { EnemyCamp } from '../src/wilderness-sites.ts';
@@ -127,8 +127,7 @@ test('automated roaming keeps source geography and deterministic loot after the 
   sim.setSpawnExclusion(viewAt(6400)); advance(sim, 20);
   const enemy = ambient(sim)[0]; assert.ok(enemy);
   const source = { level: enemy.level, rank: enemy.rank, biome: enemy.biome, kind: enemy.kind, seed: enemy.lootSeed, firstKill: true };
-  const stats = scaledEnemyStats(enemy.kind, getZoneAt(enemy.homeX, enemy.homeY).level, enemy.rank);
-  assert.equal(enemy.level, getZoneAt(enemy.homeX, enemy.homeY).level);
+  const stats = scaledEnemyStats(enemy.kind, enemy.level, enemy.rank);
   assert.equal(enemy.damage, stats.damage); assert.equal(enemy.xpReward, stats.xpReward); assert.equal(enemy.maxHp, stats.maxHp);
   const items = rollEnemyLoot(source);
   sim.player.level = 20; enemy.x = enemy.prevX = sim.player.x + 45; enemy.y = enemy.prevY = sim.player.y;

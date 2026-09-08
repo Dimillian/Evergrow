@@ -25,17 +25,13 @@ The climate-region spacing increases from 2,400 to **6,400 units**. Adjacent cel
 
 Twelve landmark families occupy a 1,400-unit seeded lattice, with twelve scored candidates, regional/biome kind weights, road-adjacent caravans/hamlets/crossings and quieter inland sites. Placement checks centers and perimeter samples against water and settlements. Approaches face the nearest road segment and share their orientation with decor, camp members and ground tracks; chapels retain a front-facing aisle to match their upright architecture. All six new POIs and cursed chests participate in map discovery and Journeys. See [wilderness places](wilderness-and-encounters.md).
 
-## Fixed regional danger
+## Bounded regional danger
 
-`zone-progression.ts` replaces distance rings with warped, jittered districts at approximately 3,600-unit spacing. Each district has a stable identity, name and level. Several danger regions can therefore lie within one large biome.
-
-The district's anchor samples the closest road and its accumulated travel cost from the home settlement along the connecting tree. Ordinary progression is roughly one level per **6,000 route units**, with a remoteness contribution away from roads. A subset of districts whose anchors are more than 2,500 units from a route gain an additional **3–5 levels**. These hazardous wilderness pockets can sit beside lower-level travel corridors. The starting district remains level one and now receives a seeded name. The initial portal destination is this home settlement; continuing restores the saved seed and destination. Road loops interpolate their endpoints' tree costs; this is not a full shortest-path simulation over every incidental road crossing. Beyond 128 parent hops the bounded distant estimate continues outward.
-
-Levels never depend on the player. Enemy level, rank, stats, rewards and projectiles still retain their spawn-time identity. Vendors, event rewards, portal landing checks, map hover and entry notifications use the same world seed and region query. Returning home never rescales existing enemies. Towns remain sanctuaries.
+The existing named, warped districts now own ordinary level ranges rather than fixed levels. The home district is 1–12; road travel and remoteness lead through overlapping 4–18, 7–22, 12–28 and 18–35 ranges, with tougher wilderness pockets. District shapes, terrain, towns and roads remain generation 9. New encounters snapshot the player within those bounds; existing encounters retain their levels. See [regional scaling](region-scaling.md) for rank offsets, rewards, guidance and save compatibility.
 
 ## Map and reviews
 
-The actual runtime large map now shows revealed regional boundaries, names and levels. Orange `!` labels indicate hazardous districts. Region labels avoid town names and one another; overlapping minor POIs are suppressed before hover testing. Zooming reveals more landmarks. Boundary strokes and label anchors respect discovery, including hidden holes. The minimap retains its compact terrain treatment and does not receive regional labels.
+The actual runtime large map now shows revealed regional boundaries, names and level ranges. Orange `!` labels indicate hazardous districts. Region labels avoid town names and one another; overlapping minor POIs are suppressed before hover testing. Zooming reveals more landmarks. Boundary strokes and label anchors respect discovery, including hidden holes. The minimap retains its compact terrain treatment and does not receive regional labels.
 
 The extended atlas stages a roughly 40,000-unit-wide surveyed disk through memory-only Exploration. It uses no simulation ticks, gameplay input or character saves. Native Canvas PNG exports use the real WorldMap renderer and are explicitly identified as CPU renders. Local navigation and PNG export remain available in the in-app browser.
 

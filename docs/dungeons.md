@@ -1,12 +1,14 @@
 # Rootbound Crypt
 
+Local regional scaling, 2026-09-08: New expeditions capture the regional baseline on first entry. Members use normal variation and rank offsets; the Warden is +3. Final treasure uses the boss level, side treasure baseline +1. Existing expeditions keep their saved floor, levels and chest receipts. See [regional scaling](region-scaling.md).
+
 Updated 2026-09-07. One complete, persistent dungeon floor; pacing, difficulty and art remain subject to player feedback. The original proposal is in [dungeons and events](dungeons-and-events.md).
 
 ## Finding and entering
 
-A stone crypt entrance appears near the starting route, around **(-520, 380)** (its exact clear-ground position is seeded). Other entrances sit near graveyards, offset from their event interaction. Discovered entrances appear on the overworld chart. Approach and press **E**, click, or use the controller interaction button to preview the fixed level and enter.
+A stone crypt entrance appears near the starting route, around **(-520, 380)** (its exact clear-ground position is seeded). Other entrances sit near graveyards, offset from their event interaction. Discovered entrances appear on the overworld chart. Approach and press **E**, click, or use the controller interaction button to preview its bounded level and boss level, then enter.
 
-Each entrance owns a separate floor, not distant overworld coordinates. Dungeon level is the entrance's geographic level plus one, clamped at 1,000,000. Monsters never rescale when the player changes rooms, equipment or level. Entry uses the existing transition and short arrival protection without healing or restoring mana.
+Each entrance owns a separate floor, not distant overworld coordinates. On first entry, dungeon baseline level is the player level clamped to the entrance region’s ordinary range. Ranked guards and the Warden add their shared offsets. Monsters never rescale when the player changes rooms, equipment or level. Entry uses the existing transition and short arrival protection without healing or restoring mana.
 
 ## Floor and encounters
 

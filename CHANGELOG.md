@@ -1,5 +1,24 @@
 # Evergrow changelog
 
+## v0.8.0 — 2026-09-08T17:55:00Z
+
+### New
+
+- Regions now have level ranges: home stays useful through level 12, with tougher regions farther afield.
+
+### Tweaks
+
+- New ordinary enemies vary around your level within regional bounds; Veterans, Elites and bosses fight above the local baseline.
+- Event and dungeon treasure, gold and town services now follow regional scaling.
+- Events and wilderness bosses can appear from level one, outside the safe starting area.
+
+### Fixes
+
+- Journeys finds suitable onward roads when you outgrow a region.
+- Shops show their actual stock level separately from improvement services.
+
+> Existing characters and worlds are preserved. Previously activated encounters keep their levels and progress.
+
 ## v0.7.1 — 2026-09-08T16:22:00Z
 
 ### Fixes

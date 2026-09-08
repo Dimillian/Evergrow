@@ -1,3 +1,4 @@
+import { regionLevelLabel } from './encounter-scaling.ts';
 import type { Exploration } from './exploration.ts';
 import { projectMapPoint, type MapView } from './map-view.ts';
 import { getZoneAt, type ZoneProgression } from './zone-progression.ts';
@@ -79,7 +80,7 @@ export function drawMapZoneLevels(c: CanvasRenderingContext2D, view: MapView, ex
     c.shadowColor = '#030b10';
     c.shadowBlur = 5;
     text(c, zone.name.split(' · ')[0], p.x, p.y - 11, 1.15, '#d6ded5', 'center');
-    text(c, `${zone.hazardous ? '! ' : ''}Lv ${zone.level}`, p.x, p.y + 5, 1.25, color, 'center');
+    text(c, `${zone.hazardous ? '! ' : ''}${regionLevelLabel(zone)}`, p.x, p.y + 5, 1.25, color, 'center');
     c.shadowBlur = 0;
   }
   c.restore();

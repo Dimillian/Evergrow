@@ -1,12 +1,14 @@
 # Journeys
 
+Local regional scaling, 2026-09-08: Activity levels now preview bounded scaling or show the saved encounter level. Recommendations remain local while the region is useful, then favor a higher-ceiling road lead at its ordinary cap. Bosses and dungeons can be recommended at +3. Manual pins remain fixed. See [regional scaling](region-scaling.md).
+
 Implemented · 2026-09-06 · initial tuning for continued player testing.
 
 ## Recommended and nearby
 
 The compact list beneath the minimap and the **J** panel share one activity catalogue:
 
-- **Recommended** selects one suitable next activity. In an area within two levels of the character, a suitable activity within 2,400 units takes priority over a distant alternative. In outgrown or dangerous areas, recommendations can point toward a better-fit activity or an outward/inward road destination.
+- **Recommended** selects one suitable next activity. Within a region’s useful range, a suitable activity within 2,400 units takes priority over a distant alternative. In outgrown or dangerous areas, recommendations can point toward a better-fit activity or an outward/inward road destination.
 - **Nearby** lists local activities by distance, including ones above or below the character's level. Level numerals subtly indicate difficulty: muted for easier, neutral for a match, warm for harder. A match means within two levels. The journal detail only spells out Easier/Harder when relevant; the mini log has no repeated status captions. This does not guarantee a boss is easy for every build.
 - **Automatic guidance** follows Recommended by default, including The road ahead. Its marker and highlighted row advance as the recommendation changes during travel or after completion. It does not consume an accepted slot or require repeated clicks.
 - **Pin** accepts and fixes a destination until completion or Unpin; inspection alone does not. Up to three activities may be accepted, one pinned. Finishing or unpinning resumes automatic guidance. Hiding suggestions also hides automatic guidance, while an explicit pin remains visible.
@@ -32,7 +34,7 @@ Nearest settlement lookup checks nine seeded geography anchors, then loads only 
 - Crypts: defeat the Warden and fully claim the final chest. Boss death alone is not completion.
 - Towns/frontiers: arrive within the objective's radius on the surface.
 
-Ground-loot capacity can postpone completion: the bonus is paid only once the full bundle has been delivered. Ordinary combat remains an independent progression path. Existing completed activities are not paid retroactively when loading this feature.
+Full gold-pile capacity can postpone completion: the bonus is paid only once the full bundle has been delivered. Ordinary combat remains an independent progression path. Existing completed activities are not paid retroactively when loading this feature.
 
 ## Completion XP and presentation
 

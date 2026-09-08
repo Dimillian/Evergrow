@@ -1,3 +1,5 @@
+import { encounterMemberLevel } from '../src/encounter-scaling.ts';
+import { LOOT_RULES } from '../src/combat-content.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
@@ -56,25 +58,19 @@ test('storage rejection leaves reward IDs, character, ledger and existing actors
   assert.equal(sim.nextEntityIdentity, id);
   assert.equal(sim.enemies[0], enemy);
 });
-test('full ground stores a deterministic pending bundle and partial delivery never rerolls', async () => {
-  const { sim, persist, repo } = (await setup());
-  sim.groundItems = Array.from({ length: 96 }, (_, i) => ({ id: 1000 + i, x: 500, y: 500, item: generateItem(i + 900, 1) }));
-  // Restore establishes the shared identity allocator as in an actual saved full-ground run.
+test('full ground replaces oldest items and a claimed caravan never rerolls after reload', async () => {
+  const { sim, persist, repo } = await setup();
+  sim.groundItems = Array.from({length:LOOT_RULES.maxGroundItems},(_,i)=>({id:1000+i,x:500,y:500,item:generateItem(i+900,1)}));
   sim.restoreCheckpoint(sim.captureCheckpoint());
-  assert.ok((await executeEvent(sim, site('caravan'), 'goods', persist)).ok);
-  assert.equal(sim.eventState.sites[site('caravan').id].phase, 'completed');
-  assert.equal(sim.groundItems.length, 96);
-  const expected = eventRewards(sim.eventState.sites[site('caravan').id]).items;
-  sim.groundItems.pop();
-  assert.ok((await executeEvent(sim, site('caravan'), 'goods', persist)).ok);
-  assert.deepEqual(sim.groundItems.at(-1)!.item, expected[0]);
-  const resumed = new Simulation(world, { spawn: false });
-  resumed.restoreCheckpoint(repo.read(0).record!.checkpoint);
-  resumed.groundItems.shift();
-  assert.ok((await executeEvent(resumed, site('caravan'), 'goods', persist)).ok);
-  assert.deepEqual(resumed.groundItems.at(-1)!.item, expected[1]);
-  assert.equal(resumed.eventState.sites[site('caravan').id].phase, 'claimed');
-  assert.equal(new Set(resumed.groundItems.map(i => i.id)).size, 96);
+  assert.ok((await executeEvent(sim,site('caravan'),'goods',persist)).ok);
+  const expected=eventRewards(sim.eventState.sites[site('caravan').id]).items;
+  assert.equal(sim.eventState.sites[site('caravan').id].phase,'claimed');
+  assert.equal(sim.groundItems.length,LOOT_RULES.maxGroundItems);
+  assert.deepEqual(sim.groundItems.slice(-expected.length).map(d=>d.item),expected);
+  const resumed=new Simulation(world,{spawn:false});resumed.restoreCheckpoint(repo.read(0).record!.checkpoint);
+  const before=resumed.captureCheckpoint();
+  assert.equal((await executeEvent(resumed,site('caravan'),'goods',persist)).ok,false);
+  assert.deepEqual(resumed.captureCheckpoint(),before);
 });
 test('full coin capacity retains value until a later interaction', async () => {
   const { sim, persist } = (await setup());
@@ -110,7 +106,7 @@ test('trial admission waits for camera coverage, then preserves source and injur
   for (let i = 0; i < 120 && !sim.enemies.length; i++) tick(sim, FIXED_STEP);
   assert.equal(sim.enemies.length, eventRecipe(grave)!.size);
   assert.ok(sim.enemies.every(e => { const g = sim.eventState.trial!.guardians[Number(e.campMemberId)]; return isSpawnHidden(g.x, g.y, view, e.radius); }), 'admission is hidden; guardians may then walk into view');
-  assert.ok(sim.enemies.every(e => e.level === 1 && e.biome === 'deadwood'));
+  assert.ok(sim.enemies.every(e => e.level === encounterMemberLevel(sim.eventState.sites[grave.id].scaling!,e.rank,e.lootSeed) && e.biome === 'deadwood'));
   const first = sim.enemies[0];
   first.hp = 3;
   first.state = 'dead';

@@ -1,5 +1,7 @@
 # World-state longevity
 
+Local regional scaling, 2026-09-08: Camp encounter baselines now persist alongside the exact casualty ledger, including healthy sleeping camps after actor-cache eviction. Location swaps carry this ledger through dungeon surface storage. No actor-count cap or encounter reset is introduced. See [regional scaling](region-scaling.md).
+
 Implemented locally, 2026-09-06. This pass removes lifetime activity-count gates and separates disposable actors from exact reward history. It does not claim unlimited storage.
 
 ## Retention policy

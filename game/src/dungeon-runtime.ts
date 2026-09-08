@@ -1,5 +1,5 @@
 import type { Simulation } from './simulation.ts';
-import { currentDungeon, syncDungeon } from './dungeon-state.ts';
+import { currentDungeon, syncDungeon, dungeonMemberLevel } from './dungeon-state.ts';
 import { generateDungeon, dungeonRoomAt } from './dungeon.ts';
 import { isSpawnHidden, isEnemyInactive, type SpawnExclusion } from './spawn-visibility.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
@@ -25,7 +25,7 @@ export function updateDungeon(sim: Simulation, view: SpawnExclusion | null): voi
         if (members.some(m => { const s = run.states[m.id]; return !isSpawnHidden(s.x, s.y, view, ENEMY_DEFINITIONS[m.kind].radius) || sim.world.blocked(s.x, s.y, ENEMY_DEFINITIONS[m.kind].radius); }))
             continue;
         for (const m of members) {
-            const s = run.states[m.id], e = sim.spawnEnemy(m.kind, s.x, s.y, m.rank, { campId: run.entrance.id, memberId: m.id, lootSeed: m.seed });
+            const s = run.states[m.id], e = sim.spawnEnemy(m.kind, s.x, s.y, m.rank, { campId: run.entrance.id, memberId: m.id, lootSeed: m.seed, level: dungeonMemberLevel(run.entrance, m) });
             if (!e)
                 throw new Error('Validated dungeon spawn failed');
             e.hp = s.hp;

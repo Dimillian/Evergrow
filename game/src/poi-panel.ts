@@ -1,3 +1,4 @@
+import { encounterRewardLevel } from './encounter-scaling.ts';
 import { eventRecipe } from './event-recipes.ts';
 import type { DungeonEntrance } from './dungeon.ts';
 import { BLESSINGS, blessingChoices, type EventSite, type EventChoice } from './poi-content.ts';
@@ -38,7 +39,7 @@ export class EventPanel {
     }, { signal: this.lifetime.signal });
   }
   openDungeon(entrance:DungeonEntrance) {
-    this.entrance=entrance;this.element.innerHTML=`<section class="ui-window event-window" role="dialog" aria-modal="true" aria-label="Dungeon entrance"><header class="ui-window-header"><h2 class="ui-title">${escapeUI(entrance.name)}</h2><span class="ui-muted">Level ${entrance.level}</span><button class="ui-button ui-button--icon" data-close aria-label="Close">×</button></header><div class="ui-window-body event-choices"><p>The Hollow Warden · One floor</p><button class="ui-button" data-enter>Enter crypt</button></div></section>`;
+    this.entrance=entrance;this.element.innerHTML=`<section class="ui-window event-window" role="dialog" aria-modal="true" aria-label="Dungeon entrance"><header class="ui-window-header"><h2 class="ui-title">${escapeUI(entrance.name)}</h2><span class="ui-muted">Level ${entrance.level}</span><button class="ui-button ui-button--icon" data-close aria-label="Close">×</button></header><div class="ui-window-body event-choices"><p>The Hollow Warden · Lv ${entrance.scaling ? encounterRewardLevel(entrance.scaling,3) : entrance.level}</p><button class="ui-button" data-enter>Enter crypt</button></div></section>`;
     this.element.hidden=false;this.focus=trapDialogFocus(this.element,{signal:this.lifetime.signal});
   }
   open(site: EventSite) {

@@ -26,3 +26,15 @@ body { color: var(--ui-text); background: #070e15; font-family: var(--ui-font); 
   .atlas-map-mount .world-map-root { padding: 10px; }
   .atlas-review-footer { padding: 0 14px 10px; font-size: 11px; }
 }
+.atlas-seeds { align-items: center; flex-wrap: wrap; }
+.atlas-seeds label { display: flex; align-items: center; gap: 8px; color: var(--ui-muted); font-size: 13px; }
+.atlas-seeds input, .atlas-seeds select { height: 34px; border: 1px solid var(--ui-line); border-radius: 0; background: #0c171e; color: var(--ui-text); font: inherit; padding: 4px 8px; }
+.atlas-seeds input { width: 112px; }
+.atlas-fit { font: inherit; color: var(--ui-jade); border: 0; padding: 0; background: none; cursor: pointer; }
+.atlas-fit:focus-visible { outline: 1px solid var(--ui-jade); outline-offset: 4px; }
+/* The study's own footer replaces character position/persistence information. */
+.atlas-map-mount .world-map-footer { display: none; }
+.atlas-map-mount .world-map-header { display: none; }
+.atlas-levels { font: inherit; border: 0; padding: 0; background: none; cursor: pointer; color: var(--ui-muted); }
+.atlas-levels[aria-pressed="true"] { color: var(--ui-jade); }
+.atlas-levels:focus-visible { outline: 1px solid var(--ui-jade); outline-offset: 4px; }

@@ -1,5 +1,5 @@
-import { bossForBiome, BOSS_NAMES, LAIR_RULES } from './wilderness-boss-content.ts';
 import { getZoneAt } from './zone-progression.ts';
+import { bossForBiome, BOSS_NAMES, LAIR_RULES } from './wilderness-boss-content.ts';
 import { withGoblinWarband } from './goblin-camps.ts';
 import { sampleBiome, type BiomeId } from './biomes.ts';
 import { roadPaths, pathDistance } from './road-shape.ts';
@@ -230,14 +230,17 @@ export function bossLairCell(worldSeed:number,cx:number,cy:number):boolean {
 export function generateBossLair(worldSeed:number,cx:number,cy:number,reserved:SiteReservation):WildernessSite|null {
   if(!bossLairCell(worldSeed,cx,cy))return null;
   const seed=siteHash(cx,cy,worldSeed,0xb055),radius=LAIR_RULES.radius;
+  let lowRegion: {x:number;y:number} | undefined;
   for(let attempt=0;attempt<24;attempt++){
     const x=(cx+.5)*WILDERNESS_RULES.cellSize+(random(seed,attempt*2+1)-.5)*1200;
     const y=(cy+.5)*WILDERNESS_RULES.cellSize+(random(seed,attempt*2+2)-.5)*1200;
-    if(getZoneAt(x,y,worldSeed).level<LAIR_RULES.minimumLevel||Math.hypot(x,y)<radius+1200||Math.hypot(x-740,y-180)<radius+500)continue;
+    if(Math.hypot(x,y)<radius+1200||Math.hypot(x-740,y-180)<radius+500)continue;
     if(pathDistance(x,y,worldSeed)<radius+120||reserved(x,y,radius+60))continue;
     // Check both perimeter and inner guard ring against water and reserved land.
     if([170,270,370].some(r=>Array.from({length:8},(_,i)=>i*Math.PI/4).some(a=>reserved(x+Math.cos(a)*r,y+Math.sin(a)*r,35))))continue;
+    if(getZoneAt(x,y,worldSeed).originalLevel<3){lowRegion??={x,y};continue;}
     return makeSite(seed,`site:${worldSeed}:lair:${cx}:${cy}`,'bossLair',x,y,false,sampleBiome(x,y,worldSeed).id,worldSeed);
   }
+  if(lowRegion)return makeSite(seed,`site:${worldSeed}:lair:${cx}:${cy}`,'bossLair',lowRegion.x,lowRegion.y,false,sampleBiome(lowRegion.x,lowRegion.y,worldSeed).id,worldSeed);
   return null;
 }

@@ -82,7 +82,7 @@ test('each enemy archetype awards its authored XP once on lethal melee contact',
   const expectedRewards: Record<EnemyKind, number> = { thornReaver: 32, mireSpitter: 31, frostRevenant: 43, emberAcolyte: 34, duneScuttler: 25, stormSentinel: 39, briarMatriarch: 160, ashColossus: 160, graveMarshal: 160, warden: 120, goblin: 6, goblinChief: 65, stalker: 20, caster: 30, brute: 50, hound: 22, archer: 28, wisp: 32 };
   for (const kind of Object.keys(expectedRewards) as EnemyKind[]) {
     const sim = new Simulation(emptyWorld, { spawn: false });
-    const enemy = sim.spawnEnemy(kind, 36, 0)!;
+    const enemy = sim.spawnEnemy(kind, 36, 0, 'normal', undefined, {base:1,min:1,max:1,fixed:true})!;
     enemy.hp = 24;
     enemy.stateDuration = 999;
     advance(sim, .25, { attack: true });
@@ -101,7 +101,7 @@ test('nonlethal damage awards no XP and a kill can cross a level without healing
   sim.player.xp = 90;
   sim.player.hp = 40;
   const beforeStats = { ...sim.player.stats };
-  const enemy = sim.spawnEnemy('stalker', 36, 0)!;
+  const enemy = sim.spawnEnemy('stalker', 36, 0, 'normal', undefined, {base:1,min:1,max:1,fixed:true})!;
   enemy.stateDuration = 999;
   advance(sim, .25, { attack: true });
   assert.equal(enemy.hp, 24);

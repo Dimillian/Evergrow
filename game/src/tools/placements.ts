@@ -21,7 +21,7 @@ function drawMap(){
   for(const p of visible()){const pos=mapPoint(p.x,p.y);ctx.beginPath();ctx.arc(pos.x,pos.y,p===selected?7:4,0,Math.PI*2);ctx.fillStyle=p===selected?'#fff1af':POI_DEFINITIONS[p.kind].color;ctx.fill();if(p===selected){ctx.strokeStyle='#fff1af';ctx.strokeRect(pos.x-10,pos.y-10,20,20);}}
 }
 function select(p:typeof places[number]|undefined){selected=p;drawMap();
-  root.querySelector('#name')!.textContent=p?.name??'No places in this survey';root.querySelector('#description')!.textContent=p?`${POI_DEFINITIONS[p.kind].label} · ${p.biome} · Level ${p.zone.level}`:'Try another center, seed or a wider survey.';
+  root.querySelector('#name')!.textContent=p?.name??'No places in this survey';root.querySelector('#description')!.textContent=p?`${POI_DEFINITIONS[p.kind].label} · ${p.biome} · Lv ${p.zone.level}–${p.zone.maxLevel}`:'Try another center, seed or a wider survey.';
   if(!p){renderer.reset();fx.render(renderer.canvas,0);root.querySelector('#details')!.textContent='';return;}
   root.querySelector('#details')!.textContent=JSON.stringify(p,null,2);
   const sim=new Simulation(world,{seed:query.seed,spawn:false,startX:p.x,startY:p.y+80});sim.time=12;
@@ -29,7 +29,7 @@ function select(p:typeof places[number]|undefined){selected=p;drawMap();
   for(const b of root.querySelectorAll<HTMLElement>('[data-place]'))b.setAttribute('aria-pressed',String(b.dataset.place===p.id));
   const state=new URLSearchParams({...Object.fromEntries(Object.entries(query).map(([k,v])=>[k,String(v)])),kind,place:p.id});history.replaceState(null,'',`?${state}`);reportRoute();
 }
-function listing(){root.querySelector('.tool-list')!.innerHTML=visible().map(p=>`<button data-place="${e(p.id)}">${e(p.name)}<small>${POI_DEFINITIONS[p.kind].label} · Lv ${p.zone.level} · ${Math.round(p.x)}, ${Math.round(p.y)}</small></button>`).join('');root.querySelector('.tool-status')!.textContent=`${visible().length} shown / ${places.length} placements · ${query.size} × ${query.size} world units · seed ${query.seed}`;select(visible().find(p=>p.id===q.get('place'))??visible()[0]);}
+function listing(){root.querySelector('.tool-list')!.innerHTML=visible().map(p=>`<button data-place="${e(p.id)}">${e(p.name)}<small>${POI_DEFINITIONS[p.kind].label} · Lv ${p.zone.level}–${p.zone.maxLevel} · ${Math.round(p.x)}, ${Math.round(p.y)}</small></button>`).join('');root.querySelector('.tool-status')!.textContent=`${visible().length} shown / ${places.length} placements · ${query.size} × ${query.size} world units · seed ${query.seed}`;select(visible().find(p=>p.id===q.get('place'))??visible()[0]);}
 function survey(){root.querySelector('.tool-status')!.textContent='Surveying…';places=surveyPlaces(world,query);listing();}
 form.addEventListener('submit',ev=>{ev.preventDefault();if(!form.reportValidity())return;const values=new FormData(form);query={seed:Number(values.get('seed')),x:Number(values.get('x')),y:Number(values.get('y')),size:Number(values.get('size'))};world.dispose();world=new World(query.seed);try{survey();}catch(error){root.querySelector('.tool-status')!.textContent=String(error);}});
 const filter=root.querySelector<HTMLSelectElement>('#kind')!;if(Object.hasOwn(POI_DEFINITIONS,q.get('kind')??''))kind=q.get('kind')!;filter.value=kind;filter.addEventListener('change',()=>{kind=filter.value;listing();});

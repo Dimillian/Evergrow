@@ -1,3 +1,4 @@
+import { scaledEnemyStats } from '../src/zone-progression.ts';
 import { isBossKind } from '../src/wilderness-boss-content.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -62,7 +63,7 @@ test('spawned actors and actual melee/projectile contact use the authored enemy 
     const definition = ENEMY_DEFINITIONS[kind];
     const sim = new Simulation(world, { spawn: false });
     const enemy = sim.spawnEnemy(kind, definition.attack === 'melee' ? -20 : -200, 0)!;
-    assert.equal(enemy.hp, definition.hp); assert.equal(enemy.maxHp, definition.hp); assert.equal(enemy.radius, definition.radius);
+    assert.equal(enemy.hp, scaledEnemyStats(kind,enemy.level,enemy.rank).maxHp); assert.equal(enemy.maxHp, enemy.hp); assert.equal(enemy.radius, definition.radius);
     enemy.attackAngle = 0;
     if (isBossKind(kind)) enemy.bossMove = 'sweep';
     if (definition.attack === 'melee') {

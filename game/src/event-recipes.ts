@@ -51,7 +51,7 @@ export function recipeMembers(site: EventSite) {
     return Array.from({ length: r.rules.count }, (_, wave) => Array.from({ length: Math.min(18, r.size + wave * r.growth) }, (_, i) => {
         const roster = r.roster ?? CAMP_BIOME_ROSTERS[site.biome];
         const final = wave === r.rules.count - 1 || r.mode === 'timed' && wave % 3 === 2;
-        const rank: EnemyRank = i === 0 ? final && site.level >= 3 && r.elite ? 'elite' : 'veteran' : i === 1 && wave > 1 ? 'veteran' : 'normal';
+        const rank: EnemyRank = i === 0 ? final && (site.scaling || site.level >= 3) && r.elite ? 'elite' : 'veteran' : i === 1 && wave > 1 ? 'veteran' : 'normal';
         return { wave, kind: roster[(i + wave) % roster.length], rank, seed: siteHash(site.seed, wave * 32 + i, 8791) };
     })).flat();
 }

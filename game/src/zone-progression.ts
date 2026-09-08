@@ -8,7 +8,11 @@ export const ZONE_RULES = Object.freeze({ regionSize: 3600, travelPerLevel: 6000
 export interface ZoneProgression {
   id: string;
   name: string;
+  /** Minimum ordinary level, independent of the character. */
   level: number;
+  maxLevel: number;
+  /** Previous geographic level, used only to retain already-visited save encounters. */
+  originalLevel: number;
   x: number;
   y: number;
   hazardous: boolean;
@@ -32,7 +36,7 @@ function center(cx: number, cy: number, seed: number): [
   return [(cx + (geoHash(cx, cy, seed + 41) / 4294967296 - .5) * .6) * ZONE_RULES.regionSize,
     (cy + (geoHash(cx, cy, seed + 59) / 4294967296 - .5) * .6) * ZONE_RULES.regionSize];
 }
-/** Fixed, warped geographic districts. Road travel establishes progression; remote pockets add risk. */
+/** Stable geographic districts own level ranges; encounter activation captures the player-relative level. */
 export function getZoneAt(x: number, y: number, seed = 7319): ZoneProgression {
   if (!Number.isFinite(x) || !Number.isFinite(y)) {
     x = 0;
@@ -64,10 +68,15 @@ export function getZoneAt(x: number, y: number, seed = 7319): ZoneProgression {
   const route = routeDangerDistance(px, py, seed), hash = geoHash(cx, cy, seed + 831);
   const starting = !cx && !cy;
   const hazardous = !starting && route.remoteness > 2500 && hash % 7 < 2;
-  const level = starting ? 1 : normalizeLevel(1 + Math.floor((route.travel + route.remoteness * 1.1) / ZONE_RULES.travelPerLevel) + (hazardous ? 3 + hash % 3 : 0));
+  const originalLevel = starting ? 1 : normalizeLevel(1 + Math.floor((route.travel + route.remoteness * 1.1) / ZONE_RULES.travelPerLevel) + (hazardous ? 3 + hash % 3 : 0));
+  const tier = starting ? 0 : Math.floor((route.travel + route.remoteness * 1.1) / ZONE_RULES.travelPerLevel);
+  const bands = [[1, 12], [4, 18], [7, 22], [12, 28], [18, 35]] as const;
+  const band = bands[Math.min(tier, bands.length - 1)];
+  const extra = Math.max(0, tier - 4) * 8 + (hazardous ? 3 + hash % 3 : 0);
+  const level = normalizeLevel(band[0] + extra), maxLevel = normalizeLevel(band[1] + extra);
   const biome = sampleBiome(px, py, seed).name;
   const name = `${['Raven', 'Ashen', 'Silver', 'Thorn', 'Gloam', 'Elder', 'Moon', 'Wandering', 'Sable', 'Hollow', 'Bramble', 'Whispering', 'Iron', 'Copper', 'Wren', 'Dusk', 'Windswept', 'Shrouded', 'Silent', 'Lost', 'Pale', 'Gilded', 'Cinder', 'Fallow'][hash % 24]} ${hazardous ? ['Wilds', 'Deeps', 'Banes', 'Wastes'][hash >>> 8 & 3] : ['March', 'Vale', 'Reach', 'Expanse', 'Glen', 'Basin'][Math.floor(hash / 13) % 6]}`;
-  const zone = Object.freeze({ id, name: `${name} · ${biome}`, level, x: px, y: py, hazardous, travel: route.travel });
+  const zone = Object.freeze({ id, name: `${name} · ${biome}`, level, maxLevel, originalLevel, x: px, y: py, hazardous, travel: route.travel });
   if (zones.size >= 2048)
     zones.delete(zones.keys().next().value!);
   zones.set(id, zone);

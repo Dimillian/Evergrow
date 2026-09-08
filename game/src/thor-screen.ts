@@ -63,7 +63,7 @@ function render() {
     if (!active)
         html = `<div class="thor-idle"><div class="thor-astrolabe"><span>${uiIcon('star')}</span><i></i><i></i><i></i></div><p>Select a character on the upper screen</p></div>`;
     else if (tab === 'map')
-        html = `<div class="thor-map"><img src="${mapSource}" alt="Explored terrain"><span class="thor-north">N</span><div class="thor-map-tools"><button data-zoom="0.8" aria-label="Zoom out">−</button><button data-zoom="1.25" aria-label="Zoom in">+</button><button data-panel="map" aria-label="Open full map">${uiIcon('map')}</button></div><span class="thor-area-level">Lv ${n(s.zoneLevel)}</span></div><div class="thor-section-title"><h2>Nearby</h2><button data-panel="journeys" aria-label="Open journal">${uiIcon('journal')}</button></div><div class="thor-journeys">${s.journeys.length ? s.journeys.map(g => `<button data-track="${e(g.id)}" class="${g.tracked ? 'tracked' : ''}"><span class="journey-diamond">◇</span><span>${e(g.name)}</span><small>${e(g.distance)}</small></button>`).join('') : '<p class="thor-quiet">Explore to discover nearby activities</p>'}</div>`;
+        html = `<div class="thor-map"><img src="${mapSource}" alt="Explored terrain"><span class="thor-north">N</span><div class="thor-map-tools"><button data-zoom="0.8" aria-label="Zoom out">−</button><button data-zoom="1.25" aria-label="Zoom in">+</button><button data-panel="map" aria-label="Open full map">${uiIcon('map')}</button></div><span class="thor-area-level">Lv ${n(s.zoneLevel)}${s.zoneMaxLevel ? `–${n(s.zoneMaxLevel)}` : ''}</span></div><div class="thor-section-title"><h2>Nearby</h2><button data-panel="journeys" aria-label="Open journal">${uiIcon('journal')}</button></div><div class="thor-journeys">${s.journeys.length ? s.journeys.map(g => `<button data-track="${e(g.id)}" class="${g.tracked ? 'tracked' : ''}"><span class="journey-diamond">◇</span><span>${e(g.name)}</span><small>${e(g.distance)}</small></button>`).join('') : '<p class="thor-quiet">Explore to discover nearby activities</p>'}</div>`;
     else if (tab === 'pack')
         html = `<div class="thor-pack-layout"><section class="thor-equipped-column"><div class="thor-section-title"><h2>Worn</h2></div><div class="thor-equipment">${s.equipment.map(itemCell).join('')}</div><span class="thor-gold">◈ ${n(s.gold)}</span><button class="thor-character-link" data-panel="character">Character ↗</button></section><section class="thor-bag-column"><div class="thor-section-title"><h2>Pack</h2><span>${s.bag.filter(Boolean).length} / 64</span></div><div class="thor-bag">${s.bag.map(itemCell).join('')}</div></section></div>`;
     else
@@ -78,7 +78,7 @@ function render() {
         const journeys = content.querySelector('.thor-journeys')!, next = parsed.content.querySelector('.thor-journeys')!;
         if (journeys.innerHTML !== next.innerHTML)
             journeys.innerHTML = next.innerHTML;
-        content.querySelector('.thor-area-level')!.textContent = `Lv ${n(s.zoneLevel)}`;
+        content.querySelector('.thor-area-level')!.textContent = `Lv ${n(s.zoneLevel)}${s.zoneMaxLevel ? `–${n(s.zoneMaxLevel)}` : ''}`;
     }
     else if (html !== lastContent) {
         const scroll = content.scrollTop;

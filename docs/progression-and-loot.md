@@ -9,7 +9,7 @@ Equipment construction now has independent weighted material pools and stronger 
 
 2026-09-05 · first connected balance model for the local prototype.
 
-The world supplies the danger; the character chooses how far to venture. An enemy keeps the level, rank, combat stats, biome, and reward context it received when it spawned. Leveling up does not strengthen existing enemies or improve their items. Better areas offer higher-level equipment and more XP, while returning to an earlier area makes the character's growth tangible.
+The world supplies regional level bounds; the character chooses how far to venture. An enemy keeps the level, rank, combat stats, biome, and reward context it received when it spawned. Leveling up does not strengthen existing enemies or improve their items. Better areas offer higher-level equipment and more XP, while returning to an earlier area makes the character's growth tangible.
 
 These are authored starting curves for playtesting. They establish consistent rules and expose their numbers; they do not establish a balanced endgame. Character progress, equipment, gold, uncollected loot and camp casualties persist in eight browser-local slots; each character also has its own explored chart.
 
@@ -21,8 +21,8 @@ Chest delivery bits and any old-item eviction are saved atomically before changi
 
 ## The progression loop
 
-1. Explore into a geographic area with a fixed threat level.
-2. Fight normal, veteran, or elite enemies whose level comes from their spawn location.
+1. Explore a region with a bounded ordinary level range.
+2. Fight normal, veteran, or elite enemies whose levels snapshot the player within that range, with rank offsets.
 3. A real death awards source-level XP, adjusted for the character's current level, and rolls the enemy's loot table.
 4. Pick up gear, compare its rolls, equip eligible upgrades, and allocate level-up points.
 5. Use the stronger build to push farther, or revisit lower-level areas with less danger and lower XP efficiency.
@@ -31,15 +31,13 @@ Each gained level still grants **one skill point and five attribute points**. Po
 
 ## Geographic threat
 
-Generation 5 uses fixed named, irregular districts rather than circular distance bands. The starting district is level one. Ordinary threat follows accumulated road travel from Briarwatch (about one level per 6,000 route units), plus remoteness from a route. A subset of remote wilderness districts gains 3–5 extra levels, creating optional dangerous neighbors. Several danger districts can share a large biome. Levels remain independent of player level and kill count.
-
-The runtime large map labels discovered regions and marks hazardous districts with an orange `!`. Region entry notifications and map hover use the same seeded region query as enemy spawning, vendors, events and portal landing validation. See [world generation](world-generation.md) for the exact current rules and bounded route estimate.
+Current local rules use overlapping regional ranges: home 1–12, then 4–18, 7–22, 12–28, 18–35 and higher road-linked districts. Normal members vary −1/+1; veterans, elites and bosses add +1/+2/+3 to the captured ordinary baseline. Rank multipliers remain separate. New encounters snapshot once; saved actors and existing activities keep their source identities. All event types and boss lairs are eligible from level one outside protected arrival areas. See [regional scaling](region-scaling.md).
 
 Towns remain protected. Their safe interiors and streets do not create leveled combat encounters. Entering a sanctuary does not convert existing enemies into rewards; withdrawing or despawning a living enemy gives neither XP nor loot.
 
 Level and rank are captured at spawn. Crossing a boundary or pulling an enemy across one never changes that enemy's stats or loot level. Enemy projectiles retain their attacker's source level after launch, including after the caster dies.
 
-There is no living-actor cap, ambient target, camp reserve or concurrent rank/archetype ceiling. Geographic levels still determine source stats and rank odds; area boundaries can contain enemies from both levels.
+There is no living-actor cap, ambient target, camp reserve or concurrent rank/archetype ceiling. Resolved encounter levels determine source stats and ambient rank odds; area boundaries can contain encounters with different snapshots.
 
 Automatic populations wait for valid camera bounds after construction or reset. Sixteen initial roaming enemies settle into the offscreen surroundings in small batches; later groups require both travel and a cooldown. Placement uses the actual camera rectangle, shared visual margins and a forward lead, so a wide zoom does not leave the old fixed-distance spawn ring entirely visible. Packs of four to six enemies use loose formations, with travel-direction-biased placement and biome-appropriate companions. Blocked ground, sanctuaries and every camp footprint remain excluded.
 

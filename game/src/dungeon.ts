@@ -11,6 +11,7 @@ export interface DungeonChestTarget {
     index: number;
 }
 export interface DungeonEntrance {
+    scaling?: import('./encounter-scaling.ts').EncounterScale;
     id: string;
     name: string;
     seed: number;

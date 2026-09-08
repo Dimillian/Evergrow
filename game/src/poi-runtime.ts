@@ -1,3 +1,4 @@
+import { encounterMemberLevel } from './encounter-scaling.ts';
 import { eventRecipe } from './event-recipes.ts';
 import { advanceWaves } from './wave-system.ts';
 import { alertEnemy } from './enemy-state.ts';
@@ -104,7 +105,8 @@ export function advanceTrial(context: TrialContext): void {
     const actor = context.spawn(g.kind, point.x, point.y, g.rank, { campId: `event:${site.id}`, memberId: String(point.index), lootSeed: g.seed });
     if (!actor)
       throw new Error('Preflighted event guardian could not be admitted');
-    Object.assign(actor, scaledEnemyStats(g.kind, site.level, g.rank), { level: site.level, biome: site.biome, hp: g.hp, homeX: site.x, homeY: site.y });
+    const level = site.scaling ? encounterMemberLevel(site.scaling, g.rank, g.seed) : site.level;
+    Object.assign(actor, scaledEnemyStats(g.kind, level, g.rank), { level, biome: site.biome, hp: g.hp, homeX: site.x, homeY: site.y });
     alertEnemy(actor, player);
     g.admitted = true;
     g.x = actor.x;

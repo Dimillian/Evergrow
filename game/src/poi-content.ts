@@ -18,6 +18,7 @@ export interface Blessing {
 }
 export type EventChoice = 'goods' | 'coin' | BlessingKind;
 export interface EventSite {
+  scaling?: import('./encounter-scaling.ts').EncounterScale;
   id: string;
   kind: EventKind;
   name: string;

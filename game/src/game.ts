@@ -1,3 +1,4 @@
+import { encounterScaleAt } from './encounter-scaling.ts';
 import { MUSIC_FILES } from './music-content.ts';
 import { audioVolume, DEFAULT_AUDIO, type AudioChannel } from './audio-preferences.ts';
 import { isBossKind } from './wilderness-boss-content.ts';
@@ -47,6 +48,7 @@ import { bindGameKeyboard } from './game-keyboard.ts';
 import { createCharacterSheet, type StarterLoadoutId } from './items.ts';
 import { refreshCharacter } from './character.ts';
 import { AreaNoticeTracker } from './notification-queue.ts';
+import { activityLevel } from './activity-level.ts';
 import { getZoneAt } from './zone-progression.ts';
 import { SaveHub, type SaveMode } from './save-hub.ts';
 import { SAVE_BUNDLE_LIMIT } from './save-bundle.ts';
@@ -173,7 +175,8 @@ export class Game {
       this.uiContext = uiContext;
       this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap());
       this.lifetime.defer(() => this.worldMap.dispose());
-      this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
+      this.worldMap.setEncounterLevelReader(poi => isEventKind(poi.kind)||poi.kind==='dungeon' ? activityLevel(poi,this.journeys.facts(),this.overworld.seed) : null);
+    this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
     this.worldMap.setEventStateReader(poi => { if(poi.kind==='dungeon'){if(this.sim.expeditions.cleared?.includes(poi.id))return 'Cleared';const run=this.sim.expeditions.runs.find(r=>r.entrance.id===poi.id);return run?(run.states.warden.hp<=0?'Cleared':'Expedition active'):null;} const record = this.sim.eventState.sites[poi.id]; return isEventKind(poi.kind) ? eventLabel(record ?? { id: poi.id, kind: poi.kind }, this.sim.eventState, this.sim.getCampState(poi.id) === 'cleared') : null; });
     this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.overworld.getPortalAnchor(band)));
       this.inventoryPanel = this.lifetime.own(new InventoryPanel(this.shell.panelMount, {
@@ -563,6 +566,7 @@ export class Game {
     await this.exploration.ready;
     if (this.disposed) return;
     this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap());
+    this.worldMap.setEncounterLevelReader(poi => isEventKind(poi.kind)||poi.kind==='dungeon' ? activityLevel(poi,this.journeys.facts(),this.overworld.seed) : null);
     this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
     this.worldMap.setEventStateReader(poi => { if(poi.kind==='dungeon'){if(this.sim.expeditions.cleared?.includes(poi.id))return 'Cleared';const run=this.sim.expeditions.runs.find(r=>r.entrance.id===poi.id);return run?(run.states.warden.hp<=0?'Cleared':'Expedition active'):null;} const record = this.sim.eventState.sites[poi.id]; return isEventKind(poi.kind) ? eventLabel(record ?? { id: poi.id, kind: poi.kind }, this.sim.eventState, this.sim.getCampState(poi.id) === 'cleared') : null; });
     this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.overworld.getPortalAnchor(band)));
@@ -744,7 +748,8 @@ export class Game {
       }
       const entrance = this.overworld.getDungeonEntrances(p.x - 80, p.y - 80, 160, 160).find(e => Math.hypot(e.x - p.x, e.y - p.y) < 75 && (!pointer || Math.hypot(pointer.x - e.x, pointer.y - (e.y - 20)) < 55));
       if (entrance) {
-          this.activeDungeonEntrance = entrance;
+          const scaling = encounterScaleAt(entrance.x,entrance.y,this.overworld.seed,p.level);
+          this.activeDungeonEntrance = this.sim.expeditions.runs.find(r=>r.entrance.id===entrance.id)?.entrance ?? {...entrance,scaling,level:scaling.base};
           this.panels.open('event');
           return true;
       }
@@ -772,7 +777,7 @@ export class Game {
                   this.notify('Finish the active trial.');
                   return true;
               }
-              this.activeEvent = site;
+              this.activeEvent = {...site,level:activityLevel(site,this.journeys.facts(),this.overworld.seed)};
               this.panels.open('event');
           }
           else
@@ -1002,7 +1007,7 @@ export class Game {
       if (this.sim.portal.ready) this.travelThrough(this.overworld.getPortalAnchor(this.sim.travel.homeTown), false);
       const run=currentDungeon(this.sim.expeditions);
       const zone = run?{id:run.entrance.id,name:run.entrance.name,level:run.entrance.level}:getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed);
-      if (this.areaNotices.update(zone.id, dt)) this.shell.notifications.push({ kind: 'area', id: zone.id, name: zone.name, level: zone.level });
+      if (this.areaNotices.update(zone.id, dt)) this.shell.notifications.push({ kind: 'area', id: zone.id, name: zone.name, level: zone.level, maxLevel: 'maxLevel' in zone ? zone.maxLevel : undefined });
       if (this.sim.player.dead) {
         this.panels.transition('dead', true);
       }

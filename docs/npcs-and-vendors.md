@@ -1,5 +1,7 @@
 # NPCs, vendors and item improvement
 
+Local regional scaling, 2026-09-08: Shop stock and relevel services now scale within the town region’s ordinary range. Stock uses the three-level epoch floor so unsold items do not reroll within an epoch; relevel quotes use the current bounded player level. See [regional scaling](region-scaling.md).
+
 New stock rolls the shared [equipment material pools](item-materials.md). Material persists through services and uses full trade-value multipliers but gentler service premiums (silver 1.2×, gold 1.5×, crystal 2×); services cannot change an item's material.
 
 
@@ -156,3 +158,5 @@ Stock, loot, rarity upgrades and rerolls share the expanded slot pools in [equip
 ## Multi-sell review · local, 2026-09-07
 
 `/services.html?sell` opens an isolated blacksmith sale selection with sample gear. Add `&sound` to hear the coin cue when selling. Transactions affect only the review character; no saves or gameplay ticks are involved. This update awaits the next requested Sites publication.
+
+The shop labels the actual stock level for its three-level refresh bracket (for example, Stock · Lv 7 at character level 8). The improvement tab separately shows the current Services level. Both remain capped by the town region; labels use the same level calculation as generated stock and service quotes.

@@ -1,3 +1,4 @@
+import { encounterScaleAt, encounterMemberLevel, encounterRewardLevel } from './encounter-scaling.ts';
 import { metric } from './chronicle.ts';
 import { treasureLanding } from './treasure-flight.ts';
 import { eventRecipe, isTrialKind, recipeMembers, planSeals, sealPoint } from './event-recipes.ts';
@@ -54,6 +55,12 @@ async function commitEvent(sim: Simulation, site: EventSite, choice: EventChoice
     return { ok: false, message: problem };
   const checkpoint = sim.captureCheckpoint(), state = checkpoint.events!;
   const existing = state.sites[site.id], bonusAlreadyGranted = existing?.bonusGranted ?? false;
+  if (!existing) {
+    const oldCamp = site.kind === 'camp' && sim.getCampState(site.id) === 'cleared' && !sim.encounterScale(site.id);
+    const oldLevel = getZoneAt(site.x, site.y, sim.world.seed).originalLevel;
+    const scaling = sim.encounterScale(site.id) ?? (oldCamp ? { base: oldLevel, min: oldLevel, max: oldLevel, fixed: true as const } : encounterScaleAt(site.x, site.y, sim.world.seed, sim.player.level));
+    site = { ...site, scaling, level: encounterRewardLevel(scaling) };
+  } else site = existing;
   const record: EventRecord = existing ?? { ...site, phase: 'completed', choice, delivered: 0, wavesCleared: 0, bonusGranted: false };
   state.sites[site.id] = record;
   if(existing?.phase==='paused'){state.trial=existing.pausedTrial!;delete existing.pausedTrial;existing.phase='active';}
@@ -65,7 +72,7 @@ async function commitEvent(sim: Simulation, site: EventSite, choice: EventChoice
   } else if (!existing && isTrialKind(site.kind)) {
     if(eventRecipe(site)?.mode==='seals'){const seals=planSeals(site,sim.world);if(!seals)return {ok:false,message:'No clear route to the seals.'};record.seals=seals;}
     record.phase='active';
-    state.trial={...freshWaves(),siteId:site.id,sealReady:false,guardians:recipeMembers(site).map(m=>({...m,hp:scaledEnemyStats(m.kind,site.level,m.rank).maxHp,x:site.x,y:site.y,admitted:false,dead:false}))};
+    state.trial={...freshWaves(),siteId:site.id,sealReady:false,guardians:recipeMembers(site).map(m=>({...m,hp:scaledEnemyStats(m.kind,site.scaling ? encounterMemberLevel(site.scaling,m.rank,m.seed) : site.level,m.rank).maxHp,x:site.x,y:site.y,admitted:false,dead:false}))};
   }
   else {
     const bundle = eventRewards(record);

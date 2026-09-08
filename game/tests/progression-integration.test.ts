@@ -26,10 +26,10 @@ function projectile(sourceLevel: number): Projectile {
     angle: 0, radius: 5, damage: 40, owner: 'enemy', life: 1, maxLife: 1, hitIds: new Set() };
 }
 
-test('spawn geography snapshots monster health, damage, rank, biome, and XP independently of the player', () => {
+test('spawn snapshots bounded regional health, damage, rank, biome and XP before later player changes', () => {
   const sim = createSim(), x = ZONE_RULES.regionSize * 3 + 50;
   const enemy = sim.spawnEnemy('brute', x, 0, 'elite')!;
-  const areaLevel = getZoneAt(x,0).level, expected = scaledEnemyStats('brute', areaLevel, 'elite');
+  const areaLevel = getZoneAt(x,0,640981).level+2, expected = scaledEnemyStats('brute', areaLevel, 'elite');
   assert.equal(enemy.level, areaLevel);
   assert.equal(enemy.rank, 'elite'); assert.equal(enemy.biome, sampleBiome(x, 0).id);
   assert.equal(enemy.hp, expected.maxHp); assert.equal(enemy.maxHp, expected.maxHp);

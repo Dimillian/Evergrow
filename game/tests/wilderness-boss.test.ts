@@ -1,3 +1,4 @@
+import { encounterMemberLevel } from '../src/encounter-scaling.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Simulation } from '../src/simulation.ts';
@@ -29,12 +30,13 @@ function setup(kind:typeof WILDERNESS_BOSSES[number]='briarMatriarch'){
  const c:EnemyAIContext={world:flat,player:sim.player,enemies:sim.enemies,time:0,trial:null,visible:()=>true,move:(e,vx,vy,dt)=>{e.x+=vx*dt;e.y+=vy*dt;},hurt:n=>hits.push(n),shoot:()=>{},emit:()=>{}};
  return {sim,boss,c,hits};
 }
-test('lairs are rare, deterministic, clear, spaced and never below level three',()=>{
+test('lairs are rare, deterministic, spaced and available in level-one regions outside the safe arrival',()=>{
  const world=new World(7319),sites=world.getWildernessSites(-18000,-18000,36000,36000),lairs=sites.filter(s=>s.kind==='bossLair');
  assert.ok(lairs.length>=3);assert.ok(lairs.length<sites.length*.15);
  assert.equal(new Set(lairs.map(s=>s.members[0].kind)).size,3);
+ assert.ok(lairs.some(s=>getZoneAt(s.x,s.y,world.seed).level===1));
  for(const site of lairs){
-  assert.ok(getZoneAt(site.x,site.y,world.seed).level>=3);assert.equal(site.members.length,11);
+  assert.ok(Math.hypot(site.x,site.y)>LAIR_RULES.radius+1200);assert.equal(site.members.length,11);
   assert.ok(isWildernessBoss(site.members[0].kind));assert.equal(site.members.filter(m=>m.rank==='elite').length,2);assert.equal(site.members.filter(m=>m.rank==='veteran').length,8);
   for(const m of site.members)assert.equal(world.blocked(site.x+m.dx,site.y+m.dy,ENEMY_DEFINITIONS[m.kind].radius),false,`${site.id} ${m.id}`);
   for(let y=0;y<site.radius+35;y+=10)assert.equal(world.blocked(site.x,site.y+y,12),false,`${site.id} approach`);
@@ -49,7 +51,7 @@ test('a camp admits the whole lair offscreen, retains guard casualties, and neve
  const spawn=(m:typeof site.members[number],x:number,y:number,source:Parameters<Simulation['spawnEnemy']>[4])=>sim.spawnEnemy(m.kind,x,y,m.rank,source);
  ledger.update([site],sim.player,sim.enemies,world,spawn,1200,{x:site.x-500,y:site.y-500,width:1000,height:1000});assert.equal(sim.enemies.length,0);
  ledger.update([site],sim.player,sim.enemies,world,spawn,1200,{x:site.x-100,y:site.y+700,width:200,height:200});assert.equal(sim.enemies.length,11);
- assert.ok(sim.enemies.every(e=>e.level===getZoneAt(site.x,site.y,world.seed).level&&e.hp===e.maxHp));
+ assert.ok(sim.enemies.every(e=>e.level===encounterMemberLevel(ledger.scaleFor(site.id)!,e.rank,e.lootSeed,isWildernessBoss(e.kind))&&e.hp===e.maxHp));
  sim.enemies[0].hp=0;sim.enemies[0].state='dead';sim.enemies[4].hp=0;sim.enemies[4].state='dead';
  const dead=ledger.defeatedMembers(),restored=new CampPopulation();restored.restoreDefeated(dead);sim.enemies=[];
  restored.update([site],sim.player,sim.enemies,world,spawn,1200,null);
@@ -116,8 +118,8 @@ test('previously gold-only boss hoards automatically release their pending equip
  assert.equal(sim.groundGold.length,0,'already delivered gold never repeats');
  assert.equal((await claimCompletedEvent(sim,id,ok)).ok,false);
 });
-test('nearby lairs stay pinnable but are not recommended to an underprepared character',()=>{
- const goal={id:'site:lair',name:'Briar Matriarch',kind:'bossLair' as const,x:0,y:0,level:3,region:'Test'};
+test('nearby lairs are recommended within the intentional three-level challenge offset',()=>{
+ const goal={id:'site:lair',name:'Briar Matriarch',kind:'bossLair' as const,x:0,y:0,level:7,region:'Test'};
  const facts={events:{sites:{},trial:null},expeditions:freshExpeditions(),x:0,y:0,level:3,time:0,discovered:()=>true,campCleared:()=>false};
  assert.equal(rankJourneyCandidates([goal],freshJourneys(),facts,7319).length,0);
  assert.equal(rankJourneyCandidates([goal],freshJourneys(),{...facts,level:5},7319).length,1);

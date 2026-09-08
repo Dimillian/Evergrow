@@ -1,3 +1,5 @@
+import { activityLevel } from './activity-level.ts';
+import { captureEncounterScale, type EncounterScale } from './encounter-scaling.ts';
 import { isTrialKind } from './event-recipes.ts';
 import { eventLabel } from './poi-content.ts';
 import { journeyWasCompleted } from './journey-rewards.ts';
@@ -9,6 +11,7 @@ import { getZoneAt } from './zone-progression.ts';
 import { roadPaths, pathDistance } from './road-shape.ts';
 export interface JourneyFacts {
   areaId?:string; areaLevel?:number;
+  encounterScale?(id:string): EncounterScale | undefined;
   events:EventState; expeditions:Expeditions; x:number;y:number;level:number;time:number;
   discovered(id:string):boolean; campCleared(id:string):boolean;
 }
@@ -85,15 +88,15 @@ export function journeyNeedsRefresh(state:JourneyState,facts:JourneyFacts):boole
 /** Stable scoring: level match, proximity, route access and activity variety. No combat RNG. */
 export function rankJourneyCandidates(candidates:JourneyGoal[],state:JourneyState,facts:JourneyFacts,seed:number):JourneyGoal[]{
   const last=state.history.at(-1)?.kind;
-  return candidates.filter(g=>eligibleJourney(g,state,facts)&&g.level<=facts.level+2&&(g.kind!=='bossLair'||facts.level>=g.level+2)).map(g=>{
-    const currentLevel=facts.areaLevel??getZoneAt(facts.x,facts.y,seed).level;
-    const gap=g.level-facts.level, distance=Math.hypot(g.x-facts.x,g.y-facts.y);
+  return candidates.filter(g=>eligibleJourney(g,state,facts)&&g.level<=facts.level+((g.kind==='bossLair'||g.kind==='dungeon')?3:2)).map(g=>{
+    const currentLevel=facts.areaLevel??captureEncounterScale(getZoneAt(facts.x,facts.y,seed),facts.level).base;
+    const gap=g.level-facts.level-((g.kind==='bossLair'||g.kind==='dungeon')?3:0), distance=Math.hypot(g.x-facts.x,g.y-facts.y);
     const danger=gap>1?(gap-1)*1200:gap< -1?(-gap-1)*1700:Math.abs(gap)*80;
     const challenge=(g.kind==='dungeon'||isTrialKind(g.kind))?550:0;
     // Reject obvious hazardous direct approaches; a coarse hint is never advertised as pathfinding.
     let unsafe=false;
     for(let i=1;i<=4;i++){const t=i/5;if(getZoneAt(facts.x+(g.x-facts.x)*t,facts.y+(g.y-facts.y)*t,seed).level>Math.max(facts.level+3,g.level+1,currentLevel))unsafe=true;}
-    return {g,score:distance+danger+challenge-(journeyLevelFit(currentLevel,facts.level)==='Good level'&&journeyLevelFit(g.level,facts.level)==='Good level'&&distance<=2400?4000:0)+(last===g.kind?400:0)+Math.min(600,pathDistance(g.x,g.y,seed))*.3-(facts.discovered(g.id)?220:0),unsafe};
+    return {g,score:distance+danger+challenge-(journeyLevelFit(currentLevel,facts.level)==='Good level'&&Math.abs(gap)<=2&&distance<=2400?4000:0)+(last===g.kind?400:0)+Math.min(600,pathDistance(g.x,g.y,seed))*.3-(facts.discovered(g.id)?220:0),unsafe};
   }).filter(v=>!v.unsafe).sort((a,b)=>a.score-b.score||a.g.id.localeCompare(b.g.id)).slice(0,12).map(v=>v.g);
 }
 /** One incremental cell per step. Hard caps bound world generation and candidate scoring. */
@@ -120,18 +123,25 @@ export class JourneySearch {
     return this.cell>=cells.length||this.candidates.size>=64;
   }
   result(state:JourneyState,facts:JourneyFacts):{offers:JourneyGoal[];recommended:string|null}{
-    const candidates=[...this.candidates.values()];
+    const candidates=[...this.candidates.values()].map(g=>({...g,level:activityLevel(g,facts,this.world.seed)}));
     const ranked=rankJourneyCandidates(candidates,state,facts,this.world.seed);
-    let recommended=ranked.find(g=>journeyLevelFit(g.level,facts.level)==='Good level');
+    const area=getZoneAt(facts.x,facts.y,this.world.seed);
+    const outgrown=facts.level>=area.maxLevel, tooHard=area.level>facts.level+2;
+    let recommended=outgrown||tooHard?undefined:ranked.find(g=>journeyLevelFit(g.level-((g.kind==='bossLair'||g.kind==='dungeon')?3:0),facts.level)==='Good level');
     if(!recommended){
-      const currentLevel=facts.areaLevel??getZoneAt(facts.x,facts.y,this.world.seed).level;
-      const tooHard=currentLevel>facts.level+2;
-      const routes=roadPaths(facts.x-3600,facts.y-3600,7200,7200,this.world.seed);
+      const routes=roadPaths(facts.x-5200,facts.y-5200,10400,10400,this.world.seed);
       const points=routes.flatMap(r=>r.points).filter(([x,y])=>{
         const distance=Math.hypot(x-facts.x,y-facts.y),outward=Math.hypot(x,y)-Math.hypot(facts.x,facts.y);
-        return distance>1100&&distance<5200&&(tooHard?outward< -400:outward>800)&&!this.world.blocked(x,y,22);
+        return distance>1100&&distance<6500&&(tooHard?outward< -400:outward>800)&&!this.world.blocked(x,y,22);
       });
-      const frontier=points.slice(0,64).map(([x,y])=>{const zone=getZoneAt(x,y,this.world.seed);return {id:`frontier:${Math.round(x)}:${Math.round(y)}`,kind:'frontier' as const,name:tooHard?'Back to safer ground':'The road ahead',x,y,level:zone.level,region:zone.name};});
+      // The spatial road query is already bounded. Check every destination before
+      // ranking/truncation, or the first road can hide all suitable onward routes.
+      const frontier:JourneyGoal[]=points.flatMap(([x,y])=>{
+        const zone=getZoneAt(x,y,this.world.seed);
+        if(tooHard?zone.level>=area.level:outgrown&&zone.maxLevel<=area.maxLevel)return [];
+        return [{id:`frontier:${Math.round(x)}:${Math.round(y)}`,kind:'frontier',name:tooHard?'Back to safer ground':'The road ahead',x,y,
+          level:captureEncounterScale(zone,facts.level).base,region:zone.name}];
+      });
       recommended=rankJourneyCandidates(frontier,state,facts,this.world.seed)[0]??ranked[0];
     }
     // Nearby is geography, not an endorsement: retain higher/lower-level local activities.

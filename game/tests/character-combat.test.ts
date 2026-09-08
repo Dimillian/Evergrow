@@ -1,3 +1,4 @@
+import { xpLevelFactor } from '../src/progression.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FIXED_STEP, Simulation } from '../src/simulation.ts';
@@ -6,7 +7,6 @@ import { equipItem, unequipItem } from '../src/inventory.ts';
 import { generateItem } from '../src/items.ts';
 import { allocateNode, SKILL_NODES, SKILL_TREE } from '../src/skill-tree.ts';
 import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
-import { ENEMY_DEFINITIONS } from '../src/combat-content.ts';
 import { deriveAttackStats } from '../src/equipment.ts';
 import type { Enemy, Input, WorldQuery } from '../src/model.ts';
 import type { SkillId } from '../src/character-types.ts';
@@ -187,12 +187,12 @@ test('the first real death drops loot and awards level points exactly once', () 
   const enemy = sim.spawnEnemy('stalker', 45, 0)!; enemy.hp = 1; enemy.stateDuration = 999;
   advance(sim, .25, { attack: true });
   assert.equal(enemy.state, 'dead'); assert.equal(sim.groundItems.length, 1);
-  assert.equal(sim.player.level, 2); assert.equal(sim.player.xp, 10);
+  assert.equal(sim.player.level, 2); assert.equal(sim.player.xp, Math.round(enemy.xpReward*xpLevelFactor(1,enemy.level))-10);
   assert.equal(sim.player.character.skillPoints, 1); assert.equal(sim.player.character.statPoints, 5);
-  assert.equal(sim.groundItems[0].item.itemLevel, 1, 'the source level owns loot even when the kill levels the player');
+  assert.equal(sim.groundItems[0].item.itemLevel, enemy.level, 'the source level owns loot even when the kill levels the player');
   const id = sim.groundItems[0].item.id;
   advance(sim, 1, { attack: true });
-  assert.equal(sim.kills, 1); assert.equal(sim.player.xp, 10);
+  assert.equal(sim.kills, 1); assert.equal(sim.player.xp, Math.round(enemy.xpReward*xpLevelFactor(1,enemy.level))-10);
   assert.equal(sim.groundItems.length, 1); assert.equal(sim.groundItems[0].item.id, id);
   const events = sim.drainEvents();
   assert.equal(events.filter(event => event.type === 'kill').length, 1);
@@ -236,7 +236,7 @@ test('a full inventory preserves dropped loot until a cell is available, then co
   advance(sim, .25);
   assert.equal(sim.player.character.inventory.filter(item => item?.id === drop.item.id).length, 1);
   assert.equal(sim.drainEvents().filter(event => event.type === 'loot' && event.item.id === drop.item.id).length, 1);
-  assert.equal(sim.player.xp, ENEMY_DEFINITIONS.stalker.xpReward);
+  assert.equal(sim.player.xp, Math.round(enemy.xpReward*xpLevelFactor(1,enemy.level)));
 });
 
 test('starting a new run resets character allocations, points, inventory changes and drops together', () => {

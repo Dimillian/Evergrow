@@ -7,7 +7,7 @@ export function isWildernessBoss(kind: string): kind is WildernessBossKind {
   return (WILDERNESS_BOSSES as readonly string[]).includes(kind);
 }
 export const isBossKind = (kind: EnemyKind): boolean => kind === 'warden' || isWildernessBoss(kind);
-export const LAIR_RULES = Object.freeze({ radius: 370, leash: 670, awareness: 430, minimumLevel: 3,
+export const LAIR_RULES = Object.freeze({ radius: 370, leash: 670, awareness: 430,
   sweepReach: 150, sweepArc: Math.PI * 1.2, rushLength: 330, rushWidth: 32,
   fractureLength: 410, fractureWidth: 24, eruptionRadius: 105, rallyRadius: 480, rallyDuration: 6 });
 export const BOSS_PALETTES = Object.freeze({ briarMatriarch: '#91c67f', ashColossus: '#ffac61', graveMarshal: '#b4a3eb' });

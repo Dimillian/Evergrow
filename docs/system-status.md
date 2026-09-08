@@ -1,5 +1,7 @@
 # Current system status
 
+Local, 2026-09-08: bounded regional scaling connects ordinary −1/+1 encounters, ranked +1/+2/+3 threats, saved camp/trial/dungeon baselines, source-level rewards, vendors, map ranges and onward Journey guidance. All event families are eligible from level one. Generation-9 saves remain compatible. See [regional scaling](region-scaling.md). This pass is not published.
+
 Published in v0.6.0, 2026-09-08: Cloud character file import/download are removed from the hall and cloud repository. Local browser transfers remain available. Existing saves are preserved; all Cloud characters automatically rank individually in the new home leaderboard. Character names, levels and equipped gear power are public; account identities remain private. Characters, Chronicle, Leaderboard and What’s new share home navigation. See [home and rankings](leaderboard.md). Competitive validation remains future work.
 
 The v0.6.0 regional monster expansion adds six biome-weighted archetypes, mixed packs, two-basic/one-signature attack cycles, procedural anatomy and matching remains. See [regional monsters](regional-monsters.md) for combat and spawn weights. Existing characters remain compatible.

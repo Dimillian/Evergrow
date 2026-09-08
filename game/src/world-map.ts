@@ -1,3 +1,4 @@
+import { regionLevelLabel } from './encounter-scaling.ts';
 import { bindTouchCanvas } from './touch-canvas.ts';
 import { formatWorldDistance } from './world-distance.ts';
 import { drawJourneyMapMarker, type JourneyMarker } from './journey-marker.ts';
@@ -7,9 +8,9 @@ import type { Prop } from './world.ts';
 import { Exploration, EXPLORATION_REVEAL_RADIUS, EXPLORATION_CELL_SIZE, EXPLORATION_CHUNK_SIZE } from './exploration.ts';
 import { BIOMES, type BiomeId } from './biomes.ts';
 import { roadPaths } from './road-shape.ts';
-import { clampMapCoordinate, fitMapBounds, getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt, type MapView } from './map-view.ts';
+import { clampMapCoordinate, fitMapBounds, getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt, type MapView, type MapZoomLimits, MAP_ZOOM } from './map-view.ts';
 import { POI_DEFINITIONS } from './world-pois.ts';
-export { getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt, type MapView } from './map-view.ts';
+export { getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt, type MapView, type MapZoomLimits, MAP_ZOOM } from './map-view.ts';
 import type { ExplorationWorld, MapPOI, MapRect } from './exploration.ts';
 import { text } from './font.ts';
 import { uiIcon } from './ui-components.ts';
@@ -32,7 +33,7 @@ export const MAP_TERRAIN_RULES = Object.freeze({ cacheLimit: 384, maximumVisible
 /** Increase world coverage per tile at overview scales while retaining a bounded sample budget. */
 export function mapTerrainSize(zoom: number, width: number, height: number): number {
   if (![zoom, width, height].every(Number.isFinite) || zoom <= 0 || width <= 0 || height <= 0) return MAP_TERRAIN_RULES.baseWorldSize;
-  zoom = Math.max(.025, zoom); width = Math.min(16384, width); height = Math.min(16384, height);
+  zoom = Math.max(.001, zoom); width = Math.min(16384, width); height = Math.min(16384, height);
   let size = Math.max(width, height) <= 256 ? 768 : zoom < .06 ? 3072 : zoom < .13 ? 1536 : 768;
   while ((Math.ceil(width / zoom / size) + 2) * (Math.ceil(height / zoom / size) + 2) > MAP_TERRAIN_RULES.maximumVisibleTiles) size *= 2;
   return size;
@@ -105,7 +106,7 @@ export function chartedMapArea(world: Pick<MapWorld, 'sampleBiome' | 'isSanctuar
 }
 
 function mapAreaLabel(world: Pick<MapWorld, 'isSanctuary'> & Partial<Pick<MapWorld, 'seed'>>, x: number, y: number) {
-  return world.isSanctuary?.(x, y) ? 'Sanctuary' : `Area Lv ${getZoneAt(x, y, world.seed).level}`;
+  return world.isSanctuary?.(x, y) ? 'Sanctuary' : regionLevelLabel(getZoneAt(x, y, world.seed));
 }
 
 /** Keep hover selection inside the chart and prefer the closest visible marker. */
@@ -208,11 +209,16 @@ export class WorldMap {
   private world: MapWorld;
   private exploration: Exploration;
   private onClose: () => void;
+  private encounterLevelReader: (poi: MapPOI) => number | null = () => null;
+  setEncounterLevelReader(reader: (poi: MapPOI) => number | null) { this.encounterLevelReader = reader; }
   private eventStateReader: (poi: MapPOI) => string | null = () => null;
   setEventStateReader(reader: (poi: MapPOI) => string | null) { this.eventStateReader = reader; }
   private campStateReader: (id: string) => CampMapState = () => 'dormant';
 
-  constructor(world: MapWorld, exploration: Exploration, mount: HTMLElement, onClose: () => void) {
+  private zoomLimits: MapZoomLimits = MAP_ZOOM;
+
+  constructor(world: MapWorld, exploration: Exploration, mount: HTMLElement, onClose: () => void, zoomLimits: MapZoomLimits = MAP_ZOOM) {
+    this.zoomLimits = zoomLimits;
     this.world = world; this.exploration = exploration; this.onClose = onClose;
     this.element = document.createElement('div');
     this.element.className = 'world-map-root'; this.element.hidden = true;
@@ -295,7 +301,7 @@ export class WorldMap {
   }
   /** Frame any charted region without changing discoveries, player state or saved data. */
   fitBounds(region: MapRect, padding = 40) {
-    this.view = fitMapBounds(this.view, region, padding); this.render();
+    this.view = fitMapBounds(this.view, region, padding, this.zoomLimits); this.render();
   }
   get viewBounds(): MapRect { return bounds(this.view); }
   get terrainCacheSize(): number { return this.tiles.size; }
@@ -308,7 +314,7 @@ export class WorldMap {
     this.clearTouch = bindTouchCanvas(this.canvas,signal,{
       start:()=>{this.pointer=null;this.hideTooltip();},
       pan:(dx,dy)=>{this.pointer=null;this.view.centerX=clampMapCoordinate(this.view.centerX-dx/this.view.zoom);this.view.centerY=clampMapCoordinate(this.view.centerY-dy/this.view.zoom);this.invalidate();},
-      zoom:(factor,p)=>{this.view=zoomMapAt(this.view,p.x,p.y,this.view.zoom*factor);this.invalidate();},
+      zoom:(factor,p)=>{this.view=zoomMapAt(this.view,p.x,p.y,this.view.zoom*factor, this.zoomLimits);this.invalidate();},
       tap:p=>{this.pointer=p;this.invalidate(false);},
     });
     this.element.querySelector('.world-map-close')!.addEventListener('click', () => { this.close(); this.onClose(); }, { signal });
@@ -318,7 +324,7 @@ export class WorldMap {
           this.view.centerX = clampMapCoordinate(this.player.x); this.view.centerY = clampMapCoordinate(this.player.y);
         }
         else this.view = zoomMapAt(this.view, this.view.width / 2, this.view.height / 2,
-          this.view.zoom * (button.dataset.map === 'in' ? 1.3 : 1 / 1.3));
+          this.view.zoom * (button.dataset.map === 'in' ? 1.3 : 1 / 1.3), this.zoomLimits);
         this.invalidate();
       }, { signal });
     }
@@ -345,7 +351,7 @@ export class WorldMap {
     this.canvas.addEventListener('wheel', event => {
       event.preventDefault(); const p = local(event);
       const delta = Math.max(-240, Math.min(240, event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? this.view.height : 1)));
-      this.view = zoomMapAt(this.view, p.x, p.y, this.view.zoom * Math.exp(-delta * .0016)); this.invalidate();
+      this.view = zoomMapAt(this.view, p.x, p.y, this.view.zoom * Math.exp(-delta * .0016), this.zoomLimits); this.invalidate();
     }, { signal, passive: false });
     this.element.addEventListener('keydown', event => {
       // Escape/M remain owned by the game's phase/input coordinator.
@@ -364,7 +370,7 @@ export class WorldMap {
       else if (event.key === 'ArrowDown') this.view.centerY += pan;
       else if (event.key === 'Home') { this.view.centerX = this.player.x; this.view.centerY = this.player.y; }
       else if (event.key === '+' || event.key === '=' || event.key === '-') this.view = zoomMapAt(this.view,
-        this.view.width / 2, this.view.height / 2, this.view.zoom * (event.key === '-' ? 1 / 1.3 : 1.3));
+        this.view.width / 2, this.view.height / 2, this.view.zoom * (event.key === '-' ? 1 / 1.3 : 1.3), this.zoomLimits);
       else return;
       this.view.centerX = clampMapCoordinate(this.view.centerX);
       this.view.centerY = clampMapCoordinate(this.view.centerY);
@@ -546,7 +552,7 @@ export class WorldMap {
       if (poi.kind !== 'portal' && !poi.sighted && !this.exploration.isRevealed(poi.x, poi.y)) continue;
       const p = projectMapPoint(poi.x, poi.y, view);
       this.poiIcon(c, poi, p.x, p.y, mini ? 4.1 : view.zoom < .07 ? 5.4 : 7, this.hovered?.id === poi.id && !mini);
-      if (!mini && poi.kind === 'town' && (view.zoom >= .045 || this.zoneLevels)) {
+      if (!mini && poi.kind === 'town' && (view.zoom >= .045 || (this.zoneLevels && view.zoom >= .025))) {
         text(c, poi.name, p.x + 1, p.y + 13, 1.15, palette.ink, 'center');
         text(c, poi.name, p.x, p.y + 12, 1.15, palette.ivory, 'center');
       }
@@ -689,7 +695,7 @@ export class WorldMap {
         c.strokeStyle = palette.lineStrong; c.strokeRect(bx + .5, by + .5, boxWidth - 1, 47);
         c.fillStyle = POI_DEFINITIONS[poi.kind].color; c.fillRect(bx + 1, by + 9, 2, 29);
         c.save(); c.beginPath(); c.rect(bx + 10, by + 6, boxWidth - 20, 36); c.clip();
-        text(c, `${this.poiLabel(poi)} · ${mapAreaLabel(this.world, poi.x, poi.y)}`, bx + 11, by + 9, .75, palette.jade);
+        text(c, `${this.poiLabel(poi)} · ${this.encounterLevelReader(poi) !== null ? `Lv ${this.encounterLevelReader(poi)}` : mapAreaLabel(this.world, poi.x, poi.y)}`, bx + 11, by + 9, .75, palette.jade);
         text(c, poi.name, bx + 11, by + 26, 1.1, palette.ivory); c.restore();
       }
     }
@@ -725,7 +731,7 @@ export class WorldMap {
     const features = this.features(this.view, false);
     this.visiblePOIs = features.pois;
     this.chart(c, this.view, false, features);
-    const grid = this.view.zoom < .065 ? 3200 : 1536, first = unprojectMapPoint(0, 0, this.view);
+    const grid = this.view.zoom < .01 ? 12800 : this.view.zoom < .065 ? 3200 : 1536, first = unprojectMapPoint(0, 0, this.view);
     c.save(); c.strokeStyle = '#bfbe9710'; c.lineWidth = .65;
     for (let wx = Math.ceil(first.x / grid) * grid; wx < first.x + this.view.width / this.view.zoom; wx += grid) {
       const p = projectMapPoint(wx, 0, this.view); c.beginPath(); c.moveTo(p.x, 0); c.lineTo(p.x, this.view.height); c.stroke();
@@ -735,7 +741,7 @@ export class WorldMap {
     }
     c.restore();
     this.playerArrow(c, this.player, this.view, false);
-    const scale = this.view.zoom < .06 ? 2000 : this.view.zoom < .16 ? 1000 : 250;
+    const scale = this.view.zoom < .025 ? 10000 : this.view.zoom < .06 ? 2000 : this.view.zoom < .16 ? 1000 : 250;
     const scaleWidth = scale * this.view.zoom;
     c.strokeStyle = `${palette.ivory}75`; c.lineWidth = 1;
     c.beginPath(); c.moveTo(24, this.view.height - 25); c.lineTo(24, this.view.height - 21);
@@ -796,7 +802,7 @@ export class WorldMap {
 
   private showTooltip(poi: MapPOI, point: { x: number; y: number }) {
     this.tooltip.hidden = false; setText(this.tooltipName, poi.name);
-    setText(this.tooltipKind, `${this.poiLabel(poi)} · ${mapAreaLabel(this.world, poi.x, poi.y)}`); setText(this.tooltipDescription, this.eventStateReader(poi) ?? (this.isCampCleared(poi) ? 'The watchfire is quiet. All members of this garrison have been defeated for the current run.' : poi.description));
+    setText(this.tooltipKind, `${this.poiLabel(poi)} · ${this.encounterLevelReader(poi) !== null ? `Lv ${this.encounterLevelReader(poi)}` : mapAreaLabel(this.world, poi.x, poi.y)}`); setText(this.tooltipDescription, this.eventStateReader(poi) ?? (this.isCampCleared(poi) ? 'The watchfire is quiet. All members of this garrison have been defeated for the current run.' : poi.description));
     this.tooltip.style.setProperty('--poi-color', POI_DEFINITIONS[poi.kind].color);
     this.positionTooltip(point);
   }

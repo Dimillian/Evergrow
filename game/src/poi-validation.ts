@@ -1,3 +1,4 @@
+import { encounterMemberLevel, encounterRewardLevel, validEncounterScale } from './encounter-scaling.ts';
 import { eventRecipe, recipeMembers } from './event-recipes.ts';
 import { object, number, integer, text } from './item-validation.ts';
 import { isEventKind, BLESSINGS, type EventState } from './poi-content.ts';
@@ -13,7 +14,7 @@ export function validEvents(v: unknown): v is EventState {
     return false;
   if (v.claimed !== undefined && (!Array.isArray(v.claimed) || !v.claimed.every(id => text(id, 180) && (id.startsWith('site:') || id.startsWith('reliquary:')) && !Object.hasOwn(v.sites as object, id)) || new Set(v.claimed).size !== v.claimed.length)) return false;
   for (const [id, r] of Object.entries(v.sites)) {
-    if (!object(r) || !text(id, 180) || !id.startsWith('site:') && !id.startsWith('reliquary:') || r.id !== id
+    if (!object(r) || (r.scaling !== undefined && (!validEncounterScale(r.scaling) || r.level !== encounterRewardLevel(r.scaling))) || !text(id, 180) || !id.startsWith('site:') && !id.startsWith('reliquary:') || r.id !== id
       || !isEventKind(String(r.kind)) || !text(r.name, 100)
       || !number(r.x, -4e7, 4e7) || !number(r.y, -4e7, 4e7) || !integer(r.level, 1, 1e6) || !integer(r.seed, 0, 4294967295)
       || !Object.hasOwn(BIOMES, String(r.biome)) || !['active', 'paused', 'completed', 'claimed'].includes(String(r.phase))
@@ -51,7 +52,7 @@ function validTrial(value:unknown,site:EventState['sites'][string]):boolean {
   const expected=recipeMembers(site);
   if(t.guardians.length!==expected.length)return false;
   return t.guardians.every((g,i)=>{const m=expected[i];return object(g)&&g.wave===m.wave&&g.kind===m.kind&&g.rank===m.rank&&g.seed===m.seed
-    && number(g.hp,0,scaledEnemyStats(m.kind,site.level,m.rank).maxHp)&&number(g.x,-4e7,4e7)&&number(g.y,-4e7,4e7)
+    && number(g.hp,0,scaledEnemyStats(m.kind,site.scaling ? encounterMemberLevel(site.scaling,m.rank,m.seed) : site.level,m.rank).maxHp)&&number(g.x,-4e7,4e7)&&number(g.y,-4e7,4e7)
     && typeof g.admitted==='boolean'&&typeof g.dead==='boolean'&&(g.dead?g.admitted&&g.hp===0:Number(g.hp)>0)
     && (m.wave<Number(t.wave)?g.dead:true)&&(m.wave>Number(t.wave)?!g.admitted&&!g.dead:true);});
 }

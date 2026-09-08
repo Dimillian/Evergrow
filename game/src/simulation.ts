@@ -47,7 +47,8 @@ import { activateSkill } from './skill-combat.ts';
 import { advanceProjectiles, MAX_PROJECTILES } from './projectile-combat.ts';
 import type { GroundItem, SkillId } from './character-types.ts';
 import type { EnemyRank } from './progression-content.ts';
-import { enemyLootSeed, getZoneAt, scaledEnemyStats } from './zone-progression.ts';
+import { encounterScaleAt, encounterMemberLevel, isBossKind, type EncounterScale } from './encounter-scaling.ts';
+import { enemyLootSeed, scaledEnemyStats } from './zone-progression.ts';
 import { CampPopulation, CAMP_POPULATION_RULES, type CampSpawnSource, type CampState } from './camp-population.ts';
 import { sampleBiome } from './biomes.ts';
 import { RoamingEncounters, ROAMING_RULES, ROAMING_GROUPS, roamingSpawnAnchor, shouldRetireRoamer } from './roaming-encounters.ts';
@@ -171,15 +172,16 @@ export class Simulation {
     this.roaming.reset(this.player.x, this.player.y);
   }
 
+  encounterScale(id: string) { return this.camps.scaleFor(id); }
   reserveIdentity(next:number):void { this.nextId=Math.max(this.nextId,next); }
   captureContents(): LocationContents {
-      return cloneData({ campWounds: this.camps.captureWounds(this.enemies), actors: this.enemies.filter(e => e.hp > 0).map(storedActor), groundItems: this.groundItems, groundGold: this.groundGold, pickups: this.pickups, clearedCamps: this.camps.clearedIds(), defeatedCampMembers: this.camps.defeatedMembers() });
+      return cloneData({ encounterScales: this.camps.captureScales(), campWounds: this.camps.captureWounds(this.enemies), actors: this.enemies.filter(e => e.hp > 0).map(storedActor), groundItems: this.groundItems, groundGold: this.groundGold, pickups: this.pickups, clearedCamps: this.camps.clearedIds(), defeatedCampMembers: this.camps.defeatedMembers() });
   }
   captureCheckpoint(): CharacterCheckpoint {
     const p = this.player;
     const run = currentDungeon(this.expeditions); if (run) syncDungeon(run,this.enemies,p.x,p.y);
     syncTrial(this.eventState, this.enemies);
-    return cloneData({ chronicle:p.chronicle, brokenContainers: [...this.brokenContainers], journeys:this.journeys, campWounds:this.camps.captureWounds(this.enemies), roaming:this.roaming.capture(), expeditions: this.expeditions, actors: this.enemies.filter(e=>e.hp>0).map(storedActor), pickups: this.pickups, events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
+    return cloneData({ chronicle:p.chronicle, brokenContainers: [...this.brokenContainers], journeys:this.journeys, encounterScales:this.camps.captureScales(), campWounds:this.camps.captureWounds(this.enemies), roaming:this.roaming.capture(), expeditions: this.expeditions, actors: this.enemies.filter(e=>e.hp>0).map(storedActor), pickups: this.pickups, events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
       x: p.x, y: p.y, angle: p.angle, hp: p.hp, mana: p.mana, dead: p.dead,
       flasks: p.flasks, healCooldown: p.healCooldown, dodgeCharges: p.dodgeCharges, dodgeRecharge: p.dodgeRecharge,
       skillCooldowns: p.skillCooldowns, time: this.time, kills: this.kills,
@@ -218,6 +220,7 @@ export class Simulation {
     this.camps.restoreCleared(saved.clearedCamps); this.camps.restoreDefeated(saved.defeatedCampMembers); this.groundItems = saved.groundItems;
     this.groundGold = saved.groundGold ?? [];
     this.nextId = Math.max(1, ...saved.groundItems.map(item => item.id + 1), ...this.groundGold.map(pile => pile.id + 1), ...(saved.pickups??[]).map(p=>p.id+1));
+    this.camps.restoreScales(saved.encounterScales);
     for (const actor of saved.actors ?? []) {
       const enemy=this.spawnEnemy(actor.kind,actor.x,actor.y,actor.rank, actor.campId ? {campId:actor.campId,memberId:actor.memberId!,lootSeed:actor.seed} : undefined);
       if(enemy)Object.assign(enemy,scaledEnemyStats(actor.kind,actor.level,actor.rank),{level:actor.level,biome:actor.biome,lootSeed:actor.seed,hp:actor.hp,homeX:actor.homeX,homeY:actor.homeY,bossPhases:actor.bossPhases,state:'idle',stateDuration:1});
@@ -310,13 +313,14 @@ export class Simulation {
   }
 
   /** Useful for authored encounters and deterministic headless tests. */
-  spawnEnemy(kind: EnemyKind, x: number, y: number, rank: EnemyRank = 'normal', source?: CampSpawnSource): Enemy | null {
+  spawnEnemy(kind: EnemyKind, x: number, y: number, rank: EnemyRank = 'normal', source?: CampSpawnSource, scaling?: EncounterScale): Enemy | null {
     const stats = ENEMY_DEFINITIONS[kind];
     if (this.world.isSanctuary?.(x, y)) return null;
     if (this.world.blocked(x, y, stats.radius)) return null;
-    const level = this.world.dungeonLevel ?? getZoneAt(x, y, this.world.seed).level, scaled = scaledEnemyStats(kind, level, rank);
-    const biome = this.world.dungeonBiome ?? (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
     const lootSeed = source?.lootSeed ?? enemyLootSeed(this.options.seed!, ++this.spawnOrdinal, x, y);
+    const level = source?.level ?? this.world.dungeonLevel ?? encounterMemberLevel(scaling ?? encounterScaleAt(x, y, this.world.seed ?? this.options.seed!, this.player.level), rank, lootSeed, isBossKind(kind));
+    const scaled = scaledEnemyStats(kind, level, rank);
+    const biome = this.world.dungeonBiome ?? (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
     const enemy: Enemy = {
       id: this.nextId++, level, rank, biome, lootSeed, ...scaled,
       ...(source ? { campId: source.campId, campMemberId: source.memberId } : {}),
@@ -720,7 +724,7 @@ export class Simulation {
 
   private containerContext(): ContainerAttackContext {
     return { world: this.world, break: (target, angle) => {
-      const level = getZoneAt(target.x, target.y, this.world.seed ?? this.options.seed!).level;
+      const level = this.world.dungeonLevel ?? encounterScaleAt(target.x, target.y, this.world.seed ?? this.options.seed!, this.player.level).base;
       breakContainer(target, angle, level, this.brokenContainers, this.groundGold,
         () => this.nextId++, event => this.emit(event));
     } };
@@ -822,12 +826,13 @@ export class Simulation {
     const size = this.roaming.groupSize(ROAMING_RULES.maxGroupSize, this.random());
     for (let attempt = 0; attempt < ENCOUNTER_RULES.maxSpawnAttempts; attempt++) {
       const anchor = roamingSpawnAnchor(this.player, view, this.roaming.heading, () => this.random(), attempt);
+      const scaling = encounterScaleAt(anchor.x, anchor.y, this.world.seed ?? this.options.seed!, this.player.level);
       const members: Array<{ kind: EnemyKind; rank: EnemyRank; x: number; y: number }> = [];
       for (let index = 0; index < size; index++) {
         const angle = anchor.angle + (index - 1) * Math.PI * 2 / Math.max(1, size - 1) + (this.random() - .5) * .12;
         const radius = index === 0 ? 0 : ROAMING_RULES.groupRadius * (.85 + this.random() * .15);
         const x = anchor.x + Math.cos(angle) * radius, y = anchor.y + Math.sin(angle) * radius;
-        const zone = getZoneAt(x, y, this.world.seed), biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
+        const biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
         const preferred = index ? ROAMING_GROUPS[members[0].kind]?.[index] : undefined;
         const kind = chooseEncounterEnemy(biome, () => this.random(), preferred);
         if (!isSpawnHidden(x, y, view, ENEMY_DEFINITIONS[kind].radius)
@@ -836,7 +841,7 @@ export class Simulation {
           || this.world.getEnemyCamps?.(x - 60, y - 60, 120, 120)
             .some(camp => Math.hypot(camp.x - x, camp.y - y) < camp.radius + 60)
           || [...living, ...members].some(enemy => Math.hypot(enemy.x - x, enemy.y - y) < ENCOUNTER_RULES.minimumSeparation)) break;
-        const rank = chooseEncounterRank(zone.level, this.random());
+        const rank = chooseEncounterRank(scaling.base, this.random());
         members.push({ kind, rank, x, y });
       }
       if (members.length !== size) continue;
@@ -844,7 +849,7 @@ export class Simulation {
       // not scatter a half-formed group through several unrelated candidates.
       const created: Enemy[] = [], firstEvent = this.events.length;
       for (const member of members) {
-        const enemy = this.spawnEnemy(member.kind, member.x, member.y, member.rank);
+        const enemy = this.spawnEnemy(member.kind, member.x, member.y, member.rank, undefined, scaling);
         if (enemy) {
           enemy.angle = anchor.angle + Math.PI + (this.random() - .5) * .9;
           created.push(enemy);

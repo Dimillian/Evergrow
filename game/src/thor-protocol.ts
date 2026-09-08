@@ -38,6 +38,7 @@ export interface ThorSnapshot {
     level: number;
     zone: string;
     zoneLevel: number;
+    zoneMaxLevel?: number;
     gold: number;
     hp: number;
     maxHp: number;

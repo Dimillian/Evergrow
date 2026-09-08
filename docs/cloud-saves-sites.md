@@ -1,5 +1,7 @@
 # Cloud saves on Sites
 
+Local regional scaling, 2026-09-08: The local regional-scaling pass adds optional encounter snapshots to shared validation. Current v4 saves and the existing v3 appearance migration remain supported; no D1 migration or generation reset. Saved actors, started events and entered dungeons preserve their original difficulty. The matching client/server build has not been published yet. See [regional scaling](region-scaling.md).
+
 Cloud saves deployed · 2026-09-06. Chronicle and the current cadence are included in the verified v0.5.0 publication on 2026-09-07.
 
 ## Player flow

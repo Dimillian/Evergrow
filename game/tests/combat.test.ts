@@ -354,7 +354,7 @@ test('dodge protects the middle of its animation, not startup or recovery', () =
     const sim = make();
     sim.player.dodgeTime = 0.22 - (elapsed! - FIXED_STEP);
     sim.player.dodgeAngle = 0;
-    const enemy = sim.spawnEnemy('stalker', -20, 0)!;
+    const enemy = sim.spawnEnemy('stalker', -20, 0, 'normal', undefined, {base:1,min:1,max:1,fixed:true})!;
     enemy.state = 'attack';
     enemy.stateDuration = 1;
     enemy.attackAngle = 0;
@@ -473,7 +473,7 @@ test('clearInput discards buffered controls and death stops simulation until res
   advance(sim, 0.2);
   assert.equal(sim.player.dodgeCharges, 2);
   sim.player.hp = 1;
-  const enemy = sim.spawnEnemy('stalker', -20, 0)!;
+  const enemy = sim.spawnEnemy('stalker', -20, 0, 'normal', undefined, {base:1,min:1,max:1,fixed:true})!;
   enemy.state = 'attack';
   enemy.stateDuration = 1;
   enemy.attackAngle = 0;

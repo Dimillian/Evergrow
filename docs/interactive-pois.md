@@ -1,5 +1,7 @@
 # Interactive points of interest
 
+Local regional scaling, 2026-09-08: New trials capture a bounded regional level at activation for every wave and reward. All event types are eligible from level one; new low-level recipes include their ranked final guards. Existing started/completed trials retain their source levels and rewards. See [regional scaling](region-scaling.md).
+
 Local addition: [wilderness boss lairs](wilderness-bosses.md) add three bosses, Elite/Veteran retinues and automatic Rare-or-better hoards through a separate placement layer. Existing landmark identities and save formats remain unchanged.
 
 Updated 2026-09-07. This local pass adds recipe-driven encounters, six new landmarks and timed cursed chests. All tuning remains subject to player testing. [World placement](wilderness-and-encounters.md) and [dungeons](dungeons.md) share the same geographic levels and reward owners.

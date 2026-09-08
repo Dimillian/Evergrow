@@ -3,12 +3,14 @@ import type { CharacterSheet, Item, ItemTier, EquipmentSlot } from './character-
 import { generateItem, randomSource, itemDisplayName } from './items.ts';
 import { addInventoryItem } from './inventory.ts';
 import { creditGold, spendGold, goldBalance } from './wallet.ts';
-import { hashService, type TownNPC } from './npcs.ts';
+import { hashService, vendorLevel, type TownNPC } from './npcs.ts';
 import { improveItem, improvementProblem, ITEM_TIERS, type Improvement } from './item-improvement.ts';
 
 export const COMMERCE_LIMITS = { vendors: 2048, buyback: 12 } as const;
 const RARITY_COST: Record<ItemTier, number> = { common: 1, magic: 2, rare: 5, epic: 12, legendary: 30 };
 export const stockEpoch = (level: number) => Math.floor((level - 1) / 3);
+/** Stock and its UI label share the same stable three-level refresh bracket. */
+export const vendorStockLevel = (npc: TownNPC, playerLevel: number) => vendorLevel(npc, stockEpoch(playerLevel) * 3 + 1);
 const budget = (level: number) => 30 + 3 * (level - 1);
 export function itemPrice(item: Item, mode: 'buy' | 'sell'): number {
   return mode === 'sell' ? Math.floor(.15 * budget(item.itemLevel) * RARITY_COST[item.tier] * itemMaterialValue(item))
@@ -39,7 +41,7 @@ export function vendorStock(sheet: CharacterSheet, npc: TownNPC, level: number):
     const kind = npc.role === 'jeweler' ? slot < 4 ? 'ring' : slot < 6 ? 'amulet' : slot === 6 ? 'grimoire' : 'orb'
       : (['weapon', 'weapon', 'weapon', 'shield', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'weapon', 'shield'] as const)[slot];
     const profile = npc.role === 'blacksmith' ? ({ 0: 'longsword', 1: 'thorn-shortbow', 2: 'ember-staff', 10: 'cinder-wand' } as Record<number, string>)[slot] : undefined;
-    const item = generateItem(seed, npc.level, kind, profile, tier); item.id = id;
+    const item = generateItem(seed, vendorStockLevel(npc, level), kind, profile, tier); item.id = id;
     if (item.weapon) item.weapon.id = id;
     if (item.focus) item.focus.id = id;
     if (item.shield) item.shield.id = id;
@@ -78,9 +80,9 @@ export function quoteService(sheet: CharacterSheet, npc: TownNPC, level: number,
     if (npc.role === 'jeweler' || (request.operation === 'enhance') !== (npc.role === 'blacksmith')) return fail('This service is not available here.');
     item = sourceItem(sheet, request.source);
     if (item) {
-      const problem = improvementProblem(item, request.operation, npc.level, request.affix); if (problem) return fail(problem);
-      if (request.operation === 'relevel' && 'equipped' in request.source && npc.level - 2 > level) return fail('Unequip first: the new level requirement exceeds your level.');
-      price = improvementPrice(item, request.operation, npc.level);
+      const problem = improvementProblem(item, request.operation, vendorLevel(npc, level), request.affix); if (problem) return fail(problem);
+      if (request.operation === 'relevel' && 'equipped' in request.source && vendorLevel(npc, level) - 2 > level) return fail('Unequip first: the new level requirement exceeds your level.');
+      price = improvementPrice(item, request.operation, vendorLevel(npc, level));
     }
   }
   if (!item) return fail('This item is no longer available.');
@@ -124,7 +126,7 @@ export function planService(sheet: CharacterSheet, npc: TownNPC, level: number, 
       else character.commerce.buyback = character.commerce.buyback.filter(b => b.item.id !== item.id);
       message = `Bought ${itemDisplayName(item)}`;
     } else {
-      item = improveItem(item, request.operation, npc.level, hashService(`${item.id}:${character.commerce.operations}:${item.recipe.revision}`), request.affix);
+      item = improveItem(item, request.operation, vendorLevel(npc, level), hashService(`${item.id}:${character.commerce.operations}:${item.recipe.revision}`), request.affix);
       if ('bag' in request.source) character.inventory[request.source.bag] = item; else character.equipped[request.source.equipped] = item;
       message = `${itemDisplayName(item)} improved`;
     }
