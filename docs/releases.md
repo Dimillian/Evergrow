@@ -4,14 +4,14 @@
 
 ## Last verified publication
 
-- Game v0.7.0 / Sites version 25, publicly deployed on 2026-09-08 at 08:23:29 UTC.
-- Published source: `d19216be3a5d09bfa835317b6cc60c7e03e11c8d`.
-- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_d6ef4751d8b88191b6a361b85a531157`.
-- Deployment: `appgdep_6a9fc5e8c1788191863bbafc22c95f22`; Sites returned `succeeded`.
-- Added the regional soundtrack, event/boss music, music/SFX controls and panel sounds; fixed left-facing bow motion and arrow release origins.
-- Passed focused audio and bow checks, three changelog checks, type checking, the cloud-enabled client/server build and release validation.
-- No persistence or schema changes. Existing characters are preserved.
-- Authenticated cross-device save/Chronicle acceptance remains a player check.
+- Game v0.7.1 / Sites version 26, publicly deployed on 2026-09-08 at 16:24:20 UTC.
+- Published source: `89e073dbc30de27d0a6bd573e67b1c38d8ff9e1b`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_08a45de33f008191b8f1c500d521db75`.
+- Deployment: `appgdep_6aa036a175908191a4a6a514378fc791`; Sites returned `succeeded`.
+- Ground equipment retains the newest 1,024 drops, evicting oldest items instead of blocking fresh enemy and chest rewards. Previously pending boss equipment can deliver automatically.
+- Passed focused reward/save checks, three changelog checks, type checking, the cloud-enabled client/server build and release validation.
+- Client/server ground-item validation shares the expanded limit. No database migration or character reset.
+- Regional level scaling remains proposed and is not part of this release.
 
 ## Before each requested Sites publication
 
