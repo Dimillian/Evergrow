@@ -3,13 +3,15 @@ import './typography.css';
 import './music-review.css';
 
 const tracks = [
+  {id:'wilderness',title:'Arid wilds',subtitle:'Dry wilderness',detail:'Hand drums · oud · low reeds',url:new URL('./assets/music-auditions/wilderness.mp3',import.meta.url).href,glyph:'△'},
+  {id:'dark-forest',title:'Dark forest',subtitle:'Deadwood · Mire',detail:'Slow baritone guitar · hanging harmonics',url:new URL('./assets/music-auditions/dark-forest.mp3',import.meta.url).href,glyph:'⌁'},
+  {id:'verdant-forest',title:'Verdant forest',subtitle:'Verdant · Amberwood',detail:'Warm guitar · wooden flute · gentle pulse',url:new URL('./assets/music-auditions/verdant-forest.mp3',import.meta.url).href,glyph:'♧'},
   {id:'menu',title:'Home',subtitle:'Uneasy strings',detail:'Twelve-string duet · dissonant harmonics',url:new URL('./assets/music-auditions/menu.mp3',import.meta.url).href,glyph:'◇'},
-  {id:'wilderness',title:'Wilderness',subtitle:'A restless road',detail:'Hand drums · oud · low reeds',url:new URL('./assets/music-auditions/wilderness.mp3',import.meta.url).href,glyph:'♧'},
   {id:'dungeon',title:'Dungeon',subtitle:'Subterranean dread',detail:'Prepared piano · drones · scraping metal',url:new URL('./assets/music-auditions/dungeon.mp3',import.meta.url).href,glyph:'⌑'},
 ];
 await loadGameFont();
 const root=document.querySelector<HTMLElement>('#music-review')!;
-root.innerHTML=`<header><a href="/tools/" class="back">← Tools</a><span>EVERGROW</span><h1>Soundtrack studies</h1><p>Second pass · Three new one-minute tracks.</p></header>
+root.innerHTML=`<header><a href="/tools/" class="back">← Tools</a><span>EVERGROW</span><h1>Soundtrack studies</h1><p>Three wilderness moods · Home · Dungeon</p></header>
 <section class="music-grid" aria-label="Music auditions">${tracks.map((track,i)=>`<article class="music-card ${track.id}"><div class="music-art" aria-hidden="true"><span>${track.glyph}</span></div><div class="music-copy"><span class="music-index">0${i+1}</span><h2>${track.title}</h2><p class="music-subtitle">${track.subtitle}</p><p class="music-detail">${track.detail}</p></div><div class="music-controls"><button class="music-play" data-track="${i}" aria-label="Play ${track.title}">▶ <span>Listen</span></button><button class="music-restart" data-restart="${i}" aria-label="Replay ${track.title} from the beginning">↺</button><a class="music-download" href="${track.url}" download="evergrow-${track.id}.mp3" aria-label="Download ${track.title}">↓</a></div><div class="music-progress"><input type="range" min="0" max="60" step="0.1" value="0" disabled data-seek="${i}" aria-label="Seek ${track.title}"><div><span data-time="${i}">0:00</span><span data-duration="${i}">1:00</span></div></div></article>`).join('')}</section>
 <footer><label class="music-volume">Volume <input id="volume" type="range" min="0" max="1" step="0.01" value="0.7"></label><span>Original AI-generated auditions · Not yet in the game</span></footer><p id="music-status" role="status" aria-live="polite"></p>`;
 

@@ -12,7 +12,7 @@
   },
   {
     "id": "wilderness",
-    "title": "Wilderness",
+    "title": "Arid wilds",
     "description": "Restless hand drums, dry plucked strings and unsettling low reed phrases.",
     "bpm": 94,
     "keyscale": "E minor",
@@ -31,5 +31,28 @@
     "seed": 8731903,
     "caption": "Experimental electroacoustic horror instrumental, oppressive subterranean dungeon soundscape. Deep unstable analog bass drones, stretched bowed cymbals, scraped metal, isolated low prepared-piano clusters, and distant irregular ritual drum thuds. Slowly beating dissonant tones drift against each other, brief reverse echoes emerge from the dark and decay into silence. Claustrophobic forgotten crypt, ancient machinery, approaching unseen danger. Sparse atonal late-1990s gothic game horror score with gritty tape texture, deep low end and hollow stone reverberation. Long tense spaces interrupted by disturbing small sounds. A continuous evolving atmosphere, not a conventional song.",
     "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music"
+  },
+  {
+    "id": "dark-forest",
+    "title": "Dark forest",
+    "description": "Slow baritone guitar, hanging harmonics and a quiet sense of danger.",
+    "bpm": 58,
+    "keyscale": "C minor",
+    "duration": 60,
+    "seed": 8731911,
+    "caption": "Quiet dark woodland acoustic instrumental. A low baritone acoustic guitar plays very slow broken minor chords and a sparse questioning melody, leaving long spaces between phrases. Delicate ringing steel-string harmonics and a faint woody bowed drone hover behind the guitar. A handful of dry branch-like wood clicks, almost no rhythmic percussion. Still mist in an ancient dead forest, soft footsteps through moss, melancholy solitude and subtle lurking danger. Calmer outdoor exploration music for a late-1990s gothic role playing game. Raw intimate fingerpicking, dark muted timbres, natural string noises, irregular human pacing, restrained small ensemble. A quiet musical miniature with a wistful recurring phrase and an unresolved ending.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music, driving drums, fast rhythm, oud, desert music, dramatic horror stingers, aggressive dissonant noise"
+  },
+  {
+    "id": "verdant-forest",
+    "title": "Verdant forest",
+    "description": "Warm wandering guitar, wooden flute and soft woodland rhythms.",
+    "bpm": 78,
+    "keyscale": "D minor",
+    "timesignature": "6",
+    "duration": 60,
+    "seed": 8731912,
+    "caption": "Earthy atmospheric woodland folk instrumental. Warm fingerpicked nylon-string guitar and a low wooden flute gently trade an original wandering Dorian melody. Light lute countermelodies, soft brushed frame-drum taps and quiet woody textures create a relaxed flowing six-eight pulse. Ancient green forest, moss and filtered sunlight, gentle movement in the canopy, a feeling of discovery with lingering mystery. Rustic late-1990s fantasy role playing game exploration music, understated and intimate, wistful rather than celebratory. Sparse human acoustic performances, warm midrange, organic uneven phrasing, clear melody with breathing space. The flute appears only for short answering phrases while the guitar remains central.",
+    "negative": "singing, voice, choir, vocals, orchestral strings section, lush cinematic score, fantasy tavern music, cheerful melody, new age relaxation, polished pop production, electronic dance beat, drum kit, bright bells, trailer music, fast Celtic jig, festive folk dance, epic orchestra, panpipe relaxation music, oud, desert music, strong driving percussion"
   }
 ]

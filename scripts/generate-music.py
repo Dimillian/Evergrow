@@ -8,9 +8,10 @@ import subprocess
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
+tracks = json.loads((ROOT/'scripts/music-auditions.json').read_text())
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--model-root', type=Path, default=Path.home()/'.local/share/evergrow-music/ACE-Step-1.5')
-parser.add_argument('--track', choices=['menu', 'wilderness', 'dungeon', 'all'], default='all')
+parser.add_argument('--track', nargs='+', choices=[track['id'] for track in tracks]+['all'], default=['all'])
 parser.add_argument('--no-thinking', action='store_true', help='Skip the language model for a faster diffusion-only audition.')
 parser.add_argument('--duration', type=float, help='Override audition length for a quick benchmark.')
 parser.add_argument('--seed-offset', type=int, default=0)
@@ -43,14 +44,13 @@ if not args.no_thinking:
     print(status, flush=True)
     if not ok:
         raise RuntimeError('Language model initialization failed')
-tracks = json.loads((ROOT/'scripts/music-auditions.json').read_text())
 for track in tracks:
-    if args.track != 'all' and args.track != track['id']:
+    if 'all' not in args.track and track['id'] not in args.track:
         continue
     duration = args.duration or track['duration']
     seed = track['seed'] + args.seed_offset
     params = GenerationParams(caption=track['caption'], lyrics='[Instrumental]', instrumental=True,
-        bpm=track['bpm'], keyscale=track['keyscale'], timesignature='4', duration=duration, seed=seed,
+        bpm=track['bpm'], keyscale=track['keyscale'], timesignature=track.get('timesignature','4'), duration=duration, seed=seed,
         inference_steps=8, shift=3.0, lm_negative_prompt=track.get('negative', 'NO USER INPUT'),
         thinking=not args.no_thinking, use_cot_caption=False,
         use_cot_metas=False, use_cot_language=False)
