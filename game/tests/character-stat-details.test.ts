@@ -56,6 +56,8 @@ test('source explanations include equipment attributes, allocated tree and live 
   refreshCharacter(p);
   const speed = rows(p).get('attackSpeed')!;
   assert.equal(speed.amount, p.derived.attackSpeedMultiplier - 1);
+  assert.match(speed.calculation,/\+3\.75% Dexterity/);
+  assert.match(rows(p).get('dexterity')!.description,/\+0\.25% attack speed and \+0\.075% critical chance/);
   assert.ok(speed.sources.some(s => s.label.includes(ring.name)));
   assert.ok(speed.sources.some(s => s.label === 'Skill tree'));
   assert.ok(speed.sources.some(s => s.label === 'Haste blessing'));

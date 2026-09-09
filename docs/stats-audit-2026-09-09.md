@@ -4,6 +4,8 @@ September 9, 2026 · Local source audit and headless formula checks. No gameplay
 
 This report records checkpoint `c87ae90`, before the subsequent user-requested whole-number item bonuses. Its measured build/charm values are historical; rerun the included script for current values. The minimum-positive-roll rule strengthens small regeneration and charm rolls. Current rounding rules are documented in [equipment affixes](equipment-affixes.md#weights-and-specialist-budgets).
 
+Dexterity's two conversion rates were subsequently halved as well. Current values are +0.25% attack speed and +0.075% critical chance per added point; the figures below retain the original audit's rates. See [current attribute rules](character-systems.md).
+
 ## Verdict
 
 The core system fits together: attributes, passive nodes, equipped gear and eligible charms converge on one character derivation, and combat consumes that projection. I found no broadly disconnected affix family or duplicate application of physical/spell damage. Four concrete issues were fixed below.

@@ -4,6 +4,8 @@ import { createCharacterSheet, generateItem } from '../src/items.ts';
 import { deriveCharacterStats } from '../src/character-stats.ts';
 import { allocateAttribute } from '../src/inventory.ts';
 import type { StatModifiers } from '../src/character-types.ts';
+import { addInventoryItem } from '../src/inventory.ts';
+import { deriveAttackStats } from '../src/equipment.ts';
 
 test('neutral starter gear preserves current basic attack and resource values', () => {
   const stats = deriveCharacterStats(createCharacterSheet());
@@ -22,10 +24,35 @@ test('assigned attributes drive actual combat resources, damage and cadence', ()
     for (let count = 0; count < 5; count++) allocateAttribute(sheet, attribute);
   }
   const stats = deriveCharacterStats(sheet);
-  assert.equal(stats.attackDamageMultiplier, 1.1); assert.equal(stats.attackSpeedMultiplier, 1.025);
-  assert.equal(stats.critChance, .0075); assert.equal(stats.maxMana, 120);
+  assert.equal(stats.attackDamageMultiplier, 1.1); assert.equal(stats.attackSpeedMultiplier, 1.0125);
+  assert.equal(stats.critChance, .00375); assert.equal(stats.maxMana, 120);
   assert.equal(stats.spellDamageMultiplier, 1.15); assert.equal(stats.maxHp, 130);
   assert.equal(sheet.statPoints, 0);
+});
+
+test('Dexterity from assigned points, gear, charms and nodes shares the reduced conversion', () => {
+  const sheet = createCharacterSheet('bow'); sheet.attributes.dexterity += 5;
+  const ring = generateItem(80,1,'ring'); ring.implicit={dexterity:5};ring.affixes=[];sheet.equipped.ring1=ring;
+  const charm = generateItem(81,1,'charm','storm-pebble','common');
+  charm.affixes=[{name:'Dexterity',stat:'dexterity',value:5}];assert.ok(addInventoryItem(sheet,charm));
+  const stats=deriveCharacterStats(sheet,{dexterity:5,attackSpeedPercent:10,critChance:3});
+  assert.equal(stats.attributes.dexterity,30);
+  assert.equal(stats.attackSpeedMultiplier,1.15,'20 added Dexterity gives 5% speed; the direct 10% stays unchanged');
+  assert.equal(stats.critChance,.045,'20 added Dexterity gives 1.5% crit; the direct 3% stays unchanged');
+  const base=deriveCharacterStats(createCharacterSheet('bow'));
+  const weapon=sheet.equipped.weapon!.weapon!;
+  assert.ok(Math.abs(deriveAttackStats(stats,weapon).attacksPerSecond / deriveAttackStats(base,weapon).attacksPerSecond - 1.15)<1e-10);
+});
+
+test('Dexterity-only caps now need 1000 added points for critical chance and 2000 for speed', () => {
+  const sheet=createCharacterSheet();
+  sheet.attributes.dexterity=510;
+  assert.equal(deriveCharacterStats(sheet).critChance,.375);
+  sheet.attributes.dexterity=1010;
+  assert.equal(deriveCharacterStats(sheet).critChance,.75);
+  assert.equal(deriveCharacterStats(sheet).attackSpeedMultiplier,3.5);
+  sheet.attributes.dexterity=2010;
+  assert.equal(deriveCharacterStats(sheet).attackSpeedMultiplier,6);
 });
 
 test('the same bonuses derive identically from equipment or tree nodes', () => {

@@ -69,9 +69,11 @@ Attribute effects apply per point above the starting baseline of ten, including 
 | Attribute | Effect per point above ten |
 | --- | --- |
 | Strength | +2 percentage points of attack damage |
-| Dexterity | +0.5 percentage points of attack speed; +0.15 percentage points of critical chance |
+| Dexterity | +0.25 percentage points of attack speed; +0.075 percentage points of critical chance |
 | Intelligence | +4 maximum mana; +3 percentage points of spell and added elemental damage |
 | Vitality | +6 maximum life |
+
+The September 9 Dexterity pass halves both per-point bonuses. This applies equally to assigned points, item/charm Dexterity and tree Dexterity; direct attack-speed and critical-chance bonuses keep their values. With no other bonuses, the critical cap now takes 1,000 additional Dexterity and the attack-speed cap 2,000. Existing builds recalculate normally without resetting attributes or saves. This delays saturation rather than removing the eventual caps.
 
 Flat and percentage modifiers add within their stat before conversion to derived multipliers. For example, `attackSpeedPercent: 4` means **+4%**, not a 4× multiplier. Item implicit modifiers, item affixes, and tree bonuses use the same `StatKey` vocabulary.
 

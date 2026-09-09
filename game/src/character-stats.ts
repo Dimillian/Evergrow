@@ -7,6 +7,8 @@ import { armorReduction } from './progression-content.ts';
 import { EQUIPMENT_SLOTS, itemModifiers, itemDisplayName } from './items.ts';
 import type { Attribute, CharacterSheet, DerivedCharacterStats, StatKey, StatModifiers } from './character-types.ts';
 
+export const DEXTERITY_BONUSES = Object.freeze({ attackSpeedPercent: .25, critChance: .075 });
+
 export const ATTRIBUTES: readonly Attribute[] = Object.freeze(['strength', 'dexterity', 'intelligence', 'vitality']);
 const bounded = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Number.isNaN(value) ? min : value));
 
@@ -58,9 +60,9 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
     maxMana: Math.round(bounded(PLAYER_DEFAULTS.maxMana + intelligence * 4 + value('maxMana'), 1, 1e9)),
     attackDamageMultiplier: bounded(1 + (strength * 2 + value('damagePercent')) / 100, .1, 1e6),
     castSpeedMultiplier: bounded(1 + value('castSpeedPercent') / 100, .25, 6),
-    attackSpeedMultiplier: bounded(1 + (dexterity * .5 + value('attackSpeedPercent')) / 100, .25, 6),
+    attackSpeedMultiplier: bounded(1 + (dexterity * DEXTERITY_BONUSES.attackSpeedPercent + value('attackSpeedPercent')) / 100, .25, 6),
     armor, damageReduction: armorReduction(armor, level),
-    critChance: bounded((dexterity * .15 + value('critChance')) / 100, 0, .75),
+    critChance: bounded((dexterity * DEXTERITY_BONUSES.critChance + value('critChance')) / 100, 0, .75),
     critMultiplier: bounded(1.5 + value('critDamage') / 100, 1, 5),
     moveSpeedMultiplier: bounded(1 + value('moveSpeedPercent') / 100, .5, 1.75),
     spellDamageMultiplier: bounded(1 + (intelligence * 3 + value('spellDamagePercent')) / 100, .1, 1e6),
