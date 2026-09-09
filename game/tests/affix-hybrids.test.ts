@@ -37,10 +37,10 @@ test('new items and every reroll respect slot identity and exclusive affix group
   let item = generateItem(19, 1, 'gloves', undefined, 'common');
   for (let i = 0; i < 4; i++) { item = improveItem(item, 'rarity', 1, 24 + i); assert.equal(item.affixes.length, i + 1); }
 });
-test('specialist movement and speed rolls are twice amulet rolls, with bounded scaling', () => {
-  assert.equal(singleAffix('boots', 'moveSpeedPercent').affixes[0].value, 10.9);
-  assert.equal(singleAffix('gloves', 'attackSpeedPercent').affixes[0].value, 13.1);
-  assert.equal(singleAffix('gloves', 'castSpeedPercent').affixes[0].value, 13.1);
+test('specialist movement and speed rolls retain their slot advantage after whole-number rounding', () => {
+  assert.equal(singleAffix('boots', 'moveSpeedPercent').affixes[0].value, 11);
+  assert.equal(singleAffix('gloves', 'attackSpeedPercent').affixes[0].value, 13);
+  assert.equal(singleAffix('gloves', 'castSpeedPercent').affixes[0].value, 13);
   assert.ok(singleAffix('boots', 'moveSpeedPercent').affixes[0].value > singleAffix('amulet', 'moveSpeedPercent').affixes[0].value * 1.9);
 });
 test('elemental weapon affixes remain uncommon rolls in generation and enchanting', () => {

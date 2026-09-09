@@ -23,6 +23,8 @@ The same inventory records own both regions, with room for 120 one-cell objects.
 
 Magic / Rare / Epic / Legendary add 1 / 2 / 3 / 4 affixes to that size budget. Thus even Common stones have an effect, while a Legendary Monolith has eight distinct affixes. Size weights are 30 / 25 / 16 / 16 / 9 / 4. Rarity uses existing item quality multipliers; enhancement adds the usual 5% per step, up to +10. Affix level growth and numeric caps are shared with items, before the size multiplier and final resistance cap. Higher-tier stones keep their physical dimensions.
 
+Final bonuses round to the nearest whole number, with a minimum of 1 for every positive roll. This changes actual combat bonuses, not only tooltip formatting, and also normalizes existing saved charms. In particular, small regeneration rolls become stronger, and nearby rolls may share a value until their next integer threshold. The saved roll quantile remains precise for future upgrades. See [whole-number item bonuses](equipment-affixes.md#weights-and-specialist-budgets).
+
 Six flavors provide color, carved rune and a ×2 preference for matching affixes:
 
 - Ember: fire resistance and life.

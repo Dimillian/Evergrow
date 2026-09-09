@@ -15,6 +15,8 @@ import { characterPower, previewCharacter } from '../src/character-summary.ts';
 import { LOOT_RULES } from '../src/combat-content.ts';
 import { addGroundItem } from '../src/ground-loot.ts';
 import { validContents } from '../src/dungeon-validation.ts';
+import { emptyContents, freshExpeditions, createDungeonRun } from '../src/dungeon-state.ts';
+import { roundItemStats } from '../src/items.ts';
 
 const world = { seed: 7319, generationVersion: 4, blocked: () => false, move: (x: number, y: number, dx: number, dy: number) => ({ x: x + dx, y: y + dy }), getPOIs: () => [] };
 async function setup() {
@@ -24,6 +26,39 @@ async function setup() {
   assert.ok((await session.create(0, 'Rowan', 7319, sim.captureCheckpoint(), 'character-a', 100)), session.error);
   return { data, storage, repo, session, sim };
 }
+
+test('fractional saved bonuses become whole stats in every item location without changing progress or recipes', async () => {
+  const { repo } = await setup(), save = structuredClone(repo.read(0).record!);
+  const p = save.checkpoint, s = p.character;
+  const fractional = (seed:number) => {
+    const item = generateItem(seed,1,'ring',undefined,'magic');
+    item.affixes[0].value=2.6; item.implicit={manaRegen:.3}; return item;
+  };
+  const ring=fractional(801);s.equipped.ring1=ring;
+  const charm=generateItem(802,1,'charm','jade-pebble','common');charm.affixes[0].value=.1;
+  assert.ok(addInventoryItem(s,charm));
+  s.stash=Array(96).fill(null);s.stash[0]=fractional(803);
+  s.commerce.buyback=[{item:fractional(804),price:10}];
+  const sword=generateItem(805,1,'weapon','longsword','magic');
+  sword.affixes=[{name:'Kindling',stat:'fireDamage',value:1.4}];
+  sword.weapon!.enchantment={element:'fire',damage:1.4};
+  p.groundItems=[{id:501,x:0,y:0,item:sword}];
+  const run=createDungeonRun({id:'dungeon:rounding',name:'Test',seed:333,level:1,biome:'deadwood',x:0,y:0});
+  run.contents.groundItems=[{id:502,x:run.x,y:run.y,item:fractional(806)}];
+  p.expeditions={...freshExpeditions(),location:run.entrance.id,runs:[run],surface:emptyContents()};
+  p.expeditions.surface!.groundItems=[{id:503,x:0,y:0,item:fractional(807)}];
+  const raw=JSON.stringify(save), decoded=decodeCharacterSave(raw);assert.ok(decoded);
+  const expected=JSON.parse(raw) as typeof save, sheet=expected.checkpoint.character, expeditions=expected.checkpoint.expeditions!;
+  const all=[sheet.equipped.ring1!,...sheet.inventory.filter(i=>i!==null),sheet.stash![0]!,sheet.commerce.buyback[0].item,
+    expected.checkpoint.groundItems[0].item,expeditions.runs[0].contents.groundItems[0].item,expeditions.surface!.groundItems[0].item];
+  for(const item of all)Object.assign(item,roundItemStats(item));
+  assert.deepEqual(decoded,expected);assert.equal(JSON.stringify(save),raw,'the input stays untouched');
+  assert.equal(decoded.checkpoint.character.equipped.ring1!.affixes[0].value,3);
+  assert.equal(decoded.checkpoint.character.equipped.ring1!.implicit.manaRegen,1);
+  assert.equal(decoded.checkpoint.character.inventory.find(i=>i?.kind==='charm')!.affixes[0].value,1);
+  assert.equal(decoded.checkpoint.groundItems[0].item.weapon!.enchantment!.damage,1);
+  assert.deepEqual(decodeCharacterSave(JSON.stringify(decoded)),decoded,'rounding is idempotent');
+});
 
 test('expanded ground loot preserves oldest-first order through saves and location validation', async () => {
   const { session, repo, sim } = await setup();

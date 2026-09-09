@@ -70,7 +70,7 @@ test('every charm recipe stays valid, finite, monotonic and conflict-free throug
     let previous:ReturnType<typeof generateItem>|undefined;
     for(const level of [1,12,30,60,100,300,1000,1000000]){
       const item=generateItem(7843,level,'charm',profile.id,tier);assert.ok(validItem(item));assert.deepEqual(deriveItem(item),item);
-      item.affixes.forEach((a,i)=>{assert.ok(Number.isFinite(a.value)&&a.value>0);assert.equal(affixConflicts(a.stat,item.affixes.slice(0,i).map(v=>v.stat)),false);if(previous)assert.ok(a.value>=previous.affixes[i].value);});
+      item.affixes.forEach((a,i)=>{assert.ok(Number.isSafeInteger(a.value)&&a.value>0);assert.equal(affixConflicts(a.stat,item.affixes.slice(0,i).map(v=>v.stat)),false);if(previous)assert.ok(a.value>=previous.affixes[i].value);});
       previous=item;
     }
   }
@@ -93,7 +93,7 @@ test('every gear profile and material scales monotonically and survives maximum 
         assert.deepEqual(deriveItem(item),item);
         const stats={...itemModifiers(item),...(item.weapon?{weaponDamage:item.weapon.damage}:{}),...(item.shield?{blockChance:item.shield.blockChance,blockReduction:item.shield.blockReduction}:{})};
         for(const [key,value] of Object.entries(stats)){
-          assert.ok(Number.isFinite(value)&&value!>=0,key);
+          assert.ok(Number.isSafeInteger(value)&&value!>=0,key);
           assert.ok(value!>=(previous[key]??0),`${profile.id??profile.kind} ${key} at ${level}`);
         }
         assert.ok(validItem(deriveItem({...item,recipe:{...item.recipe,enhancement:10}})));

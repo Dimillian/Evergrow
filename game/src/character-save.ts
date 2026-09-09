@@ -15,7 +15,7 @@ import { validTravel, type TravelState } from './travel.ts';
 import { GOLD_RULES, type GroundGold } from './gold.ts';
 import { validGold } from './wallet.ts';
 import type { CharacterSheet, GroundItem, Item, SkillId } from './character-types.ts';
-import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS } from './items.ts';
+import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS, roundItemStats } from './items.ts';
 import { object, number, integer, text, validItem, type ObjectValue } from './item-validation.ts';
 import { validCommerce } from './commerce-validation.ts';
 import { itemFitsSlot } from './inventory.ts';
@@ -128,6 +128,8 @@ export function decodeCharacterSave(raw: string): CharacterSave | null {
       if (!Number.isSafeInteger(epoch) || epoch > Math.floor((p.level - 1) / 3) || slot >= (source[2] === 'jeweler' ? 16 : 24)) return null;
       if (epoch >= state.epoch && !(state.sold[source[1]] & 1 << slot)) return null;
     }
+    // Normalize the validated parsed copy, including stored dungeon loot and buyback.
+    for (const item of items) Object.assign(item, roundItemStats(item));
     return v as unknown as CharacterSave;
   } catch { return null; }
 }

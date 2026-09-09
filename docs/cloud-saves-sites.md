@@ -21,6 +21,8 @@ The character-editor branch now uses save v4 with a required validated appearanc
 
 ## Storage and synchronization
 
+As of the September 9 whole-number bonus pass, shared save decoding rounds validated item bonuses on the parsed copy, including equipped, stored and dropped items. This preserves ownership, recipe rolls, progress and the original stored bytes until a successful save; no schema or database migration is required. See [item rounding](equipment-affixes.md#weights-and-specialist-budgets).
+
 - `save-hub.ts` selects the active repository and chart persistence. The Site-only build flag enables capability discovery; the Android bridge explicitly disables it.
 - `cloud-client.ts` implements the same repository interface as `SaveClient`. Gameplay writes a durable local recovery bundle first, then uploads asynchronously. NPC transactions and reward commitments still wait for the local transaction, not a network round trip.
 - `cloud-worker.ts` / `cloud-cache.ts` own serialization, validation and an account-scoped IndexedDB outbox. Character, map and upload state share one transaction. An immutable in-flight operation survives new checkpoints, interrupted uploads and browser restarts. Acknowledging an older upload never discards newer local progress.

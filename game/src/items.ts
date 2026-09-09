@@ -151,11 +151,11 @@ export function affixPotency(kind: ItemKind, stat: StatKey): number {
 function focusImplicit(profileId: string, level: number, quality: number): StatModifiers {
   const profile = FOCUS_PROFILES.find(p => p.id === profileId)!;
   return Object.fromEntries(Object.entries(profile.implicit).map(([stat, value]) => [stat,
-    Math.round(value! * quality * (PERCENT_STATS.has(stat as StatKey) ? itemPercentageScale(level) : itemPowerScale(level)) * 10) / 10]));
+    value! * quality * (PERCENT_STATS.has(stat as StatKey) ? itemPercentageScale(level) : itemPowerScale(level))]));
 }
 function jewelryImplicit(profileId:string,level:number,quality:number):StatModifiers {
   const profile=JEWELRY_PROFILES.find(p=>p.id===profileId)!;
-  return Object.fromEntries(Object.entries(profile.implicit).map(([stat,value])=>[stat,Math.round(value!*quality*(PERCENT_STATS.has(stat as StatKey)?itemPercentageScale(level):itemPowerScale(level))*10)/10]));
+  return Object.fromEntries(Object.entries(profile.implicit).map(([stat,value])=>[stat,value!*quality*(PERCENT_STATS.has(stat as StatKey)?itemPercentageScale(level):itemPowerScale(level))]));
 }
 export const TIER_AFFIXES: Readonly<Record<ItemTier, number>> = { common: 0, magic: 1, rare: 2, epic: 3, legendary: 4 };
 export const TIER_POWER: Readonly<Record<ItemTier, number>> = { common: 1, magic: 1.09, rare: 1.2, epic: 1.34, legendary: 1.5 };
@@ -206,7 +206,7 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
     const definition = rollAffix(remaining, random);
     const growthLevel = PERCENT_STATS.has(definition.stat) ? itemAffixGrowthLevel(level) : level - 1;
     const rollQuality = random(); rolls.push(rollQuality);
-    const value = discreteAffixValue(definition.stat, rollQuality, level) ?? Math.round((definition.base + growthLevel * definition.growth) * (.85 + rollQuality * .3) * quality * affixPotency(itemKind, definition.stat) * 10) / 10;
+    const value = discreteAffixValue(definition.stat, rollQuality, level) ?? (definition.base + growthLevel * definition.growth) * (.85 + rollQuality * .3) * quality * affixPotency(itemKind, definition.stat);
     affixes.push({ name: definition.name, stat: definition.stat, value: boundResistanceRoll(definition.stat, value) });
     for (let i = remaining.length - 1; i >= 0; i--) if (affixConflicts(remaining[i].stat, affixes.map(a => a.stat))) remaining.splice(i, 1);
   }
@@ -234,7 +234,7 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
       visual: { ...shieldProfile.visual, material: surface, base: appearance.base, edge: appearance.edge, trim: appearance.trim, shadow: appearance.shadow } };
   }
   if (focusProfile) item.focus = { id: item.id, name, visual: { ...focusProfile.visual, material: surface, base: appearance.base, edge: appearance.edge, trim: appearance.trim, shadow: appearance.shadow } };
-  return applyWeaponEnchantment(item);
+  return roundItemStats(item);
 }
 
 /** Display order is deliberate: melee, magic, then archery; light before heavy. */
@@ -313,22 +313,34 @@ export function deriveItem(item: Item): Item {
     if (armor[item.kind]) next.implicit.armor = Math.round(armor[item.kind]! * growth);
     if (item.kind === 'cloak') next.implicit.maxHp = Math.round(6 * growth);
     if (item.kind === 'amulet') next.implicit.maxMana = Math.round(7 * growth);
-    if (item.kind === 'ring') next.implicit.damagePercent = Math.round(2 * itemPercentageScale(item.itemLevel) * quality * enhance * baseScale * 10) / 10;
+    if (item.kind === 'ring') next.implicit.damagePercent = 2 * itemPercentageScale(item.itemLevel) * quality * enhance * baseScale;
   }
   if (JEWELRY_PROFILES.some(p=>p.id===r.profileId)) next.implicit=jewelryImplicit(r.profileId!,item.itemLevel,quality*enhance*baseScale);
   if (weapon && item.weapon) next.weapon = { ...item.weapon, damage: Math.round(weapon.damage * growth) };
   if (shield && item.shield) next.shield = { ...item.shield,
-    blockChance: Math.round(shield.blockChance * enhance * 10) / 10,
-    blockReduction: Math.round(shield.blockReduction * enhance * 10) / 10 };
+    blockChance: shield.blockChance * enhance,
+    blockReduction: shield.blockReduction * enhance };
   next.affixes = item.affixes.map((affix, index) => {
     const definition = [...AFFIXES, ...SHIELD_AFFIXES, ...ELEMENTAL_AFFIXES, ...SKILL_AFFIXES].find(a => a.stat === affix.stat)!;
     const level = PERCENT_STATS.has(affix.stat) ? itemAffixGrowthLevel(item.itemLevel) : item.itemLevel - 1;
     return { name: definition.name, stat: definition.stat,
-      value: boundResistanceRoll(definition.stat, discreteAffixValue(definition.stat, r.rolls[index], item.itemLevel) ?? Math.round((definition.base + level * definition.growth) * (.85 + r.rolls[index] * .3) * quality * enhance * affixPotency(item.kind, definition.stat) * 10) / 10) };
+      value: boundResistanceRoll(definition.stat, discreteAffixValue(definition.stat, r.rolls[index], item.itemLevel) ?? (definition.base + level * definition.growth) * (.85 + r.rolls[index] * .3) * quality * enhance * affixPotency(item.kind, definition.stat)) };
   });
   next.requiredLevel = Math.max(1, item.itemLevel - 2);
   next.power = Math.round((item.itemLevel * 10 + quality * baseScale * 12 + item.affixes.length * 7) * enhance);
-  return applyWeaponEnchantment(next);
+  return roundItemStats(next);
+}
+
+/** Round actual item bonuses once after all multipliers. Small rolls remain useful. */
+const wholeItemStat = (value: number): number => value === 0 ? 0 : Math.sign(value) * Math.max(1, Math.round(Math.abs(value)));
+/** Also canonicalizes validated saved items without rerolling their recipes or changing ownership. */
+export function roundItemStats(item: Item): Item {
+  const next: Item = { ...item,
+    implicit: Object.fromEntries(Object.entries(item.implicit).map(([key, value]) => [key, wholeItemStat(value!)])),
+    affixes: item.affixes.map(affix => ({ ...affix, value: wholeItemStat(affix.value) })),
+    ...(item.shield ? { shield: { ...item.shield, blockChance: wholeItemStat(item.shield.blockChance), blockReduction: wholeItemStat(item.shield.blockReduction) } } : {}),
+  };
+  return next.weapon?.enchantment || next.affixes.some(affix => isElementalAffix(affix.stat)) ? applyWeaponEnchantment(next) : next;
 }
 
 /** Rebuild elemental projection after generation or services, clearing removed affixes. */
@@ -370,8 +382,8 @@ function deriveCharm(item:Item):Item {
   const affixes=item.affixes.map((a,i)=>{
     const definition=definitions.find(d=>d.stat===a.stat);if(!definition)throw new RangeError('Invalid charm affix');
     const growth=PERCENT_STATS.has(a.stat)?itemAffixGrowthLevel(item.itemLevel):item.itemLevel-1;
-    return {name:definition.name,stat:a.stat,value:boundResistanceRoll(a.stat,Math.round((definition.base+growth*definition.growth)*quality*(.85+item.recipe.rolls[i]*.3)*10)/10)};
+    return {name:definition.name,stat:a.stat,value:boundResistanceRoll(a.stat,(definition.base+growth*definition.growth)*quality*(.85+item.recipe.rolls[i]*.3))};
   });
-  return {...item,affixes,implicit:{},requiredLevel:Math.max(1,item.itemLevel-2),power:Math.round((item.itemLevel*10+affixes.length*7)*profile.size.potency*TIER_POWER[item.tier]*(1+.05*item.recipe.enhancement)),recipe:{...item.recipe,rolls:[...item.recipe.rolls]}};
+  return roundItemStats({...item,affixes,implicit:{},requiredLevel:Math.max(1,item.itemLevel-2),power:Math.round((item.itemLevel*10+affixes.length*7)*profile.size.potency*TIER_POWER[item.tier]*(1+.05*item.recipe.enhancement)),recipe:{...item.recipe,rolls:[...item.recipe.rolls]}});
 }
 export const itemAffixCount = (item:Pick<Item,'kind'|'tier'|'recipe'>) => item.kind==='charm'?charmAffixCount(item):TIER_AFFIXES[item.tier];

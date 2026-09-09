@@ -43,7 +43,11 @@ Multiply the existing affix base and growth by these slot budgets before roundin
 | Shield block chance/reduction | ×2 |
 | Weapon attack/spell damage | ×2 |
 
-Other affixes remain ×1. At level 1, a midpoint magic roll gives **10.9% movement** on boots and **13.1% attack or cast speed** on gloves. Percentage growth remains bounded by `25n / (25 + n)`; tier, roll quality and enhancement still apply. No auto-reroll of already-owned items: new loot and newly rolled affixes use the new pools; services rebuild values from their recipes. Existing characters remain loadable, without resetting progress.
+Other affixes remain ×1. At level 1, a midpoint magic roll gives **11% movement** on boots and **13% attack or cast speed** on gloves. Percentage growth remains bounded by `25n / (25 + n)`; tier, roll quality and enhancement still apply. Services rebuild values from their recipes. Existing characters remain loadable, without resetting progress.
+
+All actual item bonuses now use **whole numbers**, including explicit affixes, focus/jewelry implicits and shield block values. Round to the nearest integer after level, roll quality, rarity, slot/size potency, enhancement and resistance limits; positive bonuses have a minimum of 1. Recipes retain precise coefficients and roll quantiles, so later upgrades rebuild from the original inputs rather than multiplying rounded bonuses. Small upgrade steps can leave a bonus unchanged until the next whole-number threshold.
+
+Validated saves normalize fractional bonuses in equipped gear, inventory, charms, stash, buyback and active/stored ground loot on the parsed copy. Elemental weapon damage is refreshed from the rounded enchantment. Item identities, names, recipes, prices and progression remain intact; no random reroll or save reset. Original stored bytes are unchanged until the next successful save. Derived combat rates and attribute conversion formulas retain their precision; this rule concerns item bonuses.
 
 Worn starter clothing begins without base protection. A successful service improvement clears its starter-only neutral recipe and restores the normal base stats as well as applying the quoted upgrade; enhancement/releveling must not charge for a zero-base-stat result. See the [September 9 stats audit](stats-audit-2026-09-09.md) for correctness fixes and remaining scaling concerns.
 
