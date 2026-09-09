@@ -1,5 +1,29 @@
 # Evergrow changelog
 
+## v0.3.0 — 2026-09-09T14:03:00Z
+
+### New
+
+- Arrange equipment by its shape in a wider inventory, with one-click sorting and matching vendor views.
+- Find rare magic-stone charms in six sizes, with their own four-row inventory and utility bonuses.
+- Build fire, frost, lightning and arcane resistance with jewelry, shields and charms.
+- Drop unwanted equipment or charms onto the ground using the inventory's loot-pouch icon.
+- Hover detailed character stats to see their calculations and bonus sources.
+
+### Tweaks
+
+- Sell items at every vendor and repeat gambling without reselecting an item.
+- Item and charm bonuses now use whole numbers, including existing gear; small regeneration bonuses rise to at least 1.
+- Dexterity grants half as much attack speed and critical chance per point, leaving more room for later upgrades.
+- Simplified item tooltips and improved inventory portrait spacing and drop-target feedback.
+
+### Fixes
+
+- Starter armor improves correctly when enhanced or releveled.
+- Corrected Spirit milestone tracking, Tempest mana accounting and gold bonuses on level-up kills.
+
+> Existing characters and progress are preserved. Charms use their dedicated inventory only and become active when their level requirement is met.
+
 ## v0.2.1 — 2026-09-09T11:56:00Z
 
 ### Fixes
