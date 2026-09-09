@@ -1,3 +1,4 @@
+import { hoveredGroundLoot } from './ground-loot-hover.ts';
 import { startDungeonEvent } from './dungeon-events.ts';
 import { encounterScaleAt } from './encounter-scaling.ts';
 import { MUSIC_FILES } from './music-content.ts';
@@ -6,7 +7,7 @@ import { isBossKind } from './wilderness-boss-content.ts';
 import { isTrialKind } from './event-recipes.ts';
 import { eventInteractionSites } from './poi-content.ts';
 import { basicAttackWeapon } from './equipment.ts';
-import { GroundLootTooltip } from './ground-loot-tooltip.ts';
+import { GroundLootHighlight } from './ground-loot-highlight.ts';
 import { createAppearanceEditor } from './character-editor.ts';
 import { executeAppearanceChange } from './character-commands.ts';
 import { validCharacterLook, type CharacterLook } from './character-look.ts';
@@ -97,7 +98,7 @@ export class Game {
   private saveError = '';
   private worldMap: WorldMap;
   private shell: GameShell;
-  private groundLootTooltip: GroundLootTooltip;
+  private groundLootHighlight: GroundLootHighlight;
   private inventoryPanel: InventoryPanel;
   private appearanceEditor?:ReturnType<typeof createAppearanceEditor>;
   private creationLooks=new Map<number,CharacterLook>();
@@ -169,7 +170,7 @@ export class Game {
         openCharacter: () => this.openCharacterPanel('character'), openSkills: () => this.openCharacterPanel('skills'), openJourneys: () => this.journeys.open(),
       }));
       this.canvas = this.shell.canvas;
-      this.groundLootTooltip = this.lifetime.own(new GroundLootTooltip(root, this.canvas));
+      this.groundLootHighlight = this.lifetime.own(new GroundLootHighlight(root, this.canvas));
       this.uiCanvas = this.shell.uiCanvas;
       const uiContext = this.uiCanvas.getContext('2d');
       if (!uiContext) throw new Error('The HUD requires a 2D canvas context.');
@@ -723,6 +724,15 @@ export class Game {
       if (this.phase !== 'playing')
           return false;
       const p = this.sim.player;
+      const screen=pointer&&this.renderer.worldToScreen(pointer.x,pointer.y);
+      const label=screen&&hoveredGroundLoot(this.renderer.groundLootLabels,screen.x,screen.y);
+      const nearby=!pointer?this.sim.groundItems.filter(d=>Math.hypot(d.x-p.x,d.y-p.y)<=80).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0]:undefined;
+      const lootId=label?.id??nearby?.id;
+      if(lootId!==undefined){
+          this.canvas.focus();this.input.clear();this.sim.clearInput();
+          const problem=this.sim.requestGroundItem(lootId);if(problem)this.notify(problem);
+          return true;
+      }
       const run = currentDungeon(this.sim.expeditions);
       if (run) {
           const f = this.sim.dungeonFloor!, hit = (q: {
@@ -1056,10 +1066,11 @@ export class Game {
     ui.setTransform(this.uiCanvas.width / this.renderer.width, 0, 0,
       this.uiCanvas.height / this.renderer.height, 0, 0);
     if (this.phase !== 'ready') this.renderer.renderUI(ui, this.sim, this.world, settings);
-    this.groundLootTooltip.update(this.sim.player, this.sim.groundItems, this.sim.enemies, this.sim.projectiles,
-      this.renderer.groundLootLabels, this.renderer.combatViewport, this.renderer.width, this.renderer.height,
+    this.groundLootHighlight.update(this.sim.player, this.sim.groundItems,
+      this.renderer.groundLootLabels, this.renderer.width, this.renderer.height,
       this.phase === 'playing' && !this.savingAction && !this.touch.active && !this.usingGamepad
-        && this.mouse.present && !this.pointerInHUD() ? this.mouse : null);
+        && this.mouse.present && !this.pointerInHUD() ? this.mouse : null, this.sim.time,
+      this.phase==='playing'?this.sim.groundPickup.id:null);
     if(this.phase==='playing'&&this.journeys.marker?.known){
       const marker=this.journeys.marker,point=this.renderer.worldToScreen(marker.x,marker.y);
       if(point.x>20&&point.x<this.renderer.width-20&&point.y>35&&point.y<this.renderer.height-30

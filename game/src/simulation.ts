@@ -1,3 +1,4 @@
+import { GroundItemPickup } from './ground-item-pickup.ts';
 import { updateWildernessBoss } from './wilderness-boss.ts';
 import { completeBossLair } from './wilderness-boss-rewards.ts';
 import { isWildernessBoss } from './wilderness-boss-content.ts';
@@ -114,7 +115,7 @@ export class Simulation {
   groundGold: GroundGold[] = [];
   readonly brokenContainers = new Set<string>();
   groundEffects: ActiveGroundEffect[] = [];
-  private lootNoticeAt = -10;
+  readonly groundPickup = new GroundItemPickup();
   private skillBuffer: { slot: number; until: number } | null = null;
   time = 0;
   kills = 0;
@@ -157,7 +158,7 @@ export class Simulation {
     this.projectiles = [];
     this.groundEffects = [];
     this.pickups = [];
-    this.groundItems = []; this.groundGold = []; this.lootNoticeAt = -10; this.skillBuffer = null;
+    this.groundItems = []; this.groundGold = []; this.groundPickup.cancel(); this.skillBuffer = null;
     refreshCharacter(this.player);
     this.time = 0;
     this.kills = 0;
@@ -227,6 +228,7 @@ export class Simulation {
     }
     this.camps.adopt(this.enemies); this.camps.restoreWounds(saved.campWounds??[]); this.pickups=saved.pickups??[];
     this.reserveIdentity(Math.max(1,...this.pickups.map(i=>i.id+1)));
+    this.groundPickup.cancel();
     this.randomState=saved.randomState; this.spawnOrdinal=saved.spawnOrdinal;
     this.events=[];
     if(saved.roaming)this.roaming.restore(saved.roaming,p.x,p.y);else this.roaming.reset(p.x, p.y);
@@ -269,6 +271,7 @@ export class Simulation {
 
   /** Call when focus/control context changes, including pause and resume. */
   clearInput(): void {
+    this.groundPickup.cancel();
     this.portal.cancel(); this.eventChannel.cancel();
     this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
     this.skillBuffer = null;
@@ -346,6 +349,7 @@ export class Simulation {
   }
 
   private step(dt: number, input: Input): void {
+    input=this.groundPickup.input(this.player,this.groundItems,this.world,this.time,dt,input);
     this.capturePositions();
     // Decrement before damage resolves so every new impact gets a full flash.
     this.player.hitFlash = Math.max(0, this.player.hitFlash - dt);
@@ -364,7 +368,7 @@ export class Simulation {
     this.engagements.update(this.enemies, this.time, event => this.emit(event));
     this.updatePickups(dt);
     this.groundGold = advanceGold(this.groundGold, this.player, this.world, dt, event => this.emit(event));
-    this.collectGroundItems();
+    this.collectSelectedGroundItem();
     syncTrial(this.eventState, this.enemies);
     if (this.player.dead) {
       interruptTrial(this.eventState,this.enemies);
@@ -786,22 +790,24 @@ export class Simulation {
     this.pickups = this.pickups.filter(pickup => pickup.life > 0);
   }
 
-  private collectGroundItems(): void {
-    if (this.player.dead) return;
-    this.groundItems = this.groundItems.filter(drop => {
-      if(drop.flight&&this.time<drop.flight.at+drop.flight.delay+TREASURE_FLIGHT_DURATION)return true;
-      if (Math.hypot(drop.x - this.player.x, drop.y - this.player.y) > LOOT_RULES.equipmentCollectDistance
-        || !this.lineOfSight(this.player.x, this.player.y, drop.x, drop.y)) return true;
-      if (!addInventoryItem(this.player.character, drop.item)) {
-        if (this.time - this.lootNoticeAt > 4) {
-          this.emit({ type: 'notice', x: drop.x, y: drop.y, message: 'Inventory full · item left on the ground' });
-          this.lootNoticeAt = this.time;
-        }
-        return true;
-      }
-      this.emit({ type: 'loot', x: drop.x, y: drop.y, item: drop.item, color: TIER_COLORS[drop.item.tier] });
-      return false;
-    });
+  requestGroundItem(id: number): string | null {
+    this.clearCombatInput();this.portal.cancel();this.eventChannel.cancel();
+    return this.groundPickup.select(this.player,this.groundItems.find(drop=>drop.id===id),this.time);
+  }
+
+  private collectSelectedGroundItem(): void {
+    if(this.groundPickup.id===null)return;
+    const index=this.groundItems.findIndex(drop=>drop.id===this.groundPickup.id);
+    if(index<0)return;
+    const drop=this.groundItems[index];
+    if(!this.groundPickup.ready(this.player,drop,this.world))return;
+    if(drop.flight&&this.time<drop.flight.at+drop.flight.delay+TREASURE_FLIGHT_DURATION)return;
+    this.groundPickup.cancel();
+    if(!addInventoryItem(this.player.character,drop.item)) {
+      this.emit({type:'notice',x:drop.x,y:drop.y,message:'Inventory full · item left on the ground'});return;
+    }
+    this.groundItems.splice(index,1);
+    this.emit({type:'loot',x:drop.x,y:drop.y,item:drop.item,color:TIER_COLORS[drop.item.tier]});
   }
 
   private updateSpawns(dt: number): void {

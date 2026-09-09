@@ -6,43 +6,55 @@ import { startingEnemyCamp } from './wilderness-sites.ts';
 import './ui-kit.css';
 import './typography.css';
 import { installUITheme } from './ui-theme.ts';
-import { GroundLootTooltip } from './ground-loot-tooltip.ts';
+import { GroundLootHighlight } from './ground-loot-highlight.ts';
 import type { GroundLootLabel } from './ground-loot-hover.ts';
 import { drawEnemyRemains } from './death-art.ts';
 import { drawGroundLoot, drawLootLabels, drawResourcePickups } from './loot-art.ts';
 import { generateItem } from './items.ts';
 import { loadGameFont, text } from './font.ts';
 import type { EnemyKind } from './model.ts';
-import type { ItemTier } from './character-types.ts';
+import type { GroundItem, ItemTier } from './character-types.ts';
 import { World } from './world.ts';
 import { Simulation } from './simulation.ts';
 import { Renderer } from './renderer.ts';
 import { PostFX } from './postfx.ts';
 if (!import.meta.env.DEV) throw new Error('Local review only');
 await loadGameFont(); installUITheme();
-// Frozen art study with passive item inspection; no gameplay ticks or browser storage.
+// Frozen art study with item hover highlights; no gameplay ticks or browser storage.
 const canvas = document.querySelector<HTMLCanvasElement>('#review')!;
-const tooltip = new GroundLootTooltip(document.body, canvas);
+const highlight = new GroundLootHighlight(document.body, canvas);
 let labels: GroundLootLabel[] = [];
 const world = new World(7319), sim = new Simulation(world, { spawn: false }), renderer = new Renderer();
 sim.player.level = 10;
 const stage = document.createElement('canvas'), fx = new PostFX(stage);
-const deathElement = new URLSearchParams(location.search).get('element');
+const params = new URLSearchParams(location.search);
+const pickupView = params.has('pickup');
+const deathElement = params.get('element');
 const materialsView = new URLSearchParams(location.search).has('materials');
 const containersView = new URLSearchParams(location.search).has('containers');
 const ages = [.15, .4, 1.2, 12.6];
 const kinds: EnemyKind[] = ['stalker', 'brute', 'caster', 'hound', 'archer', 'wisp'];
 const tiers: ItemTier[] = ['common', 'magic', 'rare', 'epic', 'legendary'];
-const drops = tiers.map((tier, i) => ({ id: 300 + i, x: 100 + i * 190, y: 475,
+const drops: GroundItem[] = tiers.map((tier, i) => ({ id: 300 + i, x: 100 + i * 190, y: 475,
   item: generateItem(94 + i, 4 + i, i % 2 ? 'head' : 'weapon', undefined, tier) }));
+if (pickupView) {
+  const { x, y } = sim.player;
+  drops.splice(0, drops.length,
+    { id: 301, x: x + 95, y: y - 15, item: generateItem(99, 8, 'weapon', 'longsword', 'magic') },
+    { id: 302, x: x - 100, y: y + 30, item: generateItem(102, 8, 'boots', undefined, 'rare') },
+    { id: 303, x: x + 25, y: y + 95, item: generateItem(104, 8, 'ring', undefined, 'common') });
+  sim.groundItems = drops;
+  renderer.cameraX = x; renderer.cameraY = y;
+  sim.player.angle = .5;
+}
 const draw = () => {
   canvas.width = innerWidth * devicePixelRatio; canvas.height = innerHeight * devicePixelRatio;
   stage.width = canvas.width; stage.height = canvas.height;
   renderer.resize(1000, 600);
   renderer.render(sim, world, 0, { phase: 'ready', reducedMotion: true, debug: false, fps: 60 });
   const c = renderer.ctx;
-  c.fillStyle = '#071118d8'; c.fillRect(0, 0, 1000, 600);
-  if (!containersView && !materialsView) {
+  if (!pickupView) { c.fillStyle = '#071118d8'; c.fillRect(0, 0, 1000, 600); }
+  if (!containersView && !materialsView && !pickupView) {
   kinds.forEach((kind, row) => ages.forEach((age, column) => {
     drawEnemyRemains(c, { id: row + 1, x: 240 + column * 200, y: 98 + row * 54,
       angle: -.5, facing: 1.2, kind, age, ...(deathElement === 'frost' || deathElement === 'fire' ? { element: deathElement } : {}), variant: 0, duration: kind === 'wisp' ? 5 : 14 }, false);
@@ -55,7 +67,7 @@ const draw = () => {
       for (let row = 0; row < 2; row++) { c.save(); c.translate(85 + col * 140, 235 + row * 230); c.scale(1.8, 1.8);
         drawMaterialBurst(c, { ...createMaterialBurst({ x: 0, y: 0, angle: -.5, seed: 372, material, count: 18, strength: 1 }), age: row ? .7 : .2 }, false); c.restore(); }
     });
-  } else {
+  } else if (containersView) {
     const site = startingEnemyCamp(7319);
     for (const [row, kind] of (['crate', 'barrel'] as const).entries()) for (let col = 0; col < 5; col++) {
       const source = site.decor.find(d => d.kind === kind)!;
@@ -73,7 +85,16 @@ const draw = () => {
   ui.fillStyle = '#081217'; ui.fillRect(0, 0, canvas.width, canvas.height);
   ui.drawImage(stage, left, top, 1000 * scale, 600 * scale);
   ui.setTransform(scale, 0, 0, scale, left, top);
-  if (!containersView && !materialsView) {
+  if (pickupView) {
+    labels = drawLootLabels(ui, drops, (x, y) => renderer.worldToScreen(x, y), 1000, 600).map(b => ({
+      ...b, x: left + b.x * scale, y: top + b.y * scale, width: b.width * scale, height: b.height * scale,
+      anchorX: left + b.anchorX * scale, anchorY: top + b.anchorY * scale,
+    }));
+    const focus = labels.find(b => b.id === 301)!;
+    highlight.update(sim.player, drops, labels, canvas.width, canvas.height,
+      params.get('state') === 'hovered' ? { x: focus.x + focus.width / 2, y: focus.y + focus.height / 2 } : null, sim.time,
+      params.get('state') === 'collecting' ? 301 : null);
+  } else if (!containersView && !materialsView) {
   text(ui, 'Death & ground loot', 35, 20, 1.7, '#d9e4de');
   ages.forEach((age, i) => text(ui, `${age}s`, 240 + i * 200, 52, 1, '#a3b8bf', 'center', 'interface'));
   kinds.forEach((kind, i) => text(ui, kind, 35, 85 + i * 54, 1.1, '#a3b8bf'));
@@ -93,10 +114,10 @@ const draw = () => {
 };
 const hover = (event: PointerEvent) => {
   const rect = canvas.getBoundingClientRect();
-  tooltip.update(sim.player, drops, [], [], labels, { x: 0, y: 0, width: 1000, height: 600 }, canvas.width, canvas.height,
+  highlight.update(sim.player, drops, labels, canvas.width, canvas.height,
     event.pointerType === 'touch' ? null : { x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height });
 };
-const leave = () => tooltip.hide();
+const leave = () => highlight.hide();
 canvas.addEventListener('pointermove', hover); canvas.addEventListener('pointerleave', leave);
 draw(); window.addEventListener('resize', draw);
-if (import.meta.hot) import.meta.hot.dispose(() => { window.removeEventListener('resize', draw); canvas.removeEventListener('pointermove', hover); canvas.removeEventListener('pointerleave', leave); tooltip.dispose(); fx.dispose(); world.dispose(); });
+if (import.meta.hot) import.meta.hot.dispose(() => { window.removeEventListener('resize', draw); canvas.removeEventListener('pointermove', hover); canvas.removeEventListener('pointerleave', leave); highlight.dispose(); fx.dispose(); world.dispose(); });

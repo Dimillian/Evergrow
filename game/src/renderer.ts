@@ -11,7 +11,7 @@ import { projectilePresentation } from './projectile-launch.ts';
 import { heldEquipmentLights } from './weapon-emission.ts';
 import { MaterialResponses } from './material-response.ts';
 import { drawMaterialBurst } from './material-response-art.ts';
-import type { GroundLootLabel } from './ground-loot-hover.ts';
+import { hoveredGroundLoot, type GroundLootLabel } from './ground-loot-hover.ts';
 import { eventClaimed } from './poi-content.ts';
 import type { FrameProfiler } from './frame-profiler.ts';
 import { WaterPresentation } from './water-presentation.ts';
@@ -802,6 +802,7 @@ export class Renderer {
 
   private cursor(c: CanvasRenderingContext2D, sim: Simulation) {
     if (!this.pointerActive || this.pointerOverHUD()) return;
+    if (!this.gamepadActive && !this.touchActive && hoveredGroundLoot(this.groundLootLabels, this.pointerX, this.pointerY)) return;
     const x = this.pointerX, y = this.pointerY;
     const aim = this.rangedAim, player = sim.player;
     const target = aim?.targetId == null ? null : sim.enemies.find(e => e.id === aim.targetId && e.hp > 0);

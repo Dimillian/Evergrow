@@ -1,5 +1,14 @@
 @import './tooltip-material.css';
-.ui-item-slot { --ui-slot: 46px; padding: 3px; min-width: 0; width: 100%; aspect-ratio: 1; border-radius: 1px; border-color: #819ba527; cursor: pointer; transition: border-color 120ms, background 120ms, box-shadow 120ms; touch-action: manipulation; }
+
+/* One item scale across the character bag and every town service. */
+:root { --ui-item-cell-size: 52px; --ui-item-cell-gap: 5px; }
+@media (max-width: 1180px) { :root { --ui-item-cell-size: 44px; } }
+.ui-item-grid-scroll { overflow-x: auto; padding: 4px; margin: -4px; scrollbar-width: thin; }
+.ui-item-grid { display: grid; grid-template-columns: repeat(auto-fill, var(--ui-item-cell-size)); gap: var(--ui-item-cell-gap); align-content: start; }
+.ui-item-grid--bag { grid-template-columns: repeat(8, var(--ui-item-cell-size)); width: max-content; }
+.ui-item-grid .ui-item-slot { width: var(--ui-item-cell-size); height: var(--ui-item-cell-size); min-height: 0; }
+
+.ui-item-slot { --ui-slot: 46px; padding: 3px; min-width: 0; width: 100%; aspect-ratio: 1; border-radius: 0; border-color: #819ba527; cursor: pointer; transition: border-color 120ms, background 120ms, box-shadow 120ms; touch-action: manipulation; }
 .ui-item-slot::before { inset: 3px; border-color: #99b7c210; }
 .ui-item-slot svg { width: 85%; height: 85%; pointer-events: none; }
 .ui-item-slot[data-filled='true'] { --tier-wash: 20%; background: linear-gradient(145deg, color-mix(in srgb, var(--item-color) var(--tier-wash), #101b25), #0b121b 62%), #0b151e; border-color: color-mix(in srgb, var(--item-color) 72%, #172530); box-shadow: inset 0 1px color-mix(in srgb, var(--item-color) 30%, transparent), inset 0 -5px 15px color-mix(in srgb, var(--item-color) 9%, transparent); }

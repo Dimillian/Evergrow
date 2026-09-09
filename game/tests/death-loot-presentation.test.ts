@@ -64,12 +64,13 @@ test('loot labels pack pileups without overlap or clipping at any viewport edge'
 });
 
 
-test('compact ground names preserve the full item identity and enhancement', () => {
+test('ground labels show only material and kind while preserving full item identity', () => {
   for (const tier of ['common', 'magic', 'rare', 'epic', 'legendary'] as const) {
     const item = generateItem(8392, 12, 'ring', undefined, tier);
     item.recipe.enhancement = 4;
     const before = structuredClone(item);
-    assert.equal(groundLootName(item), `${tier === 'common' || tier === 'magic' ? item.baseName : item.name} +4`);
+    assert.match(groundLootName(item), /^(Iron|Steel|Silver|Gold) Ring$/);
+    assert.ok(!groundLootName(item).includes('+4'));
     assert.deepEqual(item, before);
   }
   const measure = (text: string) => text.length * 6;

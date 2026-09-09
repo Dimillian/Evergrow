@@ -220,7 +220,7 @@ test('repeated seeded enemy deaths generate reproducible loot with unique identi
   assert.deepEqual(run(), run());
 });
 
-test('a full inventory preserves dropped loot until a cell is available, then collects it once', () => {
+test('a full inventory preserves dropped loot until a cell is available, then an explicit pickup collects it once', () => {
   const sim = createSim();
   sim.player.character.inventory = Array.from({ length: 64 }, (_, index) => generateItem(9000 + index, 1));
   const enemy = sim.spawnEnemy('stalker', 22, 0)!; enemy.hp = 1; enemy.stateDuration = 999;
@@ -228,9 +228,11 @@ test('a full inventory preserves dropped loot until a cell is available, then co
   assert.equal(sim.groundItems.length, 1);
   const drop = sim.groundItems[0];
   assert.equal(sim.player.character.inventory.some(item => item?.id === drop.item.id), false);
-  assert.ok(sim.drainEvents().some(event => event.type === 'notice' && event.message.includes('Inventory full')));
+  assert.equal(sim.requestGroundItem(drop.id), 'Inventory full');
+  assert.equal(sim.groundPickup.id, null);
   sim.player.x = drop.x; sim.player.y = drop.y;
   sim.player.character.inventory[7] = null;
+  assert.equal(sim.requestGroundItem(drop.id),null);
   advance(sim, FIXED_STEP);
   assert.equal(sim.groundItems.length, 0); assert.equal(sim.player.character.inventory.at(7)?.id, drop.item.id);
   advance(sim, .25);

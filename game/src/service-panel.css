@@ -10,19 +10,17 @@
 .service-tabs button[aria-pressed=true] { color:var(--service-color); border-color:color-mix(in srgb,var(--service-color) 50%,transparent); background:#22313a; }
 .service-tabs small { font:11px "Evergrow Numerals", system-ui,sans-serif; opacity:.7; }
 .service-body { display:grid; grid-template-columns:minmax(280px,.9fr) minmax(360px,1.1fr); flex:1; min-height:0; }
-.service-offer,.service-bag { padding:22px; overflow:auto; min-height:0; }
+.service-offer,.service-bag { padding:22px; overflow:auto; min-width:0; min-height:0; }
 .service-offer { border-right:1px solid #8099a128; background:radial-gradient(ellipse at 50% 10%,color-mix(in srgb,var(--service-color) 8%,transparent),transparent 70%); }
 .service-section-heading { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:0 0 16px; }
 .service-panel h3 { font-size:16px; margin:0; font-weight:500; color:#c7d4cf; }
 .service-section-heading span,.service-stock small,.service-equipment small { font:11px "Evergrow Numerals", system-ui,sans-serif; color:#95a6a9; }
-.service-stock { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.service-stock { row-gap:12px; }
 .service-stock small { display:block; text-align:center; margin-top:5px; color:#d8c592; }
-.service-grid { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:5px; }
-.service-equipment { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; }
+.service-equipment { row-gap:10px; }
 .service-equipment small { display:block; text-align:center; margin-top:4px; text-transform:capitalize; }
 .service-equipped-section { padding-bottom:22px; margin-bottom:22px; border-bottom:1px solid #8099a138; }
 .service-empty-bag { margin:0; padding:20px 12px; color:#819694; font:13px "Evergrow Numerals", system-ui,sans-serif; border:1px dashed #8099a128; text-align:center; }
-.service-panel .ui-slot { position:relative; display:block; min-height:0; }
 .service-panel .ui-item-slot:disabled { opacity:.6; cursor:default; }
 .service-panel .ui-slot:focus-visible { outline:2px solid var(--service-color); outline-offset:2px; }
 .service-detail { padding-top:24px; margin-top:22px; border-top:1px solid #99b6c32a; }
@@ -47,7 +45,7 @@
 .service-message { font:12px/1.4 "Evergrow Numerals", system-ui,sans-serif; color:#b5c9b8; }
 .service-success .service-item-art { animation:forge-flash 700ms ease-out; }
 @keyframes forge-flash { 0% { box-shadow:0 0 32px var(--service-color),inset 0 0 18px #fff9; filter:brightness(1.8); } 100% { box-shadow:0 0 0 transparent; filter:brightness(1); } }
-@media(max-width:760px) { .service-panel { inset:12px; max-height:calc(100dvh - 24px); } .service-body { display:block; overflow:auto; } .service-offer,.service-bag { overflow:visible; padding:16px; } .service-offer { border-right:0; border-bottom:1px solid #8099a128; } .service-grid { gap:4px; } .service-tabs > span { display:none; } .service-panel .ui-window-footer { flex-wrap:wrap; } .service-stock { grid-template-columns:repeat(6,minmax(0,1fr)); } }
+@media(max-width:760px) { .service-panel { inset:12px; max-height:calc(100dvh - 24px); } .service-body { display:block; overflow:auto; } .service-offer,.service-bag { overflow:visible; padding:16px; } .service-offer { border-right:0; border-bottom:1px solid #8099a128; } .service-tabs > span { display:none; } .service-panel .ui-window-footer { flex-wrap:wrap; } }
 @media(prefers-reduced-motion:reduce) { .service-success .service-item-art { animation:none; outline:1px solid var(--service-color); } }
 
 .service-effective { border-top:1px solid #9ab2be26; margin-top:18px; padding-top:14px; font:12px "Evergrow Numerals", system-ui,sans-serif; }
@@ -71,7 +69,6 @@
 .service-rarities button[aria-pressed=true]{background:#263339;border-color:var(--rarity-color);box-shadow:inset 0 0 10px #d1bc7010}
 .service-rarities button:hover:not(:disabled){background:#253138}.service-rarities button:disabled{opacity:.35;cursor:default}
 .service-rarities button:focus-visible,.service-sale-row:focus-visible{outline:2px solid #c8b982;outline-offset:2px}
-.service-panel.is-selling .service-grid{gap:8px}
 .service-panel.is-selling .service-grid .is-selected{outline:1px solid #e8cd86;outline-offset:1px;box-shadow:0 0 14px #d5b76028}
 .service-panel.is-selling .service-grid .is-selected::after{content:'✓';position:absolute;top:3px;right:3px;display:grid;place-items:center;width:17px;height:17px;border-radius:0;background:#e4cc89;color:#15201d;font:12px system-ui;box-shadow:0 1px 5px #0009}
 .service-sale-total{display:flex;flex-direction:column;gap:6px;padding:18px;margin-bottom:16px;border:1px solid #bdae7428;border-radius:0;background:radial-gradient(ellipse at top left,#d8b96218,transparent 80%),#0c171e}
@@ -82,7 +79,7 @@
 .service-gold-flights{position:absolute;inset:0;width:100%;height:100%;z-index:5;pointer-events:none}
 .service-gold-gain{position:absolute;top:calc(100% + 4px);right:0;color:#ffe7a6;white-space:nowrap;font-size:17px;text-shadow:0 0 12px #e6b94888;pointer-events:none;animation:service-gold-earned 2.8s ease-out both}
 @keyframes service-gold-earned{0%{opacity:0;transform:translateY(6px) scale(.9)}15%,70%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-5px)}}
-@media(max-width:760px){.service-panel.is-selling .service-body{display:flex;flex-direction:column}.service-panel.is-selling .service-bag{order:0}.service-panel.is-selling .service-offer{order:1;border-top:1px solid #8099a128}.service-panel.is-selling .service-sale-list{max-height:160px;overflow:auto}.service-panel.is-selling .service-grid{gap:5px}.service-rarities{gap:4px}.service-rarities button{padding:7px;font-size:12px}.service-sale-total{padding:12px;flex-direction:row;align-items:center;justify-content:space-between}.service-sale-total strong{font-size:23px}}
+@media(max-width:760px){.service-panel.is-selling .service-body{display:flex;flex-direction:column}.service-panel.is-selling .service-bag{order:0}.service-panel.is-selling .service-offer{order:1;border-top:1px solid #8099a128}.service-panel.is-selling .service-sale-list{max-height:160px;overflow:auto}.service-rarities{gap:4px}.service-rarities button{padding:7px;font-size:12px}.service-sale-total{padding:12px;flex-direction:row;align-items:center;justify-content:space-between}.service-sale-total strong{font-size:23px}}
 @media(prefers-reduced-motion:reduce){.service-gold-gain{animation:none}.service-rarities button{transition:none}}
 
 .service-panel { --ui-radius:0px; }

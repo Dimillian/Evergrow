@@ -89,7 +89,7 @@ export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly Grou
       c.strokeStyle = '#91aab53d'; c.lineWidth = .6;
       c.beginPath(); c.moveTo(b.x, b.y - 5); c.lineTo(center, b.top + b.height / 2); c.stroke();
     }
-    c.fillStyle = '#0d171ee8'; c.beginPath(); c.roundRect(b.left, b.top, b.width, b.height, 4); c.fill();
+    c.fillStyle = '#0d171ee8'; c.beginPath(); c.rect(b.left, b.top, b.width, b.height); c.fill();
     // A tiny rarity diamond replaces the bright outline, stripe and subtitle.
     c.strokeStyle = color; c.fillStyle = color; c.lineWidth = .8;
     c.beginPath(); c.moveTo(b.left + 8, b.top + 7); c.lineTo(b.left + 10.5, b.top + 9.5);

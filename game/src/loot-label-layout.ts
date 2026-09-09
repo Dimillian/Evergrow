@@ -1,11 +1,19 @@
-import type { Item } from './character-types.ts';
+import type { Item, ItemKind } from './character-types.ts';
+import { ITEM_MATERIALS } from './item-materials.ts';
 
-export const LOOT_LABEL_STYLE = Object.freeze({ height: 19, gap: 4, maxWidth: 210, nameSize: .9, levelSize: .7 });
+export const LOOT_LABEL_STYLE = Object.freeze({ height: 19, gap: 4, maxWidth: 165, nameSize: .9, levelSize: .7 });
 
 /** Short ground-only names; the owned item and its full tooltip name stay intact. */
 export function groundLootName(item: Item): string {
-  const name = item.tier === 'common' || item.tier === 'magic' ? item.baseName : item.name;
-  return `${name}${item.recipe.enhancement ? ` +${item.recipe.enhancement}` : ''}`;
+  const material = item.recipe.materialId && ITEM_MATERIALS[item.recipe.materialId].name;
+  const cloth = item.appearance.style === 'cloth', leather = item.appearance.style === 'leather';
+  const kinds: Record<ItemKind, string> = { weapon: 'Weapon', shield: 'Shield', grimoire: 'Grimoire', orb: 'Orb',
+    head: cloth || leather ? 'Hood' : 'Helm', chest: cloth ? 'Robe' : leather ? 'Jerkin' : 'Armor',
+    boots: 'Boots', gloves: 'Gloves', legs: cloth || leather ? 'Trousers' : 'Greaves', cloak: 'Cloak', ring: 'Ring', amulet: 'Amulet' };
+  const family = item.weapon?.family;
+  const noun = family ? family === 'sword' && item.weapon!.hands === 2 ? 'Greatsword'
+    : family.charAt(0).toUpperCase() + family.slice(1) : kinds[item.kind];
+  return material ? `${material} ${noun}` : noun;
 }
 
 export function fitLootName(value: string, width: number, measure: (text: string) => number): string {

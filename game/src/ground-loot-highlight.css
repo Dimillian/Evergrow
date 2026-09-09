@@ -1,0 +1,2 @@
+.ground-loot-affordance { position:fixed;z-index:45;pointer-events:none;box-sizing:border-box;border:1px solid var(--loot-accent);background:linear-gradient(120deg,#e1e9dc16,transparent 70%);box-shadow:0 0 12px #b8d5c31c; }
+.ground-loot-affordance[hidden] { display:none; }

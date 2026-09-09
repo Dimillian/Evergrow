@@ -23,7 +23,7 @@ Click a nearby NPC or press **E** on the focused NPC to open its service. Initia
 
 ## Shop experience
 
-Reuse the compact shared window, item cells, rarity treatment, animated tooltips and complete equipment comparisons. Header: **Blacksmith**, **Jeweler** or **Enchanter**, plus wallet and close control. No subtitle or flavor paragraph.
+Reuse the compact shared window, item cells, rarity treatment, animated tooltips and complete equipment comparisons. Character inventory, shop stock, buyback, equipped service gear and selling share one cell size (52px desktop, 44px on compact screens) and 5px horizontal spacing. Bag grids retain eight columns; stock and equipped grids wrap to fit without enlarging items. Prices and slot labels sit below the cells. Header: **Blacksmith**, **Jeweler** or **Enchanter**, plus wallet and close control. No subtitle or flavor paragraph.
 
 Shop layout: stock on the left, the player's 64-cell bag on the right. Hover shows the ordinary item tooltip, price and effective equip changes. Selecting a shop item exposes one clear **Buy · 285 gold** action. Buying puts it in the bag; it never equips automatically. Shift-click may buy/sell directly, using exactly the same validated command. Ordinary inventory retains hover-only inspection; the service selection exists only to identify the transaction target.
 
