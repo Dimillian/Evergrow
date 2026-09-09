@@ -20,7 +20,7 @@ import { Renderer } from './renderer.ts';
 import { PostFX } from './postfx.ts';
 if (!import.meta.env.DEV) throw new Error('Local review only');
 await loadGameFont(); installUITheme();
-// Frozen art study with item hover highlights; no gameplay ticks or browser storage.
+// Frozen art study with ground highlights and corner item tooltips; no gameplay ticks or browser storage.
 const canvas = document.querySelector<HTMLCanvasElement>('#review')!;
 const highlight = new GroundLootHighlight(document.body, canvas);
 let labels: GroundLootLabel[] = [];

@@ -11,6 +11,21 @@ const put = (player: ReturnType<typeof initialPlayer>, index: number, profile: s
   assert.ok(executeCharacterCommand(player, { type: 'equip', index }).ok);
 };
 
+test('ground inspection shows only the item without equip comparisons or character mutations', () => {
+  const p = initialPlayer(0, 0); put(p, 0, 'longsword'); put(p, 1, 'iron-buckler', true);
+  const incoming = generateItem(1200, 1, 'weapon', 'ember-staff', 'rare');
+  const before = structuredClone(p);
+  const cards = itemHoverCards(incoming, { sheet: p.character, level: p.level, compare: false });
+  assert.equal(cards.length, 1);
+  assert.match(cards[0], /Item level/);
+  assert.match(cards[0], /ui-item-properties/);
+  assert.match(cards[0], /Two-handed/);
+  assert.doesNotMatch(cards[0], /On equip|Replaces |Equipped ·/);
+  assert.equal(itemHoverCards(incoming, { sheet: p.character, level: p.level }).length, 3,
+    'normal inventory tooltips still compare both displaced hands');
+  assert.deepEqual(p, before);
+});
+
 test('two-handed preview includes shield armor/block losses and matches the committed full build', () => {
   const p = initialPlayer(0, 0); put(p, 0, 'longsword'); put(p, 1, 'iron-buckler', true);
   const incoming = generateItem(1200, 1, 'weapon', 'ember-staff', 'common'); p.character.inventory[2] = incoming;

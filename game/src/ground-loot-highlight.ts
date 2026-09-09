@@ -4,10 +4,16 @@ import { TIER_COLORS } from './items.ts';
 import { hoveredGroundLoot, type GroundLootLabel } from './ground-loot-hover.ts';
 import type { GroundItem } from './character-types.ts';
 import type { Player } from './model.ts';
+import { itemHoverCards } from './item-ui.ts';
+import './item-ui.css';
+import './tooltip-material.css';
 
-/** Highlight only: ground items never open an inspection panel. */
+/** Ground highlight follows the label; passive inspection stays in the screen corner. */
 export class GroundLootHighlight {
   private affordance = document.createElement('div');
+  private tooltip = document.createElement('div');
+  private inspected: GroundItem['item'] | null = null;
+  private inspectedLevel = -1;
   private cursor: string;
   private canvas: HTMLCanvasElement;
   constructor(mount: HTMLElement, canvas: HTMLCanvasElement) {
@@ -15,7 +21,11 @@ export class GroundLootHighlight {
     this.cursor = canvas.style.cursor;
     this.affordance.className = 'ground-loot-affordance';
     this.affordance.hidden = true;
-    mount.append(this.affordance);
+    this.tooltip.className = 'ui-tooltip ui-item-tooltip-group ground-loot-tooltip';
+    this.tooltip.setAttribute('role', 'tooltip');
+    this.tooltip.setAttribute('aria-label', 'Ground item');
+    this.tooltip.hidden = true;
+    mount.append(this.affordance, this.tooltip);
   }
   update(player: Player, drops: readonly GroundItem[], labels: readonly GroundLootLabel[], width: number, height: number,
     pointer: { x: number; y: number } | null, time = 0, selectedId: number | null = null): void {
@@ -33,7 +43,17 @@ export class GroundLootHighlight {
     affordance.style.left=`${bounds.left}px`;affordance.style.top=`${bounds.top}px`;
     affordance.style.width=`${bounds.right-bounds.left}px`;affordance.style.height=`${bounds.bottom-bounds.top}px`;
     affordance.style.setProperty('--loot-accent',problem?'#9a9290':TIER_COLORS[drop.item.tier]);
+    // Selected walking targets retain their highlight, but only actual mouse hover inspects.
+    if (hovered) {
+      if (this.inspected !== drop.item || this.inspectedLevel !== player.level) {
+        this.tooltip.innerHTML = itemHoverCards(drop.item, { sheet: player.character, level: player.level, compare: false }).join('');
+        this.inspected = drop.item;
+        this.inspectedLevel = player.level;
+      }
+      this.tooltip.hidden = false;
+    } else this.hideTooltip();
   }
-  hide(): void { this.affordance.hidden = true; this.canvas.style.cursor = this.cursor; }
-  dispose(): void { this.hide(); this.affordance.remove(); }
+  private hideTooltip(): void { this.tooltip.hidden = true; this.inspected = null; }
+  hide(): void { this.affordance.hidden = true; this.hideTooltip(); this.canvas.style.cursor = this.cursor; }
+  dispose(): void { this.hide(); this.affordance.remove(); this.tooltip.remove(); }
 }

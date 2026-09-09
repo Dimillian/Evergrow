@@ -1,2 +1,13 @@
 .ground-loot-affordance { position:fixed;z-index:45;pointer-events:none;box-sizing:border-box;border:1px solid var(--loot-accent);background:linear-gradient(120deg,#e1e9dc16,transparent 70%);box-shadow:0 0 12px #b8d5c31c; }
 .ground-loot-affordance[hidden] { display:none; }
+.ui-tooltip.ui-item-tooltip-group.ground-loot-tooltip {
+  --tooltip-columns: 1;
+  z-index: 45;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: min(320px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  pointer-events: none;
+}
+.ground-loot-tooltip .ui-item-hover-card { border-radius: 0; }

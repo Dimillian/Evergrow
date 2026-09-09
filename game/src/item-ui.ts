@@ -17,6 +17,8 @@ export interface ItemPresentation {
   context?: string;
   /** Hover comparisons name displaced gear in adjacent cards instead. */
   adjacentComparison?: boolean;
+  /** Compact world inspection shows the item's own stats without an equip simulation. */
+  compare?: boolean;
 }
 export const CHANGE_LABELS: Record<PreviewStat, string> = {
   ...SPECIAL_AFFIX_LABELS, ...SKILL_STATS,
@@ -76,7 +78,7 @@ export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, optio
 
 /** Item data and effective equipment changes are distinct; no inventory DOM location is required. */
 export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
-  const preview = view.equipped || item.kind === 'charm' && view.sourceIndex !== undefined ? null : previewEquipmentChange(view.sheet, item, view.level,
+  const preview = view.compare === false || view.equipped || item.kind === 'charm' && view.sourceIndex !== undefined ? null : previewEquipmentChange(view.sheet, item, view.level,
     { sourceIndex: view.sourceIndex, slot: view.targetSlot });
   const changes = new Map(preview?.ok ? preview.changes.map(change => [change.key, change]) : []);
   const rows = Object.entries(itemModifiers(item)).map(([stat, value]) => {
@@ -122,7 +124,7 @@ const EQUIPPED_LABELS: Record<EquipmentSlot, string> = {
 
 /** Use the real equip transaction's displacement, including hand conflicts and ring targets. */
 export function itemHoverCards(item: Item, view: ItemPresentation): string[] {
-  const preview = view.equipped || item.kind === 'charm' && view.sourceIndex !== undefined ? null : previewEquipmentChange(view.sheet, item, view.level,
+  const preview = view.compare === false || view.equipped || item.kind === 'charm' && view.sourceIndex !== undefined ? null : previewEquipmentChange(view.sheet, item, view.level,
     { sourceIndex: view.sourceIndex, slot: view.targetSlot });
   const displaced = preview?.ok ? preview.displaced : [];
   const card = (gear: Item, content: string, label = '') =>
