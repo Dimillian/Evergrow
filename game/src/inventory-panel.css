@@ -208,8 +208,10 @@
 .character-stat-tooltip header { display:flex; align-items:baseline; justify-content:space-between; gap:18px; color:#e5ddbc; }
 .character-stat-tooltip header b { flex:none; color:#cde1de; font-size:20px; }
 .character-stat-tooltip p { margin:12px 0; color:#c1d0d0; }
-.character-stat-tooltip .stat-calculation { padding:10px 0; border-top:1px solid #aecad526; border-bottom:1px solid #aecad526; color:#98b3bd; font-size:13px; }
-.character-stat-tooltip dl { margin:10px 0 0; font-size:12px; }
+.character-stat-tooltip .stat-calculation { padding:10px 0; border-top:1px solid #aecad526; border-bottom:1px solid #aecad526; color:#d4dfdf; font-size:14px; line-height:1.6; }
+.character-stat-tooltip .stat-calculation span { display:block; }
+.character-stat-tooltip .stat-calculation span + span { margin-top:4px; color:#a1b7bf; font-size:12px; }
+.character-stat-tooltip dl { margin:10px 0 0; font-size:13px; }
 .character-stat-tooltip dl div { padding:5px 0; }
 .character-stat-tooltip dt { color:#bcc7c4; }
 .character-stat-tooltip dd { margin:2px 0 0; color:#d6c899; }

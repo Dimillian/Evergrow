@@ -32,6 +32,7 @@ const pct = (value: number) => `${n(value * 100, 1)}%`;
 /** Display actual combat projections. Explanations never recalculate or modify gameplay stats. */
 export function characterStatDetails(p: Player): StatDetailGroup[] {
   const s = p.derived, sheet = p.character;
+  const attributeBonus = (attribute: Attribute, perPoint: number) => n(Math.max(0, s.attributes[attribute] - 10) * perPoint);
   const contributions = characterModifierSources(sheet, getTreeBonuses(sheet.allocatedNodes));
   const sources = (keys: StatKey[]) => contributions.flatMap(source => {
     const values = [...new Set(keys)].filter(key => source.modifiers[key]).map(key => `${formatStatValue(key, source.modifiers[key]!)} ${STAT_LABELS[key]}`);
@@ -45,74 +46,74 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
   };
   const attributes = (['strength', 'dexterity', 'intelligence', 'vitality'] as const).map(attribute =>
     addAttribute(row(attribute, STAT_LABELS[attribute], s.attributes[attribute], n(s.attributes[attribute], 0), {
-      strength: 'Each point above 10 adds 2% physical attack damage.',
-      dexterity: 'Each point above 10 adds 0.5% attack speed and 0.15 percentage points of critical chance.',
-      intelligence: 'Each point above 10 adds 4 mana and 3% spell and added elemental damage.',
-      vitality: 'Each point above 10 adds 6 maximum life.',
-    }[attribute], 'Starting + assigned points + equipment + skill tree. Only points above 10 grant combat bonuses.', [attribute]), attribute));
+      strength: '+2% physical damage per added point.',
+      dexterity: '+0.5% attack speed and +0.15% critical chance per added point.',
+      intelligence: '+4 mana and +3% spell / elemental damage per added point.',
+      vitality: '+6 maximum life per added point.',
+    }[attribute], 'Starting + assigned + equipment + skill tree', [attribute]), attribute));
   const weaponRows = (weapon: WeaponDefinition, off = false): StatDetail[] => {
     const a = deriveAttackStats(p.stats, weapon), bolt = weapon.attackKind === 'bolt';
     const prefix = off ? 'off-' : '', attribute = bolt ? 'intelligence' : 'strength';
     const damage = addAttribute(row(`${prefix}damage`, off ? 'Off-hand damage' : bolt ? 'Bolt damage' : 'Attack damage', a.damage, n(a.damage, 0),
-      'Basic hit before criticals, enemy defenses and conditional Spellweave. Skill damage uses its own rank and specialization. Each hand uses its own weapon.',
-      `${n(weapon.damage)} weapon × ${n(bolt ? p.stats.spellDamageMultiplier : p.stats.attackDamageMultiplier)} + ${n(a.elementalDamage)} added elemental = ${n(a.damage)} (rounded).`,
+      'Basic hit before criticals and enemy defenses. Excludes Spellweave; skills use their own potency.',
+      `${n(weapon.damage)} weapon × ${n(bolt ? p.stats.spellDamageMultiplier : p.stats.attackDamageMultiplier)}${a.elementalDamage ? ` + ${n(a.elementalDamage)} elemental` : ''} = ${n(a.damage, 0)}`,
       [attribute, bolt ? 'spellDamagePercent' : 'damagePercent', ...(weapon.enchantment ? ['intelligence', 'spellDamagePercent'] as StatKey[] : [])]), attribute);
     damage.sources.unshift({ label: weapon.name, value: `${n(weapon.damage)} base ${weapon.damageType} damage` });
     if (weapon.enchantment) damage.sources.push({ label: `${weapon.name} · enchantment`, value: `${n(weapon.enchantment.damage)} × ${n(p.stats.spellDamageMultiplier)} = ${n(a.elementalDamage)} elemental` });
     const speed = row(`${prefix}rate`, off ? bolt ? 'Off-hand casts / s' : 'Off-hand attacks / s' : bolt ? 'Casts per second' : 'Attacks per second', a.attacksPerSecond, n(a.attacksPerSecond),
-      `Basic ${bolt ? 'casting' : 'attack'} cadence. Paired weapons alternate; their rates are not added together. Skills use their own timing.`,
-      `${n(weapon.baseAttacksPerSecond)} weapon × ${WEAPON_ACTION_RULES.speedMultiplier} cadence × ${n(bolt ? p.stats.castSpeedMultiplier : p.stats.attackSpeedMultiplier)} speed. Limited to 0.25–12 / s.`, bolt ? ['castSpeedPercent'] : ['dexterity', 'attackSpeedPercent']);
+      `Basic ${bolt ? 'casting' : 'attack'} rate. Paired weapons alternate; skills use their own timing.`,
+      `${n(weapon.baseAttacksPerSecond)} × ${WEAPON_ACTION_RULES.speedMultiplier} cadence × ${n(bolt ? p.stats.castSpeedMultiplier : p.stats.attackSpeedMultiplier)} speed\nLimit: 0.25–12 / s`, bolt ? ['castSpeedPercent'] : ['dexterity', 'attackSpeedPercent']);
     speed.sources.unshift({ label: weapon.name, value: `${n(weapon.baseAttacksPerSecond)} base / s` });
     if (!bolt) addAttribute(speed, 'dexterity');
     return [damage, speed];
   };
   const offense = [...weaponRows(p.equipment.mainHand), ...(p.equipment.offHand?.kind === 'weapon' ? weaponRows(p.equipment.offHand.weapon, true) : []),
-    addAttribute(row('attackBonus', 'Physical damage bonus', s.attackDamageMultiplier - 1, pct(s.attackDamageMultiplier - 1), 'Scales physical weapon damage, including bow attacks.', '2% per Strength above 10 + physical damage bonuses; minimum total multiplier 10%.', ['strength', 'damagePercent']), 'strength'),
-    addAttribute(row('attackSpeed', 'Attack speed bonus', s.attackSpeedMultiplier - 1, pct(s.attackSpeedMultiplier - 1), 'Affects melee weapons and bows. Wands and staves use cast speed.', '0.5% per Dexterity above 10 + attack speed bonuses. Total speed multiplier: 25–600%.', ['dexterity', 'attackSpeedPercent']), 'dexterity'),
-    addAttribute(row('spellDamage', 'Spell damage bonus', s.spellDamageMultiplier - 1, pct(s.spellDamageMultiplier - 1), 'Scales spells, basic magic bolts and weapon enchantment damage.', '3% per Intelligence above 10 + spell damage bonuses; minimum total multiplier 10%.', ['intelligence', 'spellDamagePercent']), 'intelligence'),
-    row('castSpeed', 'Cast speed bonus', s.castSpeedMultiplier - 1, pct(s.castSpeedMultiplier - 1), 'Shortens magic casting actions. Does not reduce cooldowns.', 'Cast speed bonuses add together. Total speed multiplier: 25–600%.', ['castSpeedPercent']),
-    addAttribute(row('critChance', 'Critical chance', s.critChance, pct(s.critChance), 'Chance for a direct hit to critically strike. Damage-over-time ticks do not crit.', '0.15 percentage points per Dexterity above 10 + critical chance bonuses. Cap: 75%.', ['dexterity', 'critChance']), 'dexterity'),
-    row('critDamage', 'Critical damage', s.critMultiplier, pct(s.critMultiplier), 'Total damage on a critical hit: 150% means 1.5× normal damage.', '150% base + critical damage bonuses. Total range: 100–500%.', ['critDamage']),
+    addAttribute(row('attackBonus', 'Physical damage bonus', s.attackDamageMultiplier - 1, pct(s.attackDamageMultiplier - 1), 'Scales physical weapon damage, including bow attacks.', `+${attributeBonus('strength', 2)}% Strength + damage bonuses\nDamage × ${n(s.attackDamageMultiplier)}`, ['strength', 'damagePercent']), 'strength'),
+    addAttribute(row('attackSpeed', 'Attack speed bonus', s.attackSpeedMultiplier - 1, pct(s.attackSpeedMultiplier - 1), 'Affects melee weapons and bows. Wands and staves use cast speed.', `+${attributeBonus('dexterity', .5)}% Dexterity + speed bonuses\nTotal speed: 25–600%`, ['dexterity', 'attackSpeedPercent']), 'dexterity'),
+    addAttribute(row('spellDamage', 'Spell damage bonus', s.spellDamageMultiplier - 1, pct(s.spellDamageMultiplier - 1), 'Scales spells, basic magic bolts and weapon enchantment damage.', `+${attributeBonus('intelligence', 3)}% Intelligence + damage bonuses\nDamage × ${n(s.spellDamageMultiplier)}`, ['intelligence', 'spellDamagePercent']), 'intelligence'),
+    row('castSpeed', 'Cast speed bonus', s.castSpeedMultiplier - 1, pct(s.castSpeedMultiplier - 1), 'Shortens magic casting actions. Does not reduce cooldowns.', `Sum of cast speed bonuses\nTotal speed: 25–600%`, ['castSpeedPercent']),
+    addAttribute(row('critChance', 'Critical chance', s.critChance, pct(s.critChance), 'Chance to critically strike. Periodic damage cannot crit.', `+${attributeBonus('dexterity', .15)}% Dexterity + critical bonuses\nCap: 75%`, ['dexterity', 'critChance']), 'dexterity'),
+    row('critDamage', 'Critical damage', s.critMultiplier, pct(s.critMultiplier), 'Damage on a critical hit. 150% = 1.5× damage.', `150% + critical damage bonuses\nLimit: 100–500%`, ['critDamage']),
   ];
   const armor = effectiveArmor(p), armorSources = sources(['armor']);
   if (sheet.blessing?.remaining && sheet.blessing.kind === 'bulwark') armorSources.push({ label: 'Bulwark blessing', value: '×1.4 armor' });
   if (armor !== s.armor) armorSources.push({ label: 'Afterguard · active', value: `+${n(s.afterguardPercent)}% armor` });
   const defense = [
-    { ...row('armor', 'Armor', armor, n(armor, 0), 'Reduces physical damage only. Elemental hits use resistance instead. Higher-level enemies require more armor for the same protection.', 'Equipment + skill tree armor, multiplied by any active Bulwark blessing and Afterguard.'), sources: armorSources },
-    { ...row('armorReduction', `Reduction vs level ${p.level}`, armorReduction(armor, p.level), pct(armorReduction(armor, p.level)), 'Physical reduction against an attacker at your level. Combat uses the actual attacker level; block applies afterward.', `${n(armor)} ÷ (${n(armor)} + ${n(120 * itemPowerScale(p.level))}). Cap: 80%.`), sources: armorSources },
-    row('blockChance', 'Passive block chance', s.blockChance, pct(s.blockChance), 'Requires an equipped shield and a one-handed main weapon. Active guarding guarantees a block.', 'Shield chance + block chance bonuses. Cap: 75%. Without a usable shield: 0%.', ['blockChance']),
-    row('blockReduction', 'Blocked damage reduction', s.blockReduction, pct(s.blockReduction), 'Damage prevented by a passive block, after armor or elemental resistance. Hits still deal at least 1 damage.', 'Shield reduction + block reduction bonuses. Cap: 90%. Without a usable shield: 0%.', ['blockReduction']),
+    { ...row('armor', 'Armor', armor, n(armor, 0), 'Reduces physical damage. Higher-level enemies require more armor.', `Equipment + skill tree armor\nActive Bulwark and Afterguard multiply the total.`), sources: armorSources },
+    { ...row('armorReduction', `Reduction vs level ${p.level}`, armorReduction(armor, p.level), pct(armorReduction(armor, p.level)), `Physical protection against a level ${p.level} attacker. Block applies afterward.`, `${n(armor)} ÷ (${n(armor)} + ${n(120 * itemPowerScale(p.level))}) = ${pct(armorReduction(armor, p.level))}\nCap: 80%`), sources: armorSources },
+    row('blockChance', 'Passive block chance', s.blockChance, pct(s.blockChance), 'Requires a usable shield. Active guarding guarantees a block.', `Shield chance + bonuses\nCap: 75% · No usable shield: 0%`, ['blockChance']),
+    row('blockReduction', 'Blocked damage reduction', s.blockReduction, pct(s.blockReduction), 'Damage prevented by a block, after armor or resistance.', `Shield reduction + bonuses\nCap: 90% · Minimum hit: 1`, ['blockReduction']),
   ];
   if (p.equipment.offHand?.kind === 'shield') {
     const shield = p.equipment.offHand.shield;
     defense[2].sources.unshift({ label: 'Equipped shield', value: `${n(shield.blockChance)}% base chance` });
     defense[3].sources.unshift({ label: 'Equipped shield', value: `${n(shield.blockReduction)}% base reduction` });
-    if (p.guardTime > 0) defense.push(row('activeGuard', 'Active guard reduction', Math.max(p.guardReduction, s.blockReduction), pct(Math.max(p.guardReduction, s.blockReduction)), 'Current guard skill: guarantees a block while guarding.', `Higher of ${pct(p.guardReduction)} skill reduction and ${pct(s.blockReduction)} passive shield reduction. ${n(p.guardTime)}s remaining.`));
+    if (p.guardTime > 0) defense.push(row('activeGuard', 'Active guard reduction', Math.max(p.guardReduction, s.blockReduction), pct(Math.max(p.guardReduction, s.blockReduction)), 'Guaranteed block while guarding.', `Higher of ${pct(p.guardReduction)} guard / ${pct(s.blockReduction)} shield\n${n(p.guardTime)}s remaining`));
   }
   const resistances = ELEMENTS.map(element => row(`${element}Resistance`, RESISTANCE_LABELS[`${element}Resistance`], s.resistances[element], pct(s.resistances[element]),
-    `Reduces incoming ${element} damage. Armor does not apply; shields may still block afterward. Resistance does not shorten status effects.`,
-    `0% base + ${element} resistance + all-element resistance. Cap: ${pct(RESISTANCE_RULES.cap)}. A 100-damage hit becomes ${n(100 * (1 - s.resistances[element]))} before block and rounding.`, [`${element}Resistance`, 'allResistance']));
+    `Reduces ${element} damage before block. Does not shorten status effects.`,
+    `${element[0].toUpperCase() + element.slice(1)} + all-element bonuses · Cap: ${pct(RESISTANCE_RULES.cap)}\n100 damage → ${n(100 * (1 - s.resistances[element]))} before block`, [`${element}Resistance`, 'allResistance']));
   const resources = [
-    addAttribute(row('maxHp', 'Maximum life', s.maxHp, n(s.maxHp, 0), 'Your life capacity. Increasing it does not heal missing life.', `${PLAYER_DEFAULTS.maxHp} base + 6 per Vitality above 10 + flat life bonuses, rounded.`, ['vitality', 'maxHp']), 'vitality'),
-    row('lifeRegen', 'Life regeneration', s.lifeRegeneration, `${n(s.lifeRegeneration)} / s`, 'Restores life continuously, up to maximum life.', 'Flat regeneration bonuses add together; minimum 0.', ['lifeRegen']),
-    row('lifeOnHit', 'Life on hit', s.lifeOnHit, n(s.lifeOnHit, 1), 'Restores life on direct hits, up to missing life. Periodic damage does not trigger it.', 'Flat life-on-hit bonuses add together; minimum 0.', ['lifeOnHit']),
-    addAttribute(row('maxMana', 'Maximum mana', s.maxMana, n(s.maxMana, 0), 'Your mana capacity. Increasing it does not refill mana.', `${PLAYER_DEFAULTS.maxMana} base + 4 per Intelligence above 10 + flat mana bonuses, rounded.`, ['intelligence', 'maxMana']), 'intelligence'),
-    row('manaRegen', 'Mana regeneration', s.manaRegeneration, `${n(s.manaRegeneration)} / s`, 'Restores mana continuously, up to maximum mana.', `${PLAYER_DEFAULTS.manaRegeneration} / s base + flat regeneration bonuses; minimum 0.`, ['manaRegen']),
-    row('manaOnKill', 'Mana on kill', s.manaOnKill, n(s.manaOnKill, 1), 'Restores mana when you kill an enemy, up to missing mana.', 'Flat mana-on-kill bonuses add together.', ['manaOnKill']),
-    row('potion', 'Potion restoration bonus', s.potionMultiplier - 1, pct(s.potionMultiplier - 1), 'Increases both life and mana restored by your dual potion; limited by missing resources.', `${pct(PLAYER_ABILITIES.potion.lifeFraction)} life / ${pct(PLAYER_ABILITIES.potion.manaFraction)} mana × ${n(s.potionMultiplier)}. Bonus cap: 100%.`, ['potionPercent']),
+    addAttribute(row('maxHp', 'Maximum life', s.maxHp, n(s.maxHp, 0), 'Life capacity. Increasing it does not heal you.', `${PLAYER_DEFAULTS.maxHp} + ${attributeBonus('vitality', 6)} Vitality + life bonuses`, ['vitality', 'maxHp']), 'vitality'),
+    row('lifeRegen', 'Life regeneration', s.lifeRegeneration, `${n(s.lifeRegeneration)} / s`, 'Restores life continuously, up to maximum life.', 'Sum of regeneration bonuses', ['lifeRegen']),
+    row('lifeOnHit', 'Life on hit', s.lifeOnHit, n(s.lifeOnHit, 1), 'Life restored per direct hit. Periodic damage does not trigger it.', 'Sum of life-on-hit bonuses', ['lifeOnHit']),
+    addAttribute(row('maxMana', 'Maximum mana', s.maxMana, n(s.maxMana, 0), 'Mana capacity. Increasing it does not refill mana.', `${PLAYER_DEFAULTS.maxMana} + ${attributeBonus('intelligence', 4)} Intelligence + mana bonuses`, ['intelligence', 'maxMana']), 'intelligence'),
+    row('manaRegen', 'Mana regeneration', s.manaRegeneration, `${n(s.manaRegeneration)} / s`, 'Restores mana continuously, up to maximum mana.', `${PLAYER_DEFAULTS.manaRegeneration} / s + regeneration bonuses`, ['manaRegen']),
+    row('manaOnKill', 'Mana on kill', s.manaOnKill, n(s.manaOnKill, 1), 'Restores mana when you kill an enemy, up to missing mana.', 'Sum of mana-on-kill bonuses', ['manaOnKill']),
+    row('potion', 'Potion restoration bonus', s.potionMultiplier - 1, pct(s.potionMultiplier - 1), 'Boosts potion life and mana recovery, up to missing resources.', `${pct(PLAYER_ABILITIES.potion.lifeFraction)} life / ${pct(PLAYER_ABILITIES.potion.manaFraction)} mana × ${n(s.potionMultiplier)}\nBonus cap: 100%`, ['potionPercent']),
   ];
   const utility = [
-    row('movement', 'Movement speed', s.moveSpeedMultiplier, pct(s.moveSpeedMultiplier), '100% is normal travel speed. Attacking and casting slow movement. Dodge uses its own speed.', `${PLAYER_MOVEMENT.speed} base units / s × ${n(s.moveSpeedMultiplier)} = ${n(PLAYER_MOVEMENT.speed * s.moveSpeedMultiplier)} before movement penalties. Range: 50–175%.`, ['moveSpeedPercent']),
-    row('manaCost', 'Mana cost reduction', 1 - s.manaCostMultiplier, pct(1 - s.manaCostMultiplier), 'Reduces mana spent. Spell rank, specialization and minimum costs still apply.', `Base action cost × ${n(s.manaCostMultiplier)}, then action-specific rounding. Reduction cap: 75%.`, ['manaCostPercent']),
-    row('cooldown', 'Cooldown reduction', 1 - s.cooldownMultiplier, pct(1 - s.cooldownMultiplier), 'Affects skill cooldowns, dodge recharge and potion cooldown. Does not change attack or cast speed.', `Base cooldown × ${n(s.cooldownMultiplier)}. Reduction cap: 75%; skill-specific minimums still apply.`, ['cooldownPercent']),
-    row('area', 'Area of effect', s.areaMultiplier ** 2 - 1, `+${pct(s.areaMultiplier ** 2 - 1)}`, 'Enlarges supported sweeps, novas and explosions. Does not add projectile travel distance.', `Radius/reach × ${n(s.areaMultiplier)}; area uses the square of this multiplier. Bonus cap: ${AFFIX_COMBAT_RULES.maxAreaPercent}%.`, ['areaPercent']),
-    row('pierce', 'Projectile pierce', s.projectilePierce, n(s.projectilePierce, 0), 'Additional targets for supported projectiles. Explosive projectiles still detonate on contact.', `Pierce bonuses add, then round down. Cap: ${AFFIX_COMBAT_RULES.maxPierce} extra targets.`, ['projectilePierce']),
-    row('spellweave', 'Spellweave damage', s.spellweavePercent, `+${n(s.spellweavePercent)}%`, 'A melee hit empowers the next spell; a spell hit empowers the next melee attack. Bows do not trigger it.', `Separate ×${n(1 + s.spellweavePercent / 100)} damage when consumed. Lasts ${AFFIX_COMBAT_RULES.weaveDuration}s; does not stack. Bonus cap: 100%.`, ['spellweavePercent']),
-    row('afterguard', 'Armor after block', s.afterguardPercent, `+${n(s.afterguardPercent)}%`, 'Blocking temporarily increases armor. Further blocks refresh the duration.', `Armor × ${n(1 + s.afterguardPercent / 100)} for ${AFFIX_COMBAT_RULES.guardDuration}s. Bonus cap: 100%. Active bonus is included in Armor above.`, ['afterguardPercent']),
+    row('movement', 'Movement speed', s.moveSpeedMultiplier, pct(s.moveSpeedMultiplier), '100% is normal speed. Attacks slow movement; dodge has its own speed.', `${PLAYER_MOVEMENT.speed} × ${n(s.moveSpeedMultiplier)} = ${n(PLAYER_MOVEMENT.speed * s.moveSpeedMultiplier)} units / s\nBefore action penalties · Limit: 50–175%`, ['moveSpeedPercent']),
+    row('manaCost', 'Mana cost reduction', 1 - s.manaCostMultiplier, pct(1 - s.manaCostMultiplier), 'Reduces action mana costs. Skill minimums still apply.', `Action cost × ${n(s.manaCostMultiplier)}\nCap: 75% · Rounded per action`, ['manaCostPercent']),
+    row('cooldown', 'Cooldown reduction', 1 - s.cooldownMultiplier, pct(1 - s.cooldownMultiplier), 'Shortens skill, dodge and potion cooldowns.', `Cooldown × ${n(s.cooldownMultiplier)}\nCap: 75% · Skill minimums still apply`, ['cooldownPercent']),
+    row('area', 'Area of effect', s.areaMultiplier ** 2 - 1, `+${pct(s.areaMultiplier ** 2 - 1)}`, 'Enlarges sweeps, novas and explosions. Does not extend projectile travel.', `Radius / reach × ${n(s.areaMultiplier)}\nArea bonus cap: ${AFFIX_COMBAT_RULES.maxAreaPercent}%`, ['areaPercent']),
+    row('pierce', 'Projectile pierce', s.projectilePierce, n(s.projectilePierce, 0), 'Extra projectile targets. Explosive projectiles still detonate on contact.', `Sum of pierce bonuses, rounded down\nCap: ${AFFIX_COMBAT_RULES.maxPierce} extra targets`, ['projectilePierce']),
+    row('spellweave', 'Spellweave damage', s.spellweavePercent, `+${n(s.spellweavePercent)}%`, 'Melee empowers your next spell; spells empower your next melee hit. Excludes bows.', `Damage × ${n(1 + s.spellweavePercent / 100)}\n${AFFIX_COMBAT_RULES.weaveDuration}s · Does not stack · Bonus cap: 100%`, ['spellweavePercent']),
+    row('afterguard', 'Armor after block', s.afterguardPercent, `+${n(s.afterguardPercent)}%`, 'Blocks boost armor temporarily. Further blocks refresh it.', `Armor × ${n(1 + s.afterguardPercent / 100)} for ${AFFIX_COMBAT_RULES.guardDuration}s\nBonus cap: 100% · Included in Armor while active`, ['afterguardPercent']),
   ];
   const ranks = Object.entries(s.skillBonuses).flatMap(([id, ranks]) => {
     const skill = SKILL_DEFINITIONS[id as keyof typeof SKILL_DEFINITIONS];
-    return skill && ranks ? [row(`skill:${id}`, `${skill.name} bonus ranks`, ranks, `+${n(ranks, 0)}`, 'Adds effective ranks once this skill is learned. Does not unlock it or spend skill points.', `Equipped and tree bonus ranks add, then round down. Cap: ${AFFIX_COMBAT_RULES.maxBonusRanks}.`, [`skill:${skill.id}`])] : [];
+    return skill && ranks ? [row(`skill:${id}`, `${skill.name} bonus ranks`, ranks, `+${n(ranks, 0)}`, 'Adds ranks once this skill is learned. Costs no skill points.', `Equipment + skill tree ranks, rounded down\nCap: +${AFFIX_COMBAT_RULES.maxBonusRanks}`, [`skill:${skill.id}`])] : [];
   });
   return [{ title: 'Attributes', tone: 'attributes', rows: attributes }, { title: 'Offense', tone: 'offense', rows: offense },
     { title: 'Defense', tone: 'defense', rows: defense }, { title: 'Elemental resistances', tone: 'resistances', rows: resistances }, { title: 'Life & mana', tone: 'resources', rows: resources },

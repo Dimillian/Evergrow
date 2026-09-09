@@ -665,8 +665,8 @@ export class InventoryPanel {
     if (!anchor || !detail) return false;
     this.hideTooltip();
     this.statTooltip.show(`<header><strong>${escapeUI(detail.label)}</strong><b>${escapeUI(detail.value)}</b></header>
-      <p>${escapeUI(detail.description)}</p><div class="stat-calculation">${escapeUI(detail.calculation)}</div>
-      ${detail.sources.length ? `<dl>${detail.sources.map(source => `<div><dt>${escapeUI(source.label)}</dt><dd>${escapeUI(source.value)}</dd></div>`).join('')}</dl>` : '<small>No equipment, tree or blessing bonuses.</small>'}`, anchor);
+      <p>${escapeUI(detail.description)}</p><div class="stat-calculation">${detail.calculation.split('\n').map(line => `<span>${escapeUI(line)}</span>`).join('')}</div>
+      ${detail.sources.length ? `<dl>${detail.sources.map(source => `<div><dt>${escapeUI(source.label)}</dt><dd>${escapeUI(source.value)}</dd></div>`).join('')}</dl>` : '<small>No bonuses.</small>'}`, anchor);
     return true;
   }
   private hideTooltip(): void { this.hovered = null; this.tooltip.hide(); this.statTooltip.hide(); }
