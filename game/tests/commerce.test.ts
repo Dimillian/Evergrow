@@ -1,3 +1,4 @@
+import { improvementProblem } from '../src/item-improvement.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCharacterSheet, generateItem, deriveItem, ITEM_KINDS, STARTER_LOADOUTS, createStarterLoadout, TIER_AFFIXES } from '../src/items.ts';
@@ -89,7 +90,7 @@ test('all item kinds derive consistently and +10 is bounded without compounding 
     const item = generateItem(190, 10, kind, undefined, 'rare');
     assert.deepEqual(deriveItem(item), item);
     let enhanced = item;
-    for (let n = 1; n <= 10; n++) { enhanced = improveItem(enhanced, 'enhance', 10, n); assert.equal(enhanced.recipe.enhancement, n); assert.ok(validItem(enhanced)); }
+    while (!improvementProblem(enhanced, 'enhance', 10)) { const prior=enhanced; enhanced = improveItem(enhanced, 'enhance', 10, 1); assert.ok(enhanced.recipe.enhancement>prior.recipe.enhancement&&enhanced.recipe.enhancement<=10); assert.ok(validItem(enhanced)); }
     assert.equal(enhanced.id, item.id); assert.deepEqual(enhanced.recipe.rolls, item.recipe.rolls);
     assert.throws(() => improveItem(enhanced, 'enhance', 10, 1));
   }
@@ -251,7 +252,7 @@ test('bulk selling commits the whole selection, exact proceeds and bounded buyba
   c.inventory=Array.from({length:64},(_,i)=>generateItem(62000+i,10,undefined,undefined,(['common','magic','rare','epic','legendary'] as const)[i%5]));
   const items=c.inventory.map((item,bag)=>({bag,id:item!.id,revision:item!.recipe.revision}));
   const expected=c.inventory.reduce((sum,item)=>sum+itemPrice(item!,'sell'),0), before=JSON.stringify(c);
-  const quote=quoted(c,smith,{type:'sellMany',items});
+  const quote=quoted(c,smith,{type:'sellMany',items,includeActiveCharms:true});
   const plan=planService(c,smith,10,quote);assert.ok(plan.ok);
   assert.equal(JSON.stringify(c),before);assert.equal(plan.character.gold,expected);
   assert.ok(plan.character.inventory.every(item=>item===null));

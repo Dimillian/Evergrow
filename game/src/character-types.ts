@@ -15,6 +15,7 @@ export type ItemKind = Exclude<EquipmentSlot, 'offhand' | 'ring1' | 'ring2'> | '
 export type ItemTier = 'common' | 'magic' | 'rare' | 'epic' | 'legendary';
 export interface ItemAffix { name: string; stat: StatKey; value: number; }
 export interface ItemRecipe {
+  charmVersion?: 1;
   materialId?: ItemMaterialId;
   profileId?: string; starter: boolean; enhancement: number; revision: number;
   targetedRolls: number; fullRolls: number; rolls: number[];
@@ -24,6 +25,7 @@ export interface CommerceState {
   buyback: Array<{ item: Item; price: number }>;
 }
 export interface Item {
+  locked?: boolean;
   recipe: ItemRecipe;
   id: string; seed: number; name: string; baseName: string; kind: ItemKind; tier: ItemTier;
   itemLevel: number; requiredLevel: number; power: number;

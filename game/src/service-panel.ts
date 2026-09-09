@@ -1,4 +1,6 @@
-import { PACK_COLUMNS, PACK_ROWS, PACK_CELLS, CHARM_ROWS, resolvePackLayout, itemFootprint, canPackItem } from './inventory-grid.ts';
+import { itemAffixCount } from './items.ts';
+import { bulkSaleItems } from './item-protection.ts';
+import { PACK_COLUMNS, PACK_ROWS, PACK_CELLS, CHARM_ROWS, resolvePackLayout, itemFootprint, canPackItem, packSpaceProblem } from './inventory-grid.ts';
 import './inventory-pack.css';
 import { settlementBenefits } from './settlement-services.ts';
 import { vendorLevel } from './npcs.ts';
@@ -21,6 +23,7 @@ import './service-panel.css';
 const OP_LABELS: Record<Improvement, string> = { enhance: 'Enhance', rarity: 'Raise rarity', rerollOne: 'Reroll one affix', rerollAll: 'Reroll all affixes', relevel: 'Raise item level' };
 export class ServicePanel {
   readonly element: HTMLElement;
+  private includeActiveCharms = false;
   private tooltip: ItemTooltip;
   private player!: Player;
   private npc!: TownNPC;
@@ -69,7 +72,7 @@ export class ServicePanel {
     this.selected = this.tab === 'improve' ? { type: 'improve', source, operation: this.operation, affix: 0 } : { type: 'sell', source };
     this.render(); this.element.querySelector('.service-detail')?.scrollIntoView({ block: 'nearest' });
   }
-  close(): void { this.goldFeedback.stop(); this.sales.clear(); this.focus?.dispose(); this.focus = null; this.tooltip.hide(); this.element.hidden = true; this.selected = null; this.quote = null; }
+  close(): void { this.includeActiveCharms=false; this.goldFeedback.stop(); this.sales.clear(); this.focus?.dispose(); this.focus = null; this.tooltip.hide(); this.element.hidden = true; this.selected = null; this.quote = null; }
   dispose(): void { this.close(); this.abort.abort(); this.tooltip.dispose(); this.element.remove(); }
   private updateSelection(): void {
     if (this.npc.role === 'gambler' && this.tab === 'shop') {
@@ -171,14 +174,14 @@ export class ServicePanel {
     button.textContent=storage?selected.type==='store'?'Store item':'Take item':`Gamble · ${result.quote.price.toLocaleString()} gold`;
     const full=selected.type==='store'?(this.player.character.stash??[]).filter(Boolean).length>=STASH_CAPACITY:!canPackItem(this.player.character,result.item);
     button.disabled=full||goldBalance(this.player.character)<result.quote.price;
-    if(button.disabled)this.element.querySelector('.service-message')!.textContent=full?selected.type==='store'?'Storage full.':'Inventory full.':'Not enough gold.';
+    if(button.disabled)this.element.querySelector('.service-message')!.textContent=full?selected.type==='store'?'Storage full.':packSpaceProblem(this.player.character,result.item):'Not enough gold.';
   }
   private rarityControls(): string {
     return `<div class="service-rarities" aria-label="Select items by rarity">${(['common','magic','rare','epic','legendary'] as ItemTier[]).map(tier=>{
-      const items=this.player.character.inventory.filter((item):item is Item=>!!item&&item.tier===tier);
+      const items=bulkSaleItems(this.player.character,this.player.level,this.includeActiveCharms).filter(item=>item.tier===tier);
       const selected=items.length>0&&items.every(item=>this.sales.has(item.id));
       return `<button type="button" data-sell-tier="${tier}" aria-pressed="${selected}" ${items.length?'':'disabled'} style="--rarity-color:${TIER_COLORS[tier]}">${TIER_NAMES[tier]} <small>${items.length}</small></button>`;
-    }).join('')}</div>`;
+    }).join('')}<label class="service-include-charms"><input type="checkbox" data-include-charms ${this.includeActiveCharms?'checked':''}> Include active charms</label></div>`;
   }
   /** Mirror the carried pack; empty space and overflow retain their actual positions. */
   private renderInventoryPack(): void {
@@ -232,7 +235,7 @@ export class ServicePanel {
   }
   private click(e: MouseEvent): void {
     if (this.saving) return;
-    const button = (e.target as HTMLElement).closest<HTMLButtonElement>('button'); if (!button) return;
+    const button = (e.target as HTMLElement).closest<HTMLButtonElement>('button, input[data-include-charms]'); if (!button) return;
     if (button.hasAttribute('data-close')) { this.actions.close(); return; }
     if(button.dataset.gamble){
       this.gambleKind=button.dataset.gamble as ItemKind;
@@ -241,8 +244,10 @@ export class ServicePanel {
       this.renderDetail(); return;
     }
     if(button.hasAttribute('data-clear-sales')) { this.sales.clear(); this.render(); return; }
+    if(button.hasAttribute('data-include-charms')) { this.includeActiveCharms=(button as unknown as HTMLInputElement).checked; this.sales.clear(); this.render(); return; }
     if(button.dataset.sellTier) {
-      const items=this.player.character.inventory.flatMap((item,bag)=>item&&item.tier===button.dataset.sellTier?[{item,bag}]:[]);
+      const eligible=new Set(bulkSaleItems(this.player.character,this.player.level,this.includeActiveCharms).map(i=>i.id));
+      const items=this.player.character.inventory.flatMap((item,bag)=>item&&eligible.has(item.id)&&item.tier===button.dataset.sellTier?[{item,bag}]:[]);
       const remove=items.every(({item})=>this.sales.has(item.id));
       for(const {item,bag} of items) { if(remove)this.sales.delete(item.id); else this.sales.set(item.id,{bag,id:item.id,revision:item.recipe.revision}); }
       this.render(); return;
@@ -251,6 +256,7 @@ export class ServicePanel {
     if (button.dataset.item) {
       const value = this.resolve(button.dataset.item); if (!value) return;
       if(this.npc.role==='gambler'&&this.tab==='shop')return;
+      if(this.tab === 'sell' && value.item.locked){this.element.querySelector('.service-message')!.textContent='Unlock this item in your inventory before selling it.';return;}
       if(this.tab === 'sell' && value.source && 'bag' in value.source) {
         if(this.sales.has(value.item.id)) this.sales.delete(value.item.id);
         else this.sales.set(value.item.id,{bag:value.source.bag,id:value.item.id,revision:value.item.recipe.revision});
@@ -299,8 +305,10 @@ export class ServicePanel {
     if (op === 'rerollOne' || op === 'rerollAll') {
       detail.innerHTML += `<div class="service-changes">${item.affixes.map((a, i) => `<div class="${op === 'rerollOne' && i === this.selectedAffix() ? 'is-selected-affix' : ''}"><span>${escapeUI(STAT_LABELS[a.stat])}</span><b>${formatStatValue(a.stat, a.value)}</b></div>`).join('')}</div>`;
       const pool=rerollPool(item,op==='rerollOne'?this.selectedAffix():undefined,selected.focus);
+      const focusPool=op==='rerollAll'&&item.affixes.length>1?itemAffixPool(item):pool;
       const total=pool.reduce((sum,a)=>sum+(a.weight??1),0);
-      if(this.npc.settlementTier==='city')detail.innerHTML+=`<label class="service-affix">Favor an affix group<select class="ui-button" data-affix-focus aria-label="Affix preference">${AFFIX_FOCUSES.map(f=>`<option value="${f}" ${f===(selected.focus??'any')?'selected':''} ${f!=='any'&&(!pool.some(a=>affixCategory(a.stat)===f)||!pool.some(a=>affixCategory(a.stat)!==f))?'disabled':''}>${f==='any'?'No preference':f[0].toUpperCase()+f.slice(1)+' · +75% cost'}</option>`).join('')}</select></label><p class="ui-muted">Favored affixes get triple weight. Rare rolls remain rare.</p>`;
+      if(this.npc.settlementTier==='city')detail.innerHTML+=`<label class="service-affix">Favor an affix group<select class="ui-button" data-affix-focus aria-label="Affix preference">${AFFIX_FOCUSES.map(f=>`<option value="${f}" ${f===(selected.focus??'any')?'selected':''} ${f!=='any'&&(!focusPool.some(a=>affixCategory(a.stat)===f)||!focusPool.some(a=>affixCategory(a.stat)!==f))?'disabled':''}>${f==='any'?'No preference':f[0].toUpperCase()+f.slice(1)+' · +75% cost'}</option>`).join('')}</select></label><p class="ui-muted">Favored affixes get triple weight. Rare rolls remain rare.</p>`;
+      if(item.kind==='charm') detail.innerHTML += '<p class="ui-muted">The first affix stays within the stone’s theme. If no other themed affix fits, its strength is rerolled.</p>';
       detail.innerHTML += `<p class="service-caution">Replaces ${op === 'rerollOne' ? 'this affix' : 'all affixes'}. Results can be worse.</p><details><summary>Possible affixes and odds</summary>${op==='rerollAll'?'<p class="ui-muted">First roll odds. Later rolls exclude conflicting affixes.</p>':''}<div class="service-pool-odds">${pool.map(a=>`<div><span>${escapeUI(STAT_LABELS[a.stat])}</span><b>${((a.weight??1)/total*100).toFixed(1)}%</b></div>`).join('')}</div></details>`;
 
     } else {
@@ -321,14 +329,17 @@ export class ServicePanel {
           return `<div><span>${CHANGE_LABELS[change.key]}</span><b class="${delta < 0 ? 'is-loss' : 'is-gain'}">${delta > 0 ? '+' : ''}${Number(delta.toFixed(2))}${percent ? '%' : ''}</b></div>`;
         }).join('') || `<p class="ui-muted">${preview && !preview.ok ? escapeUI(preview.message) : 'No effective stat change.'}</p>`}</div>`;
       }
-      if (op === 'rarity') detail.innerHTML += '<p class="service-caution">Adds one random affix.</p><details><summary>Possible new affixes</summary><p class="service-pool">' + itemAffixPool(item).filter(a => !item.affixes.some(b => b.stat === a.stat)).map(a => escapeUI(STAT_LABELS[a.stat])).join(' · ') + '</p></details>';
+      if (op === 'rarity') {
+        const added=itemAffixCount(next)-item.affixes.length;
+        detail.innerHTML += added>0?`<p class="service-caution">Adds ${added} random ${added===1?'affix':'affixes'}.</p><details><summary>Possible new affixes</summary><p class="service-pool">${itemAffixPool(item).filter(a=>!item.affixes.some(b=>b.stat===a.stat)).map(a=>escapeUI(STAT_LABELS[a.stat])).join(' · ')}</p></details>`:'<p class="ui-muted">Strengthens existing bonuses.</p>';
+      }
       if (op === 'relevel') detail.innerHTML += `<p class="${next.requiredLevel > this.player.level ? 'service-caution' : 'ui-muted'}">Requires level ${next.requiredLevel}</p>`;
-      if (op === 'enhance') detail.innerHTML += '<p class="ui-muted">Guaranteed · maximum +10</p>';
+      if (op === 'enhance') detail.innerHTML += `<p class="ui-muted">Guaranteed · maximum +10${next.recipe.enhancement>item.recipe.enhancement+1?' · Empty steps skipped at no extra cost':''}</p>`;
     }
   }
   private syncRarities(): void {
     for(const button of this.element.querySelectorAll<HTMLButtonElement>('[data-sell-tier]')) {
-      const items=this.player.character.inventory.filter(item=>item&&item.tier===button.dataset.sellTier);
+      const items=bulkSaleItems(this.player.character,this.player.level,this.includeActiveCharms).filter(item=>item.tier===button.dataset.sellTier);
       button.setAttribute('aria-pressed',String(items.length>0&&items.every(item=>this.sales.has(item!.id))));
     }
   }
@@ -340,7 +351,7 @@ export class ServicePanel {
     }
     const clear=this.element.querySelector<HTMLButtonElement>('[data-clear-sales]');if(clear)clear.disabled=!items.length;
     if(!items.length){detail.innerHTML='<p class="service-empty">Select items or a rarity.</p>';button.textContent='Select items';return;}
-    const result=quoteService(this.player.character,this.npc,this.player.level,{type:'sellMany',items});
+    const result=quoteService(this.player.character,this.npc,this.player.level,{type:'sellMany',items,includeActiveCharms:true});
     if(!result.ok){detail.innerHTML=`<p class="service-empty">${escapeUI(result.message)}</p>`;return;}
     this.quote=result.quote;
     button.disabled=false;button.textContent=`Sell ${items.length} · ${result.quote.price.toLocaleString()} gold`;

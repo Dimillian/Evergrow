@@ -18,6 +18,7 @@ export async function executeDropItem(sim: Simulation, source: DropItemSource,
     ? Number.isInteger(source.index) && source.index >= 0 ? sheet.inventory[source.index] : null
     : EQUIPMENT_SLOTS.includes(source.slot) ? sheet.equipped[source.slot] : null;
   if (!item || item.id !== source.id) return { ok: false, message: 'That item has changed.' };
+  if (item.locked) return {ok:false,message:'Unlock this item before dropping it.'};
   const checkpoint = sim.captureCheckpoint(), character = checkpoint.character;
   if (source.type === 'bag') character.inventory[source.index] = null;
   else character.equipped[source.slot] = null;

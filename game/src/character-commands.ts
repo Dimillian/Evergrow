@@ -1,3 +1,4 @@
+import { setItemLock } from './item-protection.ts';
 export { executeAppearanceChange } from './appearance-command.ts';
 import { upgradeSkill, configureSkill, OVERLOAD_NODE } from './skill-progression.ts';
 import type { Player } from './model.ts';
@@ -8,6 +9,7 @@ import { assignSkill, refreshCharacter } from './character.ts';
 import { equipBest, sortInventory, type InventorySort, type EquipBestChoice } from './inventory-tools.ts';
 
 export type CharacterCommand =
+  | { type: 'lockItem'; id: string; locked: boolean }
   | { type: 'equipBest'; choice?: EquipBestChoice }
   | { type: 'sortInventory'; mode: InventorySort }
   | { type: 'upgradeSkill'; skill: SkillId }
@@ -26,6 +28,7 @@ export type CharacterCommand =
 export function executeCharacterCommand(player: Player, command: CharacterCommand): ActionResult {
   let result: ActionResult;
   switch (command.type) {
+    case 'lockItem': result = setItemLock(player.character, command.id, command.locked); break;
     case 'equipBest': result = equipBest(player.character, player.level, command.choice); break;
     case 'sortInventory': result = sortInventory(player.character, command.mode); break;
     case 'upgradeSkill': result = upgradeSkill(player.character, command.skill); break;

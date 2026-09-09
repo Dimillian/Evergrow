@@ -12,16 +12,18 @@ The same inventory records own both regions, with room for 120 one-cell objects.
 
 ## Stone sizes
 
-| Shape | Cells | Common affixes | Roll strength |
-| --- | --- | ---: | ---: |
-| Pebble | 1×1 | 1 | ×0.28 |
-| Shard | 1×2 | 1 | ×0.46 |
-| Tablet | 2×2 | 2 | ×0.68 |
-| Spire | 1×3 | 2 | ×0.58 |
-| Heartstone | 2×3 | 3 | ×0.92 |
-| Monolith | 2×4 | 4 | ×1.20 |
+| Shape | Cells | Affixes: Common / Magic / Rare / Epic / Legendary | Roll strength |
+| --- | --- | --- | ---: |
+| Pebble | 1×1 | 1 / 1 / 2 / 2 / 2 | ×0.28 |
+| Shard | 1×2 | 1 / 2 / 2 / 2 / 2 | ×0.50 |
+| Tablet | 2×2 | 2 / 2 / 3 / 3 / 4 | ×0.64 |
+| Spire | 1×3 | 2 / 2 / 2 / 3 / 3 | ×0.57 |
+| Heartstone | 2×3 | 3 / 3 / 4 / 4 / 5 | ×0.86 |
+| Monolith | 2×4 | 4 / 4 / 5 / 6 / 6 | ×1.12 |
 
-Magic / Rare / Epic / Legendary add 1 / 2 / 3 / 4 affixes to that size budget. Thus even Common stones have an effect, while a Legendary Monolith has eight distinct affixes. Size weights are 30 / 25 / 16 / 16 / 9 / 4. Rarity uses existing item quality multipliers; enhancement adds the usual 5% per step, up to +10. Affix level growth and numeric caps are shared with items, before the size multiplier and final resistance cap. Higher-tier stones keep their physical dimensions.
+The local post-0.3.0 pass caps small stones at two focused bonuses. Larger stones have stronger individual rolls and better nominal Legendary budget per cell: Pebble 0.56 versus Monolith 0.84, before rarity quality, rounding and caps. Shape weights remain 30 / 25 / 16 / 16 / 9 / 4; drop rates are unchanged. Higher-tier stones keep their dimensions.
+
+New recipes carry `charmVersion: 1`. Shared save decoding first validates pre-budget charm recipes, then rebalances them on the parsed copy across carried/stashed/buyback and dungeon/surface ground items. It retains IDs, enhancement, level, locks and progression, prefers the existing thematic roll, and trims excess affixes deterministically. Stored bytes remain untouched until the next save. This deliberately changes existing charm bonuses without resetting characters. Client and Worker must ship the new rules together.
 
 Final bonuses round to the nearest whole number, with a minimum of 1 for every positive roll. This changes actual combat bonuses, not only tooltip formatting, and also normalizes existing saved charms. In particular, small regeneration rolls become stronger, and nearby rolls may share a value until their next integer threshold. The saved roll quantile remains precise for future upgrades. See [whole-number item bonuses](equipment-affixes.md#weights-and-specialist-budgets).
 
@@ -34,7 +36,7 @@ Six flavors provide color, carved rune and a ×2 preference for matching affixes
 - Jade: all resistance, life and life regeneration.
 - Amber: gold, movement and mana.
 
-Flavor is a preference, not an implicit or guaranteed affix. `charm-content.ts` owns all 36 size/flavor profiles. `charm-shapes.ts` shares irregular stone silhouettes, cut faces, luminous veins and runes across inventory, vendor, forge and ground art.
+The first affix is guaranteed to match the flavor, and enchanting preserves this identity. Remaining affixes retain the ×2 thematic preference. If a targeted first-affix reroll has no alternative compatible thematic stat, it rerolls that stat’s strength; the service explains this behavior. `charm-content.ts` owns all 36 size/flavor profiles. `charm-shapes.ts` shares irregular stone silhouettes, cut faces, luminous veins and runes across inventory, vendor, forge and ground art.
 
 ## Bonuses and rewards
 
@@ -58,3 +60,11 @@ Detailed stats show active charm sources, resistances, gold found and experience
 `/character.html?charms` stages six sizes in the dedicated charm grid in the existing disposable inventory review. The Item forge supports Charm and all 36 profiles. Both use runtime generation and art, never playable saves.
 
 Headless coverage exercises profiles across every rarity, service rebuilds, fixed footprints, level-gated bonuses, grid separation, sorting, independent capacities, save round-trips, direct sales, bounded utility stats and seeded loot frequency. Gameplay feel and balance remain for the user's local playtest.
+
+## Local inventory hardening after 0.3.0
+
+- Locked items cannot be sold or dropped. Lock mode in the inventory toolbar toggles a piece on click; L toggles a focused piece. Storing, rearranging, upgrading and equipping remain allowed.
+- Vendor rarity shortcuts exclude locked items and active charms. “Include active charms” opts them into shortcuts; manual selection plus Sell is also an explicit charm sale. Transaction validation enforces the lock and active-charm consent. Buyback remains the last 12 sales.
+- Auto-sort tries eight bounded shape/direction combinations when needed. It never increases overflow; bag and charm space remain separate. Pickup and service failures distinguish full capacity from a missing rectangular space.
+- The inventory’s Compare button previews a stored/inactive charm against selected active stones, including the real capped stat changes and packing feasibility. It never changes items, resources or saves; actual storage transfers still require a storage chest.
+- Enhancements skip rounded-away ranks to the next real increase, at the current step’s price. The +N preview shows the destination; at most +10. Rarity upgrades skip ineffective tiers and quote the destination tier’s normal price. Releveling that changes no actual bonus is unavailable. Random rerolls remain allowed to produce worse or equal outcomes.

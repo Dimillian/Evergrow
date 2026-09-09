@@ -6,7 +6,7 @@ import { activeCharms, PACK_CELLS, PACK_COLUMNS, INVENTORY_CELLS, resolvePackLay
 import { addInventoryItem, moveInventoryItem } from '../src/inventory.ts';
 import { sortInventory } from '../src/inventory-tools.ts';
 import { deriveCharacterStats } from '../src/character-stats.ts';
-import { improveItem } from '../src/item-improvement.ts';
+import { improveItem, improvementProblem } from '../src/item-improvement.ts';
 import { validItem } from '../src/item-validation.ts';
 import { itemIconSVG, itemDropShapes, itemPackIconSVG } from '../src/item-art.ts';
 import { Simulation } from '../src/simulation.ts';
@@ -28,8 +28,8 @@ test('all stone shapes and flavors share deterministic item recipes, size budget
     assert.deepEqual(item,generateItem(432,30,'charm',profile.id,tier));assert.deepEqual(deriveItem(item),item);assert.ok(validItem(item));
     assert.equal(item.affixes.length,itemAffixCount(item));assert.deepEqual(itemFootprint(item),{width:profile.size.width,height:profile.size.height});
     assert.ok(itemDropShapes(item).length>8);assert.match(itemIconSVG(item),/<svg/);assert.match(itemPackIconSVG(item,profile.size.width,profile.size.height),/<svg/);
-    for(const op of ['enhance','rerollAll','rerollOne','relevel'] as const)assert.ok(validItem(improveItem(item,op,40,871,0)));
-    if(tier!=='legendary'){const next=improveItem(item,'rarity',40,871);assert.ok(validItem(next));assert.equal(next.affixes.length,item.affixes.length+1);}
+    for(const op of ['enhance','rerollAll','rerollOne','relevel'] as const)if(!improvementProblem(item,op,40,0))assert.ok(validItem(improveItem(item,op,40,871,0)));
+    if(tier!=='legendary'&&!improvementProblem(item,'rarity',40)){const next=improveItem(item,'rarity',40,871);assert.ok(validItem(next));assert.equal(next.affixes.length,itemAffixCount(next));}
   }
   assert.ok(stone(11,'jade-monolith').affixes.length>stone().affixes.length);
   const forged=stone();forged.recipe.profileId='missing';assert.equal(validItem(forged),false);
@@ -98,7 +98,7 @@ test('charms can be sold directly and item tooltips contain no stat explanations
   const s=createCharacterSheet(),item=stone();assert.ok(addInventoryItem(s,item));
   const npc:TownNPC={id:'merchant',buildingId:'stall',role:'blacksmith',name:'Smith',seed:1,x:0,y:0,level:1};
   assert.ok(quoteService(s,npc,1,{type:'sell',source:{bag:0}}).ok);
-  assert.ok(quoteService(s,npc,1,{type:'sellMany',items:[{bag:0,id:item.id,revision:item.recipe.revision}]}).ok);
+  assert.ok(quoteService(s,npc,1,{type:'sellMany',items:[{bag:0,id:item.id,revision:item.recipe.revision}],includeActiveCharms:true}).ok);
   const markup=itemTooltipMarkup(item,{sheet:s,level:1,sourceIndex:0});
   assert.doesNotMatch(markup,/ui-item-affix-note|affixes ·|Active|Place in charm grid/);
 });

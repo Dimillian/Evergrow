@@ -1,4 +1,4 @@
-import { CHARM_PROFILES, CHARM_SIZES, CHARM_FLAVORS, CHARM_UTILITY_AFFIXES, CHARM_WEIGHTS, charmProfile, charmAffixCount } from './charm-content.ts';
+import { CHARM_PROFILES, CHARM_SIZES, CHARM_FLAVORS, CHARM_UTILITY_AFFIXES, CHARM_WEIGHTS, charmProfile, charmAffixCount, charmThematicStat } from './charm-content.ts';
 import { RESISTANCE_AFFIXES, RESISTANCE_LABELS, RESISTANCE_STATS, isResistanceStat, boundResistanceRoll } from './resistance-content.ts';
 import { JEWELRY_PROFILES, jewelryProfiles } from './jewelry-content.ts';
 import { ITEM_MATERIALS, isClothMaterial, sourceMaterialPool, type MaterialSource, itemMaterialPool, rollItemMaterial, itemMaterialScale, materialBaseName, type ItemMaterialId } from './item-materials.ts';
@@ -366,16 +366,17 @@ function generateCharm(seed: number, itemLevel: number, profileId?: string, tier
   const roll=random(), tier=tierOverride??(roll<.45?'common':roll<.77?'magic':roll<.94?'rare':roll<.99?'epic':'legendary');
   const item:Item={id:`charm-${seed.toString(36)}-${level}-${selected.id}-${tier}`,seed,kind:'charm',tier,name:selected.name,baseName:selected.name,
     itemLevel:level,requiredLevel:Math.max(1,level-2),power:0,implicit:{},affixes:[],
-    recipe:{profileId:selected.id,starter:false,enhancement:0,revision:0,targetedRolls:0,fullRolls:0,rolls:[]},
+    recipe:{charmVersion:1,profileId:selected.id,starter:false,enhancement:0,revision:0,targetedRolls:0,fullRolls:0,rolls:[]},
     appearance:{base:selected.flavor.base,edge:selected.flavor.edge,shadow:'#19252b',trim:selected.flavor.glow,style:'plate'}};
   const pool=itemAffixPool(item);
   for(let i=0;i<charmAffixCount(item);i++){
-    const definition=rollAffix(pool.filter(a=>!affixConflicts(a.stat,item.affixes.map(a=>a.stat))),random);
+    const definition=rollAffix(pool.filter(a=>(i>0||charmThematicStat(item,a.stat))&&!affixConflicts(a.stat,item.affixes.map(a=>a.stat))),random);
     item.affixes.push({name:definition.name,stat:definition.stat,value:0});item.recipe.rolls.push(random());
   }
   return deriveCharm(item);
 }
 function deriveCharm(item:Item):Item {
+  if (item.recipe.charmVersion !== 1) item = rebalanceCharm(item);
   const profile=charmProfile(item);if(!profile)throw new RangeError('Unknown charm profile');
   const quality=TIER_POWER[item.tier]*(1+.05*item.recipe.enhancement)*profile.size.potency;
   const definitions=itemAffixPool(item);
@@ -387,3 +388,20 @@ function deriveCharm(item:Item):Item {
   return roundItemStats({...item,affixes,implicit:{},requiredLevel:Math.max(1,item.itemLevel-2),power:Math.round((item.itemLevel*10+affixes.length*7)*profile.size.potency*TIER_POWER[item.tier]*(1+.05*item.recipe.enhancement)),recipe:{...item.recipe,rolls:[...item.recipe.rolls]}});
 }
 export const itemAffixCount = (item:Pick<Item,'kind'|'tier'|'recipe'>) => item.kind==='charm'?charmAffixCount(item):TIER_AFFIXES[item.tier];
+
+/** Upgrade validated pre-budget stones in place, retaining identity, roll quality and progress. */
+export function rebalanceCharm(item: Item): Item {
+  if (item.kind !== 'charm' || item.recipe.charmVersion === 1) return item;
+  const next = {...item, recipe:{...item.recipe,charmVersion:1 as const,rolls:[] as number[]}, affixes:[] as ItemAffix[]};
+  const random = randomSource(item.seed ^ 0x53ac914f), pool = itemAffixPool(item);
+  const theme = item.affixes.findIndex(a=>charmThematicStat(item,a.stat));
+  const indices = [theme, ...item.affixes.map((_,i)=>i).filter(i=>i!==theme)];
+  for (let i=0;i<charmAffixCount(next);i++) {
+    const index=indices[i], old=index>=0?item.affixes[index]:undefined;
+    const choices=pool.filter(a=>(i>0||charmThematicStat(next,a.stat))&&!affixConflicts(a.stat,next.affixes.map(a=>a.stat)));
+    const definition=old&&choices.find(a=>a.stat===old.stat)||rollAffix(choices,random);
+    next.affixes.push({name:definition.name,stat:definition.stat,value:0});
+    next.recipe.rolls.push(index>=0?item.recipe.rolls[index]:random());
+  }
+  return deriveCharm(next);
+}

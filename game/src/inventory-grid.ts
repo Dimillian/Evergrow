@@ -80,3 +80,38 @@ export function activeCharms(sheet: Pick<CharacterSheet,'inventory'|'inventoryLa
   const layout=resolvePackLayout(sheet);
   return sheet.inventory.filter((item):item is Item=>!!item && item.kind==='charm' && item.requiredLevel<=level && layout[item.id]>=PACK_CELLS);
 }
+
+/** Fixed-cost fallback: try multiple shape orders instead of relying on one greedy pass. */
+export function compactPackLayout(inventory: CharacterSheet['inventory']): PackLayout {
+  const items=inventory.filter((item):item is Item=>!!item);
+  return {...packRegion(items.filter(i=>i.kind!=='charm')),...packRegion(items.filter(i=>i.kind==='charm'))};
+}
+function packRegion(items: Item[]): PackLayout {
+  let best:PackLayout={},bestCount=-1;
+  const metrics=[(s:ItemFootprint)=>s.height*100+s.width,(s:ItemFootprint)=>s.width*100+s.height,
+    (s:ItemFootprint)=>s.width*s.height*100+s.height,(s:ItemFootprint)=>Math.max(s.width,s.height)*100+s.width*s.height];
+  for(const metric of metrics)for(const reverse of [false,true]){
+    const ordered=[...items].sort((a,b)=>metric(itemFootprint(b))-metric(itemFootprint(a)));
+    const layout:PackLayout={},occupied=new Set<number>();
+    for(const item of ordered){
+      const start=item.kind==='charm'?PACK_CELLS:0,end=item.kind==='charm'?INVENTORY_CELLS:PACK_CELLS;
+      for(let i=start;i<end;i++){
+        const cell=reverse?Math.floor(i/PACK_COLUMNS)*PACK_COLUMNS+PACK_COLUMNS-1-i%PACK_COLUMNS:i;
+        const cells=footprintCells(item,cell);
+        if(cells?.every(n=>!occupied.has(n))){layout[item.id]=cell;cells.forEach(n=>occupied.add(n));break;}
+      }
+    }
+    const count=Object.keys(layout).length;
+    if(count>bestCount){best=layout;bestCount=count;}
+    if(count===items.length)break;
+  }
+  return best;
+}
+
+export function packSpaceProblem(sheet: Pick<CharacterSheet,'inventory'|'inventoryLayout'>,item:Item): string {
+  const layout=resolvePackLayout(sheet),occupied=packOccupancy(sheet.inventory,layout);
+  const start=item.kind==='charm'?PACK_CELLS:0,end=item.kind==='charm'?INVENTORY_CELLS:PACK_CELLS;
+  const free=Array.from({length:end-start},(_,i)=>start+i).filter(i=>!occupied.has(i)).length;
+  const shape=itemFootprint(item),name=item.kind==='charm'?'Charm grid':'Bag';
+  return free<shape.width*shape.height?`${name} full. Make room for this item.`:`No ${shape.width} × ${shape.height} space. Try Auto-sort.`;
+}

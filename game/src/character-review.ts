@@ -54,6 +54,10 @@ if(new URLSearchParams(location.search).has('charms')) {
     const item=generateItem(8400+i,p.level,'charm',`${CHARM_FLAVORS[i].id}-${size.id}`,(['common','magic','rare','epic','legendary','rare'] as const)[i]);
     p.character.inventory[i]=item;
   });
+  p.character.stash=Array(96).fill(null);
+  p.character.stash[0]=generateItem(8701,p.level,'charm','jade-monolith','legendary');
+  p.character.stash[1]=generateItem(8702,p.level,'charm','storm-tablet','epic');
+  p.character.inventory[0]!.locked=true;
   p.character.inventoryLayout=resolvePackLayout(p.character);
 }
 const loadout = new URLSearchParams(location.search).get('loadout');
@@ -101,6 +105,7 @@ const inventory = life.own(new InventoryPanel(shell.panelMount, { close: () => s
   equip: (i, slot) => result(equipItem(p.character, i, p.level, slot)),
   unequip: (slot, i) => result(unequipItem(p.character, slot, i)),
   move: (from, to) => result(moveInventoryItem(p.character, from, to)),
+  lock: (id,locked) => result(executeCharacterCommand(p,{type:'lockItem',id,locked})),
   drop: source => { void executeDropItem(sim, source, async () => ({ok:true})).then(result); },
   equipBest: choice => result(executeCharacterCommand(p, { type: 'equipBest', choice })),
   sort: mode => result(executeCharacterCommand(p, { type: 'sortInventory', mode })),

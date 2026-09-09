@@ -64,8 +64,8 @@ test('too-distant, airborne and full-bag items reject pickup without loss',()=>{
   drop.flight={at:sim.time,delay:0,x:0,y:0};
   assert.equal(sim.requestGroundItem(901),'Item is landing');
   delete drop.flight;
-  sim.player.character.inventory.fill(generateItem(900,1));
-  assert.equal(sim.requestGroundItem(901),'Inventory full');
+  sim.player.character.inventory=Array.from({length:120},(_,i)=>i<72?generateItem(900+i,1,'ring'):null);
+  assert.equal(sim.requestGroundItem(901),'Bag full. Make room for this item.');
   assert.equal(sim.groundItems.length,1);
   assert.equal(sim.groundPickup.id,null);
 });
@@ -93,6 +93,6 @@ test('charm pickup updates bonuses immediately without healing and a full charm 
   assert.ok(sim.player.derived.goldFindMultiplier>1);assert.equal(sim.player.hp,hp);assert.equal(sim.player.mana,mana);
   for(let i=0;i<47;i++)assert.ok(addInventoryItem(sim.player.character,generateItem(8000+i,1,'charm','jade-pebble','common')));
   sim.groundItems.push({id:902,x:0,y:0,item:generateItem(9901,1,'charm','jade-pebble','common')});
-  assert.equal(sim.requestGroundItem(902),'Charm grid full');advance(sim,FIXED_STEP);
+  assert.equal(sim.requestGroundItem(902),'Charm grid full. Make room for this item.');advance(sim,FIXED_STEP);
   assert.equal(sim.groundItems.length,1);
 });

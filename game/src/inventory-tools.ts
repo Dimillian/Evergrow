@@ -1,4 +1,4 @@
-import { resolvePackLayout, itemFootprint, type PackLayout } from './inventory-grid.ts';
+import { resolvePackLayout, compactPackLayout, itemFootprint, type PackLayout } from './inventory-grid.ts';
 import type { ActionResult, CharacterSheet, Item, ItemTier } from './character-types.ts';
 import { EQUIPMENT_SLOTS, ITEM_KINDS } from './items.ts';
 import { itemFitsSlot, planEquipmentChange } from './inventory.ts';
@@ -41,10 +41,16 @@ export function sortInventory(sheet: CharacterSheet, mode: InventorySort): Actio
     return 0;
   });
   const before = resolvePackLayout(sheet);
-  const layout = resolvePackLayout({ inventory });
-  const overflowBefore = sheet.inventory.filter(item => item && before[item.id] === undefined).length;
-  const overflowAfter = inventory.filter(item => item && layout[item.id] === undefined).length;
-  if (overflowAfter > overflowBefore) return { ok: false, message: 'This arrangement needs more space. Your pack is unchanged.' };
+  let layout = resolvePackLayout({ inventory });
+  if(mode==='compact'||Object.keys(layout).length<Object.keys(before).length){
+    const packed=compactPackLayout(inventory);
+    if(Object.keys(packed).length>=Object.keys(layout).length)layout=packed;
+  }
+  for(const charm of [false,true]){
+    const overflowBefore=sheet.inventory.filter(item=>item&&(item.kind==='charm')===charm&&before[item.id]===undefined).length;
+    const overflowAfter=inventory.filter(item=>item&&(item.kind==='charm')===charm&&layout[item.id]===undefined).length;
+    if(overflowAfter>overflowBefore)return {ok:false,message:'This arrangement needs more space. Your pack is unchanged.'};
+  }
   sheet.inventory = inventory; sheet.inventoryLayout = layout;
   return { ok: true };
 }

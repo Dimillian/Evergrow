@@ -166,3 +166,10 @@ Local generation 10 now includes tiered stock, material and gambling advantages,
 
 
 Gambling retains the selected equipment category after each purchase and when returning from Sell or Buyback. Each completed save refreshes the next offer immediately; there is no extra click cooldown or wait for the reveal animation. Choices and the Gamble button stay mounted while the wallet, new item and pack update. Only one transaction runs at a time, and items and gold still commit together after a successful local save. Insufficient gold or pack space disables the next purchase.
+
+
+## Local post-0.3.0 item protection and upgrade steps
+
+Locked items cannot be sold, including manually or in a bulk quote. Rarity shortcuts omit active charms unless explicitly included; deliberate individual selections can still sell them. See [charm and inventory hardening](charms.md#local-inventory-hardening-after-030).
+
+An enhancement purchase advances to the next +N that changes real item bonuses, skipping rounded-away ranks at no extra cost. If no change exists by +10, it cannot be purchased. Rarity upgrades likewise skip ineffective tiers, using the destination tier's normal upgrade price. Releveling with no actual stat change is unavailable. Previews use the same destination and quote as the committed transaction. Charm enchanting keeps the first affix within its theme; a targeted reroll can retain that stat and reroll its strength when no alternative fits.

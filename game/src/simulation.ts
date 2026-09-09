@@ -1,3 +1,4 @@
+import { packSpaceProblem } from './inventory-grid.ts';
 import type { DamageType } from './model.ts';
 import { GroundItemPickup } from './ground-item-pickup.ts';
 import { updateWildernessBoss } from './wilderness-boss.ts';
@@ -805,7 +806,7 @@ export class Simulation {
     if(drop.flight&&this.time<drop.flight.at+drop.flight.delay+TREASURE_FLIGHT_DURATION)return;
     this.groundPickup.cancel();
     if(!addInventoryItem(this.player.character,drop.item)) {
-      this.emit({type:'notice',x:drop.x,y:drop.y,message:`${drop.item.kind === 'charm' ? 'Charm grid' : 'Inventory'} full · item left on the ground`});return;
+      this.emit({type:'notice',x:drop.x,y:drop.y,message:`${packSpaceProblem(this.player.character,drop.item)} Item left on the ground.`});return;
     }
     if (drop.item.kind === 'charm') refreshCharacter(this.player);
     this.groundItems.splice(index,1);

@@ -1,3 +1,4 @@
+import { ITEM_LOCK_ICON } from './item-protection.ts';
 import { RESISTANCE_LABELS } from './resistance-content.ts';
 import { SPECIAL_AFFIX_LABELS, SKILL_STATS, isSkillStat, type SkillStat } from './equipment-affix-content.ts';
 import { ELEMENTAL_AFFIXES, ELEMENT_COLORS } from './elemental-weapon.ts';
@@ -57,7 +58,7 @@ function equipChangeCell(change: EquipmentStatChange | undefined, emptyLabel = '
 }
 
 export function itemSlotMarkup(item: Item, size = 44): string {
-  return `${itemIconSVG(item, size)}${item.recipe.enhancement ? `<span class="ui-item-enhancement">+${item.recipe.enhancement}</span>` : ''}<span class="ui-item-level">${number(item.itemLevel, 0)}</span><span class="ui-item-tier" aria-hidden="true">${'<i></i>'.repeat(TIER_RANK[item.tier])}</span>`;
+  return `${itemIconSVG(item, size)}${item.locked?`<span class="ui-item-lock" aria-label="Locked">${ITEM_LOCK_ICON}</span>`:''}${item.recipe.enhancement ? `<span class="ui-item-enhancement">+${item.recipe.enhancement}</span>` : ''}<span class="ui-item-level">${number(item.itemLevel, 0)}</span><span class="ui-item-tier" aria-hidden="true">${'<i></i>'.repeat(TIER_RANK[item.tier])}</span>`;
 }
 export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, options: { level: number; emptyMarkup: string; label: string; draggable?: boolean }): void {
   cell.classList.add('ui-item-slot');
@@ -70,7 +71,7 @@ export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, optio
   }
   cell.draggable = Boolean(item && options.draggable);
   cell.classList.toggle('is-locked', Boolean(item && item.requiredLevel > options.level));
-  cell.setAttribute('aria-label', options.label);
+  cell.setAttribute('aria-label', options.label+(item?.locked?', locked':''));
 }
 
 /** Item data and effective equipment changes are distinct; no inventory DOM location is required. */
@@ -107,7 +108,7 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
       comparison = `<div class="ui-item-comparison"><p>Replaces ${preview.displaced.map(entry => escapeUI(entry.item.name)).join(' + ')}</p></div>`;
   }
   return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span></span><h4>${escapeUI(itemDisplayName(item))}</h4></div></div>
-    <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${view.equipped ? '<span class="ui-item-equipped">Equipped</span>' : ''}</div>
+    <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${view.equipped ? '<span class="ui-item-equipped">Equipped</span>' : ''}${item.locked?'<span class="ui-item-equipped">Locked</span>':''}</div>
     ${item.recipe.enhancement ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% scalable item stats</div>` : ''}
     ${weapon}${properties}
     ${item.affixes.length ? `<div class="ui-item-affixes">${item.affixes.map(a => escapeUI(a.name)).join(' · ')}</div>` : ''}

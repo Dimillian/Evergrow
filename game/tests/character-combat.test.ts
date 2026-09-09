@@ -229,7 +229,7 @@ test('a full inventory preserves dropped loot until a cell is available, then an
   assert.equal(sim.groundItems.length, 1);
   const drop = sim.groundItems[0];
   assert.equal(sim.player.character.inventory.some(item => item?.id === drop.item.id), false);
-  assert.equal(sim.requestGroundItem(drop.id), 'Inventory full');
+  assert.equal(sim.requestGroundItem(drop.id), 'Bag full. Make room for this item.');
   assert.equal(sim.groundPickup.id, null);
   sim.player.x = drop.x; sim.player.y = drop.y;
   for (const cell of footprintCells(drop.item,0)!) sim.player.character.inventory[cell] = null;

@@ -40,8 +40,8 @@ const sheets=builds.flatMap(build=>levels.map(level=>{
   if (!Number.isFinite(dps) || dps <= 0 || !Number.isFinite(monster.maxHp) || budget < 0) throw new Error('Invalid study build');
   return {build:build.name,level,hp:p.maxHp,hit:a.damage,rate:round(a.attacksPerSecond),crit:round(p.derived.critChance*100),dps:round(dps),stalkerHP:monster.maxHp,secondsPerStalker:round(monster.maxHp/dps),armorPercent:round(p.derived.damageReduction*100),manaRegen:round(p.derived.manaRegeneration),treePoints:level-1-budget};
 }));
-const charmBudgets=CHARM_SIZES.map(size=>({size:size.name,cells:size.width*size.height,commonAffixes:size.affixes,legendaryAffixes:size.affixes+4,rollStrength:size.potency,
-  commonBudgetPerCell:round(size.potency*size.affixes/(size.width*size.height)),legendaryBudgetPerCell:round(size.potency*(size.affixes+4)/(size.width*size.height))}));
+const charmBudgets=CHARM_SIZES.map(size=>({size:size.name,cells:size.width*size.height,commonAffixes:size.affixes,legendaryAffixes:size.counts[4],rollStrength:size.potency,
+  commonBudgetPerCell:round(size.potency*size.affixes/(size.width*size.height)),legendaryBudgetPerCell:round(size.potency*(size.counts[4])/(size.width*size.height))}));
 const charmSaturation=levels.filter(l=>l<=100).map(level=>{
   const p=initialPlayer(0,0);p.level=level;
   // A deliberately generous ceiling study: randomly rolled Legendary pebbles, not a realistic loot timeline.

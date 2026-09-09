@@ -1,8 +1,10 @@
+import { previewCharmReplacement, charmComparisonCandidates } from './charm-comparison.ts';
+import { ITEM_LOCK_ICON } from './item-protection.ts';
 import type { DropItemSource } from './drop-item-command.ts';
-import { PACK_COLUMNS, PACK_ROWS, PACK_CELLS, INVENTORY_CELLS, CHARM_ROWS, itemFootprint, resolvePackLayout, packOccupancy, footprintCells } from './inventory-grid.ts';
-import { itemPackIconSVG } from './item-art.ts';
+import { activeCharms, PACK_COLUMNS, PACK_ROWS, PACK_CELLS, INVENTORY_CELLS, CHARM_ROWS, itemFootprint, resolvePackLayout, packOccupancy, footprintCells } from './inventory-grid.ts';
+import { itemPackIconSVG, itemIconSVG } from './item-art.ts';
 import { itemDisplayName } from './items.ts';
-import { itemTooltipMarkup, updateItemSlot } from './item-ui.ts';
+import { itemTooltipMarkup, updateItemSlot, CHANGE_LABELS, PREVIEW_PERCENT } from './item-ui.ts';
 import { ItemTooltip } from './item-tooltip.ts';
 import { goldBalance } from './wallet.ts';
 import { formatGold } from './currency-format.ts';
@@ -28,6 +30,7 @@ export interface InventoryPanelActions {
   equip(index: number, slot?: EquipmentSlot): void;
   unequip(slot: EquipmentSlot, index?: number): void;
   move(from: number, to: number): void;
+  lock?(id: string, locked: boolean): void;
   drop?(source: DropItemSource): void;
   equipBest(choice?: EquipBestChoice): void;
   sort(mode: InventorySort): void;
@@ -76,12 +79,15 @@ export class InventoryPanel {
   private readonly actions: InventoryPanelActions;
   private focus: ReturnType<typeof trapDialogFocus> | null = null;
   private popupFocus: ReturnType<typeof trapDialogFocus> | null = null;
-  private popup: 'sort' | 'weapon' | null = null;
+  private popup: 'sort' | 'weapon' | 'charms' | null = null;
+  private comparisonId = '';
+  private comparisonRemoved = new Set<string>();
   private popupReturn: HTMLElement | null = null;
   private readonly popupLayer: HTMLElement;
   private player: Player | null = null;
   private hovered: ItemLocation | null = null;
   private drag: ItemReference | null = null;
+  private locking = false;
   private dragOffset = { x: 0, y: 0 };
   private touchItem: ItemReference | null = null;
   private touchMoving = false;
@@ -125,6 +131,7 @@ export class InventoryPanel {
           <div class="character-section-title character-inventory-heading"><h3 id="inventory-title">Inventory</h3><div class="character-heading-actions">
             <button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-sort-filter aria-label="Filter inventory" aria-haspopup="dialog" aria-expanded="false" aria-controls="inventory-sort-dialog" data-tooltip="Filter inventory" data-tooltip-placement="below">${uiIcon('sortFilter')}</button>
             <button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-equip-best aria-label="Equip best items" data-tooltip="Equip best items" data-tooltip-placement="below">${uiIcon('equipBest')}</button>
+            ${actions.lock ? `<button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-lock-mode aria-pressed="false" aria-label="Lock items" data-tooltip="Lock items: click a piece to protect it from selling or dropping. L on a focused item also toggles its lock.">${ITEM_LOCK_ICON}</button>` : ''}
             ${actions.drop ? `<span class="character-ground-drop" data-ground-drop role="img" tabindex="0" aria-label="Drag an item here to drop it on the ground" data-tooltip="Drag an item here to drop it on the ground." data-tooltip-placement="below">${uiIcon('dropItem')}</span>` : ''}
           </div><div class="character-inventory-counts"><span class="character-gold" data-gold></span></div></div>
           <div class="character-pack-toolbar"><button type="button" class="ui-button character-auto-sort" data-sort="compact">${uiIcon('sortFilter')} Auto-sort</button><div class="character-sort-options" role="group" aria-label="Sort inventory">${(['type', 'rarity', 'recent'] as const).map(mode => `<button type="button" class="ui-button ui-button--quiet" data-sort="${mode}">${mode === 'type' ? 'Type' : mode === 'rarity' ? 'Rarity' : 'Recent'}</button>`).join('')}</div></div>
@@ -134,7 +141,7 @@ export class InventoryPanel {
               ${Array.from({ length: INVENTORY_CAPACITY }, (_, index) => `<button type="button" class="ui-slot ui-item-slot character-bag-slot" data-bag="${index}" data-location="bag-${index}" hidden></button>`).join('')}
               <div class="character-pack-placement" hidden aria-hidden="true"></div>
             </div>
-            <section class="character-charms" aria-label="Active charms"><header><span>${uiIcon('diamond')} Charms</span></header><div class="character-charm-grid character-tetris" role="group" aria-label="Active charms, ${PACK_COLUMNS} columns by ${CHARM_ROWS} rows">${Array.from({length: PACK_COLUMNS * CHARM_ROWS}, (_,i) => `<button type="button" class="character-grid-cell" data-cell="${PACK_CELLS+i}" data-location="cell-${PACK_CELLS+i}" style="grid-column:${i%PACK_COLUMNS+1};grid-row:${Math.floor(i/PACK_COLUMNS)+1}" aria-label="Charm row ${Math.floor(i/PACK_COLUMNS)+1}, column ${i%PACK_COLUMNS+1}"></button>`).join('')}</div></section>
+            <section class="character-charms" aria-label="Active charms"><header><span>${uiIcon('diamond')} Charms</span><button type="button" class="ui-button ui-button--quiet" data-compare-charms>Compare</button></header><div class="character-charm-grid character-tetris" role="group" aria-label="Active charms, ${PACK_COLUMNS} columns by ${CHARM_ROWS} rows">${Array.from({length: PACK_COLUMNS * CHARM_ROWS}, (_,i) => `<button type="button" class="character-grid-cell" data-cell="${PACK_CELLS+i}" data-location="cell-${PACK_CELLS+i}" style="grid-column:${i%PACK_COLUMNS+1};grid-row:${Math.floor(i/PACK_COLUMNS)+1}" aria-label="Charm row ${Math.floor(i/PACK_COLUMNS)+1}, column ${i%PACK_COLUMNS+1}"></button>`).join('')}</div></section>
             <section class="character-overflow" hidden><header>Pack overflow <small>Make space to carry these items</small></header><div class="character-overflow-items"></div></section>
           </div>
           <p class="character-filter-status" data-filter-status role="status" hidden></p>
@@ -158,6 +165,10 @@ export class InventoryPanel {
           <header><h3 id="inventory-weapon-title">Change weapon type?</h3></header>
           <p data-weapon-comparison></p><p id="inventory-weapon-warning">Some skills require a specific weapon type. Changing weapons may disable them.</p>
           <div class="character-weapon-choices"><button type="button" class="ui-button ui-button--primary" data-best-choice="replace">Equip anyway</button><button type="button" class="ui-button" data-best-choice="keep">Keep current weapon only</button><button type="button" class="ui-button ui-button--quiet" data-popup-close>Cancel</button></div>
+        </section>
+        <section class="character-mini-dialog character-charm-dialog ui-well" data-mini="charms" role="dialog" aria-modal="true" aria-labelledby="charm-comparison-title" hidden>
+          <header><h3 id="charm-comparison-title">Compare charms</h3><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-popup-close aria-label="Close comparison">${uiIcon('close')}</button></header>
+          <div data-charm-comparison></div>
         </section>
       </div>
     </section>`;
@@ -288,6 +299,7 @@ export class InventoryPanel {
   }
 
   close(): void {
+    this.locking=false;this.element.classList.remove('is-locking-items');this.element.querySelector('[data-lock-mode]')?.setAttribute('aria-pressed','false');
     this.dismissPopup(false);
     this.focus?.dispose();
     this.focus = null;
@@ -302,14 +314,29 @@ export class InventoryPanel {
 
   dispose(): void { this.close(); this.tooltip.dispose(); this.statTooltip.dispose(); this.lifetime.abort(); this.element.remove(); this.player = null; }
 
+  private renderCharmComparison(): void {
+    if(!this.player)return;
+    const {character:sheet,level}=this.player,candidates=charmComparisonCandidates(sheet,level),active=activeCharms(sheet,level);
+    if(!candidates.some(i=>i.id===this.comparisonId))this.comparisonId=candidates[0]?.id??'';
+    const root=this.element.querySelector<HTMLElement>('[data-charm-comparison]')!;
+    if(!candidates.length){root.innerHTML='<p class="ui-muted">Store a spare charm at a storage chest to compare it with your active stones.</p>';return;}
+    const candidate=candidates.find(i=>i.id===this.comparisonId)!;
+    const preview=previewCharmReplacement(sheet,level,this.comparisonId,[...this.comparisonRemoved]);
+    root.innerHTML=`<label class="charm-candidate-label">Incoming stone<select class="ui-button" data-charm-candidate>${candidates.map(i=>`<option value="${escapeUI(i.id)}" ${i.id===this.comparisonId?'selected':''}>${escapeUI(itemDisplayName(i))} · Lv ${i.itemLevel}</option>`).join('')}</select></label>
+      <div class="charm-candidate-summary">${itemIconSVG(candidate,64)}<div>${itemTooltipMarkup(candidate,{sheet,level,sourceIndex:sheet.inventory.findIndex(i=>i?.id===candidate.id)})}</div></div>
+      <p class="ui-muted">Select active stones to replace. Exchange stored stones at a storage chest.</p>
+      <div class="charm-compare-stones">${active.map(i=>`<button type="button" class="ui-button" data-compare-remove="${escapeUI(i.id)}" aria-pressed="${this.comparisonRemoved.has(i.id)}" aria-label="Replace ${escapeUI(itemDisplayName(i))}">${itemIconSVG(i,32)}<span>${escapeUI(itemDisplayName(i))}</span></button>`).join('')}</div>
+      <div class="charm-net-changes" aria-live="polite">${preview.ok?`<h4>Net change</h4>${preview.changes.length?`<table>${preview.changes.map(c=>{const delta=(c.after-c.before)*(PREVIEW_PERCENT.has(c.key)?100:1);return `<tr><th>${escapeUI(CHANGE_LABELS[c.key])}</th><td class="${delta>0?'is-gain':'is-loss'}">${delta>0?'+':''}${number(delta,2)}${PREVIEW_PERCENT.has(c.key)?'%':''}</td></tr>`;}).join('')}</table>`:'<p>No stat change.</p>'}`:`<p class="is-loss">${escapeUI(preview.message)}</p>`}</div>`;
+  }
+
   private popupPanel(): HTMLElement { return this.popupLayer.querySelector<HTMLElement>(`[data-mini="${this.popup}"]`)!; }
 
-  private openPopup(kind: 'sort' | 'weapon', anchor: HTMLElement): void {
+  private openPopup(kind: 'sort' | 'weapon' | 'charms', anchor: HTMLElement): void {
     this.closeTouchItem(); this.hideTooltip(); this.clearDrag(); this.controller.clear();
     this.focus?.dispose(); this.focus = null;
     this.popup = kind; this.popupReturn = anchor;
     this.popupLayer.hidden = false;
-    this.popupLayer.classList.toggle('is-confirmation', kind === 'weapon');
+    this.popupLayer.classList.toggle('is-confirmation', kind !== 'sort');
     for (const child of this.window.children) if (child instanceof HTMLElement && child !== this.popupLayer) child.inert = true;
     for (const panel of this.popupLayer.querySelectorAll<HTMLElement>('[data-mini]')) panel.hidden = panel.dataset.mini !== kind;
     this.element.querySelector('[data-sort-filter]')!.setAttribute('aria-expanded', String(kind === 'sort'));
@@ -320,7 +347,7 @@ export class InventoryPanel {
     panel.style.left = `${Math.max(12, Math.min(left, bounds.width - width - 12))}px`;
     panel.style.top = `${Math.max(12, Math.min(top, bounds.height - height - 12))}px`;
     this.popupFocus = trapDialogFocus(panel, { signal: this.lifetime.signal, restoreFocus: false,
-      initialFocus: () => panel.querySelector(kind === 'weapon' ? '[data-best-choice="keep"]' : '[data-filter]') });
+      initialFocus: () => panel.querySelector(kind === 'weapon' ? '[data-best-choice="keep"]' : kind === 'charms' ? '[data-charm-candidate]' : '[data-filter]') });
   }
 
   dismissPopup(restoreFocus = true): boolean {
@@ -421,6 +448,8 @@ export class InventoryPanel {
   }
 
   private activate(location: ItemLocation): void {
+    const item=this.itemAt(location);
+    if(this.locking&&item&&this.actions.lock){this.actions.lock(item.id,!item.locked);return;}
     if (this.itemAt(location)?.kind === 'charm') return;
     if (location.type === 'bag') this.actions.equip(location.index);
     else this.actions.unequip(location.slot);
@@ -429,11 +458,18 @@ export class InventoryPanel {
   private bind(): void {
     const options = { signal: this.lifetime.signal };
     document.addEventListener('evergrow-input-mode',()=>{this.closeTouchItem();this.hideTooltip();},options);
+    this.element.addEventListener('change',event=>{const select=event.target as HTMLSelectElement;if(select.matches('[data-charm-candidate]')){this.comparisonId=select.value;this.renderCharmComparison();this.popupPanel().querySelector<HTMLElement>('[data-charm-candidate]')?.focus();}},options);
     this.element.addEventListener('click', event => {
       const target = event.target as Element;
       // The window also carries data-touch-tab as layout state; only buttons are actions.
       const tab = target.closest<HTMLButtonElement>('button[data-touch-tab]')?.dataset.touchTab;
       if(tab) { this.section = tab==='equipment'?0:tab==='stats'?2:1; this.updateSectionHighlight(); this.window.dataset.touchTab = tab; for(const b of this.window.querySelectorAll('[data-touch-tab]')) b.setAttribute('aria-pressed',String((b as HTMLElement).dataset.touchTab===tab)); return; }
+      if(target.closest('[data-compare-charms]')) { this.comparisonRemoved.clear(); this.renderCharmComparison(); this.openPopup('charms',target.closest<HTMLElement>('[data-compare-charms]')!); return; }
+      const remove=target.closest<HTMLElement>('[data-compare-remove]')?.dataset.compareRemove;
+      if(remove){if(this.comparisonRemoved.has(remove))this.comparisonRemoved.delete(remove);else this.comparisonRemoved.add(remove);this.renderCharmComparison();this.popupPanel().querySelectorAll<HTMLElement>('[data-compare-remove]').forEach(b=>{if(b.dataset.compareRemove===remove)b.focus();});return;}
+      if(target.closest('[data-lock-mode]')) { this.locking=!this.locking; target.closest('[data-lock-mode]')!.setAttribute('aria-pressed',String(this.locking)); this.element.classList.toggle('is-locking-items',this.locking); this.hideTooltip(); return; }
+      const lockLocation=this.locationFrom(target),lockItem=lockLocation&&this.itemAt(lockLocation);
+      if(this.locking&&lockItem&&this.actions.lock){this.actions.lock(lockItem.id,!lockItem.locked);return;}
       const itemAction = target.closest<HTMLElement>('[data-touch-item]');
       if(itemAction) { this.touchItemAction(itemAction.dataset.touchItem!); return; }
       if (target.closest('[data-close]')) { this.actions.close(); return; }
@@ -479,7 +515,7 @@ export class InventoryPanel {
       else this.hideTooltip();
     }, options);
     this.element.addEventListener('dblclick', event => {
-      if(document.documentElement.classList.contains('touch-mode')) return;
+      if(this.locking||document.documentElement.classList.contains('touch-mode')) return;
       const location = this.locationFrom(event.target);
       if (!event.shiftKey && location?.type === 'bag' && this.itemAt(location)) { this.hideTooltip(); this.activate(location); }
     }, options);
@@ -517,6 +553,7 @@ export class InventoryPanel {
       if (event.isTrusted) this.element.classList.remove('is-controller');
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       const location = this.locationFrom(event.target);
+      if(location&&event.key.toLowerCase()==='l'&&this.actions.lock){const item=this.itemAt(location);if(item&&!event.repeat)this.actions.lock(item.id,!item.locked);event.preventDefault();return;}
       if (location && (event.key === 'Enter' || event.key === ' ')) {
         event.preventDefault(); if (!event.repeat && this.itemAt(location)) { this.hideTooltip(); this.activate(location); } return;
       }
@@ -548,7 +585,7 @@ export class InventoryPanel {
     this.element.addEventListener('dragover', event => {
       this.clearDropHighlight();
       if ((event.target as Element).closest('[data-ground-drop]')) {
-        const valid = !!this.actions.drop && !!this.drag && this.itemAt(this.drag)?.id === this.drag.id;
+        const valid = !!this.actions.drop && !!this.drag && this.itemAt(this.drag)?.id === this.drag.id && !this.itemAt(this.drag)?.locked;
         if (event.dataTransfer) event.dataTransfer.dropEffect = valid ? 'move' : 'none';
         if (valid) { event.preventDefault(); this.element.querySelector('[data-ground-drop]')?.classList.add('is-drop-target'); }
         return;

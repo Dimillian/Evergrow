@@ -37,3 +37,9 @@
 .character-pack-placement { position: absolute; box-sizing: border-box; z-index: 4; pointer-events: none; border: 2px solid #98e8b2; background: #6adb9629; box-shadow: 0 0 12px #7ee69e35; }
 .character-pack-placement.is-invalid { border-color: #e18b88; background: #d669692e; box-shadow: none; }
 .character-pack-placement[hidden] { display: none; }
+
+.ui-item-slot .ui-item-lock { position:absolute; top:4px; left:4px; width:16px; height:18px; color:var(--ui-gold,#d9c58b); z-index:3; pointer-events:none; background:#0b151ae8; }
+.ui-item-slot .ui-item-lock svg { width:100%; height:100%; }
+.is-locking-items .ui-item-slot[data-filled="true"] { cursor:crosshair; }
+[data-lock-mode][aria-pressed="true"] { color:var(--ui-gold,#d9c58b); border-color:currentColor; }
+.service-include-charms { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ui-silver-dim); }
