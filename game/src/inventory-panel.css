@@ -219,11 +219,15 @@
 @media(prefers-reduced-motion:reduce) { .ui-stat[data-stat-detail] { transition:none; } }
 
 .character-ground-drop {
+  position: relative; cursor: help;
   display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
   width: 34px; height: 34px; flex: 0 0 auto; border: 1px solid transparent;
   color: var(--ui-silver-dim); transition: color .15s, border-color .15s, background .15s, box-shadow .15s;
 }
 .character-ground-drop svg { width: 21px; height: 21px; }
+.character-ground-drop:hover, .character-ground-drop:focus-visible {
+  color: #ffedb7; border-color: #87734b; background: #29291e; box-shadow: 0 0 12px #e0c17a20;
+}
 .is-item-dragging .character-ground-drop { color: #e0c17a; border-color: #87734b; background: #29291e; }
 .is-item-dragging .character-ground-drop.is-drop-target { color: #ffedb7; border-color: #e0c17a; background: #49412c; box-shadow: 0 0 16px #e0c17a40; }
 @media (prefers-reduced-motion: reduce) { .character-ground-drop { transition: none; } }
