@@ -1,4 +1,5 @@
 import { drawFortification } from './settlement-wall-art.ts';
+import { drawSupplyCart } from './cart-art.ts';
 import { architectureStyle } from './settlement-style.ts';
 import { vendorIdentity } from './vendor-identity.ts';
 import { drawVendorGlyph } from './vendor-identity-art.ts';
@@ -8,6 +9,7 @@ const poly=(c:CanvasRenderingContext2D,p:number[][],color:string)=>{c.beginPath(
 /** Uncached small fixtures share the exact collision footprint; floors never become houses. */
 export function drawSettlementFixture(c:CanvasRenderingContext2D,b:Building,time:number):void {
   if(b.wallSegment){drawFortification(c,b);return;}
+  if(b.kind==='cart'){drawSupplyCart(c,b);return;}
   c.save();c.translate(b.x,b.y);const w=b.width,h=b.height;
   c.fillStyle='#040b1090';c.beginPath();c.ellipse(w/2+6,h+2,w*.8,8,0,0,Math.PI*2);c.fill();
   if(b.kind==='hearth'){
@@ -47,12 +49,6 @@ export function drawSettlementFixture(c:CanvasRenderingContext2D,b:Building,time
       c.strokeStyle='#c0af7a';c.lineWidth=1;c.beginPath();c.moveTo(xx+4,yy-14);c.lineTo(xx+11,yy-14);c.stroke();
     }
     c.fillStyle='#684c32';c.fillRect(1,10,w,10);c.strokeStyle='#baa075';c.strokeRect(1,10,w,10);
-  }else if(b.kind==='cart'){
-    c.fillStyle='#392f29';c.fillRect(2,-8,w-4,h-8);
-    for(let x=4;x<w-4;x+=6){c.fillStyle=x%3?'#887049':'#705b3d';c.fillRect(x,-8,5,h-8);}
-    for(const x of[-2,w-3]){c.fillStyle='#9c8050';c.fillRect(x,-17,4,h+26);c.fillStyle='#343d3b';c.beginPath();c.ellipse(x+2,h*.18,4,13,0,0,Math.PI*2);c.fill();c.strokeStyle='#a29971';c.stroke();}
-    c.fillStyle='#a68b5a';c.fillRect(0,-15,w,4);c.fillRect(0,h-16,w,4);
-    for(let i=0;i<3;i++)poly(c,[[6+i*7,10],[8+i*7,-4],[15+i*7,-6],[18+i*7,12]],'#92907a');
   }else if(b.kind==='bench'){
     for(const x of[3,w-5]){c.fillStyle='#51412f';c.fillRect(x,-4,3,15);}
     poly(c,[[0,-8],[w,-9],[w+2,-2],[-1,-1]],'#9d8052');c.strokeStyle='#c1a26a';c.beginPath();c.moveTo(2,-7);c.lineTo(w-2,-8);c.stroke();

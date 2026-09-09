@@ -22,7 +22,9 @@ Houses vary proportions, gabled/hipped/thatched/terrace roofs and nine biome pal
 
 Vendor identities share colors and symbols between world signs, clothing and panels: amber hammer, teal gem, violet arcane star and red/gold dice. Outdoor blacksmith stalls have no chimney. Outdoor vendors stand 22 units in front of their stall footprint. Side-post banners avoid counters and faces. The jeweler displays gems and necklaces, the enchanter an open grimoire and glowing orb, and the gambler cards, dice and wrapped prizes. Tents have tensioned canvas planes, seams, patches, ropes and pegs. Carts put their wheels toward the rear with handles forward.
 
-Visual references: [Rogue Encampment ground/prop staging](https://www.invenglobal.com/articles/13794/review-diablo-2-resurrection-big-stash-clear-graphics-differences-from-the-original), [Weald & Downland timber courtyards](https://danieljamesgreenwood.com/2025/08/25/late-summer-timbers-at-the-weald-downland-museum/). These inform ground wear and grouped work areas; no external art is imported.
+Supply carts use a shallow plank-sided box in an oblique projection, with a rear axle, open spoked wheels, iron rims, separate forward shafts, a tied sack and braced crate. One shadow sits beneath the load rather than at the handles. `cart-art.ts` shares this drawing across all settlements without changing generation, collision footprints or saves.
+
+Visual references: [Rogue Encampment ground/prop staging](https://www.invenglobal.com/articles/13794/review-diablo-2-resurrection-big-stash-clear-graphics-differences-from-the-original), [Weald & Downland timber courtyards](https://danieljamesgreenwood.com/2025/08/25/late-summer-timbers-at-the-weald-downland-museum/), [two-wheel wooden handcart proportions](https://www.turbosquid.com/3d-models/3d-medieval-handcart/1109809). These inform ground wear, grouped work areas and cart construction; no external art is imported.
 
 ## People
 
