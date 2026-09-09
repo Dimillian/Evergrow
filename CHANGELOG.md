@@ -1,5 +1,26 @@
 # Evergrow changelog
 
+## v0.3.1 — 2026-09-09T14:52:00Z
+
+### New
+
+- Lock items to protect them from selling or dropping.
+- Compare a stored charm against several active stones before exchanging them at storage.
+
+### Tweaks
+
+- Small charms have up to two focused affixes; larger stones offer stronger bonuses for their space.
+- Every charm has a thematic first affix, preserved when enchanting.
+- Vendor rarity shortcuts exclude active charms unless you choose to include them.
+- Auto-sort tries more arrangements; pickup messages distinguish a full bag from missing space for an item's shape.
+
+### Fixes
+
+- Enhancements skip steps lost to rounding and charge once for the next real increase.
+- Rarity upgrades skip ineffective tiers; releveling with no stat gain cannot charge gold.
+
+> Existing charms rebalance in place, including stored stones: some affixes and values change. Characters retain their progress and items; no reset is required.
+
 ## v0.3.0 — 2026-09-09T14:03:00Z
 
 ### New
