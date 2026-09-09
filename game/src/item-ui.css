@@ -48,7 +48,6 @@
 .ui-item-stat-table td.is-gain { color: #a1d4b0; }
 .ui-item-stat-table td.is-loss { color: #da9294; }
 .ui-item-stat-table td.ui-item-stat-empty { color: var(--ui-silver-dim); }
-.ui-item-stat-table .ui-item-affix-note { margin: 4px 0 2px; }
 .ui-item-weapon { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid #96b8c319; border-bottom: 1px solid #96b8c319; }
 .ui-item-weapon > div { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: baseline; }
 .ui-item-weapon strong { color: var(--ui-ivory); font-size: 21px; font-weight: 400; }
@@ -97,5 +96,3 @@
 @supports not (color: color-mix(in srgb, red, blue)) {
   .ui-item-slot[data-filled='true'] { background: linear-gradient(145deg, #233440, #0b141d 75%); border-color: var(--item-color, #607b86); }
 }
-
-.ui-item-affix-note { margin: -2px 0 10px; color: #9aaeb7; font-size: .82em; line-height: 1.35; max-width: 38em; }

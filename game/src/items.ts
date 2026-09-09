@@ -1,3 +1,4 @@
+import { CHARM_PROFILES, CHARM_SIZES, CHARM_FLAVORS, CHARM_UTILITY_AFFIXES, CHARM_WEIGHTS, charmProfile, charmAffixCount } from './charm-content.ts';
 import { RESISTANCE_AFFIXES, RESISTANCE_LABELS, RESISTANCE_STATS, isResistanceStat, boundResistanceRoll } from './resistance-content.ts';
 import { JEWELRY_PROFILES, jewelryProfiles } from './jewelry-content.ts';
 import { ITEM_MATERIALS, isClothMaterial, sourceMaterialPool, type MaterialSource, itemMaterialPool, rollItemMaterial, itemMaterialScale, materialBaseName, type ItemMaterialId } from './item-materials.ts';
@@ -10,12 +11,12 @@ import { SHIELD_PROFILES, WEAPON_PROFILES } from './weapon-content.ts';
 import { itemAffixGrowthLevel, itemPercentageScale, itemPowerScale, normalizeLevel } from './progression-content.ts';
 import type { CharacterSheet, EquipmentSlot, Item, ItemAffix, ItemKind, ItemTier, StatKey, StatModifiers } from './character-types.ts';
 
-export const INVENTORY_CAPACITY = 72;
+export const INVENTORY_CAPACITY = 120;
 
 export const EQUIPMENT_SLOTS: readonly EquipmentSlot[] = Object.freeze([
   'weapon', 'offhand', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'amulet', 'ring1', 'ring2',
 ]);
-export const ITEM_KINDS: readonly ItemKind[] = Object.freeze(['weapon', 'shield', 'grimoire', 'orb', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'amulet', 'ring']);
+export const ITEM_KINDS: readonly ItemKind[] = Object.freeze(['weapon', 'shield', 'grimoire', 'orb', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'amulet', 'ring', 'charm']);
 export const TIER_COLORS: Readonly<Record<ItemTier, string>> = Object.freeze({
   common: '#c5ccc8', magic: '#76b9ee', rare: '#e0c17a', epic: '#b895ef', legendary: '#f0a16b',
 });
@@ -23,7 +24,7 @@ export const TIER_NAMES: Readonly<Record<ItemTier, string>> = Object.freeze({
   common: 'Common', magic: 'Magic', rare: 'Rare', epic: 'Epic', legendary: 'Legendary',
 });
 export const STAT_LABELS: Readonly<Record<StatKey, string>> = Object.freeze({
-  ...SPECIAL_AFFIX_LABELS, ...SKILL_STATS, ...RESISTANCE_LABELS,
+  ...SPECIAL_AFFIX_LABELS, ...SKILL_STATS, ...RESISTANCE_LABELS, goldFindPercent: 'Gold found', xpGainPercent: 'Experience gained',
   fireDamage: 'Added fire damage', frostDamage: 'Added frost damage', lightningDamage: 'Added lightning damage',
   strength: 'Strength', dexterity: 'Dexterity', intelligence: 'Intelligence', vitality: 'Vitality',
   maxHp: 'Maximum life', maxMana: 'Maximum mana', armor: 'Armor', damagePercent: 'Attack damage',
@@ -32,7 +33,7 @@ export const STAT_LABELS: Readonly<Record<StatKey, string>> = Object.freeze({
   lifeRegen: 'Life / sec', manaCostPercent: 'Mana cost reduction', cooldownPercent: 'Cooldown reduction', lifeOnHit: 'Life on hit',
   blockChance: 'Block chance', blockReduction: 'Blocked damage reduction',
 });
-export const PERCENT_STATS = new Set<StatKey>([...RESISTANCE_STATS, 'areaPercent', 'potionPercent', 'spellweavePercent', 'afterguardPercent', 'damagePercent', 'attackSpeedPercent', 'castSpeedPercent', 'critChance', 'critDamage', 'moveSpeedPercent', 'spellDamagePercent', 'cooldownPercent', 'manaCostPercent', 'blockChance', 'blockReduction']);
+export const PERCENT_STATS = new Set<StatKey>(['goldFindPercent', 'xpGainPercent', ...RESISTANCE_STATS, 'areaPercent', 'potionPercent', 'spellweavePercent', 'afterguardPercent', 'damagePercent', 'attackSpeedPercent', 'castSpeedPercent', 'critChance', 'critDamage', 'moveSpeedPercent', 'spellDamagePercent', 'cooldownPercent', 'manaCostPercent', 'blockChance', 'blockReduction']);
 export function formatStatValue(stat: StatKey, value: number): string {
   return `${value > 0 ? '+' : ''}${Number(value.toFixed(1))}${PERCENT_STATS.has(stat) ? '%' : ''}`;
 }
@@ -58,7 +59,7 @@ const BASE_NAMES: Readonly<Record<Exclude<ItemKind, 'weapon' | 'shield' | 'grimo
   chest: ['Brigandine', 'Warden Plate', 'Scale Vest'], gloves: ['Gauntlets', 'Grips', 'Vambraces'],
   legs: ['Greaves', 'Cuisses', 'Chausses'], boots: ['Sabatons', 'Treads', 'Longboots'],
   cloak: ['Mantle', 'Shroud', 'Halfcape'], amulet: ['Reliquary', 'Talisman', 'Moon Pendant'],
-  ring: ['Signet', 'Band', 'Loop'],
+  ring: ['Signet', 'Band', 'Loop'], charm: ['Stone', 'Stone', 'Stone'],
 };
 const PREFIXES = ['Ashen', 'Starbound', 'Thornwrought', 'Gloaming', 'Hollow', 'Dawnforged', 'Mournful', 'Graveglass', 'Moonlit', 'Briar'];
 const SUFFIXES = ['of the Watch', 'of Embers', 'of the Hollow', 'of Still Water', 'of the Pilgrim', 'of Thorns', 'of the Pale Star', 'of Dusk'];
@@ -103,6 +104,11 @@ const SLOT_AFFIXES: Partial<Record<ItemKind, readonly StatKey[]>> = {
   orb: ['spellDamagePercent', 'critChance', 'critDamage', 'intelligence', 'maxMana', 'manaCostPercent'],
 };
 export function itemAffixPool(item: { kind: ItemKind; weapon?: { family: string; damageType?: string }; focus?: { visual: { motif: string } }; recipe?: {materialId?: ItemMaterialId; profileId?:string} }): typeof AFFIXES {
+  if (item.kind === 'charm') {
+    const flavor = CHARM_PROFILES.find(p=>p.id===item.recipe?.profileId)?.flavor;
+    return [...AFFIXES, ...CHARM_UTILITY_AFFIXES].filter(a=>CHARM_WEIGHTS[a.stat]).map(a=>({...a,
+      weight: CHARM_WEIGHTS[a.stat]! * (flavor?.stats.includes(a.stat) ? 2 : 1) }));
+  }
   const melee = item.kind === 'weapon' && ['sword', 'axe', 'mace', 'dagger'].includes(item.weapon?.family ?? '');
   const armor=['head','chest','gloves','legs','boots'].includes(item.kind), construction=item.recipe?.materialId;
   const leather=armor&&construction==='leather', cloth=armor&&isClothMaterial(construction);
@@ -157,6 +163,11 @@ export const TIER_POWER: Readonly<Record<ItemTier, number>> = { common: 1, magic
 /** Item-local generation; reward sources may supply an explicitly rolled tier. Callers own seed uniqueness. */
 export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, profileId?: string, tierOverride?: ItemTier, materialOverride?: ItemMaterialId, source:MaterialSource={}): Item {
   if (tierOverride !== undefined && !Object.hasOwn(TIER_POWER, tierOverride)) throw new RangeError(`Unknown item tier: ${tierOverride}`);
+  if (kind === 'charm' || profileId && CHARM_PROFILES.some(p=>p.id===profileId)) {
+    if (kind && kind !== 'charm' || materialOverride !== undefined) throw new RangeError('Charms use stone profiles, not equipment materials.');
+    return generateCharm(seed, itemLevel, profileId, tierOverride);
+  }
+  if (!kind && !profileId && randomSource(seed ^ 0x4c19ac)() < .04) return generateCharm(seed, itemLevel, undefined, tierOverride);
   seed = seed >>> 0;
   const level = normalizeLevel(itemLevel);
   const random = randomSource(seed), choose = <T>(values: readonly T[]): T => values[Math.floor(random() * values.length)];
@@ -165,7 +176,7 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
   const selectedShield = profileId ? SHIELD_PROFILES.find(profile => profile.id === profileId) : undefined;
   const selectedFocus = profileId ? FOCUS_PROFILES.find(profile => profile.id === profileId) : undefined;
   if (profileId && !selectedWeapon && !selectedShield && !selectedFocus && !selectedJewelry) throw new RangeError(`Unknown equipment profile: ${profileId}`);
-  const itemKind = kind ?? (selectedWeapon ? 'weapon' : selectedShield ? 'shield' : selectedFocus ? selectedFocus.visual.kind : selectedJewelry ? selectedJewelry.kind : choose(ITEM_KINDS));
+  const itemKind = kind ?? (selectedWeapon ? 'weapon' : selectedShield ? 'shield' : selectedFocus ? selectedFocus.visual.kind : selectedJewelry ? selectedJewelry.kind : choose(ITEM_KINDS.filter(k=>k!=='charm')));
   if (profileId && (itemKind === 'weapon' ? !selectedWeapon : itemKind === 'shield' ? !selectedShield : itemKind==='ring'||itemKind==='amulet' ? selectedJewelry?.kind!==itemKind : selectedFocus?.visual.kind !== itemKind)) {
     throw new RangeError(`Profile ${profileId} does not describe an item of kind ${itemKind}.`);
   }
@@ -288,6 +299,7 @@ export function createCharacterSheet(starter: StarterLoadoutId = 'sword'): Chara
 
 /** Rebuild from authored bases and exact roll quality; never scale rounded existing stats. */
 export function deriveItem(item: Item): Item {
+  if (item.kind === 'charm') return deriveCharm(item);
   const next: Item = { ...item, implicit: {}, affixes: [], recipe: { ...item.recipe, rolls: [...item.recipe.rolls] } };
   const r = item.recipe, quality = TIER_POWER[item.tier], enhance = 1 + .05 * r.enhancement;
   const baseScale = itemMaterialScale(item);
@@ -330,3 +342,36 @@ function applyWeaponEnchantment(item: Item): Item {
   return item;
 }
 export const itemDisplayName = (item: Item): string => `${item.name}${item.recipe.enhancement ? ` +${item.recipe.enhancement}` : ''}`;
+
+/** Charms share item recipes, rarity and affix definitions; size owns their budget. */
+function generateCharm(seed: number, itemLevel: number, profileId?: string, tierOverride?: ItemTier): Item {
+  seed >>>= 0; const random = randomSource(seed), level=normalizeLevel(itemLevel);
+  let sizeRoll=random()*100;
+  const size=CHARM_SIZES.find(s=>(sizeRoll-=s.weight)<0) ?? CHARM_SIZES[0];
+  const flavor=CHARM_FLAVORS[Math.floor(random()*CHARM_FLAVORS.length)];
+  const selected=profileId ? CHARM_PROFILES.find(p=>p.id===profileId) : CHARM_PROFILES.find(p=>p.size.id===size.id && p.flavor===flavor);
+  if(!selected) throw new RangeError(`Unknown charm profile: ${profileId}`);
+  const roll=random(), tier=tierOverride??(roll<.45?'common':roll<.77?'magic':roll<.94?'rare':roll<.99?'epic':'legendary');
+  const item:Item={id:`charm-${seed.toString(36)}-${level}-${selected.id}-${tier}`,seed,kind:'charm',tier,name:selected.name,baseName:selected.name,
+    itemLevel:level,requiredLevel:Math.max(1,level-2),power:0,implicit:{},affixes:[],
+    recipe:{profileId:selected.id,starter:false,enhancement:0,revision:0,targetedRolls:0,fullRolls:0,rolls:[]},
+    appearance:{base:selected.flavor.base,edge:selected.flavor.edge,shadow:'#19252b',trim:selected.flavor.glow,style:'plate'}};
+  const pool=itemAffixPool(item);
+  for(let i=0;i<charmAffixCount(item);i++){
+    const definition=rollAffix(pool.filter(a=>!affixConflicts(a.stat,item.affixes.map(a=>a.stat))),random);
+    item.affixes.push({name:definition.name,stat:definition.stat,value:0});item.recipe.rolls.push(random());
+  }
+  return deriveCharm(item);
+}
+function deriveCharm(item:Item):Item {
+  const profile=charmProfile(item);if(!profile)throw new RangeError('Unknown charm profile');
+  const quality=TIER_POWER[item.tier]*(1+.05*item.recipe.enhancement)*profile.size.potency;
+  const definitions=itemAffixPool(item);
+  const affixes=item.affixes.map((a,i)=>{
+    const definition=definitions.find(d=>d.stat===a.stat);if(!definition)throw new RangeError('Invalid charm affix');
+    const growth=PERCENT_STATS.has(a.stat)?itemAffixGrowthLevel(item.itemLevel):item.itemLevel-1;
+    return {name:definition.name,stat:a.stat,value:boundResistanceRoll(a.stat,Math.round((definition.base+growth*definition.growth)*quality*(.85+item.recipe.rolls[i]*.3)*10)/10)};
+  });
+  return {...item,affixes,implicit:{},requiredLevel:Math.max(1,item.itemLevel-2),power:Math.round((item.itemLevel*10+affixes.length*7)*profile.size.potency*TIER_POWER[item.tier]*(1+.05*item.recipe.enhancement)),recipe:{...item.recipe,rolls:[...item.recipe.rolls]}};
+}
+export const itemAffixCount = (item:Pick<Item,'kind'|'tier'|'recipe'>) => item.kind==='charm'?charmAffixCount(item):TIER_AFFIXES[item.tier];

@@ -62,7 +62,7 @@ test('pickup history and sorted bag round trip; malformed histories are rejected
   assert.equal(sim.player.character.inventory[0]!.id, first.id);
   executeCharacterCommand(sim.player, { type: 'sortInventory', mode: 'recent' });
   assert.equal(sim.player.character.inventory[0]!.id, latest.id);
-  for (const history of [[latest.id, latest.id], [9], ['x'.repeat(161)], Array.from({ length: 84 }, (_, i) => `item-${i}`)]) {
+  for (const history of [[latest.id, latest.id], [9], ['x'.repeat(161)], Array.from({ length: 132 }, (_, i) => `item-${i}`)]) {
     const bad = structuredClone(record); bad.checkpoint.character.recentItems = history as string[];
     assert.equal(decodeCharacterSave(JSON.stringify(bad)), null);
   }

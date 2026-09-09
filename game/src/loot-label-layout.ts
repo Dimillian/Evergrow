@@ -5,9 +5,10 @@ export const LOOT_LABEL_STYLE = Object.freeze({ height: 19, gap: 4, maxWidth: 16
 
 /** Short ground-only names; the owned item and its full tooltip name stay intact. */
 export function groundLootName(item: Item): string {
+  if(item.kind==='charm')return item.baseName;
   const material = item.recipe.materialId && ITEM_MATERIALS[item.recipe.materialId].name;
   const cloth = item.appearance.style === 'cloth', leather = item.appearance.style === 'leather';
-  const kinds: Record<ItemKind, string> = { weapon: 'Weapon', shield: 'Shield', grimoire: 'Grimoire', orb: 'Orb',
+  const kinds: Record<ItemKind, string> = { charm: 'Charm', weapon: 'Weapon', shield: 'Shield', grimoire: 'Grimoire', orb: 'Orb',
     head: cloth || leather ? 'Hood' : 'Helm', chest: cloth ? 'Robe' : leather ? 'Jerkin' : 'Armor',
     boots: 'Boots', gloves: 'Gloves', legs: cloth || leather ? 'Trousers' : 'Greaves', cloak: 'Cloak', ring: 'Ring', amulet: 'Amulet' };
   const family = item.weapon?.family;

@@ -23,7 +23,7 @@ test('reward content is deeply immutable and every authored weight table is comp
   for (const weights of Object.values(ENEMY_ITEM_KIND_WEIGHTS)) {
     assert.ok(Object.isFrozen(weights));
     assert.deepEqual(Object.keys(weights).sort(), [...ITEM_KINDS].sort());
-    assert.equal(Object.values(weights).reduce((sum, weight) => sum + weight, 0), 100);
+    assert.equal(Object.values(weights).reduce((sum, weight) => sum + weight, 0), 102);
     assert.ok(Object.values(weights).every(weight => weight > 0));
   }
   assert.ok(Object.isFrozen(BIOME_PROFILE_WEIGHTS));

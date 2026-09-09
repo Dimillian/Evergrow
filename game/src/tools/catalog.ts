@@ -17,6 +17,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'data',group:'data',name:'Game data browser',path:'/tools/data.html',description:'Search current definitions for items, skills, enemies, affixes, biomes and world content.',tags:'catalog recipes stats export'},
   {id:'audits',group:'data',name:'Code & performance audits',path:'/tools/audits.html',description:'Commands and access instructions for code checks, profiling and capture scripts.'},
   {id:'equipment',group:'equipment',name:'Equipment gallery',path:'/equipment.html',description:'Browse all equipment silhouettes and materials under movable light.'},
+  {id:'charms',group:'equipment',name:'Charms',path:'/character.html?charms',description:'Arrange six sizes of magic stones and inspect their active bonuses.'},
   {id:'inventory',group:'equipment',name:'Inventory & comparisons',path:'/character.html',description:'Equip staged gear, compare stats and organize a character’s bag.'},
   {id:'services',group:'equipment',name:'Town services',path:'/services.html',description:'Inspect vendor stock, buyback and item improvements.'},
   {id:'services-phone',group:'equipment',name:'Services · phone',path:'/services-narrow.html',description:'The same enchanting interface at 390 pixels.'},

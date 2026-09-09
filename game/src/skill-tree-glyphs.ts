@@ -31,6 +31,7 @@ interface StatGlyph { readonly engraving: EngravingId; readonly unit: number; }
 // a raw pool bonus such as +24 life from outweighing every smaller-valued stat.
 const STAT_GLYPHS: Readonly<Record<StatKey, StatGlyph>> = Object.freeze({
   ...Object.fromEntries(Object.keys(SKILL_STATS).map(key => [key, { engraving: 'book', unit: 1 }])) as Record<SkillStat, StatGlyph>,
+  goldFindPercent: { engraving: 'current', unit: 5 }, xpGainPercent: { engraving: 'current', unit: 5 },
   manaOnKill: { engraving: 'current', unit: 2 }, areaPercent: { engraving: 'impact', unit: 10 },
   potionPercent: { engraving: 'mana', unit: 12 }, projectilePierce: { engraving: 'daggers', unit: 1 },
   spellweavePercent: { engraving: 'book', unit: 16 }, afterguardPercent: { engraving: 'shield', unit: 20 },

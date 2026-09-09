@@ -187,7 +187,7 @@ export class ServicePanel {
     const sheet = this.player.character, layout = resolvePackLayout(sheet);
     root.innerHTML = `<div class="character-bag character-tetris" role="group" aria-label="Inventory, ${PACK_COLUMNS} columns by ${PACK_ROWS} rows">
       ${Array.from({length:PACK_CELLS},(_,cell)=>`<span class="character-grid-cell" aria-hidden="true" style="grid-column:${cell%PACK_COLUMNS+1};grid-row:${Math.floor(cell/PACK_COLUMNS)+1}"></span>`).join('')}</div>
-      <section class="character-charms" aria-label="Charms, reserved for a future update"><header><span>${uiIcon('diamond')} Charms</span><small>Reserved</small></header><div class="character-charm-grid" aria-hidden="true">${Array.from({length:PACK_COLUMNS*CHARM_ROWS},()=>'<span>·</span>').join('')}</div></section>
+      <section class="character-charms" aria-label="Active charms"><header><span>${uiIcon('diamond')} Charms</span></header><div class="character-charm-grid character-tetris">${Array.from({length:PACK_COLUMNS*CHARM_ROWS},(_,i)=>`<span class="character-grid-cell" aria-hidden="true" style="grid-column:${i%PACK_COLUMNS+1};grid-row:${Math.floor(i/PACK_COLUMNS)+1}"></span>`).join('')}</div></section>
       <section class="character-overflow" hidden><header>Pack overflow <small>Make space to carry these items</small></header><div class="character-overflow-items"></div></section>`;
     const bag = root.querySelector<HTMLElement>('.character-bag')!, overflow = root.querySelector<HTMLElement>('.character-overflow-items')!;
     sheet.inventory.forEach((item,index)=>{
@@ -195,9 +195,9 @@ export class ServicePanel {
       const cell = this.cell(item, `bag:${index}`), position = layout[item.id], size = itemFootprint(item);
       cell.classList.add('character-bag-slot');
       cell.style.gridColumn = position === undefined ? `span ${size.width}` : `${position % PACK_COLUMNS + 1} / span ${size.width}`;
-      cell.style.gridRow = position === undefined ? `span ${size.height}` : `${Math.floor(position / PACK_COLUMNS) + 1} / span ${size.height}`;
+      cell.style.gridRow = position === undefined ? `span ${size.height}` : `${Math.floor((position >= PACK_CELLS ? position-PACK_CELLS : position) / PACK_COLUMNS) + 1} / span ${size.height}`;
       cell.querySelector('svg')?.remove(); cell.insertAdjacentHTML('afterbegin', itemPackIconSVG(item,size.width,size.height));
-      (position === undefined ? overflow : bag).append(cell);
+      (position === undefined ? overflow : position>=PACK_CELLS ? root.querySelector<HTMLElement>('.character-charm-grid')! : bag).append(cell);
     });
     root.querySelector<HTMLElement>('.character-overflow')!.hidden = !overflow.childElementCount;
   }
@@ -328,7 +328,7 @@ export class ServicePanel {
   }
   private syncRarities(): void {
     for(const button of this.element.querySelectorAll<HTMLButtonElement>('[data-sell-tier]')) {
-      const items=this.player.character.inventory.filter(item=>item?.tier===button.dataset.sellTier);
+      const items=this.player.character.inventory.filter(item=>item&&item.tier===button.dataset.sellTier);
       button.setAttribute('aria-pressed',String(items.length>0&&items.every(item=>this.sales.has(item!.id))));
     }
   }

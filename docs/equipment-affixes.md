@@ -105,7 +105,7 @@ The skill atlas shows purchased ranks and extra gear ranks separately; item and 
 
 ## Elemental resistance · 2026-09-09
 
-Players start at **0% Fire, Frost, Lightning and Arcane resistance**. Only rings, amulets and shields can roll resistance, in a normal explicit affix slot. A piece may have **one single-element roll or one all-element roll**, never both or several single elements. Existing gear is not rerolled.
+Players start at **0% Fire, Frost, Lightning and Arcane resistance**. Rings, amulets, shields and charms can roll resistance, in a normal explicit affix slot. A piece may have **one single-element roll or one all-element roll**, never both or several single elements. Existing gear is not rerolled.
 
 | Affix | Resistance | Base / bounded growth | Relative weight | Maximum per roll |
 | --- | --- | --- | ---: | ---: |
@@ -114,4 +114,4 @@ Players start at **0% Fire, Frost, Lightning and Arcane resistance**. Only rings
 
 Growth uses `25n / (25 + n)`, where `n = item level - 1`; roll quality, rarity and enhancement apply before the hard per-roll limit. These are percentage points and relative selection weights, not drop probabilities. Jewelry profile affinity still applies. Rerolls, rarity upgrades and releveling share these rules. Common items have no explicit affixes and therefore no resistance. No new resistance implicits, passive nodes or automatic level bonuses are introduced.
 
-For each element, add its specific bonuses and all-element bonuses, then clamp the total to **0–75%**. Four all-resistance pieces can supply at most 32% to all elements; reaching the cap requires focused single-element investment. Charms remain reserved for future work. Item comparisons and detailed-stat tooltips show the actual capped totals and named sources. See [incoming damage](progression-and-loot.md#item-growth-and-defenses) for combat rules.
+For each element, add its specific bonuses and all-element bonuses, then clamp the total to **0–75%**. Four all-resistance pieces can supply at most 32% to all elements; reaching the cap requires focused single-element investment. Charms supply additional investment through their separate size budgets; see [charms](charms.md). Item comparisons and detailed-stat tooltips show the actual capped totals and named sources. See [incoming damage](progression-and-loot.md#item-growth-and-defenses) for combat rules.

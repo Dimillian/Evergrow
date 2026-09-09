@@ -5,7 +5,7 @@
     "types": []
   },
   "include": [
-    "src/resistance-content.ts", "src/encounter-scaling.ts", "src/ground-loot.ts", "src/ground-item-pickup.ts", "src/activity-level.ts", "src/journey-director.ts",
+    "src/charm-content.ts", "src/resistance-content.ts", "src/encounter-scaling.ts", "src/ground-loot.ts", "src/ground-item-pickup.ts", "src/activity-level.ts", "src/journey-director.ts",
     "src/wilderness-boss-content.ts", "src/wilderness-boss.ts", "src/wilderness-boss-rewards.ts",
     "src/chronicle.ts", "src/chronicle-content.ts", "src/chronicle-tracking.ts",
     "src/jewelry-content.ts", "src/item-materials.ts", "src/gear-material-content.ts", "src/game-features.ts", "src/affix-combat.ts", "src/equipment-affix-content.ts",

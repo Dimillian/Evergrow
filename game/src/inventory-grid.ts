@@ -1,14 +1,17 @@
+import { charmProfile } from './charm-content.ts';
 import type { CharacterSheet, Item } from './character-types.ts';
 
 export const PACK_COLUMNS = 12;
 export const PACK_ROWS = 6;
 export const PACK_CELLS = PACK_COLUMNS * PACK_ROWS;
 export const CHARM_ROWS = 4;
+export const INVENTORY_CELLS = PACK_CELLS + PACK_COLUMNS * CHARM_ROWS;
 export interface ItemFootprint { width: number; height: number; }
 export type PackLayout = Record<string, number>;
 
 /** Physical size follows the equipment silhouette, never rarity or rolled stats. */
 export function itemFootprint(item: Item): ItemFootprint {
+  if (item.kind === 'charm') { const size=charmProfile(item)?.size; return size ? {width:size.width,height:size.height} : {width:1,height:1}; }
   switch (item.kind) {
     case 'ring': case 'amulet': return { width: 1, height: 1 };
     case 'weapon':
@@ -22,17 +25,19 @@ export function itemFootprint(item: Item): ItemFootprint {
 
 export function footprintCells(item: Item, cell: number): number[] | null {
   const { width, height } = itemFootprint(item);
-  if (!Number.isInteger(cell) || cell < 0 || cell >= PACK_CELLS
-    || cell % PACK_COLUMNS + width > PACK_COLUMNS || Math.floor(cell / PACK_COLUMNS) + height > PACK_ROWS) return null;
+  if (!Number.isInteger(cell) || cell < 0 || cell >= INVENTORY_CELLS
+    || cell % PACK_COLUMNS + width > PACK_COLUMNS || Math.floor(cell / PACK_COLUMNS) + height > (cell >= PACK_CELLS ? PACK_ROWS + CHARM_ROWS : PACK_ROWS)
+    || (cell >= PACK_CELLS) !== (item.kind === 'charm')) return null;
   return Array.from({ length: width * height }, (_, i) => cell + i % width + Math.floor(i / width) * PACK_COLUMNS);
 }
 export function packOccupancy(inventory: CharacterSheet['inventory'], layout: PackLayout): Set<number> {
   return new Set(inventory.flatMap(item => item && layout[item.id] !== undefined ? footprintCells(item, layout[item.id]) ?? [] : []));
 }
 export function findPackSpace(item: Item, occupied: ReadonlySet<number>, preferred?: number): number | null {
+  const charms = item.kind === 'charm';
   const fits = (cell: number) => footprintCells(item, cell)?.every(n => !occupied.has(n)) ?? false;
   if (preferred !== undefined && fits(preferred)) return preferred;
-  for (let cell = 0; cell < PACK_CELLS; cell++) if (fits(cell)) return cell;
+  for (let cell = charms ? PACK_CELLS : 0; cell < (charms ? INVENTORY_CELLS : PACK_CELLS); cell++) if (fits(cell)) return cell;
   return null;
 }
 
@@ -64,8 +69,14 @@ export function validPackLayout(inventory: CharacterSheet['inventory'], value: u
 }
 
 export function canPackItem(sheet: Pick<CharacterSheet, 'inventory' | 'inventoryLayout'>, item: Item): boolean {
-  if (!sheet.inventory.includes(null) && sheet.inventory.length >= PACK_CELLS) return false;
+  if (!sheet.inventory.includes(null) && sheet.inventory.length >= INVENTORY_CELLS) return false;
   const layout = resolvePackLayout(sheet);
-  return !sheet.inventory.some(owned => owned && layout[owned.id] === undefined)
+  return !sheet.inventory.some(owned => owned && (owned.kind === 'charm') === (item.kind === 'charm') && layout[owned.id] === undefined)
     && findPackSpace(item, packOccupancy(sheet.inventory, layout)) !== null;
+}
+
+/** Level-eligible stones in the dedicated charm grid grant bonuses; overflow and stash do not. */
+export function activeCharms(sheet: Pick<CharacterSheet,'inventory'|'inventoryLayout'>, level = Infinity): Item[] {
+  const layout=resolvePackLayout(sheet);
+  return sheet.inventory.filter((item):item is Item=>!!item && item.kind==='charm' && item.requiredLevel<=level && layout[item.id]>=PACK_CELLS);
 }

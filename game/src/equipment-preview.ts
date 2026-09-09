@@ -1,3 +1,4 @@
+import { INVENTORY_CELLS, PACK_CELLS, resolvePackLayout, findPackSpace, packOccupancy } from './inventory-grid.ts';
 import { SKILL_STATS, type SkillStat } from './equipment-affix-content.ts';
 import type { SkillId } from './character-types.ts';
 import type { CharacterSheet, Item } from './character-types.ts';
@@ -14,7 +15,7 @@ function values(sheet: CharacterSheet, level: number) {
   return { damage: main.damage, cadence: main.attacksPerSecond, offDamage: off?.damage ?? 0, offCadence: off?.attacksPerSecond ?? 0,
     fireResistance: stats.resistances.fire, frostResistance: stats.resistances.frost,
     lightningResistance: stats.resistances.lightning, arcaneResistance: stats.resistances.arcane,
-    armor: stats.armor, maxHp: stats.maxHp, maxMana: stats.maxMana, blockChance: stats.blockChance,
+    goldFindMultiplier: stats.goldFindMultiplier, xpGainMultiplier: stats.xpGainMultiplier, armor: stats.armor, maxHp: stats.maxHp, maxMana: stats.maxMana, blockChance: stats.blockChance,
     blockReduction: stats.blockReduction, critChance: stats.critChance, critMultiplier: stats.critMultiplier,
     manaRegeneration: stats.manaRegeneration, lifeRegeneration: stats.lifeRegeneration,
     moveSpeedMultiplier: stats.moveSpeedMultiplier, manaCostReduction: 1 - stats.manaCostMultiplier,
@@ -31,9 +32,24 @@ export type PreviewStat = keyof ReturnType<typeof values>;
 export interface EquipmentStatChange { key: PreviewStat; before: number; after: number; }
 /** Full build preview, including the removal of the other hand. No live state is changed. */
 export function previewEquipmentChange(sheet: CharacterSheet, item: Item, level: number, target: EquipmentTarget = {}) {
+  if(item.kind==='charm') {
+    const inventory=[...sheet.inventory], inventoryLayout=resolvePackLayout(sheet);
+    if(item.requiredLevel>level)return {ok:false as const,message:`Requires level ${item.requiredLevel}.`};
+    const source=target.sourceIndex;
+    if(source!==undefined && inventory[source]?.id!==item.id)return {ok:false as const,message:'That inventory item has changed.'};
+    if(source===undefined && inventory.some(i=>i?.id===item.id))return {ok:false as const,message:'This item is already owned.'};
+    const active=inventoryLayout[item.id]>=PACK_CELLS;
+    if(source!==undefined)inventory[source]=null;
+    const cell=active?inventoryLayout[item.id]:findPackSpace(item,packOccupancy(inventory,inventoryLayout));
+    if(cell===null)return {ok:false as const,message:'Make room in your charm grid.'};
+    const index=source??(inventory.includes(null)?inventory.indexOf(null):inventory.length);
+    if(index>=INVENTORY_CELLS)return {ok:false as const,message:'Your inventory is full.'};
+    inventory[index]=item;inventoryLayout[item.id]=cell;
+    return {ok:true as const,slot:null,inventory,inventoryLayout,equipped:sheet.equipped,displaced:[],changes:compareCharacterStats(sheet,{...sheet,inventory,inventoryLayout},level)};
+  }
   const plan = planEquipmentChange(sheet, item, level, target);
   if (!plan.ok) return plan;
-  return { ...plan, changes: compareCharacterStats(sheet, { ...sheet, inventory: plan.inventory, equipped: plan.equipped }, level) };
+  return { ...plan, changes: compareCharacterStats(sheet, { ...sheet, inventory: plan.inventory, equipped: plan.equipped, inventoryLayout:plan.inventoryLayout }, level) };
 }
 export function compareCharacterStats(beforeSheet: CharacterSheet, afterSheet: CharacterSheet, level: number): EquipmentStatChange[] {
   const before = values(beforeSheet, level), after = values(afterSheet, level);

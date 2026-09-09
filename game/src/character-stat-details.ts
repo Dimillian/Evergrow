@@ -1,3 +1,4 @@
+import { CHARM_REWARD_CAPS } from './charm-content.ts';
 import { ELEMENTS, RESISTANCE_LABELS, RESISTANCE_RULES } from './resistance-content.ts';
 import type { Player, WeaponDefinition } from './model.ts';
 import type { Attribute, StatKey, DerivedCharacterStats } from './character-types.ts';
@@ -18,7 +19,7 @@ export interface StatDetail {
 export interface StatDetailGroup { title: string; tone: string; rows: StatDetail[] }
 /** A new derived stat must explicitly declare where players can inspect it. */
 export const DERIVED_STAT_DETAILS = {
-  resistances: 'resistances', attributes: 'attributes', attackDamageMultiplier: 'attackBonus', attackSpeedMultiplier: 'attackSpeed',
+  goldFindMultiplier: 'goldFind', xpGainMultiplier: 'xpGain', resistances: 'resistances', attributes: 'attributes', attackDamageMultiplier: 'attackBonus', attackSpeedMultiplier: 'attackSpeed',
   castSpeedMultiplier: 'castSpeed', spellDamageMultiplier: 'spellDamage', critChance: 'critChance', critMultiplier: 'critDamage',
   maxHp: 'maxHp', maxMana: 'maxMana', armor: 'armor', damageReduction: 'armorReduction',
   moveSpeedMultiplier: 'movement', manaRegeneration: 'manaRegen', lifeRegeneration: 'lifeRegen',
@@ -33,7 +34,7 @@ const pct = (value: number) => `${n(value * 100, 1)}%`;
 export function characterStatDetails(p: Player): StatDetailGroup[] {
   const s = p.derived, sheet = p.character;
   const attributeBonus = (attribute: Attribute, perPoint: number) => n(Math.max(0, s.attributes[attribute] - 10) * perPoint);
-  const contributions = characterModifierSources(sheet, getTreeBonuses(sheet.allocatedNodes));
+  const contributions = characterModifierSources(sheet, getTreeBonuses(sheet.allocatedNodes), p.level);
   const sources = (keys: StatKey[]) => contributions.flatMap(source => {
     const values = [...new Set(keys)].filter(key => source.modifiers[key]).map(key => `${formatStatValue(key, source.modifiers[key]!)} ${STAT_LABELS[key]}`);
     return values.length ? [{ label: source.label, value: values.join(' · ') }] : [];
@@ -103,6 +104,8 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
     row('potion', 'Potion restoration bonus', s.potionMultiplier - 1, pct(s.potionMultiplier - 1), 'Boosts potion life and mana recovery, up to missing resources.', `${pct(PLAYER_ABILITIES.potion.lifeFraction)} life / ${pct(PLAYER_ABILITIES.potion.manaFraction)} mana × ${n(s.potionMultiplier)}\nBonus cap: 100%`, ['potionPercent']),
   ];
   const utility = [
+    row('goldFind','Gold found',s.goldFindMultiplier-1,pct(s.goldFindMultiplier-1),'Increases gold dropped by enemies, chests and breakable objects. Excludes trading.',`Loot gold × ${n(s.goldFindMultiplier)}\nBonus cap: ${CHARM_REWARD_CAPS.gold}%`,['goldFindPercent']),
+    row('xpGain','Experience gained',s.xpGainMultiplier-1,pct(s.xpGainMultiplier-1),'Increases experience from kills, events and journeys.',`Experience × ${n(s.xpGainMultiplier)}\nBonus cap: ${CHARM_REWARD_CAPS.xp}%`,['xpGainPercent']),
     row('movement', 'Movement speed', s.moveSpeedMultiplier, pct(s.moveSpeedMultiplier), '100% is normal speed. Attacks slow movement; dodge has its own speed.', `${PLAYER_MOVEMENT.speed} × ${n(s.moveSpeedMultiplier)} = ${n(PLAYER_MOVEMENT.speed * s.moveSpeedMultiplier)} units / s\nBefore action penalties · Limit: 50–175%`, ['moveSpeedPercent']),
     row('manaCost', 'Mana cost reduction', 1 - s.manaCostMultiplier, pct(1 - s.manaCostMultiplier), 'Reduces action mana costs. Skill minimums still apply.', `Action cost × ${n(s.manaCostMultiplier)}\nCap: 75% · Rounded per action`, ['manaCostPercent']),
     row('cooldown', 'Cooldown reduction', 1 - s.cooldownMultiplier, pct(1 - s.cooldownMultiplier), 'Shortens skill, dodge and potion cooldowns.', `Cooldown × ${n(s.cooldownMultiplier)}\nCap: 75% · Skill minimums still apply`, ['cooldownPercent']),

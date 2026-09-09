@@ -5,13 +5,13 @@ import type { GoldWallet } from './wallet.ts';
 import type { WeaponDefinition, FocusDefinition, ShieldDefinition } from './model.ts';
 
 export type Attribute = 'strength' | 'dexterity' | 'intelligence' | 'vitality';
-export type StatKey = Attribute | ResistanceStat | 'maxHp' | 'maxMana' | 'armor' | 'damagePercent' | 'attackSpeedPercent' | 'castSpeedPercent'
+export type StatKey = Attribute | ResistanceStat | 'goldFindPercent' | 'xpGainPercent' | 'maxHp' | 'maxMana' | 'armor' | 'damagePercent' | 'attackSpeedPercent' | 'castSpeedPercent'
   | 'critChance' | 'critDamage' | 'moveSpeedPercent' | 'spellDamagePercent' | 'manaRegen'
   | `skill:${SkillId}` | 'manaOnKill' | 'areaPercent' | 'potionPercent' | 'projectilePierce' | 'spellweavePercent' | 'afterguardPercent'
   | 'lifeRegen' | 'manaCostPercent' | 'cooldownPercent' | 'lifeOnHit' | 'blockChance' | 'blockReduction' | 'fireDamage' | 'frostDamage' | 'lightningDamage';
 export type StatModifiers = Partial<Record<StatKey, number>>;
 export type EquipmentSlot = 'weapon' | 'offhand' | 'head' | 'chest' | 'gloves' | 'legs' | 'boots' | 'cloak' | 'amulet' | 'ring1' | 'ring2';
-export type ItemKind = Exclude<EquipmentSlot, 'offhand' | 'ring1' | 'ring2'> | 'ring' | 'shield' | 'grimoire' | 'orb';
+export type ItemKind = Exclude<EquipmentSlot, 'offhand' | 'ring1' | 'ring2'> | 'ring' | 'shield' | 'grimoire' | 'orb' | 'charm';
 export type ItemTier = 'common' | 'magic' | 'rare' | 'epic' | 'legendary';
 export interface ItemAffix { name: string; stat: StatKey; value: number; }
 export interface ItemRecipe {
@@ -55,7 +55,7 @@ export interface CharacterSheet extends GoldWallet {
   arcaneOverload: boolean;
 }
 export interface DerivedCharacterStats {
-  resistances: Record<Element, number>;
+  resistances: Record<Element, number>; goldFindMultiplier: number; xpGainMultiplier: number;
   attackSpeedMultiplier: number; castSpeedMultiplier: number; attackDamageMultiplier: number;
   maxHp: number; maxMana: number; armor: number; damageReduction: number;
   critChance: number; critMultiplier: number; moveSpeedMultiplier: number;

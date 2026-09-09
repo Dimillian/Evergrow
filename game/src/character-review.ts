@@ -1,3 +1,5 @@
+import { CHARM_SIZES, CHARM_FLAVORS } from './charm-content.ts';
+import { resolvePackLayout } from './inventory-grid.ts';
 import { xpForNextLevel } from './progression.ts';
 import { executeCharacterCommand } from './character-commands.ts';
 import './ui-kit.css';
@@ -45,6 +47,14 @@ assignSkill(p, 0, 'cleave'); assignSkill(p, 1, 'fireball');
 const kinds: ItemKind[] = ['weapon', 'chest', 'head', 'boots', 'gloves', 'cloak', 'ring', 'amulet', 'legs', 'grimoire', 'orb'];
 for (let i = 0; i < 22; i++) p.character.inventory[i] = generateItem(1284 + i * 831, 7 + i % 4, kinds[i % kinds.length]);
 for (const index of [0, 1, 2, 3, 4, 5, 6, 7, 8]) equipItem(p.character, index, p.level);
+if(new URLSearchParams(location.search).has('charms')) {
+  p.character.inventory.fill(null);p.character.inventoryLayout={};
+  CHARM_SIZES.forEach((size,i)=>{
+    const item=generateItem(8400+i,p.level,'charm',`${CHARM_FLAVORS[i].id}-${size.id}`,(['common','magic','rare','epic','legendary','rare'] as const)[i]);
+    p.character.inventory[i]=item;
+  });
+  p.character.inventoryLayout=resolvePackLayout(p.character);
+}
 const loadout = new URLSearchParams(location.search).get('loadout');
 const profile = loadout === 'bow' ? 'crescent-recurve' : loadout === 'staff' ? 'storm-staff'
   : loadout === 'wand' || loadout === 'grimoire' || loadout === 'orb' || loadout === 'wand-shield' ? 'star-wand'

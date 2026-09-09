@@ -5,7 +5,7 @@ import { itemFitsSlot, planEquipmentChange } from './inventory.ts';
 
 export type InventorySort = 'rarity' | 'type' | 'recent' | 'compact';
 type SortPriority = Exclude<InventorySort, 'compact'>;
-export type InventoryFilter = 'weapons' | 'armor' | 'jewelry' | 'offhand';
+export type InventoryFilter = 'weapons' | 'armor' | 'jewelry' | 'offhand' | 'charms';
 const tiers: ItemTier[] = ['common', 'magic', 'rare', 'epic', 'legendary'];
 export const INVENTORY_SORT_PRIORITY: Readonly<Record<InventorySort, readonly SortPriority[]>> = {
   compact: ['type', 'rarity', 'recent'],
@@ -16,6 +16,7 @@ export function matchesInventoryFilter(item: Item | null, filters: ReadonlySet<I
   if (!item || rarities.size && !rarities.has(item.tier)) return false;
   return filters.size === 0 || [...filters].some(filter => filter === 'weapons' ? item.kind === 'weapon'
     : filter === 'jewelry' ? item.kind === 'ring' || item.kind === 'amulet'
+    : filter === 'charms' ? item.kind === 'charm'
     : filter === 'offhand' ? itemFitsSlot(item, 'offhand')
     : ['head', 'chest', 'gloves', 'legs', 'boots', 'cloak'].includes(item.kind));
 }
@@ -39,8 +40,8 @@ export function sortInventory(sheet: CharacterSheet, mode: InventorySort): Actio
     for (const priority of INVENTORY_SORT_PRIORITY[mode]) if (comparisons[priority]) return comparisons[priority];
     return 0;
   });
-  const layout = resolvePackLayout({ inventory });
   const before = resolvePackLayout(sheet);
+  const layout = resolvePackLayout({ inventory });
   const overflowBefore = sheet.inventory.filter(item => item && before[item.id] === undefined).length;
   const overflowAfter = inventory.filter(item => item && layout[item.id] === undefined).length;
   if (overflowAfter > overflowBefore) return { ok: false, message: 'This arrangement needs more space. Your pack is unchanged.' };

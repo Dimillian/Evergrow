@@ -70,7 +70,7 @@ test('enemy ground signatures and Colossus eruptions route actual elemental cont
 test('resistance rolls are restricted to jewelry/shields and exactly one resistance family per item', () => {
   for (const kind of ITEM_KINDS) {
     const rolls=itemAffixPool({kind}).filter(a=>isResistanceStat(a.stat));
-    assert.equal(rolls.length,['ring','amulet','shield'].includes(kind)?5:0,kind);
+    assert.equal(rolls.length,['ring','amulet','shield','charm'].includes(kind)?5:0,kind);
   }
   for(const a of RESISTANCE_STATS){assert.equal(affixCategory(a),'defense');for(const b of RESISTANCE_STATS)assert.ok(affixConflicts(a,[b]));}
   assert.ok(RESISTANCE_AFFIXES.find(a=>a.stat==='allResistance')!.weight! < RESISTANCE_AFFIXES.find(a=>a.stat==='fireResistance')!.weight!);

@@ -24,7 +24,7 @@ export function stageJourneyCompletion(checkpoint: CharacterCheckpoint, goal: Jo
   preAwardLevel = player.level): JourneyCompletion | null {
   const state = checkpoint.journeys ??= freshJourneys();
   if (journeyWasCompleted(state, goal.id)) return null;
-  const xp = journeyXP(goal.kind, goal.level, preAwardLevel);
+  const xp = Math.round(journeyXP(goal.kind, goal.level, preAwardLevel) * player.derived.xpGainMultiplier);
   const finished = { ...goal, finishedAt: time, rewardXP: xp };
   const listed = [...state.accepted, ...state.offers].some(g => g.id === goal.id);
   state.accepted = state.accepted.map(g => g.id === goal.id ? finished : g);

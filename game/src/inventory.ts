@@ -1,4 +1,4 @@
-import { PACK_CELLS, resolvePackLayout, normalizePackLayout, packOccupancy, findPackSpace, footprintCells, type PackLayout } from './inventory-grid.ts';
+import { INVENTORY_CELLS, resolvePackLayout, normalizePackLayout, packOccupancy, findPackSpace, footprintCells, type PackLayout } from './inventory-grid.ts';
 import type { ActionResult, Attribute, CharacterSheet, EquipmentSlot, Item } from './character-types.ts';
 import { EQUIPMENT_SLOTS } from './items.ts';
 
@@ -27,6 +27,7 @@ export function planEquipmentChange(sheet: CharacterSheet, item: Item, level: nu
     return reject('That inventory item has changed.');
   if (source === undefined && [...sheet.inventory, ...Object.values(sheet.equipped)].some(owned => owned?.id === item.id))
     return reject('This item is already owned.');
+  if (item.kind === 'charm') return reject('Place charms in the charm grid.');
   const slot: EquipmentSlot = target.slot ?? (item.kind === 'ring'
     ? !sheet.equipped.ring1 ? 'ring1' : !sheet.equipped.ring2 ? 'ring2' : 'ring1'
     : (item.kind === 'shield' || item.kind === 'grimoire' || item.kind === 'orb') ? 'offhand' : item.kind);
@@ -36,7 +37,7 @@ export function planEquipmentChange(sheet: CharacterSheet, item: Item, level: nu
   if (item.kind === 'weapon' && !item.weapon) return reject('This weapon has no attack profile.');
   if ((item.kind === 'grimoire' || item.kind === 'orb') && !item.focus) return reject('This focus has no equipment profile.');
   if (item.kind === 'shield' && !item.shield) return reject('This shield has no defense profile.');
-  const inventory = [...sheet.inventory, ...Array(Math.max(0, PACK_CELLS - sheet.inventory.length)).fill(null)], equipped = { ...sheet.equipped };
+  const inventory = [...sheet.inventory, ...Array(Math.max(0, INVENTORY_CELLS - sheet.inventory.length)).fill(null)], equipped = { ...sheet.equipped };
   const inventoryLayout = resolvePackLayout(sheet), preferredCell = inventoryLayout[item.id];
   const displaced: Array<{ slot: EquipmentSlot; item: Item }> = [];
   if (source !== undefined) inventory[source] = null;
@@ -73,9 +74,9 @@ export function unequipItem(sheet: CharacterSheet, slot: EquipmentSlot, targetCe
   const cell = targetCell === undefined ? findPackSpace(item, occupied) :
     footprintCells(item, targetCell)?.every(n => !occupied.has(n)) ? targetCell : null;
   const empty = sheet.inventory.findIndex(item => item === null);
-  const index = empty >= 0 ? empty : sheet.inventory.length < PACK_CELLS ? sheet.inventory.length : -1;
+  const index = empty >= 0 ? empty : sheet.inventory.length < INVENTORY_CELLS ? sheet.inventory.length : -1;
   if (index < 0 || cell === null) return fail('Make room in your pack for this item.');
-  while (sheet.inventory.length < PACK_CELLS) sheet.inventory.push(null);
+  while (sheet.inventory.length < INVENTORY_CELLS) sheet.inventory.push(null);
   sheet.inventory[index] = item; sheet.equipped[slot] = null;
   sheet.inventoryLayout = { ...layout, [item.id]: cell }; normalizePackLayout(sheet);
   return success();
@@ -109,12 +110,12 @@ export function moveInventoryItem(sheet: CharacterSheet, from: number, to: numbe
 export function addInventoryItem(sheet: CharacterSheet, item: Item): boolean {
   if (sheet.inventory.some(existing => existing?.id === item.id) || EQUIPMENT_SLOTS.some(slot => sheet.equipped[slot]?.id === item.id)) return false;
   const layout = resolvePackLayout(sheet);
-  if (sheet.inventory.some(existing => existing && layout[existing.id] === undefined)) return false;
+  if (sheet.inventory.some(existing => existing && (existing.kind === 'charm') === (item.kind === 'charm') && layout[existing.id] === undefined)) return false;
   const empty = sheet.inventory.findIndex(existing => existing === null);
-  const index = empty >= 0 ? empty : sheet.inventory.length < PACK_CELLS ? sheet.inventory.length : -1;
+  const index = empty >= 0 ? empty : sheet.inventory.length < INVENTORY_CELLS ? sheet.inventory.length : -1;
   const cell = findPackSpace(item, packOccupancy(sheet.inventory, layout));
   if (index < 0 || cell === null) return false;
-  while (sheet.inventory.length < PACK_CELLS) sheet.inventory.push(null);
+  while (sheet.inventory.length < INVENTORY_CELLS) sheet.inventory.push(null);
   sheet.inventory[index] = item; sheet.inventoryLayout = { ...layout, [item.id]: cell };
   const owned = new Set([...sheet.inventory, ...Object.values(sheet.equipped)].filter((i): i is Item => i !== null).map(i => i.id));
   sheet.recentItems = [item.id, ...(sheet.recentItems ?? []).filter(id => id !== item.id && owned.has(id))];

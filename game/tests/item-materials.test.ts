@@ -70,7 +70,7 @@ test('enemy drops roll materials independently of rarity and preserve source-lev
   const seen=new Set<string>();let ordinary=0,total=0;
   for(let seed=0;seed<1600;seed++){
     const loot=rollEnemyLoot({seed,level:12,rank:'elite',biome:'deadwood',kind:'brute',firstKill:true});
-    for(const item of loot){assert.ok(validItem(item));assert.ok(itemMaterialPool(item.kind,item.weapon?.family).some(m=>m.id===item.recipe.materialId));seen.add(item.recipe.materialId!);total++;if(['iron','steel','leather','ashwood','runewood','glass','quartz','cloth'].includes(item.recipe.materialId!))ordinary++;}
+    for(const item of loot){assert.ok(validItem(item));if(item.kind==='charm'){assert.equal(item.recipe.materialId,undefined);continue;}assert.ok(itemMaterialPool(item.kind,item.weapon?.family).some(m=>m.id===item.recipe.materialId));seen.add(item.recipe.materialId!);total++;if(['iron','steel','leather','ashwood','runewood','glass','quartz','cloth'].includes(item.recipe.materialId!))ordinary++;}
     const common=generateItem(seed,12,'weapon','longsword','common'),legendary=generateItem(seed,12,'weapon','longsword','legendary');
     assert.equal(common.recipe.materialId,legendary.recipe.materialId);
   }

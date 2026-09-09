@@ -29,8 +29,8 @@ test('new items and every reroll respect slot identity and exclusive affix group
       const stats = item.affixes.map(a => a.stat);
       assert.ok(stats.every((stat, index) => !affixConflicts(stat, stats.filter((_, i) => i !== index))));
       assert.ok(stats.every(stat => itemAffixPool(item).some(a => a.stat === stat)));
-      if (stats.includes('moveSpeedPercent')) assert.ok(kind === 'boots' || kind === 'amulet');
-      if (stats.includes('attackSpeedPercent') || stats.includes('castSpeedPercent')) assert.ok(kind === 'gloves' || kind === 'amulet');
+      if (stats.includes('moveSpeedPercent')) assert.ok(kind === 'charm' || kind === 'boots' || kind === 'amulet');
+      if (stats.includes('attackSpeedPercent') || stats.includes('castSpeedPercent')) assert.ok(kind === 'charm' || kind === 'gloves' || kind === 'amulet');
       item = improveItem(item, operation ? 'rerollOne' : 'rerollAll', 10, seed + 498, 0);
     }
   }

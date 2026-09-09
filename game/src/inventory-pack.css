@@ -25,8 +25,8 @@
 .character-charms header span { display: flex; gap: 6px; align-items: center; }
 .character-charms .ui-icon { width: 14px; height: 14px; }
 .character-charms small { color: #7d8178; font-size: 11px; }
-.character-charm-grid { padding: 3px; border: 1px solid #a6a08725; background: #111713; }
-.character-charm-grid span { height: var(--pack-cell); display: grid; place-items: center; color: #b0a57938; border: 1px dashed #b0a57922; background: #b0a57904; }
+.character-charm-grid { position:relative; grid-template-rows:repeat(4,var(--pack-cell)); padding: 3px; border: 1px solid #a6a08725; background: #111713; }
+.character-charm-grid .character-grid-cell { height: var(--pack-cell); display: grid; place-items: center; color: #b0a57938; border: 1px solid #a1c8bf22; background: #b0a57904; }
 .character-overflow { margin-top: 20px; border-top: 1px solid #cba67566; padding-top: 12px; }
 .character-overflow header { color: #dbc194; font-size: 14px; margin-bottom: 10px; }
 .character-overflow header small { display: block; font-size: 11px; color: #aaa796; margin-top: 4px; }

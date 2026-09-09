@@ -307,3 +307,7 @@ Each container independently has a **35% gold chance**, yielding **2–7 gold at
 ## Slot-specific affix budgets
 
 The September 7 affix pass keeps the above drop counts, tier tables, item-level curves and affix counts. Explicit rolls now use weighted slot/family pools and stronger specialist multipliers; see [equipment affixes and hybrids](equipment-affixes.md) for the current tables and hybrid damage formula.
+
+## Charm rewards (2026-09-09)
+
+[Charms](charms.md) now occupy about 1.96% of enemy item rolls, sharing rank rarity and source level. Active charms may increase gold found (up to +100%) and XP gained (up to +50%). Bonuses apply once to kill/event/Journey XP and created enemy/chest/container gold piles. Sales and already-created piles are not multiplied. Item quantity, rarity and equipment RNG are unaffected by these modifiers.

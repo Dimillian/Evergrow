@@ -1,12 +1,12 @@
 import { isResistanceStat } from './resistance-content.ts';
 import type { Item } from './character-types.ts';
-import { affixConflicts, rollAffix, itemAffixPool, TIER_AFFIXES, deriveItem, randomSource } from './items.ts';
+import { affixConflicts, rollAffix, itemAffixPool, itemAffixCount, deriveItem, randomSource } from './items.ts';
 export type AffixFocus='any'|'offense'|'defense'|'utility';
 export const AFFIX_FOCUSES:readonly AffixFocus[]=['any','offense','defense','utility'];
 export function affixCategory(stat:string):Exclude<AffixFocus,'any'>{
   if(isResistanceStat(stat)) return 'defense';
   if(['maxHp','armor','vitality','lifeRegen','blockChance','blockReduction','afterguardPercent','potionPercent'].includes(stat))return 'defense';
-  if(['maxMana','manaRegen','manaOnKill','manaCostPercent','cooldownPercent','moveSpeedPercent'].includes(stat))return 'utility';
+  if(['goldFindPercent','xpGainPercent','maxMana','manaRegen','manaOnKill','manaCostPercent','cooldownPercent','moveSpeedPercent'].includes(stat))return 'utility';
   return 'offense';
 }
 export function rerollPool(item:Item,index?:number,focus:AffixFocus='any'){
@@ -41,7 +41,7 @@ export function improveItem(item: Item, operation: Improvement, zoneLevel: numbe
     case 'enhance': next.recipe.enhancement++; break;
     case 'rarity':
       next.tier = ITEM_TIERS[ITEM_TIERS.indexOf(item.tier) + 1];
-      while (next.affixes.length < TIER_AFFIXES[next.tier]) roll(next.affixes.length);
+      while (next.affixes.length < itemAffixCount(next)) roll(next.affixes.length);
       break;
     case 'rerollOne': roll(affix!, item.affixes[affix!].stat); next.recipe.targetedRolls++; break;
     case 'rerollAll':

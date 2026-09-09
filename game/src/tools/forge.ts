@@ -9,7 +9,7 @@ import { itemTooltipMarkup } from '../item-ui.ts';
 import { escapeUI as e } from '../ui-components.ts';
 import { Simulation } from '../simulation.ts';
 import { refreshCharacter } from '../character.ts';
-import { equipItem } from '../inventory.ts';
+import { addInventoryItem, equipItem } from '../inventory.ts';
 import { drawCharacterPortrait } from '../character-portrait.ts';
 import type { Item, ItemKind, ItemTier } from '../character-types.ts';
 const root=await toolPage('Item forge','Generate reproducible items with the real gear rules. Inspect affixes, preview equipment and export recipes. Everything stays in this study.');
@@ -27,8 +27,8 @@ const history:Array<{item:Item;recipe:ForgeRecipe}>=[];let current:Item;
 function draw(){const c=root.querySelector<HTMLCanvasElement>('#portrait')!;drawCharacterPortrait(c.getContext('2d')!,sim.player,2,Number(root.querySelector<HTMLInputElement>('#facing')!.value)*Math.PI/4,c.width,c.height);}
 function inspect(entry:typeof history[number]){
   current=entry.item;for(const [k,v]of Object.entries(entry.recipe)){if(k==='kind'){field(k).value=String(v);profiles();}else if(k==='profile'){field(k).value=String(v);materials();}else field(k).value=String(v);}
-  sim.player.character=createCharacterSheet();sim.player.level=entry.recipe.level;sim.player.character.inventory[0]=current;
-  const result=equipItem(sim.player.character,0,sim.player.level);refreshCharacter(sim.player);
+  sim.player.character=createCharacterSheet();sim.player.level=entry.recipe.level;addInventoryItem(sim.player.character,current);
+  const result=current.kind==='charm'?{ok:true,message:''}:equipItem(sim.player.character,0,sim.player.level);refreshCharacter(sim.player);
   root.querySelector('#gear')!.innerHTML=itemIconSVG(current,160);
   root.querySelector('#tooltip')!.innerHTML=itemTooltipMarkup(current,{sheet:createCharacterSheet(),level:sim.player.level});
   root.querySelector('#recipe')!.textContent=JSON.stringify(current,null,2);

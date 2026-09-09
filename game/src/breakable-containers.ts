@@ -27,10 +27,10 @@ export function containerGold(seed: number, level: number): number {
     * (1 + .1 * (Math.max(1, Math.min(1_000_000, level)) - 1)));
 }
 export function breakContainer(target: BreakableContainer, angle: number, level: number,
-  broken: Set<string>, piles: GroundGold[], nextId: () => number, emit: (event: CombatEvent) => void): boolean {
+  broken: Set<string>, piles: GroundGold[], nextId: () => number, emit: (event: CombatEvent) => void, goldMultiplier = 1): boolean {
   if (broken.has(target.id)) return false;
   broken.add(target.id);
-  const amount = containerGold(target.seed, level);
+  const amount = Math.round(containerGold(target.seed, level) * goldMultiplier);
   if (amount) dropGold(piles, { id: nextId(), x: target.x, y: target.y, amount, age: 0 });
   emit({ type: 'container-break', x: target.x, y: target.y, angle, containerId: target.id, kind: target.kind, seed: target.seed });
   return true;

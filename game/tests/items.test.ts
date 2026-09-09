@@ -1,7 +1,8 @@
+import { charmProfile } from '../src/charm-content.ts';
 import { isSkillStat } from '../src/equipment-affix-content.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { affixPotency } from '../src/items.ts';
+import { affixPotency, itemAffixCount, INVENTORY_CAPACITY } from '../src/items.ts';
 import { createCharacterSheet, EQUIPMENT_SLOTS, generateItem, ITEM_KINDS, itemModifiers, TIER_NAMES } from '../src/items.ts';
 import { STARTING_SWORD } from '../src/equipment.ts';
 import { SHIELD_PROFILES, WEAPON_PROFILES } from '../src/weapon-content.ts';
@@ -21,14 +22,13 @@ test('equipment generation is reproducible, independent and safe at level bounda
 
 test('the seed corpus generates all five tiers and every equipment kind with coherent affixes', () => {
   const tiers = new Set<ItemTier>(), kinds = new Set<string>(), ids = new Set<string>();
-  const affixCount = { common: 0, magic: 1, rare: 2, epic: 3, legendary: 4 };
   for (let seed = 0; seed < 4000; seed++) {
     const item = generateItem(seed, 5);
     tiers.add(item.tier); kinds.add(item.kind);
     assert.ok(!ids.has(item.id)); ids.add(item.id);
     assert.ok(item.name.length > 5 && item.baseName.length > 3);
     assert.equal(item.requiredLevel, 3);
-    assert.equal(item.affixes.length, affixCount[item.tier]);
+    assert.equal(item.affixes.length, itemAffixCount(item));
     assert.equal(new Set(item.affixes.map(affix => affix.stat)).size, item.affixes.length);
     for (const affix of item.affixes) assert.ok(affix.value > 0 && Number.isFinite(affix.value));
     assert.equal(Boolean(item.weapon), item.kind === 'weapon');
@@ -81,7 +81,7 @@ test('explicit authored profiles cover one-hand, two-hand, bow, staff, and shiel
 
 test('the starter sheet has neutral worn gear, an empty bag, independent leather outfit and five empty skill slots', () => {
   const first = createCharacterSheet(), other = createCharacterSheet();
-  assert.equal(first.inventory.length, 72); assert.equal(first.inventory.filter(Boolean).length, 0);
+  assert.equal(first.inventory.length, INVENTORY_CAPACITY); assert.equal(first.inventory.filter(Boolean).length, 0);
   assert.deepEqual(first.skillSlots, [null, null, null, null, null]);
   assert.deepEqual(first.allocatedNodes, ['origin']);
   assert.equal(first.statPoints, 0); assert.equal(first.skillPoints, 0);
@@ -123,7 +123,7 @@ test('explicit reward tiers control quality and affix count, preserving the base
 
 test('percentage affixes approach bounded quality ranges while flat stats and base item power keep scaling', () => {
   const percentBounds: Partial<Record<import('../src/character-types.ts').StatKey, number>> = {
-    fireResistance: 10 + 25 * .12, frostResistance: 10 + 25 * .12, lightningResistance: 10 + 25 * .12, arcaneResistance: 10 + 25 * .12, allResistance: 3 + 25 * .035,
+    fireResistance: 10 + 25 * .12, frostResistance: 10 + 25 * .12, lightningResistance: 10 + 25 * .12, arcaneResistance: 10 + 25 * .12, allResistance: 3 + 25 * .035, goldFindPercent: 8 + 25 * .16, xpGainPercent: 5 + 25 * .1,
     manaCostPercent: 4 + 25 * .15, castSpeedPercent: 3 + 25 * .18, damagePercent: 4 + 25 * .35, attackSpeedPercent: 3 + 25 * .18,
     critChance: 1 + 25 * .08, critDamage: 6 + 25 * .35,
     moveSpeedPercent: 2 + 25 * .12, spellDamagePercent: 5 + 25 * .45,
@@ -144,7 +144,7 @@ test('percentage affixes approach bounded quality ranges while flat stats and ba
       const bound = percentBounds[affix.stat];
       if (bound !== undefined) {
         seen.add(affix.stat);
-        assert.ok(affix.value <= bound * affixPotency(kind, affix.stat) * 1.15 * 1.5 + .05);
+        assert.ok(affix.value <= bound * (kind==='charm' ? charmProfile(high)!.size.potency : affixPotency(kind, affix.stat)) * 1.15 * 1.5 + .05);
       } else assert.ok(affix.value > mid.affixes[index].value * 1000);
     });
   }

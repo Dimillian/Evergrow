@@ -1,5 +1,5 @@
 import { RESISTANCE_LABELS } from './resistance-content.ts';
-import { AFFIX_DESCRIPTIONS, SPECIAL_AFFIX_LABELS, SKILL_STATS, isSkillStat, type SkillStat } from './equipment-affix-content.ts';
+import { SPECIAL_AFFIX_LABELS, SKILL_STATS, isSkillStat, type SkillStat } from './equipment-affix-content.ts';
 import { ELEMENTAL_AFFIXES, ELEMENT_COLORS } from './elemental-weapon.ts';
 import { weaponActionRate, basicAttackManaCost } from './equipment.ts';
 import type { CharacterSheet, EquipmentSlot, Item, ItemTier, StatKey } from './character-types.ts';
@@ -21,6 +21,7 @@ export const CHANGE_LABELS: Record<PreviewStat, string> = {
   ...SPECIAL_AFFIX_LABELS, ...SKILL_STATS,
   fireResistance: RESISTANCE_LABELS.fireResistance, frostResistance: RESISTANCE_LABELS.frostResistance,
   lightningResistance: RESISTANCE_LABELS.lightningResistance, arcaneResistance: RESISTANCE_LABELS.arcaneResistance,
+  goldFindMultiplier: 'Gold found', xpGainMultiplier: 'Experience gained',
   damage: 'Main-hand damage', cadence: 'Main-hand actions / s', offDamage: 'Off-hand damage', offCadence: 'Off-hand attacks / s',
   maxHp: 'Maximum life', maxMana: 'Maximum mana', armor: 'Armor', blockChance: 'Block chance', blockReduction: 'Blocked damage reduction',
   critChance: 'Critical chance', critMultiplier: 'Critical damage', lifeRegeneration: 'Life / s', manaRegeneration: 'Mana / s',
@@ -28,7 +29,7 @@ export const CHANGE_LABELS: Record<PreviewStat, string> = {
   attackSpeedMultiplier: 'Attack speed', castSpeedMultiplier: 'Cast speed', spellDamageMultiplier: 'Spell damage',
   strength: 'Strength', dexterity: 'Dexterity', intelligence: 'Intelligence', vitality: 'Vitality',
 };
-export const PREVIEW_PERCENT = new Set<PreviewStat>(['fireResistance', 'frostResistance', 'lightningResistance', 'arcaneResistance', 'blockChance', 'blockReduction', 'critChance', 'critMultiplier', 'moveSpeedMultiplier',
+export const PREVIEW_PERCENT = new Set<PreviewStat>(['goldFindMultiplier', 'xpGainMultiplier','fireResistance', 'frostResistance', 'lightningResistance', 'arcaneResistance', 'blockChance', 'blockReduction', 'critChance', 'critMultiplier', 'moveSpeedMultiplier',
   'manaCostReduction', 'cooldownReduction', 'attackSpeedMultiplier', 'castSpeedMultiplier', 'spellDamageMultiplier']);
 
 /** Only match like-for-like stats; damage bonuses feed separate derived hand damage rows. */
@@ -43,6 +44,7 @@ const MODIFIER_PREVIEW: Record<Exclude<StatKey, SkillStat>, PreviewStat | null> 
   areaPercent: 'areaPercent', potionPercent: 'potionPercent', projectilePierce: 'projectilePierce',
   spellweavePercent: 'spellweavePercent', afterguardPercent: 'afterguardPercent',
   fireResistance: 'fireResistance', frostResistance: 'frostResistance', lightningResistance: 'lightningResistance', arcaneResistance: 'arcaneResistance', allResistance: null,
+  goldFindPercent: 'goldFindMultiplier', xpGainPercent: 'xpGainMultiplier',
   fireDamage: null, frostDamage: null, lightningDamage: null,
 };
 
@@ -73,27 +75,24 @@ export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, optio
 
 /** Item data and effective equipment changes are distinct; no inventory DOM location is required. */
 export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
-  const preview = view.equipped ? null : previewEquipmentChange(view.sheet, item, view.level,
+  const preview = view.equipped || item.kind === 'charm' && view.sourceIndex !== undefined ? null : previewEquipmentChange(view.sheet, item, view.level,
     { sourceIndex: view.sourceIndex, slot: view.targetSlot });
   const changes = new Map(preview?.ok ? preview.changes.map(change => [change.key, change]) : []);
   const rows = Object.entries(itemModifiers(item)).map(([stat, value]) => {
     const key = stat as StatKey;
     const element = ELEMENTAL_AFFIXES.find(a => a.stat === key)?.element;
-    const description = AFFIX_DESCRIPTIONS[key];
     const label = `${escapeUI(STAT_LABELS[key])}${element ? ` · ${{ fire: 'Burn', frost: 'Chill', lightning: 'Interrupt' }[element]}` : ''}`;
     const color = element ? ` style="color:${ELEMENT_COLORS[element]}"` : '';
-    const note = description ? `<p class="ui-item-affix-note">${escapeUI(description)}</p>` : '';
-    if (!preview?.ok) return `<div class="ui-item-property"${color}><span>${label}</span><strong>${formatStatValue(key, value)}</strong></div>${note}`;
+    if (!preview?.ok) return `<div class="ui-item-property"${color}><span>${label}</span><strong>${formatStatValue(key, value)}</strong></div>`;
     const previewKey = isSkillStat(key) ? key : MODIFIER_PREVIEW[key];
     const change = previewKey ? changes.get(previewKey) : undefined;
     if (previewKey) changes.delete(previewKey);
-    return `<tr><th scope="row"${color}>${label}${note}</th><td${color}>${formatStatValue(key, value)}</td>${equipChangeCell(change, previewKey ? 'No change' : 'Included in derived changes')}</tr>`;
+    return `<tr><th scope="row"${color}>${label}</th><td${color}>${formatStatValue(key, value)}</td>${equipChangeCell(change, previewKey ? 'No change' : 'Included in derived changes')}</tr>`;
   });
   for (const change of changes.values()) rows.push(`<tr><th scope="row">${escapeUI(CHANGE_LABELS[change.key])}</th><td class="ui-item-stat-empty" aria-label="Not an item bonus">—</td>${equipChangeCell(change)}</tr>`);
   const properties = preview?.ok
     ? `<table class="ui-item-stat-table" aria-label="Item bonuses and net changes on equip"><thead><tr><th scope="col">Stat</th><th scope="col">Item</th><th scope="col">On equip</th></tr></thead><tbody>${rows.join('')}</tbody></table>${!preview.changes.length ? '<p class="ui-item-description">No stat change</p>' : ''}`
     : `<div class="ui-item-properties">${rows.join('')}</div>`;
-  const skillNote = item.affixes.some(a => isSkillStat(a.stat)) ? '<p class="ui-item-affix-note">Bonus ranks require the skill unlocked. No extra mana or cooldown.</p>' : '';
   let weapon = '';
   if (item.weapon) {
     const w = item.weapon;
@@ -110,7 +109,7 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
   return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span></span><h4>${escapeUI(itemDisplayName(item))}</h4></div></div>
     <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${view.equipped ? '<span class="ui-item-equipped">Equipped</span>' : ''}</div>
     ${item.recipe.enhancement ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% scalable item stats</div>` : ''}
-    ${weapon}${properties}${skillNote}
+    ${weapon}${properties}
     ${item.affixes.length ? `<div class="ui-item-affixes">${item.affixes.map(a => escapeUI(a.name)).join(' · ')}</div>` : ''}
     ${comparison}${view.context ? `<div class="ui-item-comparison">${escapeUI(view.context)}</div>` : ''}`;
 }
@@ -122,7 +121,7 @@ const EQUIPPED_LABELS: Record<EquipmentSlot, string> = {
 
 /** Use the real equip transaction's displacement, including hand conflicts and ring targets. */
 export function itemHoverCards(item: Item, view: ItemPresentation): string[] {
-  const preview = view.equipped ? null : previewEquipmentChange(view.sheet, item, view.level,
+  const preview = view.equipped || item.kind === 'charm' && view.sourceIndex !== undefined ? null : previewEquipmentChange(view.sheet, item, view.level,
     { sourceIndex: view.sourceIndex, slot: view.targetSlot });
   const displaced = preview?.ok ? preview.displaced : [];
   const card = (gear: Item, content: string, label = '') =>

@@ -731,7 +731,7 @@ export class Simulation {
     return { world: this.world, break: (target, angle) => {
       const level = this.world.dungeonLevel ?? encounterScaleAt(target.x, target.y, this.world.seed ?? this.options.seed!, this.player.level).base;
       if (breakContainer(target, angle, level, this.brokenContainers, this.groundGold,
-        () => this.nextId++, event => this.emit(event))) this.world.setBrokenContainers?.(this.brokenContainers);
+        () => this.nextId++, event => this.emit(event), this.player.derived.goldFindMultiplier)) this.world.setBrokenContainers?.(this.brokenContainers);
     } };
   }
 
@@ -805,8 +805,9 @@ export class Simulation {
     if(drop.flight&&this.time<drop.flight.at+drop.flight.delay+TREASURE_FLIGHT_DURATION)return;
     this.groundPickup.cancel();
     if(!addInventoryItem(this.player.character,drop.item)) {
-      this.emit({type:'notice',x:drop.x,y:drop.y,message:'Inventory full · item left on the ground'});return;
+      this.emit({type:'notice',x:drop.x,y:drop.y,message:`${drop.item.kind === 'charm' ? 'Charm grid' : 'Inventory'} full · item left on the ground`});return;
     }
+    if (drop.item.kind === 'charm') refreshCharacter(this.player);
     this.groundItems.splice(index,1);
     this.emit({type:'loot',x:drop.x,y:drop.y,item:drop.item,color:TIER_COLORS[drop.item.tier]});
   }

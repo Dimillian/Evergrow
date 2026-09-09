@@ -84,13 +84,13 @@ async function commitEvent(sim: Simulation, site: EventSite, choice: EventChoice
       record.delivered |= 1 << i;
     });
     if (bundle.gold && !(record.delivered & (1 << bundle.items.length)) && checkpoint.groundGold!.length < GOLD_RULES.maxPiles) {
-      checkpoint.groundGold!.push({ id: nextId++, ...treasureLanding(sim.world,site.x,site.y,12,site.seed), flight:{x:site.x,y:site.y,at:sim.time,delay:.1}, amount: bundle.gold, age: 0 });
+      checkpoint.groundGold!.push({ id: nextId++, ...treasureLanding(sim.world,site.x,site.y,12,site.seed), flight:{x:site.x,y:site.y,at:sim.time,delay:.1}, amount: Math.round(bundle.gold * sim.player.derived.goldFindMultiplier), age: 0 });
       record.delivered |= (1 << bundle.items.length);
     }
     if (!record.bonusGranted) {
       metric(checkpoint.chronicle,'events');metric(checkpoint.chronicle,'event:'+site.kind);
       if(site.kind==='cursedChest')metric(checkpoint.chronicle,'bestWaves',record.wavesCleared);
-      const reward = Math.round(bundle.xp * xpLevelFactor(checkpoint.level, site.level));
+      const reward = Math.round(bundle.xp * xpLevelFactor(checkpoint.level, site.level) * sim.player.derived.xpGainMultiplier);
       const staged = { ...sim.player, character: checkpoint.character, level: checkpoint.level, xp: checkpoint.xp };
       if (reward)
         awardCharacterExperience(staged, reward);

@@ -1,4 +1,4 @@
-import { PACK_COLUMNS, PACK_ROWS, PACK_CELLS, CHARM_ROWS, itemFootprint, resolvePackLayout, packOccupancy, footprintCells } from './inventory-grid.ts';
+import { PACK_COLUMNS, PACK_ROWS, PACK_CELLS, INVENTORY_CELLS, CHARM_ROWS, itemFootprint, resolvePackLayout, packOccupancy, footprintCells } from './inventory-grid.ts';
 import { itemPackIconSVG } from './item-art.ts';
 import { itemDisplayName } from './items.ts';
 import { itemTooltipMarkup, updateItemSlot } from './item-ui.ts';
@@ -131,7 +131,7 @@ export class InventoryPanel {
               ${Array.from({ length: INVENTORY_CAPACITY }, (_, index) => `<button type="button" class="ui-slot ui-item-slot character-bag-slot" data-bag="${index}" data-location="bag-${index}" hidden></button>`).join('')}
               <div class="character-pack-placement" hidden aria-hidden="true"></div>
             </div>
-            <section class="character-charms" aria-label="Charms, reserved for a future update"><header><span>${uiIcon('diamond')} Charms</span><small>Reserved</small></header><div class="character-charm-grid" aria-hidden="true">${Array.from({length: PACK_COLUMNS * CHARM_ROWS}, () => '<span>·</span>').join('')}</div></section>
+            <section class="character-charms" aria-label="Active charms"><header><span>${uiIcon('diamond')} Charms</span></header><div class="character-charm-grid character-tetris" role="group" aria-label="Active charms, ${PACK_COLUMNS} columns by ${CHARM_ROWS} rows">${Array.from({length: PACK_COLUMNS * CHARM_ROWS}, (_,i) => `<button type="button" class="character-grid-cell" data-cell="${PACK_CELLS+i}" data-location="cell-${PACK_CELLS+i}" style="grid-column:${i%PACK_COLUMNS+1};grid-row:${Math.floor(i/PACK_COLUMNS)+1}" aria-label="Charm row ${Math.floor(i/PACK_COLUMNS)+1}, column ${i%PACK_COLUMNS+1}"></button>`).join('')}</div></section>
             <section class="character-overflow" hidden><header>Pack overflow <small>Make space to carry these items</small></header><div class="character-overflow-items"></div></section>
           </div>
           <p class="character-filter-status" data-filter-status role="status" hidden></p>
@@ -147,7 +147,7 @@ export class InventoryPanel {
       <div class="character-popup-layer" data-popup-layer hidden>
         <section class="character-mini-dialog ui-well" id="inventory-sort-dialog" data-mini="sort" role="dialog" aria-modal="true" aria-labelledby="inventory-sort-title" hidden>
           <header><h3 id="inventory-sort-title">Filter inventory</h3><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-popup-close aria-label="Close filters">${uiIcon('close')}</button></header>
-          <div class="character-tool-row" role="group" aria-label="Filter item type"><span>Type</span>${(['all', 'weapons', 'armor', 'jewelry', 'offhand'] as const).map(filter => `<button type="button" class="ui-button ui-button--quiet" data-filter="${filter}" aria-pressed="${filter === 'all'}">${filter === 'offhand' ? 'Off-hand' : filter[0].toUpperCase() + filter.slice(1)}</button>`).join('')}</div>
+          <div class="character-tool-row" role="group" aria-label="Filter item type"><span>Type</span>${(['all', 'weapons', 'armor', 'jewelry', 'offhand', 'charms'] as const).map(filter => `<button type="button" class="ui-button ui-button--quiet" data-filter="${filter}" aria-pressed="${filter === 'all'}">${filter === 'offhand' ? 'Off-hand' : filter[0].toUpperCase() + filter.slice(1)}</button>`).join('')}</div>
           <div class="character-tool-row" role="group" aria-label="Filter item rarity"><span>Rarity</span><button type="button" class="ui-button ui-button--quiet" data-rarity="all" aria-pressed="true">All</button>${Object.entries(TIER_NAMES).map(([tier, name]) => `<button type="button" class="ui-button ui-button--quiet" data-rarity="${tier}" aria-pressed="false">${name}</button>`).join('')}</div>
           <button type="button" class="ui-button ui-button--quiet" data-clear-filters>Clear filters</button>
         </section>
@@ -206,10 +206,10 @@ export class InventoryPanel {
       cell.hidden = !item;
       if (!item) { delete cell.dataset.cell; return; }
       const position = layout[item.id], size = itemFootprint(item);
-      const parent = position === undefined ? overflow : bag;
+      const parent = position === undefined ? overflow : position >= PACK_CELLS ? this.element.querySelector<HTMLElement>('.character-charm-grid')! : bag;
       if (cell.parentElement !== parent) parent.append(cell);
       if (position === undefined) { delete cell.dataset.cell; cell.style.gridColumn = `span ${size.width}`; cell.style.gridRow = `span ${size.height}`; overflowCount++; }
-      else { cell.dataset.cell = String(position); cell.style.gridColumn = `${position % PACK_COLUMNS + 1} / span ${size.width}`; cell.style.gridRow = `${Math.floor(position / PACK_COLUMNS) + 1} / span ${size.height}`; }
+      else { cell.dataset.cell = String(position); cell.style.gridColumn = `${position % PACK_COLUMNS + 1} / span ${size.width}`; cell.style.gridRow = `${Math.floor((position >= PACK_CELLS ? position-PACK_CELLS : position) / PACK_COLUMNS) + 1} / span ${size.height}`; }
       cell.style.setProperty('--pack-width', String(size.width)); cell.style.setProperty('--pack-height', String(size.height));
       cell.classList.toggle('is-filtered-out', !matchesInventoryFilter(item, this.filters, this.rarities));
     });
@@ -418,6 +418,7 @@ export class InventoryPanel {
   }
 
   private activate(location: ItemLocation): void {
+    if (this.itemAt(location)?.kind === 'charm') return;
     if (location.type === 'bag') this.actions.equip(location.index);
     else this.actions.unequip(location.slot);
   }
@@ -549,9 +550,10 @@ export class InventoryPanel {
         const item = this.itemAt(this.drag);
         if (item) {
           const preview = this.element.querySelector<HTMLElement>('.character-pack-placement')!, size = itemFootprint(item);
+          (target.cell >= PACK_CELLS ? this.element.querySelector<HTMLElement>('.character-charm-grid')! : this.element.querySelector<HTMLElement>('.character-bag')!).append(preview);
           preview.hidden = false; preview.classList.toggle('is-invalid', !valid);
           preview.style.left = `calc(3px + ${target.cell % PACK_COLUMNS} * (var(--pack-cell) + var(--pack-gap)))`;
-          preview.style.top = `calc(3px + ${Math.floor(target.cell / PACK_COLUMNS)} * (var(--pack-cell) + var(--pack-gap)))`;
+          preview.style.top = `calc(3px + ${Math.floor((target.cell >= PACK_CELLS ? target.cell-PACK_CELLS : target.cell) / PACK_COLUMNS)} * (var(--pack-cell) + var(--pack-gap)))`;
           preview.style.width = `calc(${size.width} * (var(--pack-cell) + var(--pack-gap)) - var(--pack-gap))`;
           preview.style.height = `calc(${size.height} * (var(--pack-cell) + var(--pack-gap)) - var(--pack-gap))`;
         }
@@ -590,7 +592,7 @@ export class InventoryPanel {
       return;
     }
     this.touchItem = {...location,id:item.id}; this.touchMoving = false;
-    const buttons = location.type === 'equipment' ? '<button class="ui-button" data-touch-item="unequip">Unequip</button>' :
+    const buttons = item.kind==='charm' ? '' : location.type === 'equipment' ? '<button class="ui-button" data-touch-item="unequip">Unequip</button>' :
       EQUIPMENT_SLOTS.filter(slot=>planEquipmentChange(this.player!.character,item,this.player!.level,{sourceIndex:location.index,slot}).ok)
       .map(slot=>`<button class="ui-button" data-touch-item="equip:${slot}">Equip · ${SLOT_NAMES[slot]}</button>`).join('');
     this.sheet.innerHTML = `<header><strong>Item details</strong><button class="ui-button" data-touch-item="close">Close</button></header><div class="ui-item-tooltip">${itemTooltipMarkup(item,{sheet:this.player.character,level:this.player.level,equipped:location.type==='equipment',sourceIndex:location.type==='bag'?location.index:undefined})}</div><nav>${buttons}<button class="ui-button" data-touch-item="move">Move to slot…</button></nav>`;
@@ -619,7 +621,7 @@ export class InventoryPanel {
     if (target.cell === undefined) return false;
     if (source.type === 'equipment') {
       const occupied = packOccupancy(this.player!.character.inventory, resolvePackLayout(this.player!.character));
-      return (this.player!.character.inventory.includes(null) || this.player!.character.inventory.length < PACK_CELLS) && (footprintCells(item, target.cell)?.every(n => !occupied.has(n)) ?? false);
+      return (this.player!.character.inventory.includes(null) || this.player!.character.inventory.length < INVENTORY_CELLS) && (footprintCells(item, target.cell)?.every(n => !occupied.has(n)) ?? false);
     }
     return planInventoryMove(this.player!.character, source.index, target.cell) !== null;
   }
@@ -627,13 +629,16 @@ export class InventoryPanel {
   private dragLocation(event: DragEvent): ItemLocation | null {
     const target = this.locationFrom(event.target);
     if (target?.type === 'equipment') return target;
-    const bag = this.element.querySelector<HTMLElement>('.character-bag')!, bounds = bag.getBoundingClientRect();
-    if (event.clientX < bounds.left || event.clientX >= bounds.right || event.clientY < bounds.top || event.clientY >= bounds.bottom) return null;
+    const bag = [...this.element.querySelectorAll<HTMLElement>('.character-bag, .character-charm-grid')].find(grid=>{
+      const bounds=grid.getBoundingClientRect();return event.clientX>=bounds.left&&event.clientX<bounds.right&&event.clientY>=bounds.top&&event.clientY<bounds.bottom;
+    });
+    if(!bag)return null;
+    const charms=bag.classList.contains('character-charm-grid');
     const first = bag.querySelector<HTMLElement>('.character-grid-cell')!.getBoundingClientRect();
     const gap = parseFloat(getComputedStyle(bag).columnGap) || 0;
     const x = Math.floor((event.clientX - first.left) / (first.width + gap)) - this.dragOffset.x;
     const y = Math.floor((event.clientY - first.top) / (first.height + gap)) - this.dragOffset.y;
-    return { type: 'bag', index: -1, cell: x < 0 || y < 0 || x >= PACK_COLUMNS || y >= PACK_ROWS ? -1 : y * PACK_COLUMNS + x };
+    return { type: 'bag', index: -1, cell: x < 0 || y < 0 || x >= PACK_COLUMNS || y >= (charms?CHARM_ROWS:PACK_ROWS) ? -1 : (charms?PACK_CELLS:0)+y * PACK_COLUMNS + x };
   }
 
   private highlightEquipmentTargets(): void {

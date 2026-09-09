@@ -103,3 +103,5 @@ Code checks and static reviews do not establish gameplay feel, economy balance o
 - [Home and leaderboard](leaderboard.md): automatic Cloud character rankings, shared home navigation and equipped gear scoring (published in v0.6.0).
 
 - [Settlement tiers, residents, gambling and personal storage](settlements.md) · local generation 10.
+
+- [Charms](charms.md): magic stones, active inventory grid, size budgets and utility rewards.

@@ -1,3 +1,5 @@
+import { activeCharms } from './inventory-grid.ts';
+import { CHARM_REWARD_CAPS } from './charm-content.ts';
 import { deriveResistances } from './resistance-content.ts';
 import { AFFIX_COMBAT_RULES, SKILL_STATS, type SkillStat } from './equipment-affix-content.ts';
 import { PLAYER_DEFAULTS } from './combat-content.ts';
@@ -9,11 +11,12 @@ export const ATTRIBUTES: readonly Attribute[] = Object.freeze(['strength', 'dext
 const bounded = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Number.isNaN(value) ? min : value));
 
 /** Named sources shared by stat derivation and the character-sheet explanation. */
-export function characterModifierSources(sheet: CharacterSheet, treeBonuses: StatModifiers = {}): Array<{ label: string; modifiers: StatModifiers }> {
+export function characterModifierSources(sheet: CharacterSheet, treeBonuses: StatModifiers = {}, level = Infinity): Array<{ label: string; modifiers: StatModifiers }> {
   const sources = EQUIPMENT_SLOTS.flatMap(slot => {
     const item = sheet.equipped[slot];
     return item ? [{ label: `${itemDisplayName(item)} (${slot === 'weapon' ? 'main hand' : slot === 'offhand' ? 'off hand' : slot === 'ring1' ? 'ring I' : slot === 'ring2' ? 'ring II' : slot})`, modifiers: itemModifiers(item) }] : [];
   });
+  sources.push(...activeCharms(sheet,level).map(item=>({label:`${itemDisplayName(item)} (charm)`,modifiers:itemModifiers(item)})));
   sources.push({ label: 'Skill tree', modifiers: treeBonuses });
   const blessing = sheet.blessing?.remaining ? sheet.blessing.kind : null;
   if (blessing === 'haste') sources.push({ label: 'Haste blessing', modifiers: { attackSpeedPercent: 15, castSpeedPercent: 15 } });
@@ -30,7 +33,7 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
       if (Number.isFinite(value)) modifiers[key] = bounded((modifiers[key] ?? 0) + value, -1e9, 1e9);
     }
   };
-  for (const source of characterModifierSources(sheet, treeBonuses)) add(source.modifiers);
+  for (const source of characterModifierSources(sheet, treeBonuses, level)) add(source.modifiers);
   const blessing = sheet.blessing?.remaining ? sheet.blessing.kind : null;
   const value = (key: StatKey) => modifiers[key] ?? 0;
   const attributes = Object.fromEntries(ATTRIBUTES.map(key => [key,
@@ -42,6 +45,8 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
   const shield = sheet.equipped.weapon?.weapon?.hands !== 2 && offhand?.kind === 'shield' ? offhand.shield : undefined;
   return {
     attributes, resistances: deriveResistances(modifiers),
+    goldFindMultiplier: 1 + bounded(value('goldFindPercent'), 0, CHARM_REWARD_CAPS.gold) / 100,
+    xpGainMultiplier: 1 + bounded(value('xpGainPercent'), 0, CHARM_REWARD_CAPS.xp) / 100,
     manaOnKill: bounded(value('manaOnKill'), 0, 1e6),
     areaMultiplier: Math.sqrt(1 + bounded(value('areaPercent'), 0, AFFIX_COMBAT_RULES.maxAreaPercent) / 100),
     potionMultiplier: 1 + bounded(value('potionPercent'), 0, 100) / 100,

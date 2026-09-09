@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
-import { generateItem } from '../src/items.ts';
+import { addInventoryItem } from '../src/inventory.ts';
+import { PACK_CELLS, activeCharms, resolvePackLayout } from '../src/inventory-grid.ts';
+import { deriveItem, generateItem } from '../src/items.ts';
 import { GROUND_PICKUP_RANGE } from '../src/ground-item-pickup.ts';
 import type { Input, WorldQuery } from '../src/model.ts';
 
@@ -76,4 +78,21 @@ test('pickup routes around obstacles and gives up when no route exists',()=>{
   const trapped=setup({...open,blocked:()=>true});trapped.requestGroundItem(901);advance(trapped,3);
   assert.equal(trapped.groundPickup.id,null);
   assert.equal(trapped.groundItems.length,1);
+});
+
+
+test('charm pickup updates bonuses immediately without healing and a full charm grid preserves loot',()=>{
+  const sim=setup(open,0);
+  let charm=generateItem(771,1,'charm','amber-pebble','common');
+  charm.affixes[0]={name:'Prosperity',stat:'goldFindPercent',value:0};charm=deriveItem(charm);
+  sim.groundItems[0].item=charm;
+  const hp=sim.player.hp,mana=sim.player.mana;
+  assert.equal(sim.requestGroundItem(901),null);advance(sim,FIXED_STEP);
+  assert.equal(sim.groundItems.length,0);assert.equal(activeCharms(sim.player.character,1).length,1);
+  assert.ok(resolvePackLayout(sim.player.character)[charm.id]>=PACK_CELLS);
+  assert.ok(sim.player.derived.goldFindMultiplier>1);assert.equal(sim.player.hp,hp);assert.equal(sim.player.mana,mana);
+  for(let i=0;i<47;i++)assert.ok(addInventoryItem(sim.player.character,generateItem(8000+i,1,'charm','jade-pebble','common')));
+  sim.groundItems.push({id:902,x:0,y:0,item:generateItem(9901,1,'charm','jade-pebble','common')});
+  assert.equal(sim.requestGroundItem(902),'Charm grid full');advance(sim,FIXED_STEP);
+  assert.equal(sim.groundItems.length,1);
 });

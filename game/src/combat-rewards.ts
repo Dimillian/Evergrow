@@ -21,10 +21,10 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
   kills++;
   if (!player.dead) metric(player.chronicle,'manaRestored',Math.min(player.maxMana-player.mana,player.derived.manaOnKill));
   if (!player.dead) player.mana = Math.min(player.maxMana, player.mana + player.derived.manaOnKill);
-  const reward = Math.max(1, Math.round(enemy.xpReward * xpLevelFactor(player.level, enemy.level)));
+  const reward = Math.max(1, Math.round(enemy.xpReward * xpLevelFactor(player.level, enemy.level) * player.derived.xpGainMultiplier));
   const levels = awardCharacterExperience(player, reward);
   context.emit({ type: 'experience', x: enemy.x, y: enemy.y, amount: reward });
-  const gold = isBossKind(enemy.kind) ? 0 : Math.round(rollEnemyGold(enemy.lootSeed, enemy.level, enemy.rank) * (ENEMY_LOOT_YIELD[enemy.kind] ?? 1));
+  const gold = isBossKind(enemy.kind) ? 0 : Math.round(rollEnemyGold(enemy.lootSeed, enemy.level, enemy.rank) * (ENEMY_LOOT_YIELD[enemy.kind] ?? 1) * player.derived.goldFindMultiplier);
   if (gold) dropGold(context.groundGold, { id: context.nextId(), x: enemy.x, y: enemy.y, amount: gold, age: 0 });
   if (levels) context.emit({ type: 'level', x: player.x, y: player.y,
     level: player.level, skillPoints: levels, statPoints: levels * 5, color: '#c0acf0' });

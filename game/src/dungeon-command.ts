@@ -141,7 +141,7 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
             mask |= 1 << i;
         }
     if (!(mask & 8) && (checkpoint.groundGold ??= []).length < GOLD_RULES.maxPiles) {
-        checkpoint.groundGold.push({ id: next++, ...treasureLanding(sim.world,chest.x,chest.y,12,run.entrance.seed), flight:{x:chest.x,y:chest.y,at:sim.time,delay:.15}, age: 0, amount: gold });
+        checkpoint.groundGold.push({ id: next++, ...treasureLanding(sim.world,chest.x,chest.y,12,run.entrance.seed), flight:{x:chest.x,y:chest.y,at:sim.time,delay:.15}, age: 0, amount: Math.round(gold * sim.player.derived.goldFindMultiplier) });
         mask |= 8;
     }
     if (mask === run.chestMasks[index])

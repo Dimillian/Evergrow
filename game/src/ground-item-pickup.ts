@@ -11,7 +11,7 @@ export function groundPickupProblem(player: Player, drop: GroundItem | undefined
   if (!drop || player.dead) return 'Item unavailable';
   if (drop.flight && time < drop.flight.at + drop.flight.delay + TREASURE_FLIGHT_DURATION) return 'Item is landing';
   if (Math.hypot(drop.x-player.x,drop.y-player.y)>GROUND_PICKUP_RANGE) return 'Move closer';
-  if (!canPackItem(player.character, drop.item)) return 'Inventory full';
+  if (!canPackItem(player.character, drop.item)) return drop.item.kind === 'charm' ? 'Charm grid full' : 'Inventory full';
   return null;
 }
 

@@ -144,7 +144,8 @@ test('Afterguard improves subsequent armor after a block, refreshes, and clears 
 test('tooltips and saves preserve discrete skill rolls, comparison labels and the current character', () => {
   const sim = make(); const item = affix('skill:meteor', 'amulet', 80, .99999); sim.player.character.inventory[0] = item;
   const html = itemTooltipMarkup(item, { sheet: sim.player.character, level: 80, sourceIndex: 0 });
-  assert.ok(html.includes('Meteor ranks') && html.includes('+5') && html.includes('require the skill unlocked'));
+  assert.ok(html.includes('Meteor ranks') && html.includes('+5'));
+  assert.ok(!html.includes('require the skill unlocked'));
   const save = { version: CHARACTER_SAVE_VERSION, id: 'affix-save', name: 'Affix', createdAt: 1, updatedAt: 1, worldSeed: 7319, worldVersion: 4, checkpoint: sim.captureCheckpoint() };
   assert.ok(decodeCharacterSave(JSON.stringify(save)));
 });

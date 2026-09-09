@@ -1,3 +1,4 @@
+import { charmProfile } from './charm-content.ts';
 import { isResistanceStat, resistanceAffixLimit } from './resistance-content.ts';
 import { JEWELRY_PROFILES } from './jewelry-content.ts';
 import { ITEM_MATERIALS, itemMaterialPool } from './item-materials.ts';
@@ -6,7 +7,7 @@ import { isSkillStat, skillAffixRank } from './equipment-affix-content.ts';
 import { isElementalAffix, meleeEnchantment } from './elemental-weapon.ts';
 import { FOCUS_PROFILES } from './focus-content.ts';
 import type { Item } from './character-types.ts';
-import { ITEM_KINDS, TIER_NAMES, STAT_LABELS, TIER_AFFIXES } from './items.ts';
+import { ITEM_KINDS, TIER_NAMES, STAT_LABELS, itemAffixCount, itemAffixPool } from './items.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from './weapon-content.ts';
 import { STARTING_SWORD } from './equipment.ts';
 import { MAX_CONTENT_LEVEL } from './progression-content.ts';
@@ -29,18 +30,19 @@ export function validItem(v: unknown): v is Item {
   if (!object(r) || typeof r.starter !== 'boolean' || !integer(r.enhancement, 0, 10) || !integer(r.revision)
     || !integer(r.targetedRolls) || !integer(r.fullRolls) || !Array.isArray(r.rolls) || r.rolls.length !== v.affixes.length
     || !r.rolls.every(n => number(n, 0, 1)) || new Set(v.affixes.map(a => a.stat)).size !== v.affixes.length
-    || v.affixes.length !== TIER_AFFIXES[v.tier as Item['tier']]) return false;
+    || v.affixes.length !== itemAffixCount(v as unknown as Item)) return false;
   if (r.materialId !== undefined && (typeof r.materialId !== 'string' || !Object.hasOwn(ITEM_MATERIALS, r.materialId) || !itemMaterialPool(v.kind as Item['kind'], object(v.weapon) ? v.weapon.family as NonNullable<Item['weapon']>['family'] : undefined).some(m => m.id === r.materialId))) return false;
   const profile = r.profileId;
+  if (v.kind === 'charm' && (!charmProfile(v as unknown as Item) || r.materialId !== undefined || r.starter || Object.keys(v.implicit as ObjectValue).length || v.affixes.some(a=>!itemAffixPool(v as unknown as Item).some(d=>d.stat===a.stat)))) return false;
   if (v.kind === 'weapon' && !(profile === STARTING_SWORD.id || WEAPON_PROFILES.some(p => p.id === profile))) return false;
   if (v.kind === 'shield' && !SHIELD_PROFILES.some(p => p.id === profile)) return false;
-  if (v.kind !== 'weapon' && v.kind !== 'shield' && v.kind !== 'grimoire' && v.kind !== 'orb' && v.kind !== 'ring' && v.kind !== 'amulet' && profile !== undefined) return false;
+  if (v.kind !== 'charm' && v.kind !== 'weapon' && v.kind !== 'shield' && v.kind !== 'grimoire' && v.kind !== 'orb' && v.kind !== 'ring' && v.kind !== 'amulet' && profile !== undefined) return false;
   if ((v.kind==='ring'||v.kind==='amulet')&&profile!==undefined&&!JEWELRY_PROFILES.some(p=>p.id===profile&&p.kind===v.kind))return false;
   if (v.affixes.filter(a => isSkillStat(a.stat)).length > 1
     || Object.keys(v.implicit as ObjectValue).some(isSkillStat)
     || v.affixes.some((a, i) => isSkillStat(a.stat) ? !integer(a.value, 1, 5) || a.value !== skillAffixRank((r.rolls as number[])[i], v.itemLevel as number) : a.stat === 'projectilePierce' && a.value !== 1)) return false;
   const resistance = v.affixes.filter(a => isResistanceStat(a.stat));
-  if (resistance.length > 1 || resistance.length && (!['ring', 'amulet', 'shield'].includes(v.kind as string) || resistance.some(a => !isResistanceStat(a.stat) || !number(a.value, .1, resistanceAffixLimit(a.stat))))) return false;
+  if (resistance.length > 1 || resistance.length && (!['ring', 'amulet', 'shield', 'charm'].includes(v.kind as string) || resistance.some(a => !isResistanceStat(a.stat) || !number(a.value, .1, resistanceAffixLimit(a.stat))))) return false;
   const elemental = v.affixes.filter(a => isElementalAffix(a.stat));
   if (elemental.length > 1 || elemental.length && (v.kind !== 'weapon' || !object(v.weapon) || v.weapon.attackKind !== 'melee' || elemental.some(a => a.value <= 0))) return false;
   const a = v.appearance;
