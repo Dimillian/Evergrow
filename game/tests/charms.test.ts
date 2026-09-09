@@ -9,7 +9,7 @@ import { deriveCharacterStats } from '../src/character-stats.ts';
 import { improveItem, improvementProblem } from '../src/item-improvement.ts';
 import { validItem } from '../src/item-validation.ts';
 import { itemIconSVG, itemDropShapes, itemPackIconSVG } from '../src/item-art.ts';
-import { Simulation } from '../src/simulation.ts';
+import { Simulation, FIXED_STEP } from '../src/simulation.ts';
 import { refreshCharacter } from '../src/character.ts';
 import { awardKillRewards } from '../src/combat-rewards.ts';
 import { rollEnemyLoot } from '../src/loot.ts';
@@ -71,6 +71,33 @@ test('charm drops are rare, seeded and retain source levels and normal rarity',(
     total++;if(item.kind!=='charm')continue;charms++;tiers.add(item.tier);assert.equal(item.itemLevel,29);assert.ok(validItem(item));
   }
   assert.ok(charms/total>.01&&charms/total<.03,`${charms}/${total}`);assert.ok(tiers.size>=4);
+});
+
+test('pre-charm 64/72-slot saves can earn, pick up and persist new monster-dropped charms',()=>{
+  for(const capacity of [64,72]){
+    const source=new Simulation(world,{spawn:false});
+    source.player.level=16;source.player.character.skillPoints=15;source.player.character.statPoints=75;
+    refreshCharacter(source.player);
+    const checkpoint=source.captureCheckpoint();
+    checkpoint.kills=1200;
+    checkpoint.character.inventory=checkpoint.character.inventory.slice(0,capacity);
+    delete checkpoint.character.inventoryLayout;
+    const record={version:4,id:`old-charms-${capacity}`,name:'Existing adventurer',createdAt:1,updatedAt:2,worldSeed:7319,worldVersion:4,checkpoint};
+    const saved=decodeCharacterSave(JSON.stringify(record));assert.ok(saved);
+    const sim=new Simulation(world,{spawn:false});sim.restoreCheckpoint(saved.checkpoint);
+    const enemy=sim.spawnEnemy('stalker',sim.player.x+40,sim.player.y)!;
+    Object.assign(enemy,{x:sim.player.x,y:sim.player.y,level:16,rank:'normal',biome:'verdant',lootSeed:118,xpReward:20,hp:0,state:'dead'});
+    let id=9000;
+    awardKillRewards(enemy,1200,0,{player:sim.player,groundGold:sim.groundGold,groundItems:sim.groundItems,pickups:sim.pickups,nextId:()=>++id,emit:()=>{}});
+    const drop=sim.groundItems.find(d=>d.item.kind==='charm');assert.ok(drop,'ordinary kill must use the current charm pool');
+    assert.ok(decodeCharacterSave(JSON.stringify({...record,checkpoint:sim.captureCheckpoint()})),'charm on the ground must survive saving');
+    assert.equal(sim.requestGroundItem(drop.id),null);
+    sim.update(FIXED_STEP,{moveX:0,moveY:0,aimX:0,aimY:0,attack:false,dodge:false,heal:false,skillSlot:null});
+    assert.ok(sim.player.character.inventory.some(item=>item?.id===drop.item.id));
+    assert.ok(resolvePackLayout(sim.player.character)[drop.item.id]>=PACK_CELLS);
+    const picked=decodeCharacterSave(JSON.stringify({...record,checkpoint:sim.captureCheckpoint()}));assert.ok(picked);
+    assert.ok(picked.checkpoint.character.inventory.some(item=>item?.id===drop.item.id));
+  }
 });
 
 test('kill gold and XP bonuses apply once while preserving equipment rolls',()=>{

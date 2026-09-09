@@ -53,6 +53,10 @@ Kill XP, gold and mana-on-kill use eligibility before that kill's experience awa
 
 Each enemy item-kind table adds charm weight 2 to its existing equipment weight 100: **about 1.96% of dropped items** are charms. Normal item quantities, rank rarity and source levels remain authoritative. General untyped item generation (including generic POI hoards) has a 4% charm branch; explicitly themed equipment rewards keep their authored kinds. Dungeon chest rolls use the enemy table. Shops and gambling do not offer charms in this pass.
 
+This is not a 1.96% chance per kill. Ordinary non-goblin foes drop an item 28% of the time, giving about **0.55% charm chance per kill** (one per 182 kills on average). Veterans average one per 73 kills and elites one per 41. Ordinary goblins have reduced loot yield, averaging one per 607 kills. There is no pity counter: 300 ordinary non-goblin kills still have about a 19% chance of yielding none. Raid-boss chests roll three untyped items, each eligible for the separate 4% charm branch.
+
+Existing characters use these same live reward rules; no creation-date or charm-unlock flag gates eligibility. Regression coverage restores pre-charm 64- and 72-record saves without a layout, awards a normal monster's charm after 1,200 prior kills, picks it into the charm grid and validates both ground-loot and owned-item save round-trips.
+
 Detailed stats show active charm sources, resistances, gold found and experience gained. Item tooltips show ordinary rarity, level and stat values, with no size/affix-count line or stat explanations. Detailed calculation explanations belong only in character detailed stats.
 
 ## Review and verification
