@@ -188,3 +188,12 @@ The character pack is now **12 columns × 6 rows (72 cells)**, followed by **fou
 Vendor bag views (sell/shop/enchanter/gambler/storage) mirror the same positions, footprints, overflow and reserved charm rows. `inventory-pack.css` supplies their shared dimensions and presentation; no bag capacity counter is shown. Stock, equipped gear and stored-item lists remain separate selectors.
 
 `inventory-grid.ts` owns footprint/occupancy/packing and validation; `inventory.ts` owns atomic transactions; the panel only projects that state. The existing `/character.html` and character workspace preview use this exact runtime panel with disposable gear.
+
+
+## Detailed stat inspection (2026-09-09)
+
+The character window exposes hover and keyboard-focus explanations for every attribute and combat stat. Each compact, square-cornered glass tooltip states the effect, calculation, relevant caps and named sources: starting/assigned attributes, individual equipped items (including slot), allocated skill-tree totals and active blessings. Bag items contribute nothing. Weapon damage and cadence come from `deriveAttackStats`; per-hand damage includes only that weapon's elemental enchantment. Paired weapon rates are separate, never summed. Staff/wand rates are labeled casts, including the off hand.
+
+Physical/spell damage, speed and potion **bonus** rows show increases above the baseline. Critical damage and movement retain explicit total multipliers. Armor and the same-level reduction estimate use `effectiveArmor` and `armorReduction`, including active Afterguard and Bulwark blessing. Passive shield stats remain separate from the active guard skill's reduction. Skill-rank bonuses are listed by skill and explain that the skill must first be learned. Damage rows exclude criticals, enemy defenses and conditional Spellweave; each skill still uses its rank, specialization and timing.
+
+`character-stat-details.ts` owns the read-only row catalog; its `DERIVED_STAT_DETAILS` contract requires an explicit inspection entry when `DerivedCharacterStats` grows. `characterModifierSources` supplies the same item, tree and blessing modifiers to calculation and source descriptions. Keep formula explanations in sync when tuning `character-stats.ts`; do not introduce a second combat calculation in the panel. Regression coverage includes every starter, source attribution, off-hand casting, enchantments, caps, shield requirements, temporary armor and bonus ranks. No gameplay balance or save format changes in this pass.

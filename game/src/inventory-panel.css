@@ -198,3 +198,19 @@
 
 /* Initial panel focus leaves controls quiet until the player navigates. */
 .character-window:focus{outline:none}
+
+/* Quiet inspection affordance; the same smoked-glass surface as item tooltips. */
+[data-stat-detail] { cursor:help; }
+.ui-stat[data-stat-detail] { border-radius:0; transition:background-color .12s; }
+[data-stat-detail]:hover, [data-stat-detail]:focus-visible { background:#b8d5df0b; outline:1px solid #b8d5df30; outline-offset:2px; }
+.ui-tooltip.character-stat-tooltip { position:fixed; z-index:90; width:360px; max-width:calc(100vw - 24px); max-height:calc(100vh - 24px); box-sizing:border-box; overflow:auto; pointer-events:auto; border-radius:0; padding:16px; white-space:normal; font-size:14px; line-height:1.45; }
+.character-stat-tooltip header { display:flex; align-items:baseline; justify-content:space-between; gap:18px; color:#e5ddbc; }
+.character-stat-tooltip header b { flex:none; color:#cde1de; font-size:20px; }
+.character-stat-tooltip p { margin:12px 0; color:#c1d0d0; }
+.character-stat-tooltip .stat-calculation { padding:10px 0; border-top:1px solid #aecad526; border-bottom:1px solid #aecad526; color:#98b3bd; font-size:13px; }
+.character-stat-tooltip dl { margin:10px 0 0; font-size:12px; }
+.character-stat-tooltip dl div { padding:5px 0; }
+.character-stat-tooltip dt { color:#bcc7c4; }
+.character-stat-tooltip dd { margin:2px 0 0; color:#d6c899; }
+.character-stat-tooltip small { display:block; margin-top:10px; color:#879b9f; }
+@media(prefers-reduced-motion:reduce) { .ui-stat[data-stat-detail] { transition:none; } }

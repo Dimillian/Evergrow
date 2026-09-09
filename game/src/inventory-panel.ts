@@ -14,9 +14,10 @@ import { directionalControl } from './ui-navigation.ts';
 import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS, TIER_NAMES } from './items.ts';
 import { planEquipmentChange, planInventoryMove } from './inventory.ts';
 import { drawCharacterPortrait } from './character-portrait.ts';
-import { deriveAttackStats } from './equipment.ts';
+import { characterStatDetails, type StatDetail } from './character-stat-details.ts';
+import { UITooltip } from './ui-tooltip.ts';
 import { xpForNextLevel } from './progression.ts';
-import { uiIcon, trapDialogFocus } from './ui-components.ts';
+import { uiIcon, trapDialogFocus, escapeUI } from './ui-components.ts';
 import './inventory-panel.css';
 
 export interface InventoryPanelActions {
@@ -46,7 +47,6 @@ const SLOT_NAMES: Record<EquipmentSlot, string> = {
 const LEFT_SLOTS: EquipmentSlot[] = ['chest', 'gloves', 'legs', 'boots', 'cloak'];
 const RIGHT_SLOTS: EquipmentSlot[] = ['weapon', 'offhand', 'amulet', 'ring1', 'ring2'];
 const number = (value: number, decimals = 0) => Number.isFinite(value) ? value.toLocaleString('en-US', { maximumFractionDigits: decimals }) : '—';
-const percent = (value: number) => `${number(value * 100, 1)}%`;
 const locationKey = (location: ItemLocation) => location.type === 'bag' ? location.index < 0 ? `cell-${location.cell}` : `bag-${location.index}` : `equipment-${location.slot}`;
 
 function emptySlotIcon(slot: EquipmentSlot): string {
@@ -92,6 +92,8 @@ export class InventoryPanel {
   private readonly controller = new GamepadMenu();
   private readonly sectionFocus = new Map<number, HTMLElement>();
   private readonly tooltip: ItemTooltip;
+  private readonly statTooltip: UITooltip;
+  private readonly statDetails = new Map<string, StatDetail>();
   private readonly canvas: HTMLCanvasElement;
   private readonly cells = new Map<string, HTMLButtonElement>();
 
@@ -136,7 +138,7 @@ export class InventoryPanel {
         </section>
         <section class="character-details" id="character-section-2" data-section="2" tabindex="0" aria-labelledby="attributes-title">
           <div class="character-attributes"><div class="character-section-title"><h3 id="attributes-title">Attributes</h3><span class="character-points-available" data-points-label></span></div>
-            <div class="character-attribute-list">${(Object.keys(ATTRIBUTE_NAMES) as Attribute[]).map(attribute => `<div class="character-attribute"><div><span>${ATTRIBUTE_NAMES[attribute]}</span><small>${ATTRIBUTE_DESCRIPTIONS[attribute]}</small></div><strong data-attribute-value="${attribute}"></strong><button type="button" class="ui-button ui-button--icon character-attribute-add" data-allocate="${attribute}" aria-label="Increase ${ATTRIBUTE_NAMES[attribute]}">${uiIcon('plus')}</button></div>`).join('')}</div>
+            <div class="character-attribute-list">${(Object.keys(ATTRIBUTE_NAMES) as Attribute[]).map(attribute => `<div class="character-attribute"><div tabindex="0" data-stat-detail="${attribute}"><span>${ATTRIBUTE_NAMES[attribute]}</span><small>${ATTRIBUTE_DESCRIPTIONS[attribute]}</small></div><strong data-attribute-value="${attribute}"></strong><button type="button" class="ui-button ui-button--icon character-attribute-add" data-allocate="${attribute}" aria-label="Increase ${ATTRIBUTE_NAMES[attribute]}">${uiIcon('plus')}</button></div>`).join('')}</div>
           </div>
           <div class="character-statistics"><div class="character-section-title character-section-title--secondary"><h3 tabindex="0">Combat details</h3><span>Effective</span></div><div data-combat-stats></div></div>
         </section>
@@ -167,6 +169,7 @@ export class InventoryPanel {
     this.sheet = document.createElement('section'); this.sheet.className = 'touch-item-sheet'; this.sheet.hidden = true;
     this.sheet.setAttribute('aria-label','Selected item'); this.window.append(this.sheet);
     this.tooltip = new ItemTooltip(this.window, 'character-item-tooltip');
+    this.statTooltip = new UITooltip(this.window, 'character-stat-tooltip', 'character-stat-tooltip');
     this.element.querySelector('[data-edit-appearance]')?.addEventListener('click',()=>actions.editAppearance?.());
     this.canvas = this.element.querySelector('.character-doll')!;
     this.element.querySelectorAll<HTMLButtonElement>('[data-location]').forEach(cell => this.cells.set(cell.dataset.location!, cell));
@@ -270,44 +273,13 @@ export class InventoryPanel {
       button.dataset.tooltipAlign = 'end';
       button.dataset.tooltip = `Spend 1 attribute point on ${ATTRIBUTE_NAMES[attribute]}`;
     }
-    const attack = deriveAttackStats(player.stats, player.equipment.mainHand);
-    const offense: Array<[string, string]> = [
-      [player.equipment.mainHand.attackKind === 'bolt' ? 'Bolt damage' : 'Attack damage', number(attack.damage)],
-      [player.equipment.mainHand.attackKind === 'bolt' ? 'Casts per second' : 'Attacks per second', number(attack.attacksPerSecond, 2)],
-      ['Attack speed bonus', percent(stats.attackSpeedMultiplier - 1)],
-      ['Spell damage', percent(stats.spellDamageMultiplier)], ['Cast speed bonus', percent(stats.castSpeedMultiplier - 1)],
-      ['Critical chance', percent(stats.critChance)], ['Critical damage', percent(stats.critMultiplier)],
-    ];
-    if (player.equipment.offHand?.kind === 'weapon') {
-      const off = deriveAttackStats(player.stats, player.equipment.offHand.weapon);
-      offense.splice(2, 0, ['Off-hand damage', number(off.damage)], ['Off-hand attacks / s', number(off.attacksPerSecond, 2)]);
-    }
-    const groups: Array<{ title: string; tone: string; rows: Array<[string, string]> }> = [
-      { title: 'Offense', tone: 'offense', rows: offense },
-      { title: 'Defense', tone: 'defense', rows: [
-        ['Armor', number(stats.armor)], [`Reduction vs level ${player.level}`, percent(stats.damageReduction)],
-        ['Block chance', percent(stats.blockChance)], ['Blocked damage reduction', percent(stats.blockReduction)],
-      ] },
-      { title: 'Life & mana', tone: 'resources', rows: [
-        ['Maximum life', number(stats.maxHp)], ['Life regeneration', `${number(stats.lifeRegeneration, 2)} / s`],
-        ['Life on hit', number(stats.lifeOnHit, 1)], ['Maximum mana', number(stats.maxMana)],
-        ['Mana regeneration', `${number(stats.manaRegeneration, 2)} / s`],
-        ...(stats.manaOnKill ? [['Mana on kill', number(stats.manaOnKill, 1)] as [string, string]] : []),
-        ...(stats.potionMultiplier > 1 ? [['Potion restoration', percent(stats.potionMultiplier)] as [string, string]] : []),
-      ] },
-      { title: 'Utility & efficiency', tone: 'utility', rows: [
-        ['Movement speed', percent(stats.moveSpeedMultiplier)], ['Mana cost reduction', percent(1 - stats.manaCostMultiplier)],
-        ['Cooldown reduction', percent(1 - stats.cooldownMultiplier)],
-        ...(stats.areaMultiplier > 1 ? [['Area of effect', `+${number((stats.areaMultiplier ** 2 - 1) * 100)}%`] as [string, string]] : []),
-        ...(stats.projectilePierce ? [['Projectile pierce', number(stats.projectilePierce)] as [string, string]] : []),
-        ...(stats.spellweavePercent ? [['Spellweave damage', `+${number(stats.spellweavePercent)}%`] as [string, string]] : []),
-        ...(stats.afterguardPercent ? [['Armor after block', `+${number(stats.afterguardPercent)}%`] as [string, string]] : []),
-      ] },
-    ];
-    const markup = groups.map(group => `<section class="character-stat-group character-stat-group--${group.tone}" aria-labelledby="stats-${group.tone}">
-      <h4 id="stats-${group.tone}">${group.title}</h4><dl>${group.rows.map(([label, value]) => `<div class="ui-stat"><dt class="ui-stat-label">${label}</dt><dd class="ui-stat-value">${value}</dd></div>`).join('')}</dl></section>`).join('');
+    const groups = characterStatDetails(player);
+    this.statDetails.clear();
+    for (const group of groups) for (const row of group.rows) this.statDetails.set(row.id, row);
+    const markup = groups.filter(group => group.tone !== 'attributes').map(group => `<section class="character-stat-group character-stat-group--${group.tone}" aria-labelledby="stats-${group.tone}">
+      <h4 id="stats-${group.tone}">${escapeUI(group.title)}</h4><dl>${group.rows.map(row => `<div class="ui-stat" tabindex="0" data-stat-detail="${escapeUI(row.id)}"><dt class="ui-stat-label">${escapeUI(row.label)}</dt><dd class="ui-stat-value">${escapeUI(row.value)}</dd></div>`).join('')}</dl></section>`).join('');
     const statContainer = this.element.querySelector('[data-combat-stats]')!;
-    if (statContainer.innerHTML !== markup) statContainer.innerHTML = markup;
+    if (statContainer.innerHTML !== markup) { this.statTooltip.hide(); statContainer.innerHTML = markup; }
     if (this.drag) this.highlightEquipmentTargets();
     if (this.hovered) this.showTooltip(this.hovered);
   }
@@ -325,7 +297,7 @@ export class InventoryPanel {
     this.animation = 0;
   }
 
-  dispose(): void { this.close(); this.tooltip.dispose(); this.lifetime.abort(); this.element.remove(); this.player = null; }
+  dispose(): void { this.close(); this.tooltip.dispose(); this.statTooltip.dispose(); this.lifetime.abort(); this.element.remove(); this.player = null; }
 
   private popupPanel(): HTMLElement { return this.popupLayer.querySelector<HTMLElement>(`[data-mini="${this.popup}"]`)!; }
 
@@ -510,11 +482,14 @@ export class InventoryPanel {
     this.element.addEventListener('pointerdown', () => this.element.classList.remove('is-controller'), options);
     this.element.addEventListener('pointerover', event => {
       if (event.pointerType === 'touch' || this.drag || this.element.classList.contains('is-controller')) return;
+      if (this.showStatTooltip(event.target)) return;
       const location = this.locationFrom(event.target);
       if (location) this.showTooltip(location);
     }, options);
     this.element.addEventListener('pointerout', event => {
       if (this.element.classList.contains('is-controller')) return;
+      const anchor = event.target instanceof Element ? event.target.closest('[data-stat-detail]') : null;
+      if (anchor && (!(event.relatedTarget instanceof Node) || (!anchor.contains(event.relatedTarget) && !this.statTooltip.element.contains(event.relatedTarget)))) this.statTooltip.hide();
       const from = this.locationFrom(event.target), to = this.locationFrom(event.relatedTarget);
       if (from && (!to || locationKey(from) !== locationKey(to))) this.hideTooltip();
     }, options);
@@ -523,11 +498,14 @@ export class InventoryPanel {
       if (section) {
         this.section = Number(section.dataset.section); this.sectionFocus.set(this.section, event.target as HTMLElement); this.updateSectionHighlight();
       }
+      if (this.showStatTooltip(event.target)) return;
       const location = this.locationFrom(event.target);
       if (location) this.showTooltip(location);
       else this.hideTooltip();
     }, options);
+    this.statTooltip.element.addEventListener('pointerleave', () => this.statTooltip.hide(), options);
     this.element.addEventListener('focusout', event => {
+      this.statTooltip.hide();
       if (!this.locationFrom(event.relatedTarget)) this.hideTooltip();
     }, options);
     this.element.addEventListener('keydown', event => {
@@ -596,7 +574,7 @@ export class InventoryPanel {
       else if (source.type === 'equipment' && target.type === 'bag') this.actions.unequip(source.slot, target.cell!);
     }, options);
     this.element.addEventListener('dragend', () => this.clearDrag(), options);
-    this.window.addEventListener('scroll', () => this.hideTooltip(), { ...options, capture: true });
+    this.window.addEventListener('scroll', event => { if (!(event.target instanceof Node) || !this.statTooltip.element.contains(event.target)) this.hideTooltip(); }, { ...options, capture: true });
     window.addEventListener('resize', () => { this.hideTooltip(); this.dismissPopup(); }, options);
     window.addEventListener('blur', () => this.clearDrag(), options);
   }
@@ -672,6 +650,7 @@ export class InventoryPanel {
   private clearDrag(): void { this.clearDropHighlight(); this.drag = null; this.dragOffset = { x: 0, y: 0 }; for (const cell of this.cells.values()) cell.classList.remove('is-drop-target', 'is-dragging', 'is-equip-target'); }
 
   private showTooltip(location: ItemLocation): void {
+    this.statTooltip.hide();
     if (this.drag || document.documentElement.classList.contains('touch-mode')) return;
     const item = this.itemAt(location), cell = this.cells.get(locationKey(location));
     if (!item || !cell || cell.hidden || !this.player) { this.hideTooltip(); return; }
@@ -680,7 +659,17 @@ export class InventoryPanel {
       equipped: location.type === 'equipment', sourceIndex: location.type === 'bag' ? location.index : undefined }, cell);
   }
 
-  private hideTooltip(): void { this.hovered = null; this.tooltip.hide(); }
+  private showStatTooltip(target: EventTarget | null): boolean {
+    const anchor = target instanceof Element ? target.closest<HTMLElement>('[data-stat-detail]') : null;
+    const detail = anchor && this.statDetails.get(anchor.dataset.statDetail!);
+    if (!anchor || !detail) return false;
+    this.hideTooltip();
+    this.statTooltip.show(`<header><strong>${escapeUI(detail.label)}</strong><b>${escapeUI(detail.value)}</b></header>
+      <p>${escapeUI(detail.description)}</p><div class="stat-calculation">${escapeUI(detail.calculation)}</div>
+      ${detail.sources.length ? `<dl>${detail.sources.map(source => `<div><dt>${escapeUI(source.label)}</dt><dd>${escapeUI(source.value)}</dd></div>`).join('')}</dl>` : '<small>No equipment, tree or blessing bonuses.</small>'}`, anchor);
+    return true;
+  }
+  private hideTooltip(): void { this.hovered = null; this.tooltip.hide(); this.statTooltip.hide(); }
 
   private animate = (): void => {
     if (this.element.hidden || !this.player) return;

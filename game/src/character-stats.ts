@@ -1,11 +1,25 @@
 import { AFFIX_COMBAT_RULES, SKILL_STATS, type SkillStat } from './equipment-affix-content.ts';
 import { PLAYER_DEFAULTS } from './combat-content.ts';
 import { armorReduction } from './progression-content.ts';
-import { EQUIPMENT_SLOTS, itemModifiers } from './items.ts';
+import { EQUIPMENT_SLOTS, itemModifiers, itemDisplayName } from './items.ts';
 import type { Attribute, CharacterSheet, DerivedCharacterStats, StatKey, StatModifiers } from './character-types.ts';
 
 export const ATTRIBUTES: readonly Attribute[] = Object.freeze(['strength', 'dexterity', 'intelligence', 'vitality']);
 const bounded = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Number.isNaN(value) ? min : value));
+
+/** Named sources shared by stat derivation and the character-sheet explanation. */
+export function characterModifierSources(sheet: CharacterSheet, treeBonuses: StatModifiers = {}): Array<{ label: string; modifiers: StatModifiers }> {
+  const sources = EQUIPMENT_SLOTS.flatMap(slot => {
+    const item = sheet.equipped[slot];
+    return item ? [{ label: `${itemDisplayName(item)} (${slot === 'weapon' ? 'main hand' : slot === 'offhand' ? 'off hand' : slot === 'ring1' ? 'ring I' : slot === 'ring2' ? 'ring II' : slot})`, modifiers: itemModifiers(item) }] : [];
+  });
+  sources.push({ label: 'Skill tree', modifiers: treeBonuses });
+  const blessing = sheet.blessing?.remaining ? sheet.blessing.kind : null;
+  if (blessing === 'haste') sources.push({ label: 'Haste blessing', modifiers: { attackSpeedPercent: 15, castSpeedPercent: 15 } });
+  if (blessing === 'wellspring') sources.push({ label: 'Wellspring blessing', modifiers: { manaCostPercent: 20 } });
+  if (blessing === 'fleet') sources.push({ label: 'Fleet blessing', modifiers: { moveSpeedPercent: 15 } });
+  return sources;
+}
 
 /** All item, attribute and node bonuses converge here. Percent bonuses are percentage points. */
 export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatModifiers = {}, level = 1): DerivedCharacterStats {
@@ -15,12 +29,8 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
       if (Number.isFinite(value)) modifiers[key] = bounded((modifiers[key] ?? 0) + value, -1e9, 1e9);
     }
   };
-  for (const slot of EQUIPMENT_SLOTS) if (sheet.equipped[slot]) add(itemModifiers(sheet.equipped[slot]!));
-  add(treeBonuses);
+  for (const source of characterModifierSources(sheet, treeBonuses)) add(source.modifiers);
   const blessing = sheet.blessing?.remaining ? sheet.blessing.kind : null;
-  if (blessing === 'haste') add({ attackSpeedPercent: 15, castSpeedPercent: 15 });
-  if (blessing === 'wellspring') add({ manaCostPercent: 20 });
-  if (blessing === 'fleet') add({ moveSpeedPercent: 15 });
   const value = (key: StatKey) => modifiers[key] ?? 0;
   const attributes = Object.fromEntries(ATTRIBUTES.map(key => [key,
     bounded(sheet.attributes[key] + value(key), 0, 1e9)])) as Record<Attribute, number>;
