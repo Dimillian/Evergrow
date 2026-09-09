@@ -2,7 +2,11 @@ import { dungeonEventLabel } from './dungeon-prop-art.ts';
 import { dungeonTheme } from './dungeon-content.ts';
 import { isBossKind, isWildernessBoss, BOSS_PALETTES } from './wilderness-boss-content.ts';
 import { sampleGearLight } from './gear-scene-light.ts';
-import { withGearLight } from './gear-material.ts';
+import { withGearLight, DEFAULT_GEAR_LIGHT, type GearLight } from './gear-material.ts';
+import { SceneShadows } from './scene-shadows.ts';
+import { PropSurfaceLight } from './prop-surface-light.ts';
+import { sceneClimate } from './scene-light-style.ts';
+import type { Prop } from './world.ts';
 import { drawEnemyWarning, enemyWarningLight } from './enemy-warning-art.ts';
 import { drawGroundSpell, groundSpellLights } from './ground-spell-art.ts';
 import { enemyDebuffs } from './enemy-debuffs.ts';
@@ -115,6 +119,9 @@ export class Renderer {
   private settlementArt = new SettlementArt();
   private environmentArt = new EnvironmentArt();
   private atmosphere = new AtmosphereArt();
+  private sceneShadows = new SceneShadows();
+  private propSurfaceLight = new PropSurfaceLight();
+  private materialKey: GearLight = DEFAULT_GEAR_LIGHT;
   private biomeLife = new BiomeLife();
   private water = new WaterPresentation();
   private waterArt = new WaterArt();
@@ -217,7 +224,7 @@ export class Renderer {
 
   reset() {
     this.battleBarks.reset();
-    this.water.reset(); this.waterArt.reset(); this.lighting.reset();
+    this.water.reset(); this.waterArt.reset(); this.lighting.reset(); this.sceneShadows.reset(); this.atmosphere.reset(); this.propSurfaceLight.reset();
     this.portalGuide = 0; this.portalAnchors = []; this.fadingPortal = null;
     this.cameraX = 0; this.cameraY = 0; this.effects.reset(); this.rangedAim = null;
     this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
@@ -324,6 +331,7 @@ export class Renderer {
     this.settlementArt.update(this.cachedBuildings, px, py, dt, settings.reducedMotion);
     this.indoorBlend += ((world.getBuildingAt(px, py) ? 1 : 0) - this.indoorBlend) * (1 - Math.exp(-dt * 5));
     const biome = world.sampleBiome(px, py);
+    this.materialKey = sceneClimate(biome.weights, sim.dungeonFloor ? 1 : this.indoorBlend).key;
     this.biomeLife.update(dt, this.visualTime, this.cachedProps, { x: px, y: py, vx: p.vx, vy: p.vy },
       settings.reducedMotion, (x, y) => world.sampleGroundContact(x, y));
     const lights = this.sceneLights(sim, px, py, settings.reducedMotion, alpha);
@@ -366,6 +374,18 @@ export class Renderer {
       this.waterArt.drawSurface(c, this.water.fluid, lights, settings.reducedMotion, settings.waterAge);
       this.profiler?.end('water', opticsStart);
     }
+    if (!sim.dungeonFloor) this.sceneShadows.drawProps(c, this.cachedProps, this.view,
+      prop => this.propSprite(prop), this.visualTime, settings.reducedMotion);
+    this.atmosphere.drawLayer(c, world, this.view, this.visualTime, settings.reducedMotion,
+      px, py, false, !!sim.dungeonFloor, this.indoorBlend);
+    // All extended actor shadows belong to the ground, before depth-sorted silhouettes.
+    this.drawActorShadow(px, py, p.radius, 44 * PLAYER_ART_SCALE);
+    for (const enemy of sim.enemies) {
+      if (enemy.hp <= 0) continue;
+      const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);
+      if (x < left - 70 || x > left + worldWidth + 70 || y < top - 70 || y > top + worldHeight + 70) continue;
+      this.drawActorShadow(x, y, enemy.radius, enemy.kind === 'brute' ? 55 : 38);
+    }
     this.enemyFocusMark(alpha);
     drawResourcePickups(c, sim.pickups, this.visualTime, settings.reducedMotion);
     for (const ghost of this.ghosts) {
@@ -388,7 +408,8 @@ export class Renderer {
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
     this.biomeArt.drawLight(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
     this.biomeArt.drawAir(c, this.biomeLife, this.visualTime, settings.reducedMotion);
-    this.atmosphere.drawMist(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
+    this.atmosphere.drawLayer(c, world, this.view, this.visualTime, settings.reducedMotion,
+      px, py, true, !!sim.dungeonFloor, this.indoorBlend);
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, alpha, lights);
     if (sim.dungeonFloor) drawCryptEmission(c, sim.dungeonFloor, settings.reducedMotion ? 0 : this.visualTime, this.view);
@@ -546,8 +567,7 @@ export class Renderer {
       // Prefetched offscreen props retain collision/light coverage without generating unseen sprites.
       if (prop.x + 115 < this.view.left || prop.x - 115 > this.view.left + this.view.width
         || prop.y + 10 < this.view.top || prop.y - 230 > this.view.top + this.view.height) return;
-      const sprite = this.environmentArt.getSprite(prop) ?? (prop.kind === 'tree' || prop.kind === 'deadTree'
-        ? this.art.getTree(prop.seed, prop.kind === 'deadTree') : prop.kind === 'rock' ? this.art.getRock(prop.seed) : this.art.getShrine());
+      const sprite = this.propSprite(prop);
       const definition = propDefinition(prop.kind);
       const crown = definition.canopy;
       const occludes = crown && py < prop.y + 8 && py > prop.y - (crown.height + crown.radius) * prop.scale
@@ -572,12 +592,14 @@ export class Renderer {
         c.transform(1, 0, wind * -.012, 1, 0, 0);
       }
       c.drawImage(sprite.image, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
+      this.propSurfaceLight.draw(c, prop, sprite);
       for (const [layer, foliage] of (sprite.foliage ?? []).entries()) {
         c.save();
         const gust = biomeWind(prop.x, prop.y, this.visualTime - layer * .18, prop.biome ?? 'deadwood', settings.reducedMotion).x * definition.sway * 2.2;
         c.transform(1, 0, gust * (layer ? -.009 : -.005), 1, 0, 0);
         c.globalAlpha *= foliageOpacity;
         c.drawImage(foliage, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
+        this.propSurfaceLight.draw(c, prop, sprite, foliage);
         c.restore();
       }
       c.restore();
@@ -635,11 +657,21 @@ export class Renderer {
     for (const entry of entries) entry.draw();
   }
 
+  private propSprite(prop: Prop) {
+    return this.environmentArt.getSprite(prop) ?? (prop.kind === 'tree' || prop.kind === 'deadTree'
+      ? this.art.getTree(prop.seed, prop.kind === 'deadTree') : prop.kind === 'rock' ? this.art.getRock(prop.seed) : this.art.getShrine());
+  }
+
+  private drawActorShadow(x: number, y: number, radius: number, height: number) {
+    this.sceneShadows.drawActor(this.ctx, x, y, radius, height,
+      sampleGearLight(x, y - 24, this.materialLights, this.materialKey), this.water.fluid.wetAt(x, y) > .5);
+  }
+
   private actor(x: number, y: number, pose: CharacterPose) {
     const c = this.ctx;
     c.fillStyle = this.water.fluid.wetAt(x, y) > .5 ? '#02091128' : '#02091190'; c.beginPath();
     c.ellipse(x, y + 2, pose.kind === 'brute' ? 17 : pose.kind === 'player' ? 11 * PLAYER_ART_SCALE : 11, pose.kind === 'brute' ? 8 : 5, 0, 0, TAU); c.fill();
-    c.save(); c.translate(x, y); if (pose.dead) c.globalAlpha = .4; withGearLight(c,sampleGearLight(x,y-24,this.materialLights),()=>drawHumanoid(c, pose)); drawCharacterStatus(c, pose); c.restore();
+    c.save(); c.translate(x, y); if (pose.dead) c.globalAlpha = .4; withGearLight(c,sampleGearLight(x,y-24,this.materialLights,this.materialKey),()=>drawHumanoid(c, pose)); drawCharacterStatus(c, pose); c.restore();
     this.waterArt.drawFeet(c, this.water.fluid, x, y, pose.kind === 'brute' ? 18 : pose.kind === 'player' ? 13 * PLAYER_ART_SCALE : 12);
   }
 

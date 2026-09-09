@@ -31,13 +31,14 @@ export function gearMaterialStops(base: string, surface: GearSurface, facing = 0
   const m = GEAR_MATERIALS[surface.material], response=gearLightResponse(surface,light,facing);
   const power=Math.min(1.5,Math.max(0,light.power));
   const highlight=mixColor(m.light,light.color,.45);
-  const shade=(1-response.diffuse)*.27;
+  const shade=(1-response.diffuse)*.38;
   let pigment=mixColor(base,m.shade,shade);
-  pigment=mixColor(pigment,highlight,Math.min(.62,response.diffuse*.09*power+response.specular));
+  pigment=mixColor(pigment,highlight,Math.min(.62,response.diffuse*.14*power+response.specular*1.2));
   if(surface.facet) return [[0,pigment],[1,pigment]];
   // Soft cylindrical variation, with restrained metallic reflection bands.
-  const reflection=.36+Math.sin(facing+surface.normal[0]*1.7)*.14;
-  const sheen=(1-m.roughness)*(.07+response.specular*.65)*power;
+  const angle = Math.atan2(light.direction[1], light.direction[0]) - facing;
+  const reflection=.42+Math.cos(angle+surface.normal[0]*1.7)*.19;
+  const sheen=(1-m.roughness)*(.08+response.specular*.8)*power;
   return [[0,mixColor(pigment,highlight,.04)], [reflection,mixColor(pigment,highlight,Math.min(.4,sheen))],
     [Math.min(.82,reflection+.22),pigment],[1,mixColor(pigment,m.shade,.1+m.metalness*.04)]];
 }

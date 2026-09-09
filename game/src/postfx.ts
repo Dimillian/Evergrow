@@ -67,11 +67,18 @@ void main() {
   vec3 color = vec3(texture2D(u_scene, v_uv + separation).r, original.g,
                     texture2D(u_scene, v_uv - separation).b);
   float luma = dot(color, vec3(.2126, .7152, .0722));
-  color = mix(vec3(luma), color, 1.10);
-  color = max(color - .007, 0.) * 1.045;
+  // Gentle filmic contrast: preserve the toe instead of crushing dark paths.
+  // Saturation rolls off in highlights so bright materials and spell cores stay clean.
+  color = mix(vec3(luma), color, mix(1.07, .96, smoothstep(.4, .95, luma)));
+  color += (color - .32) * color * (1. - clamp(color, 0., 1.)) * .24;
+  float shadows = 1. - smoothstep(.04, .38, luma);
+  float highlights = smoothstep(.3, .85, luma);
+  color *= mix(vec3(1.), vec3(.95, 1.005, 1.055), shadows * .65);
+  color *= mix(vec3(1.), vec3(1.055, 1.018, .97), highlights * .65);
+  color = max(color, 0.);
   vec3 bloom = texture2D(u_bloom, v_uv).rgb;
   // Soft phosphor light surrounds bright cores while preserving their material color.
-  color += bloom * .86 * (1. - clamp(color, 0., 1.) * .38);
+  color += bloom * .76 * (1. - clamp(color, 0., 1.) * .38);
   color = pow(max(color, 0.), vec3(.96));
   // Shallow scanlines and a low-contrast RGB grille combine both treatments.
   // Attenuate the grille in shadow so it never becomes a colored mesh over the woods.

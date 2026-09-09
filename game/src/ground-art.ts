@@ -142,19 +142,11 @@ export class GroundDressing {
   }
 }
 
-/** Shape-aware ambient shade: broken crowns plus a small dark ground contact. */
+/** Baked contact only. Moving cast shadows belong to SceneShadows. */
 function drawPropShade(c: CanvasRenderingContext2D, prop: Prop) {
   if (prop.radius <= 0) return;
   const definition = propDefinition(prop.kind);
   c.save(); c.translate(prop.x, prop.y); c.scale(prop.scale, prop.scale);
-  if (definition.canopy) {
-    const radius = definition.canopy.radius;
-    for (let lobe = 0; lobe < 5; lobe++) {
-      const a = lobe * 2.4 + prop.seed % 11;
-      const x = 9 + Math.cos(a) * radius * .33, y = 7 + Math.sin(a) * radius * .14;
-      patch(c, x, y, radius * .46, radius * .22, hash(prop.seed + lobe), '#0e2428', .1);
-    }
-  }
   const [rx, ry] = definition.shadow;
   c.fillStyle = '#07141c30'; c.beginPath(); c.ellipse(2, 3, rx * .85, ry * .82, -.2, 0, Math.PI * 2); c.fill();
   c.fillStyle = '#07101560'; c.beginPath(); c.ellipse(0, 1, Math.max(3, prop.radius * .72), Math.max(2, prop.radius * .27), 0, 0, Math.PI * 2); c.fill();
