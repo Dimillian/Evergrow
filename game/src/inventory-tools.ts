@@ -1,4 +1,4 @@
-import { resolvePackLayout, compactPackLayout, itemFootprint, type PackLayout } from './inventory-grid.ts';
+import { resolvePackLayout, compactPackLayout, storageGridLayout, itemFootprint, type PackLayout } from './inventory-grid.ts';
 import type { ActionResult, CharacterSheet, Item, ItemTier } from './character-types.ts';
 import { EQUIPMENT_SLOTS, ITEM_KINDS } from './items.ts';
 import { itemFitsSlot, planEquipmentChange } from './inventory.ts';
@@ -21,11 +21,9 @@ export function matchesInventoryFilter(item: Item | null, filters: ReadonlySet<I
     : ['head', 'chest', 'gloves', 'legs', 'boots', 'cloak'].includes(item.kind));
 }
 
-/** Explicit organization changes bag order; acquisition history is independent of cells. */
-export function sortInventory(sheet: CharacterSheet, mode: InventorySort): ActionResult {
-  if (!['rarity', 'type', 'recent', 'compact'].includes(mode)) return { ok: false, message: 'Unknown inventory sort.' };
+function orderedItems(sheet: CharacterSheet, items: Array<Item | null>, mode: InventorySort): Array<Item | null> {
   const recency = new Map((sheet.recentItems ?? []).map((id, index) => [id, index]));
-  const inventory = [...sheet.inventory].sort((a, b) => {
+  return [...items].sort((a, b) => {
     if (!a || !b) return a ? -1 : b ? 1 : 0;
     if (mode === 'compact') {
       const sa = itemFootprint(a), sb = itemFootprint(b);
@@ -40,6 +38,12 @@ export function sortInventory(sheet: CharacterSheet, mode: InventorySort): Actio
     for (const priority of INVENTORY_SORT_PRIORITY[mode]) if (comparisons[priority]) return comparisons[priority];
     return 0;
   });
+}
+
+/** Explicit organization changes bag order; acquisition history is independent of cells. */
+export function sortInventory(sheet: CharacterSheet, mode: InventorySort): ActionResult {
+  if (!['rarity', 'type', 'recent', 'compact'].includes(mode)) return { ok: false, message: 'Unknown inventory sort.' };
+  const inventory = orderedItems(sheet, sheet.inventory, mode);
   const before = resolvePackLayout(sheet);
   let layout = resolvePackLayout({ inventory });
   if(mode==='compact'||Object.keys(layout).length<Object.keys(before).length){
@@ -52,6 +56,16 @@ export function sortInventory(sheet: CharacterSheet, mode: InventorySort): Actio
     if(overflowAfter>overflowBefore)return {ok:false,message:'This arrangement needs more space. Your pack is unchanged.'};
   }
   sheet.inventory = inventory; sheet.inventoryLayout = layout;
+  return { ok: true };
+}
+
+/** Sort storage independently, keeping exact item records and its full capacity. */
+export function sortStorage(sheet: CharacterSheet): ActionResult {
+  if (!sheet.stash) return { ok: true };
+  const ordered = orderedItems(sheet, sheet.stash, 'compact');
+  if (storageGridLayout(ordered).rows > storageGridLayout(sheet.stash).rows)
+    return { ok: false, message: 'This arrangement needs more space. Your storage is unchanged.' };
+  sheet.stash = ordered;
   return { ok: true };
 }
 

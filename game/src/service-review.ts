@@ -1,3 +1,4 @@
+import { executeCharacterCommand } from './character-commands.ts';
 import './ui-kit.css';
 import './style.css';
 import './typography.css';
@@ -38,7 +39,7 @@ for (let i = 0; i < (params.has('empty') ? 0 : 18); i++) {
 refreshCharacter(p);
 const shell = life.own(new GameShell(document.querySelector('#app')!, { play() {}, returnToTitle() {}, openMap() {}, openCharacter() {}, openSkills() {} }));
 const audio=life.own(new GameAudio());
-const panel = life.own(new ServicePanel(shell.panelMount, { close: () => panel.close(), trade: async quote => {
+const panel = life.own(new ServicePanel(shell.panelMount, { close: () => panel.close(), sort: target => { executeCharacterCommand(p, target === 'storage' ? {type:'sortStorage'} : {type:'sortInventory',mode:'compact'}); }, trade: async quote => {
   if(params.has('sound'))await audio.unlock();
   const plan = planService(p.character, npc, p.level, quote);
   if (plan.ok) { p.character = plan.character; refreshCharacter(p); if(params.has('sound')&&(quote.request.type==='sell'||quote.request.type==='sellMany'))audio.play({type:'gold',x:p.x,y:p.y,amount:quote.price,balance:p.character.gold??0}); }

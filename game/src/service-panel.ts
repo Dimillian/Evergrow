@@ -39,7 +39,7 @@ export class ServicePanel {
   private revealed:Item|null=null;
   private abort = new AbortController();
   private focus: { dispose(): void } | null = null;
-  private actions: { close(): void; trade(quote: ServiceQuote): Promise<{ ok: boolean; message: string }> };
+  private actions: { close(): void; sort(target: 'storage' | 'inventory'): void; trade(quote: ServiceQuote): Promise<{ ok: boolean; message: string }> };
   constructor(mount: HTMLElement, actions: ServicePanel['actions']) {
     this.actions = actions;
     this.element = document.createElement('section'); this.element.className = 'service-panel ui-window'; this.element.hidden = true;
@@ -103,7 +103,7 @@ export class ServicePanel {
     this.element.innerHTML = `${this.headerMarkup()}
       ${this.tabsMarkup()}
       <div class="service-body"><section class="service-offer ui-scroll-area">${this.tab === 'sell' ? '<div class="service-section-heading"><h3>Selected items</h3><button class="ui-button ui-button--quiet" data-clear-sales>Clear</button></div>' : this.tab === 'improve' ? `<div class="service-forge">${npcEmblem(this.npc.role)}</div>${this.npc.role === 'enchanter' ? `<select class="ui-button" data-operation aria-label="Enchantment">${(['rarity', 'rerollOne', 'rerollAll', 'relevel'] as Improvement[]).map(op => `<option value="${op}" ${op === this.operation ? 'selected' : ''}>${OP_LABELS[op]}</option>`).join('')}</select>` : '<h3>Enhance equipment</h3>'}` : `<div class="service-section-heading"><h3>${this.tab === 'shop' ? `Stock · Lv ${vendorStockLevel(this.npc, this.player.level)}` : 'Buyback'}</h3><span>${this.tab === 'shop' ? `Restocks at level ${(stockEpoch(this.player.level) + 1) * 3 + 1}` : 'Last 12 sales'}</span></div><div class="service-stock ui-item-grid"></div>`}<div class="service-detail"></div></section>
-      <section class="service-bag ui-scroll-area">${this.tab === 'improve' || (this.npc.role === 'blacksmith' && this.tab === 'shop') ? '<section class="service-equipped-section" aria-label="Equipped gear"><div class="service-section-heading"><h3>Equipped</h3><span>Upgrade in place</span></div><div class="service-equipment ui-item-grid"></div></section>' : ''}<section aria-label="Inventory"><div class="service-section-heading"><h3>Inventory</h3></div>${this.tab === 'sell' ? this.rarityControls() : ''}<div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section></section></div>
+      <section class="service-bag ui-scroll-area">${this.tab === 'improve' || (this.npc.role === 'blacksmith' && this.tab === 'shop') ? '<section class="service-equipped-section" aria-label="Equipped gear"><div class="service-section-heading"><h3>Equipped</h3><span>Upgrade in place</span></div><div class="service-equipment ui-item-grid"></div></section>' : ''}<section aria-label="Inventory"><div class="service-section-heading"><h3>Inventory</h3></div>${this.sortMarkup('inventory')}${this.tab === 'sell' ? this.rarityControls() : ''}<div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section></section></div>
       <footer class="ui-window-footer"><span class="service-message" role="status"></span><button class="ui-button ui-button--primary" data-confirm disabled>Choose an item</button></footer>`;
     this.renderInventoryPack();
     const equipment = this.element.querySelector('.service-equipment');
@@ -150,8 +150,8 @@ export class ServicePanel {
     this.element.innerHTML=`${this.headerMarkup()}
       ${this.tabsMarkup()}
       <div class="service-body"><section class="service-offer ui-scroll-area"><div class="service-section-heading"><h3>${storage?'Stored equipment':'Choose an item type'}</h3><span>${storage?`${(sheet.stash??[]).filter(Boolean).length} / ${STASH_CAPACITY}`:`${this.npc.settlementTier??'settlement'} · Lv ${vendorLevel(this.npc,this.player.level)}`}</span></div>
-      ${storage?'<div class="ui-item-grid-scroll"><div class="service-storage inventory-pack"></div></div>':`<div class="gamble-choices">${GAMBLE_KINDS.map((kind,i)=>`<button class="gamble-choice" data-gamble="${kind}" aria-pressed="${this.selected?.type==='gamble'&&this.selected.kind===kind}"><span>${itemIconSVG(generateItem(i+71,1,kind,undefined,'common'),44)}</span><b>${kind==='head'?'Helmet':kind[0].toUpperCase()+kind.slice(1)}</b><small>${gamblePrice(this.npc,this.player.level,kind).toLocaleString()} gold</small></button>`).join('')}</div><details class="gamble-odds"><summary>Rarity odds</summary><p>${gambleOdds(this.npc).map((w,i)=>`${['Common','Magic','Rare','Epic','Legendary'][i]} ${w}%`).join(' · ')}</p></details>`}
-      <div class="service-detail"></div></section><section class="service-bag ui-scroll-area"><div class="service-section-heading"><h3>Inventory</h3></div><div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section></div>
+      ${storage?`${this.sortMarkup('storage')}<div class="ui-item-grid-scroll"><div class="service-storage inventory-pack"></div></div>`:`<div class="gamble-choices">${GAMBLE_KINDS.map((kind,i)=>`<button class="gamble-choice" data-gamble="${kind}" aria-pressed="${this.selected?.type==='gamble'&&this.selected.kind===kind}"><span>${itemIconSVG(generateItem(i+71,1,kind,undefined,'common'),44)}</span><b>${kind==='head'?'Helmet':kind[0].toUpperCase()+kind.slice(1)}</b><small>${gamblePrice(this.npc,this.player.level,kind).toLocaleString()} gold</small></button>`).join('')}</div><details class="gamble-odds"><summary>Rarity odds</summary><p>${gambleOdds(this.npc).map((w,i)=>`${['Common','Magic','Rare','Epic','Legendary'][i]} ${w}%`).join(' · ')}</p></details>`}
+      <div class="service-detail"></div></section><section class="service-bag ui-scroll-area"><div class="service-section-heading"><h3>Inventory</h3></div>${this.sortMarkup('inventory')}<div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section></div>
       <footer class="ui-window-footer"><span class="service-message" role="status"></span><button class="ui-button ui-button--primary" data-confirm disabled>${storage?'Select an item':'Choose an item type'}</button></footer>`;
     this.renderInventoryPack();
     if (storage) this.renderStoragePack();
@@ -203,6 +203,10 @@ export class ServicePanel {
       (position === undefined ? overflow : position>=PACK_CELLS ? root.querySelector<HTMLElement>('.character-charm-grid')! : bag).append(cell);
     });
     root.querySelector<HTMLElement>('.character-overflow')!.hidden = !overflow.childElementCount;
+  }
+
+  private sortMarkup(target: 'storage' | 'inventory'): string {
+    return `<div class="character-pack-toolbar"><button type="button" class="ui-button character-auto-sort" data-sort-pack="${target}" aria-label="Auto-sort ${target === 'storage' ? 'chest' : 'inventory'}">${uiIcon('sortFilter')} Auto-sort</button></div>`;
   }
 
   private renderStoragePack(): void {
@@ -257,6 +261,16 @@ export class ServicePanel {
     if (this.saving) return;
     const button = (e.target as HTMLElement).closest<HTMLButtonElement>('button, input[data-include-charms]'); if (!button) return;
     if (button.hasAttribute('data-close')) { this.actions.close(); return; }
+    if (button.dataset.sortPack === 'storage' || button.dataset.sortPack === 'inventory') {
+      const target = button.dataset.sortPack;
+      this.tooltip.hide();
+      if (this.selected?.type !== 'gamble') this.selected = null;
+      this.quote = null; this.sales.clear();
+      this.actions.sort(target);
+      this.render();
+      this.element.querySelector<HTMLElement>(`[data-sort-pack="${target}"]`)?.focus({preventScroll:true});
+      return;
+    }
     if(button.dataset.gamble){
       this.gambleKind=button.dataset.gamble as ItemKind;
       this.selected={type:'gamble',kind:this.gambleKind};

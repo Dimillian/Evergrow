@@ -6,12 +6,13 @@ import type { ActionResult, Attribute, EquipmentSlot, SkillId } from './characte
 import { equipItem, unequipItem, moveInventoryItem, allocateAttribute } from './inventory.ts';
 import { allocateSkillRoute } from './skill-tree-routes.ts';
 import { assignSkill, refreshCharacter } from './character.ts';
-import { equipBest, sortInventory, type InventorySort, type EquipBestChoice } from './inventory-tools.ts';
+import { equipBest, sortInventory, sortStorage, type InventorySort, type EquipBestChoice } from './inventory-tools.ts';
 
 export type CharacterCommand =
   | { type: 'lockItem'; id: string; locked: boolean }
   | { type: 'equipBest'; choice?: EquipBestChoice }
   | { type: 'sortInventory'; mode: InventorySort }
+  | { type: 'sortStorage' }
   | { type: 'upgradeSkill'; skill: SkillId }
   | { type: 'configureSkill'; skill: SkillId; rank: number; specialization: string | null }
   | { type: 'overload'; enabled: boolean }
@@ -31,6 +32,7 @@ export function executeCharacterCommand(player: Player, command: CharacterComman
     case 'lockItem': result = setItemLock(player.character, command.id, command.locked); break;
     case 'equipBest': result = equipBest(player.character, player.level, command.choice); break;
     case 'sortInventory': result = sortInventory(player.character, command.mode); break;
+    case 'sortStorage': result = sortStorage(player.character); break;
     case 'upgradeSkill': result = upgradeSkill(player.character, command.skill); break;
     case 'configureSkill': result = configureSkill(player.character, command.skill, command.rank, command.specialization); break;
     case 'overload':

@@ -128,3 +128,31 @@ test('path allocation charges only missing nodes from the nearest owned branch',
   assert.equal(player.character.skillPoints, 0);
   assert.equal(new Set(player.character.allocatedNodes).size, count + 1);
 });
+
+test('storage and inventory sorting stay independent and preserve item records and resources', () => {
+  const player = make();
+  const ring = generateItem(8801,1,'ring',undefined,'rare');
+  const sword = generateItem(8802,1,'weapon','greatblade','magic');
+  const stone = generateItem(8803,1,'charm','jade-monolith','rare');
+  ring.locked = true;
+  player.character.stash = Array(96).fill(null);
+  player.character.stash[2] = ring; player.character.stash[40] = sword; player.character.stash[90] = stone;
+  refreshCharacter(player);
+  player.hp = 7; player.mana = 3;
+  const bag = JSON.stringify(player.character.inventory), stats = JSON.stringify(player.derived);
+  const originalItems = JSON.stringify([ring,sword,stone]);
+  assert.equal(executeCharacterCommand(player,{type:'sortStorage'}).ok,true);
+  assert.equal(player.character.stash.length,96);
+  assert.deepEqual(new Set(player.character.stash.filter(Boolean)),new Set([ring,sword,stone]));
+  assert.notEqual(player.character.stash[0],null);
+  assert.equal(player.character.stash[95],null);
+  assert.equal(JSON.stringify([ring,sword,stone]),originalItems);
+  assert.equal(JSON.stringify(player.character.inventory),bag);
+  assert.equal(JSON.stringify(player.derived),stats,'stored charms stay inactive');
+  assert.equal(player.hp,7); assert.equal(player.mana,3);
+  const stored = JSON.stringify(player.character.stash);
+  assert.equal(executeCharacterCommand(player,{type:'sortInventory',mode:'compact'}).ok,true);
+  assert.equal(JSON.stringify(player.character.stash),stored);
+  assert.equal(executeCharacterCommand(player,{type:'sortStorage'}).ok,true);
+  assert.equal(JSON.stringify(player.character.stash),stored,'sorting is repeatable');
+});
