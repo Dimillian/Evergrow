@@ -23,6 +23,28 @@ export function itemFootprint(item: Item): ItemFootprint {
   }
 }
 
+/** Storage presentation grows vertically to preserve its item-count capacity.
+ * Keep saved slot indices intact for retrieval; stored charms remain inactive. */
+export function storageGridLayout(items: readonly (Item | null)[]): { cells: Array<number | null>; rows: number } {
+  const occupied = new Set<number>();
+  let rows = 8;
+  const cells = items.map(item => {
+    if (!item) return null;
+    const { width, height } = itemFootprint(item);
+    // The first row below all existing items is always a valid fallback.
+    for (let cell = 0; cell <= rows * PACK_COLUMNS; cell++) {
+      if (cell % PACK_COLUMNS + width > PACK_COLUMNS) continue;
+      const footprint = Array.from({ length: width * height }, (_, i) => cell + i % width + Math.floor(i / width) * PACK_COLUMNS);
+      if (footprint.some(value => occupied.has(value))) continue;
+      footprint.forEach(value => occupied.add(value));
+      rows = Math.max(rows, Math.floor(cell / PACK_COLUMNS) + height);
+      return cell;
+    }
+    throw new Error('Unable to lay out stored item');
+  });
+  return { cells, rows };
+}
+
 export function footprintCells(item: Item, cell: number): number[] | null {
   const { width, height } = itemFootprint(item);
   if (!Number.isInteger(cell) || cell < 0 || cell >= INVENTORY_CELLS

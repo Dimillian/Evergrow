@@ -1,6 +1,6 @@
 import { itemAffixCount } from './items.ts';
 import { bulkSaleItems } from './item-protection.ts';
-import { PACK_COLUMNS, PACK_ROWS, PACK_CELLS, CHARM_ROWS, resolvePackLayout, itemFootprint, canPackItem, packSpaceProblem } from './inventory-grid.ts';
+import { PACK_COLUMNS, PACK_ROWS, PACK_CELLS, CHARM_ROWS, resolvePackLayout, storageGridLayout, itemFootprint, canPackItem, packSpaceProblem } from './inventory-grid.ts';
 import './inventory-pack.css';
 import { settlementBenefits } from './settlement-services.ts';
 import { vendorLevel } from './npcs.ts';
@@ -150,11 +150,11 @@ export class ServicePanel {
     this.element.innerHTML=`${this.headerMarkup()}
       ${this.tabsMarkup()}
       <div class="service-body"><section class="service-offer ui-scroll-area"><div class="service-section-heading"><h3>${storage?'Stored equipment':'Choose an item type'}</h3><span>${storage?`${(sheet.stash??[]).filter(Boolean).length} / ${STASH_CAPACITY}`:`${this.npc.settlementTier??'settlement'} · Lv ${vendorLevel(this.npc,this.player.level)}`}</span></div>
-      ${storage?'<div class="service-storage ui-item-grid ui-item-grid--bag"></div>':`<div class="gamble-choices">${GAMBLE_KINDS.map((kind,i)=>`<button class="gamble-choice" data-gamble="${kind}" aria-pressed="${this.selected?.type==='gamble'&&this.selected.kind===kind}"><span>${itemIconSVG(generateItem(i+71,1,kind,undefined,'common'),44)}</span><b>${kind==='head'?'Helmet':kind[0].toUpperCase()+kind.slice(1)}</b><small>${gamblePrice(this.npc,this.player.level,kind).toLocaleString()} gold</small></button>`).join('')}</div><details class="gamble-odds"><summary>Rarity odds</summary><p>${gambleOdds(this.npc).map((w,i)=>`${['Common','Magic','Rare','Epic','Legendary'][i]} ${w}%`).join(' · ')}</p></details>`}
+      ${storage?'<div class="ui-item-grid-scroll"><div class="service-storage inventory-pack"></div></div>':`<div class="gamble-choices">${GAMBLE_KINDS.map((kind,i)=>`<button class="gamble-choice" data-gamble="${kind}" aria-pressed="${this.selected?.type==='gamble'&&this.selected.kind===kind}"><span>${itemIconSVG(generateItem(i+71,1,kind,undefined,'common'),44)}</span><b>${kind==='head'?'Helmet':kind[0].toUpperCase()+kind.slice(1)}</b><small>${gamblePrice(this.npc,this.player.level,kind).toLocaleString()} gold</small></button>`).join('')}</div><details class="gamble-odds"><summary>Rarity odds</summary><p>${gambleOdds(this.npc).map((w,i)=>`${['Common','Magic','Rare','Epic','Legendary'][i]} ${w}%`).join(' · ')}</p></details>`}
       <div class="service-detail"></div></section><section class="service-bag ui-scroll-area"><div class="service-section-heading"><h3>Inventory</h3></div><div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section></div>
       <footer class="ui-window-footer"><span class="service-message" role="status"></span><button class="ui-button ui-button--primary" data-confirm disabled>${storage?'Select an item':'Choose an item type'}</button></footer>`;
     this.renderInventoryPack();
-    const stash=this.element.querySelector('.service-storage');if(stash)(sheet.stash??Array(STASH_CAPACITY).fill(null)).forEach((item,i)=>stash.append(this.cell(item,`stash:${i}`)));
+    if (storage) this.renderStoragePack();
     this.renderDetail();
     if(focus)this.element.querySelector<HTMLElement>(`[data-item="${focus}"]`)?.focus({preventScroll:true});
     else if(control)this.element.querySelector<HTMLElement>(control)?.focus({preventScroll:true});
@@ -203,6 +203,26 @@ export class ServicePanel {
       (position === undefined ? overflow : position>=PACK_CELLS ? root.querySelector<HTMLElement>('.character-charm-grid')! : bag).append(cell);
     });
     root.querySelector<HTMLElement>('.character-overflow')!.hidden = !overflow.childElementCount;
+  }
+
+  private renderStoragePack(): void {
+    const root = this.element.querySelector<HTMLElement>('.service-storage')!;
+    const items = this.player.character.stash ?? [], layout = storageGridLayout(items);
+    root.style.setProperty('--pack-columns', String(PACK_COLUMNS));
+    root.innerHTML = `<div class="character-bag character-tetris" role="group" aria-label="Stored items, ${PACK_COLUMNS} columns" style="grid-template-rows:repeat(${layout.rows},var(--pack-cell))">
+      ${Array.from({length:layout.rows*PACK_COLUMNS},(_,cell)=>`<span class="character-grid-cell" aria-hidden="true" style="grid-column:${cell%PACK_COLUMNS+1};grid-row:${Math.floor(cell/PACK_COLUMNS)+1}"></span>`).join('')}</div>`;
+    const grid = root.firstElementChild!;
+    items.forEach((item, slot) => {
+      const position = layout.cells[slot];
+      if (!item || position === null) return;
+      const cell = this.cell(item, `stash:${slot}`), size = itemFootprint(item);
+      cell.classList.add('character-bag-slot');
+      cell.style.gridColumn = `${position % PACK_COLUMNS + 1} / span ${size.width}`;
+      cell.style.gridRow = `${Math.floor(position / PACK_COLUMNS) + 1} / span ${size.height}`;
+      cell.querySelector('svg')?.remove();
+      cell.insertAdjacentHTML('afterbegin', itemPackIconSVG(item, size.width, size.height));
+      grid.append(cell);
+    });
   }
 
   private cell(item: Item | null, key: string): HTMLButtonElement {

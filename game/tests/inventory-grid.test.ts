@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCharacterSheet, generateItem } from '../src/items.ts';
-import { itemFootprint, PACK_CELLS, PACK_COLUMNS, resolvePackLayout, footprintCells, validPackLayout, canPackItem } from '../src/inventory-grid.ts';
+import { itemFootprint, storageGridLayout, PACK_CELLS, PACK_COLUMNS, resolvePackLayout, footprintCells, validPackLayout, canPackItem } from '../src/inventory-grid.ts';
 import { addInventoryItem, moveInventoryItem, equipItem, unequipItem } from '../src/inventory.ts';
 import { sortInventory } from '../src/inventory-tools.ts';
 
@@ -65,4 +65,31 @@ test('unequip obeys physical placement and save validation rejects overlaps, non
   assert.equal(validPackLayout(s.inventory,{...s.inventoryLayout,[ring.id]:0}),false);
   assert.equal(validPackLayout(s.inventory,{...s.inventoryLayout,[ring.id]:PACK_CELLS}),false);
   assert.equal(validPackLayout(s.inventory,{...s.inventoryLayout,missing:50}),false);
+});
+
+
+test('storage keeps saved slot identities and fits a full stash of large gear and charms without overlap', () => {
+  const stored = Array.from({length:96}, (_,i) => i % 3 === 0
+    ? gear(900+i,'charm','jade-monolith') : gear(900+i,'weapon','greatblade'));
+  const before = JSON.stringify(stored), layout = storageGridLayout(stored), occupied = new Set<number>();
+  assert.equal(layout.cells.length,96);
+  assert.ok(layout.rows > 8, 'large gear extends storage instead of hiding or rejecting owned items');
+  stored.forEach((item,slot) => {
+    const cell = layout.cells[slot]! , size = itemFootprint(item);
+    assert.equal(typeof cell,'number');
+    assert.ok(cell % PACK_COLUMNS + size.width <= PACK_COLUMNS);
+    assert.ok(Math.floor(cell/PACK_COLUMNS) + size.height <= layout.rows);
+    for(let y=0;y<size.height;y++)for(let x=0;x<size.width;x++) {
+      const at = cell+y*PACK_COLUMNS+x;
+      assert.ok(!occupied.has(at), `stored slot ${slot} overlaps another item`);
+      occupied.add(at);
+    }
+  });
+  assert.equal(JSON.stringify(stored),before);
+  assert.deepEqual(storageGridLayout(stored),layout);
+  const sparse = [null,stored[0],null,stored[1]];
+  const repacked = storageGridLayout(sparse);
+  assert.equal(repacked.cells[0],null); assert.equal(repacked.cells[2],null);
+  assert.equal(typeof repacked.cells[1],'number'); assert.equal(typeof repacked.cells[3],'number');
+  assert.deepEqual(storageGridLayout([]),{cells:[],rows:8});
 });
