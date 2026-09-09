@@ -1,6 +1,11 @@
 import type { Item, ItemTier, StatKey } from './character-types.ts';
 import type { AffixDefinition } from './equipment-affix-content.ts';
 
+/** Conditional on an item reward; never an extra item or a chance per kill. */
+export const CHARM_DROP_CHANCE = .05;
+/** Equipment-kind weights total 100; normalize the charm weight to the same chance. */
+export const CHARM_DROP_WEIGHT = 100 * CHARM_DROP_CHANCE / (1 - CHARM_DROP_CHANCE);
+
 export const CHARM_SIZES = Object.freeze([
   { id: 'pebble', name: 'Pebble', width: 1, height: 1, affixes: 1, potency: .28, counts: [1,1,2,2,2], weight: 30 },
   { id: 'shard', name: 'Shard', width: 1, height: 2, affixes: 1, potency: .50, counts: [1,2,2,2,2], weight: 25 },

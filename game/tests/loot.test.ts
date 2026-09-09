@@ -1,3 +1,4 @@
+import { CHARM_DROP_CHANCE, CHARM_DROP_WEIGHT } from '../src/charm-content.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BIOME_PROFILE_WEIGHTS, ENEMY_ITEM_KIND_WEIGHTS, ENEMY_LOOT_TABLES, getLootTable } from '../src/loot-content.ts';
@@ -23,7 +24,9 @@ test('reward content is deeply immutable and every authored weight table is comp
   for (const weights of Object.values(ENEMY_ITEM_KIND_WEIGHTS)) {
     assert.ok(Object.isFrozen(weights));
     assert.deepEqual(Object.keys(weights).sort(), [...ITEM_KINDS].sort());
-    assert.equal(Object.values(weights).reduce((sum, weight) => sum + weight, 0), 102);
+    const total = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
+    assert.ok(Math.abs(total - (100 + CHARM_DROP_WEIGHT)) < 1e-10);
+    assert.ok(Math.abs(weights.charm / total - CHARM_DROP_CHANCE) < 1e-10);
     assert.ok(Object.values(weights).every(weight => weight > 0));
   }
   assert.ok(Object.isFrozen(BIOME_PROFILE_WEIGHTS));

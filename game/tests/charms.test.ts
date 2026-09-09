@@ -70,7 +70,7 @@ test('charm drops are rare, seeded and retain source levels and normal rarity',(
   for(let seed=0;seed<20000;seed++)for(const item of rollEnemyLoot({seed,level:27,rank:'elite',biome:'verdant',kind:'caster'})){
     total++;if(item.kind!=='charm')continue;charms++;tiers.add(item.tier);assert.equal(item.itemLevel,29);assert.ok(validItem(item));
   }
-  assert.ok(charms/total>.01&&charms/total<.03,`${charms}/${total}`);assert.ok(tiers.size>=4);
+  assert.ok(charms/total>.04&&charms/total<.06,`${charms}/${total}`);assert.ok(tiers.size>=4);
 });
 
 test('pre-charm 64/72-slot saves can earn, pick up and persist new monster-dropped charms',()=>{

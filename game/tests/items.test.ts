@@ -3,7 +3,7 @@ import { isSkillStat } from '../src/equipment-affix-content.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { affixPotency, itemAffixCount, INVENTORY_CAPACITY } from '../src/items.ts';
-import { createCharacterSheet, EQUIPMENT_SLOTS, generateItem, ITEM_KINDS, itemModifiers, TIER_NAMES } from '../src/items.ts';
+import { createCharacterSheet, EQUIPMENT_SLOTS, generateItem, generateRewardItem, ITEM_KINDS, itemModifiers, TIER_NAMES } from '../src/items.ts';
 import { STARTING_SWORD } from '../src/equipment.ts';
 import { SHIELD_PROFILES, WEAPON_PROFILES } from '../src/weapon-content.ts';
 import type { ItemTier } from '../src/character-types.ts';
@@ -20,10 +20,10 @@ test('equipment generation is reproducible, independent and safe at level bounda
   assert.ok(Number.isFinite(generateItem(15, Number.MAX_VALUE, 'weapon').weapon!.damage));
 });
 
-test('the seed corpus generates all five tiers and every equipment kind with coherent affixes', () => {
+test('the reward seed corpus generates all five tiers and every item kind with coherent affixes', () => {
   const tiers = new Set<ItemTier>(), kinds = new Set<string>(), ids = new Set<string>();
   for (let seed = 0; seed < 4000; seed++) {
-    const item = generateItem(seed, 5);
+    const item = generateRewardItem(seed, 5);
     tiers.add(item.tier); kinds.add(item.kind);
     assert.ok(!ids.has(item.id)); ids.add(item.id);
     assert.ok(item.name.length > 5 && item.baseName.length > 3);

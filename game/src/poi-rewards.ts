@@ -1,5 +1,5 @@
 import { isTrialKind } from './event-recipes.ts';
-import { generateItem } from './items.ts';
+import { generateRewardItem } from './items.ts';
 import { ENEMY_LOOT_TABLES } from './loot-content.ts';
 import { siteHash } from './wilderness-sites.ts';
 import type { ItemTier } from './character-types.ts';
@@ -26,7 +26,7 @@ export function eventRewards(site: EventRecord) {
     }
     const kind = site.kind==='caravan' ? (i===0?'weapon':'chest') : site.kind==='ruinedChapel' ? (i%2?'amulet':'grimoire') : site.kind==='beastDen' ? (i%2?'boots':'chest') : site.kind==='quarry' ? (i%2?'chest':'weapon') : site.kind==='corruptedGrove' ? (i%2?'orb':'weapon') : undefined;
     const material = site.kind==='beastDen' ? 'leather' as const : undefined;
-    const item = generateItem(siteHash(site.seed, i, 497), Math.min(1e6, site.level + Number(veteran)), kind, site.kind==='corruptedGrove'&&kind==='weapon'?'ember-staff':undefined, tier, material, {level:site.level,encounter:site.kind==='bossLair'?'bossChest':isTrialKind(site.kind)||site.kind==='camp'?'event':undefined});
+    const item = generateRewardItem(siteHash(site.seed, i, 497), Math.min(1e6, site.level + Number(veteran)), kind, site.kind==='corruptedGrove'&&kind==='weapon'?'ember-staff':undefined, tier, material, {level:site.level,encounter:site.kind==='bossLair'?'bossChest':isTrialKind(site.kind)||site.kind==='camp'?'event':undefined});
     item.id = `poi:${site.id}:${i}`;
     return item;
   });

@@ -1,5 +1,26 @@
 # Evergrow changelog
 
+## v0.3.4 — 2026-09-09T19:13:00Z
+
+### New
+
+- Hover ground loot to inspect its full name and stats in the bottom-right corner.
+
+### Tweaks
+
+- Charms now make up 5% of item rewards from monsters, chests and events, including themed rewards.
+- Normal enemies average one charm per 71 kills, up from one per 182; existing characters use the same improved odds.
+- Shops, gambling and upgrade services use item tooltips instead of repeated detail panels.
+- Skill rank and specialization controls take less room in the tree sidebar.
+- Supply carts have plank-sided beds, spoked rear wheels, separate handles and visible cargo.
+
+### Fixes
+
+- Newly purchased skill ranks and specializations become active immediately; you can still switch back manually.
+- The hovered item's comparison card stays closest to its slot, with equipped gear beside it.
+
+> Existing characters, items and progress are preserved.
+
 ## v0.3.3 — 2026-09-09T15:41:00Z
 
 ### New

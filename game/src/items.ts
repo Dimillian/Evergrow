@@ -1,4 +1,4 @@
-import { CHARM_PROFILES, CHARM_SIZES, CHARM_FLAVORS, CHARM_UTILITY_AFFIXES, CHARM_WEIGHTS, charmProfile, charmAffixCount, charmThematicStat } from './charm-content.ts';
+import { CHARM_DROP_CHANCE, CHARM_PROFILES, CHARM_SIZES, CHARM_FLAVORS, CHARM_UTILITY_AFFIXES, CHARM_WEIGHTS, charmProfile, charmAffixCount, charmThematicStat } from './charm-content.ts';
 import { RESISTANCE_AFFIXES, RESISTANCE_LABELS, RESISTANCE_STATS, isResistanceStat, boundResistanceRoll } from './resistance-content.ts';
 import { JEWELRY_PROFILES, jewelryProfiles } from './jewelry-content.ts';
 import { ITEM_MATERIALS, isClothMaterial, sourceMaterialPool, type MaterialSource, itemMaterialPool, rollItemMaterial, itemMaterialScale, materialBaseName, type ItemMaterialId } from './item-materials.ts';
@@ -160,6 +160,12 @@ function jewelryImplicit(profileId:string,level:number,quality:number):StatModif
 export const TIER_AFFIXES: Readonly<Record<ItemTier, number>> = { common: 0, magic: 1, rare: 2, epic: 3, legendary: 4 };
 export const TIER_POWER: Readonly<Record<ItemTier, number>> = { common: 1, magic: 1.09, rare: 1.2, epic: 1.34, legendary: 1.5 };
 
+/** Reward-only charm selection also covers authored equipment themes, with one roll per item. */
+export function generateRewardItem(seed: number, itemLevel: number, kind?: ItemKind, profileId?: string, tier?: ItemTier, material?: ItemMaterialId, source: MaterialSource = {}): Item {
+  const charm = randomSource(seed ^ 0x4c19ac)() < CHARM_DROP_CHANCE;
+  return generateItem(seed, itemLevel, charm ? 'charm' : kind, charm ? undefined : profileId, tier, charm ? undefined : material, source);
+}
+
 /** Item-local generation; reward sources may supply an explicitly rolled tier. Callers own seed uniqueness. */
 export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, profileId?: string, tierOverride?: ItemTier, materialOverride?: ItemMaterialId, source:MaterialSource={}): Item {
   if (tierOverride !== undefined && !Object.hasOwn(TIER_POWER, tierOverride)) throw new RangeError(`Unknown item tier: ${tierOverride}`);
@@ -167,7 +173,6 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
     if (kind && kind !== 'charm' || materialOverride !== undefined) throw new RangeError('Charms use stone profiles, not equipment materials.');
     return generateCharm(seed, itemLevel, profileId, tierOverride);
   }
-  if (!kind && !profileId && randomSource(seed ^ 0x4c19ac)() < .04) return generateCharm(seed, itemLevel, undefined, tierOverride);
   seed = seed >>> 0;
   const level = normalizeLevel(itemLevel);
   const random = randomSource(seed), choose = <T>(values: readonly T[]): T => values[Math.floor(random() * values.length)];
