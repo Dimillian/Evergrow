@@ -65,7 +65,7 @@ export function updateWarden(e: Enemy, dt: number, c: EnemyAIContext): void {
     if (e.state === 'attack') {
         if (e.bossMove === 'sweep' && !e.attackHit && circleIntersectsSector(p.x, p.y, p.radius, e.x, e.y, e.attackAngle, WARDEN_RULES.reach, Math.PI * 1.3) && c.visible(e.x, e.y, p.x, p.y)) {
             e.attackHit = true;
-            c.hurt(e.damage, e.attackAngle, e);
+            c.hurt(e.damage, e.attackAngle, e, 'physical');
         }
         if (e.bossMove === 'fracture' && !e.attackHit) {
             for (let i = 0; i < 3; i++) {
@@ -75,7 +75,7 @@ export function updateWarden(e: Enemy, dt: number, c: EnemyAIContext): void {
                 const angle = e.attackAngle + (i - 1) * .5, vx = p.x - e.x, vy = p.y - e.y, along = vx * Math.cos(angle) + vy * Math.sin(angle), across = Math.abs(-vx * Math.sin(angle) + vy * Math.cos(angle));
                 if (along > 0 && along < WARDEN_RULES.fractureLength && across < WARDEN_RULES.fractureWidth + p.radius && c.visible(e.x, e.y, p.x, p.y)) {
                     e.attackHit = true;
-                    c.hurt(e.damage * 1.15, angle, e);
+                    c.hurt(e.damage * 1.15, angle, e, 'physical');
                     break;
                 }
             }

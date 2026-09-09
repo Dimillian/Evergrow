@@ -1,3 +1,4 @@
+import { isResistanceStat, resistanceAffixLimit } from './resistance-content.ts';
 import { JEWELRY_PROFILES } from './jewelry-content.ts';
 import { ITEM_MATERIALS, itemMaterialPool } from './item-materials.ts';
 import { GEAR_MATERIAL_IDS } from './gear-material-content.ts';
@@ -38,6 +39,8 @@ export function validItem(v: unknown): v is Item {
   if (v.affixes.filter(a => isSkillStat(a.stat)).length > 1
     || Object.keys(v.implicit as ObjectValue).some(isSkillStat)
     || v.affixes.some((a, i) => isSkillStat(a.stat) ? !integer(a.value, 1, 5) || a.value !== skillAffixRank((r.rolls as number[])[i], v.itemLevel as number) : a.stat === 'projectilePierce' && a.value !== 1)) return false;
+  const resistance = v.affixes.filter(a => isResistanceStat(a.stat));
+  if (resistance.length > 1 || resistance.length && (!['ring', 'amulet', 'shield'].includes(v.kind as string) || resistance.some(a => !isResistanceStat(a.stat) || !number(a.value, .1, resistanceAffixLimit(a.stat))))) return false;
   const elemental = v.affixes.filter(a => isElementalAffix(a.stat));
   if (elemental.length > 1 || elemental.length && (v.kind !== 'weapon' || !object(v.weapon) || v.weapon.attackKind !== 'melee' || elemental.some(a => a.value <= 0))) return false;
   const a = v.appearance;

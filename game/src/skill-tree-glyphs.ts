@@ -34,6 +34,8 @@ const STAT_GLYPHS: Readonly<Record<StatKey, StatGlyph>> = Object.freeze({
   manaOnKill: { engraving: 'current', unit: 2 }, areaPercent: { engraving: 'impact', unit: 10 },
   potionPercent: { engraving: 'mana', unit: 12 }, projectilePierce: { engraving: 'daggers', unit: 1 },
   spellweavePercent: { engraving: 'book', unit: 16 }, afterguardPercent: { engraving: 'shield', unit: 20 },
+  fireResistance: { engraving: 'shield', unit: 10 }, frostResistance: { engraving: 'shield', unit: 10 },
+  lightningResistance: { engraving: 'shield', unit: 10 }, arcaneResistance: { engraving: 'shield', unit: 10 }, allResistance: { engraving: 'shield', unit: 3 },
   fireDamage: { engraving: 'flame', unit: 4 },
   frostDamage: { engraving: 'mana', unit: 4 },
   lightningDamage: { engraving: 'impact', unit: 4 },

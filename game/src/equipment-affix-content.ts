@@ -18,6 +18,11 @@ export const SPECIAL_AFFIXES: readonly AffixDefinition[] = Object.freeze([
 export const SPECIAL_AFFIX_LABELS = Object.freeze({ manaOnKill: 'Mana on kill', areaPercent: 'Area of effect', potionPercent: 'Potion restoration',
   projectilePierce: 'Projectile pierce', spellweavePercent: 'Spellweave damage', afterguardPercent: 'Armor after blocking' });
 export const AFFIX_DESCRIPTIONS: Partial<Record<StatKey, string>> = Object.freeze({
+  fireResistance: 'Reduces incoming fire damage. Armor does not apply to elemental damage.',
+  frostResistance: 'Reduces incoming frost damage. Does not shorten slows.',
+  lightningResistance: 'Reduces incoming lightning damage.',
+  arcaneResistance: 'Reduces incoming arcane damage, including spirit-styled magic.',
+  allResistance: 'Adds this resistance to fire, frost, lightning and arcane. Does not reduce physical damage.',
   areaPercent: 'Larger sweeps, novas and explosions; no extra projectile travel.',
   potionPercent: 'Increases both life and mana restored by your potion.',
   projectilePierce: 'One extra target per roll. Explosive projectiles still detonate on contact.',

@@ -1,10 +1,11 @@
+import type { Element, ResistanceStat } from './resistance-content.ts';
 import type { ItemMaterialId } from './item-materials.ts';
 import type { GearMaterial } from './gear-material-content.ts';
 import type { GoldWallet } from './wallet.ts';
 import type { WeaponDefinition, FocusDefinition, ShieldDefinition } from './model.ts';
 
 export type Attribute = 'strength' | 'dexterity' | 'intelligence' | 'vitality';
-export type StatKey = Attribute | 'maxHp' | 'maxMana' | 'armor' | 'damagePercent' | 'attackSpeedPercent' | 'castSpeedPercent'
+export type StatKey = Attribute | ResistanceStat | 'maxHp' | 'maxMana' | 'armor' | 'damagePercent' | 'attackSpeedPercent' | 'castSpeedPercent'
   | 'critChance' | 'critDamage' | 'moveSpeedPercent' | 'spellDamagePercent' | 'manaRegen'
   | `skill:${SkillId}` | 'manaOnKill' | 'areaPercent' | 'potionPercent' | 'projectilePierce' | 'spellweavePercent' | 'afterguardPercent'
   | 'lifeRegen' | 'manaCostPercent' | 'cooldownPercent' | 'lifeOnHit' | 'blockChance' | 'blockReduction' | 'fireDamage' | 'frostDamage' | 'lightningDamage';
@@ -54,6 +55,7 @@ export interface CharacterSheet extends GoldWallet {
   arcaneOverload: boolean;
 }
 export interface DerivedCharacterStats {
+  resistances: Record<Element, number>;
   attackSpeedMultiplier: number; castSpeedMultiplier: number; attackDamageMultiplier: number;
   maxHp: number; maxMana: number; armor: number; damageReduction: number;
   critChance: number; critMultiplier: number; moveSpeedMultiplier: number;

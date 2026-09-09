@@ -23,7 +23,7 @@ function prepareKill(enemy: Enemy): void {
 }
 function projectile(sourceLevel: number): Projectile {
   return { id: 8100, sourceLevel, x: -20, y: 0, prevX: -20, prevY: 0, vx: 145, vy: 0,
-    angle: 0, radius: 5, damage: 40, owner: 'enemy', life: 1, maxLife: 1, hitIds: new Set() };
+    angle: 0, radius: 5, damage: 40, owner: 'enemy', effects: { style: 'arrow' }, life: 1, maxLife: 1, hitIds: new Set() };
 }
 
 test('spawn snapshots bounded regional health, damage, rank, biome and XP before later player changes', () => {
@@ -106,12 +106,12 @@ test('combat RNG draws and gear/pickup entity IDs cannot change later source see
   assert.ok(filled.groundItems.length > 0);
 });
 
-test('a caster bolt snapshots source level and scaled damage through its caster death and a player level change', () => {
+test('a caster bolt retains arcane damage through caster death and player level changes', () => {
   const sim = createSim(), caster = sim.spawnEnemy('caster', ZONE_RULES.regionSize * 8 + 30, 0, 'veteran')!;
   const sourceDamage = caster.damage, sourceLevel = caster.level;
   caster.x = caster.prevX = caster.homeX = -150; caster.y = caster.prevY = 0;
   caster.state = 'windup'; caster.stateDuration = 0; caster.attackAngle = 0;
-  sim.player.character.equipped.chest!.implicit = { armor: 120 }; refreshCharacter(sim.player);
+  sim.player.character.equipped.chest!.implicit = { armor: 120, arcaneResistance: 25 }; refreshCharacter(sim.player);
   advance(sim, FIXED_STEP);
   const bolt = sim.projectiles.find(shot => shot.owner === 'enemy')!;
   assert.ok(bolt); assert.equal(bolt.sourceLevel, sourceLevel); assert.equal(bolt.damage, sourceDamage);
@@ -123,7 +123,7 @@ test('a caster bolt snapshots source level and scaled damage through its caster 
   const beforeHp = sim.player.hp;
   advance(sim, 1);
   assert.equal(bolt.sourceLevel, sourceLevel); assert.equal(bolt.damage, sourceDamage);
-  assert.equal(beforeHp - sim.player.hp, Math.round(sourceDamage * (1 - armorReduction(120, sourceLevel))));
+  assert.equal(beforeHp - sim.player.hp, Math.round(sourceDamage * .75));
   assert.equal(sim.drainEvents().filter(event => event.type === 'hurt').length, 1);
 });
 

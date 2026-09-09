@@ -1,3 +1,5 @@
+import { projectileDamageType } from './resistance-content.ts';
+import type { DamageType } from './model.ts';
 import type { ProjectileStyle, HitSnapshot } from './model.ts';
 import { strikeContainers, strikeContainerSegment, type ContainerAttackContext } from './breakable-containers.ts';
 import type { GroundEffectRequest } from './ground-effects.ts';
@@ -12,7 +14,7 @@ export interface ProjectileContext {
   schedule(effect: GroundEffectRequest): void;
   player: Player; enemies: Enemy[]; world: WorldQuery;
   damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle, offense?: HitSnapshot): void;
-  hurt(amount: number, angle: number, sourceLevel: number, sourceKind?: EnemyKind): void;
+  hurt(amount: number, angle: number, sourceLevel: number, damageType: DamageType, sourceKind?: EnemyKind): void;
   onScreen(enemy: Enemy): boolean;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
   emit(event: CombatEvent): void;
@@ -84,7 +86,7 @@ export function advanceProjectiles(projectiles: Projectile[], dt: number, contex
       }
       if (projectile.owner === 'enemy') {
         if (segmentDistanceSquared(p.x, p.y, oldX, oldY, projectile.x, projectile.y) <= (projectile.radius + p.radius) ** 2) {
-          context.hurt(projectile.damage, projectile.angle, projectile.sourceLevel, projectile.sourceKind); projectile.life = 0;
+          context.hurt(projectile.damage, projectile.angle, projectile.sourceLevel, projectileDamageType(projectile.effects?.style ?? 'arcane'), projectile.sourceKind); projectile.life = 0;
         }
         continue;
       }

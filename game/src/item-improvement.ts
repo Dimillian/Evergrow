@@ -1,8 +1,10 @@
+import { isResistanceStat } from './resistance-content.ts';
 import type { Item } from './character-types.ts';
 import { affixConflicts, rollAffix, itemAffixPool, TIER_AFFIXES, deriveItem, randomSource } from './items.ts';
 export type AffixFocus='any'|'offense'|'defense'|'utility';
 export const AFFIX_FOCUSES:readonly AffixFocus[]=['any','offense','defense','utility'];
 export function affixCategory(stat:string):Exclude<AffixFocus,'any'>{
+  if(isResistanceStat(stat)) return 'defense';
   if(['maxHp','armor','vitality','lifeRegen','blockChance','blockReduction','afterguardPercent','potionPercent'].includes(stat))return 'defense';
   if(['maxMana','manaRegen','manaOnKill','manaCostPercent','cooldownPercent','moveSpeedPercent'].includes(stat))return 'utility';
   return 'offense';

@@ -1,3 +1,5 @@
+import { projectileDamageType } from './resistance-content.ts';
+import type { DamageType } from './model.ts';
 import { hasWalkableSegment } from './world-navigation.ts';
 import { goblinSpeed, goblinDamage } from './warband.ts';
 import { alertEnemy, transitionEnemy } from './enemy-state.ts';
@@ -14,7 +16,7 @@ export interface EnemyAIContext {
   trial: { campId: string; x: number; y: number; radius: number } | null;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
   move(enemy: Enemy, vx: number, vy: number, dt: number): void;
-  hurt(amount: number, angle: number, enemy: Enemy): void;
+  hurt(amount: number, angle: number, enemy: Enemy, damageType: DamageType): void;
   shoot(enemy: Enemy, angle: number, definition: ProjectileDefinition, effects: ProjectileEffects): void;
   emit(event: CombatEvent): void;
 }
@@ -207,7 +209,7 @@ export function updateEnemyAI(enemy: Enemy, dt: number, context: EnemyAIContext)
         context.emit({ type: 'blast', x: tx, y: ty, radius: definition.blastRadius, style: definition.blastStyle ?? 'frost', enemyKind: enemy.kind });
         if (Math.hypot(p.x - tx, p.y - ty) <= definition.blastRadius + p.radius
           && context.visible(enemy.x, enemy.y, tx, ty) && context.visible(tx, ty, p.x, p.y)) {
-          context.hurt(enemy.attackDamage ?? enemy.damage, Math.atan2(p.y - ty, p.x - tx), enemy);
+          context.hurt(enemy.attackDamage ?? enemy.damage, Math.atan2(p.y - ty, p.x - tx), enemy, projectileDamageType(definition.blastStyle ?? 'frost'));
         }
         enemy.attackHit = true;
       }
@@ -219,7 +221,7 @@ export function updateEnemyAI(enemy: Enemy, dt: number, context: EnemyAIContext)
       if (!enemy.attackHit && circleIntersectsSector(p.x, p.y, p.radius,
         enemy.x, enemy.y, enemy.attackAngle, definition.range, definition.arc)
         && context.visible(enemy.x, enemy.y, p.x, p.y)) {
-        enemy.attackHit = true; context.hurt(enemy.attackDamage ?? enemy.damage, enemy.attackAngle, enemy);
+        enemy.attackHit = true; context.hurt(enemy.attackDamage ?? enemy.damage, enemy.attackAngle, enemy, 'physical');
       }
     }
     if (enemy.stateTime + 1e-9 >= enemy.stateDuration) transitionEnemy(enemy, 'recover', definition.recovery);

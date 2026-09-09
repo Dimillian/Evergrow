@@ -1,3 +1,4 @@
+import { RESISTANCE_LABELS } from './resistance-content.ts';
 import { AFFIX_DESCRIPTIONS, SPECIAL_AFFIX_LABELS, SKILL_STATS, isSkillStat, type SkillStat } from './equipment-affix-content.ts';
 import { ELEMENTAL_AFFIXES, ELEMENT_COLORS } from './elemental-weapon.ts';
 import { weaponActionRate, basicAttackManaCost } from './equipment.ts';
@@ -18,6 +19,8 @@ export interface ItemPresentation {
 }
 export const CHANGE_LABELS: Record<PreviewStat, string> = {
   ...SPECIAL_AFFIX_LABELS, ...SKILL_STATS,
+  fireResistance: RESISTANCE_LABELS.fireResistance, frostResistance: RESISTANCE_LABELS.frostResistance,
+  lightningResistance: RESISTANCE_LABELS.lightningResistance, arcaneResistance: RESISTANCE_LABELS.arcaneResistance,
   damage: 'Main-hand damage', cadence: 'Main-hand actions / s', offDamage: 'Off-hand damage', offCadence: 'Off-hand attacks / s',
   maxHp: 'Maximum life', maxMana: 'Maximum mana', armor: 'Armor', blockChance: 'Block chance', blockReduction: 'Blocked damage reduction',
   critChance: 'Critical chance', critMultiplier: 'Critical damage', lifeRegeneration: 'Life / s', manaRegeneration: 'Mana / s',
@@ -25,7 +28,7 @@ export const CHANGE_LABELS: Record<PreviewStat, string> = {
   attackSpeedMultiplier: 'Attack speed', castSpeedMultiplier: 'Cast speed', spellDamageMultiplier: 'Spell damage',
   strength: 'Strength', dexterity: 'Dexterity', intelligence: 'Intelligence', vitality: 'Vitality',
 };
-export const PREVIEW_PERCENT = new Set<PreviewStat>(['blockChance', 'blockReduction', 'critChance', 'critMultiplier', 'moveSpeedMultiplier',
+export const PREVIEW_PERCENT = new Set<PreviewStat>(['fireResistance', 'frostResistance', 'lightningResistance', 'arcaneResistance', 'blockChance', 'blockReduction', 'critChance', 'critMultiplier', 'moveSpeedMultiplier',
   'manaCostReduction', 'cooldownReduction', 'attackSpeedMultiplier', 'castSpeedMultiplier', 'spellDamageMultiplier']);
 
 /** Only match like-for-like stats; damage bonuses feed separate derived hand damage rows. */
@@ -39,6 +42,7 @@ const MODIFIER_PREVIEW: Record<Exclude<StatKey, SkillStat>, PreviewStat | null> 
   blockChance: 'blockChance', blockReduction: 'blockReduction', manaOnKill: 'manaOnKill',
   areaPercent: 'areaPercent', potionPercent: 'potionPercent', projectilePierce: 'projectilePierce',
   spellweavePercent: 'spellweavePercent', afterguardPercent: 'afterguardPercent',
+  fireResistance: 'fireResistance', frostResistance: 'frostResistance', lightningResistance: 'lightningResistance', arcaneResistance: 'arcaneResistance', allResistance: null,
   fireDamage: null, frostDamage: null, lightningDamage: null,
 };
 

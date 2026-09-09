@@ -12,6 +12,8 @@ function values(sheet: CharacterSheet, level: number) {
   const offhand = sheet.equipped.offhand?.weapon;
   const off = offhand ? deriveAttackStats(stats, offhand) : null;
   return { damage: main.damage, cadence: main.attacksPerSecond, offDamage: off?.damage ?? 0, offCadence: off?.attacksPerSecond ?? 0,
+    fireResistance: stats.resistances.fire, frostResistance: stats.resistances.frost,
+    lightningResistance: stats.resistances.lightning, arcaneResistance: stats.resistances.arcane,
     armor: stats.armor, maxHp: stats.maxHp, maxMana: stats.maxMana, blockChance: stats.blockChance,
     blockReduction: stats.blockReduction, critChance: stats.critChance, critMultiplier: stats.critMultiplier,
     manaRegeneration: stats.manaRegeneration, lifeRegeneration: stats.lifeRegeneration,

@@ -197,3 +197,10 @@ The character window exposes hover and keyboard-focus explanations for every att
 Physical/spell damage, speed and potion **bonus** rows show increases above the baseline. Critical damage and movement retain explicit total multipliers. Armor and the same-level reduction estimate use `effectiveArmor` and `armorReduction`, including active Afterguard and Bulwark blessing. Passive shield stats remain separate from the active guard skill's reduction. Skill-rank bonuses are listed by skill and explain that the skill must first be learned. Damage rows exclude criticals, enemy defenses and conditional Spellweave; each skill still uses its rank, specialization and timing.
 
 `character-stat-details.ts` owns the read-only row catalog; its `DERIVED_STAT_DETAILS` contract requires an explicit inspection entry when `DerivedCharacterStats` grows. `characterModifierSources` supplies the same item, tree and blessing modifiers to calculation and source descriptions. Keep formula explanations in sync when tuning `character-stats.ts`; do not introduce a second combat calculation in the panel. Regression coverage includes every starter, source attribution, off-hand casting, enchantments, caps, shield requirements, temporary armor and bonus ranks. No gameplay balance or save format changes in this pass.
+
+
+## Elemental defenses (2026-09-09)
+
+The detailed sheet now includes Fire, Frost, Lightning and Arcane resistance, starting at zero. Single-element and all-element equipment bonuses add per element, capped at 75%; hover/focus explains the calculation and individual sources. Armor and its same-level estimate now describe physical damage only. Shield block follows either physical armor or elemental resistance.
+
+Resistance rolls are restricted to rings, amulets and shields, with at most one resistance family per item. [Equipment affixes](equipment-affixes.md#elemental-resistance--2026-09-09) owns current weights, strengths and upgrade limits. Charms remain inactive. Resistance is derived from normal item modifiers; no save-version change or character reset is needed. Existing items retain their rolls and gain no resistance automatically.

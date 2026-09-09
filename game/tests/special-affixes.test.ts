@@ -134,9 +134,9 @@ test('Afterguard improves subsequent armor after a block, refreshes, and clears 
   p.character.equipped.offhand = generateItem(2, 1, 'shield', 'iron-buckler', 'common'); refreshCharacter(p);
   p.derived.afterguardPercent = 50; p.derived.armor = 100; p.derived.blockChance = 1; p.hp = p.maxHp = 10000;
   const events: CombatEvent[] = []; const context = { player: p, world, random: () => 0, emit: (e: CombatEvent) => events.push(e) };
-  damagePlayer(100, 0, 10, context); const first = events.find(e => e.type === 'hurt')!;
+  damagePlayer(100, 0, 10, 'physical', context); const first = events.find(e => e.type === 'hurt')!;
   near(effectiveArmor(p), 150); advanceAffixBuffs(p, 1); p.invulnerable = 0; events.length = 0;
-  damagePlayer(100, 0, 10, context); const second = events.find(e => e.type === 'hurt')!;
+  damagePlayer(100, 0, 10, 'physical', context); const second = events.find(e => e.type === 'hurt')!;
   assert.ok(first.type === 'hurt' && second.type === 'hurt' && second.value < first.value); assert.equal(p.affixBuffs?.guard, 3);
   advanceAffixBuffs(p, 3.1); near(effectiveArmor(p), 100);
   p.affixBuffs!.guard = 3; p.equipment.offHand = null; advanceAffixBuffs(p, 0); near(effectiveArmor(p), 100);

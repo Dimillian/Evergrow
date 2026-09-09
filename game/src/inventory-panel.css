@@ -138,6 +138,7 @@
 .character-stat-group { --stat-accent: #cfb98d; margin-top: 19px; }
 .character-stat-group:first-child { margin-top: 14px; }
 .character-stat-group--defense { --stat-accent: #a2bfd3; }
+.character-stat-group--resistances { --stat-accent: #b5a6d2; }
 .character-stat-group--resources { --stat-accent: #9fc6ae; }
 .character-stat-group--utility { --stat-accent: #bbaad4; }
 .character-stat-group h4 { display: flex; align-items: center; gap: 9px; margin: 0 0 8px; color: var(--stat-accent); font: 500 12px var(--ui-font); letter-spacing: .09em; text-transform: uppercase; }

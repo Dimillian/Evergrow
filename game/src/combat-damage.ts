@@ -1,7 +1,7 @@
 import { metric } from './chronicle.ts';
 import { primeSpellweave, primeAfterguard, effectiveArmor } from './affix-combat.ts';
 import { applyElementalContact } from './combat-status.ts';
-import type { HitSnapshot, CombatEvent, Enemy, EnemyKind, Player, ProjectileStyle, WorldQuery } from './model.ts';
+import type { HitSnapshot, CombatEvent, Enemy, EnemyKind, Player, ProjectileStyle, WorldQuery, DamageType } from './model.ts';
 import { COMBAT_TIMING, ENEMY_DEFINITIONS } from './combat-content.ts';
 import { ENCOUNTER_RULES } from './encounter-director.ts';
 import { armorReduction } from './progression-content.ts';
@@ -65,10 +65,11 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
 }
 
 /** Returns whether damage landed; the clock owner handles input/fixed-step cancellation. */
-export function damagePlayer(amount: number, angle: number, sourceLevel: number, context: PlayerDamageContext, kind?: EnemyKind): boolean {
+export function damagePlayer(amount: number, angle: number, sourceLevel: number, damageType: DamageType, context: PlayerDamageContext, kind?: EnemyKind): boolean {
   const p = context.player;
   if (p.dead || p.invulnerable > 0 || context.world.isSanctuary?.(p.x, p.y)) return false;
-  amount = Math.max(1, Math.round(amount * (1 - armorReduction(effectiveArmor(p), sourceLevel))));
+  const reduction = damageType === 'physical' ? armorReduction(effectiveArmor(p), sourceLevel) : p.derived.resistances[damageType];
+  amount = Math.max(1, Math.round(amount * (1 - reduction)));
   if (p.equipment.offHand?.kind === 'shield' && (p.guardTime > 0 || context.random() < p.derived.blockChance)) {
     const reduction = p.guardTime > 0 ? Math.max(p.guardReduction, p.derived.blockReduction) : p.derived.blockReduction;
     const blocked = Math.floor(amount * reduction);
@@ -81,7 +82,7 @@ export function damagePlayer(amount: number, angle: number, sourceLevel: number,
   p.hitFlash = COMBAT_TIMING.hitFlashDuration;
   p.hitAngle = angle;
   p.invulnerable = COMBAT_TIMING.hurtGuard;
-  context.emit({ type: 'hurt', actualValue, x: p.x, y: p.y, angle, value: amount,
+  context.emit({ type: 'hurt', ...(damageType === 'physical' ? {} : { style: damageType }), actualValue, x: p.x, y: p.y, angle, value: amount,
     remainingHp: p.hp, enemyKind: kind, heavy: amount >= 20 });
   if (p.hp <= 0) {
     p.dead = true; p.affixBuffs = undefined;

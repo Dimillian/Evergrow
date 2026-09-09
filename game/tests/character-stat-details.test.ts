@@ -21,7 +21,7 @@ test('every starter shows actual weapon output and every derived stat has a deta
     assert.equal(all.get('spellDamage')!.amount, p.derived.spellDamageMultiplier - 1);
     assert.equal(all.get('maxHp')!.amount, p.maxHp);
     assert.equal(all.get('maxMana')!.amount, p.maxMana);
-    for (const id of Object.values(DERIVED_STAT_DETAILS)) if (!['attributes','skills'].includes(id)) assert.ok(all.has(id), id);
+    for (const id of Object.values(DERIVED_STAT_DETAILS)) if (!['attributes','skills','resistances'].includes(id)) assert.ok(all.has(id), id);
     for (const row of all.values()) { assert.ok(Number.isFinite(row.amount)); assert.ok(row.description && row.calculation); }
     assert.equal(JSON.stringify(p), before, 'inspection cannot mutate the character');
   }

@@ -1,3 +1,4 @@
+import type { DamageType } from './model.ts';
 import { GroundItemPickup } from './ground-item-pickup.ts';
 import { updateWildernessBoss } from './wilderness-boss.ts';
 import { completeBossLair } from './wilderness-boss-rewards.ts';
@@ -642,7 +643,7 @@ export class Simulation {
       trial: trial ? { campId: `event:${trial.id}`, x: trial.x, y: trial.y, radius: EVENT_RULES.trialRadius } : null,
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       move: (actor, vx, vy, delta) => this.moveEnemy(actor, vx, vy, delta),
-      hurt: (amount, angle, actor) => this.damagePlayer(amount, angle, actor.level, actor.kind),
+      hurt: (amount, angle, actor, damageType) => this.damagePlayer(amount, angle, actor.level, damageType, actor.kind),
       shoot: (actor, angle, definition, effects) => this.projectile(actor.x, actor.y, angle,
         definition, undefined, effects, actor.level, actor.kind),
       emit: event => this.emit(event),
@@ -699,8 +700,8 @@ export class Simulation {
     enemy.y = destination.y;
   }
 
-  private damagePlayer(amount: number, angle: number, sourceLevel: number, kind?: EnemyKind): void {
-    if (!damagePlayer(amount, angle, sourceLevel, {
+  private damagePlayer(amount: number, angle: number, sourceLevel: number, damageType: DamageType, kind?: EnemyKind): void {
+    if (!damagePlayer(amount, angle, sourceLevel, damageType, {
       player: this.player, world: this.world, random: () => this.random(), emit: event => this.emit(event),
     }, kind)) return;
     this.portal.cancel(); this.eventChannel.cancel();
@@ -740,7 +741,7 @@ export class Simulation {
       player: this.player, enemies: this.enemies, world: this.world,
       onScreen: enemy => enemyInCombatViewport(enemy, this.combatViewport),
       damage: (enemy, amount, angle, melee, style, offense) => this.damageEnemy(enemy, amount, angle, melee, false, style, undefined, offense),
-      hurt: (amount, angle, sourceLevel, sourceKind) => this.damagePlayer(amount, angle, sourceLevel, sourceKind),
+      hurt: (amount, angle, sourceLevel, damageType, sourceKind) => this.damagePlayer(amount, angle, sourceLevel, damageType, sourceKind),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       emit: event => this.emit(event),
       schedule: effect => this.scheduleGroundEffect(effect),

@@ -1,6 +1,6 @@
 # Equipment affixes and hybrids
 
-Current rules · September 7, 2026. Generation, rarity upgrades and rerolls share `itemAffixPool`, `rollAffix` and `affixConflicts` in `items.ts`. There are 50 explicit definitions: 24 original affixes, six specialist affixes and 20 individual skill-rank rolls (one shared rarity family). Tier counts remain 0 / 1 / 2 / 3 / 4.
+Current rules · September 9, 2026. Generation, rarity upgrades and rerolls share `itemAffixPool`, `rollAffix` and `affixConflicts` in `items.ts`. There are 55 explicit definitions: 24 original affixes, six specialist affixes, five resistance affixes and 20 individual skill-rank rolls (one shared rarity family). Tier counts remain 0 / 1 / 2 / 3 / 4.
 
 ## Slot pools
 
@@ -14,9 +14,9 @@ The head/chest/gloves/legs/boots rows below describe metal armor. Leather and cl
 | Legs | Life, armor, Vitality, life regeneration, Strength, Dexterity |
 | Boots | Movement speed, life, armor, Vitality, Dexterity |
 | Cloak | Life/mana regeneration, cooldown reduction, life, mana, Intelligence, Deep Draught |
-| Rings | Life, Vitality, life regeneration, critical chance/damage, attack/spell damage, Strength/Dexterity/Intelligence, mana, mana regeneration, Wellsip; any skill rank |
-| Amulet | All 25 general affixes plus both block affixes; any skill rank; weaker movement/speed rolls |
-| Shields | Block chance/reduction, armor, life, Vitality, life regeneration, Strength, Afterguard; shield skill ranks |
+| Rings | Life, Vitality, life regeneration, critical chance/damage, attack/spell damage, Strength/Dexterity/Intelligence, mana, mana regeneration, Wellsip; elemental resistance; any skill rank |
+| Amulet | General affixes, elemental resistance and both block affixes; any skill rank; weaker movement/speed rolls |
+| Shields | Block chance/reduction, armor, life, Vitality, life regeneration, Strength, Afterguard; elemental resistance; shield skill ranks |
 | Melee weapons | Attack damage, critical chance/damage, life on hit, Strength, Dexterity, Intelligence, spell damage, Expanse, one fire/frost/lightning enchantment; compatible melee skill ranks |
 | Bows | Attack damage, critical chance/damage, Dexterity, life on hit, Strength, Piercing; bow skill ranks |
 | Staves / wands | Spell damage, Intelligence, mana, critical chance/damage, mana cost reduction, mana regeneration; Expanse (staff) / Piercing (wand); magic skill ranks |
@@ -66,7 +66,7 @@ All player elemental weapon/spell contacts share `ELEMENTAL_CONTACT` through the
 - **Lightning:** a 0.12-second interrupt, subject to the Warden's existing control resistance/immunity.
 - **Arcane:** direct damage; no generic additional status.
 
-Melee burn potency uses only the snapshotted elemental portion, not the physical portion or later equipment. Stronger skill-authored burns/slows remain stronger; reapplication preserves strongest potency and longest duration without adding stacks. Periodic burn damage cannot crit, trigger life on hit or recursively ignite. Lightning enchantments do not automatically chain; chaining and explosions belong to skills. Enemy damage/defense rules are unchanged; separate elemental resistances are not implemented.
+Melee burn potency uses only the snapshotted elemental portion, not the physical portion or later equipment. Stronger skill-authored burns/slows remain stronger; reapplication preserves strongest potency and longest duration without adding stacks. Periodic burn damage cannot crit, trigger life on hit or recursively ignite. Lightning enchantments do not automatically chain; chaining and explosions belong to skills. Enemy defenses are unchanged. Incoming player damage now separates physical armor from elemental resistance, as described below.
 
 ## Specialist affixes · 2026-09-07
 
@@ -102,3 +102,16 @@ Below a threshold, higher quantiles collapse to the highest eligible rank. Enhan
 The **entire skill family** has weight 0.50 on weapons, 0.45 on grimoires/orbs, 0.35 on shields, 0.25 on helmets, 0.18 on rings and 0.40 on amulets. This budget is split among eligible skills, so adding more skills does not flood the affix pool. Weapons favor compatible skills, shields their two skills, caster foci magic, and helmets/jewelry can roll any skill. Fire/frost/lightning profiles and focus motifs give matching skills three times the individual weight; ultimate skills receive one quarter of ordinary weight. Generation depends on the item's identity, never the current player's build or post-kill level. Existing item rarity/quantity tables are unchanged.
 
 The skill atlas shows purchased ranks and extra gear ranks separately; item and equipment-comparison tooltips show the exact named bonus. Existing saves remain usable, and old items are not randomly rerolled on load.
+
+## Elemental resistance · 2026-09-09
+
+Players start at **0% Fire, Frost, Lightning and Arcane resistance**. Only rings, amulets and shields can roll resistance, in a normal explicit affix slot. A piece may have **one single-element roll or one all-element roll**, never both or several single elements. Existing gear is not rerolled.
+
+| Affix | Resistance | Base / bounded growth | Relative weight | Maximum per roll |
+| --- | --- | --- | ---: | ---: |
+| Cinderskin / Rimeward / Stormward / Spellward | Fire / Frost / Lightning / Arcane | 10 + 0.12 × growth | 0.15 each | 24% |
+| Sanctuary | All four elements | 3 + 0.035 × growth | 0.10 | 8% |
+
+Growth uses `25n / (25 + n)`, where `n = item level - 1`; roll quality, rarity and enhancement apply before the hard per-roll limit. These are percentage points and relative selection weights, not drop probabilities. Jewelry profile affinity still applies. Rerolls, rarity upgrades and releveling share these rules. Common items have no explicit affixes and therefore no resistance. No new resistance implicits, passive nodes or automatic level bonuses are introduced.
+
+For each element, add its specific bonuses and all-element bonuses, then clamp the total to **0–75%**. Four all-resistance pieces can supply at most 32% to all elements; reaching the cap requires focused single-element investment. Charms remain reserved for future work. Item comparisons and detailed-stat tooltips show the actual capped totals and named sources. See [incoming damage](progression-and-loot.md#item-growth-and-defenses) for combat rules.

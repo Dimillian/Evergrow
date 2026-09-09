@@ -66,6 +66,6 @@ export function updateWildernessBoss(e: Enemy, dt: number, c: EnemyAIContext): v
     c.emit({type:'blast',x:ox+Math.cos(a)*180,y:oy+Math.sin(a)*180,radius:48,duration:.4,color:BOSS_PALETTES[e.kind]});
     hit ||= segmentDistanceSquared(p.x,p.y,ox,oy,ox+Math.cos(a)*R.fractureLength,oy+Math.sin(a)*R.fractureLength)<(R.fractureWidth+p.radius)**2;
   }
-  if(hit&&!e.attackHit&&c.visible(e.x,e.y,p.x,p.y)){e.attackHit=true;c.hurt(e.damage*(e.bossMove==='sweep'?1:1.15),e.attackAngle,e);}
+  if(hit&&!e.attackHit&&c.visible(e.x,e.y,p.x,p.y)){e.attackHit=true;c.hurt(e.damage*(e.bossMove==='sweep'?1:1.15),e.attackAngle,e,e.kind==='ashColossus'&&(e.bossMove==='eruption'||e.bossMove==='fracture')?'fire':'physical');}
   if(e.stateTime>=e.stateDuration)transitionEnemy(e,'recover',e.bossMove==='command'?1.5:e.bossPhases?.75:1.2);
 }

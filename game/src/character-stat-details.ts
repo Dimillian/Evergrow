@@ -1,3 +1,4 @@
+import { ELEMENTS, RESISTANCE_LABELS, RESISTANCE_RULES } from './resistance-content.ts';
 import type { Player, WeaponDefinition } from './model.ts';
 import type { Attribute, StatKey, DerivedCharacterStats } from './character-types.ts';
 import { characterModifierSources } from './character-stats.ts';
@@ -17,7 +18,7 @@ export interface StatDetail {
 export interface StatDetailGroup { title: string; tone: string; rows: StatDetail[] }
 /** A new derived stat must explicitly declare where players can inspect it. */
 export const DERIVED_STAT_DETAILS = {
-  attributes: 'attributes', attackDamageMultiplier: 'attackBonus', attackSpeedMultiplier: 'attackSpeed',
+  resistances: 'resistances', attributes: 'attributes', attackDamageMultiplier: 'attackBonus', attackSpeedMultiplier: 'attackSpeed',
   castSpeedMultiplier: 'castSpeed', spellDamageMultiplier: 'spellDamage', critChance: 'critChance', critMultiplier: 'critDamage',
   maxHp: 'maxHp', maxMana: 'maxMana', armor: 'armor', damageReduction: 'armorReduction',
   moveSpeedMultiplier: 'movement', manaRegeneration: 'manaRegen', lifeRegeneration: 'lifeRegen',
@@ -77,10 +78,10 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
   if (sheet.blessing?.remaining && sheet.blessing.kind === 'bulwark') armorSources.push({ label: 'Bulwark blessing', value: '×1.4 armor' });
   if (armor !== s.armor) armorSources.push({ label: 'Afterguard · active', value: `+${n(s.afterguardPercent)}% armor` });
   const defense = [
-    { ...row('armor', 'Armor', armor, n(armor, 0), 'Reduces incoming damage. Higher-level enemies require more armor for the same protection.', 'Equipment + skill tree armor, multiplied by any active Bulwark blessing and Afterguard.'), sources: armorSources },
-    { ...row('armorReduction', `Reduction vs level ${p.level}`, armorReduction(armor, p.level), pct(armorReduction(armor, p.level)), 'Estimate against an attacker at your level. Combat uses the actual attacker level; block applies afterward.', `${n(armor)} ÷ (${n(armor)} + ${n(120 * itemPowerScale(p.level))}). Cap: 80%.`), sources: armorSources },
+    { ...row('armor', 'Armor', armor, n(armor, 0), 'Reduces physical damage only. Elemental hits use resistance instead. Higher-level enemies require more armor for the same protection.', 'Equipment + skill tree armor, multiplied by any active Bulwark blessing and Afterguard.'), sources: armorSources },
+    { ...row('armorReduction', `Reduction vs level ${p.level}`, armorReduction(armor, p.level), pct(armorReduction(armor, p.level)), 'Physical reduction against an attacker at your level. Combat uses the actual attacker level; block applies afterward.', `${n(armor)} ÷ (${n(armor)} + ${n(120 * itemPowerScale(p.level))}). Cap: 80%.`), sources: armorSources },
     row('blockChance', 'Passive block chance', s.blockChance, pct(s.blockChance), 'Requires an equipped shield and a one-handed main weapon. Active guarding guarantees a block.', 'Shield chance + block chance bonuses. Cap: 75%. Without a usable shield: 0%.', ['blockChance']),
-    row('blockReduction', 'Blocked damage reduction', s.blockReduction, pct(s.blockReduction), 'Damage prevented by a passive block, after armor. Hits still deal at least 1 damage.', 'Shield reduction + block reduction bonuses. Cap: 90%. Without a usable shield: 0%.', ['blockReduction']),
+    row('blockReduction', 'Blocked damage reduction', s.blockReduction, pct(s.blockReduction), 'Damage prevented by a passive block, after armor or elemental resistance. Hits still deal at least 1 damage.', 'Shield reduction + block reduction bonuses. Cap: 90%. Without a usable shield: 0%.', ['blockReduction']),
   ];
   if (p.equipment.offHand?.kind === 'shield') {
     const shield = p.equipment.offHand.shield;
@@ -88,6 +89,9 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
     defense[3].sources.unshift({ label: 'Equipped shield', value: `${n(shield.blockReduction)}% base reduction` });
     if (p.guardTime > 0) defense.push(row('activeGuard', 'Active guard reduction', Math.max(p.guardReduction, s.blockReduction), pct(Math.max(p.guardReduction, s.blockReduction)), 'Current guard skill: guarantees a block while guarding.', `Higher of ${pct(p.guardReduction)} skill reduction and ${pct(s.blockReduction)} passive shield reduction. ${n(p.guardTime)}s remaining.`));
   }
+  const resistances = ELEMENTS.map(element => row(`${element}Resistance`, RESISTANCE_LABELS[`${element}Resistance`], s.resistances[element], pct(s.resistances[element]),
+    `Reduces incoming ${element} damage. Armor does not apply; shields may still block afterward. Resistance does not shorten status effects.`,
+    `0% base + ${element} resistance + all-element resistance. Cap: ${pct(RESISTANCE_RULES.cap)}. A 100-damage hit becomes ${n(100 * (1 - s.resistances[element]))} before block and rounding.`, [`${element}Resistance`, 'allResistance']));
   const resources = [
     addAttribute(row('maxHp', 'Maximum life', s.maxHp, n(s.maxHp, 0), 'Your life capacity. Increasing it does not heal missing life.', `${PLAYER_DEFAULTS.maxHp} base + 6 per Vitality above 10 + flat life bonuses, rounded.`, ['vitality', 'maxHp']), 'vitality'),
     row('lifeRegen', 'Life regeneration', s.lifeRegeneration, `${n(s.lifeRegeneration)} / s`, 'Restores life continuously, up to maximum life.', 'Flat regeneration bonuses add together; minimum 0.', ['lifeRegen']),
@@ -111,6 +115,6 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
     return skill && ranks ? [row(`skill:${id}`, `${skill.name} bonus ranks`, ranks, `+${n(ranks, 0)}`, 'Adds effective ranks once this skill is learned. Does not unlock it or spend skill points.', `Equipped and tree bonus ranks add, then round down. Cap: ${AFFIX_COMBAT_RULES.maxBonusRanks}.`, [`skill:${skill.id}`])] : [];
   });
   return [{ title: 'Attributes', tone: 'attributes', rows: attributes }, { title: 'Offense', tone: 'offense', rows: offense },
-    { title: 'Defense', tone: 'defense', rows: defense }, { title: 'Life & mana', tone: 'resources', rows: resources },
+    { title: 'Defense', tone: 'defense', rows: defense }, { title: 'Elemental resistances', tone: 'resistances', rows: resistances }, { title: 'Life & mana', tone: 'resources', rows: resources },
     { title: 'Utility & efficiency', tone: 'utility', rows: utility }, ...(ranks.length ? [{ title: 'Skill bonuses', tone: 'skills', rows: ranks }] : [])];
 }

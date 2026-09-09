@@ -1,3 +1,4 @@
+import { deriveResistances } from './resistance-content.ts';
 import { AFFIX_COMBAT_RULES, SKILL_STATS, type SkillStat } from './equipment-affix-content.ts';
 import { PLAYER_DEFAULTS } from './combat-content.ts';
 import { armorReduction } from './progression-content.ts';
@@ -40,7 +41,7 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
   const offhand = sheet.equipped.offhand;
   const shield = sheet.equipped.weapon?.weapon?.hands !== 2 && offhand?.kind === 'shield' ? offhand.shield : undefined;
   return {
-    attributes,
+    attributes, resistances: deriveResistances(modifiers),
     manaOnKill: bounded(value('manaOnKill'), 0, 1e6),
     areaMultiplier: Math.sqrt(1 + bounded(value('areaPercent'), 0, AFFIX_COMBAT_RULES.maxAreaPercent) / 100),
     potionMultiplier: 1 + bounded(value('potionPercent'), 0, 100) / 100,

@@ -1,3 +1,4 @@
+import { RESISTANCE_AFFIXES, RESISTANCE_LABELS, RESISTANCE_STATS, isResistanceStat, boundResistanceRoll } from './resistance-content.ts';
 import { JEWELRY_PROFILES, jewelryProfiles } from './jewelry-content.ts';
 import { ITEM_MATERIALS, isClothMaterial, sourceMaterialPool, type MaterialSource, itemMaterialPool, rollItemMaterial, itemMaterialScale, materialBaseName, type ItemMaterialId } from './item-materials.ts';
 import { SPECIAL_AFFIXES, SPECIAL_AFFIX_LABELS, SKILL_AFFIXES, SKILL_STATS, isSkillStat, skillAffixPool, discreteAffixValue, type AffixDefinition } from './equipment-affix-content.ts';
@@ -22,7 +23,7 @@ export const TIER_NAMES: Readonly<Record<ItemTier, string>> = Object.freeze({
   common: 'Common', magic: 'Magic', rare: 'Rare', epic: 'Epic', legendary: 'Legendary',
 });
 export const STAT_LABELS: Readonly<Record<StatKey, string>> = Object.freeze({
-  ...SPECIAL_AFFIX_LABELS, ...SKILL_STATS,
+  ...SPECIAL_AFFIX_LABELS, ...SKILL_STATS, ...RESISTANCE_LABELS,
   fireDamage: 'Added fire damage', frostDamage: 'Added frost damage', lightningDamage: 'Added lightning damage',
   strength: 'Strength', dexterity: 'Dexterity', intelligence: 'Intelligence', vitality: 'Vitality',
   maxHp: 'Maximum life', maxMana: 'Maximum mana', armor: 'Armor', damagePercent: 'Attack damage',
@@ -31,7 +32,7 @@ export const STAT_LABELS: Readonly<Record<StatKey, string>> = Object.freeze({
   lifeRegen: 'Life / sec', manaCostPercent: 'Mana cost reduction', cooldownPercent: 'Cooldown reduction', lifeOnHit: 'Life on hit',
   blockChance: 'Block chance', blockReduction: 'Blocked damage reduction',
 });
-export const PERCENT_STATS = new Set<StatKey>(['areaPercent', 'potionPercent', 'spellweavePercent', 'afterguardPercent', 'damagePercent', 'attackSpeedPercent', 'castSpeedPercent', 'critChance', 'critDamage', 'moveSpeedPercent', 'spellDamagePercent', 'cooldownPercent', 'manaCostPercent', 'blockChance', 'blockReduction']);
+export const PERCENT_STATS = new Set<StatKey>([...RESISTANCE_STATS, 'areaPercent', 'potionPercent', 'spellweavePercent', 'afterguardPercent', 'damagePercent', 'attackSpeedPercent', 'castSpeedPercent', 'critChance', 'critDamage', 'moveSpeedPercent', 'spellDamagePercent', 'cooldownPercent', 'manaCostPercent', 'blockChance', 'blockReduction']);
 export function formatStatValue(stat: StatKey, value: number): string {
   return `${value > 0 ? '+' : ''}${Number(value.toFixed(1))}${PERCENT_STATS.has(stat) ? '%' : ''}`;
 }
@@ -63,7 +64,7 @@ const PREFIXES = ['Ashen', 'Starbound', 'Thornwrought', 'Gloaming', 'Hollow', 'D
 const SUFFIXES = ['of the Watch', 'of Embers', 'of the Hollow', 'of Still Water', 'of the Pilgrim', 'of Thorns', 'of the Pale Star', 'of Dusk'];
 const TITLES = ['Oath', 'Vigil', 'Remnant', 'Requiem', 'Promise', 'Echo', 'Witness', 'Memory'];
 export const AFFIXES: readonly AffixDefinition[] = [
-  ...SPECIAL_AFFIXES,
+  ...SPECIAL_AFFIXES, ...RESISTANCE_AFFIXES,
   { name: 'Might', stat: 'strength', base: 2, growth: .25 },
   { name: 'Grace', stat: 'dexterity', base: 2, growth: .25 },
   { name: 'Insight', stat: 'intelligence', base: 2, growth: .25 },
@@ -96,8 +97,8 @@ const SLOT_AFFIXES: Partial<Record<ItemKind, readonly StatKey[]>> = {
   legs: ['maxHp', 'armor', 'vitality', 'lifeRegen', 'strength', 'dexterity'],
   boots: ['moveSpeedPercent', 'maxHp', 'armor', 'vitality', 'dexterity'],
   cloak: ['potionPercent', 'lifeRegen', 'manaRegen', 'cooldownPercent', 'maxHp', 'maxMana', 'intelligence'],
-  ring: ['maxHp', 'vitality', 'lifeRegen', 'manaOnKill', 'critChance', 'critDamage', 'damagePercent', 'spellDamagePercent', 'strength', 'dexterity', 'intelligence', 'maxMana', 'manaRegen'],
-  shield: ['afterguardPercent', 'blockChance', 'blockReduction', 'armor', 'maxHp', 'vitality', 'lifeRegen', 'strength'],
+  ring: [...RESISTANCE_STATS, 'maxHp', 'vitality', 'lifeRegen', 'manaOnKill', 'critChance', 'critDamage', 'damagePercent', 'spellDamagePercent', 'strength', 'dexterity', 'intelligence', 'maxMana', 'manaRegen'],
+  shield: [...RESISTANCE_STATS, 'afterguardPercent', 'blockChance', 'blockReduction', 'armor', 'maxHp', 'vitality', 'lifeRegen', 'strength'],
   grimoire: ['manaOnKill', 'spellweavePercent', 'maxMana', 'manaRegen', 'manaCostPercent', 'cooldownPercent', 'intelligence', 'spellDamagePercent'],
   orb: ['spellDamagePercent', 'critChance', 'critDamage', 'intelligence', 'maxMana', 'manaCostPercent'],
 };
@@ -125,7 +126,7 @@ export function rollAffix(pool: typeof AFFIXES, random: () => number): (typeof A
   return pool.find(a => (value -= a.weight ?? 1) < 0) ?? pool[pool.length - 1];
 }
 export function affixConflicts(stat: StatKey, occupied: readonly StatKey[]): boolean {
-  return occupied.includes(stat) || isSkillStat(stat) && occupied.some(isSkillStat) || isElementalAffix(stat) && occupied.some(isElementalAffix)
+  return occupied.includes(stat) || isResistanceStat(stat) && occupied.some(isResistanceStat) || isSkillStat(stat) && occupied.some(isSkillStat) || isElementalAffix(stat) && occupied.some(isElementalAffix)
     || ['attackSpeedPercent', 'castSpeedPercent'].includes(stat) && occupied.some(s => ['attackSpeedPercent', 'castSpeedPercent'].includes(s));
 }
 /** Concentrated slots need meaningful rolls; percentage growth remains bounded. */
@@ -195,7 +196,7 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
     const growthLevel = PERCENT_STATS.has(definition.stat) ? itemAffixGrowthLevel(level) : level - 1;
     const rollQuality = random(); rolls.push(rollQuality);
     const value = discreteAffixValue(definition.stat, rollQuality, level) ?? Math.round((definition.base + growthLevel * definition.growth) * (.85 + rollQuality * .3) * quality * affixPotency(itemKind, definition.stat) * 10) / 10;
-    affixes.push({ name: definition.name, stat: definition.stat, value });
+    affixes.push({ name: definition.name, stat: definition.stat, value: boundResistanceRoll(definition.stat, value) });
     for (let i = remaining.length - 1; i >= 0; i--) if (affixConflicts(remaining[i].stat, affixes.map(a => a.stat))) remaining.splice(i, 1);
   }
   const implicit: StatModifiers = focusProfile ? focusImplicit(focusProfile.id, level, quality * baseScale) : {};
@@ -311,7 +312,7 @@ export function deriveItem(item: Item): Item {
     const definition = [...AFFIXES, ...SHIELD_AFFIXES, ...ELEMENTAL_AFFIXES, ...SKILL_AFFIXES].find(a => a.stat === affix.stat)!;
     const level = PERCENT_STATS.has(affix.stat) ? itemAffixGrowthLevel(item.itemLevel) : item.itemLevel - 1;
     return { name: definition.name, stat: definition.stat,
-      value: discreteAffixValue(definition.stat, r.rolls[index], item.itemLevel) ?? Math.round((definition.base + level * definition.growth) * (.85 + r.rolls[index] * .3) * quality * enhance * affixPotency(item.kind, definition.stat) * 10) / 10 };
+      value: boundResistanceRoll(definition.stat, discreteAffixValue(definition.stat, r.rolls[index], item.itemLevel) ?? Math.round((definition.base + level * definition.growth) * (.85 + r.rolls[index] * .3) * quality * enhance * affixPotency(item.kind, definition.stat) * 10) / 10) };
   });
   next.requiredLevel = Math.max(1, item.itemLevel - 2);
   next.power = Math.round((item.itemLevel * 10 + quality * baseScale * 12 + item.affixes.length * 7) * enhance);
