@@ -29,6 +29,18 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.1 / Sites version 32, publicly deployed on 2026-09-09 at 14:54:46 UTC.
+- Published source: `5c72271fc94422b3bbee5c609e9b6a5b0dbf985f`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_36ca7c9065708191970e590af16e08f3`.
+- Deployment: `appgdep_6aa1732247488191b0756c624261062d`; Sites returned `succeeded`.
+- Item locks, active-charm sale protection, bounded packing fallback and read-only multi-stone replacement comparisons.
+- Focused small-charm budgets, stronger large stones and guaranteed thematic first affixes. Upgrades skip ineffective steps; zero-gain releveling cannot charge gold.
+- Validated older charms rebalance on read, retaining ownership and character progress. Matching client/Worker validators shipped together; no character reset or database migration.
+- Passed the 1,110-test suite, 33 final targeted checks (including the additional city-reroll regression), three changelog checks, type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.0 / Sites version 31, publicly deployed on 2026-09-09 at 14:05:58 UTC.
 - Published source: `1d7b20b216cf6551753c7541c67a1f7d60d569fd`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_8d4ef43cf4548191ad40d1ba69d4f092`.
@@ -39,7 +51,7 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 - Passed 1,104 code tests, three release-note checks, type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation.
 - This publication record is a documentation-only checkpoint after the deployed source above.
 
-## Previous verified publication
+## Earlier verified publication
 
 - Game v0.2.1 / Sites version 30, publicly deployed on 2026-09-09 at 11:58:22 UTC.
 - Published source: `d21d361dd328721cf559e682f11f6705b680d9ba`.
