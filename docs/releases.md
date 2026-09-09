@@ -29,6 +29,18 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.4 / Sites version 35, publicly deployed on 2026-09-09 at 19:15:47 UTC.
+- Published source: `08697db396647d0c51821e1fd1d0136458b39459`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_dd23519f8e948191a9bdb88b409fcc6e`.
+- Deployment: `appgdep_6aa1b0505eb48191a47cd3c76d2d48dc`; Sites returned `succeeded`.
+- Charms occupy 5% of item rewards across monsters, dungeon chests and item-giving events, including themed equipment rewards. Total item quantities, rarity and source levels remain unchanged.
+- Ground-loot corner tooltips, tooltip-only vendor inspection, hovered-item-first comparison placement, automatic skill rank/specialization activation, compact progression controls and redrawn supply carts.
+- Existing characters and progress are preserved; no save reset or database migration. Older 64-/72-slot saves pass charm reward, pickup and save round-trip checks.
+- Broad regression run passed 1,125 checks; its remaining item-corpus fixture was updated to the new reward entrypoint and passed with all 28 final item/charm/loot checks. Three changelog checks, type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation also passed.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.3 / Sites version 34, publicly deployed on 2026-09-09 at 15:43:43 UTC.
 - Published source: `c29201cf41550758f8738c1bc50de920925ea2a6`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_89174902b5348191831c9df8d9c43cd3`.
