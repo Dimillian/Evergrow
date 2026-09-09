@@ -29,6 +29,17 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.2 / Sites version 33, publicly deployed on 2026-09-09 at 15:23:30 UTC.
+- Published source: `1b2e948580ec16cec303b3f9d90696e3de74f40a`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_39c617126c348191931b8edc03f420eb`.
+- Deployment: `appgdep_6aa179df5618819186f39f20bd0ea731`; Sites returned `succeeded`.
+- Inventory/charm/vendor grids fit their panel widths; overhead NPC and monster speech is half-size.
+- Storage displays physical item footprints in a growing 12-column grid, retaining its 96-item capacity. Independent chest and inventory Auto-sort controls save organization and clear stale item selections.
+- Passed targeted speech, inventory, character-command, commerce and charm tests, three changelog checks, type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation.
+- No character reset, save schema change or database migration. This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.1 / Sites version 32, publicly deployed on 2026-09-09 at 14:54:46 UTC.
 - Published source: `5c72271fc94422b3bbee5c609e9b6a5b0dbf985f`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_36ca7c9065708191970e590af16e08f3`.
