@@ -1,3 +1,6 @@
+import { settlementResidents, residentHint, type Resident } from './settlement-residents.ts';
+import { drawBattleBark, measureBattleBark } from './battle-bark-art.ts';
+import { placeBattleBark } from './battle-bark-layout.ts';
 import { dungeonEventLabel } from './dungeon-prop-art.ts';
 import { dungeonTheme } from './dungeon-content.ts';
 import { isBossKind, isWildernessBoss, BOSS_PALETTES } from './wilderness-boss-content.ts';
@@ -26,8 +29,8 @@ import { currentDungeon } from './dungeon-state.ts';
 import { drawEventObjectives, EventArt, drawEventUI } from './poi-art.ts';
 import { drawPortal, drawTownAnchor } from './travel-art.ts';
 import { townPortalAnchor, withinPortalReach, PORTAL_RULES, type PortalAnchor } from './travel.ts';
-import { buildingNPC, focusNPC, NPC_NAMES, NPC_COLORS } from './npcs.ts';
-import { drawNPC } from './npc-art.ts';
+import { buildingNPC, focusNPC, canInteractNPC, NPC_NAMES, NPC_COLORS } from './npcs.ts';
+import { drawNPC, npcArtScale } from './npc-art.ts';
 import { RewardFeedback } from './reward-feedback.ts';
 import { drawGroundGold, drawRewardFlights, drawGoldBalance, drawLevelCelebration, drawLevelAnnouncement, drawJourneyAnnouncement } from './reward-art.ts';
 import { goldBalance } from './wallet.ts';
@@ -117,6 +120,9 @@ export class Renderer {
   private groundLayer: GroundLayer;
   private groundDressing = new GroundDressing();
   private settlementArt = new SettlementArt();
+  private residents:Resident[]=[];
+  private residentSpeech:{id:string;age:number;line:string}|null=null;
+  private residentCooldown=0;
   private environmentArt = new EnvironmentArt();
   private atmosphere = new AtmosphereArt();
   private sceneShadows = new SceneShadows();
@@ -230,7 +236,7 @@ export class Renderer {
     this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
     this.lastDisplayedView = this.view;
     this.groundLayer.reset(); this.groundDressing.reset(); this.biomeLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
-    this.settlementArt.reset(); this.indoorBlend = 0;
+    this.settlementArt.reset(); this.indoorBlend = 0; this.residents=[]; this.residentSpeech=null; this.residentCooldown=0;
     this.materials.reset(); this.deaths.reset(); resetDeathArt(); this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
     this.damageTrails.clear(); this.playerHealthTrail = 100; this.playerHealthHold = 0;
@@ -328,6 +334,15 @@ export class Renderer {
       if (this.plateOpacity < .01) this.plateEnemy = null;
     }
     this.visibility.update(world, this.view);
+    this.residents=sim.dungeonFloor?[]:world.getSettlements(left,top,worldWidth,worldHeight).flatMap(t=>settlementResidents(t,sim.time)).filter(n=>n.x>=left-90&&n.x<=left+worldWidth+90&&n.y>=top-90&&n.y<=top+worldHeight+90);
+    if(active){
+      this.residentCooldown=Math.max(0,this.residentCooldown-step);
+      if(this.residentSpeech){this.residentSpeech.age+=step;if(this.residentSpeech.age>4)this.residentSpeech=null;}
+      if(!this.residentSpeech&&this.residentCooldown===0){
+        const speaker=this.residents.filter(n=>Math.hypot(n.x-p.x,n.y-p.y)<100&&canInteractNPC({...n,role:'stash',level:1,buildingId:n.household},p,world)).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
+        if(speaker){this.residentSpeech={id:speaker.id,age:0,line:residentHint(speaker.seed,world.sampleBiome(speaker.x,speaker.y).id,Math.floor(sim.time/18))};this.residentCooldown=12;}
+      }
+    }
     this.settlementArt.update(this.cachedBuildings, px, py, dt, settings.reducedMotion);
     this.indoorBlend += ((world.getBuildingAt(px, py) ? 1 : 0) - this.indoorBlend) * (1 - Math.exp(-dt * 5));
     const biome = world.sampleBiome(px, py);
@@ -385,6 +400,12 @@ export class Renderer {
       const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);
       if (x < left - 70 || x > left + worldWidth + 70 || y < top - 70 || y > top + worldHeight + 70) continue;
       this.drawActorShadow(x, y, enemy.radius, enemy.kind === 'brute' ? 55 : 38);
+    }
+    // Civilians share the character's contact and directional shadows, beneath all scenery.
+    for (const resident of this.residents) this.drawNPCShadow(resident.x, resident.y, npcArtScale(resident));
+    for (const building of this.cachedBuildings) {
+      const npc = buildingNPC(building);
+      if (npc && npc.role !== 'stash') this.drawNPCShadow(npc.x, npc.y, npcArtScale(npc));
     }
     this.enemyFocusMark(alpha);
     drawResourcePickups(c, sim.pickups, this.visualTime, settings.reducedMotion);
@@ -506,6 +527,10 @@ export class Renderer {
           const label=dungeonEventLabel(run,event).replace('[E]',this.gamepadActive?'[A]':'[E]');
           text(c,label,point.x,point.y,1,'#d6d7b3','center');
       }
+      if(this.residentSpeech){
+        const n=this.residents.find(n=>n.id===this.residentSpeech!.id);
+        if(n&&Math.hypot(n.x-p.x,n.y-p.y)<135){const head=worldToScreen(this.view,n.x,n.y-62);const box=placeBattleBark(this.residentSpeech.line,head,{width:this.width,height:this.height},s=>measureBattleBark(c,s),barkReserved);if(box)drawBattleBark(c,box,Math.min(2.5,this.residentSpeech.age));}
+      }
       this.drawPortalHints(c, sim, world);
       drawEventUI(c, sim, world, (x,y) => worldToScreen(this.view,x,y), this.gamepadActive, this.eventSites);
       this.cursor(c, sim);
@@ -618,11 +643,12 @@ export class Renderer {
       entries.push({ y: old.y - 1, draw: () => { c.save(); c.globalAlpha = old.life / .25;
         drawPortal(c, old.x, old.y, this.visualTime, old.progress * old.life / .25); c.restore(); } });
     }
+    for(const resident of this.residents)entries.push({y:resident.y,draw:()=>withGearLight(c,sampleGearLight(resident.x,resident.y-24,this.materialLights,this.materialKey),()=>drawNPC(c,resident,this.visualTime,settings.reducedMotion))});
     for (const bird of this.biomeLife.birds) entries.push({ y: bird.y + (bird.state === 'perched' ? 1 : 130),
       draw: () => this.biomeArt.drawBird(c, bird, this.visualTime, settings.reducedMotion) });
     for (const building of this.cachedBuildings) {
       const npc = buildingNPC(building);
-      if (npc) entries.push({ y: npc.y, draw: () => drawNPC(c, npc, this.visualTime, settings.reducedMotion) });
+      if (npc) entries.push({ y: npc.y, draw: () => withGearLight(c,sampleGearLight(npc.x,npc.y-24,this.materialLights,this.materialKey),()=>drawNPC(c, npc, this.visualTime, settings.reducedMotion)) });
       for (const layer of this.settlementArt.getStructureLayers(building, this.visualTime, sim.brokenContainers)) {
         entries.push({ y: layer.y, draw: () => layer.draw(c) });
       }
@@ -667,10 +693,20 @@ export class Renderer {
       sampleGearLight(x, y - 24, this.materialLights, this.materialKey), this.water.fluid.wetAt(x, y) > .5);
   }
 
-  private actor(x: number, y: number, pose: CharacterPose) {
+  private drawNPCShadow(x: number, y: number, scale: number) {
+    this.drawActorShadow(x, y, 11 * PLAYER_ART_SCALE * scale, 44 * PLAYER_ART_SCALE * scale);
+    this.drawContactShadow(x, y, 11 * PLAYER_ART_SCALE * scale, 5 * scale);
+  }
+
+  private drawContactShadow(x: number, y: number, radius: number, depth: number) {
     const c = this.ctx;
     c.fillStyle = this.water.fluid.wetAt(x, y) > .5 ? '#02091128' : '#02091190'; c.beginPath();
-    c.ellipse(x, y + 2, pose.kind === 'brute' ? 17 : pose.kind === 'player' ? 11 * PLAYER_ART_SCALE : 11, pose.kind === 'brute' ? 8 : 5, 0, 0, TAU); c.fill();
+    c.ellipse(x, y + 2, radius, depth, 0, 0, TAU); c.fill();
+  }
+
+  private actor(x: number, y: number, pose: CharacterPose) {
+    const c = this.ctx;
+    this.drawContactShadow(x, y, pose.kind === 'brute' ? 17 : pose.kind === 'player' ? 11 * PLAYER_ART_SCALE : 11, pose.kind === 'brute' ? 8 : 5);
     c.save(); c.translate(x, y); if (pose.dead) c.globalAlpha = .4; withGearLight(c,sampleGearLight(x,y-24,this.materialLights,this.materialKey),()=>drawHumanoid(c, pose)); drawCharacterStatus(c, pose); c.restore();
     this.waterArt.drawFeet(c, this.water.fluid, x, y, pose.kind === 'brute' ? 18 : pose.kind === 'player' ? 13 * PLAYER_ART_SCALE : 12);
   }

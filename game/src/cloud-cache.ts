@@ -1,7 +1,17 @@
+import { canUpgradeWorld, upgradeWorldChart } from './world-save-upgrade.ts';
+import type { CharacterSave } from './character-save.ts';
+import type { DecodedExploration } from './exploration-save.ts';
 import { emptyChronicle, mergeChronicles, parseChronicleLedger, recordChronicle, type ChronicleLedger } from './chronicle.ts';
-import { decodeSaveBundle, type SaveBundle } from './save-bundle.ts';
+import { decodeSaveBundle, makeSaveBundle, bundleChart, type SaveBundle } from './save-bundle.ts';
 export interface CloudUpload { operation: string; base: number; bundle: SaveBundle | null; }
 export interface CloudRow { history?:ChronicleLedger; upload?: CloudUpload; index: number; token: string; base: number; bundle: SaveBundle | null; dirty: boolean; operation: string; conflict: boolean; }
+/** Called by the save worker before its revision-checked bundle transaction. */
+export function prepareCloudSave(old:CloudRow|null,record:CharacterSave,chart?:DecodedExploration):SaveBundle{
+  const previous=old?.bundle;
+  if(previous&&previous.character.id===record.id&&previous.character.worldSeed===record.worldSeed&&canUpgradeWorld(previous.character.worldVersion,record.worldVersion))
+    chart=upgradeWorldChart(bundleChart(previous),record.worldSeed);
+  return makeSaveBundle(record,chart);
+}
 /** Migrate the live read projection without rewriting cached bytes or an immutable upload retry. */
 function currentRow(row:CloudRow):CloudRow {
   if(row.bundle && Number(row.bundle.character.version)===3){

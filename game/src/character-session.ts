@@ -1,3 +1,4 @@
+import { canUpgradeWorld, upgradeWorldSave, type UpgradeWorldFactory } from './world-save-upgrade.ts';
 import { progressForRecord } from './chronicle.ts';
 import { isWorldSeed } from './world-seed.ts';
 import { type CharacterRepositoryPort, type SaveResult } from './character-storage.ts';
@@ -9,15 +10,25 @@ export class CharacterSession {
   error = '';
   readonly repository: CharacterRepositoryPort;
   private worldVersion: number;
-  constructor(repository: CharacterRepositoryPort, worldVersion: number) {
-    this.repository = repository; this.worldVersion = worldVersion;
+  private createWorld?:UpgradeWorldFactory;
+  constructor(repository: CharacterRepositoryPort, worldVersion: number, createWorld?:UpgradeWorldFactory) {
+    this.repository = repository; this.worldVersion = worldVersion;this.createWorld=createWorld;
   }
   async load(index: number): Promise<CharacterSave | null> {
     await this.pending;
     const slot = await this.repository.read(index);
     if (!slot.record) { this.error = 'This character could not be loaded. The slot has been preserved.'; return null; }
     if (slot.record.worldVersion !== this.worldVersion) {
-      this.error = 'This character belongs to a different world version. Its save has been preserved.'; return null;
+      if(!canUpgradeWorld(slot.record.worldVersion,this.worldVersion)){
+        this.error = 'This character belongs to a different world version. Its save has been preserved.'; return null;
+      }
+      try{
+        if(!this.createWorld)throw new Error('World upgrade is unavailable. The previous save is untouched.');
+        const upgraded=upgradeWorldSave(slot.record,this.worldVersion,this.createWorld);
+        const result=await this.repository.write(index,upgraded,slot.token);
+        if(!this.accept(result))return null;
+        slot.record=upgraded;slot.token=(result as {ok:true;token:string}).token;
+      }catch(error){this.error=(error as Error).message;return null;}
     }
     slot.record.checkpoint.chronicle = progressForRecord(slot.record);
     this.active = { index, record: slot.record, token: slot.token }; this.error = '';

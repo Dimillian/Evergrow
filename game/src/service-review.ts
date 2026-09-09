@@ -3,6 +3,7 @@ import './style.css';
 import './typography.css';
 import { installUITheme } from './ui-theme.ts';
 import { loadGameFont } from './font.ts';
+import { queryPlaces } from './world-geography.ts';
 import { World } from './world.ts';
 import { Simulation } from './simulation.ts';
 import { Renderer } from './renderer.ts';
@@ -23,7 +24,10 @@ if (!import.meta.env.DEV) throw new Error('Local review only.');
 installUITheme(); await loadGameFont();
 const life = new Lifetime(), world = life.own(new World(7319)), sim = new Simulation(world, { spawn: false });
 const params = new URLSearchParams(location.search), role = params.get('role') ?? 'blacksmith';
-const npc = world.getBuildings(-1500, params.has('distant') ? 26000 : -2200, 3000, params.has('distant') ? 3200 : 1600).map(buildingNPC).find((n): n is TownNPC => n?.role === role)!;
+const tier=params.get('tier');
+const town=tier==='city'||tier==='village'?queryPlaces(world.seed,-35000,-35000,70000,70000).filter(p=>p.id!==0&&(tier==='city'?p.city:!p.city&&p.seed%3!==0)).sort((a,b)=>Math.hypot(a.x,a.y)-Math.hypot(b.x,b.y))[0]:null;
+const npc = (town?world.getBuildings(town.x-1000,town.y-1000,2000,2000):world.getBuildings(-1500, params.has('distant') ? 26000 : -2200, 3000, params.has('distant') ? 3200 : 1600)).map(buildingNPC).find((n): n is TownNPC => n?.role === role)!;
+
 const p = sim.player; p.x = p.prevX = npc.x; p.y = p.prevY = npc.y + 30; p.level = 12;
 p.character.statPoints = 55; p.character.skillPoints = 11; p.character.gold = 200_000;
 for (let i = 0; i < (params.has('empty') ? 0 : 18); i++) {

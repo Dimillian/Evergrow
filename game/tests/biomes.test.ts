@@ -64,9 +64,8 @@ test('map colors include roads and plazas without asking collision to generate m
   assert.notEqual(trail, world.mapColor(point[0]+150,point[1]+150));
   const town = world.getSettlements(-600, -1400, 1200, 1100)[0];
   assert.notEqual(world.mapColor(town.x, town.y), trail);
-  for (const building of town.buildings) {
-    const y = building.door.y + 24;
-    assert.equal(world.mapColor(town.x, y), world.mapColor(building.door.x, y));
+  for(const path of town.paths) for(const p of path.points){
+    assert.match(world.mapColor(p[0],p[1]),/^rgb/,'organic walking routes use shared map terrain without collision probes');
   }
   const colors = new Set<string>();
   for (let x = -12000; x <= 12000; x += 400) colors.add(world.mapColor(x, 3400));

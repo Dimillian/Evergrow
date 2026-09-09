@@ -1,3 +1,4 @@
+import { architectureStyle, roofVariant } from './settlement-style.ts';
 import { polygon, line, randomFromSeed, hash, type Point } from './art-primitives.ts';
 import type { Building, Rect } from './settlements.ts';
 
@@ -6,9 +7,7 @@ export function drawRoofCourses(c: CanvasRenderingContext2D, b: Building, edge: 
   back: number, front: number, rise: number, side: number) {
   const random = randomFromSeed(hash(b.seed + (side < 0 ? 183 : 319)));
   const left = Math.min(edge, center), right = Math.max(edge, center), span = right - left;
-  const palette = b.kind === 'blacksmith' ? ['#414c52', '#505957', '#63706c', '#8d9280']
-    : b.kind === 'merchant' ? ['#3e5656', '#506964', '#647d71', '#a4ae8d']
-      : ['#344d5a', '#456372', '#5b7982', '#9aa99e'];
+  const palette=architectureStyle(b).roof;
   const project = (x: number, y: number): Point => [x, y - rise * Math.abs((x - edge) / span)];
   for (let y = back - 8, row = 0; y < front + 8; y += 8, row++) {
     for (let x = left - 14 + row % 2 * 7; x < right; x += 14) {
@@ -21,6 +20,17 @@ export function drawRoofCourses(c: CanvasRenderingContext2D, b: Building, edge: 
       if (wear < .07) polygon(c, [project(x + 2, y + 1), project(x + 11, y + 1), project(x + 10, y + 6), project(x + 3, y + 6)], '#79817b5c');
     }
   }
+  if(roofVariant(b)==='thatch'){
+    for(let i=0;i<180;i++){const x=left+random()*span,y=back+random()*(front-back);line(c,[project(x,y),project(x+random()*2,y+5+random()*9)],i%3?palette[3]+'55':palette[0]+'80',.65);}
+  }
+  const weather=architectureStyle(b).weather;
+  if(weather==='snow'){
+    for(let i=0;i<14;i++){const x=left+random()*span,y=back+random()*(front-back);polygon(c,[project(x-12,y),project(x,y-4),project(x+19,y),project(x+15,y+9),project(x-10,y+8)],i%2?'#d2e3dfbb':'#a9c8d399');}
+  }
+  if(weather==='ash'||weather==='sand'){
+    for(let i=0;i<50;i++){const x=left+random()*span,y=back+random()*(front-back);line(c,[project(x,y),project(x+7,y+1)],weather==='sand'?'#d8bd8870':'#252b3260',1);}
+  }
+  if(weather==='moss'||weather==='leaves'){
   // Moss grows in sheltered eave joints; soot trails down from the chimney side.
   for (let bed = 0; bed < 5; bed++) {
     const x = left + span * (.1 + random() * .75), y = front - random() * 29;
@@ -28,6 +38,7 @@ export function drawRoofCourses(c: CanvasRenderingContext2D, b: Building, edge: 
       const mx = x + (random() - .5) * 24, my = y + (random() - .5) * 11;
       polygon(c, [project(mx - 5, my), project(mx - 3, my - 3), project(mx + 2, my - 4), project(mx + 6, my - 1), project(mx + 3, my + 2)], lobe % 3 ? '#697b4e55' : '#9b9d6955');
     }
+  }
   }
   if (side > 0 && b.kind !== 'chapel') {
     const x = b.width * .75;

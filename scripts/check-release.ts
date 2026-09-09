@@ -11,10 +11,10 @@ try {
   if (git('status', '--porcelain')) throw new Error('Commit the changelog and all release changes first.');
   const current = parseChangelog(readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8'));
   const previous = spawnSync('git', ['show', `${baseline}:CHANGELOG.md`], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-  const latest = (text: string) => text.split(/^## /m)[1]?.trim();
+  if(current.some(e=>{const [major,minor]=e.version.split('.').map(Number);return major!==0||minor>=5;}))throw new Error('Prototype versions must remain below 0.5.0 until a milestone is explicitly approved.');
   if (git('rev-parse', 'HEAD') !== baseline && previous.status === 0
-    && latest(previous.stdout) === latest(readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8'))) {
-    throw new Error('The latest changelog entry is unchanged since the last publication. Add player-facing release notes.');
+    && current[0].date <= parseChangelog(previous.stdout)[0].date) {
+    throw new Error('Add a new dated release entry since the last publication. Renumbering old entries is not new release notes.');
   }
   console.log(`Release notes ready: v${current[0].version} — ${current[0].date}`);
 } catch (error) {

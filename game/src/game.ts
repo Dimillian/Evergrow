@@ -158,7 +158,7 @@ export class Game {
       this.exploration = new Exploration(this.world, { storage: null });
       this.lifetime.defer(() => this.exploration.dispose());
       this.saveClient = this.lifetime.own(new SaveHub());
-      this.session = new CharacterSession(this.saveClient, this.world.generationVersion);
+      this.session = new CharacterSession(this.saveClient, this.world.generationVersion, seed=>new World(seed));
       this.shell = this.lifetime.own(new GameShell(root, {
         volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
         sound: () => this.toggleSound(), muted: () => this.muted, zoom: factor => this.renderer.zoomByWheel(-Math.log(factor)/.0016,0,this.canvas.getBoundingClientRect().height),

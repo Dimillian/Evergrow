@@ -2,6 +2,31 @@
 
 `CHANGELOG.md` is the single source for both the repository changelog and **What's new** in the character hall. The reader bundles it into the game; no save, login, network request or external Markdown renderer is involved. Android includes the same reader when its next APK is built.
 
+## Prototype version policy
+
+Player-facing versions remain below **0.5.0** until the user explicitly approves a new milestone. The user approved **0.2.0** for the settlement and gambler milestone on 2026-09-09. Routine publications after it increment the patch number (**0.2.1**, **0.2.2**, and so on). Patch numbers have no single-digit limit. Minor versions (0.2, 0.3, 0.4) mark deliberate product milestones, not each feature pass. Do not advance to 0.5 or 1.0 automatically.
+
+On 2026-09-09 the display history was renumbered, preserving every date, note and development-recap marker. The renumbered history ships with 0.2.0; it does not redeploy historical builds. The audit records below retain their original published labels, source SHAs and Sites IDs. Save schema v4, world generation 10, dungeon layout versions and Sites snapshot numbers are independent technical identifiers; never lower them to match a game release label.
+
+| Original published label | Current display label |
+| --- | --- |
+| 0.1.0 | 0.1.0 |
+| 0.2.0 | 0.1.1 |
+| 0.3.0 | 0.1.2 |
+| 0.3.1 | 0.1.3 |
+| 0.3.2 | 0.1.4 |
+| 0.3.3 | 0.1.5 |
+| 0.4.0 | 0.1.6 |
+| 0.5.0 | 0.1.7 |
+| 0.5.1 | 0.1.8 |
+| 0.6.0 | 0.1.9 |
+| 0.6.1 | 0.1.10 |
+| 0.6.2 | 0.1.11 |
+| 0.7.0 | 0.1.12 |
+| 0.7.1 | 0.1.13 |
+| 0.8.0 | 0.1.14 |
+| 0.9.0 | 0.1.15 |
+
 ## Last verified publication
 
 - Game v0.9.0 / Sites version 28, publicly deployed on 2026-09-08 at 19:19:56 UTC.
@@ -39,12 +64,12 @@
 
 1. Resolve the source of the last **successful publication** from the Sites history/current release record. A saved version alone is not proof of publication. For the initial changelog release the known published baseline is `1978bf9d210533cb83b11c8c9863e766f7c13562` (Sites version 14).
 2. Read the commits and relevant implementation since that source. Summarize what players can actually experience; omit internal refactors, unpublished experiments and changes later reverted.
-3. Prepend a versioned, timestamped release entry in `CHANGELOG.md`. Use **New**, **Tweaks**, and **Fixes** (omit empty sections). Lead with exciting features and meaningful balance changes; describe bugs in terms of what players experienced. Explicitly call out save resets. Use short factual bullets, ideally one line each. No themed titles or promotional copy. Increment the version for each publication; record its UTC preparation time, displayed in Europe/Paris time in the reader.
+3. Prepend a versioned, timestamped release entry in `CHANGELOG.md`. Use **New**, **Tweaks**, and **Fixes** (omit empty sections). Lead with exciting features and meaningful balance changes; describe bugs in terms of what players experienced. Explicitly call out save resets. Use short factual bullets, ideally one line each. No themed titles or promotional copy. Increment the patch version for each publication under the prototype policy above; record its UTC preparation time, displayed in Europe/Paris time in the reader.
 4. Validate the reader, run appropriate code tests and the production Site build. Commit the notes alongside the exact release source, and push the checkpoint to origin.
 5. Run `npm run release:check -- <full-last-published-source-sha>`. It checks the format, requires a clean committed tree, and rejects a changed build whose newest notes are unchanged from that publication. Re-publishing the identical source can reuse its existing notes; do not invent gameplay changes.
 6. Follow the Sites skills: push the exact source to its bound repository, package that build, save the version and publish to the requested existing audience. Verify deployment success before saying it is live. On failure, preserve the prepared notes and retry the same release rather than creating a second entry.
 
-The changelog starts with three retrospectively numbered entries (v0.1.0–v0.3.0); these are game versions, separate from Sites snapshot numbers. Historical recap timestamps use the last checkpoint that day; v0.3.0 uses the verified September 7 publication time. September 5 and 6 are explicitly marked development recaps reconstructed from Git history, not claims of individual deployment dates. The September 7 release summarizes changes since the known version-14 baseline.
+The changelog starts with three retrospectively numbered entries (now v0.1.0–v0.1.2; originally v0.1.0–v0.3.0); these are game versions, separate from Sites snapshot numbers. Historical recap timestamps use the last checkpoint that day; v0.3.0 uses the verified September 7 publication time. September 5 and 6 are explicitly marked development recaps reconstructed from Git history, not claims of individual deployment dates. The September 7 release summarizes changes since the known version-14 baseline.
 
 ## Supported file format
 

@@ -2,8 +2,7 @@ import { equippedGearPower } from './leaderboard.ts';
 import { characterPower, previewCharacter } from './character-summary.ts';
 import { bundleChart, chartKey, encodeChart } from './save-bundle.ts';
 import type { CloudRow } from './cloud-cache.ts';
-import { openCloudCache, type CacheCommand } from './cloud-cache.ts';
-import { makeSaveBundle } from './save-bundle.ts';
+import { openCloudCache, prepareCloudSave, type CacheCommand } from './cloud-cache.ts';
 import type { CharacterSave } from './character-save.ts';
 import type { DecodedExploration } from './exploration-save.ts';
 const scope = globalThis as unknown as { onmessage: (event: MessageEvent) => void; postMessage(value: unknown): void };
@@ -15,8 +14,9 @@ scope.onmessage = ({ data }) => {
       let result: unknown;
       if (data.method === 'init') { cache = openCloudCache(indexedDB, data.account); result = true; }
       else if (data.method === 'write-bundle') {
+        const old=await cache.execute({kind:'read',index:data.index}) as CloudRow|null;
         const row = await cache.execute({ kind: 'write', index: data.index, expected: data.expected, operation: data.operation,
-          bundle: makeSaveBundle(data.record as CharacterSave, data.chart as DecodedExploration) }) as CloudRow | null;
+          bundle: prepareCloudSave(old,data.record as CharacterSave,data.chart as DecodedExploration) }) as CloudRow | null;
         result = row ? { token: row.token, conflict: row.conflict } : null;
       }
       else if (data.method === 'list-info') {

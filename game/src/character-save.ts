@@ -54,6 +54,7 @@ function validSheet(v: unknown, level: number): v is CharacterSheet {
   if (object(v) && v.recentItems !== undefined && (!Array.isArray(v.recentItems)
     || v.recentItems.length > INVENTORY_CAPACITY + EQUIPMENT_SLOTS.length
     || !v.recentItems.every(id => text(id, 160)) || new Set(v.recentItems).size !== v.recentItems.length)) return false;
+  if (object(v) && v.stash !== undefined && (!Array.isArray(v.stash) || v.stash.length !== 96 || !v.stash.every(i=>i===null||validItem(i)))) return false;
   if (!object(v) || !validCharacterLook(v.look) || !validBlessing(v.blessing) || !validCommerce(v.commerce, level) || (v.gold !== undefined && !validGold(v.gold)) || !object(v.attributes) || !['strength', 'dexterity', 'intelligence', 'vitality'].every(k => integer((v.attributes as ObjectValue)[k], 10, 5e6 + 10))
     || !integer(v.statPoints, 0, 5e6) || !integer(v.skillPoints, 0, MAX_CONTENT_LEVEL)
     || !Array.isArray(v.inventory) || v.inventory.length !== INVENTORY_CAPACITY || !v.inventory.every(i => i === null || validItem(i))
@@ -63,7 +64,7 @@ function validSheet(v: unknown, level: number): v is CharacterSheet {
     || !v.allocatedNodes.every(id => typeof id === 'string' && SKILL_NODES.has(id)) || new Set(v.allocatedNodes).size !== v.allocatedNodes.length) return false;
   const sheet = v as unknown as CharacterSheet;
   if (!validSkillProgression(sheet)) return false;
-  const ids = [...sheet.inventory, ...Object.values(sheet.equipped)].filter((i): i is Item => i !== null).map(i => i.id);
+  const ids = [...(sheet.stash??[]), ...sheet.inventory, ...Object.values(sheet.equipped)].filter((i): i is Item => i !== null).map(i => i.id);
   if (new Set(ids).size !== ids.length || sheet.equipped.weapon?.weapon?.hands === 2 && sheet.equipped.offhand !== null) return false;
   const allocated = new Set(sheet.allocatedNodes), connected = new Set(['origin']), queue = ['origin'];
   for (let i = 0; i < queue.length; i++) for (const next of SKILL_NODES.get(queue[i])!.neighbors) {
@@ -116,14 +117,14 @@ export function decodeCharacterSave(raw: string): CharacterSave | null {
     if (expedition?.location && !expedition.runs.some(r=>r.entrance.id===expedition.location)) return null;
     const dungeonReturn=(p.travel as TravelState | undefined)?.returnTo?.dungeon;
     if(dungeonReturn && !expedition?.runs.some(r=>r.entrance.id===dungeonReturn))return null;
-    const items = [...storedItems,...p.character.inventory, ...Object.values(p.character.equipped), ...p.groundItems.map(i => i.item), ...p.character.commerce.buyback.map(i => i.item)].filter(Boolean) as Item[];
+    const items = [...storedItems,...(p.character.stash??[]),...p.character.inventory, ...Object.values(p.character.equipped), ...p.groundItems.map(i => i.item), ...p.character.commerce.buyback.map(i => i.item)].filter(Boolean) as Item[];
     if (new Set(items.map(i => i.id)).size !== items.length || new Set(p.groundItems.map(i => i.id)).size !== p.groundItems.length) return null;
     for (const item of items) {
       if (!item.id.startsWith('stock:')) continue;
       const source = /^stock:(town:[0-9]+:-?[0-9]+:building:[0-9]+:(blacksmith|jeweler)):([0-9]+):([0-9]+)$/.exec(item.id);
       if (!source) return null;
       const epoch = Number(source[3]), slot = Number(source[4]), state = p.character.commerce;
-      if (!Number.isSafeInteger(epoch) || epoch > Math.floor((p.level - 1) / 3) || slot >= (source[2] === 'jeweler' ? 6 : 12)) return null;
+      if (!Number.isSafeInteger(epoch) || epoch > Math.floor((p.level - 1) / 3) || slot >= (source[2] === 'jeweler' ? 16 : 24)) return null;
       if (epoch >= state.epoch && !(state.sold[source[1]] & 1 << slot)) return null;
     }
     return v as unknown as CharacterSave;

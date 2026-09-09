@@ -84,3 +84,16 @@
 
 .service-panel { --ui-radius:0px; }
 .service-panel .ui-button, .service-panel .ui-slot, .service-panel .ui-key { border-radius:0; }
+
+.gamble-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.gamble-choice{border:1px solid #72877b45;border-radius:0;background:#152127;color:#d1d7c3;display:grid;justify-items:center;padding:12px 4px;cursor:pointer;gap:5px;font:inherit}
+.gamble-choice:hover,.gamble-choice[aria-pressed=true]{border-color:#c9af73;background:radial-gradient(ellipse at top left,#b892482c,transparent),#1c292b}
+.gamble-choice b{font-weight:400;font-size:14px}.gamble-choice small{font:12px "Evergrow Numerals",sans-serif;color:#cbb982}
+.gamble-odds{margin-top:18px;color:#aab7b6;font-size:13px}.gamble-odds p{line-height:1.7}
+.gamble-reveal{padding:18px;background:radial-gradient(ellipse at top left,#d9b77720,transparent 65%);animation:gamble-reveal .65s ease-out}
+.gamble-reveal h3{color:var(--item-color);margin:14px 0}
+@keyframes gamble-reveal{from{opacity:0;transform:translateY(10px);filter:brightness(2)}to{opacity:1;transform:none;filter:brightness(1)}}
+@media(prefers-reduced-motion:reduce){.gamble-reveal{animation:none}}
+@media(max-width:500px){.gamble-choices{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.service-tier-note{color:var(--ui-muted);font-size:.85rem;margin:0 0 1rem;line-height:1.5}.service-pool-odds{display:grid;gap:.35rem;margin-top:.6rem}.service-pool-odds>div{display:flex;justify-content:space-between;gap:1rem}.service-offer>[data-shop-family]{margin-bottom:1rem;width:100%}

@@ -34,7 +34,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'barks',group:'combat',name:'Battle speech',path:'/bestiary.html?barks=1',description:'Bestiary with staged encounter speech bubbles.'},
   {id:'deaths',group:'combat',name:'Death animations',path:'/deaths.html',description:'Play creature death recipes with variant and facing controls.'},
   {id:'lights',group:'combat',name:'Weapon enchantments',path:'/weapon-lights.html',description:'Caster emission, melee enchantments and basic cast poses.'},
-  {id:'layouts',group:'world',name:'Towns & roads',path:'/layouts.html',description:'Town, city, road and enterable interior studies with PNG export.'},
+  {id:'layouts',group:'world',name:'Settlements',path:'/layouts.html',description:'Seeded refuges, villages, fortified cities, market stalls and family interiors with PNG export.'},
   {id:'atlas',group:'world',name:'World atlas',path:'/atlas.html',description:'Local, wide and vast world surveys with region levels, custom seeds and PNG export.'},
   {id:'biomes',group:'world',name:'Climates',path:'/biomes.html',description:'All seven biomes and blended transitions using the game renderer.'},
   {id:'encounters',group:'world',name:'Camps & landmarks',path:'/encounters.html',description:'Frozen wilderness placements, camps and encounter warnings.'},

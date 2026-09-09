@@ -52,6 +52,9 @@ test('generated roads remain walkable across positive and negative regions', () 
 });
 
 class SingleTreeWorld extends World {
+  // Isolate trunk collision from the procedural settlement surrounding this test coordinate.
+  override getBuildings(): [] { return []; }
+  override getWildernessSites(): [] { return []; }
   tree: Prop = { id: 'prop:-4:-7', x: -300, y: -500, radius: 12, kind: 'deadTree', seed: 1, scale: 1 };
 
   override getProps(x: number, y: number, width: number, height: number): Prop[] {

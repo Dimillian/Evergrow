@@ -17,9 +17,10 @@ const EXPORT_HEIGHT = 1000;
 const ASPECT = EXPORT_WIDTH / EXPORT_HEIGHT;
 const WORLD_SEED = 7319;
 const VIEWS = [
-  { id: 'town', label: 'Town overview' },
+  { id: 'town', label: 'Starting settlement' },
+  { id: 'village', label: 'Village' },
   { id: 'city', label: 'City overview' },
-  { id: 'street', label: 'Street junction' },
+  { id: 'street', label: 'Hearth & stalls' },
   { id: 'approach', label: 'Town approach' },
   { id: 'trail', label: 'Wilderness trail' },
   { id: 'interior', label: 'Furnished interior' },
@@ -50,8 +51,8 @@ function fit(rectangles: readonly Rect[], padding: number): Pick<Stage, 'camera'
   return { camera: { x: (left + right) / 2, y: (top + bottom) / 2 }, width: Math.round(height * ASPECT), height };
 }
 
-function settlementAt(world: World, city = false): Settlement {
-  const place = city ? queryPlaces(world.seed, -35000, -35000, 70000, 70000).filter(p => p.city).sort((a,b)=>Math.hypot(a.x,a.y)-Math.hypot(b.x,b.y))[0] : settlementPlace(world.seed, 0, 0);
+function settlementAt(world: World, tier: 'settlement'|'village'|'city' = 'settlement'): Settlement {
+  const place = tier!=='settlement' ? queryPlaces(world.seed,-35000,-35000,70000,70000).filter(p=>p.id!==0&&(tier==='city'?p.city:!p.city&&p.seed%3!==0)).sort((a,b)=>Math.hypot(a.x,a.y)-Math.hypot(b.x,b.y))[0] : settlementPlace(world.seed,0,0);
   const town = world.getSettlements(place.x - 1, place.y - 1, 2, 2)[0];
   if (!town?.buildings.length) throw new Error('No settlement found for review.');
   return town;
@@ -78,9 +79,9 @@ function overview(world: World, settlement: Settlement): Stage {
   const buildings = settlement.buildings.map(building => ({ x: building.x - 16, y: building.y - 100,
     width: building.width + 32, height: building.height + 130 }));
   return {
-    title: `${settlement.name} · ${settlement.kind === 'city' ? 'city' : 'town'}`,
-    description: `${settlement.buildings.length} generated buildings · connected streets and central road`,
-    ...fit([...buildings, ...settlement.streets, settlement.plaza], 110),
+    title: `${settlement.name} · ${settlement.kind}`,
+    description: `${settlement.kind==='settlement'?`${settlement.buildings.filter(b=>b.form==='tent').length} canvas shelters`:`${settlement.buildings.filter(b=>b.form==='house').length} homes & halls`} · ${settlement.buildings.filter(b=>b.form==='stall').length} stalls · ${settlement.layout}`,
+    ...fit([...buildings, settlement.plaza], 65),
     hero: clearFloor(world, { x: settlement.x, y: settlement.y + 25 }), settlement,
   };
 }
@@ -92,15 +93,15 @@ function selectBuilding(settlement: Settlement, kind: Building['kind']): Buildin
 function makeStage(world: World, view: ViewId): Stage {
   const town = settlementAt(world);
   if (view === 'town') return overview(world, town);
-  if (view === 'city') return overview(world, settlementAt(world, true));
+  if(view==='village'||view==='city')return overview(world,settlementAt(world,view));
   if (view === 'approach') {
     const height = 500;
     return {
       title: `${town.name} · south approach`,
-      description: 'Southern homes and doorsteps · town street meets the main trail and crossroad',
+      description: 'Timber barricades and the southern arrival',
       // The south row has doors at -798; the older crossroad meets the main trail near -644.
-      camera: { x: town.x, y: -780 }, width: Math.round(height * ASPECT), height,
-      hero: clearFloor(world, { x: town.x, y: -720 }), settlement: town,
+      camera: { x: town.x, y: town.y+town.radius*.6 }, width: Math.round(height * ASPECT), height,
+      hero: clearFloor(world, { x: town.x, y: town.y+town.radius*.7 }), settlement: town,
     };
   }
   if (view === 'trail') {
@@ -123,12 +124,13 @@ function makeStage(world: World, view: ViewId): Stage {
     const height = 420;
     return {
       title: `${town.name} · ${building.name}`,
-      description: 'Street meets the central road · equipped character shown at world scale',
+      description: 'Open-air merchants, shared fire and personal storage',
       camera: { x: (building.x + building.width / 2 + junction.x) / 2, y: building.y + building.height * .55 - 15 },
       width: Math.round(height * ASPECT), height, hero, settlement: town,
     };
   }
-  const building = selectBuilding(town, 'inn');
+  const homeTown=settlementAt(world,'village');
+  const building = selectBuilding(homeTown, 'house');
   const hero = clearFloor(world, { x: building.door.x, y: building.y + building.height * .64 }, building);
   return {
     title: `${town.name} · ${building.name}`,
@@ -151,7 +153,8 @@ async function boot() {
   const params = new URLSearchParams(location.search);
   let view: ViewId = VIEWS.find(candidate => candidate.id === params.get('view'))?.id ?? 'town';
   params.delete('mode');
-  const world = new World(WORLD_SEED);
+  const seed=Number(params.get('seed')??WORLD_SEED)>>>0;
+  const world = new World(seed);
   const renderer = new Renderer();
   const scene = document.createElement('canvas');
   scene.width = EXPORT_WIDTH; scene.height = EXPORT_HEIGHT;
@@ -182,7 +185,10 @@ async function boot() {
   const status = root.querySelector<HTMLElement>('.layout-review-status')!;
   const download = document.createElement('a');
   download.className = 'layout-review-download'; download.textContent = 'Save PNG';
-  root.querySelector('.layout-review-actions')!.append(download);
+  const seedForm=document.createElement('form');seedForm.innerHTML=`<label>Seed <input name="seed" type="number" min="0" max="4294967295" value="${seed}" style="width:110px"></label><button>Generate</button>`;
+  seedForm.addEventListener('submit',e=>{e.preventDefault();params.set('seed',String(Number(new FormData(seedForm).get('seed'))>>>0));location.search=params.toString();},{signal:lifecycle.signal});
+  const randomButton=createButton('New seed');randomButton.addEventListener('click',()=>{params.set('seed',String(crypto.getRandomValues(new Uint32Array(1))[0]));location.search=params.toString();},{signal:lifecycle.signal});
+  root.querySelector('.layout-review-actions')!.append(seedForm,randomButton,download);
   const viewButtons = new Map<ViewId, HTMLButtonElement>();
   const settings: RenderSettings = { phase: 'paused', reducedMotion: true, fps: 0, debug: false };
   let stage: Stage;
@@ -198,8 +204,8 @@ async function boot() {
     scene.setAttribute('aria-label', `${stage.title}. ${stage.description}. CRT with soft phosphor.`);
     scene.dataset.view = view;
     download.href = scene.toDataURL('image/png');
-    download.download = `evergrow-${view}-seed-${WORLD_SEED}-v${world.generationVersion}-crt-phosphor.png`;
-    metadata.textContent = `Seed ${WORLD_SEED} · generation ${world.generationVersion} · PNG ${EXPORT_WIDTH} × ${EXPORT_HEIGHT}`;
+    download.download = `evergrow-${view}-seed-${seed}-v${world.generationVersion}-crt-phosphor.png`;
+    metadata.textContent = `Seed ${seed} · generation ${world.generationVersion} · PNG ${EXPORT_WIDTH} × ${EXPORT_HEIGHT}`;
     status.textContent = `${stage.title}, CRT with soft phosphor ready.`;
     root.dataset.ready = 'true';
     root.setAttribute('aria-busy', 'false');
@@ -208,7 +214,7 @@ async function boot() {
   function renderView(next: ViewId) {
     root.dataset.ready = 'false'; root.setAttribute('aria-busy', 'true');
     stage = makeStage(world, next);
-    const simulation = new Simulation(world, { seed: WORLD_SEED, spawn: false, startX: stage.hero.x, startY: stage.hero.y });
+    const simulation = new Simulation(world, { seed, spawn: false, startX: stage.hero.x, startY: stage.hero.y });
     simulation.player.angle = -.65;
     simulation.time = 12;
     renderer.reset(); renderer.resize(stage.width, stage.height);

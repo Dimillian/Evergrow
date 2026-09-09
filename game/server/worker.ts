@@ -1,3 +1,4 @@
+import { canLoadWorld } from '../src/world-save-upgrade.ts';
 import { leaderboardAPI } from './leaderboard.ts';
 import { equippedGearPower } from '../src/leaderboard.ts';
 import { parseChronicleLedger, mergeChronicles, recordChronicle } from '../src/chronicle.ts';
@@ -68,7 +69,7 @@ export async function cloudAPI(request: Request, env: CloudEnv): Promise<Respons
   if (row?.operation === input.operation) return row.digest === digest ? json({ revision: row.revision }) : json({ error: 'Save request changed.' }, 409);
   if ((row?.revision ?? 0) !== input.expected) return json({ error: 'Cloud save changed on another device.' }, 409);
   const bundle = input.bundle === null ? null : decodeSaveBundle(raw);
-  if (input.bundle !== null && (!bundle || bundle.character.worldVersion !== WORLD_GENERATION_VERSION)) return json({ error: 'Invalid or incompatible save file.' }, 422);
+  if (input.bundle !== null && (!bundle || !canLoadWorld(bundle.character.worldVersion, WORLD_GENERATION_VERSION))) return json({ error: 'Invalid or incompatible save file.' }, 422);
   const r = bundle?.character;
   const summary = r ? JSON.stringify({ name: r.name, level: r.checkpoint.level, power: characterPower(previewCharacter(r)).power, gearPower: equippedGearPower(r.checkpoint.character), updatedAt: r.updatedAt }) : null;
   let history=parseChronicleLedger(row?.chronicle);

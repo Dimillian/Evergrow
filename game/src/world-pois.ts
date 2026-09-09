@@ -6,6 +6,8 @@ export const POI_DEFINITIONS = {
   reliquary: { label: 'Reliquary', color: '#d1bc8c' },
   portal: { label: 'Portal', color: '#bfade8' },
   town: { label: 'Settlement', color: '#e0c38b' },
+  gambler: {label:'Gambler',color:'#d9b878'},
+  stash: {label:'Storage',color:'#b2b9ad'},
   blacksmith: { label: 'Blacksmith', color: '#ee9861' },
   jeweler: { label: 'Jeweler', color: '#8fdbc8' },
   enchanter: { label: 'Enchanter', color: '#baa2eb' },

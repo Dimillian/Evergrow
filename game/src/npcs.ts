@@ -1,12 +1,14 @@
+import { vendorIdentity } from './vendor-identity.ts';
+import type { SettlementTier } from './settlement-services.ts';
 import type { Building } from './settlements.ts';
 import { getZoneAt } from './zone-progression.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import type { WorldQuery } from './model.ts';
 
-export type NPCRole = 'blacksmith' | 'jeweler' | 'enchanter';
-export interface TownNPC { id: string; name: string; role: NPCRole; x: number; y: number; level: number; maxLevel?: number; seed: number; buildingId: string; }
-export const NPC_NAMES: Record<NPCRole, string> = { blacksmith: 'Blacksmith', jeweler: 'Jeweler', enchanter: 'Enchanter' };
-export const NPC_COLORS: Record<NPCRole, string> = { blacksmith: '#e9ad68', jeweler: '#8fdbc8', enchanter: '#baa2eb' };
+export type NPCRole = 'blacksmith' | 'jeweler' | 'enchanter' | 'gambler' | 'stash';
+export interface TownNPC { settlementTier?:SettlementTier; id: string; name: string; role: NPCRole; x: number; y: number; level: number; maxLevel?: number; seed: number; buildingId: string; }
+export const NPC_NAMES: Record<NPCRole, string> = { blacksmith: 'Blacksmith', jeweler: 'Jeweler', enchanter: 'Enchanter', gambler: 'Gambler', stash: 'Storage' };
+export const NPC_COLORS=Object.fromEntries(Object.keys(NPC_NAMES).map(role=>[role,vendorIdentity(role)!.color])) as Record<NPCRole,string>;
 export function hashService(value: string): number {
   let n = 2166136261;
   for (let i = 0; i < value.length; i++) n = Math.imul(n ^ value.charCodeAt(i), 16777619);
@@ -14,11 +16,11 @@ export function hashService(value: string): number {
 }
 export function buildingNPC(building: Building): TownNPC | null {
   const role = building.kind === 'blacksmith' ? 'blacksmith' : building.kind === 'merchant' ? 'jeweler'
-    : building.kind === 'chapel' ? 'enchanter' : null;
+    : building.kind === 'chapel' ? 'enchanter' : building.kind === 'gambler' ? 'gambler' : building.kind === 'stash' ? 'stash' : null;
   if (!role) return null;
-  const x = building.door.x, y = building.door.y - 57, id = `${building.id}:${role}`;
+  const x = building.door.x, y = building.kind==='stash' ? building.door.y+12 : building.door.y + (building.form==='stall'?22:-57), id = `${building.id}:${role}`;
   const seed = hashService(id), names = ['Mara', 'Oswin', 'Vesper', 'Iona', 'Alden', 'Sable', 'Corvin', 'Edda'];
-  return { id, buildingId: building.id, role, x, y, seed, name: names[seed % names.length], level: getZoneAt(x, y, Number(building.id.split(':')[1])).level, maxLevel: getZoneAt(x, y, Number(building.id.split(':')[1])).maxLevel };
+  return { settlementTier:building.settlementTier, id, buildingId: building.id, role, x, y, seed, name: names[seed % names.length], level: getZoneAt(x, y, Number(building.id.split(':')[1])).level, maxLevel: getZoneAt(x, y, Number(building.id.split(':')[1])).maxLevel };
 }
 export function canInteractNPC(npc: TownNPC, player: { x: number; y: number; dead?: boolean }, world: WorldQuery): boolean {
   return !player.dead && !world.blocked(npc.x, npc.y, 0) && !world.blocked(player.x, player.y, 0) && Math.hypot(player.x - npc.x, player.y - npc.y) <= 70

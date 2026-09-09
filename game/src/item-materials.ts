@@ -65,13 +65,13 @@ export function materialBaseName(kind:ItemKind,name:string,id:ItemMaterialId):st
 }
 
 /** A bounded source advantage; never depends on the player's level or kill count. */
-export interface MaterialSource { readonly level?:number; readonly rank?:EnemyRank; readonly encounter?:'boss'|'chest'|'bossChest'|'event' }
+export interface MaterialSource { readonly merchantBonus?:number; readonly level?:number; readonly rank?:EnemyRank; readonly encounter?:'boss'|'chest'|'bossChest'|'event' }
 export function sourceMaterialPool(kind:ItemKind,family?:WeaponFamily,source:MaterialSource={}):readonly MaterialRoll[] {
   const level=Math.max(1,Math.min(1e6,Number.isFinite(source.level)?source.level!:1));
   const zone=1+2.5*(1-Math.exp(-(level-1)/35));
   const rank=source.rank==='elite'?1.75:source.rank==='veteran'?1.25:1;
   const encounter=source.encounter==='bossChest'?2.5:source.encounter==='boss'?2.25:source.encounter==='chest'?1.5:source.encounter==='event'?1.3:1;
-  const advantage=Math.min(7,zone*rank*encounter);
+  const advantage=Math.min(7,zone*rank*encounter*Math.max(1,Math.min(3,source.merchantBonus??1)));
   const weighted=itemMaterialPool(kind,family).map(m=>({...m,weight:m.weight*(['silver','gold','crystal','astralite','velvet','starweave'].includes(m.id)?advantage:['steel','runewood','quartz','silk'].includes(m.id)?Math.sqrt(advantage):1)}));
   const total=weighted.reduce((n,m)=>n+m.weight,0);
   return weighted.map(m=>({...m,weight:m.weight/total*100}));

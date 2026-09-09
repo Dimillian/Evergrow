@@ -37,7 +37,7 @@ export interface Prop {
 }
 
 export const TILE_SIZE = 256;
-export const WORLD_GENERATION_VERSION = 9;
+export const WORLD_GENERATION_VERSION = 10;
 const PROP_CELL_SIZE = 80;
 const MAX_PROP_RADIUS = 15;
 const PROP_CACHE_LIMIT = 8192;
@@ -208,7 +208,7 @@ export class World {
   }
 
   getBuildingAt(x: number, y: number): Building | null {
-    return this.getBuildings(x, y, .01, .01).find(building => contains(building, x, y)) ?? null;
+    return this.getBuildings(x, y, .01, .01).find(building => building.form !== 'stall' && building.form !== 'tent' && building.form !== 'fixture' && contains(building, x, y)) ?? null;
   }
 
   isSanctuary(x: number, y: number): boolean {
@@ -259,7 +259,7 @@ export class World {
   private surfaceColor(x: number, y: number, towns: Settlement[], detail: boolean): number[] {
     const damp = noise(x / 180, y / 180, this.seed + 201);
     const weights = this.sampleBiome(x, y).weights;
-    const profile = roadSurface(x, y, this.seed), road = profile.weight;
+    const profile = roadSurface(x, y, this.seed), road = profile.weight * (towns.some(t=>Math.hypot(x-t.x,y-t.y)<t.radius-100)?0:1);
     const paved = this.pavingWeight(towns, x, y, road);
     const base = detail ? biomeGround(weights, smoothstep(.50, .85, damp) * .65) : biomeMapColor(weights);
     const hydro = this.hydrology.sample(x, y);
@@ -268,7 +268,11 @@ export class World {
     const shallows = Math.max(0, 1 - hydro.depth / .65);
     const pool = [17 + shallows * 22, 51 + shallows * 25, 60 + shallows * 16];
     const dirt = [58 - wet * 9, 51 - wet * 5, 39 - wet * 2];
-    const stone = [68, 68, 59];
+    const town=towns.find(t=>Math.hypot(x-t.x,y-t.y)<t.radius);
+    // Local soil retains the surrounding climate; broad wear should not read as bright ribbons.
+    const strength=town?.kind==='city'?.5:town?.kind==='village'?.34:.25;
+    const earth=[58+weights.sunscar*40,51+weights.sunscar*33,39+weights.sunscar*22];
+    const stone=base.map((v,i)=>v*(1-strength)+earth[i]*strength+(town?.kind==='city'?3:0));
     const weather = detail ? (noise(x / 93, y / 93, this.seed + 203) - .5) * 18 : 0;
     const relief = detail ? landscapeRelief(x,y,this.seed,weights) : 0;
     const grain = detail ? (noise(x / 18, y / 18, this.seed + 202) - .5) * 5 : 0;
@@ -342,7 +346,7 @@ export class World {
     if ((x / 180) ** 2 + (y / 140) ** 2 < 1) return null;
     // Keep generous shoulders clear as well as the visibly compacted road.
     if (pathDistance(x, y, this.seed) < 76) return null;
-    if (this.isSanctuary(x, y)) return null;
+
     if (this.getWildernessSites(x - 18, y - 18, 36, 36).some(site => Math.hypot(x - site.x, y - site.y) < site.radius + 18)) return null;
     if (this.roadShrines(x - 44, y - 44, 88, 88).some(shrine => Math.hypot(x - shrine.x, y - shrine.y) < 44)) return null;
     if (this.hydrology.sample(x, y).coverage > .12) return null;
@@ -352,6 +356,13 @@ export class World {
     if (random(cx, cy, this.seed, 3) > landscapePropProbability(x,y,this.seed,kind,biome)) return null;
     const definition = propDefinition(kind);
     const scale = definition.scale[0] + random(cx, cy, this.seed, 5) * (definition.scale[1] - definition.scale[0]);
+    const towns=this.getSettlements(x-180,y-180,360,360),settlementClearance=definition.radius[1]+22;
+    for(const town of towns){
+      if(Math.hypot(x-town.x,y-town.y)<155)return null;
+      if(town.buildings.some(b=>circleHitsRect(x,y,settlementClearance+(definition.canopy?32:0),b)))return null;
+      if(town.paths.some(path=>path.points.slice(1).some((b,j)=>{const a=path.points[j],vx=b[0]-a[0],vy=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*vx+(y-a[1])*vy)/(vx*vx+vy*vy||1)));return Math.hypot(x-a[0]-t*vx,y-a[1]-t*vy)<path.width/2+settlementClearance;})))return null;
+      if(definition.canopy&&town.buildings.some(b=>circleHitsRect(x+definition.canopy!.offsetX*scale,y-definition.canopy!.height*scale,definition.canopy!.radius*scale+16,b)))return null;
+    }
     if (definition.canopy) {
       // The crown is projected above its trunk. A clear ground contact alone can
       // leave a foreground tree hiding a site's fire, supplies and entrance.
@@ -540,7 +551,7 @@ export class World {
     drawRoadDetails(context, originX, originY, TILE_SIZE, this.seed, (x, y) => {
       if (buildings.some(building => contains(building, x, y, 10))) return { road: 0, paved: 0 };
       const road = this.roadWeight(x, y);
-      return { road, paved: this.pavingWeight(towns, x, y, road) };
+      return { road:towns.some(t=>Math.hypot(x-t.x,y-t.y)<t.radius-100)?0:road, paved: towns.some(t=>t.kind==='city')?this.pavingWeight(towns,x,y,road)*smoothstep(.48,.76,noise(x/125,y/125,this.seed+941))*.6:0 };
     });
 
     yield;

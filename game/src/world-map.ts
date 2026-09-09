@@ -122,7 +122,7 @@ export function pickMapPOI(pois: readonly MapPOI[], view: MapView, pointer: { x:
   return nearest;
 }
 
-const SERVICE_KINDS = new Set(['blacksmith', 'merchant', 'inn', 'chapel', 'jeweler', 'enchanter']);
+const SERVICE_KINDS = new Set(['blacksmith', 'merchant', 'inn', 'chapel', 'jeweler', 'enchanter', 'gambler', 'stash']);
 /** The same stable visible list serves painting and hover; hidden overlapping services never steal focus. */
 export function selectMapPOIs(pois: readonly MapPOI[], view: MapView, mini = false): MapPOI[] {
   const priority = (poi: MapPOI) => poi.kind === 'portal' ? -1 : poi.kind === 'town' ? 0 : poi.kind === 'camp' ? 1 : SERVICE_KINDS.has(poi.kind) ? 3 : 2;

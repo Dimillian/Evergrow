@@ -1,5 +1,6 @@
+import { canUpgradeWorld, upgradeWorldChart } from './world-save-upgrade.ts';
 import { parseChronicleLedger, recordChronicle, forkChronicle } from './chronicle.ts';
-import { decodeSaveBundle, makeSaveBundle, chartKey, bundleChart } from './save-bundle.ts';
+import { decodeSaveBundle, makeSaveBundle, chartKey, bundleChart, encodeChart } from './save-bundle.ts';
 import { CharacterRepository, type SaveSlot } from './character-storage.ts';
 import type { CharacterSave } from './character-save.ts';
 import { Exploration, type ChartResult } from './exploration.ts';
@@ -92,6 +93,14 @@ async function execute(message: SaveRequest): Promise<unknown> {
                 const bundle = { format: 'evergrow' as const, version: 1 as const, character: message.record!, chart: message.chart };
                 if (!bundleChart(bundle)) throw new Error('Invalid explored map.');
                 tx.objectStore('charts').put(message.chart, chartKey(message.record!));
+              }
+              if(message.method==='write'&&slot.record&&slot.record.id===message.record!.id&&slot.record.worldSeed===message.record!.worldSeed&&canUpgradeWorld(slot.record.worldVersion,message.record!.worldVersion)){
+                const old=slot.record,nextRecord=message.record!,charts=tx.objectStore('charts'),read=charts.get(chartKey(old));
+                read.onsuccess=()=>{try{
+                  const data=read.result===undefined?{chunks:[],pois:[]}:decodeExploration(read.result,{seed:old.worldSeed,generation:String(old.worldVersion)});
+                  if(!data)throw new Error('The explored map could not be upgraded. The previous save is untouched.');
+                  charts.put(encodeChart(nextRecord,upgradeWorldChart(data,nextRecord.worldSeed)),chartKey(nextRecord));
+                }catch(error){tx.abort();reject(error);}};
               }
               // Return a tiny revision token, never the serialized character, to the game thread.
               const next = String(Number(current ?? 0) + 1), key = `revision:${index}`;

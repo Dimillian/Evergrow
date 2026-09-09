@@ -238,3 +238,17 @@ test('ranking migration includes existing cloud character names and levels witho
  const row=db.prepare('SELECT rank_name,rank_level,rank_gear FROM characters').get()!;assert.equal(row.rank_name,'Rowan');assert.equal(row.rank_level,12);assert.equal(row.rank_gear,null);
  }finally{db.close();}
 });
+
+test('generation-9 uploads can finish across deployment before the same character upgrades to generation 10',async t=>{
+ const s=server();t.after(()=>s.db.close());const bundle=fixture();bundle.character.worldVersion=9;
+ const oldChart=bundleChart(fixture());const old=makeSaveBundle(bundle.character,oldChart);
+ assert.equal((await s.request('upgrade-owner','characters/0',write(old))).status,200);
+ const {upgradeWorldSave,upgradeWorldChart}=await import('../src/world-save-upgrade.ts');
+ const {World}=await import('../src/world.ts');
+ const next=makeSaveBundle(upgradeWorldSave(old.character,10,seed=>new World(seed)),upgradeWorldChart(oldChart,old.character.worldSeed));
+ assert.equal((await s.request('upgrade-owner','characters/0',write(next,1))).status,200);
+ const saved=await (await s.request('upgrade-owner')).json() as {bundle:typeof next};assert.equal(saved.bundle.character.worldVersion,10);
+ assert.deepEqual(bundleChart(saved.bundle).chunks,bundleChart(old).chunks);
+ const unsupported=fixture();unsupported.character.worldVersion=8;const bad=makeSaveBundle(unsupported.character,oldChart);
+ assert.equal((await s.request('unsupported-owner','characters/0',write(bad))).status,422);
+});

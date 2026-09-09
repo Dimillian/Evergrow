@@ -120,7 +120,7 @@ export class JourneyController {
             if (this.host.phase === 'playing' && !this.host.sim.dungeonFloor) {
                 const towns = this.host.overworld.getSettlements(p.x - 260, p.y - 260, 520, 520);
                 const arrivals = [...this.host.sim.journeys.accepted, ...this.host.sim.journeys.offers,
-                    ...towns.map(t => ({ id: t.id, kind: 'town' as const, name: t.name, x: t.x, y: t.y, level: captureEncounterScale(getZoneAt(t.x, t.y, this.host.overworld.seed),p.level).base, region: getZoneAt(t.x, t.y, this.host.overworld.seed).name }))];
+                    ...towns.map(t => ({ settlementTier:t.kind, id: t.id, kind: 'town' as const, name: t.name, x: t.x, y: t.y, level: captureEncounterScale(getZoneAt(t.x, t.y, this.host.overworld.seed),p.level).base, region: getZoneAt(t.x, t.y, this.host.overworld.seed).name }))];
                 for (const goal of arrivals)
                     this.host.sim.completeJourneyArrival(goal);
                 facts.level = p.level;
@@ -141,7 +141,7 @@ export class JourneyController {
         const origin = currentDungeon(this.host.sim.expeditions)?.entrance ?? this.host.sim.player;
         const town = this.host.overworld.getNearestSettlement(origin.x,origin.y);
         const zone = getZoneAt(town.x,town.y,this.host.overworld.seed);
-        this.host.sim.journeys.nearestTown = {id:town.id,kind:'town',name:town.name,x:town.x,y:town.y,level:captureEncounterScale(zone,this.host.sim.player.level).base,region:zone.name};
+        this.host.sim.journeys.nearestTown = {settlementTier:town.kind,id:town.id,kind:'town',name:town.name,x:town.x,y:town.y,level:captureEncounterScale(zone,this.host.sim.player.level).base,region:zone.name};
         const state = this.host.sim.journeys, p = this.host.sim.player, facts = this.facts();
         for (const list of [state.accepted,state.offers]) for (const g of list)
             if(g.finishedAt===undefined)g.level=activityLevel(g,facts,this.host.overworld.seed);

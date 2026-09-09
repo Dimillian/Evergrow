@@ -34,7 +34,7 @@ test('cached settlement blueprints resist consumer edits and regenerate identica
   const first = at(0), expected = JSON.stringify(first), building = first.buildings[0], version = world.generationVersion;
   assert.throws(() => { building.door.x += 200; }, TypeError);
   assert.throws(() => { building.walls[0].width = 0; }, TypeError);
-  assert.throws(() => { first.streets.length = 0; }, TypeError);
+  assert.throws(() => { first.paths.length = 0; }, TypeError);
   assert.equal(JSON.stringify(at(0)), expected);
   for (let band = 1; band <= 40; band++) at(band);
   assert.equal(world.cacheStats.settlements, 32);

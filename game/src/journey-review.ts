@@ -29,7 +29,7 @@ const toGoal=(p:typeof camp):JourneyGoal=>({id:p.id,kind:p.kind as JourneyGoal['
 const active=toGoal(camp),crypt=toGoal(pois.find(p=>p.kind==='dungeon')!),beacon=toGoal(pois.find(p=>p.kind==='watchtower')!);
 const state=freshJourneys();state.accepted=[active];state.tracked=active.id;state.offers=[...new Map([crypt,beacon,...pois.filter(v=>['camp','graveyard','standingStones'].includes(v.kind)&&v.id!==active.id&&Math.hypot(v.x-camp.x,v.y-camp.y)<2000).slice(0,2).map(toGoal)].map(g=>[g.id,g])).values()];state.recommended=crypt.id;
 const town=world.getNearestSettlement(camp.x-115,camp.y+250),townZone=getZoneAt(town.x,town.y,world.seed);
-state.nearestTown={id:town.id,kind:'town',name:town.name,x:town.x,y:town.y,level:townZone.level,region:townZone.name};
+state.nearestTown={settlementTier:town.kind,id:town.id,kind:'town',name:town.name,x:town.x,y:town.y,level:townZone.level,region:townZone.name};
 const old=pois.find(p=>p.kind==='caravan');if(old)state.history=[{...toGoal(old),finishedAt:1}];
 sim.journeys=state;
 const p=sim.player; p.x=p.prevX=camp.x-115;p.y=p.prevY=camp.y+250;p.level=active.level;p.angle=-Math.PI/2;p.xp=32;

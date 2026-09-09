@@ -1,6 +1,27 @@
 # Evergrow changelog
 
-## v0.9.0 — 2026-09-08T19:18:00Z
+## v0.2.0 — 2026-09-09T11:50:00Z
+
+### New
+
+- Discover tent settlements, fortified villages and castle towns, with roaming residents and biome-specific homes.
+- Gamble for mystery gear and store spare equipment in your personal stash at any town.
+- Larger towns offer broader stock, better material chances and focused city enchantments.
+
+### Tweaks
+
+- Settlements have natural clearings, connected walls and distinctive vendor stalls.
+- Moving fog, canopy shadows and directional lighting give the wilderness more depth.
+- Click ground equipment to approach and collect it; service grids now match your inventory.
+
+### Fixes
+
+- Existing characters keep their progress and explored map when towns upgrade.
+- Improved NPC shadows and corrected stall, banner and cart details.
+
+> Town shops refresh once. Characters blocked by rebuilt scenery move to a safe arrival nearby.
+
+## v0.1.15 — 2026-09-08T19:18:00Z
 
 ### New
 
@@ -19,7 +40,7 @@
 
 > Characters with an older saved dungeon expedition cannot load this version; start a fresh character. Existing saves remain stored. Characters without an older expedition are unaffected.
 
-## v0.8.0 — 2026-09-08T17:55:00Z
+## v0.1.14 — 2026-09-08T17:55:00Z
 
 ### New
 
@@ -38,7 +59,7 @@
 
 > Existing characters and worlds are preserved. Previously activated encounters keep their levels and progress.
 
-## v0.7.1 — 2026-09-08T16:22:00Z
+## v0.1.13 — 2026-09-08T16:22:00Z
 
 ### Fixes
 
@@ -46,7 +67,7 @@
 - The ground now keeps the newest 1,024 items instead of 96, replacing the oldest drops when full.
 - Previously blocked boss-chest equipment can now be delivered when you return nearby.
 
-## v0.7.0 — 2026-09-08T08:19:00Z
+## v0.1.12 — 2026-09-08T08:19:00Z
 
 ### New
 
@@ -59,19 +80,19 @@
 - Bows face correctly to the left and no longer spin during firing.
 - Arrows leave the animated bow's center, including while moving and using bow skills.
 
-## v0.6.2 — 2026-09-08T06:15:00Z
+## v0.1.11 — 2026-09-08T06:15:00Z
 
 ### Tweaks
 
 - Cleaner leaderboard with a compact heading and less text.
 
-## v0.6.1 — 2026-09-08T06:08:00Z
+## v0.1.10 — 2026-09-08T06:08:00Z
 
 ### Fixes
 
 - Existing Cloud characters now show gear power in the leaderboard without needing to play or save again.
 
-## v0.6.0 — 2026-09-08T06:00:00Z
+## v0.1.9 — 2026-09-08T06:00:00Z
 
 ### New
 
@@ -87,7 +108,7 @@
 
 > Existing characters are preserved. Older Cloud characters show gear power after their next successful save.
 
-## v0.5.1 — 2026-09-07T19:37:00Z
+## v0.1.8 — 2026-09-07T19:37:00Z
 
 ### New
 
@@ -106,7 +127,7 @@
 - Chronicle opens faster and has cleaner, better-spaced tabs.
 - Opening inventory no longer highlights the close button.
 
-## v0.5.0 — 2026-09-07T18:42:00Z
+## v0.1.7 — 2026-09-07T18:42:00Z
 
 ### New
 
@@ -126,7 +147,7 @@
 - Projectile skills no longer spend mana when there is no room for their shots.
 - Corrected ultimate targeting previews, Executioner damage and Shattered Sky blast sizes.
 
-## v0.4.0 — 2026-09-07T17:36:00Z
+## v0.1.6 — 2026-09-07T17:36:00Z
 
 ### New
 
@@ -149,7 +170,7 @@
 
 > New world generation requires a fresh character. Older saves are preserved but cannot be continued in this version.
 
-## v0.3.3 — 2026-09-07T13:30:00Z
+## v0.1.5 — 2026-09-07T13:30:00Z
 
 ### New
 
@@ -169,14 +190,14 @@
 - Fixed blackened shields and capes overlapping front-facing gear.
 - Reshaped bulky wands and awkward boots.
 
-## v0.3.2 — 2026-09-07T12:17:00Z
+## v0.1.4 — 2026-09-07T12:17:00Z
 
 ### Fixes
 
 - Cloud characters with save conflicts can now be deleted without downloading first.
 - Delete confirmation explains which copies are removed; failed requests keep recovery available.
 
-## v0.3.1 — 2026-09-07T12:04:00Z
+## v0.1.3 — 2026-09-07T12:04:00Z
 
 ### Tweaks
 
@@ -192,7 +213,7 @@
 
 > Characters using removed skill-tree paths may need a fresh start. Original saves are preserved.
 
-## v0.3.0 — 2026-09-07T11:19:00Z
+## v0.1.2 — 2026-09-07T11:19:00Z
 
 ### New
 
@@ -218,7 +239,7 @@
 
 > Old specialization builds may require a new character. Original saves are preserved.
 
-## v0.2.0 — 2026-09-06T17:27:00Z
+## v0.1.1 — 2026-09-06T17:27:00Z
 
 > Development recap.
 

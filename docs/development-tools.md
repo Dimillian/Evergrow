@@ -39,3 +39,9 @@ The atlas alone uses a 0.001 minimum zoom; gameplay retains 0.025. Shared terrai
 ### Dungeon workshop
 
 The World workspace’s Dungeon tool (`/dungeon.html?view=gallery&seed=7319`) compares Rootbound Crypt, Cinder Foundry and Drowned Vault maps using consecutive seeds. Seed input, New seed and PNG export support repeatable reviews. Click a room on Floor map or select a chamber in the sidebar to inspect actual runtime materials, props, fixtures and themed enemies. Chamber, Corridor and Encounter modes freeze disposable actors while lights animate at 30 Hz. The tool imports shared `generateDungeon`, `drawDungeonMap`, `DungeonWorld` and `Renderer`; it has no alternate generator or playable saves.
+
+### Settlement workshop
+
+`/layouts.html` now compares the starting refuge, villages and fortified cities using a URL-addressable seed. Hearth & stalls and Furnished interior provide close-ups; PNG export uses the actual runtime renderer. Refuges have no houses. `/services.html?role=gambler` and `?role=stash` stage the production panels in disposable memory. See [Settlements](settlements.md).
+
+The town service study accepts `tier=village` or `tier=city` to select a real generated town of that tier. It supports all service roles and uses disposable memory.

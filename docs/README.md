@@ -101,3 +101,5 @@ Code checks and static reviews do not establish gameplay feel, economy balance o
 - [Equipment affixes and hybrids](equipment-affixes.md): current slot pools, roll weights, specialist budgets and elemental combat.
 
 - [Home and leaderboard](leaderboard.md): automatic Cloud character rankings, shared home navigation and equipped gear scoring (published in v0.6.0).
+
+- [Settlement tiers, residents, gambling and personal storage](settlements.md) · local generation 10.

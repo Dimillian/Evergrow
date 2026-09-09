@@ -7,6 +7,10 @@ test('repository notes have unique versions, timestamps and historical recaps', 
   const entries = parseChangelog(readFileSync(new URL('../../CHANGELOG.md', import.meta.url), 'utf8'));
   assert.ok(entries.length >= 3);
   assert.equal(new Set(entries.map(e => e.version)).size, entries.length);
+  for(const [i,e]of entries.entries()){
+    const [major,minor,patch]=e.version.split('.').map(Number);assert.equal(major,0);assert.ok(minor<5,'prototype releases stay below 0.5');
+    if(i){const previous=entries[i-1].version.split('.').map(Number);assert.ok(previous[1]>minor||previous[1]===minor&&previous[2]>patch,'versions remain newest first');}
+  }
   assert.ok(entries.slice(1).some(e => e.notices.includes('Development recap.')));
 });
 test('release boundaries, sections, notices and Paris timestamps stay explicit', () => {

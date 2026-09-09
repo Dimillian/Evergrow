@@ -1,3 +1,8 @@
+import { drawFortificationShadows } from './settlement-wall-art.ts';
+import { vendorIdentity } from './vendor-identity.ts';
+import { drawVendorGlyph } from './vendor-identity-art.ts';
+import { architectureStyle, roofVariant } from './settlement-style.ts';
+import { drawSettlementFixture, drawMarketCanopy, drawMarketWares, drawCampShelter } from './settlement-fixture-art.ts';
 import { furnitureContainerId } from './breakable-containers.ts';
 import { drawRoofCourses, drawBuildingApron, drawWallWeathering } from './architecture-art.ts';
 import type { Building, Rect } from './settlements.ts';
@@ -13,7 +18,7 @@ export interface StructureLayer { y: number; draw(c: CanvasRenderingContext2D): 
 interface Reveal { open: boolean; opacity: number; }
 const WALL_HEIGHT = 42;
 const TAU = Math.PI * 2;
-const MAX_CACHED_BUILDINGS = 24;
+const MAX_CACHED_BUILDINGS = 32;
 
 function hash(seed: number): number {
   let n = seed | 0; n = Math.imul(n ^ n >>> 16, 0x45d9f3b);
@@ -23,7 +28,7 @@ function rand(seed: number, salt: number) { return hash(seed + Math.imul(salt, 7
 function inside(b: Rect, x: number, y: number, margin = 0) {
   return x >= b.x - margin && x <= b.x + b.width + margin && y >= b.y - margin && y <= b.y + b.height + margin;
 }
-function roofRise(b: Building) { return Math.min(36, Math.max(22, b.width * .19)) + (b.kind === 'chapel' ? 7 : 0); }
+function roofRise(b: Building) { if(roofVariant(b)==='terrace')return 3;return (b.biome==='frostpine'?9:0)+ Math.min(36, Math.max(22, b.width * .19)) + (b.kind === 'chapel' ? 7 : 0); }
 function facadeWindows(b: Building): Array<{ x: number; sign: boolean }> {
   const half = b.door.width / 2;
   const sides = [{ start: b.x, end: b.door.x - half, right: false },
@@ -70,6 +75,7 @@ export class SettlementArt {
     const visible = new Set(buildings.map(b => b.id));
     for (const id of this.reveal.keys()) if (!visible.has(id)) this.reveal.delete(id);
     for (const b of buildings) {
+      if(b.form==='fixture')continue;
       const doorDistance = Math.hypot((playerX - b.door.x) * .9, playerY - b.door.y);
       const approaching = Math.abs(playerX - b.door.x) < b.door.width / 2 + 19
         && playerY >= b.door.y - 14 && playerY <= b.door.y + 49;
@@ -108,13 +114,13 @@ export class SettlementArt {
     const local: Building = { ...b, x: 0, y: 0, door: { ...b.door, x: b.door.x - b.x, y: b.door.y - b.y },
       walls: b.walls.map(r => ({ ...r, x: r.x - b.x, y: r.y - b.y })),
       furniture: b.furniture.map(r => ({ ...r, x: r.x - b.x, y: r.y - b.y })) };
-    const floor = this.layer(b.width + 32, b.height + 29, -16, -8, c => { drawBuildingApron(c, local); this.floor(c, local); });
+    const floor = this.layer(b.width + 32, b.height + 29, -16, -8, c => { if(b.form!=='stall'&&b.form!=='tent'){drawBuildingApron(c, local); this.floor(c, local);} });
     const furniture = local.furniture.map(item => ({
       ...this.layer(item.width + 16, item.height + 38, item.x - 8, item.y - 31, c => this.furnish(c, item, b.seed)),
       depth: item.y + item.height, kind: item.kind, source: item,
     }));
     const roofPadding = Math.ceil(WALL_HEIGHT + roofRise(b) + 36);
-    const roof = this.layer(b.width + 36, b.height + roofPadding + 6, -18, -roofPadding, c => this.roof(c, local));
+    const roof = b.form==='stall'||b.form==='tent'?this.layer(1,1,0,0,()=>{}):this.layer(b.width + 36, b.height + roofPadding + 6, -18, -roofPadding, c => this.roof(c, local));
     const result = { floor, roof, furniture };
     this.cache.set(b.id, result);
     if (this.cache.size > MAX_CACHED_BUILDINGS) this.cache.delete(this.cache.keys().next().value!);
@@ -122,7 +128,9 @@ export class SettlementArt {
   }
 
   drawGround(c: CanvasRenderingContext2D, buildings: readonly Building[], _time: number) {
+    drawFortificationShadows(c,buildings);
     for (const b of buildings) {
+      if(b.form==='fixture')continue;
       const layer = this.art(b).floor;
       c.drawImage(layer.image, b.x + layer.x, b.y + layer.y);
       const opacity = this.reveal.get(b.id)?.opacity ?? 1;
@@ -281,7 +289,8 @@ export class SettlementArt {
 
   /** Insert each footprint depth alongside actors so furnishings cannot cover someone in front. */
   getStructureLayers(b: Building, time: number, brokenContainers?: ReadonlySet<string>): StructureLayer[] {
-    const opacity = this.reveal.get(b.id)?.opacity ?? 1;
+    if(b.form==='fixture')return [{y:b.y+b.height,draw:(c:CanvasRenderingContext2D)=>drawSettlementFixture(c,b,this.reducedMotion?0:time)}];
+    const opacity = b.form==='stall'?0:this.reveal.get(b.id)?.opacity ?? 1;
     const t = this.reducedMotion ? 0 : time;
     const layers: StructureLayer[] = [];
     // The back wall stays tall; sides and the foreground wall become a cutaway.
@@ -290,10 +299,11 @@ export class SettlementArt {
       const side = wall.width < wall.height;
       const height = south ? 7 + opacity * (WALL_HEIGHT - 7) : side ? 14 + opacity * (WALL_HEIGHT - 14) : WALL_HEIGHT;
       layers.push({ y: wall.y + wall.height, draw: c => {
-        c.save(); this.wall(c, wall, height, b.kind); c.restore();
+        c.save(); this.wall(c, wall, height, b.kind, b); c.restore();
       } });
     }
     for (const [index, item] of this.art(b).furniture.entries()) {
+      if(b.form==='stall'&&b.kind!=='blacksmith')continue;
       if (item.kind === 'barrel' && brokenContainers?.has(furnitureContainerId(b, index))) continue;
       layers.push({ y: b.y + item.depth, draw: c => {
         c.save(); c.drawImage(item.image, b.x + item.x, b.y + item.y);
@@ -310,7 +320,9 @@ export class SettlementArt {
         c.restore();
       } });
     }
-    layers.push({ y: b.door.y + .1, draw: c => this.entrance(c, b, opacity, t) });
+    if(b.form==='tent')layers.push({y:b.y+b.height*.2,draw:c=>drawCampShelter(c,b,opacity,t)});
+    else if(b.form==='stall'){layers.push({y:b.y+b.height*.45,draw:c=>drawMarketCanopy(c,b,t)});if(b.kind!=='blacksmith')layers.push({y:b.y+b.height*.5+16,draw:c=>drawMarketWares(c,b,t)});}
+    else layers.push({ y: b.door.y + .1, draw: c => this.entrance(c, b, opacity, t) });
     return layers;
   }
 
@@ -340,10 +352,11 @@ export class SettlementArt {
     c.restore();
   }
 
-  private wall(c: CanvasRenderingContext2D, r: Rect, height: number, kind: Building['kind']) {
-    const stone = kind === 'chapel' || kind === 'blacksmith';
-    c.fillStyle = stone ? '#4c5c5c' : '#8b856a'; c.fillRect(r.x, r.y - height, r.width, r.height + height);
-    c.fillStyle = stone ? '#75827b' : '#a19878'; c.fillRect(r.x, r.y - height, r.width, Math.min(4, r.height));
+  private wall(c: CanvasRenderingContext2D, r: Rect, height: number, kind: Building['kind'], building:Building) {
+    const style=architectureStyle(building);
+    const stone = kind === 'chapel' || kind === 'blacksmith' || kind === 'noble';
+    c.fillStyle = stone ? style.stone : style.wall; c.fillRect(r.x, r.y - height, r.width, r.height + height);
+    c.fillStyle = style.trim; c.fillRect(r.x, r.y - height, r.width, Math.min(4, r.height));
     line(c, [[r.x + .5, r.y - height + .5], [r.x + r.width - .5, r.y - height + .5]], '#c2b08a', .75);
     if (stone) {
       c.strokeStyle = '#1a30373c'; c.lineWidth = .7;
@@ -392,6 +405,14 @@ export class SettlementArt {
   }
 
   private sign(c: CanvasRenderingContext2D, x: number, y: number, kind: Building['kind']) {
+    const identity=vendorIdentity(kind);
+    if(identity){
+      c.save();c.translate(x,y);
+      line(c,[[-15,-18],[-15,-26],[18,-26]],'#a99469',2);
+      line(c,[[-9,-26],[-9,-17],[9,-17],[9,-26]],'#71624e',1);
+      polygon(c,[[-14,-17],[14,-17],[14,12],[0,17],[-14,12]],identity.dark);
+      c.strokeStyle=identity.color;c.lineWidth=1.3;c.stroke();drawVendorGlyph(c,kind,0,-1,23);c.restore();return;
+    }
     c.save(); c.translate(x, y);
     line(c, [[-9, -8], [-9, -12], [8, -12]], '#9b8c63', 1.2);
     line(c, [[-5, -12], [-5, -7], [5, -7], [5, -12]], '#514b3c', .8);
@@ -415,6 +436,15 @@ export class SettlementArt {
   private roof(c: CanvasRenderingContext2D, b: Building) {
     const w = b.width, h = b.height, rise = roofRise(b);
     const left = -8, right = w + 8, center = w / 2, back = -WALL_HEIGHT - 3, front = h - WALL_HEIGHT + 3;
+    if(roofVariant(b)==='terrace'){
+      const style=architectureStyle(b);
+      polygon(c,[[left,back],[right,back],[right,front],[left,front]],style.wall);
+      for(let i=0;i<44;i++){const xx=rand(b.seed,i+48)*w,yy=back+rand(b.seed,i+179)*(front-back);line(c,[[xx,yy],[xx+7,yy+1]],'#8a765655',.7);}
+      line(c,[[left,front],[left,back],[right,back],[right,front]],style.trim,6);
+      line(c,[[left,front],[right,front]],'#8d795c',5);
+      polygon(c,[[w*.62,back+20],[w*.88,back+20],[w*.88,back+49],[w*.62,back+49]],'#75604b');
+      return;
+    }
     const south = [[left, front], [center, front - rise], [right, front]] as const;
     polygon(c, [[left + 1, front], [right - 1, front], [right - 2, front + 5], [left + 2, front + 5]], '#1b2e34');
     polygon(c, south, b.kind === 'chapel' ? '#647575' : '#a09374');
@@ -431,6 +461,10 @@ export class SettlementArt {
       c.restore();
       line(c, [[edge, front], [edge, back], [center, back - rise]], '#a7a68a', 1.4);
       line(c, [[edge, front], [center, front - rise]], side < 0 ? '#8a968b' : '#5f7980', 2);
+    }
+    if(roofVariant(b)==='hipped'){
+      polygon(c,[[left,front],[center,front-rise-28],[right,front]],architectureStyle(b).roof[1]);
+      for(let row=0;row<5;row++){const f=row/5;line(c,[[left+(center-left)*f,front-(rise+28)*f],[right+(center-right)*f,front-(rise+28)*f]],architectureStyle(b).roof[3]+'70',1);}
     }
     line(c, [[center, back - rise], [center, front - rise]], '#abb39b', 3);
     line(c, [[center + 1.5, back - rise + 1], [center + 1.5, front - rise]], '#516a70', .9);
@@ -449,6 +483,23 @@ export class SettlementArt {
     c.fillStyle = '#7d8172'; c.fillRect(cx - 7, cy - 31, 15, 5);
     c.fillStyle = '#182b32'; c.fillRect(cx - 4, cy - 30, 9, 2);
     for (let y = cy - 24; y < cy; y += 6) line(c, [[cx - 5, y], [cx + 6, y]], '#a29a7a70', .6);
+    if(b.kind==='noble'){
+      // Buttressed corner towers turn the manor into a recognisable small keep.
+      for(const tx of[0,w-38]){
+        const base=h-3,top=base-100;
+        polygon(c,[[tx,top],[tx+30,top-5],[tx+38,top+2],[tx+38,base],[tx,base]],'#7a8783');
+        polygon(c,[[tx+30,top-5],[tx+38,top+2],[tx+38,base],[tx+30,base-2]],'#44585f');
+        for(let yy=top+11,row=0;yy<base;yy+=11,row++){
+          line(c,[[tx+1,yy],[tx+30,yy]],'#40555a',.9);
+          for(let xx=tx+7+(row%2)*7;xx<tx+30;xx+=14)line(c,[[xx,yy-10],[xx,yy]],'#566966',.7);
+        }
+        polygon(c,[[tx-2,top],[tx+30,top-6],[tx+40,top+2],[tx+36,top+6],[tx-2,top+5]],'#a8afa0');
+        for(let xx=tx;xx<tx+34;xx+=11){c.fillStyle='#a0aaa0';c.fillRect(xx,top-9,7,11);}
+        for(const yy of[top+24,top+59]){c.fillStyle='#253b44';c.fillRect(tx+13,yy,5,15);line(c,[[tx+12,yy],[tx+12,yy+16]],'#c1bd9f',1);}
+        polygon(c,[[tx+23,top+29],[tx+31,top+29],[tx+31,top+66],[tx+27,top+61],[tx+23,top+67]],'#775365');
+        line(c,[[tx+23,top+29],[tx+31,top+29]],'#d0b981',2);
+      }
+    }
     if (b.kind === 'chapel') {
       const sx = center, sy = back - rise + 7;
       polygon(c, [[sx - 9, sy], [sx, sy - 24], [sx + 9, sy]], '#415f69');
@@ -461,12 +512,22 @@ export class SettlementArt {
   drawRoofs(c: CanvasRenderingContext2D, buildings: readonly Building[], time: number) {
     const t = this.reducedMotion ? 0 : time;
     for (const b of [...buildings].sort((a, z) => a.y + a.height - z.y - z.height)) {
+      if(b.form==='fixture'||b.form==='stall'||b.form==='tent')continue;
       const opacity = this.reveal.get(b.id)?.opacity ?? 1;
       if (opacity < .002) continue;
       const roof = this.art(b).roof;
       c.save(); c.globalAlpha *= opacity;
       const roofAlpha = c.globalAlpha;
       c.drawImage(roof.image, b.x + roof.x, b.y + roof.y);
+      const weather=architectureStyle(b).weather;
+      if(weather==='snow')for(let i=0;i<7;i++){
+        const px=b.x+12+i*(b.width-24)/7,py=b.y+b.height-WALL_HEIGHT;
+        polygon(c,[[px-2,py],[px+3,py],[px+1,py+6+b.seed%6]],'#bcdbe0bb');
+      }
+      if(weather==='leaves'&&!this.reducedMotion)for(let i=0;i<3;i++){
+        const phase=(t*.1+i*.31+rand(b.seed,i))%1,px=b.x+b.width*.3+phase*55+Math.sin(phase*12+i)*7,py=b.y+b.height-WALL_HEIGHT+phase*54;
+        polygon(c,[[px-2,py],[px,py-2],[px+3,py],[px,py+2]],'#b28a50aa');
+      }
       if (b.kind === 'blacksmith' || b.kind === 'inn' || b.kind === 'house') {
         const x = b.x + b.width * .75, y = b.y + b.height * .27 - WALL_HEIGHT - 40;
         for (let i = 0; i < 5; i++) {
@@ -487,6 +548,10 @@ export class SettlementArt {
     const nearest = [...buildings].sort((a, b) => Math.hypot(a.door.x - this.playerX, a.door.y - this.playerY)
       - Math.hypot(b.door.x - this.playerX, b.door.y - this.playerY));
     for (const b of nearest) {
+      if(b.form==='fixture'){
+        if(b.kind==='hearth'||b.kind==='torch')result.push({x:b.x+b.width/2,y:b.y-(b.kind==='torch'?40:5),radius:b.kind==='hearth'?230:125,power:.85+Math.sin(t*6+b.seed)*.04,color:'#ffc071',shadows:true});
+        continue;
+      }
       const opacity = this.reveal.get(b.id)?.opacity ?? 1;
       result.push({ x: b.door.x - b.door.width / 2 - 3, y: b.door.y - 26, radius: 111,
         power: .68 + Math.sin(t * 5 + b.seed) * .035, color: '#ffc071' });

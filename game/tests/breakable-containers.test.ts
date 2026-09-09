@@ -104,7 +104,7 @@ for (const version of [3, CHARACTER_SAVE_VERSION]) test(`broken receipts and coi
 
 test('indoor barrels use stable furniture identity and release their collision only', () => {
   const world = new World(7319), sim = new Simulation(world, { spawn: false });
-  const building = world.getBuildings(-3000, -3000, 6000, 6000).find(b => b.furniture.some(f => f.kind === 'barrel'))!;
+  const building = world.getBuildings(-25000, -25000, 50000, 50000).find(b => b.furniture.some(f => f.kind === 'barrel'))!;
   assert.ok(building);
   const index = building.furniture.findIndex(f => f.kind === 'barrel'), target = furnitureContainer(building, index)!;
   assert.ok(world.getContainers(target.x, target.y, 5).some(t => t.id === target.id));

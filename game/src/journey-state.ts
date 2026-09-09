@@ -1,7 +1,8 @@
+import type { SettlementTier } from './settlement-services.ts';
 /** Per-character guidance, source identities and bounded completion receipts. */
 export const JOURNEY_KINDS = ['bossLair','camp','caravan','watchtower','graveyard','standingStones','reliquary','cursedChest','ruinedChapel','beastDen','quarry','hamlet','crossing','corruptedGrove','dungeon','town','frontier'] as const;
 export type JourneyKind = typeof JOURNEY_KINDS[number];
-export interface JourneyGoal { id:string; kind:JourneyKind; name:string; x:number; y:number; level:number; region:string; finishedAt?:number; rewardXP?:number }
+export interface JourneyGoal { settlementTier?:SettlementTier; id:string; kind:JourneyKind; name:string; x:number; y:number; level:number; region:string; finishedAt?:number; rewardXP?:number }
 export interface JourneyState {
   nearestTown?:JourneyGoal; townPin?:JourneyGoal;
   completed?:string[]; recommended?:string|null; areaId?:string;
@@ -80,7 +81,7 @@ export function validJourneys(value:unknown):value is JourneyState {
   const coord=(n:unknown)=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=4e7;
   const goal=(g:JourneyGoal)=>g&&typeof g==='object'&&str(g.id,180)&&str(g.name,120)&&str(g.region,120)
     &&(g.rewardXP===undefined||Number.isSafeInteger(g.rewardXP)&&g.rewardXP>=0)
-    &&JOURNEY_KINDS.includes(g.kind)&&coord(g.x)&&coord(g.y)&&Number.isInteger(g.level)&&g.level>=1&&g.level<=1e6
+    &&(g.settlementTier===undefined||g.kind==='town'&&['settlement','village','city'].includes(g.settlementTier))&&JOURNEY_KINDS.includes(g.kind)&&coord(g.x)&&coord(g.y)&&Number.isInteger(g.level)&&g.level>=1&&g.level<=1e6
     &&(g.finishedAt===undefined||typeof g.finishedAt==='number'&&Number.isFinite(g.finishedAt)&&g.finishedAt>=0);
   for(const city of [v.nearestTown,v.townPin])if(city!==undefined&&(!goal(city)||city.kind!=='town'||city.finishedAt!==undefined||city.rewardXP!==undefined))return false;
   if(v.townPin&&v.tracked!==null)return false;
