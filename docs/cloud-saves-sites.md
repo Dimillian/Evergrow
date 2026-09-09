@@ -21,6 +21,8 @@ The character-editor branch now uses save v4 with a required validated appearanc
 
 ## Storage and synchronization
 
+The local storage-tab pass accepts one to five consecutive 96-item stash tabs in the shared character validator. Existing single-tab saves remain valid. Purchases save the gold debit and new capacity together through the usual durable NPC transaction. Ship the matching client and Worker together; no database migration or character reset is required.
+
 As of the September 9 whole-number bonus pass, shared save decoding rounds validated item bonuses on the parsed copy, including equipped, stored and dropped items. This preserves ownership, recipe rolls, progress and the original stored bytes until a successful save; no schema or database migration is required. See [item rounding](equipment-affixes.md#weights-and-specialist-budgets).
 
 - `save-hub.ts` selects the active repository and chart persistence. The Site-only build flag enables capability discovery; the Android bridge explicitly disables it.

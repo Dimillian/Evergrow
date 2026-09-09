@@ -36,10 +36,17 @@ for (let i = 0; i < (params.has('empty') ? 0 : 18); i++) {
     (['common', 'magic', 'rare', 'epic'] as const)[i % 4]);
   item.recipe.enhancement = [0, 5, 10][i % 3]; p.character.inventory[i] = deriveItem(item);
 }
+if (role === 'stash') {
+  // Enough disposable gold to review every unlock without touching playable saves.
+  p.character.gold = 1_200_000;
+  p.character.stash = Array(96).fill(null);
+  for (let i=0;i<12;i++) p.character.stash[i]=generateItem(99100+i,6+i%3,
+    (['weapon','chest','ring','charm'] as const)[i%4],i%4===3?'jade-monolith':undefined,'rare');
+}
 refreshCharacter(p);
 const shell = life.own(new GameShell(document.querySelector('#app')!, { play() {}, returnToTitle() {}, openMap() {}, openCharacter() {}, openSkills() {} }));
 const audio=life.own(new GameAudio());
-const panel = life.own(new ServicePanel(shell.panelMount, { close: () => panel.close(), sort: target => { executeCharacterCommand(p, target === 'storage' ? {type:'sortStorage'} : {type:'sortInventory',mode:'compact'}); }, trade: async quote => {
+const panel = life.own(new ServicePanel(shell.panelMount, { close: () => panel.close(), sort: (target,tab) => { executeCharacterCommand(p, target === 'storage' ? {type:'sortStorage',tab} : {type:'sortInventory',mode:'compact'}); }, trade: async quote => {
   if(params.has('sound'))await audio.unlock();
   const plan = planService(p.character, npc, p.level, quote);
   if (plan.ok) { p.character = plan.character; refreshCharacter(p); if(params.has('sound')&&(quote.request.type==='sell'||quote.request.type==='sellMany'))audio.play({type:'gold',x:p.x,y:p.y,amount:quote.price,balance:p.character.gold??0}); }

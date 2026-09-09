@@ -1,5 +1,6 @@
+import { storageTabCount, storageTabItems, hasStorageTab, MAX_STORAGE_TABS, nextStorageTabPrice } from './storage-content.ts';
 import { itemAffixCount } from './items.ts';
-import { bulkSaleItems } from './item-protection.ts';
+import { bulkSaleItems, ITEM_LOCK_ICON } from './item-protection.ts';
 import { PACK_COLUMNS, PACK_ROWS, PACK_CELLS, CHARM_ROWS, resolvePackLayout, storageGridLayout, itemFootprint, canPackItem, packSpaceProblem } from './inventory-grid.ts';
 import './inventory-pack.css';
 import { settlementBenefits } from './settlement-services.ts';
@@ -24,6 +25,7 @@ const OP_LABELS: Record<Improvement, string> = { enhance: 'Enhance', rarity: 'Ra
 export class ServicePanel {
   readonly element: HTMLElement;
   private includeActiveCharms = false;
+  private storageTab = 0;
   private tooltip: ItemTooltip;
   private player!: Player;
   private npc!: TownNPC;
@@ -39,7 +41,7 @@ export class ServicePanel {
   private revealed:Item|null=null;
   private abort = new AbortController();
   private focus: { dispose(): void } | null = null;
-  private actions: { close(): void; sort(target: 'storage' | 'inventory'): void; trade(quote: ServiceQuote): Promise<{ ok: boolean; message: string }> };
+  private actions: { close(): void; sort(target: 'storage' | 'inventory', tab?: number): void; trade(quote: ServiceQuote): Promise<{ ok: boolean; message: string }> };
   constructor(mount: HTMLElement, actions: ServicePanel['actions']) {
     this.actions = actions;
     this.element = document.createElement('section'); this.element.className = 'service-panel ui-window'; this.element.hidden = true;
@@ -61,7 +63,7 @@ export class ServicePanel {
     this.element.addEventListener('scroll', () => this.tooltip.hide(), { signal: this.abort.signal, capture: true });
   }
   open(player: Player, npc: TownNPC): void {
-    this.player = player; this.npc = npc; this.tab = npc.role === 'enchanter' ? 'improve' : 'shop';
+    this.storageTab = 0; this.player = player; this.npc = npc; this.tab = npc.role === 'enchanter' ? 'improve' : 'shop';
     this.sales.clear(); this.goldFeedback.stop(); this.revealed=null; this.gambleKind=null;
     this.operation = npc.role === 'blacksmith' ? 'enhance' : 'rarity'; this.selected = null; this.quote = null;
     this.element.hidden = false; this.render(); this.focus?.dispose();
@@ -90,7 +92,9 @@ export class ServicePanel {
     this.selected = null; this.render();
   }
   private render(): void {
-    if(this.npc.role==='stash'||(this.npc.role==='gambler'&&this.tab==='shop')){this.renderSpecial();return;}
+    this.element.classList.toggle('is-storage',this.npc.role==='stash');
+    if(this.npc.role==='stash'){this.renderStorage();return;}
+    if(this.npc.role==='gambler'&&this.tab==='shop'){this.renderSpecial();return;}
     this.goldFeedback.stop();
     this.tooltip.hide();
     this.element.classList.toggle('is-selling', this.tab === 'sell');
@@ -140,41 +144,79 @@ export class ServicePanel {
     tabs.push(['sell', 'Sell'], ['buyback', `Buyback <small>${this.player.character.commerce.buyback.length}/12</small>`]);
     return `<nav class="service-tabs" aria-label="Services">${tabs.map(([tab, label]) => `<button class="ui-button ui-button--quiet" data-tab="${tab}" aria-pressed="${this.tab === tab}">${label}</button>`).join('')}<span>${escapeUI(this.npc.name)}${this.tab === 'improve' ? ` · Services Lv ${vendorLevel(this.npc, this.player.level)}` : ''}</span></nav>`;
   }
+  private renderStorage(): void {
+    this.goldFeedback.stop(); this.tooltip.hide(); this.element.classList.remove('is-selling');
+    const sheet = this.player.character, count = storageTabCount(sheet), owned = hasStorageTab(sheet,this.storageTab);
+    const storageScroll = this.element.dataset.storageView === String(this.storageTab)
+      ? this.element.querySelector('.service-storage-pane')?.scrollTop ?? 0 : 0;
+    const bagScroll = this.element.querySelector('.service-bag')?.scrollTop ?? 0;
+    this.element.dataset.storageView = String(this.storageTab);
+    this.element.style.setProperty('--service-color',NPC_COLORS.stash);
+    this.element.innerHTML = `${this.headerMarkup()}
+      <div class="service-body"><section class="service-offer service-storage-pane ui-scroll-area">
+        <nav class="storage-tabs" aria-label="Storage tabs">${Array.from({length:MAX_STORAGE_TABS},(_,tab)=>`<button type="button" class="ui-button ui-button--quiet" data-storage-tab="${tab}" aria-pressed="${this.storageTab===tab}" ${tab>count?'disabled':''} aria-label="${tab<count?'Open':'Unlock'} storage tab ${tab+1}">${tab>=count?ITEM_LOCK_ICON:''}<span>Tab ${tab+1}</span></button>`).join('')}</nav>
+        ${owned?`<div class="service-storage-toolbar">${this.sortMarkup('storage')}<span>${storageTabItems(sheet,this.storageTab).filter(Boolean).length} / ${STASH_CAPACITY}</span></div><div class="ui-item-grid-scroll"><div class="service-storage inventory-pack"></div></div>`:
+          `<div class="storage-unlock"><span class="storage-unlock-icon">${ITEM_LOCK_ICON}</span><h3>Storage tab ${this.storageTab+1}</h3><p>${STASH_CAPACITY} more items</p><strong>${nextStorageTabPrice(sheet)?.toLocaleString()} <small>gold</small></strong></div>`}
+      </section><section class="service-bag ui-scroll-area"><div class="service-section-heading"><h3>Inventory</h3></div>${this.sortMarkup('inventory')}<div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section></div>
+      <footer class="ui-window-footer"><span class="service-message" role="status"></span><button class="ui-button ui-button--primary" data-confirm disabled>Select an item</button></footer>`;
+    this.renderInventoryPack();
+    if (owned) this.renderStoragePack();
+    else this.selected = {type:'unlockStorage',tab:this.storageTab};
+    this.storageDetail();
+    this.element.querySelector('.service-storage-pane')!.scrollTop = storageScroll;
+    this.element.querySelector('.service-bag')!.scrollTop = bagScroll;
+  }
+  private storageDetail(): void {
+    this.quote = null;
+    const button=this.element.querySelector<HTMLButtonElement>('[data-confirm]')!, message=this.element.querySelector<HTMLElement>('.service-message')!;
+    button.disabled=true; button.textContent='Select an item'; message.textContent='';
+    for (const cell of this.element.querySelectorAll<HTMLElement>('[data-item]')) {
+      const entry = this.resolve(cell.dataset.item!);
+      cell.classList.toggle('is-selected',Boolean(entry && JSON.stringify(entry.request)===JSON.stringify(this.selected)));
+    }
+    if (!this.selected) return;
+    const result=quoteService(this.player.character,this.npc,this.player.level,this.selected);
+    if (!result.ok) {message.textContent=result.message;return;}
+    if (this.selected.type==='unlockStorage') {
+      this.quote=result.quote; button.textContent=`Unlock tab ${this.storageTab+1} · ${result.quote.price.toLocaleString()} gold`;
+      button.disabled=goldBalance(this.player.character)<result.quote.price;
+      if(button.disabled)message.textContent='Not enough gold.';
+      return;
+    }
+    if (!result.item || (this.selected.type!=='store' && this.selected.type!=='retrieve')) return;
+    this.quote=result.quote;
+    const storing=this.selected.type==='store';
+    const full=storing?storageTabItems(this.player.character,this.storageTab).filter(Boolean).length>=STASH_CAPACITY:!canPackItem(this.player.character,result.item);
+    button.textContent=storing?`Store in tab ${this.storageTab+1}`:'Take item'; button.disabled=full;
+    message.textContent=full?storing?'Storage tab full.':packSpaceProblem(this.player.character,result.item):itemDisplayName(result.item);
+  }
   private renderSpecial():void {
     this.goldFeedback.stop(); this.tooltip.hide(); this.element.classList.remove('is-selling');
-    const storage=this.npc.role==='stash',sheet=this.player.character;
     const active=document.activeElement as HTMLElement|null;
-    const focus=active?.dataset.item;
     const control=active?.dataset.tab?`[data-tab="${active.dataset.tab}"]`:active?.dataset.gamble?`[data-gamble="${active.dataset.gamble}"]`:active?.hasAttribute('data-confirm')?'[data-confirm]':active?.hasAttribute('data-close')?'[data-close]':null;
     this.element.style.setProperty('--service-color',NPC_COLORS[this.npc.role]);
-    this.element.innerHTML=`${this.headerMarkup()}
-      ${this.tabsMarkup()}
-      <div class="service-body"><section class="service-offer ui-scroll-area"><div class="service-section-heading"><h3>${storage?'Stored equipment':'Choose an item type'}</h3><span>${storage?`${(sheet.stash??[]).filter(Boolean).length} / ${STASH_CAPACITY}`:`${this.npc.settlementTier??'settlement'} · Lv ${vendorLevel(this.npc,this.player.level)}`}</span></div>
-      ${storage?`${this.sortMarkup('storage')}<div class="ui-item-grid-scroll"><div class="service-storage inventory-pack"></div></div>`:`<div class="gamble-choices">${GAMBLE_KINDS.map((kind,i)=>`<button class="gamble-choice" data-gamble="${kind}" aria-pressed="${this.selected?.type==='gamble'&&this.selected.kind===kind}"><span>${itemIconSVG(generateItem(i+71,1,kind,undefined,'common'),44)}</span><b>${kind==='head'?'Helmet':kind[0].toUpperCase()+kind.slice(1)}</b><small>${gamblePrice(this.npc,this.player.level,kind).toLocaleString()} gold</small></button>`).join('')}</div><details class="gamble-odds"><summary>Rarity odds</summary><p>${gambleOdds(this.npc).map((w,i)=>`${['Common','Magic','Rare','Epic','Legendary'][i]} ${w}%`).join(' · ')}</p></details>`}
+    this.element.innerHTML=`${this.headerMarkup()}${this.tabsMarkup()}
+      <div class="service-body"><section class="service-offer ui-scroll-area"><div class="service-section-heading"><h3>Choose an item type</h3><span>${this.npc.settlementTier??'settlement'} · Lv ${vendorLevel(this.npc,this.player.level)}</span></div>
+      <div class="gamble-choices">${GAMBLE_KINDS.map((kind,i)=>`<button class="gamble-choice" data-gamble="${kind}" aria-pressed="${this.selected?.type==='gamble'&&this.selected.kind===kind}"><span>${itemIconSVG(generateItem(i+71,1,kind,undefined,'common'),44)}</span><b>${kind==='head'?'Helmet':kind[0].toUpperCase()+kind.slice(1)}</b><small>${gamblePrice(this.npc,this.player.level,kind).toLocaleString()} gold</small></button>`).join('')}</div><details class="gamble-odds"><summary>Rarity odds</summary><p>${gambleOdds(this.npc).map((w,i)=>`${['Common','Magic','Rare','Epic','Legendary'][i]} ${w}%`).join(' · ')}</p></details>
       <div class="service-detail"></div></section><section class="service-bag ui-scroll-area"><div class="service-section-heading"><h3>Inventory</h3></div>${this.sortMarkup('inventory')}<div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section></div>
-      <footer class="ui-window-footer"><span class="service-message" role="status"></span><button class="ui-button ui-button--primary" data-confirm disabled>${storage?'Select an item':'Choose an item type'}</button></footer>`;
-    this.renderInventoryPack();
-    if (storage) this.renderStoragePack();
-    this.renderDetail();
-    if(focus)this.element.querySelector<HTMLElement>(`[data-item="${focus}"]`)?.focus({preventScroll:true});
-    else if(control)this.element.querySelector<HTMLElement>(control)?.focus({preventScroll:true});
+      <footer class="ui-window-footer"><span class="service-message" role="status"></span><button class="ui-button ui-button--primary" data-confirm disabled>Choose an item type</button></footer>`;
+    this.renderInventoryPack(); this.renderDetail();
+    if(control)this.element.querySelector<HTMLElement>(control)?.focus({preventScroll:true});
   }
   private specialDetail():void {
     this.quote=null;const detail=this.element.querySelector<HTMLElement>('.service-detail')!,button=this.element.querySelector<HTMLButtonElement>('[data-confirm]')!;
-    const selected=this.selected;
-    button.disabled=true; button.textContent=this.npc.role==='stash'?'Select an item':'Choose an item type';
+    button.disabled=true; button.textContent='Choose an item type';
     this.element.querySelector('.service-message')!.textContent='';
     detail.innerHTML=this.revealed?`<div class="gamble-reveal" style="--item-color:${TIER_COLORS[this.revealed.tier]}"><span class="service-item-art">${itemIconSVG(this.revealed,88)}</span><h3>${escapeUI(itemDisplayName(this.revealed))}</h3>${itemTooltipMarkup(this.revealed,{sheet:this.player.character,level:this.player.level})}</div>`:'';
-    if(!selected)return;
-    const result=quoteService(this.player.character,this.npc,this.player.level,selected);
+    if(!this.selected)return;
+    const result=quoteService(this.player.character,this.npc,this.player.level,this.selected);
     if(!result.ok){this.element.querySelector('.service-message')!.textContent=result.message;return;}
+    if(!result.item)return;
     this.quote=result.quote;
-    const storage=selected.type==='store'||selected.type==='retrieve';
-    if(storage)detail.innerHTML=itemTooltipMarkup(result.item,{sheet:this.player.character,level:this.player.level});
-    button.textContent=storage?selected.type==='store'?'Store item':'Take item':`Gamble · ${result.quote.price.toLocaleString()} gold`;
-    const full=selected.type==='store'?(this.player.character.stash??[]).filter(Boolean).length>=STASH_CAPACITY:!canPackItem(this.player.character,result.item);
+    button.textContent=`Gamble · ${result.quote.price.toLocaleString()} gold`;
+    const full=!canPackItem(this.player.character,result.item);
     button.disabled=full||goldBalance(this.player.character)<result.quote.price;
-    if(button.disabled)this.element.querySelector('.service-message')!.textContent=full?selected.type==='store'?'Storage full.':packSpaceProblem(this.player.character,result.item):'Not enough gold.';
+    if(button.disabled)this.element.querySelector('.service-message')!.textContent=full?packSpaceProblem(this.player.character,result.item):'Not enough gold.';
   }
   private rarityControls(): string {
     return `<div class="service-rarities" aria-label="Select items by rarity">${(['common','magic','rare','epic','legendary'] as ItemTier[]).map(tier=>{
@@ -211,7 +253,8 @@ export class ServicePanel {
 
   private renderStoragePack(): void {
     const root = this.element.querySelector<HTMLElement>('.service-storage')!;
-    const items = this.player.character.stash ?? [], layout = storageGridLayout(items);
+    const items = storageTabItems(this.player.character,this.storageTab), layout = storageGridLayout(items);
+    layout.rows = Math.max(12,layout.rows);
     root.style.setProperty('--pack-columns', String(PACK_COLUMNS));
     root.innerHTML = `<div class="character-bag character-tetris" role="group" aria-label="Stored items, ${PACK_COLUMNS} columns" style="grid-template-rows:repeat(${layout.rows},var(--pack-cell))">
       ${Array.from({length:layout.rows*PACK_COLUMNS},(_,cell)=>`<span class="character-grid-cell" aria-hidden="true" style="grid-column:${cell%PACK_COLUMNS+1};grid-row:${Math.floor(cell/PACK_COLUMNS)+1}"></span>`).join('')}</div>`;
@@ -219,7 +262,7 @@ export class ServicePanel {
     items.forEach((item, slot) => {
       const position = layout.cells[slot];
       if (!item || position === null) return;
-      const cell = this.cell(item, `stash:${slot}`), size = itemFootprint(item);
+      const cell = this.cell(item, `stash:${this.storageTab * STASH_CAPACITY + slot}`), size = itemFootprint(item);
       cell.classList.add('character-bag-slot');
       cell.style.gridColumn = `${position % PACK_COLUMNS + 1} / span ${size.width}`;
       cell.style.gridRow = `${Math.floor(position / PACK_COLUMNS) + 1} / span ${size.height}`;
@@ -242,7 +285,7 @@ export class ServicePanel {
     else {
       const source: ItemSource = type === 'bag' ? { bag: Number(value) } : { equipped: value as EquipmentSlot };
       item = sourceItem(this.player.character, source);
-      request = this.npc.role==='stash'&&type==='bag'?{type:'store',bag:Number(value)}:this.tab === 'improve' || type === 'equipped' ? { type: 'improve', source, operation: this.operation, affix: 0 } : { type: 'sell', source };
+      request = this.npc.role==='stash'&&type==='bag'?{type:'store',bag:Number(value),tab:this.storageTab}:this.tab === 'improve' || type === 'equipped' ? { type: 'improve', source, operation: this.operation, affix: 0 } : { type: 'sell', source };
       return item ? { item, request, source } : null;
     }
     return item ? { item, request } : null;
@@ -261,12 +304,19 @@ export class ServicePanel {
     if (this.saving) return;
     const button = (e.target as HTMLElement).closest<HTMLButtonElement>('button, input[data-include-charms]'); if (!button) return;
     if (button.hasAttribute('data-close')) { this.actions.close(); return; }
+    if (button.dataset.storageTab !== undefined) {
+      const tab=Number(button.dataset.storageTab);
+      if (!Number.isInteger(tab)||tab<0||tab>=MAX_STORAGE_TABS||tab>storageTabCount(this.player.character)) return;
+      this.storageTab=tab; this.selected=null; this.quote=null; this.render();
+      this.element.querySelector<HTMLElement>(`[data-storage-tab="${tab}"]`)?.focus({preventScroll:true});
+      return;
+    }
     if (button.dataset.sortPack === 'storage' || button.dataset.sortPack === 'inventory') {
       const target = button.dataset.sortPack;
       this.tooltip.hide();
       if (this.selected?.type !== 'gamble') this.selected = null;
       this.quote = null; this.sales.clear();
-      this.actions.sort(target);
+      this.actions.sort(target,this.storageTab);
       this.render();
       this.element.querySelector<HTMLElement>(`[data-sort-pack="${target}"]`)?.focus({preventScroll:true});
       return;
@@ -288,6 +338,7 @@ export class ServicePanel {
     }
     if (button.dataset.tab) { this.tab = button.dataset.tab as typeof this.tab; this.updateSelection(); this.render(); return; }
     if (button.dataset.item) {
+      if(this.npc.role==='stash'&&!hasStorageTab(this.player.character,this.storageTab))return;
       const value = this.resolve(button.dataset.item); if (!value) return;
       if(this.npc.role==='gambler'&&this.tab==='shop')return;
       if(this.tab === 'sell' && value.item.locked){this.element.querySelector('.service-message')!.textContent='Unlock this item in your inventory before selling it.';return;}
@@ -307,7 +358,8 @@ export class ServicePanel {
     if (button.hasAttribute('data-confirm')) this.confirm();
   }
   private renderDetail(): void {
-    if(this.npc.role==='stash'||(this.npc.role==='gambler'&&this.tab==='shop')){this.specialDetail();return;}
+    if(this.npc.role==='stash'){this.storageDetail();return;}
+    if(this.npc.role==='gambler'&&this.tab==='shop'){this.specialDetail();return;}
     this.quote = null; const selected = this.selected;
     const detail = this.element.querySelector<HTMLElement>('.service-detail')!, button = this.element.querySelector<HTMLButtonElement>('[data-confirm]')!;
     const message = this.element.querySelector<HTMLElement>('.service-message')!; message.textContent = '';
@@ -321,7 +373,7 @@ export class ServicePanel {
     }
     const result = quoteService(this.player.character, this.npc, this.player.level, selected);
     if (!result.ok) { detail.innerHTML = `<p class="service-empty">${escapeUI(result.message)}</p>`; return; }
-    const { item, quote } = result; this.quote = quote;
+    const { item, quote } = result; if(!item)return; this.quote = quote;
     const buying = selected.type === 'buy' || selected.type === 'buyback', improving = selected.type === 'improve';
     const label = improving ? OP_LABELS[selected.operation] : buying ? 'Buy' : 'Sell';
     button.textContent = `${label} · ${quote.price.toLocaleString()} gold`;

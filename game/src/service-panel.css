@@ -103,3 +103,21 @@
   .service-panel.is-selling .service-body > .service-bag,
   .service-panel.is-selling .service-body > .service-offer { flex: 0 0 auto; }
 }
+
+/* The chest uses its full height for storage; item inspection stays in hover tooltips. */
+.service-panel.is-storage { inset:3vh max(16px,calc((100vw - 1260px)/2)); max-height:94vh; }
+.service-panel.is-storage .service-body { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+.storage-tabs { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px; margin-bottom:14px; }
+.storage-tabs .ui-button { display:flex; align-items:center; justify-content:center; gap:4px; min-width:0; padding:9px 4px; font-size:13px; }
+.storage-tabs svg { width:12px; height:14px; flex:none; }
+.storage-tabs [aria-pressed=true] { color:#ead9a8; background:#bba56b20; border-color:#bba56b; }
+.service-storage-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.service-storage-toolbar > span { font-size:12px; color:var(--ui-silver-dim); }
+.storage-unlock { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; min-height:360px; border:1px solid #bba56b30; background:#bba56b06; }
+.storage-unlock-icon svg { width:28px; height:34px; color:#bba56b; }
+.storage-unlock p { margin:0; color:var(--ui-silver-dim); }
+.storage-unlock strong { color:#ead9a8; font-size:24px; }
+.storage-unlock small { font-size:13px; font-weight:400; }
+.service-panel.is-storage .ui-item-slot.is-selected { outline:1px solid #ead9a8; outline-offset:-2px; border-color:#ead9a8; }
+.service-panel.is-storage .service-message { min-width:0; overflow-wrap:anywhere; }
+@media(max-width:760px) { .service-panel.is-storage { inset:8px; max-height:calc(100dvh - 16px); } .service-panel.is-storage .service-body { display:block; } .storage-unlock { min-height:240px; } }

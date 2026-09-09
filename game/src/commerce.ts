@@ -1,3 +1,5 @@
+import { STASH_CAPACITY, storageTabCount, hasStorageTab, nextStorageTabPrice } from './storage-content.ts';
+export { STASH_CAPACITY } from './storage-content.ts';
 import { bulkSaleItems } from './item-protection.ts';
 import { normalizePackLayout, canPackItem, packSpaceProblem } from './inventory-grid.ts';
 import { servicePolicy } from './settlement-services.ts';
@@ -55,7 +57,6 @@ export function vendorStock(sheet: CharacterSheet, npc: TownNPC, level: number):
 export const premiumStockSlot=(npc:TownNPC,slot:number)=>{const p=servicePolicy(npc);return slot>=(npc.role==='jeweler'?p.jewelerStock:p.smithStock)-p.premium;};
 export type ItemSource = { bag: number } | { equipped: EquipmentSlot };
 export interface SaleItem { bag: number; id: string; revision: number; }
-export const STASH_CAPACITY = 96;
 export const GAMBLE_KINDS: readonly ItemKind[] = ['weapon','shield','head','chest','gloves','legs','boots','cloak','ring','amulet','grimoire','orb'];
 export const gambleOdds=(npc:TownNPC)=>servicePolicy(npc).gambleOdds;
 export const gamblePrice=(npc:TownNPC,level:number,kind:ItemKind)=>Math.ceil(budget(vendorLevel(npc,level))*4*servicePolicy(npc).gamblePrice*(kind==='ring'||kind==='amulet'?1.5:1));
@@ -65,22 +66,32 @@ function gambleItem(sheet:CharacterSheet,npc:TownNPC,level:number,kind:ItemKind)
   const item=generateItem(seed,vendorLevel(npc,level),kind,undefined,tier,undefined,{level:vendorLevel(npc,level),merchantBonus:servicePolicy(npc).materialBonus});item.id=id;
   if(item.weapon)item.weapon.id=id;if(item.shield)item.shield.id=id;if(item.focus)item.focus.id=id;return item;
 }
-export type ServiceRequest = {type:'gamble';kind:ItemKind} | {type:'store';bag:number} | {type:'retrieve';slot:number} | { type: 'buy'; slot: number } | { type: 'sell'; source: ItemSource }
+export type ServiceRequest = {type:'gamble';kind:ItemKind} | {type:'store';bag:number;tab?:number} | {type:'unlockStorage';tab:number} | {type:'retrieve';slot:number} | { type: 'buy'; slot: number } | { type: 'sell'; source: ItemSource }
   | { type: 'sellMany'; items: SaleItem[]; includeActiveCharms?: boolean }
   | { type: 'buyback'; id: string } | { type: 'improve'; source: ItemSource; operation: Improvement; affix?: number; focus?:AffixFocus };
 export interface ServiceQuote { npcId: string; revision: number; epoch: number; itemId: string; itemRevision: number; price: number; request: ServiceRequest; }
-export type QuoteResult = { ok: false; message: string } | { ok: true; quote: ServiceQuote; item: Item };
+export type QuoteResult = { ok: false; message: string } | { ok: true; quote: ServiceQuote; item: Item | null };
 export function sourceItem(sheet: CharacterSheet, source: ItemSource): Item | null {
   return 'bag' in source ? Number.isInteger(source.bag) ? sheet.inventory[source.bag] ?? null : null : sheet.equipped[source.equipped] ?? null;
 }
 export function quoteService(sheet: CharacterSheet, npc: TownNPC, level: number, request: ServiceRequest): QuoteResult {
   let item: Item | null = null, price = 0;
   const fail = (message: string): QuoteResult => ({ ok: false, message });
+  if (request.type === 'unlockStorage') {
+    if (npc.role !== 'stash') return fail('Visit a storage chest.');
+    const price = nextStorageTabPrice(sheet), count = storageTabCount(sheet);
+    if (price === null) return fail('All five storage tabs are unlocked.');
+    if (request.tab !== count) return fail('Unlock storage tabs in order.');
+    if (sheet.commerce.revision >= Number.MAX_SAFE_INTEGER || sheet.commerce.operations >= Number.MAX_SAFE_INTEGER) return fail('This transaction exceeds the supported limit.');
+    return {ok:true,item:null,quote:{npcId:npc.id,revision:sheet.commerce.revision,epoch:stockEpoch(level),
+      itemId:`storage-tab:${count}`,itemRevision:0,price,request:{...request}}};
+  }
   if (request.type === 'gamble') {
     if(npc.role!=='gambler'||!GAMBLE_KINDS.includes(request.kind))return fail('Choose an item type at the gambler.');
     item=gambleItem(sheet,npc,level,request.kind);price=gamblePrice(npc,level,request.kind);
   } else if(request.type==='store'||request.type==='retrieve') {
     if(npc.role!=='stash')return fail('Visit a storage chest.');
+    if(request.type==='store'&&!hasStorageTab(sheet,request.tab??0))return fail('This storage tab is locked.');
     const index=request.type==='store'?request.bag:request.slot;
     if(!Number.isInteger(index)||index<0)return fail('Invalid storage slot.');
     item=(request.type==='store'?sheet.inventory:sheet.stash??[])[index]??null;
@@ -121,7 +132,7 @@ export function quoteService(sheet: CharacterSheet, npc: TownNPC, level: number,
   return { ok: true, item, quote: { npcId: npc.id, revision: sheet.commerce.revision, epoch: stockEpoch(level), itemId: item.id,
     itemRevision: item.recipe.revision, price, request: request.type === 'sellMany' ? { type: 'sellMany', items: request.items.map(i => ({ ...i })), ...(request.includeActiveCharms===undefined?{}:{includeActiveCharms:request.includeActiveCharms}) } : { ...request } } };
 }
-export type TradePlan = { ok: false; message: string } | { ok: true; character: CharacterSheet; message: string; item: Item };
+export type TradePlan = { ok: false; message: string } | { ok: true; character: CharacterSheet; message: string; item: Item | null };
 /** No live mutation: the caller persists this complete sheet before publishing it. */
 export function planService(sheet: CharacterSheet, npc: TownNPC, level: number, quote: ServiceQuote): TradePlan {
   const current = quoteService(sheet, npc, level, quote.request);
@@ -133,10 +144,17 @@ export function planService(sheet: CharacterSheet, npc: TownNPC, level: number, 
   } };
   const { request, price } = quote; let item = current.item, message = '';
   if (request.type !== 'sell' && request.type !== 'sellMany' && goldBalance(sheet) < price) return { ok: false, message: 'Not enough gold.' };
+  if (request.type === 'unlockStorage') {
+    if (!spendGold(character,price)) return {ok:false,message:'Not enough gold.'};
+    character.stash!.push(...Array(STASH_CAPACITY).fill(null));
+    return {ok:true,character,item:null,message:`Storage tab ${request.tab+1} unlocked.`};
+  }
+  if (!item) return {ok:false,message:'This item is no longer available.'};
   if ((request.type === 'buy' || request.type === 'buyback' || request.type === 'gamble' || request.type === 'retrieve') && !canPackItem(character, item)) return { ok: false, message: packSpaceProblem(character,item) };
   if(request.type==='store'||request.type==='retrieve') {
     if(request.type==='store'){
-      const slot=character.stash!.indexOf(null);if(slot<0)return {ok:false,message:'Storage full.'};
+      const start=(request.tab??0)*STASH_CAPACITY,slot=character.stash!.indexOf(null,start);
+      if(slot<0||slot>=start+STASH_CAPACITY)return {ok:false,message:'Storage tab full.'};
       character.stash![slot]=item;character.inventory[request.bag]=null;
     }else{if(!addInventoryItem(character,item))return {ok:false,message:packSpaceProblem(character,item)};character.stash![request.slot]=null;}
     normalizePackLayout(character);
@@ -159,10 +177,11 @@ export function planService(sheet: CharacterSheet, npc: TownNPC, level: number, 
   } else {
     if (!spendGold(character, price)) return { ok: false, message: 'Not enough gold.' };
     if (request.type === 'buy' || request.type === 'buyback' || request.type === 'gamble') {
-      if ([...character.inventory, ...Object.values(character.equipped)].some(i => i?.id === item.id)) return { ok: false, message: 'This item is already owned.' };
+      const purchasedId = item.id;
+      if ([...character.inventory, ...Object.values(character.equipped)].some(i => i?.id === purchasedId)) return { ok: false, message: 'This item is already owned.' };
       if (!addInventoryItem(character, item)) return { ok: false, message: 'Cannot add this item to your inventory.' };
       if (request.type === 'buy') character.commerce.sold[npc.id] = (character.commerce.sold[npc.id] ?? 0) | 1 << request.slot;
-      else if(request.type==='buyback') character.commerce.buyback = character.commerce.buyback.filter(b => b.item.id !== item.id);
+      else if(request.type==='buyback') character.commerce.buyback = character.commerce.buyback.filter(b => b.item.id !== purchasedId);
       message = `${request.type==='gamble'?'Revealed':'Bought'} ${itemDisplayName(item)}`;
     } else {
       item = improveItem(item, request.operation, vendorLevel(npc, level), hashService(`${item.id}:${character.commerce.operations}:${item.recipe.revision}`), request.affix,request.focus);

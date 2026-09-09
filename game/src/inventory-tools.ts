@@ -1,3 +1,4 @@
+import { hasStorageTab, storageTabItems, STASH_CAPACITY } from './storage-content.ts';
 import { resolvePackLayout, compactPackLayout, storageGridLayout, itemFootprint, type PackLayout } from './inventory-grid.ts';
 import type { ActionResult, CharacterSheet, Item, ItemTier } from './character-types.ts';
 import { EQUIPMENT_SLOTS, ITEM_KINDS } from './items.ts';
@@ -60,12 +61,14 @@ export function sortInventory(sheet: CharacterSheet, mode: InventorySort): Actio
 }
 
 /** Sort storage independently, keeping exact item records and its full capacity. */
-export function sortStorage(sheet: CharacterSheet): ActionResult {
+export function sortStorage(sheet: CharacterSheet, tab = 0): ActionResult {
+  if (!hasStorageTab(sheet,tab)) return {ok:false,message:'This storage tab is locked.'};
   if (!sheet.stash) return { ok: true };
-  const ordered = orderedItems(sheet, sheet.stash, 'compact');
-  if (storageGridLayout(ordered).rows > storageGridLayout(sheet.stash).rows)
+  const items = storageTabItems(sheet,tab), ordered = orderedItems(sheet, items, 'compact');
+  if (storageGridLayout(ordered).rows > storageGridLayout(items).rows)
     return { ok: false, message: 'This arrangement needs more space. Your storage is unchanged.' };
-  sheet.stash = ordered;
+  sheet.stash = [...sheet.stash];
+  sheet.stash.splice(tab * STASH_CAPACITY, STASH_CAPACITY, ...ordered);
   return { ok: true };
 }
 

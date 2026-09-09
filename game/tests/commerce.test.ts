@@ -23,7 +23,7 @@ function quoted(c: CharacterSheet, npc: TownNPC, request: ServiceRequest, level 
   const q = quoteService(c, npc, level, request); assert.ok(q.ok, q.ok ? '' : q.message); return q.quote;
 }
 function trade(c: CharacterSheet, npc: TownNPC, request: ServiceRequest, level = 10) {
-  const result = planService(c, npc, level, quoted(c, npc, request, level)); assert.ok(result.ok, result.ok ? '' : result.message); return result;
+  const result = planService(c, npc, level, quoted(c, npc, request, level)); assert.ok(result.ok, result.ok ? '' : result.message); assert.ok(result.item); return {...result,item:result.item};
 }
 
 test('purchases and buyback record acquisition order without mutating the source sheet', () => {
@@ -47,7 +47,7 @@ test('stock is deterministic, visible jewelry only, varied equipment and distinc
 });
 test('buy/sell/buyback transfers one exact instance and replayed quotes cannot charge twice', () => {
   const c = sheet(), original = JSON.stringify(c), q = quoted(c, smith, { type: 'buy', slot: 0 });
-  const bought = planService(c, smith, 10, q); assert.ok(bought.ok); assert.equal(JSON.stringify(c), original);
+  const bought = planService(c, smith, 10, q); assert.ok(bought.ok && bought.item); assert.equal(JSON.stringify(c), original);
   assert.equal(bought.character.gold, c.gold! - q.price); assert.equal(vendorStock(bought.character, smith, 10)[0], null);
   assert.equal(planService(bought.character, smith, 10, q).ok, false);
   const sold = trade(bought.character, smith, { type: 'sell', source: { bag: 0 } });
@@ -144,7 +144,7 @@ test('relevel is zone-based and rejects invalid equipped requirements before pay
   assert.equal(quoteService(c, enchanter, 1, { type: 'improve', source: { equipped: 'weapon' }, operation: 'relevel' }).ok, false);
   c.inventory[0] = c.equipped.weapon; c.equipped.weapon = null;
   const q = quoted(c, enchanter, { type: 'improve', source: { bag: 0 }, operation: 'relevel' }, 1);
-  const plan = planService(c, enchanter, 1, q); assert.ok(plan.ok); assert.equal(plan.item.itemLevel, 10);
+  const plan = planService(c, enchanter, 1, q); assert.ok(plan.ok && plan.item); assert.equal(plan.item.itemLevel, 10);
   assert.equal(plan.item.requiredLevel, 8);
 });
 test('real towns have stable reachable NPCs at all three service buildings without geometry mutations', () => {
@@ -253,7 +253,7 @@ test('bulk selling commits the whole selection, exact proceeds and bounded buyba
   const items=c.inventory.map((item,bag)=>({bag,id:item!.id,revision:item!.recipe.revision}));
   const expected=c.inventory.reduce((sum,item)=>sum+itemPrice(item!,'sell'),0), before=JSON.stringify(c);
   const quote=quoted(c,smith,{type:'sellMany',items,includeActiveCharms:true});
-  const plan=planService(c,smith,10,quote);assert.ok(plan.ok);
+  const plan=planService(c,smith,10,quote);assert.ok(plan.ok && plan.item);
   assert.equal(JSON.stringify(c),before);assert.equal(plan.character.gold,expected);
   assert.ok(plan.character.inventory.every(item=>item===null));
   assert.deepEqual(plan.character.equipped,c.equipped);

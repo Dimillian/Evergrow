@@ -26,7 +26,7 @@ test('enhancement skips rounded-away ranks, charges one step and never sells a n
     const next=nextEnhancementLevel(item),s=createCharacterSheet();s.gold=1e6;addInventoryItem(s,item);
     const quote=quoteService(s,smith,1,{type:'improve',source:{bag:0},operation:'enhance'});
     if(next===null){assert.equal(quote.ok,false);assert.throws(()=>improveItem(item,'enhance',1,1));continue;}
-    assert.ok(quote.ok);const plan=planService(s,smith,1,quote.quote);assert.ok(plan.ok);
+    assert.ok(quote.ok);const plan=planService(s,smith,1,quote.quote);assert.ok(plan.ok && plan.item);
     assert.notDeepEqual(plan.item.affixes,item.affixes);assert.equal(plan.item.recipe.enhancement,next);
     assert.equal(plan.character.gold,s.gold-improvementPrice(item,'enhance',1));
     for(let rank=item.recipe.enhancement+1;rank<next;rank++)assert.deepEqual(deriveItem({...item,recipe:{...item.recipe,enhancement:rank}}).affixes,item.affixes);
@@ -109,6 +109,6 @@ test('city preferences still apply to later charm rolls when the thematic first 
   const item=generateItem(889,20,'charm','jade-monolith','legendary');addInventoryItem(s,item);
   const enchanter:TownNPC={...smith,role:'enchanter',settlementTier:'city'};
   const result=quoteService(s,enchanter,20,{type:'improve',source:{bag:0},operation:'rerollAll',focus:'utility'});
-  assert.ok(result.ok);const plan=planService(s,enchanter,20,result.quote);assert.ok(plan.ok);
+  assert.ok(result.ok);const plan=planService(s,enchanter,20,result.quote);assert.ok(plan.ok && plan.item);
   assert.ok(validItem(plan.item));assert.ok(charmThematicStat(plan.item,plan.item.affixes[0].stat));
 });

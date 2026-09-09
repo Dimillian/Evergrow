@@ -1,3 +1,4 @@
+import { STASH_CAPACITY, MAX_STORAGE_TABS } from './storage-content.ts';
 import { validPackLayout } from './inventory-grid.ts';
 import { validEncounterScales } from './encounter-scaling.ts';
 import { validChronicle, type ChronicleProgress } from './chronicle.ts';
@@ -55,7 +56,7 @@ function validSheet(v: unknown, level: number): v is CharacterSheet {
   if (object(v) && v.recentItems !== undefined && (!Array.isArray(v.recentItems)
     || v.recentItems.length > INVENTORY_CAPACITY + EQUIPMENT_SLOTS.length
     || !v.recentItems.every(id => text(id, 160)) || new Set(v.recentItems).size !== v.recentItems.length)) return false;
-  if (object(v) && v.stash !== undefined && (!Array.isArray(v.stash) || v.stash.length !== 96 || !v.stash.every(i=>i===null||validItem(i)))) return false;
+  if (object(v) && v.stash !== undefined && (!Array.isArray(v.stash) || v.stash.length < STASH_CAPACITY || v.stash.length > STASH_CAPACITY * MAX_STORAGE_TABS || v.stash.length % STASH_CAPACITY !== 0 || !v.stash.every(i=>i===null||validItem(i)))) return false;
   if (!object(v) || !validCharacterLook(v.look) || !validBlessing(v.blessing) || !validCommerce(v.commerce, level) || (v.gold !== undefined && !validGold(v.gold)) || !object(v.attributes) || !['strength', 'dexterity', 'intelligence', 'vitality'].every(k => integer((v.attributes as ObjectValue)[k], 10, 5e6 + 10))
     || !integer(v.statPoints, 0, 5e6) || !integer(v.skillPoints, 0, MAX_CONTENT_LEVEL)
     || !Array.isArray(v.inventory) || !(v.inventory.length === 64 || v.inventory.length === 72 || v.inventory.length === INVENTORY_CAPACITY) || !v.inventory.every(i => i === null || validItem(i))
