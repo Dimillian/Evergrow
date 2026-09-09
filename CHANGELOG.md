@@ -1,5 +1,11 @@
 # Evergrow changelog
 
+## v0.2.1 — 2026-09-09T11:56:00Z
+
+### Fixes
+
+- Dragging equipment highlights valid slots in green, with a brighter glow over the drop target.
+
 ## v0.2.0 — 2026-09-09T11:50:00Z
 
 ### New

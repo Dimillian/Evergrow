@@ -276,6 +276,7 @@ export class InventoryPanel {
       <h4 id="stats-${group.tone}">${group.title}</h4><dl>${group.rows.map(([label, value]) => `<div class="ui-stat"><dt class="ui-stat-label">${label}</dt><dd class="ui-stat-value">${value}</dd></div>`).join('')}</dl></section>`).join('');
     const statContainer = this.element.querySelector('[data-combat-stats]')!;
     if (statContainer.innerHTML !== markup) statContainer.innerHTML = markup;
+    if (this.drag) this.highlightEquipmentTargets();
     if (this.hovered) this.showTooltip(this.hovered);
   }
 
@@ -520,6 +521,7 @@ export class InventoryPanel {
       event.dataTransfer.effectAllowed = 'move';
       this.hideTooltip();
       this.cells.get(locationKey(location))?.classList.add('is-dragging');
+      this.highlightEquipmentTargets();
     }, options);
     this.element.addEventListener('dragover', event => {
       const target = this.locationFrom(event.target);
@@ -590,8 +592,15 @@ export class InventoryPanel {
     return true;
   }
 
+  private highlightEquipmentTargets(): void {
+    for (const slot of EQUIPMENT_SLOTS) {
+      const target: ItemLocation = { type: 'equipment', slot };
+      this.cells.get(locationKey(target))?.classList.toggle('is-equip-target', this.canDrop(target));
+    }
+  }
+
   private clearDropHighlight(): void { for (const cell of this.cells.values()) cell.classList.remove('is-drop-target'); }
-  private clearDrag(): void { this.drag = null; for (const cell of this.cells.values()) cell.classList.remove('is-drop-target', 'is-dragging'); }
+  private clearDrag(): void { this.drag = null; for (const cell of this.cells.values()) cell.classList.remove('is-drop-target', 'is-dragging', 'is-equip-target'); }
 
   private showTooltip(location: ItemLocation): void {
     if (this.drag || document.documentElement.classList.contains('touch-mode')) return;

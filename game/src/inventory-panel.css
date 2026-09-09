@@ -162,6 +162,20 @@
 .character-reserved-label { position: absolute; inset: auto 5px 5px; font: 600 10px/1.4 system-ui, sans-serif; letter-spacing: .12em; color: #9ca7af; border-top: 1px solid #7d8b9744; padding-top: 3px; }
 .character-equipment-slot.is-twohand-reserved:hover { border-color: #a7b7c47a; }
 
+/* Available destinations stay visible while the pointer moves between slots. */
+.character-equipment-slot.ui-item-slot.is-equip-target {
+  border-color: #78da9e;
+  background: linear-gradient(145deg, #234836, #101e1a 75%);
+  box-shadow: inset 0 0 14px #62d89324, 0 0 10px #62d89330;
+}
+.character-equipment-slot.ui-item-slot.is-equip-target::before { border-color: #78da9e55; }
+.character-equipment-slot.ui-item-slot.is-equip-target[data-filled='false'] svg { color: #9ee5b5; }
+.character-equipment-slot.ui-item-slot.is-equip-target.is-drop-target {
+  border-color: #bdffd4;
+  outline-color: #8ee9ad;
+  box-shadow: inset 0 0 18px #62d89340, 0 0 14px #62d89350;
+}
+
 /* Handhelds expose one full-width section, with the shoulder route always visible. */
 .character-controller-nav { display: none; }
 .is-controller .character-controller-nav { display: flex; align-items: center; gap: 14px; padding: 6px 18px; flex-shrink: 0; border-bottom: 1px solid #96b8c32c; color: var(--ui-silver-dim); font-size: 13px; }
