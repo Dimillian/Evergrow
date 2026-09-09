@@ -1,5 +1,22 @@
 # Evergrow changelog
 
+## v0.3.2 — 2026-09-09T15:21:00Z
+
+### New
+
+- Auto-sort the storage chest and your carried inventory independently from the storage screen.
+- Auto-sort your inventory directly at vendors.
+
+### Tweaks
+
+- Storage shows equipment and charms at their full inventory shapes, with extra rows for all 96 stored items.
+- Monster and NPC speech bubbles are half the size, leaving more of the world visible.
+
+### Fixes
+
+- Inventory, charm and storage grids shrink to fit their panels without horizontal scrolling.
+- Sorting clears pending item selections so transfers and sales cannot target an item that moved.
+
 ## v0.3.1 — 2026-09-09T14:52:00Z
 
 ### New
