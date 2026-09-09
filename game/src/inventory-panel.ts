@@ -1,3 +1,4 @@
+import type { DropItemSource } from './drop-item-command.ts';
 import { PACK_COLUMNS, PACK_ROWS, PACK_CELLS, INVENTORY_CELLS, CHARM_ROWS, itemFootprint, resolvePackLayout, packOccupancy, footprintCells } from './inventory-grid.ts';
 import { itemPackIconSVG } from './item-art.ts';
 import { itemDisplayName } from './items.ts';
@@ -27,6 +28,7 @@ export interface InventoryPanelActions {
   equip(index: number, slot?: EquipmentSlot): void;
   unequip(slot: EquipmentSlot, index?: number): void;
   move(from: number, to: number): void;
+  drop?(source: DropItemSource): void;
   equipBest(choice?: EquipBestChoice): void;
   sort(mode: InventorySort): void;
   allocate(attribute: Attribute): void;
@@ -123,6 +125,7 @@ export class InventoryPanel {
           <div class="character-section-title character-inventory-heading"><h3 id="inventory-title">Inventory</h3><div class="character-heading-actions">
             <button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-sort-filter aria-label="Filter inventory" aria-haspopup="dialog" aria-expanded="false" aria-controls="inventory-sort-dialog" data-tooltip="Filter inventory" data-tooltip-placement="below">${uiIcon('sortFilter')}</button>
             <button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-equip-best aria-label="Equip best items" data-tooltip="Equip best items" data-tooltip-placement="below">${uiIcon('equipBest')}</button>
+            ${actions.drop ? `<span class="character-ground-drop" data-ground-drop role="img" aria-label="Drag an item here to drop it on the ground" data-tooltip="Drop on ground" data-tooltip-placement="below">${uiIcon('dropItem')}</span>` : ''}
           </div><div class="character-inventory-counts"><span class="character-gold" data-gold></span></div></div>
           <div class="character-pack-toolbar"><button type="button" class="ui-button character-auto-sort" data-sort="compact">${uiIcon('sortFilter')} Auto-sort</button><div class="character-sort-options" role="group" aria-label="Sort inventory">${(['type', 'rarity', 'recent'] as const).map(mode => `<button type="button" class="ui-button ui-button--quiet" data-sort="${mode}">${mode === 'type' ? 'Type' : mode === 'rarity' ? 'Rarity' : 'Recent'}</button>`).join('')}</div></div>
           <div class="character-grid-scroll ui-item-grid-scroll">
@@ -540,9 +543,16 @@ export class InventoryPanel {
       this.hideTooltip();
       this.cells.get(locationKey(location))?.classList.add('is-dragging');
       this.highlightEquipmentTargets();
+      this.element.classList.add('is-item-dragging');
     }, options);
     this.element.addEventListener('dragover', event => {
       this.clearDropHighlight();
+      if ((event.target as Element).closest('[data-ground-drop]')) {
+        const valid = !!this.actions.drop && !!this.drag && this.itemAt(this.drag)?.id === this.drag.id;
+        if (event.dataTransfer) event.dataTransfer.dropEffect = valid ? 'move' : 'none';
+        if (valid) { event.preventDefault(); this.element.querySelector('[data-ground-drop]')?.classList.add('is-drop-target'); }
+        return;
+      }
       const target = this.dragLocation(event);
       const valid = !!target && this.canDrop(target);
       if (event.dataTransfer) event.dataTransfer.dropEffect = valid ? 'move' : 'none';
@@ -566,6 +576,13 @@ export class InventoryPanel {
       if (!(event.relatedTarget instanceof Node) || !this.element.contains(event.relatedTarget)) this.clearDropHighlight();
     }, options);
     this.element.addEventListener('drop', event => {
+      if ((event.target as Element).closest('[data-ground-drop]')) {
+        const source = this.drag;
+        const valid = source && this.itemAt(source)?.id === source.id && event.dataTransfer?.getData('application/x-evergrow-item') === source.id;
+        event.preventDefault(); this.clearDrag();
+        if (valid && source) this.actions.drop?.(source);
+        return;
+      }
       const target = this.dragLocation(event), source = this.drag;
       const valid = Boolean(source && target && this.canDrop(target) && event.dataTransfer?.getData('application/x-evergrow-item') === source.id);
       this.clearDrag();
@@ -595,7 +612,7 @@ export class InventoryPanel {
     const buttons = item.kind==='charm' ? '' : location.type === 'equipment' ? '<button class="ui-button" data-touch-item="unequip">Unequip</button>' :
       EQUIPMENT_SLOTS.filter(slot=>planEquipmentChange(this.player!.character,item,this.player!.level,{sourceIndex:location.index,slot}).ok)
       .map(slot=>`<button class="ui-button" data-touch-item="equip:${slot}">Equip · ${SLOT_NAMES[slot]}</button>`).join('');
-    this.sheet.innerHTML = `<header><strong>Item details</strong><button class="ui-button" data-touch-item="close">Close</button></header><div class="ui-item-tooltip">${itemTooltipMarkup(item,{sheet:this.player.character,level:this.player.level,equipped:location.type==='equipment',sourceIndex:location.type==='bag'?location.index:undefined})}</div><nav>${buttons}<button class="ui-button" data-touch-item="move">Move to slot…</button></nav>`;
+    this.sheet.innerHTML = `<header><strong>Item details</strong><button class="ui-button" data-touch-item="close">Close</button></header><div class="ui-item-tooltip">${itemTooltipMarkup(item,{sheet:this.player.character,level:this.player.level,equipped:location.type==='equipment',sourceIndex:location.type==='bag'?location.index:undefined})}</div><nav>${buttons}<button class="ui-button" data-touch-item="move">Move to slot…</button>${this.actions.drop ? `<button class="ui-button" data-touch-item="drop">${uiIcon('dropItem')} Drop on ground</button>` : ''}</nav>`;
     this.sheet.hidden = false; this.sheet.scrollTop = 0;
   }
   private closeTouchItem() { this.window.classList.remove('touch-moving'); this.sheet.hidden = true; this.touchItem = null; this.touchMoving = false; this.clearDrag(); }
@@ -608,6 +625,7 @@ export class InventoryPanel {
       return;
     }
     this.closeTouchItem();
+    if(action==='drop') this.actions.drop?.(source);
     if(action==='unequip' && source.type==='equipment') this.actions.unequip(source.slot);
     if(action.startsWith('equip:') && source.type==='bag') this.actions.equip(source.index,action.slice(6) as EquipmentSlot);
   }
@@ -649,10 +667,11 @@ export class InventoryPanel {
   }
 
   private clearDropHighlight(): void {
+    this.element.querySelector('[data-ground-drop]')?.classList.remove('is-drop-target');
     for (const cell of this.cells.values()) cell.classList.remove('is-drop-target');
     this.element.querySelector<HTMLElement>('.character-pack-placement')!.hidden = true;
   }
-  private clearDrag(): void { this.clearDropHighlight(); this.drag = null; this.dragOffset = { x: 0, y: 0 }; for (const cell of this.cells.values()) cell.classList.remove('is-drop-target', 'is-dragging', 'is-equip-target'); }
+  private clearDrag(): void { this.element.classList.remove('is-item-dragging'); this.clearDropHighlight(); this.drag = null; this.dragOffset = { x: 0, y: 0 }; for (const cell of this.cells.values()) cell.classList.remove('is-drop-target', 'is-dragging', 'is-equip-target'); }
 
   private showTooltip(location: ItemLocation): void {
     this.statTooltip.hide();

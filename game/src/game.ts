@@ -1,3 +1,4 @@
+import { executeDropItem, type DropItemSource } from './drop-item-command.ts';
 import { hoveredGroundLoot } from './ground-loot-hover.ts';
 import { startDungeonEvent } from './dungeon-events.ts';
 import { encounterScaleAt } from './encounter-scaling.ts';
@@ -188,6 +189,7 @@ export class Game {
         equip: (index, slot) => this.characterAction({ type: 'equip', index, slot }),
         unequip: (slot, index) => this.characterAction({ type: 'unequip', slot, index }),
         move: (from, to) => this.characterAction({ type: 'moveItem', from, to }),
+        drop: source => { void this.dropInventoryItem(source); },
         equipBest: choice => this.characterAction({ type: 'equipBest', choice }),
         sort: mode => this.characterAction({ type: 'sortInventory', mode }),
         allocate: attribute => this.characterAction({ type: 'allocateAttribute', attribute }),
@@ -917,6 +919,22 @@ export class Game {
     }
     return result;
     }, { ok: false, message: 'Saving the previous action…' });
+  }
+
+  private async dropInventoryItem(source: DropItemSource) {
+    await this.durable(async () => {
+      if (this.phase !== 'character' || !this.session.active) return;
+      const result = await executeDropItem(this.sim, source, async checkpoint => {
+        const ok = await this.session.save(checkpoint, Date.now());
+        if (!ok) this.shell.setSaveStatus(this.session.error, true);
+        return { ok, message: this.session.error };
+      });
+      if (result.ok) {
+        this.saveError = ''; this.shell.setSaveStatus('Character saved locally.');
+        this.inventoryPanel.refresh(this.sim.player);
+      }
+      this.notify(result.message ?? 'Could not drop this item.');
+    }, undefined);
   }
 
   private characterAction(command: CharacterCommand) {

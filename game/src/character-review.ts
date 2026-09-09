@@ -1,3 +1,4 @@
+import { executeDropItem } from './drop-item-command.ts';
 import { CHARM_SIZES, CHARM_FLAVORS } from './charm-content.ts';
 import { resolvePackLayout } from './inventory-grid.ts';
 import { xpForNextLevel } from './progression.ts';
@@ -100,6 +101,7 @@ const inventory = life.own(new InventoryPanel(shell.panelMount, { close: () => s
   equip: (i, slot) => result(equipItem(p.character, i, p.level, slot)),
   unequip: (slot, i) => result(unequipItem(p.character, slot, i)),
   move: (from, to) => result(moveInventoryItem(p.character, from, to)),
+  drop: source => { void executeDropItem(sim, source, async () => ({ok:true})).then(result); },
   equipBest: choice => result(executeCharacterCommand(p, { type: 'equipBest', choice })),
   sort: mode => result(executeCharacterCommand(p, { type: 'sortInventory', mode })),
   allocate: attribute => result(allocateAttribute(p.character, attribute)),
