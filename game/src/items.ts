@@ -9,7 +9,7 @@ import { SHIELD_PROFILES, WEAPON_PROFILES } from './weapon-content.ts';
 import { itemAffixGrowthLevel, itemPercentageScale, itemPowerScale, normalizeLevel } from './progression-content.ts';
 import type { CharacterSheet, EquipmentSlot, Item, ItemAffix, ItemKind, ItemTier, StatKey, StatModifiers } from './character-types.ts';
 
-export const INVENTORY_CAPACITY = 64;
+export const INVENTORY_CAPACITY = 72;
 
 export const EQUIPMENT_SLOTS: readonly EquipmentSlot[] = Object.freeze([
   'weapon', 'offhand', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'amulet', 'ring1', 'ring2',

@@ -1,3 +1,4 @@
+@import './inventory-pack.css';
 .character-overlay {
   --character-inset: clamp(10px, 2.2vw, 32px);
   position: absolute; inset: 0; z-index: 40; display: grid; place-items: center;

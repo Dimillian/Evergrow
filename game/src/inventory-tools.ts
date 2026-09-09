@@ -1,11 +1,14 @@
+import { resolvePackLayout, itemFootprint, type PackLayout } from './inventory-grid.ts';
 import type { ActionResult, CharacterSheet, Item, ItemTier } from './character-types.ts';
 import { EQUIPMENT_SLOTS, ITEM_KINDS } from './items.ts';
 import { itemFitsSlot, planEquipmentChange } from './inventory.ts';
 
-export type InventorySort = 'rarity' | 'type' | 'recent';
+export type InventorySort = 'rarity' | 'type' | 'recent' | 'compact';
+type SortPriority = Exclude<InventorySort, 'compact'>;
 export type InventoryFilter = 'weapons' | 'armor' | 'jewelry' | 'offhand';
 const tiers: ItemTier[] = ['common', 'magic', 'rare', 'epic', 'legendary'];
-export const INVENTORY_SORT_PRIORITY: Readonly<Record<InventorySort, readonly InventorySort[]>> = {
+export const INVENTORY_SORT_PRIORITY: Readonly<Record<InventorySort, readonly SortPriority[]>> = {
+  compact: ['type', 'rarity', 'recent'],
   rarity: ['rarity', 'type', 'recent'], type: ['type', 'rarity', 'recent'], recent: ['recent', 'rarity', 'type'],
 };
 
@@ -17,26 +20,18 @@ export function matchesInventoryFilter(item: Item | null, filters: ReadonlySet<I
     : ['head', 'chest', 'gloves', 'legs', 'boots', 'cloak'].includes(item.kind));
 }
 
-/** Presentation-only source indices: matching items, real empty cells, then inert grid fillers.
- * Excluded items remain owned; fillers must never be treated as empty bag destinations. */
-export function inventoryGridSources(inventory: CharacterSheet['inventory'], filters: ReadonlySet<InventoryFilter>, rarities: ReadonlySet<ItemTier>): Array<number | null> {
-  if (!filters.size && !rarities.size) return inventory.map((_, index) => index);
-  const matches: number[] = [], empty: number[] = [];
-  inventory.forEach((item, index) => {
-    if (!item) empty.push(index);
-    else if (matchesInventoryFilter(item, filters, rarities)) matches.push(index);
-  });
-  const sources: Array<number | null> = [...matches, ...empty];
-  return [...sources, ...Array<null>(inventory.length - sources.length).fill(null)];
-}
-
 /** Explicit organization changes bag order; acquisition history is independent of cells. */
 export function sortInventory(sheet: CharacterSheet, mode: InventorySort): ActionResult {
-  if (!['rarity', 'type', 'recent'].includes(mode)) return { ok: false, message: 'Unknown inventory sort.' };
+  if (!['rarity', 'type', 'recent', 'compact'].includes(mode)) return { ok: false, message: 'Unknown inventory sort.' };
   const recency = new Map((sheet.recentItems ?? []).map((id, index) => [id, index]));
-  sheet.inventory = [...sheet.inventory].sort((a, b) => {
+  const inventory = [...sheet.inventory].sort((a, b) => {
     if (!a || !b) return a ? -1 : b ? 1 : 0;
-    const comparisons: Record<InventorySort, number> = {
+    if (mode === 'compact') {
+      const sa = itemFootprint(a), sb = itemFootprint(b);
+      const size = sb.height - sa.height || sb.width - sa.width;
+      if (size) return size;
+    }
+    const comparisons: Record<SortPriority, number> = {
       rarity: tiers.indexOf(b.tier) - tiers.indexOf(a.tier),
       type: ITEM_KINDS.indexOf(a.kind) - ITEM_KINDS.indexOf(b.kind),
       recent: (recency.get(a.id) ?? recency.size) - (recency.get(b.id) ?? recency.size),
@@ -44,6 +39,12 @@ export function sortInventory(sheet: CharacterSheet, mode: InventorySort): Actio
     for (const priority of INVENTORY_SORT_PRIORITY[mode]) if (comparisons[priority]) return comparisons[priority];
     return 0;
   });
+  const layout = resolvePackLayout({ inventory });
+  const before = resolvePackLayout(sheet);
+  const overflowBefore = sheet.inventory.filter(item => item && before[item.id] === undefined).length;
+  const overflowAfter = inventory.filter(item => item && layout[item.id] === undefined).length;
+  if (overflowAfter > overflowBefore) return { ok: false, message: 'This arrangement needs more space. Your pack is unchanged.' };
+  sheet.inventory = inventory; sheet.inventoryLayout = layout;
   return { ok: true };
 }
 
@@ -53,6 +54,7 @@ const equipBestScore = (item: Item | null) => item?.power ?? -1;
 export type EquipBestChoice = 'check' | 'replace' | 'keep';
 export type BestEquipmentPlan = { ok: false; message: string } | {
   ok: true; inventory: CharacterSheet['inventory']; equipped: CharacterSheet['equipped']; count: number;
+  inventoryLayout: PackLayout;
   weaponChange: { current: Item; next: Item } | null;
 };
 
@@ -73,14 +75,14 @@ export function planBestEquipment(sheet: CharacterSheet, level: number, keepWeap
     for (const { item, index } of candidates) {
       const plan = planEquipmentChange(draft, item, level, { slot, sourceIndex: index });
       if (!plan.ok || slot !== 'weapon' && plan.displaced.some(displaced => displaced.slot !== slot)) continue;
-      draft.inventory = plan.inventory; draft.equipped = plan.equipped; count++; break;
+      draft.inventory = plan.inventory; draft.equipped = plan.equipped; draft.inventoryLayout = plan.inventoryLayout; count++; break;
     }
   }
   if (!count) return { ok: false, message: 'No higher-power equipment available.' };
   const current = sheet.equipped.weapon, next = draft.equipped.weapon;
   const weaponChange = current?.weapon && next?.weapon && current.id !== next.id
     && (current.weapon.family !== next.weapon.family || current.weapon.hands !== next.weapon.hands) ? { current, next } : null;
-  return { ok: true, inventory: draft.inventory, equipped: draft.equipped, count, weaponChange };
+  return { ok: true, inventory: draft.inventory, equipped: draft.equipped, inventoryLayout: resolvePackLayout(draft), count, weaponChange };
 }
 
 /** A type-changing weapon replacement requires the player's explicit choice. */
@@ -89,6 +91,6 @@ export function equipBest(sheet: CharacterSheet, level: number, choice: EquipBes
   const plan = planBestEquipment(sheet, level, choice === 'keep');
   if (!plan.ok) return plan;
   if (plan.weaponChange && choice === 'check') return { ok: false, message: 'The best weapon changes your weapon type. Choose whether to replace or keep your current weapon.' };
-  sheet.inventory = plan.inventory; sheet.equipped = plan.equipped;
+  sheet.inventory = plan.inventory; sheet.equipped = plan.equipped; sheet.inventoryLayout = plan.inventoryLayout;
   return { ok: true, message: `Upgraded ${plan.count} equipment ${plan.count === 1 ? 'slot' : 'slots'}.` };
 }

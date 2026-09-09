@@ -1,3 +1,4 @@
+import { validPackLayout } from './inventory-grid.ts';
 import { validEncounterScales } from './encounter-scaling.ts';
 import { validChronicle, type ChronicleProgress } from './chronicle.ts';
 import { validTreasureFlight } from './treasure-flight.ts';
@@ -57,13 +58,13 @@ function validSheet(v: unknown, level: number): v is CharacterSheet {
   if (object(v) && v.stash !== undefined && (!Array.isArray(v.stash) || v.stash.length !== 96 || !v.stash.every(i=>i===null||validItem(i)))) return false;
   if (!object(v) || !validCharacterLook(v.look) || !validBlessing(v.blessing) || !validCommerce(v.commerce, level) || (v.gold !== undefined && !validGold(v.gold)) || !object(v.attributes) || !['strength', 'dexterity', 'intelligence', 'vitality'].every(k => integer((v.attributes as ObjectValue)[k], 10, 5e6 + 10))
     || !integer(v.statPoints, 0, 5e6) || !integer(v.skillPoints, 0, MAX_CONTENT_LEVEL)
-    || !Array.isArray(v.inventory) || v.inventory.length !== INVENTORY_CAPACITY || !v.inventory.every(i => i === null || validItem(i))
+    || !Array.isArray(v.inventory) || !(v.inventory.length === 64 || v.inventory.length === INVENTORY_CAPACITY) || !v.inventory.every(i => i === null || validItem(i))
     || !object(v.equipped) || Object.keys(v.equipped).length !== EQUIPMENT_SLOTS.length
     || !EQUIPMENT_SLOTS.every(slot => { const item = (v.equipped as ObjectValue)[slot]; return item === null || validItem(item) && itemFitsSlot(item, slot) && item.requiredLevel <= level; })
     || !Array.isArray(v.allocatedNodes) || v.allocatedNodes.length > SKILL_NODES.size || !v.allocatedNodes.includes('origin')
     || !v.allocatedNodes.every(id => typeof id === 'string' && SKILL_NODES.has(id)) || new Set(v.allocatedNodes).size !== v.allocatedNodes.length) return false;
   const sheet = v as unknown as CharacterSheet;
-  if (!validSkillProgression(sheet)) return false;
+  if (!validSkillProgression(sheet) || !validPackLayout(sheet.inventory, sheet.inventoryLayout)) return false;
   const ids = [...(sheet.stash??[]), ...sheet.inventory, ...Object.values(sheet.equipped)].filter((i): i is Item => i !== null).map(i => i.id);
   if (new Set(ids).size !== ids.length || sheet.equipped.weapon?.weapon?.hands === 2 && sheet.equipped.offhand !== null) return false;
   const allocated = new Set(sheet.allocatedNodes), connected = new Set(['origin']), queue = ['origin'];

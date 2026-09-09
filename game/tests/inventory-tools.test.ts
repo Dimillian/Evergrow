@@ -1,8 +1,9 @@
+import { resolvePackLayout } from '../src/inventory-grid.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCharacterSheet, generateItem } from '../src/items.ts';
 import { addInventoryItem, equipItem, moveInventoryItem, unequipItem } from '../src/inventory.ts';
-import { equipBest, planBestEquipment, matchesInventoryFilter, inventoryGridSources, sortInventory } from '../src/inventory-tools.ts';
+import { equipBest, planBestEquipment, matchesInventoryFilter, sortInventory } from '../src/inventory-tools.ts';
 import { executeCharacterCommand } from '../src/character-commands.ts';
 import { Simulation } from '../src/simulation.ts';
 import type { CharacterSheet } from '../src/character-types.ts';
@@ -98,7 +99,7 @@ test('sorts compact occupied cells without losing items, and recency survives so
   const newest = generateItem(33, 1, 'weapon', 'longsword', 'common');
   for (const item of [old, middle, newest]) assert.ok(addInventoryItem(sheet, item));
   const before = ids(sheet);
-  moveInventoryItem(sheet, 2, 63);
+  assert.ok(moveInventoryItem(sheet, 2, 39).ok);
   sortInventory(sheet, 'rarity'); assert.equal(sheet.inventory[0], old);
   sortInventory(sheet, 'type'); assert.equal(sheet.inventory[0], newest);
   sortInventory(sheet, 'recent'); assert.deepEqual(sheet.inventory.slice(0, 3), [newest, middle, old]);
@@ -146,23 +147,6 @@ test('every primary sort uses the other two priorities rather than item level or
   sortInventory(sheet, 'recent'); assert.deepEqual(sheet.inventory.slice(0, 6), [a, b, c, d, e, f]);
 });
 
-test('filtered projection preserves all 64 cells and actual source indices without exposing excluded items as empty destinations', () => {
-  const sheet = createCharacterSheet();
-  sheet.inventory[4] = generateItem(821, 1, 'ring', undefined, 'rare');
-  sheet.inventory[8] = generateItem(822, 1, 'head', undefined, 'epic');
-  sheet.inventory[63] = generateItem(823, 1, 'weapon', 'longsword', 'rare');
-  const before = structuredClone(sheet);
-  const view = inventoryGridSources(sheet.inventory, new Set(['jewelry', 'armor']), new Set(['rare']));
-  assert.equal(view.length, 64); assert.equal(view[0], 4);
-  assert.equal(view.filter(index => index === null).length, 2);
-  assert.ok(!view.includes(8) && !view.includes(63));
-  for (const source of view.slice(1)) if (source !== null) assert.equal(sheet.inventory[source], null);
-  assert.deepEqual(inventoryGridSources(sheet.inventory, new Set(), new Set()), Array.from({ length: 64 }, (_, i) => i));
-  assert.deepEqual(sheet, before);
-  sheet.inventory = Array.from({ length: 64 }, (_, i) => generateItem(900 + i, 1, 'ring'));
-  assert.deepEqual(inventoryGridSources(sheet.inventory, new Set(['weapons']), new Set()), Array(64).fill(null), 'even zero matches in a full bag retains the full grid');
-});
-
 test('spatial navigation follows bag rows and reaches toolbar controls above the first row', () => {
   const rects = [{ left: 0, top: 0, width: 100, height: 44 }, ...Array.from({ length: 16 }, (_, i) => ({ left: i % 8 * 50, top: 60 + Math.floor(i / 8) * 50, width: 44, height: 44 }))];
   assert.equal(directionalControl(rects, 1, 'ArrowRight'), 2);
@@ -172,28 +156,28 @@ test('spatial navigation follows bag rows and reaches toolbar controls above the
   assert.equal(directionalControl(rects, 1, 'ArrowLeft'), 1);
 });
 
-test('touch-style filtered selection equips the actual source and safely reserves both hands', () => {
+test('touch-style in-place filtered selection equips the actual source and safely reserves both hands', () => {
   const sim = new Simulation({ blocked: () => false, move: (x,y,dx,dy) => ({x:x+dx,y:y+dy}) }, {spawn:false});
   const p = sim.player, sheet = p.character;
   sheet.inventory[41] = generateItem(2901,1,'weapon','ember-staff','rare');
   sheet.inventory[7] = generateItem(2902,1,'ring',undefined,'epic');
   const selected = sheet.inventory[41]!, excluded = sheet.inventory[7]!, before = ids(sheet);
-  const source = inventoryGridSources(sheet.inventory,new Set(['weapons']),new Set(['rare']))[0]!;
+  const source = sheet.inventory.findIndex(item => matchesInventoryFilter(item,new Set(['weapons']),new Set(['rare'])));
   assert.equal(source,41);
   assert.ok(executeCharacterCommand(p,{type:'equip',index:source,slot:'weapon'}).ok);
   assert.equal(sheet.equipped.weapon?.id,selected.id); assert.equal(sheet.equipped.offhand,null);
   assert.equal(sheet.inventory[7]?.id,excluded.id); assert.deepEqual(ids(sheet),before);
 });
-test('moving through a filtered projection targets a real empty cell and retains acquisition order', () => {
+test('moving a filtered item targets a physical empty cell and retains acquisition order', () => {
   const sheet=createCharacterSheet();
   sheet.inventory[53]=generateItem(2911,1,'ring',undefined,'rare');
   sheet.inventory[2]=generateItem(2912,1,'head',undefined,'epic');
   const item=sheet.inventory[53]!, hidden=sheet.inventory[2]!, owned=ids(sheet);
   sheet.recentItems=[item.id,hidden.id];
-  const projection=inventoryGridSources(sheet.inventory,new Set(['jewelry']),new Set(['rare']));
-  const source=projection[0]!, target=projection[1]!;
-  assert.equal(sheet.inventory[target],null);
+  const beforeLayout = resolvePackLayout(sheet);
+  const source=53, target=59;
   assert.ok(moveInventoryItem(sheet,source,target).ok);
-  assert.equal(sheet.inventory[target],item);assert.equal(sheet.inventory[2]?.id,hidden.id);
+  assert.equal(sheet.inventoryLayout![item.id],target);assert.equal(sheet.inventory[2]?.id,hidden.id);
+  assert.equal(sheet.inventoryLayout![hidden.id],beforeLayout[hidden.id]);
   assert.deepEqual(sheet.recentItems,[item.id,hidden.id]);assert.deepEqual(ids(sheet),owned);
 });

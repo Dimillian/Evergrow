@@ -11,7 +11,7 @@ function fillBag(sheet: CharacterSheet): void {
 }
 
 test('equipping swaps into the original cell even with a full inventory', () => {
-  const sheet = characterWithTestLoot(); fillBag(sheet);
+  const sheet = characterWithTestLoot(); sheet.equipped.weapon = generateItem(915,1,'weapon','longsword'); fillBag(sheet);
   const before = ids(sheet), incoming = sheet.inventory[0], previous = sheet.equipped.weapon;
   assert.ok(equipItem(sheet, 0, 1).ok);
   assert.equal(sheet.equipped.weapon, incoming); assert.equal(sheet.inventory[0], previous);
@@ -48,20 +48,23 @@ test('unequipping fails atomically when full or targeted cell is occupied', () =
   assert.equal(unequipItem(sheet, 'head', 1).ok, false);
   assert.equal(unequipItem(sheet, 'head', Infinity).ok, false);
   assert.deepEqual(sheet, before);
-  sheet.inventory[7] = null; const helmet = sheet.equipped.head;
+  sheet.inventory = Array(64).fill(null); sheet.inventoryLayout = {}; const helmet = sheet.equipped.head;
   assert.ok(unequipItem(sheet, 'head', 7).ok);
-  assert.equal(sheet.inventory[7], helmet); assert.equal(sheet.equipped.head, null);
+  assert.equal(sheet.inventory[0], helmet); assert.equal(sheet.inventoryLayout![helmet!.id], 7); assert.equal(sheet.equipped.head, null);
 });
 
-test('bag moves swap occupants and never create or duplicate items', () => {
-  const sheet = characterWithTestLoot(), before = ids(sheet);
-  const first = sheet.inventory[0], second = sheet.inventory[1];
-  assert.ok(moveInventoryItem(sheet, 0, 1).ok); assert.equal(sheet.inventory[1], first); assert.equal(sheet.inventory[0], second);
-  assert.ok(moveInventoryItem(sheet, 1, 63).ok); assert.equal(sheet.inventory[63], first); assert.equal(sheet.inventory[1], null);
-  assert.equal(moveInventoryItem(sheet, 1, 3).ok, false);
-  assert.equal(moveInventoryItem(sheet, 63, -1).ok, false);
-  assert.ok(moveInventoryItem(sheet, 63, 63).ok);
-  assert.deepEqual(ids(sheet), before);
+test('bag movement changes footprint positions without changing item ownership', () => {
+  const sheet = characterWithTestLoot();
+  sheet.inventory = Array(64).fill(null);
+  const first = generateItem(61,1,'ring'), second = generateItem(62,1,'ring');
+  sheet.inventory[0]=first; sheet.inventory[1]=second;
+  assert.ok(moveInventoryItem(sheet,0,1).ok);
+  assert.equal(sheet.inventoryLayout![first.id],1); assert.equal(sheet.inventoryLayout![second.id],0);
+  assert.ok(moveInventoryItem(sheet,0,59).ok); assert.equal(sheet.inventoryLayout![first.id],59);
+  const stable=structuredClone(sheet);
+  assert.equal(moveInventoryItem(sheet,2,3).ok,false); assert.equal(moveInventoryItem(sheet,0,-1).ok,false);
+  assert.deepEqual(sheet,stable); assert.ok(moveInventoryItem(sheet,0,59).ok);
+  assert.equal(sheet.inventory[0],first); assert.equal(sheet.inventory[1],second);
 });
 
 test('pickup rejects duplicate identities in gear or bag and never overwrites a full pack', () => {
@@ -125,16 +128,20 @@ test('two-handed equipment stows an offhand atomically, rejecting a full bag wit
   sheet.inventory[10] = generateItem(847, 1, 'weapon', 'greatblade'); fillBag(sheet);
   const before = structuredClone(sheet), beforeIds = ids(sheet), shield = sheet.equipped.offhand;
   assert.equal(equipItem(sheet, 10, 1).ok, false); assert.deepEqual(sheet, before);
-  const displacedBagItem = sheet.inventory[63]; sheet.inventory[63] = null;
+  const removed = sheet.inventory.filter((item, index) => item && index >= 8 && index !== 10).map(item => item!.id);
+  sheet.inventory = sheet.inventory.map((item,index) => index >= 8 && index !== 10 ? null : item);
   assert.ok(equipItem(sheet, 10, 1).ok);
   assert.equal(sheet.equipped.weapon!.weapon!.hands, 2); assert.equal(sheet.equipped.offhand, null);
-  assert.equal(sheet.inventory[63], shield);
-  assert.deepEqual(ids(sheet), beforeIds.filter(id => id !== displacedBagItem!.id));
+  assert.ok(sheet.inventory.includes(shield));
+  assert.deepEqual(ids(sheet), beforeIds.filter(id => !removed.includes(id)));
 });
 
-test('equipping an offhand reuses its vacated source cell to stow a two-handed main weapon in a full bag', () => {
+test('an offhand needs enough physical room to stow a larger two-handed weapon', () => {
   const sheet = characterWithTestLoot(); fillBag(sheet);
-  const beforeIds = ids(sheet), sword = sheet.equipped.weapon, shield = sheet.inventory[4];
+  const before = structuredClone(sheet), sword = sheet.equipped.weapon, shield = sheet.inventory[4];
+  assert.equal(equipItem(sheet,4,1).ok,false); assert.deepEqual(sheet,before);
+  sheet.inventory=sheet.inventory.map((item,index)=>index===4?item:null);
+  const beforeIds=ids(sheet);
   assert.ok(equipItem(sheet, 4, 1).ok);
   assert.equal(sheet.equipped.weapon, null); assert.equal(sheet.equipped.offhand, shield);
   assert.equal(sheet.inventory[4], sword); assert.deepEqual(ids(sheet), beforeIds);

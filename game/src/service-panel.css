@@ -97,3 +97,9 @@
 @media(max-width:500px){.gamble-choices{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 .service-tier-note{color:var(--ui-muted);font-size:.85rem;margin:0 0 1rem;line-height:1.5}.service-pool-odds{display:grid;gap:.35rem;margin-top:.6rem}.service-pool-odds>div{display:flex;justify-content:space-between;gap:1rem}.service-offer>[data-shop-family]{margin-bottom:1rem;width:100%}
+
+/* A tall physical pack must scroll before the receipt, never shrink over it. */
+@media (max-width:760px) {
+  .service-panel.is-selling .service-body > .service-bag,
+  .service-panel.is-selling .service-body > .service-offer { flex: 0 0 auto; }
+}

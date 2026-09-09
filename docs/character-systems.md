@@ -173,3 +173,18 @@ Each of the five terraces now has a direct bridge between every pair of discipli
 Melee weapons may roll one weapon-local fire, frost or lightning added-damage affix in an ordinary affix slot. Both basics and weapon skills include this damage, scaled by attack bonuses; offhand affixes never increase main-hand damage. All item services rebuild its damage and elemental appearance from the recipe. Shared tooltips and equip comparisons include it. See [elemental weapons and held lighting](weapons-and-skills.md#elemental-weapons-and-held-lighting--2026-09-07) for rules and presentation bounds.
 
 The [2026-09-07 skill corrections](skill-progression.md#audit-corrections--2026-09-07) add prospective specialization costs/potency, sustained guard/storm duration, reliable effect admission, and distinct control/skill feedback. They do not change save version or reset character progress.
+
+## Local spatial inventory prototype (2026-09-09)
+
+The character pack is now **12 columns × 6 rows (72 cells)**, followed by **four reserved charm rows**. Charms are presentation-only for now: equipment cannot enter those rows and they grant no stats. This replaces the earlier one-item-per-cell bag described above; it is local and unpublished.
+
+- Jewelry occupies 1×1; daggers/wands 1×2; other one-handed weapons 1×3; two-handed weapons/bows/staves 2×4. Chest armor, cloaks, legs and shields occupy 2×3; helmets, gloves, boots and foci occupy 2×2.
+- Dragging retains the grabbed cell offset, previews the entire footprint in green/red, and preserves green compatible-equipment hints. A drop swaps at most one overlapping item, only when both resulting footprints fit. Dropping over several items, an edge or charm rows fails without mutation. Equipment conflicts must have space for every displaced item.
+- **Auto-sort** packs taller/wider items first in one click. Inline Type/Rarity/Recent controls offer ordered packing; if an arrangement would increase overflow, it leaves the pack untouched. Acquisition history stays independent of position and sorting.
+- Filters dim nonmatching items in place; they never create fake empty destinations or move the underlying layout.
+- Shared insertion rules check footprint space for world pickups, purchases, gambling, buyback and stash withdrawals. Selling/storing frees those cells. A failed transaction keeps gold, gear and saved state unchanged.
+- Optional `inventoryLayout` maps owned item IDs to top-left pack cells. Item records retain their stable bag indices during dragging. Older 64-entry records remain readable, grow to 72 records when necessary, and are packed deterministically without modifying the original on read. Items that cannot fit remain accessible in an overflow tray; new pickups are blocked until the overflow is cleared. No item is deleted or transferred to a different character. Save validation rejects overlaps, edge crossings, non-owned IDs and charm-row placement.
+
+Vendor bag views (sell/shop/enchanter/gambler/storage) mirror the same positions, footprints, overflow and reserved charm rows. `inventory-pack.css` supplies their shared dimensions and presentation; no bag capacity counter is shown. Stock, equipped gear and stored-item lists remain separate selectors.
+
+`inventory-grid.ts` owns footprint/occupancy/packing and validation; `inventory.ts` owns atomic transactions; the panel only projects that state. The existing `/character.html` and character workspace preview use this exact runtime panel with disposable gear.

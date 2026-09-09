@@ -78,8 +78,9 @@ test('skill assignment commands preserve cooldowns and reject locked or invalid 
 
 test('bag commands preserve item identities, and failed equip requirements leave every projection intact', () => {
   const player = make(); stockTestGear(player.character); const first = player.character.inventory[0], second = player.character.inventory[1];
-  assert.ok(executeCharacterCommand(player, { type: 'moveItem', from: 0, to: 1 }).ok);
-  assert.equal(player.character.inventory[0], second); assert.equal(player.character.inventory[1], first);
+  assert.ok(executeCharacterCommand(player, { type: 'moveItem', from: 0, to: 39 }).ok);
+  assert.equal(player.character.inventory[0], first); assert.equal(player.character.inventory[1], second);
+  assert.equal(player.character.inventoryLayout![first!.id],39);
   player.character.inventory[47] = generateItem(194, 20, 'weapon', 'longsword');
   const before = structuredClone(player);
   assert.equal(executeCharacterCommand(player, { type: 'equip', index: 47 }).ok, false);

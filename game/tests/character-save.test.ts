@@ -57,11 +57,12 @@ test('pickup history and sorted bag round trip; malformed histories are rejected
   assert.ok(await session.save(sim.captureCheckpoint(), 200));
   const record = repo.read(0).record!;
   const decoded = decodeCharacterSave(JSON.stringify(record))!;
+  assert.deepEqual(decoded.checkpoint.character.inventoryLayout, sim.player.character.inventoryLayout);
   sim.restoreCheckpoint(decoded.checkpoint);
   assert.equal(sim.player.character.inventory[0]!.id, first.id);
   executeCharacterCommand(sim.player, { type: 'sortInventory', mode: 'recent' });
   assert.equal(sim.player.character.inventory[0]!.id, latest.id);
-  for (const history of [[latest.id, latest.id], [9], ['x'.repeat(161)], Array.from({ length: 76 }, (_, i) => `item-${i}`)]) {
+  for (const history of [[latest.id, latest.id], [9], ['x'.repeat(161)], Array.from({ length: 84 }, (_, i) => `item-${i}`)]) {
     const bad = structuredClone(record); bad.checkpoint.character.recentItems = history as string[];
     assert.equal(decodeCharacterSave(JSON.stringify(bad)), null);
   }

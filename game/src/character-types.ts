@@ -40,6 +40,8 @@ export interface CharacterSheet extends GoldWallet {
   statPoints: number; skillPoints: number;
   allocatedNodes: string[];
   inventory: Array<Item | null>;
+  /** Item IDs map to top-left cells in the carried pack. Unplaced older items remain in overflow. */
+  inventoryLayout?: Record<string, number>;
   /** Personal storage shared by settlement chests, separate from the carried bag. */
   stash?: Array<Item | null>;
   /** Newest acquired first; absent until the first tracked pickup. */

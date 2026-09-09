@@ -42,6 +42,7 @@ export function upgradeWorldSave(source:CharacterSave,target:number,createWorld:
     // This also prevents a refreshed stock slot from colliding with an already-owned item ID.
     const renamed=new Map<string,string>();
     for(const item of allItems)if(item?.id.startsWith('stock:')){const id='owned:'+item.id;renamed.set(item.id,id);item.id=id;}
+    if(p.character.inventoryLayout)p.character.inventoryLayout=Object.fromEntries(Object.entries(p.character.inventoryLayout).map(([id,cell])=>[renamed.get(id)??id,cell]));
     if(p.character.recentItems)p.character.recentItems=p.character.recentItems.map(id=>renamed.get(id)??id);
     p.character.commerce.sold={};p.character.commerce.revision++;
     p.brokenContainers=p.brokenContainers?.filter(id=>!id.startsWith('town:'));

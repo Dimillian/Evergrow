@@ -120,6 +120,20 @@ export function itemIconSVG(item: Item, size = 48): string {
     <ellipse cx="24" cy="42" rx="15" ry="3" fill="#05090e" opacity=".45"/>${shape}</svg>`;
 }
 
+/** Upright, aspect-correct art for rectangular pack footprints. */
+export function itemPackIconSVG(item: Item, width: number, height: number): string {
+  let shapes = item.kind === 'weapon' ? weaponShapes(item.weapon?.visual ?? STARTING_SWORD.visual) : itemDropShapes(item);
+  if (item.kind === 'weapon' && item.weapon?.family !== 'bow') shapes = shapes.map(shape => ({ ...shape, points: shape.points.map(([x, y]): Point => [y, -x]) }));
+  const points = shapes.flatMap(shape => shape.points);
+  if (!points.length) return '';
+  const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const w = width * 40, h = height * 40;
+  const scale = Math.min((w - 16) / Math.max(1, maxX - minX), (h - 18) / Math.max(1, maxY - minY));
+  const prefix = `pack-${item.id.replace(/[^a-z0-9-]/gi, '')}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" aria-hidden="true" focusable="false"><g transform="translate(${w / 2} ${h / 2}) scale(${scale}) translate(${-(minX + maxX) / 2} ${-(minY + maxY) / 2})">${gearShapesSVG(shapes, true, prefix)}</g></svg>`;
+}
+
 function armor(item: Item | null): ArmorPiece | null {
   if (!item) return null;
   const { base, shadow, edge, trim, style } = item.appearance;

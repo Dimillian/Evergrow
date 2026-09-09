@@ -1,3 +1,4 @@
+import { PACK_CELLS, footprintCells } from '../src/inventory-grid.ts';
 import { xpLevelFactor } from '../src/progression.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -222,7 +223,7 @@ test('repeated seeded enemy deaths generate reproducible loot with unique identi
 
 test('a full inventory preserves dropped loot until a cell is available, then an explicit pickup collects it once', () => {
   const sim = createSim();
-  sim.player.character.inventory = Array.from({ length: 64 }, (_, index) => generateItem(9000 + index, 1));
+  sim.player.character.inventory = Array.from({ length: PACK_CELLS }, (_, index) => generateItem(9000 + index, 1, 'ring'));
   const enemy = sim.spawnEnemy('stalker', 22, 0)!; enemy.hp = 1; enemy.stateDuration = 999;
   advance(sim, .25, { attack: true });
   assert.equal(sim.groundItems.length, 1);
@@ -231,10 +232,10 @@ test('a full inventory preserves dropped loot until a cell is available, then an
   assert.equal(sim.requestGroundItem(drop.id), 'Inventory full');
   assert.equal(sim.groundPickup.id, null);
   sim.player.x = drop.x; sim.player.y = drop.y;
-  sim.player.character.inventory[7] = null;
+  for (const cell of footprintCells(drop.item,0)!) sim.player.character.inventory[cell] = null;
   assert.equal(sim.requestGroundItem(drop.id),null);
   advance(sim, FIXED_STEP);
-  assert.equal(sim.groundItems.length, 0); assert.equal(sim.player.character.inventory.at(7)?.id, drop.item.id);
+  assert.equal(sim.groundItems.length, 0); assert.equal(sim.player.character.inventory.at(0)?.id, drop.item.id);
   advance(sim, .25);
   assert.equal(sim.player.character.inventory.filter(item => item?.id === drop.item.id).length, 1);
   assert.equal(sim.drainEvents().filter(event => event.type === 'loot' && event.item.id === drop.item.id).length, 1);

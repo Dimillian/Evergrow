@@ -1,3 +1,5 @@
+import { PACK_COLUMNS, PACK_ROWS, PACK_CELLS, CHARM_ROWS, itemFootprint, resolvePackLayout, packOccupancy, footprintCells } from './inventory-grid.ts';
+import { itemPackIconSVG } from './item-art.ts';
 import { itemDisplayName } from './items.ts';
 import { itemTooltipMarkup, updateItemSlot } from './item-ui.ts';
 import { ItemTooltip } from './item-tooltip.ts';
@@ -5,12 +7,12 @@ import { goldBalance } from './wallet.ts';
 import { formatGold } from './currency-format.ts';
 import type { Player } from './model.ts';
 import type { Attribute, EquipmentSlot, Item, ItemTier } from './character-types.ts';
-import { matchesInventoryFilter, inventoryGridSources, planBestEquipment, type EquipBestChoice, type InventorySort, type InventoryFilter } from './inventory-tools.ts';
+import { matchesInventoryFilter, planBestEquipment, type EquipBestChoice, type InventorySort, type InventoryFilter } from './inventory-tools.ts';
 import { GamepadMenu } from './gamepad-menu.ts';
 import type { GamepadInput } from './gamepad-input.ts';
 import { directionalControl } from './ui-navigation.ts';
 import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS, TIER_NAMES } from './items.ts';
-import { planEquipmentChange } from './inventory.ts';
+import { planEquipmentChange, planInventoryMove } from './inventory.ts';
 import { drawCharacterPortrait } from './character-portrait.ts';
 import { deriveAttackStats } from './equipment.ts';
 import { xpForNextLevel } from './progression.ts';
@@ -30,7 +32,7 @@ export interface InventoryPanelActions {
 }
 
 
-type ItemLocation = { type: 'bag'; index: number } | { type: 'equipment'; slot: EquipmentSlot };
+type ItemLocation = { type: 'bag'; index: number; cell?: number } | { type: 'equipment'; slot: EquipmentSlot };
 type ItemReference = ItemLocation & { id: string };
 const ATTRIBUTE_NAMES: Record<Attribute, string> = { strength: 'Strength', dexterity: 'Dexterity', intelligence: 'Intelligence', vitality: 'Vitality' };
 const ATTRIBUTE_DESCRIPTIONS: Record<Attribute, string> = {
@@ -45,7 +47,7 @@ const LEFT_SLOTS: EquipmentSlot[] = ['chest', 'gloves', 'legs', 'boots', 'cloak'
 const RIGHT_SLOTS: EquipmentSlot[] = ['weapon', 'offhand', 'amulet', 'ring1', 'ring2'];
 const number = (value: number, decimals = 0) => Number.isFinite(value) ? value.toLocaleString('en-US', { maximumFractionDigits: decimals }) : '—';
 const percent = (value: number) => `${number(value * 100, 1)}%`;
-const locationKey = (location: ItemLocation) => location.type === 'bag' ? `bag-${location.index}` : `equipment-${location.slot}`;
+const locationKey = (location: ItemLocation) => location.type === 'bag' ? location.index < 0 ? `cell-${location.cell}` : `bag-${location.index}` : `equipment-${location.slot}`;
 
 function emptySlotIcon(slot: EquipmentSlot): string {
   const glyphs: Record<EquipmentSlot, string> = {
@@ -78,6 +80,7 @@ export class InventoryPanel {
   private player: Player | null = null;
   private hovered: ItemLocation | null = null;
   private drag: ItemReference | null = null;
+  private dragOffset = { x: 0, y: 0 };
   private touchItem: ItemReference | null = null;
   private touchMoving = false;
   private sheet!: HTMLElement;
@@ -114,12 +117,21 @@ export class InventoryPanel {
           <div class="character-portrait-footer"><button class="ui-button ui-button--quiet ui-button--icon" data-turn="-1" aria-label="Turn character left">‹</button><div><span class="character-portrait-label">Equipped weapon</span><strong data-weapon-name></strong></div><button class="ui-button ui-button--quiet ui-button--icon" data-turn="1" aria-label="Turn character right">›</button></div>
           <div class="character-points"><span>${uiIcon('skilltree')}Skill points <strong data-skill-points></strong></span><span>${uiIcon('plus')}Attribute points <strong data-stat-points></strong></span></div>
         </section>
-        <section class="character-inventory" id="character-section-1" data-section="1" aria-labelledby="inventory-title">
+        <section class="character-inventory inventory-pack" id="character-section-1" data-section="1" aria-labelledby="inventory-title">
           <div class="character-section-title character-inventory-heading"><h3 id="inventory-title">Inventory</h3><div class="character-heading-actions">
-            <button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-sort-filter aria-label="Sort & filter inventory" aria-haspopup="dialog" aria-expanded="false" aria-controls="inventory-sort-dialog" data-tooltip="Sort & filter" data-tooltip-placement="below">${uiIcon('sortFilter')}</button>
+            <button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-sort-filter aria-label="Filter inventory" aria-haspopup="dialog" aria-expanded="false" aria-controls="inventory-sort-dialog" data-tooltip="Filter inventory" data-tooltip-placement="below">${uiIcon('sortFilter')}</button>
             <button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-equip-best aria-label="Equip best items" data-tooltip="Equip best items" data-tooltip-placement="below">${uiIcon('equipBest')}</button>
-          </div><div class="character-inventory-counts"><span class="character-gold" data-gold></span><span data-capacity></span></div></div>
-          <div class="character-grid-scroll ui-item-grid-scroll"><div class="character-bag ui-item-grid ui-item-grid--bag" role="group" aria-label="Inventory, ${INVENTORY_CAPACITY} slots">${Array.from({ length: INVENTORY_CAPACITY }, (_, index) => `<button type="button" class="ui-slot ui-item-slot character-bag-slot" data-bag="${index}" data-location="bag-${index}" aria-label="Empty inventory slot ${index + 1}"></button>`).join('')}</div></div>
+          </div><div class="character-inventory-counts"><span class="character-gold" data-gold></span></div></div>
+          <div class="character-pack-toolbar"><button type="button" class="ui-button character-auto-sort" data-sort="compact">${uiIcon('sortFilter')} Auto-sort</button><div class="character-sort-options" role="group" aria-label="Sort inventory">${(['type', 'rarity', 'recent'] as const).map(mode => `<button type="button" class="ui-button ui-button--quiet" data-sort="${mode}">${mode === 'type' ? 'Type' : mode === 'rarity' ? 'Rarity' : 'Recent'}</button>`).join('')}</div></div>
+          <div class="character-grid-scroll ui-item-grid-scroll">
+            <div class="character-bag character-tetris" role="group" aria-label="Inventory, ${PACK_COLUMNS} columns by ${PACK_ROWS} rows">
+              ${Array.from({ length: PACK_CELLS }, (_, cell) => `<button type="button" class="character-grid-cell" data-cell="${cell}" data-location="cell-${cell}" style="grid-column:${cell % PACK_COLUMNS + 1};grid-row:${Math.floor(cell / PACK_COLUMNS) + 1}" aria-label="Pack row ${Math.floor(cell / PACK_COLUMNS) + 1}, column ${cell % PACK_COLUMNS + 1}"></button>`).join('')}
+              ${Array.from({ length: INVENTORY_CAPACITY }, (_, index) => `<button type="button" class="ui-slot ui-item-slot character-bag-slot" data-bag="${index}" data-location="bag-${index}" hidden></button>`).join('')}
+              <div class="character-pack-placement" hidden aria-hidden="true"></div>
+            </div>
+            <section class="character-charms" aria-label="Charms, reserved for a future update"><header><span>${uiIcon('diamond')} Charms</span><small>Reserved</small></header><div class="character-charm-grid" aria-hidden="true">${Array.from({length: PACK_COLUMNS * CHARM_ROWS}, () => '<span>·</span>').join('')}</div></section>
+            <section class="character-overflow" hidden><header>Pack overflow <small>Make space to carry these items</small></header><div class="character-overflow-items"></div></section>
+          </div>
           <p class="character-filter-status" data-filter-status role="status" hidden></p>
         </section>
         <section class="character-details" id="character-section-2" data-section="2" tabindex="0" aria-labelledby="attributes-title">
@@ -132,8 +144,7 @@ export class InventoryPanel {
       <footer class="ui-window-footer character-footer"><div class="character-experience"><div><span data-xp-label></span><span data-xp-total></span></div><div class="character-experience-track"><i data-xp-fill></i></div></div>${actions.openChronicle?'<button type="button" class="ui-button ui-button--quiet" data-chronicle>Chronicle</button>':''}<span class="character-footer-status">${uiIcon('diamond')}<span data-allocated-label></span></span></footer>
       <div class="character-popup-layer" data-popup-layer hidden>
         <section class="character-mini-dialog ui-well" id="inventory-sort-dialog" data-mini="sort" role="dialog" aria-modal="true" aria-labelledby="inventory-sort-title" hidden>
-          <header><h3 id="inventory-sort-title">Sort &amp; filter</h3><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-popup-close aria-label="Close sort and filter">${uiIcon('close')}</button></header>
-          <div class="character-tool-row" role="group" aria-label="Sort inventory"><span>Sort</span>${(['rarity', 'type', 'recent'] as const).map(mode => `<button type="button" class="ui-button ui-button--quiet" data-sort="${mode}">${mode === 'rarity' ? 'Rarity' : mode === 'type' ? 'Type' : 'Recent pickup'}</button>`).join('')}</div>
+          <header><h3 id="inventory-sort-title">Filter inventory</h3><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-popup-close aria-label="Close filters">${uiIcon('close')}</button></header>
           <div class="character-tool-row" role="group" aria-label="Filter item type"><span>Type</span>${(['all', 'weapons', 'armor', 'jewelry', 'offhand'] as const).map(filter => `<button type="button" class="ui-button ui-button--quiet" data-filter="${filter}" aria-pressed="${filter === 'all'}">${filter === 'offhand' ? 'Off-hand' : filter[0].toUpperCase() + filter.slice(1)}</button>`).join('')}</div>
           <div class="character-tool-row" role="group" aria-label="Filter item rarity"><span>Rarity</span><button type="button" class="ui-button ui-button--quiet" data-rarity="all" aria-pressed="true">All</button>${Object.entries(TIER_NAMES).map(([tier, name]) => `<button type="button" class="ui-button ui-button--quiet" data-rarity="${tier}" aria-pressed="false">${name}</button>`).join('')}</div>
           <button type="button" class="ui-button ui-button--quiet" data-clear-filters>Clear filters</button>
@@ -145,6 +156,7 @@ export class InventoryPanel {
         </section>
       </div>
     </section>`;
+    this.element.style.setProperty('--pack-columns', String(PACK_COLUMNS));
     this.window = this.element.querySelector('.character-window')!;
     this.element.querySelector('[data-chronicle]')?.addEventListener('click',()=>actions.openChronicle?.(),{signal:this.lifetime.signal});
     this.popupLayer = this.element.querySelector('[data-popup-layer]')!;
@@ -181,22 +193,37 @@ export class InventoryPanel {
     this.player = player;
     if (this.element.hidden) return;
     if(this.touchItem && this.itemAt(this.touchItem)?.id !== this.touchItem.id) this.closeTouchItem();
-    const sources = inventoryGridSources(player.character.inventory, this.filters, this.rarities);
+    const layout = resolvePackLayout(player.character), occupied = packOccupancy(player.character.inventory, layout);
+    const bag = this.element.querySelector<HTMLElement>('.character-bag')!;
+    const overflow = this.element.querySelector<HTMLElement>('.character-overflow-items')!;
+    let overflowCount = 0;
     this.cells.clear();
-    this.element.querySelectorAll<HTMLButtonElement>('.character-bag-slot').forEach((cell, index) => {
-      const source = sources[index];
-      cell.disabled = source === null;
-      if (source === null) delete cell.dataset.bag;
-      else cell.dataset.bag = String(source);
-      cell.dataset.location = source === null ? `filtered-${index}` : `bag-${source}`;
+    this.element.querySelectorAll<HTMLButtonElement>('.character-bag-slot').forEach(cell => {
+      const index = Number(cell.dataset.bag), item = player.character.inventory[index];
+      cell.hidden = !item;
+      if (!item) { delete cell.dataset.cell; return; }
+      const position = layout[item.id], size = itemFootprint(item);
+      const parent = position === undefined ? overflow : bag;
+      if (cell.parentElement !== parent) parent.append(cell);
+      if (position === undefined) { delete cell.dataset.cell; cell.style.gridColumn = `span ${size.width}`; cell.style.gridRow = `span ${size.height}`; overflowCount++; }
+      else { cell.dataset.cell = String(position); cell.style.gridColumn = `${position % PACK_COLUMNS + 1} / span ${size.width}`; cell.style.gridRow = `${Math.floor(position / PACK_COLUMNS) + 1} / span ${size.height}`; }
+      cell.style.setProperty('--pack-width', String(size.width)); cell.style.setProperty('--pack-height', String(size.height));
+      cell.classList.toggle('is-filtered-out', !matchesInventoryFilter(item, this.filters, this.rarities));
     });
-    this.element.querySelectorAll<HTMLButtonElement>('[data-location]').forEach(cell => this.cells.set(cell.dataset.location!, cell));
+    this.element.querySelector<HTMLElement>('.character-overflow')!.hidden = !overflowCount;
+    for (const cell of this.element.querySelectorAll<HTMLButtonElement>('.character-grid-cell')) {
+      cell.tabIndex = occupied.has(Number(cell.dataset.cell)) ? -1 : 0;
+    }
+    this.element.querySelectorAll<HTMLButtonElement>('[data-location]').forEach(cell => {
+      if (!cell.hidden) this.cells.set(cell.dataset.location!, cell);
+    });
     for (const cell of this.cells.values()) {
       const location = this.locationFrom(cell);
       if (!location) {
         updateItemSlot(cell, null, { level: player.level, emptyMarkup: '<span class="ui-empty-item-mark">·</span>', label: 'Filtered inventory cell' });
         continue;
       }
+      if (location.type === 'bag' && location.index < 0) continue;
       const item = this.itemAt(location);
       const reserved = location.type === 'equipment' && location.slot === 'offhand' && player.character.equipped.weapon?.weapon?.hands === 2;
       cell.classList.toggle('is-twohand-reserved', reserved);
@@ -206,6 +233,12 @@ export class InventoryPanel {
         emptyMarkup: reserved ? `<span class="character-reserved-glyph" aria-hidden="true">${emptySlotIcon('weapon')}</span><span class="character-reserved-label">2H</span>` : location.type === 'equipment' ? emptySlotIcon(location.slot) : '<span class="ui-empty-item-mark">·</span>',
         label: reserved ? `Off-hand reserved by two-handed ${player.character.equipped.weapon!.name}` : item ? `${itemDisplayName(item)}, ${TIER_NAMES[item.tier]}, item level ${item.itemLevel}${location.type === 'equipment' ? `, equipped in ${SLOT_NAMES[location.slot]}` : ''}${item.requiredLevel > player.level ? `, requires level ${item.requiredLevel}` : ''}` : location.type === 'equipment' ? `${SLOT_NAMES[location.slot]}, empty` : `Empty inventory slot ${location.index + 1}`,
       });
+      if (item && location.type === 'bag' && cell.dataset.packSignature !== cell.dataset.signature) {
+        const size = itemFootprint(item);
+        cell.querySelector('svg')?.remove();
+        cell.insertAdjacentHTML('afterbegin', itemPackIconSVG(item, size.width, size.height));
+        cell.dataset.packSignature = cell.dataset.signature;
+      }
     }
     const filtered = this.filters.size > 0 || this.rarities.size > 0;
     const matching = player.character.inventory.filter(item => matchesInventoryFilter(item, this.filters, this.rarities)).length;
@@ -222,7 +255,6 @@ export class InventoryPanel {
     this.text('[data-level]', `Level ${player.level}`);
     this.text('[data-equipped-count]', `${EQUIPMENT_SLOTS.filter(slot => sheet.equipped[slot]).length} / ${EQUIPMENT_SLOTS.length}`);
     this.text('[data-gold]', `${formatGold(goldBalance(sheet))} Gold`);
-    this.text('[data-capacity]', `${sheet.inventory.filter(Boolean).length} / ${sheet.inventory.length}`);
     this.text('[data-weapon-name]', sheet.equipped.weapon?.name ?? 'Unarmed');
     this.text('[data-skill-points]', number(sheet.skillPoints));
     this.text('[data-stat-points]', number(sheet.statPoints));
@@ -313,7 +345,7 @@ export class InventoryPanel {
     panel.style.left = `${Math.max(12, Math.min(left, bounds.width - width - 12))}px`;
     panel.style.top = `${Math.max(12, Math.min(top, bounds.height - height - 12))}px`;
     this.popupFocus = trapDialogFocus(panel, { signal: this.lifetime.signal, restoreFocus: false,
-      initialFocus: () => panel.querySelector(kind === 'weapon' ? '[data-best-choice="keep"]' : '[data-sort]') });
+      initialFocus: () => panel.querySelector(kind === 'weapon' ? '[data-best-choice="keep"]' : '[data-filter]') });
   }
 
   dismissPopup(restoreFocus = true): boolean {
@@ -407,7 +439,8 @@ export class InventoryPanel {
     if (!(target instanceof Element)) return null;
     const cell = target.closest<HTMLElement>('[data-location]');
     if (!cell || !this.element.contains(cell)) return null;
-    if (cell.dataset.bag !== undefined) return { type: 'bag', index: Number(cell.dataset.bag) };
+    if (cell.dataset.bag !== undefined) return { type: 'bag', index: Number(cell.dataset.bag), cell: cell.dataset.cell === undefined ? undefined : Number(cell.dataset.cell) };
+    if (cell.dataset.cell !== undefined) return { type: 'bag', index: -1, cell: Number(cell.dataset.cell) };
     const slot = cell.dataset.equipment as EquipmentSlot;
     return EQUIPMENT_SLOTS.includes(slot) ? { type: 'equipment', slot } : null;
   }
@@ -456,9 +489,9 @@ export class InventoryPanel {
           this.drag = this.touchItem;
           if(this.canDrop(location)) {
             const source = this.touchItem; this.closeTouchItem(); this.clearDrag();
-            if(source.type==='bag' && location.type==='bag') this.actions.move(source.index,location.index);
+            if(source.type==='bag' && location.type==='bag') this.actions.move(source.index,location.cell!);
             else if(source.type==='bag' && location.type==='equipment') this.actions.equip(source.index,location.slot);
-            else if(source.type==='equipment' && location.type==='bag') this.actions.unequip(source.slot,location.index);
+            else if(source.type==='equipment' && location.type==='bag') this.actions.unequip(source.slot,location.cell!);
           }
           this.drag = null; return;
         }
@@ -507,8 +540,8 @@ export class InventoryPanel {
       }
       if (location?.type === 'bag' && (event.key === 'Home' || event.key === 'End')) {
         const cells = [...this.cells.values()].filter(cell => cell.dataset.bag !== undefined && !cell.hidden);
-        const index = cells.indexOf(event.target as HTMLButtonElement), start = index - index % 8;
-        event.preventDefault(); cells[event.key === 'Home' ? start : Math.min(start + 7, cells.length - 1)]?.focus(); return;
+        const index = cells.indexOf(event.target as HTMLButtonElement), start = index - index % PACK_COLUMNS;
+        event.preventDefault(); cells[event.key === 'Home' ? start : Math.min(start + PACK_COLUMNS - 1, cells.length - 1)]?.focus(); return;
       }
       if (event.key.startsWith('Arrow') && this.navigate(event.key, event.target as HTMLElement)) event.preventDefault();
     }, options);
@@ -517,6 +550,12 @@ export class InventoryPanel {
       const location = this.locationFrom(event.target), item = location && this.itemAt(location);
       if (!location || !item || !event.dataTransfer) { event.preventDefault(); return; }
       this.drag = { ...location, id: item.id };
+      const sourceCell = this.cells.get(locationKey(location))!;
+      if (location.type === 'bag') {
+        const bounds = sourceCell.getBoundingClientRect(), size = itemFootprint(item);
+        this.dragOffset = { x: Math.min(size.width - 1, Math.max(0, Math.floor((event.clientX - bounds.left) / (bounds.width / size.width)))),
+          y: Math.min(size.height - 1, Math.max(0, Math.floor((event.clientY - bounds.top) / (bounds.height / size.height)))) };
+      }
       event.dataTransfer.setData('application/x-evergrow-item', item.id);
       event.dataTransfer.effectAllowed = 'move';
       this.hideTooltip();
@@ -524,26 +563,37 @@ export class InventoryPanel {
       this.highlightEquipmentTargets();
     }, options);
     this.element.addEventListener('dragover', event => {
-      const target = this.locationFrom(event.target);
-      if (!target || !this.canDrop(target)) return;
-      event.preventDefault();
-      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
       this.clearDropHighlight();
-      this.cells.get(locationKey(target))?.classList.add('is-drop-target');
+      const target = this.dragLocation(event);
+      const valid = !!target && this.canDrop(target);
+      if (event.dataTransfer) event.dataTransfer.dropEffect = valid ? 'move' : 'none';
+      if (target?.type === 'bag' && target.cell !== undefined && target.cell >= 0 && this.drag) {
+        const item = this.itemAt(this.drag);
+        if (item) {
+          const preview = this.element.querySelector<HTMLElement>('.character-pack-placement')!, size = itemFootprint(item);
+          preview.hidden = false; preview.classList.toggle('is-invalid', !valid);
+          preview.style.left = `calc(3px + ${target.cell % PACK_COLUMNS} * (var(--pack-cell) + var(--pack-gap)))`;
+          preview.style.top = `calc(3px + ${Math.floor(target.cell / PACK_COLUMNS)} * (var(--pack-cell) + var(--pack-gap)))`;
+          preview.style.width = `calc(${size.width} * (var(--pack-cell) + var(--pack-gap)) - var(--pack-gap))`;
+          preview.style.height = `calc(${size.height} * (var(--pack-cell) + var(--pack-gap)) - var(--pack-gap))`;
+        }
+      }
+      if (!target || !valid) return;
+      event.preventDefault();
+      if (target.type === 'equipment') this.cells.get(locationKey(target))?.classList.add('is-drop-target');
     }, options);
     this.element.addEventListener('dragleave', event => {
-      const cell = (event.target as Element).closest('[data-location]');
-      if (cell && !cell.contains(event.relatedTarget as Node | null)) cell.classList.remove('is-drop-target');
+      if (!(event.relatedTarget instanceof Node) || !this.element.contains(event.relatedTarget)) this.clearDropHighlight();
     }, options);
     this.element.addEventListener('drop', event => {
-      const target = this.locationFrom(event.target), source = this.drag;
+      const target = this.dragLocation(event), source = this.drag;
       const valid = Boolean(source && target && this.canDrop(target) && event.dataTransfer?.getData('application/x-evergrow-item') === source.id);
       this.clearDrag();
       if (!valid || !source || !target) return;
       event.preventDefault();
       if (source.type === 'bag' && target.type === 'equipment') this.actions.equip(source.index, target.slot);
-      else if (source.type === 'bag' && target.type === 'bag') this.actions.move(source.index, target.index);
-      else if (source.type === 'equipment' && target.type === 'bag') this.actions.unequip(source.slot, target.index);
+      else if (source.type === 'bag' && target.type === 'bag') this.actions.move(source.index, target.cell!);
+      else if (source.type === 'equipment' && target.type === 'bag') this.actions.unequip(source.slot, target.cell!);
     }, options);
     this.element.addEventListener('dragend', () => this.clearDrag(), options);
     this.window.addEventListener('scroll', () => this.hideTooltip(), { ...options, capture: true });
@@ -588,8 +638,24 @@ export class InventoryPanel {
     const item = this.itemAt(source);
     if (!item || item.id !== source.id) return false;
     if (target.type === 'equipment') return source.type === 'bag' && planEquipmentChange(this.player!.character, item, this.player!.level, { sourceIndex: source.index, slot: target.slot }).ok;
-    if (source.type === 'equipment') return !this.itemAt(target);
-    return true;
+    if (target.cell === undefined) return false;
+    if (source.type === 'equipment') {
+      const occupied = packOccupancy(this.player!.character.inventory, resolvePackLayout(this.player!.character));
+      return (this.player!.character.inventory.includes(null) || this.player!.character.inventory.length < PACK_CELLS) && (footprintCells(item, target.cell)?.every(n => !occupied.has(n)) ?? false);
+    }
+    return planInventoryMove(this.player!.character, source.index, target.cell) !== null;
+  }
+
+  private dragLocation(event: DragEvent): ItemLocation | null {
+    const target = this.locationFrom(event.target);
+    if (target?.type === 'equipment') return target;
+    const bag = this.element.querySelector<HTMLElement>('.character-bag')!, bounds = bag.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX >= bounds.right || event.clientY < bounds.top || event.clientY >= bounds.bottom) return null;
+    const first = bag.querySelector<HTMLElement>('.character-grid-cell')!.getBoundingClientRect();
+    const gap = parseFloat(getComputedStyle(bag).columnGap) || 0;
+    const x = Math.floor((event.clientX - first.left) / (first.width + gap)) - this.dragOffset.x;
+    const y = Math.floor((event.clientY - first.top) / (first.height + gap)) - this.dragOffset.y;
+    return { type: 'bag', index: -1, cell: x < 0 || y < 0 || x >= PACK_COLUMNS || y >= PACK_ROWS ? -1 : y * PACK_COLUMNS + x };
   }
 
   private highlightEquipmentTargets(): void {
@@ -599,8 +665,11 @@ export class InventoryPanel {
     }
   }
 
-  private clearDropHighlight(): void { for (const cell of this.cells.values()) cell.classList.remove('is-drop-target'); }
-  private clearDrag(): void { this.drag = null; for (const cell of this.cells.values()) cell.classList.remove('is-drop-target', 'is-dragging', 'is-equip-target'); }
+  private clearDropHighlight(): void {
+    for (const cell of this.cells.values()) cell.classList.remove('is-drop-target');
+    this.element.querySelector<HTMLElement>('.character-pack-placement')!.hidden = true;
+  }
+  private clearDrag(): void { this.clearDropHighlight(); this.drag = null; this.dragOffset = { x: 0, y: 0 }; for (const cell of this.cells.values()) cell.classList.remove('is-drop-target', 'is-dragging', 'is-equip-target'); }
 
   private showTooltip(location: ItemLocation): void {
     if (this.drag || document.documentElement.classList.contains('touch-mode')) return;

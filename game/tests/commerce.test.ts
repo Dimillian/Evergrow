@@ -297,3 +297,16 @@ test('bulk sale is persisted once before any live inventory or wallet change; fa
   assert.ok(success.ok);assert.equal(writes,2);assert.equal(p.hp,40);assert.equal(p.mana,20);
   assert.equal(p.character.gold,JSON.parse(before).character.gold+quote.price);
 });
+
+test('a shop purchase requires the full footprint and a sale releases its saved cells', () => {
+  const c = sheet();
+  c.inventory = Array.from({length:72},(_,i)=>generateItem(81000+i,1,'ring'));
+  c.inventory[0]=null;
+  const before=structuredClone(c), quote=quoted(c,smith,{type:'buy',slot:1});
+  assert.equal(planService(c,smith,10,quote).ok,false,'one empty cell cannot receive a bow');
+  assert.deepEqual(c,before,'a failed footprint quote never spends gold or consumes stock');
+  const ready=sheet(), purchase=trade(ready,smith,{type:'buy',slot:1});
+  assert.ok(purchase.character.inventoryLayout?.[purchase.item.id] !== undefined);
+  const sold=trade(purchase.character,smith,{type:'sell',source:{bag:0}});
+  assert.equal(sold.character.inventoryLayout?.[purchase.item.id],undefined);
+});

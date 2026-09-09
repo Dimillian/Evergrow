@@ -45,3 +45,5 @@ The World workspace’s Dungeon tool (`/dungeon.html?view=gallery&seed=7319`) co
 `/layouts.html` now compares the starting refuge, villages and fortified cities using a URL-addressable seed. Hearth & stalls and Furnished interior provide close-ups; PNG export uses the actual runtime renderer. Refuges have no houses. `/services.html?role=gambler` and `?role=stash` stage the production panels in disposable memory. See [Settlements](settlements.md).
 
 The town service study accepts `tier=village` or `tier=city` to select a real generated town of that tier. It supports all service roles and uses disposable memory.
+
+The local `/character.html` review now includes the 12×6 spatial pack, upright item art, inline sorting, drag footprint previews and four reserved charm rows. It uses the runtime inventory and disposable gear; no playable saves are accessed.

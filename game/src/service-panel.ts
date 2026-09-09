@@ -1,3 +1,5 @@
+import { PACK_COLUMNS, PACK_ROWS, PACK_CELLS, CHARM_ROWS, resolvePackLayout, itemFootprint, canPackItem } from './inventory-grid.ts';
+import './inventory-pack.css';
 import { settlementBenefits } from './settlement-services.ts';
 import { vendorLevel } from './npcs.ts';
 import { compareCharacterStats, previewEquipmentChange } from './equipment-preview.ts';
@@ -9,10 +11,10 @@ import { GAMBLE_KINDS, gambleOdds, premiumStockSlot, gamblePrice, STASH_CAPACITY
 import { improveItem, rerollPool, affixCategory, AFFIX_FOCUSES, type AffixFocus, type Improvement } from './item-improvement.ts';
 import { updateItemSlot, itemTooltipMarkup, CHANGE_LABELS, PREVIEW_PERCENT } from './item-ui.ts';
 import { ItemTooltip } from './item-tooltip.ts';
-import { itemIconSVG } from './item-art.ts';
+import { itemIconSVG, itemPackIconSVG } from './item-art.ts';
 import { generateItem, EQUIPMENT_SLOTS, TIER_COLORS, TIER_NAMES, STAT_LABELS, itemAffixPool, itemDisplayName, itemModifiers, formatStatValue } from './items.ts';
 import { goldBalance } from './wallet.ts';
-import { escapeUI, trapDialogFocus } from './ui-components.ts';
+import { escapeUI, trapDialogFocus, uiIcon } from './ui-components.ts';
 import { ServiceGoldFeedback } from './service-gold-feedback.ts';
 import './service-panel.css';
 
@@ -94,10 +96,9 @@ export class ServicePanel {
     this.element.innerHTML = `<header class="ui-window-header"><span class="ui-header-emblem">${npcEmblem(this.npc.role)}</span><h2 class="ui-title" id="service-title">${NPC_NAMES[this.npc.role]}</h2><span class="service-wallet"><b data-wallet-total>${goldBalance(this.player.character).toLocaleString()}</b> <small>gold</small></span><button class="ui-button ui-button--icon" data-close aria-label="Close service">×</button></header>
       <nav class="service-tabs" aria-label="Services">${this.npc.role === 'enchanter' ? '' : `<button class="ui-button ui-button--quiet" data-tab="shop" aria-pressed="${this.tab === 'shop'}">Shop</button><button class="ui-button ui-button--quiet" data-tab="sell" aria-pressed="${this.tab === 'sell'}">Sell</button>${this.npc.role === 'blacksmith' ? `<button class="ui-button ui-button--quiet" data-tab="improve" aria-pressed="${this.tab === 'improve'}">Enhance</button>` : ''}<button class="ui-button ui-button--quiet" data-tab="buyback" aria-pressed="${this.tab === 'buyback'}">Buyback <small>${this.player.character.commerce.buyback.length}/12</small></button>`}<span>${escapeUI(this.npc.name)}${this.tab === 'improve' ? ` · Services Lv ${vendorLevel(this.npc, this.player.level)}` : ''}</span></nav>
       <div class="service-body"><section class="service-offer ui-scroll-area">${this.tab === 'sell' ? '<div class="service-section-heading"><h3>Selected items</h3><button class="ui-button ui-button--quiet" data-clear-sales>Clear</button></div>' : this.tab === 'improve' ? `<div class="service-forge">${npcEmblem(this.npc.role)}</div>${this.npc.role === 'enchanter' ? `<select class="ui-button" data-operation aria-label="Enchantment">${(['rarity', 'rerollOne', 'rerollAll', 'relevel'] as Improvement[]).map(op => `<option value="${op}" ${op === this.operation ? 'selected' : ''}>${OP_LABELS[op]}</option>`).join('')}</select>` : '<h3>Enhance equipment</h3>'}` : `<div class="service-section-heading"><h3>${this.tab === 'shop' ? `Stock · Lv ${vendorStockLevel(this.npc, this.player.level)}` : 'Buyback'}</h3><span>${this.tab === 'shop' ? `Restocks at level ${(stockEpoch(this.player.level) + 1) * 3 + 1}` : 'Last 12 sales'}</span></div><div class="service-stock ui-item-grid"></div>`}<div class="service-detail"></div></section>
-      <section class="service-bag ui-scroll-area">${this.npc.role !== 'jeweler' && this.tab !== 'sell' ? '<section class="service-equipped-section" aria-label="Equipped gear"><div class="service-section-heading"><h3>Equipped</h3><span>Upgrade in place</span></div><div class="service-equipment ui-item-grid"></div></section>' : ''}<section aria-label="Inventory"><div class="service-section-heading"><h3>Inventory</h3><span>${this.player.character.inventory.filter(Boolean).length} / 64</span></div>${this.tab === 'sell' ? this.rarityControls() : ''}${this.player.character.inventory.some(Boolean) ? '<div class="ui-item-grid-scroll"><div class="service-grid ui-item-grid ui-item-grid--bag"></div></div>' : '<p class="service-empty-bag">No items in your bag.</p>'}</section></section></div>
+      <section class="service-bag ui-scroll-area">${this.npc.role !== 'jeweler' && this.tab !== 'sell' ? '<section class="service-equipped-section" aria-label="Equipped gear"><div class="service-section-heading"><h3>Equipped</h3><span>Upgrade in place</span></div><div class="service-equipment ui-item-grid"></div></section>' : ''}<section aria-label="Inventory"><div class="service-section-heading"><h3>Inventory</h3></div>${this.tab === 'sell' ? this.rarityControls() : ''}<div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section></section></div>
       <footer class="ui-window-footer"><span class="service-message" role="status"></span><button class="ui-button ui-button--primary" data-confirm disabled>Choose an item</button></footer>`;
-    const bag = this.element.querySelector('.service-grid');
-    this.player.character.inventory.forEach((item, index) => bag?.append(this.cell(item, `bag:${index}`)));
+    this.renderInventoryPack();
     const equipment = this.element.querySelector('.service-equipment');
     if (equipment) for (const slot of EQUIPMENT_SLOTS) {
       const wrap = document.createElement('div'); wrap.append(this.cell(this.player.character.equipped[slot], `equipped:${slot}`));
@@ -130,9 +131,9 @@ export class ServicePanel {
     this.element.innerHTML=`<header class="ui-window-header"><h2 id="service-title">${storage?'Storage':'Gambler'}</h2><span>${storage?'':escapeUI(this.npc.name)}</span><strong>${goldBalance(sheet).toLocaleString()} Gold</strong><button class="ui-button ui-button--quiet" data-close aria-label="Close">×</button></header>
       <div class="service-body"><section class="service-offer ui-scroll-area"><div class="service-section-heading"><h3>${storage?'Stored equipment':'Choose an item type'}</h3><span>${storage?`${(sheet.stash??[]).filter(Boolean).length} / ${STASH_CAPACITY}`:`${this.npc.settlementTier??'settlement'} · Lv ${vendorLevel(this.npc,this.player.level)}`}</span></div>
       ${storage?'<div class="service-storage ui-item-grid ui-item-grid--bag"></div>':`<div class="gamble-choices">${GAMBLE_KINDS.map((kind,i)=>`<button class="gamble-choice" data-gamble="${kind}" aria-pressed="${this.selected?.type==='gamble'&&this.selected.kind===kind}"><span>${itemIconSVG(generateItem(i+71,1,kind,undefined,'common'),44)}</span><b>${kind==='head'?'Helmet':kind[0].toUpperCase()+kind.slice(1)}</b><small>${gamblePrice(this.npc,this.player.level,kind).toLocaleString()} gold</small></button>`).join('')}</div><details class="gamble-odds"><summary>Rarity odds</summary><p>${gambleOdds(this.npc).map((w,i)=>`${['Common','Magic','Rare','Epic','Legendary'][i]} ${w}%`).join(' · ')}</p></details>`}
-      <div class="service-detail"></div></section><section class="service-bag ui-scroll-area"><div class="service-section-heading"><h3>Inventory</h3><span>${sheet.inventory.filter(Boolean).length} / 64</span></div><div class="ui-item-grid-scroll"><div class="service-grid ui-item-grid ui-item-grid--bag"></div></div></section></div>
+      <div class="service-detail"></div></section><section class="service-bag ui-scroll-area"><div class="service-section-heading"><h3>Inventory</h3></div><div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section></div>
       <footer class="ui-window-footer"><span class="service-message" role="status"></span><button class="ui-button ui-button--primary" data-confirm disabled>${storage?'Select an item':'Choose an item type'}</button></footer>`;
-    const bag=this.element.querySelector('.service-grid')!;sheet.inventory.forEach((item,i)=>bag.append(this.cell(item,`bag:${i}`)));
+    this.renderInventoryPack();
     const stash=this.element.querySelector('.service-storage');if(stash)(sheet.stash??Array(STASH_CAPACITY).fill(null)).forEach((item,i)=>stash.append(this.cell(item,`stash:${i}`)));
     this.renderDetail();
     if(focus)this.element.querySelector<HTMLElement>(`[data-item="${focus}"]`)?.focus({preventScroll:true});
@@ -149,7 +150,7 @@ export class ServicePanel {
     const storage=selected.type==='store'||selected.type==='retrieve';
     if(storage)detail.innerHTML=itemTooltipMarkup(result.item,{sheet:this.player.character,level:this.player.level});
     button.textContent=storage?selected.type==='store'?'Store item':'Take item':`Gamble · ${result.quote.price.toLocaleString()} gold`;
-    const full=selected.type==='store'?(this.player.character.stash??[]).filter(Boolean).length>=STASH_CAPACITY:!this.player.character.inventory.includes(null);
+    const full=selected.type==='store'?(this.player.character.stash??[]).filter(Boolean).length>=STASH_CAPACITY:!canPackItem(this.player.character,result.item);
     button.disabled=full||goldBalance(this.player.character)<result.quote.price;
     if(button.disabled)this.element.querySelector('.service-message')!.textContent=full?selected.type==='store'?'Storage full.':'Inventory full.':'Not enough gold.';
   }
@@ -160,6 +161,28 @@ export class ServicePanel {
       return `<button type="button" data-sell-tier="${tier}" aria-pressed="${selected}" ${items.length?'':'disabled'} style="--rarity-color:${TIER_COLORS[tier]}">${TIER_NAMES[tier]} <small>${items.length}</small></button>`;
     }).join('')}</div>`;
   }
+  /** Mirror the carried pack; empty space and overflow retain their actual positions. */
+  private renderInventoryPack(): void {
+    const root = this.element.querySelector<HTMLElement>('.service-grid')!;
+    root.style.setProperty('--pack-columns', String(PACK_COLUMNS));
+    const sheet = this.player.character, layout = resolvePackLayout(sheet);
+    root.innerHTML = `<div class="character-bag character-tetris" role="group" aria-label="Inventory, ${PACK_COLUMNS} columns by ${PACK_ROWS} rows">
+      ${Array.from({length:PACK_CELLS},(_,cell)=>`<span class="character-grid-cell" aria-hidden="true" style="grid-column:${cell%PACK_COLUMNS+1};grid-row:${Math.floor(cell/PACK_COLUMNS)+1}"></span>`).join('')}</div>
+      <section class="character-charms" aria-label="Charms, reserved for a future update"><header><span>${uiIcon('diamond')} Charms</span><small>Reserved</small></header><div class="character-charm-grid" aria-hidden="true">${Array.from({length:PACK_COLUMNS*CHARM_ROWS},()=>'<span>·</span>').join('')}</div></section>
+      <section class="character-overflow" hidden><header>Pack overflow <small>Make space to carry these items</small></header><div class="character-overflow-items"></div></section>`;
+    const bag = root.querySelector<HTMLElement>('.character-bag')!, overflow = root.querySelector<HTMLElement>('.character-overflow-items')!;
+    sheet.inventory.forEach((item,index)=>{
+      if (!item) return;
+      const cell = this.cell(item, `bag:${index}`), position = layout[item.id], size = itemFootprint(item);
+      cell.classList.add('character-bag-slot');
+      cell.style.gridColumn = position === undefined ? `span ${size.width}` : `${position % PACK_COLUMNS + 1} / span ${size.width}`;
+      cell.style.gridRow = position === undefined ? `span ${size.height}` : `${Math.floor(position / PACK_COLUMNS) + 1} / span ${size.height}`;
+      cell.querySelector('svg')?.remove(); cell.insertAdjacentHTML('afterbegin', itemPackIconSVG(item,size.width,size.height));
+      (position === undefined ? overflow : bag).append(cell);
+    });
+    root.querySelector<HTMLElement>('.character-overflow')!.hidden = !overflow.childElementCount;
+  }
+
   private cell(item: Item | null, key: string): HTMLButtonElement {
     const cell = document.createElement('button'); cell.type = 'button'; cell.className = 'ui-slot'; cell.dataset.item = key;
     updateItemSlot(cell, item, { level: this.player.level, emptyMarkup: '', label: item ? itemDisplayName(item) : 'Empty slot' });

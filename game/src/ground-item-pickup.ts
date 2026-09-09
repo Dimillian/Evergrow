@@ -1,3 +1,4 @@
+import { canPackItem } from './inventory-grid.ts';
 import type { GroundItem } from './character-types.ts';
 import type { Input, Player, WorldQuery } from './model.ts';
 import { LOOT_RULES } from './combat-content.ts';
@@ -10,7 +11,7 @@ export function groundPickupProblem(player: Player, drop: GroundItem | undefined
   if (!drop || player.dead) return 'Item unavailable';
   if (drop.flight && time < drop.flight.at + drop.flight.delay + TREASURE_FLIGHT_DURATION) return 'Item is landing';
   if (Math.hypot(drop.x-player.x,drop.y-player.y)>GROUND_PICKUP_RANGE) return 'Move closer';
-  if (!player.character.inventory.includes(null)) return 'Inventory full';
+  if (!canPackItem(player.character, drop.item)) return 'Inventory full';
   return null;
 }
 

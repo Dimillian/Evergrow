@@ -5,6 +5,10 @@ Evergrow opens in a procedural forest character hall. Eight slots show name, lev
 
 Every character starts at level 1 with the same attributes, worn leather outfit, the selected level-one common weapon, no allocated passives beyond the origin, empty skill-rank/specialization selections, Overload disabled, five empty skill bindings and an empty 64-cell inventory. Each character has an independently chosen world seed: creation supplies a random value from 0 through 4294967295, with an editable field and Randomize button. The seed remains visible in saved-character selection. Continuing reconstructs the saved world before restoring progress; exploration remains scoped to both the seed and character. Saved characters keep their chosen seed. The September 6 asynchronous-storage checkpoint starts fresh local slots; previous localStorage test characters are not imported.
 
+## Local spatial pack
+
+The local inventory prototype preserves older 64-entry bags and stores optional item-ID-to-cell positions in `inventoryLayout`. New bags allow 72 item records for a 12×6 physical grid; larger items consume multiple cells. Unfitted old items remain accessible as overflow, and the four charm rows are reserved. Geometry is validated with the save, including ownership, bounds and overlaps. See the local spatial inventory section in `character-systems.md`. This prototype has not been published.
+
 ## Checkpoint contents
 
 - Name/identity, level, current-level XP, attributes, unspent points and allocated nodes.

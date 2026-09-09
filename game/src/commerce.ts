@@ -1,3 +1,4 @@
+import { normalizePackLayout, canPackItem } from './inventory-grid.ts';
 import { servicePolicy } from './settlement-services.ts';
 import { itemMaterialValue, itemMaterialService } from './item-materials.ts';
 import type { CharacterSheet, Item, ItemTier, ItemKind, EquipmentSlot } from './character-types.ts';
@@ -129,12 +130,13 @@ export function planService(sheet: CharacterSheet, npc: TownNPC, level: number, 
   } };
   const { request, price } = quote; let item = current.item, message = '';
   if (request.type !== 'sell' && request.type !== 'sellMany' && goldBalance(sheet) < price) return { ok: false, message: 'Not enough gold.' };
-  if ((request.type === 'buy' || request.type === 'buyback' || request.type === 'gamble' || request.type === 'retrieve') && !character.inventory.includes(null)) return { ok: false, message: 'Inventory full.' };
+  if ((request.type === 'buy' || request.type === 'buyback' || request.type === 'gamble' || request.type === 'retrieve') && !canPackItem(character, item)) return { ok: false, message: 'Inventory full.' };
   if(request.type==='store'||request.type==='retrieve') {
     if(request.type==='store'){
       const slot=character.stash!.indexOf(null);if(slot<0)return {ok:false,message:'Storage full.'};
       character.stash![slot]=item;character.inventory[request.bag]=null;
     }else{if(!addInventoryItem(character,item))return {ok:false,message:'Inventory full.'};character.stash![request.slot]=null;}
+    normalizePackLayout(character);
     return {ok:true,character,message:request.type==='store'?'Item stored.':'Item retrieved.',item};
   }
   if (request.type === 'sellMany') {
@@ -165,5 +167,6 @@ export function planService(sheet: CharacterSheet, npc: TownNPC, level: number, 
       message = `${itemDisplayName(item)} improved`;
     }
   }
+  normalizePackLayout(character);
   return { ok: true, character, message, item };
 }
