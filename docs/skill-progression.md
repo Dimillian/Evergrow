@@ -8,7 +8,9 @@ An active skill costs one point once its path is connected. Its first purchase g
 
 All 20 skills support ranks 1–5. The original 17 skills each have a deeper mastery node that opens ranks 6–7, which still cost one point each. Ultimates currently stop at rank 5. The player still earns one skill point and five attribute points per level.
 
-Double-click an unowned node to allocate its affordable shortest path. Double-click an owned skill to buy one rank, or use **Upgrade** in its panel. The panel previews the next purchased rank. **Cast at rank** selects any purchased rank without spending points, healing, or resetting cooldowns. A deliberately chosen lower rank stays selected when buying another rank. No respec/refund is implemented.
+Double-click an unowned node to allocate its affordable shortest path. Double-click an owned skill to buy one rank, or use **Upgrade** in its panel. The panel previews the next purchased rank. **Cast at rank** selects any purchased rank without spending points, healing, or resetting cooldowns. Buying a rank immediately makes that rank active, including when a lower casting rank was selected. You can still select any purchased rank afterward. No respec/refund is implemented.
+
+The sidebar pairs the purchased-rank counter with an inline Upgrade button and a concise next-rank preview. Active rank and specialization sit side by side; the specialization selector contains unlocked choices. A collapsed Explore paths list shows the other variants and mastery route. Existing skill-bar bindings remain unchanged.
 
 ## Costs and potency
 
@@ -30,7 +32,7 @@ Example: ordinary Fireball costs 12 mana at rank 1, 17 at rank 3, and 24 at rank
 
 ## Deeper specializations
 
-Every one of the 20 skills has **three specializations (60 total)**. Each skill grows three independent leaves: **skill → potency → efficiency → specialization**. A leaf costs three points after unlocking its parent skill, and has no entrance from another school. All three may be unlocked; choose one or Original in the owning skill's details. Purchases never switch the selected variant, and switching spends no points or resets no cooldowns.
+Every one of the 20 skills has **three specializations (60 total)**. Each skill grows three independent leaves: **skill → potency → efficiency → specialization**. A leaf costs three points after unlocking its parent skill, and has no entrance from another school. All three may be unlocked; choose one or Original in the owning skill's details. Unlocking a specialization immediately activates it for its owning skill, replacing the previous variant while preserving the active rank. This applies to single-node and complete-route purchases. Passive leaf and mastery unlocks do not switch variants. Manual switching spends no points and does not reset cooldowns.
 
 Each potency star grants **+6% damage to that skill** (Bulwark instead gets +6% guard duration); each efficiency star grants **4% reduced mana cost to that skill**, including Tempest upkeep. These skill-specific passives apply across all variants and stack additively within their family: owning all leaves gives +18% potency and 12% cost reduction. They do not modify LMB or other skills. The damage and cost factors multiply the existing rank/equipment/global-stat calculation.
 

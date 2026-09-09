@@ -497,5 +497,6 @@ export function allocateNode(sheet: CharacterSheet, nodeId: string): ActionResul
   if (!Number.isSafeInteger(sheet.skillPoints) || sheet.skillPoints < 1) return { ok: false, message: 'Earn a skill point by leveling up.' };
   if (!node.neighbors.some(id => sheet.allocatedNodes.includes(id))) return { ok: false, message: 'Connect this star to your allocated path first.' };
   sheet.allocatedNodes.push(nodeId); sheet.skillPoints--;
+  if (node.specialization && node.developmentSkill) sheet.skillSpecializations[node.developmentSkill] = node.specialization;
   return { ok: true };
 }

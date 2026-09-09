@@ -4,7 +4,7 @@ import { Simulation } from '../src/simulation.ts';
 import { executeCharacterCommand } from '../src/character-commands.ts';
 import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
 import { SKILL_EXECUTION } from '../src/skill-execution-content.ts';
-import { SKILL_TREE, SKILL_NODES } from '../src/skill-tree.ts';
+import { SKILL_TREE, SKILL_NODES, allocateNode } from '../src/skill-tree.ts';
 import { resolveSkill, learnedSkillRank, activeSkillRank, maximumSkillRank, SKILL_SPECIALIZATIONS, masteryNode, specializationNode, specializationPassiveNode, skillLeafBonuses, OVERLOAD_NODE } from '../src/skill-progression.ts';
 import { CHARACTER_SAVE_VERSION, decodeCharacterSave } from '../src/character-save.ts';
 import type { SkillId } from '../src/character-types.ts';
@@ -18,6 +18,29 @@ function setup() {
   return { sim, p: sim.player, sheet: sim.player.character, command, unlock };
 }
 const close = (a: number, b: number) => assert.ok(Math.abs(a-b) < 1e-8, `${a} ≠ ${b}`);
+
+test('new specializations activate through routes and single nodes without changing bindings, ranks or cooldowns', () => {
+  const {p,sheet,command,unlock} = setup();
+  unlock('skill:fireball');
+  assert.ok(command({type:'assignSkill',slot:0,skill:'fireball'}).ok);
+  assert.ok(command({type:'upgradeSkill',skill:'fireball'}).ok);
+  const variants = SKILL_SPECIALIZATIONS.filter(v => v.skill === 'fireball');
+  p.hp = 41; p.mana = 23; p.skillCooldowns.fireball = 5;
+  unlock(specializationNode(variants[0].id));
+  assert.equal(sheet.skillSpecializations.fireball,variants[0].id);
+  unlock(specializationPassiveNode(variants[1].id,'efficiency'));
+  assert.equal(sheet.skillSpecializations.fireball,variants[0].id,'passives do not change the variant');
+  assert.ok(allocateNode(sheet,specializationNode(variants[1].id)).ok);
+  assert.equal(sheet.skillSpecializations.fireball,variants[1].id);
+  assert.equal(activeSkillRank(sheet,'fireball'),2);
+  assert.equal(sheet.skillSlots[0],'fireball');
+  assert.equal(p.hp,41); assert.equal(p.mana,23); assert.equal(p.skillCooldowns.fireball,5);
+  sheet.skillPoints=0;
+  const before=structuredClone(p);
+  assert.equal(command({type:'allocateNode',id:specializationNode(variants[2].id)}).ok,false);
+  assert.equal(command({type:'upgradeSkill',skill:'fireball'}).ok,false);
+  assert.deepEqual(p,before,'failed purchases must not change the active configuration');
+});
 
 test('rank purchases conserve points, do not heal or reset cooldowns, and stop at the mastery ceiling', () => {
   const { p, sheet, command, unlock } = setup();
@@ -46,6 +69,8 @@ test('lower casting ranks are reversible, free, and cannot exceed purchased rank
   const points=sheet.skillPoints;
   assert.ok(command({ type:'configureSkill',skill:'fireball',rank:1,specialization:null }).ok);
   command({ type:'upgradeSkill',skill:'fireball' });
+  assert.equal(activeSkillRank(sheet,'fireball'),3);
+  assert.ok(command({ type:'configureSkill',skill:'fireball',rank:1,specialization:null }).ok);
   assert.equal(activeSkillRank(sheet,'fireball'),1);
   const before=JSON.stringify(sheet);
   assert.equal(command({ type:'configureSkill',skill:'fireball',rank:4,specialization:null }).ok,false);
@@ -148,14 +173,19 @@ test('every skill owns three exclusive three-point leaves with no sideways entra
   }
 });
 
-test('leaf passives affect only their owning skill and unlocking all choices never changes the selected variant', () => {
+test('leaf passives affect only their owning skill and each new specialization becomes active', () => {
   for (const skill of Object.values(SKILL_DEFINITIONS)) {
     const {p,sheet,command,unlock}=setup(); unlock(`skill:${skill.id}`);
     const before=resolveSkill(skill.id,p.derived,sheet), other=skill.id==='fireball'?'cleave':'fireball';
     const unrelated=resolveSkill(other,p.derived,sheet), points=sheet.skillPoints;
     const variants=SKILL_SPECIALIZATIONS.filter(v=>v.skill===skill.id);
-    for(const v of variants) unlock(specializationNode(v.id));
+    for(const v of variants) {
+      unlock(specializationNode(v.id));
+      assert.equal(sheet.skillSpecializations[skill.id],v.id);
+      assert.equal(resolveSkill(skill.id,p.derived,sheet).variant?.id,v.id);
+    }
     assert.equal(sheet.skillPoints,points-9);
+    assert.ok(command({type:'configureSkill',skill:skill.id,rank:1,specialization:null}).ok);
     assert.equal(sheet.skillSpecializations[skill.id],undefined);
     const after=resolveSkill(skill.id,p.derived,sheet);
     close(after.damageMultiplier,before.damageMultiplier*1.18);

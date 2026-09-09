@@ -49,5 +49,9 @@ export function allocateSkillRoute(sheet: CharacterSheet, nodeId: string): Actio
     return { ok: false, message: `Requires ${path.length} skill ${path.length === 1 ? 'point' : 'points'}.` };
   sheet.allocatedNodes.push(...path);
   sheet.skillPoints -= path.length;
+  for (const id of path) {
+    const node = SKILL_NODES.get(id)!;
+    if (node.specialization && node.developmentSkill) sheet.skillSpecializations[node.developmentSkill] = node.specialization;
+  }
   return { ok: true };
 }

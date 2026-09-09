@@ -107,7 +107,9 @@ export function upgradeSkill(sheet: CharacterSheet, id: SkillId): ActionResult {
   const rank = learnedSkillRank(sheet, id);
   if (!rank || rank >= maximumSkillRank(sheet, id)) return { ok: false, message: 'Unlock the skill or its next mastery rank first.' };
   if (!Number.isSafeInteger(sheet.skillPoints) || sheet.skillPoints < 1) return { ok: false, message: 'Requires one skill point.' };
-  sheet.skillRanks[id] = rank + 1; sheet.skillPoints--;
+  sheet.skillRanks[id] = rank + 1;
+  sheet.activeSkillRanks[id] = rank + 1;
+  sheet.skillPoints--;
   return { ok: true };
 }
 export function configureSkill(sheet: CharacterSheet, id: SkillId, rank: number, specialization: string | null): ActionResult {
