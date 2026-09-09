@@ -1,6 +1,6 @@
 export interface BarkRect { x: number; y: number; width: number; height: number; }
 export interface BarkBox extends BarkRect { lines: readonly string[]; tailX: number; tailY: number; bodyHeight: number; }
-export const BARK_LAYOUT = Object.freeze({ fontSize: 16, lineHeight: 19, paddingX: 12, paddingY: 9, maxWidth: 220, tail: 8, headGap: 10, margin: 8 });
+export const BARK_LAYOUT = Object.freeze({ fontSize: 8, lineHeight: 9.5, paddingX: 6, paddingY: 4.5, maxWidth: 110, tail: 4, headGap: 5, margin: 8 });
 export function barkOverlap(a: BarkRect, b: BarkRect): boolean {
   return a.x < b.x + b.width + 4 && a.x + a.width + 4 > b.x
     && a.y < b.y + b.height + 4 && a.y + a.height + 4 > b.y;
@@ -26,12 +26,12 @@ export function placeBattleBark(value: string, head: { x: number; y: number }, v
   }
   const width = Math.max(...lines.map(measure)) + r.paddingX * 2;
   const bodyHeight = lines.length * r.lineHeight + r.paddingY * 2;
-  for (const up of [0, 12]) for (const side of [0, -24, 24]) {
+  for (const up of [0, 6]) for (const side of [0, -12, 12]) {
     const height = bodyHeight + r.tail + up;
     const box: BarkBox = { x: head.x - width / 2 + side, y: head.y - r.headGap - height,
       width, height, bodyHeight, lines, tailX: head.x, tailY: head.y - r.headGap };
     if (box.x < r.margin || box.y < r.margin || box.x + width > viewport.width - r.margin
-      || box.y + height > viewport.height - r.margin || Math.abs(side) > width / 2 - 14) continue;
+      || box.y + height > viewport.height - r.margin || Math.abs(side) > width / 2 - 7) continue;
     if (!blocked.some(rect => barkOverlap(box, rect))) return box;
   }
   return null;

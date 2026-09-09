@@ -12,13 +12,13 @@ export function measureBattleBark(c: CanvasRenderingContext2D, value: string): n
  * Canvas text uses the native UI surface, never the world CRT or camera scale. */
 export function drawBattleBark(c: CanvasRenderingContext2D, box: BarkBox, age: number): void {
   if (!GAME_FEATURES.battleBarks) return;
-  const { x, y, width: w, bodyHeight: h, tailX, tailY } = box, radius = 7;
+  const { x, y, width: w, bodyHeight: h, tailX, tailY } = box, radius = 3.5;
   c.save();
   c.globalAlpha *= Math.max(0, Math.min(1, age / BARK_RULES.fadeIn, (BARK_RULES.duration - age) / BARK_RULES.fadeOut));
   c.beginPath(); c.moveTo(x + radius, y); c.lineTo(x + w - radius, y);
   c.quadraticCurveTo(x + w, y, x + w, y + radius); c.lineTo(x + w, y + h - radius);
   c.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-  c.lineTo(tailX + 6, y + h); c.lineTo(tailX, tailY); c.lineTo(tailX - 6, y + h);
+  c.lineTo(tailX + 3, y + h); c.lineTo(tailX, tailY); c.lineTo(tailX - 3, y + h);
   c.lineTo(x + radius, y + h); c.quadraticCurveTo(x, y + h, x, y + h - radius);
   c.lineTo(x, y + radius); c.quadraticCurveTo(x, y, x + radius, y); c.closePath();
   c.fillStyle = '#202a2bee'; c.fill(); c.strokeStyle = '#8e9890'; c.lineWidth = 1; c.stroke();

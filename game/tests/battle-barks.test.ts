@@ -181,10 +181,10 @@ test('presentation tracks bounded current actors and never grows with a long jou
 });
 
 test('layout wraps measured text, keeps head tails attached and yields to blocked or narrow space', () => {
-  const measure = (line: string) => line.length * 8, viewport = { width: 960, height: 600 }, head = { x: 480, y: 300 };
+  const measure = (line: string) => line.length * 4, viewport = { width: 960, height: 600 }, head = { x: 480, y: 300 };
   const box = placeBattleBark('Hold still. Heavy hammer.', head, viewport, measure, [])!;
-  assert.ok(box); assert.ok(box.width <= 220); assert.equal(box.tailX, head.x); assert.equal(box.tailY, head.y - 10);
-  const wrapped = placeBattleBark('Let me borrow your warmth.', head, viewport, () => 210, []);
+  assert.ok(box); assert.ok(box.width <= 110); assert.equal(box.tailX, head.x); assert.equal(box.tailY, head.y - 5);
+  const wrapped = placeBattleBark('Let me borrow your warmth.', head, viewport, () => 105, []);
   assert.equal(wrapped, null, 'an unbreakable overwide word does not shrink');
   const twoLines = placeBattleBark('Let me borrow your warmth.', head, viewport, measure, [])!;
   assert.equal(twoLines.lines.length, 2);
@@ -232,7 +232,7 @@ function sceneFixture(kind: EnemyKind = 'brute') {
   const drawn: { value: string; font: string }[] = [];
   const context = {
     font: '', globalAlpha: 1, save() {}, restore() {}, beginPath() {}, moveTo() {}, lineTo() {},
-    quadraticCurveTo() {}, closePath() {}, fill() {}, stroke() {}, measureText: (s: string) => ({ width: s.length * 7 }),
+    quadraticCurveTo() {}, closePath() {}, fill() {}, stroke() {}, measureText: (s: string) => ({ width: s.length * 3.5 }),
     fillText(value: string) { drawn.push({ value, font: this.font }); },
   };
   const c = context as unknown as CanvasRenderingContext2D;
@@ -247,7 +247,7 @@ test('runtime overlay admits all seven humanoids above their own bodies at diffe
     scene.draw(c, sim, w, view, true, [], []);
     sim.time = .2; scene.draw(c, sim, w, view, true, [], []);
     assert.ok(drawn.length > 0, `${kind} at ${zoom} must not collide with its own clearance`);
-    assert.ok(drawn.every(line => line.font.startsWith('16px ')), 'camera zoom cannot scale the font');
+    assert.ok(drawn.every(line => line.font.startsWith('8px ')), 'camera zoom cannot scale the font');
   }
 });
 
