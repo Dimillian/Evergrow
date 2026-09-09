@@ -29,6 +29,18 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.0 / Sites version 31, publicly deployed on 2026-09-09 at 14:05:58 UTC.
+- Published source: `1d7b20b216cf6551753c7541c67a1f7d60d569fd`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_8d4ef43cf4548191ad40d1ba69d4f092`.
+- Deployment: `appgdep_6aa167ae640c8191b9f067ee8e8b52f5`; Sites returned `succeeded`.
+- Spatial inventory, dedicated charm grid and stone loot, elemental resistances, shared vendor selling, repeat gambling and saved item dropping.
+- Detailed stat explanations, whole-number item bonuses and halved Dexterity conversion; starter armor upgrades and reward/stat accounting fixes.
+- Existing characters retain progress. Saved item bonuses normalize to whole numbers on read; matching client/Worker validators ship together. No character reset or database migration.
+- Passed 1,104 code tests, three release-note checks, type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.2.1 / Sites version 30, publicly deployed on 2026-09-09 at 11:58:22 UTC.
 - Published source: `d21d361dd328721cf559e682f11f6705b680d9ba`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_0726321e2cb48191ba7f593ce5969740`.
@@ -36,7 +48,7 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 - Valid equipment slots glow green throughout a drag and brighten over the drop target, using existing equip restrictions.
 - Passed 15 inventory/changelog checks, type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation. No save or database changes.
 
-## Previous verified publication
+## Earlier verified publication
 
 - Game v0.2.0 / Sites version 29, publicly deployed on 2026-09-09 at 11:53:57 UTC.
 - Published source: `4ef69a631cf603d763e61023a7181cebb30ac0f2`.
