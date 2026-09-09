@@ -29,6 +29,18 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.2.0 / Sites version 29, publicly deployed on 2026-09-09 at 11:53:57 UTC.
+- Published source: `4ef69a631cf603d763e61023a7181cebb30ac0f2`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_e123bdb67a6081918f68b3b42c43afc4`.
+- Deployment: `appgdep_6aa148c49a7c8191a288247b41b11214`; Sites returned `succeeded`.
+- Settlement/village/city layouts, roaming residents, personal storage, gambling, tiered shops and city enchantment preferences.
+- Biome architecture, continuous fortifications, refined stalls and NPC shadows; deliberate equipment pickup, consistent item grids and layered wilderness lighting.
+- Generation-9 characters upgrade to generation 10 on Continue, preserving progress and exploration. Town stock refreshes once; obstructed surface positions move safely. Unsupported older expedition formats remain preserved and unsupported. Matching client/Worker validators shipped together; no database migration.
+- Passed 1,058 code tests, type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation.
+- Display history is now 0.1.0–0.1.15 followed by the user-approved 0.2.0 milestone. Future routine publications use 0.2.x.
+
+## Previous verified publication
+
 - Game v0.9.0 / Sites version 28, publicly deployed on 2026-09-08 at 19:19:56 UTC.
 - Published source: `87d3172333451b9c3b8ed1aefd0b32bb462b0bf1`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_0bfdf63d6b9881919cf9e715ef473a61`.
@@ -38,7 +50,7 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 - Dungeon layout version 4 deliberately rejects older expedition payloads. Characters containing older saved expeditions require a fresh character; existing saves remain stored. Characters without an older expedition are unaffected. Client and Worker validators were published together; no database migration.
 - Passed 1,032 code tests, three release-note checks, type checking, the cloud-enabled client/Worker build, archive validation and clean-source release validation. Dungeon workshop remains local-only and excluded from the production archive.
 
-## Previous verified publication
+## Earlier verified publication
 
 - Game v0.8.0 / Sites version 27, publicly deployed on 2026-09-08 at 17:57:50 UTC.
 - Published source: `7bc26887d942089f54ba565bbaf38578af37c46c`.
