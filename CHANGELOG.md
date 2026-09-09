@@ -1,5 +1,24 @@
 # Evergrow changelog
 
+## v0.3.3 — 2026-09-09T15:41:00Z
+
+### New
+
+- Expand your personal storage to five tabs, each holding 96 items.
+- Unlock extra tabs for 10,000, 50,000, 200,000 and 750,000 gold, in order.
+
+### Tweaks
+
+- A taller chest window gives more room to the grid; item details appear only on hover.
+- Chest Auto-sort organizes the selected tab; your carried inventory keeps its own button.
+
+### Fixes
+
+- Failed tab purchases never spend gold; repeated or outdated offers cannot unlock another tab.
+- A full storage tab never sends items into a different tab, and transfers preserve your scroll position.
+
+> Existing stored items remain in your free first tab. Characters and progress are preserved.
+
 ## v0.3.2 — 2026-09-09T15:21:00Z
 
 ### New
