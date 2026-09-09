@@ -5,17 +5,16 @@ import { PACK_COLUMNS, PACK_ROWS, PACK_CELLS, CHARM_ROWS, resolvePackLayout, sto
 import './inventory-pack.css';
 import { settlementBenefits } from './settlement-services.ts';
 import { vendorLevel } from './npcs.ts';
-import { compareCharacterStats, previewEquipmentChange } from './equipment-preview.ts';
 import type { Player } from './model.ts';
 import type { Item, ItemKind, ItemTier, EquipmentSlot } from './character-types.ts';
 import { NPC_NAMES, NPC_COLORS, type TownNPC } from './npcs.ts';
 import { npcEmblem } from './npc-art.ts';
 import { GAMBLE_KINDS, gambleOdds, premiumStockSlot, gamblePrice, STASH_CAPACITY, vendorStock, vendorStockLevel, quoteService, sourceItem, itemPrice, stockEpoch, type ServiceQuote, type ServiceRequest, type ItemSource, type SaleItem } from './commerce.ts';
 import { improveItem, rerollPool, affixCategory, AFFIX_FOCUSES, type AffixFocus, type Improvement } from './item-improvement.ts';
-import { updateItemSlot, itemTooltipMarkup, CHANGE_LABELS, PREVIEW_PERCENT } from './item-ui.ts';
+import { updateItemSlot } from './item-ui.ts';
 import { ItemTooltip } from './item-tooltip.ts';
 import { itemIconSVG, itemPackIconSVG } from './item-art.ts';
-import { generateItem, EQUIPMENT_SLOTS, TIER_COLORS, TIER_NAMES, STAT_LABELS, itemAffixPool, itemDisplayName, itemModifiers, formatStatValue } from './items.ts';
+import { generateItem, EQUIPMENT_SLOTS, TIER_COLORS, TIER_NAMES, STAT_LABELS, itemAffixPool, itemDisplayName, formatStatValue } from './items.ts';
 import { goldBalance } from './wallet.ts';
 import { escapeUI, trapDialogFocus, uiIcon } from './ui-components.ts';
 import { ServiceGoldFeedback } from './service-gold-feedback.ts';
@@ -207,7 +206,15 @@ export class ServicePanel {
     this.quote=null;const detail=this.element.querySelector<HTMLElement>('.service-detail')!,button=this.element.querySelector<HTMLButtonElement>('[data-confirm]')!;
     button.disabled=true; button.textContent='Choose an item type';
     this.element.querySelector('.service-message')!.textContent='';
-    detail.innerHTML=this.revealed?`<div class="gamble-reveal" style="--item-color:${TIER_COLORS[this.revealed.tier]}"><span class="service-item-art">${itemIconSVG(this.revealed,88)}</span><h3>${escapeUI(itemDisplayName(this.revealed))}</h3>${itemTooltipMarkup(this.revealed,{sheet:this.player.character,level:this.player.level})}</div>`:'';
+    detail.replaceChildren();
+    const revealedIndex=this.revealed?this.player.character.inventory.findIndex(item=>item?.id===this.revealed!.id):-1;
+    detail.hidden=revealedIndex<0;
+    if (revealedIndex>=0) {
+      const item=this.player.character.inventory[revealedIndex]!, row=document.createElement('div');
+      row.className='gamble-reveal';row.style.setProperty('--item-color',TIER_COLORS[item.tier]);
+      row.append(this.cell(item,`bag:${revealedIndex}`));
+      const name=document.createElement('span');name.textContent=itemDisplayName(item);name.dataset.item=`bag:${revealedIndex}`;row.append(name);detail.append(row);
+    }
     if(!this.selected)return;
     const result=quoteService(this.player.character,this.npc,this.player.level,this.selected);
     if(!result.ok){this.element.querySelector('.service-message')!.textContent=result.message;return;}
@@ -352,7 +359,6 @@ export class ServicePanel {
       this.selected = value.request;
       if (value.source && 'equipped' in value.source && this.tab !== 'improve') { this.tab = 'improve'; this.render(); }
       else this.renderDetail();
-      this.element.querySelector('.service-detail')?.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
       if (e.shiftKey && this.tab !== 'improve') this.confirm();
     }
     if (button.hasAttribute('data-confirm')) this.confirm();
@@ -363,33 +369,27 @@ export class ServicePanel {
     this.quote = null; const selected = this.selected;
     const detail = this.element.querySelector<HTMLElement>('.service-detail')!, button = this.element.querySelector<HTMLButtonElement>('[data-confirm]')!;
     const message = this.element.querySelector<HTMLElement>('.service-message')!; message.textContent = '';
+    detail.replaceChildren(); detail.hidden=this.tab!=='sell'&&this.tab!=='improve';
     button.disabled = true; button.textContent = 'Choose an item';
     if (this.tab === 'sell') { this.renderSales(detail, button, message); return; }
     if (selected?.type === 'sellMany') return;
-    if (!selected) { detail.innerHTML = `<p class="service-empty">${this.tab === 'improve' ? 'Choose equipment to improve.' : 'Hover to compare. Select to trade.'}</p>`; return; }
+    if (!selected) { detail.hidden=true; if(this.tab==='improve')message.textContent='Choose equipment to improve.'; return; }
     for (const cell of this.element.querySelectorAll<HTMLElement>('[data-item]')) {
       const entry = this.resolve(cell.dataset.item!);
       cell.classList.toggle('is-selected', Boolean(entry && JSON.stringify(entry.request) === JSON.stringify(selected)));
     }
     const result = quoteService(this.player.character, this.npc, this.player.level, selected);
-    if (!result.ok) { detail.innerHTML = `<p class="service-empty">${escapeUI(result.message)}</p>`; return; }
+    if (!result.ok) { detail.hidden=true; message.textContent=result.message; return; }
     const { item, quote } = result; if(!item)return; this.quote = quote;
     const buying = selected.type === 'buy' || selected.type === 'buyback', improving = selected.type === 'improve';
     const label = improving ? OP_LABELS[selected.operation] : buying ? 'Buy' : 'Sell';
     button.textContent = `${label} · ${quote.price.toLocaleString()} gold`;
     button.disabled = selected.type !== 'sell' && goldBalance(this.player.character) < quote.price;
-    if (button.disabled) message.textContent = 'Not enough gold.';
-    detail.style.setProperty('--item-color', TIER_COLORS[item.tier]);
-    detail.innerHTML = `<div class="service-selected"><div class="service-item-art">${itemIconSVG(item, 88)}</div><div><span class="ui-rarity-badge" data-tier="${item.tier}">${TIER_NAMES[item.tier]}</span><h3>${escapeUI(itemDisplayName(item))}</h3></div></div>`;
-    if (!improving) {
-      detail.innerHTML += itemTooltipMarkup(item, { sheet: this.player.character, level: this.player.level,
-        sourceIndex: selected.type === 'sell' && 'bag' in selected.source ? selected.source.bag : undefined });
-      return;
-    }
+    message.textContent = button.disabled ? 'Not enough gold.' : itemDisplayName(item);
+    if (!improving) return;
     const op = selected.operation;
     if (op === 'rerollOne') detail.innerHTML += `<label class="service-affix">Affix<select class="ui-button" data-affix aria-label="Affix to replace">${item.affixes.map((a, index) => `<option value="${index}" ${index === this.selectedAffix() ? 'selected' : ''}>${escapeUI(STAT_LABELS[a.stat])} ${formatStatValue(a.stat, a.value)}</option>`).join('')}</select></label>`;
     if (op === 'rerollOne' || op === 'rerollAll') {
-      detail.innerHTML += `<div class="service-changes">${item.affixes.map((a, i) => `<div class="${op === 'rerollOne' && i === this.selectedAffix() ? 'is-selected-affix' : ''}"><span>${escapeUI(STAT_LABELS[a.stat])}</span><b>${formatStatValue(a.stat, a.value)}</b></div>`).join('')}</div>`;
       const pool=rerollPool(item,op==='rerollOne'?this.selectedAffix():undefined,selected.focus);
       const focusPool=op==='rerollAll'&&item.affixes.length>1?itemAffixPool(item):pool;
       const total=pool.reduce((sum,a)=>sum+(a.weight??1),0);
@@ -399,22 +399,7 @@ export class ServicePanel {
 
     } else {
       const next = improveItem(item, op, vendorLevel(this.npc, this.player.level), 1);
-      // Random new affixes are deliberately excluded from the pre-purchase preview.
-      if (op === 'rarity') next.affixes = next.affixes.slice(0, item.affixes.length);
-      const before = { ...itemModifiers(item), ...(item.weapon ? { baseDamage: item.weapon.damage } : {}), ...(item.shield ? { block: item.shield.blockChance, blocked: item.shield.blockReduction } : {}) };
-      const after = { ...itemModifiers(next), ...(next.weapon ? { baseDamage: next.weapon.damage } : {}), ...(next.shield ? { block: next.shield.blockChance, blocked: next.shield.blockReduction } : {}) };
-      detail.innerHTML += `<div class="service-result-heading">${op === 'enhance' ? `+${item.recipe.enhancement} → +${next.recipe.enhancement}` : op === 'rarity' ? `${TIER_NAMES[item.tier]} → ${TIER_NAMES[next.tier]}` : `Item level ${item.itemLevel} → ${next.itemLevel}`}</div><div class="service-changes">${Object.entries(after).filter(([key, value]) => value !== before[key as keyof typeof before]).map(([key, value]) => `<div><span>${escapeUI(({ baseDamage: 'Base damage', block: 'Block chance', blocked: 'Damage blocked', ...STAT_LABELS } as Record<string, string>)[key])}</span><span>${(before as Record<string, number>)[key] ?? 0} <b>→ ${Number(value.toFixed(1))}</b></span></div>`).join('') || '<p>No base stat change.</p>'}</div>`;
-      if (selected.type === 'improve' && op !== 'rarity') {
-        const source = selected.source;
-        const preview = 'bag' in source ? previewEquipmentChange(this.player.character, next, this.player.level, { sourceIndex: source.bag }) : null;
-        const changes = 'equipped' in source ? compareCharacterStats(this.player.character,
-          { ...this.player.character, equipped: { ...this.player.character.equipped, [source.equipped]: next } }, this.player.level)
-          : preview?.ok ? preview.changes : [];
-        detail.innerHTML += `<div class="service-effective"><h3>${'equipped' in source ? 'Character changes' : 'If equipped'}</h3>${changes.map(change => {
-          const percent = PREVIEW_PERCENT.has(change.key), delta = (change.after - change.before) * (percent ? 100 : 1);
-          return `<div><span>${CHANGE_LABELS[change.key]}</span><b class="${delta < 0 ? 'is-loss' : 'is-gain'}">${delta > 0 ? '+' : ''}${Number(delta.toFixed(2))}${percent ? '%' : ''}</b></div>`;
-        }).join('') || `<p class="ui-muted">${preview && !preview.ok ? escapeUI(preview.message) : 'No effective stat change.'}</p>`}</div>`;
-      }
+      detail.innerHTML += `<div class="service-result-heading">${op === 'enhance' ? `+${item.recipe.enhancement} → +${next.recipe.enhancement}` : op === 'rarity' ? `${TIER_NAMES[item.tier]} → ${TIER_NAMES[next.tier]}` : `Item level ${item.itemLevel} → ${next.itemLevel}`}</div>`;
       if (op === 'rarity') {
         const added=itemAffixCount(next)-item.affixes.length;
         detail.innerHTML += added>0?`<p class="service-caution">Adds ${added} random ${added===1?'affix':'affixes'}.</p><details><summary>Possible new affixes</summary><p class="service-pool">${itemAffixPool(item).filter(a=>!item.affixes.some(b=>b.stat===a.stat)).map(a=>escapeUI(STAT_LABELS[a.stat])).join(' · ')}</p></details>`:'<p class="ui-muted">Strengthens existing bonuses.</p>';

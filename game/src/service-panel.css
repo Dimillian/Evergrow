@@ -25,37 +25,23 @@
 .service-panel .ui-slot:focus-visible { outline:2px solid var(--service-color); outline-offset:2px; }
 .service-detail { padding-top:24px; margin-top:22px; border-top:1px solid #99b6c32a; }
 .service-empty { text-align:center; color:#829593; padding:30px 12px; font-size:14px; }
-.service-selected { display:flex; gap:16px; align-items:center; margin-bottom:16px; }
-.service-selected h3 { color:var(--item-color); margin-top:7px; }
-.service-item-art { width:80px; height:80px; flex:none; display:grid; place-items:center; border:1px solid color-mix(in srgb,var(--item-color) 40%,transparent); background:radial-gradient(color-mix(in srgb,var(--item-color) 16%,transparent),#091218); }
-.service-detail .ui-item-heading { display:none; }
-.service-detail .ui-item-meta { font-size:12px; }
 .service-forge { display:grid; place-items:center; height:110px; background:radial-gradient(ellipse,var(--service-color),transparent 65%); background:radial-gradient(ellipse,color-mix(in srgb,var(--service-color) 13%,transparent),transparent 65%); }
 .service-forge svg { width:72px; height:72px; color:var(--service-color); filter:drop-shadow(0 0 12px color-mix(in srgb,var(--service-color) 30%,transparent)); }
 .service-affix { display:grid; gap:8px; margin-bottom:14px; color:#adc1c5; }
 .service-offer > select,.service-affix select { width:100%; font-size:14px; }
 .service-result-heading { padding:10px 0; text-align:center; letter-spacing:1px; color:var(--service-color); border-block:1px solid #99b6c325; }
-.service-changes { margin:14px 0; font:13px "Evergrow Numerals", system-ui,sans-serif; }
-.service-changes > div { display:flex; justify-content:space-between; gap:15px; padding:7px 0; border-bottom:1px solid #a5b4bc12; }
-.service-changes b { color:#b5d9b8; font-weight:500; }
 .service-caution { color:#d6bc87; font:12px/1.5 "Evergrow Numerals", system-ui,sans-serif; }
 .service-pool { font:12px/1.8 "Evergrow Numerals", system-ui,sans-serif; color:#9db0b6; }
 .service-panel summary { cursor:pointer; font-size:13px; color:#bac7c9; }
 .service-panel .ui-window-footer { display:flex; align-items:center; justify-content:space-between; gap:14px; flex:none; }
 .service-message { font:12px/1.4 "Evergrow Numerals", system-ui,sans-serif; color:#b5c9b8; }
-.service-success .service-item-art { animation:forge-flash 700ms ease-out; }
+.service-success .ui-item-slot.is-selected { animation:forge-flash 700ms ease-out; }
 @keyframes forge-flash { 0% { box-shadow:0 0 32px var(--service-color),inset 0 0 18px #fff9; filter:brightness(1.8); } 100% { box-shadow:0 0 0 transparent; filter:brightness(1); } }
 @media(max-width:760px) { .service-panel { inset:12px; max-height:calc(100dvh - 24px); } .service-body { display:block; overflow:auto; } .service-offer,.service-bag { overflow:visible; padding:16px; } .service-offer { border-right:0; border-bottom:1px solid #8099a128; } .service-tabs > span { display:none; } .service-panel .ui-window-footer { flex-wrap:wrap; } }
-@media(prefers-reduced-motion:reduce) { .service-success .service-item-art { animation:none; outline:1px solid var(--service-color); } }
+@media(prefers-reduced-motion:reduce) { .service-success .ui-item-slot.is-selected { animation:none; outline:1px solid var(--service-color); } }
 
-.service-effective { border-top:1px solid #9ab2be26; margin-top:18px; padding-top:14px; font:12px "Evergrow Numerals", system-ui,sans-serif; }
-.service-effective h3 { margin-bottom:8px; font-size:14px; }
-.service-effective > div { display:flex; justify-content:space-between; gap:12px; padding:4px 0; }
-.service-effective b { color:#c7d9ba; font-weight:500; }
 
-.service-effective b.is-loss { color:#e7a297; }
 .service-panel .ui-item-slot.is-selected { outline:2px solid var(--service-color); outline-offset:1px; }
-.service-changes .is-selected-affix { color:var(--service-color); background:#aaaaff08; }
 
 /* Selling: a roomy bag beside a compact, reviewable receipt. */
 .service-panel:focus{outline:none}
@@ -90,8 +76,10 @@
 .gamble-choice:hover,.gamble-choice[aria-pressed=true]{border-color:#c9af73;background:radial-gradient(ellipse at top left,#b892482c,transparent),#1c292b}
 .gamble-choice b{font-weight:400;font-size:14px}.gamble-choice small{font:12px "Evergrow Numerals",sans-serif;color:#cbb982}
 .gamble-odds{margin-top:18px;color:#aab7b6;font-size:13px}.gamble-odds p{line-height:1.7}
-.gamble-reveal{padding:18px;background:radial-gradient(ellipse at top left,#d9b77720,transparent 65%);animation:gamble-reveal .22s ease-out}
-.gamble-reveal h3{color:var(--item-color);margin:14px 0}
+.gamble-reveal{display:flex;align-items:center;gap:12px;padding:10px;background:radial-gradient(ellipse at top left,#d9b77720,transparent 65%);animation:gamble-reveal .22s ease-out}
+.gamble-reveal > span{color:var(--item-color);font-size:14px;overflow-wrap:anywhere}
+.gamble-reveal .ui-item-slot{width:44px;height:44px;flex:none}
+.service-panel .ui-item-slot.is-selected{border-color:var(--service-color);outline:1px solid var(--service-color);outline-offset:-2px}
 @keyframes gamble-reveal{from{opacity:0;transform:translateY(10px);filter:brightness(2)}to{opacity:1;transform:none;filter:brightness(1)}}
 @media(prefers-reduced-motion:reduce){.gamble-reveal{animation:none}}
 @media(max-width:500px){.gamble-choices{grid-template-columns:repeat(2,minmax(0,1fr))}}
