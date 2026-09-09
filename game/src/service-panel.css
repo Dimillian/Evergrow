@@ -90,7 +90,7 @@
 .gamble-choice:hover,.gamble-choice[aria-pressed=true]{border-color:#c9af73;background:radial-gradient(ellipse at top left,#b892482c,transparent),#1c292b}
 .gamble-choice b{font-weight:400;font-size:14px}.gamble-choice small{font:12px "Evergrow Numerals",sans-serif;color:#cbb982}
 .gamble-odds{margin-top:18px;color:#aab7b6;font-size:13px}.gamble-odds p{line-height:1.7}
-.gamble-reveal{padding:18px;background:radial-gradient(ellipse at top left,#d9b77720,transparent 65%);animation:gamble-reveal .65s ease-out}
+.gamble-reveal{padding:18px;background:radial-gradient(ellipse at top left,#d9b77720,transparent 65%);animation:gamble-reveal .22s ease-out}
 .gamble-reveal h3{color:var(--item-color);margin:14px 0}
 @keyframes gamble-reveal{from{opacity:0;transform:translateY(10px);filter:brightness(2)}to{opacity:1;transform:none;filter:brightness(1)}}
 @media(prefers-reduced-motion:reduce){.gamble-reveal{animation:none}}

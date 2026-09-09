@@ -272,7 +272,6 @@ test('bulk quotes reject empty, duplicate, missing, replaced, revised and non-ba
   for(const items of [[],[first,first],[{...first,bag:-1}],[{...first,bag:64}],[{...first,bag:2}],[{...first,bag:.5}],[{...first,id:'different'}],[{...first,revision:99}],[{...first,bag:undefined}]]){
     assert.equal(quoteService(c,smith,10,{type:'sellMany',items} as ServiceRequest).ok,false);
   }
-  assert.equal(quoteService(c,enchanter,10,{type:'sellMany',items:[first]}).ok,false);
   const request:ServiceRequest={type:'sellMany',items:[{...first},{...second}]};
   const quote=quoted(c,smith,request);
   request.items[0].bag=3;
@@ -309,4 +308,44 @@ test('a shop purchase requires the full footprint and a sale releases its saved 
   assert.ok(purchase.character.inventoryLayout?.[purchase.item.id] !== undefined);
   const sold=trade(purchase.character,smith,{type:'sell',source:{bag:0}});
   assert.equal(sold.character.inventoryLayout?.[purchase.item.id],undefined);
+});
+
+
+test('every merchant shares single sales, bulk sales and cross-merchant buyback', () => {
+  const gambler: TownNPC = { ...smith, role: 'gambler', id: 'town:7319:0:building:4:gambler' };
+  const merchants = [smith, jeweler, enchanter, gambler];
+  for (const [index, npc] of merchants.entries()) {
+    const original = sheet();
+    original.inventory[0] = generateItem(74000, 10, 'ring');
+    original.inventory[5] = generateItem(74001, 10, 'boots');
+    original.inventory[9] = generateItem(74002, 10, 'head');
+    const items = [0, 5, 9].map(bag => original.inventory[bag]!);
+    const single = trade(original, npc, { type: 'sell', source: { bag: 0 } });
+    const request: ServiceRequest = { type: 'sellMany', items: [5, 9].map(bag => ({ bag, id: original.inventory[bag]!.id, revision: original.inventory[bag]!.recipe.revision })) };
+    const quote = quoted(single.character, npc, request);
+    const bulk = planService(single.character, npc, 10, quote); assert.ok(bulk.ok);
+    assert.equal(bulk.character.inventory.filter(Boolean).length, 0);
+    assert.equal(bulk.character.gold, original.gold! + items.reduce((sum, item) => sum + itemPrice(item, 'sell'), 0));
+    assert.equal(planService(bulk.character, npc, 10, quote).ok, false, 'a sale receipt cannot pay twice');
+    const back = trade(bulk.character, merchants[(index + 1) % merchants.length], { type: 'buyback', id: items[0].id });
+    assert.deepEqual(back.item, items[0], 'buyback retains the exact item at another merchant');
+    assert.equal(back.character.commerce.buyback.length, 2);
+    assert.equal(original.inventory.filter(Boolean).length, 3, 'planning does not mutate the source');
+    assert.equal(quoteService(original, npc, 10, { type: 'sell', source: { equipped: 'weapon' } }).ok, false);
+  }
+});
+
+test('shared selling does not give merchants other roles or turn storage into a shop', () => {
+  const original = sheet(); original.inventory[0] = generateItem(74100, 10, 'ring', undefined, 'magic');
+  const item = original.inventory[0];
+  const gambler: TownNPC = { ...smith, role: 'gambler', id: 'gambler' };
+  const stash: TownNPC = { ...smith, role: 'stash', id: 'stash' };
+  for (const npc of [gambler, enchanter]) assert.equal(quoteService(original, npc, 10, { type: 'buy', slot: 0 }).ok, false);
+  for (const operation of ['enhance', 'rarity', 'rerollAll', 'relevel'] as const)
+    assert.equal(quoteService(original, gambler, 10, { type: 'improve', source: { bag: 0 }, operation }).ok, false);
+  for (const request of [
+    { type: 'sell', source: { bag: 0 } },
+    { type: 'sellMany', items: [{ bag: 0, id: item.id, revision: item.recipe.revision }] },
+    { type: 'buyback', id: item.id },
+  ] satisfies ServiceRequest[]) assert.equal(quoteService(original, stash, 10, request).ok, false);
 });

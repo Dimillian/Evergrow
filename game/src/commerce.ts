@@ -83,9 +83,8 @@ export function quoteService(sheet: CharacterSheet, npc: TownNPC, level: number,
     const index=request.type==='store'?request.bag:request.slot;
     if(!Number.isInteger(index)||index<0)return fail('Invalid storage slot.');
     item=(request.type==='store'?sheet.inventory:sheet.stash??[])[index]??null;
-  } else if(npc.role==='stash'||npc.role==='gambler')return fail('This service is not available here.');
+  } else if(npc.role==='stash')return fail('This service is not available here.');
   else if (request.type === 'sellMany') {
-    if (npc.role === 'enchanter') return fail('This service is not available here.');
     if (!Array.isArray(request.items) || !request.items.length || request.items.length > sheet.inventory.length) return fail('Select items to sell.');
     const slots = new Set<number>(), ids = new Set<string>();
     for (const selected of request.items) {
@@ -95,12 +94,11 @@ export function quoteService(sheet: CharacterSheet, npc: TownNPC, level: number,
       slots.add(selected.bag); ids.add(selected.id); item ??= owned; price += itemPrice(owned, 'sell');
     }
   } else if (request.type === 'buy' || request.type === 'sell' || request.type === 'buyback') {
-    if (npc.role === 'enchanter') return fail('This service is not available here.');
-    if (request.type === 'buy') { item = vendorStock(sheet, npc, level)[request.slot] ?? null; if (item) price = itemPrice(item, 'buy'); }
+    if (request.type === 'buy') { if (npc.role !== 'blacksmith' && npc.role !== 'jeweler') return fail('This service is not available here.'); item = vendorStock(sheet, npc, level)[request.slot] ?? null; if (item) price = itemPrice(item, 'buy'); }
     else if (request.type === 'buyback') { const entry = sheet.commerce.buyback.find(b => b.item.id === request.id); item = entry?.item ?? null; price = entry?.price ?? 0; }
     else { if ('equipped' in request.source) return fail('Unequip this item before selling.'); item = sourceItem(sheet, request.source); if (item) price = itemPrice(item, 'sell'); }
   } else {
-    if (npc.role === 'jeweler' || (request.operation === 'enhance') !== (npc.role === 'blacksmith')) return fail('This service is not available here.');
+    if ((npc.role !== 'blacksmith' && npc.role !== 'enchanter') || (request.operation === 'enhance') !== (npc.role === 'blacksmith')) return fail('This service is not available here.');
     item = sourceItem(sheet, request.source);
     if (item) {
       if(request.focus!==undefined&&(!AFFIX_FOCUSES.includes(request.focus)||request.focus!=='any'&&(npc.settlementTier!=='city'||npc.role!=='enchanter'||!['rerollOne','rerollAll'].includes(request.operation))))return fail('Focused rerolls are available from city enchanters.');

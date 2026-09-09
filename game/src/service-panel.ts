@@ -32,7 +32,7 @@ export class ServicePanel {
   private sales = new Map<string, SaleItem>();
   private goldFeedback: ServiceGoldFeedback;
   private saving = false;
-  private lastConfirm = -Infinity;
+  private gambleKind: ItemKind | null = null;
   private revealed:Item|null=null;
   private abort = new AbortController();
   private focus: { dispose(): void } | null = null;
@@ -59,7 +59,7 @@ export class ServicePanel {
   }
   open(player: Player, npc: TownNPC): void {
     this.player = player; this.npc = npc; this.tab = npc.role === 'enchanter' ? 'improve' : 'shop';
-    this.sales.clear(); this.goldFeedback.stop(); this.revealed=null;
+    this.sales.clear(); this.goldFeedback.stop(); this.revealed=null; this.gambleKind=null;
     this.operation = npc.role === 'blacksmith' ? 'enhance' : 'rarity'; this.selected = null; this.quote = null;
     this.element.hidden = false; this.render(); this.focus?.dispose();
     this.focus = trapDialogFocus(this.element, { initialFocus: this.element, restoreFocus: false });
@@ -72,18 +72,22 @@ export class ServicePanel {
   close(): void { this.goldFeedback.stop(); this.sales.clear(); this.focus?.dispose(); this.focus = null; this.tooltip.hide(); this.element.hidden = true; this.selected = null; this.quote = null; }
   dispose(): void { this.close(); this.abort.abort(); this.tooltip.dispose(); this.element.remove(); }
   private updateSelection(): void {
-    if (this.selected && (this.selected.type === 'sell' || this.selected.type === 'improve')) this.selected = this.tab === 'improve'
+    if (this.npc.role === 'gambler' && this.tab === 'shop') {
+      this.selected = this.gambleKind ? { type: 'gamble', kind: this.gambleKind } : null;
+      return;
+    }
+    if ((this.tab === 'sell' || this.tab === 'improve') && this.selected && (this.selected.type === 'sell' || this.selected.type === 'improve')) this.selected = this.tab === 'improve'
       ? { type: 'improve', source: this.selected.source, operation: this.operation, affix: 0 } : { type: 'sell', source: this.selected.source };
     else this.selected = null;
   }
   selectSales(tier?: ItemTier): void {
-    if(this.npc.role === 'enchanter' || this.saving) return;
+    if(this.npc.role === 'stash' || this.saving) return;
     this.tab = 'sell'; this.sales.clear();
     this.player.character.inventory.forEach((item,bag) => { if(item && (!tier || item.tier === tier)) this.sales.set(item.id,{bag,id:item.id,revision:item.recipe.revision}); });
     this.selected = null; this.render();
   }
   private render(): void {
-    if(this.npc.role==='stash'||this.npc.role==='gambler'){this.renderSpecial();return;}
+    if(this.npc.role==='stash'||(this.npc.role==='gambler'&&this.tab==='shop')){this.renderSpecial();return;}
     this.goldFeedback.stop();
     this.tooltip.hide();
     this.element.classList.toggle('is-selling', this.tab === 'sell');
@@ -93,10 +97,10 @@ export class ServicePanel {
     const control = focused?.hasAttribute('data-clear-sales') ? '[data-clear-sales]' : focused?.dataset.sellTier ? `[data-sell-tier="${focused.dataset.sellTier}"]` : focused?.hasAttribute('data-operation') ? '[data-operation]' : focused?.dataset.tab ? `[data-tab="${focused.dataset.tab}"]`
       : focused?.hasAttribute('data-confirm') ? '[data-confirm]' : focused?.hasAttribute('data-close') ? '[data-close]' : null;
     this.element.style.setProperty('--service-color', NPC_COLORS[this.npc.role]);
-    this.element.innerHTML = `<header class="ui-window-header"><span class="ui-header-emblem">${npcEmblem(this.npc.role)}</span><h2 class="ui-title" id="service-title">${NPC_NAMES[this.npc.role]}</h2><span class="service-wallet"><b data-wallet-total>${goldBalance(this.player.character).toLocaleString()}</b> <small>gold</small></span><button class="ui-button ui-button--icon" data-close aria-label="Close service">×</button></header>
-      <nav class="service-tabs" aria-label="Services">${this.npc.role === 'enchanter' ? '' : `<button class="ui-button ui-button--quiet" data-tab="shop" aria-pressed="${this.tab === 'shop'}">Shop</button><button class="ui-button ui-button--quiet" data-tab="sell" aria-pressed="${this.tab === 'sell'}">Sell</button>${this.npc.role === 'blacksmith' ? `<button class="ui-button ui-button--quiet" data-tab="improve" aria-pressed="${this.tab === 'improve'}">Enhance</button>` : ''}<button class="ui-button ui-button--quiet" data-tab="buyback" aria-pressed="${this.tab === 'buyback'}">Buyback <small>${this.player.character.commerce.buyback.length}/12</small></button>`}<span>${escapeUI(this.npc.name)}${this.tab === 'improve' ? ` · Services Lv ${vendorLevel(this.npc, this.player.level)}` : ''}</span></nav>
+    this.element.innerHTML = `${this.headerMarkup()}
+      ${this.tabsMarkup()}
       <div class="service-body"><section class="service-offer ui-scroll-area">${this.tab === 'sell' ? '<div class="service-section-heading"><h3>Selected items</h3><button class="ui-button ui-button--quiet" data-clear-sales>Clear</button></div>' : this.tab === 'improve' ? `<div class="service-forge">${npcEmblem(this.npc.role)}</div>${this.npc.role === 'enchanter' ? `<select class="ui-button" data-operation aria-label="Enchantment">${(['rarity', 'rerollOne', 'rerollAll', 'relevel'] as Improvement[]).map(op => `<option value="${op}" ${op === this.operation ? 'selected' : ''}>${OP_LABELS[op]}</option>`).join('')}</select>` : '<h3>Enhance equipment</h3>'}` : `<div class="service-section-heading"><h3>${this.tab === 'shop' ? `Stock · Lv ${vendorStockLevel(this.npc, this.player.level)}` : 'Buyback'}</h3><span>${this.tab === 'shop' ? `Restocks at level ${(stockEpoch(this.player.level) + 1) * 3 + 1}` : 'Last 12 sales'}</span></div><div class="service-stock ui-item-grid"></div>`}<div class="service-detail"></div></section>
-      <section class="service-bag ui-scroll-area">${this.npc.role !== 'jeweler' && this.tab !== 'sell' ? '<section class="service-equipped-section" aria-label="Equipped gear"><div class="service-section-heading"><h3>Equipped</h3><span>Upgrade in place</span></div><div class="service-equipment ui-item-grid"></div></section>' : ''}<section aria-label="Inventory"><div class="service-section-heading"><h3>Inventory</h3></div>${this.tab === 'sell' ? this.rarityControls() : ''}<div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section></section></div>
+      <section class="service-bag ui-scroll-area">${this.tab === 'improve' || (this.npc.role === 'blacksmith' && this.tab === 'shop') ? '<section class="service-equipped-section" aria-label="Equipped gear"><div class="service-section-heading"><h3>Equipped</h3><span>Upgrade in place</span></div><div class="service-equipment ui-item-grid"></div></section>' : ''}<section aria-label="Inventory"><div class="service-section-heading"><h3>Inventory</h3></div>${this.tab === 'sell' ? this.rarityControls() : ''}<div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section></section></div>
       <footer class="ui-window-footer"><span class="service-message" role="status"></span><button class="ui-button ui-button--primary" data-confirm disabled>Choose an item</button></footer>`;
     this.renderInventoryPack();
     const equipment = this.element.querySelector('.service-equipment');
@@ -122,13 +126,26 @@ export class ServicePanel {
     if (active) this.element.querySelector<HTMLElement>(`[data-item="${active}"]`)?.focus({ preventScroll: true });
     else if (control) this.element.querySelector<HTMLElement>(control)?.focus({ preventScroll: true });
   }
+  private headerMarkup(): string {
+    return `<header class="ui-window-header"><span class="ui-header-emblem">${npcEmblem(this.npc.role)}</span><h2 class="ui-title" id="service-title">${NPC_NAMES[this.npc.role]}</h2><span class="service-wallet"><b data-wallet-total>${goldBalance(this.player.character).toLocaleString()}</b> <small>gold</small></span><button class="ui-button ui-button--icon" data-close aria-label="Close service">×</button></header>`;
+  }
+  private tabsMarkup(): string {
+    if (this.npc.role === 'stash') return '';
+    const tabs: Array<[typeof this.tab, string]> = this.npc.role === 'enchanter'
+      ? [['improve', 'Enchant']] : [['shop', this.npc.role === 'gambler' ? 'Gamble' : 'Shop']];
+    if (this.npc.role === 'blacksmith') tabs.push(['improve', 'Enhance']);
+    tabs.push(['sell', 'Sell'], ['buyback', `Buyback <small>${this.player.character.commerce.buyback.length}/12</small>`]);
+    return `<nav class="service-tabs" aria-label="Services">${tabs.map(([tab, label]) => `<button class="ui-button ui-button--quiet" data-tab="${tab}" aria-pressed="${this.tab === tab}">${label}</button>`).join('')}<span>${escapeUI(this.npc.name)}${this.tab === 'improve' ? ` · Services Lv ${vendorLevel(this.npc, this.player.level)}` : ''}</span></nav>`;
+  }
   private renderSpecial():void {
+    this.goldFeedback.stop(); this.tooltip.hide(); this.element.classList.remove('is-selling');
     const storage=this.npc.role==='stash',sheet=this.player.character;
     const active=document.activeElement as HTMLElement|null;
     const focus=active?.dataset.item;
-    const control=active?.dataset.gamble?`[data-gamble="${active.dataset.gamble}"]`:active?.hasAttribute('data-confirm')?'[data-confirm]':active?.hasAttribute('data-close')?'[data-close]':null;
+    const control=active?.dataset.tab?`[data-tab="${active.dataset.tab}"]`:active?.dataset.gamble?`[data-gamble="${active.dataset.gamble}"]`:active?.hasAttribute('data-confirm')?'[data-confirm]':active?.hasAttribute('data-close')?'[data-close]':null;
     this.element.style.setProperty('--service-color',NPC_COLORS[this.npc.role]);
-    this.element.innerHTML=`<header class="ui-window-header"><h2 id="service-title">${storage?'Storage':'Gambler'}</h2><span>${storage?'':escapeUI(this.npc.name)}</span><strong>${goldBalance(sheet).toLocaleString()} Gold</strong><button class="ui-button ui-button--quiet" data-close aria-label="Close">×</button></header>
+    this.element.innerHTML=`${this.headerMarkup()}
+      ${this.tabsMarkup()}
       <div class="service-body"><section class="service-offer ui-scroll-area"><div class="service-section-heading"><h3>${storage?'Stored equipment':'Choose an item type'}</h3><span>${storage?`${(sheet.stash??[]).filter(Boolean).length} / ${STASH_CAPACITY}`:`${this.npc.settlementTier??'settlement'} · Lv ${vendorLevel(this.npc,this.player.level)}`}</span></div>
       ${storage?'<div class="service-storage ui-item-grid ui-item-grid--bag"></div>':`<div class="gamble-choices">${GAMBLE_KINDS.map((kind,i)=>`<button class="gamble-choice" data-gamble="${kind}" aria-pressed="${this.selected?.type==='gamble'&&this.selected.kind===kind}"><span>${itemIconSVG(generateItem(i+71,1,kind,undefined,'common'),44)}</span><b>${kind==='head'?'Helmet':kind[0].toUpperCase()+kind.slice(1)}</b><small>${gamblePrice(this.npc,this.player.level,kind).toLocaleString()} gold</small></button>`).join('')}</div><details class="gamble-odds"><summary>Rarity odds</summary><p>${gambleOdds(this.npc).map((w,i)=>`${['Common','Magic','Rare','Epic','Legendary'][i]} ${w}%`).join(' · ')}</p></details>`}
       <div class="service-detail"></div></section><section class="service-bag ui-scroll-area"><div class="service-section-heading"><h3>Inventory</h3></div><div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section></div>
@@ -142,6 +159,8 @@ export class ServicePanel {
   private specialDetail():void {
     this.quote=null;const detail=this.element.querySelector<HTMLElement>('.service-detail')!,button=this.element.querySelector<HTMLButtonElement>('[data-confirm]')!;
     const selected=this.selected;
+    button.disabled=true; button.textContent=this.npc.role==='stash'?'Select an item':'Choose an item type';
+    this.element.querySelector('.service-message')!.textContent='';
     detail.innerHTML=this.revealed?`<div class="gamble-reveal" style="--item-color:${TIER_COLORS[this.revealed.tier]}"><span class="service-item-art">${itemIconSVG(this.revealed,88)}</span><h3>${escapeUI(itemDisplayName(this.revealed))}</h3>${itemTooltipMarkup(this.revealed,{sheet:this.player.character,level:this.player.level})}</div>`:'';
     if(!selected)return;
     const result=quoteService(this.player.character,this.npc,this.player.level,selected);
@@ -215,7 +234,12 @@ export class ServicePanel {
     if (this.saving) return;
     const button = (e.target as HTMLElement).closest<HTMLButtonElement>('button'); if (!button) return;
     if (button.hasAttribute('data-close')) { this.actions.close(); return; }
-    if(button.dataset.gamble){this.selected={type:'gamble',kind:button.dataset.gamble as ItemKind};this.render();return;}
+    if(button.dataset.gamble){
+      this.gambleKind=button.dataset.gamble as ItemKind;
+      this.selected={type:'gamble',kind:this.gambleKind};
+      this.element.querySelectorAll<HTMLButtonElement>('[data-gamble]').forEach(choice=>choice.setAttribute('aria-pressed',String(choice.dataset.gamble===this.gambleKind)));
+      this.renderDetail(); return;
+    }
     if(button.hasAttribute('data-clear-sales')) { this.sales.clear(); this.render(); return; }
     if(button.dataset.sellTier) {
       const items=this.player.character.inventory.flatMap((item,bag)=>item&&item.tier===button.dataset.sellTier?[{item,bag}]:[]);
@@ -226,7 +250,7 @@ export class ServicePanel {
     if (button.dataset.tab) { this.tab = button.dataset.tab as typeof this.tab; this.updateSelection(); this.render(); return; }
     if (button.dataset.item) {
       const value = this.resolve(button.dataset.item); if (!value) return;
-      if(this.npc.role==='gambler')return;
+      if(this.npc.role==='gambler'&&this.tab==='shop')return;
       if(this.tab === 'sell' && value.source && 'bag' in value.source) {
         if(this.sales.has(value.item.id)) this.sales.delete(value.item.id);
         else this.sales.set(value.item.id,{bag:value.source.bag,id:value.item.id,revision:value.item.recipe.revision});
@@ -243,7 +267,7 @@ export class ServicePanel {
     if (button.hasAttribute('data-confirm')) this.confirm();
   }
   private renderDetail(): void {
-    if(this.npc.role==='stash'||this.npc.role==='gambler'){this.specialDetail();return;}
+    if(this.npc.role==='stash'||(this.npc.role==='gambler'&&this.tab==='shop')){this.specialDetail();return;}
     this.quote = null; const selected = this.selected;
     const detail = this.element.querySelector<HTMLElement>('.service-detail')!, button = this.element.querySelector<HTMLButtonElement>('[data-confirm]')!;
     const message = this.element.querySelector<HTMLElement>('.service-message')!; message.textContent = '';
@@ -328,13 +352,12 @@ export class ServicePanel {
   }
   private selectedAffix() { return this.selected?.type === 'improve' ? this.selected.affix ?? 0 : 0; }
   private async confirm(): Promise<void> {
-    if (this.saving || !this.quote || performance.now() - this.lastConfirm < 350) return;
+    if (this.saving || !this.quote) return;
     const gamble=this.quote.request.type==='gamble',revealedId=this.quote.itemId;
     const sale = this.quote.request.type === 'sell' || this.quote.request.type === 'sellMany';
     const soldItems = this.quote.request.type === 'sellMany' ? this.quote.request.items : this.quote.request.type === 'sell' && 'bag' in this.quote.request.source ? [{bag:this.quote.request.source.bag}] : [];
     const origins = soldItems.map(({bag})=>this.element.querySelector(`.service-grid [data-item="bag:${bag}"]`)?.getBoundingClientRect()).filter((r):r is DOMRect=>!!r&&r.width>0&&r.height>0).map(r=>({x:r.x+r.width/2,y:r.y+r.height/2}));
     const proceeds = sale ? this.quote.price : 0;
-    this.lastConfirm = performance.now();
     this.saving = true;
     const button = this.element.querySelector<HTMLButtonElement>('[data-confirm]')!;
     button.disabled = true; button.textContent = 'Saving…';
@@ -343,14 +366,20 @@ export class ServicePanel {
     catch { result = { ok: false, message: 'Could not complete the save. No purchase was committed.' }; }
     finally { this.saving = false; }
     if (this.element.hidden) return;
-    this.renderDetail();
     this.tooltip.hide();
     if (result.ok) {
       if(gamble)this.revealed=this.player.character.inventory.find(i=>i?.id===revealedId)??null;
-      this.sales.clear(); const keep = this.selected?.type === 'improve'; if (!keep) this.selected = null;
-      this.render(); this.element.classList.remove('service-success'); void this.element.offsetWidth; this.element.classList.add('service-success');
+      this.sales.clear(); const keep = gamble || this.selected?.type === 'improve'; if (!keep) this.selected = null;
+      if (gamble) {
+        // Keep the choices and action button mounted for rapid repeat purchases.
+        this.renderInventoryPack();
+        this.element.querySelector('[data-wallet-total]')!.textContent=goldBalance(this.player.character).toLocaleString();
+        this.renderDetail();
+      } else this.render();
+      this.element.classList.remove('service-success'); void this.element.offsetWidth; this.element.classList.add('service-success');
       if(proceeds>0)this.goldFeedback.play(proceeds,goldBalance(this.player.character),origins);
-    }
-    this.element.querySelector('.service-message')!.textContent = result.message;
+    } else this.renderDetail();
+    const message=this.element.querySelector('.service-message')!;
+    if(!result.ok || !message.textContent) message.textContent = result.message;
   }
 }
