@@ -29,6 +29,18 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.3 / Sites version 34, publicly deployed on 2026-09-09 at 15:43:43 UTC.
+- Published source: `c29201cf41550758f8738c1bc50de920925ea2a6`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_89174902b5348191831c9df8d9c43cd3`.
+- Deployment: `appgdep_6aa17ea05e8c819198181a49cbe61ea7`; Sites returned `succeeded`.
+- Taller storage without persistent item details, five 96-item tabs, escalating permanent unlock purchases and independent per-tab sorting.
+- Tab purchases persist gold and capacity together; selected-tab transfers, stale quote protection and scroll preservation retain item ownership.
+- Existing 96-item storage remains the free first tab. Matching client/Worker validation supports up to 480 stored items; no character reset or database migration.
+- Passed the 1,119-test regression suite, seven final storage-tab checks including five full tabs, three changelog checks, type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.2 / Sites version 33, publicly deployed on 2026-09-09 at 15:23:30 UTC.
 - Published source: `1b2e948580ec16cec303b3f9d90696e3de74f40a`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_39c617126c348191931b8edc03f420eb`.
