@@ -45,6 +45,8 @@ Two new charm rolls use whole percentage points:
 
 These receive stone size, roll quality, rarity and enhancement multipliers. Total gold bonus caps at **+100%** and XP at **+50%**. Gold increases physical piles created by enemy kills, event/dungeon chests and breakable containers, never vendor payments. XP increases kills, event completion and Journey rewards. Apply once when the reward is created/committed, preserving actual HUD and Chronicle amounts. Pickup does not multiply already-dropped gold. Equipment RNG remains independent of the two utility bonuses.
 
+Kill XP, gold and mana-on-kill use eligibility before that kill's experience award. If a level-up activates a higher-level stone, its bonuses apply to subsequent kills. See the [stats audit](stats-audit-2026-09-09.md) for full-grid and size/rarity budget comparisons.
+
 Each enemy item-kind table adds charm weight 2 to its existing equipment weight 100: **about 1.96% of dropped items** are charms. Normal item quantities, rank rarity and source levels remain authoritative. General untyped item generation (including generic POI hoards) has a 4% charm branch; explicitly themed equipment rewards keep their authored kinds. Dungeon chest rolls use the enemy table. Shops and gambling do not offer charms in this pass.
 
 Detailed stats show active charm sources, resistances, gold found and experience gained. Item tooltips show ordinary rarity, level and stat values, with no size/affix-count line or stat explanations. Detailed calculation explanations belong only in character detailed stats.

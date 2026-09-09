@@ -1,3 +1,4 @@
+import { projectileDamageType } from './resistance-content.ts';
 import { isBossKind, isWildernessBoss } from './wilderness-boss-content.ts';
 import { metric, type ChronicleProgress } from './chronicle.ts';
 import type { CombatEvent, Enemy, Player } from './model.ts';
@@ -7,7 +8,7 @@ export function trackChronicleEvent(p:Player,enemies:readonly Enemy[],e:CombatEv
  switch(e.type){
  case 'hit': {
    const n=e.actualValue??e.value;metric(c,'damage',n);metric(c,e.periodic?'periodicDamage':'directDamage',n);metric(c,'hits');
-   const element=e.style==='fire'||e.style==='frost'||e.style==='lightning'||e.style==='arcane'?e.style:null;
+   const channel=e.style?projectileDamageType(e.style):'physical',element=channel==='physical'?null:channel;
    const elemental=element?Math.min(n,e.elementalValue??n):0;metric(c,'damage:physical',n-elemental);if(element)metric(c,'damage:'+element,elemental);
    if(!e.periodic){let marks=hybridHits.get(p);if(!marks){marks=new Map();hybridHits.set(p,marks);}if(marks.size>=256&&!marks.has(e.targetId))marks.delete(marks.keys().next().value!);marks.set(e.targetId,(marks.get(e.targetId)??0)|(e.melee?1:element?2:0));}
    if(e.skill)metric(c,'skillDamage:'+e.skill,n);else metric(c,e.periodic?'burnDamage':'basicDamage',n);

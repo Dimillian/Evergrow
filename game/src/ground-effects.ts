@@ -1,3 +1,4 @@
+import { metric } from './chronicle.ts';
 import { skillWeapon } from './skill-content.ts';
 import type { ProjectileStyle, HitSnapshot } from './model.ts';
 import { strikeContainers, type ContainerAttackContext } from './breakable-containers.ts';
@@ -52,7 +53,7 @@ export function advanceGroundEffects(effects: ActiveGroundEffect[], dt: number, 
           context.emit({ type: 'notice', x: p.x, y: p.y, message: p.dead ? 'Storm ended.' : 'Storm ended: insufficient mana.' });
           continue;
         }
-        p.mana -= cost;
+        p.mana -= cost; metric(p.chronicle, 'manaSpent', cost);
       }
       if (effect.damage > 0) strikeContainers(context.containers, effect.x, effect.y, effect.radius);
       for (const enemy of context.enemies) if (enemy.state !== 'dead'

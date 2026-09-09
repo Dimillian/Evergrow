@@ -57,7 +57,7 @@ const FAMILIES: Readonly<Record<SkillDomain, readonly Family[]>> = {
   Might: [
     { name: 'Tempered Edge', description: 'Increase the damage of your weapon attacks.', minor: { damagePercent: 4 }, notable: { damagePercent: 12, strength: 3 } },
     { name: 'Heart of Iron', description: 'Build a larger life reserve to withstand heavy hits.', minor: { maxHp: 8 }, notable: { maxHp: 28, vitality: 3 } },
-    { name: 'Stonebound', description: 'Reduce incoming damage with stronger armor.', minor: { armor: 6 }, notable: { armor: 24, vitality: 2 } },
+    { name: 'Stonebound', description: 'Reduce incoming physical damage with stronger armor.', minor: { armor: 6 }, notable: { armor: 24, vitality: 2 } },
     { name: 'Sanguine Vow', description: 'Recover life steadily during and between fights.', minor: { lifeRegen: .12 }, notable: { lifeRegen: .45, maxHp: 12 } },
     { name: 'Titan Grip', description: 'Build strength to make every weapon strike heavier.', minor: { strength: 2 }, notable: { strength: 6, damagePercent: 6 } },
     { name: 'Bloodletting', description: 'Drive deeper wounds with stronger weapon attacks.', minor: { damagePercent: 3 }, notable: { damagePercent: 8, lifeOnHit: 1 } },

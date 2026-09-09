@@ -28,7 +28,7 @@ export function improvementProblem(item: Item, operation: Improvement, zoneLevel
 export function improveItem(item: Item, operation: Improvement, zoneLevel: number, seed: number, affix?: number, focus:AffixFocus='any'): Item {
   const problem = improvementProblem(item, operation, zoneLevel, affix);
   if (problem) throw new RangeError(problem);
-  const next = { ...item, recipe: { ...item.recipe, rolls: [...item.recipe.rolls], revision: item.recipe.revision + 1 }, affixes: [...item.affixes] };
+  const next = { ...item, recipe: { ...item.recipe, starter: false, rolls: [...item.recipe.rolls], revision: item.recipe.revision + 1 }, affixes: [...item.affixes] };
   const random = randomSource(seed), definitions = [...itemAffixPool(item)];
   const roll = (index: number, excluded?: string) => {
     const occupied = new Set(next.affixes.filter((_, i) => i !== index).map(a => a.stat));

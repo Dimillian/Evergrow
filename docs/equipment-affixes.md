@@ -45,6 +45,8 @@ Multiply the existing affix base and growth by these slot budgets before roundin
 
 Other affixes remain ×1. At level 1, a midpoint magic roll gives **10.9% movement** on boots and **13.1% attack or cast speed** on gloves. Percentage growth remains bounded by `25n / (25 + n)`; tier, roll quality and enhancement still apply. No auto-reroll of already-owned items: new loot and newly rolled affixes use the new pools; services rebuild values from their recipes. Existing characters remain loadable, without resetting progress.
 
+Worn starter clothing begins without base protection. A successful service improvement clears its starter-only neutral recipe and restores the normal base stats as well as applying the quoted upgrade; enhancement/releveling must not charge for a zero-base-stat result. See the [September 9 stats audit](stats-audit-2026-09-09.md) for correctness fixes and remaining scaling concerns.
+
 ## Damage and hybrid hands
 
 - Physical melee/bow damage = base physical damage × attack multiplier. Each Strength above 10 supplies +2% attack damage.

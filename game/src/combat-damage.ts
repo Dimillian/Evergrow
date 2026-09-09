@@ -1,3 +1,4 @@
+import { projectileDamageType } from './resistance-content.ts';
 import { metric } from './chronicle.ts';
 import { primeSpellweave, primeAfterguard, effectiveArmor } from './affix-combat.ts';
 import { applyElementalContact } from './combat-status.ts';
@@ -32,7 +33,7 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
   const statusDamage = elementalDamage ?? (style === 'fire' || style === 'frost' || style === 'lightning' ? damage : 0);
   if (!periodic) primeSpellweave(context.player, melee, style);
   if (!periodic) applyElementalContact(enemy, style, statusDamage);
-  const elementFraction=style==='arcane'?1:Math.min(1,Math.max(0,statusDamage/Math.max(1,damage)));
+  const elementFraction=style && projectileDamageType(style)==='arcane'?1:Math.min(1,Math.max(0,statusDamage/Math.max(1,damage)));
   const hitStats = offense ?? context.player.derived;
   const critical = !periodic && hitStats.critChance > 0 && context.random() < hitStats.critChance;
   damage = Math.max(1, Math.round(damage * (critical ? hitStats.critMultiplier : 1)));
