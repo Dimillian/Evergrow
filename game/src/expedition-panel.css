@@ -4,7 +4,8 @@
 .expedition-panel .ui-window-header,.expedition-panel .ui-window-footer{flex-shrink:0}
 .expedition-progress{margin-left:auto;color:#caba8e;font-size:17px}
 .expedition-chart-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;background:radial-gradient(ellipse at 50% 26%,#23352d80,transparent 65%),#0b161a;scrollbar-color:#56675b #0b161a;scrollbar-width:thin}
-.expedition-chart{position:relative;width:min(100%,640px);margin:0 auto;isolation:isolate}
+.expedition-chart{position:relative;width:100%;min-height:100%;isolation:isolate}
+.expedition-trail{position:relative;width:min(100%,640px);height:100%;margin:0 auto}
 .expedition-chart:before{content:'';position:absolute;top:0;left:0;right:0;height:100px;background:linear-gradient(#0b161a,transparent);z-index:1;pointer-events:none}
 .expedition-cartography{position:absolute;inset:0;width:100%;height:100%}
 .expedition-contours{fill:none;stroke:#86a79b;stroke-width:1;opacity:.09}
