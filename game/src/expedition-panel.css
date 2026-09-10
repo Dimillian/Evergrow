@@ -1,4 +1,5 @@
-.expedition-panel{position:absolute;inset:5% max(16px,calc((100% - 1000px)/2));z-index:35;display:flex;flex-direction:column;min-height:0;pointer-events:auto}
+/* Keep the overlay positioned above the game regardless of shared UI import order. */
+.expedition-panel.ui-window{position:absolute;inset:5% max(16px,calc((100% - 1000px)/2));z-index:35;display:flex;flex-direction:column;min-height:0;pointer-events:auto}
 .expedition-panel[hidden]{display:none}.expedition-panel:focus{outline:none}
 .expedition-panel .ui-window-header,.expedition-panel .ui-window-footer{flex-shrink:0}
 .expedition-progress{margin-left:auto;color:#caba8e;font-size:17px}
@@ -43,5 +44,5 @@
 .expedition-odds{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:14px}.expedition-odds span:first-child{color:#cbb0ee}.expedition-odds span:nth-child(2){color:#edb176}.expedition-odds span:last-child{color:#e3ce8d}
 @keyframes expedition-trail{to{stroke-dashoffset:-54}}
 @keyframes expedition-tip-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-@media(max-width:760px){.expedition-panel{inset:8px}.expedition-panel .ui-window-footer{flex-wrap:wrap;padding:10px}.expedition-enter{min-width:0;flex:1}.expedition-panel [role=status]{flex-basis:60%}.expedition-progress{font-size:14px}.expedition-panel .ui-window-header{padding:14px}.expedition-node-name{font-size:13px;width:130px}}
+@media(max-width:760px){.expedition-panel.ui-window{inset:8px}.expedition-panel .ui-window-footer{flex-wrap:wrap;padding:10px}.expedition-enter{min-width:0;flex:1}.expedition-panel [role=status]{flex-basis:60%}.expedition-progress{font-size:14px}.expedition-panel .ui-window-header{padding:14px}.expedition-node-name{font-size:13px;width:130px}}
 @media(prefers-reduced-motion:reduce){.expedition-paths .is-next,.expedition-tooltip{animation:none}.expedition-node,.expedition-node canvas,.expedition-node-ground{transition:none}}
