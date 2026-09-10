@@ -10,6 +10,9 @@ import { drawGlow } from './lighting.ts';
 import { cryptFixtures, cryptFlicker } from './dungeon-lighting.ts';
 import { cryptHash, cryptOutline } from './dungeon-contours.ts';
 export function warden(c: CanvasRenderingContext2D, p: CharacterPose, color: Color) {
+    const themed=p.dungeonTheme==='rime'||p.dungeonTheme==='astral';
+    const baseColor=color;
+    if(themed)color=(value)=>baseColor(value==='#b3e6c2'?(p.dungeonTheme==='rime'?'#b5edff':'#dfb1ff'):value==='#969c81'||value==='#9a9f80'?(p.dungeonTheme==='rime'?'#9cbbcf':'#9581b4'):value==='#65746b'?(p.dungeonTheme==='rime'?'#5e849a':'#675379'):value);
     const sway = Math.sin(p.time * 1.6) * 1.2, bob = Math.abs(Math.sin(p.time * 5)) * p.moving * 2;
     c.save();
     polygon(c, [[-20, -66], [19, -66], [30, -8], [17, -1], [5, -7], [-9, -3], [-27, -9]], color('#263a3a'));
@@ -26,6 +29,13 @@ export function warden(c: CanvasRenderingContext2D, p: CharacterPose, color: Col
         taper(c, [side * 25, -65], [side * (32 + arm), -40], 11, 7, color('#69786b'));
         taper(c, [side * (32 + arm), -40], [side * 33, -23 - arm], 7, 5, color('#a0a084'));
         polygon(c, [[side * 17, -70], [side * 26, -79], [side * 38, -68], [side * 30, -56], [side * 20, -58]], color('#536961'));
+    }
+    if(p.dungeonTheme==='rime'){
+      for(let i=0;i<5;i++){const x=-20+i*10;polygon(c,[[x-5,-86],[x,-112-Math.abs(i-2)*4],[x+5,-87]],color('#bedce6'));}
+      for(const side of[-1,1])polygon(c,[[side*23,-65],[side*37,-98],[side*40,-59]],color('#94b9d0'));
+    }else if(p.dungeonTheme==='astral'){
+      c.strokeStyle=color('#d1ab6b');c.lineWidth=2;for(const tilt of[-.5,.5]){c.beginPath();c.ellipse(0,-75,47,19,tilt,0,7);c.stroke();}
+      polygon(c,[[-8,-91],[0,-113],[8,-91],[0,-79]],color('#deb5ff'));
     }
     const angle = p.attack < 0 ? -1.8 : p.attack > 0 ? -1.8 + p.attack * 3.2 : -1.1;
     c.save();
@@ -47,46 +57,62 @@ export function warden(c: CanvasRenderingContext2D, p: CharacterPose, color: Col
     c.restore();
     c.restore();
 }
-export function drawCryptGate(c: CanvasRenderingContext2D, p: Pick<DungeonEntrance, 'x' | 'y'> & {seed?:number}, time: number) {
-    const theme=dungeonTheme(p.seed??0);
-    c.save();
-    c.translate(p.x, p.y);
-    c.fillStyle = '#071218';
-    c.fillRect(-25, -42, 50, 44);
-    c.strokeStyle = '#9caf99';
-    c.lineWidth = 7;
-    c.beginPath();
-    c.moveTo(-30, 3);
-    c.lineTo(-30, -35);
-    c.quadraticCurveTo(0, -76, 30, -35);
-    c.lineTo(30, 3);
-    c.stroke();
-    for (let i = 0; i < 5; i++) {
-        c.fillStyle = `rgba(110,175,160,${.12 + i * .025})`;
-        c.fillRect(-22 + i * 3, -7 + i * 3, 44 - i * 6, 3);
+export function drawCryptGate(c: CanvasRenderingContext2D, p: Pick<DungeonEntrance, 'x' | 'y'> & {seed?:number;theme?:import('./dungeon-content.ts').DungeonThemeId}, time: number) {
+    const theme=dungeonTheme(p.seed??0,p.theme),id=theme.id;
+    c.save();c.translate(p.x,p.y);
+    const poly=(pts:number[][],fill:string)=>polygon(c,pts as [number,number][],fill);
+    c.fillStyle='#03080ab0';c.beginPath();c.ellipse(6,12,64,24,0,0,7);c.fill();
+    // Receding steps ground every entrance; the portal silhouette stays distinct.
+    for(let i=0;i<5;i++)poly([[-33-i*5,5+i*5],[33+i*5,5+i*5],[38+i*5,10+i*5],[-38-i*5,10+i*5]],i%2?'#56605c':'#353e3f');
+    const stone=`rgb(${theme.stone.map(v=>v+35).join(',')})`;
+    if(id==='foundry') {
+        poly([[-66,7],[-66,-75],[-45,-108],[43,-108],[64,-75],[64,8]],'#393337');
+        poly([[-47,5],[-47,-71],[-29,-88],[29,-88],[47,-71],[47,5]],'#967255');
+        poly([[-37,5],[-37,-63],[-22,-78],[22,-78],[37,-63],[37,5]],'#080c13');
+        for(const side of[-1,1]){poly([[side*43,-77],[side*32,-64],[side*32,4],[side*44,-1]],'#555457');for(let y=-64;y<0;y+=16){c.fillStyle='#dfac68';c.fillRect(side*39-2,y,4,4);}poly([[side*48,-29],[side*60,-25],[side*61,-10],[side*48,-12]],'#db793f');}
+        line(c,[[-24,-95],[24,-95]],'#dc9c60',4);
+    } else if(id==='ossuary') {
+        poly([[-66,6],[-59,-92],[59,-92],[67,6]],'#66553e');
+        poly([[-66,-92],[-43,-119],[42,-119],[66,-92]],'#b29669');
+        poly([[-36,5],[-34,-80],[34,-80],[36,5]],'#10141a');
+        for(const side of[-1,1]){poly([[side*43-9,5],[side*43-9,-88],[side*43+9,-88],[side*43+9,5]],stone);for(let y=-75;y<0;y+=18)line(c,[[side*43-8,y],[side*43+8,y]],'#645238',2);}
+        c.fillStyle='#d2c3a0';c.beginPath();c.ellipse(0,-95,12,14,0,0,7);c.fill();c.fillStyle='#3a342d';c.fillRect(-8,-99,5,6);c.fillRect(3,-99,5,6);line(c,[[-5,-86],[5,-86]],'#5b4b36',2);
+    } else if(id==='astral') {
+        for(const side of[-1,1]){poly([[side*49-11,9],[side*49-8,-85],[side*49,-105],[side*49+8,-85],[side*49+11,9]],stone);line(c,[[side*49,-90],[side*49,-5]],'#c4a873',2);}
+        c.strokeStyle='#a18eb8';c.lineWidth=9;c.beginPath();c.ellipse(0,-42,39,58,0,0,7);c.stroke();c.fillStyle='#0b101c';c.beginPath();c.ellipse(0,-42,34,53,0,0,7);c.fill();
+        c.strokeStyle='#c4a873';c.lineWidth=2;c.beginPath();c.ellipse(0,-42,48,64,.22,0,7);c.stroke();
+        for(let i=0;i<8;i++){const a=i*Math.PI/4;poly([[Math.cos(a)*43,-42+Math.sin(a)*60-3],[Math.cos(a)*43+3,-42+Math.sin(a)*60],[Math.cos(a)*43,-42+Math.sin(a)*60+3],[Math.cos(a)*43-3,-42+Math.sin(a)*60]],theme.accent);}
+        line(c,[[-17,-108],[0,-121],[17,-108],[0,-96],[-17,-108]],'#dbbd7e',2);
+    } else {
+        const pointed=id==='rime',top=pointed?-120:-89;
+        poly([[-54,7],[-51,-65],[-32,top+12],[0,top],[32,top+12],[51,-65],[54,7]],stone);
+        poly([[-31,7],[-30,-53],[0,pointed?-96:-70],[30,-53],[31,7]],'#060d14');
+        line(c,[[-36,4],[-35,-57],[0,pointed?-103:-77],[35,-57],[36,4]],'#bcc0ad',3);
+        for(const side of[-1,1])for(let i=0;i<5;i++)line(c,[[side*38,-8-i*13],[side*50,-10-i*13]],'#353d41',2);
+        if(id==='rime') {
+            for(const side of[-1,1]){poly([[side*55-8,2],[side*55-7,-104],[side*55,-133],[side*55+7,-104],[side*55+8,2]],'#8eafc4');line(c,[[side*55,-128],[side*55,-5]],'#d3eff2',2);}
+            for(let i=0;i<7;i++){const x=-29+i*10;poly([[x,-62-Math.abs(x)*.7],[x+6,-62-Math.abs(x)*.7],[x+2,-45-Math.abs(x)*.7]],'#bee6ef');}
+            poly([[-13,-107],[0,-123],[13,-107],[0,-96]],'#d1ebf0');
+        }else if(id==='rootbound'){
+            for(const side of[-1,1])for(let i=0;i<3;i++){c.strokeStyle=i%2?'#6d7350':'#3a4c34';c.lineWidth=5-i;c.beginPath();c.moveTo(side*(58+i*4),15);c.bezierCurveTo(side*27,-8,side*65,-60,side*(11+i*9),-93);c.stroke();}
+            for(let i=0;i<8;i++){c.fillStyle='#648762';c.beginPath();c.ellipse(-42+i*12,-75-Math.sin(i)*12,7,3,i,0,7);c.fill();}
+        }else{
+            c.strokeStyle='#91bac5';c.lineWidth=2;for(let i=0;i<4;i++){c.beginPath();c.ellipse(0,14+i*4,40+i*8,8+i*2,0,.1,3.1);c.stroke();}
+            for(const side of[-1,1])poly([[side*58-7,8],[side*58-6,-36],[side*58,-52],[side*58+7,-34],[side*58+8,8]],'#75b7c9');
+        }
     }
-    for (const side of [-1, 1]) {
-        c.fillStyle = '#deb77b';
-        c.fillRect(side * 38 - 2, -25, 4, 6);
-        const g = c.createRadialGradient(side * 38, -25, 0, side * 38, -25, 35);
-        g.addColorStop(0, theme.accent+'3a');
-        g.addColorStop(1, theme.accent+'00');
-        c.fillStyle = g;
-        c.fillRect(side * 38 - 35, -60, 70, 70);
-    }
-    c.strokeStyle = theme.accent;
-    c.lineWidth = 1;
-    c.beginPath();
-    c.ellipse(0, 5, 28 + Math.sin(time) * 1.5, 9, 0, 0, Math.PI * 2);
-    c.stroke();
-    c.restore();
+    for(const side of[-1,1]){c.fillStyle='#826e45';c.fillRect(side*70-3,-22,6,26);drawGlow(c,side*70,-26,25,theme.accent,.5);poly([[side*70-4,-24],[side*70,-37],[side*70+4,-24]],theme.light);}
+    // Restrained light at the threshold; no floating doorway text or decorative particles.
+    const glow=c.createRadialGradient(0,1,1,0,1,35);glow.addColorStop(0,theme.accent+'45');glow.addColorStop(1,theme.accent+'00');c.fillStyle=glow;c.fillRect(-35,-28,70,60);
+    c.strokeStyle=theme.accent+'70';c.lineWidth=1;c.beginPath();c.ellipse(0,8,28+Math.sin(time)*.6,8,0,0,7);c.stroke();c.restore();
 }
+
 export function drawCryptDecor(c: CanvasRenderingContext2D, f: DungeonFloor, run: DungeonRun, time: number, chests:ChestArt=defaultChests, reduced=false) {
     for (const r of f.rooms) {
         c.save(); c.beginPath();
         cryptOutline(r).forEach((p,i) => i ? c.lineTo(p.x,p.y) : c.moveTo(p.x,p.y)); c.closePath(); c.clip();
         // Old drag marks and scattered bones interrupt the ordered burial masonry.
-        if (r.kind !== 'entry' && dungeonTheme(f.seed).id==='rootbound') {
+        if (r.kind !== 'entry' && dungeonTheme(f.seed,f.theme).id==='rootbound') {
             const sx=r.x+r.width*.33, sy=r.y+r.height*.35;
             for(let i=0;i<9;i++) {
                 const h=cryptHash(r.id,i,f.seed), x=sx+h%80, y=sy+(h>>>8)%130;
@@ -143,7 +169,7 @@ export function drawCryptDecor(c: CanvasRenderingContext2D, f: DungeonFloor, run
     drawCryptGate(c, {...f.entry,seed:f.seed}, time);
     if (run.states.warden.hp <= 0)
         drawCryptGate(c, {...f.exit,seed:f.seed}, time);
-    f.chests.forEach((p,i)=>chests.draw(c,`${run.entrance.id}:chest:${i}`,p.x,p.y,run.chestMasks[i]!==0,time,0,false,reduced));
+    f.chests.forEach((p,i)=>{const grand=i===2&&run.entrance.expedition?.stage===9;c.save();c.translate(p.x,p.y);if(grand){drawGlow(c,0,-12,90,'#c19af0',.3);c.scale(1.5,1.5);}chests.draw(c,`${run.entrance.id}:chest:${i}`,0,0,run.chestMasks[i]!==0,time,0,grand,reduced);c.restore();});
 }
 
 
@@ -169,10 +195,10 @@ export function drawCryptEmission(c: CanvasRenderingContext2D, f: DungeonFloor, 
             c.globalAlpha=1;
         } else {
             const bob=Math.sin(time*1.8+p.phase)*3;
-            if (!coresOnly) drawGlow(c,x,y+bob,86,dungeonTheme(f.seed).light,.4*flicker);
-            if (!coresOnly) drawGlow(c,x,y+bob,31,dungeonTheme(f.seed).accent,.65);
+            if (!coresOnly) drawGlow(c,x,y+bob,86,dungeonTheme(f.seed,f.theme).light,.4*flicker);
+            if (!coresOnly) drawGlow(c,x,y+bob,31,dungeonTheme(f.seed,f.theme).accent,.65);
             const sphere=c.createRadialGradient(x-2,y-3+bob,1,x,y+bob,9);
-            sphere.addColorStop(0,'#f0ffff'); sphere.addColorStop(.35,dungeonTheme(f.seed).accent); sphere.addColorStop(.75,dungeonTheme(f.seed).light); sphere.addColorStop(1,'#235895');
+            sphere.addColorStop(0,'#f0ffff'); sphere.addColorStop(.35,dungeonTheme(f.seed,f.theme).accent); sphere.addColorStop(.75,dungeonTheme(f.seed,f.theme).light); sphere.addColorStop(1,'#235895');
             c.fillStyle=sphere; c.beginPath(); c.arc(x,y+bob,9,0,7); c.fill();
             c.save(); c.translate(x,y+bob); c.strokeStyle='#9ce9f3a0'; c.lineWidth=.8;
             for(let ring=0;ring<2;ring++) {

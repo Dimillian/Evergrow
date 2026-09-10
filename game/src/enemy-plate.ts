@@ -11,6 +11,7 @@ import { getMinimapRect } from './map-view.ts';
 import { drawRankCrest, RANK_METALS } from './enemy-rank-art.ts';
 
 export interface EnemyPlateOptions {
+  name?:string;
   touch?: boolean;
   /** Safe-area top inset in the same logical coordinates as the UI canvas. */
   topInset?: number;
@@ -114,7 +115,7 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
   c.fillStyle = shadow; c.fillRect(-1, -1, 2, 2); c.restore();
 
   c.save(); c.shadowColor = '#010409'; c.shadowBlur = 3; c.shadowOffsetY = 1;
-  const name = ENEMY_DEFINITIONS[enemy.kind].name;
+  const name = options.name ?? ENEMY_DEFINITIONS[enemy.kind].name;
   text(c, name, w / 2, 28, Math.min(1.13, (w - 30) / Math.max(1, textWidth(name))), UI.ivory, 'center'); c.restore();
   drawRankCrest(c, enemy.rank, w / 2, 14, .88);
   // Engraved suspension arms lead the eye into the rank seal, without a window background.

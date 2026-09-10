@@ -62,7 +62,7 @@ export function journeyAvailable(goal:JourneyGoal,facts:JourneyFacts):boolean {
   if(journeyComplete(goal,facts))return false;
   if(goal.kind==='dungeon'){
     const run=facts.expeditions.runs.find(r=>r.entrance.id===goal.id);
-    if(!run&&facts.expeditions.runs.some(r=>r.states.warden?.hp>0))return false;
+    if(!run&&facts.expeditions.runs.some(r=>!r.entrance.expedition&&r.states.warden?.hp>0))return false;
   }
   if(isTrialKind(goal.kind)&&facts.events.trial&&facts.events.trial.siteId!==goal.id)return false;
   return true;

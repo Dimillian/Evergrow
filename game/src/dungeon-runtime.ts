@@ -1,3 +1,4 @@
+import { isWildernessBoss } from './wilderness-boss-content.ts';
 import { encounterApproaches } from './encounter-approaches.ts';
 import { advanceDungeonEvents } from './dungeon-events.ts';
 import type { CombatEvent } from './model.ts';
@@ -12,6 +13,7 @@ export function updateDungeon(sim: Simulation, view: SpawnExclusion | null, dt=1
     const run = currentDungeon(sim.expeditions);
     if (!run)
         return;
+    for(const boss of sim.enemies)if(boss.campMemberId==='warden'&&isWildernessBoss(boss.kind)&&boss.hp>0){if(boss.hp/boss.maxHp<.65)boss.bossPhases=(boss.bossPhases??0)|1;if(boss.hp/boss.maxHp<.3)boss.bossPhases=(boss.bossPhases??0)|2;}
     syncDungeon(run, sim.enemies, sim.player.x, sim.player.y);
     const floor = sim.dungeonFloor!;
     advanceDungeonEvents(sim,dt,emit);
@@ -60,4 +62,4 @@ export function updateDungeon(sim: Simulation, view: SpawnExclusion | null, dt=1
         }
     }
 }
-export function dungeonFromState(sim: Simulation) { const run = currentDungeon(sim.expeditions); return run ? generateDungeon(run.entrance.seed, run.entrance.level) : null; }
+export function dungeonFromState(sim: Simulation) { const run = currentDungeon(sim.expeditions); return run ? generateDungeon(run.entrance.seed, run.entrance.level, run.entrance) : null; }

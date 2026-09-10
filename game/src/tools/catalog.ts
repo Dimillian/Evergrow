@@ -11,6 +11,8 @@ export const WORKSPACES = [
 export type Workspace = typeof WORKSPACES[number]['id'];
 export interface Tool { id: string; group: Workspace; name: string; path: string; description: string; tags?: string; }
 export const TOOLS: readonly Tool[] = [
+  {id:'expeditions',group:'world',name:'Expedition routes',path:'/tools/expeditions.html',description:'Ten-stage route choices, dungeon modifiers, reward odds and level gate in the runtime panel.'},
+  {id:'respec',group:'equipment',name:'Enchanter respec',path:'/services.html?role=enchanter&respec',description:'Preview the affordable skill reset and exact refunded points.'},
   {id:'forge',group:'equipment',name:'Item forge',path:'/tools/forge.html',description:'Generate items by seed, kind, profile, rarity and material; equip previews and JSON export.',tags:'generator random roll affixes'},
   {id:'playground',group:'combat',name:'Skill playground',path:'/tools/skills.html',description:'Replay every active skill and specialization using actual combat and animation rules.',tags:'animations spells effects cast'},
   {id:'placements',group:'world',name:'Seed & placement inspector',path:'/tools/placements.html',description:'Survey generated events, towns and dungeon entrances by seed and coordinates.',tags:'generation map positions'},

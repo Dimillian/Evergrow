@@ -1,3 +1,4 @@
+import { ExpeditionPanel } from './expedition-panel.ts';
 import { executeDropItem, type DropItemSource } from './drop-item-command.ts';
 import { hoveredGroundLoot } from './ground-loot-hover.ts';
 import { startDungeonEvent } from './dungeon-events.ts';
@@ -86,6 +87,8 @@ export class Game {
   private lifetime = new Lifetime();
   overworld = new World(7319);
   world: World = this.overworld;
+  private expeditionPanel: ExpeditionPanel;
+  private activeExpeditionTable: string | null = null;
   private dungeonMap: DungeonMap;
   private activeDungeonEntrance: DungeonEntrance | null = null;
   sim = new Simulation(this.world, { seed: 7319 });
@@ -217,6 +220,7 @@ export class Game {
         close: () => this.resume(), trade: quote => this.trade(quote),
         sort: (target,tab) => this.characterAction(target === 'storage' ? {type:'sortStorage',tab} : {type:'sortInventory',mode:'compact'}),
       }));
+      this.expeditionPanel=this.lifetime.own(new ExpeditionPanel(this.shell.panelMount,{close:()=>this.resume(),enter:async action=>{const ok=await this.switchDungeon(action);if(ok)this.resume();return ok;}}));
       this.dungeonMap = this.lifetime.own(new DungeonMap(this.shell.mapMount,()=>this.closeMap(),()=>this.worldMap.open({x:this.sim.expeditions.surfaceX,y:this.sim.expeditions.surfaceY,angle:0})));
       this.eventPanel = this.lifetime.own(new EventPanel(this.shell.panelMount, {
         enter: entrance => { this.resume(); this.switchDungeon({kind:'enter',entrance}); },
@@ -239,7 +243,7 @@ export class Game {
       this.panels = new PanelCoordinator({
         chronicle:{open:()=>{void this.chronicle.open(async onCached=>{await this.saveCharacter(true);return this.saveClient.chronicle(onCached);},this.session.active?.record.id);},close:()=>this.chronicle.close(false)},
         journeys:{open:()=>this.journeys.panel.open(this.journeys.selected),close:()=>this.journeys.panel.close()},
-        event: { open: () => { if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.activeEvent = null; this.activeDungeonEntrance = null; } },
+        event: { open: () => { if(this.activeExpeditionTable)this.expeditionPanel.open(this.sim.expeditions,this.sim.player.level,this.overworld.seed,this.activeExpeditionTable); else if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.expeditionPanel.close(); this.activeExpeditionTable=null; this.activeEvent = null; this.activeDungeonEntrance = null; } },
         service: { open: () => { if (this.activeNPC) this.servicePanel.open(this.sim.player, this.activeNPC); }, close: () => { this.servicePanel.close(); this.activeNPC = null; } },
         map: { open: () => { const run=currentDungeon(this.sim.expeditions); if(run) this.dungeonMap.open(this.sim.dungeonFloor!,run,this.sim.player); else this.worldMap.open(this.sim.player); this.shell.setStatus('World map open. Game paused.'); }, close: () => { this.worldMap.close(); this.dungeonMap.close(); } },
         character: { open: () => { this.inventoryPanel.open(this.sim.player); this.shell.setStatus('Character and inventory open. Game paused.'); }, close: () => this.inventoryPanel.close() },
@@ -786,6 +790,8 @@ export class Game {
           }
           return true;
       }
+      const table=this.world.getBuildings(p.x-180,p.y-180,360,360).find(b=>b.kind==='expedition'&&Math.hypot(b.door.x-p.x,b.door.y-p.y)<75&&(!pointer||Math.hypot(pointer.x-b.door.x,pointer.y-(b.door.y-25))<55));
+      if(table){this.activeExpeditionTable=table.id;this.panels.open('event');return true;}
       const npcs = this.world.getBuildings(p.x - 220, p.y - 220, 440, 440).map(buildingNPC).filter((npc): npc is TownNPC => npc !== null);
       const npc = focusNPC(npcs, p, this.world, pointer);
       if (!npc) {
@@ -883,7 +889,7 @@ export class Game {
       const run = checkpoint.expeditions && currentDungeon(checkpoint.expeditions);
       if (this.world !== this.overworld)
           this.world.dispose();
-      this.world = run ? new DungeonWorld(generateDungeon(run.entrance.seed, run.entrance.level), run.entrance) : this.overworld;
+      this.world = run ? new DungeonWorld(generateDungeon(run.entrance.seed, run.entrance.level, run.entrance), run.entrance) : this.overworld;
       this.sim.world = this.world;
   }
   private switchDungeon(action: DungeonAction): Promise<boolean> {

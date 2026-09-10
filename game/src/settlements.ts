@@ -6,7 +6,7 @@ import type { WorldPOI } from './world-pois.ts';
 export type POI = WorldPOI;
 
 export interface Rect { x: number; y: number; width: number; height: number; }
-export type BuildingKind = 'blacksmith' | 'merchant' | 'inn' | 'house' | 'chapel' | 'gambler' | 'noble' | 'stash' | 'hearth' | 'barricade' | 'tower' | 'torch' | 'shelter' | 'cart' | 'supplies' | 'bench' | 'rack' | 'garden' | 'well';
+export type BuildingKind = 'expedition' | 'blacksmith' | 'merchant' | 'inn' | 'house' | 'chapel' | 'gambler' | 'noble' | 'stash' | 'hearth' | 'barricade' | 'tower' | 'torch' | 'shelter' | 'cart' | 'supplies' | 'bench' | 'rack' | 'garden' | 'well';
 export interface Building extends Rect {
   biome?: BiomeId;
   settlementTier?: SettlementTier;
@@ -40,12 +40,12 @@ export interface Settlement {
 export const MAX_TOWN_RADIUS = 1000;
 const NAMES = ['Alder', 'Briar', 'Mourn', 'Thorn', 'Raven', 'Ash', 'Mist', 'Willow', 'Oak', 'Hollow', 'Wren', 'Red', 'Silver', 'Bracken', 'Dawn', 'Grey', 'Fern', 'Elder', 'Stone', 'West', 'High', 'Amber', 'White', 'Copper'];
 const BUILDING_NAMES: Record<BuildingKind, string> = {
-  garden:'Kitchen garden', well:'Village well', shelter: 'Traveller’s shelter', cart: 'Supply cart', supplies: 'Supplies', bench: 'Bench', rack: 'Work rack',
+  expedition:'Expeditions', garden:'Kitchen garden', well:'Village well', shelter: 'Traveller’s shelter', cart: 'Supply cart', supplies: 'Supplies', bench: 'Bench', rack: 'Work rack',
   gambler: 'Gambler', noble: 'Count’s Hall', stash: 'Storage', hearth: 'Hearth', barricade: 'Fortification', tower: 'Watchtower', torch: 'Torch',
   blacksmith: 'The Ember Forge', merchant: 'Wayfarer Goods', inn: 'The Lantern Inn', house: 'Woodland House', chapel: 'Chapel of the Vigil',
 };
 const BUILDING_DESCRIPTIONS: Record<BuildingKind, string> = {
-  garden:'',well:'', shelter: 'Canvas and firelight keep the weather out.', cart: '', supplies: '', bench: '', rack: '',
+  expedition:'Choose a dungeon route. Requires level 20.', garden:'',well:'', shelter: 'Canvas and firelight keep the weather out.', cart: '', supplies: '', bench: '', rack: '',
   gambler: 'Trade gold for an unknown piece of equipment.', noble: 'The local household keeps court behind these walls.', stash: 'Your personal equipment storage.', hearth: 'A warm refuge for travellers.', barricade: '', tower: '', torch: '',
   blacksmith: 'Coal glows in the forge beside a scarred iron anvil.',
   merchant: 'Shelves of travel supplies stand above tightly sealed crates.',
@@ -279,6 +279,14 @@ export function generateSettlement(seed: number, place: Place): Settlement {
     if(buildings.some(b=>circleHitsRect(tx,ty,Math.max(w,h)/2+10,b)))continue;
     if(paths.some(path=>path.points.slice(1).some((q,j)=>{const a=path.points[j],vx=q[0]-a[0],vy=q[1]-a[1],t=Math.max(0,Math.min(1,((tx-a[0])*vx+(ty-a[1])*vy)/(vx*vx+vy*vy||1)));return Math.hypot(tx-a[0]-t*vx,ty-a[1]-t*vy)<Math.max(w,h)/2+24;})))continue;
     fixture(kind,dx,dy,w,h);
+  }
+  for(let i=0;i<192;i++) {
+    const angle=i*Math.PI*.382,dist=110+Math.floor(i/24)*28,dx=Math.cos(angle)*dist,dy=Math.sin(angle)*dist;
+    if(circleHitsRect(x+dx,y+dy,55,portalClear)||buildings.some(b=>circleHitsRect(x+dx,y+dy,65,b)))continue;
+    if(paths.some(path=>path.points.slice(1).some((q,j)=>{const a=path.points[j],vx=q[0]-a[0],vy=q[1]-a[1],t=Math.max(0,Math.min(1,((x+dx-a[0])*vx+(y+dy-a[1])*vy)/(vx*vx+vy*vy||1)));return Math.hypot(x+dx-a[0]-t*vx,y+dy-a[1]-t*vy)<65;})))continue;
+    const table=fixture('expedition',dx,dy,54,32);
+    table.door.y+=12;
+    break;
   }
   return {id,seed:place.seed,name:NAMES[place.seed%NAMES.length]+['ford','haven','watch','rest','wick','mere','bridge','fall','brook','cross','holm','stead','gate','wall','bury','crest'][Math.floor(place.seed/29)%16],kind,layout,x,y,radius,buildings,plaza,paths};
 }

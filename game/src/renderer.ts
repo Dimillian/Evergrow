@@ -471,7 +471,7 @@ export class Renderer {
     const weights = biome.weights, inside = this.indoorBlend;
     const ambientChannels = biomeAmbient(weights).map((value, channel) =>
       Math.round(value * this.sky.ambient[channel] * (1 - inside) + [116, 119, 141][channel] * inside));
-    const ambient = sim.dungeonFloor ? dungeonTheme(sim.dungeonFloor.seed).ambient : `rgb(${ambientChannels.join(',')})`;
+    const ambient = sim.dungeonFloor ? dungeonTheme(sim.dungeonFloor.seed,sim.dungeonFloor.theme).ambient : `rgb(${ambientChannels.join(',')})`;
     const lightingStart = this.profiler?.start() ?? 0;
     this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps, ambient, zoom);
     this.profiler?.end('lighting', lightingStart);
@@ -557,7 +557,7 @@ export class Renderer {
     const plateInset=this.touchTopInset/plateScale;
     const boss=sim.enemies.find(e=>isBossKind(e.kind)&&e.hp>0&&e.state!=='return'&&Math.hypot(e.x-p.x,e.y-p.y)<(isWildernessBoss(e.kind)?650:1100));
     if (boss) {
-      drawEnemyPlate(c, boss, plateWidth, plateHeight, { touch: this.touchActive, topInset: plateInset });
+      drawEnemyPlate(c, boss, plateWidth, plateHeight, { touch: this.touchActive, topInset: plateInset, name:sim.dungeonFloor?dungeonTheme(sim.dungeonFloor.seed,sim.dungeonFloor.theme).bossName:undefined });
       const plate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, enemyDebuffs(boss).length > 0);
       if (plate.height && this.focusedEnemy?.id === boss.id) text(c, 'CONTROL DURATION −75% · BRIEF STUN IMMUNITY',
         plateWidth / 2, plate.y + plate.height + 4, .7, '#9db8a7', 'center');
@@ -573,6 +573,8 @@ export class Renderer {
     if (settings.phase === 'playing') {
       const run=currentDungeon(sim.expeditions),f=sim.dungeonFloor;
       const points=run&&f?[{...f.entry,name:'Leave dungeon'},...(run.states.warden.hp<=0?[{...f.exit,name:'Leave dungeon'}]:[]),...f.chests.map(ch=>({...ch,name:'Treasure chest'}))]:this.visibility.entrances;
+      const table=!run&&world.getBuildings(p.x-180,p.y-180,360,360).find(b=>b.kind==='expedition'&&Math.hypot(b.door.x-p.x,b.door.y-p.y)<75);
+      if(table){const q=worldToScreen(this.view,table.door.x,table.door.y-80);text(c,`Expeditions${p.level<20?' · Level 20':''} [${this.gamepadActive?'A':'E'}]`,q.x,q.y,1,'#d8c593','center');}
       const target=points.find(q=>Math.hypot(q.x-p.x,q.y-p.y)<75);
       if(target){const point=worldToScreen(this.view,target.x,target.y-75);text(c,`${target.name}  [${this.gamepadActive?'A':'E'}]`,point.x,point.y,1,'#d6d7b3','center');}
       if(run&&f)for(const event of f.events??[]){
@@ -722,7 +724,7 @@ export class Renderer {
     for (const enemy of sim.enemies) {
       if (enemy.hp <= 0) continue;
       const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);
-      entries.push({ y, draw: () => this.actor(x, y, { kind: enemy.kind, angle: enemy.angle,
+      entries.push({ y, draw: () => this.actor(x, y, { kind: enemy.kind, dungeonTheme:enemy.dungeonTheme, angle: enemy.angle,
         command: enemy.warband?.order, commandWarning: enemy.warband?.warning,
         time: sim.time + enemy.id, effectTime: settings.reducedMotion ? 0 : sim.time + enemy.id, moveAngle: Math.atan2(enemy.vy, enemy.vx),
         moving: Math.min(1, Math.hypot(enemy.vx, enemy.vy) / 70),
@@ -919,7 +921,7 @@ export class Renderer {
     const p = sim.player;
     const building = world.getBuildingAt(p.x, p.y);
     const town = world.getSettlements(p.x - 1, p.y - 1, 2, 2).find(town => Math.hypot(p.x - town.x, p.y - town.y) <= town.radius);
-    text(c, sim.dungeonFloor ? `${dungeonTheme(sim.dungeonFloor.seed).name} · ${currentDungeon(sim.expeditions)!.entrance.level}` : building?.name ?? town?.name ?? world.sampleBiome(p.x, p.y).name, 22, 22, 1.2, '#d7c99d');
+    text(c, sim.dungeonFloor ? `${dungeonTheme(sim.dungeonFloor.seed,sim.dungeonFloor.theme).name} · ${currentDungeon(sim.expeditions)!.entrance.level}` : building?.name ?? town?.name ?? world.sampleBiome(p.x, p.y).name, 22, 22, 1.2, '#d7c99d');
     text(c, world.isSanctuary(p.x, p.y) ? 'SANCTUARY' : String(sim.kills).padStart(2, '0') + ' SLAIN',
       22, 37, 1, '#91b69e');
     if (settings.debug) text(c, `${Math.round(settings.fps)} FPS / ${sim.enemies.length} MOBS / ${Math.round(p.x)},${Math.round(p.y)}`,

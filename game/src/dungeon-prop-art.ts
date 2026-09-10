@@ -5,11 +5,20 @@ import { dungeonTheme, DUNGEON_EVENTS } from './dungeon-content.ts';
 
 /** Theme-specific silhouettes live in the same lit world pass as actors and masonry. */
 export function drawDungeonProps(c: CanvasRenderingContext2D, f: DungeonFloor, run: DungeonRun, time: number) {
-    const theme=dungeonTheme(f.seed);
+    const theme=dungeonTheme(f.seed,f.theme);
     for(const p of f.props??[]){
         c.save();c.translate(p.x,p.y);
         c.fillStyle='#03090caf';c.beginPath();c.ellipse(5,10,36,15,0,0,7);c.fill();
-        if(p.kind==='anvil'){
+        if(p.kind==='icePillar'){
+            polygon(c,[[-22,14],[-19,-80],[-7,-104],[9,-92],[22,-63],[18,13]],'#547d99');polygon(c,[[-7,-104],[9,-92],[18,13],[-2,20]],'#a9d5e0');line(c,[[-7,-100],[-4,-36],[8,-22],[-2,17]],'#e5f8ed',2);
+        }else if(p.kind==='orrery'){
+            polygon(c,[[-25,12],[0,-1],[25,12],[0,24]],'#68557f');line(c,[[0,12],[0,-48]],'#b29159',5);
+            c.strokeStyle='#d3b77c';c.lineWidth=2;for(const a of[-.6,.6,1.5]){c.beginPath();c.ellipse(0,-48,32,13,a,0,7);c.stroke();}c.fillStyle='#cfafff';c.beginPath();c.arc(0,-48,8,0,7);c.fill();
+        }else if(p.kind==='bookshelf'){
+            polygon(c,[[-31,12],[-31,-64],[29,-64],[29,12]],'#342b3f');for(const y of[-60,-31,-2]){c.fillStyle='#9c8259';c.fillRect(-32,y,64,4);for(let i=0;i<8;i++){c.fillStyle=['#5f7184','#806783','#928359'][i%3];c.fillRect(-27+i*7,y+6,5,19);c.fillStyle='#c8b583';c.fillRect(-26+i*7,y+9,3,1);}}
+        }else if(p.kind==='sarcophagus'){
+            polygon(c,[[-30,20],[-30,-53],[0,-66],[30,-52],[30,20],[0,34]],'#6d5942');polygon(c,[[-27,6],[-27,-58],[0,-73],[27,-57],[27,6],[0,22]],'#b29a6f');c.fillStyle='#dbc69a';c.beginPath();c.ellipse(0,-47,9,11,0,0,7);c.fill();polygon(c,[[-13,-30],[0,-36],[13,-30],[9,4],[0,11],[-9,4]],'#d0b987');line(c,[[-14,-21],[13,-9],[-13,-9],[14,-21]],'#6d5942',2);
+        }else if(p.kind==='anvil'){
             polygon(c,[[-21,12],[-14,-5],[12,-5],[22,12],[15,19],[-17,19]],'#4c3930');
             polygon(c,[[-35,-22],[18,-22],[36,-31],[39,-22],[18,-10],[8,-4],[-14,-4],[-17,-14],[-35,-16]],'#849198');
             line(c,[[-33,-23],[16,-23],[35,-31]],'#c1c6bd',2);

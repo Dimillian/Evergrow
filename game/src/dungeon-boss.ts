@@ -3,7 +3,13 @@ import type { Enemy } from './model.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
 import { transitionEnemy } from './enemy-state.ts';
 export const WARDEN_RULES = Object.freeze({ sweepWarning: .9, fractureWarning: 1, reach: 125, fractureLength: 480, fractureWidth: 22, controlFactor: .25, controlImmunity: 2.5 });
+export function wardenProfile(theme?: Enemy['dungeonTheme']) {
+    const astral=theme==='astral',rime=theme==='rime';
+    return {offsets:astral?[-.8,-.4,0,.4,.8]:rime?[-.65,0,.65]:[-.5,0,.5],length:astral?580:rime?540:480,width:rime?28:22,
+      element:astral?'arcane' as const:rime?'frost' as const:'physical' as const,color:astral?'#c9a8ff':rime?'#b1e6ff':'#b6c8ad',warning:astral?1.3:rime?1.15:1};
+}
 export function updateWarden(e: Enemy, dt: number, c: EnemyAIContext): void {
+    const profile=wardenProfile(e.dungeonTheme);
     const p = c.player, dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
     if (e.interrupted) {
         e.interrupted = false;
@@ -41,7 +47,7 @@ export function updateWarden(e: Enemy, dt: number, c: EnemyAIContext): void {
             e.bossMove = 'summon';
         }
         else
-            e.bossMove = (e.bossTurns ?? 0) % 2 ? 'fracture' : 'sweep';
+            e.bossMove = (e.bossTurns ?? 0) % (e.dungeonTheme==='astral'?3:2) ? 'fracture' : 'sweep';
         e.bossTurns = (e.bossTurns ?? 0) + 1;
         if (e.bossMove === 'sweep' && d > WARDEN_RULES.reach + 15) {
             c.move(e, Math.cos(a) * 66, Math.sin(a) * 66, dt);
@@ -52,13 +58,13 @@ export function updateWarden(e: Enemy, dt: number, c: EnemyAIContext): void {
         e.attackTargetX = p.x;
         e.attackTargetY = p.y;
         e.bossHits = 0;
-        transitionEnemy(e, 'windup', e.bossMove === 'sweep' ? WARDEN_RULES.sweepWarning : WARDEN_RULES.fractureWarning);
+        transitionEnemy(e, 'windup', e.bossMove === 'sweep' ? WARDEN_RULES.sweepWarning : profile.warning);
         return;
     }
     if (e.state === 'windup') {
         if (e.stateTime >= e.stateDuration) {
-            transitionEnemy(e, 'attack', e.bossMove === 'fracture' ? .6 : .22);
-            c.emit({ type: 'blast', x: e.x, y: e.y, radius: 120, duration: .4, color: '#b6c8ad' });
+            transitionEnemy(e, 'attack', e.bossMove === 'fracture' ? profile.offsets.length*.16+.12 : .22);
+            c.emit({ type: 'blast', x: e.x, y: e.y, radius: 120, duration: .4, color: profile.color });
         }
         return;
     }
@@ -68,14 +74,14 @@ export function updateWarden(e: Enemy, dt: number, c: EnemyAIContext): void {
             c.hurt(e.damage, e.attackAngle, e, 'physical');
         }
         if (e.bossMove === 'fracture' && !e.attackHit) {
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < profile.offsets.length; i++) {
                 if (e.stateTime < i * .16 || ((e.bossHits ?? 0) & 1 << i))
                     continue;
                 e.bossHits = (e.bossHits ?? 0) | 1 << i;
-                const angle = e.attackAngle + (i - 1) * .5, vx = p.x - e.x, vy = p.y - e.y, along = vx * Math.cos(angle) + vy * Math.sin(angle), across = Math.abs(-vx * Math.sin(angle) + vy * Math.cos(angle));
-                if (along > 0 && along < WARDEN_RULES.fractureLength && across < WARDEN_RULES.fractureWidth + p.radius && c.visible(e.x, e.y, p.x, p.y)) {
+                const angle = e.attackAngle + profile.offsets[i], vx = p.x - e.x, vy = p.y - e.y, along = vx * Math.cos(angle) + vy * Math.sin(angle), across = Math.abs(-vx * Math.sin(angle) + vy * Math.cos(angle));
+                if (along > 0 && along < profile.length && across < profile.width + p.radius && c.visible(e.x, e.y, p.x, p.y)) {
                     e.attackHit = true;
-                    c.hurt(e.damage * 1.15, angle, e, 'physical');
+                    c.hurt(e.damage * 1.15, angle, e, profile.element);
                     break;
                 }
             }

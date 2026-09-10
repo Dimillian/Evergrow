@@ -6,6 +6,7 @@ import type { DungeonEntrance } from './dungeon.ts';
 import { BIOMES } from './biomes.ts';
 /** The active floor is a distinct World object, with no overworld content or coordinate-level queries. */
 export class DungeonWorld extends World {
+    get dungeonTheme() {return this.floor.theme;}
     readonly dungeonLevel: number;
     readonly dungeonBiome: DungeonEntrance['biome'];
     private geometry: DungeonGeometry;

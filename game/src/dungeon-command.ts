@@ -1,4 +1,4 @@
-import { dungeonTheme } from './dungeon-content.ts';
+import { newExpeditionRoute, expeditionChoices, expeditionRewardItems, completeExpeditionStage, dungeonChestMask, EXPEDITION_RULES } from './expedition-route.ts';
 import { encounterScaleAt, encounterRewardLevel } from './encounter-scaling.ts';
 import { interruptTrial } from './poi-content.ts';
 import { treasureLanding } from './treasure-flight.ts';
@@ -13,7 +13,7 @@ import { hasLineOfSight } from './combat-geometry.ts';
 import { rollEnemyLoot } from './loot.ts';
 import { GOLD_RULES } from './gold.ts';
 import { addGroundItem } from './ground-loot.ts';
-export type DungeonAction = {
+export type DungeonAction = {kind:'expedition';tableId:string;choice:number;attempt:number;restart?:boolean;resume?:string} | {
     kind: 'enter';
     entrance: DungeonEntrance;
 } | {
@@ -46,23 +46,48 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
         x: number;
         y: number;
     };
-    if (action.kind === 'enter' || action.kind === 'return') {
+    if (action.kind === 'enter' || action.kind === 'return' || action.kind === 'expedition') {
         if (run)
             return { ok: false, message: 'Already in a dungeon.' };
-        const entrance = action.kind === 'enter' ? action.entrance : state.runs.find(r => r.entrance.id === sim.travel.returnTo?.dungeon)?.entrance;
+        let expeditionEntrance: DungeonEntrance | undefined;
+        let expeditionPoint: {x:number;y:number}|undefined;
+        if(action.kind==='expedition') {
+            const table=surface.getBuildings?.(p.x-200,p.y-200,400,400).find(b=>b.id===action.tableId&&b.kind==='expedition');
+            if(!table||p.level<EXPEDITION_RULES.minimumLevel||Math.hypot(p.x-table.door.x,p.y-table.door.y)>75||!hasLineOfSight(surface,p.x,p.y,table.door.x,table.door.y+12))return {ok:false,message:'Visit an expedition table at level 20.'};
+            expeditionPoint={x:table.door.x,y:table.door.y+14};
+            const previous=state.route;
+            if(action.attempt!==(previous?.attempt??0))return {ok:false,message:'This route changed. Open the table again.'};
+            if(action.resume){
+                expeditionEntrance=state.runs.find(r=>r.entrance.id===action.resume&&r.entrance.expedition?.attempt===previous?.attempt)?.entrance;
+                if(!expeditionEntrance||previous?.status==='failed')return {ok:false,message:'This dungeon is no longer available.'};
+            }else {
+            if(!previous||previous.status!=='active') {
+                if(previous?.status==='complete'&&!action.restart)return {ok:false,message:'Start a new route to leave previous expedition loot behind.'};
+                state.runs=state.runs.filter(r=>!r.entrance.expedition);
+                state.route=newExpeditionRoute(surface.seed??0,p.level,(previous?.attempt??0)+1);
+            }
+            const route=state.route!;
+            if(route.choice!==null&&route.choice!==action.choice)return {ok:false,message:'This route is already chosen.'};
+            expeditionEntrance=expeditionChoices(route,{x:table.door.x,y:table.door.y+14})[action.choice];
+            if(!expeditionEntrance)return {ok:false,message:'Choose an available route.'};
+            route.choice=action.choice;
+            }
+        }
+        const entrance = action.kind==='expedition' ? expeditionEntrance : action.kind === 'enter' ? action.entrance : state.runs.find(r => r.entrance.id === sim.travel.returnTo?.dungeon)?.entrance;
+        if(action.kind==='enter' && entrance?.expedition)return {ok:false,message:'Use the expedition table.'};
         if (action.kind === 'return' && sim.travel.returnTo?.town !== action.anchor.band)
             return { ok: false, message: 'Return portal unavailable.' };
         if (!entrance)
             return { ok: false, message: 'Expedition unavailable.' };
-        const target = action.kind === 'enter' ? entrance : action.anchor;
+        const target = action.kind === 'return' ? action.anchor : expeditionPoint??entrance;
         if (Math.hypot(p.x - target.x, p.y - target.y) > 75 || !hasLineOfSight(surface, p.x, p.y, target.x, target.y))
             return { ok: false, message: 'Move closer to the entrance.' };
         if (state.cleared?.includes(entrance.id)) return { ok: false, message: 'This dungeon has been cleared.' };
         let next = state.runs.find(r => r.entrance.id === entrance.id);
         if (!next) {
-            if (state.runs.some(r => r.states.warden.hp > 0))
+            if (state.runs.some(r => r.states.warden.hp > 0 && !r.entrance.expedition) && action.kind!=='expedition')
                 return { ok: false, message: 'Finish your active expedition first.' };
-            const scaling = encounterScaleAt(entrance.x, entrance.y, surface.seed, p.level);
+            const scaling = entrance.expedition ? entrance.scaling! : encounterScaleAt(entrance.x, entrance.y, surface.seed, p.level);
             next = createDungeonRun({ ...entrance, scaling, level: scaling.base });
             state.runs.push(next);
         }
@@ -95,6 +120,9 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
         applyContents(checkpoint, state.surface);
         state.surface = null;
         state.location = null;
+        if(action.kind==='death' && run.entrance.expedition && state.route){
+            state.route.status='failed';state.route.choice=null;state.runs=state.runs.filter(r=>!r.entrance.expedition);
+        }
         checkpoint.travel = { ...sim.travel, returnTo: action.kind === 'town' ? { x: p.x, y: p.y, town: action.anchor.band, dungeon: run.entrance.id } : null };
     }
     compactExpeditions(state, checkpoint.travel?.returnTo?.dungeon);
@@ -103,7 +131,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
     const result = await persist(checkpoint);
     if (!result.ok)
         return { ok: false, message: result.message };
-    return { ok: true, checkpoint, message: action.kind === 'enter' || action.kind === 'return' ? dungeonTheme(currentDungeon(state)!.entrance.seed).name : 'Returned to the surface.' };
+    return { ok: true, checkpoint, message: state.location ? currentDungeon(state)!.entrance.name : 'Returned to the surface.' };
 }
 function applyContents(c: CharacterCheckpoint, contents: LocationContents) { c.encounterScales = contents.encounterScales ?? {}; c.campWounds = contents.campWounds ?? []; c.actors = contents.actors; c.groundItems = contents.groundItems; c.groundGold = contents.groundGold; c.pickups = contents.pickups; c.clearedCamps = contents.clearedCamps; c.defeatedCampMembers = contents.defeatedCampMembers; }
 export function dungeonChestProblem(sim: Simulation, index: number): string | null {
@@ -117,8 +145,8 @@ export function dungeonChestProblem(sim: Simulation, index: number): string | nu
         return 'Move closer to the chest.';
     if(event&&!run.events?.[event.id]?.finished)return 'Complete the chamber encounter.';
     if (index === 2 ? run.states.warden.hp > 0 : floor.members.some(m => m.room === chest.room && run.states[m.id].hp > 0))
-        return index === 2 ? 'Defeat the Hollow Warden.' : 'Defeat the chamber guards.';
-    if (run.chestMasks[index] === (index === 2 ? 15 : 9))
+        return index === 2 ? 'Defeat the dungeon boss.' : 'Defeat the chamber guards.';
+    if (run.chestMasks[index] === dungeonChestMask(run,index))
         return 'Already claimed.';
     return null;
 }
@@ -132,22 +160,24 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     const floor = sim.dungeonFloor!, chest = floor.chests[index];
     const rewardLevel = run.entrance.scaling ? encounterRewardLevel(run.entrance.scaling, index === 2 ? 3 : 1) : run.entrance.level;
     const ranks = index === 2 ? ['normal', 'veteran', 'elite'] as const : ['veteran'] as const;
-    const items = ranks.map((rank, i) => rollEnemyLoot({ seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: rewardLevel, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true, encounter:index===2?'bossChest':'chest' })[0]);
+    const items = index===2 && run.entrance.expedition ? expeditionRewardItems(run.entrance) : ranks.map((rank, i) => rollEnemyLoot({ seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: rewardLevel, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true, encounter:index===2?'bossChest':'chest' })[0]);
     const gold = Math.round((index === 2 ? 45 + run.entrance.seed % 26 : 18) * (1 + .1 * (rewardLevel - 1)));
+    const goldBit=index===2 && run.entrance.expedition?.stage===9 ? 64 : 8;
     let mask = run.chestMasks[index], next = Math.max(1, ...sim.groundItems.map(i => i.id + 1), ...sim.groundGold.map(i => i.id + 1), ...sim.pickups.map(i => i.id + 1), ...sim.enemies.map(i => i.id + 1), ...sim.projectiles.map(i => i.id + 1));
     for (let i = 0; i < items.length; i++)
         if (!(mask & 1 << i)) {
             addGroundItem(checkpoint.groundItems, { id: next++, ...treasureLanding(sim.world,chest.x,chest.y,i,run.entrance.seed), flight:{x:chest.x,y:chest.y,at:sim.time,delay:i*.12}, item: items[i] });
             mask |= 1 << i;
         }
-    if (!(mask & 8) && (checkpoint.groundGold ??= []).length < GOLD_RULES.maxPiles) {
+    if (!(mask & goldBit) && (checkpoint.groundGold ??= []).length < GOLD_RULES.maxPiles) {
         checkpoint.groundGold.push({ id: next++, ...treasureLanding(sim.world,chest.x,chest.y,12,run.entrance.seed), flight:{x:chest.x,y:chest.y,at:sim.time,delay:.15}, age: 0, amount: Math.round(gold * sim.player.derived.goldFindMultiplier) });
-        mask |= 8;
+        mask |= goldBit;
     }
     if (mask === run.chestMasks[index])
-        return { ok: false, message: mask === (index === 2 ? 15 : 9) ? 'Already claimed.' : 'Collect nearby loot to make room.' };
+        return { ok: false, message: mask === dungeonChestMask(run,index) ? 'Already claimed.' : 'Collect nearby loot to make room.' };
     run.chestMasks[index] = mask;
-    const completion=index===2&&mask===15?stageJourneyCompletion(checkpoint,{...run.entrance,level:rewardLevel,kind:'dungeon',region:run.entrance.name},sim.player,sim.time):null;
+    if(index===2)completeExpeditionStage(checkpoint.expeditions!,run);
+    const completion=index===2&&!run.entrance.expedition&&mask===15?stageJourneyCompletion(checkpoint,{...run.entrance,level:rewardLevel,kind:'dungeon',region:run.entrance.name},sim.player,sim.time):null;
     const result = await persist(checkpoint);
     if (!result.ok)
         return result;

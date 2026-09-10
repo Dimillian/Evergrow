@@ -163,7 +163,7 @@ export class DungeonLightEffects {
       else gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,this.atlas);this.atlasAllocated=true;}
     gl.useProgram(this.program);gl.uniform4fv(this.uniforms['lamps[0]'],this.positions);gl.uniform3fv(this.uniforms['colors[0]'],this.colors);
     gl.uniform4f(this.uniforms.view,view.left,view.top,view.width,view.height);gl.uniform1f(this.uniforms.time,reduced?0:time);
-    gl.uniform1f(this.uniforms.damp,dungeonTheme(floor.seed).id==='drowned'?1:dungeonTheme(floor.seed).id==='rootbound'?.55:.12);
+    gl.uniform1f(this.uniforms.damp,dungeonTheme(floor.seed,floor.theme).id==='drowned'?1:dungeonTheme(floor.seed,floor.theme).id==='rootbound'?.55:.12);
     return true;
   }
   draw(c:CanvasRenderingContext2D,view:CameraView,air:boolean){

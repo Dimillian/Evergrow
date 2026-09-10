@@ -1,3 +1,5 @@
+import { validExpeditionRoute, expeditionChoices, dungeonChestMask } from './expedition-route.ts';
+import { DUNGEON_THEME_IDS } from './dungeon-content.ts';
 import { DUNGEON_EVENTS } from './dungeon-content.ts';
 import { dungeonMemberLevel } from './dungeon-state.ts';
 import type { DungeonEntrance } from './dungeon.ts';
@@ -18,6 +20,7 @@ export function validExpeditions(v: unknown): v is Expeditions {
     if (!object(v) || !(v.location === null || text(v.location, 180)) || !Array.isArray(v.runs) || !(v.surface === null || validContents(v.surface)) || !number(v.surfaceX, -4e7, 4e7) || !number(v.surfaceY, -4e7, 4e7))
         return false;
     if (v.cleared !== undefined && (!Array.isArray(v.cleared) || !v.cleared.every(id => text(id, 180) && id.startsWith('dungeon:')) || new Set(v.cleared).size !== v.cleared.length)) return false;
+    if(v.route!==undefined && !validExpeditionRoute(v.route))return false;
     const ids = new Set<string>(v.cleared as string[] | undefined);
     for (const run of v.runs) {
         if (!object(run) || run.layoutVersion !== DUNGEON_RULES.version || !object(run.entrance))
@@ -25,8 +28,16 @@ export function validExpeditions(v: unknown): v is Expeditions {
         const e = run.entrance;
         if ((e.scaling !== undefined && (!validEncounterScale(e.scaling) || e.level !== e.scaling.base)) || !text(e.id, 180) || !e.id.startsWith('dungeon:') || ids.has(e.id) || !text(e.name, 80) || !point(e) || !integer(e.seed, 0, 4294967295) || !integer(e.level, 1, 1e6) || typeof e.biome !== 'string' || !Object.hasOwn(BIOMES, e.biome) || !object(run.states) || !validContents(run.contents) || !point(run))
             return false;
+        if(e.theme!==undefined && !DUNGEON_THEME_IDS.includes(e.theme as never))return false;
+        if(e.expedition!==undefined) {
+            const tag=e.expedition, route=v.route;
+            if(!object(tag)||!validExpeditionRoute(route)||!integer(tag.attempt,1)||tag.attempt!==route.attempt||!integer(tag.stage,0,9)||tag.stage>route.cleared||!integer(tag.choice,0,1))return false;
+            const expected=expeditionChoices({...route,cleared:tag.stage,choice:null,status:'active'},{x:e.x as number,y:e.y as number})[tag.choice];
+            if(!expected||JSON.stringify(expected.expedition)!==JSON.stringify(tag)||expected.seed!==e.seed||expected.theme!==e.theme||expected.level!==e.level||expected.id!==e.id||JSON.stringify(expected.scaling)!==JSON.stringify(e.scaling))return false;
+            if(tag.stage===route.cleared&&(route.status!=='active'||route.choice!==tag.choice))return false;
+        }
         ids.add(e.id);
-        const floor = generateDungeon(e.seed, e.level);
+        const floor = generateDungeon(e.seed, e.level, e as unknown as DungeonEntrance);
         if(!object(run.events)||Object.keys(run.events).length!==(floor.events?.length??0)||!(floor.events??[]).every(event=>{
             const s=(run.events as Record<string,unknown>)[event.id],rules=DUNGEON_EVENTS[event.kind].rules;
             return object(s)&&integer(s.wave,0,rules.count)&&integer(s.cleared,0,rules.count)&&s.wave===s.cleared&&number(s.elapsed,0,1e9)&&number(s.rest,0,rules.interval)&&number(s.held,0,rules.hold)&&typeof s.started==='boolean'&&typeof s.finished==='boolean'&&s.finished===(s.wave===rules.count)
@@ -34,8 +45,10 @@ export function validExpeditions(v: unknown): v is Expeditions {
         }))return false;
         if (Object.keys(run.states).length !== floor.members.length || !floor.members.every(m => { const s = (run.states as Record<string, unknown>)[m.id]; return object(s) && number(s.hp, 0, scaledEnemyStats(m.kind, dungeonMemberLevel(e as unknown as DungeonEntrance, m), m.rank).maxHp) && point(s) && typeof s.admitted === 'boolean' && !dungeonBlocked(floor, s.x as number, s.y as number, 0) && (s.bossPhases === undefined || integer(s.bossPhases, 0, 3)); }))
             return false;
-        if (dungeonBlocked(floor, run.x as number, run.y as number, 0) || !Array.isArray(run.explored) || run.explored.length > floor.rooms.length || !run.explored.every(id => integer(id, 0, floor.rooms.length-1)) || new Set(run.explored).size !== run.explored.length || !Array.isArray(run.chestMasks) || run.chestMasks.length !== 3 || !run.chestMasks.every((n, i) => integer(n, 0, 15) && (i === 2 || ((n as number) & 6) === 0)))
+        if (dungeonBlocked(floor, run.x as number, run.y as number, 0) || !Array.isArray(run.explored) || run.explored.length > floor.rooms.length || !run.explored.every(id => integer(id, 0, floor.rooms.length-1)) || new Set(run.explored).size !== run.explored.length || !Array.isArray(run.chestMasks) || run.chestMasks.length !== 3 || !run.chestMasks.every((n, i) => integer(n, 0, dungeonChestMask(run as unknown as import('./dungeon-state.ts').DungeonRun,i)) && (i === 2 || ((n as number) & 6) === 0)))
             return false;
     }
+    const route=v.route;
+    if(validExpeditionRoute(route) && route.choice!==null && !v.runs.some(r=>r.entrance.expedition?.attempt===route.attempt && r.entrance.expedition?.stage===route.cleared && r.entrance.expedition?.choice===route.choice))return false;
     return v.location === null ? v.surface === null : v.runs.some(r => r.entrance.id === v.location) && v.surface !== null;
 }

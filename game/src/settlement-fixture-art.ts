@@ -12,7 +12,15 @@ export function drawSettlementFixture(c:CanvasRenderingContext2D,b:Building,time
   if(b.kind==='cart'){drawSupplyCart(c,b);return;}
   c.save();c.translate(b.x,b.y);const w=b.width,h=b.height;
   c.fillStyle='#040b1090';c.beginPath();c.ellipse(w/2+6,h+2,w*.8,8,0,0,Math.PI*2);c.fill();
-  if(b.kind==='hearth'){
+  if(b.kind==='expedition'){
+    for(const x of[4,w-9]){c.fillStyle='#42382c';c.fillRect(x,-9,6,34);c.fillStyle='#ad8850';c.fillRect(x,8,6,3);}
+    poly(c,[[-5,-18],[w+4,-18],[w+7,6],[-7,6]],'#443a2c');poly(c,[[-5,-23],[w+4,-23],[w+7,-1],[-7,-1]],'#997448');
+    poly(c,[[3,-22],[w-7,-22],[w-3,-3],[0,-3]],'#d4c298');
+    c.strokeStyle='#7c775b';c.lineWidth=1;c.beginPath();c.moveTo(4,-9);c.bezierCurveTo(18,-27,28,2,45,-14);c.stroke();
+    for(let i=0;i<5;i++){c.fillStyle=i===4?'#8a4e47':'#475d59';c.beginPath();c.arc(7+i*8,-12+Math.sin(i*2)*5,2,0,7);c.fill();}
+    c.strokeStyle='#d4b66f';c.lineWidth=2;c.beginPath();c.arc(w-5,-20,7,0,7);c.stroke();c.beginPath();c.moveTo(w-12,-20);c.lineTo(w+2,-20);c.moveTo(w-5,-27);c.lineTo(w-5,-13);c.stroke();
+    c.fillStyle='#b09769';c.fillRect(-3,-25,4,26);c.fillRect(w-5,-25,4,26);
+  }else if(b.kind==='hearth'){
     for(let i=0;i<9;i++){const a=i*Math.PI*2/9;poly(c,[[w/2+Math.cos(a)*20-4,h/2+Math.sin(a)*13],[w/2+Math.cos(a)*20,h/2+Math.sin(a)*13-5],[w/2+Math.cos(a)*20+6,h/2+Math.sin(a)*13-2],[w/2+Math.cos(a)*20+3,h/2+Math.sin(a)*13+4]],i%2?'#758078':'#505f5b');}
     c.strokeStyle='#57412c';c.lineWidth=6;c.beginPath();c.moveTo(3,17);c.lineTo(29,5);c.moveTo(3,5);c.lineTo(29,18);c.stroke();
     for(let i=0;i<5;i++){const x=6+i*5;poly(c,[[x-5,15],[x-3,-4],[x+Math.sin(time*6+i)*4,-20-Math.sin(time*4+i)*8],[x+5,12]],i%2?'#ffca70':'#e67938');}

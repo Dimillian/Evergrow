@@ -69,7 +69,7 @@ export function cryptFlicker(p: CryptFixture, time: number): number {
 }
 export function cryptLights(f: DungeonFloor, time: number): PointLight[] {
     return cryptFixtures(f).map(p => ({ x: p.x, y: p.y, radius: p.kind === 'orb' ? 270 : 265,
-        color: p.kind === 'orb' ? dungeonTheme(f.seed).light : '#ffc079', power: cryptFlicker(p, time) * (p.kind === 'orb' ? .9 : 1) }));
+        color: p.kind === 'orb' ? dungeonTheme(f.seed,f.theme).light : '#ffc079', power: cryptFlicker(p, time) * (p.kind === 'orb' ? .9 : 1) }));
 }
 interface LightCache { masks: Map<string, readonly CryptPoint[]>; samples: Map<string, boolean> }
 const masks = new WeakMap<DungeonFloor, LightCache>();

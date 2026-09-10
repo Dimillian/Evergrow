@@ -4,7 +4,7 @@ import { cryptFloorContains, cryptHash, cryptOutline } from './dungeon-contours.
 
 /** World-aligned masonry and eroded wall faces; tile crops always sample the same surface. */
 export function drawCryptSurface(c: CanvasRenderingContext2D, f: DungeonFloor, tx: number, ty: number, size: number) {
-    const theme=dungeonTheme(f.seed);
+    const theme=dungeonTheme(f.seed,f.theme);
     const ox = tx * size, oy = ty * size;
     const margin = 40, stride = (size + margin * 2) / 8, cells = new Uint8Array(stride * stride);
     for (let gy = 0; gy < stride; gy++) for (let gx = 0; gx < stride; gx++)
@@ -70,6 +70,15 @@ export function drawCryptSurface(c: CanvasRenderingContext2D, f: DungeonFloor, t
             const g=c.createRadialGradient(x+70,y+70,8,x+70,y+70,95);g.addColorStop(0,'#23799677');g.addColorStop(1,'#163c5900');c.fillStyle=g;c.fillRect(x-30,y-30,200,200);
             c.strokeStyle='#b2e3ed35';c.lineWidth=1;for(let i=0;i<3;i++){c.beginPath();c.ellipse(x+70,y+70,28+i*17,10+i*6,-.4,.2,4.8);c.stroke();}
         }
+    }
+    if(theme.id==='rime'||theme.id==='astral'||theme.id==='ossuary'){
+      for(let y=Math.floor(oy/192)*192;y<oy+size;y+=192)for(let x=Math.floor(ox/192)*192;x<ox+size;x+=192){
+        const h=cryptHash(x,y,f.seed);if(h%3)continue;
+        c.strokeStyle=theme.id==='rime'?'#b6e5f235':theme.id==='astral'?'#b29ada40':'#d9b57830';c.lineWidth=1;
+        if(theme.id==='rime'){for(let i=0;i<4;i++){c.beginPath();c.moveTo(x+90,y+85);c.lineTo(x+20+i*46,y+15+(i%2)*144);c.stroke();}}
+        else if(theme.id==='astral'){for(const r of[34,45]){c.beginPath();c.arc(x+96,y+96,r,0,7);c.stroke();}for(let i=0;i<5;i++){const a=i*Math.PI*2/5,b=a+Math.PI*4/5;c.beginPath();c.moveTo(x+96+Math.cos(a)*34,y+96+Math.sin(a)*34);c.lineTo(x+96+Math.cos(b)*34,y+96+Math.sin(b)*34);c.stroke();}}
+        else {c.fillStyle='#b3986330';c.beginPath();c.ellipse(x+70,y+60,60,16,.4,0,7);c.fill();for(let i=0;i<5;i++)c.fillRect(x+20+i*13,y+63+i*3,5,2);}
+      }
     }
     // Seeded damp patches, dust, rubble and bone fragments belong to fixed world cells.
     for (let gy = Math.floor((oy - 100) / 96); gy <= Math.floor((oy + size + 100) / 96); gy++)

@@ -2,7 +2,7 @@ import { drawWildernessBossImpact } from './wilderness-boss-effect-art.ts';
 import { isWildernessBoss, LAIR_RULES as R } from './wilderness-boss-content.ts';
 import type { Enemy } from './model.ts';
 import { enemyAttackDefinition } from './combat-content.ts';
-import { WARDEN_RULES } from './dungeon-boss.ts';
+import { WARDEN_RULES, wardenProfile } from './dungeon-boss.ts';
 import { drawAttackWarning, type WarningShape } from './attack-warning-art.ts';
 import { drawGlow, type PointLight } from './lighting.ts';
 
@@ -21,8 +21,9 @@ export function enemyWarnings(e: Enemy, alpha = 1): Warning[] {
     return [];
   }
   if (e.kind === 'warden') {
-    if (e.bossMove === 'fracture') return [-.5, 0, .5].map(offset => ({ ...base, angle: e.attackAngle + offset,
-      shape: { kind: 'lane', length: WARDEN_RULES.fractureLength, width: WARDEN_RULES.fractureWidth } }));
+    const profile=wardenProfile(e.dungeonTheme);
+    if (e.bossMove === 'fracture') return profile.offsets.map(offset => ({ ...base, angle: e.attackAngle + offset,
+      shape: { kind: 'lane', length: profile.length, width: profile.width } }));
     if (e.bossMove === 'sweep') return [{ ...base, shape: { kind: 'sector', radius: WARDEN_RULES.reach, arc: Math.PI * 1.3 } }];
     return []; // Summoning has no damage footprint; show an aura rather than a false hit boundary.
   }

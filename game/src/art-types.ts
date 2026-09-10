@@ -48,6 +48,7 @@ export interface CharacterOutfit {
 }
 
 export interface CharacterPose {
+  dungeonTheme?: import('./dungeon-content.ts').DungeonThemeId;
   /** Personal appearance for players; enemy recipes use their own art. */
   appearance?: Readonly<CharacterAppearance>;
   kind: 'player' | EnemyKind;

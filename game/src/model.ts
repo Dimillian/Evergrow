@@ -8,6 +8,8 @@ import type { EnemyCamp } from './wilderness-sites.ts';
 import type { EnemyRank } from './progression-content.ts';
 
 export interface WorldQuery {
+  getBuildings?(x:number,y:number,width:number,height:number): readonly import('./settlements.ts').Building[];
+  readonly dungeonTheme?: import('./dungeon-content.ts').DungeonThemeId;
   impactMaterial?(x: number, y: number, radius: number): MaterialId;
   getContainers?(x: number, y: number, radius: number): readonly BreakableContainer[];
   setBrokenContainers?(ids: ReadonlySet<string>): void;
@@ -185,6 +187,7 @@ export type EnemyKind = 'thornReaver' | 'mireSpitter' | 'frostRevenant' | 'ember
 export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
 
 export interface Enemy {
+  dungeonTheme?: import('./dungeon-content.ts').DungeonThemeId;
   /** Regional enemies commit two basic actions, then one signature attack. */
   attackTurns?: number;
   attackVariant?: 0 | 1;

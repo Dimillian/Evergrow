@@ -1,6 +1,6 @@
 import type { MaterialSource } from './item-materials.ts';
 import type { BiomeId } from './biomes.ts';
-import type { Item } from './character-types.ts';
+import type { Item, ItemTier } from './character-types.ts';
 import type { EnemyKind } from './model.ts';
 import type { EnemyRank } from './progression-content.ts';
 import { normalizeLevel } from './progression-content.ts';
@@ -8,6 +8,7 @@ import { generateItem } from './items.ts';
 import { BIOME_PROFILE_WEIGHTS, ENEMY_ITEM_KIND_WEIGHTS, ENEMY_LOOT_YIELD, getLootTable } from './loot-content.ts';
 
 export interface EnemyLootContext {
+  readonly tierOverride?: ItemTier;
   readonly seed: number;
   readonly level: number;
   readonly rank: EnemyRank;
@@ -71,7 +72,7 @@ export function rollEnemyLoot(context: EnemyLootContext): Item[] {
   const itemLevel = lootItemLevel(context.level, context.rank);
   const items: Item[] = [];
   for (let index = 0; index < count; index++) {
-    const tier = selectLootWeight(table.tierWeights, random());
+    const rolledTier = selectLootWeight(table.tierWeights, random()), tier = context.tierOverride ?? rolledTier;
     const kind = selectLootWeight(ENEMY_ITEM_KIND_WEIGHTS[context.kind], random());
     const profileId = kind === 'weapon' || kind === 'shield' || kind === 'grimoire' || kind === 'orb'
       ? selectLootWeight(BIOME_PROFILE_WEIGHTS[context.biome][kind], random()) : undefined;

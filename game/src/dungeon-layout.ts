@@ -11,12 +11,13 @@ const passage = (a:Point,b:Point,width:number,connection:number) => dungeonPassa
 /** Pack a short procession of chambers, then attach two optional side rooms.
  * Doorways are chosen on facing walls: passages occupy the gap, never room centers.
  */
-export function buildDungeonLayout(random: () => number, theme: DungeonThemeId): Layout {
-    const coreCount = 4 + Math.floor(random()*3);
+export function buildDungeonLayout(random: () => number, theme: DungeonThemeId, expedition = false): Layout {
+    const coreCount = (expedition?7:4) + Math.floor(random()*3);
     const rooms: Room[] = [], edges: [number,number][] = [], corridors: Room[] = [];
     const dimensions = theme === 'foundry' ? [[832,512],[608,768],[704,576]] : theme === 'drowned' ? [[704,608],[576,768],[832,576]] : [[576,512],[704,576],[576,704]];
     function chamber(id: number, kind: Room['kind']): Room {
-        const [width,height] = kind === 'boss' ? [1408,1088] : dimensions[Math.floor(random()*dimensions.length)];
+        const [baseWidth,baseHeight] = kind === 'boss' ? [1408,1088] : dimensions[Math.floor(random()*dimensions.length)];
+        const width=baseWidth*(expedition?1.2:1),height=baseHeight*(expedition?1.2:1);
         return { id, kind, x:-width/2, y:-height/2, width, height, shape: kind === 'boss' ? 'octagon' : kind === 'entry' ? 'hall' : random()<.18 ? 'cross' : random()<.15 ? 'octagon' : 'hall' };
     }
     rooms.push(chamber(0,'entry'));

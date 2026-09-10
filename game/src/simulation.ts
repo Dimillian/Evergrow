@@ -327,7 +327,7 @@ export class Simulation {
     const scaled = scaledEnemyStats(kind, level, rank);
     const biome = this.world.dungeonBiome ?? (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
     const enemy: Enemy = {
-      id: this.nextId++, level, rank, biome, lootSeed, ...scaled,
+      id: this.nextId++, level, rank, biome, lootSeed, ...scaled, dungeonTheme:this.world.dungeonTheme,
       ...(source ? { campId: source.campId, campMemberId: source.memberId } : {}),
       x, y, prevX: x, prevY: y, vx: 0, vy: 0, knockbackX: 0, knockbackY: 0, angle: 0, hp: scaled.maxHp,
       kind, state: 'idle', stateTime: 0, stateDuration: ENCOUNTER_RULES.initialIdleMin + this.random() * ENCOUNTER_RULES.initialIdleRange,

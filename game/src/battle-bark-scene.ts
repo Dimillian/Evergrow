@@ -6,7 +6,7 @@ import { enemyEngaged } from './enemy-engagement.ts';
 import { ENEMY_BODY_BOUNDS, ENEMY_SPEECH_TOP } from './enemy-body.ts';
 import { canBark } from './battle-bark-content.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
-import { WARDEN_RULES } from './dungeon-boss.ts';
+import { wardenProfile } from './dungeon-boss.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { worldToScreen, type CameraView } from './camera.ts';
 import { propDefinition } from './biome-props.ts';
@@ -58,7 +58,8 @@ export class BattleBarkScene {
       if (e.state === 'windup' || e.state === 'attack') {
         const definition = ENEMY_DEFINITIONS[e.kind];
         if (e.kind === 'warden' && e.bossMove === 'fracture') {
-          for (const offset of [-.5, 0, .5]) reserveLane(e.x, e.y, e.attackAngle + offset, WARDEN_RULES.fractureLength, WARDEN_RULES.fractureWidth);
+          const profile=wardenProfile(e.dungeonTheme);
+          for (const offset of profile.offsets) reserveLane(e.x, e.y, e.attackAngle + offset, profile.length, profile.width);
         } else if (definition.attack === 'ground') {
           const radius = definition.blastRadius;
           reserved.push(rectangle(e.attackTargetX - radius, e.attackTargetY - radius, radius * 2, radius * 2));

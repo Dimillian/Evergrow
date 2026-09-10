@@ -18,14 +18,14 @@ export function updateWildernessBoss(e: Enemy, dt: number, c: EnemyAIContext): v
     if(e.state!=='return'){transitionEnemy(e,'return');e.bossMove=undefined;e.awareness=0;e.burnTime=0;e.slowTime=0;}
   }
   if(e.state==='return'){
-    if(Math.hypot(e.x-e.homeX,e.y-e.homeY)<12){e.hp=e.maxHp;e.bossPhases=0;e.bossTurns=0;transitionEnemy(e,'idle',1);}
+    if(Math.hypot(e.x-e.homeX,e.y-e.homeY)<12){if(c.world.dungeonLevel===undefined){e.hp=e.maxHp;e.bossPhases=0;}e.bossTurns=0;transitionEnemy(e,'idle',1);}
     else walk(e.homeX,e.homeY,def.speed*1.5);
     return;
   }
   if(e.state==='idle'||e.state==='patrol'){
     if(d<R.awareness&&c.visible(e.x,e.y,p.x,p.y)||e.awareness>=1)alertEnemy(e,p);else return;
   }
-  if(e.awareness>=1&&e.campId)for(const guard of c.enemies)if(guard!==e&&guard.hp>0&&guard.campId===e.campId)alertEnemy(guard,p);
+  if(e.awareness>=1&&e.campId)for(const guard of c.enemies)if(guard!==e&&guard.hp>0&&guard.campId===e.campId&&(c.world.dungeonLevel===undefined||Math.hypot(guard.homeX-e.homeX,guard.homeY-e.homeY)<650))alertEnemy(guard,p);
   if(e.interrupted){e.interrupted=false;transitionEnemy(e,'recover',.8);return;}
   if(e.state==='recover'){if(e.stateTime>=e.stateDuration)transitionEnemy(e,'chase');return;}
   if(e.state==='chase'){
