@@ -20,7 +20,7 @@ After stage ten, the final chest becomes the expedition grand chest: six equipme
 
 Expand from three to six themes: Rootbound Crypt, Cinder Foundry, Drowned Vault, Rime Cathedral, Sunken Ossuary and Astral Archive. Distinct materials, props, light, enemy mixtures, entrance architecture and boss identities share the runtime generators. The new themes also occur at wilderness entrances. Existing dungeon runs keep their recorded identity and geometry; explicit entrance options select new content without changing old saved seed interpretation.
 
-The expedition panel uses the game's square-edged dark metalwork, restrained gold route links and theme-colored destination cards. Ten numbered stages remain legible; only the current fork is actionable. Compact modifiers explain actual effects. No permanent item-detail panels. The enchanter gets a concise Reset skills service tab. Local tools stage the production panels and dungeon maps in disposable memory; previews never read playable saves.
+The expedition panel is a vertically scrollable revealed trail with compact dungeon landmarks. Only completed stops and the current fork exist in the map projection; future paths, themes and modifiers remain hidden until the current dungeon is cleared. Completed forks retain only the recorded chosen branch; retired floors use a neutral cleared marker. The panel opens at the current choice, with earlier stops below. Hover or keyboard focus exposes difficulty, modifier and boss; click/tap selects a current dungeon and the footer commits entry. The final stage uses the shared in-game chest art with reward odds on hover. No large cards or permanent reward summary. No permanent item-detail panels. The enchanter gets a concise Reset skills service tab. Local tools stage the production panels and dungeon maps in disposable memory; previews never read playable saves.
 
 ## Checkpoints and verification
 
@@ -35,3 +35,5 @@ Checkpoint specification, respec, expedition state/transactions/UI, dungeon dive
 Regression coverage includes all ten durable stage transitions, failed writes, unchanged character progress on death, partial grand-chest delivery at the gold-pile limit, reopening completed floors for loot, save validation after completion/death, and the Frost/Arcane boss hit channels. No browser gameplay automation was used; combat pacing remains for player testing.
 
 Final local verification: 1,146 code tests pass, application and headless-core type checks pass, and the production build succeeds. The build retains its existing large-bundle advisory. No save reset or Sites publication was performed.
+
+Revealed-trail UI verification: two map projection tests enforce hidden future choices and saved branch identity; the six expedition transaction tests still pass. Type checking and production build pass. The disposable review covers selection, focus details and vertical history scrolling.
