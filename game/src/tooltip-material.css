@@ -2,7 +2,7 @@
 .ui-tooltip:not(.ui-item-tooltip-group), .ui-item-tooltip, .ui-item-hover-card,
 [data-tooltip]:where(:not([data-tooltip=""]))::after {
   border: 1px solid #abc7d226;
-  border-radius: 8px;
+  border-radius: 0;
   background-color: #0d1821;
   background-image: radial-gradient(ellipse at 0 0, #a9d4e00c, transparent 65%),
     linear-gradient(155deg, #bedde507, transparent 48%, #03080d24);
@@ -11,9 +11,9 @@
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .ui-tooltip:not(.ui-item-tooltip-group), .ui-item-tooltip, .ui-item-hover-card,
   [data-tooltip]:where(:not([data-tooltip=""]))::after {
-    background-color: #0c1720d1;
-    -webkit-backdrop-filter: blur(24px) saturate(1.15);
-    backdrop-filter: blur(24px) saturate(1.15);
+    background-color: #0c1720bd;
+    -webkit-backdrop-filter: blur(24px) saturate(1.65);
+    backdrop-filter: blur(24px) saturate(1.65);
   }
 }
 /* The comparison host owns placement/motion only. Never paint a second surface
@@ -52,4 +52,68 @@
 }
 @media (forced-colors: active) {
   .ui-tooltip:not(.ui-item-tooltip-group):not(.ui-item-tooltip)::before { display: none; }
+}
+
+/* Two independent glass cards let the inventory color bleed through beneath
+   each item. Rarity washes affect the material, never blur or blend the text. */
+.ui-item-hover-card.ui-item-hover-card {
+  border-radius: 0; border-color: #b8d7e65c;
+  background-color: #101d2d;
+  background-image: linear-gradient(135deg, #e0f7ff16, #d9e3ff03 40%, #02071230);
+  box-shadow: 0 18px 38px #0009, inset 0 1px #edfcff7a, inset 1px 0 #d7edff21;
+  color: #e4eef0;
+}
+.ui-item-hover-card.ui-item-hover-card::before {
+  background: radial-gradient(ellipse at 0 0, var(--item-color), transparent 67%),
+    radial-gradient(ellipse at 100% 100%, var(--item-color), transparent 74%);
+  opacity: .3;
+}
+.ui-item-hover-card.ui-item-hover-card::after {
+  content: ''; position: absolute; z-index: -1; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 24%, #e0f7ff1c 40%, #ffffff38 46%, transparent 58%);
+  background-size: 260% 100%; background-position: 100% 0;
+  opacity: 0; animation: ui-glass-sheen 620ms ease-out both;
+}
+.ui-item-hover-card.ui-item-hover-card:first-child {
+  border-color: var(--item-color);
+}
+.ui-item-hover-card.ui-item-hover-card:not(:first-child)::before { opacity: .17; }
+.ui-item-hover-card.ui-item-hover-card:not(:first-child)::after { animation: none; }
+.ui-item-hover-card.ui-item-hover-card .ui-item-heading h4 {
+  text-shadow: 0 0 18px color-mix(in srgb, var(--item-color), transparent 58%);
+}
+@supports (color: color-mix(in srgb, red, blue)) {
+  .ui-item-hover-card.ui-item-hover-card:first-child {
+    box-shadow: 0 18px 38px #0009,
+      0 0 20px color-mix(in srgb, var(--item-color), transparent 83%),
+      inset 0 1px #f4fdff80, inset 0 0 30px color-mix(in srgb, var(--item-color), transparent 94%);
+  }
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ui-item-hover-card.ui-item-hover-card {
+    background-color: #0b1528b8;
+    -webkit-backdrop-filter: blur(22px) saturate(1.8) brightness(1.12);
+    backdrop-filter: blur(22px) saturate(1.8) brightness(1.12);
+  }
+}
+@keyframes ui-glass-sheen {
+  0% { background-position: 100% 0; opacity: 0; }
+  22% { opacity: .8; }
+  100% { background-position: 0% 0; opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-item-hover-card.ui-item-hover-card::after { animation: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .ui-item-hover-card.ui-item-hover-card {
+    background-color: #10202b; -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+}
+@media (forced-colors: active) {
+  .ui-item-hover-card.ui-item-hover-card,
+  .ui-item-hover-card.ui-item-hover-card:first-child { background: Canvas; border-color: CanvasText; color: CanvasText; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .ui-item-hover-card.ui-item-hover-card::before,
+  .ui-item-hover-card.ui-item-hover-card::after { display: none; }
+  .ui-item-hover-card.ui-item-hover-card .ui-item-heading h4 { text-shadow: none; }
 }

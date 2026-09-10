@@ -1,5 +1,16 @@
 # Evergrow changelog
 
+## v0.3.7 — 2026-09-10T12:22:00Z
+
+### Tweaks
+
+- Inventory, vendors, skills, journals and menu panels share frosted glass that picks up the scene behind them.
+- Item tooltips have richer rarity-colored light and a brief shimmer, with quieter equipped-item comparisons.
+- Square edges, crisp text and lighter window backdrops keep the interface consistent and the world visible.
+- Reduced-motion and reduced-transparency preferences retain clear, comfortable panels.
+
+> Existing characters and progress are unchanged.
+
 ## v0.3.6 — 2026-09-10T11:53:00Z
 
 ### New

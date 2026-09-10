@@ -1,0 +1,53 @@
+/* One shared inventory glass material; the visible scene supplies the tint.
+   A separate surface preserves viewport positioning
+   for fixed tooltips: never put backdrop-filter on their window ancestor. */
+/* Embedded libraries borrow the home frame rather than stacking two blurs. */
+.ui-window:not(.home-embedded > .ui-window) {
+  background: none; border-radius: 0; border-color: #c3e9ef59;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: 0 32px 90px #0009, 0 0 0 1px #040d1866,
+    inset 0 1px #e5fbff70, inset 1px 0 #c3efff1f, inset 0 -1px #aad2ec26;
+}
+.ui-window:not(.home-embedded > .ui-window)::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-color: #10202b;
+  background-image: radial-gradient(ellipse at 6% 0%, #b2e9ff24, transparent 46%),
+    radial-gradient(ellipse at 100% 90%, #9585e81a, transparent 55%),
+    linear-gradient(125deg, #d3f8ff0a, transparent 38%, #050d171f);
+}
+.ui-window:not(.home-embedded > .ui-window)::before { opacity: .9; filter: none; }
+.ui-window > :is(.ui-window-header, .ui-window__header) {
+  background: linear-gradient(110deg, #d5f7ff12, #b4c7ff04 62%, #d5f7ff0a);
+  border-bottom-color: #c6ecff30;
+}
+.ui-window > :is(.ui-window-footer, .ui-window__footer) { background: #07121c26; }
+:is(.character-overlay, .skill-atlas, .chronicle-overlay, .changelog-overlay,
+  .journey-panel, .event-panel, .world-map-root, .overlay):not(.home-embedded) {
+  background: #03091238; -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ui-window:not(.home-embedded > .ui-window)::after {
+    background-color: #0c1a29a3;
+    -webkit-backdrop-filter: blur(30px) saturate(1.65);
+    backdrop-filter: blur(30px) saturate(1.65);
+  }
+}
+/* Preserve the opaque, readable map canvases; soften their surrounding chrome. */
+.skill-atlas-window .skill-atlas-sidebar { background: #08111c18; }
+.skill-atlas-window .skill-atlas-search { background: #080f1866; }
+.expedition-panel .expedition-chart-scroll { background: #08111c18; }
+.expedition-panel .expedition-chart::before { background: linear-gradient(#0b161a66, transparent); }
+.service-panel .service-sale-total { background: #08111c40; }
+.service-panel .service-offer { background: #08111c18; }
+.service-panel .character-bag.character-tetris,
+.service-panel .character-charm-grid { background: #040c154d; }
+.service-panel .character-grid-cell:not(.is-drop-target):not(.is-placement-valid):not(.is-placement-invalid) { background: #10212b45; }
+@media (prefers-reduced-transparency: reduce) {
+  .ui-window:not(.home-embedded > .ui-window)::after {
+    background-color: #10202b; -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+}
+@media (forced-colors: active) {
+  .ui-window:not(.home-embedded > .ui-window) { background: Canvas; border-color: CanvasText; box-shadow: none; }
+  .ui-window:not(.home-embedded > .ui-window)::after { display: none; }
+}

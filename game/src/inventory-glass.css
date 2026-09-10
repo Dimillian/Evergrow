@@ -1,0 +1,12 @@
+/* Inventory wells reveal the shared frosted panel beneath them. */
+.character-overlay .character-equipment,
+.character-overlay .character-inventory { border-right-color: #b3dbea29; }
+.character-overlay .character-details { background: #08111c18; }
+.character-overlay .character-section-title h3 { color: #c7e4ed; }
+.character-overlay .character-bag.character-tetris,
+.character-overlay .character-charm-grid { background: #040c154d; border-color: #aacddd35; }
+.character-overlay .character-grid-cell:not(.is-drop-target):not(.is-placement-valid):not(.is-placement-invalid) {
+  background: #10212b45; border-color: #afddec20; box-shadow: inset 0 1px #e0f8ff0a;
+}
+.character-overlay .character-grid-cell:hover { border-color: #b8e9ff5c; }
+
