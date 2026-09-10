@@ -1,5 +1,30 @@
 # Evergrow changelog
 
+## v0.3.6 — 2026-09-10T11:53:00Z
+
+### New
+
+- Level 20 characters can start ten-dungeon expeditions at settlement map tables, choosing routes as they explore.
+- Larger expedition dungeons feature eight encounter modifiers and increasingly strong enemies, with treasure after each clear.
+- Finish all ten stages for a grand chest favoring epic and legendary equipment. Dying resets the route, while earned loot and character progress remain.
+- Rime Cathedral, Sunken Ossuary and Astral Archive join the wilderness and expeditions with distinct entrances, scenery and bosses.
+- Enchanters can reset your skill tree for 25 gold per refunded skill point.
+
+### Tweaks
+
+- The expedition map scrolls through your journey and reveals the next choices only after a clear; hover entrances for details.
+- Forks offer different dungeon themes and modifiers, with your current choice preserved across saves.
+- Journeys follows the boss, final chest and exit while inside any dungeon, then restores your outdoor objectives.
+
+### Fixes
+
+- Large dungeon fights run more smoothly, especially when enemies from several rooms pursue you together.
+- Expedition rewards and return visits preserve route progress without granting completion twice.
+- A problem with one cloud character no longer blocks other characters from loading or uploading.
+- Cloud save failures show clearer recovery actions, and the character hall opens without waiting for pending uploads.
+
+> Existing characters and progress are preserved. No save reset is required.
+
 ## v0.3.5 — 2026-09-10T06:09:00Z
 
 ### New
