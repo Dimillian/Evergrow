@@ -15,6 +15,12 @@ const escape = (value: string) => value.replace(/[&<>"']/g, character => ({ '&':
 
 const dropShapes = new WeakMap<Item, readonly GearShape[]>();
 
+/** Every icon markup string is inserted into its own throwaway DOM node, but several
+ * call sites (the character panel, a vendor's mirrored inventory, storage) can keep the
+ * same item's icon mounted at once. Salt every render with a fresh id so their <defs>
+ * never collide, even when two calls share an item id. */
+let iconInstance = 0;
+
 /** Small world drops preserve the equipped silhouette and material. The geometry
  * cache follows the item lifetime; it does not accumulate an unbounded ID map. */
 export function itemDropShapes(item: Item): readonly GearShape[] {
@@ -64,7 +70,7 @@ export function itemDropShapes(item: Item): readonly GearShape[] {
 /** Inventory silhouettes share each item's material and weapon dimensions with its worn art. */
 export function itemIconSVG(item: Item, size = 48): string {
   const pixels = Number.isFinite(size) ? Math.max(16, Math.min(512, Math.round(size))) : 48;
-  const prefix = `itm-${item.id.replace(/[^a-z0-9-]/gi, '')}-${pixels}`;
+  const prefix = `itm-${item.id.replace(/[^a-z0-9-]/gi, '')}-${pixels}-${iconInstance++}`;
   const base = safeColor(item.appearance.base), shadow = safeColor(item.appearance.shadow);
   const edge = safeColor(item.appearance.edge), trim = safeColor(item.appearance.trim);
   const armorPiece: ArmorPiece = { style: item.appearance.style, seed: item.seed, material: { base, shadow, edge, trim, surface: item.appearance.surface } };
@@ -133,7 +139,7 @@ export function itemPackIconSVG(item: Item, width: number, height: number): stri
   const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
   const w = width * 40, h = height * 40;
   const scale = Math.min((w - 16) / Math.max(1, maxX - minX), (h - 18) / Math.max(1, maxY - minY));
-  const prefix = `pack-${item.id.replace(/[^a-z0-9-]/gi, '')}`;
+  const prefix = `pack-${item.id.replace(/[^a-z0-9-]/gi, '')}-${iconInstance++}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" aria-hidden="true" focusable="false"><g transform="translate(${w / 2} ${h / 2}) scale(${scale}) translate(${-(minX + maxX) / 2} ${-(minY + maxY) / 2})">${gearShapesSVG(shapes, true, prefix)}</g></svg>`;
 }
 
