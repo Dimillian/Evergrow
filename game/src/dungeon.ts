@@ -1,3 +1,4 @@
+import { dungeonCollision } from './dungeon-collision.ts';
 import type { ExpeditionModifier } from './expedition-modifiers.ts';
 import { buildDungeonLayout } from './dungeon-layout.ts';
 import { worldNavigation } from './world-navigation.ts';
@@ -163,6 +164,7 @@ export function generateDungeon(seed: number, _level = 1, options: Pick<DungeonE
 }
 export function dungeonRoomAt(f: DungeonFloor, x: number, y: number): Room | undefined { return f.rooms.find(r => cryptContains(r, x, y)); }
 export function dungeonBlocked(f: DungeonFloor, x: number, y: number, radius: number): boolean {
+    if (Object.isFrozen(f)) return dungeonCollision(f).blocked(x,y,radius);
     if (![x, y, radius].every(Number.isFinite) || radius < 0 || radius > 1000)
         return true;
     const open = (px: number, py: number) => cryptFloorContains(f, px, py);

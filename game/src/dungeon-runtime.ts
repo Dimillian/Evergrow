@@ -4,9 +4,22 @@ import { advanceDungeonEvents } from './dungeon-events.ts';
 import type { CombatEvent } from './model.ts';
 import type { Simulation } from './simulation.ts';
 import { currentDungeon, syncDungeon, dungeonMemberLevel } from './dungeon-state.ts';
-import { generateDungeon, dungeonRoomAt } from './dungeon.ts';
+import { generateDungeon, dungeonRoomAt, type DungeonFloor, type DungeonMember } from './dungeon.ts';
 import { isSpawnHidden, isEnemyInactive, type SpawnExclusion } from './spawn-visibility.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
+const rosters = new WeakMap<DungeonFloor, Map<number, DungeonMember[]>>();
+function roomRosters(floor:DungeonFloor):Map<number,DungeonMember[]> {
+    let result=rosters.get(floor);
+    if(!result){
+        result=new Map();
+        for(const member of floor.members){
+            const room=result.get(member.room);
+            if(room)room.push(member);else result.set(member.room,[member]);
+        }
+        rosters.set(floor,result);
+    }
+    return result;
+}
 const admissions = new WeakMap<Simulation, { run:object; at:number }>();
 /** Persistent room rosters stream by proximity without an actor-count ceiling. */
 export function updateDungeon(sim: Simulation, view: SpawnExclusion | null, dt=1/120, emit: (event:CombatEvent)=>void = ()=>{}): void {
@@ -25,10 +38,11 @@ export function updateDungeon(sim: Simulation, view: SpawnExclusion | null, dt=1
     const admitEvents=!last||last.run!==run||sim.time<last.at||sim.time-last.at>=.5;
     if(admitEvents)admissions.set(sim,{run,at:sim.time});
     sim.enemies = sim.enemies.filter(e => e.state === 'dead' || !(Math.hypot(e.x - sim.player.x, e.y - sim.player.y) > 1400 && isEnemyInactive(e) && isSpawnHidden(e.x, e.y, view, e.radius)));
+    const present=new Set(sim.enemies.map(e=>e.campMemberId)), roster=roomRosters(floor);
     for (const room of [...floor.rooms].sort((a, b) => Math.hypot(a.x + a.width / 2 - sim.player.x, a.y + a.height / 2 - sim.player.y) - Math.hypot(b.x + b.width / 2 - sim.player.x, b.y + b.height / 2 - sim.player.y))) {
         if (Math.hypot(room.x + room.width / 2 - sim.player.x, room.y + room.height / 2 - sim.player.y) > 2100)
             continue;
-        const members = floor.members.filter(m => m.room === room.id && run.states[m.id].hp > 0 && !sim.enemies.some(e => e.campMemberId === m.id) && (m.event===undefined || !!run.events?.[m.event]?.started && !run.events[m.event].finished && run.events[m.event].rest<=0 && run.events[m.event].wave===m.eventWave) && (!m.wave || run.states.warden.hp > 0 && ((run.states.warden.bossPhases ?? 0) & m.wave)));
+        const members = (roster.get(room.id)??[]).filter(m => run.states[m.id].hp > 0 && !present.has(m.id) && (m.event===undefined || !!run.events?.[m.event]?.started && !run.events[m.event].finished && run.events[m.event].rest<=0 && run.events[m.event].wave===m.eventWave) && (!m.wave || run.states.warden.hp > 0 && ((run.states.warden.bossPhases ?? 0) & m.wave)));
         if (!members.length)
             continue;
         const event=floor.events?.find(e=>e.room===room.id);
@@ -47,6 +61,7 @@ export function updateDungeon(sim: Simulation, view: SpawnExclusion | null, dt=1
             const e = sim.spawnEnemy(m.kind, s.x, s.y, m.rank, { campId: run.entrance.id, memberId: m.id, lootSeed: m.seed, level: dungeonMemberLevel(run.entrance, m) });
             if (!e)
                 throw new Error('Validated dungeon spawn failed');
+            present.add(m.id);
             e.hp = s.hp;
             e.homeX = event?.x ?? m.x;
             e.homeY = event?.y ?? m.y;

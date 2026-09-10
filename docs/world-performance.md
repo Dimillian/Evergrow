@@ -75,3 +75,21 @@ The current camera and procedural assets remain in place. `scene-light-style.ts`
 `atmosphere-art.ts` places separate world-anchored ground and foreground mist banks, with cooler woodland mist, warm dry-climate haze and restrained dungeon floor wisps. Each layer admits at most 96 cells; 32 small procedural tint cookies are cached. Foreground mist thins around the player, disappears indoors and is omitted in dungeons. Enclosed ground mist requires a clear floor footprint. Reduced motion freezes wind and mist displacement. Existing biome particles remain independent.
 
 The fixed CRT composite now uses restrained split-tone contrast with a preserved dark toe, warmer highlights, cooler shadows and less bloom spill. No new render targets, texture readbacks, per-frame blur filters or graphics settings are introduced. Native-resolution HUD, attack warnings, input projection, collisions, saves and world generation are unchanged. Code checks cover cache reuse, reduced motion, enclosed fog rejection, blended light, material response and shadow direction; device frame-time and visual acceptance still require the player's test.
+
+## Dungeon crowds · September 10, 2026
+
+A Node CPU profile of real dungeon crowd simulation found most samples inside repeated room/corridor polygon containment. Every sight ray and body-clearance probe scanned the floor, making pursuing groups expensive even before rendering. Frozen floors now use a 64-unit spatial index: only local silhouettes are candidates, and cells with no intersecting outline edges cache a proven uniform result. Boundary cells retain exact polygon checks. Small body queries whose entire bounds lie in open cells skip redundant perimeter probes. Cache storage is limited to the finite floor bounds and weakly owned by the floor. Generation uses uncached queries until geometry is frozen.
+
+Dungeon admission now indexes the static roster by room and checks existing actors using a set; spawn ordering, offscreen requirements, casualties and reward rules are unchanged. Drawing skips wholly offscreen enemy rigs with a conservative 256-unit world margin. Their movement and combat still simulate, including when pursuing from another room. There is no new enemy-count cap or reduced simulation frequency.
+
+Run `node --experimental-strip-types game/scripts/benchmark-dungeon-crowds.ts` from the repository root; add `--uncached` to compare the original exact collision algorithm in the same scenario. This disposable headless study uses seed 7319, real dungeon geometry and a mixed melee/ranged crowd, 360 fixed simulation ticks, discarding the first 60 for warm-cache reporting. It accesses no saves and opens no browser.
+
+Measured on the development machine:
+
+| Enemies | Original median tick | Indexed median tick | Original p95 | Indexed p95 |
+| --- | ---: | ---: | ---: | ---: |
+| 24 | 2.635 ms | 0.055 ms | 10.885 ms | 0.144 ms |
+| 48 | 5.385 ms | 0.104 ms | 21.641 ms | 0.303 ms |
+| 96 | 15.894 ms | 0.268 ms | 53.003 ms | 0.684 ms |
+
+These are CPU simulation measurements, not browser frame rates, GPU measurements or a guarantee for every encounter. Cold navigation, rendering and effects remain part of the real frame budget. Differential tests compare all six theme outlines, wall vertices, negative coordinates, cell boundaries and radii from 0 to 1000 against the original algorithm; a deterministic crowd replay produces identical enemies, projectiles and events. Dungeon/expedition, AI, navigation and spawn regressions also pass.

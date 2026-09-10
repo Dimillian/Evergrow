@@ -724,6 +724,10 @@ export class Renderer {
     for (const enemy of sim.enemies) {
       if (enemy.hp <= 0) continue;
       const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);
+      // Keep simulating pursued rooms, but don't build or draw wholly offscreen rigs.
+      // Generous padding includes bosses, held weapons and status effects.
+      if (x < this.view.left - 256 || x > this.view.left + this.view.width + 256
+        || y < this.view.top - 256 || y > this.view.top + this.view.height + 256) continue;
       entries.push({ y, draw: () => this.actor(x, y, { kind: enemy.kind, dungeonTheme:enemy.dungeonTheme, angle: enemy.angle,
         command: enemy.warband?.order, commandWarning: enemy.warband?.warning,
         time: sim.time + enemy.id, effectTime: settings.reducedMotion ? 0 : sim.time + enemy.id, moveAngle: Math.atan2(enemy.vy, enemy.vx),
