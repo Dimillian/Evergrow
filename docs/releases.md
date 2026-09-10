@@ -29,6 +29,18 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.8 / Sites version 39, publicly deployed on 2026-09-10 at 19:00:05 UTC.
+- Published source: `d543c5a0bc28d88830590dd444fe18739d62e553`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_01560e5860a48191bc8382d3c46fb642`.
+- Deployment: `appgdep_6aa2fe1e32d881918e60cbbc22774ec9`; Sites returned `succeeded`.
+- Refined silver-blue frosted frames, portrait-safe corner fittings, lighter interaction highlights and quieter item tooltips.
+- Equipped gear-power display uses the leaderboard calculation; inventory items remain within their physical footprints.
+- Existing characters and progress are unchanged; no save reset or database migration.
+- Passed 13 changelog, spatial-inventory and leaderboard tests, application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.7 / Sites version 38, publicly deployed on 2026-09-10 at 12:24:50 UTC.
 - Published source: `02564a52b6eec53daadcae9cf146b4f5855d721e`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_d0ddda91bbe48191bde922809a66216c`.
