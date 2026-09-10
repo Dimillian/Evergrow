@@ -6,7 +6,7 @@ import { World } from '../src/world.ts';
 import { DungeonWorld } from '../src/dungeon-world.ts';
 import { generateDungeon, dungeonBlocked } from '../src/dungeon.ts';
 import { currentDungeon } from '../src/dungeon-state.ts';
-import { planDungeonTravel, claimDungeonChest } from '../src/dungeon-command.ts';
+import { planDungeonTravel, claimDungeonChest, expeditionTableProblem } from '../src/dungeon-command.ts';
 import { validExpeditions } from '../src/dungeon-validation.ts';
 import { validItem } from '../src/item-validation.ts';
 import { decodeCharacterSave, type CharacterCheckpoint } from '../src/character-save.ts';
@@ -132,4 +132,46 @@ test('saved chosen dungeons retain their identity when the available content poo
   assert.ok(decoded(next.checkpoint));
   const bad=structuredClone(next.checkpoint.expeditions!);bad.runs[0].entrance.expedition!.modifier='fake' as never;
   assert.equal(validExpeditions(bad),false);
+});
+
+
+test('level-25 characters enter from every reachable table side, including behind its solid footprint',async()=>{
+  const {world,table,sim}=setup();
+  try {
+    sim.player.level=25;sim.player.character.skillPoints=24;sim.player.character.statPoints=120;
+    for(const [side,x,y] of [
+      ['front',table.door.x,table.door.y+25],
+      ['back',table.door.x,table.y-25],
+      ['left',table.x-25,table.y+table.height/2],
+      ['right',table.x+table.width+25,table.y+table.height/2],
+    ] as const){
+      sim.player.x=x;sim.player.y=y;
+      assert.equal(world.blocked(x,y,sim.player.radius),false,side);
+      assert.equal(expeditionTableProblem(table,sim.player,world),null,side);
+      let saved=false;
+      const result=await planDungeonTravel(sim,{kind:'expedition',tableId:table.id,choice:0,attempt:0},world,()=>{saved=true;return ok();});
+      assert.equal(result.ok,true,side);assert.equal(saved,true,side);
+      if(result.ok)assert.ok(decoded(result.checkpoint),side);
+    }
+  } finally {world.dispose();}
+});
+
+test('table entry distinguishes level, distance, missing table and obstruction without saving',async()=>{
+  const {world,table,sim}=setup();const action={kind:'expedition',tableId:table.id,choice:0,attempt:0} as const;
+  let writes=0;const persist=()=>{writes++;return ok();};
+  try {
+    sim.player.level=19;
+    assert.deepEqual(await planDungeonTravel(sim,action,world,persist),{ok:false,message:'Expeditions unlock at level 20.'});
+    sim.player.level=25;
+    assert.deepEqual(await planDungeonTravel(sim,{...action,tableId:'missing'},world,persist),{ok:false,message:'Visit an expedition table.'});
+    sim.player.y=table.door.y+100;
+    assert.deepEqual(await planDungeonTravel(sim,action,world,persist),{ok:false,message:'Move closer to the expedition table.'});
+    sim.player.x=table.door.x;sim.player.y=table.y-25;
+    // An actual wall between the player and table remains a blocker.
+    const blockedWorld=Object.create(world) as World;
+    blockedWorld.blocked=(x,y,r)=>Math.abs(y-(table.y-12))<3||world.blocked(x,y,r);
+    assert.match(expeditionTableProblem(table,sim.player,blockedWorld)!,/blocked/);
+    const denied=await planDungeonTravel(sim,action,blockedWorld,persist);
+    assert.equal(denied.ok,false);assert.match(denied.message,/blocked/);assert.equal(writes,0);
+  } finally {world.dispose();}
 });

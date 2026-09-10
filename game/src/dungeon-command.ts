@@ -9,6 +9,7 @@ import type { DungeonEntrance } from './dungeon.ts';
 import { currentDungeon, createDungeonRun, compactExpeditions, type LocationContents } from './dungeon-state.ts';
 import { portalLanding, portalDepartureProblem, type PortalAnchor } from './travel.ts';
 import type { WorldQuery } from './model.ts';
+import type { Building } from './settlements.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { rollEnemyLoot } from './loot.ts';
 import { GOLD_RULES } from './gold.ts';
@@ -36,6 +37,16 @@ export type DungeonResult = {
     message: string;
 };
 export type PersistDungeon = (checkpoint: CharacterCheckpoint) => { ok: boolean; message: string } | Promise<{ ok: boolean; message: string }>;
+/** Reach the near edge of the solid table, from any side, without tracing through it. */
+export function expeditionTableProblem(table: Building | undefined, player: {x:number;y:number;dead?:boolean}, world: WorldQuery): string | null {
+    if (!table || table.kind !== 'expedition') return 'Visit an expedition table.';
+    if (player.dead) return 'Recover in town first.';
+    if (Math.hypot(player.x-table.door.x,player.y-table.door.y)>75) return 'Move closer to the expedition table.';
+    const x=Math.max(table.x-3,Math.min(table.x+table.width+3,player.x));
+    const y=Math.max(table.y-3,Math.min(table.y+table.height+3,player.y));
+    if (world.blocked(player.x,player.y,0) || world.blocked(x,y,1) || !hasLineOfSight(world,player.x,player.y,x,y)) return 'The expedition table is blocked. Approach from another side.';
+    return null;
+}
 /** Complete location and reward ownership are staged before persistence. No live mutation on failure. */
 export async function planDungeonTravel(sim: Simulation, action: DungeonAction, surface: WorldQuery, persist: PersistDungeon): Promise<DungeonResult> {
     const checkpoint = sim.captureCheckpoint(), state = checkpoint.expeditions!, run = currentDungeon(state), p = sim.player;
@@ -53,7 +64,9 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
         let expeditionPoint: {x:number;y:number}|undefined;
         if(action.kind==='expedition') {
             const table=surface.getBuildings?.(p.x-200,p.y-200,400,400).find(b=>b.id===action.tableId&&b.kind==='expedition');
-            if(!table||p.level<EXPEDITION_RULES.minimumLevel||Math.hypot(p.x-table.door.x,p.y-table.door.y)>75||!hasLineOfSight(surface,p.x,p.y,table.door.x,table.door.y+12))return {ok:false,message:'Visit an expedition table at level 20.'};
+            if(p.level<EXPEDITION_RULES.minimumLevel)return {ok:false,message:`Expeditions unlock at level ${EXPEDITION_RULES.minimumLevel}.`};
+            const problem=expeditionTableProblem(table,p,surface);
+            if(problem||!table)return {ok:false,message:problem??'Visit an expedition table.'};
             expeditionPoint={x:table.door.x,y:table.door.y+14};
             const previous=state.route;
             if(action.attempt!==(previous?.attempt??0))return {ok:false,message:'This route changed. Open the table again.'};
@@ -81,7 +94,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
         if (!entrance)
             return { ok: false, message: 'Expedition unavailable.' };
         const target = action.kind === 'return' ? action.anchor : expeditionPoint??entrance;
-        if (Math.hypot(p.x - target.x, p.y - target.y) > 75 || !hasLineOfSight(surface, p.x, p.y, target.x, target.y))
+        if (action.kind !== 'expedition' && (Math.hypot(p.x - target.x, p.y - target.y) > 75 || !hasLineOfSight(surface, p.x, p.y, target.x, target.y)))
             return { ok: false, message: 'Move closer to the entrance.' };
         if (state.cleared?.includes(entrance.id)) return { ok: false, message: 'This dungeon has been cleared.' };
         let next = state.runs.find(r => r.entrance.id === entrance.id);
