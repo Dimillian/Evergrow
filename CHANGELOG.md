@@ -1,5 +1,15 @@
 # Evergrow changelog
 
+## v0.3.10 — 2026-09-10T19:19:00Z
+
+### Fixes
+
+- Expedition tables can be used from every reachable side, including from behind.
+- Blocked or out-of-reach tables no longer incorrectly show the level-20 requirement.
+- The expedition map background fills the panel, with the route kept neatly centered.
+
+> Existing characters and progress are unchanged.
+
 ## v0.3.9 — 2026-09-10T19:13:00Z
 
 ### Tweaks
