@@ -1,7 +1,7 @@
 # Cloud saves on Sites
 
 Local settlement rework · generation 10 (2026-09-09): three settlement tiers, outdoor starting refuges without houses, families, gambling and personal storage. Generation-9 characters upgrade on Continue, preserving progression and exploration. The original save is retained until the upgrade commits. The matching Worker accepts generation-9 uploads so an existing outbox can finish; the next saved bundle upgrades character and chart together. See the generation upgrade in `character-saves.md`. See [Settlements](settlements.md). Earlier generation/layout statements below describe the prior checkpoint.
-Local regional scaling, 2026-09-08: The local regional-scaling pass adds optional encounter snapshots to shared validation. Current v4 saves and the existing v3 appearance migration remain supported; no D1 migration or generation reset. Saved actors, started events and entered dungeons preserve their original difficulty. The matching client/server build has not been published yet. See [regional scaling](region-scaling.md).
+Local regional scaling, 2026-09-08: The local regional-scaling pass adds optional encounter snapshots to shared validation. Current v4 saves and the existing v3 appearance migration remain supported; no D1 migration or generation reset. Saved actors, started events and entered dungeons preserve their original difficulty. The matching client/server build was published; see the verified release records. See [regional scaling](region-scaling.md).
 
 Cloud saves deployed · 2026-09-06. Chronicle and the current cadence are included in the verified v0.5.0 publication on 2026-09-07.
 
@@ -21,7 +21,7 @@ The character-editor branch now uses save v4 with a required validated appearanc
 
 ## Storage and synchronization
 
-Local cloud recovery fix — 2026-09-10 (not yet published): the character hall reads the roster without first flushing uploads. Cache summaries isolate incompatible characters per slot, preserving their bytes and keeping other slots usable. The upload loop continues past individual HTTP/save failures so a rejected early slot cannot starve a newly created character in another slot. Network, authentication and local storage failures still stop that upload pass.
+Cloud recovery fix — published in v0.3.6 (2026-09-10): the character hall reads the roster without first flushing uploads. Cache summaries isolate incompatible characters per slot, preserving their bytes and keeping other slots usable. The upload loop continues past individual HTTP/save failures so a rejected early slot cannot starve a newly created character in another slot. Network, authentication and local storage failures still stop that upload pass.
 
 Cloud worker startup now waits for IndexedDB readiness, handles startup errors and bounds an unresponsive startup to ten seconds. The hall distinguishes **Reload required** (a missing/failed game worker), **Storage unavailable**, **Cloud unavailable** and **Save needs attention** from **Offline**, with explicit Reload, Retry or sign-in actions. Reload is player initiated in the hall; it never clears browser storage or interrupts gameplay automatically. Retry reopens the same account database after a storage startup failure. Existing stale clients need a reload to receive this code.
 
@@ -39,6 +39,14 @@ As of the September 9 whole-number bonus pass, shared save decoding rounds valid
 
 The server retains one predecessor; older referenced backups are pruned after successful publication. Interrupted, unreferenced uploads can remain in R2 if cleanup cannot be confirmed. Scheduled orphan collection and an in-product server-backup restore flow are deferred.
 
+## Cloud-first character selection — v0.3.9
+
+The Cloud roster checks server summaries before choosing a character. Selecting a slot and pressing Continue each fetch the committed server revision; ordinary Local-tab saves are never consulted. A clean device cache adopts newer cloud data. An unsent checkpoint based on the same server revision remains available as **This device · awaiting upload**. If the server advanced independently, the hall shows **Cloud save** and **This device’s recovery** separately, with name, level, equipped gear power, played time and save date/time. Inspection never uploads or discards either branch.
+
+Continue cannot silently load a conflicting recovery, including through keyboard/controller shortcuts or when another device saves after the portrait loaded. Explicit **Continue recovery** checks the displayed cache token; it keeps that branch local and blocked from uploading. Confirmed **Use cloud version** replaces the recovery with the latest server copy. Server deletions and incompatible recovery records remain visible without hiding readable cloud progress. Offline fallbacks are explicitly labeled as device copies; an unknown server branch is never presented as current.
+
+The owned single-slot GET includes the last committed operation receipt. A lost upload acknowledgement can therefore be reconciled without a false conflict, preserving any subsequent unsent checkpoint. Cache metadata is reread after network waits, and revision/token guards prevent delayed reads from overwriting concurrent uploads or edits. Background conflict/sync changes refresh the selected hall character. No save reset or database migration is required.
+
 ## Conflicts
 
 Every upload compares the server revision it started from. Two devices can play independently, but only one divergent branch can publish. The other remains a durable recovery copy with **Conflict**. Returning to the hall offers **Continue recovery** or a confirmed **Use cloud version** action. Choosing the cloud version explicitly discards the local recovery branch; cancelling preserves it. Cloud recovery has no file export. No field-level merging of XP, gold, items or world claims occurs.
@@ -55,7 +63,7 @@ Sites owns `/signin-with-chatgpt`, `/signout-with-chatgpt` and `/callback`; sign
 | --- | --- |
 | `GET /api/cloud/session` | Optional signed-in identity / capability |
 | `GET /api/cloud/characters` | Eight owned summaries; no full checkpoints |
-| `GET /api/cloud/characters/:slot` | Owned committed bundle and revision |
+| `GET /api/cloud/characters/:slot` | Owned committed bundle, revision and last operation receipt |
 | `PUT /api/cloud/characters/:slot` | Validated revision-checked publication; null bundle is a tombstone |
 
 Private replies use `Cache-Control: no-store`. Writes require same-origin JSON, bounded streamed bodies, a valid operation ID, shared character/point/item/world validation and a chart matching the character’s world. Slot IDs are 0–7. Payloads are capped at 24 MiB on transport, with the existing smaller character/chart validators inside. These checks protect persistence integrity, not competitive anti-cheat. User-edited valid solo saves remain possible.

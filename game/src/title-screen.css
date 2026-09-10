@@ -134,3 +134,14 @@
 .title-screen.is-controller .title-controller-hint { display: inline; }
 .title-controller-hint kbd { font: 600 11px system-ui,sans-serif; border: 1px solid #b6c8c366; border-radius: 50%; padding: 2px 5px; margin-right: 4px; }
 .title-screen.is-controller .title-slot:focus { outline: 2px solid #c9dfe4; outline-offset: 2px; }
+
+/* Cloud and unsent recovery are separate choices, with comparable progress. */
+.title-save-branches { display: grid; gap: 14px; width: 100%; }
+.title-save-branch { padding: 16px; border: 1px solid #bdd9e33b; background: #a7c9df07; }
+.title-save-branch h3 { margin: 0 0 10px; color: #c6e0e7; font-size: 17px; font-weight: 400; }
+.title-save-branch > strong { display: block; color: var(--ui-ivory); font-size: 20px; font-weight: 400; }
+.title-save-branch .title-branch-stats, .title-save-branch time { display: block; margin-top: 6px; color: #a8bec7; font-size: 13px; line-height: 1.5; }
+.title-save-branch p { color: #a8bec7; font-size: 13px; line-height: 1.5; margin: 9px 0; }
+.title-save-branch .ui-button { margin-top: 12px; }
+.title-save-branch--recovery { background: none; border-color: #bdd9e322; }
+.title-save-meta { flex-wrap: wrap; }

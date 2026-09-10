@@ -20,6 +20,7 @@ scope.onmessage = ({ data }) => {
           bundle: prepareCloudSave(old,data.record as CharacterSave,data.chart as DecodedExploration) }) as CloudRow | null;
         result = row ? { token: row.token, conflict: row.conflict } : null;
       }
+      else if (data.method === 'decode-bundle') { result = decodeSaveBundle(JSON.stringify(data.bundle)); }
       else if (data.method === 'list-info') {
         const rows = await cache.execute({ kind: 'list' }) as CloudRow[];
         result = rows.map(({ index, token, base, dirty, conflict, bundle }) => {

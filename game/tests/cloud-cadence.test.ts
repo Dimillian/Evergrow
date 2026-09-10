@@ -254,3 +254,104 @@ test('an idle upload timer cannot claim Synced after roster access failed', asyn
   await client.flush(); assert.equal(client.status, 'Cloud unavailable');
   fail = false; await client.list(); assert.equal(client.status, 'Synced');
 });
+
+test('cloud-first inspection preserves a divergent recovery and requires an explicit branch choice to play', async t => {
+  installWorker(t);
+  const local = recoveryRecord(), remote = {...local, name:'Remote Rowan', updatedAt:200, checkpoint:{...local.checkpoint, time:7200}};
+  BrowserWorker.seedRows=[{index:0, token:'4', base:3, dirty:true, conflict:false, operation:'pending-old-progress', bundle:makeSaveBundle(local)}];
+  let puts=0;
+  t.mock.method(globalThis,'fetch',async (url:unknown,options:RequestInit)=>{
+    if(options.method==='PUT'){puts++;throw new Error('Inspection must never upload');}
+    if(String(url).endsWith('/characters'))return Response.json({slots:[{index:0,revision:7,summary:{name:remote.name,level:remote.checkpoint.level,power:1,updatedAt:remote.updatedAt}}]});
+    return Response.json({revision:7,bundle:makeSaveBundle(remote)});
+  });
+  const client=new CloudClient('cloud-first-choice');t.after(()=>client.dispose());
+  assert.equal((await client.list())[0].summary?.name,remote.name);
+  const view=await client.inspect(0);
+  assert.equal(view.record?.name,remote.name);assert.equal(view.recovery?.record?.name,local.name);
+  assert.equal(view.conflict,true);assert.equal(view.cloudState,'cloud');assert.equal(puts,0);
+  const {CharacterSession}=await import('../src/character-session.ts');
+  const session=new CharacterSession(client,WORLD_GENERATION_VERSION);
+  assert.equal(await session.load(0),null,'ordinary Continue cannot launch a hidden recovery');
+  assert.equal(session.active,null);
+  assert.equal(await session.load(0,'stale-token'),null);
+  assert.equal((await session.load(0,view.token!))?.name,local.name,'only an explicit matching recovery choice can play that branch');
+  session.active = null;
+  await client.useCloud(0,view.token);
+  const resolved=await client.inspect(0);
+  assert.equal(resolved.record?.name,remote.name);assert.equal(resolved.pending,false);assert.equal(resolved.conflict,false);
+  assert.equal((await session.load(0))?.name,remote.name);assert.equal(puts,0);
+});
+
+test('Continue checks the server even when a previously displayed device save is pending',async t=>{
+  installWorker(t);const local=recoveryRecord();
+  BrowserWorker.seedRows=[{index:0,token:'2',base:3,dirty:true,conflict:false,operation:'pending-operation',bundle:makeSaveBundle(local)}];
+  let revision=3;
+  t.mock.method(globalThis,'fetch',async()=>Response.json({revision,bundle:makeSaveBundle({...local,name:'Cloud',updatedAt:9})}));
+  const client=new CloudClient('continue-check');t.after(()=>client.dispose());
+  const before=await client.inspect(0);assert.equal(before.cloudState,'pending');assert.equal(before.record?.name,local.name);
+  revision=4;
+  const {CharacterSession}=await import('../src/character-session.ts');
+  const session=new CharacterSession(client,WORLD_GENERATION_VERSION);
+  assert.equal(await session.load(0),null);assert.equal(session.active,null);assert.match(session.error,/cloud save/);
+  const view=await client.inspect(0);assert.equal(view.record?.name,'Cloud');assert.equal(view.recovery?.record?.name,local.name);
+});
+
+test('clean cached saves refresh from cloud and failed reads are explicitly marked as device copies',async t=>{
+  installWorker(t);const local=recoveryRecord();
+  BrowserWorker.seedRows=[{index:0,token:'2',base:3,dirty:false,conflict:false,operation:'',bundle:makeSaveBundle(local)}];
+  let offline=false;
+  t.mock.method(globalThis,'fetch',async()=>{if(offline)throw new Error('Offline');return Response.json({revision:4,bundle:makeSaveBundle({...local,name:'Fresh Cloud',updatedAt:9})});});
+  const client=new CloudClient('clean-refresh');t.after(()=>client.dispose());
+  const view=await client.inspect(0);assert.equal(view.record?.name,'Fresh Cloud');assert.equal(view.cloudState,'cloud');
+  offline=true;const fallback=await client.inspect(0);assert.equal(fallback.record?.name,'Fresh Cloud');assert.equal(fallback.cloudState,'offline');assert.equal(client.status,'Offline');
+});
+
+test('a cloud deletion remains visibly empty while this machine retains its unsent character',async t=>{
+  installWorker(t);const local=recoveryRecord();
+  BrowserWorker.seedRows=[{index:0,token:'2',base:3,dirty:true,conflict:false,operation:'pending-operation',bundle:makeSaveBundle(local)}];
+  t.mock.method(globalThis,'fetch',async()=>Response.json({revision:4,bundle:null}));
+  const client=new CloudClient('deleted-cloud');t.after(()=>client.dispose());
+  const view=await client.inspect(0);assert.equal(view.state,'empty');assert.equal(view.record,null);assert.equal(view.recovery?.record?.id,local.id);assert.equal(view.conflict,true);
+  await client.useCloud(0,view.token);assert.equal((await client.read(0)).state,'empty');
+});
+
+test('an incompatible recovery cannot hide or prevent choosing a valid newer cloud save',async t=>{
+  installWorker(t);const local=recoveryRecord(),broken=makeSaveBundle(structuredClone(local));broken.character.checkpoint.character.skillPoints=999;
+  BrowserWorker.seedRows=[{index:0,token:'2',base:3,dirty:true,conflict:false,operation:'pending-operation',bundle:broken}];
+  t.mock.method(globalThis,'fetch',async()=>Response.json({revision:4,bundle:makeSaveBundle({...local,name:'Valid Cloud'})}));
+  const client=new CloudClient('invalid-recovery-choice');t.after(()=>client.dispose());
+  const view=await client.inspect(0);assert.equal(view.record?.name,'Valid Cloud');assert.equal(view.recovery?.invalid,true);assert.equal(view.recovery?.record,null);
+  await client.useCloud(0,view.token);assert.equal((await client.read(0)).record?.name,'Valid Cloud');
+});
+
+test('lost upload receipts reconcile on a read without false conflicts or losing subsequent local progress',async t=>{
+  installWorker(t);const old=recoveryRecord(),current={...old,updatedAt:3};
+  BrowserWorker.seedRows=[{index:0,token:'3',base:3,dirty:true,conflict:false,operation:'newer-operation',bundle:makeSaveBundle(current),upload:{base:3,operation:'accepted-operation',bundle:makeSaveBundle(old)}}];
+  t.mock.method(globalThis,'fetch',async()=>Response.json({revision:4,operation:'accepted-operation',bundle:makeSaveBundle(old)}));
+  const client=new CloudClient('lost-receipt');t.after(()=>client.dispose());
+  const view=await client.inspect(0);assert.equal(view.record?.updatedAt,3);assert.equal(view.conflict,false);assert.equal(view.pending,true);assert.equal(view.cloudState,'pending');
+});
+
+
+test('an acknowledged upload with a lost response becomes synced when its receipt is read',async t=>{
+  installWorker(t);const local=recoveryRecord();
+  BrowserWorker.seedRows=[{index:0,token:'2',base:3,dirty:true,conflict:false,operation:'accepted-operation',bundle:makeSaveBundle(local),upload:{base:3,operation:'accepted-operation',bundle:makeSaveBundle(local)}}];
+  t.mock.method(globalThis,'fetch',async()=>Response.json({revision:4,operation:'accepted-operation',bundle:makeSaveBundle(local)}));
+  const client=new CloudClient('lost-final-receipt');t.after(()=>client.dispose());
+  const view=await client.inspect(0);assert.equal(view.pending,false);assert.equal(view.conflict,false);assert.equal(view.cloudState,'cloud');assert.equal(client.status,'Synced');
+});
+
+test('a delayed GET cannot roll back an upload acknowledged while the request was in flight',async t=>{
+  installWorker(t);const local=recoveryRecord();
+  BrowserWorker.seedRows=[{index:0,token:'2',base:3,dirty:true,conflict:false,operation:'pending-operation',bundle:makeSaveBundle(local)}];
+  let release!:()=>void,started!:()=>void;
+  const entered=new Promise<void>(resolve=>{started=resolve;}),gate=new Promise<void>(resolve=>{release=resolve;});
+  t.mock.method(globalThis,'fetch',async(_url:unknown,options:RequestInit)=>{
+    if(options.method==='PUT')return Response.json({revision:4});
+    started();await gate;return Response.json({revision:3,bundle:makeSaveBundle({...local,name:'Old Cloud'})});
+  });
+  const client=new CloudClient('read-upload-race');t.after(()=>client.dispose());
+  const reading=client.inspect(0);await entered;await client.flush();release();
+  const view=await reading;assert.equal(view.record?.name,local.name);assert.equal(view.pending,false);assert.equal(view.conflict,false);assert.equal(view.cloudState,'cloud');
+});

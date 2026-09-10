@@ -210,8 +210,8 @@ export class Game {
         volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
         chronicle: onCached => this.saveClient.chronicle(onCached),
         create: (index, name, weapon, seed) => this.editNewCharacter(index, name, weapon, seed),
-        continue: index => this.continueCharacter(index), remove: (index, expected) => this.deleteCharacter(index, expected),
-        read: index => this.saveClient.read(index), source: mode => this.selectSaveSource(mode),
+        continue: index => this.continueCharacter(index), continueRecovery: (index, token) => this.continueCharacter(index, token), remove: (index, expected) => this.deleteCharacter(index, expected),
+        read: index => this.saveClient.inspect(index), source: mode => this.selectSaveSource(mode),
         retry: () => { void this.retryCloudSaves(); },
         leaderboard: order => this.saveClient.leaderboard(order),
         ...(!window.EvergrowAndroid ? { download: (index: number) => this.downloadSave(index), import: (index: number, file: File) => this.importSave(index, file) } : {}),
@@ -549,13 +549,13 @@ export class Game {
     return true;
   }
 
-  private async continueCharacter(index: number) {
+  private async continueCharacter(index: number, recoveryToken?: string) {
     if (this.phase !== 'ready' || this.hallBusy || this.disposed) return;
     this.hallBusy = true;
     try {
-    const record = await this.session.load(index);
+    const record = await this.session.load(index, recoveryToken);
     if (this.disposed) return;
-    if (!record) { this.titleScreen.message(this.session.error); return; }
+    if (!record) { await this.loadRoster(index); this.titleScreen.message(this.session.error); return; }
     if (this.world !== this.overworld) this.world.dispose();
     this.overworld.dispose();
     this.overworld = new World(record.worldSeed); this.world = this.overworld;

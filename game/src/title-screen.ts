@@ -12,6 +12,7 @@ import { FramePacer } from './frame-pacer.ts';
 import { escapeUI, uiIcon, trapDialogFocus } from './ui-components.ts';
 import { previewCharacter } from './character-summary.ts';
 import { drawCharacterPortrait } from './character-portrait.ts';
+import type { CharacterSave } from './character-save.ts';
 import type { SaveSlot } from './character-storage.ts';
 import type { SaveMode, SaveSourceUI } from './save-hub.ts';
 import type { Player } from './model.ts';
@@ -24,6 +25,7 @@ export interface TitleActions extends AudioControlActions {
   leaderboard?: LeaderboardLoader;
   chronicle?(onCached?:(ledger:ChronicleLedger)=>void): Promise<ChronicleLedger>;
   create(index: number, name: string, weapon: StarterLoadoutId, seed: number): void;
+  continueRecovery?(index: number, token: string): void;
   continue(index: number): void; remove(index: number, expected: string | null): void;
   read?(index: number): Promise<SaveSlot>; source?(mode: SaveMode): void;
   retry?(): void;
@@ -107,6 +109,7 @@ export class TitleScreen {
       const action = button.dataset.action;
       if (action === 'retry') { if (this.source.status === 'Reload required' || !this.actions.retry) window.location.reload(); else this.actions.retry(); }
       if (action === 'continue') this.actions.continue(this.selected);
+      if (action === 'recovery') { const slot = this.slots[this.selected]; if (slot?.token && slot.recovery?.record) this.actions.continueRecovery?.(this.selected, slot.token); }
       if (action === 'delete' || action === 'cloud') { this.confirming = action; this.renderSelection(); this.element.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.focus(); }
       if (action === 'cancel') { this.confirming = null; this.renderSelection(); }
       if (action === 'confirm-delete') this.actions.remove(this.selected, this.slots[this.selected]?.token ?? null);
@@ -151,6 +154,9 @@ export class TitleScreen {
   }
   setBusy(busy: boolean) { this.element.inert = busy; this.element.classList.toggle('is-busy', busy); this.element.setAttribute('aria-busy', String(busy)); }
   setSource(source: SaveSourceUI) {
+    const refresh = source.mode === 'cloud' && this.source.mode === 'cloud' && source.status !== this.source.status
+      && (source.status === 'Conflict' || source.status === 'Synced')
+      && !this.element.hidden && !this.loading && !this.confirming;
     this.source = source;
     this.element.querySelector<HTMLElement>('[data-home-page=leaderboard]')!.hidden = !source.supported;
     if (!source.supported && this.page === 'leaderboard') this.selectPage('characters');
@@ -169,6 +175,7 @@ export class TitleScreen {
     retry.textContent = source.status === 'Reload required' ? 'Reload game' : 'Retry';
     retry.hidden = source.status === 'Sign in again';
     recovery.querySelector('a')!.hidden = source.status !== 'Sign in again';
+    if (refresh) { this.slots[this.selected] = { ...this.slots[this.selected], record: null }; this.choose(this.selected, false); }
   }
   open(slots: SaveSlot[], preferred?: number) {
     this.selectPage('characters', false); this.element.inert = false;
@@ -230,7 +237,7 @@ export class TitleScreen {
     this.render();
     if (focus) this.element.querySelector<HTMLButtonElement>(`[data-slot="${index}"]`)?.focus();
     const slot = this.slots[index];
-    if (!slot || !this.actions.read || slot.record) return;
+    if (!slot || !this.actions.read || slot.record && this.source.mode !== 'cloud') return;
     this.loading = true; this.renderSelection();
     void this.actions.read(index).then(value => {
       if (ticket !== this.inspection || this.element.hidden) return;
@@ -271,11 +278,22 @@ export class TitleScreen {
         : 'This cannot be undone.';
       selection.innerHTML = `<div class="title-confirm"><h3>${this.confirming === 'delete' ? 'Delete character?' : 'Use cloud version?'}</h3><p>${this.confirming === 'delete' ? deleteMessage : 'Replaces this device’s recovery copy with the saved cloud version. This cannot be undone.'}</p><div class="title-actions"><button class="ui-button" data-action="cancel">Cancel</button><button class="ui-button ui-button--danger" data-action="confirm-${this.confirming}">${this.confirming === 'delete' ? 'Delete' : 'Use cloud'}</button></div></div>`; return;
     }
+    if (slot?.conflict && slot.recovery) {
+      const describe = (save: CharacterSave) => `<strong>${escapeUI(save.name)}</strong><div class="title-branch-stats">Level ${save.checkpoint.level} · ${format(equippedGearPower(save.checkpoint.character))} gear · ${Math.floor(save.checkpoint.time / 60)} min played</div><time datetime="${new Date(save.updatedAt).toISOString()}">${escapeUI(new Date(save.updatedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }))}</time>`;
+      selection.innerHTML = `<div class="title-save-branches">
+        <section class="title-save-branch"><h3>Cloud save</h3>${record ? describe(record) : `<p>${slot.cloudState === 'offline' ? 'Cannot check the cloud save. Reconnect and retry.' : 'This slot is empty in the cloud.'}</p>`}
+          <button class="ui-button ui-button--primary" data-action="cloud" ${slot.cloudState === 'offline' ? 'disabled' : ''}>Use cloud version</button></section>
+        <section class="title-save-branch title-save-branch--recovery"><h3>This device’s recovery</h3>${slot.recovery.record ? describe(slot.recovery.record) : `<p>${slot.recovery.invalid ? 'This copy requires a compatible game version.' : 'This device has a pending deletion.'}</p>`}
+          <p>Unsent changes. Kept separately from the cloud save.</p>
+          ${slot.recovery.record && this.actions.continueRecovery ? '<button class="ui-button" data-action="recovery">Continue recovery</button>' : ''}</section>
+        <button class="ui-button ui-button--quiet" data-action="delete">Delete character</button>
+      </div>`; return;
+    }
     if (record) {
       const power = equippedGearPower(record.checkpoint.character);
       selection.innerHTML = `<div class="title-selection-heading"><h3>${escapeUI(record.name)}</h3><button class="ui-button ui-button--quiet ui-button--icon" data-action="delete" aria-label="Delete character">${uiIcon('close')}</button></div>
         <div class="title-build-stats"><div><strong>${record.checkpoint.level}</strong><span>Level</span></div><div data-tooltip="Average equipped item power. Two-handed weapons count for both hands." tabindex="0"><strong>${format(power)}</strong><span>Gear power</span></div></div>
-        <div class="title-save-meta"><span>${Math.floor(record.checkpoint.time / 60)} min</span><span>${new Date(record.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span></div>
+        <div class="title-save-meta">${slot.cloudState ? `<span>${slot.cloudState === 'offline' ? 'Device copy · cloud unavailable' : slot.cloudState === 'pending' ? 'This device · awaiting upload' : 'Cloud save'}</span>` : ''}<span>${Math.floor(record.checkpoint.time / 60)} min</span><span>${new Date(record.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span></div>
         ${slot.conflict ? '<div class="title-conflict"><span>Another device has a newer save.</span><button class="ui-button" data-action="cloud">Use cloud version</button></div>' : ''}
         <button class="ui-button ui-button--primary title-enter" data-action="continue"><span>${slot.conflict ? 'Continue recovery' : 'Continue'}</span>${uiIcon('chevron')}</button>`;
     } else if (slot?.state === 'empty') {

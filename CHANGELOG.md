@@ -1,5 +1,21 @@
 # Evergrow changelog
 
+## v0.3.9 — 2026-09-10T19:13:00Z
+
+### Tweaks
+
+- Cloud characters check the server when selected and again before Continue.
+- Conflicting cloud and device copies appear separately, with dates and progress to help you choose.
+- Offline copies and progress awaiting upload are clearly labeled.
+
+### Fixes
+
+- An old device recovery no longer silently replaces the newer cloud character in the hall.
+- Interrupted uploads and unreadable recovery copies no longer hide valid cloud progress.
+- Background synchronization refreshes the selected character.
+
+> Existing characters and progress are preserved. No save reset is required.
+
 ## v0.3.8 — 2026-09-10T18:57:00Z
 
 ### New
