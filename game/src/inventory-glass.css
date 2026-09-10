@@ -1,12 +1,54 @@
 /* Inventory wells reveal the shared frosted panel beneath them. */
 .character-overlay .character-equipment,
-.character-overlay .character-inventory { border-right-color: #b3dbea29; }
+.character-overlay .character-inventory { border-right-color: #b3dbea30; }
 .character-overlay .character-details { background: #08111c18; }
 .character-overlay .character-section-title h3 { color: #c7e4ed; }
 .character-overlay .character-bag.character-tetris,
-.character-overlay .character-charm-grid { background: #040c154d; border-color: #aacddd35; }
+.character-overlay .character-charm-grid { background: #040c154d; border-color: #aacddd40; }
 .character-overlay .character-grid-cell:not(.is-drop-target):not(.is-placement-valid):not(.is-placement-invalid) {
-  background: #10212b45; border-color: #afddec20; box-shadow: inset 0 1px #e0f8ff0a;
+  background: #10212b45; border-color: #afddec20; box-shadow: inset 0 1px #e0f8ff0c;
 }
 .character-overlay .character-grid-cell:hover { border-color: #b8e9ff5c; }
 
+
+/* A small heraldic plate replaces the celestial ring, without changing layout. */
+.character-overlay .character-sigil {
+  border-radius: 0; color: #c9dbe5; border-color: #a6bfd259;
+  background: linear-gradient(145deg, #889eae22, #111a2880);
+  box-shadow: inset 0 1px #e4f2ff30, inset 0 -2px #080c1766;
+}
+.character-overlay .character-orbit { border-color: #adc6dc22; border-radius: 48% 48% 0 0; }
+.character-overlay .character-header .ui-button { border-color: #96b8c338; color: #b8ccdb; background: #091f2880; }
+
+/* A recessed reliquary niche, rather than intersecting celestial rings. */
+.character-overlay .character-orbit {
+  background: radial-gradient(ellipse at 50% 72%, #c6ddea0c, transparent 68%);
+  box-shadow: inset 0 0 28px #070c1626;
+}
+.character-overlay .character-orbit::before {
+  inset: 8px; border-radius: inherit; border-color: #b6c6dc20;
+}
+.character-overlay .character-orbit::after {
+  content: ''; inset: auto 20% -10px; height: 1px;
+  background: linear-gradient(90deg, transparent, #b9d5e655, transparent);
+}
+.character-overlay .character-section-title {
+  padding-bottom: 10px; border-bottom: 1px solid #b4d3e022;
+}
+.character-overlay .character-section-title h3 { text-shadow: 0 1px 1px #0006; }
+.character-overlay .character-bag.character-tetris,
+.character-overlay .character-charm-grid {
+  box-shadow: inset 0 2px 8px #0003, 0 1px #def1ff13;
+}
+.character-overlay .character-grid-cell:not(.is-drop-target):not(.is-placement-valid):not(.is-placement-invalid) {
+  border-color: #b3cbde1c;
+  background: linear-gradient(150deg, #9cb4c010, #040c1520);
+}
+.character-overlay .character-sort-options { gap: 3px; }
+.character-overlay .character-sort-options .ui-button { font-size: 12px; letter-spacing: .02em; }
+.character-overlay .character-level { color: #aecbd6; }
+@media (forced-colors: active) {
+  .character-overlay .character-orbit { display: none; }
+  .character-overlay .character-bag.character-tetris,
+  .character-overlay .character-charm-grid { box-shadow: none; }
+}

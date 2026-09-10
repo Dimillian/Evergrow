@@ -1,12 +1,12 @@
 /* Shared smoked glass. Unsupported blur keeps a readable, opaque ink surface. */
 .ui-tooltip:not(.ui-item-tooltip-group), .ui-item-tooltip, .ui-item-hover-card,
 [data-tooltip]:where(:not([data-tooltip=""]))::after {
-  border: 1px solid #abc7d226;
+  border: 1px solid #abc7d242;
   border-radius: 0;
   background-color: #0d1821;
-  background-image: radial-gradient(ellipse at 0 0, #a9d4e00c, transparent 65%),
-    linear-gradient(155deg, #bedde507, transparent 48%, #03080d24);
-  box-shadow: 0 12px 32px #0007, 0 0 18px #a8d7e008, inset 0 0 18px #c5e7ef04;
+  background-image: radial-gradient(ellipse at 0 0, #a9d4e012, transparent 65%),
+    linear-gradient(155deg, #bedde509, transparent 48%, #03080d24);
+  box-shadow: 0 12px 32px #0007, 0 0 18px #a8d7e008, inset 0 0 18px #c5e7ef06;
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .ui-tooltip:not(.ui-item-tooltip-group), .ui-item-tooltip, .ui-item-hover-card,
@@ -41,6 +41,18 @@
   [data-tooltip]:where(:not([data-tooltip=""]))::after { border-color: CanvasText; background: Canvas; box-shadow: none; }
 }
 
+/* A quieter inscription hierarchy keeps long comparisons easy to scan. */
+.ui-item-hover-card .ui-item-class { color: #afc0c7; line-height: 1.45; }
+.ui-item-hover-card .ui-item-meta { color: #acbfca; line-height: 1.5; }
+.ui-item-hover-card .ui-item-weapon {
+  border-color: #b4d3e026;
+  background: none;
+}
+.ui-item-hover-card .ui-item-stat-table tbody tr + tr { border-top: 1px solid #c7dfec09; }
+.ui-item-hover-card .ui-item-stat-table tbody th,
+.ui-item-hover-card .ui-item-stat-table td { padding-top: 5px; padding-bottom: 5px; }
+.ui-item-hover-card .ui-item-comparison { border-color: #b4d3e026; }
+
 /* Non-item tooltips use the same fading corner accent as equipment cards. */
 .ui-tooltip:not(.ui-item-tooltip-group):not(.ui-item-tooltip) { isolation: isolate; }
 .ui-tooltip:not(.ui-item-tooltip-group):not(.ui-item-tooltip)::before {
@@ -57,36 +69,49 @@
 /* Two independent glass cards let the inventory color bleed through beneath
    each item. Rarity washes affect the material, never blur or blend the text. */
 .ui-item-hover-card.ui-item-hover-card {
-  border-radius: 0; border-color: #b8d7e65c;
+  border-radius: 0; border-color: #b8d7e666;
   background-color: #101d2d;
-  background-image: linear-gradient(135deg, #e0f7ff16, #d9e3ff03 40%, #02071230);
-  box-shadow: 0 18px 38px #0009, inset 0 1px #edfcff7a, inset 1px 0 #d7edff21;
+  background-image: linear-gradient(135deg, #e0f7ff12, #d9e3ff04 40%, #02071230);
+  box-shadow: 0 18px 38px #0009, inset 0 1px #edfcff52, inset 1px 0 #d7edff24;
   color: #e4eef0;
 }
 .ui-item-hover-card.ui-item-hover-card::before {
   background: radial-gradient(ellipse at 0 0, var(--item-color), transparent 67%),
     radial-gradient(ellipse at 100% 100%, var(--item-color), transparent 74%);
-  opacity: .3;
+  opacity: .19;
 }
 .ui-item-hover-card.ui-item-hover-card::after {
-  content: ''; position: absolute; z-index: -1; inset: 0; pointer-events: none;
-  background: linear-gradient(115deg, transparent 24%, #e0f7ff1c 40%, #ffffff38 46%, transparent 58%);
-  background-size: 260% 100%; background-position: 100% 0;
-  opacity: 0; animation: ui-glass-sheen 620ms ease-out both;
+  content: ''; position: absolute; z-index: -1; inset: 5px; pointer-events: none;
+  /* Only the inset engraving catches the light; no sweep crosses the text. */
+  background: linear-gradient(110deg, transparent 38%, var(--item-color) 48%, #e3f3ff 50%, transparent 60%);
+  background-size: 300% 100%; background-position: 100% 0;
+  clip-path: polygon(0 0,100% 0,100% 100%,0 100%,0 0,1px 1px,1px calc(100% - 1px),calc(100% - 1px) calc(100% - 1px),calc(100% - 1px) 1px,1px 1px);
+  opacity: 0; animation: ui-engraving-glint 850ms ease-out both;
 }
 .ui-item-hover-card.ui-item-hover-card:first-child {
   border-color: var(--item-color);
+  border-color: color-mix(in srgb, var(--item-color) 55%, #8ca4b7);
 }
-.ui-item-hover-card.ui-item-hover-card:not(:first-child)::before { opacity: .17; }
+.ui-item-hover-card.ui-item-hover-card:not(:first-child)::before { opacity: .10; }
 .ui-item-hover-card.ui-item-hover-card:not(:first-child)::after { animation: none; }
 .ui-item-hover-card.ui-item-hover-card .ui-item-heading h4 {
-  text-shadow: 0 0 18px color-mix(in srgb, var(--item-color), transparent 58%);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--item-color), transparent 78%);
 }
+.ui-item-hover-card .ui-item-heading {
+  position: relative; padding-bottom: 14px; margin-bottom: 12px;
+  border-bottom: 1px solid #aac2d638;
+}
+.ui-item-hover-card .ui-item-heading::after {
+  content: ''; position: absolute; width: 6px; height: 6px; left: calc(50% - 4px); bottom: -4px;
+  transform: rotate(45deg); border: 1px solid var(--item-color); background: #253340;
+  box-shadow: 0 0 0 3px #172030e0; pointer-events: none;
+}
+.ui-item-hover-card .ui-item-meta { border-top: 0; }
 @supports (color: color-mix(in srgb, red, blue)) {
   .ui-item-hover-card.ui-item-hover-card:first-child {
     box-shadow: 0 18px 38px #0009,
-      0 0 20px color-mix(in srgb, var(--item-color), transparent 83%),
-      inset 0 1px #f4fdff80, inset 0 0 30px color-mix(in srgb, var(--item-color), transparent 94%);
+      0 0 12px color-mix(in srgb, var(--item-color), transparent 91%),
+      inset 0 1px #f4fdff66, inset 0 0 30px color-mix(in srgb, var(--item-color), transparent 96%);
   }
 }
 
@@ -97,7 +122,7 @@
     backdrop-filter: blur(22px) saturate(1.8) brightness(1.12);
   }
 }
-@keyframes ui-glass-sheen {
+@keyframes ui-engraving-glint {
   0% { background-position: 100% 0; opacity: 0; }
   22% { opacity: .8; }
   100% { background-position: 0% 0; opacity: 0; }
@@ -116,4 +141,5 @@
   .ui-item-hover-card.ui-item-hover-card::before,
   .ui-item-hover-card.ui-item-hover-card::after { display: none; }
   .ui-item-hover-card.ui-item-hover-card .ui-item-heading h4 { text-shadow: none; }
+  .ui-item-hover-card .ui-item-heading::after { display: none; }
 }

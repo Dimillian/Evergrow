@@ -1,5 +1,25 @@
 # Evergrow changelog
 
+## v0.3.8 — 2026-09-10T18:57:00Z
+
+### New
+
+- Equipment now shows a discreet gear-power score that updates as you change gear and matches the leaderboard.
+
+### Tweaks
+
+- Frosted panels keep their cool silver-blue colors with finer metal frames, cleaner controls and more subtle highlights.
+- Inventory sections have clearer dividers and recessed grids, with a refined frame around your character.
+- Item tooltips use quieter rarity accents, finer stat separators and a brief edge glint.
+
+### Fixes
+
+- Inventory items stay within their grid footprints, including narrow one-cell items.
+- Window corners no longer crowd the emblem or close button on narrow screens.
+- Weapon damage stats blend into the tooltip without a pale background overlay.
+
+> Existing characters and progress are unchanged.
+
 ## v0.3.7 — 2026-09-10T12:22:00Z
 
 ### Tweaks

@@ -132,9 +132,9 @@
 }
 .ui-button:not(:disabled):not([aria-disabled="true"]):hover {
   color: var(--ui-ivory);
-  border-color: var(--ui-brass);
-  background-color: #293b35;
-  box-shadow: inset 0 1px #d6dbc027, 0 3px 9px #02060950;
+  border-color: #b8d3e066;
+  background-color: #b8d3e010;
+  box-shadow: inset 0 1px #e0f3ff18;
 }
 .ui-button:not(:disabled):not([aria-disabled="true"]):active {
   transform: translateY(1px);
@@ -180,8 +180,8 @@
   filter: saturate(.45);
 }
 .ui-button:focus-visible, .ui-slot:focus-visible, .ui-focus:focus-visible {
-  outline: 2px solid var(--ui-focus);
-  outline-offset: 3px;
+  outline: 1px solid #c1dce0a6;
+  outline-offset: 2px;
 }
 
 .ui-tooltip {
@@ -332,7 +332,7 @@
   pointer-events: none;
 }
 .ui-slot .ui-icon { width: 30px; height: 30px; }
-.ui-slot:not(:disabled):hover { border-color: var(--ui-brass-dim); }
+.ui-slot:not(:disabled):hover { border-color: #b8d3e066; }
 .ui-slot:disabled { color: var(--ui-faint); opacity: .4; cursor: default; }
 .ui-slot[aria-selected="true"] { border-color: var(--ui-jade); box-shadow: inset 0 0 12px #66876b1f; }
 .ui-window[hidden], .ui-button[hidden], .ui-status[hidden], .ui-slot[hidden], .ui-badge[hidden] { display: none; }

@@ -8,7 +8,7 @@
 .inventory-pack .ui-item-grid-scroll, .ui-item-grid-scroll:has(> .inventory-pack) { overflow: clip; }
 .character-pack-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0 14px; }
 .character-pack-toolbar .ui-button { min-height: 32px; padding: 6px 9px; font-size: 12px; border-radius: 0; }
-.character-auto-sort { display: inline-flex; align-items: center; gap: 6px; color: #e0d6ad; border-color: #b5a76d66; background: #b5a76d10; }
+.character-auto-sort { display: inline-flex; align-items: center; gap: 6px; color: #c7dce5; border-color: #b8d3e038; background: #b8d3e008; }
 .character-auto-sort .ui-icon { width: 16px; height: 16px; }
 .character-sort-options { display: flex; gap: 2px; }
 .character-bag.character-tetris, .character-overflow-items, .character-charm-grid {

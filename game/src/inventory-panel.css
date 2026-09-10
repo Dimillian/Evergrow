@@ -245,3 +245,14 @@
 .charm-net-changes table { width:100%; }
 .charm-net-changes th { text-align:left; font-weight:normal; }
 .charm-net-changes td { text-align:right; }
+
+/* Quiet equipment score, shared with the character hall and leaderboard. */
+.character-section-title > .character-gear-power {
+  display: inline-flex; align-items: baseline; gap: 6px; margin-left: auto;
+  flex: none; white-space: nowrap; color: var(--ui-silver-dim);
+}
+.character-gear-power > span { font-size: 10px; letter-spacing: .02em; }
+.character-gear-power > strong {
+  color: var(--ui-ivory); font-family: var(--ui-font); font-size: 17px;
+  font-weight: 400; font-variant-numeric: tabular-nums;
+}
