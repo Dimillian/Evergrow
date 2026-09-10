@@ -29,6 +29,18 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.5 / Sites version 36, publicly deployed on 2026-09-10 at 06:13:19 UTC.
+- Published source: `7d969525dec524642f1bcc16e5469bcd37c156d8`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_43e24ace2bd881919fe2af15a207de7b`.
+- Deployment: `appgdep_6aa24a6ba91c8191bed8f4eeb15dfc2d`; Sites returned `succeeded`.
+- Dynamic day/night lighting and minimap clock, nine biome atmospheres, cloud shadows, directional scenery/water highlights, warmer settlement nights and dungeon reflections/glow.
+- Smoother Mire fog, cached fortification artwork and reusable flickering-light shadows.
+- Existing characters and progress are preserved; the clock follows saved simulation time. No save reset or database migration.
+- Passed all 1,137 code tests, type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.4 / Sites version 35, publicly deployed on 2026-09-09 at 19:15:47 UTC.
 - Published source: `08697db396647d0c51821e1fd1d0136458b39459`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_dd23519f8e948191a9bdb88b409fcc6e`.
