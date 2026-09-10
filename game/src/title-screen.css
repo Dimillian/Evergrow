@@ -145,3 +145,16 @@
 .title-save-branch .ui-button { margin-top: 12px; }
 .title-save-branch--recovery { background: none; border-color: #bdd9e322; }
 .title-save-meta { flex-wrap: wrap; }
+
+/* Stable roster silhouettes while the account and character list arrive. */
+.title-slot-skeleton { display:flex; align-items:center; gap:12px; min-height:44px; padding:10px; border:1px solid #708d931c; background:#040d1625; animation:title-loading-breathe 1.8s ease-in-out infinite alternate; }
+.title-slot-skeleton i { width:12px; height:12px; border:1px solid #a4c3cc45; transform:rotate(45deg); flex:none; }
+.title-slot-skeleton span { width:62%; height:7px; background:#a4c3cc20; }
+.title-slot-skeleton:nth-child(2n) span { width:46%; }
+.title-slot-skeleton:nth-child(3n) span { width:72%; }
+.title-loading-state { display:grid; justify-items:center; gap:14px; color:#b2ccd3; text-align:center; }
+.title-loading-state > span { width:38px; height:38px; opacity:.65; animation:title-loading-breathe 1.8s ease-in-out infinite alternate; }
+.title-loading-state svg { width:100%; height:100%; }
+.title-loading-state p { margin:0; }
+@keyframes title-loading-breathe { from { opacity:.4; } to { opacity:.85; } }
+@media(prefers-reduced-motion:reduce) { .title-slot-skeleton,.title-loading-state > span { animation:none; } }

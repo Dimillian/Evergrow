@@ -618,10 +618,11 @@ export class Game {
 
   private async loadRoster(preferred?: number) {
     this.hallBusy = true;
+    this.titleScreen.setRosterLoading(true);
     try {
       const slots = await this.session.repository.list();
       if (!this.disposed) { this.titleScreen.setSource(this.saveClient.state); this.titleScreen.open(slots, preferred); }
-    } catch { this.titleScreen.message('Saves unavailable. Please retry.'); }
+    } catch { this.titleScreen.setRosterLoading(false); this.titleScreen.message('Saves unavailable. Please retry.'); }
     finally { this.hallBusy = false; }
   }
 

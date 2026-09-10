@@ -7,6 +7,7 @@
 - Expedition tables can be used from every reachable side, including from behind.
 - Blocked or out-of-reach tables no longer incorrectly show the level-20 requirement.
 - The expedition map background fills the panel, with the route kept neatly centered.
+- Cloud characters show a proper loading state instead of briefly displaying an invalid, unavailable slot.
 
 > Existing characters and progress are unchanged.
 

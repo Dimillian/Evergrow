@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { titleSlotAction } from '../src/title-slot-action.ts';
+import { titleSlotAction, shouldRefreshCloudSlot } from '../src/title-slot-action.ts';
 import type { SaveSlot } from '../src/character-storage.ts';
 const saved: SaveSlot = { index: 2, state: 'saved', record: null, token: 'revision', summary: { name: 'Test', level: 3, power: 42, updatedAt: 1 } };
 test('a highlighted saved character can continue while its portrait read is pending', () => {
@@ -21,4 +21,13 @@ test('busy, signed-out and confirmation states cannot bypass title safeguards', 
 test('conflicting saves cannot bypass the explicit branch choices through quick activation', () => {
   assert.equal(titleSlotAction({...saved,conflict:true},true,false,false),'none');
   assert.equal(titleSlotAction({...saved,state:'empty',conflict:true},true,false,false),'none');
+});
+
+
+test('cloud initialization cannot refresh an absent slot before the roster arrives', () => {
+  assert.equal(shouldRefreshCloudSlot(undefined, 'Loading…', 'Synced'), false);
+  assert.equal(shouldRefreshCloudSlot(undefined, 'Saving…', 'Conflict'), false);
+  assert.equal(shouldRefreshCloudSlot(saved, 'Saving…', 'Conflict'), true);
+  assert.equal(shouldRefreshCloudSlot(saved, 'Saving…', 'Synced'), true);
+  assert.equal(shouldRefreshCloudSlot(saved, 'Synced', 'Synced'), false);
 });
