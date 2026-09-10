@@ -1,3 +1,5 @@
+import { dungeonTheme } from './dungeon-content.ts';
+import { dungeonChestMask } from './expedition-route.ts';
 import { activityLevel } from './activity-level.ts';
 import { captureEncounterScale, type EncounterScale } from './encounter-scaling.ts';
 import { isTrialKind } from './event-recipes.ts';
@@ -19,7 +21,7 @@ export function journeyObjective(goal:JourneyGoal,facts:JourneyFacts):string {
   if(goal.finishedAt!==undefined)return 'Completed';
   if(goal.kind==='dungeon'){
     const run=facts.expeditions.runs.find(r=>r.entrance.id===goal.id);
-    return !run?'Enter the crypt':run.states.warden?.hp>0?'Defeat the Hollow Warden':'Claim the Warden’s chest';
+    return !run?'Enter the dungeon':run.states.warden?.hp>0?`Defeat ${dungeonTheme(run.entrance.seed,run.entrance.theme).bossName??'Hollow Warden'}`:run.chestMasks[2]===dungeonChestMask(run,2)?'Return to the surface':'Claim the boss chest';
   }
   if(goal.kind==='bossLair')return 'Defeat the boss';
   if(goal.kind==='camp')return facts.campCleared(goal.id)?'Open the strongbox':'Clear the garrison';
@@ -37,7 +39,7 @@ export function journeyObjective(goal:JourneyGoal,facts:JourneyFacts):string {
   return goal.kind==='reliquary'?'Open the reliquary':'Begin the trial';
 }
 export function journeyComplete(goal:JourneyGoal,facts:JourneyFacts):boolean {
-  if(goal.kind==='dungeon')return !!facts.expeditions.cleared?.includes(goal.id)||!!facts.expeditions.runs.find(r=>r.entrance.id===goal.id&&(r.chestMasks[2]&15)===15);
+  if(goal.kind==='dungeon')return !!facts.expeditions.cleared?.includes(goal.id)||!!facts.expeditions.runs.find(r=>r.entrance.id===goal.id&&r.chestMasks[2]===dungeonChestMask(r,2));
   if(goal.kind==='town'||goal.kind==='frontier')return !facts.expeditions.location&&Math.hypot(goal.x-facts.x,goal.y-facts.y)<(goal.kind==='town'?260:180);
   return eventClaimed(facts.events,goal.id);
 }

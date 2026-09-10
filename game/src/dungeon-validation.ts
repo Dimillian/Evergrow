@@ -1,3 +1,4 @@
+import { EXPEDITION_MODIFIER_IDS } from './expedition-modifiers.ts';
 import { validExpeditionRoute, expeditionChoices, dungeonChestMask } from './expedition-route.ts';
 import { DUNGEON_THEME_IDS } from './dungeon-content.ts';
 import { DUNGEON_EVENTS } from './dungeon-content.ts';
@@ -33,7 +34,10 @@ export function validExpeditions(v: unknown): v is Expeditions {
             const tag=e.expedition, route=v.route;
             if(!object(tag)||!validExpeditionRoute(route)||!integer(tag.attempt,1)||tag.attempt!==route.attempt||!integer(tag.stage,0,9)||tag.stage>route.cleared||!integer(tag.choice,0,1))return false;
             const expected=expeditionChoices({...route,cleared:tag.stage,choice:null,status:'active'},{x:e.x as number,y:e.y as number})[tag.choice];
-            if(!expected||JSON.stringify(expected.expedition)!==JSON.stringify(tag)||expected.seed!==e.seed||expected.theme!==e.theme||expected.level!==e.level||expected.id!==e.id||JSON.stringify(expected.scaling)!==JSON.stringify(e.scaling))return false;
+            // A chosen entrance is a persisted snapshot, not a fresh roll from the current content pool.
+            const level=route.base+tag.stage+(tag.modifier==='peril'?2:0);
+            if(!expected||!EXPEDITION_MODIFIER_IDS.includes(tag.modifier as never)||expected.id!==e.id||e.level!==level
+                ||JSON.stringify({base:level,min:Math.max(1,level-1),max:level+1})!==JSON.stringify(e.scaling))return false;
             if(tag.stage===route.cleared&&(route.status!=='active'||route.choice!==tag.choice))return false;
         }
         ids.add(e.id);

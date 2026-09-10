@@ -71,3 +71,7 @@ Static review: `/journeys.html?view=hud`, `view=journal`, `view=crypt`, `view=ma
 Activity names match across the mini log, journal and markers. Distances use metres and kilometres with one shared display scale (32 world units per metre), measured directly to the activity.
 
 `journey-controller.ts` owns runtime scheduling and presentation orchestration; the director remains pure and rewards remain source-owned.
+
+## Dungeon objectives
+
+Inside either a wilderness dungeon or an expedition stage, the journal and HUD automatically show the current dungeon objective instead of surface activities: defeat its named boss, claim the final chest, then return to the surface. The dungeon-map marker uses the actual generated boss room; unexplored chambers are approached through the revealed route. Grand-chest guidance waits for all reward receipts. This is a temporary presentation derived from the active run, so outdoor pins and offers are not replaced or lost.

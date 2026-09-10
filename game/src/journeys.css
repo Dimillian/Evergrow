@@ -33,3 +33,5 @@
 .journey-mini-level[data-fit="Harder"],.journey-list-level[data-fit="Harder"] { color:#d3a084; }
 .journey-mini-level[data-fit="Easier"],.journey-list-level[data-fit="Easier"] { color:#70848c; }
 .journey-list-level { flex:none; font-size:13px; font-variant-numeric:tabular-nums; }
+
+.journey-mini-row.is-dungeon strong { white-space:normal; line-height:1.25; }

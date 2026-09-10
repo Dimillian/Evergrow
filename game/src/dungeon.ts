@@ -1,3 +1,4 @@
+import type { ExpeditionModifier } from './expedition-modifiers.ts';
 import { buildDungeonLayout } from './dungeon-layout.ts';
 import { worldNavigation } from './world-navigation.ts';
 import { dungeonTheme, type DungeonThemeId, type DungeonEventKind, DUNGEON_EVENTS } from './dungeon-content.ts';
@@ -15,7 +16,7 @@ export interface DungeonChestTarget {
 }
 export interface DungeonEntrance {
     theme?: DungeonThemeId;
-    expedition?: { attempt: number; stage: number; choice: number; modifier: 'elite' | 'ranged' | 'peril' };
+    expedition?: { attempt: number; stage: number; choice: number; modifier: ExpeditionModifier };
     scaling?: import('./encounter-scaling.ts').EncounterScale;
     id: string;
     name: string;
@@ -91,15 +92,20 @@ export function generateDungeon(seed: number, _level = 1, options: Pick<DungeonE
             continue;
         const c = center(room), event=events.find(e=>e.room===room.id), recipe=event?DUNGEON_EVENTS[event.kind]:null, count = recipe ? recipe.size * recipe.rules.count : 6 + Math.floor(random() * 5);
         for (let i = 0; i < count; i++) {
-            const kind: EnemyKind = options.expedition?.modifier==='ranged' && i%3===0 ? 'archer' : theme.roster[(i + room.id) % theme.roster.length];
+            const modifier=options.expedition?.modifier;
+            const replacements={ranged:'archer',brutes:'brute',coven:'caster',hunt:'hound'} as const;
+            const replacement=modifier && modifier in replacements ? replacements[modifier as keyof typeof replacements] : undefined;
+            const kind: EnemyKind = replacement && i%3===0 ? replacement : theme.roster[(i + room.id) % theme.roster.length];
             const slot=recipe?i%recipe.size:i;
-            members.push({ id: `room:${room.id}:${i}`, kind, rank: options.expedition?.modifier==='elite' && i%4===0 ? 'elite' : recipe && slot === 0 ? (event!.kind === 'champion' || i >= count-recipe.size ? 'elite' : 'veteran') : i === 0 && room.id % 3 === 0 ? 'veteran' : 'normal', room: room.id, x: c.x + (slot % 3 - 1) * 70, y: c.y + (Math.floor(slot / 3) - (Math.ceil((recipe?.size??count) / 3) - 1) / 2) * 75, seed: Math.floor(random() * 4294967296), ...(event?{event:event.id,eventWave:Math.floor(i/recipe!.size)}:{}) });
+            const baseRank: EnemyRank = recipe && slot === 0 ? (event!.kind === 'champion' || i >= count-recipe.size ? 'elite' : 'veteran') : i === 0 && room.id % 3 === 0 ? 'veteran' : 'normal';
+            const rank: EnemyRank = modifier==='elite' && i%4===0 ? 'elite' : modifier==='veterans' && i%2===0 && baseRank==='normal' ? 'veteran' : baseRank;
+            members.push({ id: `room:${room.id}:${i}`, kind, rank, room: room.id, x: c.x + (slot % 3 - 1) * 70, y: c.y + (Math.floor(slot / 3) - (Math.ceil((recipe?.size??count) / 3) - 1) / 2) * 75, seed: Math.floor(random() * 4294967296), ...(event?{event:event.id,eventWave:Math.floor(i/recipe!.size)}:{}) });
         }
     }
     const boss = center(rooms[bossId]);
     members.push({ id: 'warden', kind: options.theme ? (theme.boss ?? (theme.id==='foundry'?'ashColossus':theme.id==='drowned'?'briarMatriarch':'warden')) : 'warden', rank: options.expedition?'veteran':'normal', room: bossId, x: boss.x, y: boss.y, seed: (seed ^ 731) >>> 0 });
     for (let i = 0; i < 4; i++)
-        members.push({ id: `buried:${i}`, kind: i % 2 ? 'stalker' : 'archer', rank: 'normal', room: bossId, x: boss.x + (i % 2 ? 560 : -560), y: boss.y + (i < 2 ? -400 : 400), seed: (seed + i + 900) >>> 0, wave: i < 2 ? 1 : 2 });
+        members.push({ id: `buried:${i}`, kind: i % 2 ? 'stalker' : 'archer', rank: options.expedition?.modifier==='retinue'?'elite':'normal', room: bossId, x: boss.x + (i % 2 ? 560 : -560), y: boss.y + (i < 2 ? -400 : 400), seed: (seed + i + 900) >>> 0, wave: i < 2 ? 1 : 2 });
     const props: DungeonProp[] = [];
     const floor: DungeonFloor = { theme:theme.id, events, props, seed, rooms, edges, corridors, members, entry: center(rooms[0]), exit: { x: boss.x + 260, y: boss.y + 220 }, chests: [...treasureIds, bossId].map(id => { const p = center(rooms[id]); return { x: p.x, y: p.y + 140, room: id }; }) };
     // Rotate and mirror the authored graph; proportions and encounter recipes remain seeded.

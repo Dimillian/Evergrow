@@ -68,7 +68,8 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
             }
             const route=state.route!;
             if(route.choice!==null&&route.choice!==action.choice)return {ok:false,message:'This route is already chosen.'};
-            expeditionEntrance=expeditionChoices(route,{x:table.door.x,y:table.door.y+14})[action.choice];
+            expeditionEntrance=state.runs.find(r=>r.entrance.expedition?.attempt===route.attempt&&r.entrance.expedition.stage===route.cleared&&r.entrance.expedition.choice===action.choice)?.entrance
+                ??expeditionChoices(route,{x:table.door.x,y:table.door.y+14})[action.choice];
             if(!expeditionEntrance)return {ok:false,message:'Choose an available route.'};
             route.choice=action.choice;
             }

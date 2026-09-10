@@ -1,6 +1,7 @@
+import { EXPEDITION_MODIFIERS } from './expedition-modifiers.ts';
 import type { Expeditions } from './dungeon-state.ts';
 import type { DungeonAction } from './dungeon-command.ts';
-import { newExpeditionRoute, EXPEDITION_RULES, EXPEDITION_MODIFIERS } from './expedition-route.ts';
+import { newExpeditionRoute, EXPEDITION_RULES } from './expedition-route.ts';
 import { expeditionMap, type ExpeditionMapNode } from './expedition-map.ts';
 import { dungeonTheme } from './dungeon-content.ts';
 import { escapeUI, trapDialogFocus } from './ui-components.ts';

@@ -1,3 +1,4 @@
+import { EXPEDITION_MODIFIER_IDS } from './expedition-modifiers.ts';
 import { dungeonTheme, DUNGEON_THEME_IDS } from './dungeon-content.ts';
 import { dungeonRandom, type DungeonEntrance } from './dungeon.ts';
 import type { Item, ItemTier } from './character-types.ts';
@@ -6,11 +7,6 @@ import type { Expeditions, DungeonRun } from './dungeon-state.ts';
 export const EXPEDITION_RULES = Object.freeze({minimumLevel:20, stages:10, stageRewards:3, grandRewards:6,
   stageRarity:Object.freeze({rare:60,epic:35,legendary:5}),
   grandRarity:Object.freeze({rare:15,epic:65,legendary:20})});
-export const EXPEDITION_MODIFIERS = Object.freeze({
-  elite:{name:'Elite guard',description:'Every fourth chamber guard is Elite.'},
-  ranged:{name:'Firing lines',description:'Every third chamber guard is an archer.'},
-  peril:{name:'Deep peril',description:'All enemies and rewards are 2 levels higher.'},
-});
 export interface ExpeditionRoute {attempt:number;seed:number;base:number;cleared:number;choice:number|null;status:'active'|'failed'|'complete'}
 export function newExpeditionRoute(worldSeed:number,level:number,attempt:number):ExpeditionRoute {
   return {attempt,seed:(worldSeed^Math.imul(attempt,0x9e3779b9))>>>0,base:Math.max(20,Math.min(999980,Math.floor(level))),cleared:0,choice:null,status:'active'};
@@ -23,9 +19,10 @@ export function expeditionChoices(route:ExpeditionRoute,point={x:0,y:0}):Dungeon
   stageSeed=Math.imul(stageSeed^(stageSeed>>>15),0x846ca68b);
   const random=dungeonRandom((stageSeed^(stageSeed>>>16))>>>0);
   const count=random()<.65?2:1, first=Math.floor(random()*DUNGEON_THEME_IDS.length);
+  const remainingModifiers=[...EXPEDITION_MODIFIER_IDS];
   return Array.from({length:count},(_,choice)=>{
-    const theme=DUNGEON_THEME_IDS[(first+choice*(1+Math.floor(random()*5)))%DUNGEON_THEME_IDS.length];
-    const modifier=(['elite','ranged','peril'] as const)[Math.floor(random()*3)];
+    const theme=DUNGEON_THEME_IDS[(first+choice*(1+Math.floor(random()*(DUNGEON_THEME_IDS.length-1))))%DUNGEON_THEME_IDS.length];
+    const modifier=remainingModifiers.splice(Math.floor(random()*remainingModifiers.length),1)[0];
     const level=route.base+route.cleared+(modifier==='peril'?2:0), seed=Math.floor(random()*4294967296)>>>0;
     const biome=theme==='rime'?'frostpine':theme==='ossuary'?'sunscar':theme==='foundry'?'emberfall':theme==='drowned'?'swamp':theme==='astral'?'highlands':'verdant';
     return {id:`dungeon:expedition:${route.attempt}:${route.cleared}:${choice}`,name:dungeonTheme(seed,theme).name,seed,theme,level,biome,...point,scaling:{base:level,min:Math.max(1,level-1),max:level+1},expedition:{attempt:route.attempt,stage:route.cleared,choice,modifier}};

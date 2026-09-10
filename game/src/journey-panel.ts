@@ -1,3 +1,4 @@
+import type { DungeonJourney } from './dungeon-journey.ts';
 import { settlementBenefits } from './settlement-services.ts';
 import { formatWorldDistance } from './world-distance.ts';
 import { journeyXP } from './journey-rewards.ts';
@@ -15,6 +16,7 @@ export class JourneyPanel {
   private abort=new AbortController();private focus:ReturnType<typeof trapDialogFocus>|null=null;
   private selected:string|null=null;private state:JourneyState|null=null;private facts:JourneyFacts|null=null;
   private signature='';private miniSignature='';
+  private dungeon:DungeonJourney|null=null;
   constructor(mount:HTMLElement,hudMount:HTMLElement,hooks:Hooks){
     this.element=document.createElement('section');this.element.className='journey-panel';this.element.hidden=true;mount.append(this.element);
     this.mini=document.createElement('aside');this.mini.className='journey-mini hud-sidebar-surface';this.mini.hidden=true;this.mini.setAttribute('aria-label','Journeys');hudMount.append(this.mini);
@@ -33,7 +35,8 @@ export class JourneyPanel {
       }
     },{signal:this.abort.signal});
   }
-  update(state:JourneyState,facts:JourneyFacts,playing:boolean,width:number,height:number){
+  update(state:JourneyState,facts:JourneyFacts,playing:boolean,width:number,height:number,dungeon:DungeonJourney|null=null){
+    this.dungeon=dungeon;
     this.state=state;this.facts=facts;this.mini.hidden=!playing;
     const anchor=getJourneyLogAnchor(width,height);
     this.mini.style.left=`${anchor.x/width*100}%`;
@@ -41,9 +44,10 @@ export class JourneyPanel {
     this.mini.style.width=`${anchor.width/width*100}%`;
     const list=miniJourneys(state,facts),recommended=recommendedJourney(state),guided=guidedJourney(state);
     const firstNearby=list.find(g=>g.id!==state.tracked&&g.id!==recommended?.id)?.id;
-    const html=`<header><button class="journey-mini-title" data-open>Journeys<kbd class="hud-sidebar-key">J</kbd></button><button data-collapse aria-label="${state.collapsed?'Expand':'Collapse'} journeys" aria-expanded="${!state.collapsed}">${uiIcon('chevron')}</button></header>${state.collapsed?'':list.map(g=>`${g.id===recommended?.id?'<div class="journey-mini-section">Recommended</div>':g.id===firstNearby?'<div class="journey-mini-section">Nearby</div>':''}<button class="journey-mini-row ${g.id===guided?.id?'is-tracked':''}" data-goal="${e(g.id)}" data-tooltip="${e(g.name)} · ${e(g.kind==='town'?'Visit the town services':journeyObjective(g,facts))} · Level ${g.level}${g.level>facts.level+2?' · Harder':''}" data-tooltip-align="end" aria-label="${e(g.name)} · Level ${g.level} · ${journeyLevelFit(g.level,facts.level)}"><span class="journey-symbol">${g.finishedAt!==undefined?'✓':g.id===guided?.id?'◆':'◇'}</span><span><strong>${e(g.name)}</strong></span><span class="journey-mini-level" data-fit="${journeyLevelFit(g.level,facts.level)}"><span>Lv</span> ${g.level}</span></button>`).join('')}`;
+    const outdoorHtml=`<header><button class="journey-mini-title" data-open>Journeys<kbd class="hud-sidebar-key">J</kbd></button><button data-collapse aria-label="${state.collapsed?'Expand':'Collapse'} journeys" aria-expanded="${!state.collapsed}">${uiIcon('chevron')}</button></header>${state.collapsed?'':list.map(g=>`${g.id===recommended?.id?'<div class="journey-mini-section">Recommended</div>':g.id===firstNearby?'<div class="journey-mini-section">Nearby</div>':''}<button class="journey-mini-row ${g.id===guided?.id?'is-tracked':''}" data-goal="${e(g.id)}" data-tooltip="${e(g.name)} · ${e(g.kind==='town'?'Visit the town services':journeyObjective(g,facts))} · Level ${g.level}${g.level>facts.level+2?' · Harder':''}" data-tooltip-align="end" aria-label="${e(g.name)} · Level ${g.level} · ${journeyLevelFit(g.level,facts.level)}"><span class="journey-symbol">${g.finishedAt!==undefined?'✓':g.id===guided?.id?'◆':'◇'}</span><span><strong>${e(g.name)}</strong></span><span class="journey-mini-level" data-fit="${journeyLevelFit(g.level,facts.level)}"><span>Lv</span> ${g.level}</span></button>`).join('')}`;
+    const html=dungeon?`<header><button class="journey-mini-title" data-open>Journeys<kbd class="hud-sidebar-key">J</kbd></button><button data-collapse aria-label="${state.collapsed?'Expand':'Collapse'} journeys" aria-expanded="${!state.collapsed}">${uiIcon('chevron')}</button></header>${state.collapsed?'':`<div class="journey-mini-section">${dungeon.stage?`Expedition · ${dungeon.stage} / 10`:'Dungeon'}</div><button class="journey-mini-row is-tracked is-dungeon" data-goal="${e(dungeon.id)}" data-tooltip="${e(dungeon.name)} · ${e(dungeon.objective)}" data-tooltip-align="end"><span class="journey-symbol">◆</span><span><strong>${e(dungeon.objective)}</strong></span><span class="journey-mini-level"><span>Lv</span> ${dungeon.level}</span></button>`}`:outdoorHtml;
     if(html!==this.miniSignature){this.mini.innerHTML=html;this.miniSignature=html;}
-    if(!this.element.hidden){const signature=JSON.stringify([state,Math.round(facts.x/100),Math.round(facts.y/100),facts.level,facts.expeditions.location,list.map(g=>journeyObjective(g,facts))]);if(signature!==this.signature){this.signature=signature;this.render();}}
+    if(!this.element.hidden){const signature=JSON.stringify([dungeon?.id,dungeon?.phase,state,Math.round(facts.x/100),Math.round(facts.y/100),facts.level,facts.expeditions.location,list.map(g=>journeyObjective(g,facts))]);if(signature!==this.signature){this.signature=signature;this.render();}}
   }
   bounds(width:number,height:number){
     if(this.mini.hidden)return null;
@@ -54,6 +58,7 @@ export class JourneyPanel {
   close(){this.focus?.dispose();this.focus=null;this.element.hidden=true;}
   private render(){
     const state=this.state,facts=this.facts;if(!state||!facts)return;
+    if(this.dungeon){this.renderDungeon(this.dungeon);return;}
     const cityOrigin=facts.expeditions.runs.find(r=>r.entrance.id===facts.expeditions.location)?.entrance??facts;
     const cities=[state.nearestTown,state.townPin].filter((v):v is JourneyGoal=>!!v);
     const otherGoals=[...state.accepted,...state.offers,...state.history.slice(-8).reverse()].filter(v=>!cities.some(c=>c.id===v.id));
@@ -70,6 +75,10 @@ export class JourneyPanel {
     this.element.innerHTML=`<section class="ui-window journey-window" role="dialog" aria-modal="true" aria-labelledby="journey-title"><header class="ui-window-header"><span class="journey-heading-icon">${uiIcon('map')}</span><h2 class="ui-title" id="journey-title">Journeys</h2><button class="ui-button ui-button--icon" data-close aria-label="Close journeys">×</button></header><div class="journey-columns"><nav class="journey-list ui-scroll-area" aria-label="Activities">${rows('Nearest town',state.nearestTown?[state.nearestTown]:[])}${rows('Pinned town',state.townPin&&state.townPin.id!==state.nearestTown?.id?[state.townPin]:[])}${rows('Recommended',recommended&&!cities.some(c=>c.id===recommended.id)?[recommended]:[])}${rows('Accepted',state.accepted.filter(v=>!cities.some(c=>c.id===v.id)))}${rows('Nearby',nearby.filter(v=>!cities.some(c=>c.id===v.id)))}${rows('Completed',state.history.slice(-8).reverse().filter(v=>!cities.some(c=>c.id===v.id)))}${goals.length?'':'<p class="ui-muted">Explore to find new activities.</p>'}</nav><div class="journey-detail ui-scroll-area">${g?`<h3>${e(g.name)}</h3><div class="journey-meta"><span class="ui-badge">Level ${g.level}</span><span class="${g.level>facts.level+2?'journey-danger':''}">${e(detail!.category)}${journeyLevelFit(g.level,facts.level)==='Good level'?'':` · ${journeyLevelFit(g.level,facts.level)}`}</span></div><p class="journey-objective">${e(cityRoute?settlementBenefits(g.settlementTier??'settlement'):journeyObjective(g,facts))}</p><dl><dt>Location</dt><dd>${e(g.region)}${known?'':' · Search area'}</dd><dt>Distance</dt><dd>${distanceLabel}</dd><dt>Reward</dt><dd>${e(detail!.reward)}${!cityRoute&&(!done||g.rewardXP)?` · +${(done?g.rewardXP!:journeyXP(g.kind,g.level,facts.level)).toLocaleString()} XP`: ''}</dd></dl>${!done?`<div class="journey-actions"><button class="ui-button ui-button--primary" data-action="${g.id===pinned?'untrack':'track'}" ${g.id!==pinned&&(!available||!cityRoute&&!accepted&&state.accepted.length>=3)?'disabled':''}>${g.id===pinned?'Unpin':'Pin'}</button><button class="ui-button" data-action="map">Show on map</button>${cityRoute?'':'<button class="ui-button ui-button--quiet" data-action="dismiss">Dismiss</button>'}</div>${!available?'<p class="ui-muted">Finish your current trial or expedition first.</p>':''}${!cityRoute&&!accepted&&state.accepted.length>=3?'<p class="ui-muted">Three activities accepted. Dismiss one to pin another.</p>':''}`:''}`:'<p class="ui-muted">No activity selected.</p>'}</div></div><footer class="ui-window-footer"><button class="ui-button ui-button--quiet" data-action="suggestions" aria-pressed="${state.suggestions}">${state.suggestions?'Hide':'Show'} suggestions</button><span class="ui-muted">J</span></footer></section>`;
     if(focus?.select)this.element.querySelector<HTMLElement>(`[data-select="${CSS.escape(focus.select)}"]`)?.focus({preventScroll:true});
     else if(focus?.action)this.element.querySelector<HTMLElement>(`[data-action="${CSS.escape(focus.action)}"]`)?.focus({preventScroll:true});
+  }
+  private renderDungeon(dungeon:DungeonJourney){
+    this.selected=dungeon.id;
+    this.element.innerHTML=`<section class="ui-window journey-window" role="dialog" aria-modal="true" aria-labelledby="journey-title"><header class="ui-window-header"><span class="journey-heading-icon">${uiIcon('map')}</span><h2 class="ui-title" id="journey-title">Journeys</h2><button class="ui-button ui-button--icon" data-close aria-label="Close journeys">×</button></header><div class="journey-detail ui-scroll-area"><h3>${e(dungeon.name)}</h3><div class="journey-meta"><span class="ui-badge">Boss level ${dungeon.level}</span><span>${dungeon.stage?`Expedition · ${dungeon.stage} / 10`:'Dungeon'}</span></div><p class="journey-objective">${e(dungeon.objective)}</p><div class="journey-actions"><button class="ui-button ui-button--primary" data-action="map">Show on map</button></div></div><footer class="ui-window-footer"><span class="ui-muted">J</span></footer></section>`;
   }
   dispose(){this.close();this.abort.abort();this.element.remove();this.mini.remove();}
 }

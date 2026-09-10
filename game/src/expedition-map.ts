@@ -22,11 +22,12 @@ export function expeditionMap(route: ExpeditionRoute, runs: Expeditions['runs'])
       id: `cleared-${stage}`, stage, choice: visited?.entrance.expedition?.choice ?? -1,
       x, y, state: 'cleared', entry: visited?.entrance,
     }];
-    const entries = expeditionChoices(route);
-    return entries.map((entry, choice) => ({
-      id: `${stage}-${choice}`, stage, choice,
-      x: entries.length === 2 ? 190 + choice * 220 : 300, y, entry,
-      state: route.choice === null || route.choice === choice ? 'available' : 'skipped',
+    // Once entered, only the saved branch remains selectable for resuming.
+    const entries = visited ? [visited.entrance] : expeditionChoices(route);
+    return entries.map((entry, index) => ({
+      id: `${stage}-${entry.expedition!.choice}`, stage, choice: entry.expedition!.choice,
+      x: entries.length === 2 ? 190 + index * 220 : 300, y, entry,
+      state: route.choice === null || route.choice === entry.expedition!.choice ? 'available' : 'skipped',
     }));
   });
 }

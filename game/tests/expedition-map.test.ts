@@ -27,3 +27,12 @@ test('completed forks show only their saved branch, while a committed choice can
   assert.equal(current[0].state,'skipped');assert.equal(current[1].state,'available');
   assert.ok(expeditionMap({...route,attempt:2,cleared:1},[chosen])[0].every(n=>!n.entry));
 });
+
+test('resuming shows only the saved entrance rather than newly rolled alternatives', () => {
+  const route={...newExpeditionRoute(7319,24,1),choice:1};
+  const chosen=createDungeonRun(expeditionChoices(route)[1]);
+  chosen.entrance.seed=98765;
+  const map=expeditionMap(route,[chosen]);
+  assert.equal(map[0].length,1);assert.equal(map[0][0].choice,1);
+  assert.equal(map[0][0].entry,chosen.entrance);assert.equal(map[0][0].state,'available');
+});

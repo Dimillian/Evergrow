@@ -1,3 +1,4 @@
+import { dungeonJourney } from './dungeon-journey.ts';
 import { activityLevel } from './activity-level.ts';
 import { captureEncounterScale } from './encounter-scaling.ts';
 import { JourneyPanel } from './journey-panel.ts';
@@ -76,6 +77,11 @@ export class JourneyController {
     private showMap(id: string) {
         if (this.host.savingAction)
             return;
+        if (currentDungeon(this.host.sim.expeditions)?.entrance.id === id) {
+            this.host.panels.transition('map');
+            return;
+        }
+
         const goal = [this.host.sim.journeys.townPin, this.host.sim.journeys.nearestTown, ...this.host.sim.journeys.accepted, ...this.host.sim.journeys.offers].filter(g=>g!==undefined).find(g => g.id === id);
         if (!goal)
             return;
@@ -145,26 +151,16 @@ export class JourneyController {
         const state = this.host.sim.journeys, p = this.host.sim.player, facts = this.facts();
         for (const list of [state.accepted,state.offers]) for (const g of list)
             if(g.finishedAt===undefined)g.level=activityLevel(g,facts,this.host.overworld.seed);
-        this.panel.update(state, facts, this.host.phase === 'playing' && this.host.navigationVisible, this.host.renderer.width, this.host.renderer.height);
+        const dungeon = dungeonJourney(this.host.sim.expeditions, this.host.sim.dungeonFloor);
+        this.panel.update(state, facts, this.host.phase === 'playing' && this.host.navigationVisible, this.host.renderer.width, this.host.renderer.height, dungeon);
         const goal = guidedJourney(state);
         let marker: JourneyMarker | null = goal ? publicJourneyMarker(goal, this.facts().discovered(goal.id)) : null;
         if (this.host.phase !== 'map')
             this.journeyMapPreview = null;
         const surfaceMarker = marker;
         const run = currentDungeon(this.host.sim.expeditions), floor = this.host.sim.dungeonFloor;
-        if (goal && run && floor) {
-            if (goal.id !== run.entrance.id)
-                marker = { ...floor.entry, known: true, name: 'Exit to the surface' };
-            else if (run.explored.includes(12)) {
-                const target = run.states.warden?.hp > 0 ? run.states.warden : floor.chests[2];
-                marker = { x: target.x, y: target.y, known: true, name: run.states.warden?.hp > 0 ? 'Hollow Warden' : 'Warden’s chest' };
-            }
-            else {
-                const edges = floor.edges.filter(([a, b]) => run.explored.includes(a) !== run.explored.includes(b));
-                const choices = edges.map(([a, b]) => { const from = floor.rooms[run.explored.includes(a) ? a : b], to = floor.rooms[run.explored.includes(a) ? b : a]; return { x: (from.x + from.width / 2 + to.x + to.width / 2) / 2, y: (from.y + from.height / 2 + to.y + to.height / 2) / 2 }; });
-                const next = choices.sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
-                marker = next ? { ...next, known: false, name: 'Explore the crypt' } : null;
-            }
+        if (run && floor) {
+            marker = dungeon?.marker ?? null;
         }
         else if (marker?.known && goal && goal.kind !== 'town' && goal.kind !== 'frontier' && goal.kind !== 'dungeon') {
             const anchor = this.host.overworld.getEventSites(goal.x - 300, goal.y - 300, 600, 600).find(s => s.id === goal.id);
