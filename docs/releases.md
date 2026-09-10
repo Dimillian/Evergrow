@@ -29,6 +29,18 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.7 / Sites version 38, publicly deployed on 2026-09-10 at 12:24:50 UTC.
+- Published source: `02564a52b6eec53daadcae9cf146b4f5855d721e`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_d0ddda91bbe48191bde922809a66216c`.
+- Deployment: `appgdep_6aa2a1842ce08191b4b5ae1e5c66045b`; Sites returned `succeeded`.
+- Unified frosted panel materials using the approved inventory treatment, background-driven tint, square edges and shared rarity-lit item tooltips.
+- Reduced-motion/transparency and forced-color fallbacks retained; embedded home panels reuse a single glass surface.
+- Existing characters and progress are unchanged; no save reset or database migration.
+- Passed three changelog tests, application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.6 / Sites version 37, publicly deployed on 2026-09-10 at 11:57:42 UTC.
 - Published source: `9cb0458f289c11e9b2b62d523e84cc0d6f64bbd6`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_80060e300e988191a42d29f7e477e4fd`.
