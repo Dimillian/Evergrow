@@ -109,3 +109,5 @@
 .service-panel.is-storage .ui-item-slot.is-selected { outline:1px solid #ead9a8; outline-offset:-2px; border-color:#ead9a8; }
 .service-panel.is-storage .service-message { min-width:0; overflow-wrap:anywhere; }
 @media(max-width:760px) { .service-panel.is-storage { inset:8px; max-height:calc(100dvh - 16px); } .service-panel.is-storage .service-body { display:block; } .storage-unlock { min-height:240px; } }
+
+.service-respec{padding:36px;display:flex;align-items:center;flex-direction:column;text-align:center;gap:16px}.service-respec h3,.service-respec p{margin:0}.service-respec p{line-height:1.7}.service-respec-sigil{width:72px;color:var(--service-color)}.service-respec-sigil svg{width:100%;height:auto}.service-respec-values{display:flex;gap:60px;margin:18px 0}.service-respec-values>div{display:flex;flex-direction:column;gap:8px}.service-respec-values strong{font-size:40px;color:var(--ui-gold,#d1be89)}.service-respec-values span{color:var(--ui-muted,#95a6ac)}

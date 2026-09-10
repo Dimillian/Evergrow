@@ -173,3 +173,7 @@ Gambling retains the selected equipment category after each purchase and when re
 Locked items cannot be sold, including manually or in a bulk quote. Rarity shortcuts omit active charms unless explicitly included; deliberate individual selections can still sell them. See [charm and inventory hardening](charms.md#local-inventory-hardening-after-030).
 
 An enhancement purchase advances to the next +N that changes real item bonuses, skipping rounded-away ranks at no extra cost. If no change exists by +10, it cannot be purchased. Rarity upgrades likewise skip ineffective tiers, using the destination tier's normal upgrade price. Releveling with no actual stat change is unavailable. Previews use the same destination and quote as the committed transaction. Charm enchanting keeps the first affix within its theme; a targeted reroll can retain that stat and reroll its strength when no alternative fits.
+
+## Skill reset
+
+Enchanters offer Reset skills at 25 gold per spent tree/rank point, without level or repeat-use premiums. The service previews cost and refunds all purchased skill points, clearing bindings, rank selections, specializations and Overload. Attributes and gear remain unchanged. Wallet and build persist together before commitment; failed saves retain the old build. See [specification](expeditions.md).

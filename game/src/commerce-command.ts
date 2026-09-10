@@ -13,6 +13,6 @@ export async function executeService(player: Player, npc: TownNPC, world: WorldQ
   const candidate = { ...player, character: plan.character }; refreshCharacter(candidate);
   const result = await persist(plan.character, candidate.hp, candidate.mana);
   if (!result.ok) return { ok: false, message: result.message ?? 'Could not save. No gold or items changed.' };
-  player.character = plan.character; refreshCharacter(player);
+  player.character = plan.character; if(quote.request.type==='respec') player.skillCooldowns={}; refreshCharacter(player);
   return { ok: true, message: plan.message };
 }

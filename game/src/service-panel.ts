@@ -9,7 +9,7 @@ import type { Player } from './model.ts';
 import type { Item, ItemKind, ItemTier, EquipmentSlot } from './character-types.ts';
 import { NPC_NAMES, NPC_COLORS, type TownNPC } from './npcs.ts';
 import { npcEmblem } from './npc-art.ts';
-import { GAMBLE_KINDS, gambleOdds, premiumStockSlot, gamblePrice, STASH_CAPACITY, vendorStock, vendorStockLevel, quoteService, sourceItem, itemPrice, stockEpoch, type ServiceQuote, type ServiceRequest, type ItemSource, type SaleItem } from './commerce.ts';
+import { RESPEC_GOLD_PER_POINT, respecPoints, GAMBLE_KINDS, gambleOdds, premiumStockSlot, gamblePrice, STASH_CAPACITY, vendorStock, vendorStockLevel, quoteService, sourceItem, itemPrice, stockEpoch, type ServiceQuote, type ServiceRequest, type ItemSource, type SaleItem } from './commerce.ts';
 import { improveItem, rerollPool, affixCategory, AFFIX_FOCUSES, type AffixFocus, type Improvement } from './item-improvement.ts';
 import { updateItemSlot } from './item-ui.ts';
 import { ItemTooltip } from './item-tooltip.ts';
@@ -28,7 +28,7 @@ export class ServicePanel {
   private tooltip: ItemTooltip;
   private player!: Player;
   private npc!: TownNPC;
-  private tab: 'shop' | 'sell' | 'improve' | 'buyback' = 'shop';
+  private tab: 'shop' | 'sell' | 'improve' | 'buyback' | 'respec' = 'shop';
   private shopFamily='all';
   private operation: Improvement = 'enhance';
   private selected: ServiceRequest | null = null;
@@ -92,6 +92,7 @@ export class ServicePanel {
   }
   private render(): void {
     this.element.classList.toggle('is-storage',this.npc.role==='stash');
+    if(this.tab==='respec'){this.renderRespec();return;}
     if(this.npc.role==='stash'){this.renderStorage();return;}
     if(this.npc.role==='gambler'&&this.tab==='shop'){this.renderSpecial();return;}
     this.goldFeedback.stop();
@@ -138,10 +139,23 @@ export class ServicePanel {
   private tabsMarkup(): string {
     if (this.npc.role === 'stash') return '';
     const tabs: Array<[typeof this.tab, string]> = this.npc.role === 'enchanter'
-      ? [['improve', 'Enchant']] : [['shop', this.npc.role === 'gambler' ? 'Gamble' : 'Shop']];
+      ? [['improve', 'Enchant'], ['respec', 'Reset skills']] : [['shop', this.npc.role === 'gambler' ? 'Gamble' : 'Shop']];
     if (this.npc.role === 'blacksmith') tabs.push(['improve', 'Enhance']);
     tabs.push(['sell', 'Sell'], ['buyback', `Buyback <small>${this.player.character.commerce.buyback.length}/12</small>`]);
     return `<nav class="service-tabs" aria-label="Services">${tabs.map(([tab, label]) => `<button class="ui-button ui-button--quiet" data-tab="${tab}" aria-pressed="${this.tab === tab}">${label}</button>`).join('')}<span>${escapeUI(this.npc.name)}${this.tab === 'improve' ? ` · Services Lv ${vendorLevel(this.npc, this.player.level)}` : ''}</span></nav>`;
+  }
+  showRespec(): void { if(this.npc.role!=='enchanter')return; this.tab='respec'; this.render(); }
+  private renderRespec(): void {
+    this.goldFeedback.stop();this.tooltip.hide();this.element.classList.remove('is-selling');
+    const points=respecPoints(this.player.character), result=quoteService(this.player.character,this.npc,this.player.level,{type:'respec'});
+    this.quote=result.ok?result.quote:null;this.selected={type:'respec'};
+    this.element.style.setProperty('--service-color',NPC_COLORS.enchanter);
+    this.element.innerHTML=`${this.headerMarkup()}${this.tabsMarkup()}<div class="service-respec ui-scroll-area">
+      <div class="service-respec-sigil">${npcEmblem('enchanter')}</div><h3>Choose a new path</h3>
+      <p>Return every spent skill point, including purchased ranks.</p>
+      <div class="service-respec-values"><div><strong>${points}</strong><span>Points refunded</span></div><div><strong>${(points*RESPEC_GOLD_PER_POINT).toLocaleString()}</strong><span>Gold · ${RESPEC_GOLD_PER_POINT} per point</span></div></div>
+      <p class="ui-muted">Clears your skill tree, ranks, specializations and skill bindings.<br>Attributes and equipment stay yours.</p>
+      </div><footer class="ui-window-footer"><span class="service-message" role="status">${!result.ok?escapeUI(result.message):goldBalance(this.player.character)<result.quote.price?'Not enough gold.':''}</span><button class="ui-button ui-button--primary" data-confirm ${!result.ok||goldBalance(this.player.character)<result.quote.price?'disabled':''}>Reset skills · ${(points*RESPEC_GOLD_PER_POINT).toLocaleString()} gold</button></footer>`;
   }
   private renderStorage(): void {
     this.goldFeedback.stop(); this.tooltip.hide(); this.element.classList.remove('is-selling');
@@ -364,6 +378,7 @@ export class ServicePanel {
     if (button.hasAttribute('data-confirm')) this.confirm();
   }
   private renderDetail(): void {
+    if(this.tab==='respec'){this.renderRespec();return;}
     if(this.npc.role==='stash'){this.storageDetail();return;}
     if(this.npc.role==='gambler'&&this.tab==='shop'){this.specialDetail();return;}
     this.quote = null; const selected = this.selected;

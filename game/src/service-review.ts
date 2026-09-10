@@ -62,6 +62,7 @@ function draw() {
 shell.showMenu('service', 0, 0); draw();
 if (params.get('view') !== 'town') {
   panel.open(p, npc);
+  if(params.has('respec')){executeCharacterCommand(p,{type:'allocateNode',id:'skill:cleave'});panel.showRespec();}
   if(params.has('sell'))panel.selectSales('common');
   const operation = params.get('operation');
   if (operation) panel.inspect(params.has('empty') ? { equipped: 'weapon' } : { bag: Number(params.get('item') ?? 1) }, operation as Improvement);

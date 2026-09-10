@@ -911,7 +911,7 @@ export class Game {
     const result = await executeService(p, npc, this.world, quote, async (character, hp, mana) => {
       progress=structuredClone(p.chronicle);
       trackCommerce(progress,p.character.gold??0,character.gold??0,Math.max(0,...Object.values(character.equipped).filter(Boolean).map(i=>i!.recipe?.enhancement??0),...character.inventory.filter(Boolean).map(i=>i!.recipe?.enhancement??0)));
-      const saved = await this.session.save({ ...this.sim.captureCheckpoint(), character, hp, mana, chronicle:progress }, Date.now());
+      const saved = await this.session.save({ ...this.sim.captureCheckpoint(), character, hp, mana, skillCooldowns: quote.request.type==='respec'?{}:p.skillCooldowns, chronicle:progress }, Date.now());
       if (!saved) this.shell.setSaveStatus(this.session.error, true);
       return { ok: saved, message: this.session.error };
     });
