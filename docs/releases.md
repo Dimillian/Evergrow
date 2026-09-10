@@ -29,6 +29,18 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.9 / Sites version 40, publicly deployed on 2026-09-10 at 19:14:36 UTC.
+- Published source: `7b7f3ced19a41f542eaf16e822ee74087c33be9d`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_f1d272a5f50c8191ade227102abf7879`.
+- Deployment: `appgdep_6aa3018d9e9c81918263dd48217bb53b`; Sites returned `succeeded`.
+- Cloud-first character inspection and Continue checks, separate cloud/recovery choices with comparable progress, and explicit offline/pending labels.
+- Lost upload receipts reconcile without false conflicts; delayed reads preserve concurrent uploads and incompatible recovery cannot hide a valid cloud character.
+- Existing characters and progress are preserved; no save reset or database migration.
+- Passed 91 focused cloud, save, Chronicle, title-action and changelog tests, application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation. Live cross-device acceptance remains player testing.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.8 / Sites version 39, publicly deployed on 2026-09-10 at 19:00:05 UTC.
 - Published source: `d543c5a0bc28d88830590dd444fe18739d62e553`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_01560e5860a48191bc8382d3c46fb642`.
