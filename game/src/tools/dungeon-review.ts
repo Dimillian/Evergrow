@@ -1,3 +1,4 @@
+import { FrameProfiler } from '../frame-profiler.ts';
 import '../typography.css';
 import '../layout-review.css';
 import './dungeon-review.css';
@@ -15,9 +16,8 @@ const root=document.querySelector<HTMLElement>('#dungeon-review')!,abort=new Abo
 let disposed=false,frame=0,fx:PostFX|undefined,world:DungeonWorld|undefined;
 let seed=Number(params.get('seed')??7319)>>>0,view=params.get('view')??'gallery',roomId=Number(params.get('room')??4);
 let present:((dt:number)=>void)|null=null;
-const renderer=new Renderer(),reduced=matchMedia('(prefers-reduced-motion: reduce)');
+const profiler=new FrameProfiler(true),renderer=new Renderer(false,profiler),reduced=matchMedia('(prefers-reduced-motion: reduce)');
 const entranceFor=(seed:number):DungeonEntrance=>({id:'dungeon:review',name:dungeonTheme(seed).name,seed,level:8,biome:'deadwood',x:0,y:0});
-function download(canvas:HTMLCanvasElement,name:string){const a=document.createElement('a');a.download=name;a.href=canvas.toDataURL('image/png');a.click();}
 function floorMap(canvas:HTMLCanvasElement,seed:number,labels=true){
     const floor=generateDungeon(seed,8),run=createDungeonRun(entranceFor(seed)),c=canvas.getContext('2d')!,bounds=dungeonMapBounds(floor);
     run.explored=floor.rooms.map(r=>r.id);
@@ -35,11 +35,12 @@ function floorMap(canvas:HTMLCanvasElement,seed:number,labels=true){
     return {floor,bounds,zoom};
 }
 function render(){
-    present=null;fx?.dispose();fx=undefined;world?.dispose();world=undefined;
+    present=null;profiler.reset();fx?.dispose();fx=undefined;world?.dispose();world=undefined;
     const theme=dungeonTheme(seed);
+    root.classList.toggle('lighting-study',view==='lighting');
     params.set('seed',String(seed));params.set('view',view);params.set('room',String(roomId));history.replaceState(null,'',`?${params}`);
     root.innerHTML=`<header class="layout-review-header"><div><p class="layout-review-eyebrow">WORLD WORKSHOP</p><h1>${view==='gallery'?'Dungeon atlas':theme.name}</h1></div><p class="layout-review-static">Live generator · Disposable preview</p></header>
-      <nav class="dungeon-workshop-toolbar"><label>Seed <input data-seed type="number" value="${seed}" min="0" max="4294967295"></label><button data-generate>Generate</button><button data-random>New seed</button><span></span><button data-view="gallery">Three themes</button><button data-view="map">Floor map</button><button data-view="chamber">Chamber</button><button data-view="corridor">Corridor</button><button data-view="event">Encounter</button><button data-export>Export PNG</button></nav><section data-content></section><footer class="dungeon-workshop-footer"><span>◎ Entrance · ◇ Encounter · ■ Treasure · ● Warden</span><span>Click a room to inspect its art. Maps use the actual collision contours.</span></footer>`;
+      <nav class="dungeon-workshop-toolbar"><label>Seed <input data-seed type="number" value="${seed}" min="0" max="4294967295"></label><button data-generate>Generate</button><button data-random>New seed</button><span></span><button data-view="gallery">Three themes</button><button data-view="map">Floor map</button><button data-view="chamber">Chamber</button><button data-view="corridor">Corridor</button><button data-view="event">Encounter</button><button data-view="lighting">Lighting</button><a class="layout-review-download" data-export href="#" download>Export PNG</a></nav><section data-content></section><footer class="dungeon-workshop-footer"><span>◎ Entrance · ◇ Encounter · ■ Treasure · ● Warden</span><span>Click a room to inspect its art. Maps use the actual collision contours.</span></footer>`;
     const content=root.querySelector<HTMLElement>('[data-content]')!;
     let exportCanvas:HTMLCanvasElement;
     if(view==='gallery'){
@@ -60,7 +61,7 @@ function render(){
         const canvas=content.querySelector('canvas')!,c=canvas.getContext('2d')!,floor=generateDungeon(seed,8),run=createDungeonRun(entranceFor(seed));exportCanvas=canvas;
         const event=floor.events?.[0];
         const room=view==='corridor'?floor.corridors.find(r=>Math.max(r.width,r.height)>400)!:view==='event'?floor.rooms[event!.room]:view==='boss'?floor.rooms.at(-1)!:floor.rooms[Math.max(0,Math.min(floor.rooms.length-1,roomId))];
-        content.querySelector('aside')!.innerHTML=`<strong>${view==='map'?'Explore the floor':view==='event'?DUNGEON_EVENTS[event!.kind].name:view==='corridor'?'Connecting passage':`Chamber ${room.id}`}</strong><p>${theme.description}</p><p>${floor.rooms.length} rooms · ${floor.edges.length-floor.rooms.length+1} loops</p><div class="room-buttons">${floor.rooms.map(r=>`<button data-room="${r.id}">${r.kind==='entry'?'Entry':r.kind==='boss'?'Warden':r.kind==='treasure'?'Encounter':r.id}</button>`).join('')}</div><p>${view==='event'?DUNGEON_EVENTS[event!.kind].objective:'Frozen actors; only lighting and material effects animate.'}</p>`;
+        content.querySelector('aside')!.innerHTML=`<strong>${view==='map'?'Explore the floor':view==='event'?DUNGEON_EVENTS[event!.kind].name:view==='corridor'?'Connecting passage':`Chamber ${room.id}`}</strong><p>${theme.description}</p><p>${floor.rooms.length} rooms · ${floor.edges.length-floor.rooms.length+1} loops</p><div class="room-buttons">${floor.rooms.map(r=>`<button data-room="${r.id}">${r.kind==='entry'?'Entry':r.kind==='boss'?'Warden':r.kind==='treasure'?'Encounter':r.id}</button>`).join('')}</div><p>${view==='event'?DUNGEON_EVENTS[event!.kind].objective:'Frozen actors; only lighting and material effects animate.'}</p><output data-render-cost></output>`;
         content.querySelectorAll<HTMLButtonElement>('[data-room]').forEach(b=>b.onclick=()=>{roomId=Number(b.dataset.room);view='chamber';render();});
         if(view==='map'){
             const map=floorMap(canvas,seed);
@@ -71,16 +72,22 @@ function render(){
             const sim=new Simulation(scene,{spawn:false,startX:x,startY:y+(view==='corridor'?0:70)});sim.dungeonFloor=floor;sim.expeditions={location:entrance.id,runs:[run],surface:emptyContents(),surfaceX:0,surfaceY:0};
             for(const m of floor.members.filter(m=>m.room===room.id&&!m.wave&&(m.eventWave??0)===0))sim.spawnEnemy(m.kind,m.x,m.y,m.rank,{campId:entrance.id,memberId:m.id,lootSeed:m.seed});
             const output=document.createElement('canvas');output.width=1440;output.height=1000;fx=new PostFX(output);renderer.reset();renderer.resize(720,500);renderer.cameraX=x;renderer.cameraY=y;
-            present=dt=>{renderer.render(sim,scene,dt,{phase:'paused',reducedMotion:reduced.matches,fps:0,debug:false});fx!.render(renderer.canvas,0);c.drawImage(output,0,0);};present(0);
+            let renderCount=0;
+            present=dt=>{profiler.begin(performance.now());renderer.render(sim,scene,dt,{phase:'paused',reducedMotion:reduced.matches,fps:0,debug:false});const postStart=profiler.start();fx!.render(renderer.canvas,0,renderer.emission);profiler.end('postfx',postStart);c.drawImage(output,0,0);profiler.finish();
+              if(++renderCount%30===0){const timing=profiler.snapshot(),stats=content.querySelector<HTMLElement>('[data-render-cost]')!;
+                stats.textContent=`Frame CPU ${timing.metrics.frameCPU.p50.toFixed(1)} ms · Lighting ${timing.metrics.lighting.p50.toFixed(1)} ms (median)`;
+                stats.dataset.profile=JSON.stringify(timing.metrics);}
+            };present(0);
         }
     }
     root.querySelectorAll<HTMLButtonElement>('[data-view]').forEach(b=>{b.setAttribute('aria-current',String(b.dataset.view===view));b.onclick=()=>{view=b.dataset.view!;render();};});
     root.querySelector<HTMLButtonElement>('[data-generate]')!.onclick=()=>{seed=Number(root.querySelector<HTMLInputElement>('[data-seed]')!.value)>>>0;render();};
     root.querySelector<HTMLButtonElement>('[data-random]')!.onclick=()=>{seed=crypto.getRandomValues(new Uint32Array(1))[0];render();};
-    root.querySelector<HTMLButtonElement>('[data-export]')!.onclick=()=>download(exportCanvas,`evergrow-dungeons-${seed}-${view}.png`);
+    const exportLink=root.querySelector<HTMLAnchorElement>('[data-export]')!;
+    exportLink.onclick=()=>{exportLink.download=`evergrow-dungeons-${seed}-${view}.png`;exportLink.href=exportCanvas.toDataURL('image/png');};
     root.dataset.ready='true';
 }
-async function boot(){if(!import.meta.env.DEV)throw Error('Local tool only');await loadGameFont();if(disposed)return;render();let previous=performance.now();const animate=(now:number)=>{if(disposed)return;if(now-previous>=1000/30){if(!document.hidden&&!reduced.matches)present?.(Math.min(.05,(now-previous)/1000));previous=now;}frame=requestAnimationFrame(animate);};frame=requestAnimationFrame(animate);}
+async function boot(){if(!import.meta.env.DEV)throw Error('Local tool only');await loadGameFont();if(disposed)return;render();let previous=performance.now();const animate=(now:number)=>{if(disposed)return;if(now-previous>=1000/30){if(!document.hidden&&!reduced.matches)present?.(Math.min(.05,(now-previous)/1000));previous=now-((now-previous)%(1000/30));}frame=requestAnimationFrame(animate);};frame=requestAnimationFrame(animate);}
 void boot().catch(e=>{root.textContent=String(e);});
 function dispose(){disposed=true;cancelAnimationFrame(frame);abort.abort();fx?.dispose();world?.dispose();renderer.reset();}
 window.addEventListener('pagehide',dispose,{signal:abort.signal});if(import.meta.hot)import.meta.hot.dispose(dispose);

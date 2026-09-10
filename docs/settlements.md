@@ -65,3 +65,11 @@ Tab unlocks use ordinary commerce quotes and the validated wallet, with the expe
 `/layouts.html?view=town&seed=7324` shows the refuge. Village, City overview, Hearth & stalls and Furnished interior inspect the actual runtime World and Renderer without gameplay ticks or saves. Seed input and New seed generate more examples. The World workspace registers this as Settlements. `/services.html?role=gambler&tier=city`, `/services.html?role=enchanter&tier=city&operation=rerollOne` and `/services.html?role=stash` use the real panels in disposable memory.
 
 Headless tests cover tier composition, seeded reproducibility, immutable layouts, bounds, checked paths, access, family/roaming positions, transaction identity, full containers, failed writes and save ownership. Gameplay, economy feel and device performance remain player acceptance.
+
+## Dynamic nights and rendering
+
+The shared world clock fades exterior lighting in through dusk: warm window panes preserve their dark mullions, soft window light falls onto the ground, stall lanterns use their actual left-post position, and hearths/torches retain warm luminous cores after ambient darkening. Tents do not emit phantom house-window lights. Facade light fades with the existing roof cutaway when entering a home. Reduced motion freezes flicker, while the clock remains tied to active play. No new particles, saved state or light-budget increase is involved.
+
+Static fortification timbers/masonry are cached per immutable building, keeping each span's existing actor depth. Their shared directional shadows remain live. The LRU is limited to 512 spans and six million pixels (24 MB of RGBA pixels, excluding browser overhead); renderer resets release it. Animated fires, awnings and roof cutaways are not frozen by this cache.
+
+`/layouts.html?lighting&view=village&seed=406135043&hour=22` adds a live 30 Hz study, a time slider, Noon/Dusk/Night presets, a one-minute day cycle, PNG export and opt-in CPU timings. It uses the runtime renderer and disposable paused simulation; it never plays or reads a character save.

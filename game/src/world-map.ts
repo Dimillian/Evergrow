@@ -1,3 +1,4 @@
+import { worldTimeLabel, skyAtTime } from './world-time.ts';
 import { regionLevelLabel } from './encounter-scaling.ts';
 import { bindTouchCanvas } from './touch-canvas.ts';
 import { formatWorldDistance } from './world-distance.ts';
@@ -639,10 +640,10 @@ export class WorldMap {
     this.playerArrow(c, player, view, true);
   }
 
-  drawMinimap(c: CanvasRenderingContext2D, player: MapPlayer, width: number, height: number, _time: number,
+  drawMinimap(c: CanvasRenderingContext2D, player: MapPlayer, width: number, height: number, time: number,
     enemies: readonly MinimapEnemy[] = []) {
     const r = getMinimapRect(width, height);
-    const view: MapView = { x: r.x + 6, y: r.y + 25, width: r.width - 12, height: r.height - 48,
+    const view: MapView = { x: r.x + 6, y: r.y + 25, width: r.width - 12, height: r.height - 66,
       centerX: player.x, centerY: player.y, zoom: .05 };
     const active = this.minimapPointer && this.minimapPointer.x >= r.x && this.minimapPointer.y >= r.y
       && this.minimapPointer.x < r.x + r.width && this.minimapPointer.y < r.y + r.height;
@@ -684,6 +685,8 @@ export class WorldMap {
     }
     this.playerArrow(c, player, view, true); c.restore();
     text(c, 'N', view.x + view.width / 2, view.y + 3, .8, palette.jade, 'center');
+    const clockY=r.y+r.height-34, night=skyAtTime(time).daylight<.35;
+    text(c, `${night?'Night':'Day'} · ${worldTimeLabel(time)}`,r.x+r.width/2,clockY,.9,night?'#a7c6e4':palette.brass,'center');
     const name = this.location(player);
     c.save(); c.beginPath(); c.rect(r.x + 6, r.y + r.height - 19, r.width - 12, 15); c.clip();
     text(c, name, r.x + r.width / 2, r.y + r.height - 15, .95, palette.text, 'center'); c.restore();

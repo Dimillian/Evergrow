@@ -1,3 +1,6 @@
+import { skyAtTime, skyAtHour, type SkyState } from './world-time.ts';
+import { OutdoorLightEffects } from './outdoor-light-effects.ts';
+import { DungeonLightEffects } from './dungeon-light-effects.ts';
 import { settlementResidents, residentHint, type Resident } from './settlement-residents.ts';
 import { drawBattleBark, measureBattleBark } from './battle-bark-art.ts';
 import { placeBattleBark } from './battle-bark-layout.ts';
@@ -20,7 +23,7 @@ import { MaterialResponses } from './material-response.ts';
 import { drawMaterialBurst } from './material-response-art.ts';
 import { hoveredGroundLoot, type GroundLootLabel } from './ground-loot-hover.ts';
 import { eventClaimed } from './poi-content.ts';
-import type { FrameProfiler } from './frame-profiler.ts';
+import type { FrameProfiler, FrameStage } from './frame-profiler.ts';
 import { WaterPresentation } from './water-presentation.ts';
 import { WaterArt } from './water-art.ts';
 import { cryptLights, cryptLightMask } from './dungeon-lighting.ts';
@@ -85,6 +88,8 @@ export interface RenderSettings {
   reducedMotion: boolean;
   /** Save-free reviews can inspect long-session water optics without advancing gameplay. */
   waterAge?: number;
+  /** Save-free scene tools only; runtime always uses persisted simulation time. */
+  skyHour?: number;
   phase: GamePhase; fps: number; debug: boolean;
 }
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -92,6 +97,11 @@ const TAU = Math.PI * 2;
 
 export class Renderer {
   extraUIBounds: {x:number;y:number;width:number;height:number}|null = null;
+  private outdoorLightEffects = new OutdoorLightEffects();
+  private dungeonLightEffects = new DungeonLightEffects();
+  private emissionCanvas: HTMLCanvasElement | undefined;
+  /** Explicit dungeon fixture emission for the shared bloom pass. */
+  emission: HTMLCanvasElement | undefined;
   canvas = document.createElement('canvas');
   ctx = this.canvas.getContext('2d', { alpha: false })!;
   art = new ArtLibrary();
@@ -127,6 +137,7 @@ export class Renderer {
   private atmosphere = new AtmosphereArt();
   private sceneShadows = new SceneShadows();
   private propSurfaceLight = new PropSurfaceLight();
+  private sky: SkyState = skyAtTime(0);
   private materialKey: GearLight = DEFAULT_GEAR_LIGHT;
   private biomeLife = new BiomeLife();
   private water = new WaterPresentation();
@@ -229,6 +240,8 @@ export class Renderer {
   }
 
   reset() {
+    this.outdoorLightEffects.reset();
+    this.dungeonLightEffects.reset(); this.emission = undefined;
     this.battleBarks.reset();
     this.water.reset(); this.waterArt.reset(); this.lighting.reset(); this.sceneShadows.reset(); this.atmosphere.reset(); this.propSurfaceLight.reset();
     this.portalGuide = 0; this.portalAnchors = []; this.fadingPortal = null;
@@ -273,6 +286,7 @@ export class Renderer {
   }
 
   render(sim: Simulation, world: World, dt: number, settings: RenderSettings) {
+    const setupStart = this.profiler?.start() ?? 0;
     const c = this.ctx, p = sim.player, active = settings.phase === 'playing';
     const step = active ? dt : 0, alpha = sim.interpolationAlpha;
     const feedbackStep = active || settings.phase === 'dead' ? dt : 0;
@@ -346,11 +360,33 @@ export class Renderer {
     this.settlementArt.update(this.cachedBuildings, px, py, dt, settings.reducedMotion);
     this.indoorBlend += ((world.getBuildingAt(px, py) ? 1 : 0) - this.indoorBlend) * (1 - Math.exp(-dt * 5));
     const biome = world.sampleBiome(px, py);
-    this.materialKey = sceneClimate(biome.weights, sim.dungeonFloor ? 1 : this.indoorBlend).key;
+    this.sky = settings.skyHour === undefined ? skyAtTime(sim.time) : skyAtHour(settings.skyHour);
+    this.materialKey = sceneClimate(biome.weights, sim.dungeonFloor ? 1 : this.indoorBlend, this.sky).key;
     this.biomeLife.update(dt, this.visualTime, this.cachedProps, { x: px, y: py, vx: p.vx, vy: p.vy },
       settings.reducedMotion, (x, y) => world.sampleGroundContact(x, y));
     const lights = this.sceneLights(sim, px, py, settings.reducedMotion, alpha);
-    this.materialLights = lights;
+    this.materialLights = lights.slice(1);
+    this.profiler?.end('sceneSetup', setupStart);
+    const detailStart = this.profiler?.start() ?? 0;
+    // The first light is navigation fill, not a physical lamp reflecting on wet stone.
+    const dungeonDetail = sim.dungeonFloor && this.dungeonLightEffects.prepare(sim.dungeonFloor, this.view, lights.slice(1),
+      this.visualTime, settings.reducedMotion, this.width, this.height);
+    const outdoorDetail = !sim.dungeonFloor && this.outdoorLightEffects.prepare(world, this.view, this.cachedProps,
+      prop => this.propSprite(prop), lights.slice(1), this.visualTime, settings.reducedMotion, this.indoorBlend, this.width, this.height, this.sky, {x:px,y:py});
+    if (sim.dungeonFloor) {
+      this.emissionCanvas ??= document.createElement('canvas');
+      const scale = Math.min(.5, 640 / this.width, 640 / this.height);
+      const w = Math.max(1, Math.ceil(this.width * scale)), h = Math.max(1, Math.ceil(this.height * scale));
+      if (this.emissionCanvas.width !== w || this.emissionCanvas.height !== h) {
+        this.emissionCanvas.width = w; this.emissionCanvas.height = h;
+      }
+      const e = this.emissionCanvas.getContext('2d')!;
+      e.setTransform(1, 0, 0, 1, 0, 0); e.clearRect(0, 0, w, h);
+      e.setTransform(w / worldWidth, 0, 0, h / worldHeight, -left * w / worldWidth, -top * h / worldHeight);
+      drawCryptEmission(e, sim.dungeonFloor, settings.reducedMotion ? 0 : this.visualTime, this.view, true);
+      this.emission = this.emissionCanvas;
+    } else this.emission = undefined;
+    this.profiler?.end('lighting', detailStart);
     const waterStart = this.profiler?.start() ?? 0;
     if (!sim.dungeonFloor) {
       const a = p.attack;
@@ -366,11 +402,12 @@ export class Renderer {
     const terrainStart = this.profiler?.start() ?? 0;
     this.groundLayer.draw(c, world, left, top, worldWidth, worldHeight);
     this.profiler?.end('terrain', terrainStart);
+    const sceneryStart = this.profiler?.start() ?? 0;
     const dungeonRun=currentDungeon(sim.expeditions);
     if(sim.dungeonFloor&&dungeonRun) drawCryptDecor(c,sim.dungeonFloor,dungeonRun,settings.reducedMotion ? 0 : this.visualTime,this.eventArt.chests,settings.reducedMotion);
     else for(const entrance of this.visibility.entrances)drawCryptGate(c,entrance,this.visualTime);
     for (const site of this.visibility.sites) drawSiteGround(c, site, settings.reducedMotion ? 0 : this.visualTime);
-    this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime);
+    this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime, this.sky);
     this.groundDressing.draw(c, this.cachedProps, this.view);
     this.biomeArt.drawGround(c, this.biomeLife, this.cachedProps, this.visualTime, settings.reducedMotion, this.view);
     this.atmosphere.drawWater(c, this.cachedProps, this.visualTime, settings.reducedMotion);
@@ -386,13 +423,19 @@ export class Renderer {
         if (sprite) { this.waterArt.drawPropReflection(c, this.water.fluid, prop.x, prop.y, sprite, prop.scale, settings.reducedMotion); reflected++; }
       }
       this.waterArt.drawReflection(c, this.water.fluid, px, py, playerPose(p, sim.time), settings.reducedMotion);
-      this.waterArt.drawSurface(c, this.water.fluid, lights, settings.reducedMotion, settings.waterAge);
+      this.waterArt.drawSurface(c, this.water.fluid, lights, settings.reducedMotion, settings.waterAge, this.sky);
       this.profiler?.end('water', opticsStart);
     }
     if (!sim.dungeonFloor) this.sceneShadows.drawProps(c, this.cachedProps, this.view,
-      prop => this.propSprite(prop), this.visualTime, settings.reducedMotion);
+      prop => this.propSprite(prop), this.visualTime, settings.reducedMotion, this.sky.direction, this.sky.shadow);
     this.atmosphere.drawLayer(c, world, this.view, this.visualTime, settings.reducedMotion,
-      px, py, false, !!sim.dungeonFloor, this.indoorBlend);
+      px, py, false, !!sim.dungeonFloor, this.indoorBlend, this.sky);
+    if (dungeonDetail) {
+      const start = this.profiler?.start() ?? 0; this.dungeonLightEffects.draw(c, this.view, false); this.profiler?.end('lighting', start);
+    }
+    if (outdoorDetail) {
+      const start = this.profiler?.start() ?? 0; this.outdoorLightEffects.draw(c, this.view, false); this.profiler?.end('lighting', start);
+    }
     // All extended actor shadows belong to the ground, before depth-sorted silhouettes.
     this.drawActorShadow(px, py, p.radius, 44 * PLAYER_ART_SCALE);
     for (const enemy of sim.enemies) {
@@ -415,13 +458,19 @@ export class Renderer {
         moving: 1, attack: 0, attackAngle: ghost.angle, weapon: p.equipment.mainHand.visual, hitFlash: .04, dodging: true });
       c.restore();
     }
-    this.actorsAndProps(sim, px, py, alpha, dt, settings);
+    this.profiler?.end('scenery', sceneryStart);
+    const actorStart = this.profiler?.start() ?? 0;
+    this.actorsAndProps(sim, world, px, py, alpha, dt, settings);
     this.settlementArt.drawRoofs(c, this.cachedBuildings, this.visualTime);
+    this.profiler?.end('actors', actorStart);
+    if (outdoorDetail) {
+      const start = this.profiler?.start() ?? 0; this.outdoorLightEffects.draw(c, this.view, false, true); this.profiler?.end('lighting', start);
+    }
     c.restore();
 
     const weights = biome.weights, inside = this.indoorBlend;
     const ambientChannels = biomeAmbient(weights).map((value, channel) =>
-      Math.round(value * (1 - inside) + [116, 119, 141][channel] * inside));
+      Math.round(value * this.sky.ambient[channel] * (1 - inside) + [116, 119, 141][channel] * inside));
     const ambient = sim.dungeonFloor ? dungeonTheme(sim.dungeonFloor.seed).ambient : `rgb(${ambientChannels.join(',')})`;
     const lightingStart = this.profiler?.start() ?? 0;
     this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps, ambient, zoom);
@@ -430,7 +479,14 @@ export class Renderer {
     this.biomeArt.drawLight(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
     this.biomeArt.drawAir(c, this.biomeLife, this.visualTime, settings.reducedMotion);
     this.atmosphere.drawLayer(c, world, this.view, this.visualTime, settings.reducedMotion,
-      px, py, true, !!sim.dungeonFloor, this.indoorBlend);
+      px, py, true, !!sim.dungeonFloor, this.indoorBlend, this.sky);
+    if (dungeonDetail) {
+      const start = this.profiler?.start() ?? 0; this.dungeonLightEffects.draw(c, this.view, true); this.profiler?.end('lighting', start);
+    }
+    if (outdoorDetail) {
+      const start = this.profiler?.start() ?? 0; this.outdoorLightEffects.draw(c, this.view, true); this.profiler?.end('lighting', start);
+    }
+    if (!sim.dungeonFloor) this.settlementArt.drawNightEmission(c,this.cachedBuildings,this.visualTime,this.sky);
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, alpha, lights);
     if (sim.dungeonFloor) drawCryptEmission(c, sim.dungeonFloor, settings.reducedMotion ? 0 : this.visualTime, this.view);
@@ -586,9 +642,9 @@ export class Renderer {
     c.restore();
   }
 
-  private actorsAndProps(sim: Simulation, px: number, py: number, alpha: number, dt: number, settings: RenderSettings) {
+  private actorsAndProps(sim: Simulation, world: World, px: number, py: number, alpha: number, dt: number, settings: RenderSettings) {
     const c = this.ctx, p = sim.player;
-    const entries: Array<{ y: number; draw: () => void }> = this.cachedProps.map(prop => ({ y: prop.y, draw: () => {
+    const entries: Array<{ y: number; stage?: FrameStage; draw: () => void }> = this.cachedProps.map(prop => ({ y: prop.y, stage: 'props', draw: () => {
       // Prefetched offscreen props retain collision/light coverage without generating unseen sprites.
       if (prop.x + 115 < this.view.left || prop.x - 115 > this.view.left + this.view.width
         || prop.y + 10 < this.view.top || prop.y - 230 > this.view.top + this.view.height) return;
@@ -617,14 +673,16 @@ export class Renderer {
         c.transform(1, 0, wind * -.012, 1, 0, 0);
       }
       c.drawImage(sprite.image, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
-      this.propSurfaceLight.draw(c, prop, sprite);
+      this.propSurfaceLight.draw(c, prop, sprite, sprite.image, sim.dungeonFloor ? undefined : this.sky);
+      if (!sim.dungeonFloor) this.propSurfaceLight.drawOutdoor(c, prop, sprite, sprite.image, world, this.visualTime, settings.reducedMotion, this.sky);
       for (const [layer, foliage] of (sprite.foliage ?? []).entries()) {
         c.save();
         const gust = biomeWind(prop.x, prop.y, this.visualTime - layer * .18, prop.biome ?? 'deadwood', settings.reducedMotion).x * definition.sway * 2.2;
         c.transform(1, 0, gust * (layer ? -.009 : -.005), 1, 0, 0);
         c.globalAlpha *= foliageOpacity;
         c.drawImage(foliage, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
-        this.propSurfaceLight.draw(c, prop, sprite, foliage);
+        this.propSurfaceLight.draw(c, prop, sprite, foliage, sim.dungeonFloor ? undefined : this.sky);
+        if (!sim.dungeonFloor) this.propSurfaceLight.drawOutdoor(c, prop, sprite, foliage, world, this.visualTime, settings.reducedMotion, this.sky);
         c.restore();
       }
       c.restore();
@@ -643,14 +701,14 @@ export class Renderer {
       entries.push({ y: old.y - 1, draw: () => { c.save(); c.globalAlpha = old.life / .25;
         drawPortal(c, old.x, old.y, this.visualTime, old.progress * old.life / .25); c.restore(); } });
     }
-    for(const resident of this.residents)entries.push({y:resident.y,draw:()=>withGearLight(c,sampleGearLight(resident.x,resident.y-24,this.materialLights,this.materialKey),()=>drawNPC(c,resident,this.visualTime,settings.reducedMotion))});
+    for(const resident of this.residents)entries.push({y:resident.y,stage:'characters',draw:()=>withGearLight(c,sampleGearLight(resident.x,resident.y-24,this.materialLights,this.materialKey),()=>drawNPC(c,resident,this.visualTime,settings.reducedMotion))});
     for (const bird of this.biomeLife.birds) entries.push({ y: bird.y + (bird.state === 'perched' ? 1 : 130),
       draw: () => this.biomeArt.drawBird(c, bird, this.visualTime, settings.reducedMotion) });
     for (const building of this.cachedBuildings) {
       const npc = buildingNPC(building);
-      if (npc) entries.push({ y: npc.y, draw: () => withGearLight(c,sampleGearLight(npc.x,npc.y-24,this.materialLights,this.materialKey),()=>drawNPC(c, npc, this.visualTime, settings.reducedMotion)) });
+      if (npc) entries.push({ y: npc.y, stage: 'characters', draw: () => withGearLight(c,sampleGearLight(npc.x,npc.y-24,this.materialLights,this.materialKey),()=>drawNPC(c, npc, this.visualTime, settings.reducedMotion)) });
       for (const layer of this.settlementArt.getStructureLayers(building, this.visualTime, sim.brokenContainers)) {
-        entries.push({ y: layer.y, draw: () => layer.draw(c) });
+        entries.push({ y: layer.y, stage: 'structures', draw: () => layer.draw(c) });
       }
     }
     for (const remains of this.materials.bursts)
@@ -680,7 +738,11 @@ export class Renderer {
       this.actor(px, py, pose);
     } });
     entries.sort((a, b) => a.y - b.y);
-    for (const entry of entries) entry.draw();
+    for (const entry of entries) {
+      const start = this.profiler?.enabled && entry.stage ? this.profiler.start() : 0;
+      entry.draw();
+      if (this.profiler?.enabled && entry.stage) this.profiler.end(entry.stage, start);
+    }
   }
 
   private propSprite(prop: Prop) {
@@ -725,7 +787,7 @@ export class Renderer {
       const npc = buildingNPC(building);
       if (npc) environmentLights.push({ x: npc.x, y: npc.y - 20, radius: 60, color: NPC_COLORS[npc.role], power: .3 });
     }
-    const buildingLights = this.settlementArt.getLights(this.cachedBuildings, this.visualTime)
+    const buildingLights = this.settlementArt.getLights(this.cachedBuildings, this.visualTime, this.sky)
       .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py));
     environmentLights.push(...buildingLights.slice(0, 6));
     const siteLights = this.visibility.sites.flatMap(site => wildernessLights(site, reducedMotion ? 0 : this.visualTime))
@@ -736,7 +798,7 @@ export class Renderer {
       if (!emission) continue;
       const flicker = reducedMotion ? 1 : 1 + Math.sin(sim.time * 8 + prop.seed) * .035 + Math.sin(sim.time * 17) * .018;
       environmentLights.push({ x: prop.x + emission.offsetX * prop.scale, y: prop.y + emission.offsetY * prop.scale,
-        radius: emission.radius * prop.scale * flicker, color: emission.color, power: emission.power, shadows: emission.power > .2 });
+        radius: emission.radius * prop.scale, color: emission.color, power: emission.power * flicker, shadows: emission.power > .2 });
     }
     if (p.attack?.kind === 'melee' && p.attack.weapon.visual.kind !== 'unarmed' && p.attack.elapsed >= p.attack.activeStart && p.attack.elapsed < p.attack.activeEnd + .05) {
       const a = p.attack;

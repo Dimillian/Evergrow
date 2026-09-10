@@ -22,6 +22,8 @@ vec3 damageTint(vec3 color) {
 `;
 const brightFragment = precision + `
 uniform sampler2D u_scene;
+uniform sampler2D u_emission;
+uniform float u_selective;
 uniform vec2 u_size;
 void main() {
   // Preserve thin trails and sparks in the quarter-resolution extraction.
@@ -41,7 +43,10 @@ void main() {
   float soft = clamp(brightness - threshold + knee, 0., 2. * knee);
   soft = soft * soft / (4. * knee + .0001);
   float contribution = max(soft, brightness - threshold) / max(brightness, .0001);
-  gl_FragColor = vec4(color * contribution, 1.);
+  // Fixture cores are explicitly authored; ordinary bright stone retains only a trace of phosphor glow.
+  vec4 core = texture2D(u_emission, v_uv);
+  vec3 emission = core.rgb * core.a;
+  gl_FragColor = vec4(max(color * contribution * mix(1., .28, u_selective), emission * u_selective * .95), 1.);
 }`;
 const blurFragment = precision + `
 uniform sampler2D u_scene;
@@ -106,6 +111,9 @@ export class PostFX {
   private blur: Pass | null = null;
   private composite: Pass | null = null;
   private scene: WebGLTexture | null = null;
+  private emission: WebGLTexture | null = null;
+  private emissionWidth = 0;
+  private emissionHeight = 0;
   private buffer: WebGLBuffer | null = null;
   private targets: BloomTarget[] = [];
   private fallback: CanvasRenderingContext2D | null = null;
@@ -156,6 +164,7 @@ export class PostFX {
       if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) ?? 'Could not initialize the display');
       const pass = { program, uniforms: Object.fromEntries(uniforms.map(name => [name, gl.getUniformLocation(program!, name)])) };
       gl.useProgram(program); gl.uniform1i(pass.uniforms.u_scene, 0);
+      if ('u_emission' in pass.uniforms) gl.uniform1i(pass.uniforms.u_emission, 2);
       if ('u_bloom' in pass.uniforms) gl.uniform1i(pass.uniforms.u_bloom, 1);
       return pass;
     } catch (error) {
@@ -181,7 +190,7 @@ export class PostFX {
     const gl = this.gl!;
     this.clearHandles();
     try {
-      this.bright = this.makePass(brightFragment, ['u_scene', 'u_size']);
+      this.bright = this.makePass(brightFragment, ['u_scene', 'u_size', 'u_emission', 'u_selective']);
       this.blur = this.makePass(blurFragment, ['u_scene', 'u_direction']);
       this.composite = this.makePass(compositeFragment, ['u_scene', 'u_bloom', 'u_size', 'u_hurt']);
       this.buffer = gl.createBuffer();
@@ -195,6 +204,8 @@ export class PostFX {
         if (!framebuffer) { gl.deleteTexture(texture); throw new Error('Could not allocate the bloom framebuffer'); }
         this.targets.push({ texture, framebuffer });
       }
+      gl.activeTexture(gl.TEXTURE2); this.emission = this.makeTexture(true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
       gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.disable(gl.SCISSOR_TEST);
     } catch (error) {
@@ -230,7 +241,7 @@ export class PostFX {
   }
 
   /** The source contains only the world; native-resolution UI is composed later. */
-  render(source: HTMLCanvasElement, hurt: number) {
+  render(source: HTMLCanvasElement, hurt: number, emission?: HTMLCanvasElement) {
     if (this.lost || this.disposed || !source.width || !source.height) return;
     const gl = this.gl;
     if (gl && this.scene && this.bright && this.blur && this.composite) {
@@ -239,9 +250,17 @@ export class PostFX {
       gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.scene);
       gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+      gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, this.emission);
+      if (emission) {
+        if (emission.width !== this.emissionWidth || emission.height !== this.emissionHeight) {
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, emission);
+          this.emissionWidth = emission.width; this.emissionHeight = emission.height;
+        } else gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, emission);
+      }
       const hurtAmount = Math.max(0, Math.min(1, hurt));
       const [a, b] = this.targets;
       this.use(this.bright, this.scene, a);
+      gl.uniform1f(this.bright.uniforms.u_selective, emission ? 1 : 0);
       gl.uniform2f(this.bright.uniforms.u_size, this.sourceWidth, this.sourceHeight);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       this.use(this.blur, a.texture, b);
@@ -260,6 +279,7 @@ export class PostFX {
 
   private clearHandles() {
     this.bright = null; this.blur = null; this.composite = null;
+    this.emission = null; this.emissionWidth = 0; this.emissionHeight = 0;
     this.scene = null; this.buffer = null; this.targets = [];
     this.sourceWidth = 0; this.sourceHeight = 0; this.bloomWidth = 0; this.bloomHeight = 0;
   }
@@ -269,7 +289,7 @@ export class PostFX {
     if (gl && !gl.isContextLost()) {
       for (const target of this.targets) { gl.deleteFramebuffer(target.framebuffer); gl.deleteTexture(target.texture); }
       for (const pass of [this.bright, this.blur, this.composite]) if (pass) gl.deleteProgram(pass.program);
-      gl.deleteTexture(this.scene); gl.deleteBuffer(this.buffer);
+      gl.deleteTexture(this.emission); gl.deleteTexture(this.scene); gl.deleteBuffer(this.buffer);
     }
     this.clearHandles();
   }

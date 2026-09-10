@@ -1,4 +1,5 @@
 import { BIOME_IDS, type BiomeWeights } from './biomes.ts';
+import type { SkyState } from './world-time.ts';
 import type { GearLight } from './gear-material.ts';
 
 /** Shared art direction, separate from terrain generation and combat visibility. */
@@ -8,14 +9,14 @@ const palettes = {
   frostpine: [184, 213, 238, .14], emberfall: [209, 159, 140, .10], autumn: [230, 205, 157, .10],
   highlands: [184, 185, 219, .14], steppe: [222, 218, 179, .06], sunscar: [239, 205, 165, .055],
 } as const;
-export function sceneClimate(weights: BiomeWeights, enclosure = 0) {
+export function sceneClimate(weights: BiomeWeights, enclosure = 0, sky?: SkyState) {
   const channels = [0, 1, 2].map(channel => Math.round(BIOME_IDS.reduce((sum, id) => sum + palettes[id][channel] * weights[id], 0)));
   const color = `#${channels.map(n => n.toString(16).padStart(2, '0')).join('')}`;
   const inside = Math.max(0, Math.min(1, enclosure));
   const outdoorFog = BIOME_IDS.reduce((sum, id) => sum + palettes[id][3] * weights[id], 0);
   const fog = outdoorFog * (1 - inside) + .085 * inside;
   const keyColor = channels.map((n, i) => Math.round(n * (1 - inside) + [172, 185, 212][i] * inside));
-  const key: GearLight = { direction: SKY_DIRECTION, color: `#${keyColor.map(n => n.toString(16).padStart(2, '0')).join('')}`, power: .95 - .57 * inside };
+  const key: GearLight = { direction: sky ? sky.direction.map((n,i)=>n*(1-inside)+SKY_DIRECTION[i]*inside) as unknown as GearLight['direction'] : SKY_DIRECTION, color: `#${keyColor.map((n,i) => Math.round(n * (sky ? sky.tint[i]*(1-inside)+inside : 1)).toString(16).padStart(2, '0')).join('')}`, power: (sky?.power ?? .95) * (1-inside) + .38 * inside };
   return { color: inside === 1 ? '#91a6b9' : color, fog, key };
 }
 

@@ -1,3 +1,4 @@
+import type { SkyState } from './world-time.ts';
 import type { Prop } from './world.ts';
 import { hash, randomFromSeed } from './art-primitives.ts';
 import type { World } from './world.ts';
@@ -39,7 +40,7 @@ export class AtmosphereArt {
   }
   /** Separate ground and foreground banks: anchored in world space, never a screen veil. */
   drawLayer(c: CanvasRenderingContext2D, world: World, view: CameraView, time: number, reducedMotion: boolean,
-    playerX: number, playerY: number, foreground: boolean, enclosed: boolean, indoorBlend: number) {
+    playerX: number, playerY: number, foreground: boolean, enclosed: boolean, indoorBlend: number, sky?: SkyState) {
     if (!enclosed && indoorBlend > .98) return;
     const t = reducedMotion ? 0 : time, cell = enclosed ? 180 : 360, margin = enclosed ? 120 : 420;
     c.save(); c.globalCompositeOperation = 'screen'; let count = 0;
@@ -49,7 +50,8 @@ export class AtmosphereArt {
         const seed = hash(Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663) ^ (foreground ? 4717 : 9811));
         const phase = seed / 0x100000000 * Math.PI * 2;
         const anchorX = (cx + .5) * cell, anchorY = (cy + .5) * cell;
-        const style = sceneClimate(world.sampleBiome(anchorX, anchorY).weights, enclosed ? 1 : 0);
+        const weights=world.sampleBiome(anchorX,anchorY).weights;
+        const style = sceneClimate(weights, enclosed ? 1 : 0);
         const x = anchorX + Math.sin(t * (foreground ? .035 : .06) + phase) * (enclosed ? 14 : 75),
           y = anchorY + Math.cos(t * .045 + phase) * 24;
         if (world.getBuildingAt(x, y)) continue;
@@ -57,7 +59,7 @@ export class AtmosphereArt {
         if (enclosed && (foreground || world.blocked(x, y, 65))) continue;
         const distance = Math.hypot(x - playerX, y - playerY);
         const clearance = foreground ? .18 + .82 * Math.min(1, distance / 260) : 1;
-        c.globalAlpha = style.fog * (foreground ? .52 : .85) * clearance * (enclosed ? 1 : 1 - indoorBlend);
+        c.globalAlpha = style.fog * (enclosed ? 1 : 1-weights.swamp*.4) * (foreground ? .52 : .85) * clearance * (enclosed ? 1 : (1 - indoorBlend) * (.42 + .58 * (sky?.daylight ?? 1)));
         // Quantize only the cookie tint; biome opacity remains continuously blended.
         const color = style.color.replace(/[0-9a-f]{2}/gi, pair => Math.min(255, Math.round(parseInt(pair, 16) / 16) * 16).toString(16).padStart(2, '0'));
         const width = enclosed ? 150 : foreground ? 690 : 510, height = enclosed ? 65 : foreground ? 170 : 110;

@@ -149,13 +149,13 @@ export function drawCryptDecor(c: CanvasRenderingContext2D, f: DungeonFloor, run
 
 /** Hot source cores and small particles are emitted after the surface light pass. */
 export function drawCryptEmission(c: CanvasRenderingContext2D, f: DungeonFloor, time: number,
-    view: {left: number; top: number; width: number; height: number}) {
+    view: {left: number; top: number; width: number; height: number}, coresOnly = false) {
     for (const p of cryptFixtures(f)) {
         if (p.x < view.left-90 || p.x > view.left+view.width+90 || p.y < view.top-100 || p.y > view.top+view.height+90) continue;
         const {x, y} = p, flicker = cryptFlicker(p, time);
         if (p.kind === 'torch') {
-            drawGlow(c,x,y,62,'#ff812f',.48*flicker);
-            drawGlow(c,x,y,22,'#ffcb79',.8*flicker);
+            if (!coresOnly) drawGlow(c,x,y,62,'#ff812f',.48*flicker);
+            if (!coresOnly) drawGlow(c,x,y,22,'#ffcb79',.8*flicker);
             const lean = Math.sin(time*7+p.phase)*3;
             c.fillStyle = '#f36b27'; c.beginPath(); c.moveTo(x-6,y+7);
             c.quadraticCurveTo(x-10,y-2,x+lean+2,y-21*flicker);
@@ -169,8 +169,8 @@ export function drawCryptEmission(c: CanvasRenderingContext2D, f: DungeonFloor, 
             c.globalAlpha=1;
         } else {
             const bob=Math.sin(time*1.8+p.phase)*3;
-            drawGlow(c,x,y+bob,86,dungeonTheme(f.seed).light,.4*flicker);
-            drawGlow(c,x,y+bob,31,dungeonTheme(f.seed).accent,.65);
+            if (!coresOnly) drawGlow(c,x,y+bob,86,dungeonTheme(f.seed).light,.4*flicker);
+            if (!coresOnly) drawGlow(c,x,y+bob,31,dungeonTheme(f.seed).accent,.65);
             const sphere=c.createRadialGradient(x-2,y-3+bob,1,x,y+bob,9);
             sphere.addColorStop(0,'#f0ffff'); sphere.addColorStop(.35,dungeonTheme(f.seed).accent); sphere.addColorStop(.75,dungeonTheme(f.seed).light); sphere.addColorStop(1,'#235895');
             c.fillStyle=sphere; c.beginPath(); c.arc(x,y+bob,9,0,7); c.fill();

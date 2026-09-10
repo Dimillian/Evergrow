@@ -1,3 +1,5 @@
+import { FrameProfiler } from './frame-profiler.ts';
+import { worldTimeLabel, WORLD_TIME } from './world-time.ts';
 import './typography.css';
 import './layout-review.css';
 import { loadGameFont } from './font.ts';
@@ -39,7 +41,8 @@ interface Stage {
 
 const lifecycle = new AbortController();
 let disposed = false;
-let postfx: PostFX | undefined;
+let postfx: PostFX | undefined, activeRenderer:Renderer|undefined, activeWorld:World|undefined;
+let animation=0;
 const root = document.querySelector<HTMLElement>('#layout-review')!;
 
 function fit(rectangles: readonly Rect[], padding: number): Pick<Stage, 'camera' | 'width' | 'height'> {
@@ -154,8 +157,12 @@ async function boot() {
   let view: ViewId = VIEWS.find(candidate => candidate.id === params.get('view'))?.id ?? 'town';
   params.delete('mode');
   const seed=Number(params.get('seed')??WORLD_SEED)>>>0;
-  const world = new World(seed);
-  const renderer = new Renderer();
+  const live=params.has('lighting'),reduced=matchMedia('(prefers-reduced-motion: reduce)');
+  let hour=Number(params.get('hour')??(live?22:9));if(!Number.isFinite(hour))hour=22;hour=((hour%24)+24)%24;
+  let cycle=false;
+  const profiler=new FrameProfiler(live);
+  const world = activeWorld = new World(seed);
+  const renderer = activeRenderer = new Renderer(false,profiler);
   const scene = document.createElement('canvas');
   scene.width = EXPORT_WIDTH; scene.height = EXPORT_HEIGHT;
   scene.className = 'layout-review-scene'; scene.setAttribute('role', 'img');
@@ -167,12 +174,13 @@ async function boot() {
   root.innerHTML = `
     <header class="layout-review-header">
       <div><p class="layout-review-eyebrow">EVERGROW / LOCAL DEV</p><h1>Settlement layout review</h1></div>
-      <p class="layout-review-static">Frozen generated scenes</p>
+      <p class="layout-review-static">${live?'Live settlement lighting':'Frozen generated scenes'}</p>
     </header>
     <div class="layout-review-toolbar">
       <nav class="layout-review-views" aria-label="Layout views"></nav>
       <div class="layout-review-actions"></div>
     </div>
+    ${live?`<div class="layout-review-toolbar"><label>Time <input type="range" data-hour min="0" max="23.99" step=".05" value="${hour}" aria-label="Time of day"/></label><output data-clock></output><button data-time="12">Noon</button><button data-time="18">Dusk</button><button data-time="22">Night</button><button data-cycle aria-pressed="false">Play day cycle</button><button data-reset>Reset timings</button></div><details><summary>Render timings</summary><output data-timings></output></details>`:''}
     <figure class="layout-review-figure">
       <div class="layout-review-frame"></div>
       <figcaption class="layout-review-caption"><p class="layout-review-description"></p><p class="layout-review-metadata"></p></figcaption>
@@ -184,14 +192,14 @@ async function boot() {
   const metadata = root.querySelector<HTMLElement>('.layout-review-metadata')!;
   const status = root.querySelector<HTMLElement>('.layout-review-status')!;
   const download = document.createElement('a');
-  download.className = 'layout-review-download'; download.textContent = 'Save PNG';
+  download.className = 'layout-review-download'; download.textContent = 'Save PNG'; download.href = '#';
   const seedForm=document.createElement('form');seedForm.innerHTML=`<label>Seed <input name="seed" type="number" min="0" max="4294967295" value="${seed}" style="width:110px"></label><button>Generate</button>`;
   seedForm.addEventListener('submit',e=>{e.preventDefault();params.set('seed',String(Number(new FormData(seedForm).get('seed'))>>>0));location.search=params.toString();},{signal:lifecycle.signal});
   const randomButton=createButton('New seed');randomButton.addEventListener('click',()=>{params.set('seed',String(crypto.getRandomValues(new Uint32Array(1))[0]));location.search=params.toString();},{signal:lifecycle.signal});
   root.querySelector('.layout-review-actions')!.append(seedForm,randomButton,download);
   const viewButtons = new Map<ViewId, HTMLButtonElement>();
-  const settings: RenderSettings = { phase: 'paused', reducedMotion: true, fps: 0, debug: false };
-  let stage: Stage;
+  const settings: RenderSettings = { phase: 'paused', reducedMotion: !live||reduced.matches, fps: 0, debug: false, skyHour:hour };
+  let stage: Stage, simulation:Simulation,frames=0;
 
   function compose() {
     context!.imageSmoothingEnabled = false;
@@ -199,13 +207,12 @@ async function boot() {
     postfx.render(renderer.canvas, 0);
     // Copy immediately while the WebGL drawing buffer is still valid; exports use the persistent 2D canvas.
     context!.drawImage(display, 0, 0);
-    params.set('view', view);
-    history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
+
     scene.setAttribute('aria-label', `${stage.title}. ${stage.description}. CRT with soft phosphor.`);
     scene.dataset.view = view;
-    download.href = scene.toDataURL('image/png');
+
     download.download = `evergrow-${view}-seed-${seed}-v${world.generationVersion}-crt-phosphor.png`;
-    metadata.textContent = `Seed ${seed} · generation ${world.generationVersion} · PNG ${EXPORT_WIDTH} × ${EXPORT_HEIGHT}`;
+    metadata.textContent = `Seed ${seed} · render ${renderer.width} × ${renderer.height} · PNG ${EXPORT_WIDTH} × ${EXPORT_HEIGHT}`;
     status.textContent = `${stage.title}, CRT with soft phosphor ready.`;
     root.dataset.ready = 'true';
     root.setAttribute('aria-busy', 'false');
@@ -214,14 +221,16 @@ async function boot() {
   function renderView(next: ViewId) {
     root.dataset.ready = 'false'; root.setAttribute('aria-busy', 'true');
     stage = makeStage(world, next);
-    const simulation = new Simulation(world, { seed, spawn: false, startX: stage.hero.x, startY: stage.hero.y });
+    simulation = new Simulation(world, { seed, spawn: false, startX: stage.hero.x, startY: stage.hero.y });
     simulation.player.angle = -.65;
     simulation.time = 12;
     renderer.reset(); renderer.resize(stage.width, stage.height);
     renderer.cameraX = stage.camera.x; renderer.cameraY = stage.camera.y;
     // Advance only presentation settling, once; the paused simulation never runs.
+    profiler.reset();frames=0;
     renderer.render(simulation, world, 1, settings);
     view = next;
+    params.set('view',view);history.replaceState(null,'',`${location.pathname}?${params}`);
     heading.textContent = stage.title; description.textContent = stage.description;
     document.title = `Evergrow · ${stage.title} · Layout review`;
     for (const [id, button] of viewButtons) button.setAttribute('aria-current', String(id === view));
@@ -237,6 +246,22 @@ async function boot() {
   }
   display.addEventListener('webglcontextrestored', compose, { signal: lifecycle.signal });
   renderView(view);
+  const present=(dt:number)=>{
+    profiler.begin(performance.now());settings.skyHour=hour;settings.reducedMotion=!live||reduced.matches;
+    const start=profiler.start();renderer.render(simulation,world,dt,settings);profiler.end('world',start);
+    const fx=profiler.start();compose();profiler.end('postfx',fx);profiler.finish();
+    const clock=root.querySelector('[data-clock]');if(clock)clock.textContent=worldTimeLabel((hour-WORLD_TIME.startHour)/24*WORLD_TIME.daySeconds);
+    if(++frames%30===0){const snapshot=profiler.snapshot(),out=root.querySelector<HTMLElement>('[data-timings]');if(out){out.textContent=`${snapshot.frames} frames · CPU median ${snapshot.metrics.frameCPU.p50} ms / p95 ${snapshot.metrics.frameCPU.p95} ms · Lighting ${snapshot.metrics.lighting.p50} ms · PostFX ${snapshot.metrics.postfx.p50} ms (excludes GPU completion)`;out.dataset.profile=JSON.stringify(snapshot);}}
+  };
+  download.onclick=()=>{download.href=scene.toDataURL('image/png');};
+  const setHour=(value:number)=>{hour=value;params.set('hour',String(hour));history.replaceState(null,'',`${location.pathname}?${params}`);root.querySelector<HTMLInputElement>('[data-hour]')!.value=String(hour);present(0);};
+  root.querySelector('[data-hour]')?.addEventListener('input',e=>setHour(Number((e.target as HTMLInputElement).value)),{signal:lifecycle.signal});
+  for(const button of root.querySelectorAll<HTMLButtonElement>('[data-time]'))button.addEventListener('click',()=>setHour(Number(button.dataset.time)),{signal:lifecycle.signal});
+  root.querySelector('[data-reset]')?.addEventListener('click',()=>{profiler.reset();frames=0;},{signal:lifecycle.signal});
+  root.querySelector('[data-cycle]')?.addEventListener('click',e=>{cycle=!cycle;const b=e.target as HTMLButtonElement;b.textContent=cycle?'Pause day cycle':'Play day cycle';b.setAttribute('aria-pressed',String(cycle));},{signal:lifecycle.signal});
+  if(live){present(0);let previous=performance.now();const tick=(now:number)=>{if(disposed)return;
+    if(now-previous>=1000/30){if(!document.hidden&&!reduced.matches){const dt=Math.min(.05,(now-previous)/1000);if(cycle){hour=(hour+dt*.4)%24;root.querySelector<HTMLInputElement>('[data-hour]')!.value=String(hour);}present(dt);}previous=now-((now-previous)%(1000/30));}
+    animation=requestAnimationFrame(tick);};animation=requestAnimationFrame(tick);}
 }
 
 void boot().catch(error => {
@@ -249,7 +274,7 @@ void boot().catch(error => {
 });
 
 function dispose() {
-  disposed = true; lifecycle.abort(); postfx?.dispose();
+  disposed = true; cancelAnimationFrame(animation); lifecycle.abort(); postfx?.dispose(); activeRenderer?.reset();activeWorld?.dispose();
 }
 window.addEventListener('pagehide', event => { if (!event.persisted) dispose(); }, { signal: lifecycle.signal });
 if (import.meta.hot) import.meta.hot.dispose(dispose);

@@ -1,3 +1,4 @@
+import type { SkyState } from './world-time.ts';
 import type { WaterSimulation } from './water-simulation.ts';
 import type { PointLight } from './lighting.ts';
 import type { CharacterPose, Sprite } from './art-types.ts';
@@ -72,9 +73,9 @@ export class WaterArt {
     this.propDraws.push({ ...cached, x, y });
   }
 
-  drawSurface(c: CanvasRenderingContext2D, f: WaterSimulation, lights: readonly PointLight[], reduced: boolean, age = 0) {
+  drawSurface(c: CanvasRenderingContext2D, f: WaterSimulation, lights: readonly PointLight[], reduced: boolean, age = 0, sky?: SkyState) {
     if (!this.active) return;
-    if (this.shader.draw(c, f, this.reflections, this.view, lights, reduced, age)) return;
+    if (this.shader.draw(c, f, this.reflections, this.view, lights, reduced, age, sky)) return;
     this.drawFallback(c, f);
   }
   private drawFallback(c: CanvasRenderingContext2D, f: WaterSimulation) {

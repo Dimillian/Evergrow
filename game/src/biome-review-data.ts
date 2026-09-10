@@ -12,7 +12,7 @@ export function biomeReviewScenes(world: World, ids: readonly BiomeId[] = BIOME_
   const pairs = [['frostpine', 'highlands'], ['autumn', 'emberfall']] as const;
   for (let y = -36000; y <= 36000; y += 640) for (let x = -36000; x <= 36000; x += 640) {
     const sample = world.sampleBiome(x, y);
-    if (sample.weights[sample.id] > .94) candidates.get(sample.id)!.push({ x, y });
+    if (sample.weights[sample.id] > .94) candidates.get(sample.id)?.push({ x, y });
   }
   const scenes = ids.map(id => {
     const sorted = candidates.get(id)!.sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y));

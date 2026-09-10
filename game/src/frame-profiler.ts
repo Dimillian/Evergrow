@@ -1,4 +1,4 @@
-export const FRAME_STAGES = ['simulation', 'world', 'terrain', 'water', 'lighting', 'postfx', 'ui'] as const;
+export const FRAME_STAGES = ['simulation', 'world', 'sceneSetup', 'scenery', 'actors', 'props', 'structures', 'characters', 'terrain', 'water', 'lighting', 'postfx', 'ui'] as const;
 export type FrameStage = typeof FRAME_STAGES[number];
 const CAPACITY = 600;
 /** Opt-in bounded CPU timings; cadence includes browser/GPU scheduling, stage times do not. */

@@ -22,8 +22,8 @@ export class SceneShadows {
     this.silhouettes.set(source, mask); return mask;
   }
   drawProps(c: CanvasRenderingContext2D, props: readonly Prop[], view: CameraView,
-    spriteFor: (prop: Prop) => Sprite, time: number, reduced: boolean) {
-    const projection = shadowProjection(SKY_DIRECTION);
+    spriteFor: (prop: Prop) => Sprite, time: number, reduced: boolean, direction: GearLight['direction'] = SKY_DIRECTION, strength = 1) {
+    const projection = shadowProjection(direction);
     c.save(); c.imageSmoothingEnabled = true;
     let count = 0;
     for (const prop of props) {
@@ -35,16 +35,16 @@ export class SceneShadows {
       c.save(); c.translate(prop.x, prop.y + 1); c.scale(prop.scale, prop.scale);
       // Actual trunk/rock silhouette, anchored at its contact with the terrain.
       c.save(); c.transform(1, 0, -projection.x, -projection.y, 0, 0);
-      c.globalAlpha = definition.canopy ? .18 : .24;
+      c.globalAlpha = (definition.canopy ? .18 : .24) * strength;
       c.drawImage(this.mask(sprite.image), -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height); c.restore();
       for (const [layer, foliage] of (sprite.foliage ?? []).entries()) {
         const gust = biomeWind(prop.x, prop.y, time - layer * .18, prop.biome ?? 'deadwood', reduced).x * definition.sway * 2.2;
         c.save(); c.transform(1, 0, -projection.x + gust * (layer ? -.009 : -.005), -projection.y, wind.x * 1.4, wind.y);
-        c.globalAlpha = .115;
+        c.globalAlpha = .115 * strength;
         const mask = this.mask(foliage);
         // Two faint offset samples give a soft penumbra without a Canvas blur filter.
         c.drawImage(mask, -sprite.anchorX - 2, -sprite.anchorY - 1, sprite.width + 4, sprite.height + 2);
-        c.globalAlpha = .09; c.drawImage(mask, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
+        c.globalAlpha = .09 * strength; c.drawImage(mask, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
         c.restore();
       }
       c.restore();
@@ -57,7 +57,7 @@ export class SceneShadows {
     // Contact stays dense; the directional body shadow broadens and fades away from the feet.
     const length = Math.hypot(dx, dy);
     for (const [spread, opacity] of [[1.35, .06], [1, .13]]) {
-      c.globalAlpha = opacity * (wet ? .3 : 1);
+      c.globalAlpha = opacity * (wet ? .3 : 1) * Math.min(1, .3 + light.power);
       c.fillStyle = '#030a13'; c.beginPath(); c.ellipse(length * .42, 0, Math.max(radius, length * .62), radius * .56 * spread, 0, 0, Math.PI * 2); c.fill();
     }
     c.restore();

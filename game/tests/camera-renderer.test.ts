@@ -57,7 +57,9 @@ class RecordingCanvas {
   set width(value: number) { this.w = value; this.resizeCount++; }
   get height() { return this.h; }
   set height(value: number) { this.h = value; this.resizeCount++; }
-  getContext() { return this.context; }
+  getContext(kind: string) { return kind === '2d' ? this.context : null; }
+  addEventListener() {}
+  removeEventListener() {}
 }
 
 class EmptyWorld extends World {

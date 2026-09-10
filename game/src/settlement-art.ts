@@ -1,3 +1,5 @@
+import type { SkyState } from './world-time.ts';
+import { shadowProjection } from './scene-light-style.ts';
 import { drawFortificationShadows } from './settlement-wall-art.ts';
 import { vendorIdentity } from './vendor-identity.ts';
 import { drawVendorGlyph } from './vendor-identity-art.ts';
@@ -56,6 +58,8 @@ function line(c: CanvasRenderingContext2D, points: readonly Point[], color: stri
 /** Floors, wall footprints and furniture use the same coordinates as collision. */
 export class SettlementArt {
   private cache = new Map<string, BuildingArt>();
+  private fortifications = new Map<Building, ImageLayer>();
+  private fortificationPixels = 0;
   private reveal = new Map<string, Reveal>();
   private factory: CanvasFactory;
   private playerX = 0;
@@ -68,7 +72,7 @@ export class SettlementArt {
     });
   }
 
-  reset() { this.cache.clear(); this.reveal.clear(); }
+  reset() { this.cache.clear(); this.reveal.clear(); this.fortifications.clear(); this.fortificationPixels = 0; }
 
   update(buildings: readonly Building[], playerX: number, playerY: number, dt: number, reducedMotion: boolean) {
     this.playerX = playerX; this.playerY = playerY; this.reducedMotion = reducedMotion;
@@ -127,18 +131,37 @@ export class SettlementArt {
     return result;
   }
 
-  drawGround(c: CanvasRenderingContext2D, buildings: readonly Building[], _time: number) {
-    drawFortificationShadows(c,buildings);
+  drawGround(c: CanvasRenderingContext2D, buildings: readonly Building[], _time: number, sky?: SkyState) {
+    drawFortificationShadows(c,buildings,sky);
+    if(sky){
+      const projection=shadowProjection(sky.direction);
+      c.save();c.globalAlpha*=.18*sky.shadow;c.fillStyle='#07111c';c.beginPath();
+      for(const b of buildings){
+        if(b.form==='fixture'||b.wallSegment)continue;
+        const height=b.form==='tent'?64:b.form==='stall'?48:WALL_HEIGHT+roofRise(b),dx=projection.x*height,dy=projection.y*height;
+        const q:Point[]=[[b.x,b.y],[b.x+b.width,b.y],[b.x+b.width,b.y+b.height],[b.x,b.y+b.height]];
+        // One consistent-winding union across footprint, displaced roof and walls.
+        for(const points of [q,q.map(([x,y])=>[x+dx,y+dy] as Point),...q.map((a,i)=>{const z=q[(i+1)%4];return [a,z,[z[0]+dx,z[1]+dy],[a[0]+dx,a[1]+dy]] as Point[];})]){
+          const area=points.reduce((sum,a,i)=>{const b=points[(i+1)%points.length];return sum+a[0]*b[1]-b[0]*a[1];},0);
+          const ordered=area<0?[...points].reverse():points;c.moveTo(...ordered[0]);for(const p of ordered.slice(1))c.lineTo(...p);c.closePath();
+        }
+      }
+      c.fill();c.restore();
+    }
     for (const b of buildings) {
       if(b.form==='fixture')continue;
       const layer = this.art(b).floor;
       c.drawImage(layer.image, b.x + layer.x, b.y + layer.y);
       const opacity = this.reveal.get(b.id)?.opacity ?? 1;
-      if (opacity > .1) for (const window of facadeWindows(b)) {
+      if (opacity > .1 && b.form!=='stall' && b.form!=='tent') for (const window of facadeWindows(b)) {
         if (window.sign) continue;
         c.save(); c.globalAlpha *= opacity;
         const y = b.y + b.height;
-        polygon(c, [[window.x - 5, y], [window.x + 5, y], [window.x + 16, y + 27], [window.x - 10, y + 27]], '#e9bc7014');
+        const night=1-(sky?.daylight??1);
+        if(night>.01){
+          const g=c.createLinearGradient(0,y,0,y+46);g.addColorStop(0,`rgba(255,192,105,${.20*night})`);g.addColorStop(1,'rgba(255,192,105,0)');
+          c.fillStyle=g;c.beginPath();c.moveTo(window.x-6,y);c.lineTo(window.x+6,y);c.lineTo(window.x+22,y+46);c.lineTo(window.x-18,y+46);c.closePath();c.fill();
+        }
         line(c, [[window.x + 1, y + 2], [window.x + 4, y + 26]], '#253c3330', 1.4);
         c.restore();
       }
@@ -287,8 +310,29 @@ export class SettlementArt {
     for (const layer of this.getStructureLayers(b, time).sort((a, z) => a.y - z.y)) layer.draw(c);
   }
 
+  /** The masonry/timbers are static; their shared sun shadow remains a separate live pass. */
+  private fortification(b: Building): ImageLayer {
+    const cached = this.fortifications.get(b);
+    if (cached) { this.fortifications.delete(b); this.fortifications.set(b, cached); return cached; }
+    const q = b.wallSegment!.footprint;
+    const x = Math.floor(Math.min(...q.map(p => p[0])) - 8);
+    const y = Math.floor(Math.min(...q.map(p => p[1])) - 104);
+    const width = Math.ceil(Math.max(...q.map(p => p[0])) + 8 - x);
+    const height = Math.ceil(Math.max(...q.map(p => p[1])) + 12 - y);
+    const layer = this.layer(width, height, x, y, c => drawSettlementFixture(c, b, 0));
+    const pixels = layer.image.width * layer.image.height;
+    // 24 MiB RGBA ceiling plus an entry limit, independent of world travel distance.
+    while (this.fortifications.size && (this.fortifications.size >= 512 || this.fortificationPixels + pixels > 6_000_000)) {
+      const key = this.fortifications.keys().next().value!, old = this.fortifications.get(key)!;
+      this.fortificationPixels -= old.image.width * old.image.height; this.fortifications.delete(key);
+    }
+    if (pixels <= 6_000_000) { this.fortifications.set(b, layer); this.fortificationPixels += pixels; }
+    return layer;
+  }
+
   /** Insert each footprint depth alongside actors so furnishings cannot cover someone in front. */
   getStructureLayers(b: Building, time: number, brokenContainers?: ReadonlySet<string>): StructureLayer[] {
+    if(b.wallSegment)return [{y:b.y+b.height,draw:c=>{const layer=this.fortification(b);c.drawImage(layer.image,layer.x,layer.y);}}];
     if(b.form==='fixture')return [{y:b.y+b.height,draw:(c:CanvasRenderingContext2D)=>drawSettlementFixture(c,b,this.reducedMotion?0:time)}];
     const opacity = b.form==='stall'?0:this.reveal.get(b.id)?.opacity ?? 1;
     const t = this.reducedMotion ? 0 : time;
@@ -542,20 +586,62 @@ export class SettlementArt {
     }
   }
 
-  getLights(buildings: readonly Building[], time: number): PointLight[] {
+  /** Warm sources remain luminous after ambient multiplication; small cores preserve the architecture. */
+  drawNightEmission(c: CanvasRenderingContext2D, buildings: readonly Building[], time:number, sky:SkyState) {
+    const night=1-sky.daylight;if(night<.01)return;
+    const t=this.reducedMotion?0:time;
+    for(const b of buildings){
+      const flicker=.96+.04*Math.sin(t*2.4+b.seed);
+      if(b.form==='fixture'){
+        if(b.kind==='hearth'||b.kind==='torch'){
+          const x=b.x+b.width/2,y=b.y-(b.kind==='torch'?40:5);
+          drawGlow(c,x,y,b.kind==='hearth'?48:22,'#ffc27c',night*.28*flicker);
+        }
+        continue;
+      }
+      if(b.form==='tent')continue;
+      if(b.form==='stall'){
+        const x=b.x+7.5,y=b.y+b.height*.45+6;
+        drawGlow(c,x,y,23,'#ffd294',night*.30*flicker);
+        c.save();c.globalAlpha*=night*.8;c.fillStyle='#ffe7b3';c.fillRect(x-2.5,y-4,5,8);c.restore();continue;
+      }
+      const opacity=this.reveal.get(b.id)?.opacity??1;
+      if(opacity>.05)for(const window of facadeWindows(b)){
+        if(window.sign)continue;
+        const x=window.x,y=b.door.y-23;
+        drawGlow(c,x,y-2,27,'#ffc77e',night*.18*opacity*flicker);
+        c.save();c.globalAlpha*=night*opacity*(.64+rand(b.seed,Math.round(x))*.18)*flicker;
+        c.beginPath();c.moveTo(x-7,y+6);c.lineTo(x-7,y-6);c.lineTo(x,y-12);c.lineTo(x+7,y-6);c.lineTo(x+7,y+6);c.closePath();c.clip();
+        c.fillStyle='#ffdb95';
+        for(const dx of[-7,1])for(const dy of[-12,0])c.fillRect(x+dx,y+dy,6,dy<0?10:6);
+        c.restore();
+      }
+      const x=b.door.x-b.door.width/2-3,y=b.door.y-26;
+      drawGlow(c,x,y,21,'#ffc77e',night*.26*flicker);
+    }
+  }
+
+  getLights(buildings: readonly Building[], time: number, sky?: SkyState): PointLight[] {
     const t = this.reducedMotion ? 0 : time;
+    const night=1-(sky?.daylight??1);
     const result: PointLight[] = [];
     const nearest = [...buildings].sort((a, b) => Math.hypot(a.door.x - this.playerX, a.door.y - this.playerY)
       - Math.hypot(b.door.x - this.playerX, b.door.y - this.playerY));
     for (const b of nearest) {
       if(b.form==='fixture'){
-        if(b.kind==='hearth'||b.kind==='torch')result.push({x:b.x+b.width/2,y:b.y-(b.kind==='torch'?40:5),radius:b.kind==='hearth'?230:125,power:.85+Math.sin(t*6+b.seed)*.04,color:'#ffc071',shadows:true});
+        if(b.kind==='hearth'||b.kind==='torch')result.push({x:b.x+b.width/2,y:b.y-(b.kind==='torch'?40:5),radius:b.kind==='hearth'?230:125,power:.72+night*.22+Math.sin(t*6+b.seed)*.035,color:'#ffc071',shadows:true});
+        continue;
+      }
+      if(b.form==='tent')continue;
+      if(b.form==='stall'){
+        // Same physical lantern as the one painted on the left front post.
+        result.push({x:b.x+7.5,y:b.y+b.height*.45+6,radius:105,power:.28+night*.5+Math.sin(t*3+b.seed)*.018,color:'#ffd394'});
         continue;
       }
       const opacity = this.reveal.get(b.id)?.opacity ?? 1;
       result.push({ x: b.door.x - b.door.width / 2 - 3, y: b.door.y - 26, radius: 111,
-        power: .68 + Math.sin(t * 5 + b.seed) * .035, color: '#ffc071' });
-      if (opacity > .1) result.push({ x: facadeWindows(b)[0].x, y: b.door.y - 24, radius: 89, power: .36 * opacity, color: '#e8be79' });
+        power: .32 + night*.45 + Math.sin(t * 5 + b.seed) * .025, color: '#ffc071' });
+      if (opacity > .1) result.push({ x: facadeWindows(b)[0].x, y: b.door.y - 24, radius: 89, power: (.10+night*.40) * opacity, color: '#e8be79' });
       if (opacity < .95) {
         const source = b.furniture.find(item => item.kind === 'forge' || item.kind === 'altar');
         const forge = source?.kind === 'forge';

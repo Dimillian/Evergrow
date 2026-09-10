@@ -1,3 +1,4 @@
+import { worldTimeLabel } from './world-time.ts';
 import { dungeonTheme, DUNGEON_EVENTS } from './dungeon-content.ts';
 import { bindTouchCanvas } from './touch-canvas.ts';
 import { drawJourneyMapMarker, type JourneyMarker } from './journey-marker.ts';
@@ -169,4 +170,4 @@ export function drawCryptMinimap(c: CanvasRenderingContext2D, f: DungeonFloor, r
     x: number;
     y: number;
     angle: number;
-}, w: number, h: number, marker:JourneyMarker|null=null) { const box = getMinimapRect(w, h); drawDungeonMap(c, f, r, p, box, .095, p.x, p.y,marker); text(c, `CRYPT · ${r.entrance.level}`, box.x + box.width / 2, box.y + box.height - 8, .9, '#b9cbbb', 'center'); }
+}, w: number, h: number, marker:JourneyMarker|null=null, time=0) { const box = getMinimapRect(w, h); drawDungeonMap(c, f, r, p, box, .095, p.x, p.y,marker); text(c, `Lv ${r.entrance.level} · ${worldTimeLabel(time)}`, box.x + box.width / 2, box.y + box.height - 8, .9, '#b9cbbb', 'center'); }

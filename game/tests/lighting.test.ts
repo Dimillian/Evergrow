@@ -105,3 +105,17 @@ test('enclosed lights mask the source cookie in world coordinates before project
   lighting.apply(target, 640, 480, 0, 0, [light], [], undefined, .75);
   assert.deepEqual(scratch.context.shadowPoints, [[64,64], [192,64], [128,192]]);
 });
+
+test('stationary flickering lights reuse their shadow cookie as brightness changes', t => {
+  const { lighting, target, map, canvases } = fixture(t);
+  const props: Prop[] = [{ id: 'rock', kind: 'rock', x: 135, y: 100, radius: 10, scale: 1, seed: 1 }];
+  const light: PointLight = { ...lightAt(100, 100), radius: 100, shadows: true, stationary: true };
+  lighting.apply(target, 640, 480, 0, 0, [light], props);
+  lighting.apply(target, 640, 480, 0, 0, [{ ...light, power: .6 }], props);
+  const count = canvases.length, cookie = map.context.draws[0].image;
+  for (let i = 0; i < 20; i++) {
+    lighting.apply(target, 640, 480, 0, 0, [{ ...light, power: .6 + Math.sin(i) * .03 }], props);
+    assert.equal(canvases.length, count);
+    assert.equal(map.context.draws[0].image, cookie);
+  }
+});

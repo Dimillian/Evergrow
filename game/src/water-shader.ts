@@ -1,3 +1,4 @@
+import { skyAtHour, type SkyState } from './world-time.ts';
 import { waterView } from './water-view.ts';
 import { WATER_FLOW_GLSL } from './water-flow.ts';
 import type { WaterSimulation } from './water-simulation.ts';
@@ -11,7 +12,8 @@ varying vec2 uv;
 uniform sampler2D scene, state, waves, reflections;
 uniform vec4 view, grid, sceneView;
 uniform vec2 gridSize;
-uniform float time;
+uniform float time, skyPower;
+uniform vec3 skyDirection, skyTint;
 uniform vec4 lightPosition[8];
 uniform vec3 lightColor[8];
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -57,13 +59,13 @@ void main(){
   vec3 sky=mix(vec3(.12,.24,.31),vec3(.57,.76,.78),clouds);
   vec3 waterColor=mix(vec3(.075,.27,.29),vec3(.025,.115,.17),clamp(depth*.55,0.,1.));
   vec3 color=mix(bed,waterColor,.30+clamp(depth*.24,0.,.44));
-  color=mix(color,sky,fresnel+.1);
+  color=mix(color,sky*skyTint,fresnel+.1);
   vec2 refUV=q+(gradient*vec2(18.,12.)+vec2(sin(world.y*.06-time)*.9,0.))/grid.zw;
   // Reflection canvas is uploaded top-to-bottom, matching the hydrology grid.
   vec4 reflected=texture2D(reflections,refUV);
   color=mix(color,reflected.rgb,reflected.a*.85);
-  float sun=pow(max(0.,dot(normal,normalize(vec3(-.24,-.18,1.)))),110.);
-  color+=vec3(.64,.84,.79)*sun*1.08*(.55+clouds*.45);
+  float sun=pow(max(0.,dot(normal,normalize(normalize(skyDirection)+eye))),110.);
+  color+=vec3(.64,.84,.79)*skyTint*skyPower*sun*1.08*(.55+clouds*.45);
   // Broad refracted light pockets under the shallows, deliberately softer than surface glints.
   vec2 causticP=world*.034+vec2(sin(world.y*.02+time*.5),cos(world.x*.017-time*.4))*.45;
   float caustic=pow(max(0.,1.-abs(sin(causticP.x)+sin(causticP.y)+sin(causticP.x+causticP.y))*.7),9.);
@@ -143,7 +145,7 @@ export class WaterShader {
       gl.useProgram(this.program);
       this.buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
-      for (const name of ['scene','state','waves','reflections','view','sceneView','grid','gridSize','time','lightPosition[0]','lightColor[0]']) this.uniforms[name] = gl.getUniformLocation(this.program, name);
+      for (const name of ['scene','state','waves','reflections','view','sceneView','grid','gridSize','time','lightPosition[0]','lightColor[0]','skyPower','skyDirection','skyTint']) this.uniforms[name] = gl.getUniformLocation(this.program, name);
       for (let i = 0; i < 4; i++) {
         const texture = gl.createTexture()!; this.textures.push(texture); gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -155,7 +157,7 @@ export class WaterShader {
     finally { for (const shader of shaders) gl.deleteShader(shader); }
   }
   draw(target: CanvasRenderingContext2D, f: WaterSimulation, reflection: HTMLCanvasElement,
-    view: { left: number; top: number; width: number; height: number }, lights: readonly PointLight[], reduced: boolean, age = 0): boolean {
+    view: { left: number; top: number; width: number; height: number }, lights: readonly PointLight[], reduced: boolean, age = 0, sky: SkyState = skyAtHour(9)): boolean {
     const bounds = waterView(view, f.waterBounds); if (!bounds) return true;
     if (!this.setup()) return false;
     const gl = this.gl!, u = this.uniforms, fullView = view;
@@ -210,6 +212,7 @@ export class WaterShader {
     gl.uniform4f(u.view, view.left, view.top, view.width, view.height);
     gl.uniform4f(u.grid, f.left, f.top, f.columns * f.cell, f.rows * f.cell); gl.uniform2f(u.gridSize, f.columns, f.rows);
     gl.uniform1f(u.time, reduced ? 0 : f.time + age);
+    gl.uniform1f(u.skyPower,sky.power);gl.uniform3fv(u.skyDirection,sky.direction);gl.uniform3fv(u.skyTint,sky.tint);
     const positions = this.lightPositions, colors = this.lightColors;
     positions.fill(0); colors.fill(0);
     for (let i = 0; i < Math.min(8, lights.length); i++) {

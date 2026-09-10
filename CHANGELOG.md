@@ -1,5 +1,26 @@
 # Evergrow changelog
 
+## v0.3.5 — 2026-09-10T06:09:00Z
+
+### New
+
+- A dynamic day and night cycle changes outdoor lighting, water highlights and shadow direction; the minimap shows the current time.
+- All nine biomes have distinct moving atmosphere, from forest sunbeams and drifting clouds to snow, ash and desert haze.
+- Settlements glow after dusk with warm windows, stall lanterns, doorstep light and campfires.
+- Dungeon lights cast richer reflections and atmospheric glow while keeping stonework readable.
+
+### Tweaks
+
+- Forest leaves and rocks catch directional light that follows the time of day.
+- Mire fog moves in smoother banks, with clearer ground around your character and gentler wet highlights.
+
+### Fixes
+
+- Settlement walls reuse their artwork for smoother rendering while their shadows keep moving.
+- Flickering scenery lights no longer rebuild their shadows every frame.
+
+> Existing characters and progress are preserved. The world clock follows saved play time and pauses with the game.
+
 ## v0.3.4 — 2026-09-09T19:13:00Z
 
 ### New

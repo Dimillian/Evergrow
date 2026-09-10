@@ -1,3 +1,4 @@
+import type { SkyState } from './world-time.ts';
 import type { Building } from './settlements.ts';
 import type { WallSegment } from './settlement-walls.ts';
 import { SKY_DIRECTION, shadowProjection } from './scene-light-style.ts';
@@ -29,11 +30,11 @@ function prism(c:CanvasRenderingContext2D,q:WallSegment['footprint'],h:number,ba
 }
 
 /** All spans share one ground fill, so joins never darken into a chain of oval stamps. */
-export function drawFortificationShadows(c:CanvasRenderingContext2D,buildings:readonly Building[]){
+export function drawFortificationShadows(c:CanvasRenderingContext2D,buildings:readonly Building[], sky?:SkyState){
   const walls=buildings.filter(b=>b.wallSegment);
   if(!walls.length)return;
-  const projection=shadowProjection(SKY_DIRECTION);
-  c.save();c.fillStyle='#040d1740';c.beginPath();
+  const projection=shadowProjection(sky?.direction??SKY_DIRECTION);
+  c.save();c.globalAlpha*=sky?.shadow??1;c.fillStyle='#040d1740';c.beginPath();
   for(const b of walls){
     const q=b.wallSegment!.footprint,dx=projection.x*height(b),dy=projection.y*height(b);
     polygon(c,q);

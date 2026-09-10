@@ -106,3 +106,5 @@ Code checks and static reviews do not establish gameplay feel, economy balance o
 
 - [Charms](charms.md): magic stones, active inventory grid, size budgets and utility rewards.
 - [Stats and scaling audit · September 9](stats-audit-2026-09-09.md): verified stat flow, corrected edge cases, reproducible progression comparisons and remaining balance concerns.
+
+- [Outdoor lighting detail](outdoor-lighting.md): local Verdant/Mire canopy shafts, damp materials, illuminated mist and rendering budgets.
