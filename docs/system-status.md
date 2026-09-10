@@ -1,5 +1,7 @@
 # Current system status
 
+Local, 2026-09-10: Enchanter skill resets cost 25 gold per refunded point. Settlement expedition tables unlock ten-stage saved dungeon routes at level 20, with forks, stage modifiers, death resets and an Epic/Legendary-weighted final chest. Six dungeon themes share distinct entrances and interiors; three new styles also appear in the wilderness. See [Expeditions and respec](expeditions.md). Not yet published.
+
 Local settlement rework · generation 10 (2026-09-09): three settlement tiers, outdoor starting refuges without houses, families, gambling and personal storage. Generation-9 characters upgrade on Continue, preserving progression and exploration. The original save is retained until the upgrade commits. See [Settlements](settlements.md). Earlier generation/layout statements below describe the prior checkpoint.
 Local, 2026-09-08: bounded regional scaling connects ordinary −1/+1 encounters, ranked +1/+2/+3 threats, saved camp/trial/dungeon baselines, source-level rewards, vendors, map ranges and onward Journey guidance. All event families are eligible from level one. Generation-9 saves remain compatible. See [regional scaling](region-scaling.md). This pass is not published.
 

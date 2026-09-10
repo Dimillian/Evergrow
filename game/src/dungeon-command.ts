@@ -58,7 +58,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
             const previous=state.route;
             if(action.attempt!==(previous?.attempt??0))return {ok:false,message:'This route changed. Open the table again.'};
             if(action.resume){
-                expeditionEntrance=state.runs.find(r=>r.entrance.id===action.resume&&r.entrance.expedition?.attempt===previous?.attempt)?.entrance;
+                expeditionEntrance=state.runs.find(r=>!!previous&&!!r.entrance.expedition&&r.entrance.id===action.resume&&r.entrance.expedition.attempt===previous.attempt)?.entrance;
                 if(!expeditionEntrance||previous?.status==='failed')return {ok:false,message:'This dungeon is no longer available.'};
             }else {
             if(!previous||previous.status!=='active') {
@@ -121,7 +121,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
         state.surface = null;
         state.location = null;
         if(action.kind==='death' && run.entrance.expedition && state.route){
-            state.route.status='failed';state.route.choice=null;state.runs=state.runs.filter(r=>!r.entrance.expedition);
+            state.route.status='failed';state.route.choice=null;state.route.cleared=0;state.runs=state.runs.filter(r=>!r.entrance.expedition);
         }
         checkpoint.travel = { ...sim.travel, returnTo: action.kind === 'town' ? { x: p.x, y: p.y, town: action.anchor.band, dungeon: run.entrance.id } : null };
     }

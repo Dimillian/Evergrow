@@ -38,7 +38,7 @@ The atlas alone uses a 0.001 minimum zoom; gameplay retains 0.025. Shared terrai
 
 ### Dungeon workshop
 
-The World workspace’s Dungeon tool (`/dungeon.html?view=gallery&seed=7319`) compares Rootbound Crypt, Cinder Foundry and Drowned Vault maps using consecutive seeds. Seed input, New seed and PNG export support repeatable reviews. Click a room on Floor map or select a chamber in the sidebar to inspect actual runtime materials, props, fixtures and themed enemies. Chamber, Corridor and Encounter modes freeze disposable actors while lights animate at 30 Hz. The tool imports shared `generateDungeon`, `drawDungeonMap`, `DungeonWorld` and `Renderer`; it has no alternate generator or playable saves.
+The World workspace’s Dungeon tool (`/dungeon.html?view=gallery&seed=7319`) compares six dungeon themes using consecutive seeds. `view=entrances` shows their shared runtime entrance art; `expedition` selects the larger level-24 review floors. The Theme selector includes Rime Cathedral, Sunken Ossuary and Astral Archive. Seed input, New seed and PNG export support repeatable reviews. Click a room on Floor map or select a chamber in the sidebar to inspect actual runtime materials, props, fixtures and themed enemies. Chamber, Corridor and Encounter modes freeze disposable actors while lights animate at 30 Hz. The tool imports shared `generateDungeon`, `drawDungeonMap`, `DungeonWorld` and `Renderer`; it has no alternate generator or playable saves.
 
 ### Settlement workshop
 
@@ -65,3 +65,7 @@ The outdoor lighting study now covers all nine climates. Use its time slider, Da
 ### Settlement night study
 
 World → Settlement nights opens `/layouts.html?lighting`. The existing settlement views share live time-of-day controls and a 30 Hz presentation loop, with reduced-motion/hidden-tab suspension. The simulation remains paused in disposable memory. Save PNG encodes only on demand, never on each animation frame. Render timings expose a bounded 600-frame CPU sample; setup, scenery, props, structures and characters help locate drawing costs. Nested timings overlap (world contains the other render stages; actors contains props/structures/characters), so do not sum them. GPU completion and playable simulation are not measured.
+
+### Expedition and respec studies
+
+The World workspace includes `/tools/expeditions.html`, a disposable instance of the runtime expedition panel. `stage=0..9`, `level=19` and `failed` expose progression, the level gate and failed-route states. Equipment includes `/services.html?role=enchanter&respec` for exact reset pricing and point refunds. These studies do not access playable saves.

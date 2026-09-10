@@ -13,7 +13,7 @@ test('three seeded settlement tiers have their own services, homes, walls and im
   const place=settlementPlace(seed,cell,0),town=generateSettlement(seed,place);tiers.add(town.kind);layouts.add(town.layout);
   assert.deepEqual(town,generateSettlement(seed,place));assert.ok(town.radius<=MAX_TOWN_RADIUS);
   if(!cell){assert.equal(town.kind,'settlement');assert.equal(town.buildings.filter(b=>b.form==='house').length,0);assert.equal(town.buildings.filter(b=>b.form==='stall').length,4);}
-  for(const kind of['blacksmith','merchant','chapel','gambler','stash','hearth'])assert.ok(town.buildings.some(b=>b.kind===kind));
+  for(const kind of['blacksmith','merchant','chapel','gambler','stash','hearth','expedition'])assert.ok(town.buildings.some(b=>b.kind===kind));
   if(town.kind==='city')assert.ok(town.buildings.some(b=>b.kind==='noble'));
   assert.equal(new Set(town.buildings.map(b=>b.id)).size,town.buildings.length);
   for(const b of town.buildings)for(const [x,y]of [[b.x,b.y],[b.x+b.width,b.y+b.height]])assert.ok(Math.hypot(x-town.x,y-town.y)<town.radius);

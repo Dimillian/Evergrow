@@ -166,9 +166,9 @@ export function drawCryptDecor(c: CanvasRenderingContext2D, f: DungeonFloor, run
             c.strokeStyle = '#50829266'; c.lineWidth = 1; c.beginPath(); c.ellipse(x,y+37,38,16,0,0,7); c.stroke();
         }
     }
-    drawCryptGate(c, {...f.entry,seed:f.seed}, time);
+    drawCryptGate(c, {...f.entry,seed:f.seed,theme:f.theme}, time);
     if (run.states.warden.hp <= 0)
-        drawCryptGate(c, {...f.exit,seed:f.seed}, time);
+        drawCryptGate(c, {...f.exit,seed:f.seed,theme:f.theme}, time);
     f.chests.forEach((p,i)=>{const grand=i===2&&run.entrance.expedition?.stage===9;c.save();c.translate(p.x,p.y);if(grand){drawGlow(c,0,-12,90,'#c19af0',.3);c.scale(1.5,1.5);}chests.draw(c,`${run.entrance.id}:chest:${i}`,0,0,run.chestMasks[i]!==0,time,0,grand,reduced);c.restore();});
 }
 

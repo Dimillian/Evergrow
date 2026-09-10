@@ -47,6 +47,7 @@ Updated 2026-09-07. Use the current guides for implementation. Proposed designs 
 | Drainage, cell-based water and shader optics | [Living water](living-water.md) |
 | Wilderness bosses, lairs and hoards | [Wilderness bosses](wilderness-bosses.md) |
 | Camps, landmarks and roaming | [Wilderness and encounters](wilderness-and-encounters.md) |
+| Level-20 expedition routes and affordable skill resets | [Expeditions and respec](expeditions.md) |
 | Procedural crypt floors, boss, treasure and location saves | [Dungeons](dungeons.md) |
 | Chests, timed waves, regional POIs and guardian recipes | [Interactive POIs](interactive-pois.md) |
 | Minimal activity guidance, journal and tracked markers | [Journeys](journeys.md) |

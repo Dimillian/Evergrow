@@ -73,3 +73,7 @@ The shared world clock fades exterior lighting in through dusk: warm window pane
 Static fortification timbers/masonry are cached per immutable building, keeping each span's existing actor depth. Their shared directional shadows remain live. The LRU is limited to 512 spans and six million pixels (24 MB of RGBA pixels, excluding browser overhead); renderer resets release it. Animated fires, awnings and roof cutaways are not frozen by this cache.
 
 `/layouts.html?lighting&view=village&seed=406135043&hour=22` adds a live 30 Hz study, a time slider, Noon/Dusk/Night presets, a one-minute day cycle, PNG export and opt-in CPU timings. It uses the runtime renderer and disposable paused simulation; it never plays or reads a character save.
+
+### Expedition table · local 2026-09-10
+
+Every tier now places one small chart table on a clear patch beside its existing paths, preserving existing building IDs and vendor/resident placement. Approach and press E (or click) to view a ten-stage route; entry unlocks at level 20. Tables use the same saved route for the character, whichever town they visit. See [Expeditions](expeditions.md).
