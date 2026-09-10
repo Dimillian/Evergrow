@@ -29,6 +29,19 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.6 / Sites version 37, publicly deployed on 2026-09-10 at 11:57:42 UTC.
+- Published source: `9cb0458f289c11e9b2b62d523e84cc0d6f64bbd6`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_80060e300e988191a42d29f7e477e4fd`.
+- Deployment: `appgdep_6aa29b22f82c8191b893b1204813d8d5`; Sites returned `succeeded`.
+- Level-20 ten-stage expeditions, revealed route map, eight modifiers, grand-chest rewards, affordable enchanter skill respec and three additional dungeon themes with distinct entrances/bosses.
+- Dungeon-specific Journey guidance, accelerated crowd collision and roster queries, and offscreen enemy drawing culling.
+- Cloud roster/upload failure isolation, clearer recovery actions and Chronicle-backed replacement/deletion recovery.
+- Existing characters and progress are preserved; no save reset or database migration.
+- The 1,166-test regression run passed 1,165 tests; its remaining core-boundary check exposed two missing compiler-list entries. Both architecture tests passed after correction, followed by full type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.5 / Sites version 36, publicly deployed on 2026-09-10 at 06:13:19 UTC.
 - Published source: `7d969525dec524642f1bcc16e5469bcd37c156d8`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_43e24ace2bd881919fe2af15a207de7b`.
