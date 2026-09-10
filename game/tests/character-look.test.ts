@@ -139,7 +139,9 @@ test('cloud cached v3 reads migrate without modifying stored recovery bytes or p
     assert.deepEqual(staged.upload!.bundle,bundle,'the immutable upload keeps the original v3 request');
     const read=await cache.execute({kind:'read',index:0}) as CloudRow;
     assert.deepEqual(read,staged);
-    const rows=await cache.execute({kind:'list'}) as CloudRow[];assert.deepEqual(rows,[read]);
+    // Raw enumeration isolates migration/validation per slot in the cloud worker.
+    const rows=await cache.execute({kind:'list'}) as CloudRow[];
+    assert.deepEqual(rows,[{...read,bundle}]);
     const stored=await new Promise<CloudRow>((resolve,reject)=>{
       const open=factory.open('evergrow-cloud:appearance-migration');
       open.onerror=()=>reject(open.error);

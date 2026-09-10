@@ -1,6 +1,7 @@
 import { equippedGearPower } from './leaderboard.ts';
 import { characterPower, previewCharacter } from './character-summary.ts';
-import { bundleChart, chartKey, encodeChart } from './save-bundle.ts';
+import { bundleChart, chartKey, encodeChart, decodeSaveBundle } from './save-bundle.ts';
+import { CloudSaveError } from './cloud-errors.ts';
 import type { CloudRow } from './cloud-cache.ts';
 import { openCloudCache, prepareCloudSave, type CacheCommand } from './cloud-cache.ts';
 import type { CharacterSave } from './character-save.ts';
@@ -12,7 +13,7 @@ scope.onmessage = ({ data }) => {
   queue = queue.then(async () => {
     try {
       let result: unknown;
-      if (data.method === 'init') { cache = openCloudCache(indexedDB, data.account); result = true; }
+      if (data.method === 'init') { cache = openCloudCache(indexedDB, data.account); await cache.ready; result = true; }
       else if (data.method === 'write-bundle') {
         const old=await cache.execute({kind:'read',index:data.index}) as CloudRow|null;
         const row = await cache.execute({ kind: 'write', index: data.index, expected: data.expected, operation: data.operation,
@@ -21,9 +22,17 @@ scope.onmessage = ({ data }) => {
       }
       else if (data.method === 'list-info') {
         const rows = await cache.execute({ kind: 'list' }) as CloudRow[];
-        result = rows.map(({ index, token, base, dirty, conflict, bundle }) => ({ index, token, base, dirty, conflict,
-          summary: bundle ? { name: bundle.character.name, level: bundle.character.checkpoint.level, updatedAt: bundle.character.updatedAt,
-            power: characterPower(previewCharacter(bundle.character)).power, gearPower: equippedGearPower(bundle.character.checkpoint.character) } : undefined }));
+        result = rows.map(({ index, token, base, dirty, conflict, bundle }) => {
+          const info = { index, token, base, dirty, conflict };
+          if (!bundle) return info;
+          try {
+            const decoded = decodeSaveBundle(JSON.stringify(bundle));
+            if (!decoded) throw new CloudSaveError();
+            const record = decoded.character;
+            return { ...info, summary: { name: record.name, level: record.checkpoint.level, updatedAt: record.updatedAt,
+              power: characterPower(previewCharacter(record)).power, gearPower: equippedGearPower(record.checkpoint.character) } };
+          } catch { return { ...info, invalid: true }; }
+        });
       }
       else if (data.method === 'chart-status') {
         const rows = await cache.execute({ kind: 'list' }) as CloudRow[];
@@ -38,6 +47,6 @@ scope.onmessage = ({ data }) => {
       else if (data.method === 'encode-request') result = JSON.stringify(data.body);
       else result = await cache.execute(data.command as CacheCommand);
       scope.postMessage({ id: data.id, result });
-    } catch (error) { scope.postMessage({ id: data.id, error: (error as Error).message }); }
+    } catch (error) { scope.postMessage({ id: data.id, error: (error as Error).message, errorKind: error instanceof CloudSaveError ? 'save' : 'storage' }); }
   });
 };

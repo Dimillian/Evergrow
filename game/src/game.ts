@@ -212,6 +212,7 @@ export class Game {
         create: (index, name, weapon, seed) => this.editNewCharacter(index, name, weapon, seed),
         continue: index => this.continueCharacter(index), remove: (index, expected) => this.deleteCharacter(index, expected),
         read: index => this.saveClient.read(index), source: mode => this.selectSaveSource(mode),
+        retry: () => { void this.retryCloudSaves(); },
         leaderboard: order => this.saveClient.leaderboard(order),
         ...(!window.EvergrowAndroid ? { download: (index: number) => this.downloadSave(index), import: (index: number, file: File) => this.importSave(index, file) } : {}),
         useCloud: (index, expected) => this.resolveCloudSave(index, expected),
@@ -308,7 +309,7 @@ export class Game {
       this.bind();
       this.showMenu();
       this.saveClient.chart = record => this.session.active?.record.id === record.id ? this.exploration.snapshot() : undefined;
-      this.saveClient.onChange = state => { if (!this.disposed) { this.titleScreen.setSource(state); if (state.mode === 'cloud') this.shell.setSaveStatus(state.status, state.status === 'Conflict' || state.status === 'Offline'); } };
+      this.saveClient.onChange = state => { if (!this.disposed) { this.titleScreen.setSource(state); if (state.mode === 'cloud') this.shell.setSaveStatus(state.status, !['Synced', 'Saving…'].includes(state.status)); } };
       this.titleScreen.setSource({ ...this.saveClient.state, supported: !!import.meta.env.VITE_SITE_CLOUD && !window.EvergrowAndroid, mode: import.meta.env.VITE_SITE_CLOUD && !window.EvergrowAndroid ? 'cloud' : 'local', status: 'Loading…' });
       this.titleScreen.open([]);
       void this.saveClient.initialize().then(() => this.loadRoster());
@@ -627,6 +628,13 @@ export class Game {
   private async selectSaveSource(mode: SaveMode) {
     if (this.phase !== 'ready' || this.hallBusy || this.session.active) return;
     await this.saveClient.select(mode); await this.loadRoster();
+  }
+  private async retryCloudSaves() {
+    if (this.phase !== 'ready' || this.hallBusy || this.appearanceEditor || this.disposed) return;
+    this.hallBusy = true;
+    try { await this.saveClient.retry(); }
+    finally { this.hallBusy = false; }
+    if (!this.disposed) await this.loadRoster();
   }
   private async downloadSave(index: number) {
     if (this.saveClient.mode !== 'local' || this.phase !== 'ready' || this.hallBusy) return;

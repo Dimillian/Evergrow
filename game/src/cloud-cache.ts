@@ -3,6 +3,7 @@ import type { CharacterSave } from './character-save.ts';
 import type { DecodedExploration } from './exploration-save.ts';
 import { emptyChronicle, mergeChronicles, parseChronicleLedger, recordChronicle, type ChronicleLedger } from './chronicle.ts';
 import { decodeSaveBundle, makeSaveBundle, bundleChart, type SaveBundle } from './save-bundle.ts';
+import { CloudSaveError } from './cloud-errors.ts';
 export interface CloudUpload { operation: string; base: number; bundle: SaveBundle | null; }
 export interface CloudRow { history?:ChronicleLedger; upload?: CloudUpload; index: number; token: string; base: number; bundle: SaveBundle | null; dirty: boolean; operation: string; conflict: boolean; }
 /** Called by the save worker before its revision-checked bundle transaction. */
@@ -12,11 +13,11 @@ export function prepareCloudSave(old:CloudRow|null,record:CharacterSave,chart?:D
     chart=upgradeWorldChart(bundleChart(previous),record.worldSeed);
   return makeSaveBundle(record,chart);
 }
-/** Migrate the live read projection without rewriting cached bytes or an immutable upload retry. */
+/** Validate the live read projection without rewriting cached bytes or an immutable upload retry. */
 function currentRow(row:CloudRow):CloudRow {
-  if(row.bundle && Number(row.bundle.character.version)===3){
+  if(row.bundle){
     const bundle=decodeSaveBundle(JSON.stringify(row.bundle));
-    if(!bundle)throw new Error('Invalid save file.');
+    if(!bundle)throw new CloudSaveError('This saved character cannot be read by this version. Its recovery copy is preserved.');
     return {...row,bundle};
   }
   return row;
@@ -24,6 +25,7 @@ function currentRow(row:CloudRow):CloudRow {
 export type CacheCommand =
   | {kind:'chronicle'} | {kind:'read-history'} | {kind:'history'; ledger:ChronicleLedger}
   | { kind: 'list' } | { kind: 'read'; index: number }
+  | { kind: 'inspect'; index: number }
   | { kind: 'write'; index: number; expected: string | null; bundle: SaveBundle | null; operation: string }
   | { kind: 'upload'; index: number }
   | { kind: 'resolve'; index: number; expected: string; bundle: SaveBundle | null; base: number }
@@ -38,9 +40,9 @@ export function openCloudCache(factory: IDBFactory, account: string) {
     r.onsuccess = () => { r.result.onversionchange = () => r.result.close(); resolve(r.result); };
     r.onerror = () => reject(r.error); r.onblocked = () => reject(new Error('Close other Evergrow tabs.'));
   });
-  return { close: async () => (await opened).close(), execute: async (command: CacheCommand): Promise<CloudRow | CloudRow[] | ChronicleLedger | null> => {
+  return { ready: opened.then(() => {}), close: async () => (await opened).close(), execute: async (command: CacheCommand): Promise<CloudRow | CloudRow[] | ChronicleLedger | null> => {
     if ('index' in command && (!Number.isInteger(command.index) || command.index < 0 || command.index > 7)) throw new Error('Invalid slot.');
-    if ((command.kind === 'write' || command.kind === 'adopt' || command.kind === 'resolve') && command.bundle && !decodeSaveBundle(JSON.stringify(command.bundle))) throw new Error('Invalid save file.');
+    if ((command.kind === 'write' || command.kind === 'adopt' || command.kind === 'resolve') && command.bundle && !decodeSaveBundle(JSON.stringify(command.bundle))) throw new CloudSaveError('This saved character cannot be read by this version. The original save is preserved.');
     const db = await opened;
     if(command.kind==='chronicle')return new Promise<ChronicleLedger>((resolve,reject)=>{
       const tx=db.transaction(['slots','history'],'readonly');
@@ -59,7 +61,7 @@ export function openCloudCache(factory: IDBFactory, account: string) {
       tx.oncomplete=()=>resolve(ledger);tx.onerror=tx.onabort=()=>reject(tx.error??new Error('Chronicle unavailable.'));
     });
     return new Promise((resolve, reject) => {
-      const tx = db.transaction('slots', command.kind === 'list' || command.kind === 'read' ? 'readonly' : 'readwrite');
+      const tx = db.transaction('slots', command.kind === 'list' || command.kind === 'read' || command.kind === 'inspect' ? 'readonly' : 'readwrite');
       const store = tx.objectStore('slots');
       const request = command.kind === 'list' ? store.getAll() : store.get(command.index);
       let result: CloudRow | CloudRow[] | null = null;
@@ -67,7 +69,7 @@ export function openCloudCache(factory: IDBFactory, account: string) {
         if (command.kind === 'list') { result = request.result; return; }
         const row: CloudRow | null = request.result ?? null;
         result = row;
-        if (command.kind === 'read') return;
+        if (command.kind === 'read' || command.kind === 'inspect') return;
         if (command.kind === 'write' || command.kind === 'adopt' || command.kind === 'resolve') {
           if ((row?.token ?? null) !== command.expected || command.kind === 'adopt' && row?.dirty || command.kind === 'resolve' && !row?.conflict) { result = null; return; }
           result = { index: command.index, token: String(Number(row?.token ?? 0) + 1),
@@ -83,7 +85,10 @@ export function openCloudCache(factory: IDBFactory, account: string) {
         }
         if (result && !Array.isArray(result)) {
           let history=row?.history??emptyChronicle();
-          if(row?.bundle&&!row.dirty&&!row.conflict)history=recordChronicle(history,row.bundle.character,!result.bundle);
+          if(row?.bundle&&!row.dirty&&!row.conflict) {
+            const previous = decodeSaveBundle(JSON.stringify(row.bundle));
+            if (previous) history=recordChronicle(history,previous.character,!result.bundle);
+          }
           // Only acknowledged history is permanent. Divergent recovery never pollutes account totals.
           if(command.kind==='ack'&&row?.upload?.bundle)history=recordChronicle(history,row.upload.bundle.character);
           if((command.kind==='adopt'||command.kind==='resolve')&&command.bundle)history=recordChronicle(history,command.bundle.character);
@@ -92,7 +97,8 @@ export function openCloudCache(factory: IDBFactory, account: string) {
         }
       };
       tx.oncomplete = () => {
-        try { resolve(Array.isArray(result)?result.map(currentRow):result?currentRow(result):null); }
+        // Listing raw rows must not let one incompatible character hide all other slots.
+        try { resolve(Array.isArray(result)||command.kind==='inspect'?result:result?currentRow(result):null); }
         catch(error){reject(error);}
       };
       tx.onabort = tx.onerror = () => reject(tx.error ?? new Error('Save storage unavailable.'));

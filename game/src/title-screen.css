@@ -62,6 +62,9 @@
 .title-roster-footer { display:flex; align-items:center; justify-content:space-between; gap:8px; border-top:1px solid #718c9038; padding:8px 18px; color:#8ea8a3; font-size:12px; }
 .title-storage-status::before { content:'◆'; font-size:8px; color:#9bbfa1; margin-right:8px; }
 .title-storage-status[data-status='Conflict']::before, .title-storage-status[data-status='Offline']::before { color:#efb575; }
+.title-cloud-recovery { padding:12px 16px; border-top:1px solid #879b9838; color:#efc99c; }
+.title-cloud-recovery[hidden] { display:none; }
+.title-cloud-message { margin:0 0 10px; font:14px var(--ui-font); }
 .title-transfer { display:flex; gap:12px; }
 .title-transfer button { padding:7px 0; border:0; background:none; color:#b6c8c3; font:13px var(--ui-font); cursor:pointer; }
 .title-transfer button:disabled { opacity:.3; cursor:default; }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { IDBFactory } from 'fake-indexeddb';
-import { cloudAPI, type CloudEnv } from '../server/worker.ts';
+import cloudServer, { cloudAPI, type CloudEnv } from '../server/worker.ts';
 import { backfillGearPower, savedGearPower } from '../server/leaderboard-backfill.ts';
 import { equippedGearPower } from '../src/leaderboard.ts';
 import { openCloudCache, type CloudRow } from '../src/cloud-cache.ts';
@@ -251,4 +251,36 @@ test('generation-9 uploads can finish across deployment before the same characte
  assert.deepEqual(bundleChart(saved.bundle).chunks,bundleChart(old).chunks);
  const unsupported=fixture();unsupported.character.worldVersion=8;const bad=makeSaveBundle(unsupported.character,oldChart);
  assert.equal((await s.request('unsupported-owner','characters/0',write(bad))).status,422);
+});
+
+test('validated stored Chronicle allows deletion or replacement even when the old gameplay checkpoint is incompatible', async t => {
+  for (const action of ['delete', 'replace'] as const) await t.test(action, async t => {
+    const s = server(); t.after(() => s.db.close());
+    const original = fixture(); original.character.checkpoint.chronicle!.sources[0].values.kills = 37;
+    assert.equal((await s.request('A', 'characters/0', write(original))).status, 200);
+    const row = s.db.prepare('SELECT object FROM characters WHERE owner=?').get('A') as { object: string };
+    const invalid = structuredClone(original); invalid.character.checkpoint.character.skillPoints = 999;
+    s.blobs.set(row.object, JSON.stringify(invalid));
+    const updated = action === 'delete' ? null : fixture();
+    if (updated) updated.character.updatedAt = 2;
+    const response = await s.request('A', 'characters/0', write(updated, 1));
+    assert.equal(response.status, 200);
+    const ledger = await (await s.request('A', 'chronicle')).json();
+    assert.equal(ledger.characters['cloud-test'].deleted, action === 'delete');
+    assert.equal(Object.values(ledger.sources).reduce((n: number, source: any) => n + (source.values.kills ?? 0), 0), 37);
+    assert.equal(s.blobs.get(row.object), JSON.stringify(invalid), 'the previous immutable checkpoint remains the backup');
+    assert.equal((await s.request('B', 'characters/0', write(updated, 1))).status, 409, 'other accounts cannot overwrite this revision');
+  });
+});
+test('backend failures log a safe stage and request reference without save data or backend messages', async t => {
+  const s = server(); t.after(() => s.db.close());
+  const entries: unknown[] = [];
+  t.mock.method(console, 'error', (value: unknown) => { entries.push(value); });
+  s.env.DB.prepare = () => { throw new Error('private SQL owner=secret-owner'); };
+  const response = await cloudServer.fetch(new Request('https://evergrow.test/api/cloud/characters/0', {
+    headers: { 'oai-authenticated-user-id': 'secret-owner', 'X-Evergrow-Account': 'secret-owner', 'cf-ray': 'request-reference' },
+  }), s.env);
+  assert.equal(response.status, 503);
+  assert.deepEqual(entries, [{ event: 'cloud-request-failed', method: 'GET', path: '/api/cloud/characters/0', requestId: 'request-reference', status: 503, code: 'backend_failure', stage: 'character-row-read' }]);
+  assert.ok(!JSON.stringify(entries).includes('secret-owner'));
 });

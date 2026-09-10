@@ -26,6 +26,7 @@ export interface TitleActions extends AudioControlActions {
   create(index: number, name: string, weapon: StarterLoadoutId, seed: number): void;
   continue(index: number): void; remove(index: number, expected: string | null): void;
   read?(index: number): Promise<SaveSlot>; source?(mode: SaveMode): void;
+  retry?(): void;
   download?(index: number): void; import?(index: number, file: File): void; useCloud?(index: number, expected: string | null): void;
 }
 export type HomePage = 'characters' | 'chronicle' | 'leaderboard' | 'changelog';
@@ -68,6 +69,7 @@ export class TitleScreen {
       <section class="title-roster ui-window" aria-labelledby="roster-title"><header class="title-roster-header"><h2 id="roster-title">Characters</h2><div class="title-sources" role="group" aria-label="Save location" hidden><button data-source="cloud">Cloud</button><button data-source="local">Local</button></div><span class="title-controller-hint"><kbd>A</kbd> Continue</span><span class="title-slot-count"></span></header>
       <div class="title-hall-body"><div class="title-slot-grid" role="group" aria-label="Eight character slots"></div><div class="title-selection"></div></div>
       <footer class="title-roster-footer"><span class="title-storage-status" role="status"></span><a class="title-signout" href="/signout-with-chatgpt?return_to=/" target="_top" hidden>Sign out</a><span class="title-transfer"><button data-action="import">Import</button><button data-action="download">Download</button></span></footer>
+      <div class="title-cloud-recovery" hidden><p class="title-cloud-message" role="status"></p><button class="ui-button" data-action="retry">Retry</button><a class="ui-button" href="/signin-with-chatgpt?return_to=/" target="_top" hidden>Sign in again</a></div>
       <p class="title-save-message" role="status" hidden></p><input type="file" class="title-file" accept=".json,application/json" hidden></section><section class="title-library ui-window" hidden aria-label="Home content"></section>`;
     const refreshAudio = this.refreshAudio = bindAudioControls(this.element, actions, this.abort.signal);
     this.element.querySelector('details.title-audio')!.addEventListener('toggle', event => {
@@ -103,7 +105,7 @@ export class TitleScreen {
       if (button.dataset.source) { this.actions.source?.(button.dataset.source as SaveMode); return; }
       if (button.dataset.slot !== undefined) { this.choose(Number(button.dataset.slot)); return; }
       const action = button.dataset.action;
-      if (action === 'retry') window.location.reload();
+      if (action === 'retry') { if (this.source.status === 'Reload required' || !this.actions.retry) window.location.reload(); else this.actions.retry(); }
       if (action === 'continue') this.actions.continue(this.selected);
       if (action === 'delete' || action === 'cloud') { this.confirming = action; this.renderSelection(); this.element.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.focus(); }
       if (action === 'cancel') { this.confirming = null; this.renderSelection(); }
@@ -160,6 +162,13 @@ export class TitleScreen {
     const status = this.element.querySelector<HTMLElement>('.title-storage-status')!;
     status.textContent = source.mode === 'local' ? 'On this device' : source.status;
     status.dataset.status = source.status;
+    const recovery = this.element.querySelector<HTMLElement>('.title-cloud-recovery')!;
+    recovery.hidden = source.mode !== 'cloud' || !['Offline', 'Cloud unavailable', 'Save needs attention', 'Storage unavailable', 'Reload required', 'Sign in again', 'Unavailable'].includes(source.status);
+    recovery.querySelector('p')!.textContent = source.message || (source.status === 'Save needs attention' ? 'A saved character needs attention. Other slots are still available.' : 'Cloud saves could not be reached. Retry to reconnect.');
+    const retry = recovery.querySelector('button')!;
+    retry.textContent = source.status === 'Reload required' ? 'Reload game' : 'Retry';
+    retry.hidden = source.status === 'Sign in again';
+    recovery.querySelector('a')!.hidden = source.status !== 'Sign in again';
   }
   open(slots: SaveSlot[], preferred?: number) {
     this.selectPage('characters', false); this.element.inert = false;

@@ -10,7 +10,7 @@ import type { CharacterRepositoryPort, SaveResult } from './character-storage.ts
 import type { ChartResult, ExplorationPersistence } from './exploration.ts';
 import type { DecodedExploration } from './exploration-save.ts';
 export type SaveMode = 'cloud' | 'local';
-export interface SaveSourceUI { supported: boolean; mode: SaveMode; signedIn: boolean; status: string; }
+export interface SaveSourceUI { supported: boolean; mode: SaveMode; signedIn: boolean; status: string; message?: string; }
 /** Explicit storage selection. Android/local builds never contact cloud endpoints. */
 export class SaveHub implements CharacterRepositoryPort, ExplorationPersistence {
   private local = new SaveClient();
@@ -21,7 +21,7 @@ export class SaveHub implements CharacterRepositoryPort, ExplorationPersistence 
   status = '';
   onChange = (_state: SaveSourceUI) => {};
   chart: (record: CharacterSave) => DecodedExploration | undefined = () => undefined;
-  get state(): SaveSourceUI { return { supported: this.supported, mode: this.mode, signedIn: !!this.cloud, status: this.mode === 'local' ? 'Local' : this.cloud?.status ?? this.status }; }
+  get state(): SaveSourceUI { return { supported: this.supported, mode: this.mode, signedIn: !!this.cloud, status: this.mode === 'local' ? 'Local' : this.cloud?.status ?? this.status, message: this.mode === 'cloud' ? this.cloud?.message : undefined }; }
   get repository() { if (this.mode === 'local') return this.local; if (!this.cloud) throw new Error('Sign in to use cloud saves.'); return this.cloud; }
   async initialize() {
     if (!import.meta.env.VITE_SITE_CLOUD || window.EvergrowAndroid) return;
@@ -40,6 +40,11 @@ export class SaveHub implements CharacterRepositoryPort, ExplorationPersistence 
     this.onChange(this.state);
   }
   async select(mode: SaveMode) { if (mode === 'cloud' && !this.supported) return; this.mode = mode; this.onChange(this.state); }
+  async retry() {
+    if (this.mode !== 'cloud') return;
+    if (!this.cloud) await this.initialize();
+    else { await this.cloud.retryStorage(); await this.cloud.flush(); }
+  }
   async list() {
     if (this.mode === 'cloud' && !this.cloud) return [];
     return this.repository.list();

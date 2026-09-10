@@ -14,6 +14,13 @@ export interface CloudEnv {
 }
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Vary': 'Cookie', 'X-Content-Type-Options': 'nosniff' } });
 const hash = async (value: string) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))].map(n => n.toString(16).padStart(2, '0')).join('');
+class BackendFailure extends Error {
+  stage: string;
+  constructor(stage: string) { super('Cloud backend request failed.'); this.stage = stage; }
+}
+async function backend<T>(stage: string, work: () => Promise<T>): Promise<T> {
+  try { return await work(); } catch { throw new BackendFailure(stage); }
+}
 async function boundedBody(request: Request): Promise<string> {
   if (Number(request.headers.get('Content-Length')) > SAVE_BUNDLE_LIMIT) throw new Error('large');
   const reader = request.body?.getReader(); if (!reader) throw new Error('body');
@@ -52,12 +59,12 @@ export async function cloudAPI(request: Request, env: CloudEnv): Promise<Respons
   const match = /^\/api\/cloud\/characters\/([0-7])$/.exec(url.pathname);
   if (!match) return json({ error: 'Not found.' }, 404);
   const slot = Number(match[1]);
-  const current = () => env.DB.prepare('SELECT * FROM characters WHERE owner = ? AND slot = ?').bind(owner, slot).first<Row>();
+  const current = () => backend('character-row-read', () => env.DB.prepare('SELECT * FROM characters WHERE owner = ? AND slot = ?').bind(owner, slot).first<Row>());
   const row = await current();
   if (request.method === 'GET') {
     if (!row?.object) return json({ revision: row?.revision ?? 0, bundle: null });
-    const object = await env.SAVES.get(row.object);
-    if (!object) return json({ error: 'This checkpoint is unavailable. Please retry.' }, 503);
+    const object = await backend('checkpoint-read', () => env.SAVES.get(row.object!));
+    if (!object) return json({ code: 'checkpoint_missing', error: 'This checkpoint is unavailable. Please retry.' }, 503);
     return json({ revision: row.revision, bundle: JSON.parse(await object.text()) });
   }
   if (request.method !== 'PUT') return json({ error: 'Method not allowed.' }, 405);
@@ -69,18 +76,24 @@ export async function cloudAPI(request: Request, env: CloudEnv): Promise<Respons
   if (row?.operation === input.operation) return row.digest === digest ? json({ revision: row.revision }) : json({ error: 'Save request changed.' }, 409);
   if ((row?.revision ?? 0) !== input.expected) return json({ error: 'Cloud save changed on another device.' }, 409);
   const bundle = input.bundle === null ? null : decodeSaveBundle(raw);
-  if (input.bundle !== null && (!bundle || !canLoadWorld(bundle.character.worldVersion, WORLD_GENERATION_VERSION))) return json({ error: 'Invalid or incompatible save file.' }, 422);
+  if (input.bundle !== null && (!bundle || !canLoadWorld(bundle.character.worldVersion, WORLD_GENERATION_VERSION))) return json({ code: 'save_incompatible', error: 'This character save is incompatible with the current game. Its recovery copy is preserved.' }, 422);
   const r = bundle?.character;
   const summary = r ? JSON.stringify({ name: r.name, level: r.checkpoint.level, power: characterPower(previewCharacter(r)).power, gearPower: equippedGearPower(r.checkpoint.character), updatedAt: r.updatedAt }) : null;
   let history=parseChronicleLedger(row?.chronicle);
-  if(row?.object){const previous=await env.SAVES.get(row.object);if(!previous) return json({error:'Previous checkpoint unavailable.'},503);
-    const old=decodeSaveBundle(await previous.text());if(!old)return json({error:'Previous checkpoint invalid.'},503);
-    history=recordChronicle(history,old.character,!bundle);
+  // Every modern publication already stores its full validated Chronicle in D1.
+  // A changed gameplay validator must not block replacing/deleting that checkpoint.
+  if(row?.object && !row.chronicle){
+    const previous=await backend('previous-checkpoint-read', () => env.SAVES.get(row.object!));
+    if(!previous) return json({code:'previous_checkpoint_missing',error:'Previous checkpoint unavailable.'},503);
+    const old=decodeSaveBundle(await previous.text());
+    if(!old)return json({code:'previous_checkpoint_incompatible',error:'The previous character needs recovery before it can be replaced. Its save is preserved.'},422);
+    history=recordChronicle(history,old.character);
   }
+  if (!bundle) for (const character of Object.values(history.characters)) character.deleted = true;
   if(bundle)history=recordChronicle(history,bundle.character);
   const historyRaw=JSON.stringify(history);parseChronicleLedger(historyRaw);
   const key = bundle ? `${await hash(owner)}/${slot}/${crypto.randomUUID()}.json` : null;
-  if (key) await env.SAVES.put(key, raw);
+  if (key) await backend('checkpoint-write', () => env.SAVES.put(key, raw));
   let committed = false, safeToDelete = false;
   try {
     const result = await env.DB.prepare(`INSERT INTO characters (owner, slot, revision, object, previous, summary, operation, digest, updated_at, chronicle, rank_name, rank_level, rank_gear )
@@ -104,10 +117,22 @@ export async function cloudAPI(request: Request, env: CloudEnv): Promise<Respons
       if (observed?.operation === input.operation && observed.digest === digest) { committed = true; return json({ revision: observed.revision }); }
       safeToDelete = !!observed && observed.object !== key && observed.previous !== key;
     } catch { safeToDelete = false; }
-    throw error;
+    throw error instanceof BackendFailure ? error : new BackendFailure('character-row-publish');
   } finally { if (!committed && safeToDelete && key) try { await env.SAVES.delete(key); } catch { /* Unreferenced upload; old pointer remains intact. */ } }
 }
 export default { async fetch(request: Request, env: CloudEnv): Promise<Response> {
   if (!new URL(request.url).pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
-  try { return await cloudAPI(request, env); } catch { return json({ error: 'Cloud saves are temporarily unavailable.' }, 503); }
+  const context = { event: 'cloud-request-failed', method: request.method, path: new URL(request.url).pathname, requestId: request.headers.get('cf-ray') };
+  try {
+    const response = await cloudAPI(request, env);
+    if (response.status >= 400) {
+      const body = await response.clone().json() as { code?: string };
+      console.error({ ...context, status: response.status, code: body.code ?? 'request_rejected' });
+    }
+    return response;
+  } catch (error) {
+    // No identity, checkpoint content, object keys, SQL or credentials in diagnostics.
+    console.error({ ...context, status: 503, code: 'backend_failure', stage: error instanceof BackendFailure ? error.stage : 'request-processing' });
+    return json({ code: 'backend_failure', error: 'Cloud saves are temporarily unavailable. Try again shortly.' }, 503);
+  }
 } };
