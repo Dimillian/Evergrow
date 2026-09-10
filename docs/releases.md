@@ -29,6 +29,19 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.10 / Sites version 41, publicly deployed on 2026-09-10 at 19:22:57 UTC.
+- Published source: `b12ee24d269730964f27d3b45cb115077735384e`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_e367358dda808191893dd5a073056ff5`.
+- Deployment: `appgdep_6aa3037aaddc8191bccc613226912e43`; Sites returned `succeeded`.
+- Expedition tables share reachable-edge checks for opening and entering, with distinct level, distance and obstruction messages.
+- Expedition backdrops fill the panel while preserving centered route geometry; the character hall shows loading placeholders until the roster arrives.
+- Cloud initialization no longer creates a phantom slot while processing an early synchronization status.
+- Existing characters and progress are unchanged; no save reset or database migration.
+- Passed 14 expedition tests and eight title-action/changelog tests, application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.9 / Sites version 40, publicly deployed on 2026-09-10 at 19:14:36 UTC.
 - Published source: `7b7f3ced19a41f542eaf16e822ee74087c33be9d`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_f1d272a5f50c8191ade227102abf7879`.
