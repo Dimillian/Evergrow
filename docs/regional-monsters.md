@@ -1,5 +1,9 @@
 # Regional monsters
 
+Follow-up: wilderness groups now grow from 4–6 to 14–20 by encounter level, using two loose rings. Extra members repeat biome-compatible companion recipes and favor ordinary ranks. See [pack size bands](progression-and-loot.md#larger-wilderness-packs--local-2026-09-11); dungeon/camp/event rosters are unchanged. The four-to-six-member descriptions below record the original content checkpoint.
+
+Local 2026-09-11 refinement: elite-led roaming groups replace their first two escort slots with a complementary screen/ranged attacker and a flanker, using only biome-eligible weighted choices. Group size and spawning frequency are unchanged. Elite regional basics and signatures retain their warning geometry but have 25% stronger source hits and 15% shorter recovery. Shared control protection also applies to signature attacks; see [combat power audit](combat-power-audit.md).
+
 Implemented locally on 2026-09-07. Six regional archetypes expand the roster to eighteen enemy kinds: twelve ordinary roaming creatures, two goblins and four bosses. The save format and generation version are unchanged; existing characters encounter the new packs as they explore.
 
 ## Creatures and combat

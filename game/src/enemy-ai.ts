@@ -1,9 +1,10 @@
+import { enemyRecoveryDuration, enemyWindupDuration } from './enemy-threat.ts';
 import { projectileDamageType } from './resistance-content.ts';
 import type { DamageType } from './model.ts';
 import { hasWalkableSegment } from './world-navigation.ts';
 import { goblinSpeed, goblinDamage } from './warband.ts';
 import { alertEnemy, transitionEnemy } from './enemy-state.ts';
-import { ENEMY_AI_RULES, ENEMY_DEFINITIONS, ENEMY_SIGNATURE_ATTACKS, enemyAttackDefinition, type EnemyDefinition, type ProjectileDefinition } from './combat-content.ts';
+import { ENEMY_AI_RULES, ENEMY_DEFINITIONS, enemyAttackVariant, enemyAttackDefinition, type EnemyDefinition, type ProjectileDefinition } from './combat-content.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
 import type { CombatEvent, Enemy, Player, ProjectileEffects, WorldQuery } from './model.ts';
 
@@ -127,7 +128,7 @@ function chase(enemy: Enemy, dt: number, context: EnemyAIContext, definition: En
     enemy.attackDamage = enemy.damage * (definition.damage / ENEMY_DEFINITIONS[enemy.kind].damage) * goblinDamage(enemy) * ((enemy.rallyTime??0)>0?1.25:1);
     enemy.attackAngle = angle; enemy.attackTargetX = p.x; enemy.attackTargetY = p.y;
     enemy.attackTurns = ((enemy.attackTurns ?? 0) + 1) % 3;
-    transitionEnemy(enemy, 'windup', definition.windup); return;
+    transitionEnemy(enemy, 'windup', enemyWindupDuration(enemy, definition.windup)); return;
   }
 
   if (!hasSight || !context.visible(enemy.x, enemy.y, targetX, targetY)) { moveToward(enemy, targetX, targetY, pursuitSpeed * .8, dt, context); return; }
@@ -152,7 +153,7 @@ function chase(enemy: Enemy, dt: number, context: EnemyAIContext, definition: En
 
 /** Tick only a living, unstaggered actor; status/damage integration remains simulation-owned. */
 export function updateEnemyAI(enemy: Enemy, dt: number, context: EnemyAIContext): void {
-  if (enemy.state === 'chase') enemy.attackVariant = ENEMY_SIGNATURE_ATTACKS[enemy.kind] && (enemy.attackTurns ?? 0) % 3 === 2 ? 1 : 0;
+  if (enemy.state === 'chase') enemy.attackVariant = enemyAttackVariant(enemy);
   const p = context.player, definition = enemyAttackDefinition(enemy);
   if (context.world.isSanctuary?.(p.x, p.y)) {
     if (enemy.state !== 'return') disengage(enemy);
@@ -224,6 +225,6 @@ export function updateEnemyAI(enemy: Enemy, dt: number, context: EnemyAIContext)
         enemy.attackHit = true; context.hurt(enemy.attackDamage ?? enemy.damage, enemy.attackAngle, enemy, 'physical');
       }
     }
-    if (enemy.stateTime + 1e-9 >= enemy.stateDuration) transitionEnemy(enemy, 'recover', definition.recovery);
+    if (enemy.stateTime + 1e-9 >= enemy.stateDuration) transitionEnemy(enemy, 'recover', enemyRecoveryDuration(enemy, definition.recovery));
   }
 }

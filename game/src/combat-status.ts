@@ -1,5 +1,5 @@
 import { isBossKind } from './wilderness-boss-content.ts';
-import { WARDEN_RULES } from './dungeon-boss.ts';
+import { enemyThreat } from './enemy-threat.ts';
 import type { Enemy, ProjectileStyle } from './model.ts';
 import { interruptStaggeredEnemy } from './enemy-state.ts';
 
@@ -21,8 +21,13 @@ export function applyBurn(enemy: Enemy, effect: BurnEffect): void {
   enemy.burnDps = Math.max(enemy.burnDps, effect.dps);
 }
 export function applyStun(enemy: Enemy, duration: number, kind: 'stun' | 'freeze' | 'stagger' = 'stun'): void {
-  if (enemy.state === 'dead') return;
-  if (isBossKind(enemy.kind)) { if ((enemy.controlImmunity ?? 0) > 0) return; duration = Math.min(.35, duration * WARDEN_RULES.controlFactor); enemy.controlImmunity = WARDEN_RULES.controlImmunity; }
+  if (enemy.state === 'dead' || !Number.isFinite(duration) || duration <= 0) return;
+  const threat = enemyThreat(enemy);
+  if (threat.controlRest > 0) {
+    if ((enemy.controlImmunity ?? 0) > 0) return;
+    duration = Math.min(threat.controlMaximum, duration * threat.controlFactor);
+    enemy.controlImmunity = duration + threat.controlRest;
+  }
   enemy.stagger = Math.max(enemy.stagger, duration); enemy.interrupted = true;
   if (kind === 'freeze') enemy.freezeTime = Math.max(enemy.freezeTime ?? 0, duration);
   if (kind === 'stun') enemy.stunTime = Math.max(enemy.stunTime ?? 0, duration);
@@ -48,6 +53,9 @@ export function advanceEnemyStatuses(enemy: Enemy, dt: number, damage: (enemy: E
     if (enemy.hp <= 0) return false;
   }
   if (enemy.stagger > 0) {
+    // The clock advanced before statuses; a frozen/staggered actor cannot spend
+    // its recovery while control is suppressing the AI.
+    enemy.stateTime = Math.max(0, enemy.stateTime - dt);
     interruptStaggeredEnemy(enemy);
     enemy.stagger = Math.max(0, enemy.stagger - dt);
     enemy.vx = enemy.vy = 0;

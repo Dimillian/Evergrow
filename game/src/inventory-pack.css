@@ -8,7 +8,7 @@
 .inventory-pack .ui-item-grid-scroll, .ui-item-grid-scroll:has(> .inventory-pack) { overflow: clip; }
 .character-pack-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0 14px; }
 .character-pack-toolbar .ui-button { min-height: 32px; padding: 6px 9px; font-size: 12px; border-radius: 0; }
-.character-auto-sort { display: inline-flex; align-items: center; gap: 6px; color: #e0d6ad; border-color: #b5a76d66; background: #b5a76d10; }
+.character-auto-sort { display: inline-flex; align-items: center; gap: 6px; color: #c7dce5; border-color: #b8d3e038; background: #b8d3e008; }
 .character-auto-sort .ui-icon { width: 16px; height: 16px; }
 .character-sort-options { display: flex; gap: 2px; }
 .character-bag.character-tetris, .character-overflow-items, .character-charm-grid {
@@ -18,7 +18,10 @@
 .character-grid-cell { box-sizing: border-box; min-width: 0; width: var(--pack-cell); height: var(--pack-cell); padding: 0; background: #101b22; border: 1px solid #73929819; border-radius: 0; box-shadow: inset 0 1px #95b9bf06; }
 .character-grid-cell:hover { background: #1a2b31; }
 .character-tetris .character-bag-slot, .character-overflow-items .character-bag-slot {
-  z-index: 1; width: 100%; height: 100%; min-height: 0; aspect-ratio: auto; padding: 0; align-self: stretch; justify-self: stretch;
+  /* Grid footprints own both dimensions. The shared square slot minimum can
+     otherwise make one-column items spill into their neighbor on smaller cells. */
+  z-index: 1; box-sizing: border-box; width: 100%; height: 100%; min-width: 0; min-height: 0;
+  max-width: 100%; max-height: 100%; aspect-ratio: auto; padding: 0; align-self: stretch; justify-self: stretch;
 }
 .character-bag-slot[hidden] { display: none; }
 .character-tetris .character-bag-slot svg, .character-overflow-items .character-bag-slot svg { width: 100%; height: 100%; display: block; }

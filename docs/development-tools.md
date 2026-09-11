@@ -28,6 +28,8 @@ The home page presents six workspace cards rather than every review. Search reve
 
 ## Verification
 
+`/progression.html?view=power` extends the progression workspace with a read-only character/cloud-observation importer and health, damage and recovery-time sensitivity controls. Inputs stay in memory; it never reads or writes playable saves. Cloud summaries/history are explicitly distinct from full validated checkpoints. The tool can export its data and assumptions. The companion command `node --experimental-strip-types game/scripts/power-audit.ts [snapshot.json] [report.json]` also runs a bounded 30-second, 120 Hz lightning-interruption study at three pulse phases. Personal snapshots/reports belong outside the repository. See `docs/combat-power-audit.md` for interpretation.
+
 `game/tests/development-tools.test.ts` checks registry coverage of every review HTML, local navigation boundaries, deterministic forge derivation across kinds/materials, every skill/specialization activation, delayed effect completion, source-backed catalog coverage and bounded deterministic placement surveys. Run `npm run check`; do not run optional browser gameplay tests without the player's request. Inspect the production output to confirm only `index.html` is emitted and no tools modules are bundled.
 
 ### Expanded world atlas
@@ -69,3 +71,5 @@ World → Settlement nights opens `/layouts.html?lighting`. The existing settlem
 ### Expedition and respec studies
 
 The World workspace includes `/tools/expeditions.html`, a disposable instance of the runtime expedition panel. `stage=0..9`, `level=19` and `failed` expose progression, the level gate and failed-route states. Equipment includes `/services.html?role=enchanter&respec` for exact reset pricing and point refunds. These studies do not access playable saves.
+
+The power-audit CLI also includes disposable `enemyPressureProbe` scenarios for elite melee/ranged foes, dungeon/wilderness bosses and a twelve-enemy ring. It reports first contact, landed hits, largest hit and peak half-second damage through the real AI/projectile/hurt-guard loop; it never loads a playable slot.

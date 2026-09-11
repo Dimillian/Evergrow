@@ -1,5 +1,6 @@
 import type { AudioControlActions } from './audio-controls.ts';
 import { PauseMenu } from './pause-menu.ts';
+import type { GroundLootNameplates } from './ground-loot-hover.ts';
 import { PORTAL_RULES } from './travel.ts';
 import './travel-ui.css';
 import './hud-sidebar.css';
@@ -11,7 +12,7 @@ import type { GamePhase } from './game-phase.ts';
 import { gameMenuMarkup } from './game-menu.ts';
 import { trapDialogFocus, uiIcon } from './ui-components.ts';
 
-interface ShellActions extends AudioControlActions { openChronicle?(): void; save?(): Promise<boolean>; sound?(): void; muted?(): boolean; zoom?(factor: number): void; portal?(): void; play(): void; returnToTitle(): void | Promise<void>; openMap(): void; openCharacter(): void; openSkills(): void; openJourneys?(): void; }
+interface ShellActions extends AudioControlActions { groundLootNames?(): GroundLootNameplates; setGroundLootNames?(mode: GroundLootNameplates): void; openChronicle?(): void; save?(): Promise<boolean>; sound?(): void; muted?(): boolean; zoom?(factor: number): void; portal?(): void; play(): void; returnToTitle(): void | Promise<void>; openMap(): void; openCharacter(): void; openSkills(): void; openJourneys?(): void; }
 
 /** Owns DOM presentation and its listeners; it never reads or mutates simulation state. */
 export class GameShell {

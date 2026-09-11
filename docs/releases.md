@@ -29,6 +29,80 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.12 / Sites version 43, publicly deployed on 2026-09-11 at 09:21:41 UTC.
+- Published source: `950fe47730186739a40e14a93996132304280bb5`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_2bfde87903088191876beee66c9bff18`.
+- Deployment: `appgdep_6aa3c81712cc8191879cf7cbc19d994d`; Sites returned `succeeded`.
+- Lighter quick elite basics, faster ranged preparation, later melee aim commitment and shorter elite/boss recovery.
+- Distance-aware boss choices and alternating jabs/bolts, varied attack rhythms, correct Warden aim-lock warnings and idle-rally fallback.
+- Existing characters and progress are preserved; no save reset or database migration.
+- Passed the 1,203-test implementation suite, 11 final pressure/audit regression checks, three release-note tests, application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
+- Game v0.3.11 / Sites version 42, publicly deployed on 2026-09-11 at 09:00:10 UTC.
+- Published source: `574e476af71778a8a0f791c6e778f19a481990e2`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_db80af23800c81918d8a9ecbfa927282`.
+- Deployment: `appgdep_6aa3c306ae5481918c5bfd4efbc8f9df`; Sites returned `succeeded`.
+- Level-scaled wilderness packs up to 14–20, varied elite escorts, stronger elite/boss damage and recovery, bounded repeated control and Arc Lightning healing.
+- Normal kills drop one third fewer common equipment items; retained charms and higher-tier items keep their original rolls. First-kill and authored reward guarantees remain intact.
+- Distinct charm nameplates, compact loot labels, Always/Hold Ctrl visibility options, and complete item rendering in inventory/vendor grids.
+- Existing characters and progress are preserved; no save reset or database migration.
+- Passed all 1,196 code tests, application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
+- Game v0.3.10 / Sites version 41, publicly deployed on 2026-09-10 at 19:22:57 UTC.
+- Published source: `b12ee24d269730964f27d3b45cb115077735384e`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_e367358dda808191893dd5a073056ff5`.
+- Deployment: `appgdep_6aa3037aaddc8191bccc613226912e43`; Sites returned `succeeded`.
+- Expedition tables share reachable-edge checks for opening and entering, with distinct level, distance and obstruction messages.
+- Expedition backdrops fill the panel while preserving centered route geometry; the character hall shows loading placeholders until the roster arrives.
+- Cloud initialization no longer creates a phantom slot while processing an early synchronization status.
+- Existing characters and progress are unchanged; no save reset or database migration.
+- Passed 14 expedition tests and eight title-action/changelog tests, application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
+- Game v0.3.9 / Sites version 40, publicly deployed on 2026-09-10 at 19:14:36 UTC.
+- Published source: `7b7f3ced19a41f542eaf16e822ee74087c33be9d`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_f1d272a5f50c8191ade227102abf7879`.
+- Deployment: `appgdep_6aa3018d9e9c81918263dd48217bb53b`; Sites returned `succeeded`.
+- Cloud-first character inspection and Continue checks, separate cloud/recovery choices with comparable progress, and explicit offline/pending labels.
+- Lost upload receipts reconcile without false conflicts; delayed reads preserve concurrent uploads and incompatible recovery cannot hide a valid cloud character.
+- Existing characters and progress are preserved; no save reset or database migration.
+- Passed 91 focused cloud, save, Chronicle, title-action and changelog tests, application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation. Live cross-device acceptance remains player testing.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
+- Game v0.3.8 / Sites version 39, publicly deployed on 2026-09-10 at 19:00:05 UTC.
+- Published source: `d543c5a0bc28d88830590dd444fe18739d62e553`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_01560e5860a48191bc8382d3c46fb642`.
+- Deployment: `appgdep_6aa2fe1e32d881918e60cbbc22774ec9`; Sites returned `succeeded`.
+- Refined silver-blue frosted frames, portrait-safe corner fittings, lighter interaction highlights and quieter item tooltips.
+- Equipped gear-power display uses the leaderboard calculation; inventory items remain within their physical footprints.
+- Existing characters and progress are unchanged; no save reset or database migration.
+- Passed 13 changelog, spatial-inventory and leaderboard tests, application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
+- Game v0.3.7 / Sites version 38, publicly deployed on 2026-09-10 at 12:24:50 UTC.
+- Published source: `02564a52b6eec53daadcae9cf146b4f5855d721e`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_d0ddda91bbe48191bde922809a66216c`.
+- Deployment: `appgdep_6aa2a1842ce08191b4b5ae1e5c66045b`; Sites returned `succeeded`.
+- Unified frosted panel materials using the approved inventory treatment, background-driven tint, square edges and shared rarity-lit item tooltips.
+- Reduced-motion/transparency and forced-color fallbacks retained; embedded home panels reuse a single glass surface.
+- Existing characters and progress are unchanged; no save reset or database migration.
+- Passed three changelog tests, application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.6 / Sites version 37, publicly deployed on 2026-09-10 at 11:57:42 UTC.
 - Published source: `9cb0458f289c11e9b2b62d523e84cc0d6f64bbd6`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_80060e300e988191a42d29f7e477e4fd`.

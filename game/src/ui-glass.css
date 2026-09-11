@@ -1,0 +1,90 @@
+/* Silver-blue frosted glass in aged metal; the visible scene supplies the tint.
+   A separate surface preserves viewport positioning
+   for fixed tooltips: never put backdrop-filter on their window ancestor. */
+/* Embedded libraries borrow the home frame rather than stacking two blurs. */
+.ui-window:not(.home-embedded > .ui-window) {
+  --ui-corner-size: 22px;
+  --ui-silver: #b8d3de;
+  --ui-silver-dim: #829da9;
+  --ui-line: #b4d3e026;
+  --ui-line-strong: #b4d3e050;
+  background: none; border-radius: 0; border-color: #c3e9ef66;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: 0 32px 90px #0009, 0 0 0 1px #040d1866,
+    inset 0 1px #e5fbff4d, inset 1px 0 #c3efff25, inset 0 -1px #aad2ec38;
+}
+.ui-window:not(.home-embedded > .ui-window)::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-color: #10202b;
+  background-image: radial-gradient(ellipse at 6% 0%, #b2e9ff1a, transparent 46%),
+    radial-gradient(ellipse at 100% 90%, #9585e810, transparent 55%),
+    repeating-linear-gradient(112deg, #e6f1fa02 0 1px, transparent 1px 7px),
+    linear-gradient(125deg, #d3f8ff09, transparent 38%, #050d172e);
+}
+.ui-window:not(.home-embedded > .ui-window)::before {
+  inset: 2px; opacity: .78; filter: none;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2240%22%20height%3D%2240%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cg%20transform%3D%22rotate%280%2020%2020%29%22%3E%3Cpath%20d%3D%22M3%2036V9l6-6h27l-6%204H11L7%2011v19Z%22%20fill%3D%22%23303e49%22%20stroke%3D%22%2391acbe%22%20stroke-width%3D%221%22%2F%3E%3Cpath%20d%3D%22M11%2031V14l3-3h17M13%207h15M7%2013v15%22%20fill%3D%22none%22%20stroke%3D%22%23ccdce6%22%20stroke-opacity%3D%22.38%22%2F%3E%3Cpath%20d%3D%22m10%206%204%204-4%204-4-4Z%22%20fill%3D%22%23758d9f%22%20stroke%3D%22%23c8dce9%22%20stroke-width%3D%22.6%22%2F%3E%3Cpath%20d%3D%22M17%2017h9m-9%200v9%22%20fill%3D%22none%22%20stroke%3D%22%23a9c1d1%22%20stroke-opacity%3D%22.42%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") left top / var(--ui-corner-size) var(--ui-corner-size) no-repeat,
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2240%22%20height%3D%2240%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cg%20transform%3D%22rotate%2890%2020%2020%29%22%3E%3Cpath%20d%3D%22M3%2036V9l6-6h27l-6%204H11L7%2011v19Z%22%20fill%3D%22%23303e49%22%20stroke%3D%22%2391acbe%22%20stroke-width%3D%221%22%2F%3E%3Cpath%20d%3D%22M11%2031V14l3-3h17M13%207h15M7%2013v15%22%20fill%3D%22none%22%20stroke%3D%22%23ccdce6%22%20stroke-opacity%3D%22.38%22%2F%3E%3Cpath%20d%3D%22m10%206%204%204-4%204-4-4Z%22%20fill%3D%22%23758d9f%22%20stroke%3D%22%23c8dce9%22%20stroke-width%3D%22.6%22%2F%3E%3Cpath%20d%3D%22M17%2017h9m-9%200v9%22%20fill%3D%22none%22%20stroke%3D%22%23a9c1d1%22%20stroke-opacity%3D%22.42%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") right top / var(--ui-corner-size) var(--ui-corner-size) no-repeat,
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2240%22%20height%3D%2240%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cg%20transform%3D%22rotate%28180%2020%2020%29%22%3E%3Cpath%20d%3D%22M3%2036V9l6-6h27l-6%204H11L7%2011v19Z%22%20fill%3D%22%23303e49%22%20stroke%3D%22%2391acbe%22%20stroke-width%3D%221%22%2F%3E%3Cpath%20d%3D%22M11%2031V14l3-3h17M13%207h15M7%2013v15%22%20fill%3D%22none%22%20stroke%3D%22%23ccdce6%22%20stroke-opacity%3D%22.38%22%2F%3E%3Cpath%20d%3D%22m10%206%204%204-4%204-4-4Z%22%20fill%3D%22%23758d9f%22%20stroke%3D%22%23c8dce9%22%20stroke-width%3D%22.6%22%2F%3E%3Cpath%20d%3D%22M17%2017h9m-9%200v9%22%20fill%3D%22none%22%20stroke%3D%22%23a9c1d1%22%20stroke-opacity%3D%22.42%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") right bottom / var(--ui-corner-size) var(--ui-corner-size) no-repeat,
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2240%22%20height%3D%2240%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cg%20transform%3D%22rotate%28270%2020%2020%29%22%3E%3Cpath%20d%3D%22M3%2036V9l6-6h27l-6%204H11L7%2011v19Z%22%20fill%3D%22%23303e49%22%20stroke%3D%22%2391acbe%22%20stroke-width%3D%221%22%2F%3E%3Cpath%20d%3D%22M11%2031V14l3-3h17M13%207h15M7%2013v15%22%20fill%3D%22none%22%20stroke%3D%22%23ccdce6%22%20stroke-opacity%3D%22.38%22%2F%3E%3Cpath%20d%3D%22m10%206%204%204-4%204-4-4Z%22%20fill%3D%22%23758d9f%22%20stroke%3D%22%23c8dce9%22%20stroke-width%3D%22.6%22%2F%3E%3Cpath%20d%3D%22M17%2017h9m-9%200v9%22%20fill%3D%22none%22%20stroke%3D%22%23a9c1d1%22%20stroke-opacity%3D%22.42%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") left bottom / var(--ui-corner-size) var(--ui-corner-size) no-repeat;
+}
+.ui-window > :is(.ui-window-header, .ui-window__header) {
+  padding: 12px 26px;
+  background: linear-gradient(110deg, #d5f7ff12, #b4c7ff03 62%, #d5f7ff06);
+  box-shadow: inset 0 -1px #070c1655;
+  border-bottom-color: #c6ecff33;
+}
+.ui-window > :is(.ui-window-footer, .ui-window__footer) { background: #07121c26; }
+:is(.character-overlay, .skill-atlas, .chronicle-overlay, .changelog-overlay,
+  .journey-panel, .event-panel, .world-map-root, .overlay):not(.home-embedded) {
+  background: #03091238; -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ui-window:not(.home-embedded > .ui-window)::after {
+    background-color: #0c1a29a3;
+    -webkit-backdrop-filter: blur(30px) saturate(1.65);
+    backdrop-filter: blur(30px) saturate(1.65);
+  }
+}
+/* Preserve the opaque, readable map canvases; soften their surrounding chrome. */
+.skill-atlas-window .skill-atlas-sidebar { background: #08111c18; }
+.skill-atlas-window .skill-atlas-search { background: #080f1866; }
+.expedition-panel .expedition-chart-scroll { background: #08111c18; }
+.expedition-panel .expedition-chart::before { background: linear-gradient(#080f1866, transparent); }
+.service-panel .service-sale-total { background: #08111c40; }
+.service-panel .service-offer { background: #08111c18; }
+.service-panel .character-bag.character-tetris,
+.service-panel .character-charm-grid { background: #040c154d; }
+.service-panel .character-grid-cell:not(.is-drop-target):not(.is-placement-valid):not(.is-placement-invalid) { background: #10212b45; }
+
+/* Metal controls catch light at their edges, with restrained pressed states.
+   Keep danger, selection and drag/drop feedback owned by their components. */
+.ui-window .ui-button { border-radius: 0; }
+.ui-window .ui-button:not(.ui-button--quiet):not(.ui-button--danger):not([aria-pressed=true]) {
+  background-image: linear-gradient(170deg, #c5dce813, #10182030 60%);
+  box-shadow: inset 0 1px #dedff022, inset 0 -1px #060c1666, 0 2px 4px #0002;
+}
+.ui-window .ui-button:not(:disabled):not([aria-disabled=true]):hover {
+  box-shadow: inset 0 1px #e4eeff20, inset 0 -1px #090e1733;
+}
+.ui-window .ui-button:not(:disabled):not([aria-disabled=true]):active {
+  box-shadow: inset 0 2px 5px #050a1266;
+}
+.ui-window :is(.ui-input, .ui-select) { border-radius: 0; }
+.ui-window :is(.ui-window-footer, .ui-window__footer) { border-top-color: #c6ecff30; }
+@media (max-width: 740px) {
+  .ui-window:not(.home-embedded > .ui-window) { --ui-corner-size: 16px; }
+  .ui-window > :is(.ui-window-header, .ui-window__header) { padding: 12px 20px; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .ui-window:not(.home-embedded > .ui-window)::after {
+    background-color: #10202b; -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+}
+@media (forced-colors: active) {
+  .ui-window:not(.home-embedded > .ui-window) { background: Canvas; border-color: CanvasText; box-shadow: none; }
+  .ui-window:not(.home-embedded > .ui-window)::after,
+  .ui-window:not(.home-embedded > .ui-window)::before { display: none; }
+  .ui-window .ui-button { box-shadow: none; }
+}

@@ -79,6 +79,6 @@ test('Absolute Zero snapshots frost and gives elites a shorter freeze without by
   scheduleGroundEffect(effects,{kind:'frost',skill:'absoluteZero',x:0,y:0,radius:50,delay:0,duration:0,interval:1,damage:3,style:'frost',slow,stun:1.5},{nextId:()=>1,emit:()=>{}});
   slow.factor=.9;
   advanceGroundEffects(effects,.01,{player:sim.player,enemies:sim.enemies,visible:(_x,_y,x)=>x!==hidden.x,damage:()=>{},emit:()=>{}});
-  assert.equal(normal.stagger,1.5); assert.ok(Math.abs(elite.stagger-.3)<1e-8);
+  assert.equal(normal.stagger,1.5); assert.ok(Math.abs(elite.stagger-.6)<1e-8);
   assert.equal(normal.slowFactor,.25); assert.equal(hidden.stagger,0); assert.equal(hidden.slowTime,0);
 });

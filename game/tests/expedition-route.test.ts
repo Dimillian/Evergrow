@@ -1,3 +1,4 @@
+import { enemyWindupDuration } from '../src/enemy-threat.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newExpeditionRoute, expeditionChoices, expeditionRewardItems, dungeonChestMask } from '../src/expedition-route.ts';
@@ -6,7 +7,7 @@ import { World } from '../src/world.ts';
 import { DungeonWorld } from '../src/dungeon-world.ts';
 import { generateDungeon, dungeonBlocked } from '../src/dungeon.ts';
 import { currentDungeon } from '../src/dungeon-state.ts';
-import { planDungeonTravel, claimDungeonChest } from '../src/dungeon-command.ts';
+import { planDungeonTravel, claimDungeonChest, expeditionTableProblem } from '../src/dungeon-command.ts';
 import { validExpeditions } from '../src/dungeon-validation.ts';
 import { validItem } from '../src/item-validation.ts';
 import { decodeCharacterSave, type CharacterCheckpoint } from '../src/character-save.ts';
@@ -72,12 +73,12 @@ test('Rime and Astral fracture attacks use their own elements, timings, and one 
   const sim=new Simulation(world,{spawn:false,startX:0,startY:0});
   for(const theme of ['rime','astral'] as const){
     const e=sim.spawnEnemy('warden',sim.player.x-300,sim.player.y)!;
-    e.dungeonTheme=theme;e.state='chase';e.bossTurns=1;e.hp=e.maxHp;
+    e.dungeonTheme=theme;e.state='chase';e.bossTurns=2;e.hp=e.maxHp;
     const hits:string[]=[];
     const context={player:sim.player,enemies:sim.enemies,world:{...world,isSanctuary:()=>false},time:0,trial:null,visible:()=>true,move:()=>{},hurt:(_n:number,_a:number,_e:typeof e,element:string)=>hits.push(element),shoot:()=>{},emit:()=>{}};
     updateWarden(e,1/120,context);
     assert.equal(e.bossMove,'fracture');
-    assert.equal(e.stateDuration,wardenProfile(theme).warning);
+    assert.equal(e.stateDuration,enemyWindupDuration(e,wardenProfile(theme).warning));
     e.stateTime=e.stateDuration;updateWarden(e,1/120,context);
     for(let i=0;i<110;i++){e.stateTime+=1/120;updateWarden(e,1/120,context);}
     assert.deepEqual(hits,[theme==='rime'?'frost':'arcane']);
@@ -132,4 +133,46 @@ test('saved chosen dungeons retain their identity when the available content poo
   assert.ok(decoded(next.checkpoint));
   const bad=structuredClone(next.checkpoint.expeditions!);bad.runs[0].entrance.expedition!.modifier='fake' as never;
   assert.equal(validExpeditions(bad),false);
+});
+
+
+test('level-25 characters enter from every reachable table side, including behind its solid footprint',async()=>{
+  const {world,table,sim}=setup();
+  try {
+    sim.player.level=25;sim.player.character.skillPoints=24;sim.player.character.statPoints=120;
+    for(const [side,x,y] of [
+      ['front',table.door.x,table.door.y+25],
+      ['back',table.door.x,table.y-25],
+      ['left',table.x-25,table.y+table.height/2],
+      ['right',table.x+table.width+25,table.y+table.height/2],
+    ] as const){
+      sim.player.x=x;sim.player.y=y;
+      assert.equal(world.blocked(x,y,sim.player.radius),false,side);
+      assert.equal(expeditionTableProblem(table,sim.player,world),null,side);
+      let saved=false;
+      const result=await planDungeonTravel(sim,{kind:'expedition',tableId:table.id,choice:0,attempt:0},world,()=>{saved=true;return ok();});
+      assert.equal(result.ok,true,side);assert.equal(saved,true,side);
+      if(result.ok)assert.ok(decoded(result.checkpoint),side);
+    }
+  } finally {world.dispose();}
+});
+
+test('table entry distinguishes level, distance, missing table and obstruction without saving',async()=>{
+  const {world,table,sim}=setup();const action={kind:'expedition',tableId:table.id,choice:0,attempt:0} as const;
+  let writes=0;const persist=()=>{writes++;return ok();};
+  try {
+    sim.player.level=19;
+    assert.deepEqual(await planDungeonTravel(sim,action,world,persist),{ok:false,message:'Expeditions unlock at level 20.'});
+    sim.player.level=25;
+    assert.deepEqual(await planDungeonTravel(sim,{...action,tableId:'missing'},world,persist),{ok:false,message:'Visit an expedition table.'});
+    sim.player.y=table.door.y+100;
+    assert.deepEqual(await planDungeonTravel(sim,action,world,persist),{ok:false,message:'Move closer to the expedition table.'});
+    sim.player.x=table.door.x;sim.player.y=table.y-25;
+    // An actual wall between the player and table remains a blocker.
+    const blockedWorld=Object.create(world) as World;
+    blockedWorld.blocked=(x,y,r)=>Math.abs(y-(table.y-12))<3||world.blocked(x,y,r);
+    assert.match(expeditionTableProblem(table,sim.player,blockedWorld)!,/blocked/);
+    const denied=await planDungeonTravel(sim,action,blockedWorld,persist);
+    assert.equal(denied.ok,false);assert.match(denied.message,/blocked/);assert.equal(writes,0);
+  } finally {world.dispose();}
 });

@@ -136,3 +136,36 @@ test('climate changes profile tendencies without changing rank yield, rarity, or
     }
   }
 });
+
+test('ordinary kills thin one third of common equipment while preserving exact valuable drops and first-kill rewards', () => {
+  for (const kind of ['stalker', 'goblin'] as const) {
+    let common = 0, removed = 0, charms = 0, higher = 0;
+    for (let seed = 0; seed < 6000; seed++) {
+      const context = { ...source, seed, kind, rank: 'normal' as const };
+      // An override preserves the original count roll and bypasses common-only thinning.
+      const hadDrop = rollEnemyLoot({ ...context, tierOverride: 'magic' }).length > 0;
+      const guaranteed = rollEnemyLoot({ ...context, firstKill: true });
+      assert.equal(guaranteed.length, 1);
+      const actual = rollEnemyLoot(context);
+      if (!hadDrop) { assert.deepEqual(actual, []); continue; }
+      const [original] = guaranteed;
+      if (original.kind === 'charm' || original.tier !== 'common') {
+        assert.deepEqual(actual, guaranteed, 'valuable item identity, stats and rarity must not change');
+        charms += Number(original.kind === 'charm');
+        higher += Number(original.tier !== 'common');
+      } else {
+        common++;
+        if (!actual.length) removed++;
+        else assert.deepEqual(actual, guaranteed);
+      }
+      for (const encounter of ['chest', 'bossChest', 'event', 'boss'] as const) {
+        const reward = rollEnemyLoot({ ...context, encounter });
+        assert.equal(reward.length, 1, 'authored rewards do not lose common items');
+        assert.equal(reward[0].tier, original.tier);
+        assert.equal(reward[0].kind, original.kind);
+      }
+    }
+    assert.ok(charms > 0 && higher > 0);
+    assert.ok(removed / common > .28 && removed / common < .38, `${kind}: removed ${removed}/${common} common items`);
+  }
+});

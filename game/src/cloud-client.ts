@@ -95,15 +95,16 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
     try {
       local = await this.rpc<CloudInfo[]>('list-info');
       const remote = await this.api<{ slots: { index: number; revision: number; summary: SaveSummary | null }[] }>('characters');
+      local = await this.rpc<CloudInfo[]>('list-info');
       if (this.uploadFailure) this.failed(this.uploadFailure);
       else this.setStatus(local.some(r => r.invalid) ? 'Save needs attention' : local.some(r => r.conflict) ? 'Conflict' : local.some(r => r.dirty) ? 'Saving…' : 'Synced');
       return remote.slots.map(r => {
         const cached = local.find(c => c.index === r.index);
-        if (cached?.dirty) return { index: cached.index, token: cached.token, summary: cached.summary, record: null, state: cached.invalid ? 'invalid' : cached.summary ? 'saved' : 'empty', pending: true, conflict: cached.conflict };
-        return { index: r.index, record: null, token: cached?.token ?? null, summary: r.summary ?? undefined, state: r.summary ? 'saved' : 'empty' };
+        if (cached?.dirty && cached.base >= r.revision && !cached.conflict) return { cloudState: 'pending', index: cached.index, token: cached.token, summary: cached.summary, record: null, state: cached.invalid ? 'invalid' : cached.summary ? 'saved' : 'empty', pending: true, conflict: cached.conflict };
+        return { cloudState: 'cloud', conflict: !!cached?.dirty && (cached.conflict || cached.base < r.revision), index: r.index, record: null, token: cached?.token ?? null, summary: r.summary ?? undefined, state: r.summary ? 'saved' : 'empty' };
       });
     } catch (error) { this.failed(error); return Array.from({ length: 8 }, (_, index) => {
-      const cached = local.find(c => c.index === index); return cached ? { index, token: cached.token, record: null, summary: cached.summary, state: cached.invalid ? 'invalid' : cached.summary ? 'saved' : 'empty', pending: cached.dirty, conflict: cached.conflict } : { index, record: null, token: null, state: 'unavailable' };
+      const cached = local.find(c => c.index === index); return cached ? { cloudState: 'offline', index, token: cached.token, record: null, summary: cached.summary, state: cached.invalid ? 'invalid' : cached.summary ? 'saved' : 'empty', pending: cached.dirty, conflict: cached.conflict } : { index, record: null, token: null, state: 'unavailable' };
     }); }
   }
   async leaderboard(order: LeaderboardOrder): Promise<LeaderboardSnapshot> {
@@ -120,22 +121,55 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
       return await this.cache<ChronicleLedger>({kind:'chronicle'});
     } catch(error){this.failed(error);return cached;}
   }
-  async read(index: number): Promise<SaveSlot> {
+  /** Hall inspection shows the server branch without adopting over unsent progress. */
+  async inspect(index: number): Promise<SaveSlot> { return this.read(index, true); }
+  async read(index: number, inspect = false): Promise<SaveSlot> {
     let cached: CloudRow | null = null;
     try {
-      cached = await this.cache<CloudRow | null>({ kind: 'read', index });
-      if (cached?.dirty) return this.slot(cached);
-      const value = await this.api<{ revision: number; bundle: SaveBundle | null }>(`characters/${index}`);
-      if (cached && cached.base === value.revision) return this.slot(cached);
-      const row = await this.cache<CloudRow | null>({ kind: 'adopt', index, expected: cached?.token ?? null, bundle: value.bundle, base: value.revision });
-      return this.slot(row ?? (await this.cache<CloudRow>({ kind: 'read', index })));
+      // Inspect raw metadata first: an incompatible recovery must not hide a valid cloud save.
+      cached = await this.cache<CloudRow | null>({ kind: 'inspect', index });
+      if (cached?.conflict && !inspect) return this.slot(await this.cache<CloudRow>({ kind: 'read', index }));
+      const value = await this.api<{ revision: number; operation?: string | null; bundle: SaveBundle | null }>(`characters/${index}`);
+      const bundle = value.bundle ? await this.rpc<SaveBundle | null>('decode-bundle', { bundle: value.bundle }) : null;
+      if (value.bundle && !bundle) throw new CloudSaveError('The cloud character cannot be read by this version. Reload the game.');
+      // Re-read after the network wait; a checkpoint or upload may have committed meanwhile.
+      cached = await this.cache<CloudRow | null>({ kind: 'inspect', index });
+      // Recover a lost upload acknowledgement without treating our own commit as a competing device.
+      if (cached?.upload && cached.upload.operation === value.operation && cached.base < value.revision) {
+        await this.cache({ kind: 'ack', index, operation: cached.upload.operation, base: cached.upload.base, revision: value.revision });
+        cached = await this.cache<CloudRow | null>({ kind: 'inspect', index });
+        const current = await this.rpc<CloudInfo[]>('list-info');
+        this.setStatus(current.some(r => r.invalid) ? 'Save needs attention' : current.some(r => r.conflict) ? 'Conflict' : current.some(r => r.dirty) ? 'Saving…' : 'Synced');
+      }
+      if (cached?.dirty) {
+        if (cached.conflict || cached.base < value.revision) {
+          await this.cache({ kind: 'conflict', index, base: cached.base });
+          const recovery = cached.bundle ? await this.rpc<SaveBundle | null>('decode-bundle', { bundle: cached.bundle }) : null;
+          this.setStatus('Conflict');
+          if (inspect) return { index, token: cached.token, record: bundle?.character ?? null,
+            state: bundle ? 'saved' : 'empty', conflict: true, cloudState: 'cloud',
+            recovery: { record: recovery?.character ?? null, invalid: !!cached.bundle && !recovery } };
+          return this.slot(await this.cache<CloudRow>({ kind: 'read', index }));
+        }
+        this.setStatus('Saving…');
+        return { ...this.slot(await this.cache<CloudRow>({ kind: 'read', index })), cloudState: 'pending' };
+      }
+      // Never roll a cache back when an upload completed after this GET's snapshot.
+      if (cached && cached.base >= value.revision) return { ...this.slot(await this.cache<CloudRow>({ kind: 'read', index })), cloudState: 'cloud' };
+      const row = await this.cache<CloudRow | null>({ kind: 'adopt', index, expected: cached?.token ?? null, bundle, base: value.revision });
+      if (!row) throw new CloudSaveError('This save changed in another tab. Select it again.');
+      return { ...this.slot(row), cloudState: 'cloud' };
     } catch (error) {
       this.failed(error);
       if (error instanceof CloudSaveError) {
         const info = (await this.rpc<CloudInfo[]>('list-info')).find(r => r.index === index);
         return { index, token: info?.token ?? null, record: null, state: 'invalid', pending: info?.dirty, conflict: info?.conflict };
       }
-      return cached ? this.slot(cached) : { index, token: null, record: null, state: 'unavailable' };
+      if (!cached) return { index, token: null, record: null, state: 'unavailable' };
+      const fallback = this.slot(await this.cache<CloudRow>({ kind: 'read', index }));
+      return inspect && fallback.conflict
+        ? { ...fallback, record: null, state: 'unavailable', cloudState: 'offline', recovery: { record: fallback.record } }
+        : { ...fallback, cloudState: 'offline' };
     }
   }
   async write(index: number, record: CharacterSave, expected: string | null): Promise<SaveResult> {
@@ -224,8 +258,8 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
   async useCloud(index: number, expected: string | null): Promise<void> {
     await this.flush();
     const remote = await this.api<{ revision: number; bundle: SaveBundle | null }>(`characters/${index}`);
-    const row = await this.cache<CloudRow | null>({ kind: 'read', index });
-    if (!row?.conflict) return;
+    const row = await this.cache<CloudRow | null>({ kind: 'inspect', index });
+    if (!row?.conflict) throw new Error('The save changed. Select the character again.');
     if (row.token !== expected) throw new Error('Recovery changed. Select it again before resolving.');
     const resolved = await this.cache({ kind: 'resolve', index, expected: row.token, bundle: remote.bundle, base: remote.revision });
     if (!resolved) throw new Error('Recovery changed in another tab. Reopen it before resolving.');

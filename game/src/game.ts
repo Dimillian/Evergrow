@@ -1,6 +1,6 @@
 import { ExpeditionPanel } from './expedition-panel.ts';
 import { executeDropItem, type DropItemSource } from './drop-item-command.ts';
-import { hoveredGroundLoot } from './ground-loot-hover.ts';
+import { hoveredGroundLoot, type GroundLootNameplates } from './ground-loot-hover.ts';
 import { startDungeonEvent } from './dungeon-events.ts';
 import { encounterScaleAt } from './encounter-scaling.ts';
 import { MUSIC_FILES } from './music-content.ts';
@@ -32,7 +32,7 @@ import { hasLineOfSight } from './combat-geometry.ts';
 import { DungeonWorld } from './dungeon-world.ts';
 import { generateDungeon, type DungeonEntrance, type DungeonChestTarget } from './dungeon.ts';
 import { currentDungeon } from './dungeon-state.ts';
-import { claimDungeonChest, dungeonChestProblem, type DungeonAction } from './dungeon-command.ts';
+import { claimDungeonChest, dungeonChestProblem, expeditionTableProblem, type DungeonAction } from './dungeon-command.ts';
 import { DungeonMap, drawCryptMinimap } from './dungeon-map.ts';
 import { EventPanel } from './poi-panel.ts';
 import { EVENT_RULES, focusEvent, eventLabel, eventClaimed, isEventKind, type EventSite, type EventChoice } from './poi-content.ts';
@@ -120,6 +120,8 @@ export class Game {
   private chronicle: ChroniclePanel;
   get phase(): GamePhase { return this.panels?.phase ?? 'ready'; }
   private muted = false;
+  private groundLootNames: GroundLootNameplates = 'always';
+  private revealLootHeld = false;
   private nextScore = 0;
   private audioPhase: GamePhase = 'ready';
   private nativeBackground = false;
@@ -164,6 +166,8 @@ export class Game {
       this.saveClient = this.lifetime.own(new SaveHub());
       this.session = new CharacterSession(this.saveClient, this.world.generationVersion, seed=>new World(seed));
       this.shell = this.lifetime.own(new GameShell(root, {
+        groundLootNames: () => this.groundLootNames,
+        setGroundLootNames: mode => { this.groundLootNames = mode; this.savePreferences(); },
         volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
         sound: () => this.toggleSound(), muted: () => this.muted, zoom: factor => this.renderer.zoomByWheel(-Math.log(factor)/.0016,0,this.canvas.getBoundingClientRect().height),
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
@@ -210,8 +214,8 @@ export class Game {
         volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
         chronicle: onCached => this.saveClient.chronicle(onCached),
         create: (index, name, weapon, seed) => this.editNewCharacter(index, name, weapon, seed),
-        continue: index => this.continueCharacter(index), remove: (index, expected) => this.deleteCharacter(index, expected),
-        read: index => this.saveClient.read(index), source: mode => this.selectSaveSource(mode),
+        continue: index => this.continueCharacter(index), continueRecovery: (index, token) => this.continueCharacter(index, token), remove: (index, expected) => this.deleteCharacter(index, expected),
+        read: index => this.saveClient.inspect(index), source: mode => this.selectSaveSource(mode),
         retry: () => { void this.retryCloudSaves(); },
         leaderboard: order => this.saveClient.leaderboard(order),
         ...(!window.EvergrowAndroid ? { download: (index: number) => this.downloadSave(index), import: (index: number, file: File) => this.importSave(index, file) } : {}),
@@ -300,6 +304,7 @@ export class Game {
       try {
         const saved = JSON.parse(localStorage.getItem('evergrow-preferences') ?? 'null');
         if (typeof saved?.muted === 'boolean') this.muted = saved.muted;
+        if (saved?.groundLootNames === 'ctrl') this.groundLootNames = 'ctrl';
         for (const channel of ['sfx', 'music'] as const) this.audio.setVolume(channel, audioVolume(saved?.[channel], DEFAULT_AUDIO[channel]));
       } catch { /* Preferences are optional when storage is disabled. */ }
       // Presentation is fixed and motion follows the OS.
@@ -356,6 +361,7 @@ export class Game {
       this.last = performance.now();
     }, { signal });
     bindGameKeyboard(window, {
+      revealLoot: held => { this.revealLootHeld = this.phase === 'playing' && held; },
       clear: () => this.clearInput(),
       release: code => this.input.keyUp(code),
       press: event => {
@@ -486,6 +492,7 @@ export class Game {
   }
 
   clearInput() {
+    this.revealLootHeld = false;
     this.touch?.clear(); this.clearWorldTouch?.();
     this.input.clear();
     this.gamepad.clear(); this.gamepadMenu.clear(); clearNativeController();
@@ -549,13 +556,13 @@ export class Game {
     return true;
   }
 
-  private async continueCharacter(index: number) {
+  private async continueCharacter(index: number, recoveryToken?: string) {
     if (this.phase !== 'ready' || this.hallBusy || this.disposed) return;
     this.hallBusy = true;
     try {
-    const record = await this.session.load(index);
+    const record = await this.session.load(index, recoveryToken);
     if (this.disposed) return;
-    if (!record) { this.titleScreen.message(this.session.error); return; }
+    if (!record) { await this.loadRoster(index); this.titleScreen.message(this.session.error); return; }
     if (this.world !== this.overworld) this.world.dispose();
     this.overworld.dispose();
     this.overworld = new World(record.worldSeed); this.world = this.overworld;
@@ -618,10 +625,11 @@ export class Game {
 
   private async loadRoster(preferred?: number) {
     this.hallBusy = true;
+    this.titleScreen.setRosterLoading(true);
     try {
       const slots = await this.session.repository.list();
       if (!this.disposed) { this.titleScreen.setSource(this.saveClient.state); this.titleScreen.open(slots, preferred); }
-    } catch { this.titleScreen.message('Saves unavailable. Please retry.'); }
+    } catch { this.titleScreen.setRosterLoading(false); this.titleScreen.message('Saves unavailable. Please retry.'); }
     finally { this.hallBusy = false; }
   }
 
@@ -798,7 +806,7 @@ export class Game {
           }
           return true;
       }
-      const table=this.world.getBuildings(p.x-180,p.y-180,360,360).find(b=>b.kind==='expedition'&&Math.hypot(b.door.x-p.x,b.door.y-p.y)<75&&(!pointer||Math.hypot(pointer.x-b.door.x,pointer.y-(b.door.y-25))<55));
+      const table=this.world.getBuildings(p.x-180,p.y-180,360,360).find(b=>b.kind==='expedition'&&!expeditionTableProblem(b,p,this.world)&&(!pointer||Math.hypot(pointer.x-b.door.x,pointer.y-(b.door.y-25))<55));
       if(table){this.activeExpeditionTable=table.id;this.panels.open('event');return true;}
       const npcs = this.world.getBuildings(p.x - 220, p.y - 220, 440, 440).map(buildingNPC).filter((npc): npc is TownNPC => npc !== null);
       const npc = focusNPC(npcs, p, this.world, pointer);
@@ -1080,6 +1088,7 @@ export class Game {
     this.shell.setNavigationVisible(this.renderer.navigationVisible);
     this.journeys.update();
     const settings = {
+      showGroundLootNames: this.groundLootNames === 'always' || this.revealLootHeld || this.touch.active || this.usingGamepad,
       reducedMotion: this.reducedMotion, phase: this.phase, fps: this.fps, debug: this.debug,
     };
     if (this.phase === 'ready') {
@@ -1231,7 +1240,7 @@ export class Game {
     this.audio.setVolume(channel, value); this.savePreferences();
   }
   private savePreferences() {
-    try { localStorage.setItem('evergrow-preferences', JSON.stringify({ muted: this.muted, ...this.audio.getVolumes() })); } catch { /* Storage may be disabled. */ }
+    try { localStorage.setItem('evergrow-preferences', JSON.stringify({ muted: this.muted, groundLootNames: this.groundLootNames, ...this.audio.getVolumes() })); } catch { /* Storage may be disabled. */ }
   }
 
   private notify(message: string) {

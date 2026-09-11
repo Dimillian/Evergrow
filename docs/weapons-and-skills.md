@@ -36,6 +36,8 @@ Fire contacts burn, frost contacts slow movement by 20% for 1.5 seconds, and lig
 
 Physical melee attacks and arrows use `attackDamageMultiplier`; staff and wand bolts use `spellDamageMultiplier`. Melee and arrows use `attackSpeedMultiplier`; staff/wand bolts and magic spells use the independent `castSpeedMultiplier`. This keeps Strength/attack-damage bonuses and Intelligence/spell-damage bonuses on their respective damage paths. Active skills multiply a compatible held weapon’s derived hit by their potency, preferring the main hand; staff spell scaling is already included and is never applied a second time. Normal direct hits can critically strike and trigger life on hit.
 
+Local challenge tuning (2026-09-11): Arc Lightning heals full life-on-hit on its first contact, 25% on each additional distinct target and none on revisits within that cast. Single-target recovery, mana costs and damage are unchanged. Veterans/elites/bosses now share bounded control durations and a protected recovery window across melee stagger, lightning, stun and freeze. Ordinary foes remain controllable. See [combat power audit](combat-power-audit.md).
+
 ## Caster off-hands
 
 `focus-content.ts` owns six focus profiles, each with normal generated names, rarity, materials, affixes, enhancement and releveling. All occupy the offhand slot. Their base implicits are:

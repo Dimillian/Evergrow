@@ -62,7 +62,7 @@ export function advanceGroundEffects(effects: ActiveGroundEffect[], dt: number, 
         if (effect.damage > 0) context.damage(enemy, effect.damage, Math.atan2(enemy.y - effect.y, enemy.x - effect.x), false, effect.style, effect.kind === 'embers', effect.offense);
         if (effect.burn) applyBurn(enemy, effect.burn);
         if (effect.slow) applySlow(enemy, effect.slow);
-        if (effect.stun) applyStun(enemy, effect.stun * (enemy.rank === 'elite' ? .2 : 1), effect.style === 'frost' ? 'freeze' : 'stun');
+        if (effect.stun) applyStun(enemy, effect.stun, effect.style === 'frost' ? 'freeze' : 'stun');
         if (effect.style === 'lightning') context.emit({ type: 'chain', x: effect.x, y: effect.y, toX: enemy.x, toY: enemy.y, style: effect.style, skill: effect.skill });
       }
       if (effect.damage > 0) context.emit({ type: 'blast', groundKind: effect.kind, x: effect.x, y: effect.y, radius: effect.radius,

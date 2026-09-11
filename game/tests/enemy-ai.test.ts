@@ -1,3 +1,4 @@
+import { enemyWindupDuration } from '../src/enemy-threat.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FIXED_STEP, Simulation } from '../src/simulation.ts';
@@ -104,7 +105,7 @@ test('hound pounces commit to their advertised lane, move continuously, and resp
   const sim = new Simulation(open, { spawn: false }), hound = engaged(sim, 'hound', -100);
   advance(sim, .3); sim.player.y = sim.player.prevY = 85;
   const locked = hound.attackAngle;
-  advance(sim, .4); assert.equal(hound.state, 'attack');
+  advance(sim, hound.stateDuration-hound.stateTime+FIXED_STEP); assert.equal(hound.state, 'attack');
   const x = hound.x; advance(sim, .1);
   assert.ok(hound.x - x > 25 && hound.x - x < 33, 'pounce covers its lane over ticks, not a teleport');
   assert.equal(hound.attackAngle, locked); assert.equal(sim.player.hp, sim.player.maxHp);
@@ -125,7 +126,7 @@ test('a mixed pack attacks concurrently with independent windups instead of shar
   }
   advance(sim, FIXED_STEP);
   assert.equal(sim.enemies.filter(e => e.state === 'windup').length, 8);
-  for (const enemy of sim.enemies) assert.equal(enemy.stateDuration, ENEMY_DEFINITIONS[enemy.kind].windup);
+  for (const enemy of sim.enemies) assert.equal(enemy.stateDuration, enemyWindupDuration(enemy,ENEMY_DEFINITIONS[enemy.kind].windup));
   const committed = new Set<number>();
   for (let tick = 0; tick < 200; tick++) {
     sim.update(FIXED_STEP, idle);

@@ -4,6 +4,35 @@ import { bindGameKeyboard } from '../src/game-keyboard.ts';
 import { GameInput } from '../src/game-input.ts';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
 
+test('Ctrl reveal tracks either control key without consuming browser shortcuts or latching after cancellation', () => {
+  const target = new EventTarget(), abort = new AbortController();
+  let held = false;
+  let cancellations = 0;
+  const pressed: string[] = [];
+  bindGameKeyboard(target, { press: event => pressed.push(event.code), release: () => {},
+    clear: () => { held = false; cancellations++; }, revealLoot: value => { held = value; } }, abort.signal);
+  const key = (type: string, code: string, ctrlKey: boolean, extra = {}) => {
+    const event = Object.assign(new Event(type, { cancelable: true }), { code, ctrlKey, metaKey: false, altKey: false, isComposing: false, ...extra });
+    target.dispatchEvent(event); return event;
+  };
+  assert.equal(key('keydown', 'ControlLeft', true).defaultPrevented, false);
+  assert.equal(held, true);
+  key('keydown', 'ControlRight', true);
+  key('keyup', 'ControlLeft', true); assert.equal(held, true, 'second Ctrl is still held');
+  assert.equal(cancellations, 0, 'revealing loot never cancels a pickup approach');
+  key('keyup', 'KeyA', true); assert.equal(held, true);
+  key('keyup', 'ControlRight', false); assert.equal(held, false);
+  const before = cancellations;
+  key('keydown', 'ControlLeft', true); key('keyup', 'ControlLeft', false);
+  assert.equal(cancellations, before, 'releasing Ctrl preserves the clicked pickup target');
+  key('keydown', 'ControlLeft', true);
+  key('keydown', 'KeyR', true); assert.deepEqual(pressed, []);
+  key('keydown', 'MetaLeft', true, { metaKey: true }); assert.equal(held, false);
+  key('keydown', 'ControlLeft', true);
+  target.dispatchEvent(new Event('compositionstart')); assert.equal(held, false);
+  abort.abort(); key('keydown', 'ControlRight', true); assert.equal(held, false);
+});
+
 function setup() {
   const target = new EventTarget(), abort = new AbortController(), input = new GameInput();
   const sim = new Simulation({ blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) }, { spawn: false });

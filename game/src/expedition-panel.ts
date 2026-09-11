@@ -98,6 +98,9 @@ export class ExpeditionPanel {
       <div class="expedition-chart-scroll ui-scroll-area"><div class="expedition-chart" style="height:${height}px" aria-label="Revealed expedition trail">
         <svg class="expedition-cartography" viewBox="0 0 600 ${height}" preserveAspectRatio="none" aria-hidden="true">
           <g class="expedition-contours"><path d="M-40 100Q80 10 130 90T270 140M410 70Q530 5 655 100M-40 120Q80 30 130 110T270 160M410 90Q530 25 655 120"/></g>
+        </svg>
+        <div class="expedition-trail" style="height:${height}px">
+        <svg class="expedition-cartography" viewBox="0 0 600 ${height}" preserveAspectRatio="none" aria-hidden="true">
           <g class="expedition-paths">${paths}${stages[0].map(n=>`<path d="M${n.x},${n.y} C${n.x},${n.y + 85} 300,${n.y + 65} 300,${n.y + 125}" class="is-travelled"/>`).join('')}</g>
           <path class="expedition-departure" d="M300 ${first.y + 116}l9 9-9 9-9-9Z"/>
         </svg>
@@ -105,7 +108,7 @@ export class ExpeditionPanel {
           const theme = n.entry ? dungeonTheme(n.entry.seed, n.entry.theme) : null;
           return `<button class="expedition-node is-${n.state}" data-node="${n.id}" style="--map-x:${n.x / 6}%;--map-y:${n.y}px;--node-color:${theme?.accent ?? '#9cbba7'}" aria-label="${escapeUI(`Stage ${n.stage + 1} · ${theme?.name ?? 'Cleared'} · ${n.state}`)}" ${n.state === 'available' ? 'aria-current="step"' : ''}><span class="expedition-node-ground"></span>${n.entry ? `<canvas width="180" height="180" data-gate="${n.id}" aria-hidden="true"></canvas>` : '<span class="expedition-cleared-mark">✓</span>'}<span class="expedition-node-number">${n.state === 'cleared' ? '✓' : n.stage + 1}</span>${n.state === 'available' ? `<span class="expedition-node-name">${theme!.name}</span>` : ''}</button>`;
         }).join('')}
-      </div></div>
+      </div></div></div>
       <footer class="ui-window-footer"><span role="status">${this.locked ? 'Unlocks at level 20' : existing?.status === 'complete' ? 'New route replaces uncollected loot.' : 'Choose your path'}</span>${route.cleared === 9 ? '<button class="expedition-treasure" data-treasure aria-label="Grand chest rewards"><canvas width="96" height="80" aria-hidden="true"></canvas></button>' : ''}<button class="expedition-rule ui-button ui-button--quiet" data-rules aria-label="Expedition rules">◇</button>${lastRun && route.choice === null ? '<button class="ui-button ui-button--quiet" data-return>Return for loot</button>' : ''}<button class="ui-button ui-button--primary expedition-enter" data-enter></button></footer>
       <div class="expedition-tooltip" id="expedition-tooltip" role="tooltip" hidden></div>`;
     this.element.querySelectorAll<HTMLCanvasElement>('[data-gate]').forEach(canvas => {
@@ -152,7 +155,7 @@ export class ExpeditionPanel {
       else {
         const theme = dungeonTheme(node.entry.seed, node.entry.theme), mod = EXPEDITION_MODIFIERS[node.entry.expedition!.modifier];
         tip.style.setProperty('--tooltip-accent', theme.accent);
-        tip.innerHTML = `<small>${node.state === 'available' ? this.locked ? 'Requires level 20' : 'Choose this path' : node.state === 'skipped' ? 'Path not taken' : 'Cleared'}</small><strong>${theme.name}</strong><div class="expedition-tip-level">Lv ${node.entry.level} <span>Boss ${node.entry.level + 3}</span></div><p class="expedition-tip-modifier">${mod.name}</p><p>${mod.description}</p><div class="expedition-tip-boss">${theme.bossName ?? 'Hollow Warden'}</div>`;
+        tip.innerHTML = `<small>${node.state === 'available' ? this.locked ? 'Requires level 20' : 'Choose this path' : node.state === 'skipped' ? 'Path not taken' : 'Cleared'}</small><strong>${theme.name}</strong><div class="expedition-tip-level">Lv ${node.entry.level} <span>Boss ${node.entry.level + 3}</span></div><p class="expedition-tip-modifier">${mod.name}</p><p>${mod.description}</p><div class="expedition-tip-boss">${theme.bossName ?? 'Hollow Warden'} · Resists stuns and knockback</div>`;
       }
     }
     tip.hidden = false;

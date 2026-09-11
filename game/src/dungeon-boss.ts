@@ -1,8 +1,10 @@
+import { BOSS_PRESSURE, bossQuickMove, updateBossPressure } from './boss-pressure.ts';
+import { enemyRecoveryDuration, enemyWindupDuration } from './enemy-threat.ts';
 import type { EnemyAIContext } from './enemy-ai.ts';
 import type { Enemy } from './model.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
 import { transitionEnemy } from './enemy-state.ts';
-export const WARDEN_RULES = Object.freeze({ sweepWarning: .9, fractureWarning: 1, reach: 125, fractureLength: 480, fractureWidth: 22, controlFactor: .25, controlImmunity: 2.5 });
+export const WARDEN_RULES = Object.freeze({ sweepWarning: .9, fractureWarning: 1, reach: 125, fractureLength: 480, fractureWidth: 22 });
 export function wardenProfile(theme?: Enemy['dungeonTheme']) {
     const astral=theme==='astral',rime=theme==='rime';
     return {offsets:astral?[-.8,-.4,0,.4,.8]:rime?[-.65,0,.65]:[-.5,0,.5],length:astral?580:rime?540:480,width:rime?28:22,
@@ -13,7 +15,6 @@ export function updateWarden(e: Enemy, dt: number, c: EnemyAIContext): void {
     const p = c.player, dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
     if (e.interrupted) {
         e.interrupted = false;
-        transitionEnemy(e, 'recover', .9);
     }
     if (p.dead || c.world.isSanctuary?.(p.x, p.y) || Math.hypot(p.x - e.homeX, p.y - e.homeY) > 1100) {
         e.awareness = 0;
@@ -34,6 +35,7 @@ export function updateWarden(e: Enemy, dt: number, c: EnemyAIContext): void {
             transitionEnemy(e, 'chase', 0);
         return;
     }
+    if (updateBossPressure(e,c)) return;
     if (e.state === 'chase') {
         e.angle = a;
         e.seesPlayer = c.visible(e.x, e.y, p.x, p.y);
@@ -47,18 +49,19 @@ export function updateWarden(e: Enemy, dt: number, c: EnemyAIContext): void {
             e.bossMove = 'summon';
         }
         else
-            e.bossMove = (e.bossTurns ?? 0) % (e.dungeonTheme==='astral'?3:2) ? 'fracture' : 'sweep';
+            e.bossMove = (e.bossTurns ?? 0)%2 ? bossQuickMove(d,p.radius)
+              : Math.floor((e.bossTurns ?? 0)/2) % (e.dungeonTheme==='astral'?3:2) ? 'fracture' : 'sweep';
         e.bossTurns = (e.bossTurns ?? 0) + 1;
         if (e.bossMove === 'sweep' && d > WARDEN_RULES.reach + 15) {
-            c.move(e, Math.cos(a) * 66, Math.sin(a) * 66, dt);
-            e.bossTurns!--;
-            return;
+            e.bossMove = 'fracture';
         }
         e.attackAngle = a;
         e.attackTargetX = p.x;
         e.attackTargetY = p.y;
         e.bossHits = 0;
-        transitionEnemy(e, 'windup', e.bossMove === 'sweep' ? WARDEN_RULES.sweepWarning : profile.warning);
+        const quick=e.bossMove==='jab'||e.bossMove==='bolt'?BOSS_PRESSURE[e.bossMove]:null;
+        e.attackDamage=e.damage*(quick?.damage??(e.bossMove==='fracture'?1.15:1));
+        transitionEnemy(e, 'windup', enemyWindupDuration(e,quick?.windup??(e.bossMove === 'sweep' ? WARDEN_RULES.sweepWarning : profile.warning)));
         return;
     }
     if (e.state === 'windup') {
@@ -87,6 +90,6 @@ export function updateWarden(e: Enemy, dt: number, c: EnemyAIContext): void {
             }
         }
         if (e.stateTime >= e.stateDuration)
-            transitionEnemy(e, 'recover', e.bossMove === 'summon' ? 1.8 : e.hp / e.maxHp < .3 ? .65 : 1);
+            transitionEnemy(e, 'recover', enemyRecoveryDuration(e, e.bossMove === 'summon' ? 1.8 : e.hp / e.maxHp < .3 ? .65 : 1));
     }
 }

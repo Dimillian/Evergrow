@@ -1,5 +1,37 @@
 # Progression, threat, and loot
 
+## Attack pressure — local 2026-09-11
+
+Ordinary ranged basics now prepare in 0.70–0.75 seconds; the Thorn Reaver's basic slash takes 0.45 seconds. Melee preparation tracks longer before committing: normal Brute locks at 0.60 of its 0.95-second windup; quick elite melee leaves at least 0.22 seconds locked. Ground marks, long pounces and regional signature warnings retain their escape windows. Each action adds a deterministic 0–0.12-second variation to its warning, without drawing from combat or loot RNG or imposing shared attack slots.
+
+Eligible elites use two quick basics followed by their full basic/signature action. Quick melee prepares in at most 0.50 seconds and ranged fire in 0.60 seconds, before rhythm variation. These attacks deal 75% of the original basic hit; quick ranged fire is a single projectile. Wisps and pouncing Hounds retain their ground/lane commitment instead of receiving faster blasts. Normal health, source damage, rewards and player defenses are unchanged. Elites and bosses recover at 65% of authored recovery (previously 85% / 80%); normal and veteran recovery multipliers remain 100%.
+
+All four bosses alternate major attacks with a short jab in melee range or a single bolt farther away. Jabs warn for 0.50 seconds and deal 55% of a sweep; bolts warn for 0.65 seconds and deal 45%, plus rhythm variation. Both commit aim before release and share their warning geometry with contact. Bosses select an in-range major instead of endlessly chasing for a queued sweep; the Marshal switches to fractures when no living retinue can benefit from its rally. Heavy damage and minimum warning lengths stay unchanged. Sanctuary, obstacles, leashes, once-per-action contact and source-level projectile rules remain authoritative.
+
+This is local tuning awaiting player feedback. Existing saves need no reset; restored actors safely restart their transient action state. See [combat power audit](combat-power-audit.md) for measured attack frequency and half-second burst checks.
+
+## Larger wilderness packs — local 2026-09-11
+
+Roaming pack size now follows the captured encounter baseline at its spawn anchor:
+
+| Encounter level | Pack size |
+| --- | --- |
+| 1–12 | 4–6 |
+| 13–25 | 6–9 |
+| 26–40 | 8–12 |
+| 41–60 | 11–16 |
+| 61+ | 14–20 |
+
+The first six slots retain normal rank odds. Additional slots use one quarter of the regional elite chance and half the veteran chance, leaving 88% ordinary / 10% veteran / 2% elite at high levels. Every rank remains possible; there is no concurrent population cap. Companion recipes repeat within the biome, and elite leaders retain their complementary escort roles. Larger packs use two loose rings with local obstacle adjustments. Admission reserves the full footprint outside the camera and validates the complete group; failed placement creates no partial group. Each planning pass has at most 256 member candidates, followed by spawn revalidation.
+
+The initial population remains sixteen, so its final group can be smaller. Travel requirements and cooldowns are unchanged. Pack size derives from the encounter's regional baseline, not directly from the player: returning home still produces 4–6-member groups. Dungeon room populations, camps and event waves are unchanged. Existing actors, saves and progress require no reset. The progression power-audit tool now displays pack ranges and crowd pressure through twenty attackers.
+
+Verification: 72 focused spawn, region, camp, control and tooling tests pass, along with type checking and the production build. Headless samples on real terrain generated 18, 16 and 15-member packs for seeds 7319, 18427 and 90210 respectively. This verifies placement, not crowded-combat frame rate; gameplay density and performance remain player testing.
+
+## Earlier challenge tuning
+
+2026-09-11 local challenge tuning: elites have 25% stronger raw hits and 15% shorter post-attack recovery; dungeon and wilderness bosses have 25% stronger hits and 20% shorter recovery. Normal health/damage/timing and all warning lengths remain unchanged. Veterans, elites and bosses resist repeated control and knockback; elite-led roaming packs combine ranged, heavy and flanking roles within their biome, without adding actors. See [combat power audit](combat-power-audit.md) for rules, tests and before/after measurements. Existing progress and wounds remain compatible; loading reconstructs damage with the new tuning at each enemy's saved level/rank.
+
 Local regional monster expansion adds six biome-weighted archetypes, mixed packs, two-basic/one-signature attack cycles, procedural anatomy and matching remains. See [regional monsters](regional-monsters.md) for combat and spawn weights. Existing characters remain compatible.
 
 Local addition: [wilderness boss lairs](wilderness-bosses.md) add three bosses, Elite/Veteran retinues and automatic Rare-or-better hoards through a separate placement layer. Existing landmark identities and save formats remain unchanged.
@@ -156,13 +188,13 @@ A level-ten character therefore gets full source XP from a level-six enemy, 80% 
 
 Each real death makes one rank-based gear-count roll, using an RNG isolated from combat randomness. The first kill guarantees at least one item if the table otherwise rolled zero. It does not add a bonus item on top of a successful roll.
 
-| Rank | Guaranteed items | Extra-item chance | Expected items per ordinary kill |
+| Rank | Guaranteed items | Initial extra-item chance | Expected items after thinning |
 | --- | ---: | ---: | ---: |
-| Normal | 0 | 28% | 0.28 |
+| Normal | 0 | 28% | 0.2135 |
 | Veteran | 0 | 70% | 0.70 |
 | Elite | 1 | 25% | 1.25 |
 
-Every dropped item then rolls its tier independently from that rank's table:
+Each candidate item rolls its tier independently from that rank's table, before common-equipment thinning:
 
 | Rank | Common | Magic | Rare | Epic | Legendary |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -170,7 +202,9 @@ Every dropped item then rolls its tier independently from that rank's table:
 | Veteran | 60% | 32% | 7% | 0.95% | 0.05% |
 | Elite | 40% | 45% | 13% | 1.9% | 0.1% |
 
-These are **conditional tier probabilities per dropped item**, not per-kill drop chances. For example, an ordinary normal kill has a 0.28 × 0.0002 = **0.0056%** chance of a legendary item. Elites guarantee an item, not a minimum rarity. Common drops outnumber gold rares at every rank; these tables apply at all source levels. Legendary currently means four stronger generated affixes; unique legendary powers are not implemented. There is no tier unlock gate, pity counter, smart-loot bias toward the equipped weapon, or magic-find stat in this foundation.
+These are **conditional tier probabilities per candidate item before thinning**, not per-kill drop chances. For example, an ordinary normal kill has a 0.28 × 0.0002 = **0.0056%** chance of a legendary item. Elites guarantee an item, not a minimum rarity. Common drops outnumber gold rares at every rank; these tables apply at all source levels. Legendary currently means four stronger generated affixes; unique legendary powers are not implemented. There is no tier unlock gate, pity counter, smart-loot bias toward the equipped weapon, or magic-find stat in this foundation.
+
+Normal kills discard one third of common equipment candidates using an independent deterministic roll. Charms of every rarity, Magic-or-better equipment, first-kill guarantees and authored boss/chest/event rewards bypass this reduction. Per 100 ordinary non-goblin kills, expected common equipment falls from 19.95 to 13.30; Magic-or-better equipment remains 6.65 and charms remain 1.40, for 21.35 items total (23.75% less clutter). Veteran and elite yields are unchanged. The separate thinning stream preserves retained item identities, profiles, stats and rarity, and does not affect gold or XP. Existing ground drops remain untouched.
 
 Default generation for content tools keeps its general-purpose tier distribution of 45 / 32 / 17 / 5 / 1. Enemy rewards explicitly pass the rolled tier into the generator and always use the rank tables above.
 
@@ -286,7 +320,7 @@ Nonstarter camp seeds divisible by three select a veteran/elite War Chief and 10
 
 The chief alternates six-second rush and surround phases, each with a 0.8-second horn warning. Rush grants nearby visible followers +20% speed and attack damage; surround widens their flanking approach. Orders reach 360 units and expire shortly after losing contact. Damage is captured at windup; killing the chief never changes an already committed hit. Surviving followers flee for 2.2 seconds once their current committed action finishes, then resume ordinary AI. Chief death does not itself clear the strongbox.
 
-Normal goblin equipment chance is 30% of the ordinary normal-enemy yield (8.4% instead of 28%); dropped equipment uses the same common-heavy rarity and source-level tables. Gold amount is also multiplied by 0.3 and rounded; its independent drop chance is unchanged. First-kill equipment guarantee and ordinary potion kill credit still apply. Chiefs use ordinary rank rewards. This keeps dense packs from multiplying equipment/gold income as much as an equal number of full enemies.
+Normal goblin initial item chance is 30% of the ordinary normal-enemy yield (8.4% instead of 28%). The same common-equipment thinning then gives 6.405 items per 100 normal goblins; their charm chance stays 0.42% per kill. Candidate equipment uses the same common-heavy rarity and source-level tables. Gold amount is also multiplied by 0.3 and rounded; its independent drop chance is unchanged. First-kill equipment guarantee and ordinary potion kill credit still apply. Chiefs use ordinary rank rewards. This keeps dense packs from multiplying equipment/gold income as much as an equal number of full enemies.
 
 ## Dungeon rewards
 

@@ -124,6 +124,11 @@ function render() {
 async function boot() {
   await loadGameFont();
   if (abort.signal.aborted) return;
+  if (new URLSearchParams(location.search).get('view') === 'power') {
+    const { mountPowerAudit } = await import('./power-audit-review.ts');
+    if (!abort.signal.aborted) mountPowerAudit(root, abort.signal);
+    return;
+  }
   root.innerHTML = `<header class="study-heading"><div><p class="ui-kicker">Evergrow · Local design study</p><h1>Beyond the first clearing</h1><p>Explore how geography, enemies, experience and equipment grow together.</p></div>
     <div class="study-heading-tools"><span class="ui-badge">Live rule values</span><nav aria-label="Study sections"><a class="ui-button ui-button--quiet" href="#loot-table">Loot table</a><a class="ui-button ui-button--quiet" href="#level-curve">Level curve</a></nav></div></header>
     <form class="ui-window study-controls" aria-label="Progression parameters">

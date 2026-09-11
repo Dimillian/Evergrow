@@ -42,11 +42,18 @@ const root = document.querySelector<HTMLElement>('#app')!;
 root.innerHTML = '<div class="game-shell"><canvas id="title-world"></canvas><div id="title-review-mount"></div></div>';
 const canvas = root.querySelector<HTMLCanvasElement>('canvas')!, renderer = new Renderer(), fx = life.own(new PostFX(canvas));
 const title = life.own(new TitleScreen(root.querySelector('#title-review-mount')!, { create: () => title.message('Frozen preview — no character is saved.'), continue: () => title.message('Frozen preview — gameplay is not started.'), remove: () => title.message('Preview only.'), download: () => title.message('Preview only.'), import: () => title.message('Preview only.'),
+  continueRecovery: () => title.message('Frozen preview — recovery gameplay is not started.'),
+  useCloud: () => title.message('Frozen preview — both copies are preserved.'),
   chronicle:async()=>history,
   leaderboard:async order=>{const entries=[...previewRanks].sort((a,b)=>order==='gear'?b.gearPower!-a.gearPower!:b.level-a.level).map((r,i)=>({...r,rank:i+1}));return {entries,own:entries.filter(r=>r.mine),total:entries.length,signedIn:!query.has('signedout')};},
   source: mode => { title.setSource({ supported: true, mode, signedIn: !query.has('signedout'), status: query.has('conflict') ? 'Conflict' : 'Synced' }); title.open(mode === 'cloud' && query.has('signedout') ? [] : repository.list()); } }));
 if (query.has('cloud')) title.setSource({ supported: true, mode: 'cloud', signedIn: !query.has('signedout'), status: query.has('conflict') ? 'Conflict' : 'Synced' });
-const slots = repository.list(); if (query.has('conflict')) slots[1].conflict = true;
+const slots = repository.list();
+if (query.has('conflict')) {
+  const recovery = structuredClone(slots[1].record!);
+  recovery.updatedAt -= 86400000; recovery.checkpoint.time = 1200;
+  slots[1].conflict = true; slots[1].cloudState = 'cloud'; slots[1].recovery = {record: recovery};
+}
 title.open(query.has('signedout') ? [] : slots, query.has('empty') ? 0 : 1);
 const home=query.get('home');if(home==='leaderboard'||home==='chronicle'||home==='changelog')title.selectPage(home,false);
 const previewLabel=document.createElement('span');previewLabel.textContent='LOCAL PREVIEW · SAMPLE CHARACTERS';previewLabel.style.cssText='position:fixed;bottom:4px;left:50%;transform:translateX(-50%);z-index:30;font:10px system-ui;color:#91a8a7;pointer-events:none';root.append(previewLabel);

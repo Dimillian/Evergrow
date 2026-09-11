@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { RoamingEncounters, ROAMING_RULES, roamingSpawnAnchor, shouldRetireRoamer } from '../src/roaming-encounters.ts';
+import { RoamingEncounters, ROAMING_RULES, ROAMING_PACK_BANDS, roamingSpawnAnchor, shouldRetireRoamer, roamingMemberOffset, roamingFormationRadius, roamingMemberRank } from '../src/roaming-encounters.ts';
 import { isSpawnHidden } from '../src/spawn-visibility.ts';
 import { Simulation } from '../src/simulation.ts';
 import { ENEMY_DEFINITIONS } from '../src/combat-content.ts';
@@ -72,10 +72,49 @@ test('retirement only releases hidden inactive roamers and never interrupts purs
   assert.equal(shouldRetireRoamer(enemy, player, view, heading), false, 'camp ledger owns its members');
 });
 
-test('roaming packs use four to six members while respecting capacity remainders', () => {
+test('roaming packs grow by encounter level while preserving the initial population remainder', () => {
   const planner = new RoamingEncounters();
   planner.resolved(ROAMING_RULES.warmupPopulation, () => 0);
-  assert.deepEqual([0, .24, .25, .74, .75, .99].map(roll => planner.groupSize(20, roll)), [4, 4, 5, 5, 6, 6]);
-  assert.equal(planner.groupSize(2, .99), 2);
-  assert.equal(planner.groupSize(0, .99), 0);
+  assert.deepEqual([0, .24, .25, .74, .75, .99].map(roll => planner.groupSize(12, roll)), [4, 4, 5, 5, 6, 6]);
+  for(const [i,band] of ROAMING_PACK_BANDS.entries())for(const level of [i?ROAMING_PACK_BANDS[i-1].through+1:1,band.through]){
+    assert.equal(planner.groupSize(level,0),band.min);assert.equal(planner.groupSize(level,.999),band.max);
+  }
+  const initial=new RoamingEncounters();assert.equal(initial.groupSize(100,.99),16);
+  initial.resolved(14,()=>0);assert.equal(initial.groupSize(100,.99),2);
+});
+
+test('full-size formations stay separated and hidden across camera shapes and headings',()=>{
+  let seed=42;const random=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/2**32);
+  for(const [width,height] of [[400,2000],[4000,700],[2600,1650]])for(let heading=0;heading<6.28;heading+=.3){
+    const view={x:-width/2,y:-height/2,width,height};
+    const anchor=roamingSpawnAnchor({x:0,y:0},view,{x:Math.cos(heading),y:Math.sin(heading)},random,0,roamingFormationRadius(20));
+    const points=Array.from({length:20},(_,i)=>roamingMemberOffset(20,i,heading,random));
+    for(const [i,p] of points.entries()){
+      assert.ok(Math.hypot(p.x,p.y)<=roamingFormationRadius(20));
+      assert.ok(isSpawnHidden(anchor.x+p.x,anchor.y+p.y,view,32));
+      for(const other of points.slice(0,i))assert.ok(Math.hypot(p.x-other.x,p.y-other.y)>=45);
+    }
+  }
+});
+
+test('extra members favor ordinary enemies without excluding veterans or elites',()=>{
+  const counts={normal:0,veteran:0,elite:0};
+  for(let i=0;i<1000;i++)counts[roamingMemberRank(80,12,(i+.5)/1000)]++;
+  assert.deepEqual(counts,{normal:880,veteran:100,elite:20});
+});
+
+test('runtime spawns large regional packs safely but keeps an overlevelled home small',()=>{
+  for(const x of [0,200000])for(const seed of [7319,18427,90210]){
+    let blocked=false,checks=0;
+    const sim=new Simulation({seed,blocked:()=>{checks++;return blocked;},move:(x,y)=>({x,y})},{spawn:false,seed,startX:x,startY:0});
+    sim.player.level=80;sim['roaming'].resolved(16,()=>0);
+    const view={x:x-200,y:-200,width:400,height:400};
+    const count=sim['spawnRoamingGroup'](view);
+    assert.ok(x?count>=14&&count<=20:count>=4&&count<=6,`${seed} at ${x}: ${count}`);
+    for(const e of sim.enemies)assert.ok(isSpawnHidden(e.x,e.y,view,e.radius));
+    const saved=sim.enemies.map(e=>({level:e.level,rank:e.rank,seed:e.lootSeed}));sim.player.level++;
+    assert.deepEqual(sim.enemies.map(e=>({level:e.level,rank:e.rank,seed:e.lootSeed})),saved);
+    blocked=true;checks=0;assert.equal(sim['spawnRoamingGroup'](view),0);
+    assert.ok(checks<=ROAMING_RULES.placementBudget);assert.equal(sim.enemies.length,count);
+  }
 });

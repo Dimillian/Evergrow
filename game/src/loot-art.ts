@@ -7,6 +7,7 @@ import { itemDropShapes } from './item-art.ts';
 import { drawGearShapes } from './equipment-art.ts';
 import { polygon } from './art-primitives.ts';
 import { layoutLootLabels, groundLootName, fitLootName, LOOT_LABEL_STYLE } from './loot-label-layout.ts';
+import { groundLootVisibility, type GroundLootVisibility } from './ground-loot-hover.ts';
 
 /** Separate silhouettes in a multi-item drop without changing pickup/save positions. */
 function lootPositions(drops: readonly GroundItem[]) {
@@ -69,20 +70,26 @@ export function drawResourcePickups(c: CanvasRenderingContext2D, pickups: readon
 
 /** Compact single-line ground names; full generated names belong in item inspection. */
 export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly GroundItem[],
-  project: (x: number, y: number) => { x: number; y: number }, width: number, height: number) {
-  const { nameSize, levelSize, maxWidth } = LOOT_LABEL_STYLE;
+  project: (x: number, y: number) => { x: number; y: number }, width: number, height: number,
+  visibility: GroundLootVisibility = { showAll: true }) {
+  const { scale, nameSize, levelSize, maxWidth, charmMaxWidth } = LOOT_LABEL_STYLE;
   const measure = (value: string) => textWidth(value, nameSize);
   const positions = lootPositions(drops);
-  const labels = new Map(drops.map(drop => [drop.id, { drop, name: groundLootName(drop.item),
+  const labels = new Map(drops.map(drop => [drop.id, { drop, name: groundLootName(drop.item), inset: drop.item.kind === 'charm' ? 24 : 16,
     level: `Lv ${drop.item.itemLevel}`, levelWidth: textWidth(`Lv ${drop.item.itemLevel}`, levelSize, 'interface') }]));
   const anchors = positions.map(({ drop, x, y }) => {
     const label = labels.get(drop.id)!;
-    return { id: drop.id, ...project(x, y), width: Math.min(maxWidth, measure(label.name) + label.levelWidth + 34) };
+    const screen = project(x, y);
+    return { id: drop.id, x: screen.x / scale, y: screen.y / scale, width: Math.min(drop.item.kind === 'charm' ? charmMaxWidth : maxWidth, measure(label.name) + label.levelWidth + label.inset + 18) };
   });
-  const boxes = layoutLootLabels(anchors, width, height);
-  c.save();
+  const boxes = layoutLootLabels(anchors, width / scale, height / scale);
+  const targets = groundLootVisibility(boxes.map(box => ({ id: box.id, x: box.left * scale, y: box.top * scale,
+    width: box.width * scale, height: box.height * scale, anchorX: box.x * scale, anchorY: box.y * scale })), visibility);
+  const visibleIds = new Set(targets.filter(label => label.visible).map(label => label.id));
+  c.save(); c.scale(scale, scale);
   for (const b of boxes) {
-    const { drop, name, level, levelWidth } = labels.get(b.id)!, color = TIER_COLORS[drop.item.tier];
+    if (!visibleIds.has(b.id)) continue;
+    const { drop, name, level, levelWidth, inset } = labels.get(b.id)!, color = TIER_COLORS[drop.item.tier];
     const center = b.left + b.width / 2;
     // Only displaced labels need a connector; a nearby label already identifies its drop.
     if (Math.abs(center - b.x) > 10 || b.y - b.top - b.height > 18 || b.top > b.y) {
@@ -90,15 +97,27 @@ export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly Grou
       c.beginPath(); c.moveTo(b.x, b.y - 5); c.lineTo(center, b.top + b.height / 2); c.stroke();
     }
     c.fillStyle = '#0d171ee8'; c.beginPath(); c.rect(b.left, b.top, b.width, b.height); c.fill();
-    // A tiny rarity diamond replaces the bright outline, stripe and subtitle.
-    c.strokeStyle = color; c.fillStyle = color; c.lineWidth = .8;
-    c.beginPath(); c.moveTo(b.left + 8, b.top + 7); c.lineTo(b.left + 10.5, b.top + 9.5);
-    c.lineTo(b.left + 8, b.top + 12); c.lineTo(b.left + 5.5, b.top + 9.5); c.closePath();
-    if (drop.item.tier === 'common') c.stroke(); else c.fill();
-    const available = b.width - levelWidth - 34;
-    text(c, fitLootName(name, available, measure), b.left + 16, b.top + 6, nameSize, color);
+    if (drop.item.kind === 'charm') {
+      // A rune-cut stone and quiet silver frame identify charms even at common rarity.
+      c.strokeStyle = '#acc9d95c'; c.lineWidth = .7;
+      c.strokeRect(b.left + .5, b.top + .5, b.width - 1, b.height - 1);
+      const x = b.left + 11, y = b.top + 9.5;
+      polygon(c, [[x-4,y-5],[x+1,y-7],[x+5,y-3],[x+4,y+5],[x-1,y+7],[x-5,y+3]], '#243846');
+      c.strokeStyle = '#adcbd9'; c.lineWidth = .8; c.stroke();
+      polygon(c, [[x+1,y-7],[x+5,y-3],[x+4,y+5],[x+1,y+2]], color + '65');
+      c.strokeStyle = '#dce9ee'; c.lineWidth = 1;
+      c.beginPath(); c.moveTo(x-1,y-4); c.lineTo(x+2,y-1); c.lineTo(x-2,y+2); c.lineTo(x+1,y+4); c.stroke();
+    } else {
+      // Equipment retains the small rarity diamond.
+      c.strokeStyle = color; c.fillStyle = color; c.lineWidth = .8;
+      c.beginPath(); c.moveTo(b.left + 8, b.top + 7); c.lineTo(b.left + 10.5, b.top + 9.5);
+      c.lineTo(b.left + 8, b.top + 12); c.lineTo(b.left + 5.5, b.top + 9.5); c.closePath();
+      if (drop.item.tier === 'common') c.stroke(); else c.fill();
+    }
+    const available = b.width - levelWidth - inset - 18;
+    text(c, fitLootName(name, available, measure), b.left + inset, b.top + 6, nameSize, color);
     if (b.width > levelWidth + 26) text(c, level, b.left + b.width - 7, b.top + 7, levelSize, '#92a6b0', 'right', 'interface');
   }
   c.restore();
-  return boxes.map(box => ({ id: box.id, x: box.left, y: box.top, width: box.width, height: box.height, anchorX: box.x, anchorY: box.y }));
+  return targets;
 }

@@ -1,12 +1,13 @@
 import { projectileDamageType } from './resistance-content.ts';
 import { metric } from './chronicle.ts';
 import { primeSpellweave, primeAfterguard, effectiveArmor } from './affix-combat.ts';
-import { applyElementalContact } from './combat-status.ts';
+import { applyElementalContact, applyStun } from './combat-status.ts';
+import { enemyThreat } from './enemy-threat.ts';
 import type { HitSnapshot, CombatEvent, Enemy, EnemyKind, Player, ProjectileStyle, WorldQuery, DamageType } from './model.ts';
 import { COMBAT_TIMING, ENEMY_DEFINITIONS } from './combat-content.ts';
 import { ENCOUNTER_RULES } from './encounter-director.ts';
 import { armorReduction } from './progression-content.ts';
-import { alertEnemy, transitionEnemy } from './enemy-state.ts';
+import { alertEnemy, transitionEnemy, interruptStaggeredEnemy } from './enemy-state.ts';
 
 export interface EnemyDamageContext {
   player: Player; enemies: readonly Enemy[];
@@ -44,7 +45,7 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
   enemy.hitFlash = COMBAT_TIMING.hitFlashDuration;
   enemy.hitAngle = angle;
   const definition = ENEMY_DEFINITIONS[enemy.kind];
-  const shove = definition.knockbackDistance;
+  const shove = definition.knockbackDistance * enemyThreat(enemy).knockback;
   if (!periodic) {
     enemy.knockbackX += Math.cos(angle) * shove / COMBAT_TIMING.knockbackDecay;
     enemy.knockbackY += Math.sin(angle) * shove / COMBAT_TIMING.knockbackDecay;
@@ -57,11 +58,8 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
     context.emit({ ...(style ? { style } : {}), type: 'kill', x: enemy.x, y: enemy.y, angle, facing: enemy.angle,
       targetId: enemy.id, remainingHp: 0, enemyKind: enemy.kind });
   } else if (definition.interruptible && melee) {
-    enemy.stagger = Math.max(enemy.stagger, COMBAT_TIMING.staggerDuration);
-    if (enemy.state === 'windup') {
-      enemy.interrupted = true;
-      transitionEnemy(enemy, 'recover', COMBAT_TIMING.interruptedRecovery);
-    }
+    applyStun(enemy, COMBAT_TIMING.staggerDuration, 'stagger');
+    interruptStaggeredEnemy(enemy);
   }
 }
 

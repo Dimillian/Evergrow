@@ -248,7 +248,7 @@ export function gearShapesSVG(shapes: readonly GearShape[], fine = true, prefix 
       const id=`${prefix}-surface-${i}`, xs=shape.points.map(p=>p[0]),ys=shape.points.map(p=>p[1]);
       const x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x,h=Math.max(...ys)-y;
       definitions.push(`<linearGradient id="${id}" x1="0" y1="0" x2=".8" y2="1">${gearMaterialStops(fill,shape.surface).map(([at,color])=>`<stop offset="${at}" stop-color="${gearShapeColor(color)}"/>`).join('')}</linearGradient>`);
-      fill=`url(#${id})`;
+      fill=`url(#${id}) ${fill}`;
       if(fine && !shape.fine && w*h>5) {
         definitions.push(`<clipPath id="${id}-clip"><polygon points="${points}"/></clipPath>`);
         marks=`<g clip-path="url(#${id}-clip)" stroke="${gearShapeColor(shape.fill)}" opacity=".13" stroke-width=".1">${gearMaterialMarks(shape.surface,[x,y,w,h]).map(mark=>`<polyline fill="none" points="${mark.map(p=>p.join(',')).join(' ')}"/>`).join('')}</g>`;

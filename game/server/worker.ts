@@ -62,10 +62,10 @@ export async function cloudAPI(request: Request, env: CloudEnv): Promise<Respons
   const current = () => backend('character-row-read', () => env.DB.prepare('SELECT * FROM characters WHERE owner = ? AND slot = ?').bind(owner, slot).first<Row>());
   const row = await current();
   if (request.method === 'GET') {
-    if (!row?.object) return json({ revision: row?.revision ?? 0, bundle: null });
+    if (!row?.object) return json({ revision: row?.revision ?? 0, operation: row?.operation ?? null, bundle: null });
     const object = await backend('checkpoint-read', () => env.SAVES.get(row.object!));
     if (!object) return json({ code: 'checkpoint_missing', error: 'This checkpoint is unavailable. Please retry.' }, 503);
-    return json({ revision: row.revision, bundle: JSON.parse(await object.text()) });
+    return json({ revision: row.revision, operation: row.operation, bundle: JSON.parse(await object.text()) });
   }
   if (request.method !== 'PUT') return json({ error: 'Method not allowed.' }, 405);
   let input: { expected: number; operation: string; bundle: unknown };

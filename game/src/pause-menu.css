@@ -28,6 +28,10 @@
 .pause-option[hidden], .pause-detail [hidden] { display: none; }
 .pause-option .ui-button { height: 30px; min-height: 30px; padding: 5px 10px; font-size: 12px; }
 .pause-toggle { min-width: 56px; }
+.pause-option--loot { flex-wrap: wrap; padding-block: 6px; }
+.pause-loot-modes { display: flex; gap: 3px; margin-left: auto; }
+.pause-loot-modes .ui-button { padding-inline: 8px; white-space: nowrap; letter-spacing: 0; text-transform: none; }
+.pause-loot-modes .ui-button[aria-pressed="true"] { color: var(--ui-ivory); border-color: #94aeb477; background: #8da8b01a; box-shadow: inset 0 -1px #b6cbd180; }
 .pause-toggle[aria-pressed="true"] { color: #c6dfcd; border-color: #6d987e80; background: #29433966; }
 .pause-stepper { display: flex; gap: 5px; }
 .pause-stepper .ui-button { width: 32px; padding: 6px; }

@@ -85,6 +85,7 @@ import { EnemyDeaths } from './death-presentation.ts';
 import { drawEnemyRemains, deathDepth, resetDeathArt } from './death-art.ts';
 interface Ghost { x: number; y: number; angle: number; gait: number; life: number; }
 export interface RenderSettings {
+  showGroundLootNames?: boolean;
   reducedMotion: boolean;
   /** Save-free reviews can inspect long-session water optics without advancing gameplay. */
   waterAge?: number;
@@ -523,7 +524,14 @@ export class Renderer {
     // Project popup anchors, leaving their glyph size and outline independent of camera zoom.
     // Speech draws later and may cover damage numbers; popups never displace a bark.
     this.effects.drawNumbers(c, (x, y) => worldToScreen(this.view, x, y));
-    const lootBounds = this.groundLootLabels = drawLootLabels(c, sim.groundItems.filter(d=>!d.flight||sim.time>=d.flight.at+d.flight.delay+1.05), (x, y) => worldToScreen(this.view, x, y), this.width, this.height);
+    const lootPointer = settings.phase === 'playing' && this.pointerActive && !this.gamepadActive && !this.touchActive && !this.pointerOverHUD()
+      ? { x: this.pointerX, y: this.pointerY } : null;
+    const retainedId = lootPointer ? hoveredGroundLoot(this.groundLootLabels, lootPointer.x, lootPointer.y)?.id : undefined;
+    this.groundLootLabels = drawLootLabels(c, sim.groundItems.filter(d=>!d.flight||sim.time>=d.flight.at+d.flight.delay+1.05),
+      (x, y) => worldToScreen(this.view, x, y), this.width, this.height,
+      { showAll: settings.showGroundLootNames !== false, pointer: lootPointer, retainedId,
+        selectedId: settings.phase === 'playing' ? sim.groundPickup.id : null });
+    const lootBounds = this.groundLootLabels.filter(label => label.visible !== false);
     const phone = this.touchActive && this.touchViewport ? phoneLandscapeLayout(this.touchViewport) : null;
     const unit = this.touchViewport ? this.width / this.touchViewport.width : 1;
     const footer = phone ? {x:phone.footer.x*unit,y:phone.footer.y*unit,scale:phone.footer.scale*unit} : undefined;

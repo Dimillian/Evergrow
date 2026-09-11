@@ -2,7 +2,7 @@ import type { ChronicleLedger } from './chronicle.ts';
 import { CHARACTER_SLOT_COUNT, SAVE_MAX_CODE_UNITS, decodeCharacterSave, type CharacterSave } from './character-save.ts';
 export interface CharacterStorage { getItem(key: string): string | null; setItem(key: string, value: string): void; }
 export interface SaveSummary { name: string; level: number; power: number; gearPower?: number; updatedAt: number; }
-export interface SaveSlot { summary?: SaveSummary; conflict?: boolean; pending?: boolean; index: number; record: CharacterSave | null; token: string | null; state: 'empty' | 'saved' | 'recovered' | 'invalid' | 'unavailable'; }
+export interface SaveSlot { cloudState?: 'cloud' | 'pending' | 'offline'; recovery?: { record: CharacterSave | null; invalid?: boolean }; summary?: SaveSummary; conflict?: boolean; pending?: boolean; index: number; record: CharacterSave | null; token: string | null; state: 'empty' | 'saved' | 'recovered' | 'invalid' | 'unavailable'; }
 export type SaveResult = { ok: true; token: string } | { ok: false; message: string };
 export interface CharacterRepositoryPort {
   chronicle?(): ChronicleLedger | Promise<ChronicleLedger>;

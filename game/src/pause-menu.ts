@@ -1,7 +1,10 @@
 import { bindAudioControls, type AudioControlActions } from './audio-controls.ts';
 import './pause-menu.css';
+import type { GroundLootNameplates } from './ground-loot-hover.ts';
 
 export interface PauseActions extends AudioControlActions {
+  groundLootNames?(): GroundLootNameplates;
+  setGroundLootNames?(mode: GroundLootNameplates): void;
   openChronicle?(): void;
   sound?(): void; muted?(): boolean; zoom?(factor: number): void;
   save?(): Promise<boolean>;
@@ -35,9 +38,18 @@ export class PauseMenu {
     root.querySelector('#save-action')!.addEventListener('click', () => { void this.save(false); }, { signal });
     root.querySelector('#title-action')!.addEventListener('click', () => { void this.save(true); }, { signal });
     bindAudioControls(root, actions, signal);
+    for (const button of root.querySelectorAll<HTMLButtonElement>('[data-loot-names]')) {
+      button.disabled = !actions.setGroundLootNames;
+      button.addEventListener('click', () => {
+        actions.setGroundLootNames?.(button.dataset.lootNames === 'ctrl' ? 'ctrl' : 'always');
+        this.refresh();
+      }, { signal });
+    }
     this.refresh();
   }
   refresh(): void {
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-loot-names]'))
+      button.setAttribute('aria-pressed', String(button.dataset.lootNames === (this.actions.groundLootNames?.() ?? 'always')));
     const sound = this.root.querySelector<HTMLButtonElement>('[data-sound]')!;
     sound.textContent = this.actions.muted?.() ? 'Off' : 'On'; sound.setAttribute('aria-pressed', String(!this.actions.muted?.()));
     const fullscreen = this.root.querySelector<HTMLButtonElement>('[data-fullscreen]')!;

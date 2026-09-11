@@ -28,7 +28,7 @@ const world = new World(7319), sim = new Simulation(world, { spawn: false }), re
 sim.player.level = 10;
 const stage = document.createElement('canvas'), fx = new PostFX(stage);
 const params = new URLSearchParams(location.search);
-const pickupView = params.has('pickup');
+const pickupView = params.has('pickup') || params.has('charms');
 const deathElement = params.get('element');
 const materialsView = new URLSearchParams(location.search).has('materials');
 const containersView = new URLSearchParams(location.search).has('containers');
@@ -43,6 +43,10 @@ if (pickupView) {
     { id: 301, x: x + 95, y: y - 15, item: generateItem(99, 8, 'weapon', 'longsword', 'magic') },
     { id: 302, x: x - 100, y: y + 30, item: generateItem(102, 8, 'boots', undefined, 'rare') },
     { id: 303, x: x + 25, y: y + 95, item: generateItem(104, 8, 'ring', undefined, 'common') });
+  if (params.has('charms')) drops.push(
+    {id:304,x:x-110,y:y-85,item:generateItem(105,8,'charm','jade-pebble','common')},
+    {id:305,x:x+10,y:y-95,item:generateItem(106,12,'charm','rime-shard','magic')},
+    {id:306,x:x+125,y:y+75,item:generateItem(107,20,'charm','astral-monolith','epic')});
   sim.groundItems = drops;
   renderer.cameraX = x; renderer.cameraY = y;
   sim.player.angle = .5;

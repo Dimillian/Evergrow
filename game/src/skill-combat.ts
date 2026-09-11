@@ -1,3 +1,4 @@
+import { chainLifeOnHitMultiplier } from './skill-execution-content.ts';
 import { metric } from './chronicle.ts';
 import { consumeSpellweave } from './affix-combat.ts';
 import { weaponImpactStyle } from './elemental-weapon.ts';
@@ -56,7 +57,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   let launch: WeaponLaunch | undefined;
   const color = definition.color;
   const hitStyle = 'style' in recipe ? recipe.style : weaponImpactStyle(weapon);
-  const damageTarget = (enemy: Enemy, amount: number, angle: number, melee: boolean) => context.damage(enemy, amount, angle, melee, hitStyle, weapon.attackKind === 'melee' ? attack.elementalDamage * (damage > 0 ? amount / attack.damage : 0) : undefined, offense);
+  const damageTarget = (enemy: Enemy, amount: number, angle: number, melee: boolean, contactOffense = offense) => context.damage(enemy, amount, angle, melee, hitStyle, weapon.attackKind === 'melee' ? attack.elementalDamage * (damage > 0 ? amount / attack.damage : 0) : undefined, contactOffense);
   const living = () => enemies.filter(enemy => enemy.state !== 'dead');
   const visible = (enemy: Enemy) => context.visible(p.x, p.y, enemy.x, enemy.y);
   const radial = (radius: number, hit: (enemy: Enemy, angle: number) => void) => {
@@ -167,7 +168,8 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
       for (let jump = 0; next && jump < recipe.jumps; jump++) {
         const target = next;
         context.emit({ type: 'chain', x: from.x, y: from.y, toX: target.x, toY: target.y, skill: id, color, style: recipe.style, duration: recipe.duration });
-        damageTarget(target, amount, Math.atan2(target.y - from.y, target.x - from.x), false);
+        damageTarget(target, amount, Math.atan2(target.y - from.y, target.x - from.x), false,
+          { ...offense, lifeOnHit: offense.lifeOnHit * chainLifeOnHitMultiplier(jump, hit.has(target.id)) });
         hit.add(target.id); from = { x: target.x, y: target.y }; amount *= recipe.falloff;
         next = living().filter(enemy => context.onScreen(enemy) && enemy.id !== target.id && (recipe.revisit || !hit.has(enemy.id)) && Math.hypot(enemy.x - from.x, enemy.y - from.y) <= recipe.range + enemy.radius
           && context.visible(from.x, from.y, enemy.x, enemy.y))

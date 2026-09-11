@@ -126,9 +126,10 @@ test('concurrent device writes commit once; retries are idempotent and stale sav
   assert.deepEqual(results.map(r => r.status).sort(), [200, 409]);
   assert.equal((await s.request('A', 'characters/0', initial)).status, 200); assert.equal(s.blobs.size, 1);
   assert.equal((await s.request('A', 'characters/0', { ...initial, bundle: null })).status, 409);
-  assert.equal((await s.request('A', 'characters/0', write(null, 1))).status, 200);
+  const deletion = write(null, 1);
+  assert.equal((await s.request('A', 'characters/0', deletion)).status, 200);
   assert.equal((await s.request('A', 'characters/0', write(fixture(), 1))).status, 409);
-  assert.deepEqual(await (await s.request('A')).json(), { revision: 2, bundle: null });
+  assert.deepEqual(await (await s.request('A')).json(), { revision: 2, operation: deletion.operation, bundle: null });
 });
 test('failed blob and pointer commits preserve the last acknowledged checkpoint', async t => {
   const s = server(); t.after(() => s.db.close()); await s.request('A', 'characters/0', write(fixture()));

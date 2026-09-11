@@ -59,7 +59,7 @@ test('a camp admits the whole lair offscreen, retains guard casualties, and neve
 });
 test('bosses have distinct locked moves, phase two recovery, and a full-health reset only at home',()=>{
  for(const kind of WILDERNESS_BOSSES){const {sim,boss,c}=setup(kind);sim.player.x=100;sim.player.y=0;
-  for(let turn=0;turn<3;turn++){boss.state='chase';boss.stateTime=0;boss.bossTurns=turn;updateWildernessBoss(boss,.01,c);assert.equal(boss.state,'windup');
+  for(let turn=0;turn<3;turn++){boss.state='chase';boss.stateTime=0;boss.bossTurns=turn*2;updateWildernessBoss(boss,.01,c);assert.equal(boss.state,'windup');
    const aim=boss.attackAngle,tx=boss.attackTargetX;sim.player.y=60;updateWildernessBoss(boss,.1,c);assert.equal(boss.attackAngle,aim);assert.equal(boss.attackTargetX,tx);
    if(boss.bossMove!=='command')assert.ok(enemyWarnings(boss).every(w=>w.locked));
   }
@@ -77,7 +77,7 @@ test('committed strikes can be dodged and cannot hit repeatedly during their act
 test('Marshal rally affects only living retinue and cannot summon or resurrect guards',()=>{
  const {sim,boss,c}=setup('graveMarshal');const guard=sim.spawnEnemy('archer',80,20,'elite',{campId:boss.campId!,memberId:'1',lootSeed:3})!;
  const dead=sim.spawnEnemy('stalker',80,0)!;dead.state='dead';dead.hp=0;
- boss.state='chase';boss.bossTurns=2;updateWildernessBoss(boss,.01,c);boss.stateTime=boss.stateDuration;updateWildernessBoss(boss,.01,c);
+ boss.state='chase';boss.bossTurns=4;updateWildernessBoss(boss,.01,c);boss.stateTime=boss.stateDuration;updateWildernessBoss(boss,.01,c);
  assert.equal(guard.rallyTime,LAIR_RULES.rallyDuration);assert.equal(dead.hp,0);assert.equal(sim.enemies.length,3);
 });
 test('boss hoards guarantee a rare, use stable rolls, and require no E interaction',async()=>{

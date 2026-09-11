@@ -47,6 +47,8 @@ Terrain remains tile-cached and world-aligned. Light masks are limited to 96 ray
 
 ## Hollow Warden
 
+Local attack-pressure pass (2026-09-11): major attacks alternate with a compact jab at close range or one themed bolt at distance. Jabs use 55% of sweep damage and a 0.50-second warning; bolts use 45% and 0.65 seconds. Aim locks before release and each actor adds 0–0.12 seconds of rhythm variation. When a queued sweep is out of reach, the Warden uses its themed fracture immediately instead of endlessly chasing. Major warnings and phase guardian triggers remain intact; the shared recovery multiplier is now 0.65. `boss-pressure.ts` supplies the same quick-action recipes to dungeon and wilderness bosses.
+
 The Warden has a distinct procedural silhouette and a persistent top boss plate. Its level-one baseline is 1,800 life and 18 damage, using shared geographic monster scaling.
 
 | Move | Rule |

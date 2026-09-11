@@ -14,9 +14,13 @@ export class CharacterSession {
   constructor(repository: CharacterRepositoryPort, worldVersion: number, createWorld?:UpgradeWorldFactory) {
     this.repository = repository; this.worldVersion = worldVersion;this.createWorld=createWorld;
   }
-  async load(index: number): Promise<CharacterSave | null> {
+  async load(index: number, recoveryToken?: string): Promise<CharacterSave | null> {
     await this.pending;
     const slot = await this.repository.read(index);
+    if (slot.conflict && (recoveryToken === undefined || recoveryToken !== slot.token)) {
+      this.error = 'A different cloud save is available. Choose the cloud version or explicitly continue this device’s recovery.'; return null;
+    }
+    if (recoveryToken !== undefined && recoveryToken !== slot.token) { this.error = 'Recovery changed. Select it again.'; return null; }
     if (!slot.record) { this.error = 'This character could not be loaded. The slot has been preserved.'; return null; }
     if (slot.record.worldVersion !== this.worldVersion) {
       if(!canUpgradeWorld(slot.record.worldVersion,this.worldVersion)){

@@ -46,7 +46,7 @@
 .appearance-editor .check-label input { accent-color:#a7c0ae; width:17px; height:17px; }
 .appearance-editor .gear-choice { display:flex; align-items:center; gap:10px; font-size:14px; color:var(--ui-muted); }
 .appearance-editor .gear-choice select { max-width:190px; }
-.appearance-editor .editor-controls.ui-window { background:linear-gradient(145deg,#17242bf2,#0f191ff2); padding:22px 24px; }
+.appearance-editor .editor-controls.ui-window { padding:22px 24px; }
 .appearance-editor .editor-controls h2 { font-size:20px; font-weight:500; color:var(--ui-ivory); margin:0 0 22px; }
 .appearance-editor .editor-tabs { display:flex; gap:24px; border-bottom:1px solid #78908b40; margin:0 0 18px; }
 .appearance-editor .editor-tabs button { padding:0 2px 10px; border:0; border-bottom:2px solid transparent; color:var(--ui-muted); background:none; font-size:20px; }

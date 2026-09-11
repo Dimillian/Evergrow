@@ -5,7 +5,7 @@ import type { EnemyKind } from './model.ts';
 import type { EnemyRank } from './progression-content.ts';
 import { normalizeLevel } from './progression-content.ts';
 import { generateItem } from './items.ts';
-import { BIOME_PROFILE_WEIGHTS, ENEMY_ITEM_KIND_WEIGHTS, ENEMY_LOOT_YIELD, getLootTable } from './loot-content.ts';
+import { BIOME_PROFILE_WEIGHTS, ENEMY_ITEM_KIND_WEIGHTS, ENEMY_LOOT_YIELD, NORMAL_COMMON_EQUIPMENT_SKIP_CHANCE, getLootTable } from './loot-content.ts';
 
 export interface EnemyLootContext {
   readonly tierOverride?: ItemTier;
@@ -74,6 +74,10 @@ export function rollEnemyLoot(context: EnemyLootContext): Item[] {
   for (let index = 0; index < count; index++) {
     const rolledTier = selectLootWeight(table.tierWeights, random()), tier = context.tierOverride ?? rolledTier;
     const kind = selectLootWeight(ENEMY_ITEM_KIND_WEIGHTS[context.kind], random());
+    // A separate stream preserves existing rarity, charm, profile and item rolls.
+    // First-kill guarantees and authored chest/event/boss rewards bypass thinning.
+    if (context.rank === 'normal' && !context.firstKill && !context.encounter && tier === 'common' && kind !== 'charm'
+      && randomSource(seed ^ 0xA24BAED5)() < NORMAL_COMMON_EQUIPMENT_SKIP_CHANCE) continue;
     const profileId = kind === 'weapon' || kind === 'shield' || kind === 'grimoire' || kind === 'orb'
       ? selectLootWeight(BIOME_PROFILE_WEIGHTS[context.biome][kind], random()) : undefined;
     // Consecutive rewards receive different item-local seeds, independent of how many table draws were needed.

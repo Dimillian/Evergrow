@@ -81,7 +81,7 @@ export function openCloudCache(factory: IDBFactory, account: string) {
           if (row?.dirty && !row.conflict && !row.upload) result = { ...row, upload: { operation: row.operation, base: row.base, bundle: row.bundle } };
         } else if (row && row.base === command.base) {
           if (command.kind === 'ack') result = { ...row, base: command.revision, dirty: row.operation !== command.operation, conflict: false, upload: undefined };
-          else result = { ...row, conflict: true };
+          else if (row.dirty) result = { ...row, conflict: true };
         }
         if (result && !Array.isArray(result)) {
           let history=row?.history??emptyChronicle();
@@ -98,7 +98,7 @@ export function openCloudCache(factory: IDBFactory, account: string) {
       };
       tx.oncomplete = () => {
         // Listing raw rows must not let one incompatible character hide all other slots.
-        try { resolve(Array.isArray(result)||command.kind==='inspect'?result:result?currentRow(result):null); }
+        try { resolve(Array.isArray(result)||command.kind==='inspect'||command.kind==='conflict'?result:result?currentRow(result):null); }
         catch(error){reject(error);}
       };
       tx.onabort = tx.onerror = () => reject(tx.error ?? new Error('Save storage unavailable.'));

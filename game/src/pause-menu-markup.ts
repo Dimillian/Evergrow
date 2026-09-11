@@ -24,6 +24,7 @@ export function pauseMenuMarkup(kills: number, duration: string, location: strin
           <header class="pause-options-heading"><h2>Options</h2><button type="button" data-options-back class="ui-button ui-button--quiet ui-button--icon" aria-label="Back to pause menu">${uiIcon('chevron')}</button></header>
           <div class="pause-option"><span>Sound</span><button type="button" data-sound aria-label="Game sound" class="ui-button pause-toggle" aria-pressed="true">On</button></div>
           ${audioControlsMarkup()}
+          <div class="pause-option pause-option--loot"><span id="ground-loot-names-label">Loot names</span><div class="pause-loot-modes" role="group" aria-labelledby="ground-loot-names-label"><button type="button" data-loot-names="always" class="ui-button ui-button--quiet" aria-pressed="true">Always</button><button type="button" data-loot-names="ctrl" class="ui-button ui-button--quiet" aria-pressed="false">Hold Ctrl</button></div></div>
           <div class="pause-option"><span>Camera zoom</span><div class="pause-stepper"><button type="button" data-zoom="out" class="ui-button ui-button--icon" aria-label="Zoom camera out">${uiIcon('minus')}</button><button type="button" data-zoom="in" class="ui-button ui-button--icon" aria-label="Zoom camera in">${uiIcon('plus')}</button></div></div>
           <div class="pause-option" data-fullscreen-row hidden><span>Fullscreen</span><button type="button" data-fullscreen aria-label="Fullscreen" class="ui-button pause-toggle" aria-pressed="false">Off</button></div>
           <details class="pause-controls"><summary>Controls</summary><dl><div><dt>Move</dt><dd>WASD · Left stick</dd></div><div><dt>Attack</dt><dd>LMB · RT</dd></div><div><dt>Dodge</dt><dd>Space · B</dd></div><div><dt>Potion</dt><dd>Q · LB</dd></div><div><dt>Interact</dt><dd>E · A</dd></div><div><dt>Pause / back</dt><dd>Esc · Menu / B</dd></div></dl></details>
@@ -33,4 +34,3 @@ export function pauseMenuMarkup(kills: number, duration: string, location: strin
     <footer class="pause-footer"><i aria-hidden="true"></i><p class="menu-save-state" role="status">Saving…</p></footer>
   </section>`;
 }
-

@@ -30,7 +30,7 @@ export class GroundLootHighlight {
   update(player: Player, drops: readonly GroundItem[], labels: readonly GroundLootLabel[], width: number, height: number,
     pointer: { x: number; y: number } | null, time = 0, selectedId: number | null = null): void {
     const hovered = pointer && hoveredGroundLoot(labels, pointer.x, pointer.y);
-    const label = hovered??labels.find(b=>b.id===selectedId);
+    const label = hovered??labels.find(b=>b.id===selectedId && b.visible !== false);
     const drop = label && drops.find(d => d.id === label.id);
     if (!label || !drop) { this.hide(); return; }
     const problem=groundPickupProblem(player,drop,time);
