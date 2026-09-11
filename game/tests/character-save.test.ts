@@ -312,3 +312,29 @@ test('full encounter population and fresh roaming warmup survive an atomic chara
   assert.equal(restored.captureCheckpoint().roaming?.warmup, 16);
   assert.ok(restored.spawnEnemy('stalker', 3000, 0));
 });
+
+test('mana repricing reaches equipped, carried, stored, buyback and both dungeon loot layers without resetting progress',async()=>{
+  const {repo}=await setup(),save=structuredClone(repo.read(0).record!);
+  const old=(seed:number)=>{
+    const item=generateItem(seed,35,'ring','moonstone-ring','magic');
+    item.affixes=[{name:'Clarity',stat:'manaRegen',value:99}];item.implicit={manaRegen:12};
+    item.recipe.rolls=[.5];delete item.recipe.manaVersion;return item;
+  };
+  const p=save.checkpoint,s=p.character;
+  p.level=35;s.statPoints=170;s.skillPoints=34;
+  const charm=generateItem(908,35,'charm','astral-pebble','common');charm.affixes=[{name:'Clarity',stat:'manaRegen',value:99}];charm.recipe.rolls=[.5];delete charm.recipe.manaVersion;assert.ok(addInventoryItem(s,charm));
+  s.equipped.ring1=old(901);assert.ok(addInventoryItem(s,old(902)));
+  s.stash=Array(96).fill(null);s.stash[0]=old(903);s.commerce.buyback=[{item:old(904),price:10}];
+  p.groundItems=[{id:901,x:0,y:0,item:old(905)}];
+  const run=createDungeonRun({id:'dungeon:mana',name:'Test',seed:333,level:1,biome:'deadwood',x:0,y:0});
+  run.contents.groundItems=[{id:902,x:run.x,y:run.y,item:old(906)}];
+  p.expeditions={...freshExpeditions(),location:run.entrance.id,runs:[run],surface:emptyContents()};
+  p.expeditions.surface!.groundItems=[{id:903,x:0,y:0,item:old(907)}];
+  const raw=JSON.stringify(save),decoded=decodeCharacterSave(raw);assert.ok(decoded);
+  const d=decoded.checkpoint,c=d.character;
+  const all=[c.equipped.ring1!,c.inventory.find(i=>i?.seed===902)!,c.inventory.find(i=>i?.seed===908)!,c.stash![0]!,c.commerce.buyback[0].item,
+    d.groundItems[0].item,d.expeditions!.runs[0].contents.groundItems[0].item,d.expeditions!.surface!.groundItems[0].item];
+  for(const item of all){assert.equal(item.recipe.manaVersion,1);assert.ok(item.affixes[0].value<99);assert.deepEqual(item.recipe.rolls,[.5]);}
+  assert.equal(d.level,p.level);assert.equal(d.xp,p.xp);assert.equal(c.gold,s.gold);assert.deepEqual(c.allocatedNodes,s.allocatedNodes);
+  assert.equal(JSON.stringify(save),raw);assert.deepEqual(decodeCharacterSave(JSON.stringify(decoded)),decoded);
+});

@@ -1,3 +1,4 @@
+import { manaImplicitScale } from './mana-content.ts';
 import { CHARM_DROP_CHANCE, CHARM_PROFILES, CHARM_SIZES, CHARM_FLAVORS, CHARM_UTILITY_AFFIXES, CHARM_WEIGHTS, charmProfile, charmAffixCount, charmThematicStat } from './charm-content.ts';
 import { RESISTANCE_AFFIXES, RESISTANCE_LABELS, RESISTANCE_STATS, isResistanceStat, boundResistanceRoll } from './resistance-content.ts';
 import { JEWELRY_PROFILES, jewelryProfiles } from './jewelry-content.ts';
@@ -29,7 +30,7 @@ export const STAT_LABELS: Readonly<Record<StatKey, string>> = Object.freeze({
   strength: 'Strength', dexterity: 'Dexterity', intelligence: 'Intelligence', vitality: 'Vitality',
   maxHp: 'Maximum life', maxMana: 'Maximum mana', armor: 'Armor', damagePercent: 'Attack damage',
   attackSpeedPercent: 'Attack speed', castSpeedPercent: 'Cast speed', critChance: 'Critical chance', critDamage: 'Critical damage',
-  moveSpeedPercent: 'Movement speed', spellDamagePercent: 'Spell damage', manaRegen: 'Mana / sec',
+  moveSpeedPercent: 'Movement speed', spellDamagePercent: 'Spell damage', manaRegen: 'Mana / 5 sec',
   lifeRegen: 'Life / sec', manaCostPercent: 'Mana cost reduction', cooldownPercent: 'Cooldown reduction', lifeOnHit: 'Life on hit',
   blockChance: 'Block chance', blockReduction: 'Blocked damage reduction',
 });
@@ -71,7 +72,7 @@ export const AFFIXES: readonly AffixDefinition[] = [
   { name: 'Insight', stat: 'intelligence', base: 2, growth: .25 },
   { name: 'Vigor', stat: 'vitality', base: 2, growth: .25 },
   { name: 'The Hart', stat: 'maxHp', base: 8, growth: 1.8 },
-  { name: 'The Wellspring', stat: 'maxMana', base: 8, growth: 1.5 },
+  { name: 'The Wellspring', stat: 'maxMana', base: 8, growth: .8 },
   { name: 'Shelter', stat: 'armor', base: 6, growth: 1.4 },
   { name: 'Ruin', stat: 'damagePercent', base: 4, growth: .35 },
   { name: 'Invocation', stat: 'castSpeedPercent', base: 3, growth: .18 },
@@ -80,7 +81,7 @@ export const AFFIXES: readonly AffixDefinition[] = [
   { name: 'Severity', stat: 'critDamage', base: 6, growth: .35 },
   { name: 'The Wanderer', stat: 'moveSpeedPercent', base: 2, growth: .12 },
   { name: 'Sorcery', stat: 'spellDamagePercent', base: 5, growth: .45 },
-  { name: 'Clarity', stat: 'manaRegen', base: .5, growth: .08 },
+  { name: 'Clarity', stat: 'manaRegen', base: 2, growth: .12 },
   { name: 'Renewal', stat: 'lifeRegen', base: .3, growth: .05 },
   { name: 'Efficiency', stat: 'manaCostPercent', base: 4, growth: .15 },
   { name: 'Readiness', stat: 'cooldownPercent', base: 2, growth: .1 },
@@ -151,11 +152,11 @@ export function affixPotency(kind: ItemKind, stat: StatKey): number {
 function focusImplicit(profileId: string, level: number, quality: number): StatModifiers {
   const profile = FOCUS_PROFILES.find(p => p.id === profileId)!;
   return Object.fromEntries(Object.entries(profile.implicit).map(([stat, value]) => [stat,
-    value! * quality * (PERCENT_STATS.has(stat as StatKey) ? itemPercentageScale(level) : itemPowerScale(level))]));
+    value! * quality * (isManaBudgetStat(stat) ? manaImplicitScale(level) : PERCENT_STATS.has(stat as StatKey) ? itemPercentageScale(level) : itemPowerScale(level))]));
 }
 function jewelryImplicit(profileId:string,level:number,quality:number):StatModifiers {
   const profile=JEWELRY_PROFILES.find(p=>p.id===profileId)!;
-  return Object.fromEntries(Object.entries(profile.implicit).map(([stat,value])=>[stat,value!*quality*(PERCENT_STATS.has(stat as StatKey)?itemPercentageScale(level):itemPowerScale(level))]));
+  return Object.fromEntries(Object.entries(profile.implicit).map(([stat,value])=>[stat,value!*quality*(isManaBudgetStat(stat)?manaImplicitScale(level):PERCENT_STATS.has(stat as StatKey)?itemPercentageScale(level):itemPowerScale(level))]));
 }
 export const TIER_AFFIXES: Readonly<Record<ItemTier, number>> = { common: 0, magic: 1, rare: 2, epic: 3, legendary: 4 };
 export const TIER_POWER: Readonly<Record<ItemTier, number>> = { common: 1, magic: 1.09, rare: 1.2, epic: 1.34, legendary: 1.5 };
@@ -209,7 +210,7 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
   const affixes: ItemAffix[] = [], remaining = [...itemAffixPool({ kind: itemKind, weapon: weaponProfile, focus: focusProfile, recipe:{materialId,profileId:jewelryProfile?.id} })];
   for (let index = 0; index < TIER_AFFIXES[tier]; index++) {
     const definition = rollAffix(remaining, random);
-    const growthLevel = PERCENT_STATS.has(definition.stat) ? itemAffixGrowthLevel(level) : level - 1;
+    const growthLevel = (PERCENT_STATS.has(definition.stat) || isManaBudgetStat(definition.stat)) ? itemAffixGrowthLevel(level) : level - 1;
     const rollQuality = random(); rolls.push(rollQuality);
     const value = discreteAffixValue(definition.stat, rollQuality, level) ?? (definition.base + growthLevel * definition.growth) * (.85 + rollQuality * .3) * quality * affixPotency(itemKind, definition.stat);
     affixes.push({ name: definition.name, stat: definition.stat, value: boundResistanceRoll(definition.stat, value) });
@@ -225,7 +226,7 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
   const name = tier === 'common' ? `${prefix} ${baseName}` : tier === 'magic' ? `${prefix} ${baseName} ${suffix}`
     : `${prefix} ${choose(TITLES)}`;
   const item: Item = {
-    recipe: { materialId, ...((weaponProfile ?? shieldProfile ?? focusProfile ?? jewelryProfile) ? { profileId: (weaponProfile ?? shieldProfile ?? focusProfile ?? jewelryProfile)!.id } : {}), starter: false, enhancement: 0, revision: 0, targetedRolls: 0, fullRolls: 0, rolls },
+    recipe: { manaVersion: 1, materialId, ...((weaponProfile ?? shieldProfile ?? focusProfile ?? jewelryProfile) ? { profileId: (weaponProfile ?? shieldProfile ?? focusProfile ?? jewelryProfile)!.id } : {}), starter: false, enhancement: 0, revision: 0, targetedRolls: 0, fullRolls: 0, rolls },
     id: `item-${seed.toString(36)}-${level}-${weaponProfile?.id ?? shieldProfile?.id ?? focusProfile?.id ?? jewelryProfile?.id ?? itemKind}-${materialId}-${tier}`, seed, name, baseName, kind: itemKind, tier,
     itemLevel: level, requiredLevel: Math.max(1, level - 2),
     power: Math.round(level * 10 + quality * baseScale * 12 + affixes.length * 7), implicit, affixes, appearance,
@@ -305,7 +306,7 @@ export function createCharacterSheet(starter: StarterLoadoutId = 'sword'): Chara
 /** Rebuild from authored bases and exact roll quality; never scale rounded existing stats. */
 export function deriveItem(item: Item): Item {
   if (item.kind === 'charm') return deriveCharm(item);
-  const next: Item = { ...item, implicit: {}, affixes: [], recipe: { ...item.recipe, rolls: [...item.recipe.rolls] } };
+  const next: Item = { ...item, implicit: {}, affixes: [], recipe: { ...item.recipe, manaVersion: 1, rolls: [...item.recipe.rolls] } };
   const r = item.recipe, quality = TIER_POWER[item.tier], enhance = 1 + .05 * r.enhancement;
   const baseScale = itemMaterialScale(item);
   const growth = itemPowerScale(item.itemLevel) * quality * enhance * baseScale;
@@ -317,7 +318,7 @@ export function deriveItem(item: Item): Item {
   if (!r.starter) {
     if (armor[item.kind]) next.implicit.armor = Math.round(armor[item.kind]! * growth);
     if (item.kind === 'cloak') next.implicit.maxHp = Math.round(6 * growth);
-    if (item.kind === 'amulet') next.implicit.maxMana = Math.round(7 * growth);
+    if (item.kind === 'amulet') next.implicit.maxMana = Math.round(7 * manaImplicitScale(item.itemLevel) * quality * enhance * baseScale);
     if (item.kind === 'ring') next.implicit.damagePercent = 2 * itemPercentageScale(item.itemLevel) * quality * enhance * baseScale;
   }
   if (JEWELRY_PROFILES.some(p=>p.id===r.profileId)) next.implicit=jewelryImplicit(r.profileId!,item.itemLevel,quality*enhance*baseScale);
@@ -327,7 +328,7 @@ export function deriveItem(item: Item): Item {
     blockReduction: shield.blockReduction * enhance };
   next.affixes = item.affixes.map((affix, index) => {
     const definition = [...AFFIXES, ...SHIELD_AFFIXES, ...ELEMENTAL_AFFIXES, ...SKILL_AFFIXES].find(a => a.stat === affix.stat)!;
-    const level = PERCENT_STATS.has(affix.stat) ? itemAffixGrowthLevel(item.itemLevel) : item.itemLevel - 1;
+    const level = (PERCENT_STATS.has(affix.stat) || isManaBudgetStat(affix.stat)) ? itemAffixGrowthLevel(item.itemLevel) : item.itemLevel - 1;
     return { name: definition.name, stat: definition.stat,
       value: boundResistanceRoll(definition.stat, discreteAffixValue(definition.stat, r.rolls[index], item.itemLevel) ?? (definition.base + level * definition.growth) * (.85 + r.rolls[index] * .3) * quality * enhance * affixPotency(item.kind, definition.stat)) };
   });
@@ -371,7 +372,7 @@ function generateCharm(seed: number, itemLevel: number, profileId?: string, tier
   const roll=random(), tier=tierOverride??(roll<.45?'common':roll<.77?'magic':roll<.94?'rare':roll<.99?'epic':'legendary');
   const item:Item={id:`charm-${seed.toString(36)}-${level}-${selected.id}-${tier}`,seed,kind:'charm',tier,name:selected.name,baseName:selected.name,
     itemLevel:level,requiredLevel:Math.max(1,level-2),power:0,implicit:{},affixes:[],
-    recipe:{charmVersion:1,profileId:selected.id,starter:false,enhancement:0,revision:0,targetedRolls:0,fullRolls:0,rolls:[]},
+    recipe:{charmVersion:1,manaVersion:1,profileId:selected.id,starter:false,enhancement:0,revision:0,targetedRolls:0,fullRolls:0,rolls:[]},
     appearance:{base:selected.flavor.base,edge:selected.flavor.edge,shadow:'#19252b',trim:selected.flavor.glow,style:'plate'}};
   const pool=itemAffixPool(item);
   for(let i=0;i<charmAffixCount(item);i++){
@@ -383,14 +384,14 @@ function generateCharm(seed: number, itemLevel: number, profileId?: string, tier
 function deriveCharm(item:Item):Item {
   if (item.recipe.charmVersion !== 1) item = rebalanceCharm(item);
   const profile=charmProfile(item);if(!profile)throw new RangeError('Unknown charm profile');
-  const quality=TIER_POWER[item.tier]*(1+.05*item.recipe.enhancement)*profile.size.potency;
+  const quality=TIER_POWER[item.tier]*(1+.05*item.recipe.enhancement);
   const definitions=itemAffixPool(item);
   const affixes=item.affixes.map((a,i)=>{
     const definition=definitions.find(d=>d.stat===a.stat);if(!definition)throw new RangeError('Invalid charm affix');
-    const growth=PERCENT_STATS.has(a.stat)?itemAffixGrowthLevel(item.itemLevel):item.itemLevel-1;
-    return {name:definition.name,stat:a.stat,value:boundResistanceRoll(a.stat,(definition.base+growth*definition.growth)*quality*(.85+item.recipe.rolls[i]*.3))};
+    const growth=(PERCENT_STATS.has(a.stat)||isManaBudgetStat(a.stat))?itemAffixGrowthLevel(item.itemLevel):item.itemLevel-1;
+    return {name:definition.name,stat:a.stat,value:boundResistanceRoll(a.stat,(definition.base+growth*definition.growth)*quality*(a.stat==='manaRegen'?profile.size.width*profile.size.height*.35:profile.size.potency)*(.85+item.recipe.rolls[i]*.3))};
   });
-  return roundItemStats({...item,affixes,implicit:{},requiredLevel:Math.max(1,item.itemLevel-2),power:Math.round((item.itemLevel*10+affixes.length*7)*profile.size.potency*TIER_POWER[item.tier]*(1+.05*item.recipe.enhancement)),recipe:{...item.recipe,rolls:[...item.recipe.rolls]}});
+  return roundItemStats({...item,affixes,implicit:{},requiredLevel:Math.max(1,item.itemLevel-2),power:Math.round((item.itemLevel*10+affixes.length*7)*profile.size.potency*TIER_POWER[item.tier]*(1+.05*item.recipe.enhancement)),recipe:{...item.recipe,manaVersion:1,rolls:[...item.recipe.rolls]}});
 }
 export const itemAffixCount = (item:Pick<Item,'kind'|'tier'|'recipe'>) => item.kind==='charm'?charmAffixCount(item):TIER_AFFIXES[item.tier];
 
@@ -410,3 +411,16 @@ export function rebalanceCharm(item: Item): Item {
   }
   return deriveCharm(next);
 }
+
+/** Reprice existing resource recipes once; preserve non-resource stats and every identity. */
+export function rebalanceItemMana(item:Item):Item {
+  if(item.recipe.manaVersion===1)return item;
+  const current=deriveItem(item);
+  const implicit={...item.implicit};
+  for(const key of ['maxMana','manaRegen','manaOnKill'] as const) {
+    if(current.implicit[key]!==undefined)implicit[key]=current.implicit[key];
+    else delete implicit[key];
+  }
+  return {...item,implicit,recipe:{...item.recipe,manaVersion:1},affixes:item.affixes.map((a,i)=>isManaBudgetStat(a.stat)?current.affixes[i]:a)};
+}
+function isManaBudgetStat(stat:string):boolean { return stat==='maxMana'||stat==='manaRegen'||stat==='manaOnKill'; }

@@ -145,7 +145,8 @@ test('percentage affixes approach bounded quality ranges while flat stats and ba
       if (bound !== undefined) {
         seen.add(affix.stat);
         assert.ok(affix.value <= bound * (kind==='charm' ? charmProfile(high)!.size.potency : affixPotency(kind, affix.stat)) * 1.15 * 1.5 + .5);
-      } else assert.ok(affix.value > mid.affixes[index].value * 1000);
+      } else if (['maxMana','manaRegen','manaOnKill'].includes(affix.stat)) assert.ok(affix.value <= mid.affixes[index].value * 2);
+      else assert.ok(affix.value > mid.affixes[index].value * 1000);
     });
   }
   assert.deepEqual([...seen].sort(), Object.keys(percentBounds).sort());

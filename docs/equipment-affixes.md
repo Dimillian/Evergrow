@@ -54,7 +54,7 @@ Worn starter clothing begins without base protection. A successful service impro
 ## Damage and hybrid hands
 
 - Physical melee/bow damage = base physical damage × attack multiplier. Each Strength above 10 supplies +2% attack damage.
-- Added elemental melee damage = the weapon's elemental affix × spell multiplier. Each Intelligence above 10 supplies +3% spell/elemental damage and +4 mana.
+- Added elemental melee damage = the weapon's elemental affix × spell multiplier. Each Intelligence above 10 supplies +3% spell/elemental damage and +2 mana.
 - Sum the two portions, then round once. Strength does not scale the elemental portion; Intelligence does not scale the physical portion. Critical hits multiply the combined direct hit. There is no double multiplication.
 - Staff/wand bolts remain base elemental damage × spell multiplier. Melee/bows use attack speed; wands/staves and magic skills use cast speed.
 - Skill potency multiplies the compatible weapon's derived hit, including its elemental portion for melee skills. A fire sword does not add damage to a separate wand spell or to the other hand.
@@ -121,3 +121,11 @@ Players start at **0% Fire, Frost, Lightning and Arcane resistance**. Rings, amu
 Growth uses `25n / (25 + n)`, where `n = item level - 1`; roll quality, rarity and enhancement apply before the hard per-roll limit. These are percentage points and relative selection weights, not drop probabilities. Jewelry profile affinity still applies. Rerolls, rarity upgrades and releveling share these rules. Common items have no explicit affixes and therefore no resistance. No new resistance implicits, passive nodes or automatic level bonuses are introduced.
 
 For each element, add its specific bonuses and all-element bonuses, then clamp the total to **0–75%**. Four all-resistance pieces can supply at most 32% to all elements; reaching the cap requires focused single-element investment. Charms supply additional investment through their separate size budgets; see [charms](charms.md). Item comparisons and detailed-stat tooltips show the actual capped totals and named sources. See [incoming damage](progression-and-loot.md#item-growth-and-defenses) for combat rules.
+
+## Local mana budget pass — September 11, 2026
+
+Mana regeneration item rolls are whole **mana per five seconds**, divided by five in the derived combat stat. Life regeneration remains life per second. The Wellspring now uses `8 + 0.8 × bounded growth`, Clarity `2 + 0.12 × bounded growth`, and Wellsip `1 + 0.04 × bounded growth`. All three use the existing `25n/(25+n)` taper, rather than linear level growth. Slot, rarity, roll-quality and enhancement multipliers still apply. Mana and regeneration implicits use `1 + 0.04 × bounded growth`; non-resource implicits and damage are unchanged.
+
+Mana cost reduction preserves the first 20 percentage points, then approaches 40% with diminishing returns. A raw 50% bonus gives about 35.54% effective reduction; 75% gives about 38.72%. Shared derivation feeds spells, basic bolts, upkeep and tooltips. Individual affix numbers show the raw contribution; detailed stats explain the effective result.
+
+Existing recipes without `manaVersion: 1` reprice resource bonuses on validated save read, retaining rolls, IDs, enhancement and all non-resource bonuses. New and rebuilt recipes carry the marker. The matching client and Worker must ship together; local testing requires reloading the character. See [resource benchmark](resource-balance.md).

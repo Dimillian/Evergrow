@@ -298,6 +298,8 @@ export interface Pickup {
   y: number;
   kind: 'health' | 'mana';
   restoreFraction: number;
+  /** Mana only: source-level amount, additionally limited by the mana fraction cap. */
+  restoreAmount?: number;
   life: number;
   radius: number;
 }

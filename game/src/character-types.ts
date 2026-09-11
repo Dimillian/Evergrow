@@ -16,6 +16,7 @@ export type ItemTier = 'common' | 'magic' | 'rare' | 'epic' | 'legendary';
 export interface ItemAffix { name: string; stat: StatKey; value: number; }
 export interface ItemRecipe {
   charmVersion?: 1;
+  manaVersion?: 1;
   materialId?: ItemMaterialId;
   profileId?: string; starter: boolean; enhancement: number; revision: number;
   targetedRolls: number; fullRolls: number; rolls: number[];

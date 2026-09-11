@@ -1,3 +1,4 @@
+import { manaVialAmount } from './mana-content.ts';
 import { isBossKind } from './wilderness-boss-content.ts';
 import { metric } from './chronicle.ts';
 import { ENEMY_LOOT_YIELD } from './loot-content.ts';
@@ -41,7 +42,7 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
   }
   const health = kills % LOOT_RULES.healthEveryKills === 0;
   if (context.pickups.length < LOOT_RULES.maxPickups) context.pickups.push({ id: context.nextId(), x: enemy.x, y: enemy.y,
-    kind: health ? 'health' : 'mana', restoreFraction: health ? LOOT_RULES.healthFraction : LOOT_RULES.manaFraction,
+    kind: health ? 'health' : 'mana', ...(!health?{restoreAmount:manaVialAmount(enemy.level)}:{}), restoreFraction: health ? LOOT_RULES.healthFraction : LOOT_RULES.manaFraction,
     life: LOOT_RULES.life, radius: LOOT_RULES.radius });
   return { kills, recharge };
 }

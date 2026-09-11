@@ -1,3 +1,4 @@
+import { MANA_RULES } from './mana-content.ts';
 import { ITEM_LOCK_ICON } from './item-protection.ts';
 import { RESISTANCE_LABELS } from './resistance-content.ts';
 import { SPECIAL_AFFIX_LABELS, SKILL_STATS, isSkillStat, type SkillStat } from './equipment-affix-content.ts';
@@ -51,10 +52,10 @@ const MODIFIER_PREVIEW: Record<Exclude<StatKey, SkillStat>, PreviewStat | null> 
   fireDamage: null, frostDamage: null, lightningDamage: null,
 };
 
-function equipChangeCell(change: EquipmentStatChange | undefined, emptyLabel = 'No change'): string {
+function equipChangeCell(change: EquipmentStatChange | undefined, emptyLabel = 'No change', scale = 1): string {
   if (!change) return `<td class="ui-item-stat-empty" aria-label="${emptyLabel}">—</td>`;
   const percentage = PREVIEW_PERCENT.has(change.key);
-  const delta = (change.after - change.before) * (percentage ? 100 : 1);
+  const delta = (change.after - change.before) * (percentage ? 100 : 1) * scale;
   const wholePercent = ['areaPercent', 'potionPercent', 'spellweavePercent', 'afterguardPercent'].includes(change.key);
   return `<td class="${delta > 0 ? 'is-gain' : 'is-loss'}">${delta > 0 ? '+' : ''}${number(delta, 2)}${percentage || wholePercent ? '%' : ''}</td>`;
 }
@@ -90,7 +91,7 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
     const previewKey = isSkillStat(key) ? key : MODIFIER_PREVIEW[key];
     const change = previewKey ? changes.get(previewKey) : undefined;
     if (previewKey) changes.delete(previewKey);
-    return `<tr><th scope="row"${color}>${label}</th><td${color}>${formatStatValue(key, value)}</td>${equipChangeCell(change, previewKey ? 'No change' : 'Included in derived changes')}</tr>`;
+    return `<tr><th scope="row"${color}>${label}</th><td${color}>${formatStatValue(key, value)}</td>${equipChangeCell(change, previewKey ? 'No change' : 'Included in derived changes', key === 'manaRegen' ? MANA_RULES.regenerationPeriod : 1)}</tr>`;
   });
   for (const change of changes.values()) rows.push(`<tr><th scope="row">${escapeUI(CHANGE_LABELS[change.key])}</th><td class="ui-item-stat-empty" aria-label="Not an item bonus">—</td>${equipChangeCell(change)}</tr>`);
   const properties = preview?.ok

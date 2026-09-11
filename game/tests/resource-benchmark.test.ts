@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { resourceBenchmark } from '../src/resource-benchmark.ts';
@@ -16,4 +17,12 @@ test('headless benchmark casts at visible foes and reconciles real recovery sour
   assert.ok(result.damage>0);assert.ok(result.manaSpent>0);assert.ok(result.enemyAttacks>0);
   assert.ok(Math.abs(Object.values(result.manaSources).reduce((a,b)=>a+b,0)-result.manaRestored)<1e-6);
   assert.deepEqual(result,resourceEncounter(35,'caster','strong','boss'));
+});
+
+test('the resource slice preserves every benchmark build’s expected first-hit damage',()=>{
+  const before=JSON.parse(readFileSync(new URL('../src/tools/data/resource-baseline.json',import.meta.url),'utf8')) as {builds:Array<{level:number;style:string;gear:string;expectedFirstHit:number}>};
+  for(const current of resourceBenchmark()) {
+    const previous=before.builds.find(b=>b.level===current.level&&b.style===current.style&&b.gear===current.gear)!;
+    assert.equal(current.expectedFirstHit,previous.expectedFirstHit,`${current.level} ${current.style} ${current.gear}`);
+  }
 });

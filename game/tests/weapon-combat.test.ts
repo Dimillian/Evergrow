@@ -281,7 +281,7 @@ test('mana efficiency from gear reduces staff basic costs and a paid windup reta
   const sim = make(); equip(sim, 'ember-staff');
   const p = sim.player;
   p.character.equipped.chest!.implicit = { manaCostPercent: 50 };
-  refreshCharacter(p); p.mana = 2; p.derived.manaRegeneration = 0;
+  refreshCharacter(p); p.mana = 2.6; p.derived.manaRegeneration = 0;
   sim.update(FIXED_STEP, { ...idle, attack: true });
   assert.ok(p.attack); assert.equal(p.mana, 0);
   p.derived.manaCostMultiplier = 1;

@@ -1,3 +1,4 @@
+import { resolveSkill } from '../src/skill-progression.ts';
 import { writeFileSync } from 'node:fs';
 import { benchmarkPlayer, resourceBenchmark, BENCHMARK_SKILLS, type BenchmarkStyle, type BenchmarkGear } from '../src/resource-benchmark.ts';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
@@ -16,6 +17,7 @@ export function resourceEncounter(level:number,style:BenchmarkStyle,gear:Benchma
       encounter==='elite'?'elite':'normal',undefined,{base:level+(encounter==='pack'?0:encounter==='elite'?2:3),min:level,max:level+3,fixed:true})!;
     e.state='chase';e.awareness=1;return e;
   });
+  const skillCost=resolveSkill(BENCHMARK_SKILLS[style],sim.player.derived,sim.player.character).mana;
   sim.drainEvents();let attacks=0,firstHit:number|null=null,clearTime:number|null=null,starved=0,damage=0,overkill=0;
   for(let tick=0;tick<duration/FIXED_STEP;tick++) {
     const target=actors.find(e=>e.state!=='dead');if(!target||sim.player.dead)break;
@@ -23,7 +25,7 @@ export function resourceEncounter(level:number,style:BenchmarkStyle,gear:Benchma
     const input:Input={moveX:0,moveY:0,aimX:target.x,aimY:target.y,attack:false,dodge:false,
       heal:sim.player.mana<sim.player.maxMana*.25,skillSlot:0};
     sim.update(FIXED_STEP,input);
-    if(sim.player.mana<1)starved+=FIXED_STEP;
+    if(sim.player.mana<skillCost)starved+=FIXED_STEP;
     actors.forEach((e,i)=>{if(e.state==='attack'&&before[i]!=='attack')attacks++;});
     for(const event of sim.drainEvents())if(event.type==='hit'){firstHit??=event.value;damage+=event.actualValue??event.value;overkill+=event.value-(event.actualValue??event.value);}
     if(actors.every(e=>e.state==='dead')){clearTime=(tick+1)*FIXED_STEP;break;}
@@ -32,7 +34,7 @@ export function resourceEncounter(level:number,style:BenchmarkStyle,gear:Benchma
   return {level,style,gear,skill:BENCHMARK_SKILLS[style],encounter,clearTime,dead:sim.player.dead,endingLevel:sim.player.level,
     kills:values.kills??0,enemyAttacks:attacks,firstHit,damage,overkill,manaSpent:values.manaSpent??0,manaRestored:values.manaRestored??0,
     manaSources:Object.fromEntries(['passive','kill','vial','potion'].map(k=>[k,values['manaRecovery:'+k]??0])),
-    belowOneManaSeconds:starved,endingMana:sim.player.mana};
+    insufficientManaSeconds:starved,endingMana:sim.player.mana};
 }
 if(process.argv[1]?.endsWith('/resource-benchmark.ts')) {
   const builds=resourceBenchmark();

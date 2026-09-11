@@ -8,7 +8,7 @@ export const SKILL_STATS = Object.freeze(Object.fromEntries(Object.values(SKILL_
 export const isSkillStat = (stat: string): stat is SkillStat => Object.hasOwn(SKILL_STATS, stat);
 export const SKILL_AFFIXES: readonly AffixDefinition[] = Object.freeze(Object.values(SKILL_DEFINITIONS).map(s => Object.freeze({ name: s.name, stat: `skill:${s.id}` as SkillStat, base: 1, growth: 0 })));
 export const SPECIAL_AFFIXES: readonly AffixDefinition[] = Object.freeze([
-  { name: 'Wellsip', stat: 'manaOnKill', base: 2, growth: .12, weight: 1 },
+  { name: 'Wellsip', stat: 'manaOnKill', base: 1, growth: .04, weight: 1 },
   { name: 'Expanse', stat: 'areaPercent', base: 10, growth: .3, weight: .55 },
   { name: 'Deep Draught', stat: 'potionPercent', base: 12, growth: .35, weight: 1 },
   { name: 'Piercing', stat: 'projectilePierce', base: 1, growth: 0, weight: .12 },

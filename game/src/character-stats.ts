@@ -1,3 +1,4 @@
+import { MANA_RULES, manaCostMultiplier } from './mana-content.ts';
 import { activeCharms } from './inventory-grid.ts';
 import { CHARM_REWARD_CAPS } from './charm-content.ts';
 import { deriveResistances } from './resistance-content.ts';
@@ -57,7 +58,7 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
     skillBonuses: Object.fromEntries((Object.keys(SKILL_STATS) as SkillStat[]).filter(key => value(key) > 0)
       .map(key => [key.slice(6), Math.floor(bounded(value(key), 0, AFFIX_COMBAT_RULES.maxBonusRanks))])),
     maxHp: Math.round(bounded(PLAYER_DEFAULTS.maxHp + vitality * 6 + value('maxHp'), 1, 1e9)),
-    maxMana: Math.round(bounded(PLAYER_DEFAULTS.maxMana + intelligence * 4 + value('maxMana'), 1, 1e9)),
+    maxMana: Math.round(bounded(PLAYER_DEFAULTS.maxMana + intelligence * MANA_RULES.perIntelligence + value('maxMana'), 1, 1e9)),
     attackDamageMultiplier: bounded(1 + (strength * 2 + value('damagePercent')) / 100, .1, 1e6),
     castSpeedMultiplier: bounded(1 + value('castSpeedPercent') / 100, .25, 6),
     attackSpeedMultiplier: bounded(1 + (dexterity * DEXTERITY_BONUSES.attackSpeedPercent + value('attackSpeedPercent')) / 100, .25, 6),
@@ -66,9 +67,9 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
     critMultiplier: bounded(1.5 + value('critDamage') / 100, 1, 5),
     moveSpeedMultiplier: bounded(1 + value('moveSpeedPercent') / 100, .5, 1.75),
     spellDamageMultiplier: bounded(1 + (intelligence * 3 + value('spellDamagePercent')) / 100, .1, 1e6),
-    manaRegeneration: bounded(PLAYER_DEFAULTS.manaRegeneration + value('manaRegen'), 0, 1e6),
+    manaRegeneration: bounded(PLAYER_DEFAULTS.manaRegeneration + value('manaRegen') / MANA_RULES.regenerationPeriod, 0, 1e6),
     lifeRegeneration: bounded(value('lifeRegen'), 0, 1e6),
-    manaCostMultiplier: bounded(1 - value('manaCostPercent') / 100, .25, 2),
+    manaCostMultiplier: manaCostMultiplier(value('manaCostPercent')),
     cooldownMultiplier: bounded(1 - value('cooldownPercent') / 100, .25, 2),
     lifeOnHit: bounded(value('lifeOnHit'), 0, 1e6),
     blockChance: shield ? bounded((shield.blockChance + value('blockChance')) / 100, 0, .75) : 0,

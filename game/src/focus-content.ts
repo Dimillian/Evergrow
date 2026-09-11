@@ -7,7 +7,7 @@ const focus = (id: string, name: string, kind: 'grimoire' | 'orb', motif: 'ember
 });
 /** Grimoires sustain spellcasting; orbs trade that reserve for spell potency. */
 export const FOCUS_PROFILES: readonly Readonly<FocusProfile>[] = Object.freeze([
-  focus('ember-codex', 'Ember Codex', 'grimoire', 'ember', '#f5ad71', { maxMana: 14, manaRegen: .4 }),
+  focus('ember-codex', 'Ember Codex', 'grimoire', 'ember', '#f5ad71', { maxMana: 14, manaRegen: 2 }),
   focus('rime-folio', 'Rime Folio', 'grimoire', 'rime', '#a5e0ec', { maxMana: 18, manaCostPercent: 3 }),
   focus('astral-grimoire', 'Astral Grimoire', 'grimoire', 'astral', '#c9b8f2', { maxMana: 12, cooldownPercent: 3 }),
   focus('cinder-orb', 'Cinder Reliquary', 'orb', 'ember', '#ffad73', { spellDamagePercent: 7, critDamage: 5 }),

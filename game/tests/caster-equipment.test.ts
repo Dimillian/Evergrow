@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { generateItem, deriveItem, itemAffixPool, TIER_AFFIXES } from '../src/items.ts';
 import { FOCUS_PROFILES } from '../src/focus-content.ts';
 import { WEAPON_PROFILES } from '../src/weapon-content.ts';
-import { improveItem } from '../src/item-improvement.ts';
+import { improveItem, improvementProblem } from '../src/item-improvement.ts';
 import { validItem } from '../src/item-validation.ts';
 import { basicAttackManaCost, deriveAttackStats } from '../src/equipment.ts';
 import { Simulation, initialPlayer } from '../src/simulation.ts';
@@ -56,7 +56,7 @@ test('caster recipes survive every tier, level, upgrade, relevel and reroll with
         next = improveItem(next, 'rerollOne', level, 97, 0);
         next = improveItem(next, 'rerollAll', level, 132);
       }
-      if (level < 1_000_000) next = improveItem(next, 'relevel', level + 5, 145);
+      if (level < 1_000_000 && !improvementProblem(next,'relevel',level+5)) next = improveItem(next, 'relevel', level + 5, 145);
       assert.ok(validItem(next));
       assert.ok(next.affixes.every(a => itemAffixPool(next).some(def => def.stat === a.stat)));
       assert.ok(!next.affixes.some(a => ['attackSpeedPercent', 'damagePercent', 'strength'].includes(a.stat)));

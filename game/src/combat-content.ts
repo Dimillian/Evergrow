@@ -1,3 +1,4 @@
+import { MANA_RULES } from './mana-content.ts';
 import { LAIR_RULES } from './wilderness-boss-content.ts';
 import type { Enemy, EnemyKind, Projectile, ProjectileStyle } from './model.ts';
 
@@ -199,6 +200,6 @@ export const ENEMY_AI_RULES = Object.freeze({
 
 export const LOOT_RULES = Object.freeze({
   maxGroundItems: 1024, equipmentCollectDistance: 30,
-  maxPickups: 32, life: 20, radius: 4, healthEveryKills: 3, healthFraction: .12, manaFraction: .16,
+  maxPickups: 32, life: 20, radius: 4, healthEveryKills: 3, healthFraction: .12, manaFraction: MANA_RULES.vialMaxFraction,
   collectDistance: 18, magnetDistance: 55, magnetSpeed: 100,
 });

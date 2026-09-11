@@ -4,7 +4,7 @@ const profile=(id:string,kind:'ring'|'amulet',name:string,implicit:StatModifiers
 export const JEWELRY_PROFILES=Object.freeze([
   profile('garnet-band','ring','Garnet Band',{damagePercent:2},'#d88273',['damagePercent','strength','dexterity','critChance','critDamage']),
   profile('sapphire-ring','ring','Sapphire Ring',{spellDamagePercent:2},'#769ede',['spellDamagePercent','intelligence','maxMana','manaRegen']),
-  profile('moonstone-ring','ring','Moonstone Ring',{manaRegen:.3},'#b8b0e5',['maxMana','manaRegen','manaOnKill','intelligence']),
+  profile('moonstone-ring','ring','Moonstone Ring',{manaRegen:1.5},'#b8b0e5',['maxMana','manaRegen','manaOnKill','intelligence']),
   profile('jade-signet','ring','Jade Signet',{maxHp:8},'#8fbc91',['maxHp','vitality','lifeRegen','maxMana']),
   profile('lion-pendant','amulet','Lion Pendant',{strength:2},'#dfa970',['strength','damagePercent','armor','lifeOnHit']),
   profile('hawk-talisman','amulet','Hawk Talisman',{dexterity:2},'#9dbb89',['dexterity','damagePercent','critChance','critDamage']),

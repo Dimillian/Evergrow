@@ -29,7 +29,7 @@ test('leather and cloth favor their builds while keeping specialist slots and sk
 test('jewelry bases have distinct persistent implicits and favor their own affixes',()=>{
   for(const profile of JEWELRY_PROFILES){
     const item=generateItem(2,1,profile.kind,profile.id,'common','iron');
-    assert.deepEqual(item.implicit,profile.id==='moonstone-ring'?{manaRegen:1}:profile.implicit);assert.ok(validItem(item));
+    assert.deepEqual(item.implicit,profile.id==='moonstone-ring'?{manaRegen:2}:profile.implicit);assert.ok(validItem(item));
     assert.deepEqual(deriveItem(JSON.parse(JSON.stringify(item))),item);
     const upgraded=improveItem(improveItem(item,'rarity',1,89),'relevel',35,91);
     assert.equal(upgraded.recipe.profileId,profile.id);assert.equal(upgraded.recipe.materialId,'iron');assert.ok(validItem(upgraded));

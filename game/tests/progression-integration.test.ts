@@ -157,7 +157,7 @@ test('level gains refresh the sheet armor estimate without healing, spending poi
 
 test('dual potion scales with both resource pools, consumes one charge, and clamps to missing resources', () => {
   const sim = createSim(), player = sim.player;
-  player.character.equipped.chest!.implicit = { maxHp: 900, maxMana: 1900, manaRegen: -1 };
+  player.character.equipped.chest!.implicit = { maxHp: 900, maxMana: 1900, manaRegen: -5 };
   refreshCharacter(player);
   assert.equal(player.maxHp, 1000); assert.equal(player.maxMana, 2000);
   assert.equal(player.hp, 100); assert.equal(player.mana, 100, 'larger resource pools grant no free restoration');
@@ -174,9 +174,9 @@ test('dual potion scales with both resource pools, consumes one charge, and clam
   assert.equal(player.flasks, 1); assert.equal(player.hp, 1000);
 });
 
-test('death pickups retain the health cadence and restore percentages of current maxima with missing-resource clamps', () => {
+test('death pickups retain the health cadence and restore source-level mana and percentage life with missing-resource clamps', () => {
   const sim = createSim(), player = sim.player;
-  player.character.equipped.chest!.implicit = { maxHp: 900, maxMana: 1900, manaRegen: -1 };
+  player.character.equipped.chest!.implicit = { maxHp: 900, maxMana: 1900, manaRegen: -5 };
   refreshCharacter(player); player.hp = player.maxHp; player.mana = player.maxMana;
   for (let index = 0; index < 3; index++) {
     const enemy = sim.spawnEnemy('stalker', 45, 0)!; prepareKill(enemy);
@@ -188,7 +188,7 @@ test('death pickups retain the health cadence and restore percentages of current
   player.hp = 100; player.mana = 0;
   for (const pickup of sim.pickups) { pickup.x = 0; pickup.y = 0; }
   advance(sim, FIXED_STEP);
-  assert.equal(player.hp, 220); assert.equal(player.mana, 640); assert.equal(sim.pickups.length, 0);
+  assert.equal(player.hp, 220); assert.equal(player.mana, 16); assert.equal(sim.pickups.length, 0);
   player.hp = 997; player.mana = 1998;
   sim.pickups.push({ id: 91_001, x: 0, y: 0, kind: 'health', restoreFraction: LOOT_RULES.healthFraction, life: 20, radius: 4 },
     { id: 91_002, x: 0, y: 0, kind: 'mana', restoreFraction: LOOT_RULES.manaFraction, life: 20, radius: 4 });
@@ -200,7 +200,7 @@ test('death pickups retain the health cadence and restore percentages of current
 
 test('dual potion works at full life, respects cooldown and charges, and reports only restored resources', () => {
   const sim = createSim(), p = sim.player;
-  p.character.equipped.chest!.implicit = { manaRegen: -1 }; refreshCharacter(p);
+  p.character.equipped.chest!.implicit = { manaRegen: -5 }; refreshCharacter(p);
   p.mana = 0;
   advance(sim, FIXED_STEP, { heal: true });
   assert.equal(p.hp, p.maxHp); assert.equal(p.mana, 40); assert.equal(p.flasks, 1);

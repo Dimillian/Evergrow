@@ -51,7 +51,7 @@ export function resourceBuildReport(p:Player,skill:SkillId) {
   const net=drain+resolved.upkeep-p.derived.manaRegeneration;
   return {mana:p.maxMana,regen:p.derived.manaRegeneration,costReduction:1-p.derived.manaCostMultiplier,
     skill,rank:resolved.rank,bonusRanks:resolved.bonusRanks,manaPerCast:resolved.mana,castsPerSecond:rate,
-    manaPerSecond:drain+resolved.upkeep,isolatedBurstSeconds:net>0?p.maxMana/net:null,
+    manaPerSecond:drain+resolved.upkeep,isolatedBurstSeconds:net>1e-9?p.maxMana/net:null,
     expectedFirstHit:action.damage*resolved.damageMultiplier*(1+p.derived.critChance*(p.derived.critMultiplier-1)),
     sources:characterModifierSources(p.character,getTreeBonuses(p.character.allocatedNodes),p.level)
       .map(s=>({label:s.label,modifiers:Object.fromEntries(Object.entries(s.modifiers).filter(([k])=>['intelligence','maxMana','manaRegen','manaOnKill','manaCostPercent'].includes(k)))})).filter(s=>Object.keys(s.modifiers).length),

@@ -25,7 +25,7 @@ The local post-0.3.0 pass caps small stones at two focused bonuses. Larger stone
 
 New recipes carry `charmVersion: 1`. Shared save decoding first validates pre-budget charm recipes, then rebalances them on the parsed copy across carried/stashed/buyback and dungeon/surface ground items. It retains IDs, enhancement, level, locks and progression, prefers the existing thematic roll, and trims excess affixes deterministically. Stored bytes remain untouched until the next save. This deliberately changes existing charm bonuses without resetting characters. Client and Worker must ship the new rules together.
 
-Final bonuses round to the nearest whole number, with a minimum of 1 for every positive roll. This changes actual combat bonuses, not only tooltip formatting, and also normalizes existing saved charms. In particular, small regeneration rolls become stronger, and nearby rolls may share a value until their next integer threshold. The saved roll quantile remains precise for future upgrades. See [whole-number item bonuses](equipment-affixes.md#weights-and-specialist-budgets).
+Final bonuses round to the nearest whole number, with a minimum of 1 for every positive roll. This changes actual combat bonuses, not only tooltip formatting, and also normalizes existing saved charms. Life regeneration still uses per-second rolls. The local September 11 mana pass uses whole mana per five seconds, so a minimum mana roll grants 0.2 mana/sec rather than 1. Nearby rolls can still share a value until their next integer threshold. The saved roll quantile remains precise for future upgrades. See [whole-number item bonuses](equipment-affixes.md#weights-and-specialist-budgets).
 
 Six flavors provide color, carved rune and a ×2 preference for matching affixes:
 
@@ -76,3 +76,7 @@ Headless coverage exercises profiles across every rarity, service rebuilds, fixe
 - Enhancements skip rounded-away ranks to the next real increase, at the current step’s price. The +N preview shows the destination; at most +10. Rarity upgrades skip ineffective tiers and quote the destination tier’s normal price. Releveling that changes no actual bonus is unavailable. Random rerolls remain allowed to produce worse or equal outcomes.
 
 Ground recognition: charm nameplates use a rune-cut stone glyph, a subtle silver frame and a leading “Charm” label, followed by the stone name and item level. Rarity colors remain authoritative. The single-row plate shares equipment label packing, pickup hitboxes and hover highlighting; no extra beam or particle layer. `/loot.html?charms` stages common, magic and epic stones beside ordinary equipment in disposable memory.
+
+## Local mana tuning — September 11, 2026
+
+Mana-regeneration potency uses `0.35 × occupied cells` instead of the generic size potency. A middle-roll common level-35 pebble supplies 1 mana/5 sec; an eight-cell monolith supplies 10 mana/5 sec, with its additional affixes. Eight selected pebbles supply 8 mana/5 sec. All rolls remain whole numbers in the displayed unit. Other charm size budgets, footprints, drop rates and offensive bonuses are unchanged. Maximum-mana and regeneration affixes use tapered item-level growth. Validated existing charm recipes receive the same mana repricing without changing their stored random rolls or placement. See [resource balance](resource-balance.md).

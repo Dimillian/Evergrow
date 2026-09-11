@@ -74,8 +74,8 @@ const FAMILIES: Readonly<Record<SkillDomain, readonly Family[]>> = {
   ],
   Arcana: [
     { name: 'Inner Flame', description: 'Strengthen spells and cast them faster.', minor: { spellDamagePercent: 4, castSpeedPercent: 2 }, notable: { spellDamagePercent: 14, castSpeedPercent: 6, intelligence: 3 } },
-    { name: 'Astral Reservoir', description: 'Expand your mana reserve for longer sequences of spells.', minor: { maxMana: 7 }, notable: { maxMana: 24, manaRegen: .25 } },
-    { name: 'Quiet Current', description: 'Spend less mana per skill and restore it faster.', minor: { manaRegen: .15, manaCostPercent: 2 }, notable: { manaRegen: .5, manaCostPercent: 5, maxMana: 10 } },
+    { name: 'Astral Reservoir', description: 'Expand your mana reserve for longer sequences of spells.', minor: { maxMana: 7 }, notable: { maxMana: 24, manaRegen: 1.25 } },
+    { name: 'Quiet Current', description: 'Spend less mana per skill and restore it faster.', minor: { manaRegen: .75, manaCostPercent: 2 }, notable: { manaRegen: 2.5, manaCostPercent: 5, maxMana: 10 } },
     { name: 'Continuum', description: 'Reduce skill cooldowns and dodge recharge time.', minor: { cooldownPercent: 1 }, notable: { cooldownPercent: 3, spellDamagePercent: 5 } },
     { name: 'Higher Thought', description: 'Develop intelligence to strengthen spells and expand mana.', minor: { intelligence: 2 }, notable: { intelligence: 6, maxMana: 12 } },
     { name: 'Soul Stitch', description: 'Restore life steadily as you move and fight.', minor: { lifeRegen: .12 }, notable: { lifeRegen: .4, intelligence: 3 } },

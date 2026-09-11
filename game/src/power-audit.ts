@@ -1,3 +1,6 @@
+import { characterModifierSources } from './character-stats.ts';
+import { getTreeBonuses } from './skill-tree.ts';
+import { MANA_RULES } from './mana-content.ts';
 /** Read-only balance calculations. Observed cloud history is never treated as a current build. */
 import { COMBAT_TIMING, ENEMY_DEFINITIONS, enemyAttackDefinition, enemyAttackVariant } from './combat-content.ts';
 import { itemPowerScale, monsterHealthScale, monsterDamageScale, type EnemyRank } from './progression-content.ts';
@@ -92,6 +95,15 @@ export function exactBuildAudit(record: CharacterSave) {
   } : null;
   return { name: record.name, level: p.level, hp: p.maxHp, mana: p.maxMana, derived: p.derived,
     basicDps: dps, arc: chain,
+    manaBudget: {
+      allocatedIntelligenceMana:Math.max(0,p.character.attributes.intelligence-10)*MANA_RULES.perIntelligence,
+      regenerationPerSecond:p.derived.manaRegeneration,
+      arcCostPerSecond:chain?chain.manaPerCast*chain.castsPerSecond:null,
+      sources:characterModifierSources(p.character,getTreeBonuses(p.character.allocatedNodes),p.level)
+        .map(source=>({...source,modifiers:Object.fromEntries(Object.entries(source.modifiers).filter(([stat])=>['intelligence','maxMana','manaRegen','manaOnKill','manaCostPercent'].includes(stat)))}))
+        .filter(source=>Object.keys(source.modifiers).length),
+      units:'manaRegen modifiers are mana per 5 seconds; derived regeneration is mana per second. Intelligence grants 2 mana per point above 10.',
+    },
     foes: (['normal', 'veteran', 'elite'] as const).map(rank => {
       const enemy = enemyAudit(p.level + (rank === 'elite' ? 2 : rank === 'veteran' ? 1 : 0), 'stalker', rank);
       return { ...enemy, basicDamageBudgetSeconds: enemy.maxHp / dps };

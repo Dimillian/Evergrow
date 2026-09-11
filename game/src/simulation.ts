@@ -1,3 +1,4 @@
+import { manaVialAmount, manaVialRestoration } from './mana-content.ts';
 import { roamingEscortRole, roamingFormationRadius, roamingMemberOffset, roamingMemberRank } from './roaming-encounters.ts';
 import { packSpaceProblem } from './inventory-grid.ts';
 import type { DamageType } from './model.ts';
@@ -780,7 +781,7 @@ export class Simulation {
       if (distance < LOOT_RULES.collectDistance) {
         const before = pickup.kind === 'health' ? p.hp : p.mana;
         if (pickup.kind === 'health') p.hp = Math.min(p.maxHp, p.hp + p.maxHp * pickup.restoreFraction);
-        else p.mana = Math.min(p.maxMana, p.mana + p.maxMana * pickup.restoreFraction);
+        else p.mana = Math.min(p.maxMana, p.mana + manaVialRestoration(p.maxMana,pickup.restoreAmount ?? manaVialAmount(1)));
         const value = (pickup.kind === 'health' ? p.hp : p.mana) - before;
         pickup.life = 0;
         this.emit({ type: 'pickup', x: pickup.x, y: pickup.y, value, heavy: pickup.kind === 'health' });
