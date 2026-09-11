@@ -120,7 +120,7 @@ Successful inventory insertion emits a typed item payload; a full bag emits a se
 
 ### Ground item labels
 
-Equipment and charm nameplates render at 70% of their authored size, uniformly scaling text, icons, padding and packing gaps. Hover rectangles return to display coordinates at the same scale; item silhouettes and the full hover tooltip keep their existing size.
+Equipment and charm nameplates render at 85% of their authored size, uniformly scaling text, icons, padding and packing gaps. Hover rectangles return to display coordinates at the same scale; item silhouettes and the full hover tooltip keep their existing size. Loot-name options use two inline styled buttons with an explicit selected state, avoiding native dropdown colors.
 
 Escape → Options → Loot names offers **Always** (default) and **Hold Ctrl**, persisted in device preferences rather than character saves. Either Ctrl key reveals all nameplates while held. Without Ctrl, hovering a physical item reveals its plate; the revealed plate remains clickable while hovered, and a selected pickup target stays visible while approaching it. Hidden plates have no clickable rectangle. Blur, pause and input cancellation clear the held reveal. Touch/controller input keeps names visible because it has no Ctrl key.
 
