@@ -25,6 +25,9 @@ export const ENEMY_LOOT_TABLES: Readonly<Record<EnemyRank, EnemyLootTable>> = Ob
 
 export function getLootTable(rank: EnemyRank): EnemyLootTable { return ENEMY_LOOT_TABLES[rank]; }
 
+/** Thin common equipment from ordinary kills without reducing charms or higher tiers. */
+export const NORMAL_COMMON_EQUIPMENT_SKIP_CHANCE = 1 / 3;
+
 /** All twelve equipment kinds remain eligible. The foe's archetype supplies a readable tendency. */
 export const ENEMY_ITEM_KIND_WEIGHTS: Readonly<Record<EnemyKind, Readonly<Record<ItemKind, number>>>> = Object.freeze({
   thornReaver: Object.freeze({ charm: CHARM_DROP_WEIGHT, grimoire: 2, orb: 2, weapon: 14, shield: 5, head: 5, chest: 7, gloves: 13, legs: 10, boots: 22, cloak: 10, amulet: 5, ring: 5 }),

@@ -1,5 +1,30 @@
 # Evergrow changelog
 
+## v0.3.11 — 2026-09-11T08:56:00Z
+
+### New
+
+- Ground loot labels can stay visible or appear while holding Ctrl; hovering an item always reveals its label.
+
+### Tweaks
+
+- Wilderness packs grow with encounter level, from 4–6 enemies early on to 14–20 at level 61 and above.
+- Larger packs spread into wider formations, with most additional enemies remaining ordinary foes.
+- Elite-led groups bring more varied support, including ranged enemies, heavy fighters and flankers.
+- Elites and bosses hit 25% harder and recover faster between attacks, while keeping their attack warnings.
+- Veterans, elites and bosses resist repeated stuns, freezes and knockback, giving them chances to fight back.
+- Arc Lightning grants full life on hit on its first target and one quarter on additional targets; repeat bounces no longer heal again.
+- Normal enemies drop one third fewer common equipment items; charms and Magic-or-better drops keep their rates.
+- Dropped charms have distinctive runestone labels, and ground loot nameplates are more compact.
+
+### Fixes
+
+- Items render fully in inventory and vendor grids instead of sometimes showing only their outline.
+- Loot visibility controls use consistent, readable menu styling.
+- Repeated interruptions no longer let dangerous enemies skip their attack recovery.
+
+> Existing characters and progress are preserved. No save reset is required.
+
 ## v0.3.10 — 2026-09-10T19:19:00Z
 
 ### Fixes

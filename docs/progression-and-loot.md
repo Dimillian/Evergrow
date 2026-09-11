@@ -178,13 +178,13 @@ A level-ten character therefore gets full source XP from a level-six enemy, 80% 
 
 Each real death makes one rank-based gear-count roll, using an RNG isolated from combat randomness. The first kill guarantees at least one item if the table otherwise rolled zero. It does not add a bonus item on top of a successful roll.
 
-| Rank | Guaranteed items | Extra-item chance | Expected items per ordinary kill |
+| Rank | Guaranteed items | Initial extra-item chance | Expected items after thinning |
 | --- | ---: | ---: | ---: |
-| Normal | 0 | 28% | 0.28 |
+| Normal | 0 | 28% | 0.2135 |
 | Veteran | 0 | 70% | 0.70 |
 | Elite | 1 | 25% | 1.25 |
 
-Every dropped item then rolls its tier independently from that rank's table:
+Each candidate item rolls its tier independently from that rank's table, before common-equipment thinning:
 
 | Rank | Common | Magic | Rare | Epic | Legendary |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -192,7 +192,9 @@ Every dropped item then rolls its tier independently from that rank's table:
 | Veteran | 60% | 32% | 7% | 0.95% | 0.05% |
 | Elite | 40% | 45% | 13% | 1.9% | 0.1% |
 
-These are **conditional tier probabilities per dropped item**, not per-kill drop chances. For example, an ordinary normal kill has a 0.28 × 0.0002 = **0.0056%** chance of a legendary item. Elites guarantee an item, not a minimum rarity. Common drops outnumber gold rares at every rank; these tables apply at all source levels. Legendary currently means four stronger generated affixes; unique legendary powers are not implemented. There is no tier unlock gate, pity counter, smart-loot bias toward the equipped weapon, or magic-find stat in this foundation.
+These are **conditional tier probabilities per candidate item before thinning**, not per-kill drop chances. For example, an ordinary normal kill has a 0.28 × 0.0002 = **0.0056%** chance of a legendary item. Elites guarantee an item, not a minimum rarity. Common drops outnumber gold rares at every rank; these tables apply at all source levels. Legendary currently means four stronger generated affixes; unique legendary powers are not implemented. There is no tier unlock gate, pity counter, smart-loot bias toward the equipped weapon, or magic-find stat in this foundation.
+
+Normal kills discard one third of common equipment candidates using an independent deterministic roll. Charms of every rarity, Magic-or-better equipment, first-kill guarantees and authored boss/chest/event rewards bypass this reduction. Per 100 ordinary non-goblin kills, expected common equipment falls from 19.95 to 13.30; Magic-or-better equipment remains 6.65 and charms remain 1.40, for 21.35 items total (23.75% less clutter). Veteran and elite yields are unchanged. The separate thinning stream preserves retained item identities, profiles, stats and rarity, and does not affect gold or XP. Existing ground drops remain untouched.
 
 Default generation for content tools keeps its general-purpose tier distribution of 45 / 32 / 17 / 5 / 1. Enemy rewards explicitly pass the rolled tier into the generator and always use the rank tables above.
 
@@ -308,7 +310,7 @@ Nonstarter camp seeds divisible by three select a veteran/elite War Chief and 10
 
 The chief alternates six-second rush and surround phases, each with a 0.8-second horn warning. Rush grants nearby visible followers +20% speed and attack damage; surround widens their flanking approach. Orders reach 360 units and expire shortly after losing contact. Damage is captured at windup; killing the chief never changes an already committed hit. Surviving followers flee for 2.2 seconds once their current committed action finishes, then resume ordinary AI. Chief death does not itself clear the strongbox.
 
-Normal goblin equipment chance is 30% of the ordinary normal-enemy yield (8.4% instead of 28%); dropped equipment uses the same common-heavy rarity and source-level tables. Gold amount is also multiplied by 0.3 and rounded; its independent drop chance is unchanged. First-kill equipment guarantee and ordinary potion kill credit still apply. Chiefs use ordinary rank rewards. This keeps dense packs from multiplying equipment/gold income as much as an equal number of full enemies.
+Normal goblin initial item chance is 30% of the ordinary normal-enemy yield (8.4% instead of 28%). The same common-equipment thinning then gives 6.405 items per 100 normal goblins; their charm chance stays 0.42% per kill. Candidate equipment uses the same common-heavy rarity and source-level tables. Gold amount is also multiplied by 0.3 and rounded; its independent drop chance is unchanged. First-kill equipment guarantee and ordinary potion kill credit still apply. Chiefs use ordinary rank rewards. This keeps dense packs from multiplying equipment/gold income as much as an equal number of full enemies.
 
 ## Dungeon rewards
 
