@@ -16,6 +16,11 @@ export type SkillExecution = (
   | { kind: 'chain'; jumps: number; range: number; falloff: number; duration: number; style: ProjectileStyle; revisit?: boolean });
 
 export const GROUND_EFFECT_RULES = Object.freeze({ maximum: 16, minimumInterval: .05 });
+/** One full life-on-hit proc, then smaller procs for new targets only. */
+export const CHAIN_SUSTAIN = Object.freeze({ subsequentTarget: .25 });
+export function chainLifeOnHitMultiplier(contact: number, revisited: boolean): number {
+  return revisited ? 0 : contact === 0 ? 1 : CHAIN_SUSTAIN.subsequentTarget;
+}
 export function groundEffectPulseCount(effect: { duration: number; interval: number }): number {
   return Math.max(1, Math.ceil(effect.duration / Math.max(GROUND_EFFECT_RULES.minimumInterval, effect.interval)));
 }

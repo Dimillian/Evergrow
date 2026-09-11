@@ -1,3 +1,4 @@
+import { roamingEscortRole } from './roaming-encounters.ts';
 import { packSpaceProblem } from './inventory-grid.ts';
 import type { DamageType } from './model.ts';
 import { GroundItemPickup } from './ground-item-pickup.ts';
@@ -843,7 +844,7 @@ export class Simulation {
         const x = anchor.x + Math.cos(angle) * radius, y = anchor.y + Math.sin(angle) * radius;
         const biome = (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
         const preferred = index ? ROAMING_GROUPS[members[0].kind]?.[index] : undefined;
-        const kind = chooseEncounterEnemy(biome, () => this.random(), preferred);
+        const kind = chooseEncounterEnemy(biome, () => this.random(), preferred, roamingEscortRole(members[0], index));
         if (!isSpawnHidden(x, y, view, ENEMY_DEFINITIONS[kind].radius)
           || this.world.isSanctuary?.(x, y)
           || this.world.blocked(x, y, ENEMY_DEFINITIONS[kind].radius + ENCOUNTER_RULES.spawnClearance)

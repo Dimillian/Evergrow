@@ -1,3 +1,4 @@
+import { enemyRecoveryDuration } from './enemy-threat.ts';
 import { projectileDamageType } from './resistance-content.ts';
 import type { DamageType } from './model.ts';
 import { hasWalkableSegment } from './world-navigation.ts';
@@ -224,6 +225,6 @@ export function updateEnemyAI(enemy: Enemy, dt: number, context: EnemyAIContext)
         enemy.attackHit = true; context.hurt(enemy.attackDamage ?? enemy.damage, enemy.attackAngle, enemy, 'physical');
       }
     }
-    if (enemy.stateTime + 1e-9 >= enemy.stateDuration) transitionEnemy(enemy, 'recover', definition.recovery);
+    if (enemy.stateTime + 1e-9 >= enemy.stateDuration) transitionEnemy(enemy, 'recover', enemyRecoveryDuration(enemy, definition.recovery));
   }
 }

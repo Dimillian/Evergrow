@@ -1,3 +1,4 @@
+import { CHAIN_SUSTAIN } from './skill-execution-content.ts';
 import { CHARM_REWARD_CAPS } from './charm-content.ts';
 import { ELEMENTS, RESISTANCE_LABELS, RESISTANCE_RULES } from './resistance-content.ts';
 import type { Player, WeaponDefinition } from './model.ts';
@@ -97,7 +98,7 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
   const resources = [
     addAttribute(row('maxHp', 'Maximum life', s.maxHp, n(s.maxHp, 0), 'Life capacity. Increasing it does not heal you.', `${PLAYER_DEFAULTS.maxHp} + ${attributeBonus('vitality', 6)} Vitality + life bonuses`, ['vitality', 'maxHp']), 'vitality'),
     row('lifeRegen', 'Life regeneration', s.lifeRegeneration, `${n(s.lifeRegeneration)} / s`, 'Restores life continuously, up to maximum life.', 'Sum of regeneration bonuses', ['lifeRegen']),
-    row('lifeOnHit', 'Life on hit', s.lifeOnHit, n(s.lifeOnHit, 1), 'Life restored per direct hit. Periodic damage does not trigger it.', 'Sum of life-on-hit bonuses', ['lifeOnHit']),
+    row('lifeOnHit', 'Life on hit', s.lifeOnHit, n(s.lifeOnHit, 1), `Life per direct hit. Chains: ${CHAIN_SUSTAIN.subsequentTarget * 100}% on additional targets, none on repeat targets. Periodic damage gives none.`, 'Sum of life-on-hit bonuses', ['lifeOnHit']),
     addAttribute(row('maxMana', 'Maximum mana', s.maxMana, n(s.maxMana, 0), 'Mana capacity. Increasing it does not refill mana.', `${PLAYER_DEFAULTS.maxMana} + ${attributeBonus('intelligence', 4)} Intelligence + mana bonuses`, ['intelligence', 'maxMana']), 'intelligence'),
     row('manaRegen', 'Mana regeneration', s.manaRegeneration, `${n(s.manaRegeneration)} / s`, 'Restores mana continuously, up to maximum mana.', `${PLAYER_DEFAULTS.manaRegeneration} / s + regeneration bonuses`, ['manaRegen']),
     row('manaOnKill', 'Mana on kill', s.manaOnKill, n(s.manaOnKill, 1), 'Restores mana when you kill an enemy, up to missing mana.', 'Sum of mana-on-kill bonuses', ['manaOnKill']),

@@ -9,6 +9,8 @@ import { deriveAttackStats, alternatesBasicAttacks } from './equipment.ts';
 import { resolveSkill } from './skill-progression.ts';
 import { skillWeapon } from './skill-content.ts';
 import { unlockedSkills } from './skill-tree.ts';
+import { enemyRecoveryDuration } from './enemy-threat.ts';
+import { chainLifeOnHitMultiplier } from './skill-execution-content.ts';
 import type { EnemyKind } from './model.ts';
 
 export interface CloudObservation {
@@ -48,8 +50,9 @@ export function powerGrowth(maxLevel = 100) {
 }
 export function enemyAudit(level: number, kind: EnemyKind = 'stalker', rank: EnemyRank = 'normal') {
   const base = ENEMY_DEFINITIONS[kind], stats = scaledEnemyStats(kind, level, rank);
-  const cycle = base.windup + base.active + base.recovery;
-  return { level, kind, rank, ...stats, windup: base.windup, recovery: base.recovery,
+  const recovery = enemyRecoveryDuration({kind,rank},base.recovery);
+  const cycle = base.windup + base.active + recovery;
+  return { level, kind, rank, ...stats, windup: base.windup, recovery,
     idealAttacksPerSecond: 1 / cycle, rawIdealDps: stats.damage / cycle };
 }
 export function packPressure(level: number, kind: EnemyKind = 'stalker') {
@@ -79,6 +82,7 @@ export function exactBuildAudit(record: CharacterSave) {
     maxContacts: arc.recipe.jumps, falloff: arc.recipe.falloff,
     castsPerSecond: Math.min(attack.attacksPerSecond, arc.cooldown > 0 ? 1 / arc.cooldown : Infinity),
     manaPerCast: arc.mana, lifeOnHit: p.derived.lifeOnHit,
+    maximumLifeOnHitPerCast: p.derived.lifeOnHit * Array.from({length:arc.recipe.jumps},(_,i)=>chainLifeOnHitMultiplier(i,false)).reduce((a,b)=>a+b,0),
     revisits: !!arc.recipe.revisit,
   } : null;
   return { name: record.name, level: p.level, hp: p.maxHp, mana: p.maxMana, derived: p.derived,

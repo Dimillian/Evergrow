@@ -27,7 +27,7 @@ export function mountPowerAudit(root: HTMLElement, signal: AbortSignal) {
     const report = buildPowerAudit(sample);
     const rows = (['stalker','brute','caster'] as const).flatMap(kind => (['normal','veteran','elite'] as const).map(rank => {
       const base = ENEMY_DEFINITIONS[kind], stats = enemyAudit(level,kind,rank);
-      const cadence = 1 / (base.windup + base.active + base.recovery * recovery);
+      const cadence = 1 / (base.windup + base.active + stats.recovery * recovery);
       return `<tr><th>${e(base.name)} · ${rank}</th><td>${fmt(stats.maxHp)} → ${fmt(stats.maxHp*hp)}</td><td>${fmt(stats.damage)} → ${fmt(stats.damage*damage)}</td><td>${fmt(stats.idealAttacksPerSecond)} → ${fmt(cadence)}</td><td>${fmt(stats.rawIdealDps)} → ${fmt(stats.damage*damage*cadence)}</td></tr>`;
     }));
     const metricRows = report.sample ? Object.entries(report.sample.metrics).map(([key,value])=>`<tr><th>${e(key)}</th><td>${fmt(value)}</td></tr>`).join('') : '';

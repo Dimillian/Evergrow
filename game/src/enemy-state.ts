@@ -1,5 +1,6 @@
 import type { Enemy, Player } from './model.ts';
-import { COMBAT_TIMING } from './combat-content.ts';
+import { COMBAT_TIMING, enemyAttackDefinition } from './combat-content.ts';
+import { enemyRecoveryDuration } from './enemy-threat.ts';
 
 /** Shared state transitions keep damage, statuses, streaming and AI independent. */
 export function transitionEnemy(enemy: Enemy, state: Enemy['state'], duration = 0): void {
@@ -17,6 +18,13 @@ export function alertEnemy(enemy: Enemy, player: Pick<Player, 'x' | 'y'>): void 
 
 /** Shared interruption entrypoint for status skills without forcing every actor type into a kind branch. */
 export function interruptStaggeredEnemy(enemy: Enemy): void {
-  if (enemy.interrupted && (enemy.state === 'windup' || enemy.state === 'attack'))
-    transitionEnemy(enemy, 'recover', COMBAT_TIMING.interruptedRecovery);
+  if (enemy.interrupted && (enemy.state === 'windup' || enemy.state === 'attack')) {
+    const action = enemyAttackDefinition(enemy);
+    // Cancel contact without skipping the unfinished action's time. A weak pulse
+    // must never grant an earlier next attack by substituting a tiny recovery.
+    const unfinished = Math.max(0, enemy.stateDuration - enemy.stateTime)
+      + (enemy.state === 'windup' ? action.active : 0);
+    transitionEnemy(enemy, 'recover', unfinished + Math.max(COMBAT_TIMING.interruptedRecovery,
+      enemyRecoveryDuration(enemy, action.recovery)));
+  }
 }

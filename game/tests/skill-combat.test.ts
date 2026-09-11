@@ -2,6 +2,7 @@ import { SKILL_SPECIALIZATIONS, specializationNode, resolveSkill } from '../src/
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { activateSkill, type SkillContext } from '../src/skill-combat.ts';
+import { damageEnemy } from '../src/combat-damage.ts';
 import { SKILL_DEFINITIONS, canUseSkill, skillWeapon, skillIconSVG, skillRequirementLabel, type SkillRequirement } from '../src/skill-content.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
 import { deriveAttackStats, weaponActionRate } from '../src/equipment.ts';
@@ -37,6 +38,25 @@ function harness(id: SkillId) {
   return { context, player, hits, events, missiles, scheduled, target };
 }
 const close = (actual: number, expected: number) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} should equal ${expected}`);
+
+test('chain casts retain full first-target healing, diminish new targets and never heal revisits', () => {
+  for (const [targets,circuit,expected] of [[1,false,8],[5,false,16],[2,true,10],[8,true,10]] as const) {
+    const h=harness('arcLightning');
+    if(circuit){h.player.character.allocatedNodes.push(specializationNode('arc-circuit'));h.player.character.skillSpecializations.arcLightning='arc-circuit';}
+    for(let i=0;i<targets;i++) h.target(80+i*20);
+    h.player.derived.lifeOnHit=8;h.player.hp=1;
+    h.context.damage=(enemy,amount,angle,melee,style,elemental,offense)=>damageEnemy(enemy,amount,angle,melee,
+      {player:h.player,enemies:h.context.enemies,random:()=>1,visible:()=>true,emit:()=>{},killed:()=>assert.fail('unexpected death')},false,style,elemental,offense);
+    const mana=h.player.mana;
+    const cost=resolveSkill('arcLightning',h.player.derived,h.player.character).mana;
+    assert.ok(activateSkill(h.context,0));
+    close(h.player.hp-1,expected);close(mana-h.player.mana,cost);
+    assert.equal(h.events.filter(e=>e.type==='chain').length,circuit?8:targets);
+    h.player.hp=1;h.player.castTime=0;
+    assert.ok(activateSkill(h.context,0),'a new cast has a fresh healing budget');
+    close(h.player.hp-1,expected);
+  }
+});
 
 test('all skill requirements admit the intended weapon families and reject incompatible profiles', () => {
   for (const skill of Object.values(SKILL_DEFINITIONS)) {

@@ -155,7 +155,7 @@ export class ExpeditionPanel {
       else {
         const theme = dungeonTheme(node.entry.seed, node.entry.theme), mod = EXPEDITION_MODIFIERS[node.entry.expedition!.modifier];
         tip.style.setProperty('--tooltip-accent', theme.accent);
-        tip.innerHTML = `<small>${node.state === 'available' ? this.locked ? 'Requires level 20' : 'Choose this path' : node.state === 'skipped' ? 'Path not taken' : 'Cleared'}</small><strong>${theme.name}</strong><div class="expedition-tip-level">Lv ${node.entry.level} <span>Boss ${node.entry.level + 3}</span></div><p class="expedition-tip-modifier">${mod.name}</p><p>${mod.description}</p><div class="expedition-tip-boss">${theme.bossName ?? 'Hollow Warden'}</div>`;
+        tip.innerHTML = `<small>${node.state === 'available' ? this.locked ? 'Requires level 20' : 'Choose this path' : node.state === 'skipped' ? 'Path not taken' : 'Cleared'}</small><strong>${theme.name}</strong><div class="expedition-tip-level">Lv ${node.entry.level} <span>Boss ${node.entry.level + 3}</span></div><p class="expedition-tip-modifier">${mod.name}</p><p>${mod.description}</p><div class="expedition-tip-boss">${theme.bossName ?? 'Hollow Warden'} · Resists stuns and knockback</div>`;
       }
     }
     tip.hidden = false;

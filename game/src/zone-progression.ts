@@ -1,3 +1,4 @@
+import { enemyThreat } from './enemy-threat.ts';
 import { geoHash } from './world-geography.ts';
 import { routeDangerDistance } from './road-shape.ts';
 import { sampleBiome } from './biomes.ts';
@@ -86,7 +87,7 @@ export function scaledEnemyStats(kind: EnemyKind, level: number, rank: EnemyRank
   const base = ENEMY_DEFINITIONS[kind], quality = ENEMY_RANKS[rank];
   return {
     maxHp: Math.max(1, Math.round(base.hp * monsterHealthScale(level) * quality.healthMultiplier)),
-    damage: Math.max(1, Math.round(base.damage * monsterDamageScale(level) * quality.damageMultiplier)),
+    damage: Math.max(1, Math.round(base.damage * monsterDamageScale(level) * quality.damageMultiplier * enemyThreat({kind,rank}).damage)),
     xpReward: Math.max(1, Math.round(base.xpReward * monsterExperienceScale(level) * quality.xpMultiplier)),
   };
 }

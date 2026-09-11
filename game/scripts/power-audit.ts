@@ -4,14 +4,15 @@ import { buildPowerAudit, readAuditSample } from '../src/power-audit.ts';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
 import { applyElementalContact } from '../src/combat-status.ts';
 import { ENEMY_DEFINITIONS } from '../src/combat-content.ts';
+import type { EnemyRank } from '../src/progression-content.ts';
 import type { Enemy, EnemyKind, Input } from '../src/model.ts';
 
 const idle: Input = { moveX: 0, moveY: 0, aimX: 30, aimY: 0, attack: false, dodge: false, heal: false, skillSlot: null };
 /** Isolated status/AI experiment; deliberately removes damage and knockback. */
-export function lightningControlProbe(kind: EnemyKind, rate: number, phase = 0, duration = 30) {
+export function lightningControlProbe(kind: EnemyKind, rate: number, phase = 0, duration = 30, rank: EnemyRank = 'normal') {
   const sim = new Simulation({ blocked: () => false, move: (x,y) => ({x,y}) }, {spawn:false,seed:7319});
   sim.player.hp = sim.player.maxHp = 1e9;
-  const enemy = sim.spawnEnemy(kind, 20, 0)!;
+  const enemy = sim.spawnEnemy(kind, 20, 0, rank, undefined, {base:32,min:32,max:32,fixed:true})!;
   enemy.angle = enemy.attackAngle = Math.PI;
   enemy.state = 'windup'; enemy.stateTime = 0; enemy.stateDuration = ENEMY_DEFINITIONS[kind].windup;
   sim.drainEvents();
@@ -27,16 +28,16 @@ export function lightningControlProbe(kind: EnemyKind, rate: number, phase = 0, 
   return { attacks, hits };
 }
 export function controlSweep() {
-  return (['stalker','brute'] as const).flatMap(kind => [0,.5,1,1.25,1.5,2,2.5,3].map(rate => {
-    const samples = [0,.17,.41].map(phase => lightningControlProbe(kind,rate,phase));
-    return {kind,rate,attacks: samples.reduce((a,b)=>a+b.attacks,0)/samples.length,
+  return (['normal','veteran','elite'] as const).flatMap(rank => (['stalker','brute'] as const).flatMap(kind => [0,.5,1,1.25,1.5,2,2.5,3].map(rate => {
+    const samples = [0,.17,.41].map(phase => lightningControlProbe(kind,rate,phase,30,rank));
+    return {kind,rank,rate,attacks: samples.reduce((a,b)=>a+b.attacks,0)/samples.length,
       hits: samples.reduce((a,b)=>a+b.hits,0)/samples.length,
       min:Math.min(...samples.map(s=>s.hits)),max:Math.max(...samples.map(s=>s.hits)),duration:30};
-  }));
+  })));
 }
 if (process.argv[1]?.endsWith('/power-audit.ts')) {
   const report = { ...buildPowerAudit(process.argv[2] ? readAuditSample(readFileSync(process.argv[2],'utf8')) : {}),
-    control: controlSweep(), controlAssumptions: 'Actual 120 Hz status/AI loop, 30 seconds, stationary isolated melee foe at 20 units, three pulse phases; lightning status only, no damage or knockback. Attack entries count attempts, not successful hits.' };
+    control: controlSweep(), controlAssumptions: 'Actual 120 Hz status/AI loop, 30 seconds, level-32 stationary isolated melee foe at 20 units, three pulse phases and all ordinary ranks; lightning status only, no damage or knockback. Attacks count attack entries; hits count landed hurt events.' };
   const json = JSON.stringify(report,null,2);
   if (process.argv[3]) writeFileSync(process.argv[3],json); else console.log(json);
 }

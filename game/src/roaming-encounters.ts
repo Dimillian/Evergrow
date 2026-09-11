@@ -23,6 +23,14 @@ export const ROAMING_GROUPS: Readonly<Partial<Record<EnemyKind, readonly EnemyKi
   archer: Object.freeze(['archer', 'hound', 'archer', 'hound', 'stalker', 'hound'] as const),
   wisp: Object.freeze(['wisp', 'wisp', 'stalker', 'hound', 'stalker', 'stalker'] as const),
 });
+/** Replace existing escort slots, never add actors: ranged leaders gain a heavy
+ * screen, melee leaders gain ranged pressure, and either gains a flanker. */
+export function roamingEscortRole(leader: Pick<Enemy,'kind'|'rank'> | undefined, index: number) {
+  if (leader?.rank !== 'elite') return undefined;
+  if (index === 1) return ENEMY_DEFINITIONS[leader.kind].role === 'ranged' ? 'heavy' as const : 'ranged' as const;
+  if (index === 2) return 'flanker' as const;
+  return undefined;
+}
 type Position = Pick<Player, 'x' | 'y'>;
 export interface TravelHeading { x: number; y: number }
 const unit = (value: number) => Math.max(0, Math.min(1 - Number.EPSILON, Number.isFinite(value) ? value : 0));

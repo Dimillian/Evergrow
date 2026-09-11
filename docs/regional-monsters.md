@@ -1,5 +1,7 @@
 # Regional monsters
 
+Local 2026-09-11 refinement: elite-led roaming groups replace their first two escort slots with a complementary screen/ranged attacker and a flanker, using only biome-eligible weighted choices. Group size and spawning frequency are unchanged. Elite regional basics and signatures retain their warning geometry but have 25% stronger source hits and 15% shorter recovery. Shared control protection also applies to signature attacks; see [combat power audit](combat-power-audit.md).
+
 Implemented locally on 2026-09-07. Six regional archetypes expand the roster to eighteen enemy kinds: twelve ordinary roaming creatures, two goblins and four bosses. The save format and generation version are unchanged; existing characters encounter the new packs as they explore.
 
 ## Creatures and combat

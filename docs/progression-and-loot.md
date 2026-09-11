@@ -1,5 +1,7 @@
 # Progression, threat, and loot
 
+2026-09-11 local challenge tuning: elites have 25% stronger raw hits and 15% shorter post-attack recovery; dungeon and wilderness bosses have 25% stronger hits and 20% shorter recovery. Normal health/damage/timing and all warning lengths remain unchanged. Veterans, elites and bosses resist repeated control and knockback; elite-led roaming packs combine ranged, heavy and flanking roles within their biome, without adding actors. See [combat power audit](combat-power-audit.md) for rules, tests and before/after measurements. Existing progress and wounds remain compatible; loading reconstructs damage with the new tuning at each enemy's saved level/rank.
+
 Local regional monster expansion adds six biome-weighted archetypes, mixed packs, two-basic/one-signature attack cycles, procedural anatomy and matching remains. See [regional monsters](regional-monsters.md) for combat and spawn weights. Existing characters remain compatible.
 
 Local addition: [wilderness boss lairs](wilderness-bosses.md) add three bosses, Elite/Veteran retinues and automatic Rare-or-better hoards through a separate placement layer. Existing landmark identities and save formats remain unchanged.

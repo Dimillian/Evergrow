@@ -1,3 +1,4 @@
+import { enemyRecoveryDuration } from './enemy-threat.ts';
 import type { Enemy } from './model.ts';
 import type { EnemyAIContext } from './enemy-ai.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
@@ -26,7 +27,7 @@ export function updateWildernessBoss(e: Enemy, dt: number, c: EnemyAIContext): v
     if(d<R.awareness&&c.visible(e.x,e.y,p.x,p.y)||e.awareness>=1)alertEnemy(e,p);else return;
   }
   if(e.awareness>=1&&e.campId)for(const guard of c.enemies)if(guard!==e&&guard.hp>0&&guard.campId===e.campId&&(c.world.dungeonLevel===undefined||Math.hypot(guard.homeX-e.homeX,guard.homeY-e.homeY)<650))alertEnemy(guard,p);
-  if(e.interrupted){e.interrupted=false;transitionEnemy(e,'recover',.8);return;}
+  if(e.interrupted){e.interrupted=false;}
   if(e.state==='recover'){if(e.stateTime>=e.stateDuration)transitionEnemy(e,'chase');return;}
   if(e.state==='chase'){
     e.angle=angle;e.seesPlayer=c.visible(e.x,e.y,p.x,p.y);
@@ -67,5 +68,5 @@ export function updateWildernessBoss(e: Enemy, dt: number, c: EnemyAIContext): v
     hit ||= segmentDistanceSquared(p.x,p.y,ox,oy,ox+Math.cos(a)*R.fractureLength,oy+Math.sin(a)*R.fractureLength)<(R.fractureWidth+p.radius)**2;
   }
   if(hit&&!e.attackHit&&c.visible(e.x,e.y,p.x,p.y)){e.attackHit=true;c.hurt(e.damage*(e.bossMove==='sweep'?1:1.15),e.attackAngle,e,e.kind==='ashColossus'&&(e.bossMove==='eruption'||e.bossMove==='fracture')?'fire':'physical');}
-  if(e.stateTime>=e.stateDuration)transitionEnemy(e,'recover',e.bossMove==='command'?1.5:e.bossPhases?.75:1.2);
+  if(e.stateTime>=e.stateDuration)transitionEnemy(e,'recover',enemyRecoveryDuration(e,e.bossMove==='command'?1.5:e.bossPhases?.75:1.2));
 }

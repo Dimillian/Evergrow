@@ -1,5 +1,6 @@
 import type { Enemy, EnemyKind } from './model.ts';
 import type { BiomeId } from './biomes.ts';
+import { ENEMY_DEFINITIONS, type EnemyDefinition } from './combat-content.ts';
 import { normalizeLevel, type EnemyRank } from './progression-content.ts';
 
 export const ENCOUNTER_RULES = Object.freeze({
@@ -28,8 +29,10 @@ export function livingEnemyCount(enemies: readonly Pick<Enemy, 'state'>[]): numb
 }
 
 /** Policy is independent of placement/collision; random is read only when a roll is needed. */
-export function chooseEncounterEnemy(biome: BiomeId, random: () => number, preferred?: EnemyKind): EnemyKind {
-  const entries = (Object.entries(ENCOUNTER_WEIGHTS[biome]) as [EnemyKind, number][]).filter(([, weight]) => weight > 0);
+export function chooseEncounterEnemy(biome: BiomeId, random: () => number, preferred?: EnemyKind, role?: EnemyDefinition['role']): EnemyKind {
+  const eligible = (Object.entries(ENCOUNTER_WEIGHTS[biome]) as [EnemyKind, number][]).filter(([, weight]) => weight > 0);
+  const matching = role ? eligible.filter(([kind]) => ENEMY_DEFINITIONS[kind].role === role) : eligible;
+  const entries = matching.length ? matching : eligible;
   if (preferred && entries.some(([kind]) => kind === preferred)) return preferred;
   const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
   let roll = Math.max(0, Math.min(1 - Number.EPSILON, random())) * total;

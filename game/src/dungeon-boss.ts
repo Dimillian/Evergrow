@@ -1,8 +1,9 @@
+import { enemyRecoveryDuration } from './enemy-threat.ts';
 import type { EnemyAIContext } from './enemy-ai.ts';
 import type { Enemy } from './model.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
 import { transitionEnemy } from './enemy-state.ts';
-export const WARDEN_RULES = Object.freeze({ sweepWarning: .9, fractureWarning: 1, reach: 125, fractureLength: 480, fractureWidth: 22, controlFactor: .25, controlImmunity: 2.5 });
+export const WARDEN_RULES = Object.freeze({ sweepWarning: .9, fractureWarning: 1, reach: 125, fractureLength: 480, fractureWidth: 22 });
 export function wardenProfile(theme?: Enemy['dungeonTheme']) {
     const astral=theme==='astral',rime=theme==='rime';
     return {offsets:astral?[-.8,-.4,0,.4,.8]:rime?[-.65,0,.65]:[-.5,0,.5],length:astral?580:rime?540:480,width:rime?28:22,
@@ -13,7 +14,6 @@ export function updateWarden(e: Enemy, dt: number, c: EnemyAIContext): void {
     const p = c.player, dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
     if (e.interrupted) {
         e.interrupted = false;
-        transitionEnemy(e, 'recover', .9);
     }
     if (p.dead || c.world.isSanctuary?.(p.x, p.y) || Math.hypot(p.x - e.homeX, p.y - e.homeY) > 1100) {
         e.awareness = 0;
@@ -87,6 +87,6 @@ export function updateWarden(e: Enemy, dt: number, c: EnemyAIContext): void {
             }
         }
         if (e.stateTime >= e.stateDuration)
-            transitionEnemy(e, 'recover', e.bossMove === 'summon' ? 1.8 : e.hp / e.maxHp < .3 ? .65 : 1);
+            transitionEnemy(e, 'recover', enemyRecoveryDuration(e, e.bossMove === 'summon' ? 1.8 : e.hp / e.maxHp < .3 ? .65 : 1));
     }
 }
