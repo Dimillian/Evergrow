@@ -61,6 +61,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'touch',group:'interface',name:'Touch controls',path:'/touch.html',description:'Touch layout and mobile controls.'},
   {id:'thor',group:'interface',name:'Thor companion',path:'/thor.html?preview=1',description:'Preview lower-screen map, inventory and character controls.'},
   {id:'progression',group:'data',name:'Progression & loot',path:'/progression.html',description:'Compare current enemy stats, XP, item curves and drop distributions.'},
+  {id:'power-audit',group:'data',name:'Combat power audit',path:'/progression.html?view=power',description:'Import a read-only character or cloud-history snapshot; compare enemy power curves and proposed health, damage and recovery tuning.'},
   {id:'hud-history',group:'archive',name:'HUD concepts',path:'/hud-directions.html',description:'Historical alternatives; Astral is the selected runtime design.'},
 ];
 export function toolForPath(path: string): Tool | undefined {
