@@ -1,3 +1,4 @@
+import { enemyWindupDuration } from '../src/enemy-threat.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newExpeditionRoute, expeditionChoices, expeditionRewardItems, dungeonChestMask } from '../src/expedition-route.ts';
@@ -72,12 +73,12 @@ test('Rime and Astral fracture attacks use their own elements, timings, and one 
   const sim=new Simulation(world,{spawn:false,startX:0,startY:0});
   for(const theme of ['rime','astral'] as const){
     const e=sim.spawnEnemy('warden',sim.player.x-300,sim.player.y)!;
-    e.dungeonTheme=theme;e.state='chase';e.bossTurns=1;e.hp=e.maxHp;
+    e.dungeonTheme=theme;e.state='chase';e.bossTurns=2;e.hp=e.maxHp;
     const hits:string[]=[];
     const context={player:sim.player,enemies:sim.enemies,world:{...world,isSanctuary:()=>false},time:0,trial:null,visible:()=>true,move:()=>{},hurt:(_n:number,_a:number,_e:typeof e,element:string)=>hits.push(element),shoot:()=>{},emit:()=>{}};
     updateWarden(e,1/120,context);
     assert.equal(e.bossMove,'fracture');
-    assert.equal(e.stateDuration,wardenProfile(theme).warning);
+    assert.equal(e.stateDuration,enemyWindupDuration(e,wardenProfile(theme).warning));
     e.stateTime=e.stateDuration;updateWarden(e,1/120,context);
     for(let i=0;i<110;i++){e.stateTime+=1/120;updateWarden(e,1/120,context);}
     assert.deepEqual(hits,[theme==='rime'?'frost':'arcane']);

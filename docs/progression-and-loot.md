@@ -1,5 +1,15 @@
 # Progression, threat, and loot
 
+## Attack pressure — local 2026-09-11
+
+Ordinary ranged basics now prepare in 0.70–0.75 seconds; the Thorn Reaver's basic slash takes 0.45 seconds. Melee preparation tracks longer before committing: normal Brute locks at 0.60 of its 0.95-second windup; quick elite melee leaves at least 0.22 seconds locked. Ground marks, long pounces and regional signature warnings retain their escape windows. Each action adds a deterministic 0–0.12-second variation to its warning, without drawing from combat or loot RNG or imposing shared attack slots.
+
+Eligible elites use two quick basics followed by their full basic/signature action. Quick melee prepares in at most 0.50 seconds and ranged fire in 0.60 seconds, before rhythm variation. These attacks deal 75% of the original basic hit; quick ranged fire is a single projectile. Wisps and pouncing Hounds retain their ground/lane commitment instead of receiving faster blasts. Normal health, source damage, rewards and player defenses are unchanged. Elites and bosses recover at 65% of authored recovery (previously 85% / 80%); normal and veteran recovery multipliers remain 100%.
+
+All four bosses alternate major attacks with a short jab in melee range or a single bolt farther away. Jabs warn for 0.50 seconds and deal 55% of a sweep; bolts warn for 0.65 seconds and deal 45%, plus rhythm variation. Both commit aim before release and share their warning geometry with contact. Bosses select an in-range major instead of endlessly chasing for a queued sweep; the Marshal switches to fractures when no living retinue can benefit from its rally. Heavy damage and minimum warning lengths stay unchanged. Sanctuary, obstacles, leashes, once-per-action contact and source-level projectile rules remain authoritative.
+
+This is local tuning awaiting player feedback. Existing saves need no reset; restored actors safely restart their transient action state. See [combat power audit](combat-power-audit.md) for measured attack frequency and half-second burst checks.
+
 ## Larger wilderness packs — local 2026-09-11
 
 Roaming pack size now follows the captured encounter baseline at its spawn anchor:

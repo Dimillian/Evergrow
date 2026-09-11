@@ -1,4 +1,5 @@
-import { enemyRecoveryDuration } from './enemy-threat.ts';
+import { BOSS_PRESSURE, bossQuickMove, updateBossPressure } from './boss-pressure.ts';
+import { enemyRecoveryDuration, enemyWindupDuration } from './enemy-threat.ts';
 import type { EnemyAIContext } from './enemy-ai.ts';
 import type { Enemy } from './model.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
@@ -34,6 +35,7 @@ export function updateWarden(e: Enemy, dt: number, c: EnemyAIContext): void {
             transitionEnemy(e, 'chase', 0);
         return;
     }
+    if (updateBossPressure(e,c)) return;
     if (e.state === 'chase') {
         e.angle = a;
         e.seesPlayer = c.visible(e.x, e.y, p.x, p.y);
@@ -47,18 +49,19 @@ export function updateWarden(e: Enemy, dt: number, c: EnemyAIContext): void {
             e.bossMove = 'summon';
         }
         else
-            e.bossMove = (e.bossTurns ?? 0) % (e.dungeonTheme==='astral'?3:2) ? 'fracture' : 'sweep';
+            e.bossMove = (e.bossTurns ?? 0)%2 ? bossQuickMove(d,p.radius)
+              : Math.floor((e.bossTurns ?? 0)/2) % (e.dungeonTheme==='astral'?3:2) ? 'fracture' : 'sweep';
         e.bossTurns = (e.bossTurns ?? 0) + 1;
         if (e.bossMove === 'sweep' && d > WARDEN_RULES.reach + 15) {
-            c.move(e, Math.cos(a) * 66, Math.sin(a) * 66, dt);
-            e.bossTurns!--;
-            return;
+            e.bossMove = 'fracture';
         }
         e.attackAngle = a;
         e.attackTargetX = p.x;
         e.attackTargetY = p.y;
         e.bossHits = 0;
-        transitionEnemy(e, 'windup', e.bossMove === 'sweep' ? WARDEN_RULES.sweepWarning : profile.warning);
+        const quick=e.bossMove==='jab'||e.bossMove==='bolt'?BOSS_PRESSURE[e.bossMove]:null;
+        e.attackDamage=e.damage*(quick?.damage??(e.bossMove==='fracture'?1.15:1));
+        transitionEnemy(e, 'windup', enemyWindupDuration(e,quick?.windup??(e.bossMove === 'sweep' ? WARDEN_RULES.sweepWarning : profile.warning)));
         return;
     }
     if (e.state === 'windup') {

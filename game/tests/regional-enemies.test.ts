@@ -1,6 +1,7 @@
+import { enemyWindupDuration } from '../src/enemy-threat.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ENEMY_DEFINITIONS, ENEMY_SIGNATURE_ATTACKS, REGIONAL_ENEMY_KINDS, enemyAttackDefinition, isRegionalEnemy } from '../src/combat-content.ts';
+import { ENEMY_DEFINITIONS, ENEMY_SIGNATURE_ATTACKS, REGIONAL_ENEMY_KINDS, enemyAttackVariant, enemyAttackDefinition, isRegionalEnemy } from '../src/combat-content.ts';
 import { ENCOUNTER_WEIGHTS, chooseEncounterEnemy } from '../src/encounter-director.ts';
 import { ROAMING_GROUPS } from '../src/roaming-encounters.ts';
 import { Simulation } from '../src/simulation.ts';
@@ -32,15 +33,15 @@ test('regional enemies commit two basics then a signature, with immutable timing
     for(let turn=0;turn<4;turn++) {
       begin(f,turn%3);
       const d=enemyAttackDefinition(f.enemy);
-      assert.equal(f.enemy.attackVariant,turn===2?1:0);
-      assert.equal(f.enemy.stateDuration,d.windup);
+      assert.equal(f.enemy.attackVariant,enemyAttackVariant({...f.enemy,attackTurns:turn%3}));
+      assert.equal(f.enemy.stateDuration,enemyWindupDuration(f.enemy,d.windup));
       assert.ok(Object.isFrozen(d));
       assert.ok(d.aimLock<d.windup);
       assert.equal(f.enemy.attackTurns,(turn+1)%3);
       const expected=f.enemy.damage*d.damage/ENEMY_DEFINITIONS[kind].damage;
       assert.ok(Math.abs(f.enemy.attackDamage!-expected)<1e-8);
       f.sim.player.level=100; // Turning or levelling during commitment cannot re-roll damage.
-      f.enemy.stateTime=d.windup;
+      f.enemy.stateTime=f.enemy.stateDuration;
       updateEnemyAI(f.enemy,1/120,f.context);
       if(d.attack==='melee')updateEnemyAI(f.enemy,1/120,f.context);
       assert.ok(Math.abs(f.damage.at(-1)!-expected)<1e-8,kind);
@@ -59,9 +60,9 @@ test('signature ground strikes lock their warning and can be escaped; walls supp
     f.enemy.stateTime=d.aimLock+.01;f.sim.player.x=150;
     updateEnemyAI(f.enemy,1/120,f.context);
     assert.equal(f.enemy.attackTargetX,0);assert.equal(enemyWarnings(f.enemy)[0].x,initial.x);
-    f.enemy.stateTime=d.windup;updateEnemyAI(f.enemy,1/120,f.context);
+    f.enemy.stateTime=f.enemy.stateDuration;updateEnemyAI(f.enemy,1/120,f.context);
     assert.equal(f.damage.length,0,`${kind}: walking out avoids the burst`);
-    f.sim.player.x=0;begin(f,2);f.enemy.stateTime=d.windup;f.context.visible=()=>false;
+    f.sim.player.x=0;begin(f,2);f.enemy.stateTime=f.enemy.stateDuration;f.context.visible=()=>false;
     updateEnemyAI(f.enemy,1/120,f.context);assert.equal(f.damage.length,0,'cannot hit through a wall');
   }
 });

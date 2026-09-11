@@ -1,5 +1,5 @@
 /** Read-only balance calculations. Observed cloud history is never treated as a current build. */
-import { COMBAT_TIMING, ENEMY_DEFINITIONS } from './combat-content.ts';
+import { COMBAT_TIMING, ENEMY_DEFINITIONS, enemyAttackDefinition, enemyAttackVariant } from './combat-content.ts';
 import { itemPowerScale, monsterHealthScale, monsterDamageScale, type EnemyRank } from './progression-content.ts';
 import { encounterRankChances } from './encounter-director.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
@@ -50,21 +50,24 @@ export function powerGrowth(maxLevel = 100) {
       enemyCadence: 1, veteranPercent: ranks.veteran * 100, elitePercent: ranks.elite * 100 };
   });
 }
-export function enemyAudit(level: number, kind: EnemyKind = 'stalker', rank: EnemyRank = 'normal') {
+export function enemyAudit(level: number, kind: EnemyKind = 'stalker', rank: EnemyRank = 'normal', recoveryMultiplier = 1) {
   const base = ENEMY_DEFINITIONS[kind], stats = scaledEnemyStats(kind, level, rank);
-  const recovery = enemyRecoveryDuration({kind,rank},base.recovery);
-  const cycle = base.windup + base.active + recovery;
-  return { level, kind, rank, ...stats, windup: base.windup, recovery,
-    idealAttacksPerSecond: 1 / cycle, rawIdealDps: stats.damage / cycle };
+  const actions=Array.from({length:3},(_,attackTurns)=>enemyAttackDefinition({kind,
+    attackVariant:enemyAttackVariant({kind,rank,attackTurns})}));
+  const recovery=enemyRecoveryDuration({kind,rank},actions[0].recovery)*recoveryMultiplier;
+  const cycle=actions.reduce((sum,d)=>sum+d.windup+.06+d.active+enemyRecoveryDuration({kind,rank},d.recovery)*recoveryMultiplier,0);
+  const cycleDamage=actions.reduce((sum,d)=>sum+stats.damage*d.damage/base.damage,0);
+  return { level, kind, rank, ...stats, windup: actions[0].windup, recovery,
+    idealAttacksPerSecond: 3 / cycle, rawIdealDps: cycleDamage / cycle };
 }
 export function packPressure(level: number, kind: EnemyKind = 'stalker') {
   const enemy = enemyAudit(level, kind);
   return Array.from({ length: ROAMING_RULES.maxGroupSize }, (_, i) => {
-    const count = i + 1, rate = count * enemy.idealAttacksPerSecond;
-    return { count, rawDps: rate * enemy.damage,
+    const count = i + 1, rate = count * enemy.idealAttacksPerSecond, averageHit=enemy.rawIdealDps/enemy.idealAttacksPerSecond;
+    return { count, rawDps: count * enemy.rawIdealDps,
       // Poisson arrivals with a non-extending damage-immunity window. This is an
       // analytical sensitivity estimate, not measured positioning or hit chance.
-      guardedDps: rate / (1 + rate * COMBAT_TIMING.hurtGuard) * enemy.damage };
+      guardedDps: rate / (1 + rate * COMBAT_TIMING.hurtGuard) * averageHit };
   });
 }
 export function exactBuildAudit(record: CharacterSave) {
@@ -111,7 +114,7 @@ export function buildPowerAudit(sample: AuditSample = {}) {
     assumptions: [
       'Cloud observations are cumulative history across levels and sessions, not current DPS, encounter exposure or a full equipment snapshot.',
       'Growth normalizes each quantity to level 1. Caster-hit curve isolates a same-quality same-level weapon and three Intelligence per level; no affixes, charms or tree.',
-      'Ideal enemy cadence excludes pathing, idle time, missed attacks and control effects. Boss special patterns need their own encounter study.',
+      'Ideal enemy cadence averages the three-action pattern and 0.06s rhythm delay, excluding pathing, idle time, missed attacks and control effects. Boss special patterns need their own encounter study.',
       'Pack pressure assumes identical normal Stalkers, every attack hitting, and independently timed arrivals. Before armor, resistance, block, recovery or dodging.',
       'Exact-build damage budgets, when a full save is supplied, exclude movement, overkill, mana downtime, temporary Spellweave and active combat buffs.',
     ] };

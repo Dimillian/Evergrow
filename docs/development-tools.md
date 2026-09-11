@@ -71,3 +71,5 @@ World → Settlement nights opens `/layouts.html?lighting`. The existing settlem
 ### Expedition and respec studies
 
 The World workspace includes `/tools/expeditions.html`, a disposable instance of the runtime expedition panel. `stage=0..9`, `level=19` and `failed` expose progression, the level gate and failed-route states. Equipment includes `/services.html?role=enchanter&respec` for exact reset pricing and point refunds. These studies do not access playable saves.
+
+The power-audit CLI also includes disposable `enemyPressureProbe` scenarios for elite melee/ranged foes, dungeon/wilderness bosses and a twelve-enemy ring. It reports first contact, landed hits, largest hit and peak half-second damage through the real AI/projectile/hurt-guard loop; it never loads a playable slot.

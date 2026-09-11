@@ -35,8 +35,34 @@ export function controlSweep() {
       min:Math.min(...samples.map(s=>s.hits)),max:Math.max(...samples.map(s=>s.hits)),duration:30};
   })));
 }
+
+/** Stationary, non-attacking level-32 target; real damage guards and AI, no playable save. */
+export function enemyPressureProbe(kind: EnemyKind, rank: EnemyRank, distance: number, count = 1, duration = 30) {
+  const sim = new Simulation({blocked:()=>false,move:(x,y,dx,dy)=>({x:x+dx,y:y+dy})},{spawn:false,seed:7319});
+  sim.player.hp=sim.player.maxHp=1e9;
+  for(let i=0;i<count;i++) {
+    const angle=i*Math.PI*2/count;
+    const enemy=sim.spawnEnemy(kind,Math.cos(angle)*distance,Math.sin(angle)*distance,rank,undefined,{base:32,min:32,max:32,fixed:true})!;
+    enemy.state='chase';enemy.awareness=1;
+  }
+  sim.drainEvents();
+  const hits:{time:number;damage:number}[]=[];let attacks=0;
+  for(let tick=0;tick<duration/FIXED_STEP;tick++) {
+    const states=sim.enemies.map(e=>e.state);
+    sim.update(FIXED_STEP,idle);
+    for(let i=0;i<sim.enemies.length;i++)if(sim.enemies[i].state==='attack'&&states[i]!=='attack')attacks++;
+    for(const e of sim.drainEvents())if(e.type==='hurt')hits.push({time:tick*FIXED_STEP,damage:e.actualValue??e.value});
+  }
+  return {kind,rank,distance,count,duration,attacks,hits:hits.length,firstHit:hits[0]?.time??null,
+    damagePerSecond:hits.reduce((s,h)=>s+h.damage,0)/duration,
+    largestHit:Math.max(0,...hits.map(h=>h.damage)),
+    peakHalfSecond:Math.max(0,...hits.map(h=>hits.filter(other=>other.time>=h.time&&other.time<h.time+.5).reduce((s,v)=>s+v.damage,0)))};
+}
 if (process.argv[1]?.endsWith('/power-audit.ts')) {
   const report = { ...buildPowerAudit(process.argv[2] ? readAuditSample(readFileSync(process.argv[2],'utf8')) : {}),
+    pressureProbe: [enemyPressureProbe('brute','elite',45),enemyPressureProbe('archer','elite',210),
+      enemyPressureProbe('warden','normal',280),enemyPressureProbe('ashColossus','normal',280),enemyPressureProbe('stalker','normal',30,12)],
+    pressureAssumptions: 'Thirty-second stationary non-attacking target in open terrain; level-32 enemies, starter defenses with huge life to prevent death. Real AI, projectiles and hurt guard. Peak damage sums landed hits within 0.5s; not a geared-player or moving-player survival forecast.',
     control: controlSweep(), controlAssumptions: 'Actual 120 Hz status/AI loop, 30 seconds, level-32 stationary isolated melee foe at 20 units, three pulse phases and all ordinary ranks; lightning status only, no damage or knockback. Attacks count attack entries; hits count landed hurt events.' };
   const json = JSON.stringify(report,null,2);
   if (process.argv[3]) writeFileSync(process.argv[3],json); else console.log(json);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readAuditSample, buildPowerAudit } from '../src/power-audit.ts';
+import { readAuditSample, buildPowerAudit, enemyAudit } from '../src/power-audit.ts';
 import { lightningControlProbe } from '../scripts/power-audit.ts';
 import { Simulation } from '../src/simulation.ts';
 import { CharacterRepository } from '../src/character-storage.ts';
@@ -42,4 +42,13 @@ test('isolated control audit measures actual landed hits and is deterministic', 
   assert.ok(interrupted.hits<baseline.hits);
   assert.ok(interrupted.hits<=interrupted.attacks);
   assert.deepEqual(lightningControlProbe('brute',2,0,10),interrupted);
+});
+
+test('cadence proposals preserve the actual quick/heavy pattern at neutral settings',()=>{
+  const current=enemyAudit(32,'brute','elite'),neutral=enemyAudit(32,'brute','elite',1),faster=enemyAudit(32,'brute','elite',.5);
+  assert.deepEqual(neutral,current);
+  assert.ok(faster.idealAttacksPerSecond>current.idealAttacksPerSecond);
+  assert.equal(faster.windup,current.windup);assert.equal(faster.damage,current.damage);
+  assert.ok(Math.abs(faster.rawIdealDps/faster.idealAttacksPerSecond-current.rawIdealDps/current.idealAttacksPerSecond)<1e-9);
+  assert.ok(current.rawIdealDps/current.idealAttacksPerSecond<current.damage,'quick hits are weaker than the full basic');
 });

@@ -1,5 +1,22 @@
 # Combat power audit — 2026-09-11
 
+## Local attack-pressure follow-up — 2026-09-11
+
+The next pass adds lighter elite basics, longer melee tracking before commitment, shorter dangerous-rank recovery and distance-aware boss choices with jabs/bolts between major moves. It does not increase source damage, life, reward yield or player defense. Minimum heavy/ground/pounce warnings remain; rhythm variation adds up to 0.12 seconds, never subtracts warning time.
+
+Thirty-second comparisons use the actual 120 Hz simulation, level-32 enemies and a stationary non-attacking target with starter defenses and enlarged life to prevent death. Open ground permits movement, projectiles and ordinary hurt-guard behavior. These are contact-pressure probes, not the cloud character's survivability.
+
+| Fixture | Landed hits before → after | Damage/second before → after | Largest hit before → after | Peak within 0.5s before → after |
+| --- | --- | --- | --- | --- |
+| One Elite Brute, 45 units | 15 → 22 | 109 → 132.9 | 218 → 218 | 218 → 218 |
+| One Elite Archer, 210 units | 17 → 23 | 61.8 → 69.2 | 109 → 109 | 109 → 109 |
+| Twelve normal Stalkers, 30-unit ring | 24 → 56 | 33.6 → 78.4 | 42 → 42 | 42 → 84 |
+
+The pack result is a meaningful difficulty increase: varied rhythms stop the synchronized hits from all being swallowed by the same 0.3-second hurt guard. That guard remains unchanged; the sample admits at most two hits per half-second. This is a measured fixture result, not a universal safety guarantee for mixed high-level packs. Clearing trash, movement, control, armor and sustain change actual play substantially.
+
+`enemyPressureProbe` in the existing CLI records attack entries, landed hits, first contact, damage/second, largest hit and peak half-second damage. The standard report includes both elite fixtures, actual normal-rank Warden/Colossus fixtures at 280 units and the twelve-Stalker ring. The browser audit's ideal cadence now averages each three-action basic/signature/quick pattern with mean rhythm delay; it still excludes positioning and control. Boss patterns are measured by the dedicated probe rather than inferred from generic definitions.
+
+
 The initial audit below describes the last recorded published source, `b12ee24d269730964f27d3b45cb115077735384e`. The following local tuning pass implements its recommendations. Historical measurements remain labeled below; the tool and CLI now use the current rules.
 
 ## Local tuning — 2026-09-11

@@ -1,3 +1,4 @@
+import { BOSS_PRESSURE } from './boss-pressure.ts';
 import { drawWildernessBossImpact } from './wilderness-boss-effect-art.ts';
 import { isWildernessBoss, LAIR_RULES as R } from './wilderness-boss-content.ts';
 import type { Enemy } from './model.ts';
@@ -12,6 +13,12 @@ export function enemyWarnings(e: Enemy, alpha = 1): Warning[] {
   const d = enemyAttackDefinition(e), x = e.prevX + (e.x - e.prevX) * alpha, y = e.prevY + (e.y - e.prevY) * alpha;
   const progress = e.state === 'attack' ? 1 : Math.min(1, e.stateTime / Math.max(.01, e.stateDuration));
   const base = { x, y, angle: e.attackAngle, progress, locked: e.state === 'attack' || e.stateTime >= d.aimLock, color: '#f34e60' };
+  if((isWildernessBoss(e.kind)||e.kind==='warden')&&(e.bossMove==='jab'||e.bossMove==='bolt')) {
+    const rule=BOSS_PRESSURE[e.bossMove], locked=e.state==='attack'||e.stateTime>=rule.aimLock;
+    return [{...base,locked,shape:e.bossMove==='jab'
+      ? {kind:'sector',radius:BOSS_PRESSURE.jab.range,arc:BOSS_PRESSURE.jab.arc}
+      : {kind:'lane',length:BOSS_PRESSURE.bolt.speed*BOSS_PRESSURE.bolt.life,width:BOSS_PRESSURE.bolt.radius}}];
+  }
   if(isWildernessBoss(e.kind)) {
     const origin={...base,x:e.bossOriginX??x,y:e.bossOriginY??y,locked:true};
     if(e.bossMove==='rush')return [{...origin,shape:{kind:'lane',length:R.rushLength,width:R.rushWidth}}];
@@ -22,15 +29,15 @@ export function enemyWarnings(e: Enemy, alpha = 1): Warning[] {
   }
   if (e.kind === 'warden') {
     const profile=wardenProfile(e.dungeonTheme);
-    if (e.bossMove === 'fracture') return profile.offsets.map(offset => ({ ...base, angle: e.attackAngle + offset,
+    if (e.bossMove === 'fracture') return profile.offsets.map(offset => ({ ...base, locked:true, angle: e.attackAngle + offset,
       shape: { kind: 'lane', length: profile.length, width: profile.width } }));
-    if (e.bossMove === 'sweep') return [{ ...base, shape: { kind: 'sector', radius: WARDEN_RULES.reach, arc: Math.PI * 1.3 } }];
+    if (e.bossMove === 'sweep') return [{ ...base, locked:true, shape: { kind: 'sector', radius: WARDEN_RULES.reach, arc: Math.PI * 1.3 } }];
     return []; // Summoning has no damage footprint; show an aura rather than a false hit boundary.
   }
   if (d.attack === 'ground') return [{ ...base, x: e.attackTargetX, y: e.attackTargetY, color: '#e83d59', shape: { kind: 'circle', radius: d.blastRadius } }];
   // Basic arrows and the Hexer's three bolts are readable from their projectiles.
   // Suppress both the floor footprint and its warning light; preserve the cast pose/aim lock.
-  if (d.attack === 'projectile') return d.warning ? d.shotOffsets.map(offset => ({ ...base, angle: e.attackAngle + offset,
+  if (d.attack === 'projectile') return d.warning ? d.shotOffsets.map(offset => ({ ...base, locked:true, angle: e.attackAngle + offset,
     shape: { kind: 'lane', width: d.projectile.radius, length: d.projectile.speed * d.projectile.life } })) : [];
   if (d.engageDistance) return [{ ...base, shape: { kind: 'lane', width: 11,
     length: d.lungeSpeed * Math.max(0, d.active - (e.state === 'attack' ? e.stateTime : 0)) + d.range } }];

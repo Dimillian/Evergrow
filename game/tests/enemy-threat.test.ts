@@ -54,8 +54,8 @@ test('rank tuning preserves normal life, rewards, windups and immutable source s
   const {sim,enemy}=fixture('elite'),before={damage:enemy.damage,hp:enemy.maxHp,lootSeed:enemy.lootSeed,level:enemy.level};
   sim.player.level=99;assert.deepEqual({damage:enemy.damage,hp:enemy.maxHp,lootSeed:enemy.lootSeed,level:enemy.level},before);
   assert.equal(ENEMY_DEFINITIONS.stalker.windup,.42);
-  assert.equal(enemyRecoveryDuration(enemy,1),.85);
-  assert.equal(enemyRecoveryDuration({kind:'warden',rank:'normal'},1),.8);
+  assert.equal(enemyRecoveryDuration(enemy,1),.65);
+  assert.equal(enemyRecoveryDuration({kind:'warden',rank:'normal'},1),.65);
 });
 test('elite escorts complement their leader within each biome without increasing pack size',()=>{
   for(const biome of Object.keys(ENCOUNTER_WEIGHTS) as BiomeId[])for(const leaderKind of ['stalker','caster'] as const) {

@@ -1,4 +1,5 @@
-import { enemyRecoveryDuration } from './enemy-threat.ts';
+import { BOSS_PRESSURE, bossQuickMove, updateBossPressure } from './boss-pressure.ts';
+import { enemyRecoveryDuration, enemyWindupDuration } from './enemy-threat.ts';
 import type { Enemy } from './model.ts';
 import type { EnemyAIContext } from './enemy-ai.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
@@ -29,6 +30,7 @@ export function updateWildernessBoss(e: Enemy, dt: number, c: EnemyAIContext): v
   if(e.awareness>=1&&e.campId)for(const guard of c.enemies)if(guard!==e&&guard.hp>0&&guard.campId===e.campId&&(c.world.dungeonLevel===undefined||Math.hypot(guard.homeX-e.homeX,guard.homeY-e.homeY)<650))alertEnemy(guard,p);
   if(e.interrupted){e.interrupted=false;}
   if(e.state==='recover'){if(e.stateTime>=e.stateDuration)transitionEnemy(e,'chase');return;}
+  if(updateBossPressure(e,c))return;
   if(e.state==='chase'){
     e.angle=angle;e.seesPlayer=c.visible(e.x,e.y,p.x,p.y);
     if(!e.seesPlayer||d>360){walk(p.x,p.y,def.speed*(e.slowTime>0?e.slowFactor:1));return;}
@@ -36,13 +38,17 @@ export function updateWildernessBoss(e: Enemy, dt: number, c: EnemyAIContext): v
     const turns=e.bossTurns??0;
     const moves:Enemy['bossMove'][]=e.kind==='briarMatriarch'?['sweep','rush','fracture']
       :e.kind==='ashColossus'?['sweep','eruption','fracture']:['sweep','rush','command'];
-    const move=moves[turns%moves.length];
-    if(move==='sweep'&&d>R.sweepReach+10){walk(p.x,p.y,def.speed*(e.slowTime>0?e.slowFactor:1));return;}
+    let move = turns%2 ? bossQuickMove(d,p.radius) : moves[Math.floor(turns/2)%moves.length];
+    if(move==='sweep'&&d>R.sweepReach+10)move=e.kind==='ashColossus'?'eruption':d<R.rushLength?'rush':'fracture';
+    if(move==='command'&&!c.enemies.some(guard=>guard!==e&&guard.hp>0&&guard.campId===e.campId
+      &&Math.hypot(guard.x-e.x,guard.y-e.y)<R.rallyRadius))move='fracture';
     if(phase&&!e.bossPhases)c.emit({type:'blast',x:e.x,y:e.y-35,radius:110,duration:.7,color:BOSS_PALETTES[e.kind]});
     e.bossPhases=Number(phase);e.bossTurns=turns+1;e.bossMove=move;e.bossHits=0;
     e.bossOriginX=e.x;e.bossOriginY=e.y;e.attackAngle=angle;
     e.attackTargetX=p.x;e.attackTargetY=p.y;
-    transitionEnemy(e,'windup',move==='sweep'?.85:move==='rush'?1:1.15);
+    const quick=move==='jab'||move==='bolt'?BOSS_PRESSURE[move]:null;
+    e.attackDamage=e.damage*(quick?.damage??(move==='sweep'?1:1.15));
+    transitionEnemy(e,'windup',enemyWindupDuration(e,quick?.windup??(move==='sweep'?.85:move==='rush'?1:1.15)));
     return;
   }
   if(e.state==='windup'){

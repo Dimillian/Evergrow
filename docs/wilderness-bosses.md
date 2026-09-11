@@ -16,7 +16,9 @@ The silhouettes use procedural bark/antlers/claws, furnace masonry and crowned i
 
 Base health is 1,450 / 1,900 / 1,650; base damage is 21 / 26 / 23 before snapshotted regional scaling and the shared damage multiplier. Each boss awards 160 base XP through normal level-gap adjustment. They have normal rank internally; their authored boss stats are not multiplied by Elite rank. New lairs snapshot one regional baseline: Veterans +1, Elites +2, boss +3. Existing actors retain their source levels. Ambient archetype weights for these bosses are zero.
 
-Below 50% health, recovery falls from 1.2 to 0.75 seconds. Warning windows stay unchanged: 0.85 seconds for a sweep, one second for a charge, 1.15 seconds for roots/eruption/rally. Rally recovery remains 1.5 seconds. Sweeps reach 150 units; charges travel 330 with 32-unit half-width; fractures reach 410 with 24-unit half-width; eruptions cover a 105-unit radius. A damaging action hits each player at most once, including staggered fractures. Bosses use the Warden's reduced hard-control durations and slow resistance; burn damage remains effective.
+Local pressure pass: major attacks alternate with a compact jab (55% sweep damage, 0.50-second warning) in melee range or one elemental bolt (45%, 0.65-second warning) at distance. Aim tracks until 0.28 / 0.30 seconds respectively, then locks; every warning receives 0–0.12 seconds of deterministic actor rhythm. Out-of-range queued sweeps choose a charge, eruption or fracture instead. A Marshal without a living nearby retinue uses fracture instead of rally.
+
+Below 50% health, authored major recovery falls from 1.2 to 0.75 seconds. The shared boss recovery multiplier is 0.65, yielding 0.78 / 0.4875 seconds. Warning windows stay unchanged: 0.85 seconds for a sweep, one second for a charge, 1.15 seconds for roots/eruption/rally. Rally recovery remains 1.5 seconds. Sweeps reach 150 units; charges travel 330 with 32-unit half-width; fractures reach 410 with 24-unit half-width; eruptions cover a 105-unit radius. A damaging action hits each player at most once, including staggered fractures. Bosses use the Warden's reduced hard-control durations and slow resistance; burn damage remains effective.
 
 Leaving the 670-unit home tether, dying or entering sanctuary sends the boss home. Its health resets only when it reaches home; phase/cadence reset then too. Guard wounds and deaths remain intact. A killed boss never respawns for that character. Closing/loading preserves source health and death state; live attack windups restart safely through existing actor restoration.
 
@@ -47,7 +49,7 @@ Chronicle counts wilderness bosses toward Kingslayer and adds three boss-specifi
 
 ## Owners and review
 
-`wilderness-boss-content.ts` owns identity, shared bounds and palettes. `wilderness-sites.ts` and `World` own the additive placement layer. `CampPopulation` owns admission and casualty persistence. `wilderness-boss.ts` owns action decisions; existing contact/status/reward owners remain authoritative. `wilderness-boss-rewards.ts` stages a hoard on the exactly-once death boundary. `poi-command.ts` delivers it atomically.
+`wilderness-boss-content.ts` owns identity, shared bounds and palettes. `wilderness-sites.ts` and `World` own the additive placement layer. `CampPopulation` owns admission and casualty persistence. `wilderness-boss.ts` owns action decisions; `boss-pressure.ts` shares light jab/bolt recipes and execution with dungeon bosses; existing contact/status/reward owners remain authoritative. `wilderness-boss-rewards.ts` stages a hoard on the exactly-once death boundary. `poi-command.ts` delivers it atomically.
 
 `/bosses.html` stages all three real generated lairs, warning shapes and hoard opening. It uses the actual renderer with presentation time only: no gameplay ticks, inputs or saves. `/bestiary.html?bosses` shows the boss silhouettes. Gameplay feel, camera-scale readability and reward pacing remain player acceptance checks.
 

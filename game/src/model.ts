@@ -188,11 +188,12 @@ export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'at
 
 export interface Enemy {
   dungeonTheme?: import('./dungeon-content.ts').DungeonThemeId;
-  /** Regional enemies commit two basic actions, then one signature attack. */
+  /** Three-action cycle; regional signatures follow two basics, elites use lighter quick basics. */
   attackTurns?: number;
-  attackVariant?: 0 | 1;
+  /** 0: basic, 1: signature, 2: elite quick basic. */
+  attackVariant?: 0 | 1 | 2;
   bossPhases?: number; bossTurns?: number; bossHits?: number; controlImmunity?: number;
-  bossMove?: 'sweep'|'fracture'|'summon'|'rush'|'eruption'|'command';
+  bossMove?: 'sweep'|'fracture'|'summon'|'rush'|'eruption'|'command'|'jab'|'bolt';
   bossOriginX?: number; bossOriginY?: number;
   rallyTime?: number;
   /** Ephemeral orders; camp membership and casualties own persistent identity. */
