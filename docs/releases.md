@@ -29,6 +29,18 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.13 / Sites version 44, publicly deployed on 2026-09-11 at 13:52:33 UTC.
+- Published source: `97753ec961415fedf661ac883c2337ff9760017b`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_0aab0d5768ac81919036f987c919bf6d`.
+- Deployment: `appgdep_6aa4078fed54819185dd19bb92dd296e`; Sites returned `succeeded`.
+- Halved Intelligence mana, tapered equipment/charm mana budgets, whole per-five-second regeneration rolls, tapered cost reduction and source-level mana vials.
+- Existing item resource bonuses update on validated load; characters and progress are preserved. Matching client/Worker rules shipped together; no save reset or database migration.
+- Damage, enemy stats and potion fractions remain unchanged. Repeatable 28-build / 84-encounter benchmarks and recovery-source accounting support subsequent tuning.
+- Passed the 1,211-test implementation suite, eight final resource/regression checks, three release-note tests, application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.12 / Sites version 43, publicly deployed on 2026-09-11 at 09:21:41 UTC.
 - Published source: `950fe47730186739a40e14a93996132304280bb5`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_2bfde87903088191876beee66c9bff18`.
