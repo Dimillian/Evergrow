@@ -1,5 +1,26 @@
 # Evergrow changelog
 
+## v0.3.14 — 2026-09-11T16:16:00Z
+
+### New
+
+- Greater affixes carry a silver star on ground loot, pickup notifications, inventory tiles and tooltips.
+- The enchanter offers one free attribute reset per character, refunding assigned points.
+
+### Tweaks
+
+- Item and charm affix rolls have a wider range: excellent rolls are stronger and weak rolls are weaker.
+- Strength and Intelligence each grant 1.5% damage per point above ten; their item bonuses grow more slowly.
+- Equipment skill ranks remain valuable, with smaller damage gains beyond the first three bonus ranks.
+- Elite health gradually increases above level 14, reaching 50% extra at level 37; ordinary foes are unchanged.
+- Shattered Sky spreads its five impacts across a wider area.
+
+### Fixes
+
+- Fireball uses its intended burn rate instead of combining it with the stronger basic-fire burn.
+
+> Existing characters retain their progress. Existing item bonuses update when loaded; no save reset is required. Reload the game to apply this update.
+
 ## v0.3.13 — 2026-09-11T13:50:00Z
 
 ### Tweaks
