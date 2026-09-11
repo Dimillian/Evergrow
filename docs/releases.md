@@ -29,6 +29,19 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.11 / Sites version 42, publicly deployed on 2026-09-11 at 09:00:10 UTC.
+- Published source: `574e476af71778a8a0f791c6e778f19a481990e2`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_db80af23800c81918d8a9ecbfa927282`.
+- Deployment: `appgdep_6aa3c306ae5481918c5bfd4efbc8f9df`; Sites returned `succeeded`.
+- Level-scaled wilderness packs up to 14–20, varied elite escorts, stronger elite/boss damage and recovery, bounded repeated control and Arc Lightning healing.
+- Normal kills drop one third fewer common equipment items; retained charms and higher-tier items keep their original rolls. First-kill and authored reward guarantees remain intact.
+- Distinct charm nameplates, compact loot labels, Always/Hold Ctrl visibility options, and complete item rendering in inventory/vendor grids.
+- Existing characters and progress are preserved; no save reset or database migration.
+- Passed all 1,196 code tests, application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.10 / Sites version 41, publicly deployed on 2026-09-10 at 19:22:57 UTC.
 - Published source: `b12ee24d269730964f27d3b45cb115077735384e`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_e367358dda808191893dd5a073056ff5`.
