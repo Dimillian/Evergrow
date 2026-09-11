@@ -29,6 +29,19 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.14 / Sites version 45, publicly deployed on 2026-09-11 at 16:19:43 UTC.
+- Published source: `54b064943f8862a5a2dffcaf837d36964048dadc`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_205791b7c89881919272ce7d570388ff`.
+- Deployment: `appgdep_6aa42a0dd7e4819188616ddffc283d9f`; Sites returned `succeeded`.
+- Greater-affix stars, wider roll quality, bounded offensive attributes and one free attribute reset per character.
+- Tapered equipment-rank damage, later elite durability, wider Shattered Sky coverage and corrected authored fire burns.
+- The discarded same-target repeat penalty is excluded: every connecting projectile and impact deals full resolved damage.
+- Existing characters retain progress; item bonuses reprice on validated load. Matching client/Worker rules shipped together; no save reset or database migration.
+- Passed all 1,235 code tests, application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.13 / Sites version 44, publicly deployed on 2026-09-11 at 13:52:33 UTC.
 - Published source: `97753ec961415fedf661ac883c2337ff9760017b`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_0aab0d5768ac81919036f987c919bf6d`.
