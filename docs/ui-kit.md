@@ -28,6 +28,8 @@ The selected bottom-HUD direction is **The Astral Instrument**: calibrated silve
 | `.ui-tooltip` | Shared detail-card surface |
 | `.ui-slot` | Shared equipment and bag-slot presentation primitive |
 
+Item artwork uses per-render SVG resource IDs for gradients and clipping. Never derive these IDs only from item identity: a hidden inventory and a visible vendor can render the same item simultaneously, and SVG IDs are document-wide. Gradient fills retain a solid material-color fallback.
+
 `ui-icons.ts` provides decorative code-defined SVG icons with a common grid and stroke. Give every icon-only button an accessible name. `ui-components.ts` exports the icons, `escapeUI()` for interpolated markup, and dialog focus management. Prefer `textContent` for dynamic labels when no markup is needed.
 
 ## Numeric typography

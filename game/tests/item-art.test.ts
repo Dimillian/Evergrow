@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCharacterSheet, generateItem, ITEM_KINDS } from '../src/items.ts';
-import { itemIconSVG, itemDropShapes, outfitFromEquipment } from '../src/item-art.ts';
+import { itemIconSVG, itemPackIconSVG, itemDropShapes, outfitFromEquipment } from '../src/item-art.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
 import { armorShapes } from '../src/armor-shapes.ts';
 
@@ -69,4 +69,22 @@ test('helmet and cuirass icons reuse the actual equipped plate geometry', () => 
       }
     }
   }
+});
+
+
+test('repeated item icons keep their material references inside their own SVG across panels', () => {
+  const ids = new Set<string>();
+  let referenced = 0;
+  for (const kind of ITEM_KINDS) {
+    const item = generateItem(8901, 25, kind);
+    // Hidden inventory, visible vendor, rebuilt vendor, and duplicate square previews.
+    for (const svg of [itemPackIconSVG(item,2,3), itemPackIconSVG(item,2,3), itemPackIconSVG(item,2,3), itemIconSVG(item,120), itemIconSVG(item,120)]) {
+      const local = new Set([...svg.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]));
+      for (const id of local) { assert.equal(ids.has(id),false,`${kind} reuses a material from another icon: ${id}`); ids.add(id); }
+      for (const match of svg.matchAll(/url\(#([^)]+)\)/g)) {
+        assert.ok(local.has(match[1]),`${kind} references material outside its SVG`); referenced++;
+      }
+    }
+  }
+  assert.ok(referenced>100,'exercise material gradients and clipping, not just plain outlines');
 });
