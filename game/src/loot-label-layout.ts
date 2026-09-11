@@ -1,11 +1,11 @@
 import type { Item, ItemKind } from './character-types.ts';
 import { ITEM_MATERIALS } from './item-materials.ts';
 
-export const LOOT_LABEL_STYLE = Object.freeze({ height: 19, gap: 4, maxWidth: 165, nameSize: .9, levelSize: .7 });
+export const LOOT_LABEL_STYLE = Object.freeze({ height: 19, gap: 4, maxWidth: 165, charmMaxWidth: 205, nameSize: .9, levelSize: .7 });
 
 /** Short ground-only names; the owned item and its full tooltip name stay intact. */
 export function groundLootName(item: Item): string {
-  if(item.kind==='charm')return item.baseName;
+  if(item.kind==='charm')return `Charm · ${item.baseName}`;
   const material = item.recipe.materialId && ITEM_MATERIALS[item.recipe.materialId].name;
   const cloth = item.appearance.style === 'cloth', leather = item.appearance.style === 'leather';
   const kinds: Record<ItemKind, string> = { charm: 'Charm', weapon: 'Weapon', shield: 'Shield', grimoire: 'Grimoire', orb: 'Orb',
