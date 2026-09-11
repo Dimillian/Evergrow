@@ -75,3 +75,5 @@ The World workspace includes `/tools/expeditions.html`, a disposable instance of
 The power-audit CLI also includes disposable `enemyPressureProbe` scenarios for elite melee/ranged foes, dungeon/wilderness bosses and a twelve-enemy ring. It reports first contact, landed hits, largest hit and peak half-second damage through the real AI/projectile/hurt-guard loop; it never loads a playable slot.
 
 The Combat power audit (`/progression.html?view=power`) now includes the frozen-before/current mana benchmark, 28 reproducible synthetic loadouts and a full-snapshot mana source breakdown. `game/scripts/resource-benchmark.ts` runs 84 disposable headless encounters; see [resource balance](resource-balance.md). Neither tool reads or writes playable/cloud saves automatically.
+
+The complementary `game/scripts/damage-audit.ts /path/to/report.json` CLI compares 24 offensive fixtures, 300 damage-selected equipment sets and 280 single-cast contact/geometry probes using the existing disposable skill study. It writes JSON only, never loads playable saves and changes no runtime rules. Assumptions and findings are in [the September 11 damage audit](damage-audit-2026-09-11.md).
