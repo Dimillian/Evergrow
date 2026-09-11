@@ -1,5 +1,24 @@
 # Evergrow changelog
 
+## v0.3.12 — 2026-09-11T09:19:00Z
+
+### Tweaks
+
+- Elites mix quicker, lighter basic attacks with full-strength strikes, creating steadier pressure.
+- Bosses alternate major attacks with weaker close-range jabs or single ranged bolts.
+- Archers, casters and several wilderness foes prepare basic attacks faster.
+- Melee enemies track movement longer before committing to their strike.
+- Elites and bosses pause less between attacks, while heavy attacks retain clear warnings.
+- Small variations in enemy attack timing make packs less likely to strike in unison.
+
+### Fixes
+
+- Bosses choose a ranged attack when their queued melee sweep cannot reach you.
+- The Grave Marshal attacks instead of rallying when no nearby surviving guards can benefit.
+- Warden attack warnings correctly show when major attacks have locked their aim.
+
+> Existing characters and progress are preserved. No save reset is required.
+
 ## v0.3.11 — 2026-09-11T08:56:00Z
 
 ### New
