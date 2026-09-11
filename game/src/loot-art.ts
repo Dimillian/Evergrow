@@ -70,17 +70,18 @@ export function drawResourcePickups(c: CanvasRenderingContext2D, pickups: readon
 /** Compact single-line ground names; full generated names belong in item inspection. */
 export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly GroundItem[],
   project: (x: number, y: number) => { x: number; y: number }, width: number, height: number) {
-  const { nameSize, levelSize, maxWidth, charmMaxWidth } = LOOT_LABEL_STYLE;
+  const { scale, nameSize, levelSize, maxWidth, charmMaxWidth } = LOOT_LABEL_STYLE;
   const measure = (value: string) => textWidth(value, nameSize);
   const positions = lootPositions(drops);
   const labels = new Map(drops.map(drop => [drop.id, { drop, name: groundLootName(drop.item), inset: drop.item.kind === 'charm' ? 24 : 16,
     level: `Lv ${drop.item.itemLevel}`, levelWidth: textWidth(`Lv ${drop.item.itemLevel}`, levelSize, 'interface') }]));
   const anchors = positions.map(({ drop, x, y }) => {
     const label = labels.get(drop.id)!;
-    return { id: drop.id, ...project(x, y), width: Math.min(drop.item.kind === 'charm' ? charmMaxWidth : maxWidth, measure(label.name) + label.levelWidth + label.inset + 18) };
+    const screen = project(x, y);
+    return { id: drop.id, x: screen.x / scale, y: screen.y / scale, width: Math.min(drop.item.kind === 'charm' ? charmMaxWidth : maxWidth, measure(label.name) + label.levelWidth + label.inset + 18) };
   });
-  const boxes = layoutLootLabels(anchors, width, height);
-  c.save();
+  const boxes = layoutLootLabels(anchors, width / scale, height / scale);
+  c.save(); c.scale(scale, scale);
   for (const b of boxes) {
     const { drop, name, level, levelWidth, inset } = labels.get(b.id)!, color = TIER_COLORS[drop.item.tier];
     const center = b.left + b.width / 2;
@@ -112,5 +113,6 @@ export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly Grou
     if (b.width > levelWidth + 26) text(c, level, b.left + b.width - 7, b.top + 7, levelSize, '#92a6b0', 'right', 'interface');
   }
   c.restore();
-  return boxes.map(box => ({ id: box.id, x: box.left, y: box.top, width: box.width, height: box.height, anchorX: box.x, anchorY: box.y }));
+  return boxes.map(box => ({ id: box.id, x: box.left * scale, y: box.top * scale,
+    width: box.width * scale, height: box.height * scale, anchorX: box.x * scale, anchorY: box.y * scale }));
 }

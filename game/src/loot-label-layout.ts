@@ -1,7 +1,8 @@
 import type { Item, ItemKind } from './character-types.ts';
 import { ITEM_MATERIALS } from './item-materials.ts';
 
-export const LOOT_LABEL_STYLE = Object.freeze({ height: 19, gap: 4, maxWidth: 165, charmMaxWidth: 205, nameSize: .9, levelSize: .7 });
+// Authored label units; the renderer applies one shared scale to art and hitboxes.
+export const LOOT_LABEL_STYLE = Object.freeze({ scale: .7, height: 19, gap: 4, maxWidth: 165, charmMaxWidth: 205, nameSize: .9, levelSize: .7 });
 
 /** Short ground-only names; the owned item and its full tooltip name stay intact. */
 export function groundLootName(item: Item): string {
