@@ -29,6 +29,18 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.12 / Sites version 43, publicly deployed on 2026-09-11 at 09:21:41 UTC.
+- Published source: `950fe47730186739a40e14a93996132304280bb5`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_2bfde87903088191876beee66c9bff18`.
+- Deployment: `appgdep_6aa3c81712cc8191879cf7cbc19d994d`; Sites returned `succeeded`.
+- Lighter quick elite basics, faster ranged preparation, later melee aim commitment and shorter elite/boss recovery.
+- Distance-aware boss choices and alternating jabs/bolts, varied attack rhythms, correct Warden aim-lock warnings and idle-rally fallback.
+- Existing characters and progress are preserved; no save reset or database migration.
+- Passed the 1,203-test implementation suite, 11 final pressure/audit regression checks, three release-note tests, application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.11 / Sites version 42, publicly deployed on 2026-09-11 at 09:00:10 UTC.
 - Published source: `574e476af71778a8a0f791c6e778f19a481990e2`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_db80af23800c81918d8a9ecbfa927282`.
