@@ -1,3 +1,4 @@
+import { ATTRIBUTE_DAMAGE_BONUSES } from './attribute-content.ts';
 import { MANA_RULES } from './mana-content.ts';
 import { CHAIN_SUSTAIN } from './skill-execution-content.ts';
 import { CHARM_REWARD_CAPS } from './charm-content.ts';
@@ -49,9 +50,9 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
   };
   const attributes = (['strength', 'dexterity', 'intelligence', 'vitality'] as const).map(attribute =>
     addAttribute(row(attribute, STAT_LABELS[attribute], s.attributes[attribute], n(s.attributes[attribute], 0), {
-      strength: '+2% physical damage per added point.',
+      strength: `+${ATTRIBUTE_DAMAGE_BONUSES.strength}% physical damage per added point.`,
       dexterity: `+${DEXTERITY_BONUSES.attackSpeedPercent}% attack speed and +${DEXTERITY_BONUSES.critChance}% critical chance per added point.`,
-      intelligence: `+${MANA_RULES.perIntelligence} mana and +3% spell / elemental damage per added point.`,
+      intelligence: `+${MANA_RULES.perIntelligence} mana and +${ATTRIBUTE_DAMAGE_BONUSES.intelligence}% spell / elemental damage per added point.`,
       vitality: '+6 maximum life per added point.',
     }[attribute], 'Starting + assigned + gear + charms + skill tree', [attribute]), attribute));
   const weaponRows = (weapon: WeaponDefinition, off = false): StatDetail[] => {
@@ -71,9 +72,9 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
     return [damage, speed];
   };
   const offense = [...weaponRows(p.equipment.mainHand), ...(p.equipment.offHand?.kind === 'weapon' ? weaponRows(p.equipment.offHand.weapon, true) : []),
-    addAttribute(row('attackBonus', 'Physical damage bonus', s.attackDamageMultiplier - 1, pct(s.attackDamageMultiplier - 1), 'Scales physical weapon damage, including bow attacks.', `+${attributeBonus('strength', 2)}% Strength + damage bonuses\nDamage × ${n(s.attackDamageMultiplier)}`, ['strength', 'damagePercent']), 'strength'),
+    addAttribute(row('attackBonus', 'Physical damage bonus', s.attackDamageMultiplier - 1, pct(s.attackDamageMultiplier - 1), 'Scales physical weapon damage, including bow attacks.', `+${attributeBonus('strength', ATTRIBUTE_DAMAGE_BONUSES.strength)}% Strength + damage bonuses\nDamage × ${n(s.attackDamageMultiplier)}`, ['strength', 'damagePercent']), 'strength'),
     addAttribute(row('attackSpeed', 'Attack speed bonus', s.attackSpeedMultiplier - 1, pct(s.attackSpeedMultiplier - 1), 'Affects melee weapons and bows. Wands and staves use cast speed.', `+${attributeBonus('dexterity', DEXTERITY_BONUSES.attackSpeedPercent)}% Dexterity + speed bonuses\nTotal speed: 25–600%`, ['dexterity', 'attackSpeedPercent']), 'dexterity'),
-    addAttribute(row('spellDamage', 'Spell damage bonus', s.spellDamageMultiplier - 1, pct(s.spellDamageMultiplier - 1), 'Scales spells, basic magic bolts and weapon enchantment damage.', `+${attributeBonus('intelligence', 3)}% Intelligence + damage bonuses\nDamage × ${n(s.spellDamageMultiplier)}`, ['intelligence', 'spellDamagePercent']), 'intelligence'),
+    addAttribute(row('spellDamage', 'Spell damage bonus', s.spellDamageMultiplier - 1, pct(s.spellDamageMultiplier - 1), 'Scales spells, basic magic bolts and weapon enchantment damage.', `+${attributeBonus('intelligence', ATTRIBUTE_DAMAGE_BONUSES.intelligence)}% Intelligence + damage bonuses\nDamage × ${n(s.spellDamageMultiplier)}`, ['intelligence', 'spellDamagePercent']), 'intelligence'),
     row('castSpeed', 'Cast speed bonus', s.castSpeedMultiplier - 1, pct(s.castSpeedMultiplier - 1), 'Shortens magic casting actions. Does not reduce cooldowns.', `Sum of cast speed bonuses\nTotal speed: 25–600%`, ['castSpeedPercent']),
     addAttribute(row('critChance', 'Critical chance', s.critChance, pct(s.critChance), 'Chance to critically strike. Burn damage cannot crit.', `+${attributeBonus('dexterity', DEXTERITY_BONUSES.critChance)}% Dexterity + critical bonuses\nCap: 75%`, ['dexterity', 'critChance']), 'dexterity'),
     row('critDamage', 'Critical damage', s.critMultiplier, pct(s.critMultiplier), 'Damage on a critical hit. 150% = 1.5× damage.', `150% + critical damage bonuses\nLimit: 100–500%`, ['critDamage']),

@@ -12,10 +12,10 @@ import { awardKillRewards } from '../src/combat-rewards.ts';
 import { addInventoryItem } from '../src/inventory.ts';
 
 const world={blocked:()=>false,move:(x:number,y:number,dx:number,dy:number)=>({x:x+dx,y:y+dy})};
-test('mana investment leaves offense intact and preserves level-one casting',()=>{
+test('Intelligence adds mana without regeneration and preserves level-one casting',()=>{
   const s=createCharacterSheet();const base=deriveCharacterStats(s);s.attributes.intelligence+=100;
   const grown=deriveCharacterStats(s);assert.equal(base.maxMana,100);assert.equal(base.manaRegeneration,1);
-  assert.equal(grown.maxMana,300);assert.equal(grown.spellDamageMultiplier,4);assert.equal(grown.manaRegeneration,1);
+  assert.equal(grown.maxMana,300);assert.equal(grown.spellDamageMultiplier,2.5);assert.equal(grown.manaRegeneration,1);
   assert.equal(manaCostMultiplier(0),1);assert.equal(manaCostMultiplier(20),.8);
   const samples=[20,30,50,75,150,1000].map(manaCostMultiplier);
   for(let i=1;i<samples.length;i++)assert.ok(samples[i]<=samples[i-1]&&samples[i]>=.6);

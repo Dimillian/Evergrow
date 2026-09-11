@@ -4,7 +4,9 @@ Implemented local rules · 2026-09-10. Local development; not a published releas
 
 ## Enchanter respec
 
-Every enchanter offers Reset skills. A complete reset refunds every purchased tree node except the free origin and every additional purchased skill rank. It costs 25 gold per refunded skill point, with no character-level multiplier or repeat-use surcharge: 10 points cost 250 gold; 40 cost 1,000. Unspent points are not charged. Attributes and equipment stay unchanged. The screen previews refunded points and exact cost before the explicit reset button. Reset clears skill assignments, selected ranks, specializations and Overload. Resources clamp to the new maxima without healing. Gold, refunded points and the new build save atomically; stale quotes and failed writes change nothing.
+Every enchanter offers Respec → Skills. A complete reset refunds every purchased tree node except the free origin and every additional purchased skill rank. It costs 25 gold per refunded skill point, with no character-level multiplier or repeat-use surcharge: 10 points cost 250 gold; 40 cost 1,000. Unspent points are not charged. Attributes and equipment stay unchanged. The screen previews refunded points and exact cost before the explicit reset button. Reset clears skill assignments, selected ranks, specializations and Overload. Resources clamp to the new maxima without healing. Gold, refunded points and the new build save atomically; stale quotes and failed writes change nothing.
+
+A separate Respec → Attributes choice offers one free refund per character for the September 11 offensive balance change. All assigned attribute points return to the unspent pool, and the four base attributes return to ten. Skills, equipment and gold remain unchanged. The saved `attributeResetUsed: true` flag prevents repeat claims; builds with no assigned points do not consume the offer. Quotes include allocations and unspent points; the same save-before-commit and resource-clamping rules apply.
 
 ## Expedition route
 

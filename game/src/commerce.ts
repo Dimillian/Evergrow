@@ -68,7 +68,8 @@ function gambleItem(sheet:CharacterSheet,npc:TownNPC,level:number,kind:ItemKind)
 }
 export const RESPEC_GOLD_PER_POINT = 25;
 export const respecPoints = (sheet: CharacterSheet) => sheet.allocatedNodes.length - 1 + Object.values(sheet.skillRanks).reduce((sum, rank) => sum + rank - 1, 0);
-export type ServiceRequest = {type:'respec'} | {type:'gamble';kind:ItemKind} | {type:'store';bag:number;tab?:number} | {type:'unlockStorage';tab:number} | {type:'retrieve';slot:number} | { type: 'buy'; slot: number } | { type: 'sell'; source: ItemSource }
+export const attributeResetPoints = (sheet: CharacterSheet) => Object.values(sheet.attributes).reduce((sum, value) => sum + value - 10, 0);
+export type ServiceRequest = {type:'resetAttributes'} | {type:'respec'} | {type:'gamble';kind:ItemKind} | {type:'store';bag:number;tab?:number} | {type:'unlockStorage';tab:number} | {type:'retrieve';slot:number} | { type: 'buy'; slot: number } | { type: 'sell'; source: ItemSource }
   | { type: 'sellMany'; items: SaleItem[]; includeActiveCharms?: boolean }
   | { type: 'buyback'; id: string } | { type: 'improve'; source: ItemSource; operation: Improvement; affix?: number; focus?:AffixFocus };
 export interface ServiceQuote { npcId: string; revision: number; epoch: number; itemId: string; itemRevision: number; price: number; request: ServiceRequest; }
@@ -79,6 +80,14 @@ export function sourceItem(sheet: CharacterSheet, source: ItemSource): Item | nu
 export function quoteService(sheet: CharacterSheet, npc: TownNPC, level: number, request: ServiceRequest): QuoteResult {
   let item: Item | null = null, price = 0;
   const fail = (message: string): QuoteResult => ({ ok: false, message });
+  if (request.type === 'resetAttributes') {
+    if (npc.role !== 'enchanter') return fail('Visit an enchanter to reset attributes.');
+    if (sheet.attributeResetUsed) return fail('Your free attribute reset has been used.');
+    if (attributeResetPoints(sheet) <= 0) return fail('No spent attribute points to refund.');
+    if (sheet.commerce.revision >= Number.MAX_SAFE_INTEGER || sheet.commerce.operations >= Number.MAX_SAFE_INTEGER) return fail('This transaction exceeds the supported limit.');
+    const signature = JSON.stringify([sheet.attributes, sheet.statPoints]);
+    return {ok:true,item:null,quote:{npcId:npc.id,revision:sheet.commerce.revision,epoch:stockEpoch(level),itemId:signature,itemRevision:0,price:0,request:{type:'resetAttributes'}}};
+  }
   if (request.type === 'respec') {
     if (npc.role !== 'enchanter') return fail('Visit an enchanter to reset skills.');
     if (sheet.commerce.revision >= Number.MAX_SAFE_INTEGER || sheet.commerce.operations >= Number.MAX_SAFE_INTEGER) return fail('This transaction exceeds the supported limit.');
@@ -158,6 +167,13 @@ export function planService(sheet: CharacterSheet, npc: TownNPC, level: number, 
     if (!spendGold(character,price)) return {ok:false,message:'Not enough gold.'};
     character.stash!.push(...Array(STASH_CAPACITY).fill(null));
     return {ok:true,character,item:null,message:`Storage tab ${request.tab+1} unlocked.`};
+  }
+  if (request.type === 'resetAttributes') {
+    const points = attributeResetPoints(character);
+    character.statPoints += points;
+    character.attributes = {strength:10,dexterity:10,intelligence:10,vitality:10};
+    character.attributeResetUsed = true;
+    return {ok:true,character,item:null,message:`${points} attribute points refunded.`};
   }
   if (request.type === 'respec') {
     if (!spendGold(character,price)) return {ok:false,message:'Not enough gold.'};

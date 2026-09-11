@@ -97,3 +97,8 @@ Chronicle counters travel in the existing character checkpoint. D1 stores a vali
 ### Local resource repricing — September 11, 2026
 
 Current local item recipes carry `manaVersion: 1`. Validated reads update prior mana capacity, regeneration and mana-on-kill values from their existing recipes across equipment, bag/charms, stash, buyback and all surface/dungeon ground items. Other affixes, random rolls, ownership and progress remain intact. Regeneration bonuses now represent mana per five seconds. Original stored bytes remain unchanged until a subsequent save. This change requires the matching client and Worker in the next publication and a client reload; it is not deployed by local testing. Older stored mana vials without a source amount remain collectible at the new level-one amount. No D1 migration or save reset.
+
+
+### Offensive attribute follow-up (local)
+
+`offenseVersion: 1` marks current Strength/Intelligence item budgets. After complete validation, shared decoding reprices these attributes once across equipped, bag/charm, stash, buyback and every surface/dungeon ground item. Dedicated damage/resource affixes and item identities remain intact. Character state may also carry `attributeResetUsed: true`, recording the single complimentary enchanter attribute refund; other supplied values are invalid. Existing saves with neither marker remain loadable. Match client and Worker on the next publication and reload clients; local testing does not deploy these rules or edit online saves. No D1 migration or automatic progress reset.

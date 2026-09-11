@@ -68,9 +68,9 @@ Attribute effects apply per point above the starting baseline of ten, including 
 
 | Attribute | Effect per point above ten |
 | --- | --- |
-| Strength | +2 percentage points of attack damage |
+| Strength | +1.5 percentage points of attack damage |
 | Dexterity | +0.25 percentage points of attack speed; +0.075 percentage points of critical chance |
-| Intelligence | +2 maximum mana; +3 percentage points of spell and added elemental damage |
+| Intelligence | +2 maximum mana; +1.5 percentage points of spell and added elemental damage |
 | Vitality | +6 maximum life |
 
 The September 9 Dexterity pass halves both per-point bonuses. This applies equally to assigned points, item/charm Dexterity and tree Dexterity; direct attack-speed and critical-chance bonuses keep their values. With no other bonuses, the critical cap now takes 1,000 additional Dexterity and the attack-speed cap 2,000. Existing builds recalculate normally without resetting attributes or saves. This delays saturation rather than removing the eventual caps.
@@ -208,3 +208,10 @@ Physical/spell damage, speed and potion **bonus** rows show increases above the 
 The detailed sheet now includes Fire, Frost, Lightning and Arcane resistance, starting at zero. Single-element and all-element equipment bonuses add per element, capped at 75%; hover/focus explains the calculation and individual sources. Armor and its same-level estimate now describe physical damage only. Shield block follows either physical armor or elemental resistance.
 
 Resistance rolls are restricted to rings, amulets, shields and charms, with at most one resistance family per item. [Equipment affixes](equipment-affixes.md#elemental-resistance--2026-09-09) owns current weights, strengths and upgrade limits. Charms now grant bonuses only in their dedicated grid; see [charms](charms.md). Resistance is derived from normal item modifiers; no save-version change or character reset is needed. Existing items retain their rolls and gain no resistance automatically.
+
+
+## Offensive attribute balance · local September 11 pass
+
+`attribute-content.ts` owns the 1.5-per-point Strength/Intelligence damage conversion used by both combat and detailed stats. It applies equally to assigned, equipped, charm and tree attributes; dedicated attack/spell percentage bonuses still add inside the same multiplier. Offensive attribute item budgets now taper rather than growing linearly. Dexterity/Vitality, direct damage affixes, skill potency and enemy rules are unchanged by this pass. See [before/after audit](offensive-attribute-balance-2026-09-11.md).
+
+Enchanter → Respec → Attributes provides one free full attribute refund per character. It returns assigned points only, restores base attributes to ten and preserves the skill build and equipment. The optional `attributeResetUsed: true` flag is saved with the refund; absent means available. Resources clamp without healing, stale quotes fail, and failed saves consume neither points nor the entitlement.

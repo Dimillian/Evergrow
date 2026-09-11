@@ -19,10 +19,10 @@ test('headless benchmark casts at visible foes and reconciles real recovery sour
   assert.deepEqual(result,resourceEncounter(35,'caster','strong','boss'));
 });
 
-test('the resource slice preserves every benchmark build’s expected first-hit damage',()=>{
+test('the offensive attribute slice reduces first-hit damage across the historical build suite',()=>{
   const before=JSON.parse(readFileSync(new URL('../src/tools/data/resource-baseline.json',import.meta.url),'utf8')) as {builds:Array<{level:number;style:string;gear:string;expectedFirstHit:number}>};
   for(const current of resourceBenchmark()) {
     const previous=before.builds.find(b=>b.level===current.level&&b.style===current.style&&b.gear===current.gear)!;
-    assert.equal(current.expectedFirstHit,previous.expectedFirstHit,`${current.level} ${current.style} ${current.gear}`);
+    assert.ok(current.expectedFirstHit>0&&current.expectedFirstHit<previous.expectedFirstHit,`${current.level} ${current.style} ${current.gear}`);
   }
 });

@@ -24,9 +24,9 @@ test('assigned attributes drive actual combat resources, damage and cadence', ()
     for (let count = 0; count < 5; count++) allocateAttribute(sheet, attribute);
   }
   const stats = deriveCharacterStats(sheet);
-  assert.equal(stats.attackDamageMultiplier, 1.1); assert.equal(stats.attackSpeedMultiplier, 1.0125);
+  assert.equal(stats.attackDamageMultiplier, 1.075); assert.equal(stats.attackSpeedMultiplier, 1.0125);
   assert.equal(stats.critChance, .00375); assert.equal(stats.maxMana, 110);
-  assert.equal(stats.spellDamageMultiplier, 1.15); assert.equal(stats.maxHp, 130);
+  assert.equal(stats.spellDamageMultiplier, 1.075); assert.equal(stats.maxHp, 130);
   assert.equal(sheet.statPoints, 0);
 });
 
@@ -77,7 +77,7 @@ test('attribute and direct bonuses accumulate once across multiple items and the
   sheet.equipped.chest!.implicit = { vitality: 2, armor: 120 };
   const stats = deriveCharacterStats(sheet, { strength: 3, damagePercent: 4, vitality: 1 });
   assert.equal(stats.attributes.strength, 18); assert.equal(stats.attributes.vitality, 13);
-  assert.equal(stats.attackDamageMultiplier, 1.3); assert.equal(stats.maxHp, 128);
+  assert.equal(stats.attackDamageMultiplier, 1.26); assert.equal(stats.maxHp, 128);
   assert.equal(stats.damageReduction, .5);
   assert.equal(sheet.attributes.strength, 10); assert.equal(sheet.attributes.vitality, 10);
 });

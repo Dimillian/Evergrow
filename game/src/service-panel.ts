@@ -9,7 +9,7 @@ import type { Player } from './model.ts';
 import type { Item, ItemKind, ItemTier, EquipmentSlot } from './character-types.ts';
 import { NPC_NAMES, NPC_COLORS, type TownNPC } from './npcs.ts';
 import { npcEmblem } from './npc-art.ts';
-import { RESPEC_GOLD_PER_POINT, respecPoints, GAMBLE_KINDS, gambleOdds, premiumStockSlot, gamblePrice, STASH_CAPACITY, vendorStock, vendorStockLevel, quoteService, sourceItem, itemPrice, stockEpoch, type ServiceQuote, type ServiceRequest, type ItemSource, type SaleItem } from './commerce.ts';
+import { RESPEC_GOLD_PER_POINT, respecPoints, attributeResetPoints, GAMBLE_KINDS, gambleOdds, premiumStockSlot, gamblePrice, STASH_CAPACITY, vendorStock, vendorStockLevel, quoteService, sourceItem, itemPrice, stockEpoch, type ServiceQuote, type ServiceRequest, type ItemSource, type SaleItem } from './commerce.ts';
 import { improveItem, rerollPool, affixCategory, AFFIX_FOCUSES, type AffixFocus, type Improvement } from './item-improvement.ts';
 import { updateItemSlot } from './item-ui.ts';
 import { ItemTooltip } from './item-tooltip.ts';
@@ -28,6 +28,7 @@ export class ServicePanel {
   private tooltip: ItemTooltip;
   private player!: Player;
   private npc!: TownNPC;
+  private respecKind: 'skills' | 'attributes' = 'skills';
   private tab: 'shop' | 'sell' | 'improve' | 'buyback' | 'respec' = 'shop';
   private shopFamily='all';
   private operation: Improvement = 'enhance';
@@ -139,7 +140,7 @@ export class ServicePanel {
   private tabsMarkup(): string {
     if (this.npc.role === 'stash') return '';
     const tabs: Array<[typeof this.tab, string]> = this.npc.role === 'enchanter'
-      ? [['improve', 'Enchant'], ['respec', 'Reset skills']] : [['shop', this.npc.role === 'gambler' ? 'Gamble' : 'Shop']];
+      ? [['improve', 'Enchant'], ['respec', 'Respec']] : [['shop', this.npc.role === 'gambler' ? 'Gamble' : 'Shop']];
     if (this.npc.role === 'blacksmith') tabs.push(['improve', 'Enhance']);
     tabs.push(['sell', 'Sell'], ['buyback', `Buyback <small>${this.player.character.commerce.buyback.length}/12</small>`]);
     return `<nav class="service-tabs" aria-label="Services">${tabs.map(([tab, label]) => `<button class="ui-button ui-button--quiet" data-tab="${tab}" aria-pressed="${this.tab === tab}">${label}</button>`).join('')}<span>${escapeUI(this.npc.name)}${this.tab === 'improve' ? ` · Services Lv ${vendorLevel(this.npc, this.player.level)}` : ''}</span></nav>`;
@@ -147,16 +148,21 @@ export class ServicePanel {
   showRespec(): void { if(this.npc.role!=='enchanter')return; this.tab='respec'; this.render(); }
   private renderRespec(): void {
     this.goldFeedback.stop();this.tooltip.hide();this.element.classList.remove('is-selling');
-    const points=respecPoints(this.player.character), result=quoteService(this.player.character,this.npc,this.player.level,{type:'respec'});
-    this.quote=result.ok?result.quote:null;this.selected={type:'respec'};
+    const attributes = this.respecKind === 'attributes', sheet = this.player.character;
+    const request: ServiceRequest = {type:attributes?'resetAttributes':'respec'};
+    const points = attributes ? attributeResetPoints(sheet) : respecPoints(sheet);
+    const result = quoteService(sheet,this.npc,this.player.level,request), price = attributes ? 0 : points*RESPEC_GOLD_PER_POINT;
+    this.quote=result.ok?result.quote:null;this.selected=request;
     this.element.style.setProperty('--service-color',NPC_COLORS.enchanter);
     this.element.innerHTML=`${this.headerMarkup()}${this.tabsMarkup()}<div class="service-respec ui-scroll-area">
+      <nav class="service-tabs" aria-label="Reset type">${(['skills','attributes'] as const).map(kind=>`<button class="ui-button ui-button--quiet" data-respec-kind="${kind}" aria-pressed="${this.respecKind===kind}">${kind==='skills'?'Skills':'Attributes'}</button>`).join('')}</nav>
       <div class="service-respec-sigil">${npcEmblem('enchanter')}</div><h3>Choose a new path</h3>
-      <p>Return every spent skill point, including purchased ranks.</p>
-      <div class="service-respec-values"><div><strong>${points}</strong><span>Points refunded</span></div><div><strong>${(points*RESPEC_GOLD_PER_POINT).toLocaleString()}</strong><span>Gold · ${RESPEC_GOLD_PER_POINT} per point</span></div></div>
-      <p class="ui-muted">Clears your skill tree, ranks, specializations and skill bindings.<br>Attributes and equipment stay yours.</p>
-      </div><footer class="ui-window-footer"><span class="service-message" role="status">${!result.ok?escapeUI(result.message):goldBalance(this.player.character)<result.quote.price?'Not enough gold.':''}</span><button class="ui-button ui-button--primary" data-confirm ${!result.ok||goldBalance(this.player.character)<result.quote.price?'disabled':''}>Reset skills · ${(points*RESPEC_GOLD_PER_POINT).toLocaleString()} gold</button></footer>`;
+      <p>${attributes?'Redistribute your assigned attributes. One free reset per character.':'Return every spent skill point, including purchased ranks.'}</p>
+      <div class="service-respec-values"><div><strong>${points}</strong><span>Points refunded</span></div><div><strong>${attributes?'Free':price.toLocaleString()}</strong><span>${attributes?'Once per character':`Gold · ${RESPEC_GOLD_PER_POINT} per point`}</span></div></div>
+      <p class="ui-muted">${attributes?'Returns all four attributes to 10 and refunds their assigned points.':'Clears your skill tree, ranks, specializations and skill bindings.<br>Attributes and equipment stay yours.'}</p>
+      </div><footer class="ui-window-footer"><span class="service-message" role="status">${!result.ok?escapeUI(result.message):goldBalance(sheet)<price?'Not enough gold.':''}</span><button class="ui-button ui-button--primary" data-confirm ${!result.ok||goldBalance(sheet)<price?'disabled':''}>${attributes?'Reset attributes · Free':`Reset skills · ${price.toLocaleString()} gold`}</button></footer>`;
   }
+
   private renderStorage(): void {
     this.goldFeedback.stop(); this.tooltip.hide(); this.element.classList.remove('is-selling');
     const sheet = this.player.character, count = storageTabCount(sheet), owned = hasStorageTab(sheet,this.storageTab);
@@ -357,6 +363,7 @@ export class ServicePanel {
       for(const {item,bag} of items) { if(remove)this.sales.delete(item.id); else this.sales.set(item.id,{bag,id:item.id,revision:item.recipe.revision}); }
       this.render(); return;
     }
+    if (button.dataset.respecKind === 'skills' || button.dataset.respecKind === 'attributes') { this.respecKind = button.dataset.respecKind; this.renderRespec(); this.element.querySelector<HTMLButtonElement>(`[data-respec-kind="${this.respecKind}"]`)?.focus(); return; }
     if (button.dataset.tab) { this.tab = button.dataset.tab as typeof this.tab; this.updateSelection(); this.render(); return; }
     if (button.dataset.item) {
       if(this.npc.role==='stash'&&!hasStorageTab(this.player.character,this.storageTab))return;

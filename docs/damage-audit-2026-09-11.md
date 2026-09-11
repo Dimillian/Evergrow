@@ -2,6 +2,8 @@
 
 Audit of published v0.3.13 source `97753ec961415fedf661ac883c2337ff9760017b`. No runtime balance changes, save edits or deployment. Reproduce with `node --experimental-strip-types game/scripts/damage-audit.ts /tmp/damage-audit.json`.
 
+Follow-up: the approved attribute-only slice and its repeated measurements are documented in [the implementation report](offensive-attribute-balance-2026-09-11.md). The numbers below remain the original pre-change audit.
+
 ## Conclusion
 
 There is no broad duplicate spell-damage multiplier in the inspected combat path. The principal problem is the combined offensive budget: leveled and enhanced weapons, attribute rolls, skill potency and multiple contacts can exceed light-elite health before criticals or speed caps become relevant. This affects physical builds too. Halving Intelligence alone would leave a substantial problem.

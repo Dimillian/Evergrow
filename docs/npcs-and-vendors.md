@@ -176,4 +176,7 @@ An enhancement purchase advances to the next +N that changes real item bonuses, 
 
 ## Skill reset
 
-Enchanters offer Reset skills at 25 gold per spent tree/rank point, without level or repeat-use premiums. The service previews cost and refunds all purchased skill points, clearing bindings, rank selections, specializations and Overload. Attributes and gear remain unchanged. Wallet and build persist together before commitment; failed saves retain the old build. See [specification](expeditions.md).
+Enchanters offer Respec → Skills at 25 gold per spent tree/rank point, without level or repeat-use premiums. The service previews cost and refunds all purchased skill points, clearing bindings, rank selections, specializations and Overload. Attributes and gear remain unchanged. Wallet and build persist together before commitment; failed saves retain the old build. See [specification](expeditions.md).
+
+
+Local September 11: Respec → Attributes also offers one free full assigned-attribute refund per character. It refunds no item/tree bonuses, preserves skills and equipment, and persists its used flag with the new allocation before updating combat. See [respec rules](expeditions.md#enchanter-respec).

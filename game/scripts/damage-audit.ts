@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process';
+import { ATTRIBUTE_DAMAGE_BONUSES } from '../src/attribute-content.ts';
 import { writeFileSync } from 'node:fs';
 import { benchmarkPlayer, BENCHMARK_SKILLS, BENCHMARK_LEVELS } from '../src/resource-benchmark.ts';
 import { deriveAttackStats } from '../src/equipment.ts';
@@ -60,7 +62,7 @@ const builds=BENCHMARK_LEVELS.flatMap(level=>(['melee','bow','caster'] as const)
   const expected=attack.damage*r.damageMultiplier*(1+p.derived.critChance*(p.derived.critMultiplier-1));
   const sources=characterModifierSources(p.character,getTreeBonuses(p.character.allocatedNodes),level);
   const original=structuredClone(p.character);
-  const counterfactuals=Object.fromEntries(['noAllocatedOffense','halfIntScaling','noGearOffense','noCriticals','rankOne'].map(mode=>{
+  const counterfactuals=Object.fromEntries(['noAllocatedOffense','noGearOffense','noCriticals','rankOne'].map(mode=>{
     p.character=structuredClone(original);
     if(mode==='noAllocatedOffense')p.character.attributes[style==='caster'?'intelligence':'strength']=10;
     if(mode==='noGearOffense') for(const item of Object.values(p.character.equipped))if(item){
@@ -69,7 +71,6 @@ const builds=BENCHMARK_LEVELS.flatMap(level=>(['melee','bow','caster'] as const)
     }
     if(mode==='rankOne'){p.character.skillRanks[skill]=1;p.character.activeSkillRanks[skill]=1;}
     refreshCharacter(p);
-    if(mode==='halfIntScaling')p.stats.spellDamageMultiplier-=Math.max(0,p.derived.attributes.intelligence-10)*.015;
     const a=deriveAttackStats(p.stats,p.equipment.mainHand),s=resolveSkill(skill,p.derived,p.character);
     return [mode,round(a.damage*s.damageMultiplier*(mode==='noCriticals'?1:1+p.derived.critChance*(p.derived.critMultiplier-1)))];
   }));
@@ -94,8 +95,8 @@ const distances=(['fireball','volley','frostLance','meteor','cataclysm'] as Skil
   ['',...SKILL_SPECIALIZATIONS.filter(s=>s.skill===skill).map(s=>s.id)].flatMap(v=>
     [35,100,300].flatMap(distance=>(['stalker','warden'] as EnemyKind[]).map(kind=>contactProbe(skill,v,1,distance,kind)))));
 const scaling=[1,10,20,35,50,100].map(level=>({level,weapon:round(itemPowerScale(level)),monsterHp:round(monsterHealthScale(level)),
-  casterWithThreeOffensePoints:round(itemPowerScale(level)*(1+.09*(level-1))),
-  physicalWithThreeOffensePoints:round(itemPowerScale(level)*(1+.06*(level-1)))}));
+  casterWithThreeOffensePoints:round(itemPowerScale(level)*(1+3*ATTRIBUTE_DAMAGE_BONUSES.intelligence/100*(level-1))),
+  physicalWithThreeOffensePoints:round(itemPowerScale(level)*(1+3*ATTRIBUTE_DAMAGE_BONUSES.strength/100*(level-1)))}));
 const gearSamples=(['melee','bow','caster'] as const).map(style=>{
   const samples=Array.from({length:100},(_,sample)=>{
     const p=benchmarkPlayer(35,style,'strong'),skill=BENCHMARK_SKILLS[style];
@@ -146,7 +147,7 @@ const bonusRankCases=[0,3,10].map(bonus=>{
   const r=resolveSkill('arcLightning',{...p.derived,skillBonuses:{arcLightning:bonus}},p.character);
   return {purchased:r.rank,bonus,effective:r.effectiveRank,damageMultiplier:r.damageMultiplier,mana:r.mana};
 });
-const report={source:'97753ec961415fedf661ac883c2337ff9760017b',builds,contacts,distances,scaling,gearSamples,affixExamples,bonusRankCases,
-  assumptions:'24 synthetic seeded builds, not Dimillian. Contact probes use rank 1, no crits, no prerequisite passives, a 1000-damage training weapon, infinite training mana, pinned high-life bodies, one cast and 20 seconds. Values normalize by derived weapon damage. Eight-body contact probes deliberately overlap bodies to measure clustered coverage bounds, not natural encounter geometry. Resource/TTK comparisons remain separate. Counterfactuals are independent removals, not additive attribution; halfIntScaling is analytical only. Additional 100 gear samples/style use level 35, rank 5, Epic +5, no charms/specializations/extra passives/offhand, three offense and two Vitality points/level; greedily select among eight generated candidates per slot for expected first-target DPS. Weapon profile alternatives are included. These are damage-selected sets, not random-drop distributions, not optimized global maxima, and not estimates of acquisition time.'};
+const report={source:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),workingTreeDirty:!!execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),attributeDamageBonuses:ATTRIBUTE_DAMAGE_BONUSES,builds,contacts,distances,scaling,gearSamples,affixExamples,bonusRankCases,
+  assumptions:'24 synthetic seeded builds, not Dimillian. Contact probes use rank 1, no crits, no prerequisite passives, a 1000-damage training weapon, infinite training mana, pinned high-life bodies, one cast and 20 seconds. Values normalize by derived weapon damage. Eight-body contact probes deliberately overlap bodies to measure clustered coverage bounds, not natural encounter geometry. Resource/TTK comparisons remain separate. Counterfactuals are independent removals, not additive attribution. Additional 100 gear samples/style use level 35, rank 5, Epic +5, no charms/specializations/extra passives/offhand, three offense and two Vitality points/level; greedily select among eight generated candidates per slot for expected first-target DPS. Weapon profile alternatives are included. These are damage-selected sets, not random-drop distributions, not optimized global maxima, and not estimates of acquisition time.'};
 writeFileSync(process.argv[2]??'/tmp/evergrow-damage-audit.json',JSON.stringify(report,null,2));
 console.log(`Audited ${builds.length} builds, ${contacts.length} skill/formation cases and ${distances.length} distance/body cases.`);

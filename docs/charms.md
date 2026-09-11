@@ -80,3 +80,8 @@ Ground recognition: charm nameplates use a rune-cut stone glyph, a subtle silver
 ## Local mana tuning — September 11, 2026
 
 Mana-regeneration potency uses `0.35 × occupied cells` instead of the generic size potency. A middle-roll common level-35 pebble supplies 1 mana/5 sec; an eight-cell monolith supplies 10 mana/5 sec, with its additional affixes. Eight selected pebbles supply 8 mana/5 sec. All rolls remain whole numbers in the displayed unit. Other charm size budgets, footprints, drop rates and offensive bonuses are unchanged. Maximum-mana and regeneration affixes use tapered item-level growth. Validated existing charm recipes receive the same mana repricing without changing their stored random rolls or placement. See [resource balance](resource-balance.md).
+
+
+## Offensive attribute follow-up · local September 11
+
+Strength/Intelligence use the shared tapered item budget. At level 35, a middle-roll Rare Storm Pebble's Intelligence roll is now +2 (previously +4); a Rare Monolith's is +7 (previously +14). At the new 1.5% spell conversion, eight such pebbles provide +24 percentage points of spell damage from Intelligence, previously +96. Cast speed, direct damage, resistance and other utility rolls are unchanged. Small-stone concentration and total skill budgets still need the next balance pass; this change does not claim to resolve every per-cell tradeoff. Existing charms update through the shared `offenseVersion` repricing on load.

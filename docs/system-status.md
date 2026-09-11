@@ -1,5 +1,8 @@
 # Current system status
 
+Local, 2026-09-11: Strength and Intelligence now each grant 1.5% damage per added point; their equipment/charm rolls and jewelry implicits taper. Enchanters offer one free attribute refund. Existing items update on validated load. The repeat audit shows substantially lower hits but remaining skill-driven elite burst; see [offensive attribute follow-up](offensive-attribute-balance-2026-09-11.md). Not yet published.
+
+
 Local, 2026-09-10: Enchanter skill resets cost 25 gold per refunded point. Settlement expedition tables unlock ten-stage saved dungeon routes at level 20, with forks, stage modifiers, death resets and an Epic/Legendary-weighted final chest. Six dungeon themes share distinct entrances and interiors; three new styles also appear in the wilderness. See [Expeditions and respec](expeditions.md). Not yet published.
 
 Local settlement rework · generation 10 (2026-09-09): three settlement tiers, outdoor starting refuges without houses, families, gambling and personal storage. Generation-9 characters upgrade on Continue, preserving progression and exploration. The original save is retained until the upgrade commits. See [Settlements](settlements.md). Earlier generation/layout statements below describe the prior checkpoint.

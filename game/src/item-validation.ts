@@ -31,6 +31,7 @@ export function validItem(v: unknown): v is Item {
     || !integer(r.targetedRolls) || !integer(r.fullRolls) || !Array.isArray(r.rolls) || r.rolls.length !== v.affixes.length
     || !r.rolls.every(n => number(n, 0, 1)) || new Set(v.affixes.map(a => a.stat)).size !== v.affixes.length
     || r.manaVersion !== undefined && r.manaVersion !== 1
+    || r.offenseVersion !== undefined && r.offenseVersion !== 1
     || r.charmVersion !== undefined && (r.charmVersion !== 1 || v.kind !== 'charm')
     || v.affixes.length !== (v.kind === 'charm' && r.charmVersion === undefined ? (charmProfile(v as unknown as Item)?.size.affixes ?? 1) + ['common','magic','rare','epic','legendary'].indexOf(v.tier as string) : itemAffixCount(v as unknown as Item))) return false;
   if (r.materialId !== undefined && (typeof r.materialId !== 'string' || !Object.hasOwn(ITEM_MATERIALS, r.materialId) || !itemMaterialPool(v.kind as Item['kind'], object(v.weapon) ? v.weapon.family as NonNullable<Item['weapon']>['family'] : undefined).some(m => m.id === r.materialId))) return false;

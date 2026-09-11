@@ -129,3 +129,12 @@ Mana regeneration item rolls are whole **mana per five seconds**, divided by fiv
 Mana cost reduction preserves the first 20 percentage points, then approaches 40% with diminishing returns. A raw 50% bonus gives about 35.54% effective reduction; 75% gives about 38.72%. Shared derivation feeds spells, basic bolts, upkeep and tooltips. Individual affix numbers show the raw contribution; detailed stats explain the effective result.
 
 Existing recipes without `manaVersion: 1` reprice resource bonuses on validated save read, retaining rolls, IDs, enhancement and all non-resource bonuses. New and rebuilt recipes carry the marker. The matching client and Worker must ship together; local testing requires reloading the character. See [resource benchmark](resource-balance.md).
+
+
+## Offensive attribute budgets · local September 11 pass
+
+Strength and Intelligence rolls now use `(1 + 0.3 × g) × quality × enhancement × roll quality × slot/stone potency`, where `g = 25n / (25+n)` and `n = item level − 1`. Other affixes keep their existing budgets. The final positive value is rounded to a whole number. A middle level-35 Epic +5 head affix grants 9 Strength/Intelligence instead of 18; a dedicated spell-damage affix remains 19%.
+
+Sage/Lion pendant implicits use `0.5 + 0.15 × g` instead of raw item-power growth, retaining their authored base and rarity/enhancement/material factors. This prevents jewelry implicits bypassing the offensive attribute budget. The same policy applies to any offensive attribute focus implicit.
+
+Recipes carry `offenseVersion: 1`. Shared validated save reads update old Strength/Intelligence affixes and implicits once across every owned and ground-loot container, preserving IDs, roll quantiles, enhancement, locks and unrelated stats. Fresh generation, releveling, enchanting and enhancement consume the same current formulas. No character progress reset. See [measurements](offensive-attribute-balance-2026-09-11.md).
