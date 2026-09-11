@@ -1,3 +1,4 @@
+import { itemRollMultiplier } from './item-roll-content.ts';
 import { isOffensiveAttribute, offensiveAttributeImplicitScale } from './attribute-content.ts';
 import { manaImplicitScale } from './mana-content.ts';
 import { CHARM_DROP_CHANCE, CHARM_PROFILES, CHARM_SIZES, CHARM_FLAVORS, CHARM_UTILITY_AFFIXES, CHARM_WEIGHTS, charmProfile, charmAffixCount, charmThematicStat } from './charm-content.ts';
@@ -213,7 +214,7 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
     const definition = rollAffix(remaining, random);
     const growthLevel = (PERCENT_STATS.has(definition.stat) || isManaBudgetStat(definition.stat) || isOffensiveAttribute(definition.stat)) ? itemAffixGrowthLevel(level) : level - 1;
     const rollQuality = random(); rolls.push(rollQuality);
-    const value = discreteAffixValue(definition.stat, rollQuality, level) ?? (definition.base + growthLevel * definition.growth) * (.85 + rollQuality * .3) * quality * affixPotency(itemKind, definition.stat);
+    const value = discreteAffixValue(definition.stat, rollQuality, level) ?? (definition.base + growthLevel * definition.growth) * itemRollMultiplier(rollQuality) * quality * affixPotency(itemKind, definition.stat);
     affixes.push({ name: definition.name, stat: definition.stat, value: boundResistanceRoll(definition.stat, value) });
     for (let i = remaining.length - 1; i >= 0; i--) if (affixConflicts(remaining[i].stat, affixes.map(a => a.stat))) remaining.splice(i, 1);
   }
@@ -227,7 +228,7 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
   const name = tier === 'common' ? `${prefix} ${baseName}` : tier === 'magic' ? `${prefix} ${baseName} ${suffix}`
     : `${prefix} ${choose(TITLES)}`;
   const item: Item = {
-    recipe: { manaVersion: 1, offenseVersion: 1, materialId, ...((weaponProfile ?? shieldProfile ?? focusProfile ?? jewelryProfile) ? { profileId: (weaponProfile ?? shieldProfile ?? focusProfile ?? jewelryProfile)!.id } : {}), starter: false, enhancement: 0, revision: 0, targetedRolls: 0, fullRolls: 0, rolls },
+    recipe: { manaVersion: 1, offenseVersion: 1, rollVersion: 1, materialId, ...((weaponProfile ?? shieldProfile ?? focusProfile ?? jewelryProfile) ? { profileId: (weaponProfile ?? shieldProfile ?? focusProfile ?? jewelryProfile)!.id } : {}), starter: false, enhancement: 0, revision: 0, targetedRolls: 0, fullRolls: 0, rolls },
     id: `item-${seed.toString(36)}-${level}-${weaponProfile?.id ?? shieldProfile?.id ?? focusProfile?.id ?? jewelryProfile?.id ?? itemKind}-${materialId}-${tier}`, seed, name, baseName, kind: itemKind, tier,
     itemLevel: level, requiredLevel: Math.max(1, level - 2),
     power: Math.round(level * 10 + quality * baseScale * 12 + affixes.length * 7), implicit, affixes, appearance,
@@ -307,7 +308,7 @@ export function createCharacterSheet(starter: StarterLoadoutId = 'sword'): Chara
 /** Rebuild from authored bases and exact roll quality; never scale rounded existing stats. */
 export function deriveItem(item: Item): Item {
   if (item.kind === 'charm') return deriveCharm(item);
-  const next: Item = { ...item, implicit: {}, affixes: [], recipe: { ...item.recipe, manaVersion: 1, offenseVersion: 1, rolls: [...item.recipe.rolls] } };
+  const next: Item = { ...item, implicit: {}, affixes: [], recipe: { ...item.recipe, manaVersion: 1, offenseVersion: 1, rollVersion: 1, rolls: [...item.recipe.rolls] } };
   const r = item.recipe, quality = TIER_POWER[item.tier], enhance = 1 + .05 * r.enhancement;
   const baseScale = itemMaterialScale(item);
   const growth = itemPowerScale(item.itemLevel) * quality * enhance * baseScale;
@@ -331,7 +332,7 @@ export function deriveItem(item: Item): Item {
     const definition = [...AFFIXES, ...SHIELD_AFFIXES, ...ELEMENTAL_AFFIXES, ...SKILL_AFFIXES].find(a => a.stat === affix.stat)!;
     const level = (PERCENT_STATS.has(affix.stat) || isManaBudgetStat(affix.stat) || isOffensiveAttribute(affix.stat)) ? itemAffixGrowthLevel(item.itemLevel) : item.itemLevel - 1;
     return { name: definition.name, stat: definition.stat,
-      value: boundResistanceRoll(definition.stat, discreteAffixValue(definition.stat, r.rolls[index], item.itemLevel) ?? (definition.base + level * definition.growth) * (.85 + r.rolls[index] * .3) * quality * enhance * affixPotency(item.kind, definition.stat)) };
+      value: boundResistanceRoll(definition.stat, discreteAffixValue(definition.stat, r.rolls[index], item.itemLevel) ?? (definition.base + level * definition.growth) * itemRollMultiplier(r.rolls[index]) * quality * enhance * affixPotency(item.kind, definition.stat)) };
   });
   next.requiredLevel = Math.max(1, item.itemLevel - 2);
   next.power = Math.round((item.itemLevel * 10 + quality * baseScale * 12 + item.affixes.length * 7) * enhance);
@@ -373,7 +374,7 @@ function generateCharm(seed: number, itemLevel: number, profileId?: string, tier
   const roll=random(), tier=tierOverride??(roll<.45?'common':roll<.77?'magic':roll<.94?'rare':roll<.99?'epic':'legendary');
   const item:Item={id:`charm-${seed.toString(36)}-${level}-${selected.id}-${tier}`,seed,kind:'charm',tier,name:selected.name,baseName:selected.name,
     itemLevel:level,requiredLevel:Math.max(1,level-2),power:0,implicit:{},affixes:[],
-    recipe:{charmVersion:1,manaVersion:1,offenseVersion:1,profileId:selected.id,starter:false,enhancement:0,revision:0,targetedRolls:0,fullRolls:0,rolls:[]},
+    recipe:{charmVersion:1,manaVersion:1,offenseVersion:1,rollVersion:1,profileId:selected.id,starter:false,enhancement:0,revision:0,targetedRolls:0,fullRolls:0,rolls:[]},
     appearance:{base:selected.flavor.base,edge:selected.flavor.edge,shadow:'#19252b',trim:selected.flavor.glow,style:'plate'}};
   const pool=itemAffixPool(item);
   for(let i=0;i<charmAffixCount(item);i++){
@@ -390,9 +391,9 @@ function deriveCharm(item:Item):Item {
   const affixes=item.affixes.map((a,i)=>{
     const definition=definitions.find(d=>d.stat===a.stat);if(!definition)throw new RangeError('Invalid charm affix');
     const growth=(PERCENT_STATS.has(a.stat)||isManaBudgetStat(a.stat)||isOffensiveAttribute(a.stat))?itemAffixGrowthLevel(item.itemLevel):item.itemLevel-1;
-    return {name:definition.name,stat:a.stat,value:boundResistanceRoll(a.stat,(definition.base+growth*definition.growth)*quality*(a.stat==='manaRegen'?profile.size.width*profile.size.height*.35:profile.size.potency)*(.85+item.recipe.rolls[i]*.3))};
+    return {name:definition.name,stat:a.stat,value:boundResistanceRoll(a.stat,(definition.base+growth*definition.growth)*quality*(a.stat==='manaRegen'?profile.size.width*profile.size.height*.35:profile.size.potency)*itemRollMultiplier(item.recipe.rolls[i]))};
   });
-  return roundItemStats({...item,affixes,implicit:{},requiredLevel:Math.max(1,item.itemLevel-2),power:Math.round((item.itemLevel*10+affixes.length*7)*profile.size.potency*TIER_POWER[item.tier]*(1+.05*item.recipe.enhancement)),recipe:{...item.recipe,manaVersion:1,offenseVersion:1,rolls:[...item.recipe.rolls]}});
+  return roundItemStats({...item,affixes,implicit:{},requiredLevel:Math.max(1,item.itemLevel-2),power:Math.round((item.itemLevel*10+affixes.length*7)*profile.size.potency*TIER_POWER[item.tier]*(1+.05*item.recipe.enhancement)),recipe:{...item.recipe,manaVersion:1,offenseVersion:1,rollVersion:1,rolls:[...item.recipe.rolls]}});
 }
 export const itemAffixCount = (item:Pick<Item,'kind'|'tier'|'recipe'>) => item.kind==='charm'?charmAffixCount(item):TIER_AFFIXES[item.tier];
 
@@ -436,4 +437,11 @@ export function rebalanceItemOffense(item: Item): Item {
   }
   return {...item, implicit, recipe: {...item.recipe, offenseVersion: 1},
     affixes: item.affixes.map((affix, i) => isOffensiveAttribute(affix.stat) ? current.affixes[i] : affix)};
+}
+
+
+/** Keep a saved roll's percentile and identity while applying the wider current range. */
+export function rebalanceItemRolls(item: Item): Item {
+  if (item.recipe.rollVersion === 1) return item;
+  return roundItemStats({...item, affixes: deriveItem(item).affixes, recipe: {...item.recipe, rollVersion: 1}});
 }

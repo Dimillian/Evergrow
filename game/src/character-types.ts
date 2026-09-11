@@ -18,6 +18,7 @@ export interface ItemRecipe {
   charmVersion?: 1;
   manaVersion?: 1;
   offenseVersion?: 1;
+  rollVersion?: 1;
   materialId?: ItemMaterialId;
   profileId?: string; starter: boolean; enhancement: number; revision: number;
   targetedRolls: number; fullRolls: number; rolls: number[];

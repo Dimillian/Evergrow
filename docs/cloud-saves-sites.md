@@ -102,3 +102,8 @@ Current local item recipes carry `manaVersion: 1`. Validated reads update prior 
 ### Offensive attribute follow-up (local)
 
 `offenseVersion: 1` marks current Strength/Intelligence item budgets. After complete validation, shared decoding reprices these attributes once across equipped, bag/charm, stash, buyback and every surface/dungeon ground item. Dedicated damage/resource affixes and item identities remain intact. Character state may also carry `attributeResetUsed: true`, recording the single complimentary enchanter attribute refund; other supplied values are invalid. Existing saves with neither marker remain loadable. Match client and Worker on the next publication and reload clients; local testing does not deploy these rules or edit online saves. No D1 migration or automatic progress reset.
+
+
+### Wider affix quality (local)
+
+Validated reads also upgrade missing `rollVersion` to 1 by rebuilding explicit affixes with their saved percentiles and the new 0.65–1.35 multiplier. This follows the resource and offensive attribute upgrades. Implicits, base weapon stats and character progress stay intact; enchantments refresh from their affix. Client and Worker must share these rules on publication. No online edits or publication occur as part of local tuning.

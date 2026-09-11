@@ -138,3 +138,10 @@ Strength and Intelligence rolls now use `(1 + 0.3 × g) × quality × enhancemen
 Sage/Lion pendant implicits use `0.5 + 0.15 × g` instead of raw item-power growth, retaining their authored base and rarity/enhancement/material factors. This prevents jewelry implicits bypassing the offensive attribute budget. The same policy applies to any offensive attribute focus implicit.
 
 Recipes carry `offenseVersion: 1`. Shared validated save reads update old Strength/Intelligence affixes and implicits once across every owned and ground-loot container, preserving IDs, roll quantiles, enhancement, locks and unrelated stats. Fresh generation, releveling, enchanting and enhancement consume the same current formulas. No character progress reset. See [measurements](offensive-attribute-balance-2026-09-11.md).
+
+
+## Wider quality rolls · local September 11 follow-up
+
+Ordinary continuous affixes now use a saved uniform quantile mapped to **0.65–1.35×**, previously 0.85–1.15×. The midpoint stays 1×; rounding and resistance caps still apply. At level 35, unenhanced Legendary gloves can roll +22–45% cast speed instead of +29–39%. Rarity counts, rarity multipliers, drop odds and discrete skill-rank/pierce quantiles are unchanged. Small whole-number rolls and capped resistances naturally have narrower effective variation.
+
+`item-roll-content.ts` owns this range for drops, charms and every service reconstruction. `rollVersion: 1` records repricing of old explicit affixes from their existing percentiles; it does not reroll names, affix types, IDs or quality. Low rolls decrease and high rolls increase. Implicit bonuses and base weapon/armor values are unchanged by this step; elemental enchantment projections rebuild from the new explicit roll. All save containers share the update.
