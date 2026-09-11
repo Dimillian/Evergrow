@@ -10,7 +10,7 @@ import { GroundLootHighlight } from './ground-loot-highlight.ts';
 import type { GroundLootLabel } from './ground-loot-hover.ts';
 import { drawEnemyRemains } from './death-art.ts';
 import { drawGroundLoot, drawLootLabels, drawResourcePickups } from './loot-art.ts';
-import { generateItem } from './items.ts';
+import { generateItem, deriveItem } from './items.ts';
 import { loadGameFont, text } from './font.ts';
 import type { EnemyKind } from './model.ts';
 import type { GroundItem, ItemTier } from './character-types.ts';
@@ -28,7 +28,7 @@ const world = new World(7319), sim = new Simulation(world, { spawn: false }), re
 sim.player.level = 10;
 const stage = document.createElement('canvas'), fx = new PostFX(stage);
 const params = new URLSearchParams(location.search);
-const pickupView = params.has('pickup') || params.has('charms');
+const pickupView = params.has('pickup') || params.has('charms') || params.has('greater');
 const deathElement = params.get('element');
 const materialsView = new URLSearchParams(location.search).has('materials');
 const containersView = new URLSearchParams(location.search).has('containers');
@@ -47,6 +47,18 @@ if (pickupView) {
     {id:304,x:x-110,y:y-85,item:generateItem(105,8,'charm','jade-pebble','common')},
     {id:305,x:x+10,y:y-95,item:generateItem(106,12,'charm','rime-shard','magic')},
     {id:306,x:x+125,y:y+75,item:generateItem(107,20,'charm','astral-monolith','epic')});
+  if (params.has('greater')) {
+    drops[0].item = generateItem(99, 35, 'weapon', 'ember-staff', 'legendary');
+    drops[0].item.recipe.rolls = drops[0].item.recipe.rolls.map((_, i) => i === 0 || i === 2 ? .97 : .5);
+    drops[0].item = deriveItem(drops[0].item);
+    drops[1].item = generateItem(102, 35, 'gloves', undefined, 'epic', 'cloth');
+    drops[1].item.recipe.rolls = drops[1].item.recipe.rolls.map(() => .5);
+    drops[1].item = deriveItem(drops[1].item);
+    const stone = generateItem(107, 35, 'charm', 'astral-monolith', 'epic');
+    stone.recipe.rolls = stone.recipe.rolls.map((_, i) => i === 0 ? .97 : .5);
+    drops[2].item = deriveItem(stone);
+    sim.player.level = 35;
+  }
   sim.groundItems = drops;
   renderer.cameraX = x; renderer.cameraY = y;
   sim.player.angle = .5;

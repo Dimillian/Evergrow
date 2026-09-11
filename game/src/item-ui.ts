@@ -1,3 +1,4 @@
+import { hasGreaterAffix, isGreaterAffix, GREATER_AFFIX_SYMBOL } from './item-roll-content.ts';
 import { MANA_RULES } from './mana-content.ts';
 import { ITEM_LOCK_ICON } from './item-protection.ts';
 import { RESISTANCE_LABELS } from './resistance-content.ts';
@@ -10,6 +11,7 @@ import { itemIconSVG } from './item-art.ts';
 import { previewEquipmentChange, type EquipmentStatChange, type PreviewStat } from './equipment-preview.ts';
 import { escapeUI } from './ui-components.ts';
 
+const greaterMark = '<span class="ui-greater-affix" role="img" aria-label="Greater affix · top 10% roll" title="Greater affix · top 10% roll"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0 10 6 16 8 10 10 8 16 6 10 0 8 6 6Z"/></svg></span>';
 const TIER_RANK: Record<ItemTier, number> = { common: 1, magic: 2, rare: 3, epic: 4, legendary: 5 };
 const number = (n: number, decimals = 1) => n.toLocaleString('en-US', { maximumFractionDigits: decimals });
 export interface ItemPresentation {
@@ -61,7 +63,7 @@ function equipChangeCell(change: EquipmentStatChange | undefined, emptyLabel = '
 }
 
 export function itemSlotMarkup(item: Item, size = 44): string {
-  return `${itemIconSVG(item, size)}${item.locked?`<span class="ui-item-lock" aria-label="Locked">${ITEM_LOCK_ICON}</span>`:''}${item.recipe.enhancement ? `<span class="ui-item-enhancement">+${item.recipe.enhancement}</span>` : ''}<span class="ui-item-level">${number(item.itemLevel, 0)}</span><span class="ui-item-tier" aria-hidden="true">${'<i></i>'.repeat(TIER_RANK[item.tier])}</span>`;
+  return `${itemIconSVG(item, size)}${hasGreaterAffix(item) ? `<span class="ui-item-greater">${greaterMark}</span>` : ''}${item.locked?`<span class="ui-item-lock" aria-label="Locked">${ITEM_LOCK_ICON}</span>`:''}${item.recipe.enhancement ? `<span class="ui-item-enhancement">+${item.recipe.enhancement}</span>` : ''}<span class="ui-item-level">${number(item.itemLevel, 0)}</span><span class="ui-item-tier" aria-hidden="true">${'<i></i>'.repeat(TIER_RANK[item.tier])}</span>`;
 }
 export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, options: { level: number; emptyMarkup: string; label: string; draggable?: boolean }): void {
   cell.classList.add('ui-item-slot');
@@ -85,7 +87,8 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
   const rows = Object.entries(itemModifiers(item)).map(([stat, value]) => {
     const key = stat as StatKey;
     const element = ELEMENTAL_AFFIXES.find(a => a.stat === key)?.element;
-    const label = `${escapeUI(STAT_LABELS[key])}${element ? ` · ${{ fire: 'Burn', frost: 'Chill', lightning: 'Interrupt' }[element]}` : ''}`;
+    const greater = item.affixes.some((a, i) => a.stat === key && isGreaterAffix(item, i));
+    const label = `${greater ? greaterMark : ''}${escapeUI(STAT_LABELS[key])}${element ? ` · ${{ fire: 'Burn', frost: 'Chill', lightning: 'Interrupt' }[element]}` : ''}`;
     const color = element ? ` style="color:${ELEMENT_COLORS[element]}"` : '';
     if (!preview?.ok) return `<div class="ui-item-property"${color}><span>${label}</span><strong>${formatStatValue(key, value)}</strong></div>`;
     const previewKey = isSkillStat(key) ? key : MODIFIER_PREVIEW[key];
@@ -110,7 +113,7 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
     else if (preview.displaced.length && !view.adjacentComparison)
       comparison = `<div class="ui-item-comparison"><p>Replaces ${preview.displaced.map(entry => escapeUI(entry.item.name)).join(' + ')}</p></div>`;
   }
-  return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span></span><h4>${escapeUI(itemDisplayName(item))}</h4></div></div>
+  return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span></span><h4>${hasGreaterAffix(item) ? escapeUI(itemDisplayName(item).slice(0, -(GREATER_AFFIX_SYMBOL.length + 1))) + ' ' + greaterMark : escapeUI(itemDisplayName(item))}</h4></div></div>
     <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${view.equipped ? '<span class="ui-item-equipped">Equipped</span>' : ''}${item.locked?'<span class="ui-item-equipped">Locked</span>':''}</div>
     ${item.recipe.enhancement ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% scalable item stats</div>` : ''}
     ${weapon}${properties}

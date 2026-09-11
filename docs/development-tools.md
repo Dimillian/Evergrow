@@ -80,3 +80,7 @@ The complementary `game/scripts/damage-audit.ts /path/to/report.json` CLI compar
 
 
 The damage audit also reports controlled low/mid/high-roll Legendary staff/chest comparisons on otherwise identical level-35 builds. It records roll-range/rank coefficients and the elite target's actual life, so successive tuning reports remain interpretable when enemy durability changes. These are deliberately matched affix combinations, not drop-frequency estimates or the user's cloud character. See [loot and combat follow-up](loot-quality-and-combat-2026-09-11.md).
+
+### Greater-roll inspection
+
+`/loot.html?greater&state=hovered` stages a Legendary staff with two greater rolls, an ordinary Epic item and an Epic charm with one greater roll. It shows the shared ground labels and bottom-corner tooltip. `/character.html?charms&greater` places the same staff in the existing inventory study; other generated gear retains its naturally rolled quality. Both modes use disposable recipes and runtime drawing, with no character-save access.

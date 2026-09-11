@@ -1,3 +1,4 @@
+import { hasGreaterAffix } from './item-roll-content.ts';
 import { treasurePose } from './treasure-flight.ts';
 import type { GroundItem } from './character-types.ts';
 import type { Pickup } from './model.ts';
@@ -75,12 +76,12 @@ export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly Grou
   const { scale, nameSize, levelSize, maxWidth, charmMaxWidth } = LOOT_LABEL_STYLE;
   const measure = (value: string) => textWidth(value, nameSize);
   const positions = lootPositions(drops);
-  const labels = new Map(drops.map(drop => [drop.id, { drop, name: groundLootName(drop.item), inset: drop.item.kind === 'charm' ? 24 : 16,
+  const labels = new Map(drops.map(drop => [drop.id, { drop, name: groundLootName(drop.item), greater: hasGreaterAffix(drop.item), inset: drop.item.kind === 'charm' ? 24 : 16,
     level: `Lv ${drop.item.itemLevel}`, levelWidth: textWidth(`Lv ${drop.item.itemLevel}`, levelSize, 'interface') }]));
   const anchors = positions.map(({ drop, x, y }) => {
     const label = labels.get(drop.id)!;
     const screen = project(x, y);
-    return { id: drop.id, x: screen.x / scale, y: screen.y / scale, width: Math.min(drop.item.kind === 'charm' ? charmMaxWidth : maxWidth, measure(label.name) + label.levelWidth + label.inset + 18) };
+    return { id: drop.id, x: screen.x / scale, y: screen.y / scale, width: Math.min(drop.item.kind === 'charm' ? charmMaxWidth : maxWidth, measure(label.name) + (label.greater ? 13 : 0) + label.levelWidth + label.inset + 18) };
   });
   const boxes = layoutLootLabels(anchors, width / scale, height / scale);
   const targets = groundLootVisibility(boxes.map(box => ({ id: box.id, x: box.left * scale, y: box.top * scale,
@@ -89,7 +90,7 @@ export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly Grou
   c.save(); c.scale(scale, scale);
   for (const b of boxes) {
     if (!visibleIds.has(b.id)) continue;
-    const { drop, name, level, levelWidth, inset } = labels.get(b.id)!, color = TIER_COLORS[drop.item.tier];
+    const { drop, name, level, levelWidth, inset, greater } = labels.get(b.id)!, color = TIER_COLORS[drop.item.tier];
     const center = b.left + b.width / 2;
     // Only displaced labels need a connector; a nearby label already identifies its drop.
     if (Math.abs(center - b.x) > 10 || b.y - b.top - b.height > 18 || b.top > b.y) {
@@ -114,8 +115,13 @@ export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly Grou
       c.lineTo(b.left + 8, b.top + 12); c.lineTo(b.left + 5.5, b.top + 9.5); c.closePath();
       if (drop.item.tier === 'common') c.stroke(); else c.fill();
     }
-    const available = b.width - levelWidth - inset - 18;
-    text(c, fitLootName(name, available, measure), b.left + inset, b.top + 6, nameSize, color);
+    const available = b.width - levelWidth - inset - 18 - (greater ? 13 : 0);
+    const fitted = fitLootName(name, available, measure);
+    if (greater && fitted) {
+      const x = b.left + inset + measure(fitted) + 7, y = b.top + 9.5;
+      polygon(c, [[x,y-4],[x+1.2,y-1.2],[x+4,y],[x+1.2,y+1.2],[x,y+4],[x-1.2,y+1.2],[x-4,y],[x-1.2,y-1.2]], '#e2eef1');
+    }
+    text(c, fitted, b.left + inset, b.top + 6, nameSize, color);
     if (b.width > levelWidth + 26) text(c, level, b.left + b.width - 7, b.top + 7, levelSize, '#92a6b0', 'right', 'interface');
   }
   c.restore();

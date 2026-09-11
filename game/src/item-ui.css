@@ -95,3 +95,10 @@
 @supports not (color: color-mix(in srgb, red, blue)) {
   .ui-item-slot[data-filled='true'] { background: linear-gradient(145deg, #233440, #0b141d 75%); border-color: var(--item-color, #607b86); }
 }
+
+/* Quiet silver engraving: quality stays separate from rarity. */
+.ui-greater-affix { display: inline-flex; width: .8em; height: .8em; margin-inline-end: .35em; vertical-align: .02em; color: #e2eef1; }
+.ui-greater-affix svg { width: 100%; height: 100%; fill: currentColor; }
+.ui-item-heading h4 .ui-greater-affix { margin-inline: .12em 0; width: .65em; height: .65em; }
+.ui-item-greater { position: absolute; top: 4px; right: 5px; pointer-events: none; line-height: 1; }
+.ui-item-greater .ui-greater-affix { width: 10px; height: 10px; margin: 0; filter: drop-shadow(0 1px 2px #081119); }

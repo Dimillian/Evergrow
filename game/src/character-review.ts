@@ -15,7 +15,7 @@ import { PostFX } from './postfx.ts';
 import { GameShell } from './game-shell.ts';
 import { InventoryPanel } from './inventory-panel.ts';
 import { SkillTreePanel } from './skill-tree-panel.ts';
-import { generateItem } from './items.ts';
+import { generateItem, deriveItem } from './items.ts';
 import { addInventoryItem, equipItem, unequipItem, moveInventoryItem, allocateAttribute } from './inventory.ts';
 import { allocateNode, SKILL_NODES, SKILL_TREE } from './skill-tree.ts';
 import { awardCharacterExperience, refreshCharacter, assignSkill } from './character.ts';
@@ -71,6 +71,12 @@ if(new URLSearchParams(location.search).has('charms')) {
     if (!addInventoryItem(p.character, generateItem(48000 + i, p.level,
       i % 2 ? 'amulet' : 'ring', undefined, tiers[i % tiers.length]))) break;
   }
+}
+if (new URLSearchParams(location.search).has('greater')) {
+  const item = generateItem(99, 35, 'weapon', 'ember-staff', 'legendary');
+  item.recipe.rolls = item.recipe.rolls.map((_, i) => i === 0 || i === 2 ? .97 : .5);
+  p.character.inventory[6] = deriveItem(item);
+  p.character.inventoryLayout = resolvePackLayout(p.character);
 }
 const loadout = new URLSearchParams(location.search).get('loadout');
 const profile = loadout === 'bow' ? 'crescent-recurve' : loadout === 'staff' ? 'storm-staff'

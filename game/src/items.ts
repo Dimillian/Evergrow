@@ -1,4 +1,4 @@
-import { itemRollMultiplier } from './item-roll-content.ts';
+import { itemRollMultiplier, hasGreaterAffix, GREATER_AFFIX_SYMBOL } from './item-roll-content.ts';
 import { isOffensiveAttribute, offensiveAttributeImplicitScale } from './attribute-content.ts';
 import { manaImplicitScale } from './mana-content.ts';
 import { CHARM_DROP_CHANCE, CHARM_PROFILES, CHARM_SIZES, CHARM_FLAVORS, CHARM_UTILITY_AFFIXES, CHARM_WEIGHTS, charmProfile, charmAffixCount, charmThematicStat } from './charm-content.ts';
@@ -361,7 +361,7 @@ function applyWeaponEnchantment(item: Item): Item {
     ...(enchantment ? { glow: ELEMENT_COLORS[enchantment.element] } : {}) } };
   return item;
 }
-export const itemDisplayName = (item: Item): string => `${item.name}${item.recipe.enhancement ? ` +${item.recipe.enhancement}` : ''}`;
+export const itemDisplayName = (item: Item): string => `${item.name}${item.recipe.enhancement ? ` +${item.recipe.enhancement}` : ''}${hasGreaterAffix(item) ? ` ${GREATER_AFFIX_SYMBOL}` : ''}`;
 
 /** Charms share item recipes, rarity and affix definitions; size owns their budget. */
 function generateCharm(seed: number, itemLevel: number, profileId?: string, tierOverride?: ItemTier): Item {
