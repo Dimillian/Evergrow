@@ -1,14 +1,46 @@
 import type { Enemy, EnemyKind, Player } from './model.ts';
-import { ENCOUNTER_RULES } from './encounter-director.ts';
+import { ENCOUNTER_RULES, chooseEncounterRank, encounterRankChances } from './encounter-director.ts';
+import { normalizeLevel, type EnemyRank } from './progression-content.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { isEnemyInactive, isSpawnHidden, SPAWN_VISIBILITY_MARGIN, type SpawnExclusion } from './spawn-visibility.ts';
 
 export const ROAMING_RULES = Object.freeze({
-  warmupPopulation: ENCOUNTER_RULES.basePopulation, warmupInterval: .65, maxGroupSize: 6, retryInterval: .45,
+  warmupPopulation: ENCOUNTER_RULES.basePopulation, warmupInterval: .65, maxGroupSize: 20, retryInterval: .45,
+  memberPlacementAttempts: 4, placementBudget: 256, outerRadius: 190, placementNudge: 20,
   minInterval: 2.2, maxInterval: 3.8, minTravel: 180, maxTravel: 280,
   minimumDistance: 300, leadMin: 30, leadMax: 90, groupRadius: 100, corridorHalfWidth: 140,
   retirementMargin: 650, behindDistance: 430, behindProjection: -220,
 });
+export const ROAMING_PACK_BANDS = Object.freeze([
+  Object.freeze({ through:12, min:4, max:6 }), Object.freeze({ through:25, min:6, max:9 }),
+  Object.freeze({ through:40, min:8, max:12 }), Object.freeze({ through:60, min:11, max:16 }),
+  Object.freeze({ through:1_000_000, min:14, max:20 }),
+]);
+export function roamingPackBand(level:number) {
+  return ROAMING_PACK_BANDS.find(b=>normalizeLevel(level)<=b.through)!;
+}
+/** Extra members retain a chance of every rank, with ordinary foes favored. */
+export function roamingMemberRank(level:number, index:number, roll:number):EnemyRank {
+  if(index<6)return chooseEncounterRank(level,roll);
+  const odds=encounterRankChances(level);
+  return roll<odds.elite*.25?'elite':roll<odds.elite*.25+odds.veteran*.5?'veteran':'normal';
+}
+export function roamingFormationRadius(size:number):number {
+  return (size>8?ROAMING_RULES.outerRadius:ROAMING_RULES.groupRadius)+ROAMING_RULES.placementNudge;
+}
+/** Two loose rings give large groups space without making a giant empty circle. */
+export function roamingMemberOffset(size:number,index:number,heading:number,random:()=>number,attempt=0) {
+  let x=0,y=0;
+  if(index>0){
+    const inner=size>8?6:size-1, outer=index>inner;
+    const count=outer?size-1-inner:inner, slot=outer?index-inner-1:index-1;
+    const step=Math.PI*2/count, angle=heading+slot*step+(outer?step*.5:0)+(unit(random())-.5)*step*.12;
+    const radius=(outer?ROAMING_RULES.outerRadius:ROAMING_RULES.groupRadius)*(.93+unit(random())*.07);
+    x=Math.cos(angle)*radius;y=Math.sin(angle)*radius;
+  }
+  if(attempt){const angle=unit(random())*Math.PI*2;x+=Math.cos(angle)*ROAMING_RULES.placementNudge;y+=Math.sin(angle)*ROAMING_RULES.placementNudge;}
+  return {x,y};
+}
 export const ROAMING_GROUPS: Readonly<Partial<Record<EnemyKind, readonly EnemyKind[]>>> = Object.freeze({
   thornReaver: Object.freeze(['thornReaver', 'hound', 'thornReaver', 'stalker', 'thornReaver', 'hound'] as const),
   mireSpitter: Object.freeze(['mireSpitter', 'thornReaver', 'stalker', 'mireSpitter', 'stalker', 'wisp'] as const),
@@ -34,7 +66,7 @@ export function roamingEscortRole(leader: Pick<Enemy,'kind'|'rank'> | undefined,
 type Position = Pick<Player, 'x' | 'y'>;
 export interface TravelHeading { x: number; y: number }
 const unit = (value: number) => Math.max(0, Math.min(1 - Number.EPSILON, Number.isFinite(value) ? value : 0));
-const groupClearance = ROAMING_RULES.groupRadius + Math.max(...Object.values(ENEMY_DEFINITIONS).map(enemy => enemy.radius));
+const largestBody = Math.max(...Object.values(ENEMY_DEFINITIONS).map(enemy => enemy.radius));
 
 /** Time paces encounters, but exploration earns them. Standing still cannot keep
  * refilling a cleared patch, and a blocked placement never spends travel credit. */
@@ -64,9 +96,10 @@ export class RoamingEncounters {
     this.cooldown = Math.max(0, this.cooldown - dt);
   }
   get ready(): boolean { return this.cooldown <= 0 && (this.warmup > 0 || this.distance >= this.requiredDistance); }
-  groupSize(available: number, roll: number): number {
-    const size = roll < .25 ? 4 : roll < .75 ? 5 : ROAMING_RULES.maxGroupSize;
-    return Math.max(0, Math.min(size, available, this.warmup > 0 ? this.warmup : ROAMING_RULES.maxGroupSize));
+  groupSize(level: number, roll: number): number {
+    const band=roamingPackBand(level);
+    const size=band.max===6?(roll<.25?4:roll<.75?5:6):band.min+Math.floor(unit(roll)*(band.max-band.min+1));
+    return Math.min(size,this.warmup>0?this.warmup:ROAMING_RULES.maxGroupSize);
   }
   resolved(count: number, random: () => number): void {
     if (!count) { this.cooldown = ROAMING_RULES.retryInterval; return; }
@@ -81,7 +114,8 @@ export class RoamingEncounters {
 /** Sample beyond the actual camera rectangle, regardless of zoom or aspect ratio.
  * Most new groups lie ahead of travel; later attempts also search the flanks. */
 export function roamingSpawnAnchor(player: Position, view: SpawnExclusion, heading: TravelHeading,
-  random: () => number, attempt: number): { x: number; y: number; angle: number } {
+  random: () => number, attempt: number, formationRadius:number=ROAMING_RULES.groupRadius): { x: number; y: number; angle: number } {
+  const groupClearance=formationRadius+largestBody;
   const forward = attempt < 18;
   const angle = forward ? Math.atan2(heading.y, heading.x) : unit(random()) * Math.PI * 2;
   // A fixed world-space corridor stays encounterable even when zoomed far out.

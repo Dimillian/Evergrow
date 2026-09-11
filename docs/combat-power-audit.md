@@ -4,6 +4,8 @@ The initial audit below describes the last recorded published source, `b12ee24d2
 
 ## Local tuning — 2026-09-11
 
+Subsequent approved density pass: wilderness pack bands are now 4–6, 6–9, 8–12, 11–16 and 14–20 at encounter levels 1–12, 13–25, 26–40, 41–60 and 61+. Extra slots favor ordinary enemies. The earlier tuning results below changed neither health nor density; the later pack pass is documented in [progression and loot](progression-and-loot.md). The current tool includes these bands and pressure estimates up to twenty attackers.
+
 Ordinary health, damage, attack timing, pack size, rank odds and rewards stay unchanged. Elites deal 25% more raw damage before rounding and recover 15% faster after attacks; all four dungeon/wilderness boss kinds deal 25% more and recover 20% faster. Windups, aim locks, action geometry, active durations and boss phase warnings are preserved. This increases elite Stalker/Brute/Hexer theoretical attack frequency by roughly 7–8%, rather than 15%, because their warnings remain the same length.
 
 Veterans accept 80% control duration (maximum 1 second), followed by 3.5 seconds protected from another stun, freeze or stagger. Elites accept 50% (maximum 0.6 seconds), followed by 4 seconds protected. Bosses retain their 25% duration / 0.35-second maximum, with 2.5 seconds protected after control ends. Melee and elemental interruptions share the same policy. Knockback is 65% on veterans, 35% on elites and 15% on bosses, relative to each archetype's existing shove. Ordinary foes remain fully controllable. Slow effects retain their existing separate behavior.

@@ -11,6 +11,7 @@ import { skillWeapon } from './skill-content.ts';
 import { unlockedSkills } from './skill-tree.ts';
 import { enemyRecoveryDuration } from './enemy-threat.ts';
 import { chainLifeOnHitMultiplier } from './skill-execution-content.ts';
+import { roamingPackBand, ROAMING_RULES } from './roaming-encounters.ts';
 import type { EnemyKind } from './model.ts';
 
 export interface CloudObservation {
@@ -41,7 +42,8 @@ export function readAuditSample(raw: string): AuditSample {
 export function powerGrowth(maxLevel = 100) {
   return Array.from({ length: Math.min(1000, Math.max(1, Math.floor(maxLevel))) }, (_, i) => {
     const level = i + 1, ranks = encounterRankChances(level);
-    return { level, weapon: itemPowerScale(level), monsterHp: monsterHealthScale(level),
+    const band=roamingPackBand(level);
+    return { level, packMin:band.min, packMax:band.max, weapon: itemPowerScale(level), monsterHp: monsterHealthScale(level),
       monsterHit: monsterDamageScale(level) / monsterDamageScale(1),
       // Isolates one attribute budget; not a reconstruction of any character.
       casterHit: itemPowerScale(level) * (1 + .03 * 3 * (level - 1)),
@@ -57,7 +59,7 @@ export function enemyAudit(level: number, kind: EnemyKind = 'stalker', rank: Ene
 }
 export function packPressure(level: number, kind: EnemyKind = 'stalker') {
   const enemy = enemyAudit(level, kind);
-  return Array.from({ length: 16 }, (_, i) => {
+  return Array.from({ length: ROAMING_RULES.maxGroupSize }, (_, i) => {
     const count = i + 1, rate = count * enemy.idealAttacksPerSecond;
     return { count, rawDps: rate * enemy.damage,
       // Poisson arrivals with a non-extending damage-immunity window. This is an

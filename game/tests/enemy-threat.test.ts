@@ -71,7 +71,7 @@ test('elite escorts complement their leader within each biome without increasing
   }
   assert.equal(roamingEscortRole({kind:'stalker',rank:'normal'},1),undefined);
   assert.equal(roamingEscortRole({kind:'stalker',rank:'elite'},3),undefined);
-  assert.equal(ROAMING_RULES.maxGroupSize,6);
+  assert.equal(ROAMING_RULES.maxGroupSize,20);
 });
 
 test('reloading a pre-tuning actor preserves wounds, identity and level while deriving current damage',()=>{

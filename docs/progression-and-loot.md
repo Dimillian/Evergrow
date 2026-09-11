@@ -1,5 +1,25 @@
 # Progression, threat, and loot
 
+## Larger wilderness packs — local 2026-09-11
+
+Roaming pack size now follows the captured encounter baseline at its spawn anchor:
+
+| Encounter level | Pack size |
+| --- | --- |
+| 1–12 | 4–6 |
+| 13–25 | 6–9 |
+| 26–40 | 8–12 |
+| 41–60 | 11–16 |
+| 61+ | 14–20 |
+
+The first six slots retain normal rank odds. Additional slots use one quarter of the regional elite chance and half the veteran chance, leaving 88% ordinary / 10% veteran / 2% elite at high levels. Every rank remains possible; there is no concurrent population cap. Companion recipes repeat within the biome, and elite leaders retain their complementary escort roles. Larger packs use two loose rings with local obstacle adjustments. Admission reserves the full footprint outside the camera and validates the complete group; failed placement creates no partial group. Each planning pass has at most 256 member candidates, followed by spawn revalidation.
+
+The initial population remains sixteen, so its final group can be smaller. Travel requirements and cooldowns are unchanged. Pack size derives from the encounter's regional baseline, not directly from the player: returning home still produces 4–6-member groups. Dungeon room populations, camps and event waves are unchanged. Existing actors, saves and progress require no reset. The progression power-audit tool now displays pack ranges and crowd pressure through twenty attackers.
+
+Verification: 72 focused spawn, region, camp, control and tooling tests pass, along with type checking and the production build. Headless samples on real terrain generated 18, 16 and 15-member packs for seeds 7319, 18427 and 90210 respectively. This verifies placement, not crowded-combat frame rate; gameplay density and performance remain player testing.
+
+## Earlier challenge tuning
+
 2026-09-11 local challenge tuning: elites have 25% stronger raw hits and 15% shorter post-attack recovery; dungeon and wilderness bosses have 25% stronger hits and 20% shorter recovery. Normal health/damage/timing and all warning lengths remain unchanged. Veterans, elites and bosses resist repeated control and knockback; elite-led roaming packs combine ranged, heavy and flanking roles within their biome, without adding actors. See [combat power audit](combat-power-audit.md) for rules, tests and before/after measurements. Existing progress and wounds remain compatible; loading reconstructs damage with the new tuning at each enemy's saved level/rank.
 
 Local regional monster expansion adds six biome-weighted archetypes, mixed packs, two-basic/one-signature attack cycles, procedural anatomy and matching remains. See [regional monsters](regional-monsters.md) for combat and spawn weights. Existing characters remain compatible.
