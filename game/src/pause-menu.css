@@ -28,6 +28,7 @@
 .pause-option[hidden], .pause-detail [hidden] { display: none; }
 .pause-option .ui-button { height: 30px; min-height: 30px; padding: 5px 10px; font-size: 12px; }
 .pause-toggle { min-width: 56px; }
+.pause-option [data-loot-names] { width: auto; min-width: 0; max-width: 120px; padding: 5px 8px; font-size: 12px; }
 .pause-toggle[aria-pressed="true"] { color: #c6dfcd; border-color: #6d987e80; background: #29433966; }
 .pause-stepper { display: flex; gap: 5px; }
 .pause-stepper .ui-button { width: 32px; padding: 6px; }

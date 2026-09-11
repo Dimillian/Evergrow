@@ -7,6 +7,7 @@ import { itemDropShapes } from './item-art.ts';
 import { drawGearShapes } from './equipment-art.ts';
 import { polygon } from './art-primitives.ts';
 import { layoutLootLabels, groundLootName, fitLootName, LOOT_LABEL_STYLE } from './loot-label-layout.ts';
+import { groundLootVisibility, type GroundLootVisibility } from './ground-loot-hover.ts';
 
 /** Separate silhouettes in a multi-item drop without changing pickup/save positions. */
 function lootPositions(drops: readonly GroundItem[]) {
@@ -69,7 +70,8 @@ export function drawResourcePickups(c: CanvasRenderingContext2D, pickups: readon
 
 /** Compact single-line ground names; full generated names belong in item inspection. */
 export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly GroundItem[],
-  project: (x: number, y: number) => { x: number; y: number }, width: number, height: number) {
+  project: (x: number, y: number) => { x: number; y: number }, width: number, height: number,
+  visibility: GroundLootVisibility = { showAll: true }) {
   const { scale, nameSize, levelSize, maxWidth, charmMaxWidth } = LOOT_LABEL_STYLE;
   const measure = (value: string) => textWidth(value, nameSize);
   const positions = lootPositions(drops);
@@ -81,8 +83,12 @@ export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly Grou
     return { id: drop.id, x: screen.x / scale, y: screen.y / scale, width: Math.min(drop.item.kind === 'charm' ? charmMaxWidth : maxWidth, measure(label.name) + label.levelWidth + label.inset + 18) };
   });
   const boxes = layoutLootLabels(anchors, width / scale, height / scale);
+  const targets = groundLootVisibility(boxes.map(box => ({ id: box.id, x: box.left * scale, y: box.top * scale,
+    width: box.width * scale, height: box.height * scale, anchorX: box.x * scale, anchorY: box.y * scale })), visibility);
+  const visibleIds = new Set(targets.filter(label => label.visible).map(label => label.id));
   c.save(); c.scale(scale, scale);
   for (const b of boxes) {
+    if (!visibleIds.has(b.id)) continue;
     const { drop, name, level, levelWidth, inset } = labels.get(b.id)!, color = TIER_COLORS[drop.item.tier];
     const center = b.left + b.width / 2;
     // Only displaced labels need a connector; a nearby label already identifies its drop.
@@ -113,6 +119,5 @@ export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly Grou
     if (b.width > levelWidth + 26) text(c, level, b.left + b.width - 7, b.top + 7, levelSize, '#92a6b0', 'right', 'interface');
   }
   c.restore();
-  return boxes.map(box => ({ id: box.id, x: box.left * scale, y: box.top * scale,
-    width: box.width * scale, height: box.height * scale, anchorX: box.x * scale, anchorY: box.y * scale }));
+  return targets;
 }
