@@ -22,8 +22,8 @@ export function trackChronicleEvent(p:Player,enemies:readonly Enemy[],e:CombatEv
    break;}
  case 'hurt': metric(c,'damageTaken',e.actualValue??e.value);if(e.remainingHp===0){metric(c,'deaths');const s=c.sources.find(s=>s.id===c.active)!;metric(c,'highestDeathTime',s.values.time??0);}break;
  case 'heal':metric(c,'healing',e.value);break;
- case 'potion':metric(c,'potions');metric(c,'healing',e.life);metric(c,'manaRestored',e.mana);break;
- case 'pickup':metric(c,e.heavy?'healing':'manaRestored',e.value);break;
+ case 'potion':metric(c,'potions');metric(c,'healing',e.life);metric(c,'manaRestored',e.mana);metric(c,'manaRecovery:potion',e.mana);break;
+ case 'pickup':metric(c,e.heavy?'healing':'manaRestored',e.value);if(!e.heavy)metric(c,'manaRecovery:vial',e.value);break;
  case 'dodge':metric(c,'dodges');break;
  case 'block':metric(c,'blocks');metric(c,'damageBlocked',e.value);break;
  case 'gold':metric(c,'goldFound',e.amount);metric(c,'goldEarned',e.amount);metric(c,'largestGold',e.amount);break;

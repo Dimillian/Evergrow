@@ -424,6 +424,7 @@ export class Simulation {
     for (const id of Object.keys(p.skillCooldowns) as SkillId[]) p.skillCooldowns[id] = Math.max(0, p.skillCooldowns[id]! - dt);
     p.healFlash = Math.max(0, p.healFlash - dt);
     metric(p.chronicle,'manaRestored',Math.min(p.maxMana-p.mana,p.derived.manaRegeneration*dt));
+    metric(p.chronicle,'manaRecovery:passive',Math.min(p.maxMana-p.mana,p.derived.manaRegeneration*dt));
     p.mana = Math.min(p.maxMana, p.mana + p.derived.manaRegeneration * dt);
     metric(p.chronicle,'healing',Math.min(p.maxHp-p.hp,p.derived.lifeRegeneration*dt));
     p.hp = Math.min(p.maxHp, p.hp + p.derived.lifeRegeneration * dt);

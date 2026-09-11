@@ -1,3 +1,5 @@
+import { resourceBenchmark } from './resource-benchmark.ts';
+import baseline from './tools/data/resource-baseline.json';
 import { buildPowerAudit, readAuditSample, enemyAudit, type AuditSample } from './power-audit.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { escapeUI as e } from './ui-components.ts';
@@ -32,11 +34,17 @@ export function mountPowerAudit(root: HTMLElement, signal: AbortSignal) {
     }));
     const metricRows = report.sample ? Object.entries(report.sample.metrics).map(([key,value])=>`<tr><th>${e(key)}</th><td>${fmt(value)}</td></tr>`).join('') : '';
     const exact = report.exactBuild;
+    const resourceRows=resourceBenchmark().map(b=>{
+      const old=baseline.builds.find(o=>o.level===b.level&&o.style===b.style&&o.gear===b.gear)!;
+      return `<tr><th>${b.level} · ${b.style} · ${b.gear}</th><td>${fmt(old.mana)} → ${fmt(b.mana)}</td><td>${fmt(old.regen)} → ${fmt(b.regen)}</td><td>${fmt(old.manaPerCast)} → ${fmt(b.manaPerCast)}</td><td>${b.isolatedBurstSeconds===null?'Sustained':fmt(b.isolatedBurstSeconds)+' s'}</td></tr>`;
+    }).join('');
     root.querySelector('[data-results]')!.innerHTML = `
       <section class="ui-window study-detail"><h2>Enemy pressure · level ${level}</h2><p>Current → proposed. Ideal back-to-back attacks, before armor, resistance, block, misses or control. Windups stay unchanged.</p>
       <div class="study-table-wrap"><table><thead><tr><th>Enemy</th><th>Life</th><th>Raw hit</th><th>Attacks / second</th><th>Raw damage / second</th></tr></thead><tbody>${rows.join('')}</tbody></table></div></section>
       ${exact ? `<section class="ui-window study-detail"><h2>${e(exact.name)} · Lv ${exact.level}</h2><p>Life ${fmt(exact.hp)} · Mana ${fmt(exact.mana)} · Basic theoretical DPS ${fmt(exact.basicDps)}</p><pre>${e(JSON.stringify(exact.arc,null,2))}</pre><p>Skill estimate excludes mana downtime, travel, missed targets and temporary combat buffs.</p></section>` : '<p>A full character snapshot is required for current DPS, resistances, charm bonuses, tree and mana sustainability. Summary power alone cannot reconstruct them.</p>'}
       ${report.sample ? `<section class="ui-window study-detail"><h2>${e(report.sample.name)} · cloud history</h2><p>Level ${report.sample.level} · ${e(new Date(report.sample.updatedAt).toISOString())}. Cumulative across the journey; not current combat DPS.</p><div class="study-table-wrap"><table><tbody>${metricRows}</tbody></table></div></section>` : ''}
+      <section class="ui-window study-detail"><h2>Resource benchmark · before → current</h2><p>Fixed seeded loadouts, levels 10–50. Ordinary: Rare gear, rank 3. Strong: Epic +5, rank 5, eight recovery pebbles. Sustain: the same gear with 48 recovery pebbles. Three offense / two Vitality points per level. Burst duration excludes kills, vials and potions.</p>
+      <div class="study-table-wrap"><table><thead><tr><th>Fixture</th><th>Mana</th><th>Mana / second</th><th>Cost / cast</th><th>Current isolated burst</th></tr></thead><tbody>${resourceRows}</tbody></table></div></section>
       <section class="ui-window study-detail"><h2>Level growth · relative to level one</h2><div class="study-table-wrap"><table><thead><tr><th>Level</th><th>Weapon</th><th>Monster life</th><th>Monster hit</th><th>Weapon + 3 Int / level</th><th>Enemy cadence</th><th>Roaming pack</th></tr></thead><tbody>${report.growth.filter(p=>[1,12,20,32,50,100].includes(p.level)).map(p=>`<tr><th>${p.level}</th><td>${fmt(p.weapon)}×</td><td>${fmt(p.monsterHp)}×</td><td>${fmt(p.monsterHit)}×</td><td>${fmt(p.casterHit)}×</td><td>${fmt(p.enemyCadence)}×</td><td>${p.packMin}–${p.packMax}</td></tr>`).join('')}</tbody></table></div><p>Attribute-only caster illustration: same-quality weapon, no affixes, charms, tree or skill multipliers.</p></section>`;
     root.dataset.ready = 'true'; root.setAttribute('aria-busy','false');
   }
