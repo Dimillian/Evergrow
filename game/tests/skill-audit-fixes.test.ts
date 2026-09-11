@@ -178,29 +178,26 @@ test('sustained feedback outlives cast recovery and skill audio distinguishes im
     assert.equal(skillSoundFamily({type:'cast',skill:id,x:0,y:0,angle:0}),family);
 });
 
-test('one meteor barrage gives each target a full first hit and reduced repeats, with a fresh budget on recast',()=>{
+test('every meteor in a barrage deals full damage to each overlapping target',()=>{
   const h=setup('cataclysm'),enemies=[h.target(100),h.target(105)];h.cast();
   const impacts=h.sim.groundEffects.filter(e=>e.kind==='meteor');assert.equal(impacts.length,7);
-  const budget=impacts[0].repeatHits!;assert.ok(budget);assert.ok(impacts.every(e=>e.repeatHits===budget));
   const base=impacts[0].damage,totals=new Map<number,number>(),counts=new Map<number,number>();
   for(let i=0;i<360;i++){
     enemies.forEach((e,j)=>{e.x=100+j*5;e.y=0;e.stagger=60;e.knockbackX=e.knockbackY=0;});h.step();
     for(const event of h.sim.drainEvents())if(event.type==='hit'&&!event.periodic){totals.set(event.targetId,(totals.get(event.targetId)??0)+event.value);counts.set(event.targetId,(counts.get(event.targetId)??0)+1);}
   }
-  for(const e of enemies){assert.equal(counts.get(e.id),7);assert.equal(totals.get(e.id),Math.round(base)+6*Math.round(base*.2));}
-  h.p.castTime=0;h.p.skillCooldowns.cataclysm=0;h.cast();
-  const next=h.sim.groundEffects.find(e=>e.kind==='meteor')!;assert.ok(next);assert.notEqual(next.repeatHits,budget);assert.equal(next.repeatHits!.targets.size,0);
+  for(const e of enemies){assert.equal(counts.get(e.id),7);assert.equal(totals.get(e.id),7*Math.round(base));}
 });
 
-test('projectile fans share a cast budget through direct and explosion contacts',()=>{
+test('every projectile in a fan deals full damage through direct and explosion contacts',()=>{
   const h=setup('fireball','fireball-fork'),enemies=[h.target(35),h.target(40)];h.cast();
-  const shots=h.sim.projectiles;assert.equal(shots.length,3);assert.ok(shots.every(s=>s.effects!.repeatHits===shots[0].effects!.repeatHits));
+  const shots=h.sim.projectiles;assert.equal(shots.length,3);
   const base=shots[0].damage,totals=new Map<number,number>(),counts=new Map<number,number>();
   for(let i=0;i<120;i++){
     enemies.forEach((e,j)=>{e.x=35+j*5;e.y=0;e.stagger=60;e.knockbackX=e.knockbackY=0;});h.step();
     for(const event of h.sim.drainEvents())if(event.type==='hit'&&!event.periodic){totals.set(event.targetId,(totals.get(event.targetId)??0)+event.value);counts.set(event.targetId,(counts.get(event.targetId)??0)+1);}
   }
-  for(const e of enemies){assert.equal(counts.get(e.id),3);assert.equal(totals.get(e.id),Math.round(base)+2*Math.round(base*.35));}
+  for(const e of enemies){assert.equal(counts.get(e.id),3);assert.equal(totals.get(e.id),3*Math.round(base));}
 });
 
 test('Fireball uses its authored burn without merging the generic contact rate',()=>{
@@ -210,8 +207,7 @@ test('Fireball uses its authored burn without merging the generic contact rate',
 });
 
 
-test('Shattered Sky trades focused damage for wider coverage and shares one cast budget',()=>{
+test('Shattered Sky spreads its five smaller impacts over wider ground',()=>{
   const h=setup('meteor','meteor-shards');h.cast();const effects=h.sim.groundEffects;
   assert.equal(effects.length,5);assert.ok(effects.some(e=>Math.hypot(e.x-100,e.y)>125));
-  assert.ok(effects.every(e=>e.repeatHits===effects[0].repeatHits));
 });

@@ -1,4 +1,3 @@
-import { castHitMultiplier } from './cast-hit-budget.ts';
 import { metric } from './chronicle.ts';
 import { skillWeapon } from './skill-content.ts';
 import type { ProjectileStyle, HitSnapshot } from './model.ts';
@@ -60,11 +59,10 @@ export function advanceGroundEffects(effects: ActiveGroundEffect[], dt: number, 
       for (const enemy of context.enemies) if (enemy.state !== 'dead'
         && Math.hypot(enemy.x - effect.x, enemy.y - effect.y) <= effect.radius + enemy.radius
         && context.visible(effect.x, effect.y, enemy.x, enemy.y)) {
-        const multiplier = effect.damage > 0 ? castHitMultiplier(effect.repeatHits, enemy.id) : 1;
         const offense = effect.offense;
-        if (effect.damage > 0) context.damage(enemy, effect.damage * multiplier, Math.atan2(enemy.y - effect.y, enemy.x - effect.x), false, effect.style, effect.kind === 'embers',
-          offense && multiplier !== 1 ? {...offense, lifeOnHit:offense.lifeOnHit * multiplier} : offense, effect.burn !== undefined);
-        if (effect.burn) applyBurn(enemy, multiplier === 1 ? effect.burn : {...effect.burn, dps:effect.burn.dps * multiplier});
+        if (effect.damage > 0) context.damage(enemy, effect.damage, Math.atan2(enemy.y - effect.y, enemy.x - effect.x), false, effect.style, effect.kind === 'embers',
+          offense, effect.burn !== undefined);
+        if (effect.burn) applyBurn(enemy, effect.burn);
         if (effect.slow) applySlow(enemy, effect.slow);
         if (effect.stun) applyStun(enemy, effect.stun, effect.style === 'frost' ? 'freeze' : 'stun');
         if (effect.style === 'lightning') context.emit({ type: 'chain', x: effect.x, y: effect.y, toX: enemy.x, toY: enemy.y, style: effect.style, skill: effect.skill });

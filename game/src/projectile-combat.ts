@@ -1,4 +1,3 @@
-import { castHitMultiplier } from './cast-hit-budget.ts';
 import { projectileDamageType } from './resistance-content.ts';
 import type { DamageType } from './model.ts';
 import type { ProjectileStyle, HitSnapshot } from './model.ts';
@@ -25,16 +24,15 @@ function hit(projectile: Projectile, enemy: Enemy, context: ProjectileContext): 
   const effects = projectile.effects;
   projectile.hitIds.add(enemy.id);
   const lifeBefore = enemy.hp;
-  const multiplier = castHitMultiplier(effects?.repeatHits, enemy.id);
   const offense = effects?.offense;
-  context.damage(enemy, projectile.damage * multiplier, projectile.angle, false, effects?.style,
-    offense && multiplier !== 1 ? {...offense, lifeOnHit:offense.lifeOnHit * multiplier} : offense, effects?.burnDuration !== undefined);
+  context.damage(enemy, projectile.damage, projectile.angle, false, effects?.style,
+    offense, effects?.burnDuration !== undefined);
   if (enemy.state !== 'dead') {
     if (effects?.slowDuration) {
       applySlow(enemy, { duration: effects.slowDuration, factor: effects.slowFactor ?? .6 });
     }
     if (effects?.burnDuration) {
-      applyBurn(enemy, { duration: effects.burnDuration, dps: (effects.burnDps ?? 0) * multiplier });
+      applyBurn(enemy, { duration: effects.burnDuration, dps: effects.burnDps ?? 0 });
     }
   }
   const p = context.player;

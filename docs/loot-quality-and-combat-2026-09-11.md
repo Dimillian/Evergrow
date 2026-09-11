@@ -17,7 +17,9 @@ Controlled single-slot comparisons hold all other pieces of the level-35 strong 
 
 These are complete eligible affix combinations, not typical drops or probabilities of finding four perfect rolls. The staff's raw damage stays fixed in this comparison; percentage affixes add to existing bonuses, rather than independently multiplying total damage. Its spell-damage affix itself changes +22% → +47%. Physical effective life is maximum life divided by one minus the sheet's same-level physical reduction; it excludes block, avoidance and regeneration. Actual survival depends on attacks and play.
 
-## Damage budgets and skill identity
+## Damage budgets and skill identity (historical experiment)
+
+**Subsequently reverted at the player's request:** the 35%/20% same-target reductions below are no longer active. Every connecting projectile/impact now deals full resolved damage, with unscaled authored burns and life-on-hit. The measurements in this section describe the discarded experiment, not current balance. Fireball's authored-burn correction, equipment-rank tuning, Shattered Sky coverage and elite durability remain.
 
 - **Projectile fans:** every enemy takes one full hit, then 35% damage from additional projectiles in that cast. Shared ledgers include explosions and piercing/fan variants; a projectile's own once-per-target ledger remains authoritative.
 - **Meteor barrages:** first impact against each enemy is full damage; repeats from that cast deal 20%. Repeated direct hits also scale their explicit burn and life-on-hit. Independent casts do not share ledgers. Ground fire remains a separate authored effect and never stacks additively.

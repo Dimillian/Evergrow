@@ -112,7 +112,6 @@ export interface ShieldDefinition {
 }
 /** Payload snapshots travel with a projectile; equipment changes cannot rewrite it in flight. */
 export interface ProjectileEffects {
-  repeatHits?: import('./cast-hit-budget.ts').CastHitBudget;
   offense?: HitSnapshot;
   style: ProjectileStyle;
   pierce?: number; chain?: number; chainRange?: number; blastRadius?: number;
@@ -285,7 +284,6 @@ export interface Projectile {
 }
 
 export interface GroundEffect {
-  repeatHits?: import('./cast-hit-budget.ts').CastHitBudget;
   id: number; kind: 'meteor' | 'arrowRain' | 'storm' | 'frost' | 'embers'; x: number; y: number; radius: number;
   delay: number; duration: number; interval: number; tick: number;
   damage: number; skill: SkillId; style: ProjectileStyle; offense?: HitSnapshot;

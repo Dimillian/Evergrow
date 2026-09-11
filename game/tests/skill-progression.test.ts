@@ -222,13 +222,3 @@ test('early equipment ranks remain valuable while deeper stacks taper without ch
   assert.equal(three.mana,base.mana);assert.equal(ten.mana,base.mana);assert.equal(ten.cooldown,base.cooldown);
   assert.equal(ten.effectiveRank,15);assert.equal(s.skillRanks.fireball,5);
 });
-
-
-test('every multi-projectile specialization resolves an explicit same-target budget',()=>{
-  for(const variant of SKILL_SPECIALIZATIONS){
-    const {p,sheet}=setup();sheet.allocatedNodes=['origin',`skill:${variant.skill}`,specializationNode(variant.id)];sheet.skillSpecializations[variant.skill]=variant.id;
-    const recipe=resolveSkill(variant.skill,p.derived,sheet).recipe;
-    if(recipe.kind==='projectile'&&recipe.offsets.length>1)assert.equal(recipe.repeatHitMultiplier,.35,variant.id);
-    if(recipe.kind==='ground'&&(recipe.scatter??1)>1)assert.equal(recipe.repeatHitMultiplier,.2,variant.id);
-  }
-});

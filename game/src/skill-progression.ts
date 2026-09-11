@@ -1,7 +1,7 @@
 import { AFFIX_COMBAT_RULES } from './equipment-affix-content.ts';
 import type { ActionResult, CharacterSheet, DerivedCharacterStats, SkillId } from './character-types.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
-import { SKILL_EXECUTION, MULTIHIT_RULES, type SkillExecution } from './skill-execution-content.ts';
+import { SKILL_EXECUTION, type SkillExecution } from './skill-execution-content.ts';
 
 /** First three equipment ranks remain strong; later stacks have a smaller marginal return. */
 export const SKILL_DAMAGE_RANK_RULES = Object.freeze({ purchased: .15, bonus: .12, bonusKnee: 3, bonusTail: .05 });
@@ -177,8 +177,6 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
   }
   if (recipe.kind === 'ground' && v === 'meteor-shards') { recipe.scatter = 5; recipe.radius *= .65; recipe.scatterRadiusMultiplier = 1.6; }
   variant?.modify?.(recipe);
-  if (recipe.kind === 'projectile' && recipe.offsets.length > 1) recipe.repeatHitMultiplier ??= MULTIHIT_RULES.projectile;
-  if (recipe.kind === 'ground' && (recipe.scatter ?? 1) > 1) recipe.repeatHitMultiplier ??= MULTIHIT_RULES.barrage;
   if (recipe.kind === 'guard') {
     const growth = .025 * (effectiveRank - 1);
     // Once reduction caps, additional ranks extend the guard instead of only raising its cost.
