@@ -77,3 +77,6 @@ The power-audit CLI also includes disposable `enemyPressureProbe` scenarios for 
 The Combat power audit (`/progression.html?view=power`) now includes the frozen-before/current mana benchmark, 28 reproducible synthetic loadouts and a full-snapshot mana source breakdown. `game/scripts/resource-benchmark.ts` runs 84 disposable headless encounters; see [resource balance](resource-balance.md). Neither tool reads or writes playable/cloud saves automatically.
 
 The complementary `game/scripts/damage-audit.ts /path/to/report.json` CLI compares 24 offensive fixtures, 300 damage-selected equipment sets and 280 single-cast contact/geometry probes using the existing disposable skill study. It writes JSON only, never loads playable saves and changes no runtime rules. Assumptions and findings are in [the September 11 damage audit](damage-audit-2026-09-11.md).
+
+
+The damage audit also reports controlled low/mid/high-roll Legendary staff/chest comparisons on otherwise identical level-35 builds. It records roll-range/rank coefficients and the elite target's actual life, so successive tuning reports remain interpretable when enemy durability changes. These are deliberately matched affix combinations, not drop-frequency estimates or the user's cloud character. See [loot and combat follow-up](loot-quality-and-combat-2026-09-11.md).

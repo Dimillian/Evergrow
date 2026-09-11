@@ -1,5 +1,5 @@
 import { previewSkillVariant } from './skill-variant-preview.ts';
-import { skillDamageSuffix } from './skill-execution-content.ts';
+import { skillDamageSuffix, skillRepeatHitLabel } from './skill-execution-content.ts';
 import { resolveSkill } from './skill-progression.ts';
 import type { SkillNode } from './skill-tree.ts';
 import type { CharacterSheet, DerivedCharacterStats, StatKey } from './character-types.ts';
@@ -31,7 +31,7 @@ export function skillTooltipMarkup(node: SkillNode, view: SkillTooltipView): str
     ${node.specialization && view.sheet ? specializationPreviewMarkup(node.specialization, view.costStats ?? { manaCostMultiplier: 1, cooldownMultiplier: 1 }, view.sheet) : ''}
     ${node.specialization ? '<small>Unlocks a selectable variant. One active per skill.</small>' : node.improvement ? '<small>Applies to all variants of this skill.</small>' : ''}</section>
     ${costs && skill ? `<section class="skill-tip-facts"><div><b>${costs.mana}</b><small>Mana</small></div><div><b>${costs.cooldown ? `${Number(costs.cooldown.toFixed(2))}s` : 'None'}</b><small>Cooldown</small></div>
-      ${costs.damageMultiplier ? `<div class="skill-tip-wide"><b>${Math.round(costs.damageMultiplier * 100)}%</b><small>Weapon damage${skillDamageSuffix(skill.id, costs.recipe)}</small></div>` : costs.recipe.kind === 'guard' ? `<div class="skill-tip-wide"><b>${Number(costs.recipe.duration.toFixed(2))}s · ${Math.round(costs.recipe.reduction * 100)}%</b><small>Guard · damage blocked</small></div>` : ''}
+      ${skillRepeatHitLabel(costs.recipe) ? `<div class="skill-tip-wide"><small>${skillRepeatHitLabel(costs.recipe)}</small></div>` : ''}${costs.damageMultiplier ? `<div class="skill-tip-wide"><b>${Math.round(costs.damageMultiplier * 100)}%</b><small>Weapon damage${skillDamageSuffix(skill.id, costs.recipe)}</small></div>` : costs.recipe.kind === 'guard' ? `<div class="skill-tip-wide"><b>${Number(costs.recipe.duration.toFixed(2))}s · ${Math.round(costs.recipe.reduction * 100)}%</b><small>Guard · damage blocked</small></div>` : ''}
       ${costs.upkeep ? `<div class="skill-tip-wide"><b>${costs.upkeep}</b><small>Mana / second</small></div>` : ''}
       <p class="skill-tip-wide">${escapeUI(skillRequirementLabel(skill.requirement))}${owned ? ` · Rank ${costs.rank}${costs.bonusRanks ? ` + ${costs.bonusRanks} gear` : ''}` : ''}</p>
       ${costs.variant ? `<p class="skill-tip-wide">${escapeUI(costs.variant.name)}</p>` : ''}</section>` : ''}
@@ -45,7 +45,7 @@ export function specializationPreviewMarkup(id: string, stats: Parameters<typeof
   const { before, after } = preview;
   const potency = (r: typeof before) => r.recipe.kind === 'guard'
     ? `${Number(r.recipe.duration.toFixed(2))}s · ${Math.round(r.recipe.reduction * 100)}% block`
-    : `${Math.round(r.damageMultiplier * 100)}% damage${skillDamageSuffix(after.variant!.skill, r.recipe)}`;
+    : `${Math.round(r.damageMultiplier * 100)}% damage${skillDamageSuffix(after.variant!.skill, r.recipe)}${skillRepeatHitLabel(r.recipe) ? ` · ${skillRepeatHitLabel(r.recipe)}` : ''}`;
   return `<div class="ui-well skill-variant-preview"><small>Current → with this specialization and required passives</small>
     <div class="ui-stat"><span>Mana</span><b>${before.mana} → ${after.mana}</b></div>
     <div class="ui-stat"><span>Cooldown</span><b>${Number(before.cooldown.toFixed(2))}s → ${Number(after.cooldown.toFixed(2))}s</b></div>

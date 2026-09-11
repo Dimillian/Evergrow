@@ -156,3 +156,14 @@ Projectile fans require all their projectile slots before paying mana or consumi
 Executioner's rear strike now deals 3× the equivalent Original frontal potency; only non-rear hits receive its 15% penalty. Shattered Sky has five impacts at 65% Original radius, and its falling stones scale with that radius. Iron Aegis gains duration after capping reduction, including effective ranks from equipment. These are deliberate corrections to the published tradeoffs and rank plateau; no save-format change or progress reset is introduced.
 
 See [weapons and skills](weapons-and-skills.md#skill-contact-and-feedback--2026-09-07) for the contact/GFX pass and [the audit](skill-audit-2026-09-07.md#implementation-follow-up--2026-09-07) for its resolution matrix. Combat feel, sound balance and visual composition still need player acceptance.
+
+
+## Loot and focused-damage tuning · local September 11 follow-up
+
+Purchased ranks keep their 15%-per-rank damage progression and original mana/cooldown costs. Equipment ranks contribute 12 percentage points each for the first three, then 5 each for further ranks, inside the same rank multiplier. At purchased rank 5, +3 gear ranks grant 22.5% more damage and +10 grant 44.375% (formerly 28.125% and 93.75%). The ten-rank cap, drop quantiles, effective-rank display and Bulwark utility progression remain unchanged.
+
+Every multi-projectile cast shares a per-target hit ledger: the first hit against each enemy is full strength; subsequent arrows/projectiles from that cast deal 35%. This includes blast contacts and piercing/fan variants, while each individual projectile still cannot hit a target twice. Scattered meteor casts use 20% for subsequent impacts against the same enemy. Direct damage, explicit burn rates and life-on-hit procs follow the repeat multiplier. Separate casts have separate ledgers; additional enemies each receive a full first hit. Cast ledgers live only with their active missiles/effects and are released with them, without permanent enemy/save state.
+
+Shattered Sky's four outer centers now lie 1.6 impact radii from the aim point rather than 0.7, so its reduced focused damage buys substantially wider coverage. Blocked/occluded centers retain the existing fallback to the aim point; repeated hits still share the budget. Other barrage positions remain unchanged. Tree sidebar/tooltips and specialization comparisons show the same-target repeat percentage from the resolved recipe.
+
+Fire attacks with an explicit burn recipe suppress the generic contact burn. Fireball now applies its authored 12%-of-hit-per-second rate for three seconds rather than merging the generic 15% rate with its longer duration. Basic fire bolts and elemental melee keep their generic burn; periodic damage still cannot crit or recursively apply contact burns. Ground fire keeps its separate authored rate, with normal strongest-rate/longest-duration status merging across distinct applications.

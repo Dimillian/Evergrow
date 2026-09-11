@@ -1,5 +1,12 @@
 # Progression, threat, and loot
 
+## Later elite durability — local September 11 follow-up
+
+Non-boss elites retain their original health through monster level 14, covering the home region's normal 1–12 range and +2 elite offset. Above that, an extra health multiplier ramps linearly to +50% at level 37, then stays capped. A level-37 elite Stalker now has 4,875 life instead of 3,250. Ordinary/veteran health, every boss's health, outgoing damage, attack cadence, loot and XP are unchanged by this pass. This is source-level scaling, never scaling to the player's current gear or DPS.
+
+Already active actors are not mutated. Restored actors reconstruct maxima from current source-level rules while retaining saved current HP, and camp wounds retain their saved HP; loading does not heal old encounters to the higher maximum. Fresh enemies receive the complete new health budget. Existing character progress and encounter levels remain compatible. See [loot/tuning measurements](loot-quality-and-combat-2026-09-11.md).
+
+
 ## Attack pressure — local 2026-09-11
 
 Ordinary ranged basics now prepare in 0.70–0.75 seconds; the Thorn Reaver's basic slash takes 0.45 seconds. Melee preparation tracks longer before committing: normal Brute locks at 0.60 of its 0.95-second windup; quick elite melee leaves at least 0.22 seconds locked. Ground marks, long pounces and regional signature warnings retain their escape windows. Each action adds a deterministic 0–0.12-second variation to its warning, without drawing from combat or loot RNG or imposing shared attack slots.

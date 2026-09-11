@@ -1,8 +1,9 @@
+import { isBossKind } from './wilderness-boss-content.ts';
 import { enemyThreat } from './enemy-threat.ts';
 import { geoHash } from './world-geography.ts';
 import { routeDangerDistance } from './road-shape.ts';
 import { sampleBiome } from './biomes.ts';
-import { normalizeLevel, ENEMY_RANKS, monsterDamageScale, monsterExperienceScale, monsterHealthScale, type EnemyRank } from './progression-content.ts';
+import { normalizeLevel, ENEMY_RANKS, eliteDurabilityMultiplier, monsterDamageScale, monsterExperienceScale, monsterHealthScale, type EnemyRank } from './progression-content.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import type { EnemyKind } from './model.ts';
 export const ZONE_RULES = Object.freeze({ regionSize: 3600, travelPerLevel: 6000 });
@@ -86,7 +87,7 @@ export function getZoneAt(x: number, y: number, seed = 7319): ZoneProgression {
 export function scaledEnemyStats(kind: EnemyKind, level: number, rank: EnemyRank) {
   const base = ENEMY_DEFINITIONS[kind], quality = ENEMY_RANKS[rank];
   return {
-    maxHp: Math.max(1, Math.round(base.hp * monsterHealthScale(level) * quality.healthMultiplier)),
+    maxHp: Math.max(1, Math.round(base.hp * monsterHealthScale(level) * quality.healthMultiplier * (rank === 'elite' && !isBossKind(kind) ? eliteDurabilityMultiplier(level) : 1))),
     damage: Math.max(1, Math.round(base.damage * monsterDamageScale(level) * quality.damageMultiplier * enemyThreat({kind,rank}).damage)),
     xpReward: Math.max(1, Math.round(base.xpReward * monsterExperienceScale(level) * quality.xpMultiplier)),
   };

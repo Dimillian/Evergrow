@@ -1,4 +1,6 @@
 import { execFileSync } from 'node:child_process';
+import { ITEM_ROLL_RULES } from '../src/item-roll-content.ts';
+import { SKILL_DAMAGE_RANK_RULES } from '../src/skill-progression.ts';
 import { ATTRIBUTE_DAMAGE_BONUSES } from '../src/attribute-content.ts';
 import { writeFileSync } from 'node:fs';
 import { benchmarkPlayer, BENCHMARK_SKILLS, BENCHMARK_LEVELS } from '../src/resource-benchmark.ts';
@@ -147,7 +149,24 @@ const bonusRankCases=[0,3,10].map(bonus=>{
   const r=resolveSkill('arcLightning',{...p.derived,skillBonuses:{arcLightning:bonus}},p.character);
   return {purchased:r.rank,bonus,effective:r.effectiveRank,damageMultiplier:r.damageMultiplier,mana:r.mana};
 });
-const report={source:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),workingTreeDirty:!!execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),attributeDamageBonuses:ATTRIBUTE_DAMAGE_BONUSES,builds,contacts,distances,scaling,gearSamples,affixExamples,bonusRankCases,
-  assumptions:'24 synthetic seeded builds, not Dimillian. Contact probes use rank 1, no crits, no prerequisite passives, a 1000-damage training weapon, infinite training mana, pinned high-life bodies, one cast and 20 seconds. Values normalize by derived weapon damage. Eight-body contact probes deliberately overlap bodies to measure clustered coverage bounds, not natural encounter geometry. Resource/TTK comparisons remain separate. Counterfactuals are independent removals, not additive attribution. Additional 100 gear samples/style use level 35, rank 5, Epic +5, no charms/specializations/extra passives/offhand, three offense and two Vitality points/level; greedily select among eight generated candidates per slot for expected first-target DPS. Weapon profile alternatives are included. These are damage-selected sets, not random-drop distributions, not optimized global maxima, and not estimates of acquisition time.'};
+// Identical complete Legendary items; vary only their saved affix percentiles.
+const itemUpgradeExamples = (['weapon','chest'] as const).map(slot => {
+  const style = slot === 'weapon' ? 'caster' : 'melee';
+  const template = generateItem(555,35,slot,slot==='weapon'?'ember-staff':undefined,'legendary',slot==='chest'?'iron':undefined);
+  const stats: StatKey[] = slot === 'weapon' ? ['spellDamagePercent','intelligence','critChance','critDamage'] : ['maxHp','armor','vitality','lifeRegen'];
+  const pool = itemAffixPool(template);
+  template.affixes = stats.map(stat=>{const definition=pool.find(a=>a.stat===stat);if(!definition)throw new Error(`Invalid loot comparison: ${stat}`);return {name:definition.name,stat,value:1};});
+  return {slot,style,level:35,tier:'legendary',enhancement:0,material:template.recipe.materialId,rolls:[0,.5,1].map(quantile=>{
+    const item = deriveItem({...template,recipe:{...template.recipe,rolls:stats.map(()=>quantile)}});
+    const p = benchmarkPlayer(35,style,'strong');p.character.equipped[slot]=item;refreshCharacter(p);
+    const a=deriveAttackStats(p.stats,p.equipment.mainHand),skill=resolveSkill(BENCHMARK_SKILLS[style],p.derived,p.character);
+    const expectedHit=a.damage*skill.damageMultiplier*(1+p.derived.critChance*(p.derived.critMultiplier-1));
+    return {quantile,affixes:item.affixes,expectedHit:round(expectedHit),expectedActionDps:round(expectedHit*a.attacksPerSecond),
+      maxHp:p.maxHp,armor:p.derived.armor,physicalReduction:p.derived.damageReduction,
+      physicalEffectiveLife:round(p.maxHp/(1-p.derived.damageReduction)),lifeRegeneration:p.derived.lifeRegeneration};
+  })};
+});
+const report={source:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),workingTreeDirty:!!execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),attributeDamageBonuses:ATTRIBUTE_DAMAGE_BONUSES,itemRollRules:ITEM_ROLL_RULES,skillDamageRankRules:SKILL_DAMAGE_RANK_RULES,eliteTargetLife:scaledEnemyStats('stalker',37,'elite').maxHp,builds,contacts,distances,scaling,gearSamples,affixExamples,bonusRankCases,itemUpgradeExamples,
+  assumptions:'24 synthetic seeded builds, not Dimillian. Contact probes use rank 1, no crits, no prerequisite passives, a 1000-damage training weapon, infinite training mana, pinned high-life bodies, one cast and 20 seconds. Values normalize by derived weapon damage. Eight-body contact probes deliberately overlap bodies to measure clustered coverage bounds, not natural encounter geometry. Resource/TTK comparisons remain separate. Counterfactuals are independent removals, not additive attribution. Item-upgrade examples vary all four eligible affix percentiles together on one unenhanced level-35 Legendary, holding all other build pieces fixed; these are deliberately matched affix combinations, not drop probabilities. Additional 100 gear samples/style use level 35, rank 5, Epic +5, no charms/specializations/extra passives/offhand, three offense and two Vitality points/level; greedily select among eight generated candidates per slot for expected first-target DPS. Weapon profile alternatives are included. These are damage-selected sets, not random-drop distributions, not optimized global maxima, and not estimates of acquisition time.'};
 writeFileSync(process.argv[2]??'/tmp/evergrow-damage-audit.json',JSON.stringify(report,null,2));
 console.log(`Audited ${builds.length} builds, ${contacts.length} skill/formation cases and ${distances.length} distance/body cases.`);

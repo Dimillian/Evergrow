@@ -50,7 +50,7 @@ test('melee and freeze share elite immunity without blocking damage or spending 
 test('rank tuning preserves normal life, rewards, windups and immutable source stats',()=>{
   const ordinary=scaledEnemyStats('stalker',32,'normal'),elite=scaledEnemyStats('stalker',32,'elite');
   assert.deepEqual(ordinary,{maxHp:653,damage:42,xpReward:132});
-  assert.equal(elite.maxHp,2612);assert.equal(elite.damage,79);assert.equal(elite.xpReward,658);
+  assert.equal(elite.maxHp,3635);assert.equal(elite.damage,79);assert.equal(elite.xpReward,658);
   const {sim,enemy}=fixture('elite'),before={damage:enemy.damage,hp:enemy.maxHp,lootSeed:enemy.lootSeed,level:enemy.level};
   sim.player.level=99;assert.deepEqual({damage:enemy.damage,hp:enemy.maxHp,lootSeed:enemy.lootSeed,level:enemy.level},before);
   assert.equal(ENEMY_DEFINITIONS.stalker.windup,.42);

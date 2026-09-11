@@ -1,6 +1,7 @@
+import { ENEMY_DEFINITIONS } from '../src/combat-content.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { armorReduction, itemPowerScale, MAX_CONTENT_LEVEL, normalizeLevel } from '../src/progression-content.ts';
+import { armorReduction, itemPowerScale, MAX_CONTENT_LEVEL, normalizeLevel, eliteDurabilityMultiplier, monsterHealthScale, ENEMY_RANKS } from '../src/progression-content.ts';
 import { enemyLootSeed, getZoneAt, scaledEnemyStats } from '../src/zone-progression.ts';
 import { deriveCharacterStats } from '../src/character-stats.ts';
 import { createCharacterSheet } from '../src/items.ts';
@@ -50,4 +51,17 @@ test('loot source identity depends only on spawn seed, ordinal and original loca
   assert.equal(seeds.size, 1000);
   assert.notEqual(enemyLootSeed(17, 4, -3300, 900), enemyLootSeed(18, 4, -3300, 900));
   assert.notEqual(enemyLootSeed(17, 4, -3300, 900), enemyLootSeed(17, 4, -3301, 900));
+});
+
+
+test('elite durability ramps only beyond home levels, caps, and leaves other ranks and bosses unchanged',()=>{
+  assert.equal(eliteDurabilityMultiplier(1),1);assert.equal(eliteDurabilityMultiplier(14),1);
+  assert.ok(eliteDurabilityMultiplier(25)>1&&eliteDurabilityMultiplier(25)<1.5);
+  assert.equal(eliteDurabilityMultiplier(37),1.5);assert.equal(eliteDurabilityMultiplier(1000000),1.5);
+  assert.equal(scaledEnemyStats('stalker',37,'elite').maxHp,4875);
+  for(const kind of ['stalker','warden','briarMatriarch','ashColossus','graveMarshal'] as const)for(const rank of ['normal','veteran','elite'] as const){
+    if(kind==='stalker'&&rank==='elite')continue;
+    const expected=Math.round(ENEMY_DEFINITIONS[kind].hp*monsterHealthScale(37)*ENEMY_RANKS[rank].healthMultiplier);
+    assert.equal(scaledEnemyStats(kind,37,rank).maxHp,expected);
+  }
 });

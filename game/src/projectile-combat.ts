@@ -1,3 +1,4 @@
+import { castHitMultiplier } from './cast-hit-budget.ts';
 import { projectileDamageType } from './resistance-content.ts';
 import type { DamageType } from './model.ts';
 import type { ProjectileStyle, HitSnapshot } from './model.ts';
@@ -13,7 +14,7 @@ export interface ProjectileContext {
   containers?: ContainerAttackContext;
   schedule(effect: GroundEffectRequest): void;
   player: Player; enemies: Enemy[]; world: WorldQuery;
-  damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle, offense?: HitSnapshot): void;
+  damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle, offense?: HitSnapshot, authoredBurn?: boolean): void;
   hurt(amount: number, angle: number, sourceLevel: number, damageType: DamageType, sourceKind?: EnemyKind): void;
   onScreen(enemy: Enemy): boolean;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
@@ -24,13 +25,16 @@ function hit(projectile: Projectile, enemy: Enemy, context: ProjectileContext): 
   const effects = projectile.effects;
   projectile.hitIds.add(enemy.id);
   const lifeBefore = enemy.hp;
-  context.damage(enemy, projectile.damage, projectile.angle, false, projectile.effects?.style, projectile.effects?.offense);
+  const multiplier = castHitMultiplier(effects?.repeatHits, enemy.id);
+  const offense = effects?.offense;
+  context.damage(enemy, projectile.damage * multiplier, projectile.angle, false, effects?.style,
+    offense && multiplier !== 1 ? {...offense, lifeOnHit:offense.lifeOnHit * multiplier} : offense, effects?.burnDuration !== undefined);
   if (enemy.state !== 'dead') {
     if (effects?.slowDuration) {
       applySlow(enemy, { duration: effects.slowDuration, factor: effects.slowFactor ?? .6 });
     }
     if (effects?.burnDuration) {
-      applyBurn(enemy, { duration: effects.burnDuration, dps: effects.burnDps ?? 0 });
+      applyBurn(enemy, { duration: effects.burnDuration, dps: (effects.burnDps ?? 0) * multiplier });
     }
   }
   const p = context.player;

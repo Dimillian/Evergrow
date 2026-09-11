@@ -1,3 +1,4 @@
+import { createCastHitBudget } from './cast-hit-budget.ts';
 import { chainLifeOnHitMultiplier } from './skill-execution-content.ts';
 import { metric } from './chronicle.ts';
 import { consumeSpellweave } from './affix-combat.ts';
@@ -124,6 +125,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
     case 'projectile': {
       const { burnDamageMultiplier, groundDamageMultiplier, ...payload } = recipe.effects;
       const effects: ProjectileEffects = { ...payload, offense,
+        ...(recipe.offsets.length > 1 ? {repeatHits:createCastHitBudget(recipe.repeatHitMultiplier ?? 1)} : {}),
         ...(groundDamageMultiplier !== undefined ? { groundDps: damage * groundDamageMultiplier } : {}),
         ...(burnDamageMultiplier !== undefined ? { burnDps: damage * burnDamageMultiplier } : {}) };
       for (const offset of recipe.offsets) {
@@ -137,12 +139,13 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
     case 'ground': {
       const point = recipe.follow || recipe.effect === 'frost' ? { x: p.x, y: p.y } : aimedPoint();
       const count = recipe.scatter ?? 1;
+      const repeatHits = count > 1 ? createCastHitBudget(recipe.repeatHitMultiplier ?? 1) : undefined;
       for (let i = 0; i < count; i++) {
-        const angle = i * Math.PI * 2 / count, radius = i ? recipe.radius * .7 : 0;
+        const angle = i * Math.PI * 2 / count, radius = i ? recipe.radius * (recipe.scatterRadiusMultiplier ?? .7) : 0;
         const candidate = { x: point.x + Math.cos(angle) * radius, y: point.y + Math.sin(angle) * radius };
         const target = context.world.blocked(candidate.x, candidate.y, 1) || !context.visible(point.x, point.y, candidate.x, candidate.y) ? point : candidate;
         context.schedule({ kind: recipe.effect, ...target, radius: recipe.radius, delay: recipe.delay + i * .18,
-          duration: recipe.duration, interval: recipe.interval, damage, offense, skill: id, style: recipe.style,
+          duration: recipe.duration, interval: recipe.interval, damage, offense, repeatHits, skill: id, style: recipe.style,
           follow: recipe.follow, upkeep: costs.upkeep, slow: recipe.slow, stun: recipe.stun,
           ...(recipe.scorch ? { scorch: { duration: recipe.scorch.duration, interval: recipe.scorch.interval, dps: damage * recipe.scorch.damageMultiplier } } : {}),
           ...(recipe.burn ? { burn: { duration: recipe.burn.duration, dps: damage * recipe.burn.damageMultiplier } } : {}) });

@@ -21,7 +21,7 @@ export interface PlayerDamageContext {
 
 /** One contact owner: damage, awareness, impulse, interruption and death commitment. */
 export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean,
-  context: EnemyDamageContext, periodic = false, style?: ProjectileStyle, elementalDamage?: number, offense?: HitSnapshot): void {
+  context: EnemyDamageContext, periodic = false, style?: ProjectileStyle, elementalDamage?: number, offense?: HitSnapshot, authoredBurn = false): void {
   if (enemy.state === 'dead') return;
   if (!periodic) {
     alertEnemy(enemy, context.player);
@@ -33,7 +33,7 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
   // Contact status uses the elemental portion, never physical damage or recursive burn ticks.
   const statusDamage = elementalDamage ?? (style === 'fire' || style === 'frost' || style === 'lightning' ? damage : 0);
   if (!periodic) primeSpellweave(context.player, melee, style);
-  if (!periodic) applyElementalContact(enemy, style, statusDamage);
+  if (!periodic && !(style === 'fire' && authoredBurn)) applyElementalContact(enemy, style, statusDamage);
   const elementFraction=style && projectileDamageType(style)==='arcane'?1:Math.min(1,Math.max(0,statusDamage/Math.max(1,damage)));
   const hitStats = offense ?? context.player.derived;
   const critical = !periodic && hitStats.critChance > 0 && context.random() < hitStats.critChance;

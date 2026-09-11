@@ -623,7 +623,7 @@ export class Simulation {
     return hasLineOfSight(this.world, ax, ay, bx, by);
   }
 
-  private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean, periodic = false, style?: ProjectileStyle, elementalDamage?: number, offense?: HitSnapshot): void {
+  private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean, periodic = false, style?: ProjectileStyle, elementalDamage?: number, offense?: HitSnapshot, authoredBurn = false): void {
     damageEnemy(enemy, damage, angle, melee, {
       player: this.player, enemies: this.enemies, random: () => this.random(),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by), emit: event => this.emit(event),
@@ -635,7 +635,7 @@ export class Simulation {
         });
         this.kills = reward.kills; this.killRecharge = reward.recharge;
       },
-    }, periodic, style, elementalDamage, offense);
+    }, periodic, style, elementalDamage, offense, authoredBurn);
   }
 
   private updateEnemies(dt: number): void {
@@ -744,7 +744,7 @@ export class Simulation {
       containers: this.containerContext(),
       player: this.player, enemies: this.enemies, world: this.world,
       onScreen: enemy => enemyInCombatViewport(enemy, this.combatViewport),
-      damage: (enemy, amount, angle, melee, style, offense) => this.damageEnemy(enemy, amount, angle, melee, false, style, undefined, offense),
+      damage: (enemy, amount, angle, melee, style, offense, authoredBurn) => this.damageEnemy(enemy, amount, angle, melee, false, style, undefined, offense, authoredBurn),
       hurt: (amount, angle, sourceLevel, damageType, sourceKind) => this.damagePlayer(amount, angle, sourceLevel, damageType, sourceKind),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       emit: event => this.emit(event),
@@ -764,7 +764,7 @@ export class Simulation {
       containers: this.containerContext(),
       player: this.player,
       enemies: this.enemies, visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
-      damage: (enemy, amount, angle, melee, style, periodic = false, offense) => this.damageEnemy(enemy, amount, angle, melee, periodic, style, undefined, offense),
+      damage: (enemy, amount, angle, melee, style, periodic = false, offense, authoredBurn) => this.damageEnemy(enemy, amount, angle, melee, periodic, style, undefined, offense, authoredBurn),
       emit: event => this.emit(event),
     });
   }

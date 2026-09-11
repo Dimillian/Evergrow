@@ -1,5 +1,8 @@
 # Current system status
 
+Local, 2026-09-11 follow-up: wider affix quality (0.65–1.35×), tapered equipment-rank damage, per-cast repeated-hit budgets for fans/barrages, corrected authored fire burns, and gradual elite durability above home levels. [Measurements and remaining limits](loot-quality-and-combat-2026-09-11.md). Not yet published.
+
+
 Local, 2026-09-11: Strength and Intelligence now each grant 1.5% damage per added point; their equipment/charm rolls and jewelry implicits taper. Enchanters offer one free attribute refund. Existing items update on validated load. The repeat audit shows substantially lower hits but remaining skill-driven elite burst; see [offensive attribute follow-up](offensive-attribute-balance-2026-09-11.md). Not yet published.
 
 

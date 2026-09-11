@@ -1,7 +1,14 @@
 import { AFFIX_COMBAT_RULES } from './equipment-affix-content.ts';
 import type { ActionResult, CharacterSheet, DerivedCharacterStats, SkillId } from './character-types.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
-import { SKILL_EXECUTION, type SkillExecution } from './skill-execution-content.ts';
+import { SKILL_EXECUTION, MULTIHIT_RULES, type SkillExecution } from './skill-execution-content.ts';
+
+/** First three equipment ranks remain strong; later stacks have a smaller marginal return. */
+export const SKILL_DAMAGE_RANK_RULES = Object.freeze({ purchased: .15, bonus: .12, bonusKnee: 3, bonusTail: .05 });
+export function skillRankDamageMultiplier(rank: number, bonusRanks: number): number {
+  const r = SKILL_DAMAGE_RANK_RULES;
+  return 1 + r.purchased * (rank - 1) + r.bonus * Math.min(bonusRanks, r.bonusKnee) + r.bonusTail * Math.max(0, bonusRanks - r.bonusKnee);
+}
 
 export interface SkillSpecialization {
   readonly id: string; readonly skill: SkillId; readonly name: string; readonly description: string;
@@ -35,7 +42,7 @@ export const SKILL_SPECIALIZATIONS: readonly SkillSpecialization[] = Object.free
   spec('arc-focus', 'arcLightning', 'Concentrated Current', '60% more damage, but only three targets. Costs 45% more mana.', 1.45, 1.6),
   spec('nova-echo', 'iceNova', 'Echoing Frost', 'A second nova expands after 0.6 seconds at 60% damage. Costs 70% more mana.', 1.7),
   spec('nova-deep', 'iceNova', 'Deep Winter', '30% more radius and a stronger, longer slow; 15% less damage. Costs 40% more mana.', 1.4, .85),
-  spec('meteor-shards', 'meteor', 'Shattered Sky', 'Five impacts with 35% smaller radius spread across the target area at 45% damage each. Costs 90% more mana; 25% longer cooldown.', 1.9, .45, 1.25),
+  spec('meteor-shards', 'meteor', 'Shattered Sky', 'Five impacts with 35% smaller radius spread across a wider target area at 45% damage each. Costs 90% more mana; 25% longer cooldown.', 1.9, .45, 1.25),
   spec("cleave-economy", "cleave", "Measured Cut", "25% less mana, 15% less damage.", 0.75, 0.85, 1, change('sweep', { arc: Math.PI * 1.4 })),
   spec("whirlwind-economy", "whirlwind", "Steady Revolutions", "30% less mana, 20% less damage.", 0.7, 0.8, 1, change('sweep', { arc: Math.PI * 2 })),
   spec("shield-control", "shieldBash", "Concussion", "2-second stun, 30% less damage. Costs 20% more mana.", 1.2, 0.7, 1, change('cone', { stun: 2 })),
@@ -134,7 +141,7 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
   const cooldownFloor = id === 'bulwark' ? 4 : base.tier === 'ultimate' ? 12 : 0;
   const rankCooldown = base.tier === 'basic' ? 1 : 1 + .05 * (rank - 1);
   const cooldown = Math.max(cooldownFloor, base.cooldown * stats.cooldownMultiplier * rankCooldown * (variant?.cooldown ?? 1));
-  const damageMultiplier = base.damageMultiplier * (1 + development.potency) * (1 + .15 * (effectiveRank - 1)) * (variant?.damage ?? 1) * (overload ? 1.3 : 1);
+  const damageMultiplier = base.damageMultiplier * (1 + development.potency) * skillRankDamageMultiplier(rank, bonusRanks) * (variant?.damage ?? 1) * (overload ? 1.3 : 1);
   const recipe: SkillExecution = { ...SKILL_EXECUTION[id] };
   // Resolve variations once at release, never by inspecting a player's current gear mid-flight.
   const v = variant?.id;
@@ -168,8 +175,10 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
     if (v === 'nova-echo') recipe.echo = true;
     if (v === 'nova-deep') { recipe.radius *= 1.3; recipe.slow = { factor: .3, duration: 4 }; }
   }
-  if (recipe.kind === 'ground' && v === 'meteor-shards') { recipe.scatter = 5; recipe.radius *= .65; }
+  if (recipe.kind === 'ground' && v === 'meteor-shards') { recipe.scatter = 5; recipe.radius *= .65; recipe.scatterRadiusMultiplier = 1.6; }
   variant?.modify?.(recipe);
+  if (recipe.kind === 'projectile' && recipe.offsets.length > 1) recipe.repeatHitMultiplier ??= MULTIHIT_RULES.projectile;
+  if (recipe.kind === 'ground' && (recipe.scatter ?? 1) > 1) recipe.repeatHitMultiplier ??= MULTIHIT_RULES.barrage;
   if (recipe.kind === 'guard') {
     const growth = .025 * (effectiveRank - 1);
     // Once reduction caps, additional ranks extend the guard instead of only raising its cost.

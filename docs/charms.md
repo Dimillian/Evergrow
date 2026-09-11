@@ -85,3 +85,6 @@ Mana-regeneration potency uses `0.35 × occupied cells` instead of the generic s
 ## Offensive attribute follow-up · local September 11
 
 Strength/Intelligence use the shared tapered item budget. At level 35, a middle-roll Rare Storm Pebble's Intelligence roll is now +2 (previously +4); a Rare Monolith's is +7 (previously +14). At the new 1.5% spell conversion, eight such pebbles provide +24 percentage points of spell damage from Intelligence, previously +96. Cast speed, direct damage, resistance and other utility rolls are unchanged. Small-stone concentration and total skill budgets still need the next balance pass; this change does not claim to resolve every per-cell tradeoff. Existing charms update through the shared `offenseVersion` repricing on load.
+
+
+The subsequent local quality pass widens continuous rolls to 0.65–1.35× their midpoint, shared with equipment. Existing stones retain their saved percentile when repriced (`rollVersion: 1`). Positive whole-number minimums, stone potency, per-affix resistance caps and total reward caps still apply; very small affixes may therefore have fewer distinct values than larger ones.

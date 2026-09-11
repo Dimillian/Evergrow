@@ -26,3 +26,11 @@ export function armorReduction(armor: number, sourceLevel: number): number {
   const value = Number.isFinite(armor) ? Math.max(0, armor) : 0;
   return Math.min(.8, value / (value + 120 * itemPowerScale(sourceLevel)));
 }
+
+
+/** Home elites (including their +2 rank levels) retain their original durability. */
+export const ELITE_DURABILITY = Object.freeze({ startLevel: 14, fullLevel: 37, maximumBonus: .5 });
+export function eliteDurabilityMultiplier(level: number): number {
+  const r = ELITE_DURABILITY;
+  return 1 + r.maximumBonus * Math.max(0, Math.min(1, (normalizeLevel(level) - r.startLevel) / (r.fullLevel - r.startLevel)));
+}
