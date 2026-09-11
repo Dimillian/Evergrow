@@ -1,5 +1,21 @@
 # Evergrow changelog
 
+## v0.3.13 — 2026-09-11T13:50:00Z
+
+### Tweaks
+
+- Intelligence grants two maximum mana per point instead of four; its spell damage bonus is unchanged.
+- Maximum mana, mana regeneration and mana-on-kill bonuses grow more slowly on equipment and charms.
+- Regeneration bonuses display mana restored per five seconds, allowing smaller whole-number rolls on charms.
+- Mana cost reduction tapers above 20%, approaching a 40% maximum.
+- Dropped mana vials restore an amount based on the defeated monster's level, up to 16% of your maximum mana.
+
+### Fixes
+
+- Mana regeneration comparisons use matching units for the item bonus and equipment change.
+
+> Existing characters retain their progress. Existing items receive the updated mana bonuses when loaded; no save reset is required. Reload the game to apply this update.
+
 ## v0.3.12 — 2026-09-11T09:19:00Z
 
 ### Tweaks
