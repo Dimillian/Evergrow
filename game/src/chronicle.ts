@@ -8,6 +8,9 @@ export interface ChronicleCharacter { id: string; name: string; level: number; u
 export interface ChronicleLedger { version: 1; sources: Record<string, ChronicleSource>; characters: Record<string, ChronicleCharacter>; unlocked: Record<string,number>; }
 export const emptyChronicle = (): ChronicleLedger => ({version:1,sources:{},characters:{},unlocked:{}});
 export const freshChronicle = (id='current',name='Wayfarer',started=0):ChronicleProgress => ({version:1,active:id,sources:[{id,name,started,values:{},unlocked:{}}]});
+export type ChronicleRecord = Pick<CharacterSave, 'id' | 'name' | 'createdAt' | 'updatedAt'> & {
+  checkpoint: Pick<CharacterSave['checkpoint'], 'chronicle' | 'kills' | 'time' | 'level'>;
+};
 export const metricMode = (key:string):'sum'|'max' => /^(highest|largest|longest|best|fastest|seen:|feat:)/.test(key)?'max':'sum';
 export function chronicleValues(sources: readonly ChronicleSource[]):Record<string,number> {
   const result:Record<string,number>={};
@@ -28,7 +31,7 @@ export function validChronicle(v:unknown):v is ChronicleProgress {
     &&new Set(p.sources.map(s=>s.id)).size===p.sources.length&&p.sources.some(s=>s.id===p.active);
 }
 /** Recover only recorded facts; never pretend historic damage, earnings or deaths were measured. */
-export function progressForRecord(record:CharacterSave):ChronicleProgress {
+export function progressForRecord(record:ChronicleRecord):ChronicleProgress {
   const stored=record.checkpoint.chronicle;
   const p=stored?cloneData(stored):freshChronicle(record.id,record.name,record.createdAt);
   for(const s of p.sources)if(s.id==='current')s.id=record.id;
@@ -65,7 +68,7 @@ export function mergeChronicles(...ledgers:ChronicleLedger[]):ChronicleLedger {
   for(const a of ACHIEVEMENTS)for(let tier=1;tier<=achievementTier(a,values);tier++)out.unlocked[a.id+':'+tier]??=at;
   return out;
 }
-export function recordChronicle(ledger:ChronicleLedger,record:CharacterSave,deleted=false):ChronicleLedger {
+export function recordChronicle(ledger:ChronicleLedger,record:ChronicleRecord,deleted=false):ChronicleLedger {
   const p=progressForRecord(record),addition=emptyChronicle();
   for(const s of p.sources)addition.sources[s.id]=s;
   addition.characters[record.id]={id:record.id,name:record.name,level:record.checkpoint.level,updatedAt:record.updatedAt,sources:p.sources.map(s=>s.id),deleted};

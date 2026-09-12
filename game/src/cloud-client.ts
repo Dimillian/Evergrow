@@ -13,7 +13,11 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
   status: CloudStatus = 'Synced';
   onStatus = (_status: CloudStatus) => {};
   message = '';
-  private uploadFailure: unknown;
+  private uploadFailure: { error: unknown; index: number } | undefined;
+  private deleting = new Set<number>();
+  private slotInfo = new Map<number, CloudInfo>();
+  private slotFailures = new Map<number, unknown>();
+  private writeFailures = new Map<number, unknown>();
   private remoteFailure: unknown;
   chart: (record: CharacterSave) => DecodedExploration | undefined = () => undefined;
   private worker: Worker | null = null;
@@ -65,9 +69,37 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
   private async rpc<T>(method: string, data: object = {}): Promise<T> {
     await this.ready;
     if (this.storageError) throw this.storageError;
-    return this.dispatch<T>(method, data);
+    const result = await this.dispatch<T>(method, data);
+    if (method === 'list-info') this.slotInfo = new Map((result as CloudInfo[]).map(row => [row.index, row]));
+    return result;
   }
-  private async cache<T>(command: CacheCommand): Promise<T> { return this.rpc('cache', { command }); }
+  private async cache<T>(command: CacheCommand): Promise<T> {
+    const result = await this.rpc<T>('cache', { command });
+    if (result && (command.kind === 'ack' || command.kind === 'resolve' || command.kind === 'delete')) {
+      this.slotFailures.delete(command.index);
+      if (command.kind !== 'ack') this.writeFailures.delete(command.index);
+      this.rememberSlot(result as unknown as CloudRow);
+    }
+    return result;
+  }
+  private rememberSlot(row: CloudRow) {
+    const { index, token, base, dirty, conflict } = row;
+    this.slotInfo.set(index, { index, token, base, dirty, conflict });
+    if (!dirty && !conflict) this.slotFailures.delete(index);
+  }
+  /** Gameplay reports its own checkpoint; the hall keeps the account-wide status. */
+  statusForSlot(index: number): { status: CloudStatus; message: string } {
+    if (this.storageError) return { status: cloudFailureStatus(this.storageError), message: this.storageError.message };
+    const writeFailure = this.writeFailures.get(index);
+    if (writeFailure) return { status: cloudFailureStatus(writeFailure), message: `This character could not be saved on this device. ${writeFailure instanceof Error ? writeFailure.message : 'Retry from the hall.'}` };
+    const row = this.slotInfo.get(index);
+    if (!row) return { status: this.status, message: this.message };
+    if (row.conflict) return { status: 'Conflict', message: 'Saved on this device. Resolve this character’s cloud conflict in the hall.' };
+    if (row.invalid) return { status: 'Save needs attention', message: 'This character’s recovery needs attention in the hall.' };
+    const failure = this.slotFailures.get(index);
+    if (failure) return { status: cloudFailureStatus(failure), message: `Cloud upload failed for this character. ${failure instanceof Error ? failure.message : 'Retry from the hall.'}` };
+    return { status: row.dirty ? 'Saving…' : 'Synced', message: row.dirty ? 'Saved on this device. Awaiting cloud upload.' : '' };
+  }
   private async api<T>(path: string, body?: object): Promise<T> {
     // Serialization failures belong to local storage, before attempting the network.
     const encoded = body ? await this.rpc<string>('encode-request', { body }) : undefined;
@@ -84,8 +116,9 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
     } catch (error) { this.remoteFailure = error; throw error; }
   }
   private setStatus(status: CloudStatus, message = '') { this.status = status; this.message = message; this.onStatus(status); }
-  private failed(error: unknown) { const status = cloudFailureStatus(error); this.setStatus(status, status === 'Offline' ? 'Could not reach cloud saves. Check your connection and retry.' : error instanceof Error ? error.message : 'Cloud saves unavailable.'); }
+  private failed(error: unknown, index?: number) { const status = cloudFailureStatus(error); const message = status === 'Offline' ? 'Could not reach cloud saves. Check your connection and retry.' : error instanceof Error ? error.message : 'Cloud saves unavailable.'; this.setStatus(status, index === undefined ? message : `Slot ${index + 1}: ${message}`); }
   private slot(row: CloudRow): SaveSlot {
+    this.rememberSlot(row);
     const r = row.bundle?.character;
     return { index: row.index, record: r ?? null, token: row.token, state: r ? 'saved' : 'empty', pending: row.dirty, conflict: row.conflict };
   }
@@ -96,7 +129,7 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
       local = await this.rpc<CloudInfo[]>('list-info');
       const remote = await this.api<{ slots: { index: number; revision: number; summary: SaveSummary | null }[] }>('characters');
       local = await this.rpc<CloudInfo[]>('list-info');
-      if (this.uploadFailure) this.failed(this.uploadFailure);
+      if (this.uploadFailure) this.failed(this.uploadFailure.error, this.uploadFailure.index);
       else this.setStatus(local.some(r => r.invalid) ? 'Save needs attention' : local.some(r => r.conflict) ? 'Conflict' : local.some(r => r.dirty) ? 'Saving…' : 'Synced');
       return remote.slots.map(r => {
         const cached = local.find(c => c.index === r.index);
@@ -161,7 +194,7 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
       return { ...this.slot(row), cloudState: 'cloud' };
     } catch (error) {
       this.failed(error);
-      if (error instanceof CloudSaveError) {
+      if (error instanceof CloudSaveError || error instanceof CloudError && error.status === 422) {
         const info = (await this.rpc<CloudInfo[]>('list-info')).find(r => r.index === index);
         return { index, token: info?.token ?? null, record: null, state: 'invalid', pending: info?.dirty, conflict: info?.conflict };
       }
@@ -177,43 +210,43 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
       let chart = this.chart(record);
       if (!chart) { const old = await this.cache<CloudRow | null>({ kind: 'read', index }); chart = old?.bundle?.character.id === record.id ? bundleChart(old.bundle) : undefined; }
       const row = await this.rpc<{ token: string; conflict: boolean } | null>('write-bundle', { index, record, chart, expected, operation: crypto.randomUUID() });
-      if (!row) return { ok: false, message: 'Character changed in another tab. Reopen it before saving.' };
+      if (!row) throw new CloudSaveError('This character or slot changed. Resolve its cloud save in the hall before saving.');
+      this.writeFailures.delete(index);
+      this.slotInfo.set(index, { index, token: row.token, base: this.slotInfo.get(index)?.base ?? 0, dirty: true, conflict: row.conflict });
       this.setStatus(row.conflict ? 'Conflict' : 'Saving…');
       // Durable local writes coalesce until the next 30-second upload window.
       return { ok: true, token: row.token };
-    } catch (error) { this.failed(error); return { ok: false, message: (error as Error).message }; }
-  }
-  private async commit(index: number, expected: string | null, bundle: SaveBundle | null): Promise<SaveResult> {
-    try {
-      const row = await this.cache<CloudRow | null>({ kind: 'write', index, expected, bundle, operation: crypto.randomUUID() });
-      if (!row) return { ok: false, message: 'Character changed in another tab. Reopen it before saving.' };
-      this.setStatus(row.conflict ? 'Conflict' : 'Saving…');
-      // Upload is asynchronous; the complete bundle is already durable before gameplay proceeds.
-      queueMicrotask(() => { void this.flush(); });
-      return { ok: true, token: row.token };
-    } catch (error) { this.failed(error); return { ok: false, message: (error as Error).message }; }
+    } catch (error) { this.writeFailures.set(index, error); this.failed(error, index); return { ok: false, message: (error as Error).message }; }
   }
   async remove(index: number, expected: string | null): Promise<SaveResult> {
+    if (this.deleting.has(index)) return { ok: false, message: 'Deletion is already pending. Wait for confirmation.' };
+    this.deleting.add(index);
+    let deleted = false;
     try {
+      // Finish an existing upload, but do not publish queued recovery just to delete it.
+      await this.syncing;
       const row = await this.cache<CloudRow | null>({ kind: 'inspect', index });
-      if (!row?.conflict) return this.commit(index, expected, null);
-      if (row.token !== expected) return { ok: false, message: 'Recovery changed. Select it again before deleting.' };
-      // The hall confirms deletion of both branches. Keep recovery until the server
-      // acknowledges its revision-checked tombstone; a failed request remains retryable.
-      await this.flush();
-      const remote = await this.api<{ revision: number }>(`characters/${index}`);
+      if ((row?.token ?? null) !== expected) return { ok: false, message: 'Recovery changed. Select it again before deleting.' };
+      const remote = await this.api<{ revision: number }>(`characters/${index}?metadata=1`);
       const current = await this.cache<CloudRow | null>({ kind: 'inspect', index });
-      if (current?.token !== expected || !current.conflict) return { ok: false, message: 'Recovery changed. Select it again before deleting.' };
+      if ((current?.token ?? null) !== expected) return { ok: false, message: 'Recovery changed. Select it again before deleting.' };
       const result = await this.api<{ revision: number }>(`characters/${index}`, { expected: remote.revision, operation: crypto.randomUUID(), bundle: null });
-      const resolved = await this.cache<CloudRow | null>({ kind: 'resolve', index, expected: row.token, bundle: null, base: result.revision });
+      // No local tombstone until the server acknowledges. The token guard keeps any
+      // concurrent recovery edit, including when the response arrives after a new save.
+      const resolved = await this.cache<CloudRow | null>({ kind: 'delete', index, expected, base: result.revision });
       if (!resolved) return { ok: false, message: 'Cloud save deleted, but recovery changed in another tab. Select it again before deleting that copy.' };
-      await this.flush();
+      if (this.uploadFailure?.index === index) this.uploadFailure = undefined;
+      deleted = true;
       return { ok: true, token: resolved.token };
     } catch (error) {
-      this.failed(error);
+      this.failed(error, index);
       return { ok: false, message: error instanceof CloudError && error.status === 409
         ? 'Cloud save changed during deletion. Your recovery is still available. Select the character and try again.'
-        : 'Could not confirm cloud deletion. Your recovery is still available. Check your connection and sign-in, then try again.' };
+        : `Deletion was not confirmed. Your recovery is still available. ${error instanceof Error ? error.message : 'Retry from the character hall.'}` };
+    } finally {
+      this.deleting.delete(index);
+      // Refresh the aggregate status; failures remain actionable and other slots may sync.
+      if (deleted) await this.flush();
     }
   }
   async readChart(key: string, _seed: number, _generation: string): Promise<ChartResult> {
@@ -229,9 +262,9 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
     this.syncing = (async () => {
       try {
         const rows = await this.rpc<CloudInfo[]>('list-info');
-        let failure: unknown;
+        let failure: { error: unknown; index: number } | undefined;
         for (const row of rows) {
-          if (!row.dirty || row.conflict) continue;
+          if (!row.dirty || row.conflict || this.deleting.has(row.index)) continue;
           this.setStatus('Saving…');
           try {
             const staged = await this.cache<CloudRow>({ kind: 'upload', index: row.index });
@@ -240,15 +273,17 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
             const result = await this.api<{ revision: number }>(`characters/${row.index}`, { expected: upload.base, operation: upload.operation, bundle: upload.bundle });
             await this.cache({ kind: 'ack', index: row.index, operation: upload.operation, base: upload.base, revision: result.revision });
           } catch (error) {
+            this.slotFailures.set(row.index, error);
             if (error instanceof CloudError && error.status === 409) await this.cache({ kind: 'conflict', index: row.index, base: row.base });
-            failure ??= error;
+            failure ??= { error, index: row.index };
             // Account or network failures affect every slot; save-specific failures do not.
             if (!(error instanceof CloudError) && !(error instanceof CloudSaveError) || error instanceof CloudError && error.status === 401) break;
           }
         }
         const current = await this.rpc<CloudInfo[]>('list-info');
         this.uploadFailure = failure;
-        if (failure || this.remoteFailure) this.failed(failure ?? this.remoteFailure);
+        if (failure) this.failed(failure.error, failure.index);
+        else if (this.remoteFailure) this.failed(this.remoteFailure);
         else this.setStatus(current.some(r => r.invalid) ? 'Save needs attention' : current.some(r => r.conflict) ? 'Conflict' : current.some(r => r.dirty) ? 'Saving…' : 'Synced');
       } catch (error) { this.failed(error); }
     })().finally(() => { this.syncing = null; });

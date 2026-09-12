@@ -5,6 +5,7 @@ import { parseChronicleLedger, mergeChronicles, recordChronicle } from '../src/c
 import { decodeSaveBundle, SAVE_BUNDLE_LIMIT } from '../src/save-bundle.ts';
 import { characterPower, previewCharacter } from '../src/character-summary.ts';
 import { WORLD_GENERATION_VERSION } from '../src/world.ts';
+import { checkpointHistory } from './checkpoint-history.ts';
 interface Row { chronicle?: string | null; owner: string; slot: number; revision: number; object: string | null; previous: string | null; summary: string | null; operation: string; digest: string; }
 interface Statement { bind(...values: unknown[]): Statement; first<T>(): Promise<T | null>; all<T>(): Promise<{ results: T[] }>; run(): Promise<{ meta: { changes: number } }>; }
 export interface CloudEnv {
@@ -47,7 +48,7 @@ export async function cloudAPI(request: Request, env: CloudEnv): Promise<Respons
   const owner = user;
   if (url.pathname === '/api/cloud/chronicle' && request.method === 'GET') {
     const {results}=await env.DB.prepare('SELECT chronicle, object FROM characters WHERE owner = ?').bind(owner).all<Row>();
-    const histories=await Promise.all(results.map(async r=>{let history=parseChronicleLedger(r.chronicle);if(!r.chronicle&&r.object){const object=await env.SAVES.get(r.object);if(!object)throw new Error('History unavailable');const bundle=decodeSaveBundle(await object.text());if(!bundle)throw new Error('Invalid history');history=recordChronicle(history,bundle.character);}return history;}));
+    const histories=await Promise.all(results.map(async r=>{let history=parseChronicleLedger(r.chronicle);if(!r.chronicle&&r.object){const object=await env.SAVES.get(r.object);if(!object)throw new Error('History unavailable');const recovered=checkpointHistory(await object.text());if(!recovered)throw new Error('Invalid history');history=mergeChronicles(history,recovered);}return history;}));
     return json(mergeChronicles(...histories));
   }
   if (url.pathname === '/api/cloud/characters' && request.method === 'GET') {
@@ -62,10 +63,15 @@ export async function cloudAPI(request: Request, env: CloudEnv): Promise<Respons
   const current = () => backend('character-row-read', () => env.DB.prepare('SELECT * FROM characters WHERE owner = ? AND slot = ?').bind(owner, slot).first<Row>());
   const row = await current();
   if (request.method === 'GET') {
+    if (url.searchParams.get('metadata') === '1') return json({ revision: row?.revision ?? 0, operation: row?.operation ?? null });
     if (!row?.object) return json({ revision: row?.revision ?? 0, operation: row?.operation ?? null, bundle: null });
     const object = await backend('checkpoint-read', () => env.SAVES.get(row.object!));
     if (!object) return json({ code: 'checkpoint_missing', error: 'This checkpoint is unavailable. Please retry.' }, 503);
-    return json({ revision: row.revision, operation: row.operation, bundle: JSON.parse(await object.text()) });
+    const raw = await object.text();
+    let bundle: unknown;
+    try { bundle = JSON.parse(raw); }
+    catch { return json({ code: 'checkpoint_unreadable', error: 'The cloud checkpoint is unreadable. Its original data is preserved.' }, 422); }
+    return json({ revision: row.revision, operation: row.operation, bundle });
   }
   if (request.method !== 'PUT') return json({ error: 'Method not allowed.' }, 405);
   let input: { expected: number; operation: string; bundle: unknown };
@@ -84,10 +90,15 @@ export async function cloudAPI(request: Request, env: CloudEnv): Promise<Respons
   // A changed gameplay validator must not block replacing/deleting that checkpoint.
   if(row?.object && !row.chronicle){
     const previous=await backend('previous-checkpoint-read', () => env.SAVES.get(row.object!));
-    if(!previous) return json({code:'previous_checkpoint_missing',error:'Previous checkpoint unavailable.'},503);
-    const old=decodeSaveBundle(await previous.text());
-    if(!old)return json({code:'previous_checkpoint_incompatible',error:'The previous character needs recovery before it can be replaced. Its save is preserved.'},422);
-    history=recordChronicle(history,old.character);
+    const old = previous ? checkpointHistory(await previous.text()) : null;
+    // Explicit deletion must remain possible even when historical facts cannot be
+    // recovered. The immutable original becomes the retained predecessor below.
+    // Ordinary replacement still requires history recovery and a valid new save.
+    if (!old && bundle) return json({
+      code: previous ? 'previous_checkpoint_incompatible' : 'previous_checkpoint_missing',
+      error: 'The previous character needs recovery before it can be replaced. Its save is preserved.',
+    }, previous ? 422 : 503);
+    if (old) history=mergeChronicles(history,old);
   }
   if (!bundle) for (const character of Object.values(history.characters)) character.deleted = true;
   if(bundle)history=recordChronicle(history,bundle.character);

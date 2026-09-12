@@ -285,3 +285,69 @@ test('backend failures log a safe stage and request reference without save data 
   assert.deepEqual(entries, [{ event: 'cloud-request-failed', method: 'GET', path: '/api/cloud/characters/0', requestId: 'request-reference', status: 503, code: 'backend_failure', stage: 'character-row-read' }]);
   assert.ok(!JSON.stringify(entries).includes('secret-owner'));
 });
+
+test('legacy history survives incompatible gameplay when reading, replacing or deleting a save', async t => {
+  for (const action of ['replace', 'delete'] as const) await t.test(action, async t => {
+    const s = server(); t.after(() => s.db.close());
+    const bundle = fixture(); bundle.character.checkpoint.chronicle!.sources[0].values.kills = 37;
+    bundle.character.checkpoint.character.skillPoints = 999;
+    bundle.chart = 'no longer readable';
+    const original = legacy(s, 'A', bundle);
+    const before = await (await s.request('A', 'chronicle')).json();
+    assert.equal(Object.values(before.sources).reduce((n: number, source: any) => n + (source.values.kills ?? 0), 0), 37);
+    const response = await s.request('A', 'characters/0', write(action === 'delete' ? null : fixture(), 7));
+    assert.equal(response.status, 200);
+    const row = s.db.prepare('SELECT * FROM characters WHERE owner=?').get('A')!;
+    assert.equal(row.previous, original.key); assert.equal(s.blobs.get(original.key), original.raw);
+    const ledger = JSON.parse(row.chronicle as string);
+    assert.equal(ledger.characters['cloud-test'].deleted, action === 'delete');
+    assert.equal(Object.values(ledger.sources).reduce((n: number, source: any) => n + (source.values.kills ?? 0), 0), 37);
+  });
+});
+
+test('confirmed deletion can clear unreadable legacy saves while replacement remains protected', async t => {
+  for (const damage of ['json', 'history', 'missing'] as const) await t.test(damage, async t => {
+    const s = server(); t.after(() => s.db.close());
+    const original = legacy(s, 'A');
+    if (damage === 'missing') s.blobs.delete(original.key);
+    else if (damage === 'json') s.blobs.set(original.key, '{broken');
+    else { const broken = fixture(); (broken.character.checkpoint.chronicle as any).sources[0].values.kills = -1; s.blobs.set(original.key, JSON.stringify(broken)); }
+    const preserved = s.blobs.get(original.key);
+    if (damage === 'json') assert.equal((await s.request('A')).status, 422, 'unreadable bytes produce an actionable invalid slot');
+    assert.equal((await s.request('A', 'characters/0', write(fixture(), 7))).status, damage === 'missing' ? 503 : 422);
+    assert.equal((await s.request('B', 'characters/0', write(null, 7))).status, 409);
+    assert.equal((await s.request('A', 'characters/0', write(null, 6))).status, 409);
+    const result = await s.request('A', 'characters/0', write(null, 7)); assert.equal(result.status, 200);
+    const row = s.db.prepare('SELECT * FROM characters WHERE owner=?').get('A')!;
+    assert.equal(row.object, null); assert.equal(row.previous, original.key); assert.equal(row.revision, 8);
+    assert.equal(s.blobs.get(original.key), preserved);
+    assert.equal((await s.request('A', 'characters/0', write(fixture(), 7))).status, 409, 'stale devices cannot resurrect the deleted character');
+    assert.equal((await s.request('A', 'characters/0', write(fixture(), 8))).status, 200, 'the confirmed empty slot can accept a fresh character');
+  });
+});
+
+test('owned deletion metadata reads do not require a readable or available blob', async t => {
+  const s = server(); t.after(() => s.db.close()); legacy(s, 'A');
+  s.env.SAVES.get = async () => { assert.fail('metadata must not read checkpoint bytes'); };
+  const result = await s.request('A', 'characters/0?metadata=1'); assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), { revision: 7, operation: 'old-operation' });
+  assert.equal((await s.request(null, 'characters/0?metadata=1')).status, 401);
+  assert.deepEqual(await (await s.request('B', 'characters/0?metadata=1')).json(), { revision: 0, operation: null });
+});
+
+test('legacy history projection validates only recorded facts and cannot introduce malformed counters', async () => {
+  const { checkpointHistory } = await import('../server/checkpoint-history.ts');
+  const bundle = fixture(); delete bundle.character.checkpoint.chronicle;
+  bundle.character.checkpoint.kills = 12; bundle.character.checkpoint.time = 123;
+  bundle.character.checkpoint.character.skillPoints = 999;
+  const history = checkpointHistory(JSON.stringify(bundle))!;
+  assert.equal(history.sources['cloud-test'].values.kills, 12);
+  assert.equal(history.sources['cloud-test'].values.time, 123);
+  for (const mutate of [
+    (v: typeof bundle) => { v.character.id = 'constructor'; },
+    (v: typeof bundle) => { v.character.checkpoint.kills = -1; },
+    (v: typeof bundle) => { v.character.checkpoint.time = -1; },
+    (v: typeof bundle) => { v.character.updatedAt = 0; },
+    (v: typeof bundle) => { v.character.checkpoint.level = 0; },
+  ]) { const bad = structuredClone(bundle); mutate(bad); assert.equal(checkpointHistory(JSON.stringify(bad)), null); }
+});

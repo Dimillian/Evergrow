@@ -42,6 +42,9 @@ export class CharacterSession {
     await this.pending;
     if (!isWorldSeed(worldSeed)) { this.error = 'Enter a whole world seed from 0 to 4294967295.'; return false; }
     const slot = await this.repository.read(index);
+    if (slot.conflict || slot.pending && slot.state === 'empty') {
+      this.error = 'This slot has an unresolved cloud save or deletion. Resolve it in the character hall before creating a character.'; return false;
+    }
     if (slot.state !== 'empty') { this.error = 'Choose an empty character slot.'; return false; }
     const record: CharacterSave = { version: CHARACTER_SAVE_VERSION, id, name: name.trim(), createdAt: now, updatedAt: now,
       worldSeed, worldVersion: this.worldVersion, checkpoint };

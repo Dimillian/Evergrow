@@ -1,5 +1,7 @@
 # Current system status
 
+Local, 2026-09-12: cloud creation rejects unresolved empty slots; every cloud deletion awaits server confirmation while retaining device recovery. Legacy Chronicle recovery is independent of gameplay validation, and explicit deletion can clear unreadable legacy slots. Gameplay save status is specific to the active character. No automatic reset or production changes. See [cloud recovery and deletion](cloud-saves-sites.md#cloud-recovery-and-deletion--local-september-12-2026). Not yet published.
+
 Local, 2026-09-11 follow-up: wider affix quality (0.65–1.35×), tapered equipment-rank damage, per-cast repeated-hit budgets for fans/barrages, corrected authored fire burns, and gradual elite durability above home levels. [Measurements and remaining limits](loot-quality-and-combat-2026-09-11.md). Not yet published.
 
 

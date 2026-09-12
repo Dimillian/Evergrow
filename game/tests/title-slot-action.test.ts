@@ -21,6 +21,7 @@ test('busy, signed-out and confirmation states cannot bypass title safeguards', 
 test('conflicting saves cannot bypass the explicit branch choices through quick activation', () => {
   assert.equal(titleSlotAction({...saved,conflict:true},true,false,false),'none');
   assert.equal(titleSlotAction({...saved,state:'empty',conflict:true},true,false,false),'none');
+  assert.equal(titleSlotAction({...saved,state:'empty',pending:true},true,false,false),'none');
 });
 
 

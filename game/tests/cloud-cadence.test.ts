@@ -219,6 +219,9 @@ test('one rejected save never prevents another slot from being created and uploa
   await client.flush(); assert.deepEqual(uploads, [0, 1]);
   assert.equal(client.status, 'Save needs attention');
   assert.equal((await client.list())[1].pending, undefined);
+  assert.equal(client.statusForSlot(1).status, 'Synced', 'another slot’s failure must not label the active character unsaved');
+  assert.equal(client.statusForSlot(0).status, 'Save needs attention');
+  assert.match(client.message, /Slot 1:/);
   assert.equal(client.status, 'Save needs attention', 'a successful roster read cannot hide a rejected upload');
   failure = 503; await client.flush(); assert.equal(client.status, 'Cloud unavailable');
   assert.deepEqual(uploads, [0, 1, 0], 'the acknowledged new character is not uploaded again');
@@ -354,4 +357,100 @@ test('a delayed GET cannot roll back an upload acknowledged while the request wa
   const client=new CloudClient('read-upload-race');t.after(()=>client.dispose());
   const reading=client.inspect(0);await entered;await client.flush();release();
   const view=await reading;assert.equal(view.record?.name,local.name);assert.equal(view.pending,false);assert.equal(view.conflict,false);assert.equal(view.cloudState,'cloud');
+});
+
+test('creation refuses conflicted or pending empty slots without replacing recovery state', async t => {
+  const { CharacterSession } = await import('../src/character-session.ts');
+  for (const conflict of [false, true]) await t.test(conflict ? 'conflict' : 'pending deletion', async t => {
+    BrowserWorker.seedRows = [{ index: 0, token: '3', base: 7, dirty: true, conflict, operation: 'pending-deletion', bundle: null }];
+    installWorker(t);
+    t.mock.method(globalThis, 'fetch', async () => Response.json({ revision: 7, bundle: null }));
+    const client = new CloudClient('create-pending-' + conflict); t.after(() => client.dispose());
+    const session = new CharacterSession(client, WORLD_GENERATION_VERSION), record = recoveryRecord();
+    assert.equal(await session.create(0, 'New', record.worldSeed, record.checkpoint, 'new-character', 2), false);
+    assert.match(session.error, /unresolved/);
+    assert.equal(session.active, null);
+    const after = await client.read(0);
+    assert.equal(after.token, '3'); assert.equal(after.record, null); assert.equal(after.conflict, conflict);
+    assert.equal((await client.write(0, record, '3')).ok, false, 'storage also rejects a caller bypassing the session guard');
+    assert.equal((await client.read(0)).token, '3');
+  });
+});
+
+test('ordinary and unreadable deletions wait for cloud acknowledgement and keep recovery on failure', async t => {
+  for (const scenario of ['success', 'rejected', 'offline', 'lost-response', 'unreadable', 'no-cache', 'concurrent-edit'] as const) await t.test(scenario, async t => {
+    const record = recoveryRecord(), bundle = makeSaveBundle(record);
+    if (scenario === 'unreadable') bundle.character.checkpoint.character.skillPoints = 999;
+    BrowserWorker.seedRows = scenario === 'no-cache' ? [] : [{ index: 0, token: '3', base: 7, dirty: false, conflict: false, operation: '', bundle }];
+    installWorker(t);
+    const client = new CloudClient('ordinary-delete-' + scenario); t.after(() => client.dispose());
+    let revision = 7, remote = true, puts = 0, release!: () => void;
+    const pending = new Promise<void>(resolve => { release = resolve; });
+    t.mock.method(globalThis, 'fetch', async (url: unknown, options: RequestInit) => {
+      if (options.method === 'GET') {
+        assert.match(String(url), /metadata=1/, 'deletion reads revision without decoding the broken checkpoint');
+        if (scenario === 'offline') throw new Error('Offline');
+        return Response.json({ revision });
+      }
+      const data = JSON.parse(options.body as string);
+      assert.equal(data.bundle, null); assert.equal(data.expected, revision);
+      puts++;
+      if (puts === 1) await pending;
+      if (scenario === 'rejected') return Response.json({ error: 'Previous checkpoint needs recovery.' }, { status: 422 });
+      remote = false; revision++;
+      if (scenario === 'lost-response' && puts === 1) throw new Error('Response lost');
+      return Response.json({ revision });
+    });
+    const rawRow = () => (client as unknown as { cache(c: object): Promise<import('../src/cloud-cache.ts').CloudRow | null> }).cache({ kind: 'inspect', index: 0 });
+    const token = scenario === 'no-cache' ? null : '3';
+    const deleting = client.remove(0, token);
+    if (scenario !== 'offline') {
+      await until(() => puts === 1);
+      assert.deepEqual((await rawRow())?.bundle ?? null, scenario === 'no-cache' ? null : bundle);
+      if (scenario === 'concurrent-edit') {
+        const changed = await client.write(0, { ...record, updatedAt: 3 }, '3'); assert.ok(changed.ok);
+      }
+      release();
+    }
+    const result = await deleting;
+    assert.equal(result.ok, ['success', 'unreadable', 'no-cache'].includes(scenario));
+    const row = (await rawRow())!;
+    if (result.ok) { assert.equal(remote, false); assert.equal(row.bundle, null); assert.equal(row.dirty, false); assert.equal(row.conflict, false); assert.equal(row.base, 8); }
+    else {
+      assert.ok(row.bundle, 'a failed or uncertain deletion preserves the original device recovery');
+      if (scenario === 'rejected') assert.match(result.message, /Previous checkpoint needs recovery/);
+      if (scenario === 'lost-response') { assert.equal(remote, false); assert.ok((await client.remove(0, '3')).ok); }
+      if (scenario === 'concurrent-edit') assert.equal(row.bundle.character.updatedAt, 3);
+    }
+  });
+});
+
+test('an unreadable cloud checkpoint remains selectable for confirmed deletion on a fresh browser', async t => {
+  installWorker(t);
+  let deleted = false;
+  t.mock.method(globalThis, 'fetch', async (url: unknown, options: RequestInit) => {
+    if (options.method === 'PUT') { deleted = true; return Response.json({ revision: 8 }); }
+    return String(url).includes('metadata=1') ? Response.json({ revision: 7 })
+      : Response.json({ error: 'The cloud checkpoint is unreadable. Its original data is preserved.' }, { status: 422 });
+  });
+  const client = new CloudClient('unreadable-fresh-browser'); t.after(() => client.dispose());
+  const slot = await client.inspect(0);
+  assert.equal(slot.state, 'invalid'); assert.equal(slot.token, null);
+  assert.ok((await client.remove(0, slot.token)).ok);
+  assert.equal(deleted, true);
+});
+
+test('a failed live checkpoint cannot be reported as synced by an idle upload pass', async t => {
+  installWorker(t);
+  t.mock.method(globalThis, 'fetch', async () => Response.json({ revision: 1 }));
+  const client = new CloudClient('failed-live-checkpoint'); t.after(() => client.dispose());
+  const record = recoveryRecord(), first = await client.write(0, record, null); assert.ok(first.ok);
+  await client.flush(); assert.equal(client.statusForSlot(0).status, 'Synced');
+  const invalid = structuredClone(record); invalid.checkpoint.character.skillPoints = 999;
+  assert.equal((await client.write(0, invalid, first.token)).ok, false);
+  await client.flush();
+  assert.equal(client.statusForSlot(0).status, 'Save needs attention');
+  assert.match(client.statusForSlot(0).message, /could not be saved on this device/);
+  assert.ok((await client.write(0, record, first.token)).ok);
+  assert.equal(client.statusForSlot(0).status, 'Saving…');
 });

@@ -310,6 +310,9 @@ export class TitleScreen {
         ${slot.conflict ? '<div class="title-conflict"><span>Another device has a newer save.</span><button class="ui-button" data-action="cloud">Use cloud version</button></div>' : ''}
         <button class="ui-button ui-button--primary title-enter" data-action="continue"><span>${slot.conflict ? 'Continue recovery' : 'Continue'}</span>${uiIcon('chevron')}</button>`;
     } else if (slot?.state === 'empty') {
+      if (slot.conflict || slot.pending) {
+        selection.innerHTML = '<div class="title-confirm"><h3>Deletion needs attention</h3><p>Resolve this slot’s cloud save before creating another character.</p><button class="ui-button" data-action="retry">Retry</button><button class="ui-button" data-action="delete">Delete character</button></div>'; return;
+      }
       selection.innerHTML = `<form class="title-create"><div class="title-create-fields"><label>Name<input name="character-name" maxlength="24" minlength="1" required autocomplete="off" value="${escapeUI(this.names.get(this.selected) ?? 'Wayfarer')}" pattern=".*\\S.*"/></label><label>World seed<span class="title-seed-controls"><input name="world-seed" inputmode="numeric" required autocomplete="off" value="${escapeUI(this.seedDrafts.get(this.selected) ?? this.rollSeed())}"/><button type="button" data-action="random-seed" aria-label="Random world seed">↻</button></span></label></div>
         <fieldset class="title-weapons"><legend>Starting gear</legend><select class="title-compact-starter" name="compact-starter" aria-label="Starting gear">${STARTER_LOADOUTS.map(option => `<option value="${option.id}" ${this.starter === option.id ? 'selected' : ''}>${escapeUI(option.label)}</option>`).join('')}</select><div class="title-weapon-grid">${STARTER_LOADOUTS.map(option => {
           const loadout = createStarterLoadout(option.id);

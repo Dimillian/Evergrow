@@ -29,6 +29,7 @@ export type CacheCommand =
   | { kind: 'write'; index: number; expected: string | null; bundle: SaveBundle | null; operation: string }
   | { kind: 'upload'; index: number }
   | { kind: 'resolve'; index: number; expected: string; bundle: SaveBundle | null; base: number }
+  | { kind: 'delete'; index: number; expected: string | null; base: number }
   | { kind: 'adopt'; index: number; expected: string | null; bundle: SaveBundle | null; base: number }
   | { kind: 'ack'; index: number; operation: string; base: number; revision: number }
   | { kind: 'conflict'; index: number; base: number };
@@ -70,12 +71,16 @@ export function openCloudCache(factory: IDBFactory, account: string) {
         const row: CloudRow | null = request.result ?? null;
         result = row;
         if (command.kind === 'read' || command.kind === 'inspect') return;
-        if (command.kind === 'write' || command.kind === 'adopt' || command.kind === 'resolve') {
+        if (command.kind === 'write' || command.kind === 'adopt' || command.kind === 'resolve' || command.kind === 'delete') {
           if ((row?.token ?? null) !== command.expected || command.kind === 'adopt' && row?.dirty || command.kind === 'resolve' && !row?.conflict) { result = null; return; }
+          // Recovery play may save the same character. Never let a replacement inherit
+          // unresolved upload/deletion state, including a race after the hall read.
+          if (command.kind === 'write' && command.bundle && row && (row.conflict || row.dirty)
+            && row.bundle?.character.id !== command.bundle.character.id) { result = null; return; }
           result = { index: command.index, token: String(Number(row?.token ?? 0) + 1),
             base: command.kind !== 'write' ? command.base : row?.base ?? 0,
             upload: command.kind === 'write' ? row?.upload : undefined,
-            bundle: command.bundle, dirty: command.kind === 'write',
+            bundle: command.kind === 'delete' ? null : command.bundle, dirty: command.kind === 'write',
             operation: command.kind === 'write' ? command.operation : '', conflict: command.kind === 'write' && !!row?.conflict };
         } else if (command.kind === 'upload') {
           if (row?.dirty && !row.conflict && !row.upload) result = { ...row, upload: { operation: row.operation, base: row.base, bundle: row.bundle } };
@@ -92,7 +97,7 @@ export function openCloudCache(factory: IDBFactory, account: string) {
           // Only acknowledged history is permanent. Divergent recovery never pollutes account totals.
           if(command.kind==='ack'&&row?.upload?.bundle)history=recordChronicle(history,row.upload.bundle.character);
           if((command.kind==='adopt'||command.kind==='resolve')&&command.bundle)history=recordChronicle(history,command.bundle.character);
-          if(command.kind==='ack'&&row?.upload?.bundle===null){history=mergeChronicles(history);for(const c of Object.values(history.characters))c.deleted=true;}
+          if(command.kind==='delete'||command.kind==='ack'&&row?.upload?.bundle===null){history=mergeChronicles(history);for(const c of Object.values(history.characters))c.deleted=true;}
           result.history=history;store.put(result);
         }
       };

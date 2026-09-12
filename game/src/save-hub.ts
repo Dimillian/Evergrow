@@ -22,6 +22,7 @@ export class SaveHub implements CharacterRepositoryPort, ExplorationPersistence 
   onChange = (_state: SaveSourceUI) => {};
   chart: (record: CharacterSave) => DecodedExploration | undefined = () => undefined;
   get state(): SaveSourceUI { return { supported: this.supported, mode: this.mode, signedIn: !!this.cloud, status: this.mode === 'local' ? 'Local' : this.cloud?.status ?? this.status, message: this.mode === 'cloud' ? this.cloud?.message : undefined }; }
+  statusForSlot(index: number) { return this.mode === 'cloud' && this.cloud ? this.cloud.statusForSlot(index) : this.state; }
   get repository() { if (this.mode === 'local') return this.local; if (!this.cloud) throw new Error('Sign in to use cloud saves.'); return this.cloud; }
   async initialize() {
     if (!import.meta.env.VITE_SITE_CLOUD || window.EvergrowAndroid) return;

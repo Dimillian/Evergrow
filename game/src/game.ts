@@ -314,7 +314,15 @@ export class Game {
       this.bind();
       this.showMenu();
       this.saveClient.chart = record => this.session.active?.record.id === record.id ? this.exploration.snapshot() : undefined;
-      this.saveClient.onChange = state => { if (!this.disposed) { this.titleScreen.setSource(state); if (state.mode === 'cloud') this.shell.setSaveStatus(state.status, !['Synced', 'Saving…'].includes(state.status)); } };
+      this.saveClient.onChange = state => {
+        if (this.disposed) return;
+        this.titleScreen.setSource(state);
+        if (state.mode === 'cloud') {
+          const active = this.session?.active;
+          const save = active ? this.saveClient.statusForSlot(active.index) : state;
+          this.shell.setSaveStatus(save.message || save.status, !['Synced', 'Saving…'].includes(save.status));
+        }
+      };
       this.titleScreen.setSource({ ...this.saveClient.state, supported: !!import.meta.env.VITE_SITE_CLOUD && !window.EvergrowAndroid, mode: import.meta.env.VITE_SITE_CLOUD && !window.EvergrowAndroid ? 'cloud' : 'local', status: 'Loading…' });
       this.titleScreen.open([]);
       void this.saveClient.initialize().then(() => this.loadRoster());
@@ -687,7 +695,8 @@ export class Game {
         if (!this.disposed) {
           if (message && message !== this.saveError) this.notify(message);
           this.saveError = message;
-          this.shell.setSaveStatus(message || (this.saveClient.mode === 'cloud' ? this.saveClient.state.status : 'Character saved locally.'), !saved);
+          const cloud = this.saveClient.statusForSlot(this.session.active!.index);
+          this.shell.setSaveStatus(message || (this.saveClient.mode === 'cloud' ? cloud.message || cloud.status : 'Character saved locally.'), !saved || this.saveClient.mode === 'cloud' && !['Synced', 'Saving…'].includes(cloud.status));
         }
       } while (this.saveAgain && !this.savingAction && !this.disposed && saved);
       await this.exploration.save();

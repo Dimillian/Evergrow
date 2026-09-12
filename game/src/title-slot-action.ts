@@ -4,7 +4,7 @@ import type { SaveSlot } from './character-storage.ts';
 export function titleSlotAction(slot: SaveSlot | undefined, canUse: boolean, busy: boolean, confirming: boolean): 'continue' | 'create' | 'none' {
   if (!slot || slot.conflict || !canUse || busy || confirming) return 'none';
   if ((slot.state === 'saved' || slot.state === 'recovered') && (slot.record || slot.summary)) return 'continue';
-  return slot.state === 'empty' ? 'create' : 'none';
+  return slot.state === 'empty' && !slot.pending ? 'create' : 'none';
 }
 
 /** Status can become Synced before the initial roster arrives; never invent a slot. */
