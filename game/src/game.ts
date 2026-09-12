@@ -597,7 +597,12 @@ export class Game {
     this.worldMap.setEventStateReader(poi => { if(poi.kind==='dungeon'){if(this.sim.expeditions.cleared?.includes(poi.id))return 'Cleared';const run=this.sim.expeditions.runs.find(r=>r.entrance.id===poi.id);return run?(run.states.warden.hp<=0?'Cleared':'Expedition active'):null;} const record = this.sim.eventState.sites[poi.id]; return isEventKind(poi.kind) ? eventLabel(record ?? { id: poi.id, kind: poi.kind }, this.sim.eventState, this.sim.getCampState(poi.id) === 'cleared') : null; });
     this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.overworld.getPortalAnchor(band)));
     this.worldMap.resize(); this.titleScreen.close(); this.saveError = '';
-    this.projectBeacons(); this.enterWorld(); this.saveCharacter();
+    this.projectBeacons(); this.enterWorld();
+    if(this.sim.player.character.treeRefunded){
+      this.openCharacterPanel('skills');this.skillPanel.inspectNode('origin');this.skillPanel.setDetailsVisible(true);
+      this.shell.setStatus('Your skill points were refunded. Rebuild your skills while the game is paused.');
+    }
+    this.saveCharacter();
     } finally { this.hallBusy = false; }
   }
 

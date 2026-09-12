@@ -5,6 +5,7 @@ import { CHARM_REWARD_CAPS } from './charm-content.ts';
 import { deriveResistances } from './resistance-content.ts';
 import { AFFIX_COMBAT_RULES, SKILL_STATS, type SkillStat } from './equipment-affix-content.ts';
 import { PLAYER_DEFAULTS } from './combat-content.ts';
+import { scaleTreeDefenses, BORROWED_FLAME } from './skill-tree-balance.ts';
 import { armorReduction } from './progression-content.ts';
 import { EQUIPMENT_SLOTS, itemModifiers, itemDisplayName } from './items.ts';
 import type { Attribute, CharacterSheet, DerivedCharacterStats, StatKey, StatModifiers } from './character-types.ts';
@@ -21,7 +22,7 @@ export function characterModifierSources(sheet: CharacterSheet, treeBonuses: Sta
     return item ? [{ label: `${itemDisplayName(item)} (${slot === 'weapon' ? 'main hand' : slot === 'offhand' ? 'off hand' : slot === 'ring1' ? 'ring I' : slot === 'ring2' ? 'ring II' : slot})`, modifiers: itemModifiers(item) }] : [];
   });
   sources.push(...activeCharms(sheet,level).map(item=>({label:`${itemDisplayName(item)} (charm)`,modifiers:itemModifiers(item)})));
-  sources.push({ label: 'Skill tree', modifiers: treeBonuses });
+  sources.push({ label: 'Skill tree', modifiers: scaleTreeDefenses(treeBonuses, Number.isFinite(level) ? level : 1) });
   const blessing = sheet.blessing?.remaining ? sheet.blessing.kind : null;
   if (blessing === 'haste') sources.push({ label: 'Haste blessing', modifiers: { attackSpeedPercent: 15, castSpeedPercent: 15 } });
   if (blessing === 'wellspring') sources.push({ label: 'Wellspring blessing', modifiers: { manaCostPercent: 20 } });
@@ -47,7 +48,13 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
   const armor = bounded(value('armor') * (blessing === 'bulwark' ? 1.4 : 1), 0, 1e9);
   const offhand = sheet.equipped.offhand;
   const shield = sheet.equipped.weapon?.weapon?.hands !== 2 && offhand?.kind === 'shield' ? offhand.shield : undefined;
+  const owned=new Set(sheet.allocatedNodes);
+  const rawCrit=bounded((dexterity * DEXTERITY_BONUSES.critChance + value('critChance')) / 100, 0, .75);
+  const measured=owned.has('keystone:measured-force'), borrowed=owned.has('keystone:borrowed-flame');
+  const main=sheet.equipped.weapon?.weapon;
+  const open=owned.has('keystone:open-hand') ? main?.hands===1 && main.attackKind==='melee' && !offhand ? 1.2 : .9 : 1;
   return {
+    directDamageMultiplier: measured ? 1 + Math.min(.3,rawCrit) : 1,
     attributes, resistances: deriveResistances(modifiers),
     goldFindMultiplier: 1 + bounded(value('goldFindPercent'), 0, CHARM_REWARD_CAPS.gold) / 100,
     xpGainMultiplier: 1 + bounded(value('xpGainPercent'), 0, CHARM_REWARD_CAPS.xp) / 100,
@@ -60,14 +67,14 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
       .map(key => [key.slice(6), Math.floor(bounded(value(key), 0, AFFIX_COMBAT_RULES.maxBonusRanks))])),
     maxHp: Math.round(bounded(PLAYER_DEFAULTS.maxHp + vitality * 6 + value('maxHp'), 1, 1e9)),
     maxMana: Math.round(bounded(PLAYER_DEFAULTS.maxMana + intelligence * MANA_RULES.perIntelligence + value('maxMana'), 1, 1e9)),
-    attackDamageMultiplier: bounded(1 + (strength * ATTRIBUTE_DAMAGE_BONUSES.strength + value('damagePercent')) / 100, .1, 1e6),
+    attackDamageMultiplier: open * (borrowed ? BORROWED_FLAME.baselineMultiplier : 1) * bounded(1 + (strength * ATTRIBUTE_DAMAGE_BONUSES.strength + value('damagePercent')) / 100, .1, 1e6),
     castSpeedMultiplier: bounded(1 + value('castSpeedPercent') / 100, .25, 6),
     attackSpeedMultiplier: bounded(1 + (dexterity * DEXTERITY_BONUSES.attackSpeedPercent + value('attackSpeedPercent')) / 100, .25, 6),
     armor, damageReduction: armorReduction(armor, level),
-    critChance: bounded((dexterity * DEXTERITY_BONUSES.critChance + value('critChance')) / 100, 0, .75),
+    critChance: measured ? 0 : rawCrit,
     critMultiplier: bounded(1.5 + value('critDamage') / 100, 1, 5),
-    moveSpeedMultiplier: bounded(1 + value('moveSpeedPercent') / 100, .5, 1.75),
-    spellDamageMultiplier: bounded(1 + (intelligence * ATTRIBUTE_DAMAGE_BONUSES.intelligence + value('spellDamagePercent')) / 100, .1, 1e6),
+    moveSpeedMultiplier: bounded(1 + (value('moveSpeedPercent') + (open === 1.2 ? 8 : 0)) / 100, .5, 1.75),
+    spellDamageMultiplier: (borrowed ? BORROWED_FLAME.baselineMultiplier : 1) * bounded(1 + (intelligence * ATTRIBUTE_DAMAGE_BONUSES.intelligence + value('spellDamagePercent')) / 100, .1, 1e6),
     manaRegeneration: bounded(PLAYER_DEFAULTS.manaRegeneration + value('manaRegen') / MANA_RULES.regenerationPeriod, 0, 1e6),
     lifeRegeneration: bounded(value('lifeRegen'), 0, 1e6),
     manaCostMultiplier: manaCostMultiplier(value('manaCostPercent')),

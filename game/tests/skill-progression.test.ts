@@ -4,221 +4,45 @@ import { Simulation } from '../src/simulation.ts';
 import { executeCharacterCommand } from '../src/character-commands.ts';
 import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
 import { SKILL_EXECUTION } from '../src/skill-execution-content.ts';
-import { SKILL_TREE, SKILL_NODES, allocateNode } from '../src/skill-tree.ts';
-import { resolveSkill, learnedSkillRank, activeSkillRank, maximumSkillRank, SKILL_SPECIALIZATIONS, masteryNode, specializationNode, specializationPassiveNode, skillLeafBonuses, OVERLOAD_NODE } from '../src/skill-progression.ts';
+import { resolveSkill, learnedSkillRank, activeSkillRank, maximumSkillRank, SKILL_SPECIALIZATIONS, specializationNode, OVERLOAD_NODE } from '../src/skill-progression.ts';
 import { CHARACTER_SAVE_VERSION, decodeCharacterSave } from '../src/character-save.ts';
-import type { SkillId } from '../src/character-types.ts';
-
-const world = { blocked: () => false, move: (x: number, y: number) => ({ x, y }) };
-function setup() {
-  const sim = new Simulation(world, { spawn: false });
-  sim.player.level = 100; sim.player.character.skillPoints = 99; sim.player.character.statPoints = 495;
-  const command = (cmd: Parameters<typeof executeCharacterCommand>[1]) => executeCharacterCommand(sim.player, cmd);
-  const unlock = (id: string) => assert.ok(command({ type: 'allocateNode', id }).ok, id);
-  return { sim, p: sim.player, sheet: sim.player.character, command, unlock };
-}
-const close = (a: number, b: number) => assert.ok(Math.abs(a-b) < 1e-8, `${a} ≠ ${b}`);
-
-test('new specializations activate through routes and single nodes without changing bindings, ranks or cooldowns', () => {
-  const {p,sheet,command,unlock} = setup();
-  unlock('skill:fireball');
-  assert.ok(command({type:'assignSkill',slot:0,skill:'fireball'}).ok);
-  assert.ok(command({type:'upgradeSkill',skill:'fireball'}).ok);
-  const variants = SKILL_SPECIALIZATIONS.filter(v => v.skill === 'fireball');
-  p.hp = 41; p.mana = 23; p.skillCooldowns.fireball = 5;
-  unlock(specializationNode(variants[0].id));
-  assert.equal(sheet.skillSpecializations.fireball,variants[0].id);
-  unlock(specializationPassiveNode(variants[1].id,'efficiency'));
-  assert.equal(sheet.skillSpecializations.fireball,variants[0].id,'passives do not change the variant');
-  assert.ok(allocateNode(sheet,specializationNode(variants[1].id)).ok);
-  assert.equal(sheet.skillSpecializations.fireball,variants[1].id);
-  assert.equal(activeSkillRank(sheet,'fireball'),2);
-  assert.equal(sheet.skillSlots[0],'fireball');
-  assert.equal(p.hp,41); assert.equal(p.mana,23); assert.equal(p.skillCooldowns.fireball,5);
-  sheet.skillPoints=0;
-  const before=structuredClone(p);
-  assert.equal(command({type:'allocateNode',id:specializationNode(variants[2].id)}).ok,false);
-  assert.equal(command({type:'upgradeSkill',skill:'fireball'}).ok,false);
-  assert.deepEqual(p,before,'failed purchases must not change the active configuration');
+import { PREVIOUS_NODE_IDS, PREVIOUS_EDGES } from '../src/skill-tree-previous.ts';
+const world={blocked:()=>false,move:(x:number,y:number)=>({x,y})};
+function setup(){const sim=new Simulation(world,{spawn:false});sim.player.level=100;sim.player.character.skillPoints=99;sim.player.character.statPoints=495;const command=(cmd:Parameters<typeof executeCharacterCommand>[1])=>executeCharacterCommand(sim.player,cmd);return{sim,p:sim.player,sheet:sim.player.character,command,unlock:(id:string)=>assert.ok(command({type:'allocateNode',id}).ok,id)};}
+const close=(a:number,b:number)=>assert.ok(Math.abs(a-b)<1e-8,`${a} != ${b}`);
+const record=(sim:Simulation)=>({version:CHARACTER_SAVE_VERSION,id:'rank-test',name:'Rank test',createdAt:1,updatedAt:1,worldSeed:7319,worldVersion:10,checkpoint:sim.captureCheckpoint()});
+test('rank purchases conserve points without healing or resetting cooldowns and stop at three',()=>{
+ const{p,sheet,command,unlock}=setup();assert.equal(command({type:'upgradeSkill',skill:'fireball'}).ok,false);unlock('skill:fireball');p.hp=41;p.mana=23;p.skillCooldowns.fireball=2;const points=sheet.skillPoints;
+ for(let rank=2;rank<=3;rank++){assert.ok(command({type:'upgradeSkill',skill:'fireball'}).ok);assert.equal(learnedSkillRank(sheet,'fireball'),rank);}
+ assert.equal(maximumSkillRank(sheet,'fireball'),3);assert.equal(sheet.skillPoints,points-2);assert.equal(command({type:'upgradeSkill',skill:'fireball'}).ok,false);assert.equal(p.hp,41);assert.equal(p.mana,23);assert.equal(p.skillCooldowns.fireball,2);
+ assert.ok(command({type:'configureSkill',skill:'fireball',rank:1,specialization:null}).ok);assert.equal(activeSkillRank(sheet,'fireball'),1);assert.equal(command({type:'configureSkill',skill:'fireball',rank:4,specialization:null}).ok,false);
 });
-
-test('rank purchases conserve points, do not heal or reset cooldowns, and stop at the mastery ceiling', () => {
-  const { p, sheet, command, unlock } = setup();
-  const before = JSON.stringify(sheet);
-  assert.equal(command({ type: 'upgradeSkill', skill: 'fireball' }).ok, false);
-  assert.equal(JSON.stringify(sheet), before);
-  unlock('skill:fireball'); p.hp = 41; p.mana = 23; p.skillCooldowns.fireball = 2;
-  const points = sheet.skillPoints;
-  for (let rank = 2; rank <= 5; rank++) {
-    assert.ok(command({ type: 'upgradeSkill', skill: 'fireball' }).ok);
-    assert.equal(learnedSkillRank(sheet,'fireball'), rank); assert.equal(activeSkillRank(sheet,'fireball'),rank);
-  }
-  assert.equal(sheet.skillPoints, points-4);
-  assert.equal(command({ type: 'upgradeSkill', skill: 'fireball' }).ok, false);
-  unlock(masteryNode('fireball'));
-  assert.equal(maximumSkillRank(sheet,'fireball'),7);
-  assert.ok(command({ type: 'upgradeSkill', skill: 'fireball' }).ok);
-  assert.ok(command({ type: 'upgradeSkill', skill: 'fireball' }).ok);
-  assert.equal(command({ type: 'upgradeSkill', skill: 'fireball' }).ok,false);
-  assert.equal(p.hp,41); assert.equal(p.mana,23); assert.equal(p.skillCooldowns.fireball,2);
+test('ranks reward damage per mana and never lengthen cooldowns; utility ranks improve their role',()=>{
+ const stats={manaCostMultiplier:1,cooldownMultiplier:1};for(const skill of Object.values(SKILL_DEFINITIONS)){
+  const a=resolveSkill(skill.id,stats,undefined,1),b=resolveSkill(skill.id,stats,undefined,3);close(b.mana,a.mana*1.1);assert.equal(b.cooldown,a.cooldown);if(a.damageMultiplier)close(b.damageMultiplier/a.damageMultiplier,1.2);else assert.notDeepEqual(a.recipe,b.recipe);
+ }
+ assert.equal(resolveSkill('bulwark',{...stats,cooldownMultiplier:0}).cooldown,4);
+ for(const id of ['rallyOfIron','ghostHunt','cataclysm','tempest','absoluteZero'] as const)assert.equal(resolveSkill(id,{...stats,cooldownMultiplier:0}).cooldown,12);
 });
-
-test('lower casting ranks are reversible, free, and cannot exceed purchased ranks', () => {
-  const { p, sheet, command, unlock } = setup(); unlock('skill:fireball');
-  command({ type:'upgradeSkill',skill:'fireball' });
-  const points=sheet.skillPoints;
-  assert.ok(command({ type:'configureSkill',skill:'fireball',rank:1,specialization:null }).ok);
-  command({ type:'upgradeSkill',skill:'fireball' });
-  assert.equal(activeSkillRank(sheet,'fireball'),3);
-  assert.ok(command({ type:'configureSkill',skill:'fireball',rank:1,specialization:null }).ok);
-  assert.equal(activeSkillRank(sheet,'fireball'),1);
-  const before=JSON.stringify(sheet);
-  assert.equal(command({ type:'configureSkill',skill:'fireball',rank:4,specialization:null }).ok,false);
-  assert.equal(JSON.stringify(sheet),before);
-  assert.ok(command({ type:'configureSkill',skill:'fireball',rank:3,specialization:null }).ok);
-  assert.equal(sheet.skillPoints,points-1);
-  close(resolveSkill('fireball',p.derived,sheet).damageMultiplier,SKILL_DEFINITIONS.fireball.damageMultiplier*1.3);
+test('every Technique costs one point after its skill and selection changes no binding, rank, resource or cooldown',()=>{
+ const base=JSON.stringify(SKILL_EXECUTION);for(const v of SKILL_SPECIALIZATIONS){const{p,sheet,command,unlock}=setup();unlock(`skill:${v.skill}`);const points=sheet.skillPoints;p.hp=41;p.mana=23;p.skillCooldowns[v.skill]=7;assert.equal(command({type:'configureSkill',skill:v.skill,rank:1,specialization:v.id}).ok,false);unlock(specializationNode(v.id));assert.equal(sheet.skillPoints,points-1);assert.equal(sheet.skillSpecializations[v.skill],v.id);assert.equal(resolveSkill(v.skill,p.derived,sheet).variant?.id,v.id);assert.ok(command({type:'configureSkill',skill:v.skill,rank:1,specialization:null}).ok);assert.equal(p.hp,41);assert.equal(p.mana,23);assert.equal(p.skillCooldowns[v.skill],7);}
+ assert.equal(JSON.stringify(SKILL_EXECUTION),base);
 });
-
-test('every skill rank has a finite resource tradeoff and basic skills remain cooldown free', () => {
-  const stats={manaCostMultiplier:1,cooldownMultiplier:1};
-  for (const skill of Object.values(SKILL_DEFINITIONS)) {
-    let previous=resolveSkill(skill.id,stats,undefined,1);
-    for(let rank=2;rank<=7;rank++) {
-      const next=resolveSkill(skill.id,stats,undefined,rank);
-      assert.ok(Number.isFinite(next.mana) && next.mana>previous.mana);
-      if(skill.id==='bulwark') { assert.equal(next.recipe.kind,'guard'); if(next.recipe.kind==='guard') assert.ok(next.recipe.reduction<=.9); }
-      else assert.ok(next.damageMultiplier>previous.damageMultiplier);
-      if(skill.tier==='basic') assert.equal(next.cooldown,0); else assert.ok(next.cooldown>previous.cooldown);
-      previous=next;
-    }
-  }
-  assert.equal(resolveSkill('bulwark',{...stats,cooldownMultiplier:0}).cooldown,4);
-  for(const id of ['cataclysm','tempest','absoluteZero'] as const) assert.equal(resolveSkill(id,{...stats,cooldownMultiplier:0}).cooldown,12);
+test('Overload is an explicit optional Arcana damage-for-mana tradeoff',()=>{
+ const{p,sheet,command,unlock}=setup();assert.equal(command({type:'overload',enabled:true}).ok,false);unlock(OVERLOAD_NODE);const before=resolveSkill('tempest',p.derived,sheet);assert.equal(sheet.arcaneOverload,false);command({type:'overload',enabled:true});const after=resolveSkill('tempest',p.derived,sheet);close(after.damageMultiplier,before.damageMultiplier*1.3);assert.ok(after.mana>before.mana&&after.upkeep>before.upkeep);assert.deepEqual(resolveSkill('cleave',p.derived,sheet),resolveSkill('cleave',p.derived,{...sheet,arcaneOverload:false}));
 });
-
-test('specializations require their own node, remain exclusive, and never mutate base recipes', () => {
-  const base=JSON.stringify(SKILL_EXECUTION);
-  for(const variant of SKILL_SPECIALIZATIONS) {
-    const {p,sheet,command,unlock}=setup(); unlock(`skill:${variant.skill}`);
-    assert.equal(command({type:'configureSkill',skill:variant.skill,rank:1,specialization:variant.id}).ok,false);
-    unlock(specializationNode(variant.id));
-    assert.ok(command({type:'configureSkill',skill:variant.skill,rank:1,specialization:variant.id}).ok);
-    const resolved=resolveSkill(variant.skill,p.derived,sheet);
-    assert.equal(resolved.variant?.id,variant.id);
-    close(resolved.damageMultiplier,SKILL_DEFINITIONS[variant.skill].damageMultiplier*variant.damage*(1+skillLeafBonuses(sheet,variant.skill).potency));
-    assert.ok(command({type:'configureSkill',skill:variant.skill,rank:1,specialization:null}).ok);
-    assert.equal(resolveSkill(variant.skill,p.derived,sheet).variant,undefined);
-  }
-  assert.equal(JSON.stringify(SKILL_EXECUTION),base);
-  for(const skill of Object.values(SKILL_DEFINITIONS)) assert.equal(SKILL_SPECIALIZATIONS.filter(s=>s.skill===skill.id).length,3);
+test('current saves round-trip paid ranks and reject unpaid, unknown and competing Doctrine power',()=>{
+ const{sim,command,unlock}=setup();unlock('skill:fireball');unlock(specializationNode('fireball-fork'));unlock('doctrine:casting:0');command({type:'upgradeSkill',skill:'fireball'});const save=record(sim);assert.ok(decodeCharacterSave(JSON.stringify(save)));
+ for(const mutate of[(s:typeof save)=>{s.checkpoint.character.skillPoints++;},(s:typeof save)=>{s.checkpoint.character.skillRanks.fireball=4;},(s:typeof save)=>{s.checkpoint.character.skillSpecializations.fireball='arc-focus';},(s:typeof save)=>{s.checkpoint.character.allocatedNodes.push('doctrine:casting:1');s.checkpoint.character.skillPoints--;},(s:typeof save)=>{s.checkpoint.character.treeVersion=99;}]){const bad=structuredClone(save);mutate(bad);assert.equal(decodeCharacterSave(JSON.stringify(bad)),null);}
 });
-
-test('Overload is optional and raises only Arcana damage, casting costs and storm upkeep', () => {
-  const {p,sheet,command,unlock}=setup();
-  assert.equal(command({type:'overload',enabled:true}).ok,false);
-  const before=resolveSkill('tempest',p.derived,sheet), melee=resolveSkill('cleave',p.derived,sheet);
-  unlock(OVERLOAD_NODE); assert.equal(sheet.arcaneOverload,false);
-  command({type:'overload',enabled:true});
-  const after=resolveSkill('tempest',p.derived,sheet);
-  close(after.damageMultiplier,before.damageMultiplier*1.3);
-  assert.ok(after.mana>before.mana && after.upkeep>before.upkeep);
-  assert.deepEqual(resolveSkill('cleave',p.derived,sheet),resolveSkill('cleave',p.derived,{...sheet,arcaneOverload:false}));
-  assert.equal(melee.damageMultiplier,resolveSkill('cleave',p.derived,sheet).damageMultiplier);
+test('previous tree refunds nodes and paid ranks on a copy, preserving character and world progress',()=>{
+ const{sim}=setup(),save=record(sim),s=save.checkpoint.character;delete s.treeVersion;
+ const graph=PREVIOUS_NODE_IDS.map(()=>[] as number[]);for(const[a,b]of PREVIOUS_EDGES){graph[a].push(b);graph[b].push(a);}const root=PREVIOUS_NODE_IDS.indexOf('origin'),target=PREVIOUS_NODE_IDS.indexOf('skill:fireball'),routes=new Map([[root,[root]]]),queue=[root];for(let i=0;i<queue.length;i++)for(const next of graph[queue[i]])if(!routes.has(next)){routes.set(next,[...routes.get(queue[i])!,next]);queue.push(next);}
+ s.allocatedNodes=routes.get(target)!.map(i=>PREVIOUS_NODE_IDS[i]);s.skillRanks={fireball:5};s.activeSkillRanks={fireball:3};s.skillSlots[0]='fireball';s.skillPoints=99-(s.allocatedNodes.length-1)-4;save.checkpoint.skillCooldowns={fireball:2};
+ const original=JSON.stringify(save),upgraded=decodeCharacterSave(original);assert.ok(upgraded);assert.equal(JSON.stringify(save),original);const current=upgraded.checkpoint.character;assert.equal(current.treeVersion,2);assert.equal(current.treeRefunded,true);assert.equal(current.skillPoints,99);assert.deepEqual(current.allocatedNodes,['origin']);assert.deepEqual(current.skillSlots,[null,null,null,null,null]);assert.deepEqual(current.equipped,s.equipped);assert.deepEqual(current.inventory,s.inventory);assert.equal(upgraded.checkpoint.level,100);assert.equal(upgraded.checkpoint.x,save.checkpoint.x);
+ const bad=JSON.parse(original);bad.checkpoint.character.allocatedNodes.push('unknown');bad.checkpoint.character.skillPoints--;assert.equal(decodeCharacterSave(JSON.stringify(bad)),null);
+ const disconnected=JSON.parse(original);disconnected.checkpoint.character.allocatedNodes=['origin','skill:fireball'];disconnected.checkpoint.character.skillPoints=94;assert.equal(decodeCharacterSave(JSON.stringify(disconnected)),null);
 });
-
-test('current saves round-trip purchased ranks and configurations, rejecting unowned or unpaid power', () => {
-  const {sim,command,unlock}=setup();
-  unlock('skill:fireball'); unlock(specializationNode('fireball-fork')); unlock(masteryNode('fireball')); unlock(OVERLOAD_NODE);
-  for(let rank=2;rank<=7;rank++) assert.ok(command({type:'upgradeSkill',skill:'fireball'}).ok);
-  command({type:'configureSkill',skill:'fireball',rank:4,specialization:'fireball-fork'});
-  command({type:'overload',enabled:true});
-  const record={version:CHARACTER_SAVE_VERSION,id:'rank-test',name:'Rank test',createdAt:1,updatedAt:1,worldSeed:7319,worldVersion:4,checkpoint:sim.captureCheckpoint()};
-  const saved=decodeCharacterSave(JSON.stringify(record)); assert.ok(saved);
-  const fresh=new Simulation(world,{spawn:false}); fresh.restoreCheckpoint(saved.checkpoint);
-  assert.deepEqual(fresh.player.character,sim.player.character);
-  for(const mutate of [
-    (s:typeof record)=>{s.checkpoint.character.skillPoints++;},
-    (s:typeof record)=>{s.checkpoint.character.skillRanks.fireball=8;},
-    (s:typeof record)=>{s.checkpoint.character.activeSkillRanks.fireball=8;},
-    (s:typeof record)=>{s.checkpoint.character.skillSpecializations.fireball='arc-focus';},
-    (s:typeof record)=>{s.checkpoint.character.skillRanks.cleave=2;},
-    (s:typeof record)=>{s.checkpoint.character.allocatedNodes=s.checkpoint.character.allocatedNodes.filter(id=>id!==masteryNode('fireball'));},
-  ]) { const invalid=structuredClone(record); mutate(invalid); assert.equal(decodeCharacterSave(JSON.stringify(invalid)),null); }
-  assert.equal(decodeCharacterSave(JSON.stringify({...record,version:2})),null);
-});
-
-test('development groups are frozen, bounded and attached to actual skill nodes', () => {
-  for(const cluster of SKILL_TREE.clusters.filter(c=>!c.id.includes(':terrace:'))) {
-    assert.ok(Object.isFrozen(cluster));
-    const members=SKILL_TREE.nodes.filter(n=>n.cluster===cluster.id); assert.ok(members.length);
-    for(const n of members) assert.ok(Math.hypot(n.x-cluster.x,n.y-cluster.y)<cluster.radius);
-  }
-  const masteries=SKILL_TREE.nodes.filter(n=>n.mastery);
-  assert.equal(masteries.length,17);
-  for(const n of masteries) assert.ok(SKILL_TREE.nodes.some(s=>s.skill===n.mastery));
-  assert.equal(SKILL_TREE.nodes.filter(n=>n.skill && SKILL_DEFINITIONS[n.skill as SkillId].tier==='ultimate').length,3);
-});
-
-
-test('every skill owns three exclusive three-point leaves with no sideways entrance', () => {
-  assert.equal(SKILL_SPECIALIZATIONS.length, 60);
-  for (const variant of SKILL_SPECIALIZATIONS) {
-    const potency = specializationPassiveNode(variant.id, 'potency'), efficiency = specializationPassiveNode(variant.id, 'efficiency');
-    const tip = specializationNode(variant.id);
-    assert.deepEqual(SKILL_NODES.get(tip)!.neighbors, [efficiency]);
-    assert.deepEqual(new Set(SKILL_NODES.get(efficiency)!.neighbors), new Set([potency, tip]));
-    assert.deepEqual(new Set(SKILL_NODES.get(potency)!.neighbors), new Set([`skill:${variant.skill}`, efficiency]));
-    for (const id of [potency, efficiency, tip]) assert.equal(SKILL_NODES.get(id)!.developmentSkill, variant.skill);
-  }
-});
-
-test('leaf passives affect only their owning skill and each new specialization becomes active', () => {
-  for (const skill of Object.values(SKILL_DEFINITIONS)) {
-    const {p,sheet,command,unlock}=setup(); unlock(`skill:${skill.id}`);
-    const before=resolveSkill(skill.id,p.derived,sheet), other=skill.id==='fireball'?'cleave':'fireball';
-    const unrelated=resolveSkill(other,p.derived,sheet), points=sheet.skillPoints;
-    const variants=SKILL_SPECIALIZATIONS.filter(v=>v.skill===skill.id);
-    for(const v of variants) {
-      unlock(specializationNode(v.id));
-      assert.equal(sheet.skillSpecializations[skill.id],v.id);
-      assert.equal(resolveSkill(skill.id,p.derived,sheet).variant?.id,v.id);
-    }
-    assert.equal(sheet.skillPoints,points-9);
-    assert.ok(command({type:'configureSkill',skill:skill.id,rank:1,specialization:null}).ok);
-    assert.equal(sheet.skillSpecializations[skill.id],undefined);
-    const after=resolveSkill(skill.id,p.derived,sheet);
-    close(after.damageMultiplier,before.damageMultiplier*1.18);
-    if(after.recipe.kind==='guard' && before.recipe.kind==='guard') close(after.recipe.duration,before.recipe.duration*1.18);
-    assert.ok(after.mana<before.mana);
-    assert.deepEqual(resolveSkill(other,p.derived,sheet),unrelated);
-    p.skillCooldowns[skill.id]=7; const available=sheet.skillPoints;
-    const {variant: originalVariant, ...originalMechanics}=after;
-    void originalVariant;
-    const configurations = new Set([JSON.stringify(originalMechanics)]);
-    for(const v of variants) {
-      assert.ok(command({type:'configureSkill',skill:skill.id,rank:1,specialization:v.id}).ok);
-      const resolved=resolveSkill(skill.id,p.derived,sheet);
-      // Compare mechanical output, not variant names or IDs.
-      const {variant: _, ...mechanics}=resolved;
-      const {variant: __, ...original}=after;
-      assert.notDeepEqual(mechanics,original,v.id);
-      configurations.add(JSON.stringify(mechanics));
-    }
-    assert.equal(configurations.size,4);
-    assert.equal(sheet.skillPoints,available); assert.equal(p.skillCooldowns[skill.id],7);
-    assert.ok(command({type:'configureSkill',skill:skill.id,rank:1,specialization:null}).ok);
-    assert.deepEqual(resolveSkill(skill.id,p.derived,sheet),after);
-  }
-});
-
-test('early equipment ranks remain valuable while deeper stacks taper without changing purchased ranks or costs',()=>{
-  const p=new Simulation(world,{spawn:false}).player,s=p.character;s.allocatedNodes=['origin','skill:fireball'];s.skillRanks.fireball=5;
-  const base=resolveSkill('fireball',p.derived,s);
-  const three=resolveSkill('fireball',{...p.derived,skillBonuses:{fireball:3}},s);
-  const ten=resolveSkill('fireball',{...p.derived,skillBonuses:{fireball:10}},s);
-  close(three.damageMultiplier/base.damageMultiplier,1.225);
-  close(ten.damageMultiplier/base.damageMultiplier,1.44375);
-  assert.equal(three.mana,base.mana);assert.equal(ten.mana,base.mana);assert.equal(ten.cooldown,base.cooldown);
-  assert.equal(ten.effectiveRank,15);assert.equal(s.skillRanks.fireball,5);
+test('gear ranks taper without changing purchased ranks, costs or cooldowns',()=>{
+ const{p,sheet,unlock}=setup();unlock('skill:fireball');sheet.skillRanks.fireball=3;const base=resolveSkill('fireball',p.derived,sheet),three=resolveSkill('fireball',{...p.derived,skillBonuses:{fireball:3}},sheet),ten=resolveSkill('fireball',{...p.derived,skillBonuses:{fireball:10}},sheet);close(three.damageMultiplier/base.damageMultiplier,1.3);close(ten.damageMultiplier/base.damageMultiplier,1.5916666666666668);assert.equal(ten.mana,base.mana);assert.equal(ten.cooldown,base.cooldown);assert.equal(sheet.skillRanks.fireball,3);
 });

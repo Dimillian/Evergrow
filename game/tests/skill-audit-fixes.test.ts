@@ -163,11 +163,11 @@ test('skill crescents cover actual contact geometry across facings, hands and sp
   }
 });
 
-test('variant previews show prospective passives without mutating the character or selecting the variant',()=>{
+test('variant previews show direct Techniques without mutating the character or selecting the variant',()=>{
   const h=setup('fireball');const before=JSON.stringify(h.p.character);
   const preview=previewSkillVariant('fireball-fork',h.p.derived,h.p.character)!;
-  close(preview.after.damageMultiplier,SKILL_DEFINITIONS.fireball.damageMultiplier*.65*1.06);
-  assert.equal(preview.after.mana,20.7);assert.equal(JSON.stringify(h.p.character),before);
+  close(preview.after.damageMultiplier,SKILL_DEFINITIONS.fireball.damageMultiplier*.65);
+  assert.equal(preview.after.mana,21.6);assert.equal(JSON.stringify(h.p.character),before);
 });
 
 test('sustained feedback outlives cast recovery and skill audio distinguishes impact families',()=>{

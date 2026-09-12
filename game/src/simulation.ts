@@ -9,6 +9,7 @@ import { isWildernessBoss } from './wilderness-boss-content.ts';
 import { freshChronicle, metric } from './chronicle.ts';
 import { trackChronicleEvent } from './chronicle-tracking.ts';
 import { TREASURE_FLIGHT_DURATION } from './treasure-flight.ts';
+import { advanceSkillEffects, consumeRally, snapshotSkillOffense, queueSkillEcho } from './player-skill-effects.ts';
 import { advanceAffixBuffs, consumeSpellweave } from './affix-combat.ts';
 import { alternatesBasicAttacks, basicAttackWeapon } from './equipment.ts';
 import { skillWeapon } from './skill-content.ts';
@@ -255,7 +256,7 @@ export class Simulation {
     const p = this.player;
     this.clearInput(); this.portal.cancel();
     p.x = p.prevX = x; p.y = p.prevY = y;
-    p.attack = null; p.dash = null; p.activeSkill = null; p.castTime = p.castDuration = p.dodgeTime = 0;
+    p.skillEffects = undefined; p.attack = null; p.dash = null; p.activeSkill = null; p.castTime = p.castDuration = p.dodgeTime = 0;
     this.arrivalProtection = PORTAL_RULES.protection; p.invulnerable = Math.max(p.invulnerable, this.arrivalProtection);
     this.spawnExclusion = null; this.combatViewport = null; this.roaming.relocate(x, y);
   }
@@ -422,6 +423,7 @@ export class Simulation {
     p.healCooldown = Math.max(0, p.healCooldown - dt);
     p.guardTime = Math.max(0, p.guardTime - dt);
     advanceAffixBuffs(p, dt);
+    advanceSkillEffects(p,dt,echo=>{if(!this.world.blocked(echo.x,echo.y,echo.definition.radius))this.projectile(echo.x,echo.y,echo.angle,echo.definition,'ghostHunt',echo.effects);});
     for (const id of Object.keys(p.skillCooldowns) as SkillId[]) p.skillCooldowns[id] = Math.max(0, p.skillCooldowns[id]! - dt);
     p.healFlash = Math.max(0, p.healFlash - dt);
     metric(p.chronicle,'manaRestored',Math.min(p.maxMana-p.mana,p.derived.manaRegeneration*dt));
@@ -439,7 +441,7 @@ export class Simulation {
     }
     const aimingSkill = this.skillBuffer && this.skillBuffer.until >= this.time ? p.character.skillSlots[this.skillBuffer.slot] : null;
     const aimingWeapon = aimingSkill ? skillWeapon(aimingSkill, p.equipment) ?? basicAttackWeapon(p) : basicAttackWeapon(p);
-    const direction = aimingWeapon.attackKind !== 'melee' && input.rangedAim
+    const direction = aimingSkill !== 'sidestep' && aimingWeapon.attackKind !== 'melee' && input.rangedAim
       && Number.isFinite(input.rangedAim.x) && Number.isFinite(input.rangedAim.y) ? input.rangedAim : { x: input.aimX, y: input.aimY };
     if (direction.x !== p.x || direction.y !== p.y) p.angle = Math.atan2(direction.y - p.y, direction.x - p.x);
     if (this.healBuffer >= this.time && p.flasks > 0 && (p.hp < p.maxHp || p.mana < p.maxMana) && p.healCooldown <= 0) {
@@ -470,6 +472,7 @@ export class Simulation {
           gaitPhase: p.walkTime, moving: Math.min(1, Math.hypot(p.vx, p.vy) / 130), moveAngle: Math.atan2(p.vy, p.vx),
           start: attack.activeStart / attack.duration, end: attack.activeEnd / attack.duration,
         };
+        if(shot&&style==='arrow'&&attack.projectile)queueSkillEcho(p,p.x,p.y,attack.angle,{owner:'player',damage:attack.damage,speed,life:attack.range/speed,radius:2},attack.projectile);
         attack.released = true;
         this.emit({ type: 'cast', x: p.x, y: p.y, angle: attack.angle, style, ...(shot?.launch ? { launch: shot.launch } : {}) });
       }
@@ -525,12 +528,12 @@ export class Simulation {
           Math.sin(dash.angle) * dash.speed * delta / steps, p.radius);
         p.x = to.x; p.y = to.y;
       }
-      for (const enemy of this.enemies) if (enemy.state !== 'dead' && !dash.hitIds.has(enemy.id)
+      for (const enemy of this.enemies) if (dash.damage > 0 && enemy.state !== 'dead' && !dash.hitIds.has(enemy.id)
         && segmentDistanceSquared(enemy.x, enemy.y, startX, startY, p.x, p.y) <= (enemy.radius + dash.radius) ** 2
         && this.lineOfSight(p.x, p.y, enemy.x, enemy.y)) {
         dash.hitIds.add(enemy.id); this.damageEnemy(enemy, dash.damage, dash.angle, true, false, dash.style, dash.elementalDamage, dash.offense);
       }
-      strikeContainerSegment(this.containerContext(), startX, startY, p.x, p.y, dash.radius + p.radius);
+      if(dash.damage>0)strikeContainerSegment(this.containerContext(), startX, startY, p.x, p.y, dash.radius + p.radius);
       dash.remaining = Math.max(0, dash.remaining - dt);
       p.walkTime += Math.hypot(p.x - startX, p.y - startY) / PLAYER_MOVEMENT.gaitDistance;
       p.vx = p.vy = 0;
@@ -576,7 +579,7 @@ export class Simulation {
     if (p.mana < manaCost) return;
     p.mana -= manaCost; metric(p.chronicle,'manaSpent',manaCost);metric(p.chronicle,'basics');
     const stats = deriveAttackStats(p.stats, weapon);
-    const weave = consumeSpellweave(p, weapon.attackKind === 'melee' ? 'melee' : weapon.attackKind === 'bolt' ? 'spell' : 'other');
+    const weave = consumeRally(p,weapon.attackKind==='melee') * consumeSpellweave(p, weapon.attackKind === 'melee' ? 'melee' : weapon.attackKind === 'bolt' ? 'spell' : 'other');
     const duration = 1 / stats.attacksPerSecond;
     const ranged = weapon.attackKind !== 'melee';
     const style = weapon.attackKind === 'arrow' ? 'arrow' : weapon.damageType === 'physical' ? 'arcane' : weapon.damageType;
@@ -585,8 +588,8 @@ export class Simulation {
       elapsed, duration, activeStart: duration * (ranged ? RANGED_BASIC_ATTACK_PHASES.activeStart : BASIC_ATTACK_PHASES.activeStart),
       activeEnd: duration * (ranged ? RANGED_BASIC_ATTACK_PHASES.activeEnd : BASIC_ATTACK_PHASES.activeEnd), angle: this.player.angle,
       range: stats.range, arc: stats.arc, damage: stats.damage * weave, elementalDamage: stats.elementalDamage * weave, hitIds: new Set<number>(),
-      offense: { critChance: p.derived.critChance, critMultiplier: p.derived.critMultiplier, lifeOnHit: p.derived.lifeOnHit },
-      ...(ranged ? { projectile: { style, pierce: p.derived.projectilePierce, offense: { critChance: p.derived.critChance, critMultiplier: p.derived.critMultiplier, lifeOnHit: p.derived.lifeOnHit } } } : {}),
+      offense: snapshotSkillOffense(p),
+      ...(ranged ? { projectile: { style, pierce: p.derived.projectilePierce, offense: snapshotSkillOffense(p) } } : {}),
     };
     p.nextAttackHand = hand === 'main' ? 'off' : 'main';
     if (!ranged) this.emit({ type: 'swing', x: p.x, y: p.y, angle: p.angle });

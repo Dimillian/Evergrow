@@ -70,10 +70,10 @@ test('pinch midpoint and scale are incremental, with no jump returning to one fi
 test('gesture reset and unknown pointer endings cannot affect the remaining pointer',()=>{
   const g=new TouchGesture();g.down(1,point);g.up(2);assert.equal(g.size,1);g.clear();assert.equal(g.move(1,{x:150,y:0}),null);assert.equal(g.up(1),null);
 });
-test('all twenty recipes have explicit touch targeting, including omnidirectional melee',()=>{
-  assert.equal(Object.keys(SKILL_EXECUTION).length,20);
+test('all active recipes have explicit touch targeting, including omnidirectional melee',()=>{
+  assert.equal(Object.keys(SKILL_EXECUTION).length,30);
   for(const recipe of Object.values(SKILL_EXECUTION))assert.ok(['self','ground','direction'].includes(touchTargeting(recipe)));
-  assert.equal(touchTargeting(SKILL_EXECUTION.whirlwind),'self');assert.equal(touchTargeting(SKILL_EXECUTION.cleave),'direction');
+  assert.equal(touchTargeting(SKILL_EXECUTION.nightReaping),'self');assert.equal(touchTargeting(SKILL_EXECUTION.smokeVeil),'self');assert.equal(touchTargeting(SKILL_EXECUTION.whirlwind),'self');assert.equal(touchTargeting(SKILL_EXECUTION.cleave),'direction');
   assert.equal(touchTargeting(SKILL_EXECUTION.meteor),'ground');assert.equal(touchTargeting(SKILL_EXECUTION.bulwark),'self');
 });
 test('ground preview and action target obey weapon range and walls',()=>{

@@ -38,7 +38,7 @@ export interface Input {
   skillSlot: number | null;
 }
 
-export type HitSnapshot = Readonly<Pick<DerivedCharacterStats, 'critChance' | 'critMultiplier' | 'lifeOnHit'>> & { readonly skill?: SkillId };
+export type HitSnapshot = Readonly<Pick<DerivedCharacterStats, 'critChance' | 'critMultiplier' | 'lifeOnHit'>> & { readonly skill?: SkillId; readonly directDamageMultiplier?: number };
 
 export interface Attack {
   offense?: HitSnapshot;
@@ -153,6 +153,7 @@ export interface Player {
   activeSkill: SkillId | null;
   nextAttackHand: 'main' | 'off';
   affixBuffs?: import('./affix-combat.ts').AffixBuffs;
+  skillEffects?: import('./player-skill-effects.ts').PlayerSkillEffects;
   guardTime: number;
   guardReduction: number;
   dash: { angle: number; remaining: number; speed: number; damage: number; elementalDamage?: number; offense?: HitSnapshot; radius: number; skill: SkillId; style?: ProjectileStyle; hitIds: Set<number> } | null;

@@ -1,3 +1,4 @@
+import { mitigateSkillHit } from './player-skill-effects.ts';
 import { projectileDamageType } from './resistance-content.ts';
 import { metric } from './chronicle.ts';
 import { primeSpellweave, primeAfterguard, effectiveArmor } from './affix-combat.ts';
@@ -37,7 +38,7 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
   const elementFraction=style && projectileDamageType(style)==='arcane'?1:Math.min(1,Math.max(0,statusDamage/Math.max(1,damage)));
   const hitStats = offense ?? context.player.derived;
   const critical = !periodic && hitStats.critChance > 0 && context.random() < hitStats.critChance;
-  damage = Math.max(1, Math.round(damage * (critical ? hitStats.critMultiplier : 1)));
+  damage = Math.max(1, Math.round(damage * (critical ? hitStats.critMultiplier : 1) * (periodic ? 1 : hitStats.directDamageMultiplier ?? 1)));
   const actualValue = Math.min(enemy.hp, damage);
   enemy.hp = Math.max(0, enemy.hp - damage);
   if (!periodic && !context.player.dead) metric(context.player.chronicle,'healing',Math.min(context.player.maxHp-context.player.hp,hitStats.lifeOnHit));
@@ -76,6 +77,8 @@ export function damagePlayer(amount: number, angle: number, sourceLevel: number,
     primeAfterguard(p);
     context.emit({ type: 'block', x: p.x, y: p.y, angle, value: blocked, color: '#a9daca' });
   }
+  const mitigated=mitigateSkillHit(p,amount); amount=mitigated.damage;
+  if(mitigated.absorbed)context.emit({type:'block',x:p.x,y:p.y,angle,value:mitigated.absorbed,color:'#9ed6d5'});
   const actualValue = Math.min(p.hp, amount);
   p.hp = Math.max(0, p.hp - amount);
   p.hitFlash = COMBAT_TIMING.hitFlashDuration;
@@ -84,7 +87,7 @@ export function damagePlayer(amount: number, angle: number, sourceLevel: number,
   context.emit({ type: 'hurt', ...(damageType === 'physical' ? {} : { style: damageType }), actualValue, x: p.x, y: p.y, angle, value: amount,
     remainingHp: p.hp, enemyKind: kind, heavy: amount >= 20 });
   if (p.hp <= 0) {
-    p.dead = true; p.affixBuffs = undefined;
+    p.dead = true; p.affixBuffs = undefined; p.skillEffects = undefined;
     p.attack = null;
     p.dash = null; p.guardTime = 0;
     p.castTime = p.dodgeTime = 0;

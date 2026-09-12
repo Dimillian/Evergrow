@@ -9,7 +9,7 @@
 
 - [Chronicle](chronicle.md): account/character achievements and statistics; local review and persistence contract.
 
-[Local development tools](development-tools.md) · [Open Tools](http://127.0.0.1:5173/tools/) — the canonical hub for game data, generated gear, skill animations and world reviews.
+[Current skill atlas and progression](skill-progression.md) · [Local development tools](development-tools.md) · [Open Tools](http://127.0.0.1:5173/tools/) — the canonical hub for game data, generated gear, skill animations and world reviews.
 
 - [Equipment materials](item-materials.md): base construction, drop weights, stats, pricing and the local gallery.
 
@@ -58,6 +58,8 @@ Updated 2026-09-07. Use the current guides for implementation. Proposed designs 
 [NPCs and vendors](npcs-and-vendors.md) documents implemented blacksmith trading/+10 enhancement, jeweler stock and enchanting. Prices, stock weights and enhancement strength are initial playtest defaults. [Service captures](captures/2026-09-05/town-services/README.md) show the shared panels and NPC art.
 
 ## Next iteration specifications
+
+- [Complete skill tree audit and redesign](skill-tree-redesign-proposal.md): September 12 proposal comparing the current tree with versioned PoE 1/2 sources, three replacement directions, active-skill pacing, new movement/defense/ultimate candidates, balance and implementation stages. [Content dispositions](skill-tree-redesign-content.md) cover all 21 passive families and 60 variants. Proposed, not implemented.
 
 - [Character editor feasibility](character-editor-feasibility.md): source-based assessment of creation-time appearance, modular hair/skin/accessories, body presets, rendering integration and save implications; historical proposal, with the selected MVP now integrated.
 - [Character editor MVP mockup](character-editor-mockup.md): local appearance study using the real rig, paged hair/skin options, armor tints and the inventory editor entry; save-free harnesses now share the production component.
@@ -109,3 +111,5 @@ Code checks and static reviews do not establish gameplay feel, economy balance o
 - [Stats and scaling audit · September 9](stats-audit-2026-09-09.md): verified stat flow, corrected edge cases, reproducible progression comparisons and remaining balance concerns.
 
 - [Outdoor lighting detail](outdoor-lighting.md): local Verdant/Mire canopy shafts, damp materials, illuminated mist and rendering budgets.
+
+- [Skill tree balance and readability follow-up](skill-tree-balance-2026-09-12.md): 30 actions/90 Techniques, utility and armor corrections, finite-resource playground, matched-point probes and remaining playtest questions.

@@ -3,12 +3,15 @@ import type { ProjectileEffects, ProjectileStyle } from './model.ts';
 import type { SlowEffect } from './combat-status.ts';
 
 export type SkillExecution = (
+  | { kind: 'step'; duration: number; speed: number; retreat?: boolean; shot?: boolean; pierce?: number }
+  | { kind: 'ward'; duration: number; fraction: number }
+  | { kind: 'stance'; duration: number; reduction: number; charges: number; bonus: number; echo?: boolean }
   | { kind: 'sweep'; reachMultiplier: number; arc: number }
   | { kind: 'dash'; duration: number; speed: number; radius: number }
-  | { kind: 'radial'; radius: number; melee: boolean; stun?: number; slow?: SlowEffect; style?: ProjectileStyle; echo?: boolean }
+  | { kind: 'radial'; radius: number; melee: boolean; stun?: number; slow?: SlowEffect; style?: ProjectileStyle; echo?: boolean; shelter?: { duration: number; reduction: number } }
   | { kind: 'cone'; radius: number; arc: number; stun: number }
   | { kind: 'guard'; duration: number; reduction: number }
-  | { kind: 'backstab'; minRange: number; reachMultiplier: number; arc: number; rearAngle: number; rearMultiplier: number }
+  | { kind: 'backstab'; minRange: number; reachMultiplier: number; arc: number; rearAngle: number; rearMultiplier: number; targets?: number }
   | { kind: 'projectile'; speed: number; radius: number; offsets: readonly number[];
       effects: Readonly<Omit<ProjectileEffects, 'burnDps' | 'groundDps'> & { burnDamageMultiplier?: number; groundDamageMultiplier?: number }> }
   | { kind: 'ground'; effect: 'meteor' | 'arrowRain' | 'storm' | 'frost'; radius: number; delay: number; duration: number; interval: number;
@@ -30,6 +33,16 @@ export const SKILL_TARGETING = Object.freeze({ maximumRange: 900, probeStep: 4, 
 
 /** Execution tuning is content. Handlers operate on these recipes, never skill-name branches. */
 export const SKILL_EXECUTION = {
+  repulse: { kind: 'cone', radius: 95, arc: Math.PI * 1.5, stun: 1.2 },
+  ironCitadel: { kind: 'radial', radius: 130, melee: true, shelter: { duration: 5, reduction: .45 } },
+  smokeVeil: { kind: 'radial', radius: 115, melee: false, style: 'spirit', slow: { duration: 3, factor: .5 }, shelter: { duration: 2, reduction: .2 } },
+  nightReaping: { kind: 'backstab', minRange: 160, reachMultiplier: 2, arc: Math.PI * 2, rearAngle: Math.PI * .6, rearMultiplier: 2, targets: 5 },
+  sidestep: { kind: 'step', duration: .22, speed: 720 },
+  brace: { kind: 'stance', duration: 2, reduction: .2, charges: 0, bonus: 0 },
+  runicWard: { kind: 'ward', duration: 4, fraction: .18 },
+  vaultingShot: { kind: 'step', duration: .24, speed: 440, retreat: true, shot: true },
+  rallyOfIron: { kind: 'stance', duration: 6, reduction: .25, charges: 3, bonus: .35 },
+  ghostHunt: { kind: 'stance', duration: 6, reduction: 0, charges: 3, bonus: .6, echo: true },
   cataclysm: { kind: 'ground', effect: 'meteor', radius: 105, delay: 1, duration: 0, interval: .5, style: 'fire', scatter: 7, scorch: { duration: 4, interval: .25, damageMultiplier: .12 }, burn: { duration: 3, damageMultiplier: .12 } },
   tempest: { kind: 'ground', effect: 'storm', radius: 195, delay: .4, duration: 6, interval: .5, style: 'lightning', follow: true },
   absoluteZero: { kind: 'ground', effect: 'frost', radius: 240, delay: .5, duration: 1.3, interval: 1.2, style: 'frost', slow: { duration: 4, factor: .25 }, stun: 1.5 },
@@ -65,7 +78,12 @@ export function skillDamageSuffix(id: SkillId, recipe: SkillExecution = SKILL_EX
   if (recipe.kind === 'ground' && groundEffectPulseCount(recipe) > 1) return ' / wave';
   return '';
 }
-export function skillUtilityLabel(id: SkillId): string {
-  const recipe = SKILL_EXECUTION[id];
-  return recipe.kind === 'guard' ? `${recipe.duration}s guard` : '';
+export function skillUtilityLabel(id: SkillId, recipe:SkillExecution = SKILL_EXECUTION[id]): string {
+  const n=(v:number)=>Number(v.toFixed(2));
+  if(recipe.kind==='radial'&&recipe.shelter)return `${n(recipe.shelter.duration)}s · ${Math.round(recipe.shelter.reduction*100)}% less hit damage${recipe.slow?` · ${Math.round((1-recipe.slow.factor)*100)}% slow for ${n(recipe.slow.duration)}s`:''}`;
+  if(recipe.kind==='guard')return `${n(recipe.duration)}s · ${Math.round(recipe.reduction*100)}% block`;
+  if(recipe.kind==='step')return `${Math.round(recipe.speed*recipe.duration)} units · no invulnerability`;
+  if(recipe.kind==='ward')return `${Math.round(recipe.fraction*100)}% max life barrier · ${n(recipe.duration)}s`;
+  if(recipe.kind==='stance')return `${n(recipe.duration)}s${recipe.reduction?` · ${Math.round(recipe.reduction*100)}% less hit damage`:''}${recipe.charges?` · ${recipe.charges} ${recipe.echo?'echoes at':'actions at +'} ${Math.round(recipe.bonus*100)}% damage`:''}`;
+  return '';
 }

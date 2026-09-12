@@ -73,31 +73,19 @@ Equipping a two-handed weapon stows any offhand item; equipping an offhand stows
 
 New characters choose Sword (Weathered Sword), Bow (Thorn Shortbow) or Fire Staff (Ember Staff). They share neutral worn leather armor and 64 empty inventory cells; no test items are granted.
 
-## Skill schools and requirements
+## Skill territories and requirements
 
-The atlas contains **2,182 nodes**, **2,923 connections**, **150 passive constellations plus 23 development groups**, and **20 skill majors**. Nine schools branch from the central Might, Cunning, and Arcana arteries. A school's first skill costs three points along its shortest origin route; its advanced skill costs four total. The dagger school currently has one skill. Crosslinks allow movement between specialties and disciplines.
-
-| Domain | School | First skill — 3 points | Advanced skill — 4 total points |
-| --- | --- | --- | --- |
-| Might | Way of the Blade | Crescent Cleave | Rift Lunge |
-| Might | Way of the Colossus | Whirlwind | Earthshatter |
-| Might | Way of the Sentinel | Shield Bash | Bulwark |
-| Cunning | Way of the Marksman | Thorn Volley | Piercing Shot |
-| Cunning | Way of the Ranger | Ricochet | Rain of Arrows |
-| Cunning | Way of the Dagger | Backstab | — |
-| Arcana | Way of the Pyromancer | Fireball | Meteor |
-| Arcana | Way of the Winter Star | Ice Nova | Frost Lance |
-| Arcana | Way of the Stormcaller | Arc Lightning | Soul Siphon |
+The local atlas has 875 nodes, 932 connections, 90 passive specialties, 30 skill groups and six territories. Origin route costs vary from 2 to 33 points. See [skill progression](skill-progression.md#unlock-pacing-and-assignments) for the complete unlock table and the six new movement, defensive and ultimate actions.
 
 Each skill requires allocation, an assigned slot, suitable equipment, enough mana, and a ready cooldown. Gear changes retain assignments, but incompatible slots cannot activate. Cooldowns belong to skill IDs and survive reassignment. The UI and combat consume the same requirement and cost metadata.
 
 ## Skill development
 
-Skills now support purchased ranks, optional lower casting ranks, deeper specializations, mastery and three Arcana ultimates. See [skill progression](skill-progression.md) for implemented formulas, choices and the full ultimate catalog.
+Skills now support purchased ranks, optional lower casting ranks, 68 direct Techniques, eight Doctrine families, four keystones and five ultimates. See [skill progression](skill-progression.md) for implemented formulas, choices and the full ultimate catalog.
 
 ## Active skill catalog
 
-First-row skills have no cooldown; the eight second-row skills cost 24–40 base mana and retain cooldowns. All tiers respect action recovery. Costs and cooldowns below are rank-1 authored bases; mana-cost reduction and cooldown reduction independently change their effective values. Mana reduction adds across gear and tree, caps at 75%, and costs round to tenths with a minimum of one mana. Damage potency multiplies the selected compatible weapon’s derived hit. “Melee” means sword, axe, mace, or dagger; “blade” means sword, axe, or dagger. Heavy skills accept an axe or mace of either handedness.
+Repeatable basic skills have no cooldown; advanced and ultimate actions retain individual cooldowns. All tiers respect action recovery. Costs and cooldowns below are rank-1 authored bases; mana-cost reduction and cooldown reduction independently change their effective values. Mana reduction adds across gear and tree, tapers after 20% toward 40%, and costs round to tenths with a minimum of one mana. Damage potency multiplies the selected compatible weapon’s derived hit. “Melee” means sword, axe, mace, or dagger; “blade” means sword, axe, or dagger. Heavy skills accept an axe or mace of either handedness.
 
 | Skill | Requirement | Mana | Cooldown | Potency | Effect |
 | --- | --- | ---: | ---: | ---: | --- |

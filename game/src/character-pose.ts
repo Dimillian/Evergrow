@@ -14,7 +14,7 @@ export function playerPose(player: Player, time: number,
   const castProgress = player.castTime > 0 ? Math.max(0, Math.min(1, 1 - player.castTime / Math.max(.001, player.castDuration))) : 0;
   const castingWeapon = player.activeSkill && player.castTime > 0 ? skillWeapon(player.activeSkill, player.equipment) : null;
   const gesture: CharacterPose['gesture'] = player.castTime <= 0 ? undefined : player.activeSkill === 'earthshatter' ? 'slam'
-    : player.activeSkill === 'shieldBash' ? 'bash' : player.activeSkill === 'backstab' || player.activeSkill === 'lunge' ? 'thrust' : undefined;
+    : (player.activeSkill === 'shieldBash' || player.activeSkill === 'repulse' || player.activeSkill === 'ironCitadel') ? 'bash' : (player.activeSkill === 'backstab' || player.activeSkill === 'nightReaping') || player.activeSkill === 'lunge' ? 'thrust' : undefined;
   const off = player.equipment.offHand;
   const offHand: CharacterPose['offHand'] = off?.kind === 'weapon'
     ? { kind: 'weapon', visual: attack?.hand === 'off' ? attack.weapon.visual : off.weapon.visual }
@@ -22,12 +22,12 @@ export function playerPose(player: Player, time: number,
   return {
     kind: 'player', appearance:player.character.look.appearance, outfit:tintedOutfit(outfitFromEquipment(player.character),player.character.look.armorTints,player.character.look.showHelmet), angle: player.castTime > 0 ? player.castAngle : player.angle,
     time, gaitPhase: player.walkTime, moveAngle: Math.atan2(player.vy, player.vx),
-    moving: Math.min(1, Math.hypot(player.vx, player.vy) / 130),
+    moving: player.dash ? 1 : Math.min(1, Math.hypot(player.vx, player.vy) / 130),
     attack: attack ? elapsed / attack.duration : 0,
     attackAngle: attack?.angle ?? player.angle,
     attackKind: attack?.kind, attackHand: attack?.hand ?? (castingWeapon && castingWeapon === (off?.kind === 'weapon' ? off.weapon : null) ? 'off' : 'main'), gesture,
     weapon: attack?.hand === 'main' ? attack.weapon.visual : player.equipment.mainHand.visual,
-    offHand, guard: Math.min(1, player.guardTime / .2),
+    offHand, guard: Math.min(1, Math.max(player.guardTime,player.skillEffects?.brace?.remaining??0,player.skillEffects?.rallyOfIron?.remaining??0) / .2),
     castColor: player.activeSkill ? SKILL_DEFINITIONS[player.activeSkill].color : player.equipment.mainHand.visual.glow ?? '#c0acf0',
     grip: getWeaponGrip(player.equipment),
     attackStart: attack ? attack.activeStart / attack.duration : undefined,

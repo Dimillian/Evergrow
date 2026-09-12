@@ -106,6 +106,7 @@ test('dual wield alternates actual main/off-hand damage and duration snapshots',
 
 test('an unlocked bow skill stays assigned but cannot spend mana or cast after equipping a sword', () => {
   const sim = skillSim('piercingShot'); equip(sim, 'longsword');
+  sim.player.derived.manaRegeneration=0; // Isolate rejected casts from passive recovery.
   const mana = sim.player.mana;
   cast(sim); advance(sim, .2);
   assert.equal(sim.player.character.skillSlots[0], 'piercingShot'); assert.equal(sim.player.mana, mana);

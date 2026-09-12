@@ -1,3 +1,4 @@
+import { advanceSkillEffects } from './player-skill-effects.ts';
 import { advanceAffixBuffs } from './affix-combat.ts';
 import type { Player } from './model.ts';
 import type { ActionResult, SkillId } from './character-types.ts';
@@ -17,6 +18,7 @@ export function refreshCharacter(player: Player): void {
       : offhand?.focus ? { kind: 'focus', focus: offhand.focus }
       : offhand?.kind === 'weapon' && offhand.weapon ? { kind: 'weapon', weapon: offhand.weapon } : null };
   advanceAffixBuffs(player, 0);
+  advanceSkillEffects(player,0);
   player.maxHp = derived.maxHp; player.maxMana = derived.maxMana;
   player.hp = Math.min(player.hp, player.maxHp); player.mana = Math.min(player.mana, player.maxMana);
 }

@@ -16,7 +16,7 @@ test('every skill has immutable finite execution content and numeric UI reads it
     }
   };
   verify(SKILL_EXECUTION);
-  assert.equal(skillUtilityLabel('bulwark'), `${SKILL_EXECUTION.bulwark.duration}s guard`);
+  assert.equal(skillUtilityLabel('bulwark'), `${SKILL_EXECUTION.bulwark.duration}s · 75% block`);
   assert.equal(skillDamageSuffix('volley'), ' / arrow');
   assert.equal(skillDamageSuffix('rainOfArrows'), ' / wave');
   assert.equal(skillDamageSuffix('meteor'), '');

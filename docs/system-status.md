@@ -77,7 +77,7 @@ Updated 2026-09-07 after rebasing the character editor onto the upstream pause-m
 | Progression | Fixed geographic danger, source-level rewards, XP level-gap factors, unchanged thresholds through level 4 and a rising post-intro premium, one skill and five stat points per level | Numeric level bound 1,000,000; not a balanced infinite endgame |
 | Equipment | Twelve kinds, five rarities, eleven slots; 17 generated weapons, 3 shields and 6 caster foci; shared affixes with curated caster rolls; visible procedural gear | Recipe-based +10 enhancement and enchanting; no unique legendary powers |
 | Inventory | 64 cells, three columns, subtle title-row Sort & filter / Equip Best icons; compact filtering popover and three-choice weapon-type warning; double-click/keyboard equip; LB/RB section switching and highlighted controller navigation | Equip Best uses item power; weapon changes require a choice, keeping the current weapon still upgrades other gear; no stash or manual ground disposal |
-| Skill atlas | 2,333 nodes, 3,166 edges, 150 passive constellations + 23 development groups, three domains, nine schools; short cross-connected routes, hover stat previews, search/filters, double-click and atomic path allocation | Reused authored bonus families need balancing; no respec |
+| Skill atlas | Local 875-node, 932-edge six-territory map; 90 specialties, 30 skills, 90 Techniques, eight Doctrine families and four keystones; three ranks and finite old-tree point refund | Initial tuning; user combat/visual playtest pending; unpushed |
 | Gold and loot | Independent gear/gold rolls; physical saved coin piles, magnet pickup, wallet in HUD/inventory; corrected common-heavy loot tables; individual named ground items | Purchases, enhancements and enchanting provide gold sinks; affordability awaits playtesting |
 | World | Seven blended biomes, 23 prop families, seeded roads/rivers/lakes, water-aware settlements, streamed terrain and climate-specific environmental life | Finite coordinate/cache/save bounds; no weather or multi-site quest chains |
 | Towns and interiors | Stable generated towns/cities, five building kinds, furnished walk-in interiors, roof fading and protected sanctuaries | Three procedural service NPC roles, nearby click/E interaction and pause-safe workbenches |
@@ -192,3 +192,7 @@ Caster armor has four fabric constructions: linen, silk, velvet and starweave. T
 ## Dynamic soundtrack — September 8
 
 The local runtime now includes regional, settlement, dungeon and major-encounter music, independent remembered SFX/music levels, quiet panel sounds and shared mute/background handling. See [dynamic soundtrack](dynamic-soundtrack.md) for the 17-track catalogue and transition rules. Site publication and Android installation are separate.
+
+## Local atlas replacement · 2026-09-12
+
+Supersedes the historical atlas counts and three-/four-point school rules above. Six territories replace the celestial petals. Adds Sidestep, Brace, Runic Ward, Vaulting Shot, Rally of Iron and Ghost Hunt. Direct Techniques replace potency/efficiency chains; ranks stop at three, and optional Doctrines/keystones introduce distinct decisions. Older valid tree investments are refunded while retaining character and world progress. [Current rules](skill-progression.md). This pass is local only.

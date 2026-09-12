@@ -1,0 +1,8732 @@
+{
+  "methodology": "Runtime graph, BFS from free origin, one point per node. Path costs exclude ranks and optional detours. Formula probes have no gear, leaf, variant or global bonuses. No simulation or saves.",
+  "nodes": 573,
+  "edges": 602,
+  "connectedNodes": 573,
+  "cycleRank": 30,
+  "groups": 74,
+  "ordinaryClusters": 48,
+  "ordinaryClusterNodes": 294,
+  "ordinaryMinorNodes": 240,
+  "kindCounts": {
+    "minor": 396,
+    "notable": 146,
+    "major": 30,
+    "origin": 1
+  },
+  "roleCounts": {
+    "cluster": 294,
+    "travel": 156,
+    "other": 99,
+    "choice": 24
+  },
+  "clusterSizeCounts": {
+    "5": 12,
+    "6": 18,
+    "7": 18
+  },
+  "familyCounts": {
+    "Afterburn": 1,
+    "Arrowstorm": 1,
+    "Ashproof": 1,
+    "Battle Rhythm": 1,
+    "Blood and Iron": 1,
+    "Borrowed Time": 1,
+    "Cinder Skin": 1,
+    "Clear Water": 1,
+    "Close Quarters": 1,
+    "Conductive Vein": 1,
+    "Cutpurse Ward": 1,
+    "Deep Aquifer": 1,
+    "Deep Draught": 1,
+    "Elusive Heart": 1,
+    "Far Horizon": 1,
+    "Fault Line": 1,
+    "Field Supplies": 1,
+    "First Shelter": 1,
+    "Flight Path": 1,
+    "Furnace Mouth": 1,
+    "Heartseeker": 1,
+    "Heavy Hand": 1,
+    "Icefield": 1,
+    "Iron Harvest": 1,
+    "Kindling": 1,
+    "Knife Edge": 1,
+    "Light Foot": 1,
+    "Live Wire": 1,
+    "Living Stone": 1,
+    "Perfect Opening": 1,
+    "Quick Steel": 1,
+    "Quiet Mind": 1,
+    "Reservoir": 1,
+    "Returning Tide": 1,
+    "Rime Shell": 1,
+    "Running Quarry": 1,
+    "Second Breath": 1,
+    "Shieldwork": 1,
+    "Soul Stitch": 1,
+    "Spellweave": 1,
+    "Still Current": 1,
+    "Sure Aim": 1,
+    "Tempered Edge": 1,
+    "Unbroken": 1,
+    "Volatile Thought": 1,
+    "War Reserve": 1,
+    "Wide Arc": 1,
+    "Winter Wall": 1
+  },
+  "uniqueFamilyNames": 48,
+  "uniqueFamilyBonusPairs": 48,
+  "familyBonusPairs": {
+    "[[\"arcaneResistance\",3]] / [[\"arcaneResistance\",12],[\"moveSpeedPercent\",2]]": 1,
+    "[[\"areaPercent\",3]] / [[\"areaPercent\",14],[\"damagePercent\",6]]": 1,
+    "[[\"areaPercent\",3]] / [[\"areaPercent\",15],[\"attackSpeedPercent\",4]]": 1,
+    "[[\"areaPercent\",3]] / [[\"areaPercent\",15],[\"spellDamagePercent\",5]]": 1,
+    "[[\"areaPercent\",3]] / [[\"areaPercent\",18]]": 1,
+    "[[\"armor\",8]] / [[\"afterguardPercent\",24],[\"armor\",32]]": 1,
+    "[[\"attackSpeedPercent\",2]] / [[\"attackSpeedPercent\",6],[\"manaCostPercent\",4]]": 1,
+    "[[\"attackSpeedPercent\",2]] / [[\"attackSpeedPercent\",7]]": 1,
+    "[[\"blockChance\",1]] / [[\"blockChance\",4],[\"blockReduction\",5]]": 1,
+    "[[\"castSpeedPercent\",2]] / [[\"castSpeedPercent\",7]]": 1,
+    "[[\"cooldownPercent\",1]] / [[\"cooldownPercent\",4],[\"maxMana\",12]]": 1,
+    "[[\"cooldownPercent\",1]] / [[\"cooldownPercent\",4]]": 1,
+    "[[\"critChance\",0.6]] / [[\"critChance\",2],[\"critDamage\",10]]": 1,
+    "[[\"critChance\",0.6]] / [[\"critChance\",2],[\"critDamage\",14]]": 1,
+    "[[\"critDamage\",4]] / [[\"critChance\",2],[\"critDamage\",12]]": 1,
+    "[[\"critDamage\",4]] / [[\"critDamage\",16],[\"damagePercent\",8]]": 1,
+    "[[\"damagePercent\",3]] / [[\"areaPercent\",16]]": 1,
+    "[[\"damagePercent\",3]] / [[\"critChance\",1.5],[\"lifeOnHit\",1]]": 1,
+    "[[\"damagePercent\",3]] / [[\"projectilePierce\",1]]": 1,
+    "[[\"damagePercent\",4]] / [[\"damagePercent\",12]]": 1,
+    "[[\"dexterity\",2]] / [[\"critChance\",1],[\"projectilePierce\",1]]": 1,
+    "[[\"dexterity\",2]] / [[\"damagePercent\",6],[\"dexterity\",5]]": 1,
+    "[[\"fireResistance\",3]] / [[\"fireResistance\",12],[\"lightningResistance\",6]]": 1,
+    "[[\"fireResistance\",3]] / [[\"fireResistance\",12],[\"maxHp\",20]]": 1,
+    "[[\"frostResistance\",3]] / [[\"arcaneResistance\",8],[\"frostResistance\",12]]": 1,
+    "[[\"frostResistance\",3]] / [[\"frostResistance\",12],[\"maxHp\",16]]": 1,
+    "[[\"intelligence\",2]] / [[\"allResistance\",4],[\"maxMana\",26]]": 1,
+    "[[\"intelligence\",2]] / [[\"intelligence\",6],[\"spellDamagePercent\",8]]": 1,
+    "[[\"lifeOnHit\",0.25]] / [[\"armor\",24],[\"lifeOnHit\",1]]": 1,
+    "[[\"lifeRegen\",0.15]] / [[\"arcaneResistance\",8],[\"lifeRegen\",0.6]]": 1,
+    "[[\"lifeRegen\",0.15]] / [[\"lifeRegen\",0.65],[\"maxHp\",12]]": 1,
+    "[[\"manaCostPercent\",1]] / [[\"manaCostPercent\",5],[\"manaRegen\",1.5]]": 1,
+    "[[\"manaCostPercent\",1]] / [[\"manaCostPercent\",5],[\"maxMana\",12]]": 1,
+    "[[\"manaRegen\",0.5]] / [[\"manaOnKill\",2],[\"potionPercent\",8]]": 1,
+    "[[\"manaRegen\",0.6]] / [[\"lightningResistance\",8],[\"manaRegen\",2.5]]": 1,
+    "[[\"manaRegen\",0.6]] / [[\"manaRegen\",2.5],[\"maxMana\",12]]": 1,
+    "[[\"maxHp\",6]] / [[\"damagePercent\",8],[\"lifeOnHit\",1.5]]": 1,
+    "[[\"maxHp\",7]] / [[\"cooldownPercent\",3],[\"maxHp\",22]]": 1,
+    "[[\"maxHp\",8]] / [[\"maxHp\",24],[\"vitality\",2]]": 1,
+    "[[\"maxMana\",5]] / [[\"manaOnKill\",2],[\"maxMana\",18]]": 1,
+    "[[\"maxMana\",5]] / [[\"spellweavePercent\",20]]": 1,
+    "[[\"maxMana\",6]] / [[\"maxMana\",24]]": 1,
+    "[[\"moveSpeedPercent\",1]] / [[\"cooldownPercent\",3],[\"moveSpeedPercent\",4]]": 1,
+    "[[\"moveSpeedPercent\",1]] / [[\"moveSpeedPercent\",4]]": 1,
+    "[[\"potionPercent\",3]] / [[\"potionPercent\",15]]": 1,
+    "[[\"spellDamagePercent\",4]] / [[\"spellDamagePercent\",12]]": 1,
+    "[[\"strength\",2]] / [[\"critDamage\",12],[\"strength\",6]]": 1,
+    "[[\"vitality\",2]] / [[\"allResistance\",4],[\"vitality\",6]]": 1
+  },
+  "statBearingNodes": 474,
+  "uniqueStatBonusPackages": 103,
+  "statBonusPackages": {
+    "[[\"maxMana\",4]]": 34,
+    "[[\"intelligence\",2]]": 33,
+    "[[\"dexterity\",2]]": 32,
+    "[[\"maxHp\",5]]": 31,
+    "[[\"strength\",2]]": 25,
+    "[[\"maxHp\",4],[\"maxMana\",3]]": 24,
+    "[[\"areaPercent\",3]]": 20,
+    "[[\"damagePercent\",3]]": 15,
+    "[[\"manaRegen\",0.6]]": 11,
+    "[[\"attackSpeedPercent\",2]]": 10,
+    "[[\"cooldownPercent\",1]]": 10,
+    "[[\"critChance\",0.6]]": 10,
+    "[[\"critDamage\",4]]": 10,
+    "[[\"frostResistance\",3]]": 10,
+    "[[\"lifeRegen\",0.15]]": 10,
+    "[[\"manaCostPercent\",1]]": 10,
+    "[[\"maxMana\",5]]": 10,
+    "[[\"fireResistance\",3]]": 9,
+    "[[\"moveSpeedPercent\",1]]": 9,
+    "[[\"armor\",8]]": 6,
+    "[[\"castSpeedPercent\",2]]": 6,
+    "[[\"manaRegen\",0.5]]": 6,
+    "[[\"maxHp\",7]]": 6,
+    "[[\"potionPercent\",3]]": 6,
+    "[[\"arcaneResistance\",3]]": 5,
+    "[[\"blockChance\",1]]": 5,
+    "[[\"damagePercent\",4]]": 5,
+    "[[\"lifeOnHit\",0.25]]": 5,
+    "[[\"maxHp\",8]]": 5,
+    "[[\"maxMana\",6]]": 5,
+    "[[\"vitality\",2]]": 5,
+    "[[\"maxHp\",6]]": 4,
+    "[[\"spellDamagePercent\",4]]": 4,
+    "[[\"allResistance\",4],[\"vitality\",6]]": 2,
+    "[[\"areaPercent\",15],[\"attackSpeedPercent\",4]]": 2,
+    "[[\"areaPercent\",24]]": 2,
+    "[[\"critChance\",1.5],[\"lifeOnHit\",1]]": 2,
+    "[[\"manaOnKill\",2],[\"maxMana\",18]]": 2,
+    "[[\"maxMana\",24]]": 2,
+    "[[\"projectilePierce\",1]]": 2,
+    "[[\"spellweavePercent\",20]]": 2,
+    "[[\"afterguardPercent\",24],[\"armor\",32]]": 1,
+    "[[\"allResistance\",3],[\"maxHp\",28]]": 1,
+    "[[\"allResistance\",4],[\"maxMana\",26]]": 1,
+    "[[\"allResistance\",7]]": 1,
+    "[[\"arcaneResistance\",12],[\"frostResistance\",12]]": 1,
+    "[[\"arcaneResistance\",12],[\"moveSpeedPercent\",2]]": 1,
+    "[[\"arcaneResistance\",8],[\"frostResistance\",12]]": 1,
+    "[[\"arcaneResistance\",8],[\"lifeRegen\",0.6]]": 1,
+    "[[\"areaPercent\",14],[\"damagePercent\",6]]": 1,
+    "[[\"areaPercent\",15],[\"spellDamagePercent\",5]]": 1,
+    "[[\"areaPercent\",16]]": 1,
+    "[[\"areaPercent\",18]]": 1,
+    "[[\"armor\",24],[\"lifeOnHit\",1]]": 1,
+    "[[\"attackSpeedPercent\",6],[\"manaCostPercent\",4]]": 1,
+    "[[\"attackSpeedPercent\",7]]": 1,
+    "[[\"attackSpeedPercent\",9]]": 1,
+    "[[\"blockChance\",4],[\"blockReduction\",5]]": 1,
+    "[[\"blockChance\",5]]": 1,
+    "[[\"blockReduction\",10]]": 1,
+    "[[\"castSpeedPercent\",10]]": 1,
+    "[[\"castSpeedPercent\",7]]": 1,
+    "[[\"cooldownPercent\",3],[\"maxHp\",22]]": 1,
+    "[[\"cooldownPercent\",3],[\"moveSpeedPercent\",4]]": 1,
+    "[[\"cooldownPercent\",4],[\"maxMana\",12]]": 1,
+    "[[\"cooldownPercent\",4]]": 1,
+    "[[\"cooldownPercent\",6]]": 1,
+    "[[\"critChance\",1],[\"projectilePierce\",1]]": 1,
+    "[[\"critChance\",2],[\"critDamage\",10]]": 1,
+    "[[\"critChance\",2],[\"critDamage\",12]]": 1,
+    "[[\"critChance\",2],[\"critDamage\",14]]": 1,
+    "[[\"critChance\",3],[\"critDamage\",10]]": 1,
+    "[[\"critDamage\",12],[\"strength\",6]]": 1,
+    "[[\"critDamage\",16],[\"damagePercent\",8]]": 1,
+    "[[\"damagePercent\",12]]": 1,
+    "[[\"damagePercent\",16]]": 1,
+    "[[\"damagePercent\",6],[\"dexterity\",5]]": 1,
+    "[[\"damagePercent\",8],[\"lifeOnHit\",1.5]]": 1,
+    "[[\"fireResistance\",12],[\"lightningResistance\",12]]": 1,
+    "[[\"fireResistance\",12],[\"lightningResistance\",6]]": 1,
+    "[[\"fireResistance\",12],[\"maxHp\",20]]": 1,
+    "[[\"frostResistance\",12],[\"maxHp\",16]]": 1,
+    "[[\"intelligence\",6],[\"spellDamagePercent\",8]]": 1,
+    "[[\"lifeOnHit\",2]]": 1,
+    "[[\"lifeRegen\",0.65],[\"maxHp\",12]]": 1,
+    "[[\"lifeRegen\",1.2]]": 1,
+    "[[\"lifeRegen\",1]]": 1,
+    "[[\"lightningResistance\",8],[\"manaRegen\",2.5]]": 1,
+    "[[\"manaCostPercent\",5],[\"manaRegen\",1.5]]": 1,
+    "[[\"manaCostPercent\",5],[\"maxMana\",12]]": 1,
+    "[[\"manaCostPercent\",8]]": 1,
+    "[[\"manaOnKill\",2],[\"potionPercent\",8]]": 1,
+    "[[\"manaRegen\",2.5],[\"maxMana\",12]]": 1,
+    "[[\"manaRegen\",5]]": 1,
+    "[[\"maxHp\",24],[\"vitality\",2]]": 1,
+    "[[\"maxMana\",35]]": 1,
+    "[[\"moveSpeedPercent\",4]]": 1,
+    "[[\"moveSpeedPercent\",6]]": 1,
+    "[[\"potionPercent\",15]]": 1,
+    "[[\"potionPercent\",25]]": 1,
+    "[[\"spellDamagePercent\",12]]": 1,
+    "[[\"spellDamagePercent\",18]]": 1,
+    "[[\"spellweavePercent\",28]]": 1
+  },
+  "stats": {
+    "afterguardPercent": {
+      "nodes": 1,
+      "earliestPointCost": 11
+    },
+    "allResistance": {
+      "nodes": 5,
+      "earliestPointCost": 12
+    },
+    "arcaneResistance": {
+      "nodes": 9,
+      "earliestPointCost": 15
+    },
+    "areaPercent": {
+      "nodes": 28,
+      "earliestPointCost": 9
+    },
+    "armor": {
+      "nodes": 8,
+      "earliestPointCost": 8
+    },
+    "attackSpeedPercent": {
+      "nodes": 15,
+      "earliestPointCost": 6
+    },
+    "blockChance": {
+      "nodes": 7,
+      "earliestPointCost": 6
+    },
+    "blockReduction": {
+      "nodes": 2,
+      "earliestPointCost": 7
+    },
+    "castSpeedPercent": {
+      "nodes": 8,
+      "earliestPointCost": 6
+    },
+    "cooldownPercent": {
+      "nodes": 15,
+      "earliestPointCost": 8
+    },
+    "critChance": {
+      "nodes": 17,
+      "earliestPointCost": 8
+    },
+    "critDamage": {
+      "nodes": 16,
+      "earliestPointCost": 10
+    },
+    "damagePercent": {
+      "nodes": 26,
+      "earliestPointCost": 4
+    },
+    "dexterity": {
+      "nodes": 33,
+      "earliestPointCost": 1
+    },
+    "fireResistance": {
+      "nodes": 12,
+      "earliestPointCost": 12
+    },
+    "frostResistance": {
+      "nodes": 13,
+      "earliestPointCost": 8
+    },
+    "intelligence": {
+      "nodes": 34,
+      "earliestPointCost": 1
+    },
+    "lifeOnHit": {
+      "nodes": 10,
+      "earliestPointCost": 11
+    },
+    "lifeRegen": {
+      "nodes": 14,
+      "earliestPointCost": 10
+    },
+    "lightningResistance": {
+      "nodes": 3,
+      "earliestPointCost": 14
+    },
+    "manaCostPercent": {
+      "nodes": 14,
+      "earliestPointCost": 10
+    },
+    "manaOnKill": {
+      "nodes": 3,
+      "earliestPointCost": 13
+    },
+    "manaRegen": {
+      "nodes": 21,
+      "earliestPointCost": 4
+    },
+    "maxHp": {
+      "nodes": 76,
+      "earliestPointCost": 4
+    },
+    "maxMana": {
+      "nodes": 82,
+      "earliestPointCost": 2
+    },
+    "moveSpeedPercent": {
+      "nodes": 13,
+      "earliestPointCost": 4
+    },
+    "potionPercent": {
+      "nodes": 9,
+      "earliestPointCost": 13
+    },
+    "projectilePierce": {
+      "nodes": 3,
+      "earliestPointCost": 9
+    },
+    "spellDamagePercent": {
+      "nodes": 8,
+      "earliestPointCost": 4
+    },
+    "spellweavePercent": {
+      "nodes": 3,
+      "earliestPointCost": 11
+    },
+    "strength": {
+      "nodes": 26,
+      "earliestPointCost": 1
+    },
+    "vitality": {
+      "nodes": 8,
+      "earliestPointCost": 7
+    }
+  },
+  "specializations": 68,
+  "doctrines": [
+    {
+      "id": "doctrine:guard:0",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:guard:1",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:guard:2",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:recovery:0",
+      "cost": 19
+    },
+    {
+      "id": "doctrine:recovery:1",
+      "cost": 19
+    },
+    {
+      "id": "doctrine:recovery:2",
+      "cost": 19
+    },
+    {
+      "id": "doctrine:impact:0",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:impact:1",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:impact:2",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:flight:0",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:flight:1",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:flight:2",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:motion:0",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:motion:1",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:motion:2",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:casting:0",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:casting:1",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:casting:2",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:reserve:0",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:reserve:1",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:reserve:2",
+      "cost": 12
+    },
+    {
+      "id": "doctrine:insulation:0",
+      "cost": 19
+    },
+    {
+      "id": "doctrine:insulation:1",
+      "cost": 19
+    },
+    {
+      "id": "doctrine:insulation:2",
+      "cost": 19
+    }
+  ],
+  "keystones": [
+    {
+      "id": "keystone:measured-force",
+      "cost": 16
+    },
+    {
+      "id": "keystone:open-hand",
+      "cost": 17
+    },
+    {
+      "id": "keystone:borrowed-flame",
+      "cost": 17
+    },
+    {
+      "id": "keystone:arcane-overload",
+      "cost": 17
+    }
+  ],
+  "exceptionalNodes": 122,
+  "maxShortestPointCost": 27,
+  "distanceBands": [
+    {
+      "min": 0,
+      "max": 4,
+      "nodes": 60,
+      "skills": [
+        "brace",
+        "shieldBash",
+        "cleave",
+        "volley",
+        "backstab",
+        "sidestep",
+        "fireball",
+        "arcLightning",
+        "iceNova"
+      ],
+      "keystones": 0,
+      "doctrines": 0
+    },
+    {
+      "min": 5,
+      "max": 9,
+      "nodes": 139,
+      "skills": [
+        "bulwark",
+        "lunge",
+        "whirlwind",
+        "ricochet",
+        "vaultingShot",
+        "runicWard",
+        "siphon"
+      ],
+      "keystones": 0,
+      "doctrines": 0
+    },
+    {
+      "min": 10,
+      "max": 19,
+      "nodes": 281,
+      "skills": [
+        "earthshatter",
+        "piercingShot",
+        "rainOfArrows",
+        "meteor",
+        "frostLance"
+      ],
+      "keystones": 4,
+      "doctrines": 24
+    },
+    {
+      "min": 20,
+      "max": 29,
+      "nodes": 93,
+      "skills": [
+        "rallyOfIron",
+        "ghostHunt",
+        "cataclysm",
+        "tempest",
+        "absoluteZero"
+      ],
+      "keystones": 0,
+      "doctrines": 0
+    },
+    {
+      "min": 30,
+      "max": 27,
+      "nodes": 0,
+      "skills": [],
+      "keystones": 0,
+      "doctrines": 0
+    }
+  ],
+  "skills": [
+    {
+      "id": "brace",
+      "name": "Brace",
+      "domain": "Might",
+      "tier": "advanced",
+      "requirement": "any",
+      "shortestPointCost": 2,
+      "earliestLevel": 3,
+      "mana": 14,
+      "cooldown": 8,
+      "shortestRoute": [
+        "origin",
+        "road:bastion:1",
+        "skill:brace"
+      ]
+    },
+    {
+      "id": "shieldBash",
+      "name": "Shield Bash",
+      "domain": "Might",
+      "tier": "basic",
+      "requirement": "shield",
+      "shortestPointCost": 4,
+      "earliestLevel": 5,
+      "mana": 10,
+      "cooldown": 0,
+      "shortestRoute": [
+        "origin",
+        "road:bastion:1",
+        "road:bastion:2",
+        "road:bastion:3",
+        "skill:shieldBash"
+      ]
+    },
+    {
+      "id": "bulwark",
+      "name": "Bulwark",
+      "domain": "Might",
+      "tier": "advanced",
+      "requirement": "shield",
+      "shortestPointCost": 6,
+      "earliestLevel": 7,
+      "mana": 32,
+      "cooldown": 8,
+      "shortestRoute": [
+        "origin",
+        "road:bastion:1",
+        "road:bastion:2",
+        "road:bastion:3",
+        "road:bastion:4",
+        "road:bastion:5",
+        "skill:bulwark"
+      ]
+    },
+    {
+      "id": "cleave",
+      "name": "Crescent Cleave",
+      "domain": "Might",
+      "tier": "basic",
+      "requirement": "melee",
+      "shortestPointCost": 2,
+      "earliestLevel": 3,
+      "mana": 12,
+      "cooldown": 0,
+      "shortestRoute": [
+        "origin",
+        "road:forge:1",
+        "skill:cleave"
+      ]
+    },
+    {
+      "id": "lunge",
+      "name": "Rift Lunge",
+      "domain": "Might",
+      "tier": "advanced",
+      "requirement": "blade",
+      "shortestPointCost": 5,
+      "earliestLevel": 6,
+      "mana": 24,
+      "cooldown": 4,
+      "shortestRoute": [
+        "origin",
+        "road:forge:1",
+        "road:forge:2",
+        "road:forge:3",
+        "road:forge:4",
+        "skill:lunge"
+      ]
+    },
+    {
+      "id": "whirlwind",
+      "name": "Whirlwind",
+      "domain": "Might",
+      "tier": "basic",
+      "requirement": "melee",
+      "shortestPointCost": 9,
+      "earliestLevel": 10,
+      "mana": 12,
+      "cooldown": 0,
+      "shortestRoute": [
+        "origin",
+        "road:forge:1",
+        "road:forge:2",
+        "road:forge:3",
+        "road:forge:4",
+        "road:forge:5",
+        "road:forge:6",
+        "road:forge:7",
+        "road:forge:8",
+        "skill:whirlwind"
+      ]
+    },
+    {
+      "id": "earthshatter",
+      "name": "Earthshatter",
+      "domain": "Might",
+      "tier": "advanced",
+      "requirement": "heavy",
+      "shortestPointCost": 13,
+      "earliestLevel": 14,
+      "mana": 36,
+      "cooldown": 6,
+      "shortestRoute": [
+        "origin",
+        "road:forge:1",
+        "road:forge:2",
+        "road:forge:3",
+        "road:forge:4",
+        "road:forge:5",
+        "road:forge:6",
+        "road:forge:7",
+        "road:forge:8",
+        "road:forge:9",
+        "road:forge:10",
+        "road:forge:11",
+        "road:forge:12",
+        "skill:earthshatter"
+      ]
+    },
+    {
+      "id": "rallyOfIron",
+      "name": "Rally of Iron",
+      "domain": "Might",
+      "tier": "ultimate",
+      "requirement": "melee",
+      "shortestPointCost": 23,
+      "earliestLevel": 24,
+      "mana": 42,
+      "cooldown": 24,
+      "shortestRoute": [
+        "origin",
+        "road:forge:1",
+        "road:forge:2",
+        "road:forge:3",
+        "road:forge:4",
+        "road:forge:5",
+        "road:forge:6",
+        "road:forge:7",
+        "road:forge:8",
+        "road:forge:9",
+        "road:forge:10",
+        "road:forge:11",
+        "road:forge:12",
+        "road:forge:13",
+        "road:forge:14",
+        "road:forge:15",
+        "road:forge:16",
+        "road:forge:17",
+        "road:forge:18",
+        "road:forge:19",
+        "road:forge:20",
+        "road:forge:21",
+        "road:forge:22",
+        "skill:rallyOfIron"
+      ]
+    },
+    {
+      "id": "volley",
+      "name": "Thorn Volley",
+      "domain": "Cunning",
+      "tier": "basic",
+      "requirement": "bow",
+      "shortestPointCost": 2,
+      "earliestLevel": 3,
+      "mana": 10,
+      "cooldown": 0,
+      "shortestRoute": [
+        "origin",
+        "road:hunt:1",
+        "skill:volley"
+      ]
+    },
+    {
+      "id": "ricochet",
+      "name": "Ricochet",
+      "domain": "Cunning",
+      "tier": "basic",
+      "requirement": "bow",
+      "shortestPointCost": 8,
+      "earliestLevel": 9,
+      "mana": 12,
+      "cooldown": 0,
+      "shortestRoute": [
+        "origin",
+        "road:hunt:1",
+        "road:hunt:2",
+        "road:hunt:3",
+        "road:hunt:4",
+        "road:hunt:5",
+        "road:hunt:6",
+        "road:hunt:7",
+        "skill:ricochet"
+      ]
+    },
+    {
+      "id": "piercingShot",
+      "name": "Piercing Shot",
+      "domain": "Cunning",
+      "tier": "advanced",
+      "requirement": "bow",
+      "shortestPointCost": 10,
+      "earliestLevel": 11,
+      "mana": 28,
+      "cooldown": 3.5,
+      "shortestRoute": [
+        "origin",
+        "road:hunt:1",
+        "road:hunt:2",
+        "road:hunt:3",
+        "road:hunt:4",
+        "road:hunt:5",
+        "road:hunt:6",
+        "road:hunt:7",
+        "road:hunt:8",
+        "road:hunt:9",
+        "skill:piercingShot"
+      ]
+    },
+    {
+      "id": "rainOfArrows",
+      "name": "Rain of Arrows",
+      "domain": "Cunning",
+      "tier": "advanced",
+      "requirement": "bow",
+      "shortestPointCost": 13,
+      "earliestLevel": 14,
+      "mana": 36,
+      "cooldown": 6,
+      "shortestRoute": [
+        "origin",
+        "road:hunt:1",
+        "road:hunt:2",
+        "road:hunt:3",
+        "road:hunt:4",
+        "road:hunt:5",
+        "road:hunt:6",
+        "road:hunt:7",
+        "road:hunt:8",
+        "road:hunt:9",
+        "road:hunt:10",
+        "road:hunt:11",
+        "road:hunt:12",
+        "skill:rainOfArrows"
+      ]
+    },
+    {
+      "id": "ghostHunt",
+      "name": "Ghost Hunt",
+      "domain": "Cunning",
+      "tier": "ultimate",
+      "requirement": "bow",
+      "shortestPointCost": 23,
+      "earliestLevel": 24,
+      "mana": 40,
+      "cooldown": 24,
+      "shortestRoute": [
+        "origin",
+        "road:hunt:1",
+        "road:hunt:2",
+        "road:hunt:3",
+        "road:hunt:4",
+        "road:hunt:5",
+        "road:hunt:6",
+        "road:hunt:7",
+        "road:hunt:8",
+        "road:hunt:9",
+        "road:hunt:10",
+        "road:hunt:11",
+        "road:hunt:12",
+        "road:hunt:13",
+        "road:hunt:14",
+        "road:hunt:15",
+        "road:hunt:16",
+        "road:hunt:17",
+        "road:hunt:18",
+        "road:hunt:19",
+        "road:hunt:20",
+        "road:hunt:21",
+        "road:hunt:22",
+        "skill:ghostHunt"
+      ]
+    },
+    {
+      "id": "backstab",
+      "name": "Backstab",
+      "domain": "Cunning",
+      "tier": "basic",
+      "requirement": "dagger",
+      "shortestPointCost": 2,
+      "earliestLevel": 3,
+      "mana": 10,
+      "cooldown": 0,
+      "shortestRoute": [
+        "origin",
+        "road:veil:1",
+        "skill:backstab"
+      ]
+    },
+    {
+      "id": "sidestep",
+      "name": "Sidestep",
+      "domain": "Cunning",
+      "tier": "advanced",
+      "requirement": "any",
+      "shortestPointCost": 3,
+      "earliestLevel": 4,
+      "mana": 12,
+      "cooldown": 4.5,
+      "shortestRoute": [
+        "origin",
+        "road:veil:1",
+        "road:veil:2",
+        "skill:sidestep"
+      ]
+    },
+    {
+      "id": "vaultingShot",
+      "name": "Vaulting Shot",
+      "domain": "Cunning",
+      "tier": "advanced",
+      "requirement": "bow",
+      "shortestPointCost": 8,
+      "earliestLevel": 9,
+      "mana": 22,
+      "cooldown": 6,
+      "shortestRoute": [
+        "origin",
+        "road:veil:1",
+        "road:veil:2",
+        "road:veil:3",
+        "road:veil:4",
+        "road:veil:5",
+        "road:veil:6",
+        "road:veil:7",
+        "skill:vaultingShot"
+      ]
+    },
+    {
+      "id": "fireball",
+      "name": "Fireball",
+      "domain": "Arcana",
+      "tier": "basic",
+      "requirement": "magic",
+      "shortestPointCost": 2,
+      "earliestLevel": 3,
+      "mana": 12,
+      "cooldown": 0,
+      "shortestRoute": [
+        "origin",
+        "road:crucible:1",
+        "skill:fireball"
+      ]
+    },
+    {
+      "id": "arcLightning",
+      "name": "Arc Lightning",
+      "domain": "Arcana",
+      "tier": "basic",
+      "requirement": "magic",
+      "shortestPointCost": 3,
+      "earliestLevel": 4,
+      "mana": 12,
+      "cooldown": 0,
+      "shortestRoute": [
+        "origin",
+        "road:crucible:1",
+        "road:crucible:2",
+        "skill:arcLightning"
+      ]
+    },
+    {
+      "id": "meteor",
+      "name": "Meteor",
+      "domain": "Arcana",
+      "tier": "advanced",
+      "requirement": "magic",
+      "shortestPointCost": 14,
+      "earliestLevel": 15,
+      "mana": 40,
+      "cooldown": 7,
+      "shortestRoute": [
+        "origin",
+        "road:crucible:1",
+        "road:crucible:2",
+        "road:crucible:3",
+        "road:crucible:4",
+        "road:crucible:5",
+        "road:crucible:6",
+        "road:crucible:7",
+        "road:crucible:8",
+        "road:crucible:9",
+        "road:crucible:10",
+        "road:crucible:11",
+        "road:crucible:12",
+        "road:crucible:13",
+        "skill:meteor"
+      ]
+    },
+    {
+      "id": "cataclysm",
+      "name": "Cataclysm",
+      "domain": "Arcana",
+      "tier": "ultimate",
+      "requirement": "magic",
+      "shortestPointCost": 24,
+      "earliestLevel": 25,
+      "mana": 80,
+      "cooldown": 30,
+      "shortestRoute": [
+        "origin",
+        "road:crucible:1",
+        "road:crucible:2",
+        "road:crucible:3",
+        "road:crucible:4",
+        "road:crucible:5",
+        "road:crucible:6",
+        "road:crucible:7",
+        "road:crucible:8",
+        "road:crucible:9",
+        "road:crucible:10",
+        "road:crucible:11",
+        "road:crucible:12",
+        "road:crucible:13",
+        "road:crucible:14",
+        "road:crucible:15",
+        "road:crucible:16",
+        "road:crucible:17",
+        "road:crucible:18",
+        "road:crucible:19",
+        "road:crucible:20",
+        "road:crucible:21",
+        "road:crucible:22",
+        "road:crucible:23",
+        "skill:cataclysm"
+      ]
+    },
+    {
+      "id": "tempest",
+      "name": "Tempest",
+      "domain": "Arcana",
+      "tier": "ultimate",
+      "requirement": "magic",
+      "shortestPointCost": 26,
+      "earliestLevel": 27,
+      "mana": 35,
+      "cooldown": 24,
+      "shortestRoute": [
+        "origin",
+        "road:crucible:1",
+        "road:crucible:2",
+        "road:crucible:3",
+        "road:crucible:4",
+        "road:crucible:5",
+        "road:crucible:6",
+        "road:crucible:7",
+        "road:crucible:8",
+        "road:crucible:9",
+        "road:crucible:10",
+        "road:crucible:11",
+        "road:crucible:12",
+        "road:crucible:13",
+        "road:crucible:14",
+        "road:crucible:15",
+        "road:crucible:16",
+        "road:crucible:17",
+        "road:crucible:18",
+        "road:crucible:19",
+        "road:crucible:20",
+        "road:crucible:21",
+        "road:crucible:22",
+        "road:crucible:23",
+        "road:crucible:24",
+        "road:crucible:25",
+        "skill:tempest"
+      ]
+    },
+    {
+      "id": "iceNova",
+      "name": "Ice Nova",
+      "domain": "Arcana",
+      "tier": "basic",
+      "requirement": "magic",
+      "shortestPointCost": 3,
+      "earliestLevel": 4,
+      "mana": 14,
+      "cooldown": 0,
+      "shortestRoute": [
+        "origin",
+        "road:wellspring:1",
+        "road:wellspring:2",
+        "skill:iceNova"
+      ]
+    },
+    {
+      "id": "runicWard",
+      "name": "Runic Ward",
+      "domain": "Arcana",
+      "tier": "advanced",
+      "requirement": "magic",
+      "shortestPointCost": 5,
+      "earliestLevel": 6,
+      "mana": 22,
+      "cooldown": 10,
+      "shortestRoute": [
+        "origin",
+        "road:wellspring:1",
+        "road:wellspring:2",
+        "road:wellspring:3",
+        "road:wellspring:4",
+        "skill:runicWard"
+      ]
+    },
+    {
+      "id": "siphon",
+      "name": "Soul Siphon",
+      "domain": "Arcana",
+      "tier": "advanced",
+      "requirement": "magic",
+      "shortestPointCost": 8,
+      "earliestLevel": 9,
+      "mana": 30,
+      "cooldown": 4.5,
+      "shortestRoute": [
+        "origin",
+        "road:wellspring:1",
+        "road:wellspring:2",
+        "road:wellspring:3",
+        "road:wellspring:4",
+        "road:wellspring:5",
+        "road:wellspring:6",
+        "road:wellspring:7",
+        "skill:siphon"
+      ]
+    },
+    {
+      "id": "frostLance",
+      "name": "Frost Lance",
+      "domain": "Arcana",
+      "tier": "advanced",
+      "requirement": "magic",
+      "shortestPointCost": 11,
+      "earliestLevel": 12,
+      "mana": 28,
+      "cooldown": 1.8,
+      "shortestRoute": [
+        "origin",
+        "road:wellspring:1",
+        "road:wellspring:2",
+        "road:wellspring:3",
+        "road:wellspring:4",
+        "road:wellspring:5",
+        "road:wellspring:6",
+        "road:wellspring:7",
+        "road:wellspring:8",
+        "road:wellspring:9",
+        "road:wellspring:10",
+        "skill:frostLance"
+      ]
+    },
+    {
+      "id": "absoluteZero",
+      "name": "Absolute Zero",
+      "domain": "Arcana",
+      "tier": "ultimate",
+      "requirement": "magic",
+      "shortestPointCost": 24,
+      "earliestLevel": 25,
+      "mana": 75,
+      "cooldown": 28,
+      "shortestRoute": [
+        "origin",
+        "road:wellspring:1",
+        "road:wellspring:2",
+        "road:wellspring:3",
+        "road:wellspring:4",
+        "road:wellspring:5",
+        "road:wellspring:6",
+        "road:wellspring:7",
+        "road:wellspring:8",
+        "road:wellspring:9",
+        "road:wellspring:10",
+        "road:wellspring:11",
+        "road:wellspring:12",
+        "road:wellspring:13",
+        "road:wellspring:14",
+        "road:wellspring:15",
+        "road:wellspring:16",
+        "road:wellspring:17",
+        "road:wellspring:18",
+        "road:wellspring:19",
+        "road:wellspring:20",
+        "road:wellspring:21",
+        "road:wellspring:22",
+        "road:wellspring:23",
+        "skill:absoluteZero"
+      ]
+    }
+  ],
+  "connectedUnionOfRegularShortestRoutes": {
+    "points": 80,
+    "skills": 21,
+    "note": "A feasible union, not a minimum Steiner-tree solution; equipment compatibility still applies."
+  },
+  "rankFormula": [
+    {
+      "rank": 1,
+      "damageFactor": 1,
+      "fireballMana": 12,
+      "damagePerManaRelativeToRank1": 1,
+      "meteorCooldown": 7,
+      "cooldownLimitedDamageRateRelativeToRank1": 1
+    },
+    {
+      "rank": 2,
+      "damageFactor": 1.1,
+      "fireballMana": 12.6,
+      "damagePerManaRelativeToRank1": 1.0476190476190477,
+      "meteorCooldown": 7,
+      "cooldownLimitedDamageRateRelativeToRank1": 1.1
+    },
+    {
+      "rank": 3,
+      "damageFactor": 1.2,
+      "fireballMana": 13.2,
+      "damagePerManaRelativeToRank1": 1.090909090909091,
+      "meteorCooldown": 7,
+      "cooldownLimitedDamageRateRelativeToRank1": 1.2
+    }
+  ],
+  "graph": [
+    {
+      "id": "origin",
+      "x": 0,
+      "y": 0,
+      "kind": "origin",
+      "domain": "Might",
+      "distance": 0
+    },
+    {
+      "id": "road:bastion:1",
+      "x": -346.23807812074506,
+      "y": -237.73765637620988,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 1
+    },
+    {
+      "id": "road:bastion:2",
+      "x": -456.8212916267419,
+      "y": -287.9484459351625,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 2
+    },
+    {
+      "id": "road:bastion:3",
+      "x": -571.3169889993474,
+      "y": -330.449539386454,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 3
+    },
+    {
+      "id": "road:bastion:4",
+      "x": -688.8878773115603,
+      "y": -365.83260173633056,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 4
+    },
+    {
+      "id": "road:bastion:5",
+      "x": -808.687287201606,
+      "y": -394.9998373651657,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 5
+    },
+    {
+      "id": "road:bastion:6",
+      "x": -929.9026208644449,
+      "y": -419.14331166014864,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 6
+    },
+    {
+      "id": "road:bastion:7",
+      "x": -1051.7862276300307,
+      "y": -439.71096343824496,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 7
+    },
+    {
+      "id": "road:bastion:8",
+      "x": -1173.6713322326407,
+      "y": -458.3618700276653,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 8
+    },
+    {
+      "id": "road:bastion:9",
+      "x": -1294.972345202712,
+      "y": -476.9136453910586,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 9
+    },
+    {
+      "id": "road:bastion:10",
+      "x": -1415.170623943216,
+      "y": -497.28473245030204,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 10
+    },
+    {
+      "id": "road:bastion:11",
+      "x": -1533.7883410798,
+      "y": -521.4339121764862,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 11
+    },
+    {
+      "id": "road:bastion:12",
+      "x": -1650.354407613964,
+      "y": -551.2987658875743,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 12
+    },
+    {
+      "id": "road:bastion:13",
+      "x": -1764.3672938543805,
+      "y": -588.734279940424,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 13
+    },
+    {
+      "id": "road:bastion:14",
+      "x": -1875.2600360145254,
+      "y": -635.4524351411368,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 14
+    },
+    {
+      "id": "road:bastion:15",
+      "x": -1982.3726884619086,
+      "y": -692.963580601682,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 15
+    },
+    {
+      "id": "road:bastion:16",
+      "x": -2084.9369810359995,
+      "y": -762.5206784792737,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 16
+    },
+    {
+      "id": "road:bastion:17",
+      "x": -2182.076985694674,
+      "y": -845.0680614611141,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 17
+    },
+    {
+      "id": "road:bastion:18",
+      "x": -2272.8282267530494,
+      "y": -941.1970312716613,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 18
+    },
+    {
+      "id": "road:bastion:19",
+      "x": -2356.175956061496,
+      "y": -1051.1112519984242,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 19
+    },
+    {
+      "id": "road:bastion:20",
+      "x": -2431.1113748539324,
+      "y": -1174.6052456275781,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 20
+    },
+    {
+      "id": "bastion:0:0",
+      "x": -643.9157514403107,
+      "y": -204.93292816690038,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 4
+    },
+    {
+      "id": "bastion:0:1",
+      "x": -651.1951236685264,
+      "y": -141.71892070049242,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 5
+    },
+    {
+      "id": "bastion:0:2",
+      "x": -702.4683150635302,
+      "y": -180.02113792314563,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 5
+    },
+    {
+      "id": "bastion:0:3",
+      "x": -665.6847884366646,
+      "y": -83.89116253102007,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "bastion:0:4",
+      "x": -753.8105861468273,
+      "y": -149.7230983824553,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "bastion:0:5",
+      "x": -741.4667109292557,
+      "y": -74.34651883275018,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "bastion:1:0",
+      "x": -745.0484245149959,
+      "y": -525.2883447476466,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "bastion:1:1",
+      "x": -766.3789241643519,
+      "y": -593.6477609586474,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "bastion:1:2",
+      "x": -735.489670953064,
+      "y": -651.7068174102376,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "bastion:1:3",
+      "x": -666.0978128443985,
+      "y": -656.03925647234,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "bastion:1:4",
+      "x": -644.9604423962605,
+      "y": -584.0794651264905,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "bastion:1:5",
+      "x": -679.855413685283,
+      "y": -529.01276939542,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "bastion:2:0",
+      "x": -1107.714376488404,
+      "y": -305.93113623968844,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "bastion:2:1",
+      "x": -1108.3914705910263,
+      "y": -241.52972675529753,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "bastion:2:2",
+      "x": -1169.2783853725934,
+      "y": -287.0136097071982,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "bastion:2:3",
+      "x": -1143.1028549490557,
+      "y": -195.0633970535754,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "bastion:2:4",
+      "x": -1203.9897697306228,
+      "y": -240.54728000547607,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "bastion:2:5",
+      "x": -1177.814239307085,
+      "y": -148.59706735185324,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "bastion:2:6",
+      "x": -1238.7011540886522,
+      "y": -194.08095030375392,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "bastion:3:0",
+      "x": -1244.8618534768398,
+      "y": -612.9795802130827,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "bastion:3:1",
+      "x": -1213.7413019834341,
+      "y": -654.6390482215232,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "bastion:3:2",
+      "x": -1183.2192226341322,
+      "y": -695.4973726144169,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "bastion:3:3",
+      "x": -1151.5001989966227,
+      "y": -737.9579842384044,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "bastion:3:4",
+      "x": -1227.2821214892135,
+      "y": -728.4133405401345,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "bastion:4:0",
+      "x": -1580.4598949474484,
+      "y": -384.15038782057815,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "bastion:4:1",
+      "x": -1611.5804464408543,
+      "y": -342.4909198121376,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "bastion:4:2",
+      "x": -1591.6209357404741,
+      "y": -258.9288594461951,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 14
+    },
+    {
+      "id": "bastion:4:3",
+      "x": -1654.6704408163391,
+      "y": -284.8085794927584,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 14
+    },
+    {
+      "id": "bastion:4:4",
+      "x": -1697.3718929926695,
+      "y": -337.92718246791736,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 14
+    },
+    {
+      "id": "bastion:5:0",
+      "x": -1828.7243778855027,
+      "y": -772.7820842432106,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 15
+    },
+    {
+      "id": "bastion:5:1",
+      "x": -1832.641931734494,
+      "y": -834.3747199380748,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 16
+    },
+    {
+      "id": "bastion:5:2",
+      "x": -1802.1198523851922,
+      "y": -875.2330443309685,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 17
+    },
+    {
+      "id": "bastion:5:3",
+      "x": -1740.7489727022212,
+      "y": -890.5501957286099,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "bastion:5:4",
+      "x": -1738.0283631414377,
+      "y": -827.3552728026519,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 17
+    },
+    {
+      "id": "bastion:5:5",
+      "x": -1768.5504424907394,
+      "y": -786.4969484097583,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 16
+    },
+    {
+      "id": "bastion:5:6",
+      "x": -1696.368895132997,
+      "y": -796.2347213092462,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "bastion:6:0",
+      "x": -2234.4423142894866,
+      "y": -709.8538892706322,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "bastion:6:1",
+      "x": -2231.123232584599,
+      "y": -647.4601099602211,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 19
+    },
+    {
+      "id": "bastion:6:2",
+      "x": -2241.0182494011233,
+      "y": -592.4411255802754,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 20
+    },
+    {
+      "id": "bastion:6:3",
+      "x": -2298.5574556671286,
+      "y": -560.5312565382662,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "bastion:6:4",
+      "x": -2295.214721828354,
+      "y": -695.3378814885376,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 19
+    },
+    {
+      "id": "bastion:6:5",
+      "x": -2345.166919422225,
+      "y": -670.2425043137898,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 20
+    },
+    {
+      "id": "bastion:6:6",
+      "x": -2359.4443704486953,
+      "y": -606.015139490167,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "bastion:7:0",
+      "x": -2368.0307227739327,
+      "y": -1305.1649305734375,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "bastion:7:1",
+      "x": -2362.325010966136,
+      "y": -1354.5759096445545,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 22
+    },
+    {
+      "id": "bastion:7:2",
+      "x": -2310.944570801939,
+      "y": -1364.8739856072466,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 23
+    },
+    {
+      "id": "bastion:7:3",
+      "x": -2314.4472394378195,
+      "y": -1418.6673988883092,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 24
+    },
+    {
+      "id": "bastion:7:4",
+      "x": -2261.2713828413107,
+      "y": -1431.368905697642,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 25
+    },
+    {
+      "id": "bastion:7:5",
+      "x": -2267.167940053607,
+      "y": -1481.9577445165169,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 26
+    },
+    {
+      "id": "skill:brace",
+      "x": -474.14860812089455,
+      "y": -113.2832618572503,
+      "kind": "major",
+      "domain": "Might",
+      "skill": "brace",
+      "distance": 2
+    },
+    {
+      "id": "specialization:brace-long",
+      "x": -501.9372007025532,
+      "y": -17.22185377715506,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 3
+    },
+    {
+      "id": "specialization:brace-hard",
+      "x": -558.3816512845591,
+      "y": -59.387116917299146,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 3
+    },
+    {
+      "id": "skill:shieldBash",
+      "x": -513.9949060029046,
+      "y": -499.4589438613201,
+      "kind": "major",
+      "domain": "Might",
+      "skill": "shieldBash",
+      "distance": 4
+    },
+    {
+      "id": "specialization:shield-wide",
+      "x": -521.8276093499911,
+      "y": -599.1517157070087,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 5
+    },
+    {
+      "id": "specialization:shield-force",
+      "x": -454.147691592509,
+      "y": -579.5733054160135,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 5
+    },
+    {
+      "id": "specialization:shield-control",
+      "x": -416.1752453221001,
+      "y": -520.2270440221985,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 5
+    },
+    {
+      "id": "skill:bulwark",
+      "x": -916.9417611915617,
+      "y": -253.11619186238772,
+      "kind": "major",
+      "domain": "Might",
+      "skill": "bulwark",
+      "distance": 6
+    },
+    {
+      "id": "specialization:bulwark-duration",
+      "x": -909.1090578444752,
+      "y": -153.42342001669903,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 7
+    },
+    {
+      "id": "specialization:bulwark-reduction",
+      "x": -976.7889756019573,
+      "y": -173.00183030769435,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 7
+    },
+    {
+      "id": "specialization:bulwark-swift",
+      "x": -1014.7614218723661,
+      "y": -232.34809170150933,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 7
+    },
+    {
+      "id": "doctrine:guard:0",
+      "x": -1479.7544299148005,
+      "y": -695.3914802545982,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "choice",
+      "doctrine": "guard",
+      "distance": 12
+    },
+    {
+      "id": "doctrine:guard:1",
+      "x": -1526.2207596165226,
+      "y": -730.1028646126276,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "choice",
+      "doctrine": "guard",
+      "distance": 12
+    },
+    {
+      "id": "doctrine:guard:2",
+      "x": -1572.6870893182447,
+      "y": -764.8142489706571,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "choice",
+      "doctrine": "guard",
+      "distance": 12
+    },
+    {
+      "id": "doctrine:recovery:0",
+      "x": -2354.4908115012454,
+      "y": -753.8980285368921,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "choice",
+      "doctrine": "recovery",
+      "distance": 19
+    },
+    {
+      "id": "doctrine:recovery:1",
+      "x": -2400.9571412029677,
+      "y": -788.6094128949215,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "choice",
+      "doctrine": "recovery",
+      "distance": 19
+    },
+    {
+      "id": "doctrine:recovery:2",
+      "x": -2447.42347090469,
+      "y": -823.320797252951,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "choice",
+      "doctrine": "recovery",
+      "distance": 19
+    },
+    {
+      "id": "road:forge:1",
+      "x": -384.91050340577607,
+      "y": 168.0592287496049,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 1
+    },
+    {
+      "id": "road:forge:2",
+      "x": -501.0338737532264,
+      "y": 201.40768940593117,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 2
+    },
+    {
+      "id": "road:forge:3",
+      "x": -619.1473075826538,
+      "y": 228.59705053467042,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 3
+    },
+    {
+      "id": "road:forge:4",
+      "x": -738.7855073069776,
+      "y": 250.19187475450087,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 4
+    },
+    {
+      "id": "road:forge:5",
+      "x": -859.4912537377764,
+      "y": 266.97337835122306,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 5
+    },
+    {
+      "id": "road:forge:6",
+      "x": -980.8385332891552,
+      "y": 279.9210095994562,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 6
+    },
+    {
+      "id": "road:forge:7",
+      "x": -1102.447998991404,
+      "y": 290.18685276878017,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 7
+    },
+    {
+      "id": "road:forge:8",
+      "x": -1223.9937053859117,
+      "y": 299.0642224935402,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 8
+    },
+    {
+      "id": "road:forge:9",
+      "x": -1345.2009549110237,
+      "y": 307.9519295384758,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 9
+    },
+    {
+      "id": "road:forge:10",
+      "x": -1465.835993258921,
+      "y": 318.3156308864398,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 10
+    },
+    {
+      "id": "road:forge:11",
+      "x": -1585.6891090028623,
+      "y": 331.64747788835734,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 11
+    },
+    {
+      "id": "road:forge:12",
+      "x": -1704.5533596145297,
+      "y": 349.4250194631462,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 12
+    },
+    {
+      "id": "road:forge:13",
+      "x": -1822.2016119246266,
+      "y": 373.0700812170446,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 13
+    },
+    {
+      "id": "road:forge:14",
+      "x": -1938.3648190030065,
+      "y": 403.9081930976918,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 14
+    },
+    {
+      "id": "road:forge:15",
+      "x": -2052.714442442308,
+      "y": 443.1291208990491,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 15
+    },
+    {
+      "id": "road:forge:16",
+      "x": -2164.851667681896,
+      "y": 491.749180919414,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 16
+    },
+    {
+      "id": "road:forge:17",
+      "x": -2274.3055610690735,
+      "y": 550.5762571073026,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 17
+    },
+    {
+      "id": "road:forge:18",
+      "x": -2380.54160476217,
+      "y": 620.178738749041,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 18
+    },
+    {
+      "id": "road:forge:19",
+      "x": -2482.9811592052074,
+      "y": 700.8598740347204,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 19
+    },
+    {
+      "id": "road:forge:20",
+      "x": -2581.0314015082854,
+      "y": 792.6392019249205,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 20
+    },
+    {
+      "id": "road:forge:21",
+      "x": -2674.124250289322,
+      "y": 895.2427011791669,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 21
+    },
+    {
+      "id": "road:forge:22",
+      "x": -2761.761808816098,
+      "y": 1008.1030261658941,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 22
+    },
+    {
+      "id": "forge:0:0",
+      "x": -568.9252282985216,
+      "y": 364.6218378066171,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 4
+    },
+    {
+      "id": "forge:0:1",
+      "x": -498.53908909171116,
+      "y": 377.8048347177716,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 5
+    },
+    {
+      "id": "forge:0:2",
+      "x": -461.71867545634166,
+      "y": 432.2957251465422,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "forge:0:3",
+      "x": -490.40240437272354,
+      "y": 495.63010518970304,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "forge:0:4",
+      "x": -563.8788275042696,
+      "y": 480.589651612965,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "forge:0:5",
+      "x": -596.1788804295538,
+      "y": 423.9618617830252,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 5
+    },
+    {
+      "id": "forge:1:0",
+      "x": -902.5036313610291,
+      "y": 128.49978747124797,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "forge:1:1",
+      "x": -959.0821265298366,
+      "y": 97.72847153524631,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "forge:1:2",
+      "x": -890.3726437365399,
+      "y": 65.24760063747524,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "forge:1:3",
+      "x": -983.8701595833987,
+      "y": 45.29228729825677,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "forge:1:4",
+      "x": -915.160676790102,
+      "y": 12.811416400485697,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "forge:1:5",
+      "x": -1008.6581926369608,
+      "y": -7.14389693873278,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "forge:1:6",
+      "x": -939.9487098436641,
+      "y": -39.62476783650385,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "forge:2:0",
+      "x": -1065.538267718182,
+      "y": 430.41050176330083,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "forge:2:1",
+      "x": -1043.3145139460228,
+      "y": 477.422253148188,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "forge:2:2",
+      "x": -1021.5181400540974,
+      "y": 523.5299323910581,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "forge:2:3",
+      "x": -998.8670064017045,
+      "y": 571.4457559179624,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "forge:2:4",
+      "x": -971.7941722431591,
+      "y": 500.02403897819744,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "forge:3:0",
+      "x": -1377.5582228697765,
+      "y": 166.60835094275228,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "forge:3:1",
+      "x": -1399.7819766419357,
+      "y": 119.59659955786509,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "forge:3:2",
+      "x": -1482.9566314279223,
+      "y": 98.07970384235949,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "forge:3:3",
+      "x": -1430.5533280187715,
+      "y": 54.50340533263669,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "forge:3:4",
+      "x": -1363.6191086816702,
+      "y": 41.665559651493965,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "forge:4:0",
+      "x": -1556.0046125252006,
+      "y": 473.5764413484901,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "forge:4:1",
+      "x": -1499.7548724735282,
+      "y": 498.97263681393883,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "forge:4:2",
+      "x": -1477.958498581603,
+      "y": 545.0803160568089,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 14
+    },
+    {
+      "id": "forge:4:3",
+      "x": -1493.1797701308276,
+      "y": 606.4750462249981,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 15
+    },
+    {
+      "id": "forge:4:4",
+      "x": -1550.2842699429677,
+      "y": 579.2707064755152,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 14
+    },
+    {
+      "id": "forge:4:5",
+      "x": -1572.080643834893,
+      "y": 533.1630272326452,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "forge:4:6",
+      "x": -1597.296021327855,
+      "y": 601.4944602476744,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 15
+    },
+    {
+      "id": "forge:5:0",
+      "x": -1967.9439543561202,
+      "y": 261.9572341302999,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 15
+    },
+    {
+      "id": "forge:5:1",
+      "x": -2024.6210742880264,
+      "y": 235.65696652283418,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 16
+    },
+    {
+      "id": "forge:5:2",
+      "x": -2068.5918718501443,
+      "y": 201.13785642782685,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 17
+    },
+    {
+      "id": "forge:5:3",
+      "x": -2069.824716829714,
+      "y": 135.3542711404898,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "forge:5:4",
+      "x": -1952.2953029266616,
+      "y": 201.4665761041278,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 16
+    },
+    {
+      "id": "forge:5:5",
+      "x": -1951.0624933879265,
+      "y": 145.57847199742898,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 17
+    },
+    {
+      "id": "forge:5:6",
+      "x": -2001.1152340364172,
+      "y": 102.87340024271873,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "forge:6:0",
+      "x": -2240.188656248322,
+      "y": 691.5054478573093,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "forge:6:1",
+      "x": -2199.2095178478407,
+      "y": 719.6960529581971,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 19
+    },
+    {
+      "id": "forge:6:2",
+      "x": -2214.1842274893183,
+      "y": 769.9131623050466,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 20
+    },
+    {
+      "id": "forge:6:3",
+      "x": -2165.019127429134,
+      "y": 792.021824319562,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "forge:6:4",
+      "x": -2178.7116974299106,
+      "y": 844.9511500924626,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 22
+    },
+    {
+      "id": "forge:6:5",
+      "x": -2131.256116890662,
+      "y": 863.4435235389099,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 23
+    },
+    {
+      "id": "forge:7:0",
+      "x": -2623.5990623524017,
+      "y": 654.0282562883644,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "forge:7:1",
+      "x": -2676.035264309808,
+      "y": 617.9804446449086,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 22
+    },
+    {
+      "id": "forge:7:2",
+      "x": -2618.1746472207165,
+      "y": 590.6281323099436,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 22
+    },
+    {
+      "id": "forge:7:3",
+      "x": -2720.3348169890614,
+      "y": 578.0862140793483,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 23
+    },
+    {
+      "id": "forge:7:4",
+      "x": -2620.8868813671843,
+      "y": 531.0744272536272,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 23
+    },
+    {
+      "id": "forge:7:5",
+      "x": -2693.261982830516,
+      "y": 506.66449713958343,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "cluster",
+      "distance": 24
+    },
+    {
+      "id": "skill:cleave",
+      "x": -346.96170004392206,
+      "y": 342.443540897812,
+      "kind": "major",
+      "domain": "Might",
+      "skill": "cleave",
+      "distance": 2
+    },
+    {
+      "id": "specialization:cleave-reach",
+      "x": -275.1152207370095,
+      "y": 411.99987354410223,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 3
+    },
+    {
+      "id": "specialization:cleave-force",
+      "x": -338.81148486789516,
+      "y": 442.11085746941666,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 3
+    },
+    {
+      "id": "skill:lunge",
+      "x": -732.0689314579799,
+      "y": 95.66527454640658,
+      "kind": "major",
+      "domain": "Might",
+      "skill": "lunge",
+      "distance": 5
+    },
+    {
+      "id": "specialization:lunge-distance",
+      "x": -823.8127269861609,
+      "y": 55.877387167414945,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 6
+    },
+    {
+      "id": "specialization:lunge-force",
+      "x": -774.8069194813629,
+      "y": 5.2580603447004535,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 6
+    },
+    {
+      "id": "specialization:lunge-swift",
+      "x": -704.5864644256676,
+      "y": -0.48416125962332046,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 6
+    },
+    {
+      "id": "skill:whirlwind",
+      "x": -1216.4568329669733,
+      "y": 549.3706877552929,
+      "kind": "major",
+      "domain": "Might",
+      "skill": "whirlwind",
+      "distance": 9
+    },
+    {
+      "id": "specialization:whirlwind-reach",
+      "x": -1144.6103536600606,
+      "y": 618.9270204015831,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 10
+    },
+    {
+      "id": "specialization:whirlwind-force",
+      "x": -1208.3066177909463,
+      "y": 649.0380043268976,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 10
+    },
+    {
+      "id": "skill:earthshatter",
+      "x": -1773.9836734033568,
+      "y": 185.01871931870218,
+      "kind": "major",
+      "domain": "Might",
+      "skill": "earthshatter",
+      "distance": 13
+    },
+    {
+      "id": "specialization:earthshatter-wide",
+      "x": -1865.7274689315377,
+      "y": 145.23083193971055,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 14
+    },
+    {
+      "id": "specialization:earthshatter-force",
+      "x": -1816.7216614267397,
+      "y": 94.61150511699606,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 14
+    },
+    {
+      "id": "specialization:earthshatter-swift",
+      "x": -1746.5012063710444,
+      "y": 88.86928351267228,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 14
+    },
+    {
+      "id": "skill:rallyOfIron",
+      "x": -2734.6337930778436,
+      "y": 1184.4948365259702,
+      "kind": "major",
+      "domain": "Might",
+      "skill": "rallyOfIron",
+      "distance": 23
+    },
+    {
+      "id": "specialization:rally-last",
+      "x": -2662.787313770931,
+      "y": 1254.0511691722604,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 24
+    },
+    {
+      "id": "specialization:rally-march",
+      "x": -2726.4835779018167,
+      "y": 1284.162153097575,
+      "kind": "notable",
+      "domain": "Might",
+      "distance": 24
+    },
+    {
+      "id": "doctrine:impact:0",
+      "x": -1584.926284097875,
+      "y": 123.37859722536864,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "choice",
+      "doctrine": "impact",
+      "distance": 12
+    },
+    {
+      "id": "doctrine:impact:1",
+      "x": -1637.3624683348644,
+      "y": 148.16663027893077,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "choice",
+      "doctrine": "impact",
+      "distance": 12
+    },
+    {
+      "id": "doctrine:impact:2",
+      "x": -1689.7986525718538,
+      "y": 172.95466333249288,
+      "kind": "notable",
+      "domain": "Might",
+      "role": "choice",
+      "doctrine": "impact",
+      "distance": 12
+    },
+    {
+      "id": "road:hunt:1",
+      "x": 371.0919949330938,
+      "y": -196.69959658468204,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 1
+    },
+    {
+      "id": "road:hunt:2",
+      "x": 467.4855761825697,
+      "y": -270.2910210518485,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 2
+    },
+    {
+      "id": "road:hunt:3",
+      "x": 559.2298227274476,
+      "y": -350.5167690314224,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 3
+    },
+    {
+      "id": "road:hunt:4",
+      "x": 646.4679277226026,
+      "y": -436.43924941054973,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 4
+    },
+    {
+      "id": "road:hunt:5",
+      "x": 729.588044785623,
+      "y": -526.9737041882563,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 5
+    },
+    {
+      "id": "road:hunt:6",
+      "x": 809.2246552105976,
+      "y": -620.9311213003336,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 6
+    },
+    {
+      "id": "road:hunt:7",
+      "x": 886.244307663065,
+      "y": -717.0571993466174,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 7
+    },
+    {
+      "id": "road:hunt:8",
+      "x": 961.7166517690056,
+      "y": -814.0645439461256,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 8
+    },
+    {
+      "id": "road:hunt:9",
+      "x": 1036.8726464461754,
+      "y": -910.656419870691,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 9
+    },
+    {
+      "id": "road:hunt:10",
+      "x": 1113.0524840212072,
+      "y": -1005.5417285295624,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 10
+    },
+    {
+      "id": "road:hunt:11",
+      "x": 1191.6461398070735,
+      "y": -1097.4422433471843,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 11
+    },
+    {
+      "id": "road:hunt:12",
+      "x": 1274.029594674248,
+      "y": -1185.0943388161852,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 12
+    },
+    {
+      "id": "road:hunt:13",
+      "x": 1361.4997751189167,
+      "y": -1267.2483428085986,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 13
+    },
+    {
+      "id": "road:hunt:14",
+      "x": 1455.2112013928681,
+      "y": -1342.6691175940277,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 14
+    },
+    {
+      "id": "road:hunt:15",
+      "x": 1556.117292523955,
+      "y": -1410.1414723026608,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 15
+    },
+    {
+      "id": "road:hunt:16",
+      "x": 1664.9192649485794,
+      "y": -1468.4835175115459,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 16
+    },
+    {
+      "id": "road:hunt:17",
+      "x": 1782.025544218258,
+      "y": -1516.5701301798154,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 17
+    },
+    {
+      "id": "road:hunt:18",
+      "x": 1907.5245072290782,
+      "y": -1553.367391932914,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 18
+    },
+    {
+      "id": "road:hunt:19",
+      "x": 2041.173081378759,
+      "y": -1577.9773293221745,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 19
+    },
+    {
+      "id": "road:hunt:20",
+      "x": 2182.4031471588555,
+      "y": -1589.690694214168,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 20
+    },
+    {
+      "id": "road:hunt:21",
+      "x": 2330.346758692475,
+      "y": -1588.0440750342784,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 21
+    },
+    {
+      "id": "road:hunt:22",
+      "x": 2483.879913719005,
+      "y": -1572.8765286007892,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 22
+    },
+    {
+      "id": "hunt:0:0",
+      "x": 482.2223507432715,
+      "y": -473.37786644881623,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 4
+    },
+    {
+      "id": "hunt:0:1",
+      "x": 425.3871530800858,
+      "y": -503.6724254749287,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 5
+    },
+    {
+      "id": "hunt:0:2",
+      "x": 493.8211328588892,
+      "y": -536.7298060673821,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 5
+    },
+    {
+      "id": "hunt:0:3",
+      "x": 400.15915210163445,
+      "y": -555.8983574113839,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "hunt:0:4",
+      "x": 468.59313188043785,
+      "y": -588.9557380038374,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "hunt:0:5",
+      "x": 374.9311511231831,
+      "y": -608.1242893478392,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "hunt:0:6",
+      "x": 443.3651309019865,
+      "y": -641.1816699402926,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "hunt:1:0",
+      "x": 814.489363793731,
+      "y": -409.4289636394615,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "hunt:1:1",
+      "x": 837.1075715675149,
+      "y": -362.60571431712225,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "hunt:1:2",
+      "x": 859.2908138071876,
+      "y": -316.6829120971357,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "hunt:1:3",
+      "x": 882.3439871150829,
+      "y": -268.95921567244386,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "hunt:1:4",
+      "x": 908.8154044365849,
+      "y": -340.60601647325336,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "hunt:2:0",
+      "x": 795.0396638865216,
+      "y": -829.7812560230599,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "hunt:2:1",
+      "x": 772.4214561127376,
+      "y": -876.604505345399,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "hunt:2:2",
+      "x": 689.0688429813433,
+      "y": -897.4213707234551,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "hunt:2:3",
+      "x": 741.103937656729,
+      "y": -941.4366967147919,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "hunt:2:4",
+      "x": 807.9278604918966,
+      "y": -954.8368212261375,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "hunt:3:0",
+      "x": 1132.5575601282408,
+      "y": -801.7096562948248,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "hunt:3:1",
+      "x": 1189.0188243255757,
+      "y": -776.7872638486982,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "hunt:3:2",
+      "x": 1211.2020665652485,
+      "y": -730.8644616287116,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "hunt:3:3",
+      "x": 1196.4974936425915,
+      "y": -669.3439322489812,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "hunt:3:4",
+      "x": 1139.1662983770343,
+      "y": -696.0672188998132,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "hunt:3:5",
+      "x": 1116.9830561373615,
+      "y": -741.9900211197997,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "hunt:3:6",
+      "x": 1092.3430490546953,
+      "y": -673.4490111260292,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "hunt:4:0",
+      "x": 1093.418284692665,
+      "y": -1204.1019287002866,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "hunt:4:1",
+      "x": 1036.522054961219,
+      "y": -1229.924768248766,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "hunt:4:2",
+      "x": 992.2626006968404,
+      "y": -1264.072985013619,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 14
+    },
+    {
+      "id": "hunt:4:3",
+      "x": 990.476740413689,
+      "y": -1329.8438805757828,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 15
+    },
+    {
+      "id": "hunt:4:4",
+      "x": 1108.5578231494333,
+      "y": -1264.7220109776642,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "hunt:4:5",
+      "x": 1109.3207240026884,
+      "y": -1320.618504448079,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 14
+    },
+    {
+      "id": "hunt:4:6",
+      "x": 1058.9107201924924,
+      "y": -1362.9012611682365,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 15
+    },
+    {
+      "id": "hunt:5:0",
+      "x": 1553.5379802065722,
+      "y": -1236.1006205223277,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 15
+    },
+    {
+      "id": "hunt:5:1",
+      "x": 1594.752675732172,
+      "y": -1208.2555334739434,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 16
+    },
+    {
+      "id": "hunt:5:2",
+      "x": 1580.2006829801664,
+      "y": -1157.9143027882958,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 17
+    },
+    {
+      "id": "hunt:5:3",
+      "x": 1629.5499184610703,
+      "y": -1136.2197652857294,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "hunt:5:4",
+      "x": 1616.3028223113984,
+      "y": -1083.1771932930237,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 19
+    },
+    {
+      "id": "hunt:5:5",
+      "x": 1663.9121956558577,
+      "y": -1065.084444199868,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 20
+    },
+    {
+      "id": "hunt:6:0",
+      "x": 1688.0500446985684,
+      "y": -1626.9947899711176,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "hunt:6:1",
+      "x": 1635.312633047165,
+      "y": -1662.6004835089554,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 19
+    },
+    {
+      "id": "hunt:6:2",
+      "x": 1692.9412475977365,
+      "y": -1690.438277692074,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 19
+    },
+    {
+      "id": "hunt:6:3",
+      "x": 1590.679245316936,
+      "y": -1702.1208668537945,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 20
+    },
+    {
+      "id": "hunt:6:4",
+      "x": 1689.7284265757303,
+      "y": -1749.9670756060298,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 20
+    },
+    {
+      "id": "hunt:6:5",
+      "x": 1617.1506626384378,
+      "y": -1773.7676676546039,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "hunt:7:0",
+      "x": 2267.775425181468,
+      "y": -1472.4875622371183,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "hunt:7:1",
+      "x": 2338.269909550595,
+      "y": -1459.896784916757,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 22
+    },
+    {
+      "id": "hunt:7:2",
+      "x": 2375.5471402913518,
+      "y": -1405.7173786049455,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 23
+    },
+    {
+      "id": "hunt:7:3",
+      "x": 2347.396892901665,
+      "y": -1342.14408569118,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 24
+    },
+    {
+      "id": "hunt:7:4",
+      "x": 2273.7966177254993,
+      "y": -1356.5662732503765,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 23
+    },
+    {
+      "id": "hunt:7:5",
+      "x": 2241.021622496506,
+      "y": -1412.9205072327443,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 22
+    },
+    {
+      "id": "skill:volley",
+      "x": 320.05816260056747,
+      "y": -367.7128941888613,
+      "kind": "major",
+      "domain": "Cunning",
+      "skill": "volley",
+      "distance": 2
+    },
+    {
+      "id": "specialization:volley-fan",
+      "x": 227.9831028269539,
+      "y": -406.72806261968435,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 3
+    },
+    {
+      "id": "specialization:volley-pierce",
+      "x": 276.5616091894444,
+      "y": -457.757604424129,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 3
+    },
+    {
+      "id": "specialization:volley-focus",
+      "x": 346.73130626945056,
+      "y": -464.08998382545036,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 3
+    },
+    {
+      "id": "skill:ricochet",
+      "x": 1023.5281327980344,
+      "y": -579.0258380624905,
+      "kind": "major",
+      "domain": "Cunning",
+      "skill": "ricochet",
+      "distance": 8
+    },
+    {
+      "id": "specialization:ricochet-chain",
+      "x": 1095.9568502350487,
+      "y": -510.0759947673158,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 9
+    },
+    {
+      "id": "specialization:ricochet-force",
+      "x": 1032.5159877178355,
+      "y": -479.43056476129107,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 9
+    },
+    {
+      "id": "skill:piercingShot",
+      "x": 947.6883487275124,
+      "y": -1065.2402516268903,
+      "kind": "major",
+      "domain": "Cunning",
+      "skill": "piercingShot",
+      "distance": 10
+    },
+    {
+      "id": "specialization:piercing-depth",
+      "x": 855.6132889538989,
+      "y": -1104.2554200577133,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 11
+    },
+    {
+      "id": "specialization:piercing-force",
+      "x": 904.1917953163894,
+      "y": -1155.284961862158,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 11
+    },
+    {
+      "id": "specialization:piercing-twin",
+      "x": 974.3614923963955,
+      "y": -1161.6173412634794,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 11
+    },
+    {
+      "id": "skill:rainOfArrows",
+      "x": 1418.8471493331167,
+      "y": -1080.7972829486985,
+      "kind": "major",
+      "domain": "Cunning",
+      "skill": "rainOfArrows",
+      "distance": 13
+    },
+    {
+      "id": "specialization:rain-wide",
+      "x": 1510.9222091067302,
+      "y": -1041.7821145178755,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 14
+    },
+    {
+      "id": "specialization:rain-lasting",
+      "x": 1462.3437027442396,
+      "y": -990.7525727134308,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 14
+    },
+    {
+      "id": "specialization:rain-burst",
+      "x": 1392.1740056642336,
+      "y": -984.4201933121094,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 14
+    },
+    {
+      "id": "skill:ghostHunt",
+      "x": 2419.8263097989457,
+      "y": -1739.4512440435967,
+      "kind": "major",
+      "domain": "Cunning",
+      "skill": "ghostHunt",
+      "distance": 23
+    },
+    {
+      "id": "specialization:ghost-patient",
+      "x": 2347.3975923619314,
+      "y": -1808.4010873387715,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 24
+    },
+    {
+      "id": "specialization:ghost-flurry",
+      "x": 2410.8384548791446,
+      "y": -1839.046517344796,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 24
+    },
+    {
+      "id": "doctrine:flight:0",
+      "x": 1256.6881177227442,
+      "y": -1001.7434439980024,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "choice",
+      "doctrine": "flight",
+      "distance": 12
+    },
+    {
+      "id": "doctrine:flight:1",
+      "x": 1308.9140496591995,
+      "y": -1026.9714449764538,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "choice",
+      "doctrine": "flight",
+      "distance": 12
+    },
+    {
+      "id": "doctrine:flight:2",
+      "x": 1361.1399815956547,
+      "y": -1052.199445954905,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "choice",
+      "doctrine": "flight",
+      "distance": 12
+    },
+    {
+      "id": "road:veil:1",
+      "x": 344.86975671446106,
+      "y": 239.71827402955415,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 1
+    },
+    {
+      "id": "road:veil:2",
+      "x": 434.9215868463786,
+      "y": 320.0675136514606,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 2
+    },
+    {
+      "id": "road:veil:3",
+      "x": 521.1601016285344,
+      "y": 404.9594405252649,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 3
+    },
+    {
+      "id": "road:veil:4",
+      "x": 603.813065394406,
+      "y": 493.7709813861189,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 4
+    },
+    {
+      "id": "road:veil:5",
+      "x": 683.2752214507209,
+      "y": 585.7772373107957,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 5
+    },
+    {
+      "id": "road:veil:6",
+      "x": 760.1047394720928,
+      "y": 680.1770247752139,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 6
+    },
+    {
+      "id": "road:veil:7",
+      "x": 835.0109593905833,
+      "y": 776.1164201958478,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 7
+    },
+    {
+      "id": "road:veil:8",
+      "x": 908.8338959481001,
+      "y": 872.7089718662219,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 8
+    },
+    {
+      "id": "road:veil:9",
+      "x": 982.5164609647927,
+      "y": 969.0518066301817,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 9
+    },
+    {
+      "id": "road:veil:10",
+      "x": 1057.0707350529187,
+      "y": 1064.237502202719,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 10
+    },
+    {
+      "id": "road:veil:11",
+      "x": 1133.5398733757345,
+      "y": 1157.3622403842817,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 11
+    },
+    {
+      "id": "road:veil:12",
+      "x": 1212.9573766144665,
+      "y": 1247.5313232606832,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 12
+    },
+    {
+      "id": "road:veil:13",
+      "x": 1296.3055251359206,
+      "y": 1333.863555803998,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 13
+    },
+    {
+      "id": "road:veil:14",
+      "x": 1384.4747893315325,
+      "y": 1415.4962231335726,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 14
+    },
+    {
+      "id": "road:veil:15",
+      "x": 1478.2260122518505,
+      "y": 1491.5923895964313,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 15
+    },
+    {
+      "id": "road:veil:16",
+      "x": 1578.157117702279,
+      "y": 1561.3520140716619,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 16
+    },
+    {
+      "id": "road:veil:17",
+      "x": 1684.6760170388422,
+      "y": 1624.0279300597458,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 17
+    },
+    {
+      "id": "road:veil:18",
+      "x": 1797.9812461090671,
+      "y": 1678.9471220500322,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 18
+    },
+    {
+      "id": "road:veil:19",
+      "x": 1918.0516280969089,
+      "y": 1725.537003936687,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 19
+    },
+    {
+      "id": "road:veil:20",
+      "x": 2044.645899229572,
+      "y": 1763.3556495397336,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 20
+    },
+    {
+      "id": "veil:0:0",
+      "x": 610.1284635621154,
+      "y": 290.4621454705111,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 4
+    },
+    {
+      "id": "veil:0:1",
+      "x": 638.6257082752928,
+      "y": 246.96608767492137,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 5
+    },
+    {
+      "id": "veil:0:2",
+      "x": 666.5749290516784,
+      "y": 204.30649252924684,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "veil:0:3",
+      "x": 695.6201977016476,
+      "y": 159.97397208374193,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "veil:0:4",
+      "x": 620.5694833063432,
+      "y": 174.1651760056938,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "veil:1:0",
+      "x": 588.8999998839815,
+      "y": 695.8604674334118,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "veil:1:1",
+      "x": 560.4027551708041,
+      "y": 739.3565252290016,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "veil:1:2",
+      "x": 585.4679735416535,
+      "y": 821.5315508026005,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "veil:1:3",
+      "x": 520.9450317217892,
+      "y": 799.581836022895,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "veil:1:4",
+      "x": 475.05490375284876,
+      "y": 749.1923911460732,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "veil:2:0",
+      "x": 889.3813040479345,
+      "y": 688.2776906409207,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "veil:2:1",
+      "x": 881.679923080545,
+      "y": 627.042988623232,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "veil:2:2",
+      "x": 909.6291438569306,
+      "y": 584.3833934775574,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "veil:2:3",
+      "x": 969.9408227563399,
+      "y": 565.3176811033882,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "veil:2:4",
+      "x": 976.5461558501456,
+      "y": 628.2253084209073,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "veil:2:5",
+      "x": 948.59693507376,
+      "y": 670.8849035665818,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "veil:2:6",
+      "x": 1020.0422136457354,
+      "y": 656.7225531340847,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "veil:3:0",
+      "x": 880.6958001232157,
+      "y": 1072.2872318764823,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "veil:3:1",
+      "x": 887.8491571538133,
+      "y": 1134.3583965440862,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "veil:3:2",
+      "x": 881.3595265620992,
+      "y": 1189.8821274596426,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "veil:3:3",
+      "x": 825.8935988068768,
+      "y": 1225.2732401611731,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "veil:3:4",
+      "x": 820.9321451605982,
+      "y": 1090.5164816007364,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "veil:3:5",
+      "x": 772.6193820731249,
+      "y": 1118.6390156766988,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "veil:3:6",
+      "x": 762.3224374133226,
+      "y": 1183.6234209649908,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "veil:4:0",
+      "x": 1237.130938101488,
+      "y": 1055.9034245574412,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "veil:4:1",
+      "x": 1239.784401135659,
+      "y": 1006.2349321912914,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "veil:4:2",
+      "x": 1290.4335274175735,
+      "y": 992.7937266323147,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 14
+    },
+    {
+      "id": "veil:4:3",
+      "x": 1283.6263160790088,
+      "y": 939.3179201980764,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 15
+    },
+    {
+      "id": "veil:4:4",
+      "x": 1335.919514171299,
+      "y": 923.3673266893542,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 16
+    },
+    {
+      "id": "veil:4:5",
+      "x": 1326.920207085567,
+      "y": 873.2373708547766,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 17
+    },
+    {
+      "id": "veil:5:0",
+      "x": 1280.8147123848821,
+      "y": 1516.884528412902,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 15
+    },
+    {
+      "id": "veil:5:1",
+      "x": 1277.440200658615,
+      "y": 1580.4267401355771,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 16
+    },
+    {
+      "id": "veil:5:2",
+      "x": 1223.9065910640431,
+      "y": 1545.3532081808974,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 16
+    },
+    {
+      "id": "veil:5:3",
+      "x": 1266.5375250831112,
+      "y": 1639.0367364271256,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 17
+    },
+    {
+      "id": "veil:5:4",
+      "x": 1174.5266335924407,
+      "y": 1578.7541033800194,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 17
+    },
+    {
+      "id": "veil:5:5",
+      "x": 1191.4868106878066,
+      "y": 1653.2279403490775,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "veil:6:0",
+      "x": 1785.3102263801513,
+      "y": 1519.6356127646038,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "veil:6:1",
+      "x": 1759.8123980303292,
+      "y": 1452.7187931342373,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 19
+    },
+    {
+      "id": "veil:6:2",
+      "x": 1787.0693274226492,
+      "y": 1392.8684815218314,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 20
+    },
+    {
+      "id": "veil:6:3",
+      "x": 1856.0629250237885,
+      "y": 1384.2729309256172,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "veil:6:4",
+      "x": 1881.5896068630652,
+      "y": 1454.7951863793132,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 20
+    },
+    {
+      "id": "veil:6:5",
+      "x": 1850.1503642211694,
+      "y": 1511.9053783077597,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 19
+    },
+    {
+      "id": "veil:7:0",
+      "x": 1949.9471699024382,
+      "y": 1873.1607070909513,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "veil:7:1",
+      "x": 1953.2355058860378,
+      "y": 1937.481674484632,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 22
+    },
+    {
+      "id": "veil:7:2",
+      "x": 1889.6643444924837,
+      "y": 1895.8318552884498,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 22
+    },
+    {
+      "id": "veil:7:3",
+      "x": 1921.450117552109,
+      "y": 1985.996508179713,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 23
+    },
+    {
+      "id": "veil:7:4",
+      "x": 1857.878956158555,
+      "y": 1944.3466889835306,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 23
+    },
+    {
+      "id": "veil:7:5",
+      "x": 1889.6647292181806,
+      "y": 2034.511341874794,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 24
+    },
+    {
+      "id": "veil:7:6",
+      "x": 1826.0935678246265,
+      "y": 1992.8615226786117,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "cluster",
+      "distance": 24
+    },
+    {
+      "id": "skill:backstab",
+      "x": 273.7262889283519,
+      "y": 403.39052882970907,
+      "kind": "major",
+      "domain": "Cunning",
+      "skill": "backstab",
+      "distance": 2
+    },
+    {
+      "id": "specialization:backstab-reach",
+      "x": 251.90332662026495,
+      "y": 500.9802737627696,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 3
+    },
+    {
+      "id": "specialization:backstab-rear",
+      "x": 192.97047888784047,
+      "y": 462.3693313328189,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 3
+    },
+    {
+      "id": "skill:sidestep",
+      "x": 532.8954065876259,
+      "y": 165.9246942279968,
+      "kind": "major",
+      "domain": "Cunning",
+      "skill": "sidestep",
+      "distance": 3
+    },
+    {
+      "id": "specialization:sidestep-long",
+      "x": 554.7183688957128,
+      "y": 68.33494929493625,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 4
+    },
+    {
+      "id": "specialization:sidestep-short",
+      "x": 613.6512166281373,
+      "y": 106.94589172488699,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 4
+    },
+    {
+      "id": "skill:vaultingShot",
+      "x": 1033.1226816841,
+      "y": 591.9419661985776,
+      "kind": "major",
+      "domain": "Cunning",
+      "skill": "vaultingShot",
+      "distance": 8
+    },
+    {
+      "id": "specialization:vault-long",
+      "x": 1054.945643992187,
+      "y": 494.35222126551713,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 9
+    },
+    {
+      "id": "specialization:vault-close",
+      "x": 1113.8784917246112,
+      "y": 532.9631636954678,
+      "kind": "notable",
+      "domain": "Cunning",
+      "distance": 9
+    },
+    {
+      "id": "doctrine:motion:0",
+      "x": 984.1237707458931,
+      "y": 1308.3853144566515,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "choice",
+      "doctrine": "motion",
+      "distance": 12
+    },
+    {
+      "id": "doctrine:motion:1",
+      "x": 1032.638604440974,
+      "y": 1340.1707027905802,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "choice",
+      "doctrine": "motion",
+      "distance": 12
+    },
+    {
+      "id": "doctrine:motion:2",
+      "x": 1081.1534381360548,
+      "y": 1371.956091124509,
+      "kind": "notable",
+      "domain": "Cunning",
+      "role": "choice",
+      "doctrine": "motion",
+      "distance": 12
+    },
+    {
+      "id": "road:crucible:1",
+      "x": -41.6298609178611,
+      "y": 417.93175840077,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 1
+    },
+    {
+      "id": "road:crucible:2",
+      "x": -37.67579655899554,
+      "y": 538.6840765733151,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 2
+    },
+    {
+      "id": "road:crucible:3",
+      "x": -27.249108395030735,
+      "y": 659.4372495481855,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 3
+    },
+    {
+      "id": "road:crucible:4",
+      "x": -11.030036627573164,
+      "y": 779.9220078264201,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 4
+    },
+    {
+      "id": "road:crucible:5",
+      "x": 10.09749322026656,
+      "y": 899.943354123284,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 5
+    },
+    {
+      "id": "road:crucible:6",
+      "x": 35.070508161089954,
+      "y": 1019.3969096761688,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 6
+    },
+    {
+      "id": "road:crucible:7",
+      "x": 62.67609662175108,
+      "y": 1138.2757604870012,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 7
+    },
+    {
+      "id": "road:crucible:8",
+      "x": 91.58336396076417,
+      "y": 1256.6672142797513,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 8
+    },
+    {
+      "id": "road:crucible:9",
+      "x": 120.37677536342379,
+      "y": 1374.739768811939,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 9
+    },
+    {
+      "id": "road:crucible:10",
+      "x": 147.5897682229457,
+      "y": 1492.7214275664087,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 10
+    },
+    {
+      "id": "road:crucible:11",
+      "x": 171.73795700458442,
+      "y": 1610.8712158716758,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 11
+    },
+    {
+      "id": "road:crucible:12",
+      "x": 191.35170285167604,
+      "y": 1729.4463061384022,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 12
+    },
+    {
+      "id": "road:crucible:13",
+      "x": 205.0081880798276,
+      "y": 1848.6675317158101,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 13
+    },
+    {
+      "id": "road:crucible:14",
+      "x": 211.3633486766631,
+      "y": 1968.6862459102485,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 14
+    },
+    {
+      "id": "road:crucible:15",
+      "x": 209.18403039357221,
+      "y": 2089.5554650279805,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 15
+    },
+    {
+      "id": "road:crucible:16",
+      "x": 197.38053570985966,
+      "y": 2211.20802371077,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 16
+    },
+    {
+      "id": "road:crucible:17",
+      "x": 175.0393471936011,
+      "y": 2333.444069810553,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 17
+    },
+    {
+      "id": "road:crucible:18",
+      "x": 141.45530951881798,
+      "y": 2455.929639751297,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 18
+    },
+    {
+      "id": "road:crucible:19",
+      "x": 96.1620161234951,
+      "y": 2578.2072970680742,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 19
+    },
+    {
+      "id": "road:crucible:20",
+      "x": 38.95867973207884,
+      "y": 2699.7189152342385,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 20
+    },
+    {
+      "id": "road:crucible:21",
+      "x": -30.068530556241292,
+      "y": 2819.839691094192,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 21
+    },
+    {
+      "id": "road:crucible:22",
+      "x": -110.53274749351915,
+      "y": 2937.921461123754,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 22
+    },
+    {
+      "id": "road:crucible:23",
+      "x": -201.74206706268322,
+      "y": 3053.3424535052195,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 23
+    },
+    {
+      "id": "road:crucible:24",
+      "x": -302.7058682598199,
+      "y": 3165.5598489558,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 24
+    },
+    {
+      "id": "road:crucible:25",
+      "x": -412.15224681197856,
+      "y": 3274.1610414651013,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 25
+    },
+    {
+      "id": "crucible:0:0",
+      "x": 117.62725703601001,
+      "y": 665.423796089518,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 4
+    },
+    {
+      "id": "crucible:0:1",
+      "x": 169.19382717953837,
+      "y": 672.1237097928853,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 5
+    },
+    {
+      "id": "crucible:0:2",
+      "x": 232.23912837792878,
+      "y": 613.7602794892762,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "crucible:0:3",
+      "x": 240.5936935321161,
+      "y": 681.400513382163,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "crucible:0:4",
+      "x": 215.2316551309195,
+      "y": 744.6600344690021,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "crucible:1:0",
+      "x": -134.89338049959588,
+      "y": 901.5701724754381,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "crucible:1:1",
+      "x": -186.6554063626829,
+      "y": 935.1810736616471,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "crucible:1:2",
+      "x": -237.2303116957588,
+      "y": 928.6100044525754,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "crucible:1:3",
+      "x": -280.66810763610874,
+      "y": 882.630031813996,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "crucible:1:4",
+      "x": -226.92275215211683,
+      "y": 849.2768196163779,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "crucible:1:5",
+      "x": -176.34784681904094,
+      "y": 855.8478888254497,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "crucible:1:6",
+      "x": -220.2228384487495,
+      "y": 797.7102494728496,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "crucible:2:0",
+      "x": 207.45678545562404,
+      "y": 1130.3038008289714,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "crucible:2:1",
+      "x": 260.2104761291635,
+      "y": 1096.8217441370577,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "crucible:2:2",
+      "x": 313.01482900917506,
+      "y": 1078.4723485905222,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "crucible:2:3",
+      "x": 369.03591629034406,
+      "y": 1112.9779681304706,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "crucible:2:4",
+      "x": 249.90291658552155,
+      "y": 1176.1549289732554,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "crucible:2:5",
+      "x": 296.26504475075683,
+      "y": 1207.3887739493432,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "crucible:2:6",
+      "x": 359.24373472388413,
+      "y": 1188.344493724858,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "crucible:3:0",
+      "x": -24.070519185656778,
+      "y": 1387.388053179835,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "crucible:3:1",
+      "x": -69.93321839250105,
+      "y": 1406.639360186439,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "crucible:3:2",
+      "x": -104.09858869980395,
+      "y": 1366.9061565430773,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "crucible:3:3",
+      "x": -149.26640322869852,
+      "y": 1396.3318006427971,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "crucible:3:4",
+      "x": -186.40676796735883,
+      "y": 1356.2120635165486,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 14
+    },
+    {
+      "id": "crucible:3:5",
+      "x": -227.60792325444356,
+      "y": 1386.1530855934507,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 15
+    },
+    {
+      "id": "crucible:4:0",
+      "x": 315.9208744745801,
+      "y": 1595.4996086089197,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "crucible:4:1",
+      "x": 374.5854628669226,
+      "y": 1570.8527818606947,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "crucible:4:2",
+      "x": 366.33941523200906,
+      "y": 1634.3193297296527,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "crucible:4:3",
+      "x": 432.0904508106055,
+      "y": 1555.1309384065416,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 14
+    },
+    {
+      "id": "crucible:4:4",
+      "x": 417.9175564380978,
+      "y": 1664.2140675563132,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 14
+    },
+    {
+      "id": "crucible:4:5",
+      "x": 477.5622385783325,
+      "y": 1616.5012611790903,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 15
+    },
+    {
+      "id": "crucible:5:0",
+      "x": 67.19188117313479,
+      "y": 1984.1648749800042,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 15
+    },
+    {
+      "id": "crucible:5:1",
+      "x": 18.06897846499067,
+      "y": 2036.2699652258354,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 16
+    },
+    {
+      "id": "crucible:5:2",
+      "x": -47.67767915737503,
+      "y": 2037.811721201151,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 17
+    },
+    {
+      "id": "crucible:5:3",
+      "x": -85.4738374300733,
+      "y": 1979.4554840038713,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "crucible:5:4",
+      "x": -33.11825130198073,
+      "y": 1925.753597620022,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 17
+    },
+    {
+      "id": "crucible:5:5",
+      "x": 31.984183848907353,
+      "y": 1929.170165696969,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 16
+    },
+    {
+      "id": "crucible:6:0",
+      "x": 319.63310365622084,
+      "y": 2322.597614535736,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "crucible:6:1",
+      "x": 376.0957645829792,
+      "y": 2291.614265441909,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 19
+    },
+    {
+      "id": "crucible:6:2",
+      "x": 366.30358301651927,
+      "y": 2366.980791036297,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 19
+    },
+    {
+      "id": "crucible:6:3",
+      "x": 433.61232358922234,
+      "y": 2299.08724611105,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 20
+    },
+    {
+      "id": "crucible:6:4",
+      "x": 423.8201420227624,
+      "y": 2374.4537717054377,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 20
+    },
+    {
+      "id": "crucible:6:5",
+      "x": 491.1288825954655,
+      "y": 2306.56022678019,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "crucible:6:6",
+      "x": 481.33670102900555,
+      "y": 2381.926752374578,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "crucible:7:0",
+      "x": -106.02622497494508,
+      "y": 2701.8111406272574,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "crucible:7:1",
+      "x": -157.59279511847345,
+      "y": 2695.11122692389,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 22
+    },
+    {
+      "id": "crucible:7:2",
+      "x": -208.16770045154934,
+      "y": 2688.540157714818,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 23
+    },
+    {
+      "id": "crucible:7:3",
+      "x": -260.7259354055302,
+      "y": 2681.7113995171553,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 24
+    },
+    {
+      "id": "crucible:7:4",
+      "x": -215.25414763780321,
+      "y": 2743.081722289704,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 24
+    },
+    {
+      "id": "skill:fireball",
+      "x": 40.34678155155444,
+      "y": 506.8427898236582,
+      "kind": "major",
+      "domain": "Arcana",
+      "skill": "fireball",
+      "distance": 2
+    },
+    {
+      "id": "specialization:fireball-fork",
+      "x": 123.3965186007515,
+      "y": 451.14053514703653,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 3
+    },
+    {
+      "id": "specialization:fireball-ember",
+      "x": 139.5132625968013,
+      "y": 519.7272392532107,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 3
+    },
+    {
+      "id": "specialization:fireball-impact",
+      "x": 106.4049016794745,
+      "y": 581.9182502962074,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 3
+    },
+    {
+      "id": "skill:arcLightning",
+      "x": -214.69128966991218,
+      "y": 561.3890363552443,
+      "kind": "major",
+      "domain": "Arcana",
+      "skill": "arcLightning",
+      "distance": 3
+    },
+    {
+      "id": "specialization:arc-circuit",
+      "x": -297.74102671910924,
+      "y": 617.091291031866,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 4
+    },
+    {
+      "id": "specialization:arc-focus",
+      "x": -313.85777071515906,
+      "y": 548.5045869256919,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 4
+    },
+    {
+      "id": "specialization:arc-economy",
+      "x": -280.74940979783224,
+      "y": 486.31357588269526,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 4
+    },
+    {
+      "id": "skill:meteor",
+      "x": 382.7996421836237,
+      "y": 1864.165881552414,
+      "kind": "major",
+      "domain": "Arcana",
+      "skill": "meteor",
+      "distance": 14
+    },
+    {
+      "id": "specialization:meteor-shards",
+      "x": 465.84937923282075,
+      "y": 1808.4636268757922,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 15
+    },
+    {
+      "id": "specialization:meteor-inferno",
+      "x": 481.9661232288705,
+      "y": 1877.0503309819665,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 15
+    },
+    {
+      "id": "specialization:meteor-impact",
+      "x": 448.85776231154375,
+      "y": 1939.2413420249632,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 15
+    },
+    {
+      "id": "skill:cataclysm",
+      "x": -378.66883232758755,
+      "y": 3076.7287685825772,
+      "kind": "major",
+      "domain": "Arcana",
+      "skill": "cataclysm",
+      "distance": 24
+    },
+    {
+      "id": "specialization:cataclysm-many",
+      "x": -461.7185693767846,
+      "y": 3132.431023259199,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 25
+    },
+    {
+      "id": "specialization:cataclysm-force",
+      "x": -477.83531337283443,
+      "y": 3063.8443191530246,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 25
+    },
+    {
+      "id": "specialization:cataclysm-fire",
+      "x": -444.7269524555076,
+      "y": 3001.6533081100283,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 25
+    },
+    {
+      "id": "skill:tempest",
+      "x": -242.89380632168354,
+      "y": 3330.743550447942,
+      "kind": "major",
+      "domain": "Arcana",
+      "skill": "tempest",
+      "distance": 26
+    },
+    {
+      "id": "specialization:tempest-wide",
+      "x": -159.84406927248648,
+      "y": 3275.0412957713206,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 27
+    },
+    {
+      "id": "specialization:tempest-fast",
+      "x": -143.7273252764367,
+      "y": 3343.627999877495,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 27
+    },
+    {
+      "id": "specialization:tempest-still",
+      "x": -176.83568619376348,
+      "y": 3405.819010920491,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 27
+    },
+    {
+      "id": "doctrine:casting:0",
+      "x": -13.301386865818454,
+      "y": 1634.218770663715,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "choice",
+      "doctrine": "casting",
+      "distance": 12
+    },
+    {
+      "id": "doctrine:casting:1",
+      "x": -20.774367534958884,
+      "y": 1691.7353296699582,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "choice",
+      "doctrine": "casting",
+      "distance": 12
+    },
+    {
+      "id": "doctrine:casting:2",
+      "x": -28.247348204099314,
+      "y": 1749.2518886762014,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "choice",
+      "doctrine": "casting",
+      "distance": 12
+    },
+    {
+      "id": "road:wellspring:1",
+      "x": 69.29970319118269,
+      "y": -414.24334772886095,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 1
+    },
+    {
+      "id": "road:wellspring:2",
+      "x": 96.93352169917571,
+      "y": -531.2286629795077,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 2
+    },
+    {
+      "id": "road:wellspring:3",
+      "x": 127.72340830189161,
+      "y": -647.5235370021296,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 3
+    },
+    {
+      "id": "road:wellspring:4",
+      "x": 161.3225219743433,
+      "y": -763.1350102726499,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 4
+    },
+    {
+      "id": "road:wellspring:5",
+      "x": 197.2918946109058,
+      "y": -878.1092803978553,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 5
+    },
+    {
+      "id": "road:wellspring:6",
+      "x": 235.1114788351685,
+      "y": -992.533421361689,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 6
+    },
+    {
+      "id": "road:wellspring:7",
+      "x": 274.19280537537065,
+      "y": -1106.5343670579707,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 7
+    },
+    {
+      "id": "road:wellspring:8",
+      "x": 313.8928393570859,
+      "y": -1220.2750859541247,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 8
+    },
+    {
+      "id": "road:wellspring:9",
+      "x": 353.52865996053987,
+      "y": -1333.948082417942,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 9
+    },
+    {
+      "id": "road:wellspring:10",
+      "x": 392.392647669683,
+      "y": -1447.7665592403964,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 10
+    },
+    {
+      "id": "road:wellspring:11",
+      "x": 429.7679358211169,
+      "y": -1561.953751344788,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 11
+    },
+    {
+      "id": "road:wellspring:12",
+      "x": 464.9439547624486,
+      "y": -1676.7310812798378,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 12
+    },
+    {
+      "id": "road:wellspring:13",
+      "x": 497.2319545263143,
+      "y": -1792.3058844399138,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 13
+    },
+    {
+      "id": "road:wellspring:14",
+      "x": 525.9804248308457,
+      "y": -1908.8595005119582,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 14
+    },
+    {
+      "id": "road:wellspring:15",
+      "x": 550.5903328123181,
+      "y": -2026.5365245693501,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 15
+    },
+    {
+      "id": "road:wellspring:16",
+      "x": 570.5300676927137,
+      "y": -2145.4359561307224,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 16
+    },
+    {
+      "id": "road:wellspring:17",
+      "x": 585.3499215677342,
+      "y": -2265.6048793469367,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 17
+    },
+    {
+      "id": "road:wellspring:18",
+      "x": 594.6958556990302,
+      "y": -2387.0351566775043,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 18
+    },
+    {
+      "id": "road:wellspring:19",
+      "x": 598.32221502749,
+      "y": -2509.6634290288007,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 19
+    },
+    {
+      "id": "road:wellspring:20",
+      "x": 596.1029751464654,
+      "y": -2633.374497298387,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 20
+    },
+    {
+      "id": "road:wellspring:21",
+      "x": 588.0410507339011,
+      "y": -2758.0079265027084,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 21
+    },
+    {
+      "id": "road:wellspring:22",
+      "x": 574.2751752415016,
+      "y": -2883.3674797190424,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 22
+    },
+    {
+      "id": "road:wellspring:23",
+      "x": 555.0838870037484,
+      "y": -3009.23277238382,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 23
+    },
+    {
+      "id": "wellspring:0:0",
+      "x": -14.535550584939884,
+      "y": -675.583982765424,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 4
+    },
+    {
+      "id": "wellspring:0:1",
+      "x": -67.01120223543815,
+      "y": -643.0985093372045,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 5
+    },
+    {
+      "id": "wellspring:0:2",
+      "x": -117.43244214087585,
+      "y": -650.7600083027005,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "wellspring:0:3",
+      "x": -159.86735972414266,
+      "y": -697.6671268424418,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "wellspring:0:4",
+      "x": -105.41440454794099,
+      "y": -729.8521493308381,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "wellspring:0:5",
+      "x": -54.993164642503274,
+      "y": -722.1906503653421,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 5
+    },
+    {
+      "id": "wellspring:0:6",
+      "x": -97.60268011253332,
+      "y": -781.2620409991275,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "wellspring:1:0",
+      "x": 338.76505645278246,
+      "y": -846.323364043876,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 6
+    },
+    {
+      "id": "wellspring:1:1",
+      "x": 392.2293598661324,
+      "y": -878.6586120021839,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "wellspring:1:2",
+      "x": 445.4175847565106,
+      "y": -895.8636325778925,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "wellspring:1:3",
+      "x": 500.68060283999824,
+      "y": -860.1565067861951,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "wellspring:1:4",
+      "x": 380.21132227319754,
+      "y": -799.5664709740463,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 7
+    },
+    {
+      "id": "wellspring:1:5",
+      "x": 425.8882736679914,
+      "y": -767.338903407169,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "wellspring:1:6",
+      "x": 489.26346712671017,
+      "y": -785.0189728094643,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "wellspring:2:0",
+      "x": 133.4493990390498,
+      "y": -1141.40976774168,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 8
+    },
+    {
+      "id": "wellspring:2:1",
+      "x": 87.1817364886337,
+      "y": -1123.1531688765895,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 9
+    },
+    {
+      "id": "wellspring:2:2",
+      "x": 53.882209184325646,
+      "y": -1163.6147739029554,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "wellspring:2:3",
+      "x": 8.089595460496133,
+      "y": -1135.1712064695243,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "wellspring:2:4",
+      "x": -28.175887132367084,
+      "y": -1176.0834879056254,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "wellspring:2:5",
+      "x": -70.01389380478975,
+      "y": -1147.0390185925476,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "wellspring:3:0",
+      "x": 493.6898715189468,
+      "y": -1296.8019551032476,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 10
+    },
+    {
+      "id": "wellspring:3:1",
+      "x": 552.8729335129653,
+      "y": -1320.1764106693597,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "wellspring:3:2",
+      "x": 543.2585034386175,
+      "y": -1256.9026978468498,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 11
+    },
+    {
+      "id": "wellspring:3:3",
+      "x": 610.7039662777787,
+      "y": -1334.6530003698067,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "wellspring:3:4",
+      "x": 594.1791645874933,
+      "y": -1225.9013064561177,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "wellspring:3:5",
+      "x": 654.8401088637771,
+      "y": -1272.3152035076428,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "wellspring:4:0",
+      "x": 289.9634333859352,
+      "y": -1600.4206344892707,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 12
+    },
+    {
+      "id": "wellspring:4:1",
+      "x": 239.7269820912852,
+      "y": -1549.3883019801617,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "wellspring:4:2",
+      "x": 173.96236280680657,
+      "y": -1549.266439895904,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 14
+    },
+    {
+      "id": "wellspring:4:3",
+      "x": 137.43498338379854,
+      "y": -1608.4251294730711,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 15
+    },
+    {
+      "id": "wellspring:4:4",
+      "x": 190.9378409068271,
+      "y": -1660.9840890981484,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 14
+    },
+    {
+      "id": "wellspring:4:5",
+      "x": 255.9513328417473,
+      "y": -1656.1626923681474,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 13
+    },
+    {
+      "id": "wellspring:5:0",
+      "x": 684.1394455309528,
+      "y": -1825.9945144663293,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 15
+    },
+    {
+      "id": "wellspring:5:1",
+      "x": 741.2579050558863,
+      "y": -1855.7515570192868,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 16
+    },
+    {
+      "id": "wellspring:5:2",
+      "x": 729.8407693425982,
+      "y": -1780.6140230425563,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 16
+    },
+    {
+      "id": "wellspring:5:3",
+      "x": 798.5997073012861,
+      "y": -1847.0384797644092,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 17
+    },
+    {
+      "id": "wellspring:5:4",
+      "x": 787.1825715879979,
+      "y": -1771.9009457876787,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 17
+    },
+    {
+      "id": "wellspring:5:5",
+      "x": 855.9415095466858,
+      "y": -1838.3254025095314,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "wellspring:5:6",
+      "x": 844.5243738333976,
+      "y": -1763.1878685328008,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "wellspring:6:0",
+      "x": 444.9598756252958,
+      "y": -2301.876562521006,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 18
+    },
+    {
+      "id": "wellspring:6:1",
+      "x": 393.54998395700636,
+      "y": -2309.6882869564133,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 19
+    },
+    {
+      "id": "wellspring:6:2",
+      "x": 343.1287440515687,
+      "y": -2317.3497859219096,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 20
+    },
+    {
+      "id": "wellspring:6:3",
+      "x": 290.7302006204275,
+      "y": -2325.311735827229,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "wellspring:6:4",
+      "x": 334.86634320642594,
+      "y": -2262.973938965065,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "wellspring:7:0",
+      "x": 737.5249388902677,
+      "y": -2601.361559744225,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 21
+    },
+    {
+      "id": "wellspring:7:1",
+      "x": 788.9348305585571,
+      "y": -2593.5498353088174,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 22
+    },
+    {
+      "id": "wellspring:7:2",
+      "x": 853.2255585295729,
+      "y": -2650.5384508118877,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 23
+    },
+    {
+      "id": "wellspring:7:3",
+      "x": 860.117757483881,
+      "y": -2582.733601475176,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 23
+    },
+    {
+      "id": "wellspring:7:4",
+      "x": 833.3957965012305,
+      "y": -2520.036418115461,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "cluster",
+      "distance": 23
+    },
+    {
+      "id": "skill:iceNova",
+      "x": 207.4914360402394,
+      "y": -602.1287600973552,
+      "kind": "major",
+      "domain": "Arcana",
+      "skill": "iceNova",
+      "distance": 3
+    },
+    {
+      "id": "specialization:nova-echo",
+      "x": 291.724479203904,
+      "y": -656.0249050373063,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 4
+    },
+    {
+      "id": "specialization:nova-deep",
+      "x": 306.35661232541133,
+      "y": -587.1062131061866,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 4
+    },
+    {
+      "id": "specialization:nova-freeze",
+      "x": 271.91320476400847,
+      "y": -525.6445413689064,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 4
+    },
+    {
+      "id": "skill:runicWard",
+      "x": -47.0010526741622,
+      "y": -851.9412082377804,
+      "kind": "major",
+      "domain": "Arcana",
+      "skill": "runicWard",
+      "distance": 5
+    },
+    {
+      "id": "specialization:ward-deep",
+      "x": -144.82071335496667,
+      "y": -831.173108076902,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 6
+    },
+    {
+      "id": "specialization:ward-lasting",
+      "x": -134.23660090866082,
+      "y": -900.8284164238331,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 6
+    },
+    {
+      "id": "skill:siphon",
+      "x": 452.47373732561874,
+      "y": -1098.4159125898473,
+      "kind": "major",
+      "domain": "Arcana",
+      "skill": "siphon",
+      "distance": 8
+    },
+    {
+      "id": "specialization:siphon-drain",
+      "x": 536.7067804892833,
+      "y": -1152.3120575297985,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 9
+    },
+    {
+      "id": "specialization:siphon-pierce",
+      "x": 551.3389136107908,
+      "y": -1083.3933655986787,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 9
+    },
+    {
+      "id": "specialization:siphon-force",
+      "x": 516.8955060493879,
+      "y": -1021.9316938613985,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 9
+    },
+    {
+      "id": "skill:frostLance",
+      "x": 179.30763516738097,
+      "y": -1447.5058384030908,
+      "kind": "major",
+      "domain": "Arcana",
+      "skill": "frostLance",
+      "distance": 11
+    },
+    {
+      "id": "specialization:lance-fan",
+      "x": 95.07459200371636,
+      "y": -1393.6096934631398,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 12
+    },
+    {
+      "id": "specialization:lance-chill",
+      "x": 80.442458882209,
+      "y": -1462.5283853942594,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 12
+    },
+    {
+      "id": "specialization:lance-force",
+      "x": 114.88586644361186,
+      "y": -1523.9900571315397,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 12
+    },
+    {
+      "id": "skill:absoluteZero",
+      "x": 733.5295311907745,
+      "y": -3011.907107941917,
+      "kind": "major",
+      "domain": "Arcana",
+      "skill": "absoluteZero",
+      "distance": 24
+    },
+    {
+      "id": "specialization:zero-wide",
+      "x": 817.762574354439,
+      "y": -3065.803252881868,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 25
+    },
+    {
+      "id": "specialization:zero-freeze",
+      "x": 832.3947074759465,
+      "y": -2996.8845609507484,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 25
+    },
+    {
+      "id": "specialization:zero-burst",
+      "x": 797.9512999145436,
+      "y": -2935.422889213468,
+      "kind": "notable",
+      "domain": "Arcana",
+      "distance": 25
+    },
+    {
+      "id": "doctrine:reserve:0",
+      "x": 629.8059859848963,
+      "y": -1509.4043181836253,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "choice",
+      "doctrine": "reserve",
+      "distance": 12
+    },
+    {
+      "id": "doctrine:reserve:1",
+      "x": 638.5190632397741,
+      "y": -1566.746120429025,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "choice",
+      "doctrine": "reserve",
+      "distance": 12
+    },
+    {
+      "id": "doctrine:reserve:2",
+      "x": 647.232140494652,
+      "y": -1624.0879226744248,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "choice",
+      "doctrine": "reserve",
+      "distance": 12
+    },
+    {
+      "id": "doctrine:insulation:0",
+      "x": 416.1230514413947,
+      "y": -2433.8455178400177,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "choice",
+      "doctrine": "insulation",
+      "distance": 19
+    },
+    {
+      "id": "doctrine:insulation:1",
+      "x": 424.83612869627245,
+      "y": -2491.1873200854175,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "choice",
+      "doctrine": "insulation",
+      "distance": 19
+    },
+    {
+      "id": "doctrine:insulation:2",
+      "x": 433.5492059511502,
+      "y": -2548.5291223308172,
+      "kind": "notable",
+      "domain": "Arcana",
+      "role": "choice",
+      "doctrine": "insulation",
+      "distance": 19
+    },
+    {
+      "id": "pass:bastion:wellspring:1",
+      "x": -876.1584979146953,
+      "y": -610.7445132129571,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 9
+    },
+    {
+      "id": "pass:bastion:wellspring:2",
+      "x": -578.6456635967501,
+      "y": -763.1271563982491,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 10
+    },
+    {
+      "id": "pass:bastion:wellspring:3",
+      "x": -281.1328292788047,
+      "y": -915.5097995835409,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 10
+    },
+    {
+      "id": "pass:bastion:wellspring:4",
+      "x": 16.380005039140542,
+      "y": -1067.892442768833,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 9
+    },
+    {
+      "id": "pass:forge:crucible:1",
+      "x": -1143.1508409625476,
+      "y": 553.1967902224336,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 11
+    },
+    {
+      "id": "pass:forge:crucible:2",
+      "x": -820.4656886661744,
+      "y": 788.0779495584275,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 12
+    },
+    {
+      "id": "pass:forge:crucible:3",
+      "x": -497.7805363698011,
+      "y": 1022.9591088944212,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 12
+    },
+    {
+      "id": "pass:forge:crucible:4",
+      "x": -175.0953840734278,
+      "y": 1257.840268230415,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 11
+    },
+    {
+      "id": "pass:hunt:veil:1",
+      "x": 1101.8561342275495,
+      "y": -591.5858823831061,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 11
+    },
+    {
+      "id": "pass:hunt:veil:2",
+      "x": 1090.659784433892,
+      "y": -177.63003623664974,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 12
+    },
+    {
+      "id": "pass:hunt:veil:3",
+      "x": 1079.463434640234,
+      "y": 236.32580990980648,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 12
+    },
+    {
+      "id": "pass:hunt:veil:4",
+      "x": 1068.2670848465764,
+      "y": 650.2816560562629,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 11
+    },
+    {
+      "id": "pass:wellspring:hunt:1",
+      "x": 751.6957247546455,
+      "y": -1903.2575141160123,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 16
+    },
+    {
+      "id": "pass:wellspring:hunt:2",
+      "x": 952.8011166969729,
+      "y": -1779.9785036626745,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 17
+    },
+    {
+      "id": "pass:wellspring:hunt:3",
+      "x": 1153.9065086393002,
+      "y": -1656.6994932093367,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 17
+    },
+    {
+      "id": "pass:wellspring:hunt:4",
+      "x": 1355.0119005816277,
+      "y": -1533.4204827559986,
+      "kind": "minor",
+      "domain": "Arcana",
+      "role": "travel",
+      "distance": 16
+    },
+    {
+      "id": "pass:veil:crucible:1",
+      "x": 1302.0018013037952,
+      "y": 1691.3232159994834,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 17
+    },
+    {
+      "id": "pass:veil:crucible:2",
+      "x": 1025.8464849053112,
+      "y": 1821.294417927305,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 18
+    },
+    {
+      "id": "pass:veil:crucible:3",
+      "x": 749.6911685068274,
+      "y": 1951.2656198551267,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 18
+    },
+    {
+      "id": "pass:veil:crucible:4",
+      "x": 473.53585210834353,
+      "y": 2081.236821782948,
+      "kind": "minor",
+      "domain": "Cunning",
+      "role": "travel",
+      "distance": 17
+    },
+    {
+      "id": "pass:bastion:forge:1",
+      "x": -2100.9199183651785,
+      "y": -511.66670659953616,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 17
+    },
+    {
+      "id": "pass:bastion:forge:2",
+      "x": -2116.902855694358,
+      "y": -260.8127347197986,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 18
+    },
+    {
+      "id": "pass:bastion:forge:3",
+      "x": -2132.885793023537,
+      "y": -9.958762840061127,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 18
+    },
+    {
+      "id": "pass:bastion:forge:4",
+      "x": -2148.8687303527167,
+      "y": 240.8952090396765,
+      "kind": "minor",
+      "domain": "Might",
+      "role": "travel",
+      "distance": 17
+    },
+    {
+      "id": "keystone:measured-force",
+      "x": -2064.2732377539833,
+      "y": 650.2314971551964,
+      "kind": "major",
+      "domain": "Might",
+      "keystone": true,
+      "distance": 16
+    },
+    {
+      "id": "keystone:open-hand",
+      "x": 1707.006260217189,
+      "y": 1508.7695298997444,
+      "kind": "major",
+      "domain": "Cunning",
+      "keystone": true,
+      "distance": 17
+    },
+    {
+      "id": "keystone:borrowed-flame",
+      "x": 401.47852409102916,
+      "y": 2224.2081742342475,
+      "kind": "major",
+      "domain": "Arcana",
+      "keystone": true,
+      "distance": 17
+    },
+    {
+      "id": "keystone:arcane-overload",
+      "x": 408.3528658001794,
+      "y": -2233.017191186629,
+      "kind": "major",
+      "domain": "Arcana",
+      "keystone": true,
+      "distance": 17
+    }
+  ],
+  "graphEdges": [
+    {
+      "from": "origin",
+      "to": "road:bastion:1"
+    },
+    {
+      "from": "road:bastion:1",
+      "to": "road:bastion:2"
+    },
+    {
+      "from": "road:bastion:2",
+      "to": "road:bastion:3"
+    },
+    {
+      "from": "road:bastion:3",
+      "to": "road:bastion:4"
+    },
+    {
+      "from": "road:bastion:4",
+      "to": "road:bastion:5"
+    },
+    {
+      "from": "road:bastion:5",
+      "to": "road:bastion:6"
+    },
+    {
+      "from": "road:bastion:6",
+      "to": "road:bastion:7"
+    },
+    {
+      "from": "road:bastion:7",
+      "to": "road:bastion:8"
+    },
+    {
+      "from": "road:bastion:8",
+      "to": "road:bastion:9"
+    },
+    {
+      "from": "road:bastion:9",
+      "to": "road:bastion:10"
+    },
+    {
+      "from": "road:bastion:10",
+      "to": "road:bastion:11"
+    },
+    {
+      "from": "road:bastion:11",
+      "to": "road:bastion:12"
+    },
+    {
+      "from": "road:bastion:12",
+      "to": "road:bastion:13"
+    },
+    {
+      "from": "road:bastion:13",
+      "to": "road:bastion:14"
+    },
+    {
+      "from": "road:bastion:14",
+      "to": "road:bastion:15"
+    },
+    {
+      "from": "road:bastion:15",
+      "to": "road:bastion:16"
+    },
+    {
+      "from": "road:bastion:16",
+      "to": "road:bastion:17"
+    },
+    {
+      "from": "road:bastion:17",
+      "to": "road:bastion:18"
+    },
+    {
+      "from": "road:bastion:18",
+      "to": "road:bastion:19"
+    },
+    {
+      "from": "road:bastion:19",
+      "to": "road:bastion:20"
+    },
+    {
+      "from": "bastion:0:0",
+      "to": "bastion:0:1"
+    },
+    {
+      "from": "bastion:0:0",
+      "to": "bastion:0:2"
+    },
+    {
+      "from": "bastion:0:1",
+      "to": "bastion:0:3"
+    },
+    {
+      "from": "bastion:0:2",
+      "to": "bastion:0:4"
+    },
+    {
+      "from": "bastion:0:3",
+      "to": "bastion:0:5"
+    },
+    {
+      "from": "bastion:0:4",
+      "to": "bastion:0:5"
+    },
+    {
+      "from": "road:bastion:3",
+      "to": "bastion:0:0"
+    },
+    {
+      "from": "bastion:1:0",
+      "to": "bastion:1:1"
+    },
+    {
+      "from": "bastion:1:1",
+      "to": "bastion:1:2"
+    },
+    {
+      "from": "bastion:1:2",
+      "to": "bastion:1:3"
+    },
+    {
+      "from": "bastion:1:3",
+      "to": "bastion:1:4"
+    },
+    {
+      "from": "bastion:1:4",
+      "to": "bastion:1:5"
+    },
+    {
+      "from": "bastion:1:5",
+      "to": "bastion:1:0"
+    },
+    {
+      "from": "road:bastion:5",
+      "to": "bastion:1:0"
+    },
+    {
+      "from": "bastion:2:0",
+      "to": "bastion:2:1"
+    },
+    {
+      "from": "bastion:2:0",
+      "to": "bastion:2:2"
+    },
+    {
+      "from": "bastion:2:1",
+      "to": "bastion:2:3"
+    },
+    {
+      "from": "bastion:2:2",
+      "to": "bastion:2:4"
+    },
+    {
+      "from": "bastion:2:3",
+      "to": "bastion:2:5"
+    },
+    {
+      "from": "bastion:2:4",
+      "to": "bastion:2:6"
+    },
+    {
+      "from": "bastion:2:3",
+      "to": "bastion:2:4"
+    },
+    {
+      "from": "road:bastion:7",
+      "to": "bastion:2:0"
+    },
+    {
+      "from": "bastion:3:0",
+      "to": "bastion:3:1"
+    },
+    {
+      "from": "bastion:3:1",
+      "to": "bastion:3:2"
+    },
+    {
+      "from": "bastion:3:2",
+      "to": "bastion:3:3"
+    },
+    {
+      "from": "bastion:3:2",
+      "to": "bastion:3:4"
+    },
+    {
+      "from": "road:bastion:9",
+      "to": "bastion:3:0"
+    },
+    {
+      "from": "bastion:4:0",
+      "to": "bastion:4:1"
+    },
+    {
+      "from": "bastion:4:1",
+      "to": "bastion:4:2"
+    },
+    {
+      "from": "bastion:4:1",
+      "to": "bastion:4:3"
+    },
+    {
+      "from": "bastion:4:1",
+      "to": "bastion:4:4"
+    },
+    {
+      "from": "road:bastion:11",
+      "to": "bastion:4:0"
+    },
+    {
+      "from": "bastion:5:0",
+      "to": "bastion:5:1"
+    },
+    {
+      "from": "bastion:5:1",
+      "to": "bastion:5:2"
+    },
+    {
+      "from": "bastion:5:2",
+      "to": "bastion:5:3"
+    },
+    {
+      "from": "bastion:5:3",
+      "to": "bastion:5:4"
+    },
+    {
+      "from": "bastion:5:4",
+      "to": "bastion:5:5"
+    },
+    {
+      "from": "bastion:5:5",
+      "to": "bastion:5:0"
+    },
+    {
+      "from": "bastion:5:4",
+      "to": "bastion:5:6"
+    },
+    {
+      "from": "road:bastion:14",
+      "to": "bastion:5:0"
+    },
+    {
+      "from": "bastion:6:0",
+      "to": "bastion:6:1"
+    },
+    {
+      "from": "bastion:6:1",
+      "to": "bastion:6:2"
+    },
+    {
+      "from": "bastion:6:2",
+      "to": "bastion:6:3"
+    },
+    {
+      "from": "bastion:6:0",
+      "to": "bastion:6:4"
+    },
+    {
+      "from": "bastion:6:4",
+      "to": "bastion:6:5"
+    },
+    {
+      "from": "bastion:6:5",
+      "to": "bastion:6:6"
+    },
+    {
+      "from": "road:bastion:17",
+      "to": "bastion:6:0"
+    },
+    {
+      "from": "bastion:7:0",
+      "to": "bastion:7:1"
+    },
+    {
+      "from": "bastion:7:1",
+      "to": "bastion:7:2"
+    },
+    {
+      "from": "bastion:7:2",
+      "to": "bastion:7:3"
+    },
+    {
+      "from": "bastion:7:3",
+      "to": "bastion:7:4"
+    },
+    {
+      "from": "bastion:7:4",
+      "to": "bastion:7:5"
+    },
+    {
+      "from": "road:bastion:20",
+      "to": "bastion:7:0"
+    },
+    {
+      "from": "road:bastion:1",
+      "to": "skill:brace"
+    },
+    {
+      "from": "skill:brace",
+      "to": "specialization:brace-long"
+    },
+    {
+      "from": "skill:brace",
+      "to": "specialization:brace-hard"
+    },
+    {
+      "from": "road:bastion:3",
+      "to": "skill:shieldBash"
+    },
+    {
+      "from": "skill:shieldBash",
+      "to": "specialization:shield-wide"
+    },
+    {
+      "from": "skill:shieldBash",
+      "to": "specialization:shield-force"
+    },
+    {
+      "from": "skill:shieldBash",
+      "to": "specialization:shield-control"
+    },
+    {
+      "from": "road:bastion:5",
+      "to": "skill:bulwark"
+    },
+    {
+      "from": "skill:bulwark",
+      "to": "specialization:bulwark-duration"
+    },
+    {
+      "from": "skill:bulwark",
+      "to": "specialization:bulwark-reduction"
+    },
+    {
+      "from": "skill:bulwark",
+      "to": "specialization:bulwark-swift"
+    },
+    {
+      "from": "road:bastion:11",
+      "to": "doctrine:guard:0"
+    },
+    {
+      "from": "road:bastion:11",
+      "to": "doctrine:guard:1"
+    },
+    {
+      "from": "road:bastion:11",
+      "to": "doctrine:guard:2"
+    },
+    {
+      "from": "road:bastion:18",
+      "to": "doctrine:recovery:0"
+    },
+    {
+      "from": "road:bastion:18",
+      "to": "doctrine:recovery:1"
+    },
+    {
+      "from": "road:bastion:18",
+      "to": "doctrine:recovery:2"
+    },
+    {
+      "from": "origin",
+      "to": "road:forge:1"
+    },
+    {
+      "from": "road:forge:1",
+      "to": "road:forge:2"
+    },
+    {
+      "from": "road:forge:2",
+      "to": "road:forge:3"
+    },
+    {
+      "from": "road:forge:3",
+      "to": "road:forge:4"
+    },
+    {
+      "from": "road:forge:4",
+      "to": "road:forge:5"
+    },
+    {
+      "from": "road:forge:5",
+      "to": "road:forge:6"
+    },
+    {
+      "from": "road:forge:6",
+      "to": "road:forge:7"
+    },
+    {
+      "from": "road:forge:7",
+      "to": "road:forge:8"
+    },
+    {
+      "from": "road:forge:8",
+      "to": "road:forge:9"
+    },
+    {
+      "from": "road:forge:9",
+      "to": "road:forge:10"
+    },
+    {
+      "from": "road:forge:10",
+      "to": "road:forge:11"
+    },
+    {
+      "from": "road:forge:11",
+      "to": "road:forge:12"
+    },
+    {
+      "from": "road:forge:12",
+      "to": "road:forge:13"
+    },
+    {
+      "from": "road:forge:13",
+      "to": "road:forge:14"
+    },
+    {
+      "from": "road:forge:14",
+      "to": "road:forge:15"
+    },
+    {
+      "from": "road:forge:15",
+      "to": "road:forge:16"
+    },
+    {
+      "from": "road:forge:16",
+      "to": "road:forge:17"
+    },
+    {
+      "from": "road:forge:17",
+      "to": "road:forge:18"
+    },
+    {
+      "from": "road:forge:18",
+      "to": "road:forge:19"
+    },
+    {
+      "from": "road:forge:19",
+      "to": "road:forge:20"
+    },
+    {
+      "from": "road:forge:20",
+      "to": "road:forge:21"
+    },
+    {
+      "from": "road:forge:21",
+      "to": "road:forge:22"
+    },
+    {
+      "from": "forge:0:0",
+      "to": "forge:0:1"
+    },
+    {
+      "from": "forge:0:1",
+      "to": "forge:0:2"
+    },
+    {
+      "from": "forge:0:2",
+      "to": "forge:0:3"
+    },
+    {
+      "from": "forge:0:3",
+      "to": "forge:0:4"
+    },
+    {
+      "from": "forge:0:4",
+      "to": "forge:0:5"
+    },
+    {
+      "from": "forge:0:5",
+      "to": "forge:0:0"
+    },
+    {
+      "from": "road:forge:3",
+      "to": "forge:0:0"
+    },
+    {
+      "from": "forge:1:0",
+      "to": "forge:1:1"
+    },
+    {
+      "from": "forge:1:0",
+      "to": "forge:1:2"
+    },
+    {
+      "from": "forge:1:1",
+      "to": "forge:1:3"
+    },
+    {
+      "from": "forge:1:2",
+      "to": "forge:1:4"
+    },
+    {
+      "from": "forge:1:3",
+      "to": "forge:1:5"
+    },
+    {
+      "from": "forge:1:4",
+      "to": "forge:1:6"
+    },
+    {
+      "from": "forge:1:3",
+      "to": "forge:1:4"
+    },
+    {
+      "from": "road:forge:5",
+      "to": "forge:1:0"
+    },
+    {
+      "from": "forge:2:0",
+      "to": "forge:2:1"
+    },
+    {
+      "from": "forge:2:1",
+      "to": "forge:2:2"
+    },
+    {
+      "from": "forge:2:2",
+      "to": "forge:2:3"
+    },
+    {
+      "from": "forge:2:2",
+      "to": "forge:2:4"
+    },
+    {
+      "from": "road:forge:7",
+      "to": "forge:2:0"
+    },
+    {
+      "from": "forge:3:0",
+      "to": "forge:3:1"
+    },
+    {
+      "from": "forge:3:1",
+      "to": "forge:3:2"
+    },
+    {
+      "from": "forge:3:1",
+      "to": "forge:3:3"
+    },
+    {
+      "from": "forge:3:1",
+      "to": "forge:3:4"
+    },
+    {
+      "from": "road:forge:9",
+      "to": "forge:3:0"
+    },
+    {
+      "from": "forge:4:0",
+      "to": "forge:4:1"
+    },
+    {
+      "from": "forge:4:1",
+      "to": "forge:4:2"
+    },
+    {
+      "from": "forge:4:2",
+      "to": "forge:4:3"
+    },
+    {
+      "from": "forge:4:3",
+      "to": "forge:4:4"
+    },
+    {
+      "from": "forge:4:4",
+      "to": "forge:4:5"
+    },
+    {
+      "from": "forge:4:5",
+      "to": "forge:4:0"
+    },
+    {
+      "from": "forge:4:4",
+      "to": "forge:4:6"
+    },
+    {
+      "from": "road:forge:11",
+      "to": "forge:4:0"
+    },
+    {
+      "from": "forge:5:0",
+      "to": "forge:5:1"
+    },
+    {
+      "from": "forge:5:1",
+      "to": "forge:5:2"
+    },
+    {
+      "from": "forge:5:2",
+      "to": "forge:5:3"
+    },
+    {
+      "from": "forge:5:0",
+      "to": "forge:5:4"
+    },
+    {
+      "from": "forge:5:4",
+      "to": "forge:5:5"
+    },
+    {
+      "from": "forge:5:5",
+      "to": "forge:5:6"
+    },
+    {
+      "from": "road:forge:14",
+      "to": "forge:5:0"
+    },
+    {
+      "from": "forge:6:0",
+      "to": "forge:6:1"
+    },
+    {
+      "from": "forge:6:1",
+      "to": "forge:6:2"
+    },
+    {
+      "from": "forge:6:2",
+      "to": "forge:6:3"
+    },
+    {
+      "from": "forge:6:3",
+      "to": "forge:6:4"
+    },
+    {
+      "from": "forge:6:4",
+      "to": "forge:6:5"
+    },
+    {
+      "from": "road:forge:17",
+      "to": "forge:6:0"
+    },
+    {
+      "from": "forge:7:0",
+      "to": "forge:7:1"
+    },
+    {
+      "from": "forge:7:0",
+      "to": "forge:7:2"
+    },
+    {
+      "from": "forge:7:1",
+      "to": "forge:7:3"
+    },
+    {
+      "from": "forge:7:2",
+      "to": "forge:7:4"
+    },
+    {
+      "from": "forge:7:3",
+      "to": "forge:7:5"
+    },
+    {
+      "from": "forge:7:4",
+      "to": "forge:7:5"
+    },
+    {
+      "from": "road:forge:20",
+      "to": "forge:7:0"
+    },
+    {
+      "from": "road:forge:1",
+      "to": "skill:cleave"
+    },
+    {
+      "from": "skill:cleave",
+      "to": "specialization:cleave-reach"
+    },
+    {
+      "from": "skill:cleave",
+      "to": "specialization:cleave-force"
+    },
+    {
+      "from": "road:forge:4",
+      "to": "skill:lunge"
+    },
+    {
+      "from": "skill:lunge",
+      "to": "specialization:lunge-distance"
+    },
+    {
+      "from": "skill:lunge",
+      "to": "specialization:lunge-force"
+    },
+    {
+      "from": "skill:lunge",
+      "to": "specialization:lunge-swift"
+    },
+    {
+      "from": "road:forge:8",
+      "to": "skill:whirlwind"
+    },
+    {
+      "from": "skill:whirlwind",
+      "to": "specialization:whirlwind-reach"
+    },
+    {
+      "from": "skill:whirlwind",
+      "to": "specialization:whirlwind-force"
+    },
+    {
+      "from": "road:forge:12",
+      "to": "skill:earthshatter"
+    },
+    {
+      "from": "skill:earthshatter",
+      "to": "specialization:earthshatter-wide"
+    },
+    {
+      "from": "skill:earthshatter",
+      "to": "specialization:earthshatter-force"
+    },
+    {
+      "from": "skill:earthshatter",
+      "to": "specialization:earthshatter-swift"
+    },
+    {
+      "from": "road:forge:22",
+      "to": "skill:rallyOfIron"
+    },
+    {
+      "from": "skill:rallyOfIron",
+      "to": "specialization:rally-last"
+    },
+    {
+      "from": "skill:rallyOfIron",
+      "to": "specialization:rally-march"
+    },
+    {
+      "from": "road:forge:11",
+      "to": "doctrine:impact:0"
+    },
+    {
+      "from": "road:forge:11",
+      "to": "doctrine:impact:1"
+    },
+    {
+      "from": "road:forge:11",
+      "to": "doctrine:impact:2"
+    },
+    {
+      "from": "origin",
+      "to": "road:hunt:1"
+    },
+    {
+      "from": "road:hunt:1",
+      "to": "road:hunt:2"
+    },
+    {
+      "from": "road:hunt:2",
+      "to": "road:hunt:3"
+    },
+    {
+      "from": "road:hunt:3",
+      "to": "road:hunt:4"
+    },
+    {
+      "from": "road:hunt:4",
+      "to": "road:hunt:5"
+    },
+    {
+      "from": "road:hunt:5",
+      "to": "road:hunt:6"
+    },
+    {
+      "from": "road:hunt:6",
+      "to": "road:hunt:7"
+    },
+    {
+      "from": "road:hunt:7",
+      "to": "road:hunt:8"
+    },
+    {
+      "from": "road:hunt:8",
+      "to": "road:hunt:9"
+    },
+    {
+      "from": "road:hunt:9",
+      "to": "road:hunt:10"
+    },
+    {
+      "from": "road:hunt:10",
+      "to": "road:hunt:11"
+    },
+    {
+      "from": "road:hunt:11",
+      "to": "road:hunt:12"
+    },
+    {
+      "from": "road:hunt:12",
+      "to": "road:hunt:13"
+    },
+    {
+      "from": "road:hunt:13",
+      "to": "road:hunt:14"
+    },
+    {
+      "from": "road:hunt:14",
+      "to": "road:hunt:15"
+    },
+    {
+      "from": "road:hunt:15",
+      "to": "road:hunt:16"
+    },
+    {
+      "from": "road:hunt:16",
+      "to": "road:hunt:17"
+    },
+    {
+      "from": "road:hunt:17",
+      "to": "road:hunt:18"
+    },
+    {
+      "from": "road:hunt:18",
+      "to": "road:hunt:19"
+    },
+    {
+      "from": "road:hunt:19",
+      "to": "road:hunt:20"
+    },
+    {
+      "from": "road:hunt:20",
+      "to": "road:hunt:21"
+    },
+    {
+      "from": "road:hunt:21",
+      "to": "road:hunt:22"
+    },
+    {
+      "from": "hunt:0:0",
+      "to": "hunt:0:1"
+    },
+    {
+      "from": "hunt:0:0",
+      "to": "hunt:0:2"
+    },
+    {
+      "from": "hunt:0:1",
+      "to": "hunt:0:3"
+    },
+    {
+      "from": "hunt:0:2",
+      "to": "hunt:0:4"
+    },
+    {
+      "from": "hunt:0:3",
+      "to": "hunt:0:5"
+    },
+    {
+      "from": "hunt:0:4",
+      "to": "hunt:0:6"
+    },
+    {
+      "from": "hunt:0:3",
+      "to": "hunt:0:4"
+    },
+    {
+      "from": "road:hunt:3",
+      "to": "hunt:0:0"
+    },
+    {
+      "from": "hunt:1:0",
+      "to": "hunt:1:1"
+    },
+    {
+      "from": "hunt:1:1",
+      "to": "hunt:1:2"
+    },
+    {
+      "from": "hunt:1:2",
+      "to": "hunt:1:3"
+    },
+    {
+      "from": "hunt:1:2",
+      "to": "hunt:1:4"
+    },
+    {
+      "from": "road:hunt:5",
+      "to": "hunt:1:0"
+    },
+    {
+      "from": "hunt:2:0",
+      "to": "hunt:2:1"
+    },
+    {
+      "from": "hunt:2:1",
+      "to": "hunt:2:2"
+    },
+    {
+      "from": "hunt:2:1",
+      "to": "hunt:2:3"
+    },
+    {
+      "from": "hunt:2:1",
+      "to": "hunt:2:4"
+    },
+    {
+      "from": "road:hunt:7",
+      "to": "hunt:2:0"
+    },
+    {
+      "from": "hunt:3:0",
+      "to": "hunt:3:1"
+    },
+    {
+      "from": "hunt:3:1",
+      "to": "hunt:3:2"
+    },
+    {
+      "from": "hunt:3:2",
+      "to": "hunt:3:3"
+    },
+    {
+      "from": "hunt:3:3",
+      "to": "hunt:3:4"
+    },
+    {
+      "from": "hunt:3:4",
+      "to": "hunt:3:5"
+    },
+    {
+      "from": "hunt:3:5",
+      "to": "hunt:3:0"
+    },
+    {
+      "from": "hunt:3:4",
+      "to": "hunt:3:6"
+    },
+    {
+      "from": "road:hunt:9",
+      "to": "hunt:3:0"
+    },
+    {
+      "from": "hunt:4:0",
+      "to": "hunt:4:1"
+    },
+    {
+      "from": "hunt:4:1",
+      "to": "hunt:4:2"
+    },
+    {
+      "from": "hunt:4:2",
+      "to": "hunt:4:3"
+    },
+    {
+      "from": "hunt:4:0",
+      "to": "hunt:4:4"
+    },
+    {
+      "from": "hunt:4:4",
+      "to": "hunt:4:5"
+    },
+    {
+      "from": "hunt:4:5",
+      "to": "hunt:4:6"
+    },
+    {
+      "from": "road:hunt:11",
+      "to": "hunt:4:0"
+    },
+    {
+      "from": "hunt:5:0",
+      "to": "hunt:5:1"
+    },
+    {
+      "from": "hunt:5:1",
+      "to": "hunt:5:2"
+    },
+    {
+      "from": "hunt:5:2",
+      "to": "hunt:5:3"
+    },
+    {
+      "from": "hunt:5:3",
+      "to": "hunt:5:4"
+    },
+    {
+      "from": "hunt:5:4",
+      "to": "hunt:5:5"
+    },
+    {
+      "from": "road:hunt:14",
+      "to": "hunt:5:0"
+    },
+    {
+      "from": "hunt:6:0",
+      "to": "hunt:6:1"
+    },
+    {
+      "from": "hunt:6:0",
+      "to": "hunt:6:2"
+    },
+    {
+      "from": "hunt:6:1",
+      "to": "hunt:6:3"
+    },
+    {
+      "from": "hunt:6:2",
+      "to": "hunt:6:4"
+    },
+    {
+      "from": "hunt:6:3",
+      "to": "hunt:6:5"
+    },
+    {
+      "from": "hunt:6:4",
+      "to": "hunt:6:5"
+    },
+    {
+      "from": "road:hunt:17",
+      "to": "hunt:6:0"
+    },
+    {
+      "from": "hunt:7:0",
+      "to": "hunt:7:1"
+    },
+    {
+      "from": "hunt:7:1",
+      "to": "hunt:7:2"
+    },
+    {
+      "from": "hunt:7:2",
+      "to": "hunt:7:3"
+    },
+    {
+      "from": "hunt:7:3",
+      "to": "hunt:7:4"
+    },
+    {
+      "from": "hunt:7:4",
+      "to": "hunt:7:5"
+    },
+    {
+      "from": "hunt:7:5",
+      "to": "hunt:7:0"
+    },
+    {
+      "from": "road:hunt:20",
+      "to": "hunt:7:0"
+    },
+    {
+      "from": "road:hunt:1",
+      "to": "skill:volley"
+    },
+    {
+      "from": "skill:volley",
+      "to": "specialization:volley-fan"
+    },
+    {
+      "from": "skill:volley",
+      "to": "specialization:volley-pierce"
+    },
+    {
+      "from": "skill:volley",
+      "to": "specialization:volley-focus"
+    },
+    {
+      "from": "road:hunt:7",
+      "to": "skill:ricochet"
+    },
+    {
+      "from": "skill:ricochet",
+      "to": "specialization:ricochet-chain"
+    },
+    {
+      "from": "skill:ricochet",
+      "to": "specialization:ricochet-force"
+    },
+    {
+      "from": "road:hunt:9",
+      "to": "skill:piercingShot"
+    },
+    {
+      "from": "skill:piercingShot",
+      "to": "specialization:piercing-depth"
+    },
+    {
+      "from": "skill:piercingShot",
+      "to": "specialization:piercing-force"
+    },
+    {
+      "from": "skill:piercingShot",
+      "to": "specialization:piercing-twin"
+    },
+    {
+      "from": "road:hunt:12",
+      "to": "skill:rainOfArrows"
+    },
+    {
+      "from": "skill:rainOfArrows",
+      "to": "specialization:rain-wide"
+    },
+    {
+      "from": "skill:rainOfArrows",
+      "to": "specialization:rain-lasting"
+    },
+    {
+      "from": "skill:rainOfArrows",
+      "to": "specialization:rain-burst"
+    },
+    {
+      "from": "road:hunt:22",
+      "to": "skill:ghostHunt"
+    },
+    {
+      "from": "skill:ghostHunt",
+      "to": "specialization:ghost-patient"
+    },
+    {
+      "from": "skill:ghostHunt",
+      "to": "specialization:ghost-flurry"
+    },
+    {
+      "from": "road:hunt:11",
+      "to": "doctrine:flight:0"
+    },
+    {
+      "from": "road:hunt:11",
+      "to": "doctrine:flight:1"
+    },
+    {
+      "from": "road:hunt:11",
+      "to": "doctrine:flight:2"
+    },
+    {
+      "from": "origin",
+      "to": "road:veil:1"
+    },
+    {
+      "from": "road:veil:1",
+      "to": "road:veil:2"
+    },
+    {
+      "from": "road:veil:2",
+      "to": "road:veil:3"
+    },
+    {
+      "from": "road:veil:3",
+      "to": "road:veil:4"
+    },
+    {
+      "from": "road:veil:4",
+      "to": "road:veil:5"
+    },
+    {
+      "from": "road:veil:5",
+      "to": "road:veil:6"
+    },
+    {
+      "from": "road:veil:6",
+      "to": "road:veil:7"
+    },
+    {
+      "from": "road:veil:7",
+      "to": "road:veil:8"
+    },
+    {
+      "from": "road:veil:8",
+      "to": "road:veil:9"
+    },
+    {
+      "from": "road:veil:9",
+      "to": "road:veil:10"
+    },
+    {
+      "from": "road:veil:10",
+      "to": "road:veil:11"
+    },
+    {
+      "from": "road:veil:11",
+      "to": "road:veil:12"
+    },
+    {
+      "from": "road:veil:12",
+      "to": "road:veil:13"
+    },
+    {
+      "from": "road:veil:13",
+      "to": "road:veil:14"
+    },
+    {
+      "from": "road:veil:14",
+      "to": "road:veil:15"
+    },
+    {
+      "from": "road:veil:15",
+      "to": "road:veil:16"
+    },
+    {
+      "from": "road:veil:16",
+      "to": "road:veil:17"
+    },
+    {
+      "from": "road:veil:17",
+      "to": "road:veil:18"
+    },
+    {
+      "from": "road:veil:18",
+      "to": "road:veil:19"
+    },
+    {
+      "from": "road:veil:19",
+      "to": "road:veil:20"
+    },
+    {
+      "from": "veil:0:0",
+      "to": "veil:0:1"
+    },
+    {
+      "from": "veil:0:1",
+      "to": "veil:0:2"
+    },
+    {
+      "from": "veil:0:2",
+      "to": "veil:0:3"
+    },
+    {
+      "from": "veil:0:2",
+      "to": "veil:0:4"
+    },
+    {
+      "from": "road:veil:3",
+      "to": "veil:0:0"
+    },
+    {
+      "from": "veil:1:0",
+      "to": "veil:1:1"
+    },
+    {
+      "from": "veil:1:1",
+      "to": "veil:1:2"
+    },
+    {
+      "from": "veil:1:1",
+      "to": "veil:1:3"
+    },
+    {
+      "from": "veil:1:1",
+      "to": "veil:1:4"
+    },
+    {
+      "from": "road:veil:5",
+      "to": "veil:1:0"
+    },
+    {
+      "from": "veil:2:0",
+      "to": "veil:2:1"
+    },
+    {
+      "from": "veil:2:1",
+      "to": "veil:2:2"
+    },
+    {
+      "from": "veil:2:2",
+      "to": "veil:2:3"
+    },
+    {
+      "from": "veil:2:3",
+      "to": "veil:2:4"
+    },
+    {
+      "from": "veil:2:4",
+      "to": "veil:2:5"
+    },
+    {
+      "from": "veil:2:5",
+      "to": "veil:2:0"
+    },
+    {
+      "from": "veil:2:4",
+      "to": "veil:2:6"
+    },
+    {
+      "from": "road:veil:7",
+      "to": "veil:2:0"
+    },
+    {
+      "from": "veil:3:0",
+      "to": "veil:3:1"
+    },
+    {
+      "from": "veil:3:1",
+      "to": "veil:3:2"
+    },
+    {
+      "from": "veil:3:2",
+      "to": "veil:3:3"
+    },
+    {
+      "from": "veil:3:0",
+      "to": "veil:3:4"
+    },
+    {
+      "from": "veil:3:4",
+      "to": "veil:3:5"
+    },
+    {
+      "from": "veil:3:5",
+      "to": "veil:3:6"
+    },
+    {
+      "from": "road:veil:9",
+      "to": "veil:3:0"
+    },
+    {
+      "from": "veil:4:0",
+      "to": "veil:4:1"
+    },
+    {
+      "from": "veil:4:1",
+      "to": "veil:4:2"
+    },
+    {
+      "from": "veil:4:2",
+      "to": "veil:4:3"
+    },
+    {
+      "from": "veil:4:3",
+      "to": "veil:4:4"
+    },
+    {
+      "from": "veil:4:4",
+      "to": "veil:4:5"
+    },
+    {
+      "from": "road:veil:11",
+      "to": "veil:4:0"
+    },
+    {
+      "from": "veil:5:0",
+      "to": "veil:5:1"
+    },
+    {
+      "from": "veil:5:0",
+      "to": "veil:5:2"
+    },
+    {
+      "from": "veil:5:1",
+      "to": "veil:5:3"
+    },
+    {
+      "from": "veil:5:2",
+      "to": "veil:5:4"
+    },
+    {
+      "from": "veil:5:3",
+      "to": "veil:5:5"
+    },
+    {
+      "from": "veil:5:4",
+      "to": "veil:5:5"
+    },
+    {
+      "from": "road:veil:14",
+      "to": "veil:5:0"
+    },
+    {
+      "from": "veil:6:0",
+      "to": "veil:6:1"
+    },
+    {
+      "from": "veil:6:1",
+      "to": "veil:6:2"
+    },
+    {
+      "from": "veil:6:2",
+      "to": "veil:6:3"
+    },
+    {
+      "from": "veil:6:3",
+      "to": "veil:6:4"
+    },
+    {
+      "from": "veil:6:4",
+      "to": "veil:6:5"
+    },
+    {
+      "from": "veil:6:5",
+      "to": "veil:6:0"
+    },
+    {
+      "from": "road:veil:17",
+      "to": "veil:6:0"
+    },
+    {
+      "from": "veil:7:0",
+      "to": "veil:7:1"
+    },
+    {
+      "from": "veil:7:0",
+      "to": "veil:7:2"
+    },
+    {
+      "from": "veil:7:1",
+      "to": "veil:7:3"
+    },
+    {
+      "from": "veil:7:2",
+      "to": "veil:7:4"
+    },
+    {
+      "from": "veil:7:3",
+      "to": "veil:7:5"
+    },
+    {
+      "from": "veil:7:4",
+      "to": "veil:7:6"
+    },
+    {
+      "from": "veil:7:3",
+      "to": "veil:7:4"
+    },
+    {
+      "from": "road:veil:20",
+      "to": "veil:7:0"
+    },
+    {
+      "from": "road:veil:1",
+      "to": "skill:backstab"
+    },
+    {
+      "from": "skill:backstab",
+      "to": "specialization:backstab-reach"
+    },
+    {
+      "from": "skill:backstab",
+      "to": "specialization:backstab-rear"
+    },
+    {
+      "from": "road:veil:2",
+      "to": "skill:sidestep"
+    },
+    {
+      "from": "skill:sidestep",
+      "to": "specialization:sidestep-long"
+    },
+    {
+      "from": "skill:sidestep",
+      "to": "specialization:sidestep-short"
+    },
+    {
+      "from": "road:veil:7",
+      "to": "skill:vaultingShot"
+    },
+    {
+      "from": "skill:vaultingShot",
+      "to": "specialization:vault-long"
+    },
+    {
+      "from": "skill:vaultingShot",
+      "to": "specialization:vault-close"
+    },
+    {
+      "from": "road:veil:11",
+      "to": "doctrine:motion:0"
+    },
+    {
+      "from": "road:veil:11",
+      "to": "doctrine:motion:1"
+    },
+    {
+      "from": "road:veil:11",
+      "to": "doctrine:motion:2"
+    },
+    {
+      "from": "origin",
+      "to": "road:crucible:1"
+    },
+    {
+      "from": "road:crucible:1",
+      "to": "road:crucible:2"
+    },
+    {
+      "from": "road:crucible:2",
+      "to": "road:crucible:3"
+    },
+    {
+      "from": "road:crucible:3",
+      "to": "road:crucible:4"
+    },
+    {
+      "from": "road:crucible:4",
+      "to": "road:crucible:5"
+    },
+    {
+      "from": "road:crucible:5",
+      "to": "road:crucible:6"
+    },
+    {
+      "from": "road:crucible:6",
+      "to": "road:crucible:7"
+    },
+    {
+      "from": "road:crucible:7",
+      "to": "road:crucible:8"
+    },
+    {
+      "from": "road:crucible:8",
+      "to": "road:crucible:9"
+    },
+    {
+      "from": "road:crucible:9",
+      "to": "road:crucible:10"
+    },
+    {
+      "from": "road:crucible:10",
+      "to": "road:crucible:11"
+    },
+    {
+      "from": "road:crucible:11",
+      "to": "road:crucible:12"
+    },
+    {
+      "from": "road:crucible:12",
+      "to": "road:crucible:13"
+    },
+    {
+      "from": "road:crucible:13",
+      "to": "road:crucible:14"
+    },
+    {
+      "from": "road:crucible:14",
+      "to": "road:crucible:15"
+    },
+    {
+      "from": "road:crucible:15",
+      "to": "road:crucible:16"
+    },
+    {
+      "from": "road:crucible:16",
+      "to": "road:crucible:17"
+    },
+    {
+      "from": "road:crucible:17",
+      "to": "road:crucible:18"
+    },
+    {
+      "from": "road:crucible:18",
+      "to": "road:crucible:19"
+    },
+    {
+      "from": "road:crucible:19",
+      "to": "road:crucible:20"
+    },
+    {
+      "from": "road:crucible:20",
+      "to": "road:crucible:21"
+    },
+    {
+      "from": "road:crucible:21",
+      "to": "road:crucible:22"
+    },
+    {
+      "from": "road:crucible:22",
+      "to": "road:crucible:23"
+    },
+    {
+      "from": "road:crucible:23",
+      "to": "road:crucible:24"
+    },
+    {
+      "from": "road:crucible:24",
+      "to": "road:crucible:25"
+    },
+    {
+      "from": "crucible:0:0",
+      "to": "crucible:0:1"
+    },
+    {
+      "from": "crucible:0:1",
+      "to": "crucible:0:2"
+    },
+    {
+      "from": "crucible:0:1",
+      "to": "crucible:0:3"
+    },
+    {
+      "from": "crucible:0:1",
+      "to": "crucible:0:4"
+    },
+    {
+      "from": "road:crucible:3",
+      "to": "crucible:0:0"
+    },
+    {
+      "from": "crucible:1:0",
+      "to": "crucible:1:1"
+    },
+    {
+      "from": "crucible:1:1",
+      "to": "crucible:1:2"
+    },
+    {
+      "from": "crucible:1:2",
+      "to": "crucible:1:3"
+    },
+    {
+      "from": "crucible:1:3",
+      "to": "crucible:1:4"
+    },
+    {
+      "from": "crucible:1:4",
+      "to": "crucible:1:5"
+    },
+    {
+      "from": "crucible:1:5",
+      "to": "crucible:1:0"
+    },
+    {
+      "from": "crucible:1:4",
+      "to": "crucible:1:6"
+    },
+    {
+      "from": "road:crucible:5",
+      "to": "crucible:1:0"
+    },
+    {
+      "from": "crucible:2:0",
+      "to": "crucible:2:1"
+    },
+    {
+      "from": "crucible:2:1",
+      "to": "crucible:2:2"
+    },
+    {
+      "from": "crucible:2:2",
+      "to": "crucible:2:3"
+    },
+    {
+      "from": "crucible:2:0",
+      "to": "crucible:2:4"
+    },
+    {
+      "from": "crucible:2:4",
+      "to": "crucible:2:5"
+    },
+    {
+      "from": "crucible:2:5",
+      "to": "crucible:2:6"
+    },
+    {
+      "from": "road:crucible:7",
+      "to": "crucible:2:0"
+    },
+    {
+      "from": "crucible:3:0",
+      "to": "crucible:3:1"
+    },
+    {
+      "from": "crucible:3:1",
+      "to": "crucible:3:2"
+    },
+    {
+      "from": "crucible:3:2",
+      "to": "crucible:3:3"
+    },
+    {
+      "from": "crucible:3:3",
+      "to": "crucible:3:4"
+    },
+    {
+      "from": "crucible:3:4",
+      "to": "crucible:3:5"
+    },
+    {
+      "from": "road:crucible:9",
+      "to": "crucible:3:0"
+    },
+    {
+      "from": "crucible:4:0",
+      "to": "crucible:4:1"
+    },
+    {
+      "from": "crucible:4:0",
+      "to": "crucible:4:2"
+    },
+    {
+      "from": "crucible:4:1",
+      "to": "crucible:4:3"
+    },
+    {
+      "from": "crucible:4:2",
+      "to": "crucible:4:4"
+    },
+    {
+      "from": "crucible:4:3",
+      "to": "crucible:4:5"
+    },
+    {
+      "from": "crucible:4:4",
+      "to": "crucible:4:5"
+    },
+    {
+      "from": "road:crucible:11",
+      "to": "crucible:4:0"
+    },
+    {
+      "from": "crucible:5:0",
+      "to": "crucible:5:1"
+    },
+    {
+      "from": "crucible:5:1",
+      "to": "crucible:5:2"
+    },
+    {
+      "from": "crucible:5:2",
+      "to": "crucible:5:3"
+    },
+    {
+      "from": "crucible:5:3",
+      "to": "crucible:5:4"
+    },
+    {
+      "from": "crucible:5:4",
+      "to": "crucible:5:5"
+    },
+    {
+      "from": "crucible:5:5",
+      "to": "crucible:5:0"
+    },
+    {
+      "from": "road:crucible:14",
+      "to": "crucible:5:0"
+    },
+    {
+      "from": "crucible:6:0",
+      "to": "crucible:6:1"
+    },
+    {
+      "from": "crucible:6:0",
+      "to": "crucible:6:2"
+    },
+    {
+      "from": "crucible:6:1",
+      "to": "crucible:6:3"
+    },
+    {
+      "from": "crucible:6:2",
+      "to": "crucible:6:4"
+    },
+    {
+      "from": "crucible:6:3",
+      "to": "crucible:6:5"
+    },
+    {
+      "from": "crucible:6:4",
+      "to": "crucible:6:6"
+    },
+    {
+      "from": "crucible:6:3",
+      "to": "crucible:6:4"
+    },
+    {
+      "from": "road:crucible:17",
+      "to": "crucible:6:0"
+    },
+    {
+      "from": "crucible:7:0",
+      "to": "crucible:7:1"
+    },
+    {
+      "from": "crucible:7:1",
+      "to": "crucible:7:2"
+    },
+    {
+      "from": "crucible:7:2",
+      "to": "crucible:7:3"
+    },
+    {
+      "from": "crucible:7:2",
+      "to": "crucible:7:4"
+    },
+    {
+      "from": "road:crucible:20",
+      "to": "crucible:7:0"
+    },
+    {
+      "from": "road:crucible:1",
+      "to": "skill:fireball"
+    },
+    {
+      "from": "skill:fireball",
+      "to": "specialization:fireball-fork"
+    },
+    {
+      "from": "skill:fireball",
+      "to": "specialization:fireball-ember"
+    },
+    {
+      "from": "skill:fireball",
+      "to": "specialization:fireball-impact"
+    },
+    {
+      "from": "road:crucible:2",
+      "to": "skill:arcLightning"
+    },
+    {
+      "from": "skill:arcLightning",
+      "to": "specialization:arc-circuit"
+    },
+    {
+      "from": "skill:arcLightning",
+      "to": "specialization:arc-focus"
+    },
+    {
+      "from": "skill:arcLightning",
+      "to": "specialization:arc-economy"
+    },
+    {
+      "from": "road:crucible:13",
+      "to": "skill:meteor"
+    },
+    {
+      "from": "skill:meteor",
+      "to": "specialization:meteor-shards"
+    },
+    {
+      "from": "skill:meteor",
+      "to": "specialization:meteor-inferno"
+    },
+    {
+      "from": "skill:meteor",
+      "to": "specialization:meteor-impact"
+    },
+    {
+      "from": "road:crucible:23",
+      "to": "skill:cataclysm"
+    },
+    {
+      "from": "skill:cataclysm",
+      "to": "specialization:cataclysm-many"
+    },
+    {
+      "from": "skill:cataclysm",
+      "to": "specialization:cataclysm-force"
+    },
+    {
+      "from": "skill:cataclysm",
+      "to": "specialization:cataclysm-fire"
+    },
+    {
+      "from": "road:crucible:25",
+      "to": "skill:tempest"
+    },
+    {
+      "from": "skill:tempest",
+      "to": "specialization:tempest-wide"
+    },
+    {
+      "from": "skill:tempest",
+      "to": "specialization:tempest-fast"
+    },
+    {
+      "from": "skill:tempest",
+      "to": "specialization:tempest-still"
+    },
+    {
+      "from": "road:crucible:11",
+      "to": "doctrine:casting:0"
+    },
+    {
+      "from": "road:crucible:11",
+      "to": "doctrine:casting:1"
+    },
+    {
+      "from": "road:crucible:11",
+      "to": "doctrine:casting:2"
+    },
+    {
+      "from": "origin",
+      "to": "road:wellspring:1"
+    },
+    {
+      "from": "road:wellspring:1",
+      "to": "road:wellspring:2"
+    },
+    {
+      "from": "road:wellspring:2",
+      "to": "road:wellspring:3"
+    },
+    {
+      "from": "road:wellspring:3",
+      "to": "road:wellspring:4"
+    },
+    {
+      "from": "road:wellspring:4",
+      "to": "road:wellspring:5"
+    },
+    {
+      "from": "road:wellspring:5",
+      "to": "road:wellspring:6"
+    },
+    {
+      "from": "road:wellspring:6",
+      "to": "road:wellspring:7"
+    },
+    {
+      "from": "road:wellspring:7",
+      "to": "road:wellspring:8"
+    },
+    {
+      "from": "road:wellspring:8",
+      "to": "road:wellspring:9"
+    },
+    {
+      "from": "road:wellspring:9",
+      "to": "road:wellspring:10"
+    },
+    {
+      "from": "road:wellspring:10",
+      "to": "road:wellspring:11"
+    },
+    {
+      "from": "road:wellspring:11",
+      "to": "road:wellspring:12"
+    },
+    {
+      "from": "road:wellspring:12",
+      "to": "road:wellspring:13"
+    },
+    {
+      "from": "road:wellspring:13",
+      "to": "road:wellspring:14"
+    },
+    {
+      "from": "road:wellspring:14",
+      "to": "road:wellspring:15"
+    },
+    {
+      "from": "road:wellspring:15",
+      "to": "road:wellspring:16"
+    },
+    {
+      "from": "road:wellspring:16",
+      "to": "road:wellspring:17"
+    },
+    {
+      "from": "road:wellspring:17",
+      "to": "road:wellspring:18"
+    },
+    {
+      "from": "road:wellspring:18",
+      "to": "road:wellspring:19"
+    },
+    {
+      "from": "road:wellspring:19",
+      "to": "road:wellspring:20"
+    },
+    {
+      "from": "road:wellspring:20",
+      "to": "road:wellspring:21"
+    },
+    {
+      "from": "road:wellspring:21",
+      "to": "road:wellspring:22"
+    },
+    {
+      "from": "road:wellspring:22",
+      "to": "road:wellspring:23"
+    },
+    {
+      "from": "wellspring:0:0",
+      "to": "wellspring:0:1"
+    },
+    {
+      "from": "wellspring:0:1",
+      "to": "wellspring:0:2"
+    },
+    {
+      "from": "wellspring:0:2",
+      "to": "wellspring:0:3"
+    },
+    {
+      "from": "wellspring:0:3",
+      "to": "wellspring:0:4"
+    },
+    {
+      "from": "wellspring:0:4",
+      "to": "wellspring:0:5"
+    },
+    {
+      "from": "wellspring:0:5",
+      "to": "wellspring:0:0"
+    },
+    {
+      "from": "wellspring:0:4",
+      "to": "wellspring:0:6"
+    },
+    {
+      "from": "road:wellspring:3",
+      "to": "wellspring:0:0"
+    },
+    {
+      "from": "wellspring:1:0",
+      "to": "wellspring:1:1"
+    },
+    {
+      "from": "wellspring:1:1",
+      "to": "wellspring:1:2"
+    },
+    {
+      "from": "wellspring:1:2",
+      "to": "wellspring:1:3"
+    },
+    {
+      "from": "wellspring:1:0",
+      "to": "wellspring:1:4"
+    },
+    {
+      "from": "wellspring:1:4",
+      "to": "wellspring:1:5"
+    },
+    {
+      "from": "wellspring:1:5",
+      "to": "wellspring:1:6"
+    },
+    {
+      "from": "road:wellspring:5",
+      "to": "wellspring:1:0"
+    },
+    {
+      "from": "wellspring:2:0",
+      "to": "wellspring:2:1"
+    },
+    {
+      "from": "wellspring:2:1",
+      "to": "wellspring:2:2"
+    },
+    {
+      "from": "wellspring:2:2",
+      "to": "wellspring:2:3"
+    },
+    {
+      "from": "wellspring:2:3",
+      "to": "wellspring:2:4"
+    },
+    {
+      "from": "wellspring:2:4",
+      "to": "wellspring:2:5"
+    },
+    {
+      "from": "road:wellspring:7",
+      "to": "wellspring:2:0"
+    },
+    {
+      "from": "wellspring:3:0",
+      "to": "wellspring:3:1"
+    },
+    {
+      "from": "wellspring:3:0",
+      "to": "wellspring:3:2"
+    },
+    {
+      "from": "wellspring:3:1",
+      "to": "wellspring:3:3"
+    },
+    {
+      "from": "wellspring:3:2",
+      "to": "wellspring:3:4"
+    },
+    {
+      "from": "wellspring:3:3",
+      "to": "wellspring:3:5"
+    },
+    {
+      "from": "wellspring:3:4",
+      "to": "wellspring:3:5"
+    },
+    {
+      "from": "road:wellspring:9",
+      "to": "wellspring:3:0"
+    },
+    {
+      "from": "wellspring:4:0",
+      "to": "wellspring:4:1"
+    },
+    {
+      "from": "wellspring:4:1",
+      "to": "wellspring:4:2"
+    },
+    {
+      "from": "wellspring:4:2",
+      "to": "wellspring:4:3"
+    },
+    {
+      "from": "wellspring:4:3",
+      "to": "wellspring:4:4"
+    },
+    {
+      "from": "wellspring:4:4",
+      "to": "wellspring:4:5"
+    },
+    {
+      "from": "wellspring:4:5",
+      "to": "wellspring:4:0"
+    },
+    {
+      "from": "road:wellspring:11",
+      "to": "wellspring:4:0"
+    },
+    {
+      "from": "wellspring:5:0",
+      "to": "wellspring:5:1"
+    },
+    {
+      "from": "wellspring:5:0",
+      "to": "wellspring:5:2"
+    },
+    {
+      "from": "wellspring:5:1",
+      "to": "wellspring:5:3"
+    },
+    {
+      "from": "wellspring:5:2",
+      "to": "wellspring:5:4"
+    },
+    {
+      "from": "wellspring:5:3",
+      "to": "wellspring:5:5"
+    },
+    {
+      "from": "wellspring:5:4",
+      "to": "wellspring:5:6"
+    },
+    {
+      "from": "wellspring:5:3",
+      "to": "wellspring:5:4"
+    },
+    {
+      "from": "road:wellspring:14",
+      "to": "wellspring:5:0"
+    },
+    {
+      "from": "wellspring:6:0",
+      "to": "wellspring:6:1"
+    },
+    {
+      "from": "wellspring:6:1",
+      "to": "wellspring:6:2"
+    },
+    {
+      "from": "wellspring:6:2",
+      "to": "wellspring:6:3"
+    },
+    {
+      "from": "wellspring:6:2",
+      "to": "wellspring:6:4"
+    },
+    {
+      "from": "road:wellspring:17",
+      "to": "wellspring:6:0"
+    },
+    {
+      "from": "wellspring:7:0",
+      "to": "wellspring:7:1"
+    },
+    {
+      "from": "wellspring:7:1",
+      "to": "wellspring:7:2"
+    },
+    {
+      "from": "wellspring:7:1",
+      "to": "wellspring:7:3"
+    },
+    {
+      "from": "wellspring:7:1",
+      "to": "wellspring:7:4"
+    },
+    {
+      "from": "road:wellspring:20",
+      "to": "wellspring:7:0"
+    },
+    {
+      "from": "road:wellspring:2",
+      "to": "skill:iceNova"
+    },
+    {
+      "from": "skill:iceNova",
+      "to": "specialization:nova-echo"
+    },
+    {
+      "from": "skill:iceNova",
+      "to": "specialization:nova-deep"
+    },
+    {
+      "from": "skill:iceNova",
+      "to": "specialization:nova-freeze"
+    },
+    {
+      "from": "road:wellspring:4",
+      "to": "skill:runicWard"
+    },
+    {
+      "from": "skill:runicWard",
+      "to": "specialization:ward-deep"
+    },
+    {
+      "from": "skill:runicWard",
+      "to": "specialization:ward-lasting"
+    },
+    {
+      "from": "road:wellspring:7",
+      "to": "skill:siphon"
+    },
+    {
+      "from": "skill:siphon",
+      "to": "specialization:siphon-drain"
+    },
+    {
+      "from": "skill:siphon",
+      "to": "specialization:siphon-pierce"
+    },
+    {
+      "from": "skill:siphon",
+      "to": "specialization:siphon-force"
+    },
+    {
+      "from": "road:wellspring:10",
+      "to": "skill:frostLance"
+    },
+    {
+      "from": "skill:frostLance",
+      "to": "specialization:lance-fan"
+    },
+    {
+      "from": "skill:frostLance",
+      "to": "specialization:lance-chill"
+    },
+    {
+      "from": "skill:frostLance",
+      "to": "specialization:lance-force"
+    },
+    {
+      "from": "road:wellspring:23",
+      "to": "skill:absoluteZero"
+    },
+    {
+      "from": "skill:absoluteZero",
+      "to": "specialization:zero-wide"
+    },
+    {
+      "from": "skill:absoluteZero",
+      "to": "specialization:zero-freeze"
+    },
+    {
+      "from": "skill:absoluteZero",
+      "to": "specialization:zero-burst"
+    },
+    {
+      "from": "road:wellspring:11",
+      "to": "doctrine:reserve:0"
+    },
+    {
+      "from": "road:wellspring:11",
+      "to": "doctrine:reserve:1"
+    },
+    {
+      "from": "road:wellspring:11",
+      "to": "doctrine:reserve:2"
+    },
+    {
+      "from": "road:wellspring:18",
+      "to": "doctrine:insulation:0"
+    },
+    {
+      "from": "road:wellspring:18",
+      "to": "doctrine:insulation:1"
+    },
+    {
+      "from": "road:wellspring:18",
+      "to": "doctrine:insulation:2"
+    },
+    {
+      "from": "road:bastion:8",
+      "to": "pass:bastion:wellspring:1"
+    },
+    {
+      "from": "pass:bastion:wellspring:1",
+      "to": "pass:bastion:wellspring:2"
+    },
+    {
+      "from": "pass:bastion:wellspring:2",
+      "to": "pass:bastion:wellspring:3"
+    },
+    {
+      "from": "pass:bastion:wellspring:3",
+      "to": "pass:bastion:wellspring:4"
+    },
+    {
+      "from": "pass:bastion:wellspring:4",
+      "to": "road:wellspring:8"
+    },
+    {
+      "from": "road:forge:10",
+      "to": "pass:forge:crucible:1"
+    },
+    {
+      "from": "pass:forge:crucible:1",
+      "to": "pass:forge:crucible:2"
+    },
+    {
+      "from": "pass:forge:crucible:2",
+      "to": "pass:forge:crucible:3"
+    },
+    {
+      "from": "pass:forge:crucible:3",
+      "to": "pass:forge:crucible:4"
+    },
+    {
+      "from": "pass:forge:crucible:4",
+      "to": "road:crucible:10"
+    },
+    {
+      "from": "road:hunt:10",
+      "to": "pass:hunt:veil:1"
+    },
+    {
+      "from": "pass:hunt:veil:1",
+      "to": "pass:hunt:veil:2"
+    },
+    {
+      "from": "pass:hunt:veil:2",
+      "to": "pass:hunt:veil:3"
+    },
+    {
+      "from": "pass:hunt:veil:3",
+      "to": "pass:hunt:veil:4"
+    },
+    {
+      "from": "pass:hunt:veil:4",
+      "to": "road:veil:10"
+    },
+    {
+      "from": "road:wellspring:15",
+      "to": "pass:wellspring:hunt:1"
+    },
+    {
+      "from": "pass:wellspring:hunt:1",
+      "to": "pass:wellspring:hunt:2"
+    },
+    {
+      "from": "pass:wellspring:hunt:2",
+      "to": "pass:wellspring:hunt:3"
+    },
+    {
+      "from": "pass:wellspring:hunt:3",
+      "to": "pass:wellspring:hunt:4"
+    },
+    {
+      "from": "pass:wellspring:hunt:4",
+      "to": "road:hunt:15"
+    },
+    {
+      "from": "road:veil:16",
+      "to": "pass:veil:crucible:1"
+    },
+    {
+      "from": "pass:veil:crucible:1",
+      "to": "pass:veil:crucible:2"
+    },
+    {
+      "from": "pass:veil:crucible:2",
+      "to": "pass:veil:crucible:3"
+    },
+    {
+      "from": "pass:veil:crucible:3",
+      "to": "pass:veil:crucible:4"
+    },
+    {
+      "from": "pass:veil:crucible:4",
+      "to": "road:crucible:16"
+    },
+    {
+      "from": "road:bastion:16",
+      "to": "pass:bastion:forge:1"
+    },
+    {
+      "from": "pass:bastion:forge:1",
+      "to": "pass:bastion:forge:2"
+    },
+    {
+      "from": "pass:bastion:forge:2",
+      "to": "pass:bastion:forge:3"
+    },
+    {
+      "from": "pass:bastion:forge:3",
+      "to": "pass:bastion:forge:4"
+    },
+    {
+      "from": "pass:bastion:forge:4",
+      "to": "road:forge:16"
+    },
+    {
+      "from": "road:forge:15",
+      "to": "keystone:measured-force"
+    },
+    {
+      "from": "road:veil:16",
+      "to": "keystone:open-hand"
+    },
+    {
+      "from": "road:crucible:16",
+      "to": "keystone:borrowed-flame"
+    },
+    {
+      "from": "road:wellspring:16",
+      "to": "keystone:arcane-overload"
+    }
+  ]
+}

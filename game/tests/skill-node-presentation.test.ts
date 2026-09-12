@@ -13,12 +13,12 @@ test('every development hover identifies its exact owner and whether it unlocks 
     const html=skillTooltipMarkup(node,view);
     assert.ok(html.includes(name),node.id);
     assert.ok(html.includes(node.specialization?'Unlocks a selectable variant':'Applies to all variants'),node.id);
-    assert.equal(skillNodeRole(node),node.specialization?'Specialization':'Skill improvement');
+    assert.equal(skillNodeRole(node),node.specialization?'Technique':'Skill improvement');
     assert.ok(!html.includes('undefined'));
   }
 });
 test('unrelated notable passives are never presented as selectable specializations',()=>{
-  const node=SKILL_TREE.nodes.find(n=>n.kind==='notable' && !n.specialization && !n.mastery && !n.keystone)!;
+  const node=SKILL_TREE.nodes.find(n=>n.kind==='notable' && !n.specialization && !n.keystone)!;
   assert.equal(skillNodeRole(node),'Notable passive');
   assert.equal(skillNodeOwner(node),undefined);
 });

@@ -35,10 +35,12 @@ export interface Item {
   implicit: StatModifiers; affixes: ItemAffix[]; weapon?: WeaponDefinition; shield?: ShieldDefinition; focus?: FocusDefinition;
   appearance: { surface?: GearMaterial; base: string; shadow: string; edge: string; trim: string; style: 'plate' | 'leather' | 'cloth' };
 }
-export type SkillId = 'cleave' | 'lunge' | 'whirlwind' | 'earthshatter' | 'shieldBash' | 'bulwark'
+export type SkillId = 'repulse' | 'ironCitadel' | 'smokeVeil' | 'nightReaping' | 'sidestep' | 'brace' | 'runicWard' | 'vaultingShot' | 'rallyOfIron' | 'ghostHunt' | 'cleave' | 'lunge' | 'whirlwind' | 'earthshatter' | 'shieldBash' | 'bulwark'
   | 'volley' | 'piercingShot' | 'ricochet' | 'rainOfArrows' | 'backstab'
   | 'cataclysm' | 'tempest' | 'absoluteZero' | 'fireball' | 'arcLightning' | 'iceNova' | 'frostLance' | 'meteor' | 'siphon';
 export interface CharacterSheet extends GoldWallet {
+  treeVersion?: number;
+  treeRefunded?: true;
   look: import('./character-look.ts').CharacterLook;
   blessing?: import('./poi-content.ts').Blessing;
   commerce: CommerceState;
@@ -62,6 +64,7 @@ export interface CharacterSheet extends GoldWallet {
   arcaneOverload: boolean;
 }
 export interface DerivedCharacterStats {
+  directDamageMultiplier?: number;
   resistances: Record<Element, number>; goldFindMultiplier: number; xpGainMultiplier: number;
   attackSpeedMultiplier: number; castSpeedMultiplier: number; attackDamageMultiplier: number;
   maxHp: number; maxMana: number; armor: number; damageReduction: number;

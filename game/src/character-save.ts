@@ -1,3 +1,5 @@
+import { upgradeSkillTree } from './skill-tree-upgrade.ts';
+import { doctrineConflict } from './skill-tree.ts';
 import { STASH_CAPACITY, MAX_STORAGE_TABS } from './storage-content.ts';
 import { validPackLayout } from './inventory-grid.ts';
 import { validEncounterScales } from './encounter-scaling.ts';
@@ -66,7 +68,7 @@ function validSheet(v: unknown, level: number): v is CharacterSheet {
     || !Array.isArray(v.allocatedNodes) || v.allocatedNodes.length > SKILL_NODES.size || !v.allocatedNodes.includes('origin')
     || !v.allocatedNodes.every(id => typeof id === 'string' && SKILL_NODES.has(id)) || new Set(v.allocatedNodes).size !== v.allocatedNodes.length) return false;
   const sheet = v as unknown as CharacterSheet;
-  if (!validSkillProgression(sheet) || !validPackLayout(sheet.inventory, sheet.inventoryLayout)) return false;
+  if (sheet.treeVersion!==2 || sheet.treeRefunded!==undefined&&sheet.treeRefunded!==true || sheet.allocatedNodes.some(id=>doctrineConflict(sheet.allocatedNodes,SKILL_NODES.get(id)!)) || !validSkillProgression(sheet) || !validPackLayout(sheet.inventory, sheet.inventoryLayout)) return false;
   const ids = [...(sheet.stash??[]), ...sheet.inventory, ...Object.values(sheet.equipped)].filter((i): i is Item => i !== null).map(i => i.id);
   if (new Set(ids).size !== ids.length || sheet.equipped.weapon?.weapon?.hands === 2 && sheet.equipped.offhand !== null) return false;
   const allocated = new Set(sheet.allocatedNodes), connected = new Set(['origin']), queue = ['origin'];
@@ -94,6 +96,7 @@ export function decodeCharacterSave(raw: string): CharacterSave | null {
       || !text(v.name, 24) || !integer(v.createdAt) || !integer(v.updatedAt) || v.updatedAt < v.createdAt
       || !integer(v.worldSeed, 0, 4294967295) || !integer(v.worldVersion, 1)) return null;
     const p = v.checkpoint;
+    if(!object(p)||!upgradeSkillTree(p))return null;
     if (!object(p) || (p.encounterScales !== undefined && !validEncounterScales(p.encounterScales)) || (p.chronicle !== undefined && !validChronicle(p.chronicle)) || (p.journeys !== undefined && !validJourneys(p.journeys)) || (p.campWounds!==undefined&&!validCampWounds(p.campWounds)) || (p.roaming !== undefined && (!object(p.roaming) || !integer(p.roaming.warmup,0,ROAMING_RULES.warmupPopulation) || !number(p.roaming.cooldown,-1,10) || !number(p.roaming.requiredDistance,0,300))) || (p.expeditions !== undefined && !validExpeditions(p.expeditions)) || (p.actors !== undefined && !validActors(p.actors)) || (p.pickups !== undefined && !validPickups(p.pickups)) || (p.events !== undefined && !validEvents(p.events)) || (p.travel !== undefined && !validTravel(p.travel)) || !integer(p.level, 1, MAX_CONTENT_LEVEL) || !integer(p.xp, 0) || (p.level < MAX_CONTENT_LEVEL && p.xp >= xpForNextLevel(p.level))
       || !validSheet(p.character, p.level) || !number(p.x, -4e7, 4e7) || !number(p.y, -4e7, 4e7) || !number(p.angle, -1000, 1000)
       || !number(p.hp, 0, 1e9) || !number(p.mana, 0, 1e9) || typeof p.dead !== 'boolean' || (!p.dead && p.hp <= 0)

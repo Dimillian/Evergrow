@@ -44,7 +44,7 @@ These windows pause combat, clear buffered inputs, trap modal keyboard focus, an
 | `skill-tree-routes.ts` | Pure shortest-route and remaining-point-cost previews from the current allocation |
 | `skill-tree-art.ts`, `skill-tree-glyphs.ts` | Culled native-resolution atlas drawing and shared procedural stat/skill engravings |
 | `skill-content.ts` | Shared names, costs, cooldowns, damage multipliers, colors, and procedural skill icons |
-| `skill-combat.ts` | Execute twenty unlocked, assigned, equipment-compatible active actions |
+| `skill-combat.ts` | Execute 30 unlocked, assigned, equipment-compatible active actions |
 | `projectile-combat.ts` | Swept projectile contacts, pierce/chain/explosion payloads, and direct-hit status/life-steal application |
 | `simulation.ts` | Deterministic tick ordering, state, RNG/IDs, movement, spawning and pickup |
 | `combat-damage.ts`, `combat-rewards.ts` | Damage/death commitment and exactly-once source-level XP/loot/flask rewards |
@@ -113,31 +113,13 @@ Every item retains a source recipe with profile, starter flag, normalized affix 
 
 ## Skill atlas and active skills
 
-The fixed atlas contains **2,182 nodes**, **2,923 undirected connections**, and **150 passive constellations and 23 development groups** across **Might, Cunning, and Arcana**:
+The local **Atlas of Becoming** contains 875 nodes, 932 connections and six territories: Bastion, Forge, Hunt, Veil, Crucible and Wellspring. It has 90 different passive specialties, 30 tree-unlocked active skills, 90 direct one-point Techniques, eight exclusive Doctrine families and four optional keystones. Might/Cunning/Arcana remain content tags. The wide luminous map replaces the three celestial petals; 36 hybrid border gardens fill the gaps between the original 48 territory specialties, and six optional late clusters decorate the Bastion and Veil approaches.
 
-- 1 free origin.
-- 1,662 minor nodes within themed constellations.
-- 266 minor travel nodes connecting specialties; these grant their discipline's attribute.
-- 36 early choice nodes granting speed, resources, critical chance, or mana efficiency.
-- 150 passive notable nodes, plus 60 specialization nodes, 17 mastery nodes and Arcane Overload.
-- 120 skill-specific passive improvements in specialization leaves.
-- 20 major nodes, each unlocking one executable active skill.
+Early active paths cost 2–6 points; advanced attacks cost 8–14; ultimates cost 23–26. Skills and tradeoffs are optional dead ends, never travel tolls. Three purchased ranks replace mastery gates and seven-rank growth. Doctrines permit one paid choice per family with free reconfiguration. The enchanter still provides full skill respec. See [skill progression](skill-progression.md) for exact formulas, all choices, actions, save refunds and verification boundaries.
 
-Three distinct petals each contain five staggered terraces (3, 6, 10, 14 and 17 specialties). Ellipses, open crescents, fans and branching boughs contain 9–14 nodes. Focal notables connect multiple entrances, so crossing a specialty does not require buying half its circumference. Inter-cluster roads contain at most two intermediate travel nodes. Inner cross-discipline bridges and local circuits add alternatives. Node centers remain at least 22 world units apart, and cluster bounds include their actual geometry.
+LMB remains the equipment basic attack. Exactly five assignable skills occupy RMB / 1–4, with Q potion and Space dodge separate. Skills require unlock, assignment, compatible equipment, mana, recovery and a ready skill-owned cooldown. Incompatible equipment retains assignments. Physical melee and bow damage uses attack scaling; spells and magic bolts use spell scaling once. Magic requires staff/wand, bow skills require a bow, shield skills require a usable shield; Sidestep and Brace accept any weapon.
 
-Arcana exposes +4% cast speed, +16 maximum mana, and 4% mana-cost reduction within two points, with nine more branching bonuses around the first skills. Might and Cunning receive corresponding attack-speed, survival, critical and efficiency choices. First Arcana specialties begin at four to five points; the second terrace begins at eight to twelve. Passive bypasses allow progression without buying an unwanted active skill.
-
-All nodes have stable IDs from deterministic content recipes. There are no class locks. Every node can be reached from the origin. Nine named weapon schools lead to **three-point first skills** and **four-point advanced skills** along their shortest origin routes; the dagger school currently has one skill. Allocate requires a real node, an integer unspent point, an allocated neighbor, and no existing allocation. Duplicate/unknown IDs do not add bonuses. Allocation persists with the character; respec is not present.
-
-The shortest-route preview starts at any already allocated node, highlights the fewest additional points to the hovered or selected destination, and reports that cost. Double-click or Allocate path commits the complete highlighted route atomically, spending only missing nodes. Insufficient points or an invalid route leave all allocations and points unchanged. Equivalent builds resolve tied routes deterministically.
-
-The twenty skills cover melee sweeps and dashes, heavy-weapon shocks, shield strikes/guarding, bow fans/piercing/ricochets/area rain, dagger backstabs, fire/ice/lightning spells, and life-stealing spirits. Shared metadata includes equipment requirements, mana costs, cooldowns, potency, and icons. The full [weapon and skill catalog](weapons-and-skills.md) lists every school, skill, and profile.
-
-Physical melee and bow attacks use the derived attack-damage multiplier; staff and wand bolts use the derived spell-damage multiplier. Melee and bows use attack-speed modifiers; staff/wand basics and magic skills use independent cast-speed modifiers. A skill multiplies the compatible weapon's derived hit by its authored potency; spell scaling is applied once. When a melee skill can use either held weapon, the main hand takes priority. Bow skills require a bow; magic skills accept staff or wand; shield skills require a usable equipped shield. Assignments survive gear changes, but incompatible slots cannot activate.
-
-Skills require unlocking, assignment, compatible equipment, enough mana, and a ready cooldown. Cooldowns belong to skill IDs and survive reassignment. Innate LMB attacks are separate from the five assignable skills: there is no universal right-click cast or automatic sword combo. Rift Lunge is a timed, collision-resolved dash. Rain of Arrows delivers four area pulses; Meteor delivers a delayed blast and ignition. Normal direct hits can critically strike and trigger life on hit. Soul Siphon heals 35% of actual enemy life removed by its direct hit, capped by missing player life. Burns tick every 0.5 seconds without critical rolls or life-on-hit healing. Requirements, mechanics, and balance remain authored initial content for iteration.
-
-The atlas uses event-driven native-resolution Canvas drawing with curved-geometry culling, rather than one DOM node per star. Overview zoom emphasizes regions and connecting routes; closer views reveal constellation names, notable frames, and code-defined engravings for the actual stat or skill. The same engraving paths appear in node details. The detail pane, search, filtering, zoom controls, and skill assignment use ordinary UI controls. It shares Astral steel/silver/violet materials with the inventory and live HUD; world CRT processing does not touch text.
+The shared validated command boundary owns allocations, atomic shortest-route purchases, rank/Technique choices and Doctrine replacement. Presentation never writes progression directly. Current saves carry treeVersion 2; valid immediately preceding builds receive their tree/rank points back on decode while retaining character and world progress. Unknown/corrupt builds remain stored. The atlas preview reads only disposable state, not playable saves.
 
 ## Enemy gear drops
 

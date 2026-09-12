@@ -44,7 +44,7 @@ test('forge produces deterministic, internally derived items for every kind and 
 });
 test('all active skills and specialization recipes activate in the isolated study',()=>{
   for(const skill of Object.values(SKILL_DEFINITIONS))for(const specialization of ['',...SKILL_SPECIALIZATIONS.filter(s=>s.skill===skill.id).map(s=>s.id)]){
-    const study=new SkillStudy(emptyWorld,{skill:skill.id,rank:specialization?7:1,specialization,weapon:studyWeapons(skill.id)[0].id,facing:0,targets:'fan',enemy:'brute',x:0,y:0});
+    const study=new SkillStudy(emptyWorld,{skill:skill.id,rank:specialization?3:1,specialization,weapon:studyWeapons(skill.id)[0].id,facing:0,targets:'fan',enemy:'brute',x:0,y:0});
     const seen=new Set<string>();for(let i=0;i<240;i++)for(const event of study.step())seen.add(event.type);
     assert.equal(study.didCast,true,`${skill.id}/${specialization}`);assert.ok(seen.has('cast')||seen.has('swing'));
     assert.equal(study.simulation.kills,0);assert.equal(study.simulation.groundItems.length,0);assert.equal(study.simulation.enemies.length,7);

@@ -2,7 +2,7 @@ import { SKILL_EXECUTION, groundEffectPulseCount } from './skill-execution-conte
 import type { SkillId } from './character-types.ts';
 import type { Equipment, WeaponDefinition } from './model.ts';
 
-export type SkillRequirement = 'melee' | 'blade' | 'heavy' | 'dagger' | 'bow' | 'magic' | 'shield';
+export type SkillRequirement = 'any' | 'melee' | 'blade' | 'heavy' | 'dagger' | 'bow' | 'magic' | 'shield';
 export interface SkillDefinition {
   readonly id: SkillId;
   readonly name: string;
@@ -18,6 +18,16 @@ export interface SkillDefinition {
 
 /** Costs, potency and equipment requirements are shared by the atlas, HUD and combat. */
 export const SKILL_DEFINITIONS: Readonly<Record<SkillId, Readonly<SkillDefinition>>> = Object.freeze({
+  repulse: Object.freeze({ id: 'repulse', name: 'Repulse', description: 'Drive a broad shield shockwave through nearby enemies, damaging and stunning the front line.', requirement: 'shield', domain: 'Might', tier: 'advanced', manaCost: 24, cooldown: 5, damageMultiplier: 1.65, color: '#e5bd80' }),
+  ironCitadel: Object.freeze({ id: 'ironCitadel', name: 'Iron Citadel', description: 'Strike every enemy around your shield, then take 45% less hit damage for 5 seconds. Stance mitigation uses the strongest active value.', requirement: 'shield', domain: 'Might', tier: 'ultimate', manaCost: 45, cooldown: 28, damageMultiplier: 2.4, color: '#f0d5a2' }),
+  smokeVeil: Object.freeze({ id: 'smokeVeil', name: 'Smoke Veil', description: 'Slow surrounding enemies by 50% for 3 seconds and take 20% less hit damage for 2 seconds. No weapon requirement; deals no damage.', requirement: 'any', domain: 'Cunning', tier: 'advanced', manaCost: 20, cooldown: 9, damageMultiplier: 0, color: '#9bbfc6' }),
+  nightReaping: Object.freeze({ id: 'nightReaping', name: 'Night Reaping', description: 'Your dagger strikes up to five nearby enemies in every direction. Rear strikes deal double damage. Does not teleport or grant invulnerability.', requirement: 'dagger', domain: 'Cunning', tier: 'ultimate', manaCost: 48, cooldown: 28, damageMultiplier: 2.2, color: '#b9e3d6' }),
+  sidestep: Object.freeze({ id: 'sidestep', name: 'Sidestep', description: 'Step toward your aim without invulnerability. Terrain still blocks movement.', requirement: 'any', domain: 'Cunning', tier: 'advanced', manaCost: 8, cooldown: 3.5, damageMultiplier: 0, color: '#b5cbb8' }),
+  brace: Object.freeze({ id: 'brace', name: 'Brace', description: 'Brace for 2 seconds, taking 20% less hit damage. Does not require a shield.', requirement: 'any', domain: 'Might', tier: 'advanced', manaCost: 14, cooldown: 8, damageMultiplier: 0, color: '#cfb88f' }),
+  runicWard: Object.freeze({ id: 'runicWard', name: 'Runic Ward', description: 'Create a barrier equal to 18% of maximum life for 4 seconds. Absorbs damage after mitigation; does not stack.', requirement: 'magic', domain: 'Arcana', tier: 'advanced', manaCost: 22, cooldown: 10, damageMultiplier: 0, color: '#9ed6d5' }),
+  vaultingShot: Object.freeze({ id: 'vaultingShot', name: 'Vaulting Shot', description: 'Loose one arrow toward your aim while retreating. The retreat has no invulnerability.', requirement: 'bow', domain: 'Cunning', tier: 'advanced', manaCost: 22, cooldown: 6, damageMultiplier: 1.2, color: '#a7c897' }),
+  rallyOfIron: Object.freeze({ id: 'rallyOfIron', name: 'Rally of Iron', description: 'For 6 seconds take 25% less hit damage. The next three melee actions deal 35% more damage.', requirement: 'melee', domain: 'Might', tier: 'ultimate', manaCost: 42, cooldown: 24, damageMultiplier: 0, color: '#d4a677' }),
+  ghostHunt: Object.freeze({ id: 'ghostHunt', name: 'Ghost Hunt', description: 'For 6 seconds, your next three projectile arrow actions each release one delayed echo along the original aim. Echoes deal 60% of the first arrow’s damage and retain its critical chance, piercing and rebounds. They cannot restore life, apply statuses or create more echoes.', requirement: 'bow', domain: 'Cunning', tier: 'ultimate', manaCost: 40, cooldown: 24, damageMultiplier: 0, color: '#c5dbc7' }),
   cataclysm: Object.freeze({ id: 'cataclysm', name: 'Cataclysm', description: 'Seven meteors converge on a wide area, each igniting its impact zone.', requirement: 'magic', domain: 'Arcana', tier: 'ultimate', manaCost: 80, cooldown: 30, damageMultiplier: 2.8, color: '#ffa46b' }),
   tempest: Object.freeze({ id: 'tempest', name: 'Tempest', description: 'A moving lightning storm strikes nearby enemies for up to six seconds. Each pulse consumes mana; exhaustion ends the storm.', requirement: 'magic', domain: 'Arcana', tier: 'ultimate', manaCost: 35, cooldown: 24, damageMultiplier: .65, color: '#c4c4ff' }),
   absoluteZero: Object.freeze({ id: 'absoluteZero', name: 'Absolute Zero', description: 'Two vast freezing waves damage and chill surrounding enemies. Elite enemies resist the freeze.', requirement: 'magic', domain: 'Arcana', tier: 'ultimate', manaCost: 75, cooldown: 28, damageMultiplier: 2.4, color: '#b7efff' }),
@@ -41,7 +51,7 @@ export const SKILL_DEFINITIONS: Readonly<Record<SkillId, Readonly<SkillDefinitio
 });
 
 const REQUIREMENT_LABELS: Readonly<Record<SkillRequirement, string>> = Object.freeze({
-  melee: 'Melee weapon', blade: 'Sword, axe or dagger', heavy: 'Axe or mace', dagger: 'Dagger', bow: 'Bow', magic: 'Staff or wand', shield: 'Equipped shield',
+  any: 'Any weapon', melee: 'Melee weapon', blade: 'Sword, axe or dagger', heavy: 'Axe or mace', dagger: 'Dagger', bow: 'Bow', magic: 'Staff or wand', shield: 'Equipped shield',
 });
 export function skillRequirementLabel(requirement: SkillRequirement): string { return REQUIREMENT_LABELS[requirement]; }
 
@@ -52,6 +62,7 @@ export function skillWeapon(id: SkillId, equipment: Equipment): WeaponDefinition
   const eligible = (weapon: WeaponDefinition) => {
     const family = weapon.family;
     switch (requirement) {
+      case 'any': return true;
       case 'melee': return family === 'sword' || family === 'axe' || family === 'mace' || family === 'dagger';
       case 'blade': return family === 'sword' || family === 'axe' || family === 'dagger';
       case 'heavy': return family === 'axe' || family === 'mace';
@@ -68,6 +79,16 @@ export function skillWeapon(id: SkillId, equipment: Equipment): WeaponDefinition
 export function canUseSkill(id: SkillId, equipment: Equipment): boolean { return skillWeapon(id, equipment) !== null; }
 
 const SKILL_PATHS: Readonly<Record<SkillId, string>> = Object.freeze({
+  repulse: '<path d="M20 4 30 9v12c0 6-5 11-10 14-5-3-10-8-10-14V9ZM3 12v13M37 12v13M5 30l-3 4M35 30l3 4M15 17h10M20 12v14"/>',
+  ironCitadel: '<path d="M4 34V12l7-5 5 5 4-8 4 8 5-5 7 5v22M4 34h32M15 34V23l5-4 5 4v11M4 17h8M28 17h8M20 4V1"/>',
+  smokeVeil: '<path d="M7 31C-2 22 7 13 14 17 8 5 24 1 28 13c10-2 15 15 3 20M6 36c8-5 19-5 28 0M13 24c3-7 11-7 15 0M15 27h10"/>',
+  nightReaping: '<path d="M5 31 14 13l8-7-3 12L9 34ZM31 34 21 18l-3-12 8 7 9 18ZM3 25l10 8M27 33l10-8M20 21v16M15 33l5 5 5-5"/>',
+  sidestep: '<path d="M4 27h19l-5-6m5 6-5 6M14 7h10l-2 10 11 3-2 6H13Z"/>',
+  brace: '<path d="M8 33V17l12-9 12 9v16M4 36h32M14 20v9h12v-9M20 3v5"/>',
+  runicWard: '<path d="M20 3 35 13v13L20 38 5 26V13ZM20 10 28 17v7l-8 8-8-8v-7ZM3 6l6 2M31 8l6-2"/>',
+  vaultingShot: '<path d="M3 28h19l-6-5m6 5-6 5M20 4c14 9 14 17 0 26M20 4v26M16 15h21l-5-5m5 5-5 5"/>',
+  rallyOfIron: '<path d="M20 3v34M8 8h23l-4 7 4 7H8ZM5 36h30M9 27v6M31 27v6"/>',
+  ghostHunt: '<path d="M7 4c12 9 12 23 0 32M7 4v32M3 20h29l-6-6m6 6-6 6M22 4c12 9 12 23 0 32"/>',
   cataclysm: '<path d="M5 3 15 15M20 1 24 10M35 5 29 18M4 34l8-12 8 14 9-17 8 16M3 38h34"/><circle cx="20" cy="20" r="5"/>',
   tempest: '<circle cx="20" cy="20" r="16"/><path d="m23 3-14 20 12-4-4 18 15-23-11 5M2 12l6 2M32 27l6 2"/>',
   absoluteZero: '<circle cx="20" cy="20" r="17"/><path d="M20 2v36M4 10l32 20M4 30l32-20M14 7l6 6 6-6M14 33l6-6 6 6M7 16l6 4-6 4M33 16l-6 4 6 4"/>',

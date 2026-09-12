@@ -74,9 +74,10 @@ export function directionalAimProfile(range: number, kind: string, recipe: Skill
   const speed = kind === 'melee' ? 0 : kind === 'arrow' ? 560 : 380;
   if (!recipe) return { range, speed };
   switch (recipe.kind) {
-    case 'ground': case 'guard': case 'radial': return null;
+    case 'ground': case 'ward': case 'stance': case 'guard': case 'radial': return null;
     case 'sweep': return recipe.arc >= Math.PI * 1.9 ? null : { range: range * recipe.reachMultiplier, speed: 0 };
     case 'backstab': return { range: Math.max(recipe.minRange, range * recipe.reachMultiplier), speed: 0 };
+    case 'step': return recipe.shot ? {range,speed:560} : null;
     case 'dash': return { range: recipe.duration * recipe.speed, speed: 0 };
     case 'cone': return { range: recipe.radius, speed: 0 };
     case 'projectile': return { range, speed: recipe.speed };

@@ -1,5 +1,31 @@
 # Evergrow changelog
 
+## v0.3.16 — 2026-09-12T16:33:00Z
+
+### New
+
+- Rebuilt skill atlas with six territories, 875 nodes and 90 distinct passive clusters.
+- Ten new movement, defensive and ultimate skills, including Sidestep, Runic Ward, Iron Citadel and Night Reaping.
+- All 30 active skills now have three optional specializations.
+- Eight exclusive Doctrine families and four optional keystones offer stronger build choices and tradeoffs.
+- Hybrid routes, optional outer clusters, a draggable mini-atlas and clearer route previews make the tree easier to explore.
+
+### Tweaks
+
+- Active unlocks are spaced from early utility choices to deeper ultimates; skills remain optional branches.
+- Purchased skill ranks now have three levels with gentler mana costs and stronger defensive and movement upgrades.
+- The atlas has smoother outer paths, circular nodes and glowing territory backgrounds.
+- Skill names avoid nodes, paths and other text; crowded captions thin out as you zoom.
+- Passive armor grows with character level; Ghost Hunt echoes and Borrowed Flame better support their intended builds.
+
+### Fixes
+
+- Overlapping defensive skills retain their own durations and apply the strongest protection.
+- Skill descriptions, previews and effects more closely match their actual combat behavior.
+- Returning characters whose old tree was refunded open the new atlas with gameplay paused and rebuilding instructions visible.
+
+> Existing characters keep their level, XP, attributes, equipment, gold and world progress. The old skill tree receives a free one-time refund of all node and purchased-rank points. Unlock your skills again and reassign the five skill slots. Reload the game to apply this update.
+
 ## v0.3.15 — 2026-09-12T09:37:00Z
 
 ### Tweaks

@@ -1,0 +1,19 @@
+{
+  "local": {
+    "sha": "53f25e0486cb97ce01b14e780f87b95ff1d39a92",
+    "date": "2026-09-12",
+    "note": "Clean source at start of audit; analysis only."
+  },
+  "poe1": {
+    "url": "https://raw.githubusercontent.com/grindinggear/skilltree-export/8bd138b32ea2631455cac5935bfab089f826094f/data.json",
+    "sha": "8bd138b32ea2631455cac5935bfab089f826094f",
+    "date": "2026-07-31T00:26:38Z",
+    "message": "3.29.1"
+  },
+  "poe2": {
+    "url": "https://raw.githubusercontent.com/grindinggear/poe2-skilltree-export/bd87e6512c92b868542eddfb1ba4ea8b6dc2da36/data.json",
+    "sha": "bd87e6512c92b868542eddfb1ba4ea8b6dc2da36",
+    "date": "2026-09-04T17:12:04Z",
+    "message": "0.5.5"
+  }
+}

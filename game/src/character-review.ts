@@ -105,9 +105,9 @@ if (comparisonReview) {
 const progressionReview = new URLSearchParams(location.search).has('progression');
 if (progressionReview) {
   while (p.level < 100) awardCharacterExperience(p, xpForNextLevel(p.level) - p.xp);
-  for (const id of ['skill:fireball', 'specialization:fireball-fork', 'specialization:fireball-ember', 'mastery:fireball', 'skill:cataclysm'])
+  for (const id of ['skill:fireball', 'specialization:fireball-fork', 'specialization:fireball-ember', 'skill:cataclysm'])
     executeCharacterCommand(p, { type: 'allocateNode', id });
-  for (let rank = 2; rank <= 5; rank++) executeCharacterCommand(p, { type: 'upgradeSkill', skill: 'fireball' });
+  for (let rank = 2; rank <= 3; rank++) executeCharacterCommand(p, { type: 'upgradeSkill', skill: 'fireball' });
   executeCharacterCommand(p, { type: 'configureSkill', skill: 'fireball', rank: 3, specialization: 'fireball-fork' });
 }
 refreshCharacter(p); p.hp = p.maxHp; p.mana = p.maxMana;
@@ -144,7 +144,7 @@ function background() {
 function show(panel: string) {
   selected = panel; inventory.close(); tree.close(); shell.showMenu(panel === 'skills' ? 'skills' : 'character', 0, 0);
   if (panel === 'skills') {
-    tree.open(p); tree.inspectNode(new URLSearchParams(location.search).get('node') ?? (progressionReview ? 'skill:fireball' : 'skill:cleave'), true);
+    tree.open(p); tree.inspectNode(new URLSearchParams(location.search).get('node') ?? (new URLSearchParams(location.search).get('zoom')==='overview' ? 'origin' : progressionReview ? 'skill:fireball' : 'skill:cleave'), true);
     if (new URLSearchParams(location.search).has('map')) tree.setDetailsVisible(false);
     const zoom = new URLSearchParams(location.search).get('zoom');
     if (zoom === 'overview') tree.showOverview();
@@ -152,12 +152,12 @@ function show(panel: string) {
     else if (zoom === 'arcana') tree.setView(0, -1000, .34);
     else if (zoom === 'school') {
       const node = SKILL_NODES.get(new URLSearchParams(location.search).get('node') ?? 'skill:fireball')!;
-      const family = [node, ...SKILL_TREE.nodes.filter(n => n.developmentSkill === node.skill)];
+      const family = node.cluster ? SKILL_TREE.nodes.filter(n => n.cluster === node.cluster) : [node];
       tree.setView((Math.min(...family.map(n => n.x)) + Math.max(...family.map(n => n.x))) / 2,
         (Math.min(...family.map(n => n.y)) + Math.max(...family.map(n => n.y))) / 2, .85);
     }
     else if (zoom === 'region' || zoom === 'detail') {
-      const cluster = SKILL_TREE.clusters.find(cluster => cluster.domain === 'Might' && cluster.name === 'Heart of Iron')!;
+      const cluster = SKILL_TREE.clusters.find(cluster => cluster.id === 'bastion:2')!;
       const notable = SKILL_TREE.nodes.find(node => node.cluster === cluster.id && node.kind === 'notable')!;
       tree.inspectNode(notable.id, false);
       tree.setView(cluster.x + (zoom === 'region' ? -350 : 0), cluster.y + (zoom === 'region' ? 250 : 0), zoom === 'detail' ? 1.2 : .3);

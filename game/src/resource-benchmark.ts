@@ -23,7 +23,7 @@ export function benchmarkSheet(level:number, style:BenchmarkStyle, gear:Benchmar
   sheet.skillPoints=level-1;
   const skill=BENCHMARK_SKILLS[style];
   allocateSkillRoute(sheet,`skill:${skill}`);
-  const rank=Math.min(strong?5:3,1+sheet.skillPoints);
+  const rank=Math.min(strong?3:2,1+sheet.skillPoints);
   sheet.skillRanks[skill]=rank;sheet.skillPoints-=rank-1;sheet.skillSlots[0]=skill;
   for(const [index,slot] of EQUIPMENT_SLOTS.entries()) {
     if(slot==='offhand'){sheet.equipped[slot]=null;continue;}

@@ -1,13 +1,14 @@
 import { SKILL_NODES, SKILL_TREE } from './skill-tree.ts';
-import { skillNodeScreenRadius, type SkillAtlasView } from './skill-tree-art.ts';
+import type { SkillAtlasView } from './skill-tree-art.ts';
+import { skillNodeScreenRadius, type AtlasLabelBox } from './skill-tree-labels.ts';
 
 interface Point { x: number; y: number }
 interface LightThread { points: Point[]; lengths: number[]; length: number; offset: number; owned: boolean; startRadius: number; endRadius: number }
-export interface AtlasLightPlan { threads: LightThread[]; width: number; height: number }
+export interface AtlasLightPlan { threads: LightThread[]; width: number; height: number; captions: readonly AtlasLabelBox[] }
 const key = (a: string, b: string) => a < b ? `${a}|${b}` : `${b}|${a}`;
 
 /** Geometry and route distances are rebuilt only when the view or allocation changes. */
-export function buildAtlasLightPlan(view: SkillAtlasView): AtlasLightPlan {
+export function buildAtlasLightPlan(view: SkillAtlasView, captions: readonly AtlasLabelBox[] = []): AtlasLightPlan {
   const distances = new Map<string, number>([['origin', 0]]), queue = ['origin'];
   for (let i = 0; i < queue.length; i++) {
     const a = SKILL_NODES.get(queue[i])!;
@@ -43,7 +44,7 @@ export function buildAtlasLightPlan(view: SkillAtlasView): AtlasLightPlan {
       startRadius: skillNodeScreenRadius(a, view.zoom) + 2, endRadius: skillNodeScreenRadius(b, view.zoom) + 2 });
     if (threads.length >= 160) break;
   }
-  return { threads, width: view.width, height: view.height };
+  return { threads, width: view.width, height: view.height, captions };
 }
 
 /** A smooth traveling crest over an unbroken luminous thread; never a marching dash. */
@@ -54,7 +55,12 @@ export function atlasLightStrength(distance: number, seconds: number): number {
 }
 
 export function drawAtlasLight(c: CanvasRenderingContext2D, plan: AtlasLightPlan, seconds: number): void {
-  c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+  c.save();
+  // Animated bloom must obey the same caption clearance as the cached map.
+  c.beginPath();c.rect(0,0,plan.width,plan.height);
+  for(const b of plan.captions)c.rect(b.x-3,b.y-3,b.width+6,b.height+6);
+  c.clip('evenodd');
+  c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
   // Batch equal light levels: at most 64 strokes, even on a fully allocated atlas.
   const bands = Array.from({ length: 2 }, () => Array.from({ length: 16 }, () => new Path2D()));
   for (const thread of plan.threads) {
@@ -72,13 +78,6 @@ export function drawAtlasLight(c: CanvasRenderingContext2D, plan: AtlasLightPlan
     const strength = (band + .5) / 16, path = bands[kind][band];
     c.globalAlpha = strength * .16; c.strokeStyle = kind === 0 ? '#f3c774' : '#b4daef'; c.lineWidth = 6; c.stroke(path);
     c.globalAlpha = strength * .8; c.strokeStyle = kind === 0 ? '#fff1c3' : '#dff4ff'; c.lineWidth = 1.5; c.stroke(path);
-  }
-  // Sparse, slow drifting dust adds depth without obscuring nodes or labels.
-  for (let i = 0; i < 22; i++) {
-    const x = (i * 173.3 + Math.sin(seconds * .08 + i) * 12) % plan.width;
-    const y = ((i * 127.7 - seconds * (1 + i % 3) + plan.height * 100) % plan.height);
-    c.globalAlpha = .08 + .10 * (1 + Math.sin(seconds * .5 + i)) / 2;
-    c.fillStyle = '#b1cbd3'; c.beginPath(); c.arc(x, y, i % 4 === 0 ? 1.1 : .65, 0, Math.PI * 2); c.fill();
   }
   c.restore();
 }

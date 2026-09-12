@@ -91,7 +91,7 @@ export class SkillEffects {
   private drawStrike(c: CanvasRenderingContext2D, s: Extract<CombatEvent, { type: 'skill-strike' }> & { life: number }, reduced: boolean): void {
     const life = s.life / .35;
     c.save(); c.translate(s.x, s.y - 14); c.rotate(s.angle);
-    if (s.skill === 'shieldBash') {
+    if (s.skill === 'shieldBash' || s.skill === 'repulse') {
       const radius = s.range * (reduced ? 1 : .9 + (1 - life) * .1);
       c.globalAlpha = life * .25;
       c.fillStyle = '#a4e0da'; c.beginPath(); c.moveTo(0,0); c.arc(0,0,radius,-s.arc/2,s.arc/2); c.closePath(); c.fill();

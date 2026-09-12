@@ -22,7 +22,7 @@ export interface StatDetail {
 export interface StatDetailGroup { title: string; tone: string; rows: StatDetail[] }
 /** A new derived stat must explicitly declare where players can inspect it. */
 export const DERIVED_STAT_DETAILS = {
-  goldFindMultiplier: 'goldFind', xpGainMultiplier: 'xpGain', resistances: 'resistances', attributes: 'attributes', attackDamageMultiplier: 'attackBonus', attackSpeedMultiplier: 'attackSpeed',
+  directDamageMultiplier: 'measuredForce', goldFindMultiplier: 'goldFind', xpGainMultiplier: 'xpGain', resistances: 'resistances', attributes: 'attributes', attackDamageMultiplier: 'attackBonus', attackSpeedMultiplier: 'attackSpeed',
   castSpeedMultiplier: 'castSpeed', spellDamageMultiplier: 'spellDamage', critChance: 'critChance', critMultiplier: 'critDamage',
   maxHp: 'maxHp', maxMana: 'maxMana', armor: 'armor', damageReduction: 'armorReduction',
   moveSpeedMultiplier: 'movement', manaRegeneration: 'manaRegen', lifeRegeneration: 'lifeRegen',
@@ -71,7 +71,7 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
     if (!bolt) addAttribute(speed, 'dexterity');
     return [damage, speed];
   };
-  const offense = [...weaponRows(p.equipment.mainHand), ...(p.equipment.offHand?.kind === 'weapon' ? weaponRows(p.equipment.offHand.weapon, true) : []),
+  const offense = [row('measuredForce','Reliable direct damage',(s.directDamageMultiplier??1)-1,pct((s.directDamageMultiplier??1)-1),'Measured Force converts critical chance into reliable direct damage. Periodic damage is unaffected.','Crit chance becomes zero. Direct damage bonus capped at 30%.'),...weaponRows(p.equipment.mainHand), ...(p.equipment.offHand?.kind === 'weapon' ? weaponRows(p.equipment.offHand.weapon, true) : []),
     addAttribute(row('attackBonus', 'Physical damage bonus', s.attackDamageMultiplier - 1, pct(s.attackDamageMultiplier - 1), 'Scales physical weapon damage, including bow attacks.', `+${attributeBonus('strength', ATTRIBUTE_DAMAGE_BONUSES.strength)}% Strength + damage bonuses\nDamage × ${n(s.attackDamageMultiplier)}`, ['strength', 'damagePercent']), 'strength'),
     addAttribute(row('attackSpeed', 'Attack speed bonus', s.attackSpeedMultiplier - 1, pct(s.attackSpeedMultiplier - 1), 'Affects melee weapons and bows. Wands and staves use cast speed.', `+${attributeBonus('dexterity', DEXTERITY_BONUSES.attackSpeedPercent)}% Dexterity + speed bonuses\nTotal speed: 25–600%`, ['dexterity', 'attackSpeedPercent']), 'dexterity'),
     addAttribute(row('spellDamage', 'Spell damage bonus', s.spellDamageMultiplier - 1, pct(s.spellDamageMultiplier - 1), 'Scales spells, basic magic bolts and weapon enchantment damage.', `+${attributeBonus('intelligence', ATTRIBUTE_DAMAGE_BONUSES.intelligence)}% Intelligence + damage bonuses\nDamage × ${n(s.spellDamageMultiplier)}`, ['intelligence', 'spellDamagePercent']), 'intelligence'),
@@ -114,7 +114,7 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
     row('cooldown', 'Cooldown reduction', 1 - s.cooldownMultiplier, pct(1 - s.cooldownMultiplier), 'Shortens skill, dodge and potion cooldowns.', `Cooldown × ${n(s.cooldownMultiplier)}\nCap: 75% · Skill minimums still apply`, ['cooldownPercent']),
     row('area', 'Area of effect', s.areaMultiplier ** 2 - 1, `+${pct(s.areaMultiplier ** 2 - 1)}`, 'Enlarges skill sweeps, novas and explosions. Does not extend projectile travel.', `Radius / reach × ${n(s.areaMultiplier)}\nArea bonus cap: ${AFFIX_COMBAT_RULES.maxAreaPercent}%`, ['areaPercent']),
     row('pierce', 'Projectile pierce', s.projectilePierce, n(s.projectilePierce, 0), 'Extra projectile targets. Explosive projectiles still detonate on contact.', `Sum of pierce bonuses, rounded down\nCap: ${AFFIX_COMBAT_RULES.maxPierce} extra targets`, ['projectilePierce']),
-    row('spellweave', 'Spellweave damage', s.spellweavePercent, `+${n(s.spellweavePercent)}%`, 'Melee empowers your next spell; spells empower your next melee hit. Excludes bows.', `Damage × ${n(1 + s.spellweavePercent / 100)}\n${AFFIX_COMBAT_RULES.weaveDuration}s · Does not stack · Bonus cap: 100%`, ['spellweavePercent']),
+    row('spellweave', 'Spellweave damage', s.spellweavePercent, `+${n(s.spellweavePercent)}%`, 'Melee empowers your next spell; spells empower your next melee hit. Excludes bows.', `Damage × ${n(1 + s.spellweavePercent / 100)}\n${AFFIX_COMBAT_RULES.weaveDuration}s · Does not stack · Bonus cap: 100%${p.character.allocatedNodes.includes('keystone:borrowed-flame') ? '\nBorrowed Flame: empowered actions × 1.4; all damage × 0.85' : ''}`, ['spellweavePercent']),
     row('afterguard', 'Armor after block', s.afterguardPercent, `+${n(s.afterguardPercent)}%`, 'Blocks boost armor temporarily. Further blocks refresh it.', `Armor × ${n(1 + s.afterguardPercent / 100)} for ${AFFIX_COMBAT_RULES.guardDuration}s\nBonus cap: 100% · Included in Armor while active`, ['afterguardPercent']),
   ];
   const ranks = Object.entries(s.skillBonuses).flatMap(([id, ranks]) => {

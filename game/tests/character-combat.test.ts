@@ -131,12 +131,12 @@ for (const id of Object.keys(SKILL_DEFINITIONS) as SkillId[]) {
       assert.ok(player.attack.damage > deriveAttackStats(player.stats, player.equipment.mainHand).damage);
     } else if (id === 'lunge') {
       assert.ok(player.x > 0 && player.x < 10, 'dash advances over time, not a teleport');
-    } else if (id === 'bulwark') assert.ok(player.guardTime > 2.9);
+    } else if(id==='sidestep'){assert.ok(player.dash);assert.equal(player.dash.damage,0);} else if(id==='runicWard'){assert.ok(player.skillEffects?.ward?.capacity);} else if(id==='brace'||id==='rallyOfIron'||id==='ghostHunt'){assert.ok(player.skillEffects?.[id]);} else if (id === 'bulwark') assert.ok(player.guardTime > 2.9);
     else if (id === 'meteor' || id === 'rainOfArrows') assert.equal(sim.groundEffects.length, 1);
     advance(sim, id === 'meteor' || id === 'cataclysm' ? 1.1 : .5, { aimX: enemy.x });
     const laterEvents = sim.drainEvents();
     assert.equal(laterEvents.filter(event => event.type === 'cast' || event.type === 'swing').length, 0);
-    if (id !== 'bulwark') assert.ok(enemy.hp < enemy.maxHp, `${id} must damage the actual enemy`);
+    if (definition.damageMultiplier>0) assert.ok(enemy.hp < enemy.maxHp, `${id} must damage the actual enemy`);
     if (id === 'siphon') {
       assert.ok(player.hp > 20); assert.ok(laterEvents.some(event => event.type === 'heal' && event.value! > 0));
     }
