@@ -1,6 +1,6 @@
 import { isTrialKind } from './event-recipes.ts';
 import { generateRewardItem } from './items.ts';
-import { ENEMY_LOOT_TABLES } from './loot-content.ts';
+import { ENEMY_LOOT_TABLES, BOSS_CHEST_LOOT_TABLES } from './loot-content.ts';
 import { siteHash } from './wilderness-sites.ts';
 import type { ItemTier } from './character-types.ts';
 import type { EventRecord } from './poi-content.ts';
@@ -12,7 +12,7 @@ export function eventRewards(site: EventRecord) {
     : site.kind === 'reliquary' && random(1) < .25 ? 1 : 0;
   const veteran = site.kind==='bossLair'||isTrialKind(site.kind), weights = ENEMY_LOOT_TABLES[veteran ? 'veteran' : 'normal'].tierWeights;
   const items = Array.from({ length: count }, (_, i) => {
-    const table=site.kind==='bossLair'&&i===0?{rare:94,epic:5.7,legendary:.3}:weights;
+    const table=site.kind==='bossLair'?BOSS_CHEST_LOOT_TABLES.raid[i]:weights;
     let roll = random(10 + i) * 100, tier: ItemTier = 'common';
     for (const [key, weight] of Object.entries(table) as [
       ItemTier,

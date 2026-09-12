@@ -197,7 +197,7 @@ Each real death makes one rank-based gear-count roll, using an RNG isolated from
 
 | Rank | Guaranteed items | Initial extra-item chance | Expected items after thinning |
 | --- | ---: | ---: | ---: |
-| Normal | 0 | 28% | 0.2135 |
+| Normal | 0 | 28% | ≈0.21353 |
 | Veteran | 0 | 70% | 0.70 |
 | Elite | 1 | 25% | 1.25 |
 
@@ -205,13 +205,13 @@ Each candidate item rolls its tier independently from that rank's table, before 
 
 | Rank | Common | Magic | Rare | Epic | Legendary |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Normal | 75% | 22% | 2.7% | 0.28% | 0.02% |
-| Veteran | 60% | 32% | 7% | 0.95% | 0.05% |
-| Elite | 40% | 45% | 13% | 1.9% | 0.1% |
+| Normal | 74.97% | 22% | 2.7% | 0.28% | 0.05% |
+| Veteran | 59.9% | 32% | 7% | 0.95% | 0.15% |
+| Elite | 39.6% | 45% | 13% | 1.9% | 0.5% |
 
-These are **conditional tier probabilities per candidate item before thinning**, not per-kill drop chances. For example, an ordinary normal kill has a 0.28 × 0.0002 = **0.0056%** chance of a legendary item. Elites guarantee an item, not a minimum rarity. Common drops outnumber gold rares at every rank; these tables apply at all source levels. Legendary currently means four stronger generated affixes; unique legendary powers are not implemented. There is no tier unlock gate, pity counter, smart-loot bias toward the equipped weapon, or magic-find stat in this foundation.
+These are **conditional tier probabilities per candidate item before thinning**, not per-kill drop chances. For example, an ordinary normal kill has a 0.28 × 0.0005 = **0.014%** chance of a legendary item. Elites guarantee an item, not a minimum rarity. Common drops outnumber gold rares at every rank; these tables apply at all source levels. Legendary currently means four stronger generated affixes; unique legendary powers are not implemented. There is no tier unlock gate, pity counter, smart-loot bias toward the equipped weapon, or magic-find stat in this foundation.
 
-Normal kills discard one third of common equipment candidates using an independent deterministic roll. Charms of every rarity, Magic-or-better equipment, first-kill guarantees and authored boss/chest/event rewards bypass this reduction. Per 100 ordinary non-goblin kills, expected common equipment falls from 19.95 to 13.30; Magic-or-better equipment remains 6.65 and charms remain 1.40, for 21.35 items total (23.75% less clutter). Veteran and elite yields are unchanged. The separate thinning stream preserves retained item identities, profiles, stats and rarity, and does not affect gold or XP. Existing ground drops remain untouched.
+Normal kills discard one third of common equipment candidates using an independent deterministic roll. Charms of every rarity, Magic-or-better equipment, first-kill guarantees and authored boss/chest/event rewards bypass this reduction. Per 100 ordinary non-goblin kills, expected common equipment falls from 19.94 to 13.29; Magic-or-better equipment is 6.66 and charms remain 1.40, for approximately 21.35 items total (23.74% less clutter). Veteran and elite yields are unchanged. The separate thinning stream preserves retained item identities, profiles, stats and rarity, and does not affect gold or XP. Existing ground drops remain untouched.
 
 Default generation for content tools keeps its general-purpose tier distribution of 45 / 32 / 17 / 5 / 1. Enemy rewards explicitly pass the rolled tier into the generator and always use the rank tables above.
 
@@ -352,3 +352,13 @@ The September 7 affix pass keeps the above drop counts, tier tables, item-level 
 ## Charm rewards (2026-09-09)
 
 [Charms](charms.md) occupy 5% of enemy item rolls and item-giving chest/event rewards, sharing their source rarity and level. The charm roll also applies before themed equipment rewards; it replaces an item rather than adding loot. Active charms may increase gold found (up to +100%) and XP gained (up to +50%). Bonuses apply once to kill/event/Journey XP and created enemy/chest/container gold piles. Sales and already-created piles are not multiplied. Item quantity, rarity and equipment RNG are unaffected by these modifiers.
+
+## Legendary reward tuning — local September 12
+
+Legendary weight replaces Common weight; Magic/Rare/Epic probabilities, candidate quantities, charm eligibility, affix quality and gold are unchanged. Standard non-goblin kills now give a 0.014% chance of at least one Legendary for normals, 0.105% for veterans and 0.624375% for elites (approximately 1 in 7,143 / 952 / 160). The elite figure includes its independent 25% second-item chance. First-kill guarantees and goblin yield retain their existing exceptions.
+
+Regular dungeon final chests retain three rewards and now guarantee Rare-or-better on the first. Their total Legendary chance is 5%. Raid hoards likewise retain three rewards with a Rare-or-better first item and a total 10% Legendary chance. The shared boss-chest tables solve the first reward's Legendary weight after accounting for both supporting rolls, instead of giving every item the advertised whole-chest chance. The first item retains a 5.7% Epic chance; Rare fills the remainder. Supporting dungeon rolls use Veteran/Elite weights; raid rolls use Veteran/Veteran weights.
+
+Other event rewards and side chests that already consume normal/veteran tables inherit their higher Legendary weights. Expedition rewards remain 5% per item for three stage rewards and 20% per item for six grand-chest rewards; no expedition change is part of this pass.
+
+Existing ground/owned items and delivered chest rewards are untouched. Unclaimed reward components use the current deterministic tables; existing delivery receipts still prevent duplicate claims. No character reset is required. This tuning is local until explicitly published.

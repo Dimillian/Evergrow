@@ -37,7 +37,7 @@ Boss death stages a completed hoard in the existing event ledger. The normal aut
 The hoard contains:
 
 - Three items at lair level +1, clamped to the shared level limit.
-- One guaranteed Rare-or-better roll: 94% Rare, 5.7% Epic, 0.3% Legendary.
+- One guaranteed Rare-or-better roll: 5.7% Epic, with Legendary weight adjusted for a 10% total chance across the hoard; Rare fills the remainder.
 - Two ordinary Veteran-weight rarity rolls.
 - Boss-chest material weighting on all three items.
 - 65–100 gold, multiplied by `1 + 0.1 × (level − 1)` and rounded once.

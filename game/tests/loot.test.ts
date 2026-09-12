@@ -17,7 +17,7 @@ test('reward content is deeply immutable and every authored weight table is comp
   for (const rank of ranks) {
     const table = getLootTable(rank);
     assert.ok(Object.isFrozen(table) && Object.isFrozen(table.tierWeights));
-    assert.equal(Object.values(table.tierWeights).reduce((total, weight) => total + weight, 0), 100);
+    assert.ok(Math.abs(Object.values(table.tierWeights).reduce((total, weight) => total + weight, 0) - 100) < 1e-10);
     assert.ok(table.bonusItemChance >= 0 && table.bonusItemChance <= 1);
   }
   assert.ok(Object.isFrozen(ENEMY_ITEM_KIND_WEIGHTS));

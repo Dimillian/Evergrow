@@ -16,11 +16,26 @@ export interface EnemyLootTable {
 /** Initial authored rewards. Encounter rank changes yield and rarity, never the player's current level. */
 export const ENEMY_LOOT_TABLES: Readonly<Record<EnemyRank, EnemyLootTable>> = Object.freeze({
   normal: Object.freeze({ guaranteedItems: 0, bonusItemChance: .28, itemLevelBonus: 0,
-    tierWeights: Object.freeze({ common: 75, magic: 22, rare: 2.7, epic: .28, legendary: .02 }) }),
+    tierWeights: Object.freeze({ common: 74.97, magic: 22, rare: 2.7, epic: .28, legendary: .05 }) }),
   veteran: Object.freeze({ guaranteedItems: 0, bonusItemChance: .7, itemLevelBonus: 1,
-    tierWeights: Object.freeze({ common: 60, magic: 32, rare: 7, epic: .95, legendary: .05 }) }),
+    tierWeights: Object.freeze({ common: 59.9, magic: 32, rare: 7, epic: .95, legendary: .15 }) }),
   elite: Object.freeze({ guaranteedItems: 1, bonusItemChance: .25, itemLevelBonus: 2,
-    tierWeights: Object.freeze({ common: 40, magic: 45, rare: 13, epic: 1.9, legendary: .1 }) }),
+    tierWeights: Object.freeze({ common: 39.6, magic: 45, rare: 13, epic: 1.9, legendary: .5 }) }),
+});
+
+type TierWeights = Readonly<Record<ItemTier, number>>;
+/** Three rewards; the first is Rare+. Account for both supporting rolls so the
+ * advertised chance is per chest, not per item. Keep the first item's Epic rate. */
+function bossChestTable(chance: number, second: TierWeights, third: TierWeights): readonly TierWeights[] {
+  const legendary = 100 * (1 - (1 - chance) / ((1 - second.legendary / 100) * (1 - third.legendary / 100)));
+  return Object.freeze([
+    Object.freeze({ common: 0, magic: 0, rare: 100 - 5.7 - legendary, epic: 5.7, legendary }),
+    second, third,
+  ]);
+}
+export const BOSS_CHEST_LOOT_TABLES = Object.freeze({
+  dungeon: bossChestTable(.05, ENEMY_LOOT_TABLES.veteran.tierWeights, ENEMY_LOOT_TABLES.elite.tierWeights),
+  raid: bossChestTable(.10, ENEMY_LOOT_TABLES.veteran.tierWeights, ENEMY_LOOT_TABLES.veteran.tierWeights),
 });
 
 export function getLootTable(rank: EnemyRank): EnemyLootTable { return ENEMY_LOOT_TABLES[rank]; }

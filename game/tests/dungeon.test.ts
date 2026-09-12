@@ -154,6 +154,7 @@ test('chest claims preserve partial delivery and reject duplicates and failed sa
     assert.equal(JSON.stringify(sim.captureCheckpoint()), before);
     assert.equal((await claimDungeonChest(sim, 2, ok)).ok, true);
     assert.equal(sim.groundItems.length, 3);
+    assert.ok(['rare', 'epic', 'legendary'].includes(sim.groundItems[0].item.tier));
     assert.equal(sim.groundGold.length, 1);
     assert.ok(decoded(sim.captureCheckpoint()));
     assert.equal((await claimDungeonChest(sim, 2, ok)).ok, false);
