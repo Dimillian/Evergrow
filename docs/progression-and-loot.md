@@ -353,7 +353,7 @@ The September 7 affix pass keeps the above drop counts, tier tables, item-level 
 
 [Charms](charms.md) occupy 5% of enemy item rolls and item-giving chest/event rewards, sharing their source rarity and level. The charm roll also applies before themed equipment rewards; it replaces an item rather than adding loot. Active charms may increase gold found (up to +100%) and XP gained (up to +50%). Bonuses apply once to kill/event/Journey XP and created enemy/chest/container gold piles. Sales and already-created piles are not multiplied. Item quantity, rarity and equipment RNG are unaffected by these modifiers.
 
-## Legendary reward tuning — local September 12
+## Legendary reward tuning — v0.3.15, September 12
 
 Legendary weight replaces Common weight; Magic/Rare/Epic probabilities, candidate quantities, charm eligibility, affix quality and gold are unchanged. Standard non-goblin kills now give a 0.014% chance of at least one Legendary for normals, 0.105% for veterans and 0.624375% for elites (approximately 1 in 7,143 / 952 / 160). The elite figure includes its independent 25% second-item chance. First-kill guarantees and goblin yield retain their existing exceptions.
 
@@ -361,4 +361,4 @@ Regular dungeon final chests retain three rewards and now guarantee Rare-or-bett
 
 Other event rewards and side chests that already consume normal/veteran tables inherit their higher Legendary weights. Expedition rewards remain 5% per item for three stage rewards and 20% per item for six grand-chest rewards; no expedition change is part of this pass.
 
-Existing ground/owned items and delivered chest rewards are untouched. Unclaimed reward components use the current deterministic tables; existing delivery receipts still prevent duplicate claims. No character reset is required. This tuning is local until explicitly published.
+Existing ground/owned items and delivered chest rewards are untouched. Unclaimed reward components use the current deterministic tables; existing delivery receipts still prevent duplicate claims. No character reset is required. Published in v0.3.15 on September 12, 2026.

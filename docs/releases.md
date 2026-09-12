@@ -29,6 +29,19 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.15 / Sites version 46, publicly deployed on 2026-09-12 at 09:40:10 UTC.
+- Published source: `540b537389af0295f9ffdae0842e41568d473655`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_0c005ec067a88191ad80147217759b2b`.
+- Deployment: `appgdep_6aa51de7a11c81919833484cbb82ce1b`; Sites returned `succeeded`.
+- Cloud creation rejects unresolved slots; confirmed deletion retains recovery until server acknowledgement and can clear unreadable legacy checkpoints while preserving recoverable Chronicle history.
+- Active-character save status, persistent failed-device-save warnings, and actionable deletion errors.
+- Higher Legendary monster drops, 5% regular dungeon boss-chest and 10% wilderness boss-hoard Legendary chances, with a Rare-or-better first dungeon boss reward.
+- No automatic character reset or database migration. Existing clients need a reload; no individual account was modified or authenticated gameplay tested during publication.
+- Passed all 1,260 code tests in the implementation checkpoint, three release-note checks, application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.14 / Sites version 45, publicly deployed on 2026-09-11 at 16:19:43 UTC.
 - Published source: `54b064943f8862a5a2dffcaf837d36964048dadc`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_205791b7c89881919272ce7d570388ff`.
