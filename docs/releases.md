@@ -29,6 +29,18 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.17 / Sites version 48, publicly deployed on 2026-09-12 at 18:15:31 UTC.
+- Published source: `45f5320ed55f82ff4397427a04090205c68c1cfc`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_289300146e888191aa505bb044d5caea`.
+- Deployment: `appgdep_6aa596b1e8b48191812ad1609614563a`; Sites returned `succeeded`.
+- All 30 active skills now support 20 purchased ranks with +5% base damage and +1.5% base mana per additional rank; 90 Techniques retain their choices.
+- Smaller movement, ward, guard, stance and shelter gains remain useful through all ranks; defensive previews retain fractional improvements.
+- Current-tree saves retain purchases, assignments and progress, with gentler early-rank tuning; no additional refund, reset or database migration. Matching game and cloud validators shipped together.
+- Ran the 1,293-test code suite; corrected two obsolete combat expectations and passed all 49 focused retests. Cloud timeout failures passed all 38 checks when rerun separately. Three release-note checks, application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation passed. No automated browser gameplay was run.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.16 / Sites version 47, publicly deployed on 2026-09-12 at 16:38:50 UTC.
 - Published source: `fca34cec89f92521699c1a5e07089bf1f7638152`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_0ff1f1e3ea308191a4107357d7cd9024`.

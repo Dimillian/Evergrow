@@ -1,6 +1,6 @@
 # Atlas of Becoming: skill progression
 
-The atlas was published in v0.3.16 on 2026-09-12. The twenty-rank progression below is prepared for v0.3.17. The pre-redesign measurements and proposals remain historical in [the audit](skill-tree-redesign-proposal.md); this document describes current runtime rules.
+The atlas was published in v0.3.16 on 2026-09-12. The twenty-rank progression below was published in v0.3.17 on 2026-09-12. The pre-redesign measurements and proposals remain historical in [the audit](skill-tree-redesign-proposal.md); this document describes current runtime rules.
 
 ## Six recommendations implemented
 
@@ -75,7 +75,7 @@ Each effective rank above 1 adds 0.05 seconds to guard, ward, stance and shelter
 
 Cooldown floors remain four seconds for Bulwark and twelve for ultimates. Basic repeatable skills retain zero cooldown but respect recovery. Global mana reduction tapers after 20% toward 40%; reductions and all displayed costs resolve through the shared rules. Fireball costs 12 mana at rank 1 and 15.4 at rank 20 before modifiers (costs round to one decimal). Technique-specific tradeoffs still apply. Tempest upkeep uses the same gradual mana curve.
 
-Existing current-tree saves retain purchased ranks, casting ranks, Techniques, assignments and unspent points, without an additional refund or reset. Existing ranks 2 and 3 receive the new gentler tuning: rank 3 now grants +10% damage / +3% mana instead of the published +20% / +10%. This is initial local tuning; code checks cover all ranks and Techniques, while the value of deep investment versus more tree routes still needs player combat feedback. Historical rank-three benchmark reports retain their original measured results.
+Existing current-tree saves retain purchased ranks, casting ranks, Techniques, assignments and unspent points, without an additional refund or reset. Existing ranks 2 and 3 receive the new gentler tuning: rank 3 now grants +10% damage / +3% mana instead of the published +20% / +10%. This is initial tuning; code checks cover all ranks and Techniques, while the value of deep investment versus more tree routes still needs player combat feedback. Historical rank-three benchmark reports retain their original measured results.
 
 Every Technique is **one optional point directly beside its skill**. Potency/efficiency precursors and the 17 rank-masteries are removed. Measured Cut, Steady Revolutions, Skipping Arrow and Quiet Blade are retired. Other useful spatial, timing, target-count and sustain variants remain, and every active now has three distinct Techniques, including new economy, control and tactical choices for the ten skills that previously had only two. Multiple Techniques can be purchased; only one or Original is active. Buying a Technique selects it. Previewing one does not mutate the build or include fictional prerequisite bonuses.
 
