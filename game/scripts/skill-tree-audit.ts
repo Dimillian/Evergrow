@@ -44,8 +44,7 @@ const familySignatures = count(clusters, c => {
   return signature(members.find(n => n.kind === 'minor')!.bonuses) + ' / ' + signature(members.find(n => n.kind === 'notable')!.bonuses);
 });
 const unionOfRegularRoutes = new Set(regular.flatMap(s => s.shortestRoute).filter(id => id !== 'origin'));
-const rankFormula = Array.from({length:3}, (_, i) => {
-  const rank = i+1;
+const rankFormula = [1, 5, 10, 15, 20].map(rank => {
   const fire = resolveSkill('fireball',{manaCostMultiplier:1,cooldownMultiplier:1},undefined,rank);
   const meteor = resolveSkill('meteor',{manaCostMultiplier:1,cooldownMultiplier:1},undefined,rank);
   const damage = fire.damageMultiplier / SKILL_DEFINITIONS.fireball.damageMultiplier;

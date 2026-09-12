@@ -1,6 +1,6 @@
 # Atlas of Becoming: skill progression
 
-Published in v0.3.16 on 2026-09-12. The pre-redesign measurements and proposals remain historical in [the audit](skill-tree-redesign-proposal.md); this document describes current runtime rules.
+The atlas was published in v0.3.16 on 2026-09-12. The twenty-rank progression below is prepared for v0.3.17. The pre-redesign measurements and proposals remain historical in [the audit](skill-tree-redesign-proposal.md); this document describes current runtime rules.
 
 ## Six recommendations implemented
 
@@ -57,17 +57,25 @@ The table is a **minimum point distance from a fresh root**, not a mandatory cha
 
 ## Ranks and Techniques
 
-All 30 skills support **three purchased ranks**. The unlock gives rank 1. Ranks 2 and 3 each cost one point; no mastery node is required. Optional lower casting ranks remain available. Buying a rank selects it; changing rank or Technique never resets cooldowns or restores resources.
+All 30 skills support **twenty purchased ranks**. The unlock gives rank 1. Each additional rank costs one point, for 19 points to reach rank 20; no mastery node is required. Optional lower casting ranks remain available. Buying a rank selects it; changing rank or Technique never resets cooldowns or restores resources. Specialization remains a choice among three Techniques, separate from rank investment.
+
+Damage adds 5% of rank-1 damage per purchased rank above 1; mana adds 1.5% of rank-1 cost. These are additive increments, not compounding multipliers. The relative return gently declines as the skill grows, with no milestone jumps.
 
 | Purchased rank | Damage factor | Mana factor | Cooldown factor |
 | --- | ---: | ---: | ---: |
 | 1 | 1.00 | 1.00 | 1.00 |
-| 2 | 1.10 | 1.05 | 1.00 |
-| 3 | 1.20 | 1.10 | 1.00 |
+| 5 | 1.20 | 1.06 | 1.00 |
+| 10 | 1.45 | 1.135 | 1.00 |
+| 15 | 1.70 | 1.21 | 1.00 |
+| 20 | 1.95 | 1.285 | 1.00 |
 
-Equipment ranks do not buy traversal or increase mana cost. Their damage contribution remains +0.12 per bonus rank for the first three, then +0.05 for each further rank, up to ten bonus ranks. These contributions add to the purchased-rank damage factor. Bulwark gains 2.5 percentage points of block reduction per effective rank above 1, up to 90%; excess increases duration. Steps gain 10% speed per effective rank above 1, capped at +30%. Runic Ward gains two percentage points of maximum life capacity per effective rank above 1, capped at 35%. Brace/Rally/Ghost Hunt gain 0.25 seconds per effective rank above 1, up to six increments. Empowered-action/echo strength gains 15% of its base value per increment; stance mitigation gains 2.5 percentage points, capped at 50%. Charges do not increase. Smoke Veil and Iron Citadel gain 0.25 seconds and 2.5 percentage points per increment, capped at six increments and 75% mitigation. Stances and Runic Ward commit in 0.18 seconds, still requiring a free action window. Utility ranks now improve their actual defense or charge strength rather than just stretching the expiry window.
+Equipment ranks do not buy traversal or increase mana cost. Their damage contribution remains +0.12 per bonus rank for the first three, then +0.05 for each further rank, up to ten bonus ranks. These contributions add to the purchased-rank damage factor. Equipment ranks also contribute to effective utility rank.
 
-Cooldown floors remain four seconds for Bulwark and twelve for ultimates. Basic repeatable skills retain zero cooldown but respect recovery. Global mana reduction tapers after 20% toward 40%; reductions and all displayed costs resolve through the shared rules. Fireball now costs 12 / 12.6 / 13.2 mana at ranks 1 / 2 / 3 before modifiers. Ranks improve damage per mana instead of doubling costs. Technique-specific tradeoffs still apply.
+Each effective rank above 1 adds 0.05 seconds to guard, ward, stance and shelter duration. Bulwark adds 0.35 percentage points of block reduction, capped at 90%. Sidestep and Vaulting Shot add 2% of base speed per rank (+38% travel at purchased rank 20); their travel duration and collision rules stay unchanged. Runic Ward adds 0.35 percentage points of maximum-life barrier capacity, capped at 35%. Stance mitigation adds 0.35 percentage points, capped at 50%; empowered-action/echo strength adds 5% of its base value. Charges do not increase. Smoke Veil and Iron Citadel shelter mitigation adds 0.35 percentage points, capped at 75%. Duration continues improving when mitigation reaches a cap, so late ranks still benefit every utility Technique. Stances and Runic Ward commit in 0.18 seconds, still requiring a free action window. Lunge ranks improve hit damage, retaining the selected Technique's dash distance.
+
+Cooldown floors remain four seconds for Bulwark and twelve for ultimates. Basic repeatable skills retain zero cooldown but respect recovery. Global mana reduction tapers after 20% toward 40%; reductions and all displayed costs resolve through the shared rules. Fireball costs 12 mana at rank 1 and 15.4 at rank 20 before modifiers (costs round to one decimal). Technique-specific tradeoffs still apply. Tempest upkeep uses the same gradual mana curve.
+
+Existing current-tree saves retain purchased ranks, casting ranks, Techniques, assignments and unspent points, without an additional refund or reset. Existing ranks 2 and 3 receive the new gentler tuning: rank 3 now grants +10% damage / +3% mana instead of the published +20% / +10%. This is initial local tuning; code checks cover all ranks and Techniques, while the value of deep investment versus more tree routes still needs player combat feedback. Historical rank-three benchmark reports retain their original measured results.
 
 Every Technique is **one optional point directly beside its skill**. Potency/efficiency precursors and the 17 rank-masteries are removed. Measured Cut, Steady Revolutions, Skipping Arrow and Quiet Blade are retired. Other useful spatial, timing, target-count and sustain variants remain, and every active now has three distinct Techniques, including new economy, control and tactical choices for the ten skills that previously had only two. Multiple Techniques can be purchased; only one or Original is active. Buying a Technique selects it. Previewing one does not mutate the build or include fictional prerequisite bonuses.
 
@@ -140,7 +148,7 @@ Every Technique is **one optional point directly beside its skill**. Potency/eff
 | Earthshatter | Seismic Hammer | 60% more damage and 2-second stun; 20% smaller radius. Costs 60% more mana; 25% longer cooldown. |
 | Earthshatter | Tremor | 35% shorter cooldown, 25% less damage; stun lasts 0.6 seconds. |
 | Bulwark | Enduring Guard | Guard lasts 5 seconds. Costs 50% more mana; 25% longer cooldown. |
-| Bulwark | Iron Aegis | Base block reduction rises to 85%, guard lasts 2 seconds. Ranks above the 90% block cap add 0.25 seconds each. Costs 35% more mana. |
+| Bulwark | Iron Aegis | Base block reduction rises to 85%, guard lasts 2 seconds. Every additional rank extends the guard; block reduction caps at 90%. Costs 35% more mana. |
 | Bulwark | Ready Guard | 25% less mana and 25% shorter cooldown; guard lasts 2 seconds. |
 | Piercing Shot | Unbroken Flight | Hits up to 8 enemies; 15% less damage. Costs 40% more mana. |
 | Piercing Shot | Siegebreaker | 60% more damage, hits up to 2 enemies. Costs 40% more mana; 20% longer cooldown. |

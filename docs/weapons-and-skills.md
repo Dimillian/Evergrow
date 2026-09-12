@@ -81,7 +81,7 @@ Each skill requires allocation, an assigned slot, suitable equipment, enough man
 
 ## Skill development
 
-Skills now support purchased ranks, optional lower casting ranks, 68 direct Techniques, eight Doctrine families, four keystones and five ultimates. See [skill progression](skill-progression.md) for implemented formulas, choices and the full ultimate catalog.
+Skills now support twenty purchased ranks, optional lower casting ranks, 90 direct Techniques, eight Doctrine families, four keystones and seven ultimates. See [skill progression](skill-progression.md) for implemented formulas, choices and the full ultimate catalog.
 
 ## Active skill catalog
 

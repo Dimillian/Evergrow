@@ -256,15 +256,17 @@ test('effective mana cost is used both to validate and spend, with independent c
 });
 
 test('ranked forked fireballs snapshot three stronger projectiles and their actual mana cost', () => {
-  const h=harness('fireball');
-  h.player.character.skillRanks.fireball=3;
-  h.player.character.allocatedNodes.push('specialization:fireball-fork');
-  h.player.character.skillSpecializations.fireball='fireball-fork';
-  assert.ok(activateSkill(h.context,0));
-  assert.equal(h.missiles.length,3);
-  close(h.player.mana,100-23.8);
-  close(h.missiles[0].definition.damage,deriveAttackStats(h.player.stats,h.player.equipment.mainHand).damage*SKILL_DEFINITIONS.fireball.damageMultiplier*1.2*.65);
-  assert.deepEqual(h.missiles.map(m=>m.angle),[-.24,0,.24]);
+  for (const [rank, mana, damageFactor] of [[3, 22.2, 1.1], [20, 27.8, 1.95]]) {
+    const h=harness('fireball');
+    h.player.character.skillRanks.fireball=rank;
+    h.player.character.allocatedNodes.push('specialization:fireball-fork');
+    h.player.character.skillSpecializations.fireball='fireball-fork';
+    assert.ok(activateSkill(h.context,0));
+    assert.equal(h.missiles.length,3);
+    close(h.player.mana,100-mana);
+    close(h.missiles[0].definition.damage,deriveAttackStats(h.player.stats,h.player.equipment.mainHand).damage*SKILL_DEFINITIONS.fireball.damageMultiplier*damageFactor*.65);
+    assert.deepEqual(h.missiles.map(m=>m.angle),[-.24,0,.24]);
+  }
 });
 
 test('Storm Circuit can revisit two enemies for eight bounded jumps with diminishing damage',()=>{

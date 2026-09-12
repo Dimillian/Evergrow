@@ -1,5 +1,25 @@
 # Evergrow changelog
 
+## v0.3.17 — 2026-09-12T18:12:00Z
+
+### New
+
+- All 30 active skills can now reach rank 20, with each rank after unlocking costing one skill point.
+
+### Tweaks
+
+- Each purchased damage rank adds 5% of base damage and 1.5% of base mana cost, reaching +95% damage and +28.5% mana at rank 20.
+- Early rank upgrades are gentler: rank 3 now grants +10% damage instead of +20%, with only +3% mana cost instead of +10%.
+- Movement, wards, guards and empowered actions gain smaller improvements throughout all 20 ranks; defensive limits remain in place.
+- All specializations support the expanded ranks, and lower casting ranks remain available to save mana.
+
+### Fixes
+
+- Defensive upgrade previews show small percentage gains accurately instead of rounding them away.
+- Defensive ranks continue extending protection after reaching their mitigation limit.
+
+> Existing characters keep their progress, purchased ranks, specializations, skill assignments and unspent points. No additional skill refund or save reset. Reload the game to apply this update.
+
 ## v0.3.16 — 2026-09-12T16:33:00Z
 
 ### New

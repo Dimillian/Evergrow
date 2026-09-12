@@ -7,7 +7,7 @@ import { Simulation } from '../simulation.ts';
 import { generateItem } from '../items.ts';
 import { refreshCharacter } from '../character.ts';
 import { SKILL_DEFINITIONS, canUseSkill } from '../skill-content.ts';
-import { SKILL_SPECIALIZATIONS, specializationNode, resolveSkill } from '../skill-progression.ts';
+import { SKILL_RANK_RULES, SKILL_SPECIALIZATIONS, specializationNode, resolveSkill } from '../skill-progression.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from '../weapon-content.ts';
 import type { SkillId } from '../character-types.ts';
 import type { CombatEvent, Input, WorldQuery, EnemyKind } from '../model.ts';
@@ -33,7 +33,7 @@ export class SkillStudy {
   readonly initialTargetLife=1000000;
   constructor(world:WorldQuery,options:SkillStudyOptions,loadout?:CharacterSheet){
     if(options.scenario&&!['showcase','followup','defense','sustain'].includes(options.scenario)||options.level!==undefined&&(!Number.isInteger(options.level)||options.level<1||options.level>100))throw new Error('Invalid study scenario or level.');
-    if(!SKILL_DEFINITIONS[options.skill]||!Number.isInteger(options.rank)||options.rank<1||options.rank>3||!Number.isFinite(options.facing))throw new Error('Invalid skill study configuration.');
+    if(!SKILL_DEFINITIONS[options.skill]||!Number.isInteger(options.rank)||options.rank<1||options.rank>SKILL_RANK_RULES.maximum||!Number.isFinite(options.facing))throw new Error('Invalid skill study configuration.');
     if(!studyWeapons(options.skill).some(w=>w.id===options.weapon))throw new Error('Choose a compatible weapon.');
     if(options.specialization&&!SKILL_SPECIALIZATIONS.some(s=>s.id===options.specialization&&s.skill===options.skill))throw new Error('Choose a specialization belonging to this skill.');
     this.options=options;

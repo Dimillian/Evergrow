@@ -3,8 +3,11 @@ import type { ActionResult, CharacterSheet, DerivedCharacterStats, SkillId } fro
 import { SKILL_DEFINITIONS } from './skill-content.ts';
 import { SKILL_EXECUTION, type SkillExecution } from './skill-execution-content.ts';
 
+/** Small additive purchased-rank gains; utility growth stays useful through rank twenty. */
+export const SKILL_RANK_RULES = Object.freeze({ maximum: 20, mana: .015, duration: .05,
+  stepSpeed: .02, protection: .0035, wardCapacity: .0035, empowerment: .05 });
 /** First three equipment ranks remain strong; later stacks have a smaller marginal return. */
-export const SKILL_DAMAGE_RANK_RULES = Object.freeze({ purchased: .10, bonus: .12, bonusKnee: 3, bonusTail: .05 });
+export const SKILL_DAMAGE_RANK_RULES = Object.freeze({ purchased: .05, bonus: .12, bonusKnee: 3, bonusTail: .05 });
 export function skillRankDamageMultiplier(rank: number, bonusRanks: number): number {
   const r = SKILL_DAMAGE_RANK_RULES;
   return 1 + r.purchased * (rank - 1) + r.bonus * Math.min(bonusRanks, r.bonusKnee) + r.bonusTail * Math.max(0, bonusRanks - r.bonusKnee);
@@ -91,7 +94,7 @@ export const SKILL_SPECIALIZATIONS: readonly SkillSpecialization[] = Object.free
   spec("earthshatter-force", "earthshatter", "Seismic Hammer", "60% more damage and 2-second stun; 20% smaller radius. Costs 60% more mana; 25% longer cooldown.", 1.6, 1.6, 1.25, change('radial', { radius: 100, stun: 2 })),
   spec("earthshatter-swift", "earthshatter", "Tremor", "35% shorter cooldown, 25% less damage; stun lasts 0.6 seconds.", 1, 0.75, 0.65, change('radial', { stun: .6 })),
   spec("bulwark-duration", "bulwark", "Enduring Guard", "Guard lasts 5 seconds. Costs 50% more mana; 25% longer cooldown.", 1.5, 1, 1.25, change('guard', { duration: 5 })),
-  spec("bulwark-reduction", "bulwark", "Iron Aegis", "Base block reduction rises to 85%, guard lasts 2 seconds. Ranks above the 90% block cap add 0.25 seconds each. Costs 35% more mana.", 1.35, 1, 1, change('guard', { reduction: .85, duration: 2 })),
+  spec("bulwark-reduction", "bulwark", "Iron Aegis", "Base block reduction rises to 85%, guard lasts 2 seconds. Every additional rank extends the guard; block reduction caps at 90%. Costs 35% more mana.", 1.35, 1, 1, change('guard', { reduction: .85, duration: 2 })),
   spec("bulwark-swift", "bulwark", "Ready Guard", "25% less mana and 25% shorter cooldown; guard lasts 2 seconds.", 0.75, 1, 0.75, change('guard', { duration: 2 })),
   spec("piercing-depth", "piercingShot", "Unbroken Flight", "Hits up to 8 enemies; 15% less damage. Costs 40% more mana.", 1.4, 0.85, 1, change('projectile', { effects: { ...SKILL_EXECUTION.piercingShot.effects, pierce: 7 } })),
   spec("piercing-force", "piercingShot", "Siegebreaker", "60% more damage, hits up to 2 enemies. Costs 40% more mana; 20% longer cooldown.", 1.4, 1.6, 1.2, change('projectile', { effects: { ...SKILL_EXECUTION.piercingShot.effects, pierce: 1 } })),
@@ -121,7 +124,7 @@ export function learnedSkillRank(sheet: CharacterSheet, id: SkillId): number {
   return sheet.allocatedNodes.includes(`skill:${id}`) ? sheet.skillRanks[id] ?? 1 : 0;
 }
 export function maximumSkillRank(_sheet: CharacterSheet, _id: SkillId): number {
-  return 3;
+  return SKILL_RANK_RULES.maximum;
 }
 export function activeSkillRank(sheet: CharacterSheet, id: SkillId): number {
   return Math.min(learnedSkillRank(sheet, id), sheet.activeSkillRanks[id] ?? learnedSkillRank(sheet, id));
@@ -131,7 +134,7 @@ export function selectedSpecialization(sheet: CharacterSheet, id: SkillId): Skil
 }
 export function upgradeSkill(sheet: CharacterSheet, id: SkillId): ActionResult {
   const rank = learnedSkillRank(sheet, id);
-  if (!rank || rank >= maximumSkillRank(sheet, id)) return { ok: false, message: 'Unlock this skill first; purchased ranks stop at 3.' };
+  if (!rank || rank >= maximumSkillRank(sheet, id)) return { ok: false, message: `Unlock this skill first; purchased ranks stop at ${SKILL_RANK_RULES.maximum}.` };
   if (!Number.isSafeInteger(sheet.skillPoints) || sheet.skillPoints < 1) return { ok: false, message: 'Requires one skill point.' };
   sheet.skillRanks[id] = rank + 1;
   sheet.activeSkillRanks[id] = rank + 1;
@@ -154,7 +157,7 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
   const effectiveRank = rank + bonusRanks;
   const variant = sheet ? selectedSpecialization(sheet, id) : undefined;
   const overload = sheet?.arcaneOverload && sheet.allocatedNodes.includes(OVERLOAD_NODE) && base.domain === 'Arcana';
-  const manaGrowth = 1 + .05 * (rank - 1);
+  const manaGrowth = 1 + SKILL_RANK_RULES.mana * (rank - 1);
   const multiplier = manaGrowth * (variant?.mana ?? 1) * (overload ? 1.6 : 1);
   const cooldownFloor = id === 'bulwark' ? 4 : base.tier === 'ultimate' ? 12 : 0;
   const rankCooldown = 1;
@@ -195,22 +198,24 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
   }
   if (recipe.kind === 'ground' && v === 'meteor-shards') { recipe.scatter = 5; recipe.radius *= .65; recipe.scatterRadiusMultiplier = 1.6; }
   variant?.modify?.(recipe);
+  const growth=effectiveRank-1,rules=SKILL_RANK_RULES;
   if (recipe.kind === 'guard') {
-    const growth = .025 * (effectiveRank - 1);
-    // Once reduction caps, additional ranks extend the guard instead of only raising its cost.
-    const excessRanks = Math.max(0, (recipe.reduction + growth - .9) / .025);
-    recipe.duration += excessRanks * .25;
-    recipe.reduction = Math.min(.9, recipe.reduction + growth);
+    recipe.duration += rules.duration * growth;
+    recipe.reduction = Math.min(.9, recipe.reduction + rules.protection * growth);
   }
-  if (recipe.kind === 'step') recipe.speed *= 1 + Math.min(.3, .1 * (effectiveRank - 1));
-  if (recipe.kind === 'ward') recipe.fraction = Math.min(.35, recipe.fraction + .02 * (effectiveRank - 1));
+  if (recipe.kind === 'step') recipe.speed *= 1 + rules.stepSpeed * growth;
+  if (recipe.kind === 'ward') {
+    recipe.fraction = Math.min(.35, recipe.fraction + rules.wardCapacity * growth);
+    recipe.duration += rules.duration * growth;
+  }
   if (recipe.kind === 'stance') {
-    const growth = Math.min(6, effectiveRank - 1);
-    recipe.duration += growth * .25;
-    if (recipe.charges) recipe.bonus *= 1 + growth * .15;
-    if (recipe.reduction) recipe.reduction = Math.min(.5, recipe.reduction + growth * .025);
+    recipe.duration += rules.duration * growth;
+    if (recipe.charges) recipe.bonus *= 1 + rules.empowerment * growth;
+    if (recipe.reduction) recipe.reduction = Math.min(.5, recipe.reduction + rules.protection * growth);
   }
-  if(recipe.kind==='radial'&&recipe.shelter)recipe.shelter={duration:recipe.shelter.duration+.25*Math.min(6,effectiveRank-1),reduction:Math.min(.75,recipe.shelter.reduction+.025*Math.min(6,effectiveRank-1))};
+  if(recipe.kind==='radial'&&recipe.shelter)recipe.shelter={
+    duration:recipe.shelter.duration+rules.duration*growth,
+    reduction:Math.min(.75,recipe.shelter.reduction+rules.protection*growth)};
   if(recipe.kind==='step'&&recipe.shot&&stats.projectilePierce)recipe.pierce=Math.min(12,stats.projectilePierce);
   const area = stats.areaMultiplier ?? 1;
   if (recipe.kind === 'sweep') recipe.reachMultiplier *= area;

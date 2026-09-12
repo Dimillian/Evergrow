@@ -80,10 +80,10 @@ export function skillDamageSuffix(id: SkillId, recipe: SkillExecution = SKILL_EX
 }
 export function skillUtilityLabel(id: SkillId, recipe:SkillExecution = SKILL_EXECUTION[id]): string {
   const n=(v:number)=>Number(v.toFixed(2));
-  if(recipe.kind==='radial'&&recipe.shelter)return `${n(recipe.shelter.duration)}s · ${Math.round(recipe.shelter.reduction*100)}% less hit damage${recipe.slow?` · ${Math.round((1-recipe.slow.factor)*100)}% slow for ${n(recipe.slow.duration)}s`:''}`;
-  if(recipe.kind==='guard')return `${n(recipe.duration)}s · ${Math.round(recipe.reduction*100)}% block`;
+  if(recipe.kind==='radial'&&recipe.shelter)return `${n(recipe.shelter.duration)}s · ${n(recipe.shelter.reduction*100)}% less hit damage${recipe.slow?` · ${Math.round((1-recipe.slow.factor)*100)}% slow for ${n(recipe.slow.duration)}s`:''}`;
+  if(recipe.kind==='guard')return `${n(recipe.duration)}s · ${n(recipe.reduction*100)}% block`;
   if(recipe.kind==='step')return `${Math.round(recipe.speed*recipe.duration)} units · no invulnerability`;
-  if(recipe.kind==='ward')return `${Math.round(recipe.fraction*100)}% max life barrier · ${n(recipe.duration)}s`;
-  if(recipe.kind==='stance')return `${n(recipe.duration)}s${recipe.reduction?` · ${Math.round(recipe.reduction*100)}% less hit damage`:''}${recipe.charges?` · ${recipe.charges} ${recipe.echo?'echoes at':'actions at +'} ${Math.round(recipe.bonus*100)}% damage`:''}`;
+  if(recipe.kind==='ward')return `${n(recipe.fraction*100)}% max life barrier · ${n(recipe.duration)}s`;
+  if(recipe.kind==='stance')return `${n(recipe.duration)}s${recipe.reduction?` · ${n(recipe.reduction*100)}% less hit damage`:''}${recipe.charges?` · ${recipe.charges} ${recipe.echo?'echoes at':'actions at +'} ${n(recipe.bonus*100)}% damage`:''}`;
   return '';
 }
