@@ -1,6 +1,6 @@
 # Atlas of Becoming: skill progression
 
-Local rebuild, 2026-09-12. Not pushed or published. The pre-redesign measurements and proposals remain historical in [the audit](skill-tree-redesign-proposal.md); this document describes current runtime rules.
+Published in v0.3.16 on 2026-09-12. The pre-redesign measurements and proposals remain historical in [the audit](skill-tree-redesign-proposal.md); this document describes current runtime rules.
 
 ## Six recommendations implemented
 

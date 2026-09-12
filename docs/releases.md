@@ -29,6 +29,19 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 
 ## Last verified publication
 
+- Game v0.3.16 / Sites version 47, publicly deployed on 2026-09-12 at 16:38:50 UTC.
+- Published source: `fca34cec89f92521699c1a5e07089bf1f7638152`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_0ff1f1e3ea308191a4107357d7cd9024`.
+- Deployment: `appgdep_6aa58007d9e0819181bc876bb06a9014`; Sites returned `succeeded`.
+- Six-territory atlas with 875 nodes, 90 passive specialties, 30 active skills, 90 Techniques, eight Doctrine families and four optional keystones.
+- Movement/defensive/ultimate additions, gentler purchased ranks, utility-rank scaling, armor scaling, independent shelter expiry and corrected echo/Spellweave behavior.
+- Smoother routes, spaced skill medallions and captions that avoid nodes, connectors, other text and navigation controls.
+- Valid preceding-tree saves receive a free one-time node/rank refund. Continue opens the atlas at its root with details visible and gameplay paused; players unlock and reassign skills. Character/world progress is preserved; no database migration. Unsupported saves remain stored.
+- Passed all 1,291 code tests, application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation. No automated browser gameplay was run.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.15 / Sites version 46, publicly deployed on 2026-09-12 at 09:40:10 UTC.
 - Published source: `540b537389af0295f9ffdae0842e41568d473655`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_0c005ec067a88191ad80147217759b2b`.
