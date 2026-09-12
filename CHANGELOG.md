@@ -1,5 +1,23 @@
 # Evergrow changelog
 
+## v0.3.15 — 2026-09-12T09:37:00Z
+
+### Tweaks
+
+- Legendary equipment drops more often from ordinary enemies, veterans and elites.
+- Dungeon boss chests have a 5% chance of a Legendary; wilderness boss rewards have a 10% chance.
+- Dungeon boss chests now guarantee at least one Rare-or-better item.
+
+### Fixes
+
+- New characters cannot inherit a slot’s unresolved cloud conflict or pending deletion.
+- Unreadable older cloud saves can be deleted with confirmation, retaining recoverable Chronicle history.
+- Failed cloud deletions keep the device recovery copy and show the actual error.
+- Save messages reflect the active character; another slot’s error no longer makes a saved character appear unsaved.
+- Failed device saves remain visible until a checkpoint succeeds.
+
+> Existing characters retain their progress. No automatic save reset is required. Reload the game to apply this update.
+
 ## v0.3.14 — 2026-09-11T16:16:00Z
 
 ### New
