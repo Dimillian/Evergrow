@@ -50,7 +50,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'biomes',group:'world',name:'Climates',path:'/biomes.html',description:'All seven biomes and blended transitions using the game renderer.'},
   {id:'encounters',group:'world',name:'Camps & landmarks',path:'/encounters.html',description:'Frozen wilderness placements, camps and encounter warnings.'},
   {id:'bosses',group:'world',name:'Wilderness bosses',path:'/bosses.html',description:'Three guarded lairs, committed attack warnings and automatic hoards.',tags:'boss elite arena'},
-  {id:'events',group:'world',name:'Events',path:'/events.html',description:'Interactive landmark and reward presentation.'},
+  {id:'events',group:'world',name:'Events',path:'/events.html',description:'Interactive landmarks, cursed-chest countdown preview and reward presentation.',tags:'in progress timer unsealing chest animation'},
   {id:'settlement-lighting',group:'world',name:'Settlement nights',path:'/layouts.html?lighting',description:'Warm settlement lanterns, windows and hearths through a live day cycle, with render timings.',tags:'town village city night windows performance'},
   {id:'outdoor-lighting',group:'world',name:'Outdoor lighting',path:'/biomes.html?lighting',description:'Nine biome atmospheres, moving cloud shadows and a live day–night lighting study.',tags:'shader sunlight moonlight time day night cloud forest fog wet reflections'},
   {id:'dungeon-lighting',group:'world',name:'Dungeon lighting',path:'/dungeon.html?view=lighting&seed=7319&room=4',description:'Live illuminated mist, damp stone reflections and selective fixture glow; export a rendered chamber.',tags:'shader atmosphere fog bloom'},

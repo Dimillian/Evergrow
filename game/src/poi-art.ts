@@ -6,6 +6,8 @@ import { BLESSINGS, eventLabel, focusEvent, type EventSite, type EventRecord } f
 import type { Simulation } from './simulation.ts';
 import type { World } from './world.ts';
 import { text } from './font.ts';
+import { cursedChestProgress } from './event-progress.ts';
+import { drawCursedChestProgress } from './event-progress-art.ts';
 export class EventArt {
   readonly chests = new ChestArt();
   draw(c: CanvasRenderingContext2D, site: EventSite, record: Pick<EventRecord, 'phase'> & Partial<Pick<EventRecord,'delivered'|'bonusGranted'>> | undefined, time: number, _dt: number, reduced: boolean, preparation=0) {
@@ -76,7 +78,8 @@ export function drawEventUI(c: CanvasRenderingContext2D, sim: Simulation, world:
   y: number;
 }, gamepad: boolean, sites: readonly EventSite[]) {
   const p = sim.player, site = focusEvent(eventInteractionSites(sites,sim.eventState), p, world);
-  if (site) {
+  const chestProgress = sim.dungeonFloor ? null : cursedChestProgress(sim.eventState);
+  if (site && site.id !== chestProgress?.site.id) {
     const point = project(site.x, site.y - 52), label = eventLabel(site, sim.eventState, sim.getCampState(site.id) === 'cleared');
     c.save();
     c.font = '13px "Evergrow Numerals", system-ui';
@@ -94,6 +97,11 @@ export function drawEventUI(c: CanvasRenderingContext2D, sim: Simulation, world:
     const s = sim.eventState.sites[trial.siteId];
     text(c, s.name, 24, 90, 1.1, '#c5b0e1');
     text(c, eventLabel(s, sim.eventState, false), 24, 109, .95, '#d2d6cc');
+    const progress = chestProgress;
+    if (progress && sites.some(site => site.id === progress.site.id)) {
+      const point = project(progress.site.x, progress.site.y - 100);
+      drawCursedChestProgress(c, point.x, point.y, progress);
+    }
   }
   const blessing = p.character.blessing;
   if (blessing)

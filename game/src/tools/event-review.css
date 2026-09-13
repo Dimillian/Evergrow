@@ -1,0 +1,6 @@
+.event-review-progress { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; padding: 14px; margin-bottom: 14px; border: 1px solid #62516f; background: #171320; }
+.event-review-progress[hidden] { display: none; }
+.event-review-progress label { display: flex; align-items: center; gap: 8px; }
+.event-review-progress input { width: clamp(140px, 28vw, 440px); accent-color: #d59be9; }
+.event-review-progress select { background: #171320; color: #ead9ef; padding: 8px; border: 1px solid #62516f; font: inherit; }
+.event-review-progress output { min-width: 110px; color: #ead9ef; }
