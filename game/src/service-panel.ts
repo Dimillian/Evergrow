@@ -451,7 +451,7 @@ export class ServicePanel {
     this.tooltip.show(value.item, { sheet: this.player.character, level: this.player.level,
       sourceIndex: value.source && 'bag' in value.source ? value.source.bag : undefined,
       equipped: Boolean(value.source && 'equipped' in value.source),
-      context: value.request.type === 'buyback' ? `${this.player.character.commerce.buyback.find(b=>b.item.id===value.item.id)?.price??0} gold` : value.request.type === 'buy' ? `${itemPrice(value.item, 'buy')} gold` : value.request.type === 'sell' ? `Sell · ${itemPrice(value.item, 'sell')} gold` : undefined }, cell);
+      context: value.request.type === 'buyback' ? `Buy back · ${this.player.character.commerce.buyback.find(b=>b.item.id===value.item.id)?.price??0} gold` : value.request.type === 'buy' ? `Buy · ${itemPrice(value.item, 'buy')} gold` : undefined }, cell);
   }
   private click(e: MouseEvent): void {
     if (this.saving || this.tradeDrag || Date.now()<this.ignoreClickUntil) return;
