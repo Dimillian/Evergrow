@@ -8,12 +8,13 @@ import { itemHoverCards } from './item-ui.ts';
 import './item-ui.css';
 import './tooltip-material.css';
 
-/** Ground highlight follows the label; passive inspection stays in the screen corner. */
+/** Ground highlight follows the label; passive inspection follows the pointer. */
 export class GroundLootHighlight {
   private affordance = document.createElement('div');
   private tooltip = document.createElement('div');
   private inspected: GroundItem['item'] | null = null;
   private inspectedLevel = -1;
+  private inspectedStats: Player['stats'] | null = null;
   private cursor: string;
   private canvas: HTMLCanvasElement;
   constructor(mount: HTMLElement, canvas: HTMLCanvasElement) {
@@ -45,12 +46,28 @@ export class GroundLootHighlight {
     affordance.style.setProperty('--loot-accent',problem?'#9a9290':TIER_COLORS[drop.item.tier]);
     // Selected walking targets retain their highlight, but only actual mouse hover inspects.
     if (hovered) {
-      if (this.inspected !== drop.item || this.inspectedLevel !== player.level) {
-        this.tooltip.innerHTML = itemHoverCards(drop.item, { sheet: player.character, level: player.level, compare: false }).join('');
+      if (this.inspected !== drop.item || this.inspectedLevel !== player.level || this.inspectedStats !== player.stats) {
+        const cards = itemHoverCards(drop.item, { sheet: player.character, level: player.level, compactComparison: true });
+        this.tooltip.innerHTML = cards.join('');
+        this.tooltip.style.setProperty('--tooltip-columns', String(cards.length));
         this.inspected = drop.item;
         this.inspectedLevel = player.level;
+        this.inspectedStats = player.stats;
       }
       this.tooltip.hidden = false;
+      const x = canvas.left + pointer!.x * sx, y = canvas.top + pointer!.y * sy;
+      const viewportWidth = document.documentElement.clientWidth, viewportHeight = document.documentElement.clientHeight;
+      const tooltipWidth = this.tooltip.offsetWidth, tooltipHeight = this.tooltip.offsetHeight;
+      const gap = 16, margin = 16;
+      let left = x + gap, top = y + gap;
+      if (left + tooltipWidth > viewportWidth - margin) left = x - tooltipWidth - gap;
+      if (top + tooltipHeight > viewportHeight - margin) top = y - tooltipHeight - gap;
+      this.tooltip.style.left = `${Math.max(margin, Math.min(viewportWidth - tooltipWidth - margin, left))}px`;
+      this.tooltip.style.top = `${Math.max(margin, Math.min(viewportHeight - tooltipHeight - margin, top))}px`;
+      // Keep the hovered loot nearest the cursor when the comparison flips left.
+      const cards = [...this.tooltip.children] as HTMLElement[];
+      const stacked = viewportWidth <= 680;
+      cards.forEach((card, index) => { card.style.order = String(!stacked && left < x ? (index === 0 ? cards.length - 1 : index - 1) : index); });
     } else this.hideTooltip();
   }
   private hideTooltip(): void { this.tooltip.hidden = true; this.inspected = null; }

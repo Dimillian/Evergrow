@@ -25,7 +25,10 @@ export interface ItemPresentation {
   context?: string;
   /** Hover comparisons name displaced gear in adjacent cards instead. */
   adjacentComparison?: boolean;
-  /** Compact world inspection shows the item's own stats without an equip simulation. */
+  /** Ground inspection retains compact property rows with inline net changes. */
+  compactComparison?: boolean;
+  equippedLabel?: string;
+  /** Optional item-only inspection without an equip simulation. */
   compare?: boolean;
 }
 export const CHANGE_LABELS: Record<PreviewStat, string> = {
@@ -64,7 +67,15 @@ function equipChangeCell(change: EquipmentStatChange | undefined, emptyLabel = '
   const percentage = PREVIEW_PERCENT.has(change.key);
   const delta = (change.after - change.before) * (percentage ? 100 : 1) * scale;
   const wholePercent = ['areaPercent', 'potionPercent', 'spellweavePercent', 'afterguardPercent'].includes(change.key);
-  return `<td class="${delta > 0 ? 'is-gain' : 'is-loss'}">${delta > 0 ? '+' : ''}${number(delta, 2)}${percentage || wholePercent ? '%' : ''}</td>`;
+  return `<td class="${delta > 0 ? 'is-gain' : 'is-loss'}"><span aria-hidden="true">${delta > 0 ? '↑' : '↓'}</span> ${delta > 0 ? '+' : ''}${number(delta, 2)}${percentage || wholePercent ? '%' : ''}</td>`;
+}
+
+function inlineEquipChange(change: EquipmentStatChange | undefined, scale = 1): string {
+  if (!change) return '';
+  const percentage = PREVIEW_PERCENT.has(change.key);
+  const delta = (change.after - change.before) * (percentage ? 100 : 1) * scale;
+  const unit = percentage || ['areaPercent', 'potionPercent', 'spellweavePercent', 'afterguardPercent'].includes(change.key) ? '%' : '';
+  return ` <span class="ui-item-inline-change ${delta > 0 ? 'is-gain' : 'is-loss'}" aria-label="On equip: ${delta > 0 ? '+' : ''}${number(delta, 2)}${unit}">(${delta > 0 ? '+' : ''}${number(delta, 2)}${unit})</span>`;
 }
 
 export function itemSlotMarkup(item: Item, size = 44): string {
@@ -102,10 +113,16 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
     const previewKey = isSkillStat(key) ? key : MODIFIER_PREVIEW[key];
     const change = previewKey ? changes.get(previewKey) : undefined;
     if (previewKey) changes.delete(previewKey);
+    if (view.compactComparison) return `<div class="ui-item-property"${color}><span>${label}</span><strong>${formatStatValue(key, value)}${inlineEquipChange(change, key === 'manaRegen' ? MANA_RULES.regenerationPeriod : 1)}</strong></div>`;
     return `<tr><th scope="row"${color}>${label}</th><td${color}>${formatStatValue(key, value)}</td>${equipChangeCell(change, previewKey ? 'No change' : 'Included in derived changes', key === 'manaRegen' ? MANA_RULES.regenerationPeriod : 1)}</tr>`;
   });
-  for (const change of changes.values()) rows.push(`<tr><th scope="row">${statTerm(change.key, CHANGE_LABELS[change.key]) || escapeUI(CHANGE_LABELS[change.key])}</th><td class="ui-item-stat-empty" aria-label="Not an item bonus">—</td>${equipChangeCell(change)}</tr>`);
-  const properties = preview?.ok
+  for (const change of changes.values()) {
+    const label = statTerm(change.key, CHANGE_LABELS[change.key]) || escapeUI(CHANGE_LABELS[change.key]);
+    rows.push(view.compactComparison
+      ? `<div class="ui-item-property"><span>${label}</span><strong>${inlineEquipChange(change)}</strong></div>`
+      : `<tr><th scope="row">${label}</th><td class="ui-item-stat-empty" aria-label="Not an item bonus">—</td>${equipChangeCell(change)}</tr>`);
+  }
+  const properties = preview?.ok && !view.compactComparison
     ? `<table class="ui-item-stat-table" aria-label="Item bonuses and net changes on equip"><thead><tr><th scope="col">Stat</th><th scope="col">Item</th><th scope="col">On equip</th></tr></thead><tbody>${rows.join('')}</tbody></table>${!preview.changes.length ? '<p class="ui-item-description">No stat change</p>' : ''}`
     : `<div class="ui-item-properties">${rows.join('')}</div>`;
   let weapon = '';
@@ -121,7 +138,7 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
     else if (preview.displaced.length && !view.adjacentComparison)
       comparison = `<div class="ui-item-comparison"><p>Replaces ${preview.displaced.map(entry => escapeUI(entry.item.name)).join(' + ')}</p></div>`;
   }
-  return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span></span><h4>${hasGreaterAffix(item) ? escapeUI(itemDisplayName(item).slice(0, -(GREATER_AFFIX_SYMBOL.length + 1))) + ' ' + greaterMark : escapeUI(itemDisplayName(item))}</h4></div></div>
+  return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span>${view.equipped && view.compactComparison ? `<span class="ui-item-equipped-inline" title="${escapeUI(view.equippedLabel ?? '')}">Equipped</span>` : ''}</span><h4>${hasGreaterAffix(item) ? escapeUI(itemDisplayName(item).slice(0, -(GREATER_AFFIX_SYMBOL.length + 1))) + ' ' + greaterMark : escapeUI(itemDisplayName(item))}</h4></div></div>
     <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${view.equipped ? '<span class="ui-item-equipped">Equipped</span>' : ''}${item.locked?'<span class="ui-item-equipped">Locked</span>':''}</div>
     ${item.recipe.enhancement ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% scalable item stats</div>` : ''}
     ${weapon}${properties}
@@ -142,8 +159,9 @@ export function itemHoverCards(item: Item, view: ItemPresentation): string[] {
     { sourceIndex: view.sourceIndex, slot: view.targetSlot });
   const displaced = preview?.ok ? preview.displaced : [];
   const card = (gear: Item, content: string, label = '') =>
-    `<section class="ui-item-hover-card" data-tier="${gear.tier}" style="--item-color:${TIER_COLORS[gear.tier]}">${label ? `<div class="ui-item-section-label ui-item-comparison-label">Equipped · ${label}</div>` : ''}${content}</section>`;
+    `<section class="ui-item-hover-card" data-tier="${gear.tier}" style="--item-color:${TIER_COLORS[gear.tier]}">${label && !view.compactComparison ? `<div class="ui-item-section-label ui-item-comparison-label">Equipped · ${label}</div>` : ''}${content}</section>`;
   return [card(item, itemTooltipMarkup(item, { ...view, adjacentComparison: displaced.length > 0 })),
     ...displaced.map(({ item: gear, slot }) => card(gear,
-      itemTooltipMarkup(gear, { sheet: view.sheet, level: view.level, equipped: true }), EQUIPPED_LABELS[slot]))];
+      itemTooltipMarkup(gear, { sheet: view.sheet, level: view.level, equipped: true,
+        compactComparison: view.compactComparison, equippedLabel: EQUIPPED_LABELS[slot] }), EQUIPPED_LABELS[slot]))];
 }

@@ -3,11 +3,16 @@
 .ui-tooltip.ui-item-tooltip-group.ground-loot-tooltip {
   --tooltip-columns: 1;
   z-index: 45;
-  right: max(16px, env(safe-area-inset-right));
-  bottom: max(16px, env(safe-area-inset-bottom));
-  width: min(320px, calc(100vw - 32px));
+  right: auto;
+  bottom: auto;
+  width: min(calc(var(--tooltip-columns) * 320px + (var(--tooltip-columns) - 1) * 8px), calc(100vw - 32px));
   max-height: calc(100dvh - 32px);
   padding: 0;
   pointer-events: none;
 }
 .ground-loot-tooltip .ui-item-hover-card { border-radius: 0; }
+.ground-loot-tooltip .ui-item-equipped-inline { display: inline-flex; align-items: center; padding: 2px 6px; border: 1px solid #aacbb966; border-radius: 999px; background: #243c35; font-size: 9px; line-height: 1; color: #c7ead4; white-space: nowrap; }
+.ground-loot-tooltip .ui-item-inline-change { font-size: 11px; white-space: nowrap; }
+@media (max-width: 680px) {
+  .ui-tooltip.ui-item-tooltip-group.ground-loot-tooltip { grid-template-columns: 1fr; width: min(320px, calc(100vw - 32px)); }
+}
