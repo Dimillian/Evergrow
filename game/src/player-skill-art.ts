@@ -1,3 +1,5 @@
+import { UNIQUE_RULES } from './unique-content.ts';
+import { deriveAttackStats } from './equipment.ts';
 import type { Player } from './model.ts';
 /** Bounded, read-only stance engravings drawn beside the actor in the world pass. */
 export function drawPlayerSkillEffects(c:CanvasRenderingContext2D,p:Player,x:number,y:number,time:number):void {
@@ -12,5 +14,33 @@ export function drawPlayerSkillEffects(c:CanvasRenderingContext2D,p:Player,x:num
  if(s.borrowed&&s.borrowed.capacity>0){c.strokeStyle='#da8fb6';c.globalAlpha=.6;c.beginPath();c.ellipse(0,-18,23,30,0,0,Math.PI*2);c.stroke();}
  if(s.ward){const strength=Math.min(1,s.ward.capacity/Math.max(1,p.maxHp*.18));c.strokeStyle='#9ed6d5';c.globalAlpha=.35+strength*.4;c.beginPath();c.ellipse(0,-18,19,27,0,0,Math.PI*2);c.stroke();for(let i=0;i<6;i++){const a=i*Math.PI/3+time*.15;c.beginPath();c.moveTo(Math.cos(a)*19,Math.sin(a)*27-18);c.lineTo(Math.cos(a)*23,Math.sin(a)*31-18);c.stroke();}}
  for(const [id,color]of [['brace','#cfb88f'],['rallyOfIron','#dc9a64'],['ghostHunt','#b9d9c9']] as const){const b=s[id];if(!b)continue;c.globalAlpha=Math.min(.7,b.remaining*2);c.strokeStyle=color;c.beginPath();c.ellipse(0,2,id==='brace'?19:25,7,0,0,Math.PI*2);c.stroke();if(b.charges)for(let i=0;i<b.charges;i++){const a=Math.PI+(i+1)*Math.PI/(b.charges+1);c.fillStyle=color;c.fillRect(Math.cos(a)*24-1,Math.sin(a)*18-15,2,5);}}
+ if(s.draw&&!s.draw.released){
+   const fill=Math.min(1,s.draw.elapsed/UNIQUE_RULES.drawTime);
+   c.strokeStyle=fill>=1?'#e4efd0':'#a9cf9e';c.globalAlpha=.35+fill*.5;c.lineWidth=1.5;
+   c.beginPath();c.ellipse(0,2,26,10,0,Math.PI,Math.PI+Math.PI*2*fill);c.stroke();
+   c.translate(Math.cos(p.angle)*24,Math.sin(p.angle)*12-23);c.rotate(p.angle);
+   c.beginPath();c.moveTo(-4-fill*6,0);c.lineTo(8+fill*8,0);c.moveTo(3+fill*8,-4);c.lineTo(8+fill*8,0);c.lineTo(3+fill*8,4);c.stroke();
+ }
+ if(s.bastion){
+   const fill=Math.min(1,s.bastion.damage/Math.max(1,deriveAttackStats(p.stats,p.equipment.mainHand).damage*UNIQUE_RULES.bastionCap));
+   c.strokeStyle='#e8cf99';c.globalAlpha=Math.min(.85,s.bastion.remaining)*fill;c.lineWidth=2;
+   c.beginPath();c.moveTo(-20,-29);c.lineTo(-20,-14);c.lineTo(-13,-8);c.lineTo(-6,-14);c.lineTo(-6,-29);c.stroke();
+   for(let i=0;i<3;i++){c.globalAlpha=i/3<fill?.8:.15;c.beginPath();c.moveTo(-18,-24+i*5);c.lineTo(-13,-21+i*5);c.lineTo(-8,-24+i*5);c.stroke();}
+ }
  c.restore();
+}
+/** World-anchored conduit, kept in actor depth order independently of the player. */
+export function drawConductor(c:CanvasRenderingContext2D,p:Player):void {
+ const s=p.skillEffects?.conductor;if(!s||p.dead)return;
+ c.save();c.translate(s.x,s.y);c.globalAlpha=Math.min(1,s.remaining*2);c.strokeStyle='#baa5ee';c.lineWidth=1.5;
+ c.beginPath();c.ellipse(0,0,19,8,0,0,Math.PI*2);c.stroke();
+ c.fillStyle='#292139';c.beginPath();c.moveTo(0,-37);c.lineTo(7,-19);c.lineTo(0,-9);c.lineTo(-7,-19);c.closePath();c.fill();c.stroke();
+ c.strokeStyle='#e2d8ff';c.beginPath();c.moveTo(1,-29);c.lineTo(-3,-20);c.lineTo(3,-20);c.lineTo(0,-12);c.stroke();
+ c.beginPath();c.moveTo(0,-8);c.lineTo(0,-1);c.stroke();c.restore();
+}
+export function drawHarvestMark(c:CanvasRenderingContext2D,p:Player,id:number,x:number,y:number):void {
+ const mark=p.skillEffects?.harvest?.find(m=>m.target===id);if(!mark)return;
+ c.save();c.translate(x,y-66);c.globalAlpha=Math.min(.85,mark.remaining*2);c.strokeStyle='#f198aa';c.lineWidth=1.5;
+ c.beginPath();c.moveTo(0,-9);c.lineTo(6,0);c.lineTo(0,7);c.lineTo(-6,0);c.closePath();c.stroke();
+ c.beginPath();c.moveTo(-9,-4);c.lineTo(-3,2);c.moveTo(9,-4);c.lineTo(3,2);c.stroke();c.restore();
 }

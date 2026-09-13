@@ -198,3 +198,7 @@ The local runtime now includes regional, settlement, dungeon and major-encounter
 ## Local atlas replacement · 2026-09-12
 
 Supersedes the historical atlas counts and three-/four-point school rules above. Six territories replace the celestial petals. Adds Sidestep, Brace, Runic Ward, Vaulting Shot, Rally of Iron and Ghost Hunt. Direct Techniques replace potency/efficiency chains; ranks stop at three, and optional Doctrines/keystones introduce distinct decisions. Older valid tree investments are refunded while retaining character and world progress. [Current rules](skill-progression.md). This pass is local only.
+
+## Local Unique batch three · 2026-09-13
+
+Six new signatures bring the current catalog to eighteen: Heartwood Draw, Briarfall Mantle, Thread of Pursuit, The Patient Bastion, Red Harvest and Stormglass Reliquary. They cover charged piercing shots, advancing arrow rain, finite returning ricochets, stored guard counterattacks, rear-strike marks and aimed lightning conductors. Loot and Chronicles use the shared catalog; rarity odds and valid saves remain unchanged. Combat/Technique, cleanup, terrain and resource regression checks live in `unique-items.test.ts`. See [Unique items](unique-items.md). This addition has not been published to Sites.

@@ -1,5 +1,6 @@
 import { canUseSkill } from './skill-content.ts';
 import { hasUnique, UNIQUE_RULES } from './unique-content.ts';
+import { deriveAttackStats } from './equipment.ts';
 import type { HitSnapshot, Player, Enemy, WorldQuery, Projectile, ProjectileEffects } from './model.ts';
 import type { ProjectileDefinition } from './combat-content.ts';
 
@@ -49,6 +50,32 @@ export function advanceUniqueEffects(p:Player,dt:number):void {
   if(s.archer?.shotRemaining)s.archer.shotRemaining=Math.max(0,s.archer.shotRemaining-dt);
   if(s.borrowed)s.borrowed.capacity=Math.min(s.borrowed.capacity,Math.max(0,p.maxHp*UNIQUE_RULES.borrowedLife-(s.ward?.capacity??0)));
   if(s.ward?.rupture&&!hasUnique(p.character,'broken-seal'))delete s.ward.rupture;
+  for(const [key,id,skill] of [['bastion','patient-bastion','bulwark'],['conductor','stormglass-reliquary','arcLightning']] as const){
+    const effect=s[key];if(effect&&((effect.remaining-=dt)<=0||!hasUnique(p.character,id)||!p.character.allocatedNodes.includes(`skill:${skill}`)||!canUseSkill(skill,p.equipment)))delete s[key];
+  }
+  if(s.harvest){s.harvest=s.harvest.filter(mark=>(mark.remaining-=dt)>0);if(!hasUnique(p.character,'red-harvest')||!canUseSkill('backstab',p.equipment)||!p.character.allocatedNodes.includes('skill:backstab'))delete s.harvest;}
+  if(s.draw&&(!hasUnique(p.character,'heartwood-draw')||!canUseSkill('piercingShot',p.equipment)||p.character.skillSlots[s.draw.slot]!=='piercingShot'||!p.character.allocatedNodes.includes('skill:piercingShot')))delete s.draw;
+}
+
+export function storeBastion(p:Player,blocked:number):void {
+  if(p.dead||p.guardTime<=0||blocked<=0||!hasUnique(p.character,'patient-bastion')||!p.character.allocatedNodes.includes('skill:bulwark'))return;
+  const s=p.skillEffects??={echoes:[]},cap=deriveAttackStats(p.stats,p.equipment.mainHand).damage*UNIQUE_RULES.bastionCap;
+  s.bastion={damage:Math.min(cap,(s.bastion?.damage??0)+blocked),remaining:UNIQUE_RULES.bastionWindow};
+}
+export function consumeBastion(p:Player,weaponDamage:number,melee:boolean):number {
+  const charge=p.skillEffects?.bastion;
+  if(!charge||!melee||!hasUnique(p.character,'patient-bastion')||!canUseSkill('bulwark',p.equipment))return 0;
+  delete p.skillEffects!.bastion;
+  return charge.remaining>0?Math.min(charge.damage,weaponDamage*UNIQUE_RULES.bastionCap):0;
+}
+/** A mark is spent before checking the natural rear angle, so rear follow-ups cannot renew it. */
+export function harvestRear(p:Player,target:number,naturalRear:boolean):boolean {
+  if(!hasUnique(p.character,'red-harvest'))return naturalRear;
+  const s=p.skillEffects??={echoes:[]};s.harvest??=[];
+  const index=s.harvest.findIndex(mark=>mark.target===target&&mark.remaining>0);
+  if(index>=0){s.harvest.splice(index,1);return true;}
+  if(naturalRear){if(s.harvest.length>=16)s.harvest.shift();s.harvest.push({target,remaining:UNIQUE_RULES.harvestWindow});}
+  return naturalRear;
 }
 export function storeFireballs(p:Player,shots:StoredFireball[]):void {
   const s=p.skillEffects??={echoes:[]};

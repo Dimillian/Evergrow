@@ -1,4 +1,5 @@
 import type { WardBurst } from './unique-combat.ts';
+import { storeBastion } from './unique-combat.ts';
 import { mitigateSkillHit } from './player-skill-effects.ts';
 import { projectileDamageType } from './resistance-content.ts';
 import { metric } from './chronicle.ts';
@@ -75,6 +76,7 @@ export function damagePlayer(amount: number, angle: number, sourceLevel: number,
   if (p.equipment.offHand?.kind === 'shield' && (p.guardTime > 0 || context.random() < p.derived.blockChance)) {
     const reduction = p.guardTime > 0 ? Math.max(p.guardReduction, p.derived.blockReduction) : p.derived.blockReduction;
     const blocked = Math.floor(amount * reduction);
+    storeBastion(p,blocked);
     amount = Math.max(1, amount - blocked);
     primeAfterguard(p);
     context.emit({ type: 'block', x: p.x, y: p.y, angle, value: blocked, color: '#a9daca' });

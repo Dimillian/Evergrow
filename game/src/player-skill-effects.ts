@@ -8,6 +8,10 @@ export interface TimedSkillStance { remaining: number; reduction: number; charge
 export interface SkillEcho { delay: number; x: number; y: number; angle: number; definition: ProjectileDefinition; effects: ProjectileEffects; }
 export interface PlayerSkillEffects {
   uniqueSerial?: number;
+  draw?: {slot:number;elapsed:number;released?:boolean;remaining:number};
+  bastion?: {damage:number;remaining:number};
+  harvest?: Array<{target:number;remaining:number}>;
+  conductor?: {x:number;y:number;remaining:number};
   decoy?: {id:number;x:number;y:number;radius:number;reach:number;angle:number;remaining:number;hp:number;maxHp:number};
   returnStep?: {x:number;y:number;remaining:number;speed:number;outward?:Player['dash']};
   archer?: {x:number;y:number;angle:number;remaining:number;shotRemaining?:number};

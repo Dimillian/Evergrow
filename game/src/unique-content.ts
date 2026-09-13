@@ -5,7 +5,9 @@ export const UNIQUE_COLOR = '#ef82ad';
 export const UNIQUE_EDGE = '#ba8bf1';
 export const UNIQUE_SYMBOL = '✧';
 export const UNIQUE_RULES = Object.freeze({ storedCasts: 3, emberLifetime: 20, shieldSpeed: 380, shieldRange: 220,
-  wardRadius: 140, wardSpellCap: 3, novaRange: 420, decoyDuration: 2, decoyLife: .2, returnWindow: 2, fissureRange: 350, fissureSpeed: 310, shatterDelay: .6, shatterRadius: 70, borrowedLife: .2, borrowedDuration: 4 });
+  wardRadius: 140, wardSpellCap: 3, novaRange: 420, decoyDuration: 2, decoyLife: .2, returnWindow: 2, fissureRange: 350, fissureSpeed: 310, shatterDelay: .6, shatterRadius: 70, borrowedLife: .2, borrowedDuration: 4,
+  drawTime:.6, drawDamage:2, drawReach:1.3, rainTravel:240, pursuitTime:.3, pursuitRadius:28,
+  bastionCap:2, bastionWindow:6, harvestWindow:4, conductorWindow:3 });
 export interface UniqueDefinition {
   readonly id: string; readonly name: string; readonly kind: ItemKind; readonly profile?: string;
   readonly material: ItemMaterialId; readonly skill: SkillId; readonly power: string;
@@ -48,6 +50,24 @@ export const UNIQUES: readonly UniqueDefinition[] = Object.freeze([
   {id:'borrowed-life',name:'Vessel of Borrowed Life',kind:'amulet',profile:'warden-amulet',material:'silver',skill:'siphon',
     power:'Unused Soul Siphon healing becomes a barrier for 4 seconds, up to 20% maximum life. It shares capacity with Runic Ward and cannot trigger The Broken Seal.',
     affixes:['maxHp','spellDamagePercent','intelligence','armor']},
+  {id:'heartwood-draw',name:'Heartwood Draw',kind:'weapon',profile:'warden-longbow',material:'ashwood',skill:'piercingShot',
+    power:'Hold Piercing Shot to charge its damage and reach. After 0.6 seconds it deals double damage with 30% more reach. Release to fire; quick releases retain normal damage and mana cost.',
+    affixes:['damagePercent','critDamage','manaCostPercent','strength']},
+  {id:'briarfall-mantle',name:'Briarfall Mantle',kind:'cloak',material:'cloth',skill:'rainOfArrows',
+    power:'Rain of Arrows advances 240 units from its target along your firing direction, carrying its normal waves and damage. Solid terrain stops the curtain.',
+    affixes:['damagePercent','areaPercent','manaRegen','maxHp']},
+  {id:'thread-of-pursuit',name:'Thread of Pursuit',kind:'amulet',profile:'hawk-talisman',material:'silver',skill:'ricochet',
+    power:'When no fresh target remains, Ricochet spends its remaining rebounds looping back into previously struck enemies. Each loop takes 0.3 seconds; repeated contacts cannot restore life.',
+    affixes:['damagePercent','critChance','manaCostPercent','maxMana']},
+  {id:'patient-bastion',name:'The Patient Bastion',kind:'shield',profile:'bastion-tower',material:'iron',skill:'bulwark',
+    power:'Move at full speed while raising Bulwark. Its blocked damage charges your next basic melee attack for 6 seconds, adding up to 200% of its weapon damage. The charge is consumed once per attack.',
+    affixes:['armor','blockChance','damagePercent','maxHp']},
+  {id:'red-harvest',name:'Red Harvest',kind:'weapon',profile:'rondel-dagger',material:'steel',skill:'backstab',
+    power:'A rear Backstab marks its victim for 4 seconds. Your next Backstab against that enemy counts as a rear strike from any direction and consumes the mark. That follow-up cannot renew it.',
+    affixes:['damagePercent','critDamage','attackSpeedPercent','lifeOnHit']},
+  {id:'stormglass-reliquary',name:'Stormglass Reliquary',kind:'orb',profile:'astral-orb',material:'glass',skill:'arcLightning',
+    power:'Arc Lightning starts from a conductor placed at your aim within weapon reach and line of sight. Each cast moves the conductor; it lasts 3 seconds and never attacks on its own.',
+    affixes:['spellDamagePercent','castSpeedPercent','manaRegen','maxHp']},
 ].map(def => Object.freeze({...def,affixes:Object.freeze(def.affixes)})) as UniqueDefinition[]);
 export function uniqueSlot(definition:UniqueDefinition):EquipmentSlot {
   const kind=definition.kind;return kind==='ring'?'ring1':['shield','grimoire','orb'].includes(kind)?'offhand':kind as EquipmentSlot;

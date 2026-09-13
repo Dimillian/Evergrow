@@ -1,3 +1,4 @@
+import { UNIQUE_RULES } from './unique-content.ts';
 import { lungeReturn } from './unique-combat.ts';
 import { skillSustain } from './skill-sustain.ts';
 import { basicAttackWeapon } from './equipment.ts';
@@ -73,6 +74,9 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = 
       c.restore(); c.globalAlpha = 1;
       if (!compatible) {
         c.fillStyle = '#dc9a87'; c.beginPath(); c.moveTo(x + 3, y + 3); c.lineTo(x + 9, y + 3); c.lineTo(x + 3, y + 9); c.closePath(); c.fill();
+      } else if(skill==='piercingShot'&&p.skillEffects?.draw){
+        const draw=p.skillEffects.draw;
+        text(c,draw.elapsed>=UNIQUE_RULES.drawTime?'READY':`${Math.round(draw.elapsed/UNIQUE_RULES.drawTime*100)}%`,x+w/2,y+h/2-4,.75,'#d4e7ba','center');
       } else if(returning){
         text(c,'RETURN',x+w/2,y+h/2-9,.65,'#d2bee6','center');
         text(c,`${returning.remaining.toFixed(1)}s`,x+w/2,y+h/2+1,.7,'#d2bee6','center');

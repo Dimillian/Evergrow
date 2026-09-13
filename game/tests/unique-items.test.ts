@@ -1,3 +1,4 @@
+import { deriveAttackStats } from '../src/equipment.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { UNIQUES, withUniqueChance, hasUnique, uniqueSlot } from '../src/unique-content.ts';
@@ -378,4 +379,115 @@ test('stationary archer echoes launch from the casting position through the real
  const echo=f.sim.projectiles.find(s=>s.skill==='ghostHunt');assert.ok(echo);
  assert.ok(Math.abs(echo.x)<1);assert.equal(echo.angle,Math.PI/2);assert.equal(echo.launch,undefined);
  assert.equal(echo.effects!.lifeSteal,undefined);assert.equal(echo.effects!.offense!.lifeOnHit,0);
+});
+
+test('Heartwood holds without cost, releases exactly once, preserves Technique damage and caps charge/reach',()=>{
+ for(const variant of [undefined,...SKILL_SPECIALIZATIONS.filter(v=>v.skill==='piercingShot').map(v=>v.id)]){
+  const quick=fixture('heartwood-draw',variant),full=fixture('heartwood-draw',variant);
+  quick.cast();full.context.drawStrength=5;full.cast();
+  assert.equal(full.sim.projectiles.length,quick.sim.projectiles.length);
+  for(const [i,s]of full.sim.projectiles.entries()){
+   assert.equal(s.damage,quick.sim.projectiles[i].damage*2);assert.ok(Math.abs(s.life/quick.sim.projectiles[i].life-1.3)<1e-9);
+   assert.equal(s.effects?.pierce,quick.sim.projectiles[i].effects?.pierce);
+  }
+ }
+ for(const ticks of [1,36,72,144]){
+  const f=fixture('heartwood-draw');f.p.derived.manaRegeneration=0;const mana=f.p.mana,cost=resolveSkill('piercingShot',f.p.derived,f.p.character).mana;
+  for(let i=0;i<ticks;i++)f.sim.update(1/120,{...idle,skillSlot:0,heldSkillSlots:[0]});
+  assert.equal(f.p.mana,mana);assert.equal(f.sim.projectiles.length,0);assert.ok(f.p.skillEffects?.draw);
+  f.sim.update(1/120,idle);assert.equal(f.p.mana,mana-cost);assert.equal(f.sim.projectiles.length,1);assert.equal(f.p.skillEffects?.draw,undefined);
+  const base=fixture('heartwood-draw');base.cast();assert.ok(Math.abs(f.sim.projectiles[0].damage/base.sim.projectiles[0].damage-(1+Math.min(1,ticks/72)))<1e-9);
+  for(let i=0;i<120;i++)f.sim.update(1/120,idle);assert.equal(f.p.mana,mana-cost);
+ }
+});
+test('Heartwood cancels cleanly on dodge, pause, equipment removal and insufficient mana',()=>{
+ for(const cancel of ['dodge','pause','gear','mana'] as const){
+  const f=fixture('heartwood-draw');f.p.derived.manaRegeneration=0;
+  for(let i=0;i<40;i++)f.sim.update(1/120,{...idle,skillSlot:0,heldSkillSlots:[0]});
+  if(cancel==='dodge')f.sim.update(1/120,{...idle,dodge:true});
+  if(cancel==='pause')f.sim.clearInput();
+  if(cancel==='gear'){f.p.character.equipped.weapon=generateItem(1,25,'weapon','crescent-recurve','common');refreshCharacter(f.p);}
+  if(cancel==='mana'){f.p.mana=0;f.p.derived.manaRegeneration=0;}
+  for(let i=0;i<30;i++)f.sim.update(1/120,idle);
+  assert.equal(f.sim.projectiles.length,0,cancel);assert.equal(f.p.skillEffects?.draw,undefined,cancel);
+ }
+});
+test('Briarfall moves the complete rain across 240 units, retains every pulse and stops at walls',()=>{
+ for(const variant of [undefined,...SKILL_SPECIALIZATIONS.filter(v=>v.skill==='rainOfArrows').map(v=>v.id)]){
+  const f=fixture('briarfall-mantle',variant);f.cast();
+  const effect=f.sim.groundEffects[0],start=effect.x,count=effect.pulsesLeft,damage=effect.damage;
+  let pulses=0,active=f.sim.groundEffects;
+  for(let i=0;i<1200&&active.length;i++)active=advanceGroundEffects(active,1/120,{player:f.p,enemies:[],visible:()=>true,damage:()=>{},emit:e=>{if(e.type==='blast')pulses++;}});
+  assert.equal(pulses,count);assert.equal(effect.damage,damage);assert.ok(Math.abs(effect.x-start-240)<.01,`${variant}: ${effect.x-start}`);
+  const wall=fixture('briarfall-mantle',variant);wall.cast();const blocked=wall.sim.groundEffects[0],initial=blocked.x;let remaining=wall.sim.groundEffects;
+  for(let i=0;i<1200&&remaining.length;i++)remaining=advanceGroundEffects(remaining,1/120,{player:wall.p,enemies:[],visible:(_x,_y,toX)=>toX<initial+65,damage:()=>{},emit:()=>{}});
+  assert.ok(blocked.x>initial&&blocked.x<initial+65);assert.equal(blocked.travel,undefined);assert.equal(blocked.pulsesLeft,0);
+ }
+});
+test('Pursuit spends each rebound at full damage on a lone enemy and never heals on repeated contacts',()=>{
+ for(const variant of [undefined,...SKILL_SPECIALIZATIONS.filter(v=>v.skill==='ricochet').map(v=>v.id)]){
+  const f=fixture('thread-of-pursuit',variant),target=f.sim.spawnEnemy('brute',90,0)!;target.hp=100000;f.p.derived.lifeOnHit=15;f.cast();
+  const shot=f.sim.projectiles[0],budget=1+(shot.effects?.chain??0),contacts:Array<{damage:number;heal:number}>=[];
+  for(let i=0;i<1200&&shot.life>0;i++)advanceProjectiles([shot],1/120,{player:f.p,enemies:[target],world,schedule:()=>{},visible:()=>true,onScreen:()=>true,emit:()=>{},hurt:()=>{},damage:(_e,n,_a,_m,_s,off)=>contacts.push({damage:n,heal:off?.lifeOnHit??0})});
+  assert.equal(contacts.length,budget,variant);assert.ok(contacts.every(c=>c.damage===shot.damage));assert.equal(contacts[0].heal,15);assert.ok(contacts.slice(1).every(c=>c.heal===0));assert.ok(shot.life<=0);
+ }
+});
+test('Pursuit prefers fresh enemies, collides during loops and never homes after selecting a return point',()=>{
+ const f=fixture('thread-of-pursuit'),a=f.sim.spawnEnemy('brute',90,0)!,b=f.sim.spawnEnemy('brute',150,0)!;a.hp=b.hp=100000;f.cast();const shot=f.sim.projectiles[0],hits:number[]=[];
+ const context={player:f.p,enemies:[a,b],world,schedule:()=>{},visible:()=>true,onScreen:()=>true,emit:()=>{},hurt:()=>{},damage:(e:typeof a)=>{hits.push(e.id);}};
+ for(let i=0;i<200&&!shot.effects?.pursuitLoop;i++)advanceProjectiles([shot],1/120,context);
+ assert.deepEqual(hits,[a.id,b.id]);assert.ok(shot.effects?.pursuitLoop);
+ a.y=b.y=300;for(let i=0;i<80&&shot.life>0;i++)advanceProjectiles([shot],1/120,context);
+ assert.deepEqual(hits,[a.id,b.id]);assert.ok(shot.life<=0);
+ const wall=fixture('thread-of-pursuit'),target=wall.sim.spawnEnemy('brute',90,0)!;wall.cast();const missile=wall.sim.projectiles[0];let contacts=0;
+ for(let i=0;i<300&&missile.life>0;i++)advanceProjectiles([missile],1/120,{...context,player:wall.p,enemies:[target],world:{...world,blocked:(_x,y)=>Math.abs(y)>10},damage:()=>{contacts++;}});
+ assert.equal(contacts,1);assert.ok(missile.life<=0);
+});
+test('Patient Bastion stores actual active-guard blocks, caps the next melee basic and consumes once',()=>{
+ for(const variant of [undefined,...SKILL_SPECIALIZATIONS.filter(v=>v.skill==='bulwark').map(v=>v.id)]){
+  const f=fixture('patient-bastion',variant);f.p.derived.blockChance=0;f.p.invulnerable=0;f.sim.takeDamage(10,0,25,'physical');assert.equal(f.p.skillEffects?.bastion,undefined);
+  f.cast();f.p.invulnerable=0;f.sim.takeDamage(100,0,25,'physical');const blocked=f.sim.drainEvents().filter(e=>e.type==='block').reduce((n,e)=>n+e.value,0);
+  assert.equal(f.sim.player.skillEffects?.bastion?.damage,blocked);assert.ok(blocked>0);
+  f.p.hp=f.p.maxHp=1e7;for(let i=0;i<10;i++){f.p.invulnerable=0;f.sim.takeDamage(1e5,0,25,'physical');}
+  const charge=f.sim.player.skillEffects!.bastion!.damage;f.p.castTime=0;f.sim.update(1/120,{...idle,attack:true});
+  const boosted=f.p.attack!.damage;assert.equal(f.p.skillEffects?.bastion,undefined);assert.ok(Math.abs(boosted-charge*1.5)<1e-9);
+  f.p.attack=null;f.sim.update(1/120,{...idle,attack:true});assert.equal(f.sim.player.attack!.damage,charge/2);
+ }
+ const moving=fixture('patient-bastion');moving.cast();for(let i=0;i<18;i++)moving.sim.update(1/120,{...idle,moveX:1});
+ const base=fixture('patient-bastion');for(let i=0;i<18;i++)base.sim.update(1/120,{...idle,moveX:1});assert.equal(moving.p.x,base.p.x);
+});
+test('Red Harvest marks natural rear hits, consumes from the front and cannot renew on consumption',()=>{
+ for(const variant of [undefined,...SKILL_SPECIALIZATIONS.filter(v=>v.skill==='backstab').map(v=>v.id)]){
+  const f=fixture('red-harvest',variant),target=f.sim.spawnEnemy('brute',35,0)!;target.hp=100000;target.angle=0;
+  f.cast();const rear=100000-target.hp;assert.equal(f.p.skillEffects?.harvest?.length,1);
+  target.angle=Math.PI;f.p.castTime=0;f.p.skillCooldowns.backstab=0;const before=target.hp;f.cast();assert.equal(before-target.hp,rear);assert.equal(f.p.skillEffects?.harvest?.length,0);
+  f.p.castTime=0;f.p.skillCooldowns.backstab=0;const unmarked=target.hp;f.cast();assert.ok(unmarked-target.hp<rear);assert.equal(f.p.skillEffects?.harvest?.length,0);
+  target.angle=0;f.p.castTime=0;f.p.skillCooldowns.backstab=0;f.cast();f.p.castTime=0;f.p.skillCooldowns.backstab=0;f.cast();assert.equal(f.p.skillEffects?.harvest?.length,0);
+ }
+});
+test('Stormglass starts every Technique at its aimed conductor and never attacks between casts',()=>{
+ for(const variant of [undefined,...SKILL_SPECIALIZATIONS.filter(v=>v.skill==='arcLightning').map(v=>v.id)]){
+  const f=fixture('stormglass-reliquary',variant),enemy=f.sim.spawnEnemy('brute',270,0)!;enemy.hp=100000;f.cast();
+  const bolt=f.events.find(e=>e.type==='chain');assert.ok(bolt?.type==='chain');assert.equal(bolt.x,250);assert.equal(bolt.y,0);
+  assert.equal(f.p.skillEffects?.conductor?.x,250);const life=enemy.hp;advanceSkillEffects(f.p,3.1);assert.equal(enemy.hp,life);assert.equal(f.p.skillEffects?.conductor,undefined);
+  f.p.castTime=0;f.p.skillCooldowns.arcLightning=0;f.context.aimX=150;f.cast();assert.equal(f.sim.player.skillEffects?.conductor?.x,150);
+ }
+ const wall=fixture('stormglass-reliquary',undefined,{...world,blocked:x=>x>=100});wall.sim.spawnEnemy('brute',160,0);wall.cast();assert.ok(wall.p.skillEffects!.conductor!.x<100);assert.equal(wall.events.filter(e=>e.type==='chain').length,0);
+});
+test('batch-three transient state expires and cannot survive removal, death or saved restoration',()=>{
+ for(const id of ['patient-bastion','red-harvest','stormglass-reliquary','heartwood-draw'])for(const mode of ['expiry','remove','restore','death']){
+  const f=fixture(id);f.p.skillEffects={echoes:[],bastion:{damage:30,remaining:6},harvest:[{target:9,remaining:4}],conductor:{x:50,y:0,remaining:3},draw:{slot:0,elapsed:.3,remaining:.15}};
+  if(mode==='expiry'){advanceSkillEffects(f.p,7);f.sim.clearInput();}
+  if(mode==='remove'){f.p.character.equipped[uniqueSlot(f.u)]=null;refreshCharacter(f.p);advanceSkillEffects(f.p,1/120);}
+  if(mode==='restore'){f.sim.restoreCheckpoint(f.sim.captureCheckpoint());f.p=f.sim.player;}
+  if(mode==='death'){f.p.invulnerable=0;f.sim.takeDamage(1e9,0,25,'physical');}
+  assert.ok(!f.p.skillEffects?.bastion&&!f.p.skillEffects?.harvest?.length&&!f.p.skillEffects?.conductor&&!f.p.skillEffects?.draw,`${id}:${mode}`);
+ }
+});
+
+test('Stormglass places its first jump beyond weapon reach only through an in-range conductor',()=>{
+ const f=fixture('stormglass-reliquary'),range=deriveAttackStats(f.p.stats,f.p.equipment.mainHand).range;
+ f.context.aimX=range+500;const e=f.sim.spawnEnemy('brute',range+50,0)!;e.hp=100000;f.cast();
+ assert.equal(f.p.skillEffects?.conductor?.x,range);assert.ok(e.hp<100000);
+ const first=f.events.find(event=>event.type==='chain');assert.ok(first?.type==='chain');assert.equal(first.x,range);
 });

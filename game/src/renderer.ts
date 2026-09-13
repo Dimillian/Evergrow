@@ -1,4 +1,4 @@
-import { drawPlayerSkillEffects } from './player-skill-art.ts';
+import { drawPlayerSkillEffects, drawConductor, drawHarvestMark } from './player-skill-art.ts';
 import { skyAtTime, skyAtHour, type SkyState } from './world-time.ts';
 import { OutdoorLightEffects } from './outdoor-light-effects.ts';
 import { DungeonLightEffects } from './dungeon-light-effects.ts';
@@ -730,6 +730,7 @@ export class Renderer {
     }
     for (const remains of this.deaths.remains)
       entries.push({ y: deathDepth(remains), draw: () => drawEnemyRemains(c, remains, settings.reducedMotion) });
+    if(p.skillEffects?.conductor)entries.push({y:p.skillEffects.conductor.y,draw:()=>drawConductor(c,p)});
     for (const enemy of sim.enemies) {
       if (enemy.hp <= 0) continue;
       const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);
@@ -737,6 +738,7 @@ export class Renderer {
       // Generous padding includes bosses, held weapons and status effects.
       if (x < this.view.left - 256 || x > this.view.left + this.view.width + 256
         || y < this.view.top - 256 || y > this.view.top + this.view.height + 256) continue;
+      if(p.skillEffects?.harvest?.length)entries.push({y:y+1,draw:()=>drawHarvestMark(c,p,enemy.id,x,y)});
       entries.push({ y, draw: () => this.actor(x, y, { kind: enemy.kind, dungeonTheme:enemy.dungeonTheme, angle: enemy.angle,
         command: enemy.warband?.order, commandWarning: enemy.warband?.warning,
         time: sim.time + enemy.id, effectTime: settings.reducedMotion ? 0 : sim.time + enemy.id, moveAngle: Math.atan2(enemy.vy, enemy.vx),

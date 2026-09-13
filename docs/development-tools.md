@@ -102,3 +102,7 @@ The save-free `game/scripts/atlas-balance.ts` CLI extends this workspace with 20
 Skills & combat → Skill icon workshop (`/tools/skill-icons.html`) compares the first six redesigned skills or all 30. Each shows the shared stained-glass artwork at 106px, a 32px hotbar sample and 24px tree/dimmed samples. The SVG disclosure verifies DOM controls against the Canvas artwork. PNG export is on demand; the study owns no simulation, animation loop or saves.
 
 The Interface workspace’s **HUD & shortcut menu** view (`/character.html?panel=hud&loadout=wand`) stages the actual floating HUD and compact shortcut list on a frozen, disposable character. `loadout=bow`, `staff`, `wand`, `shield` or `dual` changes the staged equipped silhouette. This view binds no gameplay input, advances no simulation and never accesses saves.
+
+### Unique batch-three studies
+
+The skill playground Unique selector includes all eighteen signatures. Heartwood’s study holds for 0.65 seconds then releases through normal simulation input. Red Harvest’s rear showcase turns its stationary target to face the player for one marked follow-up. Patient Bastion uses the existing incoming-hit scenario and adds basic attacks after the first guard hit. These are authored isolated probes; no playable saves are accessed. See [Unique items](unique-items.md) for direct preview links.

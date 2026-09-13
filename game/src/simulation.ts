@@ -1,5 +1,6 @@
-import { hasUnique } from './unique-content.ts';
-import { releaseStoredEmbers, hurtDecoy } from './unique-combat.ts';
+import { resolveSkill } from './skill-progression.ts';
+import { hasUnique, UNIQUE_RULES } from './unique-content.ts';
+import { releaseStoredEmbers, hurtDecoy, consumeBastion } from './unique-combat.ts';
 import { manaVialAmount, manaVialRestoration } from './mana-content.ts';
 import { roamingEscortRole, roamingFormationRadius, roamingMemberOffset, roamingMemberRank } from './roaming-encounters.ts';
 import { packSpaceProblem } from './inventory-grid.ts';
@@ -14,7 +15,7 @@ import { TREASURE_FLIGHT_DURATION } from './treasure-flight.ts';
 import { advanceSkillEffects, consumeRally, snapshotSkillOffense, queueSkillEcho } from './player-skill-effects.ts';
 import { advanceAffixBuffs, consumeSpellweave } from './affix-combat.ts';
 import { alternatesBasicAttacks, basicAttackWeapon } from './equipment.ts';
-import { skillWeapon } from './skill-content.ts';
+import { canUseSkill, skillWeapon } from './skill-content.ts';
 import { weaponImpactStyle } from './elemental-weapon.ts';
 import { breakContainer, strikeContainers, strikeContainerSegment, type ContainerAttackContext } from './breakable-containers.ts';
 import { enemyInCombatViewport, type CombatViewport } from './combat-visibility.ts';
@@ -282,6 +283,7 @@ export class Simulation {
     this.portal.cancel(); this.eventChannel.cancel();
     this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
     this.skillBuffer = null;
+    if(this.player.skillEffects)delete this.player.skillEffects.draw;
     this.player.vx = this.player.vy = 0;
     this.accumulator = 0;
     this.capturePositions();
@@ -292,6 +294,7 @@ export class Simulation {
 
   clearCombatInput(): void {
     this.attackBuffer = -1; this.skillBuffer = null;
+    if(this.player.skillEffects)delete this.player.skillEffects.draw;
   }
 
   /** Fraction between the two most recent fixed-tick positions for rendering. */
@@ -504,6 +507,7 @@ export class Simulation {
       p.dodgeAngle = moving ? Math.atan2(input.moveY, input.moveX) : p.angle;
       p.dodgeTime = PLAYER_ABILITIES.dodge.duration;
       p.dodgeCharges--;
+      if(p.skillEffects?.draw){delete p.skillEffects.draw;this.skillBuffer=null;}
       p.attack = null;
       p.dash = null;
       p.castTime = 0;
@@ -511,7 +515,26 @@ export class Simulation {
       this.emit({ type: 'dodge', x: p.x, y: p.y, angle: p.dodgeAngle });
     }
 
+    // Holding draws the bow without paying or firing. Release commits one normal skill action.
+    const heldDraw=(input.heldSkillSlots??(input.skillSlot===null?[]:[input.skillSlot])).find(slot=>p.character.skillSlots[slot]==='piercingShot');
+    let draw=p.skillEffects?.draw;
+    if(draw&&(input.attack||input.dodge||p.dodgeTime>0||(input.skillSlot!==null&&input.skillSlot!==draw.slot))){delete p.skillEffects!.draw;this.skillBuffer=null;draw=undefined;}
+    if(!draw&&heldDraw!==undefined&&!input.attack&&!input.dodge&&p.dodgeTime<=0&&!p.attack&&!p.dash&&p.castTime<=0
+      &&hasUnique(p.character,'heartwood-draw')&&canUseSkill('piercingShot',p.equipment)&&p.character.allocatedNodes.includes('skill:piercingShot')
+      &&(p.skillCooldowns.piercingShot??0)<=0&&p.mana>=resolveSkill('piercingShot',p.derived,p.character).mana){
+      draw=(p.skillEffects??={echoes:[]}).draw={slot:heldDraw,elapsed:0,remaining:COMBAT_TIMING.inputBuffer};
+    }
+    if(draw){
+      if(heldDraw===draw.slot&&!draw.released){draw.elapsed=Math.min(UNIQUE_RULES.drawTime,draw.elapsed+dt);this.skillBuffer=null;}
+      else {
+        if(!draw.released){draw.released=true;this.skillBuffer={slot:draw.slot,until:this.time+draw.remaining,pressed:true};}
+        draw.remaining-=dt;
+        if(draw.remaining<=0){delete p.skillEffects!.draw;this.skillBuffer=null;}
+      }
+    }
+
     if (this.skillBuffer && this.skillBuffer.until >= this.time && activateSkill({
+      drawStrength:p.skillEffects?.draw?.released?p.skillEffects.draw.elapsed/UNIQUE_RULES.drawTime:0,
       allowReturn:this.skillBuffer.pressed,
       containers: this.containerContext(),
       availableGroundEffects: GROUND_EFFECT_RULES.maximum - this.groundEffects.length
@@ -525,9 +548,9 @@ export class Simulation {
       projectile: (x, y, angle, definition, skill, effects) => this.projectile(x, y, angle, definition, skill, effects),
       schedule: effect => this.scheduleGroundEffect(effect),
       emit: event => this.emit(event),
-    }, this.skillBuffer.slot)) this.skillBuffer = null;
+    }, this.skillBuffer.slot)) { this.skillBuffer = null; if(p.skillEffects)delete p.skillEffects.draw; }
 
-    if (p.dodgeTime <= 0 && p.castTime <= 0 && !p.dash && this.attackBuffer >= this.time && !p.attack) {
+    if (p.dodgeTime <= 0 && p.castTime <= 0 && !p.dash && !p.skillEffects?.draw && this.attackBuffer >= this.time && !p.attack) {
       this.startAttack(completedAttackTime);
       this.attackBuffer = -1;
     }
@@ -558,7 +581,7 @@ export class Simulation {
       p.dodgeTime = Math.max(0, p.dodgeTime - dt);
     } else {
       const length = Math.hypot(input.moveX, input.moveY);
-      const factor = p.attack?.skill==='whirlwind'&&hasUnique(p.character,'dervish-grasp') ? 1 : p.attack
+      const factor = p.activeSkill==='bulwark'&&hasUnique(p.character,'patient-bastion') ? 1 : p.attack?.skill==='whirlwind'&&hasUnique(p.character,'dervish-grasp') ? 1 : p.attack
         ? p.attack.elapsed < p.attack.activeStart ? PLAYER_MOVEMENT.attackMultiplier.windup
           : p.attack.elapsed < p.attack.activeEnd ? PLAYER_MOVEMENT.attackMultiplier.active : PLAYER_MOVEMENT.attackMultiplier.recovery
         : p.castTime > 0 ? PLAYER_MOVEMENT.castMultiplier : 1;
@@ -601,7 +624,7 @@ export class Simulation {
       kind: ranged ? 'ranged' : 'melee', weapon, hand,
       elapsed, duration, activeStart: duration * (ranged ? RANGED_BASIC_ATTACK_PHASES.activeStart : BASIC_ATTACK_PHASES.activeStart),
       activeEnd: duration * (ranged ? RANGED_BASIC_ATTACK_PHASES.activeEnd : BASIC_ATTACK_PHASES.activeEnd), angle: this.player.angle,
-      range: stats.range, arc: stats.arc, damage: stats.damage * weave, elementalDamage: stats.elementalDamage * weave, hitIds: new Set<number>(),
+      range: stats.range, arc: stats.arc, damage: stats.damage * weave + consumeBastion(p,stats.damage,weapon.attackKind==='melee'), elementalDamage: stats.elementalDamage * weave, hitIds: new Set<number>(),
       offense: snapshotSkillOffense(p),
       ...(ranged ? { projectile: { style, pierce: p.derived.projectilePierce, offense: snapshotSkillOffense(p) } } : {}),
     };

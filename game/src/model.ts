@@ -116,6 +116,8 @@ export interface ShieldDefinition {
 }
 /** Payload snapshots travel with a projectile; equipment changes cannot rewrite it in flight. */
 export interface ProjectileEffects {
+  pursuit?: boolean;
+  pursuitLoop?: {target:number;x:number;y:number;toX:number;toY:number;angle:number;elapsed:number};
   fissureWidth?: number;
   shatter?: {radius:number;delay:number};
   borrowedLife?: boolean;
@@ -297,6 +299,7 @@ export interface Projectile {
 }
 
 export interface GroundEffect {
+  travel?: {vx:number;vy:number;remaining:number};
   id: number; kind: 'meteor' | 'arrowRain' | 'storm' | 'frost' | 'embers'; x: number; y: number; radius: number;
   delay: number; duration: number; interval: number; tick: number;
   damage: number; skill: SkillId; style: ProjectileStyle; offense?: HitSnapshot;

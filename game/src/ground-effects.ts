@@ -23,7 +23,7 @@ export interface GroundEffectContext {
 export function scheduleGroundEffect(effects: ActiveGroundEffect[], effect: GroundEffectRequest, context: ScheduleContext): void {
   if (effects.length >= GROUND_EFFECT_RULES.maximum) return;
   effects.push({ ...effect, ...(effect.offense ? { offense: { ...effect.offense } } : {}), initialDelay: effect.delay,
-    ...(effect.scorch ? { scorch: { ...effect.scorch } } : {}), ...(effect.burn ? { burn: { ...effect.burn } } : {}), ...(effect.slow ? { slow: { ...effect.slow } } : {}), id: context.nextId(), tick: 0,
+    ...(effect.travel ? {travel:{...effect.travel}} : {}), ...(effect.scorch ? { scorch: { ...effect.scorch } } : {}), ...(effect.burn ? { burn: { ...effect.burn } } : {}), ...(effect.slow ? { slow: { ...effect.slow } } : {}), id: context.nextId(), tick: 0,
     pulsesLeft: groundEffectPulseCount(effect) });
   context.emit({ type: 'ground', x: effect.x, y: effect.y, radius: effect.radius,
     duration: effect.delay + (effect.follow ? 0 : effect.duration), style: effect.style, skill: effect.skill });
@@ -43,6 +43,11 @@ export function advanceGroundEffects(effects: ActiveGroundEffect[], dt: number, 
     effect.delay -= dt;
     if (effect.delay > 1e-9) continue;
     const activeDt = beforeDelay > 0 ? Math.max(0, dt - beforeDelay) : dt;
+    if(effect.travel){
+      const speed=Math.hypot(effect.travel.vx,effect.travel.vy),travelDt=Math.min(activeDt,effect.travel.remaining/Math.max(1,speed));
+      const to={x:effect.x+effect.travel.vx*travelDt,y:effect.y+effect.travel.vy*travelDt};
+      if(context.visible(effect.x,effect.y,to.x,to.y)){effect.x=to.x;effect.y=to.y;effect.travel.remaining=Math.max(0,effect.travel.remaining-speed*travelDt);}else delete effect.travel;
+    }
     effect.tick -= activeDt;
     if (effect.tick <= 1e-9 && effect.pulsesLeft > 0) {
       if (effect.upkeep) {

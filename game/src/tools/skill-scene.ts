@@ -76,13 +76,17 @@ export class SkillStudy {
     if(this.elapsed>=this.duration||this.simulation.player.dead)return [];
     const sim=this.simulation,p=sim.player,scenario=this.options.scenario??'showcase';
     // Dummy AI is held still. Damage, statuses, recovery, projectiles and mana use runtime rules.
-    for(const enemy of sim.enemies){enemy.stagger=60;if(scenario!=='showcase'){const point=this.targetPositions.get(enemy.id)!;enemy.x=point.x;enemy.y=point.y;enemy.knockbackX=enemy.knockbackY=0;}}
+    for(const enemy of sim.enemies){enemy.stagger=60;if(scenario!=='showcase'||this.options.unique==='red-harvest'){const point=this.targetPositions.get(enemy.id)!;enemy.x=point.x;enemy.y=point.y;enemy.knockbackX=enemy.knockbackY=0;}}
     const ready=this.elapsed>=.3&&!this.options.baseline;
     const returning=!!p.skillEffects?.returnStep&&this.elapsed>=1.2;
-    const cast=ready&&(!this.didCast||returning||scenario==='sustain'||!!this.options.unique&&this.options.skill==='whirlwind'&&this.elapsed<4);
-    const attack=(scenario==='followup'||scenario==='sustain'||!!this.options.unique&&['fireball','ghostHunt'].includes(this.options.skill))&&this.elapsed>=.55&&(this.didCast||!!this.options.baseline);
+    const harvest=this.options.unique==='red-harvest'&&!!p.skillEffects?.harvest?.length&&this.elapsed>=1.2;
+    if(harvest)for(const enemy of sim.enemies)enemy.angle=this.options.facing+Math.PI;
+    const cast=ready&&(!this.didCast||returning||harvest||scenario==='sustain'||!!this.options.unique&&this.options.skill==='whirlwind'&&this.elapsed<4);
+    const attack=(this.options.unique==='patient-bastion'&&this.elapsed>=1.4||scenario==='followup'||scenario==='sustain'||!!this.options.unique&&['fireball','ghostHunt'].includes(this.options.skill))&&this.elapsed>=.55&&(this.didCast||!!this.options.baseline);
     const showSpirit=scenario==='showcase'&&['ashen-double','pale-huntsman'].includes(this.options.unique??'')&&this.elapsed>=.55&&this.elapsed<1.25;
-    sim.update(1/120,{...this.input,moveY:showSpirit?1:this.input.moveY,attack,skillSlot:cast?0:null});this.elapsed+=1/120;
+    const charge=this.options.unique==='heartwood-draw';
+    const drawing=charge&&cast&&(this.elapsed-.3)%1.5<.65;
+    sim.update(1/120,{...this.input,moveY:showSpirit?1:this.input.moveY,attack:attack&&!drawing,skillSlot:(charge?drawing:cast)?0:null,heldSkillSlots:(charge?drawing:cast)?[0]:[]});this.elapsed+=1/120;
     const events=sim.drainEvents();
     if(events.some(e=>(e.type==='cast'||e.type==='swing')&&e.skill===this.options.skill))this.didCast=true;
     if(scenario==='defense'&&this.elapsed>=this.nextHit){

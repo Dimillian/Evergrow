@@ -1,3 +1,4 @@
+import { UNIQUE_RULES } from './unique-content.ts';
 import { turnProjectile, storeBorrowedLife, hurtDecoy } from './unique-combat.ts';
 import { projectileDamageType } from './resistance-content.ts';
 import type { DamageType } from './model.ts';
@@ -23,9 +24,10 @@ export interface ProjectileContext {
 
 function hit(projectile: Projectile, enemy: Enemy, context: ProjectileContext): void {
   const effects = projectile.effects;
+  const repeated=effects?.pursuit&&projectile.hitIds.has(enemy.id);
   projectile.hitIds.add(enemy.id);
   const lifeBefore = enemy.hp;
-  const offense = effects?.offense;
+  const offense = repeated&&effects?.offense?{...effects.offense,lifeOnHit:0}:effects?.offense;
   context.damage(enemy, projectile.damage, projectile.angle, !!(effects?.thrownShield||effects?.fissureWidth), effects?.style,
     offense, effects?.burnDuration !== undefined, effects?.elementalDamage);
   if (enemy.state !== 'dead') {
@@ -38,7 +40,7 @@ function hit(projectile: Projectile, enemy: Enemy, context: ProjectileContext): 
     }
   }
   const p = context.player;
-  if (effects?.lifeSteal && !p.dead) {
+  if (effects?.lifeSteal && !p.dead && !repeated) {
     const restoration=Math.max(0,lifeBefore-enemy.hp)*effects.lifeSteal;
     const healed = Math.min(p.maxHp - p.hp, restoration);
     if(projectile.skill==='siphon'&&effects.borrowedLife)storeBorrowedLife(p,restoration-healed);
@@ -77,12 +79,60 @@ function blast(projectile: Projectile, context: ProjectileContext): void {
   }
 }
 
-/** Bounded swept missiles. Each target can be struck once, including after a ricochet. */
+/** Prefer fresh contacts. A loop spends one existing rebound and snapshots its destination. */
+function rebound(shot:Projectile,enemy:Enemy,context:ProjectileContext):boolean {
+  const e=shot.effects;if(!e||(e.chain??0)<=0)return false;
+  const eligible=context.enemies.filter(t=>context.onScreen(t)&&t.state!=='dead'
+    &&Math.hypot(t.x-enemy.x,t.y-enemy.y)<=(e.chainRange??180)&&context.visible(shot.x,shot.y,t.x,t.y))
+    .sort((a,b)=>Math.hypot(a.x-enemy.x,a.y-enemy.y)-Math.hypot(b.x-enemy.x,b.y-enemy.y)||a.id-b.id);
+  const fresh=eligible.find(t=>!shot.hitIds.has(t.id)),next=fresh??(e.pursuit?eligible.find(t=>shot.hitIds.has(t.id)):undefined);
+  if(!next)return false;
+  e.chain!--;
+  if(!fresh){
+    e.pursuitLoop={target:next.id,x:shot.x,y:shot.y,toX:next.x,toY:next.y,angle:shot.angle,elapsed:0};
+    shot.life=Math.max(shot.life,UNIQUE_RULES.pursuitTime+.05);delete shot.launch;
+  } else {
+    shot.angle=Math.atan2(next.y-shot.y,next.x-shot.x);
+    const speed=Math.hypot(shot.vx,shot.vy);
+    shot.vx=Math.cos(shot.angle)*speed;shot.vy=Math.sin(shot.angle)*speed;
+    context.emit({type:'chain',x:shot.x,y:shot.y,toX:next.x,toY:next.y,style:e.style,skill:shot.skill});
+  }
+  return true;
+}
+/** Sweep the visible loop against scenery. Moving targets can evade the snapshotted endpoint. */
+function advancePursuit(shot:Projectile,dt:number,context:ProjectileContext):void {
+  const loop=shot.effects!.pursuitLoop!;
+  const end=Math.min(UNIQUE_RULES.pursuitTime,loop.elapsed+dt);
+  const steps=Math.max(1,Math.ceil((end-loop.elapsed)*(Math.hypot(loop.toX-loop.x,loop.toY-loop.y)+Math.PI*2*UNIQUE_RULES.pursuitRadius)/UNIQUE_RULES.pursuitTime/3));
+  const start=loop.elapsed;
+  for(let i=1;i<=steps;i++){
+    const t=(start+(end-start)*i/steps)/UNIQUE_RULES.pursuitTime,a=t*Math.PI*2;
+    const along=(1-Math.cos(a))*UNIQUE_RULES.pursuitRadius,side=Math.sin(a)*UNIQUE_RULES.pursuitRadius;
+    const x=loop.x+(loop.toX-loop.x)*t+Math.cos(loop.angle)*along-Math.sin(loop.angle)*side;
+    const y=loop.y+(loop.toY-loop.y)*t+Math.sin(loop.angle)*along+Math.cos(loop.angle)*side;
+    if(context.world.blocked(x,y,shot.radius)||!context.visible(shot.x,shot.y,x,y)){
+      context.emit({type:'surface-hit',x:shot.x,y:shot.y,angle:shot.angle,material:context.world.impactMaterial?.(x,y,shot.radius)??'stone',style:shot.effects?.style});
+      shot.life=0;delete shot.effects!.pursuitLoop;return;
+    }
+    shot.angle=Math.atan2(y-shot.y,x-shot.x);shot.x=x;shot.y=y;
+  }
+  loop.elapsed=end;
+  if(end+1e-9<UNIQUE_RULES.pursuitTime)return;
+  delete shot.effects!.pursuitLoop;
+  const target=context.enemies.find(t=>t.id===loop.target&&t.state!=='dead'&&context.onScreen(t)
+    &&Math.hypot(t.x-shot.x,t.y-shot.y)<=t.radius+shot.radius+PLAYER_PROJECTILE_FORGIVENESS&&context.visible(shot.x,shot.y,t.x,t.y));
+  if(!target){shot.life=0;return;}
+  hit(shot,target,context);
+  if(!rebound(shot,target,context))shot.life=0;
+}
+
+/** Bounded swept missiles; revisits require an explicit, finite Unique rebound budget. */
 export function advanceProjectiles(projectiles: Projectile[], dt: number, context: ProjectileContext): void {
   const p = context.player;
   for (const projectile of projectiles) {
     projectile.life -= dt;
     if (projectile.life <= 0 && !turnProjectile(projectile)) continue;
+    if(projectile.effects?.pursuitLoop){advancePursuit(projectile,dt,context);continue;}
     const steps = Math.max(1, Math.ceil(Math.hypot(projectile.vx, projectile.vy) * dt / 3));
     for (let i = 0; i < steps && projectile.life > 0; i++) {
       const oldX = projectile.x, oldY = projectile.y;
@@ -119,19 +169,9 @@ export function advanceProjectiles(projectiles: Projectile[], dt: number, contex
       hit(projectile, enemy, context);
       const effects = projectile.effects;
       if (effects?.blastRadius) { blast(projectile, context); projectile.life = 0; break; }
-      if (effects && (effects.chain ?? 0) > 0) {
-        const next = context.enemies.filter(target => context.onScreen(target) && target.state !== 'dead' && !projectile.hitIds.has(target.id)
-          && Math.hypot(target.x - enemy.x, target.y - enemy.y) <= (effects?.chainRange ?? 180)
-          && context.visible(projectile.x, projectile.y, target.x, target.y))
-          .sort((a, b) => Math.hypot(a.x - enemy.x, a.y - enemy.y) - Math.hypot(b.x - enemy.x, b.y - enemy.y) || a.id - b.id)[0];
-        if (next) {
-          effects.chain = (effects.chain ?? 0) - 1;
-          projectile.angle = Math.atan2(next.y - projectile.y, next.x - projectile.x);
-          const speed = Math.hypot(projectile.vx, projectile.vy);
-          projectile.vx = Math.cos(projectile.angle) * speed; projectile.vy = Math.sin(projectile.angle) * speed;
-          context.emit({ type: 'chain', x: projectile.x, y: projectile.y, toX: next.x, toY: next.y, style: effects.style, skill: projectile.skill });
-          continue;
-        }
+      if (rebound(projectile,enemy,context)) {
+        if(effects?.pursuitLoop)break;
+        continue;
       }
       if (effects && (effects.pierce ?? 0) > 0) { effects.pierce = (effects.pierce ?? 0) - 1; continue; }
       if(!turnProjectile(projectile)){shatter(projectile,context);blast(projectile, context); projectile.life = 0;}

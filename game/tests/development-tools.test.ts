@@ -66,3 +66,15 @@ test('world survey returns deterministic bounded geography without player explor
     assert.throws(()=>surveyPlaces(world,{...query,size:1000000}));
   }finally{world.dispose();}
 });
+
+test('new Unique studies stage a held draw, marked follow-up and blocked counterattack through runtime input',()=>{
+ for(const [unique,skill,scenario] of [['heartwood-draw','piercingShot','showcase'],['red-harvest','backstab','showcase'],['patient-bastion','bulwark','defense']] as const){
+  const study=new SkillStudy(emptyWorld,{unique,skill,scenario,level:25,rank:1,specialization:'',weapon:studyWeapons(skill)[0].id,facing:0,targets:'single',rear:true,enemy:'brute',x:0,y:0});
+  let charge=false,mark=false,stored=false;
+  for(let i=0;i<400;i++){study.step();const effects=study.simulation.player.skillEffects;charge||=!!effects?.draw;mark||=!!effects?.harvest?.length;stored||=!!effects?.bastion;}
+  assert.ok(study.casts>0,unique);
+  if(unique==='heartwood-draw'){assert.ok(charge);assert.equal(study.casts,1);assert.ok(study.damage>0);}
+  if(unique==='red-harvest'){assert.ok(mark);assert.equal(study.casts,2);assert.equal(study.simulation.player.skillEffects?.harvest?.length,0);}
+  if(unique==='patient-bastion'){assert.ok(stored);assert.ok(study.damage>0);}
+ }
+});
