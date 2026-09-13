@@ -96,3 +96,7 @@ The save-free `game/scripts/atlas-balance.ts` CLI extends this workspace with 20
 ### Merchant refresh and enhancement workbench
 
 `/services.html?tier=city` stages the spatial Weapons / Armor / Accessories stock trays and paid refreshes. `/services.html?operation=enhance&item=1` opens the shared item showcase and exact enhancement gains. Both use the same runtime panel and pure commerce planner with disposable in-memory items and gold.
+
+### Procedural skill icons
+
+Skills & combat → Skill icon workshop (`/tools/skill-icons.html`) compares the first six redesigned skills or all 30. Each shows the shared relief at 106px, a 32px hotbar sample and 24px tree/dimmed samples. The SVG disclosure verifies DOM controls against the Canvas artwork. PNG export is on demand; the study owns no simulation, animation loop or saves.

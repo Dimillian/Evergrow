@@ -1,10 +1,11 @@
 import { SKILL_STATS, type SkillStat } from './equipment-affix-content.ts';
 import { SKILL_SPECIALIZATIONS } from './skill-progression.ts';
 import type { StatKey } from './character-types.ts';
-import { skillIconSVG } from './skill-content.ts';
+import { skillIconSVG } from './skill-icon.ts';
+import { drawSkillIcon } from './skill-icon-canvas.ts';
 import type { SkillNode } from './skill-tree.ts';
 
-/** Engravings share a 40-unit drawing space with the active-skill illustrations. */
+/** Passive engravings retain their compact 40-unit drawing space. */
 const ENGRAVINGS = Object.freeze({
   origin: 'M20 3 24 15 37 20 24 25 20 37 16 25 3 20 16 15ZM20 11v18M11 20h18',
   sword: 'M12 29 27 6 32 4 31 10 16 32ZM8 25l13 9M12 30l-5 7M5 35l4 4M24 13l3 2',
@@ -74,7 +75,7 @@ function engravingFor(node: SkillNode): EngravingId {
   return engraving;
 }
 
-/** Native UI and Canvas both consume the original active-skill illustration. */
+/** Active nodes and Techniques share their owning skill’s relief in native UI and Canvas. */
 export function skillNodeIconSVG(node: SkillNode, size = 32): string {
   const skill = node.skill ?? SKILL_SPECIALIZATIONS.find(s => s.id === node.specialization)?.skill;
   if (skill) return skillIconSVG(skill, size);
@@ -82,41 +83,28 @@ export function skillNodeIconSVG(node: SkillNode, size = 32): string {
   return `<svg aria-hidden="true" width="${dimension}" height="${dimension}" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${ENGRAVINGS[engravingFor(node)]}"/></svg>`;
 }
 
-interface CanvasGlyph { readonly paths: readonly Path2D[]; readonly width: number; }
-const canvasGlyphs = new Map<string, CanvasGlyph>();
-
-/**
- * The authored SVG vocabulary is deliberately only paths and circles. Read that
- * tiny vocabulary directly so no image loading, DOM parsing, or duplicate skill
- * geometry is needed. Path2D objects are created lazily in the rendering layer.
- */
-function canvasGlyph(node: SkillNode): CanvasGlyph {
-  const key = node.skill || node.specialization ? node.id : engravingFor(node);
-  const cached = canvasGlyphs.get(key);
-  if (cached) return cached;
-  const svg = skillNodeIconSVG(node), paths: Path2D[] = [];
-  for (const match of svg.matchAll(/<path\s+d="([^"]+)"/g)) paths.push(new Path2D(match[1]));
-  for (const match of svg.matchAll(/<circle\s+cx="([\d.]+)"\s+cy="([\d.]+)"\s+r="([\d.]+)"/g)) {
-    const path = new Path2D();
-    path.arc(Number(match[1]), Number(match[2]), Number(match[3]), 0, Math.PI * 2);
-    paths.push(path);
-  }
-  const result = { paths, width: node.skill ? 1.6 : 1.8 };
-  canvasGlyphs.set(key, result);
-  return result;
+const canvasGlyphs = new Map<EngravingId, Path2D>();
+/** Passive engravings keep their lightweight single-path vocabulary. */
+function canvasGlyph(node: SkillNode): Path2D {
+  const id = engravingFor(node);
+  let path = canvasGlyphs.get(id);
+  if (!path) { path = new Path2D(ENGRAVINGS[id]); canvasGlyphs.set(id, path); }
+  return path;
 }
 
 /** Draw a centered, scalable engraving without creating per-node image assets. */
 export function drawSkillGlyph(c: CanvasRenderingContext2D, node: SkillNode, x: number, y: number, size: number, color: string): void {
   if (!Number.isFinite(size) || size <= 0) return;
+  const skill = node.skill ?? SKILL_SPECIALIZATIONS.find(s => s.id === node.specialization)?.skill;
+  if (skill) { drawSkillIcon(c, skill, x, y, size); return; }
   const glyph = canvasGlyph(node);
   c.save();
   c.translate(x - size / 2, y - size / 2);
   c.scale(size / 40, size / 40);
   c.strokeStyle = color;
-  c.lineWidth = glyph.width;
+  c.lineWidth = 1.8;
   c.lineCap = 'round';
   c.lineJoin = 'round';
-  for (const path of glyph.paths) c.stroke(path);
+  c.stroke(glyph);
   c.restore();
 }

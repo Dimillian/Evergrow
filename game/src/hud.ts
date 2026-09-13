@@ -3,7 +3,7 @@ import { basicAttackWeapon } from './equipment.ts';
 import { basicAttackManaCost } from './equipment.ts';
 import { resolveSkill } from './skill-progression.ts';
 import { PAD_SKILL_LABELS } from './gamepad-input.ts';
-import { drawActiveSkillIcon } from './hud-active-skills.ts';
+import { drawSkillIcon } from './skill-icon-canvas.ts';
 import { SKILL_DEFINITIONS, canUseSkill } from './skill-content.ts';
 import { heldWeapon as drawEquippedWeapon } from './equipment-art.ts';
 import type { GroundEffect, Player } from './model.ts';
@@ -64,7 +64,7 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = 
       c.fillStyle = glow; c.fillRect(x + 1, y + 2, w - 2, 38);
       c.globalAlpha = usable ? 1 : .42;
       c.save(); c.translate(x + w / 2, y + 22); c.scale(1.08, 1.08);
-      if (skill) drawActiveSkillIcon(c, skill);
+      if (skill) drawSkillIcon(c, skill, 0, 0, 32);
       else if (basicAttackWeapon(p).family === 'unarmed') drawHUDSkillIcon(c, 0, 0, 0, time, active);
       else {
         c.save(); c.scale(.66, .66);

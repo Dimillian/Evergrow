@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { activateSkill, type SkillContext } from '../src/skill-combat.ts';
 import { damageEnemy } from '../src/combat-damage.ts';
-import { SKILL_DEFINITIONS, canUseSkill, skillWeapon, skillIconSVG, skillRequirementLabel, type SkillRequirement } from '../src/skill-content.ts';
+import { SKILL_DEFINITIONS, canUseSkill, skillWeapon, skillRequirementLabel, type SkillRequirement } from '../src/skill-content.ts';
+import { skillIconDrawing, skillIconSVG } from '../src/skill-icon.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
 import { deriveAttackStats, weaponActionRate } from '../src/equipment.ts';
 import { Simulation } from '../src/simulation.ts';
@@ -100,7 +101,7 @@ test('each skill has a distinct procedural icon and all metadata is immutable', 
     assert.ok(Object.isFrozen(skill));
     const svg = skillIconSVG(skill.id);
     assert.ok(svg.includes('<path')); assert.ok(!svg.includes('https:'));
-    return svg;
+    return JSON.stringify(skillIconDrawing(skill.id, false));
   });
   assert.equal(new Set(icons).size, Object.keys(SKILL_DEFINITIONS).length);
 });

@@ -3,7 +3,8 @@ import test from 'node:test';
 import { createCharacterSheet } from '../src/items.ts';
 import { SKILL_TREE, SKILL_NODES, SKILL_TERRITORIES, SKILL_DOCTRINES, allocateNode, chooseDoctrine, getTreeBonuses } from '../src/skill-tree.ts';
 import { buildSkillRoutes, previewSkillRoute, allocateSkillRoute } from '../src/skill-tree-routes.ts';
-import { SKILL_DEFINITIONS, skillIconSVG } from '../src/skill-content.ts';
+import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
+import { skillIconSVG } from '../src/skill-icon.ts';
 import { SKILL_SPECIALIZATIONS, specializationNode } from '../src/skill-progression.ts';
 const routes=buildSkillRoutes(new Set(['origin']));
 test('six territories form a bounded immutable connected undirected atlas',()=>{

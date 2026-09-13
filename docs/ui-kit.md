@@ -201,3 +201,9 @@ What's new opens a read-only release panel from the character hall. A compact ve
 The equipment heading displays a compact Gear power score using the same equipped-only calculation as the leaderboard. It refreshes with the character sheet, counts two-handed weapons across both hands, and replaces the occupied-slot counter.
 
 Shared control hover uses a thin translucent silver edge and a slight surface lift. Keyboard focus retains a distinct 1px silver outline; semantic danger, rarity and valid-drop colors remain separate.
+
+### Active-skill reliefs
+
+`skill-icon-content.ts` owns all 30 active-skill compositions in a 64-unit space: reusable blades, shields, arrows, crystals and greaves, with skill-specific motion silhouettes. Steel, gold and elemental materials share beveled shading, inset facets and sparse engraving. `skill-icon.ts` compiles the same bounded drawing list for SVG controls and Canvas. SVG paint IDs are instance-local. Below 40px, fine engraving is omitted while the silhouettes and facets remain.
+
+`skill-icon-canvas.ts` draws synchronously and caches at most two 144px stamps per skill for the native hotbar and atlas. Large inspection drawings stay vector. Skill identity retains its material colors; allocation, route, hover and search states remain on the atlas lenses/connections, and parent opacity still dims unavailable controls. Passive engravings retain their separate, lightweight paths. The former outline-only active artwork and asynchronous HUD image loader have been removed. See the local Skill icon workshop for actual-size samples; no generated bitmap assets are used.
