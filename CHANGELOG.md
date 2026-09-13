@@ -1,5 +1,33 @@
 # Evergrow changelog
 
+## v0.5.1 — 2026-09-13T16:53:00Z
+
+### New
+
+- Seven auras support melee, bow and spell builds: Ironroot, Blood Oath, Hawkeye, Thornbound, Elemental Resonance, Stillwater and Elemental Spikes.
+- Assign an aura to activate it and reserve mana. Invest up to twenty ranks for stronger effects and lower reservation.
+- Reserved mana appears in the orb; active effects, remaining protection, stored casts and aura buildup appear above the skill bar.
+- Six more Uniques reshape Piercing Shot, Rain of Arrows, Ricochet, Bulwark, Backstab and Arc Lightning, bringing the collection to eighteen.
+- Hover underlined terms in item, stat, skill and Unique tooltips for nested explanations of their effects.
+- Target status icons show remaining control, burn, slow, Red Harvest marks and elemental Exposure.
+
+### Tweaks
+
+- Weapon skills and non-damaging support skills cost less mana, making low-Intelligence builds easier to sustain.
+- Unique powers lead with their affected skill, and compact Unique markers remain readable on narrow items.
+- Shorter skill, Technique and Unique descriptions keep detailed interactions one hover away.
+- Aura unlocks branch from existing routes, with Blood Oath and Elemental Resonance reachable at twenty-five points.
+
+### Fixes
+
+- Thornbound keeps nearby bosses slowed continuously at half strength instead of dropping between pulses.
+- Wards and borrowed-life barriers immediately respect your new maximum life after equipment changes.
+- Focused buff icons and explanation links no longer pass keyboard activation through to combat controls.
+- Living Stone's smaller nodes describe their armor bonus correctly; the endpoint clearly enables Afterguard.
+- Expired effects, consumed marks and removed Unique powers clear their corresponding status indicators.
+
+> Existing local and cloud characters remain compatible. No save reset or skill refund is required. Reload the game to apply this update.
+
 ## v0.5.0 — 2026-09-13T10:06:00Z
 
 ### New

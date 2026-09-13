@@ -355,6 +355,22 @@ test('second-batch transient powers clear on unequip, death and checkpoint resto
  }
 });
 
+test('equipment refresh immediately clamps ward and borrowed-life budgets to the new maximum life',()=>{
+ const f=fixture('borrowed-life'),p=f.p;
+ p.character.allocatedNodes.push('skill:runicWard');
+ p.character.attributes.vitality+=200;refreshCharacter(p);
+ p.skillEffects={echoes:[],ward:{remaining:5,capacity:p.maxHp*.35},borrowed:{remaining:4,capacity:100}};
+ p.character.attributes.vitality-=200;refreshCharacter(p);
+ assert.equal(p.skillEffects.ward!.capacity,p.maxHp*.35);
+ assert.equal(p.skillEffects.borrowed!.capacity,0);
+ // A ward that expires this step must no longer consume the shared budget.
+ p.skillEffects.ward={remaining:.01,capacity:p.maxHp*.35};
+ p.skillEffects.borrowed={remaining:4,capacity:p.maxHp*.1};
+ advanceSkillEffects(p,.02);
+ assert.equal(p.skillEffects.ward,undefined);
+ assert.equal(p.skillEffects.borrowed!.capacity,p.maxHp*.1);
+});
+
 test('a decoy does not prevent the same committed melee swing from hitting its nearby owner',()=>{
  const f=fixture('ashen-double');f.cast();f.p.x=f.p.prevX=16;f.p.derived.blockChance=0;f.p.derived.lifeRegeneration=0;
  const e=f.sim.spawnEnemy('stalker',26,0)!;e.state='chase';e.awareness=1;e.slowTime=0;e.stagger=0;

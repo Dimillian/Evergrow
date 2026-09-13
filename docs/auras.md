@@ -37,3 +37,5 @@ Ironroot augments the shared armor derivation and physical hit mitigation. It us
 - `/character.html?panel=skills&auras&node=skill:bloodOath`: inspect rank controls and placement.
 
 `auras.test.ts` covers routes/ranks, transactional reservation, capped recovery, actual damage/status changes, release snapshots, buff projection and save restoration. Existing tree geometry, progression and isolated skill studies include the new leaves. These are headless checks, not automated gameplay testing.
+
+September 13 release audit: Thornbound compensates for shared boss duration resistance so proximity coverage remains continuous at half potency. Leaving its range or line of sight still releases the slow after the short refresh window. A multi-pulse regression covers a stationary boss and subsequent exit.

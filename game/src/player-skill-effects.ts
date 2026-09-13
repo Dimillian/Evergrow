@@ -64,10 +64,11 @@ export function mitigateSkillHit(p: Player, amount:number):{damage:number;absorb
 }
 export function advanceSkillEffects(p: Player,dt:number,emitEcho?:(echo:SkillEcho)=>boolean|void):void {
   const s=p.skillEffects;if(!s)return;if(p.dead){p.skillEffects=undefined;return;}
-  advanceUniqueEffects(p,dt);
   for(const id of ['brace','rallyOfIron','ghostHunt'] as const){const b=s[id];if(b){b.remaining=Math.max(0,b.remaining-dt);if(!b.remaining||!p.character.allocatedNodes.includes(`skill:${id}`)||!canUseSkill(id,p.equipment))delete s[id];}}
   for(const [id,b]of Object.entries(s.shelters??{})){b.remaining=Math.max(0,b.remaining-dt);if(!b.remaining||!p.character.allocatedNodes.includes(`skill:${id}`)||!canUseSkill(id as SkillId,p.equipment))delete s.shelters![id as SkillId];}
   if(s.ward){s.ward.remaining=Math.max(0,s.ward.remaining-dt);s.ward.capacity=Math.min(s.ward.capacity,p.maxHp*.35);if(!s.ward.remaining||!p.character.allocatedNodes.includes('skill:runicWard')||!canUseSkill('runicWard',p.equipment))delete s.ward;}
+  // The shared barrier budget uses the current life limit and surviving ward.
+  advanceUniqueEffects(p,dt);
   if(s.archer&&!s.ghostHunt){delete s.archer;s.echoes=[];}
   if(!p.character.allocatedNodes.includes('skill:ghostHunt')||!canUseSkill('ghostHunt',p.equipment))s.echoes=[];
   for(const echo of s.echoes)echo.delay-=dt;

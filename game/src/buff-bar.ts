@@ -27,7 +27,7 @@ export class BuffBar {
     const opts = { signal: this.life.signal };
     this.element.addEventListener('pointerover', show, opts); this.element.addEventListener('focusin', show, opts);
     this.element.addEventListener('click', show, opts);
-    this.element.addEventListener('keydown', event => { if (event.key === 'Tab') event.stopPropagation(); }, opts);
+    this.element.addEventListener('keydown', event => { if (event.key !== 'Escape') event.stopPropagation(); }, opts);
     this.element.addEventListener('pointerleave', () => this.tips.defer(), opts);
     // Never let buff inspection become an attack, dodge or camera gesture.
     for (const type of ['pointerdown', 'contextmenu', 'dblclick']) this.element.addEventListener(type, event => event.stopPropagation(), opts);

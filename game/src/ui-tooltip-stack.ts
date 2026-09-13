@@ -27,7 +27,9 @@ export class UITooltipStack {
     mount.addEventListener('pointerout', () => this.defer(), options);
     mount.addEventListener('focusout', () => this.defer(), options);
     mount.addEventListener('keydown', event => {
-      if (event.key === 'Tab' && ((event.target as Element).closest('[data-ui-term], .ui-explanation'))) event.stopPropagation();
+      // Keep native focus/activation, but do not pass Space or other gameplay
+      // bindings through an inspected explanation. Escape closes deepest first.
+      if (event.key !== 'Escape' && ((event.target as Element).closest('[data-ui-term], .ui-explanation'))) event.stopPropagation();
     }, options);
     document.addEventListener('keydown', event => {
       if (event.key !== 'Escape' || !this.cards.length) return;

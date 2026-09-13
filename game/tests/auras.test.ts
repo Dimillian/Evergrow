@@ -7,6 +7,7 @@ import { refreshCharacter } from '../src/character.ts';
 import { executeCharacterCommand } from '../src/character-commands.ts';
 import { buildSkillRoutes } from '../src/skill-tree-routes.ts';
 import { activeBuffs } from '../src/active-buffs.ts';
+import { advanceEnemyStatuses } from '../src/combat-status.ts';
 import { damageEnemy } from '../src/combat-damage.ts';
 import { generateItem } from '../src/items.ts';
 import { deriveAttackStats } from '../src/equipment.ts';
@@ -103,6 +104,22 @@ test('Hawkeye snapshots extra arrow speed, reach and distant critical chance on 
  const on=make(false),off=make(true);for(let i=0;i<200&&!on.simulation.projectiles.length;i++){on.step();off.step();}
  const a=on.simulation.projectiles[0],b=off.simulation.projectiles[0];assert.ok(a&&b);close(Math.hypot(a.vx,a.vy)/Math.hypot(b.vx,b.vy),1.2);assert.equal(a.maxLife,b.maxLife);close(a.effects!.hawkeye!.crit,.1);
  on.simulation.player.character.skillSlots.fill(null);refreshCharacter(on.simulation.player);close(a.effects!.hawkeye!.crit,.1);
+});
+
+test('Thornbound continuously slows nearby bosses at half potency and releases them after leaving',()=>{
+ const {p,sim}=fixture('thornbound'),boss=sim.spawnEnemy('warden',30,0)!;
+ advanceAuras(p,[boss],1,false,()=>true,()=>{},()=>{});
+ for(let tick=0;tick<360;tick++){
+  advanceEnemyStatuses(boss,1/120,()=>{});
+  advanceAuras(p,[boss],1/120,false,()=>true,()=>{},()=>{});
+  assert.ok(boss.slowTime>0,`slow dropped at tick ${tick}`);close(boss.slowFactor,.9);
+ }
+ boss.x=300;
+ for(let tick=0;tick<90;tick++){
+  advanceEnemyStatuses(boss,1/120,()=>{});
+  advanceAuras(p,[boss],1/120,false,()=>true,()=>{},()=>{});
+ }
+ assert.equal(boss.slowTime,0);assert.equal(boss.slowFactor,1);
 });
 
 test('pressing an assigned aura never casts, pays mana or starts an action',()=>{
