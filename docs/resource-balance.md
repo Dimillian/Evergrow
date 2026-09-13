@@ -27,3 +27,7 @@ Level-35 synthetic caster comparison (not a cloud character):
 | Strong, eight recovery pebbles | 1,134 → 563 | 37 → 9 |
 
 Expected first-hit damage is unchanged across all 28 fixtures, covered by a regression against the frozen baseline. The strong caster still immediately kills the benchmark elite; that is evidence for the next damage/encounter slice, not a successful difficulty target.
+
+## Mana reservation
+
+Assigned [auras](auras.md) reserve 30–45% of maximum mana at rank one. The orb and resource recovery use the unreserved capacity. Aura ranks reduce reservation; ordinary mana-cost bonuses do not. Removing an aura never refills mana. Stillwater reduces action costs while stationary, after the ordinary reduction curve.

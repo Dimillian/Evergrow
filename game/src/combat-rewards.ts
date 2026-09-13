@@ -1,3 +1,4 @@
+import { manaCapacity } from './auras.ts';
 import { manaVialAmount } from './mana-content.ts';
 import { isBossKind } from './wilderness-boss-content.ts';
 import { metric } from './chronicle.ts';
@@ -21,9 +22,9 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
   const { player } = context;
   const dropPlayerLevel=player.level;
   kills++;
-  if (!player.dead) metric(player.chronicle,'manaRestored',Math.min(player.maxMana-player.mana,player.derived.manaOnKill));
-  if (!player.dead) metric(player.chronicle,'manaRecovery:kill',Math.min(player.maxMana-player.mana,player.derived.manaOnKill));
-  if (!player.dead) player.mana = Math.min(player.maxMana, player.mana + player.derived.manaOnKill);
+  if (!player.dead) metric(player.chronicle,'manaRestored',Math.min(manaCapacity(player)-player.mana,player.derived.manaOnKill));
+  if (!player.dead) metric(player.chronicle,'manaRecovery:kill',Math.min(manaCapacity(player)-player.mana,player.derived.manaOnKill));
+  if (!player.dead) player.mana = Math.min(manaCapacity(player), player.mana + player.derived.manaOnKill);
   const goldMultiplier = player.derived.goldFindMultiplier;
   const reward = Math.max(1, Math.round(enemy.xpReward * xpLevelFactor(player.level, enemy.level) * player.derived.xpGainMultiplier));
   const levels = awardCharacterExperience(player, reward);

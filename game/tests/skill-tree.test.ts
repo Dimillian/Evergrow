@@ -16,11 +16,11 @@ test('six territories form a bounded immutable connected undirected atlas',()=>{
  assert.ok(SKILL_TREE.edges.length-SKILL_TREE.nodes.length+1>=25);
 });
 test('active unlocks are paced across the journey and never require another skill or tradeoff',()=>{
- const skills=SKILL_TREE.nodes.filter(n=>n.skill);assert.equal(skills.length,30);
+ const skills=SKILL_TREE.nodes.filter(n=>n.skill);assert.equal(skills.length,Object.keys(SKILL_DEFINITIONS).length);
  for(const n of skills){const cost=routes.get(n.id)!.cost,path=previewSkillRoute(routes,n.id);assert.ok(path.slice(0,-1).every(id=>!SKILL_NODES.get(id)!.skill&&!SKILL_NODES.get(id)!.keystone&&!SKILL_NODES.get(id)!.doctrine));
   if(SKILL_DEFINITIONS[n.skill!].tier==='ultimate')assert.ok(cost>=22&&cost<=33);assert.ok(skillIconSVG(n.skill!).includes('<path'));
  }
- for(const territory of SKILL_TERRITORIES){const group=skills.filter(n=>n.territory===territory.id);assert.equal(group.length,5);assert.ok(group.some(n=>SKILL_DEFINITIONS[n.skill!].tier==='ultimate'));}
+ for(const territory of SKILL_TERRITORIES){const group=skills.filter(n=>n.territory===territory.id&&SKILL_DEFINITIONS[n.skill!].tier!=='aura');assert.equal(group.length,5);assert.ok(group.some(n=>SKILL_DEFINITIONS[n.skill!].tier==='ultimate'));}
  assert.equal(routes.get('skill:brace')!.cost,2);assert.equal(routes.get('skill:sidestep')!.cost,3);assert.equal(routes.get('skill:runicWard')!.cost,5);assert.equal(routes.get('skill:meteor')!.cost,14);
 });
 test('passive specialties have distinct identities, connected groups and honest geometry bounds',()=>{

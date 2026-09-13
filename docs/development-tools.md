@@ -106,3 +106,9 @@ The Interface workspace’s **HUD & shortcut menu** view (`/character.html?panel
 ### Unique batch-three studies
 
 The skill playground Unique selector includes all eighteen signatures. Heartwood’s study holds for 0.65 seconds then releases through normal simulation input. Red Harvest’s rear showcase turns its stationary target to face the player for one marked follow-up. Patient Bastion uses the existing incoming-hit scenario and adds basic attacks after the first guard hit. These are authored isolated probes; no playable saves are accessed. See [Unique items](unique-items.md) for direct preview links.
+
+### Active-effect review
+
+Interface → HUD & active buffs opens `/character.html?panel=hud&loadout=shield&buffs`. The existing frozen HUD review stages Spellweave, Afterguard and Brace with production glyphs, time readouts and nested explanations. Hover/focus/tap icons and underlined terms to inspect the cards. Timers are deliberately frozen; this review advances no simulation and has no playable saves.
+
+Aura previews: the existing skill playground supports seven aura studies and shared buff/buildup icons. `/character.html?panel=hud&auras` stages reserved mana and Blood Oath stacks; `/character.html?panel=skills&auras&node=skill:bloodOath` inspects the existing-branch placement. Both are disposable and save-free. See [Auras](auras.md).

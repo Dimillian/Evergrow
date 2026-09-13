@@ -1,3 +1,4 @@
+import { isAura } from './aura-content.ts';
 import { hasUnique, UNIQUE_RULES } from './unique-content.ts';
 import { harvestRear, lungeReturn, returningProjectile, storeFireballs, type StoredFireball } from './unique-combat.ts';
 import { skillEffects, consumeRally, snapshotSkillOffense, queueSkillEcho } from './player-skill-effects.ts';
@@ -41,6 +42,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   const { player: p, enemies } = context;
   if (!Number.isInteger(slot) || slot < 0 || slot >= 5 || p.dead || p.attack || p.dash || p.dodgeTime > 0 || p.castTime > 0) return false;
   const id = p.character.skillSlots[slot];
+  if(isAura(id))return false;
   if (!id || !unlockedSkills(p.character.allocatedNodes).includes(id)) return false;
   const weapon = skillWeapon(id, p.equipment);
   if (!weapon) return false;
@@ -109,6 +111,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
 
   p.castTime = 1 / attack.attacksPerSecond; p.castAngle = p.angle;
   switch (recipe.kind) {
+    case 'aura': return false;
     case 'step': {
       const angle=p.angle;
       p.dash={angle:angle+(recipe.retreat?Math.PI:0),remaining:recipe.duration,speed:recipe.speed,damage:0,radius:0,skill:id,hitIds:new Set()};

@@ -1,3 +1,4 @@
+import { AURA_IDS, AURAS } from './aura-content.ts';
 import { SKILL_EXECUTION, groundEffectPulseCount } from './skill-execution-content.ts';
 import type { SkillId } from './character-types.ts';
 import type { Equipment, WeaponDefinition } from './model.ts';
@@ -9,7 +10,7 @@ export interface SkillDefinition {
   readonly description: string;
   readonly requirement: SkillRequirement;
   readonly domain: 'Might' | 'Cunning' | 'Arcana';
-  readonly tier: 'basic' | 'advanced' | 'ultimate';
+  readonly tier: 'basic' | 'advanced' | 'ultimate' | 'aura';
   readonly manaCost: number;
   readonly cooldown: number;
   readonly damageMultiplier: number;
@@ -18,6 +19,7 @@ export interface SkillDefinition {
 
 /** Costs, potency and equipment requirements are shared by the atlas, HUD and combat. */
 export const SKILL_DEFINITIONS: Readonly<Record<SkillId, Readonly<SkillDefinition>>> = Object.freeze({
+  ...Object.fromEntries(AURA_IDS.map(id=>[id,Object.freeze({id,name:AURAS[id].name,description:AURAS[id].description,requirement:'any',domain:AURAS[id].domain,tier:'aura',manaCost:0,cooldown:0,damageMultiplier:0,color:AURAS[id].color})])) as Record<typeof AURA_IDS[number],Readonly<SkillDefinition>>,
   repulse: Object.freeze({ id: 'repulse', name: 'Repulse', description: 'Drive a broad shield shockwave through nearby enemies, damaging and stunning the front line.', requirement: 'shield', domain: 'Might', tier: 'advanced', manaCost: 18, cooldown: 5, damageMultiplier: 1.65, color: '#e5bd80' }),
   ironCitadel: Object.freeze({ id: 'ironCitadel', name: 'Iron Citadel', description: 'Strike every enemy around your shield, then take 45% less hit damage for 5 seconds. Stance mitigation uses the strongest active value.', requirement: 'shield', domain: 'Might', tier: 'ultimate', manaCost: 34, cooldown: 28, damageMultiplier: 2.4, color: '#f0d5a2' }),
   smokeVeil: Object.freeze({ id: 'smokeVeil', name: 'Smoke Veil', description: 'Slow surrounding enemies by 50% for 3 seconds and take 20% less hit damage for 2 seconds. No weapon requirement; deals no damage.', requirement: 'any', domain: 'Cunning', tier: 'advanced', manaCost: 15, cooldown: 9, damageMultiplier: 0, color: '#9bbfc6' }),

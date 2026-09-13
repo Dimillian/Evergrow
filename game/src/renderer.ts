@@ -765,7 +765,7 @@ export class Renderer {
       pose.effectTime = settings.reducedMotion ? 0 : sim.time;
       if (sim.portal.active) { pose.cast = .45 * Math.min(1, sim.portal.progress * 4); pose.castColor = '#b5a0ee'; }
       this.actor(px, py, pose);
-      drawPlayerSkillEffects(c,p,px,py,settings.reducedMotion?0:sim.time);
+      drawPlayerSkillEffects(c,p,px,py,settings.reducedMotion?0:sim.time,pose,settings.reducedMotion);
     } });
     entries.sort((a, b) => a.y - b.y);
     for (const entry of entries) {

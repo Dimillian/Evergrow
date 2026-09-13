@@ -4,7 +4,7 @@ The atlas was published in v0.3.16 on 2026-09-12. The twenty-rank progression be
 
 ## Open passive network — local September 13 follow-up
 
-The local atlas now has **1,824 nodes, 2,118 undirected connections and 174 groups**: 144 passive neighborhoods and 30 active-skill groups. It retains Bastion, Forge, Hunt, Veil, Crucible and Wellspring, all 30 active skills, all 90 Techniques, eight Doctrine families, four keystones and twenty purchased skill ranks. The root is free; every other node costs one point. Each level still grants one skill point and five attribute points.
+The local atlas now has **1,831 nodes, 2,125 undirected connections and 181 groups**: 144 passive neighborhoods, 30 active-skill groups and seven aura leaves. It retains Bastion, Forge, Hunt, Veil, Crucible and Wellspring, all 30 active skills, seven optional auras, all 90 Techniques, eight Doctrine families, four keystones and twenty purchased skill ranks. The root is free; every other node costs one point. Each level still grants one skill point and five attribute points.
 
 The six main active-skill trunks retain every minimum unlock cost in the table below. The network between them is rebuilt. Six compact silhouettes connect through short neighboring routes: 42 rings, 22 crescents, 25 pointed leaves, 25 kites, 26 twin loops and four forks. All 144 passive neighborhoods have at least two distinct entry nodes (105 have four, 35 have three, four have two). The graph has 295 independent cycles. No connector crosses another or passes through an unrelated node. Ordinary route segments are at most 155 units; the six Origin links are the longest at 240. There are no sweeping cross-country curves or disconnected-looking bridges. Unused outer road tails are trimmed.
 
@@ -243,3 +243,11 @@ Character level, XP, attributes, appearance, wallet, gear, inventory, storage, l
 Code checks cover all 30 actions/90 Techniques, exact allocation and rank ledgers, exclusive choices, collision movement, finite barriers, charge consumption, echo snapshots/expiry, tradeoff stats, gear changes and old-tree refunds. The save-free local review is [the atlas](http://127.0.0.1:5173/character.html?panel=skills&zoom=overview&map). Its state is disposable. Combat feel and numerical balance still need the player's playtest: especially Brace uptime, ward value against bosses, travel cost to ultimates and the opportunity cost of a five-slot loadout. No automated browser gameplay was run.
 
 The follow-up adds matched-point, matched-rarity probes at levels 10/25/50/100, and finite-resource/follow-up/defensive playground modes. Read [balance follow-up](skill-tree-balance-2026-09-12.md) for measurements, reproducible commands and remaining player-test questions. Current version-2 allocations and paid points remain valid; no additional save reset or refund.
+
+### Spellweave clarity
+
+Spellweave is automatic once any gear/tree source grants its bonus; Borrowed Flame also enables it independently. It needs no assigned slot. Mana-only Spellweave steps now identify the endpoint as the enabling purchase. Bonus nodes expose an underlined explanation in both hover and inspector views, and the inspector identifies missing melee/magic equipment. Sword + wand naturally alternates its basic attacks when held. The active-buff strip shows which action is empowered and the real remaining four-second window; eligible ready action buttons are outlined. Nested explanations cover whole-action consumption and equipment without adding long paragraphs to the tree. No allocation, balance or save changes.
+
+## Aura leaves
+
+Seven auras attach to existing routes at 20–30 origin points, without extra travel nodes. Assignment automatically activates them and reserves mana. Twenty purchased ranks improve potency and reservation efficiency. Blood Oath and Elemental Resonance cost 25 points following placement feedback. See [Auras](auras.md) for effects, costs, UI and runtime rules.

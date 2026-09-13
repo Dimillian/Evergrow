@@ -1,3 +1,4 @@
+import { isAura, resolveAura, auraReservation } from './aura-content.ts';
 import { hasUnique, UNIQUE_RULES } from './unique-content.ts';
 import { AFFIX_COMBAT_RULES } from './equipment-affix-content.ts';
 import type { ActionResult, CharacterSheet, DerivedCharacterStats, SkillId } from './character-types.ts';
@@ -146,6 +147,7 @@ export function configureSkill(sheet: CharacterSheet, id: SkillId, rank: number,
   if (!Number.isInteger(rank) || rank < 1 || rank > learnedSkillRank(sheet, id)) return { ok: false, message: 'Choose a purchased rank.' };
   if (specialization !== null && !SKILL_SPECIALIZATIONS.some(s => s.id === specialization && s.skill === id && sheet.allocatedNodes.includes(specializationNode(s.id))))
     return { ok: false, message: 'Unlock this specialization first.' };
+  if(isAura(id)&&auraReservation({...sheet,activeSkillRanks:{...sheet.activeSkillRanks,[id]:rank}})>=100)return {ok:false,message:'This rank reserves all your mana. Remove another aura first.'};
   sheet.activeSkillRanks[id] = rank;
   if (specialization === null) delete sheet.skillSpecializations[id]; else sheet.skillSpecializations[id] = specialization;
   return { ok: true };
@@ -165,6 +167,7 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
   const cooldown = Math.max(cooldownFloor, base.cooldown * stats.cooldownMultiplier * rankCooldown * (variant?.cooldown ?? 1));
   const damageMultiplier = base.damageMultiplier * skillRankDamageMultiplier(rank, bonusRanks) * (variant?.damage ?? 1) * (overload ? 1.3 : 1);
   const recipe: SkillExecution = { ...SKILL_EXECUTION[id] };
+  if(recipe.kind==='aura')recipe.rank=rank;
   // Resolve variations once at release, never by inspecting a player's current gear mid-flight.
   const v = variant?.id;
   if (recipe.kind === 'sweep') {
@@ -226,7 +229,7 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
     ...(!recipe.effects.blastRadius && stats.projectilePierce ? { pierce: Math.min(12, (recipe.effects.pierce ?? 0) + stats.projectilePierce) } : {}) };
 
   if(id==='iceNova'&&recipe.kind==='radial'&&sheet&&hasUnique(sheet,'winters-reach'))recipe.targetRange=UNIQUE_RULES.novaRange;
-  return { rank, bonusRanks, effectiveRank, variant, damageMultiplier, recipe, mana: Math.max(1, Math.round(base.manaCost * stats.manaCostMultiplier * multiplier * 10) / 10),
+  return { rank, bonusRanks, effectiveRank, variant, damageMultiplier, recipe, reservation:isAura(id)?resolveAura(id,rank).reservation:0, mana: isAura(id)?0:Math.max(1, Math.round(base.manaCost * stats.manaCostMultiplier * multiplier * 10) / 10),
     cooldown, upkeep: id === 'tempest' ? Math.round(18 * stats.manaCostMultiplier * multiplier * 10) / 10 : 0 };
 }
 
@@ -243,5 +246,5 @@ export function validSkillProgression(sheet: CharacterSheet): boolean {
   for (const [id, variant] of Object.entries(sheet.skillSpecializations)) {
     if (!learnedSkillRank(sheet, id as SkillId) || !SKILL_SPECIALIZATIONS.some(s => s.skill === id && s.id === variant && sheet.allocatedNodes.includes(specializationNode(s.id)))) return false;
   }
-  return !sheet.arcaneOverload || sheet.allocatedNodes.includes(OVERLOAD_NODE);
+  return auraReservation(sheet)<100 && (!sheet.arcaneOverload || sheet.allocatedNodes.includes(OVERLOAD_NODE));
 }

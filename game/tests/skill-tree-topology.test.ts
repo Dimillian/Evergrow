@@ -5,7 +5,7 @@ import { buildSkillRoutes, previewSkillRoute } from '../src/skill-tree-routes.ts
 
 test('opening passive routes preserves every active skill unlock cost and optional skill branches', () => {
   const routes = buildSkillRoutes(new Set(['origin']));
-  const expected = { repulse: 15, ironCitadel: 33, smokeVeil: 14, nightReaping: 33,
+  const expected = { ironroot:20, bloodOath:25, hawkeye:29, thornbound:30, elementalResonance:25, stillwater:20, elementalSpikes:30, repulse: 15, ironCitadel: 33, smokeVeil: 14, nightReaping: 33,
     brace: 2, shieldBash: 4, bulwark: 6, cleave: 2, lunge: 5, whirlwind: 9, earthshatter: 13, rallyOfIron: 23,
     volley: 2, ricochet: 8, piercingShot: 10, rainOfArrows: 13, ghostHunt: 23, backstab: 2, sidestep: 3, vaultingShot: 8,
     fireball: 2, arcLightning: 3, meteor: 14, cataclysm: 24, tempest: 26, iceNova: 3, runicWard: 5,

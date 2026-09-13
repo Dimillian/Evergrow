@@ -215,6 +215,11 @@ export class GameAudio {
     return 1;
   }
 
+  spellweave(kind: 'melee' | 'spell'): void {
+    if (!this.enabled || !this.foreground || this.volumes.sfx <= 0 || !this.ctx || !this.bus || this.disposed || this.ctx.state !== 'running') return;
+    this.tone(kind === 'spell' ? 460 : 330, kind === 'spell' ? 690 : 440, .12, .035, 1, 'sine');
+  }
+
   play(event: CombatEvent) {
     if (!this.enabled || !this.foreground || this.volumes.sfx <= 0 || !this.ctx || !this.bus || this.disposed || this.ctx.state !== 'running') return;
     if (event.type === 'spawn' || event.type === 'engagement') return;

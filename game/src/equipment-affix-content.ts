@@ -6,7 +6,7 @@ export interface AffixDefinition { name: string; stat: StatKey; base: number; gr
 export type SkillStat = `skill:${SkillId}`;
 export const SKILL_STATS = Object.freeze(Object.fromEntries(Object.values(SKILL_DEFINITIONS).map(s => [`skill:${s.id}`, `${s.name} ranks`])) as Record<SkillStat, string>);
 export const isSkillStat = (stat: string): stat is SkillStat => Object.hasOwn(SKILL_STATS, stat);
-export const SKILL_AFFIXES: readonly AffixDefinition[] = Object.freeze(Object.values(SKILL_DEFINITIONS).map(s => Object.freeze({ name: s.name, stat: `skill:${s.id}` as SkillStat, base: 1, growth: 0 })));
+export const SKILL_AFFIXES: readonly AffixDefinition[] = Object.freeze(Object.values(SKILL_DEFINITIONS).filter(s=>s.tier!=='aura').map(s => Object.freeze({ name: s.name, stat: `skill:${s.id}` as SkillStat, base: 1, growth: 0 })));
 export const SPECIAL_AFFIXES: readonly AffixDefinition[] = Object.freeze([
   { name: 'Wellsip', stat: 'manaOnKill', base: 1, growth: .04, weight: 1 },
   { name: 'Expanse', stat: 'areaPercent', base: 10, growth: .3, weight: .55 },

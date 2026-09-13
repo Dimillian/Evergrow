@@ -1,9 +1,48 @@
+import { AURA_IDS, AURAS } from './aura-content.ts';
+import { auraPower } from './auras.ts';
+import { SPELLWEAVE_FEEDBACK_DURATION } from './affix-combat.ts';
+import type { CharacterPose } from './art-types.ts';
+import { playerMotion, characterTransform, PLAYER_ART_SCALE } from './character-motion.ts';
+import { projectArmPoint } from './player-arm-rig.ts';
+import { transformPoint } from './art-primitives.ts';
 import { UNIQUE_RULES } from './unique-content.ts';
 import { deriveAttackStats } from './equipment.ts';
 import type { Player } from './model.ts';
 /** Bounded, read-only stance engravings drawn beside the actor in the world pass. */
-export function drawPlayerSkillEffects(c:CanvasRenderingContext2D,p:Player,x:number,y:number,time:number):void {
- const s=p.skillEffects;if(!s||p.dead)return;c.save();c.translate(x,y);c.lineWidth=1.4;
+export function drawPlayerSkillEffects(c:CanvasRenderingContext2D,p:Player,x:number,y:number,time:number,pose:CharacterPose,reducedMotion=false):void {
+ if(p.dead)return;
+ const auras=AURA_IDS.filter(id=>auraPower(p,id)>0);
+ if(auras.length){
+   c.save();c.translate(x,y+2);c.lineWidth=1.4;c.globalAlpha=.65;
+   for(let i=0;i<auras.length;i++){
+     const angle=(reducedMotion?0:time*.18)+i*Math.PI*2/auras.length;
+     c.strokeStyle=c.fillStyle=AURAS[auras[i]].color;
+     c.beginPath();c.ellipse(0,0,29,11,0,angle,angle+Math.PI*2/auras.length*.82);c.stroke();
+     const ax=Math.cos(angle)*29,ay=Math.sin(angle)*11;
+     c.beginPath();c.moveTo(ax,ay-3);c.lineTo(ax+2,ay);c.lineTo(ax,ay+3);c.lineTo(ax-2,ay);c.closePath();c.fill();
+   }
+   c.restore();
+ }
+
+ const weave=p.affixBuffs;
+ if(weave && (weave.melee > 0 || weave.spell > 0 || (weave.spent?.remaining ?? 0) > 0)){
+   const spent=weave.spent, flash=spent ? spent.remaining/SPELLWEAVE_FEEDBACK_DURATION : 0, motion=playerMotion(pose);
+   const hands = [{weapon:p.equipment.mainHand, hand:motion.weaponArm.hand},
+     ...(p.equipment.offHand?.kind==='weapon'?[{weapon:p.equipment.offHand.weapon,hand:motion.offArm.hand}]:[])];
+   c.save();c.translate(x,y);c.lineWidth=1.4;
+   for(const {weapon,hand} of hands){
+     const kind=weapon.attackKind==='bolt'?'spell':weapon.attackKind==='melee'?'melee':null;
+     if(!kind)continue;
+     const ready=weave[kind]>0, pulse=spent?.kind===kind?flash:0, expansion=reducedMotion?0:pulse;
+     if(!ready&&!pulse)continue;
+     const body=transformPoint(motion.body,projectArmPoint(hand));
+     const point=transformPoint(characterTransform(pose),[body[0]*PLAYER_ART_SCALE,body[1]*PLAYER_ART_SCALE]);
+     c.strokeStyle=kind==='spell'?'#c7a0ef':'#e5bd80';c.globalAlpha=(ready?.45:0)+pulse*.2;
+     c.beginPath();c.ellipse(point[0],point[1],5+expansion*12,9+expansion*10,0,time*.7,time*.7+Math.PI*1.6);c.stroke();
+   }
+   c.restore();
+ }
+ const s=p.skillEffects;if(!s)return;c.save();c.translate(x,y);c.lineWidth=1.4;
  for(const [id,b]of Object.entries(s.shelters??{})){c.strokeStyle=id==='smokeVeil'?'#9bbfc6':'#f0d5a2';c.globalAlpha=Math.min(.7,b.remaining*2);for(let i=0;i<6;i++){const a=i*Math.PI/3+time*.1;c.beginPath();c.ellipse(0,-8,27+i%2*3,16+i%2*4,0,a,a+.55);c.stroke();}}
  if(s.embers?.length){for(let i=0;i<s.embers.length;i++){
    const a=time*1.2+i*Math.PI*2/s.embers.length,ex=Math.cos(a)*27,ey=-22+Math.sin(a)*12;

@@ -1,3 +1,4 @@
+import { activeBuffs } from './active-buffs.ts';
 import { ExpeditionPanel } from './expedition-panel.ts';
 import { executeDropItem, type DropItemSource } from './drop-item-command.ts';
 import { hoveredGroundLoot, type GroundLootNameplates } from './ground-loot-hover.ts';
@@ -136,6 +137,7 @@ export class Game {
   private padAimAngle: number | null = null;
   private padAimDistance = 180;
   private mouse = this.input.pointer;
+  private pointerOverEffects = false;
   readonly performance = new FrameProfiler(new URLSearchParams(location.search).has('profile'));
   private last = performance.now();
   private animation = 0;
@@ -468,7 +470,8 @@ export class Game {
     this.canvas.addEventListener('pointercancel', () => this.clearInput(), { signal });
   }
 
-  private updatePointer(event: { clientX: number; clientY: number }) {
+  private updatePointer(event: { clientX: number; clientY: number; target?: EventTarget | null }) {
+    this.pointerOverEffects = event.target instanceof Element && !!event.target.closest('.buff-bar, .ui-explanation');
     this.usingGamepad = false;
     this.input.movePointer(event.clientX, event.clientY, this.canvas.getBoundingClientRect(),
       this.renderer.width, this.renderer.height);
@@ -477,7 +480,7 @@ export class Game {
   }
 
   private pointerInHUD() {
-    return isGameUIPoint(this.mouse.x, this.mouse.y, this.renderer.width, this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible);
+    return this.pointerOverEffects || isGameUIPoint(this.mouse.x, this.mouse.y, this.renderer.width, this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible);
   }
 
   private resize() {
@@ -1065,7 +1068,10 @@ export class Game {
       this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
       this.sim.setCombatViewport(this.renderer.combatViewport);
       const simulationStart = this.performance.start();
+      const previousWeave = this.sim.player.affixBuffs?.spent;
       this.sim.update(dt, this.readInput());
+      const spentWeave = this.sim.player.affixBuffs?.spent;
+      if (spentWeave && spentWeave !== previousWeave) this.audio.spellweave(spentWeave.kind);
       this.performance.end('simulation', simulationStart);
       const events = this.sim.drainEvents();
       this.renderer.handleEvents(events, this.reducedMotion);
@@ -1096,13 +1102,14 @@ export class Game {
       }
       if (now >= this.nextAutosave) { this.saveCharacter(); this.nextAutosave = now + 20_000; }
     }
+    this.shell.setBuffs(activeBuffs(this.sim.player));
     this.shell.shortcutMenu.setPoints(this.sim.player.character.statPoints, this.sim.player.character.skillPoints);
     this.shell.setPortalState(this.sim.portal.active ? this.sim.portal.progress : null,
       !!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x, this.sim.player.y));
     if(this.touch.active) this.touch.setPortal(this.sim.portal.active ? this.sim.portal.progress : null,!!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x,this.sim.player.y));
     this.renderer.pointerX = this.mouse.x;
     this.renderer.pointerY = this.mouse.y;
-    this.renderer.pointerActive = this.mouse.present;
+    this.renderer.pointerActive = this.mouse.present && (this.usingGamepad || this.touch.active || !this.pointerOverEffects);
     // Presentation existence does not reveal whether the Thor dashboard covers it.
     this.renderer.navigationVisible = !(this.touch.active && (window.innerWidth < 620 || this.touch.phoneLandscape));
     this.shell.setNavigationVisible(this.renderer.navigationVisible);

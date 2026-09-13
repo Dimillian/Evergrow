@@ -1,8 +1,10 @@
+import { AURA_IDS, auraSummary, type AuraId } from './aura-content.ts';
 import type { SkillId } from './character-types.ts';
 import type { ProjectileEffects, ProjectileStyle } from './model.ts';
 import type { SlowEffect } from './combat-status.ts';
 
 export type SkillExecution = (
+  | {kind:'aura'; aura:AuraId; rank:number}
   | { kind: 'step'; duration: number; speed: number; retreat?: boolean; shot?: boolean; pierce?: number }
   | { kind: 'ward'; duration: number; fraction: number }
   | { kind: 'stance'; duration: number; reduction: number; charges: number; bonus: number; echo?: boolean }
@@ -33,6 +35,7 @@ export const SKILL_TARGETING = Object.freeze({ maximumRange: 900, probeStep: 4, 
 
 /** Execution tuning is content. Handlers operate on these recipes, never skill-name branches. */
 export const SKILL_EXECUTION = {
+  ...Object.fromEntries(AURA_IDS.map(id=>[id,{kind:'aura',aura:id,rank:1}])) as Record<AuraId,{kind:'aura';aura:AuraId;rank:number}>,
   repulse: { kind: 'cone', radius: 95, arc: Math.PI * 1.5, stun: 1.2 },
   ironCitadel: { kind: 'radial', radius: 130, melee: true, shelter: { duration: 5, reduction: .45 } },
   smokeVeil: { kind: 'radial', radius: 115, melee: false, style: 'spirit', slow: { duration: 3, factor: .5 }, shelter: { duration: 2, reduction: .2 } },
@@ -80,6 +83,7 @@ export function skillDamageSuffix(id: SkillId, recipe: SkillExecution = SKILL_EX
 }
 export function skillUtilityLabel(id: SkillId, recipe:SkillExecution = SKILL_EXECUTION[id]): string {
   const n=(v:number)=>Number(v.toFixed(2));
+  if(recipe.kind==='aura')return auraSummary(recipe.aura,recipe.rank);
   if(recipe.kind==='radial'&&recipe.shelter)return `${n(recipe.shelter.duration)}s · ${n(recipe.shelter.reduction*100)}% less hit damage${recipe.slow?` · ${Math.round((1-recipe.slow.factor)*100)}% slow for ${n(recipe.slow.duration)}s`:''}`;
   if(recipe.kind==='guard')return `${n(recipe.duration)}s · ${n(recipe.reduction*100)}% block`;
   if(recipe.kind==='step')return `${Math.round(recipe.speed*recipe.duration)} units · no invulnerability`;

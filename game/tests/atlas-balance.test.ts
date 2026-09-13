@@ -16,6 +16,7 @@ const world={blocked:()=>false,move:(x:number,y:number,dx:number,dy:number)=>({x
 const close=(a:number,b:number)=>assert.ok(Math.abs(a-b)<1e-8,`${a} != ${b}`);
 test('every active has three distinct selectable Techniques',()=>{
  for(const id of Object.keys(SKILL_DEFINITIONS) as Array<keyof typeof SKILL_DEFINITIONS>){
+  if(SKILL_DEFINITIONS[id].tier==='aura')continue;
   const variants=SKILL_SPECIALIZATIONS.filter(s=>s.skill===id);assert.equal(variants.length,3,id);
   const base=resolveSkill(id,{manaCostMultiplier:1,cooldownMultiplier:1});
   const signatures=variants.map(v=>{const sheet=createCharacterSheet();sheet.allocatedNodes=['origin',`skill:${id}`,`specialization:${v.id}`];sheet.skillSpecializations[id]=v.id;const r=resolveSkill(id,{manaCostMultiplier:1,cooldownMultiplier:1},sheet);const signature=JSON.stringify([r.recipe,r.damageMultiplier,r.mana,r.cooldown]);assert.notEqual(signature,JSON.stringify([base.recipe,base.damageMultiplier,base.mana,base.cooldown]));return signature;});

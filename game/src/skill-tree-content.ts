@@ -58,7 +58,7 @@ export const TERRITORY_SPECIALTIES: Readonly<Record<string, readonly Specialty[]
   crucible: [
     f('Kindling',{spellDamagePercent:8},{spellDamagePercent:24},'Stronger spell hits and their snapshotted effects.'),
     f('Live Wire',{castSpeedPercent:3},{castSpeedPercent:11},'Faster spell windups and recovery.'),
-    f('Spellweave',{maxMana:5},{spellweavePercent:20},'Direct melee hits prime the next spell; spell hits prime the next melee action for four seconds.'),
+    f('Spellweave',{maxMana:5},{spellweavePercent:20},'Enables Spellweave: melee hits empower spells; spell hits empower melee. Four seconds. No skill slot.'),
     f('Furnace Mouth',{areaPercent:4},{areaPercent:20,spellDamagePercent:12},'Broaden spell explosions and ground effects.'),
     f('Conductive Vein',{manaRegen:.6},{manaRegen:2.5,lightningResistance:8},'Regenerate mana while insulating against lightning.'),
     f('Cinder Skin',{fireResistance:3},{fireResistance:12,maxHp:20},'Protection for close-range casting.'),
@@ -118,7 +118,7 @@ export const BORDER_GARDENS: readonly { from: string; to: string; specialties: r
   {from:'veil',to:'crucible',specialties:[
     f('Sparkstep',{maxMana:4,castSpeedPercent:2},{castSpeedPercent:7,moveSpeedPercent:4},'Cast, reposition, and find the next opening.'),
     f('Cinder Veil',{fireResistance:2},{fireResistance:8,cooldownPercent:3},'Fire protection for close-range repositioning.'),
-    f('Dancing Embers',{damagePercent:5,spellDamagePercent:3},{spellweavePercent:20,attackSpeedPercent:5},'Direct melee and spell hits reward alternating actions.'),
+    f('Dancing Embers',{damagePercent:5,spellDamagePercent:3},{spellweavePercent:20,attackSpeedPercent:5},'Enables Spellweave and improves alternating melee and magic.'),
     f('Fleet Incantation',{castSpeedPercent:3},{manaCostPercent:4,moveSpeedPercent:4},'Mobile casting with lighter mana demands.'),
     f('Stormglass',{lightningResistance:2},{critChance:3,critDamage:16,lightningResistance:8},'Critical investment with lightning insulation.'),
     f('Shadow Conduit',{intelligence:2,spellDamagePercent:3},{spellDamagePercent:20,lifeOnHit:.75},'Stronger spells and recovery from direct contact.'),
@@ -126,7 +126,7 @@ export const BORDER_GARDENS: readonly { from: string; to: string; specialties: r
   {from:'crucible',to:'forge',specialties:[
     f('Runesmith',{strength:2,intelligence:2},{damagePercent:14,spellDamagePercent:14},'A balanced foundation for a spellblade.'),
     f('Tempered Will',{armor:6},{maxMana:16,fireResistance:8},'Armor, mana and protection against fire.'),
-    f('Resonant Steel',{damagePercent:5,spellDamagePercent:3},{spellweavePercent:22,maxHp:12},'Alternate direct melee and spell hits from a sturdier foundation.'),
+    f('Resonant Steel',{damagePercent:5,spellDamagePercent:3},{spellweavePercent:22,maxHp:12},'Enables Spellweave with extra life for melee and magic builds.'),
     f('Molten Reach',{areaPercent:4},{areaPercent:16,spellDamagePercent:12},'Broaden weapon sweeps and magical explosions.'),
     f('Furnace Heart',{maxHp:5},{manaOnKill:2,lifeOnHit:.75},'Direct contact and kills replenish different resources.'),
     f('Thunder Anvil',{critDamage:8,critChance:.75},{strength:4,critChance:2,critDamage:16,castSpeedPercent:6},'Critical power with strength and faster casting.'),
@@ -162,7 +162,7 @@ export const SKILL_DOCTRINES: readonly Doctrine[] = [
   {id:'casting',territory:'crucible',name:'Casting Doctrine',choices:[
     {name:'Incantation',description:'Spell damage +30%.',bonuses:{spellDamagePercent:30}},
     {name:'Impulse',description:'Cast speed +12%.',bonuses:{castSpeedPercent:12}},
-    {name:'Alternation',description:'Spellweave damage +28%; alternate direct melee and spell hits.',bonuses:{spellweavePercent:28}}]},
+    {name:'Alternation',description:'Enables Spellweave: +28% damage when alternating melee and magic.',bonuses:{spellweavePercent:28}}]},
   {id:'reserve',territory:'wellspring',name:'Reserve Doctrine',choices:[
     {name:'Depth',description:'Maximum mana +35.',bonuses:{maxMana:35}},
     {name:'Flow',description:'Mana regeneration +5 per five seconds.',bonuses:{manaRegen:5}},

@@ -1,3 +1,5 @@
+import { isAura } from '../aura-content.ts';
+import { manaCapacity } from '../auras.ts';
 import { deriveAttackStats } from '../equipment.ts';
 import { UNIQUES, uniqueSlot } from '../unique-content.ts';
 import { chronicleValues } from '../chronicle.ts';
@@ -58,8 +60,10 @@ export class SkillStudy {
       if((unique.kind==='grimoire'||unique.kind==='orb')&&sheet.equipped.weapon?.weapon?.hands===2)sheet.equipped.weapon=generateItem(1024,p.level,'weapon','cinder-wand','common');
       sheet.equipped[uniqueSlot(unique)]=generateUnique(7319,p.level,unique.id);
     }
+    if(options.baseline&&isAura(options.skill))sheet.skillSlots[0]=null;
     refreshCharacter(p);p.angle=options.facing;p.hp=p.maxHp;p.mana=p.maxMana;
-    if(!options.scenario||options.scenario==='showcase')p.mana=p.maxMana=100000;
+    if(!options.scenario||options.scenario==='showcase')p.maxMana=100000;
+    p.mana=manaCapacity(p);
     this.resolved=resolveSkill(options.skill,p.derived,sheet);
     const near=p.equipment.mainHand.attackKind==='melee',range=near?Math.min(38,deriveAttackStats(p.stats,p.equipment.mainHand).range*.65):140;
     const distance=this.resolved.recipe.kind==='radial'?(this.resolved.recipe.targetRange?220:Math.min(range,this.resolved.recipe.radius*.6)):range;
@@ -76,13 +80,13 @@ export class SkillStudy {
     if(this.elapsed>=this.duration||this.simulation.player.dead)return [];
     const sim=this.simulation,p=sim.player,scenario=this.options.scenario??'showcase';
     // Dummy AI is held still. Damage, statuses, recovery, projectiles and mana use runtime rules.
-    for(const enemy of sim.enemies){enemy.stagger=60;if(scenario!=='showcase'||this.options.unique==='red-harvest'){const point=this.targetPositions.get(enemy.id)!;enemy.x=point.x;enemy.y=point.y;enemy.knockbackX=enemy.knockbackY=0;}}
+    for(const enemy of sim.enemies){enemy.stagger=60;if(isAura(this.options.skill)||scenario!=='showcase'||this.options.unique==='red-harvest'){const point=this.targetPositions.get(enemy.id)!;enemy.x=point.x;enemy.y=point.y;enemy.knockbackX=enemy.knockbackY=0;}}
     const ready=this.elapsed>=.3&&!this.options.baseline;
     const returning=!!p.skillEffects?.returnStep&&this.elapsed>=1.2;
     const harvest=this.options.unique==='red-harvest'&&!!p.skillEffects?.harvest?.length&&this.elapsed>=1.2;
     if(harvest)for(const enemy of sim.enemies)enemy.angle=this.options.facing+Math.PI;
-    const cast=ready&&(!this.didCast||returning||harvest||scenario==='sustain'||!!this.options.unique&&this.options.skill==='whirlwind'&&this.elapsed<4);
-    const attack=(this.options.unique==='patient-bastion'&&this.elapsed>=1.4||scenario==='followup'||scenario==='sustain'||!!this.options.unique&&['fireball','ghostHunt'].includes(this.options.skill))&&this.elapsed>=.55&&(this.didCast||!!this.options.baseline);
+    const cast=!isAura(this.options.skill)&&ready&&(!this.didCast||returning||harvest||scenario==='sustain'||!!this.options.unique&&this.options.skill==='whirlwind'&&this.elapsed<4);
+    const attack=(isAura(this.options.skill)||this.options.unique==='patient-bastion'&&this.elapsed>=1.4||scenario==='followup'||scenario==='sustain'||!!this.options.unique&&['fireball','ghostHunt'].includes(this.options.skill))&&this.elapsed>=.55&&(isAura(this.options.skill)||this.didCast||!!this.options.baseline);
     const showSpirit=scenario==='showcase'&&['ashen-double','pale-huntsman'].includes(this.options.unique??'')&&this.elapsed>=.55&&this.elapsed<1.25;
     const charge=this.options.unique==='heartwood-draw';
     const drawing=charge&&cast&&(this.elapsed-.3)%1.5<.65;

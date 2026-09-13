@@ -1,3 +1,4 @@
+import { advanceAuras, auraPower, manaCapacity } from './auras.ts';
 import { resolveSkill } from './skill-progression.ts';
 import { hasUnique, UNIQUE_RULES } from './unique-content.ts';
 import { releaseStoredEmbers, hurtDecoy, consumeBastion } from './unique-combat.ts';
@@ -435,10 +436,15 @@ export class Simulation {
     advanceAffixBuffs(p, dt);
     advanceSkillEffects(p,dt,echo=>{if(this.world.blocked(echo.x,echo.y,echo.definition.radius))return true;const shot=this.projectile(echo.x,echo.y,echo.angle,echo.definition,'ghostHunt',echo.effects);if(shot)delete shot.launch;return !!shot;});
     for (const id of Object.keys(p.skillCooldowns) as SkillId[]) p.skillCooldowns[id] = Math.max(0, p.skillCooldowns[id]! - dt);
+    advanceAuras(p,this.enemies,dt,Math.hypot(input.moveX,input.moveY)>.01||!!p.dash||p.dodgeTime>0,
+      (ax,ay,bx,by)=>this.lineOfSight(ax,ay,bx,by),
+      (e,damage,style)=>this.damageEnemy(e,damage,Math.atan2(e.y-p.y,e.x-p.x),false,true,style),
+      (style,radius)=>this.emit({type:'blast',x:p.x,y:p.y,radius,style,skill:'elementalSpikes'}));
+    for(const e of this.enemies)if(e.auraExposure)for(const [key,exposure] of Object.entries(e.auraExposure))if((exposure.remaining-=dt)<=0)delete e.auraExposure[key as keyof typeof e.auraExposure];
     p.healFlash = Math.max(0, p.healFlash - dt);
-    metric(p.chronicle,'manaRestored',Math.min(p.maxMana-p.mana,p.derived.manaRegeneration*dt));
-    metric(p.chronicle,'manaRecovery:passive',Math.min(p.maxMana-p.mana,p.derived.manaRegeneration*dt));
-    p.mana = Math.min(p.maxMana, p.mana + p.derived.manaRegeneration * dt);
+    metric(p.chronicle,'manaRestored',Math.min(manaCapacity(p)-p.mana,p.derived.manaRegeneration*dt));
+    metric(p.chronicle,'manaRecovery:passive',Math.min(manaCapacity(p)-p.mana,p.derived.manaRegeneration*dt));
+    p.mana = Math.min(manaCapacity(p), p.mana + p.derived.manaRegeneration * dt);
     metric(p.chronicle,'healing',Math.min(p.maxHp-p.hp,p.derived.lifeRegeneration*dt));
     p.hp = Math.min(p.maxHp, p.hp + p.derived.lifeRegeneration * dt);
     if (p.dodgeCharges < PLAYER_ABILITIES.dodge.charges) {
@@ -454,9 +460,9 @@ export class Simulation {
     const direction = aimingSkill !== 'sidestep' && aimingWeapon.attackKind !== 'melee' && input.rangedAim
       && Number.isFinite(input.rangedAim.x) && Number.isFinite(input.rangedAim.y) ? input.rangedAim : { x: input.aimX, y: input.aimY };
     if (direction.x !== p.x || direction.y !== p.y) p.angle = Math.atan2(direction.y - p.y, direction.x - p.x);
-    if (this.healBuffer >= this.time && p.flasks > 0 && (p.hp < p.maxHp || p.mana < p.maxMana) && p.healCooldown <= 0) {
+    if (this.healBuffer >= this.time && p.flasks > 0 && (p.hp < p.maxHp || p.mana < manaCapacity(p)) && p.healCooldown <= 0) {
       const healed = Math.min(p.maxHp * PLAYER_ABILITIES.potion.lifeFraction * p.derived.potionMultiplier, p.maxHp - p.hp);
-      const mana = Math.min(p.maxMana * PLAYER_ABILITIES.potion.manaFraction * p.derived.potionMultiplier, p.maxMana - p.mana);
+      const mana = Math.min(p.maxMana * PLAYER_ABILITIES.potion.manaFraction * p.derived.potionMultiplier, manaCapacity(p) - p.mana);
       p.hp += healed; p.mana += mana;
       p.flasks--;
       p.healCooldown = PLAYER_ABILITIES.potion.cooldown * p.derived.cooldownMultiplier;
@@ -763,7 +769,10 @@ export class Simulation {
 
   private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill?: SkillId, effects?: ProjectileEffects, sourceLevel = this.player.level, sourceKind?: EnemyKind): Projectile | undefined {
     if (this.projectiles.length >= MAX_PROJECTILES) return;
-    const { speed, life, radius, damage, owner } = definition;
+    const { life, radius, damage, owner } = definition;
+    const hawkeye=owner==='player'&&effects?.style==='arrow'?auraPower(this.player,'hawkeye'):0;
+    const speed=definition.speed*(1+hawkeye/100);
+    if(hawkeye)effects={...effects!,hawkeye:{x,y,crit:this.player.character.allocatedNodes.includes('keystone:measured-force')?0:hawkeye/200}};
     const shot: Projectile = { id: this.nextId++, sourceLevel, sourceKind, x, y, prevX: x, prevY: y,
       vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, radius, damage, life, maxLife: life, owner, skill,
       effects: effects ? { ...effects, ...(effects.offense ? { offense: { ...effects.offense } } : {}) } : undefined, hitIds: new Set() };
@@ -821,7 +830,7 @@ export class Simulation {
     const p = this.player;
     for (const pickup of this.pickups) {
       pickup.life -= dt;
-      const needed = pickup.kind === 'health' ? p.hp < p.maxHp : p.mana < p.maxMana;
+      const needed = pickup.kind === 'health' ? p.hp < p.maxHp : p.mana < manaCapacity(p);
       if (!needed || pickup.life <= 0 || p.dead) continue;
       const dx = p.x - pickup.x;
       const dy = p.y - pickup.y;
@@ -829,7 +838,7 @@ export class Simulation {
       if (distance < LOOT_RULES.collectDistance) {
         const before = pickup.kind === 'health' ? p.hp : p.mana;
         if (pickup.kind === 'health') p.hp = Math.min(p.maxHp, p.hp + p.maxHp * pickup.restoreFraction);
-        else p.mana = Math.min(p.maxMana, p.mana + manaVialRestoration(p.maxMana,pickup.restoreAmount ?? manaVialAmount(1)));
+        else p.mana = Math.min(manaCapacity(p), p.mana + manaVialRestoration(p.maxMana,pickup.restoreAmount ?? manaVialAmount(1)));
         const value = (pickup.kind === 'health' ? p.hp : p.mana) - before;
         pickup.life = 0;
         this.emit({ type: 'pickup', x: pickup.x, y: pickup.y, value, heavy: pickup.kind === 'health' });

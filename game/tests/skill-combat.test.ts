@@ -60,7 +60,7 @@ test('chain casts retain full first-target healing, diminish new targets and nev
 });
 
 test('all skill requirements admit the intended weapon families and reject incompatible profiles', () => {
-  for (const skill of Object.values(SKILL_DEFINITIONS)) {
+  for (const skill of Object.values(SKILL_DEFINITIONS).filter(s=>s.tier!=='aura')) {
     assert.ok(skillRequirementLabel(skill.requirement).length > 2);
     for (const weapon of WEAPON_PROFILES) {
       const equipment: Equipment = { mainHand: weapon, offHand: null };
@@ -84,7 +84,7 @@ test('dual wield admits a matching off-hand skill and uses that hand rather than
 });
 
 test('incompatible weapons reject every active skill before consuming resources or emitting effects', () => {
-  for (const skill of Object.values(SKILL_DEFINITIONS)) {
+  for (const skill of Object.values(SKILL_DEFINITIONS).filter(s=>s.tier!=='aura')) {
     if(skill.requirement==='any')continue;
     const h = harness(skill.id);
     h.player.equipment = { mainHand: WEAPON_PROFILES.find(weapon => !families[skill.requirement].includes(weapon.family))!, offHand: null };
@@ -213,7 +213,7 @@ test('ground skills schedule delayed effects inside weapon range and before bloc
 
 test('first-row skills repeat after action recovery while second-row skills retain cooldowns', () => {
   const basic: SkillId[] = ['cleave', 'whirlwind', 'shieldBash', 'volley', 'ricochet', 'backstab', 'fireball', 'iceNova', 'arcLightning'];
-  for (const skill of Object.values(SKILL_DEFINITIONS)) {
+  for (const skill of Object.values(SKILL_DEFINITIONS).filter(s=>s.tier!=='aura')) {
     const h = harness(skill.id);
     assert.equal(skill.tier === 'basic', basic.includes(skill.id));
     assert.equal(activateSkill(h.context, 0), true);

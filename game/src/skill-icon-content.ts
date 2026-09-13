@@ -67,6 +67,13 @@ const flame = (): IconPart[] => [
   facet('M26 39C18 47 23 53 29 49L31 43 27 46Z', 'steel'), cut('M12 38C8 48 17 57 28 55', 'fire')];
 
 const recipes: Record<SkillId, readonly IconPart[]> = {
+  ironroot: [...place(shield('jade'),32,27,0,.8),body('M30 34H34V45L48 54 34 49 32 58 30 49 16 54 30 45Z','gold')],
+  bloodOath: [body('M32 5C29 18 16 27 16 37A16 16 0 0 0 48 37C48 26 36 17 32 5Z','rose'),facet('M32 16 28 36 34 43 38 35Z','gold')],
+  hawkeye: [body('M4 31Q32 5 60 31Q32 55 4 31Z','gold'),body('M21 31A11 11 0 1 0 43 31A11 11 0 1 0 21 31Z','jade'),facet('M31 17 35 30 31 44 28 30Z','steel')],
+  thornbound: [body('M12 48 19 24 9 17 25 21 32 5 36 24 53 16 45 32 58 43 40 41 32 59 27 41 8 48Z','jade'),body('M26 29 36 29 37 37 27 39Z','dark')],
+  elementalResonance: [body('M32 5 43 24 32 34 21 24Z','fire'),body('M12 31 27 33 31 52 9 48Z','ice'),body('M41 31 55 31 55 48 34 53Z','violet')],
+  stillwater: [body('M10 37Q32 29 54 37L49 44Q32 37 15 44ZM16 48Q32 42 48 48L44 54H20Z','ice'),body('M32 6Q17 23 23 30Q32 38 41 30Q47 23 32 6Z','steel')],
+  elementalSpikes: [body('M8 49 14 15 24 46Z','fire'),body('M23 51 32 5 41 51Z','ice'),body('M40 46 51 15 57 49Z','violet'),facet('M8 52H57V57H8Z','gold')],
   fireball: flame(),
   shieldBash: [...place(shield(), 25, 30, -14, .88), body('M47 13 61 31 48 48 51 35 43 32 51 28Z', 'gold')],
   bulwark: [body('M8 12 18 8V35L13 44 7 34ZM56 12 46 8V35L51 44 57 34Z', 'steel'), ...place(shield(), 32, 31),

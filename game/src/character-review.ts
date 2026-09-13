@@ -1,3 +1,6 @@
+import { AURA_IDS } from './aura-content.ts';
+import { manaCapacity } from './auras.ts';
+import { activeBuffs } from './active-buffs.ts';
 import { drawFloatingHUD } from './hud.ts';
 import { generateUnique } from './items.ts';
 import { UNIQUES } from './unique-content.ts';
@@ -113,7 +116,14 @@ if (progressionReview) {
   executeCharacterCommand(p, { type: 'configureSkill', skill: 'fireball', rank: 3, specialization: 'fireball-fork' });
 }
 if(new URLSearchParams(location.search).has('uniques')){p.level=25;p.character.inventory.fill(null);for(const [i,u] of UNIQUES.entries())p.character.inventory[i]=generateUnique(7319+i,25,u.id);}
-refreshCharacter(p); p.hp = p.maxHp; p.mana = p.maxMana;
+const auraReview=new URLSearchParams(location.search).has('auras');
+if(auraReview){
+ p.level=400;p.character.skillPoints=399;
+ for(const id of AURA_IDS)executeCharacterCommand(p,{type:'allocateNode',id:`skill:${id}`});
+ p.character.skillSlots=['ironroot','bloodOath',null,null,null];
+}
+refreshCharacter(p); p.hp = p.maxHp; p.mana = manaCapacity(p);
+if(auraReview&&p.auras)p.auras.blood={target:1,stacks:3,remaining:2.2};
 const root = document.querySelector<HTMLElement>('#app')!;
 let selected = new URLSearchParams(location.search).get('panel') ?? 'character';
 const shell = life.own(new GameShell(root, { play: () => {}, returnToTitle: () => {}, openMap: () => {},
@@ -141,6 +151,11 @@ const tree = life.own(new SkillTreePanel(shell.panelMount, {
 }));
 const renderer = new Renderer(), fx = life.own(new PostFX(shell.canvas));
 function background() {
+  if (selected === 'hud' && new URLSearchParams(location.search).has('buffs')) {
+    p.derived.spellweavePercent = 20; p.derived.afterguardPercent = 24;
+    p.affixBuffs = { spell: 3.4, melee: 2.1, guard: 2.5 };
+    p.skillEffects = { echoes: [], brace: { remaining: 1.6, reduction: .2, charges: 0, bonus: 0 } };
+  }
   const w = innerWidth, h = innerHeight, density = devicePixelRatio || 1;
   shell.canvas.width = Math.round(w * density); shell.canvas.height = Math.round(h * density);
   renderer.resize(Math.round(680 * w / h), 680);
@@ -152,6 +167,7 @@ function background() {
   if (selected !== 'character') drawFloatingHUD(ui, p, renderer.width, renderer.height, 0, { reducedMotion: true });
   inventory.refresh(p);
   shell.resizeControls(renderer.width, renderer.height);
+  shell.setBuffs(selected === 'hud' ? activeBuffs(p) : []);
   shell.shortcutMenu.setPoints(p.character.statPoints, p.character.skillPoints);
 }
 function show(panel: string) {

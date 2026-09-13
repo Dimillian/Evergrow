@@ -11,7 +11,7 @@
 - [Physical versus caster balance audit](physical-caster-balance-2026-09-13.md): matched gear/tree samples, mana sustain, skill comparisons and proposed tuning.
 - [Chronicle](chronicle.md): account/character achievements and statistics; local review and persistence contract.
 
-[Current skill atlas and progression](skill-progression.md) · [Local development tools](development-tools.md) · [Open Tools](http://127.0.0.1:5173/tools/) — the canonical hub for game data, generated gear, skill animations and world reviews.
+[Current skill atlas and progression](skill-progression.md) · [Auras and mana reservation](auras.md) · [Local development tools](development-tools.md) · [Open Tools](http://127.0.0.1:5173/tools/) — the canonical hub for game data, generated gear, skill animations and world reviews.
 
 - [Equipment materials](item-materials.md): base construction, drop weights, stats, pricing and the local gallery.
 

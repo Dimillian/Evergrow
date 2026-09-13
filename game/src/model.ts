@@ -116,6 +116,7 @@ export interface ShieldDefinition {
 }
 /** Payload snapshots travel with a projectile; equipment changes cannot rewrite it in flight. */
 export interface ProjectileEffects {
+  hawkeye?: {x:number;y:number;crit:number};
   pursuit?: boolean;
   pursuitLoop?: {target:number;x:number;y:number;toX:number;toY:number;angle:number;elapsed:number};
   fissureWidth?: number;
@@ -143,6 +144,7 @@ export interface Equipment {
 }
 
 export interface Player {
+  auras?: import('./auras.ts').AuraState;
   chronicle?: ChronicleProgress;
   name?: string;
   x: number;
@@ -201,6 +203,7 @@ export type EnemyKind = 'thornReaver' | 'mireSpitter' | 'frostRevenant' | 'ember
 export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
 
 export interface Enemy {
+  auraExposure?: Partial<Record<'fire'|'frost'|'lightning'|'arcane',{power:number;remaining:number}>>;
   decoyTarget?: {id:number;x:number;y:number;radius:number;hit?:boolean};
   dungeonTheme?: import('./dungeon-content.ts').DungeonThemeId;
   /** Three-action cycle; regional signatures follow two basics, elites use lighter quick basics. */

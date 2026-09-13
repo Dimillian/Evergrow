@@ -1,3 +1,5 @@
+import { UITooltipStack } from './ui-tooltip-stack.ts';
+import { effectExplanation, effectTerm, spellweaveFit, spellweaveNodeMarkup } from './effect-terms.ts';
 import { buildAtlasLightPlan, drawAtlasLight, type AtlasLightPlan } from './skill-tree-light.ts';
 import { GamepadMenu } from './gamepad-menu.ts';
 import { PAD, PAD_SKILL_LABELS, type GamepadInput } from './gamepad-input.ts';
@@ -33,6 +35,8 @@ export class SkillTreePanel {
   private root: HTMLDivElement;
   private canvas: HTMLCanvasElement;
   private tooltip: HTMLDivElement;
+  private explanations: UITooltipStack;
+  private hoverExit?: ReturnType<typeof setTimeout>;
   private tooltipMarkup = '';
   private detail: HTMLElement;
   private search: HTMLInputElement;
@@ -108,6 +112,9 @@ export class SkillTreePanel {
     this.canvas = this.root.querySelector('canvas')!;
     this.navigator = this.root.querySelector('.skill-atlas-navigator canvas')!;
     this.tooltip = this.root.querySelector('.skill-atlas-tooltip')!;
+    this.explanations = new UITooltipStack(this.root, effectExplanation);
+    this.tooltip.addEventListener('pointerenter', () => { clearTimeout(this.hoverExit); this.hoverExit = undefined; }, { signal: this.life.signal });
+    this.tooltip.addEventListener('pointerleave', () => this.leaveHovered(), { signal: this.life.signal });
     this.detail = this.root.querySelector('.skill-atlas-inspection')!;
     this.search = this.root.querySelector('input')!;
     this.searchSummary = this.root.querySelector('.skill-atlas-search-summary')!;
@@ -149,7 +156,7 @@ export class SkillTreePanel {
         d.x = event.clientX; d.y = event.clientY; this.invalidate();
       } else {
         const node = this.pick(event.clientX, event.clientY), id = node?.id ?? null;
-        this.setHovered(id);
+        if (id) this.setHovered(id); else this.leaveHovered();
       }
     }, opts);
     this.canvas.addEventListener('pointerup', event => {
@@ -173,7 +180,7 @@ export class SkillTreePanel {
     this.canvas.addEventListener('pointercancel', () => {
       this.drag = undefined; this.lastClickedNode = this.doubleClickedNode = null;
     }, opts);
-    this.canvas.addEventListener('pointerleave', () => this.setHovered(null), opts);
+    this.canvas.addEventListener('pointerleave', () => this.leaveHovered(), opts);
     this.canvas.addEventListener('wheel', event => {
       event.preventDefault();
       const rect = this.canvas.getBoundingClientRect();
@@ -267,11 +274,12 @@ export class SkillTreePanel {
     this.lastClickedNode = this.doubleClickedNode = null;
     this.atlasDirty = true; this.lightPlan = undefined;
     this.atlasSurface.width = this.atlasSurface.height = 0;
+    clearTimeout(this.hoverExit); this.hoverExit = undefined; this.explanations.hide();
     this.shown = false; this.root.hidden = true; this.focus?.dispose(); this.focus = undefined;
     this.drag = undefined; this.hovered = null; this.tooltipMotion.reset(); this.tooltip.hidden = true;
     if (this.frame) cancelAnimationFrame(this.frame); this.frame = 0;
   }
-  dispose(): void { this.close(); this.life.abort(); this.observer.disconnect(); this.root.remove(); }
+  dispose(): void { this.close(); this.explanations.dispose(); this.life.abort(); this.observer.disconnect(); this.root.remove(); }
 
   /** Also used by frozen review scenes; it changes presentation only. */
   inspectNode(id: string, center = true): void {
@@ -343,8 +351,18 @@ export class SkillTreePanel {
     }).sort((a, b) => b.alignment - a.alignment);
     if (choices[0]?.alignment > .1) this.inspectNode(choices[0].node.id);
   }
+  private leaveHovered(): void {
+    if (this.hoverExit) return;
+    this.hoverExit = setTimeout(() => {
+      this.hoverExit = undefined;
+      if (this.tooltip.matches(':hover, :focus-within') || this.explanations.held) { this.leaveHovered(); return; }
+      this.setHovered(null);
+    }, 280);
+  }
   private setHovered(id: string | null): void {
+    clearTimeout(this.hoverExit); this.hoverExit = undefined;
     if (id === this.hovered) return;
+    this.explanations.hide();
     this.hovered = id;
     this.tooltipMotion.set(id, performance.now(), window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     this.canvas.style.cursor = id ? 'pointer' : 'grab';
@@ -358,12 +376,12 @@ export class SkillTreePanel {
     const heading = skillNodeRole(node), owner = skillNodeOwner(node);
     const routeCost = this.routes.get(node.id)?.cost;
     const cluster = SKILL_TREE.clusters.find(cluster => cluster.id === node.cluster);
-    const bonuses = (Object.entries(scaleTreeDefenses(node.bonuses, this.player.level)) as [StatKey, number][]).map(([key, value]) => `<div class="ui-stat"><span>${STAT_LABELS[key]}${key==='armor'?' (scales with level)':''}</span><b>${formatStatValue(key, value)}</b></div>`).join('');
+    const bonuses = (Object.entries(scaleTreeDefenses(node.bonuses, this.player.level)) as [StatKey, number][]).map(([key, value]) => `<div class="ui-stat"><span>${key === 'spellweavePercent' ? effectTerm('spellweave', STAT_LABELS[key]) : STAT_LABELS[key]}${key==='armor'?' (scales with level)':''}</span><b>${formatStatValue(key, value)}</b></div>`).join('');
     this.detail.classList.toggle('has-skill', !!skill);
     this.detail.innerHTML = `<header class="skill-node-heading"><div class="skill-atlas-emblem" style="--star-color:${COLORS[node.domain]}">${skillNodeIconSVG(node, 48)}</div>
       <div><p class="ui-kicker">${heading}</p><h3>${escapeUI(node.name)}</h3><p class="skill-atlas-domain" style="color:${COLORS[node.domain]}">${node.kind === 'origin' ? 'Six territories · one shared root' : escapeUI(owner && !skill ? owner.name : cluster && !cluster.id.startsWith('development:') ? `${node.domain} / ${cluster.name}` : node.domain)}</p></div></header>
-      <p class="skill-atlas-description">${node.kind==='origin'&&this.player.character.treeRefunded?'Your previous tree and rank points have been refunded. Your character and world progress are preserved. Unlock your skills again and assign them to the five skill slots. The game is paused while this tree is open. ':''}${escapeUI(node.description)}${node.skill && costs?.variant ? `</p><p class="skill-atlas-description">${escapeUI(costs.variant.description)}` : ''}</p>${node.specialization ? `<p class="skill-atlas-requirement">${owned ? 'Variant for' : 'Unlock & activate for'} <b>${escapeUI(owner!.name)}</b>.</p>` : ''}${node.specialization ? specializationPreviewMarkup(node.specialization, this.player.derived, this.player.character) : ''}${bonuses ? `<div class="skill-atlas-bonuses ui-well">${bonuses}</div>` : ''}
-      ${skill ? `<p class="skill-atlas-requirement ${canUseSkill(skill.id, this.player.equipment) ? 'is-ready' : ''}">Requires ${escapeUI(skillRequirementLabel(skill.requirement))}</p><div class="skill-atlas-skill-costs">${owned ? `<span class="skill-casting-rank">Casting rank ${costs!.rank}</span>` : ''}<span><b>${costs!.mana}</b> mana</span><span>${costs!.cooldown ? `<b>${Number(costs!.cooldown.toFixed(2))}s</b> cooldown` : 'No cooldown'}</span>${skill.damageMultiplier ? `<span><b>${Math.round(costs!.damageMultiplier * 100)}%</b> damage${skillDamageSuffix(skill.id, costs!.recipe)}</span>` : `<span>${costs!.recipe.kind === 'guard' ? `${costs!.recipe.duration}s · ${Math.round(costs!.recipe.reduction*100)}% block` : skillUtilityLabel(skill.id, costs!.recipe)}</span>`}${skill.damageMultiplier&&skillUtilityLabel(skill.id,costs!.recipe)?`<span>${skillUtilityLabel(skill.id,costs!.recipe)}</span>`:''}${costs!.upkeep ? `<span><b>${costs!.upkeep}</b> mana / second</span>` : ''}</div>` : ''}
+      <p class="skill-atlas-description">${node.kind==='origin'&&this.player.character.treeRefunded?'Your previous tree and rank points have been refunded. Your character and world progress are preserved. Unlock your skills again and assign them to the five skill slots. The game is paused while this tree is open. ':''}${escapeUI(node.bonuses.spellweavePercent ? 'Passive · Melee / magic synergy.' : node.description)}${node.skill && costs?.variant ? `</p><p class="skill-atlas-description">${escapeUI(costs.variant.description)}` : ''}</p>${node.specialization ? `<p class="skill-atlas-requirement">${owned ? 'Variant for' : 'Unlock & activate for'} <b>${escapeUI(owner!.name)}</b>.</p>` : ''}${node.specialization ? specializationPreviewMarkup(node.specialization, this.player.derived, this.player.character) : ''}${spellweaveNodeMarkup(node.bonuses.spellweavePercent ?? 0, node.id === 'keystone:borrowed-flame')}${node.bonuses.spellweavePercent || node.id === 'keystone:borrowed-flame' ? `<p class="effect-fit">${spellweaveFit(this.player.equipment)} ${effectTerm('hybrid', 'Equipment')}</p>` : ''}${bonuses ? `<div class="skill-atlas-bonuses ui-well">${bonuses}</div>` : ''}
+      ${skill ? `<p class="skill-atlas-requirement ${canUseSkill(skill.id, this.player.equipment) ? 'is-ready' : ''}">Requires ${escapeUI(skillRequirementLabel(skill.requirement))}</p><div class="skill-atlas-skill-costs">${owned ? `<span class="skill-casting-rank">${costs!.reservation?'Active rank':'Casting rank'} ${costs!.rank}</span>` : ''}<span><b>${costs!.reservation?`${costs!.reservation}%`:costs!.mana}</b> ${costs!.reservation?'mana reserved':'mana'}</span><span>${costs!.reservation?'Auto active on skill bar':costs!.cooldown ? `<b>${Number(costs!.cooldown.toFixed(2))}s</b> cooldown` : 'No cooldown'}</span>${skill.damageMultiplier ? `<span><b>${Math.round(costs!.damageMultiplier * 100)}%</b> damage${skillDamageSuffix(skill.id, costs!.recipe)}</span>` : `<span>${costs!.recipe.kind === 'guard' ? `${costs!.recipe.duration}s · ${Math.round(costs!.recipe.reduction*100)}% block` : skillUtilityLabel(skill.id, costs!.recipe)}</span>`}${skill.damageMultiplier&&skillUtilityLabel(skill.id,costs!.recipe)?`<span>${skillUtilityLabel(skill.id,costs!.recipe)}</span>`:''}${costs!.upkeep ? `<span><b>${costs!.upkeep}</b> mana / second</span>` : ''}</div>` : ''}
       <div class="skill-atlas-allocation"><span class="skill-atlas-node-state ${owned ? 'is-owned' : ''}">${owned ? '◆ Allocated' : reachable ? '◇ Connected to your path' : routeCost !== undefined ? `◇ ${routeCost} ${routeCost === 1 ? 'point' : 'points'} along the highlighted path` : '◇ No connected path'}</span>
         ${owned ? '' : `<button class="ui-button ui-button--primary" data-tree="allocate" data-inspected="${node.id}" ${routeCost === undefined || this.player.character.skillPoints < routeCost ? 'disabled' : ''}>${routeCost === 1 ? 'Allocate' : 'Allocate path'} <span>${routeCost ?? '—'} ${routeCost === 1 ? 'point' : 'points'}</span></button>`}
         ${!owned && routeCost !== undefined && this.player.character.skillPoints < routeCost ? `<small class="ui-muted">${routeCost - this.player.character.skillPoints} more ${routeCost - this.player.character.skillPoints === 1 ? 'point' : 'points'} needed.</small>` : ''}</div>
@@ -387,9 +405,9 @@ export class SkillTreePanel {
     return `<section class="skill-rank-controls ui-well">
       <header class="skill-rank-heading"><strong>Rank ${learned}<small> / ${max}${current.bonusRanks ? ` · +${current.bonusRanks} gear` : ''}</small></strong>
         ${next ? `<button class="ui-button ui-button--primary" data-upgrade="${id}" aria-label="Upgrade ${SKILL_DEFINITIONS[id].name} to rank ${learned+1} for 1 skill point" ${sheet.skillPoints < 1 ? 'disabled' : ''}>Upgrade <span>1 pt</span></button>` : '<span class="skill-rank-max">Max rank</span>'}</header>
-      ${next ? `<div class="skill-rank-preview"><span>Next</span><span>${next.recipe.kind === 'guard' && current.recipe.kind === 'guard' ? `${Number((current.recipe.reduction*100).toFixed(2))} → ${Number((next.recipe.reduction*100).toFixed(2))}% block · ${Number(current.recipe.duration.toFixed(2))} → ${Number(next.recipe.duration.toFixed(2))}s` : current.damageMultiplier ? `${Math.round(current.damageMultiplier*100)} → ${Math.round(next.damageMultiplier*100)}% damage` : `${skillUtilityLabel(id,current.recipe)} → ${skillUtilityLabel(id,next.recipe)}`}</span><span>${current.mana} → ${next.mana} mana</span>${next.cooldown ? `<span>${Number(next.cooldown.toFixed(2))}s cooldown</span>` : ''}</div>` : ''}
+      ${next ? `<div class="skill-rank-preview"><span>Next</span><span>${next.recipe.kind === 'guard' && current.recipe.kind === 'guard' ? `${Number((current.recipe.reduction*100).toFixed(2))} → ${Number((next.recipe.reduction*100).toFixed(2))}% block · ${Number(current.recipe.duration.toFixed(2))} → ${Number(next.recipe.duration.toFixed(2))}s` : current.damageMultiplier ? `${Math.round(current.damageMultiplier*100)} → ${Math.round(next.damageMultiplier*100)}% damage` : `${skillUtilityLabel(id,current.recipe)} → ${skillUtilityLabel(id,next.recipe)}`}</span><span>${current.reservation?`${current.reservation}% → ${next.reservation}% reserved`:`${current.mana} → ${next.mana} mana`}</span>${next.cooldown ? `<span>${Number(next.cooldown.toFixed(2))}s cooldown</span>` : ''}</div>` : ''}
       <div class="skill-active-controls"><label>Active rank<select class="ui-button" data-config="rank" data-skill="${id}" aria-label="Active rank for ${SKILL_DEFINITIONS[id].name}">${Array.from({length:learned},(_,i)=>`<option value="${i+1}" ${i+1===active?'selected':''}>${i+1}</option>`).join('')}</select></label>
-        <label>Technique<select class="ui-button" data-config="variant" data-skill="${id}" aria-label="Technique for ${SKILL_DEFINITIONS[id].name}" ${!unlocked.length ? 'disabled' : ''}><option value="">Original</option>${unlocked.map(v=>`<option value="${v.id}" ${selected?.id===v.id?'selected':''}>${v.name}</option>`).join('')}</select></label></div>
+        ${variants.length?`<label>Technique<select class="ui-button" data-config="variant" data-skill="${id}" aria-label="Technique for ${SKILL_DEFINITIONS[id].name}" ${!unlocked.length ? 'disabled' : ''}><option value="">Original</option>${unlocked.map(v=>`<option value="${v.id}" ${selected?.id===v.id?'selected':''}>${v.name}</option>`).join('')}</select></label>`:''}</div>
       ${variants.length ? `<details class="skill-variant-links"><summary>Explore Techniques <span>${unlocked.length} / ${variants.length}</span></summary>${variants.map(v=>`<button class="ui-button ui-button--quiet" data-node="${specializationNode(v.id)}"><span>${v.name}</span><small>${selected?.id===v.id?'Active':sheet.allocatedNodes.includes(specializationNode(v.id))?'Unlocked':'↗'}</small></button>`).join('')}
 </details>` : ''}</section>`;
   }

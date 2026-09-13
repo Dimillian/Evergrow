@@ -1,3 +1,4 @@
+import { AURA_IDS, AURAS } from './aura-content.ts';
 import { SKILL_SPECIALIZATIONS, specializationNode, OVERLOAD_NODE } from './skill-progression.ts';
 import type { ActionResult, CharacterSheet, SkillId, StatKey, StatModifiers } from './character-types.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
@@ -116,7 +117,7 @@ function buildTree() {
    const count=recipe.points.length,cos=Math.cos(rotation),sin=Math.sin(rotation);
    const depth=Math.max(2,Math.round((Math.hypot(p.x,p.y)-240)/80)+2);
    const members=recipe.points.map(([x,y],k)=>{
-     return add({id:`${id}:${k}`,name:k===count-1?name:`${name} · ${k+1}`,description:f.description,x:p.x+x*cos-y*sin,y:p.y+x*sin+y*cos,domain:t.domain,territory:t.id,kind:k===count-1?'notable':'minor',cluster:id,role:'cluster',bonuses:k===count-1?f.reward:f.small},depth);
+     return add({id:`${id}:${k}`,name:k===count-1?name:`${name} · ${k+1}`,description: k!==count-1&&f.reward.spellweavePercent ? name==='Spellweave'?'More mana. The endpoint enables Spellweave.':'More weapon and spell damage. The endpoint enables Spellweave.':f.description,x:p.x+x*cos-y*sin,y:p.y+x*sin+y*cos,domain:t.domain,territory:t.id,kind:k===count-1?'notable':'minor',cluster:id,role:'cluster',bonuses:k===count-1?f.reward:f.small},depth);
    });
    for(const [a,b] of recipe.edges)link(members[a].id,members[b].id);
    clusters.push({id,name,domain:t.domain,territory:t.id,shape,...p,radius:Math.max(...recipe.points.map(([x,y])=>Math.hypot(x,y)))+20});
@@ -195,6 +196,11 @@ function buildTree() {
      const neighbor=byId.get(n.neighbors[0])!;neighbor.neighbors.splice(neighbor.neighbors.indexOf(n.id),1);
      edges.splice(edges.findIndex(e=>e.from===n.id||e.to===n.id),1);nodes.splice(nodes.indexOf(n),1);byId.delete(n.id);
    }
+ }
+ // Aura leaves sit on late routes. Preserve the existing passive graph and its identifiers.
+ for(const skill of AURA_IDS){
+   const aura=AURAS[skill],t=SKILL_TERRITORIES.find(t=>t.id===aura.territory)!,depth=Math.min(aura.points-1,Math.max(...nodes.filter(n=>n.id.startsWith(`road:${t.id}:`)).map(n=>Number(n.id.split(':')[2]))));
+   pocket(byId.get(`road:${t.id}:${depth}`)!,t,skill==='elementalSpikes'?1:-1,p=>[{id:`skill:${skill}`,name:aura.name,description:aura.description,...p,kind:'major',domain:t.domain,territory:t.id,skill,cluster:`development:${skill}`,bonuses:{}}],depth+1,`development:${skill}`);
  }
  // Keep every displayed connection straight and local; authored silhouettes supply the rhythm.
  for(const n of nodes){Object.freeze(n.neighbors);Object.freeze(n);}for(const e of edges)Object.freeze(e);

@@ -1,3 +1,4 @@
+import { AURA_RULES } from './aura-content.ts';
 import { UNIQUE_RULES } from './unique-content.ts';
 import { turnProjectile, storeBorrowedLife, hurtDecoy } from './unique-combat.ts';
 import { projectileDamageType } from './resistance-content.ts';
@@ -27,7 +28,8 @@ function hit(projectile: Projectile, enemy: Enemy, context: ProjectileContext): 
   const repeated=effects?.pursuit&&projectile.hitIds.has(enemy.id);
   projectile.hitIds.add(enemy.id);
   const lifeBefore = enemy.hp;
-  const offense = repeated&&effects?.offense?{...effects.offense,lifeOnHit:0}:effects?.offense;
+  let offense = repeated&&effects?.offense?{...effects.offense,lifeOnHit:0}:effects?.offense;
+  if(offense&&effects?.hawkeye&&Math.hypot(enemy.x-effects.hawkeye.x,enemy.y-effects.hawkeye.y)>=AURA_RULES.distantRange)offense={...offense,critChance:Math.min(.75,offense.critChance+effects.hawkeye.crit)};
   context.damage(enemy, projectile.damage, projectile.angle, !!(effects?.thrownShield||effects?.fissureWidth), effects?.style,
     offense, effects?.burnDuration !== undefined, effects?.elementalDamage);
   if (enemy.state !== 'dead') {

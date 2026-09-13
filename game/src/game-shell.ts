@@ -1,3 +1,5 @@
+import { BuffBar } from './buff-bar.ts';
+import type { ActiveBuff } from './active-buffs.ts';
 import type { AudioControlActions } from './audio-controls.ts';
 import { PauseMenu } from './pause-menu.ts';
 import type { GroundLootNameplates } from './ground-loot-hover.ts';
@@ -31,6 +33,8 @@ export class GameShell {
   private menuAbort = new AbortController();
   private readonly actions: ShellActions;
   readonly shortcutMenu: HUDShortcutMenu;
+  readonly buffs: BuffBar;
+  setBuffs(buffs: readonly ActiveBuff[]): void { this.buffs.update(this.controls.hidden ? [] : buffs); }
   private gamepadActive = false;
   private pauseMenu: PauseMenu | null = null;
   backInMenu(): boolean { return this.pauseMenu?.back() ?? false; }
@@ -71,6 +75,7 @@ export class GameShell {
     this.controls = root.querySelector<HTMLElement>('#hud-controls')!;
     this.status = root.querySelector<HTMLElement>('#state-description')!;
     this.notifications = new GameNotifications(this.element);
+    this.buffs = new BuffBar(this.controls);
     const signal = this.abort.signal;
     this.element.addEventListener('contextmenu', event => event.preventDefault(), { signal });
     this.controls.querySelector('[data-hud="map"]')!.addEventListener('click', actions.openMap, { signal });
@@ -98,7 +103,9 @@ export class GameShell {
       button.style.left = `${rect.x / width * 100}%`; button.style.top = `${rect.y / height * 100}%`;
       button.style.width = `${rect.width / width * 100}%`; button.style.height = `${rect.height / height * 100}%`;
     };
-    for (const shortcut of getHUDLayout(width, height).shortcuts) place(shortcut.id, shortcut);
+    const hud = getHUDLayout(width, height);
+    this.buffs.element.style.bottom = `${(height - hud.y + 8) / height * 100}%`;
+    for (const shortcut of hud.shortcuts) place(shortcut.id, shortcut);
     place('map', getMinimapRect(width, height));
     place('portal', getPortalControlRect(width, height));
     this.shortcutMenu.position();
@@ -136,6 +143,7 @@ export class GameShell {
     const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys' || phase === 'chronicle';
     this.overlay.hidden = playing || panel || phase === 'ready';
     this.controls.hidden = !playing;
+    if (!playing) this.buffs.hide();
     this.element.classList.toggle('playing', playing);
     if (playing || panel || phase === 'ready') {
       this.overlay.innerHTML = '';
@@ -156,6 +164,7 @@ export class GameShell {
   }
 
   dispose(): void {
+    this.buffs.dispose();
     this.shortcutMenu.dispose();
     this.notifications.dispose();
     this.menuAbort.abort(); this.abort.abort();

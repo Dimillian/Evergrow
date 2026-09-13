@@ -1,3 +1,4 @@
+import { auraPower, bloodOathHit, resonanceHit } from './auras.ts';
 import type { WardBurst } from './unique-combat.ts';
 import { storeBastion } from './unique-combat.ts';
 import { mitigateSkillHit } from './player-skill-effects.ts';
@@ -27,6 +28,9 @@ export interface PlayerDamageContext {
 export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean,
   context: EnemyDamageContext, periodic = false, style?: ProjectileStyle, elementalDamage?: number, offense?: HitSnapshot, authoredBurn = false): void {
   if (enemy.state === 'dead') return;
+  if(!periodic){const oath=bloodOathHit(context.player,enemy,melee);damage*=oath;if(elementalDamage!==undefined)elementalDamage*=oath;}
+  const exposure=resonanceHit(context.player,enemy,style,periodic);
+  if(elementalDamage!==undefined){damage+=elementalDamage*(exposure-1);elementalDamage*=exposure;}else damage*=exposure;
   if (!periodic) {
     alertEnemy(enemy, context.player);
     // A camp shares danger only with nearby members who can see the struck ally.
@@ -72,7 +76,7 @@ export function damagePlayer(amount: number, angle: number, sourceLevel: number,
   const p = context.player;
   if (p.dead || p.invulnerable > 0 || context.world.isSanctuary?.(p.x, p.y)) return false;
   const reduction = damageType === 'physical' ? armorReduction(effectiveArmor(p), sourceLevel) : p.derived.resistances[damageType];
-  amount = Math.max(1, Math.round(amount * (1 - reduction)));
+  amount = Math.max(1, Math.round(amount * (1 - reduction) * (damageType==='physical'?1-auraPower(p,'ironroot')/800:1)));
   if (p.equipment.offHand?.kind === 'shield' && (p.guardTime > 0 || context.random() < p.derived.blockChance)) {
     const reduction = p.guardTime > 0 ? Math.max(p.guardReduction, p.derived.blockReduction) : p.derived.blockReduction;
     const blocked = Math.floor(amount * reduction);
@@ -91,7 +95,7 @@ export function damagePlayer(amount: number, angle: number, sourceLevel: number,
   context.emit({ type: 'hurt', ...(damageType === 'physical' ? {} : { style: damageType }), actualValue, x: p.x, y: p.y, angle, value: amount,
     remainingHp: p.hp, enemyKind: kind, heavy: amount >= 20 });
   if (p.hp <= 0) {
-    p.dead = true; p.affixBuffs = undefined; p.skillEffects = undefined;
+    p.dead = true; p.auras=undefined; p.affixBuffs = undefined; p.skillEffects = undefined;
     p.attack = null;
     p.dash = null; p.guardTime = 0;
     p.castTime = p.dodgeTime = 0;

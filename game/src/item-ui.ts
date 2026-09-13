@@ -4,7 +4,7 @@ import { hasGreaterAffix, isGreaterAffix, GREATER_AFFIX_SYMBOL } from './item-ro
 import { MANA_RULES } from './mana-content.ts';
 import { ITEM_LOCK_ICON } from './item-protection.ts';
 import { RESISTANCE_LABELS } from './resistance-content.ts';
-import { SPECIAL_AFFIX_LABELS, SKILL_STATS, isSkillStat, type SkillStat } from './equipment-affix-content.ts';
+import { AFFIX_COMBAT_RULES, SPECIAL_AFFIX_LABELS, SKILL_STATS, isSkillStat, type SkillStat } from './equipment-affix-content.ts';
 import { ELEMENTAL_AFFIXES, ELEMENT_COLORS } from './elemental-weapon.ts';
 import { weaponActionRate, basicAttackManaCost } from './equipment.ts';
 import type { CharacterSheet, EquipmentSlot, Item, ItemTier, StatKey } from './character-types.ts';
@@ -124,7 +124,7 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
     ${item.recipe.enhancement ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% scalable item stats</div>` : ''}
     ${weapon}${properties}
     ${uniqueDefinition(item)?uniquePowerMarkup(uniqueDefinition(item)!):''}
-    ${item.affixes.length ? `<div class="ui-item-affixes">${item.affixes.map(a => escapeUI(a.name)).join(' · ')}</div>` : ''}
+    ${itemModifiers(item).spellweavePercent ? `<p class="ui-item-description">Enables Spellweave · melee ↔ magic. Hits empower your next opposite action for ${AFFIX_COMBAT_RULES.weaveDuration}s.</p>` : ''}${item.affixes.length ? `<div class="ui-item-affixes">${item.affixes.map(a => escapeUI(a.name)).join(' · ')}</div>` : ''}
     ${comparison}${view.context ? `<div class="ui-item-comparison">${escapeUI(view.context)}</div>` : ''}`;
 }
 

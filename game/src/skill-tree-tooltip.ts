@@ -1,3 +1,4 @@
+import { effectTerm, spellweaveNodeMarkup } from './effect-terms.ts';
 import { scaleTreeDefenses } from './skill-tree-balance.ts';
 import { previewSkillVariant } from './skill-variant-preview.ts';
 import { skillDamageSuffix, skillUtilityLabel } from './skill-execution-content.ts';
@@ -22,16 +23,17 @@ export function skillTooltipMarkup(node: SkillNode, view: SkillTooltipView): str
   const owned = view.allocated.has(node.id);
   const costs = skill ? resolveSkill(skill.id, view.costStats ?? { manaCostMultiplier: 1, cooldownMultiplier: 1 }, view.sheet) : undefined;
   const bonuses = Object.entries(scaleTreeDefenses(node.bonuses, view.level ?? 1)) as [StatKey, number][];
-  const rows = bonuses.map(([key, value]) => `<div class="skill-tip-stat"><span>${escapeUI(STAT_LABELS[key])}${key==='armor'?' (scales with level)':''}</span><b>${escapeUI(formatStatValue(key, value))}</b></div>`).join('');
+  const rows = bonuses.map(([key, value]) => `<div class="skill-tip-stat"><span>${key === 'spellweavePercent' ? effectTerm('spellweave', STAT_LABELS[key]) : escapeUI(STAT_LABELS[key])}${key==='armor'?' (scales with level)':''}</span><b>${escapeUI(formatStatValue(key, value))}</b></div>`).join('');
   const cost = previewSkillRoute(view.routes, node.id).filter(id => !view.allocated.has(id)).length;
   const selected = node.specialization && owner && view.sheet?.skillSpecializations[owner.id] === node.specialization;
   const state = selected ? 'Selected' : owned ? node.specialization ? 'Unlocked' : 'Allocated' : cost ? `${cost} ${cost === 1 ? 'point' : 'points'} to unlock` : 'Not connected';
   return `<header class="skill-tip-heading"><small>${escapeUI(skillNodeRole(node))} <span>· ${node.domain}</span></small><h3>${escapeUI(node.name)}</h3>
     ${owner && !skill ? `<p class="skill-tip-owner">${escapeUI(owner.name)}</p>` : ''}</header>
-    <section class="skill-tip-effects">${node.doctrine?`<p>${escapeUI(node.description)}</p>`:''}${rows || `<p>${escapeUI(node.description)}${node.skill && costs?.variant ? `</p><p>${escapeUI(costs.variant.description)}` : ''}</p>`}
+    <section class="skill-tip-effects">${node.doctrine&&!node.bonuses.spellweavePercent?`<p>${escapeUI(node.description)}</p>`:''}${rows || `<p>${escapeUI(node.description)}${node.skill && costs?.variant ? `</p><p>${escapeUI(costs.variant.description)}` : ''}</p>`}
+    ${spellweaveNodeMarkup(node.bonuses.spellweavePercent ?? 0, node.id === 'keystone:borrowed-flame')}
     ${node.specialization && view.sheet ? specializationPreviewMarkup(node.specialization, view.costStats ?? { manaCostMultiplier: 1, cooldownMultiplier: 1 }, view.sheet) : ''}
     ${node.specialization ? '<small>Unlocks a selectable variant. One active per skill.</small>' : ''}</section>
-    ${costs && skill ? `<section class="skill-tip-facts"><div><b>${costs.mana}</b><small>Mana</small></div><div><b>${costs.cooldown ? `${Number(costs.cooldown.toFixed(2))}s` : 'None'}</b><small>Cooldown</small></div>
+    ${costs && skill ? `<section class="skill-tip-facts"><div><b>${costs.reservation?`${costs.reservation}%`:costs.mana}</b><small>${costs.reservation?'Reserved mana':'Mana'}</small></div><div><b>${costs.reservation?'On skill bar':costs.cooldown ? `${Number(costs.cooldown.toFixed(2))}s` : 'None'}</b><small>${costs.reservation?'Auto active':'Cooldown'}</small></div>
       ${costs.damageMultiplier ? `<div class="skill-tip-wide"><b>${Math.round(costs.damageMultiplier * 100)}%</b><small>Weapon damage${skillDamageSuffix(skill.id, costs.recipe)}</small></div>` : costs.recipe.kind === 'guard' ? `<div class="skill-tip-wide"><b>${Number(costs.recipe.duration.toFixed(2))}s · ${Math.round(costs.recipe.reduction * 100)}%</b><small>Guard · damage blocked</small></div>` : `<div class="skill-tip-wide"><b>${skillUtilityLabel(skill.id,costs.recipe)}</b></div>`}
       ${costs.damageMultiplier&&skillUtilityLabel(skill.id,costs.recipe)?`<div class="skill-tip-wide"><b>${skillUtilityLabel(skill.id,costs.recipe)}</b></div>`:''}
       ${costs.upkeep ? `<div class="skill-tip-wide"><b>${costs.upkeep}</b><small>Mana / second</small></div>` : ''}

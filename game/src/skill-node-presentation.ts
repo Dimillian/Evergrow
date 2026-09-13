@@ -11,6 +11,7 @@ export function skillNodeOwner(node: SkillNode) {
 export function skillNodeRole(node: SkillNode): string {
   if (node.doctrine) return 'Doctrine · choose one';
   if (node.specialization) return 'Technique';
+  if(node.skill&&SKILL_DEFINITIONS[node.skill].tier==='aura')return 'Aura · mana reservation';
   if (node.skill) return SKILL_DEFINITIONS[node.skill].tier === 'ultimate' ? 'Ultimate skill' : 'Active skill';
   if (node.keystone) return 'Keystone';
   if (node.kind === 'origin') return 'Origin';

@@ -1,0 +1,7 @@
+.ui-tooltip.ui-explanation { position: fixed; z-index: 180; width: 248px; max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow: auto; box-sizing: border-box; pointer-events: auto; font-family: var(--ui-font); font-size: 14px; }
+.ui-explanation h3 { margin: 0 0 6px; font-size: 17px; color: #e2edf0; }
+.ui-explanation p { margin: 6px 0; }
+.ui-explanation small, .effect-fit { color: #adbec7; font-size: 12px; }
+.ui-term { display: inline; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; line-height: inherit; text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+.ui-term:hover, .ui-term:focus-visible { color: #e4caff; text-decoration-style: solid; outline: 1px solid #c7a0ef88; outline-offset: 2px; }
+.skill-atlas-tooltip.ui-tooltip { pointer-events: auto; }

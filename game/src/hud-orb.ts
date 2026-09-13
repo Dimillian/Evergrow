@@ -44,7 +44,7 @@ function manaEnergy(c: CanvasRenderingContext2D, time: number, level: number) {
 
 /** Native-resolution garnet/lapis glass and its complete, 31px metal socket. */
 export function drawHUDOrb(c: CanvasRenderingContext2D, x: number, y: number,
-  ratio: number, time: number, mana: boolean, trail = ratio, hit = 0) {
+  ratio: number, time: number, mana: boolean, trail = ratio, hit = 0, reserved = 0) {
   const r = GLASS_RADIUS;
   ratio = clamp(ratio); trail = clamp(trail); hit = clamp(hit);
   const lowPulse = !mana && ratio > 0 && ratio < .3 ? .5 + Math.sin(time * 4.5) * .5 : 0;
@@ -172,6 +172,14 @@ export function drawHUDOrb(c: CanvasRenderingContext2D, x: number, y: number,
       circle(c, 0, 0, 29.1); c.lineWidth = 1.35;
       c.globalAlpha = hit * .48; c.strokeStyle = '#df7c6b'; c.stroke();
     }
+  }
+  if(mana&&reserved>0){
+    c.save();circle(c,0,0,r);c.clip();
+    const boundary=liquidLevel(1-clamp(reserved));
+    c.fillStyle='#10101edf';c.fillRect(-r,-r,r*2,boundary+r);
+    c.save();c.beginPath();c.rect(-r,-r,r*2,boundary+r);c.clip();c.strokeStyle='#a394bd35';c.lineWidth=.65;
+    for(let i=-65;i<65;i+=7){c.beginPath();c.moveTo(i,-r);c.lineTo(i+36,r);c.stroke();}c.restore();
+    c.strokeStyle='#c4b6d999';c.lineWidth=.8;c.beginPath();c.moveTo(-r,boundary);c.lineTo(r,boundary);c.stroke();c.restore();
   }
   c.restore();
 }

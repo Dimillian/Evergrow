@@ -1,3 +1,5 @@
+import { isAura } from './aura-content.ts';
+import { auraPower, manaCapacity } from './auras.ts';
 import { lungeReturn } from './unique-combat.ts';
 import { basicAttackWeapon } from './equipment.ts';
 import { PORTAL_RULES } from './travel.ts';
@@ -170,7 +172,7 @@ export class TouchHUD {
     if(this.element.hidden !== hidden) this.element.hidden = hidden;
     if(!this.active || !enabled || now < this.nextUpdate) return;
     this.nextUpdate = now+75;
-    for(const [kind,value,max] of [['life',player.hp,player.maxHp],['mana',player.mana,player.maxMana]] as const) {
+    for(const [kind,value,max] of [['life',player.hp,player.maxHp],['mana',player.mana,manaCapacity(player)]] as const) {
       const el = this.element.querySelector<HTMLElement>(`.touch-${kind}`)!;
       el.setAttribute('aria-valuenow',String(Math.ceil(value))); el.setAttribute('aria-valuemax',String(max));
       el.querySelector('span')!.textContent = `${Math.ceil(value)} / ${max}`;
@@ -189,12 +191,13 @@ export class TouchHUD {
       el.setAttribute('aria-label',id ? `${SKILL_DEFINITIONS[id].name}${cooldown>0?`, ${cooldown.toFixed(1)} seconds`:player.mana<cost?', Not enough mana':''}` : `Empty skill ${i+1}`);
       const sustain = skillSustain(id, player, effects);
       el.classList.toggle('is-sustained', !!sustain);
+      if(id&&isAura(id)&&auraPower(player,id))el.setAttribute('aria-label',`${SKILL_DEFINITIONS[id].name}, aura active, ${resolveSkill(id,player.derived,player.character).reservation}% mana reserved`);
       if (sustain) el.setAttribute('aria-label', `${SKILL_DEFINITIONS[id!].name}, active ${sustain.remaining.toFixed(1)} seconds${sustain.upkeep ? `, ${sustain.upkeep} mana per second` : ''}, cooldown ${cooldown.toFixed(1)} seconds`);
       if(returning)el.setAttribute('aria-label',`Lunge, return available for ${returning.remaining.toFixed(1)} seconds`);
       el.querySelector('small')!.textContent = returning ? `Return ${returning.remaining.toFixed(1)}s` : sustain ? `${sustain.remaining.toFixed(1)}s · ${cooldown.toFixed(1)}` : cooldown>0 ? cooldown.toFixed(1) : id ? `${i+1} · ${cost}` : '—';
     }
     this.element.querySelector('.touch-potion small')!.textContent = player.healCooldown>0 ? player.healCooldown.toFixed(1) : String(player.flasks);
-    this.element.querySelector('.touch-potion')!.classList.toggle('is-unavailable',player.flasks===0||player.healCooldown>0||(player.hp>=player.maxHp&&player.mana>=player.maxMana));
+    this.element.querySelector('.touch-potion')!.classList.toggle('is-unavailable',player.flasks===0||player.healCooldown>0||(player.hp>=player.maxHp&&player.mana>=manaCapacity(player)));
     this.element.querySelector('.touch-dodge small')!.textContent = String(player.dodgeCharges);
     this.element.querySelector('.touch-dodge')!.classList.toggle('is-unavailable',player.dodgeCharges===0);
     this.element.querySelector('.touch-attack')!.classList.toggle('is-unavailable',player.mana<basicAttackManaCost(basicAttackWeapon(player),player.derived));

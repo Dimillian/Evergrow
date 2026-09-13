@@ -34,7 +34,7 @@ export function inventorySkillPickerMarkup(player: Player, slot: number): string
     const resolved = resolveSkill(skill.id, player.derived, player.character);
     const compatible = canUseSkill(skill.id, player.equipment), assigned = player.character.skillSlots.indexOf(skill.id);
     const selected = assigned === slot;
-    const detail = `${resolved.mana} mana${compatible ? '' : ` · Requires ${skillRequirementLabel(skill.requirement)}`}`;
+    const detail = `${resolved.reservation?`${resolved.reservation}% reserved · Auto active`:`${resolved.mana} mana`}${compatible ? '' : ` · Requires ${skillRequirementLabel(skill.requirement)}`}`;
     return `<button type="button" class="inventory-skill-choice" data-assign-skill="${skill.id}" aria-pressed="${selected}" title="${escapeUI(detail)}" style="--skill-color:${skill.color}">
       <span class="inventory-skill-icon">${skillIconSVG(skill.id, 24)}</span><span class="inventory-skill-copy"><strong>${escapeUI(resolved.variant?.name ?? skill.name)}</strong><small class="${compatible ? '' : 'is-loss'}">${escapeUI(detail)}</small></span>
       <span class="inventory-skill-binding">${selected ? '✓' : assigned >= 0 ? `← ${INVENTORY_SKILL_BINDINGS[assigned].key}` : ''}</span></button>`;

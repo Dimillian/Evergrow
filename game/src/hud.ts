@@ -1,3 +1,6 @@
+import { isAura } from './aura-content.ts';
+import { auraPower, manaCapacity } from './auras.ts';
+import { canSpellweave } from './affix-combat.ts';
 import { UNIQUE_RULES } from './unique-content.ts';
 import { lungeReturn } from './unique-combat.ts';
 import { skillSustain } from './skill-sustain.ts';
@@ -6,7 +9,7 @@ import { basicAttackManaCost } from './equipment.ts';
 import { resolveSkill } from './skill-progression.ts';
 import { PAD_SKILL_LABELS } from './gamepad-input.ts';
 import { drawSkillIcon } from './skill-icon-canvas.ts';
-import { SKILL_DEFINITIONS, canUseSkill } from './skill-content.ts';
+import { SKILL_DEFINITIONS, canUseSkill, skillWeapon } from './skill-content.ts';
 import { drawHUDWeapon } from './hud-weapon-icon.ts';
 import { drawHUDUtility } from './hud-utility-art.ts';
 import type { GroundEffect, Player } from './model.ts';
@@ -49,10 +52,13 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = 
     const returning=skill==='lunge'?lungeReturn(p):undefined;
     const cooldown = skill && !returning ? p.skillCooldowns[skill] ?? 0 : 0;
     const sustain = skillSustain(skill, p, groundEffects);
-    const occupied = i === 0 || !!skill, active = i === 0 ? !!p.attack : !!skill && (p.activeSkill === skill || !!sustain);
+    const occupied = i === 0 || !!skill, active = i === 0 ? !!p.attack : !!skill && (p.activeSkill === skill || !!sustain || isAura(skill)&&auraPower(p,skill)>0);
     const compatible = !skill || canUseSkill(skill, p.equipment);
     const resolved = skill ? resolveSkill(skill, p.derived, p.character) : null;
     const manaCost = returning ? 0 : resolved?.mana ?? (i === 0 ? basicAttackManaCost(basicAttackWeapon(p), p.derived) : 0);
+    const weaveWeapon = skill ? skillWeapon(skill, p.equipment) : basicAttackWeapon(p);
+    const weaveKind = definition?.requirement === 'magic' || weaveWeapon?.attackKind === 'bolt' ? 'spell' : weaveWeapon?.attackKind === 'melee' ? 'melee' : null;
+    const weaveReady = occupied && !returning && canSpellweave(p) && weaveKind && (p.affixBuffs?.[weaveKind] ?? 0) > 0 && (!definition || definition.damageMultiplier > 0);
     const usable = !p.dead && compatible && cooldown <= 0 && p.mana >= manaCost;
     c.save();
     chamfer(c, x, y, w, h, 1);
@@ -74,6 +80,8 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = 
       c.restore(); c.globalAlpha = 1;
       if (!compatible) {
         c.fillStyle = '#dc9a87'; c.beginPath(); c.moveTo(x + 3, y + 3); c.lineTo(x + 9, y + 3); c.lineTo(x + 3, y + 9); c.closePath(); c.fill();
+      } else if(resolved?.reservation){
+        text(c,`${Number(resolved.reservation.toFixed(1))}%`,x+w-4,y+3,.65,'#c6bbdd','right');
       } else if(skill==='piercingShot'&&p.skillEffects?.draw){
         const draw=p.skillEffects.draw;
         text(c,draw.elapsed>=UNIQUE_RULES.drawTime?'READY':`${Math.round(draw.elapsed/UNIQUE_RULES.drawTime*100)}%`,x+w/2,y+h/2-4,.75,'#d4e7ba','center');
@@ -95,6 +103,11 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = 
     c.fillStyle = '#07111de8'; c.fillRect(x + w - badgeWidth - 1, y + h - 10, badgeWidth, 9);
     text(c, binding, x + w - 3, y + h - 9, keyScale,
       occupied && !p.dead ? UI.text : '#718490', 'right');
+    if (weaveReady && usable) {
+      c.strokeStyle = weaveKind === 'spell' ? '#d8b4ff' : '#f4d69a'; c.lineWidth = 1.5;
+      c.strokeRect(x + 1.5, y + 1.5, w - 3, h - 3);
+      c.fillStyle = c.strokeStyle; c.beginPath(); c.arc(x + 5, y + 5, 2, 0, TAU); c.fill();
+    }
     if (active) {
       c.fillStyle = '#c4ad7a'; c.fillRect(x + 8, y + h - 1, w - 16, .8);
     }
@@ -165,13 +178,13 @@ export function drawHUDContents(c: CanvasRenderingContext2D, p: Player, time: nu
     c.save(); c.translate(mana ? orb.right : orb.left, orb.y); c.scale(orb.scale, orb.scale);
     drawHUDOrb(c, 0, 0, mana ? p.mana / Math.max(1, p.maxMana) : p.hp / Math.max(1, p.maxHp),
       t + (mana && !options.reducedMotion ? 7 : 0), mana, mana ? undefined : options.healthTrail,
-      mana ? 0 : (options.hitPulse ?? 0) * (options.reducedMotion ? .4 : 1));
+      mana ? 0 : (options.hitPulse ?? 0) * (options.reducedMotion ? .4 : 1),mana?(p.auras?.reservation??0)/100:0);
     c.restore();
   }
   skills(c, p, t, options.gamepad, options.groundEffects, options.inventory);
   if (!options.inventory) { utilities(c, p, options.gamepad); shortcuts(c, p); }
   readout(c, orb.left, Math.ceil(Math.max(0, p.hp)), p.maxHp, false);
-  readout(c, orb.right, Math.floor(Math.max(0, p.mana)), p.maxMana, true);
+  readout(c, orb.right, Math.floor(Math.max(0, p.mana)), manaCapacity(p), true);
   drawHUDExperience(c, p, t, options.experience, options.inventory ? HUD_ART.inventory.experienceY : HUD_ART.experience.y);
 }
 
@@ -186,7 +199,7 @@ function drawTouchResources(c: CanvasRenderingContext2D, p: Player, time: number
     c.scale(HUD_ART.orb.scale, HUD_ART.orb.scale);
     drawHUDOrb(c, 0, 0, mana ? p.mana / Math.max(1, p.maxMana) : p.hp / Math.max(1, p.maxHp),
       t + (mana && !options.reducedMotion ? 7 : 0), mana, mana ? undefined : options.healthTrail,
-      mana ? 0 : (options.hitPulse ?? 0) * (options.reducedMotion ? .4 : 1));
+      mana ? 0 : (options.hitPulse ?? 0) * (options.reducedMotion ? .4 : 1),mana?(p.auras?.reservation??0)/100:0);
     c.restore();
     // Keep the numeric plate larger than the scaled instrument for phone readability.
     chamfer(c, x - 44, 129, 88, 18, 4);
@@ -194,7 +207,7 @@ function drawTouchResources(c: CanvasRenderingContext2D, p: Player, time: number
     metal.addColorStop(0, '#263943'); metal.addColorStop(1, '#0a141c');
     c.fillStyle = metal; c.fill(); c.strokeStyle = '#77929c'; c.lineWidth = .8; c.stroke();
     const current = mana ? Math.floor(Math.max(0, p.mana)) : Math.ceil(Math.max(0, p.hp));
-    const value = `${current} / ${mana ? p.maxMana : p.maxHp}`;
+    const value = `${current} / ${mana ? manaCapacity(p) : p.maxHp}`;
     const size = Math.min(1.6, 78 / Math.max(1, textWidth(value)));
     text(c, value, x, 138 - size * 3.85, size, mana ? '#b9cee0' : '#dfb9af', 'center');
   }

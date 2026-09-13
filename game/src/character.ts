@@ -1,3 +1,5 @@
+import { auraReservation } from './aura-content.ts';
+import { manaCapacity, syncAuras } from './auras.ts';
 import { advanceSkillEffects } from './player-skill-effects.ts';
 import { advanceAffixBuffs } from './affix-combat.ts';
 import type { Player } from './model.ts';
@@ -20,7 +22,8 @@ export function refreshCharacter(player: Player): void {
   advanceAffixBuffs(player, 0);
   advanceSkillEffects(player,0);
   player.maxHp = derived.maxHp; player.maxMana = derived.maxMana;
-  player.hp = Math.min(player.hp, player.maxHp); player.mana = Math.min(player.mana, player.maxMana);
+  syncAuras(player);
+  player.hp = Math.min(player.hp, player.maxHp); player.mana = Math.min(player.mana, manaCapacity(player));
 }
 
 export function awardCharacterExperience(player: Player, amount: number): number {
@@ -36,6 +39,8 @@ export function awardCharacterExperience(player: Player, amount: number): number
 export function assignSkill(player: Player, slot: number, skill: SkillId | null): ActionResult {
   if (!Number.isInteger(slot) || slot < 0 || slot >= 5) return { ok: false, message: 'Choose one of the five skill slots.' };
   if (skill !== null && !unlockedSkills(player.character.allocatedNodes).includes(skill)) return { ok: false, message: 'Unlock this skill in the tree first.' };
+  const slots=player.character.skillSlots.map(id=>id===skill?null:id);slots[slot]=skill;
+  if(auraReservation({...player.character,skillSlots:slots})>=100)return {ok:false,message:'Not enough unreserved mana. Remove another aura first.'};
   if (skill) player.character.skillSlots = player.character.skillSlots.map(id => id === skill ? null : id);
   player.character.skillSlots[slot] = skill;
   return { ok: true };

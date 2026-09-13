@@ -1,0 +1,12 @@
+.buff-bar { position: absolute; z-index: 12; left: 50%; bottom: 145px; transform: translateX(-50%); display: flex; flex-wrap: wrap-reverse; justify-content: center; gap: 5px; width: max-content; max-width: min(440px, calc(100vw - 24px)); pointer-events: none; }
+.buff-bar[hidden] { display: none; }
+.buff-bar > button { position: relative; width: 40px; height: 40px; padding: 1px; overflow: hidden; border: 1px solid #829da9; border-color: var(--buff-color); border-radius: 0; color: var(--buff-color); background: #0d1821; box-shadow: inset 0 0 8px #c7dce51a, 0 2px 6px #0008; pointer-events: auto; cursor: help; font-family: var(--ui-font); }
+.buff-bar svg { width: 100%; height: 100%; display: block; }
+.buff-shade { position: absolute; inset: 0 0 auto; height: var(--buff-spent); background: #030910a8; pointer-events: none; }
+.buff-time { position: absolute; bottom: 0; left: 0; right: 0; background: #07111de8; color: #edf5f5; font-size: 13px; line-height: 15px; font-weight: 500; }
+.buff-charges { position: absolute; right: 2px; top: 0; color: #fff0c8; font-size: 12px; text-shadow: 0 1px 2px #000; }
+.buff-bar button:focus-visible { outline: 2px solid #edf5f5; outline-offset: 2px; }
+@media (pointer: coarse) { .buff-bar > button { width: 44px; height: 44px; } }
+@media (max-height: 450px) { .buff-bar { bottom: 142px; } }
+
+@media (forced-colors: active) { .buff-bar > button { border-color: ButtonText; background: Canvas; color: CanvasText; } .buff-time { background: Canvas; color: CanvasText; } .buff-shade { display: none; } }

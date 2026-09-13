@@ -1,3 +1,4 @@
+import { isAura } from '../src/aura-content.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
@@ -46,7 +47,7 @@ test('all active skills and specialization recipes activate in the isolated stud
   for(const skill of Object.values(SKILL_DEFINITIONS))for(const specialization of ['',...SKILL_SPECIALIZATIONS.filter(s=>s.skill===skill.id).map(s=>s.id)]){
     const study=new SkillStudy(emptyWorld,{skill:skill.id,rank:specialization?3:1,specialization,weapon:studyWeapons(skill.id)[0].id,facing:0,targets:'fan',enemy:'brute',x:0,y:0});
     const seen=new Set<string>();for(let i=0;i<240;i++)for(const event of study.step())seen.add(event.type);
-    assert.equal(study.didCast,true,`${skill.id}/${specialization}`);assert.ok(seen.has('cast')||seen.has('swing'));
+    if(isAura(skill.id)){assert.ok(study.simulation.player.auras?.powers[skill.id]);assert.equal(study.casts,0);}else {assert.equal(study.didCast,true,`${skill.id}/${specialization}`);assert.ok(seen.has('cast')||seen.has('swing'));}
     assert.equal(study.simulation.kills,0);assert.equal(study.simulation.groundItems.length,0);assert.equal(study.simulation.enemies.length,7);
     assert.equal(study.simulation.player.character.skillSlots[0],skill.id);
   }

@@ -112,7 +112,7 @@ test('all five empty slots and a locked skill are inert and cannot consume mana'
   assert.equal(sim.drainEvents().filter(event => event.type === 'cast' || event.type === 'swing' || event.type === 'hit').length, 0);
 });
 
-for (const id of Object.keys(SKILL_DEFINITIONS) as SkillId[]) {
+for (const id of (Object.keys(SKILL_DEFINITIONS) as SkillId[]).filter(id=>SKILL_DEFINITIONS[id].tier!=='aura')) {
   test(`${id} unlocks through connected nodes, pays its cost once and produces its actual combat effect`, () => {
     const sim = createSim(); unlock(sim, id);
     sim.setCombatViewport({ x: -600, y: -400, width: 1200, height: 800 });

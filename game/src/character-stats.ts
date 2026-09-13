@@ -1,3 +1,4 @@
+import { admittedAuras, auraRank, resolveAura } from './aura-content.ts';
 import { ATTRIBUTE_DAMAGE_BONUSES } from './attribute-content.ts';
 import { MANA_RULES, manaCostMultiplier } from './mana-content.ts';
 import { activeCharms } from './inventory-grid.ts';
@@ -45,7 +46,8 @@ export function deriveCharacterStats(sheet: CharacterSheet, treeBonuses: StatMod
     bounded(sheet.attributes[key] + value(key), 0, 1e9)])) as Record<Attribute, number>;
   const strength = Math.max(0, attributes.strength - 10), dexterity = Math.max(0, attributes.dexterity - 10);
   const intelligence = Math.max(0, attributes.intelligence - 10), vitality = Math.max(0, attributes.vitality - 10);
-  const armor = bounded(value('armor') * (blessing === 'bulwark' ? 1.4 : 1), 0, 1e9);
+  const ironroot=admittedAuras(sheet).includes('ironroot')?resolveAura('ironroot',auraRank(sheet,'ironroot')).power:0;
+  const armor = bounded(value('armor') * (blessing === 'bulwark' ? 1.4 : 1) * (1+ironroot/100), 0, 1e9);
   const offhand = sheet.equipped.offhand;
   const shield = sheet.equipped.weapon?.weapon?.hands !== 2 && offhand?.kind === 'shield' ? offhand.shield : undefined;
   const owned=new Set(sheet.allocatedNodes);
