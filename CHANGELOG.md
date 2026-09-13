@@ -10,6 +10,8 @@
 - Six more Uniques reshape Piercing Shot, Rain of Arrows, Ricochet, Bulwark, Backstab and Arc Lightning, bringing the collection to eighteen.
 - Hover underlined terms in item, stat, skill and Unique tooltips for nested explanations of their effects.
 - Target status icons show remaining control, burn, slow, Red Harvest marks and elemental Exposure.
+- Options now includes keyboard and mouse remapping for movement, combat and shortcuts, with primary and alternate bindings.
+- Replace conflicting bindings, unbind actions or restore defaults. Controls save per device, and displayed shortcuts follow your choices.
 
 ### Tweaks
 

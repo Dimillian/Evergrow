@@ -15,4 +15,4 @@ Scope: seven auras, eighteen Uniques, shared buff/debuff projections and retaine
 - Every Unique with Original and all three Techniques; projectile return/rebound budgets, charge/release cancellation, paid Fireball storage, terrain, ward rupture, barrier caps, marks, expiry, removal and restored checkpoints.
 - Shared item/stat/Unique explanations, current resolved skill values, status durations and target ownership; escaped glossary markup and bounded nested-card placement.
 
-No drop-rate or general damage-balance change is introduced by these audit fixes. Existing saves remain supported. The concurrent custom-controls work is outside this release snapshot.
+No drop-rate or general damage-balance change is introduced by these audit fixes. Existing saves remain supported. The release also includes custom controls; focused buff/explanation input tests cover Space, Enter, Tab and rebound gameplay keys, preserving native activation while preventing combat leakage. Potion glossary text no longer assumes its default binding.

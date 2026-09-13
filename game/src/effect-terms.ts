@@ -38,7 +38,7 @@ export function effectExplanation(id: string): string | undefined {
     block: ['Block', `Requires a usable shield. Active guard guarantees a block; otherwise block chance applies. Reduces damage after armor or resistance, before ${effectTerm('ward','wards')}.`],
     attackSpeed: ['Attack speed', 'Speeds up melee and bow actions. Paired basics alternate weapons. Magic bolts and magic skills use cast speed.'],
     castSpeed: ['Cast speed', 'Speeds up spells and basic staff/wand bolts. Does not shorten cooldowns.'],
-    potion: ['Potion recovery', 'Increases both life and mana restored by the shared potion, up to missing resources. Charges and cooldown stay on Q.'],
+    potion: ['Potion recovery', 'Increases both life and mana restored by the shared potion, up to missing resources. Charges and cooldown appear on the potion button.'],
     manaOnKill: ['Mana on kill', 'Restores mana immediately when an enemy dies, up to unreserved capacity.'],
     doctrine: ['Doctrine', 'Choose one option per family. Buying another replaces the current choice. Once paid, switching within that family is free and clears temporary skill buffs.'],
     measuredForce: ['Measured Force', `Cannot crit. Each percentage point of critical chance gives 1% more ${effectTerm('direct','direct damage')}, capped at 30%. Periodic damage is unaffected.`],
