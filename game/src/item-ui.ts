@@ -4,6 +4,7 @@ import { uniqueDefinition } from './unique-content.ts';
 import { hasGreaterAffix, isGreaterAffix, GREATER_AFFIX_SYMBOL } from './item-roll-content.ts';
 import { MANA_RULES } from './mana-content.ts';
 import { ITEM_LOCK_ICON } from './item-protection.ts';
+import { itemPrice } from './commerce.ts';
 import { RESISTANCE_LABELS } from './resistance-content.ts';
 import { AFFIX_COMBAT_RULES, SPECIAL_AFFIX_LABELS, SKILL_STATS, isSkillStat, type SkillStat } from './equipment-affix-content.ts';
 import { ELEMENTAL_AFFIXES, ELEMENT_COLORS } from './elemental-weapon.ts';
@@ -126,7 +127,8 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
     ${weapon}${properties}
     ${uniqueDefinition(item)?uniquePowerMarkup(uniqueDefinition(item)!):''}
     ${itemModifiers(item).spellweavePercent ? `<p class="ui-item-description">Enables ${effectTerm('spellweave', 'Spellweave')} · melee ↔ magic · ${AFFIX_COMBAT_RULES.weaveDuration}s.</p>` : ''}${item.affixes.length ? `<div class="ui-item-affixes">${item.affixes.map(a => escapeUI(a.name)).join(' · ')}</div>` : ''}
-    ${comparison}${view.context ? `<div class="ui-item-comparison">${escapeUI(view.context)}</div>` : ''}`;
+    ${comparison}<div class="ui-item-comparison"><span>Sell value · ${number(itemPrice(item, 'sell'), 0)} gold</span></div>
+    ${view.context ? `<div class="ui-item-comparison">${escapeUI(view.context)}</div>` : ''}`;
 }
 
 const EQUIPPED_LABELS: Record<EquipmentSlot, string> = {
