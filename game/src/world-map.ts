@@ -346,16 +346,16 @@ export class WorldMap {
   focusJourney(marker: JourneyMarker) {
     if (!this.opened || this.disposed) return;
     this.setJourneyMarker(marker);
-    this.focusLocation(marker, 180);
+    this.focusLocation(marker, 450, 1.6);
   }
 
-  private focusLocation(target: { x: number; y: number } | null, delay = 0) {
+  private focusLocation(target: { x: number; y: number } | null, delay = 0, durationScale = 1) {
     this.cancelRecenter(); this.pointer = null; this.hideTooltip();
     this.focusTarget = target ? { x: clampMapCoordinate(target.x), y: clampMapCoordinate(target.y) } : null;
     const destination = this.focusTarget ?? this.player;
     const distance = Math.hypot(destination.x - this.view.centerX, destination.y - this.view.centerY) * this.view.zoom;
     this.recenter = { x: this.view.centerX, y: this.view.centerY, started: performance.now() + delay,
-      duration: distance < 1 ? 0 : Math.min(850, 380 + distance * .3) };
+      duration: distance < 1 ? 0 : Math.min(850, 380 + distance * .3) * durationScale };
     this.invalidate();
   }
 
@@ -363,7 +363,8 @@ export class WorldMap {
     const motion = this.recenter;
     if (!motion) return;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const t = reduced || motion.duration === 0 ? 1 : Math.min(1, Math.max(0, (now - motion.started) / motion.duration));
+    const t = reduced || now >= motion.started + motion.duration || motion.duration === 0
+      ? 1 : Math.max(0, (now - motion.started) / motion.duration);
     const ease = t * t * t * (t * (t * 6 - 15) + 10);
     const destination = this.focusTarget ?? this.player;
     this.view.centerX = motion.x + (clampMapCoordinate(destination.x) - motion.x) * ease;
