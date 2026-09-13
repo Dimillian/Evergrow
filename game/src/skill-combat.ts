@@ -1,5 +1,5 @@
 import { hasUnique, UNIQUE_RULES } from './unique-content.ts';
-import { returningProjectile, storeFireballs, type StoredFireball } from './unique-combat.ts';
+import { lungeReturn, returningProjectile, storeFireballs, type StoredFireball } from './unique-combat.ts';
 import { skillEffects, consumeRally, snapshotSkillOffense, queueSkillEcho } from './player-skill-effects.ts';
 import { chainLifeOnHitMultiplier } from './skill-execution-content.ts';
 import { metric } from './chronicle.ts';
@@ -20,6 +20,7 @@ import { applySlow, applyStun } from './combat-status.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
 
 export interface SkillContext {
+  allowReturn?: boolean;
   containers?: ContainerAttackContext;
   availableGroundEffects: number;
   availableProjectiles: number;
@@ -42,14 +43,27 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   if (!id || !unlockedSkills(p.character.allocatedNodes).includes(id)) return false;
   const weapon = skillWeapon(id, p.equipment);
   if (!weapon) return false;
+  const returnStep=lungeReturn(p);
+  if(id==='lunge'&&returnStep){
+    if(context.allowReturn===false||returnStep.remaining<=0)return false;
+    const to=skillTargetPoint(context.world,p,returnStep,Math.hypot(returnStep.x-p.x,returnStep.y-p.y));
+    const distance=Math.hypot(to.x-p.x,to.y-p.y);delete p.skillEffects!.returnStep;
+    if(distance<1)return true;
+    const angle=Math.atan2(to.y-p.y,to.x-p.x),duration=distance/returnStep.speed;
+    p.dash={angle,remaining:duration,speed:returnStep.speed,damage:0,radius:0,skill:id,hitIds:new Set()};
+    p.castTime=duration;p.castDuration=duration;p.castAngle=angle;p.angle=angle;p.activeSkill=id;
+    context.emit({type:'cast',x:p.x,y:p.y,angle,skill:id,style:'arcane'});return true;
+  }
   const definition = SKILL_DEFINITIONS[id];
   const costs = resolveSkill(id, p.derived, p.character);
   const recipe: SkillExecution = costs.recipe;
   const storeEmbers=id==='fireball'&&hasUnique(p.character,'cinderheart-testament');
   const throwShield=id==='shieldBash'&&hasUnique(p.character,'returning-verdict');
   if(storeEmbers&&(p.skillEffects?.embers?.length??0)>=UNIQUE_RULES.storedCasts)return false;
-  const projectileSlots = storeEmbers ? 0 : throwShield ? 1 : recipe.kind === 'projectile' ? recipe.offsets.length : recipe.kind === 'step' && recipe.shot ? 1 : 0;
-  const groundSlots = storeEmbers ? 0 : recipe.kind === 'ground' ? recipe.scatter ?? 1 : recipe.kind === 'radial' && recipe.echo ? 1
+  const fissure=id==='earthshatter'&&hasUnique(p.character,'gravetide');
+  const shatter=id==='frostLance'&&hasUnique(p.character,'rimeheart-spire');
+  const projectileSlots = storeEmbers ? 0 : throwShield||fissure ? 1 : recipe.kind === 'projectile' ? recipe.offsets.length : recipe.kind === 'step' && recipe.shot ? 1 : 0;
+  const groundSlots = storeEmbers ? 0 : shatter ? projectileSlots : recipe.kind === 'ground' ? recipe.scatter ?? 1 : recipe.kind === 'radial' && recipe.echo ? 1
     : recipe.kind === 'projectile' && recipe.effects.groundDuration ? projectileSlots : 0;
   if (projectileSlots > context.availableProjectiles) return false;
   if (groundSlots > context.availableGroundEffects) return false;
@@ -100,26 +114,40 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
         const shotDef:ProjectileDefinition={owner:'player',speed:560,life:Math.max(.1,attack.range/560),radius:3,damage};
         const effects:ProjectileEffects={style:'arrow',offense,pierce:recipe.pierce};
         const shot=context.projectile(p.x,p.y,angle,shotDef,id,effects);if(shot)launch=shot.launch;
-        queueSkillEcho(p,p.x,p.y,angle,shotDef,effects);
+        queueSkillEcho(p,p.x,p.y,angle,shotDef,effects,{x:context.aimX,y:context.aimY});
       }
       break;
     }
     case 'ward': {
       p.castTime=.18;
       skillEffects(p).ward={remaining:recipe.duration,capacity:p.maxHp*recipe.fraction,
-        ...(hasUnique(p.character,'broken-seal')?{rupture:{absorbed:0,cap:attack.damage*UNIQUE_RULES.wardSpellCap,radius:UNIQUE_RULES.wardRadius*p.derived.areaMultiplier,offense:{...offense,critChance:0,lifeOnHit:0,directDamageMultiplier:1}}}:{})};break;
+        ...(hasUnique(p.character,'broken-seal')?{rupture:{absorbed:0,cap:attack.damage*UNIQUE_RULES.wardSpellCap,radius:UNIQUE_RULES.wardRadius*p.derived.areaMultiplier,offense:{...offense,critChance:0,lifeOnHit:0,directDamageMultiplier:1}}}:{})};
+      if(p.skillEffects?.borrowed)p.skillEffects.borrowed.capacity=Math.min(p.skillEffects.borrowed.capacity,Math.max(0,p.maxHp*UNIQUE_RULES.borrowedLife-p.skillEffects.ward!.capacity));
+      break;
     }
     case 'stance': {
       p.castTime=.18;
       const key=id==='ghostHunt'?'ghostHunt':id==='rallyOfIron'?'rallyOfIron':'brace';
       skillEffects(p)[key]={remaining:recipe.duration,reduction:recipe.reduction,charges:recipe.charges,bonus:recipe.bonus};
+      if(id==='ghostHunt'&&hasUnique(p.character,'pale-huntsman')){skillEffects(p).archer={x:p.x,y:p.y,angle:p.angle,remaining:recipe.duration};skillEffects(p).echoes=[];}
       break;
     }
     case 'dash':
+      if(id==='lunge'&&hasUnique(p.character,'duelists-return'))skillEffects(p).returnStep={x:p.x,y:p.y,remaining:UNIQUE_RULES.returnWindow,speed:recipe.speed};
       p.dash = { angle: p.angle, remaining: recipe.duration, speed: recipe.speed, damage, offense, elementalDamage: attack.elementalDamage * costs.damageMultiplier * weave * rally, radius: recipe.radius, skill: id, style: hitStyle, hitIds: new Set() };
+      if(p.skillEffects?.returnStep)p.skillEffects.returnStep.outward=p.dash;
       p.castTime = Math.max(p.castTime, recipe.duration);
       break;
     case 'radial':
+      if(id==='smokeVeil'&&hasUnique(p.character,'ashen-double')){
+        const state=skillEffects(p),serial=state.uniqueSerial=(state.uniqueSerial??0)+1;
+        state.decoy={id:serial,x:p.x,y:p.y,radius:p.radius,reach:recipe.radius,angle:p.angle,remaining:UNIQUE_RULES.decoyDuration,hp:p.maxHp*UNIQUE_RULES.decoyLife,maxHp:p.maxHp*UNIQUE_RULES.decoyLife};
+      }
+      if(fissure){
+        context.projectile(p.x,p.y,p.angle,{owner:'player',speed:UNIQUE_RULES.fissureSpeed,life:UNIQUE_RULES.fissureRange/UNIQUE_RULES.fissureSpeed,radius:4,damage},id,
+          {style:hitStyle??'arrow',fissureWidth:recipe.radius*.4,offense,pierce:Number.MAX_SAFE_INTEGER,stunDuration:recipe.stun,elementalDamage:attack.elementalDamage*costs.damageMultiplier*weave*rally});
+        break;
+      }
       if(recipe.shelter)(skillEffects(p).shelters??={})[id]={remaining:recipe.shelter.duration,reduction:recipe.shelter.reduction};
       if(!damage)p.castTime=.18;
       if(damage)strikeContainers(context.containers, novaPoint.x, novaPoint.y, recipe.radius);
@@ -166,6 +194,8 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
     case 'projectile': {
       const { burnDamageMultiplier, groundDamageMultiplier, ...payload } = recipe.effects;
       const effects: ProjectileEffects = { ...payload, offense,
+        ...(shatter?{shatter:{radius:UNIQUE_RULES.shatterRadius*p.derived.areaMultiplier,delay:UNIQUE_RULES.shatterDelay}}:{}),
+        ...(id==='siphon'&&hasUnique(p.character,'borrowed-life')?{borrowedLife:true}:{}),
         ...(groundDamageMultiplier !== undefined ? { groundDps: damage * groundDamageMultiplier } : {}),
         ...(burnDamageMultiplier !== undefined ? { burnDps: damage * burnDamageMultiplier } : {}) };
       if(storeEmbers){
@@ -177,7 +207,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
         { owner: 'player', speed: recipe.speed, life: Math.max(SKILL_TARGETING.minimumProjectileLife, attack.range / recipe.speed),
           radius: recipe.radius, damage }, id, effects);
         if (shot) {launch ??= shot.launch;if(id==='volley'&&hasUnique(p.character,'homeward-thorn'))returningProjectile(shot,p.x,p.y);}
-        if(index===0)queueSkillEcho(p,p.x,p.y,p.angle+offset,{owner:'player',speed:recipe.speed,life:Math.max(SKILL_TARGETING.minimumProjectileLife,attack.range/recipe.speed),radius:recipe.radius,damage},effects);
+        if(index===0)queueSkillEcho(p,p.x,p.y,p.angle+offset,{owner:'player',speed:recipe.speed,life:Math.max(SKILL_TARGETING.minimumProjectileLife,attack.range/recipe.speed),radius:recipe.radius,damage},effects,{x:context.aimX,y:context.aimY});
       }
       break;
     }

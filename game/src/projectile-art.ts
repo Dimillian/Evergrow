@@ -22,7 +22,12 @@ export function drawProjectile(c: CanvasRenderingContext2D, shot: Projectile, x:
   const wake = shot.launch ? Math.min(1, Math.max(0, shot.maxLife - shot.life) / .08) : 1;
   if (style !== 'arrow') drawGlow(c, x, y, style === 'fire' ? 58 : 37, color, .65);
   c.save(); c.translate(x, y); c.rotate(shot.angle);
-  if (shot.effects?.thrownShield) {
+  if(shot.effects?.fissureWidth){
+    const width=shot.effects.fissureWidth;c.strokeStyle='#c4a17c';c.lineWidth=3;
+    c.beginPath();c.moveTo(-32,-width*.5);c.lineTo(-15,-width*.25);c.lineTo(-4,0);c.lineTo(-20,width*.3);c.lineTo(-27,width*.6);c.stroke();
+    for(let i=0;i<7;i++){const sy=(i/6-.5)*width*2,lag=12+(i*17%23);polygon(c,[[-lag-12,sy],[-lag+3,sy-7],[-lag+8,sy+3]],i%2?'#ad927b':'#665747');}
+    c.strokeStyle='#edcda3';c.lineWidth=1.3;c.beginPath();c.moveTo(-30,-width*.45);c.lineTo(-4,0);c.lineTo(-27,width*.55);c.stroke();
+  } else if (shot.effects?.thrownShield) {
     const shield=shot.effects.thrownShield;
     c.rotate(time*15);c.fillStyle=shield.base;c.strokeStyle=shield.edge;c.lineWidth=1.8;
     c.beginPath();c.ellipse(0,0,10,13,0,0,Math.PI*2);c.fill();c.stroke();

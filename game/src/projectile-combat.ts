@@ -1,4 +1,4 @@
-import { turnProjectile } from './unique-combat.ts';
+import { turnProjectile, storeBorrowedLife, hurtDecoy } from './unique-combat.ts';
 import { projectileDamageType } from './resistance-content.ts';
 import type { DamageType } from './model.ts';
 import type { ProjectileStyle, HitSnapshot } from './model.ts';
@@ -26,7 +26,7 @@ function hit(projectile: Projectile, enemy: Enemy, context: ProjectileContext): 
   projectile.hitIds.add(enemy.id);
   const lifeBefore = enemy.hp;
   const offense = effects?.offense;
-  context.damage(enemy, projectile.damage, projectile.angle, !!effects?.thrownShield, effects?.style,
+  context.damage(enemy, projectile.damage, projectile.angle, !!(effects?.thrownShield||effects?.fissureWidth), effects?.style,
     offense, effects?.burnDuration !== undefined, effects?.elementalDamage);
   if (enemy.state !== 'dead') {
     if(effects?.stunDuration)applyStun(enemy,effects.stunDuration);
@@ -39,7 +39,9 @@ function hit(projectile: Projectile, enemy: Enemy, context: ProjectileContext): 
   }
   const p = context.player;
   if (effects?.lifeSteal && !p.dead) {
-    const healed = Math.min(p.maxHp - p.hp, Math.max(0, lifeBefore - enemy.hp) * effects.lifeSteal);
+    const restoration=Math.max(0,lifeBefore-enemy.hp)*effects.lifeSteal;
+    const healed = Math.min(p.maxHp - p.hp, restoration);
+    if(projectile.skill==='siphon'&&effects.borrowedLife)storeBorrowedLife(p,restoration-healed);
     p.hp += healed;
     if (healed > 0) {
       context.emit({ type: 'heal', x: p.x, y: p.y, value: healed });
@@ -48,6 +50,13 @@ function hit(projectile: Projectile, enemy: Enemy, context: ProjectileContext): 
   }
 }
 
+function shatter(projectile:Projectile,context:ProjectileContext):void {
+  const e=projectile.effects,crystal=e?.shatter;if(!crystal)return;
+  context.schedule({kind:'frost',crystal:true,x:projectile.x,y:projectile.y,radius:crystal.radius,delay:crystal.delay,
+    duration:0,interval:1,damage:projectile.damage,skill:'frostLance',style:'frost',offense:e.offense,
+    ...(e.slowDuration?{slow:{duration:e.slowDuration,factor:e.slowFactor??.6}}:{})});
+  delete e.shatter;
+}
 function blast(projectile: Projectile, context: ProjectileContext): void {
   const radius = projectile.effects?.blastRadius ?? 0;
   context.emit({ type: 'blast', x: projectile.x, y: projectile.y, radius: radius || 14,
@@ -85,18 +94,25 @@ export function advanceProjectiles(projectiles: Projectile[], dt: number, contex
         if (!broken) context.emit({ type: 'surface-hit', x: oldX, y: oldY, angle: projectile.angle,
           material: context.world.impactMaterial?.(projectile.x, projectile.y, projectile.radius) ?? 'stone', style: projectile.effects?.style });
         projectile.x = oldX; projectile.y = oldY;
-        if (projectile.owner === 'player') blast(projectile, context);
+        if (projectile.owner === 'player') {shatter(projectile,context);blast(projectile, context);}
         if(!turnProjectile(projectile))projectile.life = 0; break;
       }
       if (projectile.owner === 'enemy') {
+        const decoy=p.skillEffects?.decoy;
+        const playerHit=segmentDistanceSquared(p.x,p.y,oldX,oldY,projectile.x,projectile.y)<=(projectile.radius+p.radius)**2;
+        if(decoy&&decoy.hp>0&&segmentDistanceSquared(decoy.x,decoy.y,oldX,oldY,projectile.x,projectile.y)<=(projectile.radius+decoy.radius)**2
+          &&(!playerHit||Math.hypot(decoy.x-oldX,decoy.y-oldY)<Math.hypot(p.x-oldX,p.y-oldY))){
+          hurtDecoy(p,decoy.id,projectile.damage);context.emit({type:'blast',x:decoy.x,y:decoy.y,radius:12,style:'spirit'});projectile.life=0;continue;
+        }
         if (segmentDistanceSquared(p.x, p.y, oldX, oldY, projectile.x, projectile.y) <= (projectile.radius + p.radius) ** 2) {
           context.hurt(projectile.damage, projectile.angle, projectile.sourceLevel, projectileDamageType(projectile.effects?.style ?? 'arcane'), projectile.sourceKind); projectile.life = 0;
         }
         continue;
       }
       const candidates = context.enemies.filter(enemy => enemy.state !== 'dead' && !projectile.hitIds.has(enemy.id)
-        && segmentDistanceSquared(enemy.x, enemy.y, oldX, oldY, projectile.x, projectile.y) <= (projectile.radius + enemy.radius + PLAYER_PROJECTILE_FORGIVENESS) ** 2
+        && segmentDistanceSquared(enemy.x, enemy.y, oldX, oldY, projectile.x, projectile.y) <= ((projectile.effects?.fissureWidth??projectile.radius) + enemy.radius + PLAYER_PROJECTILE_FORGIVENESS) ** 2
         && context.visible(oldX, oldY, enemy.x, enemy.y));
+      if(projectile.effects?.fissureWidth){for(const enemy of candidates)hit(projectile,enemy,context);continue;}
       candidates.sort((a, b) => Math.hypot(a.x - oldX, a.y - oldY) - Math.hypot(b.x - oldX, b.y - oldY) || a.id - b.id);
       const enemy = candidates[0];
       if (!enemy) continue;
@@ -118,7 +134,7 @@ export function advanceProjectiles(projectiles: Projectile[], dt: number, contex
         }
       }
       if (effects && (effects.pierce ?? 0) > 0) { effects.pierce = (effects.pierce ?? 0) - 1; continue; }
-      if(!turnProjectile(projectile)){blast(projectile, context); projectile.life = 0;}
+      if(!turnProjectile(projectile)){shatter(projectile,context);blast(projectile, context); projectile.life = 0;}
     }
   }
 }

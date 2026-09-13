@@ -27,7 +27,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'enhancement-workbench',group:'equipment',name:'Enhancement workbench',path:'/services.html?operation=enhance&item=1',description:'Inspect equipment and exact before/after upgrade gains.'},
   {id:'services',group:'equipment',name:'Town services',path:'/services.html',description:'Inspect vendor stock, buyback and item improvements.'},
   {id:'services-phone',group:'equipment',name:'Services · phone',path:'/services-narrow.html',description:'The same enchanting interface at 390 pixels.'},
-  {id:'unique-items',group:'equipment',name:'Unique equipment',path:'/character.html?uniques',description:'The six unique items, fixed affixes and signature powers in the inventory.'},
+  {id:'unique-items',group:'equipment',name:'Unique equipment',path:'/character.html?uniques',description:'The twelve unique items, fixed affixes and signature powers in the inventory.'},
   {id:'unique-collection',group:'interface',name:'Unique collection',path:'/chronicle.html?uniques',description:'Found and undiscovered unique items with sample character history.'},
   {id:'unique-loot',group:'equipment',name:'Unique ground loot',path:'/loot.html?uniques',description:'Crimson and violet unique drops with named loot plates.'},
   {id:'loot',group:'equipment',name:'Ground loot',path:'/loot.html',description:'Dropped item art, rarity labels, coins and resource vials.'},

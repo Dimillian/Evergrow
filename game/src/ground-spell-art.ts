@@ -30,6 +30,12 @@ export function drawGroundSpell(c: CanvasRenderingContext2D, effect: ActiveGroun
   const progress = effect.delay > 0 ? 1 - effect.delay / Math.max(.01, effect.initialDelay ?? effect.delay) : 1;
   const t = reduced ? 0 : time;
   c.save(); c.translate(effect.x, effect.y);
+  if(effect.crystal&&effect.delay>0){
+    c.save();const grow=.7+progress*.3;
+    c.scale(grow,grow);polygon(c,[[0,-26],[9,-9],[3,5],[-7,-2],[-5,-15]],'#87bbdf');
+    polygon(c,[[0,-26],[3,5],[-7,-2],[-5,-15]],'#d5f5ff');
+    c.strokeStyle='#b4e7f1';c.lineWidth=1;c.globalAlpha=.35+progress*.4;c.beginPath();c.ellipse(0,0,effect.radius,effect.radius*.6,0,0,Math.PI*2);c.stroke();c.restore();
+  }
   if (effect.delay > 0 && effect.kind !== 'embers') {
     drawAttackWarning(c, { kind: 'circle', radius: r }, progress, color, t, reduced);
     if (effect.kind === 'arrowRain') for (let i = 0; i < 16; i++) {

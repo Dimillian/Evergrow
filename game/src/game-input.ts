@@ -56,6 +56,7 @@ export class GameInput {
       aimX: aim.x, aimY: aim.y,
       attack: !combatBlocked && (this.buttons.has(0) || this.pending.attack),
       dodge: this.pending.dodge, heal: this.pending.heal,
+      ...(this.pendingSkill===null&&this.buttons.has(2)?{skillPressed:false}:{}),
       heldSkillSlots: combatBlocked?[]:[...(this.buttons.has(2)?[0]:[]),...[1,2,3,4].filter(n=>this.keys.has(`Digit${n}`))],
       skillSlot: combatBlocked ? null : this.pendingSkill ?? (this.buttons.has(2) ? 0 : null),
     };

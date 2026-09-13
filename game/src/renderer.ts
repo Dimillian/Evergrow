@@ -746,6 +746,18 @@ export class Renderer {
         attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash, slow: enemy.slowTime, burning: enemy.burnTime, frozen: enemy.freezeTime, stunned: enemy.stunTime,
         impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false }) });
     }
+    for(const [kind,spirit] of [['decoy',p.skillEffects?.decoy],['archer',p.skillEffects?.archer]] as const){
+      if(!spirit||p.dead||settings.phase==='ready')continue;
+      entries.push({y:spirit.y,draw:()=>{
+        c.save();c.globalAlpha=Math.min(.55,spirit.remaining*2);
+        const pose=playerPose(p,settings.reducedMotion?0:sim.time,null);pose.effectTime=settings.reducedMotion?0:sim.time;
+        Object.assign(pose,{angle:spirit.angle,attack:0,moving:0,dodging:false,cast:0,guard:0,hitFlash:0,impact:0,gesture:undefined,attackKind:undefined});
+        if(kind==='archer'&&spirit.shotRemaining){pose.attackKind='ranged';pose.attack=.45;pose.attackAngle=spirit.angle;}
+        c.save();c.translate(spirit.x,spirit.y);drawHumanoid(c,pose);c.restore();
+        c.strokeStyle=kind==='decoy'?'#adc7ce':'#bcaddd';c.lineWidth=1.5;c.beginPath();c.ellipse(spirit.x,spirit.y,23,9,0,0,Math.PI*2);c.stroke();
+        c.restore();
+      }});
+    }
     if (settings.phase !== 'ready') entries.push({ y: py, draw: () => {
       const pose = playerPose(p, sim.time);
       pose.effectTime = settings.reducedMotion ? 0 : sim.time;

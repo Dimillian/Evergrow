@@ -1,3 +1,4 @@
+import { lungeReturn } from './unique-combat.ts';
 import { basicAttackWeapon } from './equipment.ts';
 import { PORTAL_RULES } from './travel.ts';
 import { TouchInput, type TouchAction } from './touch-input.ts';
@@ -72,7 +73,7 @@ export class TouchHUD {
       const id = this.player?.character.skillSlots[slot];
       if (slot >= 0 && (!id || !this.player)) return;
       if (id && this.player && !canUseSkill(id, this.player.equipment)) { this.actions.notice('Equip a compatible weapon to use this skill.'); return; }
-      if(id && this.player) {
+      if(id && this.player && !(id==='lunge'&&lungeReturn(this.player))) {
         const cooldown=this.player.skillCooldowns[id]??0, cost=resolveSkill(id,this.player.derived,this.player.character).mana;
         if(cooldown>0 || this.player.mana<cost) { this.actions.notice(cooldown>0?'Skill is recharging.':'Not enough mana.'); return; }
       }
@@ -181,14 +182,16 @@ export class TouchHUD {
     for(let i=0;i<5;i++) {
       const id = player.character.skillSlots[i], el = this.element.querySelector<HTMLButtonElement>(`[data-touch-action="skill-${i}"]`)!;
       if(this.icons.get(i)!==id) { el.querySelector('.touch-icon')!.innerHTML = id ? skillIconSVG(id,29) : ''; this.icons.set(i,id); }
-      const cooldown = id ? player.skillCooldowns[id]??0 : 0;
-      const cost = id ? resolveSkill(id,player.derived,player.character).mana : 0;
+      const returning=id==='lunge'?lungeReturn(player):undefined;
+      const cooldown = id && !returning ? player.skillCooldowns[id]??0 : 0;
+      const cost = id && !returning ? resolveSkill(id,player.derived,player.character).mana : 0;
       el.classList.toggle('is-unavailable',!id || cooldown>0 || player.mana<cost || !canUseSkill(id,player.equipment));
       el.setAttribute('aria-label',id ? `${SKILL_DEFINITIONS[id].name}${cooldown>0?`, ${cooldown.toFixed(1)} seconds`:player.mana<cost?', Not enough mana':''}` : `Empty skill ${i+1}`);
       const sustain = skillSustain(id, player, effects);
       el.classList.toggle('is-sustained', !!sustain);
       if (sustain) el.setAttribute('aria-label', `${SKILL_DEFINITIONS[id!].name}, active ${sustain.remaining.toFixed(1)} seconds${sustain.upkeep ? `, ${sustain.upkeep} mana per second` : ''}, cooldown ${cooldown.toFixed(1)} seconds`);
-      el.querySelector('small')!.textContent = sustain ? `${sustain.remaining.toFixed(1)}s · ${cooldown.toFixed(1)}` : cooldown>0 ? cooldown.toFixed(1) : id ? `${i+1} · ${cost}` : '—';
+      if(returning)el.setAttribute('aria-label',`Lunge, return available for ${returning.remaining.toFixed(1)} seconds`);
+      el.querySelector('small')!.textContent = returning ? `Return ${returning.remaining.toFixed(1)}s` : sustain ? `${sustain.remaining.toFixed(1)}s · ${cooldown.toFixed(1)}` : cooldown>0 ? cooldown.toFixed(1) : id ? `${i+1} · ${cost}` : '—';
     }
     this.element.querySelector('.touch-potion small')!.textContent = player.healCooldown>0 ? player.healCooldown.toFixed(1) : String(player.flasks);
     this.element.querySelector('.touch-potion')!.classList.toggle('is-unavailable',player.flasks===0||player.healCooldown>0||(player.hp>=player.maxHp&&player.mana>=player.maxMana));

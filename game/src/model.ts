@@ -37,6 +37,8 @@ export interface Input {
   heal: boolean;
   skillSlot: number | null;
   heldSkillSlots?: readonly number[];
+  /** False for a held repeat, absent/true for a fresh skill press. */
+  skillPressed?: boolean;
 }
 
 export type HitSnapshot = Readonly<Pick<DerivedCharacterStats, 'critChance' | 'critMultiplier' | 'lifeOnHit'>> & { readonly skill?: SkillId; readonly directDamageMultiplier?: number };
@@ -114,6 +116,9 @@ export interface ShieldDefinition {
 }
 /** Payload snapshots travel with a projectile; equipment changes cannot rewrite it in flight. */
 export interface ProjectileEffects {
+  fissureWidth?: number;
+  shatter?: {radius:number;delay:number};
+  borrowedLife?: boolean;
   returning?: {x:number;y:number;leg:'out'|'back';pierce:number};
   thrownShield?: ShieldDefinition['visual'];
   stunDuration?: number;
@@ -194,6 +199,7 @@ export type EnemyKind = 'thornReaver' | 'mireSpitter' | 'frostRevenant' | 'ember
 export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
 
 export interface Enemy {
+  decoyTarget?: {id:number;x:number;y:number;radius:number;hit?:boolean};
   dungeonTheme?: import('./dungeon-content.ts').DungeonThemeId;
   /** Three-action cycle; regional signatures follow two basics, elites use lighter quick basics. */
   attackTurns?: number;
@@ -294,6 +300,7 @@ export interface GroundEffect {
   id: number; kind: 'meteor' | 'arrowRain' | 'storm' | 'frost' | 'embers'; x: number; y: number; radius: number;
   delay: number; duration: number; interval: number; tick: number;
   damage: number; skill: SkillId; style: ProjectileStyle; offense?: HitSnapshot;
+  crystal?: boolean;
   slow?: { duration: number; factor: number }; stun?: number; follow?: boolean; upkeep?: number;
   burn?: { readonly duration: number; readonly dps: number };
   scorch?: { readonly duration: number; readonly interval: number; readonly dps: number };

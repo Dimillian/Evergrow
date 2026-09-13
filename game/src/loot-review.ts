@@ -61,7 +61,7 @@ if (pickupView) {
     drops[2].item = deriveItem(stone);
     sim.player.level = 35;
   }
-  if(params.has('uniques'))drops.splice(0,drops.length,...UNIQUES.map((u,i)=>({id:400+i,x:x+(i%3-1)*115,y:y+(Math.floor(i/3)?90:-75),item:generateUnique(7319+i,25,u.id)})));
+  if(params.has('uniques'))drops.splice(0,drops.length,...UNIQUES.map((u,i)=>({id:400+i,x:x+(i%3-1)*115,y:y+(Math.floor(i/3)-(Math.ceil(UNIQUES.length/3)-1)/2)*110,item:generateUnique(7319+i,25,u.id)})));
   sim.groundItems = drops;
   renderer.cameraX = x; renderer.cameraY = y;
   sim.player.angle = .5;

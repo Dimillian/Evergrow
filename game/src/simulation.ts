@@ -1,5 +1,5 @@
 import { hasUnique } from './unique-content.ts';
-import { releaseStoredEmbers } from './unique-combat.ts';
+import { releaseStoredEmbers, hurtDecoy } from './unique-combat.ts';
 import { manaVialAmount, manaVialRestoration } from './mana-content.ts';
 import { roamingEscortRole, roamingFormationRadius, roamingMemberOffset, roamingMemberRank } from './roaming-encounters.ts';
 import { packSpaceProblem } from './inventory-grid.ts';
@@ -123,7 +123,7 @@ export class Simulation {
   readonly brokenContainers = new Set<string>();
   groundEffects: ActiveGroundEffect[] = [];
   readonly groundPickup = new GroundItemPickup();
-  private skillBuffer: { slot: number; until: number } | null = null;
+  private skillBuffer: { slot: number; until: number; pressed?:boolean } | null = null;
   time = 0;
   kills = 0;
   world: WorldQuery;
@@ -311,7 +311,7 @@ export class Simulation {
     if (!Number.isFinite(dt) || dt <= 0 || this.player.dead) return;
     if (input.attack) this.attackBuffer = this.time + COMBAT_TIMING.attackBuffer;
     if (input.dodge) this.dodgeBuffer = this.time + COMBAT_TIMING.inputBuffer;
-    if (input.skillSlot !== null) this.skillBuffer = { slot: input.skillSlot, until: this.time + COMBAT_TIMING.inputBuffer };
+    if (input.skillSlot !== null) this.skillBuffer = { slot: input.skillSlot, until: this.time + COMBAT_TIMING.inputBuffer, pressed: input.skillPressed!==false || this.skillBuffer?.slot===input.skillSlot&&!!this.skillBuffer.pressed&&this.skillBuffer.until>=this.time };
     if (input.heal) this.healBuffer = this.time + COMBAT_TIMING.inputBuffer;
     // Bound catch-up after a suspended tab; normal frames always run at 120 Hz.
     this.accumulator += Math.min(dt, 0.25);
@@ -430,7 +430,7 @@ export class Simulation {
     p.healCooldown = Math.max(0, p.healCooldown - dt);
     p.guardTime = Math.max(0, p.guardTime - dt);
     advanceAffixBuffs(p, dt);
-    advanceSkillEffects(p,dt,echo=>{if(!this.world.blocked(echo.x,echo.y,echo.definition.radius))this.projectile(echo.x,echo.y,echo.angle,echo.definition,'ghostHunt',echo.effects);});
+    advanceSkillEffects(p,dt,echo=>{if(this.world.blocked(echo.x,echo.y,echo.definition.radius))return true;const shot=this.projectile(echo.x,echo.y,echo.angle,echo.definition,'ghostHunt',echo.effects);if(shot)delete shot.launch;return !!shot;});
     for (const id of Object.keys(p.skillCooldowns) as SkillId[]) p.skillCooldowns[id] = Math.max(0, p.skillCooldowns[id]! - dt);
     p.healFlash = Math.max(0, p.healFlash - dt);
     metric(p.chronicle,'manaRestored',Math.min(p.maxMana-p.mana,p.derived.manaRegeneration*dt));
@@ -470,7 +470,7 @@ export class Simulation {
       if(!p.attack.skill&&!p.attack.embersReleased&&p.attack.elapsed>=p.attack.activeStart){
         p.attack.embersReleased=true;
         releaseStoredEmbers(p,MAX_PROJECTILES-this.projectiles.length-Number(p.attack.kind==='ranged'),
-          GROUND_EFFECT_RULES.maximum-this.groundEffects.length-this.projectiles.filter(s=>s.life>0&&s.effects?.groundDuration).length,
+          GROUND_EFFECT_RULES.maximum-this.groundEffects.length-this.projectiles.filter(s=>s.life>0&&(s.effects?.groundDuration||s.effects?.shatter)).length,
           stored=>this.projectile(p.x,p.y,p.attack!.angle+stored.offset,stored.definition,'fireball',stored.effects,stored.sourceLevel));
       }
       if (p.attack.kind === 'melee' && p.attack.elapsed >= p.attack.activeStart && previousElapsed < p.attack.activeEnd) this.resolveMelee(p.attack, previousElapsed);
@@ -485,7 +485,7 @@ export class Simulation {
           gaitPhase: p.walkTime, moving: Math.min(1, Math.hypot(p.vx, p.vy) / 130), moveAngle: Math.atan2(p.vy, p.vx),
           start: attack.activeStart / attack.duration, end: attack.activeEnd / attack.duration,
         };
-        if(shot&&style==='arrow'&&attack.projectile)queueSkillEcho(p,p.x,p.y,attack.angle,{owner:'player',damage:attack.damage,speed,life:attack.range/speed,radius:2},attack.projectile);
+        if(shot&&style==='arrow'&&attack.projectile)queueSkillEcho(p,p.x,p.y,attack.angle,{owner:'player',damage:attack.damage,speed,life:attack.range/speed,radius:2},attack.projectile,{x:input.aimX,y:input.aimY});
         attack.released = true;
         this.emit({ type: 'cast', x: p.x, y: p.y, angle: attack.angle, style, ...(shot?.launch ? { launch: shot.launch } : {}) });
       }
@@ -512,9 +512,10 @@ export class Simulation {
     }
 
     if (this.skillBuffer && this.skillBuffer.until >= this.time && activateSkill({
+      allowReturn:this.skillBuffer.pressed,
       containers: this.containerContext(),
       availableGroundEffects: GROUND_EFFECT_RULES.maximum - this.groundEffects.length
-        - this.projectiles.filter(shot => shot.life > 0 && shot.effects?.groundDuration).length,
+        - this.projectiles.filter(shot => shot.life > 0 && (shot.effects?.groundDuration||shot.effects?.shatter)).length,
       availableProjectiles: MAX_PROJECTILES - this.projectiles.length,
       player: p, world: this.world, enemies: this.enemies,
       aimX: input.aimX, aimY: input.aimY,
@@ -660,6 +661,7 @@ export class Simulation {
     const trial = this.eventState.trial && !this.dungeonFloor ? this.eventState.sites[this.eventState.trial.siteId] : null;
     const context: EnemyAIContext = {
       player: p, enemies: this.enemies, world: this.world, time: this.time,
+      hurtDecoy:(id,amount)=>{hurtDecoy(p,id,amount);},
       trial: trial ? { campId: `event:${trial.id}`, x: trial.x, y: trial.y, radius: EVENT_RULES.trialRadius } : null,
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       move: (actor, vx, vy, delta) => this.moveEnemy(actor, vx, vy, delta),

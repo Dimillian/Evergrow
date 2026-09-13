@@ -1,5 +1,5 @@
 import { deriveAttackStats } from '../equipment.ts';
-import { UNIQUES } from '../unique-content.ts';
+import { UNIQUES, uniqueSlot } from '../unique-content.ts';
 import { chronicleValues } from '../chronicle.ts';
 import { cloneData } from '../data-clone.ts';
 import type { CharacterSheet } from '../character-types.ts';
@@ -56,7 +56,7 @@ export class SkillStudy {
     if(unique){
       if(unique.skill!==options.skill)throw new Error('Choose a unique for this skill');
       if((unique.kind==='grimoire'||unique.kind==='orb')&&sheet.equipped.weapon?.weapon?.hands===2)sheet.equipped.weapon=generateItem(1024,p.level,'weapon','cinder-wand','common');
-      sheet.equipped[unique.kind==='weapon'?'weapon':unique.kind==='gloves'?'gloves':'offhand']=generateUnique(7319,p.level,unique.id);
+      sheet.equipped[uniqueSlot(unique)]=generateUnique(7319,p.level,unique.id);
     }
     refreshCharacter(p);p.angle=options.facing;p.hp=p.maxHp;p.mana=p.maxMana;
     if(!options.scenario||options.scenario==='showcase')p.mana=p.maxMana=100000;
@@ -78,9 +78,11 @@ export class SkillStudy {
     // Dummy AI is held still. Damage, statuses, recovery, projectiles and mana use runtime rules.
     for(const enemy of sim.enemies){enemy.stagger=60;if(scenario!=='showcase'){const point=this.targetPositions.get(enemy.id)!;enemy.x=point.x;enemy.y=point.y;enemy.knockbackX=enemy.knockbackY=0;}}
     const ready=this.elapsed>=.3&&!this.options.baseline;
-    const cast=ready&&(!this.didCast||scenario==='sustain'||!!this.options.unique&&this.options.skill==='whirlwind'&&this.elapsed<4);
-    const attack=(scenario==='followup'||scenario==='sustain'||!!this.options.unique&&this.options.skill==='fireball')&&this.elapsed>=.55&&(this.didCast||!!this.options.baseline);
-    sim.update(1/120,{...this.input,attack,skillSlot:cast?0:null});this.elapsed+=1/120;
+    const returning=!!p.skillEffects?.returnStep&&this.elapsed>=1.2;
+    const cast=ready&&(!this.didCast||returning||scenario==='sustain'||!!this.options.unique&&this.options.skill==='whirlwind'&&this.elapsed<4);
+    const attack=(scenario==='followup'||scenario==='sustain'||!!this.options.unique&&['fireball','ghostHunt'].includes(this.options.skill))&&this.elapsed>=.55&&(this.didCast||!!this.options.baseline);
+    const showSpirit=scenario==='showcase'&&['ashen-double','pale-huntsman'].includes(this.options.unique??'')&&this.elapsed>=.55&&this.elapsed<1.25;
+    sim.update(1/120,{...this.input,moveY:showSpirit?1:this.input.moveY,attack,skillSlot:cast?0:null});this.elapsed+=1/120;
     const events=sim.drainEvents();
     if(events.some(e=>(e.type==='cast'||e.type==='swing')&&e.skill===this.options.skill))this.didCast=true;
     if(scenario==='defense'&&this.elapsed>=this.nextHit){

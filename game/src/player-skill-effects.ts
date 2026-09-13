@@ -7,6 +7,11 @@ import { canUseSkill } from './skill-content.ts';
 export interface TimedSkillStance { remaining: number; reduction: number; charges: number; bonus: number; }
 export interface SkillEcho { delay: number; x: number; y: number; angle: number; definition: ProjectileDefinition; effects: ProjectileEffects; }
 export interface PlayerSkillEffects {
+  uniqueSerial?: number;
+  decoy?: {id:number;x:number;y:number;radius:number;reach:number;angle:number;remaining:number;hp:number;maxHp:number};
+  returnStep?: {x:number;y:number;remaining:number;speed:number;outward?:Player['dash']};
+  archer?: {x:number;y:number;angle:number;remaining:number;shotRemaining?:number};
+  borrowed?: {capacity:number;remaining:number};
   brace?: TimedSkillStance; rallyOfIron?: TimedSkillStance; ghostHunt?: TimedSkillStance;
   shelters?: Partial<Record<SkillId, { remaining: number; reduction: number }>>;
   embers?: StoredEmbers[];
@@ -24,10 +29,12 @@ export function consumeRally(p: Player, melee: boolean): number {
   buff.charges--;return 1+buff.bonus;
 }
 /** One delayed first-arrow snapshot per action. Topology and crit survive; healing/statuses/recursion do not. */
-export function queueSkillEcho(p: Player, x:number,y:number,angle:number,definition:ProjectileDefinition,effects:ProjectileEffects):void {
+export function queueSkillEcho(p: Player, x:number,y:number,angle:number,definition:ProjectileDefinition,effects:ProjectileEffects,aim?:{x:number;y:number}):void {
   const state=p.skillEffects,buff=state?.ghostHunt;
   if(!state || !buff || buff.remaining<=0 || buff.charges<=0 || state.echoes.length>=5 || effects.style!=='arrow' || !canUseSkill('ghostHunt',p.equipment))return;
   buff.charges--;
+  const archer=state.archer;
+  if(archer){const reach=definition.speed*definition.life;angle=Math.atan2((aim?.y??y+Math.sin(angle)*reach)-archer.y,(aim?.x??x+Math.cos(angle)*reach)-archer.x);x=archer.x;y=archer.y;archer.angle=angle;archer.shotRemaining=.32;}
   state.echoes.push({delay:.32,x,y,angle,definition:{...definition,damage:definition.damage*buff.bonus},effects:{style:'arrow',pierce:effects.pierce,chain:effects.chain,chainRange:effects.chainRange,offense:{skill:'ghostHunt',critChance:effects.offense?.critChance??0,critMultiplier:effects.offense?.critMultiplier??1.5,lifeOnHit:0,directDamageMultiplier:effects.offense?.directDamageMultiplier??1}}});
 }
 /** Highest stance mitigation wins; a finite ward consumes only the remaining damage. */
@@ -46,15 +53,19 @@ export function mitigateSkillHit(p: Player, amount:number):{damage:number;absorb
       delete s.ward;
     }
   }
-  return{damage:amount-absorbed,absorbed,...(burst?{burst}:{})};
+  const borrowed=s.borrowed;
+  const borrowedAbsorbed=borrowed?Math.min(amount-absorbed,borrowed.capacity):0;
+  if(borrowed){borrowed.capacity-=borrowedAbsorbed;if(borrowed.capacity<=0)delete s.borrowed;}
+  return{damage:amount-absorbed-borrowedAbsorbed,absorbed:absorbed+borrowedAbsorbed,...(burst?{burst}:{})};
 }
-export function advanceSkillEffects(p: Player,dt:number,emitEcho?:(echo:SkillEcho)=>void):void {
+export function advanceSkillEffects(p: Player,dt:number,emitEcho?:(echo:SkillEcho)=>boolean|void):void {
   const s=p.skillEffects;if(!s)return;if(p.dead){p.skillEffects=undefined;return;}
   advanceUniqueEffects(p,dt);
   for(const id of ['brace','rallyOfIron','ghostHunt'] as const){const b=s[id];if(b){b.remaining=Math.max(0,b.remaining-dt);if(!b.remaining||!p.character.allocatedNodes.includes(`skill:${id}`)||!canUseSkill(id,p.equipment))delete s[id];}}
   for(const [id,b]of Object.entries(s.shelters??{})){b.remaining=Math.max(0,b.remaining-dt);if(!b.remaining||!p.character.allocatedNodes.includes(`skill:${id}`)||!canUseSkill(id as SkillId,p.equipment))delete s.shelters![id as SkillId];}
   if(s.ward){s.ward.remaining=Math.max(0,s.ward.remaining-dt);s.ward.capacity=Math.min(s.ward.capacity,p.maxHp*.35);if(!s.ward.remaining||!p.character.allocatedNodes.includes('skill:runicWard')||!canUseSkill('runicWard',p.equipment))delete s.ward;}
+  if(s.archer&&!s.ghostHunt){delete s.archer;s.echoes=[];}
   if(!p.character.allocatedNodes.includes('skill:ghostHunt')||!canUseSkill('ghostHunt',p.equipment))s.echoes=[];
   for(const echo of s.echoes)echo.delay-=dt;
-  if(emitEcho){const due=s.echoes.filter(e=>e.delay<=0);s.echoes=s.echoes.filter(e=>e.delay>0);for(const echo of due)emitEcho(echo);}
+  if(emitEcho){const due=s.echoes.filter(e=>e.delay<=0);s.echoes=s.echoes.filter(e=>e.delay>0);for(const echo of due)if(emitEcho(echo)===false)s.echoes.push(echo);}
 }

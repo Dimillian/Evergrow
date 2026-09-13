@@ -1,3 +1,4 @@
+import { lungeReturn } from './unique-combat.ts';
 import { skillSustain } from './skill-sustain.ts';
 import { basicAttackWeapon } from './equipment.ts';
 import { basicAttackManaCost } from './equipment.ts';
@@ -43,12 +44,13 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = 
     const x = field.x + i * field.step, y = field.y, w = field.width, h = field.height;
     const skill = i > 0 ? p.character.skillSlots[i - 1] : null;
     const definition = skill ? SKILL_DEFINITIONS[skill] : null;
-    const cooldown = skill ? p.skillCooldowns[skill] ?? 0 : 0;
+    const returning=skill==='lunge'?lungeReturn(p):undefined;
+    const cooldown = skill && !returning ? p.skillCooldowns[skill] ?? 0 : 0;
     const sustain = skillSustain(skill, p, groundEffects);
     const occupied = i === 0 || !!skill, active = i === 0 ? !!p.attack : !!skill && (p.activeSkill === skill || !!sustain);
     const compatible = !skill || canUseSkill(skill, p.equipment);
     const resolved = skill ? resolveSkill(skill, p.derived, p.character) : null;
-    const manaCost = resolved?.mana ?? (i === 0 ? basicAttackManaCost(basicAttackWeapon(p), p.derived) : 0);
+    const manaCost = returning ? 0 : resolved?.mana ?? (i === 0 ? basicAttackManaCost(basicAttackWeapon(p), p.derived) : 0);
     const usable = !p.dead && compatible && cooldown <= 0 && p.mana >= manaCost;
     c.save();
     chamfer(c, x, y, w, h, 3);
@@ -75,6 +77,9 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = 
       if (!compatible) {
         const required = definition!.requirement;
         text(c, required === 'heavy' ? 'HEAVY' : required.toUpperCase(), x + w / 2, y + 32, .7, '#d3a898', 'center');
+      } else if(returning){
+        text(c,'RETURN',x+w/2,y+h/2-9,.65,'#d2bee6','center');
+        text(c,`${returning.remaining.toFixed(1)}s`,x+w/2,y+h/2+1,.7,'#d2bee6','center');
       } else if (definition && cooldown > 0) {
         c.fillStyle = '#030a10a8'; c.fillRect(x + 2, y + 2, w - 4, 37 * clamp(cooldown / Math.max(.001, resolved!.cooldown)));
         text(c, cooldown.toFixed(1), x + w / 2, y + 18, 1.3, UI.ivory, 'center');
