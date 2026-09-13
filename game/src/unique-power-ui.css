@@ -1,0 +1,6 @@
+.ui-unique-power { margin-top: .85rem; padding: .8rem 0; border-top: 1px solid #ba8bf140; color: #ecc5dc; line-height: 1.45; }
+.ui-unique-power-skill { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; color: #f1dbe8; }
+.ui-unique-power-skill > span { display: flex; flex: 0 0 28px; }
+.ui-unique-power-skill svg { width: 28px; height: 28px; }
+.ui-unique-power-skill strong { font-size: 1rem; font-weight: 500; }
+.ui-unique-power p { margin: 0; }

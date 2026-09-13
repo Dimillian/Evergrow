@@ -1,3 +1,4 @@
+import { uniquePowerMarkup } from './unique-power-ui.ts';
 import { uniqueDefinition } from './unique-content.ts';
 import { hasGreaterAffix, isGreaterAffix, GREATER_AFFIX_SYMBOL } from './item-roll-content.ts';
 import { MANA_RULES } from './mana-content.ts';
@@ -122,7 +123,7 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
     <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${view.equipped ? '<span class="ui-item-equipped">Equipped</span>' : ''}${item.locked?'<span class="ui-item-equipped">Locked</span>':''}</div>
     ${item.recipe.enhancement ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% scalable item stats</div>` : ''}
     ${weapon}${properties}
-    ${uniqueDefinition(item)?`<div class="ui-unique-power"><span aria-hidden="true">✧</span><p>${escapeUI(uniqueDefinition(item)!.power)}</p></div>`:''}
+    ${uniqueDefinition(item)?uniquePowerMarkup(uniqueDefinition(item)!):''}
     ${item.affixes.length ? `<div class="ui-item-affixes">${item.affixes.map(a => escapeUI(a.name)).join(' · ')}</div>` : ''}
     ${comparison}${view.context ? `<div class="ui-item-comparison">${escapeUI(view.context)}</div>` : ''}`;
 }

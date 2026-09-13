@@ -1,3 +1,4 @@
+import { uniquePowerMarkup } from './unique-power-ui.ts';
 import { uniqueCollection } from './unique-collection.ts';
 import { generateUnique, STAT_LABELS } from './items.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
@@ -126,7 +127,7 @@ export class ChroniclePanel {
   const entry=uniqueCollection(this.sources()).find(e=>e.definition.id===anchor.dataset.unique);
   if(entry){const u=entry.definition;
     this.tooltip.element.style.setProperty('--tooltip-color','#ef82ad');
-    this.tooltip.show(`<header><div><small>${esc(u.kind)} · ${esc(SKILL_DEFINITIONS[u.skill].name)}</small><strong>${esc(u.name)}</strong></div></header><p>${esc(u.power)}</p><p class="chronicle-unique-affixes">${u.affixes.map(a=>esc(STAT_LABELS[a])).join(' · ')}</p><footer>${entry.found?`Found by ${esc(entry.finder??'Unknown')} · Highest level ${entry.level}${entry.firstAt?` · ${new Date(entry.firstAt).toLocaleDateString()}`:''}`:'Not yet discovered'}</footer>`,anchor);return;
+    this.tooltip.show(`<header><div><small>${esc(u.kind)} · ${esc(SKILL_DEFINITIONS[u.skill].name)}</small><strong>${esc(u.name)}</strong></div></header>${uniquePowerMarkup(u)}<p class="chronicle-unique-affixes">${u.affixes.map(a=>esc(STAT_LABELS[a])).join(' · ')}</p><footer>${entry.found?`Found by ${esc(entry.finder??'Unknown')} · Highest level ${entry.level}${entry.firstAt?` · ${new Date(entry.firstAt).toLocaleDateString()}`:''}`:'Not yet discovered'}</footer>`,anchor);return;
   }
   const achievement=ACHIEVEMENTS.find(a=>a.id===anchor.dataset.achievement);
   if(achievement){

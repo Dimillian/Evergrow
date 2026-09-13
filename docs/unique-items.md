@@ -2,7 +2,7 @@
 
 Published in v0.5.0 · 2026-09-13 · twelve items. Local batch three adds six more (eighteen total); further balance follows gameplay feedback.
 
-Uniques are a separate rarity beside Legendary. Each has a fixed name, base/profile, four fixed affix types, and an equipped signature power. They use red/rose light with violet edges and the ✧ mark in item names, ground labels and tooltips. Legendary items keep their random affixes and Greater Affix rolls.
+Uniques are a separate rarity beside Legendary. Each has a fixed name, base/profile, four fixed affix types, and an equipped signature power. The signature description leads with the affected skill’s shared icon and full name, in both item tooltips and Chronicles. They use red/rose light with violet edges and the ✧ mark in item names, ground labels and tooltips. Legendary items keep their random affixes and Greater Affix rolls.
 
 ## Catalog
 
