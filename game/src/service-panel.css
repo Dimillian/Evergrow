@@ -189,3 +189,13 @@ button.enchant-affix:hover { background:#a8b6ca0e; border-color:#b4c7d350; }
 .enchant-pool-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }.enchant-pool-tags span { padding:5px 8px; border:1px solid #b1c4d01c; color:#a8bbc5; font-size:12px; }
 @media(max-width:420px) { .enchant-operations .ui-button,.enchant-focus .ui-button { font-size:12px; padding:10px 3px; }.enchant-affix { padding:10px 8px; gap:6px; font-size:13px; }.enchant-affix b { font-size:12px; }.enchant-transition { font-size:16px; gap:8px; } }
 @media(prefers-reduced-motion:reduce) { button.enchant-affix { transition:none; } }
+
+/* Trading gestures keep the bag intact until the shared saved purchase succeeds. */
+.service-panel .ui-item-slot[draggable=true] { cursor:grab; }
+.service-panel .is-trade-source { opacity:.45; }
+.service-panel.is-trade-dragging { cursor:grabbing; }
+.service-panel .is-trade-destination { box-shadow:inset 0 0 0 1px #b4ccbf66; }
+.service-panel .is-trade-destination::before { content:attr(data-drop-caption); display:block; position:sticky; top:0; z-index:4; padding:12px; margin-bottom:12px; border:1px solid #bbd7c25c; background:#162a29f2; color:#d3e6d8; text-align:center; font-size:14px; pointer-events:none; }
+.service-panel .is-trade-destination.is-trade-over { box-shadow:inset 0 0 0 2px #c0e0cd99; background-color:#b0d1c009; }
+.service-panel .is-trade-destination.is-trade-invalid { box-shadow:inset 0 0 0 1px #b68a7b55; }
+.service-panel .is-trade-invalid::before { border-color:#c8978866; background:#2b2229f2; color:#ddbbb4; }

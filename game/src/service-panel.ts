@@ -41,6 +41,8 @@ export class ServicePanel {
   private sales = new Map<string, SaleItem>();
   private goldFeedback: ServiceGoldFeedback;
   private saving = false;
+  private tradeDrag: { id:string; quote:ServiceQuote|null; target:'.service-offer'|'.service-bag'; problem:string; message:string } | null = null;
+  private ignoreClickUntil = 0;
   private gambleKind: ItemKind | null = null;
   private revealed:Item|null=null;
   private abort = new AbortController();
@@ -52,6 +54,7 @@ export class ServicePanel {
     this.element.setAttribute('role', 'dialog'); this.element.setAttribute('aria-modal', 'true'); this.element.setAttribute('aria-labelledby', 'service-title');
     mount.append(this.element); this.goldFeedback = new ServiceGoldFeedback(this.element); this.tooltip = new ItemTooltip(mount, 'service-tooltip');
     this.element.addEventListener('click', e => this.click(e), { signal: this.abort.signal });
+    this.installTradeDrag();
     this.element.addEventListener('pointerover', e => this.hover(e.target), { signal: this.abort.signal });
     this.element.addEventListener('focusin', e => this.hover(e.target), { signal: this.abort.signal });
     this.element.addEventListener('pointerout', e => { if (!(e.relatedTarget instanceof Node) || !(e.target as HTMLElement).closest('[data-item]')?.contains(e.relatedTarget)) this.tooltip.hide(); }, { signal: this.abort.signal });
@@ -72,7 +75,7 @@ export class ServicePanel {
     this.selected = this.tab === 'improve' ? { type: 'improve', source, operation: this.operation, affix: 0 } : { type: 'sell', source };
     this.render();
   }
-  close(): void { this.includeActiveCharms=false; this.goldFeedback.stop(); this.sales.clear(); this.focus?.dispose(); this.focus = null; this.tooltip.hide(); this.element.hidden = true; this.selected = null; this.quote = null; }
+  close(): void { this.clearTradeDrag(); this.includeActiveCharms=false; this.goldFeedback.stop(); this.sales.clear(); this.focus?.dispose(); this.focus = null; this.tooltip.hide(); this.element.hidden = true; this.selected = null; this.quote = null; }
   dispose(): void { this.close(); this.abort.abort(); this.tooltip.dispose(); this.element.remove(); }
   private updateSelection(): void {
     if (this.npc.role === 'gambler' && this.tab === 'shop') {
@@ -90,6 +93,7 @@ export class ServicePanel {
     this.selected = null; this.render();
   }
   private render(): void {
+    this.clearTradeDrag();
     this.element.classList.toggle('is-storage',this.npc.role==='stash');
     this.element.classList.toggle('is-enhancing',this.tab==='improve');
     this.element.classList.toggle('is-enchanting',this.tab==='improve'&&this.npc.role==='enchanter');
@@ -343,8 +347,87 @@ export class ServicePanel {
 
   private cell(item: Item | null, key: string): HTMLButtonElement {
     const cell = document.createElement('button'); cell.type = 'button'; cell.className = 'ui-slot'; cell.dataset.item = key;
-    updateItemSlot(cell, item, { level: this.player.level, emptyMarkup: '', label: item ? itemDisplayName(item) : 'Empty slot' });
+    updateItemSlot(cell, item, { level: this.player.level, draggable: this.canDragTrade(key), emptyMarkup: '', label: item ? itemDisplayName(item) : 'Empty slot' });
     cell.disabled = !item; return cell;
+  }
+  private canDragTrade(key:string): boolean {
+    return this.npc.role!=='stash' && (this.tab==='sell'||this.tab==='buyback'||this.tab==='shop'&&this.npc.role!=='gambler')
+      && /^(bag|stock|buyback):/.test(key);
+  }
+  private directTrade(key:string): {item:Item;quote:ServiceQuote|null;problem:string}|null {
+    if(!this.canDragTrade(key))return null;
+    const value=this.resolve(key);if(!value)return null;
+    const request:ServiceRequest=key.startsWith('bag:')?{type:'sell',source:{bag:Number(key.split(':')[1])}}:value.request;
+    const result=quoteService(this.player.character,this.npc,this.player.level,request);
+    const buying=request.type==='buy'||request.type==='buyback';
+    const problem=!result.ok?result.message:buying&&goldBalance(this.player.character)<result.quote.price?'Not enough gold.':buying&&!canPackItem(this.player.character,value.item)?packSpaceProblem(this.player.character,value.item):'';
+    return {item:value.item,quote:result.ok?result.quote:null,problem};
+  }
+  private clearTradeDrag(): void {
+    if(this.tradeDrag){const message=this.element.querySelector('.service-message');if(message)message.textContent=this.tradeDrag.message;}
+    this.tradeDrag=null;
+    this.element.classList.remove('is-trade-dragging');
+    for(const node of this.element.querySelectorAll<HTMLElement>('.is-trade-source,.is-trade-destination')){
+      node.classList.remove('is-trade-source','is-trade-destination','is-trade-over','is-trade-invalid');
+      delete node.dataset.dropCaption;
+    }
+  }
+  private installTradeDrag(): void {
+    const options={signal:this.abort.signal};
+    this.element.addEventListener('dragstart',event=>{
+      this.clearTradeDrag();
+      const cell=event.target instanceof Element?event.target.closest<HTMLElement>('[data-item]'):null;
+      const trade=cell&&!this.saving?this.directTrade(cell.dataset.item!):null;
+      if(!trade||!event.dataTransfer){event.preventDefault();return;}
+      const selling=cell!.dataset.item!.startsWith('bag:');
+      const target=selling?'.service-offer':'.service-bag';
+      const destination=this.element.querySelector<HTMLElement>(target);
+      if(!destination){event.preventDefault();return;}
+      const message=this.element.querySelector('.service-message')!;
+      this.tradeDrag={id:trade.item.id,quote:trade.quote,target,problem:trade.problem,message:message.textContent??''};
+      this.tooltip.hide();
+      event.dataTransfer.setData('application/x-evergrow-trade',trade.item.id);
+      event.dataTransfer.effectAllowed='move';
+      cell!.classList.add('is-trade-source');this.element.classList.add('is-trade-dragging');
+      destination.classList.add('is-trade-destination');
+      destination.classList.toggle('is-trade-invalid',!!trade.problem);
+      destination.dataset.dropCaption=trade.problem||`Drop to ${selling?'sell':'buy'} · ${trade.quote!.price.toLocaleString()} gold`;
+      message.textContent=`${itemDisplayName(trade.item)} · ${destination.dataset.dropCaption}`;
+    },options);
+    this.element.addEventListener('dragover',event=>{
+      const drag=this.tradeDrag;if(!drag)return;
+      const destination=this.element.querySelector(drag.target)!;
+      const over=event.target instanceof Node&&destination.contains(event.target);
+      destination.classList.toggle('is-trade-over',over);
+      const valid=over&&!drag.problem&&!this.saving;
+      if(event.dataTransfer)event.dataTransfer.dropEffect=valid?'move':'none';
+      if(valid)event.preventDefault();
+    },options);
+    this.element.addEventListener('dragleave',event=>{
+      if(!this.tradeDrag)return;
+      const destination=this.element.querySelector(this.tradeDrag.target);
+      if(!(event.relatedTarget instanceof Node)||!destination?.contains(event.relatedTarget))destination?.classList.remove('is-trade-over');
+    },options);
+    this.element.addEventListener('drop',event=>{
+      const drag=this.tradeDrag;if(!drag)return;
+      event.preventDefault();
+      const destination=this.element.querySelector(drag.target);
+      const valid=!this.saving&&!drag.problem&&drag.quote&&event.target instanceof Node&&destination?.contains(event.target)
+        &&event.dataTransfer?.getData('application/x-evergrow-trade')===drag.id;
+      this.clearTradeDrag();this.ignoreClickUntil=Date.now()+200;
+      if(valid){this.selected=drag.quote!.request;this.quote=drag.quote;void this.confirm();}
+    },options);
+    this.element.addEventListener('dragend',()=>{this.clearTradeDrag();this.ignoreClickUntil=Date.now()+200;},options);
+    // A quick purchase also works without dragging. Single click remains inspection.
+    this.element.addEventListener('dblclick',event=>{
+      if(this.saving||this.tradeDrag||Date.now()<this.ignoreClickUntil)return;
+      const cell=event.target instanceof Element?event.target.closest<HTMLElement>('[data-item]'):null;
+      if(!cell||! /^(stock|buyback):/.test(cell.dataset.item!))return;
+      const trade=this.directTrade(cell.dataset.item!);if(!trade)return;
+      event.preventDefault();this.tooltip.hide();
+      if(trade.problem){this.element.querySelector('.service-message')!.textContent=trade.problem;return;}
+      this.selected=trade.quote!.request;this.quote=trade.quote;void this.confirm();
+    },options);
   }
   private resolve(key: string): { item: Item; source?: ItemSource; request: ServiceRequest } | null {
     const [type, value] = key.split(':'); let item: Item | null = null, request: ServiceRequest;
@@ -360,6 +443,7 @@ export class ServicePanel {
     return item ? { item, request } : null;
   }
   private hover(target: EventTarget | null): void {
+    if(this.tradeDrag||this.saving)return;
     if(document.documentElement.classList.contains('touch-mode')) return;
     const cell = target instanceof HTMLElement ? target.closest<HTMLButtonElement>('[data-item]') : null;
     if (!cell) return;
@@ -370,7 +454,7 @@ export class ServicePanel {
       context: value.request.type === 'buyback' ? `${this.player.character.commerce.buyback.find(b=>b.item.id===value.item.id)?.price??0} gold` : value.request.type === 'buy' ? `${itemPrice(value.item, 'buy')} gold` : value.request.type === 'sell' ? `Sell · ${itemPrice(value.item, 'sell')} gold` : undefined }, cell);
   }
   private click(e: MouseEvent): void {
-    if (this.saving) return;
+    if (this.saving || this.tradeDrag || Date.now()<this.ignoreClickUntil) return;
     const button = (e.target as HTMLElement).closest<HTMLButtonElement>('button, input[data-include-charms]'); if (!button) return;
     if(button.dataset.operation && ENCHANT_OPERATIONS.includes(button.dataset.operation as typeof ENCHANT_OPERATIONS[number])) {
       this.operation=button.dataset.operation as Improvement; this.updateSelection(); this.render(); return;
