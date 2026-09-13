@@ -65,7 +65,7 @@ test('a static open chart avoids redraws but reacts to discovery and delayed sto
   // Exercise the real update/render invalidation path without creating a DOM or canvas.
   const map = Object.assign(Object.create(WorldMap.prototype), {
     opened: true, disposed: false, presentation: null, exploration,
-    prepareLayout() { return true; }, playerPing: { style: {} },
+    prepareLayout() { return true; }, focusPing: { style: {} },
     view: { x: 0, y: 0, width: 800, height: 500, centerX: 0, centerY: 0, zoom: .17 },
     drawChart() { draws++; },
   }) as WorldMap;
@@ -102,7 +102,7 @@ test('first map draw measures populated footer layout and aligns the canvas with
   const map = Object.assign(Object.create(WorldMap.prototype), {
     opened: true, disposed: false, frame: 0, recenter: null, player,
     view: { x: 0, y: 0, width: 800, height: 500, centerX: player.x, centerY: player.y, zoom: .17 },
-    canvas: { width: 300, height: 150 }, playerPing: { style: {} }, viewport, discoveries, status, coordinates,
+    canvas: { width: 300, height: 150 }, focusPing: { style: {} }, viewport, discoveries, status, coordinates,
     exploration: { discoveredPOICount: 12, revision: 1, storageStatus: 'saved', persistenceMessage: '' },
     world: { isSanctuary: () => true },
     drawChart() {
@@ -114,15 +114,55 @@ test('first map draw measures populated footer layout and aligns the canvas with
   });
   map.resize();
   assert.equal(draws, 1);
-  assert.equal(map.playerPing.style.left, '450px'); assert.equal(map.playerPing.style.top, '280px');
+  assert.equal(map.focusPing.style.left, '450px'); assert.equal(map.focusPing.style.top, '280px');
   map.resize();
-  assert.equal(map.playerPing.style.top, '280px', 'reopening must not correct an initially stale height');
+  assert.equal(map.focusPing.style.top, '280px', 'reopening must not correct an initially stale height');
   availableWidth = 700;
   map.exploration.persistenceMessage = 'A long chart storage message that wraps onto an additional footer row in the available panel width.';
   map.render();
-  assert.equal(map.playerPing.style.left, '350px'); assert.equal(map.playerPing.style.top, '260px');
+  assert.equal(map.focusPing.style.left, '350px'); assert.equal(map.focusPing.style.top, '260px');
   assert.equal(map.view.centerX, player.x); assert.equal(map.view.centerY, player.y);
   assert.equal(map.view.zoom, .17, 'layout changes preserve the camera and zoom');
+});
+
+test('journey focus holds on the player, eases to the objective, and pings its location', t => {
+  let now = 0, reduced = false, animations = 0, cancelled = 0;
+  t.mock.method(performance, 'now', () => now);
+  const win = Object.getOwnPropertyDescriptor(globalThis, 'window');
+  Object.defineProperty(globalThis, 'window', { configurable: true,
+    value: { matchMedia: () => ({ matches: reduced }) } });
+  t.after(() => { if (win) Object.defineProperty(globalThis, 'window', win); else Reflect.deleteProperty(globalThis, 'window'); });
+  const ring = { animate() { animations++; return { cancel() { cancelled++; }, finished: new Promise(() => {}) }; } };
+  const player = { x: 100, y: -200, angle: 0 };
+  const target = { x: 4100, y: 1800, known: false, name: 'Search area' };
+  const map = Object.assign(Object.create(WorldMap.prototype), {
+    opened: true, disposed: false, player, pingAnimations: [], focusTarget: null,
+    focusPing: { hidden: true, style: {}, children: [ring, ring] },
+    view: { x: 0, y: 0, width: 900, height: 560, centerX: player.x, centerY: player.y, zoom: .17 },
+    exploration: {}, tooltip: { hidden: true }, invalidate() {}, prepareLayout() { return true; }, drawChart() {},
+  });
+  map.focusJourney(target);
+  map.render();
+  assert.equal(map.view.centerX, player.x); assert.equal(map.view.centerY, player.y);
+  assert.equal(animations, 0);
+  now = map.recenter.started + map.recenter.duration / 2; map.render();
+  near(map.view.centerX, (player.x + target.x) / 2); near(map.view.centerY, (player.y + target.y) / 2);
+  assert.equal(animations, 0, 'arrival rings wait for the objective');
+  now = map.recenter.started + map.recenter.duration; map.render();
+  assert.equal(map.view.centerX, target.x); assert.equal(map.view.centerY, target.y);
+  assert.equal(map.focusPing.style.left, '450px'); assert.equal(map.focusPing.style.top, '280px');
+  assert.equal(animations, 2); assert.equal(map.view.zoom, .17);
+  assert.deepEqual(map.player, player); assert.deepEqual(map.journeyMarker, target);
+  map.centerOnPlayer();
+  assert.equal(cancelled, 2, 'centering on the player replaces the objective ping');
+  now = map.recenter.started + map.recenter.duration / 2; map.render();
+  const interruptedX = map.view.centerX;
+  map.cancelRecenter(); now += 2000; map.render();
+  assert.equal(map.view.centerX, interruptedX, 'direct input cancellation prevents further camera motion');
+  assert.equal(map.focusPing.hidden, true);
+  reduced = true; map.focusJourney(target); map.render();
+  assert.equal(map.recenter, null); assert.equal(map.view.centerX, target.x);
+  assert.equal(animations, 4, 'reduced motion still highlights the objective without camera travel');
 });
 
 test('overview fitting keeps the requested world rectangle inside the chart while respecting zoom bounds', () => {

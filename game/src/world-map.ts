@@ -186,7 +186,8 @@ export class WorldMap {
   private previewTiles = new Map<string, PreviewTile>();
   private frame = 0;
   private recenter: { x: number; y: number; started: number; duration: number } | null = null;
-  private playerPing: HTMLDivElement;
+  private focusTarget: { x: number; y: number } | null = null;
+  private focusPing: HTMLDivElement;
   private pingAnimations: Animation[] = [];
   private chartDirty = false;
   private buildBudget?: number;
@@ -233,7 +234,7 @@ export class WorldMap {
         <button type="button" class="world-map-close ui-button ui-button--quiet ui-button--icon" aria-label="Close world map" data-tooltip="Close map" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('close')}</button>
       </header>
       <div class="world-map-viewport ui-window__body"><canvas class="world-map-canvas" tabindex="0" aria-label="Explored world map"></canvas>
-        <div class="world-map-player-ping" aria-hidden="true" hidden><span></span><span></span></div>
+        <div class="world-map-focus-ping" aria-hidden="true" hidden><span></span><span></span></div>
         <div class="world-map-toolbar" role="toolbar" aria-label="Map controls">
           <button type="button" class="ui-button ui-button--quiet ui-button--icon" data-map="out" aria-label="Zoom out" data-tooltip="Zoom out">${uiIcon('minus')}</button>
           <button type="button" class="ui-button ui-button--quiet ui-button--icon" data-map="in" aria-label="Zoom in" data-tooltip="Zoom in">${uiIcon('plus')}</button>
@@ -251,7 +252,7 @@ export class WorldMap {
     this.canvas = this.element.querySelector<HTMLCanvasElement>('.world-map-canvas')!;
     this.context = this.canvas.getContext('2d')!;
     this.viewport = this.element.querySelector<HTMLDivElement>('.world-map-viewport')!;
-    this.playerPing = this.element.querySelector<HTMLDivElement>('.world-map-player-ping')!;
+    this.focusPing = this.element.querySelector<HTMLDivElement>('.world-map-focus-ping')!;
     this.status = this.element.querySelector('.world-map-status')!;
     this.discoveries = this.element.querySelector('.world-map-discoveries')!;
     this.coordinates = this.element.querySelector('.world-map-coordinates')!;
@@ -331,15 +332,29 @@ export class WorldMap {
 
   private cancelRecenter() {
     this.recenter = null;
+    this.focusTarget = null;
     for (const animation of this.pingAnimations) animation.cancel();
     this.pingAnimations = [];
-    this.playerPing.hidden = true;
+    this.focusPing.hidden = true;
   }
 
   private centerOnPlayer() {
+    this.focusLocation(null);
+  }
+
+  /** Called after opening on the player; the brief hold makes the journey's origin readable. */
+  focusJourney(marker: JourneyMarker) {
+    if (!this.opened || this.disposed) return;
+    this.setJourneyMarker(marker);
+    this.focusLocation(marker, 180);
+  }
+
+  private focusLocation(target: { x: number; y: number } | null, delay = 0) {
     this.cancelRecenter(); this.pointer = null; this.hideTooltip();
-    const distance = Math.hypot(this.player.x - this.view.centerX, this.player.y - this.view.centerY) * this.view.zoom;
-    this.recenter = { x: this.view.centerX, y: this.view.centerY, started: performance.now(),
+    this.focusTarget = target ? { x: clampMapCoordinate(target.x), y: clampMapCoordinate(target.y) } : null;
+    const destination = this.focusTarget ?? this.player;
+    const distance = Math.hypot(destination.x - this.view.centerX, destination.y - this.view.centerY) * this.view.zoom;
+    this.recenter = { x: this.view.centerX, y: this.view.centerY, started: performance.now() + delay,
       duration: distance < 1 ? 0 : Math.min(850, 380 + distance * .3) };
     this.invalidate();
   }
@@ -350,13 +365,14 @@ export class WorldMap {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const t = reduced || motion.duration === 0 ? 1 : Math.min(1, Math.max(0, (now - motion.started) / motion.duration));
     const ease = t * t * t * (t * (t * 6 - 15) + 10);
-    this.view.centerX = motion.x + (clampMapCoordinate(this.player.x) - motion.x) * ease;
-    this.view.centerY = motion.y + (clampMapCoordinate(this.player.y) - motion.y) * ease;
+    const destination = this.focusTarget ?? this.player;
+    this.view.centerX = motion.x + (clampMapCoordinate(destination.x) - motion.x) * ease;
+    this.view.centerY = motion.y + (clampMapCoordinate(destination.y) - motion.y) * ease;
     if (t < 1) return;
     this.recenter = null;
-    this.playerPing.hidden = false;
+    this.focusPing.hidden = false;
     // Screen-space rings stay readable at every zoom; their fade never repaints terrain.
-    this.pingAnimations = [...this.playerPing.children].map((ring, index) => ring.animate(reduced ? [
+    this.pingAnimations = [...this.focusPing.children].map((ring, index) => ring.animate(reduced ? [
       { opacity: 0 }, { opacity: .85, offset: .12 }, { opacity: .85, offset: .65 }, { opacity: 0 },
     ] : [
       { transform: 'scale(.45)', opacity: 0 },
@@ -788,9 +804,10 @@ export class WorldMap {
     this.advanceRecenter(performance.now());
     this.buildBudget = 5;
     try { this.drawChart(); } finally { this.buildBudget = undefined; }
-    const playerPoint = projectMapPoint(this.player.x, this.player.y, this.view);
-    this.playerPing.style.left = `${playerPoint.x}px`;
-    this.playerPing.style.top = `${playerPoint.y}px`;
+    const destination = this.focusTarget ?? this.player;
+    const focusPoint = projectMapPoint(destination.x, destination.y, this.view);
+    this.focusPing.style.left = `${focusPoint.x}px`;
+    this.focusPing.style.top = `${focusPoint.y}px`;
     if (this.pendingTerrain || this.recenter) this.invalidate();
     this.presentation = { x: this.player.x, y: this.player.y, angle: this.player.angle,
       revision: this.exploration.revision, status: this.exploration.storageStatus,

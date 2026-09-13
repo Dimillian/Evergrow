@@ -27,7 +27,7 @@ export interface JourneyHost {
     readonly navigationVisible: boolean;
     readonly renderer: Pick<Renderer, 'width' | 'height' | 'extraUIBounds'>;
     readonly panels: Pick<PanelCoordinator, 'canOpen' | 'open' | 'transition'>;
-    readonly worldMap: Pick<WorldMap, 'setJourneyMarker' | 'fitBounds'>;
+    readonly worldMap: Pick<WorldMap, 'setJourneyMarker' | 'focusJourney'>;
     readonly dungeonMap: Pick<DungeonMap, 'marker'>;
     durable(work: () => Promise<boolean>, fallback: boolean): Promise<boolean>;
     persistTravel: PersistDungeon;
@@ -89,8 +89,7 @@ export class JourneyController {
         if (!this.host.sim.dungeonFloor) {
             const target = publicJourneyMarker(goal, this.facts().discovered(goal.id));
             this.journeyMapPreview = target;
-            this.host.worldMap.setJourneyMarker(target);
-            this.host.worldMap.fitBounds({ x: target.x - 900, y: target.y - 900, width: 1800, height: 1800 });
+            this.host.worldMap.focusJourney(target);
         }
     }
     update() {

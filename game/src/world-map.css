@@ -36,14 +36,14 @@
 }
 .world-map-canvas.world-map-dragging { cursor: grabbing; }
 .world-map-canvas:focus-visible { outline: 1px solid var(--ui-focus); outline-offset: -4px; }
-.world-map-player-ping { position: absolute; width: 0; height: 0; pointer-events: none; }
-.world-map-player-ping[hidden] { display: none; }
-.world-map-player-ping span {
+.world-map-focus-ping { position: absolute; width: 0; height: 0; pointer-events: none; }
+.world-map-focus-ping[hidden] { display: none; }
+.world-map-focus-ping span {
   position: absolute; left: -28px; top: -28px; width: 56px; height: 56px;
   box-sizing: border-box; border: 2px solid #fff2ba; border-radius: 50%;
   box-shadow: 0 0 12px #e3c87880, inset 0 0 8px #e3c87830;
 }
-.world-map-player-ping span + span { border-color: #d7b86d; }
+.world-map-focus-ping span + span { border-color: #d7b86d; }
 .world-map-toolbar {
   position: absolute; z-index: 1; right: 18px; bottom: 18px; display: flex; align-items: center; gap: 2px;
   padding: 4px; border: 1px solid var(--ui-line-strong); border-radius: 3px;
