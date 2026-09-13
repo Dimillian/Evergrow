@@ -33,6 +33,21 @@ The user approved the next major prototype milestone, **0.5.0**, on 2026-09-13 f
 
 ## Last verified publication
 
+- Game v0.5.1 / Sites version 51, publicly deployed on 2026-09-13 at 17:02:41 UTC.
+- Published source: `b0769a7f0dcc0a626db062ae220d0db700627bba`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_d6deee73817c81919f3cc0c17a759cfd`.
+- Deployment: `appgdep_6aa6d71e9a388191a38bdd0009f59d61`; Sites returned `succeeded`.
+- Seven reserving auras, rank investment, reserved mana orb, shared player/target effects and nested item/stat/skill/Unique explanations.
+- Eighteen Uniques total, compact Unique markers, skill-led powers and lower weapon/support mana costs.
+- Keyboard/mouse remapping with alternate bindings, conflict replacement, per-device persistence and live shortcut labels.
+- Audit fixes for continuous boss slows, immediate ward/barrier limits after maximum-life changes and keyboard ownership while inspecting effects; includes the merged mobile pinch-zoom correction.
+- All 1,403 combined code tests passed. After merging the CSS-only mobile fix and updating notes, all 19 affected touch, effect-keyboard and changelog checks passed.
+- Application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation passed. No automated browser gameplay was run.
+- Existing local/cloud characters remain compatible; no save reset, skill refund or D1 migration. Reload existing clients.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.5.0 / Sites version 50, publicly deployed on 2026-09-13 at 10:13:45 UTC.
 - Published source: `ea9824504ab25d0711d917519d2782bf1d77b37b`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_c238f9fe20f88191824dd8f6bdbe0355`.

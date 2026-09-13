@@ -16,3 +16,7 @@ Scope: seven auras, eighteen Uniques, shared buff/debuff projections and retaine
 - Shared item/stat/Unique explanations, current resolved skill values, status durations and target ownership; escaped glossary markup and bounded nested-card placement.
 
 No drop-rate or general damage-balance change is introduced by these audit fixes. Existing saves remain supported. The release also includes custom controls; focused buff/explanation input tests cover Space, Enter, Tab and rebound gameplay keys, preserving native activation while preventing combat leakage. Potion glossary text no longer assumes its default binding.
+
+## Verification
+
+All 1,403 combined code tests passed, including actual combat and DOM event-owner regressions. After incorporating the already-merged CSS-only mobile gesture correction, all 19 affected touch/input/release-note checks passed. Application and core type checks, local and cloud-enabled production client/Worker builds, archive validation and clean-source release validation passed. Published as v0.5.1; see the verified publication record in `releases.md`.
