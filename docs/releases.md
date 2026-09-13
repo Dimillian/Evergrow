@@ -31,6 +31,20 @@ The user approved **0.4.0** on 2026-09-13 for the rebuilt passive atlas and merc
 
 ## Last verified publication
 
+- Game v0.4.0 / Sites version 49, publicly deployed on 2026-09-13 at 06:19:47 UTC.
+- Published source: `25f6c547196fbfc836bf3ffb8c1d8ee7b5664771`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_cdb5f10c8f908191a963306320000ea8`.
+- Deployment: `appgdep_6aa640720c948191abfdf2cb3766ee09`; Sites returned `succeeded`.
+- Connected 1,824-node atlas, 144 passive neighborhoods, stronger passive rewards, distinct cluster shapes and grouped stat search with visible match markers.
+- Preserves 30 active skills, 90 Techniques and twenty ranks. Valid preceding trees receive a one-time node/rank refund and reopen the atlas for rebuilding; character and world progress remain.
+- Item-sized vendor/buyback trays, category tabs, saved escalating restock fees, enhancement/enchanting workbenches and direct drag/double-click trading.
+- Ran all 1,312 code tests: 1,308 passed initially. Added the new shape and preceding-tree data modules to the explicit core compiler list, then both architecture checks passed. Two cloud-worker timeout cases and their parent test passed in the isolated 38-check cloud suite.
+- Application/core type checks, local and cloud-enabled client/Worker builds, archive contents and clean-source release validation passed. No automated browser gameplay or account-save edits were performed.
+- Client and Worker share the save upgrade rules; no D1 migration required. Reload existing clients.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.3.17 / Sites version 48, publicly deployed on 2026-09-12 at 18:15:31 UTC.
 - Published source: `45f5320ed55f82ff4397427a04090205c68c1cfc`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_289300146e888191aa505bb044d5caea`.
