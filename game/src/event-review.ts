@@ -22,6 +22,7 @@ const views: readonly [EventKind, string][] = [
 ];
 const root = document.querySelector<HTMLElement>('#event-review')!;
 const lifetime = new AbortController();
+type PreviewState = 'available' | 'progress' | 'opening' | 'claimed';
 let disposed = false, frame = 0, world: World | undefined, fx: PostFX | undefined, panel: EventPanel | undefined;
 async function boot() {
   if (!import.meta.env.DEV) throw new Error('Local review only.');
@@ -35,17 +36,22 @@ async function boot() {
   for (const c of [display, canvas]) { c.width = 1920; c.height = 1280; }
   canvas.className = 'layout-review-scene'; canvas.setAttribute('role', 'img');
   root.innerHTML = `<header class="layout-review-header"><h1>World events</h1></header>
-    <div class="layout-review-toolbar"><nav class="layout-review-views"></nav><button class="state-button">Show claimed</button><button class="progress-button">Preview In Progress</button><button class="opening-button">Preview opening</button><button class="choice-button">Show choices</button></div>
-    <div class="event-review-progress" hidden><button class="progress-play">Pause</button><label>Elapsed <input class="progress-time" type="range" min="0" step="0.1" value="0"></label><output class="progress-readout"></output><label>Speed <select class="progress-speed"><option value="1">1×</option><option value="5">5×</option><option value="10">10×</option></select></label><button class="progress-restart">Restart</button></div>
-    <label class="event-review-recipe" hidden>Encounter recipe <select class="progress-recipe"></select></label>
+    <nav class="layout-review-views event-review-events" aria-label="World event"></nav>
+    <div class="event-review-settings">
+      <div class="event-review-state"><span class="event-review-label">Preview state</span><div class="event-review-segments" role="group" aria-label="Preview state"><button data-preview-state="available" aria-pressed="true">Available</button><button data-preview-state="progress" aria-pressed="false">In progress</button><button data-preview-state="opening" aria-pressed="false">Opening</button><button data-preview-state="claimed" aria-pressed="false">Claimed</button></div></div>
+      <label class="event-review-recipe" hidden><span class="event-review-label">Encounter recipe</span><select class="progress-recipe"></select></label>
+      <button class="choice-button">View choices ↗</button>
+    </div>
+    <div class="event-review-progress" hidden><button class="progress-play">Pause</button><label class="event-review-timeline">Timeline <input class="progress-time" type="range" min="0" step="0.1" value="0"></label><label>Speed <select class="progress-speed"><option value="1">1×</option><option value="5">5×</option><option value="10">10×</option></select></label><button class="progress-restart">Restart</button><output class="progress-readout"></output></div>
     <p class="layout-review-static progress-note">Disposable visual preview · No combat or saves.</p>
     <figure class="layout-review-figure"><div class="layout-review-frame"></div></figure>`;
   root.querySelector('.layout-review-frame')!.append(canvas);
   panel = new EventPanel(document.body, { close: () => panel!.close(), choose: () => panel!.close() });
   const params = new URLSearchParams(location.search);
-  let kind = views.find(([k]) => k === params.get('view'))?.[0] ?? 'cursedChest', claimed = false;
+  let kind = views.find(([k]) => k === params.get('view'))?.[0] ?? 'cursedChest';
+  let previewState: PreviewState = 'available';
   let sim: Simulation, selected: EventSite;
-  let inProgress = false, paused = false, previous = 0, studyTime = 0, recipeIndex = -1;
+  let paused = false, previous = 0, studyTime = 0, recipeIndex = -1;
   const progressControls = root.querySelector<HTMLElement>('.event-review-progress')!;
   const timeline = root.querySelector<HTMLInputElement>('.progress-time')!;
   const playButton = root.querySelector<HTMLButtonElement>('.progress-play')!;
@@ -60,11 +66,11 @@ async function boot() {
     renderer.render(sim, scene, dt, settings); fx ??= new PostFX(display); fx.render(renderer.canvas, sim.time);
     const c = canvas.getContext('2d')!; c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(display, 0, 0);
     c.save(); c.scale(2, 2); renderer.renderUI(c, sim, scene, settings); c.restore();
-    canvas.setAttribute('aria-label', `${selected.name}, ${inProgress ? readout.value : claimed ? 'claimed' : 'available'}`);
+    canvas.setAttribute('aria-label', `${selected.name}, ${previewState === 'progress' ? readout.value : previewState}`);
   }
   function draw() {
     cancelAnimationFrame(frame);
-    inProgress = false; progressControls.hidden = true; panel?.close();
+    progressControls.hidden = true; panel?.close();
     selected = sites.filter(s => s.kind === kind).sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y))[0];
     if (!selected) return;
     const recipes = EVENT_RECIPES[kind] ?? [];
@@ -80,26 +86,36 @@ async function boot() {
     note.textContent = 'Disposable visual preview · No combat or saves.';
     sim = new Simulation(scene, { spawn: false, seed: 7319, startX: selected.x + 42, startY: selected.y + 35 });
     sim.time = 12; sim.player.angle = -Math.PI / 2;
-    if (claimed) sim.eventState.sites[selected.id] = reviewRecord('claimed');
+    if (previewState === 'claimed') sim.eventState.sites[selected.id] = reviewRecord('claimed');
     const landmark = ['cursedChest','reliquary'].includes(kind)?undefined:landmarks.find(s => s.id === selected.id);
     renderer.reset(); renderer.resize(960, 640); renderer.cameraX = landmark?.x ?? selected.x; renderer.cameraY = (landmark?.y ?? selected.y) - 40;
     paint();
     for (const [id, b] of buttons) b.setAttribute('aria-current', String(id === kind));
-    root.querySelector('.state-button')!.textContent = claimed ? 'Show available' : 'Show claimed';
-    (root.querySelector('.choice-button') as HTMLButtonElement).disabled = ['reliquary', 'camp', 'watchtower'].includes(kind);
-    (root.querySelector('.opening-button') as HTMLButtonElement).disabled = ['watchtower', 'standingStones'].includes(kind);
-    params.delete('state');
-    params.set('view', kind); history.replaceState(null, '', `${location.pathname}?${params}`);
+    root.querySelector<HTMLButtonElement>('.choice-button')!.hidden = ['reliquary', 'camp', 'watchtower'].includes(kind);
+    root.querySelector<HTMLButtonElement>('[data-preview-state="opening"]')!.disabled = ['watchtower', 'standingStones'].includes(kind);
+    syncState();
     root.dataset.ready = 'true'; root.setAttribute('aria-busy', 'false');
   }
   for (const [id, name] of views) {
     const b = document.createElement('button'); b.textContent = name; b.disabled = !sites.some(s => s.kind === id);
-    b.addEventListener('click', () => { const resume = inProgress; kind = id; recipeIndex = -1; claimed = false; draw(); if (resume) startProgress(); }, { signal: lifetime.signal });
+    b.addEventListener('click', () => { kind = id; recipeIndex = -1; showState(previewState); }, { signal: lifetime.signal });
     buttons.set(id, b); root.querySelector('nav')!.append(b);
   }
-  root.querySelector('.state-button')!.addEventListener('click', () => { claimed = !claimed; draw(); }, { signal: lifetime.signal });
+  function syncState() {
+    for (const button of root.querySelectorAll<HTMLButtonElement>('[data-preview-state]')) button.setAttribute('aria-pressed', String(button.dataset.previewState === previewState));
+    params.set('state', previewState); params.set('view', kind);
+    history.replaceState(null, '', `${location.pathname}?${params}`);
+  }
+  function showState(state: PreviewState) {
+    if (state === 'opening' && ['watchtower', 'standingStones'].includes(kind)) state = 'claimed';
+    previewState = state;
+    if (state === 'progress') startProgress();
+    else if (state === 'opening') startOpening();
+    else draw();
+  }
+  for (const button of root.querySelectorAll<HTMLButtonElement>('[data-preview-state]')) button.addEventListener('click', () => showState(button.dataset.previewState as PreviewState), { signal: lifetime.signal });
   root.querySelector('.choice-button')!.addEventListener('click', () => panel!.open(selected), { signal: lifetime.signal });
-  recipeSelect.addEventListener('change', () => { const resume = inProgress; recipeIndex = Number(recipeSelect.value); draw(); if (resume) startProgress(); }, { signal: lifetime.signal });
+  recipeSelect.addEventListener('change', () => { recipeIndex = Number(recipeSelect.value); showState(previewState); }, { signal: lifetime.signal });
   function updateProgress() {
     const staged = stageEventProgress(selected, studyTime);
     sim.eventState = staged.state;
@@ -111,7 +127,7 @@ async function boot() {
     playButton.textContent = paused ? 'Play' : 'Pause';
   }
   function animateProgress(now: number) {
-    if (disposed || !inProgress || paused || document.hidden) return;
+    if (disposed || previewState !== 'progress' || paused || document.hidden) return;
     if (!previous) previous = now;
     const dt = Math.min(.1, (now - previous) / 1000);
     if (dt >= 1 / 30) {
@@ -121,43 +137,40 @@ async function boot() {
       sim.time += dt;
       updateProgress(); paint(true, dt);
       if (studyTime >= duration) {
-        if (['watchtower', 'standingStones'].includes(kind)) { claimed = true; draw(); }
-        else root.querySelector<HTMLButtonElement>('.opening-button')!.click();
+        showState('opening');
         return;
       }
     }
     frame = requestAnimationFrame(animateProgress);
   }
   function startProgress() {
-    claimed = false; draw(); inProgress = true;
+    draw();
     const profile = eventStudyProfile(selected);
     studyTime = 0; timeline.max = String(profile.duration); progressControls.hidden = false;
     timeline.disabled = playButton.disabled = speed.disabled = profile.duration === 0;
     note.textContent = `${profile.note} Disposable state; no playable saves.`;
     paused = profile.duration === 0 || matchMedia('(prefers-reduced-motion: reduce)').matches; previous = 0;
-    params.set('state', 'progress'); history.replaceState(null, '', `${location.pathname}?${params}`);
     updateProgress(); paint();
     if (!paused) frame = requestAnimationFrame(animateProgress);
   }
-  root.querySelector('.progress-button')!.addEventListener('click', startProgress, { signal: lifetime.signal });
   root.querySelector('.progress-restart')!.addEventListener('click', startProgress, { signal: lifetime.signal });
   playButton.addEventListener('click', () => {
     paused = !paused; previous = 0; cancelAnimationFrame(frame); updateProgress();
     if (!paused) frame = requestAnimationFrame(animateProgress);
   }, { signal: lifetime.signal });
   timeline.addEventListener('input', () => {
-    if (!inProgress) return;
+    if (previewState !== 'progress') return;
     paused = true; cancelAnimationFrame(frame);
     studyTime = Number(timeline.value);
     updateProgress(); paint();
   }, { signal: lifetime.signal });
   document.addEventListener('visibilitychange', () => {
-    if (!inProgress) return;
+    if (previewState !== 'progress') return;
     cancelAnimationFrame(frame); previous = 0;
     if (!paused && !document.hidden) frame = requestAnimationFrame(animateProgress);
   }, { signal: lifetime.signal });
-  root.querySelector('.opening-button')!.addEventListener('click', () => {
-    claimed = false; draw();
+  function startOpening() {
+    draw();
     let previous = performance.now(), elapsed = 0, opened = false;
     function animate(now: number) {
       if (disposed) return;
@@ -165,7 +178,7 @@ async function boot() {
       if (document.hidden) { frame = requestAnimationFrame(animate); return; }
       elapsed += dt; sim.time = 12 + elapsed;
       if (!opened) {
-        opened = true; claimed = true; root.querySelector('.state-button')!.textContent = 'Show available';
+        opened = true;
         sim.eventChannel.cancel(); const record = reviewRecord('claimed');
         sim.eventState.sites[selected.id] = record; const bundle = eventRewards(record);
         sim.groundItems = bundle.items.map((item, i) => ({ id: i + 1, item, ...treasureLanding(scene, selected.x, selected.y, i, selected.seed), flight: { x: selected.x, y: selected.y, at: 12, delay: i * .11 } }));
@@ -174,12 +187,12 @@ async function boot() {
       for (const pile of sim.groundGold) pile.age = elapsed;
       paint(true, dt);
       if (elapsed < 4) frame = requestAnimationFrame(animate);
+      else { previewState = 'claimed'; syncState(); paint(); }
     }
     frame = requestAnimationFrame(animate);
-  }, { signal: lifetime.signal });
-  const initialProgress = params.get('state') === 'progress';
-  draw();
-  if (initialProgress) startProgress();
+  }
+  const initialState = params.get('state');
+  showState(initialState === 'progress' || initialState === 'opening' || initialState === 'claimed' ? initialState : 'available');
 }
 void boot().catch(e => { root.textContent = String(e); root.dataset.ready = 'error'; });
 function dispose() { disposed = true; cancelAnimationFrame(frame); lifetime.abort(); panel?.dispose(); fx?.dispose(); world?.dispose(); }

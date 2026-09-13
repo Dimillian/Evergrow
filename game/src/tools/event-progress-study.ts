@@ -8,7 +8,7 @@ export function eventStudyProfile(site: EventSite) {
   if (recipe) return { duration: recipe.mode === 'timed' ? recipe.rules.duration : recipe.rules.count * 12, mode: recipe.mode,
     note: recipe.mode === 'timed' ? 'Real event duration; sample wave casualties, no combat.' : 'Staged waves and objectives: 12 preview seconds per wave, not a gameplay time limit.' };
   if (site.kind === 'watchtower') return { duration: EVENT_RULES.beaconChannel, mode: 'channel', note: 'Real beacon channel duration; no exploration or saves are changed.' };
-  return { duration: 0, mode: 'instant', note: site.kind === 'camp' ? 'Clear the garrison, then open the strongbox instantly. There is no timed trial; use Preview opening to inspect the reward.' : 'This interaction resolves instantly. There is no in-progress timer; use Show choices or Preview opening.' };
+  return { duration: 0, mode: 'instant', note: site.kind === 'camp' ? 'Clear the garrison, then open the strongbox instantly. There is no timed trial; select Opening to inspect the reward.' : 'This interaction resolves instantly. There is no in-progress timer; use View choices or select Opening.' };
 }
 
 export function stageEventProgress(site: EventSite, time: number) {
