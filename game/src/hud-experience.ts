@@ -57,8 +57,8 @@ function railPath(c: CanvasRenderingContext2D, x: number, y: number, w: number, 
 
 /** A violet enamel rail and engraved readout tuck beneath the six skill leaves. */
 export function drawHUDExperience(c: CanvasRenderingContext2D, player: Progress, time: number,
-  display?: ExperienceDisplay): void {
-  const { x, y, width: w, height: h, railHeight: rh } = HUD_ART.experience;
+  display?: ExperienceDisplay, y: number = HUD_ART.experience.y): void {
+  const { x, width: w, height: h, railHeight: rh } = HUD_ART.experience;
   const needed = xpForNextLevel(display?.level ?? player.level);
   const fill = Math.max(0, Math.min(1, display?.fill ?? player.xp / needed));
   const pulse = Math.max(0, Math.min(1, display?.pulse ?? 0));

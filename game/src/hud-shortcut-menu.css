@@ -1,0 +1,20 @@
+.hud-controls.has-shortcut-menu { z-index: 9; }
+.hud-menu-backdrop { position: absolute; inset: 0; pointer-events: auto; }
+.hud-menu-backdrop[hidden], .hud-shortcut-menu [hidden] { display: none; }
+.hud-shortcut-menu {
+  position: absolute; padding: 4px; overflow: auto; overscroll-behavior: contain;
+  background: #111b23f5; border: 1px solid #788177;
+  box-shadow: 0 6px 18px #0008, inset 0 0 0 2px #080f16;
+  color: #d3d4c7; font: 12px var(--ui-font);
+}
+.hud-shortcut-menu > button {
+  display: flex; width: 100%; height: 28px; gap: 6px; padding: 4px 7px; align-items: center;
+  text-align: left; border: 0; border-bottom: 1px solid #73827b1c; background: transparent; color: inherit;
+}
+.hud-shortcut-menu > button:last-child { border-bottom: 0; }
+.hud-shortcut-menu button:hover, .hud-shortcut-menu button:focus-visible { background: #b6b99a18; color: #f3e5c4; }
+.hud-shortcut-menu button:focus-visible { outline: 1px solid #bbbba2; outline-offset: -1px; }
+.hud-shortcut-menu kbd { margin-left: auto; text-align: center; color: #a5afa6; font: 10px system-ui, sans-serif; }
+.hud-menu-points { font-size: 10px; color: #e4bd83; margin-left: auto; }
+.hud-menu-points[data-points="skilltree"] { color: #c9a6ef; }
+.hud-menu-points:not([hidden]) + kbd { margin-left: 2px; }

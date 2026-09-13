@@ -166,6 +166,7 @@ export class Game {
       this.saveClient = this.lifetime.own(new SaveHub());
       this.session = new CharacterSession(this.saveClient, this.world.generationVersion, seed=>new World(seed));
       this.shell = this.lifetime.own(new GameShell(root, {
+        shortcutMenuChanged: () => this.clearInput(),
         groundLootNames: () => this.groundLootNames,
         setGroundLootNames: mode => { this.groundLootNames = mode; this.savePreferences(); },
         volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
@@ -191,6 +192,9 @@ export class Game {
     this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.overworld.getPortalAnchor(band)));
       this.inventoryPanel = this.lifetime.own(new InventoryPanel(this.shell.panelMount, {
         close: () => this.closeCharacterPanel(),
+        assignSkill: (slot, skill) => this.characterAction({ type: 'assignSkill', slot, skill }),
+        hudOptions: () => ({ groundEffects: this.sim.groundEffects, gamepad: this.usingGamepad, reducedMotion: this.reducedMotion }),
+        openSkills: skill => { this.openCharacterPanel('skills'); this.skillPanel.inspectNode(skill ? `skill:${skill}` : 'origin', true); this.skillPanel.setDetailsVisible(true); },
         editAppearance:()=>this.editAppearance(),
         openChronicle:()=>{if(!this.savingAction)this.panels.open('chronicle');},
         equip: (index, slot) => this.characterAction({ type: 'equip', index, slot }),
@@ -266,6 +270,7 @@ export class Game {
       });
       this.touch = this.lifetime.own(new TouchHUD(this.canvas.parentElement!, {
         activate: active => {
+          if (active) this.shell.shortcutMenu.close(false);
           this.input.clear();
           // A fresh pad event switching away from touch must survive this presentation change.
           if(active || !this.usingGamepad) this.gamepad.clear();
@@ -1055,7 +1060,7 @@ export class Game {
     this.touch.update(this.sim.player,this.phase,this.savingAction,now,this.sim.groundEffects);
     this.renderer.gamepadActive = this.usingGamepad;
     this.shell.setGamepadActive(this.usingGamepad);
-    if (this.phase === 'playing' && !this.savingAction) {
+    if (this.phase === 'playing' && !this.savingAction && !this.shell.shortcutMenu.isOpen) {
       // The simulation owns the fixed 120 Hz clock and render interpolation.
       this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
       this.sim.setCombatViewport(this.renderer.combatViewport);
@@ -1091,6 +1096,7 @@ export class Game {
       }
       if (now >= this.nextAutosave) { this.saveCharacter(); this.nextAutosave = now + 20_000; }
     }
+    this.shell.shortcutMenu.setPoints(this.sim.player.character.statPoints, this.sim.player.character.skillPoints);
     this.shell.setPortalState(this.sim.portal.active ? this.sim.portal.progress : null,
       !!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x, this.sim.player.y));
     if(this.touch.active) this.touch.setPortal(this.sim.portal.active ? this.sim.portal.progress : null,!!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x,this.sim.player.y));
@@ -1188,6 +1194,11 @@ export class Game {
       this.padAimAngle = this.sim.player.angle;
     }
     if (!pad.active) { this.gamepadMenu.clear(); if (this.phase === 'character') this.inventoryPanel.updateGamepad(pad, now); if (this.phase === 'skills') this.skillPanel.updateGamepad(pad, now); return; }
+    if (this.shell.shortcutMenu.isOpen) {
+      if (pad.pressed.has(PAD.pause) || pad.pressed.has(PAD.dodge)) this.shell.shortcutMenu.close();
+      else this.gamepadMenu.update(this.shell.shortcutMenu.element, pad, now);
+      return;
+    }
     if (pad.pressed.has(PAD.dodge) && this.thor.dismissInspection()) {
       pad.pressed.delete(PAD.dodge); // Closing lower-screen detail must not also dodge.
       return;

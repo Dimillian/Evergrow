@@ -21,6 +21,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'audits',group:'data',name:'Code & performance audits',path:'/tools/audits.html',description:'Commands and access instructions for code checks, profiling and capture scripts.'},
   {id:'equipment',group:'equipment',name:'Equipment gallery',path:'/equipment.html',description:'Browse all equipment silhouettes and materials under movable light.'},
   {id:'charms',group:'equipment',name:'Charms',path:'/character.html?charms',description:'Arrange six sizes of magic stones and inspect their active bonuses.'},
+  {id:'hud-menu',group:'interface',name:'HUD & shortcut menu',path:'/character.html?panel=hud&loadout=wand',description:'Frozen equipped-weapon HUD, orb utilities and compact shortcut list. No gameplay or saves.'},
   {id:'inventory',group:'equipment',name:'Inventory & comparisons',path:'/character.html',description:'Equip staged gear, compare stats and organize a character’s bag.'},
   {id:'enchanting-workbench',group:'equipment',name:'Enchanting workbench',path:'/services.html?role=enchanter&tier=city&operation=rerollOne&item=3',description:'Choose affixes directly, inspect rarity upgrades and favor city rerolls.'},
   {id:'merchant-stock',group:'equipment',name:'Merchant stock',path:'/services.html?tier=city',description:'Spatial vendor trays, category tabs and paid stock refreshes.'},

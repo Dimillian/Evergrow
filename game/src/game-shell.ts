@@ -5,14 +5,15 @@ import { PORTAL_RULES } from './travel.ts';
 import './travel-ui.css';
 import './hud-sidebar.css';
 import { GameNotifications } from './notifications.ts';
-import { getHUDLayout, HUD_MENU_SHORTCUTS } from './hud.ts';
+import { getHUDLayout } from './hud.ts';
+import { HUDShortcutMenu } from './hud-shortcut-menu.ts';
 import type { HUDRect } from './hud.ts';
 import { getMinimapRect, getPortalControlRect } from './map-view.ts';
 import type { GamePhase } from './game-phase.ts';
 import { gameMenuMarkup } from './game-menu.ts';
 import { trapDialogFocus, uiIcon } from './ui-components.ts';
 
-interface ShellActions extends AudioControlActions { groundLootNames?(): GroundLootNameplates; setGroundLootNames?(mode: GroundLootNameplates): void; openChronicle?(): void; save?(): Promise<boolean>; sound?(): void; muted?(): boolean; zoom?(factor: number): void; portal?(): void; play(): void; returnToTitle(): void | Promise<void>; openMap(): void; openCharacter(): void; openSkills(): void; openJourneys?(): void; }
+interface ShellActions extends AudioControlActions { shortcutMenuChanged?(): void; groundLootNames?(): GroundLootNameplates; setGroundLootNames?(mode: GroundLootNameplates): void; openChronicle?(): void; save?(): Promise<boolean>; sound?(): void; muted?(): boolean; zoom?(factor: number): void; portal?(): void; play(): void; returnToTitle(): void | Promise<void>; openMap(): void; openCharacter(): void; openSkills(): void; openJourneys?(): void; }
 
 /** Owns DOM presentation and its listeners; it never reads or mutates simulation state. */
 export class GameShell {
@@ -29,6 +30,7 @@ export class GameShell {
   private readonly abort = new AbortController();
   private menuAbort = new AbortController();
   private readonly actions: ShellActions;
+  readonly shortcutMenu: HUDShortcutMenu;
   private gamepadActive = false;
   private pauseMenu: PauseMenu | null = null;
   backInMenu(): boolean { return this.pauseMenu?.back() ?? false; }
@@ -47,8 +49,7 @@ export class GameShell {
       <canvas id="game" tabindex="0" aria-label="Evergrow: wilderness and settlements"></canvas>
       <canvas id="game-ui" aria-hidden="true"></canvas>
       <nav id="hud-controls" class="hud-controls" aria-label="Character menus" hidden>
-        ${HUD_MENU_SHORTCUTS.map(shortcut => `<button type="button" class="hud-control" data-hud="${shortcut.id}"
-          aria-haspopup="dialog" aria-keyshortcuts="${shortcut.key}" aria-label="${shortcut.label}" data-tooltip="${shortcut.label}"></button>`).join('')}
+        <button type="button" class="hud-control" data-hud="menu" aria-haspopup="dialog" aria-label="Open character menus" data-tooltip="Character menus"></button>
         <button type="button" class="hud-control" data-hud="map" aria-label="World map" aria-keyshortcuts="M"
           aria-haspopup="dialog" data-tooltip="World map" data-tooltip-placement="left"></button>
         <button type="button" class="hud-control portal-control hud-sidebar-surface" data-hud="portal" aria-label="Town portal" aria-keyshortcuts="P" data-tooltip="Town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="left">${uiIcon('portal')}<span class="portal-label">Town portal</span><kbd class="hud-sidebar-key">P</kbd><i class="portal-progress" aria-hidden="true"></i></button>
@@ -75,9 +76,12 @@ export class GameShell {
     this.controls.querySelector('[data-hud="map"]')!.addEventListener('click', actions.openMap, { signal });
     this.controls.querySelector<HTMLButtonElement>('[data-hud="portal"]')!.disabled = !actions.portal;
     this.controls.querySelector('[data-hud="portal"]')!.addEventListener('click', () => actions.portal?.(), { signal });
-    for (const id of ['character', 'inventory']) this.controls.querySelector(`[data-hud="${id}"]`)!.addEventListener('click', actions.openCharacter, { signal });
-    this.controls.querySelector('[data-hud="skilltree"]')!.addEventListener('click', actions.openSkills, { signal });
-    this.controls.querySelector('[data-hud="journal"]')!.addEventListener('click', () => actions.openJourneys?.(), { signal });
+    this.shortcutMenu = new HUDShortcutMenu(this.controls, this.controls.querySelector('[data-hud="menu"]')!, id => {
+      if (id === 'character' || id === 'inventory') actions.openCharacter();
+      else if (id === 'skilltree') actions.openSkills();
+      else if (id === 'map') actions.openMap();
+      else actions.openJourneys?.();
+    }, () => actions.shortcutMenuChanged?.());
   }
 
   private navigationVisible = true;
@@ -97,6 +101,7 @@ export class GameShell {
     for (const shortcut of getHUDLayout(width, height).shortcuts) place(shortcut.id, shortcut);
     place('map', getMinimapRect(width, height));
     place('portal', getPortalControlRect(width, height));
+    this.shortcutMenu.position();
   }
 
   setPortalState(progress: number | null, returning: boolean): void {
@@ -125,6 +130,7 @@ export class GameShell {
   setStatus(message: string): void { this.status.textContent = message; }
 
   showMenu(phase: GamePhase, kills: number, time: number, location = 'Deadwood'): void {
+    this.shortcutMenu.close(false);
     this.menuAbort.abort(); this.menuAbort = new AbortController(); this.pauseMenu = null;
     const playing = phase === 'playing';
     const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys' || phase === 'chronicle';
@@ -150,6 +156,7 @@ export class GameShell {
   }
 
   dispose(): void {
+    this.shortcutMenu.dispose();
     this.notifications.dispose();
     this.menuAbort.abort(); this.abort.abort();
   }

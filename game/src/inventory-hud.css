@@ -1,0 +1,50 @@
+/* One compact HUD lives in the existing footer, returning the outside gap to the inventory. */
+.has-inventory-hud .character-window { height: min(940px, 100%); max-height: 100%; }
+.has-inventory-hud .character-footer {
+  position: relative; flex: 0 0 clamp(106px, 15vh, 116px); min-height: 106px;
+  padding: 12px 24px; justify-content: space-between; align-items: center;
+  background: linear-gradient(180deg, #14243190, #08121dba);
+  border-top: 1px solid #9abac64d; overflow: hidden;
+}
+.has-inventory-hud .character-experience { display: none; }
+.inventory-hud-dock { position: absolute; inset: 0; pointer-events: none; }
+.inventory-hud-dock canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.has-inventory-hud .character-footer > :not(.inventory-hud-dock) { position: relative; z-index: 1; }
+.has-inventory-hud .character-footer-status { margin-left: auto; }
+@media (max-width: 660px) {
+  .has-inventory-hud .character-footer { padding: 5px 8px; align-items: flex-start; }
+  .has-inventory-hud .character-footer-status { display: none; }
+  .has-inventory-hud .character-footer [data-chronicle] { min-height: 22px; padding: 1px 4px; font-size: 10px; }
+}
+.inventory-hud-targets { position: absolute; inset: 0; pointer-events: none; }
+.inventory-hud-slot {
+  position: absolute; pointer-events: auto; padding: 0; border: 1px solid transparent;
+  background: transparent; border-radius: 0; appearance: none;
+}
+.inventory-hud-slot:hover, .inventory-hud-slot[aria-expanded="true"] { border-color: #d2dcec; background: #d6e6ff12; box-shadow: 0 0 10px #b6d8fa35; }
+.inventory-hud-slot:focus-visible { outline: 2px solid var(--ui-ivory); outline-offset: 2px; }
+.inventory-quick-skills {
+  position: absolute; z-index: 90; display: flex; flex-direction: column;
+  width: min(310px, calc(100% - 24px)); padding: 10px;
+  background: #101e2b; border: 1px solid #9fb8cb; color: var(--ui-text);
+  box-shadow: 0 12px 35px #000a, inset 0 1px #daeaff20; font: 13px var(--ui-font);
+}
+.inventory-quick-skills[hidden] { display: none; }
+.inventory-quick-skills > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; flex-shrink: 0; }
+.inventory-quick-skills h3 { margin: 0; font-size: 15px; font-weight: 400; }
+.inventory-quick-skills > header .ui-button { width: 28px; height: 28px; min-height: 28px; padding: 5px; }
+.inventory-skill-choices { display: flex; flex-direction: column; gap: 3px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 3px; }
+.inventory-skill-choice {
+  display: flex; flex-shrink: 0; align-items: center; gap: 9px; width: 100%; padding: 8px;
+  border: 1px solid transparent; background: #172838; text-align: left; color: var(--ui-text);
+}
+.inventory-skill-choice:hover, .inventory-skill-choice[aria-pressed="true"] { background: #2a3d50; border-color: #abc4d680; }
+.inventory-skill-icon { display: flex; flex: 0 0 24px; color: var(--skill-color); }
+.inventory-skill-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
+.inventory-skill-copy strong { font-size: 14px; font-weight: 400; line-height: 1.2; }
+.inventory-skill-copy small { color: var(--ui-silver-dim); font-size: 11px; line-height: 1.2; }
+.inventory-skill-copy .is-loss { color: #e2ada1; }
+.inventory-skill-binding { color: #c9c4ee; white-space: nowrap; font-size: 11px; }
+.inventory-skill-picker-footer { display: flex; justify-content: space-between; flex-shrink: 0; gap: 8px; padding-top: 8px; }
+.inventory-skill-picker-footer .ui-button { min-height: 30px; padding: 4px 8px; font-size: 12px; }
+.inventory-skill-empty { line-height: 1.5; color: var(--ui-silver-dim); }

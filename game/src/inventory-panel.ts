@@ -1,3 +1,5 @@
+import type { HUDOptions } from './hud.ts';
+import { InventoryHUD } from './inventory-hud.ts';
 import { previewCharmReplacement, charmComparisonCandidates } from './charm-comparison.ts';
 import { ITEM_LOCK_ICON } from './item-protection.ts';
 import type { DropItemSource } from './drop-item-command.ts';
@@ -10,7 +12,7 @@ import { goldBalance } from './wallet.ts';
 import { equippedGearPower } from './leaderboard.ts';
 import { formatGold } from './currency-format.ts';
 import type { Player } from './model.ts';
-import type { Attribute, EquipmentSlot, Item, ItemTier } from './character-types.ts';
+import type { Attribute, EquipmentSlot, Item, ItemTier, SkillId } from './character-types.ts';
 import { matchesInventoryFilter, planBestEquipment, type EquipBestChoice, type InventorySort, type InventoryFilter } from './inventory-tools.ts';
 import { GamepadMenu } from './gamepad-menu.ts';
 import type { GamepadInput } from './gamepad-input.ts';
@@ -26,6 +28,9 @@ import './inventory-panel.css';
 
 export interface InventoryPanelActions {
   close(): void;
+  assignSkill?(slot: number, skill: SkillId | null): void;
+  openSkills?(skill?: SkillId | null): void;
+  hudOptions?(): HUDOptions;
   editAppearance?():void;
   openChronicle?():void;
   equip(index: number, slot?: EquipmentSlot): void;
@@ -78,6 +83,7 @@ export class InventoryPanel {
   private readonly window: HTMLElement;
   private readonly lifetime = new AbortController();
   private readonly actions: InventoryPanelActions;
+  private readonly hud: InventoryHUD | null;
   private focus: ReturnType<typeof trapDialogFocus> | null = null;
   private popupFocus: ReturnType<typeof trapDialogFocus> | null = null;
   private popup: 'sort' | 'weapon' | 'charms' | null = null;
@@ -189,6 +195,18 @@ export class InventoryPanel {
     this.canvas = this.element.querySelector('.character-doll')!;
     this.element.querySelectorAll<HTMLButtonElement>('[data-location]').forEach(cell => this.cells.set(cell.dataset.location!, cell));
     mount.append(this.element);
+    this.hud = actions.assignSkill && actions.openSkills ? new InventoryHUD(this.element, this.window.querySelector('.character-footer')!, {
+      options: actions.hudOptions, assign: actions.assignSkill, details: actions.openSkills,
+      suspend: () => { this.focus?.dispose(); this.focus = null; this.window.inert = true; this.hideTooltip(); },
+      restore: anchor => { this.window.inert = false; if (!this.element.hidden) this.focus = trapDialogFocus(this.element, {
+        signal: this.lifetime.signal, restoreFocus: false, initialFocus: anchor,
+      }); },
+    }) : null;
+    if (this.hud) {
+      this.element.setAttribute('role', 'dialog'); this.element.setAttribute('aria-modal', 'true');
+      this.element.setAttribute('aria-labelledby', 'character-title');
+      this.window.removeAttribute('role'); this.window.removeAttribute('aria-modal');
+    }
     this.bind();
   }
 
@@ -202,7 +220,7 @@ export class InventoryPanel {
     this.element.hidden = false;
     this.refresh(player);
     if (!wasOpen) {
-      this.focus = trapDialogFocus(this.window, { signal: this.lifetime.signal, restoreFocus: false, initialFocus: this.window });
+      this.focus = trapDialogFocus(this.hud ? this.element : this.window, { signal: this.lifetime.signal, restoreFocus: false, initialFocus: this.window });
       this.animate();
     }
   }
@@ -295,11 +313,13 @@ export class InventoryPanel {
       <h4 id="stats-${group.tone}">${escapeUI(group.title)}</h4><dl>${group.rows.map(row => `<div class="ui-stat" tabindex="0" data-stat-detail="${escapeUI(row.id)}"><dt class="ui-stat-label">${escapeUI(row.label)}</dt><dd class="ui-stat-value">${escapeUI(row.value)}</dd></div>`).join('')}</dl></section>`).join('');
     const statContainer = this.element.querySelector('[data-combat-stats]')!;
     if (statContainer.innerHTML !== markup) { this.statTooltip.hide(); statContainer.innerHTML = markup; }
+    this.hud?.refresh(player);
     if (this.drag) this.highlightEquipmentTargets();
     if (this.hovered) this.showTooltip(this.hovered);
   }
 
   close(): void {
+    this.hud?.dismiss(false); this.window.inert = false;
     this.locking=false;this.element.classList.remove('is-locking-items');this.element.querySelector('[data-lock-mode]')?.setAttribute('aria-pressed','false');
     this.dismissPopup(false);
     this.focus?.dispose();
@@ -313,7 +333,7 @@ export class InventoryPanel {
     this.animation = 0;
   }
 
-  dispose(): void { this.close(); this.tooltip.dispose(); this.statTooltip.dispose(); this.lifetime.abort(); this.element.remove(); this.player = null; }
+  dispose(): void { this.close(); this.hud?.dispose(); this.tooltip.dispose(); this.statTooltip.dispose(); this.lifetime.abort(); this.element.remove(); this.player = null; }
 
   private renderCharmComparison(): void {
     if(!this.player)return;
@@ -333,6 +353,8 @@ export class InventoryPanel {
   private popupPanel(): HTMLElement { return this.popupLayer.querySelector<HTMLElement>(`[data-mini="${this.popup}"]`)!; }
 
   private openPopup(kind: 'sort' | 'weapon' | 'charms', anchor: HTMLElement): void {
+    this.hud?.dismiss();
+    this.hud?.setInert(true);
     this.closeTouchItem(); this.hideTooltip(); this.clearDrag(); this.controller.clear();
     this.focus?.dispose(); this.focus = null;
     this.popup = kind; this.popupReturn = anchor;
@@ -352,12 +374,14 @@ export class InventoryPanel {
   }
 
   dismissPopup(restoreFocus = true): boolean {
+    if (this.hud?.dismiss(restoreFocus)) return true;
     if (!this.popup) return false;
+    this.hud?.setInert(false);
     this.popupFocus?.dispose(); this.popupFocus = null;
     this.popup = null; this.popupLayer.hidden = true; this.controller.clear();
     for (const child of this.window.children) if (child instanceof HTMLElement && child !== this.popupLayer) child.inert = false;
     this.element.querySelector('[data-sort-filter]')!.setAttribute('aria-expanded', 'false');
-    if (restoreFocus && !this.element.hidden) this.focus = trapDialogFocus(this.window, {
+    if (restoreFocus && !this.element.hidden) this.focus = trapDialogFocus(this.hud ? this.element : this.window, {
       signal: this.lifetime.signal, restoreFocus: false, initialFocus: this.popupReturn ?? undefined,
     });
     this.popupReturn = null;
@@ -382,6 +406,7 @@ export class InventoryPanel {
     if (!this.element.classList.contains('is-controller')) {
       this.element.classList.add('is-controller'); if (!this.popup) this.selectSection(this.section);
     }
+    if (this.hud?.pickerOpen) { this.controller.update(this.hud.picker, pad, now); return; }
     if (this.popup) { this.controller.update(this.popupPanel(), pad, now); return; }
     const root = this.element.querySelector<HTMLElement>(`[data-section="${this.section}"]`)!;
     this.controller.update(root, pad, now, {
@@ -746,6 +771,7 @@ export class InventoryPanel {
       const time = reduced ? 3 : performance.now() / 1000;
       drawCharacterPortrait(ctx, this.player, time, this.facing, this.canvas.width, this.canvas.height);
     }
+    this.hud?.draw(performance.now());
     this.animation = requestAnimationFrame(this.animate);
   };
 }

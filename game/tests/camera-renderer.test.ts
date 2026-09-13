@@ -80,12 +80,17 @@ class EmptyWorld extends World {
 
 function fixture(t: TestContext) {
   const previous = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const previousPath = Object.getOwnPropertyDescriptor(globalThis, 'Path2D');
+  // Icon paths are opaque to this projection/text recorder, just like canvas fill/stroke.
+  Object.defineProperty(globalThis, 'Path2D', { configurable: true, value: class {} });
   Object.defineProperty(globalThis, 'document', { configurable: true, value: {
     createElement: () => new RecordingCanvas(),
   } });
   t.after(() => {
     if (previous) Object.defineProperty(globalThis, 'document', previous);
     else Reflect.deleteProperty(globalThis, 'document');
+    if (previousPath) Object.defineProperty(globalThis, 'Path2D', previousPath);
+    else Reflect.deleteProperty(globalThis, 'Path2D');
   });
   const renderer = new Renderer(), world = new EmptyWorld();
   const sim = new Simulation(world, { spawn: false, startX: -123.25, startY: 67.125 });
@@ -142,7 +147,7 @@ test('mouse aiming inverts the actual smoothed rendering transform, including ca
 
 test('native HUD labels stay fixed and damage numbers project without scaling their font', t => {
   const { renderer, sim, world, render, settings } = fixture(t);
-  const menuLabels: unknown[] = [], popupFonts: string[] = [];
+  const utilityLabels: unknown[] = [], popupFonts: string[] = [];
   for (const [index, delta] of [0, 300, -300].entries()) {
     renderer.zoomByWheel(delta, 0, 900);
     const matrix = render();
@@ -151,7 +156,7 @@ test('native HUD labels stay fixed and damage numbers project without scaling th
     const ui = new RecordingContext();
     ui.scale(2, 2); // The native UI backing surface may have a different DPR from the world.
     renderer.renderUI(ui as unknown as CanvasRenderingContext2D, sim, world, settings);
-    menuLabels.push(ui.texts.filter(call => ['C', 'I', 'T', 'J'].includes(call.value)));
+    utilityLabels.push(ui.texts.filter(call => ['Q', 'SPACE'].includes(call.value)));
     const popup = ui.texts.filter(call => call.value === `+${value}`).at(-1)!;
     assert.ok(popup, 'damage feedback is drawn in the separate native UI pass');
     popupFonts.push(popup.font);
@@ -162,8 +167,8 @@ test('native HUD labels stay fixed and damage numbers project without scaling th
     assert.deepEqual({ ...popup.matrix, e: 0, f: 0 }, identity(), 'glyphs rasterize directly at physical pixel scale');
     assert.deepEqual(ui.getTransform(), { a: 2, b: 0, c: 0, d: 2, e: 0, f: 0 });
   }
-  assert.equal((menuLabels[0] as unknown[]).length, 4);
-  assert.deepEqual(menuLabels[1], menuLabels[0]); assert.deepEqual(menuLabels[2], menuLabels[0]);
+  assert.equal((utilityLabels[0] as unknown[]).length, 2);
+  assert.deepEqual(utilityLabels[1], utilityLabels[0]); assert.deepEqual(utilityLabels[2], utilityLabels[0]);
   assert.equal(new Set(popupFonts).size, 1);
 });
 

@@ -1,6 +1,6 @@
 import type { SkillId } from './character-types.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
-import { ICON_MATERIALS, SKILL_ICON_RECIPES, type SkillIconMaterial } from './skill-icon-content.ts';
+import { ICON_MATERIALS, SKILL_ICON_RECIPES, type SkillIconMaterial, type IconPart } from './skill-icon-content.ts';
 
 export interface SkillIconDraw {
   readonly path: string;
@@ -48,14 +48,19 @@ export function skillIconDrawing(id: SkillId, detail: boolean): readonly SkillIc
   const key = `${id}:${detail}`;
   const cached = scenes.get(key);
   if (cached) return cached;
-  const theme = glassTheme(id);
+  const result = glassIconDrawing(SKILL_ICON_RECIPES[id], glassTheme(id), detail);
+  scenes.set(key, result);
+  return result;
+}
+/** The same glass construction also serves the HUD's utility emblems. */
+export function glassIconDrawing(parts: readonly IconPart[], theme: SkillIconMaterial, detail: boolean): readonly SkillIconDraw[] {
   const drawing: SkillIconDraw[] = [{ path: 'M32 1A31 31 0 1 1 32 63 31 31 0 1 1 32 1Z', transform: identity, opacity: .65, localGradient: false, halo: theme }];
   // Wide, low-opacity edges sit behind every pane instead of washing over the seams.
-  for (const part of SKILL_ICON_RECIPES[id]) if (part.kind === 'body') {
+  for (const part of parts) if (part.kind === 'body') {
     const material = ICON_MATERIALS[part.material === 'steel' || part.material === 'dark' ? theme : part.material];
     drawing.push({ path: part.path, transform: part.transform ?? identity, opacity: .13 * (part.opacity ?? 1), localGradient: !!part.transform, stroke: material.face, width: 5 });
   }
-  for (const part of SKILL_ICON_RECIPES[id]) {
+  for (const part of parts) {
     if (part.detail && !detail) continue;
     const transform = part.transform ?? identity, opacity = part.opacity ?? 1;
     const base = { path: part.path, transform, opacity, localGradient: !!part.transform };
@@ -76,7 +81,6 @@ export function skillIconDrawing(id: SkillId, detail: boolean): readonly SkillIc
     }
   }
   const result = Object.freeze(drawing.map(op => Object.freeze({ ...op, transform: Object.freeze(op.transform) })));
-  scenes.set(key, result);
   return result;
 }
 /** Backlight is inside the pane, not a metallic top-to-bottom surface reflection. */

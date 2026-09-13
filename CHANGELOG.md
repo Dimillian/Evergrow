@@ -1,5 +1,36 @@
 # Evergrow changelog
 
+## v0.5.0 — 2026-09-13T10:06:00Z
+
+### New
+
+- Twelve Unique items introduce skill-changing powers, fixed affixes and red-violet loot effects.
+- Dervish’s Grasp sustains moving Whirlwind; Returning Verdict and Homeward Thorn send shields and arrows back through enemies.
+- Cinderheart Testament stores paid Fireballs, Winter’s Reach places Ice Nova at your aim, and The Broken Seal explodes when enemy damage breaks your ward.
+- Ashen Double leaves a smoke decoy, Duelist’s Return adds a free Lunge return, and Gravetide sends Earthshatter along a traveling fissure.
+- Pale Huntsman’s Signet creates a spectral archer, Rimeheart Spire adds delayed Frost Lance shatters, and Vessel of Borrowed Life turns unused Siphon healing into a barrier.
+- Chronicles now tracks found and undiscovered Uniques, including the first finder and highest item level found.
+- Right-click an inventory skill slot to assign or clear a skill; left-click to open its details in the atlas.
+- A compact HUD menu gathers Character, Inventory, Skill Tree, Journeys and World Map, with available-point badges.
+
+### Tweaks
+
+- All 30 active skills have distinct stained-glass icons across the HUD, atlas, assignment menus and touch controls.
+- A smaller HUD uses square skill lenses, clearer bindings, equipped-weapon artwork and separate potion and dodge medallions.
+- Inventory docks health, mana, experience and skill slots into its footer, leaving more room for items and stats.
+- Unique affixes scale to your level when dropped. Uniques have the same overall drop chance as Legendary items; Legendary odds stay unchanged.
+- All twelve Uniques share the Unique pool equally, support enhancement, and preserve each skill’s Techniques and normal damage rules.
+
+### Fixes
+
+- Reassigning skills preserves cooldowns, resources and progress; duplicate assignments move to the chosen slot.
+- HUD and inventory controls follow their artwork when the window changes size.
+- Navigation menus hold combat and clear buffered input, preventing accidental attacks when closing them.
+- Lunge’s free return shows its remaining window and requires a fresh press, including on touch and controller.
+- Returning attacks, delayed shatters, decoys and barriers respect terrain, attack commitment and their finite limits.
+
+> Existing characters and cloud saves remain compatible. All twelve Uniques can drop for existing characters; no save reset or additional skill refund is required. Reload the game to apply this update.
+
 ## v0.4.0 — 2026-09-13T06:14:00Z
 
 ### New

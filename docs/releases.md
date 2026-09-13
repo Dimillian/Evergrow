@@ -4,7 +4,7 @@
 
 ## Prototype version policy
 
-Player-facing versions remain below **0.5.0** until the user explicitly approves a new milestone. The user approved **0.2.0** for the settlement and gambler milestone and **0.3.0** for the spatial inventory, charms and resistance milestone on 2026-09-09. Routine publications after 0.3.0 increment the patch number (**0.3.1**, **0.3.2**, and so on). Patch numbers have no single-digit limit. Minor versions (0.2, 0.3, 0.4) mark deliberate product milestones, not each feature pass. Do not advance to 0.5 or 1.0 automatically.
+Player-facing versions stay within the latest explicitly approved prototype milestone. The current ceiling is **0.5.x**; do not advance to 0.6 or 1.0 without approval. The user approved **0.2.0** for the settlement and gambler milestone and **0.3.0** for the spatial inventory, charms and resistance milestone on 2026-09-09. Routine publications after 0.3.0 increment the patch number (**0.3.1**, **0.3.2**, and so on). Patch numbers have no single-digit limit. Minor versions (0.2, 0.3, 0.4) mark deliberate product milestones, not each feature pass. Do not advance beyond the approved milestone automatically.
 
 On 2026-09-09 the display history was renumbered, preserving every date, note and development-recap marker. The renumbered history ships with 0.2.0; it does not redeploy historical builds. The audit records below retain their original published labels, source SHAs and Sites IDs. Save schema v4, world generation 10, dungeon layout versions and Sites snapshot numbers are independent technical identifiers; never lower them to match a game release label.
 
@@ -28,6 +28,8 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 | 0.9.0 | 0.1.15 |
 
 The user approved **0.4.0** on 2026-09-13 for the rebuilt passive atlas and merchant overhaul. This remains a prototype milestone below 0.5.0.
+
+The user approved the next major prototype milestone, **0.5.0**, on 2026-09-13 for the new HUD, stained-glass skill icons, inventory skill assignment and twelve Unique items. Routine updates after this milestone use 0.5.x.
 
 ## Last verified publication
 

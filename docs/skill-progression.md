@@ -26,6 +26,14 @@ The current `projectile pierce` query finds nine related nodes: three global-bon
 
 The previous published v0.3.17 atlas had **875 nodes, 932 connections and 120 groups**, including 90 passive specialties. Its successive 573-node foundation, 36 border gardens and six outer clusters remain historical checkpoints. This local rebuild replaces their long one-entry attachments rather than preserving them as hidden connectivity.
 
+## Inventory hotkeys — local September 13 follow-up
+
+Character & inventory docks the shared HUD inside a compact framed footer, reclaiming the outside gap and replacing the duplicate inventory XP display. Health/mana orbs, current/maximum numbers and XP remain visible; increasing attributes or changing equipment immediately updates these same instruments without healing the character. The inventory version hides the menu/utility shortcut strip and compass; gameplay keeps them. Both versions use square skill tiles with small corner bindings for unobstructed skill artwork. The shared gameplay HUD is 150 logical units tall, down from 174; the inventory footer is 106–116 CSS pixels tall.
+
+Left-click RMB or 1–4 on the HUD to open the full atlas with that skill's details selected (an empty slot opens the Origin). Right-click a slot for a compact assignment picker directly above it. The picker lists unlocked skills with their icons, effective mana costs, missing weapon requirements and existing bindings. Selecting a skill already assigned elsewhere moves it to the chosen slot; Clear removes the assignment. LMB remains the equipped weapon's basic attack. Escape or clicking outside closes the quick picker. Keyboard users can focus a slot and press Shift+F10 for the picker or Enter for details.
+
+Assignments use the same validated character command and save flow as the atlas, preserving skill cooldowns, resources and progress. No save reset is required. The disposable `/character.html` study includes the same HUD and interaction targets.
+
 ## Unlock pacing and assignments
 
 Active skills remain tree unlocks. They are optional side branches, never mandatory roads. Techniques and keystones are also dead ends. Every passive territory remains traversable without buying an unwanted skill or accepting a tradeoff. Shortest paths are previews; allocation atomically spends the missing nodes or changes nothing.

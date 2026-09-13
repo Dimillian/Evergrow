@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getHUDLayout, isHUDPoint } from '../src/hud.ts';
 import { HUD_ART, HUD_SKILL_SLOTS } from '../src/hud-layout.ts';
+import { weaponIconFit } from '../src/hud-weapon-icon.ts';
+import { WEAPON_PROFILES } from '../src/weapon-content.ts';
+import { weaponShapes } from '../src/weapon-shapes.ts';
 
 const viewports = [[240, 180], [390, 844], [540, 450], [960, 600], [1440, 900]] as const;
 
@@ -28,9 +31,9 @@ test('resource orbs, action tray and resource readouts block world input after r
   const occupied = [
     ['left orb', HUD_ART.orb.left, HUD_ART.orb.y], ['right orb', HUD_ART.orb.right, HUD_ART.orb.y],
     ['basic attack', 153, 94], ['empty skill', 211, 94], ['empty skill', 297, 94], ['empty skill', 365, 94],
-    ['health readout', HUD_ART.orb.left, 131], ['mana readout', HUD_ART.orb.right, 131],
-    ['attribute seal', 212, 30], ['skill seal', 286, 30],
-    ['XP rail', 260, 145], ['level', 160, 159], ['current XP', 358, 159],
+    ['health readout', HUD_ART.orb.left, HUD_ART.orb.readoutY], ['mana readout', HUD_ART.orb.right, HUD_ART.orb.readoutY],
+    ['menu', 260, 47], ['potion key', 149, 37], ['dodge key', 365, 37],
+    ['XP rail', 260, HUD_ART.experience.y + 4], ['level', 160, HUD_ART.experience.y + 18], ['current XP', 358, HUD_ART.experience.y + 18],
   ] as const;
   for (const [width, height] of viewports) {
     const hud = getHUDLayout(width, height);
@@ -84,7 +87,7 @@ test('energy wisps leave open space playable while the closer orb collars block 
   const samples = [
     ['gap beside skill tray', 390, 94, false],
     ['current beneath collar', 397, 127, false],
-    ['current beneath skill plate', 368, 138, false],
+    ['gap below square skill plate', 368, 114, false],
     ['orb collar', 410, 97, true],
     ['readout shelf', 446, 131, true],
   ] as const;
@@ -95,5 +98,27 @@ test('energy wisps leave open space playable while the closer orb collars block 
       assert.equal(isHUDPoint(hud.x + logicalX * hud.scale, hud.y + y * hud.scale, width, height), occupied,
         `${label}, ${side === 1 ? 'right' : 'left'} side (${width}×${height})`);
     }
+  }
+});
+
+
+test('square skill wells reduce the shared HUD height without a separate binding row', () => {
+  assert.equal(HUD_ART.skill.width, HUD_ART.skill.height);
+  assert.ok(HUD_ART.height <= 150);
+  assert.ok(HUD_ART.skill.y + HUD_ART.skill.height < HUD_ART.experience.y);
+});
+
+
+test('all equipped silhouettes fill the basic lens without clipping, including short wands', () => {
+  for (const weapon of WEAPON_PROFILES) {
+    const fit = weaponIconFit(weapon.visual), size = HUD_ART.skill.width - 7;
+    const points = weaponShapes(weapon.visual).flatMap(shape => shape.points.map(([x, y]) => [
+      ((x + y) / Math.SQRT2 - fit.x) * size / fit.span,
+      ((y - x) / Math.SQRT2 - fit.y) * size / fit.span,
+    ]));
+    const extent = Math.max(...points.flat().map(Math.abs));
+    assert.ok(Math.abs(extent - size / 2) < .001, `${weapon.id} should fill and remain inside the lens`);
+    assert.ok(points.flat().every(Number.isFinite));
+    if (weapon.family === 'wand') assert.ok(size / fit.span > .66, 'short wands must grow beyond the old world scale');
   }
 });

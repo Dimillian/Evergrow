@@ -1,15 +1,18 @@
 import type { SkillId } from './character-types.ts';
-import { skillIconDrawing, skillIconLight, skillIconSurface, skillIconHalo, SKILL_ICON_STOPS, SKILL_ICON_HALO_STOPS } from './skill-icon.ts';
+import { skillIconDrawing, skillIconLight, skillIconSurface, skillIconHalo, SKILL_ICON_STOPS, SKILL_ICON_HALO_STOPS, type SkillIconDraw } from './skill-icon.ts';
 
 const paths = new Map<string, Path2D>();
 const stamps = new Map<string, HTMLCanvasElement>();
 /** Synchronous paths: the first frame is complete, with no image decoding or DOM parsing. */
 export function paintSkillIcon(c: CanvasRenderingContext2D, id: SkillId, x: number, y: number, size: number, detail = size >= 40): void {
+  paintGlassIcon(c, skillIconDrawing(id, detail), x, y, size);
+}
+export function paintGlassIcon(c: CanvasRenderingContext2D, drawing: readonly SkillIconDraw[], x: number, y: number, size: number): void {
   if (![x, y, size].every(Number.isFinite) || size <= 0) return;
   c.save();
   c.translate(x - size / 2, y - size / 2); c.scale(size / 64, size / 64);
   c.lineCap = 'round'; c.lineJoin = 'round';
-  for (const op of skillIconDrawing(id, detail)) {
+  for (const op of drawing) {
     let path = paths.get(op.path);
     if (!path) { path = new Path2D(op.path); paths.set(op.path, path); }
     c.save(); c.transform(...op.transform); c.globalAlpha *= op.opacity;

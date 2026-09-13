@@ -550,11 +550,11 @@ export class Renderer {
     this.navigation(c, sim, world, settings);
     drawGoldBalance(c, this.rewards);
     c.restore();
-    drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
+    if (settings.phase !== 'character') drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
       reducedMotion: settings.reducedMotion, healthTrail: this.playerHealthTrail / Math.max(1, p.maxHp),
       hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / COMBAT_TIMING.hitFlashDuration),
       experience: this.experienceDisplay, groundEffects: sim.groundEffects,
-      gamepad: this.gamepadActive, touch: this.touchActive, layout:footer,
+      gamepad: this.gamepadActive, touch: this.touchActive, layout: footer,
     });
     drawRewardFlights(c, this.rewards, (x, y) => worldToScreen(this.view, x, y), this.width, this.height, footer ? {hud:footer,gold:{x:headerX+27*.8*unit,y:headerY+62*.8*unit}} : undefined);
     drawLevelAnnouncement(c, this.rewards.level, worldToScreen(this.view, p.x, p.y), this.width, this.height, settings.reducedMotion);

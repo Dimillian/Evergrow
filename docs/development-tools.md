@@ -100,3 +100,5 @@ The save-free `game/scripts/atlas-balance.ts` CLI extends this workspace with 20
 ### Procedural skill icons
 
 Skills & combat → Skill icon workshop (`/tools/skill-icons.html`) compares the first six redesigned skills or all 30. Each shows the shared stained-glass artwork at 106px, a 32px hotbar sample and 24px tree/dimmed samples. The SVG disclosure verifies DOM controls against the Canvas artwork. PNG export is on demand; the study owns no simulation, animation loop or saves.
+
+The Interface workspace’s **HUD & shortcut menu** view (`/character.html?panel=hud&loadout=wand`) stages the actual floating HUD and compact shortcut list on a frozen, disposable character. `loadout=bow`, `staff`, `wand`, `shield` or `dual` changes the staged equipped silhouette. This view binds no gameplay input, advances no simulation and never accesses saves.

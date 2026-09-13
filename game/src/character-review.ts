@@ -1,3 +1,4 @@
+import { drawFloatingHUD } from './hud.ts';
 import { generateUnique } from './items.ts';
 import { UNIQUES } from './unique-content.ts';
 import { executeDropItem } from './drop-item-command.ts';
@@ -85,17 +86,16 @@ const profile = loadout === 'bow' ? 'crescent-recurve' : loadout === 'staff' ? '
   : loadout === 'wand' || loadout === 'grimoire' || loadout === 'orb' || loadout === 'wand-shield' ? 'star-wand'
   : loadout === 'dual' || loadout === 'shield' ? 'longsword' : undefined;
 if (profile) {
-  p.character.inventory[46] = generateItem(8409, 8, 'weapon', profile);
-  equipItem(p.character, 46, p.level);
+  // A loadout is staged directly: spatial pack validation must not silently reject the preset.
+  p.character.equipped.weapon = generateItem(8409, 1, 'weapon', profile);
+  p.character.equipped.offhand = null;
   if (loadout === 'grimoire' || loadout === 'orb' || loadout === 'wand-shield') {
-    p.character.inventory[47] = generateItem(8411, 8, loadout === 'wand-shield' ? 'shield' : loadout,
+    p.character.equipped.offhand = generateItem(8411, 1, loadout === 'wand-shield' ? 'shield' : loadout,
       loadout === 'wand-shield' ? 'vigil-kite' : loadout === 'grimoire' ? 'astral-grimoire' : 'rime-orb');
-    equipItem(p.character, 47, p.level, 'offhand');
   }
   if (loadout === 'shield' || loadout === 'dual') {
-    p.character.inventory[47] = generateItem(8410, 8, loadout === 'shield' ? 'shield' : 'weapon',
+    p.character.equipped.offhand = generateItem(8410, 1, loadout === 'shield' ? 'shield' : 'weapon',
       loadout === 'shield' ? 'vigil-kite' : 'rondel-dagger');
-    equipItem(p.character, 47, p.level, 'offhand');
   }
 }
 const comparisonReview = new URLSearchParams(location.search).get('comparison') === 'twohand';
@@ -115,12 +115,12 @@ if (progressionReview) {
 if(new URLSearchParams(location.search).has('uniques')){p.level=25;p.character.inventory.fill(null);for(const [i,u] of UNIQUES.entries())p.character.inventory[i]=generateUnique(7319+i,25,u.id);}
 refreshCharacter(p); p.hp = p.maxHp; p.mana = p.maxMana;
 const root = document.querySelector<HTMLElement>('#app')!;
-let selected = new URLSearchParams(location.search).get('panel') === 'skills' ? 'skills' : 'character';
+let selected = new URLSearchParams(location.search).get('panel') ?? 'character';
 const shell = life.own(new GameShell(root, { play: () => {}, returnToTitle: () => {}, openMap: () => {},
   openCharacter: () => show('character'), openSkills: () => show('skills') }));
 const result = (action: ActionResult) => {
   if (!action.ok) shell.notifications.info(action.message ?? 'Unavailable');
-  refreshCharacter(p); inventory.refresh(p); tree.refresh(p);
+  refreshCharacter(p); inventory.refresh(p); tree.refresh(p); background();
 };
 const inventory = life.own(new InventoryPanel(shell.panelMount, { close: () => show('skills'),
   equip: (i, slot) => result(equipItem(p.character, i, p.level, slot)),
@@ -130,6 +130,9 @@ const inventory = life.own(new InventoryPanel(shell.panelMount, { close: () => s
   drop: source => { void executeDropItem(sim, source, async () => ({ok:true})).then(result); },
   equipBest: choice => result(executeCharacterCommand(p, { type: 'equipBest', choice })),
   sort: mode => result(executeCharacterCommand(p, { type: 'sortInventory', mode })),
+  assignSkill: (slot, skill) => result(executeCharacterCommand(p, { type: 'assignSkill', slot, skill })),
+  hudOptions: () => ({ reducedMotion: true }),
+  openSkills: skill => { show('skills'); tree.inspectNode(skill ? `skill:${skill}` : 'origin', true); tree.setDetailsVisible(true); },
   allocate: attribute => result(allocateAttribute(p.character, attribute)),
 }));
 const tree = life.own(new SkillTreePanel(shell.panelMount, {
@@ -143,9 +146,17 @@ function background() {
   renderer.resize(Math.round(680 * w / h), 680);
   renderer.render(sim, world, 0, { phase: 'paused', reducedMotion: true, debug: false, fps: 60 });
   fx.render(renderer.canvas, 0);
+  shell.uiCanvas.width = Math.round(w * density); shell.uiCanvas.height = Math.round(h * density);
+  const ui = shell.uiCanvas.getContext('2d')!;
+  ui.setTransform(shell.uiCanvas.width / renderer.width, 0, 0, shell.uiCanvas.height / renderer.height, 0, 0);
+  if (selected !== 'character') drawFloatingHUD(ui, p, renderer.width, renderer.height, 0, { reducedMotion: true });
+  inventory.refresh(p);
+  shell.resizeControls(renderer.width, renderer.height);
+  shell.shortcutMenu.setPoints(p.character.statPoints, p.character.skillPoints);
 }
 function show(panel: string) {
-  selected = panel; inventory.close(); tree.close(); shell.showMenu(panel === 'skills' ? 'skills' : 'character', 0, 0);
+  selected = panel; inventory.close(); tree.close(); shell.showMenu(panel === 'hud' ? 'playing' : panel === 'skills' ? 'skills' : 'character', 0, 0);
+  if (panel === 'hud') { background(); return; }
   if (panel === 'skills') {
     tree.open(p); tree.inspectNode(new URLSearchParams(location.search).get('node') ?? (new URLSearchParams(location.search).get('zoom')==='overview' ? 'origin' : progressionReview ? 'skill:fireball' : 'skill:cleave'), true);
     if (new URLSearchParams(location.search).has('map')) tree.setDetailsVisible(false);
@@ -167,6 +178,7 @@ function show(panel: string) {
     }
   }
   else inventory.open(p);
+  background();
   root.dataset.ready = 'true'; root.dataset.panel = panel;
 }
 background(); show(selected);
