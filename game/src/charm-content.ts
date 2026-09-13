@@ -26,7 +26,7 @@ export const CHARM_PROFILES = Object.freeze(CHARM_SIZES.flatMap(size => CHARM_FL
   id:`${flavor.id}-${size.id}`, name:`${flavor.name} ${size.name}`, size, flavor,
 }))));
 export const charmProfile = (item: Pick<Item,'recipe'>) => CHARM_PROFILES.find(p=>p.id===item.recipe.profileId);
-const tiers: Record<ItemTier,number> = {common:0,magic:1,rare:2,epic:3,legendary:4};
+const tiers: Record<ItemTier,number> = {common:0,magic:1,rare:2,epic:3,legendary:4,unique:4};
 export const charmAffixCount = (item: Pick<Item,'recipe'|'tier'>) => charmProfile(item)?.size.counts[tiers[item.tier]] ?? 1;
 export const CHARM_UTILITY_AFFIXES: readonly AffixDefinition[] = Object.freeze([
   {name:'Prosperity',stat:'goldFindPercent',base:8,growth:.16,weight:2},

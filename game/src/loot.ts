@@ -4,10 +4,11 @@ import type { Item, ItemTier } from './character-types.ts';
 import type { EnemyKind } from './model.ts';
 import type { EnemyRank } from './progression-content.ts';
 import { normalizeLevel } from './progression-content.ts';
-import { generateItem } from './items.ts';
+import { generateItem, generateUnique } from './items.ts';
 import { BIOME_PROFILE_WEIGHTS, ENEMY_ITEM_KIND_WEIGHTS, ENEMY_LOOT_YIELD, NORMAL_COMMON_EQUIPMENT_SKIP_CHANCE, getLootTable } from './loot-content.ts';
 
 export interface EnemyLootContext {
+  readonly playerLevel?: number;
   readonly tierOverride?: ItemTier;
   /** Authored chest rarity; quantity, item identity and source level retain their normal rules. */
   readonly tierWeights?: Readonly<Record<ItemTier, number>>;
@@ -84,6 +85,7 @@ export function rollEnemyLoot(context: EnemyLootContext): Item[] {
       ? selectLootWeight(BIOME_PROFILE_WEIGHTS[context.biome][kind], random()) : undefined;
     // Consecutive rewards receive different item-local seeds, independent of how many table draws were needed.
     const itemSeed = (seed + Math.imul(index + 1, 0x9E3779B9)) >>> 0;
+    if(tier==='unique'){items.push(generateUnique(itemSeed,context.playerLevel??context.level));continue;}
     items.push(generateItem(itemSeed, itemLevel, kind, profileId, tier, undefined, {level:context.level,rank:context.rank,encounter:context.encounter}));
   }
   return items;

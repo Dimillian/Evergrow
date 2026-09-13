@@ -1,10 +1,11 @@
+import { turnProjectile } from './unique-combat.ts';
 import { projectileDamageType } from './resistance-content.ts';
 import type { DamageType } from './model.ts';
 import type { ProjectileStyle, HitSnapshot } from './model.ts';
 import { strikeContainers, strikeContainerSegment, type ContainerAttackContext } from './breakable-containers.ts';
 import type { GroundEffectRequest } from './ground-effects.ts';
 import type { CombatEvent, Enemy, EnemyKind, Player, Projectile, WorldQuery } from './model.ts';
-import { applySlow, applyBurn } from './combat-status.ts';
+import { applySlow, applyBurn, applyStun } from './combat-status.ts';
 import { PLAYER_PROJECTILE_FORGIVENESS } from './ranged-aim.ts';
 import { segmentDistanceSquared } from './combat-geometry.ts';
 
@@ -13,7 +14,7 @@ export interface ProjectileContext {
   containers?: ContainerAttackContext;
   schedule(effect: GroundEffectRequest): void;
   player: Player; enemies: Enemy[]; world: WorldQuery;
-  damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle, offense?: HitSnapshot, authoredBurn?: boolean): void;
+  damage(enemy: Enemy, amount: number, angle: number, melee: boolean, style?: ProjectileStyle, offense?: HitSnapshot, authoredBurn?: boolean, elementalDamage?:number): void;
   hurt(amount: number, angle: number, sourceLevel: number, damageType: DamageType, sourceKind?: EnemyKind): void;
   onScreen(enemy: Enemy): boolean;
   visible(ax: number, ay: number, bx: number, by: number): boolean;
@@ -25,9 +26,10 @@ function hit(projectile: Projectile, enemy: Enemy, context: ProjectileContext): 
   projectile.hitIds.add(enemy.id);
   const lifeBefore = enemy.hp;
   const offense = effects?.offense;
-  context.damage(enemy, projectile.damage, projectile.angle, false, effects?.style,
-    offense, effects?.burnDuration !== undefined);
+  context.damage(enemy, projectile.damage, projectile.angle, !!effects?.thrownShield, effects?.style,
+    offense, effects?.burnDuration !== undefined, effects?.elementalDamage);
   if (enemy.state !== 'dead') {
+    if(effects?.stunDuration)applyStun(enemy,effects.stunDuration);
     if (effects?.slowDuration) {
       applySlow(enemy, { duration: effects.slowDuration, factor: effects.slowFactor ?? .6 });
     }
@@ -71,7 +73,7 @@ export function advanceProjectiles(projectiles: Projectile[], dt: number, contex
   const p = context.player;
   for (const projectile of projectiles) {
     projectile.life -= dt;
-    if (projectile.life <= 0) continue;
+    if (projectile.life <= 0 && !turnProjectile(projectile)) continue;
     const steps = Math.max(1, Math.ceil(Math.hypot(projectile.vx, projectile.vy) * dt / 3));
     for (let i = 0; i < steps && projectile.life > 0; i++) {
       const oldX = projectile.x, oldY = projectile.y;
@@ -84,7 +86,7 @@ export function advanceProjectiles(projectiles: Projectile[], dt: number, contex
           material: context.world.impactMaterial?.(projectile.x, projectile.y, projectile.radius) ?? 'stone', style: projectile.effects?.style });
         projectile.x = oldX; projectile.y = oldY;
         if (projectile.owner === 'player') blast(projectile, context);
-        projectile.life = 0; break;
+        if(!turnProjectile(projectile))projectile.life = 0; break;
       }
       if (projectile.owner === 'enemy') {
         if (segmentDistanceSquared(p.x, p.y, oldX, oldY, projectile.x, projectile.y) <= (projectile.radius + p.radius) ** 2) {
@@ -116,7 +118,7 @@ export function advanceProjectiles(projectiles: Projectile[], dt: number, contex
         }
       }
       if (effects && (effects.pierce ?? 0) > 0) { effects.pierce = (effects.pierce ?? 0) - 1; continue; }
-      blast(projectile, context); projectile.life = 0;
+      if(!turnProjectile(projectile)){blast(projectile, context); projectile.life = 0;}
     }
   }
 }

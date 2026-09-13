@@ -36,7 +36,7 @@ test('basic attack and first skill repeat; utility and other skill buttons fire 
     pad.poll([snapshot()], true);
   }
   pad.poll([snapshot([PAD.attack, PAD.dodge, PAD.potion])], true);
-  assert.deepEqual(pad.gameplay(aim), { moveX: 0, moveY: 0, aimX: 200, aimY: 0, attack: true, dodge: true, heal: true, skillSlot: null });
+  assert.deepEqual(pad.gameplay(aim), { moveX: 0, moveY: 0, aimX: 200, aimY: 0, attack: true, dodge: true, heal: true, skillSlot: null, heldSkillSlots: [] });
   pad.poll([snapshot([PAD.attack, PAD.dodge, PAD.potion])], true);
   assert.equal(pad.gameplay(aim).attack, true); assert.equal(pad.gameplay(aim).dodge, false); assert.equal(pad.gameplay(aim).heal, false);
 });

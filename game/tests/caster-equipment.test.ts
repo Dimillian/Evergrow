@@ -45,7 +45,7 @@ test('wands use cast speed, spell power and cheaper bolts while supporting every
 });
 test('caster recipes survive every tier, level, upgrade, relevel and reroll with appropriate affixes', () => {
   for (const profile of [...FOCUS_PROFILES, ...WEAPON_PROFILES.filter(w => w.family === 'wand')]) {
-    for (const level of [1, 80, 1_000_000]) for (const tier of Object.keys(TIER_AFFIXES) as ItemTier[]) {
+    for (const level of [1, 80, 1_000_000]) for (const tier of Object.keys(TIER_AFFIXES).filter(t=>t!=='unique') as ItemTier[]) {
       const item = generateItem(3781, level, undefined, profile.id, tier);
       assert.ok(validItem(item)); assert.deepEqual(deriveItem(item), item);
       assert.deepEqual(generateItem(3781, level, undefined, profile.id, tier), item);

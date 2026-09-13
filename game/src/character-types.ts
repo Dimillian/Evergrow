@@ -12,9 +12,10 @@ export type StatKey = Attribute | ResistanceStat | 'goldFindPercent' | 'xpGainPe
 export type StatModifiers = Partial<Record<StatKey, number>>;
 export type EquipmentSlot = 'weapon' | 'offhand' | 'head' | 'chest' | 'gloves' | 'legs' | 'boots' | 'cloak' | 'amulet' | 'ring1' | 'ring2';
 export type ItemKind = Exclude<EquipmentSlot, 'offhand' | 'ring1' | 'ring2'> | 'ring' | 'shield' | 'grimoire' | 'orb' | 'charm';
-export type ItemTier = 'common' | 'magic' | 'rare' | 'epic' | 'legendary';
+export type ItemTier = 'common' | 'magic' | 'rare' | 'epic' | 'legendary' | 'unique';
 export interface ItemAffix { name: string; stat: StatKey; value: number; }
 export interface ItemRecipe {
+  uniqueId?: string;
   charmVersion?: 1;
   manaVersion?: 1;
   offenseVersion?: 1;

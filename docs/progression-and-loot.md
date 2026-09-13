@@ -1,5 +1,7 @@
 # Progression, threat, and loot
 
+Local Unique exception (2026-09-13): six fixed-design Uniques have the same chance as Legendary at each item-giving source, preserving Legendary probability and taking their share proportionally from lower rarities. Unique equipment uses player level when the reward is generated; all ordinary equipment retains source-level rules. Unique rolls bypass charm conversion. Historical tables below precede this extra tier; [Unique items](unique-items.md) records current chances and generation rules.
+
 ## Later elite durability — local September 11 follow-up
 
 Non-boss elites retain their original health through monster level 14, covering the home region's normal 1–12 range and +2 elite offset. Above that, an extra health multiplier ramps linearly to +50% at level 37, then stays capped. A level-37 elite Stalker now has 4,875 life instead of 3,250. Ordinary/veteran health, every boss's health, outgoing damage, attack cadence, loot and XP are unchanged by this pass. This is source-level scaling, never scaling to the player's current gear or DPS.

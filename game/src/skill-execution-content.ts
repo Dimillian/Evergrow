@@ -8,7 +8,7 @@ export type SkillExecution = (
   | { kind: 'stance'; duration: number; reduction: number; charges: number; bonus: number; echo?: boolean }
   | { kind: 'sweep'; reachMultiplier: number; arc: number }
   | { kind: 'dash'; duration: number; speed: number; radius: number }
-  | { kind: 'radial'; radius: number; melee: boolean; stun?: number; slow?: SlowEffect; style?: ProjectileStyle; echo?: boolean; shelter?: { duration: number; reduction: number } }
+  | { kind: 'radial'; targetRange?:number; radius: number; melee: boolean; stun?: number; slow?: SlowEffect; style?: ProjectileStyle; echo?: boolean; shelter?: { duration: number; reduction: number } }
   | { kind: 'cone'; radius: number; arc: number; stun: number }
   | { kind: 'guard'; duration: number; reduction: number }
   | { kind: 'backstab'; minRange: number; reachMultiplier: number; arc: number; rearAngle: number; rearMultiplier: number; targets?: number }

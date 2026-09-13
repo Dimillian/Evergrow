@@ -6,7 +6,7 @@ import type { ItemTier } from './character-types.ts';
 import type { EventRecord } from './poi-content.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
 /** Independent per-component seeds make partial delivery and reload deterministic. */
-export function eventRewards(site: EventRecord) {
+export function eventRewards(site: EventRecord, playerLevel=site.level) {
   const random = (salt: number) => siteHash(site.seed, salt, 0x37518) / 4294967296;
   const count = site.kind==='bossLair'?3:site.kind === 'cursedChest' ? Math.min(10, Math.floor(site.wavesCleared / 2) + Number(site.wavesCleared>0)) : isTrialKind(site.kind)&&!['graveyard','standingStones'].includes(site.kind) ? 2 : site.kind === 'camp' || site.kind === 'graveyard' ? 1 : site.kind === 'caravan' && site.choice === 'goods' ? 2
     : site.kind === 'reliquary' && random(1) < .25 ? 1 : 0;
@@ -26,7 +26,7 @@ export function eventRewards(site: EventRecord) {
     }
     const kind = site.kind==='caravan' ? (i===0?'weapon':'chest') : site.kind==='ruinedChapel' ? (i%2?'amulet':'grimoire') : site.kind==='beastDen' ? (i%2?'boots':'chest') : site.kind==='quarry' ? (i%2?'chest':'weapon') : site.kind==='corruptedGrove' ? (i%2?'orb':'weapon') : undefined;
     const material = site.kind==='beastDen' ? 'leather' as const : undefined;
-    const item = generateRewardItem(siteHash(site.seed, i, 497), Math.min(1e6, site.level + Number(veteran)), kind, site.kind==='corruptedGrove'&&kind==='weapon'?'ember-staff':undefined, tier, material, {level:site.level,encounter:site.kind==='bossLair'?'bossChest':isTrialKind(site.kind)||site.kind==='camp'?'event':undefined});
+    const item = generateRewardItem(siteHash(site.seed, i, 497), tier==='unique'?playerLevel:Math.min(1e6, site.level + Number(veteran)), kind, site.kind==='corruptedGrove'&&kind==='weapon'?'ember-staff':undefined, tier, material, {level:site.level,encounter:site.kind==='bossLair'?'bossChest':isTrialKind(site.kind)||site.kind==='camp'?'event':undefined});
     item.id = `poi:${site.id}:${i}`;
     return item;
   });

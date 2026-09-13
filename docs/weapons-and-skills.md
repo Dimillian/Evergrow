@@ -1,5 +1,7 @@
 # Weapons and skills
 
+Local Unique equipment adds six equipped skill powers while preserving unlocks and Techniques. See [Unique items](unique-items.md) for the complete rules, fixed affixes and combat limits.
+
 2026-09-06 · current local prototype catalog.
 
 Weapons supply the basic attack immediately. LMB swings a melee weapon, fires an arrow from a bow, or releases an elemental bolt from a staff or wand. The five active slots remain empty on a new run; major tree nodes unlock skills for assignment to RMB and 1–4. Melee/bow basic attacks cost no mana; staff bolts cost 4 base mana and wand bolts cost 2, reduced by mana efficiency. Potion and dodge keep their separate Q and Space shortcuts.

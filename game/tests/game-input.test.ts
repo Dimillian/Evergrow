@@ -12,10 +12,10 @@ test('a press and release between frames retains one action edge, while held bas
   input.pointerDown(0); input.pointerUp(0);
   input.keyDown('Space'); input.keyUp('Space'); input.keyDown('KeyQ'); input.keyUp('KeyQ');
   assert.deepEqual(input.consume(aim, false), {
-    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: true, dodge: true, heal: true, skillSlot: null,
+    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: true, dodge: true, heal: true, skillSlot: null, heldSkillSlots: [],
   });
   assert.deepEqual(input.consume(aim, false), {
-    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: false, dodge: false, heal: false, skillSlot: null,
+    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: false, dodge: false, heal: false, skillSlot: null, heldSkillSlots: [],
   });
   input.pointerDown(0);
   for (let frame = 0; frame < 10; frame++) {
@@ -68,7 +68,7 @@ test('focus loss and phase changes clear every held and pending action', () => {
   for (const code of ['KeyD', 'KeyW', 'Space', 'KeyQ']) input.keyDown(code);
   input.pointerDown(0); input.pointerDown(2); input.clear(); input.clear();
   assert.deepEqual(input.consume(aim, false), {
-    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: false, dodge: false, heal: false, skillSlot: null,
+    moveX: 0, moveY: 0, aimX: -41, aimY: 22, attack: false, dodge: false, heal: false, skillSlot: null, heldSkillSlots: [],
   });
 });
 

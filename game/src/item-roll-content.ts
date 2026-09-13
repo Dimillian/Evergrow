@@ -9,6 +9,7 @@ export const itemRollMultiplier = (quantile: number): number =>
 export const GREATER_AFFIX_THRESHOLD = .9;
 export const GREATER_AFFIX_SYMBOL = '✦';
 export function isGreaterAffix(item: Item, index: number): boolean {
+  if (item.tier === 'unique') return false;
   const affix = item.affixes[index], roll = item.recipe.rolls[index];
   // Discrete rank/pierce recipes do not use the continuous roll-quality range.
   return !!affix && affix.value > 0 && affix.stat !== 'projectilePierce' && !affix.stat.startsWith('skill:')

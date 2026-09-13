@@ -18,8 +18,8 @@ test('every item-giving event can roll charms, including themed rewards and boss
       items += reward.items.length;
       for (const item of reward.items) {
         if (item.kind !== 'charm') {
-          if (kind === 'beastDen') assert.equal(item.recipe.materialId,'leather');
-          if (kind === 'corruptedGrove' && item.kind === 'weapon') assert.equal(item.recipe.profileId,'ember-staff');
+          if (kind === 'beastDen' && item.tier!=='unique') assert.equal(item.recipe.materialId,'leather');
+          if (kind === 'corruptedGrove' && item.tier!=='unique' && item.kind === 'weapon') assert.equal(item.recipe.profileId,'ember-staff');
           continue;
         }
         charms++;
@@ -28,7 +28,7 @@ test('every item-giving event can roll charms, including themed rewards and boss
       }
       if (kind === 'bossLair') {
         assert.equal(reward.items.length,3);
-        assert.ok(['rare','epic','legendary'].includes(reward.items[0].tier));
+        assert.ok(['rare','epic','legendary','unique'].includes(reward.items[0].tier));
       }
       if (seed === 118) assert.deepEqual(eventRewards(site),reward,'retries preserve item identities and rolls');
     }

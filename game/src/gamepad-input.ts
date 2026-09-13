@@ -34,6 +34,7 @@ export class GamepadInput {
     const slot = PAD_SKILL_BUTTONS.findIndex(button => this.pressed.has(button));
     return { moveX: this.move.x, moveY: this.move.y, aimX: aim.x, aimY: aim.y,
       attack: this.held.has(PAD.attack), dodge: this.pressed.has(PAD.dodge), heal: this.pressed.has(PAD.potion),
+      heldSkillSlots: PAD_SKILL_BUTTONS.flatMap((b,i)=>this.held.has(b)?[i]:[]),
       skillSlot: slot >= 0 ? slot : this.held.has(PAD.skill1) ? 0 : null };
   }
 

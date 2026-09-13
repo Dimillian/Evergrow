@@ -20,7 +20,7 @@ test('equipment generation is reproducible, independent and safe at level bounda
   assert.ok(Number.isFinite(generateItem(15, Number.MAX_VALUE, 'weapon').weapon!.damage));
 });
 
-test('the reward seed corpus generates all five tiers and every item kind with coherent affixes', () => {
+test('the reward seed corpus generates all six tiers and every item kind with coherent affixes', () => {
   const tiers = new Set<ItemTier>(), kinds = new Set<string>(), ids = new Set<string>();
   for (let seed = 0; seed < 4000; seed++) {
     const item = generateRewardItem(seed, 5);

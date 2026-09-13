@@ -1,3 +1,4 @@
+import { uniqueDefinition } from './unique-content.ts';
 import { hasGreaterAffix, isGreaterAffix, GREATER_AFFIX_SYMBOL } from './item-roll-content.ts';
 import { MANA_RULES } from './mana-content.ts';
 import { ITEM_LOCK_ICON } from './item-protection.ts';
@@ -12,7 +13,7 @@ import { previewEquipmentChange, type EquipmentStatChange, type PreviewStat } fr
 import { escapeUI } from './ui-components.ts';
 
 const greaterMark = '<span class="ui-greater-affix" role="img" aria-label="Greater affix · top 10% roll" title="Greater affix · top 10% roll"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0 10 6 16 8 10 10 8 16 6 10 0 8 6 6Z"/></svg></span>';
-const TIER_RANK: Record<ItemTier, number> = { common: 1, magic: 2, rare: 3, epic: 4, legendary: 5 };
+const TIER_RANK: Record<ItemTier, number> = { common: 1, magic: 2, rare: 3, epic: 4, legendary: 5, unique: 6 };
 const number = (n: number, decimals = 1) => n.toLocaleString('en-US', { maximumFractionDigits: decimals });
 export interface ItemPresentation {
   sheet: CharacterSheet; level: number; equipped?: boolean; sourceIndex?: number; targetSlot?: EquipmentSlot;
@@ -117,6 +118,7 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
     <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${view.equipped ? '<span class="ui-item-equipped">Equipped</span>' : ''}${item.locked?'<span class="ui-item-equipped">Locked</span>':''}</div>
     ${item.recipe.enhancement ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% scalable item stats</div>` : ''}
     ${weapon}${properties}
+    ${uniqueDefinition(item)?`<div class="ui-unique-power"><span aria-hidden="true">✧</span><p>${escapeUI(uniqueDefinition(item)!.power)}</p></div>`:''}
     ${item.affixes.length ? `<div class="ui-item-affixes">${item.affixes.map(a => escapeUI(a.name)).join(' · ')}</div>` : ''}
     ${comparison}${view.context ? `<div class="ui-item-comparison">${escapeUI(view.context)}</div>` : ''}`;
 }

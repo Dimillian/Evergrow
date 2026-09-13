@@ -29,8 +29,12 @@ export function drawGroundLoot(c: CanvasRenderingContext2D, drops: readonly Grou
     if(drop.flight&&worldTime<drop.flight.at+drop.flight.delay)continue;
     const flight=treasurePose(drop,worldTime,reducedMotion);
     const color = TIER_COLORS[drop.item.tier];
-    const precious = ['rare', 'epic', 'legendary'].includes(drop.item.tier);
+    const precious = ['rare', 'epic', 'legendary','unique'].includes(drop.item.tier);
     c.fillStyle = '#040a10b0'; c.beginPath(); c.ellipse(flight.landed?x:flight.x, (flight.landed?y:flight.y) + 2, 12, 4, -.12, 0, Math.PI * 2); c.fill();
+    if(drop.item.tier==='unique'){
+      const glow=c.createRadialGradient(x,y,2,x,y,36);glow.addColorStop(0,'#e04b8970');glow.addColorStop(.5,'#9e60cf35');glow.addColorStop(1,'#9e60cf00');
+      c.fillStyle=glow;c.beginPath();c.ellipse(x,y,36,17,0,0,Math.PI*2);c.fill();
+    }
     // Equipment rests on the floor, not suspended inside a beam of light.
     c.save(); c.translate(flight.landed?x:flight.x, (flight.landed?y:flight.y)-3-flight.height); c.rotate(flight.spin); c.rotate(Math.sin(drop.item.seed) * .18); c.scale(1.2, .95);
     drawGearShapes(c, itemDropShapes(drop.item), value => value); c.restore();
@@ -98,6 +102,7 @@ export function drawLootLabels(c: CanvasRenderingContext2D, drops: readonly Grou
       c.beginPath(); c.moveTo(b.x, b.y - 5); c.lineTo(center, b.top + b.height / 2); c.stroke();
     }
     c.fillStyle = '#0d171ee8'; c.beginPath(); c.rect(b.left, b.top, b.width, b.height); c.fill();
+    if(drop.item.tier==='unique'){c.strokeStyle='#ba8bf190';c.lineWidth=.7;c.strokeRect(b.left+.5,b.top+.5,b.width-1,b.height-1);}
     if (drop.item.kind === 'charm') {
       // A rune-cut stone and quiet silver frame identify charms even at common rarity.
       c.strokeStyle = '#acc9d95c'; c.lineWidth = .7;

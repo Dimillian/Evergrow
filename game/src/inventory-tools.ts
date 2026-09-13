@@ -7,7 +7,7 @@ import { itemFitsSlot, planEquipmentChange } from './inventory.ts';
 export type InventorySort = 'rarity' | 'type' | 'recent' | 'compact';
 type SortPriority = Exclude<InventorySort, 'compact'>;
 export type InventoryFilter = 'weapons' | 'armor' | 'jewelry' | 'offhand' | 'charms';
-const tiers: ItemTier[] = ['common', 'magic', 'rare', 'epic', 'legendary'];
+const tiers: ItemTier[] = ['common', 'magic', 'rare', 'epic', 'legendary', 'unique'];
 export const INVENTORY_SORT_PRIORITY: Readonly<Record<InventorySort, readonly SortPriority[]>> = {
   compact: ['type', 'rarity', 'recent'],
   rarity: ['rarity', 'type', 'recent'], type: ['type', 'rarity', 'recent'], recent: ['recent', 'rarity', 'type'],

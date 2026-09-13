@@ -1,3 +1,5 @@
+import { generateUnique } from './items.ts';
+import { UNIQUES } from './unique-content.ts';
 import { executeDropItem } from './drop-item-command.ts';
 import { CHARM_SIZES, CHARM_FLAVORS } from './charm-content.ts';
 import { PACK_CELLS, resolvePackLayout } from './inventory-grid.ts';
@@ -110,6 +112,7 @@ if (progressionReview) {
   for (let rank = 2; rank <= 3; rank++) executeCharacterCommand(p, { type: 'upgradeSkill', skill: 'fireball' });
   executeCharacterCommand(p, { type: 'configureSkill', skill: 'fireball', rank: 3, specialization: 'fireball-fork' });
 }
+if(new URLSearchParams(location.search).has('uniques')){p.level=25;p.character.inventory.fill(null);for(const [i,u] of UNIQUES.entries())p.character.inventory[i]=generateUnique(7319+i,25,u.id);}
 refreshCharacter(p); p.hp = p.maxHp; p.mana = p.maxMana;
 const root = document.querySelector<HTMLElement>('#app')!;
 let selected = new URLSearchParams(location.search).get('panel') === 'skills' ? 'skills' : 'character';

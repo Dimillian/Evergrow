@@ -6,6 +6,7 @@ export const LOOT_LABEL_STYLE = Object.freeze({ scale: .85, height: 19, gap: 4, 
 
 /** Short ground-only names; the owned item and its full tooltip name stay intact. */
 export function groundLootName(item: Item): string {
+  if(item.tier==='unique')return `✧ ${item.name}`;
   if(item.kind==='charm')return `Charm · ${item.baseName}`;
   const material = item.recipe.materialId && ITEM_MATERIALS[item.recipe.materialId].name;
   const cloth = item.appearance.style === 'cloth', leather = item.appearance.style === 'leather';

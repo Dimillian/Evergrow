@@ -292,7 +292,7 @@ export class ServicePanel {
     if(button.disabled)this.element.querySelector('.service-message')!.textContent=full?packSpaceProblem(this.player.character,result.item):'Not enough gold.';
   }
   private rarityControls(): string {
-    return `<div class="service-rarities" aria-label="Select items by rarity">${(['common','magic','rare','epic','legendary'] as ItemTier[]).map(tier=>{
+    return `<div class="service-rarities" aria-label="Select items by rarity">${(['common','magic','rare','epic','legendary','unique'] as ItemTier[]).map(tier=>{
       const items=bulkSaleItems(this.player.character,this.player.level,this.includeActiveCharms).filter(item=>item.tier===tier);
       const selected=items.length>0&&items.every(item=>this.sales.has(item.id));
       return `<button type="button" data-sell-tier="${tier}" aria-pressed="${selected}" ${items.length?'':'disabled'} style="--rarity-color:${TIER_COLORS[tier]}">${TIER_NAMES[tier]} <small>${items.length}</small></button>`;

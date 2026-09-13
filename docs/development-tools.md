@@ -1,5 +1,7 @@
 # Local development tools
 
+Local Unique studies: `/character.html?uniques`, `/loot.html?uniques` and `/chronicle.html?uniques` stage the six designs and collection states. The skill playground has a matching Unique selector for each supported skill. All use runtime generators/renderers/combat with disposable state; see [Unique items](unique-items.md).
+
 Open **http://127.0.0.1:5173/tools/** (`/tools` also resolves) while `npm run dev` is running. This is the canonical entry point for development reviews. It groups existing reviews into Equipment, Characters, Skills & Combat, World, Interface and Data & Audits, with historical concepts in Archive. Search finds tools by purpose. A workspace mounts only one review at a time; moving between tabs unloads its renderer and memory state. Standalone reviews have Tools home / Open in workspace navigation.
 
 The hub and review HTML are outside the production build entry graph and outside `public/`. Do not add them to Sites or Android builds. No publication is required for local tools. Review changes use staged, memory-only characters; they never load or edit playable saves. The game itself remains `/`.

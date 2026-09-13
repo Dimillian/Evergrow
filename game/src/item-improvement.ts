@@ -19,6 +19,7 @@ export function rerollPool(item:Item,index?:number,focus:AffixFocus='any'){
 export type Improvement = 'enhance' | 'rarity' | 'rerollOne' | 'rerollAll' | 'relevel';
 export const ITEM_TIERS = ['common', 'magic', 'rare', 'epic', 'legendary'] as const;
 export function improvementProblem(item: Item, operation: Improvement, zoneLevel: number, affix?: number): string | null {
+  if(item.tier==='unique'&&operation!=='enhance')return 'Unique powers and affixes are fixed. Only enhancement is available.';
   if (item.recipe.revision >= Number.MAX_SAFE_INTEGER) return 'This item cannot be improved further.';
   if (operation === 'enhance' && item.recipe.enhancement >= 10) return 'Maximum enhancement reached.';
   if (operation === 'rarity' && item.tier === 'legendary') return 'Maximum rarity reached.';
@@ -80,7 +81,8 @@ export function nextEnhancementLevel(item: Item): number | null {
 
 /** Small stones can retain their affix count across tiers: skip tiers with no actual benefit. */
 export function nextRarityTier(item: Item): Item['tier'] | null {
-  for(const tier of ITEM_TIERS.slice(ITEM_TIERS.indexOf(item.tier)+1)) {
+  if(item.tier==='unique')return null;
+  for(const tier of ITEM_TIERS.slice(ITEM_TIERS.indexOf(item.tier as typeof ITEM_TIERS[number])+1)) {
     const next={...item,tier,recipe:{...item.recipe,starter:false}};
     if(itemAffixCount(next)>item.affixes.length||actualItemBonuses(deriveItem(next))!==actualItemBonuses(item))return tier;
   }

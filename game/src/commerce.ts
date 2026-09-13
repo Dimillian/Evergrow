@@ -12,7 +12,7 @@ import { hashService, vendorLevel, type TownNPC } from './npcs.ts';
 import { nextRarityTier, improveItem, improvementProblem, ITEM_TIERS, AFFIX_FOCUSES, rerollPool, affixCategory, type AffixFocus, type Improvement } from './item-improvement.ts';
 
 export const COMMERCE_LIMITS = { vendors: 2048, buyback: 12 } as const;
-const RARITY_COST: Record<ItemTier, number> = { common: 1, magic: 2, rare: 5, epic: 12, legendary: 30 };
+const RARITY_COST: Record<ItemTier, number> = { common: 1, magic: 2, rare: 5, epic: 12, legendary: 30, unique: 30 };
 export const stockEpoch = (level: number) => Math.floor((level - 1) / 3);
 /** Stock and its UI label share the same stable three-level refresh bracket. */
 export const vendorStockLevel = (npc: TownNPC, playerLevel: number) => vendorLevel(npc, stockEpoch(playerLevel) * 3 + 1);

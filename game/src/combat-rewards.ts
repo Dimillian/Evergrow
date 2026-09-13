@@ -19,6 +19,7 @@ export interface KillRewardContext {
 /** Called once after the damage resolver commits an enemy's death. */
 export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, context: KillRewardContext): { kills: number; recharge: number } {
   const { player } = context;
+  const dropPlayerLevel=player.level;
   kills++;
   if (!player.dead) metric(player.chronicle,'manaRestored',Math.min(player.maxMana-player.mana,player.derived.manaOnKill));
   if (!player.dead) metric(player.chronicle,'manaRecovery:kill',Math.min(player.maxMana-player.mana,player.derived.manaOnKill));
@@ -31,7 +32,7 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
   if (gold) dropGold(context.groundGold, { id: context.nextId(), x: enemy.x, y: enemy.y, amount: gold, age: 0 });
   if (levels) context.emit({ type: 'level', x: player.x, y: player.y,
     level: player.level, skillPoints: levels, statPoints: levels * 5, color: '#c0acf0' });
-  for (const item of isBossKind(enemy.kind) ? [] : rollEnemyLoot({ seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank,
+  for (const item of isBossKind(enemy.kind) ? [] : rollEnemyLoot({ playerLevel: dropPlayerLevel, seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank,
     biome: enemy.biome, kind: enemy.kind, encounter: enemy.bossPhases!==undefined||enemy.kind==='goblinChief'?'boss':undefined, firstKill: kills === 1 })) {
     addGroundItem(context.groundItems, { id: context.nextId(), x: enemy.x, y: enemy.y, item });
   }

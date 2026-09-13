@@ -1,3 +1,4 @@
+import { discoverUnique } from './unique-collection.ts';
 import { projectileDamageType } from './resistance-content.ts';
 import { isBossKind, isWildernessBoss } from './wilderness-boss-content.ts';
 import { metric, type ChronicleProgress } from './chronicle.ts';
@@ -27,7 +28,7 @@ export function trackChronicleEvent(p:Player,enemies:readonly Enemy[],e:CombatEv
  case 'dodge':metric(c,'dodges');break;
  case 'block':metric(c,'blocks');metric(c,'damageBlocked',e.value);break;
  case 'gold':metric(c,'goldFound',e.amount);metric(c,'goldEarned',e.amount);metric(c,'largestGold',e.amount);break;
- case 'loot':metric(c,'items');metric(c,'items:'+e.item.tier);metric(c,'itemKind:'+e.item.kind);if(e.item.recipe.materialId)metric(c,'material:'+e.item.recipe.materialId);break;
+ case 'loot':discoverUnique(c,e.item,Date.now());metric(c,'items');metric(c,'items:'+e.item.tier);metric(c,'itemKind:'+e.item.kind);if(e.item.recipe.materialId)metric(c,'material:'+e.item.recipe.materialId);break;
  case 'journey':metric(c,'journeys');break;
  case 'experience':metric(c,'xp',e.amount);break;
  case 'level':metric(c,'highestLevel',e.level);break;

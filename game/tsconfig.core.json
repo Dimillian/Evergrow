@@ -5,6 +5,7 @@
     "types": []
   },
   "include": [
+    "src/unique-content.ts", "src/unique-combat.ts", "src/unique-collection.ts",
     "src/skill-tree-shapes.ts", "src/skill-tree-v2.ts", "src/skill-tree-balance.ts", "src/skill-tree-labels.ts", "src/skill-tree-view.ts", "src/player-skill-effects.ts", "src/skill-tree-content.ts", "src/skill-tree-upgrade.ts", "src/skill-tree-previous.ts", "src/item-roll-content.ts", "src/attribute-content.ts", "src/mana-content.ts", "src/enemy-threat.ts", "src/boss-pressure.ts", "src/expedition-modifiers.ts", "src/dungeon-collision.ts",
     "src/drop-item-command.ts", "src/charm-content.ts", "src/resistance-content.ts", "src/encounter-scaling.ts", "src/ground-loot.ts", "src/ground-item-pickup.ts", "src/activity-level.ts", "src/journey-director.ts",
     "src/wilderness-boss-content.ts", "src/wilderness-boss.ts", "src/wilderness-boss-rewards.ts",

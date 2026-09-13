@@ -1,3 +1,4 @@
+import { withUniqueChance } from './unique-content.ts';
 import { EXPEDITION_MODIFIER_IDS } from './expedition-modifiers.ts';
 import { dungeonTheme, DUNGEON_THEME_IDS } from './dungeon-content.ts';
 import { dungeonRandom, type DungeonEntrance } from './dungeon.ts';
@@ -5,8 +6,8 @@ import type { Item, ItemTier } from './character-types.ts';
 import { rollEnemyLoot, selectLootWeight } from './loot.ts';
 import type { Expeditions, DungeonRun } from './dungeon-state.ts';
 export const EXPEDITION_RULES = Object.freeze({minimumLevel:20, stages:10, stageRewards:3, grandRewards:6,
-  stageRarity:Object.freeze({rare:60,epic:35,legendary:5}),
-  grandRarity:Object.freeze({rare:15,epic:65,legendary:20})});
+  stageRarity:Object.freeze(withUniqueChance({rare:60,epic:35,legendary:5})),
+  grandRarity:Object.freeze(withUniqueChance({rare:15,epic:65,legendary:20}))});
 export interface ExpeditionRoute {attempt:number;seed:number;base:number;cleared:number;choice:number|null;status:'active'|'failed'|'complete'}
 export function newExpeditionRoute(worldSeed:number,level:number,attempt:number):ExpeditionRoute {
   return {attempt,seed:(worldSeed^Math.imul(attempt,0x9e3779b9))>>>0,base:Math.max(20,Math.min(999980,Math.floor(level))),cleared:0,choice:null,status:'active'};
@@ -28,11 +29,11 @@ export function expeditionChoices(route:ExpeditionRoute,point={x:0,y:0}):Dungeon
     return {id:`dungeon:expedition:${route.attempt}:${route.cleared}:${choice}`,name:dungeonTheme(seed,theme).name,seed,theme,level,biome,...point,scaling:{base:level,min:Math.max(1,level-1),max:level+1},expedition:{attempt:route.attempt,stage:route.cleared,choice,modifier}};
   });
 }
-export function expeditionRewardItems(entrance:DungeonEntrance):Item[] {
+export function expeditionRewardItems(entrance:DungeonEntrance,playerLevel=entrance.level):Item[] {
   const grand=entrance.expedition?.stage===9, random=dungeonRandom(entrance.seed^0x47c593a1);
   const weights=grand?EXPEDITION_RULES.grandRarity:EXPEDITION_RULES.stageRarity;
   return Array.from({length:grand?EXPEDITION_RULES.grandRewards:EXPEDITION_RULES.stageRewards},(_,i)=>{
-    return rollEnemyLoot({tierOverride:selectLootWeight(weights,random()) as ItemTier,seed:(entrance.seed+Math.imul(i+1,0x6d2b79f5))>>>0,level:entrance.level+3,rank:'normal',biome:entrance.biome,kind:'stalker',firstKill:true,encounter:'bossChest'})[0];
+    return rollEnemyLoot({playerLevel,tierOverride:selectLootWeight(weights,random()) as ItemTier,seed:(entrance.seed+Math.imul(i+1,0x6d2b79f5))>>>0,level:entrance.level+3,rank:'normal',biome:entrance.biome,kind:'stalker',firstKill:true,encounter:'bossChest'})[0];
   });
 }
 export function dungeonChestMask(run:DungeonRun,index:number):number {return index===2 ? run.entrance.expedition?.stage===9?127:15 : 9;}

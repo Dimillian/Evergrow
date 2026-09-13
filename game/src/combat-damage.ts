@@ -1,3 +1,4 @@
+import type { WardBurst } from './unique-combat.ts';
 import { mitigateSkillHit } from './player-skill-effects.ts';
 import { projectileDamageType } from './resistance-content.ts';
 import { metric } from './chronicle.ts';
@@ -16,6 +17,7 @@ export interface EnemyDamageContext {
   emit(event: CombatEvent): void; killed(enemy: Enemy): void;
 }
 export interface PlayerDamageContext {
+  wardBurst?(burst:WardBurst):void;
   player: Player; world: Pick<WorldQuery, 'isSanctuary'>;
   random(): number; emit(event: CombatEvent): void;
 }
@@ -93,5 +95,6 @@ export function damagePlayer(amount: number, angle: number, sourceLevel: number,
     p.castTime = p.dodgeTime = 0;
     p.vx = p.vy = 0;
   }
+  if(mitigated.burst&&!p.dead)context.wardBurst?.(mitigated.burst);
   return true;
 }

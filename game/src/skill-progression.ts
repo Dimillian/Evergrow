@@ -1,3 +1,4 @@
+import { hasUnique, UNIQUE_RULES } from './unique-content.ts';
 import { AFFIX_COMBAT_RULES } from './equipment-affix-content.ts';
 import type { ActionResult, CharacterSheet, DerivedCharacterStats, SkillId } from './character-types.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
@@ -224,6 +225,7 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
     ...(recipe.effects.blastRadius ? { blastRadius: recipe.effects.blastRadius * area } : {}),
     ...(!recipe.effects.blastRadius && stats.projectilePierce ? { pierce: Math.min(12, (recipe.effects.pierce ?? 0) + stats.projectilePierce) } : {}) };
 
+  if(id==='iceNova'&&recipe.kind==='radial'&&sheet&&hasUnique(sheet,'winters-reach'))recipe.targetRange=UNIQUE_RULES.novaRange;
   return { rank, bonusRanks, effectiveRank, variant, damageMultiplier, recipe, mana: Math.max(1, Math.round(base.manaCost * stats.manaCostMultiplier * multiplier * 10) / 10),
     cooldown, upkeep: id === 'tempest' ? Math.round(18 * stats.manaCostMultiplier * multiplier * 10) / 10 : 0 };
 }

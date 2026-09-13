@@ -1,3 +1,4 @@
+import { UNIQUES, uniqueDefinition, UNIQUE_SYMBOL, UNIQUE_COLOR } from './unique-content.ts';
 import { itemRollMultiplier, hasGreaterAffix, GREATER_AFFIX_SYMBOL } from './item-roll-content.ts';
 import { isOffensiveAttribute, offensiveAttributeImplicitScale } from './attribute-content.ts';
 import { manaImplicitScale } from './mana-content.ts';
@@ -21,10 +22,10 @@ export const EQUIPMENT_SLOTS: readonly EquipmentSlot[] = Object.freeze([
 ]);
 export const ITEM_KINDS: readonly ItemKind[] = Object.freeze(['weapon', 'shield', 'grimoire', 'orb', 'head', 'chest', 'gloves', 'legs', 'boots', 'cloak', 'amulet', 'ring', 'charm']);
 export const TIER_COLORS: Readonly<Record<ItemTier, string>> = Object.freeze({
-  common: '#c5ccc8', magic: '#76b9ee', rare: '#e0c17a', epic: '#b895ef', legendary: '#f0a16b',
+  common: '#c5ccc8', magic: '#76b9ee', rare: '#e0c17a', epic: '#b895ef', legendary: '#f0a16b', unique: UNIQUE_COLOR,
 });
 export const TIER_NAMES: Readonly<Record<ItemTier, string>> = Object.freeze({
-  common: 'Common', magic: 'Magic', rare: 'Rare', epic: 'Epic', legendary: 'Legendary',
+  common: 'Common', magic: 'Magic', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', unique: 'Unique',
 });
 export const STAT_LABELS: Readonly<Record<StatKey, string>> = Object.freeze({
   ...SPECIAL_AFFIX_LABELS, ...SKILL_STATS, ...RESISTANCE_LABELS, goldFindPercent: 'Gold found', xpGainPercent: 'Experience gained',
@@ -160,17 +161,21 @@ function jewelryImplicit(profileId:string,level:number,quality:number):StatModif
   const profile=JEWELRY_PROFILES.find(p=>p.id===profileId)!;
   return Object.fromEntries(Object.entries(profile.implicit).map(([stat,value])=>[stat,value!*quality*(isOffensiveAttribute(stat)?offensiveAttributeImplicitScale(level):isManaBudgetStat(stat)?manaImplicitScale(level):PERCENT_STATS.has(stat as StatKey)?itemPercentageScale(level):itemPowerScale(level))]));
 }
-export const TIER_AFFIXES: Readonly<Record<ItemTier, number>> = { common: 0, magic: 1, rare: 2, epic: 3, legendary: 4 };
-export const TIER_POWER: Readonly<Record<ItemTier, number>> = { common: 1, magic: 1.09, rare: 1.2, epic: 1.34, legendary: 1.5 };
+export const TIER_AFFIXES: Readonly<Record<ItemTier, number>> = { common: 0, magic: 1, rare: 2, epic: 3, legendary: 4, unique: 4 };
+export const TIER_POWER: Readonly<Record<ItemTier, number>> = { common: 1, magic: 1.09, rare: 1.2, epic: 1.34, legendary: 1.5, unique: 1.5 };
 
 /** Reward-only charm selection also covers authored equipment themes, with one roll per item. */
 export function generateRewardItem(seed: number, itemLevel: number, kind?: ItemKind, profileId?: string, tier?: ItemTier, material?: ItemMaterialId, source: MaterialSource = {}): Item {
+  if(tier==='unique')return generateUnique(seed,itemLevel);
   const charm = randomSource(seed ^ 0x4c19ac)() < CHARM_DROP_CHANCE;
-  return generateItem(seed, itemLevel, charm ? 'charm' : kind, charm ? undefined : profileId, tier, charm ? undefined : material, source);
+  const item=generateItem(seed, itemLevel, charm ? 'charm' : kind, charm ? undefined : profileId, tier, charm ? undefined : material, source);
+  // Default reward rarity has 1% Legendary. Add an equal Unique chance from the other 99%.
+  return tier===undefined&&item.tier!=='legendary'&&randomSource(seed^0x73c1a91)()<1/99?generateUnique(seed,itemLevel):item;
 }
 
 /** Item-local generation; reward sources may supply an explicitly rolled tier. Callers own seed uniqueness. */
 export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, profileId?: string, tierOverride?: ItemTier, materialOverride?: ItemMaterialId, source:MaterialSource={}): Item {
+  if (tierOverride === 'unique') return generateUnique(seed, itemLevel);
   if (tierOverride !== undefined && !Object.hasOwn(TIER_POWER, tierOverride)) throw new RangeError(`Unknown item tier: ${tierOverride}`);
   if (kind === 'charm' || profileId && CHARM_PROFILES.some(p=>p.id===profileId)) {
     if (kind && kind !== 'charm' || materialOverride !== undefined) throw new RangeError('Charms use stone profiles, not equipment materials.');
@@ -307,6 +312,7 @@ export function createCharacterSheet(starter: StarterLoadoutId = 'sword'): Chara
 
 /** Rebuild from authored bases and exact roll quality; never scale rounded existing stats. */
 export function deriveItem(item: Item): Item {
+  if (item.tier === 'unique') return deriveUnique(item);
   if (item.kind === 'charm') return deriveCharm(item);
   const next: Item = { ...item, implicit: {}, affixes: [], recipe: { ...item.recipe, manaVersion: 1, offenseVersion: 1, rollVersion: 1, rolls: [...item.recipe.rolls] } };
   const r = item.recipe, quality = TIER_POWER[item.tier], enhance = 1 + .05 * r.enhancement;
@@ -361,7 +367,7 @@ function applyWeaponEnchantment(item: Item): Item {
     ...(enchantment ? { glow: ELEMENT_COLORS[enchantment.element] } : {}) } };
   return item;
 }
-export const itemDisplayName = (item: Item): string => `${item.name}${item.recipe.enhancement ? ` +${item.recipe.enhancement}` : ''}${hasGreaterAffix(item) ? ` ${GREATER_AFFIX_SYMBOL}` : ''}`;
+export const itemDisplayName = (item: Item): string => `${item.name}${item.recipe.enhancement ? ` +${item.recipe.enhancement}` : ''}${item.tier === 'unique' ? ` ${UNIQUE_SYMBOL}` : hasGreaterAffix(item) ? ` ${GREATER_AFFIX_SYMBOL}` : ''}`;
 
 /** Charms share item recipes, rarity and affix definitions; size owns their budget. */
 function generateCharm(seed: number, itemLevel: number, profileId?: string, tierOverride?: ItemTier): Item {
@@ -444,4 +450,26 @@ export function rebalanceItemOffense(item: Item): Item {
 export function rebalanceItemRolls(item: Item): Item {
   if (item.recipe.rollVersion === 1) return item;
   return roundItemStats({...item, affixes: deriveItem(item).affixes, recipe: {...item.recipe, rollVersion: 1}});
+}
+
+/** Fixed identities and fixed roll quality; level is captured by the reward owner at drop. */
+export function generateUnique(seed:number, level:number, uniqueId?:string):Item {
+  const definition=uniqueId ? UNIQUES.find(u=>u.id===uniqueId) : UNIQUES[Math.floor(randomSource(seed^0x51c3a97)()*UNIQUES.length)];
+  if(!definition)throw new RangeError('Unknown unique item');
+  const item=generateItem(seed,level,definition.kind,definition.profile,'legendary',definition.material);
+  item.tier='unique';item.name=definition.name;item.id+=`-${definition.id}`;
+  item.recipe={...item.recipe,uniqueId:definition.id,rolls:[.75,.75,.75,.75]};
+  item.affixes=definition.affixes.map(stat=>({name:STAT_LABELS[stat],stat,value:0}));
+  return deriveUnique(item);
+}
+function deriveUnique(item:Item):Item {
+  const definition=uniqueDefinition(item);if(!definition)throw new RangeError('Unknown unique item');
+  const next=deriveItem({...item,tier:'legendary'});
+  const name=definition.name;
+  next.tier='unique';next.name=name;
+  next.appearance={...next.appearance,trim:UNIQUE_COLOR,edge:'#d7b6ee'};
+  if(next.weapon)next.weapon={...next.weapon,name,visual:{...next.weapon.visual,guard:UNIQUE_COLOR,edge:'#d7b6ee'}};
+  if(next.shield)next.shield={...next.shield,name,visual:{...next.shield.visual,trim:UNIQUE_COLOR,edge:'#d7b6ee'}};
+  if(next.focus)next.focus={...next.focus,name,visual:{...next.focus.visual,trim:UNIQUE_COLOR,edge:'#d7b6ee',glow:'#ba8bf1'}};
+  return next;
 }

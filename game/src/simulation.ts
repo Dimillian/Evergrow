@@ -1,3 +1,5 @@
+import { hasUnique } from './unique-content.ts';
+import { releaseStoredEmbers } from './unique-combat.ts';
 import { manaVialAmount, manaVialRestoration } from './mana-content.ts';
 import { roamingEscortRole, roamingFormationRadius, roamingMemberOffset, roamingMemberRank } from './roaming-encounters.ts';
 import { packSpaceProblem } from './inventory-grid.ts';
@@ -418,6 +420,11 @@ export class Simulation {
   private updatePlayer(dt: number, input: Input): void {
     const p = this.player;
     let completedAttackTime = 0;
+    const channelSlot=(input.heldSkillSlots??(input.skillSlot===null?[]:[input.skillSlot])).find(slot=>p.character.skillSlots[slot]==='whirlwind');
+    if(hasUnique(p.character,'dervish-grasp')){
+      if(channelSlot!==undefined)this.skillBuffer={slot:channelSlot,until:this.time+COMBAT_TIMING.inputBuffer};
+      else if(input.skillSlot===null&&input.heldSkillSlots&&this.skillBuffer&&p.character.skillSlots[this.skillBuffer.slot]==='whirlwind')this.skillBuffer=null;
+    }
     this.arrivalProtection = input.attack || input.skillSlot !== null ? 0 : Math.max(0, this.arrivalProtection - dt);
     this.hurtGuard = Math.max(0, this.hurtGuard - dt);
     p.healCooldown = Math.max(0, p.healCooldown - dt);
@@ -460,6 +467,12 @@ export class Simulation {
       // Let aim corrections steer anticipation, then lock the actual contact arc.
       if (p.attack.elapsed < p.attack.activeStart) p.attack.angle = p.angle;
       p.attack.elapsed += dt;
+      if(!p.attack.skill&&!p.attack.embersReleased&&p.attack.elapsed>=p.attack.activeStart){
+        p.attack.embersReleased=true;
+        releaseStoredEmbers(p,MAX_PROJECTILES-this.projectiles.length-Number(p.attack.kind==='ranged'),
+          GROUND_EFFECT_RULES.maximum-this.groundEffects.length-this.projectiles.filter(s=>s.life>0&&s.effects?.groundDuration).length,
+          stored=>this.projectile(p.x,p.y,p.attack!.angle+stored.offset,stored.definition,'fireball',stored.effects,stored.sourceLevel));
+      }
       if (p.attack.kind === 'melee' && p.attack.elapsed >= p.attack.activeStart && previousElapsed < p.attack.activeEnd) this.resolveMelee(p.attack, previousElapsed);
       if (p.attack.kind === 'ranged' && !p.attack.released && p.attack.elapsed >= p.attack.activeStart) {
         const attack = p.attack, style = attack.projectile?.style ?? 'arrow';
@@ -544,7 +557,7 @@ export class Simulation {
       p.dodgeTime = Math.max(0, p.dodgeTime - dt);
     } else {
       const length = Math.hypot(input.moveX, input.moveY);
-      const factor = p.attack
+      const factor = p.attack?.skill==='whirlwind'&&hasUnique(p.character,'dervish-grasp') ? 1 : p.attack
         ? p.attack.elapsed < p.attack.activeStart ? PLAYER_MOVEMENT.attackMultiplier.windup
           : p.attack.elapsed < p.attack.activeEnd ? PLAYER_MOVEMENT.attackMultiplier.active : PLAYER_MOVEMENT.attackMultiplier.recovery
         : p.castTime > 0 ? PLAYER_MOVEMENT.castMultiplier : 1;
@@ -650,7 +663,7 @@ export class Simulation {
       trial: trial ? { campId: `event:${trial.id}`, x: trial.x, y: trial.y, radius: EVENT_RULES.trialRadius } : null,
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       move: (actor, vx, vy, delta) => this.moveEnemy(actor, vx, vy, delta),
-      hurt: (amount, angle, actor, damageType) => this.damagePlayer(amount, angle, actor.level, damageType, actor.kind),
+      hurt: (amount, angle, actor, damageType) => this.takeDamage(amount, angle, actor.level, damageType, actor.kind),
       shoot: (actor, angle, definition, effects) => this.projectile(actor.x, actor.y, angle,
         definition, undefined, effects, actor.level, actor.kind),
       emit: event => this.emit(event),
@@ -707,9 +720,16 @@ export class Simulation {
     enemy.y = destination.y;
   }
 
-  private damagePlayer(amount: number, angle: number, sourceLevel: number, damageType: DamageType, kind?: EnemyKind): void {
+  takeDamage(amount: number, angle: number, sourceLevel: number, damageType: DamageType, kind?: EnemyKind): void {
     if (!damagePlayer(amount, angle, sourceLevel, damageType, {
       player: this.player, world: this.world, random: () => this.random(), emit: event => this.emit(event),
+      wardBurst: burst=>{
+        const p=this.player;
+        this.emit({type:'blast',x:p.x,y:p.y,radius:burst.radius,style:'arcane',skill:'runicWard',color:'#d98eda'});
+        strikeContainers(this.containerContext(),p.x,p.y,burst.radius);
+        for(const enemy of this.enemies)if(enemy.state!=='dead'&&Math.hypot(enemy.x-p.x,enemy.y-p.y)<=burst.radius+enemy.radius&&this.lineOfSight(p.x,p.y,enemy.x,enemy.y))
+          this.damageEnemy(enemy,burst.damage,Math.atan2(enemy.y-p.y,enemy.x-p.x),false,false,'arcane',undefined,burst.offense);
+      },
     }, kind)) return;
     this.portal.cancel(); this.eventChannel.cancel();
     this.hurtGuard = COMBAT_TIMING.hurtGuard;
@@ -747,8 +767,8 @@ export class Simulation {
       containers: this.containerContext(),
       player: this.player, enemies: this.enemies, world: this.world,
       onScreen: enemy => enemyInCombatViewport(enemy, this.combatViewport),
-      damage: (enemy, amount, angle, melee, style, offense, authoredBurn) => this.damageEnemy(enemy, amount, angle, melee, false, style, undefined, offense, authoredBurn),
-      hurt: (amount, angle, sourceLevel, damageType, sourceKind) => this.damagePlayer(amount, angle, sourceLevel, damageType, sourceKind),
+      damage: (enemy, amount, angle, melee, style, offense, authoredBurn, elementalDamage) => this.damageEnemy(enemy, amount, angle, melee, false, style, elementalDamage, offense, authoredBurn),
+      hurt: (amount, angle, sourceLevel, damageType, sourceKind) => this.takeDamage(amount, angle, sourceLevel, damageType, sourceKind),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
       emit: event => this.emit(event),
       schedule: effect => this.scheduleGroundEffect(effect),

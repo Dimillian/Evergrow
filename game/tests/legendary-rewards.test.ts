@@ -1,3 +1,4 @@
+import { withUniqueChance } from '../src/unique-content.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BOSS_CHEST_LOOT_TABLES, ENEMY_LOOT_TABLES } from '../src/loot-content.ts';
@@ -27,8 +28,8 @@ test('boss chest odds cover all three rewards and the first can never be below R
       assert.ok(Math.abs(Object.values(table).reduce((a,b) => a+b, 0) - 100) < 1e-10);
     }
   }
-  assert.deepEqual(EXPEDITION_RULES.stageRarity, {rare:60,epic:35,legendary:5});
-  assert.deepEqual(EXPEDITION_RULES.grandRarity, {rare:15,epic:65,legendary:20});
+  assert.deepEqual(EXPEDITION_RULES.stageRarity, withUniqueChance({rare:60,epic:35,legendary:5}));
+  assert.deepEqual(EXPEDITION_RULES.grandRarity, withUniqueChance({rare:15,epic:65,legendary:20}));
 });
 
 test('seeded raid and dungeon reward generation uses the advertised tables and preserves identities on retry', () => {
@@ -42,8 +43,8 @@ test('seeded raid and dungeon reward generation uses the advertised tables and p
       biome:'deadwood',kind:'stalker',firstKill:true,encounter:'bossChest',tierWeights,
     })[0]);
     assert.equal(raid.length, 3);
-    assert.ok(['rare','epic','legendary'].includes(raid[0].tier));
-    assert.ok(['rare','epic','legendary'].includes(dungeon[0].tier));
+    assert.ok(['rare','epic','legendary','unique'].includes(raid[0].tier));
+    assert.ok(['rare','epic','legendary','unique'].includes(dungeon[0].tier));
     raids += Number(raid.some(item => item.tier === 'legendary'));
     dungeons += Number(dungeon.some(item => item.tier === 'legendary'));
     if (seed === 3) assert.deepEqual(eventRewards(record).items, raid);

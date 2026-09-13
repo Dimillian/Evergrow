@@ -5,7 +5,8 @@ import type { TouchTargeting } from './touch-input.ts';
 export function touchTargeting(recipe: SkillExecution): TouchTargeting {
   switch (recipe.kind) {
     case 'ground': return recipe.follow || recipe.effect === 'frost' ? 'self' : 'ground';
-    case 'ward': case 'stance': case 'guard': case 'radial': return 'self';
+    case 'radial': return recipe.targetRange?'ground':'self';
+    case 'ward': case 'stance': case 'guard': return 'self';
     case 'sweep': case 'cone': case 'backstab': return recipe.arc >= Math.PI * 1.9 ? 'self' : 'direction';
     case 'step':
     case 'dash': case 'projectile': case 'chain': return 'direction';

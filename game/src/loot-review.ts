@@ -1,3 +1,5 @@
+import { UNIQUES } from './unique-content.ts';
+import { generateUnique } from './items.ts';
 import { drawMaterialBurst } from './material-response-art.ts';
 import { createMaterialBurst } from './material-response.ts';
 import { MATERIALS, type MaterialId } from './material-content.ts';
@@ -28,7 +30,7 @@ const world = new World(7319), sim = new Simulation(world, { spawn: false }), re
 sim.player.level = 10;
 const stage = document.createElement('canvas'), fx = new PostFX(stage);
 const params = new URLSearchParams(location.search);
-const pickupView = params.has('pickup') || params.has('charms') || params.has('greater');
+const pickupView = params.has('pickup') || (params.has('charms')||params.has('uniques')) || params.has('greater');
 const deathElement = params.get('element');
 const materialsView = new URLSearchParams(location.search).has('materials');
 const containersView = new URLSearchParams(location.search).has('containers');
@@ -59,6 +61,7 @@ if (pickupView) {
     drops[2].item = deriveItem(stone);
     sim.player.level = 35;
   }
+  if(params.has('uniques'))drops.splice(0,drops.length,...UNIQUES.map((u,i)=>({id:400+i,x:x+(i%3-1)*115,y:y+(Math.floor(i/3)?90:-75),item:generateUnique(7319+i,25,u.id)})));
   sim.groundItems = drops;
   renderer.cameraX = x; renderer.cameraY = y;
   sim.player.angle = .5;

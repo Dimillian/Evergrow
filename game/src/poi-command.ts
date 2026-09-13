@@ -75,7 +75,7 @@ async function commitEvent(sim: Simulation, site: EventSite, choice: EventChoice
     state.trial={...freshWaves(),siteId:site.id,sealReady:false,guardians:recipeMembers(site).map(m=>({...m,hp:scaledEnemyStats(m.kind,site.scaling ? encounterMemberLevel(site.scaling,m.rank,m.seed) : site.level,m.rank).maxHp,x:site.x,y:site.y,admitted:false,dead:false}))};
   }
   else {
-    const bundle = eventRewards(record);
+    const bundle = eventRewards(record,sim.player.level);
     let nextId = sim.nextEntityIdentity;
     bundle.items.forEach((item, i) => {
       if (record.delivered & 1 << i)

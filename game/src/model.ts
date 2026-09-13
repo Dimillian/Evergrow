@@ -36,11 +36,13 @@ export interface Input {
   dodge: boolean;
   heal: boolean;
   skillSlot: number | null;
+  heldSkillSlots?: readonly number[];
 }
 
 export type HitSnapshot = Readonly<Pick<DerivedCharacterStats, 'critChance' | 'critMultiplier' | 'lifeOnHit'>> & { readonly skill?: SkillId; readonly directDamageMultiplier?: number };
 
 export interface Attack {
+  embersReleased?: boolean;
   offense?: HitSnapshot;
   skill?: SkillId;
   specialization?: string;
@@ -112,6 +114,10 @@ export interface ShieldDefinition {
 }
 /** Payload snapshots travel with a projectile; equipment changes cannot rewrite it in flight. */
 export interface ProjectileEffects {
+  returning?: {x:number;y:number;leg:'out'|'back';pierce:number};
+  thrownShield?: ShieldDefinition['visual'];
+  stunDuration?: number;
+  elementalDamage?: number;
   offense?: HitSnapshot;
   style: ProjectileStyle;
   pierce?: number; chain?: number; chainRange?: number; blastRadius?: number;

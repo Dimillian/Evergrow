@@ -1,5 +1,7 @@
 # Chronicle
 
+Local: the Uniques collection lists found and unfound designs, with filters, search and hover details. Successful pickup records first finder/date and highest item level through existing source ledgers; selling or dropping an item does not erase discovery. See [Unique items](unique-items.md).
+
 Local update: wilderness bosses now count toward Kingslayer and have three dedicated achievement families. The current catalog has 35 families / 100 tiers; earlier 32-family / 91-tier counts below describe the initial release. See [boss lairs](wilderness-bosses.md).
 
 Published in v0.5.0 on 2026-09-07 with matching cloud client, API and additive D1 migration. Sites confirmed deployment success; cross-device acceptance remains a player check.

@@ -22,7 +22,13 @@ export function drawProjectile(c: CanvasRenderingContext2D, shot: Projectile, x:
   const wake = shot.launch ? Math.min(1, Math.max(0, shot.maxLife - shot.life) / .08) : 1;
   if (style !== 'arrow') drawGlow(c, x, y, style === 'fire' ? 58 : 37, color, .65);
   c.save(); c.translate(x, y); c.rotate(shot.angle);
-  if (style === 'arrow') {
+  if (shot.effects?.thrownShield) {
+    const shield=shot.effects.thrownShield;
+    c.rotate(time*15);c.fillStyle=shield.base;c.strokeStyle=shield.edge;c.lineWidth=1.8;
+    c.beginPath();c.ellipse(0,0,10,13,0,0,Math.PI*2);c.fill();c.stroke();
+    c.strokeStyle=shield.trim;c.lineWidth=2;c.beginPath();c.moveTo(-7,0);c.lineTo(7,0);c.moveTo(0,-10);c.lineTo(0,10);c.stroke();
+    c.fillStyle='#e0c1f2';c.beginPath();c.arc(0,0,3,0,Math.PI*2);c.fill();
+  } else if (style === 'arrow') {
     c.globalAlpha *= .45;
     line(c, [[-42, 0], [-14, 0]], '#d5ddc2', 1.5);
     c.globalAlpha /= .45;
