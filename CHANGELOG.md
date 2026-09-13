@@ -25,6 +25,7 @@
 - Thornbound keeps nearby bosses slowed continuously at half strength instead of dropping between pulses.
 - Wards and borrowed-life barriers immediately respect your new maximum life after equipment changes.
 - Focused buff icons and explanation links no longer pass keyboard activation through to combat controls.
+- Mobile combat gestures no longer trigger the browser's pinch zoom.
 - Living Stone's smaller nodes describe their armor bonus correctly; the endpoint clearly enables Afterguard.
 - Expired effects, consumed marks and removed Unique powers clear their corresponding status indicators.
 
