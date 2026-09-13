@@ -42,6 +42,8 @@ Local challenge tuning (2026-09-11): Arc Lightning heals full life-on-hit on its
 
 ## Caster off-hands
 
+Fire Staff uses a single lead-hand grip with its free arm hanging beside the upper thigh with a soft elbow bend during idle, movement and casting. The shared world/portrait pose retains its upright shaft and grounded base. This is a visual carry change only; the staff still reserves both equipment slots. Frost and Lightning staves retain their supporting-hand grip.
+
 `focus-content.ts` owns six focus profiles, each with normal generated names, rarity, materials, affixes, enhancement and releveling. All occupy the offhand slot. Their base implicits are:
 
 | Profile | Item | Base implicit bonuses |

@@ -120,13 +120,13 @@ test('staves stay upright and bows carry upright at either side, facing forward'
     }
   }
 });
-test('upright staff remains supported by two hands at rest and while casting', () => {
+test('upright staves keep their carry grips and Fire Staff rests its free arm', () => {
   for (const weapon of WEAPON_PROFILES.filter(w => w.family === 'staff')) {
     for (const angle of [0, Math.PI / 4, Math.PI / 2, Math.PI * .75, Math.PI]) {
       for (const action of [{}, { moving: 1, gaitPhase: 1.3 }, { attack: .19 }, { attack: .7 }, { cast: .5 }, { cast: 1 }]) {
         const motion = playerMotion({ ...pose, ...action, angle, attackAngle: angle, weapon: weapon.visual, grip: 'two-handed' });
         assert.equal(motion.weaponBehind, false, 'upward tips must not move the staff and forearms behind the chest');
-        for (const arm of [motion.weaponArm, motion.offArm]) {
+        for (const arm of weapon.damageType === 'fire' ? [motion.weaponArm] : [motion.weaponArm, motion.offArm]) {
           const forward = arm.hand[0] * Math.cos(angle) + arm.hand[1] * Math.sin(angle);
           assert.ok(forward > 0, 'both hands are physically forward of the torso');
         }
@@ -134,14 +134,18 @@ test('upright staff remains supported by two hands at rest and while casting', (
     }
     const front = playerMotion({ ...pose, angle: Math.PI / 2, weapon: weapon.visual, grip: 'two-handed' });
     assert.ok(front.weaponArm.hand[0] < -8, 'staff hand clears the shoulder and face');
-    assert.ok(front.offArm.hand[2] > 20, 'support arm reaches across to the shaft');
-    assert.equal(front.supportHolding, true, 'resting staff uses both hands');
+    if (weapon.damageType === 'fire') {
+      assert.equal(front.offArm.hand[2], 8, 'free hand hangs beside the upper thigh');
+      assert.ok(front.offArm.hand[0] > 8, 'free arm stays on its own side of the body');
+    } else assert.ok(front.offArm.hand[2] > 20, 'support arm reaches across to the shaft');
+    assert.equal(front.supportHolding, weapon.damageType !== 'fire');
     const bottom = Math.min(...weaponShapes(weapon.visual).flatMap(shape => shape.points.map(p => p[0])));
     const base = transformPoint(front.body, [front.weaponOrigin[0] + Math.cos(front.weaponAngle) * bottom,
       front.weaponOrigin[1] + Math.sin(front.weaponAngle) * bottom]);
     assert.ok(Math.abs(base[1]) < 4, 'upright staff base is close to the feet');
     const casting = playerMotion({ ...pose, angle: Math.PI / 2, weapon: weapon.visual, grip: 'two-handed', cast: 1 });
-    assert.equal(casting.supportHolding, true, 'both hands keep supporting the cast');
+    assert.equal(casting.supportHolding, weapon.damageType !== 'fire');
+    if (weapon.damageType === 'fire') assert.deepEqual(casting.offArm.hand, front.offArm.hand, 'free arm stays relaxed during spells');
     for (const phase of [0, .3, .55, 1]) {
       const before = playerMotion({ ...pose, weapon: weapon.visual, cast: Math.max(0, phase - 1e-6) });
       const after = playerMotion({ ...pose, weapon: weapon.visual, cast: Math.min(1, phase + 1e-6) });
@@ -191,7 +195,10 @@ test('staff basics lift vertically and wand basics flick, with attached grips an
         assert.ok(Math.sin(motion.weaponAngle) < (weapon.family === 'staff' ? -.97 : -.65), 'weapon stays in its guarded casting envelope');
         const palmTravel = Math.hypot(...motion.weaponArm.hand.map((v, i) => v - rest.weaponArm.hand[i]));
         assert.ok(palmTravel < 9, 'casting hand remains within the arm reach');
-        if (weapon.family === 'staff') assert.equal(motion.supportHolding, true);
+        if (weapon.family === 'staff') {
+          assert.equal(motion.supportHolding, weapon.damageType !== 'fire');
+          if (weapon.damageType === 'fire') assert.deepEqual(motion.offArm.hand, rest.offArm.hand);
+        }
         else assert.deepEqual(motion.offArm.hand, rest.offArm.hand, 'off-hand book, orb or shield stays steady');
       }
       const released = playerMotion({ ...base, attack: .42 });
