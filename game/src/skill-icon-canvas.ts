@@ -1,5 +1,5 @@
 import type { SkillId } from './character-types.ts';
-import { skillIconDrawing, skillIconGradient, skillIconSurface, SKILL_ICON_STOPS } from './skill-icon.ts';
+import { skillIconDrawing, skillIconLight, skillIconSurface, skillIconHalo, SKILL_ICON_STOPS, SKILL_ICON_HALO_STOPS } from './skill-icon.ts';
 
 const paths = new Map<string, Path2D>();
 const stamps = new Map<string, HTMLCanvasElement>();
@@ -13,9 +13,18 @@ export function paintSkillIcon(c: CanvasRenderingContext2D, id: SkillId, x: numb
     let path = paths.get(op.path);
     if (!path) { path = new Path2D(op.path); paths.set(op.path, path); }
     c.save(); c.transform(...op.transform); c.globalAlpha *= op.opacity;
-    if (op.surface) {
-      const gradient = c.createLinearGradient(...skillIconGradient(op.localGradient));
-      skillIconSurface(op.surface).forEach((color, i) => gradient.addColorStop(SKILL_ICON_STOPS[i], color));
+    if (op.clip) {
+      let clip = paths.get(op.clip);
+      if (!clip) { clip = new Path2D(op.clip); paths.set(op.clip, clip); }
+      c.clip(clip);
+    }
+    const material = op.surface ?? op.halo;
+    if (material) {
+      const [cx, cy, radius] = op.halo ? [32, 32, 31] : skillIconLight(op.localGradient);
+      const gradient = c.createRadialGradient(cx, cy, 0, cx, cy, radius);
+      const colors = op.halo ? skillIconHalo(material) : skillIconSurface(material);
+      const stops = op.halo ? SKILL_ICON_HALO_STOPS : SKILL_ICON_STOPS;
+      colors.forEach((color, i) => gradient.addColorStop(stops[i], color));
       c.fillStyle = gradient; c.fill(path);
     } else if (op.fill) { c.fillStyle = op.fill; c.fill(path); }
     if (op.stroke) { c.strokeStyle = op.stroke; c.lineWidth = op.width!; c.stroke(path); }

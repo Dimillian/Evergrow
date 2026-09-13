@@ -1,19 +1,19 @@
 import type { SkillId } from './character-types.ts';
 
-/** A 64-unit relief, composed from silhouettes, inset facets and sparse engraving. */
+/** A 64-unit glass emblem, composed from silhouettes, inset facets and sparse engraving. */
 export type SkillIconMaterial = 'steel' | 'gold' | 'fire' | 'ice' | 'jade' | 'violet' | 'rose' | 'dark';
 export interface IconMaterial {
   readonly light: string; readonly face: string; readonly shade: string; readonly edge: string;
 }
 export const ICON_MATERIALS: Readonly<Record<SkillIconMaterial, IconMaterial>> = Object.freeze({
-  steel: { light: '#f1f3e4', face: '#9bafb5', shade: '#314654', edge: '#cddde0' },
-  gold: { light: '#fff0bb', face: '#dbb46b', shade: '#78502d', edge: '#ffe0a0' },
-  fire: { light: '#ffe9a7', face: '#fa963d', shade: '#a33123', edge: '#ffbc65' },
-  ice: { light: '#e9fcff', face: '#7dd9f5', shade: '#286a9b', edge: '#b3f4ff' },
-  jade: { light: '#e0f4c5', face: '#9dca9f', shade: '#326867', edge: '#c1e5bb' },
-  violet: { light: '#f1eaff', face: '#b4a0ee', shade: '#54428f', edge: '#dcd1ff' },
-  rose: { light: '#ffe4e8', face: '#da96b8', shade: '#743b72', edge: '#f6bfd5' },
-  dark: { light: '#9babbc', face: '#415869', shade: '#142431', edge: '#748995' },
+  steel: { light: '#eeffff', face: '#9edfe5', shade: '#25466d', edge: '#d4e7e8' },
+  gold: { light: '#fff3bd', face: '#efb939', shade: '#864021', edge: '#ffd982' },
+  fire: { light: '#fff4c9', face: '#ff9a28', shade: '#a51e37', edge: '#ffc176' },
+  ice: { light: '#dcffff', face: '#39dbf5', shade: '#2346a2', edge: '#95f4ff' },
+  jade: { light: '#dcffd9', face: '#48dca3', shade: '#175762', edge: '#a1f5c5' },
+  violet: { light: '#f4e3ff', face: '#bd83fb', shade: '#452282', edge: '#dec2ff' },
+  rose: { light: '#ffe1f1', face: '#f781be', shade: '#752060', edge: '#ffbdda' },
+  dark: { light: '#8cb0c2', face: '#294d64', shade: '#101c31', edge: '#637785' },
 });
 export interface IconPart {
   readonly path: string;

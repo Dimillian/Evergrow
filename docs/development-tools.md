@@ -99,4 +99,4 @@ The save-free `game/scripts/atlas-balance.ts` CLI extends this workspace with 20
 
 ### Procedural skill icons
 
-Skills & combat → Skill icon workshop (`/tools/skill-icons.html`) compares the first six redesigned skills or all 30. Each shows the shared relief at 106px, a 32px hotbar sample and 24px tree/dimmed samples. The SVG disclosure verifies DOM controls against the Canvas artwork. PNG export is on demand; the study owns no simulation, animation loop or saves.
+Skills & combat → Skill icon workshop (`/tools/skill-icons.html`) compares the first six redesigned skills or all 30. Each shows the shared stained-glass artwork at 106px, a 32px hotbar sample and 24px tree/dimmed samples. The SVG disclosure verifies DOM controls against the Canvas artwork. PNG export is on demand; the study owns no simulation, animation loop or saves.

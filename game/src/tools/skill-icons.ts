@@ -5,7 +5,7 @@ import { drawSkillIconSheet, ICON_STUDY_SKILLS, ICON_CARD_HEIGHT } from './skill
 import type { SkillId } from '../character-types.ts';
 import { escapeUI } from '../ui-components.ts';
 
-const root = await toolPage('Skill icon workshop', 'Procedural metal, carved facets and elemental cores. Compare the shared artwork at inspection, hotbar and skill-tree sizes.');
+const root = await toolPage('Skill icon workshop', 'Backlit stained glass, dark metal seams and colored light. Compare the shared artwork at inspection, hotbar and skill-tree sizes.');
 root.insertAdjacentHTML('beforeend', `<div class="tool-toolbar"><label>Collection <select id="collection"><option value="study">First six</option><option value="all">All 30 skills</option><option>Might</option><option>Cunning</option><option>Arcana</option></select></label><button id="export">Export PNG</button><a class="tools-button" href="/tools/skills.html">Skill playground ↗</a></div><canvas id="icons" style="display:block;width:100%" role="img"></canvas><details><summary>SVG controls · same drawing recipe</summary><div id="svg-icons" style="display:flex;flex-wrap:wrap;gap:24px;padding:20px 0"></div></details>`);
 const canvas = root.querySelector<HTMLCanvasElement>('#icons')!, context = canvas.getContext('2d')!;
 const selector = root.querySelector<HTMLSelectElement>('#collection')!;
