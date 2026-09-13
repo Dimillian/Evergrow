@@ -19,7 +19,7 @@ test('cursed countdown uses the recipe and saved trial clock without mutating pr
   assert.equal(eventProgress(state)!.started, false);
   trial.started = true; trial.elapsed = duration / 2;
   const before = structuredClone(state), progress = eventProgress(state)!;
-  assert.match(progress.label, /45s/); assert.equal(progress.fraction, .5);
+  assert.equal(progress.timer, '45s'); assert.doesNotMatch(progress.label, /45s/); assert.equal(progress.fraction, .5);
   assert.deepEqual(state, before);
 });
 
@@ -27,8 +27,21 @@ test('countdown stays bounded at its endpoints', () => {
   const { state, trial, duration } = fixture();
   trial.elapsed = -.01; assert.equal(eventProgress(state)!.fraction, 1);
   trial.elapsed = duration + .01;
-  assert.match(eventProgress(state)!.label, /0s/);
+  assert.equal(eventProgress(state)!.timer, '0s');
   assert.equal(eventProgress(state)!.fraction, 0);
+});
+
+test('trial labels show the current wave and living members of that wave, including pending arrivals', () => {
+  const { site } = fixture();
+  const staged = stageEventProgress(site, 20), trial = staged.state.trial!;
+  const current = trial.guardians.filter(g => g.wave === trial.wave);
+  current[0].dead = true; current[1].dead = false; current[1].admitted = false;
+  const progress = eventProgress(staged.state)!;
+  assert.equal(progress.wave, 'Wave 2/20');
+  assert.equal(progress.enemiesLeft, current.filter(g => !g.dead).length);
+  assert.match(progress.label, /^Wave 2\/20 · Enemies Left: \d+$/);
+  for (const g of current) g.dead = true;
+  assert.equal(eventProgress(staged.state)!.enemiesLeft, 0);
 });
 
 test('only an active trial owns an indicator', () => {
