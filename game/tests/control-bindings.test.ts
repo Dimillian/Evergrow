@@ -10,6 +10,45 @@ const memory = () => {
   return { data, getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => { data.set(key, value); } };
 };
 
+test('portable keybinds round trip all slots and publish one complete persisted update', () => {
+  const source = new ControlBindings();
+  source.bind('skill0', 0, 'KeyF'); source.bind('skill0', 1, 'Mouse4'); source.bind('heal', 0, null);
+  const store = memory(), target = new ControlBindings(store);
+  let updates = 0;
+  target.subscribe(() => { updates++; assert.equal(target.action('KeyF'), 'skill0'); assert.deepEqual(target.get('heal'), [null, null]); });
+  assert.equal(target.importConfiguration(source.exportConfiguration()), 'saved');
+  assert.equal(updates, 1);
+  assert.equal(target.exportConfiguration(), source.exportConfiguration());
+  assert.equal(new ControlBindings(store).exportConfiguration(), source.exportConfiguration());
+});
+
+test('bad keybind imports never reset, persist or notify current bindings', () => {
+  const store = memory(), target = new ControlBindings(store);
+  target.bind('heal', 0, 'KeyH');
+  const before = target.exportConfiguration(), stored = store.getItem(CONTROL_STORAGE_KEY);
+  let updates = 0; target.subscribe(() => updates++);
+  const file = (bindings: unknown, version = 1) => JSON.stringify({ format: 'evergrow-keybindings', version, bindings });
+  const missing = defaultControls() as Partial<ReturnType<typeof defaultControls>>; delete missing.up;
+  for (const raw of ['broken', 'null', '[]', '{}', ' '.repeat(16_385), JSON.stringify(defaultControls()),
+    file(defaultControls(), 2), file(missing), file({ ...defaultControls(), extra: [null, null] }),
+    file({ ...defaultControls(), up: ['Escape', null] }), file({ ...defaultControls(), up: ['KeyQ', null] }),
+    file({ ...defaultControls(), up: ['KeyW', 'KeyW'] }), file({ ...defaultControls(), up: ['KeyW'] })]) {
+    assert.equal(target.importConfiguration(raw), 'invalid');
+    assert.equal(target.exportConfiguration(), before);
+    assert.equal(store.getItem(CONTROL_STORAGE_KEY), stored);
+  }
+  assert.equal(updates, 0);
+});
+
+test('keybind import remains usable with blocked persistence and refreshes input labels', () => {
+  const target = new ControlBindings({ getItem: () => null, setItem() { throw Error('blocked'); } });
+  const source = new ControlBindings(); source.bind('heal', 0, 'Mouse4');
+  let updates = 0; target.subscribe(() => updates++);
+  assert.equal(target.importConfiguration(source.exportConfiguration()), 'session');
+  assert.equal(target.label('heal'), 'M5'); assert.equal(target.action('Mouse4'), 'heal');
+  assert.equal(updates, 1);
+});
+
 test('bindings persist across sessions, including unbound slots and alternate mouse buttons', () => {
   const store = memory(), controls = new ControlBindings(store);
   assert.equal(controls.bind('skill0', 0, 'KeyF'), 'saved');

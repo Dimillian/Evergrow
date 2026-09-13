@@ -6,6 +6,11 @@ Changes apply immediately and save automatically on this device, across characte
 
 Bindings use physical keyboard positions. Escape remains pause/back and cancels binding capture. Ctrl remains the loot-name reveal control; OS/browser modifier shortcuts, reload, fullscreen and developer-tools keys are reserved. Tab and ordinary menu navigation keys retain their native behavior in panels. Mouse wheel zoom and left-click interaction with nearby objects remain available. The Controller tab documents the fixed gamepad layout; touch and controller input are independent of keyboard/mouse remapping.
 
+## Export and import
+
+In the Keyboard & mouse tab, **Export bindings** downloads `evergrow-keybindings.json`, including primary, alternate and unbound slots. **Import bindings** replaces the entire keyboard/mouse layout with a valid export and saves it on this device. Files must use the supported Evergrow format and version, include every action, contain no duplicate or reserved keys, and be at most 16 KB. Invalid files leave current bindings untouched. Imports refresh shortcut labels immediately; blocked storage is reported as session-only. Controller controls, character progress and skill-slot assignments are unaffected.
+
+
 ## Default keyboard and mouse layout
 
 | Control | Action |

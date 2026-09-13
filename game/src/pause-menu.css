@@ -78,6 +78,8 @@
 .controls-capture { position: sticky; bottom: 0; padding: 14px; border: 1px solid var(--ui-brass); background: #18272c; box-shadow: 0 -10px 30px #0009; }
 .controls-capture p { margin: 0 0 12px; line-height: 1.5; font-size: 13px; }
 .controls-capture-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.controls-transfer { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.controls-transfer .ui-button { min-height: 44px; text-transform: none; font-size: 12px; }
 .controls-capture-actions .ui-button { text-transform: none; font-size: 12px; }
 .controls-pad { font-size: 13px; }
 .controls-pad div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--ui-line); }

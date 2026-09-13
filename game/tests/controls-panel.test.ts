@@ -30,6 +30,7 @@ function setup() {
   const cancel = select('[data-capture-cancel]'), clear = select('[data-capture-clear]'), replace = select('[data-capture-replace]');
   capture.children = [cancel, clear, replace];
   select('[data-capture-message]'); select('[data-controls-status]'); select('[data-controls-reset]');
+  select('[data-controls-export]'); select('[data-controls-import]'); select('[data-controls-file]');
   const binding = new ElementStub(); binding.dataset = { binding: 'skill0', bindingIndex: '0' };
   root.many.set('[data-binding]', [binding]);
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'window');
@@ -95,4 +96,46 @@ test('controls markup exposes full combat and alternate bindings with a separate
   assert.equal((markup.match(/data-binding="skill[0-4]"/g) ?? []).length, 10);
   assert.match(markup, /data-controls-reset/); assert.match(markup, /data-controls-controller hidden/);
   assert.match(markup, /role="status" aria-live="polite"/);
+});
+
+test('file picker imports and refreshes bindings while read errors and oversized files preserve them', async () => {
+  const s = setup();
+  const input = s.root.querySelector('[data-controls-file]');
+  const status = s.root.querySelector('[data-controls-status]');
+  const settle = () => new Promise(resolve => setImmediate(resolve));
+  const choose = (file: { size: number; text(): Promise<string> }) => {
+    Object.assign(input, { files: [file], value: 'selected.json' });
+    input.dispatchEvent(new Event('change'));
+  };
+  try {
+    controls.bind('skill0', 0, 'KeyF');
+    const raw = controls.exportConfiguration(); controls.reset();
+    choose({ size: raw.length, text: async () => raw }); await settle();
+    assert.equal(controls.action('KeyF'), 'skill0'); assert.match(s.binding.innerHTML, />F</);
+    assert.match(status.textContent, /imported.*session only/);
+    const before = controls.exportConfiguration();
+    choose({ size: 1, text: async () => '{' }); await settle();
+    assert.match(status.textContent, /Invalid/); assert.equal(controls.exportConfiguration(), before);
+    choose({ size: 16_385, text: async () => { throw Error('must not read'); } }); await settle();
+    assert.match(status.textContent, /too large/); assert.equal(controls.exportConfiguration(), before);
+    choose({ size: 1, text: async () => { throw Error('read failure'); } }); await settle();
+    assert.match(status.textContent, /Could not read/); assert.equal(controls.exportConfiguration(), before);
+  } finally { s.dispose(); }
+});
+
+test('an import finishing after panel disposal cannot replace bindings', async () => {
+  const s = setup();
+  let finish!: (raw: string) => void;
+  const pending = new Promise<string>(resolve => { finish = resolve; });
+  const raw = controls.exportConfiguration();
+  controls.bind('skill0', 0, 'KeyF');
+  const input = s.root.querySelector('[data-controls-file]');
+  Object.assign(input, { files: [{ size: raw.length, text: () => pending }] });
+  input.dispatchEvent(new Event('change'));
+  s.dispose();
+  controls.bind('skill0', 0, 'KeyH');
+  try {
+    finish(raw); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(controls.action('KeyH'), 'skill0');
+  } finally { controls.reset(); }
 });
