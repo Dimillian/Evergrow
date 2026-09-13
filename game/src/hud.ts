@@ -1,3 +1,5 @@
+import { controls } from './control-preferences.ts';
+import { SKILL_ACTIONS } from './control-bindings.ts';
 import { isAura } from './aura-content.ts';
 import { auraPower, manaCapacity } from './auras.ts';
 import { canSpellweave } from './affix-combat.ts';
@@ -45,7 +47,7 @@ function chamfer(c: CanvasRenderingContext2D, x: number, y: number, w: number, h
 
 function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = false, groundEffects: readonly GroundEffect[] = [], inventory = false) {
   const field = HUD_ART.skill;
-  for (const [i, slot] of HUD_SKILL_SLOTS.entries()) {
+  for (const [i] of HUD_SKILL_SLOTS.entries()) {
     const x = field.x + i * field.step, y = inventory ? HUD_ART.inventory.skillY : field.y, w = field.width, h = field.height;
     const skill = i > 0 ? p.character.skillSlots[i - 1] : null;
     const definition = skill ? SKILL_DEFINITIONS[skill] : null;
@@ -98,7 +100,8 @@ function skills(c: CanvasRenderingContext2D, p: Player, time: number, gamepad = 
       text(c, `${sustain.remaining.toFixed(1)}s`, x + w / 2, y + h / 2 - 3, .76, '#adead2', 'center');
     }
     // Small corner badges leave the square artwork intact; there is no separate label row.
-    const binding = gamepad ? PAD_SKILL_LABELS[i] : slot.key, keyScale = .82;
+    const binding = gamepad ? PAD_SKILL_LABELS[i] : controls.label(i === 0 ? 'attack' : SKILL_ACTIONS[i - 1]);
+    const keyScale = Math.min(.82, 31 / Math.max(1, textWidth(binding)));
     const badgeWidth = textWidth(binding) * keyScale + 5;
     c.fillStyle = '#07111de8'; c.fillRect(x + w - badgeWidth - 1, y + h - 10, badgeWidth, 9);
     text(c, binding, x + w - 3, y + h - 9, keyScale,
@@ -124,9 +127,9 @@ function medallion(c: CanvasRenderingContext2D, x: number, y: number, size: numb
 function utilities(c: CanvasRenderingContext2D, p: Player, gamepad = false) {
   const field = HUD_ART.utility, dodge = PLAYER_ABILITIES.dodge, potion = PLAYER_ABILITIES.potion;
   const slots = [
-    { x: field.left, key: gamepad ? 'LB' : 'Q', icon: 'potion' as const, charges: p.flasks, capacity: potion.charges,
+    { x: field.left, key: gamepad ? 'LB' : controls.label('heal'), icon: 'potion' as const, charges: p.flasks, capacity: potion.charges,
       cooldown: p.healCooldown, duration: potion.cooldown, active: p.healFlash > 0, color: '#d5a4bf' },
-    { x: field.right, key: gamepad ? 'B' : 'SPACE', icon: 'dodge' as const, charges: p.dodgeCharges, capacity: dodge.charges,
+    { x: field.right, key: gamepad ? 'B' : controls.label('dodge'), icon: 'dodge' as const, charges: p.dodgeCharges, capacity: dodge.charges,
       cooldown: p.dodgeCharges > 0 ? 0 : Math.max(0, dodge.recharge - p.dodgeRecharge), duration: dodge.recharge,
       active: p.dodgeTime > 0, color: '#8ac9b4' },
   ];
@@ -141,9 +144,10 @@ function utilities(c: CanvasRenderingContext2D, p: Player, gamepad = false) {
       text(c, slot.cooldown.toFixed(1), cx, cy - 3, .9, UI.ivory, 'center');
     }
     const left = slot.icon === 'potion', bx = left ? x + w + 2 : x - 2;
-    const keyWidth = slot.key === 'SPACE' ? 25 : 13;
+    const keyScale = Math.min(.8, 23 / Math.max(1, textWidth(slot.key, 1, 'interface')));
+    const keyWidth = Math.max(13, textWidth(slot.key, 1, 'interface') * keyScale + 4);
     c.fillStyle = '#b7b9a4'; c.fillRect(left ? bx : bx - keyWidth, y + 4, keyWidth, 12);
-    text(c, slot.key, left ? bx + keyWidth / 2 : bx - keyWidth / 2, y + 6, slot.key === 'SPACE' ? .6 : .8, '#162129', 'center', 'interface');
+    text(c, slot.key, left ? bx + keyWidth / 2 : bx - keyWidth / 2, y + 6, keyScale, '#162129', 'center', 'interface');
     for (let charge = 0; charge < slot.capacity; charge++) {
       c.beginPath(); c.arc(cx - (slot.capacity - 1) * 2.5 + charge * 5, y + w + 3, 1.2, 0, TAU);
       c.fillStyle = charge < slot.charges ? slot.color : '#1a242c'; c.fill();

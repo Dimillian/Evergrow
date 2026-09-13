@@ -1,3 +1,5 @@
+import { controls } from './control-preferences.ts';
+import { SKILL_ACTIONS } from './control-bindings.ts';
 import { skillMechanicFacts } from './skill-mechanic-facts.ts';
 import { nodeDescription, nodeMechanicDetails } from './skill-node-explanation.ts';
 import { TECHNIQUE_SUMMARIES } from './technique-summaries.ts';
@@ -31,7 +33,6 @@ import './skill-tree-panel.css';
 
 interface SkillTreeActions { develop(command: CharacterCommand): void; close(): void; allocate(id: string): void; assign(slot: number, skill: SkillId | null): void; }
 const COLORS = SKILL_DOMAIN_COLORS;
-const BINDINGS = ['RMB', '1', '2', '3', '4'];
 
 /** Cached native-resolution atlas with a bounded 30 Hz light pass. Simulation owns allocations. */
 export class SkillTreePanel {
@@ -420,7 +421,8 @@ export class SkillTreePanel {
     const skills = new Set(unlockedSkills(this.player.character.allocatedNodes));
     const node = SKILL_NODES.get(this.selected)!, assigning = !!node.skill && this.allocated.has(node.id);
     this.root.querySelector('[data-slot-help]')!.textContent = assigning ? `Assign ${SKILL_DEFINITIONS[node.skill!].name}` : '';
-    this.assignments.innerHTML = BINDINGS.map((binding, index) => {
+    this.assignments.innerHTML = SKILL_ACTIONS.map((action, index) => {
+      const binding = escapeUI(controls.label(action));
       const id = this.player!.character.skillSlots[index], skill = id && skills.has(id) ? SKILL_DEFINITIONS[id] : null;
       return `<div class="skill-atlas-assigned ${skill ? 'is-filled' : ''}"><button class="ui-button ui-button--quiet skill-slot-button" data-slot="${index+1}" aria-label="${assigning ? `Assign ${SKILL_DEFINITIONS[node.skill!].name} to` : 'Inspect'} ${binding}${skill ? `, ${skill.name}` : ', empty slot'}" title="${skill?.name ?? 'Empty slot'}" ${!assigning && !skill ? 'disabled' : ''}><span class="skill-atlas-assigned-icon" ${skill ? `style="color:${skill.color}"` : ''}>${skill ? skillIconSVG(skill.id, 24) : '◇'}</span><small><span class="desktop-binding">${binding}</span><span class="controller-binding">${PAD_SKILL_LABELS[index+1]}</span><span class="touch-only">${index+1}</span></small></button>${skill ? `<button class="ui-button ui-button--quiet skill-slot-clear" data-clear="${index+1}" aria-label="Remove ${skill.name} from ${binding}">×</button>` : ''}</div>`;
     }).join('');

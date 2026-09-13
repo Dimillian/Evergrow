@@ -35,11 +35,6 @@
 .pause-toggle[aria-pressed="true"] { color: #c6dfcd; border-color: #6d987e80; background: #29433966; }
 .pause-stepper { display: flex; gap: 5px; }
 .pause-stepper .ui-button { width: 32px; padding: 6px; }
-.pause-controls { margin-top: 12px; color: var(--ui-muted); font-size: 12px; }
-.pause-controls summary { cursor: pointer; padding: 4px 0; }
-.pause-controls dl { margin: 8px 0 0; display: grid; gap: 8px; }
-.pause-controls dl div { display: flex; gap: 10px; justify-content: space-between; }
-.pause-controls dd { margin: 0; text-align: right; color: var(--ui-text); font-size: 11px; }
 @media (max-width: 480px) {
   .pause-layout { grid-template-columns: 1fr; gap: 14px; padding: 14px; }
   .pause-actions { display: grid; grid-template-columns: 1fr 1fr; }
@@ -61,5 +56,35 @@
 @media (pointer: coarse) {
   .pause-option { min-height: 50px; }
   .pause-option .ui-button { height: 44px; min-height: 44px; min-width: 44px; }
-  .pause-controls summary { padding-block: 12px; }
+
 }
+
+.pause-controls-action { width: 100%; justify-content: space-between; margin-top: 16px; text-transform: none; }
+.menu-window.pause-menu.has-controls { width: min(820px, 100%); }
+.controls-intro, .controls-note { color: var(--ui-muted); font-size: 12px; line-height: 1.6; }
+.controls-devices { display: flex; gap: 6px; margin: 16px 0; }
+.controls-devices .ui-button { flex: 1; text-transform: none; font-size: 12px; padding: 8px; }
+.controls-devices [aria-pressed="true"] { border-color: #9faeaa; background: #304448; color: var(--ui-ivory); }
+.controls-column-head, .controls-row { display: grid; grid-template-columns: minmax(110px, 1fr) repeat(2, minmax(64px, .7fr)); align-items: center; gap: 8px; }
+.controls-column-head { font-size: 10px; color: var(--ui-muted); }
+.controls-column-head span:not(:first-child) { text-align: center; }
+.controls-group h3 { margin: 18px 0 6px; color: var(--ui-brass); font-size: 12px; font-weight: 500; }
+.controls-row { padding: 5px 0; border-bottom: 1px solid var(--ui-line); font-size: 13px; }
+.control-binding.ui-button { min-height: 34px; padding: 6px; text-transform: none; }
+.control-binding kbd { font-family: 'Evergrow Numerals', system-ui, sans-serif; font-size: 11px; overflow-wrap: anywhere; }
+.control-binding.is-unbound { color: var(--ui-muted); border-style: dashed; }
+.control-binding[aria-pressed="true"] { border-color: var(--ui-brass); background: #554730; }
+.controls-status { min-height: 18px; color: #c6dfcd; font-size: 12px; line-height: 1.5; }
+.controls-capture { position: sticky; bottom: 0; padding: 14px; border: 1px solid var(--ui-brass); background: #18272c; box-shadow: 0 -10px 30px #0009; }
+.controls-capture p { margin: 0 0 12px; line-height: 1.5; font-size: 13px; }
+.controls-capture-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.controls-capture-actions .ui-button { text-transform: none; font-size: 12px; }
+.controls-pad { font-size: 13px; }
+.controls-pad div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--ui-line); }
+.controls-pad dd { margin: 0; color: var(--ui-ivory); text-align: right; }
+@media (pointer: coarse) { .control-binding.ui-button { min-height: 44px; } }
+.has-controls #pause-controls { display: flex; flex-direction: column; min-height: 0; }
+.has-controls [data-controls-desktop], .has-controls [data-controls-controller] { max-height: min(470px, 48dvh); overflow-y: auto; overscroll-behavior: contain; padding-right: 8px; scrollbar-gutter: stable; }
+.has-controls .controls-capture { flex: none; }
+.has-controls .controls-status { margin-bottom: 6px; }
+.has-controls .controls-column-head { position: sticky; top: 0; background: #0b151c; padding: 8px 0; z-index: 1; }

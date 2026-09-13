@@ -1,3 +1,4 @@
+import { ControlsPanel } from './controls-panel.ts';
 import { bindAudioControls, type AudioControlActions } from './audio-controls.ts';
 import './pause-menu.css';
 import type { GroundLootNameplates } from './ground-loot-hover.ts';
@@ -16,9 +17,14 @@ export class PauseMenu {
   private readonly actions: PauseActions;
   private readonly signal: AbortSignal;
   private options = false;
+  private controlsOpen = false;
+  private readonly controls: ControlsPanel;
   private busy = false;
   constructor(root: HTMLElement, actions: PauseActions, signal: AbortSignal) {
     this.root = root; this.actions = actions; this.signal = signal;
+    this.controls = new ControlsPanel(root, signal);
+    root.querySelector('[data-controls-open]')!.addEventListener('click', () => this.showControls(true), { signal });
+    root.querySelector('[data-controls-back]')!.addEventListener('click', () => this.back(), { signal });
     const chronicle=root.querySelector<HTMLButtonElement>('#chronicle-action')!;chronicle.disabled=!actions.openChronicle;chronicle.addEventListener('click',()=>actions.openChronicle?.(),{signal});
     root.querySelector('#options-action')!.addEventListener('click', () => this.showOptions(!this.options), { signal });
     root.querySelector('[data-options-back]')!.addEventListener('click', () => this.back(), { signal });
@@ -57,11 +63,21 @@ export class PauseMenu {
   }
   back(): boolean {
     if (this.busy) return true;
+    if (this.controls.cancel()) return true;
+    if (this.controlsOpen) { this.showControls(false); return true; }
     if (!this.options) return false;
     this.showOptions(false); return true;
   }
+  private showControls(open: boolean): void {
+    this.controls.cancel(false); this.controlsOpen = open;
+    this.root.querySelector<HTMLElement>('#pause-controls')!.hidden = !open;
+    this.root.querySelector<HTMLElement>('#pause-options')!.hidden = open;
+    this.root.querySelector('.pause-menu')!.classList.toggle('has-controls', open);
+    this.root.querySelector<HTMLElement>(open ? '[data-control-device]' : '[data-controls-open]')!.focus();
+  }
   private showOptions(open: boolean): void {
     if (this.busy) return;
+    if (this.controlsOpen) this.showControls(false);
     this.actions.panelSound?.(open);
     this.options = open;
     this.root.querySelector<HTMLElement>('#pause-options')!.hidden = !open;

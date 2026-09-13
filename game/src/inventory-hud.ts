@@ -1,9 +1,11 @@
+import { controls } from './control-preferences.ts';
+import { SKILL_ACTIONS } from './control-bindings.ts';
 import { drawFloatingHUD, type HUDOptions } from './hud.ts';
 import type { Player } from './model.ts';
 import type { SkillId } from './character-types.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
 import { INVENTORY_SKILL_BINDINGS, inventoryHUDLayout, inventorySkillPickerMarkup } from './inventory-skills.ts';
-import { trapDialogFocus, uiIcon } from './ui-components.ts';
+import { escapeUI, trapDialogFocus, uiIcon } from './ui-components.ts';
 import './inventory-hud.css';
 
 interface InventoryHUDActions {
@@ -39,7 +41,7 @@ export class InventoryHUD {
     this.dock.append(this.canvas); footer.prepend(this.dock);
     this.controls = document.createElement('div'); this.controls.className = 'inventory-hud-targets';
     this.controls.setAttribute('aria-label', 'Skill hotkeys');
-    this.controls.innerHTML = INVENTORY_SKILL_BINDINGS.map((binding, slot) => `<button type="button" class="inventory-hud-slot" data-skill-slot="${slot}" aria-label="${binding.key}: skill details" aria-haspopup="dialog" aria-expanded="false" aria-controls="inventory-quick-skills"></button>`).join('');
+    this.controls.innerHTML = INVENTORY_SKILL_BINDINGS.map((_, slot) => `<button type="button" class="inventory-hud-slot" data-skill-slot="${slot}" aria-label="${escapeUI(controls.label(SKILL_ACTIONS[slot]))}: skill details" aria-haspopup="dialog" aria-expanded="false" aria-controls="inventory-quick-skills"></button>`).join('');
     this.picker = document.createElement('section'); this.picker.className = 'inventory-quick-skills';
     this.picker.id = 'inventory-quick-skills'; this.picker.hidden = true;
     this.picker.setAttribute('role', 'dialog'); this.picker.setAttribute('aria-modal', 'true');
@@ -81,7 +83,7 @@ export class InventoryHUD {
   refresh(player: Player): void {
     this.player = player;
     for (const [slot, button] of [...this.controls.querySelectorAll<HTMLButtonElement>('button')].entries()) {
-      const id = player.character.skillSlots[slot], key = INVENTORY_SKILL_BINDINGS[slot].key;
+      const id = player.character.skillSlots[slot], key = controls.label(SKILL_ACTIONS[slot]);
       const label = `${key}: ${id ? SKILL_DEFINITIONS[id].name : 'Empty slot'}. Click for skill details. Right-click to assign.`;
       button.setAttribute('aria-label', label); button.title = label;
     }
@@ -124,7 +126,7 @@ export class InventoryHUD {
     if (!this.player) return;
     this.dismiss(false); this.slot = slot;
     this.actions.suspend(); this.picker.hidden = false;
-    this.picker.innerHTML = `<header><h3 id="inventory-quick-skills-title">Assign to ${INVENTORY_SKILL_BINDINGS[slot].key}</h3><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-picker-close aria-label="Close quick picker">${uiIcon('close')}</button></header>${inventorySkillPickerMarkup(this.player, slot)}`;
+    this.picker.innerHTML = `<header><h3 id="inventory-quick-skills-title">Assign to ${escapeUI(controls.label(SKILL_ACTIONS[slot]))}</h3><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-picker-close aria-label="Close quick picker">${uiIcon('close')}</button></header>${inventorySkillPickerMarkup(this.player, slot)}`;
     this.controls.querySelectorAll('button').forEach((button, index) => button.setAttribute('aria-expanded', String(index === slot)));
     this.positionPicker();
     this.focus = trapDialogFocus(this.picker, { signal: this.lifetime.signal, restoreFocus: false,

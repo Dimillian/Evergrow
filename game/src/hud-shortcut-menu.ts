@@ -1,8 +1,11 @@
+import { controls } from './control-preferences.ts';
+import type { ControlAction } from './control-bindings.ts';
 import { HUD_MENU_SHORTCUTS } from './hud-layout.ts';
 import { trapDialogFocus } from './ui-components.ts';
 import './hud-shortcut-menu.css';
 
 type Destination = typeof HUD_MENU_SHORTCUTS[number]['id'] | 'map';
+const destinationAction: Record<Destination, ControlAction> = { character: 'character', inventory: 'character', skilltree: 'skills', journal: 'journeys', map: 'map' };
 const destinations = [...HUD_MENU_SHORTCUTS, { id: 'map', label: 'World map', key: 'M' }] as const;
 
 /** A small, focus-contained navigation drawer. GameShell owns routing and pause state. */
@@ -43,7 +46,7 @@ export class HUDShortcutMenu {
       event.stopPropagation();
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.key === 'Escape') { event.preventDefault(); this.close(); return; }
-      const destination = destinations.find(d => event.code === `Key${d.key}`);
+      const destination = destinations.find(d => controls.action(event.code) === destinationAction[d.id]);
       if (destination) { event.preventDefault(); this.close(false); this.select(destination.id); return; }
       if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
         event.preventDefault();
@@ -54,7 +57,15 @@ export class HUDShortcutMenu {
     }, { signal });
   }
 
+  refreshBindings(): void {
+    for (const d of destinations) {
+      const button = this.element.querySelector<HTMLButtonElement>(`[data-destination="${d.id}"]`)!;
+      button.querySelector('kbd')!.textContent = controls.label(destinationAction[d.id]);
+      button.removeAttribute('aria-keyshortcuts');
+    }
+  }
   open(): void {
+    this.refreshBindings();
     this.backdrop.hidden = false; this.mount.classList.add('has-shortcut-menu');
     this.trigger.setAttribute('aria-expanded', 'true'); this.position();
     this.changed();

@@ -1,5 +1,13 @@
 # Controls
 
+Open **Escape → Options → Controls & key bindings** to customize keyboard and mouse controls. Movement, basic attack, all five skill slots, dodge, potion, interaction, portal and menu shortcuts each have primary and alternate bindings. Select either binding, then press a key or a mouse button (left, right, middle, or side buttons M4/M5). Choose **Unbind** to clear it, or Escape/Cancel to leave it unchanged. Conflicts name the existing action and require **Replace binding** before moving the binding. **Restore defaults** restores the entire default layout below.
+
+Changes apply immediately and save automatically on this device, across characters and reloads. They do not change skill assignments or character saves, and require no progress reset. If browser storage is unavailable, the screen reports that changes apply only to this session. HUD badges, interaction prompts, inventory assignment menus and the skill atlas use the current bindings. The first available binding is shown when a primary is empty.
+
+Bindings use physical keyboard positions. Escape remains pause/back and cancels binding capture. Ctrl remains the loot-name reveal control; OS/browser modifier shortcuts, reload, fullscreen and developer-tools keys are reserved. Tab and ordinary menu navigation keys retain their native behavior in panels. Mouse wheel zoom and left-click interaction with nearby objects remain available. The Controller tab documents the fixed gamepad layout; touch and controller input are independent of keyboard/mouse remapping.
+
+## Default keyboard and mouse layout
+
 | Control | Action |
 | --- | --- |
 | WASD / arrow keys | Move |
@@ -23,7 +31,7 @@
 
 A town portal channels for three seconds. Movement, damage, attacking, skills, dodge, Escape, P again or leaving the gameplay input context cancels it. It costs nothing and refills nothing. E/click the town endpoint returns once to your departure point.
 
-Unlock skills in the tree, then assign them to RMB or 1–4. Empty slots do nothing. Character, inventory, skill tree, Journeys, map and town-service panels pause combat.
+Unlock skills in the tree, then assign them to the five skill slots (RMB or 1–4 by default). Empty slots do nothing. Character, inventory, skill tree, Journeys, map and town-service panels pause combat.
 
 In shops, select an item and Buy/Sell, or Shift-click for a direct trade. The Equipped section at the blacksmith or enchanter upgrades worn gear in place. Escape closes the service.
 
@@ -57,7 +65,7 @@ The HUD's small bindings follow the active input device. Stick deadzones suppres
 
 In menus, use D-pad/left stick to navigate and A to activate. LB/RB move through focusable controls. B closes gameplay panels/resumes pause and cancels the character hall's delete confirmation. In the character/inventory window, LB/RB instead switches Equipment, Inventory and Attributes section tabs with remembered focus; D-pad/left stick moves spatially between cells and buttons, A/X equips or unequips, and A operates Equip Best, sorting, filters and attribute buttons. A compact LB/RB rail names and highlights the active section. On handheld-sized controller screens, Equipment, Inventory and Stats each use the full body width; section changes restore focus and scroll it into view. In shops, select an item with A, then focus and activate the ordinary purchase/sale/upgrade button. On the focused map or skill-atlas canvas, D-pad pans the map or inspects connected stars; LT/RT zoom out/in. Select fields change with left/right; up/down moves to the next control. In the skill atlas, LB/RB switches Tree, Node and Skills. A on a star focuses its node actions; X jumps to the pinned five-slot skill bar. With an unlocked skill inspected, select a slot and press A to assign it; the slot labels show LT, RB, X, Y and RS. The small × clears an assignment. The right stick scrolls the Node inspector; rank, specialization and upgrade controls remain in that inspector. B closes the panel.
 
-Character names and search text still use a keyboard. Inventory drag/drop and gameplay camera zoom remain mouse controls. This is an initial fixed controller layout; remapping, rumble and an on-screen keyboard are not implemented. Hardware compatibility and combat feel await player testing.
+Character names and search text still use a keyboard. Inventory drag/drop and gameplay camera zoom remain mouse controls. This is an initial fixed controller layout; controller remapping, rumble and an on-screen keyboard are not implemented. Hardware compatibility and combat feel await player testing.
 
 Pause, panels, focus loss and travel clear controller actions and require neutral sticks/released buttons before accepting input again. Disconnecting the active controller pauses combat. Keyboard/mouse input takes over when used; no character save format or progress reset is involved.
 

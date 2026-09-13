@@ -1,3 +1,4 @@
+import { controls } from './control-preferences.ts';
 import { BuffBar } from './buff-bar.ts';
 import type { ActiveBuff } from './active-buffs.ts';
 import type { AudioControlActions } from './audio-controls.ts';
@@ -55,8 +56,14 @@ export class GameShell {
   setGamepadActive(active: boolean) {
     if (active === this.gamepadActive) return;
     this.gamepadActive = active;
+    this.refreshBindings();
+  }
+
+  refreshBindings(): void {
     const key = this.controls.querySelector('kbd');
-    if (key) key.textContent = active ? '↓' : 'P';
+    if (key) key.textContent = this.gamepadActive ? '↓' : controls.label('portal');
+    for (const action of ['map', 'portal'] as const) this.controls.querySelector(`[data-hud="${action}"]`)!.removeAttribute('aria-keyshortcuts');
+    this.shortcutMenu.refreshBindings();
   }
 
   constructor(root: HTMLElement, actions: ShellActions) {
@@ -101,6 +108,7 @@ export class GameShell {
       else if (id === 'map') actions.openMap();
       else actions.openJourneys?.();
     }, () => actions.shortcutMenuChanged?.());
+    this.refreshBindings();
   }
 
   private navigationVisible = true;

@@ -1,3 +1,4 @@
+import { controls } from './control-preferences.ts';
 import type { ActiveBuff } from './active-buffs.ts';
 import { drawPlayerSkillEffects, drawConductor, drawHarvestMark } from './player-skill-art.ts';
 import { skyAtTime, skyAtHour, type SkyState } from './world-time.ts';
@@ -592,15 +593,15 @@ export class Renderer {
       const run=currentDungeon(sim.expeditions),f=sim.dungeonFloor;
       const points=run&&f?[{...f.entry,name:'Leave dungeon'},...(run.states.warden.hp<=0?[{...f.exit,name:'Leave dungeon'}]:[]),...f.chests.map(ch=>({...ch,name:'Treasure chest'}))]:this.visibility.entrances;
       const table=!run&&world.getBuildings(p.x-180,p.y-180,360,360).find(b=>b.kind==='expedition'&&Math.hypot(b.door.x-p.x,b.door.y-p.y)<75);
-      if(table){const q=worldToScreen(this.view,table.door.x,table.door.y-80);text(c,`Expeditions${p.level<20?' · Level 20':''} [${this.gamepadActive?'A':'E'}]`,q.x,q.y,1,'#d8c593','center');}
+      if(table){const q=worldToScreen(this.view,table.door.x,table.door.y-80);text(c,`Expeditions${p.level<20?' · Level 20':''} [${this.gamepadActive?'A':controls.label('interact')}]`,q.x,q.y,1,'#d8c593','center');}
       const target=points.find(q=>Math.hypot(q.x-p.x,q.y-p.y)<75);
-      if(target){const point=worldToScreen(this.view,target.x,target.y-75);text(c,`${target.name}  [${this.gamepadActive?'A':'E'}]`,point.x,point.y,1,'#d6d7b3','center');}
+      if(target){const point=worldToScreen(this.view,target.x,target.y-75);text(c,`${target.name}  [${this.gamepadActive?'A':controls.label('interact')}]`,point.x,point.y,1,'#d6d7b3','center');}
       if(run&&f)for(const event of f.events??[]){
           if(Math.hypot(event.x-p.x,event.y-p.y)>650)continue;
           const state=run.events?.[event.id];if(state?.finished)continue;
           if(!state?.started&&Math.hypot(event.x-p.x,event.y-p.y)>100)continue;
           const point=worldToScreen(this.view,event.x,event.y-60);
-          const label=dungeonEventLabel(run,event).replace('[E]',this.gamepadActive?'[A]':'[E]');
+          const label=dungeonEventLabel(run,event).replace('[E]',`[${this.gamepadActive ? 'A' : controls.label('interact')}]`);
           text(c,label,point.x,point.y,1,'#d6d7b3','center');
       }
       if(this.residentSpeech){
@@ -615,7 +616,7 @@ export class Renderer {
       if (npc) {
         const point = worldToScreen(this.view, npc.x, npc.y - 65);
         c.save(); c.font = '12px "Evergrow Numerals", system-ui, sans-serif'; c.textAlign = 'center';
-        const label = `${NPC_NAMES[npc.role]}  [${this.gamepadActive ? 'A' : 'E'}]`, width = c.measureText(label).width + 18;
+        const label = `${NPC_NAMES[npc.role]}  [${this.gamepadActive ? 'A' : controls.label('interact')}]`, width = c.measureText(label).width + 18;
         c.fillStyle = '#071019ed'; c.fillRect(point.x - width / 2, point.y - 14, width, 23);
         c.strokeStyle = NPC_COLORS[npc.role] + '90'; c.strokeRect(point.x - width / 2, point.y - 14, width, 23);
         c.fillStyle = '#e1dfcd'; c.fillText(label, point.x, point.y + 2); c.restore();
@@ -630,7 +631,7 @@ export class Renderer {
     else if (anchor) { x = anchor.x; y = anchor.y - (sim.travel.returnTo?.town === anchor.band ? 82 : 28);
       label = sim.travel.returnTo?.town === anchor.band ? 'Return to expedition  [E]' : sim.travel.homeTown === anchor.band ? `${anchor.name} · Home  [E]` : 'Set home town  [E]'; }
     if (label) {
-      if (this.gamepadActive) label = label.replace('[E]', '[A]');
+      label = label.replace('[E]', `[${this.gamepadActive ? 'A' : controls.label('interact')}]`);
       const point = worldToScreen(this.view, x, y);
       c.save(); c.font = '12px "Evergrow Numerals", system-ui, sans-serif'; c.textAlign = 'center';
       const w = c.measureText(label).width + 18;

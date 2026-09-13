@@ -1,3 +1,4 @@
+import { controlsMarkup } from './controls-panel.ts';
 import { audioControlsMarkup } from './audio-controls.ts';
 import { uiIcon } from './ui-icons.ts';
 import { escapeUI } from './ui-components.ts';
@@ -27,8 +28,9 @@ export function pauseMenuMarkup(kills: number, duration: string, location: strin
           <div class="pause-option pause-option--loot"><span id="ground-loot-names-label">Loot names</span><div class="pause-loot-modes" role="group" aria-labelledby="ground-loot-names-label"><button type="button" data-loot-names="always" class="ui-button ui-button--quiet" aria-pressed="true">Always</button><button type="button" data-loot-names="ctrl" class="ui-button ui-button--quiet" aria-pressed="false">Hold Ctrl</button></div></div>
           <div class="pause-option"><span>Camera zoom</span><div class="pause-stepper"><button type="button" data-zoom="out" class="ui-button ui-button--icon" aria-label="Zoom camera out">${uiIcon('minus')}</button><button type="button" data-zoom="in" class="ui-button ui-button--icon" aria-label="Zoom camera in">${uiIcon('plus')}</button></div></div>
           <div class="pause-option" data-fullscreen-row hidden><span>Fullscreen</span><button type="button" data-fullscreen aria-label="Fullscreen" class="ui-button pause-toggle" aria-pressed="false">Off</button></div>
-          <details class="pause-controls"><summary>Controls</summary><dl><div><dt>Move</dt><dd>WASD · Left stick</dd></div><div><dt>Attack</dt><dd>LMB · RT</dd></div><div><dt>Dodge</dt><dd>Space · B</dd></div><div><dt>Potion</dt><dd>Q · LB</dd></div><div><dt>Interact</dt><dd>E · A</dd></div><div><dt>Pause / back</dt><dd>Esc · Menu / B</dd></div></dl></details>
+          <button type="button" class="ui-button pause-controls-action" data-controls-open aria-controls="pause-controls">Controls & key bindings <span aria-hidden="true">→</span></button>
         </section>
+        ${controlsMarkup()}
       </div>
     </div>
     <footer class="pause-footer"><i aria-hidden="true"></i><p class="menu-save-state" role="status">Saving…</p></footer>

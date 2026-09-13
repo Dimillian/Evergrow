@@ -69,3 +69,14 @@ test('docked HUD stays inside its compact footer and its hit targets match the s
     }
   }
 });
+
+test('inventory assignment labels follow custom controls without changing skill slots', async () => {
+  const { controls } = await import('../src/control-preferences.ts');
+  const before = make();
+  try {
+    controls.bind('skill0', 0, 'Mouse4');
+    assert.equal(inventoryHUDLayout(700, 108).slots[0].key, 'M5');
+    assert.match(inventorySkillPickerMarkup(before, 0), /Clear M5/);
+    assert.deepEqual(before.character.skillSlots, [null, null, null, null, null]);
+  } finally { controls.reset(); }
+});

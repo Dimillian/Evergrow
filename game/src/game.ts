@@ -1,3 +1,5 @@
+import { controls } from './control-preferences.ts';
+import type { ControlAction } from './control-bindings.ts';
 import { activeBuffs } from './active-buffs.ts';
 import { ExpeditionPanel } from './expedition-panel.ts';
 import { executeDropItem, type DropItemSource } from './drop-item-command.ts';
@@ -130,7 +132,7 @@ export class Game {
   private get reducedMotion() { return this.motionPreference.matches; }
   private touch!: TouchHUD;
   private clearWorldTouch: (()=>void) | null = null;
-  private input = new GameInput();
+  private input = new GameInput(controls);
   private gamepad = new GamepadInput();
   private gamepadMenu = new GamepadMenu();
   private usingGamepad = false;
@@ -180,6 +182,7 @@ export class Game {
         returnToTitle: () => this.returnToTitle(), openMap: () => this.openMap(),
         openCharacter: () => this.openCharacterPanel('character'), openSkills: () => this.openCharacterPanel('skills'), openJourneys: () => this.journeys.open(),
       }));
+      this.lifetime.defer(controls.subscribe(() => { this.clearInput(); this.shell.refreshBindings(); }));
       this.canvas = this.shell.canvas;
       this.groundLootHighlight = this.lifetime.own(new GroundLootHighlight(root, this.canvas));
       this.uiCanvas = this.shell.uiCanvas;
@@ -380,7 +383,7 @@ export class Game {
       clear: () => this.clearInput(),
       release: code => this.input.keyUp(code),
       press: event => {
-        if(this.appearanceEditor)return;
+        if(this.appearanceEditor || event.defaultPrevented)return;
         if (this.savingAction) { event.preventDefault(); return; }
         if (event.isTrusted && !(event.target instanceof HTMLInputElement) && !(event.target instanceof HTMLTextAreaElement) && !(event.target instanceof HTMLSelectElement) && !(event.target instanceof HTMLElement && event.target.isContentEditable)) { this.usingGamepad = false; this.touch.setActive(false); }
         if (event.code === 'Escape') {
@@ -397,31 +400,9 @@ export class Game {
         }
         const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement
           || event.target instanceof HTMLSelectElement || (event.target instanceof HTMLElement && event.target.isContentEditable);
-        if (!typing && ['KeyC', 'KeyI', 'KeyT'].includes(event.code)
-          && this.panels.canOpen(event.code === 'KeyT' ? 'skills' : 'character')) {
-          event.preventDefault();
-          if (!event.repeat) {
-            const panel = event.code === 'KeyT' ? 'skills' : 'character';
-            this.panels.toggle(panel);
-          }
-          return;
-        }
         if (typing) return;
-        if (event.code === 'KeyJ' && !typing && (this.panels.canOpen('journeys') || this.phase==='journeys')) { event.preventDefault(); if(!event.repeat) { if(this.phase==='journeys')this.resume();else this.journeys.open(); } return; }
-        if (event.code === 'KeyM' && (this.panels.canOpen('map') || this.phase === 'map')) {
-          event.preventDefault();
-          if (!event.repeat) this.panels.toggle('map');
-          return;
-        }
-        if (event.code === 'Tab' && this.phase === 'playing') {
-          event.preventDefault();
-          if (!event.repeat) this.openMap();
-          return;
-        }
-        if (event.code === 'KeyN') {
-          if (!event.repeat) this.toggleSound();
-          return;
-        }
+        if ((this.panels.activePanel || event.target instanceof HTMLButtonElement) && ['Tab', 'Enter', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown', 'Backspace', 'Delete'].includes(event.code)) return;
+        if (this.controlShortcut(controls.action(event.code), event.repeat, event.code === 'Tab')) { event.preventDefault(); return; }
         // Native menu controls retain their ordinary keyboard behavior.
         if (event.target instanceof HTMLSelectElement || event.target instanceof HTMLInputElement
           || event.target instanceof HTMLButtonElement) return;
@@ -432,11 +413,9 @@ export class Game {
           this.phase === 'paused' ? this.resume() : this.start();
           return;
         }
-        if (event.code === 'F3') { event.preventDefault(); this.debug = !this.debug; return; }
         if (event.code === 'KeyR' && this.phase === 'dead') { this.start(); return; }
         if (this.phase !== 'playing') return;
-        if (event.code === 'KeyP') { event.preventDefault(); this.requestPortal(); return; }
-        if (event.code === 'KeyE') { event.preventDefault(); this.interact(); return; }
+        if (controls.action(event.code)) event.preventDefault();
         this.input.keyDown(event.code);
       },
     }, signal);
@@ -451,23 +430,48 @@ export class Game {
       this.renderer.zoomByWheel(event.deltaY, event.deltaMode, this.canvas.getBoundingClientRect().height);
     }, { signal, passive: false });
     this.canvas.addEventListener('pointerdown', event => {
-      if(event.pointerType === 'touch') return;
+      if (event.pointerType === 'mouse' && this.phase === 'playing' && !this.savingAction) this.canvas.setPointerCapture(event.pointerId);
+    }, { signal });
+    window.addEventListener('pointerup', event => {
+      if (this.canvas.hasPointerCapture(event.pointerId)) this.canvas.releasePointerCapture(event.pointerId);
+    }, { signal });
+    this.canvas.addEventListener('mousedown', event => {
+      if (this.touch.active) return;
       if (this.phase !== 'playing' || this.savingAction) return;
       event.preventDefault();
       this.updatePointer(event);
       if (this.pointerInHUD()) return;
       if (event.button === 0 && this.interact(this.renderer.screenToWorld(this.mouse.x, this.mouse.y))) return;
       this.canvas.focus();
-      this.canvas.setPointerCapture(event.pointerId);
+      if (this.controlShortcut(controls.action(`Mouse${event.button}`), false)) return;
       this.input.pointerDown(event.button);
       void this.audio.unlock().catch(() => this.notify('Sound is unavailable in this browser.'));
     }, { signal });
-    window.addEventListener('pointerup', event => {
-      if(event.pointerType === 'touch') return;
+    window.addEventListener('mouseup', event => {
       this.input.pointerUp(event.button);
-      if (this.canvas.hasPointerCapture(event.pointerId)) this.canvas.releasePointerCapture(event.pointerId);
     }, { signal });
+    this.canvas.addEventListener('auxclick', event => { event.preventDefault(); }, { signal });
     this.canvas.addEventListener('pointercancel', () => this.clearInput(), { signal });
+  }
+
+  private controlShortcut(action: ControlAction | undefined, repeat: boolean, tab = false): boolean {
+    // Tab navigates focused interfaces, even when it is a gameplay binding.
+    if (tab && this.phase !== 'playing') return false;
+    if ((action === 'character' || action === 'skills') && this.panels.canOpen(action)) {
+      if (!repeat) this.panels.toggle(action); return true;
+    }
+    if (action === 'journeys' && (this.panels.canOpen('journeys') || this.phase === 'journeys')) {
+      if (!repeat) { if (this.phase === 'journeys') this.resume(); else this.journeys.open(); } return true;
+    }
+    if (action === 'map' && (this.panels.canOpen('map') || this.phase === 'map')) {
+      if (!repeat) this.panels.toggle('map'); return true;
+    }
+    if (action === 'sound') { if (!repeat) this.toggleSound(); return true; }
+    if (action === 'debug') { if (!repeat) this.debug = !this.debug; return true; }
+    if (this.phase !== 'playing') return false;
+    if (action === 'portal') { if (!repeat) this.requestPortal(); return true; }
+    if (action === 'interact') { if (!repeat) this.interact(); return true; }
+    return false;
   }
 
   private updatePointer(event: { clientX: number; clientY: number; target?: EventTarget | null }) {

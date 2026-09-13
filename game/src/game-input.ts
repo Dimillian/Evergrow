@@ -1,10 +1,7 @@
 import type { Input } from './model.ts';
 
-const MOVEMENT = {
-  right: ['KeyD', 'ArrowRight'], left: ['KeyA', 'ArrowLeft'],
-  down: ['KeyS', 'ArrowDown'], up: ['KeyW', 'ArrowUp'],
-} as const;
-const GAME_KEYS = new Set<string>([...Object.values(MOVEMENT).flat(), 'Space', 'KeyQ', 'Digit1', 'Digit2', 'Digit3', 'Digit4']);
+import { ControlBindings, SKILL_ACTIONS, type ControlAction } from './control-bindings.ts';
+
 type Point = { x: number; y: number };
 type PointerBounds = { left: number; top: number; width: number; height: number };
 
@@ -16,23 +13,23 @@ export class GameInput {
   private pendingSkill: number | null = null;
   private pending = { attack: false, dodge: false, heal: false };
 
+  private readonly bindings: ControlBindings;
+  constructor(bindings = new ControlBindings()) { this.bindings = bindings; }
+
+  private press(action: ControlAction | undefined): void {
+    if (action === 'attack' || action === 'dodge' || action === 'heal') this.pending[action] = true;
+    const slot = SKILL_ACTIONS.findIndex(id => id === action);
+    if (slot >= 0) this.pendingSkill = slot;
+  }
   keyDown(code: string): void {
-    if (!GAME_KEYS.has(code) || this.keys.has(code)) return;
-    this.keys.add(code);
-    if (code === 'Space') this.pending.dodge = true;
-    if (code === 'KeyQ') this.pending.heal = true;
-    if (/^Digit[1-4]$/.test(code)) this.pendingSkill = Number(code.at(-1));
+    if (this.keys.has(code)) return;
+    this.keys.add(code); this.press(this.bindings.action(code));
   }
-
   keyUp(code: string): void { this.keys.delete(code); }
-
   pointerDown(button: number): void {
-    if ((button !== 0 && button !== 2) || this.buttons.has(button)) return;
-    this.buttons.add(button);
-    if (button === 0) this.pending.attack = true;
-    else this.pendingSkill = 0;
+    if (this.buttons.has(button)) return;
+    this.buttons.add(button); this.press(this.bindings.action(`Mouse${button}`));
   }
-
   pointerUp(button: number): void { this.buttons.delete(button); }
 
   /** Ignore invalid/hidden surface bounds instead of injecting NaN into aiming. */
@@ -49,16 +46,16 @@ export class GameInput {
   }
 
   consume(aim: Point, combatBlocked: boolean): Input {
-    const held = (codes: readonly string[]) => codes.some(code => this.keys.has(code));
+    const held = (action: ControlAction) => this.bindings.get(action).some(code => code !== null && (code.startsWith('Mouse') ? this.buttons.has(Number(code.slice(5))) : this.keys.has(code)));
     const input: Input = {
-      moveX: Number(held(MOVEMENT.right)) - Number(held(MOVEMENT.left)),
-      moveY: Number(held(MOVEMENT.down)) - Number(held(MOVEMENT.up)),
+      moveX: Number(held('right')) - Number(held('left')),
+      moveY: Number(held('down')) - Number(held('up')),
       aimX: aim.x, aimY: aim.y,
-      attack: !combatBlocked && (this.buttons.has(0) || this.pending.attack),
+      attack: !combatBlocked && (held('attack') || this.pending.attack),
       dodge: this.pending.dodge, heal: this.pending.heal,
-      ...(this.pendingSkill===null&&this.buttons.has(2)?{skillPressed:false}:{}),
-      heldSkillSlots: combatBlocked?[]:[...(this.buttons.has(2)?[0]:[]),...[1,2,3,4].filter(n=>this.keys.has(`Digit${n}`))],
-      skillSlot: combatBlocked ? null : this.pendingSkill ?? (this.buttons.has(2) ? 0 : null),
+      ...(this.pendingSkill===null&&held('skill0')?{skillPressed:false}:{}),
+      heldSkillSlots: combatBlocked?[]:[...(held('skill0')?[0]:[]),...[1,2,3,4].filter(n=>held(SKILL_ACTIONS[n]))],
+      skillSlot: combatBlocked ? null : this.pendingSkill ?? (held('skill0') ? 0 : null),
     };
     this.pending.attack = this.pending.dodge = this.pending.heal = false;
     this.pendingSkill = null;
