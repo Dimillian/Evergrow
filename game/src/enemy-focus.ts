@@ -43,7 +43,7 @@ export class EnemyFocus {
   }
 
   update(enemies: readonly Enemy[], view: CameraView, pointer: { x: number; y: number } | null,
-    alpha: number, dt: number, enabled = true): Enemy | null {
+    alpha: number, dt: number, enabled = true, inspectedId: number | null = null): Enemy | null {
     if (!enabled) { this.reset(); return null; }
     const elapsed = Number.isFinite(dt) ? Math.max(0, dt) : 0;
     const interpolation = Number.isFinite(alpha) ? Math.max(0, Math.min(1, alpha)) : 1;
@@ -96,7 +96,7 @@ export class EnemyFocus {
       this.hitRemaining = HIT_RETENTION;
     }
 
-    this.targetId = this.retainedHoverId ?? this.recentHitId;
+    this.targetId = inspectedId !== null && visible.has(inspectedId) ? inspectedId : this.retainedHoverId ?? this.recentHitId;
     return this.targetId === null ? null : visible.get(this.targetId)?.enemy ?? null;
   }
 }

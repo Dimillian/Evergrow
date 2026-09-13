@@ -102,7 +102,7 @@ test('candidate rows merge matching stats while retaining losses, derived effect
   assert.equal(cards.length, 2);
   const [candidate, equipped] = cards;
   const row = (label: string) => {
-    const matches = [...candidate.matchAll(new RegExp(`<tr><th scope="row">${label}</th>(.*?)</tr>`, 'g'))];
+    const matches = [...candidate.matchAll(new RegExp(`<tr><th scope="row">(?:<button[^>]*>)?${label}(?:</button>)?</th>(.*?)</tr>`, 'g'))];
     assert.equal(matches.length, 1, `${label} appears exactly once`);
     return matches[0][1];
   };

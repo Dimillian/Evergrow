@@ -9,7 +9,7 @@ import { chronicleValues, emptyChronicle, type ChronicleLedger, type ChronicleSo
 import { escapeUI as esc, trapDialogFocus, uiIcon } from './ui-components.ts';
 import { GamepadMenu } from './gamepad-menu.ts';
 import { PAD, type GamepadInput } from './gamepad-input.ts';
-import { UITooltip } from './ui-tooltip.ts';
+import { RetainedTooltip } from './retained-tooltip.ts';
 import './chronicle-panel.css';
 let nextTooltipId=0;
 const tabs = ['Overview', 'Achievements', 'Statistics', 'Uniques'] as const;
@@ -34,14 +34,13 @@ export class ChroniclePanel {
  private uniqueFilter='All'; private uniqueSearch='';
  private embedded:boolean;
  private onClose:()=>void;
- private tooltip:UITooltip;
+ private tooltip:RetainedTooltip;
  private explainedAnchor:HTMLElement|null=null;
- private hideTimer:ReturnType<typeof setTimeout>|undefined;
  constructor(mount:HTMLElement,onClose:()=>void,embedded=false) {
   this.onClose=onClose;this.embedded=embedded;
   this.element=document.createElement('div');this.element.className='chronicle-overlay'+(embedded?' home-embedded':'');this.element.hidden=true;mount.append(this.element);
-  this.tooltip=new UITooltip(embedded?(mount.parentElement??mount):mount,`chronicle-tooltip-${++nextTooltipId}`,'chronicle-tooltip');
-  this.element.addEventListener('click',e=>{const anchor=(e.target as HTMLElement).closest<HTMLElement>('[data-achievement],[data-stat-help],[data-unique]');if(anchor)this.explain(anchor);else this.hideTooltip();
+  this.tooltip=new RetainedTooltip(embedded?(mount.parentElement??mount):this.element,`chronicle-tooltip-${++nextTooltipId}`,'chronicle-tooltip');
+  this.element.addEventListener('click',e=>{const anchor=(e.target as HTMLElement).closest<HTMLElement>('[data-achievement],[data-stat-help],[data-unique]');if(anchor)this.explain(anchor);else if(!(e.target as Element).closest('.ui-term,.ui-explanation'))this.hideTooltip();
    const b=(e.target as HTMLElement).closest<HTMLButtonElement>('button');if(e.target===this.element||b?.hasAttribute('data-close'))this.close();else if(b?.dataset.tab!==undefined){this.tab=Number(b.dataset.tab);this.render();this.element.querySelector<HTMLElement>(`[data-tab="${this.tab}"]`)?.focus();}else if(b?.dataset.uniqueFilter){this.uniqueFilter=b.dataset.uniqueFilter;this.render();this.element.querySelector<HTMLElement>(`[data-unique-filter="${this.uniqueFilter}"]`)?.focus();}else if(b?.dataset.group){this.group=b.dataset.group;this.render();this.element.querySelector<HTMLElement>(`[data-group="${this.group}"]`)?.focus();}},{signal:this.life.signal});
   this.element.addEventListener('input',e=>{const input=e.target as HTMLInputElement;if(!input.matches('[data-unique-search]'))return;this.uniqueSearch=input.value;const caret=input.selectionStart;this.render();const next=this.element.querySelector<HTMLInputElement>('[data-unique-search]');next?.focus();if(caret!==null)next?.setSelectionRange(caret,caret);},{signal:this.life.signal});
   this.element.addEventListener('change',e=>{const s=e.target as HTMLSelectElement;if(s.matches('[data-character]')){this.selected=s.value;this.render();this.element.querySelector<HTMLElement>('[data-character]')?.focus();}},{signal:this.life.signal});
@@ -52,12 +51,11 @@ export class ChroniclePanel {
     if(e.pointerType==='touch')return;
     const anchor=(e.target as HTMLElement).closest('[data-achievement],[data-stat-help],[data-unique]');
     if(e.relatedTarget instanceof Node&&(anchor?.contains(e.relatedTarget)||this.tooltip.element.contains(e.relatedTarget)))return;
-    this.cancelTooltipHide();this.hideTimer=setTimeout(()=>this.hideTooltip(),140);
+    this.tooltip.defer();
   },{signal:this.life.signal});
-  this.element.addEventListener('focusout',()=>this.hideTooltip(),{signal:this.life.signal});
-  this.element.addEventListener('scroll',()=>this.hideTooltip(),{signal:this.life.signal,capture:true});
-  this.tooltip.element.addEventListener('pointerenter',()=>this.cancelTooltipHide(),{signal:this.life.signal});
-  this.tooltip.element.addEventListener('pointerleave',()=>this.hideTooltip(),{signal:this.life.signal});
+  this.element.addEventListener('focusout',()=>this.tooltip.defer(),{signal:this.life.signal});
+  this.element.addEventListener('scroll',event=>{if(!(event.target instanceof Element)||!event.target.closest('.ui-tooltip'))this.hideTooltip();},{signal:this.life.signal,capture:true});
+  this.tooltip.element.addEventListener('pointerleave',()=>this.tooltip.defer(),{signal:this.life.signal});
   window.addEventListener('resize',()=>this.hideTooltip(),{signal:this.life.signal});
  }
  get opened(){return !this.element.hidden;}
@@ -115,13 +113,12 @@ export class ChroniclePanel {
   return `<div class="chronicle-unique-controls"><div class="chronicle-filters">${['All','Found','Unfound'].map(f=>`<button data-unique-filter="${f}" aria-pressed="${this.uniqueFilter===f}">${f}</button>`).join('')}</div><input class="ui-input" data-unique-search type="search" aria-label="Search uniques or skills" placeholder="Search items or skills" value="${esc(this.uniqueSearch)}"/></div>
     <div class="chronicle-uniques">${filtered.map(({definition:u,found,level})=>`<button class="chronicle-unique ${found?'is-found':'is-unfound'}" data-unique="${u.id}" aria-label="${esc(u.name)} · ${found?'Found':'Unfound'}"><span class="chronicle-unique-art">${itemIconSVG(generateUnique(7319,Math.max(1,level),u.id),100)}</span><span class="chronicle-unique-caption"><small>${found?'✧ Discovered':'Undiscovered'}</small><strong>${esc(u.name)}</strong><span>${esc(SKILL_DEFINITIONS[u.skill].name)}</span></span></button>`).join('')}</div>${!filtered.length?'<p class="chronicle-empty">No matching uniques.</p>':''}`;
  }
- private cancelTooltipHide():void{clearTimeout(this.hideTimer);this.hideTimer=undefined;}
- private hideTooltip():void{this.cancelTooltipHide();this.explainedAnchor=null;this.tooltip.hide();}
+ private hideTooltip():void{this.explainedAnchor=null;this.tooltip.hide();}
  private help(key:string):string{return CHRONICLE_STAT_HELP[key]?`data-stat-help="${key}" tabindex="0"`:'';}
  private explain(target:EventTarget|null):void {
   const anchor=target instanceof Element?target.closest<HTMLElement>('[data-achievement],[data-stat-help],[data-unique]'):null;
   if(!anchor||!this.opened)return;
-  this.cancelTooltipHide();
+
   if(this.explainedAnchor===anchor&&!this.tooltip.element.hidden)return;
   this.explainedAnchor=anchor;
   const entry=uniqueCollection(this.sources()).find(e=>e.definition.id===anchor.dataset.unique);

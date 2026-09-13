@@ -1102,13 +1102,14 @@ export class Game {
       }
       if (now >= this.nextAutosave) { this.saveCharacter(); this.nextAutosave = now + 20_000; }
     }
-    this.shell.setBuffs(activeBuffs(this.sim.player));
+    this.shell.setBuffs(activeBuffs(this.sim.player, this.sim.groundEffects));
     this.shell.shortcutMenu.setPoints(this.sim.player.character.statPoints, this.sim.player.character.skillPoints);
     this.shell.setPortalState(this.sim.portal.active ? this.sim.portal.progress : null,
       !!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x, this.sim.player.y));
     if(this.touch.active) this.touch.setPortal(this.sim.portal.active ? this.sim.portal.progress : null,!!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x,this.sim.player.y));
     this.renderer.pointerX = this.mouse.x;
     this.renderer.pointerY = this.mouse.y;
+    this.renderer.inspectedEnemyId = this.shell.targetBuffs.held ? this.renderer.targetEffects?.id ?? null : null;
     this.renderer.pointerActive = this.mouse.present && (this.usingGamepad || this.touch.active || !this.pointerOverEffects);
     // Presentation existence does not reveal whether the Thor dashboard covers it.
     this.renderer.navigationVisible = !(this.touch.active && (window.innerWidth < 620 || this.touch.phoneLandscape));
@@ -1136,6 +1137,7 @@ export class Game {
     ui.setTransform(this.uiCanvas.width / this.renderer.width, 0, 0,
       this.uiCanvas.height / this.renderer.height, 0, 0);
     if (this.phase !== 'ready') this.renderer.renderUI(ui, this.sim, this.world, settings);
+    this.shell.setTargetEffects(this.phase === 'playing' ? this.renderer.targetEffects : null);
     this.groundLootHighlight.update(this.sim.player, this.sim.groundItems,
       this.renderer.groundLootLabels, this.renderer.width, this.renderer.height,
       this.phase === 'playing' && !this.savingAction && !this.touch.active && !this.usingGamepad

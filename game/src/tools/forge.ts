@@ -1,3 +1,5 @@
+import { UITooltipStack } from '../ui-tooltip-stack.ts';
+import { effectExplanation } from '../effect-terms.ts';
 import '../ui-kit.css';
 import '../item-ui.css';
 import { toolPage, boundedNumber, downloadJSON, reportRoute } from './common.ts';
@@ -13,6 +15,8 @@ import { addInventoryItem, equipItem } from '../inventory.ts';
 import { drawCharacterPortrait } from '../character-portrait.ts';
 import type { Item, ItemKind, ItemTier } from '../character-types.ts';
 const root=await toolPage('Item forge','Generate reproducible items with the real gear rules. Inspect affixes, preview equipment and export recipes. Everything stays in this study.');
+const explanations = new UITooltipStack(root, effectExplanation);
+window.addEventListener('pagehide', () => explanations.dispose(), {once:true});
 const q=new URLSearchParams(location.search);
 root.insertAdjacentHTML('beforeend',`<form class="tool-toolbar"><label>Seed<input name="seed" type="number" min="0" max="4294967295" value="${boundedNumber(q.get('seed'),7319,0,4294967295)}" required></label><label>Item level<input name="level" type="number" min="1" max="1000000" value="${boundedNumber(q.get('level'),10,1,1000000)}" required></label><label>Kind<select name="kind">${ITEM_KINDS.map(k=>`<option>${k}</option>`).join('')}</select></label><label>Profile<select name="profile"></select></label><label>Rarity<select name="tier">${Object.entries(TIER_NAMES).map(([id,name])=>`<option value="${id}">${name}</option>`).join('')}</select></label><label>Material<select name="material"></select></label><label>Enhancement<input name="enhancement" type="number" min="0" max="10" value="${boundedNumber(q.get('enhancement'),0,0,10)}" required></label><button type="submit">Generate item</button><button type="button" id="random">Random seed</button><button type="button" id="batch">Generate 12</button></form><p class="tool-status" role="status"></p><div class="tool-split"><section class="tool-panel"><div id="gear"></div><div id="tooltip"></div><button id="export">Export item JSON</button><details><summary>Exact recipe & derived data</summary><pre id="recipe"></pre></details></section><section class="tool-panel"><h2>Equipped preview</h2><label>Facing <input id="facing" type="range" min="0" max="7" value="2"></label><canvas id="portrait" width="600" height="660" aria-label="Generated equipment on a staged character"></canvas><p>Neutral starter outfit. Hand conflicts use the real inventory rules.</p><h2>This session <small>latest 16</small></h2><div class="forge-history"></div></section></div>`);
 const form=root.querySelector('form')!,field=(name:string)=>form.elements.namedItem(name) as HTMLInputElement|HTMLSelectElement;
@@ -26,6 +30,7 @@ const sim=new Simulation({blocked:()=>false,move:(x,y,dx,dy)=>({x:x+dx,y:y+dy})}
 const history:Array<{item:Item;recipe:ForgeRecipe}>=[];let current:Item;
 function draw(){const c=root.querySelector<HTMLCanvasElement>('#portrait')!;drawCharacterPortrait(c.getContext('2d')!,sim.player,2,Number(root.querySelector<HTMLInputElement>('#facing')!.value)*Math.PI/4,c.width,c.height);}
 function inspect(entry:typeof history[number]){
+  explanations.hide();
   current=entry.item;for(const [k,v]of Object.entries(entry.recipe)){if(k==='kind'){field(k).value=String(v);profiles();}else if(k==='profile'){field(k).value=String(v);materials();}else field(k).value=String(v);}
   sim.player.character=createCharacterSheet();sim.player.level=entry.recipe.level;addInventoryItem(sim.player.character,current);
   const result=current.kind==='charm'?{ok:true,message:''}:equipItem(sim.player.character,0,sim.player.level);refreshCharacter(sim.player);

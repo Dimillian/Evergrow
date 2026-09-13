@@ -160,3 +160,13 @@ test('lethal or invisible hits do not obscure a surviving visible enemy in the s
   focus.noteHits([hit(1), hit(3, 0), hit(2)]);
   assert.equal(focus.update([invisible, survivor, dying], view, null, 1, 0), survivor);
 });
+
+test('inspecting target effects retains only a visible living target and releases when inspection ends', () => {
+  const focus=new EnemyFocus(), target=enemy();
+  assert.equal(focus.update([target],view,point(),1,0),target);
+  assert.equal(focus.update([target],view,null,1,3,true,target.id),target);
+  assert.equal(focus.hoveredId,null,'inspection never becomes an attack hover');
+  assert.equal(focus.update([target],view,null,1,0),null);
+  target.hp=0;assert.equal(focus.update([target],view,null,1,0,true,target.id),null);
+  target.hp=100;target.x=target.prevX=10000;assert.equal(focus.update([target],view,null,1,0,true,target.id),null);
+});

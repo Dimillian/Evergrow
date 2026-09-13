@@ -12,11 +12,13 @@ export const STATUS_RULES = Object.freeze({ burnInterval: .5 });
 export function applySlow(enemy: Enemy, effect: SlowEffect): void {
   if (enemy.state === 'dead') return;
   if (isBossKind(enemy.kind)) effect = { duration: effect.duration * .5, factor: Math.max(.65, effect.factor) };
+  if (effect.duration >= enemy.slowTime) (enemy.statusDurations ??= {}).slow = effect.duration;
   enemy.slowTime = Math.max(enemy.slowTime, effect.duration);
   enemy.slowFactor = Math.min(enemy.slowFactor, effect.factor);
 }
 export function applyBurn(enemy: Enemy, effect: BurnEffect): void {
   if (enemy.state === 'dead') return;
+  if (effect.duration >= enemy.burnTime) (enemy.statusDurations ??= {}).burn = effect.duration;
   enemy.burnTime = Math.max(enemy.burnTime, effect.duration);
   enemy.burnDps = Math.max(enemy.burnDps, effect.dps);
 }
@@ -28,9 +30,16 @@ export function applyStun(enemy: Enemy, duration: number, kind: 'stun' | 'freeze
     duration = Math.min(threat.controlMaximum, duration * threat.controlFactor);
     enemy.controlImmunity = duration + threat.controlRest;
   }
+  if (duration >= enemy.stagger) (enemy.statusDurations ??= {}).stagger = duration;
   enemy.stagger = Math.max(enemy.stagger, duration); enemy.interrupted = true;
-  if (kind === 'freeze') enemy.freezeTime = Math.max(enemy.freezeTime ?? 0, duration);
-  if (kind === 'stun') enemy.stunTime = Math.max(enemy.stunTime ?? 0, duration);
+  if (kind === 'freeze') {
+    if (duration >= (enemy.freezeTime ?? 0)) (enemy.statusDurations ??= {}).freeze = duration;
+    enemy.freezeTime = Math.max(enemy.freezeTime ?? 0, duration);
+  }
+  if (kind === 'stun') {
+    if (duration >= (enemy.stunTime ?? 0)) (enemy.statusDurations ??= {}).stun = duration;
+    enemy.stunTime = Math.max(enemy.stunTime ?? 0, duration);
+  }
 }
 
 /** Run after state time advances and before AI. False suppresses this tick's AI. */

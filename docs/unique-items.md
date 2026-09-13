@@ -94,3 +94,7 @@ Preview links:
 The showcase uses disposable targets and the runtime renderer. These checks validate mechanics; player testing still decides balance and input feel.
 
 Verification: the full 1,356-test suite passed; the final targeted run passed all 45 Unique/tool tests after the added range and staged-input checks.
+
+### Shared effect UI · September 13
+
+All eighteen signatures now separate a concise primary power from nested rules in item comparisons and Chronicles. Stored Fireballs show count and earliest expiry; Patient Bastion shows stored damage; Borrowed Life shows absorption; Lunge shows only its usable return window. Ashen Double and conductor presence show remaining lifetimes. Broken Seal and Pale Huntsman extend the existing Ward/Ghost Hunt cards. Red Harvest belongs to its marked target. Ordinary projectile travel and Piercing Shot's existing charge display do not gain redundant player badges. No signature or drop rule changes.

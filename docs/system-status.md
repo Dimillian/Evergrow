@@ -1,6 +1,8 @@
 # Current system status
 
-Local September 13, 2026: seven [mana-reserving auras](auras.md), twenty ranks each, shared buff/buildup icons and reserved mana-orb presentation. Optional leaves use existing 20–30-point routes; no new travel nodes or save reset. Not published.
+Local September 13, 2026: [effect UI audit](effect-ui-audit-2026-09-13.md) implemented across equipment, stats, Uniques, Techniques and player/target status strips. Shared retained/nested explanations, accurate timed budgets, generic Slowed and target-specific marks/exposure. No balance or save changes.
+
+Earlier September 13, 2026:  seven [mana-reserving auras](auras.md), twenty ranks each, shared buff/buildup icons and reserved mana-orb presentation. Optional leaves use existing 20–30-point routes; no new travel nodes or save reset. Not published.
 
 Published v0.5.0, 2026-09-13: twelve skill-changing Uniques, fixed level-scaled affixes, equal Unique/Legendary drop chances and a found/unfound Chronicles collection are implemented. Existing saves remain valid. The release also includes the compact HUD, stained-glass skill icons, inventory skill assignment and navigation menu. See [Unique items](unique-items.md).
 
@@ -166,7 +168,7 @@ Affix/hybrid checkpoint verification: all 836 code tests pass, including weighte
 
 Sword/wand follow-up: mixed one-handed basics now alternate one action per click (or sequentially while held), with independent weapon speed, mana cost and release. Next-hand HUD/aim assistance and offhand wand-tip launch share the same selection. Unaffordable wand turns wait without skipping or firing both hands.
 
-Enemy debuff HUD: target and boss plates now show compact Burn/Chill/Stagger indicators and actual remaining durations. Shared projection hides expired/dead effects; narrow layouts retain icons/timers, and the boss resistance note clears the row. Verified 19 focused status/focus/layout tests plus application/headless checks and production build.
+Historical initial enemy debuff HUD (superseded by the September 13 shared strips): target and boss plates showed compact Burn/Chill/Stagger indicators and actual remaining durations. Shared projection hides expired/dead effects; narrow layouts retain icons/timers, and the boss resistance note clears the row. Verified 19 focused status/focus/layout tests plus application/headless checks and production build.
 
 ### Spell anticipation and aftermath · 2026-09-07
 

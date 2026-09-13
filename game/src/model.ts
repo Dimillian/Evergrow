@@ -262,6 +262,8 @@ export interface Enemy {
   hitAngle: number;
   radius: number;
   stagger: number;
+  /** Applied duration retained for status progress; never drives combat. */
+  statusDurations?: Partial<Record<'burn' | 'slow' | 'freeze' | 'stun' | 'stagger', number>>;
   freezeTime?: number;
   stunTime?: number;
   attackHit: boolean;
@@ -302,6 +304,8 @@ export interface Projectile {
 }
 
 export interface GroundEffect {
+  /** Initial delay + duration, retained only for presentation progress. */
+  initialDuration?: number;
   travel?: {vx:number;vy:number;remaining:number};
   id: number; kind: 'meteor' | 'arrowRain' | 'storm' | 'frost' | 'embers'; x: number; y: number; radius: number;
   delay: number; duration: number; interval: number; tick: number;

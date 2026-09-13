@@ -5,3 +5,6 @@
 .ui-term { display: inline; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; line-height: inherit; text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
 .ui-term:hover, .ui-term:focus-visible { color: #e4caff; text-decoration-style: solid; outline: 1px solid #c7a0ef88; outline-offset: 2px; }
 .skill-atlas-tooltip.ui-tooltip { pointer-events: auto; }
+
+.ui-retained-tooltip.ui-tooltip { pointer-events: auto; }
+.ui-term { font: inherit; text-align: inherit; }

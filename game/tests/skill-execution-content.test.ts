@@ -1,3 +1,4 @@
+import { skillMechanicFacts } from '../src/skill-mechanic-facts.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SKILL_EXECUTION, groundEffectPulseCount, skillDamageSuffix, skillUtilityLabel } from '../src/skill-execution-content.ts';
@@ -20,8 +21,8 @@ test('every skill has immutable finite execution content and numeric UI reads it
   assert.equal(skillDamageSuffix('volley'), ' / arrow');
   assert.equal(skillDamageSuffix('rainOfArrows'), ' / wave');
   assert.equal(skillDamageSuffix('meteor'), '');
-  assert.ok(SKILL_DEFINITIONS.arcLightning.description.includes(String(SKILL_EXECUTION.arcLightning.jumps)));
-  assert.ok(SKILL_DEFINITIONS.rainOfArrows.description.includes(String(groundEffectPulseCount(SKILL_EXECUTION.rainOfArrows))));
+  assert.ok(skillMechanicFacts('arcLightning',SKILL_EXECUTION.arcLightning).includes(`${SKILL_EXECUTION.arcLightning.jumps} targets`));
+  assert.ok(skillMechanicFacts('rainOfArrows',SKILL_EXECUTION.rainOfArrows).includes(`${groundEffectPulseCount(SKILL_EXECUTION.rainOfArrows)} waves`));
 });
 
 test('scheduled ground attacks snapshot burn and damage, and cannot hit unseen targets', () => {
@@ -32,6 +33,7 @@ test('scheduled ground attacks snapshot burn and damage, and cannot hit unseen t
   const request: GroundEffectRequest = { kind: 'meteor', skill: 'meteor', x: 0, y: 0, radius: 50,
     delay: .05, duration: 0, interval: 1, damage: 12, style: 'fire', burn };
   scheduleGroundEffect(effects, request, { nextId: () => 1, emit: event => events.push(event) });
+  assert.equal(effects[0].initialDuration,.05);
   request.damage = 500; burn.duration = 10; burn.dps = 500; request.radius = 1000;
   const result = advanceGroundEffects(effects, .1, {
     player: sim.player, enemies: sim.enemies, visible: (_ax, _ay, bx) => bx !== hidden.x,

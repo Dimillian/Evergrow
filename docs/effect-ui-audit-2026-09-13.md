@@ -1,6 +1,10 @@
 # Effect explanations and status presentation audit
 
-Local source review, 2026-09-13. This is a proposed follow-up to the Spellweave/buff/tooltip implementation, not release notes. The separate aura pass is being integrated in the same workspace. No playable saves or gameplay were inspected.
+Local source audit, implemented September 13, 2026. The findings and proposed presentations below record the audit that guided this pass; they are not release notes. All audit groups are now implemented, including lower-priority summoned/maintained indicators. No playable saves or gameplay were inspected.
+
+Implementation: retained equipment/stat/collection tooltips; shared glossary; concise eighteen-Unique and ninety-Technique summaries; resolved effect disclosures; corrected Living Stone and keystones; missing player budgets; shared target icons with Red Harvest, per-element Exposure and applied-duration fills. Heartwood charge and ordinary cooldowns remain on their action buttons. No balance, allocation or save changes.
+
+Static reviews and code checks are documented in [Development tools](development-tools.md); shared interaction ownership is in [UI kit](ui-kit.md).
 
 ## Spellweave acquisition
 
@@ -105,7 +109,7 @@ The current slow projection labels every `slowTime` effect **Chill**, including 
 
 The initial elapsed-fill duration must come from the applied effect, especially for rank/Technique-modified statuses. Remaining time alone is insufficient to draw a truthful draining fill. Expired/dead targets and consumed marks must clear immediately.
 
-## Recommended sequence
+## Audit implementation sequence (completed)
 
 1. Fix Living Stone's misleading minor-node copy; give item/stat tooltip surfaces the same retained-hover behavior as the atlas.
 2. Add shared definitions for Ward, Afterguard, Echo, Pierce, Rebound, direct hit and elemental statuses; trim the largest skill/Unique paragraphs.
@@ -114,3 +118,7 @@ The initial elapsed-fill duration must come from the applied effect, especially 
 5. Add the lower-priority maintained/summoned states and persistent Overload indicator after checking HUD density.
 
 Sources: `active-buffs.ts`, `affix-combat.ts`, `unique-content.ts`, `unique-combat.ts`, `equipment-affix-content.ts`, `elemental-weapon.ts`, `skill-tree-content.ts`, `skill-tree.ts`, `skill-tree-routes.ts`, `skill-content.ts`, `skill-progression.ts`, `player-skill-effects.ts`, `skill-sustain.ts`, `aura-content.ts`, `auras.ts`, `enemy-debuffs.ts`, `item-tooltip.ts`, `character-stat-details.ts`.
+
+## Verification of this local implementation
+
+The 1,385-test headless suite passed all effect/content checks. Nine cloud-cadence failures in the concurrent run were worker timeouts; the unchanged 38-test cloud-cadence group passed in isolation. The final 29 focused effect/focus/execution checks, both TypeScript configurations, production build and whitespace checks passed. Static in-app inspection verified equipment → Spellweave → empowered-action cards, retained parent focus, target-icon placement and deepest-first Escape. Gameplay, saves and deployment were not exercised.

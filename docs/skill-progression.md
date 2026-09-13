@@ -251,3 +251,7 @@ Spellweave is automatic once any gear/tree source grants its bonus; Borrowed Fla
 ## Aura leaves
 
 Seven auras attach to existing routes at 20–30 origin points, without extra travel nodes. Assignment automatically activates them and reserves mana. Twenty purchased ranks improve potency and reservation efficiency. Blood Oath and Elemental Resonance cost 25 points following placement feedback. See [Auras](auras.md) for effects, costs, UI and runtime rules.
+
+### Effect audit implementation · September 13
+
+Living Stone's armor-only steps now identify Afterguard as the endpoint reward. Keystone summaries retain their tradeoffs; Open Hand shows current equipment eligibility. Every Doctrine keeps “Choose one” visible. All active skills and ninety Techniques use short primary text, shared mechanic terms, current resolved costs/potency and expandable effect values. Full Technique base rules remain available beneath an underlined term. Arcane Overload has a persistent HUD indicator while enabled; its extra mana cost stays visible.

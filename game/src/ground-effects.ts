@@ -22,7 +22,7 @@ export interface GroundEffectContext {
 /** Copy the entire payload at release; later content/gear changes cannot rewrite a scheduled attack. */
 export function scheduleGroundEffect(effects: ActiveGroundEffect[], effect: GroundEffectRequest, context: ScheduleContext): void {
   if (effects.length >= GROUND_EFFECT_RULES.maximum) return;
-  effects.push({ ...effect, ...(effect.offense ? { offense: { ...effect.offense } } : {}), initialDelay: effect.delay,
+  effects.push({ ...effect, initialDuration: Math.max(0,effect.delay) + Math.max(0,effect.duration), ...(effect.offense ? { offense: { ...effect.offense } } : {}), initialDelay: effect.delay,
     ...(effect.travel ? {travel:{...effect.travel}} : {}), ...(effect.scorch ? { scorch: { ...effect.scorch } } : {}), ...(effect.burn ? { burn: { ...effect.burn } } : {}), ...(effect.slow ? { slow: { ...effect.slow } } : {}), id: context.nextId(), tick: 0,
     pulsesLeft: groundEffectPulseCount(effect) });
   context.emit({ type: 'ground', x: effect.x, y: effect.y, radius: effect.radius,

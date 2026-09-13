@@ -1,3 +1,7 @@
+import { applyBurn, applySlow, applyStun } from './combat-status.ts';
+import { enemyDebuffs } from './enemy-debuffs.ts';
+import { drawEnemyPlate, getEnemyPlateLayout } from './enemy-plate.ts';
+import { uniqueSlot } from './unique-content.ts';
 import { AURA_IDS } from './aura-content.ts';
 import { manaCapacity } from './auras.ts';
 import { activeBuffs } from './active-buffs.ts';
@@ -149,12 +153,38 @@ const tree = life.own(new SkillTreePanel(shell.panelMount, {
   develop: command => result(executeCharacterCommand(p, command)), close: () => show('character'),
   allocate: id => result(executeCharacterCommand(p, { type: 'allocateNode', id })), assign: (slot, skill) => result(assignSkill(p, slot, skill)),
 }));
+const effectReview = new URLSearchParams(location.search).get('effects');
+if (effectReview) {
+  const signatures = effectReview === 'guard' ? ['patient-bastion'] : effectReview === 'rogue' ? ['duelists-return','ashen-double'] : effectReview === 'bow' ? ['pale-huntsman'] : effectReview === 'ward' ? ['broken-seal','borrowed-life'] : ['cinderheart-testament','borrowed-life'];
+  p.character.equipped.weapon = generateItem(400,p.level,'weapon',effectReview === 'guard' || effectReview === 'rogue' ? 'longsword' : effectReview === 'bow' ? 'crescent-recurve' : 'star-wand','common');
+  p.character.equipped.offhand = null;
+  for (const id of signatures) { const u = UNIQUES.find(u => u.id === id)!; p.character.equipped[uniqueSlot(u)] = generateUnique(400,p.level,id); p.character.allocatedNodes.push(`skill:${u.skill}`); }
+  refreshCharacter(p);
+  p.character.arcaneOverload = true; p.character.allocatedNodes.push('keystone:arcane-overload');
+}
+const statusTarget = effectReview ? sim.spawnEnemy('brute', p.x + 300, p.y)! : null;
+if (statusTarget) {
+  applyBurn(statusTarget,{duration:4,dps:12}); applySlow(statusTarget,{duration:3,factor:.6}); applyStun(statusTarget,1.4);
+  statusTarget.auraExposure = {fire:{power:12,remaining:2.3},frost:{power:12,remaining:1.6}};
+}
 const renderer = new Renderer(), fx = life.own(new PostFX(shell.canvas));
 function background() {
   if (selected === 'hud' && new URLSearchParams(location.search).has('buffs')) {
     p.derived.spellweavePercent = 20; p.derived.afterguardPercent = 24;
     p.affixBuffs = { spell: 3.4, melee: 2.1, guard: 2.5 };
     p.skillEffects = { echoes: [], brace: { remaining: 1.6, reduction: .2, charges: 0, bonus: 0 } };
+  }
+  if (effectReview) {
+    const effects = p.skillEffects = { echoes: [] } as NonNullable<typeof p.skillEffects>;
+    if (effectReview === 'guard') effects.bastion = {damage:86,remaining:5.2};
+    else if (effectReview === 'rogue') { effects.returnStep = {x:p.x-80,y:p.y,remaining:1.7,speed:520}; effects.decoy = {id:900,x:p.x+50,y:p.y,radius:10,reach:100,angle:0,remaining:1.2,hp:16,maxHp:20}; }
+    else if (effectReview === 'bow') { effects.ghostHunt = {remaining:4.2,reduction:0,charges:2,bonus:.6}; effects.archer = {x:p.x-40,y:p.y,angle:0,remaining:4.2}; }
+    else {
+      effects.borrowed = {capacity:23,remaining:2.7};
+      if (effectReview === 'ward') effects.ward = {capacity:32,remaining:2.8,rupture:{absorbed:58,cap:120,radius:140,offense:{critChance:0,critMultiplier:1,lifeOnHit:0}}};
+      else effects.embers = [{remaining:8.4,shots:[]},{remaining:16.8,shots:[]}];
+    }
+    if (statusTarget) effects.harvest = [{target:statusTarget.id,remaining:3.2}];
   }
   const w = innerWidth, h = innerHeight, density = devicePixelRatio || 1;
   shell.canvas.width = Math.round(w * density); shell.canvas.height = Math.round(h * density);
@@ -168,6 +198,11 @@ function background() {
   inventory.refresh(p);
   shell.resizeControls(renderer.width, renderer.height);
   shell.setBuffs(selected === 'hud' ? activeBuffs(p) : []);
+  if (selected === 'hud' && statusTarget) {
+    const debuffs = enemyDebuffs(statusTarget,p), plate = getEnemyPlateLayout(renderer.width,renderer.height,false,0,true);
+    drawEnemyPlate(ui,statusTarget,renderer.width,renderer.height,{hasDebuffs:true,reducedMotion:true});
+    shell.setTargetEffects({id:statusTarget.id,buffs:debuffs,x:(plate.x+plate.width/2)/renderer.width,y:(plate.y+76)/renderer.height,opacity:1});
+  } else shell.setTargetEffects(null);
   shell.shortcutMenu.setPoints(p.character.statPoints, p.character.skillPoints);
 }
 function show(panel: string) {

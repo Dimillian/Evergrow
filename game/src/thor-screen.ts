@@ -1,3 +1,5 @@
+import { UITooltipStack } from './ui-tooltip-stack.ts';
+import { effectExplanation } from './effect-terms.ts';
 import { loadGameFont } from './font.ts';
 import { installUITheme } from './ui-theme.ts';
 import { escapeUI as e, uiIcon } from './ui-components.ts';
@@ -40,6 +42,8 @@ root.innerHTML = `<div class="thor-shell"><header class="thor-header"><span clas
 <section class="thor-content" id="thor-content"></section><footer class="thor-footer"><button data-panel="journeys">${uiIcon('journal')}<span>Journal</span></button><button data-action="portal">${uiIcon('star')}<span>Portal</span></button><button data-action="resume" id="thor-resume">${uiIcon('close')}<span>Resume</span></button></footer><div class="thor-xp"><i></i></div><div id="thor-detail" class="thor-detail" hidden></div></div>`;
 const get = (selector: string) => root.querySelector<HTMLElement>(selector)!;
 const content = get('#thor-content');
+const explanations = new UITooltipStack(root, effectExplanation);
+window.addEventListener('pagehide', () => explanations.dispose(), {once:true});
 function itemCell(item: ThorItem | null) { return item ? `<button class="thor-item" data-item="${e(item.id)}" style="--rarity:${e(item.color)}" aria-label="${e(item.name)}">${icon(item)}<small>${n(item.level)}</small></button>` : '<span class="thor-item empty"></span>'; }
 function render() {
     const s = state, active = !!s?.session;
@@ -88,11 +92,11 @@ function render() {
     lastContent = html;
     const detail = get('#thor-detail'), d = s?.detail, visible = active && s.phase !== 'dead' && !!d && d.id !== detailClosed;
     detail.hidden = !visible;
+    if (!visible) explanations.hide();
     if (visible) {
         const value = `<div class="thor-detail-toolbar"><button class="thor-back" data-action="close-detail" aria-label="Back to pack">‹ <span>Pack</span><kbd>B</kbd></button><button data-action="close-detail" aria-label="Close item">${uiIcon('close')}</button></div><div class="thor-detail-scroll">${d.html}</div><button class="thor-equip" data-equip="${e(d.id)}" ${d.equipped || (s.phase !== 'playing' && s.phase !== 'paused' && s.phase !== 'character') ? 'disabled' : ''}>${d.equipped ? 'Equipped' : 'Equip'}</button>`;
         detail.style.setProperty('--item-color', d.color);
-        if (detail.innerHTML !== value)
-            detail.innerHTML = value;
+        if (detail.innerHTML !== value) { explanations.hide(); detail.innerHTML = value; }
     }
 }
 root.addEventListener('click', event => {

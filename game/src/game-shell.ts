@@ -34,6 +34,18 @@ export class GameShell {
   private readonly actions: ShellActions;
   readonly shortcutMenu: HUDShortcutMenu;
   readonly buffs: BuffBar;
+  readonly targetBuffs: BuffBar;
+  private targetId: number | null = null;
+  setTargetEffects(target: { id: number; buffs: readonly ActiveBuff[]; x: number; y: number; opacity: number } | null): void {
+    if (target?.id !== this.targetId) this.targetBuffs.hide();
+    this.targetId = target?.id ?? null;
+    this.targetBuffs.update(this.controls.hidden ? [] : target?.buffs ?? []);
+    if (target) {
+      this.targetBuffs.element.style.left = `${target.x * 100}%`;
+      this.targetBuffs.element.style.top = `${target.y * 100}%`;
+      this.targetBuffs.element.style.opacity = String(target.opacity);
+    }
+  }
   setBuffs(buffs: readonly ActiveBuff[]): void { this.buffs.update(this.controls.hidden ? [] : buffs); }
   private gamepadActive = false;
   private pauseMenu: PauseMenu | null = null;
@@ -76,6 +88,8 @@ export class GameShell {
     this.status = root.querySelector<HTMLElement>('#state-description')!;
     this.notifications = new GameNotifications(this.element);
     this.buffs = new BuffBar(this.controls);
+    this.targetBuffs = new BuffBar(this.controls, 'Target effects');
+    this.targetBuffs.element.classList.add('target-buff-bar');
     const signal = this.abort.signal;
     this.element.addEventListener('contextmenu', event => event.preventDefault(), { signal });
     this.controls.querySelector('[data-hud="map"]')!.addEventListener('click', actions.openMap, { signal });
@@ -143,7 +157,7 @@ export class GameShell {
     const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys' || phase === 'chronicle';
     this.overlay.hidden = playing || panel || phase === 'ready';
     this.controls.hidden = !playing;
-    if (!playing) this.buffs.hide();
+    if (!playing) { this.buffs.hide(); this.targetBuffs.hide(); }
     this.element.classList.toggle('playing', playing);
     if (playing || panel || phase === 'ready') {
       this.overlay.innerHTML = '';
@@ -164,7 +178,7 @@ export class GameShell {
   }
 
   dispose(): void {
-    this.buffs.dispose();
+    this.buffs.dispose(); this.targetBuffs.dispose();
     this.shortcutMenu.dispose();
     this.notifications.dispose();
     this.menuAbort.abort(); this.abort.abort();

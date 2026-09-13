@@ -87,5 +87,5 @@ test('caps, missing shields and skill-rank bonuses match the gameplay projection
   assert.equal(all.get('manaCost')!.amount,1-p.derived.manaCostMultiplier); assert.ok(all.get('manaCost')!.amount<.4); assert.equal(all.get('cooldown')!.amount,.75);
   assert.ok(Math.abs(all.get('area')!.amount - 1)<1e-12); assert.equal(all.get('pierce')!.amount,4);
   assert.equal(all.get('skill:fireball')!.amount,10);
-  assert.match(all.get('skill:fireball')!.description,/once this skill is learned/);
+  assert.match(all.get('skill:fireball')!.description,/learned skills/);
 });

@@ -1,7 +1,6 @@
 import { auraPower, manaCapacity, auraCostMultiplier } from './auras.ts';
 import { ATTRIBUTE_DAMAGE_BONUSES } from './attribute-content.ts';
 import { MANA_RULES } from './mana-content.ts';
-import { CHAIN_SUSTAIN } from './skill-execution-content.ts';
 import { CHARM_REWARD_CAPS } from './charm-content.ts';
 import { ELEMENTS, RESISTANCE_LABELS, RESISTANCE_RULES } from './resistance-content.ts';
 import type { Player, WeaponDefinition } from './model.ts';
@@ -102,7 +101,7 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
   const resources = [
     addAttribute(row('maxHp', 'Maximum life', s.maxHp, n(s.maxHp, 0), 'Life capacity. Increasing it does not heal you.', `${PLAYER_DEFAULTS.maxHp} + ${attributeBonus('vitality', 6)} Vitality + life bonuses`, ['vitality', 'maxHp']), 'vitality'),
     row('lifeRegen', 'Life regeneration', s.lifeRegeneration, `${n(s.lifeRegeneration)} / s`, 'Restores life continuously, up to maximum life.', 'Sum of regeneration bonuses', ['lifeRegen']),
-    row('lifeOnHit', 'Life on hit', s.lifeOnHit, n(s.lifeOnHit, 1), `Life per direct hit. Chains: ${CHAIN_SUSTAIN.subsequentTarget * 100}% on additional targets, none on repeat targets. Periodic damage gives none.`, 'Sum of life-on-hit bonuses', ['lifeOnHit']),
+    row('lifeOnHit', 'Life on hit', s.lifeOnHit, n(s.lifeOnHit, 1), `Restore life per direct hit. Periodic damage gives none.`, 'Sum of life-on-hit bonuses', ['lifeOnHit']),
     addAttribute(row('maxMana', 'Maximum mana', s.maxMana, n(s.maxMana, 0), `Total mana before reservation. ${manaCapacity(p)} available · ${n(p.auras?.reservation??0)}% reserved. Increasing capacity does not refill mana.`, `${PLAYER_DEFAULTS.maxMana} + ${attributeBonus('intelligence', MANA_RULES.perIntelligence)} Intelligence + mana bonuses`, ['intelligence', 'maxMana']), 'intelligence'),
     row('manaRegen', 'Mana regeneration', s.manaRegeneration, `${n(s.manaRegeneration)} / s`, 'Restores mana continuously, up to unreserved capacity.', `${PLAYER_DEFAULTS.manaRegeneration} / s + bonuses ÷ ${MANA_RULES.regenerationPeriod}`, ['manaRegen']),
     row('manaOnKill', 'Mana on kill', s.manaOnKill, n(s.manaOnKill, 1), 'Restores mana when you kill an enemy, up to missing mana.', 'Sum of mana-on-kill bonuses', ['manaOnKill']),
@@ -115,13 +114,13 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
     row('manaCost', 'Mana cost reduction', 1 - s.manaCostMultiplier, pct(1 - s.manaCostMultiplier), 'Reduces action mana costs. Skill minimums still apply.', `Action cost × ${n(s.manaCostMultiplier)}\nFirst 20% at full value · Further bonuses taper toward 40%${auraPower(p,'stillwater')?`\nStillwater · ×${n(auraCostMultiplier(p))} while focused`:""}`, ['manaCostPercent']),
     row('cooldown', 'Cooldown reduction', 1 - s.cooldownMultiplier, pct(1 - s.cooldownMultiplier), 'Shortens skill, dodge and potion cooldowns.', `Cooldown × ${n(s.cooldownMultiplier)}\nCap: 75% · Skill minimums still apply`, ['cooldownPercent']),
     row('area', 'Area of effect', s.areaMultiplier ** 2 - 1, `+${pct(s.areaMultiplier ** 2 - 1)}`, 'Enlarges skill sweeps, novas and explosions. Does not extend projectile travel.', `Radius / reach × ${n(s.areaMultiplier)}\nArea bonus cap: ${AFFIX_COMBAT_RULES.maxAreaPercent}%`, ['areaPercent']),
-    row('pierce', 'Projectile pierce', s.projectilePierce, n(s.projectilePierce, 0), 'Extra projectile targets. Explosive projectiles still detonate on contact.', `Sum of pierce bonuses, rounded down\nCap: ${AFFIX_COMBAT_RULES.maxPierce} extra targets`, ['projectilePierce']),
-    row('spellweave', 'Spellweave damage', s.spellweavePercent, `+${n(s.spellweavePercent)}%`, 'Automatic with any Spellweave bonus. Melee hits empower your next spell; spell hits empower your next melee action. Excludes bows.', `Damage × ${n(1 + s.spellweavePercent / 100)}\n${AFFIX_COMBAT_RULES.weaveDuration}s · Does not stack · Bonus cap: 100%${p.character.allocatedNodes.includes('keystone:borrowed-flame') ? '\nBorrowed Flame: empowered actions × 1.4; all damage × 0.85' : ''}`, ['spellweavePercent']),
+    row('pierce', 'Projectile pierce', s.projectilePierce, n(s.projectilePierce, 0), 'Pierces extra targets.', `Sum of pierce bonuses, rounded down\nCap: ${AFFIX_COMBAT_RULES.maxPierce} extra targets`, ['projectilePierce']),
+    row('spellweave', 'Spellweave damage', s.spellweavePercent, `+${n(s.spellweavePercent)}%`, 'Enables Spellweave: melee hits empower magic; magic hits empower melee.', `Damage × ${n(1 + s.spellweavePercent / 100)}\n${AFFIX_COMBAT_RULES.weaveDuration}s · Does not stack · Bonus cap: 100%${p.character.allocatedNodes.includes('keystone:borrowed-flame') ? '\nBorrowed Flame: empowered actions × 1.4; all damage × 0.85' : ''}`, ['spellweavePercent']),
     row('afterguard', 'Armor after block', s.afterguardPercent, `+${n(s.afterguardPercent)}%`, 'Blocks boost armor temporarily. Further blocks refresh it.', `Armor × ${n(1 + s.afterguardPercent / 100)} for ${AFFIX_COMBAT_RULES.guardDuration}s\nBonus cap: 100% · Included in Armor while active`, ['afterguardPercent']),
   ];
   const ranks = Object.entries(s.skillBonuses).flatMap(([id, ranks]) => {
     const skill = SKILL_DEFINITIONS[id as keyof typeof SKILL_DEFINITIONS];
-    return skill && ranks ? [row(`skill:${id}`, `${skill.name} bonus ranks`, ranks, `+${n(ranks, 0)}`, 'Adds ranks once this skill is learned. Costs no skill points.', `Equipment + skill tree ranks, rounded down\nCap: +${AFFIX_COMBAT_RULES.maxBonusRanks}`, [`skill:${skill.id}`])] : [];
+    return skill && ranks ? [row(`skill:${id}`, `${skill.name} bonus ranks`, ranks, `+${n(ranks, 0)}`, 'Bonus ranks improve learned skills without raising casting costs.', `Equipment + skill tree ranks, rounded down\nCap: +${AFFIX_COMBAT_RULES.maxBonusRanks}`, [`skill:${skill.id}`])] : [];
   });
   return [{ title: 'Attributes', tone: 'attributes', rows: attributes }, { title: 'Offense', tone: 'offense', rows: offense },
     { title: 'Defense', tone: 'defense', rows: defense }, { title: 'Elemental resistances', tone: 'resistances', rows: resistances }, { title: 'Life & mana', tone: 'resources', rows: resources },

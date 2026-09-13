@@ -1,3 +1,4 @@
+import { effectTerm, statTerm } from './effect-terms.ts';
 import { uniquePowerMarkup } from './unique-power-ui.ts';
 import { uniqueDefinition } from './unique-content.ts';
 import { hasGreaterAffix, isGreaterAffix, GREATER_AFFIX_SYMBOL } from './item-roll-content.ts';
@@ -94,7 +95,7 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
     const key = stat as StatKey;
     const element = ELEMENTAL_AFFIXES.find(a => a.stat === key)?.element;
     const greater = item.affixes.some((a, i) => a.stat === key && isGreaterAffix(item, i));
-    const label = `${greater ? greaterMark : ''}${escapeUI(STAT_LABELS[key])}${element ? ` · ${{ fire: 'Burn', frost: 'Chill', lightning: 'Interrupt' }[element]}` : ''}`;
+    const label = `${greater ? greaterMark : ''}${statTerm(key, element ? `This weapon · ${element} damage` : STAT_LABELS[key]) || escapeUI(STAT_LABELS[key])}${element ? ` · ${effectTerm({fire:'burn',frost:'slow',lightning:'stagger'}[element], {fire:'Burn',frost:'Slow',lightning:'Interrupt'}[element])}` : ''}`;
     const color = element ? ` style="color:${ELEMENT_COLORS[element]}"` : '';
     if (!preview?.ok) return `<div class="ui-item-property"${color}><span>${label}</span><strong>${formatStatValue(key, value)}</strong></div>`;
     const previewKey = isSkillStat(key) ? key : MODIFIER_PREVIEW[key];
@@ -102,7 +103,7 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
     if (previewKey) changes.delete(previewKey);
     return `<tr><th scope="row"${color}>${label}</th><td${color}>${formatStatValue(key, value)}</td>${equipChangeCell(change, previewKey ? 'No change' : 'Included in derived changes', key === 'manaRegen' ? MANA_RULES.regenerationPeriod : 1)}</tr>`;
   });
-  for (const change of changes.values()) rows.push(`<tr><th scope="row">${escapeUI(CHANGE_LABELS[change.key])}</th><td class="ui-item-stat-empty" aria-label="Not an item bonus">—</td>${equipChangeCell(change)}</tr>`);
+  for (const change of changes.values()) rows.push(`<tr><th scope="row">${statTerm(change.key, CHANGE_LABELS[change.key]) || escapeUI(CHANGE_LABELS[change.key])}</th><td class="ui-item-stat-empty" aria-label="Not an item bonus">—</td>${equipChangeCell(change)}</tr>`);
   const properties = preview?.ok
     ? `<table class="ui-item-stat-table" aria-label="Item bonuses and net changes on equip"><thead><tr><th scope="col">Stat</th><th scope="col">Item</th><th scope="col">On equip</th></tr></thead><tbody>${rows.join('')}</tbody></table>${!preview.changes.length ? '<p class="ui-item-description">No stat change</p>' : ''}`
     : `<div class="ui-item-properties">${rows.join('')}</div>`;
@@ -124,7 +125,7 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
     ${item.recipe.enhancement ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% scalable item stats</div>` : ''}
     ${weapon}${properties}
     ${uniqueDefinition(item)?uniquePowerMarkup(uniqueDefinition(item)!):''}
-    ${itemModifiers(item).spellweavePercent ? `<p class="ui-item-description">Enables Spellweave · melee ↔ magic. Hits empower your next opposite action for ${AFFIX_COMBAT_RULES.weaveDuration}s.</p>` : ''}${item.affixes.length ? `<div class="ui-item-affixes">${item.affixes.map(a => escapeUI(a.name)).join(' · ')}</div>` : ''}
+    ${itemModifiers(item).spellweavePercent ? `<p class="ui-item-description">Enables ${effectTerm('spellweave', 'Spellweave')} · melee ↔ magic · ${AFFIX_COMBAT_RULES.weaveDuration}s.</p>` : ''}${item.affixes.length ? `<div class="ui-item-affixes">${item.affixes.map(a => escapeUI(a.name)).join(' · ')}</div>` : ''}
     ${comparison}${view.context ? `<div class="ui-item-comparison">${escapeUI(view.context)}</div>` : ''}`;
 }
 

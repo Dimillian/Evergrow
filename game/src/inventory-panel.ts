@@ -1,3 +1,4 @@
+import { UITooltipStack } from './ui-tooltip-stack.ts';
 import type { HUDOptions } from './hud.ts';
 import { InventoryHUD } from './inventory-hud.ts';
 import { previewCharmReplacement, charmComparisonCandidates } from './charm-comparison.ts';
@@ -21,7 +22,8 @@ import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS, TIER_NAMES } from './items.ts';
 import { planEquipmentChange, planInventoryMove } from './inventory.ts';
 import { drawCharacterPortrait } from './character-portrait.ts';
 import { characterStatDetails, type StatDetail } from './character-stat-details.ts';
-import { UITooltip } from './ui-tooltip.ts';
+import { RetainedTooltip } from './retained-tooltip.ts';
+import { effectText, statTerm, effectExplanation } from './effect-terms.ts';
 import { xpForNextLevel } from './progression.ts';
 import { uiIcon, trapDialogFocus, escapeUI } from './ui-components.ts';
 import './inventory-panel.css';
@@ -107,7 +109,8 @@ export class InventoryPanel {
   private readonly controller = new GamepadMenu();
   private readonly sectionFocus = new Map<number, HTMLElement>();
   private readonly tooltip: ItemTooltip;
-  private readonly statTooltip: UITooltip;
+  private readonly inlineExplanations: UITooltipStack;
+  private readonly statTooltip: RetainedTooltip;
   private readonly statDetails = new Map<string, StatDetail>();
   private readonly canvas: HTMLCanvasElement;
   private readonly cells = new Map<string, HTMLButtonElement>();
@@ -189,8 +192,9 @@ export class InventoryPanel {
     this.window.querySelector('.character-header-right')!.before(tabs);
     this.sheet = document.createElement('section'); this.sheet.className = 'touch-item-sheet'; this.sheet.hidden = true;
     this.sheet.setAttribute('aria-label','Selected item'); this.window.append(this.sheet);
+    this.inlineExplanations = new UITooltipStack(this.window, effectExplanation, this.window, anchor => !anchor.closest('.ui-tooltip'));
     this.tooltip = new ItemTooltip(this.window, 'character-item-tooltip');
-    this.statTooltip = new UITooltip(this.window, 'character-stat-tooltip', 'character-stat-tooltip');
+    this.statTooltip = new RetainedTooltip(this.window, 'character-stat-tooltip', 'character-stat-tooltip');
     this.element.querySelector('[data-edit-appearance]')?.addEventListener('click',()=>actions.editAppearance?.());
     this.canvas = this.element.querySelector('.character-doll')!;
     this.element.querySelectorAll<HTMLButtonElement>('[data-location]').forEach(cell => this.cells.set(cell.dataset.location!, cell));
@@ -333,7 +337,7 @@ export class InventoryPanel {
     this.animation = 0;
   }
 
-  dispose(): void { this.close(); this.hud?.dispose(); this.tooltip.dispose(); this.statTooltip.dispose(); this.lifetime.abort(); this.element.remove(); this.player = null; }
+  dispose(): void { this.close(); this.hud?.dispose(); this.tooltip.dispose(); this.statTooltip.dispose(); this.inlineExplanations.dispose(); this.lifetime.abort(); this.element.remove(); this.player = null; }
 
   private renderCharmComparison(): void {
     if(!this.player)return;
@@ -555,9 +559,9 @@ export class InventoryPanel {
     this.element.addEventListener('pointerout', event => {
       if (this.element.classList.contains('is-controller')) return;
       const anchor = event.target instanceof Element ? event.target.closest('[data-stat-detail]') : null;
-      if (anchor && (!(event.relatedTarget instanceof Node) || (!anchor.contains(event.relatedTarget) && !this.statTooltip.element.contains(event.relatedTarget)))) this.statTooltip.hide();
+      if (anchor && (!(event.relatedTarget instanceof Node) || (!anchor.contains(event.relatedTarget) && !this.statTooltip.element.contains(event.relatedTarget)))) this.statTooltip.defer();
       const from = this.locationFrom(event.target), to = this.locationFrom(event.relatedTarget);
-      if (from && (!to || locationKey(from) !== locationKey(to))) this.hideTooltip();
+      if (from && (!to || locationKey(from) !== locationKey(to))) { this.hovered = null; this.tooltip.defer(); }
     }, options);
     this.element.addEventListener('focusin', event => {
       const section = (event.target as Element).closest<HTMLElement>('[data-section]');
@@ -567,12 +571,11 @@ export class InventoryPanel {
       if (this.showStatTooltip(event.target)) return;
       const location = this.locationFrom(event.target);
       if (location) this.showTooltip(location);
-      else this.hideTooltip();
+      else { this.tooltip.defer(); this.statTooltip.defer(); }
     }, options);
-    this.statTooltip.element.addEventListener('pointerleave', () => this.statTooltip.hide(), options);
     this.element.addEventListener('focusout', event => {
-      this.statTooltip.hide();
-      if (!this.locationFrom(event.relatedTarget)) this.hideTooltip();
+      this.statTooltip.defer();
+      if (!this.locationFrom(event.relatedTarget)) { this.hovered = null; this.tooltip.defer(); }
     }, options);
     this.element.addEventListener('keydown', event => {
       if (event.key === 'Escape' && this.dismissPopup()) { event.preventDefault(); event.stopPropagation(); return; }
@@ -656,7 +659,7 @@ export class InventoryPanel {
       else if (source.type === 'equipment' && target.type === 'bag') this.actions.unequip(source.slot, target.cell!);
     }, options);
     this.element.addEventListener('dragend', () => this.clearDrag(), options);
-    this.window.addEventListener('scroll', event => { if (!(event.target instanceof Node) || !this.statTooltip.element.contains(event.target)) this.hideTooltip(); }, { ...options, capture: true });
+    this.window.addEventListener('scroll', event => { if (!(event.target instanceof Element) || !event.target.closest('.ui-tooltip')) this.hideTooltip(); }, { ...options, capture: true });
     window.addEventListener('resize', () => { this.hideTooltip(); this.dismissPopup(); }, options);
     window.addEventListener('blur', () => this.clearDrag(), options);
   }
@@ -678,7 +681,7 @@ export class InventoryPanel {
     this.sheet.innerHTML = `<header><strong>Item details</strong><button class="ui-button" data-touch-item="close">Close</button></header><div class="ui-item-tooltip">${itemTooltipMarkup(item,{sheet:this.player.character,level:this.player.level,equipped:location.type==='equipment',sourceIndex:location.type==='bag'?location.index:undefined})}</div><nav>${buttons}<button class="ui-button" data-touch-item="move">Move to slot…</button>${this.actions.drop ? `<button class="ui-button" data-touch-item="drop">${uiIcon('dropItem')} Drop on ground</button>` : ''}</nav>`;
     this.sheet.hidden = false; this.sheet.scrollTop = 0;
   }
-  private closeTouchItem() { this.window.classList.remove('touch-moving'); this.sheet.hidden = true; this.touchItem = null; this.touchMoving = false; this.clearDrag(); }
+  private closeTouchItem() { this.inlineExplanations.hide(); this.window.classList.remove('touch-moving'); this.sheet.hidden = true; this.touchItem = null; this.touchMoving = false; this.clearDrag(); }
   private touchItemAction(action: string) {
     if(action==='close') { this.closeTouchItem(); return; }
     const source = this.touchItem; if(!source || this.itemAt(source)?.id!==source.id) { this.closeTouchItem(); return; }
@@ -752,11 +755,11 @@ export class InventoryPanel {
     if (!anchor || !detail) return false;
     this.hideTooltip();
     this.statTooltip.show(`<header><strong>${escapeUI(detail.label)}</strong><b>${escapeUI(detail.value)}</b></header>
-      <p>${escapeUI(detail.description)}</p><div class="stat-calculation">${detail.calculation.split('\n').map(line => `<span>${escapeUI(line)}</span>`).join('')}</div>
+      <p>${effectText(detail.description)}</p>${statTerm(detail.id, 'Details') ? `<p>${statTerm(detail.id, 'Details')}</p>` : ''}<div class="stat-calculation">${detail.calculation.split('\n').map(line => `<span>${escapeUI(line)}</span>`).join('')}</div>
       ${detail.sources.length ? `<dl>${detail.sources.map(source => `<div><dt>${escapeUI(source.label)}</dt><dd>${escapeUI(source.value)}</dd></div>`).join('')}</dl>` : '<small>No bonuses.</small>'}`, anchor);
     return true;
   }
-  private hideTooltip(): void { this.hovered = null; this.tooltip.hide(); this.statTooltip.hide(); }
+  private hideTooltip(): void { this.inlineExplanations.hide(); this.hovered = null; this.tooltip.hide(); this.statTooltip.hide(); }
 
   private animate = (): void => {
     if (this.element.hidden || !this.player) return;

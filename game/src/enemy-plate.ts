@@ -1,6 +1,5 @@
 import { isBossKind } from './wilderness-boss-content.ts';
-import { enemyDebuffs, type EnemyDebuffState } from './enemy-debuffs.ts';
-import { drawEnemyDebuffs } from './enemy-debuff-art.ts';
+import { type EnemyDebuffState } from './enemy-debuffs.ts';
 import type { Enemy } from './model.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { ENEMY_RANKS } from './progression-content.ts';
@@ -12,6 +11,8 @@ import { drawRankCrest, RANK_METALS } from './enemy-rank-art.ts';
 
 export interface EnemyPlateOptions {
   name?:string;
+  /** Status icons are owned by the shared DOM effect strip. */
+  hasDebuffs?: boolean;
   touch?: boolean;
   /** Safe-area top inset in the same logical coordinates as the UI canvas. */
   topInset?: number;
@@ -30,7 +31,7 @@ const compact = (value: number) => value >= 10_000 ? compactNumber.format(value)
 
 /** A centered target readout that shares the existing navigation and map space. */
 export function getEnemyPlateLayout(width: number, height: number, touch = false, topInset = 0, hasDebuffs = false): { x: number; y: number; width: number; height: number } {
-  const plateHeight = hasDebuffs ? 94 : 70;
+  const plateHeight = hasDebuffs ? 114 : 70;
   width = Math.max(0, Number.isFinite(width) ? width : 0);
   height = Math.max(0, Number.isFinite(height) ? height : 0);
   if (touch) {
@@ -94,8 +95,7 @@ function bloodMotion(c: CanvasRenderingContext2D, x: number, y: number, width: n
 /** Native text and restrained metalwork, drawn after world post-processing. */
 export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, 'kind' | 'hp' | 'maxHp' | 'level' | 'rank'> & EnemyDebuffState,
   width: number, height: number, options: EnemyPlateOptions = {}): void {
-  const debuffs = enemyDebuffs(enemy);
-  const layout = getEnemyPlateLayout(width, height, options.touch, options.topInset, debuffs.length > 0);
+  const layout = getEnemyPlateLayout(width, height, options.touch, options.topInset, options.hasDebuffs);
   const opacity = clamp(options.opacity ?? 1);
   if (!layout.height || opacity <= 0) return;
   const w = layout.width;
@@ -172,6 +172,5 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
   text(c, healthLabel, w / 2, 61, Math.min(.8, (w - 114) / Math.max(1, textWidth(healthLabel))), UI.text, 'center');
   text(c, isBossKind(enemy.kind)?'BOSS':rank.name, w - 11, 61, .78, rank.color, 'right');
   c.restore();
-  if (layout.height > 70) drawEnemyDebuffs(c, debuffs, w, 76);
   c.restore();
 }

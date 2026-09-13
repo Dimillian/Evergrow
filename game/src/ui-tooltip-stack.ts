@@ -11,13 +11,13 @@ export class UITooltipStack {
   private readonly mount: HTMLElement;
   private readonly resolve: TooltipResolver;
   private restoringFocus = false;
-  constructor(mount: HTMLElement, resolve: TooltipResolver) {
+  constructor(mount: HTMLElement, resolve: TooltipResolver, scope: HTMLElement = mount, accept: (anchor: HTMLElement) => boolean = () => true) {
     this.mount = mount; this.resolve = resolve;
     const options = { signal: this.life.signal };
     const open = (event: Event) => {
       if (this.restoringFocus) return;
       const anchor = (event.target as Element).closest<HTMLElement>('[data-ui-term]');
-      if (anchor && mount.contains(anchor)) this.term(anchor);
+      if (anchor && ((scope.contains(anchor) && accept(anchor)) || this.contains(anchor))) this.term(anchor);
     };
     mount.addEventListener('pointerover', open, options);
     mount.addEventListener('focusin', open, options);
@@ -39,6 +39,7 @@ export class UITooltipStack {
     }, options);
     window.addEventListener('resize', () => this.hide(), options);
   }
+  contains(node: Node): boolean { return this.cards.some(c => c.tip.element.contains(node)); }
   get held(): boolean {
     return this.cards.some(c => c.tip.element.matches(':hover, :focus-within'));
   }
@@ -62,17 +63,19 @@ export class UITooltipStack {
     const parent = depth ? this.cards[depth - 1].tip.element : anchor.closest('.ui-tooltip');
     if (parent) {
       const position = placeExplanation(parent.getBoundingClientRect(), tip.element.offsetWidth, tip.element.offsetHeight,
-        { width: document.documentElement.clientWidth, height: document.documentElement.clientHeight }, this.cards.map(c => c.tip.element.getBoundingClientRect()));
+        { width: document.documentElement.clientWidth, height: document.documentElement.clientHeight }, [...this.cards.map(c => c.tip.element.getBoundingClientRect()), ...((this.cards[0]?.anchor ?? anchor).closest('.ui-tooltip') ? [(this.cards[0]?.anchor ?? anchor).closest('.ui-tooltip')!.getBoundingClientRect()] : [])]);
       tip.element.style.left = `${position.left}px`; tip.element.style.top = `${position.top}px`;
     }
     else if (!key) {
       const bounds = anchor.getBoundingClientRect(), width = tip.element.offsetWidth, height = tip.element.offsetHeight;
       tip.element.style.left = `${Math.max(8, Math.min(document.documentElement.clientWidth - width - 8, (bounds.left + bounds.right - width) / 2))}px`;
-      tip.element.style.top = `${Math.max(8, bounds.top - height - 12)}px`;
+      const above = bounds.top - height - 12;
+      tip.element.style.top = `${above >= 8 ? above : Math.min(document.documentElement.clientHeight - height - 8, bounds.bottom + 12)}px`;
     }
     anchor.setAttribute('aria-expanded', 'true'); anchor.setAttribute('aria-controls', tip.element.id);
     this.cards.push({ tip, anchor, key });
   }
+  hideBuff(id: string): void { if (this.cards[0]?.anchor.dataset.buff === id) this.hide(); }
   refreshSummary(id: string, summary: string): void {
     const root = this.cards[0];
     if (root?.anchor.dataset.buff === id) {

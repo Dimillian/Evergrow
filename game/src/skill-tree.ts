@@ -94,10 +94,10 @@ function buildTree() {
    pocket(byId.get(`road:${t.id}:${depth}`)!,t,j?-1:1,(p,a)=>d.choices.map((choice,k)=>({id:`doctrine:${d.id}:${k}`,name:choice.name,description:`${d.name}: choose one of three. ${choice.description} Other choices in this family are mutually exclusive.`,x:p.x+Math.cos(a+Math.PI/2)*(k-1)*70,y:p.y+Math.sin(a+Math.PI/2)*(k-1)*70,kind:'notable' as const,domain:t.domain,territory:t.id,doctrine:d.id,bonuses:choice.bonuses,role:'choice' as const})),depth+1);
  });
  for(const [id,name,description,territory,depth] of [
-   ['keystone:measured-force','Measured Force','You cannot critically hit. Gain 1% more direct damage for each 1% critical chance, up to 30%. Periodic damage is unaffected.','forge',15],
-   ['keystone:open-hand','Open Hand','With one one-handed melee weapon and an empty offhand: 20% more weapon damage and 8% movement speed. With any other loadout: 10% less weapon damage.','veil',16],
-   ['keystone:borrowed-flame','Borrowed Flame','Alternating melee and spell actions gain a separate 40% more damage multiplier on Spellweave-empowered actions, beyond its 100% bonus cap. All weapon and spell damage is 15% lower. Works without other Spellweave investment.','crucible',16],
-   [OVERLOAD_NODE,'Arcane Overload','Optional toggle: Arcana skills deal 30% more damage but cost 60% more mana, including Tempest upkeep. Utility skills receive no damage benefit.','wellspring',16],
+   ['keystone:measured-force','Measured Force','Cannot crit. Critical chance becomes direct damage, up to 30%.','forge',15],
+   ['keystone:open-hand','Open Hand','One melee weapon, empty offhand: +20% weapon damage, +8% movement. Otherwise: −10% weapon damage.','veil',16],
+   ['keystone:borrowed-flame','Borrowed Flame','Spellweave actions deal 40% more damage. All weapon and spell damage is 15% lower.','crucible',16],
+   [OVERLOAD_NODE,'Arcane Overload','Arcana damage +30%; mana cost +60%. Optional toggle.','wellspring',16],
  ] as const){const t=SKILL_TERRITORIES.find(t=>t.id===territory)!;pocket(byId.get(`road:${territory}:${depth}`)!,t,-1,p=>[{id,name,description,...p,kind:'major',domain:t.domain,territory,keystone:true,bonuses:{}}],depth+1);}
  // A lightly offset triangular packing fills the whole atlas without stretched petals.
  // Compact shape families share consistent spacing and retain room for captions.
@@ -117,7 +117,7 @@ function buildTree() {
    const count=recipe.points.length,cos=Math.cos(rotation),sin=Math.sin(rotation);
    const depth=Math.max(2,Math.round((Math.hypot(p.x,p.y)-240)/80)+2);
    const members=recipe.points.map(([x,y],k)=>{
-     return add({id:`${id}:${k}`,name:k===count-1?name:`${name} · ${k+1}`,description: k!==count-1&&f.reward.spellweavePercent ? name==='Spellweave'?'More mana. The endpoint enables Spellweave.':'More weapon and spell damage. The endpoint enables Spellweave.':f.description,x:p.x+x*cos-y*sin,y:p.y+x*sin+y*cos,domain:t.domain,territory:t.id,kind:k===count-1?'notable':'minor',cluster:id,role:'cluster',bonuses:k===count-1?f.reward:f.small},depth);
+     return add({id:`${id}:${k}`,name:k===count-1?name:`${name} · ${k+1}`,description: k!==count-1&&f.reward.afterguardPercent ? 'More armor. The endpoint enables Afterguard.' : k===count-1&&f.reward.afterguardPercent ? 'Enables Afterguard: more armor for 3s after blocking.' : k!==count-1&&f.reward.spellweavePercent ? name==='Spellweave'?'More mana. The endpoint enables Spellweave.':'More weapon and spell damage. The endpoint enables Spellweave.':f.description,x:p.x+x*cos-y*sin,y:p.y+x*sin+y*cos,domain:t.domain,territory:t.id,kind:k===count-1?'notable':'minor',cluster:id,role:'cluster',bonuses:k===count-1?f.reward:f.small},depth);
    });
    for(const [a,b] of recipe.edges)link(members[a].id,members[b].id);
    clusters.push({id,name,domain:t.domain,territory:t.id,shape,...p,radius:Math.max(...recipe.points.map(([x,y])=>Math.hypot(x,y)))+20});

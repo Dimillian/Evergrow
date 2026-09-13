@@ -16,9 +16,9 @@ export class BuffBar {
   private readonly life = new AbortController();
   private readonly buttons = new Map<string, HTMLButtonElement>();
   private buffs: readonly ActiveBuff[] = [];
-  constructor(mount: HTMLElement) {
-    this.element.className = 'buff-bar'; this.element.setAttribute('role', 'group'); this.element.setAttribute('aria-label', 'Active effects');
-    mount.append(this.element); this.tips = new UITooltipStack(mount, effectExplanation);
+  constructor(mount: HTMLElement, label = 'Active effects') {
+    this.element.className = 'buff-bar'; this.element.setAttribute('role', 'group'); this.element.setAttribute('aria-label', label);
+    mount.append(this.element); this.tips = new UITooltipStack(mount, effectExplanation, this.element);
     const show = (event: Event) => {
       const button = (event.target as Element).closest<HTMLButtonElement>('[data-buff]');
       const buff = this.buffs.find(b => b.id === button?.dataset.buff);
@@ -32,10 +32,11 @@ export class BuffBar {
     // Never let buff inspection become an attack, dodge or camera gesture.
     for (const type of ['pointerdown', 'contextmenu', 'dblclick']) this.element.addEventListener(type, event => event.stopPropagation(), opts);
   }
+  get held(): boolean { return this.element.matches(':hover, :focus-within') || this.tips.held; }
   update(buffs: readonly ActiveBuff[]): void {
     this.buffs = buffs;
     const ids = new Set(buffs.map(b => b.id));
-    for (const [id, button] of this.buttons) if (!ids.has(id)) { this.tips.hide(); button.remove(); this.buttons.delete(id); }
+    for (const [id, button] of this.buttons) if (!ids.has(id)) { this.tips.hideBuff(id); button.remove(); this.buttons.delete(id); }
     for (const buff of buffs) {
       this.tips.refreshSummary(buff.id, buff.summary);
       let button = this.buttons.get(buff.id);
@@ -45,9 +46,9 @@ export class BuffBar {
         button.style.setProperty('--buff-color', buff.color); this.buttons.set(buff.id, button); this.element.append(button);
       }
       button.style.setProperty('--buff-spent', `${(1 - Math.min(1, buff.progress ?? (buff.persistent?1:buff.remaining / Math.max(.001, buff.duration)))) * 100}%`);
-      const label = `${buff.name}. ${buff.summary} ${buff.persistent?'Active while assigned.':`${Math.ceil(buff.remaining)} seconds remaining.`}`;
+      const label = `${buff.name}. ${buff.summary} ${buff.persistent?'Active.':`${Math.ceil(buff.remaining)} seconds remaining.`}`;
       if (button.getAttribute('aria-label') !== label) button.setAttribute('aria-label', label);
-      const time = buff.persistent ? (buff.reservation!==undefined?`${Number(buff.reservation.toFixed(1))}%`:buff.progress===1?'Ready':'Focus') : buff.remaining < 10 ? buff.remaining.toFixed(1) : String(Math.ceil(buff.remaining));
+      const time = buff.persistent ? (buff.reservation!==undefined?`${Number(buff.reservation.toFixed(1))}%`:buff.progress===undefined?'On':buff.progress>=1?'Ready':'Focus') : buff.remaining < 10 ? (Math.ceil(buff.remaining * 10) / 10).toFixed(1) : String(Math.ceil(buff.remaining));
       const readout = button.querySelector('.buff-time')!; if (readout.textContent !== time) readout.textContent = time;
       const charges = button.querySelector('.buff-charges')!, value = buff.charges ? String(buff.charges) : '';
       if (charges.textContent !== value) charges.textContent = value;

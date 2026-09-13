@@ -10,3 +10,7 @@
 @media (max-height: 450px) { .buff-bar { bottom: 142px; } }
 
 @media (forced-colors: active) { .buff-bar > button { border-color: ButtonText; background: Canvas; color: CanvasText; } .buff-time { background: Canvas; color: CanvasText; } .buff-shade { display: none; } }
+
+.target-buff-bar { bottom: auto; flex-wrap: wrap; max-width: min(340px, calc(100vw - 24px)); }
+.target-buff-bar > button { width: 34px; height: 34px; }
+.target-buff-bar .buff-time { font-size: 12px; line-height: 13px; }

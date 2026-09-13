@@ -1,3 +1,4 @@
+import type { ActiveBuff } from './active-buffs.ts';
 import { drawPlayerSkillEffects, drawConductor, drawHarvestMark } from './player-skill-art.ts';
 import { skyAtTime, skyAtHour, type SkyState } from './world-time.ts';
 import { OutdoorLightEffects } from './outdoor-light-effects.ts';
@@ -114,6 +115,7 @@ export class Renderer {
   pointerX = 0;
   pointerY = 0;
   pointerActive = true;
+  inspectedEnemyId: number | null = null;
   shake = 0;
   hurt = 0;
   private kickX = 0;
@@ -162,6 +164,7 @@ export class Renderer {
   private enemyFocus = new EnemyFocus();
   private battleBarks = new BattleBarkScene();
   private focusedEnemy: Enemy | null = null;
+  targetEffects: { id: number; buffs: ActiveBuff[]; x: number; y: number; opacity: number } | null = null;
   private plateEnemy: Enemy | null = null;
   private plateOpacity = 0;
   private rangedAim: RangedAim | null = null;
@@ -339,7 +342,7 @@ export class Renderer {
     const { offsetX, offsetY, left, top, width: worldWidth, height: worldHeight } = this.view;
     this.focusedEnemy = this.enemyFocus.update(sim.enemies, this.view,
       this.pointerActive && !this.pointerOverHUD() ? { x: this.pointerX, y: this.pointerY } : null,
-      alpha, dt, active && !p.dead);
+      alpha, dt, active && !p.dead, this.inspectedEnemyId);
     if (!active || p.dead) {
       this.plateEnemy = null; this.plateOpacity = 0;
     } else {
@@ -565,14 +568,20 @@ export class Renderer {
     const plateWidth=this.width/plateScale, plateHeight=this.height/plateScale;
     const plateInset=this.touchTopInset/plateScale;
     const boss=sim.enemies.find(e=>isBossKind(e.kind)&&e.hp>0&&e.state!=='return'&&Math.hypot(e.x-p.x,e.y-p.y)<(isWildernessBoss(e.kind)?650:1100));
+    const target = boss ?? (this.plateOpacity > .01 ? this.plateEnemy : null);
+    const debuffs = target ? enemyDebuffs(target, p) : [];
+    const targetPlate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0);
+    this.targetEffects = target && target.hp > 0 && targetPlate.height > 70 && debuffs.length && settings.phase === 'playing'
+      ? { id: target.id, buffs: debuffs, x: (targetPlate.x + targetPlate.width / 2) * plateScale / this.width,
+        y: (targetPlate.y + 76) * plateScale / this.height, opacity: boss ? 1 : this.plateOpacity } : null;
     if (boss) {
-      drawEnemyPlate(c, boss, plateWidth, plateHeight, { touch: this.touchActive, topInset: plateInset, name:sim.dungeonFloor?dungeonTheme(sim.dungeonFloor.seed,sim.dungeonFloor.theme).bossName:undefined });
-      const plate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, enemyDebuffs(boss).length > 0);
+      drawEnemyPlate(c, boss, plateWidth, plateHeight, { hasDebuffs: debuffs.length > 0, touch: this.touchActive, topInset: plateInset, name:sim.dungeonFloor?dungeonTheme(sim.dungeonFloor.seed,sim.dungeonFloor.theme).bossName:undefined });
+      const plate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0);
       if (plate.height && this.focusedEnemy?.id === boss.id) text(c, 'CONTROL DURATION −75% · BRIEF STUN IMMUNITY',
         plateWidth / 2, plate.y + plate.height + 4, .7, '#9db8a7', 'center');
     }
     if (!boss && this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, plateWidth, plateHeight, {
-      touch: this.touchActive, topInset: plateInset,
+      hasDebuffs: debuffs.length > 0, touch: this.touchActive, topInset: plateInset,
       time: this.visualTime, reducedMotion: settings.reducedMotion,
       opacity: this.plateOpacity,
       healthTrail: this.damageTrails.get(this.plateEnemy.id)?.value ?? this.plateEnemy.hp,

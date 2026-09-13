@@ -52,14 +52,14 @@ export class ServicePanel {
     this.actions = actions;
     this.element = document.createElement('section'); this.element.className = 'service-panel ui-window'; this.element.hidden = true;
     this.element.setAttribute('role', 'dialog'); this.element.setAttribute('aria-modal', 'true'); this.element.setAttribute('aria-labelledby', 'service-title');
-    mount.append(this.element); this.goldFeedback = new ServiceGoldFeedback(this.element); this.tooltip = new ItemTooltip(mount, 'service-tooltip');
+    mount.append(this.element); this.goldFeedback = new ServiceGoldFeedback(this.element); this.tooltip = new ItemTooltip(this.element, 'service-tooltip');
     this.element.addEventListener('click', e => this.click(e), { signal: this.abort.signal });
     this.installTradeDrag();
     this.element.addEventListener('pointerover', e => this.hover(e.target), { signal: this.abort.signal });
     this.element.addEventListener('focusin', e => this.hover(e.target), { signal: this.abort.signal });
-    this.element.addEventListener('pointerout', e => { if (!(e.relatedTarget instanceof Node) || !(e.target as HTMLElement).closest('[data-item]')?.contains(e.relatedTarget)) this.tooltip.hide(); }, { signal: this.abort.signal });
-    this.element.addEventListener('focusout', () => this.tooltip.hide(), { signal: this.abort.signal });
-    this.element.addEventListener('scroll', () => this.tooltip.hide(), { signal: this.abort.signal, capture: true });
+    this.element.addEventListener('pointerout', e => { if (!(e.relatedTarget instanceof Node) || !(e.target as HTMLElement).closest('[data-item]')?.contains(e.relatedTarget)) this.tooltip.defer(); }, { signal: this.abort.signal });
+    this.element.addEventListener('focusout', () => this.tooltip.defer(), { signal: this.abort.signal });
+    this.element.addEventListener('scroll', event => { if (!(event.target instanceof Element) || !event.target.closest('.ui-tooltip')) this.tooltip.hide(); }, { signal: this.abort.signal, capture: true });
   }
   open(player: Player, npc: TownNPC): void {
     this.stockCache=null;
