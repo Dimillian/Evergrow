@@ -99,3 +99,27 @@ test('phase eligibility, repeated opens, toggle and pause remain consistent', ()
 test('Chronicle returns to pause when opened from pause, and cannot open at the title',()=>{const {coordinator:c}=setup();assert.equal(c.open('chronicle'),false);c.transition('playing');c.pause();assert.ok(c.open('chronicle'));assert.equal(c.phase,'chronicle');assert.ok(c.resume());assert.equal(c.phase,'paused');c.resume();c.open('chronicle');c.resume();assert.equal(c.phase,'playing');});
 
 test("Chronicle returns to character inventory without resuming simulation",()=>{const {coordinator:c,active}=setup();c.transition("playing");c.open("character");c.open("chronicle");assert.deepEqual([...active],["chronicle"]);c.resume();assert.equal(c.phase,"character");assert.deepEqual([...active],["character"]);});
+
+
+test('quick map yields to gameplay panels and releasing Tab cannot dismiss their focus owner', () => {
+  for (const panel of ['character', 'skills', 'journeys', 'event', 'service', 'chronicle'] as const) {
+    const { coordinator: c, input, sim } = setup();
+    c.transition('playing'); c.holdMap();
+    input.keyDown('KeyW'); input.pointerDown(0); sim.player.vy = -100;
+    assert.equal(c.canOpen(panel), true, panel);
+    assert.equal(c.open(panel), true, panel);
+    assert.equal(c.mapHeld, false); assert.equal(c.simulationActive, false);
+    const state = input.consume({ x: 0, y: 0 }, false);
+    assert.equal(state.attack, false); assert.equal(state.moveY, 0); assert.equal(sim.player.vy, 0);
+    c.releaseMap(); assert.equal(c.phase, panel);
+  }
+});
+
+
+test('opening the full map from a quick map upgrades it and survives Tab release', () => {
+  const { coordinator: c } = setup();
+  c.transition('playing'); c.holdMap();
+  assert.equal(c.open('map'), true);
+  assert.equal(c.mapHeld, false); assert.equal(c.simulationActive, false);
+  c.releaseMap(); assert.equal(c.phase, 'map');
+});

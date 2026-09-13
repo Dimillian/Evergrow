@@ -22,6 +22,10 @@ export const CONTROL_ACTIONS = [
   { id: 'debug', label: 'Performance overlay', group: 'World & menus', defaults: ['F3', null], pad: '—' },
 ] as const;
 export type ControlAction = typeof CONTROL_ACTIONS[number]['id'];
+export function isGameplayAction(action: ControlAction | undefined): boolean {
+  return isMovementAction(action) || action === 'attack' || action === 'dodge' || action === 'heal'
+    || SKILL_ACTIONS.some(skill => skill === action);
+}
 export function isMovementAction(action: ControlAction | undefined): boolean {
   return action === 'up' || action === 'down' || action === 'left' || action === 'right';
 }

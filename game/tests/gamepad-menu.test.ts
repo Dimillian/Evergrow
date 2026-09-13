@@ -46,10 +46,8 @@ function setup(children: Element[], actions: GamepadMenuActions = {}) {
   };
   poll([]); doc.activeElement = children[0];
   const update = (buttons: number[], now = 0) => { poll(buttons); menu.update(root as unknown as HTMLElement, pad, now, actions); };
-  return { root, update, pad, menu };
+  return { root, update };
 }
-
-
 
 test('menu focus traversal skips disabled/hidden controls and activation runs once per press', () => {
   const a = new Element(), disabled = new Element(), hidden = new Element(), b = new Element();

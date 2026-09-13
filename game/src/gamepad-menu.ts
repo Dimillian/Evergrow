@@ -28,11 +28,10 @@ export class GamepadMenu {
     if (!controls.includes(document.activeElement as HTMLElement) && pad.active) step(1);
     let target = document.activeElement;
     if (!(target instanceof HTMLElement) || !root.contains(target)) return;
-    const stick = pad.move;
-    const key = pad.held.has(PAD.left) || stick.x < -.5 ? 'ArrowLeft'
-      : pad.held.has(PAD.right) || stick.x > .5 ? 'ArrowRight'
-      : pad.held.has(PAD.up) || stick.y < -.5 ? 'ArrowUp'
-      : pad.held.has(PAD.down) || stick.y > .5 ? 'ArrowDown' : '';
+    const key = pad.held.has(PAD.left) || pad.move.x < -.5 ? 'ArrowLeft'
+      : pad.held.has(PAD.right) || pad.move.x > .5 ? 'ArrowRight'
+      : pad.held.has(PAD.up) || pad.move.y < -.5 ? 'ArrowUp'
+      : pad.held.has(PAD.down) || pad.move.y > .5 ? 'ArrowDown' : '';
     if (key && (key !== this.direction || now >= this.nextRepeat)) {
       const delta = key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1;
       if (target instanceof HTMLInputElement && target.type === 'range' && (key === 'ArrowLeft' || key === 'ArrowRight')) {

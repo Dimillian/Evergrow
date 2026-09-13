@@ -1,5 +1,5 @@
 import { controls } from './control-preferences.ts';
-import { isMovementAction, type ControlAction } from './control-bindings.ts';
+import { isGameplayAction, type ControlAction } from './control-bindings.ts';
 import { activeBuffs } from './active-buffs.ts';
 import { ExpeditionPanel } from './expedition-panel.ts';
 import { executeDropItem, type DropItemSource } from './drop-item-command.ts';
@@ -391,7 +391,7 @@ export class Game {
         if (!event.isTrusted && this.usingGamepad) return false;
         const action = controls.action(event.code);
         if (event.code === 'Tab' && this.panels.mapHeld) return true;
-        if (isMovementAction(action) || action === 'attack' || action === 'dodge' || action === 'heal' || action?.startsWith('skill')) {
+        if (isGameplayAction(action)) {
           if (!this.savingAction) {
             if (event.isTrusted) { this.usingGamepad = false; this.touch.setActive(false); }
             this.input.keyDown(event.code);
@@ -942,7 +942,7 @@ export class Game {
   }
 
   private requestPortal() {
-    if (this.savingAction || this.phase !== 'playing' || !this.session.active) return;
+    if (this.savingAction || !this.panels.simulationActive || !this.session.active) return;
     const p = this.sim.player, link = this.sim.travel.returnTo;
     if (this.world.isSanctuary(p.x, p.y)) {
       if (link) { this.renderer.portalGuide = 4; this.notify('Return portal marked on your map.'); }
@@ -969,6 +969,7 @@ export class Game {
     return this.durable(() => this.locations.portal(anchor, returning), false);
   }
   private finishTravel(): void {
+    this.panels.releaseMap();
     this.clearInput();
     this.renderer.reset(); this.renderer.snapTo(this.sim.player);
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));

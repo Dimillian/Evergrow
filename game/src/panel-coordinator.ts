@@ -29,9 +29,9 @@ export class PanelCoordinator {
   constructor(panels: Record<PanelPhase, PanelLifecycle>, hooks: PanelHooks) { this.panels = panels; this.hooks = hooks; }
   get phase(): GamePhase { return this.current; }
   get activePanel(): PanelPhase | null { return Object.hasOwn(this.panels, this.current) ? this.current as PanelPhase : null; }
-  canOpen(panel: PanelPhase): boolean { return OPEN_FROM[panel].includes(this.current); }
+  canOpen(panel: PanelPhase): boolean { return OPEN_FROM[panel].includes(this.holdingMap ? 'playing' : this.current); }
   open(panel: PanelPhase): boolean {
-    if (!this.canOpen(panel) || this.current === panel) return false;
+    if (!this.canOpen(panel) || this.current === panel && !this.holdingMap) return false;
     if(panel==='chronicle')this.chronicleReturn=this.current==='paused'?'paused':this.current==='character'?'character':'playing';
     this.transition(panel, true); return true;
   }
