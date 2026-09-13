@@ -12,7 +12,7 @@ export function eventProgress(state: EventState) {
   const timed = recipe.mode === 'timed', duration = recipe.rules.duration;
   const fraction = timed ? 1 - trial.elapsed / duration : trial.cleared / recipe.rules.count;
   const timer = timed ? `${Math.max(0, Math.ceil(duration - Math.max(0, trial.elapsed)))}s` : null;
-  const wave = `Wave ${Math.min(trial.wave + 1, recipe.rules.count)}/${recipe.rules.count}`;
+  const wave = site.kind === 'cursedChest' ? `Waves Cleared: ${trial.cleared}` : `Wave ${Math.min(trial.wave + 1, recipe.rules.count)}/${recipe.rules.count}`;
   const enemiesLeft = trial.guardians.filter(g => g.wave === trial.wave && !g.dead).length;
   const objective = trial.sealReady
     ? `${({ beastDen: 'Destroy nest', hamlet: 'Dismantle standard', corruptedGrove: 'Cleanse root' } as Partial<Record<EventKind, string>>)[site.kind] ?? 'Break seal'} · ${trial.wave + 1}/${recipe.rules.count}`

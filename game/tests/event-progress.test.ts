@@ -31,15 +31,15 @@ test('countdown stays bounded at its endpoints', () => {
   assert.equal(eventProgress(state)!.fraction, 0);
 });
 
-test('trial labels show the current wave and living members of that wave, including pending arrivals', () => {
+test('cursed chest labels show cleared waves and living current-wave members, including pending arrivals', () => {
   const { site } = fixture();
   const staged = stageEventProgress(site, 20), trial = staged.state.trial!;
   const current = trial.guardians.filter(g => g.wave === trial.wave);
   current[0].dead = true; current[1].dead = false; current[1].admitted = false;
   const progress = eventProgress(staged.state)!;
-  assert.equal(progress.wave, 'Wave 2/20');
+  assert.equal(progress.wave, 'Waves Cleared: 1');
   assert.equal(progress.enemiesLeft, current.filter(g => !g.dead).length);
-  assert.match(progress.label, /^Wave 2\/20 · Enemies Left: \d+$/);
+  assert.match(progress.label, /^Waves Cleared: 1 · Enemies Left: \d+$/);
   for (const g of current) g.dead = true;
   assert.equal(eventProgress(staged.state)!.enemiesLeft, 0);
 });
@@ -71,6 +71,7 @@ test('every trial recipe stages actual roster counts and its objective, with rep
       const progress = eventProgress(stageEventProgress(site, 12).state)!;
       assert.equal(progress.fraction, 1 / recipes[index].rules.count);
       assert.equal(progress.timed, false);
+      assert.equal(progress.wave, `Wave 2/${recipes[index].rules.count}`);
     }
   }
 });
