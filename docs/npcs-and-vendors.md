@@ -190,3 +190,10 @@ The enhancement showcase uses the shared item art, +N → +N progression and ten
 Paid restocks are regular durable commerce commands: validate merchant/epoch/revision/price, debit the wallet and increment the merchant generation atomically. Stock IDs include the paid generation; previously purchased items retain their identity. Optional `commerce.refreshes` stores counts only for known entries in the bounded sold-mask ledger. Natural restock clears both. Unsafe prices, stale offers, insufficient funds and failed persistence change nothing. Existing saves without counts start at zero; no progress reset.
 
 Local previews: `/services.html?tier=city` and `/services.html?operation=enhance&item=1`. These use disposable characters.
+
+
+## Enchanting workbench · local 2026-09-13
+
+Enchanting uses the same item showcase and spatial equipment/bag trays as enhancement. Compact Rarity / One affix / All affixes / Item level buttons retain the chosen item. Targeted rerolls use selectable affix rows, distinguishing the replaced bonus from those kept. City preferences use Any / Offense / Defense / Utility buttons with the existing threefold weight and 75% surcharge; odds remain available on demand. Rarity previews retain known bonuses and show added random affixes as unrevealed slots, never a seeded sample result. Item-level upgrades show exact derived changes and the new requirement. Unsupported operations retain the item with an explanation and disabled purchase. Commerce rules and save flow are unchanged.
+
+Disposable city preview: `/services.html?role=enchanter&tier=city&operation=rerollOne&item=3`.

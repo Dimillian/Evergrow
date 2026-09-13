@@ -1,3 +1,4 @@
+import { isGreaterAffix, GREATER_AFFIX_SYMBOL } from './item-roll-content.ts';
 import { STOCK_CATEGORIES, STOCK_CATEGORY_NAMES, stockCategory, enhancementGains, type StockCategory } from './service-presentation.ts';
 import { storageTabCount, storageTabItems, hasStorageTab, MAX_STORAGE_TABS, nextStorageTabPrice } from './storage-content.ts';
 import { itemAffixCount } from './items.ts';
@@ -20,6 +21,8 @@ import { escapeUI, trapDialogFocus, uiIcon } from './ui-components.ts';
 import { ServiceGoldFeedback } from './service-gold-feedback.ts';
 import './service-panel.css';
 
+const ENCHANT_OPERATIONS = ['rarity', 'rerollOne', 'rerollAll', 'relevel'] as const;
+const ENCHANT_LABELS = { rarity:'Rarity', rerollOne:'One affix', rerollAll:'All affixes', relevel:'Item level' };
 const OP_LABELS: Record<Improvement, string> = { enhance: 'Enhance', rarity: 'Raise rarity', rerollOne: 'Reroll one affix', rerollAll: 'Reroll all affixes', relevel: 'Raise item level' };
 export class ServicePanel {
   readonly element: HTMLElement;
@@ -49,13 +52,6 @@ export class ServicePanel {
     this.element.setAttribute('role', 'dialog'); this.element.setAttribute('aria-modal', 'true'); this.element.setAttribute('aria-labelledby', 'service-title');
     mount.append(this.element); this.goldFeedback = new ServiceGoldFeedback(this.element); this.tooltip = new ItemTooltip(mount, 'service-tooltip');
     this.element.addEventListener('click', e => this.click(e), { signal: this.abort.signal });
-    this.element.addEventListener('change', e => {
-      if(this.saving) return;
-      const target = e.target as HTMLSelectElement;
-      if (target.dataset.operation !== undefined) { this.operation = target.value as Improvement; this.updateSelection(); this.render(); }
-      if(target.hasAttribute('data-affix-focus')&&this.selected?.type==='improve'){this.selected.focus=target.value as AffixFocus;this.renderDetail();this.element.querySelector<HTMLElement>('[data-affix-focus]')?.focus();}
-      if (target.dataset.affix !== undefined && this.selected?.type === 'improve') { this.selected.affix = Number(target.value); this.renderDetail(); this.element.querySelector<HTMLElement>('[data-affix]')?.focus(); }
-    }, { signal: this.abort.signal });
     this.element.addEventListener('pointerover', e => this.hover(e.target), { signal: this.abort.signal });
     this.element.addEventListener('focusin', e => this.hover(e.target), { signal: this.abort.signal });
     this.element.addEventListener('pointerout', e => { if (!(e.relatedTarget instanceof Node) || !(e.target as HTMLElement).closest('[data-item]')?.contains(e.relatedTarget)) this.tooltip.hide(); }, { signal: this.abort.signal });
@@ -95,7 +91,8 @@ export class ServicePanel {
   }
   private render(): void {
     this.element.classList.toggle('is-storage',this.npc.role==='stash');
-    this.element.classList.toggle('is-enhancing',this.tab==='improve'&&this.npc.role==='blacksmith');
+    this.element.classList.toggle('is-enhancing',this.tab==='improve');
+    this.element.classList.toggle('is-enchanting',this.tab==='improve'&&this.npc.role==='enchanter');
     if(this.tab==='respec'){this.renderRespec();return;}
     if(this.npc.role==='stash'){this.renderStorage();return;}
     if(this.npc.role==='gambler'&&this.tab==='shop'){this.renderSpecial();return;}
@@ -106,12 +103,12 @@ export class ServicePanel {
     const bagScroll=this.element.querySelector('.service-bag')?.scrollTop??0;
     const focused = this.element.querySelector<HTMLElement>(':focus');
     const active = focused?.dataset.item;
-    const control = focused?.hasAttribute('data-clear-sales') ? '[data-clear-sales]' : focused?.dataset.sellTier ? `[data-sell-tier="${focused.dataset.sellTier}"]` : focused?.hasAttribute('data-operation') ? '[data-operation]' : focused?.dataset.tab ? `[data-tab="${focused.dataset.tab}"]`
+    const control = focused?.hasAttribute('data-clear-sales') ? '[data-clear-sales]' : focused?.dataset.sellTier ? `[data-sell-tier="${focused.dataset.sellTier}"]` : focused?.dataset.operation ? `[data-operation="${focused.dataset.operation}"]` : focused?.dataset.tab ? `[data-tab="${focused.dataset.tab}"]`
       : focused?.hasAttribute('data-confirm') ? '[data-confirm]' : focused?.hasAttribute('data-close') ? '[data-close]' : null;
     this.element.style.setProperty('--service-color', NPC_COLORS[this.npc.role]);
     this.element.innerHTML = `${this.headerMarkup()}
       ${this.tabsMarkup()}
-      <div class="service-body"><section class="service-offer ui-scroll-area">${this.tab === 'sell' ? '<div class="service-section-heading"><h3>Selected items</h3><button class="ui-button ui-button--quiet" data-clear-sales>Clear</button></div>' : this.tab === 'improve' ? `<div class="service-forge" ${this.npc.role==='blacksmith'?'hidden':''}>${npcEmblem(this.npc.role)}</div>${this.npc.role === 'enchanter' ? `<select class="ui-button" data-operation aria-label="Enchantment">${(['rarity', 'rerollOne', 'rerollAll', 'relevel'] as Improvement[]).map(op => `<option value="${op}" ${op === this.operation ? 'selected' : ''}>${OP_LABELS[op]}</option>`).join('')}</select>` : '<div class="service-section-heading"><h3>The workbench</h3><span>Guaranteed enhancement</span></div>'}` : `<div class="service-section-heading"><h3>${this.tab === 'shop' ? `Stock · Lv ${vendorStockLevel(this.npc, this.player.level)}` : 'Buyback'}</h3><span>${this.tab === 'shop' ? `Restocks at level ${(stockEpoch(this.player.level) + 1) * 3 + 1}` : 'Last 12 sales'}</span></div>${this.tab==='shop'?'<div class="service-stock-controls"></div>':''}<div class="service-stock inventory-pack"></div>`}<div class="service-detail"></div></section>
+      <div class="service-body"><section class="service-offer ui-scroll-area">${this.tab === 'sell' ? '<div class="service-section-heading"><h3>Selected items</h3><button class="ui-button ui-button--quiet" data-clear-sales>Clear</button></div>' : this.tab === 'improve' ? `${this.npc.role === 'enchanter' ? `<nav class="enchant-operations" aria-label="Enchantment">${ENCHANT_OPERATIONS.map(op=>`<button class="ui-button ui-button--quiet" data-operation="${op}" aria-pressed="${this.operation===op}">${ENCHANT_LABELS[op]}</button>`).join('')}</nav>` : '<div class="service-section-heading"><h3>The workbench</h3><span>Guaranteed enhancement</span></div>'}` : `<div class="service-section-heading"><h3>${this.tab === 'shop' ? `Stock · Lv ${vendorStockLevel(this.npc, this.player.level)}` : 'Buyback'}</h3><span>${this.tab === 'shop' ? `Restocks at level ${(stockEpoch(this.player.level) + 1) * 3 + 1}` : 'Last 12 sales'}</span></div>${this.tab==='shop'?'<div class="service-stock-controls"></div>':''}<div class="service-stock inventory-pack"></div>`}<div class="service-detail"></div></section>
       <section class="service-bag ui-scroll-area">${this.tab === 'improve' ? '<section class="service-equipped-section" aria-label="Equipped gear"><div class="service-section-heading"><h3>Equipped</h3><span>Upgrade in place</span></div><div class="service-equipment inventory-pack"></div></section>' : ''}<section aria-label="Inventory"><div class="service-section-heading"><h3>Inventory</h3></div>${this.sortMarkup('inventory')}${this.tab === 'sell' ? this.rarityControls() : ''}<div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section></section></div>
       <footer class="ui-window-footer"><span class="service-message" role="status"></span><button class="ui-button ui-button--primary" data-confirm disabled>Choose an item</button></footer>`;
     this.renderInventoryPack();
@@ -375,6 +372,17 @@ export class ServicePanel {
   private click(e: MouseEvent): void {
     if (this.saving) return;
     const button = (e.target as HTMLElement).closest<HTMLButtonElement>('button, input[data-include-charms]'); if (!button) return;
+    if(button.dataset.operation && ENCHANT_OPERATIONS.includes(button.dataset.operation as typeof ENCHANT_OPERATIONS[number])) {
+      this.operation=button.dataset.operation as Improvement; this.updateSelection(); this.render(); return;
+    }
+    if(button.dataset.affix !== undefined && this.selected?.type==='improve') {
+      this.selected.affix=Number(button.dataset.affix); this.renderDetail();
+      this.element.querySelector<HTMLElement>(`[data-affix="${this.selected.affix}"]`)?.focus({preventScroll:true}); return;
+    }
+    if(button.dataset.affixFocus && AFFIX_FOCUSES.includes(button.dataset.affixFocus as AffixFocus) && this.selected?.type==='improve') {
+      this.selected.focus=button.dataset.affixFocus as AffixFocus; this.renderDetail();
+      this.element.querySelector<HTMLElement>(`[data-affix-focus="${this.selected.focus}"]`)?.focus({preventScroll:true}); return;
+    }
     if(button.dataset.stockCategory&&STOCK_CATEGORIES.includes(button.dataset.stockCategory as StockCategory)){
       this.shopCategory=button.dataset.stockCategory as StockCategory;this.selected=null;this.render();
       this.element.querySelector('.service-offer')!.scrollTop=0;
@@ -449,13 +457,13 @@ export class ServicePanel {
     button.disabled = true; button.textContent = 'Choose an item';
     if (this.tab === 'sell') { this.renderSales(detail, button, message); return; }
     if (selected?.type === 'sellMany') return;
-    if (!selected) { detail.hidden=true; if(this.tab==='improve'&&this.operation==='enhance')this.renderEnhancement(detail,null,null); else if(this.tab==='improve')message.textContent='Choose equipment to improve.'; return; }
+    if (!selected) { detail.hidden=true; if(this.tab==='improve'&&this.operation==='enhance')this.renderEnhancement(detail,null,null); else if(this.tab==='improve')this.renderEnchantment(detail,null,false); return; }
     for (const cell of this.element.querySelectorAll<HTMLElement>('[data-item]')) {
       const entry = this.resolve(cell.dataset.item!);
-      cell.classList.toggle('is-selected', Boolean(entry && JSON.stringify(entry.request) === JSON.stringify(selected)));
+      cell.classList.toggle('is-selected', Boolean(entry && (entry.request.type==='improve'&&selected.type==='improve' ? JSON.stringify(entry.request.source)===JSON.stringify(selected.source) : JSON.stringify(entry.request)===JSON.stringify(selected))));
     }
     const result = quoteService(this.player.character, this.npc, this.player.level, selected);
-    if (!result.ok) { detail.hidden=true; message.textContent=result.message; if(selected.type==='improve'&&selected.operation==='enhance')this.renderEnhancement(detail,sourceItem(this.player.character,selected.source),null); return; }
+    if (!result.ok) { detail.hidden=true; message.textContent=result.message; if(selected.type==='improve'&&selected.operation==='enhance')this.renderEnhancement(detail,sourceItem(this.player.character,selected.source),null); else if(selected.type==='improve')this.renderEnchantment(detail,sourceItem(this.player.character,selected.source),false,result.message); return; }
     const { item, quote } = result; if(!item)return; this.quote = quote;
     const buying = selected.type === 'buy' || selected.type === 'buyback', improving = selected.type === 'improve';
     const label = improving ? OP_LABELS[selected.operation] : buying ? 'Buy' : 'Sell';
@@ -466,23 +474,43 @@ export class ServicePanel {
     if (!improving) return;
     const op = selected.operation;
     if(op==='enhance'){this.renderEnhancement(detail,item,improveItem(item,op,vendorLevel(this.npc,this.player.level),1));return;}
-    if (op === 'rerollOne') detail.innerHTML += `<label class="service-affix">Affix<select class="ui-button" data-affix aria-label="Affix to replace">${item.affixes.map((a, index) => `<option value="${index}" ${index === this.selectedAffix() ? 'selected' : ''}>${escapeUI(STAT_LABELS[a.stat])} ${formatStatValue(a.stat, a.value)}</option>`).join('')}</select></label>`;
-    if (op === 'rerollOne' || op === 'rerollAll') {
-      const pool=rerollPool(item,op==='rerollOne'?this.selectedAffix():undefined,selected.focus);
+    this.renderEnchantment(detail,item,true);
+  }
+  private renderEnchantment(detail:HTMLElement,item:Item|null,valid:boolean,problem=''): void {
+    detail.hidden=false;
+    const op=this.operation, selected=this.selected?.type==='improve'?this.selected:null;
+    const source=selected?.source, key=source?('bag' in source?`bag:${source.bag}`:`equipped:${source.equipped}`):'';
+    const reroll=op==='rerollOne'||op==='rerollAll';
+    const next=item&&valid&&!reroll?improveItem(item,op,vendorLevel(this.npc,this.player.level),1):null;
+    const added=item&&next?itemAffixCount(next)-item.affixes.length:0;
+    const transition=item&&next?(op==='rarity'?`${TIER_NAMES[item.tier]} <i>→</i> <strong style="color:${TIER_COLORS[next.tier]}">${TIER_NAMES[next.tier]}</strong>`:`Lv ${item.itemLevel} <i>→</i> <strong>Lv ${next.itemLevel}</strong>`):reroll?'Reshape its magic':'';
+    detail.innerHTML=`<div class="enhance-showcase enchant-showcase" style="--item-color:${item?TIER_COLORS[item.tier]:'#a6b6ca'}">
+      <div class="enhance-halo" aria-hidden="true"></div>
+      ${item?`<button class="enhance-art" data-item="${key}" aria-label="Inspect ${escapeUI(itemDisplayName(item))}">${itemPackIconSVG(item,itemFootprint(item).width,itemFootprint(item).height)}</button>`:`<div class="enhance-empty-emblem">${npcEmblem('enchanter')}</div>`}
+      <span class="enhance-kicker">${item?`${TIER_NAMES[item.tier]} · Item level ${item.itemLevel}`:'The enchanting table'}</span>
+      <h3>${item?escapeUI(itemDisplayName(item)):'Choose an item'}</h3>
+      ${item?`<div class="enchant-transition">${transition}</div>`:'<p>Select equipped gear or a piece from your inventory.</p>'}
+    </div>`;
+    if(!item)return;
+    if(problem)detail.innerHTML+=`<p class="enchant-note">${escapeUI(problem)}</p>`;
+    if(op==='relevel') {
+      if(next){const gains=enhancementGains(item,next);detail.innerHTML+=`<div class="enhance-gains"><div class="enhance-gains-heading"><span>Item improvement</span><span>Current</span><span>After</span><span>Gain</span></div>${gains.map(row=>`<div><span>${escapeUI(row.label)}</span><span>${row.before}</span><strong>${row.after}</strong><em>${row.gain}</em></div>`).join('')}</div><p class="enchant-note">Requires level ${next.requiredLevel}. Affix types and roll quality stay the same.</p>`;}
+      return;
+    }
+    detail.innerHTML+=`<div class="enchant-affix-heading"><span>${op==='rerollOne'?'Choose an affix to replace':'Affixes'}</span><small>${reroll?'Random result':'Existing rolls retained'}</small></div><div class="enchant-affixes">${item.affixes.map((affix,index)=>{
+      const replacing=op==='rerollAll'||op==='rerollOne'&&index===this.selectedAffix();
+      const tag=op==='rerollOne'?'button':'div';
+      const after=next?.affixes[index];
+      return `<${tag} class="enchant-affix ${replacing?'is-replacing':''}" ${tag==='button'?`type="button" data-affix="${index}" aria-pressed="${replacing}"`:''}><span class="enchant-affix-mark" aria-hidden="true">${replacing?'↻':'◇'}</span><span>${isGreaterAffix(item,index)?GREATER_AFFIX_SYMBOL+' ':''}${escapeUI(STAT_LABELS[affix.stat])}<small>${replacing?'Will be replaced':reroll?'Kept':'Retained'}</small></span><b>${formatStatValue(affix.stat,affix.value)}${after&&after.value!==affix.value?` <i>→</i> ${formatStatValue(after.stat,after.value)}`:''}</b></${tag}>`;
+    }).join('')}${added>0?Array.from({length:added},()=>'<div class="enchant-affix enchant-new-affix"><span class="enchant-affix-mark">+</span><span>New random affix<small>Revealed after enchanting</small></span><b>?</b></div>').join(''):!item.affixes.length?'<p class="enchant-note">No affixes on this item.</p>':''}</div>`;
+    if(reroll&&item.affixes.length){
+      const pool=rerollPool(item,op==='rerollOne'?this.selectedAffix():undefined,selected?.focus);
       const focusPool=op==='rerollAll'&&item.affixes.length>1?itemAffixPool(item):pool;
       const total=pool.reduce((sum,a)=>sum+(a.weight??1),0);
-      if(this.npc.settlementTier==='city')detail.innerHTML+=`<label class="service-affix">Favor an affix group<select class="ui-button" data-affix-focus aria-label="Affix preference">${AFFIX_FOCUSES.map(f=>`<option value="${f}" ${f===(selected.focus??'any')?'selected':''} ${f!=='any'&&(!focusPool.some(a=>affixCategory(a.stat)===f)||!focusPool.some(a=>affixCategory(a.stat)!==f))?'disabled':''}>${f==='any'?'No preference':f[0].toUpperCase()+f.slice(1)+' · +75% cost'}</option>`).join('')}</select></label><p class="ui-muted">Favored affixes get triple weight. Rare rolls remain rare.</p>`;
-      if(item.kind==='charm') detail.innerHTML += '<p class="ui-muted">The first affix stays within the stone’s theme. If no other themed affix fits, its strength is rerolled.</p>';
-      detail.innerHTML += `<p class="service-caution">Replaces ${op === 'rerollOne' ? 'this affix' : 'all affixes'}. Results can be worse.</p><details><summary>Possible affixes and odds</summary>${op==='rerollAll'?'<p class="ui-muted">First roll odds. Later rolls exclude conflicting affixes.</p>':''}<div class="service-pool-odds">${pool.map(a=>`<div><span>${escapeUI(STAT_LABELS[a.stat])}</span><b>${((a.weight??1)/total*100).toFixed(1)}%</b></div>`).join('')}</div></details>`;
-
-    } else {
-      const next = improveItem(item, op, vendorLevel(this.npc, this.player.level), 1);
-      detail.innerHTML += `<div class="service-result-heading">${op === 'rarity' ? `${TIER_NAMES[item.tier]} → ${TIER_NAMES[next.tier]}` : `Item level ${item.itemLevel} → ${next.itemLevel}`}</div>`;
-      if (op === 'rarity') {
-        const added=itemAffixCount(next)-item.affixes.length;
-        detail.innerHTML += added>0?`<p class="service-caution">Adds ${added} random ${added===1?'affix':'affixes'}.</p><details><summary>Possible new affixes</summary><p class="service-pool">${itemAffixPool(item).filter(a=>!item.affixes.some(b=>b.stat===a.stat)).map(a=>escapeUI(STAT_LABELS[a.stat])).join(' · ')}</p></details>`:'<p class="ui-muted">Strengthens existing bonuses.</p>';
-      }
-      if (op === 'relevel') detail.innerHTML += `<p class="${next.requiredLevel > this.player.level ? 'service-caution' : 'ui-muted'}">Requires level ${next.requiredLevel}</p>`;
+      if(this.npc.settlementTier==='city')detail.innerHTML+=`<div class="enchant-affix-heading"><span>Favor a group</span><small>3× weight · +75% cost</small></div><nav class="enchant-focus" aria-label="Affix preference">${AFFIX_FOCUSES.map(f=>`<button class="ui-button ui-button--quiet" data-affix-focus="${f}" aria-pressed="${f===(selected?.focus??'any')}" ${f!=='any'&&(!focusPool.some(a=>affixCategory(a.stat)===f)||!focusPool.some(a=>affixCategory(a.stat)!==f))?'disabled':''}>${f==='any'?'Any':f[0].toUpperCase()+f.slice(1)}</button>`).join('')}</nav>`;
+      detail.innerHTML+=`<p class="enchant-note">${op==='rerollOne'?'Only the selected affix changes.':'All affixes are replaced.'} Rolls can be better or worse.${item.kind==='charm'?' The first affix keeps the stone’s theme.':''}</p><details class="enchant-pool"><summary>Possible affixes & odds</summary>${op==='rerollAll'?'<p class="enchant-note">First roll odds; later rolls exclude conflicts.</p>':''}<div class="service-pool-odds">${pool.map(a=>`<div><span>${escapeUI(STAT_LABELS[a.stat])}</span><b>${((a.weight??1)/total*100).toFixed(1)}%</b></div>`).join('')}</div></details>`;
+    } else if(op==='rarity'&&added>0) {
+      detail.innerHTML+=`<details class="enchant-pool"><summary>Possible new affixes</summary><div class="enchant-pool-tags">${rerollPool(item,item.affixes.length).map(a=>`<span>${escapeUI(STAT_LABELS[a.stat])}</span>`).join('')}</div></details>`;
     }
   }
   private syncRarities(): void {

@@ -25,13 +25,7 @@
 .service-panel .ui-slot:focus-visible { outline:2px solid var(--service-color); outline-offset:2px; }
 .service-detail { padding-top:24px; margin-top:22px; border-top:1px solid #99b6c32a; }
 .service-empty { text-align:center; color:#829593; padding:30px 12px; font-size:14px; }
-.service-forge { display:grid; place-items:center; height:110px; background:radial-gradient(ellipse,var(--service-color),transparent 65%); background:radial-gradient(ellipse,color-mix(in srgb,var(--service-color) 13%,transparent),transparent 65%); }
-.service-forge svg { width:72px; height:72px; color:var(--service-color); filter:drop-shadow(0 0 12px color-mix(in srgb,var(--service-color) 30%,transparent)); }
-.service-affix { display:grid; gap:8px; margin-bottom:14px; color:#adc1c5; }
-.service-offer > select,.service-affix select { width:100%; font-size:14px; }
-.service-result-heading { padding:10px 0; text-align:center; letter-spacing:1px; color:var(--service-color); border-block:1px solid #99b6c325; }
 .service-caution { color:#d6bc87; font:12px/1.5 "Evergrow Numerals", system-ui,sans-serif; }
-.service-pool { font:12px/1.8 "Evergrow Numerals", system-ui,sans-serif; color:#9db0b6; }
 .service-panel summary { cursor:pointer; font-size:13px; color:#bac7c9; }
 .service-panel .ui-window-footer { display:flex; align-items:center; justify-content:space-between; gap:14px; flex:none; }
 .service-message { font:12px/1.4 "Evergrow Numerals", system-ui,sans-serif; color:#b5c9b8; }
@@ -130,7 +124,6 @@
 .service-refresh-row svg { width:15px; height:15px; }
 .service-stock-empty { position:absolute; inset:35% 12px auto; text-align:center; color:#9daeb5; pointer-events:none; font-size:14px; background:#101b24d9; padding:12px; }
 .service-panel.is-enhancing .service-detail { border:0; padding:0; margin:0; }
-.service-panel .service-forge[hidden] { display:none; }
 .enhance-showcase { position:relative; display:flex; flex-direction:column; align-items:center; text-align:center; padding:8px 12px 14px; isolation:isolate; }
 .enhance-halo { position:absolute; inset:0; z-index:-1; background:radial-gradient(ellipse at 50% 35%,#89a6ba15,transparent 64%); }
 .enhance-halo::after { content:''; position:absolute; width:130px; height:130px; top:12px; left:50%; transform:translateX(-50%) rotate(45deg); border:1px solid #a4bac31c; box-shadow:inset 0 0 30px #a4bac309; }
@@ -168,3 +161,31 @@
 .enhance-halo { background:radial-gradient(ellipse at 15% 45%,#89a6ba15,transparent 65%); }
 .service-message { min-width:0; overflow-wrap:anywhere; }
 @media(max-width:420px) { .enhance-showcase { grid-template-columns:100px minmax(0,1fr); gap:8px; }.enhance-art,.enhance-empty-emblem { width:100px; height:145px; }.service-panel .enhance-showcase h3 { font-size:18px; }.enhance-halo::after { left:50px; width:90px; height:90px; }.enhance-progress { gap:3px; }.enhance-progress span { width:10px; }.enhance-gains > div { grid-template-columns:minmax(0,1fr) repeat(3,42px); gap:5px; font-size:12px; } }
+
+/* Enchanting shares the workbench's silver glass and puts the chosen item first. */
+.enchant-operations,.enchant-focus { display:flex; gap:4px; }
+.enchant-operations { margin-bottom:12px; border-bottom:1px solid #b7cdd329; }
+.enchant-operations .ui-button,.enchant-focus .ui-button { flex:1; min-width:0; padding:10px 5px; font-size:13px; background:transparent; border:0; border-bottom:2px solid transparent; }
+.enchant-operations .ui-button[aria-pressed=true],.enchant-focus .ui-button[aria-pressed=true] { color:#e4e9ed; border-bottom-color:#b9c8df; background:linear-gradient(transparent,#a4b9d311); }
+.enchant-operations .ui-button:hover,.enchant-focus .ui-button:hover { background:#a4b9d30c; }
+.enchant-operations .ui-button:focus-visible,.enchant-focus .ui-button:focus-visible,.enchant-affix:focus-visible { outline:1px solid #c3d9df; outline-offset:-2px; }
+.enchant-showcase { min-height:190px; }
+.enchant-transition { grid-column:2; grid-row:3; display:flex; align-items:center; flex-wrap:wrap; gap:12px; font-size:18px; color:#abbec9; }
+.enchant-transition strong { color:#c9dcdf; font-weight:400; }.enchant-transition i { font-style:normal; opacity:.5; }
+.enchant-affix-heading { display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size:13px; color:#c4d2d6; margin:14px 0 9px; }
+.enchant-affix-heading small { font-size:11px; color:#91a5b1; text-align:right; }
+.enchant-affixes { display:grid; gap:5px; }
+.enchant-affix { display:grid; grid-template-columns:18px minmax(0,1fr) auto; align-items:center; gap:9px; width:100%; padding:11px 12px; background:#12212b30; border:1px solid #b1c4d01c; color:#c8d5da; font:inherit; font-size:14px; text-align:left; }
+button.enchant-affix { cursor:pointer; transition:border-color .15s,background .15s; }
+button.enchant-affix:hover { background:#a8b6ca0e; border-color:#b4c7d350; }
+.enchant-affix.is-replacing { background:linear-gradient(100deg,#a1a9d316,transparent); border-color:#adbcdc65; }
+.enchant-affix-mark { color:#a7bad0; font-size:18px; }.enchant-affix small { display:block; color:#8298a5; font-size:11px; margin-top:3px; }
+.enchant-affix.is-replacing small { color:#b4bed8; }
+.enchant-affix b { font-weight:500; color:#dae6e5; white-space:nowrap; font-size:14px; }.enchant-affix b i { font-style:normal; color:#8496a3; margin:0 4px; }
+.enchant-new-affix { border-style:dashed; background:transparent; }.enchant-new-affix b { color:#b8b1d4; }
+.enchant-note { font-size:12px; line-height:1.6; color:#9aadb8; margin:12px 0; }
+.enchant-pool { border-top:1px solid #b1c4d01c; padding-top:12px; margin-top:14px; }.enchant-pool summary { font-size:12px; color:#abbecb; }
+.enchant-pool .service-pool-odds { font-size:12px; line-height:1.5; color:#a9bac6; padding:7px 0; }.enchant-pool .service-pool-odds b { font-weight:500; color:#cfdbde; }
+.enchant-pool-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }.enchant-pool-tags span { padding:5px 8px; border:1px solid #b1c4d01c; color:#a8bbc5; font-size:12px; }
+@media(max-width:420px) { .enchant-operations .ui-button,.enchant-focus .ui-button { font-size:12px; padding:10px 3px; }.enchant-affix { padding:10px 8px; gap:6px; font-size:13px; }.enchant-affix b { font-size:12px; }.enchant-transition { font-size:16px; gap:8px; } }
+@media(prefers-reduced-motion:reduce) { button.enchant-affix { transition:none; } }
