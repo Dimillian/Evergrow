@@ -6,6 +6,8 @@ export function validCommerce(v: unknown, level: number): v is CommerceState {
     && object(v.sold) && Object.keys(v.sold).length <= COMMERCE_LIMITS.vendors
     && Object.entries(v.sold).every(([key, mask]) => text(key, 140) && /^town:[0-9]+:-?[0-9]+:building:[0-9]+:(blacksmith|jeweler)$/.test(key)
       && integer(mask, 0, key.endsWith(':jeweler') ? 65535 : 16777215))
+    && (v.refreshes === undefined || object(v.refreshes) && Object.keys(v.refreshes).length <= COMMERCE_LIMITS.vendors
+      && Object.entries(v.refreshes).every(([key, count]) => object(v.sold) && Object.hasOwn(v.sold, key) && integer(count, 1, 53)))
     && Array.isArray(v.buyback) && v.buyback.length <= COMMERCE_LIMITS.buyback
     && v.buyback.every(b => object(b) && validItem(b.item) && integer(b.price));
 }

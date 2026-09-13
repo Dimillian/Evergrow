@@ -25,6 +25,8 @@ export interface ItemRecipe {
 }
 export interface CommerceState {
   epoch: number; revision: number; operations: number; sold: Record<string, number>;
+  /** Paid stock generations, scoped to the current level epoch and vendor. */
+  refreshes?: Record<string, number>;
   buyback: Array<{ item: Item; price: number }>;
 }
 export interface Item {

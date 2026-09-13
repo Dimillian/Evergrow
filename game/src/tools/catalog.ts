@@ -21,6 +21,8 @@ export const TOOLS: readonly Tool[] = [
   {id:'equipment',group:'equipment',name:'Equipment gallery',path:'/equipment.html',description:'Browse all equipment silhouettes and materials under movable light.'},
   {id:'charms',group:'equipment',name:'Charms',path:'/character.html?charms',description:'Arrange six sizes of magic stones and inspect their active bonuses.'},
   {id:'inventory',group:'equipment',name:'Inventory & comparisons',path:'/character.html',description:'Equip staged gear, compare stats and organize a character’s bag.'},
+  {id:'merchant-stock',group:'equipment',name:'Merchant stock',path:'/services.html?tier=city',description:'Spatial vendor trays, category tabs and paid stock refreshes.'},
+  {id:'enhancement-workbench',group:'equipment',name:'Enhancement workbench',path:'/services.html?operation=enhance&item=1',description:'Inspect equipment and exact before/after upgrade gains.'},
   {id:'services',group:'equipment',name:'Town services',path:'/services.html',description:'Inspect vendor stock, buyback and item improvements.'},
   {id:'services-phone',group:'equipment',name:'Services · phone',path:'/services-narrow.html',description:'The same enchanting interface at 390 pixels.'},
   {id:'loot',group:'equipment',name:'Ground loot',path:'/loot.html',description:'Dropped item art, rarity labels, coins and resource vials.'},

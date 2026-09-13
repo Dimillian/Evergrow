@@ -87,6 +87,10 @@ The damage audit also reports controlled low/mid/high-roll Legendary staff/chest
 
 ### Rebuilt skill atlas · local 2026-09-12
 
-The Skills workspace's existing atlas view now opens the six-territory runtime graph. Use `/character.html?panel=skills&zoom=overview&map` for the full-height overview of the 875-node / 120-group map. The draggable mini-atlas tracks the visible window; the top territory filter row is removed. Origin returns to the early routes; All refits the map. Search finds an action, bonus, Doctrine, Technique or keystone. Details restores the inspector. `&progression` stages a level-100 caster build with three purchased ranks in disposable memory. The playground covers all 30 skills and 90 Techniques. No playable saves are read or written.
+The Skills workspace's existing atlas view now opens the six-territory runtime graph. Use `/character.html?panel=skills&zoom=overview&map` for the full-height overview of the 1,843-node / 174-group map. The draggable mini-atlas tracks the visible window; the top territory filter row is removed. Origin returns to the early routes; All refits the map. Search finds an action, bonus, Doctrine, Technique or keystone. Details restores the inspector. `&progression` stages a level-100 caster build with three purchased ranks in disposable memory. The playground covers all 30 skills and 90 Techniques. No playable saves are read or written.
 
 The save-free `game/scripts/atlas-balance.ts` CLI extends this workspace with 20 fully spent build fixtures and all 30 active-skill probes. See [balance follow-up](skill-tree-balance-2026-09-12.md).
+
+### Merchant refresh and enhancement workbench
+
+`/services.html?tier=city` stages the spatial Weapons / Armor / Accessories stock trays and paid refreshes. `/services.html?operation=enhance&item=1` opens the shared item showcase and exact enhancement gains. Both use the same runtime panel and pure commerce planner with disposable in-memory items and gold.

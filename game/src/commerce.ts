@@ -32,15 +32,21 @@ export function improvementPrice(item: Item, operation: Improvement, zoneLevel: 
       * (budget(item.itemLevel + 1) + budget(zoneLevel)) / 2);
   }
 }
-export function vendorStock(sheet: CharacterSheet, npc: TownNPC, level: number): Array<Item | null> {
+export const vendorRefreshCount = (sheet: CharacterSheet, npc: TownNPC, level: number) =>
+  sheet.commerce.epoch === stockEpoch(level) ? sheet.commerce.refreshes?.[npc.id] ?? 0 : 0;
+/** The whole shop refreshes. Price doubles each time, resetting with the free level restock. */
+export const vendorRefreshPrice = (sheet: CharacterSheet, npc: TownNPC, level: number) =>
+  Math.ceil(budget(vendorStockLevel(npc, level)) * 5 * 2 ** vendorRefreshCount(sheet, npc, level));
+export function vendorStock(sheet: CharacterSheet, npc: TownNPC, level: number, includeSold = false): Array<Item | null> {
   if (npc.role === 'enchanter' || npc.role === 'gambler' || npc.role === 'stash') return [];
   const epoch = stockEpoch(level), state = sheet.commerce;
   const sold = state.epoch === epoch ? state.sold : {};
   if (!Object.hasOwn(sold, npc.id) && Object.keys(sold).length >= COMMERCE_LIMITS.vendors) return [];
   const policy=servicePolicy(npc),count=npc.role==='jeweler'?policy.jewelerStock:policy.smithStock;
   return Array.from({ length: count }, (_, slot) => {
-    if ((sold[npc.id] ?? 0) & 1 << slot) return null;
-    const id = `stock:${npc.id}:${epoch}:${slot}`, seed = hashService(id), random = randomSource(seed ^ 0x674af7c1), roll = random() * 100;
+    if (!includeSold && ((sold[npc.id] ?? 0) & 1 << slot)) return null;
+    const generation = vendorRefreshCount(sheet, npc, level);
+    const id = `stock:${npc.id}:${epoch}:${slot}${generation ? `:refresh:${generation}` : ''}`, seed = hashService(id), random = randomSource(seed ^ 0x674af7c1), roll = random() * 100;
     const premium=slot>=count-policy.premium;
     const weights=premium?[0,0,90,9.5,.5]:npc.settlementTier==='city'?(npc.role==='jeweler'?[0,42,52,5.7,.3]:[10,55,31,3.8,.2]):npc.settlementTier==='village'?(npc.role==='jeweler'?[0,52,44,3.8,.2]:[25,52,21,1.9,.1]):npc.role==='jeweler'?[0,60,35,4.8,.2]:[55,35,9,1,0];
     let total = 0; const tier = ITEM_TIERS[weights.findIndex(weight => { total += weight; return roll < total; })];
@@ -69,7 +75,7 @@ function gambleItem(sheet:CharacterSheet,npc:TownNPC,level:number,kind:ItemKind)
 export const RESPEC_GOLD_PER_POINT = 25;
 export const respecPoints = (sheet: CharacterSheet) => sheet.allocatedNodes.length - 1 + Object.values(sheet.skillRanks).reduce((sum, rank) => sum + rank - 1, 0);
 export const attributeResetPoints = (sheet: CharacterSheet) => Object.values(sheet.attributes).reduce((sum, value) => sum + value - 10, 0);
-export type ServiceRequest = {type:'resetAttributes'} | {type:'respec'} | {type:'gamble';kind:ItemKind} | {type:'store';bag:number;tab?:number} | {type:'unlockStorage';tab:number} | {type:'retrieve';slot:number} | { type: 'buy'; slot: number } | { type: 'sell'; source: ItemSource }
+export type ServiceRequest = {type:'refreshStock'} | {type:'resetAttributes'} | {type:'respec'} | {type:'gamble';kind:ItemKind} | {type:'store';bag:number;tab?:number} | {type:'unlockStorage';tab:number} | {type:'retrieve';slot:number} | { type: 'buy'; slot: number } | { type: 'sell'; source: ItemSource }
   | { type: 'sellMany'; items: SaleItem[]; includeActiveCharms?: boolean }
   | { type: 'buyback'; id: string } | { type: 'improve'; source: ItemSource; operation: Improvement; affix?: number; focus?:AffixFocus };
 export interface ServiceQuote { npcId: string; revision: number; epoch: number; itemId: string; itemRevision: number; price: number; request: ServiceRequest; }
@@ -80,6 +86,16 @@ export function sourceItem(sheet: CharacterSheet, source: ItemSource): Item | nu
 export function quoteService(sheet: CharacterSheet, npc: TownNPC, level: number, request: ServiceRequest): QuoteResult {
   let item: Item | null = null, price = 0;
   const fail = (message: string): QuoteResult => ({ ok: false, message });
+  if (request.type === 'refreshStock') {
+    if (npc.role !== 'blacksmith' && npc.role !== 'jeweler') return fail('This merchant does not sell stock.');
+    const sold = sheet.commerce.epoch === stockEpoch(level) ? sheet.commerce.sold : {};
+    if (!Object.hasOwn(sold, npc.id) && Object.keys(sold).length >= COMMERCE_LIMITS.vendors) return fail('Visit a known merchant until the next level restock.');
+    price = vendorRefreshPrice(sheet, npc, level);
+    if (!Number.isSafeInteger(price) || price < 0 || sheet.commerce.revision >= Number.MAX_SAFE_INTEGER || sheet.commerce.operations >= Number.MAX_SAFE_INTEGER)
+      return fail('This refresh exceeds the supported limit.');
+    return {ok:true,item:null,quote:{npcId:npc.id,revision:sheet.commerce.revision,epoch:stockEpoch(level),
+      itemId:`refresh:${vendorRefreshCount(sheet,npc,level)}`,itemRevision:0,price,request:{type:'refreshStock'}}};
+  }
   if (request.type === 'resetAttributes') {
     if (npc.role !== 'enchanter') return fail('Visit an enchanter to reset attributes.');
     if (sheet.attributeResetUsed) return fail('Your free attribute reset has been used.');
@@ -158,11 +174,18 @@ export function planService(sheet: CharacterSheet, npc: TownNPC, level: number, 
   if (!current.ok) return current;
   if (JSON.stringify(current.quote) !== JSON.stringify(quote)) return { ok: false, message: 'The offer changed. Select the item again.' };
   const character: CharacterSheet = { ...sheet, stash: [...(sheet.stash??Array(STASH_CAPACITY).fill(null))], inventory: [...sheet.inventory], equipped: { ...sheet.equipped }, commerce: {
-    ...sheet.commerce, sold: sheet.commerce.epoch === stockEpoch(level) ? { ...sheet.commerce.sold } : {},
+    ...sheet.commerce, refreshes: sheet.commerce.epoch === stockEpoch(level) ? { ...sheet.commerce.refreshes } : {},
+    sold: sheet.commerce.epoch === stockEpoch(level) ? { ...sheet.commerce.sold } : {},
     epoch: stockEpoch(level), revision: sheet.commerce.revision + 1, operations: sheet.commerce.operations + 1, buyback: [...sheet.commerce.buyback],
   } };
   const { request, price } = quote; let item = current.item, message = '';
   if (request.type !== 'sell' && request.type !== 'sellMany' && goldBalance(sheet) < price) return { ok: false, message: 'Not enough gold.' };
+  if (request.type === 'refreshStock') {
+    if (!spendGold(character, price)) return {ok:false,message:'Not enough gold.'};
+    character.commerce.refreshes![npc.id] = vendorRefreshCount(sheet,npc,level) + 1;
+    character.commerce.sold[npc.id] = 0;
+    return {ok:true,character,item:null,message:'New stock has arrived.'};
+  }
   if (request.type === 'unlockStorage') {
     if (!spendGold(character,price)) return {ok:false,message:'Not enough gold.'};
     character.stash!.push(...Array(STASH_CAPACITY).fill(null));
