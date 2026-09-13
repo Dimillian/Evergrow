@@ -22,15 +22,16 @@ class ElementStub extends EventTarget {
   contains(target: unknown): boolean { return target === this || this.children.includes(target as ElementStub); }
   click() { this.dispatchEvent(new Event('click')); }
 }
-function setup() {
+function setup(android = false) {
   const win = new EventTarget(), root = new ElementStub(), host = new ElementStub(), abort = new AbortController();
+  if (android) Object.assign(win, { EvergrowAndroid: {} });
   host.one.set('#pause-controls', root);
   const select = (selector: string) => { const node = new ElementStub(); root.one.set(selector, node); return node; };
   const capture = select('.controls-capture');
   const cancel = select('[data-capture-cancel]'), clear = select('[data-capture-clear]'), replace = select('[data-capture-replace]');
   capture.children = [cancel, clear, replace];
   select('[data-capture-message]'); select('[data-controls-status]'); select('[data-controls-reset]');
-  select('[data-controls-export]'); select('[data-controls-import]'); select('[data-controls-file]');
+  if (!android) { select('[data-controls-export]'); select('[data-controls-import]'); select('[data-controls-file]'); }
   const binding = new ElementStub(); binding.dataset = { binding: 'skill0', bindingIndex: '0' };
   root.many.set('[data-binding]', [binding]);
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'window');
@@ -96,6 +97,34 @@ test('controls markup exposes full combat and alternate bindings with a separate
   assert.equal((markup.match(/data-binding="skill[0-4]"/g) ?? []).length, 10);
   assert.match(markup, /data-controls-reset/); assert.match(markup, /data-controls-controller hidden/);
   assert.match(markup, /role="status" aria-live="polite"/);
+});
+
+test('Android omits file transfers and initializes remapping without transfer elements', () => {
+  const s = setup(true);
+  try {
+    const markup = controlsMarkup();
+    assert.doesNotMatch(markup, /data-controls-(export|import|file)|controls-transfer|Export a backup/);
+    assert.match(markup, /data-controls-reset/);
+    assert.match(markup, /data-controls-controller hidden/);
+    s.binding.click(); s.key('KeyF');
+    assert.equal(controls.action('KeyF'), 'skill0');
+    s.root.querySelector('[data-controls-reset]').click();
+    assert.equal(controls.action('Mouse2'), 'skill0');
+    assert.equal(controls.action('KeyF'), undefined);
+  } finally { s.dispose(); }
+});
+
+test('browser retains transfer markup and opens the import picker', () => {
+  const s = setup();
+  try {
+    const markup = controlsMarkup();
+    for (const action of ['export', 'import', 'file']) assert.ok(markup.includes(`data-controls-${action}`));
+    assert.match(markup, /Export a backup/);
+    let picks = 0;
+    s.root.querySelector('[data-controls-file]').addEventListener('click', () => picks++);
+    s.root.querySelector('[data-controls-import]').click();
+    assert.equal(picks, 1);
+  } finally { s.dispose(); }
 });
 
 test('file picker imports and refreshes bindings while read errors and oversized files preserve them', async () => {

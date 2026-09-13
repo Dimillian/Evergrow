@@ -8,6 +8,8 @@ Bindings use physical keyboard positions. Escape remains pause/back and cancels 
 
 ## Export and import
 
+File transfers are available in the browser. The packaged Android/AYN Thor app omits the transfer buttons, file input and transfer help because its native WebView has no file-picker or download bridge. On-device remapping and Restore defaults remain available.
+
 In the Keyboard & mouse tab, **Export bindings** downloads `evergrow-keybindings.json`, including primary, alternate and unbound slots. **Import bindings** replaces the entire keyboard/mouse layout with a valid export and saves it on this device. Files must use the supported Evergrow format and version, include every action, contain no duplicate or reserved keys, and be at most 16 KB. Invalid files leave current bindings untouched. Imports refresh shortcut labels immediately; blocked storage is reported as session-only. Controller controls, character progress and skill-slot assignments are unaffected.
 
 

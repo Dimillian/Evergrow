@@ -8,9 +8,9 @@ export function controlsMarkup(): string {
     <p class="controls-intro">Choose a binding, then press a key or mouse button. Changes save automatically on this device.</p>
     <div class="controls-devices" role="group" aria-label="Input device"><button type="button" class="ui-button" data-control-device="desktop" aria-pressed="true">Keyboard & mouse</button><button type="button" class="ui-button" data-control-device="controller" aria-pressed="false">Controller</button></div>
     <div data-controls-desktop>
-      <div class="controls-transfer"><button type="button" class="ui-button" data-controls-export>Export bindings</button><button type="button" class="ui-button" data-controls-import>Import bindings</button></div>
+      ${typeof window !== 'undefined' && window.EvergrowAndroid ? '' : `<div class="controls-transfer"><button type="button" class="ui-button" data-controls-export>Export bindings</button><button type="button" class="ui-button" data-controls-import>Import bindings</button></div>
       <p class="controls-note">Export a backup or import a JSON file to replace this device’s keyboard & mouse bindings.</p>
-      <input type="file" accept=".json,application/json" data-controls-file aria-label="Import keybind configuration" hidden>
+      <input type="file" accept=".json,application/json" data-controls-file aria-label="Import keybind configuration" hidden>`}
       <div class="controls-column-head"><span>Action</span><span>Primary</span><span>Alternate</span></div>
       ${['Movement', 'Combat', 'World & menus'].map(group => `<section class="controls-group" aria-label="${group}"><h3>${group}</h3>${CONTROL_ACTIONS.filter(a => a.group === group).map(a => `<div class="controls-row"><span>${a.label}</span>${[0, 1].map(index => `<button type="button" class="ui-button control-binding" data-binding="${a.id}" data-binding-index="${index}"></button>`).join('')}</div>`).join('')}</section>`).join('')}
       <p class="controls-note">Esc always pauses or goes back. Ctrl reveals loot names. Mouse wheel zooms; left-click also interacts with nearby objects. Bindings use physical key positions. Browser shortcuts stay reserved.</p>
@@ -44,35 +44,8 @@ export class ControlsPanel {
     this.root.querySelector('[data-capture-clear]')!.addEventListener('click', () => this.assign(null), opts);
     this.root.querySelector('[data-capture-replace]')!.addEventListener('click', () => this.assign(this.conflict, true), opts);
     this.root.querySelector('[data-controls-reset]')!.addEventListener('click', () => { this.status(controls.reset(), 'Default controls restored.'); this.refresh(); }, opts);
-    this.root.querySelector('[data-controls-export]')!.addEventListener('click', () => {
-      try {
-        const url = URL.createObjectURL(new Blob([controls.exportConfiguration()], { type: 'application/json' }));
-        const link = document.createElement('a');
-        link.href = url; link.download = 'evergrow-keybindings.json';
-        document.body.append(link);
-        try { link.click(); } finally { link.remove(); setTimeout(() => URL.revokeObjectURL(url), 60_000); }
-        this.status('saved', 'Keybind export downloaded.');
-      } catch { this.status('error', 'Could not export bindings. Please try again.'); }
-    }, opts);
-    const fileInput = this.root.querySelector<HTMLInputElement>('[data-controls-file]')!;
-    const importButton = this.root.querySelector<HTMLButtonElement>('[data-controls-import]')!;
-    importButton.addEventListener('click', () => { this.cancel(false); fileInput.value = ''; fileInput.click(); }, opts);
-    fileInput.addEventListener('change', async () => {
-      const file = fileInput.files?.[0];
-      fileInput.value = '';
-      if (!file || importButton.disabled) return;
-      importButton.disabled = true;
-      try {
-        if (file.size > CONTROL_FILE_LIMIT) { this.status('error', 'File is too large. Choose an Evergrow keybind export (up to 16 KB).'); return; }
-        const raw = await file.text();
-        if (signal.aborted) return;
-        this.cancel(false);
-        const result = controls.importConfiguration(raw);
-        this.status(result, result === 'invalid' ? 'Invalid or unsupported keybind file. Your bindings were not changed.' : 'Keybind configuration imported.');
-        if (result !== 'invalid') this.refresh();
-      } catch { if (!signal.aborted) this.status('error', 'Could not read that file. Your bindings were not changed.'); }
-      finally { importButton.disabled = false; }
-    }, opts);
+    // The packaged WebView has no native file picker or download bridge.
+    if (!window.EvergrowAndroid) this.bindFileTransfers(signal);
     for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-control-device]')) button.addEventListener('click', () => {
       const desktop = button.dataset.controlDevice === 'desktop';
       this.root.querySelector<HTMLElement>('[data-controls-desktop]')!.hidden = !desktop;
@@ -107,6 +80,38 @@ export class ControlsPanel {
     window.addEventListener('auxclick', swallow, { signal, capture: true });
     window.addEventListener('blur', () => this.cancel(false), opts);
     this.refresh();
+  }
+  private bindFileTransfers(signal: AbortSignal): void {
+    const opts = { signal };
+    this.root.querySelector('[data-controls-export]')!.addEventListener('click', () => {
+      try {
+        const url = URL.createObjectURL(new Blob([controls.exportConfiguration()], { type: 'application/json' }));
+        const link = document.createElement('a');
+        link.href = url; link.download = 'evergrow-keybindings.json';
+        document.body.append(link);
+        try { link.click(); } finally { link.remove(); setTimeout(() => URL.revokeObjectURL(url), 60_000); }
+        this.status('saved', 'Keybind export downloaded.');
+      } catch { this.status('error', 'Could not export bindings. Please try again.'); }
+    }, opts);
+    const fileInput = this.root.querySelector<HTMLInputElement>('[data-controls-file]')!;
+    const importButton = this.root.querySelector<HTMLButtonElement>('[data-controls-import]')!;
+    importButton.addEventListener('click', () => { this.cancel(false); fileInput.value = ''; fileInput.click(); }, opts);
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      fileInput.value = '';
+      if (!file || importButton.disabled) return;
+      importButton.disabled = true;
+      try {
+        if (file.size > CONTROL_FILE_LIMIT) { this.status('error', 'File is too large. Choose an Evergrow keybind export (up to 16 KB).'); return; }
+        const raw = await file.text();
+        if (signal.aborted) return;
+        this.cancel(false);
+        const result = controls.importConfiguration(raw);
+        this.status(result, result === 'invalid' ? 'Invalid or unsupported keybind file. Your bindings were not changed.' : 'Keybind configuration imported.');
+        if (result !== 'invalid') this.refresh();
+      } catch { if (!signal.aborted) this.status('error', 'Could not read that file. Your bindings were not changed.'); }
+      finally { importButton.disabled = false; }
+    }, opts);
   }
   private get capture(): HTMLElement { return this.root.querySelector('.controls-capture')!; }
   private name(action: ControlAction): string { return CONTROL_ACTIONS.find(a => a.id === action)!.label; }
