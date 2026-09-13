@@ -8,6 +8,8 @@ The hub and review HTML are outside the production build entry graph and outside
 
 World → Events includes **In progress** for all thirteen event entries (`/events.html?view=ruinedChapel&state=progress`). A recipe selector exposes every encounter variant. Play/Pause, scrubbing, speed and Restart stage the shared left-side trial panel and world objectives in disposable memory. Cursed chests and beacons use real durations; finite encounters use an explicitly authored twelve-second-per-wave presentation timeline. Instant interactions explain their lack of a progress phase. Hidden tabs suspend time, reduced motion starts paused, and no combat or playable saves are involved.
 
+Trial previews include a **HUD card** animation row: **Replay entrance** / **Replay exit**, a separate animation scrubber and 1×/0.5×/0.25× motion speeds. The event timeline pauses during these replays. The shared runtime frame expands horizontally before its contents fade in, reversing on exit. Reduced motion makes the transition instant. Finishing the event timeline automatically previews the card exit before the reward-opening study.
+
 The Events toolbar groups Available / In progress / Opening / Claimed into one preview-state selector with a visible selected state. View choices is a separate action. Recipe selection sits alongside the states, and playback/timeline controls occupy their own responsive row. Switching events retains the selected state when supported; opening animations finish on Claimed. Every preview state is URL-addressable through `state=available|progress|opening|claimed`.
 
 ## Adding a tool

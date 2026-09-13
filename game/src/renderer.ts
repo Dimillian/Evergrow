@@ -33,6 +33,8 @@ import { cryptLights, cryptLightMask } from './dungeon-lighting.ts';
 import { drawCryptGate, drawCryptDecor, drawCryptEmission } from './dungeon-art.ts';
 import { currentDungeon } from './dungeon-state.ts';
 import { drawEventObjectives, EventArt, drawEventUI } from './poi-art.ts';
+import { eventProgress } from './event-progress.ts';
+import { EventProgressPresentation } from './event-progress-presentation.ts';
 import { drawPortal, drawTownAnchor } from './travel-art.ts';
 import { townPortalAnchor, withinPortalReach, PORTAL_RULES, type PortalAnchor } from './travel.ts';
 import { buildingNPC, focusNPC, canInteractNPC, NPC_NAMES, NPC_COLORS } from './npcs.ts';
@@ -170,6 +172,7 @@ export class Renderer {
   private plateOpacity = 0;
   private rangedAim: RangedAim | null = null;
   private eventArt = new EventArt();
+  readonly eventProgressPresentation = new EventProgressPresentation();
   private get eventSites() { return this.visibility.events; }
   portalGuide = 0;
   private portalAnchors: PortalAnchor[] = [];
@@ -246,6 +249,7 @@ export class Renderer {
   }
 
   reset() {
+    this.eventProgressPresentation.reset();
     this.outdoorLightEffects.reset();
     this.dungeonLightEffects.reset(); this.emission = undefined;
     this.battleBarks.reset();
@@ -296,6 +300,7 @@ export class Renderer {
     const c = this.ctx, p = sim.player, active = settings.phase === 'playing';
     const step = active ? dt : 0, alpha = sim.interpolationAlpha;
     const feedbackStep = active || settings.phase === 'dead' ? dt : 0;
+    this.eventProgressPresentation.update(sim.dungeonFloor ? null : eventProgress(sim.eventState), feedbackStep, settings.reducedMotion);
     this.rewards.update(goldBalance(p.character), feedbackStep, settings.reducedMotion);
     this.experienceDisplay = this.experienceFeedback.update(p, feedbackStep, settings.reducedMotion);
     this.experienceDisplay.pulse = Math.max(this.experienceDisplay.pulse, this.rewards.xpPulse);
@@ -609,7 +614,7 @@ export class Renderer {
         if(n&&Math.hypot(n.x-p.x,n.y-p.y)<135){const head=worldToScreen(this.view,n.x,n.y-62);const box=placeBattleBark(this.residentSpeech.line,head,{width:this.width,height:this.height},s=>measureBattleBark(c,s),barkReserved);if(box)drawBattleBark(c,box,Math.min(2.5,this.residentSpeech.age));}
       }
       this.drawPortalHints(c, sim, world);
-      drawEventUI(c, sim, world, (x,y) => worldToScreen(this.view,x,y), this.gamepadActive, this.eventSites);
+      drawEventUI(c, sim, world, (x,y) => worldToScreen(this.view,x,y), this.gamepadActive, this.eventSites, this.eventProgressPresentation.view);
       this.cursor(c, sim);
       const npcs = this.cachedBuildings.flatMap(b => { const npc = buildingNPC(b); return npc ? [npc] : []; });
       const npc = focusNPC(npcs, p, world);

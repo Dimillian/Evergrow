@@ -13,6 +13,8 @@ import { treasureLanding } from './treasure-flight.ts';
 import { EventPanel } from './poi-panel.ts';
 import { EVENT_RECIPES, eventRecipe } from './event-recipes.ts';
 import { eventStudyProfile, stageEventProgress } from './tools/event-progress-study.ts';
+import { eventProgress } from './event-progress.ts';
+import { EVENT_CARD_MOTION } from './event-progress-presentation.ts';
 import './tools/event-review.css';
 // Frozen, memory-only scenes. Only presentation time advances; no combat, inputs or storage.
 const views: readonly [EventKind, string][] = [
@@ -43,6 +45,7 @@ async function boot() {
       <button class="choice-button">View choices ↗</button>
     </div>
     <div class="event-review-progress" hidden><button class="progress-play">Pause</button><label class="event-review-timeline">Timeline <input class="progress-time" type="range" min="0" step="0.1" value="0"></label><label>Speed <select class="progress-speed"><option value="1">1×</option><option value="5">5×</option><option value="10">10×</option></select></label><button class="progress-restart">Restart</button><output class="progress-readout"></output></div>
+    <div class="event-review-progress card-motion-controls" hidden role="group" aria-label="HUD card animation"><span class="event-review-label">HUD card</span><button class="card-enter">Replay entrance</button><button class="card-exit">Replay exit</button><label class="event-review-timeline">Animation <input class="card-time" type="range" min="0" max="${EVENT_CARD_MOTION.duration}" step="0.01" value="0"></label><label>Motion speed <select class="card-speed"><option value="1">1×</option><option value="0.5">0.5×</option><option value="0.25">0.25×</option></select></label><output class="card-readout">Replay or scrub the card animation; event time stays paused.</output></div>
     <p class="layout-review-static progress-note">Disposable visual preview · No combat or saves.</p>
     <figure class="layout-review-figure"><div class="layout-review-frame"></div></figure>`;
   root.querySelector('.layout-review-frame')!.append(canvas);
@@ -52,6 +55,8 @@ async function boot() {
   let previewState: PreviewState = 'available';
   let sim: Simulation, selected: EventSite;
   let paused = false, previous = 0, studyTime = 0, recipeIndex = -1;
+  let cardMotion: { direction: 'enter' | 'exit'; elapsed: number; finishEvent: boolean } | null = null;
+  let cardPlaying = false;
   const progressControls = root.querySelector<HTMLElement>('.event-review-progress')!;
   const timeline = root.querySelector<HTMLInputElement>('.progress-time')!;
   const playButton = root.querySelector<HTMLButtonElement>('.progress-play')!;
@@ -59,6 +64,10 @@ async function boot() {
   const readout = root.querySelector<HTMLOutputElement>('.progress-readout')!;
   const recipeSelect = root.querySelector<HTMLSelectElement>('.progress-recipe')!;
   const note = root.querySelector<HTMLElement>('.progress-note')!;
+  const cardControls = root.querySelector<HTMLElement>('.card-motion-controls')!;
+  const cardTime = root.querySelector<HTMLInputElement>('.card-time')!;
+  const cardSpeed = root.querySelector<HTMLSelectElement>('.card-speed')!;
+  const cardReadout = root.querySelector<HTMLOutputElement>('.card-readout')!;
   const buttons = new Map<EventKind, HTMLButtonElement>();
   const reviewRecord = (phase: EventRecord['phase']): EventRecord => ({ ...selected, phase, choice: kind === 'caravan' ? 'goods' : kind === 'standingStones' ? 'haste' : null, wavesCleared: kind === 'cursedChest' ? 6 : 0, delivered: 0, bonusGranted: phase === 'claimed' });
   function paint(animated = false, dt = 0) {
@@ -70,7 +79,7 @@ async function boot() {
   }
   function draw() {
     cancelAnimationFrame(frame);
-    progressControls.hidden = true; panel?.close();
+    progressControls.hidden = cardControls.hidden = true; cardMotion = null; cardPlaying = false; panel?.close();
     selected = sites.filter(s => s.kind === kind).sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y))[0];
     if (!selected) return;
     const recipes = EVENT_RECIPES[kind] ?? [];
@@ -137,7 +146,8 @@ async function boot() {
       sim.time += dt;
       updateProgress(); paint(true, dt);
       if (studyTime >= duration) {
-        showState('opening');
+        if (eventProgress(sim.eventState)) replayCard('exit', true);
+        else showState('opening');
         return;
       }
     }
@@ -150,24 +160,74 @@ async function boot() {
     timeline.disabled = playButton.disabled = speed.disabled = profile.duration === 0;
     note.textContent = `${profile.note} Disposable state; no playable saves.`;
     paused = profile.duration === 0 || matchMedia('(prefers-reduced-motion: reduce)').matches; previous = 0;
-    updateProgress(); paint();
+    updateProgress();
+    cardControls.hidden = !eventProgress(sim.eventState);
+    cardTime.value = '0'; cardReadout.value = 'Replay or scrub the card animation; event time stays paused.';
+    renderer.eventProgressPresentation.reset();
+    paint(true);
     if (!paused) frame = requestAnimationFrame(animateProgress);
   }
+  function paintCard() {
+    if (!cardMotion) return;
+    updateProgress();
+    const progress = eventProgress(sim.eventState), presentation = renderer.eventProgressPresentation;
+    presentation.reset();
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (cardMotion.direction === 'enter') presentation.update(progress, cardMotion.elapsed, reduced);
+    else {
+      presentation.update(progress, EVENT_CARD_MOTION.duration, reduced);
+      presentation.update(null, cardMotion.elapsed, reduced);
+      sim.eventState.trial = null;
+      sim.eventState.sites[selected.id].phase = 'completed';
+    }
+    cardTime.value = String(cardMotion.elapsed);
+    const phase = cardMotion.direction === 'enter' ? 'Entrance' : 'Exit';
+    cardReadout.value = reduced ? `${phase} · Instant (reduced motion)` : `${phase} · ${cardMotion.elapsed.toFixed(2)} / ${EVENT_CARD_MOTION.duration.toFixed(2)}s · Event time paused`;
+    cardTime.setAttribute('aria-valuetext', cardReadout.value);
+    paint(true);
+  }
+  function animateCard(now: number) {
+    if (disposed || !cardMotion || document.hidden) return;
+    if (!previous) previous = now;
+    const dt = Math.min(.1, (now - previous) / 1000); previous = now;
+    cardMotion.elapsed = matchMedia('(prefers-reduced-motion: reduce)').matches ? EVENT_CARD_MOTION.duration
+      : Math.min(EVENT_CARD_MOTION.duration, cardMotion.elapsed + dt * Number(cardSpeed.value));
+    paintCard();
+    if (cardMotion.elapsed < EVENT_CARD_MOTION.duration) frame = requestAnimationFrame(animateCard);
+    else { cardPlaying = false; if (cardMotion.finishEvent) showState('opening'); }
+  }
+  function replayCard(direction: 'enter' | 'exit', finishEvent = false) {
+    cancelAnimationFrame(frame); paused = true; cardPlaying = true; previous = 0;
+    cardMotion = { direction, elapsed: 0, finishEvent };
+    paintCard(); frame = requestAnimationFrame(animateCard);
+  }
+  root.querySelector('.card-enter')!.addEventListener('click', () => replayCard('enter'), { signal: lifetime.signal });
+  root.querySelector('.card-exit')!.addEventListener('click', () => replayCard('exit'), { signal: lifetime.signal });
+  cardTime.addEventListener('input', () => {
+    cancelAnimationFrame(frame); paused = true; cardPlaying = false;
+    cardMotion = { direction: cardMotion?.direction ?? 'enter', elapsed: Number(cardTime.value), finishEvent: false };
+    paintCard();
+  }, { signal: lifetime.signal });
   root.querySelector('.progress-restart')!.addEventListener('click', startProgress, { signal: lifetime.signal });
   playButton.addEventListener('click', () => {
-    paused = !paused; previous = 0; cancelAnimationFrame(frame); updateProgress();
+    cardMotion = null; cardPlaying = false; paused = !paused; previous = 0; cancelAnimationFrame(frame); updateProgress();
+    cardReadout.value = 'Replay or scrub the card animation; event time stays paused.';
     if (!paused) frame = requestAnimationFrame(animateProgress);
   }, { signal: lifetime.signal });
   timeline.addEventListener('input', () => {
     if (previewState !== 'progress') return;
-    paused = true; cancelAnimationFrame(frame);
+    cardMotion = null; cardPlaying = false; paused = true; cancelAnimationFrame(frame);
+    cardReadout.value = 'Replay or scrub the card animation; event time stays paused.';
     studyTime = Number(timeline.value);
     updateProgress(); paint();
   }, { signal: lifetime.signal });
   document.addEventListener('visibilitychange', () => {
     if (previewState !== 'progress') return;
     cancelAnimationFrame(frame); previous = 0;
-    if (!paused && !document.hidden) frame = requestAnimationFrame(animateProgress);
+    if (!document.hidden) {
+      if (cardPlaying) frame = requestAnimationFrame(animateCard);
+      else if (!paused) frame = requestAnimationFrame(animateProgress);
+    }
   }, { signal: lifetime.signal });
   function startOpening() {
     draw();
