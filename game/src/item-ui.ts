@@ -13,7 +13,8 @@ import { previewEquipmentChange, type EquipmentStatChange, type PreviewStat } fr
 import { escapeUI } from './ui-components.ts';
 
 const greaterMark = '<span class="ui-greater-affix" role="img" aria-label="Greater affix · top 10% roll" title="Greater affix · top 10% roll"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0 10 6 16 8 10 10 8 16 6 10 0 8 6 6Z"/></svg></span>';
-const TIER_RANK: Record<ItemTier, number> = { common: 1, magic: 2, rare: 3, epic: 4, legendary: 5, unique: 6 };
+const TIER_RANK: Record<Exclude<ItemTier, 'unique'>, number> = { common: 1, magic: 2, rare: 3, epic: 4, legendary: 5 };
+const uniqueSeal = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 10 6 15 8 10 10 8 15 6 10 1 8 6 6Z"/></svg>';
 const number = (n: number, decimals = 1) => n.toLocaleString('en-US', { maximumFractionDigits: decimals });
 export interface ItemPresentation {
   sheet: CharacterSheet; level: number; equipped?: boolean; sourceIndex?: number; targetSlot?: EquipmentSlot;
@@ -64,7 +65,10 @@ function equipChangeCell(change: EquipmentStatChange | undefined, emptyLabel = '
 }
 
 export function itemSlotMarkup(item: Item, size = 44): string {
-  return `${itemIconSVG(item, size)}${hasGreaterAffix(item) ? `<span class="ui-item-greater">${greaterMark}</span>` : ''}${item.locked?`<span class="ui-item-lock" aria-label="Locked">${ITEM_LOCK_ICON}</span>`:''}${item.recipe.enhancement ? `<span class="ui-item-enhancement">+${item.recipe.enhancement}</span>` : ''}<span class="ui-item-level">${number(item.itemLevel, 0)}</span><span class="ui-item-tier" aria-hidden="true">${'<i></i>'.repeat(TIER_RANK[item.tier])}</span>`;
+  const tierMark = item.tier === 'unique'
+    ? `<span class="ui-item-unique-seal" aria-hidden="true">${uniqueSeal}</span>`
+    : `<span class="ui-item-tier" aria-hidden="true">${'<i></i>'.repeat(TIER_RANK[item.tier])}</span>`;
+  return `${itemIconSVG(item, size)}${hasGreaterAffix(item) ? `<span class="ui-item-greater">${greaterMark}</span>` : ''}${item.locked?`<span class="ui-item-lock" aria-label="Locked">${ITEM_LOCK_ICON}</span>`:''}${item.recipe.enhancement ? `<span class="ui-item-enhancement">+${item.recipe.enhancement}</span>` : ''}<span class="ui-item-level">${number(item.itemLevel, 0)}</span>${tierMark}`;
 }
 export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, options: { level: number; emptyMarkup: string; label: string; draggable?: boolean }): void {
   cell.classList.add('ui-item-slot');

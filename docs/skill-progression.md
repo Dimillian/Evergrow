@@ -42,36 +42,38 @@ The table is a **minimum point distance from a fresh root**, not a mandatory cha
 
 | Skill | Territory | Minimum tree points | Requirement | Base mana | Base cooldown (s) |
 | --- | --- | ---: | --- | ---: | ---: |
-| Repulse | bastion | 15 | shield | 24 | 5 |
-| Iron Citadel | bastion | 33 | shield | 45 | 28 |
-| Smoke Veil | veil | 14 | any | 20 | 9 |
-| Night Reaping | veil | 33 | dagger | 48 | 28 |
-| Sidestep | veil | 3 | any | 8 | 3.5 |
-| Brace | bastion | 2 | any | 14 | 8 |
-| Runic Ward | wellspring | 5 | magic | 22 | 10 |
-| Vaulting Shot | veil | 8 | bow | 22 | 6 |
-| Rally of Iron | forge | 23 | melee | 42 | 24 |
-| Ghost Hunt | hunt | 23 | bow | 40 | 24 |
+| Repulse | bastion | 15 | shield | 18 | 5 |
+| Iron Citadel | bastion | 33 | shield | 34 | 28 |
+| Smoke Veil | veil | 14 | any | 15 | 9 |
+| Night Reaping | veil | 33 | dagger | 36 | 28 |
+| Sidestep | veil | 3 | any | 6 | 3.5 |
+| Brace | bastion | 2 | any | 11 | 8 |
+| Runic Ward | wellspring | 5 | magic | 17 | 10 |
+| Vaulting Shot | veil | 8 | bow | 17 | 6 |
+| Rally of Iron | forge | 23 | melee | 32 | 24 |
+| Ghost Hunt | hunt | 23 | bow | 30 | 24 |
 | Cataclysm | crucible | 24 | magic | 80 | 30 |
 | Tempest | crucible | 26 | magic | 35 | 24 |
 | Absolute Zero | wellspring | 24 | magic | 75 | 28 |
-| Crescent Cleave | forge | 2 | melee | 12 | None |
-| Rift Lunge | forge | 5 | blade | 24 | 4 |
-| Whirlwind | forge | 9 | melee | 12 | None |
-| Earthshatter | forge | 13 | heavy | 36 | 6 |
-| Shield Bash | bastion | 4 | shield | 10 | None |
-| Bulwark | bastion | 6 | shield | 32 | 8 |
-| Thorn Volley | hunt | 2 | bow | 10 | None |
-| Piercing Shot | hunt | 10 | bow | 28 | 3.5 |
-| Ricochet | hunt | 8 | bow | 12 | None |
-| Rain of Arrows | hunt | 13 | bow | 36 | 6 |
-| Backstab | veil | 2 | dagger | 10 | None |
+| Crescent Cleave | forge | 2 | melee | 9 | None |
+| Rift Lunge | forge | 5 | blade | 18 | 4 |
+| Whirlwind | forge | 9 | melee | 9 | None |
+| Earthshatter | forge | 13 | heavy | 27 | 6 |
+| Shield Bash | bastion | 4 | shield | 8 | None |
+| Bulwark | bastion | 6 | shield | 24 | 8 |
+| Thorn Volley | hunt | 2 | bow | 8 | None |
+| Piercing Shot | hunt | 10 | bow | 21 | 3.5 |
+| Ricochet | hunt | 8 | bow | 9 | None |
+| Rain of Arrows | hunt | 13 | bow | 27 | 6 |
+| Backstab | veil | 2 | dagger | 8 | None |
 | Fireball | crucible | 2 | magic | 12 | None |
 | Arc Lightning | crucible | 3 | magic | 12 | None |
 | Ice Nova | wellspring | 3 | magic | 14 | None |
 | Frost Lance | wellspring | 11 | magic | 28 | 1.8 |
 | Meteor | crucible | 14 | magic | 40 | 7 |
 | Soul Siphon | wellspring | 8 | magic | 30 | 4.5 |
+
+Non-spell-damage skill costs were reduced by approximately 25% on 2026-09-13, rounded to whole base mana: physical bow/melee/shield skills, their stances and movement/defense utilities, plus the life-based Runic Ward. Spell-damage attacks retain their costs. Ranks, Techniques and cost reduction still modify these shared base values; existing characters receive the new prices without a refund or reset.
 
 ## Ranks and Techniques
 
