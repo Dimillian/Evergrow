@@ -13,7 +13,7 @@ const key = (notice: GameNotice): string => notice.kind === 'loot' ? `loot:${not
     : `info:${notice.message}`;
 const duration = (notice: GameNotice) => notice.kind === 'loot' ? 3.6 : 2.8;
 
-/** Bounded feed with individual item pickups and coalesced warnings. */
+/** Bounded feed with queued pickups and immediate action feedback. */
 export class NotificationQueue {
   readonly visible: NoticeEntry[] = [];
   private pending: GameNotice[] = [];
@@ -25,7 +25,21 @@ export class NotificationQueue {
   push(notice: GameNotice): void {
     const active = this.visible.find(entry => key(entry.notice) === key(notice));
     const waiting = this.pending.findIndex(value => key(value) === key(notice));
-    if (active) { active.notice = notice; active.age = 0; active.duration = duration(notice); return; }
+    if (active) {
+      active.notice = notice; active.age = 0; active.duration = duration(notice);
+      // The compact mobile feed shows its last card, so renewed feedback belongs there.
+      if (notice.kind === 'info') { this.visible.splice(this.visible.indexOf(active), 1); this.visible.push(active); }
+      return;
+    }
+    if (notice.kind === 'info') {
+      // A click result must not wait behind a burst of loot. Keep displaced pickups queued.
+      const previous = this.visible.findIndex(entry => entry.notice.kind === 'info');
+      if (previous >= 0) this.visible.splice(previous, 1);
+      else if (this.visible.length >= this.capacity) this.pending.unshift(this.visible.pop()!.notice);
+      this.visible.push({ id: this.nextId++, notice, age: 0, duration: duration(notice) });
+      if (this.pending.length > 24) this.pending.pop();
+      return;
+    }
     if (waiting >= 0) { this.pending[waiting] = notice; return; }
     this.pending.push(notice);
     if (this.pending.length > 24) this.pending.shift();
@@ -42,7 +56,9 @@ export class NotificationQueue {
   private promote(): void {
     while (this.visible.length < this.capacity && this.pending.length) {
       const notice = this.pending.shift()!;
-      this.visible.push({ id: this.nextId++, notice, age: 0, duration: duration(notice) });
+      const feedback = this.visible.findIndex(entry => entry.notice.kind === 'info');
+      this.visible.splice(feedback < 0 ? this.visible.length : feedback, 0,
+        { id: this.nextId++, notice, age: 0, duration: duration(notice) });
     }
   }
 }

@@ -2,6 +2,51 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { NotificationQueue, AreaNoticeTracker, NOTICE_EXIT_SECONDS } from '../src/notification-queue.ts';
 import { generateItem } from '../src/items.ts';
+import { createCharacterSheet } from '../src/items.ts';
+import { addInventoryItem } from '../src/inventory.ts';
+import { equipBest } from '../src/inventory-tools.ts';
+
+test('Auto Equip feedback appears immediately during a loot burst and displaced pickups resume', () => {
+  const queue = new NotificationQueue(2), sheet = createCharacterSheet();
+  const items = Array.from({ length: 4 }, (_, i) => generateItem(9900 + i, 1, 'boots', undefined, 'rare'));
+  for (const item of items) queue.push({ kind: 'loot', item });
+  addInventoryItem(sheet, items[0]);
+  const result = equipBest(sheet, 1);
+  assert.equal(result.ok, true);
+  assert.equal(result.message, 'Auto Equip: upgraded 1 equipment slot.');
+  queue.push({ kind: 'info', message: result.message! });
+  assert.deepEqual(queue.visible.at(-1)?.notice, { kind: 'info', message: result.message });
+  assert.equal(queue.visible.length, 2);
+  queue.advance(3.1);
+  assert.deepEqual(queue.visible.map(entry => entry.notice), items.slice(0, 2).map(item => ({ kind: 'loot', item })));
+  assert.equal(queue.pendingCount, 2, 'remaining pickups are still queued');
+});
+
+test('repeated Auto Equip reports no upgrade immediately without queuing stale action results', () => {
+  const queue = new NotificationQueue(2);
+  queue.push({ kind: 'info', message: 'Auto Equip: upgraded 2 equipment slots.' });
+  const result = equipBest(createCharacterSheet(), 1);
+  assert.equal(result.ok, false);
+  assert.equal(result.message, 'No equipment upgrades available.');
+  const notice = { kind: 'info' as const, message: result.message! };
+  queue.push(notice); queue.advance(1); queue.push(notice);
+  assert.deepEqual(queue.visible.map(entry => entry.notice), [notice]);
+  assert.equal(queue.visible[0].age, 0);
+  assert.equal(queue.pendingCount, 0);
+});
+
+test('action feedback stays last for the mobile feed when new pickups arrive or are promoted', () => {
+  const queue = new NotificationQueue(2);
+  const first = { kind: 'loot' as const, item: generateItem(9990, 1) };
+  const second = { kind: 'loot' as const, item: generateItem(9991, 1) };
+  const feedback = { kind: 'info' as const, message: 'Auto Equip: upgraded 1 equipment slot.' };
+  queue.push(first); queue.advance(3); queue.push(feedback); queue.push(second);
+  assert.equal(queue.visible.at(-1)?.notice, feedback);
+  queue.advance(1);
+  assert.deepEqual(queue.visible.map(entry => entry.notice), [second, feedback]);
+  queue.push(feedback);
+  assert.equal(queue.visible.at(-1)?.notice, feedback);
+});
 
 test('loot bursts queue independently, preserve item identity and wait through the exit animation', () => {
   const queue = new NotificationQueue(3);

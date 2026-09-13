@@ -52,13 +52,14 @@ export class GameNotifications {
     const lane = (selector: string, entries: readonly NoticeEntry[], cards: typeof this.cards) => {
       const parent = this.element.querySelector(selector)!;
       for (const [id, card] of cards) if (!entries.some(entry => entry.id === id)) { card.element.remove(); cards.delete(id); }
-      for (const entry of entries) {
+      for (const [index, entry] of entries.entries()) {
         let card = cards.get(entry.id);
         const fresh = !card;
         if (!card) {
           const element = document.createElement('article'); element.className = 'notification-card'; element.setAttribute('aria-hidden', 'true');
           card = { element, notice: entry.notice }; cards.set(entry.id, card); parent.append(element);
         }
+        if (parent.children[index] !== card.element) parent.insertBefore(card.element, parent.children[index] ?? null);
         if (fresh || card.notice !== entry.notice) {
           const notice = entry.notice; card.notice = notice;
           let title: string, detail: string, icon: string, color: string;

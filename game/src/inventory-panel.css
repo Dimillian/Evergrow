@@ -247,8 +247,8 @@
 .charm-net-changes td { text-align:right; }
 
 /* Quiet equipment score, shared with the character hall and leaderboard. */
-.character-section-title > .character-gear-power {
-  display: inline-flex; align-items: baseline; gap: 6px; margin-left: auto;
+.character-gear-power {
+  display: inline-flex; align-items: baseline; gap: 6px;
   flex: none; white-space: nowrap; color: var(--ui-silver-dim);
 }
 .character-gear-power > span { font-size: 10px; letter-spacing: .02em; }
@@ -256,3 +256,7 @@
   color: var(--ui-ivory); font-family: var(--ui-font); font-size: 17px;
   font-weight: 400; font-variant-numeric: tabular-nums;
 }
+
+.character-equipment-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.character-auto-equip { min-height: 32px; padding: 6px 9px; font-size: 14px; white-space: nowrap; }
+@media (pointer: coarse) { .character-auto-equip { min-height: 44px; } }
