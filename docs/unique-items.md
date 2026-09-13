@@ -47,3 +47,11 @@ Discovery occurs only on successful pickup, never when a drop is generated or re
 - `/tools/skills.html?skill=whirlwind&unique=dervish-grasp&level=25`: the isolated skill study; select another skill/Unique to inspect each power and its Techniques. No playable saves are read or changed.
 
 `game/tests/unique-items.test.ts` covers all recipes across levels 1–1,000,000, enhancement/forgery/save validation, odds and source-level separation, each signature with Original and all three Techniques, returning contacts/terrain, nova targeting/echo, paid Fireball capacity and basic release, ward damage/expiry, held Whirlwind/mana, and successful-pickup collection persistence. Gameplay balance and touch/controller feel remain player checks.
+
+## Validation checkpoint · 2026-09-13
+
+The player approved Homeward Thorn after trying the level-25 local Homeward Test character. That character occupies an unused local slot; it is not a production asset or a modified cloud save.
+
+A fresh full run passed 1,325 headless tests. Two additional targeted tests then verified both returning legs across Original/all three Techniques (damage, pierce and shield stun), and paid Living Ember payload retention when ground-effect capacity is full. All 15 Unique tests pass, along with TypeScript checking and the production build. No additional runtime defect was found in this review. Visual/combat feel for the other five powers and cross-device input behavior still need player validation. Touch retains tap-to-cast Whirlwind, as documented above.
+
+The proposed second batch is recorded separately in [Next Unique batch](unique-items-next-batch.md); it is not implemented or approved content.

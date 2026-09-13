@@ -177,3 +177,42 @@ test('a quick Whirlwind tap still starts one revolution after the held button is
  for(let i=0;i<240;i++)sim.update(1/120,idle);
  assert.equal(p.attack,null);
 });
+
+test('returning attacks preserve every Technique’s damage, piercing and shield stun on both legs',()=>{
+ for(const id of ['homeward-thorn','returning-verdict']){
+  const skill=id==='homeward-thorn'?'volley':'shieldBash';
+  for(const variant of [undefined,...SKILL_SPECIALIZATIONS.filter(v=>v.skill===skill).map(v=>v.id)]){
+   const f=fixture(id,variant);assert.ok(f.cast());
+   const enemy=f.sim.spawnEnemy('stalker',70,0)!;enemy.hp=enemy.maxHp=100000;
+   for(const original of f.sim.projectiles){
+    // Inspect one aimed missile at a time so every contact can be attributed to its leg.
+    const shot=structuredClone(original);shot.angle=0;shot.vx=Math.hypot(shot.vx,shot.vy);shot.vy=0;
+    const seen:{leg:string;damage:number;melee:boolean}[]=[];
+    const pierce=shot.effects!.returning!.pierce;
+    for(let frame=0;frame<360&&shot.life>0;frame++)advanceProjectiles([shot],1/120,{
+     player:f.p,enemies:[enemy],world,visible:()=>true,onScreen:()=>true,schedule:()=>{},emit:()=>{},hurt:()=>{},
+     damage:(_e,damage,_angle,melee)=>seen.push({leg:shot.effects!.returning!.leg,damage,melee}),
+    });
+    assert.deepEqual(seen.map(h=>h.leg),['out','back'],`${id}:${variant}`);
+    assert.ok(seen.every(h=>h.damage===original.damage&&h.melee===(id==='returning-verdict')));
+    assert.equal(shot.effects!.returning!.pierce,pierce);
+    if(id==='returning-verdict'){
+     const recipe=resolveSkill(skill,f.p.derived,f.p.character).recipe;assert.equal(recipe.kind,'cone');
+     if(recipe.kind==='cone')assert.equal(shot.effects!.stunDuration,recipe.stun);
+     assert.ok(enemy.stagger>0,'normal foe receives the authored stun through contact');
+    }
+   }
+  }
+ }
+});
+
+test('stored Living Ember reserves ground capacity and preserves the paid burn payload',()=>{
+ const f=fixture('cinderheart-testament','fireball-ember');assert.ok(f.cast());
+ const paid=structuredClone(f.p.skillEffects!.embers![0].shots[0]);
+ assert.ok(paid.effects.groundDuration&&paid.effects.groundDps&&paid.effects.burnDps);
+ assert.equal(releaseStoredEmbers(f.p,128,0,()=>assert.fail('must wait for ground capacity')),false);
+ const released:typeof paid[]=[];
+ assert.ok(releaseStoredEmbers(f.p,128,1,shot=>released.push(shot)));
+ assert.deepEqual(released,[paid]);
+ assert.equal(releaseStoredEmbers(f.p,128,1,()=>assert.fail('must not release twice')),false);
+});
