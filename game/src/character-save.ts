@@ -1,5 +1,5 @@
 import { upgradeSkillTree } from './skill-tree-upgrade.ts';
-import { doctrineConflict } from './skill-tree.ts';
+import { doctrineConflict, SKILL_TREE_VERSION } from './skill-tree.ts';
 import { STASH_CAPACITY, MAX_STORAGE_TABS } from './storage-content.ts';
 import { validPackLayout } from './inventory-grid.ts';
 import { validEncounterScales } from './encounter-scaling.ts';
@@ -68,7 +68,7 @@ function validSheet(v: unknown, level: number): v is CharacterSheet {
     || !Array.isArray(v.allocatedNodes) || v.allocatedNodes.length > SKILL_NODES.size || !v.allocatedNodes.includes('origin')
     || !v.allocatedNodes.every(id => typeof id === 'string' && SKILL_NODES.has(id)) || new Set(v.allocatedNodes).size !== v.allocatedNodes.length) return false;
   const sheet = v as unknown as CharacterSheet;
-  if (sheet.treeVersion!==2 || sheet.treeRefunded!==undefined&&sheet.treeRefunded!==true || sheet.allocatedNodes.some(id=>doctrineConflict(sheet.allocatedNodes,SKILL_NODES.get(id)!)) || !validSkillProgression(sheet) || !validPackLayout(sheet.inventory, sheet.inventoryLayout)) return false;
+  if (sheet.treeVersion!==SKILL_TREE_VERSION || sheet.treeRefunded!==undefined&&sheet.treeRefunded!==true || sheet.allocatedNodes.some(id=>doctrineConflict(sheet.allocatedNodes,SKILL_NODES.get(id)!)) || !validSkillProgression(sheet) || !validPackLayout(sheet.inventory, sheet.inventoryLayout)) return false;
   const ids = [...(sheet.stash??[]), ...sheet.inventory, ...Object.values(sheet.equipped)].filter((i): i is Item => i !== null).map(i => i.id);
   if (new Set(ids).size !== ids.length || sheet.equipped.weapon?.weapon?.hands === 2 && sheet.equipped.offhand !== null) return false;
   const allocated = new Set(sheet.allocatedNodes), connected = new Set(['origin']), queue = ['origin'];

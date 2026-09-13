@@ -29,6 +29,7 @@ export function buildAtlasLightPlan(view: SkillAtlasView, captions: readonly Atl
     const owned = view.allocated.has(edge.from) && view.allocated.has(edge.to), routeFrom = route.get(key(edge.from, edge.to));
     if (!owned && !routeFrom) continue;
     let a = SKILL_NODES.get(edge.from)!, b = SKILL_NODES.get(edge.to)!;
+    if (view.filterActive && !routeFrom && (!view.matches(a) || !view.matches(b))) continue;
     if (routeFrom ? b.id === routeFrom : (distances.get(a.id) ?? 0) > (distances.get(b.id) ?? 0)) [a, b] = [b, a];
     const control = edge.control ?? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     const screen = (p: Point): Point => ({ x: (p.x - view.centerX) * view.zoom + view.width / 2, y: (p.y - view.centerY) * view.zoom + view.height / 2 });

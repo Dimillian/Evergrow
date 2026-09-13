@@ -18,7 +18,7 @@ test('every development hover identifies its exact owner and whether it unlocks 
   }
 });
 test('unrelated notable passives are never presented as selectable specializations',()=>{
-  const node=SKILL_TREE.nodes.find(n=>n.kind==='notable' && !n.specialization && !n.keystone)!;
+  const node=SKILL_TREE.nodes.find(n=>n.kind==='notable' && n.role==='cluster')!;
   assert.equal(skillNodeRole(node),'Notable passive');
   assert.equal(skillNodeOwner(node),undefined);
 });

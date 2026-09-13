@@ -8,7 +8,7 @@ export function boundsForNodes(nodes:readonly SkillNode[], padding=180):AtlasBou
 }
 export function fitAtlasBounds(bounds:AtlasBounds,width:number,height:number) {
   return {centerX:(bounds.minX+bounds.maxX)/2,centerY:(bounds.minY+bounds.maxY)/2,
-    zoom:Math.max(.005,Math.min(Math.max(1,width-80)/(bounds.maxX-bounds.minX),Math.max(1,height-100)/(bounds.maxY-bounds.minY)))};
+    zoom:Math.max(.005,Math.min(Math.max(1,width-80)/(bounds.maxX-bounds.minX),Math.max(1,height-140)/(bounds.maxY-bounds.minY)))};
 }
 /** Letterboxing uses one scale in both directions, so the navigator never distorts the tree. */
 export function atlasNavigatorProjection(width:number,height:number) {

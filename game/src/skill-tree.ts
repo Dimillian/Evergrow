@@ -2,6 +2,7 @@ import { SKILL_SPECIALIZATIONS, specializationNode, OVERLOAD_NODE } from './skil
 import type { ActionResult, CharacterSheet, SkillId, StatKey, StatModifiers } from './character-types.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
 import { SKILL_TERRITORIES, TERRITORY_SPECIALTIES, SKILL_DOCTRINES, BORDER_GARDENS, OUTER_SPECIALTIES } from './skill-tree-content.ts';
+import { PASSIVE_CLUSTER_SHAPES, passiveClusterShape, type PassiveClusterShape } from './skill-tree-shapes.ts';
 export { SKILL_TERRITORIES, SKILL_DOCTRINES } from './skill-tree-content.ts';
 export type SkillDomain = 'Might' | 'Cunning' | 'Arcana';
 export interface SkillNode {
@@ -17,21 +18,10 @@ export interface SkillNode {
 }
 interface Point { x: number; y: number; }
 export interface SkillEdge { readonly from: string; readonly to: string; readonly control?: Readonly<Point>; }
-export interface SkillCluster { readonly id: string; readonly name: string; readonly domain: SkillDomain; readonly territory?: string; readonly x: number; readonly y: number; readonly radius: number; }
+export interface SkillCluster { readonly id: string; readonly name: string; readonly domain: SkillDomain; readonly territory?: string; readonly shape?: PassiveClusterShape; readonly x: number; readonly y: number; readonly radius: number; }
 export const SKILL_TREE_ORIGIN = 'origin';
-export const SKILL_TREE_VERSION = 2;
+export const SKILL_TREE_VERSION = 3;
 type MutableNode = Omit<SkillNode, 'neighbors'> & { neighbors: string[] };
-// Different access structures: fork, loop, ladder, spur, fan, bridge, split path, long commitment.
-const SHAPES = [
-  {p:[[0,0],[55,-32],[55,32],[110,-55],[110,55],[163,0]],e:[[0,1],[0,2],[1,3],[2,4],[3,5],[4,5]]},
-  {p:[[0,0],[42,-58],[107,-68],[152,-15],[107,45],[42,50]],e:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0]]},
-  {p:[[0,0],[52,-38],[52,38],[110,-38],[110,38],[168,-38],[168,38]],e:[[0,1],[0,2],[1,3],[2,4],[3,5],[4,6],[3,4]]},
-  {p:[[0,0],[52,0],[103,0],[156,0],[103,-55]],e:[[0,1],[1,2],[2,3],[2,4]]},
-  {p:[[0,0],[52,0],[107,-66],[124,0],[107,66]],e:[[0,1],[1,2],[1,3],[1,4]]},
-  {p:[[0,0],[47,-40],[98,-40],[147,0],[98,40],[47,40],[98,92]],e:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[4,6]]},
-  {p:[[0,0],[48,-40],[98,-65],[158,-38],[48,40],[98,65],[158,38]],e:[[0,1],[1,2],[2,3],[0,4],[4,5],[5,6]]},
-  {p:[[0,0],[43,-25],[82,10],[123,-25],[165,10],[202,-25]],e:[[0,1],[1,2],[2,3],[3,4],[4,5]]},
-] as const;
 // Distances are authored from the origin; Techniques are optional one-point leaves.
 const ACTIVE_ROUTES: Readonly<Record<string, readonly [SkillId,number,number][]>> = {
  bastion:[['brace',1,-1],['shieldBash',3,1],['bulwark',5,-1],['repulse',14,1],['ironCitadel',32,-1]],
@@ -44,184 +34,170 @@ const ACTIVE_ROUTES: Readonly<Record<string, readonly [SkillId,number,number][]>
 function buildTree() {
  const nodes: MutableNode[] = [], edges: SkillEdge[] = [], clusters: SkillCluster[] = [];
  const byId = new Map<string,MutableNode>();
- const add=(n:Omit<MutableNode,'neighbors'>)=>{ if(byId.has(n.id))throw Error(n.id); const v={...n,bonuses:Object.freeze({...n.bonuses}),neighbors:[] as string[]};nodes.push(v);byId.set(v.id,v);return v; };
- const link=(a:string,b:string)=>{const x=byId.get(a)!,y=byId.get(b)!;if(x.neighbors.includes(b))return;x.neighbors.push(b);y.neighbors.push(a);edges.push(Object.freeze({from:a,to:b}));};
- add({id:'origin',name:'The Root',description:'Six territories grow from this shared beginning. Follow roads, take a Doctrine, unlock an action, or cross into another territory. Techniques are optional; keystones never obstruct a road.',x:0,y:0,domain:'Might',kind:'origin',bonuses:{}});
- // Preserve the inner atlas, then ease into compact, continuously turning outer roads.
- // Work in display-space arc length: polar angle steps stretched the horizontal tips.
- const innerPoint=(t:typeof SKILL_TERRITORIES[number],i:number)=>{
-  const a=t.angle+t.bend*Math.sin(i/8),r=100+112*i;
-  return{x:Math.cos(a)*r*1.8,y:Math.sin(a)*r*.72};
+ const potential = new Map<string,number>();
+ const add=(n:Omit<MutableNode,'neighbors'>,depth:number)=>{if(byId.has(n.id))throw Error(n.id);const v={...n,bonuses:Object.freeze({...n.bonuses}),neighbors:[] as string[]};nodes.push(v);byId.set(v.id,v);potential.set(v.id,depth);return v;};
+ const link=(a:string,b:string)=>{const x=byId.get(a)!,y=byId.get(b)!;if(x.neighbors.includes(b))return;x.neighbors.push(b);y.neighbors.push(a);edges.push({from:a,to:b});};
+ const distance=(a:Point,b:Point)=>Math.hypot(a.x-b.x,a.y-b.y);
+ const lens=(n:MutableNode)=>n.kind==='major'?40:n.kind==='notable'?24:n.role==='travel'?12:18;
+ const segmentDistance=(p:Point,a:Point,b:Point)=>{const dx=b.x-a.x,dy=b.y-a.y,d=dx*dx+dy*dy,t=d?Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/d)):0;return Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy);};
+ const cross=(a:Point,b:Point,c:Point)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+ const intersects=(a:Point,b:Point,c:Point,d:Point)=>cross(a,b,c)*cross(a,b,d)<-1e-5&&cross(c,d,a)*cross(c,d,b)<-1e-5;
+ const clearLine=(a:MutableNode,b:MutableNode)=>nodes.every(n=>n===a||n===b||segmentDistance(n,a,b)>lens(n)+9)
+   &&edges.every(e=>e.from===a.id||e.to===a.id||e.from===b.id||e.to===b.id||!intersects(a,b,byId.get(e.from)!,byId.get(e.to)!));
+ const roadPoint=(t:typeof SKILL_TERRITORIES[number],depth:number)=>({x:Math.cos(t.angle)*(240+(depth-1)*80),y:Math.sin(t.angle)*(240+(depth-1)*80)});
+ const routeBonus=(t:typeof SKILL_TERRITORIES[number],i:number):StatModifiers=>{
+   const damage=t.domain==='Arcana'?'spellDamagePercent':'damagePercent';
+   const speed=t.domain==='Arcana'?'castSpeedPercent':'attackSpeedPercent';
+   return [{[damage]:5},{maxHp:12,maxMana:6},{[speed]:2},{critChance:.75,critDamage:4},{moveSpeedPercent:1.5},{[damage]:4,manaRegen:.5}][i%6];
  };
- const roadFrames=new Map<string,{x:number;y:number;angle:number}[]>();
- for(const t of SKILL_TERRITORIES){
-  const frames=[];
-  const start=innerPoint(t,14),before=innerPoint(t,13.99),after=innerPoint(t,14.01);
-  const heading=Math.atan2(after.y-before.y,after.x-before.x),speed=Math.hypot(after.x-before.x,after.y-before.y)/.02;
-  let x=start.x,y=start.y;
-  for(let i=0;i<=32;i++){
-   if(i<=14){const p=innerPoint(t,i),a=innerPoint(t,i-.01),b=innerPoint(t,i+.01);frames.push({...p,angle:Math.atan2(b.y-a.y,b.x-a.x)});continue;}
-   // Substeps integrate a smooth heading and spacing transition, without a corner at the join.
-   for(let k=0;k<16;k++){
-    const d=i-15+(k+.5)/16,turn=.13*(d-3*(1-Math.exp(-d/3)));
-    const step=96+(speed-96)*Math.exp(-d/3);
-    x+=Math.cos(heading+turn)*step/16;y+=Math.sin(heading+turn)*step/16;
-   }
-   const d=i-14;frames.push({x,y,angle:heading+.13*(d-3*(1-Math.exp(-d/3)))});
-  }
-  roadFrames.set(t.id,frames);
+ interface Hub extends Point {id:string; members:MutableNode[]; territory:typeof SKILL_TERRITORIES[number]; external:number; road:boolean;}
+ const hubs:Hub[]=[];
+ add({id:'origin',name:'The Root',description:'Six active-skill branches meet an open network of passive neighborhoods. Follow a branch, cut across a nearby cluster, or develop your current skills.',x:0,y:0,domain:'Might',kind:'origin',bonuses:{}},0);
+ // The six readable trunks retain their exact active-skill purchase distances.
+ for(const t of SKILL_TERRITORIES)for(let i=1;i<=32;i++){
+   const n=add({id:`road:${t.id}:${i}`,name:`${t.name} route ${i}`,description:`A useful step through ${t.name}. Nearby neighborhoods offer alternate routes.`,...roadPoint(t,i),domain:t.domain,territory:t.id,kind:'minor',role:'travel',bonuses:routeBonus(t,i-1)},i);
+   link(i===1?'origin':`road:${t.id}:${i-1}`,n.id);hubs.push({...n,members:[n],territory:t,external:0,road:true});
  }
- const frame=(t:typeof SKILL_TERRITORIES[number],i:number)=>roadFrames.get(t.id)![i];
- const point=(t:typeof SKILL_TERRITORIES[number],i:number,side=0,out=0)=>{
-  const p=frame(t,i),a=p.angle;
-  return{x:p.x+Math.cos(a)*out-Math.sin(a)*side,y:p.y+Math.sin(a)*out+Math.cos(a)*side};
- };
- for(const [ti,t] of SKILL_TERRITORIES.entries()) {
-  const last=Math.max(20,...ACTIVE_ROUTES[t.id].map(v=>v[1]));
-  for(let i=1;i<=last;i++) {
-   const attr=t.domain==='Might'?'strength':t.domain==='Cunning'?'dexterity':'intelligence';
-   const bonus:StatModifiers=i%4===0?{maxHp:5}:i%4===2?{maxMana:4}:{[attr]:2};
-   add({id:`road:${t.id}:${i}`,name:`${t.name} road ${i}`,description:`A connecting road in ${t.name}. ${t.motto}.`,...point(t,i),domain:t.domain,territory:t.id,kind:'minor',role:'travel',bonuses:bonus});
-   link(i===1?'origin':`road:${t.id}:${i-1}`,`road:${t.id}:${i}`);
-  }
-  for(const [j,f] of TERRITORY_SPECIALTIES[t.id].entries()) {
-   const depth=[3,5,7,9,11,14,17,20][j],side=(j%2?1:-1),shape=SHAPES[(j+ti)%SHAPES.length],origin=point(t,depth,side*145);
-   const a=frame(t,depth).angle+Math.PI/2*side, id=`${t.id}:${j}`;
-   const members=shape.p.map(([u,v],k)=>{
-    const reward=k===shape.p.length-1 || (shape===SHAPES[6]&&k===3);
-    return add({id:`${id}:${k}`,name:reward?f.name:`${f.name} · ${k+1}`,description:f.description,x:origin.x+Math.cos(a)*u-Math.sin(a)*v,y:origin.y+Math.sin(a)*u+Math.cos(a)*v,domain:t.domain,territory:t.id,kind:reward?'notable':'minor',cluster:id,role:'cluster',bonuses:reward?f.reward:f.small});
+ // Reserve compact skill/Doctrine pockets before placing passive neighborhoods.
+ function pocket(parent:MutableNode,t:typeof SKILL_TERRITORIES[number],side:number,make:(p:Point,angle:number)=>Array<Omit<MutableNode,'neighbors'>>,depth:number,cluster?:string){
+   let found:Array<Omit<MutableNode,'neighbors'>>|undefined;
+   const aim=t.angle+side*Math.PI/2;
+   for(const reach of [135,165,195,225,255,285]){
+     for(const offset of [0,.25,-.25,.5,-.5,.8,-.8,1.1,-1.1,1.5,-1.5,2,-2,Math.PI]){
+       const a=aim+offset,p={x:parent.x+Math.cos(a)*reach,y:parent.y+Math.sin(a)*reach},candidate=make(p,a);
+       if(!candidate.every(n=>nodes.every(other=>distance(n,other)>=(n.kind==='major'&&other.kind==='major'?140:(n.kind==='major'?40:24)+lens(other)+24))))continue;
+       if(!candidate.every(n=>edges.every(e=>segmentDistance(n,byId.get(e.from)!,byId.get(e.to)!)>(n.kind==='major'?55:35))))continue;
+       // The trunk attachment and internal fan must also clear every existing lens/line.
+       const pairs=cluster?candidate.slice(1).map(n=>[candidate[0],n]):candidate.map(n=>[parent,n]);
+       if(cluster)pairs.push([parent,candidate[0]]);
+       if(!pairs.every(([a,b])=>nodes.every(n=>n.id===a.id||n.id===b.id||segmentDistance(n,a,b)>lens(n)+9)&&edges.every(e=>e.from===a.id||e.to===a.id||e.from===b.id||e.to===b.id||!intersects(a,b,byId.get(e.from)!,byId.get(e.to)!))))continue;
+       found=candidate;break;
+     }if(found)break;
+   }
+   if(!found)throw Error(`No compact pocket for ${parent.id}`);
+   const members=found.map((n,i)=>add(n,depth+(cluster&&i?1:0)));
+   if(cluster){link(parent.id,members[0].id);for(const n of members.slice(1))link(members[0].id,n.id);
+     const x=members.reduce((s,n)=>s+n.x,0)/members.length,y=members.reduce((s,n)=>s+n.y,0)/members.length;
+     clusters.push({id:cluster,name:members[0].name,domain:t.domain,territory:t.id,x,y,radius:Math.max(...members.map(n=>Math.hypot(n.x-x,n.y-y)))+20});
+   }else for(const n of members)link(parent.id,n.id);
+ }
+ for(const {t,skill,depth,side} of SKILL_TERRITORIES.flatMap(t=>ACTIVE_ROUTES[t.id].map(([skill,depth,side])=>({t,skill,depth,side}))).sort((a,b)=>a.depth-b.depth)){
+   const def=SKILL_DEFINITIONS[skill],cluster=`development:${skill}`,variants=SKILL_SPECIALIZATIONS.filter(v=>v.skill===skill);
+   pocket(byId.get(`road:${t.id}:${depth}`)!,t,side,(p,a)=>[
+     {id:`skill:${skill}`,name:def.name,description:def.description,...p,kind:'major',domain:def.domain,territory:t.id,skill,cluster,bonuses:{}},
+     ...variants.map((v,k)=>({id:specializationNode(v.id),name:v.name,description:v.description,x:p.x+Math.cos(a+(k-1)*.72)*100,y:p.y+Math.sin(a+(k-1)*.72)*100,kind:'notable' as const,domain:def.domain,territory:t.id,specialization:v.id,developmentSkill:skill,cluster,bonuses:{}}))
+   ],depth+1,cluster);
+ }
+ for(const t of SKILL_TERRITORIES)SKILL_DOCTRINES.filter(d=>d.territory===t.id).forEach((d,j)=>{
+   const depth=j?18:11;
+   pocket(byId.get(`road:${t.id}:${depth}`)!,t,j?-1:1,(p,a)=>d.choices.map((choice,k)=>({id:`doctrine:${d.id}:${k}`,name:choice.name,description:`${d.name}: choose one of three. ${choice.description} Other choices in this family are mutually exclusive.`,x:p.x+Math.cos(a+Math.PI/2)*(k-1)*70,y:p.y+Math.sin(a+Math.PI/2)*(k-1)*70,kind:'notable' as const,domain:t.domain,territory:t.id,doctrine:d.id,bonuses:choice.bonuses,role:'choice' as const})),depth+1);
+ });
+ for(const [id,name,description,territory,depth] of [
+   ['keystone:measured-force','Measured Force','You cannot critically hit. Gain 1% more direct damage for each 1% critical chance, up to 30%. Periodic damage is unaffected.','forge',15],
+   ['keystone:open-hand','Open Hand','With one one-handed melee weapon and an empty offhand: 20% more weapon damage and 8% movement speed. With any other loadout: 10% less weapon damage.','veil',16],
+   ['keystone:borrowed-flame','Borrowed Flame','Alternating melee and spell actions gain a separate 40% more damage multiplier on Spellweave-empowered actions, beyond its 100% bonus cap. All weapon and spell damage is 15% lower. Works without other Spellweave investment.','crucible',16],
+   [OVERLOAD_NODE,'Arcane Overload','Optional toggle: Arcana skills deal 30% more damage but cost 60% more mana, including Tempest upkeep. Utility skills receive no damage benefit.','wellspring',16],
+ ] as const){const t=SKILL_TERRITORIES.find(t=>t.id===territory)!;pocket(byId.get(`road:${territory}:${depth}`)!,t,-1,p=>[{id,name,description,...p,kind:'major',domain:t.domain,territory,keystone:true,bonuses:{}}],depth+1);}
+ // A lightly offset triangular packing fills the whole atlas without stretched petals.
+ // Compact shape families share consistent spacing and retain room for captions.
+ const slots:Point[]=[];
+ for(let row=-9;row<=9;row++)for(let col=-9;col<=9;col++){
+   const x=(col+(row%2)*.5)*350+Math.sin(row*7+col*3)*16,y=row*303+Math.cos(row*3-col*5)*16,r=Math.hypot(x,y);
+   if(r<480||r>2700)continue;
+   const p={x,y};
+   if(nodes.some(n=>distance(p,n)<(n.kind==='major'?220:n.developmentSkill?178:155)))continue;
+   if(edges.some(e=>segmentDistance(p,byId.get(e.from)!,byId.get(e.to)!)<132))continue;
+   slots.push(p);
+ }
+ type Subject=typeof TERRITORY_SPECIALTIES[string][number];
+ const takeSlot=(target:Point)=>{let best=-1,score=Infinity;slots.forEach((p,i)=>{const d=distance(p,target);if(d<score){score=d;best=i;}});if(best<0)throw Error('Passive neighborhood packing exhausted');return slots.splice(best,1)[0];};
+ function neighborhood(id:string,f:Subject,t:typeof SKILL_TERRITORIES[number],p:Point,name=f.name){
+   const shape=passiveClusterShape(f.small,f.reward),recipe=PASSIVE_CLUSTER_SHAPES[shape],rotation=Math.atan2(p.y,p.x)+Math.PI/2;
+   const count=recipe.points.length,cos=Math.cos(rotation),sin=Math.sin(rotation);
+   const depth=Math.max(2,Math.round((Math.hypot(p.x,p.y)-240)/80)+2);
+   const members=recipe.points.map(([x,y],k)=>{
+     return add({id:`${id}:${k}`,name:k===count-1?name:`${name} · ${k+1}`,description:f.description,x:p.x+x*cos-y*sin,y:p.y+x*sin+y*cos,domain:t.domain,territory:t.id,kind:k===count-1?'notable':'minor',cluster:id,role:'cluster',bonuses:k===count-1?f.reward:f.small},depth);
    });
-   shape.e.forEach(([a,b])=>link(members[a].id,members[b].id));link(`road:${t.id}:${depth}`,members[0].id);
-   const cx=members.reduce((s,n)=>s+n.x,0)/members.length,cy=members.reduce((s,n)=>s+n.y,0)/members.length;
-   clusters.push({id,name:f.name,domain:t.domain,territory:t.id,x:cx,y:cy,radius:Math.max(...members.map(n=>Math.hypot(n.x-cx,n.y-cy)))+12});
-  }
-  for(const [skill,depth,side] of ACTIVE_ROUTES[t.id]) {
-   const terminal=depth===last;
-   const def=SKILL_DEFINITIONS[skill],p=point(t,depth,terminal?0:side*190,terminal?150:35);
-   const direction=frame(t,depth).angle+(terminal?0:side*Math.PI/2);
-   const id=`skill:${skill}`,cluster=`development:${skill}`;
-   add({id,name:def.name,description:def.description,...p,kind:'major',domain:def.domain,territory:t.id,skill,cluster,bonuses:{}});link(`road:${t.id}:${depth}`,id);
-   const variants=SKILL_SPECIALIZATIONS.filter(v=>v.skill===skill);
-   variants.forEach((v,k)=>{
-    const a=direction+(k-(variants.length-1)/2)*.72;
-    const n=add({id:specializationNode(v.id),name:v.name,description:v.description,x:p.x+Math.cos(a)*100,y:p.y+Math.sin(a)*100,kind:'notable',domain:def.domain,territory:t.id,specialization:v.id,developmentSkill:skill,cluster,bonuses:{}});link(id,n.id);
-   });
-   clusters.push({id:cluster,name:def.name,domain:t.domain,territory:t.id,...p,radius:115});
-  }
-  // Optional late investments break up the long journeys to Bastion and Veil's capstones.
-  for(const [j,f] of (OUTER_SPECIALTIES[t.id]??[]).entries()){
-   const depth=23+j*3,side=j%2?-1:1,shape=SHAPES[[1,4,0][j]],p=point(t,depth,side*145);
-   const a=frame(t,depth).angle+side*Math.PI/2,id=`outer:${t.id}:${j}`;
-   const members=shape.p.map(([u,v],k)=>add({id:`${id}:${k}`,name:k===shape.p.length-1?f.name:`${f.name} · ${k+1}`,description:f.description,x:p.x+Math.cos(a)*u-Math.sin(a)*v,y:p.y+Math.sin(a)*u+Math.cos(a)*v,domain:t.domain,territory:t.id,kind:k===shape.p.length-1?'notable':'minor',cluster:id,role:'cluster',bonuses:k===shape.p.length-1?f.reward:f.small}));
-   shape.e.forEach(([a,b])=>link(members[a].id,members[b].id));link(`road:${t.id}:${depth}`,members[0].id);
-   clusters.push({id,name:f.name,domain:t.domain,territory:t.id,...p,radius:180});
-  }
-  SKILL_DOCTRINES.filter(d=>d.territory===t.id).forEach((d,j)=>{
-   const depth=j?18:11,p=point(t,depth,j?-190:200,60),a=frame(t,depth).angle;
-   d.choices.forEach((choice,k)=>{const n=add({id:`doctrine:${d.id}:${k}`,name:choice.name,description:`${d.name}: choose one of three. ${choice.description} Other choices in this family are mutually exclusive.`,x:p.x+Math.cos(a)*(k-1)*58,y:p.y+Math.sin(a)*(k-1)*58,kind:'notable',domain:t.domain,territory:t.id,doctrine:d.id,bonuses:choice.bonuses,role:'choice'});link(`road:${t.id}:${depth}`,n.id);});
-  });
+   for(const [a,b] of recipe.edges)link(members[a].id,members[b].id);
+   clusters.push({id,name,domain:t.domain,territory:t.id,shape,...p,radius:Math.max(...recipe.points.map(([x,y])=>Math.hypot(x,y)))+20});
+   hubs.push({id,members,territory:t,...p,external:0,road:false});
  }
- // Hybrid gardens fill the space between roads. Each is an optional investment,
- // Six mid-depth gardens also join their neighboring road, without bypassing active timing.
- for(const [gi,garden] of BORDER_GARDENS.entries()) {
-  const t=SKILL_TERRITORIES.find(t=>t.id===garden.from)!;
-  const other=SKILL_TERRITORIES.find(t=>t.id===garden.to)!;
-  garden.specialties.forEach((f,j)=>{
-   const depth=4+j*3,from=point(t,depth),to=point(other,depth),mix=j%2?.62:.38;
-   const cx=from.x+(to.x-from.x)*mix,cy=from.y+(to.y-from.y)*mix;
-   const shape=SHAPES[(gi*3+j)%SHAPES.length],a=Math.atan2(cy,cx)+Math.PI/2;
-   const id=`garden:${garden.from}:${garden.to}:${j}`;
-   const members=shape.p.map(([u,v],k)=>add({id:`${id}:${k}`,name:k===shape.p.length-1?f.name:`${f.name} · ${k+1}`,description:f.description,x:cx+Math.cos(a)*(u-80)-Math.sin(a)*v,y:cy+Math.sin(a)*(u-80)+Math.cos(a)*v,domain:t.domain,territory:j%2?other.id:t.id,kind:k===shape.p.length-1?'notable':'minor',cluster:id,role:'cluster',bonuses:k===shape.p.length-1?f.reward:f.small}));
-   shape.e.forEach(([a,b])=>link(members[a].id,members[b].id));
-   const anchor=j%2?other:t;
-   link(`road:${anchor.id}:${depth}`,members[0].id);
-   if(j===3)link(members[members.length-1].id,`road:${anchor===t?other.id:t.id}:${depth}`);
-   clusters.push({id,name:f.name,domain:t.domain,territory:anchor.id,x:cx,y:cy,radius:140});
-  });
+ // Keep familiar specialties beside their home trunks before filling shared neighborhoods.
+ for(const t of SKILL_TERRITORIES)for(const [j,f] of TERRITORY_SPECIALTIES[t.id].entries()){
+   const depth=[3,5,7,9,11,14,17,20][j],anchor=roadPoint(t,depth),side=j%2?1:-1;
+   const p=takeSlot({x:anchor.x-Math.sin(t.angle)*side*260,y:anchor.y+Math.cos(t.angle)*side*260});
+   neighborhood(`${t.id}:${j}`,f,t,p);
  }
- // Six cross-country passes form a mesh; none crosses an active or a tradeoff node.
- for(const [a,b,depth] of [['bastion','wellspring',8],['forge','crucible',10],['hunt','veil',10],['wellspring','hunt',15],['veil','crucible',16],['bastion','forge',16]] as const) {
-  const from=byId.get(`road:${a}:${depth}`)!,to=byId.get(`road:${b}:${depth}`)!;let prev=from.id;
-  const angleA=Math.atan2(from.y/.72,from.x/1.8),angleB=Math.atan2(to.y/.72,to.x/1.8);
-  const delta=Math.atan2(Math.sin(angleB-angleA),Math.cos(angleB-angleA));
-  const radius=Math.hypot(from.x/1.8,from.y/.72);
-  for(let i=1;i<=4;i++){
-   const id=`pass:${a}:${b}:${i}`,angle=angleA+delta*i/5;
-   add({id,name:`${a} — ${b} pass`,description:'A cross-country route into another territory.',x:Math.cos(angle)*radius*1.8,y:Math.sin(angle)*radius*.72,domain:from.domain,kind:'minor',role:'travel',bonuses:{maxHp:4,maxMana:3}});link(prev,id);prev=id;
-  }link(prev,to.id);
- }
- for(const [id,name,desc,territory,depth] of [
-  ['keystone:measured-force','Measured Force','You cannot critically hit. Gain 1% more direct damage for each 1% critical chance, up to 30%. Periodic damage is unaffected.','forge',15],
-  ['keystone:open-hand','Open Hand','With one one-handed melee weapon and an empty offhand: 20% more weapon damage and 8% movement speed. With any other loadout: 10% less weapon damage.','veil',16],
-  ['keystone:borrowed-flame','Borrowed Flame','Alternating melee and spell actions gain a separate 40% more damage multiplier on Spellweave-empowered actions, beyond its 100% bonus cap. All weapon and spell damage is 15% lower. Works without other Spellweave investment.','crucible',16],
-  [OVERLOAD_NODE,'Arcane Overload','Optional toggle: Arcana skills deal 30% more damage but cost 60% more mana, including Tempest upkeep. Utility skills receive no damage benefit.','wellspring',16],
- ] as const) {const t=SKILL_TERRITORIES.find(t=>t.id===territory)!;add({id,name,description:desc,...point(t,depth,-200,55),domain:t.domain,territory,kind:'major',keystone:true,bonuses:{}});link(`road:${territory}:${depth}`,id);}
- // Resolve local engraving collisions by translating whole authored groups. Internal silhouettes never deform.
- const groups=new Map<string,MutableNode[]>();
- for(const n of nodes){const key=n.cluster??(n.doctrine?`doctrine:${n.doctrine}`:n.id);const g=groups.get(key)??[];g.push(n);groups.set(key,g);}
- const fixed=[...groups.values()].filter(g=>g[0].id==='origin'||g[0].role==='travel').flat();
- const roadSegments=edges.filter(e=>e.from.startsWith('road:')&&e.to.startsWith('road:')).map(e=>({a:byId.get(e.from)!,b:byId.get(e.to)!}));
- const segmentDistance=(x:number,y:number,a:Point,b:Point)=>{
-  const dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/(dx*dx+dy*dy)));
-  return Math.hypot(x-a.x-t*dx,y-a.y-t*dy);
- };
- const placed=[...fixed];
- for(const group of groups.values()){
-  if(group[0].id==='origin'||group[0].role==='travel')continue;
-  let offset:{x:number;y:number}|undefined;
-  for(let ring=0;ring<50&&!offset;ring++){
-   const candidates=ring?ring*8:1;
-   for(let k=0;k<candidates;k++){
-    const x=Math.cos(k*Math.PI*2/candidates)*ring*24,y=Math.sin(k*Math.PI*2/candidates)*ring*24;
-    const clear=group.every(n=>placed.every(p=>Math.hypot(n.x+x-p.x,n.y+y-p.y)>=(n.kind==='major'&&p.kind==='major'?140:n.kind==='major'||p.kind==='major'?100:n.developmentSkill||p.developmentSkill?76:48)));
-    if(clear&&group.every(n=>roadSegments.every(({a,b})=>segmentDistance(n.x+x,n.y+y,a,b)>=(n.kind==='major'?50:34)))){offset={x,y};break;}
+ for(const t of SKILL_TERRITORIES)for(const [j,f] of (OUTER_SPECIALTIES[t.id]??[]).entries())neighborhood(`outer:${t.id}:${j}`,f,t,takeSlot(roadPoint(t,23+j*3)));
+ for(const garden of BORDER_GARDENS){
+   const t=SKILL_TERRITORIES.find(t=>t.id===garden.from)!,other=SKILL_TERRITORIES.find(t=>t.id===garden.to)!;
+   for(const [j,f] of garden.specialties.entries()){
+     const a=roadPoint(t,5+j*4),b=roadPoint(other,5+j*4);
+     neighborhood(`garden:${garden.from}:${garden.to}:${j}`,f,j%2?other:t,takeSlot({x:(a.x+b.x)/2,y:(a.y+b.y)/2}));
    }
-  }
-  if(!offset)throw Error('No readable atlas position');
-  for(const n of group)Object.assign(n,{x:n.x+offset.x,y:n.y+offset.y});placed.push(...group);
  }
- for(const cluster of clusters){const group=groups.get(cluster.id)!;const x=group.reduce((sum,n)=>sum+n.x,0)/group.length,y=group.reduce((sum,n)=>sum+n.y,0)/group.length;Object.assign(cluster,{x,y,radius:Math.max(...group.map(n=>Math.hypot(n.x-x,n.y-y)))+15});}
- // Prefer curves that clear unrelated medallions. The base and light pass share them.
- for(let i=0;i<edges.length;i++) {
-  const edge=edges[i],a=byId.get(edge.from)!,b=byId.get(edge.to)!;
-  const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy);
-  const road=a.id.startsWith('road:')&&b.id.startsWith('road:')&&a.territory===b.territory;
-  if(length<95&&!road)continue;
-  let base={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-  if(road){
-   const frames=roadFrames.get(a.territory!)!,aa=frames[Number(a.id.split(':')[2])].angle,ba=frames[Number(b.id.split(':')[2])].angle;
-   const cross=Math.sin(ba-aa);
-   if(Math.abs(cross)>1e-5){
-    const distance=(dx*Math.sin(ba)-dy*Math.cos(ba))/cross;
-    // Tangent intersection gives adjacent road segments the same direction at each star.
-    if(distance>0&&distance<length)base={x:a.x+Math.cos(aa)*distance,y:a.y+Math.sin(aa)*distance};
-   }
-  }
-  const pass=a.id.startsWith('pass:')||b.id.startsWith('pass:');
-  if(pass){
-   const aa=Math.atan2(a.y/.72,a.x/1.8),ba=Math.atan2(b.y/.72,b.x/1.8),delta=Math.atan2(Math.sin(ba-aa),Math.cos(ba-aa));
-   const angle=aa+delta/2,radius=(Math.hypot(a.x/1.8,a.y/.72)+Math.hypot(b.x/1.8,b.y/.72))/2/Math.cos(delta/2);
-   base={x:Math.cos(angle)*radius*1.8,y:Math.sin(angle)*radius*.72};
-  }
-  const near=nodes.filter(n=>n!==a&&n!==b&&n.x>=Math.min(a.x,b.x,base.x)-400&&n.x<=Math.max(a.x,b.x,base.x)+400&&n.y>=Math.min(a.y,b.y,base.y)-400&&n.y<=Math.max(a.y,b.y,base.y)+400);
-  const control=(bend:number)=>({x:base.x-dy/length*bend,y:base.y+dx/length*bend});
-  const score=(bend:number)=>{
-   let penalty=Math.abs(bend)*.001;
-   const c=control(bend),steps=Math.max(12,Math.ceil((length+Math.abs(bend))/12));
-   for(let k=1;k<steps;k++){
-    const t=k/steps,u=1-t,x=u*u*a.x+2*u*t*c.x+t*t*b.x,y=u*u*a.y+2*u*t*c.y+t*t*b.y;
-    for(const n of near){const clearance=n.kind==='major'?30:n.kind==='notable'?22:16;penalty+=Math.max(0,clearance*clearance-(x-n.x)**2-(y-n.y)**2);}
-   }
-   return penalty;
-  };
-  let bend=0,best=score(0);
-  if(best>0)for(const candidate of [-60,60,-120,120,-200,200,-320,320,-480,480,-640,640]){
-   const value=score(candidate);if(value<best){best=value;bend=candidate;}
-   if(best<=Math.abs(candidate)*.001)break;
-  }
-  if(bend||pass||road)edges[i]=Object.freeze({...edge,control:Object.freeze(control(bend))});
+ // Repeated opportunities are intentional: common build needs remain accessible in every region.
+ const addedSubjects:Subject[]=[
+   {name:'Spellcraft',small:{spellDamagePercent:7},reward:{spellDamagePercent:20,castSpeedPercent:4},description:'Spell damage and casting tempo for any magic weapon.'},
+   {name:'Critical Focus',small:{critChance:.8,critDamage:6},reward:{critChance:3,critDamage:18},description:'Critical chance and damage improve both attacks and spell hits.'},
+   {name:'Fleet Passage',small:{moveSpeedPercent:2},reward:{moveSpeedPercent:6,cooldownPercent:3},description:'Move faster and recover movement skills sooner.'},
+   {name:'Battlecraft',small:{damagePercent:7},reward:{damagePercent:20,attackSpeedPercent:4},description:'Weapon damage and attack tempo across your equipped attacks.'},
+   {name:'Living Reserve',small:{maxHp:12},reward:{maxHp:35,allResistance:4},description:'A larger life reserve with broad elemental protection.'},
+   {name:'Flowing Power',small:{manaRegen:.8,spellDamagePercent:3},reward:{manaRegen:3,manaCostPercent:4},description:'Sustain casting while developing spell damage.'},
+ ];
+ const occurrences=new Map<string,number>();
+ for(const p of [...slots].sort((a,b)=>Math.hypot(a.x,a.y)-Math.hypot(b.x,b.y)||a.x-b.x)){
+   const t=[...SKILL_TERRITORIES].sort((a,b)=>Math.abs(Math.atan2(Math.sin(Math.atan2(p.y,p.x)-a.angle),Math.cos(Math.atan2(p.y,p.x)-a.angle)))-Math.abs(Math.atan2(Math.sin(Math.atan2(p.y,p.x)-b.angle),Math.cos(Math.atan2(p.y,p.x)-b.angle))))[0];
+   const index=(occurrences.get(t.id)??0);occurrences.set(t.id,index+1);const f=addedSubjects[(index+SKILL_TERRITORIES.indexOf(t))%addedSubjects.length];
+   const names=['Inner','Crossing','Outer','Far'];
+   neighborhood(`neighborhood:${t.id}:${index}`,f,t,p,`${t.name} ${names[Math.floor(index/6)%names.length]} ${f.name}`);
  }
- for(const n of nodes){Object.freeze(n.neighbors);Object.freeze(n);}
+ // Build a planar neighborhood network. Connections stop at actual junctions; they
+ // never sail across a road or another group. Longer local gaps get useful nodes.
+ const parent=hubs.map((_,i)=>i),find=(i:number):number=>parent[i]===i?i:parent[i]=find(parent[i]);
+ const firstRoad=hubs.findIndex(h=>h.road);hubs.forEach((h,i)=>{if(h.road)parent[i]=firstRoad;});
+ const candidates:Array<{a:number;b:number;distance:number}>=[];
+ for(let i=0;i<hubs.length;i++)for(let j=0;j<i;j++){
+   if(hubs[i].road&&hubs[j].road)continue;
+   const d=distance(hubs[i],hubs[j]);if(d<680)candidates.push({a:i,b:j,distance:d});
+ }
+ candidates.sort((a,b)=>a.distance-b.distance||a.a-b.a||a.b-b.b);
+ const linked=new Set<string>();
+ const roadAttachments=new Map<Hub,Set<string>>();
+ function connect(ai:number,bi:number,repair=false){
+   const a=hubs[ai],b=hubs[bi],key=`${ai}:${bi}`;
+   if(linked.has(key))return false;
+   const cluster=a.road?b:a,road=a.road?a:b;
+   if(road.road&&!repair&&roadAttachments.get(cluster)?.has(road.territory.id))return false;
+   const pairs=a.members.flatMap(x=>b.members.map(y=>({x,y,d:distance(x,y)}))).sort((a,b)=>a.d-b.d);
+   for(const {x,y,d} of pairs){
+     if(x.neighbors.length>=4||y.neighbors.length>=4||!a.road&&x.neighbors.some(id=>byId.get(id)!.cluster!==x.cluster)||!b.road&&y.neighbors.some(id=>byId.get(id)!.cluster!==y.cluster)||!clearLine(x,y))continue;
+     const steps=Math.max(1,Math.ceil(d/155),Math.abs(potential.get(x.id)!-potential.get(y.id)!));
+     if(d/steps<46||steps>7)continue;
+     const mids=Array.from({length:steps-1},(_,i)=>({x:x.x+(y.x-x.x)*(i+1)/steps,y:x.y+(y.y-x.y)*(i+1)/steps}));
+     if(mids.some(p=>nodes.some(n=>distance(p,n)<Math.max(42,lens(n)+29))))continue;
+     let prev=x.id;
+     for(const [i,p] of mids.entries()){
+       const id=`junction:${a.id}:${b.id}:${i}`,t=i<steps/2?a.territory:b.territory;
+       add({id,name:`${t.name} crossing`,description:'A short connection between neighboring passive routes.',...p,kind:'minor',role:'travel',domain:t.domain,territory:t.id,bonuses:routeBonus(t,i+ai+bi)},Math.round(potential.get(x.id)!+(potential.get(y.id)!-potential.get(x.id)!)*(i+1)/steps));link(prev,id);prev=id;
+     }
+     link(prev,y.id);if(road.road){const set=roadAttachments.get(cluster)??new Set<string>();set.add(road.territory.id);roadAttachments.set(cluster,set);}
+     a.external++;b.external++;parent[find(ai)]=find(bi);linked.add(key);return true;
+   }return false;
+ }
+ for(const c of candidates)if(find(c.a)!==find(c.b))connect(c.a,c.b);
+ for(const c of candidates){const a=hubs[c.a],b=hubs[c.b];if(a.external>=(a.road?2:4)||b.external>=(b.road?2:4))continue;connect(c.a,c.b);}
+ for(const c of candidates){const a=hubs[c.a],b=hubs[c.b];if((!a.road&&a.external<2||!b.road&&b.external<2)&&a.external<5&&b.external<5)connect(c.a,c.b,true);}
+ const isolated=hubs.filter((_,i)=>find(i)!==find(firstRoad));if(isolated.length)throw Error(`Disconnected neighborhoods: ${isolated.map(h=>h.id).join(', ')}`);
+ // Trim road tails beyond the last active skill when they lead to no neighborhood.
+ for(const t of SKILL_TERRITORIES){const last=Math.max(...ACTIVE_ROUTES[t.id].map(v=>v[1]));
+   for(let i=32;i>last;i--){const n=byId.get(`road:${t.id}:${i}`);if(!n||n.neighbors.length!==1)break;
+     const neighbor=byId.get(n.neighbors[0])!;neighbor.neighbors.splice(neighbor.neighbors.indexOf(n.id),1);
+     edges.splice(edges.findIndex(e=>e.from===n.id||e.to===n.id),1);nodes.splice(nodes.indexOf(n),1);byId.delete(n.id);
+   }
+ }
+ // Keep every displayed connection straight and local; authored silhouettes supply the rhythm.
+ for(const n of nodes){Object.freeze(n.neighbors);Object.freeze(n);}for(const e of edges)Object.freeze(e);
  const bounds=Object.freeze({minX:Math.min(...nodes.map(n=>n.x))-180,minY:Math.min(...nodes.map(n=>n.y))-180,maxX:Math.max(...nodes.map(n=>n.x))+180,maxY:Math.max(...nodes.map(n=>n.y))+180});
  return Object.freeze({nodes:Object.freeze(nodes) as readonly SkillNode[],edges:Object.freeze(edges),clusters:Object.freeze(clusters.map(c=>Object.freeze(c))),bounds});
 }

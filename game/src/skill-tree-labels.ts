@@ -103,7 +103,7 @@ export function layoutAtlasCaptions(view: LabelView & { allocated?: ReadonlySet<
   const obstacles=atlasLabelObstacles(view),result:AtlasCaption[]=[],occupied:AtlasLabelBox[]=[...(view.labelExclusions??[])];
   const add=(text:string,owner:string,anchor:Point&{radius:number},color:string,size:number)=>{
     const box=placeAtlasLabel(anchor,measure(text,size)+16,size+10,view,obstacles,occupied);
-    if(box){result.push({...box,text,owner,color,size});occupied.push(box);}
+    if(box){result.push({...box,text,owner,color,size});occupied.push(box);return true;}return false;
   };
   const captions=atlasLabelCandidates(view);
   const anchorVisible=(n:SkillNode)=>{
@@ -131,8 +131,11 @@ export function layoutAtlasCaptions(view: LabelView & { allocated?: ReadonlySet<
         y:(bounds.minY+bounds.maxY)/2+Math.sin(t.angle)*(bounds.maxY-bounds.minY)*.59}
       :{x:t.x-Math.sin(t.angle)*side*370,y:t.y+Math.cos(t.angle)*side*370};
     const p=screen(anchor,view);
-    if(view.zoom<.2)p.y=Math.max(36,Math.min(view.height-100,p.y));
-    add(t.name.toUpperCase(),t.id,{...p,radius:0},t.color,view.zoom<.2?15:18);
+    if(view.zoom<.2)p.y=Math.max(36,Math.min(view.height-80,p.y));
+    const size=view.zoom<.2?15:18;
+    if(!add(t.name.toUpperCase(),t.id,{...p,radius:0},t.color,size)&&view.zoom<.2){
+      for(const dx of [90,-90,150,-150,210,-210])if(add(t.name.toUpperCase(),t.id,{x:p.x+dx,y:p.y,radius:0},t.color,size))break;
+    }
   }
   for(const cluster of captions.clusters){
     if(captions.focused.some(n=>n.cluster===cluster.id&&n.name===cluster.name))continue;

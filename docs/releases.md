@@ -27,6 +27,8 @@ On 2026-09-09 the display history was renumbered, preserving every date, note an
 | 0.8.0 | 0.1.14 |
 | 0.9.0 | 0.1.15 |
 
+The user approved **0.4.0** on 2026-09-13 for the rebuilt passive atlas and merchant overhaul. This remains a prototype milestone below 0.5.0.
+
 ## Last verified publication
 
 - Game v0.3.17 / Sites version 48, publicly deployed on 2026-09-12 at 18:15:31 UTC.

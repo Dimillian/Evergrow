@@ -19,12 +19,12 @@ import { skillNodeIconSVG } from './skill-tree-glyphs.ts';
 import { buildSkillRoutes, previewSkillRoute, type SkillRouteStep } from './skill-tree-routes.ts';
 import { STAT_LABELS, formatStatValue } from './items.ts';
 import { atlasNavigatorProjection, boundsForNodes, fitAtlasBounds } from './skill-tree-view.ts';
+import { searchSkillAtlas, groupAtlasSearchMatches, type AtlasSearchMatch } from './skill-tree-search.ts';
+import { ATLAS_SEARCH_COLOR } from './skill-tree-search-art.ts';
 import './skill-tree-panel.css';
 
 interface SkillTreeActions { develop(command: CharacterCommand): void; close(): void; allocate(id: string): void; assign(slot: number, skill: SkillId | null): void; }
 const COLORS = SKILL_DOMAIN_COLORS;
-const SEARCH_TEXT = new Map(SKILL_TREE.nodes.map(node => [node.id,
-  `${node.name} ${skillNodeRole(node)} ${skillNodeOwner(node)?.name ?? ''} ${node.domain} ${node.territory??''} ${node.doctrine?'doctrine':''} ${node.specialization?'technique':''} ${node.description} ${Object.keys(node.bonuses).map(key => STAT_LABELS[key as StatKey]).join(' ')}`.toLowerCase()]));
 const BINDINGS = ['RMB', '1', '2', '3', '4'];
 
 /** Cached native-resolution atlas with a bounded 30 Hz light pass. Simulation owns allocations. */
@@ -34,7 +34,6 @@ export class SkillTreePanel {
   private tooltip: HTMLDivElement;
   private tooltipMarkup = '';
   private detail: HTMLElement;
-  private results: HTMLElement;
   private search: HTMLInputElement;
   private points: HTMLElement;
   private assignments: HTMLElement;
@@ -48,11 +47,10 @@ export class SkillTreePanel {
   private hovered: string | null = null;
   private readonly tooltipMotion = new TooltipMotion();
   private reachableOnly = false;
-  private resultsDismissed = false;
   private allocated = new Set<string>();
   private reachable = new Set<string>();
   private zoom = .8;
-  private fitMode: 'all' | 'origin' | null = null;
+  private fitMode: 'all' | 'origin' | 'search' | null = null;
   private navigator: HTMLCanvasElement;
   private routes = new Map<string, SkillRouteStep>();
   private centerX = 0;
@@ -66,6 +64,10 @@ export class SkillTreePanel {
   private lastLightFrame = -Infinity;
   private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   private matching = new Set(SKILL_TREE.nodes.map(node => node.id));
+  private searchMatches: AtlasSearchMatch[] = [];
+  private activeSearchGroup: string | null = null;
+  private searchFitTimer?: number;
+  private searchSummary: HTMLElement;
   private lastClickedNode: string | null = null;
   private doubleClickedNode: string | null = null;
   private clearTouch: (() => void) | null = null;
@@ -89,7 +91,7 @@ export class SkillTreePanel {
       <div class="skill-atlas-main"><section class="skill-atlas-chart" aria-label="Skill atlas navigation">
         <div class="skill-atlas-toolbar"><label class="skill-atlas-search"><span>${uiIcon('center')}</span><input type="search" placeholder="Find a skill or bonus…" aria-label="Search skills and bonuses" maxlength="80"></label>
           <button class="ui-button ui-button--quiet" data-tree="reachable" aria-pressed="false">Reachable</button></div>
-        <div class="skill-atlas-results ui-scroll-area" hidden aria-label="Matching paths"></div>
+        <div class="skill-atlas-search-summary" hidden><div class="skill-atlas-search-status"><span role="status" aria-live="polite"></span><button class="ui-button ui-button--quiet" data-tree="search-map">Recenter</button><button class="ui-button ui-button--quiet" data-tree="search-clear">Clear</button></div><div class="skill-atlas-search-groups ui-scroll-area" role="group" aria-label="Matching bonuses"></div></div>
         <div class="skill-atlas-viewport"><canvas tabindex="0" role="application" aria-label="Skill territory map. Arrow keys inspect connected nodes, Enter centers the selected node, plus and minus zoom." aria-describedby="skill-atlas-selection"></canvas>
           <div class="ui-tooltip skill-atlas-tooltip" role="tooltip" hidden></div>
           <div class="skill-atlas-compass" aria-hidden="true"><span>✦</span><small data-atlas-context>THE SIX TERRITORIES</small></div>
@@ -106,15 +108,15 @@ export class SkillTreePanel {
     this.navigator = this.root.querySelector('.skill-atlas-navigator canvas')!;
     this.tooltip = this.root.querySelector('.skill-atlas-tooltip')!;
     this.detail = this.root.querySelector('.skill-atlas-inspection')!;
-    this.results = this.root.querySelector('.skill-atlas-results')!;
     this.search = this.root.querySelector('input')!;
+    this.searchSummary = this.root.querySelector('.skill-atlas-search-summary')!;
     this.points = this.root.querySelector('.skill-atlas-points')!;
     this.assignments = this.root.querySelector('.skill-atlas-assignments')!;
     this.zoomLabel = this.root.querySelector('output')!;
     const opts = { signal: this.life.signal };
     this.root.addEventListener('pointerdown', () => this.root.classList.remove('is-controller'), opts);
     this.clearTouch = bindTouchCanvas(this.canvas,this.life.signal,{
-      start:()=>{this.setHovered(null); this.lastClickedNode=this.doubleClickedNode=null;},
+      start:()=>{this.cancelSearchFit();this.setHovered(null); this.lastClickedNode=this.doubleClickedNode=null;},
       pan:(dx,dy)=>{this.fitMode=null;this.centerX-=dx/this.zoom;this.centerY-=dy/this.zoom;this.clampCenter();this.invalidate();},
       zoom:(factor,p)=>this.setZoom(this.zoom*factor,p.x,p.y),
       tap:p=>{const r=this.canvas.getBoundingClientRect();const node=this.pick(r.left+p.x,r.top+p.y);if(node){this.inspectNode(node.id,false);if(window.innerWidth<620)this.detail.scrollIntoView({block:'nearest'});}},
@@ -128,9 +130,13 @@ export class SkillTreePanel {
         rank: input.dataset.config === 'rank' ? Number(input.value) : Math.max(1, activeSkillRank(sheet,id)),
         specialization: input.dataset.config === 'variant' ? input.value || null : sheet.skillSpecializations[id] ?? null });
     }, opts);
-    this.search.addEventListener('input', () => { this.resultsDismissed = false; this.updateResults(); this.invalidate(); }, opts);
+    this.search.addEventListener('input', () => { this.activeSearchGroup = null; this.updateSearch(); this.scheduleSearchFit(); this.setHovered(null); this.invalidate(); }, opts);
+    this.search.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && this.searchMatches.length) { event.preventDefault(); this.showSearchMatches(); }
+    }, opts);
     this.canvas.addEventListener('pointerdown', event => {
       if (event.button !== 0) return;
+      this.cancelSearchFit();
       this.canvas.focus(); this.canvas.setPointerCapture(event.pointerId);
       this.drag = { pointer: event.pointerId, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, moved: false };
     }, opts);
@@ -175,6 +181,7 @@ export class SkillTreePanel {
     }, { ...opts, passive: false });
     this.canvas.addEventListener('keydown', event => this.key(event), opts);
     const navigate = (event:PointerEvent) => {
+      this.cancelSearchFit();
       const rect=this.navigator.getBoundingClientRect(),projection=atlasNavigatorProjection(rect.width,rect.height);
       const point=projection.toWorld(event.clientX-rect.left,event.clientY-rect.top);
       this.fitMode=null;if(this.zoom<.22)this.setZoom(.38);this.centerX=point.x;this.centerY=point.y;this.clampCenter();this.invalidate();
@@ -185,6 +192,7 @@ export class SkillTreePanel {
     this.navigator.addEventListener('pointermove',event=>{if(this.navigator.hasPointerCapture(event.pointerId))navigate(event);},opts);
     this.navigator.addEventListener('pointerup',event=>{if(this.navigator.hasPointerCapture(event.pointerId))this.navigator.releasePointerCapture(event.pointerId);},opts);
     this.navigator.addEventListener('keydown',event=>{
+      this.cancelSearchFit();
       if(event.key==='Enter'){event.preventDefault();this.showOverview();return;}
       const direction={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
       if(!direction)return;event.preventDefault();this.fitMode=null;
@@ -211,7 +219,7 @@ export class SkillTreePanel {
     for (const id of this.allocated) for (const neighbor of SKILL_NODES.get(id)?.neighbors ?? []) if (!this.allocated.has(neighbor)) this.reachable.add(neighbor);
     this.routes = buildSkillRoutes(this.allocated);
     this.points.innerHTML = `<strong>${player.character.skillPoints}</strong><span>SKILL ${player.character.skillPoints === 1 ? 'POINT' : 'POINTS'}</span>`;
-    this.updateDetail(); this.updateAssignments(); this.updateResults(); this.invalidate();
+    this.updateDetail(); this.updateAssignments(); this.updateSearch(); this.invalidate();
     if (this.shown && focusedControl) {
       const replacement = [...this.root.querySelectorAll<HTMLButtonElement>(`[${focusedControl.attribute}]`)]
         .find(button => button.getAttribute(focusedControl.attribute) === focusedControl.value && !button.disabled);
@@ -252,6 +260,7 @@ export class SkillTreePanel {
     target.focus({ preventScroll: true }); target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
   close(): void {
+    this.cancelSearchFit();
     this.controller.clear(); this.root.classList.remove('is-controller'); this.controllerSection = 0;
     this.clearTouch?.();
     this.lastClickedNode = this.doubleClickedNode = null;
@@ -265,6 +274,7 @@ export class SkillTreePanel {
 
   /** Also used by frozen review scenes; it changes presentation only. */
   inspectNode(id: string, center = true): void {
+    this.cancelSearchFit();
     const node = SKILL_NODES.get(id); if (!node) return;
     this.selected = id; this.hovered = null; this.tooltipMotion.reset(); this.tooltip.hidden = true;
     if (center) { this.centerX = node.x; this.centerY = node.y; this.setZoom(Math.max(.65, this.zoom)); }
@@ -286,8 +296,15 @@ export class SkillTreePanel {
     }
     if (button.hasAttribute('data-overload') && this.player) { this.actions.develop({ type: 'overload', enabled: !this.player.character.arcaneOverload }); return; }
     if (button.dataset.node) {
-      this.resultsDismissed = true; this.updateResults();
+      this.cancelSearchFit();
       this.inspectNode(button.dataset.node); this.selectControllerSection(0); return;
+    }
+    if (button.hasAttribute('data-search-group')) {
+      this.activeSearchGroup = button.dataset.searchGroup || null;
+      this.updateSearch(); this.showSearchMatches();
+      [...this.searchSummary.querySelectorAll<HTMLButtonElement>('[data-search-group]')]
+        .find(control => (control.dataset.searchGroup || null) === this.activeSearchGroup)?.focus({ preventScroll: true });
+      return;
     }
     if (button.dataset.clear) { this.actions.assign(Number(button.dataset.clear) - 1, null); return; }
     const action = button.dataset.tree;
@@ -299,12 +316,19 @@ export class SkillTreePanel {
     else if (action === 'details') this.setDetailsVisible(this.root.classList.contains('is-map-only'));
     else if (action === 'in') this.setZoom(this.zoom * 1.15);
     else if (action === 'out') this.setZoom(this.zoom / 1.15);
+    else if (action === 'search-map') this.showSearchMatches();
+    else if (action === 'search-clear') {
+      this.cancelSearchFit(); this.search.value = ''; this.activeSearchGroup = null;
+      this.reachableOnly = false; this.root.querySelector('[data-tree="reachable"]')!.setAttribute('aria-pressed', 'false');
+      this.updateSearch(); this.invalidate(); this.search.focus();
+    }
     else if (action === 'reachable') {
-      this.reachableOnly = !this.reachableOnly; this.resultsDismissed = false;
-      button.setAttribute('aria-pressed', String(this.reachableOnly)); this.updateResults(); this.invalidate();
+      this.reachableOnly = !this.reachableOnly;
+      button.setAttribute('aria-pressed', String(this.reachableOnly)); this.updateSearch(); this.scheduleSearchFit(); this.invalidate();
     }
   }
   private key(event: KeyboardEvent): void {
+    this.cancelSearchFit();
     if (event.key === '+' || event.key === '=') { event.preventDefault(); this.setZoom(this.zoom * 1.2); return; }
     if (event.key === '-') { event.preventDefault(); this.setZoom(this.zoom / 1.2); return; }
     if (event.key === 'Enter') { event.preventDefault(); this.inspectNode(this.selected); return; }
@@ -380,19 +404,38 @@ export class SkillTreePanel {
   }
 
   private matches(node: SkillNode): boolean { return this.matching.has(node.id); }
-  private updateResults(): void {
-    const query = this.search.value.trim().toLowerCase();
-    this.matching = new Set(SKILL_TREE.nodes.filter(node =>
-      (!this.reachableOnly || this.reachable.has(node.id))
-      && (!query || SEARCH_TEXT.get(node.id)!.includes(query))).map(node => node.id));
-    const active = !this.resultsDismissed && (!!this.search.value.trim() || this.reachableOnly);
-    this.results.hidden = !active;
-    if (!active) return;
-    const matches = SKILL_TREE.nodes.filter(node => this.matches(node)).sort((a, b) => {
-      const state = (node: SkillNode) => this.allocated.has(node.id) ? 0 : this.reachable.has(node.id) ? 1 : 2;
-      return state(a) - state(b) || Number(b.kind === 'major') - Number(a.kind === 'major') || Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y);
-    });
-    this.results.innerHTML = `<div class="skill-atlas-result-count">${matches.length} ${matches.length === 1 ? 'star' : 'stars'}${matches.length > 12 ? ' · nearest 12 shown' : ''}</div>${matches.slice(0, 12).map(node => `<button class="ui-button ui-button--quiet" data-node="${node.id}"><span>${escapeUI(node.name)}</span><small style="color:${COLORS[node.domain]}">${this.allocated.has(node.id) ? 'Allocated' : this.reachable.has(node.id) ? 'Reachable' : node.domain}</small></button>`).join('') || '<p class="ui-muted">No matching stars.</p>'}`;
+  private get filterActive(): boolean { return !!this.search.value.trim() || this.reachableOnly; }
+  private updateSearch(): void {
+    this.searchMatches = searchSkillAtlas(this.search.value).filter(({ node }) => !this.reachableOnly || this.reachable.has(node.id));
+    const groups = groupAtlasSearchMatches(this.search.value, this.searchMatches);
+    const selected = groups.find(group => group.id === this.activeSearchGroup);
+    if (!selected) this.activeSearchGroup = null;
+    this.matching = new Set(selected?.nodeIds ?? this.searchMatches.map(({ node }) => node.id));
+    this.searchSummary.hidden = !this.filterActive;
+    this.searchSummary.querySelector('[role="status"]')!.textContent = this.matching.size
+      ? `${this.matching.size} ${this.matching.size === 1 ? 'node' : 'nodes'} highlighted${this.reachableOnly ? ' · reachable only' : ''}` : 'No matching nodes';
+    (this.searchSummary.querySelector('[data-tree="search-map"]') as HTMLButtonElement).disabled = !this.matching.size;
+    this.searchSummary.querySelector('.skill-atlas-search-groups')!.innerHTML =
+      (groups.length > 1 ? `<button class="ui-button ui-button--quiet" data-search-group="" aria-pressed="${!selected}">All matches <b>${this.searchMatches.length}</b></button>` : '')
+      + groups.map(group => `<button class="ui-button ui-button--quiet" data-search-group="${escapeUI(group.id)}" aria-pressed="${groups.length === 1 || group.id === selected?.id}">${escapeUI(group.label)} <b>${group.nodeIds.size}</b></button>`).join('');
+    if (!this.filterActive && this.fitMode === 'search') this.fitMode = null;
+  }
+  private cancelSearchFit(): void {
+    if (this.searchFitTimer !== undefined) window.clearTimeout(this.searchFitTimer);
+    this.searchFitTimer = undefined;
+  }
+  private scheduleSearchFit(): void {
+    this.cancelSearchFit();
+    if (!this.filterActive || !this.matching.size) return;
+    this.searchFitTimer = window.setTimeout(() => {
+      this.searchFitTimer = undefined;
+      if (this.shown) this.showSearchMatches();
+    }, 220);
+  }
+  private showSearchMatches(): void {
+    this.cancelSearchFit();
+    if (!this.filterActive || !this.matching.size) return;
+    this.fitMode = 'search'; this.fitCurrentRegion();
   }
   private resize(): void {
     if (!this.shown) return;
@@ -410,14 +453,17 @@ export class SkillTreePanel {
   }
   private fitCurrentRegion():void {
     const mode=this.fitMode;if(!mode)return;
-    const nodes=SKILL_TREE.nodes.filter(n=>Math.hypot(n.x/1.8,n.y/.72)<720);
+    const nodes=SKILL_TREE.nodes.filter(n=>mode==='search'?this.matching.has(n.id):Math.hypot(n.x/1.8,n.y/.72)<720);
+    if (!nodes.length) return;
     const fit=fitAtlasBounds(mode==='all'?SKILL_TREE.bounds:boundsForNodes(nodes),this.width,this.height);
-    this.centerX=fit.centerX;this.centerY=fit.centerY;this.setZoom(fit.zoom);this.fitMode=mode;
+    this.centerX=fit.centerX;this.centerY=fit.centerY;this.setZoom(mode==='search'?Math.min(.85,fit.zoom):fit.zoom,this.width/2,this.height/2,false);this.fitMode=mode;
   }
   showOverview(): void {
+    this.cancelSearchFit();
     this.fitMode='all';this.fitCurrentRegion();
   }
   private showOrigin(): void {
+    this.cancelSearchFit();
     this.fitMode='origin';this.fitCurrentRegion();this.inspectNode(SKILL_TREE_ORIGIN,false);
   }
   setDetailsVisible(visible: boolean): void {
@@ -432,7 +478,8 @@ export class SkillTreePanel {
     if (![centerX, centerY, zoom].every(Number.isFinite)) return;
     this.centerX = centerX; this.centerY = centerY; this.setZoom(zoom);
   }
-  private setZoom(value: number, x = this.width / 2, y = this.height / 2): void {
+  private setZoom(value: number, x = this.width / 2, y = this.height / 2, cancelSearch = true): void {
+    if (cancelSearch) this.cancelSearchFit();
     this.fitMode=null;
     const b = SKILL_TREE.bounds;
     const minimum = Math.max(.005, Math.min((this.width - 80) / (b.maxX - b.minX), (this.height - 90) / (b.maxY - b.minY)) * .85);
@@ -465,12 +512,13 @@ export class SkillTreePanel {
     c.clearRect(0,0,rect.width,rect.height);c.lineWidth=.6;
     for(const edge of SKILL_TREE.edges){
       const a=SKILL_NODES.get(edge.from)!,b=SKILL_NODES.get(edge.to)!;
-      c.strokeStyle=view.allocated.has(a.id)&&view.allocated.has(b.id)?'#ffdc9c':'#8fb6c43d';
+      c.strokeStyle=view.filterActive?'#8fb6c41c':view.allocated.has(a.id)&&view.allocated.has(b.id)?'#ffdc9c':'#8fb6c43d';
       c.beginPath();c.moveTo(sx(a.x),sy(a.y));
       if(edge.control)c.quadraticCurveTo(sx(edge.control.x),sy(edge.control.y),sx(b.x),sy(b.y));else c.lineTo(sx(b.x),sy(b.y));c.stroke();
     }
-    for(const n of SKILL_TREE.nodes)if(n.kind==='major'||n.kind==='origin'){
-      c.fillStyle=view.allocated.has(n.id)?'#ffdc9c':COLORS[n.domain];c.beginPath();c.arc(sx(n.x),sy(n.y),n.kind==='origin'?2:1.1,0,Math.PI*2);c.fill();
+    for(const n of SKILL_TREE.nodes)if(view.filterActive?view.matches(n):n.kind==='major'||n.kind==='origin'){
+      c.fillStyle=view.filterActive?ATLAS_SEARCH_COLOR:view.allocated.has(n.id)?'#ffdc9c':COLORS[n.domain];
+      c.beginPath();c.arc(sx(n.x),sy(n.y),view.filterActive?2:n.kind==='origin'?2:1.1,0,Math.PI*2);c.fill();
     }
     const x=sx(view.centerX-view.width/2/view.zoom),y=sy(view.centerY-view.height/2/view.zoom),w=view.width/view.zoom*p.scale,h=view.height/view.zoom*p.scale;
     const left=Math.max(2,x),top=Math.max(2,y),right=Math.min(rect.width-2,x+w),bottom=Math.min(rect.height-2,y+h);
@@ -482,7 +530,9 @@ export class SkillTreePanel {
     const tooltip = this.tooltipMotion.sample(performance.now());
     const view: SkillAtlasView = { width: this.width, height: this.height, zoom: this.zoom,
       centerX: this.centerX, centerY: this.centerY, allocated: this.allocated, reachable: this.reachable,
-      sheet: this.player?.character, selected: this.selected, hovered: this.hovered, route: previewSkillRoute(this.routes, this.hovered ?? this.selected),
+      sheet: this.player?.character, selected: this.selected, hovered: this.hovered,
+      route: this.filterActive && !this.matching.has(this.hovered ?? this.selected) ? [] : previewSkillRoute(this.routes, this.hovered ?? this.selected),
+      filterActive: this.filterActive,
       matches: node => this.matches(node) };
     const now = performance.now(), dirty = this.atlasDirty;
     if (dirty) {

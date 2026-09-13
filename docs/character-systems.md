@@ -40,7 +40,7 @@ These windows pause combat, clear buffered inputs, trap modal keyboard focus, an
 | `character.ts` | Refresh the live player projection; award points for XP levels; validate skill assignment |
 | `progression-content.ts`, `progression.ts`, `zone-progression.ts` | Shared level/rank curves, XP thresholds and factors, geographic threat, and spawn-stat snapshots |
 | `loot-content.ts`, `loot.ts` | Rank yield/tier tables, archetype/biome weights, isolated reward rolls, and source-level gear |
-| `skill-tree.ts` | Immutable cluster/curved-route recipes and bounds, connectivity validation, unique bonus aggregation, unlocked skills |
+| `skill-tree.ts` | Immutable compact clusters and short planar routes, bounds, connectivity validation, unique bonus aggregation, unlocked skills |
 | `skill-tree-routes.ts` | Pure shortest-route and remaining-point-cost previews from the current allocation |
 | `skill-tree-art.ts`, `skill-tree-glyphs.ts` | Culled native-resolution atlas drawing and shared procedural stat/skill engravings |
 | `skill-content.ts` | Shared names, costs, cooldowns, damage multipliers, colors, and procedural skill icons |
@@ -113,13 +113,13 @@ Every item retains a source recipe with profile, starter flag, normalized affix 
 
 ## Skill atlas and active skills
 
-The local **Atlas of Becoming** contains 875 nodes, 932 connections and six territories: Bastion, Forge, Hunt, Veil, Crucible and Wellspring. It has 90 different passive specialties, 30 tree-unlocked active skills, 90 direct one-point Techniques, eight exclusive Doctrine families and four optional keystones. Might/Cunning/Arcana remain content tags. The wide luminous map replaces the three celestial petals; 36 hybrid border gardens fill the gaps between the original 48 territory specialties, and six optional late clusters decorate the Bastion and Veil approaches.
+The local **Atlas of Becoming** contains 1,824 nodes, 2,118 connections and 174 groups across six territories: Bastion, Forge, Hunt, Veil, Crucible and Wellspring. Its 144 passive neighborhoods include the 90 preceding named specialties and 54 additional locations for common build needs. All have at least two distinct entrances through short planar connections. Six main trunks preserve active-skill progression; compact neighboring loops and arcs provide alternative routes between them. The tree retains 30 unlockable active skills, 90 direct one-point Techniques, eight exclusive Doctrine families and four optional keystones. Might/Cunning/Arcana remain content tags. The published v0.3.17 atlas had 875 nodes and 932 connections; the larger network is local work.
 
 Early active paths cost 2–6 points; advanced attacks cost 8–15; ultimates cost 23–33. Skills and tradeoffs are optional dead ends, never travel tolls. Twenty purchased ranks provide gradual damage and utility growth without mastery gates. Doctrines permit one paid choice per family with free reconfiguration. The enchanter still provides full skill respec. See [skill progression](skill-progression.md) for exact formulas, all choices, actions, save refunds and verification boundaries.
 
 LMB remains the equipment basic attack. Exactly five assignable skills occupy RMB / 1–4, with Q potion and Space dodge separate. Skills require unlock, assignment, compatible equipment, mana, recovery and a ready skill-owned cooldown. Incompatible equipment retains assignments. Physical melee and bow damage uses attack scaling; spells and magic bolts use spell scaling once. Magic requires staff/wand, bow skills require a bow, shield skills require a usable shield; Sidestep and Brace accept any weapon.
 
-The shared validated command boundary owns allocations, atomic shortest-route purchases, rank/Technique choices and Doctrine replacement. Presentation never writes progression directly. Current saves carry treeVersion 2; valid immediately preceding builds receive their tree/rank points back on decode while retaining character and world progress. Unknown/corrupt builds remain stored. The atlas preview reads only disposable state, not playable saves.
+The shared validated command boundary owns allocations, atomic shortest-route purchases, rank/Technique choices and Doctrine replacement. Presentation never writes progression directly. Current local saves carry treeVersion 3; valid version-2 and supported unversioned builds receive their tree/rank points back on decode while retaining character and world progress. Unknown/corrupt builds remain stored. The atlas preview reads only disposable state, not playable saves.
 
 ## Enemy gear drops
 
@@ -139,7 +139,7 @@ Ground gear uses its actual procedural equipment silhouette, restrained rarity m
 
 Character progress now persists in eight browser-local slots. The character hall resumes saved gear, XP, allocations, assignments, resources, position and ground loot, with a separate explored chart per character. New characters have the same worn leather outfit, their selected starter loadout and an empty bag. Gold and uncollected coin piles are also saved. See [character checkpoints](character-saves.md) for backup, validation, autosave and recovery rules. No migration or cloud sync is introduced.
 
-Code tests cover graph connectivity, stable unique nodes, themed cluster membership, spacing and bounds, curved hybrid routes, shortest-route costs, short skill paths, allocation rejection, modifier deduplication, item generation and scaling, inventory conservation, stat derivation, skill execution, and integration behavior. Strict browser/core TypeScript and production builds remain the verification gates. Static in-app review scenes are used for screenshots; they stage data without gameplay or save access. The user owns gameplay feel, visual feedback, and balance acceptance.
+Code tests cover graph connectivity, stable unique nodes, themed cluster membership, spacing and bounds, short planar routes, multiple passive entrances, shortest-route costs, unchanged active unlock costs, allocation rejection, save refunds, modifier deduplication, item generation and scaling, inventory conservation, stat derivation, skill execution, and integration behavior. Strict browser/core TypeScript and production builds remain the verification gates. Static in-app review scenes are used for screenshots; they stage data without gameplay or save access. The user owns gameplay feel, visual feedback, and balance acceptance.
 
 ### Repeatable skills and action-speed split
 

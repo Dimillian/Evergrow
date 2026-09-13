@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { SKILL_TREE, SKILL_NODES, SKILL_TERRITORIES } from '../src/skill-tree.ts';
 import { atlasNavigatorProjection, boundsForNodes, fitAtlasBounds } from '../src/skill-tree-view.ts';
-import { buildSkillRoutes } from '../src/skill-tree-routes.ts';
 
 test('overview and territory fits contain their complete content on wide and narrow panels',()=>{
   for(const [width,height] of [[1350,640],[520,620],[900,320]]){
@@ -28,22 +27,6 @@ test('navigator preserves aspect ratio and inverts clicks through letterboxing',
   }
 });
 
-test('border gardens are optional investments and leave all active unlock distances intact',()=>{
-  const gardens=SKILL_TREE.clusters.filter(c=>c.id.startsWith('garden:'));
-  assert.equal(gardens.length,36);
-  for(const c of gardens){
-    const members=SKILL_TREE.nodes.filter(n=>n.cluster===c.id);
-    const exits=members.flatMap(n=>n.neighbors.filter(id=>SKILL_NODES.get(id)!.cluster!==c.id));
-    assert.equal(exits.length,c.id.endsWith(':3')?2:1);assert.ok(exits[0].startsWith('road:'));
-    assert.ok(members.every(n=>Object.keys(n.bonuses).length>0));
-  }
-  const distances=buildSkillRoutes(new Set(['origin']));
-  const expected={repulse:15,ironCitadel:33,smokeVeil:14,nightReaping:33,brace:2,shieldBash:4,bulwark:6,cleave:2,lunge:5,whirlwind:9,earthshatter:13,rallyOfIron:23,
-    volley:2,ricochet:8,piercingShot:10,rainOfArrows:13,ghostHunt:23,backstab:2,sidestep:3,vaultingShot:8,
-    fireball:2,arcLightning:3,meteor:14,cataclysm:24,tempest:26,iceNova:3,runicWard:5,siphon:8,frostLance:11,absoluteZero:24};
-  for(const [skill,cost] of Object.entries(expected))assert.equal(distances.get(`skill:${skill}`)!.cost,cost,skill);
-});
-
 test('connectors do not run through unrelated node faces',()=>{
   for(const edge of SKILL_TREE.edges){
     const a=SKILL_NODES.get(edge.from)!,b=SKILL_NODES.get(edge.to)!;
@@ -61,37 +44,6 @@ test('connectors do not run through unrelated node faces',()=>{
       const radius=n.kind==='major'?22:n.kind==='notable'?15:8;
       assert.ok(distance>=radius,`${edge.from} → ${edge.to} crosses ${n.id}`);
     }
-  }
-});
-
-
-test('outer roads have short smooth segments and forward-facing ultimate endpoints',()=>{
-  for(const territory of SKILL_TERRITORIES){
-    const road=SKILL_TREE.nodes.filter(n=>n.id.startsWith(`road:${territory.id}:`));
-    for(let i=14;i<road.length;i++){
-      const a=road[i-1],b=road[i],edge=SKILL_TREE.edges.find(e=>e.from===a.id&&e.to===b.id)!;
-      assert.ok(Math.hypot(b.x-a.x,b.y-a.y)<=180,`${b.id} stretches the outer road`);
-      const previous=SKILL_TREE.edges.find(e=>e.from===road[i-2].id&&e.to===a.id)!;
-      const incoming=previous.control??road[i-2],outgoing=edge.control??b;
-      const turn=Math.atan2(outgoing.y-a.y,outgoing.x-a.x)-Math.atan2(a.y-incoming.y,a.x-incoming.x);
-      assert.ok(Math.abs(Math.atan2(Math.sin(turn),Math.cos(turn)))<.025,`${a.id} has a visible corner`);
-    }
-    const end=road.at(-1)!,before=road.at(-2)!,skill=end.neighbors.map(id=>SKILL_NODES.get(id)!).find(n=>n.skill)!;
-    assert.ok((skill.x-end.x)*(end.x-before.x)+(skill.y-end.y)*(end.y-before.y)>0,`${skill.id} doubles back from its road`);
-  }
-});
-
-test('six outer clusters are useful optional detours distributed along the sparse late roads',()=>{
-  const clusters=SKILL_TREE.clusters.filter(c=>c.id.startsWith('outer:'));
-  assert.equal(clusters.length,6);
-  for(const territory of ['bastion','veil']){
-    const entries=clusters.filter(c=>c.territory===territory).map(c=>{
-      const members=SKILL_TREE.nodes.filter(n=>n.cluster===c.id);
-      assert.ok(members.every(n=>Object.keys(n.bonuses).length>0));
-      const exits=members.flatMap(n=>n.neighbors.filter(id=>SKILL_NODES.get(id)!.cluster!==c.id));
-      assert.equal(exits.length,1);return exits[0];
-    });
-    assert.deepEqual(entries,[23,26,29].map(i=>`road:${territory}:${i}`));
   }
 });
 

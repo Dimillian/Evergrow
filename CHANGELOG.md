@@ -1,5 +1,35 @@
 # Evergrow changelog
 
+## v0.4.0 — 2026-09-13T06:14:00Z
+
+### New
+
+- Explore a rebuilt skill atlas with 1,824 nodes, 144 passive neighborhoods and more routes between builds.
+- Distinct cluster shapes and multiple entrances make it easier to branch into useful bonuses without long detours.
+- Search by stats such as critical damage, mana regeneration or projectile pierce; matching groups glow on the atlas and can be framed together.
+- Vendor stock now uses item-sized inventory spaces with Weapons, Armor and Accessories tabs.
+- Pay to refresh a merchant’s stock; the fee doubles with each purchase and resets at the next free level restock.
+- Drag items to the merchant to sell, or into your inventory to buy. Double-click stock or buyback for a quick purchase.
+
+### Tweaks
+
+- Stronger damage, critical and speed passives make exploring the tree more competitive with investing in skill ranks.
+- Damage-focused minor passives now grant 8% and major rewards 24%; critical-damage clusters also provide critical chance.
+- All 30 active skills retain their unlock costs, 90 specializations and twenty-rank progression.
+- Blacksmith enhancement now showcases your item and its exact before-and-after gains.
+- Enchanting has compact operation tabs, selectable affixes, clear rarity and item-level previews, and inline city affix preferences.
+- Vendor, buyback and equipped-item trays share the inventory’s item sizes and fit smaller windows.
+
+### Fixes
+
+- Skill searches match actual bonuses and related skill effects instead of unrelated cluster descriptions.
+- Search highlights remain visible across zoom levels, and manual navigation cancels automatic recentering.
+- Buying from a vendor keeps neighboring stock in place; paid refresh costs survive saving and reloading.
+- Enchanting retains the selected item and shows why unavailable upgrades cannot be purchased.
+- Direct trading validates price, ownership, inventory space and saving before committing items or gold.
+
+> Existing characters receive a one-time refund of all skill-tree and purchased-rank points. Unlock and reassign your skills in the new atlas before continuing. Level, attributes, equipment, gold and world progress are preserved. Reload the game to apply this update.
+
 ## v0.3.17 — 2026-09-12T18:12:00Z
 
 ### New

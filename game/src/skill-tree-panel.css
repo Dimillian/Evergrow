@@ -19,11 +19,19 @@
 .skill-atlas-search:focus-within { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
 .skill-atlas-search input { padding: 0; width: 100%; min-width: 0; color: #d7deeb; font: 15px var(--ui-font); border: 0; outline: 0; background: transparent; }
 .skill-atlas-search input::placeholder { color: #8c9eac; }
-.skill-atlas-results { position: absolute; z-index: 3; top: 73px; left: 18px; width: min(400px, calc(100% - 36px)); max-height: min(360px, 70%); padding: 12px; background: #19241cf5; border: 1px solid #788598; box-shadow: 0 14px 36px #000a; }
-.skill-atlas-results[hidden] { display: none; }
-.skill-atlas-result-count { padding: 2px 8px 10px; font-size: 12px; color: #a3aec3; }
-.skill-atlas-results .ui-button { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; padding: 9px 8px; margin: 0; text-align: left; border: 0; font-size: 14px; }
-.skill-atlas-results small { font-size: 11px; flex-shrink: 0; }
+.skill-atlas-search-summary { display:flex; flex-direction:column; gap:6px; padding:0 16px 8px; flex-shrink:0; background:#0d1c2980; }
+.skill-atlas-search-summary[hidden] { display:none; }
+.skill-atlas-search-status { display:flex; align-items:center; gap:8px; }
+.skill-atlas-search-status > span { color:#ffb6e4; font-size:13px; margin-right:auto; }
+.skill-atlas-search-summary .ui-button { min-height:30px; padding:4px 8px; font-size:12px; }
+.skill-atlas-search-groups { display:flex; flex-wrap:wrap; gap:6px; max-height:112px; overflow-y:auto; }
+.skill-atlas-search-groups:empty { display:none; }
+.skill-atlas-search-groups .ui-button { display:flex; align-items:center; gap:10px; color:#c5c4d1; border:1px solid #a2b8cf35; }
+.skill-atlas-search-groups .ui-button[aria-pressed="true"] { color:#ffe1f3; border-color:#ff9fdb90; background:#ff9fdb16; }
+.skill-atlas-search-groups b { font-weight:500; color:#ffb6e4; }
+@media(max-width:620px) {
+ .skill-atlas-search-summary { padding:0 8px 8px; }
+}
 .skill-atlas-viewport { position: relative; flex: 1; min-height: 250px; overflow: hidden; isolation: isolate; }
 .skill-atlas-viewport canvas { display: block; width: 100%; height: 100%; position: absolute; inset: 0; cursor: grab; touch-action: none; }
 .skill-atlas-viewport > canvas:focus-visible { outline: none; }
@@ -78,7 +86,6 @@
   .skill-atlas-toolbar [data-tree="reachable"] { flex: none; font-size: 12px; padding: 0 8px; }
   .skill-atlas-inspection, .skill-atlas-loadout { padding-left: 17px; padding-right: 17px; }
   .skill-atlas-domains { display: none; }
-  .skill-atlas-results { top: 118px; left: 10px; width: calc(100% - 20px); }
 }
 @media (max-width: 620px) {
   .skill-atlas { padding: 5px; }
@@ -96,7 +103,6 @@
   .skill-atlas-search input { font-size: 13px; }
   .skill-atlas-toolbar .ui-button { padding: 0 8px; font-size: 12px; }
   .skill-atlas-toolbar [data-tree="reachable"] { flex-grow: 0; }
-  .skill-atlas-results { top: 65px; }
   .skill-atlas-sidebar { overflow: visible; border-left: 0; border-top: 1px solid #64718a88; min-height: auto; }
   .skill-atlas-inspection { padding: 25px 23px; }
   .skill-atlas-description { max-width: 390px; margin-left: auto; margin-right: auto; }
@@ -106,7 +112,7 @@
   .skill-atlas-emblem { width: 72px; height: 72px; }
 }
 @media (forced-colors: active) {
-  .skill-atlas-window, .skill-atlas-sidebar, .skill-atlas-toolbar, .skill-atlas-results, .skill-atlas-search, .skill-atlas-assigned { border: 1px solid CanvasText; }
+  .skill-atlas-window, .skill-atlas-sidebar, .skill-atlas-toolbar, .skill-atlas-search, .skill-atlas-assigned { border: 1px solid CanvasText; }
   .skill-atlas-viewport canvas { forced-color-adjust: none; }
 }
 
@@ -241,7 +247,6 @@
 .skill-atlas-navigator > span { display:flex; justify-content:space-between; color:#b9d4df; font-size:9px; letter-spacing:.1em; }
 .skill-atlas-navigator small { color:#829dac; font-size:9px; letter-spacing:0; }
 .skill-atlas-navigator canvas { position:relative; width:100%; height:94px; inset:auto; cursor:crosshair; border-radius:5px; }
-.skill-atlas-results { top:60px; border-radius:12px; border-color:#b9dcec48; background:#172c3bf2; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); }
 .skill-atlas-loadout { border-color:#bad6e123; background:#12233455; }
 .skill-atlas-assigned { background:#091b2b80; border-radius:8px; border-color:#b5d0e026; }
 .skill-atlas-footer b { color:#c7d9da; }
@@ -254,7 +259,6 @@
  .skill-atlas-header { padding:10px 12px; }
  .skill-atlas-header .ui-title { font-size:17px; letter-spacing:.02em; }
  .skill-atlas-toolbar { padding:8px; }
- .skill-atlas-results { top:58px; }
  .skill-atlas-navigator { width:110px; padding:7px; right:9px; bottom:78px; }
  .skill-atlas-navigator small { display:none; }
  .skill-atlas-navigator canvas { height:64px; }
@@ -269,5 +273,5 @@
 
 .skill-atlas .skill-atlas-zoom .ui-button { border-radius:8px; }
 @media(prefers-reduced-transparency:reduce) {
- .skill-atlas-zoom,.skill-atlas-navigator,.skill-atlas-tooltip.ui-tooltip,.skill-atlas-results { background:#162b3b; backdrop-filter:none; -webkit-backdrop-filter:none; }
+ .skill-atlas-zoom,.skill-atlas-navigator,.skill-atlas-tooltip.ui-tooltip { background:#162b3b; backdrop-filter:none; -webkit-backdrop-filter:none; }
 }

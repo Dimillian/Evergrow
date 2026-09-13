@@ -6,6 +6,7 @@ import { skillNodeOwner } from './skill-node-presentation.ts';
 import { drawSkillGlyph } from './skill-tree-glyphs.ts';
 import type { CharacterSheet } from './character-types.ts';
 import { UI_THEME } from './ui-theme.ts';
+import { drawAtlasSearchMarkers } from './skill-tree-search-art.ts';
 
 export const SKILL_DOMAIN_COLORS = { Might: '#e5b881', Cunning: '#8bd5b9', Arcana: '#b9b4ee' } as const;
 export interface SkillAtlasView {
@@ -13,6 +14,7 @@ export interface SkillAtlasView {
   allocated: ReadonlySet<string>; reachable: ReadonlySet<string>; sheet?: CharacterSheet;
   selected: string; hovered: string | null; route: readonly string[];
   labelExclusions?: readonly AtlasLabelBox[];
+  filterActive?: boolean;
   matches(node: SkillNode): boolean;
 }
 const TAU = Math.PI * 2;
@@ -79,7 +81,7 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     const road=(a.role==='travel'||a.kind==='origin')&&(b.role==='travel'||b.kind==='origin');
     const sameCluster=a.cluster&&a.cluster===b.cluster;
     const color=territoryColors.get(a.territory??'')??SKILL_DOMAIN_COLORS[a.domain];
-    c.globalAlpha=owned||route?1:!view.matches(a)&&!view.matches(b)?.1:1;
+    c.globalAlpha=view.filterActive?(view.matches(a)&&view.matches(b)?.65:view.matches(a)||view.matches(b)?.28:owned||route?.2:.07):1;
     c.beginPath();c.moveTo(ax,ay);c.quadraticCurveTo(cx,cy,bx,by);
     c.strokeStyle='#08131f99';c.lineWidth=Math.max(1.6,3*Math.sqrt(z));c.stroke();
     if(owned||route||road){
@@ -99,7 +101,7 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     const landmark=node.kind==='major'||node.kind==='origin',notable=node.kind==='notable';
     const color=territoryColors.get(node.territory??'')??SKILL_DOMAIN_COLORS[node.domain];
     const accent=owned?'#ffdb96':routeNodes.has(node.id)?'#9ce9ff':color;
-    c.globalAlpha=owned||selected||hover||routeNodes.has(node.id)||view.matches(node)?1:.13;
+    c.globalAlpha=view.filterActive?(view.matches(node)?1:selected||hover?.6:routeNodes.has(node.id)?.3:.09):1;
     if(landmark||owned||selected||hover||notable&&z>.3){
       const bloom=c.createRadialGradient(x,y,r*.3,x,y,r*(landmark?3.8:2.6));
       bloom.addColorStop(0,accent+(owned||hover?'65':landmark?'40':'24'));bloom.addColorStop(1,accent+'00');
@@ -134,6 +136,7 @@ export function drawSkillAtlas(c: CanvasRenderingContext2D, view: SkillAtlasView
     }
   }
   c.globalAlpha=1;
+  drawAtlasSearchMarkers(c, view);
   const captions=layoutAtlasCaptions(view,(text,size)=>{
     c.font=`${size}px ${UI_THEME.typography.font}`;return c.measureText(text).width;
   },node=>view.sheet&&z>=.6&&node.skill&&view.allocated.has(node.id)
