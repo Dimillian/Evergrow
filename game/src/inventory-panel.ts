@@ -98,6 +98,7 @@ export class InventoryPanel {
   private drag: ItemReference | null = null;
   private locking = false;
   private dragOffset = { x: 0, y: 0 };
+  private dropHighlightKey = '';
   private touchItem: ItemReference | null = null;
   private touchMoving = false;
   private sheet!: HTMLElement;
@@ -611,22 +612,32 @@ export class InventoryPanel {
       this.highlightEquipmentTargets();
       this.element.classList.add('is-item-dragging');
     }, options);
-    this.element.addEventListener('dragover', event => {
-      this.clearDropHighlight();
+    const updateDropPreview = (event: DragEvent) => {
       if ((event.target as Element).closest('[data-ground-drop]')) {
         const valid = !!this.actions.drop && !!this.drag && this.itemAt(this.drag)?.id === this.drag.id && !this.itemAt(this.drag)?.locked;
         if (event.dataTransfer) event.dataTransfer.dropEffect = valid ? 'move' : 'none';
-        if (valid) { event.preventDefault(); this.element.querySelector('[data-ground-drop]')?.classList.add('is-drop-target'); }
+        if (valid) event.preventDefault();
+        const key = `ground:${valid}`;
+        if (this.dropHighlightKey === key) return;
+        this.clearDropHighlight(); this.dropHighlightKey = key;
+        if (valid) this.element.querySelector('[data-ground-drop]')?.classList.add('is-drop-target');
         return;
       }
       const target = this.dragLocation(event);
       const valid = !!target && this.canDrop(target);
       if (event.dataTransfer) event.dataTransfer.dropEffect = valid ? 'move' : 'none';
+      if (valid) event.preventDefault();
+      // Native dragover also repeats over the same cell. Keep its preview in place
+      // instead of hiding/reinserting it and forcing layout on every event.
+      const key = target ? `${locationKey(target)}:${valid}` : '';
+      if (this.dropHighlightKey === key) return;
+      this.clearDropHighlight(); this.dropHighlightKey = key;
       if (target?.type === 'bag' && target.cell !== undefined && target.cell >= 0 && this.drag) {
         const item = this.itemAt(this.drag);
         if (item) {
           const preview = this.element.querySelector<HTMLElement>('.character-pack-placement')!, size = itemFootprint(item);
-          (target.cell >= PACK_CELLS ? this.element.querySelector<HTMLElement>('.character-charm-grid')! : this.element.querySelector<HTMLElement>('.character-bag')!).append(preview);
+          const grid = target.cell >= PACK_CELLS ? this.element.querySelector<HTMLElement>('.character-charm-grid')! : this.element.querySelector<HTMLElement>('.character-bag')!;
+          if (preview.parentElement !== grid) grid.append(preview);
           preview.hidden = false; preview.classList.toggle('is-invalid', !valid);
           preview.style.left = `calc(3px + ${target.cell % PACK_COLUMNS} * (var(--pack-cell) + var(--pack-gap)))`;
           preview.style.top = `calc(3px + ${Math.floor((target.cell >= PACK_CELLS ? target.cell-PACK_CELLS : target.cell) / PACK_COLUMNS)} * (var(--pack-cell) + var(--pack-gap)))`;
@@ -635,9 +646,10 @@ export class InventoryPanel {
         }
       }
       if (!target || !valid) return;
-      event.preventDefault();
       if (target.type === 'equipment') this.cells.get(locationKey(target))?.classList.add('is-drop-target');
-    }, options);
+    };
+    this.element.addEventListener('dragenter', updateDropPreview, options);
+    this.element.addEventListener('dragover', updateDropPreview, options);
     this.element.addEventListener('dragleave', event => {
       if (!(event.relatedTarget instanceof Node) || !this.element.contains(event.relatedTarget)) this.clearDropHighlight();
     }, options);
@@ -733,6 +745,7 @@ export class InventoryPanel {
   }
 
   private clearDropHighlight(): void {
+    this.dropHighlightKey = '';
     this.element.querySelector('[data-ground-drop]')?.classList.remove('is-drop-target');
     for (const cell of this.cells.values()) cell.classList.remove('is-drop-target');
     this.element.querySelector<HTMLElement>('.character-pack-placement')!.hidden = true;
