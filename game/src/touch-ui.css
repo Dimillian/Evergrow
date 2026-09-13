@@ -1,4 +1,6 @@
 /* Input-specific presentation. Desktop selectors and layout remain unchanged. */
+/* Keep the page default before the drag controls' touch-action overrides. */
+html.touch-mode, .touch-mode :where(#app,#app *) { touch-action: manipulation; }
 .touch-hud { --touch-footer-clearance: calc(max(96px, 14vh) + env(safe-area-inset-bottom)); position: absolute; inset: 0; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); z-index: 8; pointer-events: none; font: 14px var(--ui-font); color: var(--ui-text); user-select: none; -webkit-user-select: none; }
 .touch-hud[hidden] { display: none; }
 .touch-mode #game { touch-action: none; }
@@ -167,7 +169,6 @@
 }
 
 /* Suppress native page gestures without swallowing panel scroll or game pinch input. */
-html.touch-mode, .touch-mode :where(#app,#app *) { touch-action: manipulation; }
 .touch-mode :where(#app,#app *) { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .touch-mode :is(input,textarea,[contenteditable="true"]) { user-select: text; -webkit-user-select: text; -webkit-touch-callout: default; }
 .touch-install-help { flex-basis: 100%; margin: 4px 0 0; font: 12px/1.4 var(--ui-font); color: var(--ui-silver); }
