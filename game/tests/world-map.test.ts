@@ -65,6 +65,8 @@ test('a static open chart avoids redraws but reacts to discovery and delayed sto
   // Exercise the real update/render invalidation path without creating a DOM or canvas.
   const map = Object.assign(Object.create(WorldMap.prototype), {
     opened: true, disposed: false, presentation: null, exploration,
+    prepareLayout() { return true; }, playerPing: { style: {} },
+    view: { x: 0, y: 0, width: 800, height: 500, centerX: 0, centerY: 0, zoom: .17 },
     drawChart() { draws++; },
   }) as WorldMap;
   const player = { x: 15.25, y: -71.125, angle: .4 };
@@ -85,6 +87,43 @@ test('a static open chart avoids redraws but reacts to discovery and delayed sto
   assert.equal(draws, 7, 'an explicit interaction draw also refreshes the presentation cache');
 });
 
+
+test('first map draw measures populated footer layout and aligns the canvas with the arrival ping', t => {
+  const win = Object.getOwnPropertyDescriptor(globalThis, 'window');
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { devicePixelRatio: 2 } });
+  t.after(() => { if (win) Object.defineProperty(globalThis, 'window', win); else Reflect.deleteProperty(globalThis, 'window'); });
+  const discoveries = { textContent: '' }, status = { textContent: '', dataset: {} }, coordinates = { textContent: '' };
+  let availableWidth = 900, draws = 0;
+  const viewport = { getBoundingClientRect: () => ({ width: availableWidth,
+    // Empty footer rows initially leave more space; a wrapped status later takes another row.
+    height: !discoveries.textContent || !status.textContent || !coordinates.textContent ? 600
+      : status.textContent.length > 80 ? 520 : 560 }) };
+  const player = { x: -1234, y: 5678, angle: 0 };
+  const map = Object.assign(Object.create(WorldMap.prototype), {
+    opened: true, disposed: false, frame: 0, recenter: null, player,
+    view: { x: 0, y: 0, width: 800, height: 500, centerX: player.x, centerY: player.y, zoom: .17 },
+    canvas: { width: 300, height: 150 }, playerPing: { style: {} }, viewport, discoveries, status, coordinates,
+    exploration: { discoveredPOICount: 12, revision: 1, storageStatus: 'saved', persistenceMessage: '' },
+    world: { isSanctuary: () => true },
+    drawChart() {
+      draws++;
+      const rect = viewport.getBoundingClientRect();
+      assert.equal(this.view.width, rect.width); assert.equal(this.view.height, rect.height);
+      assert.equal(this.canvas.width, rect.width * 2); assert.equal(this.canvas.height, rect.height * 2);
+    },
+  });
+  map.resize();
+  assert.equal(draws, 1);
+  assert.equal(map.playerPing.style.left, '450px'); assert.equal(map.playerPing.style.top, '280px');
+  map.resize();
+  assert.equal(map.playerPing.style.top, '280px', 'reopening must not correct an initially stale height');
+  availableWidth = 700;
+  map.exploration.persistenceMessage = 'A long chart storage message that wraps onto an additional footer row in the available panel width.';
+  map.render();
+  assert.equal(map.playerPing.style.left, '350px'); assert.equal(map.playerPing.style.top, '260px');
+  assert.equal(map.view.centerX, player.x); assert.equal(map.view.centerY, player.y);
+  assert.equal(map.view.zoom, .17, 'layout changes preserve the camera and zoom');
+});
 
 test('overview fitting keeps the requested world rectangle inside the chart while respecting zoom bounds', () => {
   const view: MapView = { x: 0, y: 0, width: 1100, height: 650, centerX: 0, centerY: 0, zoom: .17 };
