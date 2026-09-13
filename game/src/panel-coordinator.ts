@@ -2,7 +2,7 @@ import type { GamePhase } from './game-phase.ts';
 export type PanelPhase = Exclude<GamePhase, 'ready' | 'playing' | 'paused' | 'dead'>;
 export interface PanelLifecycle { open(): void; close(): void; }
 export interface PanelHooks {
-  clearInput(): void; changed(phase: GamePhase): void; resumeGameplay(): void; save(): void;
+  clearInput(preserveMovement?: boolean): void; changed(phase: GamePhase): void; resumeGameplay(): void; save(): void;
 }
 const OPEN_FROM: Record<PanelPhase, readonly GamePhase[]> = {
   chronicle: ['playing','paused','character'], journeys: ['playing'], event: ['playing'], service: ['playing'], map: ['playing'], character: ['playing', 'character', 'skills'], skills: ['playing', 'character', 'skills'],
@@ -11,6 +11,18 @@ const OPEN_FROM: Record<PanelPhase, readonly GamePhase[]> = {
  * the old trap before opening a new view and returns focus only when play resumes. */
 export class PanelCoordinator {
   private current: GamePhase = 'ready';
+  private holdingMap = false;
+  get mapHeld() { return this.holdingMap; }
+  get simulationActive() { return this.current === 'playing' || this.current === 'map' && this.holdingMap; }
+  holdMap(): boolean {
+    if (this.current !== 'playing') return false;
+    this.transition('map', false, true); return true;
+  }
+  releaseMap(): void { if (this.holdingMap) this.resume(); }
+  toggleMap(): void {
+    if (this.holdingMap) this.transition('map', true);
+    else this.toggle('map');
+  }
   private chronicleReturn: 'playing'|'paused'|'character' = 'playing';
   private readonly panels: Record<PanelPhase, PanelLifecycle>;
   private readonly hooks: PanelHooks;
@@ -25,7 +37,7 @@ export class PanelCoordinator {
   }
   toggle(panel: PanelPhase): boolean { return this.current === panel ? this.resume() : this.open(panel); }
   pause(): boolean {
-    if (this.current !== 'playing') return false;
+    if (this.current !== 'playing' && this.current !== 'map') return false;
     this.transition('paused', true); return true;
   }
   resume(): boolean {
@@ -33,8 +45,10 @@ export class PanelCoordinator {
     this.transition(this.current==='chronicle'?this.chronicleReturn:'playing'); return true;
   }
   /** Explicit lifecycle changes: character entry, title return and defeat use the same cleanup. */
-  transition(next: GamePhase, save = false): void {
-    this.hooks.clearInput();
+  transition(next: GamePhase, save = false, holdMap = false): void {
+    this.hooks.clearInput(this.current === 'playing' && next === 'map' && holdMap
+      || this.current === 'map' && this.holdingMap && next === 'playing');
+    this.holdingMap = next === 'map' && holdMap;
     const active = this.activePanel;
     if (active) this.panels[active].close();
     this.current = next;

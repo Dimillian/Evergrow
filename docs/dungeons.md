@@ -106,4 +106,10 @@ Older entrances without an explicit theme keep their original three-theme seed i
 
 ## Crowd performance
 
+The dungeon map uses the same two modes: Tab holds a translucent frameless chart that always follows the player and passes mouse input through to gameplay, while M opens the full paused map. Only the held chart redraws live player and discovery state while moving; dungeon layout, combat and persistence rules are unchanged.
+
 Frozen dungeon floors share a 64-unit spatial collision index. Cells proven to contain no silhouette edges reuse an exact inside/outside result; boundary cells retain the original polygon checks and 16-point body-clearance sampling. Unfrozen generator work continues to use the original geometry queries. The weakly owned index disappears with its floor. This changes no collision contours, actor limits, AI tick rate or combat timing. Room roster lookups are cached per floor and active member IDs use a set during admission. Wholly offscreen enemy rigs skip drawing with a generous 256-unit margin while their simulation continues. See `world-performance.md` for the reproducible CPU study.
+
+Tab-map marker tooltips appear automatically whenever hovered, including during combat, without consuming mouse input. The full paused map keeps its normal tooltips.
+
+While holding Tab, the mouse wheel zooms the chart around the player; clicks continue to reach gameplay.

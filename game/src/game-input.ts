@@ -1,6 +1,6 @@
 import type { Input } from './model.ts';
 
-import { ControlBindings, SKILL_ACTIONS, type ControlAction } from './control-bindings.ts';
+import { ControlBindings, SKILL_ACTIONS, isMovementAction, type ControlAction } from './control-bindings.ts';
 
 type Point = { x: number; y: number };
 type PointerBounds = { left: number; top: number; width: number; height: number };
@@ -62,9 +62,12 @@ export class GameInput {
     return input;
   }
 
-  /** Blur, pause, map entry, cancellation, and restart discard all held/queued input. */
-  clear(): void {
-    this.keys.clear(); this.buttons.clear();
+  /** Tab transitions retain movement and mouse holds; pause/blur discard everything. */
+  clear(preserveMovement = false): void {
+    if (preserveMovement) {
+      for (const key of this.keys) if (!isMovementAction(this.bindings.action(key))) this.keys.delete(key);
+    } else this.keys.clear();
+    if (!preserveMovement) this.buttons.clear();
     this.pending.attack = this.pending.dodge = this.pending.heal = false;
     this.pendingSkill = null;
   }

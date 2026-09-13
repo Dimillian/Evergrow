@@ -4,6 +4,27 @@ import { bindGameKeyboard } from '../src/game-keyboard.ts';
 import { GameInput } from '../src/game-input.ts';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
 
+test('live-map interception owns movement keydown but always delivers release and respects native shortcuts', () => {
+  const target = new EventTarget(), abort = new AbortController(), input = new GameInput();
+  let normalPresses = 0, intercepted = 0;
+  bindGameKeyboard(target, {
+    intercept: event => { if (event.code !== 'ArrowUp') return false; intercepted++; input.keyDown(event.code); return true; },
+    press: () => { normalPresses++; }, release: code => input.keyUp(code), clear: () => input.clear(),
+  }, abort.signal);
+  const key = (type: string, code: string, ctrlKey = false) => {
+    const event = Object.assign(new Event(type, { cancelable: true }), { code, ctrlKey });
+    target.dispatchEvent(event); return event;
+  };
+  assert.equal(key('keydown', 'ArrowUp').defaultPrevented, true);
+  assert.equal(normalPresses, 0); assert.equal(input.consume({ x: 0, y: 0 }, true).moveY, -1);
+  key('keyup', 'ArrowUp'); assert.equal(input.consume({ x: 0, y: 0 }, true).moveY, 0);
+  assert.equal(intercepted, 1, 'release cannot latch a movement key again');
+  assert.equal(key('keydown', 'ArrowUp', true).defaultPrevented, false);
+  assert.equal(intercepted, 1); assert.equal(input.consume({ x: 0, y: 0 }, true).moveY, 0);
+  key('keydown', 'KeyM'); assert.equal(normalPresses, 1);
+  abort.abort();
+});
+
 test('Ctrl reveal tracks either control key without consuming browser shortcuts or latching after cancellation', () => {
   const target = new EventTarget(), abort = new AbortController();
   let held = false;

@@ -22,6 +22,9 @@ export const CONTROL_ACTIONS = [
   { id: 'debug', label: 'Performance overlay', group: 'World & menus', defaults: ['F3', null], pad: '—' },
 ] as const;
 export type ControlAction = typeof CONTROL_ACTIONS[number]['id'];
+export function isMovementAction(action: ControlAction | undefined): boolean {
+  return action === 'up' || action === 'down' || action === 'left' || action === 'right';
+}
 export type ControlMap = Record<ControlAction, readonly [string | null, string | null]>;
 export const SKILL_ACTIONS = ['skill0', 'skill1', 'skill2', 'skill3', 'skill4'] as const;
 export const CONTROL_STORAGE_KEY = 'evergrow-controls-v1';

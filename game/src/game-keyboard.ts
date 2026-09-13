@@ -1,6 +1,7 @@
 /** Keyboard ownership boundary. Native shortcuts must never latch a gameplay key. */
 export interface GameKeyboardHandlers {
   press(event: KeyboardEvent): void;
+  intercept?(event: KeyboardEvent): boolean;
   release(code: string): void;
   clear(): void;
   revealLoot?(held: boolean): void;
@@ -15,6 +16,15 @@ export function bindGameKeyboard(target: EventTarget, handlers: GameKeyboardHand
   // letter shortcuts still clear gameplay input before the browser handles them.
   const lootControl = (event: KeyboardEvent) => !!handlers.revealLoot && /^Control(Left|Right)$/.test(event.code)
     && !event.metaKey && !event.altKey && !event.isComposing;
+  // Capture movement on the live map before its focused controls can pan or trap Tab.
+  target.addEventListener('keydown', raw => {
+    const event = raw as KeyboardEvent;
+    if (nativeShortcut(event) && !lootControl(event)) handlers.clear();
+    if (!nativeShortcut(event) && handlers.intercept?.(event)) {
+      event.preventDefault(); event.stopImmediatePropagation();
+    }
+    handlers.revealLoot?.(event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing);
+  }, { signal, capture: true });
   target.addEventListener('keydown', raw => {
     const event = raw as KeyboardEvent;
     // OS/browser shortcuts can swallow the letter's eventual keyup without a
@@ -25,12 +35,6 @@ export function bindGameKeyboard(target: EventTarget, handlers: GameKeyboardHand
   target.addEventListener('keyup', raw => {
     const event = raw as KeyboardEvent;
     handlers.release(event.code);
-    if (nativeShortcut(event) && !lootControl(event)) handlers.clear();
-    handlers.revealLoot?.(event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing);
-  }, { signal, capture: true });
-  // Capture shortcut interruption before a focused control can consume keydown.
-  target.addEventListener('keydown', raw => {
-    const event = raw as KeyboardEvent;
     if (nativeShortcut(event) && !lootControl(event)) handlers.clear();
     handlers.revealLoot?.(event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing);
   }, { signal, capture: true });

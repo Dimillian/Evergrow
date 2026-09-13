@@ -88,6 +88,7 @@ import { EnemyDeaths } from './death-presentation.ts';
 import { drawEnemyRemains, deathDepth, resetDeathArt } from './death-art.ts';
 interface Ghost { x: number; y: number; angle: number; gait: number; life: number; }
 export interface RenderSettings {
+  liveMap?: boolean;
   showGroundLootNames?: boolean;
   reducedMotion: boolean;
   /** Save-free reviews can inspect long-session water optics without advancing gameplay. */
@@ -293,7 +294,7 @@ export class Renderer {
 
   render(sim: Simulation, world: World, dt: number, settings: RenderSettings) {
     const setupStart = this.profiler?.start() ?? 0;
-    const c = this.ctx, p = sim.player, active = settings.phase === 'playing';
+    const c = this.ctx, p = sim.player, active = settings.phase === 'playing' || settings.phase === 'map' && settings.liveMap === true;
     const step = active ? dt : 0, alpha = sim.interpolationAlpha;
     const feedbackStep = active || settings.phase === 'dead' ? dt : 0;
     this.rewards.update(goldBalance(p.character), feedbackStep, settings.reducedMotion);
@@ -343,8 +344,8 @@ export class Renderer {
     const { offsetX, offsetY, left, top, width: worldWidth, height: worldHeight } = this.view;
     this.focusedEnemy = this.enemyFocus.update(sim.enemies, this.view,
       this.pointerActive && !this.pointerOverHUD() ? { x: this.pointerX, y: this.pointerY } : null,
-      alpha, dt, active && !p.dead, this.inspectedEnemyId);
-    if (!active || p.dead) {
+      alpha, dt, settings.phase === 'playing' && !p.dead, this.inspectedEnemyId);
+    if (settings.phase !== 'playing' || p.dead) {
       this.plateEnemy = null; this.plateOpacity = 0;
     } else {
       if (this.focusedEnemy) this.plateEnemy = this.focusedEnemy;

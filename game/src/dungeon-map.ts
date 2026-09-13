@@ -20,13 +20,13 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
     y: number;
     width: number;
     height: number;
-}, zoom: number, cx: number, cy: number, marker:JourneyMarker|null=null) {
+}, zoom: number, cx: number, cy: number, marker:JourneyMarker|null=null, simple=false) {
     c.save();
     c.beginPath();
     c.rect(box.x, box.y, box.width, box.height);
     c.clip();
-    c.fillStyle = '#071018ee';
-    c.fillRect(box.x, box.y, box.width, box.height);
+    if (simple) c.globalAlpha = .58;
+    else { c.fillStyle = '#071018ee'; c.fillRect(box.x, box.y, box.width, box.height); }
     c.translate(box.x + box.width / 2 - cx * zoom, box.y + box.height / 2 - cy * zoom);
     c.scale(zoom, zoom);
     const shape = (r: DungeonFloor['rooms'][number]) => {
@@ -75,6 +75,7 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
     }
     c.translate(p.x, p.y);
     c.rotate(p.angle);
+    c.globalAlpha = 1;
     c.fillStyle = '#fff0bf';
     c.beginPath();
     c.moveTo(8 / zoom, 0);
@@ -87,7 +88,7 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
     drawJourneyMapMarker(c,{...box,zoom,centerX:cx,centerY:cy},marker,true);
     c.strokeStyle = '#718b85';
     c.lineWidth = 1;
-    c.strokeRect(box.x + .5, box.y + .5, box.width - 1, box.height - 1);
+    if (!simple) c.strokeRect(box.x + .5, box.y + .5, box.width - 1, box.height - 1);
 }
 export class DungeonMap {
     marker:JourneyMarker|null=null;
@@ -101,6 +102,7 @@ export class DungeonMap {
     private run: DungeonRun | null = null;
     private player = { x: 0, y: 0, angle: 0 };
     private zoom = .17;
+    private explorationMode = false;
     private center = { x: 1450, y: 1400 };
     private drag: {
         x: number;
@@ -144,7 +146,13 @@ export class DungeonMap {
         x: number;
         y: number;
         angle: number;
-    }) { this.floor = f; this.run = r; this.player = p; const bounds = dungeonMapBounds(f); this.center = { x: bounds.x, y: bounds.y }; this.zoom = Math.min(1120 / bounds.width, 680 / bounds.height); this.element.hidden = false; this.canvas.width = 1200; this.canvas.height = 760; this.draw(); this.focus = trapDialogFocus(this.element, { signal: this.abort.signal }); }
+    }, explorationMode = false) { this.floor = f; this.run = r; this.player = p; this.explorationMode=explorationMode; const bounds = dungeonMapBounds(f); this.center = explorationMode ? { x:p.x,y:p.y } : { x: bounds.x, y: bounds.y }; this.zoom = explorationMode ? .17 : Math.min(1120 / bounds.width, 680 / bounds.height); this.element.classList.toggle('crypt-map--exploration',explorationMode); this.element.querySelector('[role="dialog"]')!.setAttribute('aria-modal',String(!explorationMode)); this.element.hidden = false; this.canvas.width = 1200; this.canvas.height = 760; this.draw(); if (!explorationMode) this.focus = trapDialogFocus(this.element, { signal: this.abort.signal }); }
+    setExplorationPointer(point: { x: number; y: number } | null) {
+        if (this.element.hidden || !this.explorationMode) return;
+        const rect = this.canvas.getBoundingClientRect();
+        if (point && point.x >= rect.left && point.x < rect.right && point.y >= rect.top && point.y < rect.bottom) this.hover(point.x, point.y);
+        else this.tooltip.hidden = true;
+    }
     private hover(clientX: number, clientY: number) {
         if (!this.floor || !this.run)
             return;
@@ -158,8 +166,19 @@ export class DungeonMap {
         this.tooltip.style.left = `${Math.min(clientX + 16, window.innerWidth - this.tooltip.offsetWidth - 12)}px`;
         this.tooltip.style.top = `${Math.min(clientY + 16, window.innerHeight - this.tooltip.offsetHeight - 12)}px`;
     }
-    private draw() { if (this.floor && this.run)
-        drawDungeonMap(this.canvas.getContext('2d')!, this.floor, this.run, this.player, { x: 0, y: 0, width: 1200, height: 760 }, this.zoom, this.center.x, this.center.y,this.marker); }
+    update(player: { x: number; y: number; angle: number }) {
+        if (this.element.hidden) return;
+        if (this.explorationMode) this.center = { x: player.x, y: player.y };
+        this.player = { ...player }; this.draw();
+    }
+    private draw() { if (this.floor && this.run) {
+        const c=this.canvas.getContext('2d')!; c.clearRect(0,0,this.canvas.width,this.canvas.height);
+        drawDungeonMap(c, this.floor, this.run, this.player, { x: 0, y: 0, width: 1200, height: 760 }, this.zoom, this.center.x, this.center.y,this.marker,this.explorationMode); } }
+    zoomExplorationByWheel(deltaY: number, deltaMode: number) {
+        if (this.element.hidden || !this.explorationMode || !Number.isFinite(deltaY)) return;
+        const delta = Math.max(-240, Math.min(240, deltaY * (deltaMode === 1 ? 16 : deltaMode === 2 ? this.canvas.clientHeight : 1)));
+        this.zoomAt(Math.exp(-delta * .0016));
+    }
     private zoomAt(factor: number, px?: number, py?: number) {
         const r=this.canvas.getBoundingClientRect(), x=(px??r.width/2)*this.canvas.width/r.width-this.canvas.width/2,y=(py??r.height/2)*this.canvas.height/r.height-this.canvas.height/2;
         const next=Math.max(.04,Math.min(.8,this.zoom*factor));this.center.x+=x/this.zoom-x/next;this.center.y+=y/this.zoom-y/next;this.zoom=next;this.tooltip.hidden=true;this.draw();

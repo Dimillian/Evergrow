@@ -14,6 +14,10 @@ The seed tabs change the local review. The map retains normal panning, zooming a
 
 ## Runtime improvements
 
+Hold Tab from gameplay for a simplified exploration overlay: no frame, header, footer, coordinate grid or danger labels; terrain is drawn at 58% opacity, with a bright player marker and no on-map toolbar. The world keeps running with normal gameplay controls. The chart always centers on the player and mouse input passes through to the game. Release Tab to close. M (including from a Tab glance), the minimap button and Journey Show on Map open the full paused map. See [controls](controls.md).
+
+The full map's upper-right compass is a simple procedural Canvas rose with four faceted points and cardinal lettering, without a surrounding frame, bearing ticks or diagonal points. North is highlighted in gold and stays aligned with the north-up chart. The map-compass-art.ts module owns this native-resolution ornament; no image asset or world state is involved.
+
 The full map now zooms out to **0.025**, allowing a broad region to fit on screen. A scale rail gives the overview a readable distance reference. Native biome labels are placed only on revealed, predominantly matching terrain; they avoid settlement markers and reserve space from minor POIs. Labels are a cartographic aid, not discovery or simulation state.
 
 Overview POIs use deterministic priority and spacing: settlements and camps remain readable, while overlapping shop markers return at closer zoom. Hover queries the exact list that is drawn, so a hidden shop or obscured landmark cannot intercept a visible marker. At closer zoom, detailed building footprints remain available. The minimap uses a 0.05 scale (60% more distance across than 0.08) while retaining detailed terrain sampling. Walking reveals terrain and nearby POIs within 600 world units, up from 260; its discovery ring shares the same radius. Existing explored charts are preserved.
@@ -43,3 +47,7 @@ Generation 5 spreads settlements across both dimensions, enlarges the climate fi
 ## Interaction performance
 
 Map input is coalesced into display frames, ordinary hover does not repaint terrain, and new atlas detail builds progressively within a cooperative generation budget. A complete low-resolution preview covers revealed terrain immediately and finished tiles crossfade into it over 240 ms (instant with reduced motion). Fine fog masks use row-run copies; district contours are cached in world-aligned tiles and rechecked against current discovery. See [panel performance](panel-performance.md) for budgets, verification and measured limits.
+
+Tab-map marker tooltips appear automatically whenever hovered, including during combat, without consuming mouse input. The full paused map keeps its normal tooltips.
+
+While holding Tab, the mouse wheel zooms the chart around the player; clicks continue to reach gameplay.

@@ -86,6 +86,24 @@ test('a static open chart avoids redraws but reacts to discovery and delayed sto
 });
 
 
+test('exploration map stays centered while the full map retains manual framing', () => {
+  const map = Object.assign(Object.create(WorldMap.prototype), {
+    opened: true, disposed: false, explorationMode: true,
+    exploration: { reveal() {} }, render() {},
+    view: { x: 0, y: 0, width: 900, height: 560, centerX: 0, centerY: 0, zoom: .17 }, zoomLimits: MAP_ZOOM,
+  });
+  map.update({ x: 120, y: -240, angle: 0 }, 1 / 60);
+  assert.deepEqual(projectMapPoint(120, -240, map.view), { x: 450, y: 280 });
+  map.fitBounds({ x: 1000, y: 2000, width: 1800, height: 1800 });
+  map.update({ x: 180, y: -320, angle: 1 }, 1 / 60);
+  assert.deepEqual(projectMapPoint(180, -320, map.view), { x: 450, y: 280 });
+  map.explorationMode = false;
+  map.fitBounds({ x: 1000, y: 2000, width: 1800, height: 1800 });
+  const fullView = { ...map.view };
+  map.update({ x: 240, y: -400, angle: 1 }, 1 / 60);
+  assert.deepEqual(map.view, fullView, 'full map retains manual framing');
+});
+
 test('overview fitting keeps the requested world rectangle inside the chart while respecting zoom bounds', () => {
   const view: MapView = { x: 0, y: 0, width: 1100, height: 650, centerX: 0, centerY: 0, zoom: .17 };
   const region = { x: -10000, y: -7500, width: 20000, height: 15000 };
