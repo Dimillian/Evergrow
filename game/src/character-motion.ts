@@ -212,9 +212,10 @@ export function playerMotion(pose: CharacterPose) {
       weaponHand[1] * (1 - cast) + gestureHand[1] * cast, weaponHand[2] * (1 - cast) + gestureHand[2] * cast];
   }
   const bow = pose.weapon?.kind === 'bow', staff = pose.weapon?.kind === 'staff';
+  const restingStaffArm = staff && pose.weapon?.element === 'fire';
   const independent = pose.grip === 'one-handed';
   const gripAmount = independent ? 0 : bow || staff ? 1 : 1 - cast;
-  const supportHolding = !independent && (cast < .05 || bow || staff || !!pose.gesture);
+  const supportHolding = !restingStaffArm && !independent && (cast < .05 || bow || staff || !!pose.gesture);
   const rightX = -Math.sin(bodyAngle), rightDepth = Math.cos(bodyAngle);
   const guardHand = (side: number): RigPoint => [
     rightX * side * 8 + Math.cos(bodyAngle) * (8 + (pose.guard ?? 0) * 3) - step * moveX * .5,
@@ -226,7 +227,11 @@ export function playerMotion(pose: CharacterPose) {
     weaponHand[1] + Math.sin(weaponAngle) * supportOffset,
     weaponHand[2] + (ARM_DEPTH_SCALE - 1) * Math.sin(weaponAngle) * supportOffset];
   const offGuard = guardHand(-1);
-  const restOffHand: RigPoint = pose.gesture === 'bash'
+  // Lower the free palm beside the upper thigh for a loose, shallow elbow bend.
+  const restOffHand: RigPoint = restingStaffArm
+    ? [-rightX * 9 + Math.cos(bodyAngle) - step * moveX * .5,
+      -rightDepth * 9 + Math.sin(bodyAngle) - step * moveY * .5, 8]
+    : pose.gesture === 'bash'
     ? [offGuard[0] * (1 - cast) + (Math.cos(pose.angle) * 23 - rightX * 4) * cast,
       offGuard[1] * (1 - cast) + (Math.sin(pose.angle) * 23 - rightDepth * 4) * cast, offGuard[2] + cast * 2]
     : independent ? offGuard : supportGrip;
@@ -281,7 +286,7 @@ export function playerMotion(pose: CharacterPose) {
   }
   const weaponBehind = (staff || pose.weapon?.kind === 'wand') ? back : guardedMelee ? mainHand3[1] < -.5 : Math.sin(weaponAngle) < -0.18;
   const weaponArm = solveArm(armShoulder(bodyAngle, 1, shoulderSway), mainPalm, bodyAngle, 1, elbowTuck, diagonal && independent && !offAttacking ? .55 * attackBlend : gripAmount);
-  const offArm = solveArm(armShoulder(bodyAngle, -1, shoulderSway), offPalm, bodyAngle, -1, offAttacking ? elbowTuck : 0, diagonal && offAttacking ? .55 * offBlend : gripAmount);
+  const offArm = solveArm(armShoulder(bodyAngle, -1, shoulderSway), offPalm, bodyAngle, -1, offAttacking ? elbowTuck : 0, restingStaffArm ? 0 : diagonal && offAttacking ? .55 * offBlend : gripAmount);
   hand = projectArmPoint(mainHand3);
   const offWeaponActive = pose.attackHand === 'off' && pose.offHand?.kind === 'weapon';
   const offWeaponOrigin = projectArmPoint(offHand3);
