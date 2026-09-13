@@ -33,6 +33,20 @@ The user approved the next major prototype milestone, **0.5.0**, on 2026-09-13 f
 
 ## Last verified publication
 
+- Game v0.5.0 / Sites version 50, publicly deployed on 2026-09-13 at 10:13:45 UTC.
+- Published source: `ea9824504ab25d0711d917519d2782bf1d77b37b`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_c238f9fe20f88191824dd8f6bdbe0355`.
+- Deployment: `appgdep_6aa6774d7150819180087279762cec02`; Sites returned `succeeded`.
+- Compact square HUD, equipped-weapon art, stained-glass icons for all 30 skills, separate utility medallions and a focused navigation menu.
+- Inventory footer integrates resources and skill slots, with right-click assignment/clearing and left-click atlas details through saved character commands.
+- All twelve skill-changing Uniques, equal Unique/Legendary drop chances, level-scaled fixed affixes and the Chronicles collection.
+- Ran 1,347 code tests: 1,344 passed initially. Updated the renderer fixture for opaque Path2D icons and the current Q/Space labels, and corrected the release timestamp format. All 21 affected renderer, HUD, assignment and changelog checks then passed.
+- Application/core type checks, local and cloud-enabled client/Worker builds, archive contents and clean-source release validation passed. No automated browser gameplay was run.
+- Existing local/cloud characters remain compatible; no new reset, tree refund or D1 migration. Reload existing clients.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.4.0 / Sites version 49, publicly deployed on 2026-09-13 at 06:19:47 UTC.
 - Published source: `25f6c547196fbfc836bf3ffb8c1d8ee7b5664771`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_cdb5f10c8f908191a963306320000ea8`.

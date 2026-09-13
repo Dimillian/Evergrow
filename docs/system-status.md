@@ -1,6 +1,6 @@
 # Current system status
 
-Local, 2026-09-13: twelve skill-changing Uniques, fixed level-scaled affixes, equal Unique/Legendary drop chances and a found/unfound Chronicles collection are implemented. Existing saves remain valid. Not published; see [Unique items](unique-items.md).
+Published v0.5.0, 2026-09-13: twelve skill-changing Uniques, fixed level-scaled affixes, equal Unique/Legendary drop chances and a found/unfound Chronicles collection are implemented. Existing saves remain valid. The release also includes the compact HUD, stained-glass skill icons, inventory skill assignment and navigation menu. See [Unique items](unique-items.md).
 
 Published in v0.3.15, 2026-09-12: cloud creation rejects unresolved empty slots; every cloud deletion awaits server confirmation while retaining device recovery. Legacy Chronicle recovery is independent of gameplay validation, and explicit deletion can clear unreadable legacy slots. Gameplay save status is specific to the active character. No automatic reset or individual account edits. See [cloud recovery and deletion](cloud-saves-sites.md#cloud-recovery-and-deletion--september-12-2026).
 
