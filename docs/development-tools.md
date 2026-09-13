@@ -6,7 +6,7 @@ Open **http://127.0.0.1:5173/tools/** (`/tools` also resolves) while `npm run de
 
 The hub and review HTML are outside the production build entry graph and outside `public/`. Do not add them to Sites or Android builds. No publication is required for local tools. Review changes use staged, memory-only characters; they never load or edit playable saves. The game itself remains `/`.
 
-World → Events includes **Preview In Progress** for cursed chests (`/events.html?view=cursedChest&state=progress`). Inspect the shared countdown ring with Play/Pause, timeline scrubbing, 1×/5×/10× speed and Restart. The recipe supplies the duration; this disposable scene stages the active trial clock without combat, wave simulation or saves. At expiry it replays the sample reward opening. Hidden tabs suspend time; reduced motion starts paused.
+World → Events includes **Preview In Progress** for all thirteen event entries (`/events.html?view=ruinedChapel&state=progress`). A recipe selector exposes every encounter variant. Play/Pause, scrubbing, speed and Restart stage the shared left-side trial panel and world objectives in disposable memory. Cursed chests and beacons use real durations; finite encounters use an explicitly authored twelve-second-per-wave presentation timeline. Instant interactions explain their lack of a progress phase. Hidden tabs suspend time, reduced motion starts paused, and no combat or playable saves are involved.
 
 ## Adding a tool
 
