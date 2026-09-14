@@ -16,6 +16,7 @@ export interface EnemyAIContext {
   target?: Pick<Player,'x'|'y'|'radius'|'dead'>;
   hurtDecoy?(id:number,amount:number):void;
   enemies: readonly Enemy[];
+  neighbors?(enemy:Enemy,padding:number):readonly Enemy[];
   world: WorldQuery;
   time: number;
   trial: { campId: string; x: number; y: number; radius: number } | null;
@@ -27,10 +28,12 @@ export interface EnemyAIContext {
 }
 
 function separatedMotion(enemy: Enemy, vx: number, vy: number, context: EnemyAIContext): { vx: number; vy: number } {
-  for (const other of context.enemies) {
+  for (const other of context.neighbors?.(enemy,ENEMY_AI_RULES.separationPadding)??context.enemies) {
     if (other === enemy || other.state === 'dead') continue;
-    const dx = enemy.x - other.x, dy = enemy.y - other.y, distance = Math.hypot(dx, dy);
+    const dx = enemy.x - other.x, dy = enemy.y - other.y;
     const gap = enemy.radius + other.radius + ENEMY_AI_RULES.separationPadding;
+    if(dx*dx+dy*dy>=gap*gap)continue;
+    const distance=Math.hypot(dx,dy);
     if (distance > .01 && distance < gap) {
       const force = (gap - distance) * 5;
       vx += dx / distance * force; vy += dy / distance * force;

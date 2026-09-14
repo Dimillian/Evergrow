@@ -31,6 +31,8 @@ export interface ItemPresentation {
   equippedLabel?: string;
   /** Optional item-only inspection without an equip simulation. */
   compare?: boolean;
+  /** Ground loot keeps the enhancement rank in the name without its explanatory banner. */
+  hideEnhancementDetails?: boolean;
 }
 export const CHANGE_LABELS: Record<PreviewStat, string> = {
   ...SPECIAL_AFFIX_LABELS, ...SKILL_STATS,
@@ -101,7 +103,7 @@ export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, optio
 
 /** Item data and effective equipment changes are distinct; no inventory DOM location is required. */
 export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
-  if(item.kind==='riftKey')return `<h3>${escapeUI(item.name)}</h3><p>Consumed when opening a rift · Level 20</p>${riftModifiers({attempt:1,keySeed:item.seed,keyTier:item.recipe.riftKeyTier}).map(m=>`<div class="ui-item-property" style="color:${m.beneficial?'#a2d5b3':'#ed929f'}"><span>${escapeUI(m.label)}</span><strong>+${m.value}${m.unit}</strong></div>`).join('')}`;
+  if(item.kind==='riftKey')return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span></span><h4>${escapeUI(item.name)}</h4></div></div><p>Single use · Opens an empowered rift</p>${riftModifiers({attempt:1,keySeed:item.seed,keyTier:item.recipe.riftKeyTier}).map(m=>`<div class="ui-item-property ui-rift-modifier" style="color:${m.beneficial?'#a2d5b3':'#ed929f'}"><span>${escapeUI(m.label)}</span><strong>+${m.value}${m.unit}</strong></div>`).join('')}`;
   const preview = view.compare === false || view.equipped || item.kind === 'charm' && view.sourceIndex !== undefined ? null : previewEquipmentChange(view.sheet, item, view.level,
     { sourceIndex: view.sourceIndex, slot: view.targetSlot });
   const changes = new Map(preview?.ok ? preview.changes.map(change => [change.key, change]) : []);
@@ -142,7 +144,7 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
   }
   return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span>${view.equipped && view.compactComparison ? `<span class="ui-item-equipped-inline" title="${escapeUI(view.equippedLabel ?? '')}">Equipped</span>` : ''}</span><h4>${hasGreaterAffix(item) ? escapeUI(itemDisplayName(item).slice(0, -(GREATER_AFFIX_SYMBOL.length + 1))) + ' ' + greaterMark : escapeUI(itemDisplayName(item))}</h4></div></div>
     <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${view.equipped ? '<span class="ui-item-equipped">Equipped</span>' : ''}${item.locked?'<span class="ui-item-equipped">Locked</span>':''}</div>
-    ${item.recipe.enhancement ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% scalable item stats</div>` : ''}
+    ${item.recipe.enhancement && !view.hideEnhancementDetails ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% scalable item stats</div>` : ''}
     ${weapon}${properties}
     ${uniqueDefinition(item)?uniquePowerMarkup(uniqueDefinition(item)!):''}
     ${itemModifiers(item).spellweavePercent ? `<p class="ui-item-description">Enables ${effectTerm('spellweave', 'Spellweave')} · melee ↔ magic · ${AFFIX_COMBAT_RULES.weaveDuration}s.</p>` : ''}${item.affixes.length ? `<div class="ui-item-affixes">${item.affixes.map(a => escapeUI(a.name)).join(' · ')}</div>` : ''}

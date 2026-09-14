@@ -28,9 +28,9 @@ export function drawMapPlayerIcon(c: CanvasRenderingContext2D, x: number, y: num
     c.fillStyle = '#fff2ba'; c.fill(); c.strokeStyle = '#1b261f'; c.lineWidth = 1.3; c.stroke(); c.restore();
 }
 
-export function drawMapEnemyIcon(c: CanvasRenderingContext2D, x: number, y: number, kind?: string) {
+export function drawMapEnemyIcon(c: CanvasRenderingContext2D, x: number, y: number, kind?: string, rank?: 'normal'|'veteran'|'elite') {
     c.save();
-      c.fillStyle = kind === 'brute' ? '#d18a62' : kind === 'caster' ? '#d4a677' : '#b26a62';
+      c.fillStyle = rank === 'elite' ? '#e4bb73' : rank === 'veteran' ? '#72b5ea' : kind === 'brute' ? '#d18a62' : kind === 'caster' ? '#d4a677' : '#b26a62';
       c.strokeStyle = '#070d12'; c.lineWidth = .7;
       c.beginPath(); c.arc(x, y, kind === 'brute' ? 1.9 : 1.4, 0, Math.PI * 2); c.fill(); c.stroke();
     c.restore();

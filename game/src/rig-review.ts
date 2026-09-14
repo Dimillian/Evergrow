@@ -2,9 +2,12 @@ import './typography.css';
 import { drawHumanoid } from './art.ts';
 import type { CharacterPose } from './art.ts';
 import { loadGameFont, text } from './font.ts';
+import { STARTING_SWORD, UNARMED_WEAPON } from './equipment.ts';
 
 const directions = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 const mount = document.querySelector<HTMLElement>('#poses')!;
+const equipment = document.querySelector<HTMLSelectElement>('#equipment')!;
+equipment.value = new URLSearchParams(location.search).get('equipment') === 'unarmed' ? 'unarmed' : 'sword';
 const abort = new AbortController();
 let disposed = false;
 
@@ -22,7 +25,9 @@ async function boot() {
     return { canvas, angle: index * Math.PI / 4 };
   });
   function draw() {
+    const weapon = equipment.value === 'unarmed' ? UNARMED_WEAPON : STARTING_SWORD;
     for (const { canvas, angle } of sheets) {
+      canvas.setAttribute('aria-label', `${directions[Math.round(angle / (Math.PI / 4))]}-facing ${weapon.name} character: idle above, walking below, frozen at half-stride.`);
       const pixels = canvas.getBoundingClientRect().width * (devicePixelRatio || 1);
       canvas.width = Math.round(pixels); canvas.height = Math.round(pixels * 600 / 320);
       const c = canvas.getContext('2d')!;
@@ -35,6 +40,7 @@ async function boot() {
         c.strokeStyle = '#48615b'; c.beginPath(); c.moveTo(150, anchor); c.lineTo(170, anchor);
         c.moveTo(160, anchor - 4); c.lineTo(160, anchor + 4); c.stroke();
         const pose: CharacterPose = { kind: 'player', angle, time: 1.25, moving,
+          weapon: weapon.visual, grip: weapon.hands === 1 ? 'one-handed' : 'two-handed',
           gaitPhase: Math.PI / 2, moveAngle: angle, attack: 0, attackAngle: angle, hitFlash: 0, dodging: false };
         c.save(); c.translate(160, anchor); c.scale(2.8, 2.8); drawHumanoid(c, pose); c.restore();
       }
@@ -42,6 +48,7 @@ async function boot() {
     mount.dataset.ready = 'true'; mount.setAttribute('aria-busy', 'false');
   }
   draw();
+  equipment.addEventListener('change', draw, { signal: abort.signal });
   window.addEventListener('resize', draw, { signal: abort.signal });
 }
 void boot().catch(error => {

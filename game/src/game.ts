@@ -1,3 +1,4 @@
+import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { RiftPanel } from './rift-panel.ts';
 import { RiftWorld } from './rift-world.ts';
 import { drawRiftHUD } from './rift-hud.ts';
@@ -269,7 +270,7 @@ export class Game {
         journeys:{open:()=>this.journeys.panel.open(this.journeys.selected),close:()=>this.journeys.panel.close()},
         event: { open: () => { if(this.activeRiftPortal)this.riftPanel.open(this.sim.expeditions,this.sim.player,this.activeRiftPortal); else if(this.activeExpeditionTable)this.expeditionPanel.open(this.sim.expeditions,this.sim.player.level,this.overworld.seed,this.activeExpeditionTable); else if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.expeditionPanel.close(); this.riftPanel.close(); this.activeRiftPortal=null; this.activeExpeditionTable=null; this.activeEvent = null; this.activeDungeonEntrance = null; } },
         service: { open: () => { if (this.activeNPC) this.servicePanel.open(this.sim.player, this.activeNPC); }, close: () => { this.servicePanel.close(); this.activeNPC = null; } },
-        map: { open: () => { const run=currentDungeon(this.sim.expeditions), glance=this.panels.mapHeld; if(run) this.dungeonMap.open(this.sim.dungeonFloor!,run,this.sim.player,glance); else this.worldMap.open(this.sim.player,glance); this.shell.setStatus(glance?'Exploration map open. Movement continues.':'World map open. Game paused.'); }, close: () => { this.worldMap.close(); this.dungeonMap.close(); } },
+        map: { open: () => { const run=currentDungeon(this.sim.expeditions), glance=this.panels.mapHeld; if(run) this.dungeonMap.open(this.sim.dungeonFloor!,run,this.sim.player,glance,this.sim.enemies); else this.worldMap.open(this.sim.player,glance); this.shell.setStatus(glance?'Exploration map open. Movement continues.':'World map open. Game paused.'); }, close: () => { this.worldMap.close(); this.dungeonMap.close(); } },
         character: { open: () => { this.inventoryPanel.open(this.sim.player); this.shell.setStatus('Character and inventory open. Game paused.'); }, close: () => this.inventoryPanel.close() },
         skills: { open: () => { this.skillPanel.open(this.sim.player); this.shell.setStatus('Skill tree open. Game paused.'); }, close: () => this.skillPanel.close() },
       }, {
@@ -316,8 +317,17 @@ export class Game {
         equip: index => this.characterAction({type:'equip',index}),
         track: id => { void this.journeys.command({type:'track',id}); },
         portal: () => this.requestPortal(),
-        background: () => { this.clearInput(); this.pause(); void this.saveCharacter(); this.nativeBackground = true; this.audio.setForeground(false); },
-        foreground: () => { this.clearInput(); this.nativeBackground = false; this.audio.setForeground(!document.hidden); },
+        background: () => {
+          this.clearInput(); this.pause(); void this.saveCharacter(); this.nativeBackground = true; this.audio.setForeground(false);
+          if (this.animation) { cancelAnimationFrame(this.animation); this.animation = 0; }
+        },
+        foreground: () => {
+          this.clearInput(); this.nativeBackground = false; this.audio.setForeground(!document.hidden);
+          if (!document.hidden && !this.animation) {
+            this.last = performance.now();
+            this.animation = requestAnimationFrame(this.frame);
+          }
+        },
         back: () => { if(this.phase === 'ready' && this.titleScreen.dismissOverlay()) return; if(this.appearanceEditor){this.appearanceEditor.cancel();return;} if(this.thor.dismissInspection() || (this.phase === 'paused' && this.shell.backInMenu())) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
       }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
@@ -367,7 +377,13 @@ export class Game {
     });
     window.addEventListener('pagehide', () => { this.audio.setForeground(false); this.clearInput(); void this.saveAndSync(); }, { signal });
     window.addEventListener('focus', () => this.clearInput(), { signal });
-    window.addEventListener('pageshow', () => this.audio.setForeground(!document.hidden && !this.nativeBackground), { signal });
+    window.addEventListener('pageshow', () => {
+      this.audio.setForeground(!document.hidden && !this.nativeBackground);
+      if (!document.hidden && !this.nativeBackground && !this.animation) {
+        this.last = performance.now();
+        this.animation = requestAnimationFrame(this.frame);
+      }
+    }, { signal });
     const unlockAudio = () => { void this.audio.unlock().catch(() => {}); };
     window.addEventListener('pointerdown', unlockAudio, { signal, capture: true, passive: true });
     window.addEventListener('keydown', unlockAudio, { signal, capture: true });
@@ -385,8 +401,13 @@ export class Game {
         this.clearInput();
         if (this.phase === 'playing' || this.phase === 'map') this.pause();
         void this.saveAndSync();
+        if (this.animation) { cancelAnimationFrame(this.animation); this.animation = 0; }
+      } else {
+        this.last = performance.now();
+        if (!this.animation && !this.nativeBackground) {
+          this.animation = requestAnimationFrame(this.frame);
+        }
       }
-      this.last = performance.now();
     }, { signal });
     bindGameKeyboard(window, {
       clear: () => { this.clearInput(); this.panels.releaseMap(); },
@@ -834,7 +855,7 @@ export class Game {
               void this.durable(async()=>{const result=await startDungeonEvent(this.sim,event.id,c=>this.persistTravel(c));this.notify(result.message);},undefined);
               return true;
           }
-          const chest = f.chests.findIndex((q,i)=>(!run.rift||i===2&&run.rift.phase==='complete')&&hit(q));
+          const chest = f.chests.findIndex((_,i)=>(!run.rift||i===2&&run.rift.phase==='complete')&&hit(dungeonRunChest(f,run,i)));
           if (chest >= 0) {
               const problem = dungeonChestProblem(this.sim, chest);
               if (problem)
@@ -846,7 +867,7 @@ export class Game {
               }
               return true;
           }
-          if (hit(f.entry) || (run.states.warden.hp <= 0 && hit(f.exit))) {
+          if (hit(f.entry) || (run.states.warden.hp <= 0 && hit(dungeonRunExit(f,run)))) {
               this.switchDungeon({ kind: 'exit' });
               return true;
           }
@@ -1096,6 +1117,10 @@ export class Game {
 
   private frame = (now: number) => {
     if (this.disposed) return;
+    if (document.hidden || this.nativeBackground) {
+      this.animation = 0;
+      return;
+    }
     if (window.EvergrowAndroid && !this.framePacer.ready(now)) {
       this.animation = requestAnimationFrame(this.frame);
       return;
@@ -1219,7 +1244,7 @@ export class Game {
     const dungeonRun=currentDungeon(this.sim.expeditions);
     if(dungeonRun?.rift && this.phase!=='ready')drawRiftHUD(ui,dungeonRun,this.renderer.width);
     if (this.phase !== 'ready' && !dungeonRun) this.worldMap.update(mapPlayer, dt);
-    if (this.phase === 'map' && dungeonRun) this.dungeonMap.update(mapPlayer);
+    if (this.phase === 'map' && dungeonRun) this.dungeonMap.update(mapPlayer,this.sim.enemies);
     if (this.panels.mapHeld) {
       const rect = this.canvas.getBoundingClientRect();
       const pointer = this.mouse.present && !this.usingGamepad && !this.touch.active && !this.pointerInHUD()
@@ -1228,11 +1253,11 @@ export class Game {
       if (dungeonRun) this.dungeonMap.setExplorationPointer(pointer);
       else this.worldMap.setExplorationPointer(pointer);
     }
-    if (this.phase !== 'ready' && dungeonRun && this.renderer.navigationVisible) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time);
+    if (this.phase !== 'ready' && dungeonRun && this.renderer.navigationVisible) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time,this.sim.enemies);
     if (this.phase !== 'ready' && !dungeonRun && this.renderer.navigationVisible) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, this.sim.time,
       this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
         x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
-        y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind,
+        y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind, rank:enemy.rank,
       })));
     this.thor.update(now);
     this.performance.end('ui', uiStart); this.performance.finish();

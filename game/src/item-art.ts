@@ -29,7 +29,7 @@ export function itemDropShapes(item: Item): readonly GearShape[] {
   const piece: ArmorPiece = { style: item.appearance.style, seed: item.seed, material: { base, shadow, edge, trim, surface: item.appearance.surface } };
   let shapes: readonly GearShape[], angle = 0;
   switch (item.kind) {
-    case 'riftKey': shapes = riftKeyShapes(); break;
+    case 'riftKey': shapes = riftKeyShapes(item); break;
     case 'charm': shapes = charmShapes(item); break;
     case 'weapon': shapes = weaponShapes(item.weapon?.visual ?? STARTING_SWORD.visual); angle = -.52; break;
     case 'grimoire': case 'orb': shapes = focusShapes(item.focus!.visual); break;

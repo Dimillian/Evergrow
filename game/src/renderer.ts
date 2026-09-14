@@ -1,5 +1,8 @@
+import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
+import { EnemyOutlineArt } from './enemy-outline-art.ts';
+import { RIFT_RULES } from './rift-content.ts';
 import { enemyVisualScale } from './enemy-modifiers.ts';
-import { drawRiftPortal } from './rift-art.ts';
+import { drawRiftPortal, drawRiftArrival } from './rift-art.ts';
 import type { DungeonFloor } from './dungeon.ts';
 import { controls, cursorPreference } from './control-preferences.ts';
 import { drawMouseCursor } from './cursor-art.ts';
@@ -22,7 +25,7 @@ import { sceneClimate } from './scene-light-style.ts';
 import type { Prop } from './world.ts';
 import { drawEnemyWarning, enemyWarningLight } from './enemy-warning-art.ts';
 import { drawGroundSpell, groundSpellLights } from './ground-spell-art.ts';
-import { enemyDebuffs } from './enemy-debuffs.ts';
+import { enemyTraitBuffs, enemyDebuffs } from './enemy-debuffs.ts';
 import { basicAttackWeapon } from './equipment.ts';
 import { projectilePresentation } from './projectile-launch.ts';
 import { heldEquipmentLights } from './weapon-emission.ts';
@@ -87,7 +90,6 @@ import { resolveRangedAim, resolveDirectionalAim, PROJECTILE_HEIGHT, type Ranged
 import { deriveAttackStats } from './equipment.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { drawEnemyPlate, getEnemyPlateLayout } from './enemy-plate.ts';
-import { drawRankCrest } from './enemy-rank-art.ts';
 import { drawSiteGround, drawSiteDecor, wildernessLights } from './wilderness-art.ts';
 
 import { EnemyDeaths } from './death-presentation.ts';
@@ -425,7 +427,7 @@ export class Renderer {
     const sceneryStart = this.profiler?.start() ?? 0;
     const dungeonRun=currentDungeon(sim.expeditions);
     if(this.cryptFloor&&dungeonRun) drawCryptDecor(c,this.cryptFloor,dungeonRun,settings.reducedMotion ? 0 : this.visualTime,this.eventArt.chests,settings.reducedMotion);
-    else if(sim.dungeonFloor?.rift&&dungeonRun?.rift){const f=sim.dungeonFloor;drawRiftPortal(c,f.entry.x,f.entry.y,this.visualTime,.65);if(dungeonRun.rift.phase==='complete'){drawRiftPortal(c,f.exit.x,f.exit.y,this.visualTime,.65);const ch=f.chests[2];this.eventArt.chests.draw(c,`${dungeonRun.entrance.id}:chest`,ch.x,ch.y,dungeonRun.rift.claimed,this.visualTime,0,true,settings.reducedMotion);}}
+    else if(sim.dungeonFloor?.rift&&dungeonRun?.rift){const f=sim.dungeonFloor;drawRiftPortal(c,f.entry.x,f.entry.y,this.visualTime,.65);if(dungeonRun.rift.phase==='complete'){const exit=dungeonRunExit(f,dungeonRun);drawRiftPortal(c,exit.x,exit.y,this.visualTime,.65);const ch=dungeonRunChest(f,dungeonRun,2);this.eventArt.chests.draw(c,`${dungeonRun.entrance.id}:chest`,ch.x,ch.y,dungeonRun.rift.claimed,this.visualTime,0,true,settings.reducedMotion);}}
     else for(const entrance of this.visibility.entrances)drawCryptGate(c,entrance,this.visualTime);
     for (const site of this.visibility.sites) drawSiteGround(c, site, settings.reducedMotion ? 0 : this.visualTime);
     this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime, this.sky);
@@ -510,6 +512,8 @@ export class Renderer {
     if (!this.cryptFloor) this.settlementArt.drawNightEmission(c,this.cachedBuildings,this.visualTime,this.sky);
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, alpha, lights, settings.reducedMotion);
+    const arrival=dungeonRun?.rift?.guardian;
+    if(arrival&&dungeonRun!.rift!.phase==='boss')drawRiftArrival(c,arrival.x,arrival.y,dungeonRun!.rift!.elapsed-arrival.at,RIFT_RULES.guardianArrival,settings.reducedMotion);
     if (this.cryptFloor) drawCryptEmission(c, this.cryptFloor, settings.reducedMotion ? 0 : this.visualTime, this.view);
     drawGroundGold(c, sim.groundGold, this.visualTime, settings.reducedMotion);
     drawLevelCelebration(c, this.rewards.level, px, py, settings.reducedMotion);
@@ -588,7 +592,7 @@ export class Renderer {
     const plateInset=this.touchTopInset/plateScale;
     const boss=sim.enemies.find(e=>isBossKind(e.kind)&&e.hp>0&&e.state!=='return'&&Math.hypot(e.x-p.x,e.y-p.y)<(isWildernessBoss(e.kind)?650:1100));
     const target = boss ?? (this.plateOpacity > .01 ? this.plateEnemy : null);
-    const debuffs = target ? enemyDebuffs(target, p) : [];
+    const debuffs = target ? [...enemyTraitBuffs(target),...enemyDebuffs(target, p)] : [];
     const targetPlate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0);
     this.targetEffects = target && target.hp > 0 && targetPlate.height > 70 && debuffs.length && settings.phase === 'playing'
       ? { id: target.id, buffs: debuffs, x: (targetPlate.x + targetPlate.width / 2) * plateScale / this.width,
@@ -609,7 +613,7 @@ export class Renderer {
     c.restore();
     if (settings.phase === 'playing') {
       const run=currentDungeon(sim.expeditions),f=sim.dungeonFloor;
-      const points=run&&f?[{...f.entry,name:'Leave dungeon'},...(run.states.warden.hp<=0?[{...f.exit,name:'Leave dungeon'}]:[]),...f.chests.filter((_,i)=>!run.rift||i===2&&run.rift.phase==='complete').map(ch=>({...ch,name:'Treasure chest'}))]:this.visibility.entrances;
+      const points=run&&f?[{...f.entry,name:'Leave dungeon'},...(run.states.warden.hp<=0?[{...dungeonRunExit(f,run),name:'Leave dungeon'}]:[]),...f.chests.flatMap((_,i)=>!run.rift||i===2&&run.rift.phase==='complete'?[{...dungeonRunChest(f,run,i),name:'Treasure chest'}]:[])]:this.visibility.entrances;
       const table=!run&&world.getBuildings(p.x-180,p.y-180,360,360).find(b=>(b.kind==='expedition'||b.kind==='rift')&&Math.hypot(b.door.x-p.x,b.door.y-p.y)<75);
       if(table){const q=worldToScreen(this.view,table.door.x,table.door.y-80);text(c,`${table.kind==='rift'?'Crimson Rift':'Expeditions'}${p.level<20?' · Level 20':''} [${this.gamepadActive?'A':controls.label('interact')}]`,q.x,q.y,1,'#d8c593','center');}
       const target=points.find(q=>Math.hypot(q.x-p.x,q.y-p.y)<75);
@@ -767,14 +771,14 @@ export class Renderer {
       if (x < this.view.left - 256 || x > this.view.left + this.view.width + 256
         || y < this.view.top - 256 || y > this.view.top + this.view.height + 256) continue;
       if(p.skillEffects?.harvest?.length)entries.push({y:y+1,draw:()=>drawHarvestMark(c,p,enemy.id,x,y)});
-      entries.push({ y, draw: () => {const scale=enemyVisualScale(enemy);if(scale>1)drawGlow(c,x,y-20,enemy.radius*2.5,enemy.rank==='elite'?'#e4bb73':'#72b5ea',.18);this.actor(x, y, { kind: enemy.kind, dungeonTheme:enemy.dungeonTheme, angle: enemy.angle,
+      entries.push({ y, draw: () => {const scale=enemyVisualScale(enemy);this.actor(x, y, { kind: enemy.kind, dungeonTheme:enemy.dungeonTheme, angle: enemy.angle,
         command: enemy.warband?.order, commandWarning: enemy.warband?.warning,
         time: sim.time + enemy.id, effectTime: settings.reducedMotion ? 0 : sim.time + enemy.id, moveAngle: Math.atan2(enemy.vy, enemy.vx),
         moving: Math.min(1, Math.hypot(enemy.vx, enemy.vy) / 70),
         attack: enemy.state === 'windup' ? -Math.max(.001, enemy.stateTime / enemy.stateDuration)
           : enemy.state === 'attack' ? Math.min(1, enemy.stateTime / enemy.stateDuration) : 0,
         attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash, slow: enemy.slowTime, burning: enemy.burnTime, frozen: enemy.freezeTime, stunned: enemy.stunTime,
-        impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false },scale); } });
+        impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false },scale,scale>1?(enemy.rank==='elite'?'#e9bb70':'#85c9ee'):undefined); } });
     }
     for(const [kind,spirit] of [['decoy',p.skillEffects?.decoy],['archer',p.skillEffects?.archer]] as const){
       if(!spirit||p.dead||settings.phase==='ready')continue;
@@ -824,10 +828,15 @@ export class Renderer {
     c.ellipse(x, y + 2, radius, depth, 0, 0, TAU); c.fill();
   }
 
-  private actor(x: number, y: number, pose: CharacterPose, scale=1) {
+  private enemyOutlines=new EnemyOutlineArt();
+  private actor(x: number, y: number, pose: CharacterPose, scale=1,rankColor?:string) {
     const c = this.ctx;
     this.drawContactShadow(x, y, pose.kind === 'brute' ? 17 : pose.kind === 'player' ? 11 * PLAYER_ART_SCALE : 11, pose.kind === 'brute' ? 8 : 5);
-    c.save(); c.translate(x, y); c.scale(scale,scale); if (pose.dead) c.globalAlpha = .4; withGearLight(c,sampleGearLight(x,y-24,this.materialLights,this.materialKey),()=>drawHumanoid(c, pose)); drawCharacterStatus(c, pose); c.restore();
+    c.save(); c.translate(x, y); c.scale(scale,scale); if (pose.dead) c.globalAlpha = .4;
+    const light=sampleGearLight(x,y-24,this.materialLights,this.materialKey);
+    const paint=(target:CanvasRenderingContext2D)=>withGearLight(target,light,()=>drawHumanoid(target,pose));
+    if(rankColor)this.enemyOutlines.draw(c,pose.kind as Enemy['kind'],rankColor,paint);else paint(c);
+    drawCharacterStatus(c, pose); c.restore();
     this.waterArt.drawFeet(c, this.water.fluid, x, y, pose.kind === 'brute' ? 18 : pose.kind === 'player' ? 13 * PLAYER_ART_SCALE : 12);
   }
 
@@ -940,14 +949,14 @@ export class Renderer {
       if (enemy.hp <= 0) continue;
       const width = enemy.kind === 'brute' ? 40 : 31;
       const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha) + (ENEMY_BODY_BOUNDS[enemy.kind].headTop ?? ENEMY_BODY_BOUNDS[enemy.kind].top)*enemyVisualScale(enemy) - 5;
-      if (enemy.rank !== 'normal') drawRankCrest(c, enemy.rank, x, y - 10, .5);
-      if (enemy.hp >= enemy.maxHp && enemy.state !== 'windup') continue;
+      if(x<this.view.left-70||x>this.view.left+this.view.width+70||y<this.view.top-40||y>this.view.top+this.view.height+40)continue;
+      if (enemy.hp >= enemy.maxHp && enemy.state !== 'windup'&&enemy.rank==='normal') continue;
       c.fillStyle = enemy.hitFlash > .1 ? '#efcea0' : '#080c12';
       c.fillRect(x - width / 2 - 1, y - 1, width + 2, 5);
       c.fillStyle = '#482a29'; c.fillRect(x - width / 2, y, width, 3);
       const trail = Math.min(enemy.maxHp, this.damageTrails.get(enemy.id)?.value ?? enemy.hp);
       c.fillStyle = '#edc582'; c.fillRect(x - width / 2, y, width * trail / enemy.maxHp, 3);
-      c.fillStyle = enemy.kind === 'caster' ? '#7bb59c' : '#c45f54';
+      c.fillStyle = enemy.rank==='elite'?'#edb666':enemy.rank==='veteran'?'#79bfee':enemy.kind === 'caster' ? '#7bb59c' : '#c45f54';
       c.fillRect(x - width / 2, y, width * enemy.hp / enemy.maxHp, 3);
     }
   }

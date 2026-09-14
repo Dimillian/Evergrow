@@ -1,6 +1,7 @@
+import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { RIFT_RULES, freshRiftLedger, riftRandom, riftBonus } from './rift-content.ts';
 import { riftRewardItems } from './rift-rewards.ts';
-import { BIOME_IDS, BIOMES } from './biomes.ts';
+import { startingBiome, BIOMES } from './biomes.ts';
 import { BOSS_CHEST_LOOT_TABLES } from './loot-content.ts';
 import { newExpeditionRoute, expeditionChoices, expeditionRewardItems, completeExpeditionStage, dungeonChestMask, EXPEDITION_RULES } from './expedition-route.ts';
 import { encounterScaleAt, encounterRewardLevel } from './encounter-scaling.ts';
@@ -17,6 +18,7 @@ import type { Building } from './settlements.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { rollEnemyLoot } from './loot.ts';
 import { GOLD_RULES } from './gold.ts';
+import { LOOT_RULES } from './combat-content.ts';
 import { addGroundItem } from './ground-loot.ts';
 export type DungeonAction = {kind:'rift';portalId:string;offset:number;keyId?:string;attempt:number} | {kind:'expedition';tableId:string;choice:number;attempt:number;restart?:boolean;resume?:string} | {
     kind: 'enter';
@@ -77,7 +79,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
             if(action.keyId&&(!key||key.kind!=='riftKey'||key.locked))return {ok:false,message:'Choose an unlocked rift key from your inventory.'};
             if(key){checkpoint.character.inventory[keyIndex]=null;if(checkpoint.character.inventoryLayout)delete checkpoint.character.inventoryLayout[key.id];}
             ledger.attempts++;
-            const random=riftRandom(((surface.seed??0)^Math.imul(ledger.attempts,0x9e3779b9))>>>0),seed=Math.floor(random()*4294967296),biome=BIOME_IDS[Math.floor(random()*BIOME_IDS.length)];
+            const random=riftRandom(((surface.seed??0)^Math.imul(ledger.attempts,0x9e3779b9))>>>0),seed=Math.floor(random()*4294967296),biome=startingBiome(seed);
             expeditionEntrance={id:`dungeon:rift:${ledger.attempts}`,name:`Fractured ${BIOMES[biome].name}`,seed,biome,level:Math.max(1,Math.min(1e6,p.level+action.offset)),x:portal.door.x,y:portal.door.y,rift:{attempt:ledger.attempts,...(key?{keySeed:key.seed,keyTier:key.recipe.riftKeyTier}:{})}};
             state.runs=state.runs.filter(r=>!r.entrance.rift);
         }
@@ -138,7 +140,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
         if (!run || !state.surface)
             return { ok: false, message: 'No active dungeon.' };
         const floor = sim.dungeonFloor!;
-        if (action.kind === 'exit' && !([floor.entry, ...(run.states.warden.hp <= 0 ? [floor.exit] : [])].some(q => Math.hypot(p.x - q.x, p.y - q.y) <= 75)))
+        if (action.kind === 'exit' && !([floor.entry, ...(run.states.warden.hp <= 0 ? [dungeonRunExit(floor,run)] : [])].some(q => Math.hypot(p.x - q.x, p.y - q.y) <= 75)))
             return { ok: false, message: 'Move closer to the exit.' };
         if (action.kind === 'town' && (!sim.portal.ready || action.anchor.band !== sim.travel.homeTown || portalDepartureProblem(p, sim.world)))
             return { ok: false, message: 'The portal is not ready.' };
@@ -174,10 +176,10 @@ export function dungeonChestProblem(sim: Simulation, index: number): string | nu
     if (!run || !floor || !Number.isInteger(index) || index < 0 || index > 2)
         return 'Chest unavailable.';
     if(run.rift&&(index!==2||run.rift.phase!=='complete'||run.rift.claimed))return run.rift.claimed?'Already claimed.':'Defeat the rift guardian before time expires.';
-    const chest = floor.chests[index];
+    const chest = dungeonRunChest(floor,run,index);
     const event=floor.events?.find(e=>e.chest===index);
     const reach=event?250:75;
-    if (sim.player.dead || Math.hypot(sim.player.x - chest.x, sim.player.y - chest.y) > reach || !hasLineOfSight(sim.world, sim.player.x, sim.player.y, chest.x, chest.y))
+    if (sim.player.dead || !run.rift&&(Math.hypot(sim.player.x - chest.x, sim.player.y - chest.y) > reach || !hasLineOfSight(sim.world, sim.player.x, sim.player.y, chest.x, chest.y)))
         return 'Move closer to the chest.';
     if(event&&!run.events?.[event.id]?.finished)return 'Complete the chamber encounter.';
     if (index === 2 ? run.states.warden.hp > 0 : floor.members.some(m => m.room === chest.room && run.states[m.id].hp > 0))
@@ -193,15 +195,16 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     const checkpoint = sim.captureCheckpoint(), run = currentDungeon(checkpoint.expeditions!);
     if (!run || !Number.isInteger(index) || index < 0 || index > 2)
         return { ok: false, message: 'Chest unavailable.' };
-    const floor = sim.dungeonFloor!, chest = floor.chests[index];
+    const floor = sim.dungeonFloor!, chest = dungeonRunChest(floor,run,index);
     const rewardLevel = run.entrance.scaling ? encounterRewardLevel(run.entrance.scaling, index === 2 ? 3 : 1) : run.entrance.level;
     const ranks = index === 2 ? ['normal', 'veteran', 'elite'] as const : ['veteran'] as const;
     const items = run.entrance.rift ? riftRewardItems(run.entrance,sim.player.level) : index===2 && run.entrance.expedition ? expeditionRewardItems(run.entrance,sim.player.level) : ranks.map((rank, i) => rollEnemyLoot({ playerLevel:sim.player.level, seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: rewardLevel, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true, tierWeights: index === 2 ? BOSS_CHEST_LOOT_TABLES.dungeon[i] : undefined, encounter:index===2?'bossChest':'chest' })[0]);
-    const gold = Math.round((run.entrance.rift ? 6*(1+riftBonus(run.entrance.rift,'gold')/100) : 1)*(index === 2 ? 45 + run.entrance.seed % 26 : 18) * (1 + .1 * (rewardLevel - 1)));
+    const gold = Math.round((run.entrance.rift ? RIFT_RULES.goldMultiplier*(1+riftBonus(run.entrance.rift,'gold')/100) : 1)*(index === 2 ? 45 + run.entrance.seed % 26 : 18) * (1 + .1 * (rewardLevel - 1)));
     const goldBit=run.entrance.rift ? 1 << items.length : index===2 && run.entrance.expedition?.stage===9 ? 64 : 8;
     let mask = run.chestMasks[index], next = Math.max(1, ...sim.groundItems.map(i => i.id + 1), ...sim.groundGold.map(i => i.id + 1), ...sim.pickups.map(i => i.id + 1), ...sim.enemies.map(i => i.id + 1), ...sim.projectiles.map(i => i.id + 1));
     for (let i = 0; i < items.length; i++)
         if (!(mask & 1 << i)) {
+            if(run.rift&&checkpoint.groundItems.length>=LOOT_RULES.maxGroundItems)break;
             addGroundItem(checkpoint.groundItems, { id: next++, ...treasureLanding(sim.world,chest.x,chest.y,i,run.entrance.seed), flight:{x:chest.x,y:chest.y,at:sim.time,delay:i*.12}, item: items[i] });
             mask |= 1 << i;
         }
