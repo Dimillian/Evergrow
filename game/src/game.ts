@@ -19,7 +19,8 @@ import { eventInteractionSites } from './poi-content.ts';
 import { basicAttackWeapon } from './equipment.ts';
 import { GroundLootHighlight } from './ground-loot-highlight.ts';
 import { createAppearanceEditor } from './character-editor.ts';
-import { executeAppearanceChange } from './character-commands.ts';
+import { executeAppearanceChange, executeSavedAppearanceChange } from './character-commands.ts';
+import type { SaveSlot } from './character-storage.ts';
 import { validCharacterLook, type CharacterLook } from './character-look.ts';
 import { directionalAimProfile } from './ranged-aim.ts';
 import { FramePacer } from './frame-pacer.ts';
@@ -119,6 +120,7 @@ export class Game {
   private inventoryPanel: InventoryPanel;
   private appearanceEditor?:ReturnType<typeof createAppearanceEditor>;
   private appearanceFromPause = false;
+  private appearanceFromHall = false;
   private creationLooks=new Map<number,CharacterLook>();
   private skillPanel: SkillTreePanel;
   private servicePanel: ServicePanel;
@@ -243,6 +245,7 @@ export class Game {
         volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
         chronicle: onCached => this.saveClient.chronicle(onCached),
         create: (index, name, weapon, seed) => this.editNewCharacter(index, name, weapon, seed),
+        editAppearance: slot => this.editHallAppearance(slot),
         continue: index => this.continueCharacter(index), continueRecovery: (index, token) => this.continueCharacter(index, token), remove: (index, expected) => this.deleteCharacter(index, expected),
         read: index => this.saveClient.inspect(index), source: mode => this.selectSaveSource(mode),
         retry: () => { void this.retryCloudSaves(); },
@@ -609,7 +612,8 @@ export class Game {
   private closeAppearanceEditor() {
     this.appearanceEditor?.dispose();this.appearanceEditor=undefined;this.clearInput();
     if(this.disposed)return;
-    this.titleScreen.setEditorOpen(false);
+    this.titleScreen.setEditorOpen(false, this.appearanceFromHall);
+    this.appearanceFromHall = false;
     if (this.appearanceFromPause) { this.appearanceFromPause = false; if (this.phase === 'character') this.panels.resume(); }
     else if(this.phase==='character'){this.inventoryPanel.open(this.sim.player);this.inventoryPanel.element.querySelector<HTMLButtonElement>('[data-edit-appearance]')?.focus();}
   }
@@ -639,6 +643,28 @@ export class Game {
         });
         if(result.ok)this.closeAppearanceEditor();return result;
       },{ok:false,message:'A save is already in progress.'}),
+    });
+  }
+  private editHallAppearance(selected: SaveSlot) {
+    if (this.phase !== 'ready' || this.hallBusy || this.appearanceEditor || this.disposed || !selected.record || selected.conflict) return;
+    const slot = structuredClone(selected), record = slot.record!;
+    this.appearanceFromHall = true;
+    this.titleScreen.setEditorOpen(true); this.clearInput();
+    this.appearanceEditor = createAppearanceEditor(this.shell.panelMount, {
+      sheet: record.checkpoint.character, name: record.name,
+      onCancel: () => this.closeAppearanceEditor(),
+      onSave: async look => {
+        if (this.hallBusy || this.disposed) return {ok:false, message:'A save is already in progress.'};
+        this.hallBusy = true;
+        try {
+          const result = await executeSavedAppearanceChange(this.session.repository, slot, look, Date.now());
+          if (result.ok && !this.disposed) {
+            this.titleScreen.updateSlot({...slot, record:result.record, token:result.token});
+            this.closeAppearanceEditor();
+          }
+          return result;
+        } finally { this.hallBusy = false; }
+      },
     });
   }
   private async createCharacter(index: number, name: string, weapon: StarterLoadoutId, seed: number, look:CharacterLook):Promise<boolean> {
@@ -1334,13 +1360,13 @@ export class Game {
     }
     const pad = this.gamepad;
     if (pad.pressed.size) void this.audio.unlock().catch(() => {});
-    if (this.phase === 'ready' && this.titleScreen.updateOverlayGamepad(pad, now)) return;
-    if(this.chronicle.updateGamepad(pad,now))return;
     if(this.appearanceEditor){
       if(pad.pressed.has(PAD.dodge)||pad.pressed.has(PAD.pause))this.appearanceEditor.cancel();
       else this.appearanceEditor.updateGamepad(pad,now);
       return;
     }
+    if (this.phase === 'ready' && this.titleScreen.updateOverlayGamepad(pad, now)) return;
+    if(this.chronicle.updateGamepad(pad,now))return;
     if (pad.active && !this.usingGamepad) {
       this.input.clear(); this.sim.clearInput(); this.usingGamepad = true; this.touch.setActive(false); this.usingGamepad = true;
       this.padAimAngle = this.sim.player.angle;

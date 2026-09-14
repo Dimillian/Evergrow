@@ -14,8 +14,11 @@ import { CharacterRepository } from './character-storage.ts';
 import { CharacterSession } from './character-session.ts';
 import { awardCharacterExperience, refreshCharacter } from './character.ts';
 import { generateItem } from './items.ts';
+import { creditGold } from './wallet.ts';
 import { equipItem } from './inventory.ts';
 import { Lifetime } from './lifetime.ts';
+import { createAppearanceEditor } from './character-editor.ts';
+import { executeSavedAppearanceChange } from './character-commands.ts';
 if (!import.meta.env.DEV) throw new Error('Local review only.');
 installUITheme(); await loadGameFont();
 // In-memory staged saves. No gameplay input, simulation ticks or browser storage access.
@@ -28,7 +31,10 @@ if (!new URLSearchParams(location.search).has('empty')) for (let i = 0; i < (que
   const staged = new Simulation(world, { spawn: false });
   awardCharacterExperience(staged.player, [0, 2877, 22000][i % 3]);
   if (i) { staged.player.character.inventory[0] = generateItem(989 + i, staged.player.level, 'weapon', i === 1 ? 'storm-staff' : 'longsword', 'rare'); equipItem(staged.player.character, 0, staged.player.level); refreshCharacter(staged.player); }
-  staged.time = i * 3920;
+  const intellect = Math.min(staged.player.character.statPoints, 15 + i * 5);
+  staged.player.character.attributes.intelligence += intellect; staged.player.character.statPoints -= intellect;
+  creditGold(staged.player.character, [248, 1834, 29761][i % 3]); refreshCharacter(staged.player);
+  staged.time = 360 + i * 3920;
   await new CharacterSession(repository, world.generationVersion).create(i, ['Rowan', 'Isolde', 'Aldric', 'Briar', 'Morrow', 'Thorn', 'Ash', 'Ember'][i], world.seed, staged.captureCheckpoint(), `review-${i}`, Date.now() - i * 60000);
 }
 const history=emptyChronicle();
@@ -40,8 +46,21 @@ for (const [i,name] of ['Rowan','Isolde','Aldric'].entries()) {
 const previewRanks:LeaderboardEntry[]=['Vesper','Ironbriar','Isolde','Mossheart','Aldric','Nightjar','Ember','Hollow','Thorn','Silversong','Rowan','Ash'].map((name,i)=>({rank:i+1,name,level:68-i*3,gearPower:660-i*29+(i%3)*40,updatedAt:Date.now(),mine:[2,4,10].includes(i)}));
 const root = document.querySelector<HTMLElement>('#app')!;
 root.innerHTML = '<div class="game-shell"><canvas id="title-world"></canvas><div id="title-review-mount"></div></div>';
-const canvas = root.querySelector<HTMLCanvasElement>('canvas')!, renderer = new Renderer(), fx = life.own(new PostFX(canvas));
+const canvas = root.querySelector<HTMLCanvasElement>('#title-world')!, renderer = new Renderer(), fx = life.own(new PostFX(canvas));
 const title = life.own(new TitleScreen(root.querySelector('#title-review-mount')!, { create: () => title.message('Frozen preview — no character is saved.'), continue: () => title.message('Frozen preview — gameplay is not started.'), remove: () => title.message('Preview only.'), download: () => title.message('Preview only.'), import: () => title.message('Preview only.'),
+  editAppearance: slot => {
+    if (!slot.record) return;
+    title.setEditorOpen(true);
+    const close = () => { editor.dispose(); title.setEditorOpen(false, true); };
+    const editor = life.own(createAppearanceEditor(root, {sheet:slot.record.checkpoint.character, name:slot.record.name,
+      onCancel:close,
+      onSave:async look => {
+        const result = await executeSavedAppearanceChange(repository, slot, look, Date.now());
+        if (result.ok) { title.updateSlot({...slot, record:result.record, token:result.token}); close(); }
+        return result;
+      },
+    }));
+  },
   continueRecovery: () => title.message('Frozen preview — recovery gameplay is not started.'),
   useCloud: () => title.message('Frozen preview — both copies are preserved.'),
   chronicle:async()=>history,
@@ -59,14 +78,17 @@ const home=query.get('home');if(home==='leaderboard'||home==='chronicle'||home==
 const previewLabel=document.createElement('span');previewLabel.textContent='LOCAL PREVIEW · SAMPLE CHARACTERS';previewLabel.style.cssText='position:fixed;bottom:4px;left:50%;transform:translateX(-50%);z-index:30;font:10px system-ui;color:#91a8a7;pointer-events:none';root.append(previewLabel);
 let frame = 0;
 const draw = () => {
-  const ratio = Math.min(1.6, devicePixelRatio || 1);
-  if (canvas.width !== Math.round(innerWidth * ratio) || canvas.height !== Math.round(innerHeight * ratio)) {
-    canvas.width = Math.round(innerWidth * ratio); canvas.height = Math.round(innerHeight * ratio);
-    renderer.resize(Math.round(600 * innerWidth / innerHeight), 600);
+  if (!document.hidden) {
+    const ratio = Math.min(1.6, devicePixelRatio || 1);
+    if (canvas.width !== Math.round(innerWidth * ratio) || canvas.height !== Math.round(innerHeight * ratio)) {
+      canvas.width = Math.round(innerWidth * ratio); canvas.height = Math.round(innerHeight * ratio);
+      renderer.resize(Math.round(600 * innerWidth / innerHeight), 600);
+    }
+    renderer.cameraX = -90; renderer.cameraY = -180;
+    renderer.render(sim, world, 1 / 60, { phase: 'ready', reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches });
+    fx.render(renderer.canvas, 0);
   }
-  renderer.cameraX = -90; renderer.cameraY = -180;
-  renderer.render(sim, world, 1 / 60, { phase: 'ready', reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches });
-  fx.render(renderer.canvas, 0); frame = requestAnimationFrame(draw);
+  frame = requestAnimationFrame(draw);
 };
 draw(); life.defer(() => cancelAnimationFrame(frame));
 if (import.meta.hot) import.meta.hot.dispose(() => life.dispose());

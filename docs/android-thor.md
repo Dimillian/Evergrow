@@ -76,3 +76,9 @@ The shared runtime owns a two-stream soundtrack player only on the primary scree
 ## Map legend — local September 15, 2026
 
 The upper full map includes collapsible icon categories, visibility checkboxes and **Ping nearest** by service type. Compact landscape/phone layouts start with the legend closed; its scrollable drawer closes before an NPC ping. Desktop keeps a separate side panel. Checkbox and button actions use ordinary focus and controller activation. Full dungeon maps now measure their available viewport and render at native density; touch drag/pinch/hover use the same CSS-space coordinates. The lower map projection consumes the primary game's icon filters and does not own a second preference store or change pause behavior. Filters last for the current app session; character saves are unchanged.
+
+## Character hall — September 14
+
+The title hall now shows the equipped portrait on a procedural stone platform, all eleven equipment slots (including the reserved second hand for 2H weapons), saved location, Level / Gear power, wallet gold, effective attributes and explicitly labeled play time / last-played time. Landscape handhelds retain the roster and portrait beside Gear / Attributes tabs; Continue and both time labels stay visible. X switches those detail tabs; LB/RB still switches home pages. D-pad Right leaves the roster for details, A inspects a filled gear slot, and B/native Back closes inspection first. Right stick scrolls longer item descriptions. Inspection is read-only and needs no companion screen.
+
+The hall again shows the runtime map and its post-processing behind a translucent vignette, with the shared portrait at display density. The separate authored forest backdrop is removed. Android keeps its 60 FPS presentation cap; reduced motion freezes the portrait and ambient motes. Save formats, bundled origin and native packaging are unchanged. This local source change does not install an APK.
