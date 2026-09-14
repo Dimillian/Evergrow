@@ -1,5 +1,5 @@
 import type { CharacterSheet, Item } from './character-types.ts';
-import { activeCharms, compactPackLayout, findPackSpace, packOccupancy, packSpaceProblem, resolvePackLayout } from './inventory-grid.ts';
+import { activeCharms, PACK_CELLS, repackLayout, findPackSpace, packOccupancy, packSpaceProblem, resolvePackLayout } from './inventory-grid.ts';
 import { compareCharacterStats } from './equipment-preview.ts';
 
 /** A read-only build comparison. Storage transfers still require a storage chest. */
@@ -16,13 +16,13 @@ export function previewCharmReplacement(sheet: CharacterSheet, level: number, ca
   const layout=resolvePackLayout({...sheet,inventory});
   const index=inventory.indexOf(null);
   if(index<0)return fail('Make room in the charm grid.');
-  const cell=findPackSpace(item,packOccupancy(inventory,layout));
+  const cell=findPackSpace(item,packOccupancy(inventory,layout),undefined,'charms');
   inventory[index]=item;
-  let nextLayout=cell===null?compactPackLayout(inventory):{...layout,[item.id]:cell};
-  if(inventory.some(i=>i?.kind==='charm'&&nextLayout[i.id]===undefined))return fail(packSpaceProblem({...sheet,inventory:inventory.map(i=>i?.id===item.id?null:i)},item));
+  let nextLayout=cell===null?repackLayout(inventory,{...layout,[item.id]:PACK_CELLS},true):{...layout,[item.id]:cell};
+  if(inventory.some(i=>i&&(i.id===item.id||layout[i.id]>=PACK_CELLS)&&nextLayout[i.id]===undefined))return fail(packSpaceProblem({...sheet,inventory:inventory.map(i=>i?.id===item.id?null:i)},item,'charms'));
   // Keep the equipment bag fixed; the fallback only proposes rearranging charms.
-  nextLayout={...Object.fromEntries(Object.entries(layout).filter(([id])=>inventory.find(i=>i?.id===id)?.kind!=='charm')),
-    ...Object.fromEntries(Object.entries(nextLayout).filter(([id])=>inventory.find(i=>i?.id===id)?.kind==='charm'))};
+  nextLayout={...Object.fromEntries(Object.entries(layout).filter(([id])=>layout[id]<PACK_CELLS)),
+    ...Object.fromEntries(Object.entries(nextLayout).filter(([id])=>nextLayout[id]>=PACK_CELLS))};
   const after={...sheet,inventory,inventoryLayout:nextLayout};
   return {ok:true as const,item,removed:active.filter(i=>removeIds.includes(i.id)),layout:nextLayout,
     changes:compareCharacterStats(sheet,after,level)};
