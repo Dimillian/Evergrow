@@ -1,5 +1,34 @@
 # Evergrow changelog
 
+## v0.6.0 — 2026-09-14T13:11:00Z
+
+### New
+
+- Crimson Rifts open from town at level 20: race through dense wilderness packs, fill the hunt bar and defeat a guardian within ten minutes.
+- Choose a rift level up to ten levels above or below your own. Optional, single-use keys add hazards and rewards, including larger monster packs.
+- Rift guardians arrive in a crimson lightning storm, replacing the remaining pack. Victory opens a treasure chest automatically, with gold, gear and a guaranteed new key.
+- Chronicles tracks rift clears, records, keys, biomes and failed runs, with eighteen new achievement milestones.
+- Champions and elites stand out with larger silhouettes, colored outlines and combat traits shown on their nameplates.
+- New Wand & Grimoire characters begin with a Star Wand and Astral Grimoire, firing radiant Arcane darts with new light trails, impacts and sound.
+- A master volume slider controls the whole game alongside your existing sound settings.
+
+### Tweaks
+
+- Ground-item inspection opens a compact card with the most useful stat changes; hold Alt for the complete equipment comparison.
+- Inventory filters gain clearer type and rarity controls, visible active states and improved controller navigation. Level and gear power sit beneath the portrait.
+- Full-map area details stay in a fixed corner while landmark tooltips follow the pointer.
+- Dense monster packs and inventory dragging run more efficiently; hidden browser tabs stop unnecessary rendering.
+- Unarmed characters rest their hands naturally and clench their fists when attacking.
+
+### Fixes
+
+- Rift maps show monsters and blend explored terrain smoothly, without overlay grid seams or harsh discovery borders.
+- Rift guardians count toward boss records without incorrectly counting as dungeon clears.
+- Holding Alt keeps ground-item comparisons open reliably, including when the pointer remains still.
+- Rift menus fit the game window, with clearer key selection and modifier tooltips.
+
+> Existing local and cloud characters keep their progress and equipment. Available rift records carry into Chronicles; newly tracked details begin with this update. No save reset or skill refund is required. Reload the game to apply this update.
+
 ## v0.5.3 — 2026-09-14T08:21:00Z
 
 ### Tweaks
