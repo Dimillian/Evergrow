@@ -444,7 +444,7 @@ export class Renderer {
         if (reflected >= 10) break;
         if (Math.max(this.water.fluid.wetAt(prop.x, prop.y + 30), this.water.fluid.wetAt(prop.x, prop.y + 70)) < .1) continue;
         const sprite = this.environmentArt.getSprite(prop) ?? (prop.kind === 'tree' || prop.kind === 'deadTree'
-          ? this.art.getTree(prop.seed, prop.kind === 'deadTree') : prop.kind === 'rock' ? this.art.getRock(prop.seed) : null);
+          ? this.art.getTree(prop.seed, prop.kind === 'deadTree', prop.scale) : prop.kind === 'rock' ? this.art.getRock(prop.seed, prop.scale) : null);
         if (sprite) { this.waterArt.drawPropReflection(c, this.water.fluid, prop.x, prop.y, sprite, prop.scale, settings.reducedMotion); reflected++; }
       }
       this.waterArt.drawReflection(c, this.water.fluid, px, py, playerPose(p, sim.time), settings.reducedMotion);
@@ -811,7 +811,7 @@ export class Renderer {
 
   private propSprite(prop: Prop) {
     return this.environmentArt.getSprite(prop) ?? (prop.kind === 'tree' || prop.kind === 'deadTree'
-      ? this.art.getTree(prop.seed, prop.kind === 'deadTree') : prop.kind === 'rock' ? this.art.getRock(prop.seed) : this.art.getShrine());
+      ? this.art.getTree(prop.seed, prop.kind === 'deadTree', prop.scale) : prop.kind === 'rock' ? this.art.getRock(prop.seed, prop.scale) : this.art.getShrine());
   }
 
   private drawActorShadow(x: number, y: number, radius: number, height: number) {
