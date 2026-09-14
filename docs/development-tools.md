@@ -135,3 +135,5 @@ The Crimson Rifts map study (`/tools/rifts.html?view=map`) now displays shared o
 The Crimson Rifts map/pack study includes **Profile rendering** for a frozen 1100×900 scene, using the runtime renderer and post-processing without advancing gameplay. It reports CPU median/p95 after warmup. See `docs/rift-performance.md` and `game/scripts/benchmark-rift-crowds.ts` for the separate headless crowd benchmark.
 
 Crimson Rifts → **Guardian arrival** stages the runtime warning near a disposable character, without advancing AI or touching saves. Pack previews include the actual rank-modifier nameplate.
+
+Crimson Rifts → View map now defaults to the local connected-clearings experiment. **Compare open layout** provides a same-seed A/B view; biome selection and frozen **View pack** continue to use runtime terrain and actors. The `layout=clearings|open` parameter preserves the selected generation style without touching playable saves.

@@ -72,7 +72,7 @@ export class GroundLayer {
       const aheadX = Math.sign(dx), aheadY = Math.sign(dy);
       for (let y = minY; y <= maxY; y++) if (aheadX) coordinates.push({ x: aheadX > 0 ? maxX + 1 : minX - 1, y });
       for (let x = minX; x <= maxX; x++) if (aheadY) coordinates.push({ x, y: aheadY > 0 ? maxY + 1 : minY - 1 });
-      this.stream.update(world.seed, coordinates, world.wildernessOnly);
+      this.stream.update(world.seed, coordinates, world.wildernessOnly, world.riftTerrain);
       const retained = new Set(coordinates.map(p => `${p.x}:${p.y}`));
       for (const key of this.previews.keys()) if (!retained.has(key)) { this.previews.delete(key); this.transitions.delete(key); }
     }

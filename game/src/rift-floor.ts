@@ -1,3 +1,4 @@
+import { buildClearingRiftFloor } from './rift-clearing-floor.ts';
 import type { DungeonFloor, DungeonMember, Room } from './dungeon.ts';
 import type { BiomeId } from './biomes.ts';
 import { bossForBiome } from './wilderness-boss-content.ts';
@@ -5,15 +6,15 @@ import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { riftBonus, riftRandom, type RiftTag } from './rift-content.ts';
 import { WorldLandscape } from './world-landscape.ts';
 
-export const RIFT_FIELD = Object.freeze({ sectors:13, sectorSize:640, packs:28, minPack:64, maxPack:96, radius:380, admissionRange:1500, retirementRange:2200, admissionInterval:.25 });
-export const riftPackCount=(tag:RiftTag)=>Math.round(RIFT_FIELD.packs*(1+riftBonus(tag,'density')/100));
+import { RIFT_FIELD, riftPackCount } from './rift-field.ts';
+export { RIFT_FIELD, riftPackCount } from './rift-field.ts';
 const half = RIFT_FIELD.sectors * RIFT_FIELD.sectorSize / 2;
 const landscapes = new WeakMap<DungeonFloor, WorldLandscape>();
 const floors = new Map<string, DungeonFloor>();
 /** Shared real-world collision; no room walls or artificial arena boundary. */
 export function riftLandscape(floor:DungeonFloor):WorldLandscape {
   let world=landscapes.get(floor);
-  if(!world){world=new WorldLandscape(floor.seed,true);landscapes.set(floor,world);}
+  if(!world){world=new WorldLandscape(floor.seed,true,floor.rift?.layout==='clearings');landscapes.set(floor,world);}
   return world;
 }
 function sectorAt(x:number,y:number):number {
@@ -25,6 +26,7 @@ const cellAt=(x:number,y:number)=>y*RIFT_FIELD.sectors+x;
 /** Unmodified overworld landscape, populated with irregular, tightly gathered warbands.
  * Rooms are invisible discovery/streaming sectors only. They never carve terrain. */
 export function buildRiftFloor(seed:number,biome:BiomeId,rift:RiftTag):DungeonFloor {
+  if(rift.layout==='clearings')return buildClearingRiftFloor(seed,biome,rift);
   const key=`${seed}:${biome}:${rift.attempt}:${rift.keySeed}:${rift.keyTier}`,cached=floors.get(key);
   if(cached)return cached;
   const random=riftRandom(seed),world=new WorldLandscape(seed,true),members:DungeonMember[]=[],rooms:Room[]=[];

@@ -1,3 +1,4 @@
+import { RIFT_ENCOUNTERS, RIFT_ENCOUNTER_ORDER, RIFT_TACTICS } from '../rift-encounters.ts';
 import { updateRiftGuardian } from '../rift-runtime.ts';
 import { drawEnemyPlate } from '../enemy-plate.ts';
 import { BIOMES, BIOME_IDS, startingBiome, type BiomeId } from '../biomes.ts';
@@ -19,27 +20,30 @@ export function mountRiftMapReview(root:HTMLElement,params:URLSearchParams):()=>
   const life=new AbortController();
   let seed=Number(params.get('seed')??7319)>>>0;
   let biome:BiomeId=BIOME_IDS.find(id=>id===params.get('biome'))??'verdant';
+  let layout=params.get('layout')==='open'?'open':'clearings';
+  let encounter=params.get('encounter')??'nearest';
   let arrival=params.has('arrival'),scene=params.get('scene')==='pack'||arrival;
   const profiler=new FrameProfiler(true),renderer=new Renderer(false,profiler);
   let present:(()=>void)|undefined,staged=0,epoch=0;
   const display=document.createElement('canvas');display.width=1100;display.height=900;
   const post=new PostFX(display);
   let world:RiftWorld|undefined;
-  root.innerHTML=`<section class="ui-window" style="position:absolute;inset:16px 16px 48px;overflow:hidden"><header class="ui-window-header" style="flex-wrap:wrap"><h2 class="ui-title" style="flex:1 0 140px;white-space:nowrap;margin:0">Open-world rift</h2><select aria-label="Biome" class="ui-select">${BIOME_IDS.map(id=>`<option value="${id}" ${id===biome?'selected':''}>${escapeUI(BIOMES[id].name)}</option>`).join('')}</select><button class="ui-button" data-scene>View pack</button><button class="ui-button" data-arrival>Guardian arrival</button><button class="ui-button" data-profile>Profile rendering</button><button class="ui-button" data-next>New layout</button><a class="ui-button" href="/tools/rifts.html">Portal UI</a></header><div style="flex:1;min-height:0;display:grid;place-items:center;background:#071018"><img alt="Generated open-world rift" style="width:100%;height:100%;object-fit:contain"/></div><footer class="ui-window-footer" style="display:block;padding:12px 18px"><p data-summary style="margin:0 0 4px"></p><small data-caption></small><output data-profile-result style="display:block"></output></footer></section>`;
+  root.innerHTML=`<section class="ui-window" style="position:absolute;inset:16px 16px 48px;overflow:hidden"><header class="ui-window-header" style="flex-wrap:wrap"><h2 class="ui-title" style="flex:1 0 140px;white-space:nowrap;margin:0">Open-world rift</h2><select aria-label="Biome" class="ui-select">${BIOME_IDS.map(id=>`<option value="${id}" ${id===biome?'selected':''}>${escapeUI(BIOMES[id].name)}</option>`).join('')}</select><select class="ui-select" aria-label="Encounter"><option value="nearest">Nearest pack</option>${Object.entries(RIFT_ENCOUNTERS).map(([id,entry])=>`<option value="${id}" ${encounter===id?'selected':''}>${entry.name}</option>`).join('')}</select><button class="ui-button" data-scene>View pack</button><button class="ui-button" data-arrival>Guardian arrival</button><button class="ui-button" data-profile>Profile rendering</button><button class="ui-button" data-layout>Compare open layout</button><button class="ui-button" data-next>New layout</button><a class="ui-button" href="/tools/rifts.html">Portal UI</a></header><div style="flex:1;min-height:0;display:grid;place-items:center;background:#071018"><img alt="Generated open-world rift" style="width:100%;height:100%;object-fit:contain"/></div><footer class="ui-window-footer" style="display:block;padding:12px 18px"><p data-summary style="margin:0 0 4px"></p><small data-caption></small><output data-profile-result style="display:block"></output></footer></section>`;
   const image=root.querySelector('img')!,canvas=document.createElement('canvas');canvas.width=1100;canvas.height=900;
   const c=canvas.getContext('2d')!;
   const draw=()=>{
-    epoch++;present=undefined;
+    epoch++;present=undefined;c.clearRect(0,0,canvas.width,canvas.height);
     const output=root.querySelector<HTMLOutputElement>('[data-profile-result]')!;output.textContent='';delete output.dataset.profile;
     // Select an actual world seed with this starting climate; never paint a fake biome.
     while(startingBiome(seed)!==biome)seed=(seed+1)>>>0;
-    const entrance:DungeonEntrance={id:'dungeon:rift:1',name:'Rift preview',seed,level:30,biome,x:0,y:0,rift:{attempt:1}};
+    const entrance:DungeonEntrance={id:'dungeon:rift:1',name:'Rift preview',seed,level:30,biome,x:0,y:0,rift:{attempt:1,...(layout==='open'?{}:{layout:'clearings' as const})}};
     const floor=generateDungeon(seed,30,entrance),run=createDungeonRun(entrance),bounds=dungeonMapBounds(floor);
     run.explored=floor.rooms.map(r=>r.id);run.rift!.phase=arrival?'boss':'hunt';run.rift!.points=arrival?RIFT_RULES.progress:0;
     world?.dispose();world=new RiftWorld(floor,entrance);
     if(scene){
       const groups=Array.from({length:riftPackCount(entrance.rift!)},(_,i)=>floor.members.filter(m=>m.id.startsWith(`rift:${i}:`)));
-      const centers=groups.map(g=>({x:g.reduce((n,m)=>n+m.x,0)/g.length,y:g.reduce((n,m)=>n+m.y,0)/g.length}));
+      const selectedGroups=layout==='clearings'&&encounter!=='nearest'?groups.filter((_g,i)=>RIFT_ENCOUNTER_ORDER[(i+seed%4)%4]===encounter):groups;
+      const centers=selectedGroups.map(g=>({x:g.reduce((n,m)=>n+m.x,0)/g.length,y:g.reduce((n,m)=>n+m.y,0)/g.length}));
       const center=centers.sort((a,b)=>(world!.sampleBiome(a.x,a.y).id===biome?0:10000)+Math.hypot(a.x,a.y)-(world!.sampleBiome(b.x,b.y).id===biome?0:10000)-Math.hypot(b.x,b.y))[0];
       const sim=new Simulation(world,{seed,spawn:false,startX:center.x,startY:center.y+400});
       sim.expeditions={location:entrance.id,runs:[run],surface:null,surfaceX:0,surfaceY:0};sim.dungeonFloor=floor;
@@ -47,7 +51,14 @@ export function mountRiftMapReview(root:HTMLElement,params:URLSearchParams):()=>
       // Static pose only: no AI ticks, input or playable saves.
       for(const m of floor.members)if(m.id!=='warden'&&Math.hypot(m.x-center.x,m.y-center.y)<1100){
         const e=sim.spawnEnemy(m.kind,m.x,m.y,m.rank,{campId:entrance.id,memberId:m.id,lootSeed:m.seed,level:30});
-        if(e)e.angle=Math.atan2(sim.player.y-e.y,sim.player.x-e.x);
+        if(e){
+          e.angle=Math.atan2(sim.player.y-e.y,sim.player.x-e.x);
+          if(encounter==='ritual'&&e.campMemberId?.endsWith(':ritual'))e.awareness=1;
+          if((encounter==='battery'||encounter==='hunt')&&Math.hypot(e.x-center.x,e.y-center.y)<250&&e.campMemberId?.split(':')[3]){
+            const kind=e.campMemberId.endsWith(':fire')?'fire':'storm';
+            e.riftWarning={kind,x:kind==='storm'?sim.player.x:e.x,y:kind==='storm'?sim.player.y:e.y,originX:e.x,originY:e.y,angle:e.angle,remaining:RIFT_TACTICS.warning*.4,damage:e.damage};
+          }
+        }
       }
       if(arrival){updateRiftGuardian(sim);if(run.rift!.guardian){run.rift!.elapsed=run.rift!.guardian.at+2.1;center.x=run.rift!.guardian.x;center.y=run.rift!.guardian.y-60;}}
       renderer.reset();renderer.resize(1100,900);renderer.cameraX=center.x;renderer.cameraY=center.y;
@@ -68,13 +79,16 @@ export function mountRiftMapReview(root:HTMLElement,params:URLSearchParams):()=>
     text(c,'ENTRY',entry.x,entry.y,1.1,'#d7e5df','center');
     }
     image.src=canvas.toDataURL('image/png');image.alt=arrival?'Rift guardian arrival':scene?'Rift pack in the actual game world':'Complete generated open-world rift map';
+    root.querySelector('[data-layout]')!.textContent=layout==='open'?'Try connected clearings':'Compare open layout';
     root.querySelector('[data-scene]')!.textContent=scene?'View map':'View pack';
-    root.querySelector('[data-caption]')!.textContent=scene?'Frozen scene · Actual game renderer and generated enemies':'Full terrain revealed for preview · Dots show monster spawns';
+    root.querySelector('[data-caption]')!.textContent=scene?'Frozen scene · Actual game renderer and generated enemies':layout==='open'?'Published open-world layout · Dots show monster spawns':'Connected clearings · Guarded batteries, hunting packs, rituals and swarms';
     const counts=(['normal','veteran','elite'] as const).map(rank=>floor.members.filter(m=>m.id!=='warden'&&m.rank===rank).length);
     root.querySelector('[data-summary]')!.textContent=`Seed ${seed} · ${RIFT_FIELD.packs} packs · ${counts[0]} normal · ${counts[1]} champions · ${counts[2]} elites + guardian`;
-    const url=new URL(location.href);url.searchParams.set('view','map');url.searchParams.set('seed',String(seed));url.searchParams.set('biome',biome);if(arrival)url.searchParams.set('arrival','');else url.searchParams.delete('arrival');if(scene)url.searchParams.set('scene','pack');else url.searchParams.delete('scene');history.replaceState(null,'',url);
+    const url=new URL(location.href);url.searchParams.set('view','map');url.searchParams.set('layout',layout);url.searchParams.set('encounter',encounter);url.searchParams.set('seed',String(seed));url.searchParams.set('biome',biome);if(arrival)url.searchParams.set('arrival','');else url.searchParams.delete('arrival');if(scene)url.searchParams.set('scene','pack');else url.searchParams.delete('scene');history.replaceState(null,'',url);
   };
+  root.querySelector('[aria-label=Encounter]')!.addEventListener('change',e=>{encounter=(e.target as HTMLSelectElement).value;scene=true;arrival=false;draw();},{signal:life.signal});
   root.querySelector('select')!.addEventListener('change',e=>{biome=(e.target as HTMLSelectElement).value as BiomeId;draw();},{signal:life.signal});
+  root.querySelector('[data-layout]')!.addEventListener('click',()=>{layout=layout==='open'?'clearings':'open';draw();},{signal:life.signal});
   root.querySelector('[data-next]')!.addEventListener('click',()=>{seed=(seed+731991)>>>0;draw();},{signal:life.signal});
   root.querySelector('[data-scene]')!.addEventListener('click',()=>{arrival=false;scene=!scene;draw();},{signal:life.signal});
   root.querySelector('[data-arrival]')!.addEventListener('click',()=>{arrival=true;scene=true;draw();},{signal:life.signal});

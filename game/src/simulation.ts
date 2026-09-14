@@ -1,3 +1,4 @@
+import { RiftTactics } from './rift-tactics.ts';
 import { EnemyNeighbors } from './enemy-neighbors.ts';
 import { applyEnemyModifiers } from './enemy-modifiers.ts';
 import { tickRift, riftKill } from './rift-runtime.ts';
@@ -705,6 +706,7 @@ export class Simulation {
   }
 
   private enemyNeighbors=new EnemyNeighbors();
+  private riftTactics=new RiftTactics();
   private updateEnemies(dt: number): void {
     this.enemyNeighbors.rebuild(this.enemies);
     updateWarbands(this.enemies, this.player, this.world, dt);
@@ -722,6 +724,7 @@ export class Simulation {
         definition, undefined, effects, actor.level, actor.kind),
       emit: event => this.emit(event),
     };
+    this.riftTactics.tick(context,dt,currentDungeon(this.expeditions)?.rift?.phase==='hunt');
     for (const enemy of this.enemies) {
       this.updateKnockback(enemy, dt);
       this.enemyNeighbors.update(enemy);
@@ -730,6 +733,7 @@ export class Simulation {
       enemy.rallyTime=Math.max(0,(enemy.rallyTime??0)-dt);
       if (!advanceEnemyStatuses(enemy, dt,
         (actor, amount) => this.damageEnemy(actor, amount, 0, false, true, 'fire'))) continue;
+      if(enemy.riftWarning)continue;
       if(isWildernessBoss(enemy.kind)) updateWildernessBoss(enemy,dt,context); else if(enemy.kind==='warden') updateWarden(enemy,dt,context); else updateEnemyAI(enemy, dt, context);
       this.enemyNeighbors.update(enemy);
       if (p.dead) break;

@@ -1,3 +1,5 @@
+import { riftMechanic } from './rift-encounters.ts';
+import { riftWardActive } from './rift-tactics.ts';
 import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { EnemyOutlineArt } from './enemy-outline-art.ts';
 import { RIFT_RULES } from './rift-content.ts';
@@ -778,7 +780,7 @@ export class Renderer {
         attack: enemy.state === 'windup' ? -Math.max(.001, enemy.stateTime / enemy.stateDuration)
           : enemy.state === 'attack' ? Math.min(1, enemy.stateTime / enemy.stateDuration) : 0,
         attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash, slow: enemy.slowTime, burning: enemy.burnTime, frozen: enemy.freezeTime, stunned: enemy.stunTime,
-        impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false },scale,scale>1?(enemy.rank==='elite'?'#e9bb70':'#85c9ee'):undefined); } });
+        impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false },scale,riftMechanic(enemy)==='ritual'?'#9ae0c7':riftWardActive(enemy)?'#80c9b8':scale>1?(enemy.rank==='elite'?'#e9bb70':'#85c9ee'):undefined); } });
     }
     for(const [kind,spirit] of [['decoy',p.skillEffects?.decoy],['archer',p.skillEffects?.archer]] as const){
       if(!spirit||p.dead||settings.phase==='ready')continue;

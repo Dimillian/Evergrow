@@ -11,7 +11,7 @@ export const WORKSPACES = [
 export type Workspace = typeof WORKSPACES[number]['id'];
 export interface Tool { id: string; group: Workspace; name: string; path: string; description: string; tags?: string; }
 export const TOOLS: readonly Tool[] = [
-  {id:'rifts',group:'world',name:'Crimson Rifts',path:'/tools/rifts.html',description:'Timed rift entry, animated portal, keys and records. Use ?view=map for generated layouts, monster density and biome selection.'},
+  {id:'rifts',group:'world',name:'Crimson Rifts',path:'/tools/rifts.html',description:'Timed rift entry, animated portal, keys and records. Use ?view=map to compare connected combat clearings with open terrain, encounter formations and biome selection.'},
   {id:'map-icons',group:'world',name:'Map icon workshop',path:'/tools/map-icons.html',description:'Every map marker, vendor and event at enlarged and actual sizes; recognizable silhouettes, states, dungeon themes and PNG export.',tags:'legend icons npc symbols minimap'},
   {id:'expeditions',group:'world',name:'Expedition routes',path:'/tools/expeditions.html',description:'Ten-stage route choices, dungeon modifiers, reward odds and level gate in the runtime panel.'},
   {id:'respec',group:'equipment',name:'Enchanter respec',path:'/services.html?role=enchanter&respec',description:'Preview the affordable skill reset and exact refunded points.'},

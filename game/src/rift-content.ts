@@ -1,7 +1,7 @@
 import type { Item, ItemTier } from './character-types.ts';
 import type { EnemyRank } from './progression-content.ts';
 export const RIFT_RULES = Object.freeze({ minimumLevel:20, guardianArrival:2.4, duration:600, progress:600, offset:10, rewards:8, keyUpgradeChance:.35, maximumKeyTier:5, goldMultiplier:6 });
-export interface RiftTag { attempt:number; keySeed?:number; keyTier?:number }
+export interface RiftTag { attempt:number; layout?:'clearings'; keySeed?:number; keyTier?:number }
 export interface RiftProgress { elapsed:number; points:number; phase:'hunt'|'boss'|'complete'|'failed'; claimed:boolean; guardian?:{x:number;y:number;at:number}; treasure?:{x:number;y:number}; exit?:{x:number;y:number} }
 export interface RiftRecord { level:number; seconds:number; keyTier:number }
 export interface RiftLedger { attempts:number; clears:number; highest:number; best:RiftRecord[] }
@@ -52,7 +52,7 @@ export function validRiftKey(v:unknown):v is Item {
 }
 export function validRiftTag(v:unknown):v is RiftTag {
   if(!v||typeof v!=='object')return false;const t=v as RiftTag;
-  return Number.isSafeInteger(t.attempt)&&t.attempt>0&&t.attempt<1e9&&(t.keySeed===undefined?t.keyTier===undefined:Number.isInteger(t.keySeed)&&t.keySeed>=0&&t.keySeed<=4294967295&&Number.isInteger(t.keyTier)&&t.keyTier!>=1&&t.keyTier!<=5);
+  return (t.layout===undefined||t.layout==='clearings')&&Number.isSafeInteger(t.attempt)&&t.attempt>0&&t.attempt<1e9&&(t.keySeed===undefined?t.keyTier===undefined:Number.isInteger(t.keySeed)&&t.keySeed>=0&&t.keySeed<=4294967295&&Number.isInteger(t.keyTier)&&t.keyTier!>=1&&t.keyTier!<=5);
 }
 export function validRiftLedger(v:unknown):v is RiftLedger {
   if(!v||typeof v!=='object')return false;const l=v as RiftLedger;

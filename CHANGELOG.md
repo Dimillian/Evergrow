@@ -1,5 +1,28 @@
 # Evergrow changelog
 
+## v0.6.1 — 2026-09-14T13:48:00Z
+
+### New
+
+- New rifts feature connected combat clearings, broad winding routes and branching paths, framed by each biome's natural scenery.
+- Fight guarded ranged formations, flanking hunting packs, ritual gatherings and large swarms instead of uniformly scattered packs.
+- Rift Cantors protect nearby allies: kill or interrupt the caster to break the ward.
+- Stormbound and Cinder leaders use clearly marked lightning strikes and fire sweeps that you can dodge or interrupt.
+
+### Tweaks
+
+- Encounter sizes vary to give rifts a stronger rhythm between smaller fights and dense swarms.
+- Elite special attacks are spaced apart, giving you time to respond when several groups are nearby.
+- Density keys add reinforcements to combat clearings while leaving connecting routes open.
+- Rift support effects and special abilities have distinct names, colors and hover explanations.
+
+### Fixes
+
+- Rift terrain, water, collision and maps stay aligned when switching between old and new layouts.
+- Protection ends immediately when its caster dies, is interrupted or moves out of range; special attacks stop when the hunt ends.
+
+> Existing characters and active rifts remain intact. Start a new rift to experience the new layouts and encounters. The ten-minute timer, progress target and rewards are unchanged. Reload the game to apply this update.
+
 ## v0.6.0 — 2026-09-14T13:11:00Z
 
 ### New

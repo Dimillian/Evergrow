@@ -1,3 +1,5 @@
+import { riftWardActive } from './rift-tactics.ts';
+import { RIFT_TACTICS } from './rift-encounters.ts';
 import { auraPower, bloodOathHit, resonanceHit } from './auras.ts';
 import type { WardBurst } from './unique-combat.ts';
 import { storeBastion } from './unique-combat.ts';
@@ -28,6 +30,7 @@ export interface PlayerDamageContext {
 export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean,
   context: EnemyDamageContext, periodic = false, style?: ProjectileStyle, elementalDamage?: number, offense?: HitSnapshot, authoredBurn = false): void {
   if (enemy.state === 'dead') return;
+  if(riftWardActive(enemy,context.visible)){damage*=1-RIFT_TACTICS.wardReduction;if(elementalDamage!==undefined)elementalDamage*=1-RIFT_TACTICS.wardReduction;}
   if(!periodic){const oath=bloodOathHit(context.player,enemy,melee);damage*=oath;if(elementalDamage!==undefined)elementalDamage*=oath;}
   const exposure=resonanceHit(context.player,enemy,style,periodic);
   if(elementalDamage!==undefined){damage+=elementalDamage*(exposure-1);elementalDamage*=exposure;}else damage*=exposure;

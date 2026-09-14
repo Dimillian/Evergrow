@@ -53,3 +53,13 @@ test('rift terrain jobs retain wilderness mode and discard town tiles from the s
  reply(requests[0].id);assert.equal(closed,1);assert.equal(requests[1].wildernessOnly,true);
  reply(requests[1].id);assert.ok(stream.get(0,0));stream.dispose();assert.equal(closed,2);
 });
+test('experimental terrain cannot reuse an open-layout tile with the same seed',()=>{
+ const requests:Array<{id:number;riftTerrain:boolean}>=[];let closed=0;
+ const port={onmessage:null as ((event:MessageEvent)=>void)|null,onerror:null,postMessage:(value:unknown)=>requests.push(value as typeof requests[number]),terminate(){}};
+ const stream=new TerrainStream(()=>port);
+ stream.update(7342,[{x:0,y:0}],true,false);
+ stream.update(7342,[{x:0,y:0}],true,true);
+ const reply=(id:number)=>port.onmessage!({data:{id,bitmap:{close(){closed++;}}}} as MessageEvent);
+ reply(requests[0].id);assert.equal(closed,1);assert.equal(requests[1].riftTerrain,true);
+ reply(requests[1].id);assert.ok(stream.get(0,0));stream.dispose();assert.equal(closed,2);
+});
