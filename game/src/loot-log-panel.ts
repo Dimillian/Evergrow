@@ -43,9 +43,12 @@ export class LootLogPanel {
     this.element.querySelector('[data-entries]')!.addEventListener('keydown', event => {
       const key = (event as KeyboardEvent).key;
       if (!['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(key) || !this.view?.entries.length) return;
+      const row = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-entry]');
+      if (!row) return;
       event.preventDefault();
+      const focusedIndex = Number(row.dataset.entry);
       const max = this.view.entries.length - 1;
-      this.select(key === 'Home' ? max : key === 'End' ? 0 : Math.max(0, Math.min(max, this.selected + (key === 'ArrowUp' ? 1 : -1))));
+      this.select(key === 'Home' ? max : key === 'End' ? 0 : Math.max(0, Math.min(max, focusedIndex + (key === 'ArrowUp' ? 1 : -1))));
       this.element.querySelector<HTMLButtonElement>(`[data-entry="${this.selected}"]`)?.focus();
     }, { signal: this.life.signal });
   }
