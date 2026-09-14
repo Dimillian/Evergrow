@@ -76,7 +76,7 @@ import { EnvironmentArt } from './environment-art.ts';
 import { biomeAmbient } from './biomes.ts';
 import { propDefinition } from './biome-props.ts';
 import { SceneVisibility } from './scene-visibility.ts';
-import { isGameUIPoint } from './ui-hit-test.ts';
+import { isGameUIPoint, type UIRect } from './ui-hit-test.ts';
 import type { GamePhase } from './game-phase.ts';
 import { COMBAT_TIMING, PLAYER_ABILITIES, PLAYER_MOVEMENT } from './combat-content.ts';
 import { CAMERA_FOLLOW, CameraZoom, cameraFollowTarget, cameraSpawnExclusion,
@@ -109,6 +109,7 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const TAU = Math.PI * 2;
 
 export class Renderer {
+  performanceUIBounds: UIRect | null = null;
   extraUIBounds: {x:number;y:number;width:number;height:number}|null = null;
   private outdoorLightEffects = new OutdoorLightEffects();
   private dungeonLightEffects = new DungeonLightEffects();
@@ -566,6 +567,7 @@ export class Renderer {
       getHUDLayout(this.width, this.height), getMinimapRect(this.width, this.height), getPortalControlRect(this.width, this.height),
       { x: 0, y: 0, width: this.width, height: 112 + this.touchTopInset }];
     if (this.extraUIBounds) barkReserved.push(this.extraUIBounds);
+    if (this.performanceUIBounds) barkReserved.push(this.performanceUIBounds);
     if (this.touchActive) barkReserved.push({ x: 0, y: this.height - 190 * unit, width: this.width, height: 190 * unit });
     this.battleBarks.draw(c, sim, world, this.view, settings.phase === 'playing' && !p.dead,
       this.cachedProps, barkReserved, this.crownOpacity);
@@ -994,7 +996,7 @@ export class Renderer {
   }
 
   private pointerOverHUD() {
-    return !this.gamepadActive && !this.touchActive && isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height, this.extraUIBounds, this.navigationVisible);
+    return !this.gamepadActive && !this.touchActive && isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height, this.extraUIBounds, this.navigationVisible, this.performanceUIBounds);
   }
 
   private cursor(c: CanvasRenderingContext2D, sim: Simulation) {

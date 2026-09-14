@@ -79,6 +79,7 @@ export class PerformanceMonitor {
     }, { signal });
     root.append(this.element);
   }
+  get bounds() { return this.element.hidden ? null : this.element.getBoundingClientRect(); }
   get isOpen() { return this.open; }
   contains(target: EventTarget | null) { return target instanceof Node && this.element.contains(target); }
   setOpen(open: boolean, restoreFocus = true) {

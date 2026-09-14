@@ -82,7 +82,7 @@ import { GameInput } from './game-input.ts';
 import { GamepadInput, PAD } from './gamepad-input.ts';
 import { GamepadMenu } from './gamepad-menu.ts';
 import { GameShell } from './game-shell.ts';
-import { isGameUIPoint } from './ui-hit-test.ts';
+import { isGameUIPoint, isUIRectPoint, projectUIRect } from './ui-hit-test.ts';
 import type { GamePhase } from './game-phase.ts';
 import type { Input } from './model.ts';
 
@@ -541,16 +541,26 @@ export class Game {
   }
 
   private updatePointer(event: { clientX: number; clientY: number; target?: EventTarget | null }) {
-    this.pointerOverEffects = event.target instanceof Element && !!event.target.closest('.buff-bar, .ui-explanation, .performance-monitor');
+    this.pointerOverEffects = event.target instanceof Element && !!event.target.closest('.buff-bar, .ui-explanation');
     this.usingGamepad = false;
     this.input.movePointer(event.clientX, event.clientY, this.canvas.getBoundingClientRect(),
       this.renderer.width, this.renderer.height);
+    this.syncPerformanceInput();
     this.canvas.classList.toggle('hud-hover', this.pointerInHUD());
     this.worldMap.setMinimapPointer({ x: this.mouse.x, y: this.mouse.y });
   }
 
+  private syncPerformanceInput() {
+    const bounds = this.performanceMonitor.bounds;
+    this.renderer.performanceUIBounds = bounds
+      ? projectUIRect(bounds, this.canvas.getBoundingClientRect(), this.renderer.width, this.renderer.height) : null;
+    const blocked = !this.usingGamepad && !this.touch?.active && this.mouse.present
+      && isUIRectPoint(this.mouse.x, this.mouse.y, this.renderer.performanceUIBounds);
+    if (this.input.setPointerUIBlocked(blocked)) this.sim.clearInput();
+  }
+
   private pointerInHUD() {
-    return this.pointerOverEffects || isGameUIPoint(this.mouse.x, this.mouse.y, this.renderer.width, this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible);
+    return this.pointerOverEffects || isGameUIPoint(this.mouse.x, this.mouse.y, this.renderer.width, this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible,this.renderer.performanceUIBounds);
   }
 
   private resize() {
@@ -1136,6 +1146,9 @@ export class Game {
     }
     if (this.performancePhase !== this.phase) { this.performance.suspend(); this.performancePhase = this.phase; }
     this.performance.begin(now);
+    const pointerUIStart = this.performance.start();
+    this.syncPerformanceInput();
+    this.performance.end('monitor', pointerUIStart);
     const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
     this.last = now;
     this.pollGamepad(now);
@@ -1230,7 +1243,7 @@ export class Game {
     if(this.phase==='playing'&&this.journeys.marker?.known){
       const marker=this.journeys.marker,point=this.renderer.worldToScreen(marker.x,marker.y);
       if(point.x>20&&point.x<this.renderer.width-20&&point.y>35&&point.y<this.renderer.height-30
-        &&!isGameUIPoint(point.x,point.y-35,this.renderer.width,this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible)
+        &&!isGameUIPoint(point.x,point.y-35,this.renderer.width,this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible,this.renderer.performanceUIBounds)
         &&hasLineOfSight(this.world,this.sim.player.x,this.sim.player.y,marker.x,marker.y))drawJourneyDestination(ui,point.x,point.y-35,8);
     }
     if(this.touch.active && this.touch.input.preview && this.phase === 'playing') {
