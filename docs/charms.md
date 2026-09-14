@@ -4,6 +4,8 @@ Local implementation · 2026-09-09. Charms are generated magical stones, using o
 
 ## Placement and bonuses
 
+The question-mark help button beside the inventory’s Charms heading explains passive bonuses, level requirements and the separate grid. It uses the shared explanation bubble on hover, keyboard focus or tap.
+
 The inventory has a 12×6 equipment bag and a separate **12×4 charm grid**. Picked-up charms go directly into that grid, never into the bag. If no footprint fits, the charm stays on the ground. Bag and charm capacity are independent. Dragging rearranges stones within their grid; footprints cannot cross the divider or wrap an edge. Auto-sort packs both regions independently.
 
 Only placed stones whose level requirement is met contribute modifiers. Higher-level stones can be collected and rearranged but remain inactive until that level. Overflow, stash and buyback stones grant no bonuses. Charms can be sold directly at vendors, including bulk sales, stored, or dragged onto the inventory drop icon to put them on the ground. Each removes their bonuses; dropped stones can be picked up again. Buying back or retrieving a stone requires space in the charm grid. Enchanting and enhancement use normal services. Pickup, storage, sale and level-up refresh the shared character projection; increased life/mana capacity never heals or refills the player.

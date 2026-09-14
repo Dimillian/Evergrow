@@ -46,7 +46,6 @@
 }
 .character-overlay .character-sort-options { gap: 3px; }
 .character-overlay .character-sort-options .ui-button { font-size: 12px; letter-spacing: .02em; }
-.character-overlay .character-level { color: #aecbd6; }
 @media (forced-colors: active) {
   .character-overlay .character-orbit { display: none; }
   .character-overlay .character-bag.character-tetris,
