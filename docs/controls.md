@@ -1,5 +1,7 @@
 # Controls
 
+**Loot log:** open the button below the pickup feed, the character menu drawer entry or the Escape pause-menu entry. Select a row to read its original details and current location. Arrow keys navigate the list; Escape/Close/controller B/native Back dismisses it. Controller right stick scrolls details. The reader pauses combat and preserves an existing manual pause when closed.
+
 Open **Escape → Options → Controls & key bindings** to customize keyboard and mouse controls. Movement, basic attack, all five skill slots, dodge, potion, interaction, portal and menu shortcuts each have primary and alternate bindings. Select either binding, then press a key or a mouse button (left, right, middle, or side buttons M4/M5). Choose **Unbind** to clear it, or Escape/Cancel to leave it unchanged. Conflicts name the existing action and require **Replace binding** before moving the binding. **Restore defaults** restores the entire default layout below.
 
 Changes apply immediately and save automatically on this device, across characters and reloads. They do not change skill assignments or character saves, and require no progress reset. If browser storage is unavailable, the screen reports that changes apply only to this session. HUD badges, interaction prompts, inventory assignment menus and the skill atlas use the current bindings. The first available binding is shown when a primary is empty.

@@ -24,6 +24,7 @@ import { stageJourneyCompletion, journeyWasCompleted, type JourneyCompletion } f
 import { EnemyEngagements } from './enemy-engagement.ts';
 import type { JourneyGoal } from './journey-state.ts';
 import { cloneData } from './data-clone.ts';
+import { recordLoot, type LootLogEntry } from './loot-log.ts';
 import { freshJourneys } from './journey-state.ts';
 import { freshExpeditions, currentDungeon, syncDungeon, storedActor, type Expeditions, type LocationContents } from './dungeon-state.ts';
 import { dungeonFromState, updateDungeon } from './dungeon-runtime.ts';
@@ -60,7 +61,7 @@ import type { EnemyRank } from './progression-content.ts';
 import { encounterScaleAt, encounterMemberLevel, isBossKind, type EncounterScale } from './encounter-scaling.ts';
 import { enemyLootSeed, scaledEnemyStats } from './zone-progression.ts';
 import { CampPopulation, CAMP_POPULATION_RULES, type CampSpawnSource, type CampState } from './camp-population.ts';
-import { sampleBiome } from './biomes.ts';
+import { BIOMES, sampleBiome } from './biomes.ts';
 import { RoamingEncounters, ROAMING_RULES, ROAMING_GROUPS, roamingSpawnAnchor, shouldRetireRoamer } from './roaming-encounters.ts';
 import { isSpawnHidden, type SpawnExclusion } from './spawn-visibility.ts';
 import { updateEnemyAI, type EnemyAIContext } from './enemy-ai.ts';
@@ -121,6 +122,7 @@ export class Simulation {
   projectiles: Projectile[] = [];
   pickups: Pickup[] = [];
   groundItems: GroundItem[] = [];
+  lootLog: LootLogEntry[] = [];
   groundGold: GroundGold[] = [];
   readonly brokenContainers = new Set<string>();
   groundEffects: ActiveGroundEffect[] = [];
@@ -157,6 +159,7 @@ export class Simulation {
   }
 
   reset(): void {
+    this.lootLog = [];
     this.brokenContainers.clear(); this.world.setBrokenContainers?.(this.brokenContainers);
     this.journeys = freshJourneys();
     this.expeditions = freshExpeditions(); this.dungeonFloor = null;
@@ -191,7 +194,7 @@ export class Simulation {
     const p = this.player;
     const run = currentDungeon(this.expeditions); if (run) syncDungeon(run,this.enemies,p.x,p.y);
     syncTrial(this.eventState, this.enemies);
-    return cloneData({ chronicle:p.chronicle, brokenContainers: [...this.brokenContainers], journeys:this.journeys, encounterScales:this.camps.captureScales(), campWounds:this.camps.captureWounds(this.enemies), roaming:this.roaming.capture(), expeditions: this.expeditions, actors: this.enemies.filter(e=>e.hp>0).map(storedActor), pickups: this.pickups, events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
+    return cloneData({ lootLog:this.lootLog, chronicle:p.chronicle, brokenContainers: [...this.brokenContainers], journeys:this.journeys, encounterScales:this.camps.captureScales(), campWounds:this.camps.captureWounds(this.enemies), roaming:this.roaming.capture(), expeditions: this.expeditions, actors: this.enemies.filter(e=>e.hp>0).map(storedActor), pickups: this.pickups, events: this.eventState, travel: this.travel, character: p.character, level: p.level, xp: p.xp,
       x: p.x, y: p.y, angle: p.angle, hp: p.hp, mana: p.mana, dead: p.dead,
       flasks: p.flasks, healCooldown: p.healCooldown, dodgeCharges: p.dodgeCharges, dodgeRecharge: p.dodgeRecharge,
       skillCooldowns: p.skillCooldowns, time: this.time, kills: this.kills,
@@ -203,6 +206,7 @@ export class Simulation {
   restoreCheckpoint(checkpoint: CharacterCheckpoint): void {
     this.reset();
     const saved = cloneData(checkpoint) as CharacterCheckpoint;
+    this.lootLog = saved.lootLog ?? [];
     for (const id of saved.brokenContainers ?? []) this.brokenContainers.add(id);
     this.expeditions = saved.expeditions ?? freshExpeditions(); this.dungeonFloor = dungeonFromState(this);
     this.journeys = saved.journeys ?? freshJourneys();
@@ -870,6 +874,8 @@ export class Simulation {
     }
     if (drop.item.kind === 'charm') refreshCharacter(this.player);
     this.groundItems.splice(index,1);
+    recordLoot(this.lootLog, drop.item, this.time, currentDungeon(this.expeditions)?.entrance.name
+      ?? BIOMES[(this.world.sampleBiome?.(drop.x, drop.y) ?? sampleBiome(drop.x, drop.y, this.options.seed!)).id].name);
     this.emit({type:'loot',x:drop.x,y:drop.y,item:drop.item,color:TIER_COLORS[drop.item.tier]});
   }
 

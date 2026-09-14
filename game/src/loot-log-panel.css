@@ -1,0 +1,39 @@
+.loot-log-panel { position:absolute; inset:0; z-index:25; display:grid; place-items:center; padding:24px; background:#03090b80; font-family:var(--ui-font); color:var(--ui-ivory); pointer-events:auto; }
+.loot-log-panel[hidden] { display:none; }
+.loot-log-window { width:min(820px,100%); max-height: min(85vh,740px); display:flex; flex-direction:column; }
+.loot-log-window .ui-window-header { gap:12px; }
+.loot-log-window .ui-window-header > div { flex:1; min-width:0; }
+.loot-log-window .ui-window-header p { margin:3px 0 0; font-size:12px; }
+.loot-log-emblem { display:grid; place-items:center; color:var(--ui-gold); width:24px; }
+.loot-log-columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); min-height:0; overflow:hidden; }
+.loot-log-history { padding:0 10px 14px; border-right:1px solid #8ba5ae25; overflow:auto; min-height:280px; }
+.loot-log-list-heading { display:flex; justify-content:space-between; padding:14px 8px; color:#a4b3b8; font-size:12px; }
+.loot-log-row { width:100%; display:flex; gap:10px; align-items:center; padding:12px 8px; background:transparent; border:1px solid transparent; border-bottom-color:#8ba5ae20; border-radius:0; text-align:left; font:inherit; cursor:pointer; }
+.loot-log-row:hover { background:#a6c4d009; border-color:#b8cbd345; }
+.loot-log-row[aria-pressed="true"] { background:linear-gradient(90deg,#343729,#202b30); border-color:#96825a; box-shadow:inset 2px 0 #ddc48a; }
+.loot-log-row:focus-visible { outline:1px solid var(--ui-silver); outline-offset:-3px; }
+.loot-log-item-icon { flex:0 0 42px; height:44px; display:grid; place-items:center; background:#0c161e; border:1px solid #3b4c55; }
+.loot-log-item-icon svg { width:40px; height:42px; }
+.loot-log-row-copy { flex:1; min-width:0; }
+.loot-log-row-copy > .loot-log-sold { display:inline-block; margin-top:7px; padding:1px 6px; border:1px solid #b8a67955; background:#b8a67914; color:#dcc79a; font-size:12px; }
+.loot-log-row-copy strong { display:block; color:var(--item-color); font-weight:400; font-size:16px; overflow-wrap:anywhere; line-height:1.2; }
+.loot-log-row-copy > span { display:flex; justify-content:space-between; flex-wrap:wrap; gap:3px 8px; margin-top:6px; color:#a4b3b8; font-size:12px; }
+.loot-log-detail { padding:20px; overflow:auto; background:#101c26; }
+.loot-log-detail .loot-log-snapshot { position:static; opacity:1; visibility:visible; transform:none; display:block; width:auto; max-width:none; min-width:0; max-height:none; padding:0; border:0; box-shadow:none; background:none; backdrop-filter:none; pointer-events:auto; }
+.loot-log-detail-icon { float:right; width:70px; height:78px; margin:0 0 10px 10px; background:radial-gradient(ellipse,#d0b57515,transparent 70%); }
+.loot-log-detail-icon svg { width:70px; height:70px; }
+.loot-log-receipt { clear:both; margin:20px 0 0; padding-top:14px; border-top:1px solid #8ba5ae30; font-size:13px; }
+.loot-log-receipt > div { display:flex; flex-wrap:wrap; gap:4px 10px; margin:7px 0; }
+.loot-log-receipt dt { color:#a4b3b8; min-width:65px; }
+.loot-log-receipt dd { margin:0; overflow-wrap:anywhere; color:#d6dfcb; }
+.loot-log-empty { color:#a4b3b8; padding:20px 8px; line-height:1.5; }
+.loot-log-window .ui-window-footer { gap:8px 20px; justify-content:space-between; flex-wrap:wrap; font-size:12px; color:#a4b3b8; }
+@media (max-width:600px) {
+  .loot-log-panel { padding:12px; }
+  .loot-log-window { max-height:calc(var(--touch-vh,100dvh) - 24px); }
+  .loot-log-columns { grid-template-columns:1fr; overflow:auto; }
+  .loot-log-history { max-height:230px; min-height:140px; border-right:0; border-bottom:1px solid #8ba5ae25; }
+  .loot-log-detail { overflow:visible; padding:16px; }
+  .loot-log-row { padding:8px; }
+}
+@media (max-height:560px) { .loot-log-panel { padding:10px; } .loot-log-window { max-height:calc(var(--touch-vh,100dvh) - 20px); } .loot-log-history { min-height:0; } }

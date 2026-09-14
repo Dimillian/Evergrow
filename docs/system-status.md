@@ -1,5 +1,7 @@
 # Current system status
 
+Local loot log: the latest 100 successful pickups persist per character with original item details and current inventory/equipped/storage/ground/sold location. The feed button, character drawer and pause menu open a shared paused reader. Existing saves retain progress and begin with empty history. See [Loot log](loot-log.md).
+
 Local September 13, 2026: [effect UI audit](effect-ui-audit-2026-09-13.md) implemented across equipment, stats, Uniques, Techniques and player/target status strips. Shared retained/nested explanations, accurate timed budgets, generic Slowed and target-specific marks/exposure. No balance or save changes.
 
 Earlier September 13, 2026:  seven [mana-reserving auras](auras.md), twenty ranks each, shared buff/buildup icons and reserved mana-orb presentation. Optional leaves use existing 20–30-point routes; no new travel nodes or save reset. Not published.

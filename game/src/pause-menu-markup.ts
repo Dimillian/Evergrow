@@ -12,6 +12,7 @@ export function pauseMenuMarkup(kills: number, duration: string, location: strin
         <button type="button" id="play-action" class="ui-button ui-button--primary">${uiIcon('chevron')}<span>Resume</span></button>
         <button type="button" id="options-action" class="ui-button ui-button--quiet" aria-expanded="false" aria-controls="pause-options">${uiIcon('options')}<span>Options</span></button>
         <button type="button" id="chronicle-action" class="ui-button ui-button--quiet">${uiIcon('star')}<span>Chronicle</span></button>
+        <button type="button" id="loot-log-action" class="ui-button ui-button--quiet">${uiIcon('journal')}<span>Loot log</span></button>
         <button type="button" id="save-action" class="ui-button ui-button--quiet">${uiIcon('save')}<span>Save game</span></button>
         <button type="button" id="title-action" class="ui-button ui-button--quiet" aria-label="Save and exit to character hall">${uiIcon('exit')}<span>Save & exit</span></button>
       </nav>

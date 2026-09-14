@@ -101,6 +101,7 @@ const TAU = Math.PI * 2;
 
 export class Renderer {
   extraUIBounds: {x:number;y:number;width:number;height:number}|null = null;
+  lootLogBounds: {x:number;y:number;width:number;height:number}|null = null;
   private outdoorLightEffects = new OutdoorLightEffects();
   private dungeonLightEffects = new DungeonLightEffects();
   private emissionCanvas: HTMLCanvasElement | undefined;
@@ -967,7 +968,7 @@ export class Renderer {
   }
 
   private pointerOverHUD() {
-    return !this.gamepadActive && !this.touchActive && isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height, this.extraUIBounds, this.navigationVisible);
+    return !this.gamepadActive && !this.touchActive && isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height, this.extraUIBounds, this.navigationVisible, this.lootLogBounds);
   }
 
   private cursor(c: CanvasRenderingContext2D, sim: Simulation) {

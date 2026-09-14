@@ -7,6 +7,7 @@ export interface PauseActions extends AudioControlActions {
   groundLootNames?(): GroundLootNameplates;
   setGroundLootNames?(mode: GroundLootNameplates): void;
   openChronicle?(): void;
+  openLootLog?(): void;
   sound?(): void; muted?(): boolean; zoom?(factor: number): void;
   save?(): Promise<boolean>;
   returnToTitle(): void | Promise<void>;
@@ -26,6 +27,8 @@ export class PauseMenu {
     root.querySelector('[data-controls-open]')!.addEventListener('click', () => this.showControls(true), { signal });
     root.querySelector('[data-controls-back]')!.addEventListener('click', () => this.back(), { signal });
     const chronicle=root.querySelector<HTMLButtonElement>('#chronicle-action')!;chronicle.disabled=!actions.openChronicle;chronicle.addEventListener('click',()=>actions.openChronicle?.(),{signal});
+    const lootLog = root.querySelector<HTMLButtonElement>('#loot-log-action')!;
+    lootLog.disabled = !actions.openLootLog; lootLog.addEventListener('click', () => actions.openLootLog?.(), { signal });
     root.querySelector('#options-action')!.addEventListener('click', () => this.showOptions(!this.options), { signal });
     root.querySelector('[data-options-back]')!.addEventListener('click', () => this.back(), { signal });
     root.querySelector('[data-sound]')!.addEventListener('click', () => { actions.sound?.(); this.refresh(); }, { signal });

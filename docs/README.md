@@ -1,5 +1,7 @@
 # Documentation
 
+- [Loot log](loot-log.md): saved recent pickups, original item details and current item locations.
+
 - [Regional scaling](region-scaling.md) — current local ranges, encounter snapshots, rewards and save compatibility.
 
 - [Dynamic soundtrack](dynamic-soundtrack.md): regional/encounter music, mix controls and audio lifecycle.

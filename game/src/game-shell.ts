@@ -16,7 +16,7 @@ import type { GamePhase } from './game-phase.ts';
 import { gameMenuMarkup } from './game-menu.ts';
 import { trapDialogFocus, uiIcon } from './ui-components.ts';
 
-interface ShellActions extends AudioControlActions { shortcutMenuChanged?(): void; groundLootNames?(): GroundLootNameplates; setGroundLootNames?(mode: GroundLootNameplates): void; openChronicle?(): void; save?(): Promise<boolean>; sound?(): void; muted?(): boolean; zoom?(factor: number): void; portal?(): void; play(): void; returnToTitle(): void | Promise<void>; openMap(): void; openCharacter(): void; openSkills(): void; openJourneys?(): void; }
+interface ShellActions extends AudioControlActions { shortcutMenuChanged?(): void; groundLootNames?(): GroundLootNameplates; setGroundLootNames?(mode: GroundLootNameplates): void; openLootLog?(): void; openChronicle?(): void; save?(): Promise<boolean>; sound?(): void; muted?(): boolean; zoom?(factor: number): void; portal?(): void; play(): void; returnToTitle(): void | Promise<void>; openMap(): void; openCharacter(): void; openSkills(): void; openJourneys?(): void; }
 
 /** Owns DOM presentation and its listeners; it never reads or mutates simulation state. */
 export class GameShell {
@@ -93,7 +93,7 @@ export class GameShell {
     this.overlay = root.querySelector<HTMLElement>('#overlay')!;
     this.controls = root.querySelector<HTMLElement>('#hud-controls')!;
     this.status = root.querySelector<HTMLElement>('#state-description')!;
-    this.notifications = new GameNotifications(this.element);
+    this.notifications = new GameNotifications(this.element, { openLootLog: actions.openLootLog });
     this.buffs = new BuffBar(this.controls);
     this.targetBuffs = new BuffBar(this.controls, 'Target effects');
     this.targetBuffs.element.classList.add('target-buff-bar');
@@ -106,6 +106,7 @@ export class GameShell {
       if (id === 'character' || id === 'inventory') actions.openCharacter();
       else if (id === 'skilltree') actions.openSkills();
       else if (id === 'map') actions.openMap();
+      else if (id === 'lootLog') actions.openLootLog?.();
       else actions.openJourneys?.();
     }, () => actions.shortcutMenuChanged?.());
     this.refreshBindings();
@@ -162,9 +163,10 @@ export class GameShell {
     this.shortcutMenu.close(false);
     this.menuAbort.abort(); this.menuAbort = new AbortController(); this.pauseMenu = null;
     const playing = phase === 'playing';
-    const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys' || phase === 'chronicle';
+    const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys' || phase === 'chronicle' || phase === 'lootLog';
     this.overlay.hidden = playing || panel || phase === 'ready';
     this.controls.hidden = !playing;
+    if (!playing) this.notifications.setLootLog(false, 0);
     if (!playing) { this.buffs.hide(); this.targetBuffs.hide(); }
     this.element.classList.toggle('playing', playing);
     if (playing || panel || phase === 'ready') {
