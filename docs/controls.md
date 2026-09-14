@@ -4,7 +4,7 @@ Open **Escape → Options → Controls & key bindings** to customize keyboard an
 
 Changes apply immediately and save automatically on this device, across characters and reloads. They do not change skill assignments or character saves, and require no progress reset. If browser storage is unavailable, the screen reports that changes apply only to this session. HUD badges, interaction prompts, inventory assignment menus and the skill atlas use the current bindings. The first available binding is shown when a primary is empty.
 
-Bindings use physical keyboard positions. Escape remains pause/back and cancels binding capture. Ctrl remains the loot-name reveal control; OS/browser modifier shortcuts, reload, fullscreen and developer-tools keys are reserved. Tab and ordinary menu navigation keys retain their native behavior in panels. Mouse wheel zoom and left-click interaction with nearby objects remain available. The Controller tab documents the fixed gamepad layout; touch and controller input are independent of keyboard/mouse remapping.
+Bindings use physical keyboard positions. Escape remains pause/back and cancels binding capture. Holding Shift reveals loot names by default, and that action can be rebound like other keyboard and mouse controls. OS/browser modifier shortcuts, reload, fullscreen and developer-tools keys are reserved. Tab and ordinary menu navigation keys retain their native behavior in panels. Mouse wheel zoom and left-click interaction with nearby objects remain available. The Controller tab documents the fixed gamepad layout; touch and controller input are independent of keyboard/mouse remapping.
 
 ## Default keyboard and mouse layout
 
