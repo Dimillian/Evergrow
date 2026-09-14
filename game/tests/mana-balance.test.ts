@@ -61,5 +61,5 @@ test('item comparison keeps both regeneration columns in mana per five seconds',
   const item=generateItem(92,1,'ring','moonstone-ring','magic');
   item.implicit={};item.affixes=[{name:'Clarity',stat:'manaRegen',value:5}];
   const markup=itemTooltipMarkup(item,{sheet:createCharacterSheet(),level:1});
-  assert.match(markup,/Mana \/ 5 sec<\/th><td>\+5<\/td><td class="is-gain">\+5<\/td>/);
+  assert.match(markup.replace(/<span aria-hidden="true">[↑↓]<\/span> /g, ''),/Mana \/ 5 sec<\/th><td>\+5<\/td><td class="is-gain">\+5<\/td>/);
 });

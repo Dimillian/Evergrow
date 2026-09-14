@@ -1,3 +1,4 @@
+import { comparisonSlot, ItemComparisonInput } from './item-comparison.ts';
 import './ground-loot-highlight.css';
 import { groundPickupProblem } from './ground-item-pickup.ts';
 import { TIER_COLORS } from './items.ts';
@@ -16,10 +17,13 @@ export class GroundLootHighlight {
   private inspectedLevel = -1;
   private inspectedStats: Player['stats'] | null = null;
   private retainUntil = 0;
+  private readonly life = new AbortController();
+  private readonly comparison: ItemComparisonInput;
   private cursor: string;
   private canvas: HTMLCanvasElement;
   constructor(mount: HTMLElement, canvas: HTMLCanvasElement) {
     this.canvas = canvas;
+    this.comparison = new ItemComparisonInput(window, () => { this.inspectedStats = null; }, this.life.signal);
     this.cursor = canvas.style.cursor;
     this.affordance.className = 'ground-loot-affordance';
     this.affordance.hidden = true;
@@ -33,13 +37,11 @@ export class GroundLootHighlight {
     pointer: { x: number; y: number } | null, time = 0, selectedId: number | null = null, enabled = true): void {
     if (!enabled) { this.hide(); return; }
     const now = performance.now();
-    if (!this.tooltip.hidden && this.tooltip.matches(':hover') && drops.some(drop => drop.item === this.inspected)) {
-      this.retainUntil = now + 600;
-      this.canvas.style.cursor = this.cursor;
-      return;
-    }
-    const hovered = pointer && hoveredGroundLoot(labels, pointer.x, pointer.y);
-    const label = hovered??labels.find(b=>b.id===selectedId && b.visible !== false);
+    const held = !this.tooltip.hidden && this.tooltip.matches(':hover') && drops.some(drop => drop.item.id === this.inspected?.id);
+    if (held) this.retainUntil = now + 600;
+    const hovered = !held && pointer ? hoveredGroundLoot(labels, pointer.x, pointer.y) : undefined;
+    const heldDrop = held ? drops.find(drop => drop.item.id === this.inspected?.id) : undefined;
+    const label = hovered ?? (heldDrop ? labels.find(label => label.id === heldDrop.id) : undefined) ?? labels.find(b=>b.id===selectedId && b.visible !== false);
     const drop = label && drops.find(d => d.id === label.id);
     if (!label || !drop) {
       this.affordance.hidden = true; this.canvas.style.cursor = this.cursor;
@@ -57,9 +59,9 @@ export class GroundLootHighlight {
     affordance.style.width=`${bounds.right-bounds.left}px`;affordance.style.height=`${bounds.bottom-bounds.top}px`;
     affordance.style.setProperty('--loot-accent',problem?'#9a9290':TIER_COLORS[drop.item.tier]);
     // Selected walking targets retain their highlight, but only actual mouse hover inspects.
-    if (hovered) {
+    if (hovered || held) {
       if (this.inspected !== drop.item || this.inspectedLevel !== player.level || this.inspectedStats !== player.stats) {
-        const cards = itemHoverCards(drop.item, { sheet: player.character, level: player.level, compactComparison: true });
+        const cards = itemHoverCards(drop.item, { sheet: player.character, level: player.level, compactComparison: true, targetSlot: comparisonSlot(player.character, drop.item, this.comparison.alternate) });
         this.tooltip.innerHTML = cards.join('');
         this.tooltip.style.setProperty('--tooltip-columns', String(cards.length));
         this.inspected = drop.item;
@@ -72,5 +74,5 @@ export class GroundLootHighlight {
   }
   private hideTooltip(): void { this.tooltip.hidden = true; this.inspected = null; this.retainUntil = 0; }
   hide(): void { this.affordance.hidden = true; this.hideTooltip(); this.canvas.style.cursor = this.cursor; }
-  dispose(): void { this.hide(); this.affordance.remove(); this.tooltip.remove(); }
+  dispose(): void { this.life.abort(); this.hide(); this.affordance.remove(); this.tooltip.remove(); }
 }
