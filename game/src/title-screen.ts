@@ -124,12 +124,8 @@ export class TitleScreen {
         if (entry) { event.preventDefault(); entry.focus(); return; }
       }
       if (target.matches('[data-title-item],.title-character-actions button') && event.key.startsWith('Arrow')) {
-        const items = [...this.element.querySelectorAll<HTMLElement>('.title-character-actions button,[data-title-item]')], index = items.indexOf(target);
-        const next = directionalControl(items.map(item => item.getBoundingClientRect()), index, event.key);
         event.preventDefault();
-        if (next === index && event.key === 'ArrowLeft') this.element.querySelector<HTMLElement>(`[data-slot="${this.selected}"]`)?.focus();
-        else if (next === index && event.key === 'ArrowDown') this.element.querySelector<HTMLElement>('[data-action="continue"]')?.focus();
-        else items[next]?.focus();
+        this.navigateDetails(target, event.key);
         return;
       }
       if (!target.matches('[data-slot]') || !event.key.startsWith('Arrow')) return;
@@ -308,7 +304,8 @@ export class TitleScreen {
     this.render();
     if (focus) this.element.querySelector<HTMLButtonElement>(`[data-slot="${index}"]`)?.focus();
     const slot = this.slots[index];
-    if (!slot || !this.actions.read || slot.record && this.source.mode !== 'cloud') return;
+    // Reselecting also refreshes local records after a stale-writer rejection.
+    if (!slot || !this.actions.read) return;
     this.loading = true; this.renderSelection();
     void this.actions.read(index).then(value => {
       if (ticket !== this.inspection || this.element.hidden) return;
@@ -380,6 +377,16 @@ export class TitleScreen {
           return `<label class="title-weapon-choice" data-tooltip="${escapeUI(option.detail)}"><input type="radio" name="starter-weapon" value="${option.id}" ${this.starter === option.id ? 'checked' : ''}/><span class="title-weapon-icon" aria-hidden="true">${itemIconSVG(loadout.weapon, 40)}${loadout.offhand ? itemIconSVG(loadout.offhand, 32) : ''}</span><strong>${escapeUI(option.label)}</strong></label>`;
         }).join('')}</div></fieldset><button class="ui-button ui-button--primary title-enter" type="submit"><span>Create character</span>${uiIcon('chevron')}</button></form>`;
     } else selection.innerHTML = `<div class="title-confirm"><h3>Save unavailable</h3><p>${slot?.state === 'invalid' ? 'The original file is preserved.' : 'Check storage or connection, then select the slot again.'}</p>${slot?.state === 'invalid' ? '<button class="ui-button" data-action="delete">Delete unreadable save</button>' : ''}</div>`;
+  }
+  private navigateDetails(target: HTMLElement, key: string) {
+    const items = [...this.element.querySelectorAll<HTMLElement>('.title-character-actions button,[data-title-item]')]
+      .filter(item => item.tabIndex >= 0 && !item.matches(':disabled') && !item.closest('[hidden], [inert]')
+        && item.getClientRects().length > 0 && getComputedStyle(item).visibility !== 'hidden');
+    const index = items.indexOf(target);
+    const next = directionalControl(items.map(item => item.getBoundingClientRect()), index, key);
+    if (next === index && key === 'ArrowLeft') this.element.querySelector<HTMLElement>(`[data-slot="${this.selected}"]`)?.focus();
+    else if (next === index && key === 'ArrowDown') this.element.querySelector<HTMLElement>('[data-action="continue"]')?.focus();
+    else items[next]?.focus();
   }
   private switchDetail(tab: 'gear' | 'attributes', focus = false) {
     this.detailTab = tab;
