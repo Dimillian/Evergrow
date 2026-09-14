@@ -549,6 +549,9 @@ export class Renderer {
     if (this.touchActive) barkReserved.push({ x: 0, y: this.height - 190 * unit, width: this.width, height: 190 * unit });
     this.battleBarks.draw(c, sim, world, this.view, settings.phase === 'playing' && !p.dead,
       this.cachedProps, barkReserved, this.crownOpacity);
+    if (settings.phase === 'playing' && !p.dead) this.effects.drawManaWarning(c,
+      worldToScreen(this.view, lerp(p.prevX, p.x, sim.interpolationAlpha), lerp(p.prevY, p.y, sim.interpolationAlpha) - 43),
+      settings.reducedMotion);
     c.save();
     if(phone) { c.translate(headerX,headerY); c.scale(.8*unit,.8*unit); }
     this.navigation(c, sim, world, settings);

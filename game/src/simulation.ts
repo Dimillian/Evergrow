@@ -619,7 +619,10 @@ export class Simulation {
     const hand = dual ? p.nextAttackHand : 'main';
     const weapon = hand === 'off' && off?.kind === 'weapon' ? off.weapon : p.equipment.mainHand;
     const manaCost = basicAttackManaCost(weapon, p.derived);
-    if (p.mana < manaCost) return;
+    if (p.mana < manaCost) {
+      this.emit({ type: 'insufficient-mana', x: p.x, y: p.y });
+      return;
+    }
     p.mana -= manaCost; metric(p.chronicle,'manaSpent',manaCost);metric(p.chronicle,'basics');
     const stats = deriveAttackStats(p.stats, weapon);
     const weave = consumeRally(p,weapon.attackKind==='melee') * consumeSpellweave(p, weapon.attackKind === 'melee' ? 'melee' : weapon.attackKind === 'bolt' ? 'spell' : 'other');
