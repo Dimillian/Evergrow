@@ -35,6 +35,18 @@ The user approved the next major prototype milestone, **0.6.0**, on 2026-09-14 f
 
 ## Last verified publication
 
+- Game v0.6.0 / Sites version 54, publicly deployed on 2026-09-14 at 13:14:42 UTC.
+- Published source: `b70a176e65fbfba4baa4e011a76f013e76c9523b`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_2f020f3af0c08191a8182e09d5900d92`.
+- Deployment: `appgdep_6aa7f333135c8191b5874e3caa7e2ca5`; Sites returned `succeeded`.
+- Crimson Rifts, optional inventory keys, guardian arrival and automatic rewards; ranked enemy outlines/traits, dense-pack performance, smooth rift maps, Chronicle records and eighteen achievement milestones.
+- Includes merged PRs #32, #36, #37, #38, #41, #42 and #43: master volume, inventory drag performance, background rendering suspension, map tooltips, radiant wand identity, unarmed poses and inventory refinement. Also includes compact ground-loot comparisons and stable Alt inspection.
+- All 1,508 code tests passed under Node 24 with four test workers. Application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation passed. No automated browser gameplay was run.
+- Existing local/cloud characters remain compatible; no save reset, skill refund or D1 migration. Existing rift ledger records seed Chronicles; previously untracked details start with this update. Reload existing clients.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.5.3 / Sites version 53, publicly deployed on 2026-09-14 at 08:24:11 UTC.
 - Published source: `dfb1f3d072351d08de43b33bf5a52acb230e89f7`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_c49e9f6173948191853fda8ba40a5aee`.
