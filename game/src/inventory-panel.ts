@@ -433,8 +433,8 @@ export class InventoryPanel {
     }
     if (this.hud?.pickerOpen) { this.controller.update(this.hud.picker, pad, now); return; }
     if (this.popup) { this.controller.update(this.popupPanel(), pad, now); return; }
-    const root = this.element.querySelector<HTMLElement>(`[data-section="${this.section}"]`)!;
-    this.controller.update(root, pad, now, {
+    this.controller.update(this.window, pad, now, {
+      includeControl: target => this.inNavigationSection(target),
       switchTab: delta => this.selectSection((this.section + delta + 3) % 3),
       activate: target => {
         const location = this.locationFrom(target);
@@ -465,17 +465,24 @@ export class InventoryPanel {
   }
 
   private navigate(key: string, target: HTMLElement): boolean {
-    const root = target.closest<HTMLElement>('[data-mini], [data-section]');
-    if (!root) return false;
+    const owner = target.closest<HTMLElement>('[data-mini], [data-section], .character-header-right');
+    if (!owner) return false;
+    const popup = owner.hasAttribute('data-mini');
+    const root = popup ? owner : this.window;
     const controls = [...root.querySelectorAll<HTMLElement>('button, [tabindex]')]
-      .filter(control => !control.closest('[hidden], [inert]') && !control.matches(':disabled') && control.getClientRects().length > 0);
+      .filter(control => control.tabIndex >= 0 && !control.closest('[hidden], [inert]') && !control.matches(':disabled') && control.getClientRects().length > 0
+        && (popup || this.inNavigationSection(control)));
     const current = controls.indexOf(target);
     if (current < 0) return false;
     const next = directionalControl(controls.map(control => control.getBoundingClientRect()), current, key);
-    if (next === current && root.dataset.section === '2' && (key === 'ArrowDown' || key === 'ArrowUp'))
-      root.scrollBy({ top: key === 'ArrowDown' ? 100 : -100 });
+    if (next === current && owner.dataset.section === '2' && (key === 'ArrowDown' || key === 'ArrowUp'))
+      owner.scrollBy({ top: key === 'ArrowDown' ? 100 : -100 });
     else { controls[next].focus({ preventScroll: true }); controls[next].scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
     return true;
+  }
+
+  private inNavigationSection(target: HTMLElement): boolean {
+    return !!target.closest('.character-header-right') || target.closest<HTMLElement>('[data-section]')?.dataset.section === String(this.section);
   }
 
   private text(selector: string, value: string): void {
