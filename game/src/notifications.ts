@@ -7,7 +7,7 @@ import { escapeUI, uiIcon } from './ui-components.ts';
 import './notifications.css';
 import { notificationAnchor } from './notification-layout.ts';
 
-/** Native-resolution passive notices plus a routed history button; never mutates game state. */
+/** Native-resolution passive notices; never mutates game state. */
 export class GameNotifications {
   private element: HTMLElement;
   private feed = new NotificationQueue(2);
@@ -18,40 +18,20 @@ export class GameNotifications {
   private autoAdvance: boolean;
   private announcements = new Map<number, string>();
   private announceScheduled = false;
-  private readonly lootButton: HTMLButtonElement;
-  private readonly abort = new AbortController();
   private readonly resizeObserver: ResizeObserver;
-  private lootVisible = false;
-  private lootCount = -1;
   private viewport = { width: 0, height: 0 };
   private phoneLandscape = false;
   private safeTop = 0;
-  constructor(mount: HTMLElement, options: { autoAdvance?: boolean; openLootLog?: () => void } = {}) {
+  constructor(mount: HTMLElement, options: { autoAdvance?: boolean } = {}) {
     this.autoAdvance = options.autoAdvance ?? true;
     this.element = document.createElement('div'); this.element.className = 'game-notifications';
-    this.element.innerHTML = `<div class="notification-anchor"><div class="notification-feed"></div><button type="button" class="notification-loot-log" hidden>${uiIcon('lootBag')}<span>Loot log</span><span data-loot-count>0</span></button></div><div class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>`;
+    this.element.innerHTML = `<div class="notification-anchor"><div class="notification-feed"></div></div><div class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>`;
     mount.append(this.element);
-    this.lootButton = this.element.querySelector('.notification-loot-log')!;
-    this.lootButton.addEventListener('click', () => options.openLootLog?.(), { signal: this.abort.signal });
     this.resizeObserver = new ResizeObserver(entries => {
       const { width, height } = entries[0].contentRect; this.viewport = { width, height };
       this.placeAnchor();
     });
     this.resizeObserver.observe(this.element);
-  }
-  setLootLog(visible: boolean, count: number): void {
-    if (this.lootVisible !== visible) {
-      this.lootVisible = visible; this.lootButton.hidden = !visible;
-      this.element.querySelector('.notification-anchor')!.classList.toggle('has-loot-log', visible);
-    }
-    if (this.lootCount === count) return;
-    this.lootCount = count; this.lootButton.querySelector('[data-loot-count]')!.textContent = String(count);
-    this.lootButton.setAttribute('aria-label', `Open loot log · ${count} recent pickups`);
-  }
-  lootLogBounds(width: number, height: number) {
-    const v = this.viewport; if (!this.lootVisible || !v.width || !v.height) return null;
-    const r = notificationAnchor(v.width, v.height, this.phoneLandscape, this.safeTop);
-    return { x: r.x / v.width * width, y: r.y / v.height * height, width: r.width / v.width * width, height: r.height / v.height * height };
   }
   setTouchLayout(phoneLandscape: boolean, safeTop: number): void {
     if (phoneLandscape === this.phoneLandscape && safeTop === this.safeTop) return;
@@ -81,7 +61,7 @@ export class GameNotifications {
     this.feed.clear(); this.render();
     this.element.querySelector('[role="status"]')!.textContent = '';
   }
-  dispose(): void { this.clear(); this.disposed = true; this.abort.abort(); this.resizeObserver.disconnect(); this.element.remove(); }
+  dispose(): void { this.clear(); this.disposed = true; this.resizeObserver.disconnect(); this.element.remove(); }
   private tick = (now: number): void => {
     const dt = Math.min(.1, Math.max(0, (now - this.last) / 1000)); this.last = now;
     this.feed.advance(dt); this.render();

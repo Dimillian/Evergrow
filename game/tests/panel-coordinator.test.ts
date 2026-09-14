@@ -166,3 +166,19 @@ test('loot log preserves a manual pause and rejects title/defeat entry', () => {
   c.transition('playing'); c.pause(); assert.ok(c.open('lootLog')); c.resume(); assert.equal(c.phase,'paused');
   c.transition('dead'); assert.equal(c.open('lootLog'),false);
 });
+
+test('inventory loot log returns to inventory without resuming gameplay or losing manual pause', () => {
+  for (const paused of [false, true]) {
+    const { coordinator: c, log, active } = setup();
+    c.transition('playing'); if (paused) c.pause();
+    c.open('character'); log.length = 0;
+    assert.ok(c.open('lootLog'));
+    assert.equal(c.simulationActive, false);
+    assert.deepEqual([...active], ['lootLog']);
+    assert.ok(c.resume()); assert.equal(c.phase, 'character');
+    assert.deepEqual([...active], ['character']);
+    assert.equal(c.simulationActive, false);
+    assert.ok(!log.includes('focus:game'));
+    c.resume(); assert.equal(c.phase, paused ? 'paused' : 'playing');
+  }
+});

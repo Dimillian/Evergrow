@@ -223,6 +223,7 @@ export class Game {
         openSkills: skill => { this.openCharacterPanel('skills'); this.skillPanel.inspectNode(skill ? `skill:${skill}` : 'origin', true); this.skillPanel.setDetailsVisible(true); },
         editAppearance:()=>this.editAppearance(),
         openChronicle:()=>{if(!this.savingAction)this.panels.open('chronicle');},
+        openLootLog:()=>{if(!this.savingAction)this.panels.open('lootLog');},
         equip: (index, slot) => this.characterAction({ type: 'equip', index, slot }),
         unequip: (slot, index) => this.characterAction({ type: 'unequip', slot, index }),
         move: (from, to) => this.characterAction({ type: 'moveItem', from, to }),
@@ -566,7 +567,7 @@ export class Game {
   }
 
   private pointerInHUD() {
-    return this.pointerOverEffects || isGameUIPoint(this.mouse.x, this.mouse.y, this.renderer.width, this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible,this.renderer.performanceUIBounds,this.renderer.lootLogBounds);
+    return this.pointerOverEffects || isGameUIPoint(this.mouse.x, this.mouse.y, this.renderer.width, this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible,this.renderer.performanceUIBounds);
   }
 
   private resize() {
@@ -1162,9 +1163,7 @@ export class Game {
     this.pollGamepad(now);
     if (now >= this.nextScore) { this.updateScore(now); this.nextScore = now + 250; }
     this.touch.update(this.sim.player,this.phase,this.savingAction,now,this.sim.groundEffects);
-    this.shell.notifications.setLootLog(this.phase === 'playing', this.sim.lootLog.length);
     this.shell.notifications.setTouchLayout(this.touch.phoneLandscape, this.touch.safeTop);
-    this.renderer.lootLogBounds = this.shell.notifications.lootLogBounds(this.renderer.width, this.renderer.height);
     this.renderer.gamepadActive = this.usingGamepad;
     this.shell.setGamepadActive(this.usingGamepad);
     if (this.panels.simulationActive && !this.savingAction && !this.shell.shortcutMenu.isOpen) {
@@ -1254,7 +1253,7 @@ export class Game {
     if(this.phase==='playing'&&this.journeys.marker?.known){
       const marker=this.journeys.marker,point=this.renderer.worldToScreen(marker.x,marker.y);
       if(point.x>20&&point.x<this.renderer.width-20&&point.y>35&&point.y<this.renderer.height-30
-        &&!isGameUIPoint(point.x,point.y-35,this.renderer.width,this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible,this.renderer.performanceUIBounds,this.renderer.lootLogBounds)
+        &&!isGameUIPoint(point.x,point.y-35,this.renderer.width,this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible,this.renderer.performanceUIBounds)
         &&hasLineOfSight(this.world,this.sim.player.x,this.sim.player.y,marker.x,marker.y))drawJourneyDestination(ui,point.x,point.y-35,8);
     }
     if(this.touch.active && this.touch.input.preview && this.phase === 'playing') {

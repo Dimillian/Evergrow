@@ -98,7 +98,7 @@ export class GameShell {
     this.overlay = root.querySelector<HTMLElement>('#overlay')!;
     this.controls = root.querySelector<HTMLElement>('#hud-controls')!;
     this.status = root.querySelector<HTMLElement>('#state-description')!;
-    this.notifications = new GameNotifications(this.element, { openLootLog: actions.openLootLog });
+    this.notifications = new GameNotifications(this.element);
     this.buffs = new BuffBar(this.controls);
     this.targetBuffs = new BuffBar(this.controls, 'Target effects');
     this.targetBuffs.element.classList.add('target-buff-bar');
@@ -190,7 +190,6 @@ export class GameShell {
     const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys' || phase === 'chronicle' || phase === 'lootLog';
     this.overlay.hidden = playing || panel || phase === 'ready';
     this.controls.hidden = !playing;
-    if (!playing) this.notifications.setLootLog(false, 0);
     if (!playing) { this.buffs.hide(); this.targetBuffs.hide(); }
     this.element.classList.toggle('playing', playing);
     if (playing || panel || phase === 'ready') {

@@ -1,4 +1,4 @@
-/** Native CSS-pixel anchor shared by pickup presentation and world input exclusion. */
+/** Native CSS-pixel anchor for passive pickup presentation. */
 export function notificationAnchor(width: number, height: number, phoneLandscape = false, safeTop = 0) {
   if (phoneLandscape) {
     const size = Math.min(230, width * .32);

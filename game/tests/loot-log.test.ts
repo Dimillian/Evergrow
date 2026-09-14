@@ -149,26 +149,23 @@ test('bulk sale history survives buyback eviction', () => {
   assert.ok(staged.every(entry=>lootLogLocation(entry,after,[])==='Sold · Town merchant'));
 });
 
-test('pickup age uses active character time and the HUD button excludes combat at desktop and narrow sizes', () => {
+test('pickup age uses active character time and passive notices do not block combat', () => {
   assert.equal(lootLogAge(100,110),'Just now'); assert.equal(lootLogAge(0,120),'2 min ago');
   for(const [width,height] of [[1440,900],[800,600],[360,480]]) {
     const rect=notificationAnchor(width,height);
     assert.ok(rect.x>=0 && rect.y>=0 && rect.x+rect.width<=width && rect.y+rect.height<=height);
-    assert.ok(isGameUIPoint(rect.x+10,rect.y+10,width,height,null,false,null,rect));
     assert.equal(isGameUIPoint(rect.x+10,rect.y+10,width,height,null,false),false);
   }
   const phone = notificationAnchor(844,390,true,12);
   assert.equal(phone.y,70); assert.equal(phone.x+phone.width/2,422);
-  assert.ok(isGameUIPoint(phone.x+10,phone.y+10,844,390,null,false,null,phone));
+  assert.equal(isGameUIPoint(phone.x+10,phone.y+10,844,390,null,false),false);
 });
 
 
-test('loot-log and performance-monitor bounds independently exclude combat while navigation is hidden', () => {
+test('performance monitor still excludes combat after removing the HUD loot-log button', () => {
   const width=1440,height=900,log=notificationAnchor(width,height);
   const monitor={x:400,y:180,width:200,height:100};
-  assert.ok(isGameUIPoint(450,220,width,height,null,false,monitor,log));
-  assert.ok(isGameUIPoint(log.x+10,log.y+10,width,height,null,false,monitor,log));
-  assert.equal(isGameUIPoint(450,220,width,height,null,false,null,log),false);
-  assert.equal(isGameUIPoint(log.x+10,log.y+10,width,height,null,false,monitor,null),false);
-  assert.equal(isGameUIPoint(720,450,width,height,null,false,monitor,log),false);
+  assert.ok(isGameUIPoint(450,220,width,height,null,false,monitor));
+  assert.equal(isGameUIPoint(log.x+10,log.y+10,width,height,null,false,monitor),false);
+  assert.equal(isGameUIPoint(450,220,width,height,null,false),false);
 });

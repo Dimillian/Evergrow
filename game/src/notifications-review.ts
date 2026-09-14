@@ -22,9 +22,9 @@ root.innerHTML = '<div class="game-shell"><canvas id="review-world"></canvas><ca
 const shell = root.querySelector<HTMLElement>('.game-shell')!;
 const canvas = root.querySelector<HTMLCanvasElement>('#review-world')!, ui = root.querySelector<HTMLCanvasElement>('#game-ui')!;
 const renderer = new Renderer(), fx = life.own(new PostFX(canvas));
-const log = life.own(new LootLogPanel(shell, () => { log.close(); notices.setLootLog(true, sim.lootLog.length); }));
-const openLog = () => { notices.setLootLog(false, sim.lootLog.length); log.open({ entries:sim.lootLog, sheet:sim.player.character, level:sim.player.level, time:sim.time, ground:sim.groundItems }); };
-const notices = life.own(new GameNotifications(shell, { autoAdvance: false, openLootLog:openLog }));
+const log = life.own(new LootLogPanel(shell, () => { log.close(); }));
+const openLog = () => { log.open({ entries:sim.lootLog, sheet:sim.player.character, level:sim.player.level, time:sim.time, ground:sim.groundItems }); };
+const notices = life.own(new GameNotifications(shell, { autoAdvance: false }));
 const mode = new URLSearchParams(location.search).get('view');
 if (mode === 'loot-log') {
   sim.time = 500;
@@ -37,7 +37,7 @@ if (mode === 'loot-log') {
     else sim.player.character.inventory[index] = item;
   }
   openLog();
-  shell.addEventListener('keydown', event => { if (event.key === 'Escape' && !event.defaultPrevented) { log.close(); notices.setLootLog(true, sim.lootLog.length); } });
+  shell.addEventListener('keydown', event => { if (event.key === 'Escape' && !event.defaultPrevented) { log.close(); } });
 }
 if (mode === 'discovery') notices.push({ kind: 'discovery', poi: { id: 'review-town', kind: 'town', name: 'Briarwatch', x: 0, y: 0, description: '' } });
 else if (mode === 'area') notices.push({ kind: 'area', id: 'swamp', name: 'The Mire', level: 4 });

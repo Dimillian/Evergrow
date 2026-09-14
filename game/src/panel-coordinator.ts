@@ -5,7 +5,7 @@ export interface PanelHooks {
   clearInput(preserveMovement?: boolean): void; changed(phase: GamePhase): void; resumeGameplay(): void; save(): void;
 }
 const OPEN_FROM: Record<PanelPhase, readonly GamePhase[]> = {
-  lootLog: ['playing', 'paused'],
+  lootLog: ['playing', 'paused', 'character'],
   chronicle: ['playing','paused','character'], journeys: ['playing','paused'], event: ['playing'], service: ['playing'], map: ['playing','paused'], character: ['playing','paused', 'character', 'skills'], skills: ['playing','paused', 'character', 'skills'],
 };
 /** One control-context owner. Panel views own their focus traps; this owner closes
@@ -24,7 +24,7 @@ export class PanelCoordinator {
     if (this.holdingMap) this.transition('map', true);
     else this.toggle('map');
   }
-  private chronicleReturn: 'playing'|'paused'|'character' = 'playing';
+  private characterChildReturn: 'playing'|'paused'|'character' = 'playing';
   private returnToPause = false;
   private readonly panels: Record<PanelPhase, PanelLifecycle>;
   private readonly hooks: PanelHooks;
@@ -34,7 +34,7 @@ export class PanelCoordinator {
   canOpen(panel: PanelPhase): boolean { return OPEN_FROM[panel].includes(this.holdingMap ? 'playing' : this.current); }
   open(panel: PanelPhase): boolean {
     if (!this.canOpen(panel) || this.current === panel && !this.holdingMap) return false;
-    if(panel==='chronicle')this.chronicleReturn=this.current==='paused'?'paused':this.current==='character'?'character':'playing';
+    if(panel==='chronicle'||panel==='lootLog')this.characterChildReturn=this.current==='paused'?'paused':this.current==='character'?'character':'playing';
     this.transition(panel, true); return true;
   }
   toggle(panel: PanelPhase): boolean { return this.current === panel ? this.resume() : this.open(panel); }
@@ -44,7 +44,7 @@ export class PanelCoordinator {
   }
   resume(): boolean {
     if (this.current !== 'paused' && !this.activePanel) return false;
-    const next = this.current === 'chronicle' ? this.chronicleReturn : this.current !== 'paused' && this.returnToPause ? 'paused' : 'playing';
+    const next = this.current === 'chronicle' || this.current === 'lootLog' ? this.characterChildReturn : this.current !== 'paused' && this.returnToPause ? 'paused' : 'playing';
     this.transition(next); return true;
   }
   /** Explicit lifecycle changes: character entry, title return and defeat use the same cleanup. */

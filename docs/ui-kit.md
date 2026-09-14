@@ -1,6 +1,6 @@
 # Evergrow interface kit
 
-The [Loot log](loot-log.md) adds a shared Astral history window with newest-first pickup rows and the existing item detail/term presentation. Its button sits under the transient pickup feed, and the pause menu’s Adventure category provides keyboard/controller access and restores focus to its Loot log entry on return. Opening it uses `PanelCoordinator`; historical items have no mutation actions.
+The [Loot log](loot-log.md) adds a shared Astral history window with newest-first pickup rows and the existing item detail/term presentation. Its loot bag button sits beside Auto-sort in the inventory and returns to the inventory when closed, and the pause menu’s Adventure category provides keyboard/controller access and restores focus to its Loot log entry on return. Opening it uses `PanelCoordinator`; historical items have no mutation actions.
 
 The interface combines dark slate surfaces, fine brass edges, warm text, muted jade actions, and Pixelify Sans lettering paired with clear Barlow numerals. Ornament stays at the edges; content and actions get generous space. World post-processing never touches UI text or controls.
 
