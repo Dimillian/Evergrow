@@ -197,7 +197,7 @@ function embeddedReview() {
     const settings: RenderSettings = { phase: view === 'dead' ? 'dead' : view === 'ready' ? 'ready' : 'paused',
       reducedMotion: true, fps: 0, debug: false };
     renderer.render(simulation, world, 1, settings);
-    postfx.render(renderer.canvas, view === 'dead' ? .25 : 0);
+    postfx.render(renderer.canvas, view === 'dead' ? .25 : 0, undefined, view === 'ready' ? 0 : 1);
     ground!.drawImage(display, 0, 0);
     ui!.setTransform(shell.uiCanvas.width / renderer.width, 0, 0, shell.uiCanvas.height / renderer.height, 0, 0);
     if (view !== 'ready') renderer.renderUI(ui!, simulation, world, settings);

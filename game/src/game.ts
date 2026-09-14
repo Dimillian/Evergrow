@@ -70,6 +70,7 @@ import { isWorldSeed } from './world-seed.ts';
 import { Simulation } from './simulation.ts';
 import { Renderer } from './renderer.ts';
 import { PostFX } from './postfx.ts';
+import { advancePauseTransition } from './pause-transition.ts';
 import { GameAudio } from './audio.ts';
 import { Exploration } from './exploration.ts';
 import { WorldMap } from './world-map.ts';
@@ -153,6 +154,10 @@ export class Game {
   private get hallBusy() { return this._hallBusy; }
   private set hallBusy(value: boolean) { this._hallBusy=value; this.titleScreen?.setBusy(value); }
   private savingAction = false;
+  private pauseTransition = 0;
+  private get simulationActive(): boolean {
+    return this.phase === 'playing' && !this.savingAction && !this.shell.shortcutMenu.isOpen;
+  }
   private nextEventClaim = 0;
   private actionPending: Promise<unknown> = Promise.resolve();
   private autosave: Promise<boolean> | null = null;
@@ -1067,7 +1072,7 @@ export class Game {
     this.touch.update(this.sim.player,this.phase,this.savingAction,now,this.sim.groundEffects);
     this.renderer.gamepadActive = this.usingGamepad;
     this.shell.setGamepadActive(this.usingGamepad);
-    if (this.phase === 'playing' && !this.savingAction && !this.shell.shortcutMenu.isOpen) {
+    if (this.simulationActive) {
       // The simulation owns the fixed 120 Hz clock and render interpolation.
       this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
       this.sim.setCombatViewport(this.renderer.combatViewport);
@@ -1119,6 +1124,7 @@ export class Game {
     this.renderer.navigationVisible = !(this.touch.active && (window.innerWidth < 620 || this.touch.phoneLandscape));
     this.shell.setNavigationVisible(this.renderer.navigationVisible);
     this.journeys.update();
+    this.pauseTransition = advancePauseTransition(this.pauseTransition, !this.simulationActive, dt, this.reducedMotion);
     const settings = {
       showGroundLootNames: this.groundLootNames === 'always' || this.revealLootHeld || this.touch.active || this.usingGamepad,
       reducedMotion: this.reducedMotion, phase: this.phase, fps: this.fps, debug: this.debug,
@@ -1131,7 +1137,7 @@ export class Game {
     this.renderer.render(this.sim, this.world, dt, settings);
     this.performance.end('world', renderStart);
     const fxStart = this.performance.start();
-    this.fx.render(this.renderer.canvas, this.renderer.hurt, this.renderer.emission);
+    this.fx.render(this.renderer.canvas, this.renderer.hurt, this.renderer.emission, this.pauseTransition);
     this.performance.end('postfx', fxStart);
     const uiStart = this.performance.start();
     const ui = this.uiContext;

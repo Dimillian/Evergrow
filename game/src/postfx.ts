@@ -64,6 +64,7 @@ const compositeFragment = precision + damage + `
 uniform sampler2D u_scene;
 uniform sampler2D u_bloom;
 uniform vec2 u_size;
+uniform float u_pause;
 void main() {
   vec3 original = texture2D(u_scene, v_uv).rgb;
   float edge = smoothstep(.17, .7, length(v_uv - .5));
@@ -94,7 +95,15 @@ void main() {
              : column < 2. ? vec3(.9775, 1.045, .9775) : vec3(.9775, .9775, 1.045);
   color *= mix(vec3(1.), mask, .4 + .6 * smoothstep(.04, .55, luma));
   color *= vec3(1.02, 1.01, 1.);
-  gl_FragColor = vec4(damageTint(color), 1.);
+  color = damageTint(color);
+  // A soft circular transition drains color outward, then retracts on resume.
+  // Aspect correction keeps the wave circular on wide and portrait displays.
+  vec2 aspect = vec2(u_size.x / u_size.y, 1.);
+  float distance = length((v_uv - .5) * aspect) / length(.5 * aspect);
+  float front = u_pause * 1.24 - .12;
+  float gray = 1. - smoothstep(front - .12, front + .12, distance);
+  color = mix(color, vec3(dot(color, vec3(.2126, .7152, .0722))), gray);
+  gl_FragColor = vec4(color, 1.);
 }`;
 
 interface Pass {
@@ -192,7 +201,7 @@ export class PostFX {
     try {
       this.bright = this.makePass(brightFragment, ['u_scene', 'u_size', 'u_emission', 'u_selective']);
       this.blur = this.makePass(blurFragment, ['u_scene', 'u_direction']);
-      this.composite = this.makePass(compositeFragment, ['u_scene', 'u_bloom', 'u_size', 'u_hurt']);
+      this.composite = this.makePass(compositeFragment, ['u_scene', 'u_bloom', 'u_size', 'u_hurt', 'u_pause']);
       this.buffer = gl.createBuffer();
       if (!this.buffer) throw new Error('Could not allocate the display geometry');
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
@@ -241,7 +250,7 @@ export class PostFX {
   }
 
   /** The source contains only the world; native-resolution UI is composed later. */
-  render(source: HTMLCanvasElement, hurt: number, emission?: HTMLCanvasElement) {
+  render(source: HTMLCanvasElement, hurt: number, emission?: HTMLCanvasElement, pause = 0) {
     if (this.lost || this.disposed || !source.width || !source.height) return;
     const gl = this.gl;
     if (gl && this.scene && this.bright && this.blur && this.composite) {
@@ -270,10 +279,13 @@ export class PostFX {
       this.use(this.composite, this.scene, null);
       gl.uniform2f(this.composite.uniforms.u_size, this.sourceWidth, this.sourceHeight);
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, a.texture);
+      gl.uniform1f(this.composite.uniforms.u_pause, Math.max(0, Math.min(1, pause)));
       gl.uniform1f(this.composite.uniforms.u_hurt, hurtAmount); gl.drawArrays(gl.TRIANGLES, 0, 6);
     } else if (this.fallback) {
       this.fallback.imageSmoothingEnabled = false;
+      this.fallback.filter = `grayscale(${Math.max(0, Math.min(1, pause))})`;
       this.fallback.drawImage(source, 0, 0, this.canvas.width, this.canvas.height);
+      this.fallback.filter = 'none';
     }
   }
 

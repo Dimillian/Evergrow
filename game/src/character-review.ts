@@ -190,7 +190,7 @@ function background() {
   shell.canvas.width = Math.round(w * density); shell.canvas.height = Math.round(h * density);
   renderer.resize(Math.round(680 * w / h), 680);
   renderer.render(sim, world, 0, { phase: 'paused', reducedMotion: true, debug: false, fps: 60 });
-  fx.render(renderer.canvas, 0);
+  fx.render(renderer.canvas, 0, undefined, selected === 'hud' ? 0 : 1);
   shell.uiCanvas.width = Math.round(w * density); shell.uiCanvas.height = Math.round(h * density);
   const ui = shell.uiCanvas.getContext('2d')!;
   ui.setTransform(shell.uiCanvas.width / renderer.width, 0, 0, shell.uiCanvas.height / renderer.height, 0, 0);

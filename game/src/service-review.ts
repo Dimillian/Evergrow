@@ -57,7 +57,7 @@ renderer.cameraX = p.x; renderer.cameraY = p.y - 40;
 function draw() {
   shell.canvas.width = Math.round(innerWidth * Math.min(1.6, devicePixelRatio)); shell.canvas.height = Math.round(innerHeight * Math.min(1.6, devicePixelRatio));
   renderer.resize(Math.round(680 * innerWidth / innerHeight), 680);
-  renderer.render(sim, world, 0, { phase: 'paused', reducedMotion: true, debug: false, fps: 60 }); fx.render(renderer.canvas, 0);
+  renderer.render(sim, world, 0, { phase: 'paused', reducedMotion: true, debug: false, fps: 60 }); fx.render(renderer.canvas, 0, undefined, 1);
 }
 shell.showMenu('service', 0, 0); draw();
 if (params.get('view') !== 'town') {
