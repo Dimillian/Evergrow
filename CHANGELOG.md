@@ -1,5 +1,27 @@
 # Evergrow changelog
 
+## v0.6.2 — 2026-09-14T16:17:00Z
+
+### New
+
+- Rifts gain slowly pulsing crimson fissures, floating stone fragments and violet lightning that gathers as the guardian approaches.
+- Each rift biome gains subtle corrupted roots, fractured ice or glowing mineral veins around its clearing borders.
+
+### Tweaks
+
+- Looted charms enter your normal inventory. Move them into the charm grid when you want their bonuses active.
+- Melee weapons and bows use focused attack affixes; melee weapons no longer roll caster bonuses.
+- Weapon damage affixes matter more, while material bonuses matter less, giving strong rolls a better chance to beat a fancier base.
+- Random glove attack and cast speed bonuses are reduced. Unique item stats and powers are unchanged.
+- Gear power now reflects affix strength and actual weapon quality, making stronger rolls easier to spot.
+
+### Fixes
+
+- Skill presses during action recovery are remembered briefly, making spells such as Meteor and Cataclysm respond more reliably.
+- Rift clearings retain their biome's ground detail, and enlarged trees and rocks render more sharply.
+
+> Characters and progress are preserved. Existing regular weapons and gloves receive the new balance values; obsolete caster affixes on melee weapons are replaced with suitable bonuses. Existing active charms stay active. Reload the game to apply this update.
+
 ## v0.6.1 — 2026-09-14T13:48:00Z
 
 ### New
