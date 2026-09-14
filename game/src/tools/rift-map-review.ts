@@ -21,8 +21,9 @@ export function mountRiftMapReview(root:HTMLElement,params:URLSearchParams):()=>
   const display=document.createElement('canvas');display.width=1100;display.height=900;
   const post=new PostFX(display);
   let world:RiftWorld|undefined;
-  root.innerHTML=`<section class="ui-window" style="position:absolute;inset:16px 16px 48px;overflow:hidden"><header class="ui-window-header" style="flex-wrap:wrap"><h2 class="ui-title" style="flex:1 0 140px;white-space:nowrap;margin:0">Open-world rift</h2><select aria-label="Biome" class="ui-select">${BIOME_IDS.map(id=>`<option value="${id}" ${id===biome?'selected':''}>${escapeUI(BIOMES[id].name)}</option>`).join('')}</select><button class="ui-button" data-scene>View pack</button><button class="ui-button" data-next>New layout</button><a class="ui-button" href="/tools/rifts.html">Portal UI</a></header><div style="flex:1;min-height:0;display:grid;place-items:center;background:#071018"><canvas width="1100" height="900" aria-label="Complete generated rift layout" style="width:100%;height:100%;object-fit:contain"></canvas></div><footer class="ui-window-footer" style="display:block;padding:12px 18px"><p data-summary style="margin:0 0 4px"></p><small data-caption></small></footer></section>`;
-  const canvas=root.querySelector('canvas')!,c=canvas.getContext('2d')!;
+  root.innerHTML=`<section class="ui-window" style="position:absolute;inset:16px 16px 48px;overflow:hidden"><header class="ui-window-header" style="flex-wrap:wrap"><h2 class="ui-title" style="flex:1 0 140px;white-space:nowrap;margin:0">Open-world rift</h2><select aria-label="Biome" class="ui-select">${BIOME_IDS.map(id=>`<option value="${id}" ${id===biome?'selected':''}>${escapeUI(BIOMES[id].name)}</option>`).join('')}</select><button class="ui-button" data-scene>View pack</button><button class="ui-button" data-next>New layout</button><a class="ui-button" href="/tools/rifts.html">Portal UI</a></header><div style="flex:1;min-height:0;display:grid;place-items:center;background:#071018"><img alt="Generated open-world rift" style="width:100%;height:100%;object-fit:contain"/></div><footer class="ui-window-footer" style="display:block;padding:12px 18px"><p data-summary style="margin:0 0 4px"></p><small data-caption></small></footer></section>`;
+  const image=root.querySelector('img')!,canvas=document.createElement('canvas');canvas.width=1100;canvas.height=900;
+  const c=canvas.getContext('2d')!;
   const draw=()=>{
     // Select an actual world seed with this starting climate; never paint a fake biome.
     while(startingBiome(seed)!==biome)seed=(seed+1)>>>0;
@@ -53,6 +54,7 @@ export function mountRiftMapReview(root:HTMLElement,params:URLSearchParams):()=>
     const entry=screen(floor.entry.x,floor.entry.y-240),boss=floor.members.find(m=>m.id==='warden')!,end=screen(boss.x,boss.y-400);
     text(c,'ENTRY',entry.x,entry.y,1.1,'#d7e5df','center');text(c,'GUARDIAN',end.x,end.y,1.1,'#f1bbc9','center');
     }
+    image.src=canvas.toDataURL('image/png');image.alt=scene?'Rift pack in the actual game world':'Complete generated open-world rift map';
     root.querySelector('[data-scene]')!.textContent=scene?'View map':'View pack';
     root.querySelector('[data-caption]')!.textContent=scene?'Frozen scene · Actual game renderer and generated enemies':'Full terrain revealed for preview · Dots show monster spawns';
     const counts=(['normal','veteran','elite'] as const).map(rank=>floor.members.filter(m=>m.id!=='warden'&&m.rank===rank).length);

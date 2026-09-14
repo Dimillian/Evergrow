@@ -1,3 +1,4 @@
+import { RIFT_FIELD } from './rift-floor.ts';
 import { isWildernessBoss } from './wilderness-boss-content.ts';
 import { encounterApproaches } from './encounter-approaches.ts';
 import { advanceDungeonEvents } from './dungeon-events.ts';
@@ -36,11 +37,11 @@ export function updateDungeon(sim: Simulation, view: SpawnExclusion | null, dt=1
         run.explored.push(room.id);
     if (!view) return;
     const last=admissions.get(sim);
-    const admitEvents=!last||last.run!==run||sim.time<last.at||sim.time-last.at>=(run.rift?.25:.5);
+    const admitEvents=!last||last.run!==run||sim.time<last.at||sim.time-last.at>=(run.rift?RIFT_FIELD.admissionInterval:.5);
     if(run.rift&&!admitEvents)return;
     if(admitEvents)admissions.set(sim,{run,at:sim.time});
     if(run.rift)for(const sector of floor.rooms)if(Math.hypot(sector.x+sector.width/2-sim.player.x,sector.y+sector.height/2-sim.player.y)<900&&!run.explored.includes(sector.id))run.explored.push(sector.id);
-    sim.enemies = sim.enemies.filter(e => e.state === 'dead' || !(Math.hypot(e.x - sim.player.x, e.y - sim.player.y) > 1400 && isEnemyInactive(e) && isSpawnHidden(e.x, e.y, view, e.radius)));
+    sim.enemies = sim.enemies.filter(e => e.state === 'dead' || !(Math.hypot(e.x - sim.player.x, e.y - sim.player.y) > (run.rift?RIFT_FIELD.retirementRange:1400) && isEnemyInactive(e) && isSpawnHidden(e.x, e.y, view, e.radius)));
     const present=new Set(sim.enemies.map(e=>e.campMemberId)), roster=roomRosters(floor);
     for (const room of [...floor.rooms].sort((a, b) => Math.hypot(a.x + a.width / 2 - sim.player.x, a.y + a.height / 2 - sim.player.y) - Math.hypot(b.x + b.width / 2 - sim.player.x, b.y + b.height / 2 - sim.player.y))) {
         if (Math.hypot(room.x + room.width / 2 - sim.player.x, room.y + room.height / 2 - sim.player.y) > 2100)
@@ -56,6 +57,7 @@ export function updateDungeon(sim: Simulation, view: SpawnExclusion | null, dt=1
         for (const m of members) {
             const s = run.states[m.id];
             const radius=ENEMY_DEFINITIONS[m.kind].radius;
+            if(run.rift&&Math.hypot(s.x-sim.player.x,s.y-sim.player.y)>RIFT_FIELD.admissionRange)continue;
             if(event&&!s.admitted){
                 const point=approaches.find(p=>sim.enemies.every(e=>e.hp<=0||Math.hypot(e.x-p.x,e.y-p.y)>e.radius+radius+10));
                 if(!point)continue;s.x=point.x;s.y=point.y;

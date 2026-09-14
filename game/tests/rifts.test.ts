@@ -6,6 +6,8 @@ import { itemFootprint } from '../src/inventory-grid.ts';
 import { defaultEquipmentSlot } from '../src/inventory.ts';
 import { improvementProblem } from '../src/item-improvement.ts';
 import { generateDungeon, dungeonBlocked } from '../src/dungeon.ts';
+import { updateDungeon } from '../src/dungeon-runtime.ts';
+import { isSpawnHidden } from '../src/spawn-visibility.ts';
 import { currentDungeon } from '../src/dungeon-state.ts';
 import { validExpeditions } from '../src/dungeon-validation.ts';
 import { planDungeonTravel, claimDungeonChest, dungeonChestProblem } from '../src/dungeon-command.ts';
@@ -179,4 +181,18 @@ test('key movement modifiers apply to guardian pursuit without changing attack g
  sim.player.x=boss.x+500;sim.player.y=boss.y;
  let speed=0;updateWildernessBoss(boss,1/120,{player:sim.player,enemies:[boss],world:surface,time:0,trial:null,visible:()=>true,move:(_e,vx,vy)=>{speed=Math.hypot(vx,vy);},hurt:()=>{},shoot:()=>{},emit:()=>{}});
  assert.ok(Math.abs(speed-ENEMY_DEFINITIONS[boss.kind].speed*1.20)<1e-8);
+});
+
+
+test('open-world rift streaming retains nearby packs without visible births or stationary respawn churn',async()=>{
+ const {sim}=await setup(false);
+ updateDungeon(sim,null);assert.equal(sim.enemies.length,0);
+ const view={x:-400,y:-300,width:800,height:600};updateDungeon(sim,view);
+ assert.ok(sim.enemies.length>64,'multiple large packs populate around the arrival');
+ assert.ok(sim.enemies.every(e=>isSpawnHidden(e.x,e.y,view,e.radius)));
+ assert.ok(sim.enemies.every(e=>Math.hypot(e.x,e.y)<=RIFT_FIELD.admissionRange));
+ const ids=sim.enemies.map(e=>e.id).sort((a,b)=>a-b);
+ for(let i=0;i<8;i++){sim.time+=RIFT_FIELD.admissionInterval;updateDungeon(sim,view);}
+ assert.deepEqual(sim.enemies.map(e=>e.id).sort((a,b)=>a-b),ids,'stationary actors retain identities');
+ assert.equal(sim.enemies.some(e=>e.campMemberId==='warden'),false);
 });
