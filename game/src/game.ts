@@ -525,6 +525,7 @@ export class Game {
     this.uiCanvas.height = Math.round(height * uiRatio);
     const logicalHeight = Math.min(680, Math.max(450, Math.round(height / 1.35)));
     this.renderer.resize(Math.max(this.touch?.active ? 1 : 540, Math.round(logicalHeight * width / height)), logicalHeight);
+    this.renderer.cursorPixelScale = { x: this.renderer.width / width, y: this.renderer.height / height };
     this.touch?.refreshLayout();
     this.renderer.touchViewport = this.touch?.viewport ?? null;
     this.renderer.touchTopInset = (this.touch?.safeTop ?? 0) * this.renderer.height / height;

@@ -8,6 +8,8 @@ Bindings use physical keyboard positions. Escape remains pause/back and cancels 
 
 ## Default keyboard and mouse layout
 
+**Keyboard & mouse → Gameplay cursor** offers four styles: Crosshair (ivory, the default), Halo (cyan ring), Diamond (gold), and Arrow (white pointer, aiming at its tip). Compact shape buttons and the size slider sit beside a square actual-size preview, stacking on narrow screens. Size ranges from 50% to 250% in 10% steps, defaulting to 100%. The preview updates immediately at the exact in-game size across dark and light backgrounds; the shape buttons use fixed-size thumbnails. Each cursor has a dark outline and keeps its chosen screen size at every camera zoom, drawn above the world CRT treatment. Shape and size save independently on this device across characters and reloads, with a session-only notice if storage is unavailable. Restore defaults restores Crosshair at 100%. Menus retain their usual pointer and controller/touch aiming remains unchanged. No character progress is reset.
+
 | Control | Action |
 | --- | --- |
 | WASD / arrow keys | Move |

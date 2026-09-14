@@ -1,4 +1,5 @@
-import { controls } from './control-preferences.ts';
+import { controls, cursorPreference } from './control-preferences.ts';
+import { drawMouseCursor } from './cursor-art.ts';
 import type { ActiveBuff } from './active-buffs.ts';
 import { drawPlayerSkillEffects, drawConductor, drawHarvestMark } from './player-skill-art.ts';
 import { skyAtTime, skyAtHour, type SkyState } from './world-time.ts';
@@ -119,6 +120,8 @@ export class Renderer {
   pointerX = 0;
   pointerY = 0;
   pointerActive = true;
+  /** Logical units per CSS pixel, supplied by the runtime viewport on resize. */
+  cursorPixelScale = { x: 1, y: 1 };
   inspectedEnemyId: number | null = null;
   shake = 0;
   hurt = 0;
@@ -619,7 +622,6 @@ export class Renderer {
       }
       this.drawPortalHints(c, sim, world);
       drawEventUI(c, sim, world, (x,y) => worldToScreen(this.view,x,y), this.gamepadActive, this.eventSites, this.eventProgressPresentation.view);
-      this.cursor(c, sim);
       const npcs = this.cachedBuildings.flatMap(b => { const npc = buildingNPC(b); return npc ? [npc] : []; });
       const npc = focusNPC(npcs, p, world);
       if (npc) {
@@ -630,6 +632,7 @@ export class Renderer {
         c.strokeStyle = NPC_COLORS[npc.role] + '90'; c.strokeRect(point.x - width / 2, point.y - 14, width, 23);
         c.fillStyle = '#e1dfcd'; c.fillText(label, point.x, point.y + 2); c.restore();
       }
+      this.cursor(c, sim);
     }
   }
 
@@ -1009,6 +1012,12 @@ export class Renderer {
         }
         c.restore();
       }
+    }
+    if (!this.gamepadActive && !this.touchActive) {
+      c.save(); c.translate(x, y); c.scale(this.cursorPixelScale.x, this.cursorPixelScale.y);
+      drawMouseCursor(c, cursorPreference.style, 0, 0, cursorPreference.size);
+      c.restore();
+      return;
     }
     c.strokeStyle = target ? '#bee9d9' : this.enemyFocus.hoveredId === null ? '#ded5a9dd' : '#efb398'; c.lineWidth = 1; c.beginPath();
     c.moveTo(x - 6, y); c.lineTo(x - 3, y); c.moveTo(x + 3, y); c.lineTo(x + 6, y);
