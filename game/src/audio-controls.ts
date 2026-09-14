@@ -7,7 +7,7 @@ export interface AudioControlActions {
   panelSound?(open: boolean): void;
 }
 export function audioControlsMarkup(includeMute = false) {
-  return `<div class="audio-sliders">${includeMute ? '<div class="audio-master"><span>Sound</span><button type="button" data-audio-mute aria-pressed="true">On</button></div>' : ''}${(['music', 'sfx'] as const).map(channel => `<label class="audio-slider"><span>${channel === 'music' ? 'Music' : 'SFX'}</span><input type="range" data-audio-volume="${channel}" aria-label="${channel === 'music' ? 'Music volume' : 'Sound effects volume'}" min="0" max="100" step="5" value="${DEFAULT_AUDIO[channel] * 100}"><output>${DEFAULT_AUDIO[channel] * 100}%</output></label>`).join('')}</div>`;
+  return `<div class="audio-sliders">${includeMute ? '<div class="audio-master"><span>Sound</span><button type="button" data-audio-mute aria-pressed="true">On</button></div>' : ''}${(['master', 'music', 'sfx'] as const).map(channel => `<label class="audio-slider"><span>${channel === 'master' ? 'Master' : channel === 'music' ? 'Music' : 'SFX'}</span><input type="range" data-audio-volume="${channel}" aria-label="${channel === 'master' ? 'Master volume' : channel === 'music' ? 'Music volume' : 'Sound effects volume'}" min="0" max="100" step="5" value="${DEFAULT_AUDIO[channel] * 100}"><output>${DEFAULT_AUDIO[channel] * 100}%</output></label>`).join('')}</div>`;
 }
 export function bindAudioControls(root: HTMLElement, actions: AudioControlActions, signal: AbortSignal) {
   const refresh = () => {
@@ -27,7 +27,7 @@ export function bindAudioControls(root: HTMLElement, actions: AudioControlAction
     refresh();
   }, { signal });
   root.addEventListener('change', event => {
-    if ((event.target as HTMLElement).matches('[data-audio-volume=sfx]')) actions.panelSound?.(true);
+    if ((event.target as HTMLElement).matches('[data-audio-volume=sfx], [data-audio-volume=master]')) actions.panelSound?.(true);
   }, { signal });
   refresh(); return refresh;
 }
