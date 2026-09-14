@@ -30,5 +30,6 @@ export const ENEMY_BODY_BOUNDS: Record<EnemyKind, { radiusX: number; top: number
   wisp: { radiusX: 18, top: -49, bottom: -4 },
 };
 
-/** Rank-aware visible bounds keep focus, aiming and captions aligned with enlarged creatures. */
-export function enemyBodyBounds(enemy:Pick<Enemy,'kind'> & Partial<Pick<Enemy,'rank'>>){const b=ENEMY_BODY_BOUNDS[enemy.kind],scale=enemyVisualScale({...enemy,rank:enemy.rank??'normal'});return scale===1?b:{radiusX:b.radiusX*scale,top:b.top*scale,bottom:b.bottom*scale,...(b.headTop===undefined?{}:{headTop:b.headTop*scale})};}
+/** Rank-aware visible bounds keep focus, aiming and captions aligned without per-frame allocation. */
+const rankedBounds=new Map(Object.entries(ENEMY_BODY_BOUNDS).map(([kind,base])=>[kind,Object.fromEntries((['normal','veteran','elite'] as const).map(rank=>{const scale=enemyVisualScale({kind:kind as EnemyKind,rank});return [rank,Object.freeze({radiusX:base.radiusX*scale,top:base.top*scale,bottom:base.bottom*scale,...(base.headTop===undefined?{}:{headTop:base.headTop*scale})})];}))]));
+export function enemyBodyBounds(enemy:Pick<Enemy,'kind'> & Partial<Pick<Enemy,'rank'>>){return rankedBounds.get(enemy.kind)![enemy.rank??'normal'];}

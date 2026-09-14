@@ -23,3 +23,5 @@ Champions have one seeded modifier and 14% larger art; elites have two distinct 
 `DungeonEntrance.rift`, `DungeonRun.rift` and `Expeditions.rifts` are optional save fields, so existing characters retain their progress. `ItemKind.riftKey` uses canonical validation and a 1×2 normal-inventory footprint. Keys cannot be equipped or improved. Level, key lock/ownership and stale-attempt checks happen in the durable entry transaction. Failed and abandoned rifts retire on exit; normal expedition routes remain separate.
 
 The local runtime entry UI is available in World → Crimson Rifts (`/tools/rifts.html`). It uses disposable memory, the actual panel and procedural portal art; no playable saves are accessed.
+
+Verification: all 1,462 headless tests and the production build passed for the first integrated checkpoint. Follow-up checks cover shared rank-aware aiming and cached key modifiers. The narrow panel keeps its frame and actions outside the scrollable body. Balance timings remain targets pending player gameplay feedback.

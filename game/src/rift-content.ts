@@ -16,19 +16,23 @@ export const RIFT_HAZARDS = [
 ] as const;
 export const RIFT_BOONS = [
   {id:'gold',name:'Gilded',label:'Chest gold',unit:'%',base:35,step:25},
-  {id:'fortune',name:'Fortunate',label:'Rare-tier chest weights',unit:'%',base:25,step:20},
+  {id:'fortune',name:'Fortunate',label:'Chest magic find',unit:'%',base:25,step:20},
   {id:'bounty',name:'Bountiful',label:'Extra chest items',unit:'',base:1,step:1},
 ] as const;
 export interface RiftModifier { id:string; label:string; value:number; unit:string; beneficial:boolean }
-export function riftModifiers(tag:RiftTag):RiftModifier[] {
-  if(tag.keySeed===undefined||tag.keyTier===undefined)return [];
+const modifierCache=new WeakMap<RiftTag,{seed:number;tier:number;modifiers:readonly RiftModifier[]}>();
+const NO_MODIFIERS:readonly RiftModifier[]=Object.freeze([]);
+export function riftModifiers(tag:RiftTag):readonly RiftModifier[] {
+  if(tag.keySeed===undefined||tag.keyTier===undefined)return NO_MODIFIERS;
+  const cached=modifierCache.get(tag);if(cached&&cached.seed===tag.keySeed&&cached.tier===tag.keyTier)return cached.modifiers;
   const random=riftRandom(tag.keySeed^0x719bef21), tier=tag.keyTier;
   const hazards=[...RIFT_HAZARDS],boons=[...RIFT_BOONS];
   const roll=(pool:typeof hazards|typeof boons,count:number,beneficial:boolean)=>Array.from({length:count},()=>{
     const d=pool.splice(Math.floor(random()*pool.length),1)[0];
     return {id:d.id,label:d.label,value:d.base+d.step*(tier-1),unit:d.unit,beneficial};
   });
-  return [...roll(hazards,Math.min(3,1+Math.floor(tier/2)),false),...roll(boons,Math.min(3,1+Math.floor((tier-1)/2)),true)];
+  const modifiers=[...roll(hazards,Math.min(3,1+Math.floor(tier/2)),false),...roll(boons,Math.min(3,1+Math.floor((tier-1)/2)),true)];
+  modifiers.forEach(Object.freeze);Object.freeze(modifiers);modifierCache.set(tag,{seed:tag.keySeed,tier,modifiers});return modifiers;
 }
 export function riftBonus(tag:RiftTag|undefined,id:string):number {return tag?riftModifiers(tag).find(m=>m.id===id)?.value??0:0;}
 export function createRiftKey(seed:number,level:number,tier=1):Item {
