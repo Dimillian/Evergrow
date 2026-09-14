@@ -1,0 +1,12 @@
+.map-icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,285px),1fr));gap:16px;margin-top:20px}
+.map-icon-card{min-width:0;padding:18px;border:1px solid #344950;background:#111e26}
+.map-icon-card h2{margin:0 0 6px;font-size:20px;font-weight:400}
+.map-icon-card code{font-size:12px;overflow-wrap:anywhere;color:#a5bcb8}
+.map-icon-card p{font-size:14px;min-height:42px}
+.map-icon-card canvas{display:block;width:100%;height:224px;margin:14px 0;border:1px solid #344950}
+.map-icon-card footer{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.map-icon-card button{padding:6px 10px;font-size:13px}
+.map-icon-swatch{display:inline-block;width:10px;height:10px;margin-right:7px;background:var(--swatch)}
+.map-icon-toolbar input{width:min(280px,70vw)}
+.map-icon-notes{max-width:1000px}
+.map-icon-toolbar button[aria-pressed=true]{background:#33483e;border-color:#b1c18d;color:#f0e6bb}

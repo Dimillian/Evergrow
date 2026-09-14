@@ -1,3 +1,4 @@
+import { drawDungeonMapIcon, type DungeonMapIcon } from './dungeon-map-icon-art.ts';
 import { dungeonChestMask } from './expedition-route.ts';
 import { worldTimeLabel } from './world-time.ts';
 import { dungeonTheme, DUNGEON_EVENTS } from './dungeon-content.ts';
@@ -53,36 +54,21 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
         c.fillStyle=prop.kind==='pool'?'#6bb3c455':theme.wall+'70';
         c.fillRect(prop.x-14,prop.y-20,28,40);
     }
-    for(const event of f.events??[])if(seen.has(event.room)){
-        c.strokeStyle=run.events?.[event.id]?.finished?'#688879':theme.accent;c.lineWidth=2/zoom;
-        c.beginPath();c.arc(event.x,event.y,7/zoom,0,7);c.stroke();
-    }
-    f.chests.forEach((ch, i) => { if (seen.has(ch.room)) {
-        c.fillStyle = (run.chestMasks[i] & dungeonChestMask(run,i)) === dungeonChestMask(run,i) ? '#506459' : '#e7c485';
-        c.fillRect(ch.x - 4 / zoom, ch.y - 3 / zoom, 8 / zoom, 6 / zoom);
-    } });
-    c.strokeStyle = '#a9decc';
-    c.lineWidth = 2 / zoom;
-    c.beginPath();
-    c.arc(f.entry.x, f.entry.y, 5 / zoom, 0, 7);
-    c.stroke();
-    if (seen.has(f.rooms.find(r=>r.kind==='boss')!.id)) {
+    const icon = (kind: DungeonMapIcon, x: number, y: number, completed = false, angle = 0) => {
+        c.save(); c.translate(x, y); c.scale(1 / zoom, 1 / zoom);
+        drawDungeonMapIcon(c, kind, 0, 0, completed, theme.accent, angle); c.restore();
+    };
+    for (const event of f.events ?? []) if (seen.has(event.room))
+        icon(event.kind, event.x, event.y, !!run.events?.[event.id]?.finished);
+    f.chests.forEach((ch, i) => { if (seen.has(ch.room))
+        icon('chest', ch.x, ch.y, (run.chestMasks[i] & dungeonChestMask(run, i)) === dungeonChestMask(run, i));
+    });
+    icon('entry', f.entry.x, f.entry.y);
+    if (seen.has(f.rooms.find(r => r.kind === 'boss')!.id)) {
         const b = f.members.find(m => m.id === 'warden')!;
-        c.fillStyle = run.states.warden.hp > 0 ? '#e48c73' : '#78887f';
-        c.beginPath();
-        c.arc(b.x, b.y, 5 / zoom, 0, 7);
-        c.fill();
+        icon('boss', b.x, b.y, run.states.warden.hp <= 0);
     }
-    c.translate(p.x, p.y);
-    c.rotate(p.angle);
-    c.fillStyle = '#fff0bf';
-    c.beginPath();
-    c.moveTo(8 / zoom, 0);
-    c.lineTo(-5 / zoom, -4 / zoom);
-    c.lineTo(-3 / zoom, 0);
-    c.lineTo(-5 / zoom, 4 / zoom);
-    c.closePath();
-    c.fill();
+    icon('player', p.x, p.y, false, p.angle);
     c.restore();
     drawJourneyMapMarker(c,{...box,zoom,centerX:cx,centerY:cy},marker,true);
     c.strokeStyle = '#718b85';

@@ -3,7 +3,7 @@ import type { ControlAction } from './control-bindings.ts';
 import { activeBuffs } from './active-buffs.ts';
 import { ExpeditionPanel } from './expedition-panel.ts';
 import { executeDropItem, type DropItemSource } from './drop-item-command.ts';
-import { hoveredGroundLoot, type GroundLootNameplates } from './ground-loot-hover.ts';
+import { hoveredGroundLoot, showGroundLootNames, type GroundLootNameplates } from './ground-loot-hover.ts';
 import { startDungeonEvent } from './dungeon-events.ts';
 import { encounterScaleAt } from './encounter-scaling.ts';
 import { MUSIC_FILES } from './music-content.ts';
@@ -30,7 +30,7 @@ import { TouchHUD } from './touch-hud.ts';
 import { resolveSkill } from './skill-progression.ts';
 import { skillWeapon } from './skill-content.ts';
 import { FrameProfiler } from './frame-profiler.ts';
-import { questDiamond } from './journey-marker.ts';
+import { drawJourneyDestination } from './journey-marker.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { DungeonWorld } from './dungeon-world.ts';
 import { generateDungeon, type DungeonEntrance, type DungeonChestTarget } from './dungeon.ts';
@@ -124,7 +124,6 @@ export class Game {
   get phase(): GamePhase { return this.panels?.phase ?? 'ready'; }
   private muted = false;
   private groundLootNames: GroundLootNameplates = 'always';
-  private revealLootHeld = false;
   private nextScore = 0;
   private audioPhase: GamePhase = 'ready';
   private nativeBackground = false;
@@ -379,7 +378,6 @@ export class Game {
       this.last = performance.now();
     }, { signal });
     bindGameKeyboard(window, {
-      revealLoot: held => { this.revealLootHeld = this.phase === 'playing' && held; },
       clear: () => this.clearInput(),
       release: code => this.input.keyUp(code),
       press: event => {
@@ -512,7 +510,6 @@ export class Game {
   }
 
   clearInput() {
-    this.revealLootHeld = false;
     this.touch?.clear(); this.clearWorldTouch?.();
     this.input.clear();
     this.gamepad.clear(); this.gamepadMenu.clear(); clearNativeController();
@@ -1120,7 +1117,7 @@ export class Game {
     this.shell.setNavigationVisible(this.renderer.navigationVisible);
     this.journeys.update();
     const settings = {
-      showGroundLootNames: this.groundLootNames === 'always' || this.revealLootHeld || this.touch.active || this.usingGamepad,
+      showGroundLootNames: showGroundLootNames(this.groundLootNames, controls.has('revealLoot'), this.input.held('revealLoot'), this.touch.active || this.usingGamepad),
       reducedMotion: this.reducedMotion, phase: this.phase, fps: this.fps, debug: this.debug,
     };
     if (this.phase === 'ready') {
@@ -1151,7 +1148,7 @@ export class Game {
       const marker=this.journeys.marker,point=this.renderer.worldToScreen(marker.x,marker.y);
       if(point.x>20&&point.x<this.renderer.width-20&&point.y>35&&point.y<this.renderer.height-30
         &&!isGameUIPoint(point.x,point.y-35,this.renderer.width,this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible)
-        &&hasLineOfSight(this.world,this.sim.player.x,this.sim.player.y,marker.x,marker.y))questDiamond(ui,point.x,point.y-35,8);
+        &&hasLineOfSight(this.world,this.sim.player.x,this.sim.player.y,marker.x,marker.y))drawJourneyDestination(ui,point.x,point.y-35,8);
     }
     if(this.touch.active && this.touch.input.preview && this.phase === 'playing') {
       const preview = this.touch.input.preview, p = this.sim.player;
