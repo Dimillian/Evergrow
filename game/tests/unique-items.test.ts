@@ -416,6 +416,20 @@ test('Heartwood holds without cost, releases exactly once, preserves Technique d
   for(let i=0;i<120;i++)f.sim.update(1/120,idle);assert.equal(f.p.mana,mana-cost);
  }
 });
+test('Heartwood prioritizes a newly pressed skill and waits for release before drawing again',()=>{
+ const f=fixture('heartwood-draw');f.p.derived.manaRegeneration=0;
+ f.p.character.allocatedNodes.push('skill:rainOfArrows');f.p.character.skillSlots[1]='rainOfArrows';
+ const mana=f.p.mana,cost=resolveSkill('rainOfArrows',f.p.derived,f.p.character).mana;
+ for(let i=0;i<40;i++)f.sim.update(1/120,{...idle,skillSlot:0,heldSkillSlots:[0]});
+ f.sim.update(1/120,{...idle,skillSlot:1,heldSkillSlots:[0]});
+ assert.equal(f.p.mana,mana-cost);assert.equal(f.sim.groundEffects.length,1);assert.ok((f.p.skillCooldowns.rainOfArrows??0)>0);
+ const cooldown=f.p.skillCooldowns.rainOfArrows;
+ for(let i=0;i<240;i++)f.sim.update(1/120,{...idle,skillSlot:null,heldSkillSlots:[0]});
+ assert.equal(f.p.mana,mana-cost);assert.ok((f.p.skillCooldowns.rainOfArrows??0)<cooldown!);
+ assert.equal(f.p.skillEffects?.draw,undefined);
+ f.sim.update(1/120,idle);f.sim.update(1/120,{...idle,skillSlot:0,heldSkillSlots:[0]});
+ assert.ok(f.p.skillEffects?.draw);
+});
 test('Heartwood cancels cleanly on dodge, pause, equipment removal and insufficient mana',()=>{
  for(const cancel of ['dodge','pause','gear','mana'] as const){
   const f=fixture('heartwood-draw');f.p.derived.manaRegeneration=0;

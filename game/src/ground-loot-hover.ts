@@ -1,4 +1,7 @@
 export type GroundLootNameplates = 'always' | 'ctrl';
+export function showGroundLootNames(mode: GroundLootNameplates, holdBound: boolean, holdHeld: boolean, alternateInput: boolean): boolean {
+  return mode === 'always' || !holdBound || holdHeld || alternateInput;
+}
 export interface GroundLootLabel { id: number; x: number; y: number; width: number; height: number; anchorX: number; anchorY: number; visible?: boolean; }
 export interface GroundLootVisibility {
   showAll: boolean;

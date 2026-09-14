@@ -70,7 +70,11 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
     : recipe.kind === 'projectile' && recipe.effects.groundDuration ? projectileSlots : 0;
   if (projectileSlots > context.availableProjectiles) return false;
   if (groundSlots > context.availableGroundEffects) return false;
-  if ((p.skillCooldowns[id] ?? 0) > 0 || p.mana < costs.mana) return false;
+  if ((p.skillCooldowns[id] ?? 0) > 0) return false;
+  if (p.mana < costs.mana) {
+    context.emit({ type: 'insufficient-mana', x: p.x, y: p.y, skill: id });
+    return false;
+  }
 
   const attack = deriveAttackStats(p.stats, weapon);
   const draw = id==='piercingShot'&&hasUnique(p.character,'heartwood-draw') ? Math.max(0,Math.min(1,Number.isFinite(context.drawStrength)?context.drawStrength!:0)) : 0;

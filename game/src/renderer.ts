@@ -1,4 +1,5 @@
-import { controls } from './control-preferences.ts';
+import { controls, cursorPreference } from './control-preferences.ts';
+import { drawMouseCursor } from './cursor-art.ts';
 import type { ActiveBuff } from './active-buffs.ts';
 import { drawPlayerSkillEffects, drawConductor, drawHarvestMark } from './player-skill-art.ts';
 import { skyAtTime, skyAtHour, type SkyState } from './world-time.ts';
@@ -33,6 +34,8 @@ import { cryptLights, cryptLightMask } from './dungeon-lighting.ts';
 import { drawCryptGate, drawCryptDecor, drawCryptEmission } from './dungeon-art.ts';
 import { currentDungeon } from './dungeon-state.ts';
 import { drawEventObjectives, EventArt, drawEventUI } from './poi-art.ts';
+import { eventProgress } from './event-progress.ts';
+import { EventProgressPresentation } from './event-progress-presentation.ts';
 import { drawPortal, drawTownAnchor } from './travel-art.ts';
 import { townPortalAnchor, withinPortalReach, PORTAL_RULES, type PortalAnchor } from './travel.ts';
 import { buildingNPC, focusNPC, canInteractNPC, NPC_NAMES, NPC_COLORS } from './npcs.ts';
@@ -88,6 +91,7 @@ import { EnemyDeaths } from './death-presentation.ts';
 import { drawEnemyRemains, deathDepth, resetDeathArt } from './death-art.ts';
 interface Ghost { x: number; y: number; angle: number; gait: number; life: number; }
 export interface RenderSettings {
+  liveMap?: boolean;
   showGroundLootNames?: boolean;
   reducedMotion: boolean;
   /** Save-free reviews can inspect long-session water optics without advancing gameplay. */
@@ -116,6 +120,8 @@ export class Renderer {
   pointerX = 0;
   pointerY = 0;
   pointerActive = true;
+  /** Logical units per CSS pixel, supplied by the runtime viewport on resize. */
+  cursorPixelScale = { x: 1, y: 1 };
   inspectedEnemyId: number | null = null;
   shake = 0;
   hurt = 0;
@@ -170,6 +176,7 @@ export class Renderer {
   private plateOpacity = 0;
   private rangedAim: RangedAim | null = null;
   private eventArt = new EventArt();
+  readonly eventProgressPresentation = new EventProgressPresentation();
   private get eventSites() { return this.visibility.events; }
   portalGuide = 0;
   private portalAnchors: PortalAnchor[] = [];
@@ -246,6 +253,7 @@ export class Renderer {
   }
 
   reset() {
+    this.eventProgressPresentation.reset();
     this.outdoorLightEffects.reset();
     this.dungeonLightEffects.reset(); this.emission = undefined;
     this.battleBarks.reset();
@@ -293,9 +301,10 @@ export class Renderer {
 
   render(sim: Simulation, world: World, dt: number, settings: RenderSettings) {
     const setupStart = this.profiler?.start() ?? 0;
-    const c = this.ctx, p = sim.player, active = settings.phase === 'playing';
+    const c = this.ctx, p = sim.player, active = settings.phase === 'playing' || settings.phase === 'map' && settings.liveMap === true;
     const step = active ? dt : 0, alpha = sim.interpolationAlpha;
     const feedbackStep = active || settings.phase === 'dead' ? dt : 0;
+    this.eventProgressPresentation.update(sim.dungeonFloor ? null : eventProgress(sim.eventState), feedbackStep, settings.reducedMotion);
     this.rewards.update(goldBalance(p.character), feedbackStep, settings.reducedMotion);
     this.experienceDisplay = this.experienceFeedback.update(p, feedbackStep, settings.reducedMotion);
     this.experienceDisplay.pulse = Math.max(this.experienceDisplay.pulse, this.rewards.xpPulse);
@@ -343,8 +352,8 @@ export class Renderer {
     const { offsetX, offsetY, left, top, width: worldWidth, height: worldHeight } = this.view;
     this.focusedEnemy = this.enemyFocus.update(sim.enemies, this.view,
       this.pointerActive && !this.pointerOverHUD() ? { x: this.pointerX, y: this.pointerY } : null,
-      alpha, dt, active && !p.dead, this.inspectedEnemyId);
-    if (!active || p.dead) {
+      alpha, dt, settings.phase === 'playing' && !p.dead, this.inspectedEnemyId);
+    if (settings.phase !== 'playing' || p.dead) {
       this.plateEnemy = null; this.plateOpacity = 0;
     } else {
       if (this.focusedEnemy) this.plateEnemy = this.focusedEnemy;
@@ -549,6 +558,9 @@ export class Renderer {
     if (this.touchActive) barkReserved.push({ x: 0, y: this.height - 190 * unit, width: this.width, height: 190 * unit });
     this.battleBarks.draw(c, sim, world, this.view, settings.phase === 'playing' && !p.dead,
       this.cachedProps, barkReserved, this.crownOpacity);
+    if (settings.phase === 'playing' && !p.dead) this.effects.drawManaWarning(c,
+      worldToScreen(this.view, lerp(p.prevX, p.x, sim.interpolationAlpha), lerp(p.prevY, p.y, sim.interpolationAlpha) - 43),
+      settings.reducedMotion);
     c.save();
     if(phone) { c.translate(headerX,headerY); c.scale(.8*unit,.8*unit); }
     this.navigation(c, sim, world, settings);
@@ -609,8 +621,7 @@ export class Renderer {
         if(n&&Math.hypot(n.x-p.x,n.y-p.y)<135){const head=worldToScreen(this.view,n.x,n.y-62);const box=placeBattleBark(this.residentSpeech.line,head,{width:this.width,height:this.height},s=>measureBattleBark(c,s),barkReserved);if(box)drawBattleBark(c,box,Math.min(2.5,this.residentSpeech.age));}
       }
       this.drawPortalHints(c, sim, world);
-      drawEventUI(c, sim, world, (x,y) => worldToScreen(this.view,x,y), this.gamepadActive, this.eventSites);
-      this.cursor(c, sim);
+      drawEventUI(c, sim, world, (x,y) => worldToScreen(this.view,x,y), this.gamepadActive, this.eventSites, this.eventProgressPresentation.view);
       const npcs = this.cachedBuildings.flatMap(b => { const npc = buildingNPC(b); return npc ? [npc] : []; });
       const npc = focusNPC(npcs, p, world);
       if (npc) {
@@ -621,6 +632,7 @@ export class Renderer {
         c.strokeStyle = NPC_COLORS[npc.role] + '90'; c.strokeRect(point.x - width / 2, point.y - 14, width, 23);
         c.fillStyle = '#e1dfcd'; c.fillText(label, point.x, point.y + 2); c.restore();
       }
+      this.cursor(c, sim);
     }
   }
 
@@ -1000,6 +1012,12 @@ export class Renderer {
         }
         c.restore();
       }
+    }
+    if (!this.gamepadActive && !this.touchActive) {
+      c.save(); c.translate(x, y); c.scale(this.cursorPixelScale.x, this.cursorPixelScale.y);
+      drawMouseCursor(c, cursorPreference.style, 0, 0, cursorPreference.size);
+      c.restore();
+      return;
     }
     c.strokeStyle = target ? '#bee9d9' : this.enemyFocus.hoveredId === null ? '#ded5a9dd' : '#efb398'; c.lineWidth = 1; c.beginPath();
     c.moveTo(x - 6, y); c.lineTo(x - 3, y); c.moveTo(x + 3, y); c.lineTo(x + 6, y);
