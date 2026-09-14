@@ -104,6 +104,54 @@ export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, optio
 /** Item data and effective equipment changes are distinct; no inventory DOM location is required. */
 export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
   if(item.kind==='riftKey')return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span></span><h4>${escapeUI(item.name)}</h4></div></div><p>Single use · Opens an empowered rift</p>${riftModifiers({attempt:1,keySeed:item.seed,keyTier:item.recipe.riftKeyTier}).map(m=>`<div class="ui-item-property ui-rift-modifier" style="color:${m.beneficial?'#a2d5b3':'#ed929f'}"><span>${escapeUI(m.label)}</span><strong>+${m.value}${m.unit}</strong></div>`).join('')}`;
+  const isDualRing = item.kind === 'ring' && !view.targetSlot && !view.equipped && view.compare !== false
+    && Boolean(view.sheet.equipped.ring1 && view.sheet.equipped.ring2);
+  if (isDualRing) {
+    const preview1 = previewEquipmentChange(view.sheet, item, view.level, { sourceIndex: view.sourceIndex, slot: 'ring1' });
+    const preview2 = previewEquipmentChange(view.sheet, item, view.level, { sourceIndex: view.sourceIndex, slot: 'ring2' });
+    if (preview1.ok && preview2.ok) {
+      const changes1 = new Map(preview1.changes.map(change => [change.key, change]));
+      const changes2 = new Map(preview2.changes.map(change => [change.key, change]));
+      const rows = Object.entries(itemModifiers(item)).map(([stat, value]) => {
+        const key = stat as StatKey;
+        const element = ELEMENTAL_AFFIXES.find(a => a.stat === key)?.element;
+        const greater = item.affixes.some((a, i) => a.stat === key && isGreaterAffix(item, i));
+        const label = `${greater ? greaterMark : ''}${statTerm(key, element ? `This weapon · ${element} damage` : STAT_LABELS[key]) || escapeUI(STAT_LABELS[key])}${element ? ` · ${effectTerm({fire:'burn',frost:'slow',lightning:'stagger'}[element], {fire:'Burn',frost:'Slow',lightning:'Interrupt'}[element])}` : ''}`;
+        const color = element ? ` style="color:${ELEMENT_COLORS[element]}"` : '';
+        const previewKey = isSkillStat(key) ? key : MODIFIER_PREVIEW[key];
+        const change1 = previewKey ? changes1.get(previewKey) : undefined;
+        const change2 = previewKey ? changes2.get(previewKey) : undefined;
+        if (previewKey) { changes1.delete(previewKey); changes2.delete(previewKey); }
+        const scale = key === 'manaRegen' ? MANA_RULES.regenerationPeriod : 1;
+        const empty = previewKey ? 'No change' : 'Included in derived changes';
+        if (view.compactComparison) return `<div class="ui-item-property"${color}><span>${label}</span><strong>${formatStatValue(key, value)}${inlineEquipChange(change1, scale)} / ${inlineEquipChange(change2, scale)}</strong></div>`;
+        return `<tr><th scope="row"${color}>${label}</th><td${color}>${formatStatValue(key, value)}</td>${equipChangeCell(change1, empty, scale)}${equipChangeCell(change2, empty, scale)}</tr>`;
+      });
+      const remainingKeys = new Set([...changes1.keys(), ...changes2.keys()]);
+      for (const statKey of remainingKeys) {
+        const change1 = changes1.get(statKey);
+        const change2 = changes2.get(statKey);
+        const label = statTerm(statKey, CHANGE_LABELS[statKey]) || escapeUI(CHANGE_LABELS[statKey]);
+        rows.push(view.compactComparison
+          ? `<div class="ui-item-property"><span>${label}</span><strong>${inlineEquipChange(change1)} / ${inlineEquipChange(change2)}</strong></div>`
+          : `<tr><th scope="row">${label}</th><td class="ui-item-stat-empty" aria-label="Not an item bonus">—</td>${equipChangeCell(change1)}${equipChangeCell(change2)}</tr>`);
+      }
+      const properties = !view.compactComparison
+        ? `<table class="ui-item-stat-table" aria-label="Item bonuses and net changes on equip"><thead><tr><th scope="col">Stat</th><th scope="col">Item</th><th scope="col">Ring 1</th><th scope="col">Ring 2</th></tr></thead><tbody>${rows.join('')}</tbody></table>${!preview1.changes.length && !preview2.changes.length ? '<p class="ui-item-description">No stat change</p>' : ''}`
+        : `<div class="ui-item-properties">${rows.join('')}</div>`;
+      const comparison = view.adjacentComparison
+        ? '<div class="ui-item-comparison"><div class="ui-item-alt-toggle" role="button" tabindex="0" title="Press Alt or click to focus comparison"><kbd>Alt</kbd> <span>Focus comparison</span></div></div>'
+        : '<div class="ui-item-comparison"><p>Compare with Ring 1 and Ring 2</p></div>';
+      return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span></span><h4>${hasGreaterAffix(item) ? escapeUI(itemDisplayName(item).slice(0, -(GREATER_AFFIX_SYMBOL.length + 1))) + ' ' + greaterMark : escapeUI(itemDisplayName(item))}</h4></div></div>
+    <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${item.locked?'<span class="ui-item-equipped">Locked</span>':''}</div>
+    ${item.recipe.enhancement ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% scalable item stats</div>` : ''}
+    ${properties}
+    ${uniqueDefinition(item)?uniquePowerMarkup(uniqueDefinition(item)!):''}
+    ${itemModifiers(item).spellweavePercent ? `<p class="ui-item-description">Enables ${effectTerm('spellweave', 'Spellweave')} · melee ↔ magic · ${AFFIX_COMBAT_RULES.weaveDuration}s.</p>` : ''}${item.affixes.length ? `<div class="ui-item-affixes">${item.affixes.map(a => escapeUI(a.name)).join(' · ')}</div>` : ''}
+    ${comparison}<div class="ui-item-comparison"><span>Sell value · ${number(itemPrice(item, 'sell'), 0)} gold</span></div>
+    ${view.context ? `<div class="ui-item-comparison">${escapeUI(view.context)}</div>` : ''}`;
+    }
+  }
   const preview = view.compare === false || view.equipped || item.kind === 'charm' && view.sourceIndex !== undefined ? null : previewEquipmentChange(view.sheet, item, view.level,
     { sourceIndex: view.sourceIndex, slot: view.targetSlot });
   const changes = new Map(preview?.ok ? preview.changes.map(change => [change.key, change]) : []);
@@ -141,6 +189,8 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
     if (!preview.ok) comparison = `<div class="ui-item-comparison is-loss">${escapeUI(preview.message)}</div>`;
     else if (preview.displaced.length && !view.adjacentComparison)
       comparison = `<div class="ui-item-comparison"><p>Replaces ${preview.displaced.map(entry => escapeUI(entry.item.name)).join(' + ')}</p></div>`;
+    else if (view.adjacentComparison && item.kind === 'ring' && view.sheet.equipped.ring1 && view.sheet.equipped.ring2)
+      comparison = '<div class="ui-item-comparison"><div class="ui-item-alt-toggle" role="button" tabindex="0" title="Press Alt or click to compare both rings"><kbd>Alt</kbd> <span>Compare both</span></div></div>';
   }
   return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span>${view.equipped && view.compactComparison ? `<span class="ui-item-equipped-inline" title="${escapeUI(view.equippedLabel ?? '')}">Equipped</span>` : ''}</span><h4>${hasGreaterAffix(item) ? escapeUI(itemDisplayName(item).slice(0, -(GREATER_AFFIX_SYMBOL.length + 1))) + ' ' + greaterMark : escapeUI(itemDisplayName(item))}</h4></div></div>
     <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${view.equipped ? '<span class="ui-item-equipped">Equipped</span>' : ''}${item.locked?'<span class="ui-item-equipped">Locked</span>':''}</div>
@@ -159,11 +209,24 @@ const EQUIPPED_LABELS: Record<EquipmentSlot, string> = {
 
 /** Use the real equip transaction's displacement, including hand conflicts and ring targets. */
 export function itemHoverCards(item: Item, view: ItemPresentation): string[] {
+  const isDualRing = item.kind === 'ring' && !view.targetSlot && !view.equipped && view.compare !== false
+    && Boolean(view.sheet.equipped.ring1 && view.sheet.equipped.ring2);
+  const card = (gear: Item, content: string, label = '') =>
+    `<section class="ui-item-hover-card" data-tier="${gear.tier}" style="--item-color:${TIER_COLORS[gear.tier]}">${label && !view.compactComparison ? `<div class="ui-item-section-label ui-item-comparison-label">Equipped · ${label}</div>` : ''}${content}</section>`;
+  if (isDualRing) {
+    const ring1 = view.sheet.equipped.ring1!;
+    const ring2 = view.sheet.equipped.ring2!;
+    return [
+      card(item, itemTooltipMarkup(item, { ...view, adjacentComparison: true })),
+      card(ring1, itemTooltipMarkup(ring1, { sheet: view.sheet, level: view.level, equipped: true,
+        compactComparison: view.compactComparison, equippedLabel: EQUIPPED_LABELS.ring1 }), EQUIPPED_LABELS.ring1),
+      card(ring2, itemTooltipMarkup(ring2, { sheet: view.sheet, level: view.level, equipped: true,
+        compactComparison: view.compactComparison, equippedLabel: EQUIPPED_LABELS.ring2 }), EQUIPPED_LABELS.ring2),
+    ];
+  }
   const preview = view.compare === false || view.equipped || item.kind === 'charm' && view.sourceIndex !== undefined ? null : previewEquipmentChange(view.sheet, item, view.level,
     { sourceIndex: view.sourceIndex, slot: view.targetSlot });
   const displaced = preview?.ok ? preview.displaced : [];
-  const card = (gear: Item, content: string, label = '') =>
-    `<section class="ui-item-hover-card" data-tier="${gear.tier}" style="--item-color:${TIER_COLORS[gear.tier]}">${label && !view.compactComparison ? `<div class="ui-item-section-label ui-item-comparison-label">Equipped · ${label}</div>` : ''}${content}</section>`;
   return [card(item, itemTooltipMarkup(item, { ...view, adjacentComparison: displaced.length > 0 })),
     ...displaced.map(({ item: gear, slot }) => card(gear,
       itemTooltipMarkup(gear, { sheet: view.sheet, level: view.level, equipped: true,

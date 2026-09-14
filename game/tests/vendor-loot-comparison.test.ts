@@ -1,5 +1,5 @@
 import { planEquipmentChange } from '../src/inventory.ts';
-import { comparisonSlot, ItemComparisonInput } from '../src/item-comparison.ts';
+import { bestRingSlot, comparisonSlot, ItemComparisonInput } from '../src/item-comparison.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialPlayer } from '../src/simulation.ts';
@@ -51,7 +51,7 @@ test('external item preview succeeds and includes displaced gear even with a ful
   assert.match(cards[1], /Equipped · Main hand/);
 });
 
-test('ring inspection targets ring1 by default and ring2 when targetSlot is specified', () => {
+test('ring inspection compares both equipped rings by default and targets a specific ring when targetSlot is specified', () => {
   const p = initialPlayer(0, 0);
   p.character.equipped.ring1 = generateItem(5001, 1, 'ring', 'garnet-band', 'magic');
   p.character.equipped.ring2 = generateItem(5002, 1, 'ring', 'sapphire-ring', 'rare');
@@ -59,8 +59,9 @@ test('ring inspection targets ring1 by default and ring2 when targetSlot is spec
   const vendorRing = generateItem(5003, 1, 'ring', 'moonstone-ring', 'epic');
 
   const cardsDefault = itemHoverCards(vendorRing, { sheet: p.character, level: p.level });
-  assert.equal(cardsDefault.length, 2);
+  assert.equal(cardsDefault.length, 3);
   assert.match(cardsDefault[1], /Equipped · Ring 1/);
+  assert.match(cardsDefault[2], /Equipped · Ring 2/);
 
   const cardsRing2 = itemHoverCards(vendorRing, { sheet: p.character, level: p.level, targetSlot: 'ring2' });
   assert.equal(cardsRing2.length, 2);
@@ -103,4 +104,63 @@ test('stationary Shift switches comparisons immediately and releases never latch
   key('keyup', 'ShiftRight', false); assert.equal(input.alternate, false);
   key('keydown', 'ShiftLeft', true); target.dispatchEvent(new Event('blur')); assert.equal(input.alternate, false);
   abort.abort(); key('keydown', 'ShiftLeft', true); assert.equal(input.alternate, false);
+});
+
+test('bestRingSlot selects empty slot or the ring slot yielding higher net improvement', () => {
+  const p = initialPlayer(0, 0);
+  const ring1 = generateItem(9601, 1, 'ring');
+  const ring2 = generateItem(9602, 1, 'ring');
+  const candidate = generateItem(9603, 1, 'ring');
+  ring1.affixes = [{ name: 'Tiny Dex', stat: 'dexterity', value: 1 }];
+  ring2.affixes = [{ name: 'Huge Dex', stat: 'dexterity', value: 50 }];
+  candidate.affixes = [{ name: 'Good Dex', stat: 'dexterity', value: 25 }];
+
+  p.character.equipped.ring1 = null;
+  p.character.equipped.ring2 = ring2;
+  assert.equal(bestRingSlot(p.character, candidate, 1), 'ring1');
+
+  p.character.equipped.ring1 = ring1;
+  p.character.equipped.ring2 = null;
+  assert.equal(bestRingSlot(p.character, candidate, 1), 'ring2');
+
+  p.character.equipped.ring1 = ring1;
+  p.character.equipped.ring2 = ring2;
+  // Replacing ring1 gives +24 dexterity gain; replacing ring2 gives -25 loss.
+  assert.equal(bestRingSlot(p.character, candidate, 1), 'ring1');
+});
+
+test('Alt key toggles focused comparison mode and resets on blur or reset', () => {
+  const target = new EventTarget(), abort = new AbortController();
+  let changes = 0;
+  const input = new ItemComparisonInput(target, () => changes++, abort.signal);
+  const pressAlt = (repeat = false) => {
+    const ev = Object.assign(new Event('keydown'), { code: 'AltLeft', repeat, preventDefault() {} });
+    target.dispatchEvent(ev);
+  };
+  pressAlt(false);
+  assert.equal(input.focused, true);
+  assert.equal(changes, 1);
+
+  // Auto-repeat should not toggle
+  pressAlt(true);
+  assert.equal(input.focused, true);
+  assert.equal(changes, 1);
+
+  // Tapping Alt again toggles back to false
+  pressAlt(false);
+  assert.equal(input.focused, false);
+  assert.equal(changes, 2);
+
+  // Tapping Alt again then blurring
+  pressAlt(false);
+  assert.equal(input.focused, true);
+  target.dispatchEvent(new Event('blur'));
+  assert.equal(input.focused, false);
+
+  // reset() resets both alternate and focused
+  pressAlt(false);
+  assert.equal(input.focused, true);
+  input.reset();
+  assert.equal(input.focused, false);
+  assert.equal(input.alternate, false);
 });

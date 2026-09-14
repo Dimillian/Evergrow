@@ -1,4 +1,4 @@
-import { comparisonSlot, ItemComparisonInput } from './item-comparison.ts';
+import { bestRingSlot, comparisonSlot, ItemComparisonInput } from './item-comparison.ts';
 import type { Item } from './character-types.ts';
 import { itemHoverCards, type ItemPresentation } from './item-ui.ts';
 import { RetainedTooltip } from './retained-tooltip.ts';
@@ -19,10 +19,24 @@ export class ItemTooltip {
       const current = this.current;
       if (current && !this.element.hidden && current.anchor.isConnected) this.show(current.item, current.view, current.anchor, current.bounds);
     }, this.life.signal);
+    this.element.addEventListener('click', event => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('.ui-item-alt-toggle')) {
+        event.stopPropagation();
+        this.comparison.toggleFocused();
+      }
+    }, { signal: this.life.signal });
   }
   show(item: Item, view: ItemPresentation, anchor: HTMLElement, bounds = anchor.getBoundingClientRect() as Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>): void {
     this.current = { item, view, anchor, bounds };
-    const cards = itemHoverCards(item, { ...view, targetSlot: view.targetSlot ?? comparisonSlot(view.sheet, item, this.comparison.alternate) });
+    const isDualRing = item.kind === 'ring' && !view.targetSlot && Boolean(view.sheet.equipped.ring1 && view.sheet.equipped.ring2);
+    const bestSlot = isDualRing ? bestRingSlot(view.sheet, item, view.level) : undefined;
+    const targetSlot = view.targetSlot ?? (isDualRing
+      ? (this.comparison.focused
+          ? (this.comparison.alternate ? (bestSlot === 'ring1' ? 'ring2' : 'ring1') : bestSlot)
+          : (this.comparison.alternate ? comparisonSlot(view.sheet, item, true) : undefined))
+      : comparisonSlot(view.sheet, item, this.comparison.alternate));
+    const cards = itemHoverCards(item, { ...view, targetSlot });
     this.element.style.setProperty('--tooltip-columns', String(cards.length));
     this.surface.show(cards.join(''), anchor, bounds);
     this.orderCards(bounds);
@@ -50,6 +64,6 @@ export class ItemTooltip {
     });
   }
   defer(): void { this.surface.defer(); }
-  hide(): void { this.current = undefined; this.surface.hide(); }
-  dispose(): void { this.life.abort(); this.current = undefined; this.surface.dispose(); }
+  hide(): void { this.current = undefined; this.comparison.reset(); this.surface.hide(); }
+  dispose(): void { this.life.abort(); this.current = undefined; this.comparison.reset(); this.surface.dispose(); }
 }

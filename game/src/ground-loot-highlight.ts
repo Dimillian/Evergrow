@@ -74,7 +74,7 @@ export class GroundLootHighlight {
       this.retainUntil = now + 600;
     } else this.hideTooltip();
   }
-  private hideTooltip(): void { this.tooltip.hidden = true; this.inspected = null; this.retainUntil = 0; }
+  private hideTooltip(): void { this.tooltip.hidden = true; this.inspected = null; this.retainUntil = 0; this.comparison.reset(); }
   hide(): void { this.affordance.hidden = true; this.hideTooltip(); this.canvas.style.cursor = this.cursor; }
   dispose(): void { this.life.abort(); this.hide(); this.affordance.remove(); this.tooltip.remove(); }
 }
