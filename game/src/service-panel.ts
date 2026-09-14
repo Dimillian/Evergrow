@@ -13,6 +13,7 @@ import { npcEmblem } from './npc-art.ts';
 import { RESPEC_GOLD_PER_POINT, respecPoints, attributeResetPoints, GAMBLE_KINDS, gambleOdds, vendorRefreshPrice, gamblePrice, STASH_CAPACITY, vendorStock, vendorStockLevel, quoteService, sourceItem, itemPrice, stockEpoch, type ServiceQuote, type ServiceRequest, type ItemSource, type SaleItem } from './commerce.ts';
 import { improveItem, rerollPool, affixCategory, AFFIX_FOCUSES, type AffixFocus, type Improvement } from './item-improvement.ts';
 import { updateItemSlot } from './item-ui.ts';
+import { itemFitsSlot } from './inventory.ts';
 import { ItemTooltip } from './item-tooltip.ts';
 import { itemIconSVG, itemPackIconSVG } from './item-art.ts';
 import { generateItem, EQUIPMENT_SLOTS, TIER_COLORS, TIER_NAMES, STAT_LABELS, itemAffixPool, itemDisplayName, formatStatValue } from './items.ts';
@@ -55,7 +56,7 @@ export class ServicePanel {
     mount.append(this.element); this.goldFeedback = new ServiceGoldFeedback(this.element); this.tooltip = new ItemTooltip(this.element, 'service-tooltip');
     this.element.addEventListener('click', e => this.click(e), { signal: this.abort.signal });
     this.installTradeDrag();
-    this.element.addEventListener('pointerover', e => this.hover(e.target), { signal: this.abort.signal });
+    this.element.addEventListener('pointerover', e => this.hover(e.target, e.shiftKey), { signal: this.abort.signal });
     this.element.addEventListener('focusin', e => this.hover(e.target), { signal: this.abort.signal });
     this.element.addEventListener('pointerout', e => { if (!(e.relatedTarget instanceof Node) || !(e.target as HTMLElement).closest('[data-item]')?.contains(e.relatedTarget)) this.tooltip.defer(); }, { signal: this.abort.signal });
     this.element.addEventListener('focusout', () => this.tooltip.defer(), { signal: this.abort.signal });
@@ -442,15 +443,19 @@ export class ServicePanel {
     }
     return item ? { item, request } : null;
   }
-  private hover(target: EventTarget | null): void {
+  private hover(target: EventTarget | null, shiftKey = false): void {
     if(this.tradeDrag||this.saving)return;
     if(document.documentElement.classList.contains('touch-mode')) return;
     const cell = target instanceof HTMLElement ? target.closest<HTMLButtonElement>('[data-item]') : null;
     if (!cell) return;
     const value = this.resolve(cell.dataset.item!); if (!value) return;
+    const targetSlot = value.source && 'equipped' in value.source ? value.source.equipped
+      : value.item.kind === 'ring' ? (shiftKey ? 'ring2' : 'ring1')
+      : value.item.kind === 'weapon' && shiftKey && itemFitsSlot(value.item, 'offhand') ? 'offhand' : undefined;
     this.tooltip.show(value.item, { sheet: this.player.character, level: this.player.level,
       sourceIndex: value.source && 'bag' in value.source ? value.source.bag : undefined,
       equipped: Boolean(value.source && 'equipped' in value.source),
+      targetSlot,
       context: value.request.type === 'buyback' ? `Buy back · ${this.player.character.commerce.buyback.find(b=>b.item.id===value.item.id)?.price??0} gold` : value.request.type === 'buy' ? `Buy · ${itemPrice(value.item, 'buy')} gold` : undefined }, cell);
   }
   private click(e: MouseEvent): void {

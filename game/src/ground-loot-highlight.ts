@@ -46,7 +46,9 @@ export class GroundLootHighlight {
     // Selected walking targets retain their highlight, but only actual mouse hover inspects.
     if (hovered) {
       if (this.inspected !== drop.item || this.inspectedLevel !== player.level) {
-        this.tooltip.innerHTML = itemHoverCards(drop.item, { sheet: player.character, level: player.level, compare: false }).join('');
+        const cards = itemHoverCards(drop.item, { sheet: player.character, level: player.level });
+        this.tooltip.style.setProperty('--tooltip-columns', String(cards.length));
+        this.tooltip.innerHTML = cards.join('');
         this.inspected = drop.item;
         this.inspectedLevel = player.level;
       }

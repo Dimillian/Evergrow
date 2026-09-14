@@ -49,9 +49,11 @@ export function planEquipmentChange(sheet: CharacterSheet, item: Item, level: nu
   for (let i = 0; i < displaced.length; i++) {
     const index = i === 0 && source !== undefined ? source : inventory.findIndex(existing => existing === null);
     const cell = findPackSpace(displaced[i].item, packOccupancy(inventory, inventoryLayout), i === 0 ? preferredCell : undefined);
-    if (index < 0 || cell === null) return reject('Make room in your pack for the displaced equipment.');
-    inventory[index] = displaced[i].item;
-    inventoryLayout[displaced[i].item.id] = cell;
+    if (source !== undefined && (index < 0 || cell === null)) return reject('Make room in your pack for the displaced equipment.');
+    if (index >= 0 && cell !== null) {
+      inventory[index] = displaced[i].item;
+      inventoryLayout[displaced[i].item.id] = cell;
+    }
   }
   return { ok: true, slot, inventory, equipped, displaced, inventoryLayout: resolvePackLayout({ inventory, inventoryLayout }) };
 }

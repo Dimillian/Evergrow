@@ -5,7 +5,7 @@
   z-index: 45;
   right: max(16px, env(safe-area-inset-right));
   bottom: max(16px, env(safe-area-inset-bottom));
-  width: min(320px, calc(100vw - 32px));
+  width: min(calc(var(--tooltip-columns, 1) * 300px + (var(--tooltip-columns, 1) - 1) * 8px), calc(100vw - 32px));
   max-height: calc(100dvh - 32px);
   padding: 0;
   pointer-events: none;
