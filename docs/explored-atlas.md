@@ -46,8 +46,16 @@ Generation 5 spreads settlements across both dimensions, enlarges the climate fi
 
 ## Interaction performance
 
+The full map populates its footer before measuring the viewport on each chart draw. Canvas resolution, map projection and the arrival ping therefore share the same dimensions on first opening and when status text wraps.
+
+**Center on character** (or Home while the chart is focused) preserves zoom and eases back to the player over roughly 0.4–0.85 seconds, depending on the screen distance. Two brief gold rings mark arrival, including when already centered. Dragging, touch gestures, zooming, keyboard panning, reframing or closing cancel the effect immediately. Operating-system reduced motion uses immediate centering and a stationary fading ring. The arrival highlight is a screen-space overlay and does not regenerate terrain.
+
+Journey **Show on map** uses the same easing and arrival highlight at the objective. The map first opens on the player with a 450 ms hold, then pans to the public objective marker over roughly 0.6–1.36 seconds at the current zoom; undiscovered objectives retain their coarse search-area position.
+
 Map input is coalesced into display frames, ordinary hover does not repaint terrain, and new atlas detail builds progressively within a cooperative generation budget. A complete low-resolution preview covers revealed terrain immediately and finished tiles crossfade into it over 240 ms (instant with reduced motion). Fine fog masks use row-run copies; district contours are cached in world-aligned tiles and rechecked against current discovery. See [panel performance](panel-performance.md) for budgets, verification and measured limits.
 
 Tab-map marker tooltips appear automatically whenever hovered, including during combat, without consuming mouse input. The full paused map keeps its normal tooltips.
 
 While holding Tab, the mouse wheel zooms the chart around the player; clicks continue to reach gameplay.
+
+While the Tab overlay is held, Journey discovery and arrival progress continue, and the configured loot-reveal key remains usable. The dungeon player marker stays fully opaque above the translucent floor.

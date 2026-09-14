@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { ControlBindings } from '../src/control-bindings.ts';
 import { GameInput } from '../src/game-input.ts';
 import { getHUDLayout } from '../src/hud.ts';
 import { getMinimapRect } from '../src/map-view.ts';
@@ -115,4 +116,20 @@ test('all UI consumers share minimap and shortcut hit regions while open world s
     assert.equal(isGameUIPoint(width / 2, height / 2, width, height), false);
     assert.equal(isGameUIPoint(hud.x - 5, hud.y, width, height), false);
   }
+});
+
+
+test('Tab preserves a rebound loot-reveal hold until release, while pause clears it', () => {
+  const bindings = new ControlBindings();
+  bindings.bind('revealLoot', 0, 'KeyL');
+  const input = new GameInput(bindings);
+  input.keyDown('KeyL');
+  input.clear(true);
+  assert.equal(input.held('revealLoot'), true);
+  input.clear(true);
+  assert.equal(input.held('revealLoot'), true);
+  input.keyUp('KeyL');
+  assert.equal(input.held('revealLoot'), false);
+  input.keyDown('KeyL'); input.clear();
+  assert.equal(input.held('revealLoot'), false);
 });

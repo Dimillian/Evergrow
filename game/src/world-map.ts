@@ -1,3 +1,4 @@
+import { drawMapPOIIcon, drawMapPlayerIcon, drawMapEnemyIcon, MAP_ICON_SIZES } from './map-icon-art.ts';
 import { worldTimeLabel, skyAtTime } from './world-time.ts';
 import { regionLevelLabel } from './encounter-scaling.ts';
 import { bindTouchCanvas } from './touch-canvas.ts';
@@ -186,6 +187,10 @@ export class WorldMap {
   private tiles = new Map<string, TerrainTile>();
   private previewTiles = new Map<string, PreviewTile>();
   private frame = 0;
+  private recenter: { x: number; y: number; started: number; duration: number } | null = null;
+  private focusTarget: { x: number; y: number } | null = null;
+  private focusPing: HTMLDivElement;
+  private pingAnimations: Animation[] = [];
   private chartDirty = false;
   private buildBudget?: number;
   private pendingTerrain = false;
@@ -232,6 +237,7 @@ export class WorldMap {
         <button type="button" class="world-map-close ui-button ui-button--quiet ui-button--icon" aria-label="Close world map" data-tooltip="Close map" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('close')}</button>
       </header>
       <div class="world-map-viewport ui-window__body"><canvas class="world-map-canvas" tabindex="0" aria-label="Explored world map"></canvas>
+        <div class="world-map-focus-ping" aria-hidden="true" hidden><span></span><span></span></div>
         <div class="world-map-toolbar" role="toolbar" aria-label="Map controls">
           <button type="button" class="ui-button ui-button--quiet ui-button--icon" data-map="out" aria-label="Zoom out" data-tooltip="Zoom out">${uiIcon('minus')}</button>
           <button type="button" class="ui-button ui-button--quiet ui-button--icon" data-map="in" aria-label="Zoom in" data-tooltip="Zoom in">${uiIcon('plus')}</button>
@@ -249,6 +255,7 @@ export class WorldMap {
     this.canvas = this.element.querySelector<HTMLCanvasElement>('.world-map-canvas')!;
     this.context = this.canvas.getContext('2d')!;
     this.viewport = this.element.querySelector<HTMLDivElement>('.world-map-viewport')!;
+    this.focusPing = this.element.querySelector<HTMLDivElement>('.world-map-focus-ping')!;
     this.status = this.element.querySelector('.world-map-status')!;
     this.discoveries = this.element.querySelector('.world-map-discoveries')!;
     this.coordinates = this.element.querySelector('.world-map-coordinates')!;
@@ -280,6 +287,7 @@ export class WorldMap {
   }
   close() {
     if (!this.opened) return;
+    this.cancelRecenter();
     if (this.drag && this.canvas.hasPointerCapture(this.drag.id)) this.canvas.releasePointerCapture(this.drag.id);
     if (this.frame) cancelAnimationFrame(this.frame); this.frame = 0;
     this.chartLayer = undefined; this.visiblePOIs = [];
@@ -300,16 +308,28 @@ export class WorldMap {
       || previous.status !== this.exploration.storageStatus || previous.message !== this.exploration.persistenceMessage)) this.render();
   }
   resize() {
-    if (!this.opened || this.disposed) return;
+    this.render();
+  }
+  /** Footer text participates in flex layout, so populate it before measuring the chart. */
+  private prepareLayout(): boolean {
+    const count = this.exploration.discoveredPOICount;
+    setText(this.discoveries, `${count} ${count === 1 ? 'place' : 'places'} charted`);
+    const area = mapAreaLabel(this.world, this.player.x, this.player.y);
+    setText(this.status, `${area} · ${this.exploration.persistenceMessage || (this.exploration.storageStatus === 'pending' ? 'Charting…' : 'Chart saved')}`);
+    this.status.dataset.state = this.exploration.storageStatus;
+    setText(this.coordinates, `X ${Math.round(this.player.x)} · Y ${Math.round(this.player.y)}`);
     const rect = this.viewport.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
+    if (rect.width <= 0 || rect.height <= 0) return false;
     this.view.width = rect.width; this.view.height = rect.height;
     this.ratio = Math.max(1, Math.min(4, window.devicePixelRatio || 1));
-    this.canvas.width = Math.round(rect.width * this.ratio); this.canvas.height = Math.round(rect.height * this.ratio);
-    this.render();
+    const width = Math.round(rect.width * this.ratio), height = Math.round(rect.height * this.ratio);
+    if (this.canvas.width !== width) this.canvas.width = width;
+    if (this.canvas.height !== height) this.canvas.height = height;
+    return true;
   }
   /** Frame any charted region without changing discoveries, player state or saved data. */
   fitBounds(region: MapRect, padding = 40) {
+    this.cancelRecenter();
     this.view = fitMapBounds(this.view, region, padding, this.zoomLimits); this.render();
   }
   zoomExplorationByWheel(deltaY: number, deltaMode: number) {
@@ -334,10 +354,67 @@ export class WorldMap {
   setMinimapPointer(point: { x: number; y: number } | null) { this.minimapPointer = point; }
 
   private clearTouch: (() => void) | null = null;
+
+  private cancelRecenter() {
+    this.recenter = null;
+    this.focusTarget = null;
+    for (const animation of this.pingAnimations) animation.cancel();
+    this.pingAnimations = [];
+    this.focusPing.hidden = true;
+  }
+
+  private centerOnPlayer() {
+    this.focusLocation(null);
+  }
+
+  /** Called after opening on the player; the brief hold makes the journey's origin readable. */
+  focusJourney(marker: JourneyMarker) {
+    if (!this.opened || this.disposed) return;
+    this.setJourneyMarker(marker);
+    this.focusLocation(marker, 450, 1.6);
+  }
+
+  private focusLocation(target: { x: number; y: number } | null, delay = 0, durationScale = 1) {
+    this.cancelRecenter(); this.pointer = null; this.hideTooltip();
+    this.focusTarget = target ? { x: clampMapCoordinate(target.x), y: clampMapCoordinate(target.y) } : null;
+    const destination = this.focusTarget ?? this.player;
+    const distance = Math.hypot(destination.x - this.view.centerX, destination.y - this.view.centerY) * this.view.zoom;
+    this.recenter = { x: this.view.centerX, y: this.view.centerY, started: performance.now() + delay,
+      duration: distance < 1 ? 0 : Math.min(850, 380 + distance * .3) * durationScale };
+    this.invalidate();
+  }
+
+  private advanceRecenter(now: number) {
+    const motion = this.recenter;
+    if (!motion) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const t = reduced || now >= motion.started + motion.duration || motion.duration === 0
+      ? 1 : Math.max(0, (now - motion.started) / motion.duration);
+    const ease = t * t * t * (t * (t * 6 - 15) + 10);
+    const destination = this.focusTarget ?? this.player;
+    this.view.centerX = motion.x + (clampMapCoordinate(destination.x) - motion.x) * ease;
+    this.view.centerY = motion.y + (clampMapCoordinate(destination.y) - motion.y) * ease;
+    if (t < 1) return;
+    this.recenter = null;
+    this.focusPing.hidden = false;
+    // Screen-space rings stay readable at every zoom; their fade never repaints terrain.
+    this.pingAnimations = [...this.focusPing.children].map((ring, index) => ring.animate(reduced ? [
+      { opacity: 0 }, { opacity: .85, offset: .12 }, { opacity: .85, offset: .65 }, { opacity: 0 },
+    ] : [
+      { transform: 'scale(.45)', opacity: 0 },
+      { opacity: .95, offset: .15 },
+      { transform: 'scale(1.65)', opacity: 0 },
+    ], { duration: reduced ? 1100 : 950, delay: reduced ? 0 : index * 200, fill: 'both', easing: 'ease-out' }));
+    const animations = this.pingAnimations;
+    void Promise.all(animations.map(animation => animation.finished)).then(() => {
+      if (this.pingAnimations === animations) this.cancelRecenter();
+    }).catch(() => { /* Direct input and closing cancel the transient highlight. */ });
+  }
+
   private bind() {
     const signal = this.abort.signal;
     this.clearTouch = bindTouchCanvas(this.canvas,signal,{
-      start:()=>{this.pointer=null;this.hideTooltip();},
+      start:()=>{this.cancelRecenter();this.pointer=null;this.hideTooltip();},
       pan:(dx,dy)=>{this.pointer=null;this.view.centerX=clampMapCoordinate(this.view.centerX-dx/this.view.zoom);this.view.centerY=clampMapCoordinate(this.view.centerY-dy/this.view.zoom);this.invalidate();},
       zoom:(factor,p)=>{this.view=zoomMapAt(this.view,p.x,p.y,this.view.zoom*factor, this.zoomLimits);this.invalidate();},
       tap:p=>{this.pointer=p;this.invalidate(false);},
@@ -346,9 +423,10 @@ export class WorldMap {
     for (const button of this.element.querySelectorAll<HTMLButtonElement>('[data-map]')) {
       button.addEventListener('click', () => {
         if (button.dataset.map === 'center') {
-          this.view.centerX = clampMapCoordinate(this.player.x); this.view.centerY = clampMapCoordinate(this.player.y);
+          this.centerOnPlayer(); return;
         }
-        else this.view = zoomMapAt(this.view, this.view.width / 2, this.view.height / 2,
+        this.cancelRecenter();
+        this.view = zoomMapAt(this.view, this.view.width / 2, this.view.height / 2,
           this.view.zoom * (button.dataset.map === 'in' ? 1.3 : 1 / 1.3), this.zoomLimits);
         this.invalidate();
       }, { signal });
@@ -356,6 +434,7 @@ export class WorldMap {
     const local = (event: PointerEvent | WheelEvent) => { const r = this.canvas.getBoundingClientRect(); return { x: event.clientX - r.left, y: event.clientY - r.top }; };
     this.canvas.addEventListener('pointerdown', event => {
       if (event.button !== 0) return;
+      this.cancelRecenter();
       event.preventDefault(); const p = local(event); this.canvas.focus(); this.canvas.setPointerCapture(event.pointerId);
       this.drag = { id: event.pointerId, ...p, centerX: this.view.centerX, centerY: this.view.centerY };
       this.canvas.classList.add('world-map-dragging'); this.hideTooltip();
@@ -374,6 +453,7 @@ export class WorldMap {
     this.canvas.addEventListener('lostpointercapture', release, { signal });
     this.canvas.addEventListener('pointerleave', () => { if (!this.drag) { this.pointer = null; this.hideTooltip(); this.invalidate(false); } }, { signal });
     this.canvas.addEventListener('wheel', event => {
+      this.cancelRecenter();
       event.preventDefault(); const p = local(event);
       if (this.explorationMode) { p.x = this.view.width / 2; p.y = this.view.height / 2; }
       const delta = Math.max(-240, Math.min(240, event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? this.view.height : 1)));
@@ -390,12 +470,15 @@ export class WorldMap {
         return;
       }
       if (event.target !== this.canvas) return;
+      if (event.key === 'Home') {
+        event.preventDefault(); event.stopPropagation(); this.centerOnPlayer(); return;
+      }
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '+', '=', '-'].includes(event.key)) this.cancelRecenter();
       const pan = 70 / this.view.zoom;
       if (event.key === 'ArrowLeft') this.view.centerX -= pan;
       else if (event.key === 'ArrowRight') this.view.centerX += pan;
       else if (event.key === 'ArrowUp') this.view.centerY -= pan;
       else if (event.key === 'ArrowDown') this.view.centerY += pan;
-      else if (event.key === 'Home') { this.view.centerX = this.player.x; this.view.centerY = this.player.y; }
       else if (event.key === '+' || event.key === '=' || event.key === '-') this.view = zoomMapAt(this.view,
         this.view.width / 2, this.view.height / 2, this.view.zoom * (event.key === '-' ? 1 / 1.3 : 1.3), this.zoomLimits);
       else return;
@@ -580,7 +663,7 @@ export class WorldMap {
     for (const poi of pois) {
       if (poi.kind !== 'portal' && !poi.sighted && !this.exploration.isRevealed(poi.x, poi.y)) continue;
       const p = projectMapPoint(poi.x, poi.y, view);
-      this.poiIcon(c, poi, p.x, p.y, mini ? 4.1 : view.zoom < .07 ? 5.4 : 7, this.hovered?.id === poi.id && !mini);
+      this.poiIcon(c, poi, p.x, p.y, mini ? MAP_ICON_SIZES.minimap : view.zoom < .07 ? MAP_ICON_SIZES.overview : MAP_ICON_SIZES.map, this.hovered?.id === poi.id && !mini);
       if (!mini && poi.kind === 'town' && (view.zoom >= .045 || (this.zoneLevels && view.zoom >= .025))) {
         text(c, poi.name, p.x + 1, p.y + 13, 1.15, palette.ink, 'center');
         text(c, poi.name, p.x, p.y + 12, 1.15, palette.ivory, 'center');
@@ -592,62 +675,14 @@ export class WorldMap {
   }
 
   private poiIcon(c: CanvasRenderingContext2D, poi: MapPOI, x: number, y: number, size: number, selected: boolean) {
-    c.save(); c.translate(x, y); c.lineWidth = selected ? 1.8 : 1.1;
     const cleared = this.isCampCleared(poi) || ['Claimed', 'Beacon lit'].includes(this.eventStateReader(poi) ?? '');
-    c.fillStyle = palette.well; c.strokeStyle = selected ? palette.ivory : cleared ? palette.jade : POI_DEFINITIONS[poi.kind].color;
-    c.beginPath(); c.arc(0, 0, size + 2.5, 0, Math.PI * 2); c.fill(); if (selected) c.stroke();
-    c.beginPath();
-    if (poi.kind === 'portal') {
-      c.ellipse(0, -1, size * .7, size, 0, 0, Math.PI * 2); c.stroke();
-      c.beginPath(); c.ellipse(0, size, size, size * .35, 0, 0, Math.PI * 2); c.stroke();
-    } else if (poi.kind === 'town' || poi.kind === 'inn') {
-      c.moveTo(-size, 0); c.lineTo(0, -size); c.lineTo(size, 0); c.lineTo(size * .7, 0); c.lineTo(size * .7, size); c.lineTo(-size * .7, size); c.lineTo(-size * .7, 0); c.closePath(); c.stroke();
-    } else if (poi.kind === 'jeweler') {
-      c.moveTo(0, -size); c.lineTo(size, 0); c.lineTo(0, size); c.lineTo(-size, 0); c.closePath(); c.stroke();
-    } else if (poi.kind === 'enchanter') {
-      c.arc(0, 0, size, 0, Math.PI * 2); c.moveTo(0, -size); c.lineTo(0, size); c.moveTo(-size, 0); c.lineTo(size, 0); c.stroke();
-    } else if (poi.kind === 'chapel') {
-      c.moveTo(0, -size); c.lineTo(0, size); c.moveTo(-size * .65, -size * .3); c.lineTo(size * .65, -size * .3); c.stroke();
-    } else if (poi.kind === 'blacksmith') {
-      c.moveTo(-size, -size * .7); c.lineTo(size * .6, size * .6); c.moveTo(-size * .6, -size); c.lineTo(-size, -size * .4); c.moveTo(-size * .7, size); c.lineTo(size * .7, -size * .5); c.stroke();
-    } else if (poi.kind === 'shrine') {
-      c.moveTo(0, -size); c.lineTo(size * .3, -size * .3); c.lineTo(size, 0); c.lineTo(size * .3, size * .3); c.lineTo(0, size); c.lineTo(-size * .3, size * .3); c.lineTo(-size, 0); c.lineTo(-size * .3, -size * .3); c.closePath(); c.stroke();
-    } else if (poi.kind === 'camp') {
-      c.moveTo(-size, size * .8); c.lineTo(0, -size); c.lineTo(size, size * .8); c.closePath();
-      c.moveTo(0, -size); c.lineTo(0, size * .8); c.moveTo(-size * .5, -size); c.lineTo(size * .4, size * .8); c.stroke();
-      if (cleared) { c.beginPath(); c.moveTo(size * .35, size * .45); c.lineTo(size * .85, size * .9); c.lineTo(size * 1.45, 0); c.lineWidth = 1.6; c.stroke(); }
-    } else if (poi.kind === 'watchtower') {
-      c.moveTo(-size * .7, size); c.lineTo(-size * .7, -size); c.lineTo(-size * .25, -size * .5); c.lineTo(size * .1, -size); c.lineTo(size * .7, -size * .65); c.lineTo(size * .7, size); c.closePath();
-      c.moveTo(0, size * .5); c.lineTo(0, -size * .2); c.stroke();
-    } else if (poi.kind === 'bossLair') {
-      c.moveTo(-size,size*.55);c.lineTo(-size*1.05,-size*.65);c.lineTo(-size*.4,-size*.15);c.lineTo(0,-size);c.lineTo(size*.4,-size*.15);c.lineTo(size*1.05,-size*.65);c.lineTo(size,size*.55);c.closePath();c.stroke();
-      c.moveTo(-size*.65,size*.9);c.lineTo(size*.65,size*.9);c.stroke();
-    } else if (poi.kind === 'graveyard') {
-      c.moveTo(-size * .7, size); c.lineTo(-size * .7, -size * .35); c.quadraticCurveTo(0, -size * 1.4, size * .7, -size * .35); c.lineTo(size * .7, size); c.closePath();
-      c.moveTo(0, -size * .4); c.lineTo(0, size * .5); c.moveTo(-size * .3, 0); c.lineTo(size * .3, 0); c.stroke();
-    } else if (poi.kind === 'standingStones') {
-      c.moveTo(-size, size * .6); c.lineTo(-size * .8, -size * .55); c.lineTo(-size * .4, -size * .7); c.lineTo(-size * .25, size * .6); c.closePath();
-      c.moveTo(size * .2, size * .6); c.lineTo(size * .3, -size); c.lineTo(size * .75, -size * .8); c.lineTo(size, size * .6); c.closePath(); c.stroke();
-    } else if (poi.kind === 'caravan') {
-      c.rect(-size, -size * .75, size * 2, size * 1.2); c.moveTo(-size, -size * .2); c.lineTo(size, -size * .2); c.stroke();
-      c.beginPath(); c.arc(-size * .55, size * .7, size * .24, 0, Math.PI * 2); c.moveTo(size * .79, size * .7); c.arc(size * .55, size * .7, size * .24, 0, Math.PI * 2); c.stroke();
-    } else if (poi.kind === 'merchant') {
-      c.ellipse(0, 0, size * .7, size, 0, 0, Math.PI * 2); c.moveTo(-size * .7, 0); c.lineTo(size * .7, 0); c.stroke();
-    } else {
-      c.moveTo(-size, size * .6); c.lineTo(-size * .2, -size); c.lineTo(size * .3, 0); c.lineTo(size * .6, -size * .4); c.lineTo(size, size * .6); c.closePath(); c.stroke();
-    }
-    c.restore();
+    drawMapPOIIcon(c, poi.kind, x, y, size, selected, cleared);
   }
 
   private playerArrow(c: CanvasRenderingContext2D, player: MapPlayer, view: MapView, mini: boolean) {
     const p = projectMapPoint(player.x, player.y, view);
     if (p.x < view.x || p.y < view.y || p.x > view.x + view.width || p.y > view.y + view.height) return;
-    c.save(); c.translate(p.x, p.y);
-    c.strokeStyle = '#e3d39433'; c.lineWidth = 1; c.beginPath(); c.arc(0, 0, mini ? 17 : 14, 0, Math.PI * 2); c.stroke();
-    c.rotate(player.angle);
-    const r = mini ? 5 : 7;
-    c.beginPath(); c.moveTo(r + 2, 0); c.lineTo(-r, -r * .75); c.lineTo(-r * .5, 0); c.lineTo(-r, r * .75); c.closePath();
-    c.fillStyle = '#fff2ba'; c.fill(); c.strokeStyle = '#1b261f'; c.lineWidth = 1.3; c.stroke(); c.restore();
+    drawMapPlayerIcon(c, p.x, p.y, player.angle, mini);
   }
 
   private location(player: MapPlayer) {
@@ -707,9 +742,7 @@ export class WorldMap {
       if (!this.exploration.isRevealed(enemy.x, enemy.y)) continue;
       const p = projectMapPoint(enemy.x, enemy.y, view);
       if (p.x < view.x || p.y < view.y || p.x > view.x + view.width || p.y > view.y + view.height) continue;
-      c.fillStyle = enemy.kind === 'brute' ? '#d18a62' : enemy.kind === 'caster' ? '#d4a677' : '#b26a62';
-      c.strokeStyle = '#070d12'; c.lineWidth = .7;
-      c.beginPath(); c.arc(p.x, p.y, enemy.kind === 'brute' ? 1.9 : 1.4, 0, Math.PI * 2); c.fill(); c.stroke();
+      drawMapEnemyIcon(c, p.x, p.y, enemy.kind);
     }
     this.playerArrow(c, player, view, true); c.restore();
     text(c, 'N', view.x + view.width / 2, view.y + 3, .8, palette.jade, 'center');
@@ -747,9 +780,15 @@ export class WorldMap {
     if (!this.opened || this.disposed) return;
     if (this.frame) cancelAnimationFrame(this.frame); this.frame = 0;
     this.chartDirty = false; this.pendingTerrain = false;
+    if (!this.prepareLayout()) return;
+    this.advanceRecenter(performance.now());
     this.buildBudget = 5;
     try { this.drawChart(); } finally { this.buildBudget = undefined; }
-    if (this.pendingTerrain) this.invalidate();
+    const destination = this.focusTarget ?? this.player;
+    const focusPoint = projectMapPoint(destination.x, destination.y, this.view);
+    this.focusPing.style.left = `${focusPoint.x}px`;
+    this.focusPing.style.top = `${focusPoint.y}px`;
+    if (this.pendingTerrain || this.recenter) this.invalidate();
     this.presentation = { x: this.player.x, y: this.player.y, angle: this.player.angle,
       revision: this.exploration.revision, status: this.exploration.storageStatus,
       message: this.exploration.persistenceMessage };
@@ -787,12 +826,6 @@ export class WorldMap {
     text(c, formatWorldDistance(scale), 24, this.view.height - 39, .9, palette.muted);
 
     drawMapCompass(c, this.view.width - 60, 60);
-    const count = this.exploration.discoveredPOICount;
-    setText(this.discoveries, `${count} ${count === 1 ? 'place' : 'places'} charted`);
-    const area = mapAreaLabel(this.world, this.player.x, this.player.y);
-    setText(this.status, `${area} · ${this.exploration.persistenceMessage || (this.exploration.storageStatus === 'pending' ? 'Charting…' : 'Chart saved')}`);
-    this.status.dataset.state = this.exploration.storageStatus;
-    setText(this.coordinates, `X ${Math.round(this.player.x)} · Y ${Math.round(this.player.y)}`);
     this.drawHover();
   }
 
@@ -816,7 +849,7 @@ export class WorldMap {
       c.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
       if (this.hovered) {
         const p = projectMapPoint(this.hovered.x, this.hovered.y, this.view);
-        this.poiIcon(c, this.hovered, p.x, p.y, this.view.zoom < .07 ? 5.4 : 7, true);
+        this.poiIcon(c, this.hovered, p.x, p.y, this.view.zoom < .07 ? MAP_ICON_SIZES.overview : MAP_ICON_SIZES.map, true);
       }
     }
     const marker=this.journeyMarker, markerPoint=marker?projectMapPoint(marker.x,marker.y,this.view):null;

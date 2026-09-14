@@ -96,6 +96,35 @@ test('incompatible weapons reject every active skill before consuming resources 
   }
 });
 
+test('mana rejection emits feedback without spending resources or starting a skill', () => {
+  const h = harness('fireball');
+  h.player.mana = 0;
+  assert.equal(activateSkill(h.context, 0), false);
+  assert.deepEqual(h.events, [{ type: 'insufficient-mana', x: h.player.x, y: h.player.y, skill: 'fireball' }]);
+  assert.equal(h.player.mana, 0);
+  assert.equal(h.player.castTime, 0);
+  assert.equal(h.player.skillCooldowns.fireball, undefined);
+  assert.equal(h.missiles.length, 0);
+  h.events.length = 0;
+  h.player.mana = resolveSkill('fireball', h.player.derived, h.player.character).mana;
+  assert.equal(activateSkill(h.context, 0), true);
+  assert.equal(h.player.mana, 0);
+  assert.equal(h.events.some(e => e.type === 'insufficient-mana'), false);
+});
+
+test('empty, locked, incompatible, recovering and cooling skills do not report missing mana', () => {
+  for (const reason of ['empty', 'locked', 'weapon', 'recovery', 'cooldown'] as const) {
+    const h = harness('fireball'); h.player.mana = 0;
+    if (reason === 'empty') h.player.character.skillSlots[0] = null;
+    if (reason === 'locked') h.player.character.allocatedNodes = ['origin'];
+    if (reason === 'weapon') h.player.equipment.mainHand = profile('sword');
+    if (reason === 'recovery') h.player.castTime = .2;
+    if (reason === 'cooldown') h.player.skillCooldowns.fireball = .2;
+    assert.equal(activateSkill(h.context, 0), false, reason);
+    assert.equal(h.events.length, 0, reason);
+  }
+});
+
 test('each skill has a distinct procedural icon and all metadata is immutable', () => {
   const icons = Object.values(SKILL_DEFINITIONS).map(skill => {
     assert.ok(Object.isFrozen(skill));

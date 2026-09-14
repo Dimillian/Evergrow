@@ -113,3 +113,5 @@ Frozen dungeon floors share a 64-unit spatial collision index. Cells proven to c
 Tab-map marker tooltips appear automatically whenever hovered, including during combat, without consuming mouse input. The full paused map keeps its normal tooltips.
 
 While holding Tab, the mouse wheel zooms the chart around the player; clicks continue to reach gameplay.
+
+Dungeon maps use semantic silhouettes: a treasure chest, exit door with outward arrow, horned boss skull, sacred reliquary urn, ward shield and champion helmet. Event markers dispatch from the actual event kind. Completed markers keep their muted color, and the character arrow is unchanged. The shared `map-symbol-art.ts` artwork is also shown in the local Map icon workshop.
