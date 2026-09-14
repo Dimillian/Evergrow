@@ -1,9 +1,9 @@
 import { dungeonTheme, DUNGEON_THEME_IDS } from './dungeon-content.ts';
 import type { DungeonEntrance } from './dungeon.ts';
-import type { World } from './world.ts';
+import type { WorldLandscape } from './world-landscape.ts';
 import { getZoneAt } from './zone-progression.ts';
 /** Stable, non-solid entrances reuse clear landmark approaches; the first is close to the starting route. */
-export function dungeonEntrances(world: Pick<World, 'seed' | 'getWildernessSites' | 'blocked' | 'isSanctuary' | 'sampleBiome'>, x: number, y: number, w: number, h: number): DungeonEntrance[] {
+export function dungeonEntrances(world: Pick<WorldLandscape, 'seed' | 'getWildernessSites' | 'blocked' | 'isSanctuary' | 'sampleBiome'>, x: number, y: number, w: number, h: number): DungeonEntrance[] {
     if (![x, y, w, h].every(Number.isFinite) || w <= 0 || h <= 0 || w > 100000 || h > 100000)
         return [];
     const out: DungeonEntrance[] = [];

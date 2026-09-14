@@ -1,23 +1,73 @@
 import type { DungeonFloor, DungeonMember, Room } from './dungeon.ts';
 import type { BiomeId } from './biomes.ts';
 import { bossForBiome } from './wilderness-boss-content.ts';
+import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { riftBonus, riftRandom, type RiftTag } from './rift-content.ts';
-/** Broad branching clearings, with extra loops. No event or reward-bearing world content. */
+import { WorldLandscape } from './world-landscape.ts';
+
+export const RIFT_FIELD = Object.freeze({ sectors:13, sectorSize:640, packs:28, minPack:64, maxPack:96, radius:380 });
+const half = RIFT_FIELD.sectors * RIFT_FIELD.sectorSize / 2;
+const landscapes = new WeakMap<DungeonFloor, WorldLandscape>();
+const floors = new Map<string, DungeonFloor>();
+/** Shared real-world collision; no room walls or artificial arena boundary. */
+export function riftLandscape(floor:DungeonFloor):WorldLandscape {
+  let world=landscapes.get(floor);
+  if(!world){world=new WorldLandscape(floor.seed,true);landscapes.set(floor,world);}
+  return world;
+}
+function sectorAt(x:number,y:number):number {
+  const cell=(v:number)=>Math.max(0,Math.min(RIFT_FIELD.sectors-1,Math.floor((v+half)/RIFT_FIELD.sectorSize)));
+  return cellAt(cell(x),cell(y));
+}
+const cellAt=(x:number,y:number)=>y*RIFT_FIELD.sectors+x;
+
+/** Unmodified overworld landscape, populated with irregular, tightly gathered warbands.
+ * Rooms are invisible discovery/streaming sectors only. They never carve terrain. */
 export function buildRiftFloor(seed:number,biome:BiomeId,rift:RiftTag):DungeonFloor {
-  const random=riftRandom(seed), rooms:Room[]=[], edges:[number,number][]=[], corridors:Room[]=[], members:DungeonMember[]=[];
-  const center=(r:Room)=>({x:r.x+r.width/2,y:r.y+r.height/2});
-  for(let i=0;i<16;i++){
-    const width=850+Math.floor(random()*180),height=850+Math.floor(random()*180);
-    rooms.push({id:i,x:(i%4)*1200-width/2,y:Math.floor(i/4)*1200-height/2,width,height,kind:i===0?'entry':i===15?'boss':'combat',shape:'octagon'});
-    if(i){const parent=i%4===0?i-4:i<4?i-1:random()<.5?i-1:i-4;edges.push([parent,i]);}
+  const key=`${seed}:${biome}:${rift.attempt}:${rift.keySeed}:${rift.keyTier}`,cached=floors.get(key);
+  if(cached)return cached;
+  const random=riftRandom(seed),world=new WorldLandscape(seed,true),members:DungeonMember[]=[],rooms:Room[]=[];
+  const dry=(x:number,y:number,radius:number)=>world.sampleWater(x,y).coverage<.12&&!world.blocked(x,y,radius);
+  const clearNear=(x:number,y:number,radius:number)=>{
+    for(let i=0;i<2000;i++){
+      const angle=i*2.399963229728653,range=Math.sqrt(i)*16;
+      const p={x:x+Math.cos(angle)*range,y:y+Math.sin(angle)*range};
+      if(dry(p.x,p.y,radius))return p;
+    }
+    throw new Error('Rift landscape has no clear landing');
+  };
+  const entry={x:0,y:0},boss=clearNear(0,850,110),chest=clearNear(boss.x+125,boss.y+120,65),exit=clearNear(boss.x-140,boss.y+120,65);
+  for(let y=0;y<RIFT_FIELD.sectors;y++)for(let x=0;x<RIFT_FIELD.sectors;x++){
+    const id=cellAt(x,y);
+    rooms.push({id,x:x*RIFT_FIELD.sectorSize-half,y:y*RIFT_FIELD.sectorSize-half,width:RIFT_FIELD.sectorSize,height:RIFT_FIELD.sectorSize,
+      kind:id===sectorAt(boss.x,boss.y)?'boss':id===sectorAt(0,0)?'entry':'combat'});
   }
-  for(let i=0;i<16;i++)for(const next of [i%4<3?i+1:-1,i<12?i+4:-1])if(next>=0&&random()<.6&&!edges.some(([a,b])=>a===i&&b===next))edges.push([i,next]);
-  for(const [a,b]of edges){const p=center(rooms[a]),q=center(rooms[b]);corridors.push({id:100+corridors.length,connection:corridors.length,x:Math.min(p.x,q.x)-190,y:Math.min(p.y,q.y)-190,width:Math.abs(p.x-q.x)+380,height:Math.abs(p.y-q.y)+380,kind:'combat',shape:'hall'});}
+  const centers:{x:number;y:number}[]=[];
   const roster:DungeonMember['kind'][]=['stalker','archer','brute','hound','caster','thornReaver','mireSpitter'];
-  for(const room of rooms){if(!room.id)continue;const c=center(room);
-    for(let i=0;i<36;i++){const roll=random(), rank=roll<.10+riftBonus(rift,'court')/100?'elite':roll<.31?'veteran':'normal';members.push({id:`rift:${room.id}:${i}`,kind:roster[Math.floor(random()*roster.length)],rank,room:room.id,x:c.x+(i%6-2.5)*110+(random()-.5)*30,y:c.y+(Math.floor(i/6)-2.5)*110+(random()-.5)*30,seed:Math.floor(random()*4294967296)});}
+  for(let tries=0;centers.length<RIFT_FIELD.packs&&tries<8000;tries++){
+    const angle=random()*Math.PI*2,range=900+Math.sqrt(random())*2400;
+    const center={x:Math.cos(angle)*range,y:Math.sin(angle)*range};
+    if(!dry(center.x,center.y,40)||centers.some(p=>Math.hypot(p.x-center.x,p.y-center.y)<780))continue;
+    const pack=centers.length,placed:{x:number;y:number;radius:number}[]=[],count=RIFT_FIELD.minPack+Math.floor(random()*(RIFT_FIELD.maxPack-RIFT_FIELD.minPack+1));
+    // Keep composition coherent within a pack, with a few supporting archetypes.
+    const main=roster[Math.floor(random()*roster.length)],support=roster[Math.floor(random()*roster.length)];
+    for(let attempt=0;placed.length<count&&attempt<count*100;attempt++){
+      const a=random()*Math.PI*2,r=Math.sqrt(random())*RIFT_FIELD.radius;
+      const x=center.x+Math.cos(a)*r,y=center.y+Math.sin(a)*r;
+      const kind=random()<.72?main:support,radius=ENEMY_DEFINITIONS[kind].radius*1.28;
+      if(Math.hypot(x,y)<600||!dry(x,y,radius+4)||placed.some(p=>Math.hypot(p.x-x,p.y-y)<p.radius+radius+8))continue;
+      const roll=random(),rank=roll<.10+riftBonus(rift,'court')/100?'elite':roll<.31?'veteran':'normal';
+      members.push({id:`rift:${pack}:${placed.length}`,kind,rank,room:sectorAt(x,y),x,y,seed:Math.floor(random()*4294967296)});
+      placed.push({x,y,radius});
+    }
+    centers.push(center);
   }
-  const boss=center(rooms[15]);members.push({id:'warden',kind:bossForBiome(biome),rank:'elite',room:15,...boss,seed:(seed^731)>>>0});
-  const floor:DungeonFloor={rift,seed,rooms,edges,corridors,members,entry:center(rooms[0]),exit:{x:boss.x+180,y:boss.y+160},chests:[0,0,15].map(id=>({...center(rooms[id]),y:center(rooms[id]).y+160,room:id})),events:[],props:[]};
-  for(const list of [rooms,edges,corridors,members,floor.chests]){list.forEach(Object.freeze);Object.freeze(list);}return Object.freeze(floor);
+  if(centers.length!==RIFT_FIELD.packs)throw new Error('Rift landscape has insufficient pack sites');
+  members.push({id:'warden',kind:bossForBiome(biome),rank:'elite',room:sectorAt(boss.x,boss.y),...boss,seed:(seed^731)>>>0});
+  const floor:DungeonFloor={rift,seed,rooms,edges:[],corridors:[],members,entry,exit,
+    chests:[{...entry,room:sectorAt(0,0)},{...entry,room:sectorAt(0,0)},{...chest,room:sectorAt(chest.x,chest.y)}],events:[],props:[]};
+  for(const list of [rooms,floor.edges,floor.corridors,members,floor.chests]){list.forEach(Object.freeze);Object.freeze(list);}
+  Object.freeze(entry);Object.freeze(exit);Object.freeze(floor);landscapes.set(floor,world);
+  if(floors.size>=8)floors.delete(floors.keys().next().value!);floors.set(key,floor);
+  return floor;
 }

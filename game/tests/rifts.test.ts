@@ -19,7 +19,10 @@ import { RiftWorld } from '../src/rift-world.ts';
 import { tickRift, riftKill } from '../src/rift-runtime.ts';
 import { awardKillRewards } from '../src/combat-rewards.ts';
 import { enemyModifiers, enemyMovementMultiplier } from '../src/enemy-modifiers.ts';
-import { BIOME_IDS } from '../src/biomes.ts';
+import { World } from '../src/world.ts';
+import { WorldLandscape } from '../src/world-landscape.ts';
+import { RIFT_FIELD } from '../src/rift-floor.ts';
+import { BIOME_IDS, startingBiome } from '../src/biomes.ts';
 import type { Building } from '../src/settlements.ts';
 import { decodeCharacterSave } from '../src/character-save.ts';
 const portal:Building={id:'rift:test',seed:1,name:'Rift',kind:'rift',form:'fixture',x:0,y:-70,width:58,height:32,door:{x:0,y:0,width:42},walls:[],furniture:[]};
@@ -41,12 +44,32 @@ test('rift keys are deterministic normal-pack items with canonical validation an
   const broken=structuredClone(key);broken.recipe.riftKeyTier=9;assert.equal(validItem(broken),false);
  }
 });
-test('all rift biomes have connected broad floors and surplus rank-weighted targets',()=>{
- for(const biome of BIOME_IDS)for(let seed=0;seed<6;seed++){
-  const f=generateDungeon(seed,25,{rift:{attempt:1},biome});assert.equal(f.events!.length,0);assert.equal(f.members.length,541);
-  assert.ok(f.members.filter(m=>m.id!=='warden').reduce((n,m)=>n+riftPoints(m.rank),0)>RIFT_RULES.progress*1.5);
-  for(const m of f.members)assert.equal(dungeonBlocked(f,m.x,m.y,25),false,`${biome} ${seed} ${m.id}`);
-  const reached=new Set([0]);for(let i=0;i<16;i++)for(const [a,b]of f.edges){if(reached.has(a))reached.add(b);if(reached.has(b))reached.add(a);}assert.equal(reached.size,16);
+test('rifts use actual open-world terrain and huge irregular packs in every starting biome',()=>{
+ for(const biome of BIOME_IDS){
+  let seed=0;while(startingBiome(seed)!==biome)seed++;
+  const entrance={id:'dungeon:rift:1',name:'Test',seed,level:25,biome,x:0,y:0,rift:{attempt:1}};
+  const f=generateDungeon(seed,25,entrance),world=new RiftWorld(f,entrance),landscape=new WorldLandscape(seed,true),ordinary=new World(seed);
+  assert.equal(f.events!.length,0);assert.equal(f.corridors.length,0);assert.equal(f.edges.length,0);
+  assert.ok(f.members.length>=RIFT_FIELD.packs*RIFT_FIELD.minPack+1);
+  assert.ok(f.members.filter(m=>m.id!=='warden').reduce((n,m)=>n+riftPoints(m.rank),0)>RIFT_RULES.progress*4);
+  assert.equal(new Set(f.members.filter(m=>m.id!=='warden').map(m=>m.id.split(':')[1])).size,RIFT_FIELD.packs);
+  assert.equal(world.blocked(f.entry.x,f.entry.y,25),false);
+  for(const m of f.members){
+    assert.equal(dungeonBlocked(f,m.x,m.y,ENEMY_DEFINITIONS[m.kind].radius),false,`${biome} ${seed} ${m.id}`);
+    assert.equal(world.blocked(m.x,m.y,ENEMY_DEFINITIONS[m.kind].radius),false);
+    assert.ok(world.sampleWater(m.x,m.y).coverage<.12);
+    assert.deepEqual(world.sampleBiome(m.x,m.y),ordinary.sampleBiome(m.x,m.y));
+  }
+  for(const p of [f.exit,f.chests[2]])assert.equal(world.blocked(p.x,p.y,40),false);
+  assert.deepEqual(world.getProps(-900,-900,1800,1800),landscape.getProps(-900,-900,1800,1800));
+  assert.ok(world.getProps(-900,-900,1800,1800).length>0);
+  assert.deepEqual(world.getSettlements(-4000,-4000,8000,8000),[]);
+  assert.deepEqual(world.getEventSites(-4000,-4000,8000,8000),[]);
+  assert.deepEqual(world.getPOIs(-4000,-4000,8000,8000),[]);
+  assert.deepEqual(world.getContainers(0,0,1000),[]);
+  // Discovery sectors have no physical boundary: the landscape continues beyond the roster.
+  assert.deepEqual(world.move(0,0,0,100,15),landscape.move(0,0,0,100,15));
+  world.dispose();ordinary.dispose();landscape.dispose();
  }
 });
 test('entry consumes a key only after persistence; failures preserve inventory and attempts',async()=>{

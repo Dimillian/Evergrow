@@ -36,8 +36,10 @@ export function updateDungeon(sim: Simulation, view: SpawnExclusion | null, dt=1
         run.explored.push(room.id);
     if (!view) return;
     const last=admissions.get(sim);
-    const admitEvents=!last||last.run!==run||sim.time<last.at||sim.time-last.at>=.5;
+    const admitEvents=!last||last.run!==run||sim.time<last.at||sim.time-last.at>=(run.rift?.25:.5);
+    if(run.rift&&!admitEvents)return;
     if(admitEvents)admissions.set(sim,{run,at:sim.time});
+    if(run.rift)for(const sector of floor.rooms)if(Math.hypot(sector.x+sector.width/2-sim.player.x,sector.y+sector.height/2-sim.player.y)<900&&!run.explored.includes(sector.id))run.explored.push(sector.id);
     sim.enemies = sim.enemies.filter(e => e.state === 'dead' || !(Math.hypot(e.x - sim.player.x, e.y - sim.player.y) > 1400 && isEnemyInactive(e) && isSpawnHidden(e.x, e.y, view, e.radius)));
     const present=new Set(sim.enemies.map(e=>e.campMemberId)), roster=roomRosters(floor);
     for (const room of [...floor.rooms].sort((a, b) => Math.hypot(a.x + a.width / 2 - sim.player.x, a.y + a.height / 2 - sim.player.y) - Math.hypot(b.x + b.width / 2 - sim.player.x, b.y + b.height / 2 - sim.player.y))) {

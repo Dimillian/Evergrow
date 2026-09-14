@@ -128,3 +128,6 @@ The frozen HUD review also accepts `effects=caster`, `guard`, `rogue`, `bow` or 
 World → Crimson Rifts (`/tools/rifts.html`) previews the runtime portal, level selection, five inventory key tiers, danger/reward modifiers and records in disposable memory. It never starts a playable run or reads saves.
 
 World → Crimson Rifts supports `/tools/rifts.html?view=map&seed=7319&biome=verdant`: a full revealed layout using runtime floor generation and map art, monster spawn dots, seed cycling and all nine biome palettes. This is a disposable layout study; it does not reveal a playable character map or start combat.
+
+
+The Crimson Rifts map study (`/tools/rifts.html?view=map`) now displays shared overworld terrain with the actual dense roster. **View pack** switches to a frozen runtime-rendered scene; choosing a biome selects a real matching world seed. It never reads saves or advances combat.

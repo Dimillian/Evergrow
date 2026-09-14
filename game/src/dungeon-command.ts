@@ -1,6 +1,6 @@
 import { RIFT_RULES, freshRiftLedger, riftRandom, riftBonus } from './rift-content.ts';
 import { riftRewardItems } from './rift-rewards.ts';
-import { BIOME_IDS, BIOMES } from './biomes.ts';
+import { startingBiome, BIOMES } from './biomes.ts';
 import { BOSS_CHEST_LOOT_TABLES } from './loot-content.ts';
 import { newExpeditionRoute, expeditionChoices, expeditionRewardItems, completeExpeditionStage, dungeonChestMask, EXPEDITION_RULES } from './expedition-route.ts';
 import { encounterScaleAt, encounterRewardLevel } from './encounter-scaling.ts';
@@ -78,7 +78,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
             if(action.keyId&&(!key||key.kind!=='riftKey'||key.locked))return {ok:false,message:'Choose an unlocked rift key from your inventory.'};
             if(key){checkpoint.character.inventory[keyIndex]=null;if(checkpoint.character.inventoryLayout)delete checkpoint.character.inventoryLayout[key.id];}
             ledger.attempts++;
-            const random=riftRandom(((surface.seed??0)^Math.imul(ledger.attempts,0x9e3779b9))>>>0),seed=Math.floor(random()*4294967296),biome=BIOME_IDS[Math.floor(random()*BIOME_IDS.length)];
+            const random=riftRandom(((surface.seed??0)^Math.imul(ledger.attempts,0x9e3779b9))>>>0),seed=Math.floor(random()*4294967296),biome=startingBiome(seed);
             expeditionEntrance={id:`dungeon:rift:${ledger.attempts}`,name:`Fractured ${BIOMES[biome].name}`,seed,biome,level:Math.max(1,Math.min(1e6,p.level+action.offset)),x:portal.door.x,y:portal.door.y,rift:{attempt:ledger.attempts,...(key?{keySeed:key.seed,keyTier:key.recipe.riftKeyTier}:{})}};
             state.runs=state.runs.filter(r=>!r.entrance.rift);
         }

@@ -1,4 +1,4 @@
-import { buildRiftFloor } from './rift-floor.ts';
+import { buildRiftFloor, riftLandscape } from './rift-floor.ts';
 import type { RiftTag } from './rift-content.ts';
 import { dungeonCollision } from './dungeon-collision.ts';
 import type { ExpeditionModifier } from './expedition-modifiers.ts';
@@ -169,6 +169,7 @@ export function generateDungeon(seed: number, _level = 1, options: Partial<Pick<
 }
 export function dungeonRoomAt(f: DungeonFloor, x: number, y: number): Room | undefined { return f.rooms.find(r => cryptContains(r, x, y)); }
 export function dungeonBlocked(f: DungeonFloor, x: number, y: number, radius: number): boolean {
+    if (f.rift) return riftLandscape(f).blocked(x,y,radius);
     if (Object.isFrozen(f)) return dungeonCollision(f).blocked(x,y,radius);
     if (![x, y, radius].every(Number.isFinite) || radius < 0 || radius > 1000)
         return true;
