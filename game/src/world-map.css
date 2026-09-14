@@ -70,6 +70,21 @@
   position: absolute; z-index: 2; width: 270px; max-width: calc(100% - 22px);
   max-height: calc(100% - 22px); overflow: hidden; padding: 17px 19px 18px;
 }
+.world-map-area.ui-tooltip {
+  position: absolute; z-index: 1; top: 18px; left: 18px;
+  width: 300px; max-width: calc(100% - 128px); max-height: calc(100% - 36px);
+  box-sizing: border-box; overflow: hidden; padding: 16px 18px;
+  --poi-color: var(--ui-jade);
+}
+.world-map-area .ui-title { margin: 0 0 4px; font-size: 22px; line-height: 1.15; overflow-wrap: anywhere; }
+.world-map-area-biome.ui-body { color: var(--ui-muted); font-size: 15px; }
+.world-map-area-details {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px;
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--ui-line);
+  font-size: 13px; font-variant-numeric: tabular-nums;
+}
+.world-map-area-level { color: var(--ui-brass); }
+.world-map-area-coordinates { color: var(--ui-muted); overflow-wrap: anywhere; }
 
 .world-map-poi-kind.ui-kicker {
   display: flex; align-items: center; gap: 7px; margin: 0 0 7px;
@@ -99,6 +114,7 @@
 .world-map-position .ui-kicker { margin: 0; font-size: 10px; color: var(--ui-faint); letter-spacing: .1em; }
 .world-map-coordinates { white-space: nowrap; color: var(--ui-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 @media (max-width: 560px) {
+  .world-map-area.ui-tooltip { top: 12px; left: 12px; max-width: calc(100% - 108px); padding: 12px; }
   .world-map-heading { gap: 11px; }
   .world-map-eyebrow.ui-kicker { font-size: 10px; letter-spacing: .1em; }
   .world-map-toolbar { right: 12px; bottom: 12px; }
