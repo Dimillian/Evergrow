@@ -1,3 +1,4 @@
+import { metric, syncRiftChronicle } from './chronicle.ts';
 import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { RIFT_RULES, freshRiftLedger, riftRandom, riftBonus } from './rift-content.ts';
 import { riftRewardItems } from './rift-rewards.ts';
@@ -78,6 +79,8 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
             const keyIndex=checkpoint.character.inventory.findIndex(i=>i?.id===action.keyId),key=checkpoint.character.inventory[keyIndex];
             if(action.keyId&&(!key||key.kind!=='riftKey'||key.locked))return {ok:false,message:'Choose an unlocked rift key from your inventory.'};
             if(key){checkpoint.character.inventory[keyIndex]=null;if(checkpoint.character.inventoryLayout)delete checkpoint.character.inventoryLayout[key.id];}
+            syncRiftChronicle(checkpoint.chronicle,ledger);
+            metric(checkpoint.chronicle,'riftAttempts');if(key)metric(checkpoint.chronicle,'riftKeysUsed');
             ledger.attempts++;
             const random=riftRandom(((surface.seed??0)^Math.imul(ledger.attempts,0x9e3779b9))>>>0),seed=Math.floor(random()*4294967296),biome=startingBiome(seed);
             expeditionEntrance={id:`dungeon:rift:${ledger.attempts}`,name:`Fractured ${BIOMES[biome].name}`,seed,biome,level:Math.max(1,Math.min(1e6,p.level+action.offset)),x:portal.door.x,y:portal.door.y,rift:{attempt:ledger.attempts,...(key?{keySeed:key.seed,keyTier:key.recipe.riftKeyTier}:{})}};
@@ -159,7 +162,8 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
             state.route.status='failed';state.route.choice=null;state.route.cleared=0;state.runs=state.runs.filter(r=>!r.entrance.expedition);
         }
         if(run.rift){if(action.kind==='death'){checkpoint.dead=false;checkpoint.hp=p.maxHp;checkpoint.mana=p.maxMana;checkpoint.flasks=2;checkpoint.healCooldown=0;checkpoint.skillCooldowns={};}
-          if(run.rift.phase!=='complete')run.rift.phase='failed';state.runs=state.runs.filter(r=>r!==run);}
+          if(run.rift.phase!=='complete'&&run.rift.phase!=='failed'){metric(checkpoint.chronicle,action.kind==='death'?'riftDeaths':'riftAbandoned');run.rift.phase='failed';}
+          state.runs=state.runs.filter(r=>r!==run);}
         checkpoint.travel = { ...sim.travel, returnTo: action.kind === 'town' && !run.rift ? { x: p.x, y: p.y, town: action.anchor.band, dungeon: run.entrance.id } : null };
     }
     compactExpeditions(state, checkpoint.travel?.returnTo?.dungeon);

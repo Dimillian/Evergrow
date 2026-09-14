@@ -13,7 +13,7 @@ import { GroundItemPickup } from './ground-item-pickup.ts';
 import { updateWildernessBoss } from './wilderness-boss.ts';
 import { completeBossLair } from './wilderness-boss-rewards.ts';
 import { isWildernessBoss } from './wilderness-boss-content.ts';
-import { freshChronicle, metric } from './chronicle.ts';
+import { freshChronicle, metric, syncRiftChronicle } from './chronicle.ts';
 import { trackChronicleEvent } from './chronicle-tracking.ts';
 import { TREASURE_FLIGHT_DURATION } from './treasure-flight.ts';
 import { advanceSkillEffects, consumeRally, snapshotSkillOffense, queueSkillEcho } from './player-skill-effects.ts';
@@ -211,6 +211,7 @@ export class Simulation {
     this.expeditions = saved.expeditions ?? freshExpeditions(); this.dungeonFloor = dungeonFromState(this);
     this.journeys = saved.journeys ?? freshJourneys();
     this.player.chronicle = saved.chronicle ?? freshChronicle();
+    syncRiftChronicle(this.player.chronicle,this.expeditions.rifts);
     this.eventState = saved.events ?? freshEvents();
     this.travel = saved.travel ?? freshTravel();
     if (saved.dead) this.travel.returnTo = null;

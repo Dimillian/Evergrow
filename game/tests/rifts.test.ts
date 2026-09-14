@@ -1,3 +1,4 @@
+import { chronicleValues } from '../src/chronicle.ts';
 import { dungeonRunChest, dungeonRunExit } from '../src/dungeon-locations.ts';
 import { enemyTraitBuffs } from '../src/enemy-debuffs.ts';
 import test from 'node:test';
@@ -270,4 +271,35 @@ test('rank modifier icons retain names, actual effects and permanent lifetimes',
   buffs.forEach((buff,i)=>{assert.equal(buff.name,traits[i].name);assert.equal(buff.summary,traits[i].description);assert.equal(buff.color,traits[i].color);assert.equal(buff.persistent,true);});
  }
  assert.deepEqual(enemyTraitBuffs({kind:'stalker',rank:'elite',lootSeed:73,hp:0}),[]);
+});
+
+test('rift Chronicle records durable entry, actual kills, successful clears and no duplicate credit',async()=>{
+ const {sim,run,floor}=await setup();
+ const values=()=>chronicleValues(sim.player.chronicle!.sources);
+ assert.equal(values().riftAttempts,1);assert.equal(values().riftKeysUsed,1);
+ const member=floor.members.find(m=>m.id!=='warden')!;
+ const enemy=sim.spawnEnemy(member.kind,member.x,member.y,member.rank,{campId:run.entrance.id,memberId:member.id,lootSeed:member.seed,level:25})!;
+ run.rift!.points=599;riftKill(sim,enemy);
+ assert.equal(values().riftKills,1,'guardian transition does not credit dissolved monsters');
+ const m=floor.members.find(m=>m.id==='warden')!;
+ const boss=sim.spawnEnemy(m.kind,m.x,m.y,m.rank,{campId:run.entrance.id,memberId:m.id,lootSeed:m.seed,level:25})!;
+ run.rift!.elapsed=245;riftKill(sim,boss);riftKill(sim,boss);
+ assert.equal(values().riftClears,1);assert.equal(values().riftKeyedClears,1);
+ assert.equal(values().bestRiftSeconds,245);assert.equal(values().highestRiftLevel,25);
+ assert.equal(values().riftFastClears,1);assert.equal(values()['seen:riftBiome:'+run.entrance.biome],1);
+ const checkpoint=sim.captureCheckpoint();sim.restoreCheckpoint(checkpoint);
+ assert.equal(values().riftClears,1);assert.equal(values().riftAttempts,1);
+});
+test('rift failure outcomes count once and failed abandonment saves do not count',async()=>{
+ const {sim,run}=await setup(false);tickRift(sim,600);tickRift(sim,1);
+ assert.equal(chronicleValues(sim.player.chronicle!.sources).riftTimeouts,1);
+ const {sim:dead}=await setup(false);dead.player.dead=true;tickRift(dead,1);tickRift(dead,1);
+ assert.equal(chronicleValues(dead.player.chronicle!.sources).riftDeaths,1);
+ const {sim:leaving}=await setup(false);leaving.player.x=leaving.player.y=0;
+ const fail=await planDungeonTravel(leaving,{kind:'exit'},surface,()=>({ok:false,message:'disk'}));assert.equal(fail.ok,false);
+ assert.equal(chronicleValues(leaving.player.chronicle!.sources).riftAbandoned,undefined);
+ const success=await planDungeonTravel(leaving,{kind:'exit'},surface,ok);assert.ok(success.ok);
+ assert.equal(chronicleValues(success.checkpoint.chronicle!.sources).riftAbandoned,1);
+ assert.equal(chronicleValues(success.checkpoint.chronicle!.sources).riftDeaths,undefined);
+ assert.equal(run.rift!.phase,'failed');
 });

@@ -69,3 +69,10 @@ Champions and elites use a soft blue/gold glow and narrow rim following the actu
 
 
 The map/pack study has a **Guardian arrival** frozen-scene view (`?view=map&arrival`). Pack previews also show the shared target nameplate. The whole-map preview no longer reveals a fictitious fixed guardian destination.
+
+
+## Rift map and Chronicle follow-up
+
+Atlas, minimap and held-Tab maps draw non-overlapping terrain tile destinations. Cached sample borders still support filtering, but no longer darken grid seams when the map is translucent. Discovery fades inward over 192 world units at the unexplored frontier; edges between discovered sectors stay continuous. Unknown sectors remain hidden. Fog is cached with terrain tiles and rebuilt only when discovery changes, using local sector neighbors. The finite sector lattice remains streaming metadata, with no map lines or visible walls added.
+
+Rift history and six achievement families now use the shared Chronicle. See [Chronicle](chronicle.md) for counters, historical recovery and exactly-once ownership. Existing attempts/clears/best records are retained; no player progress resets.
