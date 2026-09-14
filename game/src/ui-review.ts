@@ -195,7 +195,7 @@ function embeddedReview() {
     simulation.player.dead = view === 'dead'; simulation.player.mana = view === 'paused' ? 62 : 100;
     simulation.kills = 17; simulation.time = 218;
     const settings: RenderSettings = { phase: view === 'dead' ? 'dead' : view === 'ready' ? 'ready' : 'paused',
-      reducedMotion: true, fps: 0, debug: false };
+      reducedMotion: true };
     renderer.render(simulation, world, 1, settings);
     postfx.render(renderer.canvas, view === 'dead' ? .25 : 0);
     ground!.drawImage(display, 0, 0);

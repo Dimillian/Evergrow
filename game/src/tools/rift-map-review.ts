@@ -54,7 +54,7 @@ export function mountRiftMapReview(root:HTMLElement,params:URLSearchParams):()=>
       const sceneWorld=world;staged=sim.enemies.length;
       present=()=>{
         profiler.begin(performance.now());
-        renderer.render(sim,sceneWorld,1/60,{phase:'paused',reducedMotion:false,fps:0,debug:false,skyHour:10});
+        renderer.render(sim,sceneWorld,1/60,{phase:'paused',reducedMotion:false,skyHour:10});
         const started=profiler.start();post.render(renderer.canvas,0);profiler.end('postfx',started);profiler.finish();
       };
       present();c.drawImage(display,0,0,1100,900);

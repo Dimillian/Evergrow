@@ -71,7 +71,7 @@ async function boot() {
   const buttons = new Map<EventKind, HTMLButtonElement>();
   const reviewRecord = (phase: EventRecord['phase']): EventRecord => ({ ...selected, phase, choice: kind === 'caravan' ? 'goods' : kind === 'standingStones' ? 'haste' : null, wavesCleared: kind === 'cursedChest' ? 6 : 0, delivered: 0, bonusGranted: phase === 'claimed' });
   function paint(animated = false, dt = 0) {
-    const settings = { phase: 'playing' as const, reducedMotion: !animated || matchMedia('(prefers-reduced-motion: reduce)').matches, fps: 0, debug: false };
+    const settings = { phase: 'playing' as const, reducedMotion: !animated || matchMedia('(prefers-reduced-motion: reduce)').matches };
     renderer.render(sim, scene, dt, settings); fx ??= new PostFX(display); fx.render(renderer.canvas, sim.time);
     const c = canvas.getContext('2d')!; c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(display, 0, 0);
     c.save(); c.scale(2, 2); renderer.renderUI(c, sim, scene, settings); c.restore();

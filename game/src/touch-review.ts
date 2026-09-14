@@ -67,7 +67,7 @@ function draw() {
     renderer.touchTopInset = touch.safeTop * renderer.height / h;
   }
   renderer.cameraX=player.x;renderer.cameraY=player.y-50;
-  const settings={phase:'playing' as const,reducedMotion:true,fps:60,debug:false};
+  const settings={phase:'playing' as const,reducedMotion:true};
   renderer.render(sim,world,0,settings);fx.render(renderer.canvas,0);
   const c=ui.getContext('2d')!;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,ui.width,ui.height);
   c.setTransform(ui.width/renderer.width,0,0,ui.height/renderer.height,0,0);

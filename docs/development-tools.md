@@ -135,3 +135,7 @@ The Crimson Rifts map study (`/tools/rifts.html?view=map`) now displays shared o
 The Crimson Rifts map/pack study includes **Profile rendering** for a frozen 1100×900 scene, using the runtime renderer and post-processing without advancing gameplay. It reports CPU median/p95 after warmup. See `docs/rift-performance.md` and `game/scripts/benchmark-rift-crowds.ts` for the separate headless crowd benchmark.
 
 Crimson Rifts → **Guardian arrival** stages the runtime warning near a disposable character, without advancing AI or touching saves. Pack previews include the actual rank-modifier nameplate.
+
+### Gameplay performance monitor
+
+Data & audits → Code & performance audits includes the actual F3 monitor with a frozen synthetic 600-frame sample (`/tools/audits.html?view=monitor`). Inspect all six dropdown views and capture controls without loading characters, simulating gameplay or reading saves. Restore sample data repopulates the disposable profiler. The runtime monitor toggles with F3; see [world performance](world-performance.md) for metric definitions and limits.

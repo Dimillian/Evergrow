@@ -103,7 +103,7 @@ export interface RenderSettings {
   waterAge?: number;
   /** Save-free scene tools only; runtime always uses persisted simulation time. */
   skyHour?: number;
-  phase: GamePhase; fps: number; debug: boolean;
+  phase: GamePhase;
 }
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const TAU = Math.PI * 2;
@@ -200,6 +200,7 @@ export class Renderer {
   }
 
   get combatViewport() { const v = this.lastDisplayedView; return { x: v.left, y: v.top, width: v.width, height: v.height }; }
+  get terrainStats() { return this.groundLayer.stats; }
   get worldHeight() { return this.view.height; }
   get worldBounds() { return { x: this.view.left, y: this.view.top, width: this.view.width, height: this.view.height }; }
   spawnExclusionBounds(player: Player) {
@@ -573,7 +574,7 @@ export class Renderer {
       settings.reducedMotion);
     c.save();
     if(phone) { c.translate(headerX,headerY); c.scale(.8*unit,.8*unit); }
-    this.navigation(c, sim, world, settings);
+    this.navigation(c, sim, world);
     drawGoldBalance(c, this.rewards);
     c.restore();
     if (settings.phase !== 'character') drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
@@ -983,15 +984,13 @@ export class Renderer {
     c.fillStyle = gradient; c.fillRect(0, 0, this.width, this.height); c.restore();
   }
 
-  private navigation(c: CanvasRenderingContext2D, sim: Simulation, world: World, settings: RenderSettings) {
+  private navigation(c: CanvasRenderingContext2D, sim: Simulation, world: World) {
     const p = sim.player;
     const building = world.getBuildingAt(p.x, p.y);
     const town = world.getSettlements(p.x - 1, p.y - 1, 2, 2).find(town => Math.hypot(p.x - town.x, p.y - town.y) <= town.radius);
     text(c, this.cryptFloor ? `${dungeonTheme(this.cryptFloor.seed,this.cryptFloor.theme).name} · ${currentDungeon(sim.expeditions)!.entrance.level}` : building?.name ?? town?.name ?? world.sampleBiome(p.x, p.y).name, 22, 22, 1.2, '#d7c99d');
     text(c, world.isSanctuary(p.x, p.y) ? 'SANCTUARY' : String(sim.kills).padStart(2, '0') + ' SLAIN',
       22, 37, 1, '#91b69e');
-    if (settings.debug) text(c, `${Math.round(settings.fps)} FPS / ${sim.enemies.length} MOBS / ${Math.round(p.x)},${Math.round(p.y)}`,
-      22, this.height - 18, 1, '#a3c7a7');
   }
 
   private pointerOverHUD() {

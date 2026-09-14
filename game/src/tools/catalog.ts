@@ -20,7 +20,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'playground',group:'combat',name:'Skill playground',path:'/tools/skills.html',description:'Replay every active skill and specialization using actual combat and animation rules.',tags:'animations spells effects cast uniques'},
   {id:'placements',group:'world',name:'Seed & placement inspector',path:'/tools/placements.html',description:'Survey generated events, towns and dungeon entrances by seed and coordinates.',tags:'generation map positions'},
   {id:'data',group:'data',name:'Game data browser',path:'/tools/data.html',description:'Search current definitions for items, skills, enemies, affixes, biomes and world content.',tags:'catalog recipes stats export'},
-  {id:'audits',group:'data',name:'Code & performance audits',path:'/tools/audits.html',description:'Commands and access instructions for code checks, profiling and capture scripts.'},
+  {id:'audits',group:'data',name:'Code & performance audits',path:'/tools/audits.html',description:'F3 monitor preview, code checks, profiling and capture instructions.'},
   {id:'equipment',group:'equipment',name:'Equipment gallery',path:'/equipment.html',description:'Browse all equipment silhouettes and materials under movable light.'},
   {id:'charms',group:'equipment',name:'Charms',path:'/character.html?charms',description:'Arrange six sizes of magic stones and inspect their active bonuses.'},
   {id:'hud-menu',group:'interface',name:'HUD & active buffs',path:'/character.html?panel=hud&loadout=shield&buffs',description:'Frozen HUD, active-effect icons, nested explanations and shortcut list. No gameplay or saves.'},

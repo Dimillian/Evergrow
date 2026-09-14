@@ -43,7 +43,7 @@ const draw = (now: number) => {
     stage.width = canvas.width; stage.height = canvas.height;
     renderer.resize(600 * innerWidth / innerHeight, 600);
   }
-  const settings = { phase: 'playing' as const, reducedMotion: motion.matches, debug: false, fps: 60 };
+  const settings = { phase: 'playing' as const, reducedMotion: motion.matches };
   // Initialize the visual balances before this loop's first authored reward.
   if (elapsed === 0) renderer.render(sim, world, 0, settings);
   const events = rewardSceneEvents(sim, scene, elapsed, elapsed + dt); elapsed += dt;

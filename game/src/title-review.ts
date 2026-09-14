@@ -65,7 +65,7 @@ const draw = () => {
     renderer.resize(Math.round(600 * innerWidth / innerHeight), 600);
   }
   renderer.cameraX = -90; renderer.cameraY = -180;
-  renderer.render(sim, world, 1 / 60, { phase: 'ready', reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches, fps: 60, debug: false });
+  renderer.render(sim, world, 1 / 60, { phase: 'ready', reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches });
   fx.render(renderer.canvas, 0); frame = requestAnimationFrame(draw);
 };
 draw(); life.defer(() => cancelAnimationFrame(frame));

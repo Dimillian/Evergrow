@@ -43,7 +43,7 @@ function stage(){
 function paint(now:number){
  if(disposed)return;const t=reduced.matches?2:(now-start)/1000;sim.time=12+t;
  for(const enemy of sim.enemies)if(enemy.state==='windup')enemy.stateTime=reduced.matches?.8:(t%2)/2*enemy.stateDuration;
- const settings={phase:'playing' as const,reducedMotion:reduced.matches,fps:0,debug:false};
+ const settings={phase:'playing' as const,reducedMotion:reduced.matches};
  renderer.render(sim,world,1/60,settings);fx.render(renderer.canvas,sim.time);
  const c=canvas.getContext('2d')!;c.setTransform(1,0,0,1,0,0);c.drawImage(display,0,0);c.save();c.scale(2,2);renderer.renderUI(c,sim,world,settings);c.restore();
  canvas.setAttribute('aria-label',`${BOSS_NAMES[kind]} · ${mode}`);root.dataset.ready='true';frame=requestAnimationFrame(paint);

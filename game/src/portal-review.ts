@@ -33,7 +33,7 @@ function draw() {
   shell.canvas.width = innerWidth * Math.min(1.6, ratio); shell.canvas.height = innerHeight * Math.min(1.6, ratio);
   shell.uiCanvas.width = innerWidth * ratio; shell.uiCanvas.height = innerHeight * ratio;
   renderer.resize(Math.round(540 * innerWidth / innerHeight), 540); renderer.snapTo(p);
-  const settings = { phase: 'playing' as const, reducedMotion: true, debug: false, fps: 60 };
+  const settings = { phase: 'playing' as const, reducedMotion: true };
   renderer.render(sim, world, 0, settings); fx.render(renderer.canvas, 0);
   const c = shell.uiCanvas.getContext('2d')!;
   c.setTransform(shell.uiCanvas.width / renderer.width, 0, 0, shell.uiCanvas.height / renderer.height, 0, 0);

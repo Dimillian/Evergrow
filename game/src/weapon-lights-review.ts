@@ -58,7 +58,7 @@ for (const [index, [label, profile, extra]] of samples.entries()) {
   }
   renderer.reset(); renderer.cameraX = x; renderer.cameraY = y - 22;
   for (let i = 0; i < 4; i++) renderer.zoomByWheel(-300, 0, height);
-  renderer.render(sim, world, 1 / 60, { phase: 'paused', reducedMotion: true, fps: 60, debug: false });
+  renderer.render(sim, world, 1 / 60, { phase: 'paused', reducedMotion: true });
   post.render(renderer.canvas, 0);
   const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
   const c = canvas.getContext('2d')!;

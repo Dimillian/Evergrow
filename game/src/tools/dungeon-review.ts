@@ -80,7 +80,7 @@ function render(){
             for(const m of floor.members.filter(m=>m.room===room.id&&!m.wave&&(m.eventWave??0)===0))sim.spawnEnemy(m.kind,m.x,m.y,m.rank,{campId:entrance.id,memberId:m.id,lootSeed:m.seed});
             const output=document.createElement('canvas');output.width=1440;output.height=1000;fx=new PostFX(output);renderer.reset();renderer.resize(720,500);renderer.cameraX=x;renderer.cameraY=y;
             let renderCount=0;
-            present=dt=>{profiler.begin(performance.now());renderer.render(sim,scene,dt,{phase:'paused',reducedMotion:reduced.matches,fps:0,debug:false});const postStart=profiler.start();fx!.render(renderer.canvas,0,renderer.emission);profiler.end('postfx',postStart);c.drawImage(output,0,0);profiler.finish();
+            present=dt=>{profiler.begin(performance.now());renderer.render(sim,scene,dt,{phase:'paused',reducedMotion:reduced.matches});const postStart=profiler.start();fx!.render(renderer.canvas,0,renderer.emission);profiler.end('postfx',postStart);c.drawImage(output,0,0);profiler.finish();
               if(++renderCount%30===0){const timing=profiler.snapshot(),stats=content.querySelector<HTMLElement>('[data-render-cost]')!;
                 stats.textContent=`Frame CPU ${timing.metrics.frameCPU.p50.toFixed(1)} ms · Lighting ${timing.metrics.lighting.p50.toFixed(1)} ms (median)`;
                 stats.dataset.profile=JSON.stringify(timing.metrics);}

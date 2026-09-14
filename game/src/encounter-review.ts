@@ -68,7 +68,7 @@ async function boot() {
       }
     }
     renderer.reset(); renderer.resize(720, 500); renderer.cameraX = site.x; renderer.cameraY = site.y - 20;
-    renderer.render(sim, sceneWorld, 1, { phase: 'paused', reducedMotion: true, fps: 0, debug: false });
+    renderer.render(sim, sceneWorld, 1, { phase: 'paused', reducedMotion: true });
     postfx ??= new PostFX(display); postfx.render(renderer.canvas, 0);
     c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(display, 0, 0);
     if (warning) { c.save(); c.scale(2, 2); drawEnemyPlate(c, warning, 720, 500); c.restore(); }

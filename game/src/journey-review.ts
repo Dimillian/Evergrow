@@ -53,7 +53,7 @@ function draw(){
   const height=Math.min(680,Math.max(450,Math.round(innerHeight/1.35)));
   renderer.resize(Math.max(540,Math.round(height*innerWidth/innerHeight)),height);
   renderer.cameraX=p.x;renderer.cameraY=p.y-30;
-  const settings={phase:'playing' as const,reducedMotion:true,debug:false,fps:60};
+  const settings={phase:'playing' as const,reducedMotion:true};
   renderer.render(sim,world,0,settings);fx.render(renderer.canvas,0);
   const c=shell.uiCanvas.getContext('2d')!;c.setTransform(shell.uiCanvas.width/renderer.width,0,0,shell.uiCanvas.height/renderer.height,0,0);
   c.clearRect(0,0,renderer.width,renderer.height);renderer.renderUI(c,sim,world,settings);

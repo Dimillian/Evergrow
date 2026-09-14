@@ -29,7 +29,7 @@ Bindings use physical keyboard positions. Escape remains pause/back and cancels 
 | Hold Tab while playing | Show a simplified translucent exploration map; release to close |
 | Full map: drag / scroll / + and − | Pan / zoom |
 | N | Toggle synthesized sound |
-| F3 | Frame-rate and coordinate overlay |
+| F3 | Compact performance monitor with selectable live graphs |
 
 A town portal channels for three seconds. Movement, damage, attacking, skills, dodge, Escape, P again or leaving the gameplay input context cancels it. It costs nothing and refills nothing. E/click the town endpoint returns once to your departure point.
 
