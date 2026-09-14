@@ -1,5 +1,36 @@
 # Evergrow changelog
 
+## v0.5.2 — 2026-09-14T06:07:00Z
+
+### New
+
+- A redesigned pause menu groups Character, Adventure and System, with direct navigation and dedicated Options, Controls, rankings and release-note windows.
+- Hold Tab for a translucent map while moving and fighting; release to close. M still opens the full paused map.
+- Choose from four gameplay cursors and adjust their size from 50% to 250%, saved on your device.
+- Active events show remaining time, waves cleared, enemies left and current objectives in a compact progress panel.
+- Ground-loot tooltips compare equipped gear, show net stat changes and support scrolling before pickup.
+- Hold Shift while inspecting inventory, shop or ground gear to compare the alternate ring or eligible off-hand slot.
+- Item tooltips show their gold sell value before you visit a merchant.
+
+### Tweaks
+
+- Pause and system windows share the inventory's frosted material, with subtle silver highlights and clearer save status.
+- The full map smoothly recenters on your character or tracked Journey, with a brief arrival highlight.
+- Clearer map symbols distinguish treasure, exits, bosses, shrines and event types; the full map gains a compass rose.
+- Loot-name reveal is now remappable and defaults to Shift; Options shows your chosen binding.
+- A subtle Not Enough Mana cue explains why an otherwise available attack or skill could not fire.
+- Fire Staff uses a relaxed free-arm pose while retaining its two-handed equipment requirement.
+
+### Fixes
+
+- Inventory placement previews stay steady instead of flickering as you drag items across the grid.
+- Switching skills during Heartwood Draw correctly cancels the held shot and lets the new skill activate.
+- Shop and ground-item comparisons remain available when your inventory is full, without bypassing storage limits.
+- The live Tab map preserves movement, Journey progress and loot reveal; its dungeon player marker stays clearly visible.
+- Opening a character or adventure panel from pause returns you to the menu when closed.
+
+> Existing local and cloud characters remain compatible. No save reset or skill refund is required. Reload the game to apply this update.
+
 ## v0.5.1 — 2026-09-13T16:53:00Z
 
 ### New
