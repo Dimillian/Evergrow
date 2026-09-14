@@ -14,8 +14,20 @@
 .character-inventory-heading .character-inventory-counts { margin-left: auto; }
 .character-inventory-heading .character-tool-icon { width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 6px; border-color: transparent; background: none; color: var(--ui-silver-dim); box-shadow: none; }
 .character-tool-icon .ui-icon { width: 17px; height: 17px; }
-.character-inventory-heading .character-tool-icon:hover, .character-inventory-heading .character-tool-icon.has-filter { color: var(--ui-ivory); background: #a0bdd112; }
-.character-tool-icon.has-filter::before { content: ''; position: absolute; right: 3px; top: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--ui-silver); pointer-events: none; }
+.character-inventory-heading .character-tool-icon:hover { color: var(--ui-ivory); background: #a0bdd112; }
+/* Persistent warm metal separates enabled modes from the cool hover treatment. */
+.character-window .character-inventory-heading .character-tool-icon:is([data-lock-mode][aria-pressed="true"], [data-sort-filter].has-filter, [data-sort-filter][aria-expanded="true"]) {
+  color: #f0d69b; border-color: #d5b777b3; background: linear-gradient(145deg, #d8ba7338, #d8ba7317);
+  box-shadow: inset 0 1px #fff0c438, inset 0 0 0 1px #d8ba7314, 0 0 8px #d8ba7318;
+}
+.character-window .character-inventory-heading .character-tool-icon:is([data-lock-mode][aria-pressed="true"], [data-sort-filter].has-filter, [data-sort-filter][aria-expanded="true"])::before {
+  content: ''; position: absolute; right: 3px; top: 3px; width: 4px; height: 4px; transform: rotate(45deg); background: currentColor; pointer-events: none;
+}
+@media (forced-colors: active) {
+  .character-window .character-inventory-heading .character-tool-icon:is([data-lock-mode][aria-pressed="true"], [data-sort-filter].has-filter, [data-sort-filter][aria-expanded="true"]) {
+    color: Highlight; border-color: Highlight; background: Canvas; outline: 1px solid Highlight; outline-offset: -3px;
+  }
+}
 .character-popup-layer { position: absolute; inset: 0; z-index: 80; }
 .character-popup-layer[hidden], .character-mini-dialog[hidden] { display: none; }
 .character-popup-layer.is-confirmation { background: #03091080; }
