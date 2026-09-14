@@ -1,3 +1,4 @@
+import { RiftAtmosphereArt } from './rift-atmosphere-art.ts';
 import { riftMechanic } from './rift-encounters.ts';
 import { riftWardActive } from './rift-tactics.ts';
 import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
@@ -153,6 +154,7 @@ export class Renderer {
   private residentCooldown=0;
   private environmentArt = new EnvironmentArt();
   private atmosphere = new AtmosphereArt();
+  private riftAtmosphere = new RiftAtmosphereArt();
   private sceneShadows = new SceneShadows();
   private propSurfaceLight = new PropSurfaceLight();
   private sky: SkyState = skyAtTime(0);
@@ -269,7 +271,7 @@ export class Renderer {
     this.cameraX = 0; this.cameraY = 0; this.effects.reset(); this.rangedAim = null;
     this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
     this.lastDisplayedView = this.view;
-    this.groundLayer.reset(); this.groundDressing.reset(); this.biomeLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
+    this.riftAtmosphere.reset(); this.groundLayer.reset(); this.groundDressing.reset(); this.biomeLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
     this.settlementArt.reset(); this.indoorBlend = 0; this.residents=[]; this.residentSpeech=null; this.residentCooldown=0;
     this.materials.reset(); this.deaths.reset(); resetDeathArt(); this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
@@ -428,12 +430,14 @@ export class Renderer {
     this.profiler?.end('terrain', terrainStart);
     const sceneryStart = this.profiler?.start() ?? 0;
     const dungeonRun=currentDungeon(sim.expeditions);
+    this.riftAtmosphere.prepare(world,this.view,sim.dungeonFloor?.rift?dungeonRun?.rift:undefined,settings.reducedMotion);
     if(this.cryptFloor&&dungeonRun) drawCryptDecor(c,this.cryptFloor,dungeonRun,settings.reducedMotion ? 0 : this.visualTime,this.eventArt.chests,settings.reducedMotion);
     else if(sim.dungeonFloor?.rift&&dungeonRun?.rift){const f=sim.dungeonFloor;drawRiftPortal(c,f.entry.x,f.entry.y,this.visualTime,.65);if(dungeonRun.rift.phase==='complete'){const exit=dungeonRunExit(f,dungeonRun);drawRiftPortal(c,exit.x,exit.y,this.visualTime,.65);const ch=dungeonRunChest(f,dungeonRun,2);this.eventArt.chests.draw(c,`${dungeonRun.entrance.id}:chest`,ch.x,ch.y,dungeonRun.rift.claimed,this.visualTime,0,true,settings.reducedMotion);}}
     else for(const entrance of this.visibility.entrances)drawCryptGate(c,entrance,this.visualTime);
     for (const site of this.visibility.sites) drawSiteGround(c, site, settings.reducedMotion ? 0 : this.visualTime);
     this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime, this.sky);
     this.groundDressing.draw(c, this.cachedProps, this.view);
+    this.riftAtmosphere.drawGround(c);
     this.biomeArt.drawGround(c, this.biomeLife, this.cachedProps, this.visualTime, settings.reducedMotion, this.view);
     this.atmosphere.drawWater(c, this.cachedProps, this.visualTime, settings.reducedMotion);
     if (!this.cryptFloor) {
@@ -501,6 +505,7 @@ export class Renderer {
     this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps, ambient, zoom);
     this.profiler?.end('lighting', lightingStart);
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
+    this.riftAtmosphere.drawEmission(c,this.view);
     this.biomeArt.drawLight(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
     this.biomeArt.drawAir(c, this.biomeLife, this.visualTime, settings.reducedMotion);
     this.atmosphere.drawLayer(c, world, this.view, this.visualTime, settings.reducedMotion,
@@ -801,6 +806,7 @@ export class Renderer {
       this.actor(px, py, pose);
       drawPlayerSkillEffects(c,p,px,py,settings.reducedMotion?0:sim.time,pose,settings.reducedMotion);
     } });
+    for(const scar of this.riftAtmosphere.visible)if(scar.float)entries.push({y:scar.y,stage:'props',draw:()=>this.riftAtmosphere.drawFragment(c,scar)});
     entries.sort((a, b) => a.y - b.y);
     for (const entry of entries) {
       const start = this.profiler?.enabled && entry.stage ? this.profiler.start() : 0;

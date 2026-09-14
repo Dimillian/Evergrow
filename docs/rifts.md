@@ -96,3 +96,14 @@ Experiment verification: 1,512 of 1,513 full-suite checks passed initially; the 
 Terrain detail correction: clearing/trail wear no longer suppresses biome ground patches in rifts. These cached patches restore soil, leaf, stone and snow marks across the fighting area, using the existing world-space artwork in both the terrain worker and synchronous renderer. Water/building exclusions, ordinary road treatment, collision and creature density are unchanged.
 
 Large ridge props now rasterize their procedural geometry at bounded 2×/4× resolution rather than stretching the small world sprites. World size, collision, anchors and layered tree wind remain unchanged; caches share variants within each resolution.
+
+
+## Crimson atmosphere — September 14, local
+
+`rift-atmosphere-art.ts` adds seeded decorative fissures along clearing/trail borders, with dark cores and thin crimson edges pulsing slowly. Small faceted stone clusters hover above separate ground shadows and share normal actor/prop depth ordering. Nine biome palettes supply corrupted root strands, fractured violet ice or ember/mineral veins. Existing open-layout rifts use nearby scenery instead of clearing boundaries; entry landings and water are excluded. These are atmospheric decorations, never attack telegraphs, obstacles or rewards.
+
+Distant violet sky bolts are single, softly fading discharges with no full-screen flash. At empty progress, 20% of six-second windows are eligible; at full hunt progress, 95% are eligible. The same seeded event retains its timing as progress changes. The guardian's actual arrival replaces the ambient lightning, and cleared/failed rifts dim their fissures. Runtime animation reads the persisted rift elapsed clock, so pausing holds it still. Reduced motion freezes pulses and hovering and removes lightning.
+
+Candidate placement is cached by world cell (96 entries), with at most 56 visible accents and 12 placement attempts per new cell. No per-enemy effect work, persistent particle systems or extra dynamic lights. Geometry is drawn at world resolution, keeping narrow lines crisp through the existing renderer/post-processing.
+
+The existing rift map tool now has **Animate atmosphere / Freeze atmosphere** and **Early hunt / Half full / Guardian near** controls. `?view=map&scene=pack&atmosphere=&progress=0.9` animates only presentation while actors remain frozen; it never ticks combat or loads player saves. The preview pauses in hidden tabs and respects reduced motion. The normal gameplay renderer uses the same effects in active rifts.
