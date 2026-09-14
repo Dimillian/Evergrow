@@ -54,7 +54,7 @@ Journey **Show on map** uses the same easing and arrival highlight at the object
 
 Map input is coalesced into display frames, ordinary hover does not repaint terrain, and new atlas detail builds progressively within a cooperative generation budget. A complete low-resolution preview covers revealed terrain immediately and finished tiles crossfade into it over 240 ms (instant with reduced motion). Fine fog masks use row-run copies; district contours are cached in world-aligned tiles and rechecked against current discovery. See [panel performance](panel-performance.md) for budgets, verification and measured limits.
 
-Tab-map marker tooltips appear automatically whenever hovered, including during combat, without consuming mouse input. The full paused map keeps its normal tooltips.
+Tab-map marker tooltips appear automatically whenever hovered, including during combat, without consuming mouse input. On the full paused map, general area information appears in a fixed upper-left glass panel: district name, biome, level range (or Sanctuary) and hovered world coordinates. It updates only over discovered terrain, including beneath discovered icons, and hides over unknown terrain, outside the chart, during dragging/recentering and when the map closes. POI and Journey icon details still follow the cursor and remain clamped inside the chart. Both displays pass pointer input through to the map; the held-Tab overlay retains only icon tooltips.
 
 While holding Tab, the mouse wheel zooms the chart around the player; clicks continue to reach gameplay.
 
