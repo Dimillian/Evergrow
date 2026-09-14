@@ -2,6 +2,8 @@
 
 Local September 15 map legend: collapsible categories, individual/category icon visibility, and **Ping nearest** for discovered NPC service types. Shared filters reach world/dungeon/minimaps and Thor projections; desktop side panel and compact drawer use the existing icon art and arrival ping. Session-only preferences; no save reset. See [explored atlas](explored-atlas.md#map-legend--local-september-15-2026).
 
+Local character direction study (2026-09-14): torso/armor surfaces turn with facing, and east/west heads and helmets use side profiles. Legs now have rotated hip/foot tracks, fixed-length joints, a compact stride and directional boots; leg armor follows the joints. The rig review adds clothing, helmet, weapon and stride controls. Shared runtime/portrait art; no save reset. See [character appearance](character-editor.md#directional-silhouette-pass--local-2026-09-14).
+
 Local September 14 wand pass: Wand & Grimoire starts with Star Wand + Astral Grimoire. Star Wand basics use dedicated ivory-gold radiant art and sound, mapped to existing Arcane damage; elemental wands and assigned spells retain their identities. No save reset. See [weapon rules](weapons-and-skills.md#radiant-wand-basics--local-september-14-2026).
 
 Published in v0.5.2 (September 14, 2026): the EVERGROW field-journal layout groups Character, Adventure and System, with Chronicle as one Character entry and map/Journeys under Adventure. Equipment, atlas, appearance, map and Journey links open while paused and return to their menu entry. Options, Controls, release notes and rankings open dedicated spacious windows and return to System. Responsive minimum height, compact run/save footer and native keyboard/controller navigation reuse the existing UI. No save reset.

@@ -2,6 +2,7 @@ import { gearSurface, materializeGear } from './gear-material.ts';
 import type { ArmorPiece } from './art-types.ts';
 import { mixColor, type Point } from './art-primitives.ts';
 import type { GearShape } from './weapon-shapes.ts';
+import { isHeadProfile } from './character-facing.ts';
 
 type ArmorShapeKind = 'head' | 'chest' | 'shoulder';
 const fill = (points: readonly Point[], color: string): GearShape => ({ points, fill: color });
@@ -60,6 +61,21 @@ function buildArmorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing: numbe
   const seam = mixColor(base, shadow, .55);
   const fine = (shape: GearShape): GearShape => ({ ...shape, fine: true });
   if (kind === 'head') {
+    if (isHeadProfile(facing)) {
+      const sign = Math.cos(facing) >= 0 ? 1 : -1;
+      const profile = [
+        fill([[-4.5,2.7],[-4.7,-1.5],[-3.4,-4.1],[-1.2,-5.6],[1.7,-5.2],[3.5,-3.5],[4,-.5],
+          [4.3,.3],[1.4,.3],[.2,1.3],[-.2,4.9],[-2.9,4.7]],shadow),
+        fill([[-4,-1.2],[-3,-3.9],[-1.1,-5],[1.5,-4.6],[3,-3.1],[3.5,-.6],[.8,-.3],[-1,.6],[-3.9,.3]],base),
+        fill([[-3.9,-1.3],[-3,-3.9],[-1.1,-5],[-.3,-4.5],[-1.3,-1.1],[-2.8,.1]],lit),
+        line([[-3,-4],[-1.1,-5.1],[1.5,-4.7],[3.1,-3.2]],edge,.55),
+        line([[-3.9,.3],[-1,.6],[1,-.15],[3.8,-.3]],trim,.65),
+        fill([[-3.9,.8],[-1,.5],[.3,1.3],[.2,4.2],[-1.2,5.1],[-3.5,4]],base),
+        line([[-3.5,1],[-3,3.7],[-1.3,4.5]],edge,.55),
+      ];
+      if(plate) profile.push(line([[-.9,-5],[.3,-3.3],[.6,-.7]],edge,.6));
+      return profile.map(shape=>({...shape,points:shape.points.map(([x,y])=>[x*sign,y] as Point)}));
+    }
     const back = Math.sin(facing) < -.16;
     const face = Math.cos(facing) * 1.15;
     const shapes: GearShape[] = [
