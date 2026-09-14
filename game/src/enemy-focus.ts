@@ -3,7 +3,7 @@ import type { CombatEvent, Enemy } from './model.ts';
 
 const HOVER_GRACE = .25;
 const HIT_RETENTION = 1.5;
-import { ENEMY_BODY_BOUNDS } from './enemy-body.ts';
+import { enemyBodyBounds } from './enemy-body.ts';
 
 interface VisibleEnemy { enemy: Enemy; x: number; y: number; centerY: number; radiusX: number; radiusY: number; }
 
@@ -55,7 +55,7 @@ export class EnemyFocus {
     const visible = new Map<number, VisibleEnemy>();
     for (const enemy of enemies) {
       if (enemy.state === 'dead' || enemy.hp <= 0 || this.killedIds.has(enemy.id)) continue;
-      const body = ENEMY_BODY_BOUNDS[enemy.kind];
+      const body = enemyBodyBounds(enemy);
       const x = enemy.prevX + (enemy.x - enemy.prevX) * interpolation;
       const y = enemy.prevY + (enemy.y - enemy.prevY) * interpolation;
       const centerY = y + (body.top + body.bottom) / 2;

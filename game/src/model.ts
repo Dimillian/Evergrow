@@ -8,6 +8,9 @@ import type { EnemyCamp } from './wilderness-sites.ts';
 import type { EnemyRank } from './progression-content.ts';
 
 export interface WorldQuery {
+  /** Optional exact accelerations of the shared sampled visibility/walking rules. */
+  lineOfSight?(ax:number,ay:number,bx:number,by:number):boolean|undefined;
+  walkableSegment?(ax:number,ay:number,bx:number,by:number,radius:number):boolean|undefined;
   getBuildings?(x:number,y:number,width:number,height:number): readonly import('./settlements.ts').Building[];
   readonly dungeonTheme?: import('./dungeon-content.ts').DungeonThemeId;
   impactMaterial?(x: number, y: number, radius: number): MaterialId;
@@ -109,7 +112,7 @@ export interface WeaponDefinition {
 
 export type WeaponFamily = 'sword' | 'axe' | 'mace' | 'dagger' | 'bow' | 'staff' | 'wand' | 'unarmed';
 export type DamageType = 'physical' | 'fire' | 'frost' | 'lightning' | 'arcane';
-export type ProjectileStyle = 'arrow' | 'fire' | 'frost' | 'lightning' | 'arcane' | 'spirit';
+export type ProjectileStyle = 'arrow' | 'fire' | 'frost' | 'lightning' | 'arcane' | 'spirit' | 'radiant';
 export interface ShieldDefinition {
   id: string; name: string; blockChance: number; blockReduction: number;
   visual: { material?: GearMaterial; kind: 'buckler' | 'kite' | 'tower'; base: string; edge: string; trim: string; shadow: string };
@@ -203,6 +206,11 @@ export type EnemyKind = 'thornReaver' | 'mireSpitter' | 'frostRevenant' | 'ember
 export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
 
 export interface Enemy {
+  /** Transient support link, never serialized; source death disables it immediately. */
+  riftWardSource?: Enemy;
+  riftSpecialCooldown?:number;
+  riftWarning?:{kind:'storm'|'fire';x:number;y:number;originX:number;originY:number;angle:number;remaining:number;damage:number};
+  rift?: import('./rift-content.ts').RiftTag;
   auraExposure?: Partial<Record<'fire'|'frost'|'lightning'|'arcane',{power:number;remaining:number}>>;
   decoyTarget?: {id:number;x:number;y:number;radius:number;hit?:boolean};
   dungeonTheme?: import('./dungeon-content.ts').DungeonThemeId;

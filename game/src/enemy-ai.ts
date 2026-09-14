@@ -1,3 +1,4 @@
+import { enemyMovementMultiplier } from './enemy-modifiers.ts';
 import { decoyTarget } from './unique-combat.ts';
 import { enemyRecoveryDuration, enemyWindupDuration } from './enemy-threat.ts';
 import { projectileDamageType } from './resistance-content.ts';
@@ -15,6 +16,7 @@ export interface EnemyAIContext {
   target?: Pick<Player,'x'|'y'|'radius'|'dead'>;
   hurtDecoy?(id:number,amount:number):void;
   enemies: readonly Enemy[];
+  neighbors?(enemy:Enemy,padding:number):readonly Enemy[];
   world: WorldQuery;
   time: number;
   trial: { campId: string; x: number; y: number; radius: number } | null;
@@ -26,16 +28,18 @@ export interface EnemyAIContext {
 }
 
 function separatedMotion(enemy: Enemy, vx: number, vy: number, context: EnemyAIContext): { vx: number; vy: number } {
-  for (const other of context.enemies) {
+  for (const other of context.neighbors?.(enemy,ENEMY_AI_RULES.separationPadding)??context.enemies) {
     if (other === enemy || other.state === 'dead') continue;
-    const dx = enemy.x - other.x, dy = enemy.y - other.y, distance = Math.hypot(dx, dy);
+    const dx = enemy.x - other.x, dy = enemy.y - other.y;
     const gap = enemy.radius + other.radius + ENEMY_AI_RULES.separationPadding;
+    if(dx*dx+dy*dy>=gap*gap)continue;
+    const distance=Math.hypot(dx,dy);
     if (distance > .01 && distance < gap) {
       const force = (gap - distance) * 5;
       vx += dx / distance * force; vy += dy / distance * force;
     }
   }
-  const maxSpeed = ENEMY_DEFINITIONS[enemy.kind].speed * goblinSpeed(enemy)
+  const maxSpeed = ENEMY_DEFINITIONS[enemy.kind].speed * goblinSpeed(enemy)*enemyMovementMultiplier(enemy)
     * (enemy.state === 'chase' ? ENEMY_AI_RULES.pursuitSpeedMultiplier : 1);
   const length = Math.hypot(vx, vy), scale = length > maxSpeed ? maxSpeed / length : 1;
   return { vx: vx * scale, vy: vy * scale };
@@ -53,8 +57,8 @@ function moveToward(enemy: Enemy, x: number, y: number, speed: number, dt: numbe
   // A patrol target drifts much more slowly than a hound can run. Arrive gently
   // instead of stepping past it and reversing on the next fixed tick.
   const arriving = enemy.state === 'patrol' || (enemy.state === 'chase' && !enemy.seesPlayer);
-  const approachSpeed = Math.min(speed * goblinSpeed(enemy), distance / dt,
-    arriving ? distance * ENEMY_AI_RULES.arrivalResponse : speed * goblinSpeed(enemy));
+  const approachSpeed = Math.min(speed * goblinSpeed(enemy)*enemyMovementMultiplier(enemy), distance / dt,
+    arriving ? distance * ENEMY_AI_RULES.arrivalResponse : speed * goblinSpeed(enemy)*enemyMovementMultiplier(enemy));
   const velocity = separatedMotion(enemy, dx / distance * approachSpeed, dy / distance * approachSpeed, context);
   const beforeX = enemy.x, beforeY = enemy.y;
   context.move(enemy, velocity.vx, velocity.vy, dt);

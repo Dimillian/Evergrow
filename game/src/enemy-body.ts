@@ -1,3 +1,5 @@
+import { enemyVisualScale } from './enemy-modifiers.ts';
+import type { Enemy } from './model.ts';
 import type { EnemyKind } from './model.ts';
 
 /** Speech clears authored heads/crowns, rather than the larger aiming envelope.
@@ -27,3 +29,7 @@ export const ENEMY_BODY_BOUNDS: Record<EnemyKind, { radiusX: number; top: number
   archer: { radiusX: 22, top: -48, bottom: 3 },
   wisp: { radiusX: 18, top: -49, bottom: -4 },
 };
+
+/** Rank-aware visible bounds keep focus, aiming and captions aligned without per-frame allocation. */
+const rankedBounds=new Map(Object.entries(ENEMY_BODY_BOUNDS).map(([kind,base])=>[kind,Object.fromEntries((['normal','veteran','elite'] as const).map(rank=>{const scale=enemyVisualScale({kind:kind as EnemyKind,rank});return [rank,Object.freeze({radiusX:base.radiusX*scale,top:base.top*scale,bottom:base.bottom*scale,...(base.headTop===undefined?{}:{headTop:base.headTop*scale})})];}))]));
+export function enemyBodyBounds(enemy:Pick<Enemy,'kind'> & Partial<Pick<Enemy,'rank'>>){return rankedBounds.get(enemy.kind)![enemy.rank??'normal'];}

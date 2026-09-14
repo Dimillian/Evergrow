@@ -19,7 +19,7 @@ export function trackChronicleEvent(p:Player,enemies:readonly Enemy[],e:CombatEv
    if(enemy){metric(c,'rank:'+enemy.rank);metric(c,'highestEnemy',enemy.level);if(enemy.rank==='elite'&&p.hp/p.maxHp<.1)metric(c,'feat:lastbreath');
      if(isBossKind(enemy.kind))metric(c,'bosses');
      if(isWildernessBoss(enemy.kind))metric(c,'boss:'+enemy.kind);
-     if(enemy.campMemberId==='warden')metric(c,'crypts');}
+     if(enemy.campMemberId==='warden'&&!enemy.campId?.startsWith('dungeon:rift:'))metric(c,'crypts');}
    break;}
  case 'hurt': metric(c,'damageTaken',e.actualValue??e.value);if(e.remainingHp===0){metric(c,'deaths');const s=c.sources.find(s=>s.id===c.active)!;metric(c,'highestDeathTime',s.values.time??0);}break;
  case 'heal':metric(c,'healing',e.value);break;

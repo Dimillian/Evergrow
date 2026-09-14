@@ -1,3 +1,12 @@
+import { RiftAtmosphereArt } from './rift-atmosphere-art.ts';
+import { riftMechanic } from './rift-encounters.ts';
+import { riftWardActive } from './rift-tactics.ts';
+import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
+import { EnemyOutlineArt } from './enemy-outline-art.ts';
+import { RIFT_RULES } from './rift-content.ts';
+import { enemyVisualScale } from './enemy-modifiers.ts';
+import { drawRiftPortal, drawRiftArrival } from './rift-art.ts';
+import type { DungeonFloor } from './dungeon.ts';
 import { controls, cursorPreference } from './control-preferences.ts';
 import { drawMouseCursor } from './cursor-art.ts';
 import type { ActiveBuff } from './active-buffs.ts';
@@ -19,7 +28,7 @@ import { sceneClimate } from './scene-light-style.ts';
 import type { Prop } from './world.ts';
 import { drawEnemyWarning, enemyWarningLight } from './enemy-warning-art.ts';
 import { drawGroundSpell, groundSpellLights } from './ground-spell-art.ts';
-import { enemyDebuffs } from './enemy-debuffs.ts';
+import { enemyTraitBuffs, enemyDebuffs } from './enemy-debuffs.ts';
 import { basicAttackWeapon } from './equipment.ts';
 import { projectilePresentation } from './projectile-launch.ts';
 import { heldEquipmentLights } from './weapon-emission.ts';
@@ -70,7 +79,7 @@ import { EnvironmentArt } from './environment-art.ts';
 import { biomeAmbient } from './biomes.ts';
 import { propDefinition } from './biome-props.ts';
 import { SceneVisibility } from './scene-visibility.ts';
-import { isGameUIPoint } from './ui-hit-test.ts';
+import { isGameUIPoint, type UIRect } from './ui-hit-test.ts';
 import type { GamePhase } from './game-phase.ts';
 import { COMBAT_TIMING, PLAYER_ABILITIES, PLAYER_MOVEMENT } from './combat-content.ts';
 import { CAMERA_FOLLOW, CameraZoom, cameraFollowTarget, cameraSpawnExclusion,
@@ -79,12 +88,11 @@ import { EnemyFocus } from './enemy-focus.ts';
 import { BattleBarkScene } from './battle-bark-scene.ts';
 import { getHUDLayout } from './hud-layout.ts';
 import { getMinimapRect, getPortalControlRect } from './map-view.ts';
-import { ENEMY_BODY_BOUNDS } from './enemy-body.ts';
+import { ENEMY_BODY_BOUNDS, enemyBodyBounds } from './enemy-body.ts';
 import { resolveRangedAim, resolveDirectionalAim, PROJECTILE_HEIGHT, type RangedAim } from './ranged-aim.ts';
 import { deriveAttackStats } from './equipment.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { drawEnemyPlate, getEnemyPlateLayout } from './enemy-plate.ts';
-import { drawRankCrest } from './enemy-rank-art.ts';
 import { drawSiteGround, drawSiteDecor, wildernessLights } from './wilderness-art.ts';
 
 import { EnemyDeaths } from './death-presentation.ts';
@@ -98,12 +106,13 @@ export interface RenderSettings {
   waterAge?: number;
   /** Save-free scene tools only; runtime always uses persisted simulation time. */
   skyHour?: number;
-  phase: GamePhase; fps: number; debug: boolean;
+  phase: GamePhase;
 }
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const TAU = Math.PI * 2;
 
 export class Renderer {
+  performanceUIBounds: UIRect | null = null;
   extraUIBounds: {x:number;y:number;width:number;height:number}|null = null;
   lootLogBounds: {x:number;y:number;width:number;height:number}|null = null;
   private outdoorLightEffects = new OutdoorLightEffects();
@@ -147,6 +156,7 @@ export class Renderer {
   private residentCooldown=0;
   private environmentArt = new EnvironmentArt();
   private atmosphere = new AtmosphereArt();
+  private riftAtmosphere = new RiftAtmosphereArt();
   private sceneShadows = new SceneShadows();
   private propSurfaceLight = new PropSurfaceLight();
   private sky: SkyState = skyAtTime(0);
@@ -196,6 +206,7 @@ export class Renderer {
   }
 
   get combatViewport() { const v = this.lastDisplayedView; return { x: v.left, y: v.top, width: v.width, height: v.height }; }
+  get terrainStats() { return this.groundLayer.stats; }
   get worldHeight() { return this.view.height; }
   get worldBounds() { return { x: this.view.left, y: this.view.top, width: this.view.width, height: this.view.height }; }
   spawnExclusionBounds(player: Player) {
@@ -263,7 +274,7 @@ export class Renderer {
     this.cameraX = 0; this.cameraY = 0; this.effects.reset(); this.rangedAim = null;
     this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
     this.lastDisplayedView = this.view;
-    this.groundLayer.reset(); this.groundDressing.reset(); this.biomeLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
+    this.riftAtmosphere.reset(); this.groundLayer.reset(); this.groundDressing.reset(); this.biomeLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
     this.settlementArt.reset(); this.indoorBlend = 0; this.residents=[]; this.residentSpeech=null; this.residentCooldown=0;
     this.materials.reset(); this.deaths.reset(); resetDeathArt(); this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
@@ -300,12 +311,14 @@ export class Renderer {
     }
   }
 
+  private cryptFloor:DungeonFloor|null=null;
   render(sim: Simulation, world: World, dt: number, settings: RenderSettings) {
+    this.cryptFloor=sim.dungeonFloor?.rift?null:sim.dungeonFloor;
     const setupStart = this.profiler?.start() ?? 0;
     const c = this.ctx, p = sim.player, active = settings.phase === 'playing' || settings.phase === 'map' && settings.liveMap === true;
     const step = active ? dt : 0, alpha = sim.interpolationAlpha;
     const feedbackStep = active || settings.phase === 'dead' ? dt : 0;
-    this.eventProgressPresentation.update(sim.dungeonFloor ? null : eventProgress(sim.eventState), feedbackStep, settings.reducedMotion);
+    this.eventProgressPresentation.update(this.cryptFloor ? null : eventProgress(sim.eventState), feedbackStep, settings.reducedMotion);
     this.rewards.update(goldBalance(p.character), feedbackStep, settings.reducedMotion);
     this.experienceDisplay = this.experienceFeedback.update(p, feedbackStep, settings.reducedMotion);
     this.experienceDisplay.pulse = Math.max(this.experienceDisplay.pulse, this.rewards.xpPulse);
@@ -364,7 +377,7 @@ export class Renderer {
       if (this.plateOpacity < .01) this.plateEnemy = null;
     }
     this.visibility.update(world, this.view);
-    this.residents=sim.dungeonFloor?[]:world.getSettlements(left,top,worldWidth,worldHeight).flatMap(t=>settlementResidents(t,sim.time)).filter(n=>n.x>=left-90&&n.x<=left+worldWidth+90&&n.y>=top-90&&n.y<=top+worldHeight+90);
+    this.residents=this.cryptFloor?[]:world.getSettlements(left,top,worldWidth,worldHeight).flatMap(t=>settlementResidents(t,sim.time)).filter(n=>n.x>=left-90&&n.x<=left+worldWidth+90&&n.y>=top-90&&n.y<=top+worldHeight+90);
     if(active){
       this.residentCooldown=Math.max(0,this.residentCooldown-step);
       if(this.residentSpeech){this.residentSpeech.age+=step;if(this.residentSpeech.age>4)this.residentSpeech=null;}
@@ -377,7 +390,7 @@ export class Renderer {
     this.indoorBlend += ((world.getBuildingAt(px, py) ? 1 : 0) - this.indoorBlend) * (1 - Math.exp(-dt * 5));
     const biome = world.sampleBiome(px, py);
     this.sky = settings.skyHour === undefined ? skyAtTime(sim.time) : skyAtHour(settings.skyHour);
-    this.materialKey = sceneClimate(biome.weights, sim.dungeonFloor ? 1 : this.indoorBlend, this.sky).key;
+    this.materialKey = sceneClimate(biome.weights, this.cryptFloor ? 1 : this.indoorBlend, this.sky).key;
     this.biomeLife.update(dt, this.visualTime, this.cachedProps, { x: px, y: py, vx: p.vx, vy: p.vy },
       settings.reducedMotion, (x, y) => world.sampleGroundContact(x, y));
     const lights = this.sceneLights(sim, px, py, settings.reducedMotion, alpha);
@@ -385,11 +398,11 @@ export class Renderer {
     this.profiler?.end('sceneSetup', setupStart);
     const detailStart = this.profiler?.start() ?? 0;
     // The first light is navigation fill, not a physical lamp reflecting on wet stone.
-    const dungeonDetail = sim.dungeonFloor && this.dungeonLightEffects.prepare(sim.dungeonFloor, this.view, lights.slice(1),
+    const dungeonDetail = this.cryptFloor && this.dungeonLightEffects.prepare(this.cryptFloor, this.view, lights.slice(1),
       this.visualTime, settings.reducedMotion, this.width, this.height);
-    const outdoorDetail = !sim.dungeonFloor && this.outdoorLightEffects.prepare(world, this.view, this.cachedProps,
+    const outdoorDetail = !this.cryptFloor && this.outdoorLightEffects.prepare(world, this.view, this.cachedProps,
       prop => this.propSprite(prop), lights.slice(1), this.visualTime, settings.reducedMotion, this.indoorBlend, this.width, this.height, this.sky, {x:px,y:py});
-    if (sim.dungeonFloor) {
+    if (this.cryptFloor) {
       this.emissionCanvas ??= document.createElement('canvas');
       const scale = Math.min(.5, 640 / this.width, 640 / this.height);
       const w = Math.max(1, Math.ceil(this.width * scale)), h = Math.max(1, Math.ceil(this.height * scale));
@@ -399,12 +412,12 @@ export class Renderer {
       const e = this.emissionCanvas.getContext('2d')!;
       e.setTransform(1, 0, 0, 1, 0, 0); e.clearRect(0, 0, w, h);
       e.setTransform(w / worldWidth, 0, 0, h / worldHeight, -left * w / worldWidth, -top * h / worldHeight);
-      drawCryptEmission(e, sim.dungeonFloor, settings.reducedMotion ? 0 : this.visualTime, this.view, true);
+      drawCryptEmission(e, this.cryptFloor, settings.reducedMotion ? 0 : this.visualTime, this.view, true);
       this.emission = this.emissionCanvas;
     } else this.emission = undefined;
     this.profiler?.end('lighting', detailStart);
     const waterStart = this.profiler?.start() ?? 0;
-    if (!sim.dungeonFloor) {
+    if (!this.cryptFloor) {
       const a = p.attack;
       const blade = a?.kind === 'melee' && a.elapsed >= a.activeStart && a.elapsed <= a.activeEnd
         ? getPlayerSwordTip(playerPose(p, sim.time)) : undefined;
@@ -420,14 +433,17 @@ export class Renderer {
     this.profiler?.end('terrain', terrainStart);
     const sceneryStart = this.profiler?.start() ?? 0;
     const dungeonRun=currentDungeon(sim.expeditions);
-    if(sim.dungeonFloor&&dungeonRun) drawCryptDecor(c,sim.dungeonFloor,dungeonRun,settings.reducedMotion ? 0 : this.visualTime,this.eventArt.chests,settings.reducedMotion);
+    this.riftAtmosphere.prepare(world,this.view,sim.dungeonFloor?.rift?dungeonRun?.rift:undefined,settings.reducedMotion);
+    if(this.cryptFloor&&dungeonRun) drawCryptDecor(c,this.cryptFloor,dungeonRun,settings.reducedMotion ? 0 : this.visualTime,this.eventArt.chests,settings.reducedMotion);
+    else if(sim.dungeonFloor?.rift&&dungeonRun?.rift){const f=sim.dungeonFloor;drawRiftPortal(c,f.entry.x,f.entry.y,this.visualTime,.65);if(dungeonRun.rift.phase==='complete'){const exit=dungeonRunExit(f,dungeonRun);drawRiftPortal(c,exit.x,exit.y,this.visualTime,.65);const ch=dungeonRunChest(f,dungeonRun,2);this.eventArt.chests.draw(c,`${dungeonRun.entrance.id}:chest`,ch.x,ch.y,dungeonRun.rift.claimed,this.visualTime,0,true,settings.reducedMotion);}}
     else for(const entrance of this.visibility.entrances)drawCryptGate(c,entrance,this.visualTime);
     for (const site of this.visibility.sites) drawSiteGround(c, site, settings.reducedMotion ? 0 : this.visualTime);
     this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime, this.sky);
     this.groundDressing.draw(c, this.cachedProps, this.view);
+    this.riftAtmosphere.drawGround(c);
     this.biomeArt.drawGround(c, this.biomeLife, this.cachedProps, this.visualTime, settings.reducedMotion, this.view);
     this.atmosphere.drawWater(c, this.cachedProps, this.visualTime, settings.reducedMotion);
-    if (!sim.dungeonFloor) {
+    if (!this.cryptFloor) {
       const opticsStart = this.profiler?.start() ?? 0;
       this.waterArt.begin(this.water.fluid, { left, top, width: worldWidth, height: worldHeight });
       let reflected = 0;
@@ -435,17 +451,17 @@ export class Renderer {
         if (reflected >= 10) break;
         if (Math.max(this.water.fluid.wetAt(prop.x, prop.y + 30), this.water.fluid.wetAt(prop.x, prop.y + 70)) < .1) continue;
         const sprite = this.environmentArt.getSprite(prop) ?? (prop.kind === 'tree' || prop.kind === 'deadTree'
-          ? this.art.getTree(prop.seed, prop.kind === 'deadTree') : prop.kind === 'rock' ? this.art.getRock(prop.seed) : null);
+          ? this.art.getTree(prop.seed, prop.kind === 'deadTree', prop.scale) : prop.kind === 'rock' ? this.art.getRock(prop.seed, prop.scale) : null);
         if (sprite) { this.waterArt.drawPropReflection(c, this.water.fluid, prop.x, prop.y, sprite, prop.scale, settings.reducedMotion); reflected++; }
       }
       this.waterArt.drawReflection(c, this.water.fluid, px, py, playerPose(p, sim.time), settings.reducedMotion);
       this.waterArt.drawSurface(c, this.water.fluid, lights, settings.reducedMotion, settings.waterAge, this.sky);
       this.profiler?.end('water', opticsStart);
     }
-    if (!sim.dungeonFloor) this.sceneShadows.drawProps(c, this.cachedProps, this.view,
+    if (!this.cryptFloor) this.sceneShadows.drawProps(c, this.cachedProps, this.view,
       prop => this.propSprite(prop), this.visualTime, settings.reducedMotion, this.sky.direction, this.sky.shadow);
     this.atmosphere.drawLayer(c, world, this.view, this.visualTime, settings.reducedMotion,
-      px, py, false, !!sim.dungeonFloor, this.indoorBlend, this.sky);
+      px, py, false, !!this.cryptFloor, this.indoorBlend, this.sky);
     if (dungeonDetail) {
       const start = this.profiler?.start() ?? 0; this.dungeonLightEffects.draw(c, this.view, false); this.profiler?.end('lighting', start);
     }
@@ -487,28 +503,31 @@ export class Renderer {
     const weights = biome.weights, inside = this.indoorBlend;
     const ambientChannels = biomeAmbient(weights).map((value, channel) =>
       Math.round(value * this.sky.ambient[channel] * (1 - inside) + [116, 119, 141][channel] * inside));
-    const ambient = sim.dungeonFloor ? dungeonTheme(sim.dungeonFloor.seed,sim.dungeonFloor.theme).ambient : `rgb(${ambientChannels.join(',')})`;
+    const ambient = this.cryptFloor ? dungeonTheme(this.cryptFloor.seed,this.cryptFloor.theme).ambient : `rgb(${ambientChannels.join(',')})`;
     const lightingStart = this.profiler?.start() ?? 0;
     this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps, ambient, zoom);
     this.profiler?.end('lighting', lightingStart);
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
+    this.riftAtmosphere.drawEmission(c,this.view);
     this.biomeArt.drawLight(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
     this.biomeArt.drawAir(c, this.biomeLife, this.visualTime, settings.reducedMotion);
     this.atmosphere.drawLayer(c, world, this.view, this.visualTime, settings.reducedMotion,
-      px, py, true, !!sim.dungeonFloor, this.indoorBlend, this.sky);
+      px, py, true, !!this.cryptFloor, this.indoorBlend, this.sky);
     if (dungeonDetail) {
       const start = this.profiler?.start() ?? 0; this.dungeonLightEffects.draw(c, this.view, true); this.profiler?.end('lighting', start);
     }
     if (outdoorDetail) {
       const start = this.profiler?.start() ?? 0; this.outdoorLightEffects.draw(c, this.view, true); this.profiler?.end('lighting', start);
     }
-    if (!sim.dungeonFloor) this.settlementArt.drawNightEmission(c,this.cachedBuildings,this.visualTime,this.sky);
+    if (!this.cryptFloor) this.settlementArt.drawNightEmission(c,this.cachedBuildings,this.visualTime,this.sky);
     // Emission is composed after surface illumination, so a hot core stays luminous.
-    this.emitters(sim, alpha, lights);
-    if (sim.dungeonFloor) drawCryptEmission(c, sim.dungeonFloor, settings.reducedMotion ? 0 : this.visualTime, this.view);
+    this.emitters(sim, alpha, lights, settings.reducedMotion);
+    const arrival=dungeonRun?.rift?.guardian;
+    if(arrival&&dungeonRun!.rift!.phase==='boss')drawRiftArrival(c,arrival.x,arrival.y,dungeonRun!.rift!.elapsed-arrival.at,RIFT_RULES.guardianArrival,settings.reducedMotion);
+    if (this.cryptFloor) drawCryptEmission(c, this.cryptFloor, settings.reducedMotion ? 0 : this.visualTime, this.view);
     drawGroundGold(c, sim.groundGold, this.visualTime, settings.reducedMotion);
     drawLevelCelebration(c, this.rewards.level, px, py, settings.reducedMotion);
-    if(!sim.dungeonFloor)drawEventObjectives(c,sim.eventState,settings.reducedMotion?0:this.visualTime);
+    if(!this.cryptFloor)drawEventObjectives(c,sim.eventState,settings.reducedMotion?0:this.visualTime);
     drawGroundLoot(c, sim.groundItems, this.visualTime, settings.reducedMotion, sim.time);
     this.effects.drawSword(c);
     for (const effect of sim.groundEffects) {
@@ -517,10 +536,10 @@ export class Renderer {
       drawGroundSpell(c, effect, this.visualTime, settings.reducedMotion);
     }
     this.effects.draw(c, settings.reducedMotion);
-    if (!sim.dungeonFloor) this.waterArt.drawSplashes(c, this.water.fluid);
+    if (!this.cryptFloor) this.waterArt.drawSplashes(c, this.water.fluid);
     this.damageDirection(px, py);
-    if(!sim.dungeonFloor) this.motes(world, left, top, worldWidth, worldHeight, sim.time, settings.reducedMotion);
-    if(!sim.dungeonFloor) this.environmentArt.drawAmbient(c, (x, y) => world.sampleBiome(x, y).weights, { x: left, y: top, width: worldWidth, height: worldHeight },
+    if(!this.cryptFloor) this.motes(world, left, top, worldWidth, worldHeight, sim.time, settings.reducedMotion);
+    if(!this.cryptFloor) this.environmentArt.drawAmbient(c, (x, y) => world.sampleBiome(x, y).weights, { x: left, y: top, width: worldWidth, height: worldHeight },
       this.visualTime, settings.reducedMotion);
     for (const enemy of sim.enemies) drawEnemyWarning(c, enemy, alpha, this.visualTime, settings.reducedMotion);
     this.healthBars(sim, alpha);
@@ -556,6 +575,7 @@ export class Renderer {
       getHUDLayout(this.width, this.height), getMinimapRect(this.width, this.height), getPortalControlRect(this.width, this.height),
       { x: 0, y: 0, width: this.width, height: 112 + this.touchTopInset }];
     if (this.extraUIBounds) barkReserved.push(this.extraUIBounds);
+    if (this.performanceUIBounds) barkReserved.push(this.performanceUIBounds);
     if (this.touchActive) barkReserved.push({ x: 0, y: this.height - 190 * unit, width: this.width, height: 190 * unit });
     this.battleBarks.draw(c, sim, world, this.view, settings.phase === 'playing' && !p.dead,
       this.cachedProps, barkReserved, this.crownOpacity);
@@ -564,7 +584,7 @@ export class Renderer {
       settings.reducedMotion);
     c.save();
     if(phone) { c.translate(headerX,headerY); c.scale(.8*unit,.8*unit); }
-    this.navigation(c, sim, world, settings);
+    this.navigation(c, sim, world);
     drawGoldBalance(c, this.rewards);
     c.restore();
     if (settings.phase !== 'character') drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
@@ -583,13 +603,13 @@ export class Renderer {
     const plateInset=this.touchTopInset/plateScale;
     const boss=sim.enemies.find(e=>isBossKind(e.kind)&&e.hp>0&&e.state!=='return'&&Math.hypot(e.x-p.x,e.y-p.y)<(isWildernessBoss(e.kind)?650:1100));
     const target = boss ?? (this.plateOpacity > .01 ? this.plateEnemy : null);
-    const debuffs = target ? enemyDebuffs(target, p) : [];
+    const debuffs = target ? [...enemyTraitBuffs(target),...enemyDebuffs(target, p)] : [];
     const targetPlate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0);
     this.targetEffects = target && target.hp > 0 && targetPlate.height > 70 && debuffs.length && settings.phase === 'playing'
       ? { id: target.id, buffs: debuffs, x: (targetPlate.x + targetPlate.width / 2) * plateScale / this.width,
         y: (targetPlate.y + 76) * plateScale / this.height, opacity: boss ? 1 : this.plateOpacity } : null;
     if (boss) {
-      drawEnemyPlate(c, boss, plateWidth, plateHeight, { hasDebuffs: debuffs.length > 0, touch: this.touchActive, topInset: plateInset, name:sim.dungeonFloor?dungeonTheme(sim.dungeonFloor.seed,sim.dungeonFloor.theme).bossName:undefined });
+      drawEnemyPlate(c, boss, plateWidth, plateHeight, { hasDebuffs: debuffs.length > 0, touch: this.touchActive, topInset: plateInset, name:this.cryptFloor?dungeonTheme(this.cryptFloor.seed,this.cryptFloor.theme).bossName:undefined });
       const plate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0);
       if (plate.height && this.focusedEnemy?.id === boss.id) text(c, 'CONTROL DURATION −75% · BRIEF STUN IMMUNITY',
         plateWidth / 2, plate.y + plate.height + 4, .7, '#9db8a7', 'center');
@@ -604,9 +624,9 @@ export class Renderer {
     c.restore();
     if (settings.phase === 'playing') {
       const run=currentDungeon(sim.expeditions),f=sim.dungeonFloor;
-      const points=run&&f?[{...f.entry,name:'Leave dungeon'},...(run.states.warden.hp<=0?[{...f.exit,name:'Leave dungeon'}]:[]),...f.chests.map(ch=>({...ch,name:'Treasure chest'}))]:this.visibility.entrances;
-      const table=!run&&world.getBuildings(p.x-180,p.y-180,360,360).find(b=>b.kind==='expedition'&&Math.hypot(b.door.x-p.x,b.door.y-p.y)<75);
-      if(table){const q=worldToScreen(this.view,table.door.x,table.door.y-80);text(c,`Expeditions${p.level<20?' · Level 20':''} [${this.gamepadActive?'A':controls.label('interact')}]`,q.x,q.y,1,'#d8c593','center');}
+      const points=run&&f?[{...f.entry,name:'Leave dungeon'},...(run.states.warden.hp<=0?[{...dungeonRunExit(f,run),name:'Leave dungeon'}]:[]),...f.chests.flatMap((_,i)=>!run.rift||i===2&&run.rift.phase==='complete'?[{...dungeonRunChest(f,run,i),name:'Treasure chest'}]:[])]:this.visibility.entrances;
+      const table=!run&&world.getBuildings(p.x-180,p.y-180,360,360).find(b=>(b.kind==='expedition'||b.kind==='rift')&&Math.hypot(b.door.x-p.x,b.door.y-p.y)<75);
+      if(table){const q=worldToScreen(this.view,table.door.x,table.door.y-80);text(c,`${table.kind==='rift'?'Crimson Rift':'Expeditions'}${p.level<20?' · Level 20':''} [${this.gamepadActive?'A':controls.label('interact')}]`,q.x,q.y,1,'#d8c593','center');}
       const target=points.find(q=>Math.hypot(q.x-p.x,q.y-p.y)<75);
       if(target){const point=worldToScreen(this.view,target.x,target.y-75);text(c,`${target.name}  [${this.gamepadActive?'A':controls.label('interact')}]`,point.x,point.y,1,'#d6d7b3','center');}
       if(run&&f)for(const event of f.events??[]){
@@ -707,16 +727,16 @@ export class Renderer {
         c.transform(1, 0, wind * -.012, 1, 0, 0);
       }
       c.drawImage(sprite.image, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
-      this.propSurfaceLight.draw(c, prop, sprite, sprite.image, sim.dungeonFloor ? undefined : this.sky);
-      if (!sim.dungeonFloor) this.propSurfaceLight.drawOutdoor(c, prop, sprite, sprite.image, world, this.visualTime, settings.reducedMotion, this.sky);
+      this.propSurfaceLight.draw(c, prop, sprite, sprite.image, this.cryptFloor ? undefined : this.sky);
+      if (!this.cryptFloor) this.propSurfaceLight.drawOutdoor(c, prop, sprite, sprite.image, world, this.visualTime, settings.reducedMotion, this.sky);
       for (const [layer, foliage] of (sprite.foliage ?? []).entries()) {
         c.save();
         const gust = biomeWind(prop.x, prop.y, this.visualTime - layer * .18, prop.biome ?? 'deadwood', settings.reducedMotion).x * definition.sway * 2.2;
         c.transform(1, 0, gust * (layer ? -.009 : -.005), 1, 0, 0);
         c.globalAlpha *= foliageOpacity;
         c.drawImage(foliage, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
-        this.propSurfaceLight.draw(c, prop, sprite, foliage, sim.dungeonFloor ? undefined : this.sky);
-        if (!sim.dungeonFloor) this.propSurfaceLight.drawOutdoor(c, prop, sprite, foliage, world, this.visualTime, settings.reducedMotion, this.sky);
+        this.propSurfaceLight.draw(c, prop, sprite, foliage, this.cryptFloor ? undefined : this.sky);
+        if (!this.cryptFloor) this.propSurfaceLight.drawOutdoor(c, prop, sprite, foliage, world, this.visualTime, settings.reducedMotion, this.sky);
         c.restore();
       }
       c.restore();
@@ -762,14 +782,14 @@ export class Renderer {
       if (x < this.view.left - 256 || x > this.view.left + this.view.width + 256
         || y < this.view.top - 256 || y > this.view.top + this.view.height + 256) continue;
       if(p.skillEffects?.harvest?.length)entries.push({y:y+1,draw:()=>drawHarvestMark(c,p,enemy.id,x,y)});
-      entries.push({ y, draw: () => this.actor(x, y, { kind: enemy.kind, dungeonTheme:enemy.dungeonTheme, angle: enemy.angle,
+      entries.push({ y, draw: () => {const scale=enemyVisualScale(enemy);this.actor(x, y, { kind: enemy.kind, dungeonTheme:enemy.dungeonTheme, angle: enemy.angle,
         command: enemy.warband?.order, commandWarning: enemy.warband?.warning,
         time: sim.time + enemy.id, effectTime: settings.reducedMotion ? 0 : sim.time + enemy.id, moveAngle: Math.atan2(enemy.vy, enemy.vx),
         moving: Math.min(1, Math.hypot(enemy.vx, enemy.vy) / 70),
         attack: enemy.state === 'windup' ? -Math.max(.001, enemy.stateTime / enemy.stateDuration)
           : enemy.state === 'attack' ? Math.min(1, enemy.stateTime / enemy.stateDuration) : 0,
         attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash, slow: enemy.slowTime, burning: enemy.burnTime, frozen: enemy.freezeTime, stunned: enemy.stunTime,
-        impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false }) });
+        impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false },scale,riftMechanic(enemy)==='ritual'?'#9ae0c7':riftWardActive(enemy)?'#80c9b8':scale>1?(enemy.rank==='elite'?'#e9bb70':'#85c9ee'):undefined); } });
     }
     for(const [kind,spirit] of [['decoy',p.skillEffects?.decoy],['archer',p.skillEffects?.archer]] as const){
       if(!spirit||p.dead||settings.phase==='ready')continue;
@@ -790,6 +810,7 @@ export class Renderer {
       this.actor(px, py, pose);
       drawPlayerSkillEffects(c,p,px,py,settings.reducedMotion?0:sim.time,pose,settings.reducedMotion);
     } });
+    for(const scar of this.riftAtmosphere.visible)if(scar.float)entries.push({y:scar.y,stage:'props',draw:()=>this.riftAtmosphere.drawFragment(c,scar)});
     entries.sort((a, b) => a.y - b.y);
     for (const entry of entries) {
       const start = this.profiler?.enabled && entry.stage ? this.profiler.start() : 0;
@@ -800,7 +821,7 @@ export class Renderer {
 
   private propSprite(prop: Prop) {
     return this.environmentArt.getSprite(prop) ?? (prop.kind === 'tree' || prop.kind === 'deadTree'
-      ? this.art.getTree(prop.seed, prop.kind === 'deadTree') : prop.kind === 'rock' ? this.art.getRock(prop.seed) : this.art.getShrine());
+      ? this.art.getTree(prop.seed, prop.kind === 'deadTree', prop.scale) : prop.kind === 'rock' ? this.art.getRock(prop.seed, prop.scale) : this.art.getShrine());
   }
 
   private drawActorShadow(x: number, y: number, radius: number, height: number) {
@@ -819,10 +840,15 @@ export class Renderer {
     c.ellipse(x, y + 2, radius, depth, 0, 0, TAU); c.fill();
   }
 
-  private actor(x: number, y: number, pose: CharacterPose) {
+  private enemyOutlines=new EnemyOutlineArt();
+  private actor(x: number, y: number, pose: CharacterPose, scale=1,rankColor?:string) {
     const c = this.ctx;
     this.drawContactShadow(x, y, pose.kind === 'brute' ? 17 : pose.kind === 'player' ? 11 * PLAYER_ART_SCALE : 11, pose.kind === 'brute' ? 8 : 5);
-    c.save(); c.translate(x, y); if (pose.dead) c.globalAlpha = .4; withGearLight(c,sampleGearLight(x,y-24,this.materialLights,this.materialKey),()=>drawHumanoid(c, pose)); drawCharacterStatus(c, pose); c.restore();
+    c.save(); c.translate(x, y); c.scale(scale,scale); if (pose.dead) c.globalAlpha = .4;
+    const light=sampleGearLight(x,y-24,this.materialLights,this.materialKey);
+    const paint=(target:CanvasRenderingContext2D)=>withGearLight(target,light,()=>drawHumanoid(target,pose));
+    if(rankColor)this.enemyOutlines.draw(c,pose.kind as Enemy['kind'],rankColor,paint);else paint(c);
+    drawCharacterStatus(c, pose); c.restore();
     this.waterArt.drawFeet(c, this.water.fluid, x, y, pose.kind === 'brute' ? 18 : pose.kind === 'player' ? 13 * PLAYER_ART_SCALE : 12);
   }
 
@@ -831,8 +857,9 @@ export class Renderer {
     const heldPose = playerPose(p, sim.time);
     heldPose.effectTime = reducedMotion ? 0 : sim.time;
     const heldLights = this.equipmentEmitters = heldEquipmentLights(heldPose, px, py);
-    const lights: PointLight[] = [{ x: px, y: py - 15, radius: sim.dungeonFloor ? 250 : 185, color: sim.dungeonFloor || heldLights.length ? '#c0cbd8' : '#ffcf87', power: (sim.dungeonFloor ? .85 : .58) * (heldLights.length ? .65 : 1), shadows: true }, ...heldLights];
-    const environmentLights: PointLight[] = sim.dungeonFloor?cryptLights(sim.dungeonFloor, reducedMotion ? 0 : this.visualTime):this.visibility.entrances.map(e=>({x:e.x,y:e.y-30,radius:100,color:'#9bdbc9',power:.45}));
+    const lights: PointLight[] = [{ x: px, y: py - 15, radius: this.cryptFloor ? 250 : 185, color: this.cryptFloor || heldLights.length ? '#c0cbd8' : '#ffcf87', power: (this.cryptFloor ? .85 : .58) * (heldLights.length ? .65 : 1), shadows: true }, ...heldLights];
+    const riftLights:PointLight[]=this.cachedBuildings.filter(b=>b.kind==='rift').map(b=>({x:b.x+b.width/2,y:b.y-35,radius:150,color:'#ef548b',power:.55}));
+    const environmentLights: PointLight[] = this.cryptFloor?cryptLights(this.cryptFloor, reducedMotion ? 0 : this.visualTime):[...riftLights,...this.visibility.entrances.map(e=>({x:e.x,y:e.y-30,radius:100,color:'#9bdbc9',power:.45}))];
     if (sim.portal.active) lights.push({ x: p.x, y: p.y - 30, radius: 105, color: '#b5a0ee', power: .22 + sim.portal.progress * .35 });
     for (const anchor of this.portalAnchors) if (sim.travel.returnTo?.town === anchor.band)
       environmentLights.push({ x: anchor.x, y: anchor.y - 30, radius: 130, color: '#b5a0ee', power: .6 });
@@ -879,11 +906,11 @@ export class Renderer {
     const view = this.view;
     return [...lights, ...environmentLights].filter(light => light.x + light.radius >= view.left
       && light.x - light.radius <= view.left + view.width && light.y + light.radius >= view.top
-      && light.y - light.radius <= view.top + view.height).slice(0, 18).map(light => sim.dungeonFloor
-        ? { ...light, clip: cryptLightMask(sim.dungeonFloor, light) } : light);
+      && light.y - light.radius <= view.top + view.height).slice(0, 18).map(light => this.cryptFloor
+        ? { ...light, clip: cryptLightMask(this.cryptFloor, light) } : light);
   }
 
-  private emitters(sim: Simulation, alpha: number, lights: PointLight[]) {
+  private emitters(sim: Simulation, alpha: number, lights: PointLight[], reducedMotion: boolean) {
     const c = this.ctx;
     for (const prop of this.cachedProps) if (prop.kind === 'shrine') {
       const x = prop.x - 18, y = prop.y - 31;
@@ -903,7 +930,7 @@ export class Renderer {
     }
     for (const shot of sim.projectiles) {
       const { x, y } = projectilePresentation(shot, alpha);
-      drawProjectile(c, shot, x, y, this.visualTime);
+      drawProjectile(c, shot, x, y, reducedMotion && shot.effects?.style === 'radiant' ? 0 : this.visualTime);
     }
   }
 
@@ -933,15 +960,15 @@ export class Renderer {
     for (const enemy of sim.enemies) {
       if (enemy.hp <= 0) continue;
       const width = enemy.kind === 'brute' ? 40 : 31;
-      const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha) + (ENEMY_BODY_BOUNDS[enemy.kind].headTop ?? ENEMY_BODY_BOUNDS[enemy.kind].top) - 5;
-      if (enemy.rank !== 'normal') drawRankCrest(c, enemy.rank, x, y - 10, .5);
-      if (enemy.hp >= enemy.maxHp && enemy.state !== 'windup') continue;
+      const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha) + (ENEMY_BODY_BOUNDS[enemy.kind].headTop ?? ENEMY_BODY_BOUNDS[enemy.kind].top)*enemyVisualScale(enemy) - 5;
+      if(x<this.view.left-70||x>this.view.left+this.view.width+70||y<this.view.top-40||y>this.view.top+this.view.height+40)continue;
+      if (enemy.hp >= enemy.maxHp && enemy.state !== 'windup'&&enemy.rank==='normal') continue;
       c.fillStyle = enemy.hitFlash > .1 ? '#efcea0' : '#080c12';
       c.fillRect(x - width / 2 - 1, y - 1, width + 2, 5);
       c.fillStyle = '#482a29'; c.fillRect(x - width / 2, y, width, 3);
       const trail = Math.min(enemy.maxHp, this.damageTrails.get(enemy.id)?.value ?? enemy.hp);
       c.fillStyle = '#edc582'; c.fillRect(x - width / 2, y, width * trail / enemy.maxHp, 3);
-      c.fillStyle = enemy.kind === 'caster' ? '#7bb59c' : '#c45f54';
+      c.fillStyle = enemy.rank==='elite'?'#edb666':enemy.rank==='veteran'?'#79bfee':enemy.kind === 'caster' ? '#7bb59c' : '#c45f54';
       c.fillRect(x - width / 2, y, width * enemy.hp / enemy.maxHp, 3);
     }
   }
@@ -968,19 +995,17 @@ export class Renderer {
     c.fillStyle = gradient; c.fillRect(0, 0, this.width, this.height); c.restore();
   }
 
-  private navigation(c: CanvasRenderingContext2D, sim: Simulation, world: World, settings: RenderSettings) {
+  private navigation(c: CanvasRenderingContext2D, sim: Simulation, world: World) {
     const p = sim.player;
     const building = world.getBuildingAt(p.x, p.y);
     const town = world.getSettlements(p.x - 1, p.y - 1, 2, 2).find(town => Math.hypot(p.x - town.x, p.y - town.y) <= town.radius);
-    text(c, sim.dungeonFloor ? `${dungeonTheme(sim.dungeonFloor.seed,sim.dungeonFloor.theme).name} · ${currentDungeon(sim.expeditions)!.entrance.level}` : building?.name ?? town?.name ?? world.sampleBiome(p.x, p.y).name, 22, 22, 1.2, '#d7c99d');
+    text(c, this.cryptFloor ? `${dungeonTheme(this.cryptFloor.seed,this.cryptFloor.theme).name} · ${currentDungeon(sim.expeditions)!.entrance.level}` : building?.name ?? town?.name ?? world.sampleBiome(p.x, p.y).name, 22, 22, 1.2, '#d7c99d');
     text(c, world.isSanctuary(p.x, p.y) ? 'SANCTUARY' : String(sim.kills).padStart(2, '0') + ' SLAIN',
       22, 37, 1, '#91b69e');
-    if (settings.debug) text(c, `${Math.round(settings.fps)} FPS / ${sim.enemies.length} MOBS / ${Math.round(p.x)},${Math.round(p.y)}`,
-      22, this.height - 18, 1, '#a3c7a7');
   }
 
   private pointerOverHUD() {
-    return !this.gamepadActive && !this.touchActive && isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height, this.extraUIBounds, this.navigationVisible, this.lootLogBounds);
+    return !this.gamepadActive && !this.touchActive && isGameUIPoint(this.pointerX, this.pointerY, this.width, this.height, this.extraUIBounds, this.navigationVisible, this.performanceUIBounds, this.lootLogBounds);
   }
 
   private cursor(c: CanvasRenderingContext2D, sim: Simulation) {
@@ -1001,7 +1026,7 @@ export class Renderer {
       }
       if (target) {
         const alpha = sim.interpolationAlpha;
-        const body = ENEMY_BODY_BOUNDS[target.kind];
+        const body = enemyBodyBounds(target);
         const center = worldToScreen(this.view, lerp(target.prevX, target.x, alpha),
           lerp(target.prevY, target.y, alpha) + (body.top + body.bottom) / 2);
         const radius = Math.max(10, body.radiusX * this.view.zoom + 3);

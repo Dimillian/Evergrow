@@ -1,3 +1,4 @@
+import { enemyModifiers } from './enemy-modifiers.ts';
 import type { Enemy, EnemyKind } from './model.ts';
 import type { EnemyRank } from './progression-content.ts';
 import { isBossKind } from './wilderness-boss-content.ts';
@@ -9,11 +10,12 @@ export const ENEMY_THREAT = Object.freeze({
   elite: Object.freeze({ damage: 1.25, recovery: .65, controlFactor: .5, controlMaximum: .6, controlRest: 4, knockback: .35 }),
   boss: Object.freeze({ damage: 1.25, recovery: .65, controlFactor: .25, controlMaximum: .35, controlRest: 2.5, knockback: .15 }),
 });
-export function enemyThreat(enemy: { kind: EnemyKind; rank: EnemyRank }) {
-  return ENEMY_THREAT[isBossKind(enemy.kind) ? 'boss' : enemy.rank];
+export function enemyThreat(enemy: { kind: EnemyKind; rank: EnemyRank; lootSeed?:number }) {
+  const base=ENEMY_THREAT[isBossKind(enemy.kind) ? 'boss' : enemy.rank],mods=enemyModifiers(enemy);
+  return mods.length ? {...base,controlFactor:base.controlFactor*mods.reduce((n,m)=>n*m.control,1)} : base;
 }
-export function enemyRecoveryDuration(enemy: Pick<Enemy, 'kind' | 'rank'>, authored: number): number {
-  return authored * enemyThreat(enemy).recovery;
+export function enemyRecoveryDuration(enemy: Pick<Enemy, 'kind' | 'rank'> & Partial<Pick<Enemy,'lootSeed'>>, authored: number): number {
+  return authored * enemyThreat(enemy).recovery * enemyModifiers(enemy).reduce((n,m)=>n*m.recovery,1);
 }
 
 /** Small additive delays vary each actor's rhythm without shortening any warning.

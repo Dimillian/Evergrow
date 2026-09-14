@@ -1,5 +1,5 @@
 .audio-sliders{display:grid;gap:14px;padding:14px 0;min-width:0}
-.audio-slider{display:grid;grid-template-columns:40px minmax(60px,1fr) 36px;gap:10px;align-items:center;color:var(--ui-text,#c4d2cc);font-size:14px}
+.audio-slider{display:grid;grid-template-columns:50px minmax(60px,1fr) 36px;gap:10px;align-items:center;color:var(--ui-text,#c4d2cc);font-size:14px}
 .audio-slider input{width:100%;min-width:0;margin:0;height:24px;accent-color:#b9b087;cursor:pointer}
 .audio-slider output{text-align:right;color:var(--ui-muted,#91a5a3);font-family:'Evergrow Numerals',sans-serif;font-size:13px}
 .audio-slider input:focus-visible{outline:1px solid #c4bb90;outline-offset:3px}

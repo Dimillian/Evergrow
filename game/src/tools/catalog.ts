@@ -11,6 +11,7 @@ export const WORKSPACES = [
 export type Workspace = typeof WORKSPACES[number]['id'];
 export interface Tool { id: string; group: Workspace; name: string; path: string; description: string; tags?: string; }
 export const TOOLS: readonly Tool[] = [
+  {id:'rifts',group:'world',name:'Crimson Rifts',path:'/tools/rifts.html',description:'Timed rift entry, animated portal, keys and records. Use ?view=map to compare connected combat clearings with open terrain, encounter formations and biome selection. Animate atmosphere previews crimson fissures, floating stones, biome corruption and progress-driven lightning with frozen enemies.'},
   {id:'map-icons',group:'world',name:'Map icon workshop',path:'/tools/map-icons.html',description:'Every map marker, vendor and event at enlarged and actual sizes; recognizable silhouettes, states, dungeon themes and PNG export.',tags:'legend icons npc symbols minimap'},
   {id:'expeditions',group:'world',name:'Expedition routes',path:'/tools/expeditions.html',description:'Ten-stage route choices, dungeon modifiers, reward odds and level gate in the runtime panel.'},
   {id:'respec',group:'equipment',name:'Enchanter respec',path:'/services.html?role=enchanter&respec',description:'Preview the affordable skill reset and exact refunded points.'},
@@ -19,7 +20,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'playground',group:'combat',name:'Skill playground',path:'/tools/skills.html',description:'Replay every active skill and specialization using actual combat and animation rules.',tags:'animations spells effects cast uniques'},
   {id:'placements',group:'world',name:'Seed & placement inspector',path:'/tools/placements.html',description:'Survey generated events, towns and dungeon entrances by seed and coordinates.',tags:'generation map positions'},
   {id:'data',group:'data',name:'Game data browser',path:'/tools/data.html',description:'Search current definitions for items, skills, enemies, affixes, biomes and world content.',tags:'catalog recipes stats export'},
-  {id:'audits',group:'data',name:'Code & performance audits',path:'/tools/audits.html',description:'Commands and access instructions for code checks, profiling and capture scripts.'},
+  {id:'audits',group:'data',name:'Code & performance audits',path:'/tools/audits.html',description:'F3 monitor preview, code checks, profiling and capture instructions.'},
   {id:'equipment',group:'equipment',name:'Equipment gallery',path:'/equipment.html',description:'Browse all equipment silhouettes and materials under movable light.'},
   {id:'charms',group:'equipment',name:'Charms',path:'/character.html?charms',description:'Arrange six sizes of magic stones and inspect their active bonuses.'},
   {id:'hud-menu',group:'interface',name:'HUD & active buffs',path:'/character.html?panel=hud&loadout=shield&buffs',description:'Frozen HUD, active-effect icons, nested explanations and shortcut list. No gameplay or saves.'},

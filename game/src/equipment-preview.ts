@@ -40,7 +40,7 @@ export function previewEquipmentChange(sheet: CharacterSheet, item: Item, level:
     if(source===undefined && inventory.some(i=>i?.id===item.id))return {ok:false as const,message:'This item is already owned.'};
     const active=inventoryLayout[item.id]>=PACK_CELLS;
     if(source!==undefined)inventory[source]=null;
-    const cell=active?inventoryLayout[item.id]:findPackSpace(item,packOccupancy(inventory,inventoryLayout));
+    const cell=active?inventoryLayout[item.id]:findPackSpace(item,packOccupancy(inventory,inventoryLayout),undefined,'charms');
     if(cell===null)return {ok:false as const,message:'Make room in your charm grid.'};
     const index=source??(inventory.includes(null)?inventory.indexOf(null):inventory.length);
     if(index>=INVENTORY_CELLS)return {ok:false as const,message:'Your inventory is full.'};

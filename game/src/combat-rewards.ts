@@ -13,6 +13,7 @@ import { rollEnemyLoot } from './loot.ts';
 import { addGroundItem } from './ground-loot.ts';
 
 export interface KillRewardContext {
+  suppressDrops?: boolean;
   player: Player; groundGold: GroundGold[]; groundItems: GroundItem[]; pickups: Pickup[];
   nextId(): number; emit(event: CombatEvent): void;
 }
@@ -29,11 +30,11 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
   const reward = Math.max(1, Math.round(enemy.xpReward * xpLevelFactor(player.level, enemy.level) * player.derived.xpGainMultiplier));
   const levels = awardCharacterExperience(player, reward);
   context.emit({ type: 'experience', x: enemy.x, y: enemy.y, amount: reward });
-  const gold = isBossKind(enemy.kind) ? 0 : Math.round(rollEnemyGold(enemy.lootSeed, enemy.level, enemy.rank) * (ENEMY_LOOT_YIELD[enemy.kind] ?? 1) * goldMultiplier);
+  const gold = context.suppressDrops || isBossKind(enemy.kind) ? 0 : Math.round(rollEnemyGold(enemy.lootSeed, enemy.level, enemy.rank) * (ENEMY_LOOT_YIELD[enemy.kind] ?? 1) * goldMultiplier);
   if (gold) dropGold(context.groundGold, { id: context.nextId(), x: enemy.x, y: enemy.y, amount: gold, age: 0 });
   if (levels) context.emit({ type: 'level', x: player.x, y: player.y,
     level: player.level, skillPoints: levels, statPoints: levels * 5, color: '#c0acf0' });
-  for (const item of isBossKind(enemy.kind) ? [] : rollEnemyLoot({ playerLevel: dropPlayerLevel, seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank,
+  for (const item of context.suppressDrops || isBossKind(enemy.kind) ? [] : rollEnemyLoot({ playerLevel: dropPlayerLevel, seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank,
     biome: enemy.biome, kind: enemy.kind, encounter: enemy.bossPhases!==undefined||enemy.kind==='goblinChief'?'boss':undefined, firstKill: kills === 1 })) {
     addGroundItem(context.groundItems, { id: context.nextId(), x: enemy.x, y: enemy.y, item });
   }
@@ -43,7 +44,7 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
     player.flasks = Math.min(PLAYER_ABILITIES.potion.charges, player.flasks + 1);
   }
   const health = kills % LOOT_RULES.healthEveryKills === 0;
-  if (context.pickups.length < LOOT_RULES.maxPickups) context.pickups.push({ id: context.nextId(), x: enemy.x, y: enemy.y,
+  if (!context.suppressDrops && context.pickups.length < LOOT_RULES.maxPickups) context.pickups.push({ id: context.nextId(), x: enemy.x, y: enemy.y,
     kind: health ? 'health' : 'mana', ...(!health?{restoreAmount:manaVialAmount(enemy.level)}:{}), restoreFraction: health ? LOOT_RULES.healthFraction : LOOT_RULES.manaFraction,
     life: LOOT_RULES.life, radius: LOOT_RULES.radius });
   return { kills, recharge };

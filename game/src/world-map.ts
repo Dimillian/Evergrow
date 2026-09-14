@@ -21,7 +21,7 @@ import { UI_THEME } from './ui-theme.ts';
 import { getZoneAt, type ZoneProgression } from './zone-progression.ts';
 
 export interface MapPlayer { x: number; y: number; angle: number; }
-export interface MinimapEnemy { x: number; y: number; kind?: string; }
+export interface MinimapEnemy { x: number; y: number; kind?: string; rank?:'normal'|'veteran'|'elite'; }
 export interface MapWorld extends ExplorationWorld {
   mapColor(x: number, y: number, sampleSize?: number): string;
   atlasColor?(x: number, y: number): string;
@@ -105,7 +105,8 @@ const palette = UI_THEME.palette;
 export function chartedMapArea(world: Pick<MapWorld, 'sampleBiome' | 'isSanctuary'> & Partial<Pick<MapWorld, 'seed'>>,
   exploration: Pick<Exploration, 'isRevealed'>, x: number, y: number) {
   if (![x, y].every(Number.isFinite) || !exploration.isRevealed(x, y)) return null;
-  return { name: getZoneAt(x, y, world.seed).name, label: mapAreaLabel(world, x, y), x, y };
+  return { name: getZoneAt(x, y, world.seed).districtName, biome: world.sampleBiome(x, y).name,
+    label: mapAreaLabel(world, x, y), x, y };
 }
 
 function mapAreaLabel(world: Pick<MapWorld, 'isSanctuary'> & Partial<Pick<MapWorld, 'seed'>>, x: number, y: number) {
@@ -184,6 +185,11 @@ export class WorldMap {
   private tooltipName: HTMLElement;
   private tooltipKind: HTMLElement;
   private tooltipDescription: HTMLElement;
+  private areaInfo: HTMLDivElement;
+  private areaName: HTMLElement;
+  private areaBiome: HTMLElement;
+  private areaLevel: HTMLElement;
+  private areaCoordinates: HTMLElement;
   private tiles = new Map<string, TerrainTile>();
   private previewTiles = new Map<string, PreviewTile>();
   private frame = 0;
@@ -244,6 +250,11 @@ export class WorldMap {
           <span class="world-map-control-divider" aria-hidden="true"></span>
           <button type="button" class="ui-button ui-button--quiet ui-button--icon" data-map="center" aria-label="Center on character" data-tooltip="Center on character" data-tooltip-align="end">${uiIcon('center')}</button>
         </div>
+        <div class="world-map-area ui-tooltip" role="region" aria-label="Hovered area" hidden>
+          <p class="world-map-poi-kind ui-kicker">Area</p>
+          <h3 class="world-map-area-name ui-title"></h3><p class="world-map-area-biome ui-body"></p>
+          <div class="world-map-area-details"><span class="world-map-area-level"></span><span class="world-map-area-coordinates"></span></div>
+        </div>
         <div class="world-map-tooltip ui-tooltip" role="status" aria-live="polite" aria-atomic="true" hidden>
           <p class="world-map-poi-kind ui-kicker"></p><h3 class="ui-title"></h3><p class="world-map-poi-description ui-body"></p></div>
       </div>
@@ -263,6 +274,11 @@ export class WorldMap {
     this.tooltipName = this.tooltip.querySelector('h3')!;
     this.tooltipKind = this.tooltip.querySelector('.world-map-poi-kind')!;
     this.tooltipDescription = this.tooltip.querySelector('.world-map-poi-description')!;
+    this.areaInfo = this.element.querySelector<HTMLDivElement>('.world-map-area')!;
+    this.areaName = this.areaInfo.querySelector('.world-map-area-name')!;
+    this.areaBiome = this.areaInfo.querySelector('.world-map-area-biome')!;
+    this.areaLevel = this.areaInfo.querySelector('.world-map-area-level')!;
+    this.areaCoordinates = this.areaInfo.querySelector('.world-map-area-coordinates')!;
     this.bind();
   }
 
@@ -742,7 +758,7 @@ export class WorldMap {
       if (!this.exploration.isRevealed(enemy.x, enemy.y)) continue;
       const p = projectMapPoint(enemy.x, enemy.y, view);
       if (p.x < view.x || p.y < view.y || p.x > view.x + view.width || p.y > view.y + view.height) continue;
-      drawMapEnemyIcon(c, p.x, p.y, enemy.kind);
+      drawMapEnemyIcon(c, p.x, p.y, enemy.kind, enemy.rank);
     }
     this.playerArrow(c, player, view, true); c.restore();
     text(c, 'N', view.x + view.width / 2, view.y + 3, .8, palette.jade, 'center');
@@ -852,6 +868,7 @@ export class WorldMap {
         this.poiIcon(c, this.hovered, p.x, p.y, this.view.zoom < .07 ? MAP_ICON_SIZES.overview : MAP_ICON_SIZES.map, true);
       }
     }
+    this.updateAreaInfo();
     const marker=this.journeyMarker, markerPoint=marker?projectMapPoint(marker.x,marker.y,this.view):null;
     if(marker&&markerPoint&&this.pointer&&!this.drag&&Math.hypot(markerPoint.x-this.pointer.x,markerPoint.y-this.pointer.y)<15){
       this.tooltip.hidden=false;setText(this.tooltipName,marker.name);
@@ -859,15 +876,22 @@ export class WorldMap {
       this.tooltip.style.setProperty('--poi-color',palette.brass);this.positionTooltip(this.pointer);
     }
     else if (this.hovered && this.pointer) this.showTooltip(this.hovered, this.pointer);
-    else if (this.pointer && !this.drag && !this.explorationMode) {
-      const point = unprojectMapPoint(this.pointer.x, this.pointer.y, this.view);
-      const inspected = chartedMapArea(this.world, this.exploration, point.x, point.y);
-      if (inspected) {
-        this.tooltip.hidden = false; setText(this.tooltipName, inspected.name); setText(this.tooltipKind, inspected.label);
-        setText(this.tooltipDescription, `X ${Math.round(inspected.x)} · Y ${Math.round(inspected.y)}`);
-        this.tooltip.style.setProperty('--poi-color', palette.jade); this.positionTooltip(this.pointer);
-      } else this.hideTooltip();
-    } else this.hideTooltip();
+    else this.tooltip.hidden = true;
+  }
+
+  private updateAreaInfo() {
+    const pointer = this.pointer;
+    if (!pointer || this.drag || this.explorationMode || pointer.x < this.view.x || pointer.y < this.view.y
+      || pointer.x >= this.view.x + this.view.width || pointer.y >= this.view.y + this.view.height) {
+      this.areaInfo.hidden = true; return;
+    }
+    const point = unprojectMapPoint(pointer.x, pointer.y, this.view);
+    const inspected = chartedMapArea(this.world, this.exploration, point.x, point.y);
+    this.areaInfo.hidden = !inspected;
+    if (!inspected) return;
+    setText(this.areaName, inspected.name); setText(this.areaBiome, inspected.biome);
+    setText(this.areaLevel, inspected.label);
+    setText(this.areaCoordinates, `X ${Math.round(inspected.x)} · Y ${Math.round(inspected.y)}`);
   }
 
   private showTooltip(poi: MapPOI, point: { x: number; y: number }) {
@@ -880,7 +904,7 @@ export class WorldMap {
     this.tooltip.style.left = `${Math.max(10, Math.min(this.view.width - this.tooltip.offsetWidth - 12, point.x + 18))}px`;
     this.tooltip.style.top = `${Math.max(10, Math.min(this.view.height - this.tooltip.offsetHeight - 12, point.y + 15))}px`;
   }
-  private hideTooltip() { this.tooltip.hidden = true; }
+  private hideTooltip() { this.tooltip.hidden = true; this.areaInfo.hidden = true; }
   dispose() {
     if (this.disposed) return;
     this.close(); this.disposed = true; this.abort.abort(); this.tiles.clear(); this.previewTiles.clear(); this.element.remove(); this.exploration.save();

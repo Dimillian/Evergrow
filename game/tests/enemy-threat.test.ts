@@ -80,5 +80,5 @@ test('reloading a pre-tuning actor preserves wounds, identity and level while de
   const saved=sim.captureCheckpoint();sim.restoreCheckpoint(saved);
   const restored=sim.enemies.find(e=>e.lootSeed===before.lootSeed)!;
   assert.ok(restored);assert.deepEqual({hp:restored.hp,level:restored.level,rank:restored.rank,lootSeed:restored.lootSeed},before);
-  assert.equal(restored.damage,79);
+  assert.equal(restored.damage,87); // Current base 79 with the persisted Savage trait (+10%).
 });

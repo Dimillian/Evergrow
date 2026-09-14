@@ -116,6 +116,7 @@ export function playerMotion(pose: CharacterPose) {
   const idleSway = Math.sin(phase + 0.35) * moving * 0.07 + breath * 0.08;
   const attackBlend = !swinging ? 0 : attack < start ? windup : 1 - recovery;
   const mainKind = (pose.weapon ?? STARTING_SWORD.visual).kind;
+  const unarmed = mainKind === 'unarmed';
   const guardedMelee = meleeGuard(mainKind);
   const hilted = mainKind === 'sword' || mainKind === 'dagger';
   const mainGuard = meleeGuardAngle(mainKind, pose.angle, pose.grip !== 'one-handed');
@@ -213,10 +214,23 @@ export function playerMotion(pose: CharacterPose) {
   }
   const bow = pose.weapon?.kind === 'bow', staff = pose.weapon?.kind === 'staff';
   const restingStaffArm = staff && pose.weapon?.element === 'fire';
-  const independent = pose.grip === 'one-handed';
+  const independent = unarmed || pose.grip === 'one-handed';
   const gripAmount = independent ? 0 : bow || staff ? 1 : 1 - cast;
   const supportHolding = !restingStaffArm && !independent && (cast < .05 || bow || staff || !!pose.gesture);
   const rightX = -Math.sin(bodyAngle), rightDepth = Math.cos(bodyAngle);
+  // Empty arms hang just outside the hips, with a shallow elbow bend and a
+  // small opposing swing in travel. Keep these mounts body-relative at every facing.
+  const relaxedHand = (side: number): RigPoint => [
+    rightX * side * 9 + Math.cos(bodyAngle) + side * step * moveX * .5,
+    rightDepth * side * 9 + Math.sin(bodyAngle) + side * step * moveY * .5, 8,
+  ];
+  if (unarmed) {
+    const relaxed = relaxedHand(1);
+    const actionBlend = Math.max(attackBlend, pose.gesture ? cast : 0);
+    weaponHand = [relaxed[0] * (1 - actionBlend) + weaponHand[0] * actionBlend,
+      relaxed[1] * (1 - actionBlend) + weaponHand[1] * actionBlend,
+      relaxed[2] * (1 - actionBlend) + weaponHand[2] * actionBlend];
+  }
   const guardHand = (side: number): RigPoint => [
     rightX * side * 8 + Math.cos(bodyAngle) * (8 + (pose.guard ?? 0) * 3) - step * moveX * .5,
     rightDepth * side * 8 + Math.sin(bodyAngle) * (8 + (pose.guard ?? 0) * 3) - step * moveY * .5,
@@ -228,9 +242,8 @@ export function playerMotion(pose: CharacterPose) {
     weaponHand[2] + (ARM_DEPTH_SCALE - 1) * Math.sin(weaponAngle) * supportOffset];
   const offGuard = guardHand(-1);
   // Lower the free palm beside the upper thigh for a loose, shallow elbow bend.
-  const restOffHand: RigPoint = restingStaffArm
-    ? [-rightX * 9 + Math.cos(bodyAngle) - step * moveX * .5,
-      -rightDepth * 9 + Math.sin(bodyAngle) - step * moveY * .5, 8]
+  const restOffHand: RigPoint = restingStaffArm || (unarmed && !pose.offHand && pose.gesture !== 'bash')
+    ? relaxedHand(-1)
     : pose.gesture === 'bash'
     ? [offGuard[0] * (1 - cast) + (Math.cos(pose.angle) * 23 - rightX * 4) * cast,
       offGuard[1] * (1 - cast) + (Math.sin(pose.angle) * 23 - rightDepth * 4) * cast, offGuard[2] + cast * 2]

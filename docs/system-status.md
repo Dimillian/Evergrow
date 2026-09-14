@@ -2,6 +2,8 @@
 
 Local loot log: the latest 100 successful pickups persist per character with original item details and current inventory/equipped/storage/ground/sold location. The feed button, character drawer and pause menu open a shared paused reader. Existing saves retain progress and begin with empty history. See [Loot log](loot-log.md).
 
+Local September 14 wand pass: Wand & Grimoire starts with Star Wand + Astral Grimoire. Star Wand basics use dedicated ivory-gold radiant art and sound, mapped to existing Arcane damage; elemental wands and assigned spells retain their identities. No save reset. See [weapon rules](weapons-and-skills.md#radiant-wand-basics--local-september-14-2026).
+
 Published in v0.5.2 (September 14, 2026): the EVERGROW field-journal layout groups Character, Adventure and System, with Chronicle as one Character entry and map/Journeys under Adventure. Equipment, atlas, appearance, map and Journey links open while paused and return to their menu entry. Options, Controls, release notes and rankings open dedicated spacious windows and return to System. Responsive minimum height, compact run/save footer and native keyboard/controller navigation reuse the existing UI. No save reset.
 
 Local September 13, 2026: [effect UI audit](effect-ui-audit-2026-09-13.md) implemented across equipment, stats, Uniques, Techniques and player/target status strips. Shared retained/nested explanations, accurate timed budgets, generic Slowed and target-specific marks/exposure. No balance or save changes.

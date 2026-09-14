@@ -1,3 +1,4 @@
+import { weaponGlowColor } from './radiant-content.ts';
 import { UNIQUE_RULES } from './unique-content.ts';
 import { tintedOutfit } from './appearance-armor.ts';
 import { SKILL_DEFINITIONS, skillWeapon } from './skill-content.ts';
@@ -31,7 +32,7 @@ export function playerPose(player: Player, time: number,
     attackKind: attack?.kind ?? (drawing?'ranged':undefined), attackHand: attack?.hand ?? (castingWeapon && castingWeapon === (off?.kind === 'weapon' ? off.weapon : null) ? 'off' : 'main'), gesture,
     weapon: attack?.hand === 'main' ? attack.weapon.visual : player.equipment.mainHand.visual,
     offHand, guard: Math.min(1, Math.max(player.guardTime,player.skillEffects?.brace?.remaining??0,player.skillEffects?.rallyOfIron?.remaining??0) / .2),
-    castColor: player.activeSkill ? SKILL_DEFINITIONS[player.activeSkill].color : player.equipment.mainHand.visual.glow ?? '#c0acf0',
+    castColor: player.activeSkill ? SKILL_DEFINITIONS[player.activeSkill].color : weaponGlowColor(player.equipment.mainHand.visual) ?? '#c0acf0',
     grip: getWeaponGrip(player.equipment),
     attackStart: attack ? attack.activeStart / attack.duration : drawing?.42:undefined,
     attackEnd: attack ? attack.activeEnd / attack.duration : drawing?.5:undefined,

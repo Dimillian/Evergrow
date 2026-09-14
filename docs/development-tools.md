@@ -126,3 +126,22 @@ Interface → HUD & active buffs opens `/character.html?panel=hud&loadout=shield
 Aura previews: the existing skill playground supports seven aura studies and shared buff/buildup icons. `/character.html?panel=hud&auras` stages reserved mana and Blood Oath stacks; `/character.html?panel=skills&auras&node=skill:bloodOath` inspects the existing-branch placement. Both are disposable and save-free. See [Auras](auras.md).
 
 The frozen HUD review also accepts `effects=caster`, `guard`, `rogue`, `bow` or `ward`, for example `/character.html?panel=hud&effects=caster`. These stage representative Unique budgets and a target with Burn, Slow, Stun, Red Harvest and Exposure. They draw production cards and target plates without advancing simulation. `/character.html?uniques` and `/chronicle.html?uniques` expose nested signature explanations; the existing forge and Thor inspection also share the terms.
+
+World → Crimson Rifts (`/tools/rifts.html`) previews the runtime portal, level selection, five inventory key tiers, danger/reward modifiers and records in disposable memory. It never starts a playable run or reads saves.
+
+World → Crimson Rifts supports `/tools/rifts.html?view=map&seed=7319&biome=verdant`: a full revealed layout using runtime floor generation and map art, monster spawn dots, seed cycling and all nine biome palettes. This is a disposable layout study; it does not reveal a playable character map or start combat.
+
+
+The Crimson Rifts map study (`/tools/rifts.html?view=map`) now displays shared overworld terrain with the actual dense roster. **View pack** switches to a frozen runtime-rendered scene; choosing a biome selects a real matching world seed. It never reads saves or advances combat.
+
+The Crimson Rifts map/pack study includes **Profile rendering** for a frozen 1100×900 scene, using the runtime renderer and post-processing without advancing gameplay. It reports CPU median/p95 after warmup. See `docs/rift-performance.md` and `game/scripts/benchmark-rift-crowds.ts` for the separate headless crowd benchmark.
+
+Crimson Rifts → **Guardian arrival** stages the runtime warning near a disposable character, without advancing AI or touching saves. Pack previews include the actual rank-modifier nameplate.
+
+Crimson Rifts → View map now defaults to the local connected-clearings experiment. **Compare open layout** provides a same-seed A/B view; biome selection and frozen **View pack** continue to use runtime terrain and actors. The `layout=clearings|open` parameter preserves the selected generation style without touching playable saves.
+
+Crimson Rifts → View pack includes an atmosphere-only animation and progress selector. `?view=map&scene=pack&atmosphere=&progress=0.9` shows late-hunt corruption/lightning using the real renderer, frozen enemies and an isolated visual clock. No combat simulation or character saves.
+
+### Gameplay performance monitor
+
+Data & audits → Code & performance audits includes the actual F3 monitor with a frozen synthetic 600-frame sample (`/tools/audits.html?view=monitor`). Inspect all six dropdown views and capture controls without loading characters, simulating gameplay or reading saves. Restore sample data repopulates the disposable profiler. The runtime monitor toggles with F3; see [world performance](world-performance.md) for metric definitions and limits.

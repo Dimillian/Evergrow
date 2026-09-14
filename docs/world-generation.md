@@ -41,3 +41,10 @@ The extended atlas stages a roughly 40,000-unit-wide surveyed disk through memor
 Generation version is **9**. The nine-biome field, clustered props and climate-aware water/settlement placement change geography. Older-generation characters remain stored, but cannot be loaded into this generation. Create a fresh character; no migration or automatic deletion is introduced. Exploration namespaces remain generation-specific.
 
 Code tests cover minimum settlement separation, two-dimensional dispersion, connectivity to the start, shared walkable road geometry, deterministic generation, interiors and entrances, seeded regional danger and hazards, spawn snapshots, same-level portal landings, conservative map fog and label placement. Gameplay pacing and combat feel remain the user's playtest responsibility.
+
+
+## Shared landscape queries and rifts (September 14, 2026)
+
+`world-landscape.ts` owns the existing DOM-free terrain, hydrology, prop generation, collision and navigation queries. `world.ts` extends it with cached canvas tiles; the ordinary overworld keeps the same default behavior and coordinates. Rifts use the wilderness-only option, disabling settlements/landmarks/shrines while retaining the actual natural landscape. The terrain worker receives that option explicitly. There is no parallel rift terrain generator; rift generation only places its roster and activity markers onto this landscape. See [rifts](rifts.md).
+
+Connected rift encounters (approved for publication September 14): an explicit `riftTerrain` profile applies `rift-shape.ts` clearings, broad reconnecting trails and biome ridges through `WorldLandscape`. Water, prop collision, maps and worker-rendered terrain use this same profile. Ordinary worlds and saved open-layout rifts retain their preceding landscape. See the connected encounters section in [Rifts](rifts.md).

@@ -77,3 +77,5 @@ Static fortification timbers/masonry are cached per immutable building, keeping 
 ### Expedition table · local 2026-09-10
 
 Every tier now places one small chart table on a clear patch beside its existing paths, preserving existing building IDs and vendor/resident placement. Approach and press E (or click) to view a ten-stage route; entry unlocks at level 20. Tables use the same saved route for the character, whichever town they visit. See [Expeditions](expeditions.md).
+
+The local rift pass appends one Crimson Rift fixture to each town without moving the preceding fixtures or changing vendor identities. Approach its southern edge to open the level-20 rift panel. See [Rifts](rifts.md).

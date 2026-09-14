@@ -21,12 +21,13 @@ const PALETTES: Record<TreeKind, TreePalette> = {
 export const isTreeKind = (kind: PropKind): kind is TreeKind => Object.hasOwn(TREE_BOUNDS, kind);
 
 /** Three authored growth habits per family, with variation inside their shared physical crown bounds. */
-export function createTreeSprite(factory: CanvasFactory, kind: TreeKind, seed: number): Sprite {
+export function createTreeSprite(factory: CanvasFactory, kind: TreeKind, seed: number, resolution = 1): Sprite {
   const [width, height] = TREE_BOUNDS[kind], anchorX = width / 2, anchorY = height - 5;
   const surfaces = Array.from({ length: PALETTES[kind].leaf.length ? 3 : 1 }, () => {
-    const image = factory(width, height); image.width = width; image.height = height;
+    const image = factory(width * resolution, height * resolution); image.width = width * resolution; image.height = height * resolution;
     const c = image.getContext('2d');
     if (!c) throw new Error('A 2D canvas context is required for tree art.');
+    c.scale(resolution, resolution);
     c.translate(anchorX, anchorY);
     return { image, c };
   });

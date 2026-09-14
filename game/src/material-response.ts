@@ -27,7 +27,7 @@ export function eventMaterial(event: CombatEvent): MaterialId | null {
   if (event.style === 'frost') return 'ice';
   if (event.style === 'fire') return 'ember';
   if (event.style === 'lightning') return 'metal';
-  if (event.style === 'arcane' || event.style === 'spirit') return 'glass';
+  if (event.style === 'arcane' || event.style === 'spirit' || event.style === 'radiant') return 'glass';
   return ENEMY_MATERIAL[event.enemyKind];
 }
 export function createMaterialBurst(request: MaterialRequest): MaterialBurst {

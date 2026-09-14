@@ -1,3 +1,5 @@
+import { riftCanChannel } from './rift-tactics.ts';
+import { riftMechanic, RIFT_TACTICS as RT } from './rift-encounters.ts';
 import { BOSS_PRESSURE } from './boss-pressure.ts';
 import { drawWildernessBossImpact } from './wilderness-boss-effect-art.ts';
 import { isWildernessBoss, LAIR_RULES as R } from './wilderness-boss-content.ts';
@@ -9,6 +11,7 @@ import { drawGlow, type PointLight } from './lighting.ts';
 
 interface Warning { x: number; y: number; angle: number; shape: WarningShape; color: string; progress: number; locked: boolean }
 export function enemyWarnings(e: Enemy, alpha = 1): Warning[] {
+  if(e.hp>0&&e.riftWarning){const w=e.riftWarning;return [{x:w.x,y:w.y,angle:w.angle,progress:1-w.remaining/RT.warning,locked:true,color:w.kind==='storm'?'#cca3ff':'#ff935f',shape:w.kind==='storm'?{kind:'circle',radius:RT.stormRadius}:{kind:'sector',radius:RT.fireRadius,arc:RT.fireArc}}];}
   if (e.hp <= 0 || (e.state !== 'windup' && e.state !== 'attack')) return [];
   const d = enemyAttackDefinition(e), x = e.prevX + (e.x - e.prevX) * alpha, y = e.prevY + (e.y - e.prevY) * alpha;
   const progress = e.state === 'attack' ? 1 : Math.min(1, e.stateTime / Math.max(.01, e.stateDuration));
@@ -45,6 +48,11 @@ export function enemyWarnings(e: Enemy, alpha = 1): Warning[] {
 }
 export function drawEnemyWarning(c: CanvasRenderingContext2D, e: Enemy, alpha: number, time: number, reduced: boolean): void {
   drawWildernessBossImpact(c,e,time,reduced);
+  if(riftMechanic(e)==='ritual'&&riftCanChannel(e)&&e.awareness>=1){
+    c.save();c.strokeStyle='#9ae0c7';c.globalAlpha=.2;c.lineWidth=1.5;
+    c.beginPath();c.arc(e.x,e.y,RT.wardRadius,0,Math.PI*2);c.stroke();c.restore();
+    drawGlow(c,e.x,e.y-30,48,'#9ae0c7',.2);
+  }
   if(e.bossMove==='command'&&(e.state==='windup'||e.state==='attack'))drawGlow(c,e.x,e.y-35,100,'#b4a3eb',.3);
   if((e.rallyTime??0)>0)drawGlow(c,e.x,e.y-15,34,'#b4a3eb',.24);
   if (e.kind === 'warden' && e.bossMove === 'summon' && (e.state === 'windup' || e.state === 'attack'))

@@ -28,8 +28,8 @@ export function deriveResistances(modifiers: StatModifiers): Record<Element, num
     ((modifiers[`${element}Resistance`] ?? 0) + (modifiers.allResistance ?? 0)) / 100));
   return { fire: resistance('fire'), frost: resistance('frost'), lightning: resistance('lightning'), arcane: resistance('arcane') };
 }
-/** Spirit is a visual style of arcane magic, not a fifth damage element. */
+/** Spirit and radiant light are visual styles of Arcane magic, not extra damage elements. */
 const PROJECTILE_DAMAGE: Record<ProjectileStyle, DamageType> = Object.freeze({
-  arrow: 'physical', fire: 'fire', frost: 'frost', lightning: 'lightning', arcane: 'arcane', spirit: 'arcane',
+  arrow: 'physical', fire: 'fire', frost: 'frost', lightning: 'lightning', arcane: 'arcane', spirit: 'arcane', radiant: 'arcane',
 });
 export const projectileDamageType = (style: ProjectileStyle): DamageType => PROJECTILE_DAMAGE[style];

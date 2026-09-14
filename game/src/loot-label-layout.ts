@@ -10,7 +10,7 @@ export function groundLootName(item: Item): string {
   if(item.kind==='charm')return `Charm · ${item.baseName}`;
   const material = item.recipe.materialId && ITEM_MATERIALS[item.recipe.materialId].name;
   const cloth = item.appearance.style === 'cloth', leather = item.appearance.style === 'leather';
-  const kinds: Record<ItemKind, string> = { charm: 'Charm', weapon: 'Weapon', shield: 'Shield', grimoire: 'Grimoire', orb: 'Orb',
+  const kinds: Record<ItemKind, string> = { riftKey: 'Rift Key', charm: 'Charm', weapon: 'Weapon', shield: 'Shield', grimoire: 'Grimoire', orb: 'Orb',
     head: cloth || leather ? 'Hood' : 'Helm', chest: cloth ? 'Robe' : leather ? 'Jerkin' : 'Armor',
     boots: 'Boots', gloves: 'Gloves', legs: cloth || leather ? 'Trousers' : 'Greaves', cloak: 'Cloak', ring: 'Ring', amulet: 'Amulet' };
   const family = item.weapon?.family;

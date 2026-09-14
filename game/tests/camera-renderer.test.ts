@@ -96,7 +96,7 @@ function fixture(t: TestContext) {
   const sim = new Simulation(world, { spawn: false, startX: -123.25, startY: 67.125 });
   renderer.cameraX = sim.player.x; renderer.cameraY = sim.player.y - 15;
   const canvas = renderer.canvas as unknown as RecordingCanvas;
-  const settings: RenderSettings = { phase: 'playing', reducedMotion: true, fps: 60, debug: false };
+  const settings: RenderSettings = { phase: 'playing', reducedMotion: true };
   const render = (dt = 1 / 60) => {
     canvas.context.images = [];
     renderer.render(sim, world, dt, settings);

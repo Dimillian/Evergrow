@@ -14,7 +14,7 @@ const equipItem = (player: ReturnType<typeof initialPlayer>, index: number, prof
   assert.ok(executeCharacterCommand(player, { type: 'equip', index }).ok);
 };
 
-test('ground loot inspection displays equipped comparison cards by default', () => {
+test('vendor inspection displays equipped comparison cards by default', () => {
   const p = initialPlayer(0, 0);
   equipItem(p, 0, 'longsword');
   const incoming = generateItem(1200, 1, 'weapon', 'ember-staff', 'rare');

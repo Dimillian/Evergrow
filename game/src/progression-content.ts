@@ -6,7 +6,7 @@ export const normalizeLevel = (level: number): number => Math.max(1, Math.min(MA
 export type EnemyRank = 'normal' | 'veteran' | 'elite';
 export const ENEMY_RANKS = Object.freeze({
   normal: Object.freeze({ name: 'Normal', color: '#c5ccc8', healthMultiplier: 1, damageMultiplier: 1, xpMultiplier: 1 }),
-  veteran: Object.freeze({ name: 'Veteran', color: '#76b9ee', healthMultiplier: 1.8, damageMultiplier: 1.2, xpMultiplier: 2 }),
+  veteran: Object.freeze({ name: 'Champion', color: '#76b9ee', healthMultiplier: 1.8, damageMultiplier: 1.2, xpMultiplier: 2 }),
   elite: Object.freeze({ name: 'Elite', color: '#e0c17a', healthMultiplier: 4, damageMultiplier: 1.5, xpMultiplier: 5 }),
 });
 

@@ -103,11 +103,11 @@ test('pack rhythms differ while every actor may start preparing concurrently',()
   assert.ok(Math.max(...durations)-Math.min(...durations)>.08);
 });
 
-test('measured elite pressure rises without increasing individual or half-second burst damage',()=>{
+test('measured elite pressure rises with at most the explicit 10% Savage modifier on burst damage',()=>{
   for(const [kind,distance,previousHits,previousPeak] of [['brute',45,15,218],['archer',210,17,109]] as const) {
     const p=enemyPressureProbe(kind,'elite',distance);
     assert.ok(p.hits>previousHits,`${kind}: ${p.hits}`);
-    assert.ok(p.largestHit<=previousPeak);assert.ok(p.peakHalfSecond<=previousPeak);
+    assert.ok(p.largestHit<=Math.ceil(previousPeak*1.1));assert.ok(p.peakHalfSecond<=Math.ceil(previousPeak*1.1));
   }
   for(const kind of ['warden','ashColossus'] as const) {
     const p=enemyPressureProbe(kind,'elite',280);

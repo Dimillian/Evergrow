@@ -32,11 +32,12 @@ test('one audio context keeps independent remembered levels, master mute and bac
     await audio.unlock(); await audio.unlock();
     assert.equal(Context.created, 1);
     const internals = audio as unknown as { ctx: Context; master: Node; sfxGain: Node };
-    assert.equal(internals.sfxGain.gain.value, .17); assert.equal(internals.master.gain.value, 1);
+    assert.equal(internals.sfxGain.gain.value, .17); assert.equal(internals.master.gain.value, .8);
     audio.setVolume('music', .8); assert.equal(internals.sfxGain.gain.value, .17);
     audio.setEnabled(false); assert.equal(internals.master.gain.value, 0);
-    assert.deepEqual(audio.getVolumes(), { sfx: .5, music: .8 });
-    audio.setEnabled(true); assert.equal(internals.master.gain.value, 1);
+    assert.deepEqual(audio.getVolumes(), { master: .8, music: .8, sfx: .5 });
+    audio.setEnabled(true); assert.equal(internals.master.gain.value, .8);
+    audio.setVolume('master', .6); assert.equal(internals.master.gain.value, .6);
     audio.setForeground(false); assert.equal(internals.ctx.state, 'suspended');
     await audio.unlock(); assert.equal(internals.ctx.state, 'suspended', 'hidden interactions must not resume sound');
     audio.setForeground(true); assert.equal(internals.ctx.state, 'running');

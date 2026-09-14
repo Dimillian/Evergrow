@@ -198,7 +198,7 @@ async function boot() {
   const randomButton=createButton('New seed');randomButton.addEventListener('click',()=>{params.set('seed',String(crypto.getRandomValues(new Uint32Array(1))[0]));location.search=params.toString();},{signal:lifecycle.signal});
   root.querySelector('.layout-review-actions')!.append(seedForm,randomButton,download);
   const viewButtons = new Map<ViewId, HTMLButtonElement>();
-  const settings: RenderSettings = { phase: 'paused', reducedMotion: !live||reduced.matches, fps: 0, debug: false, skyHour:hour };
+  const settings: RenderSettings = { phase: 'paused', reducedMotion: !live||reduced.matches, skyHour:hour };
   let stage: Stage, simulation:Simulation,frames=0;
 
   function compose() {

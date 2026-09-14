@@ -1,3 +1,7 @@
+import { RiftTactics } from './rift-tactics.ts';
+import { EnemyNeighbors } from './enemy-neighbors.ts';
+import { applyEnemyModifiers } from './enemy-modifiers.ts';
+import { tickRift, riftKill } from './rift-runtime.ts';
 import { advanceAuras, auraPower, manaCapacity } from './auras.ts';
 import { resolveSkill } from './skill-progression.ts';
 import { hasUnique, UNIQUE_RULES } from './unique-content.ts';
@@ -10,7 +14,7 @@ import { GroundItemPickup } from './ground-item-pickup.ts';
 import { updateWildernessBoss } from './wilderness-boss.ts';
 import { completeBossLair } from './wilderness-boss-rewards.ts';
 import { isWildernessBoss } from './wilderness-boss-content.ts';
-import { freshChronicle, metric } from './chronicle.ts';
+import { freshChronicle, metric, syncRiftChronicle } from './chronicle.ts';
 import { trackChronicleEvent } from './chronicle-tracking.ts';
 import { TREASURE_FLIGHT_DURATION } from './treasure-flight.ts';
 import { advanceSkillEffects, consumeRally, snapshotSkillOffense, queueSkillEcho } from './player-skill-effects.ts';
@@ -39,7 +43,7 @@ import { advanceGold, type GroundGold } from './gold.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, ProjectileStyle, ProjectileEffects, GroundEffect, SimulationOptions, WorldQuery } from './model.ts';
 import type { Pickup } from './model.ts';
-import { createBaseStats, createStartingEquipment, deriveAttackStats, basicAttackManaCost } from './equipment.ts';
+import { createBaseStats, createStartingEquipment, deriveAttackStats, basicAttackManaCost, basicProjectileStyle } from './equipment.ts';
 import { getActiveSwingOffset } from './attack-motion.ts';
 import { RANGED_BASIC_ATTACK_PHASES, BASIC_ATTACK_PHASES, COMBAT_TIMING, SKILL_CAST_MOTION, ENEMY_DEFINITIONS, LOOT_RULES, PLAYER_ABILITIES,
   PLAYER_DEFAULTS, PLAYER_MOVEMENT, type ProjectileDefinition } from './combat-content.ts';
@@ -212,6 +216,7 @@ export class Simulation {
     this.expeditions = saved.expeditions ?? freshExpeditions(); this.dungeonFloor = dungeonFromState(this);
     this.journeys = saved.journeys ?? freshJourneys();
     this.player.chronicle = saved.chronicle ?? freshChronicle();
+    syncRiftChronicle(this.player.chronicle,this.expeditions.rifts);
     this.eventState = saved.events ?? freshEvents();
     this.travel = saved.travel ?? freshTravel();
     if (saved.dead) this.travel.returnTo = null;
@@ -238,7 +243,7 @@ export class Simulation {
     this.camps.restoreScales(saved.encounterScales);
     for (const actor of saved.actors ?? []) {
       const enemy=this.spawnEnemy(actor.kind,actor.x,actor.y,actor.rank, actor.campId ? {campId:actor.campId,memberId:actor.memberId!,lootSeed:actor.seed} : undefined);
-      if(enemy)Object.assign(enemy,scaledEnemyStats(actor.kind,actor.level,actor.rank),{level:actor.level,biome:actor.biome,lootSeed:actor.seed,hp:actor.hp,homeX:actor.homeX,homeY:actor.homeY,bossPhases:actor.bossPhases,state:'idle',stateDuration:1});
+      if(enemy)Object.assign(enemy,applyEnemyModifiers(scaledEnemyStats(actor.kind,actor.level,actor.rank),{kind:actor.kind,rank:actor.rank,lootSeed:actor.seed,rift:actor.rift}),{rift:actor.rift,level:actor.level,biome:actor.biome,lootSeed:actor.seed,hp:actor.hp,homeX:actor.homeX,homeY:actor.homeY,bossPhases:actor.bossPhases,state:'idle',stateDuration:1});
     }
     this.camps.adopt(this.enemies); this.camps.restoreWounds(saved.campWounds??[]); this.pickups=saved.pickups??[];
     this.reserveIdentity(Math.max(1,...this.pickups.map(i=>i.id+1)));
@@ -322,7 +327,15 @@ export class Simulation {
     if (!Number.isFinite(dt) || dt <= 0 || this.player.dead) return;
     if (input.attack) this.attackBuffer = this.time + COMBAT_TIMING.attackBuffer;
     if (input.dodge) this.dodgeBuffer = this.time + COMBAT_TIMING.inputBuffer;
-    if (input.skillSlot !== null) this.skillBuffer = { slot: input.skillSlot, until: this.time + COMBAT_TIMING.inputBuffer, pressed: input.skillPressed!==false || this.skillBuffer?.slot===input.skillSlot&&!!this.skillBuffer.pressed&&this.skillBuffer.until>=this.time };
+    if (this.skillBuffer && this.skillBuffer.until < this.time) this.skillBuffer = null;
+    if (input.skillSlot !== null && (input.skillPressed !== false || !this.skillBuffer?.pressed)) {
+      const p = this.player, pressed = input.skillPressed !== false;
+      // Keep one deliberate press through the action already underway. Held repeats
+      // cannot overwrite it or extend its lifetime while waiting on mana/cooldown.
+      const recovery = pressed ? Math.max(0, p.castTime, p.dodgeTime, p.dash?.remaining ?? 0,
+        p.attack ? p.attack.duration - p.attack.elapsed : 0) : 0;
+      this.skillBuffer = { slot: input.skillSlot, until: this.time + recovery + COMBAT_TIMING.inputBuffer, pressed };
+    }
     if (input.heal) this.healBuffer = this.time + COMBAT_TIMING.inputBuffer;
     // Bound catch-up after a suspended tab; normal frames always run at 120 Hz.
     this.accumulator += Math.min(dt, 0.25);
@@ -340,10 +353,11 @@ export class Simulation {
     if (this.world.blocked(x, y, stats.radius)) return null;
     const lootSeed = source?.lootSeed ?? enemyLootSeed(this.options.seed!, ++this.spawnOrdinal, x, y);
     const level = source?.level ?? this.world.dungeonLevel ?? encounterMemberLevel(scaling ?? encounterScaleAt(x, y, this.world.seed ?? this.options.seed!, this.player.level), rank, lootSeed, isBossKind(kind));
-    const scaled = scaledEnemyStats(kind, level, rank);
+    const rift=currentDungeon(this.expeditions)?.entrance.rift;
+    const scaled = applyEnemyModifiers(scaledEnemyStats(kind, level, rank),{kind,rank,lootSeed,rift});
     const biome = this.world.dungeonBiome ?? (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
     const enemy: Enemy = {
-      id: this.nextId++, level, rank, biome, lootSeed, ...scaled, dungeonTheme:this.world.dungeonTheme,
+      id: this.nextId++, level, rank, biome, lootSeed, ...(rift?{rift}:{}), ...scaled, dungeonTheme:this.world.dungeonTheme,
       ...(source ? { campId: source.campId, campMemberId: source.memberId } : {}),
       x, y, prevX: x, prevY: y, vx: 0, vy: 0, knockbackX: 0, knockbackY: 0, angle: 0, hp: scaled.maxHp,
       kind, state: 'idle', stateTime: 0, stateDuration: ENCOUNTER_RULES.initialIdleMin + this.random() * ENCOUNTER_RULES.initialIdleRange,
@@ -368,6 +382,8 @@ export class Simulation {
 
   private step(dt: number, input: Input): void {
     input=this.groundPickup.input(this.player,this.groundItems,this.world,this.time,dt,input);
+    tickRift(this,dt);
+    if(currentDungeon(this.expeditions)?.rift?.phase==='failed')return;
     this.capturePositions();
     // Decrement before damage resolves so every new impact gets a full flash.
     this.player.hitFlash = Math.max(0, this.player.hitFlash - dt);
@@ -393,6 +409,7 @@ export class Simulation {
       // A death may clear input midway through this tick; freeze its final poses.
       this.travel.returnTo = null; this.portal.cancel(); this.eventChannel.cancel();
       if (this.player.character.blessing) { delete this.player.character.blessing; refreshCharacter(this.player); }
+      tickRift(this,0);
       this.capturePositions();
       return;
     }
@@ -433,8 +450,8 @@ export class Simulation {
     let completedAttackTime = 0;
     const channelSlot=(input.heldSkillSlots??(input.skillSlot===null?[]:[input.skillSlot])).find(slot=>p.character.skillSlots[slot]==='whirlwind');
     if(hasUnique(p.character,'dervish-grasp')){
-      if(channelSlot!==undefined)this.skillBuffer={slot:channelSlot,until:this.time+COMBAT_TIMING.inputBuffer};
-      else if(input.skillSlot===null&&input.heldSkillSlots&&this.skillBuffer&&p.character.skillSlots[this.skillBuffer.slot]==='whirlwind')this.skillBuffer=null;
+      if(channelSlot!==undefined&&!(this.skillBuffer?.pressed&&this.skillBuffer.until>=this.time))this.skillBuffer={slot:channelSlot,until:this.time+COMBAT_TIMING.inputBuffer};
+      else if(channelSlot===undefined&&input.skillSlot===null&&input.heldSkillSlots&&this.skillBuffer&&p.character.skillSlots[this.skillBuffer.slot]==='whirlwind')this.skillBuffer=null;
     }
     this.arrivalProtection = input.attack || input.skillSlot !== null ? 0 : Math.max(0, this.arrivalProtection - dt);
     this.hurtGuard = Math.max(0, this.hurtGuard - dt);
@@ -639,7 +656,7 @@ export class Simulation {
     const weave = consumeRally(p,weapon.attackKind==='melee') * consumeSpellweave(p, weapon.attackKind === 'melee' ? 'melee' : weapon.attackKind === 'bolt' ? 'spell' : 'other');
     const duration = 1 / stats.attacksPerSecond;
     const ranged = weapon.attackKind !== 'melee';
-    const style = weapon.attackKind === 'arrow' ? 'arrow' : weapon.damageType === 'physical' ? 'arcane' : weapon.damageType;
+    const style = basicProjectileStyle(weapon);
     this.player.attack = {
       kind: ranged ? 'ranged' : 'melee', weapon, hand,
       elapsed, duration, activeStart: duration * (ranged ? RANGED_BASIC_ATTACK_PHASES.activeStart : BASIC_ATTACK_PHASES.activeStart),
@@ -688,8 +705,10 @@ export class Simulation {
       player: this.player, enemies: this.enemies, random: () => this.random(),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by), emit: event => this.emit(event),
       killed: actor => {
+        riftKill(this,actor);
         completeBossLair(actor, this.eventState);
         const reward = awardKillRewards(actor, this.kills, this.killRecharge, {
+          suppressDrops: !!currentDungeon(this.expeditions)?.rift,
           player: this.player, groundGold: this.groundGold, groundItems: this.groundItems, pickups: this.pickups,
           nextId: () => this.nextId++, emit: event => this.emit(event),
         });
@@ -698,12 +717,16 @@ export class Simulation {
     }, periodic, style, elementalDamage, offense, authoredBurn);
   }
 
+  private enemyNeighbors=new EnemyNeighbors();
+  private riftTactics=new RiftTactics();
   private updateEnemies(dt: number): void {
+    this.enemyNeighbors.rebuild(this.enemies);
     updateWarbands(this.enemies, this.player, this.world, dt);
     const p = this.player;
     const trial = this.eventState.trial && !this.dungeonFloor ? this.eventState.sites[this.eventState.trial.siteId] : null;
     const context: EnemyAIContext = {
       player: p, enemies: this.enemies, world: this.world, time: this.time,
+      neighbors:(enemy,padding)=>this.enemyNeighbors.around(enemy,padding),
       hurtDecoy:(id,amount)=>{hurtDecoy(p,id,amount);},
       trial: trial ? { campId: `event:${trial.id}`, x: trial.x, y: trial.y, radius: EVENT_RULES.trialRadius } : null,
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
@@ -713,14 +736,18 @@ export class Simulation {
         definition, undefined, effects, actor.level, actor.kind),
       emit: event => this.emit(event),
     };
+    this.riftTactics.tick(context,dt,currentDungeon(this.expeditions)?.rift?.phase==='hunt');
     for (const enemy of this.enemies) {
       this.updateKnockback(enemy, dt);
+      this.enemyNeighbors.update(enemy);
       enemy.stateTime += dt;
       if (enemy.state === 'dead') continue;
       enemy.rallyTime=Math.max(0,(enemy.rallyTime??0)-dt);
       if (!advanceEnemyStatuses(enemy, dt,
         (actor, amount) => this.damageEnemy(actor, amount, 0, false, true, 'fire'))) continue;
+      if(enemy.riftWarning)continue;
       if(isWildernessBoss(enemy.kind)) updateWildernessBoss(enemy,dt,context); else if(enemy.kind==='warden') updateWarden(enemy,dt,context); else updateEnemyAI(enemy, dt, context);
+      this.enemyNeighbors.update(enemy);
       if (p.dead) break;
     }
     for (const enemy of this.enemies) {
@@ -766,6 +793,7 @@ export class Simulation {
   }
 
   takeDamage(amount: number, angle: number, sourceLevel: number, damageType: DamageType, kind?: EnemyKind): void {
+    if(currentDungeon(this.expeditions)?.rift?.phase==='complete')return;
     if (!damagePlayer(amount, angle, sourceLevel, damageType, {
       player: this.player, world: this.world, random: () => this.random(), emit: event => this.emit(event),
       wardBurst: burst=>{

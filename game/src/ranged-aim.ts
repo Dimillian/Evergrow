@@ -1,6 +1,6 @@
 import type { SkillExecution } from './skill-execution-content.ts';
 import type { Enemy } from './model.ts';
-import { ENEMY_BODY_BOUNDS } from './enemy-body.ts';
+import { enemyBodyBounds } from './enemy-body.ts';
 
 /** Projectile ground coordinates are rendered at this shared body height. */
 export const PROJECTILE_HEIGHT = 16;
@@ -20,7 +20,7 @@ export function resolveRangedAim(origin: Point, cursor: Point, enemies: readonly
   let selected: Enemy | null = null, best = Infinity;
   for (const enemy of enemies) {
     if (enemy.state === 'dead' || enemy.hp <= 0 || Math.hypot(enemy.x - origin.x, enemy.y - origin.y) > options.range) continue;
-    const body = ENEMY_BODY_BOUNDS[enemy.kind], view = options.bounds;
+    const body = enemyBodyBounds(enemy), view = options.bounds;
     const x = enemy.prevX + (enemy.x - enemy.prevX) * alpha;
     const groundY = enemy.prevY + (enemy.y - enemy.prevY) * alpha;
     const y = groundY + (body.top + body.bottom) / 2;
@@ -57,7 +57,7 @@ export function resolveDirectionalAim(origin: Point, aim: Point, enemies: readon
     if (enemy.state === 'dead' || enemy.hp <= 0 || distance > options.range || distance < .001) continue;
     const angle = Math.acos(Math.max(-1, Math.min(1, (dx * ex + dy * ey) / (length * distance))));
     if (angle > halfCone) continue;
-    const body = ENEMY_BODY_BOUNDS[enemy.kind], view = options.bounds;
+    const body = enemyBodyBounds(enemy), view = options.bounds;
     const x = enemy.prevX + (enemy.x - enemy.prevX) * alpha;
     const y = enemy.prevY + (enemy.y - enemy.prevY) * alpha + (body.top + body.bottom) / 2;
     if (x < view.left || x > view.left + view.width || y < view.top || y > view.top + view.height) continue;

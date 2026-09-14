@@ -1,5 +1,6 @@
 import { TerrainStream, type TerrainCoordinate } from './terrain-stream.ts';
 import { TILE_SIZE, World } from './world.ts';
+import { RiftWorld } from './rift-world.ts';
 
 type CanvasFactory = () => HTMLCanvasElement;
 const PREFETCH_LIMIT = 16;
@@ -31,6 +32,11 @@ export class GroundLayer {
     this.context = context;
   }
 
+  get stats() {
+    const stream = this.stream && !this.stream.failed ? this.stream : null;
+    return { terrainTiles: stream?.size ?? this.world?.cacheStats.groundTiles ?? 0, terrainQueued: stream?.queued ?? 0 };
+  }
+
   reset() { this.world = null; this.prefetched.clear(); this.previews.clear(); this.transitions.clear(); this.stream?.dispose(); this.stream = null; }
 
   private preview(world: World, x: number, y: number) {
@@ -58,7 +64,7 @@ export class GroundLayer {
     if (world !== this.world) {
       this.reset();
       // Dungeon terrain and frozen art reviews retain their synchronous renderer.
-      if (this.background && Object.getPrototypeOf(world) === World.prototype && typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined') {
+      if (this.background && (Object.getPrototypeOf(world) === World.prototype || Object.getPrototypeOf(world) === RiftWorld.prototype) && typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined') {
         try { this.stream = new TerrainStream(); } catch { this.stream = null; }
       }
     }
@@ -71,7 +77,7 @@ export class GroundLayer {
       const aheadX = Math.sign(dx), aheadY = Math.sign(dy);
       for (let y = minY; y <= maxY; y++) if (aheadX) coordinates.push({ x: aheadX > 0 ? maxX + 1 : minX - 1, y });
       for (let x = minX; x <= maxX; x++) if (aheadY) coordinates.push({ x, y: aheadY > 0 ? maxY + 1 : minY - 1 });
-      this.stream.update(world.seed, coordinates);
+      this.stream.update(world.seed, coordinates, world.wildernessOnly, world.riftTerrain);
       const retained = new Set(coordinates.map(p => `${p.x}:${p.y}`));
       for (const key of this.previews.keys()) if (!retained.has(key)) { this.previews.delete(key); this.transitions.delete(key); }
     }

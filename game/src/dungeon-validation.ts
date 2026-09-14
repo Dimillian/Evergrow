@@ -1,3 +1,4 @@
+import { validRiftTag, validRiftLedger, riftEnemyStats, RIFT_RULES } from './rift-content.ts';
 import { EXPEDITION_MODIFIER_IDS } from './expedition-modifiers.ts';
 import { validExpeditionRoute, expeditionChoices, dungeonChestMask } from './expedition-route.ts';
 import { DUNGEON_THEME_IDS } from './dungeon-content.ts';
@@ -13,7 +14,7 @@ import { scaledEnemyStats } from './zone-progression.ts';
 import { BIOMES } from './biomes.ts';
 import type { Expeditions, StoredActor, LocationContents } from './dungeon-state.ts';
 const point = (v: Record<string, unknown>) => number(v.x, -4e7, 4e7) && number(v.y, -4e7, 4e7);
-export function validActors(v: unknown): v is StoredActor[] { return Array.isArray(v) && v.every(a => object(a) && typeof a.kind === 'string' && Object.hasOwn(ENEMY_DEFINITIONS, a.kind) && ['normal', 'veteran', 'elite'].includes(a.rank as string) && integer(a.level, 1, 1e6) && typeof a.biome === 'string' && Object.hasOwn(BIOMES, a.biome) && integer(a.seed, 0, 4294967295) && point(a) && number(a.homeX, -4e7, 4e7) && number(a.homeY, -4e7, 4e7) && number(a.hp, 0, scaledEnemyStats(a.kind as StoredActor['kind'], a.level as number, a.rank as StoredActor['rank']).maxHp) && (a.campId === undefined || text(a.campId, 180) && text(a.memberId, 180)) && (a.bossPhases === undefined || integer(a.bossPhases, 0, 3))); }
+export function validActors(v: unknown): v is StoredActor[] { return Array.isArray(v) && v.every(a => object(a) && typeof a.kind === 'string' && Object.hasOwn(ENEMY_DEFINITIONS, a.kind) && ['normal', 'veteran', 'elite'].includes(a.rank as string) && integer(a.level, 1, 1e6) && typeof a.biome === 'string' && Object.hasOwn(BIOMES, a.biome) && integer(a.seed, 0, 4294967295) && point(a) && number(a.homeX, -4e7, 4e7) && number(a.homeY, -4e7, 4e7) && (a.rift===undefined||validRiftTag(a.rift)) && number(a.hp, 0, riftEnemyStats(scaledEnemyStats(a.kind as StoredActor['kind'], a.level as number, a.rank as StoredActor['rank']),a.rift as StoredActor['rift']).maxHp) && (a.campId === undefined || text(a.campId, 180) && text(a.memberId, 180)) && (a.bossPhases === undefined || integer(a.bossPhases, 0, 3))); }
 export function validCampWounds(v: unknown): v is StoredActor[] { return Array.isArray(v) && v.length <= 32768 && v.every(a => validActors([a]) && a.campId && a.memberId) && new Set(v.map(a => a.memberId)).size === v.length; }
 export function validPickups(v: unknown): boolean { return Array.isArray(v) && v.length <= 32 && v.every(p => object(p) && point(p) && integer(p.id, 1) && ['health', 'mana'].includes(p.kind as string) && number(p.restoreFraction, 0, 1) && (p.restoreAmount===undefined || p.kind==='mana' && integer(p.restoreAmount, 1, 1e6)) && number(p.life, 0, 100) && number(p.radius, 0, 100)); }
 export function validContents(v: unknown): v is LocationContents { return object(v) && (v.encounterScales === undefined || validEncounterScales(v.encounterScales)) && (v.campWounds === undefined || validCampWounds(v.campWounds)) && validActors(v.actors) && validPickups(v.pickups) && Array.isArray(v.groundItems) && v.groundItems.length <= LOOT_RULES.maxGroundItems && v.groundItems.every(i => object(i) && integer(i.id, 1) && point(i) && validItem(i.item) && validTreasureFlight(i.flight)) && Array.isArray(v.groundGold) && v.groundGold.length <= 128 && v.groundGold.every(i => object(i) && integer(i.id, 1) && point(i) && integer(i.amount, 1) && validTreasureFlight(i.flight) && number(i.age, 0, 10)) && Array.isArray(v.clearedCamps) && v.clearedCamps.every(id => text(id, 180)) && object(v.defeatedCampMembers) && Object.entries(v.defeatedCampMembers).every(([k, a]) => text(k, 180) && Array.isArray(a) && a.length <= 32 && a.every(id => text(id, 180))); }
@@ -21,6 +22,7 @@ export function validExpeditions(v: unknown): v is Expeditions {
     if (!object(v) || !(v.location === null || text(v.location, 180)) || !Array.isArray(v.runs) || !(v.surface === null || validContents(v.surface)) || !number(v.surfaceX, -4e7, 4e7) || !number(v.surfaceY, -4e7, 4e7))
         return false;
     if (v.cleared !== undefined && (!Array.isArray(v.cleared) || !v.cleared.every(id => text(id, 180) && id.startsWith('dungeon:')) || new Set(v.cleared).size !== v.cleared.length)) return false;
+    if(v.rifts!==undefined&&!validRiftLedger(v.rifts))return false;
     if(v.route!==undefined && !validExpeditionRoute(v.route))return false;
     const ids = new Set<string>(v.cleared as string[] | undefined);
     for (const run of v.runs) {
@@ -29,6 +31,13 @@ export function validExpeditions(v: unknown): v is Expeditions {
         const e = run.entrance;
         if ((e.scaling !== undefined && (!validEncounterScale(e.scaling) || e.level !== e.scaling.base)) || !text(e.id, 180) || !e.id.startsWith('dungeon:') || ids.has(e.id) || !text(e.name, 80) || !point(e) || !integer(e.seed, 0, 4294967295) || !integer(e.level, 1, 1e6) || typeof e.biome !== 'string' || !Object.hasOwn(BIOMES, e.biome) || !object(run.states) || !validContents(run.contents) || !point(run))
             return false;
+        if(e.rift!==undefined){
+            if(!validRiftTag(e.rift)||e.expedition!==undefined||!validRiftLedger(v.rifts)||e.rift.attempt!==v.rifts.attempts||e.id!==`dungeon:rift:${e.rift.attempt}`||e.scaling!==undefined)return false;
+            const r=run.rift;if(!object(r)||!number(r.elapsed,0,RIFT_RULES.duration)||!integer(r.points,0,RIFT_RULES.progress)||!['hunt','boss','complete','failed'].includes(r.phase as string)||typeof r.claimed!=='boolean')return false;
+            if(r.guardian!==undefined&&(r.phase==='hunt'||!object(r.guardian)||!point(r.guardian)||!number(r.guardian.at,0,r.elapsed as number)))return false;
+            for(const key of ['treasure','exit'])if(r[key]!==undefined&&(!object(r[key])||!point(r[key])||r.phase!=='complete'))return false;
+            if((r.phase==='hunt'&&r.points===RIFT_RULES.progress)||(r.phase==='boss'||r.phase==='complete')&&r.points!==RIFT_RULES.progress||r.phase!=='failed'&&r.phase!=='complete'&&r.elapsed>=RIFT_RULES.duration||r.claimed&&r.phase!=='complete')return false;
+        }else if(run.rift!==undefined)return false;
         if(e.theme!==undefined && !DUNGEON_THEME_IDS.includes(e.theme as never))return false;
         if(e.expedition!==undefined) {
             const tag=e.expedition, route=v.route;
@@ -47,8 +56,14 @@ export function validExpeditions(v: unknown): v is Expeditions {
             return object(s)&&integer(s.wave,0,rules.count)&&integer(s.cleared,0,rules.count)&&s.wave===s.cleared&&number(s.elapsed,0,1e9)&&number(s.rest,0,rules.interval)&&number(s.held,0,rules.hold)&&typeof s.started==='boolean'&&typeof s.finished==='boolean'&&s.finished===(s.wave===rules.count)
                 &&(!s.finished||s.started)&&(s.started||s.wave===0&&s.held===0&&s.rest===0&&s.elapsed===0)&&floor.members.filter(m=>m.event===event.id&&(m.eventWave ?? 0) < Number(s.wave)).every(m=>((run.states as Record<string,{hp:number}>)[m.id]?.hp??1)<=0);
         }))return false;
-        if (Object.keys(run.states).length !== floor.members.length || !floor.members.every(m => { const s = (run.states as Record<string, unknown>)[m.id]; return object(s) && number(s.hp, 0, scaledEnemyStats(m.kind, dungeonMemberLevel(e as unknown as DungeonEntrance, m), m.rank).maxHp) && point(s) && typeof s.admitted === 'boolean' && !dungeonBlocked(floor, s.x as number, s.y as number, 0) && (s.bossPhases === undefined || integer(s.bossPhases, 0, 3)); }))
+        if (Object.keys(run.states).length !== floor.members.length || !floor.members.every(m => { const s = (run.states as Record<string, unknown>)[m.id]; return object(s) && number(s.hp, 0, riftEnemyStats(scaledEnemyStats(m.kind, dungeonMemberLevel(e as unknown as DungeonEntrance, m), m.rank), (e as unknown as DungeonEntrance).rift).maxHp) && point(s) && typeof s.admitted === 'boolean' && !dungeonBlocked(floor, s.x as number, s.y as number, 0) && (s.bossPhases === undefined || integer(s.bossPhases, 0, 3)); }))
             return false;
+        if(e.rift!==undefined){
+            const r=run.rift as unknown as import('./rift-content.ts').RiftProgress;
+            for(const p of [r.guardian,r.treasure,r.exit])if(p&&dungeonBlocked(floor,p.x,p.y,0))return false;
+            if(r.phase==='complete' && ((run.states.warden as {hp:number}).hp>0 || r.elapsed>=RIFT_RULES.duration))return false;
+            if(r.claimed !== ((run.chestMasks as number[])?.[2]===dungeonChestMask(run as unknown as import('./dungeon-state.ts').DungeonRun,2)))return false;
+        }
         if (dungeonBlocked(floor, run.x as number, run.y as number, 0) || !Array.isArray(run.explored) || run.explored.length > floor.rooms.length || !run.explored.every(id => integer(id, 0, floor.rooms.length-1)) || new Set(run.explored).size !== run.explored.length || !Array.isArray(run.chestMasks) || run.chestMasks.length !== 3 || !run.chestMasks.every((n, i) => integer(n, 0, dungeonChestMask(run as unknown as import('./dungeon-state.ts').DungeonRun,i)) && (i === 2 || ((n as number) & 6) === 0)))
             return false;
     }

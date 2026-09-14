@@ -4,7 +4,7 @@
 
 ## Prototype version policy
 
-Player-facing versions stay within the latest explicitly approved prototype milestone. The current ceiling is **0.5.x**; do not advance to 0.6 or 1.0 without approval. The user approved **0.2.0** for the settlement and gambler milestone and **0.3.0** for the spatial inventory, charms and resistance milestone on 2026-09-09. Routine publications after 0.3.0 increment the patch number (**0.3.1**, **0.3.2**, and so on). Patch numbers have no single-digit limit. Minor versions (0.2, 0.3, 0.4) mark deliberate product milestones, not each feature pass. Do not advance beyond the approved milestone automatically.
+Player-facing versions stay within the latest explicitly approved prototype milestone. The current ceiling is **0.6.x**; do not advance to 0.7 or 1.0 without approval. The user approved **0.2.0** for the settlement and gambler milestone and **0.3.0** for the spatial inventory, charms and resistance milestone on 2026-09-09. Routine publications after 0.3.0 increment the patch number (**0.3.1**, **0.3.2**, and so on). Patch numbers have no single-digit limit. Minor versions (0.2, 0.3, 0.4) mark deliberate product milestones, not each feature pass. Do not advance beyond the approved milestone automatically.
 
 On 2026-09-09 the display history was renumbered, preserving every date, note and development-recap marker. The renumbered history ships with 0.2.0; it does not redeploy historical builds. The audit records below retain their original published labels, source SHAs and Sites IDs. Save schema v4, world generation 10, dungeon layout versions and Sites snapshot numbers are independent technical identifiers; never lower them to match a game release label.
 
@@ -31,7 +31,45 @@ The user approved **0.4.0** on 2026-09-13 for the rebuilt passive atlas and merc
 
 The user approved the next major prototype milestone, **0.5.0**, on 2026-09-13 for the new HUD, stained-glass skill icons, inventory skill assignment and twelve Unique items. Routine updates after this milestone use 0.5.x.
 
+The user approved the next major prototype milestone, **0.6.0**, on 2026-09-14 for Crimson Rifts, keys, ranked monsters and the accompanying interface and performance updates. Routine updates after this milestone use 0.6.x.
+
 ## Last verified publication
+
+- Game v0.6.2 / Sites version 56, publicly deployed on 2026-09-14 at 16:19:33 UTC.
+- Published source: `09e32e06ecb7f039be724ae26a7c191fba4d504d`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_645eb1c05f7c8191b66a4f73d2c5c3a3`.
+- Deployment: `appgdep_6aa81e8295a88191a312d8dba260d029`; Sites returned `succeeded`.
+- Rift fissures, floating fragments, biome corruption and progress-driven lightning; restored ground detail and sharper enlarged scenery.
+- Focused physical weapon affixes, stronger damage rolls with smaller material premiums, reduced random glove speed bonuses and roll-aware gear power. Unique combat stats remain unchanged.
+- Charms enter the normal bag for manual activation; buffered skill presses survive action recovery.
+- Existing characters retain progress and active charms. Regular weapon/glove budgets update on read; obsolete melee caster affixes become suitable bonuses. No database migration or character reset.
+- The loot checkpoint passed all 1,531 code tests and a 265,062-item audit. Final publication passed 41 focused checks, application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
+- Game v0.6.1 / Sites version 55, publicly deployed on 2026-09-14 at 13:52:11 UTC.
+- Published source: `c469820aa3b8cd2ea15bb55690fe61df6eecabd6`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_6727d96bb6f081919cccb493e37d2b02`.
+- Deployment: `appgdep_6aa7fbf68ff08191be9b55cb6af50469`; Sites returned `succeeded`.
+- New rifts use connected clearings, branching trails, biome ridges, four encounter formations, Ritual Ward support and staggered Stormbound/Cinder specials. Density keys add reinforcements to clearings. Timer, progress target and chest rewards remain unchanged.
+- All 1,514 code tests passed. Application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation passed. No automated browser gameplay was run.
+- Existing local/cloud characters and active rifts remain compatible; no save reset, skill refund or D1 migration. Reload and start a new rift for the new layout.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
+- Game v0.6.0 / Sites version 54, publicly deployed on 2026-09-14 at 13:14:42 UTC.
+- Published source: `b70a176e65fbfba4baa4e011a76f013e76c9523b`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_2f020f3af0c08191a8182e09d5900d92`.
+- Deployment: `appgdep_6aa7f333135c8191b5874e3caa7e2ca5`; Sites returned `succeeded`.
+- Crimson Rifts, optional inventory keys, guardian arrival and automatic rewards; ranked enemy outlines/traits, dense-pack performance, smooth rift maps, Chronicle records and eighteen achievement milestones.
+- Includes merged PRs #32, #36, #37, #38, #41, #42 and #43: master volume, inventory drag performance, background rendering suspension, map tooltips, radiant wand identity, unarmed poses and inventory refinement. Also includes compact ground-loot comparisons and stable Alt inspection.
+- All 1,508 code tests passed under Node 24 with four test workers. Application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation passed. No automated browser gameplay was run.
+- Existing local/cloud characters remain compatible; no save reset, skill refund or D1 migration. Existing rift ledger records seed Chronicles; previously untracked details start with this update. Reload existing clients.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
 
 - Game v0.5.3 / Sites version 53, publicly deployed on 2026-09-14 at 08:24:11 UTC.
 - Published source: `dfb1f3d072351d08de43b33bf5a52acb230e89f7`.

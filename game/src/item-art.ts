@@ -1,3 +1,4 @@
+import { riftKeyShapes } from './rift-key-art.ts';
 import { charmShapes } from './charm-shapes.ts';
 import { armorAccessoryShapes } from './armor-accessory-shapes.ts';
 import { bootShapes } from './boot-shapes.ts';
@@ -28,6 +29,7 @@ export function itemDropShapes(item: Item): readonly GearShape[] {
   const piece: ArmorPiece = { style: item.appearance.style, seed: item.seed, material: { base, shadow, edge, trim, surface: item.appearance.surface } };
   let shapes: readonly GearShape[], angle = 0;
   switch (item.kind) {
+    case 'riftKey': shapes = riftKeyShapes(item); break;
     case 'charm': shapes = charmShapes(item); break;
     case 'weapon': shapes = weaponShapes(item.weapon?.visual ?? STARTING_SWORD.visual); angle = -.52; break;
     case 'grimoire': case 'orb': shapes = focusShapes(item.focus!.visual); break;
@@ -79,7 +81,7 @@ export function itemIconSVG(item: Item, size = 48): string {
   };
   let shape: string;
   switch (item.kind) {
-    case 'charm': shape = `<g transform="translate(24 24) scale(2.3)">${detailed(itemDropShapes(item))}</g>`; break;
+    case 'riftKey': case 'charm': shape = `<g transform="translate(24 24) scale(2.3)">${detailed(itemDropShapes(item))}</g>`; break;
     case 'weapon': {
       const visual = item.weapon?.visual ?? STARTING_SWORD.visual;
       const shapes = weaponShapes(visual);

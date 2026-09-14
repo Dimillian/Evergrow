@@ -1,0 +1,30 @@
+import '../ui-kit.css';
+import '../style.css';
+import '../typography.css';
+import { loadGameFont } from '../font.ts';
+import { installUITheme } from '../ui-theme.ts';
+import { RiftPanel } from '../rift-panel.ts';
+import { Simulation } from '../simulation.ts';
+import { createRiftKey } from '../rift-content.ts';
+if(!import.meta.env.DEV)throw Error('Local review only');
+installUITheme();await loadGameFont();
+const params=new URLSearchParams(location.search),level=Math.max(1,Math.min(1e6,Number(params.get('level')??30))),root=document.querySelector<HTMLElement>('#app')!;
+if(params.get('view')==='map'){
+  const {mountRiftMapReview}=await import('./rift-map-review.ts');
+  const dispose=mountRiftMapReview(root,params);
+  if(import.meta.hot)import.meta.hot.dispose(dispose);
+}else{
+// Match the runtime canvas siblings and panel mount so normal-flow regressions
+// cannot be hidden by a standalone empty preview root. No game or saves run here.
+root.innerHTML='<div class="game-shell"><canvas id="game" aria-hidden="true"></canvas><canvas id="game-ui" aria-hidden="true"></canvas><div id="character-panels-mount"></div></div>';
+const mount=root.querySelector<HTMLElement>('#character-panels-mount')!;
+const sim=new Simulation({blocked:()=>false,move:(x,y,dx,dy)=>({x:x+dx,y:y+dy})},{spawn:false});sim.player.level=level;
+sim.player.character.inventory.fill(null);for(let i=0;i<5;i++)sim.player.character.inventory[i]=createRiftKey(7319+i*113,level,i+1);
+sim.expeditions.rifts={attempts:12,clears:8,highest:34,best:[{level:30,seconds:434,keyTier:0},{level:30,seconds:397,keyTier:3}]};
+const reopen=document.createElement('button');reopen.className='ui-button';reopen.textContent='Open rift preview';reopen.style.cssText='position:fixed;bottom:12px;right:20px';reopen.hidden=true;mount.append(reopen);
+const panel=new RiftPanel(mount,{close:()=>{panel.close();reopen.hidden=false;},enter:async()=>{panel.element.querySelector('[role=status]')!.textContent='Preview only. Enter a Crimson Rift in town to play.';return true;}});
+const open=()=>{panel.open(sim.expeditions,sim.player,'preview');reopen.hidden=true;};reopen.onclick=open;open();
+const visibility=()=>{if(document.hidden)panel.close();else open();};document.addEventListener('visibilitychange',visibility);
+if(import.meta.hot)import.meta.hot.dispose(()=>{document.removeEventListener('visibilitychange',visibility);panel.dispose();});
+
+}

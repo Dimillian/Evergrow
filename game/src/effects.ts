@@ -1,3 +1,5 @@
+import { drawRadiantSeal } from './radiant-art.ts';
+import { weaponGlowColor } from './radiant-content.ts';
 import { SkillMeleeArt } from './skill-melee-art.ts';
 import { weaponReleasePoint } from './projectile-launch.ts';
 import { PROJECTILE_HEIGHT } from './ranged-aim.ts';
@@ -20,8 +22,8 @@ interface Spark {
   z: number; vz: number; curl: number;
   life: number; max: number; size: number; color: string; luminous: boolean;
 }
-interface Flash { x: number; y: number; life: number; max: number; radius: number; color: string; ring: boolean; }
-interface Impact { x: number; y: number; angle: number; life: number; max: number; color: string; hurt: boolean; lethal: boolean; }
+interface Flash { x: number; y: number; life: number; max: number; radius: number; color: string; ring: boolean; radiant?: boolean; }
+interface Impact { x: number; y: number; angle: number; life: number; max: number; color: string; hurt: boolean; lethal: boolean; radiant?: boolean; }
 interface Popup { x: number; y: number; vx: number; vy: number; life: number; max: number; value: string; color: string; size: number; }
 const GOLD = '#ffbd63', FIRE = '#ff643b', MINT = '#54e8b8', BLUE = '#64baff';
 const MANA_WARNING_DURATION = 1.15;
@@ -71,7 +73,7 @@ export class CombatEffects {
       const color = event.color ?? (event.style ? PROJECTILE_COLORS[event.style] : undefined) ?? (event.type === 'hurt' ? '#ff5e4e' : restoring || enemyCast ? MINT
         : event.type === 'dodge' ? BLUE : event.type === 'cast' ? FIRE : GOLD);
       const count = event.type === 'blast' ? 46 : event.type === 'block' ? 22 : event.type === 'hit' ? 30 : event.type === 'kill' ? 16
-        : event.type === 'hurt' ? 32 : event.type === 'cast' ? 18 : restoring ? 30
+        : event.type === 'hurt' ? 32 : event.type === 'cast' ? event.style === 'radiant' ? 6 : 18 : restoring ? 30
         : event.type === 'loot' ? 8 : event.type === 'pickup' ? 10 : event.type === 'dodge' ? 14 : 0;
       // MaterialResponses owns solid debris. Retain the short luminous contact accents here.
       for (let i = 0; i < (contact ? event.type === 'kill' ? 0 : 8 : count); i++) {
@@ -82,12 +84,12 @@ export class CombatEffects {
       const contactY = event.y - (event.type === 'hurt' ? 24 : enemyKind === 'brute' ? 25 : 18);
       if (contact) this.impacts.push({ x: event.x, y: contactY, angle: eventAngle,
         life: event.type === 'kill' ? .3 : .22, max: event.type === 'kill' ? .3 : .22,
-        color, hurt: event.type === 'hurt', lethal: event.type === 'kill' });
+        color, hurt: event.type === 'hurt', lethal: event.type === 'kill', radiant: event.style === 'radiant' });
       if (count > 5) {
         const max = restoring ? .55 : event.type === 'kill' ? .16 : .22;
         this.flashes.push({ x: event.x + (tip?.x ?? 0), y: tip ? event.y + tip.y : contact ? contactY : event.y - 10, life: max, max,
-          radius: event.type === 'kill' ? 62 : heavy ? 145 : contact ? 118 : event.type === 'loot' || event.type === 'pickup' ? 35 : 90, color,
-          ring: restoring || event.type === 'level' || event.skill === 'iceNova' });
+          radius: event.style === 'radiant' ? 58 : event.type === 'kill' ? 62 : heavy ? 145 : contact ? 118 : event.type === 'loot' || event.type === 'pickup' ? 35 : 90, color,
+          radiant: event.type === 'cast' && event.style === 'radiant', ring: restoring || event.type === 'level' || event.skill === 'iceNova' });
       }
       if (event.type === 'hit' && event.value) this.popups.push({ x: event.x + (Math.random() - .5) * 10,
         y: event.y - (enemyKind === 'brute' ? 54 : 44), vx: (Math.random() - .5) * 22, vy: -47,
@@ -161,7 +163,7 @@ export class CombatEffects {
       }
       for (const shot of sim.projectiles.slice(0, 32)) {
         const style = projectileStyle(shot);
-        if (style === 'arrow') continue;
+        if (style === 'arrow' || style === 'radiant') continue;
         const color = PROJECTILE_COLORS[style];
         for (let i = 0; i < (style === 'fire' ? 2 : 1); i++) {
           this.spark(shot.x, shot.y - PROJECTILE_HEIGHT, shot.angle + Math.PI + (Math.random() - .5) * .7,
@@ -172,7 +174,7 @@ export class CombatEffects {
       if (castingWeapon?.attackKind === 'bolt' && p.castTime > (p.castDuration * SKILL_CAST_MOTION.releaseRemainingFraction)) {
         const angle = sim.time * 22, tip = getPlayerSwordTip(playerPose(p, sim.time));
         this.spark(p.x + tip.x + Math.cos(angle) * 8,
-          p.y + tip.y + Math.sin(angle) * 8, angle + Math.PI / 2, p.activeSkill ? SKILL_DEFINITIONS[p.activeSkill].color : p.equipment.mainHand.visual.glow ?? GOLD, .25, false);
+          p.y + tip.y + Math.sin(angle) * 8, angle + Math.PI / 2, p.activeSkill ? SKILL_DEFINITIONS[p.activeSkill].color : weaponGlowColor(castingWeapon.visual) ?? GOLD, .25, false);
       }
     }
     this.trim();
@@ -191,6 +193,10 @@ export class CombatEffects {
       c.globalAlpha = 1;
       const t = flash.life / flash.max;
       drawGlow(c, flash.x, flash.y, flash.radius * .5, flash.color, t * .52);
+      if (flash.radiant) {
+        c.save(); c.translate(flash.x, flash.y); c.globalAlpha = t * .6;
+        drawRadiantSeal(c, reducedMotion ? 7 : 5 + (1 - t) * 5, .8); c.restore();
+      }
       if (flash.ring) {
         c.globalAlpha = t * .65;
         c.strokeStyle = flash.color; c.lineWidth = 1 + t * 2;
@@ -199,7 +205,7 @@ export class CombatEffects {
     }
     this.skillEffects.draw(c, reducedMotion);
     this.meleeSkills.draw(c, reducedMotion);
-    for (const impact of this.impacts) this.drawImpact(c, impact);
+    for (const impact of this.impacts) this.drawImpact(c, impact, reducedMotion);
     for (const spark of this.sparks) {
       const t = Math.min(1, spark.life / spark.max * 1.8), y = spark.y - spark.z;
       c.globalCompositeOperation = spark.luminous ? 'lighter' : 'source-over';
@@ -219,8 +225,8 @@ export class CombatEffects {
     c.restore();
   }
 
-  private drawImpact(c: CanvasRenderingContext2D, impact: Impact) {
-    const t = Math.max(0, impact.life / impact.max), elapsed = 1 - t;
+  private drawImpact(c: CanvasRenderingContext2D, impact: Impact, reducedMotion: boolean) {
+    const t = Math.max(0, impact.life / impact.max), elapsed = impact.radiant && reducedMotion ? .4 : 1 - t;
     c.save(); c.translate(impact.x, impact.y); c.rotate(impact.angle);
     c.globalCompositeOperation = 'lighter';
     c.globalAlpha = Math.pow(t, 1.5);
@@ -232,6 +238,10 @@ export class CombatEffects {
     c.lineTo(0, -length * .65); c.lineTo(waist, -waist);
     c.lineTo(length, 0); c.lineTo(waist, waist);
     c.lineTo(0, length * .65); c.lineTo(-waist, waist); c.closePath(); c.fill();
+    if (impact.radiant) {
+      drawRadiantSeal(c, reducedMotion ? 16 : 11 + elapsed * 9, 1);
+      c.restore(); return;
+    }
     c.rotate(impact.hurt ? -.6 : .65);
     c.strokeStyle = impact.color; c.lineWidth = 1.3 * t;
     for (let i = 0; i < 3; i++) {

@@ -45,7 +45,7 @@ export function getLootTable(rank: EnemyRank): EnemyLootTable { return ENEMY_LOO
 export const NORMAL_COMMON_EQUIPMENT_SKIP_CHANCE = 1 / 3;
 
 /** All twelve equipment kinds remain eligible. The foe's archetype supplies a readable tendency. */
-export const ENEMY_ITEM_KIND_WEIGHTS: Readonly<Record<EnemyKind, Readonly<Record<ItemKind, number>>>> = Object.freeze({
+export const ENEMY_ITEM_KIND_WEIGHTS: Readonly<Record<EnemyKind, Readonly<Record<Exclude<ItemKind, 'riftKey'>, number>>>> = Object.freeze({
   thornReaver: Object.freeze({ charm: CHARM_DROP_WEIGHT, grimoire: 2, orb: 2, weapon: 14, shield: 5, head: 5, chest: 7, gloves: 13, legs: 10, boots: 22, cloak: 10, amulet: 5, ring: 5 }),
   mireSpitter: Object.freeze({ charm: CHARM_DROP_WEIGHT, grimoire: 10, orb: 10, weapon: 28, shield: 3, head: 6, chest: 6, gloves: 5, legs: 5, boots: 5, cloak: 14, amulet: 4, ring: 4 }),
   frostRevenant: Object.freeze({ charm: CHARM_DROP_WEIGHT, grimoire: 2, orb: 2, weapon: 23, shield: 18, head: 10, chest: 15, gloves: 7, legs: 10, boots: 5, cloak: 3, amulet: 2, ring: 3 }),

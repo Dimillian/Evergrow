@@ -1,3 +1,7 @@
+import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
+import { RiftPanel } from './rift-panel.ts';
+import { RiftWorld } from './rift-world.ts';
+import { drawRiftHUD } from './rift-hud.ts';
 import { controls } from './control-preferences.ts';
 import { isGameplayAction, type ControlAction } from './control-bindings.ts';
 import { activeBuffs } from './active-buffs.ts';
@@ -30,6 +34,7 @@ import { TouchHUD } from './touch-hud.ts';
 import { resolveSkill } from './skill-progression.ts';
 import { skillWeapon } from './skill-content.ts';
 import { FrameProfiler } from './frame-profiler.ts';
+import { PerformanceMonitor } from './performance-monitor.ts';
 import { drawJourneyDestination } from './journey-marker.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { DungeonWorld } from './dungeon-world.ts';
@@ -79,7 +84,7 @@ import { GameInput } from './game-input.ts';
 import { GamepadInput, PAD } from './gamepad-input.ts';
 import { GamepadMenu } from './gamepad-menu.ts';
 import { GameShell } from './game-shell.ts';
-import { isGameUIPoint } from './ui-hit-test.ts';
+import { isGameUIPoint, isUIRectPoint, projectUIRect } from './ui-hit-test.ts';
 import type { GamePhase } from './game-phase.ts';
 import type { Input } from './model.ts';
 
@@ -92,6 +97,8 @@ export class Game {
   private lifetime = new Lifetime();
   overworld = new World(7319);
   world: World = this.overworld;
+  private riftPanel: RiftPanel;
+  private activeRiftPortal: string|null=null;
   private expeditionPanel: ExpeditionPanel;
   private activeExpeditionTable: string | null = null;
   private dungeonMap: DungeonMap;
@@ -147,9 +154,10 @@ export class Game {
   private last = performance.now();
   private animation = 0;
   private framePacer = new FramePacer(60);
-  private fps = 60;
+  private performanceMonitor: PerformanceMonitor;
+  private nextPerformanceCounters = 0;
+  private performancePhase: GamePhase | null = null;
   private abort = new AbortController();
-  private debug = false;
   private disposed = false;
   private saveClient: SaveHub;
   private _hallBusy = false;
@@ -192,6 +200,11 @@ export class Game {
       }));
       this.lifetime.defer(controls.subscribe(() => { this.clearInput(); this.shell.refreshBindings(); }));
       this.canvas = this.shell.canvas;
+      this.performanceMonitor = this.lifetime.own(new PerformanceMonitor(this.performance, root, {
+        continuous: this.performance.enabled,
+        releaseInput: () => this.clearInput(), returnFocus: () => this.canvas.focus(),
+        isToggle: event => controls.action(event.code) === 'debug',
+      }));
       this.groundLootHighlight = this.lifetime.own(new GroundLootHighlight(root, this.canvas));
       this.uiCanvas = this.shell.uiCanvas;
       const uiContext = this.uiCanvas.getContext('2d');
@@ -243,6 +256,7 @@ export class Game {
         close: () => this.resume(), trade: quote => this.trade(quote),
         sort: (target,tab) => this.characterAction(target === 'storage' ? {type:'sortStorage',tab} : {type:'sortInventory',mode:'compact'}),
       }));
+      this.riftPanel=this.lifetime.own(new RiftPanel(this.shell.panelMount,{close:()=>this.resume(),enter:async action=>{const ok=await this.switchDungeon(action);if(ok)this.resume();return ok;}}));
       this.expeditionPanel=this.lifetime.own(new ExpeditionPanel(this.shell.panelMount,{close:()=>this.resume(),enter:async action=>{const ok=await this.switchDungeon(action);if(ok)this.resume();return ok;}}));
       this.dungeonMap = this.lifetime.own(new DungeonMap(this.shell.mapMount,()=>this.closeMap(),()=>this.worldMap.open({x:this.sim.expeditions.surfaceX,y:this.sim.expeditions.surfaceY,angle:0})));
       this.eventPanel = this.lifetime.own(new EventPanel(this.shell.panelMount, {
@@ -267,9 +281,9 @@ export class Game {
         lootLog: { open: () => { this.lootLogPanel.open({ entries:this.sim.lootLog, sheet:this.sim.player.character, level:this.sim.player.level, time:this.sim.time, ground:this.sim.groundItems, expeditions:this.sim.expeditions }); this.shell.setStatus('Loot log open. Game paused.'); }, close: () => this.lootLogPanel.close() },
         chronicle:{open:()=>{void this.chronicle.open(async onCached=>{await this.saveCharacter(true);return this.saveClient.chronicle(onCached);},this.session.active?.record.id);},close:()=>this.chronicle.close(false)},
         journeys:{open:()=>this.journeys.panel.open(this.journeys.selected),close:()=>this.journeys.panel.close()},
-        event: { open: () => { if(this.activeExpeditionTable)this.expeditionPanel.open(this.sim.expeditions,this.sim.player.level,this.overworld.seed,this.activeExpeditionTable); else if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.expeditionPanel.close(); this.activeExpeditionTable=null; this.activeEvent = null; this.activeDungeonEntrance = null; } },
+        event: { open: () => { if(this.activeRiftPortal)this.riftPanel.open(this.sim.expeditions,this.sim.player,this.activeRiftPortal); else if(this.activeExpeditionTable)this.expeditionPanel.open(this.sim.expeditions,this.sim.player.level,this.overworld.seed,this.activeExpeditionTable); else if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.expeditionPanel.close(); this.riftPanel.close(); this.activeRiftPortal=null; this.activeExpeditionTable=null; this.activeEvent = null; this.activeDungeonEntrance = null; } },
         service: { open: () => { if (this.activeNPC) this.servicePanel.open(this.sim.player, this.activeNPC); }, close: () => { this.servicePanel.close(); this.activeNPC = null; } },
-        map: { open: () => { const run=currentDungeon(this.sim.expeditions), glance=this.panels.mapHeld; if(run) this.dungeonMap.open(this.sim.dungeonFloor!,run,this.sim.player,glance); else this.worldMap.open(this.sim.player,glance); this.shell.setStatus(glance?'Exploration map open. Movement continues.':'World map open. Game paused.'); }, close: () => { this.worldMap.close(); this.dungeonMap.close(); } },
+        map: { open: () => { const run=currentDungeon(this.sim.expeditions), glance=this.panels.mapHeld; if(run) this.dungeonMap.open(this.sim.dungeonFloor!,run,this.sim.player,glance,this.sim.enemies); else this.worldMap.open(this.sim.player,glance); this.shell.setStatus(glance?'Exploration map open. Movement continues.':'World map open. Game paused.'); }, close: () => { this.worldMap.close(); this.dungeonMap.close(); } },
         character: { open: () => { this.inventoryPanel.open(this.sim.player); this.shell.setStatus('Character and inventory open. Game paused.'); }, close: () => this.inventoryPanel.close() },
         skills: { open: () => { this.skillPanel.open(this.sim.player); this.shell.setStatus('Skill tree open. Game paused.'); }, close: () => this.skillPanel.close() },
       }, {
@@ -316,8 +330,17 @@ export class Game {
         equip: index => this.characterAction({type:'equip',index}),
         track: id => { void this.journeys.command({type:'track',id}); },
         portal: () => this.requestPortal(),
-        background: () => { this.clearInput(); this.pause(); void this.saveCharacter(); this.nativeBackground = true; this.audio.setForeground(false); },
-        foreground: () => { this.clearInput(); this.nativeBackground = false; this.audio.setForeground(!document.hidden); },
+        background: () => {
+          this.clearInput(); this.pause(); void this.saveCharacter(); this.nativeBackground = true; this.audio.setForeground(false); this.performance.suspend();
+          if (this.animation) { cancelAnimationFrame(this.animation); this.animation = 0; }
+        },
+        foreground: () => {
+          this.clearInput(); this.nativeBackground = false; this.audio.setForeground(!document.hidden);
+          if (!document.hidden && !this.animation) {
+            this.last = performance.now();
+            this.animation = requestAnimationFrame(this.frame);
+          }
+        },
         back: () => { if(this.phase === 'ready' && this.titleScreen.dismissOverlay()) return; if(this.appearanceEditor){this.appearanceEditor.cancel();return;} if(this.thor.dismissInspection() || (this.phase === 'paused' && this.shell.backInMenu())) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
       }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
@@ -325,7 +348,7 @@ export class Game {
         const saved = JSON.parse(localStorage.getItem('evergrow-preferences') ?? 'null');
         if (typeof saved?.muted === 'boolean') this.muted = saved.muted;
         if (saved?.groundLootNames === 'ctrl') this.groundLootNames = 'ctrl';
-        for (const channel of ['sfx', 'music'] as const) this.audio.setVolume(channel, audioVolume(saved?.[channel], DEFAULT_AUDIO[channel]));
+        for (const channel of ['master', 'sfx', 'music'] as const) this.audio.setVolume(channel, audioVolume(saved?.[channel], DEFAULT_AUDIO[channel]));
       } catch { /* Preferences are optional when storage is disabled. */ }
       // Presentation is fixed and motion follows the OS.
       this.savePreferences();
@@ -365,9 +388,15 @@ export class Game {
         if(this.interact(this.renderer.screenToWorld(point.x*this.renderer.width/r.width,point.y*this.renderer.height/r.height))) this.touch.clear();
       },
     });
-    window.addEventListener('pagehide', () => { this.audio.setForeground(false); this.clearInput(); void this.saveAndSync(); }, { signal });
+    window.addEventListener('pagehide', () => { this.performance.suspend(); this.audio.setForeground(false); this.clearInput(); void this.saveAndSync(); }, { signal });
     window.addEventListener('focus', () => this.clearInput(), { signal });
-    window.addEventListener('pageshow', () => this.audio.setForeground(!document.hidden && !this.nativeBackground), { signal });
+    window.addEventListener('pageshow', () => {
+      this.audio.setForeground(!document.hidden && !this.nativeBackground);
+      if (!document.hidden && !this.nativeBackground && !this.animation) {
+        this.last = performance.now();
+        this.animation = requestAnimationFrame(this.frame);
+      }
+    }, { signal });
     const unlockAudio = () => { void this.audio.unlock().catch(() => {}); };
     window.addEventListener('pointerdown', unlockAudio, { signal, capture: true, passive: true });
     window.addEventListener('keydown', unlockAudio, { signal, capture: true });
@@ -382,16 +411,23 @@ export class Game {
     document.addEventListener('visibilitychange', () => {
       this.audio.setForeground(!document.hidden && !this.nativeBackground);
       if (document.hidden) {
+        this.performance.suspend();
         this.clearInput();
         if (this.phase === 'playing' || this.phase === 'map') this.pause();
         void this.saveAndSync();
+        if (this.animation) { cancelAnimationFrame(this.animation); this.animation = 0; }
+      } else {
+        this.last = performance.now();
+        if (!this.animation && !this.nativeBackground) {
+          this.animation = requestAnimationFrame(this.frame);
+        }
       }
-      this.last = performance.now();
     }, { signal });
     bindGameKeyboard(window, {
       clear: () => { this.clearInput(); this.panels.releaseMap(); },
       release: code => { this.input.keyUp(code); if (code === 'Tab') this.panels.releaseMap(); },
       intercept: event => {
+        if (this.performanceMonitor.contains(event.target)) return false;
         if (!this.panels.mapHeld || event.defaultPrevented || this.appearanceEditor) return false;
         const target = event.target;
         if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement
@@ -503,7 +539,7 @@ export class Game {
       if (!repeat) { if (tab) this.panels.holdMap(); else this.panels.toggleMap(); } return true;
     }
     if (action === 'sound') { if (!repeat) this.toggleSound(); return true; }
-    if (action === 'debug') { if (!repeat) this.debug = !this.debug; return true; }
+    if (action === 'debug') { if (!repeat && this.phase !== 'ready') this.performanceMonitor.setOpen(!this.performanceMonitor.isOpen); return true; }
     if (!this.panels.simulationActive) return false;
     if (action === 'portal') { if (!repeat) this.requestPortal(); return true; }
     if (action === 'interact') { if (!repeat) this.interact(); return true; }
@@ -515,12 +551,22 @@ export class Game {
     this.usingGamepad = false;
     this.input.movePointer(event.clientX, event.clientY, this.canvas.getBoundingClientRect(),
       this.renderer.width, this.renderer.height);
+    this.syncPerformanceInput();
     this.canvas.classList.toggle('hud-hover', this.pointerInHUD());
     this.worldMap.setMinimapPointer({ x: this.mouse.x, y: this.mouse.y });
   }
 
+  private syncPerformanceInput() {
+    const bounds = this.performanceMonitor.bounds;
+    this.renderer.performanceUIBounds = bounds
+      ? projectUIRect(bounds, this.canvas.getBoundingClientRect(), this.renderer.width, this.renderer.height) : null;
+    const blocked = !this.usingGamepad && !this.touch?.active && this.mouse.present
+      && isUIRectPoint(this.mouse.x, this.mouse.y, this.renderer.performanceUIBounds);
+    if (this.input.setPointerUIBlocked(blocked)) this.sim.clearInput();
+  }
+
   private pointerInHUD() {
-    return this.pointerOverEffects || isGameUIPoint(this.mouse.x, this.mouse.y, this.renderer.width, this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible,this.renderer.lootLogBounds);
+    return this.pointerOverEffects || isGameUIPoint(this.mouse.x, this.mouse.y, this.renderer.width, this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible,this.renderer.performanceUIBounds,this.renderer.lootLogBounds);
   }
 
   private resize() {
@@ -834,7 +880,7 @@ export class Game {
               void this.durable(async()=>{const result=await startDungeonEvent(this.sim,event.id,c=>this.persistTravel(c));this.notify(result.message);},undefined);
               return true;
           }
-          const chest = f.chests.findIndex(hit);
+          const chest = f.chests.findIndex((_,i)=>(!run.rift||i===2&&run.rift.phase==='complete')&&hit(dungeonRunChest(f,run,i)));
           if (chest >= 0) {
               const problem = dungeonChestProblem(this.sim, chest);
               if (problem)
@@ -846,7 +892,7 @@ export class Game {
               }
               return true;
           }
-          if (hit(f.entry) || (run.states.warden.hp <= 0 && hit(f.exit))) {
+          if (hit(f.entry) || (run.states.warden.hp <= 0 && hit(dungeonRunExit(f,run)))) {
               this.switchDungeon({ kind: 'exit' });
               return true;
           }
@@ -871,6 +917,8 @@ export class Game {
           }
           return true;
       }
+      const riftPortal=this.world.getBuildings(p.x-200,p.y-200,400,400).find(b=>b.kind==='rift'&&Math.hypot(p.x-b.door.x,p.y-b.door.y)<90&&(!pointer||Math.hypot(pointer.x-b.door.x,pointer.y-(b.door.y-65))<85));
+      if(riftPortal){this.activeRiftPortal=riftPortal.id;this.panels.open('event');return true;}
       const table=this.world.getBuildings(p.x-180,p.y-180,360,360).find(b=>b.kind==='expedition'&&!expeditionTableProblem(b,p,this.world)&&(!pointer||Math.hypot(pointer.x-b.door.x,pointer.y-(b.door.y-25))<55));
       if(table){this.activeExpeditionTable=table.id;this.panels.open('event');return true;}
       const npcs = this.world.getBuildings(p.x - 220, p.y - 220, 440, 440).map(buildingNPC).filter((npc): npc is TownNPC => npc !== null);
@@ -970,7 +1018,7 @@ export class Game {
       const run = checkpoint.expeditions && currentDungeon(checkpoint.expeditions);
       if (this.world !== this.overworld)
           this.world.dispose();
-      this.world = run ? new DungeonWorld(generateDungeon(run.entrance.seed, run.entrance.level, run.entrance), run.entrance) : this.overworld;
+      this.world = run ? new (run.entrance.rift?RiftWorld:DungeonWorld)(generateDungeon(run.entrance.seed, run.entrance.level, run.entrance), run.entrance) : this.overworld;
       this.sim.world = this.world;
   }
   private switchDungeon(action: DungeonAction): Promise<boolean> {
@@ -1096,14 +1144,21 @@ export class Game {
 
   private frame = (now: number) => {
     if (this.disposed) return;
+    if (document.hidden || this.nativeBackground) {
+      this.animation = 0;
+      return;
+    }
     if (window.EvergrowAndroid && !this.framePacer.ready(now)) {
       this.animation = requestAnimationFrame(this.frame);
       return;
     }
+    if (this.performancePhase !== this.phase) { this.performance.suspend(); this.performancePhase = this.phase; }
     this.performance.begin(now);
+    const pointerUIStart = this.performance.start();
+    this.syncPerformanceInput();
+    this.performance.end('monitor', pointerUIStart);
     const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
     this.last = now;
-    this.fps += (1 / Math.max(dt, 0.001) - this.fps) * 0.04;
     this.pollGamepad(now);
     if (now >= this.nextScore) { this.updateScore(now); this.nextScore = now + 250; }
     this.touch.update(this.sim.player,this.phase,this.savingAction,now,this.sim.groundEffects);
@@ -1146,7 +1201,9 @@ export class Game {
       const run=currentDungeon(this.sim.expeditions);
       const zone = run?{id:run.entrance.id,name:run.entrance.name,level:run.entrance.level}:getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed);
       if (this.areaNotices.update(zone.id, dt)) this.shell.notifications.push({ kind: 'area', id: zone.id, name: zone.name, level: zone.level, maxLevel: 'maxLevel' in zone ? zone.maxLevel : undefined });
-      if (this.sim.player.dead) {
+      if(run?.rift&&(this.sim.player.dead||run.rift.phase==='failed')){
+        if(!this.savingAction)void this.switchDungeon({kind:'death'});
+      } else if (this.sim.player.dead) {
         this.panels.transition('dead', true);
       }
       if (now >= this.nextAutosave) { this.saveCharacter(); this.nextAutosave = now + 20_000; }
@@ -1167,7 +1224,7 @@ export class Game {
     const settings = {
       liveMap: this.panels.mapHeld,
       showGroundLootNames: showGroundLootNames(this.groundLootNames, controls.has('revealLoot'), this.input.held('revealLoot'), this.touch.active || this.usingGamepad),
-      reducedMotion: this.reducedMotion, phase: this.phase, fps: this.fps, debug: this.debug,
+      reducedMotion: this.reducedMotion, phase: this.phase,
     };
     if (this.phase === 'ready') {
       this.renderer.cameraX = -90 + (this.reducedMotion ? 0 : Math.sin(now / 24000) * 45);
@@ -1197,7 +1254,7 @@ export class Game {
     if(this.phase==='playing'&&this.journeys.marker?.known){
       const marker=this.journeys.marker,point=this.renderer.worldToScreen(marker.x,marker.y);
       if(point.x>20&&point.x<this.renderer.width-20&&point.y>35&&point.y<this.renderer.height-30
-        &&!isGameUIPoint(point.x,point.y-35,this.renderer.width,this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible,this.renderer.lootLogBounds)
+        &&!isGameUIPoint(point.x,point.y-35,this.renderer.width,this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible,this.renderer.performanceUIBounds,this.renderer.lootLogBounds)
         &&hasLineOfSight(this.world,this.sim.player.x,this.sim.player.y,marker.x,marker.y))drawJourneyDestination(ui,point.x,point.y-35,8);
     }
     if(this.touch.active && this.touch.input.preview && this.phase === 'playing') {
@@ -1218,8 +1275,9 @@ export class Game {
     const mapPlayer = { x: p.prevX + (p.x - p.prevX) * alpha,
       y: p.prevY + (p.y - p.prevY) * alpha, angle: p.angle };
     const dungeonRun=currentDungeon(this.sim.expeditions);
+    if(dungeonRun?.rift && this.phase!=='ready')drawRiftHUD(ui,dungeonRun,this.renderer.width);
     if (this.phase !== 'ready' && !dungeonRun) this.worldMap.update(mapPlayer, dt);
-    if (this.phase === 'map' && dungeonRun) this.dungeonMap.update(mapPlayer);
+    if (this.phase === 'map' && dungeonRun) this.dungeonMap.update(mapPlayer,this.sim.enemies);
     if (this.panels.mapHeld) {
       const rect = this.canvas.getBoundingClientRect();
       const pointer = this.mouse.present && !this.usingGamepad && !this.touch.active && !this.pointerInHUD()
@@ -1228,14 +1286,25 @@ export class Game {
       if (dungeonRun) this.dungeonMap.setExplorationPointer(pointer);
       else this.worldMap.setExplorationPointer(pointer);
     }
-    if (this.phase !== 'ready' && dungeonRun && this.renderer.navigationVisible) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time);
+    if (this.phase !== 'ready' && dungeonRun && this.renderer.navigationVisible) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time,this.sim.enemies);
     if (this.phase !== 'ready' && !dungeonRun && this.renderer.navigationVisible) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, this.sim.time,
       this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
         x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
-        y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind,
+        y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind, rank:enemy.rank,
       })));
     this.thor.update(now);
-    this.performance.end('ui', uiStart); this.performance.finish();
+    this.performance.end('ui', uiStart);
+    const monitorStart = this.performance.start();
+    if (this.performance.enabled && now >= this.nextPerformanceCounters) {
+      let enemies = 0;
+      for (const enemy of this.sim.enemies) if (enemy.hp > 0) enemies++;
+      this.performance.setCounters({ enemies, projectiles: this.sim.projectiles.length,
+        groundEffects: this.sim.groundEffects.length, ...this.renderer.terrainStats });
+      this.nextPerformanceCounters = now + 100;
+    }
+    this.performanceMonitor.update(now, this.phase);
+    this.performance.end('monitor', monitorStart);
+    this.performance.finish();
     this.animation = requestAnimationFrame(this.frame);
   };
 

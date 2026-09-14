@@ -52,7 +52,7 @@ const draw = () => {
   canvas.width = ui.width = Math.round(innerWidth * ratio); canvas.height = ui.height = Math.round(innerHeight * ratio);
   renderer.resize(Math.round(600 * innerWidth / innerHeight), 600);
   renderer.cameraX = sim.player.x; renderer.cameraY = sim.player.y;
-  const settings = { phase: 'playing' as const, reducedMotion: true, fps: 60, debug: false };
+  const settings = { phase: 'playing' as const, reducedMotion: true };
   renderer.render(sim, world, 0, settings); fx.render(renderer.canvas, 0);
   const context = ui.getContext('2d')!;
   context.setTransform(ui.width / renderer.width, 0, 0, ui.height / renderer.height, 0, 0);

@@ -68,7 +68,7 @@ async function boot() {
     profiler.reset();renderCount=0;
     present=dt=>{
       profiler.begin(performance.now());
-      sceneRenderer.render(sim,sceneWorld,dt,{phase:'paused',reducedMotion:!lightingStudy||reduced.matches,fps:0,debug:false,skyHour:lightingStudy?skyHour:undefined});
+      sceneRenderer.render(sim,sceneWorld,dt,{phase:'paused',reducedMotion:!lightingStudy||reduced.matches,skyHour:lightingStudy?skyHour:undefined});
       postfx??=new PostFX(display);const start=profiler.start();postfx.render(sceneRenderer.canvas,0);profiler.end('postfx',start);
       c.drawImage(display,0,0);profiler.finish();
       const clock=root.querySelector('[data-clock]');if(clock)clock.textContent=worldTimeLabel((skyHour-WORLD_TIME.startHour)/24*WORLD_TIME.daySeconds);
