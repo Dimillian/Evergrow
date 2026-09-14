@@ -34,6 +34,8 @@ export function validExpeditions(v: unknown): v is Expeditions {
         if(e.rift!==undefined){
             if(!validRiftTag(e.rift)||e.expedition!==undefined||!validRiftLedger(v.rifts)||e.rift.attempt!==v.rifts.attempts||e.id!==`dungeon:rift:${e.rift.attempt}`||e.scaling!==undefined)return false;
             const r=run.rift;if(!object(r)||!number(r.elapsed,0,RIFT_RULES.duration)||!integer(r.points,0,RIFT_RULES.progress)||!['hunt','boss','complete','failed'].includes(r.phase as string)||typeof r.claimed!=='boolean')return false;
+            if(r.guardian!==undefined&&(r.phase==='hunt'||!object(r.guardian)||!point(r.guardian)||!number(r.guardian.at,0,r.elapsed as number)))return false;
+            for(const key of ['treasure','exit'])if(r[key]!==undefined&&(!object(r[key])||!point(r[key])||r.phase!=='complete'))return false;
             if((r.phase==='hunt'&&r.points===RIFT_RULES.progress)||(r.phase==='boss'||r.phase==='complete')&&r.points!==RIFT_RULES.progress||r.phase!=='failed'&&r.phase!=='complete'&&r.elapsed>=RIFT_RULES.duration||r.claimed&&r.phase!=='complete')return false;
         }else if(run.rift!==undefined)return false;
         if(e.theme!==undefined && !DUNGEON_THEME_IDS.includes(e.theme as never))return false;
@@ -58,6 +60,7 @@ export function validExpeditions(v: unknown): v is Expeditions {
             return false;
         if(e.rift!==undefined){
             const r=run.rift as unknown as import('./rift-content.ts').RiftProgress;
+            for(const p of [r.guardian,r.treasure,r.exit])if(p&&dungeonBlocked(floor,p.x,p.y,0))return false;
             if(r.phase==='complete' && ((run.states.warden as {hp:number}).hp>0 || r.elapsed>=RIFT_RULES.duration))return false;
             if(r.claimed !== ((run.chestMasks as number[])?.[2]===dungeonChestMask(run as unknown as import('./dungeon-state.ts').DungeonRun,2)))return false;
         }

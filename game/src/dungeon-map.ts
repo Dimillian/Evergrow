@@ -1,3 +1,4 @@
+import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { drawMapEnemyIcon } from './map-icon-art.ts';
 import { dungeonMapEnemyVisible, type DungeonMapEnemy as MapEnemy } from './dungeon-map-enemies.ts';
 import { drawRiftMapTerrain } from './rift-map-art.ts';
@@ -67,12 +68,13 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
     };
     for (const event of f.events ?? []) if (seen.has(event.room))
         icon(event.kind, event.x, event.y, !!run.events?.[event.id]?.finished);
-    f.chests.forEach((ch, i) => { if ((!run.rift||i===2&&run.rift.phase==='complete')&&seen.has(ch.room))
+    f.chests.forEach((_, i) => { const ch=dungeonRunChest(f,run,i); if ((!run.rift||i===2&&run.rift.phase==='complete')&&seen.has(ch.room))
         icon('chest', ch.x, ch.y, (run.chestMasks[i] & dungeonChestMask(run, i)) === dungeonChestMask(run, i));
     });
     icon('entry', f.entry.x, f.entry.y);
+    if(run.rift?.phase==='complete'){const exit=dungeonRunExit(f,run);icon('entry',exit.x,exit.y);}
     if (run.rift ? run.rift.phase==='boss'||run.rift.phase==='complete' : seen.has(f.rooms.find(r => r.kind === 'boss')!.id)) {
-        const b = f.members.find(m => m.id === 'warden')!;
+        const b = run.states.warden;
         icon('boss', b.x, b.y, run.states.warden.hp <= 0);
     }
     const visibleBox={x:cx-box.width/zoom/2,y:cy-box.height/zoom/2,width:box.width/zoom,height:box.height/zoom};
@@ -157,8 +159,8 @@ export class DungeonMap {
         if (!this.floor || !this.run)
             return;
         const r = this.canvas.getBoundingClientRect(), x = this.center.x + ((clientX - r.left) * 1200 / r.width - 600) / this.zoom, y = this.center.y + ((clientY - r.top) * 760 / r.height - 380) / this.zoom;
-        const targets = [...(this.floor.events??[]).map(e=>({...e,label:DUNGEON_EVENTS[e.kind].name})), { ...this.floor.entry, label: 'Exit to overworld', room: this.floor.rooms.find(r=>r.kind==='entry')?.id??0 }, ...this.floor.chests.flatMap((ch, i) => this.run!.rift&&(i!==2||this.run!.rift.phase!=='complete')?[]:[{ ...ch, label: this.run!.chestMasks[i] === dungeonChestMask(this.run!,i) ? 'Chest · Claimed' : i === 2 ? 'Boss chest' : 'Guarded chest' }]), { ...this.floor.members.find(m => m.id === 'warden')!, label: (this.run.rift?'Rift guardian':dungeonTheme(this.floor.seed,this.floor.theme).bossName??'Hollow Warden')+(this.run.states.warden.hp>0?'':' · Defeated'), room: this.floor.rooms.find(r=>r.kind==='boss')!.id }];
-        const target = targets.filter(p=>!this.run!.rift||p.label==='Exit to overworld'||this.run!.rift.phase==='complete'||this.run!.rift.phase==='boss'&&p.label==='Rift guardian').find(p => this.run!.explored.includes(p.room) && Math.hypot(p.x - x, p.y - y) < 16 / this.zoom);
+        const targets = [...(this.floor.events??[]).map(e=>({...e,label:DUNGEON_EVENTS[e.kind].name})), { ...this.floor.entry, label: 'Exit to overworld', room: this.floor.rooms.find(r=>r.kind==='entry')?.id??0 }, ...(this.run.rift?.phase==='complete'?[{...dungeonRunExit(this.floor,this.run),label:'Exit to overworld',room:0}]:[]), ...this.floor.chests.flatMap((_, i) => this.run!.rift&&(i!==2||this.run!.rift.phase!=='complete')?[]:[{ ...dungeonRunChest(this.floor!,this.run!,i), label: this.run!.chestMasks[i] === dungeonChestMask(this.run!,i) ? 'Chest · Claimed' : i === 2 ? 'Boss chest' : 'Guarded chest' }]), { ...this.run.states.warden, label: (this.run.rift?'Rift guardian':dungeonTheme(this.floor.seed,this.floor.theme).bossName??'Hollow Warden')+(this.run.states.warden.hp>0?'':' · Defeated'), room: this.floor.rooms.find(r=>r.kind==='boss')!.id }];
+        const target = targets.filter(p=>!this.run!.rift||p.label==='Exit to overworld'||this.run!.rift.phase==='complete'||this.run!.rift.phase==='boss'&&p.label==='Rift guardian').find(p => (this.run!.rift?.phase==='boss'||this.run!.rift?.phase==='complete'||this.run!.explored.includes(p.room)) && Math.hypot(p.x - x, p.y - y) < 16 / this.zoom);
         this.tooltip.hidden = !target;
         if (!target)
             return;

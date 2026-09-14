@@ -1,3 +1,4 @@
+import { enemyModifiers } from './enemy-modifiers.ts';
 import type { Enemy, Player } from './model.ts';
 import type { ActiveBuff } from './active-buffs.ts';
 import { UNIQUE_RULES } from './unique-content.ts';
@@ -35,4 +36,11 @@ export function enemyDebuffs(enemy: EnemyDebuffState, player?: Pick<Player, 'ski
 export function debuffDuration(remaining: number): string {
   if (!active(remaining)) return '0s';
   return `${remaining < 10 ? (Math.ceil(remaining * 10) / 10).toFixed(1) : Math.ceil(remaining)}s`;
+}
+
+/** Permanent rank traits share the target effect strip and its hover descriptions. */
+export function enemyTraitBuffs(enemy:Pick<Enemy,'kind'|'rank'|'lootSeed'|'hp'>):EnemyDebuff[]{
+ if(enemy.hp<=0)return [];
+ const icons={swift:'lunge',relentless:'whirlwind',savage:'cleave',resolute:'bulwark'} as const;
+ return enemyModifiers(enemy).map(trait=>({id:`trait:${trait.id}`,name:trait.name,label:trait.name,icon:icons[trait.id],color:trait.color,remaining:1,duration:1,persistent:true,summary:trait.description}));
 }

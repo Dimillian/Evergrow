@@ -2,10 +2,10 @@ import type { Enemy } from './model.ts';
 import { isBossKind } from './wilderness-boss-content.ts';
 import { riftBonus, riftEnemyStats } from './rift-content.ts';
 const TRAITS=Object.freeze([
-  Object.freeze({name:'Swift',description:'+15% movement speed',speed:1.15,recovery:1,damage:1,control:1}),
-  Object.freeze({name:'Relentless',description:'20% shorter attack recovery',speed:1,recovery:.8,damage:1,control:1}),
-  Object.freeze({name:'Savage',description:'+10% damage',speed:1,recovery:1,damage:1.1,control:1}),
-  Object.freeze({name:'Resolute',description:'25% shorter control effects',speed:1,recovery:1,damage:1,control:.75}),
+  Object.freeze({id:'swift',color:'#7ce4ed',label:'Swift',name:'Swift',description:'+15% movement speed',speed:1.15,recovery:1,damage:1,control:1}),
+  Object.freeze({id:'relentless',color:'#ffc774',label:'Relentless',name:'Relentless',description:'20% shorter attack recovery',speed:1,recovery:.8,damage:1,control:1}),
+  Object.freeze({id:'savage',color:'#f8799a',label:'Savage',name:'Savage',description:'+10% damage',speed:1,recovery:1,damage:1.1,control:1}),
+  Object.freeze({id:'resolute',color:'#caa4fc',label:'Resolute',name:'Resolute',description:'25% shorter control effects',speed:1,recovery:1,damage:1,control:.75}),
 ]);
 type Source=Pick<Enemy,'kind'|'rank'> & Partial<Pick<Enemy,'lootSeed'|'rift'>>;
 const EMPTY:readonly typeof TRAITS[number][]=Object.freeze([]);

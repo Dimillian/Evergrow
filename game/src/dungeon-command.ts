@@ -1,3 +1,4 @@
+import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { RIFT_RULES, freshRiftLedger, riftRandom, riftBonus } from './rift-content.ts';
 import { riftRewardItems } from './rift-rewards.ts';
 import { startingBiome, BIOMES } from './biomes.ts';
@@ -139,7 +140,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
         if (!run || !state.surface)
             return { ok: false, message: 'No active dungeon.' };
         const floor = sim.dungeonFloor!;
-        if (action.kind === 'exit' && !([floor.entry, ...(run.states.warden.hp <= 0 ? [floor.exit] : [])].some(q => Math.hypot(p.x - q.x, p.y - q.y) <= 75)))
+        if (action.kind === 'exit' && !([floor.entry, ...(run.states.warden.hp <= 0 ? [dungeonRunExit(floor,run)] : [])].some(q => Math.hypot(p.x - q.x, p.y - q.y) <= 75)))
             return { ok: false, message: 'Move closer to the exit.' };
         if (action.kind === 'town' && (!sim.portal.ready || action.anchor.band !== sim.travel.homeTown || portalDepartureProblem(p, sim.world)))
             return { ok: false, message: 'The portal is not ready.' };
@@ -175,10 +176,10 @@ export function dungeonChestProblem(sim: Simulation, index: number): string | nu
     if (!run || !floor || !Number.isInteger(index) || index < 0 || index > 2)
         return 'Chest unavailable.';
     if(run.rift&&(index!==2||run.rift.phase!=='complete'||run.rift.claimed))return run.rift.claimed?'Already claimed.':'Defeat the rift guardian before time expires.';
-    const chest = floor.chests[index];
+    const chest = dungeonRunChest(floor,run,index);
     const event=floor.events?.find(e=>e.chest===index);
     const reach=event?250:75;
-    if (sim.player.dead || Math.hypot(sim.player.x - chest.x, sim.player.y - chest.y) > reach || !hasLineOfSight(sim.world, sim.player.x, sim.player.y, chest.x, chest.y))
+    if (sim.player.dead || !run.rift&&(Math.hypot(sim.player.x - chest.x, sim.player.y - chest.y) > reach || !hasLineOfSight(sim.world, sim.player.x, sim.player.y, chest.x, chest.y)))
         return 'Move closer to the chest.';
     if(event&&!run.events?.[event.id]?.finished)return 'Complete the chamber encounter.';
     if (index === 2 ? run.states.warden.hp > 0 : floor.members.some(m => m.room === chest.room && run.states[m.id].hp > 0))
@@ -194,7 +195,7 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     const checkpoint = sim.captureCheckpoint(), run = currentDungeon(checkpoint.expeditions!);
     if (!run || !Number.isInteger(index) || index < 0 || index > 2)
         return { ok: false, message: 'Chest unavailable.' };
-    const floor = sim.dungeonFloor!, chest = floor.chests[index];
+    const floor = sim.dungeonFloor!, chest = dungeonRunChest(floor,run,index);
     const rewardLevel = run.entrance.scaling ? encounterRewardLevel(run.entrance.scaling, index === 2 ? 3 : 1) : run.entrance.level;
     const ranks = index === 2 ? ['normal', 'veteran', 'elite'] as const : ['veteran'] as const;
     const items = run.entrance.rift ? riftRewardItems(run.entrance,sim.player.level) : index===2 && run.entrance.expedition ? expeditionRewardItems(run.entrance,sim.player.level) : ranks.map((rank, i) => rollEnemyLoot({ playerLevel:sim.player.level, seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: rewardLevel, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true, tierWeights: index === 2 ? BOSS_CHEST_LOOT_TABLES.dungeon[i] : undefined, encounter:index===2?'bossChest':'chest' })[0]);

@@ -1,8 +1,8 @@
 import type { Item, ItemTier } from './character-types.ts';
 import type { EnemyRank } from './progression-content.ts';
-export const RIFT_RULES = Object.freeze({ minimumLevel:20, duration:600, progress:600, offset:10, rewards:8, keyUpgradeChance:.35, maximumKeyTier:5, goldMultiplier:6 });
+export const RIFT_RULES = Object.freeze({ minimumLevel:20, guardianArrival:2.4, duration:600, progress:600, offset:10, rewards:8, keyUpgradeChance:.35, maximumKeyTier:5, goldMultiplier:6 });
 export interface RiftTag { attempt:number; keySeed?:number; keyTier?:number }
-export interface RiftProgress { elapsed:number; points:number; phase:'hunt'|'boss'|'complete'|'failed'; claimed:boolean }
+export interface RiftProgress { elapsed:number; points:number; phase:'hunt'|'boss'|'complete'|'failed'; claimed:boolean; guardian?:{x:number;y:number;at:number}; treasure?:{x:number;y:number}; exit?:{x:number;y:number} }
 export interface RiftRecord { level:number; seconds:number; keyTier:number }
 export interface RiftLedger { attempts:number; clears:number; highest:number; best:RiftRecord[] }
 export const freshRiftLedger=():RiftLedger=>({attempts:0,clears:0,highest:0,best:[]});

@@ -1,3 +1,4 @@
+import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { currentDungeon, type Expeditions } from './dungeon-state.ts';
 import { dungeonChestMask } from './expedition-route.ts';
 import { dungeonTheme } from './dungeon-content.ts';
@@ -20,7 +21,7 @@ export function dungeonJourney(state: Expeditions, floor: DungeonFloor | null | 
   if(run.rift){
     const phase=run.rift.phase==='complete'?(run.rift.claimed?'exit':'chest'):'boss';
     const objective=run.rift.phase==='hunt'?`Cull monsters · ${run.rift.points} / 600`:phase==='boss'?'Slay the rift guardian':phase==='chest'?'Claim the rift chest':'Return to town';
-    const target=phase==='exit'?floor.exit:phase==='chest'?floor.chests[2]:run.states.warden;
+    const target=phase==='exit'?dungeonRunExit(floor,run):phase==='chest'?dungeonRunChest(floor,run,2):run.states.warden;
     return {id:run.entrance.id,name:run.entrance.name,level:run.entrance.level,objective,phase,marker:run.rift.phase==='hunt'?null:{x:target.x,y:target.y,name:objective,known:true}};
   }
   const boss = run.states.warden;

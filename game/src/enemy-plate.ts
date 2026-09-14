@@ -94,7 +94,7 @@ function bloodMotion(c: CanvasRenderingContext2D, x: number, y: number, width: n
 }
 
 /** Native text and restrained metalwork, drawn after world post-processing. */
-export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, 'kind' | 'hp' | 'maxHp' | 'level' | 'rank'> & EnemyDebuffState,
+export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, 'kind' | 'hp' | 'maxHp' | 'level' | 'rank'> & EnemyDebuffState & Partial<Pick<Enemy,'lootSeed'|'rift'>>,
   width: number, height: number, options: EnemyPlateOptions = {}): void {
   const layout = getEnemyPlateLayout(width, height, options.touch, options.topInset, options.hasDebuffs);
   const opacity = clamp(options.opacity ?? 1);
@@ -116,9 +116,13 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
   c.fillStyle = shadow; c.fillRect(-1, -1, 2, 2); c.restore();
 
   c.save(); c.shadowColor = '#010409'; c.shadowBlur = 3; c.shadowOffsetY = 1;
-  const traits=enemyModifiers(enemy).map(m=>m.name).join(' · ');
-  const name = `${options.name ?? ENEMY_DEFINITIONS[enemy.kind].name}${traits?' · '+traits:''}`;
-  text(c, name, w / 2, 28, Math.min(1.13, (w - 30) / Math.max(1, textWidth(name))), UI.ivory, 'center'); c.restore();
+  const traits=enemyModifiers(enemy);
+  const name = options.name ?? ENEMY_DEFINITIONS[enemy.kind].name;
+  text(c, name, w / 2, 28, Math.min(1.13, (w - 30) / Math.max(1, textWidth(name))), enemy.rank==='normal'?UI.ivory:rank.color, 'center'); c.restore();
+  if(traits.length){
+    const cell=(w-18)/traits.length;
+    traits.forEach((trait,i)=>text(c,trait.label,9+cell*(i+.5),38,Math.min(.72,(cell-4)/Math.max(1,textWidth(trait.label))),trait.color,'center'));
+  }
   drawRankCrest(c, enemy.rank, w / 2, 14, .88);
   // Engraved suspension arms lead the eye into the rank seal, without a window background.
   for (const side of [-1, 1]) {

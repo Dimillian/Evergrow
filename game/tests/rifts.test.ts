@@ -1,3 +1,5 @@
+import { dungeonRunChest, dungeonRunExit } from '../src/dungeon-locations.ts';
+import { enemyTraitBuffs } from '../src/enemy-debuffs.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRiftKey, validRiftKey, riftModifiers, riftPoints, RIFT_RULES } from '../src/rift-content.ts';
@@ -18,7 +20,7 @@ import { riftRewardItemCount, riftRewardMask } from '../src/rift-content.ts';
 import { LOOT_RULES } from '../src/combat-content.ts';
 import { Simulation } from '../src/simulation.ts';
 import { RiftWorld } from '../src/rift-world.ts';
-import { tickRift, riftKill } from '../src/rift-runtime.ts';
+import { tickRift, riftKill, updateRiftGuardian } from '../src/rift-runtime.ts';
 import { awardKillRewards } from '../src/combat-rewards.ts';
 import { enemyModifiers, enemyMovementMultiplier } from '../src/enemy-modifiers.ts';
 import { World } from '../src/world.ts';
@@ -217,3 +219,55 @@ test('open-world rift streaming retains nearby packs without visible births or s
     }
   }
  });
+
+test('guardian arrival dismisses the roster, persists its warning and spawns near the player exactly once',async()=>{
+ const {sim,run,floor}=await setup(false),m=floor.members[0];
+ sim.player.x=m.x;sim.player.y=m.y;
+ for(const member of floor.members.slice(0,12))sim.spawnEnemy(member.kind,member.x,member.y,member.rank,{campId:run.entrance.id,memberId:member.id,lootSeed:member.seed,level:25});
+ const victim=sim.enemies[0],xp=sim.player.xp,kills=sim.kills;
+ victim.hp=0;run.rift!.points=599;riftKill(sim,victim);
+ assert.equal(sim.enemies.some(e=>e.hp>0),false);
+ assert.ok(Object.entries(run.states).every(([id,s])=>id==='warden'||s.hp===0));
+ assert.equal(sim.player.xp,xp);assert.equal(sim.kills,kills);assert.equal(sim.groundItems.length,0);
+ updateDungeon(sim,{x:m.x-450,y:m.y-400,width:900,height:800});
+ const arrival=structuredClone(run.rift!.guardian!);assert.ok(arrival);
+ assert.ok(Math.hypot(arrival.x-sim.player.x,arrival.y-sim.player.y)<720);
+ assert.equal(sim.world.blocked(arrival.x,arrival.y,ENEMY_DEFINITIONS[floor.members.at(-1)!.kind].radius),false);
+ tickRift(sim,1);const checkpoint=sim.captureCheckpoint();assert.ok(validExpeditions(checkpoint.expeditions));
+ sim.restoreCheckpoint(checkpoint);const resumed=currentDungeon(sim.expeditions)!;
+ assert.deepEqual(resumed.rift!.guardian,arrival);updateRiftGuardian(sim);assert.equal(sim.enemies.some(e=>e.hp>0),false);
+ tickRift(sim,RIFT_RULES.guardianArrival-1+.01);updateRiftGuardian(sim);
+ const live=sim.enemies.filter(e=>e.hp>0);assert.equal(live.length,1);assert.equal(live[0].campMemberId,'warden');
+ assert.equal(live[0].x,arrival.x);assert.equal(live[0].y,arrival.y);
+ updateRiftGuardian(sim);assert.equal(sim.enemies.filter(e=>e.hp>0).length,1);
+ assert.ok(validExpeditions(sim.captureCheckpoint().expeditions));
+});
+test('timeout during guardian warning cannot spawn it',async()=>{
+ const {sim,run}=await setup(false);run.rift!.points=600;run.rift!.phase='boss';run.rift!.elapsed=599;
+ updateRiftGuardian(sim);tickRift(sim,1);updateRiftGuardian(sim);
+ assert.equal(run.rift!.phase,'failed');assert.equal(sim.enemies.some(e=>e.campMemberId==='warden'),false);
+});
+test('guardian treasure opens remotely at the kill site and exit uses that same destination after reload',async()=>{
+ const {sim,run,floor}=await setup(false),m=floor.members[0];sim.player.x=m.x;sim.player.y=m.y;
+ run.rift!.points=600;run.rift!.phase='boss';updateRiftGuardian(sim);tickRift(sim,3);updateRiftGuardian(sim);
+ const boss=sim.enemies.find(e=>e.campMemberId==='warden')!;boss.hp=0;riftKill(sim,boss);
+ const chest=dungeonRunChest(floor,run,2),exit=dungeonRunExit(floor,run);
+ assert.equal(chest.x,boss.x);assert.equal(chest.y,boss.y);assert.ok(Math.hypot(exit.x-boss.x,exit.y-boss.y)<=151);
+ assert.ok(Math.hypot(chest.x-sim.player.x,chest.y-sim.player.y)>75);
+ assert.equal(dungeonChestProblem(sim,2),null);
+ assert.equal((await claimDungeonChest(sim,2,ok)).ok,true);
+ assert.ok(sim.groundItems.every(item=>item.flight?.x===chest.x&&item.flight?.y===chest.y));
+ const checkpoint=sim.captureCheckpoint();assert.ok(validExpeditions(checkpoint.expeditions));sim.restoreCheckpoint(checkpoint);
+ const restored=currentDungeon(sim.expeditions)!;assert.deepEqual(dungeonRunExit(floor,restored),exit);
+ sim.player.x=exit.x;sim.player.y=exit.y;
+ assert.equal((await planDungeonTravel(sim,{kind:'exit'},surface,ok)).ok,true);
+});
+test('rank modifier icons retain names, actual effects and permanent lifetimes',()=>{
+ for(const rank of ['veteran','elite'] as const){
+  const enemy={kind:'stalker' as const,rank,lootSeed:73,hp:100};
+  const buffs=enemyTraitBuffs(enemy),traits=enemyModifiers(enemy);
+  assert.equal(buffs.length,rank==='elite'?2:1);
+  buffs.forEach((buff,i)=>{assert.equal(buff.name,traits[i].name);assert.equal(buff.summary,traits[i].description);assert.equal(buff.color,traits[i].color);assert.equal(buff.persistent,true);});
+ }
+ assert.deepEqual(enemyTraitBuffs({kind:'stalker',rank:'elite',lootSeed:73,hp:0}),[]);
+});

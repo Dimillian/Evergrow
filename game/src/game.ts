@@ -1,3 +1,4 @@
+import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { RiftPanel } from './rift-panel.ts';
 import { RiftWorld } from './rift-world.ts';
 import { drawRiftHUD } from './rift-hud.ts';
@@ -834,7 +835,7 @@ export class Game {
               void this.durable(async()=>{const result=await startDungeonEvent(this.sim,event.id,c=>this.persistTravel(c));this.notify(result.message);},undefined);
               return true;
           }
-          const chest = f.chests.findIndex((q,i)=>(!run.rift||i===2&&run.rift.phase==='complete')&&hit(q));
+          const chest = f.chests.findIndex((_,i)=>(!run.rift||i===2&&run.rift.phase==='complete')&&hit(dungeonRunChest(f,run,i)));
           if (chest >= 0) {
               const problem = dungeonChestProblem(this.sim, chest);
               if (problem)
@@ -846,7 +847,7 @@ export class Game {
               }
               return true;
           }
-          if (hit(f.entry) || (run.states.warden.hp <= 0 && hit(f.exit))) {
+          if (hit(f.entry) || (run.states.warden.hp <= 0 && hit(dungeonRunExit(f,run)))) {
               this.switchDungeon({ kind: 'exit' });
               return true;
           }
