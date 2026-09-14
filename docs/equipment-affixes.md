@@ -1,6 +1,6 @@
 # Equipment affixes and hybrids
 
-Current rules · September 9, 2026. Generation, rarity upgrades and rerolls share `itemAffixPool`, `rollAffix` and `affixConflicts` in `items.ts`. There are 55 explicit definitions: 24 original affixes, six specialist affixes, five resistance affixes and 20 individual skill-rank rolls (one shared rarity family). Tier counts remain 0 / 1 / 2 / 3 / 4.
+Current rules · September 14, 2026. Generation, rarity upgrades and rerolls share `itemAffixPool`, `rollAffix` and `affixConflicts` in `items.ts`. There are 55 explicit definitions: 24 original affixes, six specialist affixes, five resistance affixes and 20 individual skill-rank rolls (one shared rarity family). Tier counts remain 0 / 1 / 2 / 3 / 4.
 
 ## Slot pools
 
@@ -17,7 +17,7 @@ The head/chest/gloves/legs/boots rows below describe metal armor. Leather and cl
 | Rings | Life, Vitality, life regeneration, critical chance/damage, attack/spell damage, Strength/Dexterity/Intelligence, mana, mana regeneration, Wellsip; elemental resistance; any skill rank |
 | Amulet | General affixes, elemental resistance and both block affixes; any skill rank; weaker movement/speed rolls |
 | Shields | Block chance/reduction, armor, life, Vitality, life regeneration, Strength, Afterguard; elemental resistance; shield skill ranks |
-| Melee weapons | Attack damage, critical chance/damage, life on hit, Strength, Dexterity, Intelligence, spell damage, Expanse, one fire/frost/lightning enchantment; compatible melee skill ranks |
+| Melee weapons | Attack damage, critical chance/damage, life on hit, Strength, Dexterity, Expanse, one fire/frost/lightning enchantment; compatible melee skill ranks |
 | Bows | Attack damage, critical chance/damage, Dexterity, life on hit, Strength, Piercing; bow skill ranks |
 | Staves / wands | Spell damage, Intelligence, mana, critical chance/damage, mana cost reduction, mana regeneration; Expanse (staff) / Piercing (wand); magic skill ranks |
 | Grimoires | Mana, mana regeneration, mana cost/cooldown reduction, Intelligence, spell damage, Wellsip, Spellweave; magic skill ranks |
@@ -27,23 +27,23 @@ Amulets are the explicit exception to boots-only movement and gloves-only speed.
 
 ## Weights and specialist budgets
 
-Ordinary affixes have weight **1**. Critical chance, life on hit, cooldown reduction and mana cost reduction have weight **0.55**. Each of the three melee elemental affixes has weight **0.12**. Draw without replacement, removing conflicting families after each choice. Construction and jewelry affinity multiply favored weights by 2.2 and fallback weights by 0.75; the unmodified weapon pools below retain their original probabilities. Weights apply equally to drops and enchanting. With Expanse and the skill-rank family, an initial melee affix is elemental with probability `0.36 / 8.51 ≈ 4.2%`; higher tiers provide additional opportunities, never two elements. Item rarity/drop tables are unchanged.
+Ordinary affixes have weight **1**. Critical chance, life on hit, cooldown reduction and mana cost reduction have weight **0.55**. Each of the three melee elemental affixes has weight **0.12**. Draw without replacement, removing conflicting families after each choice. Construction and jewelry affinity multiply favored weights by 2.2 and fallback weights by 0.75; physical weapon pools exclude caster-only bonuses. Weights apply equally to drops and enchanting. With Expanse and the skill-rank family, an initial melee affix is elemental with probability `0.36 / 6.51 ≈ 5.5%`; higher tiers provide additional opportunities, never two elements. Item rarity/drop tables are unchanged.
 
 Multiply the existing affix base and growth by these slot budgets before rounding:
 
 | Specialty | Multiplier |
 | --- | ---: |
 | Boots movement / amulet movement | ×5 / ×2.5 |
-| Gloves attack or cast speed / amulet speed | ×4 / ×2 |
+| Random gloves attack or cast speed / amulet speed | ×3 / ×2 |
 | Chest life, armor, life regeneration | ×1.75 |
 | Head mana and mana cost reduction | ×1.5 |
 | Cloak life/mana regeneration and cooldown reduction | ×1.5 |
 | Grimoire mana, mana regeneration and cost reduction | ×1.5 |
 | Orb spell damage and critical chance/damage | ×1.5 |
 | Shield block chance/reduction | ×2 |
-| Weapon attack/spell damage | ×2 |
+| Random weapon attack/spell damage | ×4 |
 
-Other affixes remain ×1. At level 1, a midpoint magic roll gives **11% movement** on boots and **13% attack or cast speed** on gloves. Percentage growth remains bounded by `25n / (25 + n)`; tier, roll quality and enhancement still apply. Services rebuild values from their recipes. Existing characters remain loadable, without resetting progress.
+Other affixes remain ×1. At level 1, a midpoint magic roll gives **11% movement** on boots and **10% attack or cast speed** on gloves. Percentage growth remains bounded by `25n / (25 + n)`; tier, roll quality and enhancement still apply. Services rebuild values from their recipes. Existing characters remain loadable, without resetting progress.
 
 All actual item bonuses now use **whole numbers**, including explicit affixes, focus/jewelry implicits and shield block values. Round to the nearest integer after level, roll quality, rarity, slot/size potency, enhancement and resistance limits; positive bonuses have a minimum of 1. Recipes retain precise coefficients and roll quantiles, so later upgrades rebuild from the original inputs rather than multiplying rounded bonuses. Small upgrade steps can leave a bonus unchanged until the next whole-number threshold.
 
@@ -153,3 +153,13 @@ A silver four-point star (✦) identifies a **top-10% saved variable-affix roll*
 This is a quality distinction across existing rarity tiers, not an extra stat multiplier. Fixed pierce and discrete skill-rank affixes are excluded because they do not use the continuous roll range. Whole-number rounding and resistance caps still apply, so a star describes the saved roll percentile, not a promise that every adjacent percentile has a different displayed value. Existing gear is recognized from its stored recipe without changing names, values or save formats; rerolling immediately updates the distinction.
 
 Spellweave item cards explicitly say that the affix enables the automatic melee/magic exchange. Live readiness appears in the shared active-buff strip, with separate next-melee and next-spell icons, countdowns and short expandable details. Afterguard uses the same strip; these are projections of the existing temporary combat state, not saved buffs.
+
+## Random loot budget and power — September 14, 2026
+
+Random melee weapons and bows cannot roll Intelligence, spell damage or other caster-only affixes. Their compatible skill ranks and local elemental melee enchantments remain available. Existing caster attributes on random physical weapons are replaced with nonconflicting weapon stats on save read, preserving the item's identity, roll quantiles, enhancement and ownership. Elemental enchantments can still benefit from spell bonuses elsewhere in a hybrid build.
+
+Random weapon material premiums use 35% of the preceding premium: Crystal melee/staff/wand bases are 19.25% above Iron/Ashwood rather than 55%; Crystal bows are 12.25% above Ashwood rather than 35%. Ordinary Iron/Ashwood base damage stays unchanged. Random weapon attack/spell affixes use ×4 instead of ×2 potency. Random glove speed uses ×3 instead of ×4. This shifts power into useful weapon rolls without lifting every damage source. Starter weapon damage and all Unique combat budgets remain unchanged; Uniques retain their authored ×2 weapon damage and ×4 glove speed budgets.
+
+Validated saved random weapons and gloves receive the current affected values. Unrelated affix values, armor budgets, rarity odds, mana sustain and progress remain intact. No save reset. Services use the same formulas as drops.
+
+Gear power now scores actual weapon base damage, level, material/rarity, enhancement and affix strengths normalized to their same-level stat units and slot budgets. Weapon damage/crit rolls have higher relevance than resource support; caster-only rolls on physical weapons contribute nothing. The score is build-neutral quality, not DPS or a valuation of a Unique power. Equip Best and the equipped average use this same calculation and ignore a stale stored power number; direct comparison and skill synergy remain decisive.

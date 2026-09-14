@@ -117,3 +117,5 @@ Code checks and static reviews do not establish gameplay feel, economy balance o
 - [Outdoor lighting detail](outdoor-lighting.md): local Verdant/Mire canopy shafts, damp materials, illuminated mist and rendering budgets.
 
 - [Skill tree balance and readability follow-up](skill-tree-balance-2026-09-12.md): 30 actions/90 Techniques, utility and armor corrections, finite-resource playground, matched-point probes and remaining playtest questions.
+
+- [Retuned level-50 loot audit](audits/loot-level50-retuned-2026-09-14.md): physical weapon pools, material/affix budget shifts and roll-aware power.

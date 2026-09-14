@@ -1,3 +1,4 @@
+import { estimateItemPower } from './items.ts';
 import { hasStorageTab, storageTabItems, STASH_CAPACITY } from './storage-content.ts';
 import { PACK_CELLS, resolvePackLayout, repackLayout, storageGridLayout, itemFootprint, type PackLayout } from './inventory-grid.ts';
 import type { ActionResult, CharacterSheet, Item, ItemTier } from './character-types.ts';
@@ -74,7 +75,7 @@ export function sortStorage(sheet: CharacterSheet, tab = 0): ActionResult {
 }
 
 /** Item power is an estimate, including the shared enhancement multiplier. */
-const equipBestScore = (item: Item | null) => item?.power ?? -1;
+const equipBestScore = (item: Item | null) => item ? estimateItemPower(item) : -1;
 
 export type EquipBestChoice = 'check' | 'replace' | 'keep';
 export type BestEquipmentPlan = { ok: false; message: string } | {

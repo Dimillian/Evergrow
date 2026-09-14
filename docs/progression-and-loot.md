@@ -366,3 +366,5 @@ Other event rewards and side chests that already consume normal/veteran tables i
 Existing ground/owned items and delivered chest rewards are untouched. Unclaimed reward components use the current deterministic tables; existing delivery receipts still prevent duplicate claims. No character reset is required. Published in v0.3.15 on September 12, 2026.
 
 Timed rifts suppress all physical monster drops, retaining XP and kill-based recovery. Their final chest owns equipment, gold and a guaranteed normal-inventory rift key. See [Rifts](rifts.md) for the local initial tables and global champion/elite modifiers.
+
+September 14 random-equipment tuning narrows weapon material premiums, strengthens weapon damage rolls, reduces glove speed rolls and removes caster-only melee affixes. It does not change reward quantities or rarity tables. See [equipment affixes](equipment-affixes.md#random-loot-budget-and-power--september-14-2026) and the [follow-up level-50 audit](audits/loot-level50-retuned-2026-09-14.md).
