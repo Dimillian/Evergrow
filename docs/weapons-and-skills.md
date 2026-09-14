@@ -6,7 +6,7 @@ Local Unique equipment adds six equipped skill powers while preserving unlocks a
 
 Weapons supply the basic attack immediately. LMB swings a melee weapon, fires an arrow from a bow, or releases an elemental bolt from a staff or wand. The five active slots remain empty on a new run; major tree nodes unlock skills for assignment to RMB and 1–4. Melee/bow basic attacks cost no mana; staff bolts cost 4 base mana and wand bolts cost 2, reduced by mana efficiency. Potion and dodge keep their separate Q and Space shortcuts.
 
-When an otherwise eligible basic attack or assigned skill fails its mana check, a subtle blue **Not Enough Mana** cue appears above the player for 1.15 seconds. Its 14px lettering has a soft glow, briefly fades in, and drifts upward with eased motion while smoothly fading away. It follows the player and stays at native text size across camera zoom. Held or repeated attempts share one cue at a time; reduced motion removes the rise. Empty slots, incompatible gear and cooldowns do not trigger it. This feedback does not change costs, action timing or saves.
+When an otherwise eligible basic attack or assigned skill fails its mana check, a subtle blue **Not Enough Mana** cue appears above the player for 1.15 seconds. Its 11px lettering has a soft glow, briefly fades in, and drifts upward with eased motion while smoothly fading away. It follows the player and stays at native text size across camera zoom. Held or repeated attempts share one cue at a time; reduced motion removes the rise. Empty slots, incompatible gear and cooldowns do not trigger it. This feedback does not change costs, action timing or saves.
 
 ## Weapon profiles
 

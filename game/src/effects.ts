@@ -253,7 +253,7 @@ export class CombatEffects {
     const y = head.y - 8 - (reducedMotion ? 0 : rise * 18);
     c.save();
     c.globalAlpha = .85 * smooth(fadeIn) * (1 - smooth(fadeOut));
-    c.font = `400 14px ${GAME_FONT_STACK}`;
+    c.font = `400 11px ${GAME_FONT_STACK}`;
     c.textAlign = 'center'; c.textBaseline = 'bottom';
     c.lineJoin = 'round'; c.lineWidth = 2;
     c.strokeStyle = '#07172e';
