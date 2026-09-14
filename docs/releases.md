@@ -33,6 +33,18 @@ The user approved the next major prototype milestone, **0.5.0**, on 2026-09-13 f
 
 ## Last verified publication
 
+- Game v0.5.3 / Sites version 53, publicly deployed on 2026-09-14 at 08:24:11 UTC.
+- Published source: `dfb1f3d072351d08de43b33bf5a52acb230e89f7`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_c49e9f6173948191853fda8ba40a5aee`.
+- Deployment: `appgdep_6aa7af1ad0288191b45df34212248a7c`; Sites returned `succeeded`.
+- Vendor/item tooltips dismiss despite retained mouse-click focus; unrelated pointer exits cannot prolong the primary card's grace. Keyboard inspection and nested explanations remain available.
+- Skill atlas cards wait 350 ms per node, retain immediate highlights/routes, allow 200 ms exit grace and dismiss on dragging/zooming. Reduced motion keeps the intent delay without animation.
+- All 22 focused tooltip, comparison, keyboard, route and changelog checks passed, along with application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation. No automated browser gameplay was run.
+- Existing local/cloud characters remain compatible; no save reset, skill refund or D1 migration. Reload existing clients.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.5.2 / Sites version 52, publicly deployed on 2026-09-14 at 06:10:53 UTC.
 - Published source: `1843cf63efda3f643b170eaa3fb66088a92902d1`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_3377ce2ed1088191804f89d285a56062`.
