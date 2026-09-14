@@ -30,7 +30,7 @@ async function setup(key=true){
 }
 test('rift keys are deterministic normal-pack items with canonical validation and distinct modifiers',()=>{
  for(let tier=1;tier<=5;tier++)for(let seed=0;seed<40;seed++){
-  const key=createRiftKey(seed,25,tier);assert.ok(validItem(key));assert.ok(validRiftKey(structuredClone(key)));
+  const key=createRiftKey(seed,25,tier);assert.equal(key.tier,['common','magic','rare','epic','legendary'][tier-1]);assert.equal(key.name,'Crimson Rift Key');assert.ok(validItem(key));assert.ok(validRiftKey(structuredClone(key)));
   assert.deepEqual(itemFootprint(key),{width:1,height:2});assert.equal(defaultEquipmentSlot({} as never,key),undefined);assert.ok(improvementProblem(key,'enhance',25));
   const mods=riftModifiers({attempt:1,keySeed:seed,keyTier:tier});assert.ok(mods.some(m=>m.beneficial));assert.ok(mods.some(m=>!m.beneficial));assert.equal(new Set(mods.map(m=>m.id)).size,mods.length);
   const broken=structuredClone(key);broken.recipe.riftKeyTier=9;assert.equal(validItem(broken),false);

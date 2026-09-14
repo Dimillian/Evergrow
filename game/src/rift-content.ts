@@ -37,8 +37,8 @@ export function riftModifiers(tag:RiftTag):readonly RiftModifier[] {
 export function riftBonus(tag:RiftTag|undefined,id:string):number {return tag?riftModifiers(tag).find(m=>m.id===id)?.value??0:0;}
 export function createRiftKey(seed:number,level:number,tier=1):Item {
   seed=seed>>>0;level=Math.max(1,Math.min(1e6,Math.floor(level)));tier=Math.max(1,Math.min(5,Math.floor(tier)));
-  const tiers:ItemTier[]=['magic','rare','rare','epic','legendary'];
-  return {id:`rift-key:${seed}:${level}:${tier}`,seed,name:`Rift Key · Tier ${tier}`,baseName:'Crimson Rift Key',kind:'riftKey',tier:tiers[tier-1],itemLevel:level,requiredLevel:20,power:0,
+  const tiers:ItemTier[]=['common','magic','rare','epic','legendary'];
+  return {id:`rift-key:${seed}:${level}:${tier}`,seed,name:'Crimson Rift Key',baseName:'Crimson Rift Key',kind:'riftKey',tier:tiers[tier-1],itemLevel:level,requiredLevel:20,power:0,
     implicit:{},affixes:[],recipe:{riftKeyTier:tier,starter:false,enhancement:0,revision:0,targetedRolls:0,fullRolls:0,rolls:[]},
     appearance:{base:'#7c234b',shadow:'#260f2b',edge:'#ef739d',trim:'#daaaef',style:'plate'}};
 }
