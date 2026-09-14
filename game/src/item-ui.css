@@ -124,3 +124,5 @@
 /* Unique engravings use the same glass surface, with crimson and violet accents. */
 .ui-item-hover-card[data-tier="unique"] {border-color:#c782b68c;box-shadow:inset 0 0 30px #bc548112,0 0 24px #a866d516;}
 .ui-rarity-badge[data-tier="unique"] {color:#ef82ad;}
+
+.ui-item-property.ui-rift-modifier > span,.ui-item-property.ui-rift-modifier > strong{color:inherit}

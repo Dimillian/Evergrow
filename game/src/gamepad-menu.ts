@@ -3,6 +3,7 @@ import { PAD, type GamepadInput } from './gamepad-input.ts';
 export interface GamepadMenuActions {
   switchTab?(delta: number): void;
   activate?(target: HTMLElement): boolean;
+  includeControl?(target: HTMLElement): boolean;
 }
 
 /** Adapt controller navigation to the panels' existing focus/keyboard contracts. */
@@ -16,7 +17,8 @@ export class GamepadMenu {
       actions.switchTab(pad.pressed.has(PAD.potion) ? -1 : 1); this.clear(); return;
     }
     const controls = [...root.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, summary, [tabindex]')]
-      .filter(el => el.tabIndex >= 0 && !el.matches(':disabled') && !el.closest('[hidden], [inert]') && el.getClientRects().length > 0);
+      .filter(el => el.tabIndex >= 0 && !el.matches(':disabled') && !el.closest('[hidden], [inert]') && el.getClientRects().length > 0
+        && (actions.includeControl?.(el) ?? true));
     if (!controls.length) return;
     const step = (delta: number) => {
       const index = controls.indexOf(document.activeElement as HTMLElement);

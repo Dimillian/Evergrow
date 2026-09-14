@@ -67,7 +67,7 @@ export class ThorRuntime {
             const c = this.canvas.getContext('2d')!;
             c.clearRect(0, 0, 512, 380);
             if (run && h.sim.dungeonFloor)
-                drawDungeonMap(c, h.sim.dungeonFloor, run, p, { x: 0, y: 0, width: 512, height: 380 }, this.commands.selection.zoom, p.x, p.y);
+                drawDungeonMap(c, h.sim.dungeonFloor, run, p, { x: 0, y: 0, width: 512, height: 380 }, this.commands.selection.zoom, p.x, p.y, null, false, h.sim.enemies);
             else
                 h.worldMap.drawCompanion(c, p, 512, 380, this.commands.selection.zoom);
             state.map = this.canvas.toDataURL('image/png');

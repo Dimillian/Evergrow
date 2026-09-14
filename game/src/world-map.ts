@@ -21,7 +21,7 @@ import { UI_THEME } from './ui-theme.ts';
 import { getZoneAt, type ZoneProgression } from './zone-progression.ts';
 
 export interface MapPlayer { x: number; y: number; angle: number; }
-export interface MinimapEnemy { x: number; y: number; kind?: string; }
+export interface MinimapEnemy { x: number; y: number; kind?: string; rank?:'normal'|'veteran'|'elite'; }
 export interface MapWorld extends ExplorationWorld {
   mapColor(x: number, y: number, sampleSize?: number): string;
   atlasColor?(x: number, y: number): string;
@@ -742,7 +742,7 @@ export class WorldMap {
       if (!this.exploration.isRevealed(enemy.x, enemy.y)) continue;
       const p = projectMapPoint(enemy.x, enemy.y, view);
       if (p.x < view.x || p.y < view.y || p.x > view.x + view.width || p.y > view.y + view.height) continue;
-      drawMapEnemyIcon(c, p.x, p.y, enemy.kind);
+      drawMapEnemyIcon(c, p.x, p.y, enemy.kind, enemy.rank);
     }
     this.playerArrow(c, player, view, true); c.restore();
     text(c, 'N', view.x + view.width / 2, view.y + 3, .8, palette.jade, 'center');

@@ -79,6 +79,11 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
   const bow = pose.weapon?.kind === 'bow';
   const mainWeapon = () => {
     const hand = projectArmPoint(weaponArm.hand);
+    if (pose.weapon?.kind === 'unarmed') {
+      const elbow = projectArmPoint(weaponArm.elbow);
+      gauntlet(ctx, hand, outfit.hands, color, -Math.atan2(hand[0] - elbow[0], hand[1] - elbow[1]), pose.attack > 0);
+      return;
+    }
     heldWeapon(ctx, weaponOrigin, weaponAngle, color, pose.weapon, rangedDraw, pose.effectTime ?? pose.time, weaponCharge, weaponScale);
     gauntlet(ctx, hand, outfit.hands, color, weaponAngle);
     if (supportHolding) gauntlet(ctx, projectArmPoint(offArm.hand), outfit.hands, color, weaponAngle);
@@ -112,7 +117,10 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
       draw: () => forearm(ctx, projectArmPoint(arm.elbow), projectArmPoint(arm.hand), outfit.hands, color) },
   ]).sort((a, b) => a.depth - b.depth);
   if (!supportHolding) {
-    armLayers.push({ depth: offArm.hand[1], draw: () => gauntlet(ctx, projectArmPoint(offArm.hand), outfit.hands, color, -.5, false) });
+    const hand = projectArmPoint(offArm.hand), elbow = projectArmPoint(offArm.elbow);
+    const relaxed = pose.weapon?.kind === 'unarmed' && !pose.offHand;
+    armLayers.push({ depth: offArm.hand[1], draw: () => gauntlet(ctx, hand, outfit.hands, color,
+      relaxed ? -Math.atan2(hand[0] - elbow[0], hand[1] - elbow[1]) : -.5, false) });
     armLayers.sort((a, b) => a.depth - b.depth);
   }
   for (const layer of armLayers) if (layer.depth < 0) layer.draw();

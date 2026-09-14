@@ -2,7 +2,7 @@ import { hasLineOfSight } from './combat-geometry.ts';
 import type { WorldQuery } from './model.ts';
 
 type Point = { x: number; y: number };
-type Terrain = Pick<WorldQuery, 'blocked' | 'isSanctuary'>;
+type Terrain = Pick<WorldQuery, 'blocked' | 'isSanctuary' | 'walkableSegment'>;
 interface Step extends Point { next: Point; distance: number }
 interface Field { queue: Step[]; cursor: number; steps: Map<string, Step> }
 const CELL = 32;
@@ -12,6 +12,7 @@ const keyOf = (x: number, y: number) => `${x}:${y}`;
 export function hasWalkableSegment(world: Terrain, x: number, y: number, tx: number, ty: number, radius: number): boolean {
     const distance = Math.hypot(tx - x, ty - y);
     if (![x, y, tx, ty, radius].every(Number.isFinite) || radius < 0 || distance > 4000) return false;
+    const fast=world.walkableSegment?.(x,y,tx,ty,radius);if(fast!==undefined)return fast;
     const count = Math.max(1, Math.ceil(distance / 8));
     for (let i = 0; i <= count; i++) {
         const px = x + (tx - x) * i / count, py = y + (ty - y) * i / count;
