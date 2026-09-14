@@ -316,8 +316,17 @@ export class Game {
         equip: index => this.characterAction({type:'equip',index}),
         track: id => { void this.journeys.command({type:'track',id}); },
         portal: () => this.requestPortal(),
-        background: () => { this.clearInput(); this.pause(); void this.saveCharacter(); this.nativeBackground = true; this.audio.setForeground(false); },
-        foreground: () => { this.clearInput(); this.nativeBackground = false; this.audio.setForeground(!document.hidden); },
+        background: () => {
+          this.clearInput(); this.pause(); void this.saveCharacter(); this.nativeBackground = true; this.audio.setForeground(false);
+          if (this.animation) { cancelAnimationFrame(this.animation); this.animation = 0; }
+        },
+        foreground: () => {
+          this.clearInput(); this.nativeBackground = false; this.audio.setForeground(!document.hidden);
+          if (!document.hidden && !this.animation) {
+            this.last = performance.now();
+            this.animation = requestAnimationFrame(this.frame);
+          }
+        },
         back: () => { if(this.phase === 'ready' && this.titleScreen.dismissOverlay()) return; if(this.appearanceEditor){this.appearanceEditor.cancel();return;} if(this.thor.dismissInspection() || (this.phase === 'paused' && this.shell.backInMenu())) return; if(this.phase === 'playing') this.pause(); else if(this.phase !== 'ready' && this.phase !== 'dead') this.resume(); },
       }));
       this.fx = this.lifetime.own(new PostFX(this.canvas));
@@ -367,7 +376,13 @@ export class Game {
     });
     window.addEventListener('pagehide', () => { this.audio.setForeground(false); this.clearInput(); void this.saveAndSync(); }, { signal });
     window.addEventListener('focus', () => this.clearInput(), { signal });
-    window.addEventListener('pageshow', () => this.audio.setForeground(!document.hidden && !this.nativeBackground), { signal });
+    window.addEventListener('pageshow', () => {
+      this.audio.setForeground(!document.hidden && !this.nativeBackground);
+      if (!document.hidden && !this.nativeBackground && !this.animation) {
+        this.last = performance.now();
+        this.animation = requestAnimationFrame(this.frame);
+      }
+    }, { signal });
     const unlockAudio = () => { void this.audio.unlock().catch(() => {}); };
     window.addEventListener('pointerdown', unlockAudio, { signal, capture: true, passive: true });
     window.addEventListener('keydown', unlockAudio, { signal, capture: true });
@@ -385,8 +400,13 @@ export class Game {
         this.clearInput();
         if (this.phase === 'playing' || this.phase === 'map') this.pause();
         void this.saveAndSync();
+        if (this.animation) { cancelAnimationFrame(this.animation); this.animation = 0; }
+      } else {
+        this.last = performance.now();
+        if (!this.animation && !this.nativeBackground) {
+          this.animation = requestAnimationFrame(this.frame);
+        }
       }
-      this.last = performance.now();
     }, { signal });
     bindGameKeyboard(window, {
       clear: () => { this.clearInput(); this.panels.releaseMap(); },
@@ -1096,6 +1116,10 @@ export class Game {
 
   private frame = (now: number) => {
     if (this.disposed) return;
+    if (document.hidden || this.nativeBackground) {
+      this.animation = 0;
+      return;
+    }
     if (window.EvergrowAndroid && !this.framePacer.ready(now)) {
       this.animation = requestAnimationFrame(this.frame);
       return;
