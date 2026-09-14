@@ -27,7 +27,8 @@ export function circleIntersectsSector(x: number, y: number, radius: number, ori
 }
 
 /** Shared obstruction test for damage, targeting and aim feedback. */
-export function hasLineOfSight(world: Pick<WorldQuery, 'blocked'>, ax: number, ay: number, bx: number, by: number): boolean {
+export function hasLineOfSight(world: Pick<WorldQuery, 'blocked'|'lineOfSight'>, ax: number, ay: number, bx: number, by: number): boolean {
+  const fast=world.lineOfSight?.(ax,ay,bx,by);if(fast!==undefined)return fast;
   const count = Math.ceil(Math.hypot(bx - ax, by - ay) / 2);
   for (let i = 1; i < count; i++) if (world.blocked(ax + (bx - ax) * i / count, ay + (by - ay) * i / count, 1)) return false;
   return true;

@@ -131,3 +131,5 @@ World → Crimson Rifts supports `/tools/rifts.html?view=map&seed=7319&biome=ver
 
 
 The Crimson Rifts map study (`/tools/rifts.html?view=map`) now displays shared overworld terrain with the actual dense roster. **View pack** switches to a frozen runtime-rendered scene; choosing a biome selects a real matching world seed. It never reads saves or advances combat.
+
+The Crimson Rifts map/pack study includes **Profile rendering** for a frozen 1100×900 scene, using the runtime renderer and post-processing without advancing gameplay. It reports CPU median/p95 after warmup. See `docs/rift-performance.md` and `game/scripts/benchmark-rift-crowds.ts` for the separate headless crowd benchmark.

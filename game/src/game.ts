@@ -269,7 +269,7 @@ export class Game {
         journeys:{open:()=>this.journeys.panel.open(this.journeys.selected),close:()=>this.journeys.panel.close()},
         event: { open: () => { if(this.activeRiftPortal)this.riftPanel.open(this.sim.expeditions,this.sim.player,this.activeRiftPortal); else if(this.activeExpeditionTable)this.expeditionPanel.open(this.sim.expeditions,this.sim.player.level,this.overworld.seed,this.activeExpeditionTable); else if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.expeditionPanel.close(); this.riftPanel.close(); this.activeRiftPortal=null; this.activeExpeditionTable=null; this.activeEvent = null; this.activeDungeonEntrance = null; } },
         service: { open: () => { if (this.activeNPC) this.servicePanel.open(this.sim.player, this.activeNPC); }, close: () => { this.servicePanel.close(); this.activeNPC = null; } },
-        map: { open: () => { const run=currentDungeon(this.sim.expeditions), glance=this.panels.mapHeld; if(run) this.dungeonMap.open(this.sim.dungeonFloor!,run,this.sim.player,glance); else this.worldMap.open(this.sim.player,glance); this.shell.setStatus(glance?'Exploration map open. Movement continues.':'World map open. Game paused.'); }, close: () => { this.worldMap.close(); this.dungeonMap.close(); } },
+        map: { open: () => { const run=currentDungeon(this.sim.expeditions), glance=this.panels.mapHeld; if(run) this.dungeonMap.open(this.sim.dungeonFloor!,run,this.sim.player,glance,this.sim.enemies); else this.worldMap.open(this.sim.player,glance); this.shell.setStatus(glance?'Exploration map open. Movement continues.':'World map open. Game paused.'); }, close: () => { this.worldMap.close(); this.dungeonMap.close(); } },
         character: { open: () => { this.inventoryPanel.open(this.sim.player); this.shell.setStatus('Character and inventory open. Game paused.'); }, close: () => this.inventoryPanel.close() },
         skills: { open: () => { this.skillPanel.open(this.sim.player); this.shell.setStatus('Skill tree open. Game paused.'); }, close: () => this.skillPanel.close() },
       }, {
@@ -1219,7 +1219,7 @@ export class Game {
     const dungeonRun=currentDungeon(this.sim.expeditions);
     if(dungeonRun?.rift && this.phase!=='ready')drawRiftHUD(ui,dungeonRun,this.renderer.width);
     if (this.phase !== 'ready' && !dungeonRun) this.worldMap.update(mapPlayer, dt);
-    if (this.phase === 'map' && dungeonRun) this.dungeonMap.update(mapPlayer);
+    if (this.phase === 'map' && dungeonRun) this.dungeonMap.update(mapPlayer,this.sim.enemies);
     if (this.panels.mapHeld) {
       const rect = this.canvas.getBoundingClientRect();
       const pointer = this.mouse.present && !this.usingGamepad && !this.touch.active && !this.pointerInHUD()
@@ -1228,11 +1228,11 @@ export class Game {
       if (dungeonRun) this.dungeonMap.setExplorationPointer(pointer);
       else this.worldMap.setExplorationPointer(pointer);
     }
-    if (this.phase !== 'ready' && dungeonRun && this.renderer.navigationVisible) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time);
+    if (this.phase !== 'ready' && dungeonRun && this.renderer.navigationVisible) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time,this.sim.enemies);
     if (this.phase !== 'ready' && !dungeonRun && this.renderer.navigationVisible) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, this.sim.time,
       this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
         x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
-        y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind,
+        y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind, rank:enemy.rank,
       })));
     this.thor.update(now);
     this.performance.end('ui', uiStart); this.performance.finish();

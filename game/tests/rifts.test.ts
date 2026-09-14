@@ -23,7 +23,7 @@ import { awardKillRewards } from '../src/combat-rewards.ts';
 import { enemyModifiers, enemyMovementMultiplier } from '../src/enemy-modifiers.ts';
 import { World } from '../src/world.ts';
 import { WorldLandscape } from '../src/world-landscape.ts';
-import { RIFT_FIELD } from '../src/rift-floor.ts';
+import { RIFT_FIELD, riftPackCount } from '../src/rift-floor.ts';
 import { BIOME_IDS, startingBiome } from '../src/biomes.ts';
 import type { Building } from '../src/settlements.ts';
 import { decodeCharacterSave } from '../src/character-save.ts';
@@ -196,3 +196,24 @@ test('open-world rift streaming retains nearby packs without visible births or s
  assert.deepEqual(sim.enemies.map(e=>e.id).sort((a,b)=>a-b),ids,'stationary actors retain identities');
  assert.equal(sim.enemies.some(e=>e.campMemberId==='warden'),false);
 });
+
+ test('Teeming keys add separated packs to the same landscape at every rarity',()=>{
+  for(let tier=1;tier<=5;tier++){
+    let keySeed=0;while(!riftModifiers({attempt:1,keySeed,keyTier:tier}).some(m=>m.id==='density'))keySeed++;
+    const rift={attempt:1,keySeed,keyTier:tier};
+    assert.equal(riftModifiers(rift).find(m=>m.id==='density')!.value,25+10*(tier-1));
+    const entrance={id:'dungeon:rift:1',name:'Density',seed:7342,level:30,biome:'verdant' as const,x:0,y:0,rift};
+    const floor=generateDungeon(7342,30,entrance),members=floor.members.filter(m=>m.id!=='warden');
+    assert.equal(new Set(members.map(m=>m.id.split(':')[1])).size,riftPackCount(rift));
+    assert.ok(members.length>=riftPackCount(rift)*RIFT_FIELD.minPack);
+    assert.deepEqual(generateDungeon(7342,30,structuredClone(entrance)),floor);
+    for(let i=0;i<members.length;i++){
+      const a=members[i],radius=ENEMY_DEFINITIONS[a.kind].radius*1.28;
+      assert.ok(Math.hypot(a.x,a.y)<=3680);
+      assert.equal(dungeonBlocked(floor,a.x,a.y,radius),false);
+      for(let j=i+1;j<members.length;j++){const b=members[j];
+        assert.ok(Math.hypot(a.x-b.x,a.y-b.y)>=radius+ENEMY_DEFINITIONS[b.kind].radius*1.28+8,'packs must not overlap');
+      }
+    }
+  }
+ });

@@ -5,6 +5,7 @@
     "types": []
   },
   "include": [
+    "src/enemy-neighbors.ts", "src/dungeon-map-enemies.ts",
     "src/world-landscape.ts", "src/natural-landscape.ts", "src/dungeon-entrances.ts", "src/settlement-walls.ts", "src/settlement-services.ts", "src/ground-material.ts",
     "src/rift-content.ts", "src/rift-floor.ts", "src/rift-runtime.ts", "src/rift-rewards.ts", "src/enemy-modifiers.ts",
     "src/aura-content.ts", "src/auras.ts",

@@ -1,3 +1,4 @@
+import { EnemyNeighbors } from './enemy-neighbors.ts';
 import { applyEnemyModifiers } from './enemy-modifiers.ts';
 import { tickRift, riftKill } from './rift-runtime.ts';
 import { advanceAuras, auraPower, manaCapacity } from './auras.ts';
@@ -702,12 +703,15 @@ export class Simulation {
     }, periodic, style, elementalDamage, offense, authoredBurn);
   }
 
+  private enemyNeighbors=new EnemyNeighbors();
   private updateEnemies(dt: number): void {
+    this.enemyNeighbors.rebuild(this.enemies);
     updateWarbands(this.enemies, this.player, this.world, dt);
     const p = this.player;
     const trial = this.eventState.trial && !this.dungeonFloor ? this.eventState.sites[this.eventState.trial.siteId] : null;
     const context: EnemyAIContext = {
       player: p, enemies: this.enemies, world: this.world, time: this.time,
+      neighbors:(enemy,padding)=>this.enemyNeighbors.around(enemy,padding),
       hurtDecoy:(id,amount)=>{hurtDecoy(p,id,amount);},
       trial: trial ? { campId: `event:${trial.id}`, x: trial.x, y: trial.y, radius: EVENT_RULES.trialRadius } : null,
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
@@ -719,12 +723,14 @@ export class Simulation {
     };
     for (const enemy of this.enemies) {
       this.updateKnockback(enemy, dt);
+      this.enemyNeighbors.update(enemy);
       enemy.stateTime += dt;
       if (enemy.state === 'dead') continue;
       enemy.rallyTime=Math.max(0,(enemy.rallyTime??0)-dt);
       if (!advanceEnemyStatuses(enemy, dt,
         (actor, amount) => this.damageEnemy(actor, amount, 0, false, true, 'fire'))) continue;
       if(isWildernessBoss(enemy.kind)) updateWildernessBoss(enemy,dt,context); else if(enemy.kind==='warden') updateWarden(enemy,dt,context); else updateEnemyAI(enemy, dt, context);
+      this.enemyNeighbors.update(enemy);
       if (p.dead) break;
     }
     for (const enemy of this.enemies) {

@@ -1,3 +1,4 @@
+import { segmentDistanceSquared } from './combat-geometry.ts';
 import { bossLairCell, generateBossLair } from './wilderness-sites.ts';
 import { landscapePropProbability, landscapeRelief } from './natural-landscape.ts';
 import { worldNavigation } from './world-navigation.ts';
@@ -434,6 +435,48 @@ export class WorldLandscape {
       site.decor.some(decor => decor.radius > 0 && !this.brokenContainers.has(decor.id) && (x - decor.x) ** 2 + (y - decor.y) ** 2 < (radius + decor.radius) ** 2 - 1e-7))) return true;
     return region.buildings.some(building => intersects(query, building) &&
       (building.walls.some(rect => circleHitsRect(x, y, radius, rect)) || building.furniture.some((rect, i) => !(rect.kind === 'barrel' && this.brokenContainers.has(furnitureContainerId(building, i))) && circleHitsRect(x, y, radius, rect))));
+  }
+
+  /** Test only the nearest discrete ray sample to each circle. This is the same
+   * sampled collision rule as repeated blocked(), with one broad-phase query. */
+  private sampledSegmentClear(ax:number,ay:number,bx:number,by:number,radius:number,steps:number,first:number,last:number):boolean|undefined {
+    // Authored dungeon/custom worlds override blocked and retain their own geometry.
+    if(this.blocked!==WorldLandscape.prototype.blocked)return undefined;
+    if(first>last)return true;
+    if(![ax,ay,bx,by].every(isWorldCoordinate)||radius<0||radius>WORLD_QUERY_LIMITS.collisionRadius||Math.hypot(bx-ax,by-ay)>4000)return undefined;
+    const extent=radius+MAX_PROP_RADIUS;
+    const region=this.collisionRegion(Math.min(ax,bx)-extent,Math.min(ay,by)-extent,Math.abs(bx-ax)+extent*2,Math.abs(by-ay)+extent*2);
+    // Authored sites/architecture keep their existing bounds and breakable narrow phase.
+    if(region.buildings.length||region.sites.length)return undefined;
+    const dx=bx-ax,dy=by-ay,lengthSquared=dx*dx+dy*dy;
+    const hit=(p:{x:number;y:number;radius:number})=>{
+      const nearest=lengthSquared?Math.round(((p.x-ax)*dx+(p.y-ay)*dy)/lengthSquared*steps):first;
+      const index=Math.max(first,Math.min(last,nearest)),x=ax+dx*index/steps,y=ay+dy*index/steps;
+      return (x-p.x)**2+(y-p.y)**2<(radius+p.radius)**2-1e-7;
+    };
+    if(region.props.some(hit))return false;
+    return true;
+  }
+  lineOfSight(ax:number,ay:number,bx:number,by:number):boolean|undefined {
+    const steps=Math.ceil(Math.hypot(bx-ax,by-ay)/2);
+    return this.sampledSegmentClear(ax,ay,bx,by,1,steps,1,steps-1);
+  }
+  walkableSegment(ax:number,ay:number,bx:number,by:number,radius:number):boolean|undefined {
+    const steps=Math.max(1,Math.ceil(Math.hypot(bx-ax,by-ay)/8));
+    const interior=this.sampledSegmentClear(ax,ay,bx,by,radius+4,steps,1,steps-1);
+    if(interior===undefined)return undefined;
+    if(!interior||this.blocked(ax,ay,radius)||this.blocked(bx,by,radius))return false;
+    return !this.sanctuaryOnSegment(ax,ay,bx,by,steps);
+  }
+
+  protected sanctuaryOnSegment(ax:number,ay:number,bx:number,by:number,steps:number):boolean {
+    if(this.isSanctuary===WorldLandscape.prototype.isSanctuary){
+      const towns=this.getSettlements(Math.min(ax,bx),Math.min(ay,by),Math.abs(bx-ax)+.01,Math.abs(by-ay)+.01);
+      // A completely clear segment needs no per-sample sanctuary queries.
+      if(!towns.some(t=>segmentDistanceSquared(t.x,t.y,ax,ay,bx,by)<t.radius*t.radius))return false;
+    }
+    for(let i=0;i<=steps;i++)if(this.isSanctuary(ax+(bx-ax)*i/steps,ay+(by-ay)*i/steps))return true;
+    return false;
   }
 
   /** Sweep short segments against trunk circles, preserving the unblocked axis. */

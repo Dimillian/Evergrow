@@ -50,3 +50,11 @@ Audit verification: the full 1,468-test headless suite passed. All 15 rift regre
 
 
 Open-world replacement verification: all 1,470 headless tests passed, including dense-pack offscreen admission and stationary identity retention. TypeScript and the production build passed. A 100-seed headless sample contained 2,142–2,364 non-guardian enemies; slowest measured layout generation was 65 ms on the development machine (not a combat frame-rate measurement). Comparison with the preceding checkpoint preserved ordinary-world biome/water/map/collision/movement queries across 300 points and three seeds, plus matching prop collections. Static map and frozen game-renderer captures were checked in the in-app browser; no gameplay was driven.
+
+## Density and crowd performance (September 14)
+
+Teeming is a possible harmful key modifier: +25 / 35 / 45 / 55 / 65% monster density from Common through Legendary. It increases the baseline 28 packs to 35 / 38 / 41 / 43 / 46 in the same area. Pack size remains 64–96, and placement checks neighboring packs as well as terrain to prevent overlapping bodies. It does not raise the completion threshold or award extra loot during the run. Like the other key modifiers, it appears in both hover and selected-key details. Adding it changes seeded modifier selections in this unshipped key pool.
+
+Dungeon and rift minimaps, full maps and the Thor companion now receive live enemy positions. Markers respect exploration and view bounds; dead enemies disappear. Champions are blue and elites gold. Ordinary dungeon passages also retain markers between revealed rooms.
+
+Dense-crowd optimization preserves the 120 Hz simulation, attack timing, collision rules and actor population. A spatial index supplies nearby separation candidates in the original actor order and updates after each actor moves. Landscape visibility/walking rays batch the existing discrete collision samples against nearby circles; authored buildings, sites and custom dungeon geometry retain their original checks. See [rift-performance.md](rift-performance.md) for reproducible measurements and limits.

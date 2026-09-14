@@ -8,6 +8,9 @@ import type { EnemyCamp } from './wilderness-sites.ts';
 import type { EnemyRank } from './progression-content.ts';
 
 export interface WorldQuery {
+  /** Optional exact accelerations of the shared sampled visibility/walking rules. */
+  lineOfSight?(ax:number,ay:number,bx:number,by:number):boolean|undefined;
+  walkableSegment?(ax:number,ay:number,bx:number,by:number,radius:number):boolean|undefined;
   getBuildings?(x:number,y:number,width:number,height:number): readonly import('./settlements.ts').Building[];
   readonly dungeonTheme?: import('./dungeon-content.ts').DungeonThemeId;
   impactMaterial?(x: number, y: number, radius: number): MaterialId;

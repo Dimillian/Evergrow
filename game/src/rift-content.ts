@@ -12,7 +12,8 @@ export const RIFT_HAZARDS = [
   {id:'vital',name:'Unyielding',label:'Monster life',unit:'%',base:20,step:12},
   {id:'savage',name:'Savage',label:'Monster damage',unit:'%',base:8,step:5},
   {id:'swift',name:'Relentless',label:'Monster movement',unit:'%',base:8,step:3},
-  {id:'court',name:'Royal Court',label:'Extra Elite packs',unit:'%',base:5,step:3},
+  {id:'court',name:'Royal Court',label:'Elite chance',unit:'%',base:5,step:3},
+  {id:'density',name:'Teeming',label:'Monster density',unit:'%',base:25,step:10},
 ] as const;
 export const RIFT_BOONS = [
   {id:'gold',name:'Gilded',label:'Chest gold',unit:'%',base:35,step:25},

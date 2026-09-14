@@ -6,6 +6,7 @@ import { riftBonus, riftRandom, type RiftTag } from './rift-content.ts';
 import { WorldLandscape } from './world-landscape.ts';
 
 export const RIFT_FIELD = Object.freeze({ sectors:13, sectorSize:640, packs:28, minPack:64, maxPack:96, radius:380, admissionRange:1500, retirementRange:2200, admissionInterval:.25 });
+export const riftPackCount=(tag:RiftTag)=>Math.round(RIFT_FIELD.packs*(1+riftBonus(tag,'density')/100));
 const half = RIFT_FIELD.sectors * RIFT_FIELD.sectorSize / 2;
 const landscapes = new WeakMap<DungeonFloor, WorldLandscape>();
 const floors = new Map<string, DungeonFloor>();
@@ -42,27 +43,29 @@ export function buildRiftFloor(seed:number,biome:BiomeId,rift:RiftTag):DungeonFl
     rooms.push({id,x:x*RIFT_FIELD.sectorSize-half,y:y*RIFT_FIELD.sectorSize-half,width:RIFT_FIELD.sectorSize,height:RIFT_FIELD.sectorSize,
       kind:id===sectorAt(boss.x,boss.y)?'boss':id===sectorAt(0,0)?'entry':'combat'});
   }
-  const centers:{x:number;y:number}[]=[];
+  const centers:{x:number;y:number}[]=[],packCount=riftPackCount(rift),spacing=780/Math.sqrt(packCount/RIFT_FIELD.packs);
   const roster:DungeonMember['kind'][]=['stalker','archer','brute','hound','caster','thornReaver','mireSpitter'];
-  for(let tries=0;centers.length<RIFT_FIELD.packs&&tries<8000;tries++){
+  for(let tries=0;centers.length<packCount&&tries<8000;tries++){
     const angle=random()*Math.PI*2,range=900+Math.sqrt(random())*2400;
     const center={x:Math.cos(angle)*range,y:Math.sin(angle)*range};
-    if(!dry(center.x,center.y,40)||centers.some(p=>Math.hypot(p.x-center.x,p.y-center.y)<780))continue;
+    if(!dry(center.x,center.y,40)||centers.some(p=>Math.hypot(p.x-center.x,p.y-center.y)<spacing))continue;
     const pack=centers.length,placed:{x:number;y:number;radius:number}[]=[],count=RIFT_FIELD.minPack+Math.floor(random()*(RIFT_FIELD.maxPack-RIFT_FIELD.minPack+1));
     // Keep composition coherent within a pack, with a few supporting archetypes.
+    const neighbors=members.filter(m=>Math.hypot(m.x-center.x,m.y-center.y)<RIFT_FIELD.radius*2+80)
+      .map(m=>({x:m.x,y:m.y,radius:ENEMY_DEFINITIONS[m.kind].radius*1.28}));
     const main=roster[Math.floor(random()*roster.length)],support=roster[Math.floor(random()*roster.length)];
     for(let attempt=0;placed.length<count&&attempt<count*100;attempt++){
       const a=random()*Math.PI*2,r=Math.sqrt(random())*RIFT_FIELD.radius;
       const x=center.x+Math.cos(a)*r,y=center.y+Math.sin(a)*r;
       const kind=random()<.72?main:support,radius=ENEMY_DEFINITIONS[kind].radius*1.28;
-      if(Math.hypot(x,y)<600||!dry(x,y,radius+4)||placed.some(p=>Math.hypot(p.x-x,p.y-y)<p.radius+radius+8))continue;
+      if(Math.hypot(x,y)<600||!dry(x,y,radius+4)||placed.some(p=>Math.hypot(p.x-x,p.y-y)<p.radius+radius+8)||neighbors.some(p=>Math.hypot(p.x-x,p.y-y)<p.radius+radius+8))continue;
       const roll=random(),rank=roll<.10+riftBonus(rift,'court')/100?'elite':roll<.31?'veteran':'normal';
       members.push({id:`rift:${pack}:${placed.length}`,kind,rank,room:sectorAt(x,y),x,y,seed:Math.floor(random()*4294967296)});
       placed.push({x,y,radius});
     }
     centers.push(center);
   }
-  if(centers.length!==RIFT_FIELD.packs)throw new Error('Rift landscape has insufficient pack sites');
+  if(centers.length!==packCount)throw new Error('Rift landscape has insufficient pack sites');
   members.push({id:'warden',kind:bossForBiome(biome),rank:'elite',room:sectorAt(boss.x,boss.y),...boss,seed:(seed^731)>>>0});
   const floor:DungeonFloor={rift,seed,rooms,edges:[],corridors:[],members,entry,exit,
     chests:[{...entry,room:sectorAt(0,0)},{...entry,room:sectorAt(0,0)},{...chest,room:sectorAt(chest.x,chest.y)}],events:[],props:[]};
