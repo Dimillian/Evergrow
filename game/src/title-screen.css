@@ -2,7 +2,6 @@
 .title-screen[hidden] { display:none; }
 .title-vignette { position:absolute; inset:0; z-index:-1; pointer-events:none; background:linear-gradient(90deg,#040c1470,#08121b28 30%,#030910b0 80%),linear-gradient(0deg,#040a10,transparent 65%,#050c1470); backdrop-filter:blur(1px) saturate(.8); }
 .title-brand { grid-column:1/-1; display:flex; align-items:center; gap:16px; align-self:center; }
-.title-brand h1 { font-size:clamp(28px,3.2vw,48px); font-weight:400; letter-spacing:.18em; line-height:1; margin:0; color:#e7dfc6; text-shadow:0 2px #111921,0 0 40px #b4c1a940; }
 .title-brand > span { display:grid; place-items:center; width:36px; height:36px; border:1px solid #879c9455; color:#b6c8c5; transform:rotate(45deg); }
 .title-brand .ui-icon { transform:rotate(-45deg); width:23px; height:23px; }
 .title-hero { position:relative; min-width:0; min-height:0; display:grid; place-items:center; }
@@ -76,7 +75,7 @@
 .title-loading { text-align:center; }
 @media (max-width:1050px), (max-height:600px) {
   .title-screen { grid-template-columns:minmax(0,1fr); grid-template-rows:40px minmax(0,1fr); padding:14px 20px; gap:12px; }
-  .title-brand h1 { font-size:29px; } .title-brand > span { width:26px; height:26px; } .title-brand .ui-icon { width:18px; height:18px; }
+  .title-brand > span { width:26px; height:26px; } .title-brand .ui-icon { width:18px; height:18px; }
   .title-hero { display:none; } .title-roster.ui-window { max-width:920px; margin:auto; max-height:100%; }
   .title-hall-body { grid-template-columns:minmax(240px,.9fr) minmax(310px,1.1fr); }
   .title-slot-grid { grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(4,minmax(44px,1fr)); }

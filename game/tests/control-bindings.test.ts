@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CONTROL_ACTIONS, CONTROL_STORAGE_KEY, ControlBindings, controlLabel, defaultControls, parseControls, validControl } from '../src/control-bindings.ts';
+import { CONTROL_ACTIONS, CONTROL_STORAGE_KEY, isGameplayAction, ControlBindings, controlLabel, defaultControls, parseControls, validControl } from '../src/control-bindings.ts';
 import { GameInput } from '../src/game-input.ts';
 import { bindGameKeyboard } from '../src/game-keyboard.ts';
 
@@ -13,11 +13,13 @@ const memory = () => {
 test('portable keybinds round trip all slots and publish one complete persisted update', () => {
   const source = new ControlBindings();
   source.bind('skill0', 0, 'KeyF'); source.bind('skill0', 1, 'Mouse4'); source.bind('heal', 0, null);
+  source.bind('revealLoot', 0, 'Mouse3'); source.bind('revealLoot', 1, null);
   const store = memory(), target = new ControlBindings(store);
   let updates = 0;
   target.subscribe(() => { updates++; assert.equal(target.action('KeyF'), 'skill0'); assert.deepEqual(target.get('heal'), [null, null]); });
   assert.equal(target.importConfiguration(source.exportConfiguration()), 'saved');
   assert.equal(updates, 1);
+  assert.deepEqual(target.get('revealLoot'), ['Mouse3', null]);
   assert.equal(target.exportConfiguration(), source.exportConfiguration());
   assert.equal(new ControlBindings(store).exportConfiguration(), source.exportConfiguration());
 });
@@ -29,8 +31,9 @@ test('bad keybind imports never reset, persist or notify current bindings', () =
   let updates = 0; target.subscribe(() => updates++);
   const file = (bindings: unknown, version = 1) => JSON.stringify({ format: 'evergrow-keybindings', version, bindings });
   const missing = defaultControls() as Partial<ReturnType<typeof defaultControls>>; delete missing.up;
+  const missingReveal = defaultControls() as Partial<ReturnType<typeof defaultControls>>; delete missingReveal.revealLoot;
   for (const raw of ['broken', 'null', '[]', '{}', ' '.repeat(16_385), JSON.stringify(defaultControls()),
-    file(defaultControls(), 2), file(missing), file({ ...defaultControls(), extra: [null, null] }),
+    file(defaultControls(), 2), file(missing), file(missingReveal), file({ ...defaultControls(), extra: [null, null] }),
     file({ ...defaultControls(), up: ['Escape', null] }), file({ ...defaultControls(), up: ['KeyQ', null] }),
     file({ ...defaultControls(), up: ['KeyW', 'KeyW'] }), file({ ...defaultControls(), up: ['KeyW'] })]) {
     assert.equal(target.importConfiguration(raw), 'invalid');
@@ -87,6 +90,29 @@ test('invalid or duplicate stored bindings fall back safely without overwriting 
   }
 });
 
+test('older saved maps gain loot reveal bindings without losing custom controls', () => {
+  const legacy = defaultControls() as Record<string, readonly [string | null, string | null]>;
+  delete legacy.revealLoot;
+  legacy.skill1 = ['KeyF', null];
+  const migrated = parseControls(JSON.stringify(legacy));
+  assert.deepEqual(migrated.skill1, ['KeyF', null]);
+  assert.deepEqual(migrated.revealLoot, ['ShiftLeft', 'ShiftRight']);
+});
+
+test('loot reveal migration never steals Shift from an existing custom binding', () => {
+  const legacy = defaultControls() as Record<string, readonly [string | null, string | null]>;
+  delete legacy.revealLoot;
+  legacy.skill3 = ['ShiftLeft', 'ShiftRight'];
+  const migrated = parseControls(JSON.stringify(legacy));
+  assert.deepEqual(migrated.skill3, ['ShiftLeft', 'ShiftRight']);
+  assert.deepEqual(migrated.revealLoot, [null, null]);
+});
+
+test('truncated saved maps still fall back to the complete safe defaults', () => {
+  const truncated = JSON.stringify({ attack: ['KeyW', null] });
+  assert.deepEqual(parseControls(truncated), defaultControls());
+});
+
 test('reserved keys cannot replace escape, browser reload or modifier shortcuts', () => {
   const controls = new ControlBindings();
   for (const code of ['Escape', 'F5', 'F11', 'F12', 'ControlLeft', 'AltRight', 'MetaLeft', 'Unidentified', 'Mouse5', '<script>']) {
@@ -126,13 +152,34 @@ test('custom mouse and keyboard bindings preserve taps, holds, skill identities 
   assert.equal(state.attack, false); assert.deepEqual(state.heldSkillSlots, []);
 });
 
+test('loot reveal supports WASD movement, alternate holds, mouse bindings and independent releases', () => {
+  const bindings = new ControlBindings(), input = new GameInput(bindings);
+  input.keyDown('ShiftLeft');
+  assert.equal(input.held('revealLoot'), true);
+  for (const [code, axis, value] of [
+    ['KeyW', 'moveY', -1], ['KeyA', 'moveX', -1], ['KeyS', 'moveY', 1], ['KeyD', 'moveX', 1],
+  ] as const) {
+    input.keyDown(code); assert.equal(input.consume(aim, false)[axis], value, `Shift + ${code}`); input.keyUp(code);
+  }
+  input.keyDown('ShiftRight'); input.keyUp('ShiftLeft');
+  assert.equal(input.held('revealLoot'), true);
+  input.keyUp('ShiftRight'); assert.equal(input.held('revealLoot'), false);
+  bindings.bind('revealLoot', 0, 'Mouse3', true);
+  input.pointerDown(3); assert.equal(input.held('revealLoot'), true);
+  input.pointerUp(3); assert.equal(input.held('revealLoot'), false);
+  bindings.bind('revealLoot', 0, null); bindings.bind('revealLoot', 1, null);
+  assert.equal(bindings.has('revealLoot'), false);
+});
+
 test('rebinding while held clears pending input through the runtime subscription', () => {
   const bindings = new ControlBindings(), input = new GameInput(bindings);
   const unsubscribe = bindings.subscribe(() => input.clear());
-  input.keyDown('KeyW'); input.pointerDown(0); input.keyDown('Space');
+  input.keyDown('KeyW'); input.pointerDown(0); input.keyDown('Space'); input.keyDown('ShiftLeft');
+  assert.equal(input.held('revealLoot'), true);
   bindings.bind('attack', 0, 'KeyF');
   const state = input.consume(aim, false);
   assert.equal(state.moveY, 0); assert.equal(state.attack, false); assert.equal(state.dodge, false);
+  assert.equal(input.held('revealLoot'), false);
   unsubscribe();
 });
 
@@ -154,4 +201,13 @@ test('labels describe the current primary or alternate assignment', () => {
   bindings.bind('heal', 0, null); assert.equal(bindings.label('heal'), '—');
   bindings.bind('heal', 1, 'Mouse4'); assert.equal(bindings.label('heal'), 'M5');
   assert.equal(controlLabel('NumpadEnter'), 'Num Enter'); assert.equal(controlLabel('KeyZ'), 'Z');
+});
+
+
+test('quick-map input distinguishes combat slots from the skill-atlas menu shortcut', () => {
+  const bindings = new ControlBindings();
+  for (const code of ['KeyW', 'ArrowUp', 'Mouse0', 'Mouse2', 'Digit1', 'Digit4', 'Space', 'KeyQ', 'ShiftLeft'])
+    assert.equal(isGameplayAction(bindings.action(code)), true, code);
+  for (const code of ['KeyT', 'KeyC', 'KeyJ', 'KeyM', 'KeyE', 'KeyP'])
+    assert.equal(isGameplayAction(bindings.action(code)), false, code);
 });

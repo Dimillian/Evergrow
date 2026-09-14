@@ -40,3 +40,34 @@ test('reduced motion and disposal settle immediately without stale content', () 
   assert.equal(motion.sample(20).id, null);
   assert.equal(motion.sample(20).active, false);
 });
+
+test('node dwell suppresses cards until 350 ms, including with reduced motion', () => {
+  for (const reduced of [false, true]) {
+    const motion = new TooltipMotion();
+    motion.set('node-a', 0, reduced, 350);
+    for (const time of [0, 100, 349]) {
+      assert.equal(motion.sample(time).id, null);
+      assert.equal(motion.sample(time).active, true, 'pending intent keeps the display loop alive');
+    }
+    assert.equal(motion.sample(350).id, 'node-a');
+    assert.equal(motion.sample(350).opacity, reduced ? 1 : 0);
+    assert.equal(motion.sample(510).opacity, 1);
+  }
+});
+
+test('changing nodes requires fresh dwell and navigation cancels pending or visible cards', () => {
+  const motion = new TooltipMotion();
+  motion.set('node-a', 0, false, 350);
+  motion.reset(); motion.set('node-b', 200, false, 350);
+  assert.equal(motion.sample(400).id, null, 'crossing a cluster never opens the previous node');
+  assert.equal(motion.sample(550).id, 'node-b');
+  motion.reset(); motion.set('node-c', 600, false, 350);
+  assert.equal(motion.sample(949).id, null, 'an already-open tooltip does not skip the next dwell');
+  motion.reset();
+  assert.equal(motion.sample(1200).id, null, 'leaving, panning, zooming or closing cancels pending reveal');
+  assert.equal(motion.sample(1200).active, false);
+  motion.set('node-d', 1300, true, 350);
+  assert.equal(motion.sample(1650).id, 'node-d');
+  motion.reset();
+  assert.equal(motion.sample(1650).id, null, 'navigation dismisses visible cards immediately');
+});

@@ -1,5 +1,5 @@
 import { placeExplanation } from './tooltip-stack-layout.ts';
-import { UITooltip } from './ui-tooltip.ts';
+import { UITooltip, tooltipTargetHeld } from './ui-tooltip.ts';
 import './ui-tooltip-stack.css';
 
 export type TooltipResolver = (term: string) => string | undefined;
@@ -43,7 +43,7 @@ export class UITooltipStack {
   }
   contains(node: Node): boolean { return this.cards.some(c => c.tip.element.contains(node)); }
   get held(): boolean {
-    return this.cards.some(c => c.tip.element.matches(':hover, :focus-within'));
+    return this.cards.some(c => tooltipTargetHeld(c.tip.element));
   }
   show(markup: string, anchor: HTMLElement): void { this.open(markup, anchor, '', 0); }
   private term(anchor: HTMLElement): void {
@@ -88,7 +88,7 @@ export class UITooltipStack {
   defer(onExit?: () => void): void {
     clearTimeout(this.timer);
     this.timer = setTimeout(() => {
-      if (this.held || this.cards.some(c => c.anchor.matches(':hover, :focus-within'))) return;
+      if (this.held || this.cards.some(c => tooltipTargetHeld(c.anchor))) return;
       this.hide(); onExit?.();
     }, 260);
   }

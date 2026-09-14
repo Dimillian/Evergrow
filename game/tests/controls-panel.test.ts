@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { controls } from '../src/control-preferences.ts';
+import { controls, cursorPreference } from '../src/control-preferences.ts';
+import { CURSOR_STYLES, DEFAULT_CURSOR } from '../src/cursor-content.ts';
 import { ControlsPanel, controlsMarkup } from '../src/controls-panel.ts';
 
 /** Minimal event surface: exercise capture ownership without launching a browser/game. */
@@ -8,6 +9,7 @@ class ElementStub extends EventTarget {
   hidden = false;
   textContent = '';
   innerHTML = '';
+  value = '';
   focused = false;
   dataset: Record<string, string> = {};
   attributes = new Map<string, string>();
@@ -32,18 +34,23 @@ function setup(android = false) {
   capture.children = [cancel, clear, replace];
   select('[data-capture-message]'); select('[data-controls-status]'); select('[data-controls-reset]');
   if (!android) { select('[data-controls-export]'); select('[data-controls-import]'); select('[data-controls-file]'); }
+  const size = select('[data-cursor-size]'), preview = select('[data-cursor-preview]');
+  select('[data-cursor-size-label]');
   const binding = new ElementStub(); binding.dataset = { binding: 'skill0', bindingIndex: '0' };
   root.many.set('[data-binding]', [binding]);
+  const cursors = CURSOR_STYLES.map(style => { const button = new ElementStub(); button.dataset.cursorStyle = style.id; return button; });
+  root.many.set('[data-cursor-style]', cursors);
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'window');
   Object.defineProperty(globalThis, 'window', { value: win, configurable: true });
   controls.reset();
+  cursorPreference.reset();
   const panel = new ControlsPanel(host as unknown as HTMLElement, abort.signal);
   const key = (code: string, extra = {}) => {
     const event = Object.assign(new Event('keydown', { cancelable: true }), { code, repeat: false, ...extra });
     win.dispatchEvent(event); return event;
   };
-  const dispose = () => { abort.abort(); controls.reset(); if (descriptor) Object.defineProperty(globalThis, 'window', descriptor); else Reflect.deleteProperty(globalThis, 'window'); };
-  return { win, root, panel, binding, cancel, clear, replace, capture, key, dispose };
+  const dispose = () => { abort.abort(); controls.reset(); cursorPreference.reset(); if (descriptor) Object.defineProperty(globalThis, 'window', descriptor); else Reflect.deleteProperty(globalThis, 'window'); };
+  return { win, root, panel, binding, cursors, size, preview, cancel, clear, replace, capture, key, dispose };
 }
 
 test('capture consumes the key before game shortcuts, persists it, and restores row focus', () => {
@@ -139,9 +146,12 @@ test('file picker imports and refreshes bindings while read errors and oversized
   try {
     controls.bind('skill0', 0, 'KeyF');
     const raw = controls.exportConfiguration(); controls.reset();
+    cursorPreference.select('diamond'); cursorPreference.setSize(200);
     choose({ size: raw.length, text: async () => raw }); await settle();
     assert.equal(controls.action('KeyF'), 'skill0'); assert.match(s.binding.innerHTML, />F</);
     assert.match(status.textContent, /imported.*session only/);
+    assert.equal(cursorPreference.style, 'diamond'); assert.equal(cursorPreference.size, 200);
+    assert.match(s.preview.attributes.get('aria-label')!, /Diamond cursor at 200%/);
     const before = controls.exportConfiguration();
     choose({ size: 1, text: async () => '{' }); await settle();
     assert.match(status.textContent, /Invalid/); assert.equal(controls.exportConfiguration(), before);
@@ -167,4 +177,39 @@ test('an import finishing after panel disposal cannot replace bindings', async (
     finish(raw); await new Promise(resolve => setImmediate(resolve));
     assert.equal(controls.action('KeyH'), 'skill0');
   } finally { controls.reset(); }
+});
+test('cursor selection applies immediately, reports blocked storage, and resets with controls', () => {
+  const s = setup();
+  try {
+    s.cursors[1].click();
+    assert.equal(cursorPreference.style, 'halo');
+    assert.deepEqual(s.cursors.map(button => button.attributes.get('aria-pressed')), ['false', 'true', 'false', 'false']);
+    assert.match(s.root.querySelector('[data-controls-status]').textContent, /session only/);
+    assert.equal(controls.action('Mouse0'), 'attack');
+    s.root.querySelector('[data-controls-reset]').click();
+    assert.equal(cursorPreference.style, DEFAULT_CURSOR);
+    assert.equal(s.cursors[0].attributes.get('aria-pressed'), 'true');
+  } finally { s.dispose(); }
+});
+
+test('size slider updates actual-size preview immediately and retains size when switching shapes', () => {
+  const s = setup();
+  try {
+    s.size.value = '200'; s.size.dispatchEvent(new Event('input'));
+    assert.equal(cursorPreference.size, 200);
+    assert.match(s.preview.innerHTML, /width="96" height="96"/);
+    assert.equal(s.size.attributes.get('aria-valuetext'), '200%');
+    s.cursors[2].click();
+    assert.equal(cursorPreference.size, 200);
+    assert.match(s.preview.attributes.get('aria-label')!, /Diamond cursor at 200%/);
+    assert.match(s.preview.innerHTML, /width="96" height="96"/);
+    s.cursors[3].click();
+    assert.equal(cursorPreference.style, 'arrow');
+    assert.equal(cursorPreference.size, 200);
+    assert.match(s.preview.attributes.get('aria-label')!, /Arrow cursor at 200%/);
+    assert.match(s.preview.innerHTML, /width="96" height="96"/);
+    s.root.querySelector('[data-controls-reset]').click();
+    assert.equal(s.size.value, '100');
+    assert.match(s.preview.innerHTML, /width="48" height="48"/);
+  } finally { s.dispose(); }
 });

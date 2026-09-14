@@ -12,6 +12,7 @@ export const CONTROL_ACTIONS = [
   { id: 'skill4', label: 'Skill slot 5', group: 'Combat', defaults: ['Digit4', null], pad: 'RS' },
   { id: 'dodge', label: 'Dodge', group: 'Combat', defaults: ['Space', null], pad: 'B' },
   { id: 'heal', label: 'Potion', group: 'Combat', defaults: ['KeyQ', null], pad: 'LB' },
+  { id: 'revealLoot', label: 'Reveal loot names', group: 'Combat', defaults: ['ShiftLeft', 'ShiftRight'], pad: '—' },
   { id: 'interact', label: 'Interact', group: 'World & menus', defaults: ['KeyE', null], pad: 'A' },
   { id: 'portal', label: 'Town portal', group: 'World & menus', defaults: ['KeyP', null], pad: 'D-pad ↓' },
   { id: 'character', label: 'Character / inventory', group: 'World & menus', defaults: ['KeyC', 'KeyI'], pad: 'D-pad ← / →' },
@@ -22,6 +23,13 @@ export const CONTROL_ACTIONS = [
   { id: 'debug', label: 'Performance overlay', group: 'World & menus', defaults: ['F3', null], pad: '—' },
 ] as const;
 export type ControlAction = typeof CONTROL_ACTIONS[number]['id'];
+export function isGameplayAction(action: ControlAction | undefined): boolean {
+  return isMovementAction(action) || action === 'revealLoot' || action === 'attack' || action === 'dodge' || action === 'heal'
+    || SKILL_ACTIONS.some(skill => skill === action);
+}
+export function isMovementAction(action: ControlAction | undefined): boolean {
+  return action === 'up' || action === 'down' || action === 'left' || action === 'right';
+}
 export type ControlMap = Record<ControlAction, readonly [string | null, string | null]>;
 export const SKILL_ACTIONS = ['skill0', 'skill1', 'skill2', 'skill3', 'skill4'] as const;
 export const CONTROL_STORAGE_KEY = 'evergrow-controls-v1';
@@ -40,23 +48,34 @@ export function controlLabel(code: string | null | undefined): string {
 
   return CONTROL_LABELS[code] ?? code.replace(/^Key|^Digit/, '').replace(/^Numpad/, 'Num ');
 }
-function validatedControls(saved: unknown): ControlMap | null {
+/** Stored layouts may predate loot reveal; portable imports require every action. */
+function validatedControls(saved: unknown, stored = false): ControlMap | null {
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return null;
   const map = saved as Record<string, unknown>, seen = new Set<string>();
-  if (Object.keys(map).length !== CONTROL_ACTIONS.length) return null;
+  if (!stored && Object.keys(map).length !== CONTROL_ACTIONS.length) return null;
+  const parsed = {} as Record<ControlAction, [string | null, string | null]>;
   for (const { id } of CONTROL_ACTIONS) {
     const pair = map[id];
+    if (pair === undefined && stored && id === 'revealLoot') continue;
     if (!Array.isArray(pair) || pair.length !== 2) return null;
     for (const code of pair) {
       if (code === null) continue;
       if (!validControl(code) || seen.has(code)) return null;
       seen.add(code);
     }
+    parsed[id] = [...pair] as [string | null, string | null];
   }
-  return Object.fromEntries(CONTROL_ACTIONS.map(({ id }) => [id, [...map[id] as (string | null)[]]])) as unknown as ControlMap;
+  for (const { id, defaults } of CONTROL_ACTIONS) {
+    if (parsed[id]) continue;
+    parsed[id] = defaults.map(code => {
+      if (code === null || seen.has(code)) return null;
+      seen.add(code); return code;
+    }) as [string | null, string | null];
+  }
+  return parsed;
 }
 export function parseControls(raw: string | null): ControlMap {
-  try { return validatedControls(JSON.parse(raw ?? 'null')) ?? defaultControls(); }
+  try { return validatedControls(JSON.parse(raw ?? 'null'), true) ?? defaultControls(); }
   catch { return defaultControls(); }
 }
 export class ControlBindings {
@@ -69,6 +88,7 @@ export class ControlBindings {
     catch { this.map = defaultControls(); }
   }
   get(action: ControlAction): readonly [string | null, string | null] { return [...this.map[action]]; }
+  has(action: ControlAction): boolean { return this.map[action].some(Boolean); }
   label(action: ControlAction): string { return controlLabel(this.map[action].find(Boolean)); }
   action(code: string): ControlAction | undefined { return CONTROL_ACTIONS.find(a => this.map[a.id].includes(code))?.id; }
   subscribe(listener: () => void): () => void { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; }

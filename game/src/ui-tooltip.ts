@@ -1,5 +1,10 @@
 import './tooltip-material.css';
 
+/** Mouse clicks leave buttons focused; only keyboard focus should retain hover cards. */
+export function tooltipTargetHeld(element: HTMLElement): boolean {
+  return element.matches(':hover, :focus-visible') || !!element.querySelector(':focus-visible');
+}
+
 /** Shared rich-tooltip surface, placement, motion and accessible anchor ownership. */
 export class UITooltip {
   readonly element: HTMLDivElement;
