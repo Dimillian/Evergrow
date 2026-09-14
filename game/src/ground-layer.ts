@@ -32,6 +32,11 @@ export class GroundLayer {
     this.context = context;
   }
 
+  get stats() {
+    const stream = this.stream && !this.stream.failed ? this.stream : null;
+    return { terrainTiles: stream?.size ?? this.world?.cacheStats.groundTiles ?? 0, terrainQueued: stream?.queued ?? 0 };
+  }
+
   reset() { this.world = null; this.prefetched.clear(); this.previews.clear(); this.transitions.clear(); this.stream?.dispose(); this.stream = null; }
 
   private preview(world: World, x: number, y: number) {

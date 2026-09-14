@@ -34,6 +34,7 @@ import { TouchHUD } from './touch-hud.ts';
 import { resolveSkill } from './skill-progression.ts';
 import { skillWeapon } from './skill-content.ts';
 import { FrameProfiler } from './frame-profiler.ts';
+import { PerformanceMonitor } from './performance-monitor.ts';
 import { drawJourneyDestination } from './journey-marker.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { DungeonWorld } from './dungeon-world.ts';
@@ -81,7 +82,7 @@ import { GameInput } from './game-input.ts';
 import { GamepadInput, PAD } from './gamepad-input.ts';
 import { GamepadMenu } from './gamepad-menu.ts';
 import { GameShell } from './game-shell.ts';
-import { isGameUIPoint } from './ui-hit-test.ts';
+import { isGameUIPoint, isUIRectPoint, projectUIRect } from './ui-hit-test.ts';
 import type { GamePhase } from './game-phase.ts';
 import type { Input } from './model.ts';
 
@@ -150,9 +151,10 @@ export class Game {
   private last = performance.now();
   private animation = 0;
   private framePacer = new FramePacer(60);
-  private fps = 60;
+  private performanceMonitor: PerformanceMonitor;
+  private nextPerformanceCounters = 0;
+  private performancePhase: GamePhase | null = null;
   private abort = new AbortController();
-  private debug = false;
   private disposed = false;
   private saveClient: SaveHub;
   private _hallBusy = false;
@@ -194,6 +196,11 @@ export class Game {
       }));
       this.lifetime.defer(controls.subscribe(() => { this.clearInput(); this.shell.refreshBindings(); }));
       this.canvas = this.shell.canvas;
+      this.performanceMonitor = this.lifetime.own(new PerformanceMonitor(this.performance, root, {
+        continuous: this.performance.enabled,
+        releaseInput: () => this.clearInput(), returnFocus: () => this.canvas.focus(),
+        isToggle: event => controls.action(event.code) === 'debug',
+      }));
       this.groundLootHighlight = this.lifetime.own(new GroundLootHighlight(root, this.canvas));
       this.uiCanvas = this.shell.uiCanvas;
       const uiContext = this.uiCanvas.getContext('2d');
@@ -318,7 +325,7 @@ export class Game {
         track: id => { void this.journeys.command({type:'track',id}); },
         portal: () => this.requestPortal(),
         background: () => {
-          this.clearInput(); this.pause(); void this.saveCharacter(); this.nativeBackground = true; this.audio.setForeground(false);
+          this.clearInput(); this.pause(); void this.saveCharacter(); this.nativeBackground = true; this.audio.setForeground(false); this.performance.suspend();
           if (this.animation) { cancelAnimationFrame(this.animation); this.animation = 0; }
         },
         foreground: () => {
@@ -375,7 +382,7 @@ export class Game {
         if(this.interact(this.renderer.screenToWorld(point.x*this.renderer.width/r.width,point.y*this.renderer.height/r.height))) this.touch.clear();
       },
     });
-    window.addEventListener('pagehide', () => { this.audio.setForeground(false); this.clearInput(); void this.saveAndSync(); }, { signal });
+    window.addEventListener('pagehide', () => { this.performance.suspend(); this.audio.setForeground(false); this.clearInput(); void this.saveAndSync(); }, { signal });
     window.addEventListener('focus', () => this.clearInput(), { signal });
     window.addEventListener('pageshow', () => {
       this.audio.setForeground(!document.hidden && !this.nativeBackground);
@@ -398,6 +405,7 @@ export class Game {
     document.addEventListener('visibilitychange', () => {
       this.audio.setForeground(!document.hidden && !this.nativeBackground);
       if (document.hidden) {
+        this.performance.suspend();
         this.clearInput();
         if (this.phase === 'playing' || this.phase === 'map') this.pause();
         void this.saveAndSync();
@@ -413,6 +421,7 @@ export class Game {
       clear: () => { this.clearInput(); this.panels.releaseMap(); },
       release: code => { this.input.keyUp(code); if (code === 'Tab') this.panels.releaseMap(); },
       intercept: event => {
+        if (this.performanceMonitor.contains(event.target)) return false;
         if (!this.panels.mapHeld || event.defaultPrevented || this.appearanceEditor) return false;
         const target = event.target;
         if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement
@@ -524,7 +533,7 @@ export class Game {
       if (!repeat) { if (tab) this.panels.holdMap(); else this.panels.toggleMap(); } return true;
     }
     if (action === 'sound') { if (!repeat) this.toggleSound(); return true; }
-    if (action === 'debug') { if (!repeat) this.debug = !this.debug; return true; }
+    if (action === 'debug') { if (!repeat && this.phase !== 'ready') this.performanceMonitor.setOpen(!this.performanceMonitor.isOpen); return true; }
     if (!this.panels.simulationActive) return false;
     if (action === 'portal') { if (!repeat) this.requestPortal(); return true; }
     if (action === 'interact') { if (!repeat) this.interact(); return true; }
@@ -536,12 +545,22 @@ export class Game {
     this.usingGamepad = false;
     this.input.movePointer(event.clientX, event.clientY, this.canvas.getBoundingClientRect(),
       this.renderer.width, this.renderer.height);
+    this.syncPerformanceInput();
     this.canvas.classList.toggle('hud-hover', this.pointerInHUD());
     this.worldMap.setMinimapPointer({ x: this.mouse.x, y: this.mouse.y });
   }
 
+  private syncPerformanceInput() {
+    const bounds = this.performanceMonitor.bounds;
+    this.renderer.performanceUIBounds = bounds
+      ? projectUIRect(bounds, this.canvas.getBoundingClientRect(), this.renderer.width, this.renderer.height) : null;
+    const blocked = !this.usingGamepad && !this.touch?.active && this.mouse.present
+      && isUIRectPoint(this.mouse.x, this.mouse.y, this.renderer.performanceUIBounds);
+    if (this.input.setPointerUIBlocked(blocked)) this.sim.clearInput();
+  }
+
   private pointerInHUD() {
-    return this.pointerOverEffects || isGameUIPoint(this.mouse.x, this.mouse.y, this.renderer.width, this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible);
+    return this.pointerOverEffects || isGameUIPoint(this.mouse.x, this.mouse.y, this.renderer.width, this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible,this.renderer.performanceUIBounds);
   }
 
   private resize() {
@@ -1125,10 +1144,13 @@ export class Game {
       this.animation = requestAnimationFrame(this.frame);
       return;
     }
+    if (this.performancePhase !== this.phase) { this.performance.suspend(); this.performancePhase = this.phase; }
     this.performance.begin(now);
+    const pointerUIStart = this.performance.start();
+    this.syncPerformanceInput();
+    this.performance.end('monitor', pointerUIStart);
     const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
     this.last = now;
-    this.fps += (1 / Math.max(dt, 0.001) - this.fps) * 0.04;
     this.pollGamepad(now);
     if (now >= this.nextScore) { this.updateScore(now); this.nextScore = now + 250; }
     this.touch.update(this.sim.player,this.phase,this.savingAction,now,this.sim.groundEffects);
@@ -1191,7 +1213,7 @@ export class Game {
     const settings = {
       liveMap: this.panels.mapHeld,
       showGroundLootNames: showGroundLootNames(this.groundLootNames, controls.has('revealLoot'), this.input.held('revealLoot'), this.touch.active || this.usingGamepad),
-      reducedMotion: this.reducedMotion, phase: this.phase, fps: this.fps, debug: this.debug,
+      reducedMotion: this.reducedMotion, phase: this.phase,
     };
     if (this.phase === 'ready') {
       this.renderer.cameraX = -90 + (this.reducedMotion ? 0 : Math.sin(now / 24000) * 45);
@@ -1221,7 +1243,7 @@ export class Game {
     if(this.phase==='playing'&&this.journeys.marker?.known){
       const marker=this.journeys.marker,point=this.renderer.worldToScreen(marker.x,marker.y);
       if(point.x>20&&point.x<this.renderer.width-20&&point.y>35&&point.y<this.renderer.height-30
-        &&!isGameUIPoint(point.x,point.y-35,this.renderer.width,this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible)
+        &&!isGameUIPoint(point.x,point.y-35,this.renderer.width,this.renderer.height,this.renderer.extraUIBounds,this.renderer.navigationVisible,this.renderer.performanceUIBounds)
         &&hasLineOfSight(this.world,this.sim.player.x,this.sim.player.y,marker.x,marker.y))drawJourneyDestination(ui,point.x,point.y-35,8);
     }
     if(this.touch.active && this.touch.input.preview && this.phase === 'playing') {
@@ -1260,7 +1282,18 @@ export class Game {
         y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind, rank:enemy.rank,
       })));
     this.thor.update(now);
-    this.performance.end('ui', uiStart); this.performance.finish();
+    this.performance.end('ui', uiStart);
+    const monitorStart = this.performance.start();
+    if (this.performance.enabled && now >= this.nextPerformanceCounters) {
+      let enemies = 0;
+      for (const enemy of this.sim.enemies) if (enemy.hp > 0) enemies++;
+      this.performance.setCounters({ enemies, projectiles: this.sim.projectiles.length,
+        groundEffects: this.sim.groundEffects.length, ...this.renderer.terrainStats });
+      this.nextPerformanceCounters = now + 100;
+    }
+    this.performanceMonitor.update(now, this.phase);
+    this.performance.end('monitor', monitorStart);
+    this.performance.finish();
     this.animation = requestAnimationFrame(this.frame);
   };
 

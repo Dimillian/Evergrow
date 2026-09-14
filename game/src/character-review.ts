@@ -189,7 +189,7 @@ function background() {
   const w = innerWidth, h = innerHeight, density = devicePixelRatio || 1;
   shell.canvas.width = Math.round(w * density); shell.canvas.height = Math.round(h * density);
   renderer.resize(Math.round(680 * w / h), 680);
-  renderer.render(sim, world, 0, { phase: 'paused', reducedMotion: true, debug: false, fps: 60 });
+  renderer.render(sim, world, 0, { phase: 'paused', reducedMotion: true });
   fx.render(renderer.canvas, 0);
   shell.uiCanvas.width = Math.round(w * density); shell.uiCanvas.height = Math.round(h * density);
   const ui = shell.uiCanvas.getContext('2d')!;

@@ -70,7 +70,7 @@ export function mountRiftMapReview(root:HTMLElement,params:URLSearchParams):()=>
       present=(delta=1/60)=>{
         if(animate&&!arrival)run.rift!.elapsed+=delta;
         profiler.begin(performance.now());
-        renderer.render(sim,sceneWorld,delta,{phase:'paused',reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,fps:0,debug:false,skyHour:10});
+        renderer.render(sim,sceneWorld,delta,{phase:'paused',reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,skyHour:10});
         const started=profiler.start();post.render(renderer.canvas,0);profiler.end('postfx',started);profiler.finish();
       };
       present();c.drawImage(display,0,0,1100,900);

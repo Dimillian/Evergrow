@@ -10,6 +10,7 @@ export class GameInput {
   readonly pointer = { x: 0, y: 0, present: false };
   private keys = new Set<string>();
   private buttons = new Set<number>();
+  private pointerUIBlocked = false;
   private pendingSkill: number | null = null;
   private pending = { attack: false, dodge: false, heal: false };
 
@@ -48,6 +49,14 @@ export class GameInput {
     this.pointer.present = x >= 0 && x <= bounds.width && y >= 0 && y <= bounds.height;
     this.pointer.x = x / bounds.width * width;
     this.pointer.y = y / bounds.height * height;
+  }
+
+  /** Coordinate-based entry also catches canvas-captured drags and panels opening under a held pointer. */
+  setPointerUIBlocked(blocked: boolean): boolean {
+    const entered = blocked && !this.pointerUIBlocked;
+    this.pointerUIBlocked = blocked;
+    if (entered) this.clear();
+    return entered;
   }
 
   consume(aim: Point, combatBlocked: boolean): Input {
