@@ -6,9 +6,9 @@ Local implementation · 2026-09-09. Charms are generated magical stones, using o
 
 The question-mark help button beside the inventory’s Charms heading explains passive bonuses, level requirements and the separate grid. It uses the shared explanation bubble on hover, keyboard focus or tap.
 
-The inventory has a 12×6 equipment bag and a separate **12×4 charm grid**. Picked-up charms go directly into that grid, never into the bag. If no footprint fits, the charm stays on the ground. Bag and charm capacity are independent. Dragging rearranges stones within their grid; footprints cannot cross the divider or wrap an edge. Auto-sort packs both regions independently.
+The inventory has a 12×6 equipment bag and a separate **12×4 charm grid**. Picked-up charms enter the standard bag and remain inactive until the player drags them into the charm grid. Purchases, buyback and storage withdrawals also enter the bag. If the bag has no fitting space, the charm stays on the ground even when the charm grid has room. Charms can move between both regions; equipment cannot enter the charm grid. Footprints cannot cross the divider or wrap an edge. Auto-sort packs both regions independently without changing which charms are activated.
 
-Only placed stones whose level requirement is met contribute modifiers. Higher-level stones can be collected and rearranged but remain inactive until that level. Overflow, stash and buyback stones grant no bonuses. Charms can be sold directly at vendors, including bulk sales, stored, or dragged onto the inventory drop icon to put them on the ground. Each removes their bonuses; dropped stones can be picked up again. Buying back or retrieving a stone requires space in the charm grid. Enchanting and enhancement use normal services. Pickup, storage, sale and level-up refresh the shared character projection; increased life/mana capacity never heals or refills the player.
+Only stones placed in the charm grid whose level requirement is met contribute modifiers. Higher-level stones can be collected and rearranged but remain inactive until that level. Bagged, overflow, stash and buyback stones grant no bonuses. Charms can be sold directly at vendors, including bulk sales, stored, or dragged onto the inventory drop icon to put them on the ground. Each removes their bonuses; dropped stones can be picked up again. Buying back or retrieving a stone requires space in the charm grid. Enchanting and enhancement use normal services. Pickup, storage, sale and level-up refresh the shared character projection; increased life/mana capacity never heals or refills the player.
 
 The same inventory records own both regions, with room for 120 one-cell objects. `inventoryLayout` uses cells 0–71 for equipment and 72–119 for charms. Old 64-/72-record saves remain readable and expand on normal inventory transactions; no reset or save version change. Shared save validation checks shape, ownership and affix budget. Higher-level owned charms remain valid saves.
 
@@ -59,7 +59,7 @@ This replaces an existing item roll, never adds another drop. Ordinary non-gobli
 
 An item-giving chest/event with one, two or three item rolls has approximately **5%, 9.75% or 14.26%** chance of at least one charm. Raid-boss and dungeon-boss chests retain three items; normal dungeon chests retain one. Cursed chests keep their wave-based item count (up to ten rolls, approximately 40.13% chance of at least one charm). These figures assume independent rolls; each actual reward remains seeded and repeatable. Existing gold-only choices, blessings and breakable containers do not gain extra item rewards.
 
-Existing characters use these same live reward rules; no creation-date or charm-unlock flag gates eligibility. Regression coverage restores pre-charm 64- and 72-record saves without a layout, awards a normal monster's charm after 1,200 prior kills, picks it into the charm grid and validates both ground-loot and owned-item save round-trips.
+Existing characters use these same live reward rules; no creation-date or charm-unlock flag gates eligibility. Regression coverage restores pre-charm 64- and 72-record saves without a layout, awards a normal monster's charm after 1,200 prior kills, picks it into the standard bag and validates both ground-loot and owned-item save round-trips.
 
 Detailed stats show active charm sources, resistances, gold found and experience gained. Item tooltips show ordinary rarity, level and stat values, with no size/affix-count line or stat explanations. Detailed calculation explanations belong only in character detailed stats.
 
@@ -67,7 +67,7 @@ Detailed stats show active charm sources, resistances, gold found and experience
 
 `/character.html?charms` stages six sizes in the dedicated charm grid in the existing disposable inventory review. The Item forge supports Charm and all 36 profiles. Both use runtime generation and art, never playable saves.
 
-Headless coverage exercises profiles across every rarity, service rebuilds, fixed footprints, level-gated bonuses, grid separation, sorting, independent capacities, save round-trips, direct sales, bounded utility stats and seeded loot frequency. Gameplay feel and balance remain for the user's local playtest.
+Headless coverage exercises profiles across every rarity, service rebuilds, fixed footprints, level-gated bonuses, grid separation, sorting, manual activation and bag capacity, save round-trips, direct sales, bounded utility stats and seeded loot frequency. Gameplay feel and balance remain for the user's local playtest.
 
 ## Local inventory hardening after 0.3.0
 

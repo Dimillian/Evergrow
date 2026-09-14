@@ -206,6 +206,10 @@ export type EnemyKind = 'thornReaver' | 'mireSpitter' | 'frostRevenant' | 'ember
 export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
 
 export interface Enemy {
+  /** Transient support link, never serialized; source death disables it immediately. */
+  riftWardSource?: Enemy;
+  riftSpecialCooldown?:number;
+  riftWarning?:{kind:'storm'|'fire';x:number;y:number;originX:number;originY:number;angle:number;remaining:number;damage:number};
   rift?: import('./rift-content.ts').RiftTag;
   auraExposure?: Partial<Record<'fire'|'frost'|'lightning'|'arcane',{power:number;remaining:number}>>;
   decoyTarget?: {id:number;x:number;y:number;radius:number;hit?:boolean};

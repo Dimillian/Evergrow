@@ -131,6 +131,8 @@ See [character systems](character-systems.md) for item tiers, point rewards, sta
 
 Melee and bows use attack speed. Staff innate bolts and staff-or-wand-required spells use cast speed, independently of attack speed. Action duration is the reciprocal of the compatible weapon's effective actions per second (bounded to 0.25–12). Sweeps and casting recovery snapshot that duration; changing gear cannot shorten an action already underway. Dash travel retains its authored duration, while action recovery lasts at least that long. Casting poses, charging lights and dodge-cancel timing use the same snapshotted duration. Cooldown begins at activation and is separate from recovery.
 
+A deliberate skill press queues one next action through the current attack, cast, dash or dodge recovery, with 110 ms of grace afterward. A newer press replaces it; held basic attacks, right-click repeats and Whirlwind channel repeats cannot overwrite it. Movement continues during casting. The queue does not wait through a longer skill cooldown or mana shortage, and pause, focus changes and UI combat blocking clear it. Meteor and Cataclysm retain their separate, telegraphed impact delays after activation.
+
 Gear can roll Invocation (cast speed) and Efficiency (mana-cost reduction), with bounded percentage scaling. Inner Flame nodes grant cast speed; Battle Rhythm, Keen Pursuit and Quiet Current grant mana efficiency. Existing cooldown-reduction gear and nodes affect the second-row skills; a zero cooldown stays zero. Character statistics show both speed bonuses and mana-cost reduction. HUD affordability and atlas costs use the actual derived values.
 
 

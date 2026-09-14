@@ -1,5 +1,50 @@
 # Evergrow changelog
 
+## v0.6.2 — 2026-09-14T16:17:00Z
+
+### New
+
+- Rifts gain slowly pulsing crimson fissures, floating stone fragments and violet lightning that gathers as the guardian approaches.
+- Each rift biome gains subtle corrupted roots, fractured ice or glowing mineral veins around its clearing borders.
+
+### Tweaks
+
+- Looted charms enter your normal inventory. Move them into the charm grid when you want their bonuses active.
+- Melee weapons and bows use focused attack affixes; melee weapons no longer roll caster bonuses.
+- Weapon damage affixes matter more, while material bonuses matter less, giving strong rolls a better chance to beat a fancier base.
+- Random glove attack and cast speed bonuses are reduced. Unique item stats and powers are unchanged.
+- Gear power now reflects affix strength and actual weapon quality, making stronger rolls easier to spot.
+
+### Fixes
+
+- Skill presses during action recovery are remembered briefly, making spells such as Meteor and Cataclysm respond more reliably.
+- Rift clearings retain their biome's ground detail, and enlarged trees and rocks render more sharply.
+
+> Characters and progress are preserved. Existing regular weapons and gloves receive the new balance values; obsolete caster affixes on melee weapons are replaced with suitable bonuses. Existing active charms stay active. Reload the game to apply this update.
+
+## v0.6.1 — 2026-09-14T13:48:00Z
+
+### New
+
+- New rifts feature connected combat clearings, broad winding routes and branching paths, framed by each biome's natural scenery.
+- Fight guarded ranged formations, flanking hunting packs, ritual gatherings and large swarms instead of uniformly scattered packs.
+- Rift Cantors protect nearby allies: kill or interrupt the caster to break the ward.
+- Stormbound and Cinder leaders use clearly marked lightning strikes and fire sweeps that you can dodge or interrupt.
+
+### Tweaks
+
+- Encounter sizes vary to give rifts a stronger rhythm between smaller fights and dense swarms.
+- Elite special attacks are spaced apart, giving you time to respond when several groups are nearby.
+- Density keys add reinforcements to combat clearings while leaving connecting routes open.
+- Rift support effects and special abilities have distinct names, colors and hover explanations.
+
+### Fixes
+
+- Rift terrain, water, collision and maps stay aligned when switching between old and new layouts.
+- Protection ends immediately when its caster dies, is interrupted or moves out of range; special attacks stop when the hunt ends.
+
+> Existing characters and active rifts remain intact. Start a new rift to experience the new layouts and encounters. The ten-minute timer, progress target and rewards are unchanged. Reload the game to apply this update.
+
 ## v0.6.0 — 2026-09-14T13:11:00Z
 
 ### New

@@ -1,3 +1,4 @@
+import { propRasterScale } from './prop-art.ts';
 import { createTreeSprite, isTreeKind } from './tree-art.ts';
 import type { Sprite } from './art-types.ts';
 import type { Prop } from './world.ts';
@@ -47,28 +48,30 @@ export class EnvironmentArt {
   }
   reset() { this.cache.clear(); }
   get cacheStats() { return { sprites: this.cache.size,
-    pixels: [...this.cache.values()].reduce((pixels, sprite) => pixels + sprite.width * sprite.height * (1 + (sprite.foliage?.length ?? 0)), 0) }; }
+    pixels: [...this.cache.values()].reduce((pixels, sprite) => pixels + sprite.image.width * sprite.image.height * (1 + (sprite.foliage?.length ?? 0)), 0) }; }
 
   getSprite(prop: Prop): Sprite | null {
     const family = prop.kind, bounds = BIOME_PROP_BOUNDS[family];
     if (!bounds && !isTreeKind(family) && !['reeds', 'fern', 'flowers'].includes(family)) return null;
     if (family === 'tree' || family === 'deadTree') return null;
-    const variant = hash(prop.seed) % ENVIRONMENT_ART_RULES.variants, key = `${family}:${variant}`;
+    const resolution = propRasterScale(prop.scale);
+    const variant = hash(prop.seed) % ENVIRONMENT_ART_RULES.variants, key = `${family}:${variant}:${resolution}`;
     const existing = this.cache.get(key);
     if (existing) { this.cache.delete(key); this.cache.set(key, existing); return existing; }
     if (isTreeKind(family)) {
-      const sprite = createTreeSprite(this.factory, family, hash(variant + family.length * 313));
+      const sprite = createTreeSprite(this.factory, family, hash(variant + family.length * 313), resolution);
       this.cache.set(key, sprite);
       if (this.cache.size > ENVIRONMENT_ART_RULES.cacheLimit) this.cache.delete(this.cache.keys().next().value!);
       return sprite;
     }
     const width = bounds?.[0] ?? (family === 'fern' ? 52 : family === 'reeds' ? 42 : 34);
     const height = bounds?.[1] ?? (family === 'reeds' ? 49 : 37);
-    const image = this.factory(width, height); image.width = width; image.height = height;
+    const image = this.factory(width * resolution, height * resolution); image.width = width * resolution; image.height = height * resolution;
     const c = image.getContext('2d');
     if (!c) throw new Error('A 2D canvas context is required for biome art.');
     const sprite: Sprite = { image, width, height, anchorX: width / 2, anchorY: height - 4 };
     const seed = hash(variant + family.length * 313);
+    c.scale(resolution, resolution);
     c.translate(sprite.anchorX, sprite.anchorY);
     if (bounds) drawBiomeProp(c, family, seed);
     else if (family === 'reeds') this.reeds(c, seed);

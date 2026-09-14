@@ -83,7 +83,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
             metric(checkpoint.chronicle,'riftAttempts');if(key)metric(checkpoint.chronicle,'riftKeysUsed');
             ledger.attempts++;
             const random=riftRandom(((surface.seed??0)^Math.imul(ledger.attempts,0x9e3779b9))>>>0),seed=Math.floor(random()*4294967296),biome=startingBiome(seed);
-            expeditionEntrance={id:`dungeon:rift:${ledger.attempts}`,name:`Fractured ${BIOMES[biome].name}`,seed,biome,level:Math.max(1,Math.min(1e6,p.level+action.offset)),x:portal.door.x,y:portal.door.y,rift:{attempt:ledger.attempts,...(key?{keySeed:key.seed,keyTier:key.recipe.riftKeyTier}:{})}};
+            expeditionEntrance={id:`dungeon:rift:${ledger.attempts}`,name:`Fractured ${BIOMES[biome].name}`,seed,biome,level:Math.max(1,Math.min(1e6,p.level+action.offset)),x:portal.door.x,y:portal.door.y,rift:{attempt:ledger.attempts,layout:'clearings',...(key?{keySeed:key.seed,keyTier:key.recipe.riftKeyTier}:{})}};
             state.runs=state.runs.filter(r=>!r.entrance.rift);
         }
         if(action.kind==='expedition') {

@@ -1,4 +1,4 @@
-# Rifts · local implementation
+# Rifts
 
 Approved September 14, 2026. A separate crimson, tentacled breach in each town opens rifts at character level 20. Entry defaults to the current character level; choose an offset from −10 to +10 (minimum level 1). No key is required. One optional, unlocked key is consumed atomically on entry from the normal inventory. Keys are item-sized, tiered, deterministic items; each successful boss chest guarantees another key.
 
@@ -76,3 +76,34 @@ The map/pack study has a **Guardian arrival** frozen-scene view (`?view=map&arri
 Atlas, minimap and held-Tab maps draw non-overlapping terrain tile destinations. Cached sample borders still support filtering, but no longer darken grid seams when the map is translucent. Discovery fades inward over 192 world units at the unexplored frontier; edges between discovered sectors stay continuous. Unknown sectors remain hidden. Fog is cached with terrain tiles and rebuilt only when discovery changes, using local sector neighbors. The finite sector lattice remains streaming metadata, with no map lines or visible walls added.
 
 Rift history and six achievement families now use the shared Chronicle. See [Chronicle](chronicle.md) for counters, historical recovery and exactly-once ownership. Existing attempts/clears/best records are retained; no player progress resets.
+
+## Connected rift encounters · September 14
+
+Approved for publication after local playtesting on September 14. New rifts carry `layout: 'clearings'`. The published open layout remains selectable in the same preview for an A/B comparison and reconstructs already-saved active rifts. The user approved this layout and encounter pass for v0.6.1; characters and active rifts are preserved. The timer, progress threshold, XP and chest rewards are unchanged.
+
+`rift-shape.ts` creates 28 irregularly spaced combat clearings, a connected trail tree and short reconnecting routes. Trails have broad 310–370-unit cores with slight bends; clearings vary in size. Shared `WorldLandscape` queries clear their ground and water, darken the surrounding relief and add biome-specific rock/wooded ridges. Rendering, terrain workers, navigation/collision and exploration maps consume the same profile. Ordinary world generation is unchanged. Discovery sectors remain invisible streaming metadata.
+
+`rift-encounters.ts` owns four recurring encounters: guarded batteries (front-line brutes/stalkers, archers behind), flanking hunting packs, ritual gatherings and large fragile swarms. Groups vary from 34–130 enemies and rotate through these recipes. Density keys add 24-member reinforcements to existing clearings. Normal packs still die quickly; difficulty comes from composition, approach and selected leaders. Every original clearing has one special leader, with one mechanic; ordinary rank traits remain intact.
+
+A **Rift Cantor** protects allies within 300 units for 30% less damage. It does not protect itself or other encounter leaders; protection never stacks. A pale jade silhouette and a quiet radius boundary identify the source. Death, crowd control, range and line of sight break protection immediately. The target's effect strip explains the ward.
+
+**Stormbound** leaders place a locked 95-unit lightning warning at the player's position; **Cinder** leaders telegraph a 230-unit forward fire sweep. Both wait 1.4 seconds, deal 85% of the leader's base damage through ordinary elemental mitigation, and have a seven-second cooldown. A per-rift director spaces special starts at least 2.1 seconds apart. Warnings can be interrupted, and end with the hunt. Normal attacks are not queued or capped. Ward candidate searches reuse the enemy spatial index at five updates per second; immediate hit-time checks stop stale protection. These temporary states do not change saved monster identity, health or rewards.
+
+The World → Crimson Rifts map review defaults to the experiment. **Compare open layout** switches to the published layout using the same seed; **View pack** uses frozen runtime actors, with no gameplay or saved-character access. `/tools/rifts.html?view=map&seed=7342&biome=verdant&layout=clearings` opens the study. Gameplay feel remains for manual local testing.
+
+Experiment verification: 1,512 of 1,513 full-suite checks passed initially; the remaining architecture check identified the missing explicit core-compiler entries for the new modules. Those entries were added and all 37 affected architecture/rift/map/terrain checks passed. The additional same-seed terrain-profile regression and final encounter checks passed (10 checks), as did application/core type checking and the production build. Static map/pack inspection used the in-app browser; no automated gameplay or saved-character mutation was performed.
+
+Terrain detail correction: clearing/trail wear no longer suppresses biome ground patches in rifts. These cached patches restore soil, leaf, stone and snow marks across the fighting area, using the existing world-space artwork in both the terrain worker and synchronous renderer. Water/building exclusions, ordinary road treatment, collision and creature density are unchanged.
+
+Large ridge props now rasterize their procedural geometry at bounded 2×/4× resolution rather than stretching the small world sprites. World size, collision, anchors and layered tree wind remain unchanged; caches share variants within each resolution.
+
+
+## Crimson atmosphere — September 14, local
+
+`rift-atmosphere-art.ts` adds seeded decorative fissures along clearing/trail borders, with dark cores and thin crimson edges pulsing slowly. Small faceted stone clusters hover above separate ground shadows and share normal actor/prop depth ordering. Nine biome palettes supply corrupted root strands, fractured violet ice or ember/mineral veins. Existing open-layout rifts use nearby scenery instead of clearing boundaries; entry landings and water are excluded. These are atmospheric decorations, never attack telegraphs, obstacles or rewards.
+
+Distant violet sky bolts are single, softly fading discharges with no full-screen flash. At empty progress, 20% of six-second windows are eligible; at full hunt progress, 95% are eligible. The same seeded event retains its timing as progress changes. The guardian's actual arrival replaces the ambient lightning, and cleared/failed rifts dim their fissures. Runtime animation reads the persisted rift elapsed clock, so pausing holds it still. Reduced motion freezes pulses and hovering and removes lightning.
+
+Candidate placement is cached by world cell (96 entries), with at most 56 visible accents and 12 placement attempts per new cell. No per-enemy effect work, persistent particle systems or extra dynamic lights. Geometry is drawn at world resolution, keeping narrow lines crisp through the existing renderer/post-processing.
+
+The existing rift map tool now has **Animate atmosphere / Freeze atmosphere** and **Early hunt / Half full / Guardian near** controls. `?view=map&scene=pack&atmosphere=&progress=0.9` animates only presentation while actors remain frozen; it never ticks combat or loads player saves. The preview pauses in hidden tabs and respects reduced motion. The normal gameplay renderer uses the same effects in active rifts.

@@ -1,3 +1,4 @@
+import { riftMechanic } from './rift-encounters.ts';
 import { enemyModifiers } from './enemy-modifiers.ts';
 import { isBossKind } from './wilderness-boss-content.ts';
 import { type EnemyDebuffState } from './enemy-debuffs.ts';
@@ -117,7 +118,8 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
 
   c.save(); c.shadowColor = '#010409'; c.shadowBlur = 3; c.shadowOffsetY = 1;
   const traits=enemyModifiers(enemy);
-  const name = options.name ?? ENEMY_DEFINITIONS[enemy.kind].name;
+  const role=riftMechanic(enemy);
+  const name = options.name ?? (role==='ritual'?'Rift Cantor':role==='storm'?'Stormbound '+ENEMY_DEFINITIONS[enemy.kind].name:role==='fire'?'Cinder '+ENEMY_DEFINITIONS[enemy.kind].name:ENEMY_DEFINITIONS[enemy.kind].name);
   text(c, name, w / 2, 28, Math.min(1.13, (w - 30) / Math.max(1, textWidth(name))), enemy.rank==='normal'?UI.ivory:rank.color, 'center'); c.restore();
   if(traits.length){
     const cell=(w-18)/traits.length;

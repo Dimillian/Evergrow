@@ -137,7 +137,7 @@ export class InventoryPanel {
           </div>
           <dl class="character-portrait-metrics" aria-label="Character level and gear power">
             <div><dt>Level</dt><dd data-level></dd></div>
-            <div><dt>Gear power</dt><dd data-gear-power></dd></div>
+            <div title="Gear quality from level, base stats, enhancement and affix rolls. Not build DPS or Unique skill power."><dt>Gear power</dt><dd data-gear-power></dd></div>
           </dl>
           <div class="character-portrait-footer"><button class="ui-button ui-button--quiet ui-button--icon" data-turn="-1" aria-label="Turn character left">‹</button><div><span class="character-portrait-label">Equipped weapon</span><strong data-weapon-name></strong></div><button class="ui-button ui-button--quiet ui-button--icon" data-turn="1" aria-label="Turn character right">›</button></div>
           <div class="character-points"><span>${uiIcon('skilltree')}Skill points <strong data-skill-points></strong></span><span>${uiIcon('plus')}Attribute points <strong data-stat-points></strong></span></div>

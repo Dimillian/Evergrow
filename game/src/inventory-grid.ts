@@ -50,16 +50,16 @@ export function footprintCells(item: Item, cell: number): number[] | null {
   const { width, height } = itemFootprint(item);
   if (!Number.isInteger(cell) || cell < 0 || cell >= INVENTORY_CELLS
     || cell % PACK_COLUMNS + width > PACK_COLUMNS || Math.floor(cell / PACK_COLUMNS) + height > (cell >= PACK_CELLS ? PACK_ROWS + CHARM_ROWS : PACK_ROWS)
-    || (cell >= PACK_CELLS) !== (item.kind === 'charm')) return null;
+    || cell >= PACK_CELLS && item.kind !== 'charm') return null;
   return Array.from({ length: width * height }, (_, i) => cell + i % width + Math.floor(i / width) * PACK_COLUMNS);
 }
 export function packOccupancy(inventory: CharacterSheet['inventory'], layout: PackLayout): Set<number> {
   return new Set(inventory.flatMap(item => item && layout[item.id] !== undefined ? footprintCells(item, layout[item.id]) ?? [] : []));
 }
-export function findPackSpace(item: Item, occupied: ReadonlySet<number>, preferred?: number): number | null {
-  const charms = item.kind === 'charm';
+export function findPackSpace(item: Item, occupied: ReadonlySet<number>, preferred?: number, region: 'bag' | 'charms' = 'bag'): number | null {
+  const charms = region === 'charms';
   const fits = (cell: number) => footprintCells(item, cell)?.every(n => !occupied.has(n)) ?? false;
-  if (preferred !== undefined && fits(preferred)) return preferred;
+  if (preferred !== undefined && (preferred >= PACK_CELLS) === charms && fits(preferred)) return preferred;
   for (let cell = charms ? PACK_CELLS : 0; cell < (charms ? INVENTORY_CELLS : PACK_CELLS); cell++) if (fits(cell)) return cell;
   return null;
 }
@@ -94,7 +94,7 @@ export function validPackLayout(inventory: CharacterSheet['inventory'], value: u
 export function canPackItem(sheet: Pick<CharacterSheet, 'inventory' | 'inventoryLayout'>, item: Item): boolean {
   if (!sheet.inventory.includes(null) && sheet.inventory.length >= INVENTORY_CELLS) return false;
   const layout = resolvePackLayout(sheet);
-  return !sheet.inventory.some(owned => owned && (owned.kind === 'charm') === (item.kind === 'charm') && layout[owned.id] === undefined)
+  return !sheet.inventory.some(owned => owned && layout[owned.id] === undefined)
     && findPackSpace(item, packOccupancy(sheet.inventory, layout)) !== null;
 }
 
@@ -104,20 +104,21 @@ export function activeCharms(sheet: Pick<CharacterSheet,'inventory'|'inventoryLa
   return sheet.inventory.filter((item):item is Item=>!!item && item.kind==='charm' && item.requiredLevel<=level && layout[item.id]>=PACK_CELLS);
 }
 
-/** Fixed-cost fallback: try multiple shape orders instead of relying on one greedy pass. */
-export function compactPackLayout(inventory: CharacterSheet['inventory']): PackLayout {
+/** Repack each existing region independently; compact mode tries eight bounded shape orders. */
+export function repackLayout(inventory: CharacterSheet['inventory'], previous: PackLayout = {}, compact = false): PackLayout {
   const items=inventory.filter((item):item is Item=>!!item);
-  return {...packRegion(items.filter(i=>i.kind!=='charm')),...packRegion(items.filter(i=>i.kind==='charm'))};
+  const active=(item:Item)=>item.kind==='charm'&&previous[item.id]>=PACK_CELLS;
+  return {...packRegion(items.filter(i=>!active(i)),false,compact),...packRegion(items.filter(active),true,compact)};
 }
-function packRegion(items: Item[]): PackLayout {
+function packRegion(items: Item[], charms: boolean, compact: boolean): PackLayout {
   let best:PackLayout={},bestCount=-1;
   const metrics=[(s:ItemFootprint)=>s.height*100+s.width,(s:ItemFootprint)=>s.width*100+s.height,
     (s:ItemFootprint)=>s.width*s.height*100+s.height,(s:ItemFootprint)=>Math.max(s.width,s.height)*100+s.width*s.height];
-  for(const metric of metrics)for(const reverse of [false,true]){
+  for(const metric of (compact?metrics:[()=>0]))for(const reverse of (compact?[false,true]:[false])){
     const ordered=[...items].sort((a,b)=>metric(itemFootprint(b))-metric(itemFootprint(a)));
     const layout:PackLayout={},occupied=new Set<number>();
     for(const item of ordered){
-      const start=item.kind==='charm'?PACK_CELLS:0,end=item.kind==='charm'?INVENTORY_CELLS:PACK_CELLS;
+      const start=charms?PACK_CELLS:0,end=charms?INVENTORY_CELLS:PACK_CELLS;
       for(let i=start;i<end;i++){
         const cell=reverse?Math.floor(i/PACK_COLUMNS)*PACK_COLUMNS+PACK_COLUMNS-1-i%PACK_COLUMNS:i;
         const cells=footprintCells(item,cell);
@@ -131,10 +132,10 @@ function packRegion(items: Item[]): PackLayout {
   return best;
 }
 
-export function packSpaceProblem(sheet: Pick<CharacterSheet,'inventory'|'inventoryLayout'>,item:Item): string {
+export function packSpaceProblem(sheet: Pick<CharacterSheet,'inventory'|'inventoryLayout'>,item:Item,region: 'bag' | 'charms' = 'bag'): string {
   const layout=resolvePackLayout(sheet),occupied=packOccupancy(sheet.inventory,layout);
-  const start=item.kind==='charm'?PACK_CELLS:0,end=item.kind==='charm'?INVENTORY_CELLS:PACK_CELLS;
+  const start=region==='charms'?PACK_CELLS:0,end=region==='charms'?INVENTORY_CELLS:PACK_CELLS;
   const free=Array.from({length:end-start},(_,i)=>start+i).filter(i=>!occupied.has(i)).length;
-  const shape=itemFootprint(item),name=item.kind==='charm'?'Charm grid':'Bag';
+  const shape=itemFootprint(item),name=region==='charms'?'Charm grid':'Bag';
   return free<shape.width*shape.height?`${name} full. Make room for this item.`:`No ${shape.width} × ${shape.height} space. Try Auto-sort.`;
 }

@@ -3,16 +3,19 @@ import { createTreeSprite } from './tree-art.ts';
 import type { Sprite } from './art-types.ts';
 import { hash, randomFromSeed, between, polygon, line, taper, type CanvasFactory, type Point, type Random } from './art-primitives.ts';
 
+/** Three bounded raster sizes; geometry and world-space anchors never change. */
+export const propRasterScale = (scale: number): number => scale > 2 ? 4 : scale > 1.25 ? 2 : 1;
+
 const TREE_VARIANTS = 48;
 
 const ROCK_VARIANTS = 32;
 
 const GRASS_VARIANTS = 32;
 
-function makeSprite(factory: CanvasFactory, width: number, height: number): Sprite {
-  const image = factory(width, height);
-  image.width = width;
-  image.height = height;
+function makeSprite(factory: CanvasFactory, width: number, height: number, resolution = 1): Sprite {
+  const image = factory(width * resolution, height * resolution);
+  image.width = width * resolution;
+  image.height = height * resolution;
   return { image, width, height, anchorX: width / 2, anchorY: height - 4 };
 }
 
@@ -20,6 +23,7 @@ function context(sprite: Sprite): CanvasRenderingContext2D {
   const ctx = sprite.image.getContext('2d');
   if (!ctx) throw new Error('Evergrow needs a 2D canvas context to draw its procedural artwork.');
   ctx.imageSmoothingEnabled = false;
+  ctx.scale(sprite.image.width / sprite.width, sprite.image.height / sprite.height);
   return ctx;
 }
 
@@ -41,23 +45,23 @@ export class ArtLibrary {
     });
   }
 
-  getTree(seed: number, dead: boolean): Sprite {
-    const variant = hash(seed) % TREE_VARIANTS;
+  getTree(seed: number, dead: boolean, scale = 1): Sprite {
+    const variant = hash(seed) % TREE_VARIANTS, resolution = propRasterScale(scale), key = variant + resolution * TREE_VARIANTS;
     const cache = dead ? this.deadTrees : this.livingTrees;
-    let sprite = cache.get(variant);
+    let sprite = cache.get(key);
     if (!sprite) {
-      sprite = createTreeSprite(this.factory, dead ? 'deadTree' : 'tree', hash(variant + (dead ? 8901 : 1741)));
-      cache.set(variant, sprite);
+      sprite = createTreeSprite(this.factory, dead ? 'deadTree' : 'tree', hash(variant + (dead ? 8901 : 1741)), resolution);
+      cache.set(key, sprite);
     }
     return sprite;
   }
 
-  getRock(seed: number): Sprite {
-    const variant = hash(seed) % ROCK_VARIANTS;
-    let sprite = this.rocks.get(variant);
+  getRock(seed: number, scale = 1): Sprite {
+    const variant = hash(seed) % ROCK_VARIANTS, resolution = propRasterScale(scale), key = variant + resolution * ROCK_VARIANTS;
+    let sprite = this.rocks.get(key);
     if (!sprite) {
-      sprite = this.drawRock(randomFromSeed(hash(variant + 6169)));
-      this.rocks.set(variant, sprite);
+      sprite = this.drawRock(randomFromSeed(hash(variant + 6169)), resolution);
+      this.rocks.set(key, sprite);
     }
     return sprite;
   }
@@ -120,10 +124,10 @@ export class ArtLibrary {
     return sprite;
   }
 
-  private drawRock(random: Random): Sprite {
+  private drawRock(random: Random, resolution: number): Sprite {
     const width = Math.floor(between(random, 19, 33));
     const height = Math.floor(between(random, 18, 31));
-    const sprite = makeSprite(this.factory, width, height);
+    const sprite = makeSprite(this.factory, width, height, resolution);
     const ctx = context(sprite);
     const left: Point = [2, height * 0.50];
     const crown: Point = [width * between(random, 0.30, 0.47), 2];

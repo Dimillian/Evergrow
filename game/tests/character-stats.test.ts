@@ -34,7 +34,7 @@ test('Dexterity from assigned points, gear, charms and nodes shares the reduced 
   const sheet = createCharacterSheet('bow'); sheet.attributes.dexterity += 5;
   const ring = generateItem(80,1,'ring'); ring.implicit={dexterity:5};ring.affixes=[];sheet.equipped.ring1=ring;
   const charm = generateItem(81,1,'charm','storm-pebble','common');
-  charm.affixes=[{name:'Dexterity',stat:'dexterity',value:5}];assert.ok(addInventoryItem(sheet,charm));
+  charm.affixes=[{name:'Dexterity',stat:'dexterity',value:5}];assert.ok(addInventoryItem(sheet,charm));sheet.inventoryLayout![charm.id]=72;
   const stats=deriveCharacterStats(sheet,{dexterity:5,attackSpeedPercent:10,critChance:3});
   assert.equal(stats.attributes.dexterity,30);
   assert.equal(stats.attackSpeedMultiplier,1.15,'20 added Dexterity gives 5% speed; the direct 10% stays unchanged');

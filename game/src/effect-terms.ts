@@ -11,7 +11,7 @@ export function effectExplanation(id: string): string | undefined {
   if (id.startsWith('technique:')) { const spec = SKILL_SPECIALIZATIONS.find(s => `technique:${s.id}` === id); return spec ? `<h3>${escapeUI(spec.name)}</h3><small>Base rules · before rank and equipment bonuses</small><p>${effectText(spec.description)}</p>` : undefined; }
   if (id.startsWith('unique:')) { const unique = UNIQUES.find(u => `unique:${u.id}` === id); return unique ? `<h3>${escapeUI(unique.name)}</h3><p>${effectText(unique.details)}</p>` : undefined; }
   const terms: Record<string, [string, string]> = {
-    charms: ['Charms', 'Magical stones that boost your stats while in this grid. You must meet their level requirement.'],
+    charms: ['Charms', 'Looted stones go into your bag. Move them here to activate their bonuses. You must meet their level requirement.'],
     reservation: ['Mana reservation', 'An assigned aura reserves part of maximum mana. Recovery cannot fill that part. Removing the aura frees capacity without restoring mana. Ranks improve power and reservation efficiency.'],
     spellweave: ['Spellweave', `<small>Passive · No skill slot</small><p>Melee hits empower your next damaging spell or magic bolt. Spell hits empower your next melee action.</p><p>${seconds}s · Refreshes, never stacks.</p><p>${effectTerm('empowered', 'Empowered actions')} · ${effectTerm('hybrid', 'Equipment')}</p>`],
     empowered: ['Empowered actions', 'Bonus damage applies to the whole action. Starting it spends the bonus, even if it misses. Failed activation keeps it.'],

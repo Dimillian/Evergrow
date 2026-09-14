@@ -35,6 +35,17 @@ The user approved the next major prototype milestone, **0.6.0**, on 2026-09-14 f
 
 ## Last verified publication
 
+- Game v0.6.1 / Sites version 55, publicly deployed on 2026-09-14 at 13:52:11 UTC.
+- Published source: `c469820aa3b8cd2ea15bb55690fe61df6eecabd6`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_6727d96bb6f081919cccb493e37d2b02`.
+- Deployment: `appgdep_6aa7fbf68ff08191be9b55cb6af50469`; Sites returned `succeeded`.
+- New rifts use connected clearings, branching trails, biome ridges, four encounter formations, Ritual Ward support and staggered Stormbound/Cinder specials. Density keys add reinforcements to clearings. Timer, progress target and chest rewards remain unchanged.
+- All 1,514 code tests passed. Application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation passed. No automated browser gameplay was run.
+- Existing local/cloud characters and active rifts remain compatible; no save reset, skill refund or D1 migration. Reload and start a new rift for the new layout.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.6.0 / Sites version 54, publicly deployed on 2026-09-14 at 13:14:42 UTC.
 - Published source: `b70a176e65fbfba4baa4e011a76f013e76c9523b`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_2f020f3af0c08191a8182e09d5900d92`.

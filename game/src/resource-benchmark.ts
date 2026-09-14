@@ -1,3 +1,4 @@
+import { PACK_CELLS } from './inventory-grid.ts';
 import { createCharacterSheet, generateItem, deriveItem, EQUIPMENT_SLOTS } from './items.ts';
 import { characterModifierSources } from './character-stats.ts';
 import { getTreeBonuses } from './skill-tree.ts';
@@ -37,6 +38,7 @@ export function benchmarkSheet(level:number, style:BenchmarkStyle, gear:Benchmar
     // Deliberately selected recovery rolls: eight stones or the extreme full-grid case.
     item.affixes=[{name:'Clarity',stat:'manaRegen',value:1}];item.recipe.rolls=[.5];
     if(!addInventoryItem(sheet,deriveItem(item)))throw new Error('Benchmark charm does not fit');
+    sheet.inventoryLayout![item.id]=PACK_CELLS+i;
   }
   return sheet;
 }

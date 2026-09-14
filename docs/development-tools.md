@@ -136,6 +136,10 @@ The Crimson Rifts map/pack study includes **Profile rendering** for a frozen 110
 
 Crimson Rifts → **Guardian arrival** stages the runtime warning near a disposable character, without advancing AI or touching saves. Pack previews include the actual rank-modifier nameplate.
 
+Crimson Rifts → View map now defaults to the local connected-clearings experiment. **Compare open layout** provides a same-seed A/B view; biome selection and frozen **View pack** continue to use runtime terrain and actors. The `layout=clearings|open` parameter preserves the selected generation style without touching playable saves.
+
+Crimson Rifts → View pack includes an atmosphere-only animation and progress selector. `?view=map&scene=pack&atmosphere=&progress=0.9` shows late-hunt corruption/lightning using the real renderer, frozen enemies and an isolated visual clock. No combat simulation or character saves.
+
 ### Gameplay performance monitor
 
 Data & audits → Code & performance audits includes the actual F3 monitor with a frozen synthetic 600-frame sample (`/tools/audits.html?view=monitor`). Inspect all six dropdown views and capture controls without loading characters, simulating gameplay or reading saves. Restore sample data repopulates the disposable profiler. The runtime monitor toggles with F3; see [world performance](world-performance.md) for metric definitions and limits.

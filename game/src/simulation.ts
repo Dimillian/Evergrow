@@ -1,3 +1,4 @@
+import { RiftTactics } from './rift-tactics.ts';
 import { EnemyNeighbors } from './enemy-neighbors.ts';
 import { applyEnemyModifiers } from './enemy-modifiers.ts';
 import { tickRift, riftKill } from './rift-runtime.ts';
@@ -322,7 +323,15 @@ export class Simulation {
     if (!Number.isFinite(dt) || dt <= 0 || this.player.dead) return;
     if (input.attack) this.attackBuffer = this.time + COMBAT_TIMING.attackBuffer;
     if (input.dodge) this.dodgeBuffer = this.time + COMBAT_TIMING.inputBuffer;
-    if (input.skillSlot !== null) this.skillBuffer = { slot: input.skillSlot, until: this.time + COMBAT_TIMING.inputBuffer, pressed: input.skillPressed!==false || this.skillBuffer?.slot===input.skillSlot&&!!this.skillBuffer.pressed&&this.skillBuffer.until>=this.time };
+    if (this.skillBuffer && this.skillBuffer.until < this.time) this.skillBuffer = null;
+    if (input.skillSlot !== null && (input.skillPressed !== false || !this.skillBuffer?.pressed)) {
+      const p = this.player, pressed = input.skillPressed !== false;
+      // Keep one deliberate press through the action already underway. Held repeats
+      // cannot overwrite it or extend its lifetime while waiting on mana/cooldown.
+      const recovery = pressed ? Math.max(0, p.castTime, p.dodgeTime, p.dash?.remaining ?? 0,
+        p.attack ? p.attack.duration - p.attack.elapsed : 0) : 0;
+      this.skillBuffer = { slot: input.skillSlot, until: this.time + recovery + COMBAT_TIMING.inputBuffer, pressed };
+    }
     if (input.heal) this.healBuffer = this.time + COMBAT_TIMING.inputBuffer;
     // Bound catch-up after a suspended tab; normal frames always run at 120 Hz.
     this.accumulator += Math.min(dt, 0.25);
@@ -437,8 +446,8 @@ export class Simulation {
     let completedAttackTime = 0;
     const channelSlot=(input.heldSkillSlots??(input.skillSlot===null?[]:[input.skillSlot])).find(slot=>p.character.skillSlots[slot]==='whirlwind');
     if(hasUnique(p.character,'dervish-grasp')){
-      if(channelSlot!==undefined)this.skillBuffer={slot:channelSlot,until:this.time+COMBAT_TIMING.inputBuffer};
-      else if(input.skillSlot===null&&input.heldSkillSlots&&this.skillBuffer&&p.character.skillSlots[this.skillBuffer.slot]==='whirlwind')this.skillBuffer=null;
+      if(channelSlot!==undefined&&!(this.skillBuffer?.pressed&&this.skillBuffer.until>=this.time))this.skillBuffer={slot:channelSlot,until:this.time+COMBAT_TIMING.inputBuffer};
+      else if(channelSlot===undefined&&input.skillSlot===null&&input.heldSkillSlots&&this.skillBuffer&&p.character.skillSlots[this.skillBuffer.slot]==='whirlwind')this.skillBuffer=null;
     }
     this.arrivalProtection = input.attack || input.skillSlot !== null ? 0 : Math.max(0, this.arrivalProtection - dt);
     this.hurtGuard = Math.max(0, this.hurtGuard - dt);
@@ -705,6 +714,7 @@ export class Simulation {
   }
 
   private enemyNeighbors=new EnemyNeighbors();
+  private riftTactics=new RiftTactics();
   private updateEnemies(dt: number): void {
     this.enemyNeighbors.rebuild(this.enemies);
     updateWarbands(this.enemies, this.player, this.world, dt);
@@ -722,6 +732,7 @@ export class Simulation {
         definition, undefined, effects, actor.level, actor.kind),
       emit: event => this.emit(event),
     };
+    this.riftTactics.tick(context,dt,currentDungeon(this.expeditions)?.rift?.phase==='hunt');
     for (const enemy of this.enemies) {
       this.updateKnockback(enemy, dt);
       this.enemyNeighbors.update(enemy);
@@ -730,6 +741,7 @@ export class Simulation {
       enemy.rallyTime=Math.max(0,(enemy.rallyTime??0)-dt);
       if (!advanceEnemyStatuses(enemy, dt,
         (actor, amount) => this.damageEnemy(actor, amount, 0, false, true, 'fire'))) continue;
+      if(enemy.riftWarning)continue;
       if(isWildernessBoss(enemy.kind)) updateWildernessBoss(enemy,dt,context); else if(enemy.kind==='warden') updateWarden(enemy,dt,context); else updateEnemyAI(enemy, dt, context);
       this.enemyNeighbors.update(enemy);
       if (p.dead) break;

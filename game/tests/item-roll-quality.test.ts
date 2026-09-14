@@ -9,7 +9,7 @@ test('wider rolls preserve midpoint and give excellent gear substantially higher
   const item=generateItem(555,35,'gloves',undefined,'legendary','cloth');
   item.affixes=[{name:'Invocation',stat:'castSpeedPercent',value:1}];
   const values=[0,.5,1].map(q=>{item.recipe.rolls=[q];return deriveItem(item).affixes[0].value;});
-  assert.deepEqual(values,[22,34,45]);
+  assert.deepEqual(values,[16,25,34]);
   const charm=generateItem(555,35,'charm','storm-monolith','rare');charm.recipe.rolls=charm.recipe.rolls.map(()=>0);
   const low=deriveItem(charm);charm.recipe.rolls=charm.recipe.rolls.map(()=>1);const high=deriveItem(charm);
   assert.ok(high.affixes.every((a,i)=>a.value>=low.affixes[i].value));assert.ok(high.affixes.some((a,i)=>a.value>low.affixes[i].value*1.5));

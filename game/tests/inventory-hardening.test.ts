@@ -5,7 +5,7 @@ import { improveItem, improvementProblem, nextEnhancementLevel } from '../src/it
 import { quoteService, planService, improvementPrice } from '../src/commerce.ts';
 import { CHARM_PROFILES, charmThematicStat } from '../src/charm-content.ts';
 import { bulkSaleItems, setItemLock } from '../src/item-protection.ts';
-import { activeCharms, compactPackLayout, resolvePackLayout, packSpaceProblem, validPackLayout } from '../src/inventory-grid.ts';
+import { activeCharms, repackLayout, resolvePackLayout, packSpaceProblem, validPackLayout } from '../src/inventory-grid.ts';
 import { addInventoryItem } from '../src/inventory.ts';
 import { previewCharmReplacement } from '../src/charm-comparison.ts';
 import { sortInventory } from '../src/inventory-tools.ts';
@@ -64,7 +64,7 @@ test('validated old charms rebalance deterministically on load without losing it
 
 test('item locks and explicit active-charm consent are enforced by transaction owners',async()=>{
   const sim=new Simulation(world,{spawn:false}),s=sim.player.character,stone=generateItem(88,1,'charm','jade-pebble','common'),ring=generateItem(89,1,'ring');
-  addInventoryItem(s,stone);addInventoryItem(s,ring);
+  addInventoryItem(s,stone);s.inventoryLayout![stone.id]=72;addInventoryItem(s,ring);
   assert.deepEqual(bulkSaleItems(s,1).map(i=>i.id),[ring.id]);
   const items=[{bag:0,id:stone.id,revision:0}];
   assert.equal(quoteService(s,smith,1,{type:'sellMany',items}).ok,false);
@@ -83,15 +83,15 @@ test('item locks and explicit active-charm consent are enforced by transaction o
 test('bounded packing recovers a fragmented layout without losing items or changing acquisition order',()=>{
   const inventory=Array.from({length:14},(_,i)=>generateItem(801+i,1,(['ring','chest','head','weapon'] as const)[(9*(i+3)+i*i)%4],undefined,'common'));
   assert.equal(Object.keys(resolvePackLayout({inventory})).length,13);
-  const layout=compactPackLayout(inventory);assert.equal(Object.keys(layout).length,14);assert.ok(validPackLayout(inventory,layout));
+  const layout=repackLayout(inventory,{},true);assert.equal(Object.keys(layout).length,14);assert.ok(validPackLayout(inventory,layout));
   const s=createCharacterSheet();s.inventory=inventory;s.inventoryLayout=layout;s.recentItems=inventory.map(i=>i.id);
   const ids=[...s.recentItems];assert.ok(sortInventory(s,'compact').ok);assert.deepEqual(s.recentItems,ids);assert.equal(Object.keys(s.inventoryLayout!).length,14);
-  assert.deepEqual(compactPackLayout(inventory),layout);
+  assert.deepEqual(repackLayout(inventory,{},true),layout);
 });
 
 test('replacement compares several active stones to one stored stone without moving anything',()=>{
   const s=createCharacterSheet();
-  for(let i=0;i<48;i++)addInventoryItem(s,generateItem(8000+i,10,'charm','jade-pebble','common'));
+  for(let i=0;i<48;i++){const item=generateItem(8000+i,10,'charm','jade-pebble','common');addInventoryItem(s,item);s.inventoryLayout![item.id]=72+i;}
   const incoming=generateItem(9000,10,'charm','storm-monolith','legendary');s.stash=Array(96).fill(null);s.stash[0]=incoming;
   const before=structuredClone(s),ids=[0,1,12,13,24,25,36,37].map(i=>s.inventory[i]!.id);
   assert.equal(previewCharmReplacement(s,10,incoming.id,[]).ok,false);
@@ -99,9 +99,9 @@ test('replacement compares several active stones to one stored stone without mov
   assert.deepEqual(s,before);assert.equal(activeCharms(s,10).length,48);
   assert.equal(previewCharmReplacement(s,1,incoming.id,ids).ok,false);
   assert.equal(previewCharmReplacement(s,10,incoming.id,[ids[0],ids[0]]).ok,false);
-  assert.match(packSpaceProblem(s,incoming),/full/);
+  assert.match(packSpaceProblem(s,incoming,'charms'),/full/);
   const scattered=structuredClone(s);for(let i=0;i<48;i+=2)scattered.inventory[i]=null;
-  assert.match(packSpaceProblem(scattered,incoming),/No 2 × 4 space/);
+  assert.match(packSpaceProblem(scattered,incoming,'charms'),/No 2 × 4 space/);
 });
 
 test('city preferences still apply to later charm rolls when the thematic first roll has one category',()=>{
@@ -111,4 +111,16 @@ test('city preferences still apply to later charm rolls when the thematic first 
   const result=quoteService(s,enchanter,20,{type:'improve',source:{bag:0},operation:'rerollAll',focus:'utility'});
   assert.ok(result.ok);const plan=planService(s,enchanter,20,result.quote);assert.ok(plan.ok && plan.item);
   assert.ok(validItem(plan.item));assert.ok(charmThematicStat(plan.item,plan.item.affixes[0].stat));
+});
+
+
+test('comparing a bagged charm proposes activation without activating other bagged stones',()=>{
+  const s=createCharacterSheet();
+  const candidate=generateItem(501,10,'charm','storm-monolith','legendary');
+  const other=generateItem(502,10,'charm','jade-pebble','common');
+  assert.ok(addInventoryItem(s,candidate));assert.ok(addInventoryItem(s,other));
+  const before=structuredClone(s),layout=resolvePackLayout(s);
+  const preview=previewCharmReplacement(s,10,candidate.id,[]);assert.ok(preview.ok);
+  assert.ok(preview.layout[candidate.id]>=72);assert.equal(preview.layout[other.id],layout[other.id]);
+  assert.ok(preview.changes.length>0);assert.deepEqual(s,before);assert.equal(activeCharms(s).length,0);
 });

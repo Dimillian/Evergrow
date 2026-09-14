@@ -71,10 +71,12 @@ export class World extends WorldLandscape {
     // Every material sample and detail anchor is in world space. Tile edges are
     // merely a crop of the same illustration, including at negative coordinates.
     yield* groundSurfaceSteps(context, originX, originY, TILE_SIZE, (x, y) => this.surfaceColor(x, y, towns, true));
-    yield* waterTerrainSteps(context, originX, originY, TILE_SIZE, (x, y) => this.hydrology.sample(x, y));
+    yield* waterTerrainSteps(context, originX, originY, TILE_SIZE, (x, y) => this.terrainWater(x, y));
     yield;
+    // Rift wear marks combat routes, not paved roads. Keep their biome texture
+    // patches instead of stripping detail from every clearing and connecting trail.
     drawGroundPatches(context, originX, originY, TILE_SIZE, this.seed, (x, y) => this.sampleBiome(x, y).id,
-      (x, y) => this.roadWeight(x, y) < .025 && this.pavingWeight(towns, x, y, 0) < .025 && this.hydrology.sample(x, y).coverage < .02
+      (x, y) => (this.riftTerrain || this.roadWeight(x, y) < .025) && this.pavingWeight(towns, x, y, 0) < .025 && this.terrainWater(x, y).coverage < .02
         && !buildings.some(building => contains(building, x, y, 12)));
     yield;
     drawRoadDetails(context, originX, originY, TILE_SIZE, this.seed, (x, y) => {
@@ -96,7 +98,7 @@ export class World extends WorldLandscape {
         const py = wy - originY;
         const pick = random(cx, cy, this.seed, 213);
         const onRoad = pathDistance(wx, wy, this.seed) < 37;
-        if (this.hydrology.sample(wx, wy).coverage > .08 || buildings.some(building => contains(building, wx, wy, 9))
+        if (this.terrainWater(wx, wy).coverage > .08 || buildings.some(building => contains(building, wx, wy, 9))
           || this.pavingWeight(towns, wx, wy, this.roadWeight(wx, wy)) > .08) continue;
         const weights = this.sampleBiome(wx, wy).weights;
         const { biome } = chooseBiomeProp(weights, random(cx, cy, this.seed, 217), 0);
