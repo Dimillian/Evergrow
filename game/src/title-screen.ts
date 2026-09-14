@@ -1,6 +1,6 @@
 import { titleCharacterDetails } from './title-character-details.ts';
 import { drawTitlePlinth } from './title-plinth.ts';
-import { itemTooltipMarkup } from './item-ui.ts';
+import { ItemTooltip } from './item-tooltip.ts';
 import type { EquipmentSlot } from './character-types.ts';
 import './item-ui.css';
 import { GamepadMenu } from './gamepad-menu.ts';
@@ -49,13 +49,11 @@ export class TitleScreen {
   private readonly leaderboard: LeaderboardPanel;
   private page: HomePage = 'characters';
   private audioPad = new GamepadMenu();
-  private itemPad = new GamepadMenu();
+  private readonly itemTooltip: ItemTooltip;
   private detailTab: 'gear' | 'attributes' = 'gear';
   private portraitObserver: ResizeObserver;
-  private inspectingItem = false;
   private itemScrollTime = 0;
   private portraitDirty = true;
-  private inspectedAnchor?: HTMLElement;
   private refreshAudio?: () => void;
   refreshSound() { this.refreshAudio?.(); }
   private readonly chronicle: ChroniclePanel;
@@ -88,12 +86,14 @@ export class TitleScreen {
       <div class="title-hall-body"><div class="title-slot-grid" role="group" aria-label="Eight character slots"></div></div></section><section class="title-dossier ui-window" aria-label="Character details"><div class="title-selection"></div>
       <footer class="title-roster-footer"><span class="title-storage-status" role="status"></span><a class="title-signout" href="/signout-with-chatgpt?return_to=/" target="_top" hidden>Sign out</a><span class="title-transfer"><button data-action="import">Import</button><button data-action="download">Download</button></span></footer>
       <div class="title-cloud-recovery" hidden><p class="title-cloud-message" role="status"></p><button class="ui-button" data-action="retry">Retry</button><a class="ui-button" href="/signin-with-chatgpt?return_to=/" target="_top" hidden>Sign in again</a></div>
-      <p class="title-save-message" role="status" hidden></p><input type="file" class="title-file" accept=".json,application/json" hidden></section><section class="title-library ui-window" hidden aria-label="Home content"></section><section class="title-item-inspection ui-window" role="dialog" aria-modal="true" aria-label="Equipped item" hidden><header><h3>Equipped gear</h3><button class="ui-button ui-button--icon" data-action="close-item" aria-label="Close item details">${uiIcon('close')}</button></header><div class="title-inspection-content ui-scroll-area" tabindex="0"></div></section>`;
+      <p class="title-save-message" role="status" hidden></p><input type="file" class="title-file" accept=".json,application/json" hidden></section><section class="title-library ui-window" hidden aria-label="Home content"></section>`;
     const refreshAudio = this.refreshAudio = bindAudioControls(this.element, actions, this.abort.signal);
     this.element.querySelector('details.title-audio')!.addEventListener('toggle', event => {
       refreshAudio(); actions.panelSound?.((event.target as HTMLDetailsElement).open);
     }, { signal: this.abort.signal });
     this.canvas = this.element.querySelector('.title-hero canvas')!; mount.append(this.element);
+    this.itemTooltip = new ItemTooltip(this.element, 'title-item-tooltip');
+    this.bindItemTooltips();
     this.portraitObserver = new ResizeObserver(entries => {
       const { width, height } = entries[0].contentRect, ratio = Math.min(devicePixelRatio || 1, 2);
       if (width && height) { this.portraitDirty = true; this.canvas.width = Math.round(width * ratio); this.canvas.height = Math.round(height * ratio); }
@@ -116,9 +116,6 @@ export class TitleScreen {
       if (target.matches('[data-detail-tab]') && ['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) {
         event.preventDefault(); this.switchDetail(event.key === 'Home' ? 'gear' : event.key === 'End' ? 'attributes' : this.detailTab === 'gear' ? 'attributes' : 'gear', true); return;
       }
-      if (target.matches('.title-inspection-content') && ['ArrowUp','ArrowDown','PageUp','PageDown'].includes(event.key)) {
-        event.preventDefault(); target.scrollTop += (event.key.endsWith('Up') ? -1 : 1) * (event.key.startsWith('Page') ? target.clientHeight * .8 : 40); return;
-      }
       if (target.matches('[data-slot]') && event.key === 'ArrowRight' && getComputedStyle(this.element.querySelector('.title-slot-grid')!).flexDirection === 'column') {
         const entry = [...this.element.querySelectorAll<HTMLElement>('[data-detail-tab],[data-title-item],.title-create input')].find(el => el.getClientRects().length && el.tabIndex >= 0);
         if (entry) { event.preventDefault(); entry.focus(); return; }
@@ -139,13 +136,12 @@ export class TitleScreen {
     }, { signal: this.abort.signal });
     this.element.addEventListener('click', event => {
       const button = (event.target as Element).closest<HTMLButtonElement>('button'); if (!button) return;
-      if (button.dataset.titleItem) { this.inspectItem(button.dataset.titleItem as EquipmentSlot, button); return; }
+      if (button.dataset.titleItem) { this.showItemTooltip(button); return; }
       if (button.dataset.detailTab) { this.switchDetail(button.dataset.detailTab as 'gear' | 'attributes', true); return; }
       if (button.dataset.homePage) { this.selectPage(button.dataset.homePage as HomePage); return; }
       if (button.dataset.source) { this.actions.source?.(button.dataset.source as SaveMode); return; }
       if (button.dataset.slot !== undefined) { this.choose(Number(button.dataset.slot)); return; }
       const action = button.dataset.action;
-      if (action === 'close-item') this.closeItem();
       if (action === 'retry') { if (this.source.status === 'Reload required' || !this.actions.retry) window.location.reload(); else this.actions.retry(); }
       if (action === 'continue') this.actions.continue(this.selected);
       if (action === 'appearance') {
@@ -195,7 +191,7 @@ export class TitleScreen {
     }
     return true;
   }
-  setBusy(busy: boolean) { this.element.inert = busy || this.element.style.visibility === 'hidden'; this.element.classList.toggle('is-busy', busy); this.element.setAttribute('aria-busy', String(busy)); }
+  setBusy(busy: boolean) { if (busy) this.itemTooltip.hide(); this.element.inert = busy || this.element.style.visibility === 'hidden'; this.element.classList.toggle('is-busy', busy); this.element.setAttribute('aria-busy', String(busy)); }
   setRosterLoading(loading: boolean) {
     this.rosterLoading = loading;
     if (loading) { this.inspection++; this.loading = false; this.confirming = null; }
@@ -241,13 +237,14 @@ export class TitleScreen {
     this.render();
   }
   setEditorOpen(open:boolean, restoreAppearance = false) {
+    this.itemTooltip.hide();
     this.focus?.dispose();this.focus=undefined;
     this.element.inert=open;this.element.style.visibility=open?'hidden':'';
     if(!open&&!this.element.hidden)this.focus=trapDialogFocus(this.element,{signal:this.abort.signal,restoreFocus:false,initialFocus:()=>this.element.querySelector(restoreAppearance ? '[data-action="appearance"]' : `[data-slot="${this.selected}"]`)});
   }
   private availablePages() { return homePages.filter(page=>page!=='leaderboard'||this.source.supported); }
   selectPage(page: HomePage, focus=true) {
-    this.closeItem(false);
+    this.itemTooltip.hide();
     if(page==='leaderboard'&&!this.source.supported)return;
     this.changelog.close(false);this.chronicle.close(false);this.leaderboard.close();
     if (this.page !== page) this.actions.panelSound?.(page !== 'characters');
@@ -265,19 +262,17 @@ export class TitleScreen {
     if(focus)this.element.querySelector<HTMLElement>(`[data-home-page="${page}"]`)?.focus({preventScroll:true});
   }
   dismissOverlay(): boolean {
-    if (this.inspectingItem) { this.closeItem(); return true; }
+    if (!this.itemTooltip.element.hidden) { this.itemTooltip.hide(); return true; }
     const audio = this.element.querySelector<HTMLDetailsElement>('.title-audio')!;
     if (audio.open) { audio.open = false; audio.querySelector('summary')!.focus(); return true; }
     if(this.page==='characters')return false;this.selectPage('characters');return true; }
   updateOverlayGamepad(pad: GamepadInput, now: number): boolean {
     if(this.element.inert)return true;
     if(pad.active)this.element.classList.add('is-controller');
-    if (this.inspectingItem) {
+    if (!this.itemTooltip.element.hidden) {
       const elapsed = Math.min(.05, Math.max(0, (now - this.itemScrollTime) / 1000)); this.itemScrollTime = now;
-      this.element.querySelector<HTMLElement>('.title-inspection-content')!.scrollTop += pad.aim.y * elapsed * 420;
-      if (pad.pressed.has(PAD.dodge) || pad.pressed.has(PAD.pause)) this.closeItem();
-      else this.itemPad.update(this.element.querySelector('.title-item-inspection')!, pad, now);
-      return true;
+      this.itemTooltip.element.scrollTop += pad.aim.y * elapsed * 420;
+      if (pad.pressed.has(PAD.dodge) || pad.pressed.has(PAD.pause)) { this.itemTooltip.hide(); return true; }
     }
     if (this.page === 'characters' && pad.pressed.has(PAD.skill3) && this.element.querySelector('.title-detail-tabs')?.getClientRects().length) {
       this.switchDetail(this.detailTab === 'gear' ? 'attributes' : 'gear', true); return true;
@@ -299,7 +294,7 @@ export class TitleScreen {
     return this.chronicle.updateGamepad(pad,now)||this.changelog.updateGamepad(pad,now)||this.leaderboard.updateGamepad(pad,now);
   }
   private choose(index: number, focus = true) {
-    this.closeItem(false);
+    this.itemTooltip.hide();
     this.selected = index; this.confirming = null; this.loading = false; const ticket = ++this.inspection;
     this.render();
     if (focus) this.element.querySelector<HTMLButtonElement>(`[data-slot="${index}"]`)?.focus();
@@ -315,8 +310,8 @@ export class TitleScreen {
     }).catch(() => { if (ticket === this.inspection) { this.loading = false; this.message('Save unavailable. Please retry.'); this.renderSelection(); } });
   }
   message(text: string) { const target = this.element.querySelector<HTMLElement>('.title-save-message')!; target.textContent = text; target.hidden = !text; }
-  close() { this.closeItem(false); this.changelog.close(false); this.chronicle.close(false); this.leaderboard.close(); this.element.inert = false; this.inspection++; this.element.hidden = true; this.focus?.dispose(); this.focus = undefined; cancelAnimationFrame(this.frame); this.frame = 0; }
-  dispose() { this.close(); this.portraitObserver.disconnect(); this.changelog.dispose(); this.chronicle.dispose(); this.leaderboard.dispose(); this.abort.abort(); this.element.remove(); }
+  close() { this.itemTooltip.hide(); this.changelog.close(false); this.chronicle.close(false); this.leaderboard.close(); this.element.inert = false; this.inspection++; this.element.hidden = true; this.focus?.dispose(); this.focus = undefined; cancelAnimationFrame(this.frame); this.frame = 0; }
+  dispose() { this.close(); this.portraitObserver.disconnect(); this.itemTooltip.dispose(); this.changelog.dispose(); this.chronicle.dispose(); this.leaderboard.dispose(); this.abort.abort(); this.element.remove(); }
   private rollSeed() { const value = String(crypto.getRandomValues(new Uint32Array(1))[0]); this.seedDrafts.set(this.selected, value); return value; }
   private validateSeed(input: HTMLInputElement) { const seed = parseWorldSeed(input.value); input.setCustomValidity(seed === null ? 'Use a whole number from 0 to 4294967295.' : ''); return seed; }
   private render() {
@@ -334,6 +329,7 @@ export class TitleScreen {
     this.renderSelection();
   }
   private renderSelection() {
+    this.itemTooltip.hide();
     const slot = this.slots[this.selected], record = slot?.record;
     this.player = previewCharacter(record ?? null, this.starter); this.portraitDirty = true;
     const selection = this.element.querySelector('.title-selection')!;
@@ -389,6 +385,7 @@ export class TitleScreen {
     else items[next]?.focus();
   }
   private switchDetail(tab: 'gear' | 'attributes', focus = false) {
+    this.itemTooltip.hide();
     this.detailTab = tab;
     const body = this.element.querySelector<HTMLElement>('.title-detail-body');
     if (body) body.dataset.detail = tab;
@@ -398,23 +395,28 @@ export class TitleScreen {
       if (selected && focus) button.focus();
     });
   }
-  private inspectItem(slot: EquipmentSlot, anchor: HTMLElement) {
-    const record = this.slots[this.selected]?.record, item = record?.checkpoint.character.equipped[slot];
-    if (!record || !item) return;
-    this.inspectingItem = true; this.itemScrollTime = performance.now(); this.element.classList.add('has-item-inspection'); this.inspectedAnchor = anchor; this.itemPad.clear();
-    const panel = this.element.querySelector<HTMLElement>('.title-item-inspection')!;
-    panel.querySelector('.title-inspection-content')!.innerHTML = itemTooltipMarkup(item, { sheet: record.checkpoint.character, level: record.checkpoint.level, equipped: true, compare: false });
-    panel.hidden = false;
-    this.element.querySelectorAll<HTMLElement>('.title-brand,.title-roster,.title-dossier,.title-audio').forEach(el => { el.inert = true; });
-    panel.querySelector<HTMLElement>('[data-action="close-item"]')!.focus();
+  private bindItemTooltips() {
+    const options = { signal: this.abort.signal };
+    this.element.addEventListener('pointerover', event => {
+      if (event.pointerType !== 'touch') this.showItemTooltip(event.target);
+    }, options);
+    this.element.addEventListener('focusin', event => this.showItemTooltip(event.target), options);
+    for (const type of ['pointerout', 'focusout'] as const) this.element.addEventListener(type, event => {
+      const anchor = event.target instanceof Element ? event.target.closest('[data-title-item]') : null;
+      if (anchor && (!(event.relatedTarget instanceof Node) || !anchor.contains(event.relatedTarget))) this.itemTooltip.defer();
+    }, options);
+    this.element.addEventListener('scroll', event => {
+      if (!(event.target instanceof Element) || !event.target.closest('.ui-tooltip')) this.itemTooltip.hide();
+    }, { ...options, capture: true });
   }
-  private closeItem(focus = true) {
-    if (!this.inspectingItem) return;
-    this.inspectingItem = false; this.element.classList.remove('has-item-inspection');
-    this.element.querySelector<HTMLElement>('.title-item-inspection')!.hidden = true;
-    this.element.querySelectorAll<HTMLElement>('.title-brand,.title-roster,.title-dossier,.title-audio').forEach(el => { el.inert = false; });
-    if (focus && this.inspectedAnchor?.isConnected) this.inspectedAnchor.focus();
-    this.inspectedAnchor = undefined;
+  private showItemTooltip(target: EventTarget | null) {
+    if (this.element.hidden || this.element.inert || this.page !== 'characters' || this.loading || this.rosterLoading) return;
+    const anchor = target instanceof Element ? target.closest<HTMLElement>('[data-title-item]') : null;
+    const record = this.slots[this.selected]?.record;
+    const item = record?.checkpoint.character.equipped[anchor?.dataset.titleItem as EquipmentSlot];
+    if (!anchor || !item || !record || !anchor.getClientRects().length) return;
+    this.itemScrollTime = performance.now();
+    this.itemTooltip.show(item, { sheet: record.checkpoint.character, level: record.checkpoint.level, equipped: true, compare: false }, anchor);
   }
   private animate = (): void => {
     if (this.element.hidden) return;

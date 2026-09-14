@@ -159,11 +159,6 @@
 .title-continue-pad { display:none; padding:2px 6px; border:1px solid #dace9b; border-radius:50%; font:600 12px system-ui; }
 .is-controller .title-continue-pad { display:inline-block; }
 .title-roster-footer { flex:none; padding:8px 20px; min-height:40px; }
-.title-item-inspection.ui-window { position:absolute; z-index:10; width:min(480px,calc(100% - 32px)); max-height:calc(100% - 32px); inset:50% auto auto 50%; transform:translate(-50%,-50%); display:flex; flex-direction:column; box-shadow:0 0 0 100vmax #020a13b8; }
-.title-item-inspection[hidden] { display:none; }
-.title-item-inspection header { display:flex; align-items:center; justify-content:space-between; padding:10px 20px; border-bottom:1px solid #a4c0c433; }
-.title-item-inspection h3 { font-size:20px; font-weight:400; margin:0; }
-.title-inspection-content { padding:20px; min-height:0; overflow:auto; }
 .title-screen :focus-visible { outline:2px solid #ddcf99; outline-offset:3px; }
 /* Sound occupies its own row on every home page. */
 .title-screen .title-audio { position:relative; grid-column:1; grid-row:3; align-self:start; justify-self:start; bottom:auto; left:auto; }
@@ -302,7 +297,6 @@
 }
 @media (prefers-reduced-motion:reduce) { .title-slot { transition:none; } .title-slot-skeleton,.title-loading-state > span { animation:none; } }
 
-.title-screen.has-item-inspection::after { content:''; position:absolute; inset:0; z-index:9; background:#020a1380; }
 .title-halo::after { content:''; position:absolute; left:35%; top:30%; width:3px; height:3px; border-radius:50%; background:#c0d49d; box-shadow:50px 74px 3px #a1c69c, -40px 180px 2px #b9c892, 65px 235px 3px #96bd9b; opacity:.3; animation:title-fireflies 9s ease-in-out infinite alternate; }
 @keyframes title-fireflies { to { transform:translate(9px,-20px); opacity:.6; } }
 @media (prefers-reduced-motion:reduce) { .title-halo::after { animation:none; } }

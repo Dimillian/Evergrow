@@ -6,6 +6,9 @@ import { CharacterRepository, type SaveSlot } from '../src/character-storage.ts'
 import { CharacterSession } from '../src/character-session.ts';
 import { Simulation } from '../src/simulation.ts';
 import { executeSavedAppearanceChange } from '../src/appearance-command.ts';
+import type { CharacterSave } from '../src/character-save.ts';
+import type { Item } from '../src/character-types.ts';
+import type { ItemPresentation } from '../src/item-ui.ts';
 
 const assets = registerHooks({ load(url, context, next) {
   if (url.endsWith('.css')) return { format: 'module', source: '', shortCircuit: true };
@@ -17,17 +20,22 @@ assets.deregister();
 
 // Exercise production selection/navigation on a small DOM boundary, without a browser or playable saves.
 const doc = { activeElement: null as Control | null };
-class Control {
+class Control extends EventTarget {
   tabIndex = 0; disabled = false; hidden = false; inert = false; visibility = 'visible';
   dataset: Record<string, string> = {};
   left = 0; top = 0;
   matches(selector: string) { return selector === ':disabled' && this.disabled; }
-  closest() { return this.inert ? this : null; }
+  closest(selector: string) {
+    if (selector === '[data-title-item]') return this.dataset.titleItem ? this : null;
+    if (selector === '.ui-tooltip') return null;
+    return this.inert ? this : null;
+  }
+  contains(node: unknown) { return node === this; }
   getClientRects() { return this.hidden ? [] : [this.getBoundingClientRect()]; }
   getBoundingClientRect() { return this.hidden ? { left: 0, top: 0, width: 0, height: 0 } : { left: this.left, top: this.top, width: 32, height: 32 }; }
   focus() { if (!this.hidden && !this.disabled && !this.inert && this.visibility !== 'hidden') doc.activeElement = this; }
 }
-const globals = { document: doc, getComputedStyle: (element: Control) => ({ visibility: element.visibility }) };
+const globals = { document: doc, Element: Control, Node: Control, getComputedStyle: (element: Control) => ({ visibility: element.visibility }) };
 const previous = new Map(Object.keys(globals).map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
 Object.assign(globalThis, globals);
 after(() => { for (const [key, descriptor] of previous) {
@@ -43,7 +51,7 @@ interface HallBoundary {
 function hall(slots: SaveSlot[], read: (index: number) => Promise<SaveSlot>): HallBoundary {
   return Object.assign(Object.create(TitleScreen.prototype), {
     slots, selected: 0, inspection: 0, source: { mode: 'local' }, actions: { read },
-    element: { hidden: false }, render() {}, renderSelection() {}, closeItem() {},
+    element: { hidden: false }, itemTooltip: { hide() {} }, render() {}, renderSelection() {},
   });
 }
 
@@ -101,4 +109,42 @@ test('detail navigation skips hidden, disabled and inert items while retaining v
   title.navigateDetails(palette, 'ArrowDown'); assert.equal(doc.activeElement, item);
   title.navigateDetails(item, 'ArrowUp'); assert.equal(doc.activeElement, palette);
   title.navigateDetails(item, 'ArrowDown'); assert.equal(doc.activeElement, enter);
+});
+
+test('hall gear reveals shared tooltips on hover/focus and clears them when changing detail tabs', () => {
+  const world = { seed: 7319, blocked: () => false, move: (x: number, y: number, dx: number, dy: number) => ({ x: x + dx, y: y + dy }) };
+  const sim = new Simulation(world, { spawn: false });
+  const record: CharacterSave = { id: 'tooltip-test', name: 'Rowan', version: 4, worldVersion: 10,
+    worldSeed: world.seed, createdAt: 1, updatedAt: 1, checkpoint: sim.captureCheckpoint() };
+  const before = structuredClone(record);
+  const anchor = new Control(); anchor.dataset.titleItem = 'weapon';
+  const handlers = new Map<string, (event: unknown) => void>();
+  const shown: Array<{ item: Item; view: ItemPresentation; anchor: Control }> = [];
+  let hidden = 0, deferred = 0;
+  const body = { dataset: { detail: 'gear' } };
+  const element = { hidden: false, inert: false,
+    addEventListener: (type: string, handler: (event: unknown) => void) => handlers.set(type, handler),
+    querySelector: () => body, querySelectorAll: () => [],
+  };
+  const title = Object.assign(Object.create(TitleScreen.prototype), {
+    element, selected: 0, page: 'characters', slots: [{ record }], abort: new AbortController(),
+    itemTooltip: { hide: () => { hidden++; }, defer: () => { deferred++; },
+      show: (item: Item, view: ItemPresentation, target: Control) => shown.push({ item, view, anchor: target }) },
+  }) as { bindItemTooltips(): void; switchDetail(tab: string): void; loading: boolean };
+  title.bindItemTooltips();
+  handlers.get('pointerover')!({ target: anchor, pointerType: 'mouse' });
+  handlers.get('focusin')!({ target: anchor });
+  assert.equal(shown.length, 2, 'neither mouse hover nor keyboard/controller focus requires a click');
+  assert.equal(shown[0].item, record.checkpoint.character.equipped.weapon);
+  assert.equal(shown[0].anchor, anchor);
+  assert.equal(shown[0].view.equipped, true); assert.equal(shown[0].view.compare, false);
+  assert.equal(element.inert, false, 'a tooltip does not disable hall navigation');
+  handlers.get('pointerout')!({ target: anchor, relatedTarget: null });
+  handlers.get('focusout')!({ target: anchor, relatedTarget: null });
+  assert.equal(deferred, 2, 'leaving the anchor uses shared tooltip retention');
+  title.switchDetail('attributes');
+  assert.equal(hidden, 1); assert.equal(body.dataset.detail, 'attributes');
+  title.loading = true; handlers.get('focusin')!({ target: anchor });
+  assert.equal(shown.length, 2, 'loading cannot reveal a stale item');
+  assert.deepEqual(record, before, 'tooltip presentation never changes the character');
 });
