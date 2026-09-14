@@ -21,8 +21,8 @@ test('explicit item-only inspection omits comparisons without character mutation
   assert.match(cards[0], /ui-item-properties/);
   assert.match(cards[0], /Two-handed/);
   assert.doesNotMatch(cards[0], /On equip|Replaces |Equipped ·/);
-  assert.equal(itemHoverCards(incoming, { sheet: p.character, level: p.level }).length, 3,
-    'normal inventory tooltips still compare both displaced hands');
+  assert.equal(itemHoverCards(incoming, { sheet: p.character, level: p.level }).length, 2,
+    'normal inventory tooltips consolidate displaced hands into a compact two-card comparison');
   assert.deepEqual(p, before);
 });
 
@@ -132,14 +132,28 @@ test('hover comparison cards show exactly the gear displaced, without changing t
   p.character.inventory[2] = item;
   const before = structuredClone(p);
   const cards = itemHoverCards(item, { sheet: p.character, level: 1, sourceIndex: 2 });
-  assert.equal(cards.length, 3);
+  assert.equal(cards.length, 2, 'defaults to two-card D4-style comparison (candidate vs main hand)');
   assert.match(cards[0], /On equip/);
-  assert.doesNotMatch(cards[0], /Replaces/);
+  assert.match(cards[0], /<kbd>Alt<\/kbd>/);
+  assert.match(cards[0], /Compare with Off hand/);
   assert.match(cards[1], /Equipped · Main hand/);
+  assert.match(cards[1], /Replaces Main &amp; Off hand/);
   assert.match(cards[1], new RegExp(p.character.equipped.weapon!.name));
-  assert.match(cards[2], /Equipped · Off hand/);
-  assert.match(cards[2], new RegExp(p.character.equipped.offhand!.name));
   assert.doesNotMatch(cards.slice(1).join(''), /On equip/);
+
+  // Focus mode 1 (Alt pressed once): compare vs off hand
+  const focusOff = itemHoverCards(item, { sheet: p.character, level: 1, sourceIndex: 2, focusIndex: 1 });
+  assert.equal(focusOff.length, 2);
+  assert.match(focusOff[0], /Compare with Main hand/);
+  assert.match(focusOff[1], /Equipped · Off hand/);
+  assert.match(focusOff[1], /Replaces Main &amp; Off hand/);
+  assert.match(focusOff[1], new RegExp(p.character.equipped.offhand!.name));
+
+  // Focus mode 2 wraps back to main hand (focusIndex % 2 = 0)
+  const wrapCards = itemHoverCards(item, { sheet: p.character, level: 1, sourceIndex: 2, focusIndex: 2 });
+  assert.equal(wrapCards.length, 2);
+  assert.match(wrapCards[1], /Equipped · Main hand/);
+
   assert.deepEqual(p, before);
   assert.equal(itemHoverCards(item, { sheet: p.character, level: 1, sourceIndex: 3 }).length, 1);
   assert.equal(itemHoverCards(generateItem(2701, 20, 'head'), { sheet: p.character, level: 1 }).length, 1);
@@ -161,3 +175,43 @@ test('hover comparisons respect an empty ring slot and an explicitly targeted oc
   assert.match(cards[1], /&lt;equipped &amp; ring&gt;/);
   assert.doesNotMatch(cards[1], /<equipped/);
 });
+
+test('wand and grimoire comparison uses D4-style binary toggle (2 cards, Alt switches slot)', () => {
+  const p = initialPlayer(0, 0);
+  p.level = 25;
+  const wand = generateItem(3100, 20, 'weapon', 'cinder-wand', 'rare');
+  const grimoire = generateItem(3101, 20, 'grimoire', 'astral-grimoire', 'rare');
+  const twoHandStaff = generateItem(3102, 24, 'weapon', 'ember-staff', 'epic');
+
+  p.character.equipped.weapon = wand;
+  p.character.equipped.offhand = grimoire;
+  p.character.inventory[0] = twoHandStaff;
+
+  const baseView = { sheet: p.character, level: 25, sourceIndex: 0 };
+
+  // Default (focusIndex=0): candidate vs main hand wand
+  const defaultCards = itemHoverCards(twoHandStaff, { ...baseView, focusIndex: 0 });
+  assert.equal(defaultCards.length, 2, 'two-handed weapon vs wand+grimoire must produce exactly 2 cards');
+  assert.match(defaultCards[0], /<kbd>Alt<\/kbd>/);
+  assert.match(defaultCards[0], /Compare with Off hand/);
+  assert.match(defaultCards[1], /Equipped · Main hand/);
+  assert.match(defaultCards[1], /Replaces Main &amp; Off hand/);
+  assert.match(defaultCards[1], new RegExp(wand.name));
+  assert.doesNotMatch(defaultCards[1], new RegExp(grimoire.name));
+
+  // Alt once (focusIndex=1): candidate vs off hand grimoire
+  const offHandCards = itemHoverCards(twoHandStaff, { ...baseView, focusIndex: 1 });
+  assert.equal(offHandCards.length, 2);
+  assert.match(offHandCards[0], /Compare with Main hand/);
+  assert.match(offHandCards[1], /Equipped · Off hand/);
+  assert.match(offHandCards[1], /Replaces Main &amp; Off hand/);
+  assert.match(offHandCards[1], new RegExp(grimoire.name));
+  assert.doesNotMatch(offHandCards[1], new RegExp(wand.name));
+
+  // Alt twice (focusIndex=2 → wraps to 0): back to main hand
+  const wrapCards = itemHoverCards(twoHandStaff, { ...baseView, focusIndex: 2 });
+  assert.equal(wrapCards.length, 2);
+  assert.match(wrapCards[1], /Equipped · Main hand/);
+  assert.match(wrapCards[0], /Compare with Off hand/);
+});
+

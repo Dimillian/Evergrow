@@ -104,3 +104,33 @@ test('stationary Shift switches comparisons immediately and releases never latch
   key('keydown', 'ShiftLeft', true); target.dispatchEvent(new Event('blur')); assert.equal(input.alternate, false);
   abort.abort(); key('keydown', 'ShiftLeft', true); assert.equal(input.alternate, false);
 });
+
+test('Alt key binary-toggles focusIndex (0→1→0) and blur resets to 0', () => {
+  const target = new EventTarget(), abort = new AbortController();
+  let changes = 0;
+  const input = new ItemComparisonInput(target, () => changes++, abort.signal);
+  const altKey = (type: string) => target.dispatchEvent(Object.assign(new Event(type, { cancelable: true }), { key: 'Alt', code: 'AltLeft' }));
+
+  assert.equal(input.focusIndex, 0);
+  altKey('keydown');
+  assert.equal(input.focusIndex, 1);
+  assert.equal(changes, 1);
+
+  // Second press wraps back to 0 (binary toggle, max=2)
+  altKey('keydown');
+  assert.equal(input.focusIndex, 0);
+  assert.equal(changes, 2);
+
+  altKey('keydown');
+  assert.equal(input.focusIndex, 1);
+  assert.equal(changes, 3);
+
+  // Blur resets focus
+  target.dispatchEvent(new Event('blur'));
+  assert.equal(input.focusIndex, 0);
+
+  abort.abort();
+  altKey('keydown');
+  assert.equal(input.focusIndex, 0);
+});
+
