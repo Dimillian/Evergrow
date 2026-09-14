@@ -73,8 +73,10 @@ export class World extends WorldLandscape {
     yield* groundSurfaceSteps(context, originX, originY, TILE_SIZE, (x, y) => this.surfaceColor(x, y, towns, true));
     yield* waterTerrainSteps(context, originX, originY, TILE_SIZE, (x, y) => this.terrainWater(x, y));
     yield;
+    // Rift wear marks combat routes, not paved roads. Keep their biome texture
+    // patches instead of stripping detail from every clearing and connecting trail.
     drawGroundPatches(context, originX, originY, TILE_SIZE, this.seed, (x, y) => this.sampleBiome(x, y).id,
-      (x, y) => this.roadWeight(x, y) < .025 && this.pavingWeight(towns, x, y, 0) < .025 && this.terrainWater(x, y).coverage < .02
+      (x, y) => (this.riftTerrain || this.roadWeight(x, y) < .025) && this.pavingWeight(towns, x, y, 0) < .025 && this.terrainWater(x, y).coverage < .02
         && !buildings.some(building => contains(building, x, y, 12)));
     yield;
     drawRoadDetails(context, originX, originY, TILE_SIZE, this.seed, (x, y) => {
