@@ -67,6 +67,7 @@ import { TitleScreen } from './title-screen.ts';
 import { InventoryPanel } from './inventory-panel.ts';
 import { SkillTreePanel } from './skill-tree-panel.ts';
 import { executeCharacterCommand, type CharacterCommand } from './character-commands.ts';
+import { PendingItemInspections } from './item-inspection.ts';
 import { Lifetime } from './lifetime.ts';
 import { World } from './world.ts';
 import { isWorldSeed } from './world-seed.ts';
@@ -158,6 +159,7 @@ export class Game {
   private get hallBusy() { return this._hallBusy; }
   private set hallBusy(value: boolean) { this._hallBusy=value; this.titleScreen?.setBusy(value); }
   private savingAction = false;
+  private readonly pendingItemInspections = new PendingItemInspections();
   private nextEventClaim = 0;
   private actionPending: Promise<unknown> = Promise.resolve();
   private autosave: Promise<boolean> | null = null;
@@ -773,7 +775,10 @@ export class Game {
     this.savingAction = true; this.touch.update(this.sim.player,this.phase,true,performance.now()); this.clearWorldTouch?.(); this.input.clear(); this.gamepad.clear(); this.gamepadMenu.clear();
     const result = (async () => {
       try { await this.autosave; return await operation(); }
-      finally { this.savingAction = false; this.clearInput(); this.last = performance.now(); }
+      finally {
+        this.savingAction = false; this.clearInput(); this.last = performance.now();
+        this.flushItemInspections();
+      }
     })();
     this.actionPending = result;
     return result;
@@ -1031,6 +1036,12 @@ export class Game {
   }
 
   private characterAction(command: CharacterCommand) {
+    if (command.type === 'inspectItem') {
+      if (this.disposed || !this.session.active) return;
+      this.pendingItemInspections.request(this.sim.player, this.session.active.record.id, command.id);
+      this.flushItemInspections();
+      return;
+    }
     if (this.savingAction) return;
     const result = executeCharacterCommand(this.sim.player, command);
     if (!result.ok) { this.notify(result.message ?? 'Action unavailable.'); return; }
@@ -1038,6 +1049,14 @@ export class Game {
     if (this.phase === 'character') this.inventoryPanel.refresh(this.sim.player);
     if (this.phase === 'skills') this.skillPanel.refresh(this.sim.player);
     this.saveCharacter();
+  }
+
+  private flushItemInspections(): void {
+    if (this.disposed) { this.pendingItemInspections.clear(); return; }
+    if (this.savingAction) return;
+    if (!this.pendingItemInspections.flush(this.sim.player, this.session.active?.record.id ?? null)) return;
+    if (this.phase === 'character') this.inventoryPanel.refresh(this.sim.player);
+    void this.saveCharacter();
   }
 
   private readInput(): Input {
