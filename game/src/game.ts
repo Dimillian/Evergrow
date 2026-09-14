@@ -319,7 +319,7 @@ export class Game {
         const saved = JSON.parse(localStorage.getItem('evergrow-preferences') ?? 'null');
         if (typeof saved?.muted === 'boolean') this.muted = saved.muted;
         if (saved?.groundLootNames === 'ctrl') this.groundLootNames = 'ctrl';
-        for (const channel of ['sfx', 'music'] as const) this.audio.setVolume(channel, audioVolume(saved?.[channel], DEFAULT_AUDIO[channel]));
+        for (const channel of ['master', 'sfx', 'music'] as const) this.audio.setVolume(channel, audioVolume(saved?.[channel], DEFAULT_AUDIO[channel]));
       } catch { /* Preferences are optional when storage is disabled. */ }
       // Presentation is fixed and motion follows the OS.
       this.savePreferences();
