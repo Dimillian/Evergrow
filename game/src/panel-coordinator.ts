@@ -5,7 +5,7 @@ export interface PanelHooks {
   clearInput(preserveMovement?: boolean): void; changed(phase: GamePhase): void; resumeGameplay(): void; save(): void;
 }
 const OPEN_FROM: Record<PanelPhase, readonly GamePhase[]> = {
-  chronicle: ['playing','paused','character'], journeys: ['playing'], event: ['playing'], service: ['playing'], map: ['playing'], character: ['playing', 'character', 'skills'], skills: ['playing', 'character', 'skills'],
+  chronicle: ['playing','paused','character'], journeys: ['playing','paused'], event: ['playing'], service: ['playing'], map: ['playing','paused'], character: ['playing','paused', 'character', 'skills'], skills: ['playing','paused', 'character', 'skills'],
 };
 /** One control-context owner. Panel views own their focus traps; this owner closes
  * the old trap before opening a new view and returns focus only when play resumes. */
@@ -24,6 +24,7 @@ export class PanelCoordinator {
     else this.toggle('map');
   }
   private chronicleReturn: 'playing'|'paused'|'character' = 'playing';
+  private returnToPause = false;
   private readonly panels: Record<PanelPhase, PanelLifecycle>;
   private readonly hooks: PanelHooks;
   constructor(panels: Record<PanelPhase, PanelLifecycle>, hooks: PanelHooks) { this.panels = panels; this.hooks = hooks; }
@@ -42,10 +43,13 @@ export class PanelCoordinator {
   }
   resume(): boolean {
     if (this.current !== 'paused' && !this.activePanel) return false;
-    this.transition(this.current==='chronicle'?this.chronicleReturn:'playing'); return true;
+    const next = this.current === 'chronicle' ? this.chronicleReturn : this.current !== 'paused' && this.returnToPause ? 'paused' : 'playing';
+    this.transition(next); return true;
   }
   /** Explicit lifecycle changes: character entry, title return and defeat use the same cleanup. */
   transition(next: GamePhase, save = false, holdMap = false): void {
+    if (this.current === 'paused' && Object.hasOwn(this.panels, next)) this.returnToPause = true;
+    if (next === 'playing' || next === 'ready' || next === 'dead') this.returnToPause = false;
     this.hooks.clearInput(this.current === 'playing' && next === 'map' && holdMap
       || this.current === 'map' && this.holdingMap && next === 'playing');
     this.holdingMap = next === 'map' && holdMap;

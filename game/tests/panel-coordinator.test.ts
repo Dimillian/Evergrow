@@ -91,7 +91,8 @@ test('phase eligibility, repeated opens, toggle and pause remain consistent', ()
   const { coordinator: c, log } = setup();
   assert.equal(c.open('map'), false); assert.equal(c.resume(), false); assert.equal(log.length, 0);
   c.transition('playing'); assert.ok(c.pause()); const calls = log.length;
-  assert.equal(c.pause(), false); assert.equal(c.open('character'), false); assert.equal(log.length, calls);
+  assert.equal(c.pause(), false); assert.equal(log.length, calls);
+  assert.ok(c.open('character')); assert.ok(c.resume()); assert.equal(c.phase, 'paused');
   c.resume(); assert.ok(c.toggle('character')); assert.equal(c.open('character'), false);
   assert.equal(c.open('map'), false); assert.ok(c.toggle('character')); assert.equal(c.phase, 'playing');
 });
@@ -99,6 +100,42 @@ test('phase eligibility, repeated opens, toggle and pause remain consistent', ()
 test('Chronicle returns to pause when opened from pause, and cannot open at the title',()=>{const {coordinator:c}=setup();assert.equal(c.open('chronicle'),false);c.transition('playing');c.pause();assert.ok(c.open('chronicle'));assert.equal(c.phase,'chronicle');assert.ok(c.resume());assert.equal(c.phase,'paused');c.resume();c.open('chronicle');c.resume();assert.equal(c.phase,'playing');});
 
 test("Chronicle returns to character inventory without resuming simulation",()=>{const {coordinator:c,active}=setup();c.transition("playing");c.open("character");c.open("chronicle");assert.deepEqual([...active],["chronicle"]);c.resume();assert.equal(c.phase,"character");assert.deepEqual([...active],["character"]);});
+
+test('every Esc destination opens while paused and closing it keeps gameplay paused', () => {
+  for (const panel of ['character', 'skills', 'map', 'journeys', 'chronicle'] as const) {
+    const { coordinator: c, log, active, input, sim } = setup();
+    c.transition('playing'); c.pause(); log.length = 0;
+    input.keyDown('KeyW'); input.pointerDown(0); sim.player.vx = 70;
+    assert.ok(c.open(panel), panel); assert.equal(c.phase, panel);
+    assert.equal(sim.player.vx, 0); assert.equal(input.consume({x:0,y:0},false).attack, false);
+    assert.ok(c.resume()); assert.equal(c.phase, 'paused'); assert.equal(active.size, 0);
+    assert.ok(!log.includes('focus:game'), 'closing a menu child must not resume combat');
+    c.resume(); assert.equal(c.phase, 'playing');
+  }
+});
+
+test('town interactions still require gameplay rather than bypassing their world entrypoints', () => {
+  const { coordinator: c } = setup(); c.transition('playing'); c.pause();
+  assert.equal(c.open('event'), false); assert.equal(c.open('service'), false);
+  assert.equal(c.phase, 'paused');
+});
+
+test('Esc ownership survives inventory/skill switches, nested Chronicle and Journey map links', () => {
+  const { coordinator: c, log } = setup(); c.transition('playing'); c.pause();
+  c.open('character'); c.open('skills'); c.open('character'); c.open('chronicle');
+  log.length = 0; c.resume(); assert.equal(c.phase, 'character');
+  c.resume(); assert.equal(c.phase, 'paused'); assert.ok(!log.includes('focus:game'));
+  c.open('journeys'); c.transition('map'); c.resume(); assert.equal(c.phase, 'paused');
+  c.resume(); c.open('map'); c.resume(); assert.equal(c.phase, 'playing');
+});
+
+test('title and defeat discard a previous Esc return destination', () => {
+  for (const phase of ['ready','dead'] as const) {
+    const { coordinator: c } = setup(); c.transition('playing'); c.pause(); c.open('character');
+    c.transition(phase); c.transition('playing'); c.open('skills'); c.resume();
+    assert.equal(c.phase, 'playing');
+  }
+});
 
 
 test('quick map yields to gameplay panels and releasing Tab cannot dismiss their focus owner', () => {
