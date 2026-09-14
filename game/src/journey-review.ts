@@ -15,7 +15,7 @@ import { Exploration } from './exploration.ts';
 import { WorldMap } from './world-map.ts';
 import { JourneyPanel } from './journey-panel.ts';
 import { freshJourneys, planJourney, type JourneyGoal } from './journey-state.ts';
-import { publicJourneyMarker, questDiamond } from './journey-marker.ts';
+import { publicJourneyMarker, drawJourneyDestination } from './journey-marker.ts';
 import { getZoneAt } from './zone-progression.ts';
 import { Lifetime } from './lifetime.ts';
 // Frozen real UI, memory-only chart and staged goals. No gameplay ticks or character storage.
@@ -59,7 +59,7 @@ function draw(){
   c.clearRect(0,0,renderer.width,renderer.height);renderer.renderUI(c,sim,world,settings);
   map.drawMinimap(c,p,renderer.width,renderer.height,0);
   const anchor=world.getEventSites(camp.x-300,camp.y-300,600,600).find(s=>s.id===camp.id)??camp;
-  const point=renderer.worldToScreen(anchor.x,anchor.y);if(!completion)questDiamond(c,point.x,point.y-35,8);
+  const point=renderer.worldToScreen(anchor.x,anchor.y);if(!completion)drawJourneyDestination(c,point.x,point.y-35,8);
   if(completion)drawJourneyAnnouncement(c,{...completion,age:.8},renderer.worldToScreen(p.x,p.y),renderer.width,renderer.height,true);
   shell.resizeControls(renderer.width,renderer.height);shell.showMenu('playing',0,0);shell.setPortalState(new URLSearchParams(location.search).has('casting') ? .4 : null,false);
   panel.update(sim.journeys,facts(),(mode==='hud'||mode==='complete')&&panel.element.hidden,renderer.width,renderer.height);

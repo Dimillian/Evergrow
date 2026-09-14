@@ -334,6 +334,7 @@ interface EventAppearance {
   readonly color?: string; readonly style?: ProjectileStyle; readonly skill?: SkillId;
 }
 export type CombatEvent = EventAppearance & (
+  | { readonly type: 'insufficient-mana' }
   | { readonly type: 'surface-hit'; readonly angle: number; readonly material: MaterialId }
   | { readonly type: 'container-break'; readonly containerId: string; readonly kind: 'crate' | 'barrel'; readonly seed: number; readonly angle: number }
   | { readonly type: 'engagement'; readonly targetId: number; readonly enemyKind: EnemyKind;

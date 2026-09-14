@@ -1,3 +1,4 @@
+import { controls } from './control-preferences.ts';
 import { audioControlsMarkup, bindAudioControls, type AudioControlActions } from './audio-controls.ts';
 import { ControlsPanel, controlsMarkup } from './controls-panel.ts';
 import { ChangelogPanel } from './changelog-panel.ts';
@@ -20,7 +21,7 @@ export interface SystemWindowActions extends AudioControlActions {
 function optionsMarkup(): string {
   return `<section class="system-option-group" aria-labelledby="options-audio"><h3 id="options-audio">Audio</h3>${audioControlsMarkup(true)}</section>
     <section class="system-option-group" aria-labelledby="options-world"><h3 id="options-world">World view</h3>
-      <div class="pause-option pause-option--loot"><span id="ground-loot-names-label">Loot names</span><div class="pause-loot-modes" role="group" aria-labelledby="ground-loot-names-label"><button type="button" data-loot-names="always" class="ui-button ui-button--quiet" aria-pressed="true">Always</button><button type="button" data-loot-names="ctrl" class="ui-button ui-button--quiet" aria-pressed="false">Hold Ctrl</button></div></div>
+      <div class="pause-option pause-option--loot"><span id="ground-loot-names-label">Loot names</span><div class="pause-loot-modes" role="group" aria-labelledby="ground-loot-names-label"><button type="button" data-loot-names="always" class="ui-button ui-button--quiet" aria-pressed="true">Always</button><button type="button" data-loot-names="ctrl" class="ui-button ui-button--quiet" aria-pressed="false" data-loot-hold>Hold key</button></div></div>
       <div class="pause-option"><span>Camera zoom</span><div class="pause-stepper"><button type="button" data-zoom="out" class="ui-button ui-button--icon" aria-label="Zoom camera out">${uiIcon('minus')}</button><button type="button" data-zoom="in" class="ui-button ui-button--icon" aria-label="Zoom camera in">${uiIcon('plus')}</button></div></div>
       <div class="pause-option" data-fullscreen-row hidden><span>Fullscreen</span><button type="button" data-fullscreen aria-label="Fullscreen" class="ui-button pause-toggle" aria-pressed="false">Off</button></div>
     </section><p class="system-window-status" role="status"></p>`;
@@ -107,6 +108,11 @@ export class PauseSystemWindows {
   }
   refresh(): void {
     this.refreshAudio?.(); this.controls?.refresh();
+    const hold = this.window?.querySelector<HTMLButtonElement>('[data-loot-hold]');
+    if (hold) {
+      hold.disabled = !this.actions.setGroundLootNames || !controls.has('revealLoot');
+      hold.textContent = hold.disabled ? 'Hold key (unbound)' : `Hold ${controls.label('revealLoot')}`;
+    }
     for (const button of this.window?.querySelectorAll<HTMLButtonElement>('[data-loot-names]') ?? [])
       button.setAttribute('aria-pressed', String(button.dataset.lootNames === (this.actions.groundLootNames?.() ?? 'always')));
     const fullscreen = this.window?.querySelector<HTMLButtonElement>('[data-fullscreen]');

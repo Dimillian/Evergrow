@@ -1,4 +1,5 @@
 import { eventRecipe, sealPoint, isTrialKind } from './event-recipes.ts';
+import { eventProgress } from './event-progress.ts';
 import type { WaveProgress } from './wave-system.ts';
 import { siteHash, type WildernessSite, type WildernessKind } from './wilderness-sites.ts';
 import type { BiomeId } from './biomes.ts';
@@ -94,12 +95,10 @@ export function eventLabel(site: Pick<EventSite, 'id' | 'kind'>, state: EventSta
     const trial = state.trial;
     if (!trial || trial.siteId !== site.id)
       return 'Active';
-    const r = eventRecipe(state.sites[site.id])!;
-    if (trial.sealReady) return `${({beastDen:'Destroy nest',hamlet:'Dismantle standard',corruptedGrove:'Cleanse root'} as Partial<Record<EventKind,string>>)[site.kind]??'Break seal'} · ${trial.wave+1}/3`;
-    const wave = trial.guardians.filter(g => g.wave === trial.wave);
-    const progress = r.mode === 'timed' ? `${Math.max(0,Math.ceil(r.rules.duration-trial.elapsed))}s · ${trial.cleared} waves` : `Wave ${Math.min(trial.wave+1,r.rules.count)} / ${r.rules.count}`;
-    const hold=r.mode==='defend'&&trial.held<r.rules.hold?` · Hold ${Math.ceil(r.rules.hold-trial.held)}s`:'';
-    return `${progress} · ${wave.filter(g=>g.dead).length} / ${wave.length}${hold}`;
+    const progress = eventProgress(state);
+    if (!progress) return 'Active';
+    if (trial.sealReady && progress.objective) return progress.objective;
+    return [progress.timer, progress.label].filter(Boolean).join(' · ');
   }
   if (site.kind === 'camp' && !campCleared)
     return 'Clear the camp';

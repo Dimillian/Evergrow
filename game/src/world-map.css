@@ -5,6 +5,20 @@
   backdrop-filter: blur(3px) saturate(.75);
 }
 .world-map-root[hidden] { display: none; }
+.world-map-root.world-map-root--exploration {
+  background: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.world-map-root.world-map-root--exploration .world-map-panel.ui-window {
+  width: min(1100px, 94%); height: min(720px, 88%);
+  border: 0; outline: none; background: none; box-shadow: none;
+}
+.world-map-root.world-map-root--exploration .world-map-panel.ui-window::before,
+.world-map-root.world-map-root--exploration .world-map-panel.ui-window::after,
+.world-map-root--exploration .world-map-header,
+.world-map-root--exploration .world-map-footer { display: none; }
+.world-map-root--exploration .world-map-viewport.ui-window__body { background: none; box-shadow: none; }
+.world-map-root--exploration .world-map-canvas:focus-visible { outline: none; }
+.world-map-root--exploration .world-map-toolbar { display: none; }
 .world-map-panel.ui-window {
   width: min(1180px, 100%); height: min(780px, 100%); min-height: 0; overflow: hidden;
 }
@@ -36,6 +50,14 @@
 }
 .world-map-canvas.world-map-dragging { cursor: grabbing; }
 .world-map-canvas:focus-visible { outline: 1px solid var(--ui-focus); outline-offset: -4px; }
+.world-map-focus-ping { position: absolute; width: 0; height: 0; pointer-events: none; }
+.world-map-focus-ping[hidden] { display: none; }
+.world-map-focus-ping span {
+  position: absolute; left: -28px; top: -28px; width: 56px; height: 56px;
+  box-sizing: border-box; border: 2px solid #fff2ba; border-radius: 50%;
+  box-shadow: 0 0 12px #e3c87880, inset 0 0 8px #e3c87830;
+}
+.world-map-focus-ping span + span { border-color: #d7b86d; }
 .world-map-toolbar {
   position: absolute; z-index: 1; right: 18px; bottom: 18px; display: flex; align-items: center; gap: 2px;
   padding: 4px; border: 1px solid var(--ui-line-strong); border-radius: 3px;
@@ -86,3 +108,6 @@
 @media (max-height: 500px) {
   .world-map-footer { padding-top: 10px; padding-bottom: 10px; }
 }
+
+.world-map-root.world-map-root--exploration,
+.world-map-root.world-map-root--exploration * { pointer-events: none; }

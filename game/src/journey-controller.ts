@@ -26,8 +26,8 @@ export interface JourneyHost {
     readonly savingAction: boolean;
     readonly navigationVisible: boolean;
     readonly renderer: Pick<Renderer, 'width' | 'height' | 'extraUIBounds'>;
-    readonly panels: Pick<PanelCoordinator, 'canOpen' | 'open' | 'transition'>;
-    readonly worldMap: Pick<WorldMap, 'setJourneyMarker' | 'fitBounds'>;
+    readonly panels: Pick<PanelCoordinator, 'canOpen' | 'open' | 'transition' | 'simulationActive'>;
+    readonly worldMap: Pick<WorldMap, 'setJourneyMarker' | 'focusJourney'>;
     readonly dungeonMap: Pick<DungeonMap, 'marker'>;
     durable(work: () => Promise<boolean>, fallback: boolean): Promise<boolean>;
     persistTravel: PersistDungeon;
@@ -89,8 +89,7 @@ export class JourneyController {
         if (!this.host.sim.dungeonFloor) {
             const target = publicJourneyMarker(goal, this.facts().discovered(goal.id));
             this.journeyMapPreview = target;
-            this.host.worldMap.setJourneyMarker(target);
-            this.host.worldMap.fitBounds({ x: target.x - 900, y: target.y - 900, width: 1800, height: 1800 });
+            this.host.worldMap.focusJourney(target);
         }
     }
     update() {
@@ -104,7 +103,7 @@ export class JourneyController {
             return;
         }
         const p = this.host.sim.player, facts = this.facts();
-        const safe = this.host.phase === 'playing' && !this.host.sim.dungeonFloor && !p.attack && p.castTime <= 0 && !this.host.sim.eventChannel.site && !this.host.sim.portal.active
+        const safe = this.host.panels.simulationActive && !this.host.sim.dungeonFloor && !p.attack && p.castTime <= 0 && !this.host.sim.eventChannel.site && !this.host.sim.portal.active
             && !this.host.sim.enemies.some(enemy => enemy.hp > 0 && Math.hypot(enemy.x - p.x, enemy.y - p.y) < 550 && ['chase', 'windup', 'attack'].includes(enemy.state));
         if (this.journeySearchOwner !== p.character) {
             this.journeySearchOwner = p.character;
@@ -123,7 +122,7 @@ export class JourneyController {
         }
         if (this.journeyCheckedAt < 0 || this.host.sim.time - this.journeyCheckedAt >= .5) {
             this.journeyCheckedAt = this.host.sim.time;
-            if (this.host.phase === 'playing' && !this.host.sim.dungeonFloor) {
+            if (this.host.panels.simulationActive && !this.host.sim.dungeonFloor) {
                 const towns = this.host.overworld.getSettlements(p.x - 260, p.y - 260, 520, 520);
                 const arrivals = [...this.host.sim.journeys.accepted, ...this.host.sim.journeys.offers,
                     ...towns.map(t => ({ settlementTier:t.kind, id: t.id, kind: 'town' as const, name: t.name, x: t.x, y: t.y, level: captureEncounterScale(getZoneAt(t.x, t.y, this.host.overworld.seed),p.level).base, region: getZoneAt(t.x, t.y, this.host.overworld.seed).name }))];

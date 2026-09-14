@@ -1,3 +1,4 @@
+import { comparisonSlot, ItemComparisonInput } from './item-comparison.ts';
 import './ground-loot-highlight.css';
 import { groundPickupProblem } from './ground-item-pickup.ts';
 import { TIER_COLORS } from './items.ts';
@@ -8,16 +9,21 @@ import { itemHoverCards } from './item-ui.ts';
 import './item-ui.css';
 import './tooltip-material.css';
 
-/** Ground highlight follows the label; passive inspection stays in the screen corner. */
+/** Ground highlight follows the label; inspection stays in the screen corner. */
 export class GroundLootHighlight {
   private affordance = document.createElement('div');
   private tooltip = document.createElement('div');
   private inspected: GroundItem['item'] | null = null;
   private inspectedLevel = -1;
+  private inspectedStats: Player['stats'] | null = null;
+  private retainUntil = 0;
+  private readonly life = new AbortController();
+  private readonly comparison: ItemComparisonInput;
   private cursor: string;
   private canvas: HTMLCanvasElement;
   constructor(mount: HTMLElement, canvas: HTMLCanvasElement) {
     this.canvas = canvas;
+    this.comparison = new ItemComparisonInput(window, () => { this.inspectedStats = null; }, this.life.signal);
     this.cursor = canvas.style.cursor;
     this.affordance.className = 'ground-loot-affordance';
     this.affordance.hidden = true;
@@ -28,11 +34,20 @@ export class GroundLootHighlight {
     mount.append(this.affordance, this.tooltip);
   }
   update(player: Player, drops: readonly GroundItem[], labels: readonly GroundLootLabel[], width: number, height: number,
-    pointer: { x: number; y: number } | null, time = 0, selectedId: number | null = null): void {
-    const hovered = pointer && hoveredGroundLoot(labels, pointer.x, pointer.y);
-    const label = hovered??labels.find(b=>b.id===selectedId && b.visible !== false);
+    pointer: { x: number; y: number } | null, time = 0, selectedId: number | null = null, enabled = true): void {
+    if (!enabled) { this.hide(); return; }
+    const now = performance.now();
+    const held = !this.tooltip.hidden && this.tooltip.matches(':hover') && drops.some(drop => drop.item.id === this.inspected?.id);
+    if (held) this.retainUntil = now + 600;
+    const hovered = !held && pointer ? hoveredGroundLoot(labels, pointer.x, pointer.y) : undefined;
+    const heldDrop = held ? drops.find(drop => drop.item.id === this.inspected?.id) : undefined;
+    const label = hovered ?? (heldDrop ? labels.find(label => label.id === heldDrop.id) : undefined) ?? labels.find(b=>b.id===selectedId && b.visible !== false);
     const drop = label && drops.find(d => d.id === label.id);
-    if (!label || !drop) { this.hide(); return; }
+    if (!label || !drop) {
+      this.affordance.hidden = true; this.canvas.style.cursor = this.cursor;
+      if (now >= this.retainUntil || !drops.some(drop => drop.item === this.inspected)) this.hideTooltip();
+      return;
+    }
     const problem=groundPickupProblem(player,drop,time);
     this.canvas.style.cursor=hovered?(problem?'not-allowed':'pointer'):this.cursor;
     const canvas = this.canvas.getBoundingClientRect(), sx = canvas.width / width, sy = canvas.height / height;
@@ -44,16 +59,20 @@ export class GroundLootHighlight {
     affordance.style.width=`${bounds.right-bounds.left}px`;affordance.style.height=`${bounds.bottom-bounds.top}px`;
     affordance.style.setProperty('--loot-accent',problem?'#9a9290':TIER_COLORS[drop.item.tier]);
     // Selected walking targets retain their highlight, but only actual mouse hover inspects.
-    if (hovered) {
-      if (this.inspected !== drop.item || this.inspectedLevel !== player.level) {
-        this.tooltip.innerHTML = itemHoverCards(drop.item, { sheet: player.character, level: player.level, compare: false }).join('');
+    if (hovered || held) {
+      if (this.inspected !== drop.item || this.inspectedLevel !== player.level || this.inspectedStats !== player.stats) {
+        const cards = itemHoverCards(drop.item, { sheet: player.character, level: player.level, compactComparison: true, targetSlot: comparisonSlot(player.character, drop.item, this.comparison.alternate) });
+        this.tooltip.innerHTML = cards.join('');
+        this.tooltip.style.setProperty('--tooltip-columns', String(cards.length));
         this.inspected = drop.item;
         this.inspectedLevel = player.level;
+        this.inspectedStats = player.stats;
       }
       this.tooltip.hidden = false;
+      this.retainUntil = now + 600;
     } else this.hideTooltip();
   }
-  private hideTooltip(): void { this.tooltip.hidden = true; this.inspected = null; }
+  private hideTooltip(): void { this.tooltip.hidden = true; this.inspected = null; this.retainUntil = 0; }
   hide(): void { this.affordance.hidden = true; this.hideTooltip(); this.canvas.style.cursor = this.cursor; }
-  dispose(): void { this.hide(); this.affordance.remove(); this.tooltip.remove(); }
+  dispose(): void { this.life.abort(); this.hide(); this.affordance.remove(); this.tooltip.remove(); }
 }
