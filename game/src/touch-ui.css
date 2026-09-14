@@ -49,6 +49,7 @@ html.touch-mode, .touch-mode :where(#app,#app *) { touch-action: manipulation; }
 .touch-mode .character-columns { display: block; overflow: auto; }
 .touch-mode .character-columns > section { display: none; padding: 12px; overflow: visible; }
 .touch-mode .character-window[data-touch-tab="bag"] .character-inventory, .touch-mode .character-window[data-touch-tab="equipment"] .character-equipment, .touch-mode .character-window[data-touch-tab="stats"] .character-details { display: block; }
+.touch-mode .character-window[data-touch-tab="equipment"] .character-equipment { display: flex; }
 .touch-mode .character-bag { min-width: 0; grid-template-columns: repeat(auto-fit,minmax(48px,1fr)); }
 .touch-mode .character-grid-scroll { overflow: visible; }
 .touch-item-sheet { position: absolute; z-index: 12; inset: auto 8px 8px; max-height: 85%; overflow: auto; border: 1px solid var(--ui-silver-dim); border-radius: 12px; background: #0c1822fc; padding: 12px; box-shadow: 0 -8px 35px #0008; }
@@ -143,7 +144,6 @@ html.touch-mode, .touch-mode :where(#app,#app *) { touch-action: manipulation; }
 .touch-mode :is(.character-heading,.character-header-right,.world-map-heading) { gap: 6px; min-width: 0; }
 .touch-mode .character-heading { flex: 1; }
 .touch-mode .character-header-right { flex: none; }
-.touch-mode .character-level { font-size: 11px; }
 .touch-mode .character-tabs { padding: 0; gap: 3px; flex: none; }
 .touch-mode .character-tabs .ui-button { padding-inline: 9px; }
 .touch-mode .character-columns > section { padding: 6px 10px; }

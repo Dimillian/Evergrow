@@ -1,5 +1,6 @@
 @import './inventory-pack.css';
 @import './inventory-glass.css';
+@import './inventory-filter.css';
 .character-overlay {
   --character-inset: clamp(10px, 2.2vw, 32px);
   position: absolute; inset: 0; z-index: 40; display: grid; place-items: center;
@@ -24,13 +25,8 @@
 .character-mini-dialog p { font-size: 14px; line-height: 1.5; color: var(--ui-silver-dim); overflow-wrap: anywhere; }
 .character-mini-dialog [data-weapon-comparison] { color: var(--ui-text); }
 .character-mini-dialog [aria-pressed="true"] { color: var(--ui-ivory); border-color: var(--ui-silver); background: #a0bdd126; }
-.character-mini-dialog .character-tool-row { margin-bottom: 12px; }
-.character-mini-dialog .character-tool-row > span { flex-basis: 100%; }
 .character-weapon-choices { display: grid; gap: 8px; margin-top: 16px; }
 @media (pointer: coarse) { .character-inventory-heading .character-tool-icon { width: 44px; height: 44px; } }
-.character-tool-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
-.character-tool-row > span { color: var(--ui-silver-dim); font-size: 12px; margin-right: 4px; }
-.character-tool-row .ui-button { font-size: 12px; padding: 6px 9px; }
 .character-filter-status { color: var(--ui-silver-dim); font-size: 13px; margin: 12px 0 0; }
 .character-bag-slot:disabled { opacity: 1; cursor: default; }
 .character-overlay.is-controller .is-selected-section { box-shadow: inset 0 2px var(--ui-silver); }
@@ -48,16 +44,32 @@
 .character-heading, .character-header-right { display: flex; align-items: center; gap: 12px; }
 .character-heading .ui-title { letter-spacing: .025em; }
 .character-sigil { color: var(--ui-silver); border: 1px solid #8babbd4a; border-radius: 50%; box-shadow: 0 0 0 3px #8babbd09; }
-.character-level { color: var(--ui-silver); font-size: 13px; letter-spacing: .025em; white-space: nowrap; }
 .character-header .ui-button { color: var(--ui-silver-dim); border-color: #96b8c338; background: #090f1880; }
+.character-header [data-edit-appearance] .ui-icon { width: 21px; height: 21px; }
 .character-columns { display: grid; grid-template-columns: minmax(250px, .91fr) minmax(426px, 1.38fr) minmax(250px, .91fr); grid-template-rows: minmax(0, 1fr); overflow: hidden; flex: 1; min-height: 0; }
+/* Fade actual content into the glass only while more rows remain below.
+   Narrow layouts use the shared columns scroller; tooltips live outside both. */
+:is(.character-details, .character-columns).has-scroll-below {
+  scroll-padding-bottom: 48px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent);
+}
+@media (forced-colors: active) {
+  :is(.character-details, .character-columns).has-scroll-below { -webkit-mask-image: none; mask-image: none; }
+}
 .character-equipment, .character-inventory, .character-details { min-width: 0; min-height: 0; padding: 22px 22px 25px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--ui-silver-dim) var(--ui-well); }
 .character-equipment, .character-inventory { border-right: 1px solid #96b8c323; }
+.character-equipment { display: flex; flex-direction: column; align-items: center; justify-content: safe center; }
+.character-equipment > * { flex-shrink: 0; }
+.character-equipment > :is(.character-portrait-footer, .character-points) { width: 100%; box-sizing: border-box; }
+/* Equipment stays on one horizontal canvas; only its vertical axis scrolls. */
+.character-window > .character-columns > .character-equipment { overflow-x: hidden; }
 .character-section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 13px; }
 .character-section-title h3 { margin: 0; color: var(--ui-silver); font-size: 16px; font-weight: 400; letter-spacing: .03em; }
 .character-section-title > span { color: var(--ui-silver-dim); font-size: 12px; white-space: nowrap; }
 .character-section-title--secondary { margin: 19px 0 8px; padding-top: 16px; border-top: 1px solid #96b8c327; }
-.character-doll-stage { --portrait-head-clearance: 40px; height: calc(361px + var(--portrait-head-clearance)); position: relative; margin: -4px -9px 0; }
+/* Clearance is the portrait's top offset below the head slot, not its height. */
+.character-doll-stage { --portrait-head-clearance: 40px; height: calc(320px + var(--portrait-head-clearance)); position: relative; width: 100%; min-width: 0; margin: -4px 0 0; }
 .character-doll { position: absolute; width: 100%; height: 360px; object-fit: contain; inset: var(--portrait-head-clearance) 0 auto; pointer-events: none; }
 .character-orbit { position: absolute; width: 160px; height: 250px; border: 1px solid #6d93ab23; border-radius: 50%; left: 50%; top: calc(30px + var(--portrait-head-clearance)); transform: translateX(-50%); }
 .character-orbit::before { content: ''; position: absolute; inset: 12px -16px; border: 1px solid #6d93ab14; border-radius: 50%; }
@@ -70,6 +82,18 @@
 .character-equipment-cell > span { font-size: 10px; line-height: 1; color: var(--ui-silver-dim); letter-spacing: .035em; }
 
 .character-equipment-slot { width: var(--ui-item-cell-size); height: var(--ui-item-cell-size); min-height: 0; }
+
+/* Paired inscriptions on a silver plinth beneath the equipped portrait. */
+.character-portrait-metrics { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); container-type: inline-size; width: min(100%, 310px); box-sizing: border-box; margin: 12px auto 16px; padding: 10px 0; border-block: 1px solid #b4d3e047; background: linear-gradient(110deg, #b4d3e003, #b4d3e010 50%, #b4d3e003); box-shadow: inset 0 1px #e2f2ff0c, 0 1px #040c1559; text-align: center; }
+.character-portrait-metrics > div { min-width: 0; padding: 0 8px; }
+.character-portrait-metrics > div + div { border-left: 1px solid #b4d3e033; }
+.character-portrait-metrics::after { content: ''; position: absolute; left: calc(50% - 3px); top: -4px; width: 6px; height: 6px; transform: rotate(45deg); border: 1px solid #b4d3e080; background: #14232c; pointer-events: none; }
+.character-portrait-metrics dt { color: var(--ui-silver); font-size: 11px; letter-spacing: .04em; }
+.character-portrait-metrics dd { margin: 3px 0 0; color: var(--ui-ivory); font-size: clamp(18px, 8cqw, 26px); line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+@media (forced-colors: active) {
+  .character-portrait-metrics, .character-portrait-metrics > div + div { border-color: CanvasText; }
+  .character-portrait-metrics::after { display: none; }
+}
 
 .character-portrait-footer { display: flex; gap: 7px; align-items: center; justify-content: space-between; text-align: center; padding-top: 2px; }
 .character-portrait-footer .ui-button { color: var(--ui-silver-dim); font-size: 29px; min-width: 44px; width: 44px; }
@@ -115,7 +139,6 @@
   .character-overlay { --character-inset: 8px; }
   .character-heading { gap: 10px; }
   .character-header-right { gap: 10px; }
-  .character-level { font-size: 13px; }
   .character-columns { display: flex; flex-direction: column; }
   .character-equipment, .character-inventory, .character-details { flex: none; padding: 20px 18px; border: 0; border-bottom: 1px solid #96b8c327; }
   .character-equipment { order: 1; }
@@ -245,14 +268,3 @@
 .charm-net-changes table { width:100%; }
 .charm-net-changes th { text-align:left; font-weight:normal; }
 .charm-net-changes td { text-align:right; }
-
-/* Quiet equipment score, shared with the character hall and leaderboard. */
-.character-section-title > .character-gear-power {
-  display: inline-flex; align-items: baseline; gap: 6px; margin-left: auto;
-  flex: none; white-space: nowrap; color: var(--ui-silver-dim);
-}
-.character-gear-power > span { font-size: 10px; letter-spacing: .02em; }
-.character-gear-power > strong {
-  color: var(--ui-ivory); font-family: var(--ui-font); font-size: 17px;
-  font-weight: 400; font-variant-numeric: tabular-nums;
-}

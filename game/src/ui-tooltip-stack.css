@@ -4,6 +4,10 @@
 .ui-explanation small, .effect-fit { color: #adbec7; font-size: 12px; }
 .ui-term { display: inline; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; line-height: inherit; text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
 .ui-term:hover, .ui-term:focus-visible { color: #e4caff; text-decoration-style: solid; outline: 1px solid #c7a0ef88; outline-offset: 2px; }
+.ui-help-icon { position: relative; display: inline-grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 0; background: none; color: #adbec7; font: inherit; font-size: 14px; line-height: 1; cursor: help; }
+.ui-help-icon::before { content: ''; position: absolute; inset: 12px; border: 1px solid currentColor; border-radius: 50%; opacity: .65; pointer-events: none; }
+.ui-help-icon:hover, .ui-help-icon:focus-visible { color: #e2edf0; }
+.ui-help-icon:focus-visible { outline: 1px solid currentColor; outline-offset: -6px; }
 .skill-atlas-tooltip.ui-tooltip { pointer-events: auto; }
 
 .ui-retained-tooltip.ui-tooltip { pointer-events: auto; }
