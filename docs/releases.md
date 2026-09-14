@@ -33,6 +33,18 @@ The user approved the next major prototype milestone, **0.5.0**, on 2026-09-13 f
 
 ## Last verified publication
 
+- Game v0.5.2 / Sites version 52, publicly deployed on 2026-09-14 at 06:10:53 UTC.
+- Published source: `1843cf63efda3f643b170eaa3fb66088a92902d1`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_3377ce2ed1088191804f89d285a56062`.
+- Deployment: `appgdep_6aa78fdd9e1c8191b1e78ba4b761ed50`; Sites returned `succeeded`.
+- Covers merged PRs #13, #14, #15, #19, #21, #24, #25, #27, #18, #20, #26, #17, #30 and #28: sell values, stable drag previews, Fire Staff pose, Heartwood Draw switching, event progress, mana feedback, map symbols/recentering, remappable loot reveal, live Tab map, cursor settings, equipment comparisons and the frosted pause menu.
+- Ran 1,450 code tests: 1,448 passed initially. Added the event-progress module to the explicit core compiler check and updated the old staff-grip assertion for Fire Staff's relaxed arm; all 17 architecture, rig and changelog checks then passed.
+- Application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation passed. No automated browser gameplay was run.
+- Existing local/cloud characters remain compatible; no save reset, skill refund or D1 migration. Reload existing clients.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.5.1 / Sites version 51, publicly deployed on 2026-09-13 at 17:02:41 UTC.
 - Published source: `b0769a7f0dcc0a626db062ae220d0db700627bba`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_d6deee73817c81919f3cc0c17a759cfd`.

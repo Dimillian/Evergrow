@@ -1,6 +1,6 @@
 # Current system status
 
-Local Esc menu update: the EVERGROW field-journal layout groups Character, Adventure and System, with Chronicle as one Character entry and map/Journeys under Adventure. Equipment, atlas, appearance, map and Journey links open while paused and return to their menu entry. Options, Controls, release notes and rankings open dedicated spacious windows and return to System. Responsive minimum height, compact run/save footer and native keyboard/controller navigation reuse the existing UI. No save reset or publication.
+Published in v0.5.2 (September 14, 2026): the EVERGROW field-journal layout groups Character, Adventure and System, with Chronicle as one Character entry and map/Journeys under Adventure. Equipment, atlas, appearance, map and Journey links open while paused and return to their menu entry. Options, Controls, release notes and rankings open dedicated spacious windows and return to System. Responsive minimum height, compact run/save footer and native keyboard/controller navigation reuse the existing UI. No save reset.
 
 Local September 13, 2026: [effect UI audit](effect-ui-audit-2026-09-13.md) implemented across equipment, stats, Uniques, Techniques and player/target status strips. Shared retained/nested explanations, accurate timed budgets, generic Slowed and target-specific marks/exposure. No balance or save changes.
 
