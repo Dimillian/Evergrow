@@ -30,7 +30,7 @@
 .controls-pad div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--ui-line); }
 .controls-pad dd { margin: 0; color: var(--ui-ivory); text-align: right; }
 @media (pointer: coarse) { .control-binding.ui-button { min-height: 44px; } }
-.system-window.ui-window { width: min(820px, 100%); height: min(720px, calc(100dvh - 56px)); min-height: 0; display: flex; flex-direction: column; text-align: left; background: radial-gradient(ellipse at 0 100%, #343d30, transparent 65%), linear-gradient(120deg, #243031, #122729); }
+.system-window.ui-window { width: min(820px, 100%); height: min(720px, calc(100dvh - 56px)); min-height: 0; display: flex; flex-direction: column; text-align: left; }
 .system-window > .ui-window-header { flex: none; padding: 16px 22px; }
 .system-window .ui-title { font-size: 22px; }
 .system-window > .ui-window-header .ui-button { min-width: 44px; min-height: 44px; }
@@ -42,12 +42,11 @@
 .system-window-status { color: var(--ui-muted); font-size: 13px; }
 .system-window--controls.ui-window { width: min(900px, 100%); }
 .system-window .controls-intro { margin-top: 0; }
-.system-window .controls-column-head { position: sticky; top: -22px; background: #233432; padding-block: 10px; z-index: 1; }
+.system-window .controls-column-head { position: sticky; top: -22px; background: #10202b; padding-block: 10px; z-index: 1; }
 .system-window--leaderboard .rank-heading h2 { display: none; }
 .system-window--leaderboard .system-window-body { display: flex; overflow: hidden; }
 .system-window [data-system-rankings] { flex: 1; min-height: 0; min-width: 0; }
 .pause-changelog.changelog-overlay { padding: 28px; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
-.pause-changelog .changelog-window { background: radial-gradient(ellipse at 0 100%, #343d30, transparent 65%), linear-gradient(120deg, #243031, #122729); }
 .pause-changelog .changelog-layout { grid-template-rows: minmax(0, 1fr); }
 @media (max-width: 620px) { .pause-changelog .changelog-layout { grid-template-rows: auto minmax(0, 1fr); } }
 @media (max-width: 570px) {
