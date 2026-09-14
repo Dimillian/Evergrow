@@ -41,7 +41,7 @@ import { advanceGold, type GroundGold } from './gold.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import type { Attack, CombatEvent, Enemy, EnemyKind, Input, Player, Projectile, ProjectileStyle, ProjectileEffects, GroundEffect, SimulationOptions, WorldQuery } from './model.ts';
 import type { Pickup } from './model.ts';
-import { createBaseStats, createStartingEquipment, deriveAttackStats, basicAttackManaCost } from './equipment.ts';
+import { createBaseStats, createStartingEquipment, deriveAttackStats, basicAttackManaCost, basicProjectileStyle } from './equipment.ts';
 import { getActiveSwingOffset } from './attack-motion.ts';
 import { RANGED_BASIC_ATTACK_PHASES, BASIC_ATTACK_PHASES, COMBAT_TIMING, SKILL_CAST_MOTION, ENEMY_DEFINITIONS, LOOT_RULES, PLAYER_ABILITIES,
   PLAYER_DEFAULTS, PLAYER_MOVEMENT, type ProjectileDefinition } from './combat-content.ts';
@@ -642,7 +642,7 @@ export class Simulation {
     const weave = consumeRally(p,weapon.attackKind==='melee') * consumeSpellweave(p, weapon.attackKind === 'melee' ? 'melee' : weapon.attackKind === 'bolt' ? 'spell' : 'other');
     const duration = 1 / stats.attacksPerSecond;
     const ranged = weapon.attackKind !== 'melee';
-    const style = weapon.attackKind === 'arrow' ? 'arrow' : weapon.damageType === 'physical' ? 'arcane' : weapon.damageType;
+    const style = basicProjectileStyle(weapon);
     this.player.attack = {
       kind: ranged ? 'ranged' : 'melee', weapon, hand,
       elapsed, duration, activeStart: duration * (ranged ? RANGED_BASIC_ATTACK_PHASES.activeStart : BASIC_ATTACK_PHASES.activeStart),

@@ -1,5 +1,5 @@
 import type { DerivedCharacterStats } from './character-types.ts';
-import type { CharacterStats, Equipment, WeaponDefinition, Player } from './model.ts';
+import type { CharacterStats, Equipment, WeaponDefinition, Player, ProjectileStyle } from './model.ts';
 export type { CharacterStats, Equipment, WeaponDefinition, WeaponVisual } from './model.ts';
 
 export interface DerivedAttackStats {
@@ -51,6 +51,11 @@ export const WEAPON_ACTION_RULES = Object.freeze({ speedMultiplier: .8, staffBas
 export function weaponActionRate(weapon: WeaponDefinition): number {
   return positive(weapon.baseAttacksPerSecond, STARTING_SWORD.baseAttacksPerSecond)
     * WEAPON_ACTION_RULES.speedMultiplier;
+}
+export function basicProjectileStyle(weapon: WeaponDefinition): ProjectileStyle {
+  if (weapon.attackKind === 'arrow') return 'arrow';
+  if (weapon.family === 'wand' && weapon.damageType === 'arcane') return 'radiant';
+  return weapon.damageType === 'physical' ? 'arcane' : weapon.damageType;
 }
 export function basicAttackManaCost(weapon: WeaponDefinition, stats: Pick<DerivedCharacterStats, 'manaCostMultiplier'>): number {
   if (weapon.attackKind !== 'bolt') return 0;

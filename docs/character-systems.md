@@ -58,6 +58,8 @@ These windows pause combat, clear buffered inputs, trap modal keyboard focus, an
 
 ## Progression and attribute rules
 
+Wand & Grimoire starts with Star Wand + Astral Grimoire: radiant Arcane basic bolts and cooldown support. Existing fire-wand characters retain their gear; no progress reset. See [radiant wand basics](weapons-and-skills.md#radiant-wand-basics--local-september-14-2026).
+
 A new run starts at **level 1, 0 XP**, with **10 Strength, Dexterity, Intelligence, and Vitality**, zero unspent points, a free allocated origin, and five empty active slots. Each character chooses Sword + Shield, Two-handed Sword, Wand + Grimoire, Fire Staff, Shortbow or Longbow and starts with zero gold and 64 empty bag cells. The shared worn leather outfit has no stat bonuses. The Weathered Sword retains its 24 damage and 1.6 attacks/second; the bow and staff use their own profiles. LMB supplies the equipped weapon’s innate melee, arrow, or elemental-bolt attack; these basics require no skill unlock. Melee and bows remain mana-free; staff basics cost four mana and wand basics cost two mana before reductions.
 
 Level-one normal enemies award **20 XP** for a Hollow Stalker, **30** for a Mire Hexer, and **50** for a Gravebound Brute. Geographic area level increases every 3,200 world units from the origin; enemies snapshot their spawn level and normal/veteran/elite rank. Enemy XP scales by `1 + 0.18 × (enemyLevel − 1)`, then by rank (×1 / ×2 / ×5), with a bounded player-level-difference factor applied on death. Source level also controls life, damage, and item level; player level never upgrades an enemy's loot.

@@ -84,7 +84,7 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
       gauntlet(ctx, hand, outfit.hands, color, -Math.atan2(hand[0] - elbow[0], hand[1] - elbow[1]), pose.attack > 0);
       return;
     }
-    heldWeapon(ctx, weaponOrigin, weaponAngle, color, pose.weapon, rangedDraw, pose.effectTime ?? pose.time, weaponCharge, weaponScale);
+    heldWeapon(ctx, weaponOrigin, weaponAngle, color, pose.weapon, rangedDraw, pose.effectTime ?? pose.time, pose.attackHand === 'off' ? 0 : weaponCharge, weaponScale);
     gauntlet(ctx, hand, outfit.hands, color, weaponAngle);
     if (supportHolding) gauntlet(ctx, projectArmPoint(offArm.hand), outfit.hands, color, weaponAngle);
     // Fingers cross the grip, keeping the weapon seated in the animated gauntlet.
@@ -101,12 +101,12 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
   const offEquipment = () => {
     const offHand = projectArmPoint(offArm.hand);
     if (pose.offHand?.kind === 'focus') {
-      heldFocus(ctx, offHand, pose.offHand.visual, color, pose.effectTime ?? pose.time, pose.angle);
+      heldFocus(ctx, offHand, pose.offHand.visual, color, pose.effectTime ?? pose.time, pose.angle, weaponCharge);
       gauntlet(ctx, offHand, outfit.hands, color, -.2, false);
     }
     if (pose.offHand?.kind === 'shield') heldShield(ctx, offHand, pose.angle, pose.offHand.visual, color, pose.guard);
     if (pose.offHand?.kind === 'weapon') {
-      heldWeapon(ctx, offWeaponOrigin, offWeaponAngle, color, pose.offHand.visual, 0, pose.effectTime ?? pose.time, 0, offWeaponScale);
+      heldWeapon(ctx, offWeaponOrigin, offWeaponAngle, color, pose.offHand.visual, 0, pose.effectTime ?? pose.time, pose.attackHand === 'off' ? weaponCharge : 0, offWeaponScale);
       gauntlet(ctx, offHand, outfit.hands, color, offWeaponAngle);
     }
   };

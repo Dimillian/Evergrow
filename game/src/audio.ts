@@ -297,6 +297,7 @@ export class GameAudio {
         tone(180, 76, .13, .065, 1, 'sine', .014, .02);
         break;
       case 'hit':
+        if (event.style === 'radiant' && !event.periodic) tone(660 * pitch, 440, .16, .045, 1, 'sine', 0, .006);
         // Clack, flesh/body, low weight, and an inharmonic metal tail are separate layers.
         noise({ duration: .047, frequency: 3400 * pitch, endFrequency: 900, volume: .38 * weight, q: 1.1 });
         noise({ duration: .125, frequency: 900 * pitch, endFrequency: 140, volume: .53 * weight, body: true, type: 'lowpass' });
@@ -322,6 +323,12 @@ export class GameAudio {
         tone(65, 47, .105, .085, 3, 'sine', .225, .01);
         break;
       case 'cast':
+        if (event.style === 'radiant') {
+          tone(880, 740, .13, .07, 1, 'sine', 0, .005);
+          tone(1320, 1100, .18, .025, 1, 'sine', .018, .009);
+          noise({ duration: .055, frequency: 2400, endFrequency: 1200, volume: .035, attack: .008 }, 1);
+          break;
+        }
         tone(170, 720, .17, .14, 1, 'triangle', 0, .014);
         noise({ duration: .19, frequency: 1400, endFrequency: 3700, volume: .2, attack: .026 }, 1);
         noise({ duration: .09, frequency: 3900, endFrequency: 1100, volume: .18, delay: .036 }, 1);

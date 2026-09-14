@@ -1,7 +1,7 @@
 import type { CombatEvent } from './model.ts';
 import { SKILL_EXECUTION } from './skill-execution-content.ts';
 
-export type SkillSoundFamily = 'steel' | 'shield' | 'earth' | 'arrow' | 'fire' | 'frost' | 'lightning' | 'spirit' | 'arcane';
+export type SkillSoundFamily = 'steel' | 'shield' | 'earth' | 'arrow' | 'fire' | 'frost' | 'lightning' | 'spirit' | 'arcane' | 'radiant';
 export function skillSoundFamily(event: CombatEvent): SkillSoundFamily {
   if (event.skill === 'earthshatter') return 'earth';
   if (event.skill === 'shieldBash' || event.skill === 'bulwark') return 'shield';
@@ -20,5 +20,6 @@ export const SKILL_SOUNDS = {
   frost: { start: 1800, end: 690, noise: 6400, duration: .32 },
   lightning: { start: 130, end: 720, noise: 7500, duration: .12 },
   spirit: { start: 520, end: 850, noise: 1700, duration: .4 },
+  radiant: { start: 880, end: 660, noise: 2400, duration: .18 },
   arcane: { start: 340, end: 960, noise: 2800, duration: .25 },
 } as const;

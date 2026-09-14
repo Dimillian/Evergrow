@@ -257,7 +257,7 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
 export const STARTER_LOADOUTS = Object.freeze([
   { id: 'sword-shield', label: 'Sword & shield', detail: 'Quick · guarded', profileId: 'longsword', offhandProfileId: 'iron-buckler' },
   { id: 'sword', label: 'Two-handed sword', detail: 'Heavy · two-handed', profileId: 'weathered-sword', offhandProfileId: null },
-  { id: 'wand', label: 'Wand & grimoire', detail: 'Quick casting · sustain', profileId: 'cinder-wand', offhandProfileId: 'ember-codex' },
+  { id: 'wand', label: 'Wand & grimoire', detail: 'Radiant bolts · quick casting', profileId: 'star-wand', offhandProfileId: 'astral-grimoire' },
   { id: 'fire', label: 'Fire staff', detail: 'Powerful · two-handed', profileId: 'ember-staff', offhandProfileId: null },
   { id: 'bow', label: 'Shortbow', detail: 'Fast · short range', profileId: 'thorn-shortbow', offhandProfileId: null },
   { id: 'longbow', label: 'Longbow', detail: 'Heavy · long range', profileId: 'warden-longbow', offhandProfileId: null },
