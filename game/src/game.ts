@@ -1174,7 +1174,8 @@ export class Game {
       this.renderer.groundLootLabels, this.renderer.width, this.renderer.height,
       this.phase === 'playing' && !this.savingAction && !this.touch.active && !this.usingGamepad
         && this.mouse.present && !this.pointerInHUD() ? this.mouse : null, this.sim.time,
-      this.phase==='playing'?this.sim.groundPickup.id:null);
+      this.phase==='playing'?this.sim.groundPickup.id:null,
+      this.phase === 'playing' && !this.savingAction && !this.touch.active && !this.usingGamepad);
     if(this.phase==='playing'&&this.journeys.marker?.known){
       const marker=this.journeys.marker,point=this.renderer.worldToScreen(marker.x,marker.y);
       if(point.x>20&&point.x<this.renderer.width-20&&point.y>35&&point.y<this.renderer.height-30

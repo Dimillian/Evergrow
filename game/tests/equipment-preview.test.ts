@@ -11,7 +11,7 @@ const put = (player: ReturnType<typeof initialPlayer>, index: number, profile: s
   assert.ok(executeCharacterCommand(player, { type: 'equip', index }).ok);
 };
 
-test('ground inspection shows only the item without equip comparisons or character mutations', () => {
+test('explicit item-only inspection omits comparisons without character mutations', () => {
   const p = initialPlayer(0, 0); put(p, 0, 'longsword'); put(p, 1, 'iron-buckler', true);
   const incoming = generateItem(1200, 1, 'weapon', 'ember-staff', 'rare');
   const before = structuredClone(p);
@@ -106,17 +106,22 @@ test('candidate rows merge matching stats while retaining losses, derived effect
     assert.equal(matches.length, 1, `${label} appears exactly once`);
     return matches[0][1];
   };
-  assert.match(row('Armor'), /<td>\+4<\/td><td class="is-loss">-4<\/td>/);
+  assert.match(row('Armor'), /<td>\+4<\/td><td class="is-loss"><span aria-hidden="true">↓<\/span> -4<\/td>/);
   assert.match(row('Maximum mana'), /<td>\+7\.4<\/td><td class="is-gain">/);
-  assert.match(row('Cast speed'), /<td>\+10%<\/td><td class="is-gain">\+10%<\/td>/);
+  assert.match(row('Cast speed'), /<td>\+10%<\/td><td class="is-gain"><span aria-hidden="true">↑<\/span> \+10%<\/td>/);
   assert.match(row('Critical chance'), /<td>\+110%<\/td><td class="ui-item-stat-empty" aria-label="No change">—<\/td>/);
-  assert.match(row('Life on hit'), /aria-label="Not an item bonus">—<\/td><td class="is-loss">-2<\/td>/);
+  assert.match(row('Life on hit'), /aria-label="Not an item bonus">—<\/td><td class="is-loss"><span aria-hidden="true">↓<\/span> -2<\/td>/);
   assert.match(row('Spell damage'), /aria-label="Not an item bonus">—<\/td><td class="is-gain">/);
   assert.equal((candidate.match(/On equip/g) ?? []).length, 1);
   assert.doesNotMatch(candidate, /Replaces|ui-item-change/);
   assert.match(equipped, /Equipped · Boots/);
   assert.match(equipped, /Armor/);
   assert.doesNotMatch(equipped, /On equip|ui-item-stat-table/);
+  const compact = itemHoverCards(incoming, { sheet: p.character, level: 1, sourceIndex: 0, compactComparison: true });
+  assert.doesNotMatch(compact.join(''), /<table|ui-item-comparison-label/);
+  assert.match(compact[0], /is-loss[^>]*>\(-4\)<\/span>/);
+  assert.match(compact[0], /is-gain[^>]*>\(\+10%\)<\/span>/);
+  assert.match(compact[1], /ui-item-equipped-inline[^>]*>Equipped<\/span>/);
   assert.deepEqual(p, before);
 });
 
