@@ -51,7 +51,7 @@ test('external item preview succeeds and includes displaced gear even with a ful
   assert.match(cards[1], /Equipped · Main hand/);
 });
 
-test('ring inspection targets ring1 by default and ring2 when targetSlot is specified', () => {
+test('ring inspection compares both equipped rings by default and targets a specific ring when targetSlot is specified', () => {
   const p = initialPlayer(0, 0);
   p.character.equipped.ring1 = generateItem(5001, 1, 'ring', 'garnet-band', 'magic');
   p.character.equipped.ring2 = generateItem(5002, 1, 'ring', 'sapphire-ring', 'rare');
@@ -59,8 +59,9 @@ test('ring inspection targets ring1 by default and ring2 when targetSlot is spec
   const vendorRing = generateItem(5003, 1, 'ring', 'moonstone-ring', 'epic');
 
   const cardsDefault = itemHoverCards(vendorRing, { sheet: p.character, level: p.level });
-  assert.equal(cardsDefault.length, 2);
+  assert.equal(cardsDefault.length, 3);
   assert.match(cardsDefault[1], /Equipped · Ring 1/);
+  assert.match(cardsDefault[2], /Equipped · Ring 2/);
 
   const cardsRing2 = itemHoverCards(vendorRing, { sheet: p.character, level: p.level, targetSlot: 'ring2' });
   assert.equal(cardsRing2.length, 2);

@@ -161,3 +161,33 @@ test('hover comparisons respect an empty ring slot and an explicitly targeted oc
   assert.match(cards[1], /&lt;equipped &amp; ring&gt;/);
   assert.doesNotMatch(cards[1], /<equipped/);
 });
+
+test('hover comparisons when both rings are equipped display three cards and dual ring stat columns', () => {
+  const p = initialPlayer(0, 0);
+  const ring1 = generateItem(2800, 1, 'ring');
+  const ring2 = generateItem(2801, 1, 'ring');
+  const candidate = generateItem(2802, 1, 'ring');
+  ring1.name = 'First Opal Ring';
+  ring2.name = 'Second Ruby Ring';
+  candidate.name = 'Candidate Diamond Ring';
+  p.character.equipped.ring1 = ring1;
+  p.character.equipped.ring2 = ring2;
+  p.character.inventory[0] = candidate;
+
+  const view = { sheet: p.character, level: 1, sourceIndex: 0 };
+  const cards = itemHoverCards(candidate, view);
+  assert.equal(cards.length, 3, 'displays candidate, ring1, and ring2');
+  assert.match(cards[0], /Candidate Diamond Ring/);
+  assert.match(cards[0], /Ring 1/);
+  assert.match(cards[0], /Ring 2/);
+  assert.match(cards[1], /Equipped · Ring 1/);
+  assert.match(cards[1], /First Opal Ring/);
+  assert.match(cards[2], /Equipped · Ring 2/);
+  assert.match(cards[2], /Second Ruby Ring/);
+
+  const targetedCards = itemHoverCards(candidate, { ...view, targetSlot: 'ring2' });
+  assert.equal(targetedCards.length, 2);
+  assert.match(targetedCards[1], /Equipped · Ring 2/);
+  assert.match(targetedCards[1], /Second Ruby Ring/);
+});
+

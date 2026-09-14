@@ -22,7 +22,11 @@ export class ItemTooltip {
   }
   show(item: Item, view: ItemPresentation, anchor: HTMLElement, bounds = anchor.getBoundingClientRect() as Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>): void {
     this.current = { item, view, anchor, bounds };
-    const cards = itemHoverCards(item, { ...view, targetSlot: view.targetSlot ?? comparisonSlot(view.sheet, item, this.comparison.alternate) });
+    const isDualRing = item.kind === 'ring' && !view.targetSlot && Boolean(view.sheet.equipped.ring1 && view.sheet.equipped.ring2);
+    const targetSlot = view.targetSlot ?? (isDualRing
+      ? (this.comparison.alternate ? comparisonSlot(view.sheet, item, true) : undefined)
+      : comparisonSlot(view.sheet, item, this.comparison.alternate));
+    const cards = itemHoverCards(item, { ...view, targetSlot });
     this.element.style.setProperty('--tooltip-columns', String(cards.length));
     this.surface.show(cards.join(''), anchor, bounds);
     this.orderCards(bounds);
