@@ -1,38 +1,27 @@
-import { controlsMarkup } from './controls-panel.ts';
-import { audioControlsMarkup } from './audio-controls.ts';
+import { controls } from './control-preferences.ts';
 import { uiIcon } from './ui-icons.ts';
 import { escapeUI } from './ui-components.ts';
+import { PAUSE_CATEGORIES } from './pause-navigation.ts';
 
 export function pauseMenuMarkup(kills: number, duration: string, location: string): string {
-  return `<section class="ui-window menu-window pause-menu">
-    <header class="ui-window-header pause-header"><h1 id="menu-title" class="ui-title">Paused</h1>
-      <button type="button" id="close-menu" class="ui-button ui-button--quiet ui-button--icon" aria-label="Resume game">${uiIcon('close')}</button></header>
+  return `<div class="pause-menu-stack">
+    <div class="pause-brand" aria-label="Evergrow">EVERGROW</div>
+    <section class="ui-window menu-window pause-menu">
+    <header class="ui-window-header pause-header">${uiIcon('journal')}<h1 id="menu-title" class="ui-title">Paused</h1>
+      <span class="pause-place">${escapeUI(location)}</span>
+      <button type="button" id="play-action" class="ui-button pause-resume">${uiIcon('chevron')}<span>Resume</span><kbd>Esc</kbd></button></header>
     <div class="pause-layout">
-      <nav class="pause-actions" aria-label="Pause menu">
-        <button type="button" id="play-action" class="ui-button ui-button--primary">${uiIcon('chevron')}<span>Resume</span></button>
-        <button type="button" id="options-action" class="ui-button ui-button--quiet" aria-expanded="false" aria-controls="pause-options">${uiIcon('options')}<span>Options</span></button>
-        <button type="button" id="chronicle-action" class="ui-button ui-button--quiet">${uiIcon('star')}<span>Chronicle</span></button>
-        <button type="button" id="save-action" class="ui-button ui-button--quiet">${uiIcon('save')}<span>Save game</span></button>
-        <button type="button" id="title-action" class="ui-button ui-button--quiet" aria-label="Save and exit to character hall">${uiIcon('exit')}<span>Save & exit</span></button>
+      <nav class="pause-tabs" role="tablist" aria-label="Menu categories">
+        ${PAUSE_CATEGORIES.map((c,i)=>`<button type="button" id="pause-tab-${c.id}" class="ui-button pause-tab" role="tab" aria-selected="${i===0}" aria-controls="pause-page-${c.id}" tabindex="${i===0?0:-1}" data-pause-tab="${c.id}">${uiIcon(c.icon)}<span>${c.label}</span></button>`).join('')}
       </nav>
-      <div class="pause-detail">
-        <section id="pause-summary" aria-label="Current run">
-          <div class="pause-place">${uiIcon('leaf')}<span>${escapeUI(location)}</span></div>
-          <dl class="pause-stats"><div><dt>Slain</dt><dd>${kills}</dd></div><div><dt>Time played</dt><dd>${duration}</dd></div></dl>
-          <div class="pause-decoration" aria-hidden="true"><span></span>${uiIcon('star')}<span></span></div>
-        </section>
-        <section id="pause-options" aria-label="Options" hidden>
-          <header class="pause-options-heading"><h2>Options</h2><button type="button" data-options-back class="ui-button ui-button--quiet ui-button--icon" aria-label="Back to pause menu">${uiIcon('chevron')}</button></header>
-          <div class="pause-option"><span>Sound</span><button type="button" data-sound aria-label="Game sound" class="ui-button pause-toggle" aria-pressed="true">On</button></div>
-          ${audioControlsMarkup()}
-          <div class="pause-option pause-option--loot"><span id="ground-loot-names-label">Loot names</span><div class="pause-loot-modes" role="group" aria-labelledby="ground-loot-names-label"><button type="button" data-loot-names="always" class="ui-button ui-button--quiet" aria-pressed="true">Always</button><button type="button" data-loot-names="ctrl" class="ui-button ui-button--quiet" aria-pressed="false">Hold Ctrl</button></div></div>
-          <div class="pause-option"><span>Camera zoom</span><div class="pause-stepper"><button type="button" data-zoom="out" class="ui-button ui-button--icon" aria-label="Zoom camera out">${uiIcon('minus')}</button><button type="button" data-zoom="in" class="ui-button ui-button--icon" aria-label="Zoom camera in">${uiIcon('plus')}</button></div></div>
-          <div class="pause-option" data-fullscreen-row hidden><span>Fullscreen</span><button type="button" data-fullscreen aria-label="Fullscreen" class="ui-button pause-toggle" aria-pressed="false">Off</button></div>
-          <button type="button" class="ui-button pause-controls-action" data-controls-open aria-controls="pause-controls">Controls & key bindings <span aria-hidden="true">→</span></button>
-        </section>
-        ${controlsMarkup()}
+      <div class="pause-detail ui-scroll-area">
+        ${PAUSE_CATEGORIES.map((c,i)=>`<section id="pause-page-${c.id}" role="tabpanel" aria-labelledby="pause-tab-${c.id}" data-pause-page="${c.id}" ${i?'hidden':''}>
+          ${c.entries.map(e=>`<button type="button" class="ui-button ui-button--quiet pause-destination" data-pause-destination="${e.id}">${uiIcon(e.icon)}<span class="pause-row-text"><span>${e.label}</span><small>${e.description}</small></span>${e.binding?`<kbd data-pause-binding="${e.binding}">${escapeUI(controls.label(e.binding))}</kbd>`:''}</button>`).join('')}
+        </section>`).join('')}
       </div>
     </div>
-    <footer class="pause-footer"><i aria-hidden="true"></i><p class="menu-save-state" role="status">Saving…</p></footer>
-  </section>`;
+    <div class="pause-utilities"><button type="button" id="save-action" class="ui-button">${uiIcon('save')}<span>Save game</span></button><button type="button" id="title-action" class="ui-button ui-button--quiet"><span>Save & character hall</span>${uiIcon('exit')}</button></div>
+    <footer class="pause-footer"><i aria-hidden="true"></i><p class="menu-save-state" role="status">Saving…</p><span class="pause-session">${kills} slain · ${duration} played</span></footer>
+    </section>
+  </div>`;
 }

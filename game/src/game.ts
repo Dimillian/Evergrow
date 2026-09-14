@@ -108,6 +108,7 @@ export class Game {
   private groundLootHighlight: GroundLootHighlight;
   private inventoryPanel: InventoryPanel;
   private appearanceEditor?:ReturnType<typeof createAppearanceEditor>;
+  private appearanceFromPause = false;
   private creationLooks=new Map<number,CharacterLook>();
   private skillPanel: SkillTreePanel;
   private servicePanel: ServicePanel;
@@ -175,10 +176,14 @@ export class Game {
         setGroundLootNames: mode => { this.groundLootNames = mode; this.savePreferences(); },
         volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
         sound: () => this.toggleSound(), muted: () => this.muted, zoom: factor => this.renderer.zoomByWheel(-Math.log(factor)/.0016,0,this.canvas.getBoundingClientRect().height),
+        lastSavedAt: () => this.session?.active?.record.updatedAt,
+        saveLocation: () => this.saveClient.mode === 'cloud' ? 'Online' : 'Local',
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
         portal: () => { this.canvas.focus(); this.requestPortal(); },
         save: () => this.durable(async () => { const saved = await this.saveCharacter(true); if (saved) await this.saveClient.flush(); return saved; }, false),
         openChronicle: () => { if(!this.savingAction)this.panels.open('chronicle'); },
+        openAppearance: () => { if (!this.savingAction && this.panels.open('character')) this.editAppearance(true); },
+        leaderboard: order => this.saveClient.leaderboard(order), leaderboardAvailable: () => this.saveClient.supported,
         returnToTitle: () => this.returnToTitle(), openMap: () => this.openMap(),
         openCharacter: () => this.openCharacterPanel('character'), openSkills: () => this.openCharacterPanel('skills'), openJourneys: () => this.journeys.open(),
       }));
@@ -530,7 +535,8 @@ export class Game {
     this.appearanceEditor?.dispose();this.appearanceEditor=undefined;this.clearInput();
     if(this.disposed)return;
     this.titleScreen.setEditorOpen(false);
-    if(this.phase==='character'){this.inventoryPanel.open(this.sim.player);this.inventoryPanel.element.querySelector<HTMLButtonElement>('[data-edit-appearance]')?.focus();}
+    if (this.appearanceFromPause) { this.appearanceFromPause = false; if (this.phase === 'character') this.panels.resume(); }
+    else if(this.phase==='character'){this.inventoryPanel.open(this.sim.player);this.inventoryPanel.element.querySelector<HTMLButtonElement>('[data-edit-appearance]')?.focus();}
   }
   private editNewCharacter(index:number,name:string,weapon:StarterLoadoutId,seed:number) {
     if(this.phase!=='ready'||this.hallBusy||this.appearanceEditor)return;
@@ -545,8 +551,9 @@ export class Game {
       },
     });
   }
-  private editAppearance() {
+  private editAppearance(fromPause = false) {
     if(this.phase!=='character'||this.savingAction||this.appearanceEditor||!this.session.active)return;
+    this.appearanceFromPause = fromPause;
     this.inventoryPanel.close();this.clearInput();
     this.appearanceEditor=createAppearanceEditor(this.shell.panelMount,{sheet:this.sim.player.character,name:this.session.active.record.name,
       onCancel:()=>this.closeAppearanceEditor(),
@@ -713,7 +720,7 @@ export class Game {
           if (message && message !== this.saveError) this.notify(message);
           this.saveError = message;
           const cloud = this.saveClient.statusForSlot(this.session.active!.index);
-          this.shell.setSaveStatus(message || (this.saveClient.mode === 'cloud' ? cloud.message || cloud.status : 'Character saved locally.'), !saved || this.saveClient.mode === 'cloud' && !['Synced', 'Saving…'].includes(cloud.status));
+          this.shell.setSaveStatus(message || (this.saveClient.mode === 'cloud' ? cloud.message || cloud.status : ''), !saved || this.saveClient.mode === 'cloud' && !['Synced', 'Saving…'].includes(cloud.status));
         }
       } while (this.saveAgain && !this.savingAction && !this.disposed && saved);
       await this.exploration.save();
@@ -909,7 +916,7 @@ export class Game {
   private async persistTravel(checkpoint: CharacterCheckpoint) {
     const ok = await this.session.save(checkpoint, Date.now());
     this.saveError = ok ? '' : this.session.error;
-    this.shell.setSaveStatus(this.saveError || 'Character saved locally.', !ok);
+    this.shell.setSaveStatus(this.saveError || '', !ok);
     return { ok, message: this.saveError };
   }
 
@@ -963,7 +970,7 @@ export class Game {
       if (!saved) this.shell.setSaveStatus(this.session.error, true);
       return { ok: saved, message: this.session.error };
     });
-    if (result.ok) { p.chronicle=progress; this.saveError = ''; this.shell.setSaveStatus('Character saved locally.');
+    if (result.ok) { p.chronicle=progress; this.saveError = ''; this.shell.setSaveStatus();
       if(quote.request.type==='sell'||quote.request.type==='sellMany')this.audio.play({type:'gold',x:p.x,y:p.y,amount:quote.price,balance:p.character.gold??0});
       else this.notify(result.message);
     }
@@ -980,7 +987,7 @@ export class Game {
         return { ok, message: this.session.error };
       });
       if (result.ok) {
-        this.saveError = ''; this.shell.setSaveStatus('Character saved locally.');
+        this.saveError = ''; this.shell.setSaveStatus();
         this.inventoryPanel.refresh(this.sim.player);
       }
       this.notify(result.message ?? 'Could not drop this item.');
@@ -1224,6 +1231,7 @@ export class Game {
       else if (this.phase === 'ready') this.shell.titleMount.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
       return;
     }
+    if (this.phase === 'paused') { this.shell.updatePauseGamepad(pad, now); return; }
     if (pad.pressed.has(PAD.map) && (this.panels.canOpen('map') || this.phase === 'map')) {
       this.panels.toggle('map'); return;
     }

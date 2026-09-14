@@ -9,7 +9,7 @@ Published in v0.5.0 on 2026-09-07 with matching cloud client, API and additive D
 ## Player flow
 
 - **Character hall → Chronicle** opens all characters in the selected save source.
-- **Esc → Chronicle** opens the current character and returns to pause when closed.
+- **Esc → Character → Chronicle** opens the current character and returns to the same pause-menu category when closed. Achievements, Statistics and Uniques remain tabs inside Chronicle.
 - **Character & inventory → Chronicle** opens the current character and returns to inventory.
 - The character selector includes archived characters. Cloud and Local remain separate; Android uses this device's local history.
 - Overview shows six totals, the closest milestones, attributed personal bests and earned badges. Achievements contains 32 families / 91 tiers and feats. Statistics contains detailed combat, survival, loot, exploration and progression tables.

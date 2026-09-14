@@ -3,8 +3,7 @@ import { controls } from './control-preferences.ts';
 import { escapeUI } from './ui-components.ts';
 
 export function controlsMarkup(): string {
-  return `<section id="pause-controls" aria-label="Controls" hidden>
-    <header class="pause-options-heading"><h2>Controls</h2><button type="button" data-controls-back class="ui-button ui-button--quiet">Back</button></header>
+  return `<section id="pause-controls" aria-label="Control bindings">
     <p class="controls-intro">Choose a binding, then press a key or mouse button. Changes save automatically on this device.</p>
     <div class="controls-devices" role="group" aria-label="Input device"><button type="button" class="ui-button" data-control-device="desktop" aria-pressed="true">Keyboard & mouse</button><button type="button" class="ui-button" data-control-device="controller" aria-pressed="false">Controller</button></div>
     <div data-controls-desktop>
