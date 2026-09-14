@@ -1,5 +1,21 @@
 # Evergrow changelog
 
+## v0.5.3 — 2026-09-14T08:21:00Z
+
+### Tweaks
+
+- Skill-tree tooltips wait briefly while you hover a node, keeping the map clear as you explore.
+- Node highlights, route previews and selection stay immediate; dragging or zooming dismisses floating tooltips.
+- A short exit grace lets you move into skill tooltips and read their explanations.
+
+### Fixes
+
+- Selecting an item in a vendor no longer leaves its tooltip stuck open after moving the mouse away.
+- Moving across unrelated controls no longer postpones tooltip dismissal.
+- Keyboard inspection and nested explanations remain accessible, including with reduced motion enabled.
+
+> Existing local and cloud characters remain compatible. No save reset or skill refund is required. Reload the game to apply this update.
+
 ## v0.5.2 — 2026-09-14T06:07:00Z
 
 ### New
