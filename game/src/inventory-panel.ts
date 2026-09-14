@@ -98,6 +98,7 @@ export class InventoryPanel {
   private drag: ItemReference | null = null;
   private locking = false;
   private dragOffset = { x: 0, y: 0 };
+  private dragGrids: Array<{ bounds: DOMRect; first: DOMRect; gap: number; charms: boolean }> | null = null;
   private dropHighlightKey = '';
   private touchItem: ItemReference | null = null;
   private touchMoving = false;
@@ -610,6 +611,7 @@ export class InventoryPanel {
       this.hideTooltip();
       this.cells.get(locationKey(location))?.classList.add('is-dragging');
       this.highlightEquipmentTargets();
+      this.prepareDragGrids();
       this.element.classList.add('is-item-dragging');
     }, options);
     const updateDropPreview = (event: DragEvent) => {
@@ -722,19 +724,27 @@ export class InventoryPanel {
     return planInventoryMove(this.player!.character, source.index, target.cell) !== null;
   }
 
+  private prepareDragGrids(): void {
+    this.dragGrids = [...this.element.querySelectorAll<HTMLElement>('.character-bag, .character-charm-grid')].map(grid => {
+      const charms = grid.classList.contains('character-charm-grid');
+      const first = grid.querySelector<HTMLElement>('.character-grid-cell')?.getBoundingClientRect() ?? new DOMRect();
+      const gap = parseFloat(getComputedStyle(grid).columnGap) || 0;
+      return { bounds: grid.getBoundingClientRect(), first, gap, charms };
+    });
+  }
+
   private dragLocation(event: DragEvent): ItemLocation | null {
     const target = this.locationFrom(event.target);
     if (target?.type === 'equipment') return target;
-    const bag = [...this.element.querySelectorAll<HTMLElement>('.character-bag, .character-charm-grid')].find(grid=>{
-      const bounds=grid.getBoundingClientRect();return event.clientX>=bounds.left&&event.clientX<bounds.right&&event.clientY>=bounds.top&&event.clientY<bounds.bottom;
-    });
-    if(!bag)return null;
-    const charms=bag.classList.contains('character-charm-grid');
-    const first = bag.querySelector<HTMLElement>('.character-grid-cell')!.getBoundingClientRect();
-    const gap = parseFloat(getComputedStyle(bag).columnGap) || 0;
-    const x = Math.floor((event.clientX - first.left) / (first.width + gap)) - this.dragOffset.x;
-    const y = Math.floor((event.clientY - first.top) / (first.height + gap)) - this.dragOffset.y;
-    return { type: 'bag', index: -1, cell: x < 0 || y < 0 || x >= PACK_COLUMNS || y >= (charms?CHARM_ROWS:PACK_ROWS) ? -1 : (charms?PACK_CELLS:0)+y * PACK_COLUMNS + x };
+    if (!this.dragGrids) this.prepareDragGrids();
+    const bag = this.dragGrids?.find(grid =>
+      event.clientX >= grid.bounds.left && event.clientX < grid.bounds.right
+      && event.clientY >= grid.bounds.top && event.clientY < grid.bounds.bottom
+    );
+    if (!bag) return null;
+    const x = Math.floor((event.clientX - bag.first.left) / (bag.first.width + bag.gap)) - this.dragOffset.x;
+    const y = Math.floor((event.clientY - bag.first.top) / (bag.first.height + bag.gap)) - this.dragOffset.y;
+    return { type: 'bag', index: -1, cell: x < 0 || y < 0 || x >= PACK_COLUMNS || y >= (bag.charms ? CHARM_ROWS : PACK_ROWS) ? -1 : (bag.charms ? PACK_CELLS : 0) + y * PACK_COLUMNS + x };
   }
 
   private highlightEquipmentTargets(): void {
@@ -750,7 +760,7 @@ export class InventoryPanel {
     for (const cell of this.cells.values()) cell.classList.remove('is-drop-target');
     this.element.querySelector<HTMLElement>('.character-pack-placement')!.hidden = true;
   }
-  private clearDrag(): void { this.element.classList.remove('is-item-dragging'); this.clearDropHighlight(); this.drag = null; this.dragOffset = { x: 0, y: 0 }; for (const cell of this.cells.values()) cell.classList.remove('is-drop-target', 'is-dragging', 'is-equip-target'); }
+  private clearDrag(): void { this.element.classList.remove('is-item-dragging'); this.clearDropHighlight(); this.drag = null; this.dragOffset = { x: 0, y: 0 }; this.dragGrids = null; for (const cell of this.cells.values()) cell.classList.remove('is-drop-target', 'is-dragging', 'is-equip-target'); }
 
   private showTooltip(location: ItemLocation): void {
     this.statTooltip.hide();
