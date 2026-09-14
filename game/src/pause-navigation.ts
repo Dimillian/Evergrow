@@ -11,11 +11,11 @@ export const PAUSE_CATEGORIES: readonly { id: PauseCategory; label: string; icon
     { id: 'skills', label: 'Skill atlas', description: 'Passives, skills and Techniques', icon: 'skilltree', binding: 'skills' },
     { id: 'appearance', label: 'Appearance', description: 'Your character’s look', icon: 'character' },
     { id: 'chronicle', label: 'Chronicle', description: 'Achievements, statistics and Unique collection', icon: 'journal' },
-    { id: 'lootLog', label: 'Loot log', description: 'Recent pickups, original item details and current locations', icon: 'journal' },
   ] },
   { id: 'adventure', label: 'Adventure', icon: 'map', entries: [
     { id: 'map', label: 'World map', description: 'Your explored world and discovered places', icon: 'map', binding: 'map' },
     { id: 'journeys', label: 'Journeys', description: 'Goals and discoveries along your path', icon: 'journal', binding: 'journeys' },
+    { id: 'lootLog', label: 'Loot log', description: 'Recent pickups, original item details and current locations', icon: 'lootBag' },
   ] },
   { id: 'system', label: 'System', icon: 'options', entries: [
     { id: 'options', label: 'Options', description: 'Sound, loot labels, camera zoom and fullscreen', icon: 'options' },

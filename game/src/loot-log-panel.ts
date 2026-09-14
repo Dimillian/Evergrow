@@ -29,7 +29,7 @@ export class LootLogPanel {
     this.element = document.createElement('section');
     this.element.className = 'loot-log-panel'; this.element.hidden = true;
     this.element.innerHTML = `<section class="ui-window loot-log-window" role="dialog" aria-modal="true" aria-labelledby="loot-log-title">
-      <header class="ui-window-header"><span class="loot-log-emblem">${uiIcon('journal')}</span><div><h2 class="ui-title" id="loot-log-title">Loot log</h2><p class="ui-muted">This character · Recent pickups</p></div><button type="button" class="ui-button ui-button--icon" data-close aria-label="Close loot log">×</button></header>
+      <header class="ui-window-header"><span class="loot-log-emblem">${uiIcon('lootBag')}</span><div><h2 class="ui-title" id="loot-log-title">Loot log</h2><p class="ui-muted">This character · Recent pickups</p></div><button type="button" class="ui-button ui-button--icon" data-close aria-label="Close loot log">×</button></header>
       <div class="loot-log-columns"><nav class="loot-log-history ui-scroll-area" aria-label="Recent pickups"><div class="loot-log-list-heading"><span>Newest first</span><span data-count></span></div><div data-entries></div></nav><section class="loot-log-detail ui-scroll-area" aria-label="Selected pickup details" aria-live="polite"></section></div>
       <footer class="ui-window-footer"><span>Stats recorded at pickup · Last ${LOOT_LOG_LIMIT} items</span><span>Game paused</span></footer></section>`;
     mount.append(this.element);

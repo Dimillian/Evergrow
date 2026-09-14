@@ -29,7 +29,7 @@ export class GameNotifications {
   constructor(mount: HTMLElement, options: { autoAdvance?: boolean; openLootLog?: () => void } = {}) {
     this.autoAdvance = options.autoAdvance ?? true;
     this.element = document.createElement('div'); this.element.className = 'game-notifications';
-    this.element.innerHTML = `<div class="notification-anchor"><div class="notification-feed"></div><button type="button" class="notification-loot-log" hidden>${uiIcon('journal')}<span>Loot log</span><span data-loot-count>0</span></button></div><div class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>`;
+    this.element.innerHTML = `<div class="notification-anchor"><div class="notification-feed"></div><button type="button" class="notification-loot-log" hidden>${uiIcon('lootBag')}<span>Loot log</span><span data-loot-count>0</span></button></div><div class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>`;
     mount.append(this.element);
     this.lootButton = this.element.querySelector('.notification-loot-log')!;
     this.lootButton.addEventListener('click', () => options.openLootLog?.(), { signal: this.abort.signal });

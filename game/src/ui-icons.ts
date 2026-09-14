@@ -22,6 +22,7 @@ const ICONS = {
   shield: '<path d="m12 3 8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6Zm0 4v10"/>',
   inventory: '<path d="M4 8h16v13H4Zm4 0V5a4 4 0 0 1 8 0v3M4 13h16m-9-2v4h2v-4"/>',
   journal: '<path d="M5 3h14v18H5ZM5 7H3m2 5H3m2 5H3m6-9h6m-6 4h6m-6 4h4"/>',
+  lootBag: '<path d="m9 8-3-5 4 1 2-2 2 2 4-1-3 5c2 2 5 5 5 9 0 3-3 4-8 4s-8-1-8-4c0-4 3-7 5-9Z" fill="currentColor" fill-opacity=".1"/><path d="M8 8h8m-3 0 4 4m-5 1 2 3-2 3-2-3Z"/>',
   character: '<path d="M8 7a4 4 0 1 1 8 0 4 4 0 0 1-8 0Zm-4 14v-4l5-3 3 2 3-2 5 3v4Z"/>',
   palette: '<path d="M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 1-3.7 1.7 1.7 0 0 1 1-3.1h2A4 4 0 0 0 21 10c0-4-4-7-9-7Z"/><circle cx="7" cy="10" r="1"/><circle cx="10" cy="6.5" r="1"/><circle cx="15" cy="7" r="1"/><circle cx="6.5" cy="15" r="1"/>',
   skilltree: '<path d="M12 21v-7m0 1-6-5m6 1 6-5M6 10V5m12 1h3M12 9V3"/><circle cx="6" cy="3" r="2"/><circle cx="12" cy="11" r="2"/><circle cx="19" cy="4" r="2"/>',
