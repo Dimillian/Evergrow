@@ -107,3 +107,5 @@ Older entrances without an explicit theme keep their original three-theme seed i
 ## Crowd performance
 
 Frozen dungeon floors share a 64-unit spatial collision index. Cells proven to contain no silhouette edges reuse an exact inside/outside result; boundary cells retain the original polygon checks and 16-point body-clearance sampling. Unfrozen generator work continues to use the original geometry queries. The weakly owned index disappears with its floor. This changes no collision contours, actor limits, AI tick rate or combat timing. Room roster lookups are cached per floor and active member IDs use a set during admission. Wholly offscreen enemy rigs skip drawing with a generous 256-unit margin while their simulation continues. See `world-performance.md` for the reproducible CPU study.
+
+Dungeon maps use semantic silhouettes: a treasure chest, exit door with outward arrow, horned boss skull, sacred reliquary urn, ward shield and champion helmet. Event markers dispatch from the actual event kind. Completed markers keep their muted color, and the character arrow is unchanged. The shared `map-symbol-art.ts` artwork is also shown in the local Map icon workshop.

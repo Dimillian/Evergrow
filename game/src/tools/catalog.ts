@@ -11,6 +11,7 @@ export const WORKSPACES = [
 export type Workspace = typeof WORKSPACES[number]['id'];
 export interface Tool { id: string; group: Workspace; name: string; path: string; description: string; tags?: string; }
 export const TOOLS: readonly Tool[] = [
+  {id:'map-icons',group:'world',name:'Map icon workshop',path:'/tools/map-icons.html',description:'Every map marker, vendor and event at enlarged and actual sizes; recognizable silhouettes, states, dungeon themes and PNG export.',tags:'legend icons npc symbols minimap'},
   {id:'expeditions',group:'world',name:'Expedition routes',path:'/tools/expeditions.html',description:'Ten-stage route choices, dungeon modifiers, reward odds and level gate in the runtime panel.'},
   {id:'respec',group:'equipment',name:'Enchanter respec',path:'/services.html?role=enchanter&respec',description:'Preview the affordable skill reset and exact refunded points.'},
   {id:'forge',group:'equipment',name:'Item forge',path:'/tools/forge.html',description:'Generate items by seed, kind, profile, rarity and material; equip previews and JSON export.',tags:'generator random roll affixes'},

@@ -1,3 +1,4 @@
+import { drawMapPOIIcon, drawMapPlayerIcon, drawMapEnemyIcon, MAP_ICON_SIZES } from './map-icon-art.ts';
 import { worldTimeLabel, skyAtTime } from './world-time.ts';
 import { regionLevelLabel } from './encounter-scaling.ts';
 import { bindTouchCanvas } from './touch-canvas.ts';
@@ -552,7 +553,7 @@ export class WorldMap {
     for (const poi of pois) {
       if (poi.kind !== 'portal' && !poi.sighted && !this.exploration.isRevealed(poi.x, poi.y)) continue;
       const p = projectMapPoint(poi.x, poi.y, view);
-      this.poiIcon(c, poi, p.x, p.y, mini ? 4.1 : view.zoom < .07 ? 5.4 : 7, this.hovered?.id === poi.id && !mini);
+      this.poiIcon(c, poi, p.x, p.y, mini ? MAP_ICON_SIZES.minimap : view.zoom < .07 ? MAP_ICON_SIZES.overview : MAP_ICON_SIZES.map, this.hovered?.id === poi.id && !mini);
       if (!mini && poi.kind === 'town' && (view.zoom >= .045 || (this.zoneLevels && view.zoom >= .025))) {
         text(c, poi.name, p.x + 1, p.y + 13, 1.15, palette.ink, 'center');
         text(c, poi.name, p.x, p.y + 12, 1.15, palette.ivory, 'center');
@@ -564,62 +565,14 @@ export class WorldMap {
   }
 
   private poiIcon(c: CanvasRenderingContext2D, poi: MapPOI, x: number, y: number, size: number, selected: boolean) {
-    c.save(); c.translate(x, y); c.lineWidth = selected ? 1.8 : 1.1;
     const cleared = this.isCampCleared(poi) || ['Claimed', 'Beacon lit'].includes(this.eventStateReader(poi) ?? '');
-    c.fillStyle = palette.well; c.strokeStyle = selected ? palette.ivory : cleared ? palette.jade : POI_DEFINITIONS[poi.kind].color;
-    c.beginPath(); c.arc(0, 0, size + 2.5, 0, Math.PI * 2); c.fill(); if (selected) c.stroke();
-    c.beginPath();
-    if (poi.kind === 'portal') {
-      c.ellipse(0, -1, size * .7, size, 0, 0, Math.PI * 2); c.stroke();
-      c.beginPath(); c.ellipse(0, size, size, size * .35, 0, 0, Math.PI * 2); c.stroke();
-    } else if (poi.kind === 'town' || poi.kind === 'inn') {
-      c.moveTo(-size, 0); c.lineTo(0, -size); c.lineTo(size, 0); c.lineTo(size * .7, 0); c.lineTo(size * .7, size); c.lineTo(-size * .7, size); c.lineTo(-size * .7, 0); c.closePath(); c.stroke();
-    } else if (poi.kind === 'jeweler') {
-      c.moveTo(0, -size); c.lineTo(size, 0); c.lineTo(0, size); c.lineTo(-size, 0); c.closePath(); c.stroke();
-    } else if (poi.kind === 'enchanter') {
-      c.arc(0, 0, size, 0, Math.PI * 2); c.moveTo(0, -size); c.lineTo(0, size); c.moveTo(-size, 0); c.lineTo(size, 0); c.stroke();
-    } else if (poi.kind === 'chapel') {
-      c.moveTo(0, -size); c.lineTo(0, size); c.moveTo(-size * .65, -size * .3); c.lineTo(size * .65, -size * .3); c.stroke();
-    } else if (poi.kind === 'blacksmith') {
-      c.moveTo(-size, -size * .7); c.lineTo(size * .6, size * .6); c.moveTo(-size * .6, -size); c.lineTo(-size, -size * .4); c.moveTo(-size * .7, size); c.lineTo(size * .7, -size * .5); c.stroke();
-    } else if (poi.kind === 'shrine') {
-      c.moveTo(0, -size); c.lineTo(size * .3, -size * .3); c.lineTo(size, 0); c.lineTo(size * .3, size * .3); c.lineTo(0, size); c.lineTo(-size * .3, size * .3); c.lineTo(-size, 0); c.lineTo(-size * .3, -size * .3); c.closePath(); c.stroke();
-    } else if (poi.kind === 'camp') {
-      c.moveTo(-size, size * .8); c.lineTo(0, -size); c.lineTo(size, size * .8); c.closePath();
-      c.moveTo(0, -size); c.lineTo(0, size * .8); c.moveTo(-size * .5, -size); c.lineTo(size * .4, size * .8); c.stroke();
-      if (cleared) { c.beginPath(); c.moveTo(size * .35, size * .45); c.lineTo(size * .85, size * .9); c.lineTo(size * 1.45, 0); c.lineWidth = 1.6; c.stroke(); }
-    } else if (poi.kind === 'watchtower') {
-      c.moveTo(-size * .7, size); c.lineTo(-size * .7, -size); c.lineTo(-size * .25, -size * .5); c.lineTo(size * .1, -size); c.lineTo(size * .7, -size * .65); c.lineTo(size * .7, size); c.closePath();
-      c.moveTo(0, size * .5); c.lineTo(0, -size * .2); c.stroke();
-    } else if (poi.kind === 'bossLair') {
-      c.moveTo(-size,size*.55);c.lineTo(-size*1.05,-size*.65);c.lineTo(-size*.4,-size*.15);c.lineTo(0,-size);c.lineTo(size*.4,-size*.15);c.lineTo(size*1.05,-size*.65);c.lineTo(size,size*.55);c.closePath();c.stroke();
-      c.moveTo(-size*.65,size*.9);c.lineTo(size*.65,size*.9);c.stroke();
-    } else if (poi.kind === 'graveyard') {
-      c.moveTo(-size * .7, size); c.lineTo(-size * .7, -size * .35); c.quadraticCurveTo(0, -size * 1.4, size * .7, -size * .35); c.lineTo(size * .7, size); c.closePath();
-      c.moveTo(0, -size * .4); c.lineTo(0, size * .5); c.moveTo(-size * .3, 0); c.lineTo(size * .3, 0); c.stroke();
-    } else if (poi.kind === 'standingStones') {
-      c.moveTo(-size, size * .6); c.lineTo(-size * .8, -size * .55); c.lineTo(-size * .4, -size * .7); c.lineTo(-size * .25, size * .6); c.closePath();
-      c.moveTo(size * .2, size * .6); c.lineTo(size * .3, -size); c.lineTo(size * .75, -size * .8); c.lineTo(size, size * .6); c.closePath(); c.stroke();
-    } else if (poi.kind === 'caravan') {
-      c.rect(-size, -size * .75, size * 2, size * 1.2); c.moveTo(-size, -size * .2); c.lineTo(size, -size * .2); c.stroke();
-      c.beginPath(); c.arc(-size * .55, size * .7, size * .24, 0, Math.PI * 2); c.moveTo(size * .79, size * .7); c.arc(size * .55, size * .7, size * .24, 0, Math.PI * 2); c.stroke();
-    } else if (poi.kind === 'merchant') {
-      c.ellipse(0, 0, size * .7, size, 0, 0, Math.PI * 2); c.moveTo(-size * .7, 0); c.lineTo(size * .7, 0); c.stroke();
-    } else {
-      c.moveTo(-size, size * .6); c.lineTo(-size * .2, -size); c.lineTo(size * .3, 0); c.lineTo(size * .6, -size * .4); c.lineTo(size, size * .6); c.closePath(); c.stroke();
-    }
-    c.restore();
+    drawMapPOIIcon(c, poi.kind, x, y, size, selected, cleared);
   }
 
   private playerArrow(c: CanvasRenderingContext2D, player: MapPlayer, view: MapView, mini: boolean) {
     const p = projectMapPoint(player.x, player.y, view);
     if (p.x < view.x || p.y < view.y || p.x > view.x + view.width || p.y > view.y + view.height) return;
-    c.save(); c.translate(p.x, p.y);
-    c.strokeStyle = '#e3d39433'; c.lineWidth = 1; c.beginPath(); c.arc(0, 0, mini ? 17 : 14, 0, Math.PI * 2); c.stroke();
-    c.rotate(player.angle);
-    const r = mini ? 5 : 7;
-    c.beginPath(); c.moveTo(r + 2, 0); c.lineTo(-r, -r * .75); c.lineTo(-r * .5, 0); c.lineTo(-r, r * .75); c.closePath();
-    c.fillStyle = '#fff2ba'; c.fill(); c.strokeStyle = '#1b261f'; c.lineWidth = 1.3; c.stroke(); c.restore();
+    drawMapPlayerIcon(c, p.x, p.y, player.angle, mini);
   }
 
   private location(player: MapPlayer) {
@@ -679,9 +632,7 @@ export class WorldMap {
       if (!this.exploration.isRevealed(enemy.x, enemy.y)) continue;
       const p = projectMapPoint(enemy.x, enemy.y, view);
       if (p.x < view.x || p.y < view.y || p.x > view.x + view.width || p.y > view.y + view.height) continue;
-      c.fillStyle = enemy.kind === 'brute' ? '#d18a62' : enemy.kind === 'caster' ? '#d4a677' : '#b26a62';
-      c.strokeStyle = '#070d12'; c.lineWidth = .7;
-      c.beginPath(); c.arc(p.x, p.y, enemy.kind === 'brute' ? 1.9 : 1.4, 0, Math.PI * 2); c.fill(); c.stroke();
+      drawMapEnemyIcon(c, p.x, p.y, enemy.kind);
     }
     this.playerArrow(c, player, view, true); c.restore();
     text(c, 'N', view.x + view.width / 2, view.y + 3, .8, palette.jade, 'center');
@@ -782,7 +733,7 @@ export class WorldMap {
       c.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
       if (this.hovered) {
         const p = projectMapPoint(this.hovered.x, this.hovered.y, this.view);
-        this.poiIcon(c, this.hovered, p.x, p.y, this.view.zoom < .07 ? 5.4 : 7, true);
+        this.poiIcon(c, this.hovered, p.x, p.y, this.view.zoom < .07 ? MAP_ICON_SIZES.overview : MAP_ICON_SIZES.map, true);
       }
     }
     const marker=this.journeyMarker, markerPoint=marker?projectMapPoint(marker.x,marker.y,this.view):null;
