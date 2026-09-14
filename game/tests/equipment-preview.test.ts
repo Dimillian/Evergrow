@@ -180,6 +180,7 @@ test('hover comparisons when both rings are equipped display three cards and dua
   assert.match(cards[0], /Candidate Diamond Ring/);
   assert.match(cards[0], /Ring 1/);
   assert.match(cards[0], /Ring 2/);
+  assert.match(cards[0], /Alt · Focus comparison/);
   assert.match(cards[1], /Equipped · Ring 1/);
   assert.match(cards[1], /First Opal Ring/);
   assert.match(cards[2], /Equipped · Ring 2/);
@@ -187,6 +188,7 @@ test('hover comparisons when both rings are equipped display three cards and dua
 
   const targetedCards = itemHoverCards(candidate, { ...view, targetSlot: 'ring2' });
   assert.equal(targetedCards.length, 2);
+  assert.match(targetedCards[0], /Alt · Compare both/);
   assert.match(targetedCards[1], /Equipped · Ring 2/);
   assert.match(targetedCards[1], /Second Ruby Ring/);
 });

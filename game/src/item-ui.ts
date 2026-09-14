@@ -139,7 +139,9 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
       const properties = !view.compactComparison
         ? `<table class="ui-item-stat-table" aria-label="Item bonuses and net changes on equip"><thead><tr><th scope="col">Stat</th><th scope="col">Item</th><th scope="col">Ring 1</th><th scope="col">Ring 2</th></tr></thead><tbody>${rows.join('')}</tbody></table>${!preview1.changes.length && !preview2.changes.length ? '<p class="ui-item-description">No stat change</p>' : ''}`
         : `<div class="ui-item-properties">${rows.join('')}</div>`;
-      const comparison = view.adjacentComparison ? '' : '<div class="ui-item-comparison"><p>Compare with Ring 1 and Ring 2</p></div>';
+      const comparison = view.adjacentComparison
+        ? '<div class="ui-item-comparison"><p>Alt · Focus comparison</p></div>'
+        : '<div class="ui-item-comparison"><p>Compare with Ring 1 and Ring 2</p></div>';
       return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span></span><h4>${hasGreaterAffix(item) ? escapeUI(itemDisplayName(item).slice(0, -(GREATER_AFFIX_SYMBOL.length + 1))) + ' ' + greaterMark : escapeUI(itemDisplayName(item))}</h4></div></div>
     <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${item.locked?'<span class="ui-item-equipped">Locked</span>':''}</div>
     ${item.recipe.enhancement ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% scalable item stats</div>` : ''}
@@ -187,6 +189,8 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
     if (!preview.ok) comparison = `<div class="ui-item-comparison is-loss">${escapeUI(preview.message)}</div>`;
     else if (preview.displaced.length && !view.adjacentComparison)
       comparison = `<div class="ui-item-comparison"><p>Replaces ${preview.displaced.map(entry => escapeUI(entry.item.name)).join(' + ')}</p></div>`;
+    else if (view.adjacentComparison && item.kind === 'ring' && view.sheet.equipped.ring1 && view.sheet.equipped.ring2)
+      comparison = '<div class="ui-item-comparison"><p>Alt · Compare both</p></div>';
   }
   return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span>${view.equipped && view.compactComparison ? `<span class="ui-item-equipped-inline" title="${escapeUI(view.equippedLabel ?? '')}">Equipped</span>` : ''}</span><h4>${hasGreaterAffix(item) ? escapeUI(itemDisplayName(item).slice(0, -(GREATER_AFFIX_SYMBOL.length + 1))) + ' ' + greaterMark : escapeUI(itemDisplayName(item))}</h4></div></div>
     <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${view.equipped ? '<span class="ui-item-equipped">Equipped</span>' : ''}${item.locked?'<span class="ui-item-equipped">Locked</span>':''}</div>
