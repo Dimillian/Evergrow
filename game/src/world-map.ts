@@ -186,6 +186,10 @@ export class WorldMap {
   private tiles = new Map<string, TerrainTile>();
   private previewTiles = new Map<string, PreviewTile>();
   private frame = 0;
+  private recenter: { x: number; y: number; started: number; duration: number } | null = null;
+  private focusTarget: { x: number; y: number } | null = null;
+  private focusPing: HTMLDivElement;
+  private pingAnimations: Animation[] = [];
   private chartDirty = false;
   private buildBudget?: number;
   private pendingTerrain = false;
@@ -231,6 +235,7 @@ export class WorldMap {
         <button type="button" class="world-map-close ui-button ui-button--quiet ui-button--icon" aria-label="Close world map" data-tooltip="Close map" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('close')}</button>
       </header>
       <div class="world-map-viewport ui-window__body"><canvas class="world-map-canvas" tabindex="0" aria-label="Explored world map"></canvas>
+        <div class="world-map-focus-ping" aria-hidden="true" hidden><span></span><span></span></div>
         <div class="world-map-toolbar" role="toolbar" aria-label="Map controls">
           <button type="button" class="ui-button ui-button--quiet ui-button--icon" data-map="out" aria-label="Zoom out" data-tooltip="Zoom out">${uiIcon('minus')}</button>
           <button type="button" class="ui-button ui-button--quiet ui-button--icon" data-map="in" aria-label="Zoom in" data-tooltip="Zoom in">${uiIcon('plus')}</button>
@@ -248,6 +253,7 @@ export class WorldMap {
     this.canvas = this.element.querySelector<HTMLCanvasElement>('.world-map-canvas')!;
     this.context = this.canvas.getContext('2d')!;
     this.viewport = this.element.querySelector<HTMLDivElement>('.world-map-viewport')!;
+    this.focusPing = this.element.querySelector<HTMLDivElement>('.world-map-focus-ping')!;
     this.status = this.element.querySelector('.world-map-status')!;
     this.discoveries = this.element.querySelector('.world-map-discoveries')!;
     this.coordinates = this.element.querySelector('.world-map-coordinates')!;
@@ -276,6 +282,7 @@ export class WorldMap {
   }
   close() {
     if (!this.opened) return;
+    this.cancelRecenter();
     if (this.drag && this.canvas.hasPointerCapture(this.drag.id)) this.canvas.releasePointerCapture(this.drag.id);
     if (this.frame) cancelAnimationFrame(this.frame); this.frame = 0;
     this.chartLayer = undefined; this.visiblePOIs = [];
@@ -293,16 +300,28 @@ export class WorldMap {
       || previous.status !== this.exploration.storageStatus || previous.message !== this.exploration.persistenceMessage)) this.render();
   }
   resize() {
-    if (!this.opened || this.disposed) return;
+    this.render();
+  }
+  /** Footer text participates in flex layout, so populate it before measuring the chart. */
+  private prepareLayout(): boolean {
+    const count = this.exploration.discoveredPOICount;
+    setText(this.discoveries, `${count} ${count === 1 ? 'place' : 'places'} charted`);
+    const area = mapAreaLabel(this.world, this.player.x, this.player.y);
+    setText(this.status, `${area} · ${this.exploration.persistenceMessage || (this.exploration.storageStatus === 'pending' ? 'Charting…' : 'Chart saved')}`);
+    this.status.dataset.state = this.exploration.storageStatus;
+    setText(this.coordinates, `X ${Math.round(this.player.x)} · Y ${Math.round(this.player.y)}`);
     const rect = this.viewport.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
+    if (rect.width <= 0 || rect.height <= 0) return false;
     this.view.width = rect.width; this.view.height = rect.height;
     this.ratio = Math.max(1, Math.min(4, window.devicePixelRatio || 1));
-    this.canvas.width = Math.round(rect.width * this.ratio); this.canvas.height = Math.round(rect.height * this.ratio);
-    this.render();
+    const width = Math.round(rect.width * this.ratio), height = Math.round(rect.height * this.ratio);
+    if (this.canvas.width !== width) this.canvas.width = width;
+    if (this.canvas.height !== height) this.canvas.height = height;
+    return true;
   }
   /** Frame any charted region without changing discoveries, player state or saved data. */
   fitBounds(region: MapRect, padding = 40) {
+    this.cancelRecenter();
     this.view = fitMapBounds(this.view, region, padding, this.zoomLimits); this.render();
   }
   get viewBounds(): MapRect { return bounds(this.view); }
@@ -311,10 +330,67 @@ export class WorldMap {
   setMinimapPointer(point: { x: number; y: number } | null) { this.minimapPointer = point; }
 
   private clearTouch: (() => void) | null = null;
+
+  private cancelRecenter() {
+    this.recenter = null;
+    this.focusTarget = null;
+    for (const animation of this.pingAnimations) animation.cancel();
+    this.pingAnimations = [];
+    this.focusPing.hidden = true;
+  }
+
+  private centerOnPlayer() {
+    this.focusLocation(null);
+  }
+
+  /** Called after opening on the player; the brief hold makes the journey's origin readable. */
+  focusJourney(marker: JourneyMarker) {
+    if (!this.opened || this.disposed) return;
+    this.setJourneyMarker(marker);
+    this.focusLocation(marker, 450, 1.6);
+  }
+
+  private focusLocation(target: { x: number; y: number } | null, delay = 0, durationScale = 1) {
+    this.cancelRecenter(); this.pointer = null; this.hideTooltip();
+    this.focusTarget = target ? { x: clampMapCoordinate(target.x), y: clampMapCoordinate(target.y) } : null;
+    const destination = this.focusTarget ?? this.player;
+    const distance = Math.hypot(destination.x - this.view.centerX, destination.y - this.view.centerY) * this.view.zoom;
+    this.recenter = { x: this.view.centerX, y: this.view.centerY, started: performance.now() + delay,
+      duration: distance < 1 ? 0 : Math.min(850, 380 + distance * .3) * durationScale };
+    this.invalidate();
+  }
+
+  private advanceRecenter(now: number) {
+    const motion = this.recenter;
+    if (!motion) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const t = reduced || now >= motion.started + motion.duration || motion.duration === 0
+      ? 1 : Math.max(0, (now - motion.started) / motion.duration);
+    const ease = t * t * t * (t * (t * 6 - 15) + 10);
+    const destination = this.focusTarget ?? this.player;
+    this.view.centerX = motion.x + (clampMapCoordinate(destination.x) - motion.x) * ease;
+    this.view.centerY = motion.y + (clampMapCoordinate(destination.y) - motion.y) * ease;
+    if (t < 1) return;
+    this.recenter = null;
+    this.focusPing.hidden = false;
+    // Screen-space rings stay readable at every zoom; their fade never repaints terrain.
+    this.pingAnimations = [...this.focusPing.children].map((ring, index) => ring.animate(reduced ? [
+      { opacity: 0 }, { opacity: .85, offset: .12 }, { opacity: .85, offset: .65 }, { opacity: 0 },
+    ] : [
+      { transform: 'scale(.45)', opacity: 0 },
+      { opacity: .95, offset: .15 },
+      { transform: 'scale(1.65)', opacity: 0 },
+    ], { duration: reduced ? 1100 : 950, delay: reduced ? 0 : index * 200, fill: 'both', easing: 'ease-out' }));
+    const animations = this.pingAnimations;
+    void Promise.all(animations.map(animation => animation.finished)).then(() => {
+      if (this.pingAnimations === animations) this.cancelRecenter();
+    }).catch(() => { /* Direct input and closing cancel the transient highlight. */ });
+  }
+
   private bind() {
     const signal = this.abort.signal;
     this.clearTouch = bindTouchCanvas(this.canvas,signal,{
-      start:()=>{this.pointer=null;this.hideTooltip();},
+      start:()=>{this.cancelRecenter();this.pointer=null;this.hideTooltip();},
       pan:(dx,dy)=>{this.pointer=null;this.view.centerX=clampMapCoordinate(this.view.centerX-dx/this.view.zoom);this.view.centerY=clampMapCoordinate(this.view.centerY-dy/this.view.zoom);this.invalidate();},
       zoom:(factor,p)=>{this.view=zoomMapAt(this.view,p.x,p.y,this.view.zoom*factor, this.zoomLimits);this.invalidate();},
       tap:p=>{this.pointer=p;this.invalidate(false);},
@@ -323,9 +399,10 @@ export class WorldMap {
     for (const button of this.element.querySelectorAll<HTMLButtonElement>('[data-map]')) {
       button.addEventListener('click', () => {
         if (button.dataset.map === 'center') {
-          this.view.centerX = clampMapCoordinate(this.player.x); this.view.centerY = clampMapCoordinate(this.player.y);
+          this.centerOnPlayer(); return;
         }
-        else this.view = zoomMapAt(this.view, this.view.width / 2, this.view.height / 2,
+        this.cancelRecenter();
+        this.view = zoomMapAt(this.view, this.view.width / 2, this.view.height / 2,
           this.view.zoom * (button.dataset.map === 'in' ? 1.3 : 1 / 1.3), this.zoomLimits);
         this.invalidate();
       }, { signal });
@@ -333,6 +410,7 @@ export class WorldMap {
     const local = (event: PointerEvent | WheelEvent) => { const r = this.canvas.getBoundingClientRect(); return { x: event.clientX - r.left, y: event.clientY - r.top }; };
     this.canvas.addEventListener('pointerdown', event => {
       if (event.button !== 0) return;
+      this.cancelRecenter();
       event.preventDefault(); const p = local(event); this.canvas.focus(); this.canvas.setPointerCapture(event.pointerId);
       this.drag = { id: event.pointerId, ...p, centerX: this.view.centerX, centerY: this.view.centerY };
       this.canvas.classList.add('world-map-dragging'); this.hideTooltip();
@@ -351,6 +429,7 @@ export class WorldMap {
     this.canvas.addEventListener('lostpointercapture', release, { signal });
     this.canvas.addEventListener('pointerleave', () => { if (!this.drag) { this.pointer = null; this.hideTooltip(); this.invalidate(false); } }, { signal });
     this.canvas.addEventListener('wheel', event => {
+      this.cancelRecenter();
       event.preventDefault(); const p = local(event);
       const delta = Math.max(-240, Math.min(240, event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? this.view.height : 1)));
       this.view = zoomMapAt(this.view, p.x, p.y, this.view.zoom * Math.exp(-delta * .0016), this.zoomLimits); this.invalidate();
@@ -365,12 +444,15 @@ export class WorldMap {
         return;
       }
       if (event.target !== this.canvas) return;
+      if (event.key === 'Home') {
+        event.preventDefault(); event.stopPropagation(); this.centerOnPlayer(); return;
+      }
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '+', '=', '-'].includes(event.key)) this.cancelRecenter();
       const pan = 70 / this.view.zoom;
       if (event.key === 'ArrowLeft') this.view.centerX -= pan;
       else if (event.key === 'ArrowRight') this.view.centerX += pan;
       else if (event.key === 'ArrowUp') this.view.centerY -= pan;
       else if (event.key === 'ArrowDown') this.view.centerY += pan;
-      else if (event.key === 'Home') { this.view.centerX = this.player.x; this.view.centerY = this.player.y; }
       else if (event.key === '+' || event.key === '=' || event.key === '-') this.view = zoomMapAt(this.view,
         this.view.width / 2, this.view.height / 2, this.view.zoom * (event.key === '-' ? 1 / 1.3 : 1.3), this.zoomLimits);
       else return;
@@ -670,9 +752,15 @@ export class WorldMap {
     if (!this.opened || this.disposed) return;
     if (this.frame) cancelAnimationFrame(this.frame); this.frame = 0;
     this.chartDirty = false; this.pendingTerrain = false;
+    if (!this.prepareLayout()) return;
+    this.advanceRecenter(performance.now());
     this.buildBudget = 5;
     try { this.drawChart(); } finally { this.buildBudget = undefined; }
-    if (this.pendingTerrain) this.invalidate();
+    const destination = this.focusTarget ?? this.player;
+    const focusPoint = projectMapPoint(destination.x, destination.y, this.view);
+    this.focusPing.style.left = `${focusPoint.x}px`;
+    this.focusPing.style.top = `${focusPoint.y}px`;
+    if (this.pendingTerrain || this.recenter) this.invalidate();
     this.presentation = { x: this.player.x, y: this.player.y, angle: this.player.angle,
       revision: this.exploration.revision, status: this.exploration.storageStatus,
       message: this.exploration.persistenceMessage };
@@ -704,12 +792,6 @@ export class WorldMap {
 
     text(c, 'N', this.view.width - 27, 16, 1.15, palette.brass, 'center');
     c.strokeStyle = '#a8af9566'; c.beginPath(); c.moveTo(this.view.width - 27, 34); c.lineTo(this.view.width - 27, 54); c.moveTo(this.view.width - 32, 40); c.lineTo(this.view.width - 27, 34); c.lineTo(this.view.width - 22, 40); c.stroke();
-    const count = this.exploration.discoveredPOICount;
-    setText(this.discoveries, `${count} ${count === 1 ? 'place' : 'places'} charted`);
-    const area = mapAreaLabel(this.world, this.player.x, this.player.y);
-    setText(this.status, `${area} · ${this.exploration.persistenceMessage || (this.exploration.storageStatus === 'pending' ? 'Charting…' : 'Chart saved')}`);
-    this.status.dataset.state = this.exploration.storageStatus;
-    setText(this.coordinates, `X ${Math.round(this.player.x)} · Y ${Math.round(this.player.y)}`);
     this.drawHover();
   }
 

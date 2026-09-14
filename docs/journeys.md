@@ -54,7 +54,7 @@ A brief **Journey complete** celebration shows the activity name and actual bonu
 
 ## Navigation
 
-One pale-gold destination flag links the pinned activity, or the recommendation when unpinned, to maps and its visible world anchor. The minimap clamps offscreen bearings to its edge. Show on map inspects another lead without accepting it. Unknown sites expose a coarse 768-unit search cell, never hidden terrain or exact POI coordinates. Normal discovery reveals the anchor. Underground, outside objectives point toward the entrance, and crypt objectives only identify discovered rooms. Useful saved return portals become the next marker while in town.
+One pale-gold destination flag links the pinned activity, or the recommendation when unpinned, to maps and its visible world anchor. The minimap clamps offscreen bearings to its edge. Show on map inspects another lead without accepting it. On the surface, the map opens on the player, holds briefly, then eases to the objective and marks arrival with gold rings, preserving zoom. Direct pan/zoom input cancels the motion; reduced motion centers immediately with a stationary highlight. Unknown sites expose a coarse 768-unit search cell, never hidden terrain or exact POI coordinates. Normal discovery reveals the anchor. Underground, outside objectives point toward the entrance, and crypt objectives only identify discovered rooms. Useful saved return portals become the next marker while in town.
 
 Bearings are not walking paths. Recommendation scoring checks coarse approach danger and road access, including escape from a higher-level district, but does not solve terrain-aware routing. Geography and build suitability need player testing.
 
