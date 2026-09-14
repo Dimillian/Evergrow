@@ -272,10 +272,13 @@ test('staff basics cannot begin a windup or emit a bolt without sufficient mana'
   const p = sim.player; p.mana = 3.9; p.derived.manaRegeneration = 0;
   advance(sim, 1, { attack: true });
   assert.equal(p.mana, 3.9); assert.equal(p.attack, null); assert.equal(sim.projectiles.length, 0);
-  assert.equal(sim.drainEvents().filter(e => e.type === 'cast').length, 0);
+  const events = sim.drainEvents();
+  assert.equal(events.filter(e => e.type === 'cast').length, 0);
+  assert.ok(events.some(e => e.type === 'insufficient-mana'));
   p.mana = 4;
   sim.update(FIXED_STEP, { ...idle, attack: true });
   assert.ok(p.attack); assert.equal(p.mana, 0);
+  assert.equal(sim.drainEvents().filter(e => e.type === 'insufficient-mana').length, 0);
 });
 
 test('mana efficiency from gear reduces staff basic costs and a paid windup retains its price', () => {
@@ -296,6 +299,7 @@ test('sword and bow basics remain usable with an empty mana pool', () => {
     sim.player.mana = 0; sim.player.derived.manaRegeneration = 0;
     sim.update(FIXED_STEP, { ...idle, attack: true });
     assert.ok(sim.player.attack); assert.equal(sim.player.mana, 0);
+    assert.equal(sim.drainEvents().filter(e => e.type === 'insufficient-mana').length, 0);
   }
 });
 

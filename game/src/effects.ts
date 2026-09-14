@@ -10,7 +10,7 @@ import { drawGlow } from './lighting.ts';
 import type { PointLight } from './lighting.ts';
 import type { CombatEvent } from './model.ts';
 import type { Simulation } from './simulation.ts';
-import { text } from './font.ts';
+import { GAME_FONT_STACK, text } from './font.ts';
 import { SwordTrail } from './sword-trail.ts';
 import { projectileStyle, PROJECTILE_COLORS } from './projectile-art.ts';
 import { SkillEffects } from './skill-effects.ts';
@@ -24,6 +24,7 @@ interface Flash { x: number; y: number; life: number; max: number; radius: numbe
 interface Impact { x: number; y: number; angle: number; life: number; max: number; color: string; hurt: boolean; lethal: boolean; }
 interface Popup { x: number; y: number; vx: number; vy: number; life: number; max: number; value: string; color: string; size: number; }
 const GOLD = '#ffbd63', FIRE = '#ff643b', MINT = '#54e8b8', BLUE = '#64baff';
+const MANA_WARNING_DURATION = 1.15;
 
 /** Effects never drive gameplay. All collections and continuous emitters are bounded. */
 export class CombatEffects {
@@ -31,6 +32,7 @@ export class CombatEffects {
   private flashes: Flash[] = [];
   private impacts: Impact[] = [];
   private popups: Popup[] = [];
+  private manaWarningLife = 0;
   private emitterTime = 0;
   private sword = new SwordTrail();
   private skillEffects = new SkillEffects();
@@ -38,6 +40,7 @@ export class CombatEffects {
 
   reset() {
     this.sparks = []; this.flashes = []; this.impacts = []; this.popups = [];
+    this.manaWarningLife = 0;
     this.emitterTime = 0; this.sword.reset(); this.skillEffects.reset(); this.meleeSkills.reset();
   }
 
@@ -52,6 +55,11 @@ export class CombatEffects {
 
   handleEvents(events: CombatEvent[]) {
     for (const event of events) {
+      if (event.type === 'insufficient-mana') {
+        // Buffered/held attempts share one cue; never stack or restart its fade.
+        if (this.manaWarningLife <= 0) this.manaWarningLife = MANA_WARNING_DURATION;
+        continue;
+      }
       this.skillEffects.handle(event);
       const enemyKind = 'enemyKind' in event ? event.enemyKind : undefined;
       const heavy = 'heavy' in event && event.heavy;
@@ -111,6 +119,7 @@ export class CombatEffects {
 
   update(sim: Simulation, dt: number) {
     if (!Number.isFinite(dt) || dt <= 0) return;
+    this.manaWarningLife = sim.player.dead ? 0 : Math.max(0, this.manaWarningLife - dt);
     this.sword.update(sim.player, dt, sim.time, sim.interpolationAlpha);
     this.skillEffects.update(dt);
     this.meleeSkills.update(sim.player, dt, sim.interpolationAlpha);
@@ -229,6 +238,29 @@ export class CombatEffects {
       const a = i * 2.1 + elapsed * .35, r = 11 + elapsed * (impact.hurt ? 29 : 20);
       c.beginPath(); c.ellipse(0, 0, r, r * .7, 0, a, a + .6); c.stroke();
     }
+    c.restore();
+  }
+
+  /** One player-attached cue, drawn above CRT at native text size at every zoom. */
+  drawManaWarning(c: CanvasRenderingContext2D, head: { x: number; y: number }, reducedMotion: boolean) {
+    if (this.manaWarningLife <= 0) return;
+    const elapsed = MANA_WARNING_DURATION - this.manaWarningLife;
+    const progress = Math.min(1, elapsed / MANA_WARNING_DURATION);
+    const rise = 1 - (1 - progress) ** 2;
+    const fadeIn = Math.min(1, elapsed / .08);
+    const fadeOut = Math.max(0, Math.min(1, (elapsed - .15) / (MANA_WARNING_DURATION - .15)));
+    const smooth = (t: number) => t * t * (3 - 2 * t);
+    const y = head.y - 8 - (reducedMotion ? 0 : rise * 18);
+    c.save();
+    c.globalAlpha = .85 * smooth(fadeIn) * (1 - smooth(fadeOut));
+    c.font = `400 11px ${GAME_FONT_STACK}`;
+    c.textAlign = 'center'; c.textBaseline = 'bottom';
+    c.lineJoin = 'round'; c.lineWidth = 2;
+    c.strokeStyle = '#07172e';
+    c.strokeText('Not Enough Mana', head.x, y);
+    c.shadowColor = '#3289ff'; c.shadowBlur = 6;
+    c.fillStyle = '#94d0ff';
+    c.fillText('Not Enough Mana', head.x, y);
     c.restore();
   }
 

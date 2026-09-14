@@ -41,7 +41,7 @@ flowchart TD
 | `WorldMap` | Visible chart projection, bounded terrain LRU, POI layout and hover, minimap smoothing | Presentation only; disposed with the application |
 | `Renderer` | Camera, visible scene cache, art libraries, roof fades, lighting, hit trails, particles, focus | Visual state resets on a new run |
 | `PostFX` / `GameAudio` | GPU targets and listeners / audio graph and voices | Explicit disposal |
-| `GameInput` | Held keys/buttons, single-use action edges, pointer projection | Cleared on pause, map, blur, cancellation, restart |
+| `GameInput` | Held keys/buttons, single-use action edges, pointer projection | Cleared on pause, full M map, blur, cancellation, restart; held Tab map entry/exit preserves movement and held mouse buttons; the overlay uses normal gameplay input |
 | `GameShell` | DOM surface, accessible controls, menu listeners and toast timer | Explicit disposal; old menu listeners abort on replacement |
 | `Game` / `Lifetime` | Phase, event routing, frame scheduling, construction rollback, reverse-order resource teardown | One application instance per hot replacement |
 

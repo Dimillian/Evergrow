@@ -4,33 +4,45 @@ import { bindGameKeyboard } from '../src/game-keyboard.ts';
 import { GameInput } from '../src/game-input.ts';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
 
-test('Ctrl reveal tracks either control key without consuming browser shortcuts or latching after cancellation', () => {
+test('live-map interception owns movement keydown but always delivers release and respects native shortcuts', () => {
+  const target = new EventTarget(), abort = new AbortController(), input = new GameInput();
+  let normalPresses = 0, intercepted = 0;
+  bindGameKeyboard(target, {
+    intercept: event => { if (event.code !== 'ArrowUp') return false; intercepted++; input.keyDown(event.code); return true; },
+    press: () => { normalPresses++; }, release: code => input.keyUp(code), clear: () => input.clear(),
+  }, abort.signal);
+  const key = (type: string, code: string, ctrlKey = false) => {
+    const event = Object.assign(new Event(type, { cancelable: true }), { code, ctrlKey });
+    target.dispatchEvent(event); return event;
+  };
+  assert.equal(key('keydown', 'ArrowUp').defaultPrevented, true);
+  assert.equal(normalPresses, 0); assert.equal(input.consume({ x: 0, y: 0 }, true).moveY, -1);
+  key('keyup', 'ArrowUp'); assert.equal(input.consume({ x: 0, y: 0 }, true).moveY, 0);
+  assert.equal(intercepted, 1, 'release cannot latch a movement key again');
+  assert.equal(key('keydown', 'ArrowUp', true).defaultPrevented, false);
+  assert.equal(intercepted, 1); assert.equal(input.consume({ x: 0, y: 0 }, true).moveY, 0);
+  key('keydown', 'KeyM'); assert.equal(normalPresses, 1);
+  abort.abort();
+});
+
+test('Ctrl remains native and clears gameplay input before browser shortcuts', () => {
   const target = new EventTarget(), abort = new AbortController();
-  let held = false;
   let cancellations = 0;
   const pressed: string[] = [];
   bindGameKeyboard(target, { press: event => pressed.push(event.code), release: () => {},
-    clear: () => { held = false; cancellations++; }, revealLoot: value => { held = value; } }, abort.signal);
+    clear: () => { cancellations++; } }, abort.signal);
   const key = (type: string, code: string, ctrlKey: boolean, extra = {}) => {
     const event = Object.assign(new Event(type, { cancelable: true }), { code, ctrlKey, metaKey: false, altKey: false, isComposing: false, ...extra });
     target.dispatchEvent(event); return event;
   };
   assert.equal(key('keydown', 'ControlLeft', true).defaultPrevented, false);
-  assert.equal(held, true);
-  key('keydown', 'ControlRight', true);
-  key('keyup', 'ControlLeft', true); assert.equal(held, true, 'second Ctrl is still held');
-  assert.equal(cancellations, 0, 'revealing loot never cancels a pickup approach');
-  key('keyup', 'KeyA', true); assert.equal(held, true);
-  key('keyup', 'ControlRight', false); assert.equal(held, false);
-  const before = cancellations;
-  key('keydown', 'ControlLeft', true); key('keyup', 'ControlLeft', false);
-  assert.equal(cancellations, before, 'releasing Ctrl preserves the clicked pickup target');
-  key('keydown', 'ControlLeft', true);
+  assert.equal(cancellations, 1);
   key('keydown', 'KeyR', true); assert.deepEqual(pressed, []);
-  key('keydown', 'MetaLeft', true, { metaKey: true }); assert.equal(held, false);
-  key('keydown', 'ControlLeft', true);
-  target.dispatchEvent(new Event('compositionstart')); assert.equal(held, false);
-  abort.abort(); key('keydown', 'ControlRight', true); assert.equal(held, false);
+  assert.equal(key('keydown', 'KeyW', true).defaultPrevented, false);
+  key('keyup', 'ControlLeft', false);
+  assert.ok(cancellations >= 3);
+  const before = cancellations;
+  abort.abort(); key('keydown', 'ControlRight', true); assert.equal(cancellations, before);
 });
 
 function setup() {
