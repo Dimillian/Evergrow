@@ -835,7 +835,7 @@ export class Renderer {
     c.save(); c.translate(x, y); c.scale(scale,scale); if (pose.dead) c.globalAlpha = .4;
     const light=sampleGearLight(x,y-24,this.materialLights,this.materialKey);
     const paint=(target:CanvasRenderingContext2D)=>withGearLight(target,light,()=>drawHumanoid(target,pose));
-    if(rankColor)this.enemyOutlines.draw(c,rankColor,paint);else paint(c);
+    if(rankColor)this.enemyOutlines.draw(c,pose.kind as Enemy['kind'],rankColor,paint);else paint(c);
     drawCharacterStatus(c, pose); c.restore();
     this.waterArt.drawFeet(c, this.water.fluid, x, y, pose.kind === 'brute' ? 18 : pose.kind === 'player' ? 13 * PLAYER_ART_SCALE : 12);
   }
