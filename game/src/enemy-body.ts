@@ -1,3 +1,5 @@
+import { enemyVisualScale } from './enemy-modifiers.ts';
+import type { Enemy } from './model.ts';
 import type { EnemyKind } from './model.ts';
 
 /** Speech clears authored heads/crowns, rather than the larger aiming envelope.
@@ -27,3 +29,6 @@ export const ENEMY_BODY_BOUNDS: Record<EnemyKind, { radiusX: number; top: number
   archer: { radiusX: 22, top: -48, bottom: 3 },
   wisp: { radiusX: 18, top: -49, bottom: -4 },
 };
+
+/** Rank-aware visible bounds keep focus, aiming and captions aligned with enlarged creatures. */
+export function enemyBodyBounds(enemy:Pick<Enemy,'kind'> & Partial<Pick<Enemy,'rank'>>){const b=ENEMY_BODY_BOUNDS[enemy.kind],scale=enemyVisualScale({...enemy,rank:enemy.rank??'normal'});return scale===1?b:{radiusX:b.radiusX*scale,top:b.top*scale,bottom:b.bottom*scale,...(b.headTop===undefined?{}:{headTop:b.headTop*scale})};}

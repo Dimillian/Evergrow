@@ -1,3 +1,4 @@
+import { riftModifiers } from './rift-content.ts';
 import { effectTerm, statTerm } from './effect-terms.ts';
 import { uniquePowerMarkup } from './unique-power-ui.ts';
 import { uniqueDefinition } from './unique-content.ts';
@@ -100,6 +101,7 @@ export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, optio
 
 /** Item data and effective equipment changes are distinct; no inventory DOM location is required. */
 export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
+  if(item.kind==='riftKey')return `<h3>${escapeUI(item.name)}</h3><p>Consumed when opening a rift · Level 20</p>${riftModifiers({attempt:1,keySeed:item.seed,keyTier:item.recipe.riftKeyTier}).map(m=>`<div class="ui-item-property" style="color:${m.beneficial?'#a2d5b3':'#ed929f'}"><span>${escapeUI(m.label)}</span><strong>+${m.value}${m.unit}</strong></div>`).join('')}`;
   const preview = view.compare === false || view.equipped || item.kind === 'charm' && view.sourceIndex !== undefined ? null : previewEquipmentChange(view.sheet, item, view.level,
     { sourceIndex: view.sourceIndex, slot: view.targetSlot });
   const changes = new Map(preview?.ok ? preview.changes.map(change => [change.key, change]) : []);

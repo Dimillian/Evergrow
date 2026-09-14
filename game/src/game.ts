@@ -1,3 +1,6 @@
+import { RiftPanel } from './rift-panel.ts';
+import { RiftWorld } from './rift-world.ts';
+import { drawRiftHUD } from './rift-hud.ts';
 import { controls } from './control-preferences.ts';
 import { isGameplayAction, type ControlAction } from './control-bindings.ts';
 import { activeBuffs } from './active-buffs.ts';
@@ -90,6 +93,8 @@ export class Game {
   private lifetime = new Lifetime();
   overworld = new World(7319);
   world: World = this.overworld;
+  private riftPanel: RiftPanel;
+  private activeRiftPortal: string|null=null;
   private expeditionPanel: ExpeditionPanel;
   private activeExpeditionTable: string | null = null;
   private dungeonMap: DungeonMap;
@@ -238,6 +243,7 @@ export class Game {
         close: () => this.resume(), trade: quote => this.trade(quote),
         sort: (target,tab) => this.characterAction(target === 'storage' ? {type:'sortStorage',tab} : {type:'sortInventory',mode:'compact'}),
       }));
+      this.riftPanel=this.lifetime.own(new RiftPanel(this.shell.panelMount,{close:()=>this.resume(),enter:async action=>{const ok=await this.switchDungeon(action);if(ok)this.resume();return ok;}}));
       this.expeditionPanel=this.lifetime.own(new ExpeditionPanel(this.shell.panelMount,{close:()=>this.resume(),enter:async action=>{const ok=await this.switchDungeon(action);if(ok)this.resume();return ok;}}));
       this.dungeonMap = this.lifetime.own(new DungeonMap(this.shell.mapMount,()=>this.closeMap(),()=>this.worldMap.open({x:this.sim.expeditions.surfaceX,y:this.sim.expeditions.surfaceY,angle:0})));
       this.eventPanel = this.lifetime.own(new EventPanel(this.shell.panelMount, {
@@ -261,7 +267,7 @@ export class Game {
       this.panels = new PanelCoordinator({
         chronicle:{open:()=>{void this.chronicle.open(async onCached=>{await this.saveCharacter(true);return this.saveClient.chronicle(onCached);},this.session.active?.record.id);},close:()=>this.chronicle.close(false)},
         journeys:{open:()=>this.journeys.panel.open(this.journeys.selected),close:()=>this.journeys.panel.close()},
-        event: { open: () => { if(this.activeExpeditionTable)this.expeditionPanel.open(this.sim.expeditions,this.sim.player.level,this.overworld.seed,this.activeExpeditionTable); else if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.expeditionPanel.close(); this.activeExpeditionTable=null; this.activeEvent = null; this.activeDungeonEntrance = null; } },
+        event: { open: () => { if(this.activeRiftPortal)this.riftPanel.open(this.sim.expeditions,this.sim.player,this.activeRiftPortal); else if(this.activeExpeditionTable)this.expeditionPanel.open(this.sim.expeditions,this.sim.player.level,this.overworld.seed,this.activeExpeditionTable); else if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.expeditionPanel.close(); this.riftPanel.close(); this.activeRiftPortal=null; this.activeExpeditionTable=null; this.activeEvent = null; this.activeDungeonEntrance = null; } },
         service: { open: () => { if (this.activeNPC) this.servicePanel.open(this.sim.player, this.activeNPC); }, close: () => { this.servicePanel.close(); this.activeNPC = null; } },
         map: { open: () => { const run=currentDungeon(this.sim.expeditions), glance=this.panels.mapHeld; if(run) this.dungeonMap.open(this.sim.dungeonFloor!,run,this.sim.player,glance); else this.worldMap.open(this.sim.player,glance); this.shell.setStatus(glance?'Exploration map open. Movement continues.':'World map open. Game paused.'); }, close: () => { this.worldMap.close(); this.dungeonMap.close(); } },
         character: { open: () => { this.inventoryPanel.open(this.sim.player); this.shell.setStatus('Character and inventory open. Game paused.'); }, close: () => this.inventoryPanel.close() },
@@ -828,7 +834,7 @@ export class Game {
               void this.durable(async()=>{const result=await startDungeonEvent(this.sim,event.id,c=>this.persistTravel(c));this.notify(result.message);},undefined);
               return true;
           }
-          const chest = f.chests.findIndex(hit);
+          const chest = f.chests.findIndex((q,i)=>(!run.rift||i===2&&run.rift.phase==='complete')&&hit(q));
           if (chest >= 0) {
               const problem = dungeonChestProblem(this.sim, chest);
               if (problem)
@@ -865,6 +871,8 @@ export class Game {
           }
           return true;
       }
+      const riftPortal=this.world.getBuildings(p.x-200,p.y-200,400,400).find(b=>b.kind==='rift'&&Math.hypot(p.x-b.door.x,p.y-b.door.y)<90&&(!pointer||Math.hypot(pointer.x-b.door.x,pointer.y-(b.door.y-65))<85));
+      if(riftPortal){this.activeRiftPortal=riftPortal.id;this.panels.open('event');return true;}
       const table=this.world.getBuildings(p.x-180,p.y-180,360,360).find(b=>b.kind==='expedition'&&!expeditionTableProblem(b,p,this.world)&&(!pointer||Math.hypot(pointer.x-b.door.x,pointer.y-(b.door.y-25))<55));
       if(table){this.activeExpeditionTable=table.id;this.panels.open('event');return true;}
       const npcs = this.world.getBuildings(p.x - 220, p.y - 220, 440, 440).map(buildingNPC).filter((npc): npc is TownNPC => npc !== null);
@@ -964,7 +972,7 @@ export class Game {
       const run = checkpoint.expeditions && currentDungeon(checkpoint.expeditions);
       if (this.world !== this.overworld)
           this.world.dispose();
-      this.world = run ? new DungeonWorld(generateDungeon(run.entrance.seed, run.entrance.level, run.entrance), run.entrance) : this.overworld;
+      this.world = run ? new (run.entrance.rift?RiftWorld:DungeonWorld)(generateDungeon(run.entrance.seed, run.entrance.level, run.entrance), run.entrance) : this.overworld;
       this.sim.world = this.world;
   }
   private switchDungeon(action: DungeonAction): Promise<boolean> {
@@ -1135,7 +1143,9 @@ export class Game {
       const run=currentDungeon(this.sim.expeditions);
       const zone = run?{id:run.entrance.id,name:run.entrance.name,level:run.entrance.level}:getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed);
       if (this.areaNotices.update(zone.id, dt)) this.shell.notifications.push({ kind: 'area', id: zone.id, name: zone.name, level: zone.level, maxLevel: 'maxLevel' in zone ? zone.maxLevel : undefined });
-      if (this.sim.player.dead) {
+      if(run?.rift&&(this.sim.player.dead||run.rift.phase==='failed')){
+        if(!this.savingAction)void this.switchDungeon({kind:'death'});
+      } else if (this.sim.player.dead) {
         this.panels.transition('dead', true);
       }
       if (now >= this.nextAutosave) { this.saveCharacter(); this.nextAutosave = now + 20_000; }
@@ -1207,6 +1217,7 @@ export class Game {
     const mapPlayer = { x: p.prevX + (p.x - p.prevX) * alpha,
       y: p.prevY + (p.y - p.prevY) * alpha, angle: p.angle };
     const dungeonRun=currentDungeon(this.sim.expeditions);
+    if(dungeonRun?.rift && this.phase!=='ready')drawRiftHUD(ui,dungeonRun,this.renderer.width);
     if (this.phase !== 'ready' && !dungeonRun) this.worldMap.update(mapPlayer, dt);
     if (this.phase === 'map' && dungeonRun) this.dungeonMap.update(mapPlayer);
     if (this.panels.mapHeld) {

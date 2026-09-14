@@ -1,3 +1,4 @@
+import { riftBonus } from './rift-content.ts';
 import { withUniqueChance } from './unique-content.ts';
 import { EXPEDITION_MODIFIER_IDS } from './expedition-modifiers.ts';
 import { dungeonTheme, DUNGEON_THEME_IDS } from './dungeon-content.ts';
@@ -36,7 +37,7 @@ export function expeditionRewardItems(entrance:DungeonEntrance,playerLevel=entra
     return rollEnemyLoot({playerLevel,tierOverride:selectLootWeight(weights,random()) as ItemTier,seed:(entrance.seed+Math.imul(i+1,0x6d2b79f5))>>>0,level:entrance.level+3,rank:'normal',biome:entrance.biome,kind:'stalker',firstKill:true,encounter:'bossChest'})[0];
   });
 }
-export function dungeonChestMask(run:DungeonRun,index:number):number {return index===2 ? run.entrance.expedition?.stage===9?127:15 : 9;}
+export function dungeonChestMask(run:DungeonRun,index:number):number {return run.entrance.rift ? index===2 ? (1 << (10+riftBonus(run.entrance.rift,'bounty')))-1 : 0 : index===2 ? run.entrance.expedition?.stage===9?127:15 : 9;}
 export function completeExpeditionStage(state:Expeditions,run:DungeonRun):void {
   const route=state.route,tag=run.entrance.expedition;
   if(!route||!tag||route.status!=='active'||route.attempt!==tag.attempt||route.cleared!==tag.stage||route.choice!==tag.choice||run.chestMasks[2]!==dungeonChestMask(run,2))return;

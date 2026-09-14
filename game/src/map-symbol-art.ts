@@ -3,7 +3,7 @@ import type { POIKind } from './world-pois.ts';
 export type MapSymbol = POIKind | 'chest' | 'exit' | 'ward' | 'champion' | 'destination' | 'search' | 'direction';
 /** Names describe the visual cue, and are also used by the icon workshop. */
 export const MAP_SYMBOL_LABELS = {
-  bossLair: 'Horned skull', cursedChest: 'Chest with curse sparks', ruinedChapel: 'Broken chapel', beastDen: 'Clawed paw',
+  rift:'Torn aperture and tendrils', bossLair: 'Horned skull', cursedChest: 'Chest with curse sparks', ruinedChapel: 'Broken chapel', beastDen: 'Clawed paw',
   quarry: 'Pickaxe', hamlet: 'House with occupation banner', crossing: 'Bridge over water', corruptedGrove: 'Blighted tree',
   dungeon: 'Stone arch and descending steps', reliquary: 'Sacred urn', portal: 'Swirling gateway', town: 'Shelters and pennant',
   gambler: 'Three-pip die', stash: 'Locked storage chest', blacksmith: 'Anvil', jeweler: 'Faceted gemstone',
@@ -74,6 +74,8 @@ export function drawMapSymbol(c: CanvasRenderingContext2D, symbol: MapSymbol, si
       c.fillRect(-1,-8,2,4); c.fillRect(-3,-7,6,1.5); c.fillRect(-5,-3,10,2);
       polygon(-5,0,5,0,3,4,1,5,1,6,5,6,5,8,-5,8,-5,6,-1,6,-1,5,-3,4);
       if (detail) hole(() => c.fillRect(-1,1,2,3)); break;
+    case 'rift':
+      polygon(0,-9,4,-3,2,2,0,7,-3,3,-4,-3);hole(()=>polygon(0,-5,1,0,0,4,-1,0));line(-3,4,-7,2,-6,-3);line(2,3,7,5,6,-1);break;
     case 'portal':
       c.lineWidth = 2.3; c.beginPath(); c.ellipse(0,-1,5,7,0,.35,Math.PI*2-.35); c.stroke();
       line(5,-3,6,1,2,0); if (detail) { c.lineWidth = 1.35; line(-1,-4,2,-2,1,2,-1,3); } break;

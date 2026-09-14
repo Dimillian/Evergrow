@@ -1,3 +1,4 @@
+import { validRiftKey } from './rift-content.ts';
 import { uniqueDefinition } from './unique-content.ts';
 import { charmProfile, charmThematicStat } from './charm-content.ts';
 import { isResistanceStat, resistanceAffixLimit } from './resistance-content.ts';
@@ -22,6 +23,7 @@ const oneOf = (v: unknown, values: readonly unknown[]) => values.includes(v);
 const modifiers = (v: unknown) => object(v) && Object.keys(v).every(key => Object.hasOwn(STAT_LABELS, key) && number(v[key], -1e9, 1e9));
 
 export function validItem(v: unknown): v is Item {
+  if (object(v) && v.kind === 'riftKey') return validRiftKey(v);
   if (!object(v) || v.locked !== undefined && typeof v.locked !== 'boolean' || !text(v.id, 160) || !integer(v.seed, -2147483648, 4294967295) || !text(v.name)
     || !text(v.baseName) || !oneOf(v.kind, ITEM_KINDS) || !Object.hasOwn(TIER_NAMES, String(v.tier))
     || !integer(v.itemLevel, 1, MAX_CONTENT_LEVEL) || !integer(v.requiredLevel, 1, MAX_CONTENT_LEVEL)

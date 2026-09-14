@@ -1,3 +1,4 @@
+import { riftEnemyStats, type RiftProgress, type RiftLedger, type RiftTag } from './rift-content.ts';
 import { dungeonChestMask, type ExpeditionRoute } from './expedition-route.ts';
 import { freshWaves, type WaveProgress } from './wave-system.ts';
 import { encounterMemberLevel, isBossKind } from './encounter-scaling.ts';
@@ -9,6 +10,7 @@ import type { DungeonEntrance } from './dungeon.ts';
 import { generateDungeon, DUNGEON_RULES } from './dungeon.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
 export interface StoredActor {
+    rift?: RiftTag;
     kind: Enemy['kind'];
     rank: Enemy['rank'];
     level: number;
@@ -34,6 +36,7 @@ export interface LocationContents {
     defeatedCampMembers: Record<string, string[]>;
 }
 export interface DungeonRun {
+    rift?: RiftProgress;
     layoutVersion: number;
     events?: Record<number, WaveProgress>;
     entrance: DungeonEntrance;
@@ -51,6 +54,7 @@ export interface DungeonRun {
     y: number;
 }
 export interface Expeditions {
+    rifts?: RiftLedger;
     route?: ExpeditionRoute;
     /** Exact tombstones for exhausted, retired floors. Never regenerate their rewards. */
     cleared?: string[];
@@ -62,8 +66,8 @@ export interface Expeditions {
 }
 export const emptyContents = (): LocationContents => ({ actors: [], groundItems: [], groundGold: [], pickups: [], clearedCamps: [], defeatedCampMembers: {} });
 export const freshExpeditions = (): Expeditions => ({ cleared: [], location: null, runs: [], surface: null, surfaceX: 0, surfaceY: 0 });
-export function createDungeonRun(entrance: DungeonEntrance): DungeonRun { const f = generateDungeon(entrance.seed, entrance.level, entrance); return { entrance, layoutVersion:DUNGEON_RULES.version, events:Object.fromEntries((f.events??[]).map(e=>[e.id,freshWaves()])), states: Object.fromEntries(f.members.map(m => [m.id, { hp: scaledEnemyStats(m.kind, dungeonMemberLevel(entrance, m), m.rank).maxHp, x: m.x, y: m.y, admitted: false }])), explored: [0], chestMasks: [0, 0, 0], contents: emptyContents(), x: f.entry.x, y: f.entry.y }; }
-export function storedActor(e: Enemy): StoredActor { return { kind: e.kind, rank: e.rank, level: e.level, biome: e.biome, seed: e.lootSeed, x: e.x, y: e.y, homeX: e.homeX, homeY: e.homeY, hp: e.hp, campId: e.campId, memberId: e.campMemberId, bossPhases: e.bossPhases }; }
+export function createDungeonRun(entrance: DungeonEntrance): DungeonRun { const f = generateDungeon(entrance.seed, entrance.level, entrance); return { ...(entrance.rift?{rift:{elapsed:0,points:0,phase:'hunt' as const,claimed:false}}:{}), entrance, layoutVersion:DUNGEON_RULES.version, events:Object.fromEntries((f.events??[]).map(e=>[e.id,freshWaves()])), states: Object.fromEntries(f.members.map(m => [m.id, { hp: riftEnemyStats(scaledEnemyStats(m.kind, dungeonMemberLevel(entrance, m), m.rank),entrance.rift).maxHp, x: m.x, y: m.y, admitted: false }])), explored: [0], chestMasks: [0, 0, 0], contents: emptyContents(), x: f.entry.x, y: f.entry.y }; }
+export function storedActor(e: Enemy): StoredActor { return { ...(e.rift?{rift:e.rift}:{}), kind: e.kind, rank: e.rank, level: e.level, biome: e.biome, seed: e.lootSeed, x: e.x, y: e.y, homeX: e.homeX, homeY: e.homeY, hp: e.hp, campId: e.campId, memberId: e.campMemberId, bossPhases: e.bossPhases }; }
 export function currentDungeon(state: Expeditions): DungeonRun | undefined { return state.runs.find(r => r.entrance.id === state.location); }
 export function syncDungeon(run: DungeonRun, enemies: readonly Enemy[], x: number, y: number) { run.x = x; run.y = y; for (const e of enemies) {
     if (e.campId !== run.entrance.id || !e.campMemberId)
@@ -82,6 +86,7 @@ export function syncDungeon(run: DungeonRun, enemies: readonly Enemy[], x: numbe
 export function compactExpeditions(state: Expeditions, returnDungeon?: string): void {
     const cleared = new Set(state.cleared ?? []);
     state.runs = state.runs.filter(run => {
+        if(run.entrance.rift && state.location!==run.entrance.id)return false;
         const contents = run.contents;
         const exhausted = state.location !== run.entrance.id && returnDungeon !== run.entrance.id
             && Object.values(run.states).every(s => s.hp <= 0)

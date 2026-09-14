@@ -1,3 +1,4 @@
+import { enemyModifiers } from './enemy-modifiers.ts';
 import { isBossKind } from './wilderness-boss-content.ts';
 import { type EnemyDebuffState } from './enemy-debuffs.ts';
 import type { Enemy } from './model.ts';
@@ -115,7 +116,8 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
   c.fillStyle = shadow; c.fillRect(-1, -1, 2, 2); c.restore();
 
   c.save(); c.shadowColor = '#010409'; c.shadowBlur = 3; c.shadowOffsetY = 1;
-  const name = options.name ?? ENEMY_DEFINITIONS[enemy.kind].name;
+  const traits=enemyModifiers(enemy).map(m=>m.name).join(' · ');
+  const name = `${options.name ?? ENEMY_DEFINITIONS[enemy.kind].name}${traits?' · '+traits:''}`;
   text(c, name, w / 2, 28, Math.min(1.13, (w - 30) / Math.max(1, textWidth(name))), UI.ivory, 'center'); c.restore();
   drawRankCrest(c, enemy.rank, w / 2, 14, .88);
   // Engraved suspension arms lead the eye into the rank seal, without a window background.

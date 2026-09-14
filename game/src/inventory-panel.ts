@@ -687,7 +687,7 @@ export class InventoryPanel {
       return;
     }
     this.touchItem = {...location,id:item.id}; this.touchMoving = false;
-    const buttons = item.kind==='charm' ? '' : location.type === 'equipment' ? '<button class="ui-button" data-touch-item="unequip">Unequip</button>' :
+    const buttons = item.kind==='charm'||item.kind==='riftKey' ? '' : location.type === 'equipment' ? '<button class="ui-button" data-touch-item="unequip">Unequip</button>' :
       EQUIPMENT_SLOTS.filter(slot=>planEquipmentChange(this.player!.character,item,this.player!.level,{sourceIndex:location.index,slot}).ok)
       .map(slot=>`<button class="ui-button" data-touch-item="equip:${slot}">Equip · ${SLOT_NAMES[slot]}</button>`).join('');
     this.sheet.innerHTML = `<header><strong>Item details</strong><button class="ui-button" data-touch-item="close">Close</button></header><div class="ui-item-tooltip">${itemTooltipMarkup(item,{sheet:this.player.character,level:this.player.level,equipped:location.type==='equipment',sourceIndex:location.type==='bag'?location.index:undefined})}</div><nav>${buttons}<button class="ui-button" data-touch-item="move">Move to slot…</button>${this.actions.drop ? `<button class="ui-button" data-touch-item="drop">${uiIcon('dropItem')} Drop on ground</button>` : ''}</nav>`;

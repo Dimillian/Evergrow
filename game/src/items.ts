@@ -1,3 +1,4 @@
+import { createRiftKey } from './rift-content.ts';
 import { UNIQUES, uniqueDefinition, UNIQUE_SYMBOL, UNIQUE_COLOR } from './unique-content.ts';
 import { itemRollMultiplier, hasGreaterAffix, GREATER_AFFIX_SYMBOL } from './item-roll-content.ts';
 import { isOffensiveAttribute, offensiveAttributeImplicitScale } from './attribute-content.ts';
@@ -59,6 +60,7 @@ export function randomSource(seed: number): () => number {
   };
 }
 const BASE_NAMES: Readonly<Record<Exclude<ItemKind, 'weapon' | 'shield' | 'grimoire' | 'orb'>, readonly string[]>> = {
+  riftKey: ['Crimson Rift Key'],
   head: ['Crown Helm', 'Watcher Hood', 'Visored Helm'],
   chest: ['Brigandine', 'Warden Plate', 'Scale Vest'], gloves: ['Gauntlets', 'Grips', 'Vambraces'],
   legs: ['Greaves', 'Cuisses', 'Chausses'], boots: ['Sabatons', 'Treads', 'Longboots'],
@@ -189,6 +191,7 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
   const selectedShield = profileId ? SHIELD_PROFILES.find(profile => profile.id === profileId) : undefined;
   const selectedFocus = profileId ? FOCUS_PROFILES.find(profile => profile.id === profileId) : undefined;
   if (profileId && !selectedWeapon && !selectedShield && !selectedFocus && !selectedJewelry) throw new RangeError(`Unknown equipment profile: ${profileId}`);
+  if(kind==='riftKey') return createRiftKey(seed,itemLevel);
   const itemKind = kind ?? (selectedWeapon ? 'weapon' : selectedShield ? 'shield' : selectedFocus ? selectedFocus.visual.kind : selectedJewelry ? selectedJewelry.kind : choose(ITEM_KINDS.filter(k=>k!=='charm')));
   if (profileId && (itemKind === 'weapon' ? !selectedWeapon : itemKind === 'shield' ? !selectedShield : itemKind==='ring'||itemKind==='amulet' ? selectedJewelry?.kind!==itemKind : selectedFocus?.visual.kind !== itemKind)) {
     throw new RangeError(`Profile ${profileId} does not describe an item of kind ${itemKind}.`);
@@ -312,6 +315,7 @@ export function createCharacterSheet(starter: StarterLoadoutId = 'sword'): Chara
 
 /** Rebuild from authored bases and exact roll quality; never scale rounded existing stats. */
 export function deriveItem(item: Item): Item {
+  if(item.kind==='riftKey')return {...createRiftKey(item.seed,item.itemLevel,item.recipe.riftKeyTier),...(item.locked!==undefined?{locked:item.locked}:{})};
   if (item.tier === 'unique') return deriveUnique(item);
   if (item.kind === 'charm') return deriveCharm(item);
   const next: Item = { ...item, implicit: {}, affixes: [], recipe: { ...item.recipe, manaVersion: 1, offenseVersion: 1, rollVersion: 1, rolls: [...item.recipe.rolls] } };
@@ -401,7 +405,7 @@ function deriveCharm(item:Item):Item {
   });
   return roundItemStats({...item,affixes,implicit:{},requiredLevel:Math.max(1,item.itemLevel-2),power:Math.round((item.itemLevel*10+affixes.length*7)*profile.size.potency*TIER_POWER[item.tier]*(1+.05*item.recipe.enhancement)),recipe:{...item.recipe,manaVersion:1,offenseVersion:1,rollVersion:1,rolls:[...item.recipe.rolls]}});
 }
-export const itemAffixCount = (item:Pick<Item,'kind'|'tier'|'recipe'>) => item.kind==='charm'?charmAffixCount(item):TIER_AFFIXES[item.tier];
+export const itemAffixCount = (item:Pick<Item,'kind'|'tier'|'recipe'>) => item.kind==='riftKey'?0: item.kind==='charm'?charmAffixCount(item):TIER_AFFIXES[item.tier];
 
 /** Upgrade validated pre-budget stones in place, retaining identity, roll quality and progress. */
 export function rebalanceCharm(item: Item): Item {
@@ -422,6 +426,7 @@ export function rebalanceCharm(item: Item): Item {
 
 /** Reprice existing resource recipes once; preserve non-resource stats and every identity. */
 export function rebalanceItemMana(item:Item):Item {
+  if(item.kind==='riftKey')return item;
   if(item.recipe.manaVersion===1)return item;
   const current=deriveItem(item);
   const implicit={...item.implicit};
@@ -435,6 +440,7 @@ function isManaBudgetStat(stat:string):boolean { return stat==='maxMana'||stat==
 
 /** Reprice offensive attributes once, preserving unrelated affixes and rolled identities. */
 export function rebalanceItemOffense(item: Item): Item {
+  if(item.kind==='riftKey')return item;
   if (item.recipe.offenseVersion === 1) return item;
   const current = deriveItem(item), implicit = {...item.implicit};
   for (const key of ['strength', 'intelligence'] as const) {
@@ -448,6 +454,7 @@ export function rebalanceItemOffense(item: Item): Item {
 
 /** Keep a saved roll's percentile and identity while applying the wider current range. */
 export function rebalanceItemRolls(item: Item): Item {
+  if(item.kind==='riftKey')return item;
   if (item.recipe.rollVersion === 1) return item;
   return roundItemStats({...item, affixes: deriveItem(item).affixes, recipe: {...item.recipe, rollVersion: 1}});
 }

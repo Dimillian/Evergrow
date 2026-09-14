@@ -6,7 +6,7 @@ import type { WorldPOI } from './world-pois.ts';
 export type POI = WorldPOI;
 
 export interface Rect { x: number; y: number; width: number; height: number; }
-export type BuildingKind = 'expedition' | 'blacksmith' | 'merchant' | 'inn' | 'house' | 'chapel' | 'gambler' | 'noble' | 'stash' | 'hearth' | 'barricade' | 'tower' | 'torch' | 'shelter' | 'cart' | 'supplies' | 'bench' | 'rack' | 'garden' | 'well';
+export type BuildingKind = 'rift' | 'expedition' | 'blacksmith' | 'merchant' | 'inn' | 'house' | 'chapel' | 'gambler' | 'noble' | 'stash' | 'hearth' | 'barricade' | 'tower' | 'torch' | 'shelter' | 'cart' | 'supplies' | 'bench' | 'rack' | 'garden' | 'well';
 export interface Building extends Rect {
   biome?: BiomeId;
   settlementTier?: SettlementTier;
@@ -40,12 +40,12 @@ export interface Settlement {
 export const MAX_TOWN_RADIUS = 1000;
 const NAMES = ['Alder', 'Briar', 'Mourn', 'Thorn', 'Raven', 'Ash', 'Mist', 'Willow', 'Oak', 'Hollow', 'Wren', 'Red', 'Silver', 'Bracken', 'Dawn', 'Grey', 'Fern', 'Elder', 'Stone', 'West', 'High', 'Amber', 'White', 'Copper'];
 const BUILDING_NAMES: Record<BuildingKind, string> = {
-  expedition:'Expeditions', garden:'Kitchen garden', well:'Village well', shelter: 'Traveller’s shelter', cart: 'Supply cart', supplies: 'Supplies', bench: 'Bench', rack: 'Work rack',
+  rift:'Crimson Rift', expedition:'Expeditions', garden:'Kitchen garden', well:'Village well', shelter: 'Traveller’s shelter', cart: 'Supply cart', supplies: 'Supplies', bench: 'Bench', rack: 'Work rack',
   gambler: 'Gambler', noble: 'Count’s Hall', stash: 'Storage', hearth: 'Hearth', barricade: 'Fortification', tower: 'Watchtower', torch: 'Torch',
   blacksmith: 'The Ember Forge', merchant: 'Wayfarer Goods', inn: 'The Lantern Inn', house: 'Woodland House', chapel: 'Chapel of the Vigil',
 };
 const BUILDING_DESCRIPTIONS: Record<BuildingKind, string> = {
-  expedition:'Choose a dungeon route. Requires level 20.', garden:'',well:'', shelter: 'Canvas and firelight keep the weather out.', cart: '', supplies: '', bench: '', rack: '',
+  rift:'Enter a timed rift. Requires level 20.', expedition:'Choose a dungeon route. Requires level 20.', garden:'',well:'', shelter: 'Canvas and firelight keep the weather out.', cart: '', supplies: '', bench: '', rack: '',
   gambler: 'Trade gold for an unknown piece of equipment.', noble: 'The local household keeps court behind these walls.', stash: 'Your personal equipment storage.', hearth: 'A warm refuge for travellers.', barricade: '', tower: '', torch: '',
   blacksmith: 'Coal glows in the forge beside a scarred iron anvil.',
   merchant: 'Shelves of travel supplies stand above tightly sealed crates.',
@@ -288,6 +288,12 @@ export function generateSettlement(seed: number, place: Place): Settlement {
     table.door.y+=12;
     break;
   }
+  for(let i=0;i<256;i++) {
+    const angle=i*2.39996,dist=140+Math.floor(i/32)*28,dx=Math.cos(angle)*dist,dy=Math.sin(angle)*dist;
+    if(circleHitsRect(x+dx,y+dy,65,portalClear)||buildings.some(b=>circleHitsRect(x+dx,y+dy,75,b)))continue;
+    if(paths.some(path=>path.points.slice(1).some((q,j)=>{const a=path.points[j],vx=q[0]-a[0],vy=q[1]-a[1],t=Math.max(0,Math.min(1,((x+dx-a[0])*vx+(y+dy-a[1])*vy)/(vx*vx+vy*vy||1)));return Math.hypot(x+dx-a[0]-t*vx,y+dy-a[1]-t*vy)<75;})))continue;
+    const portal=fixture('rift',dx,dy,58,32);portal.door.y+=18;break;
+  }
   return {id,seed:place.seed,name:NAMES[place.seed%NAMES.length]+['ford','haven','watch','rest','wick','mere','bridge','fall','brook','cross','holm','stead','gate','wall','bury','crest'][Math.floor(place.seed/29)%16],kind,layout,x,y,radius,buildings,plaza,paths};
 }
 
@@ -344,7 +350,7 @@ export function settlementPOIs(town: Settlement): POI[] {
   return [
     { id: town.id, name: town.name, kind: 'town', x: town.x, y: town.y,
       description: settlementBenefits(town.kind)+'. '+(town.kind === 'city' ? 'A fortified city beneath the local count’s hall.' : town.kind === 'village' ? 'A palisaded village of homes, workshops and market stalls.' : 'A timber refuge gathered around a traveller’s fire.') },
-    ...town.buildings.filter(b => ['blacksmith','merchant','chapel','inn','gambler','stash'].includes(b.kind)).map(b => ({ id: `${b.id}:poi`, name: b.kind === 'merchant' ? 'Jeweler' : b.kind === 'chapel' ? 'Enchanter' : b.name, kind: b.kind === 'merchant' ? 'jeweler' : b.kind === 'chapel' ? 'enchanter' : b.kind,
+    ...town.buildings.filter(b => ['rift','blacksmith','merchant','chapel','inn','gambler','stash'].includes(b.kind)).map(b => ({ id: `${b.id}:poi`, name: b.kind === 'merchant' ? 'Jeweler' : b.kind === 'chapel' ? 'Enchanter' : b.name, kind: b.kind === 'merchant' ? 'jeweler' : b.kind === 'chapel' ? 'enchanter' : b.kind,
       x: b.door.x, y: b.door.y, description: BUILDING_DESCRIPTIONS[b.kind] } as POI)),
   ];
 }

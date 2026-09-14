@@ -17,6 +17,12 @@ export interface DungeonJourney {
 export function dungeonJourney(state: Expeditions, floor: DungeonFloor | null | undefined): DungeonJourney | null {
   const run = currentDungeon(state);
   if (!run || !floor) return null;
+  if(run.rift){
+    const phase=run.rift.phase==='complete'?(run.rift.claimed?'exit':'chest'):'boss';
+    const objective=run.rift.phase==='hunt'?`Cull monsters · ${run.rift.points} / 600`:phase==='boss'?'Slay the rift guardian':phase==='chest'?'Claim the rift chest':'Return to town';
+    const target=phase==='exit'?floor.exit:phase==='chest'?floor.chests[2]:run.states.warden;
+    return {id:run.entrance.id,name:run.entrance.name,level:run.entrance.level,objective,phase,marker:run.rift.phase==='hunt'?null:{x:target.x,y:target.y,name:objective,known:true}};
+  }
   const boss = run.states.warden;
   const bossName = dungeonTheme(run.entrance.seed, run.entrance.theme).bossName ?? 'Hollow Warden';
   const phase = boss.hp > 0 ? 'boss' : run.chestMasks[2] === dungeonChestMask(run, 2) ? 'exit' : 'chest';

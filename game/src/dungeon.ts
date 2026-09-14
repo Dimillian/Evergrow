@@ -1,3 +1,5 @@
+import { buildRiftFloor } from './rift-floor.ts';
+import type { RiftTag } from './rift-content.ts';
 import { dungeonCollision } from './dungeon-collision.ts';
 import type { ExpeditionModifier } from './expedition-modifiers.ts';
 import { buildDungeonLayout } from './dungeon-layout.ts';
@@ -16,6 +18,7 @@ export interface DungeonChestTarget {
     index: number;
 }
 export interface DungeonEntrance {
+    rift?: RiftTag;
     theme?: DungeonThemeId;
     expedition?: { attempt: number; stage: number; choice: number; modifier: ExpeditionModifier };
     scaling?: import('./encounter-scaling.ts').EncounterScale;
@@ -54,6 +57,7 @@ export interface DungeonMember {
 export interface DungeonProp { id: string; x: number; y: number; kind: 'sarcophagus' | 'icePillar' | 'orrery' | 'bookshelf' | 'tomb' | 'roots' | 'anvil' | 'furnace' | 'crystal' | 'pool' | 'barrel' | 'crate'; seed: number }
 export interface DungeonEvent { id: number; room: number; kind: DungeonEventKind; x: number; y: number; chest: number }
 export interface DungeonFloor {
+    rift?: RiftTag;
     theme?: DungeonThemeId;
     events?: readonly DungeonEvent[];
     props?: readonly DungeonProp[];
@@ -82,7 +86,8 @@ export interface DungeonFloor {
 
 export function dungeonRandom(seed: number) { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; }
 /** Grow a branching core, add two optional treasure leaves, then an exterior boss chamber. */
-export function generateDungeon(seed: number, _level = 1, options: Pick<DungeonEntrance,'theme'|'expedition'> = {}): DungeonFloor {
+export function generateDungeon(seed: number, _level = 1, options: Partial<Pick<DungeonEntrance,'theme'|'expedition'|'rift'|'biome'>> = {}): DungeonFloor {
+    if(options.rift)return buildRiftFloor(seed, options.biome??'verdant', options.rift);
     const theme=dungeonTheme(seed,options.theme), random=dungeonRandom(seed);
     const {rooms,edges,corridors,treasureIds,bossId}=buildDungeonLayout(random,theme.id,!!options.expedition);
     const center = (r: Room) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 });

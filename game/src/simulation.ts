@@ -1,3 +1,6 @@
+import { enemyModifiers } from './enemy-modifiers.ts';
+import { tickRift, riftKill } from './rift-runtime.ts';
+import { riftEnemyStats } from './rift-content.ts';
 import { advanceAuras, auraPower, manaCapacity } from './auras.ts';
 import { resolveSkill } from './skill-progression.ts';
 import { hasUnique, UNIQUE_RULES } from './unique-content.ts';
@@ -336,10 +339,12 @@ export class Simulation {
     if (this.world.blocked(x, y, stats.radius)) return null;
     const lootSeed = source?.lootSeed ?? enemyLootSeed(this.options.seed!, ++this.spawnOrdinal, x, y);
     const level = source?.level ?? this.world.dungeonLevel ?? encounterMemberLevel(scaling ?? encounterScaleAt(x, y, this.world.seed ?? this.options.seed!, this.player.level), rank, lootSeed, isBossKind(kind));
-    const scaled = scaledEnemyStats(kind, level, rank);
+    const rift=currentDungeon(this.expeditions)?.entrance.rift;
+    const scaled = riftEnemyStats(scaledEnemyStats(kind, level, rank),rift);
+    scaled.damage=Math.round(scaled.damage*enemyModifiers({kind,rank,lootSeed}).reduce((n,m)=>n*m.damage,1));
     const biome = this.world.dungeonBiome ?? (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
     const enemy: Enemy = {
-      id: this.nextId++, level, rank, biome, lootSeed, ...scaled, dungeonTheme:this.world.dungeonTheme,
+      id: this.nextId++, level, rank, biome, lootSeed, ...(rift?{rift}:{}), ...scaled, dungeonTheme:this.world.dungeonTheme,
       ...(source ? { campId: source.campId, campMemberId: source.memberId } : {}),
       x, y, prevX: x, prevY: y, vx: 0, vy: 0, knockbackX: 0, knockbackY: 0, angle: 0, hp: scaled.maxHp,
       kind, state: 'idle', stateTime: 0, stateDuration: ENCOUNTER_RULES.initialIdleMin + this.random() * ENCOUNTER_RULES.initialIdleRange,
@@ -364,6 +369,8 @@ export class Simulation {
 
   private step(dt: number, input: Input): void {
     input=this.groundPickup.input(this.player,this.groundItems,this.world,this.time,dt,input);
+    tickRift(this,dt);
+    if(currentDungeon(this.expeditions)?.rift?.phase==='failed')return;
     this.capturePositions();
     // Decrement before damage resolves so every new impact gets a full flash.
     this.player.hitFlash = Math.max(0, this.player.hitFlash - dt);
@@ -389,7 +396,9 @@ export class Simulation {
       // A death may clear input midway through this tick; freeze its final poses.
       this.travel.returnTo = null; this.portal.cancel(); this.eventChannel.cancel();
       if (this.player.character.blessing) { delete this.player.character.blessing; refreshCharacter(this.player); }
-      this.capturePositions();
+      tickRift(this,dt);
+    if(currentDungeon(this.expeditions)?.rift?.phase==='failed')return;
+    this.capturePositions();
       return;
     }
     this.eventChannel.advance(dt, this.player, input);
@@ -684,8 +693,10 @@ export class Simulation {
       player: this.player, enemies: this.enemies, random: () => this.random(),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by), emit: event => this.emit(event),
       killed: actor => {
+        riftKill(this,actor);
         completeBossLair(actor, this.eventState);
         const reward = awardKillRewards(actor, this.kills, this.killRecharge, {
+          suppressDrops: !!currentDungeon(this.expeditions)?.rift,
           player: this.player, groundGold: this.groundGold, groundItems: this.groundItems, pickups: this.pickups,
           nextId: () => this.nextId++, emit: event => this.emit(event),
         });

@@ -1,0 +1,19 @@
+import type { Enemy } from './model.ts';
+import { isBossKind } from './wilderness-boss-content.ts';
+import { riftBonus } from './rift-content.ts';
+const TRAITS=Object.freeze([
+  Object.freeze({name:'Swift',description:'+15% movement speed',speed:1.15,recovery:1,damage:1,control:1}),
+  Object.freeze({name:'Relentless',description:'20% shorter attack recovery',speed:1,recovery:.8,damage:1,control:1}),
+  Object.freeze({name:'Savage',description:'+10% damage',speed:1,recovery:1,damage:1.1,control:1}),
+  Object.freeze({name:'Resolute',description:'25% shorter control effects',speed:1,recovery:1,damage:1,control:.75}),
+]);
+type Source=Pick<Enemy,'kind'|'rank'> & Partial<Pick<Enemy,'lootSeed'|'rift'>>;
+const EMPTY:readonly typeof TRAITS[number][]=Object.freeze([]);
+const SETS=Array.from({length:8},(_,i)=>Object.freeze(i<4?[TRAITS[i]]:[TRAITS[i-4],TRAITS[(i-4+1)%4]]));
+export function enemyModifiers(e:Source):readonly typeof TRAITS[number][]{
+  if(e.rank==='normal'||isBossKind(e.kind)||e.lootSeed===undefined)return EMPTY;
+  let n=Math.imul(e.lootSeed^(e.lootSeed>>>16),0x45d9f3b);n=(n^(n>>>16))>>>0;
+  return SETS[n%4+(e.rank==='elite'?4:0)];
+}
+export function enemyMovementMultiplier(e:Source):number{return enemyModifiers(e).reduce((n,m)=>n*m.speed,1)*(1+riftBonus(e.rift,'swift')/100);}
+export function enemyVisualScale(e:Source):number{return isBossKind(e.kind)?1:e.rank==='elite'?1.28:e.rank==='veteran'?1.14:1;}

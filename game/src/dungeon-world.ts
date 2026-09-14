@@ -1,6 +1,6 @@
 import { DRY_WATER } from './hydrology.ts';
 import { drawCryptSurface } from './dungeon-surface.ts';
-import { World, TILE_SIZE } from './world.ts';
+import { World, TILE_SIZE, type Prop } from './world.ts';
 import { DungeonGeometry, type DungeonFloor } from './dungeon.ts';
 import type { DungeonEntrance } from './dungeon.ts';
 import { BIOMES } from './biomes.ts';
@@ -20,7 +20,7 @@ export class DungeonWorld extends World {
     override getEnemyCamps() { return []; }
     override getBuildings() { return []; }
     override getBuildingAt() { return null; }
-    override getProps() { return []; }
+    override getProps(_x:number,_y:number,_w:number,_h:number):Prop[] { return []; }
     override getDungeonEntrances() { return []; }
     override getPOIs() { return []; }
     override isSanctuary(x: number, y: number) { return Math.hypot(x - this.floor.entry.x, y - this.floor.entry.y) < 120; }
@@ -30,7 +30,7 @@ export class DungeonWorld extends World {
     override blocked(x: number, y: number, r: number) { return this.geometry.blocked(x, y, r); }
     override move(x: number, y: number, dx: number, dy: number, r: number) { return this.geometry.move(x, y, dx, dy, r); }
     override navigationTarget(x: number, y: number, tx: number, ty: number, radius=24) { return this.geometry.navigationTarget(x, y, tx, ty, radius); }
-    override mapColor(x: number, y: number) { return this.blocked(x, y, 0) ? '#080d14' : '#465653'; }
+    override mapColor(x: number, y: number):string { return this.blocked(x, y, 0) ? '#080d14' : '#465653'; }
     override atlasColor(x: number, y: number) { return this.mapColor(x, y); }
     override dispose() { this.tiles.clear(); super.dispose(); }
     override getGroundTile(tx: number, ty: number, create?: () => HTMLCanvasElement) {

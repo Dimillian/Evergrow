@@ -1,3 +1,4 @@
+import { drawRiftPortal } from './rift-art.ts';
 import { drawFortification } from './settlement-wall-art.ts';
 import { drawSupplyCart } from './cart-art.ts';
 import { architectureStyle } from './settlement-style.ts';
@@ -8,6 +9,7 @@ import { drawGlow } from './lighting.ts';
 const poly=(c:CanvasRenderingContext2D,p:number[][],color:string)=>{c.beginPath();p.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fillStyle=color;c.fill();};
 /** Uncached small fixtures share the exact collision footprint; floors never become houses. */
 export function drawSettlementFixture(c:CanvasRenderingContext2D,b:Building,time:number):void {
+  if(b.kind==='rift'){drawRiftPortal(c,b.x+b.width/2,b.y+b.height,time);return;}
   if(b.wallSegment){drawFortification(c,b);return;}
   if(b.kind==='cart'){drawSupplyCart(c,b);return;}
   c.save();c.translate(b.x,b.y);const w=b.width,h=b.height;

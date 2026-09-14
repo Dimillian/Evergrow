@@ -29,6 +29,7 @@ export function updateDungeon(sim: Simulation, view: SpawnExclusion | null, dt=1
     for(const boss of sim.enemies)if(boss.campMemberId==='warden'&&isWildernessBoss(boss.kind)&&boss.hp>0){if(boss.hp/boss.maxHp<.65)boss.bossPhases=(boss.bossPhases??0)|1;if(boss.hp/boss.maxHp<.3)boss.bossPhases=(boss.bossPhases??0)|2;}
     syncDungeon(run, sim.enemies, sim.player.x, sim.player.y);
     const floor = sim.dungeonFloor!;
+    if(run.rift?.phase==='failed'||run.rift?.phase==='complete')return;
     advanceDungeonEvents(sim,dt,emit);
     const room = dungeonRoomAt(floor, sim.player.x, sim.player.y);
     if (room && !run.explored.includes(room.id))
@@ -42,7 +43,7 @@ export function updateDungeon(sim: Simulation, view: SpawnExclusion | null, dt=1
     for (const room of [...floor.rooms].sort((a, b) => Math.hypot(a.x + a.width / 2 - sim.player.x, a.y + a.height / 2 - sim.player.y) - Math.hypot(b.x + b.width / 2 - sim.player.x, b.y + b.height / 2 - sim.player.y))) {
         if (Math.hypot(room.x + room.width / 2 - sim.player.x, room.y + room.height / 2 - sim.player.y) > 2100)
             continue;
-        const members = (roster.get(room.id)??[]).filter(m => run.states[m.id].hp > 0 && !present.has(m.id) && (m.event===undefined || !!run.events?.[m.event]?.started && !run.events[m.event].finished && run.events[m.event].rest<=0 && run.events[m.event].wave===m.eventWave) && (!m.wave || run.states.warden.hp > 0 && ((run.states.warden.bossPhases ?? 0) & m.wave)));
+        const members = (roster.get(room.id)??[]).filter(m => run.states[m.id].hp > 0 && (!run.rift || m.id!=='warden' || run.rift.phase==='boss') && !present.has(m.id) && (m.event===undefined || !!run.events?.[m.event]?.started && !run.events[m.event].finished && run.events[m.event].rest<=0 && run.events[m.event].wave===m.eventWave) && (!m.wave || run.states.warden.hp > 0 && ((run.states.warden.bossPhases ?? 0) & m.wave)));
         if (!members.length)
             continue;
         const event=floor.events?.find(e=>e.room===room.id);

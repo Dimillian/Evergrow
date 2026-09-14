@@ -13,6 +13,7 @@ export type PackLayout = Record<string, number>;
 export function itemFootprint(item: Item): ItemFootprint {
   if (item.kind === 'charm') { const size=charmProfile(item)?.size; return size ? {width:size.width,height:size.height} : {width:1,height:1}; }
   switch (item.kind) {
+    case 'riftKey': return { width: 1, height: 2 };
     case 'ring': case 'amulet': return { width: 1, height: 1 };
     case 'weapon':
       if (item.weapon?.hands === 2) return { width: 2, height: 4 };

@@ -124,3 +124,5 @@ Interface → HUD & active buffs opens `/character.html?panel=hud&loadout=shield
 Aura previews: the existing skill playground supports seven aura studies and shared buff/buildup icons. `/character.html?panel=hud&auras` stages reserved mana and Blood Oath stacks; `/character.html?panel=skills&auras&node=skill:bloodOath` inspects the existing-branch placement. Both are disposable and save-free. See [Auras](auras.md).
 
 The frozen HUD review also accepts `effects=caster`, `guard`, `rogue`, `bow` or `ward`, for example `/character.html?panel=hud&effects=caster`. These stage representative Unique budgets and a target with Burn, Slow, Stun, Red Harvest and Exposure. They draw production cards and target plates without advancing simulation. `/character.html?uniques` and `/chronicle.html?uniques` expose nested signature explanations; the existing forge and Thor inspection also share the terms.
+
+World → Crimson Rifts (`/tools/rifts.html`) previews the runtime portal, level selection, five inventory key tiers, danger/reward modifiers and records in disposable memory. It never starts a playable run or reads saves.

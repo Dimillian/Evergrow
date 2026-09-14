@@ -20,7 +20,7 @@ export type EquipmentPlan = { ok: false; message: string } | {
 export interface EquipmentTarget { sourceIndex?: number; slot?: EquipmentSlot; }
 
 export function defaultEquipmentSlot(sheet: CharacterSheet, item: Item): EquipmentSlot | undefined {
-  if (item.kind === 'charm') return undefined;
+  if (item.kind === 'charm' || item.kind === 'riftKey') return undefined;
   return (item.kind === 'ring'
     ? !sheet.equipped.ring1 ? 'ring1' : !sheet.equipped.ring2 ? 'ring2' : 'ring1'
     : (item.kind === 'shield' || item.kind === 'grimoire' || item.kind === 'orb') ? 'offhand' : item.kind);

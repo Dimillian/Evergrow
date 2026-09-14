@@ -3,7 +3,7 @@ import { GAME_FEATURES } from './game-features.ts';
 import { drawBattleBark, measureBattleBark } from './battle-bark-art.ts';
 import { placeBattleBark, type BarkRect } from './battle-bark-layout.ts';
 import { enemyEngaged } from './enemy-engagement.ts';
-import { ENEMY_BODY_BOUNDS, ENEMY_SPEECH_TOP } from './enemy-body.ts';
+import { enemyBodyBounds, ENEMY_SPEECH_TOP } from './enemy-body.ts';
 import { canBark } from './battle-bark-content.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { wardenProfile } from './dungeon-boss.ts';
@@ -16,7 +16,7 @@ import type { SceneVisibility } from './scene-visibility.ts';
 import type { CombatEvent, Enemy } from './model.ts';
 
 function speechTop(enemy: Enemy): number {
-  const body = ENEMY_BODY_BOUNDS[enemy.kind];
+  const body = enemyBodyBounds(enemy);
   const head = canBark(enemy.kind) ? ENEMY_SPEECH_TOP[enemy.kind] : body.top;
   return Math.min(head, enemy.rank !== 'normal' ? body.top - 26
     : enemy.hp < enemy.maxHp || enemy.state === 'windup' ? body.top - 12 : head);
@@ -49,7 +49,7 @@ export class BattleBarkScene {
     // Include equipment clearance, not just collision feet. Player actions retain priority.
     reserved.push(rectangle(p.x - 38, p.y - 85, 76, 95));
     for (const [id, e] of actors) {
-      const at = positions.get(id)!, body = ENEMY_BODY_BOUNDS[e.kind];
+      const at = positions.get(id)!, body = enemyBodyBounds(e);
       const top = canBark(e.kind) ? ENEMY_SPEECH_TOP[e.kind] : body.top;
       reserved.push(rectangle(at.x - body.radiusX - 10, at.y + top,
         (body.radiusX + 10) * 2, body.bottom - top + 8));
@@ -80,7 +80,7 @@ export class BattleBarkScene {
     const visible = (id: number) => {
       const enemy = actors.get(id), at = positions.get(id);
       if (!enemy || !at || !enemyEngaged(enemy) || sim.player.dead) return false;
-      const body = ENEMY_BODY_BOUNDS[enemy.kind], head = project(at.x, at.y + body.top);
+      const body = enemyBodyBounds(enemy), head = project(at.x, at.y + body.top);
       const feet = project(at.x, at.y + body.bottom);
       if (head.x < body.radiusX * view.zoom || head.x > width - body.radiusX * view.zoom || head.y < 0 || feet.y > height) return false;
       if (!hasLineOfSight(world, p.x, p.y, at.x, at.y)) return false;

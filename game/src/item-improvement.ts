@@ -19,6 +19,7 @@ export function rerollPool(item:Item,index?:number,focus:AffixFocus='any'){
 export type Improvement = 'enhance' | 'rarity' | 'rerollOne' | 'rerollAll' | 'relevel';
 export const ITEM_TIERS = ['common', 'magic', 'rare', 'epic', 'legendary'] as const;
 export function improvementProblem(item: Item, operation: Improvement, zoneLevel: number, affix?: number): string | null {
+  if(item.kind==='riftKey')return 'Rift keys cannot be modified.';
   if(item.tier==='unique'&&operation!=='enhance')return 'Unique powers and affixes are fixed. Only enhancement is available.';
   if (item.recipe.revision >= Number.MAX_SAFE_INTEGER) return 'This item cannot be improved further.';
   if (operation === 'enhance' && item.recipe.enhancement >= 10) return 'Maximum enhancement reached.';
