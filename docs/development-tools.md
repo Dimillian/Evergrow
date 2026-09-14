@@ -62,6 +62,8 @@ The town service study accepts `tier=village` or `tier=city` to select a real ge
 
 The local `/character.html` review now includes the 12×6 spatial pack, upright item art, inline sorting, drag footprint previews and four dedicated charm rows. It uses the runtime inventory and disposable gear; no playable saves are accessed.
 
+Equipment → New item highlights (`/character.html?pickups`) compares matched inspected/new rings, gloves, staves and charms. New items have a soft inner frame and slowly twinkling corner glints; hover, focus or touch inspection clears each marker through the normal character command. This review uses disposable memory only.
+
 ### Charm review
 
 The Equipment workspace includes `/character.html?charms`, with six stone sizes staged in the dedicated charm grid. Item forge supports all 36 stone profiles, normal rarity, levels and enhancements. These views share runtime item rules and do not access character saves.

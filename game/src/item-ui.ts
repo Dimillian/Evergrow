@@ -85,7 +85,7 @@ export function itemSlotMarkup(item: Item, size = 44): string {
     : `<span class="ui-item-tier" aria-hidden="true">${'<i></i>'.repeat(TIER_RANK[item.tier])}</span>`;
   return `${itemIconSVG(item, size)}${hasGreaterAffix(item) ? `<span class="ui-item-greater">${greaterMark}</span>` : ''}${item.locked?`<span class="ui-item-lock" aria-label="Locked">${ITEM_LOCK_ICON}</span>`:''}${item.recipe.enhancement ? `<span class="ui-item-enhancement">+${item.recipe.enhancement}</span>` : ''}<span class="ui-item-level">${number(item.itemLevel, 0)}</span>${tierMark}`;
 }
-export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, options: { level: number; emptyMarkup: string; label: string; draggable?: boolean }): void {
+export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, options: { level: number; emptyMarkup: string; label: string; draggable?: boolean; newPickup?: boolean }): void {
   cell.classList.add('ui-item-slot');
   const signature = item ? JSON.stringify(item) : options.emptyMarkup;
   if (cell.dataset.signature !== signature) {
@@ -96,7 +96,13 @@ export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, optio
   }
   cell.draggable = Boolean(item && options.draggable);
   cell.classList.toggle('is-locked', Boolean(item && item.requiredLevel > options.level));
-  cell.setAttribute('aria-label', options.label+(item?.locked?', locked':''));
+  const newPickup = Boolean(item && options.newPickup);
+  const sparkle = cell.querySelector('.ui-item-pickup-sparkles');
+  if (newPickup && !sparkle) {
+    cell.insertAdjacentHTML('beforeend', '<span class="ui-item-pickup-sparkles" aria-hidden="true"><i></i><i></i></span>');
+    cell.style.setProperty('--pickup-delay', `${-(Math.abs(item!.seed) % 4300) / 1000}s`);
+  } else if (!newPickup) sparkle?.remove();
+  cell.setAttribute('aria-label', options.label+(item?.locked?', locked':'')+(newPickup?', newly picked up':''));
 }
 
 /** Item data and effective equipment changes are distinct; no inventory DOM location is required. */

@@ -39,6 +39,7 @@ export interface InventoryPanelActions {
   unequip(slot: EquipmentSlot, index?: number): void;
   move(from: number, to: number): void;
   lock?(id: string, locked: boolean): void;
+  inspect?(id: string): void;
   drop?(source: DropItemSource): void;
   equipBest(choice?: EquipBestChoice): void;
   sort(mode: InventorySort): void;
@@ -270,7 +271,7 @@ export class InventoryPanel {
       cell.classList.toggle('is-twohand-reserved', reserved);
       if (reserved) cell.dataset.tooltip = `Both hands hold ${player.character.equipped.weapon!.name}. Equipping an off-hand will stow it.`;
       else delete cell.dataset.tooltip;
-      updateItemSlot(cell, item, { level: player.level, draggable: true,
+      updateItemSlot(cell, item, { level: player.level, draggable: true, newPickup: item?.newPickup === true,
         emptyMarkup: reserved ? `<span class="character-reserved-glyph" aria-hidden="true">${emptySlotIcon('weapon')}</span><span class="character-reserved-label">2H</span>` : location.type === 'equipment' ? emptySlotIcon(location.slot) : '<span class="ui-empty-item-mark">·</span>',
         label: reserved ? `Off-hand reserved by two-handed ${player.character.equipped.weapon!.name}` : item ? `${itemDisplayName(item)}, ${TIER_NAMES[item.tier]}, item level ${item.itemLevel}${location.type === 'equipment' ? `, equipped in ${SLOT_NAMES[location.slot]}` : ''}${item.requiredLevel > player.level ? `, requires level ${item.requiredLevel}` : ''}` : location.type === 'equipment' ? `${SLOT_NAMES[location.slot]}, empty` : `Empty inventory slot ${location.index + 1}`,
       });
@@ -320,7 +321,7 @@ export class InventoryPanel {
     if (statContainer.innerHTML !== markup) { this.statTooltip.hide(); statContainer.innerHTML = markup; }
     this.hud?.refresh(player);
     if (this.drag) this.highlightEquipmentTargets();
-    if (this.hovered) this.showTooltip(this.hovered);
+    if (this.hovered) this.showTooltip(this.hovered, false);
   }
 
   close(): void {
@@ -686,6 +687,7 @@ export class InventoryPanel {
       }
       return;
     }
+    if (item.newPickup) this.actions.inspect?.(item.id);
     this.touchItem = {...location,id:item.id}; this.touchMoving = false;
     const buttons = item.kind==='charm'||item.kind==='riftKey' ? '' : location.type === 'equipment' ? '<button class="ui-button" data-touch-item="unequip">Unequip</button>' :
       EQUIPMENT_SLOTS.filter(slot=>planEquipmentChange(this.player!.character,item,this.player!.level,{sourceIndex:location.index,slot}).ok)
@@ -752,11 +754,12 @@ export class InventoryPanel {
   }
   private clearDrag(): void { this.element.classList.remove('is-item-dragging'); this.clearDropHighlight(); this.drag = null; this.dragOffset = { x: 0, y: 0 }; for (const cell of this.cells.values()) cell.classList.remove('is-drop-target', 'is-dragging', 'is-equip-target'); }
 
-  private showTooltip(location: ItemLocation): void {
+  private showTooltip(location: ItemLocation, inspect = true): void {
     this.statTooltip.hide();
     if (this.drag || document.documentElement.classList.contains('touch-mode')) return;
     const item = this.itemAt(location), cell = this.cells.get(locationKey(location));
     if (!item || !cell || cell.hidden || !this.player) { this.hideTooltip(); return; }
+    if (inspect && item.newPickup) this.actions.inspect?.(item.id);
     this.hovered = location;
     this.tooltip.show(item, { sheet: this.player.character, level: this.player.level,
       equipped: location.type === 'equipment', sourceIndex: location.type === 'bag' ? location.index : undefined }, cell);
@@ -779,7 +782,7 @@ export class InventoryPanel {
     // Scrolling a focused cell hides its old tooltip; place it again after layout settles.
     if (this.element.classList.contains('is-controller') && !this.hovered) {
       const location = this.locationFrom(document.activeElement);
-      if (location && this.itemAt(location)) this.showTooltip(location);
+      if (location && this.itemAt(location)) this.showTooltip(location, false);
     }
     const ctx = this.canvas.getContext('2d');
     if (ctx) {

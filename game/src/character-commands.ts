@@ -4,12 +4,13 @@ export { executeAppearanceChange } from './appearance-command.ts';
 import { upgradeSkill, configureSkill, OVERLOAD_NODE } from './skill-progression.ts';
 import type { Player } from './model.ts';
 import type { ActionResult, Attribute, EquipmentSlot, SkillId } from './character-types.ts';
-import { equipItem, unequipItem, moveInventoryItem, allocateAttribute } from './inventory.ts';
+import { equipItem, unequipItem, moveInventoryItem, allocateAttribute, inspectInventoryItem } from './inventory.ts';
 import { allocateSkillRoute } from './skill-tree-routes.ts';
 import { assignSkill, refreshCharacter } from './character.ts';
 import { equipBest, sortInventory, sortStorage, type InventorySort, type EquipBestChoice } from './inventory-tools.ts';
 
 export type CharacterCommand =
+  | { type: 'inspectItem'; id: string }
   | { type: 'chooseDoctrine'; id: string }
   | { type: 'lockItem'; id: string; locked: boolean }
   | { type: 'equipBest'; choice?: EquipBestChoice }
@@ -31,6 +32,7 @@ export type CharacterCommand =
 export function executeCharacterCommand(player: Player, command: CharacterCommand): ActionResult {
   let result: ActionResult;
   switch (command.type) {
+    case 'inspectItem': return inspectInventoryItem(player.character, command.id);
     case 'chooseDoctrine': result=chooseDoctrine(player.character,command.id);if(result.ok){player.affixBuffs=undefined;player.skillEffects=undefined;}break;
     case 'lockItem': result = setItemLock(player.character, command.id, command.locked); break;
     case 'equipBest': result = equipBest(player.character, player.level, command.choice); break;

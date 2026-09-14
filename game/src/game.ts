@@ -215,6 +215,7 @@ export class Game {
         unequip: (slot, index) => this.characterAction({ type: 'unequip', slot, index }),
         move: (from, to) => this.characterAction({ type: 'moveItem', from, to }),
         lock: (id,locked) => this.characterAction({type:'lockItem',id,locked}),
+        inspect: id => this.characterAction({ type: 'inspectItem', id }),
         drop: source => { void this.dropInventoryItem(source); },
         equipBest: choice => this.characterAction({ type: 'equipBest', choice }),
         sort: mode => this.characterAction({ type: 'sortInventory', mode }),
