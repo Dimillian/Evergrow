@@ -1,5 +1,7 @@
 # Documentation
 
+- [Level-50 loot audit](audits/loot-level50-2026-09-14.md): 265,062 actual reward rolls, standout item recipes, affix quality and proposed tuning.
+
 - [Regional scaling](region-scaling.md) — current local ranges, encounter snapshots, rewards and save compatibility.
 
 - [Dynamic soundtrack](dynamic-soundtrack.md): regional/encounter music, mix controls and audio lifecycle.
