@@ -1,3 +1,4 @@
+import { projectileDamageType } from './resistance-content.ts';
 import { AURA_RULES, admittedAuras, auraRank, resolveAura, type AuraId } from './aura-content.ts';
 import type { Player, Enemy, ProjectileStyle } from './model.ts';
 import { isBossKind } from './encounter-scaling.ts';
@@ -33,8 +34,8 @@ export function bloodOathHit(p:Player,enemy:Enemy,melee:boolean):number {
  return 1+stacks*power/100;
 }
 export function resonanceHit(p:Player,e:Enemy,style:ProjectileStyle|undefined,periodic:boolean):number {
- const element=style==='spirit'?'arcane':style;
- if(!element||element==='arrow')return 1;
+ const element=style ? projectileDamageType(style) : undefined;
+ if(!element||element==='physical')return 1;
  const existing=e.auraExposure?.[element],bonus=existing&&existing.remaining>0?existing.power:0;
  const power=auraPower(p,'elementalResonance');
  if(power&&!periodic)(e.auraExposure??={})[element]={power,remaining:AURA_RULES.exposureDuration};

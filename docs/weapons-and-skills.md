@@ -30,7 +30,7 @@ When an otherwise eligible basic attack or assigned skill fails its mana check, 
 | Cinder Wand | `cinder-wand` | 1 | 16 | 1.92 | 440 | Fire bolt |
 | Hoarfrost Wand | `hoarfrost-wand` | 1 | 14 | 2.08 | 420 | Frost bolt |
 | Spark Wand | `spark-wand` | 1 | 11 | 2.48 | 460 | Lightning bolt |
-| Star Wand | `star-wand` | 1 | 17 | 1.84 | 450 | Arcane bolt |
+| Star Wand | `star-wand` | 1 | 17 | 1.84 | 450 | Radiant bolt (Arcane) |
 | Weathered Sword — starter | `weathered-sword` | 2 | 24 | 1.6 | 60 | Physical swing |
 | Unarmed — empty main hand | `unarmed` | 1 | 5 | 1.44 | 24 | Physical strike |
 
@@ -194,3 +194,14 @@ Instant skills retain immediate contact/release and begin their pose at that con
 Critical chance/multiplier and life on hit now travel with attacks, dashes, projectiles and delayed direct-damage pulses. Equipment changes after acceptance cannot rewrite these offensive values. Periodic burns still cannot crit or trigger life on hit. Shield skills continue to derive damage and cadence from the held main weapon, including wand + shield; this existing hybrid rule is retained.
 
 The code audit fixes are covered by headless regression tests. No automated gameplay, browser visual acceptance or listening test was performed; the user owns combat-feel and visual testing. This pass preserves saves and introduces no progress reset.
+
+
+## Radiant wand basics · local September 14, 2026
+
+Wand & Grimoire now starts with **Star Wand + Astral Grimoire**. The Star Wand fires a narrow ivory-gold light dart with two short ribbons, etched wake fragments, a tip-anchored release seal and a brief star/seal impact. Its held crystal and the Astral Grimoire share restrained warm light; the book seal brightens with the snapshotted casting action. The existing wood, leather and brass geometry, world lighting and fixed CRT treatment remain authoritative. A short chime replaces the generic basic-cast rush. Radiant flight has no continuous particle emitter; release/impact effects share the existing bounded budgets, and reduced motion freezes decorative drift/expansion.
+
+Radiant is a **projectile presentation mapped to Arcane damage**, like Spirit. There is no new resistance, affix, healing, blind or status effect. Star Wand retains 17 base damage, 1.84 base actions/second, 450 reach and two base mana per bolt. Astral Grimoire retains +12 mana and +3% cooldown reduction at its authored base. This starter replaces the Cinder Wand's fire/burn and Ember Codex's mana regeneration with direct Arcane hits and cooldown support. Before character bonuses, Star Wand deals 31.28 direct damage/second; Cinder Wand deals 30.72 direct damage/second plus its non-stacking burn. These existing profile values are the first playtest baseline, not a promise of equal sustained output.
+
+`basicProjectileStyle` selects the basic's style from the acting weapon; the action and projectile retain it after gear changes. Star Wand works in either hand and needs no grimoire to fire radiant bolts. Fire/frost/lightning wands retain their elements. Assigned spells retain their authored effects, including Fireball's fire and burning. Resistance mapping, elemental hit accounting and Elemental Resonance treat radiant as Arcane; critical hits and Spellweave retain their ordinary rules.
+
+No save format change or progress reset. Existing Star Wands and Astral Grimoires receive the new art on presentation; owned Cinder Wands and Ember Codices remain fire equipment. New characters receive the revised starter pairing. Normal generation, trading and improvement recipes are unchanged. `/weapon-lights.html?sample=5&attack=0.42` stages the radiant pairing with the shared runtime art and basic-style resolver in disposable memory.

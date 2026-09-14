@@ -1,3 +1,4 @@
+import { focusGlowColor } from './radiant-content.ts';
 import { gearSurface, materializeGear } from './gear-material.ts';
 import type { FocusDefinition } from './model.ts';
 import { gearShapeColor, type GearShape } from './weapon-shapes.ts';
@@ -18,6 +19,7 @@ export const focusGlowCenter = (v: FocusDefinition['visual'], time = 0): Point =
 /** Decorated covers face outward; an open book's reading surface faces its owner.
  * Orbs float above the palm. All motion stays inside the same bounded silhouette. */
 export function focusShapes(v: FocusDefinition['visual'], time = 0, facing = Math.PI / 2): GearShape[] {
+  v = { ...v, glow: focusGlowColor(v) };
   const shapes: GearShape[] = [];
   const fill = (points: readonly Point[], fill: string) => shapes.push({ points, fill });
   const line = (points: readonly Point[], stroke: string, width = .6, fine = false) => shapes.push({ points, stroke, width, fine });
@@ -48,7 +50,7 @@ export function focusShapes(v: FocusDefinition['visual'], time = 0, facing = Mat
     else if (v.motif === 'rime') {
       line([[cx, cy - 1.1], [cx, cy + 1.1]], '#e4faff', .45);
       line([[cx - .75, cy - .4], [cx + .75, cy + .4]], v.glow, .4);
-    } else fill(diamond(cx, cy, .65), '#f0e4ff');
+    } else fill(diamond(cx, cy, .65), '#fff6d9');
     for (const y of [-10.4, -2.1]) line([[-1.7, y], [-.7, y - .4], [.2, y], [1, y - .3]], v.trim, .35, true);
     fill([[3, -6.9], [5, -7.2], [5, -5.5], [3, -5.3]], v.trim);
     fill([[3.4, -6.6], [4.5, -6.7], [4.5, -5.8], [3.4, -5.7]], v.shadow);

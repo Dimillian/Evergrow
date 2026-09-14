@@ -1,6 +1,8 @@
 import { armorAccessoryShapes, type ArmorAccessory } from './armor-accessory-shapes.ts';
 import { bootShapes } from './boot-shapes.ts';
 import { gearMaterialStops, gearMaterialMarks, gearCanvasLight } from './gear-material.ts';
+import { focusGlowColor, isRadiantGrimoire } from './radiant-content.ts';
+import { drawRadiantSeal } from './radiant-art.ts';
 import { drawWeaponEnchantment, drawEquipmentGlow } from './weapon-enchantment-art.ts';
 import { focusShapes, focusGlowCenter } from './focus-shapes.ts';
 import { appearanceHeadShapes } from './appearance-shapes.ts';
@@ -190,10 +192,15 @@ export function headArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | nul
 }
 
 /** Bound spellbooks face their owner; luminous orbs levitate above the palm. */
-export function heldFocus(ctx: CanvasRenderingContext2D, hand: Point, visual: FocusDefinition['visual'], color: Color, time = 0, facing = Math.PI / 2): void {
+export function heldFocus(ctx: CanvasRenderingContext2D, hand: Point, visual: FocusDefinition['visual'], color: Color, time = 0, facing = Math.PI / 2, charge = 0): void {
   ctx.save(); ctx.translate(hand[0], hand[1]);
   drawGearShapes(ctx, focusShapes(visual, time, facing), color);
   const [cx, cy] = focusGlowCenter(visual, time);
-  drawEquipmentGlow(ctx, cx, cy, visual.kind === 'orb' ? 10 : 5, visual.glow, .5 + Math.sin(time * 1.6) * .06);
+  drawEquipmentGlow(ctx, cx, cy, visual.kind === 'orb' ? 10 : 5, focusGlowColor(visual), .5 + Math.sin(time * 1.6) * .06 + charge * .2);
+  if (isRadiantGrimoire(visual) && charge > .05) {
+    ctx.translate(cx, cy); ctx.scale(.62 + .38 * Math.abs(Math.sin(facing)), 1);
+    ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha *= charge * .8;
+    drawRadiantSeal(ctx, 3.2, .35);
+  }
   ctx.restore();
 }

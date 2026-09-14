@@ -1,3 +1,4 @@
+import { weaponGlowColor } from './radiant-content.ts';
 import { gearSurface, materializeGear, gearMaterialStops, gearMaterialMarks, type GearMaterial, type GearSurface } from './gear-material.ts';
 import type { ShieldDefinition, WeaponVisual } from './model.ts';
 import { mixColor, type Point } from './art-primitives.ts';
@@ -104,7 +105,7 @@ function buildWeaponShapes(visual: WeaponVisual, draw: number): GearShape[] {
     }
     shapes.push(poly([[head+1,-.7],[head+2,-.7],[head+2,.7],[head+1,.7]],visual.guard));
   } else if (visual.kind === 'wand') {
-    const glow = visual.glow ?? '#b4a5ef', tip = length - 1.6;
+    const glow = weaponGlowColor(visual) ?? '#b4a5ef', tip = length - 1.6;
     const wood = mixColor(visual.grip, '#283034', .2), grain = mixColor(visual.grip, visual.edge, .24);
     // Continuous tapered wood, with a short grip rather than a sword hilt.
     shapes.push(poly([[-grip,-.64],[-2,-.76],[2,-.58],[tip-2.6,-.27],[tip-1.3,0],[tip-2.6,.27],[2,.58],[-2,.76],[-grip,.64]], wood));

@@ -1,4 +1,4 @@
-import { deriveAttackStats } from './equipment.ts';
+import { deriveAttackStats, basicProjectileStyle } from './equipment.ts';
 import { RANGED_BASIC_ATTACK_PHASES } from './combat-content.ts';
 import './typography.css';
 import { loadGameFont } from './font.ts';
@@ -18,7 +18,7 @@ const params = new URLSearchParams(location.search), selected = params.get('samp
 const attackPhase = Math.max(0, Math.min(.99, Number(params.get('attack')) || 0));
 const samples = [
   ['Ember staff', 'ember-staff', ''], ['Rime staff', 'rime-staff', ''], ['Storm staff', 'storm-staff', ''],
-  ['Cinder wand & orb', 'cinder-wand', 'cinder-orb'], ['Rime wand & orb', 'hoarfrost-wand', 'rime-orb'], ['Star wand & orb', 'star-wand', 'astral-orb'],
+  ['Cinder wand & orb', 'cinder-wand', 'cinder-orb'], ['Rime wand & orb', 'hoarfrost-wand', 'rime-orb'], ['Radiant wand & grimoire', 'star-wand', 'astral-grimoire'],
   ['Kindling sword', 'longsword', 'fireDamage'], ['Rime sword', 'longsword', 'frostDamage'], ['Stormbound sword', 'longsword', 'lightningDamage'],
 ];
 root.innerHTML = `<style>body{margin:0;background:#080e14;color:#d6e0dd;font:16px var(--ui-font)}main{max-width:1400px;margin:auto;padding:20px}h1{font-size:22px;font-weight:500}section{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}article{background:#101820;border:1px solid #29383e;border-radius:6px;overflow:hidden}canvas{width:100%;display:block}h2{margin:12px 16px;font-size:16px;font-weight:500}a{color:inherit;text-decoration:none}.single{display:block;max-width:960px;margin:auto}@media(max-width:650px){section{grid-template-columns:1fr 1fr}}</style><h1>Enchanted weapons</h1>${selected !== null && Number(selected) < 6 ? `<nav style="display:flex;gap:20px;margin-bottom:16px">${[[0,'Idle'],[.2,'Windup'],[.42,'Release'],[.57,'Recovery']].map(([phase,label]) => `<a href="?sample=${selected}&attack=${phase}">${label}</a>`).join('')}</nav>` : ''}<section class="${selected === null ? '' : 'single'}"></section>`;
@@ -39,12 +39,12 @@ for (const [index, [label, profile, extra]] of samples.entries()) {
     item.affixes = [{ name: affix.name, stat: affix.stat, value: 0 }]; item.recipe.rolls = [.7]; item = deriveItem(item);
   }
   sim.player.character.equipped.weapon = item;
-  sim.player.character.equipped.offhand = extra.endsWith('orb') ? generateItem(771, 8, 'orb', extra, 'common') : null;
+  sim.player.character.equipped.offhand = extra.endsWith('orb') || extra.endsWith('grimoire') ? generateItem(771, 8, undefined, extra, 'common') : null;
   refreshCharacter(sim.player); sim.player.angle = Math.PI / 2; sim.time = 3;
   if (attackPhase > 0 && item.weapon!.attackKind === 'bolt') {
     const weapon = item.weapon!, stats = deriveAttackStats(sim.player.stats, weapon), duration = 1 / stats.attacksPerSecond;
     const start = RANGED_BASIC_ATTACK_PHASES.activeStart, end = RANGED_BASIC_ATTACK_PHASES.activeEnd;
-    const style = weapon.damageType === 'physical' ? 'arcane' : weapon.damageType;
+    const style = basicProjectileStyle(weapon);
     sim.player.attack = { kind: 'ranged', weapon, hand: 'main', elapsed: attackPhase * duration, duration,
       activeStart: start * duration, activeEnd: end * duration, angle: sim.player.angle, range: stats.range, arc: stats.arc,
       damage: stats.damage, hitIds: new Set(), released: attackPhase >= start };

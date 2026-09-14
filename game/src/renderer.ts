@@ -509,7 +509,7 @@ export class Renderer {
     }
     if (!this.cryptFloor) this.settlementArt.drawNightEmission(c,this.cachedBuildings,this.visualTime,this.sky);
     // Emission is composed after surface illumination, so a hot core stays luminous.
-    this.emitters(sim, alpha, lights);
+    this.emitters(sim, alpha, lights, settings.reducedMotion);
     if (this.cryptFloor) drawCryptEmission(c, this.cryptFloor, settings.reducedMotion ? 0 : this.visualTime, this.view);
     drawGroundGold(c, sim.groundGold, this.visualTime, settings.reducedMotion);
     drawLevelCelebration(c, this.rewards.level, px, py, settings.reducedMotion);
@@ -889,7 +889,7 @@ export class Renderer {
         ? { ...light, clip: cryptLightMask(this.cryptFloor, light) } : light);
   }
 
-  private emitters(sim: Simulation, alpha: number, lights: PointLight[]) {
+  private emitters(sim: Simulation, alpha: number, lights: PointLight[], reducedMotion: boolean) {
     const c = this.ctx;
     for (const prop of this.cachedProps) if (prop.kind === 'shrine') {
       const x = prop.x - 18, y = prop.y - 31;
@@ -909,7 +909,7 @@ export class Renderer {
     }
     for (const shot of sim.projectiles) {
       const { x, y } = projectilePresentation(shot, alpha);
-      drawProjectile(c, shot, x, y, this.visualTime);
+      drawProjectile(c, shot, x, y, reducedMotion && shot.effects?.style === 'radiant' ? 0 : this.visualTime);
     }
   }
 

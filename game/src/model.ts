@@ -109,7 +109,7 @@ export interface WeaponDefinition {
 
 export type WeaponFamily = 'sword' | 'axe' | 'mace' | 'dagger' | 'bow' | 'staff' | 'wand' | 'unarmed';
 export type DamageType = 'physical' | 'fire' | 'frost' | 'lightning' | 'arcane';
-export type ProjectileStyle = 'arrow' | 'fire' | 'frost' | 'lightning' | 'arcane' | 'spirit';
+export type ProjectileStyle = 'arrow' | 'fire' | 'frost' | 'lightning' | 'arcane' | 'spirit' | 'radiant';
 export interface ShieldDefinition {
   id: string; name: string; blockChance: number; blockReduction: number;
   visual: { material?: GearMaterial; kind: 'buckler' | 'kite' | 'tower'; base: string; edge: string; trim: string; shadow: string };
