@@ -6,6 +6,7 @@ import { formatWorldDistance } from './world-distance.ts';
 import { drawJourneyMapMarker, type JourneyMarker } from './journey-marker.ts';
 import { drawMapZoneLevels, mapZoneLabels } from './map-zone-art.ts';
 import { drawMapProps, drawMapBuilding } from './map-terrain-art.ts';
+import { drawMapCompass } from './map-compass-art.ts';
 import type { Prop } from './world.ts';
 import { Exploration, EXPLORATION_REVEAL_RADIUS, EXPLORATION_CELL_SIZE, EXPLORATION_CHUNK_SIZE } from './exploration.ts';
 import { BIOMES, type BiomeId } from './biomes.ts';
@@ -200,6 +201,7 @@ export class WorldMap {
   setZoneLevels(visible: boolean) { this.zoneLevels = visible; this.render(); }
   private abort = new AbortController();
   private opened = false;
+  private explorationMode = false;
   private player: MapPlayer = { x: 0, y: 0, angle: 0 };
   private view: MapView = { x: 0, y: 0, width: 800, height: 500, centerX: 0, centerY: 0, zoom: .17 };
   private pointer: { x: number; y: number } | null = null;
@@ -272,13 +274,16 @@ export class WorldMap {
   private poiLabel(poi: MapPOI): string { const state = this.eventStateReader(poi); if (poi.sighted) return `${POI_DEFINITIONS[poi.kind].label} · Sighted`; if (state) return `${POI_DEFINITIONS[poi.kind].label} · ${state}`; return this.isCampCleared(poi) ? 'Camp · Cleared' : POI_DEFINITIONS[poi.kind].label; }
 
   get isOpen() { return this.opened; }
-  open(player: MapPlayer) {
+  open(player: MapPlayer, explorationMode = false) {
     if (this.disposed || this.opened) return;
     this.player = { ...player }; this.exploration.reveal(player.x, player.y);
     this.returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     this.opened = true; this.element.hidden = false;
+    this.explorationMode = explorationMode;
+    this.element.classList.toggle('world-map-root--exploration', explorationMode);
+    this.element.querySelector('[role="dialog"]')!.setAttribute('aria-modal', String(!explorationMode));
     this.view.centerX = clampMapCoordinate(player.x); this.view.centerY = clampMapCoordinate(player.y);
-    this.resize(); this.canvas.focus({ preventScroll: true });
+    this.resize(); if (!explorationMode) this.canvas.focus({ preventScroll: true });
   }
   close() {
     if (!this.opened) return;
@@ -293,6 +298,9 @@ export class WorldMap {
   update(player: MapPlayer, _dt: number) {
     if (this.disposed || ![player.x, player.y].every(Number.isFinite)) return;
     this.player = { ...player };
+    if (this.opened && this.explorationMode) {
+      this.view.centerX = clampMapCoordinate(player.x); this.view.centerY = clampMapCoordinate(player.y);
+    }
     this.exploration.reveal(player.x, player.y);
     const previous = this.presentation;
     if (this.opened && (!previous || previous.x !== player.x || previous.y !== player.y
@@ -324,9 +332,25 @@ export class WorldMap {
     this.cancelRecenter();
     this.view = fitMapBounds(this.view, region, padding, this.zoomLimits); this.render();
   }
+  zoomExplorationByWheel(deltaY: number, deltaMode: number) {
+    if (!this.opened || !this.explorationMode || !Number.isFinite(deltaY)) return;
+    const delta = Math.max(-240, Math.min(240, deltaY * (deltaMode === 1 ? 16 : deltaMode === 2 ? this.view.height : 1)));
+    this.view = zoomMapAt(this.view, this.view.width / 2, this.view.height / 2,
+      this.view.zoom * Math.exp(-delta * .0016), this.zoomLimits);
+    this.invalidate();
+  }
   get viewBounds(): MapRect { return bounds(this.view); }
   get terrainCacheSize(): number { return this.tiles.size; }
   getCanvas(): HTMLCanvasElement { return this.canvas; }
+  /** Read-only hover forwarded from gameplay; the overlay never captures the mouse. */
+  setExplorationPointer(point: { x: number; y: number } | null) {
+    if (!this.opened || !this.explorationMode) return;
+    const rect = this.canvas.getBoundingClientRect();
+    this.pointer = point && point.x >= rect.left && point.x < rect.right && point.y >= rect.top && point.y < rect.bottom
+      ? { x: (point.x - rect.left) * this.view.width / rect.width,
+          y: (point.y - rect.top) * this.view.height / rect.height } : null;
+    this.drawHover();
+  }
   setMinimapPointer(point: { x: number; y: number } | null) { this.minimapPointer = point; }
 
   private clearTouch: (() => void) | null = null;
@@ -431,10 +455,12 @@ export class WorldMap {
     this.canvas.addEventListener('wheel', event => {
       this.cancelRecenter();
       event.preventDefault(); const p = local(event);
+      if (this.explorationMode) { p.x = this.view.width / 2; p.y = this.view.height / 2; }
       const delta = Math.max(-240, Math.min(240, event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? this.view.height : 1)));
       this.view = zoomMapAt(this.view, p.x, p.y, this.view.zoom * Math.exp(-delta * .0016), this.zoomLimits); this.invalidate();
     }, { signal, passive: false });
     this.element.addEventListener('keydown', event => {
+      if (this.explorationMode) return;
       // Escape/M remain owned by the game's phase/input coordinator.
       if (event.key === 'Tab') {
         const controls = [...this.element.querySelectorAll<HTMLElement>('button, canvas[tabindex]')];
@@ -570,10 +596,12 @@ export class WorldMap {
   }
 
   private chart(c: CanvasRenderingContext2D, view: MapView, mini: boolean,
-    features = this.features(view, mini)) {
+    features = this.features(view, mini), simple = false) {
     const region = bounds(view), tileSize = mini ? MAP_TERRAIN_RULES.baseWorldSize : mapTerrainSize(view.zoom, view.width, view.height);
     c.save(); c.beginPath(); c.rect(view.x, view.y, view.width, view.height); c.clip();
-    c.fillStyle = palette.ink; c.fillRect(view.x, view.y, view.width, view.height);
+    const opacity = simple ? .58 : 1;
+    c.globalAlpha = opacity;
+    if (!simple) { c.fillStyle = palette.ink; c.fillRect(view.x, view.y, view.width, view.height); }
     c.imageSmoothingEnabled = false;
     const transform = c.getTransform();
     const bleed = 1 / Math.max(.1, Math.hypot(transform.a, transform.b));
@@ -600,15 +628,15 @@ export class WorldMap {
     for (const { tx, ty, tile, blend } of layers) {
       if (!tile || !blend) continue;
       const p = projectMapPoint(tx * tileSize, ty * tileSize, view);
-      c.globalAlpha = blend;
+      c.globalAlpha = blend * opacity;
       c.drawImage(tile.charted, p.x, p.y, tileSize * view.zoom + bleed, tileSize * view.zoom + bleed);
       if (tile.chartedRoads) roadTiles.push({ tile, x: p.x, y: p.y });
     }
-    c.globalAlpha = 1;
+    c.globalAlpha = opacity;
     c.imageSmoothingEnabled = true;
     for (const road of roadTiles) c.drawImage(road.tile.chartedRoads!, road.x, road.y, tileSize * view.zoom, tileSize * view.zoom);
     c.imageSmoothingEnabled = false;
-    for (const building of view.zoom < .065 ? [] : this.world.getBuildings(region.x, region.y, region.width, region.height)) {
+    for (const building of simple || view.zoom < .065 ? [] : this.world.getBuildings(region.x, region.y, region.width, region.height)) {
       const { x, y, width, height } = building;
       if (!this.exploration.isRevealed(x, y) || !this.exploration.isRevealed(x + width, y)
         || !this.exploration.isRevealed(x, y + height) || !this.exploration.isRevealed(x + width, y + height)) continue;
@@ -621,7 +649,7 @@ export class WorldMap {
         c.strokeStyle = '#454a37'; c.beginPath(); c.moveTo(p.x + w / 2, p.y + 2); c.lineTo(p.x + w / 2, p.y + h - 2); c.stroke(); }
     }
     const { pois, labels } = features;
-    if (!mini && this.zoneLevels) drawMapZoneLevels(c, view, this.exploration, this.world.seed, features.zones);
+    if (!mini && !simple && this.zoneLevels) drawMapZoneLevels(c, view, this.exploration, this.world.seed, features.zones);
     for (const label of labels) {
       const p = projectMapPoint(label.x, label.y, view), biome = BIOMES[label.id as BiomeId];
       const labelColor = biome?.color ?? palette.jade;
@@ -770,6 +798,13 @@ export class WorldMap {
     const c = this.context;
     c.setTransform(this.ratio, 0, 0, this.ratio, 0, 0); c.clearRect(0, 0, this.view.width, this.view.height);
     this.hovered = null; this.chartLayerValid = false;
+    if (this.explorationMode) {
+      const features = this.features(this.view, true);
+      this.chart(c, this.view, false, features, true);
+      this.playerArrow(c, this.player, this.view, false);
+      this.visiblePOIs = features.pois; this.hideTooltip();
+      return;
+    }
     const features = this.features(this.view, false);
     this.visiblePOIs = features.pois;
     this.chart(c, this.view, false, features);
@@ -790,8 +825,7 @@ export class WorldMap {
     c.lineTo(24 + scaleWidth, this.view.height - 21); c.lineTo(24 + scaleWidth, this.view.height - 25); c.stroke();
     text(c, formatWorldDistance(scale), 24, this.view.height - 39, .9, palette.muted);
 
-    text(c, 'N', this.view.width - 27, 16, 1.15, palette.brass, 'center');
-    c.strokeStyle = '#a8af9566'; c.beginPath(); c.moveTo(this.view.width - 27, 34); c.lineTo(this.view.width - 27, 54); c.moveTo(this.view.width - 32, 40); c.lineTo(this.view.width - 27, 34); c.lineTo(this.view.width - 22, 40); c.stroke();
+    drawMapCompass(c, this.view.width - 60, 60);
     this.drawHover();
   }
 
@@ -825,7 +859,7 @@ export class WorldMap {
       this.tooltip.style.setProperty('--poi-color',palette.brass);this.positionTooltip(this.pointer);
     }
     else if (this.hovered && this.pointer) this.showTooltip(this.hovered, this.pointer);
-    else if (this.pointer && !this.drag) {
+    else if (this.pointer && !this.drag && !this.explorationMode) {
       const point = unprojectMapPoint(this.pointer.x, this.pointer.y, this.view);
       const inspected = chartedMapArea(this.world, this.exploration, point.x, point.y);
       if (inspected) {

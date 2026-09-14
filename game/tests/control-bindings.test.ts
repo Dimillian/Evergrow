@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CONTROL_ACTIONS, CONTROL_STORAGE_KEY, ControlBindings, controlLabel, defaultControls, parseControls, validControl } from '../src/control-bindings.ts';
+import { CONTROL_ACTIONS, CONTROL_STORAGE_KEY, isGameplayAction, ControlBindings, controlLabel, defaultControls, parseControls, validControl } from '../src/control-bindings.ts';
 import { GameInput } from '../src/game-input.ts';
 import { bindGameKeyboard } from '../src/game-keyboard.ts';
 
@@ -159,4 +159,13 @@ test('labels describe the current primary or alternate assignment', () => {
   bindings.bind('heal', 0, null); assert.equal(bindings.label('heal'), '—');
   bindings.bind('heal', 1, 'Mouse4'); assert.equal(bindings.label('heal'), 'M5');
   assert.equal(controlLabel('NumpadEnter'), 'Num Enter'); assert.equal(controlLabel('KeyZ'), 'Z');
+});
+
+
+test('quick-map input distinguishes combat slots from the skill-atlas menu shortcut', () => {
+  const bindings = new ControlBindings();
+  for (const code of ['KeyW', 'ArrowUp', 'Mouse0', 'Mouse2', 'Digit1', 'Digit4', 'Space', 'KeyQ', 'ShiftLeft'])
+    assert.equal(isGameplayAction(bindings.action(code)), true, code);
+  for (const code of ['KeyT', 'KeyC', 'KeyJ', 'KeyM', 'KeyE', 'KeyP'])
+    assert.equal(isGameplayAction(bindings.action(code)), false, code);
 });

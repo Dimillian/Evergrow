@@ -1,6 +1,7 @@
 /** Keyboard ownership boundary. Native shortcuts must never latch a gameplay key. */
 export interface GameKeyboardHandlers {
   press(event: KeyboardEvent): void;
+  intercept?(event: KeyboardEvent): boolean;
   release(code: string): void;
   clear(): void;
 }
@@ -10,6 +11,14 @@ function nativeShortcut(event: KeyboardEvent): boolean {
 }
 
 export function bindGameKeyboard(target: EventTarget, handlers: GameKeyboardHandlers, signal: AbortSignal): void {
+  // Capture gameplay on the live map before focused controls pan or trap Tab.
+  target.addEventListener('keydown', raw => {
+    const event = raw as KeyboardEvent;
+    if (nativeShortcut(event)) handlers.clear();
+    else if (handlers.intercept?.(event)) {
+      event.preventDefault(); event.stopImmediatePropagation();
+    }
+  }, { signal, capture: true });
   target.addEventListener('keydown', raw => {
     const event = raw as KeyboardEvent;
     // OS/browser shortcuts can swallow the letter's eventual keyup without a
@@ -20,11 +29,6 @@ export function bindGameKeyboard(target: EventTarget, handlers: GameKeyboardHand
   target.addEventListener('keyup', raw => {
     const event = raw as KeyboardEvent;
     handlers.release(event.code);
-    if (nativeShortcut(event)) handlers.clear();
-  }, { signal, capture: true });
-  // Capture shortcut interruption before a focused control can consume keydown.
-  target.addEventListener('keydown', raw => {
-    const event = raw as KeyboardEvent;
     if (nativeShortcut(event)) handlers.clear();
   }, { signal, capture: true });
   target.addEventListener('compositionstart', () => handlers.clear(), { signal, capture: true });

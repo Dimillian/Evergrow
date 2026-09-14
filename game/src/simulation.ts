@@ -280,15 +280,17 @@ export class Simulation {
   getCampState(id: string): CampState { return this.camps.getState(id); }
 
   /** Call when focus/control context changes, including pause and resume. */
-  clearInput(): void {
+  clearInput(preserveMovement = false): void {
     this.groundPickup.cancel();
     this.portal.cancel(); this.eventChannel.cancel();
     this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
     this.skillBuffer = null; this.blockedDrawSlot = null;
     if(this.player.skillEffects)delete this.player.skillEffects.draw;
-    this.player.vx = this.player.vy = 0;
-    this.accumulator = 0;
-    this.capturePositions();
+    if (!preserveMovement) {
+      this.player.vx = this.player.vy = 0;
+      this.accumulator = 0;
+      this.capturePositions();
+    }
   }
 
   /** UI hover cancels queued weapons while movement and current actions continue. */

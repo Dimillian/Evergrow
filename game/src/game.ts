@@ -1,5 +1,5 @@
 import { controls } from './control-preferences.ts';
-import type { ControlAction } from './control-bindings.ts';
+import { isGameplayAction, type ControlAction } from './control-bindings.ts';
 import { activeBuffs } from './active-buffs.ts';
 import { ExpeditionPanel } from './expedition-panel.ts';
 import { executeDropItem, type DropItemSource } from './drop-item-command.ts';
@@ -258,13 +258,13 @@ export class Game {
         journeys:{open:()=>this.journeys.panel.open(this.journeys.selected),close:()=>this.journeys.panel.close()},
         event: { open: () => { if(this.activeExpeditionTable)this.expeditionPanel.open(this.sim.expeditions,this.sim.player.level,this.overworld.seed,this.activeExpeditionTable); else if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.expeditionPanel.close(); this.activeExpeditionTable=null; this.activeEvent = null; this.activeDungeonEntrance = null; } },
         service: { open: () => { if (this.activeNPC) this.servicePanel.open(this.sim.player, this.activeNPC); }, close: () => { this.servicePanel.close(); this.activeNPC = null; } },
-        map: { open: () => { const run=currentDungeon(this.sim.expeditions); if(run) this.dungeonMap.open(this.sim.dungeonFloor!,run,this.sim.player); else this.worldMap.open(this.sim.player); this.shell.setStatus('World map open. Game paused.'); }, close: () => { this.worldMap.close(); this.dungeonMap.close(); } },
+        map: { open: () => { const run=currentDungeon(this.sim.expeditions), glance=this.panels.mapHeld; if(run) this.dungeonMap.open(this.sim.dungeonFloor!,run,this.sim.player,glance); else this.worldMap.open(this.sim.player,glance); this.shell.setStatus(glance?'Exploration map open. Movement continues.':'World map open. Game paused.'); }, close: () => { this.worldMap.close(); this.dungeonMap.close(); } },
         character: { open: () => { this.inventoryPanel.open(this.sim.player); this.shell.setStatus('Character and inventory open. Game paused.'); }, close: () => this.inventoryPanel.close() },
         skills: { open: () => { this.skillPanel.open(this.sim.player); this.shell.setStatus('Skill tree open. Game paused.'); }, close: () => this.skillPanel.close() },
       }, {
-        clearInput: () => this.clearInput(), changed: phase => {
-          if (phase !== this.audioPhase) {
-            if (phase !== 'dead' && this.audioPhase !== 'dead') this.audio.panel(phase !== 'playing' && phase !== 'ready');
+        clearInput: preserveMovement => this.clearInput(preserveMovement), changed: phase => {
+          if (phase !== this.audioPhase || phase === 'map') {
+            if (phase !== 'dead' && this.audioPhase !== 'dead') this.audio.panel(!this.panels.simulationActive && phase !== 'ready');
             this.audioPhase = phase; this.nextScore = 0;
           }
           this.showMenu();
@@ -360,26 +360,48 @@ export class Game {
     const unlockAudio = () => { void this.audio.unlock().catch(() => {}); };
     window.addEventListener('pointerdown', unlockAudio, { signal, capture: true, passive: true });
     window.addEventListener('keydown', unlockAudio, { signal, capture: true });
-    this.canvas.addEventListener('blur', () => this.clearInput(), { signal });
+    this.canvas.addEventListener('blur', () => { if (this.phase !== 'map') this.clearInput(); }, { signal });
     window.addEventListener('resize', () => this.resize(), { signal });
     window.visualViewport?.addEventListener('resize', () => { if(this.touch.active) this.resize(); }, {signal});
     window.addEventListener('blur', () => {
       this.mouse.present = false;
       this.clearInput();
-      if (this.phase === 'playing') this.pause();
+      if (this.phase === 'playing' || this.phase === 'map') this.pause();
     }, { signal });
     document.addEventListener('visibilitychange', () => {
       this.audio.setForeground(!document.hidden && !this.nativeBackground);
       if (document.hidden) {
         this.clearInput();
-        if (this.phase === 'playing') this.pause();
+        if (this.phase === 'playing' || this.phase === 'map') this.pause();
         void this.saveAndSync();
       }
       this.last = performance.now();
     }, { signal });
     bindGameKeyboard(window, {
-      clear: () => this.clearInput(),
-      release: code => this.input.keyUp(code),
+      clear: () => { this.clearInput(); this.panels.releaseMap(); },
+      release: code => { this.input.keyUp(code); if (code === 'Tab') this.panels.releaseMap(); },
+      intercept: event => {
+        if (!this.panels.mapHeld || event.defaultPrevented || this.appearanceEditor) return false;
+        const target = event.target;
+        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement
+          || target instanceof HTMLElement && target.isContentEditable) return false;
+        // Controller-generated events never feed the keyboard adapter.
+        if (!event.isTrusted && this.usingGamepad) return false;
+        const action = controls.action(event.code);
+        if (event.code === 'Tab' && this.panels.mapHeld) return true;
+        if (isGameplayAction(action)) {
+          if (!this.savingAction) {
+            if (event.isTrusted) { this.usingGamepad = false; this.touch.setActive(false); }
+            this.input.keyDown(event.code);
+          }
+          return true;
+        }
+        if (action === 'map' && event.code !== 'Tab') {
+          if (!event.repeat && !this.savingAction) this.panels.toggleMap();
+          return true;
+        }
+        return false;
+      },
       press: event => {
         if(this.appearanceEditor || event.defaultPrevented)return;
         if (this.savingAction) { event.preventDefault(); return; }
@@ -421,21 +443,26 @@ export class Game {
     window.addEventListener('pointermove', event => { if(event.pointerType !== 'touch') this.updatePointer(event); }, { signal });
     this.canvas.addEventListener('pointerleave', () => { this.mouse.present = false; }, { signal });
     this.canvas.addEventListener('wheel', event => {
-      if (this.phase !== 'playing' || event.ctrlKey || event.metaKey) return;
+      if (!this.panels.simulationActive || event.ctrlKey || event.metaKey) return;
       this.updatePointer(event);
       if (this.pointerInHUD()) return;
       event.preventDefault();
+      if (this.panels.mapHeld) {
+        const map = currentDungeon(this.sim.expeditions) ? this.dungeonMap : this.worldMap;
+        map.zoomExplorationByWheel(event.deltaY, event.deltaMode);
+        return;
+      }
       this.renderer.zoomByWheel(event.deltaY, event.deltaMode, this.canvas.getBoundingClientRect().height);
     }, { signal, passive: false });
     this.canvas.addEventListener('pointerdown', event => {
-      if (event.pointerType === 'mouse' && this.phase === 'playing' && !this.savingAction) this.canvas.setPointerCapture(event.pointerId);
+      if (event.pointerType === 'mouse' && this.panels.simulationActive && !this.savingAction) this.canvas.setPointerCapture(event.pointerId);
     }, { signal });
     window.addEventListener('pointerup', event => {
       if (this.canvas.hasPointerCapture(event.pointerId)) this.canvas.releasePointerCapture(event.pointerId);
     }, { signal });
     this.canvas.addEventListener('mousedown', event => {
       if (this.touch.active) return;
-      if (this.phase !== 'playing' || this.savingAction) return;
+      if (!this.panels.simulationActive || this.savingAction) return;
       event.preventDefault();
       this.updatePointer(event);
       if (this.pointerInHUD()) return;
@@ -462,11 +489,11 @@ export class Game {
       if (!repeat) { if (this.phase === 'journeys') this.resume(); else this.journeys.open(); } return true;
     }
     if (action === 'map' && (this.panels.canOpen('map') || this.phase === 'map')) {
-      if (!repeat) this.panels.toggle('map'); return true;
+      if (!repeat) { if (tab) this.panels.holdMap(); else this.panels.toggleMap(); } return true;
     }
     if (action === 'sound') { if (!repeat) this.toggleSound(); return true; }
     if (action === 'debug') { if (!repeat) this.debug = !this.debug; return true; }
-    if (this.phase !== 'playing') return false;
+    if (!this.panels.simulationActive) return false;
     if (action === 'portal') { if (!repeat) this.requestPortal(); return true; }
     if (action === 'interact') { if (!repeat) this.interact(); return true; }
     return false;
@@ -509,11 +536,12 @@ export class Game {
     this.worldMap.resize();
   }
 
-  clearInput() {
+  clearInput(preserveMovement = false) {
     this.touch?.clear(); this.clearWorldTouch?.();
-    this.input.clear();
-    this.gamepad.clear(); this.gamepadMenu.clear(); clearNativeController();
-    this.sim.clearInput();
+    this.input.clear(preserveMovement);
+    if (!preserveMovement) { this.gamepad.clear(); clearNativeController(); }
+    this.gamepadMenu.clear();
+    this.sim.clearInput(preserveMovement);
   }
 
   /** Defeat recovery keeps the character, allocations and loot; it never creates a new run. */
@@ -768,7 +796,7 @@ export class Game {
       y: number;
   }): boolean {
       if (this.savingAction) return false;
-      if (this.phase !== 'playing')
+      if (!this.panels.simulationActive)
           return false;
       const p = this.sim.player;
       const screen=pointer&&this.renderer.worldToScreen(pointer.x,pointer.y);
@@ -911,7 +939,7 @@ export class Game {
   }
 
   private requestPortal() {
-    if (this.savingAction || this.phase !== 'playing' || !this.session.active) return;
+    if (this.savingAction || !this.panels.simulationActive || !this.session.active) return;
     const p = this.sim.player, link = this.sim.travel.returnTo;
     if (this.world.isSanctuary(p.x, p.y)) {
       if (link) { this.renderer.portalGuide = 4; this.notify('Return portal marked on your map.'); }
@@ -938,6 +966,7 @@ export class Game {
     return this.durable(() => this.locations.portal(anchor, returning), false);
   }
   private finishTravel(): void {
+    this.panels.releaseMap();
     this.clearInput();
     this.renderer.reset(); this.renderer.snapTo(this.sim.player);
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
@@ -1064,7 +1093,7 @@ export class Game {
     this.touch.update(this.sim.player,this.phase,this.savingAction,now,this.sim.groundEffects);
     this.renderer.gamepadActive = this.usingGamepad;
     this.shell.setGamepadActive(this.usingGamepad);
-    if (this.phase === 'playing' && !this.savingAction && !this.shell.shortcutMenu.isOpen) {
+    if (this.panels.simulationActive && !this.savingAction && !this.shell.shortcutMenu.isOpen) {
       // The simulation owns the fixed 120 Hz clock and render interpolation.
       this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
       this.sim.setCombatViewport(this.renderer.combatViewport);
@@ -1117,6 +1146,7 @@ export class Game {
     this.shell.setNavigationVisible(this.renderer.navigationVisible);
     this.journeys.update();
     const settings = {
+      liveMap: this.panels.mapHeld,
       showGroundLootNames: showGroundLootNames(this.groundLootNames, controls.has('revealLoot'), this.input.held('revealLoot'), this.touch.active || this.usingGamepad),
       reducedMotion: this.reducedMotion, phase: this.phase, fps: this.fps, debug: this.debug,
     };
@@ -1169,6 +1199,15 @@ export class Game {
       y: p.prevY + (p.y - p.prevY) * alpha, angle: p.angle };
     const dungeonRun=currentDungeon(this.sim.expeditions);
     if (this.phase !== 'ready' && !dungeonRun) this.worldMap.update(mapPlayer, dt);
+    if (this.phase === 'map' && dungeonRun) this.dungeonMap.update(mapPlayer);
+    if (this.panels.mapHeld) {
+      const rect = this.canvas.getBoundingClientRect();
+      const pointer = this.mouse.present && !this.usingGamepad && !this.touch.active && !this.pointerInHUD()
+        ? { x: rect.left + this.mouse.x / this.renderer.width * rect.width,
+            y: rect.top + this.mouse.y / this.renderer.height * rect.height } : null;
+      if (dungeonRun) this.dungeonMap.setExplorationPointer(pointer);
+      else this.worldMap.setExplorationPointer(pointer);
+    }
     if (this.phase !== 'ready' && dungeonRun && this.renderer.navigationVisible) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time);
     if (this.phase !== 'ready' && !dungeonRun && this.renderer.navigationVisible) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, this.sim.time,
       this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
@@ -1187,7 +1226,7 @@ export class Game {
     this.gamepad.poll(pads, document.hasFocus() && !document.hidden);
     if (this.gamepad.disconnected && this.usingGamepad) {
       this.clearInput(); this.usingGamepad = false; this.mouse.present = false;
-      if (this.phase === 'playing') this.pause();
+      if (this.phase === 'playing' || this.phase === 'map') this.pause();
       this.notify('Controller disconnected.'); return;
     }
     const pad = this.gamepad;
@@ -1213,7 +1252,7 @@ export class Game {
       pad.pressed.delete(PAD.dodge); // Closing lower-screen detail must not also dodge.
       return;
     }
-    if (pad.pressed.has(PAD.pause) || (this.phase !== 'playing' && pad.pressed.has(PAD.dodge))) {
+    if (pad.pressed.has(PAD.pause) || (!this.panels.simulationActive && pad.pressed.has(PAD.dodge))) {
       if (this.phase === 'character' && this.inventoryPanel.dismissPopup()) return;
       if (this.panels.activePanel) this.resume();
       else if (this.phase === 'playing' && !this.savingAction) { if (this.sim.portal.active) this.sim.portal.cancel(); else this.pause(); }
@@ -1222,9 +1261,9 @@ export class Game {
       return;
     }
     if (pad.pressed.has(PAD.map) && (this.panels.canOpen('map') || this.phase === 'map')) {
-      this.panels.toggle('map'); return;
+      this.panels.toggleMap(); return;
     }
-    if (this.phase === 'playing' && !this.savingAction) {
+    if (this.panels.simulationActive && !this.savingAction) {
       if (pad.pressed.has(PAD.up)) { this.openCharacterPanel('skills'); return; }
       if (pad.pressed.has(PAD.left) || pad.pressed.has(PAD.right)) { this.openCharacterPanel('character'); return; }
       if (pad.pressed.has(PAD.down)) { this.requestPortal(); return; }
@@ -1267,7 +1306,7 @@ export class Game {
       && Math.hypot(e.x - p.x, e.y - p.y) < 1000);
     const trial = this.sim.eventState.trial;
     const event = trial ? this.sim.eventState.sites[trial.siteId] : undefined;
-    this.audio.score(now / 1000, { phase: this.phase, biome: this.world.sampleBiome(p.x, p.y).id,
+    this.audio.score(now / 1000, { phase: this.panels.mapHeld ? 'playing' : this.phase, biome: this.world.sampleBiome(p.x, p.y).id,
       town, dungeon: !!this.sim.dungeonFloor,
       encounter: boss ? 'boss' : event?.phase === 'active' && Math.hypot(event.x - p.x, event.y - p.y) < EVENT_RULES.abandonRadius ? 'event' : 'none' });
   }

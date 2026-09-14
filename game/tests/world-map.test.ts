@@ -88,6 +88,25 @@ test('a static open chart avoids redraws but reacts to discovery and delayed sto
 });
 
 
+test('exploration map stays centered while the full map retains manual framing', () => {
+  const map = Object.assign(Object.create(WorldMap.prototype), {
+    opened: true, disposed: false, explorationMode: true,
+    pingAnimations: [], focusPing: { hidden: true },
+    exploration: { reveal() {} }, render() {},
+    view: { x: 0, y: 0, width: 900, height: 560, centerX: 0, centerY: 0, zoom: .17 }, zoomLimits: MAP_ZOOM,
+  });
+  map.update({ x: 120, y: -240, angle: 0 }, 1 / 60);
+  assert.deepEqual(projectMapPoint(120, -240, map.view), { x: 450, y: 280 });
+  map.fitBounds({ x: 1000, y: 2000, width: 1800, height: 1800 });
+  map.update({ x: 180, y: -320, angle: 1 }, 1 / 60);
+  assert.deepEqual(projectMapPoint(180, -320, map.view), { x: 450, y: 280 });
+  map.explorationMode = false;
+  map.fitBounds({ x: 1000, y: 2000, width: 1800, height: 1800 });
+  const fullView = { ...map.view };
+  map.update({ x: 240, y: -400, angle: 1 }, 1 / 60);
+  assert.deepEqual(map.view, fullView, 'full map retains manual framing');
+});
+
 test('first map draw measures populated footer layout and aligns the canvas with the arrival ping', t => {
   const win = Object.getOwnPropertyDescriptor(globalThis, 'window');
   Object.defineProperty(globalThis, 'window', { configurable: true, value: { devicePixelRatio: 2 } });
@@ -419,4 +438,21 @@ test('a zero detail budget still paints every revealed preview and refreshes its
   revealed=false;revision++;
   assert.equal(map.previewTile(0,0,768),preview);assert.equal(preview.getContext().painted,0);
   assert.equal(samples,400,'discovery changes reuse preview colors');
+});
+
+
+test('quick-map wheel zoom retains the player center, supports wheel units and leaves full maps alone', () => {
+  const setup = () => Object.assign(Object.create(WorldMap.prototype), {
+    opened: true, explorationMode: true, invalidate() {}, zoomLimits: MAP_ZOOM,
+    view: { x: 0, y: 0, width: 900, height: 560, centerX: -120, centerY: 340, zoom: .17 },
+  });
+  const map = setup(), lines = setup();
+  map.zoomExplorationByWheel(-16, 0); lines.zoomExplorationByWheel(-1, 1);
+  assert.equal(map.view.zoom, lines.view.zoom); assert.ok(map.view.zoom > .17);
+  assert.deepEqual(projectMapPoint(-120, 340, map.view), { x: 450, y: 280 });
+  map.zoomExplorationByWheel(1, 2); assert.ok(map.view.zoom < .17);
+  for (let i = 0; i < 100; i++) map.zoomExplorationByWheel(-10000, 0);
+  assert.equal(map.view.zoom, MAP_ZOOM.max);
+  map.explorationMode = false; const before = { ...map.view };
+  map.zoomExplorationByWheel(100, 0); assert.deepEqual(map.view, before);
 });
