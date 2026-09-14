@@ -18,7 +18,7 @@ import { matchesInventoryFilter, planBestEquipment, type EquipBestChoice, type I
 import { GamepadMenu } from './gamepad-menu.ts';
 import type { GamepadInput } from './gamepad-input.ts';
 import { directionalControl } from './ui-navigation.ts';
-import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS, TIER_NAMES } from './items.ts';
+import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS, TIER_NAMES, TIER_COLORS } from './items.ts';
 import { planEquipmentChange, planInventoryMove } from './inventory.ts';
 import { drawCharacterPortrait } from './character-portrait.ts';
 import { characterStatDetails, type StatDetail } from './character-stat-details.ts';
@@ -124,17 +124,20 @@ export class InventoryPanel {
     this.element.innerHTML = `<section class="ui-window character-window" role="dialog" aria-modal="true" aria-labelledby="character-title">
       <header class="ui-window-header character-header">
         <div class="character-heading"><span class="character-sigil ui-header-emblem" aria-hidden="true">${uiIcon('shield')}</span><h2 class="ui-title" id="character-title">Character &amp; inventory</h2></div>
-        <div class="character-header-right"><span class="character-level" data-level></span><button type="button" class="ui-button ui-button--icon" data-close aria-label="Close character">${uiIcon('close')}</button></div>
+        <div class="character-header-right">${actions.editAppearance?`<button type="button" class="ui-button ui-button--quiet ui-button--icon" data-edit-appearance aria-label="Edit appearance" data-tooltip="Edit appearance" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('palette')}</button>`:''}<button type="button" class="ui-button ui-button--icon" data-close aria-label="Close character">${uiIcon('close')}</button></div>
       </header>
       <nav class="character-controller-nav" aria-label="Controller sections"><kbd>LB</kbd><span data-pad-section="0">Equipment</span><span data-pad-section="1">Inventory</span><span data-pad-section="2">Stats</span><kbd>RB</kbd><small>A Select · B Back</small></nav>
       <div class="character-columns ui-scroll-area">
-        <section class="character-equipment" id="character-section-0" data-section="0" aria-labelledby="equipment-title">
-          <div class="character-section-title character-inventory-heading"><h3 id="equipment-title">Equipment</h3>${actions.editAppearance?`<div class="character-heading-actions"><button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-edit-appearance aria-label="Edit character" data-tooltip="Edit character" data-tooltip-placement="below">${uiIcon('character')}</button></div>`:''}<span class="character-gear-power"><span>Gear power</span><strong data-gear-power></strong></span></div>
+        <section class="character-equipment" id="character-section-0" data-section="0" aria-label="Character and equipment">
           <div class="character-doll-stage"><div class="character-orbit" aria-hidden="true"></div><canvas class="character-doll" width="560" height="720" aria-label="Your character wearing the current equipment"></canvas>
             <div class="character-equipment-rail character-equipment-rail--crown">${this.equipmentMarkup('head')}</div>
             <div class="character-equipment-rail character-equipment-rail--left">${LEFT_SLOTS.map(slot => this.equipmentMarkup(slot)).join('')}</div>
             <div class="character-equipment-rail character-equipment-rail--right">${RIGHT_SLOTS.map(slot => this.equipmentMarkup(slot)).join('')}</div>
           </div>
+          <dl class="character-portrait-metrics" aria-label="Character level and gear power">
+            <div><dt>Level</dt><dd data-level></dd></div>
+            <div><dt>Gear power</dt><dd data-gear-power></dd></div>
+          </dl>
           <div class="character-portrait-footer"><button class="ui-button ui-button--quiet ui-button--icon" data-turn="-1" aria-label="Turn character left">‹</button><div><span class="character-portrait-label">Equipped weapon</span><strong data-weapon-name></strong></div><button class="ui-button ui-button--quiet ui-button--icon" data-turn="1" aria-label="Turn character right">›</button></div>
           <div class="character-points"><span>${uiIcon('skilltree')}Skill points <strong data-skill-points></strong></span><span>${uiIcon('plus')}Attribute points <strong data-stat-points></strong></span></div>
         </section>
@@ -142,7 +145,7 @@ export class InventoryPanel {
           <div class="character-section-title character-inventory-heading"><h3 id="inventory-title">Inventory</h3><div class="character-heading-actions">
             <button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-sort-filter aria-label="Filter inventory" aria-haspopup="dialog" aria-expanded="false" aria-controls="inventory-sort-dialog" data-tooltip="Filter inventory" data-tooltip-placement="below">${uiIcon('sortFilter')}</button>
             <button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-equip-best aria-label="Equip best items" data-tooltip="Equip best items" data-tooltip-placement="below">${uiIcon('equipBest')}</button>
-            ${actions.lock ? `<button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-lock-mode aria-pressed="false" aria-label="Lock items" data-tooltip="Lock items: click a piece to protect it from selling or dropping. L on a focused item also toggles its lock.">${ITEM_LOCK_ICON}</button>` : ''}
+            ${actions.lock ? `<button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-lock-mode aria-pressed="false" aria-label="Lock items" data-tooltip="Lock items: click a piece to protect it from selling or dropping. L on a focused item also toggles its lock." data-tooltip-placement="below">${ITEM_LOCK_ICON}</button>` : ''}
             ${actions.drop ? `<span class="character-ground-drop" data-ground-drop role="img" tabindex="0" aria-label="Drag an item here to drop it on the ground" data-tooltip="Drag an item here to drop it on the ground." data-tooltip-placement="below">${uiIcon('dropItem')}</span>` : ''}
           </div><div class="character-inventory-counts"><span class="character-gold" data-gold></span></div></div>
           <div class="character-pack-toolbar"><button type="button" class="ui-button character-auto-sort" data-sort="compact">${uiIcon('sortFilter')} Auto-sort</button><div class="character-sort-options" role="group" aria-label="Sort inventory">${(['type', 'rarity', 'recent'] as const).map(mode => `<button type="button" class="ui-button ui-button--quiet" data-sort="${mode}">${mode === 'type' ? 'Type' : mode === 'rarity' ? 'Rarity' : 'Recent'}</button>`).join('')}</div></div>
@@ -152,7 +155,7 @@ export class InventoryPanel {
               ${Array.from({ length: INVENTORY_CAPACITY }, (_, index) => `<button type="button" class="ui-slot ui-item-slot character-bag-slot" data-bag="${index}" data-location="bag-${index}" hidden></button>`).join('')}
               <div class="character-pack-placement" hidden aria-hidden="true"></div>
             </div>
-            <section class="character-charms" aria-label="Active charms"><header><span>${uiIcon('diamond')} Charms</span><button type="button" class="ui-button ui-button--quiet" data-compare-charms>Compare</button></header><div class="character-charm-grid character-tetris" role="group" aria-label="Active charms, ${PACK_COLUMNS} columns by ${CHARM_ROWS} rows">${Array.from({length: PACK_COLUMNS * CHARM_ROWS}, (_,i) => `<button type="button" class="character-grid-cell" data-cell="${PACK_CELLS+i}" data-location="cell-${PACK_CELLS+i}" style="grid-column:${i%PACK_COLUMNS+1};grid-row:${Math.floor(i/PACK_COLUMNS)+1}" aria-label="Charm row ${Math.floor(i/PACK_COLUMNS)+1}, column ${i%PACK_COLUMNS+1}"></button>`).join('')}</div></section>
+            <section class="character-charms" aria-label="Active charms"><header><span>${uiIcon('diamond')} Charms<button type="button" class="ui-help-icon" aria-label="About charms" aria-expanded="false" data-ui-term="charms">?</button></span><button type="button" class="ui-button ui-button--quiet" data-compare-charms>Compare</button></header><div class="character-charm-grid character-tetris" role="group" aria-label="Active charms, ${PACK_COLUMNS} columns by ${CHARM_ROWS} rows">${Array.from({length: PACK_COLUMNS * CHARM_ROWS}, (_,i) => `<button type="button" class="character-grid-cell" data-cell="${PACK_CELLS+i}" data-location="cell-${PACK_CELLS+i}" style="grid-column:${i%PACK_COLUMNS+1};grid-row:${Math.floor(i/PACK_COLUMNS)+1}" aria-label="Charm row ${Math.floor(i/PACK_COLUMNS)+1}, column ${i%PACK_COLUMNS+1}"></button>`).join('')}</div></section>
             <section class="character-overflow" hidden><header>Pack overflow <small>Make space to carry these items</small></header><div class="character-overflow-items"></div></section>
           </div>
           <p class="character-filter-status" data-filter-status role="status" hidden></p>
@@ -166,11 +169,18 @@ export class InventoryPanel {
       </div>
       <footer class="ui-window-footer character-footer"><div class="character-experience"><div><span data-xp-label></span><span data-xp-total></span></div><div class="character-experience-track"><i data-xp-fill></i></div></div>${actions.openChronicle?'<button type="button" class="ui-button ui-button--quiet" data-chronicle>Chronicle</button>':''}<span class="character-footer-status">${uiIcon('diamond')}<span data-allocated-label></span></span></footer>
       <div class="character-popup-layer" data-popup-layer hidden>
-        <section class="character-mini-dialog ui-well" id="inventory-sort-dialog" data-mini="sort" role="dialog" aria-modal="true" aria-labelledby="inventory-sort-title" hidden>
-          <header><h3 id="inventory-sort-title">Filter inventory</h3><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-popup-close aria-label="Close filters">${uiIcon('close')}</button></header>
-          <div class="character-tool-row" role="group" aria-label="Filter item type"><span>Type</span>${(['all', 'weapons', 'armor', 'jewelry', 'offhand', 'charms'] as const).map(filter => `<button type="button" class="ui-button ui-button--quiet" data-filter="${filter}" aria-pressed="${filter === 'all'}">${filter === 'offhand' ? 'Off-hand' : filter[0].toUpperCase() + filter.slice(1)}</button>`).join('')}</div>
-          <div class="character-tool-row" role="group" aria-label="Filter item rarity"><span>Rarity</span><button type="button" class="ui-button ui-button--quiet" data-rarity="all" aria-pressed="true">All</button>${Object.entries(TIER_NAMES).map(([tier, name]) => `<button type="button" class="ui-button ui-button--quiet" data-rarity="${tier}" aria-pressed="false">${name}</button>`).join('')}</div>
-          <button type="button" class="ui-button ui-button--quiet" data-clear-filters>Clear filters</button>
+        <section class="character-mini-dialog character-filter-dialog ui-window" id="inventory-sort-dialog" data-mini="sort" role="dialog" aria-modal="true" aria-labelledby="inventory-sort-title" hidden>
+          <header class="ui-window-header"><div class="character-filter-title">${uiIcon('sortFilter')}<h3 id="inventory-sort-title">Filter inventory</h3></div><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-popup-close aria-label="Close filters">${uiIcon('close')}</button></header>
+          <div class="character-filter-body ui-scroll-area">
+            <fieldset class="character-filter-group"><legend>Item type</legend><div class="character-filter-grid">
+              ${(['all', 'weapons', 'armor', 'jewelry', 'offhand', 'charms'] as const).map(filter => `<button type="button" class="ui-button ui-button--quiet character-filter-choice" data-filter="${filter}" aria-pressed="${filter === 'all'}">${uiIcon(({all:'inventory',weapons:'sword',armor:'armor',jewelry:'jewelry',offhand:'shield',charms:'diamond'} as const)[filter])}<span>${filter === 'offhand' ? 'Off-hand' : filter[0].toUpperCase() + filter.slice(1)}</span><span class="character-filter-check">${uiIcon('check')}</span></button>`).join('')}
+            </div></fieldset>
+            <fieldset class="character-filter-group"><legend>Rarity</legend><div class="character-filter-grid">
+              <button type="button" class="ui-button ui-button--quiet character-filter-choice character-filter-all" data-rarity="all" aria-pressed="true">All rarities<span class="character-filter-check">${uiIcon('check')}</span></button>
+              ${Object.entries(TIER_NAMES).map(([tier, name]) => `<button type="button" class="ui-button ui-button--quiet character-filter-choice" data-rarity="${tier}" aria-pressed="false" style="--filter-color:${TIER_COLORS[tier as ItemTier]}"><i class="character-filter-gem" aria-hidden="true"></i><span>${name}</span><span class="character-filter-check">${uiIcon('check')}</span></button>`).join('')}
+            </div></fieldset>
+          </div>
+          <footer class="ui-window-footer"><button type="button" class="ui-button ui-button--quiet" data-clear-filters>Clear filters</button><button type="button" class="ui-button" data-popup-close>Done</button></footer>
         </section>
         <section class="character-mini-dialog ui-well" data-mini="weapon" role="alertdialog" aria-modal="true" aria-labelledby="inventory-weapon-title" aria-describedby="inventory-weapon-warning" hidden>
           <header><h3 id="inventory-weapon-title">Change weapon type?</h3></header>
@@ -225,7 +235,8 @@ export class InventoryPanel {
     this.element.hidden = false;
     this.refresh(player);
     if (!wasOpen) {
-      this.focus = trapDialogFocus(this.hud ? this.element : this.window, { signal: this.lifetime.signal, restoreFocus: false, initialFocus: this.window });
+      this.focus = trapDialogFocus(this.hud ? this.element : this.window, { signal: this.lifetime.signal, restoreFocus: false,
+        initialFocus: () => this.window.querySelector<HTMLButtonElement>('[data-close]') });
       this.animate();
     }
   }
@@ -293,7 +304,7 @@ export class InventoryPanel {
     const active = document.activeElement;
     if (active instanceof HTMLElement && this.element.contains(active) && (active.hidden || active.matches(':disabled'))) this.selectSection(this.section);
     const sheet = player.character, stats = player.derived;
-    this.text('[data-level]', `Level ${player.level}`);
+    this.text('[data-level]', number(player.level));
     this.text('[data-gear-power]', number(equippedGearPower(sheet)));
     this.text('[data-gold]', `${formatGold(goldBalance(sheet))} Gold`);
     this.text('[data-weapon-name]', sheet.equipped.weapon?.name ?? 'Unarmed');
@@ -321,6 +332,15 @@ export class InventoryPanel {
     this.hud?.refresh(player);
     if (this.drag) this.highlightEquipmentTargets();
     if (this.hovered) this.showTooltip(this.hovered);
+    this.updateScrollFades();
+  }
+
+  private updateScrollFades(): void {
+    for (const pane of this.window.querySelectorAll<HTMLElement>('.character-details, .character-columns')) {
+      const remaining = pane.scrollHeight - pane.clientHeight - pane.scrollTop;
+      const scrollable = /^(auto|scroll)$/.test(getComputedStyle(pane).overflowY);
+      pane.classList.toggle('has-scroll-below', pane.clientHeight > 0 && scrollable && remaining > 2);
+    }
   }
 
   close(): void {
@@ -413,8 +433,8 @@ export class InventoryPanel {
     }
     if (this.hud?.pickerOpen) { this.controller.update(this.hud.picker, pad, now); return; }
     if (this.popup) { this.controller.update(this.popupPanel(), pad, now); return; }
-    const root = this.element.querySelector<HTMLElement>(`[data-section="${this.section}"]`)!;
-    this.controller.update(root, pad, now, {
+    this.controller.update(this.window, pad, now, {
+      includeControl: target => this.inNavigationSection(target),
       switchTab: delta => this.selectSection((this.section + delta + 3) % 3),
       activate: target => {
         const location = this.locationFrom(target);
@@ -445,17 +465,24 @@ export class InventoryPanel {
   }
 
   private navigate(key: string, target: HTMLElement): boolean {
-    const root = target.closest<HTMLElement>('[data-mini], [data-section]');
-    if (!root) return false;
+    const owner = target.closest<HTMLElement>('[data-mini], [data-section], .character-header-right');
+    if (!owner) return false;
+    const popup = owner.hasAttribute('data-mini');
+    const root = popup ? owner : this.window;
     const controls = [...root.querySelectorAll<HTMLElement>('button, [tabindex]')]
-      .filter(control => !control.closest('[hidden], [inert]') && !control.matches(':disabled') && control.getClientRects().length > 0);
+      .filter(control => control.tabIndex >= 0 && !control.closest('[hidden], [inert]') && !control.matches(':disabled') && control.getClientRects().length > 0
+        && (popup || this.inNavigationSection(control)));
     const current = controls.indexOf(target);
     if (current < 0) return false;
     const next = directionalControl(controls.map(control => control.getBoundingClientRect()), current, key);
-    if (next === current && root.dataset.section === '2' && (key === 'ArrowDown' || key === 'ArrowUp'))
-      root.scrollBy({ top: key === 'ArrowDown' ? 100 : -100 });
+    if (next === current && owner.dataset.section === '2' && (key === 'ArrowDown' || key === 'ArrowUp'))
+      owner.scrollBy({ top: key === 'ArrowDown' ? 100 : -100 });
     else { controls[next].focus({ preventScroll: true }); controls[next].scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
     return true;
+  }
+
+  private inNavigationSection(target: HTMLElement): boolean {
+    return !!target.closest('.character-header-right') || target.closest<HTMLElement>('[data-section]')?.dataset.section === String(this.section);
   }
 
   private text(selector: string, value: string): void {
@@ -488,6 +515,11 @@ export class InventoryPanel {
 
   private bind(): void {
     const options = { signal: this.lifetime.signal };
+    // Pane sizes change with responsive tabs; content sizes change with stats and fonts.
+    const scrollFadeObserver = new ResizeObserver(() => this.updateScrollFades());
+    this.window.querySelectorAll('.character-details, .character-columns, .character-attributes, .character-statistics')
+      .forEach(element => scrollFadeObserver.observe(element));
+    this.lifetime.signal.addEventListener('abort', () => scrollFadeObserver.disconnect(), { once: true });
     document.addEventListener('evergrow-input-mode',()=>{this.closeTouchItem();this.hideTooltip();},options);
     this.element.addEventListener('change',event=>{const select=event.target as HTMLSelectElement;if(select.matches('[data-charm-candidate]')){this.comparisonId=select.value;this.renderCharmComparison();this.popupPanel().querySelector<HTMLElement>('[data-charm-candidate]')?.focus();}},options);
     this.element.addEventListener('click', event => {
@@ -671,7 +703,9 @@ export class InventoryPanel {
       else if (source.type === 'equipment' && target.type === 'bag') this.actions.unequip(source.slot, target.cell!);
     }, options);
     this.element.addEventListener('dragend', () => this.clearDrag(), options);
-    this.window.addEventListener('scroll', event => { if (!(event.target instanceof Element) || !event.target.closest('.ui-tooltip')) this.hideTooltip(); }, { ...options, capture: true });
+    this.window.addEventListener('scroll', event => {
+      if (!(event.target instanceof Element) || !event.target.closest('.ui-tooltip')) { this.hideTooltip(); this.updateScrollFades(); }
+    }, { ...options, capture: true, passive: true });
     window.addEventListener('resize', () => { this.hideTooltip(); this.dismissPopup(); }, options);
     window.addEventListener('blur', () => this.clearDrag(), options);
   }
