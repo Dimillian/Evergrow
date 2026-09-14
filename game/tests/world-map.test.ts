@@ -20,7 +20,9 @@ test('area inspection reveals level only in charted terrain and respects sanctua
   assert.match(chartedMapArea(world, revealed, 6400, 0)!.label, /^Lv [1-9][0-9]*–[1-9][0-9]*/);
   assert.match(chartedMapArea(world, revealed, -6400, 0)!.label, /^Lv [1-9][0-9]*–[1-9][0-9]*/);
   assert.equal(chartedMapArea(world, revealed, 0, 0)?.label, 'Sanctuary');
-  assert.equal(chartedMapArea(world, revealed, 1, 0)!.name, getZoneAt(1, 0).name);
+  assert.equal(chartedMapArea(world, revealed, 1, 0)!.name, getZoneAt(1, 0).districtName);
+  assert.ok(!chartedMapArea(world, revealed, 1, 0)!.name.includes(' · '), 'the biome is shown separately');
+  assert.equal(chartedMapArea(world, revealed, 1, 0)!.biome, 'Deadwood');
 });
 
 test('world/map projection is reversible at fractional centers and negative coordinates', () => {
@@ -158,7 +160,7 @@ test('journey focus holds on the player, eases to the objective, and pings its l
     opened: true, disposed: false, player, pingAnimations: [], focusTarget: null,
     focusPing: { hidden: true, style: {}, children: [ring, ring] },
     view: { x: 0, y: 0, width: 900, height: 560, centerX: player.x, centerY: player.y, zoom: .17 },
-    exploration: {}, tooltip: { hidden: true }, invalidate() {}, prepareLayout() { return true; }, drawChart() {},
+    exploration: {}, tooltip: { hidden: true }, areaInfo: { hidden: true }, invalidate() {}, prepareLayout() { return true; }, drawChart() {},
   });
   map.focusJourney(target);
   map.render();
