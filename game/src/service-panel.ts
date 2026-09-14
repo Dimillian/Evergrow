@@ -57,7 +57,10 @@ export class ServicePanel {
     this.installTradeDrag();
     this.element.addEventListener('pointerover', e => this.hover(e.target), { signal: this.abort.signal });
     this.element.addEventListener('focusin', e => this.hover(e.target), { signal: this.abort.signal });
-    this.element.addEventListener('pointerout', e => { if (!(e.relatedTarget instanceof Node) || !(e.target as HTMLElement).closest('[data-item]')?.contains(e.relatedTarget)) this.tooltip.defer(); }, { signal: this.abort.signal });
+    this.element.addEventListener('pointerout', e => {
+      const cell = e.target instanceof Element ? e.target.closest('[data-item]') : null;
+      if (cell && (!(e.relatedTarget instanceof Node) || !cell.contains(e.relatedTarget))) this.tooltip.defer();
+    }, { signal: this.abort.signal });
     this.element.addEventListener('focusout', () => this.tooltip.defer(), { signal: this.abort.signal });
     this.element.addEventListener('scroll', event => { if (!(event.target instanceof Element) || !event.target.closest('.ui-tooltip')) this.tooltip.hide(); }, { signal: this.abort.signal, capture: true });
   }
