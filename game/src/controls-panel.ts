@@ -1,5 +1,7 @@
 import { CONTROL_ACTIONS, controlLabel, validControl, type ControlAction } from './control-bindings.ts';
-import { controls } from './control-preferences.ts';
+import { controls, cursorPreference } from './control-preferences.ts';
+import { CURSOR_STYLES, CURSOR_SIZE } from './cursor-content.ts';
+import { cursorPreview } from './cursor-art.ts';
 import { escapeUI } from './ui-components.ts';
 
 export function controlsMarkup(): string {
@@ -8,6 +10,17 @@ export function controlsMarkup(): string {
     <p class="controls-intro">Choose a binding, then press a key or mouse button. Changes save automatically on this device.</p>
     <div class="controls-devices" role="group" aria-label="Input device"><button type="button" class="ui-button" data-control-device="desktop" aria-pressed="true">Keyboard & mouse</button><button type="button" class="ui-button" data-control-device="controller" aria-pressed="false">Controller</button></div>
     <div data-controls-desktop>
+      <section class="controls-cursors" aria-label="Gameplay cursor">
+        <div class="controls-cursor-options">
+          <h3>Gameplay cursor</h3>
+          <div class="controls-cursor-grid" role="group" aria-label="Cursor style">${CURSOR_STYLES.map(style => `<button type="button" class="ui-button controls-cursor" data-cursor-style="${style.id}" aria-pressed="${cursorPreference.style === style.id}" title="${style.description}">${cursorPreview(style)}<span>${style.name}</span></button>`).join('')}</div>
+          <label class="controls-cursor-size"><span>Size</span><output data-cursor-size-label>${cursorPreference.size}%</output><input type="range" data-cursor-size min="${CURSOR_SIZE.min}" max="${CURSOR_SIZE.max}" step="${CURSOR_SIZE.step}" value="${cursorPreference.size}" aria-label="Cursor size"></label>
+        </div>
+        <figure class="controls-cursor-sample">
+          <div class="controls-cursor-preview" data-cursor-preview role="img" aria-label="Actual in-game cursor size"></div>
+          <figcaption title="Matches the cursor's in-game size at every camera zoom.">Actual size</figcaption>
+        </figure>
+      </section>
       <div class="controls-column-head"><span>Action</span><span>Primary</span><span>Alternate</span></div>
       ${['Movement', 'Combat', 'World & menus'].map(group => `<section class="controls-group" aria-label="${group}"><h3>${group}</h3>${CONTROL_ACTIONS.filter(a => a.group === group).map(a => `<div class="controls-row"><span>${a.label}</span>${[0, 1].map(index => `<button type="button" class="ui-button control-binding" data-binding="${a.id}" data-binding-index="${index}"></button>`).join('')}</div>`).join('')}</section>`).join('')}
       <p class="controls-note">Esc always pauses or goes back. Ctrl reveals loot names. Mouse wheel zooms; left-click also interacts with nearby objects. Bindings use physical key positions. Browser shortcuts stay reserved.</p>
@@ -40,7 +53,20 @@ export class ControlsPanel {
     this.root.querySelector('[data-capture-cancel]')!.addEventListener('click', () => this.cancel(), opts);
     this.root.querySelector('[data-capture-clear]')!.addEventListener('click', () => this.assign(null), opts);
     this.root.querySelector('[data-capture-replace]')!.addEventListener('click', () => this.assign(this.conflict, true), opts);
-    this.root.querySelector('[data-controls-reset]')!.addEventListener('click', () => { this.status(controls.reset(), 'Default controls restored.'); this.refresh(); }, opts);
+    this.root.querySelector('[data-controls-reset]')!.addEventListener('click', () => {
+      const bindings = controls.reset(), cursor = cursorPreference.reset();
+      this.status(bindings === 'session' || cursor === 'session' ? 'session' : 'saved', 'Default controls and cursor restored.'); this.refresh();
+    }, opts);
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-cursor-style]')) button.addEventListener('click', () => {
+      const style = CURSOR_STYLES.find(style => style.id === button.dataset.cursorStyle);
+      if (!style) return;
+      this.status(cursorPreference.select(style.id), `${style.name} cursor selected.`); this.refreshCursor();
+    }, opts);
+    const size = this.root.querySelector<HTMLInputElement>('[data-cursor-size]')!;
+    size.addEventListener('input', () => {
+      this.status(cursorPreference.setSize(Number(size.value)), `Cursor size set to ${cursorPreference.size}%.`);
+      this.refreshCursor();
+    }, opts);
     for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-control-device]')) button.addEventListener('click', () => {
       const desktop = button.dataset.controlDevice === 'desktop';
       this.root.querySelector<HTMLElement>('[data-controls-desktop]')!.hidden = !desktop;
@@ -100,7 +126,21 @@ export class ControlsPanel {
     this.active = null; this.conflict = null; this.capture.hidden = true;
     button.setAttribute('aria-pressed', 'false'); if (focus) button.focus(); return true;
   }
+  private refreshCursor(): void {
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-cursor-style]')) {
+      button.setAttribute('aria-pressed', String(button.dataset.cursorStyle === cursorPreference.style));
+    }
+    const size = this.root.querySelector<HTMLInputElement>('[data-cursor-size]')!;
+    size.value = String(cursorPreference.size);
+    size.setAttribute('aria-valuetext', `${cursorPreference.size}%`);
+    this.root.querySelector('[data-cursor-size-label]')!.textContent = `${cursorPreference.size}%`;
+    const preview = this.root.querySelector('[data-cursor-preview]')!;
+    const style = CURSOR_STYLES.find(style => style.id === cursorPreference.style)!;
+    preview.innerHTML = cursorPreview(style, cursorPreference.size);
+    preview.setAttribute('aria-label', `${style.name} cursor at ${cursorPreference.size}%, actual in-game size`);
+  }
   refresh(): void {
+    this.refreshCursor();
     for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-binding]')) {
       const action = button.dataset.binding as ControlAction, index = Number(button.dataset.bindingIndex);
       const code = controls.get(action)[index];
