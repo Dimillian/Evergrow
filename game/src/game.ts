@@ -218,7 +218,7 @@ export class Game {
         lock: (id,locked) => this.characterAction({type:'lockItem',id,locked}),
         drop: source => { void this.dropInventoryItem(source); },
         equipBest: choice => this.characterAction({ type: 'equipBest', choice }),
-        sort: mode => this.characterAction({ type: 'sortInventory', mode }),
+        sort: mode => { this.characterAction({ type: 'sortInventory', mode }); this.audio.panel(true); },
         allocate: attribute => this.characterAction({ type: 'allocateAttribute', attribute }),
       }));
       this.skillPanel = this.lifetime.own(new SkillTreePanel(this.shell.panelMount, {
@@ -242,7 +242,7 @@ export class Game {
       }));
       this.servicePanel = this.lifetime.own(new ServicePanel(this.shell.panelMount, {
         close: () => this.resume(), trade: quote => this.trade(quote),
-        sort: (target,tab) => this.characterAction(target === 'storage' ? {type:'sortStorage',tab} : {type:'sortInventory',mode:'compact'}),
+        sort: (target,tab) => { this.characterAction(target === 'storage' ? {type:'sortStorage',tab} : {type:'sortInventory',mode:'compact'}); this.audio.panel(true); },
       }));
       this.riftPanel=this.lifetime.own(new RiftPanel(this.shell.panelMount,{close:()=>this.resume(),enter:async action=>{const ok=await this.switchDungeon(action);if(ok)this.resume();return ok;}}));
       this.expeditionPanel=this.lifetime.own(new ExpeditionPanel(this.shell.panelMount,{close:()=>this.resume(),enter:async action=>{const ok=await this.switchDungeon(action);if(ok)this.resume();return ok;}}));
