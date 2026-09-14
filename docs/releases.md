@@ -35,6 +35,19 @@ The user approved the next major prototype milestone, **0.6.0**, on 2026-09-14 f
 
 ## Last verified publication
 
+- Game v0.6.2 / Sites version 56, publicly deployed on 2026-09-14 at 16:19:33 UTC.
+- Published source: `09e32e06ecb7f039be724ae26a7c191fba4d504d`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_645eb1c05f7c8191b66a4f73d2c5c3a3`.
+- Deployment: `appgdep_6aa81e8295a88191a312d8dba260d029`; Sites returned `succeeded`.
+- Rift fissures, floating fragments, biome corruption and progress-driven lightning; restored ground detail and sharper enlarged scenery.
+- Focused physical weapon affixes, stronger damage rolls with smaller material premiums, reduced random glove speed bonuses and roll-aware gear power. Unique combat stats remain unchanged.
+- Charms enter the normal bag for manual activation; buffered skill presses survive action recovery.
+- Existing characters retain progress and active charms. Regular weapon/glove budgets update on read; obsolete melee caster affixes become suitable bonuses. No database migration or character reset.
+- The loot checkpoint passed all 1,531 code tests and a 265,062-item audit. Final publication passed 41 focused checks, application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.6.1 / Sites version 55, publicly deployed on 2026-09-14 at 13:52:11 UTC.
 - Published source: `c469820aa3b8cd2ea15bb55690fe61df6eecabd6`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_6727d96bb6f081919cccb493e37d2b02`.
