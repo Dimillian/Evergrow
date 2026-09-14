@@ -1,11 +1,32 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { ControlBindings } from '../src/control-bindings.ts';
 import { GameInput } from '../src/game-input.ts';
 import { getHUDLayout } from '../src/hud.ts';
 import { getMinimapRect } from '../src/map-view.ts';
 import { isGameUIPoint } from '../src/ui-hit-test.ts';
 
 const aim = { x: -41, y: 22 };
+
+test('Tab retains held mouse attacks and skills without replaying released taps', () => {
+  const input = new GameInput();
+  input.keyDown('KeyW'); input.pointerDown(0); input.pointerDown(2); input.keyDown('Space'); input.keyDown('KeyQ');
+  input.clear(true);
+  for (let frame = 0; frame < 10; frame++) {
+    const state = input.consume(aim, false);
+    assert.equal(state.attack, true); assert.equal(state.moveY, -1);
+    assert.equal(state.dodge, false); assert.equal(state.heal, false); assert.equal(state.skillSlot, 0);
+    assert.deepEqual(state.heldSkillSlots, [0]);
+  }
+  input.clear(true); assert.equal(input.consume(aim, false).attack, true, 'releasing Tab keeps an uninterrupted mouse hold');
+  input.pointerUp(0); assert.equal(input.consume(aim, false).attack, false);
+  input.pointerDown(0); input.pointerUp(0); input.clear(true);
+  assert.equal(input.consume(aim, false).attack, false, 'a queued click without a held button cannot start an overlay attack');
+  input.pointerDown(0); assert.equal(input.consume(aim, false).attack, true, 'new clicks attack while the overlay is open');
+  input.pointerUp(2); input.pointerDown(2); assert.equal(input.consume(aim, false).skillSlot, 0, 'new right clicks activate the assigned skill');
+  input.clear();
+  assert.equal(input.consume(aim, false).attack, false, 'pause, focus loss and M conversion stop the carried attack');
+});
 
 test('a press and release between frames retains one action edge, while held basic attack repeats', () => {
   const input = new GameInput();
@@ -95,4 +116,20 @@ test('all UI consumers share minimap and shortcut hit regions while open world s
     assert.equal(isGameUIPoint(width / 2, height / 2, width, height), false);
     assert.equal(isGameUIPoint(hud.x - 5, hud.y, width, height), false);
   }
+});
+
+
+test('Tab preserves a rebound loot-reveal hold until release, while pause clears it', () => {
+  const bindings = new ControlBindings();
+  bindings.bind('revealLoot', 0, 'KeyL');
+  const input = new GameInput(bindings);
+  input.keyDown('KeyL');
+  input.clear(true);
+  assert.equal(input.held('revealLoot'), true);
+  input.clear(true);
+  assert.equal(input.held('revealLoot'), true);
+  input.keyUp('KeyL');
+  assert.equal(input.held('revealLoot'), false);
+  input.keyDown('KeyL'); input.clear();
+  assert.equal(input.held('revealLoot'), false);
 });

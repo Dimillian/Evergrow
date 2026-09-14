@@ -1,9 +1,9 @@
 import { controls } from './control-preferences.ts';
 import { BuffBar } from './buff-bar.ts';
 import type { ActiveBuff } from './active-buffs.ts';
-import type { AudioControlActions } from './audio-controls.ts';
-import { PauseMenu } from './pause-menu.ts';
-import type { GroundLootNameplates } from './ground-loot-hover.ts';
+import { PauseMenu, type PauseActions } from './pause-menu.ts';
+import type { PauseNavigation } from './pause-navigation.ts';
+import type { GamepadInput } from './gamepad-input.ts';
 import { PORTAL_RULES } from './travel.ts';
 import './travel-ui.css';
 import './hud-sidebar.css';
@@ -16,7 +16,7 @@ import type { GamePhase } from './game-phase.ts';
 import { gameMenuMarkup } from './game-menu.ts';
 import { trapDialogFocus, uiIcon } from './ui-components.ts';
 
-interface ShellActions extends AudioControlActions { shortcutMenuChanged?(): void; groundLootNames?(): GroundLootNameplates; setGroundLootNames?(mode: GroundLootNameplates): void; openLootLog?(): void; openChronicle?(): void; save?(): Promise<boolean>; sound?(): void; muted?(): boolean; zoom?(factor: number): void; portal?(): void; play(): void; returnToTitle(): void | Promise<void>; openMap(): void; openCharacter(): void; openSkills(): void; openJourneys?(): void; }
+interface ShellActions extends PauseActions { lastSavedAt?(): number | undefined; saveLocation?(): 'Local' | 'Online'; shortcutMenuChanged?(): void; portal?(): void; play(): void; openMap(): void; openCharacter(): void; openSkills(): void; }
 
 /** Owns DOM presentation and its listeners; it never reads or mutates simulation state. */
 export class GameShell {
@@ -50,8 +50,11 @@ export class GameShell {
   setBuffs(buffs: readonly ActiveBuff[]): void { this.buffs.update(this.controls.hidden ? [] : buffs); }
   private gamepadActive = false;
   private pauseMenu: PauseMenu | null = null;
+  private saveMessage = '';
+  private pauseNavigation: PauseNavigation = { category: 'character', focus: null };
   backInMenu(): boolean { return this.pauseMenu?.back() ?? false; }
   refreshOptions(): void { this.pauseMenu?.refresh(); }
+  updatePauseGamepad(pad: GamepadInput, now: number): void { this.pauseMenu?.updateGamepad(pad, now); }
 
   setGamepadActive(active: boolean) {
     if (active === this.gamepadActive) return;
@@ -60,10 +63,12 @@ export class GameShell {
   }
 
   refreshBindings(): void {
+    this.pauseMenu?.refresh();
     const key = this.controls.querySelector('kbd');
     if (key) key.textContent = this.gamepadActive ? '↓' : controls.label('portal');
     for (const action of ['map', 'portal'] as const) this.controls.querySelector(`[data-hud="${action}"]`)!.removeAttribute('aria-keyshortcuts');
     this.shortcutMenu.refreshBindings();
+    this.pauseMenu?.refresh();
   }
 
   constructor(root: HTMLElement, actions: ShellActions) {
@@ -150,11 +155,28 @@ export class GameShell {
     this.element.append(veil); veil.addEventListener('animationend', () => veil.remove(), { once: true });
   }
 
-  setSaveStatus(message: string, failed = false): void {
-    const status = this.overlay.querySelector('.menu-save-state'); if (status) status.textContent = message;
+  setSaveStatus(message = '', failed = false): void {
+    this.saveMessage = message;
+    this.refreshSaveStatus();
     const warning = this.element.querySelector<HTMLElement>('#save-warning')!;
     warning.hidden = !failed;
     if (warning.textContent !== message) warning.textContent = message;
+  }
+
+  private refreshSaveStatus(): void {
+    const status = this.overlay.querySelector<HTMLElement>('.menu-save-state');
+    if (!status) return;
+    const timestamp = this.actions.lastSavedAt?.();
+    const saved = timestamp === undefined ? null : new Date(timestamp);
+    if (!saved || !Number.isFinite(saved.getTime())) {
+      status.textContent = this.saveMessage || 'Not saved yet.'; status.removeAttribute('title'); return;
+    }
+    const today = saved.toDateString() === new Date().toDateString();
+    const clock = saved.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const location = this.actions.saveLocation?.() ?? 'Local';
+    const lastSave = `Last saved ${today ? clock : `${saved.toLocaleDateString()} · ${clock}`} (${location})`;
+    status.textContent = this.saveMessage ? `${lastSave} · ${this.saveMessage}` : lastSave;
+    status.title = `Last saved ${saved.toLocaleString()} (${location})`;
   }
 
   setStatus(message: string): void { this.status.textContent = message; }
@@ -163,6 +185,8 @@ export class GameShell {
     this.shortcutMenu.close(false);
     this.menuAbort.abort(); this.menuAbort = new AbortController(); this.pauseMenu = null;
     const playing = phase === 'playing';
+    if (playing || phase === 'ready' || phase === 'dead') this.pauseNavigation.focus = null;
+    if (phase === 'ready') this.pauseNavigation.category = 'character';
     const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys' || phase === 'chronicle' || phase === 'lootLog';
     this.overlay.hidden = playing || panel || phase === 'ready';
     this.controls.hidden = !playing;
@@ -176,13 +200,15 @@ export class GameShell {
     }
     const dead = phase === 'dead';
     this.overlay.innerHTML = gameMenuMarkup(phase, kills, time, location);
+    this.refreshSaveStatus();
     const signal = this.menuAbort.signal;
     const play = this.overlay.querySelector<HTMLButtonElement>('#play-action')!;
     play.addEventListener('click', this.actions.play, { signal });
     if (dead) this.overlay.querySelector('#title-action')?.addEventListener('click', this.actions.returnToTitle, { signal });
     this.overlay.querySelector('#close-menu')?.addEventListener('click', this.actions.play, { signal });
-    if (!dead) this.pauseMenu = new PauseMenu(this.overlay, this.actions, signal);
+    if (!dead) this.pauseMenu = new PauseMenu(this.overlay, this.actions, signal, this.pauseNavigation);
     trapDialogFocus(this.overlay, { signal, initialFocus: play, restoreFocus: false });
+    this.pauseMenu?.restoreFocus();
     this.setStatus(dead ? `You fell after defeating ${kills} enemies.`
       : phase === 'paused' ? 'Game paused.' : 'Ready to enter Deadwood.');
   }

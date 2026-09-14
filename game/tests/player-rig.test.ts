@@ -106,7 +106,7 @@ test('authored weapon handedness selects the appropriate stance with or without 
   assert.equal(getWeaponGrip(equipment), 'one-handed', 'an empty off-hand keeps a raised free-hand guard');
 });
 
-test('bows attach to the string and staff palms stay eight units apart on the shaft', () => {
+test('bows attach to the string, supported staves grip the shaft and fire staves relax the free arm', () => {
   for (const weapon of WEAPON_PROFILES.filter(profile => profile.family === 'bow' || profile.family === 'staff')) {
     for (let facing = 0; facing < 16; facing++) for (const attack of [0, .05, .19, .25, .45, .8]) for (const cast of [0, .7]) {
       const angle = facing / 16 * TAU;
@@ -115,6 +115,11 @@ test('bows attach to the string and staff palms stay eight units apart on the sh
       const motion = playerMotion(pose), rig = getPlayerArmRig(pose);
       validateArm(rig.weapon, weapon.name); validateArm(rig.offhand, weapon.name);
       const lead = projectArmPoint(rig.weapon.hand), support = projectArmPoint(rig.offhand.hand);
+      if (weapon.family === 'staff' && weapon.damageType === 'fire') {
+        assert.equal(motion.supportHolding, false);
+        near(rig.offhand.hand[2], 8, 'fire staff free hand rests beside the thigh');
+        continue;
+      }
       if (weapon.family === 'staff') assert.equal(motion.supportHolding, true);
       const origin = lead;
       const dx = support[0] - origin[0], dy = support[1] - origin[1];

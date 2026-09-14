@@ -27,6 +27,8 @@ Derived stats and held equipment are rebuilt from the character sheet on load. I
 
 ## When saving happens
 
+The Esc footer shows the active character’s last successful checkpoint time from `updatedAt`, in the device’s local time, followed by `(Local)` or `(Online)` for its save mode. Older saves include the date; hovering shows the full date and time. Failed writes do not advance this timestamp. Save errors and cloud-sync messages appear alongside the clock; the timestamp describes the stored character checkpoint, not a cloud upload acknowledgement.
+
 The optional `recentItems` character field records newest-first acquired item IDs, bounded to 75 unique entries (bag plus equipment capacity). Pickups, purchases and buyback record acquisitions; sorting and equipment swaps preserve the history. That historical sorting checkpoint did not require a progress reset; earlier pickup chronology was unknown. The current appearance schema v4 migrates pre-editor v3 characters as described below. The separate asynchronous-storage checkpoint starts fresh slots as described above. Sort commands persist the resulting bag order through the ordinary character-command checkpoint.
 
 A new character must be saved successfully before entering the world. Checkpoints are written every twenty seconds during play, after successful equipment/attribute/tree/assignment/appearance commands, when opening a panel or map, on pause/defeat, on document hiding/page exit, and during application teardown. **Save & Character Hall** saves before switching characters. If that write fails, the character stays open and the error is shown. Browser exit hooks are best effort; periodic checkpoints bound loss if a process is killed without delivering an exit event.

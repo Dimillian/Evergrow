@@ -128,6 +128,7 @@ export class Simulation {
   groundEffects: ActiveGroundEffect[] = [];
   readonly groundPickup = new GroundItemPickup();
   private skillBuffer: { slot: number; until: number; pressed?:boolean } | null = null;
+  private blockedDrawSlot: number | null = null;
   time = 0;
   kills = 0;
   world: WorldQuery;
@@ -170,7 +171,7 @@ export class Simulation {
     this.projectiles = [];
     this.groundEffects = [];
     this.pickups = [];
-    this.groundItems = []; this.groundGold = []; this.groundPickup.cancel(); this.skillBuffer = null;
+    this.groundItems = []; this.groundGold = []; this.groundPickup.cancel(); this.skillBuffer = null; this.blockedDrawSlot = null;
     refreshCharacter(this.player);
     this.time = 0;
     this.kills = 0;
@@ -283,22 +284,24 @@ export class Simulation {
   getCampState(id: string): CampState { return this.camps.getState(id); }
 
   /** Call when focus/control context changes, including pause and resume. */
-  clearInput(): void {
+  clearInput(preserveMovement = false): void {
     this.groundPickup.cancel();
     this.portal.cancel(); this.eventChannel.cancel();
     this.attackBuffer = this.dodgeBuffer = this.healBuffer = -1;
-    this.skillBuffer = null;
+    this.skillBuffer = null; this.blockedDrawSlot = null;
     if(this.player.skillEffects)delete this.player.skillEffects.draw;
-    this.player.vx = this.player.vy = 0;
-    this.accumulator = 0;
-    this.capturePositions();
+    if (!preserveMovement) {
+      this.player.vx = this.player.vy = 0;
+      this.accumulator = 0;
+      this.capturePositions();
+    }
   }
 
   /** UI hover cancels queued weapons while movement and current actions continue. */
   clearBasicAttackInput(): void { this.attackBuffer = -1; }
 
   clearCombatInput(): void {
-    this.attackBuffer = -1; this.skillBuffer = null;
+    this.attackBuffer = -1; this.skillBuffer = null; this.blockedDrawSlot = null;
     if(this.player.skillEffects)delete this.player.skillEffects.draw;
   }
 
@@ -527,9 +530,13 @@ export class Simulation {
 
     // Holding draws the bow without paying or firing. Release commits one normal skill action.
     const heldDraw=(input.heldSkillSlots??(input.skillSlot===null?[]:[input.skillSlot])).find(slot=>p.character.skillSlots[slot]==='piercingShot');
+    if(this.blockedDrawSlot!==null&&heldDraw!==this.blockedDrawSlot)this.blockedDrawSlot=null;
     let draw=p.skillEffects?.draw;
-    if(draw&&(input.attack||input.dodge||p.dodgeTime>0||(input.skillSlot!==null&&input.skillSlot!==draw.slot))){delete p.skillEffects!.draw;this.skillBuffer=null;draw=undefined;}
-    if(!draw&&heldDraw!==undefined&&!input.attack&&!input.dodge&&p.dodgeTime<=0&&!p.attack&&!p.dash&&p.castTime<=0
+    if(draw&&(input.attack||input.dodge||p.dodgeTime>0||(input.skillSlot!==null&&input.skillSlot!==draw.slot))){
+      const switchedSkill=input.skillSlot!==null&&input.skillSlot!==draw.slot;
+      delete p.skillEffects!.draw;if(switchedSkill)this.blockedDrawSlot=draw.slot;else this.skillBuffer=null;draw=undefined;
+    }
+    if(!draw&&heldDraw!==undefined&&heldDraw!==this.blockedDrawSlot&&!input.attack&&!input.dodge&&p.dodgeTime<=0&&!p.attack&&!p.dash&&p.castTime<=0
       &&hasUnique(p.character,'heartwood-draw')&&canUseSkill('piercingShot',p.equipment)&&p.character.allocatedNodes.includes('skill:piercingShot')
       &&(p.skillCooldowns.piercingShot??0)<=0&&p.mana>=resolveSkill('piercingShot',p.derived,p.character).mana){
       draw=(p.skillEffects??={echoes:[]}).draw={slot:heldDraw,elapsed:0,remaining:COMBAT_TIMING.inputBuffer};
@@ -623,7 +630,10 @@ export class Simulation {
     const hand = dual ? p.nextAttackHand : 'main';
     const weapon = hand === 'off' && off?.kind === 'weapon' ? off.weapon : p.equipment.mainHand;
     const manaCost = basicAttackManaCost(weapon, p.derived);
-    if (p.mana < manaCost) return;
+    if (p.mana < manaCost) {
+      this.emit({ type: 'insufficient-mana', x: p.x, y: p.y });
+      return;
+    }
     p.mana -= manaCost; metric(p.chronicle,'manaSpent',manaCost);metric(p.chronicle,'basics');
     const stats = deriveAttackStats(p.stats, weapon);
     const weave = consumeRally(p,weapon.attackKind==='melee') * consumeSpellweave(p, weapon.attackKind === 'melee' ? 'melee' : weapon.attackKind === 'bolt' ? 'spell' : 'other');

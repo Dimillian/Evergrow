@@ -1,6 +1,6 @@
 # Loot log
 
-The Loot log button below the bottom-left pickup feed opens a read-only history of the character's latest 100 distinct picked-up items. It also appears in the character menu drawer and Escape pause menu. Opening the log pauses combat and clears held/buffered input; Close, Escape, controller B or native Back returns to the previous playing/paused state. Controller directions select rows and the right stick scrolls item details. Narrow screens stack the list above the details.
+The Loot log button below the bottom-left pickup feed opens a read-only history of the character's latest 100 distinct picked-up items. It also appears in the character menu drawer and Escape pause menu’s Character category. Opening the log pauses combat and clears held/buffered input; Close, Escape, controller B or native Back returns to the previous playing/paused state. Controller directions select rows and the right stick scrolls item details. Narrow screens stack the list above the details.
 
 Each newest-first row shows the actual procedural item icon, full name, rarity, item level and time since pickup. Selecting it uses the shared item detail renderer, including weapon values, requirements, affixes, enhancement, Greater affixes and nested Unique/effect explanations. These values describe the item when picked up; there are no equip or trade actions on historical snapshots. Time labels count active character play time, excluding offline time and pauses.
 

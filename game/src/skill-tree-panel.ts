@@ -15,6 +15,7 @@ import { skillNodeOwner, skillNodeRole } from './skill-node-presentation.ts';
 import { scaleTreeDefenses } from './skill-tree-balance.ts';
 import { skillTooltipMarkup, specializationPreviewMarkup } from './skill-tree-tooltip.ts';
 import { TooltipMotion } from './ui-tooltip-motion.ts';
+import { tooltipTargetHeld } from './ui-tooltip.ts';
 import { skillDamageSuffix, skillUtilityLabel } from './skill-execution-content.ts';
 import type { Player } from './model.ts';
 import type { SkillId, StatKey } from './character-types.ts';
@@ -149,6 +150,7 @@ export class SkillTreePanel {
     this.canvas.addEventListener('pointerdown', event => {
       if (event.button !== 0) return;
       this.cancelSearchFit();
+      this.setHovered(null);
       this.canvas.focus(); this.canvas.setPointerCapture(event.pointerId);
       this.drag = { pointer: event.pointerId, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, moved: false };
     }, opts);
@@ -182,6 +184,7 @@ export class SkillTreePanel {
       this.lastClickedNode = this.doubleClickedNode = null;
     }, opts);
     this.canvas.addEventListener('pointercancel', () => {
+      this.setHovered(null);
       this.drag = undefined; this.lastClickedNode = this.doubleClickedNode = null;
     }, opts);
     this.canvas.addEventListener('pointerleave', () => this.leaveHovered(), opts);
@@ -194,6 +197,7 @@ export class SkillTreePanel {
     this.canvas.addEventListener('keydown', event => this.key(event), opts);
     const navigate = (event:PointerEvent) => {
       this.cancelSearchFit();
+      this.setHovered(null);
       const rect=this.navigator.getBoundingClientRect(),projection=atlasNavigatorProjection(rect.width,rect.height);
       const point=projection.toWorld(event.clientX-rect.left,event.clientY-rect.top);
       this.fitMode=null;if(this.zoom<.22)this.setZoom(.38);this.centerX=point.x;this.centerY=point.y;this.clampCenter();this.invalidate();
@@ -289,7 +293,7 @@ export class SkillTreePanel {
   inspectNode(id: string, center = true): void {
     this.cancelSearchFit();
     const node = SKILL_NODES.get(id); if (!node) return;
-    this.selected = id; this.hovered = null; this.tooltipMotion.reset(); this.tooltip.hidden = true;
+    this.selected = id; this.setHovered(null);
     if (center) { this.centerX = node.x; this.centerY = node.y; this.setZoom(Math.max(.65, this.zoom)); }
     this.updateDetail(); this.updateAssignments(); this.detail.scrollTop = 0; this.invalidate();
   }
@@ -356,19 +360,22 @@ export class SkillTreePanel {
     if (choices[0]?.alignment > .1) this.inspectNode(choices[0].node.id);
   }
   private leaveHovered(): void {
+    // Passing over a node must never reveal its card after the pointer has left.
+    if (this.tooltipMotion.sample(performance.now()).opacity === 0) { this.setHovered(null); return; }
     if (this.hoverExit) return;
     this.hoverExit = setTimeout(() => {
       this.hoverExit = undefined;
-      if (this.tooltip.matches(':hover, :focus-within') || this.explanations.held) { this.leaveHovered(); return; }
+      if (tooltipTargetHeld(this.tooltip) || this.explanations.held) { this.leaveHovered(); return; }
       this.setHovered(null);
-    }, 280);
+    }, 200);
   }
   private setHovered(id: string | null): void {
     clearTimeout(this.hoverExit); this.hoverExit = undefined;
     if (id === this.hovered) return;
     this.explanations.hide();
     this.hovered = id;
-    this.tooltipMotion.set(id, performance.now(), window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    this.tooltipMotion.reset(); this.tooltip.hidden = true;
+    if (id) this.tooltipMotion.set(id, performance.now(), this.reducedMotion.matches, 350);
     this.canvas.style.cursor = id ? 'pointer' : 'grab';
     this.updateDetail(); this.invalidate();
   }
@@ -504,6 +511,7 @@ export class SkillTreePanel {
     this.centerX = centerX; this.centerY = centerY; this.setZoom(zoom);
   }
   private setZoom(value: number, x = this.width / 2, y = this.height / 2, cancelSearch = true): void {
+    this.setHovered(null);
     if (cancelSearch) this.cancelSearchFit();
     this.fitMode=null;
     const b = SKILL_TREE.bounds;
@@ -577,8 +585,9 @@ export class SkillTreePanel {
       this.lastLightFrame = now;
     }
     const node = tooltip.id ? SKILL_NODES.get(tooltip.id) : undefined;
+    const tooltipWasHidden = this.tooltip.hidden;
     this.tooltip.hidden = !node;
-    if (node && (dirty || tooltip.active)) {
+    if (node && (dirty || tooltip.active || tooltipWasHidden)) {
       const markup = skillTooltipMarkup(node, { allocated: this.allocated, reachable: this.reachable,
         level: this.player?.level, sheet: this.player?.character, costStats: this.player?.derived, routes: this.routes });
       if (markup !== this.tooltipMarkup) { this.tooltip.innerHTML = markup; this.tooltipMarkup = markup; }

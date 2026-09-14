@@ -20,6 +20,7 @@ import { STARTER_LOADOUTS, createStarterLoadout, isStarterLoadoutId, type Starte
 import { itemIconSVG } from './item-art.ts';
 import { parseWorldSeed } from './world-seed.ts';
 import './title-screen.css';
+import './game-wordmark.css';
 import './home-screen.css';
 export interface TitleActions extends AudioControlActions {
   leaderboard?: LeaderboardLoader;

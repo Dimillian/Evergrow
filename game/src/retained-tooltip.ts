@@ -1,4 +1,4 @@
-import { UITooltip } from './ui-tooltip.ts';
+import { UITooltip, tooltipTargetHeld } from './ui-tooltip.ts';
 import { UITooltipStack } from './ui-tooltip-stack.ts';
 import { effectExplanation } from './effect-terms.ts';
 
@@ -24,20 +24,21 @@ export class RetainedTooltip extends UITooltip {
     window.addEventListener('resize', () => this.hide(), options);
   }
   override show(markup: string, anchor: HTMLElement, bounds: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'> = anchor.getBoundingClientRect()): void {
-    clearTimeout(this.timer);
+    clearTimeout(this.timer); this.timer = undefined;
     if (!this.element.isConnected) this.mount.append(this.element);
     if (this.source === anchor && this.markup === markup && !this.element.hidden) return;
     this.explanations.hide(); this.source = anchor; this.markup = markup;
     super.show(markup, anchor, bounds);
   }
   defer(): void {
-    clearTimeout(this.timer);
+    if (this.timer !== undefined) return;
     this.timer = setTimeout(() => {
+      this.timer = undefined;
       if (!this.source?.isConnected) { this.hide(); return; }
-      if (this.element.matches(':hover, :focus-within') || this.source.matches(':hover, :focus-within') || this.explanations.held) this.defer();
+      if (tooltipTargetHeld(this.element) || tooltipTargetHeld(this.source) || this.explanations.held) this.defer();
       else this.hide();
     }, 280);
   }
-  override hide(): void { clearTimeout(this.timer); this.explanations?.hide(); this.source = undefined; super.hide(); }
+  override hide(): void { clearTimeout(this.timer); this.timer = undefined; this.explanations?.hide(); this.source = undefined; super.hide(); }
   override dispose(): void { this.hide(); this.explanations.dispose(); this.life.abort(); super.dispose(); }
 }

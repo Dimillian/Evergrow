@@ -11,6 +11,7 @@ export const WORKSPACES = [
 export type Workspace = typeof WORKSPACES[number]['id'];
 export interface Tool { id: string; group: Workspace; name: string; path: string; description: string; tags?: string; }
 export const TOOLS: readonly Tool[] = [
+  {id:'map-icons',group:'world',name:'Map icon workshop',path:'/tools/map-icons.html',description:'Every map marker, vendor and event at enlarged and actual sizes; recognizable silhouettes, states, dungeon themes and PNG export.',tags:'legend icons npc symbols minimap'},
   {id:'expeditions',group:'world',name:'Expedition routes',path:'/tools/expeditions.html',description:'Ten-stage route choices, dungeon modifiers, reward odds and level gate in the runtime panel.'},
   {id:'respec',group:'equipment',name:'Enchanter respec',path:'/services.html?role=enchanter&respec',description:'Preview the affordable skill reset and exact refunded points.'},
   {id:'forge',group:'equipment',name:'Item forge',path:'/tools/forge.html',description:'Generate items by seed, kind, profile, rarity and material; equip previews and JSON export.',tags:'generator random roll affixes'},
@@ -50,7 +51,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'biomes',group:'world',name:'Climates',path:'/biomes.html',description:'All seven biomes and blended transitions using the game renderer.'},
   {id:'encounters',group:'world',name:'Camps & landmarks',path:'/encounters.html',description:'Frozen wilderness placements, camps and encounter warnings.'},
   {id:'bosses',group:'world',name:'Wilderness bosses',path:'/bosses.html',description:'Three guarded lairs, committed attack warnings and automatic hoards.',tags:'boss elite arena'},
-  {id:'events',group:'world',name:'Events',path:'/events.html',description:'Interactive landmark and reward presentation.'},
+  {id:'events',group:'world',name:'Events',path:'/events.html',description:'World event progress, HUD card entrance/exit animations, encounter recipes and rewards.',tags:'in progress timer waves seals defense chest animation reveal fade motion'},
   {id:'settlement-lighting',group:'world',name:'Settlement nights',path:'/layouts.html?lighting',description:'Warm settlement lanterns, windows and hearths through a live day cycle, with render timings.',tags:'town village city night windows performance'},
   {id:'outdoor-lighting',group:'world',name:'Outdoor lighting',path:'/biomes.html?lighting',description:'Nine biome atmospheres, moving cloud shadows and a live day–night lighting study.',tags:'shader sunlight moonlight time day night cloud forest fog wet reflections'},
   {id:'dungeon-lighting',group:'world',name:'Dungeon lighting',path:'/dungeon.html?view=lighting&seed=7319&room=4',description:'Live illuminated mist, damp stone reflections and selective fixture glow; export a rendered chamber.',tags:'shader atmosphere fog bloom'},
