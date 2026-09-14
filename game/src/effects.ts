@@ -245,15 +245,20 @@ export class CombatEffects {
   drawManaWarning(c: CanvasRenderingContext2D, head: { x: number; y: number }, reducedMotion: boolean) {
     if (this.manaWarningLife <= 0) return;
     const elapsed = MANA_WARNING_DURATION - this.manaWarningLife;
-    const y = head.y - 14 - (reducedMotion ? 0 : Math.min(1, elapsed / .7) * 9);
+    const progress = Math.min(1, elapsed / MANA_WARNING_DURATION);
+    const rise = 1 - (1 - progress) ** 2;
+    const fadeIn = Math.min(1, elapsed / .08);
+    const fadeOut = Math.max(0, Math.min(1, (elapsed - .15) / (MANA_WARNING_DURATION - .15)));
+    const smooth = (t: number) => t * t * (3 - 2 * t);
+    const y = head.y - 8 - (reducedMotion ? 0 : rise * 18);
     c.save();
-    c.globalAlpha = Math.min(1, this.manaWarningLife / .28);
-    c.font = `500 23px ${GAME_FONT_STACK}`;
+    c.globalAlpha = .85 * smooth(fadeIn) * (1 - smooth(fadeOut));
+    c.font = `400 14px ${GAME_FONT_STACK}`;
     c.textAlign = 'center'; c.textBaseline = 'bottom';
-    c.lineJoin = 'round'; c.lineWidth = 3;
+    c.lineJoin = 'round'; c.lineWidth = 2;
     c.strokeStyle = '#07172e';
     c.strokeText('Not Enough Mana', head.x, y);
-    c.shadowColor = '#3289ff'; c.shadowBlur = 14;
+    c.shadowColor = '#3289ff'; c.shadowBlur = 6;
     c.fillStyle = '#94d0ff';
     c.fillText('Not Enough Mana', head.x, y);
     c.restore();
