@@ -445,7 +445,9 @@ export class WorldLandscape {
     if(first>last)return true;
     if(![ax,ay,bx,by].every(isWorldCoordinate)||radius<0||radius>WORLD_QUERY_LIMITS.collisionRadius||Math.hypot(bx-ax,by-ay)>4000)return undefined;
     const extent=radius+MAX_PROP_RADIUS;
-    const region=this.collisionRegion(Math.min(ax,bx)-extent,Math.min(ay,by)-extent,Math.abs(bx-ax)+extent*2,Math.abs(by-ay)+extent*2);
+    const left=Math.min(ax,bx)-extent,top=Math.min(ay,by)-extent,width=Math.abs(bx-ax)+extent*2,height=Math.abs(by-ay)+extent*2;
+    if(!validWorldRectangle(left,top,width,height))return undefined;
+    const region=this.collisionRegion(left,top,width,height);
     // Authored sites/architecture keep their existing bounds and breakable narrow phase.
     if(region.buildings.length||region.sites.length)return undefined;
     const dx=bx-ax,dy=by-ay,lengthSquared=dx*dx+dy*dy;

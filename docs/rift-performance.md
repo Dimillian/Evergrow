@@ -30,10 +30,14 @@ The initial CPU profile concentrated in repeated landscape collision queries, mo
 - Batch walking/visibility rays: query collision regions once, then test the nearest existing discrete sample per circular obstacle. Buildings, authored sites and overridden collision implementations use the original path.
 - Skip per-sample sanctuary queries when a segment cannot reach a settlement; rifts use the same discrete samples against their circular arrival sanctuary.
 
+A 100-seed Legendary Teeming generation audit produced 3,542–3,799 non-guardian monsters; all 46 packs reached at least 64 members. Slowest layout generation was 76 ms on the development machine, outside combat ticks.
+
 Regression coverage compares accelerated and original queries across ordinary/rift worlds and custom walls, checks spatial neighbors after cell crossings, and validates density placement at all five key rarities.
 
 ## Rendering and limits
 
 The rift map tool's **Profile rendering** action repeats the actual renderer and post-processing on a frozen pack at 1100×900 for 150 frames, discarding 30 warmup frames. It displays median/p95 CPU and stores stage timings on the result element. No AI ticks or save access occur.
+
+The frozen seed-7342 Verdant scene staged 127 enemies and measured **4.5 ms median / 5.1 ms p95** render CPU in the in-app browser at 1100×900. The actor/prop pass accounted for 2.5 ms median, scenery 0.6 ms, lighting 0.6 ms and post-processing 0.1 ms (nested stage timings are not additive). This check did not reveal a rendering bottleneck comparable to the original 29.8 ms simulation cost.
 
 Headless timings exclude drawing, GPU scheduling, effects from a long fight, save serialization and device thermal limits. Static render timings exclude moving combat/effect creation. Both are useful diagnostics; sustained gameplay FPS still needs the user's playtest.

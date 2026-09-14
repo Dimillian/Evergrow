@@ -41,3 +41,10 @@ test('neighbor index retains brute-force neighbors and ordering after crossing c
  sim.enemies[0].state='dead';index.rebuild(sim.enemies);
  assert.equal(index.around(sim.enemies[1],200).includes(sim.enemies[0]),false);
 });
+
+test('batched queries retain collision rejection at the supported world boundary',()=>{
+ const world=new World(7342,true),sampled={blocked:world.blocked.bind(world)};
+ const x=Number.MAX_SAFE_INTEGER;
+ assert.equal(hasLineOfSight(world,x-8,0,x,0),hasLineOfSight(sampled,x-8,0,x,0));
+ assert.equal(hasWalkableSegment(world,x-8,0,x,0,20),hasWalkableSegment(sampled,x-8,0,x,0,20));
+});
