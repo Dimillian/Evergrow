@@ -1,5 +1,5 @@
 import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
-import { drawEnemyTraits } from './enemy-trait-art.ts';
+import { EnemyOutlineArt } from './enemy-outline-art.ts';
 import { RIFT_RULES } from './rift-content.ts';
 import { enemyVisualScale } from './enemy-modifiers.ts';
 import { drawRiftPortal, drawRiftArrival } from './rift-art.ts';
@@ -90,7 +90,6 @@ import { resolveRangedAim, resolveDirectionalAim, PROJECTILE_HEIGHT, type Ranged
 import { deriveAttackStats } from './equipment.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { drawEnemyPlate, getEnemyPlateLayout } from './enemy-plate.ts';
-import { drawRankCrest } from './enemy-rank-art.ts';
 import { drawSiteGround, drawSiteDecor, wildernessLights } from './wilderness-art.ts';
 
 import { EnemyDeaths } from './death-presentation.ts';
@@ -513,12 +512,6 @@ export class Renderer {
     if (!this.cryptFloor) this.settlementArt.drawNightEmission(c,this.cachedBuildings,this.visualTime,this.sky);
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, alpha, lights);
-    for(const enemy of sim.enemies){
-      if(enemy.hp<=0||enemy.rank==='normal')continue;
-      const x=lerp(enemy.prevX,enemy.x,alpha),y=lerp(enemy.prevY,enemy.y,alpha);
-      if(x<left-120||x>left+worldWidth+120||y<top-140||y>top+worldHeight+140)continue;
-      drawEnemyTraits(c,enemy,x,y,this.visualTime,settings.reducedMotion);
-    }
     const arrival=dungeonRun?.rift?.guardian;
     if(arrival&&dungeonRun!.rift!.phase==='boss')drawRiftArrival(c,arrival.x,arrival.y,dungeonRun!.rift!.elapsed-arrival.at,RIFT_RULES.guardianArrival,settings.reducedMotion);
     if (this.cryptFloor) drawCryptEmission(c, this.cryptFloor, settings.reducedMotion ? 0 : this.visualTime, this.view);
@@ -785,7 +778,7 @@ export class Renderer {
         attack: enemy.state === 'windup' ? -Math.max(.001, enemy.stateTime / enemy.stateDuration)
           : enemy.state === 'attack' ? Math.min(1, enemy.stateTime / enemy.stateDuration) : 0,
         attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash, slow: enemy.slowTime, burning: enemy.burnTime, frozen: enemy.freezeTime, stunned: enemy.stunTime,
-        impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false },scale); } });
+        impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false },scale,scale>1?(enemy.rank==='elite'?'#e9bb70':'#85c9ee'):undefined); } });
     }
     for(const [kind,spirit] of [['decoy',p.skillEffects?.decoy],['archer',p.skillEffects?.archer]] as const){
       if(!spirit||p.dead||settings.phase==='ready')continue;
@@ -835,10 +828,15 @@ export class Renderer {
     c.ellipse(x, y + 2, radius, depth, 0, 0, TAU); c.fill();
   }
 
-  private actor(x: number, y: number, pose: CharacterPose, scale=1) {
+  private enemyOutlines=new EnemyOutlineArt();
+  private actor(x: number, y: number, pose: CharacterPose, scale=1,rankColor?:string) {
     const c = this.ctx;
     this.drawContactShadow(x, y, pose.kind === 'brute' ? 17 : pose.kind === 'player' ? 11 * PLAYER_ART_SCALE : 11, pose.kind === 'brute' ? 8 : 5);
-    c.save(); c.translate(x, y); c.scale(scale,scale); if (pose.dead) c.globalAlpha = .4; withGearLight(c,sampleGearLight(x,y-24,this.materialLights,this.materialKey),()=>drawHumanoid(c, pose)); drawCharacterStatus(c, pose); c.restore();
+    c.save(); c.translate(x, y); c.scale(scale,scale); if (pose.dead) c.globalAlpha = .4;
+    const light=sampleGearLight(x,y-24,this.materialLights,this.materialKey);
+    const paint=(target:CanvasRenderingContext2D)=>withGearLight(target,light,()=>drawHumanoid(target,pose));
+    if(rankColor)this.enemyOutlines.draw(c,rankColor,paint);else paint(c);
+    drawCharacterStatus(c, pose); c.restore();
     this.waterArt.drawFeet(c, this.water.fluid, x, y, pose.kind === 'brute' ? 18 : pose.kind === 'player' ? 13 * PLAYER_ART_SCALE : 12);
   }
 
@@ -952,7 +950,6 @@ export class Renderer {
       const width = enemy.kind === 'brute' ? 40 : 31;
       const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha) + (ENEMY_BODY_BOUNDS[enemy.kind].headTop ?? ENEMY_BODY_BOUNDS[enemy.kind].top)*enemyVisualScale(enemy) - 5;
       if(x<this.view.left-70||x>this.view.left+this.view.width+70||y<this.view.top-40||y>this.view.top+this.view.height+40)continue;
-      if (enemy.rank !== 'normal') drawRankCrest(c, enemy.rank, x, y - 10, .5);
       if (enemy.hp >= enemy.maxHp && enemy.state !== 'windup'&&enemy.rank==='normal') continue;
       c.fillStyle = enemy.hitFlash > .1 ? '#efcea0' : '#080c12';
       c.fillRect(x - width / 2 - 1, y - 1, width + 2, 5);
