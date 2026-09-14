@@ -55,9 +55,11 @@ export class GroundComparisonInput {
   expanded = false;
   constructor(target: EventTarget, changed: () => void, signal: AbortSignal) {
     const set = (value: boolean) => { if (this.expanded !== value) { this.expanded = value; changed(); } };
-    target.addEventListener('keydown', event => { if ((event as KeyboardEvent).key === 'Alt') set(true); }, { signal, capture: true });
-    target.addEventListener('keyup', event => { if ((event as KeyboardEvent).key === 'Alt') set((event as KeyboardEvent).altKey); }, { signal, capture: true });
-    target.addEventListener('pointerover', event => set((event as PointerEvent).altKey), { signal, capture: true });
+    const isAlt = (event: KeyboardEvent) => event.key === 'Alt' || event.code === 'AltLeft' || event.code === 'AltRight';
+    target.addEventListener('keydown', event => { if (isAlt(event as KeyboardEvent)) set(true); }, { signal, capture: true });
+    target.addEventListener('keyup', event => { if (isAlt(event as KeyboardEvent)) set((event as KeyboardEvent).altKey); }, { signal, capture: true });
+    // Rebuilding the card can synthesize pointer boundary events with stale modifier
+    // flags. Only keyboard edges may release Alt; otherwise opening can close itself.
     target.addEventListener('blur', () => set(false), { signal });
   }
 }

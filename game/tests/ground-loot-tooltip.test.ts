@@ -59,6 +59,8 @@ test('Alt disclosure updates on press/release, resets on blur and removes listen
   const input = new GroundComparisonInput(target, () => changes++, life.signal);
   const key = (type: string, altKey: boolean) => target.dispatchEvent(Object.assign(new Event(type), { key: 'Alt', altKey }));
   key('keydown', true); assert.equal(input.expanded, true);
+  target.dispatchEvent(Object.assign(new Event('pointerover'), { altKey: false }));
+  assert.equal(input.expanded, true, 'layout-generated pointer entry cannot release a held key');
   key('keydown', true); assert.equal(changes, 1);
   key('keyup', false); assert.equal(input.expanded, false);
   key('keydown', true); target.dispatchEvent(new Event('blur')); assert.equal(input.expanded, false);

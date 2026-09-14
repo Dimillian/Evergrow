@@ -40,6 +40,8 @@ test('ground inspection retains scroll access, switches a stationary comparison,
   update(null); assert.match(tooltip.innerHTML, /Replaces ring 1/, 'Shift compares the occupied other ring without moving the mouse');
   win.dispatchEvent(Object.assign(new Event('keydown'), { key: 'Alt', altKey: true }));
   update(null); assert.match(tooltip.innerHTML, /ground-loot-details/, 'Alt expands a stationary tooltip');
+  win.dispatchEvent(Object.assign(new Event('pointerover'), { altKey: false, shiftKey: true }));
+  update(null); assert.match(tooltip.innerHTML, /ground-loot-details/, 'card layout changes must not collapse held Alt');
   win.dispatchEvent(Object.assign(new Event('keyup'), { key: 'Alt', altKey: false }));
   update(null); assert.doesNotMatch(tooltip.innerHTML, /ground-loot-details/, 'release collapses the detail panel');
   win.dispatchEvent(Object.assign(new Event('keyup'), { code: 'ShiftLeft', shiftKey: false }));
