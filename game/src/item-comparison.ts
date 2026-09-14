@@ -29,18 +29,18 @@ export function bestRingSlot(sheet: CharacterSheet, item: Item, level = 1): 'rin
 export class ItemComparisonInput {
   alternate = false;
   focused = false;
+  private readonly changed: () => void;
   constructor(target: EventTarget, changed: () => void, signal: AbortSignal) {
+    this.changed = changed;
     const setAlternate = (value: boolean) => { if (value !== this.alternate) { this.alternate = value; changed(); } };
-    const setFocused = (value: boolean) => { if (value !== this.focused) { this.focused = value; changed(); } };
     target.addEventListener('keydown', raw => {
       const event = raw as KeyboardEvent;
       if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
         setAlternate(true);
-      } else if (event.code === 'AltLeft' || event.code === 'AltRight') {
+      } else if (event.key === 'Alt' || event.code === 'AltLeft' || event.code === 'AltRight') {
         event.preventDefault();
         if (!event.repeat) {
-          this.focused = !this.focused;
-          changed();
+          this.toggleFocused();
         }
       }
     }, { signal, capture: true });
@@ -51,7 +51,11 @@ export class ItemComparisonInput {
       }
     }, { signal, capture: true });
     target.addEventListener('pointerover', raw => setAlternate((raw as PointerEvent).shiftKey), { signal, capture: true });
-    target.addEventListener('blur', () => { setAlternate(false); setFocused(false); }, { signal });
+    target.addEventListener('blur', () => { setAlternate(false); this.focused = false; }, { signal });
+  }
+  toggleFocused(): void {
+    this.focused = !this.focused;
+    this.changed();
   }
   reset(): void {
     this.alternate = false;

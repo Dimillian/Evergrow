@@ -19,6 +19,13 @@ export class ItemTooltip {
       const current = this.current;
       if (current && !this.element.hidden && current.anchor.isConnected) this.show(current.item, current.view, current.anchor, current.bounds);
     }, this.life.signal);
+    this.element.addEventListener('click', event => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('.ui-item-alt-toggle')) {
+        event.stopPropagation();
+        this.comparison.toggleFocused();
+      }
+    }, { signal: this.life.signal });
   }
   show(item: Item, view: ItemPresentation, anchor: HTMLElement, bounds = anchor.getBoundingClientRect() as Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>): void {
     this.current = { item, view, anchor, bounds };
