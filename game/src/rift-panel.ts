@@ -28,10 +28,11 @@ export class RiftPanel {
     this.element.addEventListener('click',async e=>{
       const b=(e.target as HTMLElement).closest<HTMLButtonElement>('button');if(!b||this.busy)return;
       if(b.hasAttribute('data-close'))return this.actions.close();
-      if(b.dataset.key!==undefined){this.selected=b.dataset.key;this.render();this.element.querySelector<HTMLButtonElement>(`[data-key="${CSS.escape(this.selected)}"]`)?.focus();return;}
+      if(b.dataset.key!==undefined){this.selected=b.dataset.key;this.update();return;}
       if(!b.hasAttribute('data-enter')||!this.player)return;
       this.busy=true;b.disabled=true;
       try {if(await this.actions.enter({kind:'rift',portalId:this.portalId,offset:this.offset,keyId:this.selected||undefined,attempt:this.state?.rifts?.attempts??0}))return;this.element.querySelector('[role=status]')!.textContent='Could not open the rift. Check your key and approach the portal.';}
+      catch {this.element.querySelector('[role=status]')!.textContent='Could not save the rift. Please try again.';}
       finally{this.busy=false;this.update();}
     });
   }
@@ -49,10 +50,11 @@ export class RiftPanel {
   }
   private update(){if(!this.player)return;const level=Math.max(1,Math.min(1e6,this.player.level+this.offset)),key=this.player.character.inventory.find(i=>i?.id===this.selected);
     this.element.querySelector('[data-level-label]')!.textContent=String(level);
+    for(const button of this.element.querySelectorAll<HTMLButtonElement>('[data-key]')){const selected=button.dataset.key===this.selected;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}
     const best=this.state?.rifts?.best.find(b=>b.level===level&&b.keyTier===(key?.recipe.riftKeyTier??0));this.element.querySelector('[data-best]')!.textContent=best?riftTime(best.seconds):'—';
     const modifiers=riftModifiers({attempt:1,...(key?{keySeed:key.seed,keyTier:key.recipe.riftKeyTier}:{})});
     this.element.querySelector('[data-modifiers]')!.innerHTML=modifiers.length?modifiers.map(m=>`<div class="${m.beneficial?'boon':'hazard'}"><span>${m.beneficial?'✧':'◆'} ${m.label}</span><strong>+${m.value}${m.unit}</strong></div>`).join(''):'<p>An unkeyed rift. Unchanged monsters and rewards.</p>';
-    const enter=this.element.querySelector<HTMLButtonElement>('[data-enter]')!;enter.disabled=this.busy||this.player.level<RIFT_RULES.minimumLevel;enter.textContent=this.player.level<20?'Unlocks at level 20':this.busy?'Opening…':'Enter rift →';
+    const enter=this.element.querySelector<HTMLButtonElement>('[data-enter]')!;enter.disabled=this.busy||this.player.level<RIFT_RULES.minimumLevel;enter.textContent=this.player.level<RIFT_RULES.minimumLevel?`Unlocks at level ${RIFT_RULES.minimumLevel}`:this.busy?'Opening…':'Enter rift →';
   }
   private animate=()=>{cancelAnimationFrame(this.animation);if(this.element.hidden)return;const canvas=this.element.querySelector('canvas')!,c=canvas.getContext('2d')!;c.clearRect(0,0,560,420);drawRiftPortal(c,280,320,matchMedia('(prefers-reduced-motion: reduce)').matches?0:performance.now()/1000,2.1);this.animation=requestAnimationFrame(this.animate);};
   close(){this.tooltip.hide();this.element.hidden=true;cancelAnimationFrame(this.animation);this.focus?.dispose();this.focus=null;}

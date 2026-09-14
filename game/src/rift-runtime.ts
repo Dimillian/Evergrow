@@ -14,6 +14,8 @@ export function riftKill(sim:Simulation,enemy:Enemy):void {
   if(enemy.campMemberId==='warden'){
     if(r.phase!=='boss'||r.elapsed>=RIFT_RULES.duration)return;
     r.phase='complete';
+    // Expire in place: completion can happen while the projectile array is iterating.
+    for(const projectile of sim.projectiles)if(projectile.owner==='enemy')projectile.life=0;
     // Completion dissolves the remaining roster without awarding kills or loot.
     for(const actor of sim.enemies)if(actor.campId===run.entrance.id&&actor!==enemy){actor.hp=0;actor.state='dead';}
     for(const state of Object.values(run.states))state.hp=0;

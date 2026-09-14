@@ -1,6 +1,5 @@
-import { enemyModifiers } from './enemy-modifiers.ts';
+import { applyEnemyModifiers } from './enemy-modifiers.ts';
 import { tickRift, riftKill } from './rift-runtime.ts';
-import { riftEnemyStats } from './rift-content.ts';
 import { advanceAuras, auraPower, manaCapacity } from './auras.ts';
 import { resolveSkill } from './skill-progression.ts';
 import { hasUnique, UNIQUE_RULES } from './unique-content.ts';
@@ -237,7 +236,7 @@ export class Simulation {
     this.camps.restoreScales(saved.encounterScales);
     for (const actor of saved.actors ?? []) {
       const enemy=this.spawnEnemy(actor.kind,actor.x,actor.y,actor.rank, actor.campId ? {campId:actor.campId,memberId:actor.memberId!,lootSeed:actor.seed} : undefined);
-      if(enemy)Object.assign(enemy,scaledEnemyStats(actor.kind,actor.level,actor.rank),{level:actor.level,biome:actor.biome,lootSeed:actor.seed,hp:actor.hp,homeX:actor.homeX,homeY:actor.homeY,bossPhases:actor.bossPhases,state:'idle',stateDuration:1});
+      if(enemy)Object.assign(enemy,applyEnemyModifiers(scaledEnemyStats(actor.kind,actor.level,actor.rank),{kind:actor.kind,rank:actor.rank,lootSeed:actor.seed,rift:actor.rift}),{rift:actor.rift,level:actor.level,biome:actor.biome,lootSeed:actor.seed,hp:actor.hp,homeX:actor.homeX,homeY:actor.homeY,bossPhases:actor.bossPhases,state:'idle',stateDuration:1});
     }
     this.camps.adopt(this.enemies); this.camps.restoreWounds(saved.campWounds??[]); this.pickups=saved.pickups??[];
     this.reserveIdentity(Math.max(1,...this.pickups.map(i=>i.id+1)));
@@ -340,8 +339,7 @@ export class Simulation {
     const lootSeed = source?.lootSeed ?? enemyLootSeed(this.options.seed!, ++this.spawnOrdinal, x, y);
     const level = source?.level ?? this.world.dungeonLevel ?? encounterMemberLevel(scaling ?? encounterScaleAt(x, y, this.world.seed ?? this.options.seed!, this.player.level), rank, lootSeed, isBossKind(kind));
     const rift=currentDungeon(this.expeditions)?.entrance.rift;
-    const scaled = riftEnemyStats(scaledEnemyStats(kind, level, rank),rift);
-    scaled.damage=Math.round(scaled.damage*enemyModifiers({kind,rank,lootSeed}).reduce((n,m)=>n*m.damage,1));
+    const scaled = applyEnemyModifiers(scaledEnemyStats(kind, level, rank),{kind,rank,lootSeed,rift});
     const biome = this.world.dungeonBiome ?? (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
     const enemy: Enemy = {
       id: this.nextId++, level, rank, biome, lootSeed, ...(rift?{rift}:{}), ...scaled, dungeonTheme:this.world.dungeonTheme,
@@ -396,9 +394,8 @@ export class Simulation {
       // A death may clear input midway through this tick; freeze its final poses.
       this.travel.returnTo = null; this.portal.cancel(); this.eventChannel.cancel();
       if (this.player.character.blessing) { delete this.player.character.blessing; refreshCharacter(this.player); }
-      tickRift(this,dt);
-    if(currentDungeon(this.expeditions)?.rift?.phase==='failed')return;
-    this.capturePositions();
+      tickRift(this,0);
+      this.capturePositions();
       return;
     }
     this.eventChannel.advance(dt, this.player, input);
@@ -773,6 +770,7 @@ export class Simulation {
   }
 
   takeDamage(amount: number, angle: number, sourceLevel: number, damageType: DamageType, kind?: EnemyKind): void {
+    if(currentDungeon(this.expeditions)?.rift?.phase==='complete')return;
     if (!damagePlayer(amount, angle, sourceLevel, damageType, {
       player: this.player, world: this.world, random: () => this.random(), emit: event => this.emit(event),
       wardBurst: burst=>{

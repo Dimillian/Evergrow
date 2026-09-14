@@ -17,6 +17,7 @@ import type { Building } from './settlements.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { rollEnemyLoot } from './loot.ts';
 import { GOLD_RULES } from './gold.ts';
+import { LOOT_RULES } from './combat-content.ts';
 import { addGroundItem } from './ground-loot.ts';
 export type DungeonAction = {kind:'rift';portalId:string;offset:number;keyId?:string;attempt:number} | {kind:'expedition';tableId:string;choice:number;attempt:number;restart?:boolean;resume?:string} | {
     kind: 'enter';
@@ -197,11 +198,12 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     const rewardLevel = run.entrance.scaling ? encounterRewardLevel(run.entrance.scaling, index === 2 ? 3 : 1) : run.entrance.level;
     const ranks = index === 2 ? ['normal', 'veteran', 'elite'] as const : ['veteran'] as const;
     const items = run.entrance.rift ? riftRewardItems(run.entrance,sim.player.level) : index===2 && run.entrance.expedition ? expeditionRewardItems(run.entrance,sim.player.level) : ranks.map((rank, i) => rollEnemyLoot({ playerLevel:sim.player.level, seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: rewardLevel, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true, tierWeights: index === 2 ? BOSS_CHEST_LOOT_TABLES.dungeon[i] : undefined, encounter:index===2?'bossChest':'chest' })[0]);
-    const gold = Math.round((run.entrance.rift ? 6*(1+riftBonus(run.entrance.rift,'gold')/100) : 1)*(index === 2 ? 45 + run.entrance.seed % 26 : 18) * (1 + .1 * (rewardLevel - 1)));
+    const gold = Math.round((run.entrance.rift ? RIFT_RULES.goldMultiplier*(1+riftBonus(run.entrance.rift,'gold')/100) : 1)*(index === 2 ? 45 + run.entrance.seed % 26 : 18) * (1 + .1 * (rewardLevel - 1)));
     const goldBit=run.entrance.rift ? 1 << items.length : index===2 && run.entrance.expedition?.stage===9 ? 64 : 8;
     let mask = run.chestMasks[index], next = Math.max(1, ...sim.groundItems.map(i => i.id + 1), ...sim.groundGold.map(i => i.id + 1), ...sim.pickups.map(i => i.id + 1), ...sim.enemies.map(i => i.id + 1), ...sim.projectiles.map(i => i.id + 1));
     for (let i = 0; i < items.length; i++)
         if (!(mask & 1 << i)) {
+            if(run.rift&&checkpoint.groundItems.length>=LOOT_RULES.maxGroundItems)break;
             addGroundItem(checkpoint.groundItems, { id: next++, ...treasureLanding(sim.world,chest.x,chest.y,i,run.entrance.seed), flight:{x:chest.x,y:chest.y,at:sim.time,delay:i*.12}, item: items[i] });
             mask |= 1 << i;
         }

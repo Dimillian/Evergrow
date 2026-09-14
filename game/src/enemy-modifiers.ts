@@ -1,6 +1,6 @@
 import type { Enemy } from './model.ts';
 import { isBossKind } from './wilderness-boss-content.ts';
-import { riftBonus } from './rift-content.ts';
+import { riftBonus, riftEnemyStats } from './rift-content.ts';
 const TRAITS=Object.freeze([
   Object.freeze({name:'Swift',description:'+15% movement speed',speed:1.15,recovery:1,damage:1,control:1}),
   Object.freeze({name:'Relentless',description:'20% shorter attack recovery',speed:1,recovery:.8,damage:1,control:1}),
@@ -17,3 +17,9 @@ export function enemyModifiers(e:Source):readonly typeof TRAITS[number][]{
 }
 export function enemyMovementMultiplier(e:Source):number{return enemyModifiers(e).reduce((n,m)=>n*m.speed,1)*(1+riftBonus(e.rift,'swift')/100);}
 export function enemyVisualScale(e:Source):number{return isBossKind(e.kind)?1:e.rank==='elite'?1.28:e.rank==='veteran'?1.14:1;}
+
+/** Spawn and save restoration must apply the same snapshotted combat modifiers. */
+export function applyEnemyModifiers<T extends {maxHp:number;damage:number}>(stats:T, source:Source):T {
+  const result=riftEnemyStats(stats,source.rift);
+  return {...result,damage:Math.round(result.damage*enemyModifiers(source).reduce((value,trait)=>value*trait.damage,1))};
+}

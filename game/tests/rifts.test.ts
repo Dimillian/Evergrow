@@ -9,6 +9,11 @@ import { generateDungeon, dungeonBlocked } from '../src/dungeon.ts';
 import { currentDungeon } from '../src/dungeon-state.ts';
 import { validExpeditions } from '../src/dungeon-validation.ts';
 import { planDungeonTravel, claimDungeonChest, dungeonChestProblem } from '../src/dungeon-command.ts';
+import { updateWildernessBoss } from '../src/wilderness-boss.ts';
+import { ENEMY_DEFINITIONS } from '../src/combat-content.ts';
+import { riftRewardItems } from '../src/rift-rewards.ts';
+import { riftRewardItemCount, riftRewardMask } from '../src/rift-content.ts';
+import { LOOT_RULES } from '../src/combat-content.ts';
 import { Simulation } from '../src/simulation.ts';
 import { RiftWorld } from '../src/rift-world.ts';
 import { tickRift, riftKill } from '../src/rift-runtime.ts';
@@ -20,9 +25,9 @@ import { decodeCharacterSave } from '../src/character-save.ts';
 const portal:Building={id:'rift:test',seed:1,name:'Rift',kind:'rift',form:'fixture',x:0,y:-70,width:58,height:32,door:{x:0,y:0,width:42},walls:[],furniture:[]};
 const surface={seed:7319,blocked:()=>false,move:(x:number,y:number,dx:number,dy:number)=>({x:x+dx,y:y+dy}),getBuildings:()=>[portal]};
 const ok=()=>({ok:true,message:''});
-async function setup(key=true){
+async function setup(key=true,keySeed=7319){
  const sim=new Simulation(surface,{spawn:false});sim.player.level=25;sim.player.character.skillPoints=24;sim.player.character.statPoints=120;sim.player.x=sim.player.y=0;
- const item=createRiftKey(7319,25,3);if(key)sim.player.character.inventory[0]=item;
+ const item=createRiftKey(keySeed,25,3);if(key)sim.player.character.inventory[0]=item;
  const result=await planDungeonTravel(sim,{kind:'rift',portalId:portal.id,offset:0,attempt:0,...(key?{keyId:item.id}:{})},surface,ok);assert.ok(result.ok);
  const entrance=currentDungeon(result.checkpoint.expeditions!)!.entrance,floor=generateDungeon(entrance.seed,entrance.level,entrance);
  sim.world=new RiftWorld(floor,entrance);sim.restoreCheckpoint(result.checkpoint);
@@ -83,4 +88,72 @@ test('death and timeout return to the departure town, clear run and never restor
 });
 test('rank modifiers are stable, distinct and leave bosses on their own authored recipes',()=>{
  for(let seed=0;seed<50;seed++){const e={kind:'stalker' as const,rank:'elite' as const,lootSeed:seed};const mods=enemyModifiers(e);assert.equal(mods.length,2);assert.equal(new Set(mods.map(m=>m.name)).size,2);assert.deepEqual(mods,enemyModifiers({...e}));assert.ok(enemyMovementMultiplier(e)>=1);assert.equal(enemyModifiers({...e,kind:'warden'}).length,0);}
+});
+
+test('save restoration retains keyed monster life, damage, traits and the remaining clock',async()=>{
+ let keySeed=0;
+ for(let i=0;i<1000;i++){const seed=Math.imul(i,0x9e3779b9)>>>0,mods=riftModifiers({attempt:1,keySeed:seed,keyTier:3});if(mods.some(m=>m.id==='vital')&&mods.some(m=>m.id==='savage')){keySeed=seed;break;}}
+ assert.ok(keySeed,'fixture has both life and damage modifiers');
+ const {sim,run,floor}=await setup(true,keySeed);
+ const m=floor.members.find(m=>enemyModifiers({kind:m.kind,rank:m.rank,lootSeed:m.seed}).some(t=>t.name==='Savage'))!;
+ assert.ok(m);
+ const enemy=sim.spawnEnemy(m.kind,m.x,m.y,m.rank,{campId:run.entrance.id,memberId:m.id,lootSeed:m.seed,level:25})!;
+ enemy.hp=Math.round(enemy.maxHp*.7);run.rift!.elapsed=187.25;
+ const expected={hp:enemy.hp,maxHp:enemy.maxHp,damage:enemy.damage,rift:enemy.rift,modifiers:enemyModifiers(enemy)};
+ const saved=sim.captureCheckpoint();sim.restoreCheckpoint(saved);
+ const restored=sim.enemies.find(e=>e.campMemberId===m.id)!;
+ assert.deepEqual({hp:restored.hp,maxHp:restored.maxHp,damage:restored.damage,rift:restored.rift,modifiers:enemyModifiers(restored)},expected);
+ assert.equal(currentDungeon(sim.expeditions)!.rift!.elapsed,187.25);
+ tickRift(sim,1);assert.equal(currentDungeon(sim.expeditions)!.rift!.elapsed,188.25);
+ assert.ok(validExpeditions(sim.captureCheckpoint().expeditions));
+});
+test('surface champion damage also survives save restoration',()=>{
+ const sim=new Simulation(surface,{spawn:false});
+ let seed=0;while(!enemyModifiers({kind:'stalker',rank:'elite',lootSeed:seed}).some(t=>t.name==='Savage'))seed++;
+ const enemy=sim.spawnEnemy('stalker',0,0,'elite',{campId:'test',memberId:'test:0',lootSeed:seed,level:25})!;
+ const damage=enemy.damage;sim.restoreCheckpoint(sim.captureCheckpoint());assert.equal(sim.enemies[0].damage,damage);
+});
+test('victory clears hostile shots and prevents post-clear damage while collecting rewards',async()=>{
+ const {sim,run,floor}=await setup(false),m=floor.members.find(m=>m.id==='warden')!;
+ const boss=sim.spawnEnemy(m.kind,m.x,m.y,m.rank,{campId:run.entrance.id,memberId:m.id,lootSeed:m.seed,level:25})!;
+ sim.player.x=m.x;sim.player.y=m.y;run.rift!.points=600;run.rift!.phase='boss';
+ sim.projectiles.push({id:900,sourceLevel:25,x:m.x,y:m.y,prevX:m.x,prevY:m.y,vx:0,vy:0,angle:0,radius:5,damage:999,life:5,maxLife:5,owner:'enemy',hitIds:new Set()});
+ boss.hp=0;riftKill(sim,boss);assert.equal(sim.projectiles[0].life,0);
+ const hp=sim.player.hp;sim.takeDamage(999,0,25,'physical');assert.equal(sim.player.hp,hp);assert.equal(sim.player.dead,false);
+ riftKill(sim,boss);assert.equal(sim.expeditions.rifts!.clears,1);
+});
+test('a crowded reward floor preserves dropped items and retries only outstanding chest rewards',async()=>{
+ const {sim,run,floor}=await setup(false);run.rift!.phase='boss';run.rift!.points=600;
+ const m=floor.members.find(m=>m.id==='warden')!,boss=sim.spawnEnemy(m.kind,m.x,m.y,m.rank,{campId:run.entrance.id,memberId:m.id,lootSeed:m.seed,level:25})!;
+ boss.hp=0;riftKill(sim,boss);sim.player.x=floor.chests[2].x;sim.player.y=floor.chests[2].y;
+ sim.groundItems=Array.from({length:LOOT_RULES.maxGroundItems},(_,i)=>({id:1000+i,x:sim.player.x,y:sim.player.y,item:createRiftKey(i,25)}));
+ const original=structuredClone(sim.groundItems);
+ assert.equal((await claimDungeonChest(sim,2,ok)).ok,true); // Gold can still be delivered.
+ assert.deepEqual(sim.groundItems,original);assert.equal(currentDungeon(sim.expeditions)!.rift!.claimed,false);
+ const gold=structuredClone(sim.groundGold);sim.groundItems=[];
+ assert.equal((await claimDungeonChest(sim,2,ok)).ok,true);
+ assert.equal(sim.groundItems.length,riftRewardItemCount(run.entrance.rift!));assert.deepEqual(sim.groundGold,gold);
+ assert.equal(currentDungeon(sim.expeditions)!.rift!.claimed,true);
+ assert.equal((await claimDungeonChest(sim,2,ok)).ok,false);
+});
+test('key progression and reward masks remain deterministic for every grade and modifier count',()=>{
+ for(let tier=1;tier<=5;tier++)for(let seed=0;seed<80;seed++){
+  const entrance={id:'dungeon:rift:1',name:'Rift',x:0,y:0,seed,level:25,biome:'verdant' as const,rift:{attempt:1,keyTier:tier,keySeed:seed}};
+  const items=riftRewardItems(entrance,25),key=items.at(-1)!;
+  assert.equal(items.length,riftRewardItemCount(entrance.rift));assert.equal(riftRewardMask(entrance.rift),(1<<(items.length+1))-1);
+  assert.equal(items.filter(i=>i.kind==='riftKey').length,1);assert.ok(validRiftKey(key));
+  assert.ok(key.recipe.riftKeyTier===tier||key.recipe.riftKeyTier===Math.min(5,tier+1));
+  const changed=riftRewardItems({...entrance,rift:{...entrance.rift,keySeed:seed+431}},25);
+  assert.deepEqual(changed.at(-1),key,'changing key modifiers cannot change the replacement key');
+ }
+});
+
+test('key movement modifiers apply to guardian pursuit without changing attack geometry',async()=>{
+ const {sim,run,floor}=await setup(),m=floor.members.find(m=>m.id==='warden')!;
+ const boss=sim.spawnEnemy(m.kind,m.x,m.y,m.rank,{campId:run.entrance.id,memberId:m.id,lootSeed:m.seed,level:25})!;
+ let seed=0;while(!riftModifiers({attempt:1,keySeed:seed,keyTier:5}).some(m=>m.id==='swift'))seed++;
+ boss.rift={attempt:1,keySeed:seed,keyTier:5};boss.state='chase';boss.awareness=1;
+ sim.player.x=boss.x+500;sim.player.y=boss.y;
+ let speed=0;updateWildernessBoss(boss,1/120,{player:sim.player,enemies:[boss],world:surface,time:0,trial:null,visible:()=>true,move:(_e,vx,vy)=>{speed=Math.hypot(vx,vy);},hurt:()=>{},shoot:()=>{},emit:()=>{}});
+ assert.ok(Math.abs(speed-ENEMY_DEFINITIONS[boss.kind].speed*1.20)<1e-8);
 });

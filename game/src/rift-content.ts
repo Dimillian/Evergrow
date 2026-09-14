@@ -1,6 +1,6 @@
 import type { Item, ItemTier } from './character-types.ts';
 import type { EnemyRank } from './progression-content.ts';
-export const RIFT_RULES = Object.freeze({ minimumLevel:20, duration:600, progress:600, offset:10, rewards:8 });
+export const RIFT_RULES = Object.freeze({ minimumLevel:20, duration:600, progress:600, offset:10, rewards:8, keyUpgradeChance:.35, maximumKeyTier:5, goldMultiplier:6 });
 export interface RiftTag { attempt:number; keySeed?:number; keyTier?:number }
 export interface RiftProgress { elapsed:number; points:number; phase:'hunt'|'boss'|'complete'|'failed'; claimed:boolean }
 export interface RiftRecord { level:number; seconds:number; keyTier:number }
@@ -36,7 +36,7 @@ export function riftModifiers(tag:RiftTag):readonly RiftModifier[] {
 }
 export function riftBonus(tag:RiftTag|undefined,id:string):number {return tag?riftModifiers(tag).find(m=>m.id===id)?.value??0:0;}
 export function createRiftKey(seed:number,level:number,tier=1):Item {
-  seed=seed>>>0;level=Math.max(1,Math.min(1e6,Math.floor(level)));tier=Math.max(1,Math.min(5,Math.floor(tier)));
+  seed=seed>>>0;level=Math.max(1,Math.min(1e6,Math.floor(level)));tier=Math.max(1,Math.min(RIFT_RULES.maximumKeyTier,Math.floor(tier)));
   const tiers:ItemTier[]=['common','magic','rare','epic','legendary'];
   return {id:`rift-key:${seed}:${level}:${tier}`,seed,name:'Crimson Rift Key',baseName:'Crimson Rift Key',kind:'riftKey',tier:tiers[tier-1],itemLevel:level,requiredLevel:20,power:0,
     implicit:{},affixes:[],recipe:{riftKeyTier:tier,starter:false,enhancement:0,revision:0,targetedRolls:0,fullRolls:0,rolls:[]},
@@ -62,3 +62,7 @@ export function riftEnemyStats<T extends {maxHp:number;damage:number}>(stats:T,t
   if(!tag)return stats;
   return {...stats,maxHp:Math.round(stats.maxHp*(1+riftBonus(tag,'vital')/100)),damage:Math.round(stats.damage*(1+riftBonus(tag,'savage')/100))};
 }
+
+/** Gear rolls plus the guaranteed key; gold uses the following claim bit. */
+export const riftRewardItemCount=(tag:RiftTag)=>RIFT_RULES.rewards+riftBonus(tag,'bounty')+1;
+export const riftRewardMask=(tag:RiftTag)=>(1 << (riftRewardItemCount(tag)+1))-1;

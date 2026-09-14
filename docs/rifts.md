@@ -25,3 +25,19 @@ Champions have one seeded modifier and 14% larger art; elites have two distinct 
 The local runtime entry UI is available in World → Crimson Rifts (`/tools/rifts.html`). It uses disposable memory, the actual panel and procedural portal art; no playable saves are accessed.
 
 Verification: all 1,462 headless tests and the production build passed for the first integrated checkpoint. Follow-up checks cover shared rank-aware aiming and cached key modifiers. The narrow panel keeps its frame and actions outside the scrollable body. Balance timings remain targets pending player gameplay feedback.
+
+## September 14 implementation audit
+
+- Spawn and save restoration share `applyEnemyModifiers`; keyed life/damage and global Savage damage survive reloading with existing wounds intact. The active clock does not advance offline or double-count a death tick.
+- Guardian victory cancels hostile projectiles and closes damage intake while rewards are collected. Clear records remain exactly once.
+- A full rift ground-item buffer leaves undelivered rewards in the chest, preserving player-dropped items; claim masks prevent duplicate items or gold across retries and saves.
+- `RIFT_RULES`, `riftRewardItemCount` and `riftRewardMask` share reward quantities, key progression odds and completion ownership. Replacement-key RNG is isolated from equipment rolls so adding gear rewards cannot alter key progression. This rerolls the guaranteed key in an unclaimed local development rift; characters and run progress remain intact.
+- Key movement penalties also affect guardian pursuit, while authored charge distances and warnings remain unchanged.
+- The fixed-biome sample/contact objects are reused rather than allocated for every terrain, lighting or movement query. Rank traits and key modifier caches remain bounded by content or object lifetime. Roster size stays finite per floor without imposing a simultaneous-actor cap.
+- Key selection retains focus and scroll position; hover and inline modifiers share content. Failed entry exceptions restore controls. Map hover targets exclude placeholder chests. The preview uses runtime-shaped canvas siblings to catch dialog placement/layer regressions.
+
+Extension points remain separate: rules and modifier recipes (`rift-content.ts`), layout/rosters (`rift-floor.ts`), lifecycle (`rift-runtime.ts`), reward generation (`rift-rewards.ts`), shared enemy modifiers and presentation. Additional key grades or reward quantities must respect the current 31-bit claim-mask representation; moving beyond that requires replacing masks, not silently expanding counts.
+
+Gameplay pacing and sustained frame rate with large pulled packs still require the user's device/playtest feedback; headless correctness tests do not prove either.
+
+Audit verification: the full 1,468-test headless suite passed. All 15 rift regressions, including an explicit combined monster-life/damage save fixture, passed; TypeScript checks and the production build passed. No automated browser gameplay or player saves were used.

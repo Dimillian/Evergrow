@@ -10,9 +10,11 @@ import { riftRandom } from './rift-content.ts';
 export class RiftWorld extends DungeonWorld {
   private riftTiles=new Map<string,HTMLCanvasElement>();
   private scenery:Prop[]|null=null;
+  private readonly biomeSample=Object.freeze({...BIOMES[this.dungeonBiome],weights:Object.freeze(Object.fromEntries(BIOME_IDS.map(id=>[id,id===this.dungeonBiome?1:0])) as BiomeWeights)});
+  private readonly groundContact=Object.freeze({weights:this.biomeSample.weights,water:0,natural:1,indoors:false});
   override get dungeonTheme(){return undefined;}
-  override sampleBiome(_x:number,_y:number){return {...BIOMES[this.dungeonBiome],weights:Object.fromEntries(BIOME_IDS.map(id=>[id,id===this.dungeonBiome?1:0])) as BiomeWeights};}
-  override sampleGroundContact(x:number,y:number){return {weights:this.sampleBiome(x,y).weights,water:0,natural:1,indoors:false};}
+  override sampleBiome(_x:number,_y:number){return this.biomeSample;}
+  override sampleGroundContact(_x:number,_y:number){return this.groundContact;}
   override mapColor(x:number,y:number){return this.blocked(x,y,0)?'#160d22':BIOMES[this.dungeonBiome].color;}
   override getProps(x:number,y:number,width:number,height:number):Prop[]{
     if(!this.scenery){this.scenery=[];const random=riftRandom(this.seed^0x63ea2731),weights=this.sampleBiome(0,0).weights;
