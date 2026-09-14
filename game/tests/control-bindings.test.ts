@@ -48,6 +48,29 @@ test('invalid or duplicate stored bindings fall back safely without overwriting 
   }
 });
 
+test('older saved maps gain loot reveal bindings without losing custom controls', () => {
+  const legacy = defaultControls() as Record<string, readonly [string | null, string | null]>;
+  delete legacy.revealLoot;
+  legacy.skill1 = ['KeyF', null];
+  const migrated = parseControls(JSON.stringify(legacy));
+  assert.deepEqual(migrated.skill1, ['KeyF', null]);
+  assert.deepEqual(migrated.revealLoot, ['ShiftLeft', 'ShiftRight']);
+});
+
+test('loot reveal migration never steals Shift from an existing custom binding', () => {
+  const legacy = defaultControls() as Record<string, readonly [string | null, string | null]>;
+  delete legacy.revealLoot;
+  legacy.skill3 = ['ShiftLeft', 'ShiftRight'];
+  const migrated = parseControls(JSON.stringify(legacy));
+  assert.deepEqual(migrated.skill3, ['ShiftLeft', 'ShiftRight']);
+  assert.deepEqual(migrated.revealLoot, [null, null]);
+});
+
+test('truncated saved maps still fall back to the complete safe defaults', () => {
+  const truncated = JSON.stringify({ attack: ['KeyW', null] });
+  assert.deepEqual(parseControls(truncated), defaultControls());
+});
+
 test('reserved keys cannot replace escape, browser reload or modifier shortcuts', () => {
   const controls = new ControlBindings();
   for (const code of ['Escape', 'F5', 'F11', 'F12', 'ControlLeft', 'AltRight', 'MetaLeft', 'Unidentified', 'Mouse5', '<script>']) {
@@ -87,13 +110,34 @@ test('custom mouse and keyboard bindings preserve taps, holds, skill identities 
   assert.equal(state.attack, false); assert.deepEqual(state.heldSkillSlots, []);
 });
 
+test('loot reveal supports WASD movement, alternate holds, mouse bindings and independent releases', () => {
+  const bindings = new ControlBindings(), input = new GameInput(bindings);
+  input.keyDown('ShiftLeft');
+  assert.equal(input.held('revealLoot'), true);
+  for (const [code, axis, value] of [
+    ['KeyW', 'moveY', -1], ['KeyA', 'moveX', -1], ['KeyS', 'moveY', 1], ['KeyD', 'moveX', 1],
+  ] as const) {
+    input.keyDown(code); assert.equal(input.consume(aim, false)[axis], value, `Shift + ${code}`); input.keyUp(code);
+  }
+  input.keyDown('ShiftRight'); input.keyUp('ShiftLeft');
+  assert.equal(input.held('revealLoot'), true);
+  input.keyUp('ShiftRight'); assert.equal(input.held('revealLoot'), false);
+  bindings.bind('revealLoot', 0, 'Mouse3', true);
+  input.pointerDown(3); assert.equal(input.held('revealLoot'), true);
+  input.pointerUp(3); assert.equal(input.held('revealLoot'), false);
+  bindings.bind('revealLoot', 0, null); bindings.bind('revealLoot', 1, null);
+  assert.equal(bindings.has('revealLoot'), false);
+});
+
 test('rebinding while held clears pending input through the runtime subscription', () => {
   const bindings = new ControlBindings(), input = new GameInput(bindings);
   const unsubscribe = bindings.subscribe(() => input.clear());
-  input.keyDown('KeyW'); input.pointerDown(0); input.keyDown('Space');
+  input.keyDown('KeyW'); input.pointerDown(0); input.keyDown('Space'); input.keyDown('ShiftLeft');
+  assert.equal(input.held('revealLoot'), true);
   bindings.bind('attack', 0, 'KeyF');
   const state = input.consume(aim, false);
   assert.equal(state.moveY, 0); assert.equal(state.attack, false); assert.equal(state.dodge, false);
+  assert.equal(input.held('revealLoot'), false);
   unsubscribe();
 });
 

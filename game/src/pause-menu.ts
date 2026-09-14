@@ -2,6 +2,7 @@ import { ControlsPanel } from './controls-panel.ts';
 import { bindAudioControls, type AudioControlActions } from './audio-controls.ts';
 import './pause-menu.css';
 import type { GroundLootNameplates } from './ground-loot-hover.ts';
+import { controls } from './control-preferences.ts';
 
 export interface PauseActions extends AudioControlActions {
   groundLootNames?(): GroundLootNameplates;
@@ -54,6 +55,9 @@ export class PauseMenu {
     this.refresh();
   }
   refresh(): void {
+    const hold = this.root.querySelector<HTMLButtonElement>('[data-loot-hold]')!;
+    hold.disabled = !this.actions.setGroundLootNames || !controls.has('revealLoot');
+    hold.textContent = hold.disabled ? 'Hold key (unbound)' : `Hold ${controls.label('revealLoot')}`;
     for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-loot-names]'))
       button.setAttribute('aria-pressed', String(button.dataset.lootNames === (this.actions.groundLootNames?.() ?? 'always')));
     const sound = this.root.querySelector<HTMLButtonElement>('[data-sound]')!;
