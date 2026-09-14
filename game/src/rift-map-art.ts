@@ -13,13 +13,14 @@ export function drawRiftMapTerrain(c:CanvasRenderingContext2D,floor:DungeonFloor
     if(!floor.rooms.some(r=>seen.has(r.id)&&r.x<tx*SIZE+SIZE&&r.x+r.width>tx*SIZE&&r.y<ty*SIZE+SIZE&&r.y+r.height>ty*SIZE))continue;
     const key=`${tx}:${ty}`;let tile=tiles.get(key);
     if(!tile){
-      tile=document.createElement('canvas');tile.width=tile.height=SIZE/SAMPLE;const ctx=tile.getContext('2d')!;
-      for(let y=0;y<SIZE/SAMPLE;y++)for(let x=0;x<SIZE/SAMPLE;x++){
-        ctx.fillStyle=world.mapColor(tx*SIZE+(x+.5)*SAMPLE,ty*SIZE+(y+.5)*SAMPLE,SAMPLE);ctx.fillRect(x,y,1,1);
+      tile=document.createElement('canvas');tile.width=tile.height=SIZE/SAMPLE+2;const ctx=tile.getContext('2d')!;
+      for(let y=0;y<SIZE/SAMPLE+2;y++)for(let x=0;x<SIZE/SAMPLE+2;x++){
+        ctx.fillStyle=world.mapColor(tx*SIZE+(x-.5)*SAMPLE,ty*SIZE+(y-.5)*SAMPLE,SAMPLE);ctx.fillRect(x,y,1,1);
       }
       if(tiles.size>=324)tiles.delete(tiles.keys().next().value!);tiles.set(key,tile);
     }
-    c.drawImage(tile,tx*SIZE,ty*SIZE,SIZE,SIZE);
+    // One shared sample of bleed prevents fractional-zoom seams between tiles.
+    c.drawImage(tile,tx*SIZE-SAMPLE,ty*SIZE-SAMPLE,SIZE+SAMPLE*2,SIZE+SAMPLE*2);
   }
   c.restore();
 }
