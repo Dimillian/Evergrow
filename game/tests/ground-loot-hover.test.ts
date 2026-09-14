@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { groundLootVisibility, hoveredGroundLoot } from '../src/ground-loot-hover.ts';
+import { groundLootVisibility, hoveredGroundLoot, showGroundLootNames } from '../src/ground-loot-hover.ts';
+
+test('hold mode fails open when no reveal binding is available', () => {
+  assert.equal(showGroundLootNames('ctrl', false, false, false), true);
+  assert.equal(showGroundLootNames('ctrl', true, false, false), false);
+  assert.equal(showGroundLootNames('ctrl', true, true, false), true);
+  assert.equal(showGroundLootNames('ctrl', true, false, true), true);
+  assert.equal(showGroundLootNames('always', true, false, false), true);
+});
 
 test('loot hit testing follows the packed label before nearby silhouettes', () => {
   const labels = [

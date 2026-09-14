@@ -64,6 +64,7 @@ export class GameShell {
     if (key) key.textContent = this.gamepadActive ? '↓' : controls.label('portal');
     for (const action of ['map', 'portal'] as const) this.controls.querySelector(`[data-hud="${action}"]`)!.removeAttribute('aria-keyshortcuts');
     this.shortcutMenu.refreshBindings();
+    this.pauseMenu?.refresh();
   }
 
   constructor(root: HTMLElement, actions: ShellActions) {

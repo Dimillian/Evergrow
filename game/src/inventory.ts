@@ -19,8 +19,24 @@ export type EquipmentPlan = { ok: false; message: string } | {
 };
 export interface EquipmentTarget { sourceIndex?: number; slot?: EquipmentSlot; }
 
-/** Pure swap plan shared by commits, drag eligibility and external-item previews. */
+export function defaultEquipmentSlot(sheet: CharacterSheet, item: Item): EquipmentSlot | undefined {
+  if (item.kind === 'charm') return undefined;
+  return (item.kind === 'ring'
+    ? !sheet.equipped.ring1 ? 'ring1' : !sheet.equipped.ring2 ? 'ring2' : 'ring1'
+    : (item.kind === 'shield' || item.kind === 'grimoire' || item.kind === 'orb') ? 'offhand' : item.kind);
+}
+
 export function planEquipmentChange(sheet: CharacterSheet, item: Item, level: number, target: EquipmentTarget = {}): EquipmentPlan {
+  return resolveEquipmentChange(sheet, item, level, target, false);
+}
+
+/** External inspection changes the projected equipment only; it never commits containers. */
+export function planEquipmentPreview(sheet: CharacterSheet, item: Item, level: number, target: EquipmentTarget = {}): EquipmentPlan {
+  return resolveEquipmentChange(sheet, item, level, target, true);
+}
+
+/** Pure swap plan shared by commits, drag eligibility and external-item previews. */
+function resolveEquipmentChange(sheet: CharacterSheet, item: Item, level: number, target: EquipmentTarget, previewOnly: boolean): EquipmentPlan {
   const reject = (message: string): EquipmentPlan => ({ ok: false, message });
   const source = target.sourceIndex;
   if (source !== undefined && (!validIndex(sheet, source) || sheet.inventory[source]?.id !== item.id))
@@ -28,10 +44,8 @@ export function planEquipmentChange(sheet: CharacterSheet, item: Item, level: nu
   if (source === undefined && [...sheet.inventory, ...Object.values(sheet.equipped)].some(owned => owned?.id === item.id))
     return reject('This item is already owned.');
   if (item.kind === 'charm') return reject('Place charms in the charm grid.');
-  const slot: EquipmentSlot = target.slot ?? (item.kind === 'ring'
-    ? !sheet.equipped.ring1 ? 'ring1' : !sheet.equipped.ring2 ? 'ring2' : 'ring1'
-    : (item.kind === 'shield' || item.kind === 'grimoire' || item.kind === 'orb') ? 'offhand' : item.kind);
-  if (!EQUIPMENT_SLOTS.includes(slot) || !itemFitsSlot(item, slot)) return reject('This item does not fit that equipment slot.');
+  const slot = target.slot ?? defaultEquipmentSlot(sheet, item);
+  if (!slot || !EQUIPMENT_SLOTS.includes(slot) || !itemFitsSlot(item, slot)) return reject('This item does not fit that equipment slot.');
   if (!Number.isSafeInteger(level) || !Number.isSafeInteger(item.requiredLevel) || item.requiredLevel < 1 || level < item.requiredLevel)
     return reject(`Requires level ${item.requiredLevel}.`);
   if (item.kind === 'weapon' && !item.weapon) return reject('This weapon has no attack profile.');
@@ -46,14 +60,12 @@ export function planEquipmentChange(sheet: CharacterSheet, item: Item, level: nu
   const conflict = slot === 'weapon' && item.weapon?.hands === 2 && equipped.offhand ? 'offhand'
     : slot === 'offhand' && equipped.weapon?.weapon?.hands === 2 ? 'weapon' : null;
   if (conflict) { displaced.push({ slot: conflict, item: equipped[conflict]! }); equipped[conflict] = null; }
-  for (let i = 0; i < displaced.length; i++) {
+  for (let i = 0; i < displaced.length && !(previewOnly && source === undefined); i++) {
     const index = i === 0 && source !== undefined ? source : inventory.findIndex(existing => existing === null);
     const cell = findPackSpace(displaced[i].item, packOccupancy(inventory, inventoryLayout), i === 0 ? preferredCell : undefined);
-    if (source !== undefined && (index < 0 || cell === null)) return reject('Make room in your pack for the displaced equipment.');
-    if (index >= 0 && cell !== null) {
-      inventory[index] = displaced[i].item;
-      inventoryLayout[displaced[i].item.id] = cell;
-    }
+    if (index < 0 || cell === null) return reject('Make room in your pack for the displaced equipment.');
+    inventory[index] = displaced[i].item;
+    inventoryLayout[displaced[i].item.id] = cell;
   }
   return { ok: true, slot, inventory, equipped, displaced, inventoryLayout: resolvePackLayout({ inventory, inventoryLayout }) };
 }
@@ -70,7 +82,7 @@ export function equipItem(sheet: CharacterSheet, inventoryIndex: number, level: 
 }
 
 export function unequipItem(sheet: CharacterSheet, slot: EquipmentSlot, targetCell?: number): ActionResult {
-  if (!EQUIPMENT_SLOTS.includes(slot) || !sheet.equipped[slot]) return fail('That equipment slot is empty.');
+  if (!slot || !EQUIPMENT_SLOTS.includes(slot) || !sheet.equipped[slot]) return fail('That equipment slot is empty.');
   const item = sheet.equipped[slot]!, layout = resolvePackLayout(sheet);
   const occupied = packOccupancy(sheet.inventory, layout);
   const cell = targetCell === undefined ? findPackSpace(item, occupied) :

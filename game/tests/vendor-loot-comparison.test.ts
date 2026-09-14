@@ -1,3 +1,5 @@
+import { planEquipmentChange } from '../src/inventory.ts';
+import { comparisonSlot, ItemComparisonInput } from '../src/item-comparison.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialPlayer } from '../src/simulation.ts';
@@ -63,4 +65,42 @@ test('ring inspection targets ring1 by default and ring2 when targetSlot is spec
   const cardsRing2 = itemHoverCards(vendorRing, { sheet: p.character, level: p.level, targetSlot: 'ring2' });
   assert.equal(cardsRing2.length, 2);
   assert.match(cardsRing2[1], /Equipped · Ring 2/);
+});
+
+test('external preview does not weaken actual equip storage validation or mutate the bag', () => {
+  const p = initialPlayer(0, 0);
+  equipItem(p, 0, 'longsword'); equipItem(p, 1, 'iron-buckler', true);
+  p.character.inventory = Array.from({ length: INVENTORY_CELLS }, (_, i) => generateItem(6000 + i, 1, 'head'));
+  const before = structuredClone(p.character);
+  const incoming = generateItem(9000, 1, 'weapon', 'ember-staff', 'epic');
+  const preview = previewEquipmentChange(p.character, incoming, p.level);
+  assert.equal(preview.ok, true);
+  if (preview.ok) assert.deepEqual(preview.displaced.map(d => d.slot), ['weapon', 'offhand']);
+  assert.equal(planEquipmentChange(p.character, incoming, p.level).ok, false);
+  assert.deepEqual(p.character, before);
+});
+
+test('ring comparison follows empty slots and Shift chooses the alternate actual destination', () => {
+  const p = initialPlayer(0, 0), ring = generateItem(9500, 1, 'ring');
+  for (const [first, second, expected] of [[false,false,'ring1'],[true,false,'ring2'],[false,true,'ring1'],[true,true,'ring1']] as const) {
+    p.character.equipped.ring1 = first ? generateItem(9501, 1, 'ring') : null;
+    p.character.equipped.ring2 = second ? generateItem(9502, 1, 'ring') : null;
+    assert.equal(comparisonSlot(p.character, ring), expected);
+    assert.equal(comparisonSlot(p.character, ring, true), expected === 'ring1' ? 'ring2' : 'ring1');
+  }
+  assert.equal(comparisonSlot(p.character, generateItem(9503, 1, 'weapon', 'longsword'), true), 'offhand');
+  assert.equal(comparisonSlot(p.character, generateItem(9504, 1, 'weapon', 'ember-staff'), true), 'weapon');
+});
+
+test('stationary Shift switches comparisons immediately and releases never latch', () => {
+  const target = new EventTarget(), abort = new AbortController();
+  let changes = 0;
+  const input = new ItemComparisonInput(target, () => changes++, abort.signal);
+  const key = (type: string, code: string, shiftKey: boolean) => target.dispatchEvent(Object.assign(new Event(type), { code, shiftKey }));
+  key('keydown', 'ShiftLeft', true); assert.equal(input.alternate, true); assert.equal(changes, 1);
+  key('keydown', 'ShiftLeft', true); assert.equal(changes, 1);
+  key('keydown', 'ShiftRight', true); key('keyup', 'ShiftLeft', true); assert.equal(input.alternate, true);
+  key('keyup', 'ShiftRight', false); assert.equal(input.alternate, false);
+  key('keydown', 'ShiftLeft', true); target.dispatchEvent(new Event('blur')); assert.equal(input.alternate, false);
+  abort.abort(); key('keydown', 'ShiftLeft', true); assert.equal(input.alternate, false);
 });
