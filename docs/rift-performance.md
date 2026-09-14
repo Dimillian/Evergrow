@@ -41,3 +41,9 @@ The rift map tool's **Profile rendering** action repeats the actual renderer and
 The frozen seed-7342 Verdant scene staged 127 enemies and measured **4.5 ms median / 5.1 ms p95** render CPU in the in-app browser at 1100×900. The actor/prop pass accounted for 2.5 ms median, scenery 0.6 ms, lighting 0.6 ms and post-processing 0.1 ms (nested stage timings are not additive). This check did not reveal a rendering bottleneck comparable to the original 29.8 ms simulation cost.
 
 Headless timings exclude drawing, GPU scheduling, effects from a long fight, save serialization and device thermal limits. Static render timings exclude moving combat/effect creation. Both are useful diagnostics; sustained gameplay FPS still needs the user's playtest.
+
+## Silhouette glow follow-up
+
+After replacing the rejected floating trait symbols with blue/gold silhouette outlines, the same frozen seed-7342 scene measured **5.4 ms median / 6.0 ms p95** render CPU. The outline paints each ranked character once into a small reusable surface sized for its body and weapons, then composites a tinted rim and soft glow. An initial oversized scratch surface caused GPU submission stalls and was replaced before completing the pass. Gameplay simulation and its measured crowd optimizations are unchanged.
+
+Guardian-arrival/reward regressions bring the full suite to **1,480 passing tests**; type checks and the production build passed. The arrival warning and final silhouette treatment were inspected using save-free static scenes.

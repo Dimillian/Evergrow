@@ -30,6 +30,7 @@ export function mountRiftMapReview(root:HTMLElement,params:URLSearchParams):()=>
   const c=canvas.getContext('2d')!;
   const draw=()=>{
     epoch++;present=undefined;
+    const output=root.querySelector<HTMLOutputElement>('[data-profile-result]')!;output.textContent='';delete output.dataset.profile;
     // Select an actual world seed with this starting climate; never paint a fake biome.
     while(startingBiome(seed)!==biome)seed=(seed+1)>>>0;
     const entrance:DungeonEntrance={id:'dungeon:rift:1',name:'Rift preview',seed,level:30,biome,x:0,y:0,rift:{attempt:1}};
