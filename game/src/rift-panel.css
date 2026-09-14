@@ -5,7 +5,7 @@
 
 .rift-key[data-tier]{--key-color:#c5ccc8;background:radial-gradient(ellipse at 50% 38%,color-mix(in srgb,var(--key-color) 15%,transparent),transparent 75%),#0a14273d;border-color:color-mix(in srgb,var(--key-color) 40%,transparent)}
 .rift-key[data-tier] svg{filter:drop-shadow(0 0 5px var(--key-color))}
-.rift-key[data-tier] small{color:var(--key-color);font-size:11px}
+.rift-key[data-tier]{display:grid;place-items:center}
 .rift-key[data-tier].selected{border-color:var(--key-color);box-shadow:inset 0 0 16px color-mix(in srgb,var(--key-color) 15%,transparent)}
 .rift-key:focus-visible{outline:1px solid var(--key-color,#c5ccc8);outline-offset:2px}
 .rift-key[data-tier]:hover{background-color:#cba7d013;border-color:var(--key-color)}
