@@ -147,7 +147,7 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
       comparison = `<div class="ui-item-comparison"><p>Replaces ${preview.displaced.map(entry => escapeUI(entry.item.name)).join(' + ')}</p></div>`;
   }
   if (view.altToggle) {
-    comparison += `<div class="ui-item-comparison"><div class="ui-item-alt-toggle" role="button" tabindex="0" title="Press Alt or click to cycle comparison"><kbd>Alt</kbd> <span>${escapeUI(view.altToggle.label)}</span></div></div>`;
+    comparison += `<div class="ui-item-comparison"><button type="button" class="ui-item-alt-toggle" title="Press Alt or click to cycle comparison"><kbd>Alt</kbd> <span>${escapeUI(view.altToggle.label)}</span></button></div>`;
   }
   return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span>${view.equipped && view.compactComparison ? `<span class="ui-item-equipped-inline" title="${escapeUI(view.equippedLabel ?? '')}">Equipped</span>` : ''}</span><h4>${hasGreaterAffix(item) ? escapeUI(itemDisplayName(item).slice(0, -(GREATER_AFFIX_SYMBOL.length + 1))) + ' ' + greaterMark : escapeUI(itemDisplayName(item))}</h4></div></div>
     <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${view.equipped ? '<span class="ui-item-equipped">Equipped</span>' : ''}${item.locked?'<span class="ui-item-equipped">Locked</span>':''}</div>

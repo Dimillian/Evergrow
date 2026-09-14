@@ -108,7 +108,8 @@ test('stationary Shift switches comparisons immediately and releases never latch
 test('Alt key binary-toggles focusIndex (0→1→0) and blur resets to 0', () => {
   const target = new EventTarget(), abort = new AbortController();
   let changes = 0;
-  const input = new ItemComparisonInput(target, () => changes++, abort.signal);
+  let active = true;
+  const input = new ItemComparisonInput(target, () => changes++, abort.signal, () => active);
   const altKey = (type: string) => target.dispatchEvent(Object.assign(new Event(type, { cancelable: true }), { key: 'Alt', code: 'AltLeft' }));
 
   assert.equal(input.focusIndex, 0);
@@ -125,6 +126,13 @@ test('Alt key binary-toggles focusIndex (0→1→0) and blur resets to 0', () =>
   assert.equal(input.focusIndex, 1);
   assert.equal(changes, 3);
 
+  // When inactive (e.g. tooltip hidden or single displaced card), Alt does not toggle
+  active = false;
+  altKey('keydown');
+  assert.equal(input.focusIndex, 1);
+  assert.equal(changes, 3);
+  active = true;
+
   // Blur resets focus
   target.dispatchEvent(new Event('blur'));
   assert.equal(input.focusIndex, 0);
@@ -133,4 +141,5 @@ test('Alt key binary-toggles focusIndex (0→1→0) and blur resets to 0', () =>
   altKey('keydown');
   assert.equal(input.focusIndex, 0);
 });
+
 

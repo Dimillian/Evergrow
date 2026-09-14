@@ -192,6 +192,7 @@ test('wand and grimoire comparison uses D4-style binary toggle (2 cards, Alt swi
   // Default (focusIndex=0): candidate vs main hand wand
   const defaultCards = itemHoverCards(twoHandStaff, { ...baseView, focusIndex: 0 });
   assert.equal(defaultCards.length, 2, 'two-handed weapon vs wand+grimoire must produce exactly 2 cards');
+  assert.match(defaultCards[0], /<button type="button" class="ui-item-alt-toggle"/);
   assert.match(defaultCards[0], /<kbd>Alt<\/kbd>/);
   assert.match(defaultCards[0], /Compare with Off hand/);
   assert.match(defaultCards[1], /Equipped · Main hand/);

@@ -15,10 +15,14 @@ export class ItemTooltip {
   constructor(mount: HTMLElement, id: string) {
     this.surface = new RetainedTooltip(mount, id, 'ui-item-tooltip-group');
     this.element = this.surface.element;
+    this.surface.onHide = () => {
+      this.comparison.resetFocus();
+      this.current = undefined;
+    };
     this.comparison = new ItemComparisonInput(window, () => {
       const current = this.current;
       if (current && !this.element.hidden && current.anchor.isConnected) this.show(current.item, current.view, current.anchor, current.bounds);
-    }, this.life.signal);
+    }, this.life.signal, () => !this.element.hidden && Boolean(this.element.querySelector('.ui-item-alt-toggle')));
     this.element.addEventListener('click', (e) => {
       const toggle = (e.target as HTMLElement)?.closest('.ui-item-alt-toggle');
       if (toggle) {
@@ -29,6 +33,9 @@ export class ItemTooltip {
     });
   }
   show(item: Item, view: ItemPresentation, anchor: HTMLElement, bounds = anchor.getBoundingClientRect() as Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>): void {
+    if (this.current?.anchor !== anchor || this.current?.item.id !== item.id) {
+      this.comparison.resetFocus();
+    }
     this.current = { item, view, anchor, bounds };
     const cards = itemHoverCards(item, {
       ...view,

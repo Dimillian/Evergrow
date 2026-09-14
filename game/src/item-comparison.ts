@@ -15,16 +15,20 @@ export class ItemComparisonInput {
   alternate = false;
   focusIndex = 0;
   private readonly changed: () => void;
+  isToggleActive?: () => boolean;
 
-  constructor(target: EventTarget, changed: () => void, signal: AbortSignal) {
+  constructor(target: EventTarget, changed: () => void, signal: AbortSignal, isToggleActive?: () => boolean) {
     this.changed = changed;
+    this.isToggleActive = isToggleActive;
     const set = (value: boolean) => { if (value !== this.alternate) { this.alternate = value; changed(); } };
     target.addEventListener('keydown', raw => {
       const event = raw as KeyboardEvent;
       if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') set(true);
       if (event.key === 'Alt' || event.code === 'AltLeft' || event.code === 'AltRight') {
-        event.preventDefault();
-        this.toggleFocus();
+        if (!this.isToggleActive || this.isToggleActive()) {
+          event.preventDefault();
+          this.toggleFocus();
+        }
       }
     }, { signal, capture: true });
     target.addEventListener('keyup', raw => {
