@@ -69,6 +69,7 @@ import { sampleBiome } from './biomes.ts';
 import { RoamingEncounters, ROAMING_RULES, ROAMING_GROUPS, roamingSpawnAnchor, shouldRetireRoamer } from './roaming-encounters.ts';
 import { isSpawnHidden, type SpawnExclusion } from './spawn-visibility.ts';
 import { updateEnemyAI, type EnemyAIContext } from './enemy-ai.ts';
+import { PlayerMovement } from './player-movement.ts';
 
 export const FIXED_STEP = COMBAT_TIMING.fixedStep;
 export const HIT_FLASH_DURATION = COMBAT_TIMING.hitFlashDuration;
@@ -155,6 +156,7 @@ export class Simulation {
   private combatViewport: CombatViewport | null = null;
   private spawnExclusion: SpawnExclusion | null = null;
   private killRecharge = 0;
+  private playerMovement = new PlayerMovement();
 
   constructor(world: WorldQuery, options: SimulationOptions = {}) {
     this.world = world;
@@ -164,6 +166,7 @@ export class Simulation {
   }
 
   reset(): void {
+    this.playerMovement.clear();
     this.brokenContainers.clear(); this.world.setBrokenContainers?.(this.brokenContainers);
     this.journeys = freshJourneys();
     this.expeditions = freshExpeditions(); this.dungeonFloor = null;
@@ -264,6 +267,7 @@ export class Simulation {
 
   /** Travel preserves actors, loot, clocks and camp memory. It is not a reset/load. */
   relocate(x: number, y: number): void {
+    this.playerMovement.clear();
     this.chains.length = 0;
     this.groundEffects = this.groundEffects.filter(effect => effect.kind !== 'storm');
     const p = this.player;
@@ -598,6 +602,7 @@ export class Simulation {
 
     let targetVX = 0;
     let targetVY = 0;
+    const walking = !p.dash && p.dodgeTime <= 0 && Math.hypot(input.moveX, input.moveY) > .01;
     if (p.dash) {
       const dash = p.dash, startX = p.x, startY = p.y, delta = Math.min(dt, dash.remaining);
       const steps = Math.max(1, Math.ceil(dash.speed * delta / 4));
@@ -638,7 +643,10 @@ export class Simulation {
       p.vy += (targetVY - p.vy) * easing;
       if (length === 0 && Math.hypot(p.vx, p.vy) < PLAYER_MOVEMENT.stopThreshold) p.vx = p.vy = 0;
     }
-    const destination = this.world.move(p.x, p.y, p.vx * dt, p.vy * dt, p.radius);
+    if (!walking) this.playerMovement.clear();
+    const destination = walking
+      ? this.playerMovement.move(this.world, p.x, p.y, p.vx * dt, p.vy * dt, p.radius, this.time)
+      : this.world.move(p.x, p.y, p.vx * dt, p.vy * dt, p.radius);
     p.walkTime += Math.hypot(destination.x - p.x, destination.y - p.y) / PLAYER_MOVEMENT.gaitDistance;
     p.x = destination.x;
     p.y = destination.y;
@@ -841,7 +849,10 @@ export class Simulation {
     return { world: this.world, break: (target, angle) => {
       const level = this.world.dungeonLevel ?? encounterScaleAt(target.x, target.y, this.world.seed ?? this.options.seed!, this.player.level).base;
       if (breakContainer(target, angle, level, this.brokenContainers, this.groundGold,
-        () => this.nextId++, event => this.emit(event), this.player.derived.goldFindMultiplier)) this.world.setBrokenContainers?.(this.brokenContainers);
+        () => this.nextId++, event => this.emit(event), this.player.derived.goldFindMultiplier)) {
+        this.world.setBrokenContainers?.(this.brokenContainers);
+        this.playerMovement.clear();
+      }
     } };
   }
 
