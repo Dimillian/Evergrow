@@ -63,6 +63,17 @@ export class ServicePanel {
     }, { signal: this.abort.signal });
     this.element.addEventListener('focusout', () => this.tooltip.defer(), { signal: this.abort.signal });
     this.element.addEventListener('scroll', event => { if (!(event.target instanceof Element) || !event.target.closest('.ui-tooltip')) this.tooltip.hide(); }, { signal: this.abort.signal, capture: true });
+    this.element.addEventListener('keydown', e => {
+      if ((e.key === 'r' || e.key === 'R') && !e.altKey && !e.ctrlKey && !e.metaKey && !e.repeat) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+        e.preventDefault(); this.tooltip.hide();
+        if (this.selected?.type !== 'gamble') this.selected = null;
+        this.quote = null; this.sales.clear();
+        const target = this.npc.role === 'stash' ? 'storage' : 'inventory';
+        this.actions.sort(target, this.storageTab);
+        this.render();
+      }
+    }, { signal: this.abort.signal });
   }
   open(player: Player, npc: TownNPC): void {
     this.stockCache=null;
@@ -324,7 +335,7 @@ export class ServicePanel {
   }
 
   private sortMarkup(target: 'storage' | 'inventory'): string {
-    return `<div class="character-pack-toolbar"><button type="button" class="ui-button character-auto-sort" data-sort-pack="${target}" aria-label="Auto-sort ${target === 'storage' ? 'chest' : 'inventory'}">${uiIcon('sortFilter')} Auto-sort</button></div>`;
+    return `<div class="character-pack-toolbar"><button type="button" class="ui-button character-auto-sort" data-sort-pack="${target}" aria-label="Auto-sort ${target === 'storage' ? 'chest' : 'inventory'} (R)" data-tooltip="Auto-sort (R)" data-tooltip-placement="below">${uiIcon('sort')} Auto-sort <small>(R)</small></button></div>`;
   }
 
   private renderStoragePack(): void {
