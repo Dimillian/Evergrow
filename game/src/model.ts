@@ -369,7 +369,7 @@ export type CombatEvent = EventAppearance & (
   | { readonly type: 'level'; readonly level: number; readonly skillPoints: number; readonly statPoints: number }
   | { readonly type: 'notice'; readonly message: string }
   | { readonly type: 'blast'; readonly groundKind?: GroundEffect['kind']; readonly radius: number; readonly duration?: number; readonly enemyKind?: EnemyKind }
-  | { readonly type: 'chain'; readonly toX: number; readonly toY: number; readonly duration?: number }
+  | { readonly type: 'chain'; readonly chainTargetId?: number; readonly travelDuration?: number; readonly toX: number; readonly toY: number; readonly duration?: number }
   | { readonly type: 'block'; readonly angle: number; readonly value: number }
   | { readonly type: 'ground'; readonly radius: number; readonly duration: number; readonly style: ProjectileStyle; readonly skill: SkillId }
 );

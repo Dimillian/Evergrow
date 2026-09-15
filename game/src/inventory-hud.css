@@ -48,3 +48,6 @@
 .inventory-skill-picker-footer { display: flex; justify-content: space-between; flex-shrink: 0; gap: 8px; padding-top: 8px; }
 .inventory-skill-picker-footer .ui-button { min-height: 30px; padding: 4px 8px; font-size: 12px; }
 .inventory-skill-empty { line-height: 1.5; color: var(--ui-silver-dim); }
+
+.inventory-skill-tooltip.ui-tooltip { position: fixed; width: min(310px, calc(100vw - 24px)); z-index: 120; pointer-events: auto; max-height: calc(100dvh - 24px); overflow-y: auto; }
+.inventory-skill-tooltip .skill-tip-state { display: none; }

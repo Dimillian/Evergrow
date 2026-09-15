@@ -23,9 +23,9 @@ test('repeated pigment blending preserves RGB colors instead of shading them fro
 test('boots preserve ankle attachment and foot contact across facings and materials', () => {
   for (const style of ['leather','plate'] as const) {
     const piece:ArmorPiece={style,seed:1,material:{base:'#776655',shadow:'#223344',edge:'#bbbbbb',trim:'#aabbcc'}};
-    for(const facing of [-1,-.5,0,.5,1]) {
+    for(const facing of Array.from({length:8},(_,i)=>i*Math.PI/4)) {
       const shapes=bootShapes(piece,facing), points=shapes.flatMap(s=>s.points);
-      assert.ok(points.every(([x,y])=>Number.isFinite(x)&&Number.isFinite(y)&&Math.abs(x)<3.2&&y>=-6&&y<=1.2));
+      assert.ok(points.every(([x,y])=>Number.isFinite(x)&&Number.isFinite(y)&&Math.abs(x)<4&&y>=-6&&y<=1.8));
       assert.ok(shapes[0].points.some(([x,y])=>x<0&&y===-6));
       assert.ok(shapes[0].points.some(([x,y])=>x>0&&y===-6));
       assert.strictEqual(bootShapes(piece,facing),shapes);

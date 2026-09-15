@@ -1,6 +1,6 @@
 import { chooseDoctrine } from './skill-tree.ts';
 import { setItemLock } from './item-protection.ts';
-export { executeAppearanceChange } from './appearance-command.ts';
+export { executeAppearanceChange, executeSavedAppearanceChange } from './appearance-command.ts';
 import { upgradeSkill, configureSkill, OVERLOAD_NODE } from './skill-progression.ts';
 import type { Player } from './model.ts';
 import type { ActionResult, Attribute, EquipmentSlot, SkillId } from './character-types.ts';

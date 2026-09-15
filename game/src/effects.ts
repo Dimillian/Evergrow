@@ -123,7 +123,7 @@ export class CombatEffects {
     if (!Number.isFinite(dt) || dt <= 0) return;
     this.manaWarningLife = sim.player.dead ? 0 : Math.max(0, this.manaWarningLife - dt);
     this.sword.update(sim.player, dt, sim.time, sim.interpolationAlpha);
-    this.skillEffects.update(dt);
+    this.skillEffects.update(dt, sim.enemies);
     this.meleeSkills.update(sim.player, dt, sim.interpolationAlpha);
     for (const spark of this.sparks) {
       spark.life -= dt;

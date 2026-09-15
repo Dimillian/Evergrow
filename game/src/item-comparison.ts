@@ -13,17 +13,41 @@ export function comparisonSlot(sheet: CharacterSheet, item: Item, alternate = fa
 /** Shared by ground, inventory and vendor inspection; never consumes gameplay keys. */
 export class ItemComparisonInput {
   alternate = false;
-  constructor(target: EventTarget, changed: () => void, signal: AbortSignal) {
+  focusIndex = 0;
+  private readonly changed: () => void;
+  isToggleActive?: () => boolean;
+
+  constructor(target: EventTarget, changed: () => void, signal: AbortSignal, isToggleActive?: () => boolean) {
+    this.changed = changed;
+    this.isToggleActive = isToggleActive;
     const set = (value: boolean) => { if (value !== this.alternate) { this.alternate = value; changed(); } };
     target.addEventListener('keydown', raw => {
       const event = raw as KeyboardEvent;
       if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') set(true);
+      if (event.key === 'Alt' || event.code === 'AltLeft' || event.code === 'AltRight') {
+        if (!this.isToggleActive || this.isToggleActive()) {
+          event.preventDefault();
+          this.toggleFocus();
+        }
+      }
     }, { signal, capture: true });
     target.addEventListener('keyup', raw => {
       const event = raw as KeyboardEvent;
       if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') set(event.shiftKey);
     }, { signal, capture: true });
     target.addEventListener('pointerover', raw => set((raw as PointerEvent).shiftKey), { signal, capture: true });
-    target.addEventListener('blur', () => set(false), { signal });
+    target.addEventListener('blur', () => { set(false); this.resetFocus(); }, { signal });
+  }
+
+  toggleFocus(max = 2): void {
+    this.focusIndex = (this.focusIndex + 1) % max;
+    this.changed();
+  }
+
+  resetFocus(): void {
+    if (this.focusIndex !== 0) {
+      this.focusIndex = 0;
+      this.changed();
+    }
   }
 }

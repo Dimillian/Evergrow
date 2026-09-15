@@ -1,3 +1,4 @@
+import { mapIconVisible, type MapIconVisibility } from './map-legend-content.ts';
 import { projectMapPoint, type MapView } from './map-view.ts';
 import type { JourneyGoal } from './journey-state.ts';
 import { drawMapSymbol } from './map-symbol-art.ts';
@@ -10,8 +11,8 @@ export function drawJourneyDestination(c:CanvasRenderingContext2D,x:number,y:num
   c.save();c.translate(x,y);c.fillStyle='#10202a';c.beginPath();c.arc(0,0,size+2,0,Math.PI*2);c.fill();
   drawMapSymbol(c,'destination',size,'#ead7a1','#10202a');c.restore();
 }
-export function drawJourneyMapMarker(c:CanvasRenderingContext2D,view:MapView,marker:JourneyMarker|null,edge:boolean){
-  if(!marker)return;
+export function drawJourneyMapMarker(c:CanvasRenderingContext2D,view:MapView,marker:JourneyMarker|null,edge:boolean,visibility?:MapIconVisibility){
+  if(!marker || !mapIconVisible(visibility, marker.known ? 'journey:destination' : 'journey:search'))return;
   const p=projectMapPoint(marker.x,marker.y,view),cx=view.x+view.width/2,cy=view.y+view.height/2;
   const dx=p.x-cx,dy=p.y-cy,scale=Math.min(1,(view.width/2-11)/Math.max(1,Math.abs(dx)),(view.height/2-11)/Math.max(1,Math.abs(dy)));
   if(!edge&&scale<1&&!marker.known){/* The clipped search circle may still intersect this view. */}

@@ -3,6 +3,7 @@ import { auraPower, manaCapacity } from './auras.ts';
 import { lungeReturn } from './unique-combat.ts';
 import { basicAttackWeapon } from './equipment.ts';
 import { PORTAL_RULES } from './travel.ts';
+import { portalDestinationLabel, type PortalActionView } from './portal-destination.ts';
 import { TouchInput, type TouchAction } from './touch-input.ts';
 import { touchTargeting } from './touch-targeting.ts';
 import { resolveSkill } from './skill-progression.ts';
@@ -202,12 +203,15 @@ export class TouchHUD {
     this.element.querySelector('.touch-dodge')!.classList.toggle('is-unavailable',player.dodgeCharges===0);
     this.element.querySelector('.touch-attack')!.classList.toggle('is-unavailable',player.mana<basicAttackManaCost(basicAttackWeapon(player),player.derived));
   }
-  setPortal(progress: number | null, returning: boolean) {
+  setPortal(view: PortalActionView) {
     if(!this.active) return;
+    const { progress, mode, destination } = view;
     const el=this.element.querySelector<HTMLButtonElement>('[data-touch-menu="portal"]')!;
-    const label=progress!==null ? `Cancel portal · ${(PORTAL_RULES.channel*(1-progress)).toFixed(1)} seconds` : returning ? 'Locate return portal' : 'Town portal';
+    const destinationLabel=portalDestinationLabel(destination);
+    const label=progress!==null ? `Cancel portal opening to ${destinationLabel} · ${(PORTAL_RULES.channel*(1-progress)).toFixed(1)} seconds` : mode==='return' ? `Return to ${destinationLabel}` : mode==='locate' ? `Locate return portal to ${destinationLabel}` : mode==='unavailable' ? 'Town portal unavailable in sanctuary. Explore outside the sanctuary to open one' : `Open town portal to ${destinationLabel}`;
     if(el.getAttribute('aria-label')!==label) el.setAttribute('aria-label',label);
-    el.querySelector('small')!.textContent=progress!==null ? 'Cancel' : returning ? 'Return' : 'Portal';
+    el.querySelector('small')!.textContent=progress!==null ? 'Cancel' : mode==='return' ? 'Return' : mode==='locate' ? 'Locate' : mode==='unavailable' ? 'Unavailable' : 'Portal';
+    el.disabled=mode==='unavailable';
     el.classList.toggle('is-held',progress!==null);
   }
   dispose() { this.clear(); this.abort.abort(); this.element.remove(); this.mount.classList.remove('touch-mode'); document.documentElement.classList.remove('touch-mode'); this.mount.classList.remove('touch-phone-landscape'); }

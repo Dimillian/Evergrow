@@ -1,5 +1,6 @@
 import type { ConsolePanel } from './console-panel.ts';
 import { canUseLocalConsole, isConsoleShortcut } from './console-access.ts';
+import { MapIconVisibility } from './map-legend-content.ts';
 import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { RiftPanel } from './rift-panel.ts';
 import { RiftWorld } from './rift-world.ts';
@@ -20,7 +21,8 @@ import { eventInteractionSites } from './poi-content.ts';
 import { basicAttackWeapon } from './equipment.ts';
 import { GroundLootHighlight } from './ground-loot-highlight.ts';
 import { createAppearanceEditor } from './character-editor.ts';
-import { executeAppearanceChange } from './character-commands.ts';
+import { executeAppearanceChange, executeSavedAppearanceChange } from './character-commands.ts';
+import type { SaveSlot } from './character-storage.ts';
 import { validCharacterLook, type CharacterLook } from './character-look.ts';
 import { directionalAimProfile } from './ranged-aim.ts';
 import { FramePacer } from './frame-pacer.ts';
@@ -49,6 +51,7 @@ import { EVENT_RULES, focusEvent, eventLabel, eventClaimed, isEventKind, type Ev
 import { executeEvent, eventProblem, claimCompletedEvent, pendingEventReward } from './poi-command.ts';
 import { activatePortalAnchor } from './travel-command.ts';
 import { townPortalAnchor, withinPortalReach, portalMapMarkers, type PortalAnchor } from './travel.ts';
+import { portalActionMode, portalDestinations, type PortalActionView } from './portal-destination.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import { ServicePanel } from './service-panel.ts';
 import { buildingNPC, focusNPC, canInteractNPC, type TownNPC } from './npcs.ts';
@@ -103,6 +106,7 @@ export class Game {
   private activeRiftPortal: string|null=null;
   private expeditionPanel: ExpeditionPanel;
   private activeExpeditionTable: string | null = null;
+  private mapIcons = new MapIconVisibility();
   private dungeonMap: DungeonMap;
   private activeDungeonEntrance: DungeonEntrance | null = null;
   sim = new Simulation(this.world, { seed: 7319 });
@@ -120,6 +124,7 @@ export class Game {
   private inventoryPanel: InventoryPanel;
   private appearanceEditor?:ReturnType<typeof createAppearanceEditor>;
   private appearanceFromPause = false;
+  private appearanceFromHall = false;
   private creationLooks=new Map<number,CharacterLook>();
   private skillPanel: SkillTreePanel;
   private servicePanel: ServicePanel;
@@ -210,7 +215,7 @@ export class Game {
       const uiContext = this.uiCanvas.getContext('2d');
       if (!uiContext) throw new Error('The HUD requires a 2D canvas context.');
       this.uiContext = uiContext;
-      this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap());
+      this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap(), undefined, this.mapIcons);
       this.lifetime.defer(() => this.worldMap.dispose());
       this.worldMap.setEncounterLevelReader(poi => isEventKind(poi.kind)||poi.kind==='dungeon' ? activityLevel(poi,this.journeys.facts(),this.overworld.seed) : null);
     this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
@@ -244,6 +249,7 @@ export class Game {
         volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
         chronicle: onCached => this.saveClient.chronicle(onCached),
         create: (index, name, weapon, seed) => this.editNewCharacter(index, name, weapon, seed),
+        editAppearance: slot => this.editHallAppearance(slot),
         continue: index => this.continueCharacter(index), continueRecovery: (index, token) => this.continueCharacter(index, token), remove: (index, expected) => this.deleteCharacter(index, expected),
         read: index => this.saveClient.inspect(index), source: mode => this.selectSaveSource(mode),
         retry: () => { void this.retryCloudSaves(); },
@@ -257,7 +263,7 @@ export class Game {
       }));
       this.riftPanel=this.lifetime.own(new RiftPanel(this.shell.panelMount,{close:()=>this.resume(),enter:async action=>{const ok=await this.switchDungeon(action);if(ok)this.resume();return ok;}}));
       this.expeditionPanel=this.lifetime.own(new ExpeditionPanel(this.shell.panelMount,{close:()=>this.resume(),enter:async action=>{const ok=await this.switchDungeon(action);if(ok)this.resume();return ok;}}));
-      this.dungeonMap = this.lifetime.own(new DungeonMap(this.shell.mapMount,()=>this.closeMap(),()=>this.worldMap.open({x:this.sim.expeditions.surfaceX,y:this.sim.expeditions.surfaceY,angle:0})));
+      this.dungeonMap = this.lifetime.own(new DungeonMap(this.shell.mapMount,()=>this.closeMap(),()=>this.worldMap.open({x:this.sim.expeditions.surfaceX,y:this.sim.expeditions.surfaceY,angle:0}), this.mapIcons));
       this.eventPanel = this.lifetime.own(new EventPanel(this.shell.panelMount, {
         enter: entrance => { this.resume(); this.switchDungeon({kind:'enter',entrance}); },
         close: () => this.resume(), choose: (site, choice) => { this.resume(); this.startEvent(site, choice); },
@@ -641,7 +647,8 @@ export class Game {
   private closeAppearanceEditor() {
     this.appearanceEditor?.dispose();this.appearanceEditor=undefined;this.clearInput();
     if(this.disposed)return;
-    this.titleScreen.setEditorOpen(false);
+    this.titleScreen.setEditorOpen(false, this.appearanceFromHall);
+    this.appearanceFromHall = false;
     if (this.appearanceFromPause) { this.appearanceFromPause = false; if (this.phase === 'character') this.panels.resume(); }
     else if(this.phase==='character'){this.inventoryPanel.open(this.sim.player);this.inventoryPanel.element.querySelector<HTMLButtonElement>('[data-edit-appearance]')?.focus();}
   }
@@ -671,6 +678,28 @@ export class Game {
         });
         if(result.ok)this.closeAppearanceEditor();return result;
       },{ok:false,message:'A save is already in progress.'}),
+    });
+  }
+  private editHallAppearance(selected: SaveSlot) {
+    if (this.phase !== 'ready' || this.hallBusy || this.appearanceEditor || this.disposed || !selected.record || selected.conflict) return;
+    const slot = structuredClone(selected), record = slot.record!;
+    this.appearanceFromHall = true;
+    this.titleScreen.setEditorOpen(true); this.clearInput();
+    this.appearanceEditor = createAppearanceEditor(this.shell.panelMount, {
+      sheet: record.checkpoint.character, name: record.name,
+      onCancel: () => this.closeAppearanceEditor(),
+      onSave: async look => {
+        if (this.hallBusy || this.disposed) return {ok:false, message:'A save is already in progress.'};
+        this.hallBusy = true;
+        try {
+          const result = await executeSavedAppearanceChange(this.session.repository, slot, look, Date.now());
+          if (result.ok && !this.disposed) {
+            this.titleScreen.updateSlot({...slot, record:result.record, token:result.token});
+            this.closeAppearanceEditor();
+          }
+          return result;
+        } finally { this.hallBusy = false; }
+      },
     });
   }
   private async createCharacter(index: number, name: string, weapon: StarterLoadoutId, seed: number, look:CharacterLook):Promise<boolean> {
@@ -717,7 +746,7 @@ export class Game {
     });
     await this.exploration.ready;
     if (this.disposed) return;
-    this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap());
+    this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap(), undefined, this.mapIcons);
     this.worldMap.setEncounterLevelReader(poi => isEventKind(poi.kind)||poi.kind==='dungeon' ? activityLevel(poi,this.journeys.facts(),this.overworld.seed) : null);
     this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
     this.worldMap.setEventStateReader(poi => { if(poi.kind==='dungeon'){if(this.sim.expeditions.cleared?.includes(poi.id))return 'Cleared';const run=this.sim.expeditions.runs.find(r=>r.entrance.id===poi.id);return run?(run.states.warden.hp<=0?'Cleared':'Expedition active'):null;} const record = this.sim.eventState.sites[poi.id]; return isEventKind(poi.kind) ? eventLabel(record ?? { id: poi.id, kind: poi.kind }, this.sim.eventState, this.sim.getCampState(poi.id) === 'cleared') : null; });
@@ -991,8 +1020,10 @@ export class Game {
       if (site.kind === 'cryptChest') {
           const result = await claimDungeonChest(this.sim, site.index, c => this.persistTravel(c));
           channel.cancel();
-          if (result.ok)
-              this.renderer.handleEvents([{ type: 'blast', x: site.x, y: site.y, radius: 70, duration: .6, color: '#d7c18a' }], this.reducedMotion);
+          if (result.ok) {
+              if(result.celebration)this.renderer.handleEvents([result.celebration],this.reducedMotion);
+              else if(!this.sim.dungeonFloor?.rift)this.renderer.handleEvents([{type:'blast',x:site.x,y:site.y,radius:70,duration:.6,color:'#d7c18a'}],this.reducedMotion);
+          }
           this.notify(result.message);
           return;
       }
@@ -1033,7 +1064,9 @@ export class Game {
     if (this.savingAction || !this.panels.simulationActive || !this.session.active) return;
     const p = this.sim.player, link = this.sim.travel.returnTo;
     if (this.world.isSanctuary(p.x, p.y)) {
-      if (link) { this.renderer.portalGuide = 4; this.notify('Return portal marked on your map.'); }
+      const anchor = this.returnPortalInReach();
+      if (anchor) { void this.travelThrough(anchor, true); }
+      else if (link) { this.renderer.portalGuide = 4; this.notify('Return portal marked on your map.'); }
       else this.notify('Explore outside the sanctuary to open a town portal.');
       return;
     }
@@ -1041,6 +1074,23 @@ export class Game {
     this.sim.clearCombatInput();
     const problem = this.sim.portal.start(p, this.world);
     if (problem) this.notify(problem);
+  }
+
+  private returnPortalInReach(): PortalAnchor | undefined {
+    const link = this.sim.travel.returnTo;
+    if (!link) return undefined;
+    const anchor = this.overworld.getPortalAnchor(link.town);
+    return withinPortalReach(this.sim.player, anchor, this.world) ? anchor : undefined;
+  }
+
+  private portalActionView(): PortalActionView {
+    const destinations = portalDestinations({ seed: this.overworld.seed,
+      home: this.overworld.getPortalAnchor(this.sim.travel.homeTown), travel: this.sim.travel, expeditions: this.sim.expeditions });
+    this.renderer.portalDestinations = destinations;
+    const progress = this.sim.portal.active ? this.sim.portal.progress : null;
+    const inSanctuary=this.world.isSanctuary(this.sim.player.x,this.sim.player.y),returnInReach=!!this.returnPortalInReach();
+    const mode=portalActionMode(progress!==null,inSanctuary,!!destinations.returnTo,returnInReach);
+    return {mode,progress,destination:mode==='locate'||mode==='return'?destinations.returnTo!:destinations.home};
   }
 
   private setLocationWorld(checkpoint: CharacterCheckpoint) {
@@ -1219,7 +1269,8 @@ export class Game {
       if(!this.savingAction&&!this.sim.player.dead&&this.sim.dungeonFloor&&!this.sim.portal.ready&&now>=this.nextEventClaim){
           this.nextEventClaim=now+250;
           const index=this.sim.dungeonFloor.chests.findIndex((_,i)=>!dungeonChestProblem(this.sim,i));
-          if(index>=0)void this.durable(async()=>{const result=await claimDungeonChest(this.sim,index,c=>this.persistTravel(c));if(!result.ok){this.nextEventClaim=performance.now()+30000;this.notify(result.message);}},undefined);
+          if(index>=0)void this.durable(async()=>{const result=await claimDungeonChest(this.sim,index,c=>this.persistTravel(c));if(!result.ok){this.nextEventClaim=performance.now()+30000;this.notify(result.message);}
+            else if(result.celebration){this.renderer.handleEvents([result.celebration],this.reducedMotion);this.notify(result.message);}},undefined);
       }
       if (this.sim.portal.ready) this.travelThrough(this.overworld.getPortalAnchor(this.sim.travel.homeTown), false);
       const run=currentDungeon(this.sim.expeditions);
@@ -1234,9 +1285,9 @@ export class Game {
     }
     this.shell.setBuffs(activeBuffs(this.sim.player, this.sim.groundEffects));
     this.shell.shortcutMenu.setPoints(this.sim.player.character.statPoints, this.sim.player.character.skillPoints);
-    this.shell.setPortalState(this.sim.portal.active ? this.sim.portal.progress : null,
-      !!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x, this.sim.player.y));
-    if(this.touch.active) this.touch.setPortal(this.sim.portal.active ? this.sim.portal.progress : null,!!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x,this.sim.player.y));
+    const portalView = this.portalActionView();
+    this.shell.setPortalState(portalView);
+    if(this.touch.active) this.touch.setPortal(portalView);
     this.renderer.pointerX = this.mouse.x;
     this.renderer.pointerY = this.mouse.y;
     this.renderer.inspectedEnemyId = this.shell.targetBuffs.held ? this.renderer.targetEffects?.id ?? null : null;
@@ -1310,7 +1361,7 @@ export class Game {
       if (dungeonRun) this.dungeonMap.setExplorationPointer(pointer);
       else this.worldMap.setExplorationPointer(pointer);
     }
-    if (this.phase !== 'ready' && dungeonRun && this.renderer.navigationVisible) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time,this.sim.enemies);
+    if (this.phase !== 'ready' && dungeonRun && this.renderer.navigationVisible) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time,this.sim.enemies,this.mapIcons);
     if (this.phase !== 'ready' && !dungeonRun && this.renderer.navigationVisible) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, this.sim.time,
       this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
         x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
@@ -1345,13 +1396,13 @@ export class Game {
     const pad = this.gamepad;
     if (pad.pressed.size) void this.audio.unlock().catch(() => {});
     if(this.phase==='console'){if(pad.pressed.has(PAD.dodge)||pad.pressed.has(PAD.pause))this.resume();return;}
-    if (this.phase === 'ready' && this.titleScreen.updateOverlayGamepad(pad, now)) return;
-    if(this.chronicle.updateGamepad(pad,now))return;
     if(this.appearanceEditor){
       if(pad.pressed.has(PAD.dodge)||pad.pressed.has(PAD.pause))this.appearanceEditor.cancel();
       else this.appearanceEditor.updateGamepad(pad,now);
       return;
     }
+    if (this.phase === 'ready' && this.titleScreen.updateOverlayGamepad(pad, now)) return;
+    if(this.chronicle.updateGamepad(pad,now))return;
     if (pad.active && !this.usingGamepad) {
       this.input.clear(); this.sim.clearInput(); this.usingGamepad = true; this.touch.setActive(false); this.usingGamepad = true;
       this.padAimAngle = this.sim.player.angle;

@@ -1,5 +1,57 @@
 # Evergrow changelog
 
+## v0.6.5 — 2026-09-15T07:04:00Z
+
+### New
+
+- Hover skills in the inventory bar or assignment picker to see their effects, current rank, Technique, mana cost, cooldown and weapon requirements.
+
+### Tweaks
+
+- Fireball has a turbulent flame core and ember trail; Frost Lance has a crystalline spear and shatters at each pierced enemy.
+- Ice Nova spreads branching frost and rising crystals. Absolute Zero gathers a larger crown of ice.
+- Meteor and Cataclysm have richer falling embers, fiery impact waves, molten cracks and flying stone fragments.
+- Tempest has a rotating storm boundary and lightning flashes synchronized with its damage pulses.
+- Spell effects keep their existing damage and timing, with reduced-motion support and clear space to read combat.
+
+## v0.6.4 — 2026-09-15T06:21:00Z
+
+### New
+
+- Arc Lightning travels visibly between enemies with branching sparks, bright arc tips, impact halos and light cast onto the surroundings.
+
+### Tweaks
+
+- Arc Lightning deals damage when each jump arrives, with about 11% less base damage. Cast speed still affects casting rather than arc travel.
+- Storm Circuit keeps eight hits and revisits, now retaining 78% damage per jump and costing 35% more mana instead of 70%.
+- Two-handed weapon comparisons show two cards instead of three. Press Alt or click the comparison control to inspect the other equipped hand; stat changes still account for both hands.
+- What's New reserves warning banners for save resets and required player actions, removing routine save-preservation and refresh reminders.
+
+## v0.6.3 — 2026-09-15T05:36:00Z
+
+### New
+
+- Redesigned character hall shows equipped gear with hover inspection, location, gold, attributes, gear power and play time before you enter the world.
+- Edit a saved character's appearance directly from the hall while keeping their progress and equipment.
+- Map legends let you filter landmarks and ping the nearest service.
+- Press F3 for an optional performance monitor with live graphs.
+
+### Tweaks
+
+- Characters have clearer side profiles, more natural articulated legs and refined hair, facial hair and armor in every direction.
+- Town portals reflect their destination with biome colors, motes and clearer destination labels.
+- Use the portal shortcut near your return portal to travel back; farther away, it highlights the portal.
+- Gold and resource drops gently hop, with colored halos helping health and mana vials stand out.
+- Rift victory shows your elapsed clear time and celebrates the automatic treasure opening; rift maps use distinct crimson portal markers.
+- Character-hall layouts adapt more comfortably to phones and handheld screens.
+
+### Fixes
+
+- Character-hall saves refresh after appearance edits, and controller navigation skips hidden controls.
+- Boot cuffs no longer obscure knees, while facial-hair styles retain their shape in side views.
+- Full dungeon maps stay sharp and correctly sized on smaller screens, with more reliable zoom and legend controls.
+- Rift reward retries cannot repeat the victory celebration.
+
 ## v0.6.2 — 2026-09-14T16:17:00Z
 
 ### New
@@ -20,7 +72,7 @@
 - Skill presses during action recovery are remembered briefly, making spells such as Meteor and Cataclysm respond more reliably.
 - Rift clearings retain their biome's ground detail, and enlarged trees and rocks render more sharply.
 
-> Characters and progress are preserved. Existing regular weapons and gloves receive the new balance values; obsolete caster affixes on melee weapons are replaced with suitable bonuses. Existing active charms stay active. Reload the game to apply this update.
+- Existing regular weapons and gloves receive the new balance values; obsolete caster affixes on melee weapons become suitable bonuses.
 
 ## v0.6.1 — 2026-09-14T13:48:00Z
 
@@ -43,7 +95,7 @@
 - Rift terrain, water, collision and maps stay aligned when switching between old and new layouts.
 - Protection ends immediately when its caster dies, is interrupted or moves out of range; special attacks stop when the hunt ends.
 
-> Existing characters and active rifts remain intact. Start a new rift to experience the new layouts and encounters. The ten-minute timer, progress target and rewards are unchanged. Reload the game to apply this update.
+- New rift layouts and encounters appear in newly started rifts.
 
 ## v0.6.0 — 2026-09-14T13:11:00Z
 
@@ -72,7 +124,7 @@
 - Holding Alt keeps ground-item comparisons open reliably, including when the pointer remains still.
 - Rift menus fit the game window, with clearer key selection and modifier tooltips.
 
-> Existing local and cloud characters keep their progress and equipment. Available rift records carry into Chronicles; newly tracked details begin with this update. No save reset or skill refund is required. Reload the game to apply this update.
+- Available rift records carry into Chronicles; newly tracked details begin with this update.
 
 ## v0.5.3 — 2026-09-14T08:21:00Z
 
@@ -87,8 +139,6 @@
 - Selecting an item in a vendor no longer leaves its tooltip stuck open after moving the mouse away.
 - Moving across unrelated controls no longer postpones tooltip dismissal.
 - Keyboard inspection and nested explanations remain accessible, including with reduced motion enabled.
-
-> Existing local and cloud characters remain compatible. No save reset or skill refund is required. Reload the game to apply this update.
 
 ## v0.5.2 — 2026-09-14T06:07:00Z
 
@@ -119,8 +169,6 @@
 - The live Tab map preserves movement, Journey progress and loot reveal; its dungeon player marker stays clearly visible.
 - Opening a character or adventure panel from pause returns you to the menu when closed.
 
-> Existing local and cloud characters remain compatible. No save reset or skill refund is required. Reload the game to apply this update.
-
 ## v0.5.1 — 2026-09-13T16:53:00Z
 
 ### New
@@ -149,8 +197,6 @@
 - Mobile combat gestures no longer trigger the browser's pinch zoom.
 - Living Stone's smaller nodes describe their armor bonus correctly; the endpoint clearly enables Afterguard.
 - Expired effects, consumed marks and removed Unique powers clear their corresponding status indicators.
-
-> Existing local and cloud characters remain compatible. No save reset or skill refund is required. Reload the game to apply this update.
 
 ## v0.5.0 — 2026-09-13T10:06:00Z
 
@@ -181,8 +227,6 @@
 - Lunge’s free return shows its remaining window and requires a fresh press, including on touch and controller.
 - Returning attacks, delayed shatters, decoys and barriers respect terrain, attack commitment and their finite limits.
 
-> Existing characters and cloud saves remain compatible. All twelve Uniques can drop for existing characters; no save reset or additional skill refund is required. Reload the game to apply this update.
-
 ## v0.4.0 — 2026-09-13T06:14:00Z
 
 ### New
@@ -211,7 +255,7 @@
 - Enchanting retains the selected item and shows why unavailable upgrades cannot be purchased.
 - Direct trading validates price, ownership, inventory space and saving before committing items or gold.
 
-> Existing characters receive a one-time refund of all skill-tree and purchased-rank points. Unlock and reassign your skills in the new atlas before continuing. Level, attributes, equipment, gold and world progress are preserved. Reload the game to apply this update.
+> Existing characters receive a one-time refund of skill-tree and purchased-rank points. Unlock and reassign your skills before continuing.
 
 ## v0.3.17 — 2026-09-12T18:12:00Z
 
@@ -230,8 +274,6 @@
 
 - Defensive upgrade previews show small percentage gains accurately instead of rounding them away.
 - Defensive ranks continue extending protection after reaching their mitigation limit.
-
-> Existing characters keep their progress, purchased ranks, specializations, skill assignments and unspent points. No additional skill refund or save reset. Reload the game to apply this update.
 
 ## v0.3.16 — 2026-09-12T16:33:00Z
 
@@ -257,7 +299,7 @@
 - Skill descriptions, previews and effects more closely match their actual combat behavior.
 - Returning characters whose old tree was refunded open the new atlas with gameplay paused and rebuilding instructions visible.
 
-> Existing characters keep their level, XP, attributes, equipment, gold and world progress. The old skill tree receives a free one-time refund of all node and purchased-rank points. Unlock your skills again and reassign the five skill slots. Reload the game to apply this update.
+> Existing characters receive a one-time refund of skill-tree and purchased-rank points. Unlock and reassign your skills before continuing.
 
 ## v0.3.15 — 2026-09-12T09:37:00Z
 
@@ -274,8 +316,6 @@
 - Failed cloud deletions keep the device recovery copy and show the actual error.
 - Save messages reflect the active character; another slot’s error no longer makes a saved character appear unsaved.
 - Failed device saves remain visible until a checkpoint succeeds.
-
-> Existing characters retain their progress. No automatic save reset is required. Reload the game to apply this update.
 
 ## v0.3.14 — 2026-09-11T16:16:00Z
 
@@ -296,8 +336,6 @@
 
 - Fireball uses its intended burn rate instead of combining it with the stronger basic-fire burn.
 
-> Existing characters retain their progress. Existing item bonuses update when loaded; no save reset is required. Reload the game to apply this update.
-
 ## v0.3.13 — 2026-09-11T13:50:00Z
 
 ### Tweaks
@@ -311,8 +349,6 @@
 ### Fixes
 
 - Mana regeneration comparisons use matching units for the item bonus and equipment change.
-
-> Existing characters retain their progress. Existing items receive the updated mana bonuses when loaded; no save reset is required. Reload the game to apply this update.
 
 ## v0.3.12 — 2026-09-11T09:19:00Z
 
@@ -330,8 +366,6 @@
 - Bosses choose a ranged attack when their queued melee sweep cannot reach you.
 - The Grave Marshal attacks instead of rallying when no nearby surviving guards can benefit.
 - Warden attack warnings correctly show when major attacks have locked their aim.
-
-> Existing characters and progress are preserved. No save reset is required.
 
 ## v0.3.11 — 2026-09-11T08:56:00Z
 
@@ -356,8 +390,6 @@
 - Loot visibility controls use consistent, readable menu styling.
 - Repeated interruptions no longer let dangerous enemies skip their attack recovery.
 
-> Existing characters and progress are preserved. No save reset is required.
-
 ## v0.3.10 — 2026-09-10T19:19:00Z
 
 ### Fixes
@@ -366,8 +398,6 @@
 - Blocked or out-of-reach tables no longer incorrectly show the level-20 requirement.
 - The expedition map background fills the panel, with the route kept neatly centered.
 - Cloud characters show a proper loading state instead of briefly displaying an invalid, unavailable slot.
-
-> Existing characters and progress are unchanged.
 
 ## v0.3.9 — 2026-09-10T19:13:00Z
 
@@ -382,8 +412,6 @@
 - An old device recovery no longer silently replaces the newer cloud character in the hall.
 - Interrupted uploads and unreadable recovery copies no longer hide valid cloud progress.
 - Background synchronization refreshes the selected character.
-
-> Existing characters and progress are preserved. No save reset is required.
 
 ## v0.3.8 — 2026-09-10T18:57:00Z
 
@@ -403,8 +431,6 @@
 - Window corners no longer crowd the emblem or close button on narrow screens.
 - Weapon damage stats blend into the tooltip without a pale background overlay.
 
-> Existing characters and progress are unchanged.
-
 ## v0.3.7 — 2026-09-10T12:22:00Z
 
 ### Tweaks
@@ -413,8 +439,6 @@
 - Item tooltips have richer rarity-colored light and a brief shimmer, with quieter equipped-item comparisons.
 - Square edges, crisp text and lighter window backdrops keep the interface consistent and the world visible.
 - Reduced-motion and reduced-transparency preferences retain clear, comfortable panels.
-
-> Existing characters and progress are unchanged.
 
 ## v0.3.6 — 2026-09-10T11:53:00Z
 
@@ -439,8 +463,6 @@
 - A problem with one cloud character no longer blocks other characters from loading or uploading.
 - Cloud save failures show clearer recovery actions, and the character hall opens without waiting for pending uploads.
 
-> Existing characters and progress are preserved. No save reset is required.
-
 ## v0.3.5 — 2026-09-10T06:09:00Z
 
 ### New
@@ -460,7 +482,7 @@
 - Settlement walls reuse their artwork for smoother rendering while their shadows keep moving.
 - Flickering scenery lights no longer rebuild their shadows every frame.
 
-> Existing characters and progress are preserved. The world clock follows saved play time and pauses with the game.
+- The world clock follows saved play time and pauses with the game.
 
 ## v0.3.4 — 2026-09-09T19:13:00Z
 
@@ -481,8 +503,6 @@
 - Newly purchased skill ranks and specializations become active immediately; you can still switch back manually.
 - The hovered item's comparison card stays closest to its slot, with equipped gear beside it.
 
-> Existing characters, items and progress are preserved.
-
 ## v0.3.3 — 2026-09-09T15:41:00Z
 
 ### New
@@ -500,7 +520,7 @@
 - Failed tab purchases never spend gold; repeated or outdated offers cannot unlock another tab.
 - A full storage tab never sends items into a different tab, and transfers preserve your scroll position.
 
-> Existing stored items remain in your free first tab. Characters and progress are preserved.
+- Existing stored items remain in the free first storage tab.
 
 ## v0.3.2 — 2026-09-09T15:21:00Z
 
@@ -538,7 +558,7 @@
 - Enhancements skip steps lost to rounding and charge once for the next real increase.
 - Rarity upgrades skip ineffective tiers; releveling with no stat gain cannot charge gold.
 
-> Existing charms rebalance in place, including stored stones: some affixes and values change. Characters retain their progress and items; no reset is required.
+- Existing charms rebalance in place, including stored stones; some affixes and values change.
 
 ## v0.3.0 — 2026-09-09T14:03:00Z
 
@@ -561,8 +581,6 @@
 
 - Starter armor improves correctly when enhanced or releveled.
 - Corrected Spirit milestone tracking, Tempest mana accounting and gold bonuses on level-up kills.
-
-> Existing characters and progress are preserved. Charms use their dedicated inventory only and become active when their level requirement is met.
 
 ## v0.2.1 — 2026-09-09T11:56:00Z
 
@@ -589,7 +607,7 @@
 - Existing characters keep their progress and explored map when towns upgrade.
 - Improved NPC shadows and corrected stall, banner and cart details.
 
-> Town shops refresh once. Characters blocked by rebuilt scenery move to a safe arrival nearby.
+- Town shops refresh once. Characters blocked by rebuilt scenery move to a safe arrival nearby.
 
 ## v0.1.15 — 2026-09-08T19:18:00Z
 
@@ -608,7 +626,7 @@
 - Event reinforcements arrive from closer, reachable approaches instead of getting stranded behind obstacles.
 - Enemies navigate narrow passages and curved bends more reliably.
 
-> Characters with an older saved dungeon expedition cannot load this version; start a fresh character. Existing saves remain stored. Characters without an older expedition are unaffected.
+> Characters with an older saved dungeon expedition cannot load this version; start a fresh character. Characters without an older expedition are unaffected.
 
 ## v0.1.14 — 2026-09-08T17:55:00Z
 
@@ -626,8 +644,6 @@
 
 - Journeys finds suitable onward roads when you outgrow a region.
 - Shops show their actual stock level separately from improvement services.
-
-> Existing characters and worlds are preserved. Previously activated encounters keep their levels and progress.
 
 ## v0.1.13 — 2026-09-08T16:22:00Z
 
@@ -676,7 +692,7 @@
 - Home panels and selling controls now use the game’s square-edged styling.
 - Save-file import and download are now limited to Local characters; Cloud progress continues syncing automatically.
 
-> Existing characters are preserved. Older Cloud characters show gear power after their next successful save.
+- Older Cloud characters show gear power after their next successful save.
 
 ## v0.1.8 — 2026-09-07T19:37:00Z
 
@@ -738,7 +754,7 @@
 - Corrected chapel orientation, den hollows and overlapping paths around chests and hamlets.
 - Starting towns and their southern approaches stay dry and clear.
 
-> New world generation requires a fresh character. Older saves are preserved but cannot be continued in this version.
+> New world generation requires a fresh character. Older saves cannot be continued in this version.
 
 ## v0.1.5 — 2026-09-07T13:30:00Z
 
@@ -781,7 +797,7 @@
 
 - Removed crowded skill paths and stretched cluster shapes.
 
-> Characters using removed skill-tree paths may need a fresh start. Original saves are preserved.
+> Characters using removed skill-tree paths may need a fresh start.
 
 ## v0.1.2 — 2026-09-07T11:19:00Z
 
@@ -807,7 +823,7 @@
 - Enemy debuffs show remaining duration.
 - Removed extra tooltip frames; improved controller navigation.
 
-> Old specialization builds may require a new character. Original saves are preserved.
+> Old specialization builds may require a new character.
 
 ## v0.1.1 — 2026-09-06T17:27:00Z
 

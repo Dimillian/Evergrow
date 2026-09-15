@@ -1,10 +1,12 @@
+import { RetainedTooltip } from './retained-tooltip.ts';
+import './skill-tree-panel.css';
 import { controls } from './control-preferences.ts';
 import { SKILL_ACTIONS } from './control-bindings.ts';
 import { drawFloatingHUD, type HUDOptions } from './hud.ts';
 import type { Player } from './model.ts';
 import type { SkillId } from './character-types.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
-import { INVENTORY_SKILL_BINDINGS, inventoryHUDLayout, inventorySkillPickerMarkup } from './inventory-skills.ts';
+import { INVENTORY_SKILL_BINDINGS, inventoryHUDLayout, inventorySkillPickerMarkup, inventorySkillTooltipMarkup } from './inventory-skills.ts';
 import { escapeUI, trapDialogFocus, uiIcon } from './ui-components.ts';
 import './inventory-hud.css';
 
@@ -20,6 +22,7 @@ interface InventoryHUDActions {
 export class InventoryHUD {
   readonly picker: HTMLElement;
   private readonly controls: HTMLElement;
+  private readonly tooltip: RetainedTooltip;
   private readonly dock: HTMLElement;
   private readonly canvas: HTMLCanvasElement;
   private lastDraw = 0;
@@ -47,7 +50,20 @@ export class InventoryHUD {
     this.picker.setAttribute('role', 'dialog'); this.picker.setAttribute('aria-modal', 'true');
     this.picker.setAttribute('aria-labelledby', 'inventory-quick-skills-title');
     root.append(this.controls, this.picker);
+    this.tooltip = new RetainedTooltip(root, 'inventory-skill-tooltip', 'skill-atlas-tooltip inventory-skill-tooltip');
     const options = { signal: this.lifetime.signal };
+    for (const surface of [this.controls, this.picker]) {
+      surface.addEventListener('pointerover', event => {
+        if (event.pointerType !== 'touch') this.showTooltip(event.target);
+      }, options);
+      surface.addEventListener('focusin', event => this.showTooltip(event.target), options);
+      surface.addEventListener('pointerout', event => {
+        const from = (event.target as Element).closest('[data-skill-slot], [data-assign-skill]');
+        if (from && !from.contains(event.relatedTarget as Node | null)) this.tooltip.defer();
+      }, options);
+      surface.addEventListener('focusout', () => this.tooltip.defer(), options);
+      surface.addEventListener('scroll', () => this.tooltip.hide(), { ...options, capture: true });
+    }
     this.controls.addEventListener('click', event => {
       const button = (event.target as Element).closest<HTMLElement>('[data-skill-slot]');
       if (button) this.details(Number(button.dataset.skillSlot));
@@ -72,7 +88,7 @@ export class InventoryHUD {
       else if (button.hasAttribute('data-picker-close')) this.dismiss();
     }, options);
     root.addEventListener('click', event => {
-      if (this.pickerOpen && !this.picker.contains(event.target as Node) && !this.controls.contains(event.target as Node)) {
+      if (this.pickerOpen && !this.picker.contains(event.target as Node) && !this.controls.contains(event.target as Node) && !(event.target as Element).closest('.ui-tooltip')) {
         event.preventDefault(); event.stopPropagation(); this.dismiss();
       }
     }, { ...options, capture: true });
@@ -81,16 +97,29 @@ export class InventoryHUD {
   }
 
   refresh(player: Player): void {
+    this.tooltip.hide();
     this.player = player;
     for (const [slot, button] of [...this.controls.querySelectorAll<HTMLButtonElement>('button')].entries()) {
       const id = player.character.skillSlots[slot], key = controls.label(SKILL_ACTIONS[slot]);
       const label = `${key}: ${id ? SKILL_DEFINITIONS[id].name : 'Empty slot'}. Click for skill details. Right-click to assign.`;
-      button.setAttribute('aria-label', label); button.title = label;
+      button.setAttribute('aria-label', label);
     }
     this.layout();
   }
 
+  private showTooltip(target: EventTarget | null): void {
+    if (!this.player || this.root.hidden || !(target instanceof Element)) return;
+    const anchor = target.closest<HTMLElement>('[data-skill-slot], [data-assign-skill]');
+    if (!anchor || anchor.closest('[inert]')) return;
+    const id = anchor.hasAttribute('data-skill-slot')
+      ? this.player.character.skillSlots[Number(anchor.dataset.skillSlot)] : anchor.dataset.assignSkill as SkillId;
+    if (!id || !SKILL_DEFINITIONS[id]) { this.tooltip.hide(); return; }
+    this.tooltip.element.style.setProperty('--tooltip-color', SKILL_DEFINITIONS[id].color);
+    this.tooltip.show(inventorySkillTooltipMarkup(this.player, id), anchor);
+  }
+
   private layout(): void {
+    this.tooltip.hide();
     if (this.root.hidden || !this.dock.clientWidth) return;
     const root = this.root.getBoundingClientRect(), dock = this.dock.getBoundingClientRect();
     const layout = inventoryHUDLayout(dock.width, dock.height);
@@ -143,6 +172,7 @@ export class InventoryHUD {
   }
 
   dismiss(restore = true): boolean {
+    this.tooltip.hide();
     if (!this.pickerOpen) return false;
     this.focus?.dispose(); this.focus = null; this.picker.hidden = true;
     this.controls.querySelectorAll('button').forEach(button => button.setAttribute('aria-expanded', 'false'));
@@ -150,6 +180,6 @@ export class InventoryHUD {
     return true;
   }
 
-  setInert(inert: boolean): void { this.controls.inert = inert; }
-  dispose(): void { this.dismiss(false); this.observer.disconnect(); this.lifetime.abort(); this.controls.remove(); this.picker.remove(); this.dock.remove(); }
+  setInert(inert: boolean): void { if (inert) this.tooltip.hide(); this.controls.inert = inert; }
+  dispose(): void { this.dismiss(false); this.observer.disconnect(); this.tooltip.dispose(); this.lifetime.abort(); this.controls.remove(); this.picker.remove(); this.dock.remove(); }
 }

@@ -1,4 +1,6 @@
-import type { CombatEvent, ProjectileStyle } from './model.ts';
+import { drawFireImpact, drawFrostBloom } from './elemental-spell-art.ts';
+import { drawLightning, lightningLight } from './chain-lightning-art.ts';
+import type { CombatEvent, Enemy, ProjectileStyle } from './model.ts';
 import type { PointLight } from './lighting.ts';
 import { drawGlow } from './lighting.ts';
 import { line, polygon, type Point } from './art-primitives.ts';
@@ -6,9 +8,9 @@ import { PROJECTILE_COLORS } from './projectile-art.ts';
 
 interface Area {
   x: number; y: number; radius: number; life: number; max: number; color: string;
-  style: ProjectileStyle; kind: 'blast' | 'block'; seed: number; meteor: boolean; earth: boolean;
+  style: ProjectileStyle; kind: 'blast' | 'block'; seed: number; meteor: boolean; earth: boolean; frostSpell: boolean; fireSpell: boolean; ultimate: boolean;
 }
-interface Link { points: Point[]; life: number; max: number; color: string; style: ProjectileStyle; }
+interface Link { travel: number; seed: number; targetId?: number; points: Point[]; life: number; max: number; color: string; style: ProjectileStyle; }
 const TAU = Math.PI * 2;
 const bounds = (v: number | undefined, low: number, high: number, fallback: number) =>
   Number.isFinite(v) ? Math.max(low, Math.min(high, v!)) : fallback;
@@ -34,31 +36,41 @@ export class SkillEffects {
         points.push([event.x + dx * t - dy / distance * offset, event.y + dy * t + dx / distance * offset - 16]);
       }
       const max = bounds(event.duration, .05, 8, style === 'arrow' ? .18 : .28);
-      this.links.push({ points, life: max, max, color, style });
+      const travel = bounds(event.travelDuration, 0, 1, 0);
+      this.links.push({ points, life: max + travel, max: max + travel, travel, seed: this.sequence++, targetId: event.chainTargetId, color, style });
       if (this.links.length > 24) this.links.shift();
     }
     if (event.type === 'blast' || event.type === 'block') {
       const meteor = event.type === 'blast' && event.groundKind === 'meteor';
       const max = meteor ? 1.15 : event.type === 'block' ? .32 : style === 'frost' ? .7 : .56;
       this.areas.push({ x: event.x, y: event.y, radius: event.type === 'block' ? 22 : bounds(event.radius, 8, 512, 55),
-        life: max, max, style, color, kind: event.type, meteor, earth: event.skill === 'earthshatter', seed: this.sequence++ });
+        life: max, max, style, color, kind: event.type, meteor, earth: event.skill === 'earthshatter', frostSpell: ['iceNova','absoluteZero','frostLance'].includes(event.skill ?? ''), fireSpell: event.skill === 'fireball', ultimate: event.skill === 'absoluteZero', seed: this.sequence++ });
       if (this.areas.length > 20) this.areas.shift();
     }
   }
 
-  update(dt: number): void {
+  update(dt: number, enemies: readonly Enemy[] = []): void {
     for (const strike of this.strikes) strike.life -= dt;
     this.strikes = this.strikes.filter(s => s.life > 0);
     for (const area of this.areas) area.life -= dt;
-    for (const link of this.links) link.life -= dt;
+    for (const link of this.links) {
+      if (link.targetId !== undefined && link.max - link.life < link.travel) {
+        const target = enemies.find(enemy => enemy.id === link.targetId);
+        if (target) {
+          const last = link.points[link.points.length - 1], dx = target.x - last[0], dy = target.y - 16 - last[1];
+          link.points = link.points.map((point, i) => { const t = i / (link.points.length - 1); return [point[0] + dx * t, point[1] + dy * t]; });
+        }
+      }
+      link.life -= dt;
+    }
     this.areas = this.areas.filter(area => area.life > 0);
     this.links = this.links.filter(link => link.life > 0);
   }
 
   getLights(): PointLight[] {
-    return this.areas.slice(-3).map(area => ({
+    return [...this.areas.slice(-3).map(area => ({
       x: area.x, y: area.y - 12, radius: Math.max(65, area.radius * 2.1), color: area.color, power: area.life / area.max * .95,
-    }));
+    })), ...this.links.filter(link => link.style === 'lightning').slice(-2).map(lightningLight)].slice(-3);
   }
 
   draw(c: CanvasRenderingContext2D, reducedMotion = false): void {
@@ -67,6 +79,7 @@ export class SkillEffects {
     c.globalCompositeOperation = 'lighter';
     for (const strike of this.strikes) this.drawStrike(c, strike, reducedMotion);
     for (const link of this.links) {
+      if (link.style === 'lightning') { drawLightning(c, link, reducedMotion); continue; }
       const life = Math.max(0, link.life / link.max);
       if (link.style === 'spirit') {
         c.globalAlpha = life * .4; line(c, link.points, '#84e4b6', 3);
@@ -137,22 +150,13 @@ export class SkillEffects {
       c.beginPath(); c.arc(0,0,area.radius * (reducedMotion ? 1 : .65 + progress * .35),0,TAU); c.stroke();
       c.restore(); return;
     }
-    if (area.meteor) {
-      c.globalCompositeOperation = 'source-over';
-      c.globalAlpha = life * .22; c.fillStyle = '#292321';
-      c.beginPath(); c.arc(0, 0, area.radius * (.65 + progress * .35), 0, TAU); c.fill();
-      c.globalCompositeOperation = 'lighter';
-      // Rolling pressure front and tall flame crown, not another persistent damage pulse.
-      const spread = reducedMotion ? .8 : 1 - Math.pow(life, 4);
-      c.strokeStyle = '#ffc77e'; c.lineWidth = 2 + life * 10; c.globalAlpha = life * .55;
-      c.beginPath(); c.arc(0, 0, area.radius * spread, 0, TAU); c.stroke();
-      for (let i = 0; i < 11; i++) {
-        const x = Math.sin(i * 2.4) * area.radius * spread * .65;
-        const y = Math.cos(i * 2.4) * area.radius * spread * .35;
-        const height = reducedMotion ? 15 : (35 + i % 4 * 17) * Math.sin(Math.PI * Math.min(1, progress * 1.5));
-        c.globalAlpha = life * .5;
-        polygon(c, [[x - 10 * life, y], [x - 7, y - height * .5], [x + 3, y - height], [x + 12 * life, y]], i % 2 ? '#ff853d' : '#ffce79');
-      }
+    if (area.frostSpell) {
+      drawFrostBloom(c, area.radius, life, area.seed, reducedMotion, area.ultimate);
+      c.restore(); return;
+    }
+    if (area.meteor || area.fireSpell) {
+      drawFireImpact(c, area.radius, life, area.seed, reducedMotion, area.meteor);
+      c.restore(); return;
     }
     const radius = area.radius * (reducedMotion ? 1 : 1 - Math.pow(life, 3));
     c.globalCompositeOperation = 'lighter';

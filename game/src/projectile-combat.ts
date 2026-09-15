@@ -175,7 +175,9 @@ export function advanceProjectiles(projectiles: Projectile[], dt: number, contex
         if(effects?.pursuitLoop)break;
         continue;
       }
-      if (effects && (effects.pierce ?? 0) > 0) { effects.pierce = (effects.pierce ?? 0) - 1; continue; }
+      if (effects && (effects.pierce ?? 0) > 0) {
+        if(projectile.skill==='frostLance') context.emit({type:'blast',x:enemy.x,y:enemy.y,radius:18,style:'frost',skill:'frostLance'});
+        effects.pierce = (effects.pierce ?? 0) - 1; continue; }
       if(!turnProjectile(projectile)){shatter(projectile,context);blast(projectile, context); projectile.life = 0;}
     }
   }

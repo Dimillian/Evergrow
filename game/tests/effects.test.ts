@@ -91,3 +91,14 @@ test('chain presentation honors the duration supplied by execution content', () 
   effects.update(.4); assert.equal(state.links.length, 1);
   effects.update(.9); assert.equal(state.links.length, 0);
 });
+
+test('traveling lightning light follows its leader, tracks moving targets, fades and stays bounded',()=>{
+ const effects=new SkillEffects();
+ effects.handle({type:'chain',x:0,y:0,toX:140,toY:0,chainTargetId:9,travelDuration:.2,duration:.28,style:'lightning'});
+ const initial=effects.getLights();assert.equal(initial.length,1);assert.equal(initial[0].x,0);assert.ok(initial[0].power>0);
+ effects.update(.1);const halfway=effects.getLights()[0];assert.ok(halfway.x>50&&halfway.x<90);
+ effects.update(.1,[{id:9,x:180,y:40} as import('../src/model.ts').Enemy]);
+ const arrival=effects.getLights()[0];assert.equal(arrival.x,180);assert.equal(arrival.y,24);
+ effects.update(.14);assert.ok(effects.getLights()[0].power<arrival.power);
+ effects.update(.15);assert.equal(effects.getLights().length,0);
+});

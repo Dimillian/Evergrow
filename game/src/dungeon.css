@@ -1,3 +1,4 @@
+@import './map-legend.css';
 .crypt-map { position:absolute; inset:0; z-index:35; display:grid; place-items:center; background:#020710a8; padding:24px; }
 .crypt-map[hidden] { display:none; }
 .crypt-map.crypt-map--exploration { background:none; }
@@ -5,10 +6,17 @@
 .crypt-map.crypt-map--exploration .ui-window[role="dialog"]::before, .crypt-map.crypt-map--exploration .ui-window[role="dialog"]::after,
 .crypt-map--exploration .ui-window-header { display:none; }
 .crypt-map .ui-window { width:min(1200px,96vw); }
-.crypt-map canvas { display:block; width:100%; max-height:78vh; object-fit:contain; touch-action:none; cursor:grab; }
+.crypt-map .crypt-map-canvas { display:block; width:100%; max-height:78vh; object-fit:contain; touch-action:none; cursor:grab; }
 
 .crypt-map-tooltip { position:fixed; z-index:90; pointer-events:none; padding:10px 14px; color:#d7d9c4; font-size:16px; }
 
 .crypt-map.crypt-map--exploration,
 .crypt-map.crypt-map--exploration * { pointer-events: none; }
 .crypt-map--exploration .crypt-touch-zoom { display: none; }
+
+.crypt-map .ui-window { width:min(1200px,100%); height:min(780px,100%); min-height:0; }
+.crypt-map-viewport { flex:1; min-width:0; min-height:0; position:relative; overflow:hidden; }
+.crypt-map .crypt-map-canvas { position:absolute; inset:0; width:100%; height:100%; max-height:none; object-fit:fill; }
+@media(max-width:900px),(max-height:560px) { .crypt-map:not(.crypt-map--exploration) { padding:10px; } .crypt-map .ui-window { height:100%; } }
+
+.crypt-touch-zoom { position:absolute; bottom:12px; right:12px; z-index:2; }

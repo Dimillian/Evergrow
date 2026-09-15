@@ -27,3 +27,7 @@ Level-up uses a warm expanding foot-ring, translucent pillar and rising filament
 `game/scripts/render-reward-animations.mjs` exports the same presentation scenes with an optional installed native Canvas implementation (`CANVAS_MODULE`). These CPU captures are before CRT and omit sound; the browser preview provides the real post-processing and synthesized sound.
 
 Code tests cover quiet-time accumulation, burst limits, frame-rate independence, monotonic settling, overflow, exact reduced-motion values, debit/reset reconciliation, merged level-point announcements, bounded audio scheduling and existing exactly-once wallet rewards.
+
+## Ground drop visibility
+
+Settled coin piles make short, sequenced 3–5 world-unit hops roughly every 4–6 seconds, with seeded timing and height variation. Mana vials share the quiet hop at 80% height and have a soft blue backglow with brighter blue liquid. Health vials share the same gentle hop and have a matching soft red backglow. Shadows stay on the ground. Reduced motion disables hops while retaining both resource halos. `drop-idle-motion.ts` owns presentation timing without consuming gameplay RNG or changing pickup/save coordinates. Initial coin scatter and treasure flights remain authoritative until settled. Preview in Equipment → Coins & mana drops (`/loot.html?resources`).
