@@ -1,4 +1,5 @@
-.map-legend-layout { display:flex; position:relative; flex:1; min-height:0; min-width:0; overflow:hidden; }
+/* Keep map/legend layers beneath the header and its button tooltips. */
+.map-legend-layout { display:flex; position:relative; isolation:isolate; flex:1; min-height:0; min-width:0; overflow:hidden; }
 .map-legend { width:334px; flex:0 0 334px; min-height:0; display:flex; flex-direction:column; background:#101b22; border-left:1px solid var(--ui-line-strong); color:var(--ui-text); z-index:4; }
 .map-legend[hidden] { display:none; }
 .map-legend-heading { display:flex; align-items:center; justify-content:space-between; padding:13px 14px 9px; gap:8px; }
