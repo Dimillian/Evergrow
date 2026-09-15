@@ -7,7 +7,7 @@ import { UNIQUE_RULES } from './unique-content.ts';
 import { AURA_RULES } from './aura-content.ts';
 
 export type EnemyDebuffState = Pick<Enemy, 'hp'> & Partial<Pick<Enemy,
-  'id' | 'state' | 'burnTime' | 'burnDps' | 'slowTime' | 'slowFactor' | 'stagger' | 'freezeTime' | 'stunTime' | 'fractureTime' | 'statusDurations' | 'auraExposure'>>;
+  'id' | 'state' | 'burnTime' | 'burnDps' | 'slowTime' | 'slowFactor' | 'stagger' | 'freezeTime' | 'stunTime' | 'fractureTime' | 'chillTime' | 'statusDurations' | 'auraExposure'>>;
 export interface EnemyDebuff extends ActiveBuff { label: string }
 const active = (n: number | undefined): n is number => Number.isFinite(n) && n! > 0;
 /** Target-owned presentation. Original durations come from application, never inferred from elapsed time. */
@@ -20,7 +20,9 @@ export function enemyDebuffs(enemy: EnemyDebuffState, player?: Pick<Player, 'ski
       progress: duration ? undefined : 1, summary, term });
   };
   if (active(enemy.burnTime) && active(enemy.burnDps)) add('burn', 'Burn', 'fireball', '#f5ab75', enemy.burnTime, enemy.statusDurations?.burn, `${Number(enemy.burnDps.toFixed(1))} fire damage / second.`);
-  if (active(enemy.slowTime) && Number.isFinite(enemy.slowFactor) && enemy.slowFactor! < 1)
+  if (active(enemy.chillTime))
+    add('chill', 'Chilled', 'frostLance', '#9bdbea', enemy.chillTime, enemy.statusDurations?.chill, 'Chilled by frost. Vulnerable to Melt and Superconduct.');
+  else if (active(enemy.slowTime) && Number.isFinite(enemy.slowFactor) && enemy.slowFactor! < 1)
     add('slow', 'Slowed', 'smokeVeil', '#9bdbea', enemy.slowTime, enemy.statusDurations?.slow, `${Math.round((1 - enemy.slowFactor!) * 100)}% slower movement.`);
   if (active(enemy.freezeTime)) add('freeze', 'Frozen', 'absoluteZero', '#c0f5ff', enemy.freezeTime, enemy.statusDurations?.freeze, 'Cannot move or attack.');
   else if (active(enemy.stunTime)) add('stun', 'Stunned', 'shieldBash', '#ffe1a1', enemy.stunTime, enemy.statusDurations?.stun, 'Cannot move or attack.');
