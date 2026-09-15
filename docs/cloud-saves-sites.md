@@ -49,6 +49,8 @@ The Cloud roster checks server summaries before choosing a character. Selecting 
 
 Continue cannot silently load a conflicting recovery, including through keyboard/controller shortcuts or when another device saves after the portrait loaded. Explicit **Continue recovery** checks the displayed cache token; it keeps that branch local and blocked from uploading. Confirmed **Use cloud version** replaces the recovery with the latest server copy. Server deletions and incompatible recovery records remain visible without hiding readable cloud progress. Offline fallbacks are explicitly labeled as device copies; an unknown server branch is never presented as current.
 
+If **Use cloud version** fails, its **Retry** action refreshes the selected character and exits the old confirmation. The player must review and confirm the refreshed version before recovery can be replaced. Returning from gameplay clears the old gameplay warning; current cloud errors remain in the hall’s status and recovery controls.
+
 The owned single-slot GET includes the last committed operation receipt. A lost upload acknowledgement can therefore be reconciled without a false conflict, preserving any subsequent unsent checkpoint. Cache metadata is reread after network waits, and revision/token guards prevent delayed reads from overwriting concurrent uploads or edits. Background conflict/sync changes refresh the selected hall character. No save reset or database migration is required.
 
 ## Conflicts

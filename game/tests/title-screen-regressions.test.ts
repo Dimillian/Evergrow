@@ -9,13 +9,16 @@ import { executeSavedAppearanceChange } from '../src/appearance-command.ts';
 import type { CharacterSave } from '../src/character-save.ts';
 import type { Item } from '../src/character-types.ts';
 import type { ItemPresentation } from '../src/item-ui.ts';
+import { CloudClient } from '../src/cloud-client.ts';
 
 const assets = registerHooks({ load(url, context, next) {
   if (url.endsWith('.css')) return { format: 'module', source: '', shortCircuit: true };
+  if (url.endsWith('/music-content.ts')) return { format: 'module', source: 'export const MUSIC_FILES = {};', shortCircuit: true };
   if (url.endsWith('?raw')) return { format: 'module', source: `export default ${JSON.stringify(readFileSync(new URL(url), 'utf8'))}`, shortCircuit: true };
   return next(url, context);
 } });
 const { TitleScreen } = await import('../src/title-screen.ts');
+const { Game } = await import('../src/game.ts');
 assets.deregister();
 
 // Exercise production selection/navigation on a small DOM boundary, without a browser or playable saves.
@@ -55,6 +58,57 @@ function hall(slots: SaveSlot[], read: (index: number) => Promise<SaveSlot>): Ha
     element: { hidden: false }, itemTooltip: { hide() {} }, render() {}, renderSelection() {}, message() {},
   });
 }
+
+test('stale cloud resolution offers a read-only retry and requires confirmation with the refreshed token', async () => {
+  let reads = 0, resolutions = 0, rosterLoads = 0;
+  const stale: SaveSlot = { index: 0, state: 'saved', token: 'old-token', conflict: true, record: null };
+  const fresh = { ...stale, token: 'new-token' };
+  const title = Object.assign(hall([stale], async () => { reads++; return fresh; }), {
+    confirming: 'cloud' as string | null, notice: '', retry: false,
+    setBusy() {},
+    message(text: string, retry = false) { this.notice = text; this.retry = retry; },
+  });
+  const cloud = Object.assign(Object.create(CloudClient.prototype), {
+    flush: async () => {}, api: async () => ({ revision: 2, bundle: null }), onStatus() {},
+    cache: async (command: { kind: string }) => {
+      if (command.kind === 'resolve') resolutions++;
+      return { conflict: true, token: fresh.token };
+    },
+  });
+  const game = Object.assign(Object.create(Game.prototype), {
+    panels: { phase: 'ready' }, hallBusy: false, titleScreen: title, saveClient: cloud,
+    loadRoster: async (index: number) => { assert.equal(index, 0); rosterLoads++; },
+  });
+  await game.resolveCloudSave(0, stale.token);
+  assert.match(title.notice, /Recovery changed\. Retry/);
+  assert.equal(title.retry, true); assert.equal(game.hallBusy, false);
+  title.choose(0, false); assert.equal(reads, 0, 'ordinary reselection still does nothing');
+  title.refreshSelected(); await Promise.resolve();
+  assert.equal(title.slots[0].token, fresh.token); assert.equal(title.confirming, null);
+  assert.equal(title.retry, false); assert.equal(reads, 1);
+  assert.equal(resolutions, 0, 'Retry only reviews the latest version; it cannot discard recovery');
+  await game.resolveCloudSave(0, title.slots[0].token);
+  assert.equal(resolutions, 1); assert.equal(rosterLoads, 1);
+});
+
+for (const saved of [true, false]) test(`returning to the hall ${saved ? 'clears old gameplay warnings' : 'retains warnings if the local checkpoint fails'}`, async () => {
+  let warning = 'Offline', opened = false, flushed = false;
+  const world = {};
+  const game = Object.assign(Object.create(Game.prototype), {
+    durable: async (operation: () => Promise<void>) => operation(),
+    saveCharacter: async () => saved,
+    session: { active: { index: 0 }, repository: { list: async () => [] } },
+    saveClient: { flush: async () => { flushed = true; } },
+    shell: { notifications: { clear() {} }, setSaveStatus: (message = '') => { warning = message; } },
+    world, overworld: world, sim: { reset() {}, world }, renderer: { reset() {} },
+    panels: { transition() {} },
+    titleScreen: { open: () => { assert.equal(warning, ''); opened = true; } },
+  });
+  await game.returnToTitle();
+  assert.equal(opened, saved); assert.equal(flushed, saved);
+  assert.equal(warning, saved ? '' : 'Offline');
+  assert.equal(game.session.active === null, saved);
+});
 
 test('explicitly refreshing a stale local character allows a cosmetic save without losing newer progress', async () => {
   const data = new Map<string, string>();

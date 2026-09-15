@@ -804,7 +804,7 @@ export class Game {
     if (this.phase !== 'ready' || this.hallBusy) return;
     this.hallBusy = true;
     try { await this.saveClient.useCloud(index, expected); await this.loadRoster(index); }
-    catch (error) { this.titleScreen.message((error as Error).message); }
+    catch (error) { this.titleScreen.message((error as Error).message, true); }
     finally { this.hallBusy = false; }
   }
 
@@ -854,6 +854,7 @@ export class Game {
     const index = this.session.active.index;
     await this.saveClient.flush();
     this.session.active = null;
+    this.shell.setSaveStatus();
     this.shell.notifications.clear();
     if(this.world!==this.overworld)this.world.dispose(); this.world=this.overworld;this.sim.world=this.world;
     this.sim.reset(); this.renderer.reset();
