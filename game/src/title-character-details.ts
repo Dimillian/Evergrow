@@ -14,6 +14,18 @@ export const TITLE_GEAR: ReadonlyArray<readonly [EquipmentSlot, string]> = [
   ['amulet', 'Amulet'], ['ring1', 'Ring I'], ['ring2', 'Ring II'],
 ];
 const number = (n: number) => Math.round(n).toLocaleString('en-US');
+/** Reserve the same responsive sections without inventing character stats or actions. */
+export function titleCharacterLoading(tab: 'gear' | 'attributes'): string {
+  const line = '<i class="title-skeleton-line"></i>';
+  return `<div class="title-selection-heading" aria-hidden="true"><h3>${line}</h3><div class="title-character-actions"><span class="ui-button ui-button--icon title-skeleton-slot"></span></div></div>
+    <div class="title-location" aria-hidden="true">${uiIcon('map')}<div><strong>${line}</strong><span>${line}</span></div></div>
+    <div class="title-summary-band" aria-hidden="true"><div class="title-build-stats"><div><span>Level</span><strong>${line}</strong></div><div><span>Gear power</span><strong>${line}</strong></div></div><div class="title-gold">${uiIcon('gold')}<div><span>Gold</span><strong>${line}</strong></div></div></div>
+    <div class="title-detail-tabs" aria-hidden="true"><button disabled>Gear</button><button disabled>Attributes</button></div>
+    <div class="title-detail-body" data-detail="${tab}" aria-hidden="true"><section class="title-gear"><h4>Equipped gear</h4><div class="title-gear-grid">${TITLE_GEAR.map(([, label]) => `<div class="title-gear-cell"><div class="ui-slot title-skeleton-slot"></div><span>${label}</span></div>`).join('')}</div></section>
+      <section class="title-attributes"><h4>Attributes <small>Effective totals</small></h4><dl>${['Strength', 'Dexterity', 'Intelligence', 'Vitality'].map(label => `<div><dt>${label}</dt><dd>${line}</dd></div>`).join('')}</dl></section></div>
+    <div class="title-save-meta" aria-hidden="true"><div><span>Time played</span><strong>${line}</strong></div><div><span>Last played</span><strong>${line}</strong></div></div>
+    <div class="ui-button title-enter title-skeleton-slot" aria-hidden="true">${line}</div>`;
+}
 export function titleCharacterDetails(record: CharacterSave, derived: DerivedCharacterStats, tab: 'gear' | 'attributes', canEditAppearance = false): string {
   const sheet = record.checkpoint.character, location = titleLocation(record);
   const twoHanded = sheet.equipped.weapon?.weapon?.hands === 2;

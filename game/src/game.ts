@@ -360,9 +360,8 @@ export class Game {
       this.saveClient.onChange = state => {
         if (this.disposed) return;
         this.titleScreen.setSource(state);
-        if (state.mode === 'cloud') {
-          const active = this.session?.active;
-          const save = active ? this.saveClient.statusForSlot(active.index) : state;
+        if (state.mode === 'cloud' && this.session?.active) {
+          const save = this.saveClient.statusForSlot(this.session.active.index);
           this.shell.setSaveStatus(save.message || save.status, !['Synced', 'Saving…'].includes(save.status));
         }
       };
@@ -648,16 +647,18 @@ export class Game {
   private editHallAppearance(selected: SaveSlot) {
     if (this.phase !== 'ready' || this.hallBusy || this.appearanceEditor || this.disposed || !selected.record || selected.conflict) return;
     const slot = structuredClone(selected), record = slot.record!;
+    let refreshOnCancel = false;
     this.appearanceFromHall = true;
     this.titleScreen.setEditorOpen(true); this.clearInput();
     this.appearanceEditor = createAppearanceEditor(this.shell.panelMount, {
       sheet: record.checkpoint.character, name: record.name,
-      onCancel: () => this.closeAppearanceEditor(),
+      onCancel: () => { this.closeAppearanceEditor(); if (refreshOnCancel && !this.disposed) this.titleScreen.refreshSelected(); },
       onSave: async look => {
         if (this.hallBusy || this.disposed) return {ok:false, message:'A save is already in progress.'};
         this.hallBusy = true;
         try {
           const result = await executeSavedAppearanceChange(this.session.repository, slot, look, Date.now());
+          refreshOnCancel = !result.ok;
           if (result.ok && !this.disposed) {
             this.titleScreen.updateSlot({...slot, record:result.record, token:result.token});
             this.closeAppearanceEditor();
@@ -732,7 +733,7 @@ export class Game {
     this.titleScreen.setBusy(true);
     try {
     const slot = await this.session.repository.read(index);
-    if (slot.token !== expected) { this.titleScreen.message('This character changed. Select it again before deleting.'); return; }
+    if (slot.token !== expected) { await this.loadRoster(index); this.titleScreen.message('This character changed. Review it before deleting.'); return; }
     const result = await this.session.repository.remove(index, expected);
     if (!result.ok) { this.titleScreen.message(result.message); return; }
     if (slot.record) {
@@ -767,7 +768,7 @@ export class Game {
   }
 
   private async selectSaveSource(mode: SaveMode) {
-    if (this.phase !== 'ready' || this.hallBusy || this.session.active) return;
+    if (mode === this.saveClient.mode || this.phase !== 'ready' || this.hallBusy || this.session.active) return;
     await this.saveClient.select(mode); await this.loadRoster();
   }
   private async retryCloudSaves() {
@@ -803,7 +804,7 @@ export class Game {
     if (this.phase !== 'ready' || this.hallBusy) return;
     this.hallBusy = true;
     try { await this.saveClient.useCloud(index, expected); await this.loadRoster(index); }
-    catch (error) { this.titleScreen.message((error as Error).message); }
+    catch (error) { this.titleScreen.message((error as Error).message, true); }
     finally { this.hallBusy = false; }
   }
 
@@ -853,6 +854,7 @@ export class Game {
     const index = this.session.active.index;
     await this.saveClient.flush();
     this.session.active = null;
+    this.shell.setSaveStatus();
     this.shell.notifications.clear();
     if(this.world!==this.overworld)this.world.dispose(); this.world=this.overworld;this.sim.world=this.world;
     this.sim.reset(); this.renderer.reset();

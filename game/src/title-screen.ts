@@ -1,4 +1,4 @@
-import { titleCharacterDetails } from './title-character-details.ts';
+import { titleCharacterDetails, titleCharacterLoading } from './title-character-details.ts';
 import { drawTitlePlinth } from './title-plinth.ts';
 import { ItemTooltip } from './item-tooltip.ts';
 import type { EquipmentSlot } from './character-types.ts';
@@ -139,9 +139,10 @@ export class TitleScreen {
       if (button.dataset.titleItem) { this.showItemTooltip(button); return; }
       if (button.dataset.detailTab) { this.switchDetail(button.dataset.detailTab as 'gear' | 'attributes', true); return; }
       if (button.dataset.homePage) { this.selectPage(button.dataset.homePage as HomePage); return; }
-      if (button.dataset.source) { this.actions.source?.(button.dataset.source as SaveMode); return; }
+      if (button.dataset.source) { this.selectSource(button.dataset.source as SaveMode); return; }
       if (button.dataset.slot !== undefined) { this.choose(Number(button.dataset.slot)); return; }
       const action = button.dataset.action;
+      if (action === 'refresh-selection') { this.refreshSelected(); return; }
       if (action === 'retry') { if (this.source.status === 'Reload required' || !this.actions.retry) window.location.reload(); else this.actions.retry(); }
       if (action === 'continue') this.actions.continue(this.selected);
       if (action === 'appearance') {
@@ -219,7 +220,7 @@ export class TitleScreen {
     retry.textContent = source.status === 'Reload required' ? 'Reload game' : 'Retry';
     retry.hidden = source.status === 'Sign in again';
     recovery.querySelector('a')!.hidden = source.status !== 'Sign in again';
-    if (refresh) this.choose(this.selected, false);
+    if (refresh) this.refreshSelected();
   }
   open(slots: SaveSlot[], preferred?: number) {
     this.selectPage('characters', false); this.element.inert = false;
@@ -227,9 +228,9 @@ export class TitleScreen {
     this.slots = slots; this.names.clear(); this.seedDrafts.clear();
     const latest = [...slots].sort((a, b) => (b.record?.updatedAt ?? b.summary?.updatedAt ?? 0) - (a.record?.updatedAt ?? a.summary?.updatedAt ?? 0))[0]?.index ?? 0;
     this.selected = preferred ?? latest; this.confirming = null; this.element.hidden = false; this.message(''); this.setSource(this.source);
-    this.choose(this.selected, false);
+    this.refreshSelected();
     this.focus?.dispose(); this.focus = trapDialogFocus(this.element, { signal: this.abort.signal, restoreFocus: false,
-      initialFocus: () => this.element.querySelector(`[data-slot="${this.selected}"]`) ?? this.element.querySelector('[data-source="local"]') });
+      initialFocus: () => this.initialSelectionFocus() });
     if (!this.frame) this.animate();
   }
   updateSlot(slot: SaveSlot) {
@@ -243,7 +244,15 @@ export class TitleScreen {
     if(!open&&!this.element.hidden)this.focus=trapDialogFocus(this.element,{signal:this.abort.signal,restoreFocus:false,initialFocus:()=>this.element.querySelector(restoreAppearance ? '[data-action="appearance"]' : `[data-slot="${this.selected}"]`)});
   }
   private availablePages() { return homePages.filter(page=>page!=='leaderboard'||this.source.supported); }
+  private initialSelectionFocus(): HTMLElement | null {
+    return this.element.querySelector(`[data-slot="${this.selected}"]`) ?? this.element.querySelector(`[data-source="${this.source.mode}"]`);
+  }
+  private selectSource(mode: SaveMode) {
+    if (mode === this.source.mode || this.rosterLoading || this.source.status === 'Loading…') return;
+    this.actions.source?.(mode);
+  }
   selectPage(page: HomePage, focus=true) {
+    if (page === this.page && this.element.dataset.homePage === page) return;
     this.itemTooltip.hide();
     if(page==='leaderboard'&&!this.source.supported)return;
     this.changelog.close(false);this.chronicle.close(false);this.leaderboard.close();
@@ -293,23 +302,30 @@ export class TitleScreen {
     }
     return this.chronicle.updateGamepad(pad,now)||this.changelog.updateGamepad(pad,now)||this.leaderboard.updateGamepad(pad,now);
   }
-  private choose(index: number, focus = true) {
+  refreshSelected() { this.message(''); this.choose(this.selected, false, true); }
+  private choose(index: number, focus = true, refresh = false) {
+    if (!refresh && (index === this.selected || this.rosterLoading)) return;
     this.itemTooltip.hide();
-    this.selected = index; this.confirming = null; this.loading = false; const ticket = ++this.inspection;
+    this.selected = index; this.confirming = null;
+    const slot = this.slots[index];
+    this.loading = !!slot && !!this.actions.read;
+    const ticket = ++this.inspection;
     this.render();
     if (focus) this.element.querySelector<HTMLButtonElement>(`[data-slot="${index}"]`)?.focus();
-    const slot = this.slots[index];
-    // Reselecting also refreshes local records after a stale-writer rejection.
+    // Fresh selections and explicit recovery refreshes read the latest revision.
     if (!slot || !this.actions.read) return;
-    this.loading = true; this.renderSelection();
     void this.actions.read(index).then(value => {
       if (ticket !== this.inspection || this.element.hidden) return;
       const restoreSlot = (document.activeElement as HTMLElement | null)?.dataset.slot === String(index);
       this.slots[index] = value; this.loading = false; this.render();
       if (restoreSlot) this.element.querySelector<HTMLButtonElement>(`[data-slot="${index}"]`)?.focus({ preventScroll: true });
-    }).catch(() => { if (ticket === this.inspection) { this.loading = false; this.message('Save unavailable. Please retry.'); this.renderSelection(); } });
+    }).catch(() => { if (ticket === this.inspection) { this.loading = false; this.message('Save unavailable. Please retry.', true); this.renderSelection(); } });
   }
-  message(text: string) { const target = this.element.querySelector<HTMLElement>('.title-save-message')!; target.textContent = text; target.hidden = !text; }
+  message(text: string, retry = false) {
+    const target = this.element.querySelector<HTMLElement>('.title-save-message')!;
+    target.textContent = text; target.hidden = !text;
+    if (retry) target.insertAdjacentHTML('beforeend', ' <button class="ui-button" data-action="refresh-selection">Retry</button>');
+  }
   close() { this.itemTooltip.hide(); this.changelog.close(false); this.chronicle.close(false); this.leaderboard.close(); this.element.inert = false; this.inspection++; this.element.hidden = true; this.focus?.dispose(); this.focus = undefined; cancelAnimationFrame(this.frame); this.frame = 0; }
   dispose() { this.close(); this.portraitObserver.disconnect(); this.itemTooltip.dispose(); this.changelog.dispose(); this.chronicle.dispose(); this.leaderboard.dispose(); this.abort.abort(); this.element.remove(); }
   private rollSeed() { const value = String(crypto.getRandomValues(new Uint32Array(1))[0]); this.seedDrafts.set(this.selected, value); return value; }
@@ -319,7 +335,7 @@ export class TitleScreen {
     this.element.querySelector('.title-slot-count')!.textContent = loading ? '' : `${this.slots.filter(s => s.record || s.summary).length} / 8`;
     this.element.querySelector('.title-hall-body')!.setAttribute('aria-busy', String(loading));
     if (loading) {
-      this.element.querySelector('.title-slot-grid')!.innerHTML = Array.from({length:8}, () => '<div class="title-slot-skeleton" aria-hidden="true"><i></i><span></span></div>').join('');
+      this.element.querySelector('.title-slot-grid')!.innerHTML = Array.from({length:8}, () => '<div class="title-slot title-slot-skeleton" aria-hidden="true"><i></i><span></span></div>').join('');
       this.renderSelection(); return;
     }
     this.element.querySelector('.title-slot-grid')!.innerHTML = this.slots.map(slot => {
@@ -331,18 +347,36 @@ export class TitleScreen {
   private renderSelection() {
     this.itemTooltip.hide();
     const slot = this.slots[this.selected], record = slot?.record;
-    this.player = previewCharacter(record ?? null, this.starter); this.portraitDirty = true;
-    const selection = this.element.querySelector('.title-selection')!;
-    selection.classList.toggle('has-character', !!record && !this.loading && !this.rosterLoading && !this.confirming && !slot?.conflict);
+    const rosterLoading = this.rosterLoading || this.source.status === 'Loading…';
+    const loading = rosterLoading || this.loading;
+    // A previous source's records must not appear while the new roster arrives.
+    const previewRecord = rosterLoading ? null : record;
+    this.player = previewCharacter(previewRecord ?? null, this.starter); this.portraitDirty = true;
+    const selection = this.element.querySelector<HTMLElement>('.title-selection')!;
+    selection.classList.toggle('has-character', loading || !!record && !this.confirming && !slot?.conflict);
+    selection.classList.toggle('is-loading', loading);
+    selection.inert = loading;
+    selection.setAttribute('aria-busy', String(loading));
+    const hero = this.element.querySelector<HTMLElement>('.title-hero')!;
+    hero.classList.toggle('is-loading', loading && !previewRecord);
+    hero.setAttribute('aria-hidden', String(loading && !previewRecord));
+    const status = this.element.querySelector<HTMLElement>('.title-storage-status')!;
+    status.textContent = loading ? rosterLoading ? `Loading ${this.source.mode === 'cloud' ? 'cloud characters' : 'characters'}…` : 'Loading character…'
+      : this.source.mode === 'local' ? 'On this device' : this.source.status;
+    status.dataset.status = loading ? 'Loading…' : this.source.status;
     const canUse = this.source.mode === 'local' || this.source.signedIn;
-    this.element.querySelector<HTMLButtonElement>('[data-action="download"]')!.disabled = this.source.mode !== 'local' || !record || !this.actions.download;
-    this.element.querySelector<HTMLButtonElement>('[data-action="import"]')!.disabled = this.source.mode !== 'local' || !canUse || slot?.state !== 'empty' || this.loading || !this.actions.import;
-    if (this.rosterLoading || this.source.status === 'Loading…') { selection.innerHTML = `<div class="title-loading-state" role="status"><span aria-hidden="true">${uiIcon('skilltree')}</span><p>Loading ${this.source.mode === 'cloud' ? 'cloud characters' : 'characters'}…</p></div>`; return; }
+    this.element.querySelector<HTMLButtonElement>('[data-action="download"]')!.disabled = loading || this.source.mode !== 'local' || !record || !this.actions.download;
+    this.element.querySelector<HTMLButtonElement>('[data-action="import"]')!.disabled = loading || this.source.mode !== 'local' || !canUse || slot?.state !== 'empty' || !this.actions.import;
+    if (loading) {
+      selection.innerHTML = previewRecord && !slot?.conflict
+        ? titleCharacterDetails(previewRecord, this.player.derived, this.detailTab, !!this.actions.editAppearance)
+        : titleCharacterLoading(this.detailTab);
+      return;
+    }
     if (!canUse) {
       if (this.source.status === 'Unavailable') { selection.innerHTML = '<div class="title-signin"><p>Cloud unavailable</p><button class="ui-button" data-action="retry">Retry</button></div>'; return; }
       selection.innerHTML = `<div class="title-signin"><span class="title-signin-crest" aria-hidden="true">${uiIcon('skilltree')}</span><a class="ui-button ui-button--primary" href="/signin-with-chatgpt?return_to=/" target="_top">Sign in with ChatGPT</a><p>Continue on any browser.</p></div>`; return;
     }
-    if (this.loading) { selection.innerHTML = '<p class="title-loading" role="status">Loading…</p>'; return; }
     if (this.confirming) {
       const deleteMessage = slot?.conflict
         ? 'Deletes the cloud save and this device’s recovery copy. This cannot be undone.'
@@ -372,7 +406,7 @@ export class TitleScreen {
           const loadout = createStarterLoadout(option.id);
           return `<label class="title-weapon-choice" data-tooltip="${escapeUI(option.detail)}"><input type="radio" name="starter-weapon" value="${option.id}" ${this.starter === option.id ? 'checked' : ''}/><span class="title-weapon-icon" aria-hidden="true">${itemIconSVG(loadout.weapon, 40)}${loadout.offhand ? itemIconSVG(loadout.offhand, 32) : ''}</span><strong>${escapeUI(option.label)}</strong></label>`;
         }).join('')}</div></fieldset><button class="ui-button ui-button--primary title-enter" type="submit"><span>Create character</span>${uiIcon('chevron')}</button></form>`;
-    } else selection.innerHTML = `<div class="title-confirm"><h3>Save unavailable</h3><p>${slot?.state === 'invalid' ? 'The original file is preserved.' : 'Check storage or connection, then select the slot again.'}</p>${slot?.state === 'invalid' ? '<button class="ui-button" data-action="delete">Delete unreadable save</button>' : ''}</div>`;
+    } else selection.innerHTML = `<div class="title-confirm"><h3>Save unavailable</h3><p>${slot?.state === 'invalid' ? 'The original file is preserved.' : 'Check storage or connection, then retry.'}</p>${slot?.state === 'invalid' ? '<button class="ui-button" data-action="delete">Delete unreadable save</button>' : '<button class="ui-button" data-action="refresh-selection">Retry</button>'}</div>`;
   }
   private navigateDetails(target: HTMLElement, key: string) {
     const items = [...this.element.querySelectorAll<HTMLElement>('.title-character-actions button,[data-title-item]')]
