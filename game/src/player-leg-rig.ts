@@ -3,7 +3,8 @@ import { clamp, smooth, type Point } from './art-primitives.ts';
 /** Ground depth is independent of foot lift, just as it is in the upper rig. */
 export type LegPoint = readonly [x: number, depth: number, height: number];
 export const LEG_DEPTH_SCALE = .45;
-const THIGH_LENGTH = 8.1, SHIN_LENGTH = 7.1;
+const THIGH_LENGTH = 8.1;
+export const PLAYER_SHIN_LENGTH = 7.1;
 export interface LegRig {
   side: number;
   hip: LegPoint;
@@ -32,7 +33,7 @@ function kneeBetween(hip: LegPoint, ankle: LegPoint, facing: number): LegPoint {
   const delta = ankle.map((v,i)=>v-hip[i]);
   const distance = Math.hypot(...delta);
   const axis = delta.map(v=>v/distance);
-  const along = (THIGH_LENGTH**2 - SHIN_LENGTH**2 + distance**2)/(2*distance);
+  const along = (THIGH_LENGTH**2 - PLAYER_SHIN_LENGTH**2 + distance**2)/(2*distance);
   const bend = Math.sqrt(Math.max(0, THIGH_LENGTH**2-along**2));
   // Knees bend toward the character's front, even while strafing or backing up.
   const forward = [Math.cos(facing),Math.sin(facing),0];

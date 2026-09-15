@@ -30,12 +30,20 @@ export function appearanceProfileShapes(appearance: Readonly<CharacterAppearance
   const beard = appearance.facialHair;
   if (beard !== 'none') {
     const bottom = beard === 'fullbeard' ? 7.5 : beard === 'chinbraid' ? 6 : beard === 'beard' ? 5.8 : 4.7;
-    if (beard !== 'handlebar') {
+    if (['stubble','beard','fullbeard','chinbraid'].includes(beard)) {
       f([[-.2,2.8],[1.1,3.8],[2.65,3.5],[2.4,4.6],[1.2,bottom],[-.5,bottom-.5],[-1,3]],
         beard === 'stubble' ? mixColor(skin.base,hair.shadow,.42) : hair.base);
       if (beard !== 'stubble') l([[.3,4.2],[.7,bottom-.5]],hair.light,.35);
     }
-    if (beard !== 'stubble') l([[1.8,2.8],[2.9,2.95],[3.1,3.5]],hair.base,.65);
+    if (beard === 'goatee') {
+      f([[1.1,3.8],[2.65,3.6],[2.5,4.7],[1.5,6.4],[.65,5.7],[.8,4.4]],hair.base);
+      l([[1.5,4.5],[1.4,5.7]],hair.light,.35);
+    }
+    if (beard !== 'stubble') l([[1.8,2.8],[2.9,2.95],[3.1,3.4]],hair.base,.65);
+    if (beard === 'handlebar') {
+      l([[2.9,3.05],[3.7,3.15],[4,2.75],[3.8,2.35]],hair.base,.7);
+      l([[3.3,3.05],[3.65,2.85]],hair.light,.3);
+    }
     if (beard === 'chinbraid') for(let i=0;i<3;i++) {
       const y=5.2+i*1.05; f([[.1,y],[1,y-.2],[1.5,y+.5],[.7,y+1.2],[0,y+.6]],i%2?hair.shadow:hair.base);
     }

@@ -61,13 +61,14 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
     if (outfit.legs) {
       const m = outfit.legs.material;
       armorSegment(ctx,hip,[knee[0],knee[1]-.5],outfit.legs,color,'thigh',.65+.35*Math.abs(Math.sin(pose.angle)));
-      kneeArmor(ctx,knee,outfit.legs,color,pose.angle);
       if (outfit.legs.style === 'plate') {
         taper(ctx, [hip[0], hip[1] - 0.5], [hip[0] + step * 0.25, hip[1] + 3.4], 4.6, 4.1, color(m.shadow));
         line(ctx, [[hip[0] - 1.8, hip[1] + 2], [hip[0] + 1.8, hip[1] + 2.4]], color(m.trim), 0.65);
       }
     }
     armorBoot(ctx, projectLegPoint(leg.foot), outfit.boots, color, leg.facing, ankle, knee);
+    // The knee cap overlaps the boot cuff when the lower leg is foreshortened.
+    if (outfit.legs) kneeArmor(ctx,knee,outfit.legs,color,pose.angle);
   }
 
   ctx.save();

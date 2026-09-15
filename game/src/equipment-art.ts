@@ -1,5 +1,6 @@
 import { armorAccessoryShapes, type ArmorAccessory } from './armor-accessory-shapes.ts';
 import { bootShapes } from './boot-shapes.ts';
+import { bootProjection } from './boot-projection.ts';
 import { gearMaterialStops, gearMaterialMarks, gearCanvasLight } from './gear-material.ts';
 import { focusGlowColor, isRadiantGrimoire } from './radiant-content.ts';
 import { drawRadiantSeal } from './radiant-art.ts';
@@ -31,12 +32,15 @@ export const STARTER_OUTFIT: CharacterOutfit = {
 };
 
 const shadingCache = new WeakMap<GearShape,{key:string;stops:Array<readonly [number,string]>}>();
-export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly GearShape[], color: Color): void {
+export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly GearShape[], color: Color, project?: (point: Point) => Point): void {
   const matrix = ctx.getTransform(), fine = Math.hypot(matrix.a, matrix.b) >= 2.4;
   const lighting = gearCanvasLight(ctx), facing = Math.round(Math.atan2(matrix.b,matrix.a)*128)/128;
   const lightKey=`${facing}:${lighting.direction.map(v=>Math.round(v*64)).join(',')}:${lighting.color}:${Math.round(lighting.power*64)}`;
   for (const shape of shapes) {
     if (shape.fine && !fine) continue;
+    // Deformation changes geometry only. Material shading stays keyed by the
+    // immutable source shape, including when a different actor shares it.
+    const points = project ? shape.points.map(project) : shape.points;
     let stops:Array<readonly [number,string]>|undefined;
     if(shape.surface) {
       const cached=shadingCache.get(shape);
@@ -44,9 +48,9 @@ export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly G
       else {stops=gearMaterialStops(shape.fill??shape.stroke??'#808080',shape.surface,facing,lighting);shadingCache.set(shape,{key:lightKey,stops});}
     }
     if (shape.fill) {
-      polygon(ctx, shape.points, color(!fine && stops ? stops[1][1] : shape.fill));
+      polygon(ctx, points, color(!fine && stops ? stops[1][1] : shape.fill));
       if (fine && shape.surface && !shape.fine) {
-        const xs=shape.points.map(p=>p[0]),ys=shape.points.map(p=>p[1]);
+        const xs=points.map(p=>p[0]),ys=points.map(p=>p[1]);
         const left=Math.min(...xs),top=Math.min(...ys),w=Math.max(...xs)-left,h=Math.max(...ys)-top;
         if(w*h>1) {
           ctx.save();ctx.clip();
@@ -58,7 +62,7 @@ export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly G
         }
       }
     }
-    if (shape.stroke) line(ctx, shape.points, color(stops ? stops[1][1] : shape.stroke), shape.width ?? .7);
+    if (shape.stroke) line(ctx, points, color(stops ? stops[1][1] : shape.stroke), shape.width ?? .7);
   }
 }
 
@@ -125,16 +129,7 @@ export function kneeArmor(ctx:CanvasRenderingContext2D, point:Point, piece:Armor
 const BARE_BOOT: ArmorPiece = { style: 'leather', seed: 11, material: LEATHER };
 export function armorBoot(ctx: CanvasRenderingContext2D, anchor: Point, piece: ArmorPiece | null, color: Color, facing: number, ankle: Point, knee: Point): void {
   ctx.save(); ctx.translate(...anchor);
-  const dx=knee[0]-ankle[0],dy=knee[1]-ankle[1],length=Math.max(.001,Math.hypot(dx,dy));
-  // Flex the boot's upper shaft toward the shin while the heel/toe keep their
-  // ground orientation. Rotating the entire boot would tilt a planted sole.
-  const shapes=bootShapes(piece ?? BARE_BOOT, facing).map(shape=>({...shape,points:shape.points.map(([x,y]):Point=>{
-    if(y>=-2) return [x,y];
-    const rise=-y-2, blend=Math.min(1,rise/3);
-    return [x*(1-blend+blend*-dy/length)+dx/length*rise,
-      -2+dy/length*rise+x*dx/length*blend];
-  })}));
-  drawGearShapes(ctx, shapes, color);
+  drawGearShapes(ctx, bootShapes(piece ?? BARE_BOOT, facing), color, bootProjection(ankle, knee));
   ctx.restore();
 }
 

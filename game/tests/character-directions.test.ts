@@ -53,3 +53,20 @@ test('torso turns continuously with a narrower solid side and distinct front and
     previous=next;
   }
 });
+
+test('profile facial hair preserves moustache-only, pointed goatee and distinct recipe silhouettes', () => {
+  for (const angle of [0,Math.PI]) {
+    const bare = {...DEFAULT_APPEARANCE,hair:'bald' as const,accessory:'none' as const,facialHair:'none' as const};
+    const baseline = new Set(appearanceHeadShapes(bare,angle,false).map(shape=>JSON.stringify(shape)));
+    const facial = (facialHair: typeof FACIAL_HAIR[number]['id']) =>
+      appearanceHeadShapes({...bare,facialHair},angle,false).filter(shape=>!baseline.has(JSON.stringify(shape)));
+    const moustache = facial('moustache').flatMap(shape=>shape.points);
+    assert.ok(moustache.length>0);
+    assert.ok(moustache.every(([,y])=>y<3.7),'moustache leaves chin clear');
+    const goatee = facial('goatee').filter(shape=>shape.fill).flatMap(shape=>shape.points);
+    assert.ok(goatee.some(([,y])=>y>6),'goatee has a pointed chin');
+    assert.ok(goatee.every(([x])=>x*Math.cos(angle)>.5),'goatee leaves the rear jaw clear');
+    const silhouettes = FACIAL_HAIR.map(({id})=>JSON.stringify(facial(id).map(shape=>shape.points)));
+    assert.equal(new Set(silhouettes).size,FACIAL_HAIR.length,'each selected style retains its own silhouette');
+  }
+});
