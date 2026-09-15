@@ -1,0 +1,41 @@
+.command-overlay{position:absolute;inset:0;z-index:100;display:grid;place-items:center;padding:24px;background:#03091265;font-family:var(--ui-font);color:var(--ui-text);box-sizing:border-box}
+.command-overlay[hidden]{display:none}
+.command-overlay *{box-sizing:border-box}
+.command-overlay button,.command-overlay input{font:inherit}
+.command-overlay button{cursor:pointer}
+.command-overlay button:focus-visible{outline:1px solid var(--ui-silver);outline-offset:3px}
+.command-window{width:min(600px,100%);max-height:calc(100dvh - 48px);border-color:#9cafaa80!important;box-shadow:0 35px 110px #000b,0 0 55px #597d6020!important}
+.command-window.ui-window::after{background-color:#101b20ec!important;backdrop-filter:blur(16px)!important}
+.command-heading{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 15px;flex:none}
+.command-title{display:flex;align-items:center;gap:11px;color:#dedfcd;font-size:18px}
+.command-sigil{color:#adbfac;font-size:20px}
+.command-local{font-size:10px;letter-spacing:1.5px;color:#9aaa97;display:flex;align-items:center;gap:7px}
+.command-local i{width:5px;height:5px;background:#a9c797;box-shadow:0 0 8px #a9c79766}
+.command-well{display:flex;align-items:center;gap:12px;margin:0 18px 14px;padding:0 14px;min-height:57px;flex:none;background:#050e13;box-shadow:inset 0 2px 7px #0009,0 1px #c8dcca10;border:1px solid #859b7966;border-bottom-color:#91b3899c}
+.command-prompt{font-size:27px;color:#b9d79c;text-shadow:0 0 10px #7ac35855}
+.command-well input{width:100%;min-width:0;outline:none;border:0;background:transparent;color:#e5e9d3;font-size:21px;caret-color:#c5e6a6;padding:12px 0}
+.command-well input::placeholder{color:#697d74}
+.command-close{background:#172127;border:1px solid #42534f;color:#8d9d94;font-size:10px!important;padding:4px 5px;border-radius:0}
+.command-close:disabled{opacity:.4;cursor:wait}
+.command-suggestions-heading{display:flex;justify-content:space-between;padding:4px 27px 10px;color:#7e938b;font-size:10px;letter-spacing:1.4px;flex:none}
+.command-suggestions-heading [data-count]{letter-spacing:0;color:#697f77}
+.command-suggestions{padding:0 10px 10px;overflow:auto;min-height:50px;max-height:290px;scrollbar-width:thin;scrollbar-color:#627d6a #0b1519}
+.command-suggestion{display:flex;align-items:center;gap:13px;min-height:58px;padding:9px 15px;border:1px solid transparent;cursor:pointer}
+.command-suggestion[aria-selected=true]{background:linear-gradient(90deg,#6585662e,#59756b14);border-color:#7e9a7245;box-shadow:inset 2px 0 #b4c892}
+.command-suggestion:hover{background-color:#a0c7ab0b}
+.command-mark{display:grid;place-items:center;flex:0 0 28px;height:28px;border:1px solid #8baa822e;background:#0c181b;color:#97b792;font-size:20px}
+.command-copy{flex:1;min-width:0}
+.command-copy strong{display:block;font-size:17px;font-weight:400;color:#c7d1bf;overflow-wrap:anywhere}
+.command-copy small{display:block;font-size:13px;color:#8b9c93;margin-top:3px}
+.command-complete-key{font-size:11px;color:#a7b79d;opacity:0;white-space:nowrap}
+.command-suggestion[aria-selected=true] .command-complete-key{opacity:1}
+.command-footer{display:flex;justify-content:space-between;gap:10px;border-top:1px solid #aac8b321;padding:12px 23px;color:#87988d;font-size:12px;background:#06101638;flex:none}
+.command-footer>span{display:flex;align-items:center;gap:6px}
+.command-footer kbd{font-family:var(--ui-font);font-size:11px;color:#aab8a7;min-width:18px;padding:2px 4px;text-align:center;border:1px solid #536b5e66;background:#0c171a;box-shadow:0 1px #020609}
+.command-footer kbd:nth-of-type(3){margin-left:9px}
+.command-empty{padding:24px 16px;color:#98ab9c;font-size:14px}
+.command-result{margin:0;padding:12px 24px;font-size:14px;line-height:1.5;color:#b8cfa9;border-top:1px solid #56735055;overflow:auto;overflow-wrap:anywhere;white-space:pre-wrap;max-height:220px;flex:0 1 auto}
+.command-result[data-ok=false]{color:var(--ui-danger)}
+.command-result[hidden]{display:none}
+@media(max-width:640px){.command-overlay{padding:14px}.command-heading{padding:17px 20px 13px}.command-well input{font-size:18px}.command-copy small{font-size:12px}.command-footer{padding:12px 17px;font-size:11px}.command-window{max-height:calc(100dvh - 28px)}}
+@media(max-height:500px){.command-overlay{padding:6px}.command-window{max-height:calc(100dvh - 12px)}.command-heading{padding:10px 20px}.command-well{min-height:44px;margin-bottom:8px}.command-result{max-height:110px}.command-footer{padding:8px 18px}}

@@ -88,3 +88,7 @@ The Android APK uses the same controller layout through native joystick/button i
 On the character hall, D-pad/left stick navigates the slot grid spatially and updates the preview. A on a saved slot loads that character immediately; A on an empty slot focuses creation. Pending portrait reads do not block loading, and title confirmation/busy/sign-in guards still apply.
 
 Tab-map marker tooltips appear automatically whenever hovered, including during combat, without consuming mouse input. The full paused map keeps its normal tooltips.
+
+## Local command console
+
+Cmd+K / Ctrl+K opens the centered local command box from play or pause. It pauses combat; Escape restores the previous state. Arrows select suggestions, Tab completes, and Enter runs. Use `help`, `drop`, `spawn`, `hp`, `mana` or `refill`. The online build excludes the console even when Local saves are selected. See [Local command console](local-console.md).

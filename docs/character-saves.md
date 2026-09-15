@@ -104,3 +104,7 @@ The cloud worker similarly builds one upgraded character/chart bundle and commit
 ## Local skill-tree refund · 2026-09-12
 
 Version-4 payloads now carry `character.treeVersion: 2`. Saves without it pass the finite pre-redesign graph/rank/variant/point-ledger validator before receiving all node/rank points back. Assignments and skill cooldowns clear. Continue opens the tree at its root with the refund explanation visible and gameplay paused. Level, XP, attributes, gear, world state and exploration remain. Invalid or unsupported trees remain stored and are not silently repaired. Conversion modifies only a parsed copy. See [the exact refund rules](skill-progression.md#existing-characters).
+
+## Authored loot identities
+
+Local command spawns persist an optional `lootIdentity` on stored actor recipes. Death rewards use it to distinguish physical equipment from repeated copies of the same seeded monster without changing its item rolls. Validation bounds the identity to 80 characters; existing actors omit it. No save version change or reset. See [Local command console](local-console.md).

@@ -107,3 +107,15 @@ test('text composition cancels held input and queued actions; disposal removes k
   const count = presses.length; abort.abort(); key('keydown', 'KeyW');
   assert.equal(presses.length, count); assert.equal(state().moveY, 0);
 });
+
+test('an explicitly owned modifier shortcut clears held input and never leaks into gameplay or native handling',()=>{
+  const target=new EventTarget(),abort=new AbortController();let clears=0,opens=0,presses=0;
+  bindGameKeyboard(target,{clear:()=>{clears++;},release:()=>{},press:()=>{presses++;},
+    shortcut:e=>{if(e.code!=='KeyK'||!e.metaKey||e.isComposing)return false;if(!e.repeat)opens++;return true;}},abort.signal);
+  const key=(code:string,extra={})=>{const e=Object.assign(new Event('keydown',{cancelable:true}),{code,metaKey:true,ctrlKey:false,altKey:false,isComposing:false,repeat:false,...extra});target.dispatchEvent(e);return e;};
+  assert.equal(key('KeyK').defaultPrevented,true);assert.equal(opens,1);assert.equal(clears,1);assert.equal(presses,0);
+  assert.equal(key('KeyK',{repeat:true}).defaultPrevented,true);assert.equal(opens,1);
+  assert.equal(key('KeyR').defaultPrevented,false);assert.equal(presses,0);
+  assert.equal(key('KeyK',{isComposing:true}).defaultPrevented,false);assert.equal(opens,1);
+  abort.abort();assert.equal(key('KeyK').defaultPrevented,false);
+});
