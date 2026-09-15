@@ -33,6 +33,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'unique-items',group:'equipment',name:'Unique equipment',path:'/character.html?uniques',description:'The twelve unique items, fixed affixes and signature powers in the inventory.'},
   {id:'unique-collection',group:'interface',name:'Unique collection',path:'/chronicle.html?uniques',description:'Found and undiscovered unique items with sample character history.'},
   {id:'unique-loot',group:'equipment',name:'Unique ground loot',path:'/loot.html?uniques',description:'Crimson and violet unique drops with named loot plates.'},
+  {id:'drop-motion',group:'equipment',name:'Coins & mana drops',path:'/loot.html?resources',description:'Animated staggered coin hops and glowing mana vials; pause, scrub and compare backdrops at actual and enlarged sizes.',tags:'gold mp potion bounce pickup glow'},
   {id:'loot',group:'equipment',name:'Ground loot',path:'/loot.html',description:'Dropped item art, rarity labels, coins and resource vials.'},
   {id:'editor',group:'characters',name:'Appearance editor',path:'/character-editor.html',description:'Edit a staged character and armor colors.'},
   {id:'atelier',group:'characters',name:'Motion & equipment',path:'/atelier.html',description:'Weapon carrying, character proportions and animated poses.'},
