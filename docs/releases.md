@@ -35,6 +35,17 @@ The user approved the next major prototype milestone, **0.6.0**, on 2026-09-14 f
 
 ## Last verified publication
 
+- Game v0.6.5 / Sites version 59, publicly deployed on 2026-09-15 at 07:06:15 UTC.
+- Published source: `ecb9a04f683881f12cce113ca414eec816dda4b4`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_e24f86b3c6988191810bb249f77ed453`.
+- Deployment: `appgdep_6aa8ee58adf0819187abb443f5bad283`; Sites returned `succeeded`.
+- Dedicated fire, frost, meteor and storm spell effects; resolved skill hover cards in the inventory bar and assignment picker.
+- All 118 relevant code tests passed, plus application/core type checking, local and cloud-enabled builds, archive validation and clean-source release validation. No automated browser gameplay was run.
+- The Prism Archmage fixture remains only in the user's local character slot; it is not part of this publication.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.6.4 / Sites version 58, publicly deployed on 2026-09-15 at 06:27:24 UTC.
 - Published source: `76d5ad29a9a6d98559510a63129de5eb7604e912`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_d4cc73833a7881919a1fd8f1e12d8194`.
