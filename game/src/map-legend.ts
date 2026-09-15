@@ -25,7 +25,7 @@ export class MapLegend {
     this.toggle = document.createElement('button'); this.toggle.type = 'button'; this.toggle.className = 'ui-button ui-button--quiet map-legend-toggle';
     this.toggle.innerHTML = `${uiIcon('journal')}<span>Legend</span>`; this.toggle.setAttribute('aria-controls', this.element.id);
     header.insertBefore(this.toggle, header.querySelector('.world-map-close, [data-close]')); 
-    this.element.innerHTML = `<div class="map-legend-heading"><div><h3 class="ui-title">Legend</h3><p class="ui-muted">Map icons & locations</p></div><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-dismiss aria-label="Close legend">${uiIcon('close')}</button></div>
+    this.element.innerHTML = `<div class="map-legend-heading"><div><h3 class="ui-title">Legend</h3><p class="ui-muted">Map icons & locations</p></div></div>
       <label class="map-legend-all"><span>Show all icons</span><input type="checkbox" data-all aria-label="Show all map icons"></label>
       <div class="map-legend-scroll">${this.groups.map(g => `<section><div class="map-legend-category"><button type="button" aria-expanded="${g.id === (context === 'world' ? 'services' : 'dungeons')}" aria-controls="${this.element.id}-${g.id}">${uiIcon('chevron')}<span>${escapeUI(g.label)}</span><span class="map-legend-count">${g.entries.length}</span></button><input type="checkbox" data-category="${g.id}" aria-label="Show all ${escapeUI(g.label)} icons"></div><div id="${this.element.id}-${g.id}" ${g.id === (context === 'world' ? 'services' : 'dungeons') ? '' : 'hidden'}>${g.entries.map(e => `<div class="map-legend-row" data-entry="${e.id}"><canvas aria-hidden="true" data-icon="${e.id}"></canvas><label><span>${escapeUI(e.label)}</span><small>${escapeUI(e.description)}</small><input type="checkbox" data-visible="${e.id}" aria-label="Show ${escapeUI(e.label)} icons"></label>${e.service && ping ? `<button type="button" class="map-legend-ping ui-button ui-button--quiet" data-ping="${e.service}" aria-label="Ping nearest ${escapeUI(e.label)}">${uiIcon('center')}<span>Ping nearest</span></button>` : ''}</div>`).join('')}</div></section>`).join('')}</div>
       <p class="map-legend-note" role="status" aria-live="polite">${context === 'world' ? 'Pings use discovered locations nearest to you.' : 'Only explored rooms reveal their icons.'}</p>`;
@@ -33,8 +33,7 @@ export class MapLegend {
     this.toggle.addEventListener('click', () => this.setOpen(this.element.hidden), { signal: this.abort.signal });
     this.element.addEventListener('click', event => {
       const button = (event.target as Element).closest<HTMLButtonElement>('button'); if (!button) return;
-      if (button.hasAttribute('data-dismiss')) { this.setOpen(false); this.toggle.focus(); }
-      else if (button.dataset.ping) ping?.(button.dataset.ping as MapServiceKind);
+      if (button.dataset.ping) ping?.(button.dataset.ping as MapServiceKind);
       else if (button.hasAttribute('aria-expanded')) {
         const expanded = button.getAttribute('aria-expanded') !== 'true'; button.setAttribute('aria-expanded', String(expanded));
         this.element.querySelector<HTMLElement>(`#${button.getAttribute('aria-controls')}`)!.hidden = !expanded;
