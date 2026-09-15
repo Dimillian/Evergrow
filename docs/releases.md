@@ -35,6 +35,17 @@ The user approved the next major prototype milestone, **0.6.0**, on 2026-09-14 f
 
 ## Last verified publication
 
+- Game v0.6.3 / Sites version 57, publicly deployed on 2026-09-15 at 05:39:32 UTC.
+- Published source: `32125e1e2eec31715a4ff92c59e0183253bba1f7`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_ce3b0d0058c08191a93d5a377a4a8453`.
+- Deployment: `appgdep_6aa8da02ca6881919806b4ddb9618c0f`; Sites returned `succeeded`.
+- Includes PRs #45, #48, #49, #51, #52, #53 and #54: redesigned character hall and appearance editing, directional character art, map legend and service pings, destination-aware portals, ground resource motion, rift completion feedback and F3 performance monitor.
+- All 1,585 code tests passed, with application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation. No automated browser gameplay was run.
+- Existing characters and progress remain intact; no save reset, skill refund or database migration. Reload existing clients.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.6.2 / Sites version 56, publicly deployed on 2026-09-14 at 16:19:33 UTC.
 - Published source: `09e32e06ecb7f039be724ae26a7c191fba4d504d`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_645eb1c05f7c8191b66a4f73d2c5c3a3`.
