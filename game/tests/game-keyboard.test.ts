@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { isConsoleShortcut } from '../src/console-access.ts';
 import { bindGameKeyboard } from '../src/game-keyboard.ts';
 import { GameInput } from '../src/game-input.ts';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
@@ -118,4 +119,22 @@ test('an explicitly owned modifier shortcut clears held input and never leaks in
   assert.equal(key('KeyR').defaultPrevented,false);assert.equal(presses,0);
   assert.equal(key('KeyK',{isComposing:true}).defaultPrevented,false);assert.equal(opens,1);
   abort.abort();assert.equal(key('KeyK').defaultPrevented,false);
+});
+
+
+test('backtick toggles the console once per press without reaching gameplay or the command input',()=>{
+  const target=new EventTarget(),abort=new AbortController();let open=false,toggles=0,presses=0,typing=false;
+  bindGameKeyboard(target,{clear:()=>{},release:()=>{},press:()=>{presses++;},shortcut:e=>{
+    if(!isConsoleShortcut(e,typing&&!open))return false;
+    if(!e.repeat){open=!open;toggles++;}return true;
+  }},abort.signal);
+  const key=(extra={})=>{const e=Object.assign(new Event('keydown',{cancelable:true}),{
+    key:'`',code:'Backquote',metaKey:false,ctrlKey:false,altKey:false,shiftKey:false,isComposing:false,repeat:false,...extra,
+  });target.dispatchEvent(e);return e;};
+  assert.equal(key().defaultPrevented,true);assert.equal(open,true);
+  typing=true; // The console input is focused, so another press still closes it.
+  assert.equal(key({repeat:true}).defaultPrevented,true);assert.equal(toggles,1);
+  assert.equal(key().defaultPrevented,true);assert.equal(open,false);assert.equal(toggles,2);assert.equal(presses,0);
+  assert.equal(key().defaultPrevented,false);assert.equal(toggles,2); // Another text field retains backtick.
+  abort.abort();
 });

@@ -31,7 +31,12 @@ async function boot() {
     return {ok:true,message:parsed.type==='help'?consoleHelp(parsed.command):`Preview received: ${raw} · nothing was changed.`};
   }});
   function toggle(open:boolean){if(open)panel.open();else panel.close();reopen.hidden=open;root.classList.toggle('console-closed',!open);if(!open)reopen.focus();}
-  window.addEventListener('keydown',event=>{if(isConsoleShortcut(event)){event.preventDefault();if(!event.repeat)toggle(panel.element.hidden);}},{signal:abort.signal});
+  window.addEventListener('keydown',event=>{
+    const target=event.target;
+    const editingText=!(target instanceof Node&&panel.element.contains(target))&&(target instanceof HTMLInputElement
+      ||target instanceof HTMLTextAreaElement||target instanceof HTMLSelectElement||target instanceof HTMLElement&&target.isContentEditable);
+    if(isConsoleShortcut(event,editingText)){event.preventDefault();if(!event.repeat)toggle(panel.element.hidden);}
+  },{signal:abort.signal,capture:true});
   reopen.addEventListener('click',()=>toggle(true),{signal:abort.signal});
   for(const button of root.querySelectorAll<HTMLElement>('[data-state]'))button.addEventListener('click',()=>{
     toggle(true);panel.setDraft(button.dataset.state!);

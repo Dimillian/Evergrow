@@ -387,7 +387,10 @@ export class Game {
             },{ok:false,message:'Saving the previous action…'}),
           }));
           this.consoleShortcut=event=>{
-            if(!isConsoleShortcut(event)||!allowed()||this.appearanceEditor)return false;
+            const target=event.target;
+            const editingText=!(target instanceof Node&&this.commandConsole?.element.contains(target))&&(target instanceof HTMLInputElement||target instanceof HTMLTextAreaElement
+              ||target instanceof HTMLSelectElement||target instanceof HTMLElement&&target.isContentEditable);
+            if(!isConsoleShortcut(event,editingText)||!allowed()||this.appearanceEditor)return false;
             if(this.phase!=='console'&&!this.panels.canOpen('console'))return false;
             if(!event.repeat&&!this.savingAction)this.panels.toggle('console');
             return true;

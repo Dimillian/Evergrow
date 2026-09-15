@@ -35,8 +35,13 @@ test('local access requires both the build permission and local ownership, inclu
   for(const [enabled,site,mode,host,android] of [[false,false,'local','localhost',false],[true,true,'local','localhost',false],
     [true,false,'cloud','localhost',false],[true,false,'local','example.com',false],[true,true,'local','localhost',true]] as const)
     assert.equal(canUseLocalConsole(enabled,site,mode,host,android),false);
-  const key={code:'KeyK',metaKey:true,ctrlKey:false,altKey:false,shiftKey:false,isComposing:false};
+  const key={key:'k',code:'KeyK',metaKey:true,ctrlKey:false,altKey:false,shiftKey:false,isComposing:false};
   assert.equal(isConsoleShortcut(key),true);assert.equal(isConsoleShortcut({...key,metaKey:false,ctrlKey:true}),true);
+  const backtick={...key,key:'`',code:'Backquote',metaKey:false};
+  assert.equal(isConsoleShortcut(backtick),true);
+  assert.equal(isConsoleShortcut(key,true),false);assert.equal(isConsoleShortcut(backtick,true),false);
+  for(const other of [{metaKey:true},{ctrlKey:true},{altKey:true},{shiftKey:true},{isComposing:true},{key:'~'},{key:'Dead'},{key:'§'}])
+    assert.equal(isConsoleShortcut({...backtick,...other}),false);
   for(const other of [{code:'KeyR'},{isComposing:true},{altKey:true},{shiftKey:true},{metaKey:false}])assert.equal(isConsoleShortcut({...key,...other}),false);
 });
 test('parser validates every argument before dispatch and uses the runtime content catalogs',()=>{

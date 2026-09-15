@@ -1,6 +1,6 @@
 # Local command console
 
-The local game includes a centered command box matching Evergrow's metal/glass interface. Press **Cmd+K** on macOS or **Ctrl+K** on other keyboards while playing or paused. The box pauses combat and clears held/buffered actions. Escape closes it and restores the previous play/pause state. It cannot open from the character hall, defeat screen or another panel.
+The local game includes a centered command box matching Evergrow's metal/glass interface. Press **Cmd+K** on macOS or **Ctrl+K** on other keyboards, or **backtick (&#96;)**, while playing or paused. Either shortcut toggles the console; other text fields keep their normal input. The box pauses combat and clears held/buffered actions. Escape closes it and restores the previous play/pause state. It cannot open from the character hall, defeat screen or another panel.
 
 Type to filter suggestions, use Up/Down to select, and Tab or a click to complete the selected token. Enter runs the typed command. Up/Down on empty input, or Alt+Up/Down, recalls the latest thirty successful commands in memory; history is discarded with the app. Results and validation errors appear below the suggestions. Clear empties the input and result, returns focus to the input and keeps command history. The Esc exit hint appears alongside the other bottom bindings. The box stays open after running a command. Close it to see drop animations or continue playing.
 
