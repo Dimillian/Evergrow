@@ -48,10 +48,13 @@ function draw() {
       c.restore();
     }
   }
-  fx.render(source, 0);
   const density = devicePixelRatio;
   const width = Math.round(Math.min(1000, canvas.clientWidth) * density), height = Math.round(width * .46);
   if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+  // PostFX renders into its destination's backing size; match the visible output
+  // before compositing so the art never passes through a default 300×150 canvas.
+  if (scene.width !== width || scene.height !== height) { scene.width = width; scene.height = height; }
+  fx.render(source, 0);
   output.setTransform(1, 0, 0, 1, 0, 0); output.drawImage(scene, 0, 0, width, height);
   output.setTransform(width / 1000, 0, 0, height / 460, 0, 0);
   ['Small pile', 'Large pile', 'Mana', 'Health'].forEach((label, i) => text(output, label, 135 + i * 245, 35, 1.4, '#e2e7da', 'center'));
