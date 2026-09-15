@@ -10,6 +10,7 @@ export class RetainedTooltip extends UITooltip {
   private source?: HTMLElement;
   private readonly mount: HTMLElement;
   private markup = '';
+  onHide?: () => void;
   constructor(mount: HTMLElement, id: string, className = '') {
     super(mount, id, `${className} ui-retained-tooltip`);
     this.mount = mount;
@@ -39,6 +40,7 @@ export class RetainedTooltip extends UITooltip {
       else this.hide();
     }, 280);
   }
-  override hide(): void { clearTimeout(this.timer); this.timer = undefined; this.explanations?.hide(); this.source = undefined; super.hide(); }
+  override hide(): void { clearTimeout(this.timer); this.timer = undefined; this.explanations?.hide(); this.source = undefined; super.hide(); this.onHide?.(); }
   override dispose(): void { this.hide(); this.explanations.dispose(); this.life.abort(); super.dispose(); }
 }
+

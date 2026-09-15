@@ -27,7 +27,7 @@ test('ground two-handed inspection is one card, Alt combines both displaced hand
   assert.match(full[1], /Block chance/);
   assert.match(full[1], /Equipped · main hand/);
   assert.match(full[1], /Equipped · off hand/);
-  assert.equal(itemHoverCards(incoming, view).length, 3, 'inventory/vendor behavior is unchanged');
+  assert.equal(itemHoverCards(incoming, view).length, 2, 'inventory/vendor comparison consolidates displaced hands');
   assert.deepEqual(p, before);
 });
 

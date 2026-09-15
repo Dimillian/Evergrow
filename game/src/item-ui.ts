@@ -33,6 +33,10 @@ export interface ItemPresentation {
   compare?: boolean;
   /** Ground loot keeps the enhancement rank in the name without its explanatory banner. */
   hideEnhancementDetails?: boolean;
+  /** Index for cycling comparison views when multiple slots are displaced (0 = consolidated/all, 1 = first slot, 2 = second slot). */
+  focusIndex?: number;
+  /** Optional Alt toggle button configuration rendered within the item comparison section. */
+  altToggle?: { label: string; focusIndex: number };
 }
 export const CHANGE_LABELS: Record<PreviewStat, string> = {
   ...SPECIAL_AFFIX_LABELS, ...SKILL_STATS,
@@ -142,6 +146,9 @@ export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
     else if (preview.displaced.length && !view.adjacentComparison)
       comparison = `<div class="ui-item-comparison"><p>Replaces ${preview.displaced.map(entry => escapeUI(entry.item.name)).join(' + ')}</p></div>`;
   }
+  if (view.altToggle) {
+    comparison += `<div class="ui-item-comparison"><button type="button" class="ui-item-alt-toggle" title="Press Alt or click to cycle comparison"><kbd>Alt</kbd> <span>${escapeUI(view.altToggle.label)}</span></button></div>`;
+  }
   return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span><span>${escapeUI(item.baseName)}</span>${view.equipped && view.compactComparison ? `<span class="ui-item-equipped-inline" title="${escapeUI(view.equippedLabel ?? '')}">Equipped</span>` : ''}</span><h4>${hasGreaterAffix(item) ? escapeUI(itemDisplayName(item).slice(0, -(GREATER_AFFIX_SYMBOL.length + 1))) + ' ' + greaterMark : escapeUI(itemDisplayName(item))}</h4></div></div>
     <div class="ui-item-meta"><span>Item level ${number(item.itemLevel, 0)}</span><span class="${item.requiredLevel > view.level ? 'is-loss' : ''}">Requires level ${number(item.requiredLevel, 0)}</span>${view.equipped ? '<span class="ui-item-equipped">Equipped</span>' : ''}${item.locked?'<span class="ui-item-equipped">Locked</span>':''}</div>
     ${item.recipe.enhancement && !view.hideEnhancementDetails ? `<div class="ui-item-upgrade">Enhancement +${item.recipe.enhancement} / 10 · +${item.recipe.enhancement * 5}% scalable item stats</div>` : ''}
@@ -157,6 +164,7 @@ const EQUIPPED_LABELS: Record<EquipmentSlot, string> = {
   legs: 'Legs', boots: 'Boots', cloak: 'Cloak', amulet: 'Amulet', ring1: 'Ring 1', ring2: 'Ring 2',
 };
 
+
 /** Use the real equip transaction's displacement, including hand conflicts and ring targets. */
 export function itemHoverCards(item: Item, view: ItemPresentation): string[] {
   const preview = view.compare === false || view.equipped || item.kind === 'charm' && view.sourceIndex !== undefined ? null : previewEquipmentChange(view.sheet, item, view.level,
@@ -164,6 +172,29 @@ export function itemHoverCards(item: Item, view: ItemPresentation): string[] {
   const displaced = preview?.ok ? preview.displaced : [];
   const card = (gear: Item, content: string, label = '') =>
     `<section class="ui-item-hover-card" data-tier="${gear.tier}" style="--item-color:${TIER_COLORS[gear.tier]}">${label && !view.compactComparison ? `<div class="ui-item-section-label ui-item-comparison-label">Equipped · ${label}</div>` : ''}${content}</section>`;
+
+  if (displaced.length > 1) {
+    // D4-style binary toggle: always exactly 2 cards (candidate vs one equipped slot).
+    // focusIndex=0 → compare vs main hand (displaced[0]), Alt label says "Compare with Off hand"
+    // focusIndex=1 → compare vs off hand (displaced[1]), Alt label says "Compare with Main hand"
+    const focus = (view.focusIndex ?? 0) % 2;
+    const target = displaced[focus];
+    const other = displaced[1 - focus];
+    const altLabel = `Compare with ${EQUIPPED_LABELS[other.slot] ?? other.slot}`;
+    const slotLabel = EQUIPPED_LABELS[target.slot] ?? target.slot;
+
+    const candidateContent = itemTooltipMarkup(item, {
+      ...view,
+      adjacentComparison: true,
+      altToggle: { label: altLabel, focusIndex: focus },
+    });
+
+    return [
+      card(item, candidateContent),
+      `<section class="ui-item-hover-card" data-tier="${target.item.tier}" style="--item-color:${TIER_COLORS[target.item.tier]}"><div class="ui-item-section-label ui-item-comparison-label" style="display:flex;justify-content:space-between;align-items:center;"><span>Equipped · ${slotLabel}</span><span style="font-size:10px;color:#8faab5;font-weight:normal;text-transform:none;">Replaces Main &amp; Off hand</span></div>${itemTooltipMarkup(target.item, { sheet: view.sheet, level: view.level, equipped: true, compactComparison: view.compactComparison, equippedLabel: slotLabel })}</section>`,
+    ];
+  }
+
   return [card(item, itemTooltipMarkup(item, { ...view, adjacentComparison: displaced.length > 0 })),
     ...displaced.map(({ item: gear, slot }) => card(gear,
       itemTooltipMarkup(gear, { sheet: view.sheet, level: view.level, equipped: true,
