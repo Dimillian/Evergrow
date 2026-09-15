@@ -8,6 +8,7 @@ import { projectileDamageType } from './resistance-content.ts';
 import { metric } from './chronicle.ts';
 import { primeSpellweave, primeAfterguard, effectiveArmor } from './affix-combat.ts';
 import { applyElementalContact, applyStun } from './combat-status.ts';
+import { resolveElementalReaction, ELEMENTAL_REACTION_RULES } from './elemental-reaction.ts';
 import { enemyThreat } from './enemy-threat.ts';
 import type { HitSnapshot, CombatEvent, Enemy, EnemyKind, Player, ProjectileStyle, WorldQuery, DamageType } from './model.ts';
 import { COMBAT_TIMING, ENEMY_DEFINITIONS } from './combat-content.ts';
@@ -43,6 +44,23 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
   }
   // Contact status uses the elemental portion, never physical damage or recursive burn ticks.
   const statusDamage = elementalDamage ?? (style === 'fire' || style === 'frost' || style === 'lightning' ? damage : 0);
+  const elementKind = (elementalDamage && elementalDamage > 0) ? (style ?? 'fire') : style;
+  const reaction = !periodic ? resolveElementalReaction(enemy, elementKind, statusDamage) : null;
+  if (reaction) {
+    damage *= reaction.damageMultiplier;
+    if (elementalDamage !== undefined) elementalDamage *= reaction.damageMultiplier;
+    if (reaction.type === 'overload' && reaction.radius) {
+      context.emit({ type: 'blast', x: enemy.x, y: enemy.y, radius: reaction.radius, color: reaction.color, reaction: 'overload' });
+      for (const other of context.enemies) {
+        if (other !== enemy && other.state !== 'dead' && Math.hypot(other.x - enemy.x, other.y - enemy.y) <= reaction.radius) {
+          const pushAngle = Math.atan2(other.y - enemy.y, other.x - enemy.x);
+          other.knockbackX += Math.cos(pushAngle) * 85 / COMBAT_TIMING.knockbackDecay;
+          other.knockbackY += Math.sin(pushAngle) * 85 / COMBAT_TIMING.knockbackDecay;
+          other.hp = Math.max(0, other.hp - Math.round(statusDamage * ELEMENTAL_REACTION_RULES.overloadBaseDamageFraction));
+        }
+      }
+    }
+  }
   if (!periodic) primeSpellweave(context.player, melee, style);
   if (!periodic && !(style === 'fire' && authoredBurn)) applyElementalContact(enemy, style, statusDamage);
   const elementFraction=style && projectileDamageType(style)==='arcane'?1:Math.min(1,Math.max(0,statusDamage/Math.max(1,damage)));
@@ -61,8 +79,8 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
     enemy.knockbackX += Math.cos(angle) * shove / COMBAT_TIMING.knockbackDecay;
     enemy.knockbackY += Math.sin(angle) * shove / COMBAT_TIMING.knockbackDecay;
   }
-  context.emit({ ...(style ? { style } : {}), type: 'hit', actualValue, elementalValue:actualValue*elementFraction, melee, periodic, ...(offense?.skill?{skill:offense.skill}:{}), x: enemy.x, y: enemy.y, angle, value: damage,
-    targetId: enemy.id, remainingHp: enemy.hp, enemyKind: enemy.kind, heavy: critical });
+  context.emit({ ...(style ? { style } : {}), type: 'hit', actualValue, elementalValue:actualValue*elementFraction, melee, periodic, ...(offense?.skill?{skill:offense.skill}:{}), ...(reaction ? { reaction: reaction.type, color: reaction.color } : {}), x: enemy.x, y: enemy.y, angle, value: damage,
+    targetId: enemy.id, remainingHp: enemy.hp, enemyKind: enemy.kind, heavy: critical || !!reaction });
   if (enemy.hp <= 0) {
     transitionEnemy(enemy, 'dead', ENCOUNTER_RULES.corpseDuration);
     context.killed(enemy);
