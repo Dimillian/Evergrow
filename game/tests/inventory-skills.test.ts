@@ -2,7 +2,7 @@ import { HUD_ART } from '../src/hud-layout.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { Simulation } from '../src/simulation.ts';
-import { INVENTORY_SKILL_BINDINGS, inventorySkillPickerMarkup, inventoryHUDLayout } from '../src/inventory-skills.ts';
+import { INVENTORY_SKILL_BINDINGS, inventorySkillPickerMarkup, inventorySkillTooltipMarkup, inventoryHUDLayout } from '../src/inventory-skills.ts';
 import { executeCharacterCommand } from '../src/character-commands.ts';
 import { resolveSkill } from '../src/skill-progression.ts';
 
@@ -79,4 +79,19 @@ test('inventory assignment labels follow custom controls without changing skill 
     assert.match(inventorySkillPickerMarkup(before, 0), /Clear M5/);
     assert.deepEqual(before.character.skillSlots, [null, null, null, null, null]);
   } finally { controls.reset(); }
+});
+
+test('inventory hover uses current ranks, costs and weapon requirements without mutating the build', () => {
+  const player = make();
+  player.character.allocatedNodes.push('skill:fireball');
+  player.character.skillRanks.fireball = 5;
+  player.derived.manaCostMultiplier = .8;
+  const before = structuredClone(player), resolved = resolveSkill('fireball', player.derived, player.character);
+  const markup = inventorySkillTooltipMarkup(player, 'fireball');
+  assert.match(markup, /Fireball/);
+  assert.match(markup, /Burn/);
+  assert.match(markup, /Rank 5/);
+  assert.ok(markup.includes(`<b>${resolved.mana}</b><small>Mana</small>`));
+  assert.match(markup, /Requires Staff or wand/);
+  assert.deepEqual(player, before);
 });
