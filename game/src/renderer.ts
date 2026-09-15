@@ -610,8 +610,8 @@ export class Renderer {
     const target = boss ?? (this.plateOpacity > .01 ? this.plateEnemy : null);
     const debuffs = target ? [...enemyTraitBuffs(target),...enemyDebuffs(target, p)] : [];
     const targetPlate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0);
-    // Combat takes this space immediately. Dismiss, rather than replaying after focus ends.
-    if(settings.phase==='playing'&&target&&target.hp>0&&targetPlate.height>0)this.areaBanner.clear();
+    // Visible plates own this space, including their death fade. Dismiss without replaying after focus ends.
+    if(settings.phase==='playing'&&target&&targetPlate.height>0)this.areaBanner.clear();
     if(settings.phase==='playing'&&!p.dead&&!this.rewards.level&&!this.rewards.journey) {
       // Use display pixels for banner sizing, independent of world resolution and zoom.
       const scale=this.cursorPixelScale;

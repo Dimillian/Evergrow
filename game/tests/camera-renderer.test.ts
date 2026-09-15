@@ -262,6 +262,38 @@ test('renderer wires hover and combat focus to a native enemy plate without HUD 
   assert.equal(plateName(), undefined, 'restarting the renderer clears the retained plate');
 });
 
+test('area entry on a killing frame dismisses the banner while the enemy plate fades out', t => {
+  const { renderer, sim, world, settings, render } = fixture(t);
+  t.after(() => world.dispose());
+  world.blocked = () => false; world.isSanctuary = () => false;
+  settings.reducedMotion = false;
+  renderer.pointerActive = false;
+  const enemy = sim.spawnEnemy('stalker', sim.player.x + 80, sim.player.y + 20)!;
+  const noteHit = () => renderer.handleEvents([{ type: 'hit', angle: 0, heavy: false, targetId: enemy.id,
+    enemyKind: enemy.kind, x: enemy.x, y: enemy.y, value: 5, remainingHp: enemy.hp }], false);
+  const draw = () => {
+    const ui = new RecordingContext();
+    renderer.renderUI(ui as unknown as CanvasRenderingContext2D, sim, world, settings);
+    return ui.texts.map(call => call.value);
+  };
+  noteHit(); render(.2);
+  assert.ok(draw().includes('HOLLOW STALKER'), 'damage focus first displays the enemy plate');
+
+  enemy.hp = 0; enemy.state = 'dead'; noteHit();
+  renderer.areaBanner.show({ id: 'new-area', name: 'Thorn Vale', level: 1, maxLevel: 12 });
+  render();
+  const killingFrame = draw();
+  assert.ok(killingFrame.includes('HOLLOW STALKER'), 'the dead enemy plate is still fading out');
+  assert.ok(!killingFrame.includes('Thorn Vale'), 'the banner must not overlap the fading plate');
+  assert.equal(renderer.areaBanner.notice, null, 'area entry is dismissed on the killing frame');
+
+  render(.3);
+  const afterFade = draw();
+  assert.ok(!afterFade.includes('HOLLOW STALKER'), 'the enemy plate finishes fading');
+  assert.ok(!afterFade.includes('Thorn Vale'), 'the dismissed banner does not return after the fade');
+  assert.equal(renderer.areaBanner.notice, null);
+});
+
 test('automatic boss plates dismiss area banners without hover on desktop and touch layouts',t=>{
   const {renderer,sim,world,settings,render}=fixture(t);
   world.blocked=()=>false;world.isSanctuary=()=>false;
