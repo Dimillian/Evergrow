@@ -31,6 +31,7 @@ export function stageForestPlayer(player: Player, scene: { x: number; y: number 
   const vx = time >= 2 && time < 6 ? 45 : time >= 8 && time < 12 ? -45 : 0;
   player.x = player.prevX = scene.x - 90 + distance; player.y = player.prevY = scene.y;
   player.vx = vx; player.vy = 0;
+  player.locomotionVX = vx; player.locomotionVY = 0;
   player.angle = vx < 0 ? Math.PI : vx > 0 ? 0 : -Math.PI / 2;
   const traveled = time < 8 ? distance : 360 - distance;
   player.walkTime = traveled / PLAYER_MOVEMENT.gaitDistance;

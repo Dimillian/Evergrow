@@ -25,8 +25,8 @@ export function playerPose(player: Player, time: number,
     : off?.kind === 'shield' ? { kind: 'shield', visual: off.shield.visual } : off?.kind === 'focus' ? { kind: 'focus', visual: off.focus.visual } : null;
   return {
     kind: 'player', appearance:player.character.look.appearance, outfit:tintedOutfit(outfitFromEquipment(player.character),player.character.look.armorTints,player.character.look.showHelmet), angle: player.castTime > 0 ? player.castAngle : player.angle,
-    time, gaitPhase: player.walkTime, moveAngle: Math.atan2(player.vy, player.vx),
-    moving: player.dash ? 1 : Math.min(1, Math.hypot(player.vx, player.vy) / 130),
+    time, gaitPhase: player.walkTime, moveAngle: Math.atan2(player.locomotionVY, player.locomotionVX),
+    moving: Math.min(1, Math.hypot(player.locomotionVX, player.locomotionVY) / 130),
     attack: attack ? elapsed / attack.duration : drawing ? .12+.29*Math.min(1,draw.elapsed/UNIQUE_RULES.drawTime) : 0,
     attackAngle: attack?.angle ?? player.angle,
     attackKind: attack?.kind ?? (drawing?'ranged':undefined), attackHand: attack?.hand ?? (castingWeapon && castingWeapon === (off?.kind === 'weapon' ? off.weapon : null) ? 'off' : 'main'), gesture,
