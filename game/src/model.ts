@@ -271,9 +271,12 @@ export interface Enemy {
   radius: number;
   stagger: number;
   /** Applied duration retained for status progress; never drives combat. */
-  statusDurations?: Partial<Record<'burn' | 'slow' | 'freeze' | 'stun' | 'stagger', number>>;
+  statusDurations?: Partial<Record<'burn' | 'slow' | 'freeze' | 'stun' | 'stagger' | 'fracture' | 'chill', number>>;
+  reactionCooldown?: number;
+  fractureTime?: number;
   freezeTime?: number;
   stunTime?: number;
+  chillTime?: number;
   attackHit: boolean;
   interrupted: boolean;
   slowTime: number;
@@ -340,6 +343,7 @@ export interface Pickup {
 interface EventAppearance {
   readonly x: number; readonly y: number;
   readonly color?: string; readonly style?: ProjectileStyle; readonly skill?: SkillId;
+  readonly reaction?: 'melt' | 'overload' | 'superconduct';
 }
 export type CombatEvent = EventAppearance & (
   | { readonly type: 'insufficient-mana' }

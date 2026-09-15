@@ -7,7 +7,7 @@ import { UNIQUE_RULES } from './unique-content.ts';
 import { AURA_RULES } from './aura-content.ts';
 
 export type EnemyDebuffState = Pick<Enemy, 'hp'> & Partial<Pick<Enemy,
-  'id' | 'state' | 'burnTime' | 'burnDps' | 'slowTime' | 'slowFactor' | 'stagger' | 'freezeTime' | 'stunTime' | 'statusDurations' | 'auraExposure'>>;
+  'id' | 'state' | 'burnTime' | 'burnDps' | 'slowTime' | 'slowFactor' | 'stagger' | 'freezeTime' | 'stunTime' | 'fractureTime' | 'statusDurations' | 'auraExposure'>>;
 export interface EnemyDebuff extends ActiveBuff { label: string }
 const active = (n: number | undefined): n is number => Number.isFinite(n) && n! > 0;
 /** Target-owned presentation. Original durations come from application, never inferred from elapsed time. */
@@ -25,6 +25,7 @@ export function enemyDebuffs(enemy: EnemyDebuffState, player?: Pick<Player, 'ski
   if (active(enemy.freezeTime)) add('freeze', 'Frozen', 'absoluteZero', '#c0f5ff', enemy.freezeTime, enemy.statusDurations?.freeze, 'Cannot move or attack.');
   else if (active(enemy.stunTime)) add('stun', 'Stunned', 'shieldBash', '#ffe1a1', enemy.stunTime, enemy.statusDurations?.stun, 'Cannot move or attack.');
   else if (active(enemy.stagger)) add('stagger', 'Stagger', 'arcLightning', '#c5b6ef', enemy.stagger, enemy.statusDurations?.stagger, 'Movement and attacks interrupted.');
+  if (active(enemy.fractureTime)) add('fracture', 'Fracture', 'earthshatter', '#76b9ee', enemy.fractureTime, enemy.statusDurations?.fracture, 'Armor shattered by Superconduct. Takes increased damage.');
   const mark = player?.skillEffects?.harvest?.find(m => m.target === enemy.id && m.remaining > 0);
   if (mark) add('red-harvest', 'Red Harvest', 'backstab', '#ef82ad', mark.remaining, UNIQUE_RULES.harvestWindow, 'Your next Backstab counts as a rear strike.', 'unique:red-harvest');
   const colors = { fire: '#f5ab75', frost: '#9bdbea', lightning: '#e5cf8b', arcane: '#c7a0ef' };
