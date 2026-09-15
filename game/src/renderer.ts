@@ -46,6 +46,7 @@ import { drawEventObjectives, EventArt, drawEventUI } from './poi-art.ts';
 import { eventProgress } from './event-progress.ts';
 import { EventProgressPresentation } from './event-progress-presentation.ts';
 import { drawPortal, drawTownAnchor } from './travel-art.ts';
+import { fitPortalWorldLabel, type PortalDestination } from './portal-destination.ts';
 import { townPortalAnchor, withinPortalReach, PORTAL_RULES, type PortalAnchor } from './travel.ts';
 import { buildingNPC, focusNPC, canInteractNPC, NPC_NAMES, NPC_COLORS } from './npcs.ts';
 import { drawNPC, npcArtScale } from './npc-art.ts';
@@ -64,7 +65,7 @@ import { World } from './world.ts';
 import { GroundLayer } from './ground-layer.ts';
 import type { Simulation } from './simulation.ts';
 import type { CombatEvent, Enemy, Player } from './model.ts';
-import { text } from './font.ts';
+import { text, textWidth } from './font.ts';
 import { drawFloatingHUD } from './hud.ts';
 import { phoneLandscapeLayout, type TouchViewport } from './touch-layout.ts';
 import { ExperienceFeedback, type ExperienceDisplay } from './hud-experience.ts';
@@ -189,6 +190,7 @@ export class Renderer {
   readonly eventProgressPresentation = new EventProgressPresentation();
   private get eventSites() { return this.visibility.events; }
   portalGuide = 0;
+  portalDestinations: { home: PortalDestination; returnTo: PortalDestination | null } | null = null;
   private portalAnchors: PortalAnchor[] = [];
   private fadingPortal: { x: number; y: number; progress: number; life: number } | null = null;
 
@@ -659,17 +661,19 @@ export class Renderer {
   private drawPortalHints(c: CanvasRenderingContext2D, sim: Simulation, world: World) {
     const p = sim.player, anchor = this.portalAnchors.find(a => withinPortalReach(p, a, world));
     let label = '', x = p.x, y = p.y - 79;
-    if (sim.portal.active) label = `Town portal · ${(PORTAL_RULES.channel * (1 - sim.portal.progress)).toFixed(1)}s`;
+    if (sim.portal.active) label = `${this.portalDestinations?.home.name ?? 'Home town'} · ${(PORTAL_RULES.channel * (1 - sim.portal.progress)).toFixed(1)}s`;
     else if (anchor) { x = anchor.x; y = anchor.y - (sim.travel.returnTo?.town === anchor.band ? 82 : 28);
-      label = sim.travel.returnTo?.town === anchor.band ? 'Return to expedition  [E]' : sim.travel.homeTown === anchor.band ? `${anchor.name} · Home  [E]` : 'Set home town  [E]'; }
+      const destination = this.portalDestinations?.returnTo;
+      const shortName = destination?.name.split(' · ', 1)[0];
+      label = sim.travel.returnTo?.town === anchor.band ? `${shortName ?? 'Expedition'}  [E]` : sim.travel.homeTown === anchor.band ? `${anchor.name} · Home  [E]` : 'Set home town  [E]'; }
     if (label) {
       label = label.replace('[E]', `[${this.gamepadActive ? 'A' : controls.label('interact')}]`);
       const point = worldToScreen(this.view, x, y);
-      c.save(); c.font = '12px "Evergrow Numerals", system-ui, sans-serif'; c.textAlign = 'center';
-      const w = c.measureText(label).width + 18;
-      c.fillStyle = '#09121deb'; c.fillRect(point.x - w / 2, point.y - 14, w, 23);
-      c.strokeStyle = '#b7a9d366'; c.strokeRect(point.x - w / 2, point.y - 14, w, 23);
-      c.fillStyle = '#dfd7f0'; c.fillText(label, point.x, point.y + 2); c.restore();
+      const available = Math.max(72, Math.min(180, 2 * Math.min(point.x - 12, this.width - point.x - 12)));
+      label = fitPortalWorldLabel(label, available, value => textWidth(value, .78));
+      c.save(); c.globalAlpha = .62;
+      text(c, label, point.x, point.y, .78, '#d8cbea', 'center');
+      c.restore();
     }
     if (this.portalGuide > 0 && sim.travel.returnTo) {
       const home = world.getPortalAnchor(sim.travel.returnTo.town), pos = worldToScreen(this.view, home.x, home.y - 38);
@@ -745,10 +749,10 @@ export class Renderer {
     for (const anchor of this.portalAnchors) entries.push({ y: anchor.y, draw: () => {
       drawTownAnchor(c, anchor, sim.travel.homeTown === anchor.band);
       if (sim.travel.returnTo?.town === anchor.band) drawPortal(c, anchor.x, anchor.y, this.visualTime, 1,
-        '#b5a0ee', settings.reducedMotion);
+        this.portalDestinations?.returnTo ?? undefined, settings.reducedMotion);
     } });
     if (sim.portal.origin) { const origin = sim.portal.origin;
-      entries.push({ y: origin.y - 1, draw: () => drawPortal(c, origin.x, origin.y, this.visualTime, sim.portal.progress, '#b5a0ee', settings.reducedMotion) });
+      entries.push({ y: origin.y - 1, draw: () => drawPortal(c, origin.x, origin.y, this.visualTime, sim.portal.progress, this.portalDestinations?.home, settings.reducedMotion) });
     }
     if (!sim.portal.active && this.fadingPortal) { const old = this.fadingPortal;
       entries.push({ y: old.y - 1, draw: () => { c.save(); c.globalAlpha = old.life / .25;

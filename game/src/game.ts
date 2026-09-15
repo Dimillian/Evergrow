@@ -48,6 +48,7 @@ import { EVENT_RULES, focusEvent, eventLabel, eventClaimed, isEventKind, type Ev
 import { executeEvent, eventProblem, claimCompletedEvent, pendingEventReward } from './poi-command.ts';
 import { activatePortalAnchor } from './travel-command.ts';
 import { townPortalAnchor, withinPortalReach, portalMapMarkers, type PortalAnchor } from './travel.ts';
+import { portalActionMode, portalDestinations, type PortalActionView } from './portal-destination.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import { ServicePanel } from './service-panel.ts';
 import { buildingNPC, focusNPC, canInteractNPC, type TownNPC } from './npcs.ts';
@@ -1000,7 +1001,9 @@ export class Game {
     if (this.savingAction || !this.panels.simulationActive || !this.session.active) return;
     const p = this.sim.player, link = this.sim.travel.returnTo;
     if (this.world.isSanctuary(p.x, p.y)) {
-      if (link) { this.renderer.portalGuide = 4; this.notify('Return portal marked on your map.'); }
+      const anchor = this.returnPortalInReach();
+      if (anchor) { void this.travelThrough(anchor, true); }
+      else if (link) { this.renderer.portalGuide = 4; this.notify('Return portal marked on your map.'); }
       else this.notify('Explore outside the sanctuary to open a town portal.');
       return;
     }
@@ -1008,6 +1011,23 @@ export class Game {
     this.sim.clearCombatInput();
     const problem = this.sim.portal.start(p, this.world);
     if (problem) this.notify(problem);
+  }
+
+  private returnPortalInReach(): PortalAnchor | undefined {
+    const link = this.sim.travel.returnTo;
+    if (!link) return undefined;
+    const anchor = this.overworld.getPortalAnchor(link.town);
+    return withinPortalReach(this.sim.player, anchor, this.world) ? anchor : undefined;
+  }
+
+  private portalActionView(): PortalActionView {
+    const destinations = portalDestinations({ seed: this.overworld.seed,
+      home: this.overworld.getPortalAnchor(this.sim.travel.homeTown), travel: this.sim.travel, expeditions: this.sim.expeditions });
+    this.renderer.portalDestinations = destinations;
+    const progress = this.sim.portal.active ? this.sim.portal.progress : null;
+    const inSanctuary=this.world.isSanctuary(this.sim.player.x,this.sim.player.y),returnInReach=!!this.returnPortalInReach();
+    const mode=portalActionMode(progress!==null,inSanctuary,!!destinations.returnTo,returnInReach);
+    return {mode,progress,destination:mode==='locate'||mode==='return'?destinations.returnTo!:destinations.home};
   }
 
   private setLocationWorld(checkpoint: CharacterCheckpoint) {
@@ -1201,9 +1221,9 @@ export class Game {
     }
     this.shell.setBuffs(activeBuffs(this.sim.player, this.sim.groundEffects));
     this.shell.shortcutMenu.setPoints(this.sim.player.character.statPoints, this.sim.player.character.skillPoints);
-    this.shell.setPortalState(this.sim.portal.active ? this.sim.portal.progress : null,
-      !!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x, this.sim.player.y));
-    if(this.touch.active) this.touch.setPortal(this.sim.portal.active ? this.sim.portal.progress : null,!!this.sim.travel.returnTo && this.world.isSanctuary(this.sim.player.x,this.sim.player.y));
+    const portalView = this.portalActionView();
+    this.shell.setPortalState(portalView);
+    if(this.touch.active) this.touch.setPortal(portalView);
     this.renderer.pointerX = this.mouse.x;
     this.renderer.pointerY = this.mouse.y;
     this.renderer.inspectedEnemyId = this.shell.targetBuffs.held ? this.renderer.targetEffects?.id ?? null : null;
