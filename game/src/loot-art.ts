@@ -62,7 +62,7 @@ export function drawResourcePickups(c: CanvasRenderingContext2D, pickups: readon
   for (const pickup of pickups) {
     c.save(); c.translate(pickup.x, pickup.y); c.globalAlpha = Math.min(1, pickup.life / 2);
     const mana = pickup.kind === 'mana';
-    const hop = mana && !reducedMotion ? dropIdleHop(time, pickup.id) * .8 : 0;
+    const hop = !reducedMotion ? dropIdleHop(time, pickup.id) * .8 : 0;
     c.fillStyle = '#030a10a0'; c.beginPath(); c.ellipse(0, 2, 5, 2, 0, 0, Math.PI * 2); c.fill();
     c.translate(0, -hop);
     const glow = c.createRadialGradient(0, -3, 1, 0, -3, 17);
