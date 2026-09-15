@@ -143,3 +143,7 @@ Crimson Rifts → View pack includes an atmosphere-only animation and progress s
 ### Gameplay performance monitor
 
 Data & audits → Code & performance audits includes the actual F3 monitor with a frozen synthetic 600-frame sample (`/tools/audits.html?view=monitor`). Inspect all six dropdown views and capture controls without loading characters, simulating gameplay or reading saves. Restore sample data repopulates the disposable profiler. The runtime monitor toggles with F3; see [world performance](world-performance.md) for metric definitions and limits.
+
+### Command console visual proposal
+
+Interface → Command console (`/tools/console.html`) stages a centered old-school input box with the shared metal/glass materials and bundled fonts. Discover, Item drop, Monster and Arguments presets demonstrate contextual suggestions from runtime item materials, weapon profiles and enemy definitions. Type to filter, use arrows to select and Tab/click to complete; Enter displays a proposal-only receipt. Cmd/Ctrl+K and Escape toggle the box. Alt+arrows recall up to twenty in-memory entries. The backdrop uses the real World/Renderer/PostFX without simulation updates. No executable cheat commands, gameplay input or character persistence are connected; the route remains outside production entrypoints.
