@@ -15,8 +15,8 @@
 .command-prompt{font-size:27px;color:#b9d79c;text-shadow:0 0 10px #7ac35855}
 .command-well input{width:100%;min-width:0;outline:none;border:0;background:transparent;color:#e5e9d3;font-size:21px;caret-color:#c5e6a6;padding:12px 0}
 .command-well input::placeholder{color:#697d74}
-.command-close{background:#172127;border:1px solid #42534f;color:#8d9d94;font-size:10px!important;padding:4px 5px;border-radius:0}
-.command-close:disabled{opacity:.4;cursor:wait}
+.command-clear{background:#172127;border:1px solid #42534f;color:#8d9d94;font-size:10px!important;padding:4px 5px;border-radius:0}
+.command-clear:disabled{opacity:.4;cursor:wait}
 .command-suggestions-heading{display:flex;justify-content:space-between;padding:4px 27px 10px;color:#7e938b;font-size:10px;letter-spacing:1.4px;flex:none}
 .command-suggestions-heading [data-count]{letter-spacing:0;color:#697f77}
 .command-suggestions{padding:0 10px 10px;overflow:auto;min-height:50px;max-height:290px;scrollbar-width:thin;scrollbar-color:#627d6a #0b1519}
@@ -29,10 +29,9 @@
 .command-copy small{display:block;font-size:13px;color:#8b9c93;margin-top:3px}
 .command-complete-key{font-size:11px;color:#a7b79d;opacity:0;white-space:nowrap}
 .command-suggestion[aria-selected=true] .command-complete-key{opacity:1}
-.command-footer{display:flex;justify-content:space-between;gap:10px;border-top:1px solid #aac8b321;padding:12px 23px;color:#87988d;font-size:12px;background:#06101638;flex:none}
+.command-footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;border-top:1px solid #aac8b321;padding:12px 23px;color:#87988d;font-size:12px;background:#06101638;flex:none}
 .command-footer>span{display:flex;align-items:center;gap:6px}
 .command-footer kbd{font-family:var(--ui-font);font-size:11px;color:#aab8a7;min-width:18px;padding:2px 4px;text-align:center;border:1px solid #536b5e66;background:#0c171a;box-shadow:0 1px #020609}
-.command-footer kbd:nth-of-type(3){margin-left:9px}
 .command-empty{padding:24px 16px;color:#98ab9c;font-size:14px}
 .command-result{margin:0;padding:12px 24px;font-size:14px;line-height:1.5;color:#b8cfa9;border-top:1px solid #56735055;overflow:auto;overflow-wrap:anywhere;white-space:pre-wrap;max-height:220px;flex:0 1 auto}
 .command-result[data-ok=false]{color:var(--ui-danger)}

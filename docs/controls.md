@@ -91,4 +91,4 @@ Tab-map marker tooltips appear automatically whenever hovered, including during 
 
 ## Local command console
 
-Cmd+K / Ctrl+K opens the centered local command box from play or pause. It pauses combat; Escape restores the previous state. Arrows select suggestions, Tab completes, and Enter runs. Use `help`, `drop`, `spawn`, `refill-hp`, `refill-mp` or `refill`. The online build excludes the console even when Local saves are selected. See [Local command console](local-console.md).
+Cmd+K / Ctrl+K opens the centered local command box from play or pause. It pauses combat; Escape restores the previous state. Arrows select suggestions, Tab completes, and Enter runs. Use `help`, `drop`, `spawn`, `refill hp`, `refill mp` or `refill both`. The online build excludes the console even when Local saves are selected. See [Local command console](local-console.md).

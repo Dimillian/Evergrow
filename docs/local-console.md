@@ -2,7 +2,7 @@
 
 The local game includes a centered command box matching Evergrow's metal/glass interface. Press **Cmd+K** on macOS or **Ctrl+K** on other keyboards while playing or paused. The box pauses combat and clears held/buffered actions. Escape closes it and restores the previous play/pause state. It cannot open from the character hall, defeat screen or another panel.
 
-Type to filter suggestions, use Up/Down to select, and Tab or a click to complete the selected token. Enter runs the typed command. Up/Down on empty input, or Alt+Up/Down, recalls the latest thirty successful commands in memory; history is discarded with the app. Results and validation errors appear below the suggestions. The box stays open after running a command. Close it to see drop animations or continue playing.
+Type to filter suggestions, use Up/Down to select, and Tab or a click to complete the selected token. Enter runs the typed command. Up/Down on empty input, or Alt+Up/Down, recalls the latest thirty successful commands in memory; history is discarded with the app. Results and validation errors appear below the suggestions. Clear empties the input and result, returns focus to the input and keeps command history. The Esc exit hint appears alongside the other bottom bindings. The box stays open after running a command. Close it to see drop animations or continue playing.
 
 ## Commands
 
@@ -13,9 +13,9 @@ Type to filter suggestions, use Up/Down to select, and Tab or a click to complet
 | `drop weapon --profile longsword --level 40 --count 3` | Drop three Longswords with independently rolled properties. |
 | `spawn brute --level 20 --rank elite --count 3` | Spawn three level-20 Elite Gravebound Brutes on clear ground outside camera coverage. |
 | `spawn brute --placement nearby --count 3` | Spawn three Brutes on clear ground beside the player. |
-| `refill-hp` | Refill current health to maximum. |
-| `refill-mp` | Refill available mana, respecting active aura reservations. |
-| `refill` | Refill both current health and available mana. |
+| `refill hp` | Refill current health to maximum. |
+| `refill mp` | Refill available mana, respecting active aura reservations. |
+| `refill both` | Refill both current health and available mana. |
 
 `drop` supports helmet/head, chest, gloves, legs, boots, cloak, weapon, shield, grimoire, orb, ring, amulet and charm. Profiles come from the current weapon, shield, focus, jewelry and charm catalogs. Materials must match the selected kind/profile; choose a weapon profile before overriding its material. Exact helmet silhouette profiles are not implemented. Unique items and rift keys are outside this first command set.
 

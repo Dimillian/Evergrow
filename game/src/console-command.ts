@@ -33,11 +33,11 @@ export async function executeConsoleCommand(sim:Simulation, raw:string, context:
     if(sim.player.dead)return {ok:false,message:'Return to the refuge before using commands.'};
     const p=sim.player, checkpoint=sim.captureCheckpoint();
     let commit:()=>void, message:string;
-    if(command.type==='refill-hp'||command.type==='refill-mp'||command.type==='refill') {
-      const hp=command.type!=='refill-mp'?p.maxHp:p.hp, mana=command.type!=='refill-hp'?manaCapacity(p):p.mana;
+    if(command.type==='refill') {
+      const hp=command.resource!=='mp'?p.maxHp:p.hp, mana=command.resource!=='hp'?manaCapacity(p):p.mana;
       checkpoint.hp=hp;checkpoint.mana=mana;
       commit=()=>{p.hp=hp;p.mana=mana;};
-      message=command.type==='refill-hp'?'Health refilled.':command.type==='refill-mp'?'Available mana refilled.':'Health and available mana refilled.';
+      message=command.resource==='hp'?'Health refilled.':command.resource==='mp'?'Available mana refilled.':'Health and available mana refilled.';
     } else if(command.type==='drop') {
       const seed=command.seed??context.seed(), identity=context.identity(), next=sim.nextEntityIdentity;
       const items=[];

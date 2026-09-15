@@ -15,13 +15,16 @@ export const CONSOLE_COMMANDS = [
   {id:'help', detail:'Browse commands and their arguments', syntax:'help [command]', flags:[]},
   {id:'drop', detail:'Drop generated equipment at your feet', syntax:'drop <item> [--level N] [--profile ID] [--material ID] [--rarity ID] [--count N] [--seed N]', flags:['level','profile','material','rarity','count','seed']},
   {id:'spawn', detail:'Summon monsters offscreen or nearby', syntax:'spawn <monster> [--level N] [--rank normal|veteran|elite] [--placement offscreen|nearby] [--count N] [--seed N]', flags:['level','rank','placement','count','seed']},
-  {id:'refill-hp', detail:'Refill health to maximum', syntax:'refill-hp', flags:[]},
-  {id:'refill-mp', detail:'Refill available, unreserved mana', syntax:'refill-mp', flags:[]},
-  {id:'refill', detail:'Refill both health and available mana', syntax:'refill', flags:[]},
+  {id:'refill', detail:'Refill health, mana or both', syntax:'refill <hp|mp|both>', flags:[]},
+] as const;
+const refillTargets = [
+  {id:'hp',detail:'Refill health to maximum'},
+  {id:'mp',detail:'Refill available, unreserved mana'},
+  {id:'both',detail:'Refill health and available mana'},
 ] as const;
 export type ConsoleSpawnPlacement = 'offscreen' | 'nearby';
 export type ConsoleCommandName = typeof CONSOLE_COMMANDS[number]['id'];
-export type ConsoleCommand = {type:'help'; command?:ConsoleCommandName} | {type:'refill-hp'} | {type:'refill-mp'} | {type:'refill'}
+export type ConsoleCommand = {type:'help'; command?:ConsoleCommandName} | {type:'refill'; resource:typeof refillTargets[number]['id']}
   | {type:'drop'; kind:ItemKind; level?:number; profile?:string; material?:ItemMaterialId; rarity?:ItemTier; count:number; seed?:number}
   | {type:'spawn'; kind:EnemyKind; level?:number; rank:EnemyRank; placement:ConsoleSpawnPlacement; count:number; seed?:number};
 export const consoleItems:ItemKind[] = ITEM_KINDS.filter(k=>k!=='riftKey');
@@ -53,9 +56,10 @@ export function parseConsoleCommand(raw:string):ConsoleCommand {
     if(tokens.length>1||tokens[0]&&!CONSOLE_COMMANDS.some(c=>c.id===tokens[0]))throw new Error('Use help or help <command>.');
     return {type:'help',command:tokens[0] as ConsoleCommandName|undefined};
   }
-  if(name==='refill-hp'||name==='refill-mp'||name==='refill') {
-    if(tokens.length)throw new Error(`${name} takes no arguments.`);
-    return {type:name};
+  if(name==='refill') {
+    const target=refillTargets.find(target=>target.id===tokens[0]);
+    if(tokens.length!==1||!target)throw new Error('Use refill hp, refill mp or refill both.');
+    return {type:'refill',resource:target.id};
   }
   const subject=tokens.shift();
   if(!subject||subject.startsWith('--'))throw new Error(`Use ${definition.syntax}`);
@@ -93,10 +97,12 @@ const flagDetails:Record<string,string>={level:'Set an exact level',profile:'Cho
 /** Contextual completion uses the same content and accepted flags as the parser. */
 export function consoleSuggestions(raw:string):ConsoleSuggestion[] {
   const tokens=raw.trimStart().split(/\s+/), last=tokens.at(-1)??'', prefix=raw.slice(0,raw.length-last.length);
-  const names=()=>CONSOLE_COMMANDS.filter(c=>c.id.startsWith(last.toLowerCase())).map(c=>({label:c.id,detail:c.detail,value:prefix+c.id+(c.flags.length?' ':''),mark:c.id==='drop'?'◇':c.id==='spawn'?'♧':'›'}));
+  const names=()=>CONSOLE_COMMANDS.filter(c=>c.id.startsWith(last.toLowerCase())).map(c=>({label:c.id,detail:c.detail,value:prefix+c.id+(c.flags.length||c.id==='refill'?' ':''),mark:c.id==='drop'?'◇':c.id==='spawn'?'♧':'›'}));
   if(tokens.length===1||tokens[0]==='help'&&tokens.length===2)return names();
-  const def=CONSOLE_COMMANDS.find(c=>c.id===tokens[0]);if(!def||!def.flags.length)return [];
+  const def=CONSOLE_COMMANDS.find(c=>c.id===tokens[0]);if(!def)return [];
   const complete=(entries:Array<{id:string;detail:string}>):ConsoleSuggestion[]=>entries.filter(e=>e.id.toLowerCase().startsWith(last.toLowerCase())).map(e=>({label:e.id,detail:e.detail,value:prefix+e.id+' ',mark:'›'}));
+  if(def.id==='refill')return tokens.length===2?complete([...refillTargets]):[];
+  if(!def.flags.length)return [];
   if(tokens.length===2)return complete(def.id==='spawn'?consoleEnemies.map(id=>({id,detail:ENEMY_DEFINITIONS[id].name})):consoleItems.map(id=>({id:id==='head'?'helmet':id,detail:'Generated equipment · random properties'})));
   const kind=itemKind(tokens[1]) as ItemKind, previous=tokens.at(-2), profile=tokens[tokens.indexOf('--profile')+1];
   if(previous?.startsWith('--')) {

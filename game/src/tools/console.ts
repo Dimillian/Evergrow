@@ -23,7 +23,7 @@ async function boot() {
     <header class="study-heading"><span>EVERGROW <i>/</i> INTERFACE STUDY</span><span>01 <i>—</i> COMMAND CONSOLE</span></header>
     <div class="scene-caption"><span>THE WORLD IS PAUSED</span><small>A quiet moment to change the rules.</small></div>
     <div class="console-mount"></div><button class="reopen ui-button" hidden>Open command console <kbd>⌘ K</kbd></button>
-    <aside class="study-controls" aria-label="Proposal states"><span>TRY A STATE</span><button data-state="">Discover</button><button data-state="drop helmet ">Item drop</button><button data-state="spawn ">Monster</button><button data-state="drop helmet --material ">Arguments</button><button data-state="refill">Refill</button></aside>
+    <aside class="study-controls" aria-label="Proposal states"><span>TRY A STATE</span><button data-state="">Discover</button><button data-state="drop helmet ">Item drop</button><button data-state="spawn ">Monster</button><button data-state="drop helmet --material ">Arguments</button><button data-state="refill ">Refill</button></aside>
     <p class="study-note">Interactive visual proposal · commands are demonstrations · no saves or gameplay</p>`;
   const reopen=root.querySelector<HTMLButtonElement>('.reopen')!;
   const panel=new ConsolePanel(root.querySelector('.console-mount')!,{close:()=>toggle(false),execute:async raw=>{

@@ -10,7 +10,7 @@ export class ConsolePanel {
   private readonly input:HTMLInputElement;
   private readonly list:HTMLElement;
   private readonly result:HTMLElement;
-  private readonly closeButton:HTMLButtonElement;
+  private readonly clearButton:HTMLButtonElement;
   private abort=new AbortController();
   private focus?:ReturnType<typeof trapDialogFocus>;
   private options:ConsoleSuggestion[]=[];
@@ -26,16 +26,19 @@ export class ConsolePanel {
     const el=this.element;el.className='command-overlay';el.hidden=true;
     el.innerHTML=`<section class="command-window ui-window" role="dialog" aria-modal="true" aria-label="Local command console">
       <header class="command-heading"><span class="command-title"><span class="command-sigil">⌘</span> Command</span><span class="command-local"><i></i> LOCAL ONLY</span></header>
-      <div class="command-well"><span class="command-prompt" aria-hidden="true">&gt;</span><input type="text" role="combobox" aria-label="Command" aria-autocomplete="list" aria-controls="command-suggestions" aria-expanded="false" autocomplete="off" spellcheck="false" placeholder="Enter a command…" maxlength="${CONSOLE_LIMITS.text}"><button class="command-close" aria-label="Close console">ESC</button></div>
+      <div class="command-well"><span class="command-prompt" aria-hidden="true">&gt;</span><input type="text" role="combobox" aria-label="Command" aria-autocomplete="list" aria-controls="command-suggestions" aria-expanded="false" autocomplete="off" spellcheck="false" placeholder="Enter a command…" maxlength="${CONSOLE_LIMITS.text}"><button class="command-clear" aria-label="Clear command">Clear</button></div>
       <div class="command-suggestions-heading"><span data-label>SUGGESTED COMMANDS</span><span data-count></span></div>
       <div id="command-suggestions" class="command-suggestions" role="listbox" aria-label="Command suggestions"></div>
       <p class="command-result" role="status" hidden></p>
-      <footer class="command-footer"><span><kbd>↑</kbd><kbd>↓</kbd> navigate <kbd>Tab</kbd> complete</span><span><kbd>↵</kbd> run</span></footer>
+      <footer class="command-footer"><span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>Tab</kbd> complete</span><span><kbd>↵</kbd> run</span><span><kbd>Esc</kbd> exit</span></footer>
     </section>`;
     mount.append(el);
-    this.input=el.querySelector('input')!;this.list=el.querySelector('.command-suggestions')!;this.result=el.querySelector('.command-result')!;this.closeButton=el.querySelector('button')!;
+    this.input=el.querySelector('input')!;this.list=el.querySelector('.command-suggestions')!;this.result=el.querySelector('.command-result')!;this.clearButton=el.querySelector('button')!;
     const signal=this.abort.signal;
-    this.closeButton.addEventListener('click',()=>{if(!this.busy)actions.close();},{signal});
+    this.clearButton.addEventListener('click',()=>{
+      if(this.busy)return;
+      this.historyIndex=this.history.length;this.draft='';this.result.textContent='';this.setDraft('');
+    },{signal});
     this.input.addEventListener('input',()=>{this.selected=0;this.result.hidden=true;this.historyIndex=this.history.length;this.draft=this.input.value;this.render();},{signal});
     this.list.addEventListener('mousedown',e=>e.preventDefault(),{signal});
     this.list.addEventListener('click',e=>{const row=(e.target as HTMLElement).closest<HTMLElement>('[data-index]');if(row&&!this.busy){this.selected=Number(row.dataset.index);this.complete();}},{signal});
@@ -73,7 +76,7 @@ export class ConsolePanel {
     if(this.busy||!this.input.value.trim())return;
     const raw=this.input.value.trim();
     try{parseConsoleCommand(raw);}catch(error){this.result.hidden=false;this.result.dataset.ok='false';this.result.textContent=(error as Error).message;return;}
-    this.busy=true;this.input.readOnly=true;this.closeButton.disabled=true;this.element.setAttribute('aria-busy','true');
+    this.busy=true;this.input.readOnly=true;this.clearButton.disabled=true;this.element.setAttribute('aria-busy','true');
     this.result.hidden=false;this.result.dataset.ok='true';this.result.textContent='Applying command…';
     try{
       const response=await this.actions.execute(raw);
@@ -81,7 +84,7 @@ export class ConsolePanel {
       this.result.dataset.ok=String(response.ok);this.result.textContent=response.message??(response.ok?'Done.':'Could not complete this command.');
       if(response.ok){if(this.history.at(-1)!==raw)this.history.push(raw);this.history=this.history.slice(-CONSOLE_LIMITS.history);this.historyIndex=this.history.length;}
     }catch{if(!this.disposed){this.result.dataset.ok='false';this.result.textContent='Could not complete this command.';}}
-    finally{this.busy=false;this.input.readOnly=false;this.closeButton.disabled=false;this.element.removeAttribute('aria-busy');if(!this.disposed&&!this.element.hidden)this.input.focus();}
+    finally{this.busy=false;this.input.readOnly=false;this.clearButton.disabled=false;this.element.removeAttribute('aria-busy');if(!this.disposed&&!this.element.hidden)this.input.focus();}
   }
   dispose(){if(this.disposed)return;this.disposed=true;this.close();this.abort.abort();this.element.remove();}
 }

@@ -48,12 +48,13 @@ test('parser validates every argument before dispatch and uses the runtime conte
     'drop helmet --level 1000001','spawn brute --count 33','spawn brute --count -1','spawn brute --seed 4294967296',
     'hp','mp','mana','spawn brute --placement close','spawn brute --placement','spawn brute --placement nearby --placement offscreen','spawn brute --rank boss','spawn warden','spawn briarMatriarch','spawn goblinChief','drop riftKey','drop helmet --profile longsword',
     'drop weapon --material iron','drop helmet --material astralite','drop helmet --rarity unique','drop charm --material iron','drop helmet --level 2 --level 3',
-    'drop helmet --unknown 1','drop helmet --rarity','refill-hp 20','refill-mp --level 10','refill;alert(1)','help no','x'.repeat(241)])assert.throws(()=>parseConsoleCommand(raw),raw);
+    'drop helmet --unknown 1','drop helmet --rarity','refill hp 20','refill mp --level 10','refill','refill-hp','refill-mp','refill all','refill hp mp','refill both --count 2','refill;alert(1)','help no','x'.repeat(241)])assert.throws(()=>parseConsoleCommand(raw),raw);
+  for(const resource of ['hp','mp','both'])assert.deepEqual(parseConsoleCommand(`refill ${resource}`),{type:'refill',resource});
   for(const kind of consoleItems)assert.equal(parseConsoleCommand(`drop ${kind}`).type,'drop');
   for(const kind of consoleEnemies)assert.equal(parseConsoleCommand(`spawn ${kind}`).type,'spawn');
 });
 test('suggestions cover command names, partial tokens, item-specific flags and runtime values',()=>{
-  assert.ok(consoleSuggestions('refill-m').some(s=>s.value==='refill-mp'));
+  assert.ok(consoleSuggestions('refill m').some(s=>s.value==='refill mp '));
   assert.ok(consoleSuggestions('help sp').some(s=>s.value==='help spawn '||s.value==='help spawn'));
   assert.equal(consoleSuggestions('drop hel')[0].value,'drop helmet ');
   assert.ok(consoleSuggestions('drop helmet --material ste').some(s=>s.value==='drop helmet --material steel '));
@@ -63,14 +64,16 @@ test('suggestions cover command names, partial tokens, item-specific flags and r
   assert.ok(consoleSuggestions('spawn brute --placement nearby ').every(s=>s.label!=='--placement'));
   assert.ok(consoleSuggestions('spawn bri').every(s=>s.label!=='briarMatriarch'));
   assert.ok(consoleSuggestions('drop helmet --level 25 ').every(s=>s.label!=='--level'));
-  assert.equal(consoleSuggestions('refill-hp ').length,0);
+  assert.equal(consoleSuggestions('ref')[0].value,'refill ');
+  assert.deepEqual(consoleSuggestions('refill ').map(s=>s.label),['hp','mp','both']);
+  assert.equal(consoleSuggestions('refill hp ').length,0);
 });
 test('help and denied commands never save, allocate identities or change state',async()=>{
   const {sim,context}=await setup();let called=0;
   context.persist=async()=>{called++;return {ok:true};};context.seed=context.identity=()=>{throw new Error('No RNG expected');};
   const before=sim.captureCheckpoint();assert.equal((await executeConsoleCommand(sim,'help drop',context)).ok,true);
   context.allowed=()=>false;
-  for(const raw of ['drop helmet','spawn brute','refill-hp','refill-mp','refill','help'])assert.equal((await executeConsoleCommand(sim,raw,context)).ok,false);
+  for(const raw of ['drop helmet','spawn brute','refill hp','refill mp','refill both','help'])assert.equal((await executeConsoleCommand(sim,raw,context)).ok,false);
   assert.equal(called,0);assert.deepEqual(sim.captureCheckpoint(),before);
 });
 test('targeted drops retain normal rolled stats, animate, save and receive independent physical identities',async()=>{
@@ -88,7 +91,7 @@ test('targeted drops retain normal rolled stats, animate, save and receive indep
   for(const drop of sim.groundItems.slice(2)){assert.equal(drop.item.weapon!.id,drop.item.id);assert.equal(drop.item.recipe.profileId,'longsword');}
 });
 test('failed or pending saves leave resources, drops, actors, RNG and identity allocation untouched',async()=>{
-  for(const raw of ['refill-hp','refill-mp','refill','drop helmet --count 3','spawn brute --count 3','spawn brute --count 3 --placement nearby']){
+  for(const raw of ['refill hp','refill mp','refill both','drop helmet --count 3','spawn brute --count 3','spawn brute --count 3 --placement nearby']){
     const {sim,context}=await setup();sim.player.hp=10;sim.player.mana=3;
     const before=sim.captureCheckpoint(), id=sim.nextEntityIdentity;
     let finish!:(result:{ok:boolean;message?:string})=>void;
@@ -103,13 +106,13 @@ test('failed or pending saves leave resources, drops, actors, RNG and identity a
 });
 test('resource commands refill only requested resources, respect aura reservations and do not change cooldowns or charges',async()=>{
   const {sim,context,repo}=await setup(),p=sim.player;p.hp=5;p.mana=2;p.flasks=0;p.healCooldown=.5;
-  assert.equal((await executeConsoleCommand(sim,'refill-hp',context)).ok,true);assert.equal(p.hp,p.maxHp);assert.equal(p.mana,2);
+  assert.equal((await executeConsoleCommand(sim,'refill hp',context)).ok,true);assert.equal(p.hp,p.maxHp);assert.equal(p.mana,2);
   p.hp=7;p.auras!.reservation=40;
-  assert.equal((await executeConsoleCommand(sim,'refill-mp',context)).ok,true);assert.equal(p.hp,7);assert.equal(p.mana,manaCapacity(p));
-  p.mana=1;assert.equal((await executeConsoleCommand(sim,'refill',context)).ok,true);
+  assert.equal((await executeConsoleCommand(sim,'refill mp',context)).ok,true);assert.equal(p.hp,7);assert.equal(p.mana,manaCapacity(p));
+  p.mana=1;assert.equal((await executeConsoleCommand(sim,'refill both',context)).ok,true);
   assert.equal(p.hp,p.maxHp);assert.equal(p.mana,manaCapacity(p));assert.equal(p.flasks,0);assert.equal(p.healCooldown,.5);
   assert.equal(repo.read(0).record!.checkpoint.mana,p.mana);
-  p.dead=true;const before=sim.captureCheckpoint();assert.equal((await executeConsoleCommand(sim,'refill',context)).ok,false);assert.deepEqual(sim.captureCheckpoint(),before);
+  p.dead=true;const before=sim.captureCheckpoint();assert.equal((await executeConsoleCommand(sim,'refill both',context)).ok,false);assert.deepEqual(sim.captureCheckpoint(),before);
 });
 test('spawned monsters retain level, rank, source stats and loot after save/load without changing other actors or progression',async()=>{
   const {sim,context,repo}=await setup();const existing=sim.spawnEnemy('hound',100,100)!;existing.hp=5;existing.state='windup';
@@ -137,7 +140,7 @@ test('spawn placement fails atomically for towns, blocked terrain, missing camer
 test('all mutations pass a complete checkpoint to persistence before live commitment',async()=>{
   const {sim,context}=await setup();let saved:CharacterCheckpoint|undefined;const oldHp=sim.player.hp=5;
   context.persist=async checkpoint=>{assert.equal(sim.player.hp,oldHp);saved=checkpoint;return {ok:true};};
-  assert.equal((await executeConsoleCommand(sim,'refill-hp',context)).ok,true);assert.equal(saved!.hp,sim.player.maxHp);
+  assert.equal((await executeConsoleCommand(sim,'refill hp',context)).ok,true);assert.equal(saved!.hp,sim.player.maxHp);
 });
 
 test('repeating a seeded monster after save/load yields distinct physical loot with identical rolls',async()=>{

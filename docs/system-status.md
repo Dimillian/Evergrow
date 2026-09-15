@@ -214,4 +214,4 @@ Six new signatures bring the current catalog to eighteen: Heartwood Draw, Briarf
 
 ## Local command console (unpublished)
 
-Local play now has a centered Cmd/Ctrl+K command box with contextual completion, saved generated equipment drops, ordinary wilderness spawns with offscreen/nearby placement and `refill-hp` / `refill-mp` resource commands. The hosted client build excludes its code and styles. Current saves remain compatible; no progress reset. See [Local command console](local-console.md) for scope and checks.
+Local play now has a centered Cmd/Ctrl+K command box with contextual completion, saved generated equipment drops, ordinary wilderness spawns with offscreen/nearby placement and `refill hp` / `refill mp` resource commands. The hosted client build excludes its code and styles. Current saves remain compatible; no progress reset. See [Local command console](local-console.md) for scope and checks.
