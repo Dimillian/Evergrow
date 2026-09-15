@@ -959,8 +959,10 @@ export class Game {
       if (site.kind === 'cryptChest') {
           const result = await claimDungeonChest(this.sim, site.index, c => this.persistTravel(c));
           channel.cancel();
-          if (result.ok)
-              this.renderer.handleEvents([{ type: 'blast', x: site.x, y: site.y, radius: 70, duration: .6, color: '#d7c18a' }], this.reducedMotion);
+          if (result.ok) {
+              const rift = !!this.sim.dungeonFloor?.rift;
+              this.renderer.handleEvents([{ type: 'blast', x: site.x, y: site.y, radius: rift ? 110 : 70, duration: rift ? .7 : .6, color: rift ? '#ef739d' : '#d7c18a' }], this.reducedMotion);
+          }
           this.notify(result.message);
           return;
       }

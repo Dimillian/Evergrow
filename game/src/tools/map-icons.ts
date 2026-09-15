@@ -37,12 +37,12 @@ for (const [id, name, known, edge] of [
     drawJourneyMapMarker(c, { x: -40, y: -40, width: 80, height: 80, centerX: 0, centerY: 0, zoom: .025 },
       { x: edge ? 10000 : 0, y: 0, known, name }, edge || mini); c.restore();
   } });
-for (const [id, name] of [['chest', 'Dungeon chest'], ['entry', 'Dungeon entrance / exit'], ['boss', 'Dungeon boss'], ['player', 'Dungeon character']] as const)
+for (const [id, name] of [['chest', 'Dungeon chest'], ['entry', 'Dungeon entrance / exit'], ['riftPortal', 'Crimson Rift portal'], ['boss', 'Dungeon boss'], ['player', 'Dungeon character']] as const)
   addDungeon(id, name, id);
 for (const [id, event] of Object.entries(DUNGEON_EVENTS)) addDungeon(id, event.name, id as DungeonEventKind);
 function addDungeon(id: string, name: string, shape: DungeonMapIcon): void {
   entries.push({ id: `dungeon:${id}`, name, group: 'Dungeons', shape,
-    note: shape === 'player' ? 'Character arrow · unchanged.' : MAP_SYMBOL_LABELS[shape === 'entry' ? 'exit' : shape === 'boss' ? 'bossLair' : shape],
+    note: shape === 'player' ? 'Character arrow · unchanged.' : MAP_SYMBOL_LABELS[shape === 'riftPortal' ? 'rift' : shape === 'entry' ? 'exit' : shape === 'boss' ? 'bossLair' : shape],
     draw: (c, _mini, _selected, completed) => drawDungeonMapIcon(c, shape, 0, 0, completed, DUNGEON_THEMES[theme.value as keyof typeof DUNGEON_THEMES].accent, -Math.PI / 2) });
 }
 const root = await toolPage('Map icon workshop', 'Every registered place, service and event, plus dungeon and navigation markers. Enlarged drawings and actual map sizes use the live game artwork.');

@@ -230,5 +230,5 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     sim.groundGold = checkpoint.groundGold!;
     sim.reserveIdentity(next);
     if(completion)sim.commitJourneyCheckpoint(checkpoint,completion);
-    return { ok: true, message: 'Dungeon treasure' };
+    return { ok: true, message: run.entrance.rift ? 'Crimson Rift Conquered' : 'Dungeon treasure' };
 }
