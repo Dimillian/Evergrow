@@ -1,0 +1,50 @@
+.map-legend-layout { display:flex; position:relative; flex:1; min-height:0; min-width:0; overflow:hidden; }
+.map-legend { width:334px; flex:0 0 334px; min-height:0; display:flex; flex-direction:column; background:#101b22; border-left:1px solid var(--ui-line-strong); color:var(--ui-text); z-index:4; }
+.map-legend[hidden] { display:none; }
+.map-legend-heading { display:flex; align-items:center; justify-content:space-between; padding:13px 14px 9px; gap:8px; }
+.map-legend-heading .ui-title { font-size:23px; margin:0 0 3px; }
+.map-legend-heading p { margin:0; font-size:12px; }
+.map-legend-toggle { margin-left:auto; gap:7px; }
+.map-legend-all { display:flex; align-items:center; justify-content:space-between; padding:9px 16px; font-size:13px; color:var(--ui-muted); border-bottom:1px solid var(--ui-line); }
+.map-legend-scroll { overflow-y:auto; overscroll-behavior:contain; min-height:0; flex:1; scrollbar-width:thin; scrollbar-color:#53645b #101b22; }
+.map-legend input { accent-color:#b5c9ad; width:17px; height:17px; margin:0; cursor:pointer; flex:none; }
+.map-legend-category { display:flex; align-items:center; padding:0 16px 0 10px; gap:10px; background:#19272c; border-bottom:1px solid #39463f; }
+.map-legend-category button { display:flex; align-items:center; gap:6px; flex:1; min-width:0; min-height:43px; padding:8px 0; border:0; background:none; color:var(--ui-text); font:inherit; text-align:left; cursor:pointer; font-size:15px; }
+.map-legend-category .ui-icon { width:14px; height:14px; flex:none; color:var(--ui-brass); }
+.map-legend-category [aria-expanded=true] .ui-icon { transform:rotate(90deg); }
+.map-legend-count { margin-left:auto; color:var(--ui-muted); font-size:12px; }
+.map-legend-row { display:grid; grid-template-columns:28px minmax(0,1fr); gap:0 9px; position:relative; padding:11px 16px 11px 12px; border-bottom:1px solid #2b3935; }
+.map-legend-row canvas { width:28px; height:28px; align-self:center; }
+.map-legend-row label { display:grid; grid-template-columns:minmax(0,1fr) 17px; column-gap:9px; font-size:16px; cursor:pointer; align-items:center; }
+.map-legend-row label small { grid-column:1; font-size:12px; color:var(--ui-muted); line-height:1.3; margin-top:3px; }
+.map-legend-row label input { grid-column:2; grid-row:1 / 3; }
+.map-legend-row .map-legend-ping { grid-column:2; justify-self:start; margin:5px 0 0 -5px; padding:4px 5px; min-height:28px; color:var(--ui-brass); font-size:12px; gap:5px; }
+.map-legend-ping .ui-icon { width:15px; height:15px; }
+.map-legend-row--hidden label span,.map-legend-row--hidden canvas { opacity:.45; }
+.map-legend-note { flex:none; margin:0; padding:11px 14px; font-size:12px; line-height:1.35; color:var(--ui-muted); border-top:1px solid var(--ui-line); }
+.world-map-root--exploration .map-legend,.crypt-map--exploration .map-legend { display:none; }
+.world-map-focus-label { position:absolute; left:50%; bottom:75px; transform:translateX(-50%); max-width:calc(100% - 30px); padding:9px 13px; border:1px solid var(--ui-line-strong); background:#101b22; color:var(--ui-brass); pointer-events:none; text-align:center; z-index:2; font-size:14px; }
+@media(max-width:900px),(max-height:560px) {
+  .map-legend { position:absolute; top:0; bottom:0; right:0; width:min(320px,100%); max-width:100%; box-shadow:-8px 0 24px #0006; }
+  .map-legend-category button { min-height:44px; }
+  .map-legend-row { padding-top:8px; padding-bottom:8px; }
+  .map-legend-row .map-legend-ping { min-height:36px; margin-top:1px; }
+  .map-legend-heading { padding-top:8px; padding-bottom:5px; }
+  .map-legend input { width:20px; height:20px; }
+  .map-legend-row label { grid-template-columns:minmax(0,1fr) 20px; min-height:44px; }
+  .map-legend-all { min-height:44px; }
+  .world-map-root:not(.world-map-root--exploration) { padding:10px; }
+  .world-map-panel.ui-window { height:100%; }
+}
+@media(pointer:coarse) {
+  .map-legend-category button,.map-legend-row .map-legend-ping { min-height:44px; }
+  .map-legend-category { gap:16px; }
+}
+
+@media(max-width:560px) {
+  .world-map-header { padding:8px 10px; gap:8px; }
+  .world-map-header .ui-title { font-size:20px; }
+  .world-map-header .world-map-emblem { display:none; }
+  .world-map-header .map-legend-toggle { padding:6px 8px; }
+  .crypt-map .ui-window-header { flex-wrap:wrap; }
+}

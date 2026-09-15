@@ -59,3 +59,15 @@ Tab-map marker tooltips appear automatically whenever hovered, including during 
 While holding Tab, the mouse wheel zooms the chart around the player; clicks continue to reach gameplay.
 
 While the Tab overlay is held, Journey discovery and arrival progress continue, and the configured loot-reveal key remains usable. The dungeon player marker stays fully opaque above the translucent floor.
+
+## Map legend — local September 15, 2026
+
+The full map has a Legend side panel using the same procedural icon art as the chart. Categories separate NPCs/services, towns/travel, encounters/dungeons, shrines/landmarks, character/Journey markers, dungeon interiors and nearby enemies. Each row explains the icon. Category headers collapse independently of visibility; individual, category and Show all checkboxes support mixed selections. Dungeon maps expose the relevant navigation, dungeon and enemy categories. Journey filters also hide their offscreen direction arrows; ranked enemy dots have their own entries.
+
+NPC rows represent service types, with one **Ping nearest** button each. The target is the closest visited, discovered service of that type measured from the character, independent of camera position and current filters. Unvisited sightings do not qualify; unavailable buttons are disabled. Arrival uses the existing player-centering pan and two gold rings, preserving zoom. The target temporarily bypasses hidden filters, overview service suppression and icon overlap so the arrival remains readable, then returns to normal visibility. Pings never reveal terrain, create discoveries, move the character or modify saves.
+
+Visibility is shared by the current game's world, dungeon, held-Tab, minimap and Thor projection surfaces. It lasts for that game session, including character changes, and resets when the app/page restarts. Collapsed categories and panel visibility stay local to their map panel. No save schema change or progress reset.
+
+Desktop uses a 334px side panel, leaving the chart in its own measured viewport. At widths up to 900px or heights up to 560px, the legend starts closed and opens as a scrollable drawer. Ping nearest closes that compact drawer before centering, so its arrival remains visible. Native checkboxes and buttons support keyboard/controller navigation; touch actions have larger targets. The held-Tab overlay remains free of legend chrome. The dungeon canvas now follows the available CSS dimensions at native display density, keeping hover, drag and pinch coordinates aligned when the side panel opens.
+
+The existing atlas study includes the runtime Legend control and remains save-free. Browser and physical Android visual acceptance are still user-tested.
