@@ -37,7 +37,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'loot',group:'equipment',name:'Ground loot',path:'/loot.html',description:'Dropped item art, rarity labels, coins and resource vials.'},
   {id:'editor',group:'characters',name:'Appearance editor',path:'/character-editor.html',description:'Edit a staged character and armor colors.'},
   {id:'atelier',group:'characters',name:'Motion & equipment',path:'/atelier.html',description:'Weapon carrying, character proportions and animated poses.'},
-  {id:'rig',group:'characters',name:'Rig directions',path:'/rig.html',description:'Inspect frozen poses across eight facings.'},
+  {id:'rig',group:'characters',name:'Rig directions',path:'/rig.html',description:'Inspect heads, torso shapes and equipment across eight facings; scrub the walking stride.'},
   {id:'looks',group:'characters',name:'Looks in the world',path:'/appearance-world.html',description:'Shared portraits and world art with actual lighting and CRT.'},
   {id:'appearance',group:'characters',name:'Hair & accessories',path:'/appearance-catalog.html',description:'Catalog of hair, facial hair and accessory silhouettes.'},
   {id:'editor-phone',group:'characters',name:'Editor · phone',path:'/character-editor-phone.html',description:'Character, armor and inventory views at smartphone sizes.'},
