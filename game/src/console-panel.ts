@@ -25,7 +25,7 @@ export class ConsolePanel {
     this.actions=actions;
     const el=this.element;el.className='command-overlay';el.hidden=true;
     el.innerHTML=`<section class="command-window ui-window" role="dialog" aria-modal="true" aria-label="Local command console">
-      <header class="command-heading"><span class="command-title"><span class="command-sigil">⌘</span> Command</span><span class="command-local"><i></i> Local Only · WIP</span></header>
+      <header class="command-heading"><span class="command-title"><span class="command-sigil">⌘</span> Evergrow Dev CLI</span><span class="command-local"><i></i> Local Only · WIP</span></header>
       <div class="command-well"><span class="command-prompt" aria-hidden="true">&gt;</span><input type="text" role="combobox" aria-label="Command" aria-autocomplete="list" aria-controls="command-suggestions" aria-expanded="false" autocomplete="off" spellcheck="false" placeholder="Enter a command…" maxlength="${CONSOLE_LIMITS.text}"><button class="command-clear" aria-label="Clear command">Clear</button></div>
       <div class="command-suggestions-heading"><span data-label>SUGGESTED COMMANDS</span><span data-count></span></div>
       <div id="command-suggestions" class="command-suggestions" role="listbox" aria-label="Command suggestions"></div>
