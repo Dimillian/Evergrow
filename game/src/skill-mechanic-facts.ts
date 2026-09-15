@@ -12,7 +12,7 @@ export function skillMechanicFacts(id: SkillId, r: SkillExecution): string {
   if (r.kind === 'sweep') parts.push(`${n(r.reachMultiplier)}× weapon reach`);
   if (r.kind === 'dash') parts.push(`${n(r.speed * r.duration)} travel · ${n(r.radius)} contact radius`);
   if (r.kind === 'backstab') parts.push(`${r.targets ?? 1} targets · ${n(r.rearMultiplier)}× rear damage · ${n(r.minRange)} minimum reach`);
-  if (r.kind === 'chain') parts.push(`${r.jumps} targets · ${n(r.falloff * 100)}% damage retained per jump`);
+  if (r.kind === 'chain') parts.push(`${r.jumps} targets · traveling arcs · ${n(r.falloff * 100)}% damage retained per jump`);
   if (r.kind === 'projectile') {
     const e = r.effects;
     if (r.offsets.length > 1) parts.push(`${r.offsets.length} projectiles`);

@@ -18,7 +18,7 @@ export type SkillExecution = (
       effects: Readonly<Omit<ProjectileEffects, 'burnDps' | 'groundDps'> & { burnDamageMultiplier?: number; groundDamageMultiplier?: number }> }
   | { kind: 'ground'; effect: 'meteor' | 'arrowRain' | 'storm' | 'frost'; radius: number; delay: number; duration: number; interval: number;
       style: ProjectileStyle; scatterRadiusMultiplier?: number; scorch?: { readonly duration: number; readonly interval: number; readonly damageMultiplier: number }; scatter?: number; slow?: SlowEffect; stun?: number; follow?: boolean; burn?: { readonly duration: number; readonly damageMultiplier: number } }
-  | { kind: 'chain'; jumps: number; range: number; falloff: number; duration: number; style: ProjectileStyle; revisit?: boolean });
+  | { kind: 'chain'; travelSpeed: number; jumps: number; range: number; falloff: number; duration: number; style: ProjectileStyle; revisit?: boolean });
 
 export const GROUND_EFFECT_RULES = Object.freeze({ maximum: 16, minimumInterval: .05 });
 /** One full life-on-hit proc, then smaller procs for new targets only. */
@@ -65,7 +65,7 @@ export const SKILL_EXECUTION = {
   siphon: { kind: 'projectile', speed: 350, radius: 5, offsets: [0], effects: { style: 'spirit', lifeSteal: .35 } },
   iceNova: { kind: 'radial', radius: 115, melee: false, slow: { duration: 2.5, factor: .5 }, style: 'frost' },
   meteor: { kind: 'ground', effect: 'meteor', radius: 125, delay: .85, duration: 0, interval: 1, style: 'fire', scorch: { duration: 4, interval: .25, damageMultiplier: .12 }, burn: { duration: 3, damageMultiplier: .12 } },
-  arcLightning: { kind: 'chain', jumps: 5, range: 145, falloff: .78, duration: .28, style: 'lightning' },
+  arcLightning: { kind: 'chain', travelSpeed: 1400, jumps: 5, range: 145, falloff: .78, duration: .28, style: 'lightning' },
 } as const satisfies Record<SkillId, SkillExecution>;
 
 function freeze(value: object): void {

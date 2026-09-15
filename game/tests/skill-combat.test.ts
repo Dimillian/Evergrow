@@ -1,3 +1,4 @@
+import { advanceChains } from '../src/chain-lightning.ts';
 import { SKILL_SPECIALIZATIONS, specializationNode, resolveSkill } from '../src/skill-progression.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -27,7 +28,7 @@ function harness(id: SkillId) {
   const hits: Array<{ enemy: Enemy; amount: number }> = [], events: CombatEvent[] = [];
   const missiles: Array<{ angle: number; definition: ProjectileDefinition; skill: SkillId; effects?: ProjectileEffects }> = [];
   const scheduled: Array<Omit<GroundEffect, 'id' | 'tick'>> = [];
-  const context: SkillContext = { availableGroundEffects: 16, availableProjectiles: 128, player, world: emptyWorld, enemies: sim.enemies, aimX: 100, aimY: 0,
+  const context: SkillContext = { chains: [], availableGroundEffects: 16, availableProjectiles: 128, player, world: emptyWorld, enemies: sim.enemies, aimX: 100, aimY: 0,
     damage: (enemy, amount) => { hits.push({ enemy, amount }); enemy.hp = Math.max(0, enemy.hp - amount); if (!enemy.hp) enemy.state = 'dead'; },
     visible: () => true, onScreen: () => true,
     projectile: (_x, _y, angle, definition, skill, effects) => { missiles.push({ angle, definition, skill, effects }); },
@@ -36,7 +37,7 @@ function harness(id: SkillId) {
   const target = (x: number, y = 0) => {
     const enemy = sim.spawnEnemy('brute', x, y)!; enemy.hp = enemy.maxHp = 10000; enemy.angle = Math.PI; return enemy;
   };
-  return { context, player, hits, events, missiles, scheduled, target };
+  return { sim, context, player, hits, events, missiles, scheduled, target, settle: () => { for(let i=0;i<240;i++) advanceChains(context.chains,1/120,context); } };
 }
 const close = (actual: number, expected: number) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} should equal ${expected}`);
 
@@ -51,11 +52,11 @@ test('chain casts retain full first-target healing, diminish new targets and nev
     const mana=h.player.mana;
     const cost=resolveSkill('arcLightning',h.player.derived,h.player.character).mana;
     assert.ok(activateSkill(h.context,0));
-    close(h.player.hp-1,expected);close(mana-h.player.mana,cost);
+    h.settle(); close(h.player.hp-1,expected);close(mana-h.player.mana,cost);
     assert.equal(h.events.filter(e=>e.type==='chain').length,circuit?8:targets);
     h.player.hp=1;h.player.castTime=0;
     assert.ok(activateSkill(h.context,0),'a new cast has a fresh healing budget');
-    close(h.player.hp-1,expected);
+    h.settle(); close(h.player.hp-1,expected);
   }
 });
 
@@ -178,13 +179,14 @@ test('lightning chains through at most five distinct targets with falloff and ca
   const h = harness('arcLightning'); h.context.aimX = 40;
   for (let i = 0; i < 6; i++) h.target(40 + i * 80);
   assert.ok(activateSkill(h.context, 0));
+  assert.equal(h.hits.length, 0, 'no instant damage before arc arrival'); h.settle();
   assert.equal(h.hits.length, 5); assert.equal(new Set(h.hits.map(hit => hit.enemy.id)).size, 5);
   for (let i = 1; i < h.hits.length; i++) close(h.hits[i].amount, h.hits[i - 1].amount * .78);
   assert.equal(h.events.filter(event => event.type === 'chain').length, 5);
   const walled = harness('arcLightning'); walled.context.aimX = 40;
   walled.target(40); walled.target(120);
   walled.context.visible = (ax, _ay, bx) => (ax < 100) === (bx < 100);
-  assert.ok(activateSkill(walled.context, 0)); assert.equal(walled.hits.length, 1);
+  assert.ok(activateSkill(walled.context, 0)); walled.settle(); assert.equal(walled.hits.length, 1);
 });
 
 test('earthshatter stuns visible nearby enemies while ice nova applies a real slowing status', () => {
@@ -302,7 +304,7 @@ test('ranked forked fireballs snapshot three stronger projectiles and their actu
 test('Storm Circuit can revisit two enemies for eight bounded jumps with diminishing damage',()=>{
   const h=harness('arcLightning'); h.context.aimX=40; h.target(40); h.target(90);
   h.player.character.allocatedNodes.push('specialization:arc-circuit'); h.player.character.skillSpecializations.arcLightning='arc-circuit';
-  assert.ok(activateSkill(h.context,0)); assert.equal(h.hits.length,8);
+  assert.ok(activateSkill(h.context,0)); h.settle(); assert.equal(h.hits.length,8);
   assert.equal(new Set(h.hits.map(h=>h.enemy.id)).size,2);
   for(let i=1;i<h.hits.length;i++) close(h.hits[i].amount,h.hits[i-1].amount*.7);
 });
@@ -357,4 +359,53 @@ test('specialized meteor snapshots long-burning ground and eleven-star casts res
   assert.equal(activateSkill(sky.context,0),false); assert.equal(sky.player.mana,1000);
   sky.context.availableGroundEffects=11;
   assert.ok(activateSkill(sky.context,0)); assert.equal(sky.scheduled.length,11);
+});
+
+
+test('runtime ticks deliver sequential chain hits and lethal player damage clears pending casts',()=>{
+ const h=harness('arcLightning');const enemy=h.target(100);
+ h.sim.setCombatViewport({x:-500,y:-500,width:1000,height:1000});
+ const idle={moveX:0,moveY:0,aimX:100,aimY:0,attack:false,dodge:false,heal:false,skillSlot:null};
+ h.sim.update(1/120,{...idle,skillSlot:0});assert.equal(h.sim.chains.length,1);assert.equal(enemy.hp,10000);
+ for(let i=0;i<30;i++)h.sim.update(1/120,idle);
+ assert.ok(enemy.hp<10000);assert.equal(h.sim.chains.length,0);
+ h.player.castTime=0;h.player.mana=100;h.sim.update(1/120,{...idle,skillSlot:0});assert.equal(h.sim.chains.length,1);
+ h.player.invulnerable=0;h.sim.takeDamage(1e9,0,25,'physical');assert.ok(h.player.dead);assert.equal(h.sim.chains.length,0);
+});
+
+test('traveling lightning snapshots offense and selects subsequent targets only at arrival', () => {
+  const h=harness('arcLightning');h.context.aimX=40;
+  const first=h.target(40),second=h.target(130),entering=h.target(500);
+  h.player.derived.lifeOnHit=8;const procs:number[]=[];
+  h.context.damage=(enemy,amount,_angle,_melee,_style,_element,offense)=>{h.hits.push({enemy,amount});procs.push(offense!.lifeOnHit);};
+  assert.ok(activateSkill(h.context,0));assert.equal(h.hits.length,0);
+  const duration=h.context.chains[0].remaining,base=h.context.chains[0].damage;
+  advanceChains(h.context.chains,duration/2,h.context);assert.equal(h.hits.length,0);
+  h.player.derived.lifeOnHit=1000;h.player.stats.spellDamageMultiplier=100;
+  second.state='dead';entering.x=100;
+  advanceChains(h.context.chains,duration/2,h.context);
+  assert.deepEqual(h.hits.map(h=>h.enemy.id),[first.id]);assert.equal(h.context.chains[0].targetId,entering.id);
+  h.settle();assert.deepEqual(h.hits.map(h=>h.enemy.id),[first.id,entering.id]);
+  close(h.hits[0].amount,base);close(h.hits[1].amount,base*.78);assert.deepEqual(procs,[8,2]);
+});
+
+test('a dead target conducts without repeat damage; walls and player death cancel pending chains',()=>{
+  const h=harness('arcLightning');h.context.aimX=40;
+  const first=h.target(40),second=h.target(100);assert.ok(activateSkill(h.context,0));first.state='dead';
+  h.settle();assert.deepEqual(h.hits.map(hit=>hit.enemy.id),[second.id]);
+  for(const cause of ['wall','death'] as const){
+    const h=harness('arcLightning');h.target(60);assert.ok(activateSkill(h.context,0));
+    if(cause==='death')h.player.dead=true;else h.context.visible=()=>false;
+    h.settle();assert.equal(h.hits.length,0);assert.equal(h.context.chains.length,0);
+  }
+});
+
+test('chain capacity rejects before payment, and relocation/restoration clear pending casts',()=>{
+  const h=harness('arcLightning');h.target(60);h.player.mana=10000;
+  for(let i=0;i<24;i++){h.player.castTime=0;assert.ok(activateSkill(h.context,0));}
+  h.player.castTime=0;const mana=h.player.mana;assert.equal(activateSkill(h.context,0),false);assert.equal(h.player.mana,mana);
+  const sim=new Simulation(emptyWorld,{spawn:false});sim.chains=h.context.chains;
+  sim.relocate(100,100);assert.equal(sim.chains.length,0);
+  const again=harness('arcLightning');again.target(60);activateSkill(again.context,0);sim.chains=again.context.chains;
+  sim.restoreCheckpoint(sim.captureCheckpoint());assert.equal(sim.chains.length,0);
 });

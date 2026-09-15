@@ -1,3 +1,4 @@
+import { advanceChains } from '../src/chain-lightning.ts';
 import { deriveAttackStats } from '../src/equipment.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -32,7 +33,7 @@ function fixture(id:string,variant?:string,terrain=world){
  if(variant){p.character.allocatedNodes.push(`specialization:${variant}`);p.character.skillSpecializations[u.skill]=variant;}
  refreshCharacter(p);p.hp=p.maxHp;p.mana=p.maxMana=10000;p.derived.critChance=0;
  const events:CombatEvent[]=[];
- const context:SkillContext={player:p,world:terrain,enemies:sim.enemies,aimX:250,aimY:0,availableGroundEffects:16,availableProjectiles:128,
+ const context:SkillContext={chains:[],player:p,world:terrain,enemies:sim.enemies,aimX:250,aimY:0,availableGroundEffects:16,availableProjectiles:128,
   visible:(ax,ay,bx,by)=>{for(let i=0;i<=20;i++)if(terrain.blocked(ax+(bx-ax)*i/20,ay+(by-ay)*i/20,1))return false;return true;},onScreen:()=>true,
   damage:(e,n)=>{e.hp-=n;},emit:e=>events.push(e),schedule:e=>scheduleGroundEffect(sim.groundEffects,e,{nextId:()=>100+sim.groundEffects.length,emit:()=>{}}),
   projectile:(x,y,angle,d,skill,effects)=>{
@@ -499,7 +500,7 @@ test('Stormglass starts every Technique at its aimed conductor and never attacks
  for(const variant of [undefined,...SKILL_SPECIALIZATIONS.filter(v=>v.skill==='arcLightning').map(v=>v.id)]){
   const f=fixture('stormglass-reliquary',variant),enemy=f.sim.spawnEnemy('brute',270,0)!;enemy.hp=100000;f.cast();
   const bolt=f.events.find(e=>e.type==='chain');assert.ok(bolt?.type==='chain');assert.equal(bolt.x,250);assert.equal(bolt.y,0);
-  assert.equal(f.p.skillEffects?.conductor?.x,250);const life=enemy.hp;advanceSkillEffects(f.p,3.1);assert.equal(enemy.hp,life);assert.equal(f.p.skillEffects?.conductor,undefined);
+  assert.equal(f.p.skillEffects?.conductor?.x,250);for(let i=0;i<240;i++)advanceChains(f.context.chains,1/120,f.context);const life=enemy.hp;advanceSkillEffects(f.p,3.1);assert.equal(enemy.hp,life);assert.equal(f.p.skillEffects?.conductor,undefined);
   f.p.castTime=0;f.p.skillCooldowns.arcLightning=0;f.context.aimX=150;f.cast();assert.equal(f.sim.player.skillEffects?.conductor?.x,150);
  }
  const wall=fixture('stormglass-reliquary',undefined,{...world,blocked:x=>x>=100});wall.sim.spawnEnemy('brute',160,0);wall.cast();assert.ok(wall.p.skillEffects!.conductor!.x<100);assert.equal(wall.events.filter(e=>e.type==='chain').length,0);
@@ -518,6 +519,7 @@ test('batch-three transient state expires and cannot survive removal, death or s
 test('Stormglass places its first jump beyond weapon reach only through an in-range conductor',()=>{
  const f=fixture('stormglass-reliquary'),range=deriveAttackStats(f.p.stats,f.p.equipment.mainHand).range;
  f.context.aimX=range+500;const e=f.sim.spawnEnemy('brute',range+50,0)!;e.hp=100000;f.cast();
- assert.equal(f.p.skillEffects?.conductor?.x,range);assert.ok(e.hp<100000);
+ assert.equal(f.p.skillEffects?.conductor?.x,range);assert.equal(e.hp,100000);
+ for(let i=0;i<240;i++)advanceChains(f.context.chains,1/120,f.context);assert.ok(e.hp<100000);
  const first=f.events.find(event=>event.type==='chain');assert.ok(first?.type==='chain');assert.equal(first.x,range);
 });
