@@ -46,16 +46,17 @@ interface HallBoundary {
   slots: SaveSlot[];
   selected: number;
   choose(index: number, focus?: boolean): void;
+  refreshSelected(): void;
   navigateDetails(target: Control, key: string): void;
 }
 function hall(slots: SaveSlot[], read: (index: number) => Promise<SaveSlot>): HallBoundary {
   return Object.assign(Object.create(TitleScreen.prototype), {
     slots, selected: 0, inspection: 0, source: { mode: 'local' }, actions: { read },
-    element: { hidden: false }, itemTooltip: { hide() {} }, render() {}, renderSelection() {},
+    element: { hidden: false }, itemTooltip: { hide() {} }, render() {}, renderSelection() {}, message() {},
   });
 }
 
-test('reselecting a stale local character refreshes its revision and allows a cosmetic save without losing newer progress', async () => {
+test('explicitly refreshing a stale local character allows a cosmetic save without losing newer progress', async () => {
   const data = new Map<string, string>();
   const repo = new CharacterRepository({ getItem: key => data.get(key) ?? null, setItem: (key, value) => { data.set(key, value); } });
   const world = { seed: 7319, blocked: () => false, move: (x: number, y: number, dx: number, dy: number) => ({ x: x + dx, y: y + dy }) };
@@ -69,7 +70,7 @@ test('reselecting a stale local character refreshes its revision and allows a co
   look.showHelmet = true;
   assert.equal((await executeSavedAppearanceChange(repo, old, look, 3)).ok, false);
   const title = hall([old], async index => repo.read(index));
-  title.choose(0, false);
+  title.refreshSelected();
   await Promise.resolve();
   assert.equal(title.slots[0].token, repo.read(0).token);
   assert.ok((await executeSavedAppearanceChange(repo, title.slots[0], look, 4)).ok);
@@ -81,12 +82,128 @@ test('a delayed local selection read cannot replace the subsequently selected sl
   const slots: SaveSlot[] = [0, 1].map(index => ({ index, state: 'empty', token: null, record: null }));
   const finish: Array<(slot: SaveSlot) => void> = [];
   const title = hall(slots, index => new Promise(resolve => { finish[index] = resolve; }));
-  title.choose(0, false); title.choose(1, false);
+  title.refreshSelected(); title.choose(1, false);
   finish[1]({ ...slots[1], token: 'new-selection' }); await Promise.resolve();
   finish[0]({ ...slots[0], token: 'late-result' }); await Promise.resolve();
   assert.equal(title.selected, 1);
   assert.equal(title.slots[1].token, 'new-selection');
   assert.equal(title.slots[0].token, null);
+});
+
+test('clicking the selected character preserves the view and does not restart pending or completed reads', async () => {
+  const slots: SaveSlot[] = [0, 1].map(index => ({ index, state: 'empty', token: null, record: null }));
+  let reads = 0, renders = 0;
+  let finish!: (slot: SaveSlot) => void;
+  const title = Object.assign(hall(slots, () => { reads++; return new Promise(resolve => { finish = resolve; }); }), {
+    render() { renders++; },
+  });
+  title.choose(0, false);
+  assert.equal(reads, 0); assert.equal(renders, 0);
+  title.choose(1, false);
+  title.choose(1, false); title.choose(1, false);
+  assert.equal(reads, 1); assert.equal(renders, 1);
+  finish({ ...slots[1], token: 'loaded' }); await Promise.resolve();
+  assert.equal(title.slots[1].token, 'loaded', 'repeat clicks do not invalidate the pending read');
+  title.choose(1, false);
+  assert.equal(reads, 1); assert.equal(renders, 2);
+});
+
+test('source selection only loads a different source and waits for the current roster to arrive', () => {
+  const calls: string[] = [];
+  const title = Object.assign(Object.create(TitleScreen.prototype), {
+    source: { mode: 'cloud', status: 'Sign in' }, rosterLoading: false,
+    actions: { source: (mode: string) => calls.push(mode) },
+  });
+  title.selectSource('cloud'); assert.deepEqual(calls, []);
+  title.selectSource('local'); assert.deepEqual(calls, ['local']);
+  title.source = { mode: 'local', status: 'Local' };
+  title.selectSource('local'); assert.deepEqual(calls, ['local']);
+  title.rosterLoading = true;
+  title.selectSource('cloud'); assert.deepEqual(calls, ['local']);
+  title.rosterLoading = false;
+  title.selectSource('cloud'); assert.deepEqual(calls, ['local', 'cloud']);
+});
+
+test('initial hall focus follows the selected save source when no character is available', () => {
+  const cloud = new Control(), local = new Control(), slot = new Control();
+  const controls = new Map<string, Control>([['[data-source="cloud"]', cloud], ['[data-source="local"]', local]]);
+  const title = Object.assign(Object.create(TitleScreen.prototype), {
+    selected: 2, source: { mode: 'cloud' }, element: { querySelector: (selector: string) => controls.get(selector) ?? null },
+  });
+  assert.equal(title.initialSelectionFocus(), cloud);
+  title.source.mode = 'local'; assert.equal(title.initialSelectionFocus(), local);
+  controls.set('[data-slot="2"]', slot); assert.equal(title.initialSelectionFocus(), slot);
+});
+
+test('clicking the current home page never reopens its library or reloads its data', () => {
+  for (const page of ['characters', 'chronicle', 'leaderboard', 'changelog']) {
+    const title = Object.assign(Object.create(TitleScreen.prototype), { page, element: { dataset: { homePage: page } } });
+    // No panel/action dependencies: reopening any library would fail this boundary.
+    title.selectPage(page);
+  }
+});
+
+function selectionBoundary(record: CharacterSave | null) {
+  const parts = new Map<string, ReturnType<typeof part>>();
+  function part() {
+    const classes = new Set<string>();
+    return { innerHTML: '', textContent: '', inert: false, disabled: false, dataset: {} as Record<string, string>, classes,
+      attributes: new Map<string, string>(),
+      classList: { toggle(name: string, enabled: boolean) { if (enabled) classes.add(name); else classes.delete(name); } },
+      setAttribute(name: string, value: string) { this.attributes.set(name, value); },
+    };
+  }
+  const get = (selector: string) => { if (!parts.has(selector)) parts.set(selector, part()); return parts.get(selector)!; };
+  const title = Object.assign(Object.create(TitleScreen.prototype), {
+    slots: [{ index: 0, state: 'saved', record, token: 'loaded' }], selected: 0,
+    source: { mode: 'local', status: 'Local', signedIn: false }, loading: true, rosterLoading: false,
+    detailTab: 'gear', confirming: null, actions: { download() {}, import() {}, editAppearance() {} },
+    itemTooltip: { hide() {} }, element: { querySelector: get },
+  });
+  return { title, get };
+}
+
+test('a cached character keeps the identical detail layout while refreshing, with actions held until it finishes', () => {
+  const sim = new Simulation({ seed: 7319, blocked: () => false, move: (x: number, y: number, dx: number, dy: number) => ({ x: x + dx, y: y + dy }) }, { spawn: false });
+  const record: CharacterSave = { id: 'loading-layout', name: 'Rowan', version: 4, worldVersion: 10,
+    worldSeed: 7319, createdAt: 1, updatedAt: 1, checkpoint: sim.captureCheckpoint() };
+  const { title, get } = selectionBoundary(record);
+  title.renderSelection();
+  const selection = get('.title-selection'), markup = selection.innerHTML;
+  assert.ok(markup.includes('Rowan'));
+  assert.equal(selection.inert, true);
+  assert.equal(selection.attributes.get('aria-busy'), 'true');
+  assert.equal(selection.classes.has('has-character'), true);
+  assert.equal(get('.title-hero').classes.has('is-loading'), false);
+  assert.equal(get('[data-action="download"]').disabled, true);
+  title.loading = false; title.renderSelection();
+  // Item SVGs allocate unique gradient IDs on each render; compare their surrounding layout.
+  const layout = (html: string) => html.replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/g, '<svg/>');
+  assert.equal(layout(selection.innerHTML), layout(markup), 'the existing layout survives the refresh');
+  assert.equal(selection.inert, false);
+  assert.equal(selection.attributes.get('aria-busy'), 'false');
+  assert.equal(get('[data-action="download"]').disabled, false);
+  assert.equal(get('.title-storage-status').textContent, 'On this device');
+
+  title.rosterLoading = true; title.renderSelection();
+  assert.ok(!selection.innerHTML.includes('Rowan'), 'a new source never shows the old roster’s character');
+  assert.equal(get('.title-hero').classes.has('is-loading'), true);
+});
+
+test('an uncached character reserves responsive detail sections without exposing made-up stats or a starter portrait', () => {
+  const { title, get } = selectionBoundary(null);
+  title.renderSelection();
+  const selection = get('.title-selection');
+  for (const section of ['title-selection-heading', 'title-location', 'title-summary-band', 'title-detail-tabs', 'title-detail-body', 'title-save-meta', 'title-enter']) {
+    assert.ok(selection.innerHTML.includes(section), section);
+  }
+  assert.equal((selection.innerHTML.match(/title-gear-cell/g) ?? []).length, 11);
+  assert.ok(!selection.innerHTML.includes('data-action='));
+  assert.equal(selection.inert, true);
+  assert.equal(get('.title-hero').attributes.get('aria-hidden'), 'true');
+  assert.equal(get('.title-storage-status').textContent, 'Loading character…');
+  title.detailTab = 'attributes'; title.renderSelection();
+  assert.ok(selection.innerHTML.includes('data-detail="attributes"'), 'handheld detail choice is retained');
 });
 
 test('detail navigation skips hidden, disabled and inert items while retaining visible gear and roster/Continue exits', () => {

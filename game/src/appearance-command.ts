@@ -22,7 +22,7 @@ export async function executeSavedAppearanceChange(repository: CharacterReposito
   record.updatedAt = Math.max(record.updatedAt + 1, now);
   const current = await repository.read(slot.index);
   if (current.conflict || current.token !== slot.token || current.record?.id !== slot.record.id) {
-    return {ok:false, message:'This character changed. Return to the hall and select it again before editing.'};
+    return {ok:false, message:'This character changed. Cancel to refresh the hall before editing again.'};
   }
   const result = await repository.write(slot.index, record, slot.token);
   return result.ok ? {ok:true, record, token:result.token} : result;
