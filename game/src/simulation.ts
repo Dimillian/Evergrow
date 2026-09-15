@@ -1,3 +1,4 @@
+import { advanceChains, type ChainFlight } from './chain-lightning.ts';
 import { RiftTactics } from './rift-tactics.ts';
 import { EnemyNeighbors } from './enemy-neighbors.ts';
 import { applyEnemyModifiers } from './enemy-modifiers.ts';
@@ -130,6 +131,7 @@ export class Simulation {
   groundGold: GroundGold[] = [];
   readonly brokenContainers = new Set<string>();
   groundEffects: ActiveGroundEffect[] = [];
+  chains: ChainFlight[] = [];
   readonly groundPickup = new GroundItemPickup();
   private skillBuffer: { slot: number; until: number; pressed?:boolean } | null = null;
   private blockedDrawSlot: number | null = null;
@@ -173,7 +175,7 @@ export class Simulation {
     this.player = initialPlayer(this.options.startX!, this.options.startY!);
     this.enemies = [];
     this.projectiles = [];
-    this.groundEffects = [];
+    this.groundEffects = []; this.chains = [];
     this.pickups = [];
     this.groundItems = []; this.groundGold = []; this.groundPickup.cancel(); this.skillBuffer = null; this.blockedDrawSlot = null;
     refreshCharacter(this.player);
@@ -266,6 +268,7 @@ export class Simulation {
 
   /** Travel preserves actors, loot, clocks and camp memory. It is not a reset/load. */
   relocate(x: number, y: number): void {
+    this.chains.length = 0;
     this.groundEffects = this.groundEffects.filter(effect => effect.kind !== 'storm');
     const p = this.player;
     this.clearInput(); this.portal.cancel();
@@ -398,6 +401,13 @@ export class Simulation {
     if(!this.dungeonFloor&&Math.floor(this.time)!==Math.floor(this.time-dt)) metric(this.player.chronicle,'seen:biome:'+sampleBiome(this.player.x,this.player.y,this.options.seed!).id,1);
     this.updateEnemies(dt);
     this.updateProjectiles(dt);
+    advanceChains(this.chains, dt, {
+      player: this.player, enemies: this.enemies,
+      onScreen: enemy => enemyInCombatViewport(enemy, this.combatViewport),
+      visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by),
+      damage: (enemy, amount, angle, melee, style, elementalDamage, offense) => this.damageEnemy(enemy, amount, angle, melee, false, style, elementalDamage, offense),
+      emit: event => this.emit(event),
+    });
     this.updateGroundEffects(dt);
     this.engagements.update(this.enemies, this.time, event => this.emit(event));
     this.updatePickups(dt);
@@ -570,6 +580,7 @@ export class Simulation {
     if (this.skillBuffer && this.skillBuffer.until >= this.time && activateSkill({
       drawStrength:p.skillEffects?.draw?.released?p.skillEffects.draw.elapsed/UNIQUE_RULES.drawTime:0,
       allowReturn:this.skillBuffer.pressed,
+      chains: this.chains,
       containers: this.containerContext(),
       availableGroundEffects: GROUND_EFFECT_RULES.maximum - this.groundEffects.length
         - this.projectiles.filter(shot => shot.life > 0 && (shot.effects?.groundDuration||shot.effects?.shatter)).length,
@@ -806,7 +817,7 @@ export class Simulation {
     }, kind)) return;
     this.portal.cancel(); this.eventChannel.cancel();
     this.hurtGuard = COMBAT_TIMING.hurtGuard;
-    if (this.player.dead) this.clearInput();
+    if (this.player.dead) { this.chains.length = 0; this.clearInput(); }
   }
 
   private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill?: SkillId, effects?: ProjectileEffects, sourceLevel = this.player.level, sourceKind?: EnemyKind): Projectile | undefined {

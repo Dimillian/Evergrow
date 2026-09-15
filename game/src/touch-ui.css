@@ -79,8 +79,8 @@ html.touch-mode, .touch-mode :where(#app,#app *) { touch-action: manipulation; }
 }
 .touch-mode .journey-mini { max-width: 195px; }
 .touch-mode .crypt-map { padding: max(8px,env(safe-area-inset-top)) 8px; }
-.touch-mode .crypt-map .ui-window { display: flex; flex-direction: column; max-height: calc(var(--touch-vh,100dvh) - 16px); overflow: auto; }
-.touch-mode .crypt-map canvas { flex: none; height: auto; aspect-ratio: 1200 / 760; max-height: none; }
+.touch-mode .crypt-map .ui-window { display: flex; flex-direction: column; max-height: calc(var(--touch-vh,100dvh) - 16px); overflow: hidden; }
+.touch-mode .crypt-map .crypt-map-canvas { height: 100%; aspect-ratio: auto; max-height: none; }
 .touch-mode .crypt-touch-zoom { gap: 8px; padding: 8px; justify-content: center; }
 .touch-mode .title-screen.is-busy::after { content: 'Saving…'; position: fixed; inset: auto 25% 15%; padding: 20px; background: #101d29f5; border: 1px solid #8aa2ab; text-align: center; z-index: 80; }
 @media (max-width: 620px) {

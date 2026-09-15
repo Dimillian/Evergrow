@@ -1,3 +1,4 @@
+import { drawElementalMissile } from './elemental-spell-art.ts';
 import { drawRadiantBolt } from './radiant-art.ts';
 import { RADIANT_COLORS } from './radiant-content.ts';
 import { projectilePresentation } from './projectile-launch.ts';
@@ -18,7 +19,7 @@ export function projectileLight(shot: Projectile, alpha = 1): PointLight {
 }
 
 /** Projectile art follows the simulation's snapshotted payload, never current gear. */
-export function drawProjectile(c: CanvasRenderingContext2D, shot: Projectile, x: number, y: number, time: number): void {
+export function drawProjectile(c: CanvasRenderingContext2D, shot: Projectile, x: number, y: number, time: number, reducedMotion = false): void {
   const style = projectileStyle(shot), color = PROJECTILE_COLORS[style];
   const flicker = Math.sin(time * 21 + shot.id * 1.7), radius = Math.max(2, shot.radius);
   const wake = shot.launch ? Math.min(1, Math.max(0, shot.maxLife - shot.life) / .08) : 1;
@@ -46,6 +47,8 @@ export function drawProjectile(c: CanvasRenderingContext2D, shot: Projectile, x:
     polygon(c, [[-21, 0], [-28, 4], [-22, 3], [-16, 0]], '#586c69');
   } else if (style === 'radiant') {
     drawRadiantBolt(c, radius, wake, time + shot.id);
+  } else if (shot.owner === 'player' && (shot.skill === 'fireball' || shot.skill === 'frostLance')) {
+    drawElementalMissile(c, shot.skill === 'frostLance', shot.id, time, wake, reducedMotion);
   } else if (style === 'fire') {
     c.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 3; i++) {

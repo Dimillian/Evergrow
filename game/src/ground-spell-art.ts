@@ -1,3 +1,4 @@
+import { drawIceCrystal, drawTempestField } from './elemental-spell-art.ts';
 import type { ActiveGroundEffect } from './ground-effects.ts';
 import type { PointLight } from './lighting.ts';
 import { drawGlow } from './lighting.ts';
@@ -23,7 +24,7 @@ export function groundSpellLights(effect: ActiveGroundEffect, reduced = false): 
       { x: effect.x, y: effect.y, radius: effect.radius * 1.5, color, power: .12 + p.progress * .5 }];
   }
   const fade = effect.delay > 0 ? .2 : Math.min(1, Math.max(0, effect.duration) / .5);
-  return [{ x: effect.x, y: effect.y, radius: effect.radius * 1.4, color, power: fade * (effect.kind === 'embers' ? .5 : .3) }];
+  return [{ x: effect.x, y: effect.y, radius: effect.radius * 1.4, color, power: fade * (effect.kind === 'embers' ? .5 : effect.kind === 'storm' ? .2 + .35 * Math.pow(Math.min(1, Math.max(0, effect.tick / effect.interval)), 3) : .3) }];
 }
 export function drawGroundSpell(c: CanvasRenderingContext2D, effect: ActiveGroundEffect, time: number, reduced: boolean): void {
   const color = PROJECTILE_COLORS[effect.style], r = effect.radius;
@@ -38,6 +39,14 @@ export function drawGroundSpell(c: CanvasRenderingContext2D, effect: ActiveGroun
   }
   if (effect.delay > 0 && effect.kind !== 'embers') {
     drawAttackWarning(c, { kind: 'circle', radius: r }, progress, color, t, reduced);
+    if (effect.kind === 'frost') {
+      c.globalAlpha=.25+progress*.35;
+      for(let i=0;i<12;i++) { const a=i/12*TAU; drawIceCrystal(c,Math.cos(a)*r*.88,Math.sin(a)*r*.88,6+progress*14); }
+    }
+    if (effect.kind === 'meteor') {
+      c.globalAlpha=progress*.6;c.strokeStyle='#ffd1a0';c.lineWidth=1.4;
+      c.beginPath();c.arc(0,0,r*(1-progress*.72),0,TAU);c.stroke();
+    }
     if (effect.kind === 'arrowRain') for (let i = 0; i < 16; i++) {
       const a = i * 2.39996 + effect.id, d = Math.sqrt((i + .5) / 16) * r * .88;
       const x = Math.cos(a) * d, y = Math.sin(a) * d, height = reduced ? 20 : 110 * (1 - progress);
@@ -47,7 +56,13 @@ export function drawGroundSpell(c: CanvasRenderingContext2D, effect: ActiveGroun
   } else {
     const fade = Math.min(1, Math.max(0, effect.duration) / .45);
     c.globalAlpha = fade;
-    if (effect.kind === 'embers') {
+    if (effect.kind === 'storm') {
+      drawTempestField(c,r,effect.id,t,Math.min(1,Math.max(0,effect.tick/effect.interval)),fade,reduced);
+    } else if (effect.kind === 'frost') {
+      // The confirmed blast owns the growing frost front; the field retains only its boundary.
+      c.globalAlpha=fade*.2;c.strokeStyle='#b0e9fb';c.lineWidth=1;
+      c.beginPath();c.arc(0,0,r,0,TAU);c.stroke();
+    } else if (effect.kind === 'embers') {
       // Scorched islands and fissures occupy the actual circular damage footprint.
       c.fillStyle = '#19130e'; c.globalAlpha = fade * .38;
       c.beginPath();
@@ -79,8 +94,7 @@ export function drawGroundSpell(c: CanvasRenderingContext2D, effect: ActiveGroun
         c.globalAlpha = fade * (reduced ? .5 : Math.sin(cycle * Math.PI) * .65);
         if (effect.kind === 'arrowRain') {
           line(c, [[x - (1 - cycle) * 26, y - (1 - cycle) * 110], [x, y]], '#dce8cc', 1.2);
-        } else if (effect.kind === 'frost') {
-          polygon(c, [[x - 3, y], [x, y - 7 - cycle * 9], [x + 4, y], [x, y + 3]], '#a8e0ee');
+
         } else {
           line(c, [[x - 8, y - 24 * cycle], [x + 2, y - 14], [x - 2, y - 8], [x + 8, y]], '#a5ccff', 1.1);
         }
@@ -100,6 +114,12 @@ function drawMeteor(c: CanvasRenderingContext2D, effect: ActiveGroundEffect): vo
     const length = 65 + i * 13, spread = Math.sin(i * 4.3) * size;
     c.globalAlpha = p.opacity * (.2 + (i % 3) * .08);
     polygon(c, [[-size * .7, 3], [spread - length * .34, -length], [size * .6, -4]], i % 2 ? '#ff7733' : '#ffce6e');
+  }
+  for(let i=0;i<12;i++) {
+    const phase=(p.progress*2+i/12)%1,lag=30+phase*170;
+    c.globalAlpha=p.opacity*(1-phase)*.6;
+    const x=-lag*.34+Math.sin(i*7+effect.id)*size,y=-lag;
+    line(c,[[x,y],[x-3,y-12]],i%3?'#ff9554':'#ffe2b0',1.5);
   }
   c.globalAlpha = p.opacity; c.globalCompositeOperation = 'source-over';
   polygon(c, [[-size, -size * .4], [-size * .3, -size], [size * .6, -size * .6], [size, size * .4], [0, size], [-size * .8, size * .5]], '#493028');

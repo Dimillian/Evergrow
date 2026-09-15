@@ -24,7 +24,7 @@ export class GroundLootHighlight {
   private canvas: HTMLCanvasElement;
   constructor(mount: HTMLElement, canvas: HTMLCanvasElement) {
     this.canvas = canvas;
-    this.comparison = new ItemComparisonInput(window, () => { this.inspectedStats = null; }, this.life.signal);
+    this.comparison = new ItemComparisonInput(window, () => { this.inspectedStats = null; }, this.life.signal, () => false);
     this.detail = new GroundComparisonInput(window, () => { this.inspectedStats = null; }, this.life.signal);
     this.cursor = canvas.style.cursor;
     this.affordance.className = 'ground-loot-affordance';

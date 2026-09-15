@@ -5,6 +5,7 @@ import { PauseMenu, type PauseActions } from './pause-menu.ts';
 import type { PauseNavigation } from './pause-navigation.ts';
 import type { GamepadInput } from './gamepad-input.ts';
 import { PORTAL_RULES } from './travel.ts';
+import { portalDestinationLabel, type PortalActionView } from './portal-destination.ts';
 import './travel-ui.css';
 import './hud-sidebar.css';
 import { GameNotifications } from './notifications.ts';
@@ -139,14 +140,17 @@ export class GameShell {
     this.shortcutMenu.position();
   }
 
-  setPortalState(progress: number | null, returning: boolean): void {
+  setPortalState(view: PortalActionView): void {
+    const { progress, mode, destination } = view;
+    const destinationLabel = portalDestinationLabel(destination);
     const button = this.controls.querySelector<HTMLElement>('[data-hud="portal"]')!;
-    button.classList.toggle('is-channeling', progress !== null); button.classList.toggle('is-return', returning);
+    button.classList.toggle('is-channeling', progress !== null); button.classList.toggle('is-return', mode === 'locate' || mode === 'return');
+    button.toggleAttribute('disabled', mode === 'unavailable');
     button.style.setProperty('--portal-progress', `${(progress ?? 0) * 100}%`);
-    const label = progress !== null ? `Casting · ${(PORTAL_RULES.channel * (1 - progress)).toFixed(1)}s` : returning ? 'Return portal' : 'Town portal';
+    const label = progress !== null ? `Opening · ${(PORTAL_RULES.channel * (1 - progress)).toFixed(1)}s` : mode === 'return' ? 'Return portal' : mode === 'locate' ? 'Locate portal' : mode === 'unavailable' ? 'Portal unavailable' : 'Town portal';
     const text = button.querySelector('.portal-label')!; if (text.textContent !== label) text.textContent = label;
-    button.setAttribute('aria-label', progress !== null ? 'Cancel town portal' : returning ? 'Locate return portal' : 'Town portal');
-    button.dataset.tooltip = progress !== null ? 'Cancel cast' : returning ? 'Locate your return portal' : `Town portal · ${PORTAL_RULES.channel} second cast`;
+    button.setAttribute('aria-label', progress !== null ? `Cancel portal opening to ${destinationLabel}` : mode === 'return' ? `Return to ${destinationLabel}` : mode === 'locate' ? `Locate return portal to ${destinationLabel}` : mode === 'unavailable' ? 'Town portal unavailable in sanctuary. Explore outside the sanctuary to open one' : `Open town portal to ${destinationLabel}`);
+    button.dataset.tooltip = progress !== null ? `Cancel cast to ${destinationLabel}` : mode === 'return' ? `Return to ${destinationLabel}` : mode === 'locate' ? `Locate return portal · ${destinationLabel}` : mode === 'unavailable' ? 'Explore outside the sanctuary to open a town portal' : `Town portal to ${destinationLabel} · ${PORTAL_RULES.channel} second cast`;
   }
   portalTransition(): void {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;

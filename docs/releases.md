@@ -35,6 +35,38 @@ The user approved the next major prototype milestone, **0.6.0**, on 2026-09-14 f
 
 ## Last verified publication
 
+- Game v0.6.5 / Sites version 59, publicly deployed on 2026-09-15 at 07:06:15 UTC.
+- Published source: `ecb9a04f683881f12cce113ca414eec816dda4b4`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_e24f86b3c6988191810bb249f77ed453`.
+- Deployment: `appgdep_6aa8ee58adf0819187abb443f5bad283`; Sites returned `succeeded`.
+- Dedicated fire, frost, meteor and storm spell effects; resolved skill hover cards in the inventory bar and assignment picker.
+- All 118 relevant code tests passed, plus application/core type checking, local and cloud-enabled builds, archive validation and clean-source release validation. No automated browser gameplay was run.
+- The Prism Archmage fixture remains only in the user's local character slot; it is not part of this publication.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
+- Game v0.6.4 / Sites version 58, publicly deployed on 2026-09-15 at 06:27:24 UTC.
+- Published source: `76d5ad29a9a6d98559510a63129de5eb7604e912`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_d4cc73833a7881919a1fd8f1e12d8194`.
+- Deployment: `appgdep_6aa8e53a794c81919085a44709644e99`; Sites returned `succeeded`.
+- Traveling Arc Lightning, luminous chain effects, Storm Circuit tuning, two-card weapon comparisons and release-warning cleanup.
+- All 134 relevant code tests passed, with application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation. No automated browser gameplay was run.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
+- Game v0.6.3 / Sites version 57, publicly deployed on 2026-09-15 at 05:39:32 UTC.
+- Published source: `32125e1e2eec31715a4ff92c59e0183253bba1f7`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_ce3b0d0058c08191a93d5a377a4a8453`.
+- Deployment: `appgdep_6aa8da02ca6881919806b4ddb9618c0f`; Sites returned `succeeded`.
+- Includes PRs #45, #48, #49, #51, #52, #53 and #54: redesigned character hall and appearance editing, directional character art, map legend and service pings, destination-aware portals, ground resource motion, rift completion feedback and F3 performance monitor.
+- All 1,585 code tests passed, with application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation. No automated browser gameplay was run.
+- Existing characters and progress remain intact; no save reset, skill refund or database migration. Reload existing clients.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.6.2 / Sites version 56, publicly deployed on 2026-09-14 at 16:19:33 UTC.
 - Published source: `09e32e06ecb7f039be724ae26a7c191fba4d504d`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_645eb1c05f7c8191b66a4f73d2c5c3a3`.
@@ -415,7 +447,7 @@ The user approved the next major prototype milestone, **0.6.0**, on 2026-09-14 f
 
 1. Resolve the source of the last **successful publication** from the Sites history/current release record. A saved version alone is not proof of publication. For the initial changelog release the known published baseline is `1978bf9d210533cb83b11c8c9863e766f7c13562` (Sites version 14).
 2. Read the commits and relevant implementation since that source. Summarize what players can actually experience; omit internal refactors, unpublished experiments and changes later reverted.
-3. Prepend a versioned, timestamped release entry in `CHANGELOG.md`. Use **New**, **Tweaks**, and **Fixes** (omit empty sections). Lead with exciting features and meaningful balance changes; describe bugs in terms of what players experienced. Explicitly call out save resets. Use short factual bullets, ideally one line each. No themed titles or promotional copy. Increment the patch version for each publication under the prototype policy above; record its UTC preparation time, displayed in Europe/Paris time in the reader.
+3. Prepend a versioned, timestamped release entry in `CHANGELOG.md`. Use **New**, **Tweaks**, and **Fixes** (omit empty sections). Lead with exciting features and meaningful balance changes; describe bugs in terms of what players experienced. Reserve warning notices for save resets or required player actions such as rebuilding skills. Omit routine save-preservation and refresh reminders; keep informational changes in ordinary bullets. Historical development-recap labels remain neutral text. Explicitly call out save resets. Use short factual bullets, ideally one line each. No themed titles or promotional copy. Increment the patch version for each publication under the prototype policy above; record its UTC preparation time, displayed in Europe/Paris time in the reader.
 4. Validate the reader, run appropriate code tests and the production Site build. Commit the notes alongside the exact release source, and push the checkpoint to origin.
 5. Run `npm run release:check -- <full-last-published-source-sha>`. It checks the format, requires a clean committed tree, and rejects a changed build whose newest notes are unchanged from that publication. Re-publishing the identical source can reuse its existing notes; do not invent gameplay changes.
 6. Follow the Sites skills: push the exact source to its bound repository, package that build, save the version and publish to the requested existing audience. Verify deployment success before saying it is live. On failure, preserve the prepared notes and retry the same release rather than creating a second entry.

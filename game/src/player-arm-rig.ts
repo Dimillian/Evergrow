@@ -19,12 +19,12 @@ export function armShoulder(facing: number, side: number, gaitSway: number): Rig
 }
 
 /** A stable body-relative elbow pole gives real foreshortening without shrinking bones. */
-export function solveArm(shoulder: RigPoint, hand: RigPoint, facing: number, side: number, tuck = 0, grip = 0): ArmRig {
+export function solveArm(shoulder: RigPoint, hand: RigPoint, facing: number, side: number, tuck = 0, grip = 0, proportion = 1): ArmRig {
   const delta = hand.map((value, index) => value - shoulder[index]);
   const distance = Math.max(.001, Math.hypot(...delta));
   const axis = delta.map(value => value / distance);
-  const stretch = Math.max(1, distance / 19.7);
-  const upperLength = 9.1 * stretch, forearmLength = 10.8 * stretch;
+  const stretch = Math.max(1, distance / (19.7 * proportion));
+  const upperLength = 9.1 * proportion * stretch, forearmLength = 10.8 * proportion * stretch;
   const along = Math.max(-upperLength, Math.min(upperLength,
     (upperLength ** 2 - forearmLength ** 2 + distance ** 2) / (2 * distance)));
   const radius = Math.sqrt(Math.max(0, upperLength ** 2 - along ** 2));

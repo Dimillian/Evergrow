@@ -1,8 +1,9 @@
+import { startChain, CHAIN_FLIGHT_LIMIT, type ChainFlight } from './chain-lightning.ts';
 import { isAura } from './aura-content.ts';
 import { hasUnique, UNIQUE_RULES } from './unique-content.ts';
 import { harvestRear, lungeReturn, returningProjectile, storeFireballs, type StoredFireball } from './unique-combat.ts';
 import { skillEffects, consumeRally, snapshotSkillOffense, queueSkillEcho } from './player-skill-effects.ts';
-import { chainLifeOnHitMultiplier, groundEffectPulseCount } from './skill-execution-content.ts';
+import { groundEffectPulseCount } from './skill-execution-content.ts';
 import { metric } from './chronicle.ts';
 import { consumeSpellweave } from './affix-combat.ts';
 import { weaponImpactStyle } from './elemental-weapon.ts';
@@ -21,6 +22,7 @@ import { applySlow, applyStun } from './combat-status.ts';
 import { circleIntersectsSector } from './combat-geometry.ts';
 
 export interface SkillContext {
+  chains: ChainFlight[];
   allowReturn?: boolean;
   drawStrength?: number;
   containers?: ContainerAttackContext;
@@ -68,6 +70,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
   const projectileSlots = storeEmbers ? 0 : throwShield||fissure ? 1 : recipe.kind === 'projectile' ? recipe.offsets.length : recipe.kind === 'step' && recipe.shot ? 1 : 0;
   const groundSlots = storeEmbers ? 0 : shatter ? projectileSlots : recipe.kind === 'ground' ? recipe.scatter ?? 1 : recipe.kind === 'radial' && recipe.echo ? 1
     : recipe.kind === 'projectile' && recipe.effects.groundDuration ? projectileSlots : 0;
+  if (recipe.kind === 'chain' && context.chains.length >= CHAIN_FLIGHT_LIMIT) return false;
   if (projectileSlots > context.availableProjectiles) return false;
   if (groundSlots > context.availableGroundEffects) return false;
   if ((p.skillCooldowns[id] ?? 0) > 0) return false;
@@ -239,11 +242,11 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
       break;
     }
     case 'chain': {
-      const point = aimedPoint(), hit = new Set<number>();
+      const point = aimedPoint();
       const conductor=hasUnique(p.character,'stormglass-reliquary');
       if(conductor)skillEffects(p).conductor={...point,remaining:UNIQUE_RULES.conductorWindow};
-      let from = conductor?{...point}:{ x: p.x, y: p.y }, amount = damage;
-      let next = living().filter(enemy => context.onScreen(enemy) && (conductor?Math.hypot(enemy.x-from.x,enemy.y-from.y)<=recipe.range+enemy.radius&&context.visible(from.x,from.y,enemy.x,enemy.y):Math.hypot(enemy.x-p.x,enemy.y-p.y)<=attack.range+enemy.radius&&visible(enemy)))
+      const from = conductor?{...point}:{ x: p.x, y: p.y };
+      const next = living().filter(enemy => context.onScreen(enemy) && (conductor?Math.hypot(enemy.x-from.x,enemy.y-from.y)<=recipe.range+enemy.radius&&context.visible(from.x,from.y,enemy.x,enemy.y):Math.hypot(enemy.x-p.x,enemy.y-p.y)<=attack.range+enemy.radius&&visible(enemy)))
         .sort((a, b) => Math.hypot(a.x - point.x, a.y - point.y) - Math.hypot(b.x - point.x, b.y - point.y))[0];
       // In a quiet area, an aimed bolt can discharge into a nearby container.
       // Enemy chains retain their own target budget and never jump through scenery.
@@ -256,16 +259,7 @@ export function activateSkill(context: SkillContext, slot: number): boolean {
           context.containers.break(target, Math.atan2(target.y - p.y, target.x - p.x));
         }
       }
-      for (let jump = 0; next && jump < recipe.jumps; jump++) {
-        const target = next;
-        context.emit({ type: 'chain', x: from.x, y: from.y, toX: target.x, toY: target.y, skill: id, color, style: recipe.style, duration: recipe.duration });
-        damageTarget(target, amount, Math.atan2(target.y - from.y, target.x - from.x), false,
-          { ...offense, lifeOnHit: offense.lifeOnHit * chainLifeOnHitMultiplier(jump, hit.has(target.id)) });
-        hit.add(target.id); from = { x: target.x, y: target.y }; amount *= recipe.falloff;
-        next = living().filter(enemy => context.onScreen(enemy) && enemy.id !== target.id && (recipe.revisit || !hit.has(enemy.id)) && Math.hypot(enemy.x - from.x, enemy.y - from.y) <= recipe.range + enemy.radius
-          && context.visible(from.x, from.y, enemy.x, enemy.y))
-          .sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y))[0];
-      }
+      if (next) startChain(context.chains, from, next, damage, offense, recipe, id, color, context);
       break;
     }
     default: {

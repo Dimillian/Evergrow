@@ -379,6 +379,8 @@ test('Arc Lightning acquires and bounces only inside the actual combat viewport'
   sim.setSpawnExclusion({ x: -1000, y: -1000, width: 2000, height: 2000 });
   const visible = target(sim, 60), offscreen = target(sim, 155);
   cast(sim, 60);
+  assert.equal(hitEvents(sim.drainEvents(), visible).length, 0, 'chain damage waits for arrival');
+  advance(sim, .5);
   assert.equal(hitEvents(sim.drainEvents(), visible).length, 1);
   assert.equal(offscreen.hp, offscreen.maxHp, 'padded spawn coverage cannot permit a bounce');
 

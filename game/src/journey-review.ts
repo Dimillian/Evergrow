@@ -61,7 +61,8 @@ function draw(){
   const anchor=world.getEventSites(camp.x-300,camp.y-300,600,600).find(s=>s.id===camp.id)??camp;
   const point=renderer.worldToScreen(anchor.x,anchor.y);if(!completion)drawJourneyDestination(c,point.x,point.y-35,8);
   if(completion)drawJourneyAnnouncement(c,{...completion,age:.8},renderer.worldToScreen(p.x,p.y),renderer.width,renderer.height,true);
-  shell.resizeControls(renderer.width,renderer.height);shell.showMenu('playing',0,0);shell.setPortalState(new URLSearchParams(location.search).has('casting') ? .4 : null,false);
+  const casting=new URLSearchParams(location.search).has('casting');
+  shell.resizeControls(renderer.width,renderer.height);shell.showMenu('playing',0,0);shell.setPortalState({mode:casting?'cancel':'cast',progress:casting ? .4 : null,destination:{kind:'settlement',name:'Home town',detail:'Home town',biome:'deadwood'}});
   panel.update(sim.journeys,facts(),(mode==='hud'||mode==='complete')&&panel.element.hidden,renderer.width,renderer.height);
 }
 draw();if(mode==='journal'||mode==='crypt')openPanel();else if(mode==='map')showMap();

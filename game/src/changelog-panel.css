@@ -41,3 +41,5 @@
   .title-roster-footer { flex-wrap:wrap; }
 }
 @media(max-height:480px) and (min-width:621px) { .changelog-footer { display:none; } }
+
+.changelog-recap { margin:0 0 18px; color:#8da4ad; font-size:14px; line-height:1.5; }

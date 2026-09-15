@@ -1,3 +1,8 @@
+import { titleCharacterDetails } from './title-character-details.ts';
+import { drawTitlePlinth } from './title-plinth.ts';
+import { ItemTooltip } from './item-tooltip.ts';
+import type { EquipmentSlot } from './character-types.ts';
+import './item-ui.css';
 import { GamepadMenu } from './gamepad-menu.ts';
 import { audioControlsMarkup, bindAudioControls, type AudioControlActions } from './audio-controls.ts';
 import { LeaderboardPanel, type LeaderboardLoader } from './leaderboard-panel.ts';
@@ -19,13 +24,14 @@ import type { Player } from './model.ts';
 import { STARTER_LOADOUTS, createStarterLoadout, isStarterLoadoutId, type StarterLoadoutId } from './items.ts';
 import { itemIconSVG } from './item-art.ts';
 import { parseWorldSeed } from './world-seed.ts';
-import './title-screen.css';
 import './game-wordmark.css';
 import './home-screen.css';
+import './title-screen.css';
 export interface TitleActions extends AudioControlActions {
   leaderboard?: LeaderboardLoader;
   chronicle?(onCached?:(ledger:ChronicleLedger)=>void): Promise<ChronicleLedger>;
   create(index: number, name: string, weapon: StarterLoadoutId, seed: number): void;
+  editAppearance?(slot: SaveSlot): void;
   continueRecovery?(index: number, token: string): void;
   continue(index: number): void; remove(index: number, expected: string | null): void;
   read?(index: number): Promise<SaveSlot>; source?(mode: SaveMode): void;
@@ -43,6 +49,11 @@ export class TitleScreen {
   private readonly leaderboard: LeaderboardPanel;
   private page: HomePage = 'characters';
   private audioPad = new GamepadMenu();
+  private readonly itemTooltip: ItemTooltip;
+  private detailTab: 'gear' | 'attributes' = 'gear';
+  private portraitObserver: ResizeObserver;
+  private itemScrollTime = 0;
+  private portraitDirty = true;
   private refreshAudio?: () => void;
   refreshSound() { this.refreshAudio?.(); }
   private readonly chronicle: ChroniclePanel;
@@ -66,12 +77,13 @@ export class TitleScreen {
   private actions: TitleActions;
   constructor(mount: HTMLElement, actions: TitleActions) {
     this.actions = actions;
+    this.motion.addEventListener('change', () => { this.portraitDirty = true; }, { signal: this.abort.signal });
     this.element = document.createElement('div'); this.element.className = 'title-screen'; this.element.hidden = true;
     this.element.innerHTML = `<details class="title-audio"><summary aria-label="Audio options">Sound <kbd class="audio-pad-key">Y</kbd></summary>${audioControlsMarkup(true)}</details><div class="title-vignette" aria-hidden="true"></div>
       <header class="title-brand"><span aria-hidden="true">${uiIcon('skilltree')}</span><h1>EVERGROW</h1><nav class="title-home-nav" aria-label="Home">${homePages.map(page=>`<button data-home-page="${page}" aria-current="${page==='characters'?'page':'false'}">${homeLabels[page]}${page==='changelog'?'<i class="home-unread" aria-label="Unread update" hidden></i>':''}</button>`).join('')}</nav><span class="home-pad-hint">LB / RB</span></header>
-      <section class="title-hero" aria-label="Selected character"><div class="title-halo" aria-hidden="true"></div><canvas width="560" height="720" aria-label="Selected character wearing their saved equipment"></canvas><div class="title-plinth" aria-hidden="true"></div></section>
+      <section class="title-hero" aria-label="Selected character"><div class="title-halo" aria-hidden="true"></div><canvas width="560" height="720" aria-label="Selected character wearing their saved equipment"></canvas></section>
       <section class="title-roster ui-window" aria-labelledby="roster-title"><header class="title-roster-header"><h2 id="roster-title">Characters</h2><div class="title-sources" role="group" aria-label="Save location" hidden><button data-source="cloud">Cloud</button><button data-source="local">Local</button></div><span class="title-controller-hint"><kbd>A</kbd> Continue</span><span class="title-slot-count"></span></header>
-      <div class="title-hall-body"><div class="title-slot-grid" role="group" aria-label="Eight character slots"></div><div class="title-selection"></div></div>
+      <div class="title-hall-body"><div class="title-slot-grid" role="group" aria-label="Eight character slots"></div></div></section><section class="title-dossier ui-window" aria-label="Character details"><div class="title-selection"></div>
       <footer class="title-roster-footer"><span class="title-storage-status" role="status"></span><a class="title-signout" href="/signout-with-chatgpt?return_to=/" target="_top" hidden>Sign out</a><span class="title-transfer"><button data-action="import">Import</button><button data-action="download">Download</button></span></footer>
       <div class="title-cloud-recovery" hidden><p class="title-cloud-message" role="status"></p><button class="ui-button" data-action="retry">Retry</button><a class="ui-button" href="/signin-with-chatgpt?return_to=/" target="_top" hidden>Sign in again</a></div>
       <p class="title-save-message" role="status" hidden></p><input type="file" class="title-file" accept=".json,application/json" hidden></section><section class="title-library ui-window" hidden aria-label="Home content"></section>`;
@@ -79,7 +91,14 @@ export class TitleScreen {
     this.element.querySelector('details.title-audio')!.addEventListener('toggle', event => {
       refreshAudio(); actions.panelSound?.((event.target as HTMLDetailsElement).open);
     }, { signal: this.abort.signal });
-    this.canvas = this.element.querySelector('canvas')!; mount.append(this.element);
+    this.canvas = this.element.querySelector('.title-hero canvas')!; mount.append(this.element);
+    this.itemTooltip = new ItemTooltip(this.element, 'title-item-tooltip');
+    this.bindItemTooltips();
+    this.portraitObserver = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect, ratio = Math.min(devicePixelRatio || 1, 2);
+      if (width && height) { this.portraitDirty = true; this.canvas.width = Math.round(width * ratio); this.canvas.height = Math.round(height * ratio); }
+    });
+    this.portraitObserver.observe(this.canvas);
     const library=this.element.querySelector<HTMLElement>('.title-library')!;
     this.changelog = new ChangelogPanel(library, () => this.selectPage('characters'), true);
     this.chronicle = new ChroniclePanel(library, () => this.selectPage('characters'), true);
@@ -94,6 +113,18 @@ export class TitleScreen {
         event.preventDefault();const pages=this.availablePages(),index=pages.indexOf(this.page);
         this.selectPage(event.key==='Home'?pages[0]:event.key==='End'?pages.at(-1)!:pages[(index+(event.key==='ArrowLeft'?-1:1)+pages.length)%pages.length]);return;
       }
+      if (target.matches('[data-detail-tab]') && ['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) {
+        event.preventDefault(); this.switchDetail(event.key === 'Home' ? 'gear' : event.key === 'End' ? 'attributes' : this.detailTab === 'gear' ? 'attributes' : 'gear', true); return;
+      }
+      if (target.matches('[data-slot]') && event.key === 'ArrowRight' && getComputedStyle(this.element.querySelector('.title-slot-grid')!).flexDirection === 'column') {
+        const entry = [...this.element.querySelectorAll<HTMLElement>('[data-detail-tab],[data-title-item],.title-create input')].find(el => el.getClientRects().length && el.tabIndex >= 0);
+        if (entry) { event.preventDefault(); entry.focus(); return; }
+      }
+      if (target.matches('[data-title-item],.title-character-actions button') && event.key.startsWith('Arrow')) {
+        event.preventDefault();
+        this.navigateDetails(target, event.key);
+        return;
+      }
       if (!target.matches('[data-slot]') || !event.key.startsWith('Arrow')) return;
       const slots = [...this.element.querySelectorAll<HTMLButtonElement>('[data-slot]')];
       const next = directionalControl(slots.map(slot => slot.getBoundingClientRect()), slots.indexOf(target as HTMLButtonElement), event.key);
@@ -105,12 +136,18 @@ export class TitleScreen {
     }, { signal: this.abort.signal });
     this.element.addEventListener('click', event => {
       const button = (event.target as Element).closest<HTMLButtonElement>('button'); if (!button) return;
+      if (button.dataset.titleItem) { this.showItemTooltip(button); return; }
+      if (button.dataset.detailTab) { this.switchDetail(button.dataset.detailTab as 'gear' | 'attributes', true); return; }
       if (button.dataset.homePage) { this.selectPage(button.dataset.homePage as HomePage); return; }
       if (button.dataset.source) { this.actions.source?.(button.dataset.source as SaveMode); return; }
       if (button.dataset.slot !== undefined) { this.choose(Number(button.dataset.slot)); return; }
       const action = button.dataset.action;
       if (action === 'retry') { if (this.source.status === 'Reload required' || !this.actions.retry) window.location.reload(); else this.actions.retry(); }
       if (action === 'continue') this.actions.continue(this.selected);
+      if (action === 'appearance') {
+        const slot = this.slots[this.selected];
+        if (slot?.record && !slot.conflict && !this.loading) this.actions.editAppearance?.(slot);
+      }
       if (action === 'recovery') { const slot = this.slots[this.selected]; if (slot?.token && slot.recovery?.record) this.actions.continueRecovery?.(this.selected, slot.token); }
       if (action === 'delete' || action === 'cloud') { this.confirming = action; this.renderSelection(); this.element.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.focus(); }
       if (action === 'cancel') { this.confirming = null; this.renderSelection(); }
@@ -128,12 +165,12 @@ export class TitleScreen {
     this.element.addEventListener('change', event => {
       const input = event.target;
       if (input instanceof HTMLSelectElement && input.name === 'compact-starter' && isStarterLoadoutId(input.value)) {
-        this.starter = input.value; this.player = previewCharacter(null, this.starter);
+        this.starter = input.value; this.player = previewCharacter(null, this.starter); this.portraitDirty = true;
         this.element.querySelectorAll<HTMLInputElement>('[name="starter-weapon"]').forEach(radio => { radio.checked = radio.value === this.starter; }); return;
       }
       if (!(input instanceof HTMLInputElement)) return;
       if (this.source.mode === 'local' && input.type === 'file' && input.files?.[0]) { this.actions.import?.(this.selected, input.files[0]); input.value = ''; }
-      if (input.name === 'starter-weapon' && isStarterLoadoutId(input.value)) { this.starter = input.value; this.player = previewCharacter(null, this.starter); const select = this.element.querySelector<HTMLSelectElement>('[name="compact-starter"]'); if (select) select.value = this.starter; }
+      if (input.name === 'starter-weapon' && isStarterLoadoutId(input.value)) { this.starter = input.value; this.player = previewCharacter(null, this.starter); this.portraitDirty = true; const select = this.element.querySelector<HTMLSelectElement>('[name="compact-starter"]'); if (select) select.value = this.starter; }
     }, { signal: this.abort.signal });
     this.element.addEventListener('submit', event => {
       event.preventDefault(); const input = this.element.querySelector<HTMLInputElement>('[name="character-name"]');
@@ -154,7 +191,7 @@ export class TitleScreen {
     }
     return true;
   }
-  setBusy(busy: boolean) { this.element.inert = busy; this.element.classList.toggle('is-busy', busy); this.element.setAttribute('aria-busy', String(busy)); }
+  setBusy(busy: boolean) { if (busy) this.itemTooltip.hide(); this.element.inert = busy || this.element.style.visibility === 'hidden'; this.element.classList.toggle('is-busy', busy); this.element.setAttribute('aria-busy', String(busy)); }
   setRosterLoading(loading: boolean) {
     this.rosterLoading = loading;
     if (loading) { this.inspection++; this.loading = false; this.confirming = null; }
@@ -195,18 +232,25 @@ export class TitleScreen {
       initialFocus: () => this.element.querySelector(`[data-slot="${this.selected}"]`) ?? this.element.querySelector('[data-source="local"]') });
     if (!this.frame) this.animate();
   }
-  setEditorOpen(open:boolean) {
+  updateSlot(slot: SaveSlot) {
+    this.slots[slot.index] = slot;
+    this.render();
+  }
+  setEditorOpen(open:boolean, restoreAppearance = false) {
+    this.itemTooltip.hide();
     this.focus?.dispose();this.focus=undefined;
     this.element.inert=open;this.element.style.visibility=open?'hidden':'';
-    if(!open&&!this.element.hidden)this.focus=trapDialogFocus(this.element,{signal:this.abort.signal,restoreFocus:false,initialFocus:()=>this.element.querySelector(`[data-slot="${this.selected}"]`)});
+    if(!open&&!this.element.hidden)this.focus=trapDialogFocus(this.element,{signal:this.abort.signal,restoreFocus:false,initialFocus:()=>this.element.querySelector(restoreAppearance ? '[data-action="appearance"]' : `[data-slot="${this.selected}"]`)});
   }
   private availablePages() { return homePages.filter(page=>page!=='leaderboard'||this.source.supported); }
   selectPage(page: HomePage, focus=true) {
+    this.itemTooltip.hide();
     if(page==='leaderboard'&&!this.source.supported)return;
     this.changelog.close(false);this.chronicle.close(false);this.leaderboard.close();
     if (this.page !== page) this.actions.panelSound?.(page !== 'characters');
     this.page=page;this.element.dataset.homePage=page;
-    this.element.querySelector<HTMLElement>('.title-roster')!.hidden=page!=='characters';
+    this.element.querySelector<HTMLElement>('.title-roster')!.inert=page!=='characters';
+    this.element.querySelector<HTMLElement>('.title-dossier')!.inert=page!=='characters';
     this.element.querySelector<HTMLElement>('.title-library')!.hidden=page==='characters';
     this.element.querySelectorAll<HTMLElement>('[data-home-page]').forEach(b=>b.setAttribute('aria-current',b.dataset.homePage===page?'page':'false'));
     if(page==='chronicle')void this.chronicle.open(onCached=>this.actions.chronicle?.(onCached)??Promise.resolve(emptyChronicle()));
@@ -218,12 +262,21 @@ export class TitleScreen {
     if(focus)this.element.querySelector<HTMLElement>(`[data-home-page="${page}"]`)?.focus({preventScroll:true});
   }
   dismissOverlay(): boolean {
+    if (!this.itemTooltip.element.hidden) { this.itemTooltip.hide(); return true; }
     const audio = this.element.querySelector<HTMLDetailsElement>('.title-audio')!;
     if (audio.open) { audio.open = false; audio.querySelector('summary')!.focus(); return true; }
     if(this.page==='characters')return false;this.selectPage('characters');return true; }
   updateOverlayGamepad(pad: GamepadInput, now: number): boolean {
     if(this.element.inert)return true;
     if(pad.active)this.element.classList.add('is-controller');
+    if (!this.itemTooltip.element.hidden) {
+      const elapsed = Math.min(.05, Math.max(0, (now - this.itemScrollTime) / 1000)); this.itemScrollTime = now;
+      this.itemTooltip.element.scrollTop += pad.aim.y * elapsed * 420;
+      if (pad.pressed.has(PAD.dodge) || pad.pressed.has(PAD.pause)) { this.itemTooltip.hide(); return true; }
+    }
+    if (this.page === 'characters' && pad.pressed.has(PAD.skill3) && this.element.querySelector('.title-detail-tabs')?.getClientRects().length) {
+      this.switchDetail(this.detailTab === 'gear' ? 'attributes' : 'gear', true); return true;
+    }
     const audio = this.element.querySelector<HTMLDetailsElement>('.title-audio')!;
     if (pad.pressed.has(PAD.skill4)) {
       audio.open = !audio.open; this.audioPad.clear();
@@ -241,11 +294,13 @@ export class TitleScreen {
     return this.chronicle.updateGamepad(pad,now)||this.changelog.updateGamepad(pad,now)||this.leaderboard.updateGamepad(pad,now);
   }
   private choose(index: number, focus = true) {
+    this.itemTooltip.hide();
     this.selected = index; this.confirming = null; this.loading = false; const ticket = ++this.inspection;
     this.render();
     if (focus) this.element.querySelector<HTMLButtonElement>(`[data-slot="${index}"]`)?.focus();
     const slot = this.slots[index];
-    if (!slot || !this.actions.read || slot.record && this.source.mode !== 'cloud') return;
+    // Reselecting also refreshes local records after a stale-writer rejection.
+    if (!slot || !this.actions.read) return;
     this.loading = true; this.renderSelection();
     void this.actions.read(index).then(value => {
       if (ticket !== this.inspection || this.element.hidden) return;
@@ -255,8 +310,8 @@ export class TitleScreen {
     }).catch(() => { if (ticket === this.inspection) { this.loading = false; this.message('Save unavailable. Please retry.'); this.renderSelection(); } });
   }
   message(text: string) { const target = this.element.querySelector<HTMLElement>('.title-save-message')!; target.textContent = text; target.hidden = !text; }
-  close() { this.changelog.close(false); this.chronicle.close(false); this.leaderboard.close(); this.element.inert = false; this.inspection++; this.element.hidden = true; this.focus?.dispose(); this.focus = undefined; cancelAnimationFrame(this.frame); this.frame = 0; }
-  dispose() { this.close(); this.changelog.dispose(); this.chronicle.dispose(); this.leaderboard.dispose(); this.abort.abort(); this.element.remove(); }
+  close() { this.itemTooltip.hide(); this.changelog.close(false); this.chronicle.close(false); this.leaderboard.close(); this.element.inert = false; this.inspection++; this.element.hidden = true; this.focus?.dispose(); this.focus = undefined; cancelAnimationFrame(this.frame); this.frame = 0; }
+  dispose() { this.close(); this.portraitObserver.disconnect(); this.itemTooltip.dispose(); this.changelog.dispose(); this.chronicle.dispose(); this.leaderboard.dispose(); this.abort.abort(); this.element.remove(); }
   private rollSeed() { const value = String(crypto.getRandomValues(new Uint32Array(1))[0]); this.seedDrafts.set(this.selected, value); return value; }
   private validateSeed(input: HTMLInputElement) { const seed = parseWorldSeed(input.value); input.setCustomValidity(seed === null ? 'Use a whole number from 0 to 4294967295.' : ''); return seed; }
   private render() {
@@ -269,14 +324,16 @@ export class TitleScreen {
     }
     this.element.querySelector('.title-slot-grid')!.innerHTML = this.slots.map(slot => {
       const r = slot.record, summary = r ? { name: r.name, level: r.checkpoint.level, gearPower: equippedGearPower(r.checkpoint.character) } : slot.summary;
-      return `<button class="title-slot" data-slot="${slot.index}" aria-pressed="${slot.index === this.selected}" aria-label="Slot ${slot.index + 1}: ${summary ? escapeUI(summary.name) : 'New character'}"><span class="title-slot-number">${slot.index + 1}</span><span class="title-slot-copy"><strong>${summary ? escapeUI(summary.name) : slot.state === 'empty' ? '+ New' : 'Unavailable'}</strong>${summary ? `<small>Lv ${summary.level} ${summary.gearPower!==undefined?`<i>·</i> ${format(summary.gearPower)} gear`:''}</small>` : ''}</span>${slot.conflict ? '<span class="title-slot-alert" aria-label="Save conflict">!</span>' : ''}</button>`;
+      return `<button class="title-slot" data-slot="${slot.index}" aria-pressed="${slot.index === this.selected}" aria-label="Slot ${slot.index + 1}: ${summary ? escapeUI(summary.name) : 'New character'}"><span class="title-slot-number">${slot.index + 1}</span><span class="title-slot-copy"><strong>${summary ? escapeUI(summary.name) : slot.state === 'empty' ? '+ New' : 'Unavailable'}</strong>${summary ? `<small>Lv ${summary.level} ${summary.gearPower!==undefined?`<i>·</i> ${format(summary.gearPower)} GP`:''}</small>` : ''}</span>${slot.conflict ? '<span class="title-slot-alert" aria-label="Save conflict">!</span>' : ''}</button>`;
     }).join('');
     this.renderSelection();
   }
   private renderSelection() {
+    this.itemTooltip.hide();
     const slot = this.slots[this.selected], record = slot?.record;
-    this.player = previewCharacter(record ?? null, this.starter);
+    this.player = previewCharacter(record ?? null, this.starter); this.portraitDirty = true;
     const selection = this.element.querySelector('.title-selection')!;
+    selection.classList.toggle('has-character', !!record && !this.loading && !this.rosterLoading && !this.confirming && !slot?.conflict);
     const canUse = this.source.mode === 'local' || this.source.signedIn;
     this.element.querySelector<HTMLButtonElement>('[data-action="download"]')!.disabled = this.source.mode !== 'local' || !record || !this.actions.download;
     this.element.querySelector<HTMLButtonElement>('[data-action="import"]')!.disabled = this.source.mode !== 'local' || !canUse || slot?.state !== 'empty' || this.loading || !this.actions.import;
@@ -304,12 +361,8 @@ export class TitleScreen {
       </div>`; return;
     }
     if (record) {
-      const power = equippedGearPower(record.checkpoint.character);
-      selection.innerHTML = `<div class="title-selection-heading"><h3>${escapeUI(record.name)}</h3><button class="ui-button ui-button--quiet ui-button--icon" data-action="delete" aria-label="Delete character">${uiIcon('close')}</button></div>
-        <div class="title-build-stats"><div><strong>${record.checkpoint.level}</strong><span>Level</span></div><div data-tooltip="Average equipped item power. Two-handed weapons count for both hands." tabindex="0"><strong>${format(power)}</strong><span>Gear power</span></div></div>
-        <div class="title-save-meta">${slot.cloudState ? `<span>${slot.cloudState === 'offline' ? 'Device copy · cloud unavailable' : slot.cloudState === 'pending' ? 'This device · awaiting upload' : 'Cloud save'}</span>` : ''}<span>${Math.floor(record.checkpoint.time / 60)} min</span><span>${new Date(record.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span></div>
-        ${slot.conflict ? '<div class="title-conflict"><span>Another device has a newer save.</span><button class="ui-button" data-action="cloud">Use cloud version</button></div>' : ''}
-        <button class="ui-button ui-button--primary title-enter" data-action="continue"><span>${slot.conflict ? 'Continue recovery' : 'Continue'}</span>${uiIcon('chevron')}</button>`;
+      selection.innerHTML = titleCharacterDetails(record, this.player.derived, this.detailTab, !!this.actions.editAppearance);
+      if (slot.conflict) selection.querySelector('.title-enter')!.insertAdjacentHTML('beforebegin', '<div class="title-conflict"><span>Another device has a newer save.</span><button class="ui-button" data-action="cloud">Use cloud version</button></div>');
     } else if (slot?.state === 'empty') {
       if (slot.conflict || slot.pending) {
         selection.innerHTML = '<div class="title-confirm"><h3>Deletion needs attention</h3><p>Resolve this slot’s cloud save before creating another character.</p><button class="ui-button" data-action="retry">Retry</button><button class="ui-button" data-action="delete">Delete character</button></div>'; return;
@@ -321,11 +374,56 @@ export class TitleScreen {
         }).join('')}</div></fieldset><button class="ui-button ui-button--primary title-enter" type="submit"><span>Create character</span>${uiIcon('chevron')}</button></form>`;
     } else selection.innerHTML = `<div class="title-confirm"><h3>Save unavailable</h3><p>${slot?.state === 'invalid' ? 'The original file is preserved.' : 'Check storage or connection, then select the slot again.'}</p>${slot?.state === 'invalid' ? '<button class="ui-button" data-action="delete">Delete unreadable save</button>' : ''}</div>`;
   }
+  private navigateDetails(target: HTMLElement, key: string) {
+    const items = [...this.element.querySelectorAll<HTMLElement>('.title-character-actions button,[data-title-item]')]
+      .filter(item => item.tabIndex >= 0 && !item.matches(':disabled') && !item.closest('[hidden], [inert]')
+        && item.getClientRects().length > 0 && getComputedStyle(item).visibility !== 'hidden');
+    const index = items.indexOf(target);
+    const next = directionalControl(items.map(item => item.getBoundingClientRect()), index, key);
+    if (next === index && key === 'ArrowLeft') this.element.querySelector<HTMLElement>(`[data-slot="${this.selected}"]`)?.focus();
+    else if (next === index && key === 'ArrowDown') this.element.querySelector<HTMLElement>('[data-action="continue"]')?.focus();
+    else items[next]?.focus();
+  }
+  private switchDetail(tab: 'gear' | 'attributes', focus = false) {
+    this.itemTooltip.hide();
+    this.detailTab = tab;
+    const body = this.element.querySelector<HTMLElement>('.title-detail-body');
+    if (body) body.dataset.detail = tab;
+    this.element.querySelectorAll<HTMLElement>('[data-detail-tab]').forEach(button => {
+      const selected = button.dataset.detailTab === tab;
+      button.setAttribute('aria-selected', String(selected)); button.tabIndex = selected ? 0 : -1;
+      if (selected && focus) button.focus();
+    });
+  }
+  private bindItemTooltips() {
+    const options = { signal: this.abort.signal };
+    this.element.addEventListener('pointerover', event => {
+      if (event.pointerType !== 'touch') this.showItemTooltip(event.target);
+    }, options);
+    this.element.addEventListener('focusin', event => this.showItemTooltip(event.target), options);
+    for (const type of ['pointerout', 'focusout'] as const) this.element.addEventListener(type, event => {
+      const anchor = event.target instanceof Element ? event.target.closest('[data-title-item]') : null;
+      if (anchor && (!(event.relatedTarget instanceof Node) || !anchor.contains(event.relatedTarget))) this.itemTooltip.defer();
+    }, options);
+    this.element.addEventListener('scroll', event => {
+      if (!(event.target instanceof Element) || !event.target.closest('.ui-tooltip')) this.itemTooltip.hide();
+    }, { ...options, capture: true });
+  }
+  private showItemTooltip(target: EventTarget | null) {
+    if (this.element.hidden || this.element.inert || this.page !== 'characters' || this.loading || this.rosterLoading) return;
+    const anchor = target instanceof Element ? target.closest<HTMLElement>('[data-title-item]') : null;
+    const record = this.slots[this.selected]?.record;
+    const item = record?.checkpoint.character.equipped[anchor?.dataset.titleItem as EquipmentSlot];
+    if (!anchor || !item || !record || !anchor.getClientRects().length) return;
+    this.itemScrollTime = performance.now();
+    this.itemTooltip.show(item, { sheet: record.checkpoint.character, level: record.checkpoint.level, equipped: true, compare: false }, anchor);
+  }
   private animate = (): void => {
     if (this.element.hidden) return;
-    if (!window.EvergrowAndroid || this.framePacer.ready(performance.now())) {
+    if (this.page === 'characters' && (!this.motion.matches || this.portraitDirty) && !document.hidden && this.element.style.visibility !== 'hidden' && (!window.EvergrowAndroid || this.framePacer.ready(performance.now()))) {
+      this.portraitDirty = false;
       const ctx = this.canvas.getContext('2d');
-      if (ctx) drawCharacterPortrait(ctx, this.player, this.motion.matches ? 3 : performance.now() / 1000, Math.PI / 2 + .18, 560, 720);
+      if (ctx) drawCharacterPortrait(ctx, this.player, this.motion.matches ? 3 : performance.now() / 1000, Math.PI / 2 + .18, this.canvas.width, this.canvas.height, { drawGround: drawTitlePlinth, padding: .01, verticalOffset: .08 });
     }
     this.frame = requestAnimationFrame(this.animate);
   };

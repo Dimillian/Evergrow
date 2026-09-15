@@ -46,7 +46,7 @@ export function itemDropShapes(item: Item): readonly GearShape[] {
       ...armorAccessoryShapes('knee',piece).map(s=>({...s,points:s.points.map(([x,y]):Point=>[side*2.8+x,y+.1])})),
       ...armorAccessoryShapes('bracer',piece).map(s=>({...s,points:s.points.map(([x,y]):Point=>[side*3+x*.85,y+2])})),
     ]); break;
-    case 'boots': shapes = [-1, 1].flatMap(side => bootShapes(piece, side * .3).map(shape => ({ ...shape,
+    case 'boots': shapes = [-1, 1].flatMap(side => bootShapes(piece, Math.PI / 2 - side * .3).map(shape => ({ ...shape,
       points: shape.points.map(([x,y]):Point => [x * 1.5 + side * 3.6, y * 1.5 + 3.5]) }))); break;
     case 'ring': case 'amulet': shapes = jewelryShapes(item); break;
   }
@@ -119,7 +119,7 @@ export function itemIconSVG(item: Item, size = 48): string {
       shape = `<g transform="translate(24 24) scale(2.25)">${detailed(itemDropShapes(item))}</g>`;
       break;
     case 'boots':
-      shape = [-1, 1].map(side => `<g transform="translate(${24 + side * 10} 36) scale(4)">${detailed(bootShapes(armorPiece, side * .3))}</g>`).join('');
+      shape = [-1, 1].map(side => `<g transform="translate(${24 + side * 10} 36) scale(4)">${detailed(bootShapes(armorPiece, Math.PI / 2 - side * .3))}</g>`).join('');
       break;
     case 'amulet': case 'ring':
       shape = `<g transform="translate(24 24) scale(2.05)">${detailed(jewelryShapes(item))}</g>`;

@@ -34,7 +34,7 @@ body { color: var(--ui-text); background: #070e15; font-family: var(--ui-font); 
 .atlas-fit:focus-visible { outline: 1px solid var(--ui-jade); outline-offset: 4px; }
 /* The study's own footer replaces character position/persistence information. */
 .atlas-map-mount .world-map-footer { display: none; }
-.atlas-map-mount .world-map-header { display: none; }
+.atlas-map-mount .world-map-header { display: flex; }
 .atlas-levels { font: inherit; border: 0; padding: 0; background: none; cursor: pointer; color: var(--ui-muted); }
 .atlas-levels[aria-pressed="true"] { color: var(--ui-jade); }
 .atlas-levels:focus-visible { outline: 1px solid var(--ui-jade); outline-offset: 4px; }
