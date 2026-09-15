@@ -4,6 +4,7 @@ import { WORLD_QUERY_LIMITS, isWorldCoordinate } from './world-query.ts';
 /** Local steering only. All probes and committed steps use the world's collision solver. */
 export const PLAYER_EDGE_SLIDE = Object.freeze({
   reach: 18, probeSpacing: 3, forwardReach: 13, step: 4, sidewaysSpeed: .65, usefulProgress: .45,
+  assistedSpeed: .6,
   failedSearchRetry: .125,
   failedSearchDistance: .25, failedSearchAngle: Math.PI / 90,
 });
@@ -72,10 +73,10 @@ export class PlayerMovement {
       let destination = ordinary;
       if (!side) this.failed = { world, x, y, ux, uy, radius, time };
       if (side) {
-        // Prefer the smallest legal deflection. Nearly perpendicular corrections are
-        // slower, and can never replace useful forward progress with a sideways shove.
+        // Automatic routing costs speed; ordinary movement regains its full budget
+        // as soon as the requested direction is clear. Sharper corrections are slower still.
         for (const turn of TURNS) {
-          const length = step * Math.min(1, PLAYER_EDGE_SLIDE.sidewaysSpeed / turn.sin);
+          const length = step * PLAYER_EDGE_SLIDE.assistedSpeed * Math.min(1, PLAYER_EDGE_SLIDE.sidewaysSpeed / turn.sin);
           const cx = (ux * turn.cos - uy * turn.sin * side) * length;
           const cy = (uy * turn.cos + ux * turn.sin * side) * length;
           if (cx * ux + cy * uy + EPSILON < progress) continue;

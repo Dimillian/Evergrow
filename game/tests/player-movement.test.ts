@@ -90,6 +90,32 @@ test('open movement, analog speed and a wall slide retain their requested motion
   assert.deepEqual(new PlayerMovement().move(world, start.x, start.y, 1, 1, 9, 0), world.move(start.x, start.y, 1, 1, 9));
 });
 
+test('automatic edge steering costs speed and full speed returns on the first clear step', () => {
+  for (const speed of [45, 165, 330]) {
+    const world = tree(), movement = new PlayerMovement();
+    const distance = speed * FIXED_STEP;
+    let p = { x: -Math.sqrt(21 ** 2 - 18 ** 2) - .001, y: 18 };
+    const first = movement.move(world, p.x, p.y, distance, 0, 9, 0);
+    assert.ok(first.y > p.y, 'automatic correction is active');
+    assert.ok(Math.hypot(first.x - p.x, first.y - p.y) <= distance * .6 + 1e-7,
+      'every assisted step pays at least a 40% speed penalty');
+    p = first;
+    let cleared = false;
+    for (let tick = 1; tick < 240; tick++) {
+      const ordinary = world.move(p.x, p.y, distance, 0, 9);
+      const next = movement.move(world, p.x, p.y, distance, 0, 9, tick * FIXED_STEP);
+      assert.ok(!world.blocked(next.x, next.y, 9));
+      if (Math.abs(ordinary.x - p.x - distance) < 1e-7 && ordinary.y === p.y) {
+        assert.deepEqual(next, ordinary, 'clear travel has no lingering penalty');
+        cleared = true; break;
+      }
+      if (next.y !== p.y) assert.ok(Math.hypot(next.x - p.x, next.y - p.y) <= distance * .6 + 1e-7);
+      p = next;
+    }
+    assert.ok(cleared, 'the slowdown still lets the player route around the obstacle');
+  }
+});
+
 test('large movements cannot tunnel and invalid/zero requests never probe', () => {
   const world = tree();
   const p = new PlayerMovement().move(world, -160, 0, 400, 0, 9, 0);
