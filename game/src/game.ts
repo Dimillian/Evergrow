@@ -959,8 +959,10 @@ export class Game {
       if (site.kind === 'cryptChest') {
           const result = await claimDungeonChest(this.sim, site.index, c => this.persistTravel(c));
           channel.cancel();
-          if (result.ok)
-              this.renderer.handleEvents([{ type: 'blast', x: site.x, y: site.y, radius: 70, duration: .6, color: '#d7c18a' }], this.reducedMotion);
+          if (result.ok) {
+              if(result.celebration)this.renderer.handleEvents([result.celebration],this.reducedMotion);
+              else if(!this.sim.dungeonFloor?.rift)this.renderer.handleEvents([{type:'blast',x:site.x,y:site.y,radius:70,duration:.6,color:'#d7c18a'}],this.reducedMotion);
+          }
           this.notify(result.message);
           return;
       }
@@ -1206,7 +1208,8 @@ export class Game {
       if(!this.savingAction&&!this.sim.player.dead&&this.sim.dungeonFloor&&!this.sim.portal.ready&&now>=this.nextEventClaim){
           this.nextEventClaim=now+250;
           const index=this.sim.dungeonFloor.chests.findIndex((_,i)=>!dungeonChestProblem(this.sim,i));
-          if(index>=0)void this.durable(async()=>{const result=await claimDungeonChest(this.sim,index,c=>this.persistTravel(c));if(!result.ok){this.nextEventClaim=performance.now()+30000;this.notify(result.message);}},undefined);
+          if(index>=0)void this.durable(async()=>{const result=await claimDungeonChest(this.sim,index,c=>this.persistTravel(c));if(!result.ok){this.nextEventClaim=performance.now()+30000;this.notify(result.message);}
+            else if(result.celebration){this.renderer.handleEvents([result.celebration],this.reducedMotion);this.notify(result.message);}},undefined);
       }
       if (this.sim.portal.ready) this.travelThrough(this.overworld.getPortalAnchor(this.sim.travel.homeTown), false);
       const run=currentDungeon(this.sim.expeditions);

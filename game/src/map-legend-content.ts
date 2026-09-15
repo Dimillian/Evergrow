@@ -20,6 +20,7 @@ export const MAP_LEGEND_GROUPS: readonly MapLegendGroup[] = [
   ] },
   { id: 'dungeons', label: 'Inside dungeons', entries: [
     { id: 'dungeon:entry', label: 'Entrance / exit', description: 'Return to the surface' },
+    { id: 'dungeon:riftPortal', label: 'Rift portal', description: 'Return from the rift to town' },
     { id: 'dungeon:chest', label: 'Dungeon chest', description: 'A treasure chest' },
     { id: 'dungeon:boss', label: 'Dungeon boss', description: 'The dungeon boss or Rift guardian' },
     { id: 'dungeon:reliquary', label: 'Bound Reliquary', description: 'Defeat the awakened waves' },

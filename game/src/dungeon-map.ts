@@ -74,8 +74,8 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
     f.chests.forEach((_, i) => { const ch=dungeonRunChest(f,run,i); if ((!run.rift||i===2&&run.rift.phase==='complete')&&seen.has(ch.room))
         icon('chest', ch.x, ch.y, (run.chestMasks[i] & dungeonChestMask(run, i)) === dungeonChestMask(run, i));
     });
-    icon('entry', f.entry.x, f.entry.y);
-    if(run.rift?.phase==='complete'){const exit=dungeonRunExit(f,run);icon('entry',exit.x,exit.y);}
+    icon(run.rift?'riftPortal':'entry', f.entry.x, f.entry.y);
+    if(run.rift?.phase==='complete'){const exit=dungeonRunExit(f,run);icon('riftPortal',exit.x,exit.y);}
     if (run.rift ? run.rift.phase==='boss'||run.rift.phase==='complete' : seen.has(f.rooms.find(r => r.kind === 'boss')!.id)) {
         const b = run.states.warden;
         icon('boss', b.x, b.y, run.states.warden.hp <= 0);
@@ -165,6 +165,9 @@ export class DungeonMap {
         this.center = explorationMode ? { x:p.x,y:p.y } : { x: bounds.x, y: bounds.y };
         this.element.classList.toggle('crypt-map--exploration',explorationMode);
         this.element.querySelector('[role="dialog"]')!.setAttribute('aria-modal',String(!explorationMode));
+        const title=r.rift?`Crimson Rift · Lv ${r.entrance.level}`:'Dungeon map';
+        this.element.querySelector('.ui-title')!.textContent=title;
+        this.element.querySelector('[role="dialog"]')!.setAttribute('aria-label',title);
         this.element.hidden = false;
         this.zoom = explorationMode ? .17 : this.fitZoom(this.canvas.getBoundingClientRect());
         this.draw();
@@ -180,8 +183,10 @@ export class DungeonMap {
         if (!this.floor || !this.run)
             return;
         const r = this.canvas.getBoundingClientRect(), x = this.center.x + ((clientX - r.left) - r.width / 2) / this.zoom, y = this.center.y + ((clientY - r.top) - r.height / 2) / this.zoom;
-        const targets = [...(this.floor.events??[]).map(e=>({...e,mapIcon:`dungeon:${e.kind}` as MapIconId,label:DUNGEON_EVENTS[e.kind].name})), { ...this.floor.entry, mapIcon:'dungeon:entry' as MapIconId, label: 'Exit to overworld', room: this.floor.rooms.find(r=>r.kind==='entry')?.id??0 }, ...(this.run.rift?.phase==='complete'?[{...dungeonRunExit(this.floor,this.run),mapIcon:'dungeon:entry' as MapIconId,label:'Exit to overworld',room:0}]:[]), ...this.floor.chests.flatMap((_, i) => this.run!.rift&&(i!==2||this.run!.rift.phase!=='complete')?[]:[{ ...dungeonRunChest(this.floor!,this.run!,i), mapIcon:'dungeon:chest' as MapIconId, label: this.run!.chestMasks[i] === dungeonChestMask(this.run!,i) ? 'Chest · Claimed' : i === 2 ? 'Boss chest' : 'Guarded chest' }]), { ...this.run.states.warden, mapIcon:'dungeon:boss' as MapIconId, label: (this.run.rift?'Rift guardian':dungeonTheme(this.floor.seed,this.floor.theme).bossName??'Hollow Warden')+(this.run.states.warden.hp>0?'':' · Defeated'), room: this.floor.rooms.find(r=>r.kind==='boss')!.id }];
-        const target = targets.filter(p=>mapIconVisible(this.iconVisibility,p.mapIcon)).filter(p=>!this.run!.rift||p.label==='Exit to overworld'||this.run!.rift.phase==='complete'||this.run!.rift.phase==='boss'&&p.label==='Rift guardian').find(p => (this.run!.rift?.phase==='boss'||this.run!.rift?.phase==='complete'||this.run!.explored.includes(p.room)) && Math.hypot(p.x - x, p.y - y) < 16 / this.zoom);
+        const exitLabel=this.run.rift?'Rift Portal · Return to town':'Exit to overworld';
+        const exitIcon:MapIconId=this.run.rift?'dungeon:riftPortal':'dungeon:entry';
+        const targets = [...(this.floor.events??[]).map(e=>({...e,mapIcon:`dungeon:${e.kind}` as MapIconId,label:DUNGEON_EVENTS[e.kind].name})), { ...this.floor.entry, mapIcon:exitIcon, label:exitLabel, room: this.floor.rooms.find(r=>r.kind==='entry')?.id??0 }, ...(this.run.rift?.phase==='complete'?[{...dungeonRunExit(this.floor,this.run),mapIcon:exitIcon,label:exitLabel,room:0}]:[]), ...this.floor.chests.flatMap((_, i) => this.run!.rift&&(i!==2||this.run!.rift.phase!=='complete')?[]:[{ ...dungeonRunChest(this.floor!,this.run!,i), mapIcon:'dungeon:chest' as MapIconId, label: this.run!.chestMasks[i] === dungeonChestMask(this.run!,i) ? 'Chest · Claimed' : i === 2 ? 'Boss chest' : 'Guarded chest' }]), { ...this.run.states.warden, mapIcon:'dungeon:boss' as MapIconId, label: (this.run.rift?'Rift guardian':dungeonTheme(this.floor.seed,this.floor.theme).bossName??'Hollow Warden')+(this.run.states.warden.hp>0?'':' · Defeated'), room: this.floor.rooms.find(r=>r.kind==='boss')!.id }];
+        const target = targets.filter(p=>mapIconVisible(this.iconVisibility,p.mapIcon)).filter(p=>!this.run!.rift||p.mapIcon===exitIcon||this.run!.rift.phase==='complete'||this.run!.rift.phase==='boss'&&p.label==='Rift guardian').find(p => (this.run!.rift?.phase==='boss'||this.run!.rift?.phase==='complete'||this.run!.explored.includes(p.room)) && Math.hypot(p.x - x, p.y - y) < 16 / this.zoom);
         this.tooltip.hidden = !target;
         if (!target)
             return;
@@ -225,4 +230,4 @@ export function drawCryptMinimap(c: CanvasRenderingContext2D, f: DungeonFloor, r
     x: number;
     y: number;
     angle: number;
-}, w: number, h: number, marker:JourneyMarker|null=null, time=0, enemies:readonly MapEnemy[]=[], visibility?:MapIconVisibility) { const box = getMinimapRect(w, h); drawDungeonMap(c, f, r, p, box, .095, p.x, p.y,marker,false,enemies,visibility); text(c, `Lv ${r.entrance.level} · ${worldTimeLabel(time)}`, box.x + box.width / 2, box.y + box.height - 8, .9, '#b9cbbb', 'center'); }
+}, w: number, h: number, marker:JourneyMarker|null=null, time=0, enemies:readonly MapEnemy[]=[], visibility?:MapIconVisibility) { const box = getMinimapRect(w, h); drawDungeonMap(c, f, r, p, box, .095, p.x, p.y,marker,false,enemies,visibility); text(c, r.rift?`Crimson Rift · Lv ${r.entrance.level}`:`Lv ${r.entrance.level} · ${worldTimeLabel(time)}`, box.x + box.width / 2, box.y + box.height - 8, .9, '#b9cbbb', 'center'); }

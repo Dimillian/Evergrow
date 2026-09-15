@@ -107,3 +107,11 @@ Distant violet sky bolts are single, softly fading discharges with no full-scree
 Candidate placement is cached by world cell (96 entries), with at most 56 visible accents and 12 placement attempts per new cell. No per-enemy effect work, persistent particle systems or extra dynamic lights. Geometry is drawn at world resolution, keeping narrow lines crisp through the existing renderer/post-processing.
 
 The existing rift map tool now has **Animate atmosphere / Freeze atmosphere** and **Early hunt / Half full / Guardian near** controls. `?view=map&scene=pack&atmosphere=&progress=0.9` animates only presentation while actors remain frozen; it never ticks combat or loads player saves. The preview pauses in hidden tabs and respects reduced motion. The normal gameplay renderer uses the same effects in active rifts.
+
+## Clear feedback and navigation
+
+After guardian victory, the rift HUD shows the frozen elapsed clear time in M:SS instead of the remaining time, with a subdued rose progress bar. The first successful chest reward delivery triggers one crimson celebration through the shared effects renderer and a completion notice, including automatic chest opening. Failed saves and retries for partially delivered rewards do not repeat the effect. Reduced motion follows the existing renderer behavior.
+
+Rift entrance and return portals use the crimson rift rune on dungeon maps and minimaps, with a dedicated shared legend filter and “Rift Portal · Return to town” hover label. The full map title and minimap footer identify Crimson Rift and its level. Ordinary dungeon titles and exits retain their existing labels, and the latest responsive map zoom/visibility controls remain shared.
+
+The map tool’s **Rift cleared (HUD)** button (`?view=map&cleared`) stages a frozen completed run with the actual HUD, character instruments and minimap. It does not fabricate a personal-best notification or run gameplay.
