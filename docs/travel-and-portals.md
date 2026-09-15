@@ -1,6 +1,6 @@
 # Town portals and waypoints
 
-Updated 2026-09-05. **Town portal implemented; permanent waypoint travel remains specified.** Initial timings remain playtest defaults. [Static captures](captures/2026-09-05/town-portal/README.md) use the real renderer without gameplay.
+Updated 2026-09-14. **Town portal implemented; permanent waypoint travel remains specified.** Initial timings remain playtest defaults. [Static captures](captures/2026-09-05/town-portal/README.md) use the real renderer without gameplay.
 
 ## Current delivery
 
@@ -20,7 +20,8 @@ Explore, fill the bag, return to town, sell or improve gear, then return to the 
 - Movement, attack, dodge, taking damage or pressing Escape cancels the channel. Opening a modal also cancels it. World combat continues during the channel. A blocked or invalid departure point prevents starting it.
 - Completion automatically takes the character to the last activated **town** waypoint. A wilderness waypoint never changes the home town. Briarwatch's plaza anchor is unlocked as the initial home for every new character; this reveals its destination marker, not its surrounding terrain or route.
 - The character arrives at a clear plaza position near the vendors. A visible return portal remains beside the anchor. **E / click** returns to the saved departure point, consuming the portal. It is a deliberate interaction, not a walk-over trigger.
-- One return portal per character, with no real-time expiry. Creating another replaces the old pair. In town, P highlights the existing return portal rather than teleporting blindly or opening another.
+- The portal action is contextual in town: when the return portal is in reach it uses the same persisted return command as E/click; otherwise it briefly locates the portal. Keyboard, controller, touch and the HUD button share this behavior.
+- One return portal per character, with no real-time expiry. Creating another replaces the old pair. In town, the portal action highlights an out-of-reach return portal rather than teleporting blindly or opening another.
 - The town portal is free and has no additional cooldown. It restores no life, mana or potion charges, and never refreshes vendors or enemies. Its cast time prevents it from being an instant dodge; no extra “out of combat for ten seconds” requirement.
 - Arrival cancels movement/attack buffers and grants one second of protection, ending immediately on an offensive action. It does not push enemies away, clear encounters or reveal more than the ordinary discovery radius.
 
@@ -38,7 +39,9 @@ Waypoint travel closes an outstanding return portal, preventing multiple expedit
 
 ## Visuals and UX
 
-Portal: an upright oval of thin silver-violet strands above a ground rune, with inward-traveling motes and restrained dynamic light. A small progress ring grows during channeling; interruption unravels it. Departure-biome tint remains a later visual refinement; current portals use silver-violet. Avoid a solid neon disk or a large screen banner.
+Portal: an upright oval of thin silver-violet strands above a ground rune, with inward-traveling motes and restrained dynamic light. A translucent inner membrane, selected strands and the ground-rune core carry a brighter destination color. Mote silhouettes distinguish ash, leaves, mist, snow, embers, petals, shards, grass and sand across the nine biomes. Hazardous surface destinations add a warm warning chevron; dungeons add a sealed inner compass. The structural silver-violet identity remains fixed. A small progress ring grows during channeling; interruption unravels it. Avoid a solid neon disk or a large screen banner.
+
+Channeling names the actual Home town. The compact world label uses only the destination name; the HUD tooltip and accessible label provide the preserved surface region and its ordinary level range, or the retained dungeon and its level. This presentation is derived from already-saved destination facts and never reveals terrain, routes, actors or rewards.
 
 Waypoints use a low stone plinth and engraved rings: dark when discovered, illuminated after activation. Their silhouette differs from temporary buff shrines. Native-resolution labels only appear on focus. The atlas distinguishes inactive, activated, home-town and return-portal markers, with concise hover information and area level.
 
