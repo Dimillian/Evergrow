@@ -1,5 +1,5 @@
 import { appearancePalette, HAIR_PALETTES, SKIN_PALETTES, type CharacterAppearance } from './appearance-content.ts';
-import { hairShapes } from './appearance-hair-shapes.ts';
+import { profileHairShapes } from './appearance-hair-directions.ts';
 import { mixColor, type Point } from './art-primitives.ts';
 import type { GearShape } from './weapon-shapes.ts';
 
@@ -12,12 +12,8 @@ export function appearanceProfileShapes(appearance: Readonly<CharacterAppearance
   const shapes: GearShape[] = [];
   const f = (points: readonly Point[], fill: string) => shapes.push({ points, fill });
   const l = (points: readonly Point[], stroke: string, width = .55) => shapes.push({ points, stroke, width });
-  // Preserve the selected cut's crown, curls, braids and length, while placing
-  // the hair behind the temple rather than framing two forward-facing eyes.
-  const layers = covered ? { rear: [], front: [] } : hairShapes(appearance.hair, hair, 0);
-  const projectHair = (shape: GearShape): GearShape => ({ ...shape, points: shape.points.map(([x, y]) =>
-    [x * .8 - .8 - Math.max(0, Math.min(1, y / 3)) * 1.35, y] as Point) });
-  shapes.push(...layers.rear.map(projectHair));
+  const layers = covered ? { rear: [], front: [] } : profileHairShapes(appearance.hair, hair);
+  shapes.push(...layers.rear);
   f([[-3.8,-1.3],[-3.3,-3.6],[-1.3,-4.7],[1.8,-4.4],[3.2,-2.7],[3.4,-.5],
     [3.1,.6],[4.7,2],[4.5,2.65],[3.1,2.8],[3.2,3.8],[2.2,5],[.1,5.1],[-1.4,3.8],[-3.2,2.2]], '#403b39');
   f([[-3.2,-1.2],[-2.8,-3.3],[-1,-4.1],[1.7,-3.9],[2.7,-2.3],[2.8,.5],
@@ -59,7 +55,7 @@ export function appearanceProfileShapes(appearance: Readonly<CharacterAppearance
     if (sign > 0) f([[1.5,.15],[3,.35],[2.9,1.65],[2,1.85],[1.5,1.1]],'#222a2f');
   }
   if (accessory === 'nosering') l([[3.8,2.25],[4,2.9],[3.4,3],[3.3,2.6]],'#e0c38b',.3);
-  shapes.push(...layers.front.map(projectHair));
+  shapes.push(...layers.front);
   // Near ear overlaps the sideburn, giving the profile a readable depth cue.
   if (!covered) {
     f([[-1.4,.15],[-.3,-.15],[.15,.65],[-.1,2.15],[-1,2.45],[-1.6,1.45]],skin.base);
