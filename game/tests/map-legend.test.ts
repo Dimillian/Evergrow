@@ -4,9 +4,31 @@ import { MAP_LEGEND_GROUPS, MAP_SERVICES, MapIconVisibility, enemyMapIconId, nea
 import { POI_DEFINITIONS, type WorldPOI } from '../src/world-pois.ts';
 import { WorldMap, selectMapPOIs, pickMapPOI, type MapView } from '../src/world-map.ts';
 import { drawJourneyMapMarker } from '../src/journey-marker.ts';
+import { MapLegend } from '../src/map-legend.ts';
 
 const service = (id: string, x: number, kind: WorldPOI['kind'] = 'blacksmith'): WorldPOI => ({ id, x, y: 0, kind, name: id, description: '' });
 const view: MapView = { x: 0, y: 0, width: 800, height: 500, centerX: 0, centerY: 0, zoom: .17 };
+
+test('compact legend returns focus before hiding a focused ping button without stealing outside focus', () => {
+  const ping = {}, outside = {}, doc = { activeElement: ping };
+  let hidden = false, expanded = 'true';
+  const toggle = {
+    focus(options: FocusOptions) { assert.equal(hidden, false, 'restore focus before hiding'); assert.equal(options.preventScroll, true); doc.activeElement = toggle; },
+    setAttribute(name: string, value: string) { assert.equal(name, 'aria-expanded'); expanded = value; },
+  };
+  const legend = Object.assign(Object.create(MapLegend.prototype), {
+    changedByUser: false, media: { matches: true }, toggle, onLayout() {},
+    element: { ownerDocument: doc, contains: (element: object) => element === ping,
+      get hidden() { return hidden; }, set hidden(value: boolean) { hidden = value; } },
+  });
+  legend.closeCompact();
+  assert.equal(doc.activeElement, toggle);
+  assert.equal(hidden, true); assert.equal(expanded, 'false');
+  doc.activeElement = outside;
+  legend.setOpen(true);
+  legend.setOpen(false);
+  assert.equal(doc.activeElement, outside, 'closing must not steal focus from another control');
+});
 
 test('legend covers every registered POI once and only real service types offer pings', () => {
   const entries = MAP_LEGEND_GROUPS.flatMap(g => g.entries);

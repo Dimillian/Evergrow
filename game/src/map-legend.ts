@@ -49,6 +49,7 @@ export class MapLegend {
     this.setOpen(!this.media.matches, false); this.refresh(); this.drawIcons();
   }
   setOpen(open: boolean, user = true) {
+    if (!open && this.element.contains(this.element.ownerDocument.activeElement)) this.toggle.focus({ preventScroll: true });
     this.changedByUser ||= user; this.element.hidden = !open; this.toggle.setAttribute('aria-expanded', String(open));
     this.element.parentElement?.classList.toggle('map-legend-open', open); this.onLayout();
   }

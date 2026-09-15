@@ -145,7 +145,7 @@ export class DungeonMap {
         this.canvas.after(zoom);
         this.element.querySelector('[data-close]')!.addEventListener('click', onClose, { signal: this.abort.signal });
         this.element.querySelector('[data-world]')!.addEventListener('click', () => { this.close(); overworld(); }, { signal: this.abort.signal });
-        this.canvas.addEventListener('wheel', e => { e.preventDefault(); this.zoom = Math.max(.08, Math.min(.8, this.zoom * Math.exp(-e.deltaY * .001))); this.draw(); }, { passive: false, signal: this.abort.signal });
+        this.canvas.addEventListener('wheel', e => { e.preventDefault(); this.zoomAt(Math.exp(-e.deltaY * .001)); }, { passive: false, signal: this.abort.signal });
         this.canvas.addEventListener('pointerdown', e => { this.drag = { x: e.clientX, y: e.clientY }; this.canvas.setPointerCapture(e.pointerId); }, { signal: this.abort.signal });
         this.canvas.addEventListener('pointermove', e => { if (!this.drag) {
             this.hover(e.clientX, e.clientY);
@@ -159,7 +159,17 @@ export class DungeonMap {
         x: number;
         y: number;
         angle: number;
-    }, explorationMode = false, enemies:readonly MapEnemy[]=[]) { this.enemies=enemies; this.floor = f; this.run = r; this.player = p; this.explorationMode=explorationMode; const bounds = dungeonMapBounds(f); this.center = explorationMode ? { x:p.x,y:p.y } : { x: bounds.x, y: bounds.y }; this.zoom = explorationMode ? .17 : Math.min(1120 / bounds.width, 680 / bounds.height); this.element.classList.toggle('crypt-map--exploration',explorationMode); this.element.querySelector('[role="dialog"]')!.setAttribute('aria-modal',String(!explorationMode)); this.element.hidden = false; const rect = this.canvas.getBoundingClientRect(); if (!explorationMode) this.zoom = Math.min((rect.width - 60) / bounds.width, (rect.height - 60) / bounds.height); this.draw(); if (!explorationMode) this.focus = trapDialogFocus(this.element, { signal: this.abort.signal }); }
+    }, explorationMode = false, enemies:readonly MapEnemy[]=[]) {
+        this.enemies=enemies; this.floor = f; this.run = r; this.player = p; this.explorationMode=explorationMode;
+        const bounds = dungeonMapBounds(f);
+        this.center = explorationMode ? { x:p.x,y:p.y } : { x: bounds.x, y: bounds.y };
+        this.element.classList.toggle('crypt-map--exploration',explorationMode);
+        this.element.querySelector('[role="dialog"]')!.setAttribute('aria-modal',String(!explorationMode));
+        this.element.hidden = false;
+        this.zoom = explorationMode ? .17 : this.fitZoom(this.canvas.getBoundingClientRect());
+        this.draw();
+        if (!explorationMode) this.focus = trapDialogFocus(this.element, { signal: this.abort.signal });
+    }
     setExplorationPointer(point: { x: number; y: number } | null) {
         if (this.element.hidden || !this.explorationMode) return;
         const rect = this.canvas.getBoundingClientRect();
@@ -197,9 +207,16 @@ export class DungeonMap {
         const delta = Math.max(-240, Math.min(240, deltaY * (deltaMode === 1 ? 16 : deltaMode === 2 ? this.canvas.clientHeight : 1)));
         this.zoomAt(Math.exp(-delta * .0016));
     }
+    private fitZoom(size: { width: number; height: number }) {
+        const bounds = dungeonMapBounds(this.floor!);
+        return Math.min(.8, Math.max(1, size.width - 60) / bounds.width, Math.max(1, size.height - 60) / bounds.height);
+    }
     private zoomAt(factor: number, px?: number, py?: number) {
+        if (!this.floor || !Number.isFinite(factor) || factor <= 0) return;
         const r=this.canvas.getBoundingClientRect(), x=(px??r.width/2)-r.width/2,y=(py??r.height/2)-r.height/2;
-        const next=Math.max(.04,Math.min(.8,this.zoom*factor));this.center.x+=x/this.zoom-x/next;this.center.y+=y/this.zoom-y/next;this.zoom=next;this.tooltip.hidden=true;this.draw();
+        // Keep the fitted overview reachable, including after a resize or legend toggle.
+        const min = Math.min(.04, this.fitZoom(r), this.zoom);
+        const next=Math.max(min,Math.min(.8,this.zoom*factor));this.center.x+=x/this.zoom-x/next;this.center.y+=y/this.zoom-y/next;this.zoom=next;this.tooltip.hidden=true;this.draw();
     }
     close() { this.clearTouch?.(); this.focus?.dispose(); this.focus = null; this.element.hidden = true; this.drag = null; this.tooltip.hidden = true; }
     dispose() { this.legend.dispose(); this.unsubscribeIcons(); this.resizeObserver.disconnect(); this.close(); this.abort.abort(); this.element.remove(); }
