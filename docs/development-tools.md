@@ -12,6 +12,12 @@ Trial previews include a **HUD card** animation row: **Replay entrance** / **Rep
 
 The Events toolbar groups Available / In progress / Opening / Claimed into one preview-state selector with a visible selected state. View choices is a separate action. Recipe selection sits alongside the states, and playback/timeline controls occupy their own responsive row. Switching events retains the selected state when supported; opening animations finish on Claimed. Every preview state is URL-addressable through `state=available|progress|opening|claimed`.
 
+## Area announcements
+
+The selected **Gilded Horizon** banner now uses the same `area-banner-art.ts` drawing in the game and this study. Its center sits at 12.5% of the scene height, horizontally centered. Desktop, handheld, landscape-phone and portrait-phone viewports inspect the shared compact spacing. The study contains no simulation input or playable saves.
+
+Interface → **Area announcements** (`/notifications.html?view=banners`) replays/scrubs the shared 4.8-second fade, holds it visible, and changes the staged area/player level. Names and ranges use `getZoneAt`; scenery uses `World` and the frozen runtime renderer. The runtime difficulty colors compare the player against the full ordinary range: sage within it, silver above its maximum, amber 1–4 below its minimum, coral 5+ below. Hidden pages stop replay. The old corner area card and unselected frame implementations have been removed; pickup/discovery notices retain their corner feed.
+
 ## Adding a tool
 
 1. Prefer extending the appropriate workspace and existing shared review over another disconnected page.
