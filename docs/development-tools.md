@@ -143,3 +143,7 @@ Crimson Rifts → View pack includes an atmosphere-only animation and progress s
 ### Gameplay performance monitor
 
 Data & audits → Code & performance audits includes the actual F3 monitor with a frozen synthetic 600-frame sample (`/tools/audits.html?view=monitor`). Inspect all six dropdown views and capture controls without loading characters, simulating gameplay or reading saves. Restore sample data repopulates the disposable profiler. The runtime monitor toggles with F3; see [world performance](world-performance.md) for metric definitions and limits.
+
+### Coin and mana drop motion
+
+Equipment → **Coins & mana drops** (`/loot.html?resources`) extends Ground loot with a save-free animated study using `drawGroundGold` and `drawResourcePickups`, followed by the shared CRT treatment. Compare small/large coin piles, mana and health vials at 4× detail and 1× world-art size over moss, stone, sand or dark swatches. Pause, restart and scrub twenty seconds; reduced motion follows the operating system with an additional preview selector. Hidden tabs stop advancing. This is an art study, not a gameplay or terrain-lighting simulation.

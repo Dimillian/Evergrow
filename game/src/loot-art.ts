@@ -1,4 +1,5 @@
 import { hasGreaterAffix } from './item-roll-content.ts';
+import { dropIdleHop } from './drop-idle-motion.ts';
 import { treasurePose } from './treasure-flight.ts';
 import type { GroundItem } from './character-types.ts';
 import type { Pickup } from './model.ts';
@@ -60,11 +61,19 @@ export function drawResourcePickups(c: CanvasRenderingContext2D, pickups: readon
   c.save();
   for (const pickup of pickups) {
     c.save(); c.translate(pickup.x, pickup.y); c.globalAlpha = Math.min(1, pickup.life / 2);
+    const mana = pickup.kind === 'mana';
+    const hop = mana && !reducedMotion ? dropIdleHop(time, pickup.id) * .8 : 0;
     c.fillStyle = '#030a10a0'; c.beginPath(); c.ellipse(0, 2, 5, 2, 0, 0, Math.PI * 2); c.fill();
+    c.translate(0, -hop);
+    const glow = c.createRadialGradient(0, -3, 1, 0, -3, 17);
+    glow.addColorStop(0, mana ? '#79c8ff70' : '#ff877970');
+    glow.addColorStop(.4, mana ? '#459eed38' : '#ed514538');
+    glow.addColorStop(1, mana ? '#459eed00' : '#ed514500');
+    c.fillStyle = glow; c.fillRect(-17, -20, 34, 34);
     c.rotate(Math.sin(pickup.id) * .35);
     polygon(c, [[-2,-8],[2,-8],[2,-5],[4,-3],[3,1],[-3,1],[-4,-3],[-2,-5]], '#1b3036');
     const surface = reducedMotion ? -3 : -3 + Math.sin(time * 2 + pickup.id) * .25;
-    polygon(c, [[-2.8,surface],[2.8,surface],[2,0],[-2,0]], pickup.kind === 'health' ? '#ca655b' : '#588db9');
+    polygon(c, [[-2.8,surface],[2.8,surface],[2,0],[-2,0]], mana ? '#75b9ec' : '#ca655b');
     c.strokeStyle = '#adc3c2'; c.lineWidth = .65; c.beginPath();
     c.moveTo(-2,-6); c.lineTo(-3,-3); c.lineTo(-2,.2); c.stroke();
     c.fillStyle = '#b8a27c'; c.fillRect(-2,-8,4,1.7);
