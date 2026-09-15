@@ -62,7 +62,7 @@ import { PanelCoordinator } from './panel-coordinator.ts';
 import { bindGameKeyboard } from './game-keyboard.ts';
 import { createCharacterSheet, type StarterLoadoutId } from './items.ts';
 import { refreshCharacter } from './character.ts';
-import { AreaNoticeTracker } from './notification-queue.ts';
+import { AreaNoticeTracker, areaLevelLabel, areaThreat, type AreaBannerNotice } from './area-banner.ts';
 import { activityLevel } from './activity-level.ts';
 import { getZoneAt } from './zone-progression.ts';
 import { SaveHub, type SaveMode } from './save-hub.ts';
@@ -745,7 +745,7 @@ export class Game {
 
   private enterWorld() {
     this.shell.notifications.clear();
-    this.areaNotices.reset(getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed).id);
+    this.areaNotices.reset(this.currentArea().id);
     this.sim.player.name = this.session.active?.record.name;
     this.renderer.reset();
     this.renderer.snapTo(this.sim.player);
@@ -1077,9 +1077,16 @@ export class Game {
     this.renderer.reset(); this.renderer.snapTo(this.sim.player);
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
     this.sim.setCombatViewport(this.renderer.combatViewport);
-    this.areaNotices.reset(getZoneAt(this.sim.player.x, this.sim.player.y, this.overworld.seed).id);
+    // Travel clears the old presentation; announce the destination after stable arrival.
+    this.areaNotices.reset('');
     this.worldMap.update(this.sim.player, 0);
     this.shell.portalTransition(); this.canvas.focus();
+  }
+
+  private currentArea(): AreaBannerNotice {
+    const run = currentDungeon(this.sim.expeditions);
+    return run ? { id: run.entrance.id, name: run.entrance.name, level: run.entrance.level }
+      : getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed);
   }
 
   private async trade(quote: ServiceQuote): Promise<{ ok: boolean; message: string }> {
@@ -1239,8 +1246,12 @@ export class Game {
       }
       if (this.sim.portal.ready) this.travelThrough(this.overworld.getPortalAnchor(this.sim.travel.homeTown), false);
       const run=currentDungeon(this.sim.expeditions);
-      const zone = run?{id:run.entrance.id,name:run.entrance.name,level:run.entrance.level}:getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed);
-      if (this.areaNotices.update(zone.id, dt)) this.shell.notifications.push({ kind: 'area', id: zone.id, name: zone.name, level: zone.level, maxLevel: 'maxLevel' in zone ? zone.maxLevel : undefined });
+      const zone = this.currentArea();
+      this.renderer.areaBanner.retain(zone.id);
+      if (this.areaNotices.update(zone.id, dt)) {
+        this.renderer.areaBanner.show(zone);
+        this.shell.notifications.announce(`${zone.name}. ${areaLevelLabel(zone)}. ${areaThreat(zone,this.sim.player.level).label}.`);
+      }
       if(run?.rift&&(this.sim.player.dead||run.rift.phase==='failed')){
         if(!this.savingAction)void this.switchDungeon({kind:'death'});
       } else if (this.sim.player.dead) {

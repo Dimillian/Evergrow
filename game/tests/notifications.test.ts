@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { NotificationQueue, AreaNoticeTracker, NOTICE_EXIT_SECONDS } from '../src/notification-queue.ts';
+import { NotificationQueue, NOTICE_EXIT_SECONDS } from '../src/notification-queue.ts';
+import { AreaNoticeTracker } from '../src/area-banner.ts';
 import { generateItem } from '../src/items.ts';
 
 test('loot bursts queue independently, preserve item identity and wait through the exit animation', () => {
@@ -20,9 +21,9 @@ test('duplicate warnings renew and queued notices stay bounded', () => {
   queue.push({ kind: 'info', message: 'Inventory full' }); queue.advance(2);
   queue.push({ kind: 'info', message: 'Inventory full' });
   assert.equal(queue.visible.length, 1); assert.equal(queue.pendingCount, 0); assert.equal(queue.visible[0].age, 0);
-  for (let i = 0; i < 40; i++) queue.push({ kind: 'area', id: `b${i}`, name: `B${i}`, level: 1 });
+  for (let i = 0; i < 40; i++) queue.push({ kind: 'info', message: `Notice ${i}` });
   assert.equal(queue.pendingCount, 24);
-  queue.advance(5); assert.equal(queue.visible[0].notice.kind, 'area');
+  queue.advance(5); assert.equal(queue.visible[0].notice.kind, 'info');
   queue.clear(); assert.ok(queue.idle);
 });
 

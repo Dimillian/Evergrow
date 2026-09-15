@@ -1,5 +1,7 @@
 # Current system status
 
+Local September 15 area announcements: Gilded Horizon replaces the bottom-left area card with a transparent brass frame centered at 12.5% of screen height. Shared desktop/Android art shows area name, mob range and player-relative difficulty color; stable-entry timing, compact spacing and celebration priority stay presentation-only. No save reset. See [regional guidance](region-scaling.md#area-announcements--local-september-15-2026).
+
 Local September 15 map legend: collapsible categories, individual/category icon visibility, and **Ping nearest** for discovered NPC service types. Shared filters reach world/dungeon/minimaps and Thor projections; desktop side panel and compact drawer use the existing icon art and arrival ping. Session-only preferences; no save reset. See [explored atlas](explored-atlas.md#map-legend--local-september-15-2026).
 
 Local character direction study (2026-09-14): torso/armor surfaces turn with facing, and east/west heads and helmets use side profiles. Legs now have rotated hip/foot tracks, fixed-length joints, a compact stride and directional boots; leg armor follows the joints. The rig review adds clothing, helmet, weapon and stride controls. Shared runtime/portrait art; no save reset. See [character appearance](character-editor.md#directional-silhouette-pass--local-2026-09-14).

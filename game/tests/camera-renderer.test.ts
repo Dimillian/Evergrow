@@ -172,14 +172,38 @@ test('native HUD labels stay fixed and damage numbers project without scaling th
   assert.equal(new Set(popupFonts).size, 1);
 });
 
+test('area banner shares desktop/handheld UI projection and waits through pause and level celebrations',t=>{
+  const {renderer,sim,world,settings,render}=fixture(t);
+  const area={id:'test',name:'Thorn Vale · Emberfall',level:1,maxLevel:12};
+  renderer.resize(960,540);renderer.cursorPixelScale={x:.75,y:.75};
+  renderer.areaBanner.show(area);render(.8);
+  const draw=()=>{
+    const ui=new RecordingContext();ui.scale(2/.75,2/.75);
+    renderer.renderUI(ui as unknown as CanvasRenderingContext2D,sim,world,settings);
+    return ui.texts.find(call=>call.value==='Thorn Vale');
+  };
+  const title=draw()!;assert.ok(title);
+  assert.equal(title.matrix.e,1280);assert.equal(title.matrix.f,180,'12.5% of 720 CSS pixels, at DPR 2');
+  assert.equal(title.matrix.a,2,'native display density is independent of the world buffer');
+  renderer.zoomByWheel(300,0,900);render(0);assert.deepEqual(draw(),title);
+  const age=renderer.areaBanner.age;settings.phase='paused';render(1);assert.equal(renderer.areaBanner.age,age);assert.equal(draw(),undefined);
+  settings.phase='playing';renderer.handleEvents([{type:'level',x:sim.player.x,y:sim.player.y,level:2,statPoints:5,skillPoints:1}],true);
+  render(.1);assert.equal(draw(),undefined);assert.equal(renderer.areaBanner.age,0);
+  render(2.5);assert.ok(draw(),'latest area resumes once the celebration clears');
+  sim.player.dead=true;render();assert.equal(renderer.areaBanner.notice,null);
+  world.dispose();
+});
+
 test('renderer wires hover and combat focus to a native enemy plate without HUD click-through or phase leakage', t => {
   const { renderer, sim, world, canvas, settings, render } = fixture(t);
   world.blocked = () => false; world.isSanctuary = () => false;
   const enemy = sim.spawnEnemy('stalker', sim.player.x + 80, sim.player.y + 20)!;
   assert.ok(enemy);
+  let areaDrawn=false;
   const plateName = () => {
     const ui = new RecordingContext(); ui.scale(2, 2);
     renderer.renderUI(ui as unknown as CanvasRenderingContext2D, sim, world, settings);
+    areaDrawn=ui.texts.some(call=>call.value==='Thorn Vale');
     assert.deepEqual(ui.getTransform(), { a: 2, b: 0, c: 0, d: 2, e: 0, f: 0 });
     return ui.texts.find(call => call.value === 'HOLLOW STALKER');
   };
@@ -191,10 +215,16 @@ test('renderer wires hover and combat focus to a native enemy plate without HUD 
     enemyKind: enemy.kind, x: enemy.x, y: enemy.y, value: 5, remainingHp: enemy.hp }], true);
 
   const firstMatrix = render();
+  const area={id:'focus-test',name:'Thorn Vale · Emberfall',level:1,maxLevel:12};
+  renderer.areaBanner.show(area);renderer.areaBanner.age=1;
   assert.equal(plateName(), undefined, 'an unhovered nearby enemy does not acquire focus');
+  assert.ok(renderer.areaBanner.notice,'nearby enemies alone leave the banner visible');
+  assert.equal(areaDrawn,true);
   hoverTorso(firstMatrix); render();
   const initial = plateName();
   assert.ok(initial, 'hovering the rendered body displays its name on the next frame');
+  assert.equal(renderer.areaBanner.notice,null,'hover focus dismisses the area banner on the same UI frame');
+  assert.equal(areaDrawn,false,'the dismissal happens before banner drawing, preventing a frame of overlap');
   assert.deepEqual({ ...initial.matrix, e: 0, f: 0 }, identity(), 'enemy glyphs render at native physical pixels');
   assert.ok(Number(initial.font.match(/([\d.]+)px/)![1]) > 20, 'the native font includes the UI backing DPR');
   assert.ok(!canvas.context.texts.some(call => call.value === 'HOLLOW STALKER'), 'the name is absent from the post-processed world surface');
@@ -211,10 +241,13 @@ test('renderer wires hover and combat focus to a native enemy plate without HUD 
   enemy.x = enemy.prevX = behindHUD.x; enemy.y = enemy.prevY = behindHUD.y + 22;
   render(.3);
   assert.equal(plateName(), undefined, 'a body directly beneath the HUD cannot refresh hover after its grace expires');
+  assert.equal(renderer.areaBanner.notice,null,'dismissed banners do not return when focus ends');
 
   renderer.pointerX = 20; renderer.pointerY = 100;
+  renderer.areaBanner.show(area);
   noteHit(); render();
   assert.ok(plateName(), 'actual hit events acquire the native plate while the mouse is away');
+  assert.equal(renderer.areaBanner.notice,null,'combat focus also dismisses a newly queued area banner');
   for (const phase of ['paused', 'map', 'dead'] as const) {
     settings.phase = phase; render();
     assert.equal(plateName(), undefined, `${phase} clears the plate immediately`);
@@ -227,6 +260,22 @@ test('renderer wires hover and combat focus to a native enemy plate without HUD 
   sim.player.dead = false; noteHit(); render(); assert.ok(plateName());
   renderer.reset();
   assert.equal(plateName(), undefined, 'restarting the renderer clears the retained plate');
+});
+
+test('automatic boss plates dismiss area banners without hover on desktop and touch layouts',t=>{
+  const {renderer,sim,world,settings,render}=fixture(t);
+  world.blocked=()=>false;world.isSanctuary=()=>false;
+  const boss=sim.spawnEnemy('briarMatriarch',sim.player.x+100,sim.player.y)!;assert.ok(boss);
+  renderer.pointerActive=false;
+  for(const touch of [false,true]) {
+    renderer.touchActive=touch;
+    renderer.areaBanner.show({id:'boss-area',name:'Thorn Vale',level:1});renderer.areaBanner.age=1;
+    render();const ui=new RecordingContext();
+    renderer.renderUI(ui as unknown as CanvasRenderingContext2D,sim,world,settings);
+    assert.equal(renderer.areaBanner.notice,null);
+    assert.ok(!ui.texts.some(call=>call.value==='Thorn Vale'));
+  }
+  world.dispose();
 });
 
 function containsBounds(outer: { x: number; y: number; width: number; height: number },
