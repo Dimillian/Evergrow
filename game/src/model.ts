@@ -155,8 +155,12 @@ export interface Player {
   /** Position at the beginning of the most recently completed simulation tick. */
   prevX: number;
   prevY: number;
+  /** Input-smoothed velocity used by movement, independent of collision correction. */
   vx: number;
   vy: number;
+  /** Actual movement per second in the last tick, used only for locomotion presentation. */
+  locomotionVX: number;
+  locomotionVY: number;
   angle: number;
   hp: number;
   maxHp: number;
