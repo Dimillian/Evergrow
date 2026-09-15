@@ -1,5 +1,19 @@
 # Evergrow changelog
 
+## v0.6.5 — 2026-09-15T07:04:00Z
+
+### New
+
+- Hover skills in the inventory bar or assignment picker to see their effects, current rank, Technique, mana cost, cooldown and weapon requirements.
+
+### Tweaks
+
+- Fireball has a turbulent flame core and ember trail; Frost Lance has a crystalline spear and shatters at each pierced enemy.
+- Ice Nova spreads branching frost and rising crystals. Absolute Zero gathers a larger crown of ice.
+- Meteor and Cataclysm have richer falling embers, fiery impact waves, molten cracks and flying stone fragments.
+- Tempest has a rotating storm boundary and lightning flashes synchronized with its damage pulses.
+- Spell effects keep their existing damage and timing, with reduced-motion support and clear space to read combat.
+
 ## v0.6.4 — 2026-09-15T06:21:00Z
 
 ### New
