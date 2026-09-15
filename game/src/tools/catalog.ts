@@ -25,6 +25,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'charms',group:'equipment',name:'Charms',path:'/character.html?charms',description:'Arrange six sizes of magic stones and inspect their active bonuses.'},
   {id:'hud-menu',group:'interface',name:'HUD & active buffs',path:'/character.html?panel=hud&loadout=shield&buffs',description:'Frozen HUD, active-effect icons, nested explanations and shortcut list. No gameplay or saves.'},
   {id:'inventory',group:'equipment',name:'Inventory & comparisons',path:'/character.html',description:'Equip staged gear, compare stats and organize a character’s bag.'},
+  {id:'inventory-pickups',group:'equipment',name:'New item highlights',path:'/character.html?pickups',description:'Compare inspected and newly collected items, with soft frames and corner sparkles.'},
   {id:'enchanting-workbench',group:'equipment',name:'Enchanting workbench',path:'/services.html?role=enchanter&tier=city&operation=rerollOne&item=3',description:'Choose affixes directly, inspect rarity upgrades and favor city rerolls.'},
   {id:'merchant-stock',group:'equipment',name:'Merchant stock',path:'/services.html?tier=city',description:'Spatial vendor trays, category tabs and paid stock refreshes.'},
   {id:'enhancement-workbench',group:'equipment',name:'Enhancement workbench',path:'/services.html?operation=enhance&item=1',description:'Inspect equipment and exact before/after upgrade gains.'},

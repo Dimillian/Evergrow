@@ -24,6 +24,18 @@
 .ui-item-slot.is-dragging { opacity: .36; }
 .ui-item-slot.is-drop-target { border-color: #d9efde; outline: 2px solid #b4dcca; outline-offset: 2px; background-color: #294836; }
 .ui-item-slot.is-locked { background-image: linear-gradient(135deg, #853e452b, transparent); }
+/* A steady inner rim identifies unread loot between the slow corner twinkles.
+   Keep the actual rarity border and the item silhouette unchanged. */
+.ui-item-pickup-sparkles { position: absolute; inset: 1px; pointer-events: none; overflow: hidden; z-index: 2; border: 1px solid #f0deb06b; box-shadow: inset 0 0 7px #ead8a529; background: radial-gradient(ellipse at top right, #f1dda83b, transparent 48%), radial-gradient(ellipse at bottom left, #f1dda824, transparent 40%); }
+.ui-item-pickup-sparkles i { position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; background: #fff0c3; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); opacity: .65; animation: item-pickup-twinkle 3.8s ease-in-out infinite; animation-delay: var(--pickup-delay, 0s); }
+.ui-item-pickup-sparkles i + i { top: auto; right: auto; bottom: 1px; left: 1px; width: 7px; height: 7px; animation-delay: calc(var(--pickup-delay, 0s) - 1.9s); }
+@keyframes item-pickup-twinkle {
+  0%, 65%, 100% { opacity: .4; transform: scale(.75); }
+  30% { opacity: .95; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-item-pickup-sparkles i { animation: none; opacity: .7; transform: none; }
+}
 .ui-item-level { position: absolute; bottom: 3px; right: 4px; font-family: var(--ui-font); font-size: 10px; color: #ccdde0aa; text-shadow: 0 1px #000, 1px 0 #000; pointer-events: none; }
 .ui-item-tier { position: absolute; top: 5px; left: 5px; display: flex; gap: 3px; pointer-events: none; }
 .ui-item-tier i { width: 3px; height: 3px; background: var(--item-color); transform: rotate(45deg); box-shadow: 0 0 3px #000; }
