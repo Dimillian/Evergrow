@@ -1,8 +1,7 @@
 import { riftMechanic } from './rift-encounters.ts';
 import { enemyModifiers } from './enemy-modifiers.ts';
 import { isBossKind } from './wilderness-boss-content.ts';
-import { type EnemyDebuffState, enemyDebuffs } from './enemy-debuffs.ts';
-import { drawSkillIcon } from './skill-icon-canvas.ts';
+import { type EnemyDebuffState } from './enemy-debuffs.ts';
 import type { Enemy } from './model.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { ENEMY_RANKS } from './progression-content.ts';
@@ -181,34 +180,5 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
   text(c, healthLabel, w / 2, 61, Math.min(.8, (w - 114) / Math.max(1, textWidth(healthLabel))), UI.text, 'center');
   text(c, isBossKind(enemy.kind)?'BOSS':rank.name, w - 11, 61, .78, rank.color, 'right');
   c.restore();
-
-  if (options.hasDebuffs) {
-    const list = enemyDebuffs(enemy);
-    if (list.length > 0) {
-      const iconSize = 24, spacing = 32;
-      const totalWidth = list.length * spacing - (spacing - iconSize);
-      const startX = Math.round((w - totalWidth) / 2);
-      const iconY = 82;
-      for (let i = 0; i < list.length; i++) {
-        const debuff = list[i];
-        const bx = startX + i * spacing;
-        c.save();
-        c.fillStyle = '#050c14f0';
-        c.strokeStyle = debuff.color;
-        c.lineWidth = 1.2;
-        c.fillRect(bx - 1, iconY - iconSize / 2 - 1, iconSize + 2, iconSize + 2);
-        c.strokeRect(bx - 1, iconY - iconSize / 2 - 1, iconSize + 2, iconSize + 2);
-        if (typeof debuff.icon === 'string' && debuff.icon !== 'weave-melee' && debuff.icon !== 'weave-spell') {
-          drawSkillIcon(c, debuff.icon, bx + iconSize / 2, iconY, iconSize);
-        }
-        if (debuff.remaining > 0 && !debuff.persistent) {
-          const timeStr = `${Math.ceil(debuff.remaining)}s`;
-          text(c, timeStr, bx + iconSize / 2, iconY + iconSize / 2 + 9, .75, '#eef6f6', 'center');
-        }
-        c.restore();
-      }
-    }
-  }
-
   c.restore();
 }
