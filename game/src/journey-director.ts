@@ -23,7 +23,10 @@ export function journeyObjective(goal:JourneyGoal,facts:JourneyFacts):string {
     const run=facts.expeditions.runs.find(r=>r.entrance.id===goal.id);
     return !run?'Enter the dungeon':run.states.warden?.hp>0?`Defeat ${dungeonTheme(run.entrance.seed,run.entrance.theme).bossName??'Hollow Warden'}`:run.chestMasks[2]===dungeonChestMask(run,2)?'Return to the surface':'Claim the boss chest';
   }
-  if(goal.kind==='bossLair')return 'Defeat the boss';
+  if(goal.kind==='bossLair'){
+    if(eventClaimed(facts.events,goal.id))return 'Completed';
+    return facts.events.sites[goal.id]?.phase==='completed'?'Boss defeated — hoard delivery pending':'Defeat the boss';
+  }
   if(goal.kind==='camp')return facts.campCleared(goal.id)?'Open the strongbox':'Clear the garrison';
   if(goal.kind==='caravan')return 'Choose goods or coin';
   if(goal.kind==='watchtower')return 'Light the beacon';
