@@ -1,5 +1,32 @@
 # Evergrow changelog
 
+## v0.6.3 — 2026-09-15T05:36:00Z
+
+### New
+
+- Redesigned character hall shows equipped gear with hover inspection, location, gold, attributes, gear power and play time before you enter the world.
+- Edit a saved character's appearance directly from the hall while keeping their progress and equipment.
+- Map legends let you filter landmarks and ping the nearest service.
+- Press F3 for an optional performance monitor with live graphs.
+
+### Tweaks
+
+- Characters have clearer side profiles, more natural articulated legs and refined hair, facial hair and armor in every direction.
+- Town portals reflect their destination with biome colors, motes and clearer destination labels.
+- Use the portal shortcut near your return portal to travel back; farther away, it highlights the portal.
+- Gold and resource drops gently hop, with colored halos helping health and mana vials stand out.
+- Rift victory shows your elapsed clear time and celebrates the automatic treasure opening; rift maps use distinct crimson portal markers.
+- Character-hall layouts adapt more comfortably to phones and handheld screens.
+
+### Fixes
+
+- Character-hall saves refresh after appearance edits, and controller navigation skips hidden controls.
+- Boot cuffs no longer obscure knees, while facial-hair styles retain their shape in side views.
+- Full dungeon maps stay sharp and correctly sized on smaller screens, with more reliable zoom and legend controls.
+- Rift reward retries cannot repeat the victory celebration.
+
+> Existing characters and progress are preserved. Reload the game to apply this update.
+
 ## v0.6.2 — 2026-09-14T16:17:00Z
 
 ### New
