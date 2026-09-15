@@ -1,4 +1,6 @@
 import { upgradeSkillTree } from './skill-tree-upgrade.ts';
+import { deduplicateLootLog, type LootLogEntry } from './loot-log.ts';
+import { validLootLog } from './loot-log-validation.ts';
 import { doctrineConflict, SKILL_TREE_VERSION } from './skill-tree.ts';
 import { STASH_CAPACITY, MAX_STORAGE_TABS } from './storage-content.ts';
 import { validPackLayout } from './inventory-grid.ts';
@@ -32,6 +34,7 @@ export const CHARACTER_SAVE_VERSION = 4;
 // A payload safety bound, not a lifetime activity quota. Fail without evicting progress.
 export const SAVE_MAX_CODE_UNITS = 8 * 1024 * 1024;
 export interface CharacterCheckpoint {
+  lootLog?: LootLogEntry[];
   chronicle?: ChronicleProgress;
   brokenContainers?: string[];
   journeys?: JourneyState;
@@ -97,6 +100,7 @@ export function decodeCharacterSave(raw: string): CharacterSave | null {
       || !integer(v.worldSeed, 0, 4294967295) || !integer(v.worldVersion, 1)) return null;
     const p = v.checkpoint;
     if(!object(p)||!upgradeSkillTree(p))return null;
+    if (p.lootLog !== undefined && (!number(p.time) || !validLootLog(p.lootLog, p.time))) return null;
     if (!object(p) || (p.encounterScales !== undefined && !validEncounterScales(p.encounterScales)) || (p.chronicle !== undefined && !validChronicle(p.chronicle)) || (p.journeys !== undefined && !validJourneys(p.journeys)) || (p.campWounds!==undefined&&!validCampWounds(p.campWounds)) || (p.roaming !== undefined && (!object(p.roaming) || !integer(p.roaming.warmup,0,ROAMING_RULES.warmupPopulation) || !number(p.roaming.cooldown,-1,10) || !number(p.roaming.requiredDistance,0,300))) || (p.expeditions !== undefined && !validExpeditions(p.expeditions)) || (p.actors !== undefined && !validActors(p.actors)) || (p.pickups !== undefined && !validPickups(p.pickups)) || (p.events !== undefined && !validEvents(p.events)) || (p.travel !== undefined && !validTravel(p.travel)) || !integer(p.level, 1, MAX_CONTENT_LEVEL) || !integer(p.xp, 0) || (p.level < MAX_CONTENT_LEVEL && p.xp >= xpForNextLevel(p.level))
       || !validSheet(p.character, p.level) || !number(p.x, -4e7, 4e7) || !number(p.y, -4e7, 4e7) || !number(p.angle, -1000, 1000)
       || !number(p.hp, 0, 1e9) || !number(p.mana, 0, 1e9) || typeof p.dead !== 'boolean' || (!p.dead && p.hp <= 0)
@@ -135,6 +139,7 @@ export function decodeCharacterSave(raw: string): CharacterSave | null {
     }
     // Normalize the validated parsed copy, including stored dungeon loot and buyback.
     for (const item of items) Object.assign(item, roundItemStats(refreshEquipmentBudgets(rebalanceItemRolls(rebalanceItemOffense(rebalanceItemMana(rebalanceCharm(item)))))));
+    if (p.lootLog !== undefined) p.lootLog = deduplicateLootLog(p.lootLog as LootLogEntry[]);
     return v as unknown as CharacterSave;
   } catch { return null; }
 }

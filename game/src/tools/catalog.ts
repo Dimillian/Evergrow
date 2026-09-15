@@ -68,6 +68,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'rewards',group:'interface',name:'Reward animations',path:'/rewards.html',description:'Replay gold, XP and level-up feedback with optional sound.'},
   {id:'music',group:'interface',name:'Soundtrack studies',path:'/music.html',description:'Listen to local menu, wilderness and dungeon music auditions.'},
   {id:'notifications',group:'interface',name:'Notifications',path:'/notifications.html',description:'Item pickups and discovery messages.'},
+  {id:'loot-log',group:'interface',name:'Loot log',path:'/notifications.html?view=loot-log',description:'Recent pickup snapshots, item details and inventory, equipped, stored and sold states.'},
   {id:'journeys',group:'interface',name:'Journeys',path:'/journeys.html',description:'Activity guidance, tracked goals and journal presentation.'},
   {id:'touch',group:'interface',name:'Touch controls',path:'/touch.html',description:'Touch layout and mobile controls.'},
   {id:'thor',group:'interface',name:'Thor companion',path:'/thor.html?preview=1',description:'Preview lower-screen map, inventory and character controls.'},

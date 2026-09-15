@@ -1,5 +1,7 @@
 # Character hall and checkpoints
 
+The optional [Loot log](loot-log.md) stores the latest 100 pickup snapshots and durable sale receipts in the character checkpoint. Existing saves begin with empty history and retain all progress. Historical snapshots are excluded from owned-item uniqueness and live-item normalization.
+
 Local settlement rework · generation 10 (2026-09-09): three settlement tiers, outdoor starting refuges without houses, families, gambling and personal storage. Generation-9 characters upgrade on Continue, preserving progression and exploration. The original save is retained until the upgrade commits. See [Settlements](settlements.md). Earlier generation/layout statements below describe the prior checkpoint.
 Evergrow opens in a procedural forest character hall. Eight slots show name, level and power beside a compact Continue/Create panel. Larger displays retain the equipped portrait; handheld layouts keep the controls together. Sites offers separate cloud and local rosters; ordinary local and Android builds retain their browser-local slots. Select an empty slot, name a character, choose Sword + Shield, Two-handed Sword, Wand + Grimoire, Fire Staff, Shortbow or Longbow, then select Create character to customize appearance before saving and entering the world. See [Character appearance editor](character-editor.md). The equipped portrait updates immediately when choosing. Select an existing character to continue. Deletion requires an explicit confirmation inside the hall.
 

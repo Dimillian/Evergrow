@@ -4,9 +4,9 @@ import { HUD_MENU_SHORTCUTS } from './hud-layout.ts';
 import { trapDialogFocus } from './ui-components.ts';
 import './hud-shortcut-menu.css';
 
-type Destination = typeof HUD_MENU_SHORTCUTS[number]['id'] | 'map';
-const destinationAction: Record<Destination, ControlAction> = { character: 'character', inventory: 'character', skilltree: 'skills', journal: 'journeys', map: 'map' };
-const destinations = [...HUD_MENU_SHORTCUTS, { id: 'map', label: 'World map', key: 'M' }] as const;
+type Destination = typeof HUD_MENU_SHORTCUTS[number]['id'] | 'map' | 'lootLog';
+const destinationAction: Partial<Record<Destination, ControlAction>> = { character: 'character', inventory: 'character', skilltree: 'skills', journal: 'journeys', map: 'map' };
+const destinations = [...HUD_MENU_SHORTCUTS, { id: 'map', label: 'World map', key: 'M' }, { id: 'lootLog', label: 'Loot log', key: '' }] as const;
 
 /** A small, focus-contained navigation drawer. GameShell owns routing and pause state. */
 export class HUDShortcutMenu {
@@ -46,7 +46,8 @@ export class HUDShortcutMenu {
       event.stopPropagation();
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.key === 'Escape') { event.preventDefault(); this.close(); return; }
-      const destination = destinations.find(d => controls.action(event.code) === destinationAction[d.id]);
+      const action = controls.action(event.code);
+      const destination = action && destinations.find(d => action === destinationAction[d.id]);
       if (destination) { event.preventDefault(); this.close(false); this.select(destination.id); return; }
       if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
         event.preventDefault();
@@ -60,7 +61,9 @@ export class HUDShortcutMenu {
   refreshBindings(): void {
     for (const d of destinations) {
       const button = this.element.querySelector<HTMLButtonElement>(`[data-destination="${d.id}"]`)!;
-      button.querySelector('kbd')!.textContent = controls.label(destinationAction[d.id]);
+      const action = destinationAction[d.id];
+      button.querySelector('kbd')!.textContent = action ? controls.label(action) : '';
+      button.querySelector('kbd')!.hidden = !action;
       button.removeAttribute('aria-keyshortcuts');
     }
   }

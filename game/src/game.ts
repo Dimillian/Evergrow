@@ -55,6 +55,8 @@ import { ServicePanel } from './service-panel.ts';
 import { buildingNPC, focusNPC, canInteractNPC, type TownNPC } from './npcs.ts';
 import type { ServiceQuote } from './commerce.ts';
 import { ChroniclePanel } from './chronicle-panel.ts';
+import { LootLogPanel } from './loot-log-panel.ts';
+import { lootLogAfterTrade } from './loot-log.ts';
 import { metric } from './chronicle.ts';
 import { trackCommerce } from './chronicle-tracking.ts';
 import { executeService } from './commerce-command.ts';
@@ -134,6 +136,7 @@ export class Game {
   fx: PostFX;
   private panels: PanelCoordinator;
   private chronicle: ChroniclePanel;
+  private lootLogPanel: LootLogPanel;
   get phase(): GamePhase { return this.panels?.phase ?? 'ready'; }
   private muted = false;
   private groundLootNames: GroundLootNameplates = 'always';
@@ -194,6 +197,7 @@ export class Game {
         portal: () => { this.canvas.focus(); this.requestPortal(); },
         save: () => this.durable(async () => { const saved = await this.saveCharacter(true); if (saved) await this.saveClient.flush(); return saved; }, false),
         openChronicle: () => { if(!this.savingAction)this.panels.open('chronicle'); },
+        openLootLog: () => { if (!this.savingAction) this.panels.open('lootLog'); },
         openAppearance: () => { if (!this.savingAction && this.panels.open('character')) this.editAppearance(true); },
         leaderboard: order => this.saveClient.leaderboard(order), leaderboardAvailable: () => this.saveClient.supported,
         returnToTitle: () => this.returnToTitle(), openMap: () => this.openMap(),
@@ -224,6 +228,7 @@ export class Game {
         openSkills: skill => { this.openCharacterPanel('skills'); this.skillPanel.inspectNode(skill ? `skill:${skill}` : 'origin', true); this.skillPanel.setDetailsVisible(true); },
         editAppearance:()=>this.editAppearance(),
         openChronicle:()=>{if(!this.savingAction)this.panels.open('chronicle');},
+        openLootLog:()=>{if(!this.savingAction)this.panels.open('lootLog');},
         equip: (index, slot) => this.characterAction({ type: 'equip', index, slot }),
         unequip: (slot, index) => this.characterAction({ type: 'unequip', slot, index }),
         move: (from, to) => this.characterAction({ type: 'moveItem', from, to }),
@@ -240,6 +245,7 @@ export class Game {
         assign: (slot, skill) => this.characterAction({ type: 'assignSkill', slot, skill }),
       }));
       this.chronicle = this.lifetime.own(new ChroniclePanel(this.shell.panelMount,()=>this.resume()));
+      this.lootLogPanel = this.lifetime.own(new LootLogPanel(this.shell.panelMount, () => this.resume()));
       this.titleScreen = this.lifetime.own(new TitleScreen(this.shell.titleMount, {
         sound: () => this.toggleSound(), muted: () => this.muted,
         volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
@@ -279,6 +285,7 @@ export class Game {
         arrived: () => this.finishTravel(), notify: message => this.notify(message),
       });
       this.panels = new PanelCoordinator({
+        lootLog: { open: () => { this.lootLogPanel.open({ entries:this.sim.lootLog, sheet:this.sim.player.character, level:this.sim.player.level, time:this.sim.time, ground:this.sim.groundItems, expeditions:this.sim.expeditions }); this.shell.setStatus('Loot log open. Game paused.'); }, close: () => this.lootLogPanel.close() },
         chronicle:{open:()=>{void this.chronicle.open(async onCached=>{await this.saveCharacter(true);return this.saveClient.chronicle(onCached);},this.session.active?.record.id);},close:()=>this.chronicle.close(false)},
         journeys:{open:()=>this.journeys.panel.open(this.journeys.selected),close:()=>this.journeys.panel.close()},
         event: { open: () => { if(this.activeRiftPortal)this.riftPanel.open(this.sim.expeditions,this.sim.player,this.activeRiftPortal); else if(this.activeExpeditionTable)this.expeditionPanel.open(this.sim.expeditions,this.sim.player.level,this.overworld.seed,this.activeExpeditionTable); else if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.expeditionPanel.close(); this.riftPanel.close(); this.activeRiftPortal=null; this.activeExpeditionTable=null; this.activeEvent = null; this.activeDungeonEntrance = null; } },
@@ -1090,14 +1097,16 @@ export class Game {
     if (this.phase !== 'service' || !npc || !this.session.active || !canInteractNPC(npc, p, this.world))
       return { ok: false, message: 'This service is no longer in reach.' };
     let progress=p.chronicle;
+    let lootLog = this.sim.lootLog;
     const result = await executeService(p, npc, this.world, quote, async (character, hp, mana) => {
       progress=structuredClone(p.chronicle);
+      lootLog = lootLogAfterTrade(this.sim.lootLog, p.character, character, quote.request.type === 'sell' || quote.request.type === 'sellMany');
       trackCommerce(progress,p.character.gold??0,character.gold??0,Math.max(0,...Object.values(character.equipped).filter(Boolean).map(i=>i!.recipe?.enhancement??0),...character.inventory.filter(Boolean).map(i=>i!.recipe?.enhancement??0)));
-      const saved = await this.session.save({ ...this.sim.captureCheckpoint(), character, hp, mana, skillCooldowns: quote.request.type==='respec'?{}:p.skillCooldowns, chronicle:progress }, Date.now());
+      const saved = await this.session.save({ ...this.sim.captureCheckpoint(), character, hp, mana, skillCooldowns: quote.request.type==='respec'?{}:p.skillCooldowns, chronicle:progress, lootLog }, Date.now());
       if (!saved) this.shell.setSaveStatus(this.session.error, true);
       return { ok: saved, message: this.session.error };
     });
-    if (result.ok) { p.chronicle=progress; this.saveError = ''; this.shell.setSaveStatus();
+    if (result.ok) { this.sim.lootLog = lootLog; p.chronicle=progress; this.saveError = ''; this.shell.setSaveStatus();
       if(quote.request.type==='sell'||quote.request.type==='sellMany')this.audio.play({type:'gold',x:p.x,y:p.y,amount:quote.price,balance:p.character.gold??0});
       else this.notify(result.message);
     }
@@ -1206,6 +1215,7 @@ export class Game {
     this.pollGamepad(now);
     if (now >= this.nextScore) { this.updateScore(now); this.nextScore = now + 250; }
     this.touch.update(this.sim.player,this.phase,this.savingAction,now,this.sim.groundEffects);
+    this.shell.notifications.setTouchLayout(this.touch.phoneLandscape, this.touch.safeTop);
     this.renderer.gamepadActive = this.usingGamepad;
     this.shell.setGamepadActive(this.usingGamepad);
     if (this.panels.simulationActive && !this.savingAction && !this.shell.shortcutMenu.isOpen) {
@@ -1403,6 +1413,7 @@ export class Game {
     } else {
       if (this.phase === 'character') { this.inventoryPanel.updateGamepad(pad, now); return; }
       if (this.phase === 'skills') { this.skillPanel.updateGamepad(pad, now); return; }
+      if (this.phase === 'lootLog') this.lootLogPanel.scrollDetails(pad.aim.y, now);
       const root = this.phase === 'ready' ? this.shell.titleMount : this.phase === 'map' ? this.shell.mapMount
         : this.panels.activePanel ? this.shell.panelMount : this.canvas.parentElement!.querySelector<HTMLElement>('#overlay')!;
       if (this.phase === 'ready') this.titleScreen.element.classList.add('is-controller');

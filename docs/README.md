@@ -1,5 +1,6 @@
 # Documentation
 
+- [Loot log](loot-log.md): saved recent pickups, original item details and current item locations.
 - [Level-50 loot audit](audits/loot-level50-2026-09-14.md): 265,062 actual reward rolls, standout item recipes, affix quality and proposed tuning.
 
 - [Regional scaling](region-scaling.md) — current local ranges, encounter snapshots, rewards and save compatibility.
