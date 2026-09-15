@@ -98,8 +98,8 @@ export class CombatEffects {
           life: .85, max: .85, value: String(Math.round(event.value)), color: reactionColor, size: heavy ? 2.6 : 2 });
         if (event.reaction) {
           const tag = event.reaction.toUpperCase();
-          this.popups.push({ x: event.x, y: event.y - (enemyKind === 'brute' ? 68 : 58), vx: 0, vy: -30,
-            life: .7, max: .7, value: tag, color: reactionColor, size: 1.6 });
+          this.popups.push({ x: event.x, y: event.y - (enemyKind === 'brute' ? 78 : 68), vx: 0, vy: -47,
+            life: .75, max: .75, value: tag, color: reactionColor, size: 1.6 });
         }
       }
       if (event.type === 'hurt' || event.type === 'heal') this.popups.push({ x: event.x, y: event.y - 61,
