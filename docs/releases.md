@@ -35,6 +35,16 @@ The user approved the next major prototype milestone, **0.6.0**, on 2026-09-14 f
 
 ## Last verified publication
 
+- Game v0.6.4 / Sites version 58, publicly deployed on 2026-09-15 at 06:27:24 UTC.
+- Published source: `76d5ad29a9a6d98559510a63129de5eb7604e912`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_d4cc73833a7881919a1fd8f1e12d8194`.
+- Deployment: `appgdep_6aa8e53a794c81919085a44709644e99`; Sites returned `succeeded`.
+- Traveling Arc Lightning, luminous chain effects, Storm Circuit tuning, two-card weapon comparisons and release-warning cleanup.
+- All 134 relevant code tests passed, with application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation. No automated browser gameplay was run.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.6.3 / Sites version 57, publicly deployed on 2026-09-15 at 05:39:32 UTC.
 - Published source: `32125e1e2eec31715a4ff92c59e0183253bba1f7`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_ce3b0d0058c08191a93d5a377a4a8453`.
