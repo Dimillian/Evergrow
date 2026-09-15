@@ -10,22 +10,24 @@ import { FOCUS_PROFILES } from './focus-content.ts';
 import { JEWELRY_PROFILES } from './jewelry-content.ts';
 import { CHARM_PROFILES } from './charm-content.ts';
 
-export const CONSOLE_LIMITS = { text:240, count:32, history:30, candidates:2048 } as const;
+export const CONSOLE_LIMITS = { text:240, count:32, history:30, candidates:2048, nearbyRadius:220 } as const;
 export const CONSOLE_COMMANDS = [
   {id:'help', detail:'Browse commands and their arguments', syntax:'help [command]', flags:[]},
   {id:'drop', detail:'Drop generated equipment at your feet', syntax:'drop <item> [--level N] [--profile ID] [--material ID] [--rarity ID] [--count N] [--seed N]', flags:['level','profile','material','rarity','count','seed']},
-  {id:'spawn', detail:'Summon monsters beyond the camera', syntax:'spawn <monster> [--level N] [--rank normal|veteran|elite] [--count N] [--seed N]', flags:['level','rank','count','seed']},
-  {id:'hp', detail:'Refill health to maximum', syntax:'hp', flags:[]},
-  {id:'mana', detail:'Refill available, unreserved mana', syntax:'mana', flags:[]},
+  {id:'spawn', detail:'Summon monsters offscreen or nearby', syntax:'spawn <monster> [--level N] [--rank normal|veteran|elite] [--placement offscreen|nearby] [--count N] [--seed N]', flags:['level','rank','placement','count','seed']},
+  {id:'refill-hp', detail:'Refill health to maximum', syntax:'refill-hp', flags:[]},
+  {id:'refill-mp', detail:'Refill available, unreserved mana', syntax:'refill-mp', flags:[]},
   {id:'refill', detail:'Refill both health and available mana', syntax:'refill', flags:[]},
 ] as const;
+export type ConsoleSpawnPlacement = 'offscreen' | 'nearby';
 export type ConsoleCommandName = typeof CONSOLE_COMMANDS[number]['id'];
-export type ConsoleCommand = {type:'help'; command?:ConsoleCommandName} | {type:'hp'} | {type:'mana'} | {type:'refill'}
+export type ConsoleCommand = {type:'help'; command?:ConsoleCommandName} | {type:'refill-hp'} | {type:'refill-mp'} | {type:'refill'}
   | {type:'drop'; kind:ItemKind; level?:number; profile?:string; material?:ItemMaterialId; rarity?:ItemTier; count:number; seed?:number}
-  | {type:'spawn'; kind:EnemyKind; level?:number; rank:EnemyRank; count:number; seed?:number};
+  | {type:'spawn'; kind:EnemyKind; level?:number; rank:EnemyRank; placement:ConsoleSpawnPlacement; count:number; seed?:number};
 export const consoleItems:ItemKind[] = ITEM_KINDS.filter(k=>k!=='riftKey');
 export const consoleEnemies = (Object.keys(ENEMY_DEFINITIONS) as EnemyKind[]).filter(k=>!isBossKind(k)&&k!=='warden'&&k!=='goblinChief');
 const rarities = ['common','magic','rare','epic','legendary'] as const;
+const placements = ['offscreen','nearby'] as const;
 const ranks = ['normal','veteran','elite'] as const;
 const itemKind = (name:string) => name==='helmet'?'head':name;
 export function consoleProfiles(kind:string) {
@@ -51,7 +53,7 @@ export function parseConsoleCommand(raw:string):ConsoleCommand {
     if(tokens.length>1||tokens[0]&&!CONSOLE_COMMANDS.some(c=>c.id===tokens[0]))throw new Error('Use help or help <command>.');
     return {type:'help',command:tokens[0] as ConsoleCommandName|undefined};
   }
-  if(name==='hp'||name==='mana'||name==='refill') {
+  if(name==='refill-hp'||name==='refill-mp'||name==='refill') {
     if(tokens.length)throw new Error(`${name} takes no arguments.`);
     return {type:name};
   }
@@ -70,7 +72,9 @@ export function parseConsoleCommand(raw:string):ConsoleCommand {
     const kind=consoleEnemies.find(k=>k.toLowerCase()===subject.toLowerCase());
     if(!kind)throw new Error('Choose an ordinary monster from the suggestions. Bosses require their own encounters.');
     const rank=flags.rank??'normal';if(!(ranks as readonly string[]).includes(rank))throw new Error('Rank must be normal, veteran or elite.');
-    return {type:'spawn',kind,rank:rank as EnemyRank,level,count,seed};
+    const placement=flags.placement??'offscreen';
+    if(!(placements as readonly string[]).includes(placement))throw new Error('Placement must be offscreen or nearby.');
+    return {type:'spawn',kind,rank:rank as EnemyRank,placement:placement as ConsoleSpawnPlacement,level,count,seed};
   }
   const kind=itemKind(subject.toLowerCase()) as ItemKind;
   if(!consoleItems.includes(kind))throw new Error('Unknown item type. Try helmet, weapon, shield, ring or charm.');
@@ -82,10 +86,10 @@ export function parseConsoleCommand(raw:string):ConsoleCommand {
 }
 export function consoleHelp(command?:ConsoleCommandName):string {
   return CONSOLE_COMMANDS.filter(c=>!command||c.id===command).map(c=>`${c.syntax}\n${c.detail}`).join('\n\n')
-    +(command==='drop'?'\n\nLevel defaults to your level. Unspecified rarity, material and affixes roll normally. Helmet is head armor.':command==='spawn'?'\n\nWithout --level, monsters use regional scaling. Spawn works in the wilderness, outside towns and dungeons.':'');
+    +(command==='drop'?'\n\nLevel defaults to your level. Unspecified rarity, material and affixes roll normally. Helmet is head armor.':command==='spawn'?'\n\nPlacement defaults to offscreen. Use --placement nearby to summon beside you. Without --level, monsters use regional scaling. Spawn works in the wilderness, outside towns and dungeons.':'');
 }
 export interface ConsoleSuggestion {label:string; detail:string; value:string; mark:string}
-const flagDetails:Record<string,string>={level:'Set an exact level',profile:'Choose an equipment profile',material:'Choose a base material',rarity:'Choose quality; keep affixes random',count:`Create 1–${CONSOLE_LIMITS.count}`,seed:'Repeat a specific random roll',rank:'Choose monster rank'};
+const flagDetails:Record<string,string>={level:'Set an exact level',profile:'Choose an equipment profile',material:'Choose a base material',rarity:'Choose quality; keep affixes random',count:`Create 1–${CONSOLE_LIMITS.count}`,seed:'Repeat a specific random roll',rank:'Choose monster rank',placement:'Choose offscreen or beside the player'};
 /** Contextual completion uses the same content and accepted flags as the parser. */
 export function consoleSuggestions(raw:string):ConsoleSuggestion[] {
   const tokens=raw.trimStart().split(/\s+/), last=tokens.at(-1)??'', prefix=raw.slice(0,raw.length-last.length);
@@ -99,6 +103,7 @@ export function consoleSuggestions(raw:string):ConsoleSuggestion[] {
     if(previous==='--profile')return complete(consoleProfiles(kind).map(p=>({id:p.id,detail:p.name})));
     if(previous==='--material'&&consoleItems.includes(kind))return complete(consoleMaterials(kind,profile).map(m=>({id:m.id,detail:ITEM_MATERIALS[m.id].name})));
     if(previous==='--rarity')return complete(rarities.map(id=>({id,detail:'Equipment quality'})));
+    if(previous==='--placement')return complete(placements.map(id=>({id,detail:id==='offscreen'?'Beyond the camera (default)':'On clear ground beside you'})));
     if(previous==='--rank')return complete(ranks.map(id=>({id,detail:'Monster rank'})));
     if(previous==='--level')return complete(['1','10','25','50','100'].map(id=>({id,detail:'Or type any level up to 1000000'})));
     if(previous==='--count')return complete(['1','3','5','10'].map(id=>({id,detail:'Number to create'})));

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseConsoleCommand, consoleSuggestions, consoleEnemies, consoleItems } from '../src/console-content.ts';
+import { parseConsoleCommand, consoleSuggestions, consoleEnemies, consoleItems, CONSOLE_LIMITS } from '../src/console-content.ts';
 import { executeConsoleCommand, type ConsoleExecution } from '../src/console-command.ts';
 import { canUseLocalConsole, isConsoleShortcut } from '../src/console-access.ts';
 import { Simulation } from '../src/simulation.ts';
@@ -42,31 +42,35 @@ test('local access requires both the build permission and local ownership, inclu
 test('parser validates every argument before dispatch and uses the runtime content catalogs',()=>{
   assert.deepEqual(parseConsoleCommand('drop helmet --level 25 --material steel --rarity rare --seed 0'),
     {type:'drop',kind:'head',level:25,count:1,seed:0,profile:undefined,material:'steel',rarity:'rare'});
-  assert.equal(parseConsoleCommand('spawn thornreaver').type,'spawn');
+  assert.deepEqual(parseConsoleCommand('spawn thornreaver'),{type:'spawn',kind:'thornReaver',rank:'normal',placement:'offscreen',level:undefined,count:1,seed:undefined});
+  assert.deepEqual(parseConsoleCommand('spawn brute --placement nearby'),{type:'spawn',kind:'brute',rank:'normal',placement:'nearby',level:undefined,count:1,seed:undefined});
   for(const raw of ['drop','spawn','drop wrong','drop helmet --level 0','drop helmet --level 1e2','drop helmet --level NaN',
     'drop helmet --level 1000001','spawn brute --count 33','spawn brute --count -1','spawn brute --seed 4294967296',
-    'spawn brute --rank boss','spawn warden','spawn briarMatriarch','spawn goblinChief','drop riftKey','drop helmet --profile longsword',
+    'hp','mp','mana','spawn brute --placement close','spawn brute --placement','spawn brute --placement nearby --placement offscreen','spawn brute --rank boss','spawn warden','spawn briarMatriarch','spawn goblinChief','drop riftKey','drop helmet --profile longsword',
     'drop weapon --material iron','drop helmet --material astralite','drop helmet --rarity unique','drop charm --material iron','drop helmet --level 2 --level 3',
-    'drop helmet --unknown 1','drop helmet --rarity','hp 20','mana --level 10','refill;alert(1)','help no','x'.repeat(241)])assert.throws(()=>parseConsoleCommand(raw),raw);
+    'drop helmet --unknown 1','drop helmet --rarity','refill-hp 20','refill-mp --level 10','refill;alert(1)','help no','x'.repeat(241)])assert.throws(()=>parseConsoleCommand(raw),raw);
   for(const kind of consoleItems)assert.equal(parseConsoleCommand(`drop ${kind}`).type,'drop');
   for(const kind of consoleEnemies)assert.equal(parseConsoleCommand(`spawn ${kind}`).type,'spawn');
 });
 test('suggestions cover command names, partial tokens, item-specific flags and runtime values',()=>{
-  assert.ok(consoleSuggestions('ma').some(s=>s.value==='mana'));
+  assert.ok(consoleSuggestions('refill-m').some(s=>s.value==='refill-mp'));
   assert.ok(consoleSuggestions('help sp').some(s=>s.value==='help spawn '||s.value==='help spawn'));
   assert.equal(consoleSuggestions('drop hel')[0].value,'drop helmet ');
   assert.ok(consoleSuggestions('drop helmet --material ste').some(s=>s.value==='drop helmet --material steel '));
   assert.ok(consoleSuggestions('drop weapon --profile long').some(s=>s.label==='longsword'));
+  assert.deepEqual(consoleSuggestions('spawn brute --placement ').map(s=>s.label),['offscreen','nearby']);
+  assert.equal(consoleSuggestions('spawn brute --placement ne')[0].value,'spawn brute --placement nearby ');
+  assert.ok(consoleSuggestions('spawn brute --placement nearby ').every(s=>s.label!=='--placement'));
   assert.ok(consoleSuggestions('spawn bri').every(s=>s.label!=='briarMatriarch'));
   assert.ok(consoleSuggestions('drop helmet --level 25 ').every(s=>s.label!=='--level'));
-  assert.equal(consoleSuggestions('hp ').length,0);
+  assert.equal(consoleSuggestions('refill-hp ').length,0);
 });
 test('help and denied commands never save, allocate identities or change state',async()=>{
   const {sim,context}=await setup();let called=0;
   context.persist=async()=>{called++;return {ok:true};};context.seed=context.identity=()=>{throw new Error('No RNG expected');};
   const before=sim.captureCheckpoint();assert.equal((await executeConsoleCommand(sim,'help drop',context)).ok,true);
   context.allowed=()=>false;
-  for(const raw of ['drop helmet','spawn brute','hp','mana','refill','help'])assert.equal((await executeConsoleCommand(sim,raw,context)).ok,false);
+  for(const raw of ['drop helmet','spawn brute','refill-hp','refill-mp','refill','help'])assert.equal((await executeConsoleCommand(sim,raw,context)).ok,false);
   assert.equal(called,0);assert.deepEqual(sim.captureCheckpoint(),before);
 });
 test('targeted drops retain normal rolled stats, animate, save and receive independent physical identities',async()=>{
@@ -84,7 +88,7 @@ test('targeted drops retain normal rolled stats, animate, save and receive indep
   for(const drop of sim.groundItems.slice(2)){assert.equal(drop.item.weapon!.id,drop.item.id);assert.equal(drop.item.recipe.profileId,'longsword');}
 });
 test('failed or pending saves leave resources, drops, actors, RNG and identity allocation untouched',async()=>{
-  for(const raw of ['hp','mana','refill','drop helmet --count 3','spawn brute --count 3']){
+  for(const raw of ['refill-hp','refill-mp','refill','drop helmet --count 3','spawn brute --count 3','spawn brute --count 3 --placement nearby']){
     const {sim,context}=await setup();sim.player.hp=10;sim.player.mana=3;
     const before=sim.captureCheckpoint(), id=sim.nextEntityIdentity;
     let finish!:(result:{ok:boolean;message?:string})=>void;
@@ -99,9 +103,9 @@ test('failed or pending saves leave resources, drops, actors, RNG and identity a
 });
 test('resource commands refill only requested resources, respect aura reservations and do not change cooldowns or charges',async()=>{
   const {sim,context,repo}=await setup(),p=sim.player;p.hp=5;p.mana=2;p.flasks=0;p.healCooldown=.5;
-  assert.equal((await executeConsoleCommand(sim,'hp',context)).ok,true);assert.equal(p.hp,p.maxHp);assert.equal(p.mana,2);
+  assert.equal((await executeConsoleCommand(sim,'refill-hp',context)).ok,true);assert.equal(p.hp,p.maxHp);assert.equal(p.mana,2);
   p.hp=7;p.auras!.reservation=40;
-  assert.equal((await executeConsoleCommand(sim,'mana',context)).ok,true);assert.equal(p.hp,7);assert.equal(p.mana,manaCapacity(p));
+  assert.equal((await executeConsoleCommand(sim,'refill-mp',context)).ok,true);assert.equal(p.hp,7);assert.equal(p.mana,manaCapacity(p));
   p.mana=1;assert.equal((await executeConsoleCommand(sim,'refill',context)).ok,true);
   assert.equal(p.hp,p.maxHp);assert.equal(p.mana,manaCapacity(p));assert.equal(p.flasks,0);assert.equal(p.healCooldown,.5);
   assert.equal(repo.read(0).record!.checkpoint.mana,p.mana);
@@ -123,7 +127,9 @@ test('spawned monsters retain level, rank, source stats and loot after save/load
 test('spawn placement fails atomically for towns, blocked terrain, missing cameras and dungeons',async()=>{
   for(const customWorld of [{...world,isSanctuary:()=>true},{...world,blocked:()=>true},{...world,dungeonLevel:12}]){
     const {sim,context}=await setup(customWorld);let saved=false;context.persist=async()=>{saved=true;return {ok:true};};
-    assert.equal((await executeConsoleCommand(sim,'spawn brute --count 3',context)).ok,false);assert.equal(saved,false);assert.equal(sim.enemies.length,0);
+    for(const placement of ['offscreen','nearby']){
+      assert.equal((await executeConsoleCommand(sim,`spawn brute --count 3 --placement ${placement}`,context)).ok,false);assert.equal(saved,false);assert.equal(sim.enemies.length,0);
+    }
   }
   const {sim,context}=await setup();context.view=null;assert.equal((await executeConsoleCommand(sim,'spawn brute',context)).ok,false);
   context.view={...view,width:NaN};assert.equal((await executeConsoleCommand(sim,'spawn brute',context)).ok,false);
@@ -131,7 +137,7 @@ test('spawn placement fails atomically for towns, blocked terrain, missing camer
 test('all mutations pass a complete checkpoint to persistence before live commitment',async()=>{
   const {sim,context}=await setup();let saved:CharacterCheckpoint|undefined;const oldHp=sim.player.hp=5;
   context.persist=async checkpoint=>{assert.equal(sim.player.hp,oldHp);saved=checkpoint;return {ok:true};};
-  assert.equal((await executeConsoleCommand(sim,'hp',context)).ok,true);assert.equal(saved!.hp,sim.player.maxHp);
+  assert.equal((await executeConsoleCommand(sim,'refill-hp',context)).ok,true);assert.equal(saved!.hp,sim.player.maxHp);
 });
 
 test('repeating a seeded monster after save/load yields distinct physical loot with identical rolls',async()=>{
@@ -158,4 +164,37 @@ test('repeating a seeded monster after save/load yields distinct physical loot w
   assert.equal(validActors([{...storedActor(a),lootIdentity:'x'.repeat(81)}]),false);
   assert.ok(consoleSuggestions('drop helmet ').every(s=>s.label!=='--profile'));
   assert.ok(consoleSuggestions('drop charm ').every(s=>s.label!=='--material'));
+});
+
+
+test('nearby placement admits visible monsters, avoids player and actors, and persists the whole group',async()=>{
+  const {sim,context,repo}=await setup({...world,blocked:(_x,y)=>y<0});
+  const existing=sim.spawnEnemy('hound',70,0)!;
+  const before=structuredClone(existing), id=sim.nextEntityIdentity;
+  const result=await executeConsoleCommand(sim,'spawn brute --placement nearby --level 20 --count 5',context);
+  assert.equal(result.ok,true,result.message);assert.match(result.message!,/nearby/);
+  assert.deepEqual(existing,before);assert.equal(sim.nextEntityIdentity,id+5);
+  for(const e of sim.enemies.slice(1)){
+    const distance=Math.hypot(e.x-sim.player.x,e.y-sim.player.y);
+    assert.ok(distance<=CONSOLE_LIMITS.nearbyRadius);assert.ok(distance>=sim.player.radius+e.radius+12);
+    assert.ok(e.y>=0);assert.equal(isSpawnHidden(e.x,e.y,view,e.radius),false);
+    assert.equal(e.level,20);
+    for(const other of sim.enemies)if(other!==e)assert.ok(Math.hypot(e.x-other.x,e.y-other.y)>=e.radius+other.radius+12);
+  }
+  const restored=new Simulation(world,{spawn:false});restored.restoreCheckpoint(repo.read(0).record!.checkpoint);
+  assert.deepEqual(restored.enemies.map(storedActor),sim.enemies.map(storedActor));
+});
+test('nearby placement never falls back to distant ground and rolls back an incomplete group',async()=>{
+  // Permit only one candidate beside the player, plus distant ground that must stay unused.
+  const customWorld={...world,blocked:(x:number,y:number)=>Math.hypot(x,y)<=CONSOLE_LIMITS.nearbyRadius&&Math.hypot(x-66,y)>5};
+  const single=await setup(customWorld);
+  const one=await executeConsoleCommand(single.sim,'spawn brute --placement nearby',single.context);
+  assert.equal(one.ok,true,one.message);
+  const {sim,context}=await setup(customWorld);
+  let saves=0;context.persist=async()=>{saves++;return {ok:true};};
+  const before=sim.captureCheckpoint(),id=sim.nextEntityIdentity;
+  const result=await executeConsoleCommand(sim,'spawn brute --placement nearby --count 2',context);
+  assert.equal(result.ok,false);assert.match(result.message!,/No clear nearby space/);
+  assert.equal(saves,0);assert.deepEqual(sim.captureCheckpoint(),before);assert.equal(sim.nextEntityIdentity,id);
+  assert.equal(sim.captureCheckpoint().randomState,before.randomState);
 });

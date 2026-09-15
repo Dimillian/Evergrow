@@ -33,11 +33,11 @@ export async function executeConsoleCommand(sim:Simulation, raw:string, context:
     if(sim.player.dead)return {ok:false,message:'Return to the refuge before using commands.'};
     const p=sim.player, checkpoint=sim.captureCheckpoint();
     let commit:()=>void, message:string;
-    if(command.type==='hp'||command.type==='mana'||command.type==='refill') {
-      const hp=command.type!=='mana'?p.maxHp:p.hp, mana=command.type!=='hp'?manaCapacity(p):p.mana;
+    if(command.type==='refill-hp'||command.type==='refill-mp'||command.type==='refill') {
+      const hp=command.type!=='refill-mp'?p.maxHp:p.hp, mana=command.type!=='refill-hp'?manaCapacity(p):p.mana;
       checkpoint.hp=hp;checkpoint.mana=mana;
       commit=()=>{p.hp=hp;p.mana=mana;};
-      message=command.type==='hp'?'Health refilled.':command.type==='mana'?'Available mana refilled.':'Health and available mana refilled.';
+      message=command.type==='refill-hp'?'Health refilled.':command.type==='refill-mp'?'Available mana refilled.':'Health and available mana refilled.';
     } else if(command.type==='drop') {
       const seed=command.seed??context.seed(), identity=context.identity(), next=sim.nextEntityIdentity;
       const items=[];
@@ -57,15 +57,17 @@ export async function executeConsoleCommand(sim:Simulation, raw:string, context:
       const view=context.view;
       if(!view||![view.x,view.y,view.width,view.height].every(Number.isFinite)||view.width<=0||view.height<=0)return {ok:false,message:'Wait for the world camera before spawning monsters.'};
       const radius=ENEMY_DEFINITIONS[command.kind].radius, next=sim.nextEntityIdentity, seed=command.seed??context.seed();
-      const centerDistance=Math.max(view.width,view.height)*.5+220;
+      const nearby=command.placement==='nearby';
+      const centerDistance=nearby?p.radius+radius+40:Math.max(view.width,view.height)*.5+220;
       const center={x:p.x+Math.cos(p.angle)*centerDistance,y:p.y+Math.sin(p.angle)*centerDistance};
-      const retireDistance=Math.max(ENCOUNTER_RULES.despawnDistance,Math.hypot(view.width,view.height)*.5+ROAMING_RULES.retirementMargin)-32;
+      const maxDistance=nearby?CONSOLE_LIMITS.nearbyRadius:Math.max(ENCOUNTER_RULES.despawnDistance,Math.hypot(view.width,view.height)*.5+ROAMING_RULES.retirementMargin)-32;
       const enemies:Enemy[]=[], identity=context.identity();
       for(let attempt=0;attempt<CONSOLE_LIMITS.candidates&&enemies.length<command.count;attempt++) {
         const angle=attempt*2.399963, distance=Math.sqrt(attempt)*(radius*2+12);
         const x=center.x+Math.cos(angle)*distance,y=center.y+Math.sin(angle)*distance;
-        if(Math.abs(x)>4e7||Math.abs(y)>4e7||Math.hypot(x-p.x,y-p.y)>retireDistance
-          ||!isSpawnHidden(x,y,view,radius)||sim.world.isSanctuary?.(x,y)||sim.world.blocked(x,y,radius+6)
+        const playerDistance=Math.hypot(x-p.x,y-p.y);
+        if(Math.abs(x)>4e7||Math.abs(y)>4e7||playerDistance>maxDistance||playerDistance<p.radius+radius+12
+          ||(!nearby&&!isSpawnHidden(x,y,view,radius))||sim.world.isSanctuary?.(x,y)||sim.world.blocked(x,y,radius+6)
           ||[...sim.enemies,...enemies].some(e=>e.hp>0&&Math.hypot(e.x-x,e.y-y)<e.radius+radius+12))continue;
         const lootSeed=(seed+Math.imul(enemies.length,0x9e3779b9))>>>0;
         const level=command.level??encounterMemberLevel(encounterScaleAt(x,y,sim.world.seed,p.level),command.rank,lootSeed);
@@ -73,11 +75,11 @@ export async function executeConsoleCommand(sim:Simulation, raw:string, context:
           biome:(sim.world.sampleBiome?.(x,y)??sampleBiome(x,y)).id,
           idleDuration:ENCOUNTER_RULES.initialIdleMin+(lootSeed/4294967296)*ENCOUNTER_RULES.initialIdleRange}));
       }
-      if(enemies.length!==command.count)return {ok:false,message:'No clear offscreen space for this group. Move to open ground or request fewer monsters.'};
+      if(enemies.length!==command.count)return {ok:false,message:`No clear ${nearby?'nearby':'offscreen'} space for this group. Move to open ground or request fewer monsters.`};
       checkpoint.actors=[...(checkpoint.actors??[]),...enemies.map(storedActor)];
       commit=()=>{sim.enemies.push(...enemies);sim.reserveIdentity(next+enemies.length);};
       const dx=enemies[0].x-p.x,dy=enemies[0].y-p.y, direction=Math.abs(dx)>Math.abs(dy)?dx>0?'east':'west':dy>0?'south':'north';
-      message=`Spawned ${enemies.length} ${ENEMY_DEFINITIONS[command.kind].name} (${command.rank}) to the ${direction}, beyond the camera.`;
+      message=`Spawned ${enemies.length} ${ENEMY_DEFINITIONS[command.kind].name} (${command.rank}) to the ${direction}, ${nearby?'nearby':'beyond the camera'}.`;
     }
     if(!context.allowed())return {ok:false,message:'Local command access changed. Nothing was changed.'};
     const saved=await context.persist(checkpoint);
