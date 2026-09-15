@@ -933,7 +933,7 @@ export class Renderer {
     }
     for (const shot of sim.projectiles) {
       const { x, y } = projectilePresentation(shot, alpha);
-      drawProjectile(c, shot, x, y, reducedMotion && shot.effects?.style === 'radiant' ? 0 : this.visualTime);
+      drawProjectile(c, shot, x, y, reducedMotion ? 0 : this.visualTime, reducedMotion);
     }
   }
 

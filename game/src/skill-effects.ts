@@ -1,3 +1,4 @@
+import { drawFireImpact, drawFrostBloom } from './elemental-spell-art.ts';
 import { drawLightning, lightningLight } from './chain-lightning-art.ts';
 import type { CombatEvent, Enemy, ProjectileStyle } from './model.ts';
 import type { PointLight } from './lighting.ts';
@@ -7,7 +8,7 @@ import { PROJECTILE_COLORS } from './projectile-art.ts';
 
 interface Area {
   x: number; y: number; radius: number; life: number; max: number; color: string;
-  style: ProjectileStyle; kind: 'blast' | 'block'; seed: number; meteor: boolean; earth: boolean;
+  style: ProjectileStyle; kind: 'blast' | 'block'; seed: number; meteor: boolean; earth: boolean; frostSpell: boolean; fireSpell: boolean; ultimate: boolean;
 }
 interface Link { travel: number; seed: number; targetId?: number; points: Point[]; life: number; max: number; color: string; style: ProjectileStyle; }
 const TAU = Math.PI * 2;
@@ -43,7 +44,7 @@ export class SkillEffects {
       const meteor = event.type === 'blast' && event.groundKind === 'meteor';
       const max = meteor ? 1.15 : event.type === 'block' ? .32 : style === 'frost' ? .7 : .56;
       this.areas.push({ x: event.x, y: event.y, radius: event.type === 'block' ? 22 : bounds(event.radius, 8, 512, 55),
-        life: max, max, style, color, kind: event.type, meteor, earth: event.skill === 'earthshatter', seed: this.sequence++ });
+        life: max, max, style, color, kind: event.type, meteor, earth: event.skill === 'earthshatter', frostSpell: ['iceNova','absoluteZero','frostLance'].includes(event.skill ?? ''), fireSpell: event.skill === 'fireball', ultimate: event.skill === 'absoluteZero', seed: this.sequence++ });
       if (this.areas.length > 20) this.areas.shift();
     }
   }
@@ -149,22 +150,13 @@ export class SkillEffects {
       c.beginPath(); c.arc(0,0,area.radius * (reducedMotion ? 1 : .65 + progress * .35),0,TAU); c.stroke();
       c.restore(); return;
     }
-    if (area.meteor) {
-      c.globalCompositeOperation = 'source-over';
-      c.globalAlpha = life * .22; c.fillStyle = '#292321';
-      c.beginPath(); c.arc(0, 0, area.radius * (.65 + progress * .35), 0, TAU); c.fill();
-      c.globalCompositeOperation = 'lighter';
-      // Rolling pressure front and tall flame crown, not another persistent damage pulse.
-      const spread = reducedMotion ? .8 : 1 - Math.pow(life, 4);
-      c.strokeStyle = '#ffc77e'; c.lineWidth = 2 + life * 10; c.globalAlpha = life * .55;
-      c.beginPath(); c.arc(0, 0, area.radius * spread, 0, TAU); c.stroke();
-      for (let i = 0; i < 11; i++) {
-        const x = Math.sin(i * 2.4) * area.radius * spread * .65;
-        const y = Math.cos(i * 2.4) * area.radius * spread * .35;
-        const height = reducedMotion ? 15 : (35 + i % 4 * 17) * Math.sin(Math.PI * Math.min(1, progress * 1.5));
-        c.globalAlpha = life * .5;
-        polygon(c, [[x - 10 * life, y], [x - 7, y - height * .5], [x + 3, y - height], [x + 12 * life, y]], i % 2 ? '#ff853d' : '#ffce79');
-      }
+    if (area.frostSpell) {
+      drawFrostBloom(c, area.radius, life, area.seed, reducedMotion, area.ultimate);
+      c.restore(); return;
+    }
+    if (area.meteor || area.fireSpell) {
+      drawFireImpact(c, area.radius, life, area.seed, reducedMotion, area.meteor);
+      c.restore(); return;
     }
     const radius = area.radius * (reducedMotion ? 1 : 1 - Math.pow(life, 3));
     c.globalCompositeOperation = 'lighter';
