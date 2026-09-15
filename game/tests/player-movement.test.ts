@@ -6,6 +6,8 @@ import type { Building, Rect } from '../src/settlements.ts';
 import type { Input, WorldQuery } from '../src/model.ts';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
 import { DungeonGeometry, type DungeonFloor, type Room } from '../src/dungeon.ts';
+import { padStick } from '../src/gamepad-input.ts';
+import { playerPose } from '../src/character-pose.ts';
 
 class Obstacles extends WorldLandscape {
   props: Prop[] = [];
@@ -152,6 +154,37 @@ test('position, direction, radius, world and clock changes invalidate failed sea
   }
 });
 
+test('small controller variations reuse failures while retaining ordinary collision checks', () => {
+  for (const jitter of [.001, .01]) {
+    const { world, calls } = countedWall();
+    const sim = new Simulation(world, { spawn: false, startX: -9, startY: 0 });
+    for (let tick = 0; tick < 240; tick++) {
+      const stick = padStick(.8, tick % 2 ? jitter : -jitter);
+      sim.update(FIXED_STEP, { ...input, moveX: stick.x, moveY: stick.y });
+      assert.ok(!world.blocked(sim.player.x, sim.player.y, sim.player.radius));
+    }
+    assert.ok(calls.move >= 240 && calls.move < 1000, `bounded searches with controller variation ${jitter}: ${calls.move}`);
+    assert.equal(sim.player.x, -9);
+  }
+});
+
+test('cache tolerances stay anchored to the original failure during gradual movement or turning', () => {
+  for (const change of ['position', 'heading']) {
+    const { world, calls } = countedWall(), movement = new PlayerMovement();
+    movement.move(world, -9, 0, 1, 0, 9, 0);
+    calls.move = 0;
+    for (let i = 1; i <= 2; i++) {
+      movement.move(world, -9, change === 'position' ? .1 * i : 0,
+        1, change === 'heading' ? Math.tan(i * .8 * Math.PI / 180) : 0, 9, .01 * i);
+    }
+    assert.equal(calls.move, 2, 'small cumulative changes still reuse the initial failure');
+    calls.move = 0;
+    movement.move(world, -9, change === 'position' ? .3 : 0,
+      1, change === 'heading' ? Math.tan(2.4 * Math.PI / 180) : 0, 9, .03);
+    assert.ok(calls.move > 1, `${change} leaves the original tolerance region`);
+  }
+});
+
 test('ordinary movement sees newly cleared ground immediately, even with a cached failure', () => {
   const { world, wall } = countedWall(), movement = new PlayerMovement();
   movement.move(world, -9, 0, 1, 0, 9, 0);
@@ -219,4 +252,59 @@ test('simulation assists walking, leaves dodge on its original path, and stops a
   for (let i = 0; i < 30; i++) released.update(FIXED_STEP, { ...input, moveX: 0 });
   assert.equal(released.player.y, 18);
   assert.equal(released.player.vx, 0);
+});
+
+test('slide poses follow actual displacement while input velocity keeps its original heading', () => {
+  const { world, wall } = countedWall(); wall.height = 100;
+  const sim = new Simulation(world, { spawn: false, startX: -9, startY: -2 });
+  for (let tick = 0; tick < 60; tick++) {
+    const before = { x: sim.player.x, y: sim.player.y };
+    sim.update(FIXED_STEP, input);
+    const dx = sim.player.x - before.x, dy = sim.player.y - before.y, pose = playerPose(sim.player, sim.time);
+    assert.ok(Math.abs(pose.moveAngle! - Math.atan2(dy, dx)) < 1e-9);
+    assert.ok(Math.abs(pose.moving - Math.min(1, Math.hypot(dx, dy) / FIXED_STEP / 130)) < 1e-9);
+    assert.equal(sim.player.vy, 0, 'presentation cannot feed correction back into input smoothing');
+    if (tick === 0) {
+      assert.equal(dx, 0); assert.ok(dy > 0);
+      assert.equal(pose.moveAngle, Math.PI / 2, 'perpendicular correction animates in the actual direction');
+    }
+  }
+});
+
+test('blocked, stopped, reset and restored players have no stale locomotion pose', () => {
+  const { world, wall } = countedWall();
+  const sim = new Simulation(world, { spawn: false, startX: -9, startY: 0 });
+  sim.update(FIXED_STEP, input);
+  assert.ok(sim.player.vx > 0);
+  assert.equal(playerPose(sim.player, sim.time).moving, 0, 'pressing against a wall does not animate walking');
+  wall.x = 100;
+  sim.update(FIXED_STEP, input);
+  assert.ok(playerPose(sim.player, sim.time).moving > 0);
+  const saved = sim.captureCheckpoint();
+  assert.ok(!('locomotionVX' in saved) && !('locomotionVY' in saved), 'locomotion is transient');
+  sim.clearInput();
+  assert.equal(playerPose(sim.player, sim.time).moving, 0);
+  sim.restoreCheckpoint(saved);
+  assert.equal(playerPose(sim.player, sim.time).moving, 0);
+  sim.update(FIXED_STEP, input);
+  sim.relocate(-50, 0);
+  assert.equal(playerPose(sim.player, sim.time).moving, 0);
+  sim.update(FIXED_STEP, input);
+  sim.reset();
+  assert.equal(playerPose(sim.player, sim.time).moving, 0);
+});
+
+test('dash and dodge poses follow their resolved travel without changing their control velocities', () => {
+  for (const action of ['dash', 'dodge']) {
+    const geometry = new Obstacles(), sim = new Simulation(geometry, { spawn: false });
+    if (action === 'dash') sim.player.dash = { angle: Math.PI / 2, speed: 300, remaining: .1,
+      damage: 0, radius: 9, skill: 'lunge', hitIds: new Set() };
+    else { sim.player.dodgeAngle = Math.PI / 2; sim.player.dodgeTime = .1; }
+    sim.update(FIXED_STEP, { ...input, moveX: 0 });
+    const pose = playerPose(sim.player, sim.time);
+    assert.ok(Math.abs(pose.moveAngle! - Math.PI / 2) < 1e-9);
+    assert.equal(pose.moving, 1);
+    if (action === 'dash') assert.equal(sim.player.vy, 0, 'dashes keep their separate movement owner');
+    else assert.ok(sim.player.vy > 0);
+  }
 });

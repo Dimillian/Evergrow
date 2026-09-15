@@ -5,11 +5,13 @@ import { WORLD_QUERY_LIMITS, isWorldCoordinate } from './world-query.ts';
 export const PLAYER_EDGE_SLIDE = Object.freeze({
   reach: 18, probeSpacing: 3, forwardReach: 13, step: 4, sidewaysSpeed: .65, usefulProgress: .45,
   failedSearchRetry: .125,
+  failedSearchDistance: .25, failedSearchAngle: Math.PI / 90,
 });
 const TURNS = [15, 30, 45, 60, 75, 90].map(degrees => ({
   cos: Math.cos(degrees * Math.PI / 180), sin: Math.sin(degrees * Math.PI / 180),
 }));
 const EPSILON = 1e-6;
+const FAILED_SEARCH_HEADING_DOT = Math.cos(PLAYER_EDGE_SLIDE.failedSearchAngle);
 const arrived = (p: { x: number; y: number }, x: number, y: number) =>
   Math.abs(p.x - x) < EPSILON && Math.abs(p.y - y) < EPSILON;
 
@@ -43,8 +45,11 @@ export class PlayerMovement {
       const progress = (ordinary.x - x) * ux + (ordinary.y - y) * uy;
       if (progress >= step * PLAYER_EDGE_SLIDE.usefulProgress) { this.clear(); x = ordinary.x; y = ordinary.y; continue; }
       const failed = this.failed;
-      if (failed && failed.world === world && arrived(failed, x, y) && failed.radius === radius
-        && Math.abs(failed.ux - ux) < EPSILON && Math.abs(failed.uy - uy) < EPSILON
+      // Compare to the original failure, not the last cache hit: slow movement or
+      // gradual steering must eventually leave this small tolerance region.
+      if (failed && failed.world === world && failed.radius === radius
+        && (failed.x - x) ** 2 + (failed.y - y) ** 2 <= PLAYER_EDGE_SLIDE.failedSearchDistance ** 2
+        && failed.ux * ux + failed.uy * uy >= FAILED_SEARCH_HEADING_DOT
         && time >= failed.time && time - failed.time < PLAYER_EDGE_SLIDE.failedSearchRetry) {
         x = ordinary.x; y = ordinary.y; continue;
       }
