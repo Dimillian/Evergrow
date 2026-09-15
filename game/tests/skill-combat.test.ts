@@ -304,9 +304,11 @@ test('ranked forked fireballs snapshot three stronger projectiles and their actu
 test('Storm Circuit can revisit two enemies for eight bounded jumps with diminishing damage',()=>{
   const h=harness('arcLightning'); h.context.aimX=40; h.target(40); h.target(90);
   h.player.character.allocatedNodes.push('specialization:arc-circuit'); h.player.character.skillSpecializations.arcLightning='arc-circuit';
+  const mana=h.player.mana;
   assert.ok(activateSkill(h.context,0)); h.settle(); assert.equal(h.hits.length,8);
+  close(mana-h.player.mana,SKILL_DEFINITIONS.arcLightning.manaCost*1.35);
   assert.equal(new Set(h.hits.map(h=>h.enemy.id)).size,2);
-  for(let i=1;i<h.hits.length;i++) close(h.hits[i].amount,h.hits[i-1].amount*.7);
+  for(let i=1;i<h.hits.length;i++) close(h.hits[i].amount,h.hits[i-1].amount*.78);
 });
 
 test('Echoing Frost schedules its second impact and Cataclysm schedules seven staggered meteors',()=>{

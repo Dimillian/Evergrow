@@ -77,7 +77,7 @@ export const SKILL_SPECIALIZATIONS: readonly SkillSpecialization[] = Object.free
   spec('backstab-rear', 'backstab', 'Executioner', 'Rear strikes deal 3× instead of 2× damage; other hits deal 15% less. Costs 70% more mana.', 1.7, .85),
   spec('fireball-fork', 'fireball', 'Forked Flame', 'Three fireballs, each dealing 35% less damage. Costs 80% more mana.', 1.8, .65),
   spec('fireball-ember', 'fireball', 'Living Ember', 'Explosions leave burning ground for three seconds. Costs 65% more mana.', 1.65),
-  spec('arc-circuit', 'arcLightning', 'Storm Circuit', 'Three extra jumps may revisit targets at reduced damage. Costs 70% more mana.', 1.7),
+  spec('arc-circuit', 'arcLightning', 'Storm Circuit', 'Three extra jumps may revisit targets; each jump retains 78% damage. Costs 35% more mana.', 1.35),
   spec('arc-focus', 'arcLightning', 'Concentrated Current', '60% more damage, but only three targets. Costs 45% more mana.', 1.45, 1.6),
   spec('nova-echo', 'iceNova', 'Echoing Frost', 'A second nova expands after 0.6 seconds at 60% damage. Costs 70% more mana.', 1.7),
   spec('nova-deep', 'iceNova', 'Deep Winter', '30% more radius and a stronger, longer slow; 15% less damage. Costs 40% more mana.', 1.4, .85),
@@ -193,7 +193,7 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
     if (v === 'fireball-ember') recipe.effects = { ...recipe.effects, groundDuration: 3, groundDamageMultiplier: .24 };
   }
   if (recipe.kind === 'chain') {
-    if (v === 'arc-circuit') { recipe.jumps = 8; recipe.revisit = true; recipe.falloff = .7; }
+    if (v === 'arc-circuit') { recipe.jumps = 8; recipe.revisit = true; }
     if (v === 'arc-focus') recipe.jumps = 3;
   }
   if (recipe.kind === 'radial') {
