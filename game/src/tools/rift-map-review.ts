@@ -128,7 +128,7 @@ export function mountRiftMapReview(root:HTMLElement,params:URLSearchParams):()=>
     root.querySelector('[data-summary]')!.textContent=`Seed ${seed} · ${RIFT_FIELD.packs} packs · ${counts[0]} normal · ${counts[1]} champions · ${counts[2]} elites + guardian`;
     const url=new URL(location.href);url.searchParams.set('view','map');if(cleared)url.searchParams.set('cleared','');else url.searchParams.delete('cleared');if(animate)url.searchParams.set('atmosphere','');else url.searchParams.delete('atmosphere');url.searchParams.set('progress',String(progress));url.searchParams.set('layout',layout);url.searchParams.set('encounter',encounter);url.searchParams.set('seed',String(seed));url.searchParams.set('biome',biome);if(arrival)url.searchParams.set('arrival','');else url.searchParams.delete('arrival');if(scene)url.searchParams.set('scene','pack');else url.searchParams.delete('scene');history.replaceState(null,'',url);
   };
-  root.querySelector('[data-atmosphere]')!.addEventListener('click',()=>{animate=!animate;cleared=false;scene=true;arrival=false;cleared=false;draw();},{signal:life.signal});
+  root.querySelector('[data-atmosphere]')!.addEventListener('click',()=>{animate=!animate;cleared=false;scene=true;arrival=false;draw();},{signal:life.signal});
   root.querySelector('[aria-label="Rift progress"]')!.addEventListener('change',e=>{progress=Number((e.target as HTMLSelectElement).value);scene=true;arrival=false;cleared=false;draw();},{signal:life.signal});
   root.querySelector('[aria-label=Encounter]')!.addEventListener('change',e=>{encounter=(e.target as HTMLSelectElement).value;scene=true;arrival=false;cleared=false;draw();},{signal:life.signal});
   root.querySelector('select')!.addEventListener('change',e=>{biome=(e.target as HTMLSelectElement).value as BiomeId;draw();},{signal:life.signal});
@@ -136,7 +136,7 @@ export function mountRiftMapReview(root:HTMLElement,params:URLSearchParams):()=>
   root.querySelector('[data-next]')!.addEventListener('click',()=>{seed=(seed+731991)>>>0;draw();},{signal:life.signal});
   root.querySelector('[data-scene]')!.addEventListener('click',()=>{arrival=false;cleared=false;scene=!scene;draw();},{signal:life.signal});
   root.querySelector('[data-arrival]')!.addEventListener('click',()=>{cleared=false;arrival=true;scene=true;draw();},{signal:life.signal});
-  root.querySelector('[data-cleared]')!.addEventListener('click',()=>{arrival=false;cleared=true;scene=true;draw();},{signal:life.signal});
+  root.querySelector('[data-cleared]')!.addEventListener('click',()=>{arrival=false;animate=false;cleared=true;scene=true;draw();},{signal:life.signal});
   root.querySelector('[data-profile]')!.addEventListener('click',async()=>{
     if(!scene||animate){animate=false;scene=true;draw();}
     const serial=++epoch,button=root.querySelector<HTMLButtonElement>('[data-profile]')!,output=root.querySelector<HTMLOutputElement>('[data-profile-result]')!;

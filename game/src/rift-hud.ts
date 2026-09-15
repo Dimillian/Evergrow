@@ -9,5 +9,5 @@ export function drawRiftHUD(c:CanvasRenderingContext2D,run:DungeonRun,width:numb
   const label=r.phase==='hunt'?'Cull the rift':r.phase==='boss'?(r.guardian&&r.elapsed-r.guardian.at<RIFT_RULES.guardianArrival?'Guardian arriving':'Slay the guardian'):r.phase==='complete'?'Rift cleared':'Rift failed';
   text(c,label,x+12,y+17,.9,'#ebc6d7');text(c,r.phase==='complete'?clearTimeClock:clock,x+w-12,y+17,1,r.phase==='complete'?'#e1dbe4':seconds<60?'#f7959e':'#e1dbe4','right');
   c.fillStyle='#32243a';c.fillRect(x+12,y+32,w-24,5);c.fillStyle='#d47baf';c.fillRect(x+12,y+32,(w-24)*r.points/RIFT_RULES.progress,5);
-  text(c,r.phase==='hunt'?`${r.points} / ${RIFT_RULES.progress}`:r.phase==='complete'?'Collect your rewards · Return to town':'Guardian marked on your map',x+12,y+54,.75,'#bbbecd');c.restore();
+  text(c,r.phase==='hunt'?`${r.points} / ${RIFT_RULES.progress}`:r.phase==='complete'?'Collect your rewards · Return to town':r.phase==='failed'?'Returning to town':'Guardian marked on your map',x+12,y+54,.75,'#bbbecd');c.restore();
 }

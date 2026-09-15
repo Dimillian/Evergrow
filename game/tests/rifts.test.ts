@@ -105,8 +105,8 @@ test('successful chest is atomic, guaranteed key, exactly once, and survives sav
  const m=floor.members.find(m=>m.id==='warden')!,boss=sim.spawnEnemy(m.kind,m.x,m.y,m.rank,{campId:run.entrance.id,memberId:m.id,lootSeed:m.seed,level:25})!;boss.hp=0;run.states.warden.hp=0;riftKill(sim,boss);
  assert.equal(run.rift!.phase,'complete');assert.equal(sim.expeditions.rifts!.clears,1);assert.equal(sim.expeditions.rifts!.best[0].seconds,405);
  sim.player.x=floor.chests[2].x;sim.player.y=floor.chests[2].y;
- assert.equal(dungeonChestProblem(sim,2),null);assert.equal((await claimDungeonChest(sim,2,()=>({ok:false,message:'disk'}))).ok,false);assert.equal(sim.groundItems.length,0);assert.equal(run.rift!.claimed,false);
- assert.equal((await claimDungeonChest(sim,2,ok)).ok,true);assert.equal(sim.groundItems.filter(d=>d.item.kind==='riftKey').length,1);assert.ok(sim.groundItems.length>=9);assert.ok(sim.groundGold.length);
+ assert.equal(dungeonChestProblem(sim,2),null);const failed=await claimDungeonChest(sim,2,()=>({ok:false,message:'disk'}));assert.equal(failed.ok,false);assert.equal(failed.celebration,undefined);assert.equal(sim.groundItems.length,0);assert.equal(run.rift!.claimed,false);
+ const claimed=await claimDungeonChest(sim,2,ok);assert.equal(claimed.ok,true);assert.deepEqual(claimed.celebration,{type:'blast',x:boss.x,y:boss.y,radius:110,duration:.7,color:'#ef739d'});assert.equal(sim.groundItems.filter(d=>d.item.kind==='riftKey').length,1);assert.ok(sim.groundItems.length>=9);assert.ok(sim.groundGold.length);
  assert.equal((await claimDungeonChest(sim,2,ok)).ok,false);const checkpoint=sim.captureCheckpoint();assert.ok(validExpeditions(checkpoint.expeditions));
  const saved=decodeCharacterSave(JSON.stringify({version:4,id:'test',name:'Rift',worldSeed:7319,worldVersion:10,createdAt:1,updatedAt:2,checkpoint}));assert.ok(saved,'complete checkpoint validates');assert.ok(decodeCharacterSave(JSON.stringify(saved)),'decoded keys remain valid on the next save');
 });
@@ -156,10 +156,10 @@ test('a crowded reward floor preserves dropped items and retries only outstandin
  boss.hp=0;riftKill(sim,boss);sim.player.x=floor.chests[2].x;sim.player.y=floor.chests[2].y;
  sim.groundItems=Array.from({length:LOOT_RULES.maxGroundItems},(_,i)=>({id:1000+i,x:sim.player.x,y:sim.player.y,item:createRiftKey(i,25)}));
  const original=structuredClone(sim.groundItems);
- assert.equal((await claimDungeonChest(sim,2,ok)).ok,true); // Gold can still be delivered.
+ const first=await claimDungeonChest(sim,2,ok);assert.equal(first.ok,true);assert.ok(first.celebration); // Gold can still be delivered.
  assert.deepEqual(sim.groundItems,original);assert.equal(currentDungeon(sim.expeditions)!.rift!.claimed,false);
  const gold=structuredClone(sim.groundGold);sim.groundItems=[];
- assert.equal((await claimDungeonChest(sim,2,ok)).ok,true);
+ const retry=await claimDungeonChest(sim,2,ok);assert.equal(retry.ok,true);assert.equal(retry.celebration,undefined,'partial reward retries must not repeat the celebration');
  assert.equal(sim.groundItems.length,riftRewardItemCount(run.entrance.rift!));assert.deepEqual(sim.groundGold,gold);
  assert.equal(currentDungeon(sim.expeditions)!.rift!.claimed,true);
  assert.equal((await claimDungeonChest(sim,2,ok)).ok,false);

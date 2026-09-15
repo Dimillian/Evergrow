@@ -14,7 +14,7 @@ import type { CharacterCheckpoint } from './character-save.ts';
 import type { DungeonEntrance } from './dungeon.ts';
 import { currentDungeon, createDungeonRun, compactExpeditions, type LocationContents } from './dungeon-state.ts';
 import { portalLanding, portalDepartureProblem, type PortalAnchor } from './travel.ts';
-import type { WorldQuery } from './model.ts';
+import type { CombatEvent, WorldQuery } from './model.ts';
 import type { Building } from './settlements.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { rollEnemyLoot } from './loot.ts';
@@ -192,7 +192,7 @@ export function dungeonChestProblem(sim: Simulation, index: number): string | nu
         return 'Already claimed.';
     return null;
 }
-export async function claimDungeonChest(sim: Simulation, index: number, persist: PersistDungeon): Promise<{ ok: boolean; message: string }> {
+export async function claimDungeonChest(sim: Simulation, index: number, persist: PersistDungeon): Promise<{ ok: boolean; message: string; celebration?: Extract<CombatEvent,{type:'blast'}> }> {
     const problem = dungeonChestProblem(sim, index);
     if (problem)
         return { ok: false, message: problem };
@@ -205,6 +205,7 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     const items = run.entrance.rift ? riftRewardItems(run.entrance,sim.player.level) : index===2 && run.entrance.expedition ? expeditionRewardItems(run.entrance,sim.player.level) : ranks.map((rank, i) => rollEnemyLoot({ playerLevel:sim.player.level, seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: rewardLevel, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true, tierWeights: index === 2 ? BOSS_CHEST_LOOT_TABLES.dungeon[i] : undefined, encounter:index===2?'bossChest':'chest' })[0]);
     const gold = Math.round((run.entrance.rift ? RIFT_RULES.goldMultiplier*(1+riftBonus(run.entrance.rift,'gold')/100) : 1)*(index === 2 ? 45 + run.entrance.seed % 26 : 18) * (1 + .1 * (rewardLevel - 1)));
     const goldBit=run.entrance.rift ? 1 << items.length : index===2 && run.entrance.expedition?.stage===9 ? 64 : 8;
+    const firstClaim=run.chestMasks[index]===0;
     let mask = run.chestMasks[index], next = Math.max(1, ...sim.groundItems.map(i => i.id + 1), ...sim.groundGold.map(i => i.id + 1), ...sim.pickups.map(i => i.id + 1), ...sim.enemies.map(i => i.id + 1), ...sim.projectiles.map(i => i.id + 1));
     for (let i = 0; i < items.length; i++)
         if (!(mask & 1 << i)) {
@@ -230,5 +231,6 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     sim.groundGold = checkpoint.groundGold!;
     sim.reserveIdentity(next);
     if(completion)sim.commitJourneyCheckpoint(checkpoint,completion);
-    return { ok: true, message: run.entrance.rift ? 'Crimson Rift Conquered' : 'Dungeon treasure' };
+    return { ok: true, message: run.rift ? 'Crimson Rift Conquered' : 'Dungeon treasure',
+        ...(run.rift&&firstClaim ? {celebration:{type:'blast' as const,x:chest.x,y:chest.y,radius:110,duration:.7,color:'#ef739d'}} : {}) };
 }
