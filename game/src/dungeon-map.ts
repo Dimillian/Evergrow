@@ -1,3 +1,5 @@
+import { MapLegend } from './map-legend.ts';
+import { MapIconVisibility, mapIconVisible, enemyMapIconId, type MapIconId } from './map-legend-content.ts';
 import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { drawMapEnemyIcon } from './map-icon-art.ts';
 import { dungeonMapEnemyVisible, type DungeonMapEnemy as MapEnemy } from './dungeon-map-enemies.ts';
@@ -26,7 +28,7 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
     y: number;
     width: number;
     height: number;
-}, zoom: number, cx: number, cy: number, marker:JourneyMarker|null=null, simple=false, enemies:readonly MapEnemy[]=[]) {
+}, zoom: number, cx: number, cy: number, marker:JourneyMarker|null=null, simple=false, enemies:readonly MapEnemy[]=[], visibility?:MapIconVisibility) {
     c.save();
     c.beginPath();
     c.rect(box.x, box.y, box.width, box.height);
@@ -63,6 +65,7 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
     }
     }
     const icon = (kind: DungeonMapIcon, x: number, y: number, completed = false, angle = 0) => {
+        if (!mapIconVisible(visibility, kind === 'player' ? 'player' : `dungeon:${kind}`)) return;
         c.save(); c.translate(x, y); c.scale(1 / zoom, 1 / zoom);
         drawDungeonMapIcon(c, kind, 0, 0, completed, theme.accent, angle); c.restore();
     };
@@ -79,19 +82,23 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
     }
     const visibleBox={x:cx-box.width/zoom/2,y:cy-box.height/zoom/2,width:box.width/zoom,height:box.height/zoom};
     for(const enemy of enemies){
-      if(!dungeonMapEnemyVisible(enemy,f,seen,visibleBox))continue;
+      if(!mapIconVisible(visibility,enemyMapIconId(enemy))||!dungeonMapEnemyVisible(enemy,f,seen,visibleBox))continue;
       c.save();c.translate(enemy.x,enemy.y);c.scale(1/zoom,1/zoom);
       drawMapEnemyIcon(c,0,0,enemy.kind,enemy.rank);c.restore();
     }
     c.globalAlpha = 1;
     icon('player', p.x, p.y, false, p.angle);
     c.restore();
-    drawJourneyMapMarker(c,{...box,zoom,centerX:cx,centerY:cy},marker,true);
+    drawJourneyMapMarker(c,{...box,zoom,centerX:cx,centerY:cy},marker,true,visibility);
     c.strokeStyle = '#718b85';
     c.lineWidth = 1;
     if (!simple) c.strokeRect(box.x + .5, box.y + .5, box.width - 1, box.height - 1);
 }
 export class DungeonMap {
+    private legend: MapLegend;
+    private iconVisibility: MapIconVisibility;
+    private unsubscribeIcons: () => void;
+    private resizeObserver: ResizeObserver;
     marker:JourneyMarker|null=null;
     readonly element: HTMLElement;
     private canvas: HTMLCanvasElement;
@@ -110,11 +117,12 @@ export class DungeonMap {
         x: number;
         y: number;
     } | null = null;
-    constructor(mount: HTMLElement, onClose: () => void, overworld: () => void) {
+    constructor(mount: HTMLElement, onClose: () => void, overworld: () => void, iconVisibility = new MapIconVisibility()) {
+        this.iconVisibility = iconVisibility;
         this.element = document.createElement('section');
         this.element.className = 'crypt-map';
         this.element.hidden = true;
-        this.element.innerHTML = '<section class="ui-window" role="dialog" aria-modal="true" aria-label="Dungeon map"><header class="ui-window-header"><h2 class="ui-title">Dungeon map</h2><button class="ui-button" data-world>Overworld</button><button class="ui-button ui-button--icon" data-close aria-label="Close">×</button></header><canvas aria-label="Explored crypt rooms"></canvas></section>';
+        this.element.innerHTML = '<section class="ui-window" role="dialog" aria-modal="true" aria-label="Dungeon map"><header class="ui-window-header"><h2 class="ui-title">Dungeon map</h2><button class="ui-button" data-world>Overworld</button><button class="ui-button ui-button--icon" data-close aria-label="Close">×</button></header><div class="map-legend-layout"><div class="crypt-map-viewport"><canvas class="crypt-map-canvas" aria-label="Explored crypt rooms"></canvas></div></div></section>';
         this.tooltip = document.createElement('div');
         this.tooltip.className = 'ui-tooltip crypt-map-tooltip';
         this.tooltip.setAttribute('role', 'tooltip');
@@ -122,9 +130,12 @@ export class DungeonMap {
         this.element.append(this.tooltip);
         mount.append(this.element);
         this.canvas = this.element.querySelector('canvas')!;
+        this.legend = new MapLegend(iconVisibility, this.element.querySelector('.map-legend-layout')!, this.element.querySelector('header')!, 'dungeon', () => this.draw());
+        this.unsubscribeIcons = iconVisibility.subscribe(() => { this.tooltip.hidden = true; this.draw(); });
+        this.resizeObserver = new ResizeObserver(() => this.draw()); this.resizeObserver.observe(this.canvas.parentElement!);
         this.clearTouch = bindTouchCanvas(this.canvas,this.abort.signal,{
           start:()=>{this.tooltip.hidden=true;},
-          pan:(dx,dy)=>{const r=this.canvas.getBoundingClientRect();this.center.x-=dx*this.canvas.width/r.width/this.zoom;this.center.y-=dy*this.canvas.height/r.height/this.zoom;this.tooltip.hidden=true;this.draw();},
+          pan:(dx,dy)=>{this.center.x-=dx/this.zoom;this.center.y-=dy/this.zoom;this.tooltip.hidden=true;this.draw();},
           zoom:(factor,p)=>this.zoomAt(factor,p.x,p.y),
           tap:p=>{const r=this.canvas.getBoundingClientRect();this.hover(p.x+r.left,p.y+r.top);},
         });
@@ -134,12 +145,12 @@ export class DungeonMap {
         this.canvas.after(zoom);
         this.element.querySelector('[data-close]')!.addEventListener('click', onClose, { signal: this.abort.signal });
         this.element.querySelector('[data-world]')!.addEventListener('click', () => { this.close(); overworld(); }, { signal: this.abort.signal });
-        this.canvas.addEventListener('wheel', e => { e.preventDefault(); this.zoom = Math.max(.08, Math.min(.8, this.zoom * Math.exp(-e.deltaY * .001))); this.draw(); }, { passive: false, signal: this.abort.signal });
+        this.canvas.addEventListener('wheel', e => { e.preventDefault(); this.zoomAt(Math.exp(-e.deltaY * .001)); }, { passive: false, signal: this.abort.signal });
         this.canvas.addEventListener('pointerdown', e => { this.drag = { x: e.clientX, y: e.clientY }; this.canvas.setPointerCapture(e.pointerId); }, { signal: this.abort.signal });
         this.canvas.addEventListener('pointermove', e => { if (!this.drag) {
             this.hover(e.clientX, e.clientY);
             return;
-        } this.tooltip.hidden = true; const r = this.canvas.getBoundingClientRect(); this.center.x -= (e.clientX - this.drag.x) * this.canvas.width / r.width / this.zoom; this.center.y -= (e.clientY - this.drag.y) * this.canvas.height / r.height / this.zoom; this.drag = { x: e.clientX, y: e.clientY }; this.draw(); }, { signal: this.abort.signal });
+        } this.tooltip.hidden = true; this.center.x -= (e.clientX - this.drag.x) / this.zoom; this.center.y -= (e.clientY - this.drag.y) / this.zoom; this.drag = { x: e.clientX, y: e.clientY }; this.draw(); }, { signal: this.abort.signal });
         this.canvas.addEventListener('pointerup', () => this.drag = null, { signal: this.abort.signal });
         this.canvas.addEventListener('pointerleave', () => this.tooltip.hidden = true, { signal: this.abort.signal });
         this.canvas.addEventListener('pointercancel', () => this.drag = null, { signal: this.abort.signal });
@@ -148,7 +159,17 @@ export class DungeonMap {
         x: number;
         y: number;
         angle: number;
-    }, explorationMode = false, enemies:readonly MapEnemy[]=[]) { this.enemies=enemies; this.floor = f; this.run = r; this.player = p; this.explorationMode=explorationMode; const bounds = dungeonMapBounds(f); this.center = explorationMode ? { x:p.x,y:p.y } : { x: bounds.x, y: bounds.y }; this.zoom = explorationMode ? .17 : Math.min(1120 / bounds.width, 680 / bounds.height); this.element.classList.toggle('crypt-map--exploration',explorationMode); this.element.querySelector('[role="dialog"]')!.setAttribute('aria-modal',String(!explorationMode)); this.element.hidden = false; this.canvas.width = 1200; this.canvas.height = 760; this.draw(); if (!explorationMode) this.focus = trapDialogFocus(this.element, { signal: this.abort.signal }); }
+    }, explorationMode = false, enemies:readonly MapEnemy[]=[]) {
+        this.enemies=enemies; this.floor = f; this.run = r; this.player = p; this.explorationMode=explorationMode;
+        const bounds = dungeonMapBounds(f);
+        this.center = explorationMode ? { x:p.x,y:p.y } : { x: bounds.x, y: bounds.y };
+        this.element.classList.toggle('crypt-map--exploration',explorationMode);
+        this.element.querySelector('[role="dialog"]')!.setAttribute('aria-modal',String(!explorationMode));
+        this.element.hidden = false;
+        this.zoom = explorationMode ? .17 : this.fitZoom(this.canvas.getBoundingClientRect());
+        this.draw();
+        if (!explorationMode) this.focus = trapDialogFocus(this.element, { signal: this.abort.signal });
+    }
     setExplorationPointer(point: { x: number; y: number } | null) {
         if (this.element.hidden || !this.explorationMode) return;
         const rect = this.canvas.getBoundingClientRect();
@@ -158,9 +179,9 @@ export class DungeonMap {
     private hover(clientX: number, clientY: number) {
         if (!this.floor || !this.run)
             return;
-        const r = this.canvas.getBoundingClientRect(), x = this.center.x + ((clientX - r.left) * 1200 / r.width - 600) / this.zoom, y = this.center.y + ((clientY - r.top) * 760 / r.height - 380) / this.zoom;
-        const targets = [...(this.floor.events??[]).map(e=>({...e,label:DUNGEON_EVENTS[e.kind].name})), { ...this.floor.entry, label: 'Exit to overworld', room: this.floor.rooms.find(r=>r.kind==='entry')?.id??0 }, ...(this.run.rift?.phase==='complete'?[{...dungeonRunExit(this.floor,this.run),label:'Exit to overworld',room:0}]:[]), ...this.floor.chests.flatMap((_, i) => this.run!.rift&&(i!==2||this.run!.rift.phase!=='complete')?[]:[{ ...dungeonRunChest(this.floor!,this.run!,i), label: this.run!.chestMasks[i] === dungeonChestMask(this.run!,i) ? 'Chest · Claimed' : i === 2 ? 'Boss chest' : 'Guarded chest' }]), { ...this.run.states.warden, label: (this.run.rift?'Rift guardian':dungeonTheme(this.floor.seed,this.floor.theme).bossName??'Hollow Warden')+(this.run.states.warden.hp>0?'':' · Defeated'), room: this.floor.rooms.find(r=>r.kind==='boss')!.id }];
-        const target = targets.filter(p=>!this.run!.rift||p.label==='Exit to overworld'||this.run!.rift.phase==='complete'||this.run!.rift.phase==='boss'&&p.label==='Rift guardian').find(p => (this.run!.rift?.phase==='boss'||this.run!.rift?.phase==='complete'||this.run!.explored.includes(p.room)) && Math.hypot(p.x - x, p.y - y) < 16 / this.zoom);
+        const r = this.canvas.getBoundingClientRect(), x = this.center.x + ((clientX - r.left) - r.width / 2) / this.zoom, y = this.center.y + ((clientY - r.top) - r.height / 2) / this.zoom;
+        const targets = [...(this.floor.events??[]).map(e=>({...e,mapIcon:`dungeon:${e.kind}` as MapIconId,label:DUNGEON_EVENTS[e.kind].name})), { ...this.floor.entry, mapIcon:'dungeon:entry' as MapIconId, label: 'Exit to overworld', room: this.floor.rooms.find(r=>r.kind==='entry')?.id??0 }, ...(this.run.rift?.phase==='complete'?[{...dungeonRunExit(this.floor,this.run),mapIcon:'dungeon:entry' as MapIconId,label:'Exit to overworld',room:0}]:[]), ...this.floor.chests.flatMap((_, i) => this.run!.rift&&(i!==2||this.run!.rift.phase!=='complete')?[]:[{ ...dungeonRunChest(this.floor!,this.run!,i), mapIcon:'dungeon:chest' as MapIconId, label: this.run!.chestMasks[i] === dungeonChestMask(this.run!,i) ? 'Chest · Claimed' : i === 2 ? 'Boss chest' : 'Guarded chest' }]), { ...this.run.states.warden, mapIcon:'dungeon:boss' as MapIconId, label: (this.run.rift?'Rift guardian':dungeonTheme(this.floor.seed,this.floor.theme).bossName??'Hollow Warden')+(this.run.states.warden.hp>0?'':' · Defeated'), room: this.floor.rooms.find(r=>r.kind==='boss')!.id }];
+        const target = targets.filter(p=>mapIconVisible(this.iconVisibility,p.mapIcon)).filter(p=>!this.run!.rift||p.label==='Exit to overworld'||this.run!.rift.phase==='complete'||this.run!.rift.phase==='boss'&&p.label==='Rift guardian').find(p => (this.run!.rift?.phase==='boss'||this.run!.rift?.phase==='complete'||this.run!.explored.includes(p.room)) && Math.hypot(p.x - x, p.y - y) < 16 / this.zoom);
         this.tooltip.hidden = !target;
         if (!target)
             return;
@@ -174,23 +195,34 @@ export class DungeonMap {
         if (this.explorationMode) this.center = { x: player.x, y: player.y };
         this.player = { ...player }; this.draw();
     }
-    private draw() { if (this.floor && this.run) {
-        const c=this.canvas.getContext('2d')!; c.clearRect(0,0,this.canvas.width,this.canvas.height);
-        drawDungeonMap(c, this.floor, this.run, this.player, { x: 0, y: 0, width: 1200, height: 760 }, this.zoom, this.center.x, this.center.y,this.marker,this.explorationMode,this.enemies); } }
+    private draw() { if (!this.element.hidden && this.floor && this.run) {
+        const rect = this.canvas.getBoundingClientRect(), ratio = Math.min(4, window.devicePixelRatio || 1);
+        if (rect.width <= 0 || rect.height <= 0) return;
+        if (this.canvas.width !== Math.round(rect.width * ratio)) this.canvas.width = Math.round(rect.width * ratio);
+        if (this.canvas.height !== Math.round(rect.height * ratio)) this.canvas.height = Math.round(rect.height * ratio);
+        const c=this.canvas.getContext('2d')!; c.setTransform(ratio,0,0,ratio,0,0); c.clearRect(0,0,rect.width,rect.height);
+        drawDungeonMap(c, this.floor, this.run, this.player, { x: 0, y: 0, width: rect.width, height: rect.height }, this.zoom, this.center.x, this.center.y,this.marker,this.explorationMode,this.enemies,this.iconVisibility); } }
     zoomExplorationByWheel(deltaY: number, deltaMode: number) {
         if (this.element.hidden || !this.explorationMode || !Number.isFinite(deltaY)) return;
         const delta = Math.max(-240, Math.min(240, deltaY * (deltaMode === 1 ? 16 : deltaMode === 2 ? this.canvas.clientHeight : 1)));
         this.zoomAt(Math.exp(-delta * .0016));
     }
+    private fitZoom(size: { width: number; height: number }) {
+        const bounds = dungeonMapBounds(this.floor!);
+        return Math.min(.8, Math.max(1, size.width - 60) / bounds.width, Math.max(1, size.height - 60) / bounds.height);
+    }
     private zoomAt(factor: number, px?: number, py?: number) {
-        const r=this.canvas.getBoundingClientRect(), x=(px??r.width/2)*this.canvas.width/r.width-this.canvas.width/2,y=(py??r.height/2)*this.canvas.height/r.height-this.canvas.height/2;
-        const next=Math.max(.04,Math.min(.8,this.zoom*factor));this.center.x+=x/this.zoom-x/next;this.center.y+=y/this.zoom-y/next;this.zoom=next;this.tooltip.hidden=true;this.draw();
+        if (!this.floor || !Number.isFinite(factor) || factor <= 0) return;
+        const r=this.canvas.getBoundingClientRect(), x=(px??r.width/2)-r.width/2,y=(py??r.height/2)-r.height/2;
+        // Keep the fitted overview reachable, including after a resize or legend toggle.
+        const min = Math.min(.04, this.fitZoom(r), this.zoom);
+        const next=Math.max(min,Math.min(.8,this.zoom*factor));this.center.x+=x/this.zoom-x/next;this.center.y+=y/this.zoom-y/next;this.zoom=next;this.tooltip.hidden=true;this.draw();
     }
     close() { this.clearTouch?.(); this.focus?.dispose(); this.focus = null; this.element.hidden = true; this.drag = null; this.tooltip.hidden = true; }
-    dispose() { this.close(); this.abort.abort(); this.element.remove(); }
+    dispose() { this.legend.dispose(); this.unsubscribeIcons(); this.resizeObserver.disconnect(); this.close(); this.abort.abort(); this.element.remove(); }
 }
 export function drawCryptMinimap(c: CanvasRenderingContext2D, f: DungeonFloor, r: DungeonRun, p: {
     x: number;
     y: number;
     angle: number;
-}, w: number, h: number, marker:JourneyMarker|null=null, time=0, enemies:readonly MapEnemy[]=[]) { const box = getMinimapRect(w, h); drawDungeonMap(c, f, r, p, box, .095, p.x, p.y,marker,false,enemies); text(c, `Lv ${r.entrance.level} · ${worldTimeLabel(time)}`, box.x + box.width / 2, box.y + box.height - 8, .9, '#b9cbbb', 'center'); }
+}, w: number, h: number, marker:JourneyMarker|null=null, time=0, enemies:readonly MapEnemy[]=[], visibility?:MapIconVisibility) { const box = getMinimapRect(w, h); drawDungeonMap(c, f, r, p, box, .095, p.x, p.y,marker,false,enemies,visibility); text(c, `Lv ${r.entrance.level} · ${worldTimeLabel(time)}`, box.x + box.width / 2, box.y + box.height - 8, .9, '#b9cbbb', 'center'); }

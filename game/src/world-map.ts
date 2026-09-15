@@ -1,3 +1,5 @@
+import { MapLegend } from './map-legend.ts';
+import { MapIconVisibility, mapIconVisible, enemyMapIconId, MAP_SERVICES, nearestMapService, type MapServiceKind } from './map-legend-content.ts';
 import { drawMapPOIIcon, drawMapPlayerIcon, drawMapEnemyIcon, MAP_ICON_SIZES } from './map-icon-art.ts';
 import { worldTimeLabel, skyAtTime } from './world-time.ts';
 import { regionLevelLabel } from './encounter-scaling.ts';
@@ -128,9 +130,9 @@ export function pickMapPOI(pois: readonly MapPOI[], view: MapView, pointer: { x:
 
 const SERVICE_KINDS = new Set(['blacksmith', 'merchant', 'inn', 'chapel', 'jeweler', 'enchanter', 'gambler', 'stash']);
 /** The same stable visible list serves painting and hover; hidden overlapping services never steal focus. */
-export function selectMapPOIs(pois: readonly MapPOI[], view: MapView, mini = false): MapPOI[] {
-  const priority = (poi: MapPOI) => poi.kind === 'portal' ? -1 : poi.kind === 'town' ? 0 : poi.kind === 'camp' ? 1 : SERVICE_KINDS.has(poi.kind) ? 3 : 2;
-  const candidates = pois.filter(poi => (view.zoom >= .10 || !SERVICE_KINDS.has(poi.kind)))
+export function selectMapPOIs(pois: readonly MapPOI[], view: MapView, mini = false, focusedId?: string): MapPOI[] {
+  const priority = (poi: MapPOI) => poi.id === focusedId ? -2 : poi.kind === 'portal' ? -1 : poi.kind === 'town' ? 0 : poi.kind === 'camp' ? 1 : SERVICE_KINDS.has(poi.kind) ? 3 : 2;
+  const candidates = pois.filter(poi => (poi.id === focusedId || view.zoom >= .10 || !SERVICE_KINDS.has(poi.kind)))
     .map(poi => ({ poi, screen: projectMapPoint(poi.x, poi.y, view) }))
     .filter(({ screen }) => screen.x >= view.x + 6 && screen.y >= view.y + 6 && screen.x <= view.x + view.width - 6 && screen.y <= view.y + view.height - 6)
     .sort((a, b) => priority(a.poi) - priority(b.poi) || a.poi.id.localeCompare(b.poi.id));
@@ -172,6 +174,12 @@ export type CampMapState = 'dormant' | 'active' | 'cleared';
 
 /** A continuously translated chart built from cached world-space terrain and discovery tiles. */
 export class WorldMap {
+  readonly iconVisibility: MapIconVisibility;
+  private legend: MapLegend;
+  private unsubscribeIcons: () => void;
+  private focusPOI: MapPOI | null = null;
+  private focusLabel: HTMLDivElement;
+  private legendRevision = -1;
   private journeyMarker: JourneyMarker|null = null;
   setJourneyMarker(marker:JourneyMarker|null) { if(JSON.stringify(marker)===JSON.stringify(this.journeyMarker))return; this.journeyMarker=marker; this.invalidate(); }
   readonly element: HTMLDivElement;
@@ -231,7 +239,8 @@ export class WorldMap {
 
   private zoomLimits: MapZoomLimits = MAP_ZOOM;
 
-  constructor(world: MapWorld, exploration: Exploration, mount: HTMLElement, onClose: () => void, zoomLimits: MapZoomLimits = MAP_ZOOM) {
+  constructor(world: MapWorld, exploration: Exploration, mount: HTMLElement, onClose: () => void, zoomLimits: MapZoomLimits = MAP_ZOOM, iconVisibility = new MapIconVisibility()) {
+    this.iconVisibility = iconVisibility;
     this.zoomLimits = zoomLimits;
     this.world = world; this.exploration = exploration; this.onClose = onClose;
     this.element = document.createElement('div');
@@ -242,7 +251,8 @@ export class WorldMap {
           <h2 class="ui-title" id="world-map-title">World map</h2></div>
         <button type="button" class="world-map-close ui-button ui-button--quiet ui-button--icon" aria-label="Close world map" data-tooltip="Close map" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('close')}</button>
       </header>
-      <div class="world-map-viewport ui-window__body"><canvas class="world-map-canvas" tabindex="0" aria-label="Explored world map"></canvas>
+      <div class="map-legend-layout"><div class="world-map-viewport ui-window__body"><canvas class="world-map-canvas" tabindex="0" aria-label="Explored world map"></canvas>
+        <div class="world-map-focus-label" role="status" aria-live="polite" hidden></div>
         <div class="world-map-focus-ping" aria-hidden="true" hidden><span></span><span></span></div>
         <div class="world-map-toolbar" role="toolbar" aria-label="Map controls">
           <button type="button" class="ui-button ui-button--quiet ui-button--icon" data-map="out" aria-label="Zoom out" data-tooltip="Zoom out">${uiIcon('minus')}</button>
@@ -257,7 +267,7 @@ export class WorldMap {
         </div>
         <div class="world-map-tooltip ui-tooltip" role="status" aria-live="polite" aria-atomic="true" hidden>
           <p class="world-map-poi-kind ui-kicker"></p><h3 class="ui-title"></h3><p class="world-map-poi-description ui-body"></p></div>
-      </div>
+      </div></div>
       <footer class="world-map-footer ui-window__footer">
         <div class="world-map-progress"><span class="world-map-discoveries"></span><span class="world-map-status ui-muted" role="status"></span></div>
         <div class="world-map-position"><span class="ui-kicker">Position</span><span class="world-map-coordinates"></span></div>
@@ -279,6 +289,9 @@ export class WorldMap {
     this.areaBiome = this.areaInfo.querySelector('.world-map-area-biome')!;
     this.areaLevel = this.areaInfo.querySelector('.world-map-area-level')!;
     this.areaCoordinates = this.areaInfo.querySelector('.world-map-area-coordinates')!;
+    this.focusLabel = this.element.querySelector<HTMLDivElement>('.world-map-focus-label')!;
+    this.legend = new MapLegend(this.iconVisibility, this.element.querySelector('.map-legend-layout')!, this.element.querySelector('.world-map-header')!, 'world', () => { this.pointer = null; this.hideTooltip(); this.resize(); }, kind => this.pingNearest(kind));
+    this.unsubscribeIcons = this.iconVisibility.subscribe(() => { this.pointer = null; this.hideTooltip(); this.invalidate(); });
     this.bind();
   }
 
@@ -328,6 +341,11 @@ export class WorldMap {
   }
   /** Footer text participates in flex layout, so populate it before measuring the chart. */
   private prepareLayout(): boolean {
+    if (this.legendRevision !== this.exploration.revision) {
+      const discovered = this.exploration.getDiscoveredPOIs().filter(p => !p.sighted && this.exploration.isRevealed(p.x, p.y));
+      this.legend.setAvailable(new Set(MAP_SERVICES.filter(kind => discovered.some(p => p.kind === kind))));
+      this.legendRevision = this.exploration.revision;
+    }
     const count = this.exploration.discoveredPOICount;
     setText(this.discoveries, `${count} ${count === 1 ? 'place' : 'places'} charted`);
     const area = mapAreaLabel(this.world, this.player.x, this.player.y);
@@ -371,12 +389,26 @@ export class WorldMap {
 
   private clearTouch: (() => void) | null = null;
 
+  private pingNearest(kind: MapServiceKind) {
+    const poi = nearestMapService(this.exploration.getDiscoveredPOIs().filter(p => this.exploration.isRevealed(p.x, p.y)), kind, this.player);
+    if (!poi) { this.legend.announce('No discovered location of this type.'); return; }
+    this.legend.closeCompact();
+    this.focusLocation(poi);
+    this.focusPOI = poi;
+    const message = `${POI_DEFINITIONS[kind].label} · ${formatWorldDistance(Math.hypot(poi.x - this.player.x, poi.y - this.player.y))} from you`;
+    this.focusLabel.textContent = message; this.focusLabel.hidden = false; this.legend.announce(message);
+  }
+
   private cancelRecenter() {
+    const hadPOI = !!this.focusPOI || (!!this.focusPing && !this.focusPing.hidden && !mapIconVisible(this.iconVisibility, 'player'));
+    this.focusPOI = null;
+    if (this.focusLabel) this.focusLabel.hidden = true;
     this.recenter = null;
     this.focusTarget = null;
     for (const animation of this.pingAnimations) animation.cancel();
     this.pingAnimations = [];
     this.focusPing.hidden = true;
+    if (hadPOI) this.invalidate();
   }
 
   private centerOnPlayer() {
@@ -479,7 +511,7 @@ export class WorldMap {
       if (this.explorationMode) return;
       // Escape/M remain owned by the game's phase/input coordinator.
       if (event.key === 'Tab') {
-        const controls = [...this.element.querySelectorAll<HTMLElement>('button, canvas[tabindex]')];
+        const controls = [...this.element.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), canvas[tabindex]')].filter(el => !el.closest('[hidden]') && el.getClientRects().length > 0);
         const first = controls[0], last = controls[controls.length - 1];
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
@@ -602,10 +634,11 @@ export class WorldMap {
 
   private features(view: MapView, mini: boolean): { pois: MapPOI[]; labels: MapRegionLabel[]; zones: ZoneProgression[] } {
     const pois = selectMapPOIs([...this.exploration.getDiscoveredPOIs(bounds(view))
-      .filter(poi => poi.sighted || this.exploration.isRevealed(poi.x, poi.y)), ...this.portalMarkers()], view, mini);
+      .filter(poi => poi.sighted || this.exploration.isRevealed(poi.x, poi.y)), ...this.portalMarkers()]
+      .filter(poi => mapIconVisible(this.iconVisibility, poi.kind) || (!mini && poi.id === this.focusPOI?.id)), view, mini, mini ? undefined : this.focusPOI?.id);
     const labels = mini || this.zoneLevels ? [] : mapRegionLabels(this.world, this.exploration, view, [...pois.filter(poi => poi.kind === 'town'), this.player]);
     const zones = mini || !this.zoneLevels ? [] : mapZoneLabels(view, this.exploration, this.world.seed, pois.filter(p => p.kind === 'town'));
-    return { labels, zones, pois: pois.filter(poi => !zones.some(z => Math.abs((z.x-poi.x)*view.zoom)<82 && Math.abs((z.y-poi.y)*view.zoom)<28)).filter(poi => poi.kind === 'portal' || poi.kind === 'town' || !labels.some(label => {
+    return { labels, zones, pois: pois.filter(poi => (!mini && poi.id === this.focusPOI?.id) || !zones.some(z => Math.abs((z.x-poi.x)*view.zoom)<82 && Math.abs((z.y-poi.y)*view.zoom)<28)).filter(poi => (!mini && poi.id === this.focusPOI?.id) || poi.kind === 'portal' || poi.kind === 'town' || !labels.some(label => {
       const dx = Math.abs((poi.x - label.x) * view.zoom), dy = (poi.y - label.y) * view.zoom;
       return dx < label.name.length * 3.4 + 8 && dy > -9 && dy < 27;
     })) };
@@ -685,7 +718,7 @@ export class WorldMap {
         text(c, poi.name, p.x, p.y + 12, 1.15, palette.ivory, 'center');
       }
     }
-    drawJourneyMapMarker(c,view,this.journeyMarker,mini);
+    drawJourneyMapMarker(c,view,this.journeyMarker,mini,this.iconVisibility);
     c.restore();
     return pois;
   }
@@ -696,6 +729,7 @@ export class WorldMap {
   }
 
   private playerArrow(c: CanvasRenderingContext2D, player: MapPlayer, view: MapView, mini: boolean) {
+    if (!mapIconVisible(this.iconVisibility, 'player') && !(!mini && this.focusPing && !this.focusPing.hidden && !this.focusTarget)) return;
     const p = projectMapPoint(player.x, player.y, view);
     if (p.x < view.x || p.y < view.y || p.x > view.x + view.width || p.y > view.y + view.height) return;
     drawMapPlayerIcon(c, p.x, p.y, player.angle, mini);
@@ -755,7 +789,7 @@ export class WorldMap {
     c.setLineDash([2, 4]); c.strokeStyle = '#c5d5b127'; c.lineWidth = .8;
     c.beginPath(); c.arc(center.x, center.y, EXPLORATION_REVEAL_RADIUS * view.zoom, 0, Math.PI * 2); c.stroke(); c.setLineDash([]);
     for (const enemy of enemies) {
-      if (!this.exploration.isRevealed(enemy.x, enemy.y)) continue;
+      if (!mapIconVisible(this.iconVisibility, enemyMapIconId(enemy)) || !this.exploration.isRevealed(enemy.x, enemy.y)) continue;
       const p = projectMapPoint(enemy.x, enemy.y, view);
       if (p.x < view.x || p.y < view.y || p.x > view.x + view.width || p.y > view.y + view.height) continue;
       drawMapEnemyIcon(c, p.x, p.y, enemy.kind, enemy.rank);
@@ -870,7 +904,7 @@ export class WorldMap {
     }
     this.updateAreaInfo();
     const marker=this.journeyMarker, markerPoint=marker?projectMapPoint(marker.x,marker.y,this.view):null;
-    if(marker&&markerPoint&&this.pointer&&!this.drag&&Math.hypot(markerPoint.x-this.pointer.x,markerPoint.y-this.pointer.y)<15){
+    if(marker&&mapIconVisible(this.iconVisibility,marker.known?'journey:destination':'journey:search')&&markerPoint&&this.pointer&&!this.drag&&Math.hypot(markerPoint.x-this.pointer.x,markerPoint.y-this.pointer.y)<15){
       this.tooltip.hidden=false;setText(this.tooltipName,marker.name);
       setText(this.tooltipKind,'Journey');setText(this.tooltipDescription,marker.known?'Tracked activity':'Explore this area to find the activity');
       this.tooltip.style.setProperty('--poi-color',palette.brass);this.positionTooltip(this.pointer);
@@ -907,6 +941,7 @@ export class WorldMap {
   private hideTooltip() { this.tooltip.hidden = true; this.areaInfo.hidden = true; }
   dispose() {
     if (this.disposed) return;
+    this.legend.dispose(); this.unsubscribeIcons();
     this.close(); this.disposed = true; this.abort.abort(); this.tiles.clear(); this.previewTiles.clear(); this.element.remove(); this.exploration.save();
   }
 }

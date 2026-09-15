@@ -72,3 +72,7 @@ Routine local autosaves now run every 20 seconds; important actions retain their
 ## Soundtrack and mix controls — September 8
 
 The shared runtime owns a two-stream soundtrack player only on the primary screen. Native background/foreground callbacks pause/resume music and suspend/resume the shared audio context. Bundled music stays offline. Home Sound (Y) and pause Options provide remembered music/SFX sliders; left/right adjust, up/down navigate, B dismisses. The companion never starts an audio player. This source update does not itself install a new APK.
+
+## Map legend — local September 15, 2026
+
+The upper full map includes collapsible icon categories, visibility checkboxes and **Ping nearest** by service type. Compact landscape/phone layouts start with the legend closed; its scrollable drawer closes before an NPC ping. Desktop keeps a separate side panel. Checkbox and button actions use ordinary focus and controller activation. Full dungeon maps now measure their available viewport and render at native density; touch drag/pinch/hover use the same CSS-space coordinates. The lower map projection consumes the primary game's icon filters and does not own a second preference store or change pause behavior. Filters last for the current app session; character saves are unchanged.

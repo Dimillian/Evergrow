@@ -124,7 +124,8 @@ test('first map draw measures populated footer layout and aligns the canvas with
     opened: true, disposed: false, frame: 0, recenter: null, player,
     view: { x: 0, y: 0, width: 800, height: 500, centerX: player.x, centerY: player.y, zoom: .17 },
     canvas: { width: 300, height: 150 }, focusPing: { style: {} }, viewport, discoveries, status, coordinates,
-    exploration: { discoveredPOICount: 12, revision: 1, storageStatus: 'saved', persistenceMessage: '' },
+    legend: { setAvailable() {} },
+    exploration: { getDiscoveredPOIs: () => [], discoveredPOICount: 12, revision: 1, storageStatus: 'saved', persistenceMessage: '' },
     world: { isSanctuary: () => true },
     drawChart() {
       draws++;

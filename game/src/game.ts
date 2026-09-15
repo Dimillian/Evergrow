@@ -1,3 +1,4 @@
+import { MapIconVisibility } from './map-legend-content.ts';
 import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { RiftPanel } from './rift-panel.ts';
 import { RiftWorld } from './rift-world.ts';
@@ -99,6 +100,7 @@ export class Game {
   private activeRiftPortal: string|null=null;
   private expeditionPanel: ExpeditionPanel;
   private activeExpeditionTable: string | null = null;
+  private mapIcons = new MapIconVisibility();
   private dungeonMap: DungeonMap;
   private activeDungeonEntrance: DungeonEntrance | null = null;
   sim = new Simulation(this.world, { seed: 7319 });
@@ -206,7 +208,7 @@ export class Game {
       const uiContext = this.uiCanvas.getContext('2d');
       if (!uiContext) throw new Error('The HUD requires a 2D canvas context.');
       this.uiContext = uiContext;
-      this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap());
+      this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap(), undefined, this.mapIcons);
       this.lifetime.defer(() => this.worldMap.dispose());
       this.worldMap.setEncounterLevelReader(poi => isEventKind(poi.kind)||poi.kind==='dungeon' ? activityLevel(poi,this.journeys.facts(),this.overworld.seed) : null);
     this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
@@ -253,7 +255,7 @@ export class Game {
       }));
       this.riftPanel=this.lifetime.own(new RiftPanel(this.shell.panelMount,{close:()=>this.resume(),enter:async action=>{const ok=await this.switchDungeon(action);if(ok)this.resume();return ok;}}));
       this.expeditionPanel=this.lifetime.own(new ExpeditionPanel(this.shell.panelMount,{close:()=>this.resume(),enter:async action=>{const ok=await this.switchDungeon(action);if(ok)this.resume();return ok;}}));
-      this.dungeonMap = this.lifetime.own(new DungeonMap(this.shell.mapMount,()=>this.closeMap(),()=>this.worldMap.open({x:this.sim.expeditions.surfaceX,y:this.sim.expeditions.surfaceY,angle:0})));
+      this.dungeonMap = this.lifetime.own(new DungeonMap(this.shell.mapMount,()=>this.closeMap(),()=>this.worldMap.open({x:this.sim.expeditions.surfaceX,y:this.sim.expeditions.surfaceY,angle:0}), this.mapIcons));
       this.eventPanel = this.lifetime.own(new EventPanel(this.shell.panelMount, {
         enter: entrance => { this.resume(); this.switchDungeon({kind:'enter',entrance}); },
         close: () => this.resume(), choose: (site, choice) => { this.resume(); this.startEvent(site, choice); },
@@ -682,7 +684,7 @@ export class Game {
     });
     await this.exploration.ready;
     if (this.disposed) return;
-    this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap());
+    this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap(), undefined, this.mapIcons);
     this.worldMap.setEncounterLevelReader(poi => isEventKind(poi.kind)||poi.kind==='dungeon' ? activityLevel(poi,this.journeys.facts(),this.overworld.seed) : null);
     this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
     this.worldMap.setEventStateReader(poi => { if(poi.kind==='dungeon'){if(this.sim.expeditions.cleared?.includes(poi.id))return 'Cleared';const run=this.sim.expeditions.runs.find(r=>r.entrance.id===poi.id);return run?(run.states.warden.hp<=0?'Cleared':'Expedition active'):null;} const record = this.sim.eventState.sites[poi.id]; return isEventKind(poi.kind) ? eventLabel(record ?? { id: poi.id, kind: poi.kind }, this.sim.eventState, this.sim.getCampState(poi.id) === 'cleared') : null; });
@@ -1275,7 +1277,7 @@ export class Game {
       if (dungeonRun) this.dungeonMap.setExplorationPointer(pointer);
       else this.worldMap.setExplorationPointer(pointer);
     }
-    if (this.phase !== 'ready' && dungeonRun && this.renderer.navigationVisible) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time,this.sim.enemies);
+    if (this.phase !== 'ready' && dungeonRun && this.renderer.navigationVisible) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time,this.sim.enemies,this.mapIcons);
     if (this.phase !== 'ready' && !dungeonRun && this.renderer.navigationVisible) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, this.sim.time,
       this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
         x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
