@@ -3,12 +3,13 @@ import { weatherStone } from './material-art.ts';
 import { line, polygon, randomFromSeed, type Point } from './art-primitives.ts';
 import { drawGlow, type PointLight } from './lighting.ts';
 import { WILDERNESS_BIOME_THEMES, type WildernessSite, type SiteDecor } from './wilderness-sites.ts';
+import type { SiteAftermath } from './poi-aftermath.ts';
 
 const TAU = Math.PI * 2;
 const palette = { stone: '#596665', edge: '#a7b2a0', dark: '#273637', wood: '#66533d', woodEdge: '#a08b5d', iron: '#778582' };
 
 /** World-space ground layer; actor/decor drawing happens later in shared depth order. */
-export function drawSiteGround(c: CanvasRenderingContext2D, site: WildernessSite, time: number): void {
+export function drawSiteGround(c: CanvasRenderingContext2D, site: WildernessSite, time: number, aftermath: SiteAftermath = 'none'): void {
   c.save(); c.translate(site.x, site.y);
   const random = randomFromSeed(site.seed);
   const points: Point[] = Array.from({ length: 26 }, (_, i) => {
@@ -78,11 +79,20 @@ export function drawSiteGround(c: CanvasRenderingContext2D, site: WildernessSite
       line(c, [[x - 3, y - 2], [x, y - 7], [x + 3, y - 1], [x - 1, y + 3]], '#81c8bd80', .8);
     }
     drawGlow(c, 0, -3, 70, '#61c8ba', .18 + Math.sin(time * 1.2) * .025);
+    if (aftermath === 'blessed') for (let i = 0; i < 12; i++) {
+      const angle = i / 12 * TAU, x = Math.cos(angle) * 86, y = Math.sin(angle) * 67;
+      c.fillStyle = i % 2 ? '#e2cf8f' : '#9ed8c7'; c.fillRect(x, y, 2, 2);
+    }
   } else if (site.kind === 'graveyard') {
     for (const grave of site.decor.filter(d => d.kind === 'gravestone')) {
       const x = grave.x - site.x, y = grave.y - site.y;
       polygon(c, [[x - 10, y + 3], [x + 8, y + 3], [x + 11, y + 26], [x - 12, y + 27]], '#131c1c50');
       line(c, [[x - 11, y + 5], [x - 13, y + 25], [x + 8, y + 26]], '#8f968644', 1);
+    }
+    if (aftermath === 'quieted') for (let i = 0; i < 22; i++) {
+      const a = random() * TAU, r = 28 + Math.sqrt(random()) * site.radius * .7;
+      const x = Math.cos(a) * r, y = Math.sin(a) * r * .75;
+      c.fillStyle = i % 3 ? '#8fae77' : '#c7ba83'; c.fillRect(x, y, 1.5, 2);
     }
   } else if (site.kind === 'camp') {
     c.fillStyle = '#162023a8'; c.beginPath(); c.ellipse(0, 4, 32, 24, 0, 0, TAU); c.fill();
@@ -97,13 +107,67 @@ export function drawSiteGround(c: CanvasRenderingContext2D, site: WildernessSite
       polygon(c, stone, ['#777967', '#606f64', '#9a9677', '#6d7462'][i % 4]);
       line(c, [stone[3], stone[4], stone[5]], '#aaa08080', .7);
     }
+    if (aftermath === 'abandoned') {
+      c.fillStyle = '#31362f'; c.beginPath(); c.ellipse(0, 1, 15, 10, 0, 0, TAU); c.fill();
+      for (let i = 0; i < 9; i++) {
+        const a = random() * TAU, r = 12 + random() * 24;
+        line(c, [[Math.cos(a) * r, Math.sin(a) * r * .55], [Math.cos(a) * (r + 5), Math.sin(a) * (r + 5) * .55]], '#8b817066', 1);
+      }
+    }
+  } else if (site.kind === 'corruptedGrove' && aftermath === 'cleansed') {
+    for (let i = 0; i < 18; i++) {
+      const a = random() * TAU, r = 30 + Math.sqrt(random()) * site.radius * .62;
+      const x = Math.cos(a) * r, y = Math.sin(a) * r * .72;
+      line(c, [[x, y], [x - 2, y - 5], [x, y - 2], [x + 3, y - 7]], i % 3 ? '#759b61' : '#9dbb72', 1.1);
+    }
+  } else if (site.kind === 'ruinedChapel' && aftermath === 'sanctified') {
+    c.strokeStyle = '#d8cfa055'; c.lineWidth = 1.2;
+    c.beginPath(); c.ellipse(0, -55, 38, 29, 0, 0, TAU); c.stroke();
+    for (let i = 0; i < 7; i++) {
+      const a = i / 7 * TAU, x = Math.cos(a) * 48, y = -55 + Math.sin(a) * 36;
+      line(c, [[x - 4, y + 3], [x, y - 4], [x + 4, y + 3]], '#b8b47b88', 1);
+    }
+  } else if (site.kind === 'beastDen' && aftermath === 'emptied') {
+    for (let i = 0; i < 14; i++) {
+      const a = random() * TAU, r = 35 + random() * 95, x = Math.cos(a) * r, y = Math.sin(a) * r * .58;
+      line(c, [[x - 4, y], [x + 5, y - 2]], i % 2 ? '#76684c70' : '#9a8b6470', 1.2);
+    }
+  } else if (site.kind === 'cursedChest' && aftermath === 'unbound') {
+    const bx = (site.entrance.x-site.x)*(1-22/site.radius), by = (site.entrance.y-site.y)*(1-22/site.radius);
+    for (const side of [-1, 1]) {
+      line(c, [[bx+side*18,by+13],[bx+side*29,by+18],[bx+side*38,by+14]], '#9c8a8766', 2);
+      c.strokeStyle = '#b49aae88'; c.beginPath(); c.ellipse(bx+side*43,by+15,4,2,.2*side,0,TAU); c.stroke();
+    }
+  } else if (site.kind === 'quarry' && aftermath === 'depleted') {
+    for (let i = 0; i < 20; i++) {
+      const a = random() * TAU, r = 45 + random() * 150, x = Math.cos(a) * r, y = Math.sin(a) * r * .7;
+      polygon(c, [[x-3,y+1],[x,y-3],[x+4,y],[x+1,y+2]], i % 3 ? '#69746f88' : '#87918a88');
+    }
+  } else if (site.kind === 'hamlet' && aftermath === 'liberated') {
+    for (let i = 0; i < 18; i++) {
+      const a = random() * TAU, r = 32 + random() * 175, x = Math.cos(a) * r, y = Math.sin(a) * r * .72;
+      line(c, [[x,y],[x-2,y-5],[x+1,y-2]], i % 3 ? '#799363' : '#b9a56a', 1);
+    }
+  } else if (site.kind === 'crossing' && aftermath === 'opened') {
+    const ex=site.entrance.x-site.x,ey=site.entrance.y-site.y;
+    c.strokeStyle = '#c7b57a55'; c.lineWidth = 2; c.setLineDash([10, 12]);
+    c.beginPath(); c.moveTo(ex,ey); c.lineTo(-ex*.9,-ey*.9); c.stroke(); c.setLineDash([]);
+  } else if (site.kind === 'caravan' && aftermath === 'recovered') {
+    for (let i = 0; i < 8; i++) {
+      const x = -82 + i * 20, y = 74 + Math.sin(i * 1.7) * 5;
+      line(c, [[x-3,y],[x,y-5],[x+3,y]], '#b0a36e99', 1);
+    }
+  } else if (site.kind === 'watchtower' && aftermath === 'secured') {
+    const tower=site.decor.find(decor=>decor.kind==='tower'),tx=(tower?.x??site.x)-site.x,ty=(tower?.y??site.y)-site.y;
+    c.strokeStyle = '#8fd4c855'; c.lineWidth = 1.2;
+    for (const r of [36, 48]) { c.beginPath(); c.ellipse(tx,ty-38,r,r*.45,tower?.angle??0,0,TAU); c.stroke(); }
   }
   c.restore();
 }
 
-function tent(c: CanvasRenderingContext2D, site: WildernessSite, seed: number, time: number): void {
+function tent(c: CanvasRenderingContext2D, site: WildernessSite, seed: number, time: number, abandoned = false): void {
   const { cloth, lining, trim } = WILDERNESS_BIOME_THEMES[site.biome];
-  const wave = Math.sin(time * 1.9 + seed) * .8;
+  const wave = abandoned ? 0 : Math.sin(time * 1.9 + seed) * .8;
   line(c, [[-42, -48], [-56, 9]], '#a8a57b', .8); line(c, [[39, -47], [52, 10]], '#a8a57b', .8);
   polygon(c, [[-46, -5], [-31, -51], [28, -58], [48, -3], [6, 7]], '#263732');
   polygon(c, [[-46, -5], [-31, -51], [3 + wave, -67], [7, 6]], cloth);
@@ -117,6 +181,14 @@ function tent(c: CanvasRenderingContext2D, site: WildernessSite, seed: number, t
   for (let i = 0; i < 5; i++) line(c, [[-39 + i * 3.4, -10 - i * 6], [-35 + i * 3.4, -9 - i * 6]], '#ded0a280', .7);
   polygon(c, [[-12, 2], [18, 2], [26, 12], [-20, 11]], '#7c4e42');
   line(c, [[-16, 9], [22, 10]], '#c79d70', 1);
+  if (abandoned) {
+    polygon(c, [[-31, -50], [-8, -43], [-15, -28], [-37, -31]], '#202b28b8');
+    line(c, [[-27, -46], [-11, -40], [-18, -31]], '#9a8a6866', 1);
+  }
+}
+function deadFire(c: CanvasRenderingContext2D): void {
+  line(c, [[-13, 1], [12, -2]], '#554b3e', 5); line(c, [[-9, -5], [10, 4]], '#403832', 4);
+  for (const [x, y] of [[-5, -2], [2, 1], [7, -3], [-1, -6]]) { c.fillStyle = '#67665d'; c.fillRect(x, y, 3, 2); }
 }
 function fire(c: CanvasRenderingContext2D, time: number, seed: number): void {
   const p = time * 7 + seed, lean = Math.sin(p) * 2;
@@ -145,22 +217,22 @@ function barrel(c: CanvasRenderingContext2D): void {
   for (let x = -5; x <= 5; x += 5) line(c, [[x, -24], [x * 1.4, -14], [x, -1]], '#514932', .9);
   line(c, [[-9, -21], [0, -19], [9, -21]], '#a3aaa0', 2); line(c, [[-9, -6], [0, -4], [9, -6]], '#778c83', 2);
 }
-function lantern(c: CanvasRenderingContext2D, time: number): void {
+function lantern(c: CanvasRenderingContext2D, time: number, extinguished = false): void {
   line(c, [[0, 2], [0, -30], [8, -30], [8, -25]], '#7c795b', 2);
   polygon(c, [[3, -26], [7, -31], [12, -26], [13, -15], [2, -15]], '#68716a');
-  c.fillStyle = '#f4d998'; c.fillRect(5, -24, 5, 8); line(c, [[7.5, -24], [7.5, -16]], '#7e7955', .7);
-  drawGlow(c, 7, -20, 23, '#ffcf82', .38 + Math.sin(time * 5) * .03);
+  c.fillStyle = extinguished ? '#59605b' : '#f4d998'; c.fillRect(5, -24, 5, 8); line(c, [[7.5, -24], [7.5, -16]], '#7e7955', .7);
+  if (!extinguished) drawGlow(c, 7, -20, 23, '#ffcf82', .38 + Math.sin(time * 5) * .03);
 }
-function standingStone(c: CanvasRenderingContext2D, seed: number, time: number): void {
+function standingStone(c: CanvasRenderingContext2D, seed: number, time: number, inert = false): void {
   polygon(c, [[-17, 2], [-13, -43], [-5, -66], [10, -59], [16, -12], [13, 3]], '#4e6865');
   polygon(c, [[-13, -43], [-5, -66], [0, -58], [-3, -2], [-17, 2]], '#899789');
   line(c, [[-5, -64], [10, -59], [15, -14]], '#b2c2a6', 1.1);
   weatherStone(c, [[-17, 2], [-13, -43], [-5, -66], [10, -59], [16, -12], [13, 3]], seed, '#aeb8a1', '#283f43', '#6f8260');
-  const light = .75 + Math.sin(time * 1.4 + seed) * .12;
+  const light = inert ? .45 : .75 + Math.sin(time * 1.4 + seed) * .12;
   c.globalAlpha = light;
-  line(c, [[3, -50], [-3, -42], [6, -37], [-2, -27], [5, -19]], '#a3e7d9', 1.6);
-  line(c, [[-5, -43], [5, -43], [5, -47]], '#6dabaa', 1);
-  c.globalAlpha = 1; drawGlow(c, 2, -34, 18, '#77d0cb', .23);
+  line(c, [[3, -50], [-3, -42], [6, -37], [-2, -27], [5, -19]], inert ? '#69786f' : '#a3e7d9', inert ? 1 : 1.6);
+  line(c, [[-5, -43], [5, -43], [5, -47]], inert ? '#4e5e58' : '#6dabaa', 1);
+  c.globalAlpha = 1; if (!inert) drawGlow(c, 2, -34, 18, '#77d0cb', .23);
   polygon(c, [[-17, 2], [-10, -6], [-3, -4], [0, 5]], '#425844');
 }
 function tower(c: CanvasRenderingContext2D): void {
@@ -200,23 +272,36 @@ function wagon(c: CanvasRenderingContext2D): void {
 }
 
 /** One ground-contact object per depth layer; every solid anchor is the collision blueprint. */
-export function drawSiteDecor(c: CanvasRenderingContext2D, site: WildernessSite, decor: SiteDecor, time: number): void {
+export function drawSiteDecor(c: CanvasRenderingContext2D, site: WildernessSite, decor: SiteDecor, time: number, aftermath: SiteAftermath = 'none'): void {
   c.save(); c.translate(decor.x, decor.y); c.rotate(decor.angle); c.scale(decor.scale, decor.scale);
   c.fillStyle = '#07141668'; c.beginPath(); c.ellipse(4, 3, Math.max(8, decor.radius / decor.scale + 4), Math.max(3, decor.radius / decor.scale * .35), 0, 0, TAU); c.fill();
   switch (decor.kind) {
-    case 'arch': case 'cottage': case 'nest': case 'crystal': case 'root': case 'barricade': drawWildernessDetail(c,decor,time); break;
-    case 'tent': tent(c, site, decor.seed, time); break;
-    case 'fire': fire(c, time, decor.seed); break;
+    case 'arch': case 'cottage': case 'nest': case 'crystal': case 'root': case 'barricade': {
+      const changed = aftermath === 'cleansed' && decor.kind === 'root' || aftermath === 'emptied' && decor.kind === 'nest'
+        || aftermath === 'depleted' && decor.kind === 'crystal';
+      drawWildernessDetail(c,decor,time,changed);
+      if (aftermath === 'opened' && decor.kind === 'barricade') {
+        line(c, [[-30,-29],[-7,-17],[12,-27],[31,-12]], '#d0bd8a99', 2);
+        line(c, [[-18,-4],[-2,-16],[16,-3]], '#403b3288', 1.4);
+      }
+      if (aftermath === 'liberated' && decor.kind === 'cottage') {
+        c.fillStyle='#f3d18c';c.fillRect(-29,-28,8,9);drawGlow(c,-25,-24,32,'#f1c77d',.25);
+      }
+      break;
+    }
+    case 'tent': tent(c, site, decor.seed, time, aftermath === 'abandoned'); break;
+    case 'fire': aftermath === 'abandoned' || aftermath === 'recovered' ? deadFire(c) : fire(c, time, decor.seed); break;
     case 'crate': crate(c); break;
     case 'barrel': barrel(c); break;
-    case 'lantern': lantern(c, time); break;
-    case 'standingStone': standingStone(c, decor.seed, time); break;
+    case 'lantern': lantern(c, time, aftermath === 'sanctified' || aftermath === 'quieted'); break;
+    case 'standingStone': standingStone(c, decor.seed, time, aftermath === 'sanctified'); break;
     case 'tower': tower(c); break;
     case 'wagon': wagon(c); break;
     case 'banner': {
       const wave = Math.sin(time * 2 + decor.seed) * 2;
       line(c, [[0, 1], [0, -64], [-4, -71]], '#aaa17b', 2);
-      polygon(c, [[2, -61], [28 + wave, -57], [23, -40], [26 + wave, -30], [14, -36], [2, -35]], WILDERNESS_BIOME_THEMES[site.biome].banner);
+      const banner = aftermath === 'liberated' || aftermath === 'secured' ? '#47776d' : WILDERNESS_BIOME_THEMES[site.biome].banner;
+      polygon(c, [[2, -61], [28 + wave, -57], [23, -40], [26 + wave, -30], [14, -36], [2, -35]], banner);
       line(c, [[3, -60], [27 + wave, -56]], WILDERNESS_BIOME_THEMES[site.biome].trim, 1.2);
       line(c, [[12, -52], [20, -46], [11, -42], [14, -52]], WILDERNESS_BIOME_THEMES[site.biome].trim, 1.2);
       line(c, [[0, -34], [20, -29]], '#493c32', 1); break;
@@ -260,14 +345,14 @@ export function drawSiteDecor(c: CanvasRenderingContext2D, site: WildernessSite,
   c.restore();
 }
 
-export function wildernessLights(site: WildernessSite, time: number): PointLight[] {
+export function wildernessLights(site: WildernessSite, time: number, aftermath: SiteAftermath = 'none'): PointLight[] {
   return site.decor.flatMap(decor => {
-    if (decor.kind === 'fire') return [{ x: decor.x, y: decor.y - 10, radius: 150 * decor.scale,
+    if (decor.kind === 'fire') return aftermath === 'abandoned' || aftermath === 'recovered' ? [] : [{ x: decor.x, y: decor.y - 10, radius: 150 * decor.scale,
       color: '#ffad60', power: .72 + Math.sin(time * 6 + decor.seed) * .06, shadows: true }];
-    if (decor.kind === 'lantern') return [{ x: decor.x + 7, y: decor.y - 20, radius: 84, color: '#f7d89e', power: .45, shadows: true }];
-    if (decor.kind === 'standingStone') return [{ x: decor.x, y: decor.y - 30, radius: 61, color: '#77d0cb', power: .3 }];
-    if (decor.kind === 'crystal') return [{x:decor.x,y:decor.y-24,radius:95,color:'#a2dce1',power:.3}];
-    if (decor.kind === 'root') return [{x:decor.x,y:decor.y-24,radius:85,color:'#91c69d',power:.25}];
+    if (decor.kind === 'lantern') return aftermath === 'sanctified' || aftermath === 'quieted' ? [] : [{ x: decor.x + 7, y: decor.y - 20, radius: 84, color: '#f7d89e', power: .45, shadows: true }];
+    if (decor.kind === 'standingStone') return aftermath === 'sanctified' ? [] : [{ x: decor.x, y: decor.y - 30, radius: 61, color: '#77d0cb', power: .3 }];
+    if (decor.kind === 'crystal') return aftermath === 'depleted' ? [] : [{x:decor.x,y:decor.y-24,radius:95,color:'#a2dce1',power:.3}];
+    if (decor.kind === 'root') return aftermath === 'cleansed' ? [] : [{x:decor.x,y:decor.y-24,radius:85,color:'#91c69d',power:.25}];
     if (decor.kind === 'altar' && site.kind === 'standingStones') return [{ x: decor.x, y: decor.y - 20, radius: 100, color: '#83ddd6', power: .4 }];
     return [];
   });

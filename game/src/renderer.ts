@@ -36,6 +36,7 @@ import { MaterialResponses } from './material-response.ts';
 import { drawMaterialBurst } from './material-response-art.ts';
 import { hoveredGroundLoot, type GroundLootLabel } from './ground-loot-hover.ts';
 import { eventClaimed } from './poi-content.ts';
+import { projectSiteAftermath, type SiteAftermath } from './poi-aftermath.ts';
 import type { FrameProfiler, FrameStage } from './frame-profiler.ts';
 import { WaterPresentation } from './water-presentation.ts';
 import { WaterArt } from './water-art.ts';
@@ -167,6 +168,7 @@ export class Renderer {
   private biomeArt = new BiomeLifeArt();
   private crownOpacity = new Map<string, number>();
   private visibility = new SceneVisibility();
+  private siteAftermath: ReadonlyMap<string, SiteAftermath> = new Map();
   private get cachedBuildings() { return this.visibility.buildings; }
   private indoorBlend = 0;
   private lighting = new Lighting();
@@ -378,6 +380,7 @@ export class Renderer {
       if (this.plateOpacity < .01) this.plateEnemy = null;
     }
     this.visibility.update(world, this.view);
+    this.siteAftermath = projectSiteAftermath(this.visibility.sites, sim.eventState, id => sim.getCampState(id));
     this.residents=this.cryptFloor?[]:world.getSettlements(left,top,worldWidth,worldHeight).flatMap(t=>settlementResidents(t,sim.time)).filter(n=>n.x>=left-90&&n.x<=left+worldWidth+90&&n.y>=top-90&&n.y<=top+worldHeight+90);
     if(active){
       this.residentCooldown=Math.max(0,this.residentCooldown-step);
@@ -438,7 +441,7 @@ export class Renderer {
     if(this.cryptFloor&&dungeonRun) drawCryptDecor(c,this.cryptFloor,dungeonRun,settings.reducedMotion ? 0 : this.visualTime,this.eventArt.chests,settings.reducedMotion);
     else if(sim.dungeonFloor?.rift&&dungeonRun?.rift){const f=sim.dungeonFloor;drawRiftPortal(c,f.entry.x,f.entry.y,this.visualTime,.65);if(dungeonRun.rift.phase==='complete'){const exit=dungeonRunExit(f,dungeonRun);drawRiftPortal(c,exit.x,exit.y,this.visualTime,.65);const ch=dungeonRunChest(f,dungeonRun,2);this.eventArt.chests.draw(c,`${dungeonRun.entrance.id}:chest`,ch.x,ch.y,dungeonRun.rift.claimed,this.visualTime,0,true,settings.reducedMotion);}}
     else for(const entrance of this.visibility.entrances)drawCryptGate(c,entrance,this.visualTime);
-    for (const site of this.visibility.sites) drawSiteGround(c, site, settings.reducedMotion ? 0 : this.visualTime);
+    for (const site of this.visibility.sites) drawSiteGround(c, site, settings.reducedMotion ? 0 : this.visualTime, this.siteAftermath.get(site.id));
     this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime, this.sky);
     this.groundDressing.draw(c, this.cachedProps, this.view);
     this.riftAtmosphere.drawGround(c);
@@ -772,7 +775,7 @@ export class Renderer {
       entries.push({ y: remains.y, draw: () => drawMaterialBurst(c, remains, settings.reducedMotion) });
     for (const site of this.visibility.sites) for (const decor of site.decor) {
       if (sim.brokenContainers.has(decor.id)) continue;
-      entries.push({ y: decor.y, draw: () => drawSiteDecor(c, site, decor, settings.reducedMotion ? 0 : this.visualTime) });
+      entries.push({ y: decor.y, draw: () => drawSiteDecor(c, site, decor, settings.reducedMotion ? 0 : this.visualTime, this.siteAftermath.get(site.id)) });
     }
     for (const remains of this.deaths.remains)
       entries.push({ y: deathDepth(remains), draw: () => drawEnemyRemains(c, remains, settings.reducedMotion) });
@@ -873,7 +876,7 @@ export class Renderer {
     const buildingLights = this.settlementArt.getLights(this.cachedBuildings, this.visualTime, this.sky)
       .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py));
     environmentLights.push(...buildingLights.slice(0, 6));
-    const siteLights = this.visibility.sites.flatMap(site => wildernessLights(site, reducedMotion ? 0 : this.visualTime))
+    const siteLights = this.visibility.sites.flatMap(site => wildernessLights(site, reducedMotion ? 0 : this.visualTime, this.siteAftermath.get(site.id)))
       .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py));
     environmentLights.push(...siteLights.slice(0, 6));
     for (const prop of this.cachedProps) {

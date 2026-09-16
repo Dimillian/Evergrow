@@ -3,7 +3,7 @@ import { polygon, line, randomFromSeed } from './art-primitives.ts';
 import { drawGlow } from './lighting.ts';
 import type { SiteDecor } from './wilderness-sites.ts';
 /** Shared procedural assemblies: their solid anchors are authored by the site blueprint. */
-export function drawWildernessDetail(c: CanvasRenderingContext2D, d: SiteDecor, time: number): void {
+export function drawWildernessDetail(c: CanvasRenderingContext2D, d: SiteDecor, time: number, inert = false): void {
     const random = randomFromSeed(d.seed);
     if (d.kind === 'arch') {
         for (const side of [-1, 1])
@@ -58,8 +58,9 @@ export function drawWildernessDetail(c: CanvasRenderingContext2D, d: SiteDecor, 
             c.strokeStyle = i % 4 ? '#6a5942' : '#8d7956';
             c.lineWidth = .7 + random() * .8; c.stroke();
         }
-        // Unevenly nestled eggs: warm shells, soft volume and small mottled marks.
-        for (const [x, y, tilt] of [[-10, -2, -.35], [2, -6, .15], [13, 0, .5]]) {
+        // Resolved dens retain the solid nest but show the brood scattered and empty.
+        const eggs = inert ? [[-18, 8, -.8], [18, 7, .75]] : [[-10, -2, -.35], [2, -6, .15], [13, 0, .5]];
+        for (const [x, y, tilt] of eggs) {
             const h = 7 + random() * 2;
             groundShade(c, x+1, y+3, 9, 4, '#15201bcc');
             c.save(); c.translate(x, y-3); c.rotate(tilt); c.beginPath();
@@ -71,6 +72,7 @@ export function drawWildernessDetail(c: CanvasRenderingContext2D, d: SiteDecor, 
                 c.fillStyle = '#5c604744'; c.fillRect((random()-.5)*10, (random()-.5)*h*1.7, .7+random(), .7);
             }
             c.restore();
+            if (inert) line(c, [[x-4,y-6],[x+1,y-1],[x-2,y+3],[x+4,y+6]], '#3c4035', 1.2);
         }
         // A little foreground moss embeds the shells into the rim.
         for (let i = 0; i < 12; i++) {
@@ -79,21 +81,22 @@ export function drawWildernessDetail(c: CanvasRenderingContext2D, d: SiteDecor, 
         }
     }
     else if (d.kind === 'crystal') {
-        drawGlow(c, 0, -17, 45, '#96cfe1', .22 + Math.sin(time * 2 + d.seed) * .025);
+        if (!inert) drawGlow(c, 0, -17, 45, '#96cfe1', .22 + Math.sin(time * 2 + d.seed) * .025);
         for (const [x, h] of [[-13, 27], [0, 49], [14, 32]]) {
-            polygon(c, [[x - 8, 1], [x - 7, -h + 9], [x, -h], [x + 9, -h + 13], [x + 7, 2]], '#538f9b');
-            polygon(c, [[x, 1], [x, -h], [x + 9, -h + 13], [x + 7, 2]], '#b9e0dd');
-            line(c, [[x - 7, -h + 9], [x, -h], [x + 9, -h + 13]], '#e2f4e3', 1);
+            polygon(c, [[x - 8, 1], [x - 7, -h + 9], [x, -h], [x + 9, -h + 13], [x + 7, 2]], inert ? '#536462' : '#538f9b');
+            polygon(c, [[x, 1], [x, -h], [x + 9, -h + 13], [x + 7, 2]], inert ? '#82918b' : '#b9e0dd');
+            line(c, [[x - 7, -h + 9], [x, -h], [x + 9, -h + 13]], inert ? '#a3aba0' : '#e2f4e3', 1);
+            if (inert) line(c, [[x-2,-h+6],[x+3,-h+16],[x-1,-h+25]], '#394b4b', 1.2);
         }
     }
     else if (d.kind === 'root') {
         for (let i = 0; i < 8; i++) {
             const a = i * Math.PI / 4, r = 24 + random() * 13;
-            line(c, [[Math.cos(a) * r, Math.sin(a) * r * .45], [Math.cos(a) * 13, -9], [Math.sin(i) * 8, -42 - random() * 17]], i % 2 ? '#344740' : '#55634a', 5 - i % 3);
+            line(c, [[Math.cos(a) * r, Math.sin(a) * r * .45], [Math.cos(a) * 13, -9], [Math.sin(i) * 8, -42 - random() * 17]], inert ? (i % 2 ? '#485145' : '#65705b') : (i % 2 ? '#344740' : '#55634a'), 5 - i % 3);
         }
-        polygon(c, [[-14, 0], [-11, -33], [0, -57], [15, -27], [10, 5]], '#3c5146');
-        line(c, [[1, 2], [-4, -16], [5, -29], [0, -47]], '#b0dba0', 2);
-        drawGlow(c, 0, -24, 42, '#86c69a', .25 + Math.sin(time * 1.5) * .04);
+        polygon(c, [[-14, 0], [-11, -33], [0, -57], [15, -27], [10, 5]], inert ? '#566150' : '#3c5146');
+        line(c, [[1, 2], [-4, -16], [5, -29], [0, -47]], inert ? '#71866b' : '#b0dba0', inert ? 1.2 : 2);
+        if (!inert) drawGlow(c, 0, -24, 42, '#86c69a', .25 + Math.sin(time * 1.5) * .04);
     }
     else if (d.kind === 'barricade') {
         for (let i = 0; i < 5; i++) {
