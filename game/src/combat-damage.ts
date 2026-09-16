@@ -43,7 +43,7 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
       && context.visible(ally.x, ally.y, enemy.x, enemy.y)) alertEnemy(ally, context.player);
   }
   // Contact status uses the elemental portion, never physical damage or recursive burn ticks.
-  const statusDamage = elementalDamage ?? (style === 'fire' || style === 'frost' || style === 'lightning' ? damage : 0);
+  const statusDamage = elementalDamage ?? (style === 'fire' || style === 'frost' || style === 'lightning' || style === 'arcane' || style === 'spirit' ? damage : 0);
   const elementKind = (elementalDamage && elementalDamage > 0) ? (style ?? 'fire') : style;
   const reaction = !periodic ? resolveElementalReaction(enemy, elementKind, statusDamage) : null;
   if (reaction) {
@@ -57,6 +57,38 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
           other.knockbackX += Math.cos(pushAngle) * 85 / COMBAT_TIMING.knockbackDecay;
           other.knockbackY += Math.sin(pushAngle) * 85 / COMBAT_TIMING.knockbackDecay;
           other.hp = Math.max(0, other.hp - Math.round(statusDamage * ELEMENTAL_REACTION_RULES.overloadBaseDamageFraction));
+          // Chain Reaction / Cascade: Overload blast hitting Chilled/Frozen foes triggers Superconduct Cascade
+          const otherHasFrost = ((other.chillTime ?? 0) > 0) || ((other.freezeTime ?? 0) > 0);
+          if (otherHasFrost) {
+            (other.statusDurations ??= {}).fracture = ELEMENTAL_REACTION_RULES.superconductDuration;
+            other.fractureTime = Math.max(other.fractureTime ?? 0, ELEMENTAL_REACTION_RULES.superconductDuration);
+            other.stagger = Math.max(other.stagger, other.stagger + ELEMENTAL_REACTION_RULES.superconductStaggerBonus);
+            context.emit({ type: 'chain', x: enemy.x, y: enemy.y, toX: other.x, toY: other.y, duration: 0.28, style: 'lightning', color: '#67e8f9', reaction: 'cascade' });
+            context.emit({ type: 'hit', actualValue: Math.round(statusDamage * 0.3), angle: pushAngle, value: Math.round(statusDamage * 0.3), targetId: other.id, remainingHp: other.hp, enemyKind: other.kind, heavy: true, reaction: 'cascade', color: '#67e8f9', x: other.x, y: other.y });
+          }
+        }
+      }
+    } else if (reaction.type === 'singularity' && reaction.pullRadius) {
+      context.emit({ type: 'blast', x: enemy.x, y: enemy.y, radius: reaction.pullRadius, color: reaction.color, reaction: 'singularity' });
+      for (const other of context.enemies) {
+        if (other !== enemy && other.state !== 'dead') {
+          const dist = Math.hypot(enemy.x - other.x, enemy.y - other.y);
+          if (dist <= reaction.pullRadius) {
+            const pullAngle = Math.atan2(enemy.y - other.y, enemy.x - other.x);
+            const pullForce = Math.min(130, 240 * (1 - dist / reaction.pullRadius));
+            other.knockbackX += Math.cos(pullAngle) * pullForce / COMBAT_TIMING.knockbackDecay;
+            other.knockbackY += Math.sin(pullAngle) * pullForce / COMBAT_TIMING.knockbackDecay;
+            applyStun(other, ELEMENTAL_REACTION_RULES.singularityStaggerDuration, 'stagger');
+            other.hp = Math.max(0, other.hp - Math.round(statusDamage * 0.45));
+          }
+        }
+      }
+    } else if (reaction.type === 'combustion' && reaction.radius) {
+      context.emit({ type: 'blast', x: enemy.x, y: enemy.y, radius: reaction.radius, color: reaction.color, reaction: 'combustion' });
+      for (const other of context.enemies) {
+        if (other !== enemy && other.state !== 'dead' && Math.hypot(other.x - enemy.x, other.y - enemy.y) <= reaction.radius) {
+          applyElementalContact(other, 'fire', statusDamage * 0.6);
+          other.hp = Math.max(0, other.hp - Math.round(statusDamage * 0.4));
         }
       }
     }

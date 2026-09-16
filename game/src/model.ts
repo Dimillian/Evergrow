@@ -343,7 +343,7 @@ export interface Pickup {
 interface EventAppearance {
   readonly x: number; readonly y: number;
   readonly color?: string; readonly style?: ProjectileStyle; readonly skill?: SkillId;
-  readonly reaction?: 'melt' | 'overload' | 'superconduct';
+  readonly reaction?: 'melt' | 'overload' | 'superconduct' | 'singularity' | 'combustion' | 'cascade';
 }
 export type CombatEvent = EventAppearance & (
   | { readonly type: 'insufficient-mana' }

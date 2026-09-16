@@ -159,3 +159,90 @@ test('Internal cooldown prevents immediate reaction stacking on the same target'
   damageEnemy(enemy, 100, 0, false, h.context, false, 'fire', 100);
   assert.equal(h.events.filter(e => e.type === 'hit' && e.reaction === 'melt').length, eventsCountBefore + 1);
 });
+
+test('Singularity reaction: Arcane on Frost triggers Gravitational Collapse pulling nearby enemies', () => {
+  const h = createTestHarness();
+  const center = h.spawnTarget('brute', 50, 0, 10000);
+  const nearby = h.spawnTarget('brute', 120, 0, 10000); // 70px away, within 180px pull radius
+  const far = h.spawnTarget('brute', 300, 0, 10000); // 250px away, outside pull radius
+
+  applyElementalContact(center, 'frost', 100);
+  const centerHpBefore = center.hp;
+  const nearbyHpBefore = nearby.hp;
+  const rawDamage = 100;
+
+  damageEnemy(center, rawDamage, 0, false, h.context, false, 'arcane', rawDamage);
+
+  // Singularity multiplier: 1.45x
+  const expectedDamage = Math.round(rawDamage * ELEMENTAL_REACTION_RULES.singularityMultiplier);
+  assert.equal(centerHpBefore - center.hp, expectedDamage);
+
+  // Blast event emitted for singularity
+  const blastEvent = h.events.find((e): e is Extract<CombatEvent, { type: 'blast' }> => e.type === 'blast' && e.reaction === 'singularity');
+  assert.ok(blastEvent);
+  assert.equal(blastEvent.radius, ELEMENTAL_REACTION_RULES.singularityRadius);
+
+  // Nearby enemy is pulled towards center (knockbackX < 0 because nearby.x = 120 > center.x = 50)
+  assert.ok(nearby.knockbackX < 0);
+  assert.ok(nearby.hp < nearbyHpBefore);
+  assert.ok(nearby.stagger > 0);
+
+  // Far enemy is untouched
+  assert.equal(far.knockbackX, 0);
+});
+
+test('Combustion reaction: Arcane on Burn triggers Voidfire explosion that ignites nearby enemies', () => {
+  const h = createTestHarness();
+  const primary = h.spawnTarget('brute', 50, 0, 10000);
+  const secondary = h.spawnTarget('brute', 90, 0, 10000); // within 120px combustion radius
+
+  applyElementalContact(primary, 'fire', 100);
+  assert.ok(primary.burnTime > 0);
+
+  const rawDamage = 100;
+  damageEnemy(primary, rawDamage, 0, false, h.context, false, 'arcane', rawDamage);
+
+  // Primary burn consumed
+  assert.equal(primary.burnTime, 0);
+
+  // Combustion hit event emitted
+  const hitEvent = h.events.find(e => e.type === 'hit' && e.reaction === 'combustion');
+  assert.ok(hitEvent);
+
+  // Secondary enemy takes blast damage and receives burn contact
+  assert.ok(secondary.hp < 10000);
+  assert.ok(secondary.burnTime > 0);
+});
+
+test('Cascade reaction: Overload blast hitting Chilled enemies triggers Superconduct cascade', () => {
+  const h = createTestHarness();
+  const primary = h.spawnTarget('brute', 50, 0, 10000);
+  const secondary = h.spawnTarget('brute', 100, 0, 10000); // within 140px overload radius
+
+  // Primary is burning, secondary is chilled
+  applyElementalContact(primary, 'fire', 100);
+  applyElementalContact(secondary, 'frost', 100);
+
+  damageEnemy(primary, 100, 0, false, h.context, false, 'lightning', 100);
+
+  // Overload blast hits primary -> secondary receives fracture from cascade
+  assert.ok((secondary.fractureTime ?? 0) > 0);
+  assert.equal(secondary.statusDurations?.fracture, ELEMENTAL_REACTION_RULES.superconductDuration);
+
+  // Chain event emitted for cascade
+  const chainEvent = h.events.find(e => e.type === 'chain' && e.reaction === 'cascade');
+  assert.ok(chainEvent);
+});
+
+test('Singularity reaction: Lightning on Arcane Exposure triggers Singularity', () => {
+  const h = createTestHarness();
+  const primary = h.spawnTarget('brute', 50, 0, 10000);
+  (primary.auraExposure ??= {}).arcane = { power: 15, remaining: 3.0 };
+
+  damageEnemy(primary, 100, 0, false, h.context, false, 'lightning', 100);
+
+  const hitEvent = h.events.find(e => e.type === 'hit' && e.reaction === 'singularity');
+  assert.ok(hitEvent);
+  assert.equal(hitEvent.reaction, 'singularity');
+});
+

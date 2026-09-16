@@ -92,7 +92,7 @@ export class CombatEffects {
           radiant: event.type === 'cast' && event.style === 'radiant', ring: restoring || event.type === 'level' || event.skill === 'iceNova' });
       }
       if (event.type === 'hit' && event.value) {
-        const reactionColor = event.reaction === 'melt' ? '#ffd177' : event.reaction === 'overload' ? '#ff77aa' : event.reaction === 'superconduct' ? '#a0d0ff' : (heavy ? '#ffd177' : '#fff0c8');
+        const reactionColor = event.reaction === 'melt' ? '#ffd177' : event.reaction === 'overload' ? '#ff77aa' : event.reaction === 'superconduct' ? '#a0d0ff' : event.reaction === 'singularity' ? '#c578ff' : event.reaction === 'combustion' ? '#ff4d79' : event.reaction === 'cascade' ? '#67e8f9' : (heavy ? '#ffd177' : '#fff0c8');
         this.popups.push({ x: event.x + (Math.random() - .5) * 10,
           y: event.y - (enemyKind === 'brute' ? 54 : 44), vx: (Math.random() - .5) * 22, vy: -47,
           life: .85, max: .85, value: String(Math.round(event.value)), color: reactionColor, size: heavy ? 2.6 : 2 });
