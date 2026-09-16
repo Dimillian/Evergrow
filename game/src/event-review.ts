@@ -41,13 +41,17 @@ async function boot() {
     <nav class="layout-review-views event-review-events" aria-label="World event"></nav>
     <div class="event-review-settings">
       <div class="event-review-state"><span class="event-review-label">Preview state</span><div class="event-review-segments" role="group" aria-label="Preview state"><button data-preview-state="available" aria-pressed="true">Available</button><button data-preview-state="progress" aria-pressed="false">In progress</button><button data-preview-state="opening" aria-pressed="false">Opening</button><button data-preview-state="completed" aria-pressed="false">Completed</button><button data-preview-state="claimed" aria-pressed="false">Claimed</button></div></div>
-      <label class="event-review-recipe" hidden><span class="event-review-label">Encounter recipe</span><select class="progress-recipe"></select></label>
-      <button class="choice-button">View choices ↗</button>
     </div>
-    <div class="event-review-progress" hidden><button class="progress-play">Pause</button><label class="event-review-timeline">Timeline <input class="progress-time" type="range" min="0" step="0.1" value="0"></label><label>Speed <select class="progress-speed"><option value="1">1×</option><option value="5">5×</option><option value="10">10×</option></select></label><button class="progress-restart">Restart</button><output class="progress-readout"></output></div>
-    <div class="event-review-progress card-motion-controls" hidden role="group" aria-label="HUD card animation"><span class="event-review-label">HUD card</span><button class="card-enter">Replay entrance</button><button class="card-exit">Replay exit</button><label class="event-review-timeline">Animation <input class="card-time" type="range" min="0" max="${EVENT_CARD_MOTION.duration}" step="0.01" value="0"></label><label>Motion speed <select class="card-speed"><option value="1">1×</option><option value="0.5">0.5×</option><option value="0.25">0.25×</option></select></label><output class="card-readout">Replay or scrub the card animation; event time stays paused.</output></div>
-    <p class="layout-review-static progress-note">Disposable visual preview · No combat or saves.</p>
-    <figure class="layout-review-figure"><div class="layout-review-frame"></div></figure>`;
+    <div class="event-review-workspace">
+      <figure class="layout-review-figure"><div class="layout-review-frame"></div></figure>
+      <aside class="event-review-controls" aria-label="Event preview controls">
+        <label class="event-review-recipe" hidden><span class="event-review-label">Encounter recipe</span><select class="progress-recipe"></select></label>
+        <button class="choice-button">View choices ↗</button>
+        <div class="event-review-progress" hidden><button class="progress-play">Pause</button><label class="event-review-timeline">Timeline <input class="progress-time" type="range" min="0" step="0.1" value="0"></label><label>Speed <select class="progress-speed"><option value="1">1×</option><option value="5">5×</option><option value="10">10×</option></select></label><button class="progress-restart">Restart</button><output class="progress-readout"></output></div>
+        <div class="event-review-progress card-motion-controls" hidden role="group" aria-label="HUD card animation"><span class="event-review-label">HUD card</span><button class="card-enter">Replay entrance</button><button class="card-exit">Replay exit</button><label class="event-review-timeline">Animation <input class="card-time" type="range" min="0" max="${EVENT_CARD_MOTION.duration}" step="0.01" value="0"></label><label>Motion speed <select class="card-speed"><option value="1">1×</option><option value="0.5">0.5×</option><option value="0.25">0.25×</option></select></label><output class="card-readout">Replay or scrub the card animation; event time stays paused.</output></div>
+        <p class="layout-review-static progress-note">Disposable visual preview · No combat or saves.</p>
+      </aside>
+    </div>`;
   root.querySelector('.layout-review-frame')!.append(canvas);
   panel = new EventPanel(document.body, { close: () => panel!.close(), choose: () => panel!.close() });
   const params = new URLSearchParams(location.search);
@@ -71,7 +75,7 @@ async function boot() {
   const buttons = new Map<EventKind, HTMLButtonElement>();
   const reviewRecord = (phase: EventRecord['phase']): EventRecord => ({ ...selected, phase, choice: kind === 'caravan' ? 'goods' : kind === 'standingStones' ? 'haste' : null, wavesCleared: kind === 'cursedChest' ? 6 : 0, delivered: 0, bonusGranted: phase === 'claimed' });
   function paint(animated = false, dt = 0) {
-    const settings = { phase: 'playing' as const, reducedMotion: !animated || matchMedia('(prefers-reduced-motion: reduce)').matches };
+    const settings = { phase: 'playing' as const, fixedCamera: true, reducedMotion: !animated || matchMedia('(prefers-reduced-motion: reduce)').matches };
     renderer.render(sim, scene, dt, settings); fx ??= new PostFX(display); fx.render(renderer.canvas, sim.time);
     const c = canvas.getContext('2d')!; c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(display, 0, 0);
     c.save(); c.scale(2, 2); renderer.renderUI(c, sim, scene, settings); c.restore();
@@ -106,7 +110,10 @@ async function boot() {
       sim.eventState.sites[selected.id] = reviewRecord('claimed');
     }
     const landmark = ['cursedChest','reliquary'].includes(kind)?undefined:landmarks.find(s => s.id === selected.id);
-    renderer.reset(); renderer.resize(960, 640); renderer.cameraX = landmark?.x ?? selected.x; renderer.cameraY = (landmark?.y ?? selected.y) - 40;
+    renderer.reset(); renderer.resize(960, 640); renderer.cameraX = landmark?.x ?? selected.x;
+    // The chapel's long north-facing nave otherwise leaves its reward anchor
+    // beneath the bottom HUD; center farther south so the scene reads higher.
+    renderer.cameraY = (landmark?.y ?? selected.y) + (kind === 'ruinedChapel' ? 100 : -40);
     paint();
     for (const [id, b] of buttons) b.setAttribute('aria-current', String(id === kind));
     root.querySelector<HTMLButtonElement>('.choice-button')!.hidden = ['reliquary', 'camp', 'watchtower'].includes(kind);

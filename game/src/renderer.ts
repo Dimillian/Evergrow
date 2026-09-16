@@ -105,6 +105,8 @@ interface Ghost { x: number; y: number; angle: number; gait: number; life: numbe
 export interface RenderSettings {
   liveMap?: boolean;
   showGroundLootNames?: boolean;
+  /** Save-free scene tools can animate presentation without following the player. */
+  fixedCamera?: boolean;
   reducedMotion: boolean;
   /** Save-free reviews can inspect long-session water optics without advancing gameplay. */
   waterAge?: number;
@@ -349,7 +351,7 @@ export class Renderer {
       if (trail.hold <= 0) trail.value += (enemy.hp - trail.value) * (1 - Math.exp(-step * 8));
       if (Math.abs(trail.value - enemy.hp) < .2) this.damageTrails.delete(id);
     }
-    if (active) {
+    if (active && !settings.fixedCamera) {
       // Velocity-based lookahead does not swing the camera when the player merely aims.
       const follow = 1 - Math.exp(-dt * CAMERA_FOLLOW.response);
       const target = cameraFollowTarget({ x: px, y: py, vx: p.vx, vy: p.vy });

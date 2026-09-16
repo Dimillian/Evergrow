@@ -366,3 +366,19 @@ test('renderer anticipates direct skill-dash travel even when player velocity is
   render(.05);
   containsBounds(guard, renderer.worldBounds, 'direct dash motion and impact still stay inside the prior guard');
 });
+
+test('fixed review camera holds its framing while preserving default runtime following', t => {
+  const { renderer, sim, settings, render } = fixture(t);
+  settings.fixedCamera = true;
+  const x = renderer.cameraX, y = renderer.cameraY;
+  sim.player.x += 250; sim.player.y += 100;
+  sim.player.prevX = sim.player.x; sim.player.prevY = sim.player.y;
+  sim.player.vx = 120;
+  for (let i = 0; i < 10; i++) render(.05);
+  assert.equal(renderer.cameraX, x);
+  assert.equal(renderer.cameraY, y);
+  delete settings.fixedCamera;
+  render(.05);
+  assert.ok(renderer.cameraX > x, 'runtime camera still follows the player by default');
+  assert.ok(renderer.cameraY > y);
+});

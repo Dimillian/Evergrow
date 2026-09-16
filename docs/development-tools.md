@@ -10,7 +10,7 @@ World → Events includes **In progress** for all thirteen event entries (`/even
 
 Trial previews include a **HUD card** animation row: **Replay entrance** / **Replay exit**, a separate animation scrubber and 1×/0.5×/0.25× motion speeds. The event timeline pauses during these replays. The shared runtime frame expands horizontally before its contents fade in, reversing on exit. Reduced motion makes the transition instant. Finishing the event timeline automatically previews the card exit before the reward-opening study.
 
-The Events toolbar groups Available / In progress / Opening / Claimed into one preview-state selector with a visible selected state. View choices is a separate action. Recipe selection sits alongside the states, and playback/timeline controls occupy their own responsive row. Switching events retains the selected state when supported; opening animations finish on Claimed. Every preview state is URL-addressable through `state=available|progress|opening|claimed`.
+The Events toolbar groups Available / In progress / Opening / Completed / Claimed into one stable preview-state selector. Contextual recipe, playback and HUD-card controls sit beside the scene on desktop and below it at widths under 980px, keeping the canvas in place when states change. The review fixes its camera while animations advance; chapel framing keeps its reward chest above the HUD. Runtime camera following is unchanged. Switching events retains the selected state when supported; opening animations finish on Claimed. Every preview state is URL-addressable through `state=available|progress|opening|completed|claimed`.
 
 ## Area announcements
 
