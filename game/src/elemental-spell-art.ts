@@ -136,3 +136,189 @@ export function drawTempestField(c: CanvasRenderingContext2D, radius: number, se
     line(c,[[x-12,y-85],[x+5,y-51],[x-6,y-34],[x,y]],'#d9f5ff',1.1);
   }
 }
+
+/** Gravitational Void Collapse (Arcane + Frost/Shock reaction).
+ * Imploding event horizon, accretion disks, inward vacuum distortion vectors, radiant cosmic flares.
+ */
+export function drawSingularityImpact(
+  c: CanvasRenderingContext2D,
+  radius: number,
+  life: number,
+  seed: number,
+  reduced: boolean
+): void {
+  const p = 1 - life;
+  const pullProgress = Math.sin(Math.min(1, p * 1.6) * Math.PI / 2);
+  const coreRadius = Math.max(8, radius * 0.28 * (1 - p * 0.6));
+
+  c.save();
+  c.globalCompositeOperation = 'lighter';
+
+  // Ambient cosmic glow
+  drawGlow(c, 0, -4, radius * 1.2, '#9333ea', life * 0.9);
+  drawGlow(c, 0, -4, radius * 0.6, '#38bdf8', life * 0.7);
+
+  // Inward spiral accretion streamers
+  const streamerCount = 12;
+  for (let i = 0; i < streamerCount; i++) {
+    const baseAngle = (i / streamerCount) * TAU + seed * 0.5;
+    const spiralAngle = baseAngle + p * 4.2;
+    const outerDist = radius * (0.85 + (i % 3) * 0.08);
+    const innerDist = coreRadius * 1.1;
+    const currentDist = outerDist - (outerDist - innerDist) * pullProgress;
+
+    c.globalAlpha = life * (0.4 + (i % 2) * 0.35);
+    const points: [number, number][] = [];
+    const steps = 6;
+    for (let s = 0; s <= steps; s++) {
+      const st = s / steps;
+      const r = currentDist + (outerDist - currentDist) * st;
+      const a = spiralAngle + st * 0.85;
+      points.push([Math.cos(a) * r, Math.sin(a) * r * 0.75 - 4]);
+    }
+    line(c, points, i % 2 === 0 ? '#c084fc' : '#38bdf8', 1.8 * life + 0.5);
+  }
+
+  // Radial gravity collapse vectors / suction spikes pointing inward
+  if (!reduced) {
+    const spikeCount = 16;
+    for (let i = 0; i < spikeCount; i++) {
+      const a = (i / spikeCount) * TAU + seed + p * 1.5;
+      const rStart = radius * (0.4 + ((i * 7) % 10) * 0.05);
+      const rEnd = rStart * (1 - pullProgress * 0.7);
+      const x1 = Math.cos(a) * rStart, y1 = Math.sin(a) * rStart * 0.75 - 4;
+      const x2 = Math.cos(a) * rEnd, y2 = Math.sin(a) * rEnd * 0.75 - 4;
+      c.globalAlpha = life * 0.6;
+      line(c, [[x1, y1], [x2, y2]], i % 3 === 0 ? '#ffffff' : '#a855f7', 1.2);
+    }
+  }
+
+  // Pulsing Event Horizon Rings
+  c.globalAlpha = life * 0.85;
+  c.strokeStyle = '#c084fc';
+  c.lineWidth = 1.5 + life * 2.5;
+  c.beginPath();
+  c.ellipse(0, -4, coreRadius * 1.6, coreRadius * 1.2, p * 2, 0, TAU);
+  c.stroke();
+
+  c.strokeStyle = '#38bdf8';
+  c.lineWidth = 1.2;
+  c.beginPath();
+  c.ellipse(0, -4, coreRadius * 2.2 * (1 - p * 0.4), coreRadius * 1.65 * (1 - p * 0.4), -p * 1.5, 0, TAU);
+  c.stroke();
+
+  // Void Core (Pure Black Event Horizon with dark matter mask)
+  c.globalCompositeOperation = 'source-over';
+  c.fillStyle = '#060312';
+  c.globalAlpha = Math.min(1, life * 1.4);
+  c.beginPath();
+  c.ellipse(0, -4, coreRadius, coreRadius * 0.75, 0, 0, TAU);
+  c.fill();
+
+  // Core High-contrast Corona Rim
+  c.globalCompositeOperation = 'lighter';
+  c.strokeStyle = '#ffffff';
+  c.lineWidth = 2.0 * life;
+  c.globalAlpha = life * 0.95;
+  c.beginPath();
+  c.ellipse(0, -4, coreRadius, coreRadius * 0.75, 0, 0, TAU);
+  c.stroke();
+
+  // Quantum micro-singularity sparkles
+  if (!reduced) {
+    for (let i = 0; i < 10; i++) {
+      const a = i * 2.399 + p * 6;
+      const r = coreRadius * (0.9 + Math.sin(i + p * 10) * 0.5);
+      const sx = Math.cos(a) * r, sy = Math.sin(a) * r * 0.75 - 4;
+      c.globalAlpha = life * 0.9;
+      c.fillStyle = '#ffffff';
+      c.fillRect(sx - 1, sy - 1, 2, 2);
+    }
+  }
+
+  c.restore();
+}
+
+/** Voidfire / True Damage Plasma Combustion (Arcane + Fire reaction).
+ * Superheated plasma shockwave, crimson-magenta corona, solar-void flare petals and molten ground fracture.
+ */
+export function drawCombustionImpact(
+  c: CanvasRenderingContext2D,
+  radius: number,
+  life: number,
+  seed: number,
+  reduced: boolean
+): void {
+  const p = 1 - life;
+  const spread = reduced ? 0.9 : 1 - Math.pow(life, 4);
+
+  c.save();
+  c.globalCompositeOperation = 'lighter';
+
+  // Intense dynamic plasma glow (deep magenta & crimson)
+  drawGlow(c, 0, -6, radius * 1.1, '#ff0055', life * 0.9);
+  drawGlow(c, 0, -6, radius * 0.55, '#ffaa00', life * 0.8);
+
+  // Outer expanding shockwave ring
+  c.globalAlpha = life * 0.8;
+  c.strokeStyle = '#ff77aa';
+  c.lineWidth = 1.5 + life * 3.5;
+  c.beginPath();
+  c.ellipse(0, -4, radius * spread, radius * spread * 0.7, 0, 0, TAU);
+  c.stroke();
+
+  // Secondary high-frequency plasma ripples
+  c.globalAlpha = life * 0.5;
+  c.strokeStyle = '#ffd6e8';
+  c.lineWidth = 1.0;
+  c.beginPath();
+  c.ellipse(0, -4, radius * spread * 0.65, radius * spread * 0.45, 0, 0, TAU);
+  c.stroke();
+
+  // Erupting Voidfire Plasma Petals / Solar Prominences
+  const petalCount = 14;
+  for (let i = 0; i < petalCount; i++) {
+    const a = (i / petalCount) * TAU + seed * 0.6;
+    const dist = radius * spread * (0.65 + (i % 3) * 0.15);
+    const x = Math.cos(a) * dist;
+    const y = Math.sin(a) * dist * 0.7 - 4;
+    const flameHeight = reduced ? 10 : Math.sin(p * Math.PI) * (34 + (i % 4) * 8);
+
+    c.globalAlpha = life * 0.7;
+    polygon(
+      c,
+      [
+        [x - 8 * life, y],
+        [x - 6 * life, y - flameHeight * 0.35],
+        [x - 2, y - flameHeight * 0.75],
+        [x + Math.sin(i * 3 + p * 8) * 5, y - flameHeight],
+        [x + 3, y - flameHeight * 0.6],
+        [x + 8 * life, y - flameHeight * 0.25],
+        [x + 7 * life, y]
+      ],
+      i % 2 === 0 ? '#ff0055' : '#ff7b00'
+    );
+  }
+
+  // Blinding white-hot / magenta plasma core
+  c.globalAlpha = Math.pow(life, 2.5) * 0.95;
+  c.fillStyle = '#fff0f5';
+  c.beginPath();
+  c.ellipse(0, -6, Math.max(2, radius * 0.35 * life), Math.max(1, radius * 0.22 * life), 0, 0, TAU);
+  c.fill();
+
+  // Molten Void-Cinder trails lifting into air
+  if (!reduced) {
+    for (let i = 0; i < 16; i++) {
+      const a = i * 2.399 + seed;
+      const d = radius * spread * (0.3 + (i % 5) * 0.14);
+      const x = Math.cos(a) * d;
+      const lift = Math.sin(p * Math.PI) * (45 + (i % 3) * 15);
+      const y = Math.sin(a) * d * 0.7 - 4 - lift;
+      c.globalAlpha = life * 0.85;
+      line(c, [[x, y], [x - Math.cos(a) * 4, y - 5]], i % 2 ? '#ffc0db' : '#ffda88', 1.4);
+    }
+  }
+
+  c.restore();
+}

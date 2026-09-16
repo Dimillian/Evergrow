@@ -10,6 +10,7 @@ import { PostFX } from './postfx.ts';
 import { GameNotifications } from './notifications.ts';
 import { generateItem } from './items.ts';
 import { Lifetime } from './lifetime.ts';
+import { getZoneAt } from './zone-progression.ts';
 if (!import.meta.env.DEV) throw new Error('Local review only.');
 installUITheme(); await loadGameFont();
 // Frozen presentation using real renderers: no simulation input, ticks or saved state.
@@ -23,7 +24,10 @@ const renderer = new Renderer(), fx = life.own(new PostFX(canvas));
 const notices = life.own(new GameNotifications(shell, { autoAdvance: false }));
 const mode = new URLSearchParams(location.search).get('view');
 if (mode === 'discovery') notices.push({ kind: 'discovery', poi: { id: 'review-town', kind: 'town', name: 'Briarwatch', x: 0, y: 0, description: '' } });
-else if (mode === 'area') notices.push({ kind: 'area', id: 'swamp', name: 'The Mire', level: 4 });
+else if (mode === 'area') {
+  renderer.areaBanner.show(getZoneAt(sim.player.x,sim.player.y,world.seed));
+  renderer.areaBanner.age=1.8;
+}
 notices.push({ kind: 'loot', item: generateItem(94, 5, 'weapon', 'longsword', 'rare') });
 notices.push({ kind: 'loot', item: generateItem(138, 4, 'boots', undefined, 'magic') });
 notices.push({ kind: 'loot', item: generateItem(279, 4, 'head', undefined, 'common') });

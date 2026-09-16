@@ -11,7 +11,7 @@ import { eventLabel, eventSite, type EventKind, type EventRecord, type EventSite
 import { eventRewards } from './poi-rewards.ts';
 import { treasureLanding } from './treasure-flight.ts';
 import { EventPanel } from './poi-panel.ts';
-import { EVENT_RECIPES, eventRecipe } from './event-recipes.ts';
+import { EVENT_RECIPES, eventRecipe, isTrialKind } from './event-recipes.ts';
 import { eventStudyProfile, stageEventProgress } from './tools/event-progress-study.ts';
 import { eventProgress } from './event-progress.ts';
 import { EVENT_CARD_MOTION } from './event-progress-presentation.ts';
@@ -24,7 +24,7 @@ const views: readonly [EventKind, string][] = [
 ];
 const root = document.querySelector<HTMLElement>('#event-review')!;
 const lifetime = new AbortController();
-type PreviewState = 'available' | 'progress' | 'opening' | 'claimed';
+type PreviewState = 'available' | 'progress' | 'opening' | 'completed' | 'claimed';
 let disposed = false, frame = 0, world: World | undefined, fx: PostFX | undefined, panel: EventPanel | undefined;
 async function boot() {
   if (!import.meta.env.DEV) throw new Error('Local review only.');
@@ -40,7 +40,7 @@ async function boot() {
   root.innerHTML = `<header class="layout-review-header"><h1>World events</h1></header>
     <nav class="layout-review-views event-review-events" aria-label="World event"></nav>
     <div class="event-review-settings">
-      <div class="event-review-state"><span class="event-review-label">Preview state</span><div class="event-review-segments" role="group" aria-label="Preview state"><button data-preview-state="available" aria-pressed="true">Available</button><button data-preview-state="progress" aria-pressed="false">In progress</button><button data-preview-state="opening" aria-pressed="false">Opening</button><button data-preview-state="claimed" aria-pressed="false">Claimed</button></div></div>
+      <div class="event-review-state"><span class="event-review-label">Preview state</span><div class="event-review-segments" role="group" aria-label="Preview state"><button data-preview-state="available" aria-pressed="true">Available</button><button data-preview-state="progress" aria-pressed="false">In progress</button><button data-preview-state="opening" aria-pressed="false">Opening</button><button data-preview-state="completed" aria-pressed="false">Completed</button><button data-preview-state="claimed" aria-pressed="false">Claimed</button></div></div>
     </div>
     <div class="event-review-workspace">
       <figure class="layout-review-figure"><div class="layout-review-frame"></div></figure>
@@ -99,7 +99,16 @@ async function boot() {
     note.textContent = 'Disposable visual preview · No combat or saves.';
     sim = new Simulation(scene, { spawn: false, seed: 7319, startX: selected.x + 42, startY: selected.y + 35 });
     sim.time = 12; sim.player.angle = -Math.PI / 2;
-    if (previewState === 'claimed') sim.eventState.sites[selected.id] = reviewRecord('claimed');
+    if (previewState === 'completed') {
+      if (kind === 'camp') {
+        const checkpoint = sim.captureCheckpoint(); checkpoint.clearedCamps = [selected.id]; sim.restoreCheckpoint(checkpoint);
+      } else sim.eventState.sites[selected.id] = reviewRecord('completed');
+    } else if (previewState === 'claimed') {
+      if (kind === 'camp') {
+        const checkpoint = sim.captureCheckpoint(); checkpoint.clearedCamps = [selected.id]; sim.restoreCheckpoint(checkpoint);
+      }
+      sim.eventState.sites[selected.id] = reviewRecord('claimed');
+    }
     const landmark = ['cursedChest','reliquary'].includes(kind)?undefined:landmarks.find(s => s.id === selected.id);
     renderer.reset(); renderer.resize(960, 640); renderer.cameraX = landmark?.x ?? selected.x;
     // The chapel's long north-facing nave otherwise leaves its reward anchor
@@ -109,6 +118,7 @@ async function boot() {
     for (const [id, b] of buttons) b.setAttribute('aria-current', String(id === kind));
     root.querySelector<HTMLButtonElement>('.choice-button')!.hidden = ['reliquary', 'camp', 'watchtower'].includes(kind);
     root.querySelector<HTMLButtonElement>('[data-preview-state="opening"]')!.disabled = ['watchtower', 'standingStones'].includes(kind);
+    root.querySelector<HTMLButtonElement>('[data-preview-state="completed"]')!.disabled = kind !== 'camp' && !isTrialKind(kind);
     syncState();
     root.dataset.ready = 'true'; root.setAttribute('aria-busy', 'false');
   }
@@ -124,6 +134,7 @@ async function boot() {
   }
   function showState(state: PreviewState) {
     if (state === 'opening' && ['watchtower', 'standingStones'].includes(kind)) state = 'claimed';
+    if (state === 'completed' && kind !== 'camp' && !isTrialKind(kind)) state = 'claimed';
     previewState = state;
     if (state === 'progress') startProgress();
     else if (state === 'opening') startOpening();
@@ -259,7 +270,7 @@ async function boot() {
     frame = requestAnimationFrame(animate);
   }
   const initialState = params.get('state');
-  showState(initialState === 'progress' || initialState === 'opening' || initialState === 'claimed' ? initialState : 'available');
+  showState(initialState === 'progress' || initialState === 'opening' || initialState === 'completed' || initialState === 'claimed' ? initialState : 'available');
 }
 void boot().catch(e => { root.textContent = String(e); root.dataset.ready = 'error'; });
 function dispose() { disposed = true; cancelAnimationFrame(frame); lifetime.abort(); panel?.dispose(); fx?.dispose(); world?.dispose(); }

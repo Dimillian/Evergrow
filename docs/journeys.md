@@ -31,6 +31,7 @@ Nearest settlement lookup checks nine seeded geography anchors, then loads only 
 - Caravans/reliquaries: finish the existing choice or treasure claim.
 - Watchtowers: activate the beacon.
 - Graveyards/standing stones: finish the guardians and claim the reward/blessing.
+- Wilderness bosses: defeat the boss, then wait for the complete physical hoard to be delivered. Guidance reports the pending delivery instead of asking for another kill.
 - Crypts: defeat the Warden and fully claim the final chest. Boss death alone is not completion.
 - Towns/frontiers: arrive within the objective's radius on the surface.
 
