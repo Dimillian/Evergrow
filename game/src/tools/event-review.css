@@ -1,24 +1,29 @@
 .event-review-events { padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid #29383c; }
-.event-review-settings { display: flex; align-items: end; flex-wrap: wrap; gap: 16px 24px; margin-bottom: 16px; }
+.event-review-settings { margin-bottom: 16px; }
 .event-review-state, .event-review-recipe { display: grid; gap: 7px; margin: 0; }
 .event-review-label { color: #9caaa9; font-size: 13px; }
 .event-review-segments { display: flex; flex-wrap: wrap; gap: 3px; padding: 4px; background: #0b1418; border: 1px solid #354149; border-radius: 5px; }
 .event-review-segments button { border-color: transparent; background: transparent; font-size: 15px; padding: 8px 14px; min-height: 34px; }
 .event-review-segments button[aria-pressed="true"] { background: #342b40; border-color: #91729f; color: #f0d9fc; box-shadow: inset 0 -2px #c899df; }
 .event-review-segments button:disabled { opacity: .3; cursor: default; }
-.event-review-settings .choice-button { margin-left: auto; font-size: 15px; color: #b4c0bf; }
+.event-review-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); align-items: start; gap: 20px; }
+.event-review-workspace .layout-review-frame { width: 100%; }
+.event-review-controls { display: grid; align-content: start; gap: 12px; min-width: 0; }
+.event-review-controls .choice-button { width: 100%; font-size: 15px; color: #b4c0bf; }
 .event-review-progress { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 14px; margin-bottom: 12px; border: 1px solid #354149; background: #101a20; border-radius: 4px; }
-.event-review-progress[hidden], .event-review-recipe[hidden], .event-review-settings .choice-button[hidden] { display: none; }
+.event-review-progress[hidden], .event-review-recipe[hidden], .event-review-controls .choice-button[hidden] { display: none; }
 .event-review-progress label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #aab7b6; }
 .event-review-timeline { flex: 1 1 220px; min-width: 0; }
 .event-review-progress input { width: 100%; min-width: 90px; accent-color: #c899df; }
 .event-review-progress select, .event-review-recipe select { background: #101a20; color: #dae0dc; padding: 8px; border: 1px solid #455159; border-radius: 3px; font: inherit; max-width: 100%; }
 .event-review-progress button { font-size: 14px; min-width: 65px; }
 .event-review-progress output { flex-basis: 100%; color: #c4b3ce; font-size: 13px; }
-.progress-note { margin: 0 0 14px; font-size: 13px; line-height: 1.5; }
+.progress-note { margin: 0; font-size: 13px; line-height: 1.5; }
+@media (max-width: 980px) {
+  .event-review-workspace { grid-template-columns: 1fr; }
+  .event-review-controls { grid-row: 2; }
+}
 @media (max-width: 600px) {
-  .event-review-settings { gap: 14px; }
-  .event-review-settings .choice-button { margin-left: 0; }
   .event-review-segments button { padding: 8px 10px; }
   .event-review-recipe { min-width: 0; max-width: 100%; }
   .event-review-progress .event-review-timeline { flex-basis: calc(100% - 85px); }
