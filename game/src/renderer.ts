@@ -1,4 +1,6 @@
 import { RiftAtmosphereArt } from './rift-atmosphere-art.ts';
+import { AreaBanner } from './area-banner.ts';
+import { drawAreaBanner } from './area-banner-art.ts';
 import { riftMechanic } from './rift-encounters.ts';
 import { riftWardActive } from './rift-tactics.ts';
 import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
@@ -146,6 +148,7 @@ export class Renderer {
   private playerHealthTrail = 100;
   private playerHealthHold = 0;
   private rewards = new RewardFeedback();
+  readonly areaBanner = new AreaBanner();
   private experienceFeedback = new ExperienceFeedback();
   private experienceDisplay: ExperienceDisplay | undefined;
   private effects = new CombatEffects();
@@ -268,6 +271,7 @@ export class Renderer {
   }
 
   reset() {
+    this.areaBanner.clear();
     this.eventProgressPresentation.reset();
     this.outdoorLightEffects.reset();
     this.dungeonLightEffects.reset(); this.emission = undefined;
@@ -323,6 +327,8 @@ export class Renderer {
     const feedbackStep = active || settings.phase === 'dead' ? dt : 0;
     this.eventProgressPresentation.update(this.cryptFloor ? null : eventProgress(sim.eventState), feedbackStep, settings.reducedMotion);
     this.rewards.update(goldBalance(p.character), feedbackStep, settings.reducedMotion);
+    if(p.dead)this.areaBanner.clear();
+    else this.areaBanner.update(settings.phase === 'playing' ? dt : 0, !!(this.rewards.level || this.rewards.journey));
     this.experienceDisplay = this.experienceFeedback.update(p, feedbackStep, settings.reducedMotion);
     this.experienceDisplay.pulse = Math.max(this.experienceDisplay.pulse, this.rewards.xpPulse);
     const px = lerp(p.prevX, p.x, alpha), py = lerp(p.prevY, p.y, alpha);
@@ -600,15 +606,24 @@ export class Renderer {
     drawRewardFlights(c, this.rewards, (x, y) => worldToScreen(this.view, x, y), this.width, this.height, footer ? {hud:footer,gold:{x:headerX+27*.8*unit,y:headerY+62*.8*unit}} : undefined);
     drawLevelAnnouncement(c, this.rewards.level, worldToScreen(this.view, p.x, p.y), this.width, this.height, settings.reducedMotion);
     if(!this.rewards.level)drawJourneyAnnouncement(c,this.rewards.journey,worldToScreen(this.view,p.x,p.y),this.width,this.height,settings.reducedMotion);
-    c.save();
     const plateScale = phone ? .72*unit : 1;
-    if(phone) c.scale(plateScale,plateScale);
     const plateWidth=this.width/plateScale, plateHeight=this.height/plateScale;
     const plateInset=this.touchTopInset/plateScale;
     const boss=sim.enemies.find(e=>isBossKind(e.kind)&&e.hp>0&&e.state!=='return'&&Math.hypot(e.x-p.x,e.y-p.y)<(isWildernessBoss(e.kind)?650:1100));
     const target = boss ?? (this.plateOpacity > .01 ? this.plateEnemy : null);
     const debuffs = target ? [...enemyTraitBuffs(target),...enemyDebuffs(target, p)] : [];
     const targetPlate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0);
+    // Visible plates own this space, including their death fade. Dismiss without replaying after focus ends.
+    if(settings.phase==='playing'&&target&&targetPlate.height>0)this.areaBanner.clear();
+    if(settings.phase==='playing'&&!p.dead&&!this.rewards.level&&!this.rewards.journey) {
+      // Use display pixels for banner sizing, independent of world resolution and zoom.
+      const scale=this.cursorPixelScale;
+      c.save();c.scale(scale.x,scale.y);
+      drawAreaBanner(c,this.areaBanner.notice,this.areaBanner.age,p.level,this.width/scale.x,this.height/scale.y,settings.reducedMotion);
+      c.restore();
+    }
+    c.save();
+    if(phone) c.scale(plateScale,plateScale);
     this.targetEffects = target && target.hp > 0 && targetPlate.height > 70 && debuffs.length && settings.phase === 'playing'
       ? { id: target.id, buffs: debuffs, x: (targetPlate.x + targetPlate.width / 2) * plateScale / this.width,
         y: (targetPlate.y + 76) * plateScale / this.height, opacity: boss ? 1 : this.plateOpacity } : null;
