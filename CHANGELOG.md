@@ -1,5 +1,12 @@
 # Evergrow changelog
 
+## v0.6.7 — 2026-09-17T11:41:00Z
+
+### Tweaks
+
+- Refined the pause menu with a clearer location heading, a prominent Resume button and a compact Save action beside save status.
+- Centered the pause panel with the Evergrow title above it and improved spacing on smaller screens.
+
 ## v0.6.6 — 2026-09-16T13:45:00Z
 
 ### New
