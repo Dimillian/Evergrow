@@ -35,6 +35,16 @@ The user approved the next major prototype milestone, **0.6.0**, on 2026-09-14 f
 
 ## Last verified publication
 
+- Game v0.6.7 / Sites version 61, publicly deployed on 2026-09-17 at 11:44:00 UTC.
+- Published source: `77263046a9cf7be8bf1a561644fb4fe9f79dd22e`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_a389400d657881919af6231eb9ae7ece`.
+- Deployment: `appgdep_6aabd27177b48191aac6107d57ce9621`; Sites returned `succeeded`.
+- Includes PR #63: refined pause-menu hierarchy, prominent Resume action, compact save controls and responsive panel/wordmark placement.
+- All 16 release-note and character-hall regression checks passed, alongside application/core type checking, local and cloud-enabled builds, archive validation and clean-source release validation. No automated browser gameplay was run.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.6.6 / Sites version 60, publicly deployed on 2026-09-16 at 13:50:13 UTC.
 - Published source: `12fdd74ba67dcb6be02a7ee03f8ed626b82511db`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_c8d0940808f08191876be527a1e53eba`.
