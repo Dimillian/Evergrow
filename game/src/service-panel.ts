@@ -421,16 +421,57 @@ export class ServicePanel {
       if(valid){this.selected=drag.quote!.request;this.quote=drag.quote;void this.confirm();}
     },options);
     this.element.addEventListener('dragend',()=>{this.clearTradeDrag();this.ignoreClickUntil=Date.now()+200;},options);
-    // A quick purchase also works without dragging. Single click remains inspection.
+    // Quick purchase or quick action also works without dragging. Single click remains inspection.
     this.element.addEventListener('dblclick',event=>{
-      if(this.saving||this.tradeDrag||Date.now()<this.ignoreClickUntil)return;
       const cell=event.target instanceof Element?event.target.closest<HTMLElement>('[data-item]'):null;
       if(!cell||! /^(stock|buyback):/.test(cell.dataset.item!))return;
-      const trade=this.directTrade(cell.dataset.item!);if(!trade)return;
-      event.preventDefault();this.tooltip.hide();
-      if(trade.problem){this.element.querySelector('.service-message')!.textContent=trade.problem;return;}
-      this.selected=trade.quote!.request;this.quote=trade.quote;void this.confirm();
+      event.preventDefault();
+      this.quickAction(cell.dataset.item!);
     },options);
+    this.element.addEventListener('contextmenu',event=>{
+      const cell=event.target instanceof Element?event.target.closest<HTMLElement>('[data-item]'):null;
+      if(!cell||!cell.dataset.item)return;
+      event.preventDefault();
+      this.quickAction(cell.dataset.item);
+    },options);
+  }
+  private quickAction(key: string): void {
+    if (this.saving || this.tradeDrag || Date.now() < this.ignoreClickUntil) return;
+    const value = this.resolve(key); if (!value) return;
+    this.tooltip.hide();
+    const message = this.element.querySelector<HTMLElement>('.service-message');
+    if (this.npc.role === 'stash') {
+      if (key.startsWith('bag:')) {
+        const bag = Number(key.split(':')[1]);
+        if (!hasStorageTab(this.player.character, this.storageTab)) {
+          if (message) message.textContent = 'Unlock this storage tab first.';
+          return;
+        }
+        if (storageTabItems(this.player.character, this.storageTab).filter(Boolean).length >= STASH_CAPACITY) {
+          if (message) message.textContent = 'Storage tab full.';
+          return;
+        }
+        const result = quoteService(this.player.character, this.npc, this.player.level, { type: 'store', bag, tab: this.storageTab });
+        if (!result.ok) { if (message) message.textContent = result.message; return; }
+        this.selected = result.quote.request; this.quote = result.quote; void this.confirm();
+        return;
+      }
+      if (key.startsWith('stash:')) {
+        const slot = Number(key.split(':')[1]);
+        if (!canPackItem(this.player.character, value.item)) {
+          if (message) message.textContent = packSpaceProblem(this.player.character, value.item);
+          return;
+        }
+        const result = quoteService(this.player.character, this.npc, this.player.level, { type: 'retrieve', slot });
+        if (!result.ok) { if (message) message.textContent = result.message; return; }
+        this.selected = result.quote.request; this.quote = result.quote; void this.confirm();
+        return;
+      }
+    }
+    const trade = this.directTrade(key);
+    if (!trade) return;
+    if (trade.problem) { if (message) message.textContent = trade.problem; return; }
+    this.selected = trade.quote!.request; this.quote = trade.quote; void this.confirm();
   }
   private resolve(key: string): { item: Item; source?: ItemSource; request: ServiceRequest } | null {
     const [type, value] = key.split(':'); let item: Item | null = null, request: ServiceRequest;
@@ -520,6 +561,15 @@ export class ServicePanel {
       if(this.npc.role==='gambler'&&this.tab==='shop')return;
       if(this.tab === 'sell' && value.item.locked){this.element.querySelector('.service-message')!.textContent='Unlock this item in your inventory before selling it.';return;}
       if(this.tab === 'sell' && value.source && 'bag' in value.source) {
+        if (e.shiftKey) {
+          const res = quoteService(this.player.character, this.npc, this.player.level, { type: 'sell', source: value.source });
+          if (res.ok) {
+            this.selected = res.quote.request;
+            this.quote = res.quote;
+            void this.confirm();
+            return;
+          }
+        }
         if(this.sales.has(value.item.id)) this.sales.delete(value.item.id);
         else this.sales.set(value.item.id,{bag:value.source.bag,id:value.item.id,revision:value.item.recipe.revision});
         this.renderDetail(); this.syncRarities();
