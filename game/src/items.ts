@@ -322,7 +322,7 @@ export function createCharacterSheet(starter: StarterLoadoutId = 'sword'): Chara
 
 /** Rebuild from authored bases and exact roll quality; never scale rounded existing stats. */
 export function deriveItem(item: Item): Item {
-  if(item.kind==='riftKey')return {...createRiftKey(item.seed,item.itemLevel,item.recipe.riftKeyTier),...(item.locked!==undefined?{locked:item.locked}:{})};
+  if(item.kind==='riftKey')return {...createRiftKey(item.seed,item.itemLevel,item.recipe.riftKeyTier),...(item.locked!==undefined?{locked:item.locked}:{}),...(item.newPickup?{newPickup:true as const}:{})};
   if (item.tier === 'unique') return deriveUnique(item);
   if (item.kind === 'charm') return deriveCharm(item);
   return deriveEquipment(item);
