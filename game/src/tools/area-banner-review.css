@@ -1,0 +1,29 @@
+html, body { margin: 0; background: #0b1218; color: #e9e4d3; }
+body { font: 14px "Evergrow Numerals", system-ui, sans-serif; }
+.banner-study { max-width: 1600px; margin: auto; padding: 28px 28px 70px; }
+.banner-study header { display: flex; flex-wrap: wrap; gap: 20px; align-items: end; justify-content: space-between; }
+.banner-study h1 { margin: 4px 0 8px; font: 32px var(--ui-font); }
+.banner-study .eyebrow { color: #b09a72; letter-spacing: .18em; font-size: 11px; text-transform: uppercase; }
+.banner-study p { color: #aebbb9; line-height: 1.5; margin: 6px 0; }
+.banner-study a { color: #c9d5c5; }
+.banner-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 22px 0 18px; }
+.banner-controls label { display: grid; gap: 6px; color: #aebbb9; font-size: 12px; }
+.banner-controls button, .banner-controls select, .banner-controls input { box-sizing: border-box; min-height: 38px; background: #15212a; border: 1px solid #42534f; border-radius: 2px; color: #e9e4d3; padding: 8px 12px; font: inherit; }
+.banner-controls input { width: 100px; }
+.banner-controls button { cursor: pointer; }
+.banner-controls button[aria-pressed="true"] { border-color: #c4ad7b; background: #27312f; }
+.banner-boards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.banner-board { min-width: 0; }
+.banner-board h2 { font: 21px var(--ui-font); margin: 0 0 8px; }
+.banner-board canvas { display: block; width: 100%; height: auto; margin: auto; }
+.banner-board .description { padding: 12px 0; }
+.banner-board .description p { font-size: 13px; }
+.banner-boards[data-mode="single"] { grid-template-columns: 1fr; }
+.banner-board[hidden] { display: none; }
+.banner-study .legend { display: flex; flex-wrap: wrap; gap: 10px 24px; margin: 16px 0 8px; }
+.banner-study .legend span { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.banner-study .legend i { width: 7px; height: 7px; transform: rotate(45deg); background: var(--tone); }
+.banner-study .footnote { font-size: 12px; max-width: 1000px; }
+.banner-study output { color: #c5d7b8; font-size: 13px; }
+@media (max-width: 1100px) { .banner-boards { grid-template-columns: 1fr; } }
+@media (max-width: 540px) { .banner-study { padding: 18px 14px 70px; } .banner-study h1 { font-size: 27px; } .banner-controls { gap: 8px; } }

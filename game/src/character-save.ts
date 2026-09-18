@@ -125,6 +125,9 @@ export function decodeCharacterSave(raw: string): CharacterSave | null {
     if(dungeonReturn && !expedition?.runs.some(r=>r.entrance.id===dungeonReturn))return null;
     const items = [...storedItems,...(p.character.stash??[]),...p.character.inventory, ...Object.values(p.character.equipped), ...p.groundItems.map(i => i.item), ...p.character.commerce.buyback.map(i => i.item)].filter(Boolean) as Item[];
     if (new Set(items.map(i => i.id)).size !== items.length || new Set(p.groundItems.map(i => i.id)).size !== p.groundItems.length) return null;
+    const actors=[...((p.actors??[]) as StoredActor[]),...(expedition?.surface?.actors??[]),...(expedition?.runs.flatMap(run=>run.contents.actors)??[])];
+    const lootIdentities=actors.flatMap(actor=>actor.lootIdentity===undefined?[]:[actor.lootIdentity]);
+    if(new Set(lootIdentities).size!==lootIdentities.length || items.some(item=>lootIdentities.some(identity=>item.id.startsWith(`loot:${identity}:`))))return null;
     for (const item of items) {
       if (!item.id.startsWith('stock:')) continue;
       const source = /^stock:(town:[0-9]+:-?[0-9]+:building:[0-9]+:(blacksmith|jeweler)):([0-9]+):([0-9]+)$/.exec(item.id);

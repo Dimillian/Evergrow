@@ -26,6 +26,7 @@ export function stageWaterScene(sim: Simulation, scene: WaterReviewScene, before
   const speed = time >= 1 && time < 4 || time >= 10 && time < 13 ? span / 3 : 0;
   p.x = p.prevX = scene.x + scene.nx * distance; p.y = p.prevY = scene.y + scene.ny * distance;
   p.vx = scene.nx * speed; p.vy = scene.ny * speed; p.angle = Math.atan2(scene.ny, scene.nx);
+  p.locomotionVX = p.vx; p.locomotionVY = p.vy;
   p.walkTime = (distance + span) / PLAYER_MOVEMENT.gaitDistance;
   sim.time = time; p.attack = null;
   if (time >= 5 && time < 5.625 || time >= 6.2 && time < 6.825) {

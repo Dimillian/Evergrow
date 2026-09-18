@@ -2,6 +2,7 @@ const ICONS = {
   gold: '<ellipse cx="10" cy="6" rx="7" ry="3"/><path d="M3 6v4c0 4 14 4 14 0V6M3 11v4c0 3 8 4 12 2m0-4c4-1 7 0 7 2v4c0 4-13 4-13 0v-2m6-2c0 2 7 2 7 0"/>',
   dropItem: '<path d="m11 4-4-1-4 3-1 4 3 4 5-1 3-4Z" fill="currentColor" fill-opacity=".14"/><path d="m10 6 4 4m-1-3 3 2-2 3-3-2M5 6l-1 3m9 4 1 1m4 0 3 3-3 3-3-3Zm0 2v2M12 22h10"/>',
   options: '<path d="M4 7h16M4 17h16M9 4v6m6 4v6"/>',
+  pause: '<path d="M6 4h4v16H6Zm8 0h4v16h-4Z"/>',
   save: '<path d="M5 3h12l3 3v15H4V3Zm3 0v6h8V3M8 21v-8h8v8"/>',
   exit: '<path d="M10 4H4v16h6m-1-8h12m-4-4 4 4-4 4"/>',
   potion: '<path d="M9 3h6v5l4 6v5c0 2-14 2-14 0v-5l4-6ZM8 3h8M8 14h8M9 17h6"/>',

@@ -70,6 +70,7 @@ import { sampleBiome } from './biomes.ts';
 import { RoamingEncounters, ROAMING_RULES, ROAMING_GROUPS, roamingSpawnAnchor, shouldRetireRoamer } from './roaming-encounters.ts';
 import { isSpawnHidden, type SpawnExclusion } from './spawn-visibility.ts';
 import { updateEnemyAI, type EnemyAIContext } from './enemy-ai.ts';
+import { PlayerMovement } from './player-movement.ts';
 
 export const FIXED_STEP = COMBAT_TIMING.fixedStep;
 export const HIT_FLASH_DURATION = COMBAT_TIMING.hitFlashDuration;
@@ -79,7 +80,7 @@ export function initialPlayer(x: number, y: number): Player {
   return {
     chronicle:freshChronicle(), character, derived: deriveCharacterStats(character), skillCooldowns: {}, activeSkill: null,
     nextAttackHand: 'main', guardTime: 0, guardReduction: .75, dash: null,
-    x, y, prevX: x, prevY: y, vx: 0, vy: 0, angle: 0,
+    x, y, prevX: x, prevY: y, vx: 0, vy: 0, locomotionVX: 0, locomotionVY: 0, angle: 0,
     hp: PLAYER_DEFAULTS.maxHp, maxHp: PLAYER_DEFAULTS.maxHp, mana: PLAYER_DEFAULTS.maxMana, maxMana: PLAYER_DEFAULTS.maxMana,
     level: 1, xp: 0,
     stats: createBaseStats(), equipment: createStartingEquipment(),
@@ -155,6 +156,7 @@ export class Simulation {
   private combatViewport: CombatViewport | null = null;
   private spawnExclusion: SpawnExclusion | null = null;
   private killRecharge = 0;
+  private playerMovement = new PlayerMovement();
 
   constructor(world: WorldQuery, options: SimulationOptions = {}) {
     this.world = world;
@@ -164,6 +166,7 @@ export class Simulation {
   }
 
   reset(): void {
+    this.playerMovement.clear();
     this.brokenContainers.clear(); this.world.setBrokenContainers?.(this.brokenContainers);
     this.journeys = freshJourneys();
     this.expeditions = freshExpeditions(); this.dungeonFloor = null;
@@ -264,6 +267,7 @@ export class Simulation {
 
   /** Travel preserves actors, loot, clocks and camp memory. It is not a reset/load. */
   relocate(x: number, y: number): void {
+    this.playerMovement.clear();
     this.chains.length = 0;
     this.groundEffects = this.groundEffects.filter(effect => effect.kind !== 'storm');
     const p = this.player;
@@ -296,6 +300,7 @@ export class Simulation {
     if(this.player.skillEffects)delete this.player.skillEffects.draw;
     if (!preserveMovement) {
       this.player.vx = this.player.vy = 0;
+      this.player.locomotionVX = this.player.locomotionVY = 0;
       this.accumulator = 0;
       this.capturePositions();
     }
@@ -445,6 +450,7 @@ export class Simulation {
 
   private updatePlayer(dt: number, input: Input): void {
     const p = this.player;
+    p.locomotionVX = p.locomotionVY = 0;
     let completedAttackTime = 0;
     const channelSlot=(input.heldSkillSlots??(input.skillSlot===null?[]:[input.skillSlot])).find(slot=>p.character.skillSlots[slot]==='whirlwind');
     if(hasUnique(p.character,'dervish-grasp')){
@@ -590,6 +596,8 @@ export class Simulation {
 
     let targetVX = 0;
     let targetVY = 0;
+    const movementX = p.x, movementY = p.y;
+    const walking = !p.dash && p.dodgeTime <= 0 && Math.hypot(input.moveX, input.moveY) > .01;
     if (p.dash) {
       const dash = p.dash, startX = p.x, startY = p.y, delta = Math.min(dt, dash.remaining);
       const steps = Math.max(1, Math.ceil(dash.speed * delta / 4));
@@ -630,8 +638,13 @@ export class Simulation {
       p.vy += (targetVY - p.vy) * easing;
       if (length === 0 && Math.hypot(p.vx, p.vy) < PLAYER_MOVEMENT.stopThreshold) p.vx = p.vy = 0;
     }
-    const destination = this.world.move(p.x, p.y, p.vx * dt, p.vy * dt, p.radius);
+    if (!walking) this.playerMovement.clear();
+    const destination = walking
+      ? this.playerMovement.move(this.world, p.x, p.y, p.vx * dt, p.vy * dt, p.radius, this.time)
+      : this.world.move(p.x, p.y, p.vx * dt, p.vy * dt, p.radius);
     p.walkTime += Math.hypot(destination.x - p.x, destination.y - p.y) / PLAYER_MOVEMENT.gaitDistance;
+    p.locomotionVX = (destination.x - movementX) / dt;
+    p.locomotionVY = (destination.y - movementY) / dt;
     p.x = destination.x;
     p.y = destination.y;
     const dodgeElapsed = PLAYER_ABILITIES.dodge.duration - p.dodgeTime;
@@ -833,7 +846,10 @@ export class Simulation {
     return { world: this.world, break: (target, angle) => {
       const level = this.world.dungeonLevel ?? encounterScaleAt(target.x, target.y, this.world.seed ?? this.options.seed!, this.player.level).base;
       if (breakContainer(target, angle, level, this.brokenContainers, this.groundGold,
-        () => this.nextId++, event => this.emit(event), this.player.derived.goldFindMultiplier)) this.world.setBrokenContainers?.(this.brokenContainers);
+        () => this.nextId++, event => this.emit(event), this.player.derived.goldFindMultiplier)) {
+        this.world.setBrokenContainers?.(this.brokenContainers);
+        this.playerMovement.clear();
+      }
     } };
   }
 

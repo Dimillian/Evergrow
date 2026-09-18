@@ -6,6 +6,8 @@ Both Android windows request a matching-resolution 60 Hz display mode. The main 
 
 ## Two screens, one character
 
+Local September 15 area banner: the upper gameplay screen shares the desktop Gilded Horizon announcement at 12.5% of viewport height. Display-sized lettering and compact ornament spacing adapt to short landscape screens; the companion does not duplicate it. This source change is included in future APK builds; it does not install an updated APK by itself.
+
 The upper screen runs the game. Its minimap (including crypts), short Journey list and town portal form one navigation group, with shared visibility and hit regions. Keep this group visible on Thor even when a companion Presentation exists: the firmware dashboard can cover that window while Android reports it as presented, powered on and visible. The native presence check is suitable for transport availability only, not proof the user can see navigation. No reliable dashboard-occlusion signal was found in the normal app APIs; automatic upper-HUD hiding has been removed. Compact phone layouts still use their dedicated touch navigation.
 
 The lower screen uses the Astral UI palette, shared procedural item art, Pixelify lettering, and Barlow numerals:

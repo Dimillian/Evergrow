@@ -64,7 +64,7 @@ import { PanelCoordinator } from './panel-coordinator.ts';
 import { bindGameKeyboard } from './game-keyboard.ts';
 import { createCharacterSheet, type StarterLoadoutId } from './items.ts';
 import { refreshCharacter } from './character.ts';
-import { AreaNoticeTracker } from './notification-queue.ts';
+import { AreaNoticeTracker, areaLevelLabel, areaThreat, type AreaBannerNotice } from './area-banner.ts';
 import { activityLevel } from './activity-level.ts';
 import { getZoneAt } from './zone-progression.ts';
 import { SaveHub, type SaveMode } from './save-hub.ts';
@@ -365,9 +365,8 @@ export class Game {
       this.saveClient.onChange = state => {
         if (this.disposed) return;
         this.titleScreen.setSource(state);
-        if (state.mode === 'cloud') {
-          const active = this.session?.active;
-          const save = active ? this.saveClient.statusForSlot(active.index) : state;
+        if (state.mode === 'cloud' && this.session?.active) {
+          const save = this.saveClient.statusForSlot(this.session.active.index);
           this.shell.setSaveStatus(save.message || save.status, !['Synced', 'Saving…'].includes(save.status));
         }
       };
@@ -381,16 +380,7 @@ export class Game {
             this.saveClient.mode,location.hostname,!!window.EvergrowAndroid) && !!this.session.active;
           this.commandConsole=this.lifetime.own(new ConsolePanel(this.shell.panelMount, {
             close:()=>{if(!this.savingAction)this.resume();},
-            execute:raw=>this.durable(async()=> {
-              const result=await executeConsoleCommand(this.sim,raw,{
-                allowed:()=>allowed()&&this.phase==='console',view:this.renderer.spawnExclusionBounds(this.sim.player),
-                seed:()=>crypto.getRandomValues(new Uint32Array(1))[0],identity:()=>crypto.randomUUID(),
-                persist:async checkpoint=>{const ok=await this.session.save(checkpoint,Date.now());
-                  if(!ok)this.shell.setSaveStatus(this.session.error,true);return {ok,message:this.session.error};},
-              });
-              if(result.ok){this.saveError='';this.shell.setSaveStatus();}
-              return result;
-            },{ok:false,message:'Saving the previous action…'}),
+            execute:raw=>this.executeLocalConsole(raw,allowed,executeConsoleCommand),
           }));
           this.consoleShortcut=event=>{
             const target=event.target;
@@ -683,16 +673,18 @@ export class Game {
   private editHallAppearance(selected: SaveSlot) {
     if (this.phase !== 'ready' || this.hallBusy || this.appearanceEditor || this.disposed || !selected.record || selected.conflict) return;
     const slot = structuredClone(selected), record = slot.record!;
+    let refreshOnCancel = false;
     this.appearanceFromHall = true;
     this.titleScreen.setEditorOpen(true); this.clearInput();
     this.appearanceEditor = createAppearanceEditor(this.shell.panelMount, {
       sheet: record.checkpoint.character, name: record.name,
-      onCancel: () => this.closeAppearanceEditor(),
+      onCancel: () => { this.closeAppearanceEditor(); if (refreshOnCancel && !this.disposed) this.titleScreen.refreshSelected(); },
       onSave: async look => {
         if (this.hallBusy || this.disposed) return {ok:false, message:'A save is already in progress.'};
         this.hallBusy = true;
         try {
           const result = await executeSavedAppearanceChange(this.session.repository, slot, look, Date.now());
+          refreshOnCancel = !result.ok;
           if (result.ok && !this.disposed) {
             this.titleScreen.updateSlot({...slot, record:result.record, token:result.token});
             this.closeAppearanceEditor();
@@ -767,7 +759,7 @@ export class Game {
     this.titleScreen.setBusy(true);
     try {
     const slot = await this.session.repository.read(index);
-    if (slot.token !== expected) { this.titleScreen.message('This character changed. Select it again before deleting.'); return; }
+    if (slot.token !== expected) { await this.loadRoster(index); this.titleScreen.message('This character changed. Review it before deleting.'); return; }
     const result = await this.session.repository.remove(index, expected);
     if (!result.ok) { this.titleScreen.message(result.message); return; }
     if (slot.record) {
@@ -780,7 +772,7 @@ export class Game {
 
   private enterWorld() {
     this.shell.notifications.clear();
-    this.areaNotices.reset(getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed).id);
+    this.areaNotices.reset(this.currentArea().id);
     this.sim.player.name = this.session.active?.record.name;
     this.renderer.reset();
     this.renderer.snapTo(this.sim.player);
@@ -802,7 +794,7 @@ export class Game {
   }
 
   private async selectSaveSource(mode: SaveMode) {
-    if (this.phase !== 'ready' || this.hallBusy || this.session.active) return;
+    if (mode === this.saveClient.mode || this.phase !== 'ready' || this.hallBusy || this.session.active) return;
     await this.saveClient.select(mode); await this.loadRoster();
   }
   private async retryCloudSaves() {
@@ -838,7 +830,7 @@ export class Game {
     if (this.phase !== 'ready' || this.hallBusy) return;
     this.hallBusy = true;
     try { await this.saveClient.useCloud(index, expected); await this.loadRoster(index); }
-    catch (error) { this.titleScreen.message((error as Error).message); }
+    catch (error) { this.titleScreen.message((error as Error).message, true); }
     finally { this.hallBusy = false; }
   }
 
@@ -888,6 +880,7 @@ export class Game {
     const index = this.session.active.index;
     await this.saveClient.flush();
     this.session.active = null;
+    this.shell.setSaveStatus();
     this.shell.notifications.clear();
     if(this.world!==this.overworld)this.world.dispose(); this.world=this.overworld;this.sim.world=this.world;
     this.sim.reset(); this.renderer.reset();
@@ -1060,6 +1053,17 @@ export class Game {
     return { ok, message: this.saveError };
   }
 
+  private executeLocalConsole(raw:string,allowed:()=>boolean,execute:(sim:Simulation,raw:string,context:{
+    allowed():boolean;view:ReturnType<Renderer['spawnExclusionBounds']>;seed():number;identity():string;
+    persist(checkpoint:CharacterCheckpoint):Promise<{ok:boolean;message?:string}>;
+  })=>Promise<{ok:boolean;message?:string}>) {
+    return this.durable(()=>execute(this.sim,raw,{
+      allowed:()=>allowed()&&this.phase==='console',view:this.renderer.spawnExclusionBounds(this.sim.player),
+      seed:()=>crypto.getRandomValues(new Uint32Array(1))[0],identity:()=>crypto.randomUUID(),
+      persist:checkpoint=>this.persistTravel(checkpoint),
+    }),{ok:false,message:'Saving the previous action…'});
+  }
+
   private requestPortal() {
     if (this.savingAction || !this.panels.simulationActive || !this.session.active) return;
     const p = this.sim.player, link = this.sim.travel.returnTo;
@@ -1112,9 +1116,16 @@ export class Game {
     this.renderer.reset(); this.renderer.snapTo(this.sim.player);
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
     this.sim.setCombatViewport(this.renderer.combatViewport);
-    this.areaNotices.reset(getZoneAt(this.sim.player.x, this.sim.player.y, this.overworld.seed).id);
+    // Travel clears the old presentation; announce the destination after stable arrival.
+    this.areaNotices.reset('');
     this.worldMap.update(this.sim.player, 0);
     this.shell.portalTransition(); this.canvas.focus();
+  }
+
+  private currentArea(): AreaBannerNotice {
+    const run = currentDungeon(this.sim.expeditions);
+    return run ? { id: run.entrance.id, name: run.entrance.name, level: run.entrance.level }
+      : getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed);
   }
 
   private async trade(quote: ServiceQuote): Promise<{ ok: boolean; message: string }> {
@@ -1274,8 +1285,12 @@ export class Game {
       }
       if (this.sim.portal.ready) this.travelThrough(this.overworld.getPortalAnchor(this.sim.travel.homeTown), false);
       const run=currentDungeon(this.sim.expeditions);
-      const zone = run?{id:run.entrance.id,name:run.entrance.name,level:run.entrance.level}:getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed);
-      if (this.areaNotices.update(zone.id, dt)) this.shell.notifications.push({ kind: 'area', id: zone.id, name: zone.name, level: zone.level, maxLevel: 'maxLevel' in zone ? zone.maxLevel : undefined });
+      const zone = this.currentArea();
+      this.renderer.areaBanner.retain(zone.id);
+      if (this.areaNotices.update(zone.id, dt)) {
+        this.renderer.areaBanner.show(zone);
+        this.shell.notifications.announce(`${zone.name}. ${areaLevelLabel(zone)}. ${areaThreat(zone,this.sim.player.level).label}.`);
+      }
       if(run?.rift&&(this.sim.player.dead||run.rift.phase==='failed')){
         if(!this.savingAction)void this.switchDungeon({kind:'death'});
       } else if (this.sim.player.dead) {
