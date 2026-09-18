@@ -40,6 +40,16 @@ test('completion uses claimed site and final chest ledgers, never missing actors
   const run=createDungeonRun(entrance);f.expeditions.runs=[run];const crypt=goal(entrance.id,'dungeon',2);
   run.states.warden.hp=0;assert.equal(journeyComplete(crypt,f),false);run.chestMasks[2]=15;assert.equal(journeyComplete(crypt,f),true);
 });
+test('wilderness boss guidance reports the durable hoard delivery state',()=>{
+  const f=facts(),lair=goal('site:lair','bossLair',8);
+  assert.equal(journeyObjective(lair,f),'Defeat the boss');
+  f.events.sites[lair.id]={...lair,kind:'bossLair',seed:7319,biome:'deadwood',phase:'completed',choice:null,wavesCleared:0,delivered:7,bonusGranted:true};
+  assert.equal(journeyObjective(lair,f),'Boss defeated — hoard delivery pending');
+  assert.equal(journeyComplete(lair,f),false);
+  f.events.sites[lair.id].delivered=15;f.events.sites[lair.id].phase='claimed';
+  assert.equal(journeyObjective(lair,f),'Completed');
+  assert.equal(journeyComplete(lair,f),true);
+});
 test('combat leveling changes candidate fit without altering pinned targets or source levels',()=>{
   const f=facts();f.level=7;const state=freshJourneys();state.accepted=[goal('old','camp',1)];state.tracked='old';
   const candidates=[goal('low','camp',1),goal('matched','camp',7),goal('too-hard','dungeon',12)];

@@ -12,9 +12,11 @@ import type { EventProgressView } from './event-progress-presentation.ts';
 export class EventArt {
   readonly chests = new ChestArt();
   draw(c: CanvasRenderingContext2D, site: EventSite, record: Pick<EventRecord, 'phase'> & Partial<Pick<EventRecord,'delivered'|'bonusGranted'>> | undefined, time: number, _dt: number, reduced: boolean, preparation=0) {
-    const claimed = record?.phase === 'claimed', active = record?.phase === 'active';
+    const claimed = record?.phase === 'claimed', completed = record?.phase === 'completed', active = record?.phase === 'active';
     if(site.kind!=='standingStones'&&site.kind!=='watchtower') {
-      this.chests.draw(c,site.id,site.x,site.y,claimed||!!record?.bonusGranted||!!record?.delivered,time,Math.max(preparation,active?.2:0),site.kind==='cursedChest',reduced);return;
+      const cursed = site.kind === 'cursedChest' && !completed && !claimed;
+      const open = completed || claimed || !!record?.bonusGranted || !!record?.delivered;
+      this.chests.draw(c,site.id,site.x,site.y,open,time,Math.max(preparation,active?.2:0),cursed,reduced);return;
     }
     c.save();
     c.translate(site.x, site.y);

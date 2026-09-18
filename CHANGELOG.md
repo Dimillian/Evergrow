@@ -1,5 +1,32 @@
 # Evergrow changelog
 
+## v0.6.7 — 2026-09-17T11:41:00Z
+
+### Tweaks
+
+- Refined the pause menu with a clearer location heading, a prominent Resume button and a compact Save action beside save status.
+- Centered the pause panel with the Evergrow title above it and improved spacing on smaller screens.
+
+## v0.6.6 — 2026-09-16T13:45:00Z
+
+### New
+
+- Combine elemental attacks for Melt, Overload, Superconduct, Singularity and Combustion reactions, with bursts, pulls, armor weakening and chained explosions.
+- Enemy burning, chill and other debuffs have clearer effects and hoverable status icons.
+- Entering a new region introduces its name and level range with a brief announcement.
+- Completed wilderness events leave visible aftermath at their sites.
+
+### Tweaks
+
+- Movement slides more smoothly around obstacles, with steadier controller movement and matching character poses.
+- Character selection makes cloud status and character details easier to read.
+
+### Fixes
+
+- Improved cloud conflict recovery and cleared stale character-hall warnings after recovery.
+- Wilderness boss objectives remain visible while their rewards are waiting to be collected.
+- Area announcements get out of the way of enemy nameplates during combat.
+
 ## v0.6.5 — 2026-09-15T07:04:00Z
 
 ### New

@@ -7,9 +7,10 @@ export function pauseMenuMarkup(kills: number, duration: string, location: strin
   return `<div class="pause-menu-stack">
     <div class="pause-brand" aria-label="Evergrow">EVERGROW</div>
     <section class="ui-window menu-window pause-menu">
-    <header class="ui-window-header pause-header">${uiIcon('journal')}<h1 id="menu-title" class="ui-title">Paused</h1>
-      <span class="pause-place">${escapeUI(location)}</span>
-      <button type="button" id="play-action" class="ui-button pause-resume">${uiIcon('chevron')}<span>Resume</span><kbd>Esc</kbd></button></header>
+    <header class="ui-window-header pause-header">
+      <div class="pause-heading">${uiIcon('pause')}<h1 id="menu-title" class="ui-title">Paused</h1></div>
+      <div class="pause-place"><span class="pause-place-label">Location</span><span>${escapeUI(location)}</span></div>
+    </header>
     <div class="pause-layout">
       <nav class="pause-tabs" role="tablist" aria-label="Menu categories">
         ${PAUSE_CATEGORIES.map((c,i)=>`<button type="button" id="pause-tab-${c.id}" class="ui-button pause-tab" role="tab" aria-selected="${i===0}" aria-controls="pause-page-${c.id}" tabindex="${i===0?0:-1}" data-pause-tab="${c.id}">${uiIcon(c.icon)}<span>${c.label}</span></button>`).join('')}
@@ -20,8 +21,14 @@ export function pauseMenuMarkup(kills: number, duration: string, location: strin
         </section>`).join('')}
       </div>
     </div>
-    <div class="pause-utilities"><button type="button" id="save-action" class="ui-button">${uiIcon('save')}<span>Save game</span></button><button type="button" id="title-action" class="ui-button ui-button--quiet"><span>Save & character hall</span>${uiIcon('exit')}</button></div>
-    <footer class="pause-footer"><i aria-hidden="true"></i><p class="menu-save-state" role="status">Saving…</p><span class="pause-session">${kills} slain · ${duration} played</span></footer>
+    <div class="pause-utilities">
+      <button type="button" id="title-action" class="ui-button ui-button--quiet pause-return">${uiIcon('exit')}<span>Character hall</span></button>
+      <button type="button" id="play-action" class="ui-button ui-button--primary pause-resume"><span>Resume</span><kbd>Esc</kbd>${uiIcon('chevron')}</button>
+    </div>
+    <footer class="pause-footer">
+      <div class="pause-save"><i aria-hidden="true"></i><p class="menu-save-state" role="status">Saving…</p><button type="button" id="save-action" class="ui-button ui-button--quiet pause-save-action" aria-label="Save game">Save</button></div>
+      <span class="pause-session">${kills} slain · ${duration} played</span>
+    </footer>
     </section>
   </div>`;
 }

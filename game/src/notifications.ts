@@ -70,8 +70,6 @@ export class GameNotifications {
             title = notice.poi.name; detail = `${POI_DEFINITIONS[notice.poi.kind].label} discovered`;
             icon = uiIcon(notice.poi.kind === 'camp' ? 'sword' : notice.poi.kind === 'town' ? 'map' : 'lantern');
             color = POI_DEFINITIONS[notice.poi.kind].color;
-          } else if (notice.kind === 'area') {
-            title = notice.name; detail = notice.maxLevel ? `Lv ${notice.level}–${notice.maxLevel}` : `Lv ${notice.level}`; icon = uiIcon('leaf'); color = '#a8cbb5';
           } else { title = notice.message; detail = ''; icon = uiIcon('diamond'); color = '#d8b780'; }
           card.element.dataset.kind = notice.kind;
           card.element.style.setProperty('--notice-accent', color);
