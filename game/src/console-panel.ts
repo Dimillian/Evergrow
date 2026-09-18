@@ -43,7 +43,7 @@ export class ConsolePanel {
     this.list.addEventListener('mousedown',e=>e.preventDefault(),{signal});
     this.list.addEventListener('click',e=>{const row=(e.target as HTMLElement).closest<HTMLElement>('[data-index]');if(row&&!this.busy){this.selected=Number(row.dataset.index);this.complete();}},{signal});
     this.input.addEventListener('keydown',e=>this.key(e),{signal});
-    el.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();if(!this.busy)actions.close();}},{signal});
+    el.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing){e.preventDefault();e.stopPropagation();if(!this.busy)actions.close();}},{signal});
   }
   open(){if(this.disposed)return;this.element.hidden=false;this.render();this.focus?.dispose();this.focus=trapDialogFocus(this.element,{initialFocus:this.input,restoreFocus:false});}
   close(){this.focus?.dispose();this.focus=undefined;this.element.hidden=true;}
@@ -59,13 +59,16 @@ export class ConsolePanel {
     this.list.innerHTML=this.options.length?this.options.map((s,i)=>`<div id="command-option-${i}" class="command-suggestion" role="option" aria-selected="${i===this.selected}" data-index="${i}"><span class="command-mark">${s.mark}</span><span class="command-copy"><strong>${escapeUI(s.label)}</strong><small>${escapeUI(s.detail)}</small></span><span class="command-complete-key">Tab ↹</span></div>`).join(''):`<div class="command-empty">${empty}</div>`;
     this.list.querySelector('[aria-selected="true"]')?.scrollIntoView({block:'nearest'});
   }
-  private complete(){if(this.options[this.selected])this.setDraft(this.options[this.selected].value);}
+  private complete(){
+    const option=this.options[this.selected];if(!option)return;
+    this.historyIndex=this.history.length;this.draft=option.value;this.setDraft(option.value);
+  }
   private key(e:KeyboardEvent){
     if(e.isComposing||this.busy)return;
     if(e.key==='Tab'&&!e.shiftKey&&this.options.length){e.preventDefault();this.complete();}
     else if(e.key==='ArrowDown'||e.key==='ArrowUp'){
       e.preventDefault();const step=e.key==='ArrowDown'?1:-1;
-      if((e.altKey||!this.input.value||!this.options.length)&&this.history.length){
+      if((e.altKey||this.historyIndex<this.history.length||!this.input.value||!this.options.length)&&this.history.length){
         if(this.historyIndex===this.history.length)this.draft=this.input.value;
         this.historyIndex=Math.max(0,Math.min(this.history.length,this.historyIndex+step));
         this.setDraft(this.history[this.historyIndex]??this.draft);

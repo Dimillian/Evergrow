@@ -380,16 +380,7 @@ export class Game {
             this.saveClient.mode,location.hostname,!!window.EvergrowAndroid) && !!this.session.active;
           this.commandConsole=this.lifetime.own(new ConsolePanel(this.shell.panelMount, {
             close:()=>{if(!this.savingAction)this.resume();},
-            execute:raw=>this.durable(async()=> {
-              const result=await executeConsoleCommand(this.sim,raw,{
-                allowed:()=>allowed()&&this.phase==='console',view:this.renderer.spawnExclusionBounds(this.sim.player),
-                seed:()=>crypto.getRandomValues(new Uint32Array(1))[0],identity:()=>crypto.randomUUID(),
-                persist:async checkpoint=>{const ok=await this.session.save(checkpoint,Date.now());
-                  if(!ok)this.shell.setSaveStatus(this.session.error,true);return {ok,message:this.session.error};},
-              });
-              if(result.ok){this.saveError='';this.shell.setSaveStatus();}
-              return result;
-            },{ok:false,message:'Saving the previous action…'}),
+            execute:raw=>this.executeLocalConsole(raw,allowed,executeConsoleCommand),
           }));
           this.consoleShortcut=event=>{
             const target=event.target;
@@ -1060,6 +1051,17 @@ export class Game {
     this.saveError = ok ? '' : this.session.error;
     this.shell.setSaveStatus(this.saveError || '', !ok);
     return { ok, message: this.saveError };
+  }
+
+  private executeLocalConsole(raw:string,allowed:()=>boolean,execute:(sim:Simulation,raw:string,context:{
+    allowed():boolean;view:ReturnType<Renderer['spawnExclusionBounds']>;seed():number;identity():string;
+    persist(checkpoint:CharacterCheckpoint):Promise<{ok:boolean;message?:string}>;
+  })=>Promise<{ok:boolean;message?:string}>) {
+    return this.durable(()=>execute(this.sim,raw,{
+      allowed:()=>allowed()&&this.phase==='console',view:this.renderer.spawnExclusionBounds(this.sim.player),
+      seed:()=>crypto.getRandomValues(new Uint32Array(1))[0],identity:()=>crypto.randomUUID(),
+      persist:checkpoint=>this.persistTravel(checkpoint),
+    }),{ok:false,message:'Saving the previous action…'});
   }
 
   private requestPortal() {

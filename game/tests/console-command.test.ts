@@ -170,6 +170,7 @@ test('repeating a seeded monster after save/load yields distinct physical loot w
   assert.equal(await session.save(restored.captureCheckpoint(),102),true,session.error);
   assert.equal(validActors([{...storedActor(a),lootIdentity:7}]),false);
   assert.equal(validActors([{...storedActor(a),lootIdentity:'x'.repeat(81)}]),false);
+  assert.equal(validActors([{...storedActor(a),lootIdentity:'duplicate'},{...storedActor(b),lootIdentity:'duplicate'}]),false);
   assert.ok(consoleSuggestions('drop helmet ').every(s=>s.label!=='--profile'));
   assert.ok(consoleSuggestions('drop charm ').every(s=>s.label!=='--material'));
 });

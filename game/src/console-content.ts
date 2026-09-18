@@ -94,6 +94,16 @@ export function consoleHelp(command?:ConsoleCommandName):string {
 }
 export interface ConsoleSuggestion {label:string; detail:string; value:string; mark:string}
 const flagDetails:Record<string,string>={level:'Set an exact level',profile:'Choose an equipment profile',material:'Choose a base material',rarity:'Choose quality; keep affixes random',count:`Create 1–${CONSOLE_LIMITS.count}`,seed:'Repeat a specific random roll',rank:'Choose monster rank',placement:'Choose offscreen or beside the player'};
+function acceptedSuggestion(suggestion:ConsoleSuggestion, kind:ItemKind, profile?:string):boolean {
+  let candidate=suggestion.value.trim();
+  if(suggestion.label.startsWith('--')) {
+    const filler:Record<string,string|undefined>={level:'1',count:'1',seed:'0',rank:'normal',placement:'offscreen',rarity:'common',
+      profile:consoleProfiles(kind)[0]?.id,material:consoleMaterials(kind,profile)[0]?.id};
+    const value=filler[suggestion.label.slice(2)];if(!value)return false;
+    candidate+=` ${value}`;
+  }
+  try{parseConsoleCommand(candidate);return true;}catch{return false;}
+}
 /** Contextual completion uses the same content and accepted flags as the parser. */
 export function consoleSuggestions(raw:string):ConsoleSuggestion[] {
   const tokens=raw.trimStart().split(/\s+/), last=tokens.at(-1)??'', prefix=raw.slice(0,raw.length-last.length);
@@ -104,17 +114,20 @@ export function consoleSuggestions(raw:string):ConsoleSuggestion[] {
   if(def.id==='refill')return tokens.length===2?complete([...refillTargets]):[];
   if(!def.flags.length)return [];
   if(tokens.length===2)return complete(def.id==='spawn'?consoleEnemies.map(id=>({id,detail:ENEMY_DEFINITIONS[id].name})):consoleItems.map(id=>({id:id==='head'?'helmet':id,detail:'Generated equipment · random properties'})));
-  const kind=itemKind(tokens[1]) as ItemKind, previous=tokens.at(-2), profile=tokens[tokens.indexOf('--profile')+1];
+  const kind=itemKind(tokens[1]) as ItemKind, previous=tokens.at(-2), profileIndex=tokens.indexOf('--profile');
+  const profile=profileIndex>=0?tokens[profileIndex+1]:undefined;
   if(previous?.startsWith('--')) {
-    if(previous==='--profile')return complete(consoleProfiles(kind).map(p=>({id:p.id,detail:p.name})));
-    if(previous==='--material'&&consoleItems.includes(kind))return complete(consoleMaterials(kind,profile).map(m=>({id:m.id,detail:ITEM_MATERIALS[m.id].name})));
-    if(previous==='--rarity')return complete(rarities.map(id=>({id,detail:'Equipment quality'})));
-    if(previous==='--placement')return complete(placements.map(id=>({id,detail:id==='offscreen'?'Beyond the camera (default)':'On clear ground beside you'})));
-    if(previous==='--rank')return complete(ranks.map(id=>({id,detail:'Monster rank'})));
-    if(previous==='--level')return complete(['1','10','25','50','100'].map(id=>({id,detail:'Or type any level up to 1000000'})));
-    if(previous==='--count')return complete(['1','3','5','10'].map(id=>({id,detail:'Number to create'})));
-    return [];
+    if(!(def.flags as readonly string[]).includes(previous.slice(2)))return [];
+    const values=previous==='--profile'?complete(consoleProfiles(kind).map(p=>({id:p.id,detail:p.name})))
+      :previous==='--material'&&consoleItems.includes(kind)?complete(consoleMaterials(kind,profile).map(m=>({id:m.id,detail:ITEM_MATERIALS[m.id].name})))
+      :previous==='--rarity'?complete(rarities.map(id=>({id,detail:'Equipment quality'})))
+      :previous==='--placement'?complete(placements.map(id=>({id,detail:id==='offscreen'?'Beyond the camera (default)':'On clear ground beside you'})))
+      :previous==='--rank'?complete(ranks.map(id=>({id,detail:'Monster rank'})))
+      :previous==='--level'?complete(['1','10','25','50','100'].map(id=>({id,detail:'Or type any level up to 1000000'})))
+      :previous==='--count'?complete(['1','3','5','10'].map(id=>({id,detail:'Number to create'}))):[];
+    return values.filter(suggestion=>acceptedSuggestion(suggestion,kind,profile));
   }
   if(last&&!last.startsWith('--'))return [];
-  return def.flags.filter(f=>!(f==='profile'&&!consoleProfiles(kind).length)&&!(f==='material'&&(kind==='charm'||kind==='weapon'&&!tokens.includes('--profile')))&&!tokens.includes('--'+f)&&('--'+f).startsWith(last)).map(f=>({label:'--'+f,detail:flagDetails[f],value:prefix+'--'+f+' ',mark:'+'}));
+  return def.flags.filter(f=>!(f==='profile'&&!consoleProfiles(kind).length)&&!(f==='material'&&(kind==='charm'||kind==='weapon'&&!tokens.includes('--profile')))&&!tokens.includes('--'+f)&&('--'+f).startsWith(last)).map(f=>({label:'--'+f,detail:flagDetails[f],value:prefix+'--'+f+' ',mark:'+'}))
+    .filter(suggestion=>acceptedSuggestion(suggestion,kind,profile));
 }
