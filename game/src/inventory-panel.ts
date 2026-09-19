@@ -588,7 +588,7 @@ export class InventoryPanel {
       if (anchor && event.relatedTarget instanceof Node && anchor.contains(event.relatedTarget)) return;
       if (this.showStatTooltip(event.target)) return;
       const location = this.locationFrom(event.target);
-      if (location) this.showTooltip(location);
+      if (location) this.showTooltip(location, true);
     }, options);
     this.element.addEventListener('pointerout', event => {
       if (this.element.classList.contains('is-controller')) return;
@@ -796,13 +796,14 @@ export class InventoryPanel {
   }
   private clearDrag(): void { this.element.classList.remove('is-item-dragging'); this.clearDropHighlight(); this.drag = null; this.dragOffset = { x: 0, y: 0 }; this.dragGrids = null; for (const cell of this.cells.values()) cell.classList.remove('is-drop-target', 'is-dragging', 'is-equip-target'); }
 
-  private showTooltip(location: ItemLocation): void {
+  private showTooltip(location: ItemLocation, pointer = false): void {
     this.statTooltip.hide();
     if (this.drag || document.documentElement.classList.contains('touch-mode')) return;
     const item = this.itemAt(location), cell = this.cells.get(locationKey(location));
     if (!item || !cell || cell.hidden || !this.player) { this.hideTooltip(); return; }
     this.hovered = location;
-    this.tooltip.show(item, { sheet: this.player.character, level: this.player.level,
+    const present = pointer ? this.tooltip.hover.bind(this.tooltip) : this.tooltip.show.bind(this.tooltip);
+    present(item, { sheet: this.player.character, level: this.player.level,
       equipped: location.type === 'equipment', sourceIndex: location.type === 'bag' ? location.index : undefined }, cell);
   }
 

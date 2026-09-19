@@ -15,11 +15,17 @@ The supplied September 19 capture retained only the final ~10 seconds (~59 FPS o
 The subsequent version-2 capture records ~60 FPS before inventory, ~32–45 FPS during extended inspection, and ~58 FPS after closing inventory. Recorded panel CPU stays around 1–2 ms per frame while frame intervals worsen, so this capture implicates presentation work beyond the recorded JavaScript without proving a cumulative memory leak.
 
 - Large item comparison cards now paint opaque smoked gradients rather than applying a separate live backdrop blur to each card over animated world/portrait canvases. Colors, rarity accents, text and comparison layout remain; the background is no longer translucent. The short engraving glint no longer retains animation fill state after finishing.
-- Inventory/vendor pointer entry ignores movement between descendants of the same item slot. Changing actual items still updates immediately, and Shift/Alt retain their independent handlers.
+- Inventory/vendor pointer entry ignores movement between descendants of the same item slot. Mouse changes use the settled-target delay described below; explicit selections and Shift/Alt retain their immediate handlers.
 - Comparison displacement and candidate stat rows share one equipment preview instead of deriving the same build twice. Resetting Alt comparison on switch/dismissal no longer synchronously redraws the previous item.
 - Pointer-triggered item-tooltip construction and positioning are now included in panel CPU measurements. Nested tooltip work during an already measured panel refresh counts once.
 
 A headless comparison of 24 generated items and both Alt positions produced identical markup hashes before/after. Median generation cost across seven 500-hover batches dropped from ~0.412 ms to ~0.217 ms per hover on the development Mac. This measures JavaScript generation only, not browser FPS or GPU/compositor time. Lifecycle tests repeatedly switch/hide two-card comparisons, verify one retained host, preserve character state and check comparison reset behavior. Browser gameplay verification remains with the user.
+
+## Rapid pointer sweeps · September 19, 2026
+
+The next capture shows ~60 FPS before inventory, temporary ~45 FPS during rapid inspection, then 60 FPS again without closing inventory. Inventory and NPC item hovers now require 140 ms on the latest source before constructing comparison markup or measuring its layout. Passing through another slot replaces the one pending request; leaving, closing, resizing or disposing cancels it. The callback also checks that the source is still hovered, connected and visible and that the document is foreground. Re-entering the displayed source only cancels its exit timer. Explicit clicks, keyboard/controller focus and character refresh still render immediately; comparison-key changes remain immediate on a visible card.
+
+A timer-driven code test sweeps across 100 targets without constructing any intermediate cards or reading their geometry, then constructs only the settled target. Cancellation and immediate-selection tests cover stale requests and cleanup. All 18 focused tooltip/comparison/profiler tests and the production build passed. This bounds rapid-hover construction work; actual browser FPS and the feel of the short delay remain user-tested.
 
 ## Earlier map and skill-atlas work
 

@@ -61,7 +61,7 @@ export class ServicePanel {
     this.element.addEventListener('pointerover', e => {
       const anchor = e.target instanceof Element ? e.target.closest('[data-item]') : null;
       if (anchor && e.relatedTarget instanceof Node && anchor.contains(e.relatedTarget)) return;
-      this.hover(e.target);
+      this.hover(e.target, true);
     }, { signal: this.abort.signal });
     this.element.addEventListener('focusin', e => this.hover(e.target), { signal: this.abort.signal });
     this.element.addEventListener('pointerout', e => {
@@ -462,13 +462,14 @@ export class ServicePanel {
     }
     return item ? { item, request } : null;
   }
-  private hover(target: EventTarget | null): void {
+  private hover(target: EventTarget | null, pointer = false): void {
     if(this.tradeDrag||this.saving)return;
     if(document.documentElement.classList.contains('touch-mode')) return;
-    const cell = target instanceof HTMLElement ? target.closest<HTMLButtonElement>('[data-item]') : null;
+    const cell = target instanceof Element ? target.closest<HTMLButtonElement>('[data-item]') : null;
     if (!cell) return;
     const value = this.resolve(cell.dataset.item!); if (!value) return;
-    this.tooltip.show(value.item, { sheet: this.player.character, level: this.player.level,
+    const present = pointer ? this.tooltip.hover.bind(this.tooltip) : this.tooltip.show.bind(this.tooltip);
+    present(value.item, { sheet: this.player.character, level: this.player.level,
       sourceIndex: value.source && 'bag' in value.source ? value.source.bag : undefined,
       equipped: Boolean(value.source && 'equipped' in value.source),
       context: value.request.type === 'buyback' ? `Buy back · ${this.player.character.commerce.buyback.find(b=>b.item.id===value.item.id)?.price??0} gold` : value.request.type === 'buy' ? `Buy · ${itemPrice(value.item, 'buy')} gold` : undefined }, cell);
