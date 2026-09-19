@@ -14,6 +14,7 @@ import { PAD, type GamepadInput } from './gamepad-input.ts';
 import { directionalControl } from './ui-navigation.ts';
 import { titleSlotAction, shouldRefreshCloudSlot } from './title-slot-action.ts';
 import { FramePacer } from './frame-pacer.ts';
+import type { PresentationFps } from './frame-limit.ts';
 import { escapeUI, uiIcon, trapDialogFocus } from './ui-components.ts';
 import { previewCharacter } from './character-summary.ts';
 import { drawCharacterPortrait } from './character-portrait.ts';
@@ -28,6 +29,7 @@ import './game-wordmark.css';
 import './home-screen.css';
 import './title-screen.css';
 export interface TitleActions extends AudioControlActions {
+  presentationFps?(): PresentationFps;
   leaderboard?: LeaderboardLoader;
   chronicle?(onCached?:(ledger:ChronicleLedger)=>void): Promise<ChronicleLedger>;
   create(index: number, name: string, weapon: StarterLoadoutId, seed: number): void;
@@ -68,6 +70,7 @@ export class TitleScreen {
   private focus?: { dispose(): void };
   private frame = 0;
   private framePacer = new FramePacer(60);
+  private pacedFps: PresentationFps = null;
   private confirming: 'delete' | 'cloud' | null = null;
   private loading = false;
   private rosterLoading = false;
@@ -454,11 +457,21 @@ export class TitleScreen {
   }
   private animate = (): void => {
     if (this.element.hidden) return;
-    if (this.page === 'characters' && (!this.motion.matches || this.portraitDirty) && !document.hidden && this.element.style.visibility !== 'hidden' && (!window.EvergrowAndroid || this.framePacer.ready(performance.now()))) {
+    const now = performance.now();
+    if (this.page === 'characters' && (!this.motion.matches || this.portraitDirty) && !document.hidden && this.element.style.visibility !== 'hidden' && this.presentationReady(now)) {
       this.portraitDirty = false;
       const ctx = this.canvas.getContext('2d');
-      if (ctx) drawCharacterPortrait(ctx, this.player, this.motion.matches ? 3 : performance.now() / 1000, Math.PI / 2 + .18, this.canvas.width, this.canvas.height, { drawGround: drawTitlePlinth, padding: .01, verticalOffset: .08 });
+      if (ctx) drawCharacterPortrait(ctx, this.player, this.motion.matches ? 3 : now / 1000, Math.PI / 2 + .18, this.canvas.width, this.canvas.height, { drawGround: drawTitlePlinth, padding: .01, verticalOffset: .08 });
     }
     this.frame = requestAnimationFrame(this.animate);
   };
+  private presentationReady(now: number): boolean {
+    const fps = this.actions.presentationFps?.() ?? (window.EvergrowAndroid ? 60 : null);
+    if (fps === null) { this.pacedFps = null; return true; }
+    if (fps !== this.pacedFps) {
+      this.pacedFps = fps;
+      this.framePacer = new FramePacer(fps);
+    }
+    return this.framePacer.ready(now);
+  }
 }

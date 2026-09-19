@@ -17,7 +17,7 @@ export const PAUSE_CATEGORIES: readonly { id: PauseCategory; label: string; icon
     { id: 'journeys', label: 'Journeys', description: 'Goals and discoveries along your path', icon: 'journal', binding: 'journeys' },
   ] },
   { id: 'system', label: 'System', icon: 'options', entries: [
-    { id: 'options', label: 'Options', description: 'Sound, loot labels, camera zoom and fullscreen', icon: 'options' },
+    { id: 'options', label: 'Options', description: 'Sound, display, loot labels, camera zoom and fullscreen', icon: 'options' },
     { id: 'controls', label: 'Controls', description: 'Input help and keyboard bindings', icon: 'center' },
     { id: 'leaderboard', label: 'Leaderboard', description: 'Cloud character rankings', icon: 'shield' },
     { id: 'changelog', label: 'What’s new', description: 'The latest release notes', icon: 'journal' },

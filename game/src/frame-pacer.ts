@@ -9,8 +9,10 @@ export class FramePacer {
       this.next = now + this.interval;
       return true;
     }
-    // Display timestamps can fall slightly ahead of the nominal 60 Hz deadline.
-    if (now + .25 < this.next) return false;
+    // Display timestamps can fall slightly ahead of a nominal deadline. The
+    // wider sub-millisecond allowance also avoids 16/50 ms alternation at a
+    // 30 FPS target when a 60 Hz callback jitters around every other deadline.
+    if (now + .75 < this.next) return false;
     this.next += this.interval;
     return true;
   }
