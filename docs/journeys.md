@@ -27,13 +27,15 @@ Nearest settlement lookup checks nine seeded geography anchors, then loads only 
 
 **Tracking is not required for credit or bonus XP.** POI completion and the final crypt chest create journal history even if the activity was never offered or was dismissed. Town arrival also counts naturally. Frontier arrival counts for generated leads in the catalogue; arbitrary walking does not invent new objectives.
 
-- Garrisons: defeat the camp, then claim its strongbox.
+- Garrisons: defeat the camp, then claim its strongbox. Map and minimap completion checks use this same reward-claim boundary; a defeated garrison with an unopened chest remains unfinished.
 - Caravans/reliquaries: finish the existing choice or treasure claim.
 - Watchtowers: activate the beacon.
 - Graveyards/standing stones: finish the guardians and claim the reward/blessing.
 - Wilderness bosses: defeat the boss, then wait for the complete physical hoard to be delivered. Guidance reports the pending delivery instead of asking for another kill.
 - Crypts: defeat the Warden and fully claim the final chest. Boss death alone is not completion.
 - Towns/frontiers: arrive within the objective's radius on the surface.
+
+Maps and Journeys share `activity-status.ts` for reward ownership across all overworld event families and dungeon entrances. Boss victory alone leaves a dungeon marked **Reward waiting**; its final chest must be fully claimed before the entrance is marked **Claimed**. Optional chamber encounters each use their own chest receipt.
 
 Full gold-pile capacity can postpone completion: the bonus is paid only once the full bundle has been delivered. Ordinary combat remains an independent progression path. Existing completed activities are not paid retroactively when loading this feature.
 

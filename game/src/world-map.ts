@@ -1,3 +1,4 @@
+import type { ActivityStatus } from './activity-status.ts';
 import { MapLegend } from './map-legend.ts';
 import { MapIconVisibility, mapIconVisible, enemyMapIconId, MAP_SERVICES, nearestMapService, type MapServiceKind } from './map-legend-content.ts';
 import { drawMapPOIIcon, drawMapPlayerIcon, drawMapEnemyIcon, MAP_ICON_SIZES } from './map-icon-art.ts';
@@ -170,8 +171,6 @@ export function mapRegionLabels(world: Pick<MapWorld, 'sampleBiome'>, exploratio
   return selected;
 }
 
-export type CampMapState = 'dormant' | 'active' | 'cleared';
-
 /** A continuously translated chart built from cached world-space terrain and discovery tiles. */
 export class WorldMap {
   readonly iconVisibility: MapIconVisibility;
@@ -233,9 +232,8 @@ export class WorldMap {
   private onClose: () => void;
   private encounterLevelReader: (poi: MapPOI) => number | null = () => null;
   setEncounterLevelReader(reader: (poi: MapPOI) => number | null) { this.encounterLevelReader = reader; }
-  private eventStateReader: (poi: MapPOI) => string | null = () => null;
-  setEventStateReader(reader: (poi: MapPOI) => string | null) { this.eventStateReader = reader; }
-  private campStateReader: (id: string) => CampMapState = () => 'dormant';
+  private activityStateReader: (poi: MapPOI) => ActivityStatus | null = () => null;
+  setActivityStateReader(reader: (poi: MapPOI) => ActivityStatus | null) { this.activityStateReader = reader; }
 
   private zoomLimits: MapZoomLimits = MAP_ZOOM;
 
@@ -295,12 +293,7 @@ export class WorldMap {
     this.bind();
   }
 
-  /** Run state is supplied by simulation; chart persistence contains discoveries only. */
-  setCampStateReader(reader: (id: string) => CampMapState) {
-    this.campStateReader = reader; this.render();
-  }
-  private isCampCleared(poi: MapPOI): boolean { return poi.kind === 'camp' && this.campStateReader(poi.id) === 'cleared'; }
-  private poiLabel(poi: MapPOI): string { const state = this.eventStateReader(poi); if (poi.sighted) return `${POI_DEFINITIONS[poi.kind].label} · Sighted`; if (state) return `${POI_DEFINITIONS[poi.kind].label} · ${state}`; return this.isCampCleared(poi) ? 'Camp · Cleared' : POI_DEFINITIONS[poi.kind].label; }
+  private poiLabel(poi: MapPOI): string { const state = this.activityStateReader(poi); if (poi.sighted) return `${POI_DEFINITIONS[poi.kind].label} · Sighted`; if (state) return `${POI_DEFINITIONS[poi.kind].label} · ${state.label}`; return POI_DEFINITIONS[poi.kind].label; }
 
   get isOpen() { return this.opened; }
   open(player: MapPlayer, explorationMode = false) {
@@ -724,7 +717,7 @@ export class WorldMap {
   }
 
   private poiIcon(c: CanvasRenderingContext2D, poi: MapPOI, x: number, y: number, size: number, selected: boolean) {
-    const cleared = this.isCampCleared(poi) || ['Claimed', 'Beacon lit'].includes(this.eventStateReader(poi) ?? '');
+    const cleared = this.activityStateReader(poi)?.rewardsClaimed ?? false;
     drawMapPOIIcon(c, poi.kind, x, y, size, selected, cleared);
   }
 
@@ -930,7 +923,7 @@ export class WorldMap {
 
   private showTooltip(poi: MapPOI, point: { x: number; y: number }) {
     this.tooltip.hidden = false; setText(this.tooltipName, poi.name);
-    setText(this.tooltipKind, `${this.poiLabel(poi)} · ${this.encounterLevelReader(poi) !== null ? `Lv ${this.encounterLevelReader(poi)}` : mapAreaLabel(this.world, poi.x, poi.y)}`); setText(this.tooltipDescription, this.eventStateReader(poi) ?? (this.isCampCleared(poi) ? 'The watchfire is quiet. All members of this garrison have been defeated for the current run.' : poi.description));
+    setText(this.tooltipKind, `${this.poiLabel(poi)} · ${this.encounterLevelReader(poi) !== null ? `Lv ${this.encounterLevelReader(poi)}` : mapAreaLabel(this.world, poi.x, poi.y)}`); setText(this.tooltipDescription, this.activityStateReader(poi)?.label ?? poi.description);
     this.tooltip.style.setProperty('--poi-color', POI_DEFINITIONS[poi.kind].color);
     this.positionTooltip(point);
   }

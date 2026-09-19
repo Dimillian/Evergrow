@@ -38,6 +38,8 @@ export function expeditionRewardItems(entrance:DungeonEntrance,playerLevel=entra
   });
 }
 export function dungeonChestMask(run:DungeonRun,index:number):number {return run.entrance.rift ? index===2 ? riftRewardMask(run.entrance.rift) : 0 : index===2 ? run.entrance.expedition?.stage===9?127:15 : 9;}
+/** Full durable delivery, including gold; an unlocked chest is not a claim. */
+export function dungeonChestClaimed(run:DungeonRun,index:number):boolean {const mask=dungeonChestMask(run,index);return mask>0&&run.chestMasks[index]===mask;}
 export function completeExpeditionStage(state:Expeditions,run:DungeonRun):void {
   const route=state.route,tag=run.entrance.expedition;
   if(!route||!tag||route.status!=='active'||route.attempt!==tag.attempt||route.cleared!==tag.stage||route.choice!==tag.choice||run.chestMasks[2]!==dungeonChestMask(run,2))return;

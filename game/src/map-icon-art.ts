@@ -11,7 +11,7 @@ export function drawMapPOIIcon(c: CanvasRenderingContext2D, kind: POIKind, x: nu
   c.fillStyle = palette.well; c.beginPath(); c.arc(0, 0, size + 2.5, 0, Math.PI * 2); c.fill();
   if (selected) { c.strokeStyle = color; c.lineWidth = 1.2; c.stroke(); }
   drawMapSymbol(c, kind, size, color, palette.well);
-  if (cleared && kind === 'camp') {
+  if (cleared) {
     c.strokeStyle = palette.well; c.lineWidth = 3; c.lineJoin = 'round';
     c.beginPath(); c.moveTo(size * .35, size * .45); c.lineTo(size * .85, size * .9); c.lineTo(size * 1.45, 0); c.stroke();
     c.strokeStyle = color; c.lineWidth = 1.5; c.stroke();

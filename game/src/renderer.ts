@@ -3,7 +3,7 @@ import { AreaBanner } from './area-banner.ts';
 import { drawAreaBanner } from './area-banner-art.ts';
 import { riftMechanic } from './rift-encounters.ts';
 import { riftWardActive } from './rift-tactics.ts';
-import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
+import { dungeonInteractionChests, dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { EnemyOutlineArt } from './enemy-outline-art.ts';
 import { RIFT_RULES } from './rift-content.ts';
 import { enemyVisualScale } from './enemy-modifiers.ts';
@@ -645,7 +645,7 @@ export class Renderer {
     c.restore();
     if (settings.phase === 'playing') {
       const run=currentDungeon(sim.expeditions),f=sim.dungeonFloor;
-      const points=run&&f?[{...f.entry,name:'Leave dungeon'},...(run.states.warden.hp<=0?[{...dungeonRunExit(f,run),name:'Leave dungeon'}]:[]),...f.chests.flatMap((_,i)=>!run.rift||i===2&&run.rift.phase==='complete'?[{...dungeonRunChest(f,run,i),name:'Treasure chest'}]:[])]:this.visibility.entrances;
+      const points=run&&f?[{...f.entry,name:'Leave dungeon'},...(run.states.warden.hp<=0?[{...dungeonRunExit(f,run),name:'Leave dungeon'}]:[]),...dungeonInteractionChests(f,run).map(chest=>({...chest,name:'Treasure chest'}))]:this.visibility.entrances;
       const table=!run&&world.getBuildings(p.x-180,p.y-180,360,360).find(b=>(b.kind==='expedition'||b.kind==='rift')&&Math.hypot(b.door.x-p.x,b.door.y-p.y)<75);
       if(table){const q=worldToScreen(this.view,table.door.x,table.door.y-80);text(c,`${table.kind==='rift'?'Crimson Rift':'Expeditions'}${p.level<20?' · Level 20':''} [${this.gamepadActive?'A':controls.label('interact')}]`,q.x,q.y,1,'#d8c593','center');}
       const target=points.find(q=>Math.hypot(q.x-p.x,q.y-p.y)<75);
