@@ -18,9 +18,11 @@ test('phone landscape resources and thumb controls remain separate across Safari
     if(layout.menu.mode==='landscape') {
       assert.equal(layout.menu.pause.x,layout.menu.rect.x);
       assert.equal(layout.menu.pause.y,layout.menu.rect.y+52);
-      assert.equal(layout.menu.rect.x+layout.menu.rect.width/2,layout.move.x+layout.move.width/2);
-      assert.equal(layout.menu.rect.x+layout.menu.rect.width/2,layout.worldActions.x+layout.worldActions.width/2);
-      assert.equal(layout.menu.pause.y+layout.menu.pause.height+4,layout.worldActions.y);
+      assert.equal(layout.menu.rect.x+4,layout.worldActions.x);
+      assert.equal(layout.menu.pause.x+4,layout.worldActions.x);
+      const goldBottom=Math.max(8,view.top+48);
+      const menuGroupCenter=(layout.menu.rect.y+layout.menu.pause.y+layout.menu.pause.height)/2;
+      assert.equal(menuGroupCenter,(goldBottom+layout.worldActions.y)/2);
     }
     assert.ok(Math.abs(layout.resources.x+layout.resources.width/2-width/2)<1e-9);
     assert.ok(Math.abs(layout.worldActions.x+layout.worldActions.width/2-layout.move.x-layout.move.width/2)<1e-9);
@@ -43,7 +45,8 @@ test('portrait menu trigger and minimap align just below the target plate',()=>{
   const controlsTop=touchWorldActionsTop(portrait);
   const menu=touchMenuLayout(portrait,controlsTop);
   assert.equal(menu.mode,'portrait'); assert.deepEqual([menu.rect.width,menu.rect.height],[48,48]);
-  assert.equal(menu.rect.x,12); assert.equal(menu.pause.x,menu.rect.x);
+  assert.equal(menu.rect.x,20); assert.equal(menu.pause.x,menu.rect.x);
+  assert.equal(menu.rect.x+menu.rect.width/2,24+40/2);
   assert.equal(menu.rect.y,154);
   assert.equal(menu.pause.y,menu.rect.y+52);
   assert.equal(touchMinimapTop(menu),menu.rect.y);

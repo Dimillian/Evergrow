@@ -7,6 +7,10 @@ export type TouchMenuLayout = { rect: TouchRect; pause: TouchRect; mode: 'portra
 
 const MENU_BUTTON = 48;
 const MENU_GAP = 4;
+const LANDSCAPE_MENU_ART_INSET = 4;
+// The compact landscape header scales the gold artwork to 80%; its glow ends
+// roughly 48 CSS pixels below the safe top.
+const LANDSCAPE_GOLD_PANEL_BOTTOM = 48;
 // CSS-pixel landing just below the normal portrait target plate. This keeps the
 // two side controls aligned without making their position depend on target focus.
 const PORTRAIT_TARGET_PLATE_BOTTOM = 146;
@@ -20,7 +24,9 @@ export function touchWorldActionsTop(view: TouchViewport) {
 
 /** The compact navigation trigger stays at the edge while thumb controls own the bottom. */
 export function touchMenuLayout(view: TouchViewport, controlsTop = view.height): TouchMenuLayout {
-  const side = Math.max(12, view.left);
+  // Portrait world actions start at 24px and use 40px buttons. Center the
+  // 48px menu targets on their first button while preserving the safe inset.
+  const side = Math.max(20, view.left);
   const groupHeight = MENU_BUTTON * 2 + MENU_GAP;
   const safeTop = view.top + 4;
   const targetTop = Math.max(view.top + 4, PORTRAIT_TARGET_PLATE_BOTTOM + PORTRAIT_TARGET_GAP);
@@ -49,10 +55,13 @@ export function phoneLandscapeLayout(view: TouchViewport) {
   const scale = Math.min(.72, centeredResourceWidth / 440);
   const footer = {x:view.width/2-260*scale,y:view.height-bottom-147*scale,scale};
   const resources = {x:footer.x+40*scale,y:footer.y+54*scale,width:440*scale,height:93*scale};
-  const menuY = worldActions.y - MENU_BUTTON * 2 - MENU_GAP * 2;
+  const menuHeight = MENU_BUTTON * 2 + MENU_GAP;
+  const goldBottom = Math.max(8, view.top + LANDSCAPE_GOLD_PANEL_BOTTOM);
+  const menuY = (goldBottom + worldActions.y - menuHeight) / 2;
   const landscapeMenu = {mode:'landscape' as const,
-    rect:{x:move.x + move.width / 2 - MENU_BUTTON / 2,y:menuY,width:MENU_BUTTON,height:MENU_BUTTON},
-    pause:{x:move.x + move.width / 2 - MENU_BUTTON / 2,y:menuY+MENU_BUTTON+MENU_GAP,width:MENU_BUTTON,height:MENU_BUTTON}};
-  const menu = menuY >= Math.max(4, view.top) ? landscapeMenu : touchMenuLayout(view, worldActions.y);
+    rect:{x:worldActions.x-LANDSCAPE_MENU_ART_INSET,y:menuY,width:MENU_BUTTON,height:MENU_BUTTON},
+    pause:{x:worldActions.x-LANDSCAPE_MENU_ART_INSET,y:menuY+MENU_BUTTON+MENU_GAP,width:MENU_BUTTON,height:MENU_BUTTON}};
+  const menuFits = menuY >= Math.max(4, view.top) && menuY + menuHeight + MENU_GAP <= worldActions.y;
+  const menu = menuFits ? landscapeMenu : touchMenuLayout(view, worldActions.y);
   return {move,actions,worldActions,footer,resources,menu,bottom,left,right,top:Math.max(8,view.top+4)};
 }
