@@ -66,14 +66,17 @@
   .ui-tooltip:not(.ui-item-tooltip-group):not(.ui-item-tooltip)::before { display: none; }
 }
 
-/* Two independent glass cards let the inventory color bleed through beneath
-   each item. Rarity washes affect the material, never blur or blend the text. */
+/* Item comparisons cover a large area over continuously drawn world/portrait
+   canvases. Paint the smoked material locally instead of filtering that backdrop
+   again for each card. Rarity washes stay independent of the crisp text. */
 .ui-item-hover-card.ui-item-hover-card {
   border-radius: 0; border-color: #b8d7e666;
   background-color: #101d2d;
   background-image: linear-gradient(135deg, #e0f7ff12, #d9e3ff04 40%, #02071230);
   box-shadow: 0 18px 38px #0009, inset 0 1px #edfcff52, inset 1px 0 #d7edff24;
   color: #e4eef0;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 .ui-item-hover-card.ui-item-hover-card::before {
   background: radial-gradient(ellipse at 0 0, var(--item-color), transparent 67%),
@@ -86,7 +89,7 @@
   background: linear-gradient(110deg, transparent 38%, var(--item-color) 48%, #e3f3ff 50%, transparent 60%);
   background-size: 300% 100%; background-position: 100% 0;
   clip-path: polygon(0 0,100% 0,100% 100%,0 100%,0 0,1px 1px,1px calc(100% - 1px),calc(100% - 1px) calc(100% - 1px),calc(100% - 1px) 1px,1px 1px);
-  opacity: 0; animation: ui-engraving-glint 850ms ease-out both;
+  opacity: 0; animation: ui-engraving-glint 850ms ease-out;
 }
 .ui-item-hover-card.ui-item-hover-card:first-child {
   border-color: var(--item-color);
@@ -115,13 +118,6 @@
   }
 }
 
-@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .ui-item-hover-card.ui-item-hover-card {
-    background-color: #0b1528b8;
-    -webkit-backdrop-filter: blur(22px) saturate(1.8) brightness(1.12);
-    backdrop-filter: blur(22px) saturate(1.8) brightness(1.12);
-  }
-}
 @keyframes ui-engraving-glint {
   0% { background-position: 100% 0; opacity: 0; }
   22% { opacity: .8; }

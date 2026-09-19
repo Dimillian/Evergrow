@@ -105,3 +105,15 @@ test('long history retains the baseline after raw frames wrap, with bounded phas
   p.setEnabled(false); p.panelWork(() => {}); p.begin(4_000_000); p.finish();
   assert.equal(p.snapshot().history.length, 0);
 });
+
+test('tooltip rendering nested in a panel refresh is counted once', () => {
+  let now = 0; const p = new FrameProfiler(true, () => now);
+  p.panelWork(() => { now += 2; p.panelWork(() => { now += 3; }); now += 1; });
+  p.begin(0, 'character'); p.finish();
+  assert.equal(p.snapshot().metrics.panels.max, 6);
+  assert.equal(p.snapshot().metrics.frameCPU.max, 6);
+  assert.throws(() => p.panelWork(() => { p.panelWork(() => { now += 4; throw Error('tooltip'); }); }));
+  p.panelWork(() => { now += 2; });
+  p.begin(16, 'character'); p.finish();
+  assert.equal(p.snapshot().timeline[1].panels, 6, 'failed nested work releases the measurement guard');
+});

@@ -10,6 +10,17 @@ JSON exports include the phase on every raw frame and up to 1,800 approximately 
 
 The supplied September 19 capture retained only the final ~10 seconds (~59 FPS overall), so it did not establish progressive degradation across the full session. Inspection found bounded panel instances and close-time callback/focus cleanup. These changes reduce measured/identifiable presentation work and closed-window retention; they do not establish a browser resource leak or prove that the reported lasting FPS decline is resolved. Code tests cover portrait cadence/reduced-motion invalidation, repeated vendor cleanup, phase history wrap/reset/freeze and exactly-once panel CPU accounting. Gameplay acceptance remains user-tested.
 
+## Repeated item hovers · September 19, 2026
+
+The subsequent version-2 capture records ~60 FPS before inventory, ~32–45 FPS during extended inspection, and ~58 FPS after closing inventory. Recorded panel CPU stays around 1–2 ms per frame while frame intervals worsen, so this capture implicates presentation work beyond the recorded JavaScript without proving a cumulative memory leak.
+
+- Large item comparison cards now paint opaque smoked gradients rather than applying a separate live backdrop blur to each card over animated world/portrait canvases. Colors, rarity accents, text and comparison layout remain; the background is no longer translucent. The short engraving glint no longer retains animation fill state after finishing.
+- Inventory/vendor pointer entry ignores movement between descendants of the same item slot. Changing actual items still updates immediately, and Shift/Alt retain their independent handlers.
+- Comparison displacement and candidate stat rows share one equipment preview instead of deriving the same build twice. Resetting Alt comparison on switch/dismissal no longer synchronously redraws the previous item.
+- Pointer-triggered item-tooltip construction and positioning are now included in panel CPU measurements. Nested tooltip work during an already measured panel refresh counts once.
+
+A headless comparison of 24 generated items and both Alt positions produced identical markup hashes before/after. Median generation cost across seven 500-hover batches dropped from ~0.412 ms to ~0.217 ms per hover on the development Mac. This measures JavaScript generation only, not browser FPS or GPU/compositor time. Lifecycle tests repeatedly switch/hide two-card comparisons, verify one retained host, preserve character state and check comparison reset behavior. Browser gameplay verification remains with the user.
+
 ## Earlier map and skill-atlas work
 
 The September 6, 2026 pass targets repeated Canvas work and cold map generation. It changes presentation only; world generation, discovery, allocation and combat remain owned by their existing systems.

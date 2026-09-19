@@ -197,7 +197,7 @@ export class InventoryPanel {
     this.sheet = document.createElement('section'); this.sheet.className = 'touch-item-sheet'; this.sheet.hidden = true;
     this.sheet.setAttribute('aria-label','Selected item'); this.window.append(this.sheet);
     this.inlineExplanations = new UITooltipStack(this.window, effectExplanation, this.window, anchor => !anchor.closest('.ui-tooltip'));
-    this.tooltip = new ItemTooltip(this.window, 'character-item-tooltip');
+    this.tooltip = new ItemTooltip(this.window, 'character-item-tooltip', this.profiler);
     this.statTooltip = new RetainedTooltip(this.window, 'character-stat-tooltip', 'character-stat-tooltip');
     this.element.querySelector('[data-edit-appearance]')?.addEventListener('click',()=>actions.editAppearance?.());
     this.canvas = this.element.querySelector('.character-doll')!;
@@ -584,6 +584,8 @@ export class InventoryPanel {
     this.element.addEventListener('pointerdown', () => this.element.classList.remove('is-controller'), options);
     this.element.addEventListener('pointerover', event => {
       if (event.pointerType === 'touch' || this.drag || this.element.classList.contains('is-controller')) return;
+      const anchor = event.target instanceof Element ? event.target.closest('[data-location], [data-stat-detail]') : null;
+      if (anchor && event.relatedTarget instanceof Node && anchor.contains(event.relatedTarget)) return;
       if (this.showStatTooltip(event.target)) return;
       const location = this.locationFrom(event.target);
       if (location) this.showTooltip(location);

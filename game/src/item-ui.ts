@@ -107,9 +107,16 @@ export function updateItemSlot(cell: HTMLButtonElement, item: Item | null, optio
 
 /** Item data and effective equipment changes are distinct; no inventory DOM location is required. */
 export function itemTooltipMarkup(item: Item, view: ItemPresentation): string {
-  if(item.kind==='riftKey')return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span></span><h4>${escapeUI(item.name)}</h4></div></div><p>Single use · Opens an empowered rift</p>${riftModifiers({attempt:1,keySeed:item.seed,keyTier:item.recipe.riftKeyTier}).map(m=>`<div class="ui-item-property ui-rift-modifier" style="color:${m.beneficial?'#a2d5b3':'#ed929f'}"><span>${escapeUI(m.label)}</span><strong>+${m.value}${m.unit}</strong></div>`).join('')}`;
-  const preview = view.compare === false || view.equipped || item.kind === 'charm' && view.sourceIndex !== undefined ? null : previewEquipmentChange(view.sheet, item, view.level,
+  return renderItemTooltip(item, view, itemPreview(item, view));
+}
+
+function itemPreview(item: Item, view: ItemPresentation) {
+  return item.kind === 'riftKey' || view.compare === false || view.equipped || item.kind === 'charm' && view.sourceIndex !== undefined ? null : previewEquipmentChange(view.sheet, item, view.level,
     { sourceIndex: view.sourceIndex, slot: view.targetSlot });
+}
+
+function renderItemTooltip(item: Item, view: ItemPresentation, preview: ReturnType<typeof itemPreview>): string {
+  if(item.kind==='riftKey')return `<div class="ui-item-heading"><div><span class="ui-item-class"><span class="ui-rarity-badge" data-tier="${item.tier}">${escapeUI(TIER_NAMES[item.tier])}</span></span><h4>${escapeUI(item.name)}</h4></div></div><p>Single use · Opens an empowered rift</p>${riftModifiers({attempt:1,keySeed:item.seed,keyTier:item.recipe.riftKeyTier}).map(m=>`<div class="ui-item-property ui-rift-modifier" style="color:${m.beneficial?'#a2d5b3':'#ed929f'}"><span>${escapeUI(m.label)}</span><strong>+${m.value}${m.unit}</strong></div>`).join('')}`;
   const changes = new Map(preview?.ok ? preview.changes.map(change => [change.key, change]) : []);
   const rows = Object.entries(itemModifiers(item)).map(([stat, value]) => {
     const key = stat as StatKey;
@@ -167,8 +174,7 @@ const EQUIPPED_LABELS: Record<EquipmentSlot, string> = {
 
 /** Use the real equip transaction's displacement, including hand conflicts and ring targets. */
 export function itemHoverCards(item: Item, view: ItemPresentation): string[] {
-  const preview = view.compare === false || view.equipped || item.kind === 'charm' && view.sourceIndex !== undefined ? null : previewEquipmentChange(view.sheet, item, view.level,
-    { sourceIndex: view.sourceIndex, slot: view.targetSlot });
+  const preview = itemPreview(item, view);
   const displaced = preview?.ok ? preview.displaced : [];
   const card = (gear: Item, content: string, label = '') =>
     `<section class="ui-item-hover-card" data-tier="${gear.tier}" style="--item-color:${TIER_COLORS[gear.tier]}">${label && !view.compactComparison ? `<div class="ui-item-section-label ui-item-comparison-label">Equipped · ${label}</div>` : ''}${content}</section>`;
@@ -183,11 +189,11 @@ export function itemHoverCards(item: Item, view: ItemPresentation): string[] {
     const altLabel = `Compare with ${EQUIPPED_LABELS[other.slot] ?? other.slot}`;
     const slotLabel = EQUIPPED_LABELS[target.slot] ?? target.slot;
 
-    const candidateContent = itemTooltipMarkup(item, {
+    const candidateContent = renderItemTooltip(item, {
       ...view,
       adjacentComparison: true,
       altToggle: { label: altLabel, focusIndex: focus },
-    });
+    }, preview);
 
     return [
       card(item, candidateContent),
@@ -195,7 +201,7 @@ export function itemHoverCards(item: Item, view: ItemPresentation): string[] {
     ];
   }
 
-  return [card(item, itemTooltipMarkup(item, { ...view, adjacentComparison: displaced.length > 0 })),
+  return [card(item, renderItemTooltip(item, { ...view, adjacentComparison: displaced.length > 0 }, preview)),
     ...displaced.map(({ item: gear, slot }) => card(gear,
       itemTooltipMarkup(gear, { sheet: view.sheet, level: view.level, equipped: true,
         compactComparison: view.compactComparison, equippedLabel: EQUIPPED_LABELS[slot] }), EQUIPPED_LABELS[slot]))];

@@ -3,6 +3,7 @@ import type { Item } from './character-types.ts';
 import { itemHoverCards, type ItemPresentation } from './item-ui.ts';
 import { RetainedTooltip } from './retained-tooltip.ts';
 import './item-ui.css';
+import type { FrameProfiler } from './frame-profiler.ts';
 
 /** Equipment content uses the shared tooltip surface, positioning and focus association. */
 export class ItemTooltip {
@@ -10,14 +11,16 @@ export class ItemTooltip {
   private readonly surface: RetainedTooltip;
   private readonly life = new AbortController();
   private readonly comparison: ItemComparisonInput;
+  private readonly profiler?: FrameProfiler;
   private current?: { item: Item; view: ItemPresentation; anchor: HTMLElement; bounds: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'> };
 
-  constructor(mount: HTMLElement, id: string) {
+  constructor(mount: HTMLElement, id: string, profiler?: FrameProfiler) {
+    this.profiler = profiler;
     this.surface = new RetainedTooltip(mount, id, 'ui-item-tooltip-group');
     this.element = this.surface.element;
     this.surface.onHide = () => {
-      this.comparison.resetFocus();
       this.current = undefined;
+      this.comparison.resetFocus();
     };
     this.comparison = new ItemComparisonInput(window, () => {
       const current = this.current;
@@ -33,7 +36,13 @@ export class ItemTooltip {
     });
   }
   show(item: Item, view: ItemPresentation, anchor: HTMLElement, bounds = anchor.getBoundingClientRect() as Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>): void {
+    if (this.profiler) this.profiler.panelWork(() => this.showContents(item, view, anchor, bounds));
+    else this.showContents(item, view, anchor, bounds);
+  }
+  private showContents(item: Item, view: ItemPresentation, anchor: HTMLElement, bounds: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>): void {
     if (this.current?.anchor !== anchor || this.current?.item.id !== item.id) {
+      // Resetting Alt comparison can notify synchronously; never rebuild the old item.
+      this.current = undefined;
       this.comparison.resetFocus();
     }
     this.current = { item, view, anchor, bounds };
@@ -69,6 +78,6 @@ export class ItemTooltip {
     });
   }
   defer(): void { this.surface.defer(); }
-  hide(): void { this.comparison.resetFocus(); this.current = undefined; this.surface.hide(); }
+  hide(): void { this.current = undefined; this.comparison.resetFocus(); this.surface.hide(); }
   dispose(): void { this.life.abort(); this.current = undefined; this.surface.dispose(); }
 }

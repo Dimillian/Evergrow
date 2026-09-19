@@ -20,6 +20,7 @@ export class FrameProfiler {
   private started = 0;
   private recording = false;
   private pendingPanels = 0;
+  private measuringPanel = false;
   private externalCPU = 0;
   private phase = 'unknown';
   private phases = new Array<string>(FRAME_CAPACITY);
@@ -40,10 +41,12 @@ export class FrameProfiler {
   }
   /** Panel event handlers and their RAF can run outside the main game callback. */
   panelWork(draw: () => void) {
-    if (!this.active) { draw(); return; }
+    if (!this.active || this.measuringPanel) { draw(); return; }
+    this.measuringPanel = true;
     const start = this.clock();
     try { draw(); }
     finally {
+      this.measuringPanel = false;
       const cost = Math.max(0, this.clock() - start);
       if (this.recording) this.current[index.panels] += cost;
       else this.pendingPanels += cost;

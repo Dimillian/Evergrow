@@ -55,10 +55,14 @@ export class ServicePanel {
     this.actions = actions;
     this.element = document.createElement('section'); this.element.className = 'service-panel ui-window'; this.element.hidden = true;
     this.element.setAttribute('role', 'dialog'); this.element.setAttribute('aria-modal', 'true'); this.element.setAttribute('aria-labelledby', 'service-title');
-    mount.append(this.element); this.goldFeedback = new ServiceGoldFeedback(this.element); this.tooltip = new ItemTooltip(this.element, 'service-tooltip');
+    mount.append(this.element); this.goldFeedback = new ServiceGoldFeedback(this.element); this.tooltip = new ItemTooltip(this.element, 'service-tooltip', this.profiler);
     this.element.addEventListener('click', e => this.click(e), { signal: this.abort.signal });
     this.installTradeDrag();
-    this.element.addEventListener('pointerover', e => this.hover(e.target), { signal: this.abort.signal });
+    this.element.addEventListener('pointerover', e => {
+      const anchor = e.target instanceof Element ? e.target.closest('[data-item]') : null;
+      if (anchor && e.relatedTarget instanceof Node && anchor.contains(e.relatedTarget)) return;
+      this.hover(e.target);
+    }, { signal: this.abort.signal });
     this.element.addEventListener('focusin', e => this.hover(e.target), { signal: this.abort.signal });
     this.element.addEventListener('pointerout', e => {
       const cell = e.target instanceof Element ? e.target.closest('[data-item]') : null;
