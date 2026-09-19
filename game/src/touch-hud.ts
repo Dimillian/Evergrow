@@ -11,13 +11,14 @@ import { canUseSkill, SKILL_DEFINITIONS } from './skill-content.ts';
 import { skillIconSVG } from './skill-icon.ts';
 import { basicAttackManaCost } from './equipment.ts';
 import { uiIcon } from './ui-components.ts';
+import { drawHUDUtility } from './hud-utility-art.ts';
 import { skillSustain } from './skill-sustain.ts';
 import type { GroundEffect, Player } from './model.ts';
 import type { GamePhase } from './game-phase.ts';
 import './touch-ui.css';
-import { phoneLandscapeLayout, type TouchViewport } from './touch-layout.ts';
+import { phoneLandscapeLayout, touchMenuLayout, touchMinimapTop, touchWorldActionsTop, type TouchViewport } from './touch-layout.ts';
 
-type MenuAction = 'pause' | 'character' | 'skills' | 'journeys' | 'map' | 'portal' | 'interact' ;
+type MenuAction = 'pause' | 'character' | 'inventory' | 'skills' | 'journeys' | 'map' | 'portal' | 'interact' ;
 export class TouchHUD {
   readonly input = new TouchInput();
   readonly element: HTMLElement;
@@ -31,25 +32,38 @@ export class TouchHUD {
   private stick: HTMLElement;
   private aimStick: HTMLElement;
   private nextUpdate = 0;
+  private mapTop = 18;
+  private menuOpen = false;
   private mount: HTMLElement;
   private actions: { clearAttack(): void; cancelCombat(): void; activate(active: boolean): void; menu(action: MenuAction): void; unlock(): void; notice(message: string): void };
   constructor(mount: HTMLElement, actions: TouchHUD['actions'], options: {forceTouch?: boolean} = {}) {
     this.mount = mount; this.actions = actions;
     this.element = document.createElement('div'); this.element.className = 'touch-hud'; this.element.hidden = true;
-    const button = (action: string, label: string, icon: string) => `<button type="button" class="touch-button" data-touch-menu="${action}" aria-label="${label}">${icon}${action==='interact' || action==='portal' ? `<small>${action==='interact'?'Interact':'Portal'}</small>` : ''}</button>`;
-    this.element.innerHTML = `<button type="button" class="touch-button touch-menu-toggle" aria-label="Open game menus" aria-expanded="false">☰</button><nav class="touch-menu" aria-label="Game menus">${button('character','Character and inventory',uiIcon('character'))}${button('skills','Skill tree',uiIcon('skilltree'))}${button('journeys','Journeys',uiIcon('journal'))}${button('map','Map',uiIcon('map'))}${button('pause','Pause','Ⅱ')}</nav>
+    const button = (action: string, label: string, icon: string) => `<button type="button" class="touch-button" data-touch-menu="${action}" aria-label="${label}"><span class="touch-icon">${icon}</span>${action==='interact' || action==='portal' ? `<small>${action==='interact'?'Interact':'Portal'}</small>` : ''}</button>`;
+    const destination = (action: string, label: string) => `<button type="button" data-touch-destination="${action}"><span>${label}</span></button>`;
+    this.element.innerHTML = `<div class="touch-menu-scrim" hidden></div><nav class="touch-menu" aria-label="Game menus">
+      <button type="button" class="touch-button touch-menu-trigger" data-touch-menu-toggle aria-haspopup="dialog" aria-expanded="false" aria-label="Open character menus"><canvas data-touch-utility="menu" width="88" height="88" aria-hidden="true"></canvas><span class="touch-point-badge touch-menu-stat" hidden></span><span class="touch-point-badge touch-menu-skill" hidden></span></button>
+      ${button('pause','Pause','Ⅱ')}
+      <section class="touch-menu-panel" role="dialog" aria-modal="true" aria-label="Character menus" hidden>
+        ${destination('character','Character')}${destination('inventory','Inventory')}${destination('skills','Skill tree')}${destination('journeys','Journeys')}${destination('map','World map')}
+      </section></nav>
       <div class="touch-resources"><div class="touch-life" role="meter" aria-label="Life" aria-valuemin="0"><span></span></div><div class="touch-mana" role="meter" aria-label="Mana" aria-valuemin="0"><span></span></div></div>
       <div class="touch-move" data-touch-action="move" role="group" aria-label="Movement stick"><i></i></div>
       <div class="touch-actions">${Array.from({length:5},(_,i)=>`<button class="touch-button touch-skill" data-touch-action="skill-${i}" aria-label="Empty skill ${i+1}"><span class="touch-icon"></span><small></small></button>`).join('')}
       <button class="touch-button touch-attack" data-touch-action="attack" aria-label="Aim stick: drag to face and attack in any direction"><span class="touch-aim-knob">${uiIcon('sword')}</span></button>
-      <button class="touch-button touch-potion" data-touch-action="heal" aria-label="Potion">${uiIcon('potion')}<small></small></button>
-      <button class="touch-button touch-dodge" data-touch-action="dodge" aria-label="Dodge">${uiIcon('dodge')}<small></small></button></div>
+      <button class="touch-button touch-potion" data-touch-action="heal" aria-label="Potion"><canvas class="touch-utility-icon" data-touch-utility="potion" width="44" height="44" aria-hidden="true"></canvas><small></small></button>
+      <button class="touch-button touch-dodge" data-touch-action="dodge" aria-label="Dodge"><canvas class="touch-utility-icon" data-touch-utility="dodge" width="44" height="44" aria-hidden="true"></canvas><small></small></button></div>
       <div class="touch-world-actions">${button('interact','Interact','✦')}${button('portal','Town portal',uiIcon('portal'))}</div>
       <div class="touch-cancel" hidden>Cancel</div>`;
     mount.append(this.element);
+    for (const canvas of this.element.querySelectorAll<HTMLCanvasElement>('[data-touch-utility]')) {
+      const context = canvas.getContext('2d');
+      if (context) drawHUDUtility(context, canvas.dataset.touchUtility as 'potion' | 'dodge' | 'menu',
+        canvas.width/2,canvas.height/2,canvas.width-8);
+    }
     for(const menu of ['character','skills']) {
       const badge=document.createElement('span');badge.className='touch-point-badge';badge.hidden=true;
-      this.element.querySelector(`[data-touch-menu="${menu}"]`)!.append(badge);
+      this.element.querySelector(`[data-touch-destination="${menu}"]`)!.append(badge);
     }
     this.cancel = this.element.querySelector('.touch-cancel')!; this.stick = this.element.querySelector('.touch-move i')!;
     this.aimStick = this.element.querySelector('.touch-aim-knob')!;
@@ -117,14 +131,11 @@ export class TouchHUD {
     this.element.addEventListener('pointercancel',e=>release(e,true),{signal});
     this.element.addEventListener('lostpointercapture',e=>release(e,true),{signal});
     this.element.addEventListener('click', e=> {
-      if ((e.target as Element).closest('.touch-menu-toggle')) {
-        const open = !this.element.classList.contains('menus-open');
-        this.clear(); this.actions.cancelCombat();
-        this.element.classList.toggle('menus-open', open);
-        this.element.querySelector('.touch-menu-toggle')!.setAttribute('aria-expanded', String(open));
-        return;
-      }
-      const action = (e.target as Element).closest<HTMLElement>('[data-touch-menu]')?.dataset.touchMenu as MenuAction;
+      const target=e.target as Element;
+      if(target.closest('[data-touch-menu-toggle]')&&this.enabled){this.menuOpen?this.closeMenu():this.openMenu();return;}
+      if(target.closest('.touch-menu-scrim')){this.closeMenu();return;}
+      const action = (target.closest<HTMLElement>('[data-touch-destination]')?.dataset.touchDestination
+        ?? target.closest<HTMLElement>('[data-touch-menu]')?.dataset.touchMenu) as MenuAction;
       if(action && this.enabled) { this.clear(); this.actions.menu(action); }
     },{signal});
     this.setActive(options.forceTouch || matchMedia('(pointer: coarse)').matches);
@@ -144,13 +155,21 @@ export class TouchHUD {
     const layout = phoneLandscapeLayout(this.viewport);
     this.mount.classList.toggle('touch-phone-landscape', this.active && !!layout);
     if(layout) {
-      for(const [name,rect] of [['move',layout.move],['actions',layout.actions]] as const) {
+      for(const [name,rect] of [['move',layout.move],['actions',layout.actions],['world-actions',layout.worldActions]] as const) {
         this.element.style.setProperty(`--${name}-x`, `${rect.x}px`);
         this.element.style.setProperty(`--${name}-y`, `${rect.y}px`);
       }
     }
+    const menu = layout?.menu ?? touchMenuLayout(this.viewport, touchWorldActionsTop(this.viewport));
+    this.mapTop = layout?.top ?? touchMinimapTop(menu);
+    this.element.dataset.menuLayout = menu.mode;
+    this.element.style.setProperty('--menu-x', `${menu.rect.x}px`);
+    this.element.style.setProperty('--menu-y', `${menu.rect.y}px`);
+    this.element.style.setProperty('--pause-x', `${menu.pause.x-menu.rect.x}px`);
+    this.element.style.setProperty('--pause-y', `${menu.pause.y-menu.rect.y}px`);
   }
   get safeTop(): number { return parseFloat(getComputedStyle(this.element).paddingTop) || 0; }
+  get minimapTop(): number { return this.mapTop; }
   setActive(active: boolean) {
     if(this.active === active) return;
     this.clear(); this.active = active; this.refreshLayout(); this.mount.classList.toggle('touch-mode',active);
@@ -159,11 +178,10 @@ export class TouchHUD {
     this.element.hidden = !active || !this.enabled;
   }
   clear() {
+    this.closeMenu();
     this.input.clear(); const contacts = [...this.captured]; this.captured.clear();
     for(const [id,target] of contacts) { target.classList.remove('is-held'); if(target.hasPointerCapture(id)) target.releasePointerCapture(id); }
     this.cancel.hidden = true; this.updateSticks();
-    this.element.classList.remove('menus-open');
-    this.element.querySelector('.touch-menu-toggle')!.setAttribute('aria-expanded', 'false');
   }
   update(player: Player, phase: GamePhase, busy: boolean, now: number, effects: readonly GroundEffect[] = []) {
     this.player = player;
@@ -179,7 +197,11 @@ export class TouchHUD {
       el.querySelector('span')!.textContent = `${Math.ceil(value)} / ${max}`;
     }
     for(const [menu,points] of [['character',player.character.statPoints],['skills',player.character.skillPoints]] as const) {
-      const badge=this.element.querySelector<HTMLElement>(`[data-touch-menu="${menu}"] .touch-point-badge`)!;
+      const badge=this.element.querySelector<HTMLElement>(`[data-touch-destination="${menu}"] .touch-point-badge`)!;
+      badge.hidden=points===0;badge.textContent=points>99?'99+':String(points);
+    }
+    for(const [kind,points] of [['stat',player.character.statPoints],['skill',player.character.skillPoints]] as const) {
+      const badge=this.element.querySelector<HTMLElement>(`.touch-menu-${kind}`)!;
       badge.hidden=points===0;badge.textContent=points>99?'99+':String(points);
     }
     for(let i=0;i<5;i++) {
@@ -210,9 +232,24 @@ export class TouchHUD {
     const destinationLabel=portalDestinationLabel(destination);
     const label=progress!==null ? `Cancel portal opening to ${destinationLabel} · ${(PORTAL_RULES.channel*(1-progress)).toFixed(1)} seconds` : mode==='return' ? `Return to ${destinationLabel}` : mode==='locate' ? `Locate return portal to ${destinationLabel}` : mode==='unavailable' ? 'Town portal unavailable in sanctuary. Explore outside the sanctuary to open one' : `Open town portal to ${destinationLabel}`;
     if(el.getAttribute('aria-label')!==label) el.setAttribute('aria-label',label);
-    el.querySelector('small')!.textContent=progress!==null ? 'Cancel' : mode==='return' ? 'Return' : mode==='locate' ? 'Locate' : mode==='unavailable' ? 'Unavailable' : 'Portal';
+    el.querySelector('small')!.textContent=progress!==null ? 'Cancel' : mode==='return' ? 'Return' : mode==='locate' ? 'Locate' : mode==='unavailable' ? 'Outside' : 'Portal';
     el.disabled=mode==='unavailable';
     el.classList.toggle('is-held',progress!==null);
+  }
+  private openMenu(){
+    this.clear();
+    this.actions.cancelCombat();
+    this.menuOpen=true;
+    this.element.querySelector<HTMLElement>('.touch-menu-panel')!.hidden=false;
+    this.element.querySelector<HTMLElement>('.touch-menu-scrim')!.hidden=false;
+    this.element.querySelector('[data-touch-menu-toggle]')!.setAttribute('aria-expanded','true');
+  }
+  private closeMenu(){
+    if(!this.menuOpen)return;
+    this.menuOpen=false;
+    this.element.querySelector<HTMLElement>('.touch-menu-panel')!.hidden=true;
+    this.element.querySelector<HTMLElement>('.touch-menu-scrim')!.hidden=true;
+    this.element.querySelector('[data-touch-menu-toggle]')!.setAttribute('aria-expanded','false');
   }
   dispose() { this.clear(); this.abort.abort(); this.element.remove(); this.mount.classList.remove('touch-mode'); document.documentElement.classList.remove('touch-mode'); this.mount.classList.remove('touch-phone-landscape'); }
 }

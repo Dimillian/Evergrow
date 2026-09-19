@@ -224,7 +224,7 @@ export function drawFloatingHUD(c: CanvasRenderingContext2D, p: Player, width: n
   c.save(); c.translate(layout.x, layout.y); c.scale(layout.scale, layout.scale);
   if(options.touch) {
     drawTouchResources(c, p, time, options);
-    drawHUDExperience(c, p, options.reducedMotion ? 0 : time, options.experience);
+    drawHUDExperience(c, p, options.reducedMotion ? 0 : time, options.experience, HUD_ART.experience.y, 1.18);
   }
   else { drawHUDFrame(c, options.reducedMotion ? 0 : time, options.inventory); drawHUDContents(c, p, time, options); }
   c.restore();

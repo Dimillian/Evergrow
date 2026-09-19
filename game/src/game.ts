@@ -89,6 +89,7 @@ import { GameShell } from './game-shell.ts';
 import { isGameUIPoint, isUIRectPoint, projectUIRect } from './ui-hit-test.ts';
 import type { GamePhase } from './game-phase.ts';
 import type { Input } from './model.ts';
+import { presentationProfile, presentationViewport, type PresentationProfile } from './presentation-viewport.ts';
 
 /** Coordinates browser lifecycle, simulation and presentation; system rules live in their owners. */
 export class Game {
@@ -171,8 +172,13 @@ export class Game {
   private actionPending: Promise<unknown> = Promise.resolve();
   private autosave: Promise<boolean> | null = null;
   private saveAgain = false;
+  private readonly presentation: PresentationProfile;
 
   constructor(root: HTMLElement) {
+    this.presentation = presentationProfile({
+      android: !!window.EvergrowAndroid,
+      coarsePointer: matchMedia('(pointer: coarse)').matches,
+    });
     this.lifetime.defer(() => this.abort.abort());
     this.lifetime.defer(() => cancelAnimationFrame(this.animation));
     this.lifetime.defer(() => { if(this.world !== this.overworld) this.world.dispose(); this.overworld.dispose(); });
@@ -311,7 +317,8 @@ export class Game {
         menu: action => {
           if(this.savingAction || this.phase !== 'playing') return;
           if(action === 'pause') this.pause();
-          else if(action === 'character') this.openCharacterPanel('character');
+          else if(action === 'character') { this.openCharacterPanel('character'); this.inventoryPanel.openTouchTab('stats'); }
+          else if(action === 'inventory') { this.openCharacterPanel('character'); this.inventoryPanel.openTouchTab('bag'); }
           else if(action === 'skills') this.openCharacterPanel('skills');
           else if(action === 'journeys') this.journeys.open();
           else if(action === 'map') this.openMap();
@@ -571,20 +578,24 @@ export class Game {
   private resize() {
     this.touch?.clear(); this.clearWorldTouch?.();
     document.documentElement.style.setProperty('--touch-vh', `${window.visualViewport?.height ?? window.innerHeight}px`);
-    const width = window.innerWidth, height = this.touch?.active ? Math.round(window.visualViewport?.height ?? window.innerHeight) : window.innerHeight;
-    const ratio = Math.min(1.6, window.devicePixelRatio || 1);
-    this.canvas.width = Math.round(width * ratio);
-    this.canvas.height = Math.round(height * ratio);
+    const viewport = presentationViewport({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      visualHeight: window.visualViewport?.height ?? window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio || 1,
+      touchActive: !!this.touch?.active,
+      profile: this.presentation,
+    });
+    this.canvas.width = viewport.worldBufferWidth;
+    this.canvas.height = viewport.worldBufferHeight;
     // UI is rasterized at the display's native density, independently of the world buffer.
-    const uiRatio = window.devicePixelRatio || 1;
-    this.uiCanvas.width = Math.round(width * uiRatio);
-    this.uiCanvas.height = Math.round(height * uiRatio);
-    const logicalHeight = Math.min(680, Math.max(450, Math.round(height / 1.35)));
-    this.renderer.resize(Math.max(this.touch?.active ? 1 : 540, Math.round(logicalHeight * width / height)), logicalHeight);
-    this.renderer.cursorPixelScale = { x: this.renderer.width / width, y: this.renderer.height / height };
+    this.uiCanvas.width = viewport.uiBufferWidth;
+    this.uiCanvas.height = viewport.uiBufferHeight;
+    this.renderer.resize(viewport.logicalWidth, viewport.logicalHeight);
+    this.renderer.cursorPixelScale = { x: this.renderer.width / viewport.width, y: this.renderer.height / viewport.height };
     this.touch?.refreshLayout();
     this.renderer.touchViewport = this.touch?.viewport ?? null;
-    this.renderer.touchTopInset = (this.touch?.safeTop ?? 0) * this.renderer.height / height;
+    this.renderer.touchTopInset = (this.touch?.safeTop ?? 0) * this.renderer.height / viewport.height;
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
     this.sim.setCombatViewport(this.renderer.combatViewport);
     this.mouse.x = this.renderer.width * 0.6;
@@ -1271,7 +1282,9 @@ export class Game {
     this.renderer.pointerActive = this.mouse.present && (this.usingGamepad || this.touch.active || !this.pointerOverEffects);
     // Presentation existence does not reveal whether the Thor dashboard covers it.
     this.renderer.navigationVisible = !(this.touch.active && (window.innerWidth < 620 || this.touch.phoneLandscape));
-    this.shell.setNavigationVisible(this.renderer.navigationVisible);
+    // Touch owns Map and Portal through its persistent menu; do not leave the
+    // desktop minimap hit target behind after moving the touch projection.
+    this.shell.setNavigationVisible(this.renderer.navigationVisible && !this.touch.active);
     this.journeys.update();
     const settings = {
       liveMap: this.panels.mapHeld,
@@ -1338,12 +1351,23 @@ export class Game {
       if (dungeonRun) this.dungeonMap.setExplorationPointer(pointer);
       else this.worldMap.setExplorationPointer(pointer);
     }
-    if (this.phase !== 'ready' && dungeonRun && this.renderer.navigationVisible) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time,this.sim.enemies,this.mapIcons);
-    if (this.phase !== 'ready' && !dungeonRun && this.renderer.navigationVisible) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, this.sim.time,
-      this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
-        x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
-        y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind, rank:enemy.rank,
-      })));
+    if (this.phase !== 'ready' && (this.renderer.navigationVisible || this.touch.active)) {
+      ui.save();
+      if (this.touch.active) {
+        const mapScale = this.renderer.navigationVisible ? 1 : .75;
+        const physicalHeight = Math.max(1, visualViewport?.height ?? innerHeight);
+        const mapTop = this.touch.minimapTop * this.renderer.height / physicalHeight;
+        ui.globalAlpha = .58;
+        ui.translate(this.renderer.width, mapTop); ui.scale(mapScale, mapScale); ui.translate(-this.renderer.width, -18);
+      }
+      if (dungeonRun) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time,this.sim.enemies,this.mapIcons);
+      else this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, this.sim.time,
+        this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
+          x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
+          y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind, rank:enemy.rank,
+        })));
+      ui.restore();
+    }
     this.thor.update(now);
     this.performance.end('ui', uiStart);
     const monitorStart = this.performance.start();

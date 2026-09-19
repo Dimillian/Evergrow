@@ -614,7 +614,7 @@ export class Renderer {
     const boss=sim.enemies.find(e=>isBossKind(e.kind)&&e.hp>0&&e.state!=='return'&&Math.hypot(e.x-p.x,e.y-p.y)<(isWildernessBoss(e.kind)?650:1100));
     const target = boss ?? (this.plateOpacity > .01 ? this.plateEnemy : null);
     const debuffs = target ? [...enemyTraitBuffs(target),...enemyDebuffs(target, p)] : [];
-    const targetPlate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0);
+    const targetPlate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0, !!phone);
     // Visible plates own this space, including their death fade. Dismiss without replaying after focus ends.
     if(settings.phase==='playing'&&target&&targetPlate.height>0)this.areaBanner.clear();
     if(settings.phase==='playing'&&!p.dead&&!this.rewards.level&&!this.rewards.journey) {
@@ -630,13 +630,13 @@ export class Renderer {
       ? { id: target.id, buffs: debuffs, x: (targetPlate.x + targetPlate.width / 2) * plateScale / this.width,
         y: (targetPlate.y + 76) * plateScale / this.height, opacity: boss ? 1 : this.plateOpacity } : null;
     if (boss) {
-      drawEnemyPlate(c, boss, plateWidth, plateHeight, { hasDebuffs: debuffs.length > 0, touch: this.touchActive, topInset: plateInset, name:this.cryptFloor?dungeonTheme(this.cryptFloor.seed,this.cryptFloor.theme).bossName:undefined });
-      const plate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0);
+      drawEnemyPlate(c, boss, plateWidth, plateHeight, { hasDebuffs: debuffs.length > 0, touch: this.touchActive, compactLandscape:!!phone, topInset: plateInset, name:this.cryptFloor?dungeonTheme(this.cryptFloor.seed,this.cryptFloor.theme).bossName:undefined });
+      const plate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0, !!phone);
       if (plate.height && this.focusedEnemy?.id === boss.id) text(c, 'CONTROL DURATION −75% · BRIEF STUN IMMUNITY',
         plateWidth / 2, plate.y + plate.height + 4, .7, '#9db8a7', 'center');
     }
     if (!boss && this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, plateWidth, plateHeight, {
-      hasDebuffs: debuffs.length > 0, touch: this.touchActive, topInset: plateInset,
+      hasDebuffs: debuffs.length > 0, touch: this.touchActive, compactLandscape:!!phone, topInset: plateInset,
       time: this.visualTime, reducedMotion: settings.reducedMotion,
       opacity: this.plateOpacity,
       healthTrail: this.damageTrails.get(this.plateEnemy.id)?.value ?? this.plateEnemy.hp,
