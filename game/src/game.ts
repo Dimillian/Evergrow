@@ -24,6 +24,7 @@ import type { SaveSlot } from './character-storage.ts';
 import { validCharacterLook, type CharacterLook } from './character-look.ts';
 import { directionalAimProfile } from './ranged-aim.ts';
 import { FramePacer } from './frame-pacer.ts';
+import { MenuBackdrop } from './menu-backdrop.ts';
 import { ThorRuntime } from './thor-runtime.ts';
 import { nativeController, clearNativeController } from './thor-native.ts';
 import type { PadSnapshot } from './gamepad-input.ts';
@@ -156,6 +157,7 @@ export class Game {
   private last = performance.now();
   private animation = 0;
   private framePacer = new FramePacer(60);
+  private menuBackdrop = new MenuBackdrop();
   private performanceMonitor: PerformanceMonitor;
   private nextPerformanceCounters = 0;
   private performancePhase: GamePhase | null = null;
@@ -288,6 +290,7 @@ export class Game {
         skills: { open: () => { this.skillPanel.open(this.sim.player); this.shell.setStatus('Skill tree open. Game paused.'); }, close: () => this.skillPanel.close() },
       }, {
         clearInput: preserveMovement => this.clearInput(preserveMovement), changed: phase => {
+          this.menuBackdrop.invalidate();
           if (phase !== this.audioPhase || phase === 'map') {
             if (phase !== 'dead' && this.audioPhase !== 'dead') this.audio.panel(!this.panels.simulationActive && phase !== 'ready');
             this.audioPhase = phase; this.nextScore = 0;
@@ -335,6 +338,7 @@ export class Game {
           if (this.animation) { cancelAnimationFrame(this.animation); this.animation = 0; }
         },
         foreground: () => {
+          this.menuBackdrop.invalidate();
           this.clearInput(); this.nativeBackground = false; this.audio.setForeground(!document.hidden);
           if (!document.hidden && !this.animation) {
             this.last = performance.now();
@@ -390,6 +394,7 @@ export class Game {
     window.addEventListener('pagehide', () => { this.performance.suspend(); this.audio.setForeground(false); this.clearInput(); void this.saveAndSync(); }, { signal });
     window.addEventListener('focus', () => this.clearInput(), { signal });
     window.addEventListener('pageshow', () => {
+      this.menuBackdrop.invalidate();
       this.audio.setForeground(!document.hidden && !this.nativeBackground);
       if (!document.hidden && !this.nativeBackground && !this.animation) {
         this.last = performance.now();
@@ -401,6 +406,10 @@ export class Game {
     window.addEventListener('keydown', unlockAudio, { signal, capture: true });
     this.canvas.addEventListener('blur', () => { if (this.phase !== 'map') this.clearInput(); }, { signal });
     window.addEventListener('resize', () => this.resize(), { signal });
+    this.canvas.addEventListener('webglcontextrestored', () => this.menuBackdrop.invalidate(), { signal });
+    this.canvas.addEventListener('contextrestored', () => this.menuBackdrop.invalidate(), { signal });
+    this.renderer.canvas.addEventListener('contextrestored', () => this.menuBackdrop.invalidate(), { signal });
+    this.motionPreference.addEventListener('change', () => this.menuBackdrop.invalidate(), { signal });
     window.visualViewport?.addEventListener('resize', () => { if(this.touch.active) this.resize(); }, {signal});
     window.addEventListener('blur', () => {
       this.mouse.present = false;
@@ -408,6 +417,7 @@ export class Game {
       if (this.phase === 'playing' || this.phase === 'map') this.pause();
     }, { signal });
     document.addEventListener('visibilitychange', () => {
+      this.menuBackdrop.invalidate();
       this.audio.setForeground(!document.hidden && !this.nativeBackground);
       if (document.hidden) {
         this.performance.suspend();
@@ -569,6 +579,7 @@ export class Game {
   }
 
   private resize() {
+    this.menuBackdrop.invalidate();
     this.touch?.clear(); this.clearWorldTouch?.();
     document.documentElement.style.setProperty('--touch-vh', `${window.visualViewport?.height ?? window.innerHeight}px`);
     const width = window.innerWidth, height = this.touch?.active ? Math.round(window.visualViewport?.height ?? window.innerHeight) : window.innerHeight;
@@ -842,7 +853,7 @@ export class Game {
     this.savingAction = true; this.touch.update(this.sim.player,this.phase,true,performance.now()); this.clearWorldTouch?.(); this.input.clear(); this.gamepad.clear(); this.gamepadMenu.clear();
     const result = (async () => {
       try { await this.autosave; return await operation(); }
-      finally { this.savingAction = false; this.clearInput(); this.last = performance.now(); }
+      finally { this.menuBackdrop.invalidate(); this.savingAction = false; this.clearInput(); this.last = performance.now(); }
     })();
     this.actionPending = result;
     return result;
@@ -1132,6 +1143,7 @@ export class Game {
     if (this.savingAction) return;
     const result = executeCharacterCommand(this.sim.player, command);
     if (!result.ok) { this.notify(result.message ?? 'Action unavailable.'); return; }
+    this.menuBackdrop.invalidate();
     if (result.message) this.notify(result.message);
     if (this.phase === 'character') this.inventoryPanel.refresh(this.sim.player);
     if (this.phase === 'skills') this.skillPanel.refresh(this.sim.player);
@@ -1283,12 +1295,15 @@ export class Game {
       this.renderer.cameraX = -90 + (this.reducedMotion ? 0 : Math.sin(now / 24000) * 45);
       this.renderer.cameraY = -180 + (this.reducedMotion ? 0 : Math.cos(now / 31000) * 25);
     }
-    const renderStart = this.performance.start();
-    this.renderer.render(this.sim, this.world, dt, settings);
-    this.performance.end('world', renderStart);
-    const fxStart = this.performance.start();
-    this.fx.render(this.renderer.canvas, this.renderer.hurt, this.renderer.emission);
-    this.performance.end('postfx', fxStart);
+    this.menuBackdrop.render(this.phase, () => {
+      const renderStart = this.performance.start();
+      this.renderer.render(this.sim, this.world, dt, settings);
+      this.performance.end('world', renderStart);
+      const fxStart = this.performance.start();
+      this.fx.render(this.renderer.canvas, this.renderer.hurt, this.renderer.emission);
+      this.performance.end('postfx', fxStart);
+      return this.renderer.terrainSettling;
+    });
     const uiStart = this.performance.start();
     const ui = this.uiContext;
     ui.setTransform(1, 0, 0, 1, 0, 0);

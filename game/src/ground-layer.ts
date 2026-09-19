@@ -22,6 +22,7 @@ export class GroundLayer {
   private lastLeft = 0;
   private lastTop = 0;
   private lastTime = 0;
+  private pendingPresentation = false;
   private prefetched = new Map<string, HTMLCanvasElement>();
 
   constructor(createCanvas: CanvasFactory = () => document.createElement('canvas'), background = false) {
@@ -37,7 +38,10 @@ export class GroundLayer {
     return { terrainTiles: stream?.size ?? this.world?.cacheStats.groundTiles ?? 0, terrainQueued: stream?.queued ?? 0 };
   }
 
-  reset() { this.world = null; this.prefetched.clear(); this.previews.clear(); this.transitions.clear(); this.stream?.dispose(); this.stream = null; }
+  /** Includes the final tile crossfade after the worker queue has emptied. */
+  get settling() { return this.pendingPresentation || !!this.stream && (this.stream.failed || this.stream.queued > 0); }
+
+  reset() { this.world = null; this.pendingPresentation = false; this.prefetched.clear(); this.previews.clear(); this.transitions.clear(); this.stream?.dispose(); this.stream = null; }
 
   private preview(world: World, x: number, y: number) {
     const key = `${x}:${y}`; let tile = this.previews.get(key);
@@ -113,14 +117,17 @@ export class GroundLayer {
       this.world = world;
       this.minX = minX; this.minY = minY; this.maxX = maxX; this.maxY = maxY;
     }
+    this.pendingPresentation = false;
     if (this.stream) for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
       const tile = this.stream.get(x, y), key = `${x}:${y}`;
-      if (!tile || this.transitions.get(key) === tile.ready) continue;
+      if (!tile) { this.pendingPresentation = true; continue; }
+      if (this.transitions.get(key) === tile.ready) continue;
       const c = this.context, px = (x - minX) * TILE_SIZE, py = (y - minY) * TILE_SIZE;
       c.imageSmoothingEnabled = true;
       c.drawImage(this.preview(world, x, y), px, py, TILE_SIZE, TILE_SIZE);
       c.globalAlpha = Math.min(1, Math.max(0, (now - tile.ready) / 160)); c.drawImage(tile.bitmap, px, py); c.globalAlpha = 1;
       if (now - tile.ready >= 160) this.transitions.set(key, tile.ready);
+      else this.pendingPresentation = true;
     }
     destination.drawImage(this.canvas, minX * TILE_SIZE, minY * TILE_SIZE);
     // Spread upcoming full-quality tiles over ordinary movement frames, not the crossing frame.

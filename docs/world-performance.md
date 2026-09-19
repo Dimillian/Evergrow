@@ -1,5 +1,15 @@
 # Walking and terrain performance
 
+## Inventory and vendor background retention · September 19, 2026
+
+The Chrome capture `evergrow-performance-1789852422907.json` runs near 60 FPS before inventory, falls to roughly 32–40 FPS while browsing, and returns to about 59 FPS after closing it. During the slower section, panel JavaScript averages approximately 1.4–2.2 ms per frame while world drawing takes 11–12 ms. These CPU measurements do not include browser style/layout/paint or GPU execution, and do not establish an accumulating tooltip or memory leak.
+
+`MenuBackdrop` now retains the displayed world and CRT canvas while the character or NPC service window is open. Scenery animation behind these already-pausing menus stays still; native HUD, menu interaction, portraits and tooltips continue on their existing schedules. Opening or switching panels, successful character commands, durable transactions, resizing, foreground/context restoration and reduced-motion changes invalidate the background. Streamed terrain continues drawing until missing tiles and their final 160 ms crossfade finish, including worker-error fallback. Gameplay and held-map rendering retain their normal cadence. No canvas copy, readback or extra render target is needed.
+
+Item-slot highlights now change immediately instead of overlapping 120 ms border/background/shadow fades during a quick sweep. Their hover styling and equipment art remain the same.
+
+Verification: 46 focused code tests passed, including retained menu cadence, invalidation/reopening, continued gameplay/map rendering, final terrain crossfades and worker fallback; strict/core compilation and the production build passed. A frozen native Canvas check of the real renderer produced one world draw over 600 menu callbacks, zero additional canvases, and identical retained pixels; explicit invalidation redrew once with identical frozen pixels. This is a scheduling/pixel check, not a browser FPS measurement. Browser FPS improvement still requires the player's playtest.
+
 ## Travel resource reuse · September 19, 2026
 
 Portal arrival now clears transient presentation while retaining bounded reusable graphics resources. Same-world trips retain the terrain worker; its normal viewport update closes stale tiles and requests the destination. Different worlds still invalidate terrain through the existing world-identity check. Water simulation, combat feedback, roof cutaways, visibility and arrival camera state reset, while shader programs, reusable texture storage and static art caches survive. Full renderer reset still releases these resources on character replacement and teardown. Saves and combat rules are unchanged.
