@@ -1,5 +1,7 @@
 .pause-option { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; border-bottom: 1px solid var(--ui-line); font-size: 13px; color: var(--ui-text); }
 .pause-option .ui-button { min-height: 36px; padding: 5px 10px; font-size: 13px; }
+.pause-option select { min-height: 36px; min-width: 124px; padding: 5px 28px 5px 10px; border: 1px solid var(--ui-line); border-radius: 0; background: #0c171e; color: var(--ui-text); font: inherit; font-size: 13px; }
+.pause-option select:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 3px; }
 .pause-toggle { min-width: 56px; }
 .pause-option--loot { flex-wrap: wrap; padding-block: 6px; }
 .pause-loot-modes { display: flex; gap: 3px; margin-left: auto; }
@@ -57,4 +59,4 @@
   .pause-changelog.changelog-overlay { padding: 16px; }
   .system-window .controls-column-head { top: -16px; }
 }
-@media (pointer: coarse) { .system-window .pause-option .ui-button { min-width: 44px; min-height: 44px; } }
+@media (pointer: coarse) { .system-window .pause-option .ui-button, .system-window .pause-option select { min-width: 44px; min-height: 44px; } }

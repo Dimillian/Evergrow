@@ -5,6 +5,7 @@
 - [Regional scaling](region-scaling.md) — current local ranges, encounter snapshots, rewards and save compatibility.
 
 - [Dynamic soundtrack](dynamic-soundtrack.md): regional/encounter music, mix controls and audio lifecycle.
+- [Presentation frame-limit benchmark](frame-limit-benchmark.md): synthetic pacing checks, controlled browser telemetry and player-perception protocol.
 - [Local music auditions](music-auditions.md): ACE-Step setup, repeatable prompts and the soundtrack listening page.
 
 - [Regional monsters](regional-monsters.md): six biome-native archetypes, attack cycles, population weights and the local bestiary.

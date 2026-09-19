@@ -25,6 +25,7 @@ import type { SaveSlot } from './character-storage.ts';
 import { validCharacterLook, type CharacterLook } from './character-look.ts';
 import { directionalAimProfile } from './ranged-aim.ts';
 import { FramePacer } from './frame-pacer.ts';
+import { parseFrameLimit, presentationFps, type FrameLimit, type PresentationFps } from './frame-limit.ts';
 import { ThorRuntime } from './thor-runtime.ts';
 import { nativeController, clearNativeController } from './thor-native.ts';
 import type { PadSnapshot } from './gamepad-input.ts';
@@ -139,6 +140,7 @@ export class Game {
   get phase(): GamePhase { return this.panels?.phase ?? 'ready'; }
   private muted = false;
   private groundLootNames: GroundLootNameplates = 'always';
+  private frameLimit: FrameLimit = 'display';
   private nextScore = 0;
   private audioPhase: GamePhase = 'ready';
   private nativeBackground = false;
@@ -158,6 +160,7 @@ export class Game {
   private last = performance.now();
   private animation = 0;
   private framePacer = new FramePacer(60);
+  private pacedFps: PresentationFps = null;
   private performanceMonitor: PerformanceMonitor;
   private nextPerformanceCounters = 0;
   private performancePhase: GamePhase | null = null;
@@ -193,6 +196,10 @@ export class Game {
         shortcutMenuChanged: () => this.clearInput(),
         groundLootNames: () => this.groundLootNames,
         setGroundLootNames: mode => { this.groundLootNames = mode; this.savePreferences(); },
+        ...(!window.EvergrowAndroid ? {
+          frameLimit: () => this.frameLimit,
+          setFrameLimit: (limit: FrameLimit) => this.setFrameLimit(limit),
+        } : {}),
         volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
         sound: () => this.toggleSound(), muted: () => this.muted, zoom: factor => this.renderer.zoomByWheel(-Math.log(factor)/.0016,0,this.canvas.getBoundingClientRect().height),
         lastSavedAt: () => this.session?.active?.record.updatedAt,
@@ -248,6 +255,7 @@ export class Game {
       this.chronicle = this.lifetime.own(new ChroniclePanel(this.shell.panelMount,()=>this.resume()));
       this.titleScreen = this.lifetime.own(new TitleScreen(this.shell.titleMount, {
         sound: () => this.toggleSound(), muted: () => this.muted,
+        presentationFps: () => this.effectivePresentationFps(),
         volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
         chronicle: onCached => this.saveClient.chronicle(onCached),
         create: (index, name, weapon, seed) => this.editNewCharacter(index, name, weapon, seed),
@@ -355,9 +363,10 @@ export class Game {
         const saved = JSON.parse(localStorage.getItem('evergrow-preferences') ?? 'null');
         if (typeof saved?.muted === 'boolean') this.muted = saved.muted;
         if (saved?.groundLootNames === 'ctrl') this.groundLootNames = 'ctrl';
+        this.frameLimit = parseFrameLimit(saved?.frameLimit);
         for (const channel of ['master', 'sfx', 'music'] as const) this.audio.setVolume(channel, audioVolume(saved?.[channel], DEFAULT_AUDIO[channel]));
       } catch { /* Preferences are optional when storage is disabled. */ }
-      // Presentation is fixed and motion follows the OS.
+      // The CRT treatment is fixed; motion still follows the OS.
       this.savePreferences();
       this.audio.setEnabled(!this.muted);
       this.resize();
@@ -1209,7 +1218,7 @@ export class Game {
       this.animation = 0;
       return;
     }
-    if (window.EvergrowAndroid && !this.framePacer.ready(now)) {
+    if (!this.presentationReady(now)) {
       this.animation = requestAnimationFrame(this.frame);
       return;
     }
@@ -1479,8 +1488,26 @@ export class Game {
   private setAudioVolume(channel: AudioChannel, value: number) {
     this.audio.setVolume(channel, value); this.savePreferences();
   }
+  private effectivePresentationFps(): PresentationFps {
+    return presentationFps(this.frameLimit, !!window.EvergrowAndroid);
+  }
+  private presentationReady(now: number): boolean {
+    const fps = this.effectivePresentationFps();
+    if (fps === null) { this.pacedFps = null; return true; }
+    if (fps !== this.pacedFps) {
+      this.pacedFps = fps;
+      this.framePacer = new FramePacer(fps);
+    }
+    return this.framePacer.ready(now);
+  }
+  private setFrameLimit(limit: FrameLimit) {
+    this.frameLimit = parseFrameLimit(limit);
+    this.pacedFps = null;
+    this.shell.refreshOptions();
+    this.savePreferences();
+  }
   private savePreferences() {
-    try { localStorage.setItem('evergrow-preferences', JSON.stringify({ muted: this.muted, groundLootNames: this.groundLootNames, ...this.audio.getVolumes() })); } catch { /* Storage may be disabled. */ }
+    try { localStorage.setItem('evergrow-preferences', JSON.stringify({ muted: this.muted, groundLootNames: this.groundLootNames, frameLimit: this.frameLimit, ...this.audio.getVolumes() })); } catch { /* Storage may be disabled. */ }
   }
 
   private notify(message: string) {

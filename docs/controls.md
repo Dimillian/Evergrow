@@ -37,6 +37,8 @@ Unlock skills in the tree, then assign them to the five skill slots (RMB or 1–
 
 Esc opens the EVERGROW field-journal menu with Character, Adventure and System categories. The wordmark sits above the frame and shares the character selection screen’s typography, spacing, color and glow. Character groups Equipment & pack, Skill atlas, Appearance and Chronicle. Adventure contains the map and Journeys. Expedition tables and town services open through their normal world interactions. System contains Options, Controls, the cloud-only Leaderboard and What’s new. Categories have no repeated body headings. Kills, active time and save status share the compact footer, with Save game and Save & character hall above it.
 
+Browser Options includes sound, presentation frame limit, loot labels, camera zoom and fullscreen. Android keeps its fixed 60 FPS presentation policy and omits the frame-limit control.
+
 Windows opened from Esc return to its selected category and entry without resuming combat, including inventory/skill switches, Chronicle and appearance editing. Each System entry opens a dedicated window with its own title, close button and scrollable content, replacing the menu until closed. Esc or B closes that window first; during control rebinding it cancels capture first. Resume returns to play. Focused category tabs support arrows and Home/End; LB/RB switches categories. Categories use a stable minimum menu height, with a scrollable body on shorter screens and a three-tab row on narrow screens. Existing direct gameplay shortcuts keep their usual close-to-play behavior.
 
 In shops, select an item and Buy/Sell, or Shift-click for a direct trade. The Equipped section at the blacksmith or enchanter upgrades worn gear in place. Escape closes the service.
