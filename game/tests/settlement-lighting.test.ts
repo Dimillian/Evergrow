@@ -31,6 +31,8 @@ test('entering a house fades its facade window light and enables its interior li
   const opened = art.getLights([house], 0, night);
   assert.equal(opened.some(l => l.radius === 89), false);
   assert.ok(opened.some(l => l.color === '#e1cda0'));
+  art.resetVisibility();
+  assert.ok(art.getLights([house], 0, night).some(l => l.radius === 89), 'arrival clears the previous roof cutaway');
 });
 
 test('fortification art is cached across time changes, preserves depth and clears on renderer reset', () => {
@@ -55,7 +57,10 @@ test('fortification art is cached across time changes, preserves depth and clear
   }
   assert.ok(materials.has('palisade') && materials.has('stone'));
   const wall = buildings.find(b => b.wallSegment)!;
+  art.getStructureLayers(wall, 20)[0].draw(context);
   const count = allocations;
+  art.resetVisibility(); art.getStructureLayers(wall, 20)[0].draw(context);
+  assert.equal(allocations, count, 'travel reuses immutable fortification art');
   art.reset(); art.getStructureLayers(wall, 20)[0].draw(context);
   assert.equal(allocations, count + 1);
 });

@@ -20,6 +20,7 @@ import { goldBalance } from './wallet.ts';
 import { escapeUI, trapDialogFocus, uiIcon } from './ui-components.ts';
 import { ServiceGoldFeedback } from './service-gold-feedback.ts';
 import './service-panel.css';
+import type { FrameProfiler } from './frame-profiler.ts';
 
 const ENCHANT_OPERATIONS = ['rarity', 'rerollOne', 'rerollAll', 'relevel'] as const;
 const ENCHANT_LABELS = { rarity:'Rarity', rerollOne:'One affix', rerollAll:'All affixes', relevel:'Item level' };
@@ -47,8 +48,10 @@ export class ServicePanel {
   private revealed:Item|null=null;
   private abort = new AbortController();
   private focus: { dispose(): void } | null = null;
+  private readonly profiler?: FrameProfiler;
   private actions: { close(): void; sort(target: 'storage' | 'inventory', tab?: number): void; trade(quote: ServiceQuote): Promise<{ ok: boolean; message: string }> };
-  constructor(mount: HTMLElement, actions: ServicePanel['actions']) {
+  constructor(mount: HTMLElement, actions: ServicePanel['actions'], profiler?: FrameProfiler) {
+    this.profiler = profiler;
     this.actions = actions;
     this.element = document.createElement('section'); this.element.className = 'service-panel ui-window'; this.element.hidden = true;
     this.element.setAttribute('role', 'dialog'); this.element.setAttribute('aria-modal', 'true'); this.element.setAttribute('aria-labelledby', 'service-title');
@@ -78,7 +81,13 @@ export class ServicePanel {
     this.selected = this.tab === 'improve' ? { type: 'improve', source, operation: this.operation, affix: 0 } : { type: 'sell', source };
     this.render();
   }
-  close(): void { this.clearTradeDrag(); this.includeActiveCharms=false; this.goldFeedback.stop(); this.sales.clear(); this.focus?.dispose(); this.focus = null; this.tooltip.hide(); this.element.hidden = true; this.selected = null; this.quote = null; }
+  close(): void {
+    this.clearTradeDrag(); this.includeActiveCharms=false; this.goldFeedback.stop(); this.sales.clear();
+    this.focus?.dispose(); this.focus = null; this.tooltip.hide(); this.element.hidden = true;
+    this.selected = null; this.quote = null; this.stockCache = null; this.revealed = null;
+    // Every open already rebuilds the stock. Release its SVGs and gradients while closed.
+    this.element.replaceChildren();
+  }
   dispose(): void { this.close(); this.abort.abort(); this.tooltip.dispose(); this.element.remove(); }
   private updateSelection(): void {
     if (this.npc.role === 'gambler' && this.tab === 'shop') {
@@ -96,6 +105,10 @@ export class ServicePanel {
     this.selected = null; this.render();
   }
   private render(): void {
+    if (this.profiler) this.profiler.panelWork(() => this.renderContents());
+    else this.renderContents();
+  }
+  private renderContents(): void {
     this.clearTradeDrag();
     this.element.classList.toggle('is-storage',this.npc.role==='stash');
     this.element.classList.toggle('is-enhancing',this.tab==='improve');

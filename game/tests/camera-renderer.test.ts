@@ -63,6 +63,8 @@ class RecordingCanvas {
 }
 
 class EmptyWorld extends World {
+  groundRequests = 0;
+  override sampleWater() { return { coverage: 0, depth: 0, flowX: 0, flowY: 0, bank: 0, kind: 'dry' as const }; }
   override getDungeonEntrances() { return []; }
   override getEventSites() { return []; }
   propQueries: Rect[] = [];
@@ -75,7 +77,7 @@ class EmptyWorld extends World {
   }
   override getBuildingAt(): Building | null { return null; }
   override getSettlements(): Settlement[] { return []; }
-  override getGroundTile(): HTMLCanvasElement { return { width: TILE_SIZE, height: TILE_SIZE } as HTMLCanvasElement; }
+  override getGroundTile(): HTMLCanvasElement { this.groundRequests++; return { width: TILE_SIZE, height: TILE_SIZE } as HTMLCanvasElement; }
 }
 
 function fixture(t: TestContext) {
@@ -381,4 +383,28 @@ test('fixed review camera holds its framing while preserving default runtime fol
   render(.05);
   assert.ok(renderer.cameraX > x, 'runtime camera still follows the player by default');
   assert.ok(renderer.cameraY > y);
+});
+
+test('travel clears transient presentation without rebuilding unchanged terrain, and invalidates moved/world coverage', t => {
+  const { renderer, sim, world, render, settings } = fixture(t);
+  renderer.snapTo(sim.player); render();
+  const requests = world.groundRequests;
+  assert.ok(requests > 0);
+  for (let trip = 0; trip < 12; trip++) {
+    renderer.hurt = 1; renderer.shake = 4; renderer.portalGuide = 4;
+    renderer.reset('travel'); renderer.snapTo(sim.player); render();
+    assert.equal(world.groundRequests, requests, 'same coverage keeps its completed terrain');
+    assert.equal(renderer.hurt, 0); assert.equal(renderer.shake, 0); assert.equal(renderer.portalGuide, 0);
+  }
+  sim.relocate(8000, -5000); renderer.reset('travel'); renderer.snapTo(sim.player); render();
+  assert.ok(world.groundRequests > requests, 'teleport replaces the previous terrain coverage');
+  containsBounds(renderer.spawnExclusionBounds(sim.player), renderer.worldBounds, 'arrival is protected before spawning');
+  const destination = new EmptyWorld(9876);
+  renderer.reset('travel'); renderer.snapTo(sim.player);
+  renderer.render(sim, destination, 1 / 60, settings);
+  assert.ok(destination.groundRequests > 0, 'a new world never inherits the old terrain');
+  const before = destination.groundRequests;
+  renderer.reset(); renderer.snapTo(sim.player);
+  renderer.render(sim, destination, 1 / 60, settings);
+  assert.ok(destination.groundRequests > before, 'full reset still releases the composition');
 });

@@ -72,7 +72,8 @@ export class SettlementArt {
     });
   }
 
-  reset() { this.cache.clear(); this.reveal.clear(); this.fortifications.clear(); this.fortificationPixels = 0; }
+  resetVisibility() { this.reveal.clear(); }
+  reset() { this.cache.clear(); this.resetVisibility(); this.fortifications.clear(); this.fortificationPixels = 0; }
 
   update(buildings: readonly Building[], playerX: number, playerY: number, dt: number, reducedMotion: boolean) {
     this.playerX = playerX; this.playerY = playerY; this.reducedMotion = reducedMotion;

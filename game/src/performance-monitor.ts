@@ -173,8 +173,8 @@ export class PerformanceMonitor {
   }
   private export() {
     const capture = this.capture ?? this.profiler.snapshot();
-    const url = URL.createObjectURL(new Blob([JSON.stringify({ version: 1, capturedAt: new Date().toISOString(), phase: this.capture ? this.capturePhase : this.phase,
-      description: 'CPU submission timings, not GPU time. Render sub-stages overlap. Counters sampled at 10 Hz. Zero intervals mark capture boundaries.', ...capture }, null, 2)], { type: 'application/json' }));
+    const url = URL.createObjectURL(new Blob([JSON.stringify({ version: 2, capturedAt: new Date().toISOString(), phase: this.capture ? this.capturePhase : this.phase,
+      description: 'CPU submission timings, not GPU time. CPU includes NPC/inventory panel rendering between game callbacks, attributed to the next frame. Render sub-stages overlap. Counters sampled at 10 Hz. Zero intervals mark capture/phase boundaries. Timeline holds 600 frames; history holds 1800 phase-labelled one-second buckets (shorter at phase changes).', ...capture }, null, 2)], { type: 'application/json' }));
     const link = document.createElement('a'); link.href = url; link.download = `evergrow-performance-${Date.now()}.json`;
     this.element.append(link); link.click(); link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);

@@ -1,4 +1,16 @@
-# Map and skill-atlas performance
+# Panel performance
+
+## NPC and inventory windows · September 19, 2026
+
+Inventory portraits draw at 30 Hz independently of desktop refresh rate. Reduced motion retains the portrait until equipment/stat refresh, rotation, reopening or the motion preference changes. The inventory HUD retains its own drawing schedule and controls remain responsive. The panel still owns one animation callback and cancels it on close. NPC windows discard their generated stock SVGs/gradients and stock cache on close; opening already rebuilds this presentation from current character/commerce state.
+
+The performance monitor now measures NPC panel rebuilds, inventory refresh and inventory animation, including callbacks outside the main game frame. These costs appear under **NPC / inventory** and are included once in CPU work. Between-frame work is assigned to the next recorded frame. GPU compositing, DOM style/layout outside those calls and other independent panel animations are still outside these CPU measurements.
+
+JSON exports include the phase on every raw frame and up to 1,800 approximately one-second summary buckets, split when the phase changes. NPC phases include the service role. This retains roughly 30 minutes of history at a steady phase, less with frequent transitions, while the live graph/raw timeline retains its 600-frame bound. Reset/disable clears both histories; frozen exports keep a detached copy of both.
+
+The supplied September 19 capture retained only the final ~10 seconds (~59 FPS overall), so it did not establish progressive degradation across the full session. Inspection found bounded panel instances and close-time callback/focus cleanup. These changes reduce measured/identifiable presentation work and closed-window retention; they do not establish a browser resource leak or prove that the reported lasting FPS decline is resolved. Code tests cover portrait cadence/reduced-motion invalidation, repeated vendor cleanup, phase history wrap/reset/freeze and exactly-once panel CPU accounting. Gameplay acceptance remains user-tested.
+
+## Earlier map and skill-atlas work
 
 The September 6, 2026 pass targets repeated Canvas work and cold map generation. It changes presentation only; world generation, discovery, allocation and combat remain owned by their existing systems.
 

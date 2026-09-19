@@ -28,6 +28,8 @@ import { effectText, statTerm, effectExplanation } from './effect-terms.ts';
 import { xpForNextLevel } from './progression.ts';
 import { uiIcon, trapDialogFocus, escapeUI } from './ui-components.ts';
 import './inventory-panel.css';
+import { FramePacer } from './frame-pacer.ts';
+import type { FrameProfiler } from './frame-profiler.ts';
 
 export interface InventoryPanelActions {
   close(): void;
@@ -89,6 +91,10 @@ export class InventoryPanel {
   private touchMoving = false;
   private sheet!: HTMLElement;
   private animation = 0;
+  private portraitPacer = new FramePacer(30);
+  private portraitDirty = true;
+  private portraitReduced = false;
+  private readonly profiler?: FrameProfiler;
   private facing = Math.PI / 2;
   private readonly filters = new Set<InventoryFilter>();
   private readonly rarities = new Set<ItemTier>();
@@ -102,7 +108,8 @@ export class InventoryPanel {
   private readonly canvas: HTMLCanvasElement;
   private readonly cells = new Map<string, HTMLButtonElement>();
 
-  constructor(mount: HTMLElement, actions: InventoryPanelActions) {
+  constructor(mount: HTMLElement, actions: InventoryPanelActions, profiler?: FrameProfiler) {
+    this.profiler = profiler;
     this.actions = actions;
     this.element = document.createElement('div');
     this.element.className = 'character-overlay';
@@ -228,8 +235,14 @@ export class InventoryPanel {
   }
 
   refresh(player: Player): void {
+    if (this.profiler) this.profiler.panelWork(() => this.refreshContents(player));
+    else this.refreshContents(player);
+  }
+
+  private refreshContents(player: Player): void {
     this.player = player;
     if (this.element.hidden) return;
+    this.portraitDirty = true;
     if(this.touchItem && this.itemAt(this.touchItem)?.id !== this.touchItem.id) this.closeTouchItem();
     const layout = resolvePackLayout(player.character), occupied = packOccupancy(player.character.inventory, layout);
     const bag = this.element.querySelector<HTMLElement>('.character-bag')!;
@@ -540,7 +553,7 @@ export class InventoryPanel {
         this.hideTooltip(); if (this.player) this.refresh(this.player); return;
       }
       const turn = target.closest<HTMLElement>('[data-turn]');
-      if (turn) { this.facing += Number(turn.dataset.turn) * Math.PI / 4; return; }
+      if (turn) { this.facing += Number(turn.dataset.turn) * Math.PI / 4; this.portraitDirty = true; return; }
       const attribute = target.closest<HTMLElement>('[data-allocate]')?.dataset.allocate as Attribute | undefined;
       if (attribute && Object.hasOwn(ATTRIBUTE_NAMES, attribute)) { this.actions.allocate(attribute); return; }
       const location = this.locationFrom(target);
@@ -805,18 +818,26 @@ export class InventoryPanel {
 
   private animate = (): void => {
     if (this.element.hidden || !this.player) return;
+    const now = performance.now();
+    if (this.profiler) this.profiler.panelWork(() => this.draw(now));
+    else this.draw(now);
+    this.animation = requestAnimationFrame(this.animate);
+  };
+
+  private draw(now: number): void {
+    if (!this.player) return;
     // Scrolling a focused cell hides its old tooltip; place it again after layout settles.
     if (this.element.classList.contains('is-controller') && !this.hovered) {
       const location = this.locationFrom(document.activeElement);
       if (location && this.itemAt(location)) this.showTooltip(location);
     }
-    const ctx = this.canvas.getContext('2d');
-    if (ctx) {
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const time = reduced ? 3 : performance.now() / 1000;
-      drawCharacterPortrait(ctx, this.player, time, this.facing, this.canvas.width, this.canvas.height);
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const portraitDue = this.portraitPacer.ready(now);
+    if (this.portraitDirty || reduced !== this.portraitReduced || !reduced && portraitDue) {
+      const ctx = this.canvas.getContext('2d');
+      if (ctx) drawCharacterPortrait(ctx, this.player, reduced ? 3 : now / 1000, this.facing, this.canvas.width, this.canvas.height);
+      this.portraitDirty = false; this.portraitReduced = reduced;
     }
-    this.hud?.draw(performance.now());
-    this.animation = requestAnimationFrame(this.animate);
-  };
+    this.hud?.draw(now);
+  }
 }

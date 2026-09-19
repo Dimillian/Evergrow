@@ -272,19 +272,28 @@ export class Renderer {
     this.lastDisplayedView = this.view; this.visibility.reset();
   }
 
-  reset() {
+  reset(mode: 'full' | 'travel' = 'full') {
+    // Travel clears the old scene, but bounded art caches and GPU/worker owners
+    // can follow the next view/world through their normal invalidation paths.
+    if (mode === 'full') {
+      this.outdoorLightEffects.reset(); this.dungeonLightEffects.reset();
+      this.sceneShadows.reset(); this.atmosphere.reset(); this.propSurfaceLight.reset();
+      this.groundLayer.reset(); this.groundDressing.reset(); this.settlementArt.reset();
+      this.waterArt.reset();
+    } else {
+      this.settlementArt.resetVisibility(); this.waterArt.clearScene();
+    }
     this.areaBanner.clear();
     this.eventProgressPresentation.reset();
-    this.outdoorLightEffects.reset();
-    this.dungeonLightEffects.reset(); this.emission = undefined;
+    this.emission = undefined;
     this.battleBarks.reset();
-    this.water.reset(); this.waterArt.reset(); this.lighting.reset(); this.sceneShadows.reset(); this.atmosphere.reset(); this.propSurfaceLight.reset();
+    this.water.reset(); this.lighting.reset();
     this.portalGuide = 0; this.portalAnchors = []; this.fadingPortal = null;
     this.cameraX = 0; this.cameraY = 0; this.effects.reset(); this.rangedAim = null;
     this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
     this.lastDisplayedView = this.view;
-    this.riftAtmosphere.reset(); this.groundLayer.reset(); this.groundDressing.reset(); this.biomeLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
-    this.settlementArt.reset(); this.indoorBlend = 0; this.residents=[]; this.residentSpeech=null; this.residentCooldown=0;
+    this.riftAtmosphere.reset(); this.biomeLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
+    this.indoorBlend = 0; this.residents=[]; this.residentSpeech=null; this.residentCooldown=0;
     this.materials.reset(); this.deaths.reset(); resetDeathArt(); this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
     this.damageTrails.clear(); this.playerHealthTrail = 100; this.playerHealthHold = 0;

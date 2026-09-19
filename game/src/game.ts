@@ -232,7 +232,7 @@ export class Game {
         equipBest: choice => this.characterAction({ type: 'equipBest', choice }),
         sort: mode => this.characterAction({ type: 'sortInventory', mode }),
         allocate: attribute => this.characterAction({ type: 'allocateAttribute', attribute }),
-      }));
+      }, this.performance));
       this.skillPanel = this.lifetime.own(new SkillTreePanel(this.shell.panelMount, {
         develop: command => this.characterAction(command),
         close: () => this.closeCharacterPanel(),
@@ -256,7 +256,7 @@ export class Game {
       this.servicePanel = this.lifetime.own(new ServicePanel(this.shell.panelMount, {
         close: () => this.resume(), trade: quote => this.trade(quote),
         sort: (target,tab) => this.characterAction(target === 'storage' ? {type:'sortStorage',tab} : {type:'sortInventory',mode:'compact'}),
-      }));
+      }, this.performance));
       this.riftPanel=this.lifetime.own(new RiftPanel(this.shell.panelMount,{close:()=>this.resume(),enter:async action=>{const ok=await this.switchDungeon(action);if(ok)this.resume();return ok;}}));
       this.expeditionPanel=this.lifetime.own(new ExpeditionPanel(this.shell.panelMount,{close:()=>this.resume(),enter:async action=>{const ok=await this.switchDungeon(action);if(ok)this.resume();return ok;}}));
       this.dungeonMap = this.lifetime.own(new DungeonMap(this.shell.mapMount,()=>this.closeMap(),()=>this.worldMap.open({x:this.sim.expeditions.surfaceX,y:this.sim.expeditions.surfaceY,angle:0}), this.mapIcons));
@@ -1076,7 +1076,7 @@ export class Game {
   private finishTravel(): void {
     this.panels.releaseMap();
     this.clearInput();
-    this.renderer.reset(); this.renderer.snapTo(this.sim.player);
+    this.renderer.reset('travel'); this.renderer.snapTo(this.sim.player);
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
     this.sim.setCombatViewport(this.renderer.combatViewport);
     // Travel clears the old presentation; announce the destination after stable arrival.
@@ -1204,7 +1204,7 @@ export class Game {
       return;
     }
     if (this.performancePhase !== this.phase) { this.performance.suspend(); this.performancePhase = this.phase; }
-    this.performance.begin(now);
+    this.performance.begin(now, this.phase === 'service' && this.activeNPC ? `service:${this.activeNPC.role}` : this.phase);
     const pointerUIStart = this.performance.start();
     this.syncPerformanceInput();
     this.performance.end('monitor', pointerUIStart);
