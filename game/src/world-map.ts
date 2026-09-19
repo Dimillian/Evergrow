@@ -1,7 +1,7 @@
 import { MapLegend } from './map-legend.ts';
 import { MapIconVisibility, mapIconVisible, enemyMapIconId, MAP_SERVICES, nearestMapService, type MapServiceKind } from './map-legend-content.ts';
 import { drawMapPOIIcon, drawMapPlayerIcon, drawMapEnemyIcon, MAP_ICON_SIZES } from './map-icon-art.ts';
-import { worldTimeLabel, skyAtTime } from './world-time.ts';
+import { drawMinimapFrame } from './minimap-art.ts';
 import { regionLevelLabel } from './encounter-scaling.ts';
 import { bindTouchCanvas } from './touch-canvas.ts';
 import { formatWorldDistance } from './world-distance.ts';
@@ -13,7 +13,7 @@ import type { Prop } from './world.ts';
 import { Exploration, EXPLORATION_REVEAL_RADIUS, EXPLORATION_CELL_SIZE, EXPLORATION_CHUNK_SIZE } from './exploration.ts';
 import { BIOMES, type BiomeId } from './biomes.ts';
 import { roadPaths } from './road-shape.ts';
-import { clampMapCoordinate, fitMapBounds, getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt, type MapView, type MapZoomLimits, MAP_ZOOM } from './map-view.ts';
+import { clampMapCoordinate, fitMapBounds, getMinimapRect, getMinimapChartRect, projectMapPoint, unprojectMapPoint, zoomMapAt, type MapView, type MapZoomLimits, MAP_ZOOM } from './map-view.ts';
 import { POI_DEFINITIONS } from './world-pois.ts';
 export { getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt, type MapView, type MapZoomLimits, MAP_ZOOM } from './map-view.ts';
 import type { ExplorationWorld, MapPOI, MapRect } from './exploration.ts';
@@ -756,34 +756,13 @@ export class WorldMap {
   drawMinimap(c: CanvasRenderingContext2D, player: MapPlayer, width: number, height: number, time: number,
     enemies: readonly MinimapEnemy[] = []) {
     const r = getMinimapRect(width, height);
-    const view: MapView = { x: r.x + 6, y: r.y + 25, width: r.width - 12, height: r.height - 66,
+    const view: MapView = { ...getMinimapChartRect(r),
       centerX: player.x, centerY: player.y, zoom: .05 };
     const active = this.minimapPointer && this.minimapPointer.x >= r.x && this.minimapPointer.y >= r.y
       && this.minimapPointer.x < r.x + r.width && this.minimapPointer.y < r.y + r.height;
     c.save();
-    const bg = c.createLinearGradient(r.x, r.y, r.x, r.y + r.height);
-    bg.addColorStop(0, `${palette.panelRaised}f5`); bg.addColorStop(1, `${palette.panel}f5`);
-    c.fillStyle = '#00000040'; c.fillRect(r.x + 2, r.y + 4, r.width, r.height);
-    c.fillStyle = bg; c.fillRect(r.x, r.y, r.width, r.height);
-    c.strokeStyle = `${palette.silverDim}${active?'cc':'70'}`; c.lineWidth = 1;
-    c.strokeRect(r.x + .5, r.y + .5, r.width - 1, r.height - 1);
-    c.strokeStyle = `${palette.silver}25`; c.beginPath();
-    c.moveTo(r.x + 7,r.y + .5); c.lineTo(r.x + 25,r.y + .5);
-    c.moveTo(r.x + r.width - 25,r.y + .5); c.lineTo(r.x + r.width - 7,r.y + .5); c.stroke();
-    // A folded chart mark shares the fine-line style of the native menu icons.
-    c.strokeStyle = palette.silverDim; c.beginPath();
-    c.moveTo(r.x + 10, r.y + 9); c.lineTo(r.x + 14, r.y + 7); c.lineTo(r.x + 18, r.y + 9);
-    c.lineTo(r.x + 22, r.y + 7); c.lineTo(r.x + 22, r.y + 17); c.lineTo(r.x + 18, r.y + 19);
-    c.lineTo(r.x + 14, r.y + 17); c.lineTo(r.x + 10, r.y + 19); c.closePath();
-    c.moveTo(r.x + 14, r.y + 7); c.lineTo(r.x + 14, r.y + 17);
-    c.moveTo(r.x + 18, r.y + 9); c.lineTo(r.x + 18, r.y + 19); c.stroke();
-    const area = mapAreaLabel(this.world, player.x, player.y);
-    text(c, area, r.x + 29, r.y + 10, .85, area === 'Sanctuary' ? palette.jade : palette.ivory);
-    c.fillStyle = palette.well; c.fillRect(r.x + r.width - 25, r.y + 6, 16, 15);
-    c.strokeStyle = palette.line; c.strokeRect(r.x + r.width - 24.5, r.y + 6.5, 15, 14);
-    text(c, 'M', r.x + r.width - 17, r.y + 10, .86, palette.muted, 'center');
+    drawMinimapFrame(c, r, this.location(player), mapAreaLabel(this.world, player.x, player.y), time, !!active);
     const pois = this.chart(c, view, true);
-    c.strokeStyle = `${palette.silverDim}40`; c.strokeRect(view.x - .5, view.y - .5, view.width + 1, view.height + 1);
     const center = projectMapPoint(player.x, player.y, view);
     c.save(); c.beginPath(); c.rect(view.x, view.y, view.width, view.height); c.clip();
     c.setLineDash([2, 4]); c.strokeStyle = '#c5d5b127'; c.lineWidth = .8;
@@ -796,11 +775,6 @@ export class WorldMap {
     }
     this.playerArrow(c, player, view, true); c.restore();
     text(c, 'N', view.x + view.width / 2, view.y + 3, .8, palette.jade, 'center');
-    const clockY=r.y+r.height-34, night=skyAtTime(time).daylight<.35;
-    text(c, `${night?'Night':'Day'} · ${worldTimeLabel(time)}`,r.x+r.width/2,clockY,.9,night?'#a7c6e4':palette.brass,'center');
-    const name = this.location(player);
-    c.save(); c.beginPath(); c.rect(r.x + 6, r.y + r.height - 19, r.width - 12, 15); c.clip();
-    text(c, name, r.x + r.width / 2, r.y + r.height - 15, .95, palette.text, 'center'); c.restore();
     if (this.minimapPointer) {
       const poi = pickMapPOI(pois.filter(p => p.kind === 'portal' || p.sighted || this.exploration.isRevealed(p.x, p.y)), view, this.minimapPointer, 8);
       if (poi) {

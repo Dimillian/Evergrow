@@ -14,6 +14,8 @@ The seed tabs change the local review. The map retains normal panning, zooming a
 
 ## Runtime improvements
 
+The Light & Open minimap keeps its right-side position with a larger chart and a quiet outline. Its location name is above the terrain; the level range / Sanctuary and day/time share one footer. Surface and dungeon maps consume the same frame and chart bounds. Journeys sits separately below with a 26-logical-pixel gap; the old portal row is removed. A small Home button appears in the lower-left chart corner whenever the player is outside town; it stays visible during movement and casting, stays clear of the metadata footer, and hides in sanctuary. Fog, world-to-map zoom, POI filters and player centering retain their existing behavior.
+
 Hold Tab from gameplay for a simplified exploration overlay: no frame, header, footer, coordinate grid or danger labels; terrain is drawn at 58% opacity, with a bright player marker and no on-map toolbar. The world keeps running with normal gameplay controls. The chart always centers on the player and mouse input passes through to the game. Release Tab to close. M (including from a Tab glance), the minimap button and Journey Show on Map open the full paused map. See [controls](controls.md).
 
 The full map's upper-right compass is a simple procedural Canvas rose with four faceted points and cardinal lettering, without a surrounding frame, bearing ticks or diagonal points. North is highlighted in gold and stays aligned with the north-up chart. The map-compass-art.ts module owns this native-resolution ornament; no image asset or world state is involved.

@@ -184,6 +184,7 @@ export class Game {
       this.session = new CharacterSession(this.saveClient, this.world.generationVersion, seed=>new World(seed));
       this.shell = this.lifetime.own(new GameShell(root, {
         shortcutMenuChanged: () => this.clearInput(),
+        homePortal: () => { if (this.shouldShowHomePortal()) this.requestPortal(); },
         groundLootNames: () => this.groundLootNames,
         setGroundLootNames: mode => { this.groundLootNames = mode; this.savePreferences(); },
         volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
@@ -191,7 +192,6 @@ export class Game {
         lastSavedAt: () => this.session?.active?.record.updatedAt,
         saveLocation: () => this.saveClient.mode === 'cloud' ? 'Online' : 'Local',
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
-        portal: () => { this.canvas.focus(); this.requestPortal(); },
         save: () => this.durable(async () => { const saved = await this.saveCharacter(true); if (saved) await this.saveClient.flush(); return saved; }, false),
         openChronicle: () => { if(!this.savingAction)this.panels.open('chronicle'); },
         openAppearance: () => { if (!this.savingAction && this.panels.open('character')) this.editAppearance(true); },
@@ -1027,6 +1027,10 @@ export class Game {
     return { ok, message: this.saveError };
   }
 
+  private shouldShowHomePortal(): boolean {
+    return this.phase === 'playing' && !this.world.isSanctuary(this.sim.player.x, this.sim.player.y);
+  }
+
   private requestPortal() {
     if (this.savingAction || !this.panels.simulationActive || !this.session.active) return;
     const p = this.sim.player, link = this.sim.travel.returnTo;
@@ -1214,7 +1218,6 @@ export class Game {
     if (now >= this.nextScore) { this.updateScore(now); this.nextScore = now + 250; }
     this.touch.update(this.sim.player,this.phase,this.savingAction,now,this.sim.groundEffects);
     this.renderer.gamepadActive = this.usingGamepad;
-    this.shell.setGamepadActive(this.usingGamepad);
     if (this.panels.simulationActive && !this.savingAction && !this.shell.shortcutMenu.isOpen) {
       // The simulation owns the fixed 120 Hz clock and render interpolation.
       this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
@@ -1263,9 +1266,7 @@ export class Game {
     }
     this.shell.setBuffs(activeBuffs(this.sim.player, this.sim.groundEffects));
     this.shell.shortcutMenu.setPoints(this.sim.player.character.statPoints, this.sim.player.character.skillPoints);
-    const portalView = this.portalActionView();
-    this.shell.setPortalState(portalView);
-    if(this.touch.active) this.touch.setPortal(portalView);
+    if(this.touch.active) this.touch.setPortal(this.portalActionView());
     this.renderer.pointerX = this.mouse.x;
     this.renderer.pointerY = this.mouse.y;
     this.renderer.inspectedEnemyId = this.shell.targetBuffs.held ? this.renderer.targetEffects?.id ?? null : null;
@@ -1273,6 +1274,7 @@ export class Game {
     // Presentation existence does not reveal whether the Thor dashboard covers it.
     this.renderer.navigationVisible = !(this.touch.active && (window.innerWidth < 620 || this.touch.phoneLandscape));
     this.shell.setNavigationVisible(this.renderer.navigationVisible);
+    this.shell.setHomePortalVisible(this.shouldShowHomePortal());
     this.journeys.update();
     const settings = {
       liveMap: this.panels.mapHeld,
@@ -1330,7 +1332,10 @@ export class Game {
     const dungeonRun=currentDungeon(this.sim.expeditions);
     if(dungeonRun?.rift && this.phase!=='ready')drawRiftHUD(ui,dungeonRun,this.renderer.width);
     if (this.phase !== 'ready' && !dungeonRun) this.worldMap.update(mapPlayer, dt);
-    if (this.phase === 'map' && dungeonRun) this.dungeonMap.update(mapPlayer,this.sim.enemies);
+    if (this.phase === 'map' && dungeonRun) {
+      if(this.worldMap.isOpen)this.worldMap.update({x:this.sim.expeditions.surfaceX,y:this.sim.expeditions.surfaceY,angle:0},dt);
+      else this.dungeonMap.update(mapPlayer,this.sim.enemies);
+    }
     if (this.panels.mapHeld) {
       const rect = this.canvas.getBoundingClientRect();
       const pointer = this.mouse.present && !this.usingGamepad && !this.touch.active && !this.pointerInHUD()

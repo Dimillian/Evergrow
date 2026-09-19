@@ -5,7 +5,7 @@ import { createDungeonRun, emptyContents, freshExpeditions } from '../src/dungeo
 import { dungeonChestMask, expeditionChoices, newExpeditionRoute } from '../src/expedition-route.ts';
 import { generateDungeon } from '../src/dungeon.ts';
 import { DUNGEON_THEME_IDS, dungeonTheme } from '../src/dungeon-content.ts';
-import { freshJourneys, guidedJourney } from '../src/journey-state.ts';
+import { freshJourneys, pinnedJourney } from '../src/journey-state.ts';
 
 test('every wilderness and expedition theme guides toward its boss without a pinned journey', () => {
   for (const theme of DUNGEON_THEME_IDS) for (const expedition of [false,true]) {
@@ -39,5 +39,5 @@ test('leaving a dungeon removes temporary guidance and preserves the outdoor pin
   journeys.townPin={id:'town:home',kind:'town',name:'Home',x:100,y:200,level:1,region:'Home'};
   const before=structuredClone(journeys),state=freshExpeditions();
   assert.equal(dungeonJourney(state,null),null);
-  assert.deepEqual(journeys,before);assert.equal(guidedJourney(journeys)?.id,'town:home');
+  assert.deepEqual(journeys,before);assert.equal(pinnedJourney(journeys)?.id,'town:home');
 });

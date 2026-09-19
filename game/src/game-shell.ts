@@ -1,23 +1,20 @@
-import { controls } from './control-preferences.ts';
 import { BuffBar } from './buff-bar.ts';
 import type { ActiveBuff } from './active-buffs.ts';
 import { PauseMenu, type PauseActions } from './pause-menu.ts';
 import type { PauseNavigation } from './pause-navigation.ts';
 import type { GamepadInput } from './gamepad-input.ts';
-import { PORTAL_RULES } from './travel.ts';
-import { portalDestinationLabel, type PortalActionView } from './portal-destination.ts';
 import './travel-ui.css';
-import './hud-sidebar.css';
 import { GameNotifications } from './notifications.ts';
 import { getHUDLayout } from './hud.ts';
 import { HUDShortcutMenu } from './hud-shortcut-menu.ts';
 import type { HUDRect } from './hud.ts';
-import { getMinimapRect, getPortalControlRect } from './map-view.ts';
+import { getMinimapRect, getMinimapHomeRect } from './map-view.ts';
 import type { GamePhase } from './game-phase.ts';
 import { gameMenuMarkup } from './game-menu.ts';
 import { trapDialogFocus, uiIcon } from './ui-components.ts';
+import { PORTAL_RULES } from './travel.ts';
 
-interface ShellActions extends PauseActions { lastSavedAt?(): number | undefined; saveLocation?(): 'Local' | 'Online'; shortcutMenuChanged?(): void; portal?(): void; play(): void; openMap(): void; openCharacter(): void; openSkills(): void; }
+interface ShellActions extends PauseActions { lastSavedAt?(): number | undefined; saveLocation?(): 'Local' | 'Online'; shortcutMenuChanged?(): void; homePortal?(): void; play(): void; openMap(): void; openCharacter(): void; openSkills(): void; }
 
 /** Owns DOM presentation and its listeners; it never reads or mutates simulation state. */
 export class GameShell {
@@ -49,7 +46,6 @@ export class GameShell {
     }
   }
   setBuffs(buffs: readonly ActiveBuff[]): void { this.buffs.update(this.controls.hidden ? [] : buffs); }
-  private gamepadActive = false;
   private pauseMenu: PauseMenu | null = null;
   private saveMessage = '';
   private pauseNavigation: PauseNavigation = { category: 'character', focus: null };
@@ -57,19 +53,10 @@ export class GameShell {
   refreshOptions(): void { this.pauseMenu?.refresh(); }
   updatePauseGamepad(pad: GamepadInput, now: number): void { this.pauseMenu?.updateGamepad(pad, now); }
 
-  setGamepadActive(active: boolean) {
-    if (active === this.gamepadActive) return;
-    this.gamepadActive = active;
-    this.refreshBindings();
-  }
-
   refreshBindings(): void {
     this.pauseMenu?.refresh();
-    const key = this.controls.querySelector('kbd');
-    if (key) key.textContent = this.gamepadActive ? '↓' : controls.label('portal');
-    for (const action of ['map', 'portal'] as const) this.controls.querySelector(`[data-hud="${action}"]`)!.removeAttribute('aria-keyshortcuts');
+    this.controls.querySelector('[data-hud="map"]')!.removeAttribute('aria-keyshortcuts');
     this.shortcutMenu.refreshBindings();
-    this.pauseMenu?.refresh();
   }
 
   constructor(root: HTMLElement, actions: ShellActions) {
@@ -81,7 +68,8 @@ export class GameShell {
         <button type="button" class="hud-control" data-hud="menu" aria-haspopup="dialog" aria-label="Open character menus" data-tooltip="Character menus"></button>
         <button type="button" class="hud-control" data-hud="map" aria-label="World map" aria-keyshortcuts="M"
           aria-haspopup="dialog" data-tooltip="World map" data-tooltip-placement="left"></button>
-        <button type="button" class="hud-control portal-control hud-sidebar-surface" data-hud="portal" aria-label="Town portal" aria-keyshortcuts="P" data-tooltip="Town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="left">${uiIcon('portal')}<span class="portal-label">Town portal</span><kbd class="hud-sidebar-key">P</kbd><i class="portal-progress" aria-hidden="true"></i></button>
+        <button type="button" class="hud-control minimap-home" data-hud="home" aria-label="Home · Open town portal"
+          data-tooltip="Home · Open town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="left" hidden>${uiIcon('home')}</button>
       </nav>
       <div id="title-mount"></div>
       <div id="world-map-mount"></div>
@@ -106,8 +94,9 @@ export class GameShell {
     const signal = this.abort.signal;
     this.element.addEventListener('contextmenu', event => event.preventDefault(), { signal });
     this.controls.querySelector('[data-hud="map"]')!.addEventListener('click', actions.openMap, { signal });
-    this.controls.querySelector<HTMLButtonElement>('[data-hud="portal"]')!.disabled = !actions.portal;
-    this.controls.querySelector('[data-hud="portal"]')!.addEventListener('click', () => actions.portal?.(), { signal });
+    this.controls.querySelector('[data-hud="home"]')!.addEventListener('click', () => {
+      if (this.homePortalVisible && this.navigationVisible) actions.homePortal?.();
+    }, { signal });
     this.shortcutMenu = new HUDShortcutMenu(this.controls, this.controls.querySelector('[data-hud="menu"]')!, id => {
       if (id === 'character' || id === 'inventory') actions.openCharacter();
       else if (id === 'skilltree') actions.openSkills();
@@ -118,11 +107,18 @@ export class GameShell {
   }
 
   private navigationVisible = true;
+  private homePortalVisible = false;
+  setHomePortalVisible(visible: boolean): void {
+    this.homePortalVisible = visible && !!this.actions.homePortal;
+    const button = this.controls.querySelector<HTMLButtonElement>('[data-hud="home"]')!;
+    button.hidden = !this.homePortalVisible || !this.navigationVisible;
+    if (button.hidden && document.activeElement === button) this.canvas.focus({ preventScroll: true });
+  }
   setNavigationVisible(visible: boolean): void {
     if (this.navigationVisible === visible) return;
     this.navigationVisible = visible;
-    for (const id of ['map', 'portal'])
-      this.controls.querySelector<HTMLElement>(`[data-hud="${id}"]`)!.hidden = !visible;
+    this.controls.querySelector<HTMLElement>('[data-hud="map"]')!.hidden = !visible;
+    this.setHomePortalVisible(this.homePortalVisible);
   }
 
   resizeControls(width: number, height: number): void {
@@ -135,22 +131,10 @@ export class GameShell {
     this.buffs.element.style.bottom = `${(height - hud.y + 8) / height * 100}%`;
     for (const shortcut of hud.shortcuts) place(shortcut.id, shortcut);
     place('map', getMinimapRect(width, height));
-    place('portal', getPortalControlRect(width, height));
+    place('home', getMinimapHomeRect(width, height));
     this.shortcutMenu.position();
   }
 
-  setPortalState(view: PortalActionView): void {
-    const { progress, mode, destination } = view;
-    const destinationLabel = portalDestinationLabel(destination);
-    const button = this.controls.querySelector<HTMLElement>('[data-hud="portal"]')!;
-    button.classList.toggle('is-channeling', progress !== null); button.classList.toggle('is-return', mode === 'locate' || mode === 'return');
-    button.toggleAttribute('disabled', mode === 'unavailable');
-    button.style.setProperty('--portal-progress', `${(progress ?? 0) * 100}%`);
-    const label = progress !== null ? `Opening · ${(PORTAL_RULES.channel * (1 - progress)).toFixed(1)}s` : mode === 'return' ? 'Return portal' : mode === 'locate' ? 'Locate portal' : mode === 'unavailable' ? 'Portal unavailable' : 'Town portal';
-    const text = button.querySelector('.portal-label')!; if (text.textContent !== label) text.textContent = label;
-    button.setAttribute('aria-label', progress !== null ? `Cancel portal opening to ${destinationLabel}` : mode === 'return' ? `Return to ${destinationLabel}` : mode === 'locate' ? `Locate return portal to ${destinationLabel}` : mode === 'unavailable' ? 'Town portal unavailable in sanctuary. Explore outside the sanctuary to open one' : `Open town portal to ${destinationLabel}`);
-    button.dataset.tooltip = progress !== null ? `Cancel cast to ${destinationLabel}` : mode === 'return' ? `Return to ${destinationLabel}` : mode === 'locate' ? `Locate return portal · ${destinationLabel}` : mode === 'unavailable' ? 'Explore outside the sanctuary to open a town portal' : `Town portal to ${destinationLabel} · ${PORTAL_RULES.channel} second cast`;
-  }
   portalTransition(): void {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     this.element.querySelector('.portal-transition')?.remove();

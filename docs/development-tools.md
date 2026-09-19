@@ -163,3 +163,7 @@ Equipment → **Coins & mana drops** (`/loot.html?resources`) extends Ground loo
 The Crimson Rifts map study also offers **Rift cleared (HUD)** (`/tools/rifts.html?view=map&cleared`): a disposable completed run at 4:34 with the actual elapsed-time HUD and crimson return marker. Atmosphere/encounter controls return to the hunt study; no character saves are accessed.
 
 Character hall (`/title.html`) now stages wallet balances, effective attribute differences and real equipped items in the redesigned runtime title UI. Its background uses the runtime World, Renderer and post-processing over a frozen disposable simulation; the character pedestal uses the shared title portrait renderer. Gear hover/focus tooltips, narrow-screen detail tabs, empty slots and the existing cloud/conflict fixture parameters remain memory-only. This view never launches gameplay or reads playable saves.
+
+## Area journal review
+
+The existing Journey review (`/journeys.html?view=journal`) stages the production Area journal with disposable accepted, nearby and completed activities. Accept, Dismiss, independent Pin and area browsing use the shared state planner. Show on Map focuses the selected activity, and closing it returns to the same details. No playable character storage is used.

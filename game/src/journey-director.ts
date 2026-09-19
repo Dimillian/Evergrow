@@ -12,7 +12,7 @@ import type { WorldPOI } from './world-pois.ts';
 import { getZoneAt } from './zone-progression.ts';
 import { roadPaths, pathDistance } from './road-shape.ts';
 export interface JourneyFacts {
-  areaId?:string; areaLevel?:number;
+  areaId?:string; areaName?:string; areaLevel?:number;
   encounterScale?(id:string): EncounterScale | undefined;
   events:EventState; expeditions:Expeditions; x:number;y:number;level:number;time:number;
   discovered(id:string):boolean; campCleared(id:string):boolean;
@@ -56,7 +56,7 @@ export function reconcileJourneys(state:JourneyState,facts:JourneyFacts,safe:boo
     else next[collection].push(goal);
   }
   if(next.townPin&&journeyComplete(next.townPin,facts))delete next.townPin;
-  next.history=next.history.slice(-64);if(next.recommended&&!next.offers.some(g=>g.id===next.recommended&&g.finishedAt===undefined))next.recommended=null;return next;
+  if(next.recommended&&!next.offers.some(g=>g.id===next.recommended&&g.finishedAt===undefined))next.recommended=null;return next;
 }
 export interface JourneyWorld {
   seed:number; getPOIs(x:number,y:number,width:number,height:number):WorldPOI[];
@@ -73,7 +73,7 @@ export function journeyAvailable(goal:JourneyGoal,facts:JourneyFacts):boolean {
   return true;
 }
 export function eligibleJourney(goal:JourneyGoal,state:JourneyState,facts:JourneyFacts):boolean {
-  return !journeyWasCompleted(state,goal.id)&&!state.dismissed.includes(goal.id)&&![...state.accepted,...state.history].some(g=>g.id===goal.id)
+  return !journeyWasCompleted(state,goal.id)&&![...state.accepted,...state.history].some(g=>g.id===goal.id)
     &&!(goal.kind==='town'&&facts.discovered(goal.id))&&journeyAvailable(goal,facts);
 }
 /** Only meaningful travel, an outgrown lead or lost availability can replace an offer. */
@@ -104,17 +104,17 @@ export function rankJourneyCandidates(candidates:JourneyGoal[],state:JourneyStat
     return {g,score:distance+danger+challenge-(journeyLevelFit(currentLevel,facts.level)==='Good level'&&Math.abs(gap)<=2&&distance<=2400?4000:0)+(last===g.kind?400:0)+Math.min(600,pathDistance(g.x,g.y,seed))*.3-(facts.discovered(g.id)?220:0),unsafe};
   }).filter(v=>!v.unsafe).sort((a,b)=>a.score-b.score||a.g.id.localeCompare(b.g.id)).slice(0,12).map(v=>v.g);
 }
-/** One incremental cell per step. Hard caps bound world generation and candidate scoring. */
+/** One bounded geography cell per step; the known activity catalogue is never truncated. */
 export class JourneySearch {
   private cell=0; private candidates=new Map<string,JourneyGoal>();
   readonly origin:{x:number;y:number};
   constructor(privateWorld:JourneyWorld,facts:JourneyFacts,known:WorldPOI[]){
     this.world=privateWorld;this.origin={x:facts.x,y:facts.y};
-    for(const poi of known.sort((a,b)=>Math.hypot(a.x-facts.x,a.y-facts.y)-Math.hypot(b.x-facts.x,b.y-facts.y)).slice(0,32))this.add(poi);
+    for(const poi of known)if(Math.hypot(poi.x-facts.x,poi.y-facts.y)<=3600)this.add(poi);
   }
   private world:JourneyWorld;
   private add(poi:WorldPOI){
-    if(this.candidates.size>=64||!JOURNEY_KINDS.includes(poi.kind as JourneyKind))return;
+    if(!JOURNEY_KINDS.includes(poi.kind as JourneyKind))return;
     const zone=getZoneAt(poi.x,poi.y,this.world.seed);
     const level=poi.kind==='dungeon'?this.world.getDungeonEntrances(poi.x-1,poi.y-1,2,2).find(e=>e.id===poi.id)?.level:zone.level;
     if(level===undefined)return;
@@ -122,12 +122,12 @@ export class JourneySearch {
   }
   step():boolean {
     const cells=[[0,0],[0,-1],[1,0],[0,1],[-1,0],[1,-1],[-1,-1],[1,1],[-1,1]];
-    if(this.cell>=cells.length||this.candidates.size>=64)return true;
+    if(this.cell>=cells.length)return true;
     const [dx,dy]=cells[this.cell++],span=2400;
     for(const p of this.world.getPOIs(this.origin.x+dx*span-span/2,this.origin.y+dy*span-span/2,span,span))this.add(p);
-    return this.cell>=cells.length||this.candidates.size>=64;
+    return this.cell>=cells.length;
   }
-  result(state:JourneyState,facts:JourneyFacts):{offers:JourneyGoal[];recommended:string|null}{
+  result(state:JourneyState,facts:JourneyFacts):{offers:JourneyGoal[];history:JourneyGoal[];recommended:string|null}{
     const candidates=[...this.candidates.values()].map(g=>({...g,level:activityLevel(g,facts,this.world.seed)}));
     const ranked=rankJourneyCandidates(candidates,state,facts,this.world.seed);
     const area=getZoneAt(facts.x,facts.y,this.world.seed);
@@ -149,10 +149,23 @@ export class JourneySearch {
       });
       recommended=rankJourneyCandidates(frontier,state,facts,this.world.seed)[0]??ranked[0];
     }
-    // Nearby is geography, not an endorsement: retain higher/lower-level local activities.
-    const nearby=candidates.filter(g=>eligibleJourney(g,state,facts)&&Math.hypot(g.x-facts.x,g.y-facts.y)<=2400)
-      .sort((a,b)=>Math.hypot(a.x-facts.x,a.y-facts.y)-Math.hypot(b.x-facts.x,b.y-facts.y));
-    const offers=[...(recommended?[recommended]:[]),...nearby.filter(g=>g.id!==recommended?.id)].slice(0,12);
-    return {offers,recommended:recommended?.id??null};
+    // Availability limits starting an encounter, never collecting it in the journal.
+    const history=new Map(state.history.map(g=>[g.id,g]));
+    const accepted=new Set(state.accepted.map(g=>g.id));
+    const offers=new Map(state.offers.map(g=>[g.id,g]));
+    for(const g of candidates){
+      if(accepted.has(g.id)||history.has(g.id))continue;
+      if(journeyWasCompleted(state,g.id)||journeyComplete(g,facts)){
+        // Older saves retained completion receipts even after trimming their detail history.
+        const recorded=offers.get(g.id);
+        history.set(g.id,recorded?.finishedAt!==undefined?recorded:{...g,finishedAt:0});offers.delete(g.id);
+      }else if(Math.hypot(g.x-facts.x,g.y-facts.y)<=2400){
+        offers.set(g.id,g);
+      }
+    }
+    if(recommended&&!history.has(recommended.id)&&!accepted.has(recommended.id))offers.set(recommended.id,recommended);
+    const recommendedGoal=recommended?offers.get(recommended.id):undefined;
+    const recommendedId=recommendedGoal&&recommendedGoal.finishedAt===undefined?recommendedGoal.id:null;
+    return {offers:[...offers.values()],history:[...history.values()],recommended:recommendedId};
   }
 }

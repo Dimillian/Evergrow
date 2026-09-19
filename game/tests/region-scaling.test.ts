@@ -13,7 +13,7 @@ import { createDungeonRun, dungeonMemberLevel, freshExpeditions } from '../src/d
 import { generateDungeon } from '../src/dungeon.ts';
 import { validExpeditions } from '../src/dungeon-validation.ts';
 import { JourneySearch, rankJourneyCandidates } from '../src/journey-director.ts';
-import { freshJourneys, guidedJourney } from '../src/journey-state.ts';
+import { freshJourneys, pinnedJourney } from '../src/journey-state.ts';
 import { activityLevel } from '../src/activity-level.ts';
 import { xpForNextLevel } from '../src/progression.ts';
 import { vendorLevel, type TownNPC } from '../src/npcs.ts';
@@ -92,7 +92,7 @@ test('guidance recommends local scaled activities, accepts challenging bosses, a
  const known={...goal,kind:'camp' as const,description:''};
  const search=new JourneySearch({...world,getPOIs:()=>[],getDungeonEntrances:()=>[]},f,[known]);
  const result=search.result(freshJourneys(),f);assert.equal(result.recommended,known.id);assert.equal(result.offers[0].level,8);
- const state={...freshJourneys(),...result,accepted:[goal],tracked:goal.id};assert.equal(guidedJourney(state)?.id,goal.id);
+ const state={...freshJourneys(),...result,accepted:[goal],tracked:goal.id};assert.equal(pinnedJourney(state)?.id,goal.id);
  f.events.sites[goal.id]={...goal,level:4,biome:'deadwood',seed:1,phase:'completed',choice:null,wavesCleared:0,delivered:0,bonusGranted:false};
  assert.equal(activityLevel(goal,f,7319),4,'saved source wins over a current-player preview');
 });
@@ -124,10 +124,10 @@ test('onward routes survive road enumeration order at the exact region cap',asyn
    assert.ok(lead.level<=f.level+2);
    assert.ok(!w.blocked(lead.x,lead.y,22));
    assert.ok(result.offers.some(g=>g.kind==='camp'),'nearby activities remain available');
-   const dismissed={...freshJourneys(),dismissed:[lead.id]};
-   const next=search.result(dismissed,f);
+   const accepted={...freshJourneys(),accepted:[lead]};
+   const next=search.result(accepted,f);
    assert.equal(next.offers.find(g=>g.id===next.recommended)?.kind,'frontier');
-   assert.notEqual(next.recommended,lead.id,'a dismissed route must not mask the next suitable destination');
+   assert.notEqual(next.recommended,lead.id,'an accepted route must not mask the next suitable destination');
   }finally{w.dispose();}
  }
 });

@@ -7,16 +7,15 @@ import { drawRiftMapTerrain } from './rift-map-art.ts';
 import { BIOMES } from './biomes.ts';
 import { drawDungeonMapIcon, type DungeonMapIcon } from './dungeon-map-icon-art.ts';
 import { dungeonChestMask } from './expedition-route.ts';
-import { worldTimeLabel } from './world-time.ts';
+import { drawMinimapFrame } from './minimap-art.ts';
 import { dungeonTheme, DUNGEON_EVENTS } from './dungeon-content.ts';
 import { bindTouchCanvas } from './touch-canvas.ts';
 import { drawJourneyMapMarker, type JourneyMarker } from './journey-marker.ts';
 import { cryptOutline } from './dungeon-contours.ts';
 import type { DungeonFloor } from './dungeon.ts';
 import type { DungeonRun } from './dungeon-state.ts';
-import { getMinimapRect } from './map-view.ts';
+import { getMinimapRect, getMinimapChartRect } from './map-view.ts';
 import { trapDialogFocus } from './ui-components.ts';
-import { text } from './font.ts';
 import './dungeon.css';
 export function dungeonMapBounds(f: DungeonFloor) { const left = Math.min(...[...f.rooms,...f.corridors].map(r => r.x)) - 100, top = Math.min(...[...f.rooms,...f.corridors].map(r => r.y)) - 100, right = Math.max(...[...f.rooms,...f.corridors].map(r => r.x + r.width)) + 100, bottom = Math.max(...[...f.rooms,...f.corridors].map(r => r.y + r.height)) + 100; return { x: (left + right) / 2, y: (top + bottom) / 2, width: right - left, height: bottom - top }; }
 export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run: DungeonRun, p: {
@@ -230,4 +229,8 @@ export function drawCryptMinimap(c: CanvasRenderingContext2D, f: DungeonFloor, r
     x: number;
     y: number;
     angle: number;
-}, w: number, h: number, marker:JourneyMarker|null=null, time=0, enemies:readonly MapEnemy[]=[], visibility?:MapIconVisibility) { const box = getMinimapRect(w, h); drawDungeonMap(c, f, r, p, box, .095, p.x, p.y,marker,false,enemies,visibility); text(c, r.rift?`Crimson Rift · Lv ${r.entrance.level}`:`Lv ${r.entrance.level} · ${worldTimeLabel(time)}`, box.x + box.width / 2, box.y + box.height - 8, .9, '#b9cbbb', 'center'); }
+}, w: number, h: number, marker:JourneyMarker|null=null, time=0, enemies:readonly MapEnemy[]=[], visibility?:MapIconVisibility) {
+    const box = getMinimapRect(w, h);
+    drawMinimapFrame(c, box, r.rift ? 'Crimson Rift' : r.entrance.name, `Lv ${r.entrance.level}`, time);
+    drawDungeonMap(c, f, r, p, getMinimapChartRect(box), .095, p.x, p.y, marker, false, enemies, visibility);
+}
