@@ -1,3 +1,4 @@
+import { dungeonChestClaimed } from './expedition-route.ts';
 import type { CombatEvent } from './model.ts';
 import type { Simulation } from './simulation.ts';
 import { currentDungeon } from './dungeon-state.ts';
@@ -11,7 +12,7 @@ export async function startDungeonEvent(sim: Simulation, id: number, persist: Pe
     const run=currentDungeon(sim.expeditions),event=sim.dungeonFloor?.events?.find(e=>e.id===id),p=sim.player;
     if(!run||!event||p.dead||Math.hypot(p.x-event.x,p.y-event.y)>75||!hasLineOfSight(sim.world,p.x,p.y,event.x,event.y))return {ok:false,message:'Move closer to the altar.'};
     const state=run.events?.[id];
-    if(!state||state.started||state.finished)return {ok:false,message:state?.finished?'Completed.':'Already active.'};
+    if(!state||state.started||state.finished)return {ok:false,message:state?.finished?(dungeonChestClaimed(run,event.chest)?'Already claimed.':'Claim the chamber chest.'):'Already active.'};
     if(Object.values(run.events??{}).some(e=>e.started&&!e.finished))return {ok:false,message:'Finish the active chamber first.'};
     const checkpoint=sim.captureCheckpoint();currentDungeon(checkpoint.expeditions!)!.events![id].started=true;
     const result=await persist(checkpoint);

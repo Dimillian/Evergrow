@@ -3,7 +3,7 @@ import { AreaBanner } from './area-banner.ts';
 import { drawAreaBanner } from './area-banner-art.ts';
 import { riftMechanic } from './rift-encounters.ts';
 import { riftWardActive } from './rift-tactics.ts';
-import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
+import { dungeonInteractionChests, dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { EnemyOutlineArt } from './enemy-outline-art.ts';
 import { RIFT_RULES } from './rift-content.ts';
 import { enemyVisualScale } from './enemy-modifiers.ts';
@@ -614,7 +614,7 @@ export class Renderer {
     const boss=sim.enemies.find(e=>isBossKind(e.kind)&&e.hp>0&&e.state!=='return'&&Math.hypot(e.x-p.x,e.y-p.y)<(isWildernessBoss(e.kind)?650:1100));
     const target = boss ?? (this.plateOpacity > .01 ? this.plateEnemy : null);
     const debuffs = target ? [...enemyTraitBuffs(target),...enemyDebuffs(target, p)] : [];
-    const targetPlate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0);
+    const targetPlate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0, !!phone);
     // Visible plates own this space, including their death fade. Dismiss without replaying after focus ends.
     if(settings.phase==='playing'&&target&&targetPlate.height>0)this.areaBanner.clear();
     if(settings.phase==='playing'&&!p.dead&&!this.rewards.level&&!this.rewards.journey) {
@@ -630,13 +630,13 @@ export class Renderer {
       ? { id: target.id, buffs: debuffs, x: (targetPlate.x + targetPlate.width / 2) * plateScale / this.width,
         y: (targetPlate.y + 76) * plateScale / this.height, opacity: boss ? 1 : this.plateOpacity } : null;
     if (boss) {
-      drawEnemyPlate(c, boss, plateWidth, plateHeight, { hasDebuffs: debuffs.length > 0, touch: this.touchActive, topInset: plateInset, name:this.cryptFloor?dungeonTheme(this.cryptFloor.seed,this.cryptFloor.theme).bossName:undefined });
-      const plate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0);
+      drawEnemyPlate(c, boss, plateWidth, plateHeight, { hasDebuffs: debuffs.length > 0, touch: this.touchActive, compactLandscape:!!phone, topInset: plateInset, name:this.cryptFloor?dungeonTheme(this.cryptFloor.seed,this.cryptFloor.theme).bossName:undefined });
+      const plate = getEnemyPlateLayout(plateWidth, plateHeight, this.touchActive, plateInset, debuffs.length > 0, !!phone);
       if (plate.height && this.focusedEnemy?.id === boss.id) text(c, 'CONTROL DURATION −75% · BRIEF STUN IMMUNITY',
         plateWidth / 2, plate.y + plate.height + 4, .7, '#9db8a7', 'center');
     }
     if (!boss && this.plateEnemy && this.plateOpacity > .01) drawEnemyPlate(c, this.plateEnemy, plateWidth, plateHeight, {
-      hasDebuffs: debuffs.length > 0, touch: this.touchActive, topInset: plateInset,
+      hasDebuffs: debuffs.length > 0, touch: this.touchActive, compactLandscape:!!phone, topInset: plateInset,
       time: this.visualTime, reducedMotion: settings.reducedMotion,
       opacity: this.plateOpacity,
       healthTrail: this.damageTrails.get(this.plateEnemy.id)?.value ?? this.plateEnemy.hp,
@@ -645,7 +645,7 @@ export class Renderer {
     c.restore();
     if (settings.phase === 'playing') {
       const run=currentDungeon(sim.expeditions),f=sim.dungeonFloor;
-      const points=run&&f?[{...f.entry,name:'Leave dungeon'},...(run.states.warden.hp<=0?[{...dungeonRunExit(f,run),name:'Leave dungeon'}]:[]),...f.chests.flatMap((_,i)=>!run.rift||i===2&&run.rift.phase==='complete'?[{...dungeonRunChest(f,run,i),name:'Treasure chest'}]:[])]:this.visibility.entrances;
+      const points=run&&f?[{...f.entry,name:'Leave dungeon'},...(run.states.warden.hp<=0?[{...dungeonRunExit(f,run),name:'Leave dungeon'}]:[]),...dungeonInteractionChests(f,run).map(chest=>({...chest,name:'Treasure chest'}))]:this.visibility.entrances;
       const table=!run&&world.getBuildings(p.x-180,p.y-180,360,360).find(b=>(b.kind==='expedition'||b.kind==='rift')&&Math.hypot(b.door.x-p.x,b.door.y-p.y)<75);
       if(table){const q=worldToScreen(this.view,table.door.x,table.door.y-80);text(c,`${table.kind==='rift'?'Crimson Rift':'Expeditions'}${p.level<20?' · Level 20':''} [${this.gamepadActive?'A':controls.label('interact')}]`,q.x,q.y,1,'#d8c593','center');}
       const target=points.find(q=>Math.hypot(q.x-p.x,q.y-p.y)<75);

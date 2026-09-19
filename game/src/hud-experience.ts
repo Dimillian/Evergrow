@@ -57,7 +57,7 @@ function railPath(c: CanvasRenderingContext2D, x: number, y: number, w: number, 
 
 /** A violet enamel rail and engraved readout tuck beneath the six skill leaves. */
 export function drawHUDExperience(c: CanvasRenderingContext2D, player: Progress, time: number,
-  display?: ExperienceDisplay, y: number = HUD_ART.experience.y): void {
+  display?: ExperienceDisplay, y: number = HUD_ART.experience.y, textScale = 1): void {
   const { x, width: w, height: h, railHeight: rh } = HUD_ART.experience;
   const needed = xpForNextLevel(display?.level ?? player.level);
   const fill = Math.max(0, Math.min(1, display?.fill ?? player.xp / needed));
@@ -119,9 +119,9 @@ export function drawHUDExperience(c: CanvasRenderingContext2D, player: Progress,
   c.beginPath(); c.moveTo(x + 5, cy - 3); c.lineTo(x + 8, cy); c.lineTo(x + 5, cy + 3); c.lineTo(x + 2, cy); c.closePath();
   c.fillStyle = '#13202c'; c.fill(); c.strokeStyle = '#9c9ebc'; c.lineWidth = .65; c.stroke();
   const level = `LV ${display?.level ?? player.level}`, amount = `${display?.xp ?? player.xp} / ${needed} XP`;
-  const size = Math.min(1.04, (w - 24) / Math.max(1, textWidth(level) + textWidth(amount)));
+  const size = Math.min(1.04 * textScale, (w - 24) / Math.max(1, textWidth(level) + textWidth(amount)));
   text(c, level, x + 13, cy - 3.85 * size, size, pulse > .6 ? '#e9ddff' : ui.silver);
   text(c, amount, x + w - 2, cy - 3.85 * size, size, '#b5accb', 'right');
-  if (display && display.pending > 0) text(c, `+${display.pending} XP`, x + w / 2, y - 8, .8, '#e2caff', 'center');
+  if (display && display.pending > 0) text(c, `+${display.pending} XP`, x + w / 2, y - 8, .8 * textScale, '#e2caff', 'center');
   c.restore();
 }

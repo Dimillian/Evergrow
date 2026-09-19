@@ -143,7 +143,7 @@ export function compactEvents(state: EventState): void {
 }
 
 export function eventInteractionSites(sites: readonly EventSite[],state:EventState):EventSite[] {
-  sites=sites.filter(site=>site.kind!=='bossLair'&&(!isTrialKind(site.kind)||(!eventClaimed(state,site.id)&&state.sites[site.id]?.phase!=='completed')));
+  sites=sites.filter(site=>site.kind!=='bossLair'&&!eventClaimed(state,site.id)&&(!isTrialKind(site.kind)||state.sites[site.id]?.phase!=='completed'));
   const trial=state.trial;if(!trial?.sealReady)return [...sites];
   const site=state.sites[trial.siteId],point=sealPoint(site,trial.wave);
   return [...sites.filter(s=>s.id!==site.id),{...site,...point}];

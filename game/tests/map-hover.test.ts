@@ -40,7 +40,7 @@ test('POI cards use their measured responsive dimensions when staying inside the
   const name = { textContent: '' }, kind = { textContent: '' }, description = { textContent: '' };
   const map = Object.assign(Object.create(WorldMap.prototype), {
     view: { ...view, x: 0, y: 0, width: 800, height: 460 }, tooltip,
-    world: { isSanctuary: () => true }, encounterLevelReader: () => null, eventStateReader: () => null,
+    world: { isSanctuary: () => true }, encounterLevelReader: () => null, activityStateReader: () => null,
     tooltipName: name, tooltipKind: kind, tooltipDescription: description,
   }) as { showTooltip(poi: MapPOI, point: { x: number; y: number }): void; view: MapView };
   const poi = markerAt(100, 100);
@@ -68,7 +68,7 @@ function hoverMap() {
     hovered: null, visiblePOIs: [], journeyMarker: null,
     world: { sampleBiome: () => ({ id: 'deadwood', name: 'Deadwood' }), isSanctuary: () => true },
     exploration: { isRevealed: (x: number) => x >= 0 },
-    encounterLevelReader: () => null, eventStateReader: () => null,
+    encounterLevelReader: () => null, activityStateReader: () => null,
     areaInfo: { hidden: true }, areaName: { textContent: '' }, areaBiome: { textContent: '' },
     areaLevel: { textContent: '' }, areaCoordinates: { textContent: '' },
     tooltip: { hidden: true, offsetWidth: 270, offsetHeight: 126,

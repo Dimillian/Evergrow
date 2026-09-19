@@ -15,7 +15,7 @@ export class EventArt {
     const claimed = record?.phase === 'claimed', completed = record?.phase === 'completed', active = record?.phase === 'active';
     if(site.kind!=='standingStones'&&site.kind!=='watchtower') {
       const cursed = site.kind === 'cursedChest' && !completed && !claimed;
-      const open = completed || claimed || !!record?.bonusGranted || !!record?.delivered;
+      const open = claimed || !!record?.bonusGranted || !!record?.delivered;
       this.chests.draw(c,site.id,site.x,site.y,open,time,Math.max(preparation,active?.2:0),cursed,reduced);return;
     }
     c.save();

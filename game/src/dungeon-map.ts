@@ -6,7 +6,7 @@ import { dungeonMapEnemyVisible, type DungeonMapEnemy as MapEnemy } from './dung
 import { drawRiftMapTerrain } from './rift-map-art.ts';
 import { BIOMES } from './biomes.ts';
 import { drawDungeonMapIcon, type DungeonMapIcon } from './dungeon-map-icon-art.ts';
-import { dungeonChestMask } from './expedition-route.ts';
+import { dungeonChestClaimed } from './expedition-route.ts';
 import { drawMinimapFrame } from './minimap-art.ts';
 import { dungeonTheme, DUNGEON_EVENTS } from './dungeon-content.ts';
 import { bindTouchCanvas } from './touch-canvas.ts';
@@ -69,9 +69,9 @@ export function drawDungeonMap(c: CanvasRenderingContext2D, f: DungeonFloor, run
         drawDungeonMapIcon(c, kind, 0, 0, completed, theme.accent, angle); c.restore();
     };
     for (const event of f.events ?? []) if (seen.has(event.room))
-        icon(event.kind, event.x, event.y, !!run.events?.[event.id]?.finished);
+        icon(event.kind, event.x, event.y, dungeonChestClaimed(run, event.chest));
     f.chests.forEach((_, i) => { const ch=dungeonRunChest(f,run,i); if ((!run.rift||i===2&&run.rift.phase==='complete')&&seen.has(ch.room))
-        icon('chest', ch.x, ch.y, (run.chestMasks[i] & dungeonChestMask(run, i)) === dungeonChestMask(run, i));
+        icon('chest', ch.x, ch.y, dungeonChestClaimed(run, i));
     });
     icon(run.rift?'riftPortal':'entry', f.entry.x, f.entry.y);
     if(run.rift?.phase==='complete'){const exit=dungeonRunExit(f,run);icon('riftPortal',exit.x,exit.y);}
@@ -184,7 +184,7 @@ export class DungeonMap {
         const r = this.canvas.getBoundingClientRect(), x = this.center.x + ((clientX - r.left) - r.width / 2) / this.zoom, y = this.center.y + ((clientY - r.top) - r.height / 2) / this.zoom;
         const exitLabel=this.run.rift?'Rift Portal · Return to town':'Exit to overworld';
         const exitIcon:MapIconId=this.run.rift?'dungeon:riftPortal':'dungeon:entry';
-        const targets = [...(this.floor.events??[]).map(e=>({...e,mapIcon:`dungeon:${e.kind}` as MapIconId,label:DUNGEON_EVENTS[e.kind].name})), { ...this.floor.entry, mapIcon:exitIcon, label:exitLabel, room: this.floor.rooms.find(r=>r.kind==='entry')?.id??0 }, ...(this.run.rift?.phase==='complete'?[{...dungeonRunExit(this.floor,this.run),mapIcon:exitIcon,label:exitLabel,room:0}]:[]), ...this.floor.chests.flatMap((_, i) => this.run!.rift&&(i!==2||this.run!.rift.phase!=='complete')?[]:[{ ...dungeonRunChest(this.floor!,this.run!,i), mapIcon:'dungeon:chest' as MapIconId, label: this.run!.chestMasks[i] === dungeonChestMask(this.run!,i) ? 'Chest · Claimed' : i === 2 ? 'Boss chest' : 'Guarded chest' }]), { ...this.run.states.warden, mapIcon:'dungeon:boss' as MapIconId, label: (this.run.rift?'Rift guardian':dungeonTheme(this.floor.seed,this.floor.theme).bossName??'Hollow Warden')+(this.run.states.warden.hp>0?'':' · Defeated'), room: this.floor.rooms.find(r=>r.kind==='boss')!.id }];
+        const targets = [...(this.floor.events??[]).map(e=>({...e,mapIcon:`dungeon:${e.kind}` as MapIconId,label:DUNGEON_EVENTS[e.kind].name+(dungeonChestClaimed(this.run!,e.chest)?' · Claimed':this.run!.events?.[e.id]?.finished?' · Reward waiting':'')})), { ...this.floor.entry, mapIcon:exitIcon, label:exitLabel, room: this.floor.rooms.find(r=>r.kind==='entry')?.id??0 }, ...(this.run.rift?.phase==='complete'?[{...dungeonRunExit(this.floor,this.run),mapIcon:exitIcon,label:exitLabel,room:0}]:[]), ...this.floor.chests.flatMap((_, i) => this.run!.rift&&(i!==2||this.run!.rift.phase!=='complete')?[]:[{ ...dungeonRunChest(this.floor!,this.run!,i), mapIcon:'dungeon:chest' as MapIconId, label: dungeonChestClaimed(this.run!,i) ? 'Chest · Claimed' : i === 2 ? 'Boss chest' : 'Guarded chest' }]), { ...this.run.states.warden, mapIcon:'dungeon:boss' as MapIconId, label: (this.run.rift?'Rift guardian':dungeonTheme(this.floor.seed,this.floor.theme).bossName??'Hollow Warden')+(this.run.states.warden.hp>0?'':' · Defeated'), room: this.floor.rooms.find(r=>r.kind==='boss')!.id }];
         const target = targets.filter(p=>mapIconVisible(this.iconVisibility,p.mapIcon)).filter(p=>!this.run!.rift||p.mapIcon===exitIcon||this.run!.rift.phase==='complete'||this.run!.rift.phase==='boss'&&p.label==='Rift guardian').find(p => (this.run!.rift?.phase==='boss'||this.run!.rift?.phase==='complete'||this.run!.explored.includes(p.room)) && Math.hypot(p.x - x, p.y - y) < 16 / this.zoom);
         this.tooltip.hidden = !target;
         if (!target)

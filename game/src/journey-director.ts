@@ -1,3 +1,4 @@
+import { activityRewardsClaimed } from './activity-status.ts';
 import { dungeonTheme } from './dungeon-content.ts';
 import { dungeonChestMask } from './expedition-route.ts';
 import { activityLevel } from './activity-level.ts';
@@ -6,7 +7,7 @@ import { isTrialKind } from './event-recipes.ts';
 import { eventLabel } from './poi-content.ts';
 import { journeyWasCompleted } from './journey-rewards.ts';
 import { JOURNEY_KINDS, recommendedJourney, journeyLevelFit, type JourneyGoal, type JourneyKind, type JourneyState } from './journey-state.ts';
-import { eventClaimed, type EventState } from './poi-content.ts';
+import { type EventState } from './poi-content.ts';
 import type { Expeditions } from './dungeon-state.ts';
 import type { WorldPOI } from './world-pois.ts';
 import { getZoneAt } from './zone-progression.ts';
@@ -23,10 +24,11 @@ export function journeyObjective(goal:JourneyGoal,facts:JourneyFacts):string {
     const run=facts.expeditions.runs.find(r=>r.entrance.id===goal.id);
     return !run?'Enter the dungeon':run.states.warden?.hp>0?`Defeat ${dungeonTheme(run.entrance.seed,run.entrance.theme).bossName??'Hollow Warden'}`:run.chestMasks[2]===dungeonChestMask(run,2)?'Return to the surface':'Claim the boss chest';
   }
+  if(activityRewardsClaimed(goal,facts))return 'Completed';
   if(goal.kind==='bossLair'){
-    if(eventClaimed(facts.events,goal.id))return 'Completed';
     return facts.events.sites[goal.id]?.phase==='completed'?'Boss defeated — hoard delivery pending':'Defeat the boss';
   }
+  if(facts.events.sites[goal.id]?.phase==='completed')return 'Claim the reward';
   if(goal.kind==='camp')return facts.campCleared(goal.id)?'Open the strongbox':'Clear the garrison';
   if(goal.kind==='caravan')return 'Choose goods or coin';
   if(goal.kind==='watchtower')return 'Light the beacon';
@@ -34,7 +36,6 @@ export function journeyObjective(goal:JourneyGoal,facts:JourneyFacts):string {
   if(goal.kind==='frontier')return 'Follow the road into new territory';
   const record=facts.events.sites[goal.id];
   if(record?.phase==='paused')return 'Resume the trial';
-  if(record?.phase==='completed')return 'Claim the reward';
   if(record?.phase==='active'){
     const trial=facts.events.trial;
     return trial?.siteId===goal.id?eventLabel(record,facts.events,false):'Complete the trial';
@@ -42,9 +43,8 @@ export function journeyObjective(goal:JourneyGoal,facts:JourneyFacts):string {
   return goal.kind==='reliquary'?'Open the reliquary':'Begin the trial';
 }
 export function journeyComplete(goal:JourneyGoal,facts:JourneyFacts):boolean {
-  if(goal.kind==='dungeon')return !!facts.expeditions.cleared?.includes(goal.id)||!!facts.expeditions.runs.find(r=>r.entrance.id===goal.id&&r.chestMasks[2]===dungeonChestMask(r,2));
   if(goal.kind==='town'||goal.kind==='frontier')return !facts.expeditions.location&&Math.hypot(goal.x-facts.x,goal.y-facts.y)<(goal.kind==='town'?260:180);
-  return eventClaimed(facts.events,goal.id);
+  return activityRewardsClaimed(goal,facts);
 }
 /** Derive completion from durable source records; never grant a second reward. */
 export function reconcileJourneys(state:JourneyState,facts:JourneyFacts,safe:boolean):JourneyState {
