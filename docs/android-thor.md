@@ -31,6 +31,8 @@ Native `KeyEvent` / joystick `MotionEvent` input is normalized into the same sta
 
 The app uses the same worker/IndexedDB save system at a stable bundled HTTPS asset origin. APK updates installed over the existing package preserve app data. **Android, Safari, localhost and the hosted game currently have separate local characters.** Cloud synchronization is available only in the Site-enabled web build; the Android wrapper remains local-only with no cloud tabs or network requests. Uninstalling or clearing Android app data removes its saves; there is no browser-save migration in this packaging checkpoint.
 
+The primary Android WebView shares the mobile `0.8` presentation-density profile with coarse-pointer browsers. It keeps the physical WebView dimensions and the existing world/UI buffer policies while exposing a wider logical game field; this is separate from gameplay camera zoom and remains stable when native controller input hides the touch controls. The persistent touch menu appears only while touch presentation is active.
+
 Backgrounding clears input, pauses play, requests a save and mutes audio. Regular autosaves remain enabled. Android process termination can still lose changes since the last completed checkpoint. Assets are served through `WebViewAssetLoader`; external navigation/network resources and file access are blocked. WebView debugging is enabled only in debug builds.
 
 Both WebViews disable Android’s default whole-view focus foreground, and the shared UI disables the browser tap tint. Game-owned focus outlines and pressed states remain visible. This prevents controller focus from washing out the entire screen.
