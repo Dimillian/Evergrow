@@ -122,6 +122,17 @@ export class JourneyPanel {
     const popup=this.element.querySelector<HTMLElement>('[data-hud-popup]'),window=this.element.querySelector<HTMLElement>('.journey-window');
     if(popup&&window)popup.style.maxHeight=`${Math.max(64,window.getBoundingClientRect().bottom-popup.getBoundingClientRect().top-12)}px`;
   }
+  /** Layout also changes while the journal pauses simulation-driven refreshes. */
+  resize(width:number,height:number){
+    this.hudView.width=width;this.hudView.height=height;
+    const anchor=getJourneyLogAnchor(width,height);
+    this.mini.style.right=`${(width-anchor.x-anchor.width)/width*100}%`;
+    this.mini.style.top=`${anchor.y/height*100}%`;
+    this.mini.style.width=`${anchor.width/width*100}%`;
+    this.mini.style.maxHeight=`${Math.max(48,height-anchor.y-24)/height*100}%`;
+    this.setHUDVisibility(this.hudView.playing);
+    this.layoutHUDSettings();
+  }
   resetSelection(){
     this.selected=null;this.scope='nearby';this.townNavigation=false;this.message='';this.signature='';this.hudSettingsOpen=false;
     this.listScroll=0;this.detailScroll=0;
@@ -134,11 +145,6 @@ export class JourneyPanel {
     this.state=state;this.facts=facts;
     const collapsed=state.collapsed&&!this.hudPreviewActive;
     this.mini.classList.toggle('is-collapsed',collapsed);
-    const anchor=getJourneyLogAnchor(width,height);
-    this.mini.style.right=`${(width-anchor.x-anchor.width)/width*100}%`;
-    this.mini.style.top=`${anchor.y/height*100}%`;
-    this.mini.style.width=`${anchor.width/width*100}%`;
-    this.mini.style.maxHeight=`${Math.max(48,height-anchor.y-24)/height*100}%`;
     const list=miniJourneys(state,this.hudPreferences.settings,this.origin());
     const header=`<header><button class="journey-mini-title" data-open>Journeys<kbd class="journey-mini-key">J</kbd></button><button data-collapse aria-label="${collapsed?'Expand':'Collapse'} journeys" aria-expanded="${!collapsed}">${uiIcon('chevron')}</button></header>`;
     const pinnedId=state.townPin?.id??state.tracked;
@@ -155,8 +161,8 @@ export class JourneyPanel {
       this.mini.innerHTML=html;this.miniSignature=html;
       if(focused)this.mini.querySelector<HTMLButtonElement>(`[data-pin="${CSS.escape(focused)}"]`)?.focus({preventScroll:true});
     }
-    if(!this.element.hidden){const signature=JSON.stringify([dungeon?.id,dungeon?.phase,state,this.hudPreferences.settings,Math.round(facts.x/100),Math.round(facts.y/100),facts.level,facts.expeditions.location,list.map(g=>journeyObjective(g,facts))]);if(signature!==this.signature){this.signature=signature;this.render();}this.layoutHUDSettings();}
-    this.setHUDVisibility(playing);
+    if(!this.element.hidden){const signature=JSON.stringify([dungeon?.id,dungeon?.phase,state,this.hudPreferences.settings,Math.round(facts.x/100),Math.round(facts.y/100),facts.level,facts.expeditions.location,list.map(g=>journeyObjective(g,facts))]);if(signature!==this.signature){this.signature=signature;this.render();}}
+    this.resize(width,height);
   }
   bounds(width:number,height:number){
     if(this.mini.hidden)return null;

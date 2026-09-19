@@ -95,7 +95,10 @@ export class GameShell {
     this.element.addEventListener('contextmenu', event => event.preventDefault(), { signal });
     this.controls.querySelector('[data-hud="map"]')!.addEventListener('click', actions.openMap, { signal });
     this.controls.querySelector('[data-hud="home"]')!.addEventListener('click', () => {
-      if (this.homePortalVisible && this.navigationVisible) actions.homePortal?.();
+      if (this.homePortalVisible && this.navigationVisible) {
+        this.canvas.focus({ preventScroll: true });
+        actions.homePortal?.();
+      }
     }, { signal });
     this.shortcutMenu = new HUDShortcutMenu(this.controls, this.controls.querySelector('[data-hud="menu"]')!, id => {
       if (id === 'character' || id === 'inventory') actions.openCharacter();

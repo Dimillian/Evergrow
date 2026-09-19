@@ -49,7 +49,7 @@ import { EVENT_RULES, focusEvent, eventLabel, eventClaimed, isEventKind, type Ev
 import { executeEvent, eventProblem, claimCompletedEvent, pendingEventReward } from './poi-command.ts';
 import { activatePortalAnchor } from './travel-command.ts';
 import { townPortalAnchor, withinPortalReach, portalMapMarkers, type PortalAnchor } from './travel.ts';
-import { portalActionMode, portalDestinations, type PortalActionView } from './portal-destination.ts';
+import { portalActionMode, portalDestinations } from './portal-destination.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import { ServicePanel } from './service-panel.ts';
 import { buildingNPC, focusNPC, canInteractNPC, type TownNPC } from './npcs.ts';
@@ -591,6 +591,7 @@ export class Game {
     this.mouse.y = this.renderer.height * 0.43;
     this.shell.resizeControls(this.renderer.width, this.renderer.height);
     this.worldMap.resize();
+    this.journeys.panel.resize(this.renderer.width, this.renderer.height);
   }
 
   clearInput(preserveMovement = false) {
@@ -1054,14 +1055,15 @@ export class Game {
     return withinPortalReach(this.sim.player, anchor, this.world) ? anchor : undefined;
   }
 
-  private portalActionView(): PortalActionView {
+  private updatePortalPresentation(): void {
     const destinations = portalDestinations({ seed: this.overworld.seed,
       home: this.overworld.getPortalAnchor(this.sim.travel.homeTown), travel: this.sim.travel, expeditions: this.sim.expeditions });
     this.renderer.portalDestinations = destinations;
+    if (!this.touch.active) return;
     const progress = this.sim.portal.active ? this.sim.portal.progress : null;
     const inSanctuary=this.world.isSanctuary(this.sim.player.x,this.sim.player.y),returnInReach=!!this.returnPortalInReach();
     const mode=portalActionMode(progress!==null,inSanctuary,!!destinations.returnTo,returnInReach);
-    return {mode,progress,destination:mode==='locate'||mode==='return'?destinations.returnTo!:destinations.home};
+    this.touch.setPortal({mode,progress,destination:mode==='locate'||mode==='return'?destinations.returnTo!:destinations.home});
   }
 
   private setLocationWorld(checkpoint: CharacterCheckpoint) {
@@ -1266,7 +1268,7 @@ export class Game {
     }
     this.shell.setBuffs(activeBuffs(this.sim.player, this.sim.groundEffects));
     this.shell.shortcutMenu.setPoints(this.sim.player.character.statPoints, this.sim.player.character.skillPoints);
-    if(this.touch.active) this.touch.setPortal(this.portalActionView());
+    this.updatePortalPresentation();
     this.renderer.pointerX = this.mouse.x;
     this.renderer.pointerY = this.mouse.y;
     this.renderer.inspectedEnemyId = this.shell.targetBuffs.held ? this.renderer.targetEffects?.id ?? null : null;

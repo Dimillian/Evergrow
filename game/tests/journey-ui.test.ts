@@ -1,13 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
+import { readFileSync } from 'node:fs';
 import { freshJourneys, planJourney, type JourneyGoal } from '../src/journey-state.ts';
 import { freshEvents } from '../src/poi-content.ts';
 import { freshExpeditions } from '../src/dungeon-state.ts';
 import { JourneyHUDPreferences } from '../src/journey-hud-settings.ts';
-const css=registerHooks({load(url,context,next){return url.endsWith('.css')?{format:'module',source:'',shortCircuit:true}:next(url,context);}});
+const css=registerHooks({load(url,context,next){
+  if(url.endsWith('.css'))return {format:'module',source:'',shortCircuit:true};
+  if(url.endsWith('/music-content.ts'))return {format:'module',source:'export const MUSIC_FILES = {};',shortCircuit:true};
+  if(url.endsWith('?raw'))return {format:'module',source:`export default ${JSON.stringify(readFileSync(new URL(url),'utf8'))}`,shortCircuit:true};
+  return next(url,context);
+}});
 const {JourneyPanel}=await import('../src/journey-panel.ts');
 const {JourneyController}=await import('../src/journey-controller.ts');
+const {Game}=await import('../src/game.ts');
 css.deregister();
 
 /** Event surfaces exercise the production journal without starting a browser or game. */
@@ -133,6 +140,55 @@ test('Area journal buttons separate acceptance from pinning and preserve selecte
   assert.equal(panel.mini.hidden,false);assert.equal(hudIds().length,0,'gameplay restores the original collapsed state');
   assert.deepEqual(state,before);assert.equal(commands,beforeCommands,'HUD settings do not submit character commands');
   assert.equal(new JourneyHUDPreferences({getItem:key=>stored.get(key)??null,setItem(){}}).settings.count,4);
+});
+
+test('Game resize moves the settings preview both ways while controller updates remain paused',t=>{
+  const originals=new Map(['document','window','CSS'].map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
+  const doc=Object.assign(new Surface(),{activeElement:null as Surface|null,defaultView:{getComputedStyle:()=>({visibility:'visible'})},
+    documentElement:{style:{setProperty(){}}},createElement:()=>{const s=new Surface();s.ownerDocument=doc;return s;}});
+  const viewport={innerWidth:1600,innerHeight:800,devicePixelRatio:1};
+  Object.defineProperty(globalThis,'document',{value:doc,configurable:true});
+  Object.defineProperty(globalThis,'window',{value:viewport,configurable:true});
+  Object.defineProperty(globalThis,'CSS',{value:{escape:(s:string)=>s},configurable:true});
+  t.after(()=>{for(const [key,value]of originals){if(value)Object.defineProperty(globalThis,key,value);else Reflect.deleteProperty(globalThis,key);}});
+  const state=freshJourneys();state.accepted=[goal('resize')];state.collapsed=true;
+  const facts={x:0,y:0,level:3,time:100,events:freshEvents(),expeditions:freshExpeditions(),discovered:()=>true,campCleared:()=>false};
+  const mount=doc.createElement(),hudMount=doc.createElement();
+  const panel=new JourneyPanel(mount as unknown as HTMLElement,hudMount as unknown as HTMLElement,
+    {open(){},close(){},command(){throw Error('Layout must not change quest state');},map(){}},new JourneyHUDPreferences());
+  t.after(()=>panel.dispose());
+  panel.update(state,facts,false,1186,593);panel.open('resize');
+  const click=new Event('click');Object.defineProperty(click,'target',{value:{closest:()=>({dataset:{action:'hudSettings'},disabled:false})}});
+  panel.element.dispatchEvent(click);
+  const preview=panel.element.querySelector<HTMLElement>('[data-hud-preview]');
+  const focused=doc.activeElement,markup=panel.element.innerHTML,before=structuredClone(state);
+  const renderer={width:1186,height:593,resize(w:number,h:number){this.width=w;this.height=h;},spawnExclusionBounds(){return {};}};
+  const character={};
+  const sim={journeys:state,time:100,player:{character,x:0,y:0},dungeonFloor:null,eventChannel:{site:null},portal:{active:false},enemies:[],
+    setSpawnExclusion(){},setCombatViewport(){}};
+  const controller=Object.assign(Object.create(JourneyController.prototype),{
+    panel,journeyCheckedAt:100,journeySearchOwner:character,journeySearch:null,facts:()=>facts,
+    host:{sim,renderer,phase:'journeys',savingAction:false,navigationVisible:true,panels:{simulationActive:false}},
+    refreshUI(){throw Error('Paused resize must not depend on timed refresh');},
+  });
+  const game=Object.assign(Object.create(Game.prototype),{canvas:{},uiCanvas:{},mouse:{},renderer,sim,journeys:controller,
+    touch:{active:false,clear(){},refreshLayout(){}},shell:{resizeControls(){}},worldMap:{resize(){}}});
+  assert.equal(panel.mini.parentElement,hudMount);assert.notEqual(panel.element.style.paddingRight,'');
+  viewport.innerWidth=900;viewport.innerHeight=650;game.resize();
+  for(let i=0;i<120;i++)controller.update();
+  assert.equal(panel.mini.parentElement,preview,'wide-to-narrow resize reparents the actual preview while paused');
+  assert.equal(panel.element.style.paddingRight,'');assert.equal(preview!.hidden,false);
+  assert.equal(panel.mini.hidden,false);assert.equal(panel.mini.inert,true);
+  const narrowHeight=panel.mini.style.maxHeight;
+  const popup=panel.element.querySelector<HTMLElement>('[data-hud-popup]')!;
+  popup.style.maxHeight='stale';
+  viewport.innerWidth=1600;viewport.innerHeight=800;game.resize();
+  for(let i=0;i<120;i++)controller.update();
+  assert.equal(panel.mini.parentElement,hudMount,'narrow-to-wide resize restores the right-side preview');
+  assert.notEqual(panel.element.style.paddingRight,'');assert.equal(preview!.hidden,true);
+  assert.notEqual(panel.mini.style.maxHeight,narrowHeight);assert.notEqual(popup.style.maxHeight,'stale');
+  assert.equal(panel.element.innerHTML,markup,'resizing never rebuilds or resets the settings form');
+  assert.equal(doc.activeElement,focused);assert.deepEqual(state,before);assert.equal(sim.time,100);
 });
 
 test('Show on Map resolves completed records and preserves the return selection',()=>{
