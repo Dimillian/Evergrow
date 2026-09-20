@@ -1,5 +1,7 @@
 # Current system status
 
+Local September 20, 2026: engaged outdoor enemies show a muted warm-red animated silhouette through trees, rocks and brush, restricted to covered pixels. Walls, roofs and foreground characters block it; indoor/dungeon enemies are excluded. Existing player canopy fading is preserved. Presentation only, no save reset. Color/readability and device performance await player testing.
+
 Local September 19 Area journal: explicit unlimited Accept/Accept all, reversible Dismiss to Nearby, independent pins, retained known/completed activities and area browsing. Show on Map returns to selected quest details on close. Existing saves keep progress; old suppression IDs are ignored and previously trimmed completion details recover when encountered. See [Journeys](journeys.md).
 
 Local September 19 Light & Open HUD: independent right-aligned map and Journey list, a clear gap, compact map metadata, lighter framing and a gold row only for an explicitly pinned quest. The old portal row is replaced by a small lower-left minimap Home icon, visible whenever the player is outside town, including during movement; existing portal shortcuts and touch/companion actions remain. Shared surface/dungeon map chrome and input bounds. Collapsed Journeys omits its divider. No save reset. See [interface kit](ui-kit.md).

@@ -6,6 +6,7 @@ import { World, TILE_SIZE, type Prop } from '../src/world.ts';
 import type { Building, Settlement } from '../src/settlements.ts';
 import { getHUDLayout } from '../src/hud.ts';
 import { cameraView, MIN_CAMERA_ZOOM } from '../src/camera.ts';
+import { EnemyOcclusionArt, type OccludedEnemy, type OcclusionLayer } from '../src/enemy-occlusion-art.ts';
 
 type Matrix = { a: number; b: number; c: number; d: number; e: number; f: number };
 type Rect = { left: number; top: number; width: number; height: number };
@@ -427,4 +428,41 @@ test('fixed preview zoom preserves world framing across display densities and ne
     settings.fixedCameraZoom = invalid; render(0);
     assert.equal(renderer.worldBounds.width, renderer.width);
   }
+});
+
+test('runtime silhouettes use displayed enemy depth, foreground props and a shared pose without changing combat', t => {
+  const { sim, world, renderer, render, settings } = fixture(t);
+  world.blocked = () => false; world.isSanctuary = () => false;
+  world.getWildernessSites = () => [];
+  const x = sim.player.x + 65, y = sim.player.y;
+  const tree: Prop = { id: 'occlusion-tree', x, y: y + 30, radius: 10, kind: 'tree', seed: 71, scale: 1.2 };
+  world.getProps = () => [tree];
+  const enemy = sim.spawnEnemy('stalker', x, y, 'elite')!;
+  enemy.state = 'windup'; enemy.prevX = x - 12; enemy.prevY = y - 8;
+  const original = EnemyOcclusionArt.prototype.draw;
+  const calls: { actor: OccludedEnemy; props: readonly OcclusionLayer[]; opacity: number }[] = [];
+  EnemyOcclusionArt.prototype.draw = function(c, actor, props, blockers, opacity) {
+    calls.push({ actor, props, opacity }); original.call(this, c, actor, props, blockers, opacity);
+  };
+  t.after(() => { EnemyOcclusionArt.prototype.draw = original; });
+  const before = JSON.stringify(enemy);
+  render();
+  const call = calls.find(call => call.actor.id === enemy.id)!;
+  assert.ok(call && call.opacity > 0);
+  assert.equal(call.actor.depth, enemy.prevY + (enemy.y - enemy.prevY) * sim.interpolationAlpha);
+  assert.ok(call.props.some(prop => prop.depth === tree.y));
+  assert.ok(call.actor.bounds.width > 150, 'rank scale includes the actual rig and held weapon');
+  assert.equal(JSON.stringify(enemy), before, 'rendering does not mutate combat or rewards');
+  for (const mode of ['travel', 'full'] as const) {
+    settings.reducedMotion = false; calls.length = 0;
+    renderer.reset(mode); renderer.snapTo(sim.player); render(0);
+    assert.equal(calls.find(call => call.actor.id === enemy.id)?.opacity, 0, `${mode} reset clears the previous reveal fade`);
+    settings.reducedMotion = true; render();
+    assert.ok(calls.at(-1)!.opacity > 0, 'the next scene can reveal the actor again');
+  }
+  calls.length = 0; enemy.hp = 0; render();
+  assert.equal(calls.length, 0, 'dead actors cannot leave a reveal');
+  enemy.hp = enemy.maxHp; renderer.reset(); calls.length = 0;
+  world.getBuildingAt = () => ({ id: 'indoors' } as Building);
+  render(); assert.equal(calls.length, 0, 'indoor actors are excluded before compositing');
 });

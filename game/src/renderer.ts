@@ -58,7 +58,9 @@ import { drawGroundGold, drawRewardFlights, drawGoldBalance, drawLevelCelebratio
 import { goldBalance } from './wallet.ts';
 import { BiomeLife } from './biome-life.ts';
 import { BiomeLifeArt } from './biome-life-art.ts';
-import { biomeWind } from './biome-wind.ts';
+import { drawPropSprite, propSpriteBounds } from './prop-sprite-art.ts';
+import { EnemyOcclusionArt, type OccludedEnemy, type OcclusionLayer } from './enemy-occlusion-art.ts';
+import { EnemyOcclusionFades, enemyOcclusionBounds, enemyOcclusionStrength, overlapsOcclusion } from './enemy-occlusion.ts';
 import { AtmosphereArt } from './atmosphere-art.ts';
 import { GroundDressing } from './ground-art.ts';
 import { drawGroundLoot, drawLootLabels, drawResourcePickups } from './loot-art.ts';
@@ -289,7 +291,8 @@ export class Renderer {
     this.areaBanner.clear();
     this.eventProgressPresentation.reset();
     this.emission = undefined;
-    this.battleBarks.reset();
+    this.battleBarks.reset(); this.enemyOcclusionFades.reset();
+    this.occludedEnemies = []; this.occludingProps = []; this.occlusionBlockers = [];
     this.water.reset(); this.lighting.reset();
     this.portalGuide = 0; this.portalAnchors = []; this.fadingPortal = null;
     this.cameraX = 0; this.cameraY = 0; this.effects.reset(); this.rangedAim = null;
@@ -534,6 +537,9 @@ export class Renderer {
     this.lighting.apply(c, this.width, this.height, left, top, lights, this.cachedProps, ambient, zoom);
     this.profiler?.end('lighting', lightingStart);
     c.save(); c.translate(offsetX, offsetY); c.scale(zoom, zoom);
+    const occlusionStart = this.profiler?.start() ?? 0;
+    this.drawEnemyOcclusion(dt, settings.reducedMotion);
+    this.profiler?.end('actors', occlusionStart);
     this.riftAtmosphere.drawEmission(c,this.view);
     this.biomeArt.drawLight(c, this.cachedProps, this.visualTime, settings.reducedMotion, px, py);
     this.biomeArt.drawAir(c, this.biomeLife, this.visualTime, settings.reducedMotion);
@@ -735,6 +741,7 @@ export class Renderer {
 
   private actorsAndProps(sim: Simulation, world: World, px: number, py: number, alpha: number, dt: number, settings: RenderSettings) {
     const c = this.ctx, p = sim.player;
+    this.occludedEnemies = []; this.occludingProps = []; this.occlusionBlockers = [];
     const entries: Array<{ y: number; stage?: FrameStage; draw: () => void }> = this.cachedProps.map(prop => ({ y: prop.y, stage: 'props', draw: () => {
       // Prefetched offscreen props retain collision/light coverage without generating unseen sprites.
       if (prop.x + 115 < this.view.left || prop.x - 115 > this.view.left + this.view.width
@@ -755,28 +762,14 @@ export class Renderer {
         else this.crownOpacity.set(prop.id, foliageOpacity);
       }
       if (this.crownOpacity.size > 512) this.crownOpacity.delete(this.crownOpacity.keys().next().value!);
-      c.save(); c.translate(prop.x, prop.y); c.scale(prop.scale, prop.scale);
-      // Trunks stay rooted and opaque. Only the obstructing canopy becomes translucent.
-      if (!sprite.foliage && definition.radius[1] === 0) {
-        const wind = biomeWind(prop.x, prop.y, this.visualTime, prop.biome ?? 'deadwood', settings.reducedMotion).x * definition.sway;
-        const bend = settings.reducedMotion ? 0 : this.biomeLife.bend(prop.x, prop.y);
-        c.transform(1, 0, -bend * .35, 1 - Math.abs(bend) * .18, 0, 0);
-        c.transform(1, 0, wind * -.012, 1, 0, 0);
-      }
-      c.drawImage(sprite.image, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
-      this.propSurfaceLight.draw(c, prop, sprite, sprite.image, this.cryptFloor ? undefined : this.sky);
-      if (!this.cryptFloor) this.propSurfaceLight.drawOutdoor(c, prop, sprite, sprite.image, world, this.visualTime, settings.reducedMotion, this.sky);
-      for (const [layer, foliage] of (sprite.foliage ?? []).entries()) {
-        c.save();
-        const gust = biomeWind(prop.x, prop.y, this.visualTime - layer * .18, prop.biome ?? 'deadwood', settings.reducedMotion).x * definition.sway * 2.2;
-        c.transform(1, 0, gust * (layer ? -.009 : -.005), 1, 0, 0);
-        c.globalAlpha *= foliageOpacity;
-        c.drawImage(foliage, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
-        this.propSurfaceLight.draw(c, prop, sprite, foliage, this.cryptFloor ? undefined : this.sky);
-        if (!this.cryptFloor) this.propSurfaceLight.drawOutdoor(c, prop, sprite, foliage, world, this.visualTime, settings.reducedMotion, this.sky);
-        c.restore();
-      }
-      c.restore();
+      const bend = !settings.reducedMotion && !sprite.foliage && definition.radius[1] === 0 ? this.biomeLife.bend(prop.x, prop.y) : 0;
+      const paint = (target: CanvasRenderingContext2D) => drawPropSprite(target, prop, sprite,
+        this.visualTime, settings.reducedMotion, bend, foliageOpacity);
+      drawPropSprite(c, prop, sprite, this.visualTime, settings.reducedMotion, bend, foliageOpacity, (target, image) => {
+        this.propSurfaceLight.draw(target, prop, sprite, image, this.cryptFloor ? undefined : this.sky);
+        if (!this.cryptFloor) this.propSurfaceLight.drawOutdoor(target, prop, sprite, image, world, this.visualTime, settings.reducedMotion, this.sky);
+      });
+      if (!this.cryptFloor) this.occludingProps.push({ depth: prop.y, bounds: propSpriteBounds(prop, sprite), paint });
     } }));
     for (const site of this.eventSites)
       entries.push({ y: site.y, draw: () => this.eventArt.draw(c, site, eventClaimed(sim.eventState, site.id) ? { phase: 'claimed' } : sim.eventState.sites[site.id], this.visualTime, dt, settings.reducedMotion, sim.eventChannel.site?.id===site.id ? sim.eventChannel.elapsed/sim.eventChannel.duration : 0) });
@@ -792,14 +785,27 @@ export class Renderer {
       entries.push({ y: old.y - 1, draw: () => { c.save(); c.globalAlpha = old.life / .25;
         drawPortal(c, old.x, old.y, this.visualTime, old.progress * old.life / .25); c.restore(); } });
     }
-    for(const resident of this.residents)entries.push({y:resident.y,stage:'characters',draw:()=>withGearLight(c,sampleGearLight(resident.x,resident.y-24,this.materialLights,this.materialKey),()=>drawNPC(c,resident,this.visualTime,settings.reducedMotion))});
+    for (const resident of this.residents) {
+      entries.push({y:resident.y,stage:'characters',draw:()=>withGearLight(c,sampleGearLight(resident.x,resident.y-24,this.materialLights,this.materialKey),()=>drawNPC(c,resident,this.visualTime,settings.reducedMotion))});
+      this.occlusionBlockers.push({ depth: resident.y,
+        bounds: { left: resident.x - 70, top: resident.y - 130, width: 140, height: 160 },
+        paint: target => drawNPC(target, resident, this.visualTime, settings.reducedMotion) });
+    }
     for (const bird of this.biomeLife.birds) entries.push({ y: bird.y + (bird.state === 'perched' ? 1 : 130),
       draw: () => this.biomeArt.drawBird(c, bird, this.visualTime, settings.reducedMotion) });
     for (const building of this.cachedBuildings) {
       const npc = buildingNPC(building);
-      if (npc) entries.push({ y: npc.y, stage: 'characters', draw: () => withGearLight(c,sampleGearLight(npc.x,npc.y-24,this.materialLights,this.materialKey),()=>drawNPC(c, npc, this.visualTime, settings.reducedMotion)) });
+      if (npc) {
+        entries.push({ y: npc.y, stage: 'characters', draw: () => withGearLight(c,sampleGearLight(npc.x,npc.y-24,this.materialLights,this.materialKey),()=>drawNPC(c, npc, this.visualTime, settings.reducedMotion)) });
+        this.occlusionBlockers.push({ depth: npc.y,
+          bounds: { left: npc.x - 70, top: npc.y - 130, width: 140, height: 160 },
+          paint: target => drawNPC(target, npc, this.visualTime, settings.reducedMotion) });
+      }
       for (const layer of this.settlementArt.getStructureLayers(building, this.visualTime, sim.brokenContainers)) {
         entries.push({ y: layer.y, stage: 'structures', draw: () => layer.draw(c) });
+        this.occlusionBlockers.push({ depth: layer.y,
+          bounds: { left: building.x - 100, top: building.y - 150, width: building.width + 200, height: building.height + 250 },
+          paint: target => layer.draw(target) });
       }
     }
     for (const remains of this.materials.bursts)
@@ -807,6 +813,9 @@ export class Renderer {
     for (const site of this.visibility.sites) for (const decor of site.decor) {
       if (sim.brokenContainers.has(decor.id)) continue;
       entries.push({ y: decor.y, draw: () => drawSiteDecor(c, site, decor, settings.reducedMotion ? 0 : this.visualTime, this.siteAftermath.get(site.id)) });
+      this.occlusionBlockers.push({ depth: decor.y,
+        bounds: { left: decor.x - 200 * decor.scale, top: decor.y - 250 * decor.scale, width: 400 * decor.scale, height: 300 * decor.scale },
+        paint: target => drawSiteDecor(target, site, decor, settings.reducedMotion ? 0 : this.visualTime, this.siteAftermath.get(site.id)) });
     }
     for (const remains of this.deaths.remains)
       entries.push({ y: deathDepth(remains), draw: () => drawEnemyRemains(c, remains, settings.reducedMotion) });
@@ -819,14 +828,23 @@ export class Renderer {
       if (x < this.view.left - 256 || x > this.view.left + this.view.width + 256
         || y < this.view.top - 256 || y > this.view.top + this.view.height + 256) continue;
       if(p.skillEffects?.harvest?.length)entries.push({y:y+1,draw:()=>drawHarvestMark(c,p,enemy.id,x,y)});
-      entries.push({ y, draw: () => {const scale=enemyVisualScale(enemy);this.actor(x, y, { kind: enemy.kind, dungeonTheme:enemy.dungeonTheme, angle: enemy.angle,
+      const scale = enemyVisualScale(enemy);
+      const pose: CharacterPose = { kind: enemy.kind, dungeonTheme:enemy.dungeonTheme, angle: enemy.angle,
         command: enemy.warband?.order, commandWarning: enemy.warband?.warning,
         time: sim.time + enemy.id, effectTime: settings.reducedMotion ? 0 : sim.time + enemy.id, moveAngle: Math.atan2(enemy.vy, enemy.vx),
         moving: Math.min(1, Math.hypot(enemy.vx, enemy.vy) / 70),
         attack: enemy.state === 'windup' ? -Math.max(.001, enemy.stateTime / enemy.stateDuration)
           : enemy.state === 'attack' ? Math.min(1, enemy.stateTime / enemy.stateDuration) : 0,
         attackAngle: enemy.attackAngle, hitFlash: enemy.hitFlash, slow: enemy.slowTime, chill: enemy.chillTime, burning: enemy.burnTime, fracture: enemy.fractureTime, frozen: enemy.freezeTime, stunned: enemy.stunTime,
-        impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false },scale,riftMechanic(enemy)==='ritual'?'#9ae0c7':riftWardActive(enemy)?'#80c9b8':scale>1?(enemy.rank==='elite'?'#e9bb70':'#85c9ee'):undefined); } });
+        impact: Math.min(1, enemy.hitFlash / COMBAT_TIMING.hitFlashDuration), impactAngle: enemy.hitAngle, dodging: false };
+      entries.push({ y, draw: () => this.actor(x, y, pose, scale, riftMechanic(enemy)==='ritual'?'#9ae0c7':riftWardActive(enemy)?'#80c9b8':scale>1?(enemy.rank==='elite'?'#e9bb70':'#85c9ee'):undefined) });
+      if (!this.cryptFloor) {
+        const shape: OccludedEnemy = { id: enemy.id, depth: y, order: this.occlusionBlockers.length + 1, bounds: enemyOcclusionBounds(enemy, x, y),
+          strength: enemyOcclusionStrength(enemy, x, y, px, py),
+          paint: target => { target.save(); target.translate(x, y); target.scale(scale, scale); drawHumanoid(target, pose); target.restore(); } };
+        this.occlusionBlockers.push(shape);
+        if (overlapsOcclusion(shape.bounds, this.view) && !world.getBuildingAt(x, y)) this.occludedEnemies.push(shape);
+      }
     }
     for(const [kind,spirit] of [['decoy',p.skillEffects?.decoy],['archer',p.skillEffects?.archer]] as const){
       if(!spirit||p.dead||settings.phase==='ready')continue;
@@ -845,9 +863,14 @@ export class Renderer {
       pose.effectTime = settings.reducedMotion ? 0 : sim.time;
       if (sim.portal.active) { pose.cast = .45 * Math.min(1, sim.portal.progress * 4); pose.castColor = '#b5a0ee'; }
       this.actor(px, py, pose);
+      this.occlusionBlockers.push({ depth: py, order: Infinity, bounds: { left: px - 110, top: py - 150, width: 220, height: 200 },
+        paint: target => { target.save(); target.translate(px, py); drawHumanoid(target, pose); target.restore(); } });
       drawPlayerSkillEffects(c,p,px,py,settings.reducedMotion?0:sim.time,pose,settings.reducedMotion);
     } });
     for(const scar of this.riftAtmosphere.visible)if(scar.float)entries.push({y:scar.y,stage:'props',draw:()=>this.riftAtmosphere.drawFragment(c,scar)});
+    for (const building of this.cachedBuildings) this.occlusionBlockers.push({ depth: Infinity,
+      bounds: { left: building.x - 100, top: building.y - 150, width: building.width + 200, height: building.height + 250 },
+      paint: target => this.settlementArt.drawRoofs(target, [building], this.visualTime) });
     entries.sort((a, b) => a.y - b.y);
     for (const entry of entries) {
       const start = this.profiler?.enabled && entry.stage ? this.profiler.start() : 0;
@@ -875,6 +898,20 @@ export class Renderer {
     const c = this.ctx;
     c.fillStyle = this.water.fluid.wetAt(x, y) > .5 ? '#02091128' : '#02091190'; c.beginPath();
     c.ellipse(x, y + 2, radius, depth, 0, 0, TAU); c.fill();
+  }
+
+  private enemyOcclusionArt = new EnemyOcclusionArt();
+  private enemyOcclusionFades = new EnemyOcclusionFades();
+  private occludedEnemies: OccludedEnemy[] = [];
+  private occludingProps: OcclusionLayer[] = [];
+  private occlusionBlockers: OcclusionLayer[] = [];
+  private drawEnemyOcclusion(dt: number, reducedMotion: boolean): void {
+    this.enemyOcclusionFades.retain(new Set(this.occludedEnemies.map(enemy => enemy.id)));
+    for (const enemy of this.occludedEnemies) {
+      const covered = this.occludingProps.some(prop => prop.depth > enemy.depth && prop.bounds && overlapsOcclusion(enemy.bounds, prop.bounds));
+      const opacity = this.enemyOcclusionFades.update(enemy.id, covered ? enemy.strength : 0, dt, reducedMotion);
+      this.enemyOcclusionArt.draw(this.ctx, enemy, this.occludingProps, this.occlusionBlockers, opacity);
+    }
   }
 
   private enemyOutlines=new EnemyOutlineArt();
