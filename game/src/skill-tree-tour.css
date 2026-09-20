@@ -1,0 +1,47 @@
+.skill-tour[open] { position: fixed; inset: 0; display: block; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; overflow: hidden; color: var(--ui-text); background: transparent; font-family: var(--ui-font); }
+.skill-tour::backdrop { background: transparent; }
+.skill-tour.without-spotlight { background: #030b128a; }
+.skill-tour-spotlight { position: absolute; pointer-events: none; border: 1px solid #e4ca91; box-shadow: 0 0 0 150vmax #030b1299, 0 0 20px #e4ca9120; box-sizing: border-box; }
+.skill-tour-card { position: absolute; width: min(420px, calc(100% - 24px)); max-height: calc(100% - 110px); display: flex; flex-direction: column; padding: 0; overflow: hidden; background: var(--ui-panel, #14201a); box-shadow: 0 14px 50px #0009; }
+.skill-tour-heading { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px 0 20px; }
+.skill-tour-heading .ui-kicker { color: #d9c59c; font-size: 11px; letter-spacing: .12em; }
+.skill-tour-heading .ui-kicker span { margin-left: 10px; color: #9caeaa; }
+.skill-tour-heading .ui-button { min-height: 32px; width: 32px; height: 32px; }
+.skill-tour-progress { display: flex; gap: 4px; padding: 8px 20px 0; }
+.skill-tour-progress i { height: 2px; flex: 1; background: #66787655; }
+.skill-tour-progress .is-done { background: #d9c59c; }
+.skill-tour-copy { padding: 18px 20px 8px; overflow-y: auto; min-height: 0; }
+.skill-tour-copy h3 { margin: 0 0 12px; font-size: 25px; line-height: 1.1; color: #f1e5c9; font-weight: 500; }
+.skill-tour-copy p { margin: 0 0 14px; color: #c6d1ca; line-height: 1.45; font-size: 16px; }
+.skill-tour-copy .skill-tour-hint { padding-top: 12px; border-top: 1px solid #91a89b30; color: #a8bcb2; font-size: 14px; margin-bottom: 4px; }
+.skill-tour-examples { display: grid; gap: 14px; margin: 18px 0; }
+.skill-tour-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: #82999f; }
+.skill-tour-legend .is-invested { color: #ffdc9c; }
+.skill-tour-legend .is-planned { color: #b4daef; }
+.skill-tour-example { display: flex; align-items: center; gap: 14px; }
+.skill-tour-example strong { display: block; font-size: 15px; font-weight: 500; color: #e6dcc4; }
+.skill-tour-example small { display: block; font-size: 13px; color: #a8bcb2; line-height: 1.35; margin-top: 3px; }
+.skill-tour-lens { display: grid; place-items: center; width: 42px; height: 42px; flex-shrink: 0; border: 1px solid #8cadb9; border-radius: 50%; color: #a5c1cc; background: #0c181b; }
+.skill-tour-lens.is-minor { width: 30px; height: 30px; margin: 6px; }
+.skill-tour-lens.is-minor svg { width: 18px; height: 18px; }
+.skill-tour-lens.is-major { outline: 1px solid #8cadb966; outline-offset: 3px; }
+.skill-tour-lens.is-doctrine { border-style: dotted; border-width: 3px; }
+.skill-tour-lens.is-keystone { border-style: double; border-width: 4px; color: #d9c59c; border-color: #d9c59c; }
+.skill-tour-actions { display: flex; gap: 8px; align-items: center; padding: 12px; border-top: 1px solid #91a89b30; }
+.skill-tour-actions > span { flex: 1; }
+.skill-tour-actions .ui-button { font-size: 14px; padding: 0 12px; white-space: nowrap; }
+.skill-atlas-header > .skill-atlas-guide { flex: 0 0 auto; padding-inline: 12px; }
+@media (max-width: 620px) {
+  .skill-tour-card { max-height: min(72%, 530px); }
+  .skill-tour-copy { padding: 14px 16px 8px; }
+  .skill-tour-copy h3 { font-size: 22px; }
+  .skill-tour-copy p { font-size: 15px; }
+  .skill-tour-actions { gap: 5px; padding: 8px; }
+  .skill-tour-actions .ui-button { padding: 0 8px; }
+}
+@media (max-height: 600px) and (min-width: 621px) {
+  .skill-tour-card { max-height: calc(100% - 100px); width: min(390px, calc(100% - 24px)); }
+  .skill-tour-copy h3 { font-size: 21px; }
+  .skill-tour-copy p { font-size: 14px; }
+  .skill-tour-examples { gap: 8px; margin: 10px 0; }
+}

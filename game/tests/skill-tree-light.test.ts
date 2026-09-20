@@ -30,6 +30,9 @@ test('only owned or previewed connections receive light; offscreen and excess wo
   const owned = buildAtlasLightPlan(view({ allocated: new Set(route) }));
   assert.equal(owned.threads.length, route.length - 1);
   assert.ok(owned.threads.every(thread => thread.owned && thread.lengths.length === 25));
+  const filtered = buildAtlasLightPlan(view({ allocated: new Set(route), filterActive: true, matches: () => false }));
+  assert.equal(filtered.threads.length, owned.threads.length, 'highlight filters retain the invested build');
+  assert.ok(filtered.threads.every(thread => thread.owned));
   assert.equal(buildAtlasLightPlan(view({ route, centerX: 100000 })).threads.length, 0);
   const all = buildAtlasLightPlan(view({ allocated: new Set(SKILL_TREE.nodes.map(node => node.id)), zoom: .05 }));
   assert.ok(all.threads.length > 0 && all.threads.length <= 160);

@@ -1,3 +1,4 @@
+import { RESPEC_GOLD_PER_POINT, respecPoints, resetSkillTree } from './skill-respec.ts';
 import { STASH_CAPACITY, storageTabCount, hasStorageTab, nextStorageTabPrice } from './storage-content.ts';
 export { STASH_CAPACITY } from './storage-content.ts';
 import { bulkSaleItems } from './item-protection.ts';
@@ -72,8 +73,7 @@ function gambleItem(sheet:CharacterSheet,npc:TownNPC,level:number,kind:ItemKind)
   const item=generateItem(seed,vendorLevel(npc,level),kind,undefined,tier,undefined,{level:vendorLevel(npc,level),merchantBonus:servicePolicy(npc).materialBonus});item.id=id;
   if(item.weapon)item.weapon.id=id;if(item.shield)item.shield.id=id;if(item.focus)item.focus.id=id;return item;
 }
-export const RESPEC_GOLD_PER_POINT = 25;
-export const respecPoints = (sheet: CharacterSheet) => sheet.allocatedNodes.length - 1 + Object.values(sheet.skillRanks).reduce((sum, rank) => sum + rank - 1, 0);
+export { RESPEC_GOLD_PER_POINT, respecPoints } from './skill-respec.ts';
 export const attributeResetPoints = (sheet: CharacterSheet) => Object.values(sheet.attributes).reduce((sum, value) => sum + value - 10, 0);
 export type ServiceRequest = {type:'refreshStock'} | {type:'resetAttributes'} | {type:'respec'} | {type:'gamble';kind:ItemKind} | {type:'store';bag:number;tab?:number} | {type:'unlockStorage';tab:number} | {type:'retrieve';slot:number} | { type: 'buy'; slot: number } | { type: 'sell'; source: ItemSource }
   | { type: 'sellMany'; items: SaleItem[]; includeActiveCharms?: boolean }
@@ -199,12 +199,9 @@ export function planService(sheet: CharacterSheet, npc: TownNPC, level: number, 
     return {ok:true,character,item:null,message:`${points} attribute points refunded.`};
   }
   if (request.type === 'respec') {
-    if (!spendGold(character,price)) return {ok:false,message:'Not enough gold.'};
-    const points=respecPoints(character);
-    character.skillPoints += points;
-    character.allocatedNodes=['origin']; character.skillRanks={}; character.activeSkillRanks={};
-    character.skillSpecializations={}; character.skillSlots=Array(5).fill(null); character.arcaneOverload=false;
-    return {ok:true,character,item:null,message:`${points} skill points refunded.`};
+    const result = resetSkillTree(character, respecPoints(character));
+    if (!result.ok) return {ok:false,message:result.message!};
+    return {ok:true,character,item:null,message:result.message!};
   }
   if (!item) return {ok:false,message:'This item is no longer available.'};
   if ((request.type === 'buy' || request.type === 'buyback' || request.type === 'gamble' || request.type === 'retrieve') && !canPackItem(character, item)) return { ok: false, message: packSpaceProblem(character,item) };

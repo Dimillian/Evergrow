@@ -13,6 +13,7 @@ import { SKILL_DEFINITIONS, skillRequirementLabel } from './skill-content.ts';
 import { skillNodeOwner, skillNodeRole } from './skill-node-presentation.ts';
 import { previewSkillRoute, type SkillRouteStep } from './skill-tree-routes.ts';
 import { escapeUI } from './ui-components.ts';
+import { RESPEC_GOLD_PER_POINT } from './skill-respec.ts';
 
 interface SkillTooltipView {
   allocated: ReadonlySet<string>; reachable: ReadonlySet<string>;
@@ -43,7 +44,7 @@ export function skillTooltipMarkup(node: SkillNode, view: SkillTooltipView): str
       ${costs.upkeep ? `<div class="skill-tip-wide"><b>${costs.upkeep}</b><small>Mana / second</small></div>` : ''}
       <p class="skill-tip-wide">${escapeUI(skillRequirementLabel(skill.requirement))}${owned ? ` · Rank ${costs.rank}${costs.bonusRanks ? ` + ${costs.bonusRanks} gear` : ''}` : ''}</p>
       ${costs.variant ? `<p class="skill-tip-wide">${escapeUI(costs.variant.name)}</p>` : ''}</section>` : ''}
-    <footer class="skill-tip-state ${owned ? 'is-owned' : ''}">${state}</footer>`;
+    <footer class="skill-tip-state ${owned ? 'is-owned' : ''}">${state}${owned && node.kind !== 'origin' ? `<small class="desktop-binding">Right-click to refund · ${RESPEC_GOLD_PER_POINT} gold / point</small>` : ''}</footer>`;
 }
 
 /** Shared alternate-selection preview for the hover card and details pane. */

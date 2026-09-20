@@ -37,12 +37,21 @@ test('caption plates avoid every lens, other caption and actual curved connector
   }
 });
 
-test('the crowded Fireball/Backstab view names both skills without sharing their lens space',()=>{
+test('selecting Fireball names only Fireball, without nearby skills or its unselected Techniques',()=>{
   const node=SKILL_NODES.get('skill:fireball')!;
   const labels=layoutAtlasCaptions({width:1280,height:720,zoom:.85,centerX:node.x,centerY:node.y,selected:node.id,matches:()=>true},measure);
   assert.ok(labels.some(l=>l.text==='Fireball'));
-  assert.ok(labels.some(l=>l.text==='Backstab'));
-  assert.equal(labels.filter(l=>l.owner.startsWith('specialization:fireball')).length,3);
+  assert.deepEqual(labels.filter(l=>SKILL_NODES.has(l.owner)).map(l=>l.owner),[node.id]);
+});
+
+test('hover names only the hovered node alongside selection; no focus produces no node names',()=>{
+  const node=SKILL_NODES.get('skill:fireball')!, technique='specialization:fireball-fork';
+  const view={width:1280,height:720,zoom:.85,centerX:node.x,centerY:node.y,matches:()=>true};
+  const names=(selected:string|null,hovered:string|null)=>layoutAtlasCaptions({...view,selected,hovered},measure)
+    .filter(l=>SKILL_NODES.has(l.owner)).map(l=>l.owner);
+  assert.deepEqual(names(null,null),[]);
+  assert.deepEqual(names(node.id,technique),[node.id,technique]);
+  assert.deepEqual(names(null,technique),[technique]);
 });
 
 test('a completely occupied pocket drops its optional caption instead of painting over the graph',()=>{

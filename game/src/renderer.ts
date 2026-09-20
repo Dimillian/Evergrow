@@ -107,6 +107,8 @@ export interface RenderSettings {
   showGroundLootNames?: boolean;
   /** Save-free scene tools can animate presentation without following the player. */
   fixedCamera?: boolean;
+  /** Fixed scene framing at a caller-owned render density; does not change gameplay zoom. */
+  fixedCameraZoom?: number;
   reducedMotion: boolean;
   /** Save-free reviews can inspect long-session water optics without advancing gameplay. */
   waterAge?: number;
@@ -369,7 +371,9 @@ export class Renderer {
     }
 
     const shake = settings.reducedMotion ? 0 : this.shake;
-    const zoom = this.cameraZoom.update(step, settings.reducedMotion);
+    const cameraZoom = this.cameraZoom.update(step, settings.reducedMotion);
+    const zoom = settings.fixedCamera && Number.isFinite(settings.fixedCameraZoom) && settings.fixedCameraZoom! > 0
+      ? settings.fixedCameraZoom! : cameraZoom;
     this.view = cameraView(this.width, this.height, this.cameraX, this.cameraY, zoom,
       (settings.reducedMotion ? 0 : this.kickX) + Math.sin(this.visualTime * 103) * shake,
       (settings.reducedMotion ? 0 : this.kickY) + Math.cos(this.visualTime * 127) * shake * .7);

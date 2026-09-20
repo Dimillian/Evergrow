@@ -1,4 +1,5 @@
 import { activityStatus } from './activity-status.ts';
+import { executeSkillRespec } from './skill-respec-command.ts';
 import { MapIconVisibility } from './map-legend-content.ts';
 import { dungeonInteractionChests, dungeonRunExit } from './dungeon-locations.ts';
 import { RiftPanel } from './rift-panel.ts';
@@ -1146,6 +1147,21 @@ export class Game {
 
   private characterAction(command: CharacterCommand) {
     if (this.savingAction) return;
+    if (command.type === 'respecSkills' || command.type === 'refundNode') {
+      void this.durable(async () => {
+        if (this.phase !== 'skills' || !this.session.active) return;
+        const result = await executeSkillRespec(this.sim.player, command, async (character, hp, mana, skillCooldowns) => {
+          const ok = await this.session.save({ ...this.sim.captureCheckpoint(), character, hp, mana, skillCooldowns }, Date.now());
+          if (!ok) this.shell.setSaveStatus(this.session.error, true);
+          return { ok, message: this.session.error };
+        });
+        if (result.ok) { this.saveError = ''; this.shell.setSaveStatus(); }
+        if (result.ok && command.type === 'refundNode') this.skillPanel.pointRefunded(command.id);
+        this.skillPanel.refresh(this.sim.player);
+        this.notify(result.message ?? 'Could not save the respec.');
+      }, undefined);
+      return;
+    }
     const result = executeCharacterCommand(this.sim.player, command);
     if (!result.ok) { this.notify(result.message ?? 'Action unavailable.'); return; }
     if (result.message) this.notify(result.message);
@@ -1426,6 +1442,7 @@ export class Game {
     }
     if (pad.pressed.has(PAD.pause) || (!this.panels.simulationActive && pad.pressed.has(PAD.dodge))) {
       if (this.phase === 'character' && this.inventoryPanel.dismissPopup()) return;
+      if (this.phase === 'skills' && this.skillPanel.dismissPopup()) return;
       if (this.panels.activePanel) this.resume();
       else if (this.phase === 'playing' && !this.savingAction) { if (this.sim.portal.active) this.sim.portal.cancel(); else this.pause(); }
       else if (this.phase === 'paused' && !this.shell.backInMenu()) this.resume();

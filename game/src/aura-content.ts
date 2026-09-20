@@ -3,7 +3,7 @@ import type { CharacterSheet } from './character-types.ts';
 export const AURA_IDS = ['ironroot','bloodOath','hawkeye','thornbound','elementalResonance','stillwater','elementalSpikes'] as const;
 export type AuraId = typeof AURA_IDS[number];
 export const AURA_RULES = Object.freeze({ rankPower: .03, rankReservation: .25, maximumRank: 20,
-  bloodStacks: 5, bloodDuration: 3, stillDuration: 1.2, pulseInterval: .6, exposureDuration: 3, distantRange: 180 });
+  bloodStacks: 5, bloodDuration: 3, stillDuration: 1.2, pulseInterval: .6, exposureDuration: 3, distantRange: 180, thornRadius: 90, spikeRadius: 70 });
 export const AURAS = Object.freeze({
  ironroot: {name:'Ironroot',description:'Strengthens armor and reduces physical hit damage.',domain:'Might',color:'#b8c49a',reservation:35,power:40,territory:'bastion',points:20},
  bloodOath: {name:'Blood Oath',description:'Consecutive melee hits against one enemy build damage. Changing targets resets the oath.',domain:'Might',color:'#df8794',reservation:45,power:4,territory:'forge',points:25},
@@ -31,10 +31,10 @@ export function auraSummary(id: AuraId, rank=1): string {
   case 'ironroot': return `+${n(power)}% armor · ${n(power/8)}% less physical hit damage.`;
   case 'bloodOath': return `+${n(power)}% melee damage per stack · 5 stacks · 3s · one target.`;
   case 'hawkeye': return `+${n(power)}% arrow speed/reach · +${n(power/2)}% critical chance beyond 180 units.`;
-  case 'thornbound': return `${n(power)}% slow within 90 units · half effect on bosses.`;
+  case 'thornbound': return `${n(power)}% slow within ${AURA_RULES.thornRadius} units · half effect on bosses.`;
   case 'elementalResonance': return `Hits expose their element for 3s: +${n(power)}% matching damage taken.`;
   case 'stillwater': return `Up to ${n(power)}% less mana cost after 1.2s standing still.`;
-  case 'elementalSpikes': return `${n(power)}% melee weapon damage every 0.6s within 70 units · fire → frost → lightning.`;
+  case 'elementalSpikes': return `${n(power)}% melee weapon damage every ${AURA_RULES.pulseInterval}s within ${AURA_RULES.spikeRadius} units · fire → frost → lightning.`;
  }
 }
 

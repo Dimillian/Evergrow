@@ -9,7 +9,7 @@ import { createCharacterSheet } from '../src/items.ts';
 import { primeSpellweave, consumeSpellweave } from '../src/affix-combat.ts';
 import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
 import { SKILL_SPECIALIZATIONS, resolveSkill } from '../src/skill-progression.ts';
-import { SkillStudy, studyWeapons } from '../src/tools/skill-scene.ts';
+import { SkillStudy, studyWeapons } from '../src/skill-showcase.ts';
 import { atlasLabelCandidates, atlasLabelBudget } from '../src/skill-tree-labels.ts';
 import { SKILL_NODES } from '../src/skill-tree.ts';
 const world={blocked:()=>false,move:(x:number,y:number,dx:number,dy:number)=>({x:x+dx,y:y+dy})};
@@ -47,12 +47,12 @@ test('new defensive and late dagger actions resolve actual mitigation, control a
  for(const id of ['smokeVeil','ironCitadel'] as const){const a=study(id,'defense'),b=study(id,'defense',true);assert.ok(a.didCast);assert.ok(a.damageTaken<b.damageTaken,id);}
  const reap=study('nightReaping','followup');assert.ok(reap.didCast);assert.ok(reap.damage>0);
 });
-test('close zoom has bounded labels, only focused Techniques, and keeps selection visible',()=>{
+test('close zoom has bounded geographic labels and keeps only selected nodes focused',()=>{
  const node=SKILL_NODES.get('skill:fireball')!;
  for(const zoom of [.35,.72,1,1.8,2.6])for(const [width,height]of [[1400,800],[520,620]]){
   const view={zoom,width,height,centerX:node.x,centerY:node.y,selected:node.id,hovered:null,matches:()=>true};const plan=atlasLabelCandidates(view),budget=atlasLabelBudget(zoom,width,height);
-  assert.ok(plan.focused.includes(node));assert.ok(plan.landmarks.length<=budget.landmarks);assert.ok(plan.clusters.length<=budget.clusters);
-  assert.ok(plan.techniques.every(n=>n.developmentSkill==='fireball'));if(zoom>=.72){assert.ok(plan.landmarks.length<=4);assert.ok(plan.clusters.length<=2);}
+  assert.deepEqual(plan.focused,[node]);assert.ok(plan.clusters.length<=budget.clusters);
+  if(zoom>=.72)assert.ok(plan.clusters.length<=2);
  }
 });
 
