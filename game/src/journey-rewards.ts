@@ -29,7 +29,7 @@ export function stageJourneyCompletion(checkpoint: CharacterCheckpoint, goal: Jo
   const listed = [...state.accepted, ...state.offers].some(g => g.id === goal.id);
   state.accepted = state.accepted.map(g => g.id === goal.id ? finished : g);
   state.offers = state.offers.map(g => g.id === goal.id ? finished : g);
-  if (!listed) state.history = [...state.history, finished].slice(-64);
+  if (!listed) state.history = [...state.history, finished];
   state.completed = [...state.completed ?? [], goal.id];
   if(state.recommended===goal.id)state.recommended=null;
   if (state.tracked === goal.id) state.tracked = null;

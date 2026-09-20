@@ -55,3 +55,7 @@ The existing v3 appearance migration still preserves progress. Unsupported older
 ## Verification
 
 Verified locally after the second review: all 1,023 code tests pass, along with strict type checking and the cloud-enabled client/Worker production build. The Worker exports a callable fetch handler. Onward-route regressions cover the exact regional cap and dismissed leads; a separate headless sweep checked 77 position/level cases across seven seeds, including 28 routes from overlevelled areas, with no missed eligible frontier lead inside the bounded query. Headless checks cover regional bounds/rank offsets, immutable camp/wave/dungeon snapshots, failed durable commands, old/current save decoding, reward identity, vendor stock stability and onward guidance across several seeds. Type checking includes the headless dependency boundary. Combat feel and time-to-level remain player playtesting, rather than automated gameplay acceptance.
+
+## Player-selected difficulty
+
+Regional level ranges remain unchanged. The per-character difficulty tier applies separate monster life/damage and reward multipliers, including dungeons and rifts. Change it safely in town through the minimap crest or Escape → Adventure. Started encounters retain their lowest reward tier; wounded health and deaths survive changes. See [World difficulty](world-difficulty.md) for the exact values and persistence rules.

@@ -9,8 +9,6 @@ import { executePortalTravel, activatePortalAnchor } from '../src/travel-command
 import { CharacterRepository } from '../src/character-storage.ts';
 import { CharacterSession } from '../src/character-session.ts';
 import { decodeCharacterSave } from '../src/character-save.ts';
-import { getPortalControlRect } from '../src/map-view.ts';
-import { isGameUIPoint } from '../src/ui-hit-test.ts';
 
 const idle: Input = { moveX: 0, moveY: 0, aimX: 300, aimY: 0, attack: false, dodge: false, heal: false, skillSlot: null };
 const world: WorldQuery = { blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }), isSanctuary: (_x, y) => y < -500 };
@@ -152,14 +150,10 @@ test('travel validation rejects invalid coordinates and identities; current save
   assert.equal(decodeCharacterSave(JSON.stringify(record)), null);
 });
 
-test('portal markers are explicit knowledge without exploration changes, and button pixels block attacks', () => {
+test('portal markers are explicit knowledge without exploration changes', () => {
   const markers = portalMapMarkers({ homeTown: 0, returnTo: { x: 800, y: 10, town: 0 } }, () => anchor);
   assert.equal(markers.length, 2); assert.equal(new Set(markers.map(m => m.id)).size, 2);
   assert.ok(markers.some(m => m.x === 800));
-  for (const width of [540, 960]) {
-    const r = getPortalControlRect(width, 600);
-    assert.ok(isGameUIPoint(r.x + r.width / 2, r.y + r.height / 2, width, 600));
-  }
 });
 
 test('relocation waits for destination camera coverage before births and keeps new enemies offscreen', () => {

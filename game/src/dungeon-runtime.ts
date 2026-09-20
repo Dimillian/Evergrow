@@ -1,3 +1,4 @@
+import { worldDifficulty } from './world-difficulty.ts';
 import { updateRiftGuardian } from './rift-runtime.ts';
 import { RIFT_FIELD } from './rift-floor.ts';
 import { isWildernessBoss } from './wilderness-boss-content.ts';
@@ -70,7 +71,7 @@ export function updateDungeon(sim: Simulation, view: SpawnExclusion | null, dt=1
             if (!e)
                 throw new Error('Validated dungeon spawn failed');
             present.add(m.id);
-            e.hp = s.hp;
+            e.hp = s.hp*worldDifficulty(e.difficulty).health;
             e.homeX = event?.x ?? m.x;
             e.homeY = event?.y ?? m.y;
             e.bossPhases = s.bossPhases ?? 0;

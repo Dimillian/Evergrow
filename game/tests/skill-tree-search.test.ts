@@ -55,7 +55,7 @@ test('skill names include their Techniques; unsupported item-only bonuses and em
   assert.equal(ids('  ').size, SKILL_TREE.nodes.length);
 });
 
-test('overview highlights include every match beyond the result-list limit and allocated nonmatches stay unlit', () => {
+test('overview highlights include every match beyond the result-list limit while invested paths stay lit', () => {
   const found = ids('crit damage');
   const view: SkillAtlasView = { width: 1200, height: 900, zoom: .1, centerX: 0, centerY: 0,
     allocated: new Set(SKILL_TREE.nodes.map(node => node.id)), reachable: new Set(), selected: 'origin', hovered: null,
@@ -67,7 +67,10 @@ test('overview highlights include every match beyond the result-list limit and a
   assert.equal(atlasSearchMarkers({ ...view, centerX: 100000 }).length, 0);
   assert.equal(atlasSearchMarkers({ ...view, filterActive: false }).length, 0);
   const none = { ...view, matches: () => false };
-  assert.equal(buildAtlasLightPlan(none).threads.length, 0);
+  const invested = buildAtlasLightPlan(none).threads;
+  assert.ok(invested.length > 0 && invested.length <= 160);
+  assert.ok(invested.every(thread => thread.owned));
+  assert.deepEqual(invested, buildAtlasLightPlan({ ...view, filterActive: false }).threads);
   assert.equal(atlasSearchMarkers(none).length, 0);
 });
 

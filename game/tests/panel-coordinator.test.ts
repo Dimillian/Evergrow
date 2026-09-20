@@ -125,7 +125,8 @@ test('Esc ownership survives inventory/skill switches, nested Chronicle and Jour
   c.open('character'); c.open('skills'); c.open('character'); c.open('chronicle');
   log.length = 0; c.resume(); assert.equal(c.phase, 'character');
   c.resume(); assert.equal(c.phase, 'paused'); assert.ok(!log.includes('focus:game'));
-  c.open('journeys'); c.transition('map'); c.resume(); assert.equal(c.phase, 'paused');
+  c.open('journeys'); c.transition('map'); c.resume(); assert.equal(c.phase, 'journeys');
+  c.resume(); assert.equal(c.phase, 'paused');
   c.resume(); c.open('map'); c.resume(); assert.equal(c.phase, 'playing');
 });
 
@@ -176,4 +177,15 @@ test('Character and Inventory switch in either direction without a gameplay fram
       assert.ok(c.toggle(second)); assert.equal(c.phase, fromPause ? 'paused' : 'playing');
     }
   }
+});
+
+test('Journey map inspection returns to its journal without resuming gameplay',()=>{
+  const {coordinator:c,log,active}=setup();c.transition('playing');c.open('journeys');
+  log.length=0;c.transition('map');assert.equal(c.simulationActive,false);
+  assert.deepEqual([...active],['map']);c.resume();
+  assert.equal(c.phase,'journeys');assert.deepEqual([...active],['journeys']);
+  assert.ok(!log.includes('focus:game'));
+  c.transition('map');c.toggleMap();assert.equal(c.phase,'journeys','M follows the same return flow as X and Escape');
+  c.resume();assert.equal(c.phase,'playing');
+  c.open('map');c.resume();assert.equal(c.phase,'playing','a later standalone map has no stale journal return');
 });

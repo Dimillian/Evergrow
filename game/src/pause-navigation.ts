@@ -3,7 +3,7 @@ import type { UIIconName } from './ui-icons.ts';
 
 export type PauseCategory = 'character' | 'adventure' | 'system';
 export type PauseDestination = 'character' | 'inventory' | 'skills' | 'appearance' | 'map' | 'journeys'
-  | 'chronicle' | 'options' | 'controls' | 'leaderboard' | 'changelog';
+  | 'difficulty' | 'chronicle' | 'options' | 'controls' | 'leaderboard' | 'changelog';
 export interface PauseEntry { id: PauseDestination; label: string; description: string; icon: UIIconName; binding?: ControlAction; }
 export const PAUSE_CATEGORIES: readonly { id: PauseCategory; label: string; icon: UIIconName; entries: readonly PauseEntry[] }[] = [
   { id: 'character', label: 'Character', icon: 'sword', entries: [
@@ -15,6 +15,7 @@ export const PAUSE_CATEGORIES: readonly { id: PauseCategory; label: string; icon
   ] },
   { id: 'adventure', label: 'Adventure', icon: 'map', entries: [
     { id: 'map', label: 'World map', description: 'Your explored world and discovered places', icon: 'map', binding: 'map' },
+    { id: 'difficulty', label: 'World difficulty', description: 'Stronger monsters and richer rewards · change in town', icon: 'shield' },
     { id: 'journeys', label: 'Journeys', description: 'Goals and discoveries along your path', icon: 'journal', binding: 'journeys' },
   ] },
   { id: 'system', label: 'System', icon: 'options', entries: [

@@ -1,3 +1,4 @@
+import { storedDifficultyHealth, type WorldDifficulty } from './world-difficulty.ts';
 import { eventRecipe, sealPoint, isTrialKind } from './event-recipes.ts';
 import { eventProgress } from './event-progress.ts';
 import type { WaveProgress } from './wave-system.ts';
@@ -30,6 +31,7 @@ export interface EventSite {
   level: number;
 }
 export interface EventRecord extends EventSite {
+  difficulty?: WorldDifficulty;
   phase: 'active' | 'paused' | 'completed' | 'claimed';
   pausedTrial?: Trial;
   choice: EventChoice | null;
@@ -124,7 +126,7 @@ export function syncTrial(state: EventState, enemies: readonly Enemy[]): void {
     if(!actor.campId?.startsWith('event:'))continue;
     const id=actor.campId.slice(6),trial=state.trial?.siteId===id?state.trial:state.sites[id]?.pausedTrial;
     const guardian=trial?.guardians[Number(actor.campMemberId)];
-    if(guardian){guardian.hp=actor.hp;guardian.x=actor.x;guardian.y=actor.y;guardian.dead=actor.state==='dead';}
+    if(guardian){guardian.hp=storedDifficultyHealth(actor);guardian.x=actor.x;guardian.y=actor.y;guardian.dead=actor.state==='dead';}
   }
 }
 

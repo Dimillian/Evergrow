@@ -1,15 +1,16 @@
+import { validWorldDifficulty, type WorldDifficulty } from './world-difficulty.ts';
 import { getZoneAt, type ZoneProgression } from './zone-progression.ts';
 import { normalizeLevel, type EnemyRank } from './progression-content.ts';
 export { isBossKind } from './wilderness-boss-content.ts';
 
 /** One immutable activation snapshot for an entire encounter and all its future waves. */
-export interface EncounterScale { base: number; min: number; max: number; fixed?: boolean }
+export interface EncounterScale { base: number; min: number; max: number; fixed?: boolean; difficulty?: WorldDifficulty }
 export type EncounterScales = Record<string, EncounterScale>;
-export function captureEncounterScale(zone: ZoneProgression, playerLevel: number): EncounterScale {
-  return { base: Math.max(zone.level, Math.min(zone.maxLevel, normalizeLevel(playerLevel))), min: zone.level, max: zone.maxLevel };
+export function captureEncounterScale(zone: ZoneProgression, playerLevel: number, difficulty?: WorldDifficulty): EncounterScale {
+  return { ...(difficulty ? {difficulty} : {}), base: Math.max(zone.level, Math.min(zone.maxLevel, normalizeLevel(playerLevel))), min: zone.level, max: zone.maxLevel };
 }
-export function encounterScaleAt(x: number, y: number, seed: number | undefined, playerLevel: number): EncounterScale {
-  return captureEncounterScale(getZoneAt(x, y, seed), playerLevel);
+export function encounterScaleAt(x: number, y: number, seed: number | undefined, playerLevel: number, difficulty?: WorldDifficulty): EncounterScale {
+  return captureEncounterScale(getZoneAt(x, y, seed), playerLevel, difficulty);
 }
 export function encounterMemberLevel(scale: EncounterScale, rank: EnemyRank, seed: number, boss = false): number {
   if (scale.fixed) return scale.base;
@@ -24,7 +25,7 @@ export function validEncounterScale(v: unknown): v is EncounterScale {
   if (!v || typeof v !== 'object') return false;
   const s = v as EncounterScale;
   return [s.base, s.min, s.max].every(n => Number.isInteger(n) && n >= 1 && n <= 1e6)
-    && s.min <= s.base && s.base <= s.max && (s.fixed === undefined || s.fixed === true);
+    && (s.difficulty === undefined || validWorldDifficulty(s.difficulty)) && s.min <= s.base && s.base <= s.max && (s.fixed === undefined || s.fixed === true);
 }
 export function validEncounterScales(v: unknown): v is EncounterScales {
   return !!v && typeof v === 'object' && !Array.isArray(v)

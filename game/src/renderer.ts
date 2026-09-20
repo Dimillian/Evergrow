@@ -91,7 +91,7 @@ import { CAMERA_FOLLOW, CameraZoom, cameraFollowTarget, cameraSpawnExclusion,
 import { EnemyFocus } from './enemy-focus.ts';
 import { BattleBarkScene } from './battle-bark-scene.ts';
 import { getHUDLayout } from './hud-layout.ts';
-import { getMinimapRect, getPortalControlRect } from './map-view.ts';
+import { getMinimapRect } from './map-view.ts';
 import { ENEMY_BODY_BOUNDS, enemyBodyBounds } from './enemy-body.ts';
 import { resolveRangedAim, resolveDirectionalAim, PROJECTILE_HEIGHT, type RangedAim } from './ranged-aim.ts';
 import { deriveAttackStats } from './equipment.ts';
@@ -107,6 +107,8 @@ export interface RenderSettings {
   showGroundLootNames?: boolean;
   /** Save-free scene tools can animate presentation without following the player. */
   fixedCamera?: boolean;
+  /** Fixed scene framing at a caller-owned render density; does not change gameplay zoom. */
+  fixedCameraZoom?: number;
   reducedMotion: boolean;
   /** Save-free reviews can inspect long-session water optics without advancing gameplay. */
   waterAge?: number;
@@ -369,7 +371,9 @@ export class Renderer {
     }
 
     const shake = settings.reducedMotion ? 0 : this.shake;
-    const zoom = this.cameraZoom.update(step, settings.reducedMotion);
+    const cameraZoom = this.cameraZoom.update(step, settings.reducedMotion);
+    const zoom = settings.fixedCamera && Number.isFinite(settings.fixedCameraZoom) && settings.fixedCameraZoom! > 0
+      ? settings.fixedCameraZoom! : cameraZoom;
     this.view = cameraView(this.width, this.height, this.cameraX, this.cameraY, zoom,
       (settings.reducedMotion ? 0 : this.kickX) + Math.sin(this.visualTime * 103) * shake,
       (settings.reducedMotion ? 0 : this.kickY) + Math.cos(this.visualTime * 127) * shake * .7);
@@ -584,7 +588,7 @@ export class Renderer {
     const headerX = phone ? (phone.left-22*.8)*unit : 0;
     const headerY = phone ? (phone.top-22*.8)*unit : 0;
     const barkReserved = [...lootBounds,
-      getHUDLayout(this.width, this.height), getMinimapRect(this.width, this.height), getPortalControlRect(this.width, this.height),
+      getHUDLayout(this.width, this.height), getMinimapRect(this.width, this.height),
       { x: 0, y: 0, width: this.width, height: 112 + this.touchTopInset }];
     if (this.extraUIBounds) barkReserved.push(this.extraUIBounds);
     if (this.performanceUIBounds) barkReserved.push(this.performanceUIBounds);

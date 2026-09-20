@@ -1,3 +1,4 @@
+import { DifficultyPanel, type DifficultyActions } from './world-difficulty-panel.ts';
 import { controls } from './control-preferences.ts';
 import { audioControlsMarkup, bindAudioControls, type AudioControlActions } from './audio-controls.ts';
 import { ControlsPanel, controlsMarkup } from './controls-panel.ts';
@@ -9,8 +10,8 @@ import { GamepadMenu } from './gamepad-menu.ts';
 import type { GamepadInput } from './gamepad-input.ts';
 import './pause-system-windows.css';
 
-export type SystemDestination = 'options' | 'controls' | 'changelog' | 'leaderboard';
-export interface SystemWindowActions extends AudioControlActions {
+export type SystemDestination = 'options' | 'controls' | 'changelog' | 'leaderboard' | 'difficulty';
+export interface SystemWindowActions extends AudioControlActions, DifficultyActions {
   groundLootNames?(): GroundLootNameplates;
   setGroundLootNames?(mode: GroundLootNameplates): void;
   zoom?(factor: number): void;
@@ -32,6 +33,7 @@ export class PauseSystemWindows {
   private window?: HTMLElement;
   private life?: AbortController;
   private controls?: ControlsPanel;
+  private difficultyPanel?: DifficultyPanel;
   private changelog?: ChangelogPanel;
   private leaderboard?: LeaderboardPanel;
   private refreshAudio?: () => void;
@@ -60,17 +62,18 @@ export class PauseSystemWindows {
       this.window.classList.add('pause-changelog');
       this.changelog.open();
     } else {
-      const title = destination === 'options' ? 'Options' : destination === 'controls' ? 'Controls' : 'Leaderboard';
+      const title = destination === 'difficulty' ? 'World difficulty' : destination === 'options' ? 'Options' : destination === 'controls' ? 'Controls' : 'Leaderboard';
       this.window = document.createElement('section');
       this.window.className = `ui-window system-window system-window--${destination}`;
       this.window.setAttribute('role', 'dialog'); this.window.setAttribute('aria-modal', 'true');
       this.window.setAttribute('aria-labelledby', 'system-window-title');
       this.window.innerHTML = `<header class="ui-window-header"><h2 id="system-window-title" class="ui-title">${title}</h2><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-system-close aria-label="Close ${title}">${uiIcon('close')}</button></header>
-        <div class="system-window-body ui-scroll-area">${destination === 'options' ? optionsMarkup() : destination === 'controls' ? controlsMarkup() : '<div data-system-rankings></div>'}</div>
-        <footer class="ui-window-footer system-window-footer"><span>EVERGROW</span><span>Esc / B · Back to System</span></footer>`;
+        <div class="system-window-body ui-scroll-area">${destination === 'options' ? optionsMarkup() : destination === 'controls' ? controlsMarkup() : destination === 'difficulty' ? '<div data-system-difficulty></div>' : '<div data-system-rankings></div>'}</div>
+        <footer class="ui-window-footer system-window-footer"><span>EVERGROW</span><span>Esc / B · Back to menu</span></footer>`;
       this.root.append(this.window);
       this.window.querySelector('[data-system-close]')!.addEventListener('click', () => this.back(), { signal });
       if (destination === 'controls') this.controls = new ControlsPanel(this.window, signal);
+      else if (destination === 'difficulty') this.difficultyPanel = new DifficultyPanel(this.window.querySelector('[data-system-difficulty]')!, this.actions, signal);
       else if (destination === 'options') this.bindOptions(signal);
       else {
         this.leaderboard = new LeaderboardPanel(this.window.querySelector('[data-system-rankings]')!, this.actions.leaderboard!, () => this.close());
@@ -120,11 +123,13 @@ export class PauseSystemWindows {
   }
   back(): boolean {
     if (!this.opened) return false;
+    if (this.difficultyPanel?.busy) return true;
     if (!this.controls?.cancel()) this.close();
     return true;
   }
   private close(notify = true): void {
     if (!this.opened) return;
+    this.difficultyPanel = undefined;
     this.controls?.cancel(false); this.controls = undefined;
     this.life?.abort(); this.life = undefined;
     this.changelog?.dispose(); this.changelog = undefined;
