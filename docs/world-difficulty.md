@@ -2,6 +2,8 @@
 
 Per-character difficulty is available from the crest in the minimap and **Escape → Adventure → World difficulty**. Players can inspect the tiers anywhere and change them while alive in an overworld sanctuary. The game pauses in the selector; changing the tier persists before modifying live state. Defaults to Normal for new and existing characters. No progress reset.
 
+Escape, controller Back and the close button return to the entry point: opening from the minimap resumes gameplay, while opening from the pause menu returns to Adventure with World difficulty focused. The footer names that destination. Closing is held while a difficulty change is saving.
+
 | Tier | Monster life | Monster damage | Kill/trial XP | Combat treasure gold | Epic/Legendary/Unique loot weight |
 | --- | --- | --- | --- | --- | --- |
 | Normal | ×1 | ×1 | ×1 | ×1 | ×1 |
