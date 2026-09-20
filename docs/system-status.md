@@ -1,6 +1,6 @@
 # Current system status
 
-Local September 20, 2026: engaged outdoor enemies show a muted warm-red animated silhouette through trees, rocks and brush, restricted to covered pixels. Walls, roofs and foreground characters block it; indoor/dungeon enemies are excluded. Existing player canopy fading is preserved. Presentation only, no save reset. Color/readability and device performance await player testing.
+Local September 20, 2026: tree canopies fade to 24% opacity when they cover nearby engaged outdoor enemies, using the same smooth fade as player cover. The previous silhouette overlay was removed after player-reported lag; this version uses numeric overlap checks and the existing foliage draw, with no extra actor or mask rendering. Indoor/dungeon enemies are excluded; trunks, rocks and architecture remain opaque. Presentation only, no save reset. Device frame-time and visual acceptance remain player-tested.
 
 Local September 19 Area journal: explicit unlimited Accept/Accept all, reversible Dismiss to Nearby, independent pins, retained known/completed activities and area browsing. Show on Map returns to selected quest details on close. Existing saves keep progress; old suppression IDs are ignored and previously trimmed completion details recover when encountered. See [Journeys](journeys.md).
 

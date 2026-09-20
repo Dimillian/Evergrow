@@ -6,7 +6,7 @@ import { World, TILE_SIZE, type Prop } from '../src/world.ts';
 import type { Building, Settlement } from '../src/settlements.ts';
 import { getHUDLayout } from '../src/hud.ts';
 import { cameraView, MIN_CAMERA_ZOOM } from '../src/camera.ts';
-import { EnemyOcclusionArt, type OccludedEnemy, type OcclusionLayer } from '../src/enemy-occlusion-art.ts';
+import type { Sprite } from '../src/art-types.ts';
 
 type Matrix = { a: number; b: number; c: number; d: number; e: number; f: number };
 type Rect = { left: number; top: number; width: number; height: number };
@@ -18,7 +18,7 @@ class RecordingContext {
   font = '10px monospace';
   globalAlpha = 1;
   imageSmoothingEnabled = true;
-  images: Array<{ matrix: Matrix; args: number[] }> = [];
+  images: Array<{ matrix: Matrix; args: number[]; image: unknown; alpha: number }> = [];
   texts: Array<{ value: string; font: string; matrix: Matrix }> = [];
   private saved: Array<{ matrix: Matrix; font: string; alpha: number }> = [];
   save() { this.saved.push({ matrix: { ...this.matrix }, font: this.font, alpha: this.globalAlpha }); }
@@ -36,7 +36,7 @@ class RecordingContext {
   translate(x: number, y: number) { this.transform(1, 0, 0, 1, x, y); }
   scale(x: number, y: number) { this.transform(x, 0, 0, y, 0, 0); }
   rotate(angle: number) { this.transform(Math.cos(angle), Math.sin(angle), -Math.sin(angle), Math.cos(angle), 0, 0); }
-  drawImage(_image: unknown, ...args: number[]) { this.images.push({ matrix: { ...this.matrix }, args }); }
+  drawImage(image: unknown, ...args: number[]) { this.images.push({ matrix: { ...this.matrix }, args, image, alpha: this.globalAlpha }); }
   measureText(value: string) {
     const pixels = Number(this.font.match(/([\d.]+)px/)![1]);
     return { width: value.length * pixels * .6, actualBoundingBoxAscent: pixels * .7 };
@@ -430,39 +430,37 @@ test('fixed preview zoom preserves world framing across display densities and ne
   }
 });
 
-test('runtime silhouettes use displayed enemy depth, foreground props and a shared pose without changing combat', t => {
-  const { sim, world, renderer, render, settings } = fixture(t);
-  world.blocked = () => false; world.isSanctuary = () => false;
-  world.getWildernessSites = () => [];
-  const x = sim.player.x + 65, y = sim.player.y;
-  const tree: Prop = { id: 'occlusion-tree', x, y: y + 30, radius: 10, kind: 'tree', seed: 71, scale: 1.2 };
+test('combat canopy fading uses existing foliage draws, retains opaque trunks and restores on departure', t => {
+  const { sim, world, renderer, render, settings, canvas } = fixture(t);
+  world.blocked = () => false; world.isSanctuary = () => false; world.getWildernessSites = () => [];
+  const x = sim.player.x + 180, y = sim.player.y;
+  const tree: Prop = { id: 'combat-tree', x, y: y + 30, radius: 10, kind: 'tree', seed: 71, scale: 1.2 };
   world.getProps = () => [tree];
-  const enemy = sim.spawnEnemy('stalker', x, y, 'elite')!;
-  enemy.state = 'windup'; enemy.prevX = x - 12; enemy.prevY = y - 8;
-  const original = EnemyOcclusionArt.prototype.draw;
-  const calls: { actor: OccludedEnemy; props: readonly OcclusionLayer[]; opacity: number }[] = [];
-  EnemyOcclusionArt.prototype.draw = function(c, actor, props, blockers, opacity) {
-    calls.push({ actor, props, opacity }); original.call(this, c, actor, props, blockers, opacity);
-  };
-  t.after(() => { EnemyOcclusionArt.prototype.draw = original; });
-  const before = JSON.stringify(enemy);
+  const actor = sim.spawnEnemy('stalker', x, y)!;
+  actor.state = 'chase'; actor.x = x + 500;
+  const sprite = (renderer as unknown as { propSprite(prop: Prop): Sprite }).propSprite(tree);
+  const foliage = () => canvas.context.images.filter(draw => sprite.foliage!.includes(draw.image as HTMLCanvasElement));
+  const before = JSON.stringify(actor);
   render();
-  const call = calls.find(call => call.actor.id === enemy.id)!;
-  assert.ok(call && call.opacity > 0);
-  assert.equal(call.actor.depth, enemy.prevY + (enemy.y - enemy.prevY) * sim.interpolationAlpha);
-  assert.ok(call.props.some(prop => prop.depth === tree.y));
-  assert.ok(call.actor.bounds.width > 150, 'rank scale includes the actual rig and held weapon');
-  assert.equal(JSON.stringify(enemy), before, 'rendering does not mutate combat or rewards');
+  assert.ok(foliage().length > 0);
+  assert.ok(foliage().every(draw => draw.alpha === .24), 'interpolated enemy fades the existing canopy layers');
+  assert.ok(canvas.context.images.filter(draw => draw.image === sprite.image).every(draw => draw.alpha === 1), 'trunk stays opaque');
+  assert.equal(JSON.stringify(actor), before, 'visibility does not change combat state');
+  actor.state = 'idle'; settings.reducedMotion = false; render();
+  assert.ok(foliage().every(draw => draw.alpha > .24 && draw.alpha < 1), 'canopy eases back after combat ends');
+  settings.reducedMotion = true; render();
+  assert.ok(foliage().every(draw => draw.alpha === 1), 'reduced motion applies the restored opacity immediately');
+  actor.state = 'chase'; actor.hp = 0; render();
+  assert.ok(foliage().every(draw => draw.alpha === 1), 'corpses do not keep the canopy faded');
+  actor.hp = actor.maxHp;
+  world.getBuildingAt = () => ({ id: 'indoors' } as Building); render();
+  assert.ok(foliage().every(draw => draw.alpha === 1), 'indoor enemies cannot reveal canopy cover');
+  world.getBuildingAt = () => null; render();
+  assert.ok(foliage().every(draw => draw.alpha === .24));
   for (const mode of ['travel', 'full'] as const) {
-    settings.reducedMotion = false; calls.length = 0;
-    renderer.reset(mode); renderer.snapTo(sim.player); render(0);
-    assert.equal(calls.find(call => call.actor.id === enemy.id)?.opacity, 0, `${mode} reset clears the previous reveal fade`);
-    settings.reducedMotion = true; render();
-    assert.ok(calls.at(-1)!.opacity > 0, 'the next scene can reveal the actor again');
+    actor.state = 'idle'; renderer.reset(mode); renderer.snapTo(sim.player); render();
+    // A full reset can replace the cached sprite, so inspect the existing opacity owner.
+    assert.equal((renderer as unknown as { crownOpacity: Map<string, number> }).crownOpacity.has(tree.id), false);
+    actor.state = 'chase'; render();
   }
-  calls.length = 0; enemy.hp = 0; render();
-  assert.equal(calls.length, 0, 'dead actors cannot leave a reveal');
-  enemy.hp = enemy.maxHp; renderer.reset(); calls.length = 0;
-  world.getBuildingAt = () => ({ id: 'indoors' } as Building);
-  render(); assert.equal(calls.length, 0, 'indoor actors are excluded before compositing');
 });
