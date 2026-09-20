@@ -9,6 +9,7 @@ import { drawRiftHUD } from './rift-hud.ts';
 import { controls } from './control-preferences.ts';
 import { isGameplayAction, type ControlAction } from './control-bindings.ts';
 import { activeBuffs } from './active-buffs.ts';
+import { potionPresentation } from './potion-presentation.ts';
 import { ExpeditionPanel } from './expedition-panel.ts';
 import { executeDropItem, type DropItemSource } from './drop-item-command.ts';
 import { hoveredGroundLoot, showGroundLootNames, type GroundLootNameplates } from './ground-loot-hover.ts';
@@ -1298,6 +1299,7 @@ export class Game {
       if (now >= this.nextAutosave) { this.saveCharacter(); this.nextAutosave = now + 20_000; }
     }
     this.shell.setBuffs(activeBuffs(this.sim.player, this.sim.groundEffects));
+    this.shell.potionTooltip.update(potionPresentation(this.sim.player), controls.label('heal'), this.phase === 'playing' && !this.touch.active);
     this.shell.shortcutMenu.setPoints(this.sim.player.character.statPoints, this.sim.player.character.skillPoints);
     this.updatePortalPresentation();
     this.renderer.pointerX = this.mouse.x;
