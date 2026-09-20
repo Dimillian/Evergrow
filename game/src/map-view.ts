@@ -56,3 +56,9 @@ export function getJourneyLogAnchor(width: number, height: number): Pick<MapRect
   const map = getMinimapRect(width, height);
   return { x: map.x, y: map.y + map.height + 26, width: map.width };
 }
+
+/** Difficulty crest sits opposite Home, inside the chart and above its time footer. */
+export function getMinimapDifficultyRect(width:number,height:number):MapRect {
+  const chart=getMinimapChartRect(getMinimapRect(width,height));
+  return {x:chart.x+chart.width-27,y:chart.y+chart.height-27,width:22,height:22};
+}

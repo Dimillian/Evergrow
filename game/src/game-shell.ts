@@ -1,3 +1,5 @@
+import { worldDifficulty, type WorldDifficulty } from './world-difficulty.ts';
+import { difficultyBadgeSVG } from './world-difficulty-art.ts';
 import { BuffBar } from './buff-bar.ts';
 import type { ActiveBuff } from './active-buffs.ts';
 import { PauseMenu, type PauseActions } from './pause-menu.ts';
@@ -8,13 +10,13 @@ import { GameNotifications } from './notifications.ts';
 import { getHUDLayout } from './hud.ts';
 import { HUDShortcutMenu } from './hud-shortcut-menu.ts';
 import type { HUDRect } from './hud.ts';
-import { getMinimapRect, getMinimapHomeRect } from './map-view.ts';
+import { getMinimapRect, getMinimapHomeRect, getMinimapDifficultyRect } from './map-view.ts';
 import type { GamePhase } from './game-phase.ts';
 import { gameMenuMarkup } from './game-menu.ts';
 import { trapDialogFocus, uiIcon } from './ui-components.ts';
 import { PORTAL_RULES } from './travel.ts';
 
-interface ShellActions extends PauseActions { lastSavedAt?(): number | undefined; saveLocation?(): 'Local' | 'Online'; shortcutMenuChanged?(): void; homePortal?(): void; play(): void; openMap(): void; openCharacter(): void; openSkills(): void; }
+interface ShellActions extends PauseActions { openDifficulty?(): void; lastSavedAt?(): number | undefined; saveLocation?(): 'Local' | 'Online'; shortcutMenuChanged?(): void; homePortal?(): void; play(): void; openMap(): void; openCharacter(): void; openSkills(): void; }
 
 /** Owns DOM presentation and its listeners; it never reads or mutates simulation state. */
 export class GameShell {
@@ -50,6 +52,16 @@ export class GameShell {
   private saveMessage = '';
   private pauseNavigation: PauseNavigation = { category: 'character', focus: null };
   backInMenu(): boolean { return this.pauseMenu?.back() ?? false; }
+  showDifficultyMenu(): void { this.pauseMenu?.openDifficulty(); }
+  private difficultyBadge?: WorldDifficulty;
+  setDifficultyBadge(id:WorldDifficulty): void {
+    if(this.difficultyBadge===id)return;
+    this.difficultyBadge=id;
+    const button=this.controls.querySelector<HTMLButtonElement>('[data-hud="difficulty"]')!;
+    button.innerHTML=difficultyBadgeSVG(id,22);
+    const label=`${worldDifficulty(id).name} · World difficulty`;
+    button.setAttribute('aria-label',label);button.dataset.tooltip=label;
+  }
   refreshOptions(): void { this.pauseMenu?.refresh(); }
   updatePauseGamepad(pad: GamepadInput, now: number): void { this.pauseMenu?.updateGamepad(pad, now); }
 
@@ -70,6 +82,7 @@ export class GameShell {
           aria-haspopup="dialog" data-tooltip="World map" data-tooltip-placement="left"></button>
         <button type="button" class="hud-control minimap-home" data-hud="home" aria-label="Home · Open town portal"
           data-tooltip="Home · Open town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="left" hidden>${uiIcon('home')}</button>
+        <button type="button" class="hud-control minimap-difficulty" data-hud="difficulty" aria-label="World difficulty" aria-haspopup="dialog" data-tooltip="World difficulty" data-tooltip-placement="left"></button>
       </nav>
       <div id="title-mount"></div>
       <div id="world-map-mount"></div>
@@ -93,6 +106,7 @@ export class GameShell {
     this.targetBuffs.element.classList.add('target-buff-bar');
     const signal = this.abort.signal;
     this.element.addEventListener('contextmenu', event => event.preventDefault(), { signal });
+    this.controls.querySelector('[data-hud="difficulty"]')!.addEventListener('click',()=>actions.openDifficulty?.(),{signal});
     this.controls.querySelector('[data-hud="map"]')!.addEventListener('click', actions.openMap, { signal });
     this.controls.querySelector('[data-hud="home"]')!.addEventListener('click', () => {
       if (this.homePortalVisible && this.navigationVisible) {
@@ -122,6 +136,7 @@ export class GameShell {
     this.navigationVisible = visible;
     this.controls.querySelector<HTMLElement>('[data-hud="map"]')!.hidden = !visible;
     this.setHomePortalVisible(this.homePortalVisible);
+    this.controls.querySelector<HTMLElement>('[data-hud="difficulty"]')!.hidden=!visible;
   }
 
   resizeControls(width: number, height: number): void {
@@ -135,6 +150,7 @@ export class GameShell {
     for (const shortcut of hud.shortcuts) place(shortcut.id, shortcut);
     place('map', getMinimapRect(width, height));
     place('home', getMinimapHomeRect(width, height));
+    place('difficulty', getMinimapDifficultyRect(width,height));
     this.shortcutMenu.position();
   }
 

@@ -124,6 +124,11 @@ function render() {
 async function boot() {
   await loadGameFont();
   if (abort.signal.aborted) return;
+  if (new URLSearchParams(location.search).get('view') === 'difficulty') {
+    const { mountDifficultyReview } = await import('./world-difficulty-review.ts');
+    if (!abort.signal.aborted) mountDifficultyReview(root, abort.signal);
+    return;
+  }
   if (new URLSearchParams(location.search).get('view') === 'power') {
     const { mountPowerAudit } = await import('./power-audit-review.ts');
     if (!abort.signal.aborted) mountPowerAudit(root, abort.signal);

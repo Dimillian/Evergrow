@@ -1,3 +1,4 @@
+import { changeWorldDifficulty, difficultyChangeProblem } from './world-difficulty-command.ts';
 import { activityStatus } from './activity-status.ts';
 import { executeSkillRespec } from './skill-respec-command.ts';
 import { MapIconVisibility } from './map-legend-content.ts';
@@ -201,6 +202,10 @@ export class Game {
         saveLocation: () => this.saveClient.mode === 'cloud' ? 'Online' : 'Local',
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
         save: () => this.durable(async () => { const saved = await this.saveCharacter(true); if (saved) await this.saveClient.flush(); return saved; }, false),
+        openDifficulty: () => { if(this.phase!=='playing'||this.savingAction)return; this.pause(); this.shell.showDifficultyMenu(); },
+        difficulty: () => this.sim.player.character.difficulty ?? 'normal',
+        difficultyProblem: () => difficultyChangeProblem(this.sim),
+        setDifficulty: id => this.durable(() => changeWorldDifficulty(this.sim,id,checkpoint=>this.persistTravel(checkpoint)), {ok:false,message:'A save is already in progress.'}),
         openChronicle: () => { if(!this.savingAction)this.panels.open('chronicle'); },
         openAppearance: () => { if (!this.savingAction && this.panels.open('character')) this.editAppearance(true); },
         leaderboard: order => this.saveClient.leaderboard(order), leaderboardAvailable: () => this.saveClient.supported,
@@ -1305,6 +1310,7 @@ export class Game {
     // desktop minimap hit target behind after moving the touch projection.
     this.shell.setNavigationVisible(this.renderer.navigationVisible && !this.touch.active);
     this.shell.setHomePortalVisible(this.shouldShowHomePortal());
+    this.shell.setDifficultyBadge(this.sim.player.character.difficulty??'normal');
     this.journeys.update();
     const settings = {
       liveMap: this.panels.mapHeld,

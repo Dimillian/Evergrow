@@ -167,3 +167,5 @@ Character hall (`/title.html`) now stages wallet balances, effective attribute d
 ## Area journal review
 
 The existing Journey review (`/journeys.html?view=journal`) stages the production Area journal with disposable accepted, nearby and completed activities. Accept, Dismiss, independent Pin and area browsing use the shared state planner. Show on Map focuses the selected activity, and closing it returns to the same details. No playable character storage is used.
+
+The Progression workspace also has **World difficulty** (`/progression.html?view=difficulty`): shared procedural crests, the actual selector with disposable actions, and level-50 scaling reference. This view never reads or writes character saves.

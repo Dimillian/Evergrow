@@ -128,3 +128,7 @@ All cloud deletions retain the device record until the server acknowledges its r
 The character hall retains the account-wide status and identifies the slot for upload errors. Gameplay uses the active slot's status and distinguishes a durable device save awaiting upload from a cloud conflict; another slot's error cannot label a successfully uploaded active character unsaved.
 
 Regression coverage includes unresolved empty-slot creation, storage-level replacement guards, normal/conflicted/unreadable deletion, missing blobs, malformed history, fresh-browser deletion, failed requests, lost responses, stale revisions, concurrent recovery edits, history preservation and per-character upload status. No schema/database migration, automatic deletion or progress reset. Published in v0.3.15 on September 12, 2026 with matching client and Worker. Existing clients need a reload. No production account was inspected or changed during this fix. The exact field invalidating the reported player's original character still requires their checkpoint to diagnose.
+
+### Optional world difficulty fields
+
+Character checkpoint v4 now includes optional `character.difficulty`; missing means Normal. Actor reward caps, encounter/event/run difficulty and per-chest reward tiers travel in the same validated checkpoint. Saved enemy/guardian HP stays in Normal-equivalent units across all tiers. Local and cloud use the same durable difficulty command and validator; no progress reset or storage migration is needed. See [World difficulty](world-difficulty.md).
